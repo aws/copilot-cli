@@ -100,7 +100,7 @@ generate-coverage: test
 	go tool cover -html=${COVERAGE}
 
 .PHONY: integ-test
-integ-test: package-custom-resources run-integ-test package-custom-resources-clean
+integ-test: package-custom-resources run-integ-test package-custom-resources-clean 
 
 .PHONY: run-integ-test
 run-integ-test:
@@ -110,11 +110,12 @@ run-integ-test:
 	# and runs tests which end in Integration.
 	go test -race -count=1 -timeout 120m -tags=integration ${PACKAGES}
 
-.PHONY: local-integ-test
-local-integ-test: package-custom-resources run-local-integ-test package-custom-resources-clean
+.PHONY: local-test
+local-test: package-custom-resources custom-resource-tests run-local-test package-custom-resources-clean
 
-run-local-integ-test:
-	go test -race -count=1 -timeout=60m -tags=localintegration ${PACKAGES}
+.PHONY: run-local-test
+run-local-test:
+	go test -race -count=1 -timeout=60m -tags=localintegration -coverprofile=${COVERAGE} ${PACKAGES}
 
 .PHONY: e2e
 e2e: build-e2e
@@ -126,7 +127,7 @@ e2e: build-e2e
 .PHONY: e2e-dryrun
 e2e-dryrun: build # Sample command "make e2e-dryrun test=multi-env-app" to run the test suit under "e2e/multi-env-app"
 	@echo "Install ginkgo"
-	go install github.com/onsi/ginkgo/ginkgo@latest
+	go install github.com/onsi/ginkgo/v2/ginkgo@latest
 	@echo "Setup credentials"
 	./scripts/dryrun-creds.sh e2e
 	@echo "Run the $(test) test"
@@ -139,7 +140,7 @@ e2e-dryrun: build # Sample command "make e2e-dryrun test=multi-env-app" to run t
 .PHONY: regression-dryrun
 regression-dryrun: build
 	@echo "Install ginkgo"
-	go install github.com/onsi/ginkgo/ginkgo@latest
+	go install github.com/onsi/ginkgo/v2/ginkgo@latest
 	@echo "Setup credentials"
 	./scripts/dryrun-creds.sh regression
 	@echo "Run the $(test) test"
@@ -188,7 +189,6 @@ gen-mocks: tools
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/aws/ec2/mocks/mock_ec2.go -source=./internal/pkg/aws/ec2/ec2.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/aws/identity/mocks/mock_identity.go -source=./internal/pkg/aws/identity/identity.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/aws/route53/mocks/mock_route53.go -source=./internal/pkg/aws/route53/route53.go
-	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/aws/route53/mocks/mock_domain.go -source=./internal/pkg/aws/route53/domain.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/aws/iam/mocks/mock_iam.go -source=./internal/pkg/aws/iam/iam.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/aws/secretsmanager/mocks/mock_secretsmanager.go -source=./internal/pkg/aws/secretsmanager/secretsmanager.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/aws/codepipeline/mocks/mock_codepipeline.go -source=./internal/pkg/aws/codepipeline/codepipeline.go
@@ -221,8 +221,14 @@ gen-mocks: tools
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/logging/mocks/mock_workload.go -source=./internal/pkg/logging/workload.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/logging/mocks/mock_task.go -source=./internal/pkg/logging/task.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/cli/list/mocks/mock_list.go -source=./internal/pkg/cli/list/list.go
-	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/cli/deploy/mocks/mock_svc.go -source=./internal/pkg/cli/deploy/svc.go
+	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/cli/deploy/mocks/mock_backend.go -source=./internal/pkg/cli/deploy/backend.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/cli/deploy/mocks/mock_env.go -source=./internal/pkg/cli/deploy/env.go
+	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/cli/deploy/mocks/mock_job.go -source=./internal/pkg/cli/deploy/job.go
+	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/cli/deploy/mocks/mock_lbws.go -source=./internal/pkg/cli/deploy/lbws.go
+	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/cli/deploy/mocks/mock_rdws.go -source=./internal/pkg/cli/deploy/rdws.go
+	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/cli/deploy/mocks/mock_svc.go -source=./internal/pkg/cli/deploy/svc.go
+	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/cli/deploy/mocks/mock_worker.go -source=./internal/pkg/cli/deploy/worker.go
+	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/cli/deploy/mocks/mock_workload.go -source=./internal/pkg/cli/deploy/workload.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/cli/deploy/patch/mocks/mock_env.go -source=./internal/pkg/cli/deploy/patch/env.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/initialize/mocks/mock_workload.go -source=./internal/pkg/initialize/workload.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/ecs/mocks/mock_ecs.go -source=./internal/pkg/ecs/ecs.go

@@ -4,7 +4,7 @@ site_url: 'https://aws.github.io/copilot-cli/'
 repo_name: 'aws/copilot-cli'
 repo_url: 'https://github.com/aws/copilot-cli'
 edit_uri: 'edit/mainline/site/content'
-copyright: 'Copyright &copy; 2022 Amazon'
+copyright: 'Copyright &copy; 2023 Amazon'
 docs_dir: 'site/content'
 site_dir: 'docs'
 extra_css:
@@ -40,15 +40,16 @@ nav:
     - Manifest:
       - Overview: docs/manifest/overview.en.md
       - Backend Service: docs/manifest/backend-service.en.md
-      - Environment: docs/manifest/environment.en.md
       - Load Balanced Web Service: docs/manifest/lb-web-service.en.md
       - Request-Driven Web Service: docs/manifest/rd-web-service.en.md
       - Scheduled Job: docs/manifest/scheduled-job.en.md
       - Worker Service: docs/manifest/worker-service.en.md
+      - Environment: docs/manifest/environment.en.md
       - Pipeline: docs/manifest/pipeline.en.md
     - Developing:
       - Additional AWS Resources:
-        - Modeling with AWS CloudFormation: docs/developing/addons/modeling.en.md
+        - Additional Workload Resources: docs/developing/addons/workload.en.md
+        - Additional Environment Resources: docs/developing/addons/environment.en.md
         - Uploading Local Artifacts: docs/developing/addons/package.en.md
       - Container Environment Variables: docs/developing/environment-variables.en.md
       - Content Delivery: docs/developing/content-delivery.en.md
@@ -59,7 +60,7 @@ nav:
       - Observability: docs/developing/observability.en.md
       - Publish/Subscribe: docs/developing/publish-subscribe.en.md
       - Secrets: docs/developing/secrets.en.md
-      - Service Discovery: docs/developing/service-discovery.en.md
+      - Service-to-Service Communication: docs/developing/svc-to-svc-communication.en.md
       - Sidecars: docs/developing/sidecars.en.md
       - Storage: docs/developing/storage.en.md
       - Task Definition Overrides: docs/developing/taskdef-overrides.en.md
@@ -97,6 +98,7 @@ nav:
         - env ls: docs/commands/env-ls.en.md
         - env show: docs/commands/env-show.en.md
         - job ls: docs/commands/job-ls.en.md
+        - job logs: docs/commands/job-logs.en.md
         - job run: docs/commands/job-run.en.md
         - svc ls: docs/commands/svc-ls.en.md
         - svc show: docs/commands/svc-show.en.md
@@ -130,6 +132,7 @@ nav:
         - job delete: docs/commands/job-delete.en.md
         - job deploy: docs/commands/job-deploy.en.md
         - job init: docs/commands/job-init.en.md
+        - job logs: docs/commands/job-logs.en.md
         - job ls: docs/commands/job-ls.en.md
         - job package: docs/commands/job-package.en.md
         - job run: docs/commands/job-run.en.md
@@ -157,6 +160,9 @@ nav:
         - task run: docs/commands/task-run.en.md
         - version: docs/commands/version.en.md
   - Blogs:
+      - Release v1.25: blogs/release-v125.en.md
+      - Release v1.24: blogs/release-v124.en.md
+      - Release v1.23: blogs/release-v123.en.md
       - Release v1.22: blogs/release-v122.en.md
       - Release v1.21: blogs/release-v121.en.md
       - Release v1.20: blogs/release-v120.en.md
@@ -205,8 +211,9 @@ plugins:
             'docs/getting-started.md': 'docs/getting-started/first-app-tutorial.en.md'
             'docs/commands/pipeline-update.en.md': 'docs/commands/pipeline-deploy.en.md'
             'docs/commands/pipeline-update.ja.md': 'docs/commands/pipeline-deploy.ja.md'
-            'docs/developing/additional-aws-resources.en.md': 'docs/developing/addons/modeling.en.md'
-            'docs/developing/additional-aws-resources.ja.md': 'docs/developing/addons/modeling.ja.md'
+            'docs/developing/additional-aws-resources.en.md': 'docs/developing/addons/workload.en.md'
+            'docs/developing/additional-aws-resources.ja.md': 'docs/developing/addons/workload.ja.md'
+            'docs/developing/service-discovery.en.md': 'docs/developing/svc-to-svc-communication.en.md'
     - i18n:
         default_language: en
         languages:

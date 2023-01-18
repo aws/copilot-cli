@@ -17,7 +17,7 @@ phases:
       - 'cd $HOME/.goenv && git pull --ff-only && cd -'
       - 'goenv install 1.18.4'
       - 'goenv global 1.18.4'
-      - 'go install github.com/onsi/ginkgo/ginkgo@latest'
+      - 'go install github.com/onsi/ginkgo/v2/ginkgo@latest'
   pre_build:
     commands:
       - printenv DOCKERHUB_TOKEN | docker login --username ${DOCKERHUB_USERNAME} --password-stdin
@@ -40,4 +40,4 @@ phases:
       - chmod +x ./copilot-linux-${FROM_VERSION}
       - export REGRESSION_TEST_FROM_PATH=../../copilot-linux-${FROM_VERSION}
       - export REGRESSION_TEST_TO_PATH=../../bin/local/copilot-linux-amd64
-      - cd regression/${TEST_SUITE} && ginkgo -v -r -noColor
+      - cd regression/${TEST_SUITE} && ginkgo -v -r -noColor --timeout=1h30m

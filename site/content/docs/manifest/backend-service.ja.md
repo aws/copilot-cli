@@ -2,10 +2,9 @@
 
 ???+ note "api service のサンプル Manifest"
 
-    === "Service Discovery"
+    === "Serving Internal Traffic"
 
         ```yaml
-            # Service は、VPC 内の "http://api.${COPILOT_SERVICE_DISCOVERY_ENDPOINT}:8080" でのみアクセス可能です。
             name: api
             type: Backend Service
 
@@ -18,7 +17,10 @@
                 retries: 2
                 timeout: 5s
                 start_period: 0s
-    
+
+            network:
+              connect: true
+
             cpu: 256
             memory: 512
             count: 2
@@ -108,7 +110,8 @@
         publish:
           topics:
             - name: 'inventory'
-
+            - name: 'orders'
+              fifo: true
         variables:
           DDB_TABLE_NAME: 'inventory'
 
@@ -145,7 +148,7 @@ Service 名。
 <div class="separator"></div>
 
 <a id="type" href="#type" class="field">`type`</a> <span class="type">String</span>  
-Service のアーキテクチャ。[Backend Services](../concepts/services.ja.md#backend-service) はインターネット側からはアクセスできませんが、[サービス検出](../developing/service-discovery.ja.md)の利用により他の Service からはアクセスできます。
+Service のアーキテクチャ。[Backend Services](../concepts/services.ja.md#backend-service) はインターネット側からはアクセスできませんが、[サービスディスカバリ](../developing/svc-to-svc-communication.ja.md#service-discovery)の利用により他の Service からはアクセスできます。
 
 <div class="separator"></div>
 
@@ -160,9 +163,10 @@ http セクションは Service と内部 Application Load Balancer の連携に
 <span class="parent-field">http.</span><a id="http-deregistration-delay" href="#http-deregistration-delay" class="field">`deregistration_delay`</a> <span class="type">Duration</span>  
 登録解除時にターゲットがクライアントとの接続を閉じるのを待つ時間を指定します。デフォルトでは 60 秒です。この値を大きくするとターゲットが安全に接続を閉じるための時間を確保できますが、新バージョンのデプロイに必要となる時間が長くなります。範囲は 0 〜 3600 です。
 
-<span class="parent-field">http.</span><a id="http-target-container" href="#http-target-container" class="field">`target_container`</a> <span class="type">String</span>  
-Service 
-サイドカーコンテナを指定することで、Service のメインコンテナの代わりにサイドカーでロードバランサからのリクエストを受け取れます。
+<span class="parent-field">http.</span><a id="http-target-container" href="#http-target-container" class="field">`target_container`</a> <span class="type">String</span>
+サイドカーコンテナを指定することで、Service のメインコンテナの代わりにサイドカーでロードバランサーからのリクエストを受け取れます。
+ターゲットコンテナのポートが `443` に設定されている場合、プロトコルは `HTTP` に設定され、ロードバランサーは
+Fargate タスクと TLS 接続します。ターゲットコンテナにインストールされた証明書が利用されます。
 
 <span class="parent-field">http.</span><a id="http-stickiness" href="#http-stickiness" class="field">`stickiness`</a> <span class="type">Boolean</span>  
 スティッキーセッションの有効化、あるいは無効化を指定します。
@@ -204,6 +208,7 @@ HTTP(S) プロトコルのバージョン。 `'grpc'`、 `'http1'`、または `
 gRPC を利用する場合は、Application にドメインが関連付けられていなければなりません。
 
 {% include 'image-config-with-port.ja.md' %}
+ポートを `443` に設定し、 内部ロードバランサーが `http` で有効化されている場合、プロトコルは `HTTPS` に設定され、ロードバランサーは Fargate タスクと TLS 接続します。ターゲットコンテナにインストールされた証明書が利用されます。
 
 {% include 'image-healthcheck.ja.md' %}
 

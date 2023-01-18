@@ -6,6 +6,7 @@ package manifest
 import (
 	"fmt"
 	"reflect"
+	"strings"
 	"time"
 
 	"github.com/imdario/mergo"
@@ -26,7 +27,7 @@ var defaultTransformers = []mergo.Transformers{
 	serviceConnectTransformer{},
 	placementArgOrStringTransformer{},
 	subnetListOrArgsTransformer{},
-	healthCheckArgsOrStringTransformer{},
+	unionTransformer{},
 	countTransformer{},
 	advancedCountTransformer{},
 	scalingConfigOrTTransformer[Percentage]{},
@@ -291,28 +292,45 @@ func (t subnetListOrArgsTransformer) Transformer(typ reflect.Type) func(dst, src
 	}
 }
 
-type healthCheckArgsOrStringTransformer struct{}
+type unionTransformer struct{}
 
-// Transformer returns custom merge logic for HealthCheckArgsOrString's fields.
-func (t healthCheckArgsOrStringTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
-	if typ != reflect.TypeOf(HealthCheckArgsOrString{}) {
+var unionPrefix, _, _ = strings.Cut(reflect.TypeOf(Union[any, any]{}).String(), "[")
+
+// Transformer returns custom merge logic for union types.
+func (t unionTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
+	// :sweat_smile: https://github.com/golang/go/issues/54393
+	// reflect currently doesn't have support for getting type parameters
+	// or checking if a type is a non-specific instantiation of a generic type
+	// (i.e., no way to tell if the type Union[string, bool] is a Union)
+	isUnion := strings.HasPrefix(typ.String(), unionPrefix)
+	if !isUnion {
 		return nil
 	}
 
-	return func(dst, src reflect.Value) error {
-		dstStruct, srcStruct := dst.Interface().(HealthCheckArgsOrString), src.Interface().(HealthCheckArgsOrString)
+	return func(dst, src reflect.Value) (err error) {
+		defer func() {
+			// should realistically never happen unless Union type code has been
+			// refactored to change functions called via reflection.
+			if r := recover(); r != nil {
+				err = fmt.Errorf("override union: %v", r)
+			}
+		}()
 
-		if srcStruct.HealthCheckPath != nil {
-			dstStruct.HealthCheckArgs = HTTPHealthCheckArgs{}
+		isBasic := src.MethodByName("IsBasic").Call(nil)[0].Bool()
+		isAdvanced := src.MethodByName("IsAdvanced").Call(nil)[0].Bool()
+
+		// Call SetType with the correct type based on src's type.
+		// We use the value from dst because it holds the merged value.
+		if isBasic {
+			if dst.CanAddr() {
+				dst.Addr().MethodByName("SetBasic").Call([]reflect.Value{dst.FieldByName("Basic")})
+			}
+		} else if isAdvanced {
+			if dst.CanAddr() {
+				dst.Addr().MethodByName("SetAdvanced").Call([]reflect.Value{dst.FieldByName("Advanced")})
+			}
 		}
 
-		if !srcStruct.HealthCheckArgs.isEmpty() {
-			dstStruct.HealthCheckPath = nil
-		}
-
-		if dst.CanSet() { // For extra safety to prevent panicking.
-			dst.Set(reflect.ValueOf(dstStruct))
-		}
 		return nil
 	}
 }
@@ -531,10 +549,10 @@ func (t secretTransformer) Transformer(typ reflect.Type) func(dst, src reflect.V
 		dstStruct, srcStruct := dst.Interface().(Secret), src.Interface().(Secret)
 
 		if !srcStruct.fromSecretsManager.IsEmpty() {
-			dstStruct.from = nil
+			dstStruct.from = stringOrFromCFN{}
 		}
 
-		if srcStruct.from != nil {
+		if !srcStruct.from.isEmpty() {
 			dstStruct.fromSecretsManager = secretsManagerSecret{}
 		}
 

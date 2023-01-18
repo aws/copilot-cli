@@ -14,6 +14,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/dustin/go-humanize/english"
+	"github.com/spf13/afero"
 
 	"github.com/aws/aws-sdk-go/service/ssm"
 
@@ -185,17 +186,14 @@ func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
 		return nil, err
 	}
 	store := config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
-
 	cfg, err := profile.NewConfig()
 	if err != nil {
 		return nil, fmt.Errorf("read named profiles: %w", err)
 	}
-
 	prompter := prompt.New()
-
-	ws, err := workspace.New()
+	ws, err := workspace.Use(afero.NewOsFs())
 	if err != nil {
-		return nil, fmt.Errorf("create workspace: %w", err)
+		return nil, err
 	}
 	return &initEnvOpts{
 		initEnvVars:  vars,
@@ -692,7 +690,7 @@ func (o *initEnvOpts) deployEnv(app *config.Application) error {
 	if err != nil {
 		return fmt.Errorf("get identity: %w", err)
 	}
-	deployEnvInput := &deploy.CreateEnvironmentInput{
+	deployEnvInput := &stack.EnvConfig{
 		Name: o.name,
 		App: deploy.AppInformation{
 			Name:                o.appName,
@@ -708,7 +706,7 @@ func (o *initEnvOpts) deployEnv(app *config.Application) error {
 	if err := o.cleanUpDanglingRoles(o.appName, o.name); err != nil {
 		return err
 	}
-	if err := o.envDeployer.CreateAndRenderEnvironment(deployEnvInput); err != nil {
+	if err := o.envDeployer.CreateAndRenderEnvironment(stack.NewBootstrapEnvStackConfig(deployEnvInput), artifactBucketARN); err != nil {
 		var existsErr *cloudformation.ErrStackAlreadyExists
 		if errors.As(err, &existsErr) {
 			// Do nothing if the stack already exists.

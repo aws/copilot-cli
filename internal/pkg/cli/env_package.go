@@ -32,6 +32,7 @@ import (
 const (
 	envCFNTemplateNameFmt              = "%s.env.yml"
 	envCFNTemplateConfigurationNameFmt = "%s.env.params.json"
+	envAddonsCFNTemplateName           = "env.addons.yml"
 )
 
 type packageEnvVars struct {
@@ -49,7 +50,7 @@ func (df discardFile) Write(p []byte) (n int, err error) {
 }
 
 func (df discardFile) Close() error {
-	return nil //noop
+	return nil // noop
 }
 
 type packageEnvOpts struct {
@@ -63,9 +64,10 @@ type packageEnvOpts struct {
 	fs           afero.Fs
 	tplWriter    io.WriteCloser
 	paramsWriter io.WriteCloser
+	addonsWriter io.WriteCloser
 
 	newInterpolator func(appName, envName string) interpolator
-	newEnvDeployer  func() (envPackager, error)
+	newEnvPackager  func() (envPackager, error)
 
 	// Cached variables.
 	appCfg *config.Application
@@ -79,9 +81,10 @@ func newPackageEnvOpts(vars packageEnvVars) (*packageEnvOpts, error) {
 		return nil, fmt.Errorf("default session: %v", err)
 	}
 
-	ws, err := workspace.New()
+	fs := afero.NewOsFs()
+	ws, err := workspace.Use(fs)
 	if err != nil {
-		return nil, fmt.Errorf("new workspace: %v", err)
+		return nil, err
 	}
 	cfgStore := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
 
@@ -92,15 +95,16 @@ func newPackageEnvOpts(vars packageEnvVars) (*packageEnvOpts, error) {
 		ws:           ws,
 		sel:          selector.NewLocalEnvironmentSelector(prompt.New(), cfgStore, ws),
 		caller:       identity.New(defaultSess),
-		fs:           &afero.Afero{Fs: afero.NewOsFs()},
+		fs:           fs,
 		tplWriter:    os.Stdout,
 		paramsWriter: discardFile{},
+		addonsWriter: discardFile{},
 
 		newInterpolator: func(appName, envName string) interpolator {
 			return manifest.NewInterpolator(appName, envName)
 		},
 	}
-	opts.newEnvDeployer = func() (envPackager, error) {
+	opts.newEnvPackager = func() (envPackager, error) {
 		appCfg, err := opts.getAppCfg()
 		if err != nil {
 			return nil, err
@@ -114,6 +118,7 @@ func newPackageEnvOpts(vars packageEnvVars) (*packageEnvOpts, error) {
 			Env:             envCfg,
 			SessionProvider: sessProvider,
 			ConfigStore:     opts.cfgStore,
+			Workspace:       ws,
 		})
 	}
 	return opts, nil
@@ -151,23 +156,25 @@ func (o *packageEnvOpts) Execute() error {
 	if err != nil {
 		return fmt.Errorf("get caller principal identity: %v", err)
 	}
-	deployer, err := o.newEnvDeployer()
+	packager, err := o.newEnvPackager()
 	if err != nil {
 		return err
 	}
-	if err := deployer.Validate(mft); err != nil {
+	if err := packager.Validate(mft); err != nil {
 		return err
 	}
-	var urls map[string]string
+	var uploadArtifactsOut deploy.UploadEnvArtifactsOutput
 	if o.uploadAssets {
-		urls, err = deployer.UploadArtifacts()
+		out, err := packager.UploadArtifacts()
 		if err != nil {
 			return fmt.Errorf("upload assets for environment %q: %v", o.envName, err)
 		}
+		uploadArtifactsOut = *out
 	}
-	res, err := deployer.GenerateCloudFormationTemplate(&deploy.DeployEnvironmentInput{
+	res, err := packager.GenerateCloudFormationTemplate(&deploy.DeployEnvironmentInput{
 		RootUserARN:         principal.RootUserARN,
-		CustomResourcesURLs: urls,
+		AddonsURL:           uploadArtifactsOut.AddonsURL,
+		CustomResourcesURLs: uploadArtifactsOut.CustomResourceURLs,
 		Manifest:            mft,
 		RawManifest:         rawMft,
 		PermissionsBoundary: o.appCfg.PermissionsBoundary,
@@ -176,13 +183,26 @@ func (o *packageEnvOpts) Execute() error {
 	if err != nil {
 		return fmt.Errorf("generate CloudFormation template from environment %q manifest: %v", o.envName, err)
 	}
+	addonsTemplate, err := packager.AddonsTemplate()
+	if err != nil {
+		return fmt.Errorf("retrieve environment addons template: %w", err)
+	}
 	if err := o.setWriters(); err != nil {
 		return err
 	}
 	if err := o.writeAndClose(o.tplWriter, res.Template); err != nil {
 		return err
 	}
-	return o.writeAndClose(o.paramsWriter, res.Parameters)
+	if err := o.writeAndClose(o.paramsWriter, res.Parameters); err != nil {
+		return err
+	}
+	if addonsTemplate == "" {
+		return nil
+	}
+	if err := o.setAddonsWriter(); err != nil {
+		return err
+	}
+	return o.writeAndClose(o.addonsWriter, addonsTemplate)
 }
 
 func (o *packageEnvOpts) getAppCfg() (*config.Application, error) {
@@ -248,6 +268,19 @@ func (o *packageEnvOpts) setWriters() error {
 
 	o.tplWriter = tplFile
 	o.paramsWriter = paramsFile
+	return nil
+}
+
+func (o *packageEnvOpts) setAddonsWriter() error {
+	if o.outputDir == "" {
+		return nil
+	}
+	addonsPath := filepath.Join(o.outputDir, envAddonsCFNTemplateName)
+	addonsFile, err := o.fs.Create(addonsPath)
+	if err != nil {
+		return fmt.Errorf("create file %s: %w", addonsPath, err)
+	}
+	o.addonsWriter = addonsFile
 	return nil
 }
 

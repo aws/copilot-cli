@@ -169,9 +169,17 @@ func TestRequestDrivenWebService_UnmarshalYaml(t *testing.T) {
 
 			wantedStruct: RequestDrivenWebService{
 				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
-					Variables: map[string]string{
-						"LOG_LEVEL": "info",
-						"NODE_ENV":  "development",
+					Variables: map[string]Variable{
+						"LOG_LEVEL": {
+							stringOrFromCFN{
+								Plain: stringP("info"),
+							},
+						},
+						"NODE_ENV": {
+							stringOrFromCFN{
+								Plain: stringP("development"),
+							},
+						},
 					},
 				},
 			},
@@ -208,13 +216,13 @@ func TestRequestDrivenWebService_UnmarshalYaml(t *testing.T) {
 				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
 					RequestDrivenWebServiceHttpConfig: RequestDrivenWebServiceHttpConfig{
 						HealthCheckConfiguration: HealthCheckArgsOrString{
-							HealthCheckArgs: HTTPHealthCheckArgs{
+							Union: AdvancedToUnion[string](HTTPHealthCheckArgs{
 								Path:               aws.String("/healthcheck"),
 								HealthyThreshold:   aws.Int64(3),
 								UnhealthyThreshold: aws.Int64(5),
 								Interval:           durationp(10 * time.Second),
 								Timeout:            durationp(5 * time.Second),
-							},
+							}),
 						},
 						Alias: aws.String("convex.domain.com"),
 					},
@@ -231,7 +239,7 @@ func TestRequestDrivenWebService_UnmarshalYaml(t *testing.T) {
 				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
 					RequestDrivenWebServiceHttpConfig: RequestDrivenWebServiceHttpConfig{
 						HealthCheckConfiguration: HealthCheckArgsOrString{
-							HealthCheckPath: aws.String("/healthcheck"),
+							Union: BasicToUnion[string, HTTPHealthCheckArgs]("/healthcheck"),
 						},
 					},
 				},

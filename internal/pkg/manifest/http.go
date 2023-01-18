@@ -57,6 +57,7 @@ type RoutingRuleConfiguration struct {
 	DeregistrationDelay *time.Duration          `yaml:"deregistration_delay"`
 	// TargetContainer is the container load balancer routes traffic to.
 	TargetContainer          *string `yaml:"target_container"`
+	TargetPort               *uint16 `yaml:"target_port"`
 	TargetContainerCamelCase *string `yaml:"targetContainer"` // "targetContainerCamelCase" for backwards compatibility
 	AllowedSourceIps         []IPNet `yaml:"allowed_source_ips"`
 	HostedZone               *string `yaml:"hosted_zone"`
@@ -75,7 +76,7 @@ func (r *RoutingRuleConfiguration) GetTargetContainer() *string {
 
 // IsEmpty returns true if RoutingRuleConfiguration has empty configuration.
 func (r *RoutingRuleConfiguration) IsEmpty() bool {
-	return r.Path == nil && r.ProtocolVersion == nil && r.HealthCheck.IsEmpty() && r.Stickiness == nil && r.Alias.IsEmpty() &&
+	return r.Path == nil && r.ProtocolVersion == nil && r.HealthCheck.IsZero() && r.Stickiness == nil && r.Alias.IsEmpty() &&
 		r.DeregistrationDelay == nil && r.TargetContainer == nil && r.TargetContainerCamelCase == nil && r.AllowedSourceIps == nil &&
 		r.HostedZone == nil && r.RedirectToHTTPS == nil
 }

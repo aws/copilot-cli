@@ -19,7 +19,16 @@ image:
 {{- end}}
   # Port exposed through your container to route traffic to it.
   port: {{.ImageConfig.Port}}
-
+{{if .Private.IsBasic}}
+http:
+  private: {{.Private.Basic}}
+  # healthcheck:
+  #   path: /
+  #   healthy_threshold: 3
+  #   unhealthy_threshold: 5
+  #   interval: 10s
+  #   timeout: 5s
+{{- else}}
 # http:
 #   healthcheck:
 #     path: /
@@ -27,16 +36,23 @@ image:
 #     unhealthy_threshold: 5
 #     interval: 10s
 #     timeout: 5s
+{{- end}}
 
 # Number of CPU units for the task.
 cpu: {{.InstanceConfig.CPU}}
 # Amount of memory in MiB used by the task.
 memory: {{.InstanceConfig.Memory}}
-
-# # Connect your App Runner service to your environment's VPC.
+{{if .Network.VPC.Placement.PlacementString}}
+# Connect your App Runner service to your environment's VPC.
+network:
+  vpc:
+    placement: {{.Network.VPC.Placement.PlacementString}}
+{{else}}
+# Connect your App Runner service to your environment's VPC.
 # network:
 #   vpc:
 #     placement: private
+{{end}}
 
 # Enable tracing for the service.
 # observability:

@@ -5,11 +5,11 @@ package manifest
 
 import (
 	"fmt"
-	"strconv"
-
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudfront"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/dustin/go-humanize/english"
+	"strconv"
+	"strings"
 )
 
 // ErrInvalidWorkloadType occurs when a user requested a manifest template type that doesn't exist.
@@ -98,6 +98,55 @@ func (e *errFieldMutualExclusive) Error() string {
 	return fmt.Sprintf(`must specify one, not both, of "%s" and "%s"`, e.firstField, e.secondField)
 }
 
+type errSpecifiedBothIngressFields struct {
+	firstField  string
+	secondField string
+}
+
+func (e *errSpecifiedBothIngressFields) Error() string {
+	return fmt.Sprintf(`must specify one, not both, of "%s" and "%s"`, e.firstField, e.secondField)
+}
+
+// RecommendActions returns recommended actions to be taken after the error.
+func (e *errSpecifiedBothIngressFields) RecommendActions() string {
+	privateOrPublicField := strings.Split(e.firstField, ".")[0]
+	if privateOrPublicField == "public" {
+		return `
+It looks like you specified ingress under both "http.public.security_groups.ingress" and "http.public.ingress".
+After Copilot v1.23.0, we have deprecated "http.public.security_groups.ingress" in favor of "http.public.ingress". 
+This means that "http.public.security_groups.ingress.cdn" is removed in favor of "http.public.ingress.cdn".
+With the new release manifest configuration for cdn looks like:
+
+http:
+  public:
+    ingress:
+      cdn: true
+`
+	}
+
+	return `
+It looks like you specified ingress under both "http.private.security_groups.ingress" and "http.private.ingress".
+After Copilot v1.23.0, we have deprecated "http.private.security_groups.ingress" in favor of "http.private.ingress". 
+This means that "http.private.security_groups.ingress.from_vpc" is removed in favor of "http.private.ingress.vpc".
+With the new release manifest configuration for vpc looks like:
+
+http:
+  private:
+    ingress:
+      vpc: true
+`
+}
+
+type errRangeValueLessThanZero struct {
+	min      int
+	max      int
+	spotFrom int
+}
+
+func (e *errRangeValueLessThanZero) Error() string {
+	return fmt.Sprintf("min value %d, max value %d, and spot_from value %d must all be positive", e.min, e.max, e.spotFrom)
+}
+
 type errMinGreaterThanMax struct {
 	min int
 	max int
@@ -139,4 +188,14 @@ func quoteStringSlice(in []string) []string {
 		quoted[idx] = strconv.Quote(str)
 	}
 	return quoted
+}
+
+type errContainersExposingSamePort struct {
+	firstContainer  string
+	secondContainer string
+	port            uint16
+}
+
+func (e *errContainersExposingSamePort) Error() string {
+	return fmt.Sprintf(`containers %q and %q are exposing the same port %d`, e.firstContainer, e.secondContainer, e.port)
 }

@@ -20,6 +20,8 @@ Parameters:
     Type: String
   NATWorkloads:
     Type: String
+  AppRunnerPrivateWorkloads:
+    Type: String
   ToolsAccountPrincipalARN:
     Type: String
   AppDNSName:
@@ -53,6 +55,8 @@ Conditions:
     !Not [!Equals [ !Ref EFSWorkloads, ""]]
   CreateNATGateways:
     !Not [!Equals [ !Ref NATWorkloads, ""]]
+  CreateAppRunnerVPCEndpoint:
+    !Not [!Equals [ !Ref AppRunnerPrivateWorkloads, ""]]
   ManagedAliases: !And
     - !Condition DelegateDNS
     - !Not [!Equals [ !Ref Aliases, "" ]]
@@ -111,7 +115,7 @@ Resources:
     Properties:
       GroupDescription: HTTP access to the public facing load balancer
       SecurityGroupIngress:
-        {{- if .PublicHTTPConfig.CIDRPrefixListIDs}}
+        {{- if .PublicHTTPConfig.HasCustomIngress}}
         {{- range $id := .PublicHTTPConfig.CIDRPrefixListIDs}}
         - SourcePrefixListId: {{$id}}
           Description: Allow ingress from prefix list {{$id}} on port 80
@@ -119,6 +123,13 @@ Resources:
           IpProtocol: tcp
           ToPort: 80
         {{- end}}
+        {{- range $cidr := .PublicHTTPConfig.PublicALBSourceIPs }}
+        - CidrIp: {{$cidr}}
+          Description: Allow ingress from source IP {{$cidr}} on port 80
+          FromPort: 80
+          IpProtocol: tcp
+          ToPort: 80
+        {{- end }}
         {{- else}}
         - CidrIp: 0.0.0.0/0
           Description: Allow from anyone on port 80
@@ -142,7 +153,7 @@ Resources:
     Properties:
       GroupDescription: HTTPS access to the public facing load balancer
       SecurityGroupIngress:
-        {{- if .PublicHTTPConfig.CIDRPrefixListIDs}}
+        {{- if .PublicHTTPConfig.HasCustomIngress}}
         {{- range $id := .PublicHTTPConfig.CIDRPrefixListIDs}}
         - SourcePrefixListId: {{$id}}
           Description: Allow ingress from prefix list {{$id}} on port 443
@@ -150,6 +161,13 @@ Resources:
           IpProtocol: tcp
           ToPort: 443
         {{- end}}
+        {{- range $cidr := .PublicHTTPConfig.PublicALBSourceIPs }}
+        - CidrIp: {{$cidr}}
+          Description: Allow ingress from source IP {{$cidr}} on port 443
+          FromPort: 443
+          IpProtocol: tcp
+          ToPort: 443
+        {{- end }}
         {{- else}}
         - CidrIp: 0.0.0.0/0
           Description: Allow from anyone on port 443
@@ -282,6 +300,9 @@ Resources:
     Metadata:
       'aws:copilot:description': 'An Application Load Balancer to distribute public traffic to your services'
     Condition: CreateALB
+    {{- if .PublicHTTPConfig.ELBAccessLogs.ShouldCreateBucket}}
+    DependsOn: ELBAccessLogsBucketPolicy
+    {{- end}}
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
       {{- if .PublicHTTPConfig.ELBAccessLogs }}
@@ -356,6 +377,9 @@ Resources:
       LoadBalancerArn: !Ref PublicLoadBalancer
       Port: 443
       Protocol: HTTPS
+{{- if .PublicHTTPConfig.SSLPolicy }}
+      SslPolicy: {{ .PublicHTTPConfig.SSLPolicy }}
+{{- end }} 
 {{- range $ind, $arn := .PublicHTTPConfig.ImportedCertARNs}}
 {{- if gt $ind 0}}
   HTTPSImportCertificate{{inc $ind}}:
@@ -432,6 +456,9 @@ Resources:
       LoadBalancerArn: !Ref InternalLoadBalancer
       Port: 443
       Protocol: HTTPS
+{{- if .PrivateHTTPConfig.SSLPolicy }}
+      SslPolicy: {{ .PrivateHTTPConfig.SSLPolicy }}
+{{- end}}      
 {{- range $ind, $arn := .PrivateHTTPConfig.ImportedCertARNs}}
 {{- if gt $ind 0}}
   InternalHTTPSImportCertificate{{inc $ind}}:
@@ -557,6 +584,83 @@ Resources:
 {{include "lambdas" . | indent 2}}
 {{include "custom-resources" . | indent 2}}
 {{- end}}
+{{- if not .VPCConfig.Imported}}
+{{include "ar-vpc-connector" . | indent 2}}
+{{- end}}
+{{- if .VPCConfig.FlowLogs}}
+  VpcFlowLogGroup:
+    Type: AWS::Logs::LogGroup
+    Metadata:
+      'aws:copilot:description': 'A CloudWatch log group with {{.VPCConfig.FlowLogs.Retention}} days retention for VPC flow log data'
+    Properties:
+      LogGroupName: !Join ['-', [!Ref AppName, !Ref EnvironmentName, FlowLogs]]
+      RetentionInDays: {{.VPCConfig.FlowLogs.Retention}}       
+  FlowLog:
+    Metadata:
+      'aws:copilot:description': 'A flow log for the VPC to capture information about the IP traffic'
+    Type: AWS::EC2::FlowLog
+    Properties:
+      DeliverLogsPermissionArn: !GetAtt FlowLogRole.Arn
+      LogDestinationType: cloud-watch-logs
+      LogGroupName: !Ref VpcFlowLogGroup
+      MaxAggregationInterval: 60
+{{- if .VPCConfig.Imported}}
+      ResourceId: {{.VPCConfig.Imported.ID}}
+{{- else}}
+      ResourceId: !Ref VPC
+{{- end}}                 
+      ResourceType: VPC
+      TrafficType:  ALL
+# Reference to IAM Role policy for Publish flow logs to CloudWatch Logs: https://go.aws/3euClbg     
+  FlowLogRole:
+    Metadata:
+      'aws:copilot:description': 'An IAM Role {{- if .PermissionsBoundary}} with permissions boundary {{.PermissionsBoundary}} {{- end}} for the flow logs service to publish logs'
+    Type: AWS::IAM::Role
+    Properties:
+      {{- if .PermissionsBoundary}}
+      PermissionsBoundary: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/{{.PermissionsBoundary}}'
+      {{- end}}
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: vpc-flow-logs.amazonaws.com
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+              ArnLike:
+                aws:SourceArn: !Sub 'arn:${AWS::Partition}:ec2:${AWS::Region}:${AWS::AccountId}:vpc-flow-log/*'
+      Policies:
+        - PolicyName: 'GrantAccesstoEC2toPublishFlowlogs'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                  - logs:DescribeLogGroups
+                  - logs:DescribeLogStreams
+                Resource: "*"
+{{- end}}
+{{- if .Addons}}
+  AddonsStack:
+    Metadata:
+      'aws:copilot:description': 'A CloudFormation nested stack for your additional AWS resources'
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        App: !Ref AppName
+        Env: !Ref EnvironmentName
+        {{- if .Addons.ExtraParams }}
+        {{ .Addons.ExtraParams }}
+        {{- end}}
+      TemplateURL: {{.Addons.URL}}
+{{- end }}
+
 Outputs:
   VpcId:
 {{- if .VPCConfig.Imported}}
@@ -716,7 +820,7 @@ Outputs:
       Name: !Sub ${AWS::StackName}-SubDomain
 {{- end}}
   EnabledFeatures:
-    Value: !Sub '${ALBWorkloads},${InternalALBWorkloads},${EFSWorkloads},${NATWorkloads},${Aliases}'
+    Value: !Sub '${ALBWorkloads},${InternalALBWorkloads},${EFSWorkloads},${NATWorkloads},${Aliases},${AppRunnerPrivateWorkloads}'
     Description: Required output to force the stack to update if mutating feature params, like ALBWorkloads, does not change the template.
   ManagedFileSystemID:
     Condition: CreateEFS
@@ -742,3 +846,11 @@ Outputs:
   LastForceDeployID:
     Value: {{quote .ForceUpdateID}}
     Description: Optionally force the template to update when no immediate resource change is present.
+{{- if not .VPCConfig.Imported}}
+  AppRunnerVpcEndpointId:
+    Condition: CreateAppRunnerVPCEndpoint
+    Value: !Ref AppRunnerVpcEndpoint
+    Description: VPC Endpoint to App Runner for private services
+    Export:
+      Name: !Sub ${AWS::StackName}-AppRunnerVpcEndpointId
+{{- end}}

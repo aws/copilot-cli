@@ -8,11 +8,11 @@ List of all available properties for a `'Request-Driven Web Service'` manifest.
         # Deploys a web service accessible at https://web.example.com.
         name: frontend
         type: Request-Driven Web Service
-    
+
         http:
           healthcheck: '/_healthcheck'
           alias: web.example.com
-    
+
         image:
           build: ./frontend/Dockerfile
           port: 80
@@ -25,10 +25,11 @@ List of all available properties for a `'Request-Driven Web Service'` manifest.
           owner: frontend
         observability:
           tracing: awsxray
-    
+
         environments:
           test:
-            LOG_LEVEL: debug
+            variables:
+              LOG_LEVEL: debug
         ```
 
     === "Connected to the environment VPC"
@@ -85,7 +86,18 @@ The architecture type for your service. A [Request-Driven Web Service](../concep
 <a id="http" href="#http" class="field">`http`</a> <span class="type">Map</span>  
 The http section contains parameters related to the managed load balancer.
 
-<span class="parent-field">http.</span><a id="http-healthcheck" href="#http-healthcheck" class="field">`healthcheck`</a> <span class="type">String or Map</span>  
+<span class="parent-field">http.</span><a id="http-private" href="#http-private" class="field">`private`</a> <span class="type">Bool or Map</span>
+Restrict incoming traffic to only your environment. Defaults to false.
+
+<span class="parent-field">http.private</span><a id="http-private-endpoint" href="#http-private-endpoint" class="field">`endpoint`</a> <span class="type">String</span>
+The ID of an existing VPC Endpoint to App Runner.
+```yaml
+http:
+  private:
+    endpoint: vpce-12345
+```
+
+<span class="parent-field">http.</span><a id="http-healthcheck" href="#http-healthcheck" class="field">`healthcheck`</a> <span class="type">String or Map</span>
 If you specify a string, Copilot interprets it as the path exposed in your container to handle target group health check requests. The default is "/".
 ```yaml
 http:
@@ -175,7 +187,7 @@ Amount of memory in MiB reserved for each instance of your service. See the [AWS
 
 <a id="network" href="#network" class="field">`network`</a> <span class="type">Map</span>      
 The `network` section contains parameters for connecting the service to AWS resources in the environment's VPC.  
-By connecting the service to a VPC, you can use [service discovery](../developing/service-discovery.en.md) to communicate with other services
+By connecting the service to a VPC, you can use [service discovery](../developing/svc-to-svc-communication.en.md#service-discovery) to communicate with other services
 in your environment, or connect to a database in your VPC such as Amazon Aurora with [`storage init`](../commands/storage-init.en.md).
 
 <span class="parent-field">network.</span><a id="network-vpc" href="#network-vpc" class="field">`vpc`</a> <span class="type">Map</span>    
@@ -186,7 +198,7 @@ The only valid option today is `'private'`. If you prefer the service not to be 
 
 When the placement is `'private'`, the App Runner service routes egress traffic through the private subnets of the VPC.  
 If you use a Copilot-generated VPC, Copilot will automatically add NAT Gateways to your environment for internet connectivity. (See [pricing](https://aws.amazon.com/vpc/pricing/).)
-Alternatively, when running `copilot env init`, you can import an existing VPC with NAT Gateways, or one with VPC endpoints 
+Alternatively, when running `copilot env init`, you can import an existing VPC with NAT Gateways, or one with VPC endpoints
 for isolated workloads. See our [custom environment resources](../developing/custom-environment-resources.en.md) page for more.
 
 {% include 'observability.en.md' %}
@@ -210,6 +222,13 @@ Key-value pairs representing AWS tags that are passed down to your AWS App Runne
 
 <div class="separator"></div>
 
+<a id="count" href="#count" class="field">`count`</a> <span class="type">String</span>
+Specify the name of an existing autoscaling configuration.
+```yaml
+count: high-availability/3
+```
+
+<div class="separator"></div>
+
 <a id="environments" href="#environments" class="field">`environments`</a> <span class="type">Map</span>  
 The environment section lets you override any value in your manifest based on the environment you're in. In the example manifest above, we're overriding the `LOG_LEVEL` environment variable in our 'test' environment.
-

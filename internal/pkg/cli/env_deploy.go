@@ -16,19 +16,22 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/cli/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
+	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
 
 type deployEnvVars struct {
-	appName        string
-	name           string
-	forceNewUpdate bool
+	appName         string
+	name            string
+	forceNewUpdate  bool
+	disableRollback bool
 }
 
 type deployEnvOpts struct {
@@ -59,9 +62,9 @@ func newEnvDeployOpts(vars deployEnvVars) (*deployEnvOpts, error) {
 		return nil, err
 	}
 	store := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
-	ws, err := workspace.New()
+	ws, err := workspace.Use(afero.NewOsFs())
 	if err != nil {
-		return nil, fmt.Errorf("new workspace: %w", err)
+		return nil, err
 	}
 	opts := &deployEnvOpts{
 		deployEnvVars: vars,
@@ -75,12 +78,12 @@ func newEnvDeployOpts(vars deployEnvVars) (*deployEnvOpts, error) {
 		newInterpolator: newManifestInterpolator,
 	}
 	opts.newEnvDeployer = func() (envDeployer, error) {
-		return newEnvDeployer(opts)
+		return newEnvDeployer(opts, ws)
 	}
 	return opts, nil
 }
 
-func newEnvDeployer(opts *deployEnvOpts) (envDeployer, error) {
+func newEnvDeployer(opts *deployEnvOpts, ws deploy.WorkspaceAddonsReaderPathGetter) (envDeployer, error) {
 	app, err := opts.cachedTargetApp()
 	if err != nil {
 		return nil, err
@@ -94,6 +97,7 @@ func newEnvDeployer(opts *deployEnvOpts) (envDeployer, error) {
 		Env:             env,
 		SessionProvider: opts.sessionProvider,
 		ConfigStore:     opts.store,
+		Workspace:       ws,
 	})
 }
 
@@ -135,17 +139,19 @@ func (o *deployEnvOpts) Execute() error {
 	if err := deployer.Validate(mft); err != nil {
 		return err
 	}
-	urls, err := deployer.UploadArtifacts()
+	artifacts, err := deployer.UploadArtifacts()
 	if err != nil {
 		return fmt.Errorf("upload artifacts for environment %s: %w", o.name, err)
 	}
 	if err := deployer.DeployEnvironment(&deploy.DeployEnvironmentInput{
 		RootUserARN:         caller.RootUserARN,
-		CustomResourcesURLs: urls,
+		AddonsURL:           artifacts.AddonsURL,
+		CustomResourcesURLs: artifacts.CustomResourceURLs,
 		Manifest:            mft,
 		ForceNewUpdate:      o.forceNewUpdate,
 		RawManifest:         rawMft,
 		PermissionsBoundary: o.targetApp.PermissionsBoundary,
+		DisableRollback:     o.disableRollback,
 	}); err != nil {
 		var errEmptyChangeSet *awscfn.ErrChangeSetEmpty
 		if errors.As(err, &errEmptyChangeSet) {
@@ -155,6 +161,16 @@ necessary by a service deployment.
 
 In this case, you can run %s to push a modified template, even if there are no immediate changes.
 `, color.HighlightCode("copilot env deploy --force"))
+		}
+		if o.disableRollback {
+			stackName := stack.NameForEnv(o.targetApp.Name, o.targetEnv.Name)
+			rollbackCmd := fmt.Sprintf("aws cloudformation rollback-stack --stack-name %s --role-arn %s", stackName, o.targetEnv.ExecutionRoleARN)
+			log.Infof(`It seems like you have disabled automatic stack rollback for this deployment.
+To debug, you can visit the AWS console to inspect the errors.
+After fixing the deployment, you can:
+1. Run %s to rollback the deployment.
+2. Run %s to make a new deployment.
+`, color.HighlightCode(rollbackCmd), color.HighlightCode("copilot env deploy"))
 		}
 		return fmt.Errorf("deploy environment %s: %w", o.name, err)
 	}
@@ -270,5 +286,6 @@ Deploy an environment named "test".
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
 	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, "", envFlagDescription)
 	cmd.Flags().BoolVar(&vars.forceNewUpdate, forceFlag, false, forceEnvDeployFlagDescription)
+	cmd.Flags().BoolVar(&vars.disableRollback, noRollbackFlag, false, noRollbackFlagDescription)
 	return cmd
 }

@@ -103,7 +103,7 @@ func convertSidecar(s map[string]*manifest.SidecarConfig) ([]*template.SidecarOp
 			Protocol:   protocol,
 			CredsParam: config.CredsParam,
 			Secrets:    convertSecrets(config.Secrets),
-			Variables:  config.Variables,
+			Variables:  convertEnvVars(config.Variables),
 			Storage: template.SidecarStorageOpts{
 				MountPoints: mp,
 			},
@@ -198,18 +198,21 @@ func convertCapacityProviders(a manifest.AdvancedCount) []*template.CapacityProv
 		CapacityProvider: capacityProviderFargateSpot,
 	})
 	rc := a.Range.RangeConfig
-	// Return if only spot is specifed as count
+	// Return if only spot is specified as count
 	if rc.SpotFrom == nil {
 		return cps
 	}
 	// Scaling with spot
 	spotFrom := aws.IntValue(rc.SpotFrom)
 	min := aws.IntValue(rc.Min)
-	// If spotFrom value is not equal to the autoscaling min, then
-	// the base value on the Fargate Capacity provider must be set
+	// If spotFrom value is greater than or equal to the autoscaling min,
+	// then the base value on the Fargate capacity provider must be set
 	// to one less than spotFrom
-	if spotFrom > min {
+	if spotFrom >= min {
 		base := spotFrom - 1
+		if base < 0 {
+			base = 0
+		}
 		fgCapacity := &template.CapacityProviderStrategy{
 			Base:             aws.Int(base),
 			Weight:           aws.Int(0),
@@ -325,29 +328,34 @@ func convertAutoscaling(a manifest.AdvancedCount) (*template.AutoscalingOpts, er
 func convertHTTPHealthCheck(hc *manifest.HealthCheckArgsOrString) template.HTTPHealthCheckOpts {
 	opts := template.HTTPHealthCheckOpts{
 		HealthCheckPath:    manifest.DefaultHealthCheckPath,
-		HealthyThreshold:   hc.HealthCheckArgs.HealthyThreshold,
-		UnhealthyThreshold: hc.HealthCheckArgs.UnhealthyThreshold,
 		GracePeriod:        manifest.DefaultHealthCheckGracePeriod,
+		HealthyThreshold:   hc.Advanced.HealthyThreshold,
+		UnhealthyThreshold: hc.Advanced.UnhealthyThreshold,
+		SuccessCodes:       aws.StringValue(hc.Advanced.SuccessCodes),
 	}
-	if hc.HealthCheckArgs.Path != nil {
-		opts.HealthCheckPath = *hc.HealthCheckArgs.Path
-	} else if hc.HealthCheckPath != nil {
-		opts.HealthCheckPath = *hc.HealthCheckPath
+
+	if hc.IsZero() {
+		return opts
 	}
-	if hc.HealthCheckArgs.Port != nil {
-		opts.Port = strconv.Itoa(aws.IntValue(hc.HealthCheckArgs.Port))
+	if hc.IsBasic() {
+		opts.HealthCheckPath = hc.Basic
+		return opts
 	}
-	if hc.HealthCheckArgs.SuccessCodes != nil {
-		opts.SuccessCodes = *hc.HealthCheckArgs.SuccessCodes
+
+	if hc.Advanced.Path != nil {
+		opts.HealthCheckPath = *hc.Advanced.Path
 	}
-	if hc.HealthCheckArgs.Interval != nil {
-		opts.Interval = aws.Int64(int64(hc.HealthCheckArgs.Interval.Seconds()))
+	if hc.Advanced.Port != nil {
+		opts.Port = strconv.Itoa(aws.IntValue(hc.Advanced.Port))
 	}
-	if hc.HealthCheckArgs.Timeout != nil {
-		opts.Timeout = aws.Int64(int64(hc.HealthCheckArgs.Timeout.Seconds()))
+	if hc.Advanced.Interval != nil {
+		opts.Interval = aws.Int64(int64(hc.Advanced.Interval.Seconds()))
 	}
-	if hc.HealthCheckArgs.GracePeriod != nil {
-		opts.GracePeriod = int64(hc.HealthCheckArgs.GracePeriod.Seconds())
+	if hc.Advanced.Timeout != nil {
+		opts.Timeout = aws.Int64(int64(hc.Advanced.Timeout.Seconds()))
+	}
+	if hc.Advanced.GracePeriod != nil {
+		opts.GracePeriod = int64(hc.Advanced.GracePeriod.Seconds())
 	}
 	return opts
 }
@@ -360,20 +368,36 @@ type networkLoadBalancerConfig struct {
 	appDNSName           *string
 }
 
-func convertELBAccessLogsConfig(mft *manifest.Environment) (*template.ELBAccessLogs, error) {
+func convertELBAccessLogsConfig(mft *manifest.Environment) *template.ELBAccessLogs {
 	elbAccessLogsArgs, isELBAccessLogsSet := mft.ELBAccessLogs()
 	if !isELBAccessLogsSet {
-		return nil, nil
+		return nil
 	}
 
 	if elbAccessLogsArgs == nil {
-		return &template.ELBAccessLogs{}, nil
+		return &template.ELBAccessLogs{}
 	}
 
 	return &template.ELBAccessLogs{
 		BucketName: aws.StringValue(elbAccessLogsArgs.BucketName),
 		Prefix:     aws.StringValue(elbAccessLogsArgs.Prefix),
+	}
+}
+
+// convertFlowLogsConfig converts the VPC FlowLog configuration into a format parsable by the templates pkg.
+func convertFlowLogsConfig(mft *manifest.Environment) (*template.VPCFlowLogs, error) {
+	vpcFlowLogs := mft.EnvironmentConfig.Network.VPC.FlowLogs
+	if vpcFlowLogs.IsZero() {
+		return nil, nil
+	}
+	retentionInDays := aws.Int(14)
+	if vpcFlowLogs.Advanced.Retention != nil {
+		retentionInDays = vpcFlowLogs.Advanced.Retention
+	}
+	return &template.VPCFlowLogs{
+		Retention: retentionInDays,
 	}, nil
+
 }
 
 func convertEnvSecurityGroupCfg(mft *manifest.Environment) (*template.SecurityGroupConfig, error) {
@@ -512,7 +536,7 @@ func convertLogging(lc manifest.Logging) *template.LogConfigOpts {
 		EnableMetadata: lc.GetEnableMetadata(),
 		Destination:    lc.Destination,
 		SecretOptions:  convertSecrets(lc.SecretOptions),
-		Variables:      lc.Variables,
+		Variables:      convertEnvVars(lc.Variables),
 		Secrets:        convertSecrets(lc.Secrets),
 	}
 }
@@ -726,7 +750,16 @@ func convertNetworkConfig(network manifest.NetworkConfig) template.NetworkOpts {
 		AssignPublicIP: template.EnablePublicIP,
 		SubnetsType:    template.PublicSubnetsPlacement,
 	}
-	opts.SecurityGroups = network.VPC.SecurityGroups.GetIDs()
+	inSGs := network.VPC.SecurityGroups.GetIDs()
+	outSGs := make([]template.SecurityGroup, len(inSGs))
+	for i, sg := range inSGs {
+		if sg.Plain != nil {
+			outSGs[i] = template.PlainSecurityGroup(aws.StringValue(sg.Plain))
+		} else {
+			outSGs[i] = template.ImportedSecurityGroup(aws.StringValue(sg.FromCFN.Name))
+		}
+	}
+	opts.SecurityGroups = outSGs
 	opts.DenyDefaultSecurityGroup = network.VPC.SecurityGroups.IsDefaultSecurityGroupDenied()
 
 	placement := network.VPC.Placement
@@ -779,16 +812,22 @@ func convertEntryPoint(entrypoint manifest.EntryPointOverride) ([]string, error)
 	return out, nil
 }
 
-func convertDeploymentConfig(deploymentConfig manifest.DeploymentConfiguration) template.DeploymentConfigurationOpts {
-	var deployConfigs template.DeploymentConfigurationOpts
-	if strings.EqualFold(aws.StringValue(deploymentConfig.Rolling), manifest.ECSRecreateRollingUpdateStrategy) {
-		deployConfigs.MinHealthyPercent = minHealthyPercentRecreate
-		deployConfigs.MaxPercent = maxPercentRecreate
-	} else {
-		deployConfigs.MinHealthyPercent = minHealthyPercentDefault
-		deployConfigs.MaxPercent = maxPercentDefault
+func convertDeploymentConfig(in manifest.DeploymentConfiguration) template.DeploymentConfigurationOpts {
+	out := template.DeploymentConfigurationOpts{
+		MinHealthyPercent: minHealthyPercentDefault,
+		MaxPercent:        maxPercentDefault,
+		Rollback: template.RollingUpdateRollbackConfig{
+			AlarmNames:        in.RollbackAlarms.Basic,
+			CPUUtilization:    in.RollbackAlarms.Advanced.CPUUtilization,
+			MemoryUtilization: in.RollbackAlarms.Advanced.MemoryUtilization,
+		},
 	}
-	return deployConfigs
+
+	if strings.EqualFold(aws.StringValue(in.Rolling), manifest.ECSRecreateRollingUpdateStrategy) {
+		out.MinHealthyPercent = minHealthyPercentRecreate
+		out.MaxPercent = maxPercentRecreate
+	}
+	return out
 }
 
 func convertCommand(command manifest.CommandOverride) ([]string, error) {
@@ -992,15 +1031,36 @@ func convertHTTPVersion(protocolVersion *string) *string {
 	return &pv
 }
 
+func convertEnvVars(variables map[string]manifest.Variable) map[string]template.Variable {
+	if len(variables) == 0 {
+		return nil
+	}
+	m := make(map[string]template.Variable, len(variables))
+	for name, variable := range variables {
+		if variable.RequiresImport() {
+			m[name] = template.ImportedVariable(variable.Value())
+			continue
+		}
+		m[name] = template.PlainVariable(variable.Value())
+	}
+	return m
+}
+
+// convertSecrets converts the manifest Secrets into a format parsable by the templates pkg.
 func convertSecrets(secrets map[string]manifest.Secret) map[string]template.Secret {
 	if len(secrets) == 0 {
 		return nil
 	}
-	m := make(map[string]template.Secret)
+	m := make(map[string]template.Secret, len(secrets))
+	var tplSecret template.Secret
 	for name, mftSecret := range secrets {
-		var tplSecret template.Secret = template.SecretFromSSMOrARN(mftSecret.Value())
-		if mftSecret.IsSecretsManagerName() {
+		switch {
+		case mftSecret.IsSecretsManagerName():
 			tplSecret = template.SecretFromSecretsManager(mftSecret.Value())
+		case mftSecret.RequiresImport():
+			tplSecret = template.SecretFromImportedSSMOrARN(mftSecret.Value())
+		default:
+			tplSecret = template.SecretFromPlainSSMOrARN(mftSecret.Value())
 		}
 		m[name] = tplSecret
 	}

@@ -22,8 +22,8 @@ import (
 )
 
 // CreateAndRenderEnvironment creates the CloudFormation stack for an environment, and render the stack creation to out.
-func (cf CloudFormation) CreateAndRenderEnvironment(env *deploy.CreateEnvironmentInput) error {
-	cfnStack, err := cf.toUploadedStack(env.ArtifactBucketARN, stack.NewBootstrapEnvStackConfig(env))
+func (cf CloudFormation) CreateAndRenderEnvironment(conf StackConfiguration, bucketARN string) error {
+	cfnStack, err := cf.toUploadedStack(bucketARN, conf)
 	if err != nil {
 		return err
 	}
@@ -84,7 +84,7 @@ func (cf CloudFormation) DeleteEnvironment(appName, envName, cfnExecRoleARN stri
 
 // GetEnvironment returns the Environment metadata from the CloudFormation stack.
 func (cf CloudFormation) GetEnvironment(appName, envName string) (*config.Environment, error) {
-	conf := stack.NewBootstrapEnvStackConfig(&deploy.CreateEnvironmentInput{
+	conf := stack.NewBootstrapEnvStackConfig(&stack.EnvConfig{
 		App: deploy.AppInformation{
 			Name: appName,
 		},
@@ -94,7 +94,7 @@ func (cf CloudFormation) GetEnvironment(appName, envName string) (*config.Enviro
 	if err != nil {
 		return nil, err
 	}
-	return conf.ToEnv(descr.SDK())
+	return conf.ToEnvMetadata(descr.SDK())
 }
 
 // EnvironmentTemplate returns the environment stack's template.

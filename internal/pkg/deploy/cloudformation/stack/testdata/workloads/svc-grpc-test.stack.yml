@@ -109,6 +109,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
               SourceVolume: persistence
           PortMappings:
             - ContainerPort: !Ref ContainerPort
+              Name: target
       Volumes:
         - Name: persistence
   ExecutionRole:
@@ -429,6 +430,8 @@ Resources: # If a bucket URL is specified, that means the template exists.
         MaximumPercent: 200
       PropagateTags: SERVICE
       LaunchType: FARGATE
+      ServiceConnectConfiguration:
+        Enabled: False
       NetworkConfiguration:
         AwsvpcConfiguration:
           AssignPublicIp: ENABLED

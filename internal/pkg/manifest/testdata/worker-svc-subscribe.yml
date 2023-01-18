@@ -16,11 +16,11 @@ memory: 512    # Amount of memory in MiB used by the task.
 count: 1       # Number of tasks that should be running in your service.
 exec: true     # Enable running commands in your container.
 
-storage:
-  readonly_fs: true       # Limit to read-only access to mounted root filesystems by default.
+# storage:
+  # readonly_fs: true       # Limit to read-only access to mounted root filesystems.
 
 
-# The events can be be received from an SQS queue via the env var $COPILOT_QUEUE_URI.
+# The events can be received from an SQS queue via the env var $COPILOT_QUEUE_URI.
 subscribe:
   topics:
     - name: testTopic

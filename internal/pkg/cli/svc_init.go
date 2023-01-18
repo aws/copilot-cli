@@ -8,9 +8,12 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+	"github.com/aws/copilot-cli/internal/pkg/describe"
+	"github.com/dustin/go-humanize/english"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
@@ -48,7 +51,7 @@ const (
 
 var (
 	fmtSvcInitSvcTypePrompt  = "Which %s best represents your service's architecture?"
-	svcInitSvcTypeHelpPrompt = fmt.Sprintf(`A %s is an internet-facing HTTP server managed by AWS App Runner that scales based on incoming requests.
+	svcInitSvcTypeHelpPrompt = fmt.Sprintf(`A %s is an internet-facing or private HTTP server managed by AWS App Runner that scales based on incoming requests.
 To learn more see: https://git.io/JEEfb
 
 A %s is an internet-facing HTTP server managed by Amazon ECS on AWS Fargate behind a load balancer.
@@ -82,8 +85,22 @@ You should set this to the port which your Dockerfile uses to communicate with t
 	svcInitPublisherHelpPrompt = `A publisher is an existing SNS Topic to which a service publishes messages. 
 These messages can be consumed by the Worker Service.`
 
+	svcInitIngressTypePrompt     = "Would you like to accept traffic from your environment or the internet?"
+	svcInitIngressTypeHelpPrompt = `"Environment" will configure your service as private.
+"Internet" will configure your service as public.`
+
 	wkldInitImagePrompt = fmt.Sprintf("What's the %s ([registry/]repository[:tag|@digest]) of the image to use?", color.Emphasize("location"))
 )
+
+const (
+	ingressTypeEnvironment = "Environment"
+	ingressTypeInternet    = "Internet"
+)
+
+var rdwsIngressOptions = []string{
+	ingressTypeEnvironment,
+	ingressTypeInternet,
+}
 
 var serviceTypeHints = map[string]string{
 	manifest.RequestDrivenWebServiceType: "App Runner",
@@ -105,7 +122,8 @@ type initWkldVars struct {
 type initSvcVars struct {
 	initWkldVars
 
-	port uint16
+	port        uint16
+	ingressType string
 }
 
 type initSvcOpts struct {
@@ -136,12 +154,15 @@ type initSvcOpts struct {
 
 	// Init a Dockerfile parser using fs and input path
 	dockerfile func(string) dockerfileParser
+	// Init a new EnvDescriber using environment name and app name.
+	initEnvDescriber func(string, string) (envDescriber, error)
 }
 
 func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
-	ws, err := workspace.New()
+	fs := afero.NewOsFs()
+	ws, err := workspace.Use(fs)
 	if err != nil {
-		return nil, fmt.Errorf("workspace cannot be created: %w", err)
+		return nil, err
 	}
 
 	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("svc init"))
@@ -163,13 +184,17 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 		Prog:     termprogress.NewSpinner(log.DiagnosticWriter),
 		Deployer: cloudformation.New(sess, cloudformation.WithProgressTracker(os.Stderr)),
 	}
+	sel, err := selector.NewLocalFileSelector(prompter, fs)
+	if err != nil {
+		return nil, err
+	}
 	opts := &initSvcOpts{
 		initSvcVars:  vars,
 		store:        store,
-		fs:           &afero.Afero{Fs: afero.NewOsFs()},
+		fs:           fs,
 		init:         initSvc,
 		prompt:       prompter,
-		sel:          selector.NewWorkspaceSelector(prompter, ws),
+		sel:          sel,
 		topicSel:     snsSel,
 		mftReader:    ws,
 		dockerEngine: dockerengine.New(exec.NewCmd()),
@@ -181,6 +206,17 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 		}
 		opts.df = dockerfile.New(opts.fs, opts.dockerfilePath)
 		return opts.df
+	}
+	opts.initEnvDescriber = func(appName string, envName string) (envDescriber, error) {
+		envDescriber, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
+			App:         appName,
+			Env:         envName,
+			ConfigStore: opts.store,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("initiate env describer: %w", err)
+		}
+		return envDescriber, nil
 	}
 	return opts, nil
 }
@@ -215,6 +251,9 @@ func (o *initSvcOpts) Validate() error {
 	if err := validateSubscribe(o.noSubscribe, o.subscriptions); err != nil {
 		return err
 	}
+	if err := o.validateIngressType(); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -228,7 +267,7 @@ func (o *initSvcOpts) Ask() error {
 		if err := o.validateSvc(); err != nil {
 			return err
 		}
-		shouldSkipAsking, err := o.shouldSkipAsking()
+		shouldSkipAsking, err := o.manifestAlreadyExists()
 		if err != nil {
 			return err
 		}
@@ -253,7 +292,10 @@ func (o *initSvcOpts) Ask() error {
 	if err := o.validateSvc(); err != nil {
 		return err
 	}
-	shouldSkipAsking, err := o.shouldSkipAsking()
+	if err := o.askIngressType(); err != nil {
+		return err
+	}
+	shouldSkipAsking, err := o.manifestAlreadyExists()
 	if err != nil {
 		return err
 	}
@@ -299,6 +341,11 @@ func (o *initSvcOpts) Execute() error {
 			o.platform = &platform
 		}
 	}
+	// Environments that are deployed and have​ only private subnets.
+	envs, err := envsWithPrivateSubnetsOnly(o.store, o.initEnvDescriber, o.appName)
+	if err != nil {
+		return err
+	}
 	manifestPath, err := o.init.Service(&initialize.ServiceProps{
 		WorkloadProps: initialize.WorkloadProps{
 			App:            o.appName,
@@ -309,10 +356,12 @@ func (o *initSvcOpts) Execute() error {
 			Platform: manifest.PlatformArgsOrString{
 				PlatformString: o.platform,
 			},
-			Topics: o.topics,
+			Topics:                  o.topics,
+			PrivateOnlyEnvironments: envs,
 		},
 		Port:        o.port,
 		HealthCheck: hc,
+		Private:     strings.EqualFold(o.ingressType, ingressTypeEnvironment),
 	})
 	if err != nil {
 		return err
@@ -389,6 +438,34 @@ func (o *initSvcOpts) askSvcName() error {
 	return nil
 }
 
+func (o *initSvcOpts) askIngressType() error {
+	if o.wkldType != manifest.RequestDrivenWebServiceType || o.ingressType != "" {
+		return nil
+	}
+
+	var opts []prompt.Option
+	for _, typ := range rdwsIngressOptions {
+		opts = append(opts, prompt.Option{Value: typ})
+	}
+
+	t, err := o.prompt.SelectOption(svcInitIngressTypePrompt, svcInitIngressTypeHelpPrompt, opts, prompt.WithFinalMessage("Reachable from:"))
+	if err != nil {
+		return fmt.Errorf("select ingress type: %w", err)
+	}
+	o.ingressType = t
+	return nil
+}
+
+func (o *initSvcOpts) validateIngressType() error {
+	if o.wkldType != manifest.RequestDrivenWebServiceType {
+		return nil
+	}
+	if strings.EqualFold(o.ingressType, "internet") || strings.EqualFold(o.ingressType, "environment") {
+		return nil
+	}
+	return fmt.Errorf("invalid ingress type %q: must be one of %s.", o.ingressType, english.OxfordWordSeries(rdwsIngressOptions, "or"))
+}
+
 func (o *initSvcOpts) askImage() error {
 	if o.image != "" {
 		return nil
@@ -414,7 +491,10 @@ func (o *initSvcOpts) askImage() error {
 	return nil
 }
 
-func (o *initSvcOpts) shouldSkipAsking() (bool, error) {
+func (o *initSvcOpts) manifestAlreadyExists() (bool, error) {
+	if o.wsPendingCreation {
+		return false, nil
+	}
 	localMft, err := o.mftReader.ReadWorkloadManifest(o.name)
 	if err != nil {
 		var (
@@ -712,6 +792,7 @@ This command is also run as part of "copilot init".`,
 	cmd.Flags().Uint16Var(&vars.port, svcPortFlag, 0, svcPortFlagDescription)
 	cmd.Flags().StringArrayVar(&vars.subscriptions, subscribeTopicsFlag, []string{}, subscribeTopicsFlagDescription)
 	cmd.Flags().BoolVar(&vars.noSubscribe, noSubscriptionFlag, false, noSubscriptionFlagDescription)
+	cmd.Flags().StringVar(&vars.ingressType, ingressTypeFlag, "", ingressTypeFlagDescription)
 
 	return cmd
 }

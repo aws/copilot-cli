@@ -240,7 +240,7 @@ type environmentManifestWriter interface {
 }
 
 type workspacePathGetter interface {
-	Path() (string, error)
+	Path() string
 }
 
 type wsPipelineManifestReader interface {
@@ -295,7 +295,6 @@ type wsWlDirReader interface {
 	workspacePathGetter
 	wlLister
 	wsEnvironmentsLister
-	ListDockerfiles() ([]string, error)
 	Summary() (*workspace.Summary, error)
 }
 
@@ -316,7 +315,6 @@ type wsPipelineGetter interface {
 }
 
 type wsAppManager interface {
-	Create(appName string) error
 	Summary() (*workspace.Summary, error)
 }
 
@@ -336,7 +334,7 @@ type bucketEmptier interface {
 
 // Interfaces for deploying resources through CloudFormation. Facilitates mocking.
 type environmentDeployer interface {
-	CreateAndRenderEnvironment(env *deploy.CreateEnvironmentInput) error
+	CreateAndRenderEnvironment(conf cloudformation.StackConfiguration, bucketARN string) error
 	DeleteEnvironment(appName, envName, cfnExecRoleARN string) error
 	GetEnvironment(appName, envName string) (*config.Environment, error)
 	EnvironmentTemplate(appName, envName string) (string, error)
@@ -411,10 +409,7 @@ type deployer interface {
 
 type domainHostedZoneGetter interface {
 	DomainHostedZoneID(domainName string) (string, error)
-}
-
-type domainInfoGetter interface {
-	IsRegisteredDomain(domainName string) error
+	ValidateDomainOwnership(domainName string) error
 }
 
 type dockerfileParser interface {
@@ -508,8 +503,7 @@ type wsSelector interface {
 	Workload(msg, help string) (string, error)
 }
 
-type initJobSelector interface {
-	dockerfileSelector
+type scheduleSelector interface {
 	Schedule(scheduleTypePrompt, scheduleTypeHelp string, scheduleValidator, rateValidator prompt.ValidatorFunc) (string, error)
 }
 
@@ -653,11 +647,12 @@ type runner interface {
 type envDeployer interface {
 	DeployEnvironment(in *clideploy.DeployEnvironmentInput) error
 	Validate(*manifest.Environment) error
-	UploadArtifacts() (map[string]string, error)
+	UploadArtifacts() (*clideploy.UploadEnvArtifactsOutput, error)
 }
 
 type envPackager interface {
 	GenerateCloudFormationTemplate(in *clideploy.DeployEnvironmentInput) (*clideploy.GenerateCloudFormationTemplateOutput, error)
 	Validate(*manifest.Environment) error
-	UploadArtifacts() (map[string]string, error)
+	UploadArtifacts() (*clideploy.UploadEnvArtifactsOutput, error)
+	AddonsTemplate() (string, error)
 }

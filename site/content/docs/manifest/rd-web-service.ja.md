@@ -28,7 +28,8 @@
     
         environments:
           test:
-            LOG_LEVEL: debug
+            variables:
+              LOG_LEVEL: debug
         ```
 
     === "Connected to the environment VPC"
@@ -68,6 +69,8 @@
         publish:
           topics:
             - name: 'refunds'
+            - name: 'orders'
+              fifo: true
         ```
 
 
@@ -85,7 +88,18 @@ Service のアーキテクチャタイプ。 [Load Balanced Web Service](../conc
 <a id="http" href="#http" class="field">`http`</a> <span class="type">Map</span>  
 http セクションは、マネージドロードバランサの連携に関するパラメーターを含みます。
 
-<span class="parent-field">http.</span><a id="http-healthcheck" href="#http-healthcheck" class="field">`healthcheck`</a> <span class="type">String or Map</span>  
+<span class="parent-field">http.</span><a id="http-private" href="#http-private" class="field">`private`</a> <span class="type">Bool or Map</span>
+受信トラフィックを Envrionment のみに制限します。デフォルトは false です。
+
+<span class="parent-field">http.private</span><a id="http-private-endpoint" href="#http-private-endpoint" class="field">`endpoint`</a> <span class="type">String</span>
+App Runner に対する既存の VPC エンドポイントの ID です。
+```yaml
+http:
+  private:
+    endpoint: vpce-12345
+```
+
+<span class="parent-field">http.</span><a id="http-healthcheck" href="#http-healthcheck" class="field">`healthcheck`</a> <span class="type">String or Map</span>
 文字列を指定した場合、Copilot は、ターゲットグループからのヘルスチェックリクエストを処理するためにコンテナが公開しているパスと解釈します。デフォルトは "/" です。
 ```yaml
 http:
@@ -174,7 +188,7 @@ Service のインスタンスに割り当てる CPU ユニット数。指定可�
 <div class="separator"></div>
 
 <a id="network" href="#network" class="field">`network`</a> <span class="type">Map</span>      
-`network` セクションには、Environment の VPC 内の AWS リソースに Service を接続するためのパラメータが含まれています。Service を VPC に接続することで、[サービス検出](../developing/service-discovery.ja.md)を使用して Environment 内の他の Service と通信したり、[`storage init`](../commands/storage-init.ja.md)で Amazon Aurora などの VPC 内のデータベースに接続することができます。
+`network` セクションには、Environment の VPC 内の AWS リソースに Service を接続するためのパラメータが含まれています。Service を VPC に接続することで、[サービスディスカバリ](../developing/svc-to-svc-communication.ja.md#service-discovery)を使用して Environment 内の他の Service と通信したり、[`storage init`](../commands/storage-init.ja.md)で Amazon Aurora などの VPC 内のデータベースに接続することができます。
 
 <span class="parent-field">network.</span><a id="network-vpc" href="#network-vpc" class="field">`vpc`</a> <span class="type">Map</span>    
 Service からの Egress トラフィックをルーティングする VPC 内のサブネットを指定します。
@@ -204,6 +218,13 @@ Copilot は Service 名などを常に環境変数としてインスタンスに
 <a id="variables" href="#variables" class="field">`tags`</a> <span class="type">Map</span>  
 AWS App Runner リソースとして渡される AWS タグを表すキー・値ペアです。
 
+<div class="separator"></div>
+
+<a id="count" href="#count" class="field">`count`</a> <span class="type">String</span>
+既存のオートスケーリング設定の名前を指定します。
+```yaml
+count: high-availability/3
+```
 <div class="separator"></div>
 
 <a id="environments" href="#environments" class="field">`environments`</a> <span class="type">Map</span>  

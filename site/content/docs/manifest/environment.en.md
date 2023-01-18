@@ -90,10 +90,8 @@ To learn more about Copilot environments, see [Environments](../concepts/environ
         cdn: true
         http:
           public:
-            security_groups:
-             ingress:
-               restrict_to:
-                 cdn: true
+            ingress:
+               cdn: true
         ```
 
 <a id="name" href="#name" class="field">`name`</a> <span class="type">String</span>  
@@ -126,9 +124,10 @@ For example, if you're importing an existing VPC:
 network:
   vpc:
     id: 'vpc-12345'
-    public:
-      - id: 'subnet-11111'
-      - id: 'subnet-22222'
+    subnets:
+      public:
+        - id: 'subnet-11111'
+        - id: 'subnet-22222'
 ```
 Alternatively, if you're configuring a Copilot-generated VPC:
 ```yaml
@@ -196,6 +195,24 @@ ports: 80
 <span class="parent-field">network.vpc.security_group.<type\>.</span><a id="network-vpc-security-group-cidr" href="#network-vpc-security-group-cidr" class="field">`cidr`</a> <span class="type">String</span>   
 The IPv4 address range, in CIDR format.
 
+<span class="parent-field">network.vpc.</span><a id="network-vpc-flowlogs" href="#network-vpc-flowlogs" class="field">`flow_logs`</a> <span class="type">Boolean or Map</span>   
+If you specify 'true', Copilot will enable VPC flow logs to capture information about the IP traffic going in and out of the environment VPC.
+The default value for VPC flow logs is 14 days (2 weeks).
+
+```yaml
+network:
+  vpc:
+    flow_logs: on
+```
+You can customize the number of days for retention:
+```yaml
+network:
+  vpc:
+    flow_logs:
+      retention: 30
+```
+<span class="parent-field">network.vpc.flow_logs.</span><a id="network-vpc-flowlogs-retention" href="#network-vpc-flowlogs-retention" class="field">`retention`</a> <span class="type">String</span>
+The number of days to retain the log events. See [this page](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-logs-loggroup.html#cfn-logs-loggroup-retentionindays) for all accepted values.
 
 <div class="separator"></div>
 
@@ -211,9 +228,20 @@ cdn:
   certificate: "arn:aws:acm:us-east-1:1234567890:certificate/e5a6e114-b022-45b1-9339-38fbfd6db3e2"
 ```
 
+<span class="parent-field">cdn.</span><a id="cdn-static-assets" href="#cdn-static-assets" class="field">`static_assets`</a> <span class="type">Map</span>  
+Optional. Configuration for static assets associated with CloudFront.
+
+<span class="parent-field">cdn.static_assets.</span><a id="cdn-static-assets-alias" href="#cdn-static-assets-alias" class="field">`alias`</a> <span class="type">String</span>  
+Additional HTTPS domain alias to use for static assets.
+
+<span class="parent-field">cdn.static_assets.</span><a id="cdn-static-assets-location" href="#cdn-static-assets-location" class="field">`location`</a> <span class="type">String</span>  
+DNS domain name of the S3 bucket (for example, `EXAMPLE-BUCKET.s3.us-west-2.amazonaws.com`).
+
+<span class="parent-field">cdn.static_assets.</span><a id="cdn-static-assets-path" href="#cdn-static-assets-path" class="field">`path`</a> <span class="type">String</span>  
+The path pattern (for example, `statics/*`) that specifies which requests should be forwarded to the S3 bucket.
+
 <span class="parent-field">cdn.</span><a id="cdn-tls-termination" href="#cdn-tls-termination" class="field">`terminate_tls`</a> <span class="type">Boolean</span>  
 Enable TLS termination for CloudFront.
-
 
 <div class="separator"></div>
 
@@ -261,25 +289,34 @@ The name of an existing S3 bucket in which to store the access logs.
 <span class="parent-field">http.public.access_logs.</span><a id="http-public-access-logs-prefix" href="#http-public-access-logs-prefix" class="field">`prefix`</a> <span class="type">String</span>   
 The prefix for the log objects.
 
-<span class="parent-field">http.public.</span><a id="http-public-security-groups" href="#http-public-security-groups" class="field">`security_groups`</a> <span class="type">Map</span>    
-Configure security groups to add to the public load balancer.
+<span class="parent-field">http.public.</span><a id="http-public-sslpolicy" href="#http-public-sslpolicy" class="field">`ssl_policy`</a> <span class="type">String</span>   
+Optional. Specify an SSL policy for the HTTPS listener of your Public Load Balancer, when applicable.
 
-<span class="parent-field">http.public.security_groups.</span><a id="http-public-security-groups-ingress" href="#http-public-security-groups-ingress" class="field">`ingress`</a> <span class="type">Map</span>  
-Ingress rules to allow for the public load balancer.  
+<span class="parent-field">http.public.</span><a id="http-public-ingress" href="#http-public-ingress" class="field">`ingress`</a> <span class="type">Map</span><span class="version">Modified in [v1.23.0](../../blogs/release-v123.en.md#move-misplaced-http-fields-in-environment-manifest-backward-compatible)</span>  
+Ingress rules to restrict the Public Load Balancer's traffic.  
+
 ```yaml
 http:
   public:
-    security_groups:
-      ingress:
-        restrict_to:
-          cdn: true
+    ingress:
+      cdn: true
 ```
+???- note "<span class="faint"> "http.public.ingress" was previously "http.public.security_groups.ingress"</span>"  
+    This field was `http.public.security_groups.ingress` until [v1.23.0](../../blogs/release-v123.en.md).
+    This change cascaded to a child field [`cdn`](#http-public-ingress-cdn) (the only child field at the time), which was previously `http.public.security_groups.ingress.restrict_to.cdn`.
+    For more, see [the blog post for v1.23.0](../../blogs/release-v123.en.md#move-misplaced-http-fields-in-environment-manifest-backward-compatible).
 
-<span class="parent-field">http.public.security_groups.ingress.</span><a id="http-public-security-groups-ingress-restrict-to" href="#http-public-security-groups-ingress-restrict-to" class="field">`restrict_to`</a> <span class="type">Map</span>  
-Ingress rules to restrict the Public Load Balancer's traffic.
-
-<span class="parent-field">http.public.security_groups.ingress.restrict_to.</span><a id="http-public-security-groups-ingress-restrict-to-cdn" href="#http-public-security-groups-ingress-restrict-to-cdn" class="field">`cdn`</a> <span class="type">Boolean</span>    
+<span class="parent-field">http.public.ingress.</span><a id="http-public-ingress-cdn" href="#http-public-ingress-cdn" class="field">`cdn`</a> <span class="type">Boolean</span><span class="version">Modified in [v1.23.0](../../blogs/release-v123.en.md#move-misplaced-http-fields-in-environment-manifest-backward-compatible)</span>     
 Restrict ingress traffic for the public load balancer to come from a CloudFront distribution.
+
+<span class="parent-field">http.public.ingress.</span><a id="http-public-ingress-source-ips" href="#http-public-ingress-source-ips" class="field">`source_ips`</a> <span class="type">Array of Strings</span>    
+Restrict public load balancer ingress traffic to source IPs.
+```yaml
+http:
+  public:
+    ingress:
+      source_ips: ["192.0.2.0/24", "198.51.100.10/32"]  
+```
 
 <span class="parent-field">http.</span><a id="http-private" href="#http-private" class="field">`private`</a> <span class="type">Map</span>  
 Configuration for the internal load balancer.
@@ -292,21 +329,25 @@ See the [Developing/Domains](../developing/domain.en.md#use-domain-in-your-exist
 <span class="parent-field">http.private.</span><a id="http-private-subnets" href="#http-private-subnets" class="field">`subnets`</a> <span class="type">Array of Strings</span>   
 The subnet IDs to place the internal load balancer in.
 
-<span class="parent-field">http.private.</span><a id="http-private-security-groups" href="#http-private-security-groups" class="field">`security_groups`</a> <span class="type">Map</span>    
-Configure security groups to add to the internal load balancer.
-
-<span class="parent-field">http.private.security_groups</span><a id="http-private-security-groups-ingress" href="#http-private-security-groups-ingress" class="field">`ingress`</a> <span class="type">Map</span>  
+<span class="parent-field">http.private</span><a id="http-private-ingress" href="#http-private-ingress" class="field">`ingress`</a> <span class="type">Map</span><span class="version">Modified in [v1.23.0](../../blogs/release-v123.en.md#move-misplaced-http-fields-in-environment-manifest-backward-compatible)</span>  
 Ingress rules to allow for the internal load balancer.  
 ```yaml
 http:
   private:
-    security_groups:
-      ingress: # Enable incoming traffic within the VPC to the internal load balancer.
-        from_vpc: true
+    ingress:
+      vpc: true  # Enable incoming traffic within the VPC to the internal load balancer.
 ```
+???- note "<span class="faint"> "http.private.ingress" was previously "http.private.security_groups.ingress"</span>"  
+    This field was `http.private.security_groups.ingress` until [v1.23.0](../../blogs/release-v123.en.md).
+    This change cascaded to a child field [`vpc`](#http-private-ingress-vpc) (the only child field at the time),
+    which was previously `http.private.security_groups.ingress.from_vpc`.
+    For more, see [the blog post for v1.23.0](../../blogs/release-v123.en.md#move-misplaced-http-fields-in-environment-manifest-backward-compatible).
 
-<span class="parent-field">http.private.security_groups.ingress.</span><a id="http-private-security-groups-ingress-from-vpc" href="#http-private-security-groups-ingress-from-vpc" class="field">`from_vpc`</a> <span class="type">Boolean</span>    
+<span class="parent-field">http.private.ingress.</span><a id="http-private-ingress-vpc" href="#http-private-ingress-vpc" class="field">`vpc`</a> <span class="type">Boolean</span><span class="version">Modified in [v1.23.0](../../blogs/release-v123.en.md#move-misplaced-http-fields-in-environment-manifest-backward-compatible)</span>     
 Enable traffic from within the VPC to the internal load balancer.
+
+<span class="parent-field">http.private.</span><a id="http-private-sslpolicy" href="#http-private-sslpolicy" class="field">`ssl_policy`</a> <span class="type">String</span>   
+Optional. Specify an SSL policy for the HTTPS listener of your Internal Load Balancer, when applicable.
 
 <div class="separator"></div>
 

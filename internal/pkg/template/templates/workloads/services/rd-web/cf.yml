@@ -100,10 +100,7 @@ Resources:
               {{- end }}
               {{- end }}
               {{- if .Variables}}
-              {{- range $name, $value := .Variables}}
-              - Name: {{$name}}
-                Value: {{$value | printf "%q"}}
-              {{- end}}
+              {{include "variables" . | indent 14}}
               {{- end}}
               {{- if .NestedStack}}{{$stackName := .NestedStack.StackName}}
               {{- range $var := .NestedStack.VariableOutputs}}
@@ -133,17 +130,26 @@ Resources:
         HealthyThreshold: !If [HasHealthCheckHealthyThreshold, !Ref HealthCheckHealthyThreshold, !Ref AWS::NoValue]
         UnhealthyThreshold: !If [HasHealthCheckUnhealthyThreshold, !Ref HealthCheckUnhealthyThreshold, !Ref AWS::NoValue]
       {{- end }}
-      {{- if requiresVPCConnector .}}
       NetworkConfiguration:
         EgressConfiguration:
+          {{- if requiresVPCConnector .}}
           EgressType: VPC
           VpcConnectorArn: !Ref VpcConnector
-      {{- end }}
+          {{- else }}
+          EgressType: DEFAULT
+          {{- end}}
+        {{- if .Private}}
+        IngressConfiguration:
+          IsPubliclyAccessible: false
+        {{- end}}
       {{- if eq .Observability.Tracing "AWSXRAY"}}
       ObservabilityConfiguration:
         ObservabilityEnabled: true
         ObservabilityConfigurationArn: !Sub 'arn:aws:apprunner:${AWS::Region}:${AWS::AccountId}:observabilityconfiguration/DefaultConfiguration/1/00000000000000000000000000000001'
       {{- end }}
+      {{- if .Count}}   
+      AutoScalingConfigurationArn: !Sub 'arn:${AWS::Partition}:apprunner:${AWS::Region}:${AWS::AccountId}:autoscalingconfiguration/{{.Count}}'
+      {{- end}}
       Tags:
         - Key: copilot-application
           Value: !Ref AppName
@@ -153,6 +159,36 @@ Resources:
           Value: !Ref WorkloadName{{if .Tags}}{{range $name, $value := .Tags}}
         - Key: {{$name}}
           Value: {{$value}}{{end}}{{end}}
+
+  {{- if .Private}}
+  AppRunnerVpcIngressConnection:
+    Metadata:
+      'aws:copilot:description': 'The ingress connection from your environment to this service'
+    Type: AWS::AppRunner::VpcIngressConnection
+    Properties:
+      ServiceArn: !GetAtt Service.ServiceArn
+      IngressVpcConfiguration:
+        VpcId:
+          Fn::ImportValue: !Sub '${AppName}-${EnvName}-VpcId'
+        {{- if .AppRunnerVPCEndpoint}}
+        VpcEndpointId: {{.AppRunnerVPCEndpoint}}
+        {{- else}}
+        VpcEndpointId: !GetAtt EnvControllerAction.AppRunnerVpcEndpointId
+        {{- end}}
+      Tags:
+        - Key: copilot-application
+          Value: !Ref AppName
+        - Key: copilot-environment
+          Value: !Ref EnvName
+        - Key: copilot-service
+          Value: !Ref WorkloadName
+        {{- if .Tags}}
+        {{- range $name, $value := .Tags}}
+        - Key: {{$name}}
+          Value: {{$value}}
+        {{- end}}
+        {{- end}}
+  {{- end}}
 
 {{include "addons" . | indent 2}}
 {{if .Alias}}

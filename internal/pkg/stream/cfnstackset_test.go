@@ -220,7 +220,7 @@ func TestStackSetStreamer_Fetch(t *testing.T) {
 		wantedTime := startTime.Add(2 * streamerFetchIntervalDurationMs * time.Millisecond)
 
 		// WHEN
-		next, err := streamer.Fetch()
+		next, _, err := streamer.Fetch()
 
 		// THEN
 		require.NoError(t, err)
@@ -237,7 +237,7 @@ func TestStackSetStreamer_Fetch(t *testing.T) {
 		streamer := NewStackSetStreamer(client, "demo-infrastructure", "1", time.Now())
 
 		// WHEN
-		_, err := streamer.Fetch()
+		_, _, err := streamer.Fetch()
 
 		// THEN
 		require.EqualError(t, err, `describe operation "1" for stack set "demo-infrastructure": some error`)
@@ -255,7 +255,7 @@ func TestStackSetStreamer_Fetch(t *testing.T) {
 		streamer.rand = func(n int) int { return n }
 
 		// WHEN
-		next, err := streamer.Fetch()
+		next, _, err := streamer.Fetch()
 
 		// THEN
 		require.NoError(t, err)
@@ -264,7 +264,7 @@ func TestStackSetStreamer_Fetch(t *testing.T) {
 }
 
 func TestStackSetStreamer_Integration(t *testing.T) {
-	t.Run("Done should be closed if Fetch retrieved a final status", func(t *testing.T) {
+	t.Run("Done if Fetch retrieved a final status", func(t *testing.T) {
 		// GIVEN
 		client := &mockStackSetClient{
 			describeOpFn: func(_, _ string) (stackset.Operation, error) {
@@ -277,17 +277,11 @@ func TestStackSetStreamer_Integration(t *testing.T) {
 		streamer := NewStackSetStreamer(client, "demo-infrastructure", "1", time.Now())
 
 		// WHEN
-		_, err := streamer.Fetch()
+		_, done, err := streamer.Fetch()
 
 		// THEN
 		require.NoError(t, err)
-
-		// WHEN
-		select {
-		case <-time.After(5 * time.Second):
-			require.Fail(t, "testcase timed out, we should never reach this")
-		case <-streamer.Done(): // should not block
-		}
+		require.True(t, done)
 	})
 	t.Run("should only broadcast unique operations to subscribers", func(t *testing.T) {
 		// GIVEN
@@ -317,7 +311,7 @@ func TestStackSetStreamer_Integration(t *testing.T) {
 		// WHEN
 		go func() {
 			for i := 0; i < 5; i += 1 {
-				_, err := streamer.Fetch()
+				_, _, err := streamer.Fetch()
 				require.NoError(t, err, "fetch %d should succeed", i)
 				streamer.Notify()
 			}

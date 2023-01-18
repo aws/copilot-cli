@@ -10,6 +10,7 @@ import (
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/describe/mocks"
+	"github.com/aws/copilot-cli/internal/pkg/template"
 
 	describeStack "github.com/aws/copilot-cli/internal/pkg/describe/stack"
 	"github.com/golang/mock/gomock"
@@ -372,17 +373,28 @@ func TestBackendServiceDescriber_URI(t *testing.T) {
 			setupMocks: func(m lbWebSvcDescriberMocks) {
 				m.ecsDescriber.EXPECT().ServiceStackResources().Return(nil, nil)
 				m.ecsDescriber.EXPECT().Params().Return(map[string]string{
-					stack.WorkloadContainerPortParamKey: stack.NoExposedContainerPort, // No port is set for the backend service.
+					stack.WorkloadTargetPortParamKey: template.NoExposedContainerPort, // No port is set for the backend service.
 				}, nil)
 			},
 			wantedURI: BlankServiceDiscoveryURI,
+		},
+		"should return service connect endpoint if port is exposed": {
+			setupMocks: func(m lbWebSvcDescriberMocks) {
+				m.ecsDescriber.EXPECT().ServiceStackResources().Return(nil, nil)
+				m.ecsDescriber.EXPECT().Params().Return(map[string]string{
+					stack.WorkloadTargetPortParamKey: "8080",
+				}, nil)
+				m.ecsDescriber.EXPECT().ServiceConnectDNSNames().Return([]string{"my-svc:8080"}, nil)
+			},
+			wantedURI: "my-svc:8080",
 		},
 		"should return service discovery endpoint if port is exposed": {
 			setupMocks: func(m lbWebSvcDescriberMocks) {
 				m.ecsDescriber.EXPECT().ServiceStackResources().Return(nil, nil)
 				m.ecsDescriber.EXPECT().Params().Return(map[string]string{
-					stack.WorkloadContainerPortParamKey: "8080",
+					stack.WorkloadTargetPortParamKey: "8080",
 				}, nil)
+				m.ecsDescriber.EXPECT().ServiceConnectDNSNames().Return(nil, nil)
 				m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.app.local", nil)
 			},
 			wantedURI: "my-svc.test.app.local:8080",
@@ -492,7 +504,7 @@ func TestRDWebServiceDescriber_URI(t *testing.T) {
 	testCases := map[string]struct {
 		setupMocks func(mocks apprunnerSvcDescriberMocks)
 
-		wantedURI   string
+		wantedURI   URI
 		wantedError error
 	}{
 		"fail to get outputs of service stack": {
@@ -501,16 +513,40 @@ func TestRDWebServiceDescriber_URI(t *testing.T) {
 					m.ecsSvcDescriber.EXPECT().ServiceURL().Return("", mockErr),
 				)
 			},
-			wantedError: fmt.Errorf("get outputs for service frontend: some error"),
+			wantedError: fmt.Errorf(`get outputs for service "frontend": some error`),
 		},
-		"succeed in getting outputs of service stack": {
+		"fail to check if private": {
 			setupMocks: func(m apprunnerSvcDescriberMocks) {
 				gomock.InOrder(
 					m.ecsSvcDescriber.EXPECT().ServiceURL().Return(testSvcURL, nil),
+					m.ecsSvcDescriber.EXPECT().IsPrivate().Return(false, mockErr),
 				)
 			},
-
-			wantedURI: "https://6znxd4ra33.public.us-east-1.apprunner.amazonaws.com",
+			wantedError: fmt.Errorf(`check if service "frontend" is private: some error`),
+		},
+		"succeed in getting public service uri": {
+			setupMocks: func(m apprunnerSvcDescriberMocks) {
+				gomock.InOrder(
+					m.ecsSvcDescriber.EXPECT().ServiceURL().Return(testSvcURL, nil),
+					m.ecsSvcDescriber.EXPECT().IsPrivate().Return(false, nil),
+				)
+			},
+			wantedURI: URI{
+				URI:        "https://6znxd4ra33.public.us-east-1.apprunner.amazonaws.com",
+				AccessType: URIAccessTypeInternet,
+			},
+		},
+		"succeed in getting private service uri": {
+			setupMocks: func(m apprunnerSvcDescriberMocks) {
+				gomock.InOrder(
+					m.ecsSvcDescriber.EXPECT().ServiceURL().Return(testSvcURL, nil),
+					m.ecsSvcDescriber.EXPECT().IsPrivate().Return(true, nil),
+				)
+			},
+			wantedURI: URI{
+				URI:        "https://6znxd4ra33.public.us-east-1.apprunner.amazonaws.com",
+				AccessType: URIAccessTypeInternal,
+			},
 		},
 	}
 
@@ -541,7 +577,7 @@ func TestRDWebServiceDescriber_URI(t *testing.T) {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, tc.wantedURI, actual.URI)
+				require.Equal(t, tc.wantedURI, actual)
 			}
 		})
 	}

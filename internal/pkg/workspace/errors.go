@@ -7,6 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+
+	"github.com/aws/copilot-cli/internal/pkg/term/color"
 )
 
 // ErrNoPipelineInWorkspace means there was no pipeline manifest in the workspace dir.
@@ -44,12 +46,29 @@ func (e *ErrWorkspaceNotFound) Error() string {
 		e.CurrentDirectory)
 }
 
-// errNoAssociatedApplication means we couldn't locate a workspace summary file.
-type errNoAssociatedApplication struct{}
+// RecommendActions suggests steps clients can take to mitigate the copilot/ directory not found error.
+func (_ *ErrWorkspaceNotFound) RecommendActions() string {
+	return fmt.Sprintf("Run %s to create an application.", color.HighlightCode("copilot app init"))
+}
 
-func (e *errNoAssociatedApplication) Error() string {
+// empty denotes that this error represents an empty workspace.
+func (_ *ErrWorkspaceNotFound) empty() {}
+
+// ErrNoAssociatedApplication means we couldn't locate a workspace summary file.
+type ErrNoAssociatedApplication struct{}
+
+func (e *ErrNoAssociatedApplication) Error() string {
 	return "couldn't find an application associated with this workspace"
 }
+
+// RecommendActions suggests steps clients can take to mitigate the .workspace file not found error.
+func (_ *ErrNoAssociatedApplication) RecommendActions() string {
+	return fmt.Sprintf(`The "copilot" directory is not associated with an application.
+Run %s to create or use an application.`, color.HighlightCode("copilot app init"))
+}
+
+// empty denotes that this error represents an empty workspace.
+func (_ *ErrNoAssociatedApplication) empty() {}
 
 // errHasExistingApplication means we tried to create a workspace that belongs to another application.
 type errHasExistingApplication struct {
@@ -64,4 +83,12 @@ func (e *errHasExistingApplication) Error() string {
 		relPath = e.summaryPath
 	}
 	return fmt.Sprintf("workspace is already registered with application %s under %s", e.existingAppName, relPath)
+}
+
+// IsEmptyErr returns true if the error is related to an empty workspace.
+func IsEmptyErr(err error) bool {
+	var emptyWs interface {
+		empty()
+	}
+	return errors.As(err, &emptyWs)
 }

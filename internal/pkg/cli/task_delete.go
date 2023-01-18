@@ -9,6 +9,7 @@ import (
 	"os"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
+	"github.com/spf13/afero"
 
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
@@ -53,6 +54,7 @@ type deleteTaskVars struct {
 
 type deleteTaskOpts struct {
 	deleteTaskVars
+	wsAppName string
 
 	// Dependencies to interact with other modules
 	store    store
@@ -74,9 +76,9 @@ type deleteTaskOpts struct {
 }
 
 func newDeleteTaskOpts(vars deleteTaskVars) (*deleteTaskOpts, error) {
-	ws, err := workspace.New()
+	ws, err := workspace.Use(afero.NewOsFs())
 	if err != nil {
-		return nil, fmt.Errorf("new workspace: %w", err)
+		return nil, err
 	}
 
 	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("task delete"))
@@ -89,6 +91,7 @@ func newDeleteTaskOpts(vars deleteTaskVars) (*deleteTaskOpts, error) {
 	prompter := prompt.New()
 	return &deleteTaskOpts{
 		deleteTaskVars: vars,
+		wsAppName:      tryReadingAppName(),
 
 		store:    store,
 		spinner:  termprogress.NewSpinner(log.DiagnosticWriter),
@@ -180,7 +183,7 @@ func (o *deleteTaskOpts) validateFlagsWithDefaultCluster() error {
 	// The app flag defaults to the WS app so there's an edge case where it's possible to specify
 	// `copilot task delete --app ws-app --default` and not error out, but this should be taken as
 	// specifying "default".
-	if o.app != tryReadingAppName() {
+	if o.app != o.wsAppName {
 		return fmt.Errorf("cannot specify both `--app` and `--default`")
 	}
 

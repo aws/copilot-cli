@@ -60,7 +60,7 @@ type RequestDrivenWebServiceConfig struct {
 	RawManifest []byte
 
 	RuntimeConfig RuntimeConfig
-	Addons        addons
+	Addons        NestedStackConfigurer
 }
 
 // NewRequestDrivenWebService creates a new RequestDrivenWebService stack from a manifest file.
@@ -120,12 +120,12 @@ func (s *RequestDrivenWebService) Template() (string, error) {
 		SerializedManifest: string(s.rawManifest),
 		EnvVersion:         s.rc.EnvVersion,
 
-		Variables:            s.manifest.Variables,
+		Variables:            convertEnvVars(s.manifest.Variables),
 		StartCommand:         s.manifest.StartCommand,
 		Tags:                 s.manifest.Tags,
 		NestedStack:          addonsOutputs,
 		AddonsExtraParams:    addonsParams,
-		EnableHealthCheck:    !s.healthCheckConfig.IsEmpty(),
+		EnableHealthCheck:    !s.healthCheckConfig.IsZero(),
 		WorkloadType:         manifest.RequestDrivenWebServiceType,
 		Alias:                s.manifest.Alias,
 		CustomResources:      crs,
@@ -140,7 +140,10 @@ func (s *RequestDrivenWebService) Template() (string, error) {
 		Observability: template.ObservabilityOpts{
 			Tracing: strings.ToUpper(aws.StringValue(s.manifest.Observability.Tracing)),
 		},
-		PermissionsBoundary: s.permBound,
+		PermissionsBoundary:  s.permBound,
+		Private:              aws.BoolValue(s.manifest.Private.Basic) || s.manifest.Private.Advanced.Endpoint != nil,
+		AppRunnerVPCEndpoint: s.manifest.Private.Advanced.Endpoint,
+		Count:                s.manifest.Count,
 	})
 	if err != nil {
 		return "", err

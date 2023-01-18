@@ -61,6 +61,9 @@ func TestNewWorkerSvc(t *testing.T) {
 				WorkloadProps: WorkloadProps{
 					Name:       "testers",
 					Dockerfile: "./testers/Dockerfile",
+					PrivateOnlyEnvironments: []string{
+						"metrics",
+					},
 				},
 			},
 			wantedManifest: &WorkerService{
@@ -93,6 +96,17 @@ func TestNewWorkerSvc(t *testing.T) {
 						VPC: vpcConfig{
 							Placement: PlacementArgOrString{
 								PlacementString: placementStringP(PublicSubnetPlacement),
+							},
+						},
+					},
+				},
+				Environments: map[string]*WorkerServiceConfig{
+					"metrics": {
+						Network: NetworkConfig{
+							VPC: vpcConfig{
+								Placement: PlacementArgOrString{
+									PlacementString: placementStringP(PrivateSubnetPlacement),
+								},
 							},
 						},
 					},
@@ -490,8 +504,12 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 						},
 					},
 					CPU: aws.Int(512),
-					Variables: map[string]string{
-						"LOG_LEVEL": "",
+					Variables: map[string]Variable{
+						"LOG_LEVEL": {
+							stringOrFromCFN{
+								Plain: stringP(""),
+							},
+						},
 					},
 				},
 				Sidecars: map[string]*SidecarConfig{
@@ -864,8 +882,12 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 								CPU: mockConfig,
 							},
 						},
-						Variables: map[string]string{
-							"LOG_LEVEL": "",
+						Variables: map[string]Variable{
+							"LOG_LEVEL": {
+								stringOrFromCFN{
+									Plain: stringP(""),
+								},
+							},
 						},
 					},
 					Sidecars: map[string]*SidecarConfig{

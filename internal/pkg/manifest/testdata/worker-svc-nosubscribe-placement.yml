@@ -1,0 +1,47 @@
+# The manifest for the "testers" service.
+# Read the full specification for the "Worker Service" type at:
+# https://aws.github.io/copilot-cli/docs/manifest/worker-service/
+
+# Your service name will be used in naming your resources like log groups, ECS services, etc.
+name: testers
+type: Worker Service
+
+# Configuration for your containers and service.
+image:
+  # Docker build arguments.
+  build: ./testers/Dockerfile
+
+cpu: 256       # Number of CPU units for the task.
+memory: 512    # Amount of memory in MiB used by the task.
+count: 1       # Number of tasks that should be running in your service.
+exec: true     # Enable running commands in your container.
+
+# storage:
+  # readonly_fs: true       # Limit to read-only access to mounted root filesystems.
+
+
+# You can register to topics from other services.
+# The events can be received from an SQS queue via the env var $COPILOT_QUEUE_URI.
+# subscribe:
+#   topics: 
+#     - name: topic-from-another-service
+#       service: another-service
+
+# Optional fields for more advanced use-cases.
+#
+#variables:                    # Pass environment variables as key value pairs.
+#  LOG_LEVEL: info
+
+#secrets:                      # Pass secrets from AWS Systems Manager (SSM) Parameter Store.
+#  GITHUB_TOKEN: GITHUB_TOKEN  # The key is the name of the environment variable, the value is the name of the SSM parameter.
+
+# You can override any of the values defined above by environment.
+environments:  
+  phonetool:
+    network:
+      vpc:
+        placement: 'private' # The tasks will be placed on private subnets for the "phonetool" environment.
+#   test:
+#     count: 2               # Number of tasks to run for the "test" environment.
+#     deployment:            # The deployment strategy for the "test" environment.
+#         rolling: 'recreate' # Stops existing tasks before new ones are started for faster deployments.

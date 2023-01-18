@@ -36,6 +36,7 @@ const (
 	// Protocols.
 	TCP = "TCP"
 	tls = "TLS"
+	udp = "UDP"
 
 	// Tracing vendors.
 	awsXRAY = "awsxray"
@@ -52,6 +53,7 @@ var (
 	essentialContainerDependsOnValidStatuses = []string{dependsOnStart, dependsOnHealthy}
 	dependsOnValidStatuses                   = []string{dependsOnStart, dependsOnComplete, dependsOnSuccess, dependsOnHealthy}
 	nlbValidProtocols                        = []string{TCP, tls}
+	validContainerProtocols                  = []string{TCP, udp}
 	TracingValidVendors                      = []string{awsXRAY}
 	ecsRollingUpdateStrategies               = []string{ECSDefaultRollingUpdateStrategy, ECSRecreateRollingUpdateStrategy}
 
@@ -100,6 +102,14 @@ func (l LoadBalancedWebService) validate() error {
 	}); err != nil {
 		return fmt.Errorf("validate container dependencies: %w", err)
 	}
+	if err = validateExposedPorts(validateExposedPortsOpts{
+		mainContainerName: aws.StringValue(l.Name),
+		mainContainerPort: l.ImageConfig.Port,
+		sidecarConfig:     l.Sidecars,
+		alb:               &l.RoutingRule.RoutingRuleConfiguration,
+	}); err != nil {
+		return fmt.Errorf("validate unique exposed ports: %w", err)
+	}
 	return nil
 }
 
@@ -107,14 +117,24 @@ func (d DeploymentConfiguration) validate() error {
 	if d.isEmpty() {
 		return nil
 	}
-	for _, validStrategy := range ecsRollingUpdateStrategies {
-		if strings.EqualFold(aws.StringValue(d.Rolling), validStrategy) {
-			return nil
-		}
+	if err := d.RollbackAlarms.validate(); err != nil {
+		return fmt.Errorf(`validate "rollback_alarms": %w`, err)
 	}
-	return fmt.Errorf("invalid rolling deployment strategy %s, must be one of %s",
-		aws.StringValue(d.Rolling),
-		english.WordSeries(ecsRollingUpdateStrategies, "or"))
+	if d.Rolling != nil {
+		for _, validStrategy := range ecsRollingUpdateStrategies {
+			if strings.EqualFold(aws.StringValue(d.Rolling), validStrategy) {
+				return nil
+			}
+		}
+		return fmt.Errorf("invalid rolling deployment strategy %q, must be one of %s",
+			aws.StringValue(d.Rolling),
+			english.WordSeries(ecsRollingUpdateStrategies, "or"))
+	}
+	return nil
+}
+
+func (a AlarmArgs) validate() error {
+	return nil
 }
 
 // validate returns nil if LoadBalancedWebServiceConfig is configured correctly.
@@ -204,11 +224,6 @@ func (b BackendService) validate() error {
 	}); err != nil {
 		return fmt.Errorf("validate HTTP load balancer target: %w", err)
 	}
-	if b.ServiceConnectEnabled() {
-		if b.RoutingRule.GetTargetContainer() == nil && b.ImageConfig.Port == nil {
-			return fmt.Errorf(`cannot enable "network.connect" when no port exposed`)
-		}
-	}
 	if err = validateContainerDeps(validateDependenciesOpts{
 		sidecarConfig:     b.Sidecars,
 		imageConfig:       b.ImageConfig.Image,
@@ -216,6 +231,14 @@ func (b BackendService) validate() error {
 		logging:           b.Logging,
 	}); err != nil {
 		return fmt.Errorf("validate container dependencies: %w", err)
+	}
+	if err = validateExposedPorts(validateExposedPortsOpts{
+		mainContainerName: aws.StringValue(b.Name),
+		mainContainerPort: b.ImageConfig.Port,
+		sidecarConfig:     b.Sidecars,
+		alb:               &b.RoutingRule,
+	}); err != nil {
+		return fmt.Errorf("validate unique exposed ports: %w", err)
 	}
 	return nil
 }
@@ -251,6 +274,11 @@ func (b BackendServiceConfig) validate() error {
 	}
 	if err = b.Network.validate(); err != nil {
 		return fmt.Errorf(`validate "network": %w`, err)
+	}
+	if b.Network.Connect.Alias != nil {
+		if b.RoutingRule.GetTargetContainer() == nil && b.ImageConfig.Port == nil {
+			return fmt.Errorf(`cannot set "network.connect.alias" when no ports are exposed`)
+		}
 	}
 	if err = b.PublishConfig.validate(); err != nil {
 		return fmt.Errorf(`validate "publish": %w`, err)
@@ -336,6 +364,11 @@ func (w WorkerService) validate() error {
 	}); err != nil {
 		return fmt.Errorf("validate container dependencies: %w", err)
 	}
+	if err = validateExposedPorts(validateExposedPortsOpts{
+		sidecarConfig: w.Sidecars,
+	}); err != nil {
+		return fmt.Errorf("validate unique exposed ports: %w", err)
+	}
 	return nil
 }
 
@@ -361,6 +394,9 @@ func (w WorkerServiceConfig) validate() error {
 	}
 	if err = w.Network.validate(); err != nil {
 		return fmt.Errorf(`validate "network": %w`, err)
+	}
+	if w.Network.Connect.Alias != nil {
+		return fmt.Errorf(`cannot set "network.connect.alias" when no ports are exposed`)
 	}
 	if err = w.Subscribe.validate(); err != nil {
 		return fmt.Errorf(`validate "subscribe": %w`, err)
@@ -408,6 +444,11 @@ func (s ScheduledJob) validate() error {
 		logging:           s.Logging,
 	}); err != nil {
 		return fmt.Errorf("validate container dependencies: %w", err)
+	}
+	if err = validateExposedPorts(validateExposedPortsOpts{
+		sidecarConfig: s.Sidecars,
+	}); err != nil {
+		return fmt.Errorf("validate unique exposed ports: %w", err)
 	}
 	return nil
 }
@@ -701,19 +742,8 @@ func (r RoutingRuleConfiguration) validate() error {
 	return nil
 }
 
-// validate returns nil if HealthCheckArgsOrString is configured correctly.
-func (h HealthCheckArgsOrString) validate() error {
-	if h.IsEmpty() {
-		return nil
-	}
-	return h.HealthCheckArgs.validate()
-}
-
 // validate returns nil if HTTPHealthCheckArgs is configured correctly.
 func (h HTTPHealthCheckArgs) validate() error {
-	if h.isEmpty() {
-		return nil
-	}
 	return nil
 }
 
@@ -829,6 +859,11 @@ func (t TaskConfig) validate() error {
 	}
 	if err = t.Storage.validate(); err != nil {
 		return fmt.Errorf(`validate "storage": %w`, err)
+	}
+	for n, v := range t.Variables {
+		if err := v.validate(); err != nil {
+			return fmt.Errorf(`validate %q "variables": %w`, n, err)
+		}
 	}
 	for _, v := range t.Secrets {
 		if err := v.validate(); err != nil {
@@ -1091,7 +1126,14 @@ func (r RangeConfig) validate() error {
 			missingField: "min/max",
 		}
 	}
-	min, max := aws.IntValue(r.Min), aws.IntValue(r.Max)
+	min, max, spotFrom := aws.IntValue(r.Min), aws.IntValue(r.Max), aws.IntValue(r.SpotFrom)
+	if min < 0 || max < 0 || spotFrom < 0 {
+		return &errRangeValueLessThanZero{
+			min:      min,
+			max:      max,
+			spotFrom: spotFrom,
+		}
+	}
 	if min <= max {
 		return nil
 	}
@@ -1235,6 +1277,23 @@ func (s SidecarConfig) validate() error {
 	for ind, mp := range s.MountPoints {
 		if err := mp.validate(); err != nil {
 			return fmt.Errorf(`validate "mount_points[%d]": %w`, ind, err)
+		}
+	}
+	_, protocol, err := ParsePortMapping(s.Port)
+	if err != nil {
+		return err
+	}
+	if protocol != nil {
+		protocolVal := aws.StringValue(protocol)
+		var isValidProtocol bool
+		for _, valid := range validContainerProtocols {
+			if strings.EqualFold(protocolVal, valid) {
+				isValidProtocol = true
+				break
+			}
+		}
+		if !isValidProtocol {
+			return fmt.Errorf(`invalid protocol %s; valid protocols include %s`, protocolVal, english.WordSeries(validContainerProtocols, "and"))
 		}
 	}
 	if err := s.HealthCheck.validate(); err != nil {
@@ -1399,7 +1458,14 @@ func (r AppRunnerInstanceConfig) validate() error {
 
 // validate returns nil if RequestDrivenWebServiceHttpConfig is configured correctly.
 func (r RequestDrivenWebServiceHttpConfig) validate() error {
-	return r.HealthCheckConfiguration.validate()
+	if err := r.HealthCheckConfiguration.validate(); err != nil {
+		return err
+	}
+	return r.Private.validate()
+}
+
+func (v VPCEndpoint) validate() error {
+	return nil
 }
 
 // validate returns nil if Observability is configured correctly.
@@ -1603,9 +1669,44 @@ func (r OverrideRule) validate() error {
 	return nil
 }
 
+// validate returns nil if Variable is configured correctly.
+func (v Variable) validate() error {
+	if err := v.FromCFN.validate(); err != nil {
+		return fmt.Errorf(`validate "from_cfn": %w`, err)
+	}
+	return nil
+}
+
+// validate returns nil if stringorFromCFN is configured correctly.
+func (s stringOrFromCFN) validate() error {
+	if s.isEmpty() {
+		return nil
+	}
+	return s.FromCFN.validate()
+}
+
+// validate returns nil if fromCFN is configured correctly.
+func (cfg fromCFN) validate() error {
+	if cfg.isEmpty() {
+		return nil
+	}
+	if len(aws.StringValue(cfg.Name)) == 0 {
+		return errors.New("name cannot be an empty string")
+	}
+	return nil
+}
+
 // validate is a no-op for Secrets.
 func (s Secret) validate() error {
 	return nil
+}
+
+type validateExposedPortsOpts struct {
+	mainContainerName string
+	mainContainerPort *uint16
+	alb               *RoutingRuleConfiguration
+	nlb               *NetworkLoadBalancerConfiguration
+	sidecarConfig     map[string]*SidecarConfig
 }
 
 type validateDependenciesOpts struct {
@@ -1690,6 +1791,120 @@ func validateDepsForEssentialContainers(deps map[string]containerDependency) err
 			}
 		}
 	}
+	return nil
+}
+
+func validateExposedPorts(opts validateExposedPortsOpts) error {
+	containerNameFor := make(map[uint16]string)
+	populateMainContainerPort(containerNameFor, opts)
+	if err := populateSidecarContainerPortsAndValidate(containerNameFor, opts); err != nil {
+		return err
+	}
+	if err := populateALBPortsAndValidate(containerNameFor, opts); err != nil {
+		return err
+	}
+	if err := populateNLBPortsAndValidate(containerNameFor, opts); err != nil {
+		return err
+	}
+	return nil
+}
+
+func populateMainContainerPort(containerNameFor map[uint16]string, opts validateExposedPortsOpts) {
+	if opts.mainContainerPort == nil {
+		return
+	}
+	containerNameFor[aws.Uint16Value(opts.mainContainerPort)] = opts.mainContainerName
+}
+
+func populateSidecarContainerPortsAndValidate(containerNameFor map[uint16]string, opts validateExposedPortsOpts) error {
+	for name, sidecar := range opts.sidecarConfig {
+		if sidecar.Port == nil {
+			continue
+		}
+		sidecarPort, _, err := ParsePortMapping(sidecar.Port)
+		if err != nil {
+			return err
+		}
+		port, err := strconv.ParseUint(aws.StringValue(sidecarPort), 10, 16)
+		if err != nil {
+			return err
+		}
+		if _, ok := containerNameFor[uint16(port)]; ok {
+			return &errContainersExposingSamePort{
+				firstContainer:  name,
+				secondContainer: containerNameFor[uint16(port)],
+				port:            uint16(port),
+			}
+		}
+		containerNameFor[uint16(port)] = name
+	}
+	return nil
+}
+
+func populateALBPortsAndValidate(containerNameFor map[uint16]string, opts validateExposedPortsOpts) error {
+	// This condition takes care of the use case where target_container is set to x container and
+	// target_port exposing port 80 which is already exposed by container y.That means container x
+	// is trying to expose the port that is already being exposed by container y, so error out.
+	if opts.alb == nil {
+		return nil
+	}
+	alb := opts.alb
+	if alb.TargetPort == nil {
+		return nil
+	}
+	if exposed, ok := containerNameFor[aws.Uint16Value(alb.TargetPort)]; ok {
+		if alb.TargetContainer != nil && exposed != aws.StringValue(alb.TargetContainer) {
+			return &errContainersExposingSamePort{
+				firstContainer:  aws.StringValue(alb.TargetContainer),
+				secondContainer: exposed,
+				port:            aws.Uint16Value(alb.TargetPort),
+			}
+		}
+	}
+	targetContainerName := opts.mainContainerName
+	if alb.TargetContainer != nil {
+		targetContainerName = aws.StringValue(alb.TargetContainer)
+	}
+	containerNameFor[aws.Uint16Value(alb.TargetPort)] = targetContainerName
+
+	return nil
+}
+
+func populateNLBPortsAndValidate(containerNameFor map[uint16]string, opts validateExposedPortsOpts) error {
+	if opts.nlb == nil {
+		return nil
+	}
+	nlb := opts.nlb
+	if nlb.Port == nil {
+		return nil
+	}
+	nlbPort, _, err := ParsePortMapping(nlb.Port)
+	if err != nil {
+		return err
+	}
+	port, err := strconv.ParseUint(aws.StringValue(nlbPort), 10, 16)
+	if err != nil {
+		return err
+	}
+	containerPort := uint16(port)
+	if nlb.TargetPort != nil {
+		containerPort = uint16(aws.IntValue(nlb.TargetPort))
+	}
+	if exposed, ok := containerNameFor[containerPort]; ok {
+		if nlb.TargetContainer != nil && aws.StringValue(nlb.TargetContainer) != exposed {
+			return &errContainersExposingSamePort{
+				firstContainer:  aws.StringValue(nlb.TargetContainer),
+				secondContainer: exposed,
+				port:            containerPort,
+			}
+		}
+	}
+	targetContainerName := opts.mainContainerName
+	if nlb.TargetContainer != nil {
+		targetContainerName = aws.StringValue(nlb.TargetContainer)
+	}
+	containerNameFor[containerPort] = targetContainerName
+
 	return nil
 }
 

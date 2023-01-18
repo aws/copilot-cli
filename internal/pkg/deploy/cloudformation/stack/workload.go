@@ -101,7 +101,8 @@ func (i ECRImage) GetLocation() string {
 	return fmt.Sprintf("%s:%s", i.RepoURL, "latest")
 }
 
-type addons interface {
+// NestedStackConfigurer configures a nested stack that deploys addons.
+type NestedStackConfigurer interface {
 	Template() (string, error)
 	Parameters() (string, error)
 }
@@ -122,7 +123,7 @@ type wkld struct {
 	rawManifest []byte // Content of the manifest file without any transformations.
 
 	parser template.Parser
-	addons addons
+	addons NestedStackConfigurer
 }
 
 // StackName returns the name of the stack.
@@ -395,34 +396,34 @@ func (w *appRunnerWkld) Parameters() ([]*cloudformation.Parameter, error) {
 	}
 
 	// Optional HealthCheckInterval parameter
-	if w.healthCheckConfig.HealthCheckArgs.Interval != nil {
+	if w.healthCheckConfig.Advanced.Interval != nil {
 		appRunnerParameters = append(appRunnerParameters, &cloudformation.Parameter{
 			ParameterKey:   aws.String(RDWkldHealthCheckIntervalParamKey),
-			ParameterValue: aws.String(strconv.Itoa(int(w.healthCheckConfig.HealthCheckArgs.Interval.Seconds()))),
+			ParameterValue: aws.String(strconv.Itoa(int(w.healthCheckConfig.Advanced.Interval.Seconds()))),
 		})
 	}
 
 	// Optional HealthCheckTimeout parameter
-	if w.healthCheckConfig.HealthCheckArgs.Timeout != nil {
+	if w.healthCheckConfig.Advanced.Timeout != nil {
 		appRunnerParameters = append(appRunnerParameters, &cloudformation.Parameter{
 			ParameterKey:   aws.String(RDWkldHealthCheckTimeoutParamKey),
-			ParameterValue: aws.String(strconv.Itoa(int(w.healthCheckConfig.HealthCheckArgs.Timeout.Seconds()))),
+			ParameterValue: aws.String(strconv.Itoa(int(w.healthCheckConfig.Advanced.Timeout.Seconds()))),
 		})
 	}
 
 	// Optional HealthCheckHealthyThreshold parameter
-	if w.healthCheckConfig.HealthCheckArgs.HealthyThreshold != nil {
+	if w.healthCheckConfig.Advanced.HealthyThreshold != nil {
 		appRunnerParameters = append(appRunnerParameters, &cloudformation.Parameter{
 			ParameterKey:   aws.String(RDWkldHealthCheckHealthyThresholdParamKey),
-			ParameterValue: aws.String(strconv.Itoa(int(*w.healthCheckConfig.HealthCheckArgs.HealthyThreshold))),
+			ParameterValue: aws.String(strconv.Itoa(int(*w.healthCheckConfig.Advanced.HealthyThreshold))),
 		})
 	}
 
 	// Optional HealthCheckUnhealthyThreshold parameter
-	if w.healthCheckConfig.HealthCheckArgs.UnhealthyThreshold != nil {
+	if w.healthCheckConfig.Advanced.UnhealthyThreshold != nil {
 		appRunnerParameters = append(appRunnerParameters, &cloudformation.Parameter{
 			ParameterKey:   aws.String(RDWkldHealthCheckUnhealthyThresholdParamKey),
-			ParameterValue: aws.String(strconv.Itoa(int(*w.healthCheckConfig.HealthCheckArgs.UnhealthyThreshold))),
+			ParameterValue: aws.String(strconv.Itoa(int(*w.healthCheckConfig.Advanced.UnhealthyThreshold))),
 		})
 	}
 

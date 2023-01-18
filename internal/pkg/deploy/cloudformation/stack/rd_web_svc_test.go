@@ -38,13 +38,13 @@ var testRDWebServiceManifest = &manifest.RequestDrivenWebService{
 			CPU:    aws.Int(256),
 			Memory: aws.Int(512),
 		},
-		Variables: map[string]string{
-			"LOG_LEVEL": "info",
-			"NODE_ENV":  "development",
+		Variables: map[string]manifest.Variable{
+			"LOG_LEVEL": {},
+			"NODE_ENV":  {},
 		},
 		RequestDrivenWebServiceHttpConfig: manifest.RequestDrivenWebServiceHttpConfig{
 			HealthCheckConfiguration: manifest.HealthCheckArgsOrString{
-				HealthCheckPath: aws.String("/"),
+				Union: manifest.BasicToUnion[string, manifest.HTTPHealthCheckArgs]("/"),
 			},
 		},
 		Tags: map[string]string{
@@ -108,7 +108,7 @@ func TestRequestDrivenWebService_NewRequestDrivenWebService(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			addons := mocks.NewMockaddons(ctrl)
+			addons := mocks.NewMockNestedStackConfigurer(ctrl)
 
 			stack, err := NewRequestDrivenWebService(RequestDrivenWebServiceConfig{
 				App:           tc.input.appInfo,
@@ -167,12 +167,16 @@ func TestRequestDrivenWebService_Template(t *testing.T) {
 				addons := mockAddons{}
 				mockParser.EXPECT().ParseRequestDrivenWebService(gomock.Any()).DoAndReturn(func(actual template.WorkloadOpts) (*template.Content, error) {
 					require.Equal(t, template.WorkloadOpts{
-						AppName:           "phonetool",
-						EnvName:           "test",
-						WorkloadName:      "frontend",
-						WorkloadType:      manifest.RequestDrivenWebServiceType,
-						Variables:         c.manifest.Variables,
+						AppName:      "phonetool",
+						EnvName:      "test",
+						WorkloadName: "frontend",
+						WorkloadType: manifest.RequestDrivenWebServiceType,
+						Variables: map[string]template.Variable{
+							"LOG_LEVEL": template.PlainVariable(""),
+							"NODE_ENV":  template.PlainVariable(""),
+						},
 						Tags:              c.manifest.Tags,
+						Count:             c.manifest.Count,
 						EnableHealthCheck: true,
 						Alias:             aws.String("convex.domain.com"),
 						CustomResources: map[string]template.S3ObjectLocation{
@@ -204,7 +208,7 @@ func TestRequestDrivenWebService_Template(t *testing.T) {
 						EnvName:                  "test",
 						WorkloadName:             "frontend",
 						WorkloadType:             manifest.RequestDrivenWebServiceType,
-						Variables:                c.manifest.Variables,
+						Variables:                convertEnvVars(c.manifest.Variables),
 						Tags:                     c.manifest.Tags,
 						ServiceDiscoveryEndpoint: mockSD,
 						EnableHealthCheck:        true,
@@ -248,7 +252,7 @@ Outputs:
 						EnvName:                  "test",
 						WorkloadName:             "frontend",
 						WorkloadType:             manifest.RequestDrivenWebServiceType,
-						Variables:                c.manifest.Variables,
+						Variables:                convertEnvVars(c.manifest.Variables),
 						Tags:                     c.manifest.Tags,
 						ServiceDiscoveryEndpoint: mockSD,
 						NestedStack: &template.WorkloadNestedStackOpts{

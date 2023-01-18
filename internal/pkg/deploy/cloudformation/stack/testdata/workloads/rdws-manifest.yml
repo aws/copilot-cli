@@ -38,6 +38,8 @@ network:
   vpc:
     placement: private
 
+count: 'high-availability/3'
+
 # Optional fields for more advanced use-cases.
 #
 # variables:                    # Pass environment variables as key value pairs.
@@ -52,6 +54,8 @@ environments:
     command: crazy diamond
     variables:
       LOG_LEVEL: debug        # Log level for the "test" environment.
+      DB_NAME:
+        from_cfn: test-UserDB
   prod:
     network:
       vpc:

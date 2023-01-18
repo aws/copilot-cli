@@ -52,7 +52,7 @@ func TestNewHTTPLoadBalancedWebService(t *testing.T) {
 						RoutingRuleConfiguration: RoutingRuleConfiguration{
 							Path: stringP("/"),
 							HealthCheck: HealthCheckArgsOrString{
-								HealthCheckPath: stringP("/"),
+								Union: BasicToUnion[string, HTTPHealthCheckArgs]("/"),
 							},
 						},
 					},
@@ -77,6 +77,7 @@ func TestNewHTTPLoadBalancedWebService(t *testing.T) {
 						},
 					},
 				},
+				Environments: map[string]*LoadBalancedWebServiceConfig{},
 			},
 		},
 		"overrides default settings when optional configuration is provided": {
@@ -84,6 +85,9 @@ func TestNewHTTPLoadBalancedWebService(t *testing.T) {
 				WorkloadProps: &WorkloadProps{
 					Name:       "subscribers",
 					Dockerfile: "./subscribers/Dockerfile",
+					PrivateOnlyEnvironments: []string{
+						"metrics",
+					},
 				},
 				Path: "/",
 				Port: 80,
@@ -121,7 +125,7 @@ func TestNewHTTPLoadBalancedWebService(t *testing.T) {
 							Path:            stringP("/"),
 							ProtocolVersion: aws.String("gRPC"),
 							HealthCheck: HealthCheckArgsOrString{
-								HealthCheckPath: stringP("/"),
+								Union: BasicToUnion[string, HTTPHealthCheckArgs]("/"),
 							},
 						},
 					},
@@ -153,6 +157,17 @@ func TestNewHTTPLoadBalancedWebService(t *testing.T) {
 						},
 					},
 				},
+				Environments: map[string]*LoadBalancedWebServiceConfig{
+					"metrics": {
+						Network: NetworkConfig{
+							VPC: vpcConfig{
+								Placement: PlacementArgOrString{
+									PlacementString: placementStringP(PrivateSubnetPlacement),
+								},
+							},
+						},
+					},
+				},
 			},
 		},
 	}
@@ -175,13 +190,12 @@ func TestNewLoadBalancedWebService_UnmarshalYaml(t *testing.T) {
 		inContent []byte
 
 		wantedStruct HealthCheckArgsOrString
-		wantedError  error
 	}{
 		"non-args path string": {
 			inContent: []byte(`  healthcheck: /testing`),
 
 			wantedStruct: HealthCheckArgsOrString{
-				HealthCheckPath: aws.String("/testing"),
+				Union: BasicToUnion[string, HTTPHealthCheckArgs]("/testing"),
 			},
 		},
 		"should use custom healthcheck configuration when provided and set default path to nil": {
@@ -192,38 +206,27 @@ func TestNewLoadBalancedWebService_UnmarshalYaml(t *testing.T) {
     interval: 78s
     timeout: 9s`),
 			wantedStruct: HealthCheckArgsOrString{
-				HealthCheckArgs: HTTPHealthCheckArgs{
+				Union: AdvancedToUnion[string](HTTPHealthCheckArgs{
 					Path:               aws.String("/testing"),
 					HealthyThreshold:   aws.Int64(5),
 					UnhealthyThreshold: aws.Int64(6),
 					Interval:           durationp(78 * time.Second),
 					Timeout:            durationp(9 * time.Second),
-				},
-				HealthCheckPath: nil,
+				}),
 			},
-		},
-		"error if unmarshalable": {
-			inContent: []byte(`  healthcheck:
-    bath: to ruin
-    unwealthy_threshold: berry`),
-			wantedError: errUnmarshalHealthCheckArgs,
 		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			rr := newDefaultHTTPLoadBalancedWebService().RoutingRule
 			err := yaml.Unmarshal(tc.inContent, &rr)
-			if tc.wantedError != nil {
-				require.EqualError(t, err, tc.wantedError.Error())
-			} else {
-				require.NoError(t, err)
-				require.Equal(t, tc.wantedStruct.HealthCheckPath, rr.HealthCheck.HealthCheckPath)
-				require.Equal(t, tc.wantedStruct.HealthCheckArgs.Path, rr.HealthCheck.HealthCheckArgs.Path)
-				require.Equal(t, tc.wantedStruct.HealthCheckArgs.HealthyThreshold, rr.HealthCheck.HealthCheckArgs.HealthyThreshold)
-				require.Equal(t, tc.wantedStruct.HealthCheckArgs.UnhealthyThreshold, rr.HealthCheck.HealthCheckArgs.UnhealthyThreshold)
-				require.Equal(t, tc.wantedStruct.HealthCheckArgs.Interval, rr.HealthCheck.HealthCheckArgs.Interval)
-				require.Equal(t, tc.wantedStruct.HealthCheckArgs.Timeout, rr.HealthCheck.HealthCheckArgs.Timeout)
-			}
+			require.NoError(t, err)
+			require.Equal(t, tc.wantedStruct.Advanced, rr.HealthCheck.Advanced)
+			require.Equal(t, tc.wantedStruct.Advanced.Path, rr.HealthCheck.Advanced.Path)
+			require.Equal(t, tc.wantedStruct.Advanced.HealthyThreshold, rr.HealthCheck.Advanced.HealthyThreshold)
+			require.Equal(t, tc.wantedStruct.Advanced.UnhealthyThreshold, rr.HealthCheck.Advanced.UnhealthyThreshold)
+			require.Equal(t, tc.wantedStruct.Advanced.Interval, rr.HealthCheck.Advanced.Interval)
+			require.Equal(t, tc.wantedStruct.Advanced.Timeout, rr.HealthCheck.Advanced.Timeout)
 		})
 	}
 }
@@ -267,7 +270,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						RoutingRuleConfiguration: RoutingRuleConfiguration{
 							Path: aws.String("/awards/*"),
 							HealthCheck: HealthCheckArgsOrString{
-								HealthCheckPath: aws.String("/"),
+								Union: BasicToUnion[string, HTTPHealthCheckArgs]("/"),
 							},
 						},
 					},
@@ -276,6 +279,20 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						Memory: aws.Int(1024),
 						Count: Count{
 							Value: aws.Int(1),
+						},
+						Variables: map[string]Variable{
+							"VAR1": {
+								stringOrFromCFN{
+									Plain: stringP("var1"),
+								},
+							},
+							"VAR2": {
+								stringOrFromCFN{
+									FromCFN: fromCFN{
+										Name: stringP("import-var2"),
+									},
+								},
+							},
 						},
 						Storage: Storage{
 							Volumes: map[string]*Volume{
@@ -319,7 +336,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						RoutingRuleConfiguration: RoutingRuleConfiguration{
 							Path: aws.String("/awards/*"),
 							HealthCheck: HealthCheckArgsOrString{
-								HealthCheckPath: aws.String("/"),
+								Union: BasicToUnion[string, HTTPHealthCheckArgs]("/"),
 							},
 						},
 					},
@@ -328,6 +345,20 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						Memory: aws.Int(1024),
 						Count: Count{
 							Value: aws.Int(1),
+						},
+						Variables: map[string]Variable{
+							"VAR1": {
+								stringOrFromCFN{
+									Plain: stringP("var1"),
+								},
+							},
+							"VAR2": {
+								stringOrFromCFN{
+									FromCFN: fromCFN{
+										Name: stringP("import-var2"),
+									},
+								},
+							},
 						},
 						Storage: Storage{
 							Volumes: map[string]*Volume{
@@ -371,7 +402,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						RoutingRuleConfiguration: RoutingRuleConfiguration{
 							Path: aws.String("/awards/*"),
 							HealthCheck: HealthCheckArgsOrString{
-								HealthCheckPath: aws.String("/"),
+								Union: BasicToUnion[string, HTTPHealthCheckArgs]("/"),
 							},
 						},
 					},
@@ -381,13 +412,43 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						Count: Count{
 							Value: aws.Int(1),
 						},
-						Variables: map[string]string{
-							"LOG_LEVEL":      "DEBUG",
-							"DDB_TABLE_NAME": "awards",
+						Variables: map[string]Variable{
+							"LOG_LEVEL": {
+								stringOrFromCFN{
+									Plain: stringP("DEBUG"),
+								},
+							},
+							"S3_TABLE_NAME": {
+								stringOrFromCFN{
+									Plain: stringP("doggo"),
+								},
+							},
+							"RDS_TABLE_NAME": {
+								stringOrFromCFN{
+									FromCFN: fromCFN{
+										Name: stringP("duckling"),
+									},
+								},
+							},
+							"DDB_TABLE_NAME": {
+								stringOrFromCFN{
+									FromCFN: fromCFN{
+										Name: stringP("awards"),
+									},
+								},
+							},
 						},
 						Secrets: map[string]Secret{
-							"GITHUB_TOKEN": {from: aws.String("1111")},
-							"TWILIO_TOKEN": {from: aws.String("1111")},
+							"GITHUB_TOKEN": {
+								from: stringOrFromCFN{
+									Plain: aws.String("1111"),
+								},
+							},
+							"TWILIO_TOKEN": {
+								from: stringOrFromCFN{
+									Plain: aws.String("1111"),
+								},
+							},
 						},
 						Storage: Storage{
 							Volumes: map[string]*Volume{
@@ -425,7 +486,9 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 								PlacementString: placementStringP(PublicSubnetPlacement),
 							},
 							SecurityGroups: SecurityGroupsIDsOrConfig{
-								IDs: []string{"sg-123"},
+								IDs: []stringOrFromCFN{{
+									Plain: aws.String("sg-123"),
+								}},
 							},
 						},
 					},
@@ -454,8 +517,25 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							Count: Count{
 								Value: aws.Int(0),
 							},
-							Variables: map[string]string{
-								"DDB_TABLE_NAME": "awards-prod",
+							Variables: map[string]Variable{
+								"LOG_LEVEL": {
+									stringOrFromCFN{
+										Plain: stringP("ERROR"),
+									},
+								},
+								"S3_TABLE_NAME": {
+									stringOrFromCFN{
+										FromCFN: fromCFN{Name: stringP("prod-doggo")},
+									},
+								},
+								"RDS_TABLE_NAME": {
+									stringOrFromCFN{Plain: stringP("duckling-prod")},
+								},
+								"DDB_TABLE_NAME": {
+									stringOrFromCFN{
+										FromCFN: fromCFN{Name: stringP("awards-prod")},
+									},
+								},
 							},
 							Storage: Storage{
 								Volumes: map[string]*Volume{
@@ -488,13 +568,24 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						},
 						Logging: Logging{
 							SecretOptions: map[string]Secret{
-								"FOO": {from: aws.String("BAR")},
+								"FOO": {
+									from: stringOrFromCFN{
+										Plain: aws.String("BAR"),
+									},
+								},
 							},
 						},
 						Network: NetworkConfig{
 							VPC: vpcConfig{
 								SecurityGroups: SecurityGroupsIDsOrConfig{
-									IDs: []string{"sg-456", "sg-789"},
+									IDs: []stringOrFromCFN{
+										{
+											Plain: aws.String("sg-456"),
+										},
+										{
+											Plain: aws.String("sg-789"),
+										},
+									},
 								},
 							},
 						},
@@ -525,7 +616,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						RoutingRuleConfiguration: RoutingRuleConfiguration{
 							Path: aws.String("/awards/*"),
 							HealthCheck: HealthCheckArgsOrString{
-								HealthCheckPath: aws.String("/"),
+								Union: BasicToUnion[string, HTTPHealthCheckArgs]("/"),
 							},
 							TargetContainer: aws.String("xray"),
 						},
@@ -536,13 +627,39 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						Count: Count{
 							Value: aws.Int(0),
 						},
-						Variables: map[string]string{
-							"LOG_LEVEL":      "DEBUG",
-							"DDB_TABLE_NAME": "awards-prod",
+						Variables: map[string]Variable{
+							"LOG_LEVEL": {
+								stringOrFromCFN{
+									Plain: stringP("ERROR"),
+								},
+							},
+							"S3_TABLE_NAME": {
+								stringOrFromCFN{
+									FromCFN: fromCFN{Name: stringP("prod-doggo")},
+								},
+							},
+							"RDS_TABLE_NAME": {
+								stringOrFromCFN{
+									Plain: stringP("duckling-prod"),
+								},
+							},
+							"DDB_TABLE_NAME": {
+								stringOrFromCFN{
+									FromCFN: fromCFN{Name: stringP("awards-prod")},
+								},
+							},
 						},
 						Secrets: map[string]Secret{
-							"GITHUB_TOKEN": {from: aws.String("1111")},
-							"TWILIO_TOKEN": {from: aws.String("1111")},
+							"GITHUB_TOKEN": {
+								from: stringOrFromCFN{
+									Plain: aws.String("1111"),
+								},
+							},
+							"TWILIO_TOKEN": {
+								from: stringOrFromCFN{
+									Plain: aws.String("1111"),
+								},
+							},
 						},
 						Storage: Storage{
 							Volumes: map[string]*Volume{
@@ -583,7 +700,11 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					Logging: Logging{
 						ConfigFile: aws.String("mockConfigFile"),
 						SecretOptions: map[string]Secret{
-							"FOO": {from: aws.String("BAR")},
+							"FOO": {
+								from: stringOrFromCFN{
+									Plain: aws.String("BAR"),
+								},
+							},
 						},
 					},
 					Network: NetworkConfig{
@@ -592,7 +713,14 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 								PlacementString: placementStringP(PublicSubnetPlacement),
 							},
 							SecurityGroups: SecurityGroupsIDsOrConfig{
-								IDs: []string{"sg-456", "sg-789"},
+								IDs: []stringOrFromCFN{
+									{
+										Plain: aws.String("sg-456"),
+									},
+									{
+										Plain: aws.String("sg-789"),
+									},
+								},
 							},
 						},
 					},
@@ -607,6 +735,18 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							AdvancedCount: AdvancedCount{
 								Range: Range{Value: &mockRange},
 								CPU:   mockConfig,
+							},
+						},
+						Variables: map[string]Variable{
+							"VAR1": {
+								stringOrFromCFN{
+									Plain: stringP("var1"),
+								},
+							},
+							"VAR2": {
+								stringOrFromCFN{
+									FromCFN: fromCFN{Name: stringP("import-var2")},
+								},
 							},
 						},
 					},
@@ -633,6 +773,18 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							AdvancedCount: AdvancedCount{
 								Range: Range{Value: &mockRange},
 								CPU:   mockConfig,
+							},
+						},
+						Variables: map[string]Variable{
+							"VAR1": {
+								stringOrFromCFN{
+									Plain: stringP("var1"),
+								},
+							},
+							"VAR2": {
+								stringOrFromCFN{
+									FromCFN: fromCFN{Name: stringP("import-var2")},
+								},
 							},
 						},
 					},
@@ -667,7 +819,14 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 								PlacementString: placementStringP(PublicSubnetPlacement),
 							},
 							SecurityGroups: SecurityGroupsIDsOrConfig{
-								IDs: []string{"sg-456", "sg-789"},
+								IDs: []stringOrFromCFN{
+									{
+										Plain: aws.String("sg-456"),
+									},
+									{
+										Plain: aws.String("sg-789"),
+									},
+								},
 							},
 						},
 					},
@@ -695,7 +854,14 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 								PlacementString: placementStringP(PublicSubnetPlacement),
 							},
 							SecurityGroups: SecurityGroupsIDsOrConfig{
-								IDs: []string{"sg-456", "sg-789"},
+								IDs: []stringOrFromCFN{
+									{
+										Plain: aws.String("sg-456"),
+									},
+									{
+										Plain: aws.String("sg-789"),
+									},
+								},
 							},
 						},
 					},
@@ -712,7 +878,14 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							},
 							SecurityGroups: SecurityGroupsIDsOrConfig{
 								AdvancedConfig: SecurityGroupsConfig{
-									SecurityGroups: []string{"sg-535", "sg-789"},
+									SecurityGroups: []stringOrFromCFN{
+										{
+											Plain: aws.String("sg-535"),
+										},
+										{
+											Plain: aws.String("sg-789"),
+										},
+									},
 								},
 							},
 						},
@@ -724,8 +897,15 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							VPC: vpcConfig{
 								SecurityGroups: SecurityGroupsIDsOrConfig{
 									AdvancedConfig: SecurityGroupsConfig{
-										SecurityGroups: []string{"sg-456", "sg-700"},
-										DenyDefault:    aws.Bool(true),
+										SecurityGroups: []stringOrFromCFN{
+											{
+												Plain: aws.String("sg-456"),
+											},
+											{
+												Plain: aws.String("sg-700"),
+											},
+										},
+										DenyDefault: aws.Bool(true),
 									},
 								},
 							},
@@ -744,8 +924,15 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							},
 							SecurityGroups: SecurityGroupsIDsOrConfig{
 								AdvancedConfig: SecurityGroupsConfig{
-									SecurityGroups: []string{"sg-456", "sg-700"},
-									DenyDefault:    aws.Bool(true),
+									SecurityGroups: []stringOrFromCFN{
+										{
+											Plain: aws.String("sg-456"),
+										},
+										{
+											Plain: aws.String("sg-700"),
+										},
+									},
+									DenyDefault: aws.Bool(true),
 								},
 							},
 						},
@@ -1175,7 +1362,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					RoutingRule: RoutingRuleConfigOrBool{
 						RoutingRuleConfiguration: RoutingRuleConfiguration{
 							HealthCheck: HealthCheckArgsOrString{
-								HealthCheckPath: aws.String("path"),
+								Union: BasicToUnion[string, HTTPHealthCheckArgs]("path"),
 							},
 							AllowedSourceIps: []IPNet{mockIPNet1},
 						},
@@ -1202,7 +1389,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					RoutingRule: RoutingRuleConfigOrBool{
 						RoutingRuleConfiguration: RoutingRuleConfiguration{
 							HealthCheck: HealthCheckArgsOrString{
-								HealthCheckPath: aws.String("path"),
+								Union: BasicToUnion[string, HTTPHealthCheckArgs]("path"),
 							},
 							AllowedSourceIps: []IPNet{mockIPNet2},
 						},
@@ -1220,7 +1407,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					RoutingRule: RoutingRuleConfigOrBool{
 						RoutingRuleConfiguration: RoutingRuleConfiguration{
 							HealthCheck: HealthCheckArgsOrString{
-								HealthCheckPath: aws.String("path"),
+								Union: BasicToUnion[string, HTTPHealthCheckArgs]("path"),
 							},
 							AllowedSourceIps: []IPNet{mockIPNet1, mockIPNet2},
 						},
@@ -1231,7 +1418,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						RoutingRule: RoutingRuleConfigOrBool{
 							RoutingRuleConfiguration: RoutingRuleConfiguration{
 								HealthCheck: HealthCheckArgsOrString{
-									HealthCheckPath: aws.String("another-path"),
+									Union: BasicToUnion[string, HTTPHealthCheckArgs]("another-path"),
 								},
 							},
 						},
@@ -1249,7 +1436,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					RoutingRule: RoutingRuleConfigOrBool{
 						RoutingRuleConfiguration: RoutingRuleConfiguration{
 							HealthCheck: HealthCheckArgsOrString{
-								HealthCheckPath: aws.String("another-path"),
+								Union: BasicToUnion[string, HTTPHealthCheckArgs]("another-path"),
 							},
 							AllowedSourceIps: []IPNet{mockIPNet1, mockIPNet2},
 						},
@@ -1267,7 +1454,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					RoutingRule: RoutingRuleConfigOrBool{
 						RoutingRuleConfiguration: RoutingRuleConfiguration{
 							HealthCheck: HealthCheckArgsOrString{
-								HealthCheckPath: aws.String("path"),
+								Union: BasicToUnion[string, HTTPHealthCheckArgs]("path"),
 							},
 							AllowedSourceIps: []IPNet{mockIPNet1, mockIPNet2},
 						},
@@ -1278,7 +1465,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						RoutingRule: RoutingRuleConfigOrBool{
 							RoutingRuleConfiguration: RoutingRuleConfiguration{
 								HealthCheck: HealthCheckArgsOrString{
-									HealthCheckPath: aws.String("another-path"),
+									Union: BasicToUnion[string, HTTPHealthCheckArgs]("another-path"),
 								},
 								AllowedSourceIps: []IPNet{},
 							},
@@ -1297,7 +1484,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					RoutingRule: RoutingRuleConfigOrBool{
 						RoutingRuleConfiguration: RoutingRuleConfiguration{
 							HealthCheck: HealthCheckArgsOrString{
-								HealthCheckPath: aws.String("another-path"),
+								Union: BasicToUnion[string, HTTPHealthCheckArgs]("another-path"),
 							},
 							AllowedSourceIps: []IPNet{},
 						},
@@ -1336,41 +1523,6 @@ func TestLoadBalancedWebService_Port(t *testing.T) {
 	// THEN
 	require.True(t, ok)
 	require.Equal(t, uint16(80), actual)
-}
-
-func TestLoadBalancedWebService_ServiceConnectEnabled(t *testing.T) {
-	testCases := map[string]struct {
-		mft *LoadBalancedWebService
-
-		wanted bool
-	}{
-		"enabled by default": {
-			mft:    &LoadBalancedWebService{},
-			wanted: true,
-		},
-		"disable if explicitly set": {
-			mft: &LoadBalancedWebService{
-				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-					Network: NetworkConfig{
-						Connect: ServiceConnectBoolOrArgs{
-							EnableServiceConnect: aws.Bool(false),
-						},
-					},
-				},
-			},
-			wanted: false,
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// WHEN
-			enabled := tc.mft.ServiceConnectEnabled()
-
-			// THEN
-			require.Equal(t, tc.wanted, enabled)
-		})
-	}
 }
 
 func TestLoadBalancedWebService_Publish(t *testing.T) {
@@ -1598,6 +1750,510 @@ func TestLoadBalancedWebService_RequiredEnvironmentFeatures(t *testing.T) {
 			tc.mft(&inSvc)
 			got := inSvc.requiredEnvironmentFeatures()
 			require.Equal(t, tc.wanted, got)
+		})
+	}
+}
+
+func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
+	testCases := map[string]struct {
+		mft                *LoadBalancedWebService
+		wantedExposedPorts []ExposedPort
+	}{
+		"expose new sidecar container port through alb target_port and target_container": {
+			mft: &LoadBalancedWebService{
+				Workload: Workload{
+					Name: aws.String("frontend"),
+				},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: ImageWithPortAndHealthcheck{
+						ImageWithPort: ImageWithPort{
+							Port: aws.Uint16(80),
+						},
+					},
+					RoutingRule: RoutingRuleConfigOrBool{
+						RoutingRuleConfiguration: RoutingRuleConfiguration{
+							Path:            aws.String("/"),
+							TargetContainer: aws.String("xray"),
+							TargetPort:      aws.Uint16(81),
+						},
+					},
+					Sidecars: map[string]*SidecarConfig{
+						"xray": {
+							Port:       aws.String("2000"),
+							Image:      aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							CredsParam: aws.String("some arn"),
+						},
+					},
+				},
+			},
+			wantedExposedPorts: []ExposedPort{
+				{
+					Port:          80,
+					ContainerName: "frontend",
+					Protocol:      "tcp",
+				},
+				{
+					Port:          81,
+					ContainerName: "xray",
+					Protocol:      "tcp",
+				},
+				{
+					Port:          2000,
+					ContainerName: "xray",
+					Protocol:      "tcp",
+				},
+			},
+		},
+		"expose new primary container port through alb target_port": {
+			mft: &LoadBalancedWebService{
+				Workload: Workload{
+					Name: aws.String("frontend"),
+				},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: ImageWithPortAndHealthcheck{
+						ImageWithPort: ImageWithPort{
+							Port: aws.Uint16(80),
+						},
+					},
+					RoutingRule: RoutingRuleConfigOrBool{
+						RoutingRuleConfiguration: RoutingRuleConfiguration{
+							Path:       aws.String("/"),
+							TargetPort: aws.Uint16(81),
+						},
+					},
+					Sidecars: map[string]*SidecarConfig{
+						"xray": {
+							Port:       aws.String("2000"),
+							Image:      aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							CredsParam: aws.String("some arn"),
+						},
+					},
+				},
+			},
+			wantedExposedPorts: []ExposedPort{
+				{
+					Port:          80,
+					ContainerName: "frontend",
+					Protocol:      "tcp",
+				},
+				{
+					Port:          81,
+					ContainerName: "frontend",
+					Protocol:      "tcp",
+				},
+				{
+					Port:          2000,
+					ContainerName: "xray",
+					Protocol:      "tcp",
+				},
+			},
+		},
+		"expose new primary container port through alb target_port and target_container": {
+			mft: &LoadBalancedWebService{
+				Workload: Workload{
+					Name: aws.String("frontend"),
+				},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: ImageWithPortAndHealthcheck{
+						ImageWithPort: ImageWithPort{
+							Port: aws.Uint16(80),
+						},
+					},
+					RoutingRule: RoutingRuleConfigOrBool{
+						RoutingRuleConfiguration: RoutingRuleConfiguration{
+							Path:            aws.String("/"),
+							TargetContainer: aws.String("frontend"),
+							TargetPort:      aws.Uint16(81),
+						},
+					},
+					Sidecars: map[string]*SidecarConfig{
+						"xray": {
+							Port:       aws.String("2000"),
+							Image:      aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							CredsParam: aws.String("some arn"),
+						},
+					},
+				},
+			},
+			wantedExposedPorts: []ExposedPort{
+				{
+					Port:          80,
+					ContainerName: "frontend",
+					Protocol:      "tcp",
+				},
+				{
+					Port:          81,
+					ContainerName: "frontend",
+					Protocol:      "tcp",
+				},
+				{
+					Port:          2000,
+					ContainerName: "xray",
+					Protocol:      "tcp",
+				},
+			},
+		},
+		"expose sidecar container port through alb target_port": {
+			mft: &LoadBalancedWebService{
+				Workload: Workload{
+					Name: aws.String("frontend"),
+				},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: ImageWithPortAndHealthcheck{
+						ImageWithPort: ImageWithPort{
+							Port: aws.Uint16(80),
+						},
+					},
+					RoutingRule: RoutingRuleConfigOrBool{
+						RoutingRuleConfiguration: RoutingRuleConfiguration{
+							Path:            aws.String("/"),
+							TargetContainer: aws.String("xray"),
+							TargetPort:      aws.Uint16(81),
+						},
+					},
+					Sidecars: map[string]*SidecarConfig{
+						"xray": {
+							Image:      aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							CredsParam: aws.String("some arn"),
+						},
+					},
+				},
+			},
+			wantedExposedPorts: []ExposedPort{
+				{
+					Port:          80,
+					ContainerName: "frontend",
+					Protocol:      "tcp",
+				},
+				{
+					Port:          81,
+					ContainerName: "xray",
+					Protocol:      "tcp",
+				},
+			},
+		},
+		"reference existing sidecar container port through alb target_port": {
+			mft: &LoadBalancedWebService{
+				Workload: Workload{
+					Name: aws.String("frontend"),
+				},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: ImageWithPortAndHealthcheck{
+						ImageWithPort: ImageWithPort{
+							Port: aws.Uint16(80),
+						},
+					},
+					RoutingRule: RoutingRuleConfigOrBool{
+						RoutingRuleConfiguration: RoutingRuleConfiguration{
+							Path:       aws.String("/"),
+							TargetPort: aws.Uint16(81),
+						},
+					},
+					Sidecars: map[string]*SidecarConfig{
+						"xray": {
+							Port:       aws.String("81"),
+							Image:      aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							CredsParam: aws.String("some arn"),
+						},
+					},
+				},
+			},
+			wantedExposedPorts: []ExposedPort{
+				{
+					Port:          80,
+					ContainerName: "frontend",
+					Protocol:      "tcp",
+				},
+				{
+					Port:          81,
+					ContainerName: "xray",
+					Protocol:      "tcp",
+				},
+			},
+		},
+		"reference existing primary container port through alb target_port": {
+			mft: &LoadBalancedWebService{
+				Workload: Workload{
+					Name: aws.String("frontend"),
+				},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: ImageWithPortAndHealthcheck{
+						ImageWithPort: ImageWithPort{
+							Port: aws.Uint16(80),
+						},
+					},
+					RoutingRule: RoutingRuleConfigOrBool{
+						RoutingRuleConfiguration: RoutingRuleConfiguration{
+							Path:       aws.String("/"),
+							TargetPort: aws.Uint16(80),
+						},
+					},
+					Sidecars: map[string]*SidecarConfig{
+						"xray": {
+							Port:       aws.String("81"),
+							Image:      aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							CredsParam: aws.String("some arn"),
+						},
+					},
+				},
+			},
+			wantedExposedPorts: []ExposedPort{
+				{
+					Port:          80,
+					ContainerName: "frontend",
+					Protocol:      "tcp",
+				},
+				{
+					Port:          81,
+					ContainerName: "xray",
+					Protocol:      "tcp",
+				},
+			},
+		},
+		"ALB and NLB exposes the same additional port on the main container": {
+			mft: &LoadBalancedWebService{
+				Workload: Workload{
+					Name: aws.String("frontend"),
+				},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: ImageWithPortAndHealthcheck{
+						ImageWithPort: ImageWithPort{
+							Port: aws.Uint16(80),
+						},
+					},
+					RoutingRule: RoutingRuleConfigOrBool{
+						RoutingRuleConfiguration: RoutingRuleConfiguration{
+							Path:       aws.String("/"),
+							TargetPort: aws.Uint16(81),
+						},
+					},
+					NLBConfig: NetworkLoadBalancerConfiguration{
+						Port:       aws.String("85"),
+						TargetPort: aws.Int(81),
+					},
+					Sidecars: map[string]*SidecarConfig{
+						"xray": {
+							Port:       aws.String("2000"),
+							Image:      aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							CredsParam: aws.String("some arn"),
+						},
+					},
+				},
+			},
+			wantedExposedPorts: []ExposedPort{
+				{
+					Port:          80,
+					ContainerName: "frontend",
+					Protocol:      "tcp",
+				},
+				{
+					Port:          81,
+					ContainerName: "frontend",
+					Protocol:      "tcp",
+				},
+				{
+					Port:          2000,
+					ContainerName: "xray",
+					Protocol:      "tcp",
+				},
+			},
+		},
+		"ALB and NLB exposes two different ports on the main container": {
+			mft: &LoadBalancedWebService{
+				Workload: Workload{
+					Name: aws.String("frontend"),
+				},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: ImageWithPortAndHealthcheck{
+						ImageWithPort: ImageWithPort{
+							Port: aws.Uint16(80),
+						},
+					},
+					RoutingRule: RoutingRuleConfigOrBool{
+						RoutingRuleConfiguration: RoutingRuleConfiguration{
+							TargetPort: aws.Uint16(81),
+						},
+					},
+					NLBConfig: NetworkLoadBalancerConfiguration{
+						Port: aws.String("82"),
+					},
+					Sidecars: map[string]*SidecarConfig{
+						"xray": {
+							Port:       aws.String("2000"),
+							Image:      aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							CredsParam: aws.String("some arn"),
+						},
+					},
+				},
+			},
+			wantedExposedPorts: []ExposedPort{
+				{
+					Port:          80,
+					ContainerName: "frontend",
+					Protocol:      "tcp",
+				},
+				{
+					Port:          81,
+					ContainerName: "frontend",
+					Protocol:      "tcp",
+				},
+				{
+					Port:          82,
+					ContainerName: "frontend",
+					Protocol:      "tcp",
+				},
+				{
+					Port:          2000,
+					ContainerName: "xray",
+					Protocol:      "tcp",
+				},
+			},
+		},
+		"expose new primary container port through NLB config": {
+			mft: &LoadBalancedWebService{
+				Workload: Workload{
+					Name: aws.String("frontend"),
+				},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: ImageWithPortAndHealthcheck{
+						ImageWithPort: ImageWithPort{
+							Port: aws.Uint16(80),
+						},
+					},
+					NLBConfig: NetworkLoadBalancerConfiguration{
+						Port: aws.String("82"),
+					},
+					Sidecars: map[string]*SidecarConfig{
+						"xray": {
+							Port:       aws.String("2000"),
+							Image:      aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							CredsParam: aws.String("some arn"),
+						},
+					},
+				},
+			},
+			wantedExposedPorts: []ExposedPort{
+				{
+					Port:          80,
+					ContainerName: "frontend",
+					Protocol:      "tcp",
+				},
+				{
+					Port:          82,
+					ContainerName: "frontend",
+					Protocol:      "tcp",
+				},
+				{
+					Port:          2000,
+					ContainerName: "xray",
+					Protocol:      "tcp",
+				},
+			},
+		},
+		"alb and nlb pointing to the same primary container port": {
+			mft: &LoadBalancedWebService{
+				Workload: Workload{
+					Name: aws.String("frontend"),
+				},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: ImageWithPortAndHealthcheck{
+						ImageWithPort: ImageWithPort{
+							Port: aws.Uint16(8080),
+						},
+					},
+					NLBConfig: NetworkLoadBalancerConfiguration{
+						Port: aws.String("8080"),
+					},
+					RoutingRule: RoutingRuleConfigOrBool{
+						RoutingRuleConfiguration: RoutingRuleConfiguration{
+							Path:       aws.String("/"),
+							TargetPort: aws.Uint16(8080),
+						},
+					},
+					Sidecars: map[string]*SidecarConfig{
+						"xray": {
+							Port:       aws.String("80"),
+							Image:      aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							CredsParam: aws.String("some arn"),
+						},
+					},
+				},
+			},
+			wantedExposedPorts: []ExposedPort{
+				{
+					Port:          80,
+					ContainerName: "xray",
+					Protocol:      "tcp",
+				},
+				{
+					Port:          8080,
+					ContainerName: "frontend",
+					Protocol:      "tcp",
+				},
+			},
+		},
+		"alb and nlb exposing new ports of the main and sidecar containers": {
+			mft: &LoadBalancedWebService{
+				Workload: Workload{
+					Name: aws.String("frontend"),
+				},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: ImageWithPortAndHealthcheck{
+						ImageWithPort: ImageWithPort{
+							Port: aws.Uint16(8080),
+						},
+					},
+					NLBConfig: NetworkLoadBalancerConfiguration{
+						Port:            aws.String("8082/tcp"),
+						TargetContainer: aws.String("xray"),
+					},
+					RoutingRule: RoutingRuleConfigOrBool{
+						RoutingRuleConfiguration: RoutingRuleConfiguration{
+							Path:       aws.String("/"),
+							TargetPort: aws.Uint16(8081),
+						},
+					},
+					Sidecars: map[string]*SidecarConfig{
+						"xray": {
+							Port:       aws.String("80"),
+							Image:      aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							CredsParam: aws.String("some arn"),
+						},
+					},
+				},
+			},
+			wantedExposedPorts: []ExposedPort{
+				{
+					Port:          80,
+					ContainerName: "xray",
+					Protocol:      "tcp",
+				},
+				{
+					Port:          8080,
+					ContainerName: "frontend",
+					Protocol:      "tcp",
+				},
+				{
+					Port:          8081,
+					ContainerName: "frontend",
+					Protocol:      "tcp",
+				},
+				{
+					Port:          8082,
+					ContainerName: "xray",
+					Protocol:      "tcp",
+				},
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// WHEN
+			actual, err := tc.mft.ExposedPorts()
+
+			// THEN
+			require.NoError(t, err)
+			require.Equal(t, tc.wantedExposedPorts, actual)
 		})
 	}
 }

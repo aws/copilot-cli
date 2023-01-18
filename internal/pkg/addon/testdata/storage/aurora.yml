@@ -11,59 +11,58 @@ Parameters:
   # Customize your Aurora Serverless cluster by setting the default value of the following parameters.
   auroraDBName:
     Type: String
-    Description: The name of the initial database to be created in the DB cluster.
+    Description: The name of the initial database to be created in the Aurora Serverless v2 cluster.
     Default: main
     # Cannot have special characters
     # Naming constraints: https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/CHAP_Limits.html#RDS_Limits.Constraints
-  auroraDBAutoPauseSeconds:
-    Type: Number
-    Description: The duration in seconds before the cluster pauses.
-    Default: 1000
 Mappings:
-  auroraEnvScalingConfigurationMap: 
+  auroraEnvScalingConfigurationMap:
     test:
-      "DBMinCapacity": 1 # AllowedValues: [1, 2, 4, 8, 16, 32, 64, 128, 256]
-      "DBMaxCapacity": 8 # AllowedValues: [1, 2, 4, 8, 16, 32, 64, 128, 256]
+      "DBMinCapacity": 0.5 # AllowedValues: from 0.5 through 128
+      "DBMaxCapacity": 8 # AllowedValues: from 0.5 through 128
+
     All:
-      "DBMinCapacity": 1 # AllowedValues: [1, 2, 4, 8, 16, 32, 64, 128, 256]
-      "DBMaxCapacity": 8 # AllowedValues: [1, 2, 4, 8, 16, 32, 64, 128, 256]
+      "DBMinCapacity": 0.5 # AllowedValues: from 0.5 through 128
+      "DBMaxCapacity": 8 # AllowedValues: from 0.5 through 128
+
 Resources:
   auroraDBSubnetGroup:
-    Type: 'AWS::RDS::DBSubnetGroup'
+    Type: "AWS::RDS::DBSubnetGroup"
     Properties:
-      DBSubnetGroupDescription: Group of Copilot private subnets for Aurora cluster.
+      DBSubnetGroupDescription: Group of Copilot private subnets for Aurora Serverless v2 cluster.
       SubnetIds:
-        !Split [',', { 'Fn::ImportValue': !Sub '${App}-${Env}-PrivateSubnets' }]
+        !Split [",", { "Fn::ImportValue": !Sub "${App}-${Env}-PrivateSubnets" }]
   auroraSecurityGroup:
     Metadata:
-      'aws:copilot:description': 'A security group for your workload to access the DB cluster aurora'
-    Type: 'AWS::EC2::SecurityGroup'
+      "aws:copilot:description": "A security group for your workload to access the Aurora Serverless v2 cluster aurora"
+    Type: "AWS::EC2::SecurityGroup"
     Properties:
-      GroupDescription: !Sub 'The Security Group for ${Name} to access DB cluster aurora.'
+      GroupDescription: !Sub "The Security Group for ${Name} to access Aurora Serverless v2 cluster aurora."
       VpcId:
-        Fn::ImportValue:
-          !Sub '${App}-${Env}-VpcId'
+        Fn::ImportValue: !Sub "${App}-${Env}-VpcId"
       Tags:
         - Key: Name
-          Value: !Sub 'copilot-${App}-${Env}-${Name}-Aurora'
+          Value: !Sub "copilot-${App}-${Env}-${Name}-Aurora"
   auroraDBClusterSecurityGroup:
     Metadata:
-      "aws:copilot:description": A security group for your DB cluster aurora
+      "aws:copilot:description": "A security group for your Aurora Serverless v2 cluster aurora"
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: The Security Group for the database cluster.
+      GroupDescription: The Security Group for the Aurora Serverless v2 cluster.
       SecurityGroupIngress:
         - ToPort: 3306
           FromPort: 3306
           IpProtocol: tcp
-          Description: !Sub 'From the Aurora Security Group of the workload ${Name}.'
+          Description: !Sub "From the Aurora Security Group of the workload ${Name}."
           SourceSecurityGroupId: !Ref auroraSecurityGroup
       VpcId:
-        Fn::ImportValue:
-          !Sub '${App}-${Env}-VpcId'
+        Fn::ImportValue: !Sub "${App}-${Env}-VpcId"
+      Tags:
+        - Key: Name
+          Value: !Sub 'copilot-${App}-${Env}-${Name}-Aurora'
   auroraAuroraSecret:
     Metadata:
-      'aws:copilot:description': A Secrets Manager secret to store your DB credentials
+      "aws:copilot:description": "A Secrets Manager secret to store your DB credentials"
     Type: AWS::SecretsManager::Secret
     Properties:
       Description: !Sub Aurora main user secret for ${AWS::StackName}
@@ -75,35 +74,64 @@ Resources:
         PasswordLength: 16
   auroraDBClusterParameterGroup:
     Metadata:
-      'aws:copilot:description': A DB parameter group for engine configuration values
-    Type: 'AWS::RDS::DBClusterParameterGroup'
+      "aws:copilot:description": "A DB parameter group for engine configuration values"
+    Type: "AWS::RDS::DBClusterParameterGroup"
     Properties:
-      Description: !Ref 'AWS::StackName'
-      Family: 'aurora-mysql5.7'
+      Description: !Ref "AWS::StackName"
+      Family: "aurora-mysql8.0"
       Parameters:
-        character_set_client: 'utf8'
+        character_set_client: "utf8"
   auroraDBCluster:
     Metadata:
-      'aws:copilot:description': The aurora Aurora Serverless database cluster
-    Type: 'AWS::RDS::DBCluster'
+      "aws:copilot:description": "The aurora Aurora Serverless v2 database cluster"
+    Type: "AWS::RDS::DBCluster"
     Properties:
       MasterUsername:
-        !Join [ "",  [ '{{resolve:secretsmanager:', !Ref auroraAuroraSecret, ":SecretString:username}}" ]]
+        !Join [
+          "",
+          [
+            "{{resolve:secretsmanager:",
+            !Ref auroraAuroraSecret,
+            ":SecretString:username}}",
+          ],
+        ]
       MasterUserPassword:
-        !Join [ "",  [ '{{resolve:secretsmanager:', !Ref auroraAuroraSecret, ":SecretString:password}}" ]]
+        !Join [
+          "",
+          [
+            "{{resolve:secretsmanager:",
+            !Ref auroraAuroraSecret,
+            ":SecretString:password}}",
+          ],
+        ]
       DatabaseName: !Ref auroraDBName
-      Engine: 'aurora-mysql'
-      EngineVersion: '5.7.mysql_aurora.2.07.1'
-      EngineMode: serverless
+      Engine: "aurora-mysql"
+      EngineVersion: "8.0.mysql_aurora.3.02.0"
       DBClusterParameterGroupName: !Ref auroraDBClusterParameterGroup
       DBSubnetGroupName: !Ref auroraDBSubnetGroup
       VpcSecurityGroupIds:
         - !Ref auroraDBClusterSecurityGroup
-      ScalingConfiguration:
-        AutoPause: true
-        MinCapacity: !FindInMap [auroraEnvScalingConfigurationMap, All, DBMinCapacity]
-        MaxCapacity: !FindInMap [auroraEnvScalingConfigurationMap, All, DBMaxCapacity]
-        SecondsUntilAutoPause: !Ref auroraDBAutoPauseSeconds
+      Port: 3306
+      ServerlessV2ScalingConfiguration:
+        # Replace "All" below with "!Ref Env" to set different autoscaling limits per environment.
+        MinCapacity:
+          !FindInMap [auroraEnvScalingConfigurationMap, All, DBMinCapacity]
+        MaxCapacity:
+          !FindInMap [auroraEnvScalingConfigurationMap, All, DBMaxCapacity]
+  auroraDBWriterInstance:
+    Metadata:
+      "aws:copilot:description": "The aurora Aurora Serverless v2 writer instance"
+    Type: "AWS::RDS::DBInstance"
+    Properties:
+      DBClusterIdentifier: !Ref auroraDBCluster
+      DBInstanceClass: db.serverless
+      Engine: "aurora-mysql"
+      PromotionTier: 1
+      AvailabilityZone: !Select
+        - 0
+        - !GetAZs
+          Ref: AWS::Region
+
   auroraSecretAuroraClusterAttachment:
     Type: AWS::SecretsManager::SecretTargetAttachment
     Properties:
@@ -117,4 +145,3 @@ Outputs:
   auroraSecurityGroup:
     Description: "The security group to attach to the workload."
     Value: !Ref auroraSecurityGroup
-

@@ -203,6 +203,21 @@ func (m *MockecsClient) EXPECT() *MockecsClientMockRecorder {
 	return m.recorder
 }
 
+// Service mocks base method.
+func (m *MockecsClient) Service(app, env, svc string) (*ecs.Service, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Service", app, env, svc)
+	ret0, _ := ret[0].(*ecs.Service)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Service indicates an expected call of Service.
+func (mr *MockecsClientMockRecorder) Service(app, env, svc interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Service", reflect.TypeOf((*MockecsClient)(nil).Service), app, env, svc)
+}
+
 // TaskDefinition mocks base method.
 func (m *MockecsClient) TaskDefinition(app, env, svc string) (*ecs.TaskDefinition, error) {
 	m.ctrl.T.Helper()
@@ -242,18 +257,33 @@ func (m *MockapprunnerClient) EXPECT() *MockapprunnerClientMockRecorder {
 }
 
 // DescribeService mocks base method.
-func (m *MockapprunnerClient) DescribeService(svcArn string) (*apprunner.Service, error) {
+func (m *MockapprunnerClient) DescribeService(svcARN string) (*apprunner.Service, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DescribeService", svcArn)
+	ret := m.ctrl.Call(m, "DescribeService", svcARN)
 	ret0, _ := ret[0].(*apprunner.Service)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // DescribeService indicates an expected call of DescribeService.
-func (mr *MockapprunnerClientMockRecorder) DescribeService(svcArn interface{}) *gomock.Call {
+func (mr *MockapprunnerClientMockRecorder) DescribeService(svcARN interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeService", reflect.TypeOf((*MockapprunnerClient)(nil).DescribeService), svcArn)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeService", reflect.TypeOf((*MockapprunnerClient)(nil).DescribeService), svcARN)
+}
+
+// PrivateURL mocks base method.
+func (m *MockapprunnerClient) PrivateURL(vicARN string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PrivateURL", vicARN)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// PrivateURL indicates an expected call of PrivateURL.
+func (mr *MockapprunnerClientMockRecorder) PrivateURL(vicARN interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PrivateURL", reflect.TypeOf((*MockapprunnerClient)(nil).PrivateURL), vicARN)
 }
 
 // MockworkloadStackDescriber is a mock of workloadStackDescriber interface.
@@ -452,6 +482,21 @@ func (mr *MockecsDescriberMockRecorder) Secrets() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Secrets", reflect.TypeOf((*MockecsDescriber)(nil).Secrets))
 }
 
+// ServiceConnectDNSNames mocks base method.
+func (m *MockecsDescriber) ServiceConnectDNSNames() ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ServiceConnectDNSNames")
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ServiceConnectDNSNames indicates an expected call of ServiceConnectDNSNames.
+func (mr *MockecsDescriberMockRecorder) ServiceConnectDNSNames() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServiceConnectDNSNames", reflect.TypeOf((*MockecsDescriber)(nil).ServiceConnectDNSNames))
+}
+
 // ServiceStackResources mocks base method.
 func (m *MockecsDescriber) ServiceStackResources() ([]*stack.Resource, error) {
 	m.ctrl.T.Helper()
@@ -488,6 +533,21 @@ func NewMockapprunnerDescriber(ctrl *gomock.Controller) *MockapprunnerDescriber 
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockapprunnerDescriber) EXPECT() *MockapprunnerDescriberMockRecorder {
 	return m.recorder
+}
+
+// IsPrivate mocks base method.
+func (m *MockapprunnerDescriber) IsPrivate() (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsPrivate")
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// IsPrivate indicates an expected call of IsPrivate.
+func (mr *MockapprunnerDescriberMockRecorder) IsPrivate() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsPrivate", reflect.TypeOf((*MockapprunnerDescriber)(nil).IsPrivate))
 }
 
 // Manifest mocks base method.

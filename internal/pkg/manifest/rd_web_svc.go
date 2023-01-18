@@ -31,12 +31,13 @@ type RequestDrivenWebServiceConfig struct {
 	RequestDrivenWebServiceHttpConfig `yaml:"http,flow"`
 	InstanceConfig                    AppRunnerInstanceConfig              `yaml:",inline"`
 	ImageConfig                       ImageWithPort                        `yaml:"image"`
-	Variables                         map[string]string                    `yaml:"variables"`
+	Variables                         map[string]Variable                  `yaml:"variables"`
 	StartCommand                      *string                              `yaml:"command"`
 	Tags                              map[string]string                    `yaml:"tags"`
 	PublishConfig                     PublishConfig                        `yaml:"publish"`
 	Network                           RequestDrivenWebServiceNetworkConfig `yaml:"network"`
 	Observability                     Observability                        `yaml:"observability"`
+	Count                             *string                              `yaml:"count"`
 }
 
 // Observability holds configuration for observability to the service.
@@ -81,8 +82,14 @@ func (c *rdwsVpcConfig) isEmpty() bool {
 
 // RequestDrivenWebServiceHttpConfig represents options for configuring http.
 type RequestDrivenWebServiceHttpConfig struct {
-	HealthCheckConfiguration HealthCheckArgsOrString `yaml:"healthcheck"`
-	Alias                    *string                 `yaml:"alias"`
+	HealthCheckConfiguration HealthCheckArgsOrString   `yaml:"healthcheck"`
+	Alias                    *string                   `yaml:"alias"`
+	Private                  Union[*bool, VPCEndpoint] `yaml:"private"`
+}
+
+// VPCEndpoint is used to configure a pre-existing VPC endpoint.
+type VPCEndpoint struct {
+	Endpoint *string `yaml:"endpoint"`
 }
 
 // AppRunnerInstanceConfig contains the instance configuration properties for an App Runner service.
@@ -97,6 +104,7 @@ type RequestDrivenWebServiceProps struct {
 	*WorkloadProps
 	Port     uint16
 	Platform PlatformArgsOrString
+	Private  bool
 }
 
 // NewRequestDrivenWebService creates a new Request-Driven Web Service manifest with default values.
@@ -107,6 +115,10 @@ func NewRequestDrivenWebService(props *RequestDrivenWebServiceProps) *RequestDri
 	svc.RequestDrivenWebServiceConfig.ImageConfig.Image.Build.BuildArgs.Dockerfile = stringP(props.Dockerfile)
 	svc.RequestDrivenWebServiceConfig.ImageConfig.Port = aws.Uint16(props.Port)
 	svc.RequestDrivenWebServiceConfig.InstanceConfig.Platform = props.Platform
+	if props.Private {
+		svc.Private = BasicToUnion[*bool, VPCEndpoint](aws.Bool(true))
+		svc.Network.VPC.Placement.PlacementString = (*PlacementString)(aws.String("private"))
+	}
 	svc.parser = template.New()
 	return svc
 }

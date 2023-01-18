@@ -175,8 +175,8 @@ func TestEnvironmentConfig_validate(t *testing.T) {
 				},
 				HTTPConfig: EnvironmentHTTPConfig{
 					Public: PublicHTTPConfig{
-						SecurityGroupConfig: ALBSecurityGroupsConfig{
-							Ingress: Ingress{
+						DeprecatedSG: DeprecatedALBSecurityGroupsConfig{
+							DeprecatedIngress: DeprecatedIngress{
 								RestrictiveIngress: RestrictiveIngress{
 									CDNIngress: aws.Bool(true),
 								},
@@ -186,6 +186,30 @@ func TestEnvironmentConfig_validate(t *testing.T) {
 				},
 			},
 			wantedError: "CDN must be enabled to limit security group ingress to CloudFront",
+		},
+		"valid vpc flowlogs with default retention": {
+			in: EnvironmentConfig{
+				Network: environmentNetworkConfig{
+					VPC: environmentVPCConfig{
+						FlowLogs: Union[*bool, VPCFlowLogsArgs]{
+							Basic: aws.Bool(true),
+						},
+					},
+				},
+			},
+		},
+		"valid vpc flowlogs with a specified retention": {
+			in: EnvironmentConfig{
+				Network: environmentNetworkConfig{
+					VPC: environmentVPCConfig{
+						FlowLogs: Union[*bool, VPCFlowLogsArgs]{
+							Advanced: VPCFlowLogsArgs{
+								Retention: aws.Int(30),
+							},
+						},
+					},
+				},
+			},
 		},
 		"valid elb access logs config with bucket_prefix": {
 			in: EnvironmentConfig{
@@ -288,6 +312,67 @@ func TestEnvironmentConfig_validate(t *testing.T) {
 				HTTPConfig: EnvironmentHTTPConfig{
 					Private: privateHTTPConfig{
 						InternalALBSubnets: []string{"existentSubnet", "anotherExistentSubnet"},
+					},
+				},
+			},
+		},
+		"returns error when http private config with deprecated and a new ingress field": {
+			in: EnvironmentConfig{
+				HTTPConfig: EnvironmentHTTPConfig{
+					Private: privateHTTPConfig{
+						Ingress: RelaxedIngress{
+							VPCIngress: aws.Bool(true),
+						},
+						DeprecatedSG: DeprecatedALBSecurityGroupsConfig{
+							DeprecatedIngress: DeprecatedIngress{
+								VPCIngress: aws.Bool(true),
+							},
+						},
+					},
+				},
+			},
+			wantedError: "validate \"http config\": validate \"private\": must specify one, not both, of \"private.http.security_groups.ingress\" and \"private.http.ingress\"",
+		},
+		"no error when http private config with a new ingress field": {
+			in: EnvironmentConfig{
+				HTTPConfig: EnvironmentHTTPConfig{
+					Private: privateHTTPConfig{
+						Ingress: RelaxedIngress{
+							VPCIngress: aws.Bool(true),
+						},
+					},
+				},
+			},
+		},
+		"returns error when http public config with deprecated and a new ingress field": {
+			in: EnvironmentConfig{
+				HTTPConfig: EnvironmentHTTPConfig{
+					Public: PublicHTTPConfig{
+						Ingress: RestrictiveIngress{
+							CDNIngress: aws.Bool(true),
+						},
+						DeprecatedSG: DeprecatedALBSecurityGroupsConfig{
+							DeprecatedIngress: DeprecatedIngress{
+								RestrictiveIngress: RestrictiveIngress{
+									CDNIngress: aws.Bool(true),
+								},
+							},
+						},
+					},
+				},
+			},
+			wantedError: "validate \"http config\": validate \"public\": must specify one, not both, of \"public.http.security_groups.ingress\" and \"public.http.ingress\"",
+		},
+		"no error when http public config with a new ingress field": {
+			in: EnvironmentConfig{
+				CDNConfig: EnvironmentCDNConfig{
+					Enabled: aws.Bool(true),
+				},
+				HTTPConfig: EnvironmentHTTPConfig{
+					Public: PublicHTTPConfig{
+						Ingress: RestrictiveIngress{
+							CDNIngress: aws.Bool(true),
+						},
 					},
 				},
 			},
@@ -777,13 +862,15 @@ func TestCDNConfiguration_validate(t *testing.T) {
 			},
 			wantedError: errors.New("cdn certificate must be in region us-east-1"),
 		},
-		"error if terminate tls set without cert": {
+		"error if static config invalid": {
 			in: EnvironmentCDNConfig{
 				Config: AdvancedCDNConfig{
-					TerminateTLS: aws.Bool(true),
+					Static: CDNStaticConfig{
+						Path: "something",
+					},
 				},
 			},
-			wantedError: errors.New(`"certificate" must be specified if "terminate_tls" is specified`),
+			wantedErrorMsgPrefix: `validate "static"`,
 		},
 		"success with cert and terminate tls": {
 			in: EnvironmentCDNConfig{
@@ -801,6 +888,54 @@ func TestCDNConfiguration_validate(t *testing.T) {
 				require.Error(t, gotErr)
 				require.Contains(t, gotErr.Error(), tc.wantedErrorMsgPrefix)
 			} else if tc.wantedError != nil {
+				require.Error(t, gotErr)
+				require.EqualError(t, tc.wantedError, gotErr.Error())
+			} else {
+				require.NoError(t, gotErr)
+			}
+		})
+	}
+}
+
+func TestCDNStaticConfig_validate(t *testing.T) {
+	testCases := map[string]struct {
+		in          CDNStaticConfig
+		wantedError error
+	}{
+		"valid if empty": {
+			in: CDNStaticConfig{},
+		},
+		"invalid if alias is not specified": {
+			in: CDNStaticConfig{
+				Path: "something",
+			},
+			wantedError: fmt.Errorf(`"alias" must be specified`),
+		},
+		"invalid if location is not specified": {
+			in: CDNStaticConfig{
+				Alias: "example.com",
+			},
+			wantedError: fmt.Errorf(`"location" must be specified`),
+		},
+		"invalid if path is not specified": {
+			in: CDNStaticConfig{
+				Alias:    "example.com",
+				Location: "s3url",
+			},
+			wantedError: fmt.Errorf(`"path" must be specified`),
+		},
+		"success": {
+			in: CDNStaticConfig{
+				Alias:    "example.com",
+				Location: "static",
+				Path:     "something",
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			gotErr := tc.in.validate()
+			if tc.wantedError != nil {
 				require.Error(t, gotErr)
 				require.EqualError(t, tc.wantedError, gotErr.Error())
 			} else {
@@ -912,8 +1047,8 @@ func TestEnvironmentHTTPConfig_validate(t *testing.T) {
 		"public http config with invalid security group ingress": {
 			in: EnvironmentHTTPConfig{
 				Public: PublicHTTPConfig{
-					SecurityGroupConfig: ALBSecurityGroupsConfig{
-						Ingress: Ingress{
+					DeprecatedSG: DeprecatedALBSecurityGroupsConfig{
+						DeprecatedIngress: DeprecatedIngress{
 							VPCIngress: aws.Bool(true),
 						},
 					},
@@ -924,8 +1059,8 @@ func TestEnvironmentHTTPConfig_validate(t *testing.T) {
 		"private http config with invalid security group ingress": {
 			in: EnvironmentHTTPConfig{
 				Private: privateHTTPConfig{
-					SecurityGroupsConfig: securityGroupsConfig{
-						Ingress: Ingress{
+					DeprecatedSG: DeprecatedALBSecurityGroupsConfig{
+						DeprecatedIngress: DeprecatedIngress{
 							RestrictiveIngress: RestrictiveIngress{
 								CDNIngress: aws.Bool(true),
 							},
@@ -934,6 +1069,18 @@ func TestEnvironmentHTTPConfig_validate(t *testing.T) {
 				},
 			},
 			wantedError: fmt.Errorf(`validate "private": an internal load balancer cannot have restrictive ingress fields`),
+		},
+		"public http config with invalid source ips": {
+			in: EnvironmentHTTPConfig{
+				Public: PublicHTTPConfig{
+					DeprecatedSG: DeprecatedALBSecurityGroupsConfig{
+						DeprecatedIngress: DeprecatedIngress{
+							RestrictiveIngress: RestrictiveIngress{SourceIPs: []IPNet{"1.1.1.invalidip"}},
+						},
+					},
+				},
+			},
+			wantedError: fmt.Errorf(`validate "public": parse IPNet 1.1.1.invalidip: invalid CIDR address: 1.1.1.invalidip`),
 		},
 	}
 	for name, tc := range testCases {

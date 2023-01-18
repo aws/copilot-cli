@@ -20,6 +20,7 @@ const (
 	URIAccessTypeInternet
 	URIAccessTypeInternal
 	URIAccessTypeServiceDiscovery
+	URIAccessTypeServiceConnect
 )
 
 var (
@@ -192,11 +193,20 @@ func (d *BackendServiceDescriber) URI(envName string) (URI, error) {
 	if err != nil {
 		return URI{}, fmt.Errorf("get stack parameters for environment %s: %w", envName, err)
 	}
-	port := svcStackParams[stack.WorkloadContainerPortParamKey]
-	if port == stack.NoExposedContainerPort {
+	if !isReachableWithinVPC(svcStackParams) {
 		return URI{
 			URI:        BlankServiceDiscoveryURI,
 			AccessType: URIAccessTypeNone,
+		}, nil
+	}
+	scDNSNames, err := svcDescr.ServiceConnectDNSNames()
+	if err != nil {
+		return URI{}, fmt.Errorf("retrieve service connect DNS names: %w", err)
+	}
+	if len(scDNSNames) > 0 {
+		return URI{
+			URI:        english.OxfordWordSeries(scDNSNames, "or"),
+			AccessType: URIAccessTypeServiceConnect,
 		}, nil
 	}
 	endpoint, err := envDescr.ServiceDiscoveryEndpoint()
@@ -205,7 +215,7 @@ func (d *BackendServiceDescriber) URI(envName string) (URI, error) {
 	}
 	s := serviceDiscovery{
 		Service:  d.svc,
-		Port:     port,
+		Port:     svcStackParams[stack.WorkloadTargetPortParamKey],
 		Endpoint: endpoint,
 	}
 	return URI{
@@ -315,12 +325,22 @@ func (d *RDWebServiceDescriber) URI(envName string) (URI, error) {
 
 	serviceURL, err := describer.ServiceURL()
 	if err != nil {
-		return URI{}, fmt.Errorf("get outputs for service %s: %w", d.svc, err)
+		return URI{}, fmt.Errorf("get outputs for service %q: %w", d.svc, err)
+	}
+
+	isPrivate, err := describer.IsPrivate()
+	if err != nil {
+		return URI{}, fmt.Errorf("check if service %q is private: %w", d.svc, err)
+	}
+
+	accessType := URIAccessTypeInternet
+	if isPrivate {
+		accessType = URIAccessTypeInternal
 	}
 
 	return URI{
 		URI:        serviceURL,
-		AccessType: URIAccessTypeInternet,
+		AccessType: accessType,
 	}, nil
 }
 

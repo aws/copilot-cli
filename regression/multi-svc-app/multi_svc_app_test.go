@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 
 	"github.com/aws/copilot-cli/regression/client"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 

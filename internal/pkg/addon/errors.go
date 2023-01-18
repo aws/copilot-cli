@@ -12,15 +12,14 @@ import (
 
 // ErrAddonsNotFound occurs when an addons directory for a workload is either not found or empty.
 type ErrAddonsNotFound struct {
-	WlName    string
 	ParentErr error
 }
 
 func (e *ErrAddonsNotFound) Error() string {
 	if e.ParentErr != nil {
-		return fmt.Sprintf("read addons directory for %s: %v", e.WlName, e.ParentErr)
+		return fmt.Sprintf("no addons found: %v", e.ParentErr)
 	}
-	return fmt.Sprintf("read addons directory for %s: no addons found", e.WlName)
+	return "no addons found"
 }
 
 type errKeyAlreadyExists struct {

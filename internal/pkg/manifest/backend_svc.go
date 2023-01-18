@@ -62,6 +62,17 @@ func NewBackendService(props BackendServiceProps) *BackendService {
 		svc.BackendServiceConfig.TaskConfig.Memory = aws.Int(MinWindowsTaskMemory)
 	}
 	svc.parser = template.New()
+	for _, envName := range props.PrivateOnlyEnvironments {
+		svc.Environments[envName] = &BackendServiceConfig{
+			Network: NetworkConfig{
+				VPC: vpcConfig{
+					Placement: PlacementArgOrString{
+						PlacementString: placementStringP(PrivateSubnetPlacement),
+					},
+				},
+			},
+		}
+	}
 	return svc
 }
 
@@ -88,7 +99,7 @@ func (s *BackendService) requiredEnvironmentFeatures() []string {
 	return features
 }
 
-// Port returns the exposed the exposed port in the manifest.
+// Port returns the exposed port in the manifest.
 // If the backend service is not meant to be reachable, then ok is set to false.
 func (s *BackendService) Port() (port uint16, ok bool) {
 	value := s.BackendServiceConfig.ImageConfig.Port
@@ -96,23 +107,6 @@ func (s *BackendService) Port() (port uint16, ok bool) {
 		return 0, false
 	}
 	return aws.Uint16Value(value), true
-}
-
-// ServiceConnectEnabled returns if ServiceConnect is enabled or not.
-// Unless explicitly disabled in the manifest or if no server is configured we default to true.
-func (s *BackendService) ServiceConnectEnabled() bool {
-	if s.Network.Connect.EnableServiceConnect != nil {
-		return *s.Network.Connect.EnableServiceConnect
-	}
-	if !s.Network.Connect.ServiceConnectArgs.isEmpty() {
-		return true
-	}
-	// Try our best to enable Service Connect by default.
-	if s.BackendServiceConfig.ImageConfig.Port != nil ||
-		s.BackendServiceConfig.RoutingRule.TargetContainer != nil {
-		return true
-	}
-	return false
 }
 
 // Publish returns the list of topics where notifications can be published.
@@ -191,5 +185,24 @@ func newDefaultBackendService() *BackendService {
 				},
 			},
 		},
+		Environments: map[string]*BackendServiceConfig{},
 	}
+}
+
+// ExposedPorts returns all the ports that are container ports available to receive traffic.
+func (b *BackendService) ExposedPorts() ([]ExposedPort, error) {
+	var exposedPorts []ExposedPort
+
+	workloadName := aws.StringValue(b.Name)
+	exposedPorts = append(exposedPorts, b.ImageConfig.exposedPorts(workloadName)...)
+	for name, sidecar := range b.Sidecars {
+		out, err := sidecar.exposedPorts(name)
+		if err != nil {
+			return nil, err
+		}
+		exposedPorts = append(exposedPorts, out...)
+	}
+	exposedPorts = append(exposedPorts, b.RoutingRule.exposedPorts(exposedPorts, workloadName)...)
+
+	return sortExposedPorts(exposedPorts), nil
 }

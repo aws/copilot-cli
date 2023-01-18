@@ -1,6 +1,6 @@
 # 内部 Application Load Balancers
 
-デフォルトでは、 Load Balanced Web Service 用に作成された Environment 内の ALB は [インターネットからアクセス可能](https://docs.aws.amazon.com/elasticloadbalancing/latest/classic/elb-internet-facing-load-balancers.html)です。プライベート IP アドレスのみを利用する[内部ロードバランサー](https://docs.aws.amazon.com/elasticloadbalancing/latest/classic/elb-internal-load-balancers.html)を作るためには、Environment とワークロードを開始する時に、幾つかの設定が必要です。
+デフォルトでは、 Load Balanced Web Service 用に作成された Environment 内の ALB は [インターネットからアクセス可能](https://docs.aws.amazon.com/elasticloadbalancing/latest/classic/elb-internet-facing-load-balancers.html)です。プライベート IP アドレスのみを利用する[内部ロードバランサー](https://docs.aws.amazon.com/elasticloadbalancing/latest/classic/elb-internal-load-balancers.html)を作るためには、Environment と Workload に幾つかの設定が必要です。
 
 ## Environment
 
@@ -24,9 +24,6 @@ network:
   vpc:
     placement: private
 ```
-
-!!!attention
-    現時点では、まだデプロイされていない新しい Backend Service を利用する必要があります。近いうちに、内部ロードバランサーを既存の Backend Service に追加できる様になります！
 
 ## 高度な設定
 

@@ -13,8 +13,10 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/tags"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/template"
+	"github.com/spf13/afero"
 
 	"github.com/spf13/cobra"
 
@@ -72,9 +74,9 @@ type deploySvcOpts struct {
 }
 
 func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
-	ws, err := workspace.New()
+	ws, err := workspace.Use(afero.NewOsFs())
 	if err != nil {
-		return nil, fmt.Errorf("new workspace: %w", err)
+		return nil, err
 	}
 
 	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("svc deploy"))
@@ -394,6 +396,13 @@ func workloadManifest(in *workloadManifestInput) (manifest.DynamicWorkload, erro
 }
 
 func validateWorkloadManifestCompatibilityWithEnv(ws wsEnvironmentsLister, env versionCompatibilityChecker, mft manifest.DynamicWorkload, envName string) error {
+	currVersion, err := env.Version()
+	if err != nil {
+		return fmt.Errorf("get environment %q version: %w", envName, err)
+	}
+	if currVersion == deploy.EnvTemplateVersionBootstrap {
+		return fmt.Errorf(`cannot deploy a service to an undeployed environment. Please run "copilot env deploy --name %s" to deploy the environment first`, envName)
+	}
 	availableFeatures, err := env.AvailableFeatures()
 	if err != nil {
 		return fmt.Errorf("get available features of the %s environment stack: %w", envName, err)
@@ -411,10 +420,7 @@ func validateWorkloadManifestCompatibilityWithEnv(ws wsEnvironmentsLister, env v
 			if v := template.LeastVersionForFeature(f); v != "" {
 				logMsg += fmt.Sprintf(` The least environment version that supports the feature is %s.`, v)
 			}
-			currVersion, err := env.Version()
-			if err == nil {
-				logMsg += fmt.Sprintf(" Your environment is on %s.", currVersion)
-			}
+			logMsg += fmt.Sprintf(" Your environment is on %s.", currVersion)
 			log.Errorln(logMsg)
 			return &errFeatureIncompatibleWithEnvironment{
 				ws:             ws,
@@ -454,6 +460,8 @@ func (o *deploySvcOpts) uriRecommendedActions() ([]string, error) {
 		network = "from your internal network."
 	case describe.URIAccessTypeServiceDiscovery:
 		network = "with service discovery."
+	case describe.URIAccessTypeServiceConnect:
+		network = "with service connect."
 	}
 
 	return []string{

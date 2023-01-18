@@ -6,10 +6,11 @@ package sessions
 import (
 	"context"
 	"errors"
-	"github.com/aws/copilot-cli/internal/pkg/aws/sessions/mocks"
-	"github.com/golang/mock/gomock"
 	"os"
 	"testing"
+
+	"github.com/aws/copilot-cli/internal/pkg/aws/sessions/mocks"
+	"github.com/golang/mock/gomock"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"

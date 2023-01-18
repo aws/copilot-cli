@@ -8,7 +8,7 @@ package addon_test
 import (
 	"encoding"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -24,7 +24,7 @@ func TestAddons(t *testing.T) {
 		outFileName    string
 	}{
 		"aurora": {
-			addonMarshaler: addon.NewRDSTemplate(addon.RDSProps{
+			addonMarshaler: addon.NewServerlessV2Template(addon.RDSProps{
 				ClusterName:   "aurora",
 				Engine:        "MySQL",
 				InitialDBName: "main",
@@ -84,7 +84,7 @@ func TestAddons(t *testing.T) {
 			cfActual := make(map[interface{}]interface{})
 			require.NoError(t, yaml.Unmarshal(actualBytes, cfActual))
 
-			expected, err := ioutil.ReadFile(filepath.Join("testdata", "storage", tc.outFileName))
+			expected, err := os.ReadFile(filepath.Join("testdata", "storage", tc.outFileName))
 			require.NoError(t, err, "should be able to read expected bytes")
 			expectedBytes := []byte(expected)
 			mExpected := make(map[interface{}]interface{})

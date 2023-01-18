@@ -650,65 +650,106 @@ func TestServiceConnectTransformer_Transformer(t *testing.T) {
 	}
 }
 
-func TestHealthCheckArgsOrStringTransformer_Transformer(t *testing.T) {
-	testCases := map[string]struct {
-		original func(h *HealthCheckArgsOrString)
-		override func(h *HealthCheckArgsOrString)
-		wanted   func(h *HealthCheckArgsOrString)
-	}{
-		"string set to empty if args is not nil": {
-			original: func(h *HealthCheckArgsOrString) {
-				h.HealthCheckPath = aws.String("mockPath")
-			},
-			override: func(h *HealthCheckArgsOrString) {
-				h.HealthCheckArgs = HTTPHealthCheckArgs{
-					Path:         aws.String("mockPathArgs"),
-					SuccessCodes: aws.String("200"),
-				}
-			},
-			wanted: func(h *HealthCheckArgsOrString) {
-				h.HealthCheckArgs = HTTPHealthCheckArgs{
-					Path:         aws.String("mockPathArgs"),
-					SuccessCodes: aws.String("200"),
-				}
-			},
-		},
-		"args set to empty if string is not nil": {
-			original: func(h *HealthCheckArgsOrString) {
-				h.HealthCheckArgs = HTTPHealthCheckArgs{
-					Path:         aws.String("mockPathArgs"),
-					SuccessCodes: aws.String("200"),
-				}
-			},
-			override: func(h *HealthCheckArgsOrString) {
-				h.HealthCheckPath = aws.String("mockPath")
-			},
-			wanted: func(h *HealthCheckArgsOrString) {
-				h.HealthCheckPath = aws.String("mockPath")
-			},
-		},
-	}
+type unionTransformerTest[Basic, Advanced any] struct {
+	original Union[Basic, Advanced]
+	override Union[Basic, Advanced]
+	expected Union[Basic, Advanced]
+}
 
-	for name, tc := range testCases {
+func TestTransformer_Generic(t *testing.T) {
+	runUnionTransformerTests(t, map[string]unionTransformerTest[any, any]{
+		"switches to Simple from Advanced if overridden": {
+			original: AdvancedToUnion[any, any](nil),
+			override: BasicToUnion[any, any](nil),
+			expected: BasicToUnion[any, any](nil),
+		},
+		"switches to Advanced from Simple if overridden": {
+			original: BasicToUnion[any, any](nil),
+			override: AdvancedToUnion[any, any](nil),
+			expected: AdvancedToUnion[any, any](nil),
+		},
+		"switches to Simple if original unset": {
+			original: Union[any, any]{},
+			override: BasicToUnion[any, any](nil),
+			expected: BasicToUnion[any, any](nil),
+		},
+		"switches to Advanced if original unset": {
+			original: Union[any, any]{},
+			override: AdvancedToUnion[any, any](nil),
+			expected: AdvancedToUnion[any, any](nil),
+		},
+	})
+}
+
+func TestTransformer_StringOrHealthCheckArgs(t *testing.T) {
+	runUnionTransformerTests(t, map[string]unionTransformerTest[string, HTTPHealthCheckArgs]{
+		"string unset if args set": {
+			original: BasicToUnion[string, HTTPHealthCheckArgs]("mockPath"),
+			override: AdvancedToUnion[string](HTTPHealthCheckArgs{
+				Path:         aws.String("mockPathArgs"),
+				SuccessCodes: aws.String("200"),
+			}),
+			expected: AdvancedToUnion[string](HTTPHealthCheckArgs{
+				Path:         aws.String("mockPathArgs"),
+				SuccessCodes: aws.String("200"),
+			}),
+		},
+		"args unset if string set": {
+			original: AdvancedToUnion[string](HTTPHealthCheckArgs{
+				Path:         aws.String("mockPathArgs"),
+				SuccessCodes: aws.String("200"),
+			}),
+			override: BasicToUnion[string, HTTPHealthCheckArgs]("mockPath"),
+			expected: BasicToUnion[string, HTTPHealthCheckArgs]("mockPath"),
+		},
+		"string merges correctly": {
+			original: BasicToUnion[string, HTTPHealthCheckArgs]("path"),
+			override: BasicToUnion[string, HTTPHealthCheckArgs]("newPath"),
+			expected: BasicToUnion[string, HTTPHealthCheckArgs]("newPath"),
+		},
+		"args merge correctly": {
+			original: AdvancedToUnion[string](HTTPHealthCheckArgs{
+				Path:             aws.String("mockPathArgs"),
+				SuccessCodes:     aws.String("200"),
+				HealthyThreshold: aws.Int64(10),
+			}),
+			override: AdvancedToUnion[string](HTTPHealthCheckArgs{
+				SuccessCodes:       aws.String("420"),
+				UnhealthyThreshold: aws.Int64(20),
+			}),
+			expected: AdvancedToUnion[string](HTTPHealthCheckArgs{
+				Path:               aws.String("mockPathArgs"), // merged unchanged
+				SuccessCodes:       aws.String("420"),          // updated
+				HealthyThreshold:   aws.Int64(10),              // comes from original
+				UnhealthyThreshold: aws.Int64(20),              // comes from override
+			}),
+		},
+	})
+}
+
+func runUnionTransformerTests[Basic, Advanced any](t *testing.T, tests map[string]unionTransformerTest[Basic, Advanced]) {
+	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			var dst, override, wanted HealthCheckArgsOrString
-
-			tc.original(&dst)
-			tc.override(&override)
-			tc.wanted(&wanted)
-
 			// Perform default merge.
-			err := mergo.Merge(&dst, override, mergo.WithOverride)
+			err := mergo.Merge(&tc.original, tc.override, mergo.WithOverride)
 			require.NoError(t, err)
 
 			// Use custom transformer.
-			err = mergo.Merge(&dst, override, mergo.WithOverride, mergo.WithTransformers(healthCheckArgsOrStringTransformer{}))
+			err = mergo.Merge(&tc.original, tc.override, mergo.WithOverride, mergo.WithTransformers(unionTransformer{}))
 			require.NoError(t, err)
 
 			require.NoError(t, err)
-			require.Equal(t, wanted, dst)
+			require.Equal(t, tc.expected, tc.original)
 		})
 	}
+}
+
+func TestUnionPanicRecover(t *testing.T) {
+	// trick the transformer logic into thinking
+	// this is the real manifest.Union type
+	type Union[T any] struct{}
+	err := mergo.Merge(&Union[any]{}, &Union[any]{}, mergo.WithTransformers(unionTransformer{}))
+	require.EqualError(t, err, "override union: reflect: call of reflect.Value.Call on zero Value")
 }
 
 func TestCountTransformer_Transformer(t *testing.T) {
@@ -1203,7 +1244,9 @@ func TestSecretTransformer_Transformer(t *testing.T) {
 	}{
 		`"from" set to empty when overriding with "secretsmanager"`: {
 			original: func(s *Secret) {
-				s.from = aws.String("/github/token")
+				s.from = stringOrFromCFN{
+					Plain: aws.String("/github/token"),
+				}
 			},
 			override: func(s *Secret) {
 				s.fromSecretsManager = secretsManagerSecret{
@@ -1223,10 +1266,35 @@ func TestSecretTransformer_Transformer(t *testing.T) {
 				}
 			},
 			override: func(s *Secret) {
-				s.from = aws.String("/github/token")
+				s.from = stringOrFromCFN{
+					Plain: aws.String("/github/token"),
+				}
 			},
 			wanted: func(s *Secret) {
-				s.from = aws.String("/github/token")
+				s.from = stringOrFromCFN{
+					Plain: aws.String("/github/token"),
+				}
+			},
+		},
+		`"secretsmanager" set to empty when overriding with imported "from"`: {
+			original: func(s *Secret) {
+				s.fromSecretsManager = secretsManagerSecret{
+					Name: aws.String("aes128-1a2b3c"),
+				}
+			},
+			override: func(s *Secret) {
+				s.from = stringOrFromCFN{
+					FromCFN: fromCFN{
+						Name: aws.String("stack-SSMGHTokenName"),
+					},
+				}
+			},
+			wanted: func(s *Secret) {
+				s.from = stringOrFromCFN{
+					FromCFN: fromCFN{
+						Name: aws.String("stack-SSMGHTokenName"),
+					},
+				}
 			},
 		},
 	}

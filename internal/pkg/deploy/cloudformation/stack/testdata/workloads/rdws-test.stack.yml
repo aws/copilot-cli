@@ -86,7 +86,8 @@ Resources:
         Statement:
           - Effect: Allow
             Principal:
-              Service: tasks.apprunner.amazonaws.com
+              Service:
+                - tasks.apprunner.amazonaws.com
             Action: 'sts:AssumeRole'
       Policies:
         - PolicyName: 'DenyIAMExceptTaggedRoles'
@@ -141,6 +142,9 @@ Resources:
                 Value: 
               - Name: COPILOT_SNS_TOPIC_ARNS
                 Value: '{"customers":"arn:aws:sns:us-west-2:123456789123:my-app-test-frontend-customers","mytopic.fifo":"arn:aws:sns:us-west-2:123456789123:my-app-test-frontend-mytopic.fifo"}'
+              - Name: DB_NAME
+                Value:
+                  Fn::ImportValue: "test-UserDB"
               - Name: LOG_LEVEL
                 Value: "debug"
             StartCommand: crazy diamond
@@ -152,6 +156,7 @@ Resources:
         EgressConfiguration:
           EgressType: VPC
           VpcConnectorArn: !Ref VpcConnector
+      AutoScalingConfigurationArn: 'arn:${AWS::Partition}:apprunner:${AWS::Region}:${AWS::AccountId}:autoscalingconfiguration/high-availability/3'    
       Tags:
         - Key: copilot-application
           Value: !Ref AppName
@@ -331,7 +336,8 @@ Resources:
           - Fn::ImportValue:
               !Sub '${AppName}-${EnvName}-PrivateSubnets'
       SecurityGroups:
-      - !Ref ServiceSecurityGroup
+        - !Ref ServiceSecurityGroup
+        - Fn::ImportValue: !Sub "${AppName}-${EnvName}-EnvironmentSecurityGroup"
       Tags:
         - Key: copilot-application
           Value: !Ref AppName

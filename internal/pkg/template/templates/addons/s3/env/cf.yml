@@ -1,0 +1,56 @@
+Parameters:
+  App:
+    Type: String
+    Description: Your application's name.
+  Env:
+    Type: String
+    Description: The name of the environment being deployed.
+
+Resources:
+  {{logicalIDSafe .Name}}Bucket:
+    Metadata:
+      'aws:copilot:description': 'An Amazon S3 bucket, {{.Name}}, for storing and retrieving objects'
+    Type: AWS::S3::Bucket
+    Properties:
+      AccessControl: Private
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+        - ServerSideEncryptionByDefault:
+            SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+
+  {{logicalIDSafe .Name}}BucketPolicy:
+    Metadata:
+      'aws:copilot:description': 'A bucket policy to deny unencrypted access to the bucket and its contents'
+    Type: AWS::S3::BucketPolicy
+    DeletionPolicy: Retain
+    Properties:
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: ForceHTTPS
+            Effect: Deny
+            Principal: '*'
+            Action: 's3:*'
+            Resource: 
+              - !Sub ${ {{logicalIDSafe .Name}}Bucket.Arn}/*
+              - !Sub ${ {{logicalIDSafe .Name}}Bucket.Arn}
+            Condition: 
+              Bool:
+                "aws:SecureTransport": false
+      Bucket: !Ref {{logicalIDSafe .Name}}Bucket
+
+Outputs:
+  {{envVarName .Name}}:
+    Description: "The name of a user-defined bucket."
+    Value: !Ref {{logicalIDSafe .Name}}Bucket
+  {{logicalIDSafe .Name}}BucketARN:
+    Description: "The ARN of the {{.Name}} bucket."
+    Value: !GetAtt {{logicalIDSafe .Name}}Bucket.Arn
+    Export:
+      Name: !Sub ${App}-${Env}-{{logicalIDSafe .Name}}BucketARN

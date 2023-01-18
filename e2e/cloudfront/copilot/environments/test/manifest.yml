@@ -10,4 +10,9 @@ http:
         restrict_to:
           cdn: true
 
-cdn: true
+cdn:
+  terminate_tls: true
+  static_assets:
+    location: ${BUCKETNAME}.s3.eu-central-1.amazonaws.com
+    alias: cloudfront.${DOMAINNAME}
+    path: static/*

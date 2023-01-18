@@ -392,7 +392,7 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 	envName := randStringBytes(10)
 	appName := randStringBytes(10)
 	bucketName := randStringBytes(10)
-	environmentToDeploy := deploy.CreateEnvironmentInput{
+	environmentToDeploy := stack.EnvConfig{
 		Name: envName,
 		App: deploy.AppInformation{
 			Name:                appName,
@@ -433,11 +433,12 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 	}()
 
 	t.Run("Deploys bootstrap resources for the environment to CloudFormation", func(t *testing.T) {
+		bucketARN := fmt.Sprintf("arn:aws:s3:::%s", bucketName)
 		environmentToDeploy.ArtifactBucketKeyARN = "arn:aws:kms:us-west-2:111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab"
-		environmentToDeploy.ArtifactBucketARN = fmt.Sprintf("arn:aws:s3:::%s", bucketName)
+		environmentToDeploy.ArtifactBucketARN = bucketARN
 
 		// Deploy the environment and wait for it to be complete
-		require.NoError(t, deployer.CreateAndRenderEnvironment(&environmentToDeploy))
+		require.NoError(t, deployer.CreateAndRenderEnvironment(stack.NewBootstrapEnvStackConfig(&environmentToDeploy), bucketARN))
 
 		// Ensure that the new stack exists
 		output, err := cfClient.DescribeStacks(&awsCF.DescribeStacksInput{
@@ -520,7 +521,7 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 		deployedStack := output.Stacks[0]
 		expectedResultsForKey := map[string]func(*awsCF.Output){
 			"EnabledFeatures": func(output *awsCF.Output) {
-				require.Equal(t, ",,,,", aws.StringValue(output.OutputValue), "no env features enabled by default")
+				require.Equal(t, ",,,,,", aws.StringValue(output.OutputValue), "no env features enabled by default")
 			},
 			"EnvironmentManagerRoleARN": func(output *awsCF.Output) {
 				require.Equal(t,
