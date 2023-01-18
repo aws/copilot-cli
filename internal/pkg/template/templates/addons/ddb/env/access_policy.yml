@@ -50,5 +50,5 @@ Outputs:
     Description: "The name of the DynamoDB table."
     Value: { Fn::ImportValue: { Fn::Sub: "${App}-${Env}-{{logicalIDSafe .Name}}TableName" }}
   {{logicalIDSafe .Name}}AccessPolicy:
-    Description: "The IAM::ManagedPolicy to attach to the task role."
+    Description: "The IAM managed policy to attach to the task role to give access to the DynamoDB table."
     Value: !Ref {{logicalIDSafe .Name}}AccessPolicy
