@@ -41,9 +41,10 @@ Resources:
               Fn::ImportValue: !Sub "${App}-${Env}-{{logicalIDSafe .Name}}BucketARN"
 
 Outputs:
-  {{envVarName .Name}}:
+  {{envVarName .Name}}BucketName:
+    # Injected as {{envVarName .Name | printf "%sBucketName" | toSnakeCase}} environment variable into your main container.
     Description: "The name of a user-defined bucket."
     Value: { Fn::ImportValue: { Fn::Sub: "${App}-${Env}-{{logicalIDSafe .Name}}BucketName" }}
-  {{logicalIDSafe .Name}}AccessPolicy:
+  {{logicalIDSafe .Name}}BucketAccessPolicy:
     Description: "The IAM::ManagedPolicy to attach to the task role"
     Value: !Ref {{logicalIDSafe .Name}}BucketAccessPolicy
