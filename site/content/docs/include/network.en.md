@@ -57,7 +57,7 @@ network:
     security_groups: [sg-0001, sg-0002]
 ```
 Copilot includes a security group so containers within your environment can communicate with each other. To disable
-the default security group, you can specify the Map form:
+the default security group, you can specify the `Map` form:
 ```yaml
 network:
   vpc:
@@ -66,8 +66,14 @@ network:
       groups: [sg-0001, sg-0002]
 ```
 
+<span class="parent-field">network.vpc.security_groups.</span><a id="network-vpc-security-groups-from-cfn" href="#network-vpc-security-groups-from-cfn" class="field">`from_cfn`</a> <span class="type">String</span>  
+The name of a [CloudFormation stack export](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-cfn-stack-exports.html).
+
 <span class="parent-field">network.vpc.security_groups.</span><a id="network-vpc-security-groups-deny-default" href="#network-vpc-security-groups-deny-default" class="field">`deny_default`</a> <span class="type">Boolean</span>  
 Disable the default security group that allows ingress from all services in your environment.
 
 <span class="parent-field">network.vpc.security_groups.</span><a id="network-vpc-security-groups-groups" href="#network-vpc-security-groups-groups" class="field">`groups`</a> <span class="type">Array of Strings</span>    
 Additional security group IDs associated with your tasks.
+
+<span class="parent-field">network.vpc.security_groups.groups</span><a id="network-vpc-security-groups-groups-from-cfn" href="#network-vpc-security-groups-groups-from-cfn" class="field">`from_cfn`</a> <span class="type">String</span>  
+The name of a [CloudFormation stack export](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-cfn-stack-exports.html). 
