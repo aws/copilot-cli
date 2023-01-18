@@ -35,7 +35,7 @@ Resources:
               - dynamodb:Update*
               - dynamodb:PutItem
             Resource: 
-              Fn::ImportValue: !Sub "${App}-${Env}-{{logicalIDSafe .Name}}ARN"
+              Fn::ImportValue: !Sub "${App}-${Env}-{{logicalIDSafe .Name}}TableArn"
           - Sid: DDBLSIActions
             Action:
               - dynamodb:Query
@@ -43,7 +43,7 @@ Resources:
             Effect: Allow
             Resource: !Sub
               - ${ TableARN }/index/*
-              - TableARN: { Fn::ImportValue: { Fn::Sub: "${App}-${Env}-{{logicalIDSafe .Name}}ARN" }}
+              - TableARN: { Fn::ImportValue: { Fn::Sub: "${App}-${Env}-{{logicalIDSafe .Name}}TableArn" }}
 
 Outputs:
   {{envVarName .Name}}:

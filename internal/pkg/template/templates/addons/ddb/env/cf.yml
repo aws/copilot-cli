@@ -42,4 +42,4 @@ Outputs:
     Description: "The ARN of the {{.Name}} DynamoDB table."
     Value: !GetAtt {{logicalIDSafe .Name}}.Arn
     Export: 
-      Name: !Sub ${App}-${Env}-{{logicalIDSafe .Name}}ARN
+      Name: !Sub ${App}-${Env}-{{logicalIDSafe .Name}}TableArn
