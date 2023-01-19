@@ -190,7 +190,7 @@ func TestECSDeploymentStreamer_Fetch(t *testing.T) {
 		}, streamer.eventsToFlush)
 		require.True(t, done, "there should be no more work to do since the deployment is completed")
 	})
-	t.Run("stores only failure event messages", func(t *testing.T) {
+	t.Run("stores failure event messages", func(t *testing.T) {
 		// GIVEN
 		startDate := time.Date(2020, time.November, 23, 18, 0, 0, 0, time.UTC)
 		m := mockECS{
@@ -270,6 +270,52 @@ func TestECSDeploymentStreamer_Fetch(t *testing.T) {
 					"(service my-svc) (deployment 123) deployment failed: some-error.",
 					"(service my-svc) was unable to place a task.",
 					"(service my-svc) (port 80) is unhealthy in (target-group 1234) due to (reason some-error).",
+				},
+			},
+		}, streamer.eventsToFlush)
+	})
+	t.Run("stores alarm-based rollback event messages", func(t *testing.T) {
+		// GIVEN
+		startDate := time.Date(2020, time.November, 23, 18, 0, 0, 0, time.UTC)
+		m := mockECS{
+			out: &ecs.Service{
+				Events: []*awsecs.ServiceEvent{
+					{
+						Id:        aws.String("1"),
+						Message:   aws.String("(service my-svc) deployment ecs-svc/0205655736282798388 deployment failed: alarm detected."),
+						CreatedAt: aws.Time(startDate.Add(1 * time.Minute)),
+					},
+					{
+						Id:        aws.String("6"),
+						Message:   aws.String("(service my-svc) rolling back to deployment ecs-svc/9086637243870003494."),
+						CreatedAt: aws.Time(startDate.Add(1 * time.Minute)),
+					},
+				},
+			},
+		}
+		streamer := &ECSDeploymentStreamer{
+			client:                 m,
+			clock:                  fakeClock{startDate},
+			rand:                   func(n int) int { return n },
+			cluster:                "my-cluster",
+			service:                "my-svc",
+			deploymentCreationTime: startDate,
+			pastEventIDs:           make(map[string]bool),
+		}
+		// WHEN
+		_, _, err := streamer.Fetch()
+
+		// THEN
+		require.NoError(t, err)
+		require.Equal(t, []ECSService{
+			{
+				Rollbacks: []string{
+					"(service my-svc) deployment ecs-svc/0205655736282798388 deployment failed: alarm detected.",
+					"(service my-svc) rolling back to deployment ecs-svc/9086637243870003494.",
+				},
+				// TKTK keep?
+				LatestFailureEvents: []string{
+					"(service my-svc) deployment ecs-svc/0205655736282798388 deployment failed: alarm detected.",
 				},
 			},
 		}, streamer.eventsToFlush)

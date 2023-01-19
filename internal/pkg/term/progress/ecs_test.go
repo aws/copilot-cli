@@ -43,6 +43,7 @@ func TestRollingUpdateComponent_Listen(t *testing.T) {
 						RolloutState:    "COMPLETED",
 					},
 				},
+				Rollbacks: []string{"alarm triggered"},
 				LatestFailureEvents: []string{"event1", "event2", "event3"},
 			}
 			events <- stream.ECSService{
@@ -55,6 +56,7 @@ func TestRollingUpdateComponent_Listen(t *testing.T) {
 						RolloutState:    "COMPLETED",
 					},
 				},
+				Rollbacks: []string{"deployment rolled back"},
 				LatestFailureEvents: []string{"event4"},
 			}
 			close(events)
@@ -71,6 +73,7 @@ func TestRollingUpdateComponent_Listen(t *testing.T) {
 				RolloutState:    "COMPLETED",
 			},
 		}, c.deployments, "expected only the latest deployment to be stored")
+		require.Equal(t, []string{"alarm triggered", "deployment rolled back"}, c.rollbackMsgs)
 		require.Equal(t, []string{"event3", "event4"}, c.failureMsgs, "expected max len failure msgs to be respected")
 	})
 }

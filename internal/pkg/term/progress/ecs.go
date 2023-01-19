@@ -38,8 +38,9 @@ func ListeningRollingUpdateRenderer(streamer ECSServiceSubscriber, opts RenderOp
 
 type rollingUpdateComponent struct {
 	// Data to render.
-	deployments []stream.ECSDeployment
-	failureMsgs []string
+	deployments  []stream.ECSDeployment
+	failureMsgs  []string
+	rollbackMsgs []string
 
 	// Style configuration for the component.
 	padding           int
@@ -50,11 +51,12 @@ type rollingUpdateComponent struct {
 	mu     sync.Mutex               // Lock used to mutate data to render.
 }
 
-// Listen updates the deployment statuses and failure event messages as events are streamed.
+// Listen updates the deployment statuses, and rollback and failure event messages as events are streamed.
 func (c *rollingUpdateComponent) Listen() {
 	for ev := range c.stream {
 		c.mu.Lock()
 		c.deployments = ev.Deployments
+		c.rollbackMsgs = ev.Rollbacks
 		c.failureMsgs = append(c.failureMsgs, ev.LatestFailureEvents...)
 		if len(c.failureMsgs) > c.maxLenFailureMsgs {
 			c.failureMsgs = c.failureMsgs[len(c.failureMsgs)-c.maxLenFailureMsgs:]
@@ -71,6 +73,12 @@ func (c *rollingUpdateComponent) Render(out io.Writer) (numLines int, err error)
 	buf := new(bytes.Buffer)
 
 	nl, err := c.renderDeployments(buf)
+	if err != nil {
+		return 0, err
+	}
+	numLines += nl
+
+	nl, err = c.renderRollbacks(buf)
 	if err != nil {
 		return 0, err
 	}
@@ -114,6 +122,20 @@ func (c *rollingUpdateComponent) renderDeployments(out io.Writer) (numLines int,
 		return 0, fmt.Errorf("render deployments table: %w", err)
 	}
 	return nl, err
+}
+
+func (c *rollingUpdateComponent) renderRollbacks(out io.Writer) (numLines int, err error) {
+	if len(c.rollbackMsgs) == 0 {
+		return 0, nil
+	}
+	components := make([]Renderer, len(c.rollbackMsgs))
+	for idx, msg := range c.rollbackMsgs {
+		components[idx] = &singleLineComponent{
+			Text:    msg,
+			Padding: 0,
+		}
+	}
+	return renderComponents(out, components)
 }
 
 func (c *rollingUpdateComponent) renderFailureMsgs(out io.Writer) (numLines int, err error) {

@@ -24,6 +24,7 @@ const (
 )
 
 var ecsEventFailureKeywords = []string{"fail", "unhealthy", "error", "throttle", "unable", "missing"}
+var ecsAlarmBasedRollbackKeyPhrases = []string{"alarm", "detected", "rolling", "back"}
 
 // ECSServiceDescriber is the interface to describe an ECS service.
 type ECSServiceDescriber interface {
@@ -61,6 +62,7 @@ func (d ECSDeployment) done() bool {
 // ECSService is a description of an ECS service.
 type ECSService struct {
 	Deployments         []ECSDeployment
+	Rollbacks           []string
 	LatestFailureEvents []string
 }
 
@@ -144,6 +146,7 @@ func (s *ECSDeploymentStreamer) Fetch() (next time.Time, done bool, err error) {
 		}
 	}
 	var failureMsgs []string
+	var rollbackMsgs []string
 	for _, event := range out.Events {
 		if createdAt := aws.TimeValue(event.CreatedAt); createdAt.Before(s.deploymentCreationTime) {
 			break
@@ -152,13 +155,18 @@ func (s *ECSDeploymentStreamer) Fetch() (next time.Time, done bool, err error) {
 		if _, ok := s.pastEventIDs[id]; ok {
 			break
 		}
-		if msg := aws.StringValue(event.Message); isFailureServiceEvent(msg) {
+		msg := aws.StringValue(event.Message)
+		if isFailureServiceEvent(msg) {
 			failureMsgs = append(failureMsgs, msg)
+		}
+		if isABREvent(msg) {
+			rollbackMsgs = append(rollbackMsgs, msg)
 		}
 		s.pastEventIDs[id] = true
 	}
 	s.eventsToFlush = append(s.eventsToFlush, ECSService{
 		Deployments:         deployments,
+		Rollbacks:           rollbackMsgs,
 		LatestFailureEvents: failureMsgs,
 	})
 	return nextFetchDate(s.clock, s.rand, s.retries), done, nil
@@ -203,6 +211,15 @@ func parseRevisionFromTaskDefARN(arn string) string {
 func isFailureServiceEvent(msg string) bool {
 	for _, kw := range ecsEventFailureKeywords {
 		if strings.Contains(msg, kw) {
+			return true
+		}
+	}
+	return false
+}
+
+func isABREvent(msg string) bool {
+	for _, kp := range ecsAlarmBasedRollbackKeyPhrases {
+		if strings.Contains(msg, kp) {
 			return true
 		}
 	}
