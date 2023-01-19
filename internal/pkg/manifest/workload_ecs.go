@@ -117,7 +117,7 @@ type WorkerDeploymentConfig struct {
 }
 
 func (d *DeploymentConfiguration) isEmpty() bool {
-	return d == nil || (d.DeploymentControllerConfig.Rolling == nil && d.RollbackAlarms.IsZero())
+	return d == nil || (d.DeploymentControllerConfig.isEmpty() && d.RollbackAlarms.IsZero())
 }
 
 func (w *WorkerDeploymentConfig) isEmpty() bool {
