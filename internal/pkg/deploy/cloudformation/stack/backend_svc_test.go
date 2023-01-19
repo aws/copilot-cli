@@ -193,9 +193,10 @@ func TestBackendService_Template(t *testing.T) {
 			StringSlice: []string{"here"},
 		}
 		mft.ExecuteCommand = manifest.ExecuteCommand{Enable: aws.Bool(true)}
-		mft.DeployConfig = manifest.DeploymentConfiguration{
-			Rolling: aws.String("recreate"),
-		}
+		mft.DeployConfig = manifest.DeploymentConfig{
+			DeploymentControllerConfig: manifest.DeploymentControllerConfig{
+				Rolling: aws.String("recreate"),
+			}}
 		privatePlacement := manifest.PrivateSubnetPlacement
 		mft.Network.VPC.Placement = manifest.PlacementArgOrString{
 			PlacementString: &privatePlacement,
@@ -328,9 +329,10 @@ Outputs:
 			StringSlice: []string{"here"},
 		}
 		mft.ExecuteCommand = manifest.ExecuteCommand{Enable: aws.Bool(true)}
-		mft.DeployConfig = manifest.DeploymentConfiguration{
-			Rolling: aws.String("recreate"),
-		}
+		mft.DeployConfig = manifest.DeploymentConfig{
+			DeploymentControllerConfig: manifest.DeploymentControllerConfig{
+				Rolling: aws.String("recreate"),
+			}}
 		mft.RoutingRule = manifest.RoutingRuleConfiguration{
 			Path: aws.String("/albPath"),
 			HealthCheck: manifest.HealthCheckArgsOrString{
