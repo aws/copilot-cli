@@ -120,6 +120,10 @@ func (d *DeploymentConfiguration) isEmpty() bool {
 	return d == nil || (d.DeploymentControllerConfig.isEmpty() && d.RollbackAlarms.IsZero())
 }
 
+func (d *DeploymentControllerConfig) isEmpty() bool {
+	return d.Rolling == nil
+}
+
 func (w *WorkerDeploymentConfig) isEmpty() bool {
 	return w == nil || (w.DeploymentControllerConfig.Rolling == nil && w.WorkerRollbackAlarms.IsZero())
 }
