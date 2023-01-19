@@ -53,6 +53,7 @@ func TestAppRunner_DescribeService(t *testing.T) {
 										"COPILOT_APPLICATION_NAME": "testapp",
 									}),
 									RuntimeEnvironmentSecrets: aws.StringMap(map[string]string{
+										"zzz123":        "parameter/zzz123",
 										"my-ssm-secret": "arn:aws:ssm:us-east-1:111111111111:parameter/jan11ssm",
 									}),
 									Port: aws.String("80"),
@@ -84,6 +85,10 @@ func TestAppRunner_DescribeService(t *testing.T) {
 					{
 						Name:  "my-ssm-secret",
 						Value: "arn:aws:ssm:us-east-1:111111111111:parameter/jan11ssm",
+					},
+					{
+						Name:  "zzz123",
+						Value: "parameter/zzz123",
 					},
 				},
 				CPU:     "1024",

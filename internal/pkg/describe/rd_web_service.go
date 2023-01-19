@@ -78,7 +78,7 @@ func (d *RDWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 	var routes []*RDWSRoute
 	var configs []*ServiceConfig
 	var envVars envVars
-	var secrets []*envSecret
+	var secrets []*rdwsSecret
 	resources := make(map[string][]*stack.Resource)
 	for _, env := range environments {
 		describer, err := d.initAppRunnerDescriber(env)
@@ -121,7 +121,7 @@ func (d *RDWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 		}
 
 		for _, v := range service.EnvironmentSecrets {
-			secrets = append(secrets, &envSecret{
+			secrets = append(secrets, &rdwsSecret{
 				Environment: env,
 				Name:        v.Name,
 				ValueFrom:   v.Value,
@@ -242,7 +242,7 @@ type rdWebSvcDesc struct {
 	Variables               envVars                 `json:"variables"`
 	Resources               deployedSvcResources    `json:"resources,omitempty"`
 	Observability           observabilityPerEnv     `json:"observability,omitempty"`
-	Secrets                 envSecrets              `json:"secrets,omitempty"`
+	Secrets                 rdwsSecrets             `json:"secrets,omitempty"`
 
 	environments []string `json:"-"`
 }

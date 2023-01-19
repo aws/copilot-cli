@@ -236,7 +236,7 @@ func TestRDWebServiceDescriber_Describe(t *testing.T) {
 						Value:       "prod",
 					},
 				},
-				Secrets: []*envSecret{
+				Secrets: []*rdwsSecret{
 					{
 						Environment: "test",
 						Name:        "SOME_OTHER_SECRET",
@@ -373,7 +373,7 @@ func TestRDWebServiceDescriber_Describe(t *testing.T) {
 						Value:       "prod",
 					},
 				},
-				Secrets: []*envSecret{
+				Secrets: []*rdwsSecret{
 					{
 						Environment: "test",
 						Name:        "SOME_OTHER_SECRET",
@@ -497,7 +497,7 @@ func TestRDWebServiceDesc_String(t *testing.T) {
 					Value:       "prod",
 				},
 			},
-			Secrets: []*envSecret{
+			Secrets: []*rdwsSecret{
 				{
 					Environment: "prod",
 					Name:        "my-ssm-secret",
@@ -625,7 +625,7 @@ Resources
 					Value:       "prod",
 				},
 			},
-			Secrets: []*envSecret{
+			Secrets: []*rdwsSecret{
 				{
 					Environment: "prod",
 					Name:        "my-ssm-secret",

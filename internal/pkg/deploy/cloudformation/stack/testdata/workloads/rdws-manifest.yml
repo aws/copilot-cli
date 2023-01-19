@@ -58,6 +58,10 @@ environments:
         from_cfn: test-UserDB
     secrets:                      # Pass secrets from AWS Systems Manager (SSM) Parameter Store and Secrets Manager.
       my-ssm-secret: "arn:aws:ssm:us-east-1:123456789123:parameter/jan11ssm"
+      MY_FROM_CFN_SECRET:
+        from_cfn: my-other-stack-exported-secret
+      MY_SECRETS_MANAGER_SECRET:
+        secretsmanager: mysecretsmanagername
   prod:
     network:
       vpc:

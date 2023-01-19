@@ -34,6 +34,7 @@ type EnvironmentVariable struct {
 	Value string
 }
 
+// EnvironmentSecret contains the name and value of a Secret from SSM Parameter Store or Secrets Manager.
 type EnvironmentSecret struct {
 	Name  string
 	Value string
