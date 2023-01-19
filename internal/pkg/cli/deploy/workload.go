@@ -51,11 +51,6 @@ type ActionRecommender interface {
 	RecommendedActions() []string
 }
 
-// An Overrider transforms the content in body to out.
-type Overrider interface {
-	Override(body []byte) (out []byte, err error)
-}
-
 type imageBuilderPusher interface {
 	BuildAndPush(docker repository.ContainerLoginBuildPusher, args *dockerengine.BuildArguments) (string, error)
 }

@@ -86,7 +86,7 @@ func newJobDeployer(o *deployJobOpts) (workloadDeployer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read manifest file for %s: %w", o.name, err)
 	}
-	ovrdr, err := newTemplateOverrider(o.ws.WorkloadOverridesPath(o.name), o.appName, o.envName, afero.NewOsFs(), o.sessProvider)
+	ovrdr, err := deploy.NewOverrider(o.ws.WorkloadOverridesPath(o.name), o.appName, o.envName, afero.NewOsFs(), o.sessProvider)
 	if err != nil {
 		return nil, err
 	}

@@ -4,15 +4,10 @@
 package cli
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
-
-	"github.com/aws/copilot-cli/internal/pkg/term/log"
-
-	"github.com/aws/copilot-cli/internal/pkg/override"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -122,7 +117,7 @@ func newWorkloadStackGenerator(o *packageSvcOpts) (workloadStackGenerator, error
 	if err != nil {
 		return nil, fmt.Errorf("read manifest file for %s: %w", o.name, err)
 	}
-	ovrdr, err := newTemplateOverrider(o.ws.WorkloadOverridesPath(o.name), o.appName, o.envName, o.fs, o.sessProvider)
+	ovrdr, err := clideploy.NewOverrider(o.ws.WorkloadOverridesPath(o.name), o.appName, o.envName, o.fs, o.sessProvider)
 	if err != nil {
 		return nil, err
 	}
@@ -158,34 +153,6 @@ func newWorkloadStackGenerator(o *packageSvcOpts) (workloadStackGenerator, error
 		return nil, fmt.Errorf("initiate workload template generator: %w", err)
 	}
 	return deployer, nil
-}
-
-func newTemplateOverrider(pathToOverridesDir, app, env string, fs afero.Fs, provider *sessions.Provider) (clideploy.Overrider, error) {
-	info, err := override.Lookup(pathToOverridesDir, fs)
-	if err != nil {
-		var errNotExist *override.ErrNotExist
-		if errors.As(err, &errNotExist) {
-			return new(override.Noop), nil
-		}
-		return nil, fmt.Errorf("look up overrider at %q: %w", pathToOverridesDir, err)
-	}
-	switch {
-	case info.IsCDK():
-		provider.UserAgentExtras("override cdk")
-		return override.WithCDK(pathToOverridesDir, override.CDKOpts{
-			Stdout: log.OutputWriter,
-			FS:     fs,
-			EnvVars: map[string]string{
-				"COPILOT_APPLICATION_NAME": app,
-				"COPILOT_ENVIRONMENT_NAME": env,
-			},
-		}), nil
-	case info.IsYAMLPatch():
-		provider.UserAgentExtras("override yamlpatch")
-		return new(override.Noop), nil
-	default:
-		return new(override.Noop), nil
-	}
 }
 
 // Validate returns an error for any invalid optional flags.
