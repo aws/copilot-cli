@@ -121,7 +121,7 @@ func (d DeploymentConfiguration) validate() error {
 		return fmt.Errorf(`validate "rollback_alarms": %w`, err)
 	}
 	if err := d.DeploymentControllerConfig.validate(); err != nil {
-		return fmt.Errorf(`validate "deployment controller strategy": %w`, err)
+		return fmt.Errorf(`validate "rolling": %w`, err)
 	}
 	return nil
 }
