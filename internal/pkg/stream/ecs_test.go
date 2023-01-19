@@ -383,7 +383,7 @@ func TestECSDeploymentStreamer_Fetch(t *testing.T) {
 
 		// THEN
 		require.NoError(t, err)
-		require.Equal(t, 1, len(streamer.eventsToFlush), "should have only event to flush")
+		require.Equal(t, 1, len(streamer.eventsToFlush), "should have only one event to flush")
 		require.Nil(t, streamer.eventsToFlush[0].LatestFailureEvents, "there should be no failed events emitted")
 	})
 }

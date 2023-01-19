@@ -56,7 +56,7 @@ func (c *rollingUpdateComponent) Listen() {
 	for ev := range c.stream {
 		c.mu.Lock()
 		c.deployments = ev.Deployments
-		c.rollbackMsgs = ev.Rollbacks
+		c.rollbackMsgs = append(c.rollbackMsgs, ev.Rollbacks...)
 		c.failureMsgs = append(c.failureMsgs, ev.LatestFailureEvents...)
 		if len(c.failureMsgs) > c.maxLenFailureMsgs {
 			c.failureMsgs = c.failureMsgs[len(c.failureMsgs)-c.maxLenFailureMsgs:]
@@ -128,11 +128,20 @@ func (c *rollingUpdateComponent) renderRollbacks(out io.Writer) (numLines int, e
 	if len(c.rollbackMsgs) == 0 {
 		return 0, nil
 	}
-	components := make([]Renderer, len(c.rollbackMsgs))
+	components := make([]Renderer, len(c.rollbackMsgs)+2)
+
+	heading := fmt.Sprintf("%s%s", color.BoldFgYellow.Sprintf("! "), color.Faint.Sprintf("Alarm-Based Rollback Event"))
+	components = []Renderer{
+		&singleLineComponent{}, // Add an empty line before rendering failure events.
+		&singleLineComponent{
+			Text:    heading,
+			Padding: c.padding,
+		},
+	}
 	for idx, msg := range c.rollbackMsgs {
-		components[idx] = &singleLineComponent{
+		components[idx+2] = &singleLineComponent{
 			Text:    msg,
-			Padding: 0,
+			Padding: c.padding,
 		}
 	}
 	return renderComponents(out, components)
