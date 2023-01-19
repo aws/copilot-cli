@@ -333,7 +333,7 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 							Path: stringP("/"),
 						},
 					},
-					DeployConfig: DeploymentConfiguration{
+					DeployConfig: DeploymentConfig{
 						DeploymentControllerConfig: DeploymentControllerConfig{
 							Rolling: aws.String("mockName"),
 						}},
@@ -530,7 +530,7 @@ func TestBackendService_validate(t *testing.T) {
 							},
 						},
 					},
-					DeployConfig: DeploymentConfiguration{
+					DeployConfig: DeploymentConfig{
 						DeploymentControllerConfig: DeploymentControllerConfig{
 							Rolling: aws.String("mockName"),
 						}},
@@ -3367,35 +3367,35 @@ func TestValidateARM(t *testing.T) {
 	}
 }
 
-func TestDeploymentConfiguration_validate(t *testing.T) {
+func TestDeploymentConfig_validate(t *testing.T) {
 	testCases := map[string]struct {
-		deployConfig DeploymentConfiguration
+		deployConfig DeploymentConfig
 		wanted       string
 	}{
 		"error if deploy config has invalid rolling strategy": {
-			deployConfig: DeploymentConfiguration{
+			deployConfig: DeploymentConfig{
 				DeploymentControllerConfig: DeploymentControllerConfig{
 					Rolling: aws.String("unknown"),
 				}},
 			wanted: `invalid rolling deployment strategy "unknown", must be one of default or recreate`,
 		},
 		"ok if deployment strategy is recreate": {
-			deployConfig: DeploymentConfiguration{
+			deployConfig: DeploymentConfig{
 				DeploymentControllerConfig: DeploymentControllerConfig{
 					Rolling: aws.String("recreate"),
 				}},
 		},
 		"ok if deployment strategy is default": {
-			deployConfig: DeploymentConfiguration{
+			deployConfig: DeploymentConfig{
 				DeploymentControllerConfig: DeploymentControllerConfig{
 					Rolling: aws.String("default"),
 				}},
 		},
 		"ok if deployment is empty": {
-			deployConfig: DeploymentConfiguration{},
+			deployConfig: DeploymentConfig{},
 		},
 		"ok if deployment strategy is empty but alarm indicated": {
-			deployConfig: DeploymentConfiguration{
+			deployConfig: DeploymentConfig{
 				RollbackAlarms: BasicToUnion[[]string, AlarmArgs]([]string{"alarmName"})},
 		},
 	}

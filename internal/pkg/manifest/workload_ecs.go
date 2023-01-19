@@ -103,7 +103,7 @@ type DeploymentControllerConfig struct {
 }
 
 // DeploymentConfiguration represents the deployment config for an ECS service.
-type DeploymentConfiguration struct {
+type DeploymentConfig struct {
 	DeploymentControllerConfig `yaml:",inline"`
 	RollbackAlarms             Union[[]string, AlarmArgs] // `yaml:"rollback_alarms"`
 	// The rollback_alarms manifest field is a no-op until the EDS-CFN ABR bug is fixed.
@@ -116,7 +116,7 @@ type WorkerDeploymentConfig struct {
 	// The rollback_alarms manifest field is a no-op until the EDS-CFN ABR bug is fixed.
 }
 
-func (d *DeploymentConfiguration) isEmpty() bool {
+func (d *DeploymentConfig) isEmpty() bool {
 	return d == nil || (d.DeploymentControllerConfig.isEmpty() && d.RollbackAlarms.IsZero())
 }
 

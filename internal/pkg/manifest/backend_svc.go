@@ -34,7 +34,7 @@ type BackendServiceConfig struct {
 	Network          NetworkConfig             `yaml:"network"`
 	PublishConfig    PublishConfig             `yaml:"publish"`
 	TaskDefOverrides []OverrideRule            `yaml:"taskdef_overrides"`
-	DeployConfig     DeploymentConfiguration   `yaml:"deployment"`
+	DeployConfig     DeploymentConfig   `yaml:"deployment"`
 	Observability    Observability             `yaml:"observability"`
 }
 

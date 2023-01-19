@@ -193,7 +193,7 @@ func TestBackendService_Template(t *testing.T) {
 			StringSlice: []string{"here"},
 		}
 		mft.ExecuteCommand = manifest.ExecuteCommand{Enable: aws.Bool(true)}
-		mft.DeployConfig = manifest.DeploymentConfiguration{
+		mft.DeployConfig = manifest.DeploymentConfig{
 			DeploymentControllerConfig: manifest.DeploymentControllerConfig{
 				Rolling: aws.String("recreate"),
 			}}
@@ -329,7 +329,7 @@ Outputs:
 			StringSlice: []string{"here"},
 		}
 		mft.ExecuteCommand = manifest.ExecuteCommand{Enable: aws.Bool(true)}
-		mft.DeployConfig = manifest.DeploymentConfiguration{
+		mft.DeployConfig = manifest.DeploymentConfig{
 			DeploymentControllerConfig: manifest.DeploymentControllerConfig{
 				Rolling: aws.String("recreate"),
 			}}

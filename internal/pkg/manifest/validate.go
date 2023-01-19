@@ -113,7 +113,7 @@ func (l LoadBalancedWebService) validate() error {
 	return nil
 }
 
-func (d DeploymentConfiguration) validate() error {
+func (d DeploymentConfig) validate() error {
 	if d.isEmpty() {
 		return nil
 	}

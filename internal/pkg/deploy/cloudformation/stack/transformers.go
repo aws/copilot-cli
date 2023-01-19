@@ -824,7 +824,7 @@ func convertDeploymentControllerConfig(in manifest.DeploymentControllerConfig) t
 	return out
 }
 
-func convertDeploymentConfig(in manifest.DeploymentConfiguration) template.DeploymentConfigurationOpts {
+func convertDeploymentConfig(in manifest.DeploymentConfig) template.DeploymentConfigurationOpts {
 	out := convertDeploymentControllerConfig(in.DeploymentControllerConfig)
 	out.Rollback = template.RollingUpdateRollbackConfig{
 		AlarmNames:        in.RollbackAlarms.Basic,
