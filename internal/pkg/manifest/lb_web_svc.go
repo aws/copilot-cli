@@ -90,6 +90,17 @@ func NewLoadBalancedWebService(props *LoadBalancedWebServiceProps) *LoadBalanced
 	}
 	svc.RoutingRule.Path = aws.String(props.Path)
 	svc.parser = template.New()
+	for _, envName := range props.PrivateOnlyEnvironments {
+		svc.Environments[envName] = &LoadBalancedWebServiceConfig{
+			Network: NetworkConfig{
+				VPC: vpcConfig{
+					Placement: PlacementArgOrString{
+						PlacementString: placementStringP(PrivateSubnetPlacement),
+					},
+				},
+			},
+		}
+	}
 	return svc
 }
 
@@ -135,6 +146,7 @@ func newDefaultLoadBalancedWebService() *LoadBalancedWebService {
 				},
 			},
 		},
+		Environments: map[string]*LoadBalancedWebServiceConfig{},
 	}
 }
 
@@ -226,4 +238,26 @@ type NetworkLoadBalancerConfiguration struct {
 func (c *NetworkLoadBalancerConfiguration) IsEmpty() bool {
 	return c.Port == nil && c.HealthCheck.isEmpty() && c.TargetContainer == nil && c.TargetPort == nil &&
 		c.SSLPolicy == nil && c.Stickiness == nil && c.Aliases.IsEmpty()
+}
+
+// ExposedPorts returns all the ports that are container ports available to receive traffic.
+func (lbws *LoadBalancedWebService) ExposedPorts() ([]ExposedPort, error) {
+	var exposedPorts []ExposedPort
+
+	workloadName := aws.StringValue(lbws.Name)
+	exposedPorts = append(exposedPorts, lbws.ImageConfig.exposedPorts(workloadName)...)
+	for name, sidecar := range lbws.Sidecars {
+		out, err := sidecar.exposedPorts(name)
+		if err != nil {
+			return nil, err
+		}
+		exposedPorts = append(exposedPorts, out...)
+	}
+	exposedPorts = append(exposedPorts, lbws.RoutingRule.exposedPorts(exposedPorts, workloadName)...)
+	out, err := lbws.NLBConfig.exposedPorts(exposedPorts, workloadName)
+	if err != nil {
+		return nil, err
+	}
+	exposedPorts = append(exposedPorts, out...)
+	return sortExposedPorts(exposedPorts), nil
 }

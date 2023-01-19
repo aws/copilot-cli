@@ -59,7 +59,7 @@ type LoadBalancedWebServiceConfig struct {
 	RawManifest   []byte // Content of the manifest file without any transformations.
 	RuntimeConfig RuntimeConfig
 	RootUserARN   string
-	Addons        addons
+	Addons        NestedStackConfigurer
 }
 
 // NewLoadBalancedWebService creates a new CFN stack with an ECS service from a manifest file, given the options.
@@ -195,6 +195,9 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		scConfig = convertServiceConnect(s.manifest.Network.Connect)
 	}
 	targetContainer, targetContainerPort := s.httpLoadBalancerTarget()
+
+	// Set container-level feature flag.
+	logConfig := convertLogging(s.manifest.Logging)
 	content, err := s.parser.ParseLoadBalancedWebService(template.WorkloadOpts{
 		AppName:            s.app,
 		EnvName:            s.env,
@@ -202,7 +205,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		SerializedManifest: string(s.rawManifest),
 		EnvVersion:         s.rc.EnvVersion,
 
-		Variables:          s.manifest.TaskConfig.Variables,
+		Variables:          convertEnvVars(s.manifest.TaskConfig.Variables),
 		Secrets:            convertSecrets(s.manifest.TaskConfig.Secrets),
 		Aliases:            aliases,
 		HTTPSListener:      s.httpsEnabled,
@@ -210,7 +213,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		NestedStack:        addonsOutputs,
 		AddonsExtraParams:  addonsParams,
 		Sidecars:           sidecars,
-		LogConfig:          convertLogging(s.manifest.Logging),
+		LogConfig:          logConfig,
 		DockerLabels:       s.manifest.ImageConfig.Image.DockerLabels,
 		Autoscaling:        autoscaling,
 		CapacityProviders:  capacityProviders,

@@ -3294,17 +3294,17 @@ func (m *MockenvironmentDeployer) EXPECT() *MockenvironmentDeployerMockRecorder 
 }
 
 // CreateAndRenderEnvironment mocks base method.
-func (m *MockenvironmentDeployer) CreateAndRenderEnvironment(env *deploy0.CreateEnvironmentInput) error {
+func (m *MockenvironmentDeployer) CreateAndRenderEnvironment(conf cloudformation0.StackConfiguration, bucketARN string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateAndRenderEnvironment", env)
+	ret := m.ctrl.Call(m, "CreateAndRenderEnvironment", conf, bucketARN)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // CreateAndRenderEnvironment indicates an expected call of CreateAndRenderEnvironment.
-func (mr *MockenvironmentDeployerMockRecorder) CreateAndRenderEnvironment(env interface{}) *gomock.Call {
+func (mr *MockenvironmentDeployerMockRecorder) CreateAndRenderEnvironment(conf, bucketARN interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAndRenderEnvironment", reflect.TypeOf((*MockenvironmentDeployer)(nil).CreateAndRenderEnvironment), env)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAndRenderEnvironment", reflect.TypeOf((*MockenvironmentDeployer)(nil).CreateAndRenderEnvironment), conf, bucketARN)
 }
 
 // DeleteEnvironment mocks base method.
@@ -4076,17 +4076,17 @@ func (mr *MockdeployerMockRecorder) AddServiceToApp(app, svcName interface{}) *g
 }
 
 // CreateAndRenderEnvironment mocks base method.
-func (m *Mockdeployer) CreateAndRenderEnvironment(env *deploy0.CreateEnvironmentInput) error {
+func (m *Mockdeployer) CreateAndRenderEnvironment(conf cloudformation0.StackConfiguration, bucketARN string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateAndRenderEnvironment", env)
+	ret := m.ctrl.Call(m, "CreateAndRenderEnvironment", conf, bucketARN)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // CreateAndRenderEnvironment indicates an expected call of CreateAndRenderEnvironment.
-func (mr *MockdeployerMockRecorder) CreateAndRenderEnvironment(env interface{}) *gomock.Call {
+func (mr *MockdeployerMockRecorder) CreateAndRenderEnvironment(conf, bucketARN interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAndRenderEnvironment", reflect.TypeOf((*Mockdeployer)(nil).CreateAndRenderEnvironment), env)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAndRenderEnvironment", reflect.TypeOf((*Mockdeployer)(nil).CreateAndRenderEnvironment), conf, bucketARN)
 }
 
 // CreatePipeline mocks base method.
@@ -4329,41 +4329,18 @@ func (mr *MockdomainHostedZoneGetterMockRecorder) DomainHostedZoneID(domainName 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DomainHostedZoneID", reflect.TypeOf((*MockdomainHostedZoneGetter)(nil).DomainHostedZoneID), domainName)
 }
 
-// MockdomainInfoGetter is a mock of domainInfoGetter interface.
-type MockdomainInfoGetter struct {
-	ctrl     *gomock.Controller
-	recorder *MockdomainInfoGetterMockRecorder
-}
-
-// MockdomainInfoGetterMockRecorder is the mock recorder for MockdomainInfoGetter.
-type MockdomainInfoGetterMockRecorder struct {
-	mock *MockdomainInfoGetter
-}
-
-// NewMockdomainInfoGetter creates a new mock instance.
-func NewMockdomainInfoGetter(ctrl *gomock.Controller) *MockdomainInfoGetter {
-	mock := &MockdomainInfoGetter{ctrl: ctrl}
-	mock.recorder = &MockdomainInfoGetterMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockdomainInfoGetter) EXPECT() *MockdomainInfoGetterMockRecorder {
-	return m.recorder
-}
-
-// IsRegisteredDomain mocks base method.
-func (m *MockdomainInfoGetter) IsRegisteredDomain(domainName string) error {
+// ValidateDomainOwnership mocks base method.
+func (m *MockdomainHostedZoneGetter) ValidateDomainOwnership(domainName string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsRegisteredDomain", domainName)
+	ret := m.ctrl.Call(m, "ValidateDomainOwnership", domainName)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// IsRegisteredDomain indicates an expected call of IsRegisteredDomain.
-func (mr *MockdomainInfoGetterMockRecorder) IsRegisteredDomain(domainName interface{}) *gomock.Call {
+// ValidateDomainOwnership indicates an expected call of ValidateDomainOwnership.
+func (mr *MockdomainHostedZoneGetterMockRecorder) ValidateDomainOwnership(domainName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsRegisteredDomain", reflect.TypeOf((*MockdomainInfoGetter)(nil).IsRegisteredDomain), domainName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateDomainOwnership", reflect.TypeOf((*MockdomainHostedZoneGetter)(nil).ValidateDomainOwnership), domainName)
 }
 
 // MockdockerfileParser is a mock of dockerfileParser interface.
@@ -6824,10 +6801,10 @@ func (mr *MockenvDeployerMockRecorder) DeployEnvironment(in interface{}) *gomock
 }
 
 // UploadArtifacts mocks base method.
-func (m *MockenvDeployer) UploadArtifacts() (map[string]string, error) {
+func (m *MockenvDeployer) UploadArtifacts() (*deploy.UploadEnvArtifactsOutput, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UploadArtifacts")
-	ret0, _ := ret[0].(map[string]string)
+	ret0, _ := ret[0].(*deploy.UploadEnvArtifactsOutput)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -6875,6 +6852,21 @@ func (m *MockenvPackager) EXPECT() *MockenvPackagerMockRecorder {
 	return m.recorder
 }
 
+// AddonsTemplate mocks base method.
+func (m *MockenvPackager) AddonsTemplate() (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AddonsTemplate")
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// AddonsTemplate indicates an expected call of AddonsTemplate.
+func (mr *MockenvPackagerMockRecorder) AddonsTemplate() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddonsTemplate", reflect.TypeOf((*MockenvPackager)(nil).AddonsTemplate))
+}
+
 // GenerateCloudFormationTemplate mocks base method.
 func (m *MockenvPackager) GenerateCloudFormationTemplate(in *deploy.DeployEnvironmentInput) (*deploy.GenerateCloudFormationTemplateOutput, error) {
 	m.ctrl.T.Helper()
@@ -6891,10 +6883,10 @@ func (mr *MockenvPackagerMockRecorder) GenerateCloudFormationTemplate(in interfa
 }
 
 // UploadArtifacts mocks base method.
-func (m *MockenvPackager) UploadArtifacts() (map[string]string, error) {
+func (m *MockenvPackager) UploadArtifacts() (*deploy.UploadEnvArtifactsOutput, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UploadArtifacts")
-	ret0, _ := ret[0].(map[string]string)
+	ret0, _ := ret[0].(*deploy.UploadEnvArtifactsOutput)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

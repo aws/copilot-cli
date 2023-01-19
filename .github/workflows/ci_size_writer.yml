@@ -1,0 +1,110 @@
+name: Comment PR with bin sizes
+
+on:
+  workflow_run:
+    workflows: ["Compute bin sizes"]
+    types:
+      - completed
+
+jobs:
+  comment_bin_size:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/github-script@v6
+        with:
+          script: |
+            let allArtifacts = await github.rest.actions.listWorkflowRunArtifacts({
+               owner: context.repo.owner,
+               repo: context.repo.repo,
+               run_id: context.payload.workflow_run.id,
+            });
+            let matchArtifact = allArtifacts.data.artifacts.filter((artifact) => {
+              return artifact.name == "pr_number_and_bin_sizes"
+            })[0];
+            let download = await github.rest.actions.downloadArtifact({
+               owner: context.repo.owner,
+               repo: context.repo.repo,
+               artifact_id: matchArtifact.id,
+               archive_format: 'zip',
+            });
+            let fs = require('fs');
+            fs.writeFileSync(`${process.env.GITHUB_WORKSPACE}/artifacts.zip`, Buffer.from(download.data));
+            
+      - name: Unzip artifacts
+        run: unzip artifacts.zip
+          
+      - name: Calculate size change
+        id: diff
+        uses: actions/github-script@v6
+        with:
+          result-encoding: string
+          script: |
+            let fs = require('fs');
+            let sizes_raw = fs.readFileSync('sizes.json');
+            let sizes = JSON.parse(sizes_raw)
+
+            const diff = (old, cur) => {
+              const res = (cur-old)/old * 100;
+              return res.toFixed(2); // 2 decimal places.
+            };
+
+            const lastRelease = '${{ steps.latestrelease.outputs.VERSION_TAG }}';
+            let msg = `
+              🍕 Here are the new binary sizes!
+
+              | Name | New size (kiB) | ${lastRelease} size (kiB) | Delta (%) |
+              |:--   |:---            |:---                    |:--    |
+            `;
+
+            let shouldAcknowledgeSize = false;
+            for (const os of Object.keys(sizes)) {
+              for (const arch of Object.keys(sizes[os])) {
+                const delta = diff(sizes[os][arch].old, sizes[os][arch].cur);
+                if (delta > 10) {
+                  shouldAcknowledgeSize = true;
+                }
+
+                let symbol = "❤️ ";
+                if (delta > 5) {
+                  symbol = "😭 +";
+                } else if (delta > 1) {
+                  symbol = "🥺 +"
+                } else if (delta > 0) {
+                  symbol = "+";
+                }
+                msg += `| ${os} (${arch}) | ${sizes[os][arch].cur} | ${sizes[os][arch].old} | ${symbol}${delta} |` + "\n";
+              }
+            }
+
+            if (shouldAcknowledgeSize) {
+              msg += "**The binary size increased more than expected! Applying the `do-not-merge` label.**\n"
+              github.rest.issues.addLabels({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                labels: ['do-not-merge']
+              });
+            }
+            return msg;
+      
+      - name: Find PR number
+        id: find-pr-number
+        run: |
+          echo "PR_NUMBER=$(cat pr_number)" >> $GITHUB_OUTPUT
+      
+      - name: Find comment
+        uses: peter-evans/find-comment@v2
+        id: fc
+        with:
+          issue-number: ${{ steps.find-pr-number.outputs.PR_NUMBER }}
+          comment-author: 'github-actions[bot]'
+          body-includes: 'Here are the new binary sizes'
+
+      - name: Create or update comment
+        uses: peter-evans/create-or-update-comment@v2
+        with:
+          comment-id: ${{ steps.fc.outputs.comment-id }}
+          issue-number: ${{ steps.find-pr-number.outputs.PR_NUMBER }}
+          body: ${{ steps.diff.outputs.result }}
+          edit-mode: replace

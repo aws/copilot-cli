@@ -24,6 +24,9 @@ func TestNewBackendSvc(t *testing.T) {
 				WorkloadProps: WorkloadProps{
 					Name:       "subscribers",
 					Dockerfile: "./subscribers/Dockerfile",
+					PrivateOnlyEnvironments: []string{
+						"metrics",
+					},
 				},
 			},
 			wantedManifest: &BackendService{
@@ -57,6 +60,17 @@ func TestNewBackendSvc(t *testing.T) {
 						VPC: vpcConfig{
 							Placement: PlacementArgOrString{
 								PlacementString: placementStringP(PublicSubnetPlacement),
+							},
+						},
+					},
+				},
+				Environments: map[string]*BackendServiceConfig{
+					"metrics": {
+						Network: NetworkConfig{
+							VPC: vpcConfig{
+								Placement: PlacementArgOrString{
+									PlacementString: placementStringP(PrivateSubnetPlacement),
+								},
 							},
 						},
 					},
@@ -457,8 +471,12 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 						},
 					},
 					CPU: aws.Int(512),
-					Variables: map[string]string{
-						"LOG_LEVEL": "",
+					Variables: map[string]Variable{
+						"LOG_LEVEL": {
+							stringOrFromCFN{
+								Plain: stringP(""),
+							},
+						},
 					},
 				},
 				Sidecars: map[string]*SidecarConfig{
@@ -652,8 +670,12 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 								CPU: mockConfig,
 							},
 						},
-						Variables: map[string]string{
-							"LOG_LEVEL": "",
+						Variables: map[string]Variable{
+							"LOG_LEVEL": {
+								stringOrFromCFN{
+									Plain: stringP(""),
+								},
+							},
 						},
 					},
 					Sidecars: map[string]*SidecarConfig{
@@ -934,6 +956,177 @@ func TestBackendSvc_ApplyEnv_CountOverrides(t *testing.T) {
 
 			// THEN
 			require.Equal(t, tc.expected, actual)
+		})
+	}
+}
+
+func TestBackendService_ExposedPorts(t *testing.T) {
+	testCases := map[string]struct {
+		mft                *BackendService
+		wantedExposedPorts []ExposedPort
+	}{
+		"expose primary container port through target_port": {
+			mft: &BackendService{
+				Workload: Workload{
+					Name: aws.String("frontend"),
+				},
+				BackendServiceConfig: BackendServiceConfig{
+					ImageConfig: ImageWithHealthcheckAndOptionalPort{},
+					RoutingRule: RoutingRuleConfiguration{
+						TargetPort: aws.Uint16(81),
+					},
+					Sidecars: map[string]*SidecarConfig{
+						"xray": {
+							Port:       aws.String("2000"),
+							Image:      aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							CredsParam: aws.String("some arn"),
+						},
+					},
+				},
+			},
+			wantedExposedPorts: []ExposedPort{
+				{
+					Port:          81,
+					ContainerName: "frontend",
+					Protocol:      "tcp",
+				},
+				{
+					Port:          2000,
+					ContainerName: "xray",
+					Protocol:      "tcp",
+				},
+			},
+		},
+		"expose two primary container port internally through image.port and target_port": {
+			mft: &BackendService{
+				Workload: Workload{
+					Name: aws.String("frontend"),
+				},
+				BackendServiceConfig: BackendServiceConfig{
+					ImageConfig: ImageWithHealthcheckAndOptionalPort{
+						ImageWithOptionalPort: ImageWithOptionalPort{
+							Port: aws.Uint16(80),
+						},
+					},
+					RoutingRule: RoutingRuleConfiguration{
+						//TargetContainer: aws.String("xray"),
+						TargetPort: aws.Uint16(81),
+					},
+					Sidecars: map[string]*SidecarConfig{
+						"xray": {
+							Port:       aws.String("2000"),
+							Image:      aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							CredsParam: aws.String("some arn"),
+						},
+					},
+				},
+			},
+			wantedExposedPorts: []ExposedPort{
+				{
+					Port:          80,
+					ContainerName: "frontend",
+					Protocol:      "tcp",
+				},
+				{
+					Port:          81,
+					ContainerName: "frontend",
+					Protocol:      "tcp",
+				},
+				{
+					Port:          2000,
+					ContainerName: "xray",
+					Protocol:      "tcp",
+				},
+			},
+		},
+		"expose two primary container port internally through image.port and target_port and target_container": {
+			mft: &BackendService{
+				Workload: Workload{
+					Name: aws.String("frontend"),
+				},
+				BackendServiceConfig: BackendServiceConfig{
+					ImageConfig: ImageWithHealthcheckAndOptionalPort{
+						ImageWithOptionalPort: ImageWithOptionalPort{
+							Port: aws.Uint16(80),
+						},
+					},
+					RoutingRule: RoutingRuleConfiguration{
+						TargetContainer: aws.String("frontend"),
+						TargetPort:      aws.Uint16(81),
+					},
+					Sidecars: map[string]*SidecarConfig{
+						"xray": {
+							Port:       aws.String("2000"),
+							Image:      aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							CredsParam: aws.String("some arn"),
+						},
+					},
+				},
+			},
+			wantedExposedPorts: []ExposedPort{
+				{
+					Port:          80,
+					ContainerName: "frontend",
+					Protocol:      "tcp",
+				},
+				{
+					Port:          81,
+					ContainerName: "frontend",
+					Protocol:      "tcp",
+				},
+				{
+					Port:          2000,
+					ContainerName: "xray",
+					Protocol:      "tcp",
+				},
+			},
+		},
+		"expose primary container port through image.port and sidecar container port through target_port and target_container": {
+			mft: &BackendService{
+				Workload: Workload{
+					Name: aws.String("frontend"),
+				},
+				BackendServiceConfig: BackendServiceConfig{
+					ImageConfig: ImageWithHealthcheckAndOptionalPort{
+						ImageWithOptionalPort: ImageWithOptionalPort{
+							Port: aws.Uint16(80),
+						},
+					},
+					RoutingRule: RoutingRuleConfiguration{
+						TargetContainer: aws.String("xray"),
+						TargetPort:      aws.Uint16(81),
+					},
+					Sidecars: map[string]*SidecarConfig{
+						"xray": {
+							//Port:       aws.String("2000"),
+							Image:      aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							CredsParam: aws.String("some arn"),
+						},
+					},
+				},
+			},
+			wantedExposedPorts: []ExposedPort{
+				{
+					Port:          80,
+					ContainerName: "frontend",
+					Protocol:      "tcp",
+				},
+				{
+					Port:          81,
+					ContainerName: "xray",
+					Protocol:      "tcp",
+				},
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// WHEN
+			actual, err := tc.mft.ExposedPorts()
+
+			// THEN
+			require.NoError(t, err)
+			require.Equal(t, tc.wantedExposedPorts, actual)
 		})
 	}
 }

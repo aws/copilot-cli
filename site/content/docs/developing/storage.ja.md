@@ -6,7 +6,7 @@ Copilot ワークロードに永続性を追加するには 2 つの方法があ
 
 Job や Service に、データベースや S3 バケットを追加するには [`copilot storage init`](../commands/storage-init.ja.md) を実行します。
 
-```bash
+```console
 # ウィザードに従い S3 バケットを作成する
 $ copilot storage init -t S3
 
@@ -21,7 +21,7 @@ $ copilot storage init -n my-bucket -t S3 -w api
 
 `copilot storage init` を実行して [DynamoDB テーブル](https://docs.aws.amazon.com/ja_jp/amazondynamodb/latest/developerguide/Introduction.html) の作成も可能です。例えば、ソートキーおよびローカルセカンダリインデックスを持つテーブルを定義した CloudFormation テンプレートは、次のコマンドで作成可能です。
 
-```bash
+```console
 # ウィザードに従い DynamoDB テーブルを作成する
 $ copilot storage init -t DynamoDB
 
@@ -31,15 +31,20 @@ $ copilot storage init -n users -t DynamoDB -w api --partition-key id:N --sort-k
 
 このコマンドにより `${app}-${env}-${svc}-users` という名前の DynamoDB テーブルが作成されます。パーティションキーは `id` となり、データ型は数値です。ソートキーは `email` となり、データ型は文字列です。また、[ローカルセカンダリインデックス](https://docs.aws.amazon.com/ja_jp/amazondynamodb/latest/developerguide/LSI.html) (代替のソートキー) として、データ型が数値である `post-count` が作成されます。
 
-同様に、`copilot storage init` を実行して [RDS Aurora Serverless](https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/AuroraUserGuide/aurora-serverless.html) クラスターを作成できます。
-```bash
+同様に、`copilot storage init` を実行して [RDS Aurora Serverless v2](https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/AuroraUserGuide/aurora-serverless-v2.html) クラスターを作成できます。
+```console
 # ウィザードに従い RDS Aurora Serverless クラスターを作成する
 $ copilot storage init -t Aurora
 
 # もしくは、RDS Aurora Serverless クラスターの作成に必要な情報をフラグで指定する
 $ copilot storage init -n my-cluster -t Aurora -w api --engine PostgreSQL --initial-db my_db
 ```
-このコマンドにより PostgreSQL エンジンを使用する `my_db` という名前のデータベースを持つ RDS Aurora Serverless クラスターが作成されます。JSON 文字列として `MYCLUSTER_SECRET` という名前の環境変数がワークロードに追加されます。この JSON 文字列は、`'host'`、`'port'`、`'dbname'`、`'username'`、`'password'`、`'dbClusterIdentifier'`、`'engine'` フィールドを含みます。
+このコマンドにより PostgreSQL エンジンを使用する `my_db` という名前のデータベースを持つ RDS Aurora Serverless v2 クラスターが作成されます。JSON 文字列として `MYCLUSTER_SECRET` という名前の環境変数がワークロードに追加されます。この JSON 文字列は、`'host'`、`'port'`、`'dbname'`、`'username'`、`'password'`、`'dbClusterIdentifier'`、`'engine'` フィールドを含みます。
+
+[RDS Aurora Serverless v1](https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/AuroraUserGuide/aurora-serverless.html) クラスターを作成するには、次のコマンドを実行します。
+```console
+$ copilot storage init -n my-cluster -t Aurora --serverless-version v1
+```
 
 ## ファイルシステム
 Copilot で EFS ファイルシステムを使う方法は２つあります: Copilot 管理の EFS、あるいは既存の EFS ファイルシステムのインポートです。
@@ -63,7 +68,7 @@ storage:
 
 各サービスごとに個別の EFS アクセスポイントを用意し利用することで、意図的に高度な設定を実施しない限りは各サービスはお互いのデータにアクセスすることはできません。詳細は[高度なユースケース](#高度なユースケース)もご覧ください。
 
-また、高度な EFS 設定にある `uid` と `gid` の指定によって、EFS アクセスポイントの UID と GID のカスタマイズも可能です。UID あるいは GID が未指定の場合、Copilot はService 名の [CRC32 チェックサム](https://stackoverflow.com/a/14210379/5890422)を元にした擬似乱数(pseudorandom numbers)をこれらの設定値として利用します。
+また、高度な EFS 設定にある `uid` と `gid` の指定によって、EFS アクセスポイントの UID と GID のカスタマイズも可能です。UID あるいは GID が未指定の場合、Copilot は Service 名の [CRC32 チェックサム](https://stackoverflow.com/a/14210379/5890422)を元にした擬似乱数(pseudorandom numbers)をこれらの設定値として利用します。
 
 ```yaml
 storage:
@@ -121,7 +126,7 @@ storage:
 ```
 
 コンテナが起動したら次のコマンドを実行しましょう。
-```bash
+```console
 $ copilot svc exec
 ```
 これによりコンテナへのインタラクティブなシェルアクセスが可能となりますので、`curl` や `wget` といったコマンドをインストールした上で、それらを利用して必要なデータのダウンロードや必要なディレクトリの作成などを EFS ボリュームに対して実施します。
@@ -199,7 +204,7 @@ storage:
 2. ファイルシステムと同じアカウントおよびリージョンにデプロイされた Copilot Environment
 
 次の AWS CLI のコマンドでファイルシステム ID を取得できます。
-```bash
+```console
 $ EFS_FILESYSTEMS=$(aws efs describe-file-systems | \
   jq '.FileSystems[] | {ID: .FileSystemId, CreationTime: .CreationTime, Size: .SizeInBytes.Value}')
 ```
@@ -211,7 +216,7 @@ $ EFS_FILESYSTEMS=$(aws efs describe-file-systems | \
 !!!info
     使用するファイルシステムは Copilot Environment と同じリージョンに作成されている必要があります。
 
-```bash
+```console
 $ SUBNETS=$(aws cloudformation describe-stacks --stack-name ${YOUR_APP}-${YOUR_ENV} \
   | jq '.Stacks[] | .Outputs[] | select(.OutputKey == "PublicSubnets") | .OutputValue')
 $ SUBNET1=$(echo $SUBNETS | jq -r 'split(",") | .[0]')
@@ -222,7 +227,7 @@ $ ENV_SG=$(aws cloudformation describe-stacks --stack-name ${YOUR_APP}-${YOUR_EN
 
 これらの情報を取得後、マウントターゲットを作成します。
 
-```bash
+```console
 $ MOUNT_TARGET_1_ID=$(aws efs create-mount-target \
     --subnet-id $SUBNET_1 \
     --security-groups $ENV_SG \
@@ -239,7 +244,7 @@ $ MOUNT_TARGET_2_ID=$(aws efs create-mount-target \
 
 AWS CLI を使用してマウントターゲットを削除します。
 
-```bash
+```console
 $ aws efs delete-mount-target --mount-target-id $MOUNT_TARGET_1
 $ aws efs delete-mount-target --mount-target-id $MOUNT_TARGET_2
 ```
@@ -305,7 +310,7 @@ Outputs:
 ```
 
 次のコマンドを実行します。
-```bash
+```console
 $ aws cloudformation deploy
     --stack-name efs-cfn \
     --template-file ecs.yml
@@ -316,7 +321,7 @@ $ aws cloudformation deploy
 
 ファイルシステム ID を取得するには、`describe-stacks` を実行します。
 
-```bash
+```console
 $ aws cloudformation describe-stacks --stack-name efs-cfn | \
     jq -r '.Stacks[] | .Outputs[] | .OutputValue'
 ```
@@ -337,12 +342,12 @@ storage:
 
 ##### リソースのクリーンアップ
 クリーンアップをするには、Manifest から `storage` 設定を削除して Service を再デプロイします。
-```bash
+```console
 $ copilot svc deploy
 ```
 
 次に、スタックを削除します。
 
-```bash
+```console
 $ aws cloudformation delete-stack --stack-name efs-cfn
 ```

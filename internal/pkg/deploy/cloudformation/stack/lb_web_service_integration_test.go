@@ -91,7 +91,7 @@ func TestLoadBalancedWebService_TemplateInteg(t *testing.T) {
 		ws, err := workspace.Use(fs)
 		require.NoError(t, err)
 
-		_, err = addon.Parse(aws.StringValue(v.Name), ws)
+		_, err = addon.ParseFromWorkload(aws.StringValue(v.Name), ws)
 		var notFound *addon.ErrAddonsNotFound
 		require.ErrorAs(t, err, &notFound)
 

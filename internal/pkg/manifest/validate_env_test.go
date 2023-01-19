@@ -862,6 +862,16 @@ func TestCDNConfiguration_validate(t *testing.T) {
 			},
 			wantedError: errors.New("cdn certificate must be in region us-east-1"),
 		},
+		"error if static config invalid": {
+			in: EnvironmentCDNConfig{
+				Config: AdvancedCDNConfig{
+					Static: CDNStaticConfig{
+						Path: "something",
+					},
+				},
+			},
+			wantedErrorMsgPrefix: `validate "static"`,
+		},
 		"success with cert and terminate tls": {
 			in: EnvironmentCDNConfig{
 				Config: AdvancedCDNConfig{
@@ -878,6 +888,54 @@ func TestCDNConfiguration_validate(t *testing.T) {
 				require.Error(t, gotErr)
 				require.Contains(t, gotErr.Error(), tc.wantedErrorMsgPrefix)
 			} else if tc.wantedError != nil {
+				require.Error(t, gotErr)
+				require.EqualError(t, tc.wantedError, gotErr.Error())
+			} else {
+				require.NoError(t, gotErr)
+			}
+		})
+	}
+}
+
+func TestCDNStaticConfig_validate(t *testing.T) {
+	testCases := map[string]struct {
+		in          CDNStaticConfig
+		wantedError error
+	}{
+		"valid if empty": {
+			in: CDNStaticConfig{},
+		},
+		"invalid if alias is not specified": {
+			in: CDNStaticConfig{
+				Path: "something",
+			},
+			wantedError: fmt.Errorf(`"alias" must be specified`),
+		},
+		"invalid if location is not specified": {
+			in: CDNStaticConfig{
+				Alias: "example.com",
+			},
+			wantedError: fmt.Errorf(`"location" must be specified`),
+		},
+		"invalid if path is not specified": {
+			in: CDNStaticConfig{
+				Alias:    "example.com",
+				Location: "s3url",
+			},
+			wantedError: fmt.Errorf(`"path" must be specified`),
+		},
+		"success": {
+			in: CDNStaticConfig{
+				Alias:    "example.com",
+				Location: "static",
+				Path:     "something",
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			gotErr := tc.in.validate()
+			if tc.wantedError != nil {
 				require.Error(t, gotErr)
 				require.EqualError(t, tc.wantedError, gotErr.Error())
 			} else {

@@ -92,6 +92,17 @@ func NewScheduledJob(props *ScheduledJobProps) *ScheduledJob {
 		job.Retries = aws.Int(props.Retries)
 	}
 	job.Timeout = stringP(props.Timeout)
+	for _, envName := range props.PrivateOnlyEnvironments {
+		job.Environments[envName] = &ScheduledJobConfig{
+			Network: NetworkConfig{
+				VPC: vpcConfig{
+					Placement: PlacementArgOrString{
+						PlacementString: placementStringP(PrivateSubnetPlacement),
+					},
+				},
+			},
+		}
+	}
 	job.parser = template.New()
 	return job
 }
@@ -178,5 +189,19 @@ func newDefaultScheduledJob() *ScheduledJob {
 				},
 			},
 		},
+		Environments: map[string]*ScheduledJobConfig{},
 	}
+}
+
+// ExposedPorts returns all the ports that are sidecar container ports available to receive traffic.
+func (j *ScheduledJob) ExposedPorts() ([]ExposedPort, error) {
+	var exposedPorts []ExposedPort
+	for name, sidecar := range j.Sidecars {
+		out, err := sidecar.exposedPorts(name)
+		if err != nil {
+			return nil, err
+		}
+		exposedPorts = append(exposedPorts, out...)
+	}
+	return sortExposedPorts(exposedPorts), nil
 }

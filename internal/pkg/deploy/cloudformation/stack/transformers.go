@@ -103,7 +103,7 @@ func convertSidecar(s map[string]*manifest.SidecarConfig) ([]*template.SidecarOp
 			Protocol:   protocol,
 			CredsParam: config.CredsParam,
 			Secrets:    convertSecrets(config.Secrets),
-			Variables:  config.Variables,
+			Variables:  convertEnvVars(config.Variables),
 			Storage: template.SidecarStorageOpts{
 				MountPoints: mp,
 			},
@@ -368,20 +368,20 @@ type networkLoadBalancerConfig struct {
 	appDNSName           *string
 }
 
-func convertELBAccessLogsConfig(mft *manifest.Environment) (*template.ELBAccessLogs, error) {
+func convertELBAccessLogsConfig(mft *manifest.Environment) *template.ELBAccessLogs {
 	elbAccessLogsArgs, isELBAccessLogsSet := mft.ELBAccessLogs()
 	if !isELBAccessLogsSet {
-		return nil, nil
+		return nil
 	}
 
 	if elbAccessLogsArgs == nil {
-		return &template.ELBAccessLogs{}, nil
+		return &template.ELBAccessLogs{}
 	}
 
 	return &template.ELBAccessLogs{
 		BucketName: aws.StringValue(elbAccessLogsArgs.BucketName),
 		Prefix:     aws.StringValue(elbAccessLogsArgs.Prefix),
-	}, nil
+	}
 }
 
 // convertFlowLogsConfig converts the VPC FlowLog configuration into a format parsable by the templates pkg.
@@ -536,7 +536,7 @@ func convertLogging(lc manifest.Logging) *template.LogConfigOpts {
 		EnableMetadata: lc.GetEnableMetadata(),
 		Destination:    lc.Destination,
 		SecretOptions:  convertSecrets(lc.SecretOptions),
-		Variables:      lc.Variables,
+		Variables:      convertEnvVars(lc.Variables),
 		Secrets:        convertSecrets(lc.Secrets),
 	}
 }
@@ -750,7 +750,16 @@ func convertNetworkConfig(network manifest.NetworkConfig) template.NetworkOpts {
 		AssignPublicIP: template.EnablePublicIP,
 		SubnetsType:    template.PublicSubnetsPlacement,
 	}
-	opts.SecurityGroups = network.VPC.SecurityGroups.GetIDs()
+	inSGs := network.VPC.SecurityGroups.GetIDs()
+	outSGs := make([]template.SecurityGroup, len(inSGs))
+	for i, sg := range inSGs {
+		if sg.Plain != nil {
+			outSGs[i] = template.PlainSecurityGroup(aws.StringValue(sg.Plain))
+		} else {
+			outSGs[i] = template.ImportedSecurityGroup(aws.StringValue(sg.FromCFN.Name))
+		}
+	}
+	opts.SecurityGroups = outSGs
 	opts.DenyDefaultSecurityGroup = network.VPC.SecurityGroups.IsDefaultSecurityGroupDenied()
 
 	placement := network.VPC.Placement
@@ -803,16 +812,22 @@ func convertEntryPoint(entrypoint manifest.EntryPointOverride) ([]string, error)
 	return out, nil
 }
 
-func convertDeploymentConfig(deploymentConfig manifest.DeploymentConfiguration) template.DeploymentConfigurationOpts {
-	var deployConfigs template.DeploymentConfigurationOpts
-	if strings.EqualFold(aws.StringValue(deploymentConfig.Rolling), manifest.ECSRecreateRollingUpdateStrategy) {
-		deployConfigs.MinHealthyPercent = minHealthyPercentRecreate
-		deployConfigs.MaxPercent = maxPercentRecreate
-	} else {
-		deployConfigs.MinHealthyPercent = minHealthyPercentDefault
-		deployConfigs.MaxPercent = maxPercentDefault
+func convertDeploymentConfig(in manifest.DeploymentConfiguration) template.DeploymentConfigurationOpts {
+	out := template.DeploymentConfigurationOpts{
+		MinHealthyPercent: minHealthyPercentDefault,
+		MaxPercent:        maxPercentDefault,
+		Rollback: template.RollingUpdateRollbackConfig{
+			AlarmNames:        in.RollbackAlarms.Basic,
+			CPUUtilization:    in.RollbackAlarms.Advanced.CPUUtilization,
+			MemoryUtilization: in.RollbackAlarms.Advanced.MemoryUtilization,
+		},
 	}
-	return deployConfigs
+
+	if strings.EqualFold(aws.StringValue(in.Rolling), manifest.ECSRecreateRollingUpdateStrategy) {
+		out.MinHealthyPercent = minHealthyPercentRecreate
+		out.MaxPercent = maxPercentRecreate
+	}
+	return out
 }
 
 func convertCommand(command manifest.CommandOverride) ([]string, error) {
@@ -1016,15 +1031,36 @@ func convertHTTPVersion(protocolVersion *string) *string {
 	return &pv
 }
 
+func convertEnvVars(variables map[string]manifest.Variable) map[string]template.Variable {
+	if len(variables) == 0 {
+		return nil
+	}
+	m := make(map[string]template.Variable, len(variables))
+	for name, variable := range variables {
+		if variable.RequiresImport() {
+			m[name] = template.ImportedVariable(variable.Value())
+			continue
+		}
+		m[name] = template.PlainVariable(variable.Value())
+	}
+	return m
+}
+
+// convertSecrets converts the manifest Secrets into a format parsable by the templates pkg.
 func convertSecrets(secrets map[string]manifest.Secret) map[string]template.Secret {
 	if len(secrets) == 0 {
 		return nil
 	}
-	m := make(map[string]template.Secret)
+	m := make(map[string]template.Secret, len(secrets))
+	var tplSecret template.Secret
 	for name, mftSecret := range secrets {
-		var tplSecret template.Secret = template.SecretFromSSMOrARN(mftSecret.Value())
-		if mftSecret.IsSecretsManagerName() {
+		switch {
+		case mftSecret.IsSecretsManagerName():
 			tplSecret = template.SecretFromSecretsManager(mftSecret.Value())
+		case mftSecret.RequiresImport():
+			tplSecret = template.SecretFromImportedSSMOrARN(mftSecret.Value())
+		default:
+			tplSecret = template.SecretFromPlainSSMOrARN(mftSecret.Value())
 		}
 		m[name] = tplSecret
 	}

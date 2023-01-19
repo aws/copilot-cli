@@ -35,7 +35,7 @@ type WorkerServiceConfig struct {
 	Manifest      *manifest.WorkerService
 	RawManifest   []byte
 	RuntimeConfig RuntimeConfig
-	Addons        addons
+	Addons        NestedStackConfigurer
 }
 
 // NewWorkerService creates a new WorkerService stack from a manifest file.
@@ -123,7 +123,7 @@ func (s *WorkerService) Template() (string, error) {
 		SerializedManifest: string(s.rawManifest),
 		EnvVersion:         s.rc.EnvVersion,
 
-		Variables:                s.manifest.WorkerServiceConfig.Variables,
+		Variables:                convertEnvVars(s.manifest.WorkerServiceConfig.Variables),
 		Secrets:                  convertSecrets(s.manifest.WorkerServiceConfig.Secrets),
 		NestedStack:              addonsOutputs,
 		AddonsExtraParams:        addonsParams,

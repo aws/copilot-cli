@@ -90,10 +90,8 @@ Copilot Environment の詳細については、[Environment](../concepts/environ
         cdn: true
         http:
           public:
-            security_groups:
-             ingress: 
-               restrict_to:
-                 cdn: true
+            ingress:
+               cdn: true
         ```
 
 <a id="name" href="#name" class="field">`name`</a> <span class="type">String</span>  
@@ -102,7 +100,7 @@ Environment の名前。
 <div class="separator"></div>
 
 <a id="type" href="#type" class="field">`type`</a> <span class="type">String</span>  
-`'Environment'` に設定されている必要があります.
+`'Environment'` に設定されている必要があります。
 
 <div class="separator"></div>
 
@@ -195,6 +193,25 @@ ports: 80
 <span class="parent-field">network.vpc.security_group.<type\>.</span><a id="network-vpc-security-group-cidr" href="#network-vpc-security-group-cidr" class="field">`cidr`</a> <span class="type">String</span>   
 IPv4 アドレスの範囲を CIDR 形式で指定します。
 
+<span class="parent-field">network.vpc.</span><a id="network-vpc-flowlogs" href="#network-vpc-flowlogs" class="field">`flow_logs`</a> <span class="type">Boolean or Map</span>
+'true' と指定すると、Copilot は VPC フローログを有効にして、 Environment VPC に出入りする IP トラフィックの情報を取得します。
+デフォルトの VPC フローログの保持期間は 14 日（2 週間）です。
+
+```yaml
+network:
+  vpc:
+    flow_logs: on
+```
+保持期間をカスタマイズできます。
+```yaml
+network:
+  vpc:
+    flow_logs:
+      retention: 30
+```
+<span class="parent-field">network.vpc.flow_logs.</span><a id="network-vpc-flowlogs-retention" href="#network-vpc-flowlogs-retention" class="field">`retention`</a> <span class="type">String</span>
+ログイベントを保持する日数です。指定可能な値については、[こちらのページ](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-logs-loggroup.html#cfn-logs-loggroup-retentionindays) を確認してください。
+
 <div class="separator"></div>
 
 <a id="cdn" href="#cdn" class="field">`cdn`</a> <span class="type">Boolean or Map</span>  
@@ -256,28 +273,40 @@ http:
 <span class="parent-field">http.public.access_logs.</span><a id="http-public-access-logs-bucket-name" href="#http-public-access-logs-bucket-name" class="field">`bucket_name`</a> <span class="type">String</span>   
 アクセスログの保存先となる既存の S3 バケット名。
 
-<span class="parent-field">http.public.access_logs.</span><a id="http-public-access-logs-prefix" href="#http-public-access-logs-prefix" class="field">`prefix`</a> <span class="type">String</span>   
+<span class="parent-field">http.public.access_logs.</span><a id="http-public-access-logs-prefix" href="#http-public-access-logs-prefix" class="field">`prefix`</a> <span class="type">String</span>
 ログオブジェクトのプレフィックス。
+
+<span class="parent-field">http.public.</span><a id="http-public-sslpolicy" href="#http-public-sslpolicy" class="field">`ssl_policy`</a> <span class="type">String</span>
+任意項目。 パブリックロードバランサーの HTTPS リスナーに対する SSL ポリシーを指定します。
+
+<span class="parent-field">http.public.</span><a id="http-public-ingress" href="#http-public-ingress" class="field">`ingress`</a> <span class="type">Map</span><span class="version">Modified in [v1.23.0](../../blogs/release-v123.ja.md#move-misplaced-http-fields-in-environment-manifest-backward-compatible)</span>
+パブリックロードバランサーの通信を制限する Ingress ルール。
 
 <span class="parent-field">http.public.</span><a id="http-public-security-groups" href="#http-public-security-groups" class="field">`security_groups`</a> <span class="type">Map</span>    
 パブリックロードバランサーに追加するセキュリティグループの設定。
 
-<span class="parent-field">http.public.security_groups.</span><a id="http-public-security-groups-ingress" href="#http-public-security-groups-ingress" class="field">`ingress`</a> <span class="type">Map</span>  
-パブリックロードバランサーを許可する Ingress ルール。  
 ```yaml
 http:
   public:
-    security_groups:
-      ingress: 
-        restrict_to:
-          cdn: true
+    ingress:
+      cdn: true
 ```
+???- note "<span class="faint"> "http.public.ingress" は、以前は "http.public.security_groups.ingress" でした</span>"
+    このフィールドは、 [v1.23.0](../../blogs/release-v123.ja.md). までは、 `http.public.security_groups.ingress` でした。
+    この変更は、子フィールド [`cdn`](#http-public-ingress-cdn)（当時は唯一の子フィールド）にカスケードされ、以前では、`http.public.security_groups.ingress.restrict_to.cdn` でした。
+    詳細については、[ブログ記事 v1.23.0](../../blogs/release-v123.ja.md#move-misplaced-http-fields-in-environment-manifest-backward-compatible) を確認してください。
 
-<span class="parent-field">http.public.security_groups.ingress.</span><a id="http-public-security-groups-ingress-restrict-to" href="#http-public-security-groups-ingress-restrict-to" class="field">`restrict_to`</a> <span class="type">Map</span>  
-Public Load Balancer のトラフィックを制限する Ingress ルール。
-
-<span class="parent-field">http.public.security_groups.ingress.restrict_to.</span><a id="http-public-security-groups-ingress-restrict-to-cdn" href="#http-public-security-groups-ingress-restrict-to-cdn" class="field">`cdn`</a> <span class="type">Boolean</span>    
+<span class="parent-field">http.public.ingress.</span><a id="http-public-ingress-cdn" href="#http-public-ingress-cdn" class="field">`cdn`</a> <span class="type">Boolean</span><span class="version">[v1.23.0](../../blogs/release-v123.ja.md#move-misplaced-http-fields-in-environment-manifest-backward-compatible) で変更されました</span> 
 パブリックロードバランサーの Ingress トラフィックが CloudFront ディストリビューションから来るように制限するかどうか。
+
+<span class="parent-field">http.public.ingress.</span><a id="http-public-ingress-source-ips" href="#http-public-ingress-source-ips" class="field">`source_ips`</a> <span class="type">Array of Strings</span>
+パブリックロードバランサーへの Ingress トラフィックをソース IP に制限します。
+```yaml
+http:
+  public:
+    ingress:
+      source_ips: ["192.0.2.0/24", "198.51.100.10/32"]
+```
 
 <span class="parent-field">http.</span><a id="http-private" href="#http-private" class="field">`private`</a> <span class="type">Map</span>  
 内部ロードバランサーの設定。
@@ -289,21 +318,24 @@ Public Load Balancer のトラフィックを制限する Ingress ルール。
 <span class="parent-field">http.private.</span><a id="http-private-subnets" href="#http-private-subnets" class="field">`subnets`</a> <span class="type">Array of Strings</span>   
 内部ロードバランサーを配置するサブネット ID。
 
-<span class="parent-field">http.private.</span><a id="http-private-security-groups" href="#http-private-security-groups" class="field">`security_groups`</a> <span class="type">Map</span>    
-内部ロードバランサーに追加するセキュリティグループの設定。
-
-<span class="parent-field">http.private.security_groups</span><a id="http-private-security-groups-ingress" href="#http-private-security-groups-ingress" class="field">`ingress`</a> <span class="type">Map</span>  
+<span class="parent-field">http.private</span><a id="http-private-ingress" href="#http-private-ingress" class="field">`ingress`</a> <span class="type">Map</span><span class="version">[v1.23.0](../../blogs/release-v123.ja.md#move-misplaced-http-fields-in-environment-manifest-backward-compatible) で変更されました</span>
 内部ロードバランサーを許可する Ingress ルール。  
 ```yaml
 http:
   private:
-    security_groups:
-      ingress: # Enable incoming traffic within the VPC to the internal load balancer.
-        from_vpc: true
+    ingress:
+      vpc: true  # Enable incoming traffic within the VPC to the internal load balancer.
 ```
+???- note "<span class="faint"> "http.private.ingress"  は、以前は "http.private.security_groups.ingress" でした</span>"
+    このフィールドは、 [v1.23.0](../../blogs/release-v123.ja.md) までは、 `http.private.security_groups.ingress` でした。
+    この変更は、子フィールド [`vpc`](#http-private-ingress-vpc)（当時は唯一の子フィールド）にカスケードされ、以前では、`http.private.security_groups.ingress.from_vpc` でした。
+    詳細については、[ブログ記事 v1.23.0](../../blogs/release-v123.ja.md#move-misplaced-http-fields-in-environment-manifest-backward-compatible) を確認してください。
 
-<span class="parent-field">http.private.security_groups.ingress.</span><a id="http-private-security-groups-ingress-from-vpc" href="#http-private-security-groups-ingress-from-vpc" class="field">`from_vpc`</a> <span class="type">Boolean</span>    
+<span class="parent-field">http.private.ingress.</span><a id="http-private-ingress-vpc" href="#http-private-ingress-vpc" class="field">`vpc`</a> <span class="type">Boolean</span><span class="version">[v1.23.0](../../blogs/release-v123.ja.md#move-misplaced-http-fields-in-environment-manifest-backward-compatible) で変更されました</span>
 VPC 内から内部ロードバランサーへのトラフィックを有効にするかどうか。
+
+<span class="parent-field">http.private.</span><a id="http-private-sslpolicy" href="#http-private-sslpolicy" class="field">`ssl_policy`</a> <span class="type">String</span>
+任意項目。 内部ロードバランサーの HTTPS リスナーに対する SSL ポリシーを指定します。
 
 <div class="separator"></div>
 

@@ -5,6 +5,7 @@ package manifest
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
 	"time"
 
@@ -84,13 +85,28 @@ type ImageWithPortAndHealthcheck struct {
 	HealthCheck   ContainerHealthCheck `yaml:"healthcheck"`
 }
 
+// AlarmArgs represents specs of CloudWatch alarms for deployment rollbacks.
+type AlarmArgs struct {
+	CPUUtilization    *float64 `yaml:"cpu_utilization"`
+	MemoryUtilization *float64 `yaml:"memory_utilization"`
+}
+
 // DeploymentConfiguration represents the deployment strategies for a service.
 type DeploymentConfiguration struct {
-	Rolling *string `yaml:"rolling"`
+	Rolling        *string                    `yaml:"rolling"`
+	RollbackAlarms Union[[]string, AlarmArgs] // `yaml:"rollback_alarms"` 
+	// The rollback_alarms manifest field is a no-op until the EDS-CFN ABR bug is fixed.
 }
 
 func (d *DeploymentConfiguration) isEmpty() bool {
-	return d == nil || d.Rolling == nil
+	return d == nil || (d.Rolling == nil && d.RollbackAlarms.IsZero())
+}
+
+// ExposedPort will hold the port mapping configuration.
+type ExposedPort struct {
+	ContainerName string // The name of the container that exposes this port.
+	Port          uint16 // The port number.
+	Protocol      string // Either "tcp" or "udp", empty means the default value that the underlying service provides.
 }
 
 // ImageWithHealthcheckAndOptionalPort represents a container image with an optional exposed port and health check.
@@ -112,10 +128,36 @@ type TaskConfig struct {
 	Platform       PlatformArgsOrString `yaml:"platform,omitempty"`
 	Count          Count                `yaml:"count"`
 	ExecuteCommand ExecuteCommand       `yaml:"exec"`
-	Variables      map[string]string    `yaml:"variables"`
+	Variables      map[string]Variable  `yaml:"variables"`
 	EnvFile        *string              `yaml:"env_file"`
 	Secrets        map[string]Secret    `yaml:"secrets"`
 	Storage        Storage              `yaml:"storage"`
+}
+
+// Variable represents an identifier for the value of an environment variable.
+type Variable struct {
+	stringOrFromCFN
+}
+
+// UnmarshalYAML implements the yaml.Unmarshaler (v3) interface to override the default YAML unmarshalling logic.
+func (v *Variable) UnmarshalYAML(value *yaml.Node) error {
+	if err := v.stringOrFromCFN.UnmarshalYAML(value); err != nil {
+		return fmt.Errorf(`unmarshal "variables": %w`, err)
+	}
+	return nil
+}
+
+// RequiresImport returns true if the value is imported from an environment.
+func (v *Variable) RequiresImport() bool {
+	return !v.FromCFN.isEmpty()
+}
+
+// Value returns the value, whether it is used for import or not.
+func (v *Variable) Value() string {
+	if v.RequiresImport() {
+		return aws.StringValue(v.FromCFN.Name)
+	}
+	return aws.StringValue(v.Plain)
 }
 
 // ContainerPlatform returns the platform for the service.
@@ -141,7 +183,7 @@ func (t TaskConfig) IsARM() bool {
 
 // Secret represents an identifier for sensitive data stored in either SSM or SecretsManager.
 type Secret struct {
-	from               *string              // SSM Parameter name or ARN to a secret.
+	from               stringOrFromCFN      // SSM Parameter name or ARN to a secret or secret ARN imported from another CloudFormation stack.
 	fromSecretsManager secretsManagerSecret // Conveniently fetch from a secretsmanager secret name instead of ARN.
 }
 
@@ -169,12 +211,19 @@ func (s *Secret) IsSecretsManagerName() bool {
 	return !s.fromSecretsManager.IsEmpty()
 }
 
+// RequiresImport returns true if the SSM parameter name or secret ARN value is imported from CloudFormation stack.
+func (s *Secret) RequiresImport() bool {
+	return !s.from.FromCFN.isEmpty()
+}
+
 // Value returns the secret value provided by clients.
 func (s *Secret) Value() string {
 	if !s.fromSecretsManager.IsEmpty() {
 		return aws.StringValue(s.fromSecretsManager.Name)
+	} else if s.RequiresImport() {
+		return aws.StringValue(s.from.FromCFN.Name)
 	}
-	return aws.StringValue(s.from)
+	return aws.StringValue(s.from.Plain)
 }
 
 // secretsManagerSecret represents the name of a secret stored in SecretsManager.
@@ -189,14 +238,14 @@ func (s secretsManagerSecret) IsEmpty() bool {
 
 // Logging holds configuration for Firelens to route your logs.
 type Logging struct {
-	Retention      *int              `yaml:"retention"`
-	Image          *string           `yaml:"image"`
-	Destination    map[string]string `yaml:"destination,flow"`
-	EnableMetadata *bool             `yaml:"enableMetadata"`
-	SecretOptions  map[string]Secret `yaml:"secretOptions"`
-	ConfigFile     *string           `yaml:"configFilePath"`
-	Variables      map[string]string `yaml:"variables"`
-	Secrets        map[string]Secret `yaml:"secrets"`
+	Retention      *int                `yaml:"retention"`
+	Image          *string             `yaml:"image"`
+	Destination    map[string]string   `yaml:"destination,flow"`
+	EnableMetadata *bool               `yaml:"enableMetadata"`
+	SecretOptions  map[string]Secret   `yaml:"secretOptions"`
+	ConfigFile     *string             `yaml:"configFilePath"`
+	Variables      map[string]Variable `yaml:"variables"`
+	Secrets        map[string]Secret   `yaml:"secrets"`
 }
 
 // IsEmpty returns empty if the struct has all zero members.
@@ -228,7 +277,7 @@ type SidecarConfig struct {
 	Image         *string              `yaml:"image"`
 	Essential     *bool                `yaml:"essential"`
 	CredsParam    *string              `yaml:"credentialsParameter"`
-	Variables     map[string]string    `yaml:"variables"`
+	Variables     map[string]Variable  `yaml:"variables"`
 	Secrets       map[string]Secret    `yaml:"secrets"`
 	MountPoints   []SidecarMountPoint  `yaml:"mount_points"`
 	DockerLabels  map[string]string    `yaml:"labels"`

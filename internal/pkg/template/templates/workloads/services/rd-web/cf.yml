@@ -100,10 +100,7 @@ Resources:
               {{- end }}
               {{- end }}
               {{- if .Variables}}
-              {{- range $name, $value := .Variables}}
-              - Name: {{$name}}
-                Value: {{$value | printf "%q"}}
-              {{- end}}
+              {{include "variables" . | indent 14}}
               {{- end}}
               {{- if .NestedStack}}{{$stackName := .NestedStack.StackName}}
               {{- range $var := .NestedStack.VariableOutputs}}

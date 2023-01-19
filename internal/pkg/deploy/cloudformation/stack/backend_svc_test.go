@@ -200,9 +200,7 @@ func TestBackendService_Template(t *testing.T) {
 		mft.Network.VPC.Placement = manifest.PlacementArgOrString{
 			PlacementString: &privatePlacement,
 		}
-		mft.Network.VPC.SecurityGroups = manifest.SecurityGroupsIDsOrConfig{
-			IDs: []string{"sg-1234"},
-		}
+		mft.Network.VPC.SecurityGroups = manifest.SecurityGroupsIDsOrConfig{}
 
 		var actual template.WorkloadOpts
 		parser := mocks.NewMockbackendSvcReadParser(ctrl)
@@ -291,7 +289,7 @@ Outputs:
 			Network: template.NetworkOpts{
 				AssignPublicIP: template.DisablePublicIP,
 				SubnetsType:    template.PrivateSubnetsPlacement,
-				SecurityGroups: []string{"sg-1234"},
+				SecurityGroups: []template.SecurityGroup{},
 			},
 			DeploymentConfiguration: template.DeploymentConfigurationOpts{
 				MinHealthyPercent: 0,
@@ -361,9 +359,7 @@ Outputs:
 		mft.Network.VPC.Placement = manifest.PlacementArgOrString{
 			PlacementString: &privatePlacement,
 		}
-		mft.Network.VPC.SecurityGroups = manifest.SecurityGroupsIDsOrConfig{
-			IDs: []string{"sg-1234"},
-		}
+		mft.Network.VPC.SecurityGroups = manifest.SecurityGroupsIDsOrConfig{}
 
 		var actual template.WorkloadOpts
 		parser := mocks.NewMockbackendSvcReadParser(ctrl)
@@ -465,7 +461,7 @@ Outputs:
 			Network: template.NetworkOpts{
 				AssignPublicIP: template.DisablePublicIP,
 				SubnetsType:    template.PrivateSubnetsPlacement,
-				SecurityGroups: []string{"sg-1234"},
+				SecurityGroups: []template.SecurityGroup{},
 			},
 			DeploymentConfiguration: template.DeploymentConfigurationOpts{
 				MinHealthyPercent: 0,

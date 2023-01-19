@@ -213,6 +213,17 @@ func NewWorkerService(props WorkerServiceProps) *WorkerService {
 	}
 	svc.WorkerServiceConfig.Subscribe.Topics = props.Topics
 	svc.WorkerServiceConfig.Platform = props.Platform
+	for _, envName := range props.PrivateOnlyEnvironments {
+		svc.Environments[envName] = &WorkerServiceConfig{
+			Network: NetworkConfig{
+				VPC: vpcConfig{
+					Placement: PlacementArgOrString{
+						PlacementString: placementStringP(PrivateSubnetPlacement),
+					},
+				},
+			},
+		}
+	}
 	svc.parser = template.New()
 	return svc
 }
@@ -353,5 +364,19 @@ func newDefaultWorkerService() *WorkerService {
 				},
 			},
 		},
+		Environments: map[string]*WorkerServiceConfig{},
 	}
+}
+
+// ExposedPorts returns all the ports that are sidecar container ports available to receive traffic.
+func (ws *WorkerService) ExposedPorts() ([]ExposedPort, error) {
+	var exposedPorts []ExposedPort
+	for name, sidecar := range ws.Sidecars {
+		out, err := sidecar.exposedPorts(name)
+		if err != nil {
+			return nil, err
+		}
+		exposedPorts = append(exposedPorts, out...)
+	}
+	return sortExposedPorts(exposedPorts), nil
 }

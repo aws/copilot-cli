@@ -62,6 +62,17 @@ func NewBackendService(props BackendServiceProps) *BackendService {
 		svc.BackendServiceConfig.TaskConfig.Memory = aws.Int(MinWindowsTaskMemory)
 	}
 	svc.parser = template.New()
+	for _, envName := range props.PrivateOnlyEnvironments {
+		svc.Environments[envName] = &BackendServiceConfig{
+			Network: NetworkConfig{
+				VPC: vpcConfig{
+					Placement: PlacementArgOrString{
+						PlacementString: placementStringP(PrivateSubnetPlacement),
+					},
+				},
+			},
+		}
+	}
 	return svc
 }
 
@@ -88,7 +99,7 @@ func (s *BackendService) requiredEnvironmentFeatures() []string {
 	return features
 }
 
-// Port returns the exposed the exposed port in the manifest.
+// Port returns the exposed port in the manifest.
 // If the backend service is not meant to be reachable, then ok is set to false.
 func (s *BackendService) Port() (port uint16, ok bool) {
 	value := s.BackendServiceConfig.ImageConfig.Port
@@ -174,5 +185,24 @@ func newDefaultBackendService() *BackendService {
 				},
 			},
 		},
+		Environments: map[string]*BackendServiceConfig{},
 	}
+}
+
+// ExposedPorts returns all the ports that are container ports available to receive traffic.
+func (b *BackendService) ExposedPorts() ([]ExposedPort, error) {
+	var exposedPorts []ExposedPort
+
+	workloadName := aws.StringValue(b.Name)
+	exposedPorts = append(exposedPorts, b.ImageConfig.exposedPorts(workloadName)...)
+	for name, sidecar := range b.Sidecars {
+		out, err := sidecar.exposedPorts(name)
+		if err != nil {
+			return nil, err
+		}
+		exposedPorts = append(exposedPorts, out...)
+	}
+	exposedPorts = append(exposedPorts, b.RoutingRule.exposedPorts(exposedPorts, workloadName)...)
+
+	return sortExposedPorts(exposedPorts), nil
 }

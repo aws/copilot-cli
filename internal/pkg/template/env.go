@@ -94,6 +94,12 @@ var (
 	}
 )
 
+// Addons holds data about an aggregated addons stack.
+type Addons struct {
+	URL         string
+	ExtraParams string
+}
+
 // EnvOpts holds data that can be provided to enable features in an environment stack template.
 type EnvOpts struct {
 	AppName string // The application name. Needed to create default value for svc discovery endpoint for upgraded environments.
@@ -107,6 +113,7 @@ type EnvOpts struct {
 	EnableLongARNFormatLambda string
 	CustomDomainLambda        string
 
+	Addons               *Addons
 	ScriptBucketName     string
 	PermissionsBoundary  string
 	ArtifactBucketARN    string
@@ -171,8 +178,17 @@ func (elb *ELBAccessLogs) ShouldCreateBucket() bool {
 type CDNConfig struct {
 	ImportedCertificate *string
 	TerminateTLS        bool
+	Static              *CDNStaticAssetConfig
 }
 
+// CDNStaticAssetConfig represents static assets config for a Content Delivery Network.
+type CDNStaticAssetConfig struct {
+	Path     string
+	Location string
+	Alias    string
+}
+
+// VPCConfig represents the VPC configuration.
 type VPCConfig struct {
 	Imported            *ImportVPC // If not-nil, use the imported VPC resources instead of the Managed VPC.
 	Managed             ManagedVPC

@@ -49,6 +49,14 @@ variables:                    # Pass environment variables as key value pairs.
 #  GITHUB_TOKEN: GITHUB_TOKEN  # The key is the name of the environment variable, the value is the name of the SSM parameter.
 # You can override any of the values defined above by environment.
 environments:
+  test:
+    network:
+      vpc:
+        security_groups:
+          - sg-0c10c4fe23f5e5361
+          - sg-09295097b2a41b59d
+          - from_cfn: MyUserDBAccessSecurityGroup1
+          - from_cfn: MyUserDBAccessSecurityGroup2
   staging:
     image:
       location: 123456789000.dkr.ecr.us-east-1.amazonaws.com/vault/e2e:${TAG}
@@ -69,6 +77,15 @@ environments:
       cooldown:
         in: 30s
         out: 1m30s
+    variables:
+      DB_NAME:
+        from_cfn: MyDB
+    secrets:
+      SQL_PASS: SQL_PASS      
+      GIT_USERNAME:
+       from_cfn: stack-SSMGHUserName
+      DB:
+       secretsmanager: 'demo/testing/mysql'
     logging:
       retention: 1
       destination:
@@ -78,8 +95,18 @@ environments:
         log_stream_prefix: copilot/
       variables:
         TEST: TEST
+        DB_NAME:
+          from_cfn: MyDB
       secrets:
         GITHUB_TOKEN: GITHUB_TOKEN
+        MONGO_DB:
+          from_cfn: stack-MongoUserName
+      secretOptions:
+        SQL_USERNAME: SQL_USERNAME
+        GIT_USERNAME:
+          from_cfn: stack-SSMGHUserName
+        DB:
+          secretsmanager: 'demo/testing/mysql'
     http:
       path: '/'
       alias: example.com
@@ -93,9 +120,17 @@ environments:
         image: 1234567890.dkr.ecr.us-west-2.amazonaws.com/reverse-proxy:revision_1
         variables:
           NGINX_PORT: 80
+          DB_NAME:
+            from_cfn: MyDB
         healthcheck:
           command: ["CMD-SHELL", "curl -f http://localhost:8080 || exit 1"]
           interval: 10s
+        secrets:
+          SQL_PASS: SQL_PASS      
+          GIT_USERNAME:
+            from_cfn: stack-SSMGHUserName
+          DB:
+            secretsmanager: 'demo/testing/mysql'
       operation:
         image: "alpine:latest"
         command: ["echo", "$COPILOT_APPLICATION_NAME"]

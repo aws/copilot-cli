@@ -3,14 +3,19 @@
   Image: {{ .LogConfig.Image }}
   Environment:
 {{include "envvars-common" . | indent 2}}
-{{if .LogConfig.Variables}}{{range $name, $value := .LogConfig.Variables}}
-  - Name: {{$name}}
-    Value: {{$value | printf "%q"}}{{end}}{{end}}
+{{if .LogConfig.Variables}}
+{{include "variables" .LogConfig | indent 2 }}
+{{end}}
 {{- if .LogConfig.Secrets}}
   Secrets:
   {{- range $name, $secret := .LogConfig.Secrets}}
   - Name: {{$name}}
-    ValueFrom: {{if not $secret.RequiresSub }}{{$secret.ValueFrom}}{{- else}} !Sub 'arn:${AWS::Partition}:{{$secret.Service}}:${AWS::Region}:${AWS::AccountId}:{{$secret.ValueFrom}}' {{- end }}
+  {{- if $secret.RequiresImport}}
+    ValueFrom:
+      Fn::ImportValue: {{ quote $secret.ValueFrom }}
+  {{- else}}
+    ValueFrom: {{if not $secret.RequiresSub }} {{$secret.ValueFrom}} {{- else}} !Sub 'arn:${AWS::Partition}:{{$secret.Service}}:${AWS::Region}:${AWS::AccountId}:{{$secret.ValueFrom}}' {{- end}}
+  {{- end}}
   {{- end}}
 {{- end}}
   FirelensConfiguration:
@@ -72,7 +77,12 @@
   Secrets:
   {{- range $name, $secret := $sidecar.Secrets}}
   - Name: {{$name}}
-    ValueFrom: {{if not $secret.RequiresSub }}{{$secret.ValueFrom}}{{- else}} !Sub 'arn:${AWS::Partition}:{{$secret.Service}}:${AWS::Region}:${AWS::AccountId}:{{$secret.ValueFrom}}' {{- end }}
+  {{- if $secret.RequiresImport}}
+    ValueFrom:
+      Fn::ImportValue: {{ quote $secret.ValueFrom }}
+  {{- else}}
+    ValueFrom: {{if not $secret.RequiresSub }} {{$secret.ValueFrom}} {{- else}} !Sub 'arn:${AWS::Partition}:{{$secret.Service}}:${AWS::Region}:${AWS::AccountId}:{{$secret.ValueFrom}}' {{- end}}
+  {{- end}}
   {{- end}}
 {{- end}}
   LogConfiguration:

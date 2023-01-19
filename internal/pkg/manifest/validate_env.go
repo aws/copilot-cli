@@ -391,15 +391,40 @@ func (i RelaxedIngress) validate() error {
 
 // validate returns nil if advancedCDNConfig is configured correctly.
 func (cfg AdvancedCDNConfig) validate() error {
-	if cfg.Certificate == nil {
+	if cfg.Certificate != nil {
+		certARN, err := arn.Parse(*cfg.Certificate)
+		if err != nil {
+			return fmt.Errorf(`parse cdn certificate: %w`, err)
+		}
+		if certARN.Region != cloudfront.CertRegion {
+			return &errInvalidCloudFrontRegion{}
+		}
+	}
+	if err := cfg.Static.validate(); err != nil {
+		return fmt.Errorf(`validate "static": %w`, err)
+	}
+	return nil
+}
+
+// validate returns nil if CDNStaticConfig is configured correctly.
+func (cfg CDNStaticConfig) validate() error {
+	if cfg.IsEmpty() {
 		return nil
 	}
-	certARN, err := arn.Parse(*cfg.Certificate)
-	if err != nil {
-		return fmt.Errorf(`parse cdn certificate: %w`, err)
+	if cfg.Alias == "" {
+		return &errFieldMustBeSpecified{
+			missingField: "alias",
+		}
 	}
-	if certARN.Region != cloudfront.CertRegion {
-		return &errInvalidCloudFrontRegion{}
+	if cfg.Location == "" {
+		return &errFieldMustBeSpecified{
+			missingField: "location",
+		}
+	}
+	if cfg.Path == "" {
+		return &errFieldMustBeSpecified{
+			missingField: "path",
+		}
 	}
 	return nil
 }

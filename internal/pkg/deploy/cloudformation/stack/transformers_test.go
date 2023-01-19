@@ -19,8 +19,8 @@ import (
 
 func Test_convertSidecar(t *testing.T) {
 	mockImage := aws.String("mockImage")
-	mockMap := map[string]string{"foo": "bar"}
-	mockSecrets := map[string]template.Secret{"foo": template.SecretFromSSMOrARN("")}
+	mockMap := map[string]template.Variable{"foo": template.PlainVariable("")}
+	mockSecrets := map[string]template.Secret{"foo": template.SecretFromPlainSSMOrARN("")}
 	mockCredsParam := aws.String("mockCredsParam")
 	testCases := map[string]struct {
 		inPort            *string
@@ -213,7 +213,7 @@ func Test_convertSidecar(t *testing.T) {
 					CredsParam:    mockCredsParam,
 					Image:         mockImage,
 					Secrets:       map[string]manifest.Secret{"foo": {}},
-					Variables:     mockMap,
+					Variables:     map[string]manifest.Variable{"foo": {}},
 					Essential:     aws.Bool(tc.inEssential),
 					Port:          tc.inPort,
 					DockerLabels:  tc.inLabels,
@@ -1496,11 +1496,11 @@ func Test_convertSubscribe(t *testing.T) {
 
 		wanted *template.SubscribeOpts
 	}{
-		"empty subscription": { //1
+		"empty subscription": { // 1
 			inSubscribe: &manifest.WorkerService{},
 			wanted:      nil,
 		},
-		"valid subscribe": { //2
+		"valid subscribe": { // 2
 			inSubscribe: &manifest.WorkerService{
 				WorkerServiceConfig: manifest.WorkerServiceConfig{
 					Subscribe: manifest.SubscribeConfig{
@@ -1538,7 +1538,7 @@ func Test_convertSubscribe(t *testing.T) {
 				},
 			},
 		},
-		"valid subscribe with default queue configs": { //3
+		"valid subscribe with default queue configs": { // 3
 			inSubscribe: &manifest.WorkerService{
 				WorkerServiceConfig: manifest.WorkerServiceConfig{
 					Subscribe: manifest.SubscribeConfig{
@@ -1562,7 +1562,7 @@ func Test_convertSubscribe(t *testing.T) {
 				Queue: nil,
 			},
 		},
-		"valid subscribe with queue enabled": { //4
+		"valid subscribe with queue enabled": { // 4
 			inSubscribe: &manifest.WorkerService{
 				WorkerServiceConfig: manifest.WorkerServiceConfig{
 					Subscribe: manifest.SubscribeConfig{
@@ -1592,7 +1592,7 @@ func Test_convertSubscribe(t *testing.T) {
 				Queue: nil,
 			},
 		},
-		"valid subscribe with minimal queue": { //5
+		"valid subscribe with minimal queue": { // 5
 			inSubscribe: &manifest.WorkerService{
 				WorkerServiceConfig: manifest.WorkerServiceConfig{
 					Subscribe: manifest.SubscribeConfig{
@@ -1636,7 +1636,7 @@ func Test_convertSubscribe(t *testing.T) {
 				Queue: nil,
 			},
 		},
-		"valid subscribe with high throughput fifo sqs": { //6
+		"valid subscribe with high throughput fifo sqs": { // 6
 			inSubscribe: &manifest.WorkerService{
 				WorkerServiceConfig: manifest.WorkerServiceConfig{
 					Subscribe: manifest.SubscribeConfig{
@@ -1731,7 +1731,7 @@ func Test_convertSubscribe(t *testing.T) {
 				Queue: nil,
 			},
 		},
-		"valid subscribe with custom complete fifo sqs config values": { //7
+		"valid subscribe with custom complete fifo sqs config values": { // 7
 			inSubscribe: &manifest.WorkerService{
 				WorkerServiceConfig: manifest.WorkerServiceConfig{
 					Subscribe: manifest.SubscribeConfig{
@@ -1787,7 +1787,7 @@ func Test_convertSubscribe(t *testing.T) {
 				Queue: nil,
 			},
 		},
-		"valid subscribe with custom complete fifo sqs config and standard topic subscription to a default standard queue": { //8
+		"valid subscribe with custom complete fifo sqs config and standard topic subscription to a default standard queue": { // 8
 			inSubscribe: &manifest.WorkerService{
 				WorkerServiceConfig: manifest.WorkerServiceConfig{
 					Subscribe: manifest.SubscribeConfig{
@@ -1851,7 +1851,7 @@ func Test_convertSubscribe(t *testing.T) {
 				Queue: nil,
 			},
 		},
-		"valid subscribe with custom complete fifo sqs config and multiple standard topic subscriptions to a default standard queue": { //9
+		"valid subscribe with custom complete fifo sqs config and multiple standard topic subscriptions to a default standard queue": { // 9
 			inSubscribe: &manifest.WorkerService{
 				WorkerServiceConfig: manifest.WorkerServiceConfig{
 					Subscribe: manifest.SubscribeConfig{
@@ -1923,7 +1923,7 @@ func Test_convertSubscribe(t *testing.T) {
 				Queue: nil,
 			},
 		},
-		"valid subscribe with standard sqs config and fifo topic subscription to a default fifo queue": { //10
+		"valid subscribe with standard sqs config and fifo topic subscription to a default fifo queue": { // 10
 			inSubscribe: &manifest.WorkerService{
 				WorkerServiceConfig: manifest.WorkerServiceConfig{
 					Subscribe: manifest.SubscribeConfig{
@@ -1979,7 +1979,7 @@ func Test_convertSubscribe(t *testing.T) {
 				},
 			},
 		},
-		"valid subscribe with standard sqs config and multiple fifo topic subscriptions to a default fifo queue": { //11
+		"valid subscribe with standard sqs config and multiple fifo topic subscriptions to a default fifo queue": { // 11
 			inSubscribe: &manifest.WorkerService{
 				WorkerServiceConfig: manifest.WorkerServiceConfig{
 					Subscribe: manifest.SubscribeConfig{
@@ -2049,6 +2049,74 @@ func Test_convertSubscribe(t *testing.T) {
 			got, err := convertSubscribe(tc.inSubscribe)
 			require.Equal(t, tc.wanted, got)
 			require.NoError(t, err)
+		})
+	}
+}
+
+func Test_convertDeploymentConfig(t *testing.T) {
+	testCases := map[string]struct {
+		in  manifest.DeploymentConfiguration
+		out template.DeploymentConfigurationOpts
+	}{
+		"if 'recreate' strategy indicated, populate with replacement defaults": {
+			in: manifest.DeploymentConfiguration{
+				Rolling: aws.String("recreate"),
+			},
+			out: template.DeploymentConfigurationOpts{
+				MinHealthyPercent: minHealthyPercentRecreate,
+				MaxPercent:        maxPercentRecreate,
+			},
+		},
+		"if 'default' strategy indicated, populate with rolling defaults": {
+			in: manifest.DeploymentConfiguration{
+				Rolling: aws.String("default"),
+			},
+			out: template.DeploymentConfigurationOpts{
+				MinHealthyPercent: minHealthyPercentDefault,
+				MaxPercent:        maxPercentDefault,
+			},
+		},
+		"if nothing indicated, populate with rolling defaults": {
+			in: manifest.DeploymentConfiguration{},
+			out: template.DeploymentConfigurationOpts{
+				MinHealthyPercent: minHealthyPercentDefault,
+				MaxPercent:        maxPercentDefault,
+			},
+		},
+		"if alarm names entered, format and populate": {
+			in: manifest.DeploymentConfiguration{
+				RollbackAlarms: manifest.BasicToUnion[[]string, manifest.AlarmArgs](
+					[]string{"alarmName1", "alarmName2"}),
+			},
+			out: template.DeploymentConfigurationOpts{
+				MinHealthyPercent: minHealthyPercentDefault,
+				MaxPercent:        maxPercentDefault,
+				Rollback: template.RollingUpdateRollbackConfig{
+					AlarmNames: []string{"alarmName1", "alarmName2"},
+				},
+			},
+		},
+		"if alarm args entered, transform": {
+			in: manifest.DeploymentConfiguration{
+				RollbackAlarms: manifest.AdvancedToUnion[[]string, manifest.AlarmArgs](
+					manifest.AlarmArgs{
+						CPUUtilization:    aws.Float64(34),
+						MemoryUtilization: aws.Float64(56),
+					}),
+			},
+			out: template.DeploymentConfigurationOpts{
+				MinHealthyPercent: minHealthyPercentDefault,
+				MaxPercent:        maxPercentDefault,
+				Rollback: template.RollingUpdateRollbackConfig{
+					CPUUtilization:    aws.Float64(34),
+					MemoryUtilization: aws.Float64(56),
+				},
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tc.out, convertDeploymentConfig(tc.in))
 		})
 	}
 }

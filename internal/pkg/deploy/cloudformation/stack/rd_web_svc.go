@@ -60,7 +60,7 @@ type RequestDrivenWebServiceConfig struct {
 	RawManifest []byte
 
 	RuntimeConfig RuntimeConfig
-	Addons        addons
+	Addons        NestedStackConfigurer
 }
 
 // NewRequestDrivenWebService creates a new RequestDrivenWebService stack from a manifest file.
@@ -120,7 +120,7 @@ func (s *RequestDrivenWebService) Template() (string, error) {
 		SerializedManifest: string(s.rawManifest),
 		EnvVersion:         s.rc.EnvVersion,
 
-		Variables:            s.manifest.Variables,
+		Variables:            convertEnvVars(s.manifest.Variables),
 		StartCommand:         s.manifest.StartCommand,
 		Tags:                 s.manifest.Tags,
 		NestedStack:          addonsOutputs,

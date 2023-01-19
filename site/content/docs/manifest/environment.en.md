@@ -124,9 +124,10 @@ For example, if you're importing an existing VPC:
 network:
   vpc:
     id: 'vpc-12345'
-    public:
-      - id: 'subnet-11111'
-      - id: 'subnet-22222'
+    subnets:
+      public:
+        - id: 'subnet-11111'
+        - id: 'subnet-22222'
 ```
 Alternatively, if you're configuring a Copilot-generated VPC:
 ```yaml
@@ -227,9 +228,20 @@ cdn:
   certificate: "arn:aws:acm:us-east-1:1234567890:certificate/e5a6e114-b022-45b1-9339-38fbfd6db3e2"
 ```
 
+<span class="parent-field">cdn.</span><a id="cdn-static-assets" href="#cdn-static-assets" class="field">`static_assets`</a> <span class="type">Map</span>  
+Optional. Configuration for static assets associated with CloudFront.
+
+<span class="parent-field">cdn.static_assets.</span><a id="cdn-static-assets-alias" href="#cdn-static-assets-alias" class="field">`alias`</a> <span class="type">String</span>  
+Additional HTTPS domain alias to use for static assets.
+
+<span class="parent-field">cdn.static_assets.</span><a id="cdn-static-assets-location" href="#cdn-static-assets-location" class="field">`location`</a> <span class="type">String</span>  
+DNS domain name of the S3 bucket (for example, `EXAMPLE-BUCKET.s3.us-west-2.amazonaws.com`).
+
+<span class="parent-field">cdn.static_assets.</span><a id="cdn-static-assets-path" href="#cdn-static-assets-path" class="field">`path`</a> <span class="type">String</span>  
+The path pattern (for example, `statics/*`) that specifies which requests should be forwarded to the S3 bucket.
+
 <span class="parent-field">cdn.</span><a id="cdn-tls-termination" href="#cdn-tls-termination" class="field">`terminate_tls`</a> <span class="type">Boolean</span>  
 Enable TLS termination for CloudFront.
-
 
 <div class="separator"></div>
 
@@ -291,7 +303,7 @@ http:
 ```
 ???- note "<span class="faint"> "http.public.ingress" was previously "http.public.security_groups.ingress"</span>"  
     This field was `http.public.security_groups.ingress` until [v1.23.0](../../blogs/release-v123.en.md).
-    This change cascaded to a child field [`cdn`](#http-public-ingress-cdn) (the only child field at the time), which was previously `http.public.security_groups.ingress.restrict_to.cdn`. 
+    This change cascaded to a child field [`cdn`](#http-public-ingress-cdn) (the only child field at the time), which was previously `http.public.security_groups.ingress.restrict_to.cdn`.
     For more, see [the blog post for v1.23.0](../../blogs/release-v123.en.md#move-misplaced-http-fields-in-environment-manifest-backward-compatible).
 
 <span class="parent-field">http.public.ingress.</span><a id="http-public-ingress-cdn" href="#http-public-ingress-cdn" class="field">`cdn`</a> <span class="type">Boolean</span><span class="version">Modified in [v1.23.0](../../blogs/release-v123.en.md#move-misplaced-http-fields-in-environment-manifest-backward-compatible)</span>     
@@ -322,12 +334,12 @@ Ingress rules to allow for the internal load balancer.
 ```yaml
 http:
   private:
-    ingress: 
+    ingress:
       vpc: true  # Enable incoming traffic within the VPC to the internal load balancer.
 ```
 ???- note "<span class="faint"> "http.private.ingress" was previously "http.private.security_groups.ingress"</span>"  
     This field was `http.private.security_groups.ingress` until [v1.23.0](../../blogs/release-v123.en.md).
-    This change cascaded to a child field [`vpc`](#http-private-ingress-vpc) (the only child field at the time), 
+    This change cascaded to a child field [`vpc`](#http-private-ingress-vpc) (the only child field at the time),
     which was previously `http.private.security_groups.ingress.from_vpc`.
     For more, see [the blog post for v1.23.0](../../blogs/release-v123.en.md#move-misplaced-http-fields-in-environment-manifest-backward-compatible).
 
