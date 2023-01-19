@@ -2055,36 +2055,38 @@ func Test_convertSubscribe(t *testing.T) {
 
 func Test_convertDeploymentConfig(t *testing.T) {
 	testCases := map[string]struct {
-		in  manifest.DeploymentConfiguration
+		in  manifest.DeploymentConfig
 		out template.DeploymentConfigurationOpts
 	}{
 		"if 'recreate' strategy indicated, populate with replacement defaults": {
-			in: manifest.DeploymentConfiguration{
-				Rolling: aws.String("recreate"),
-			},
+			in: manifest.DeploymentConfig{
+				DeploymentControllerConfig: manifest.DeploymentControllerConfig{
+					Rolling: aws.String("recreate"),
+				}},
 			out: template.DeploymentConfigurationOpts{
 				MinHealthyPercent: minHealthyPercentRecreate,
 				MaxPercent:        maxPercentRecreate,
 			},
 		},
 		"if 'default' strategy indicated, populate with rolling defaults": {
-			in: manifest.DeploymentConfiguration{
-				Rolling: aws.String("default"),
-			},
+			in: manifest.DeploymentConfig{
+				DeploymentControllerConfig: manifest.DeploymentControllerConfig{
+					Rolling: aws.String("default"),
+				}},
 			out: template.DeploymentConfigurationOpts{
 				MinHealthyPercent: minHealthyPercentDefault,
 				MaxPercent:        maxPercentDefault,
 			},
 		},
 		"if nothing indicated, populate with rolling defaults": {
-			in: manifest.DeploymentConfiguration{},
+			in: manifest.DeploymentConfig{},
 			out: template.DeploymentConfigurationOpts{
 				MinHealthyPercent: minHealthyPercentDefault,
 				MaxPercent:        maxPercentDefault,
 			},
 		},
 		"if alarm names entered, format and populate": {
-			in: manifest.DeploymentConfiguration{
+			in: manifest.DeploymentConfig{
 				RollbackAlarms: manifest.BasicToUnion[[]string, manifest.AlarmArgs](
 					[]string{"alarmName1", "alarmName2"}),
 			},
@@ -2097,7 +2099,7 @@ func Test_convertDeploymentConfig(t *testing.T) {
 			},
 		},
 		"if alarm args entered, transform": {
-			in: manifest.DeploymentConfiguration{
+			in: manifest.DeploymentConfig{
 				RollbackAlarms: manifest.AdvancedToUnion[[]string, manifest.AlarmArgs](
 					manifest.AlarmArgs{
 						CPUUtilization:    aws.Float64(34),
@@ -2117,6 +2119,53 @@ func Test_convertDeploymentConfig(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			require.Equal(t, tc.out, convertDeploymentConfig(tc.in))
+		})
+	}
+}
+
+func Test_convertWorkerDeploymentConfig(t *testing.T) {
+	testCases := map[string]struct {
+		in  manifest.WorkerDeploymentConfig
+		out template.DeploymentConfigurationOpts
+	}{
+		"if alarm names entered, format and populate": {
+			in: manifest.WorkerDeploymentConfig{
+				WorkerRollbackAlarms: manifest.BasicToUnion[[]string, manifest.WorkerAlarmArgs](
+					[]string{"alarmName1", "alarmName2"}),
+			},
+			out: template.DeploymentConfigurationOpts{
+				MinHealthyPercent: minHealthyPercentDefault,
+				MaxPercent:        maxPercentDefault,
+				Rollback: template.RollingUpdateRollbackConfig{
+					AlarmNames: []string{"alarmName1", "alarmName2"},
+				},
+			},
+		},
+		"if alarm args entered, transform": {
+			in: manifest.WorkerDeploymentConfig{
+				WorkerRollbackAlarms: manifest.AdvancedToUnion[[]string, manifest.WorkerAlarmArgs](
+					manifest.WorkerAlarmArgs{
+						AlarmArgs: manifest.AlarmArgs{
+							CPUUtilization:    aws.Float64(34),
+							MemoryUtilization: aws.Float64(56),
+						},
+						MessagesDelayed: aws.Int(10),
+					}),
+			},
+			out: template.DeploymentConfigurationOpts{
+				MinHealthyPercent: minHealthyPercentDefault,
+				MaxPercent:        maxPercentDefault,
+				Rollback: template.RollingUpdateRollbackConfig{
+					CPUUtilization:    aws.Float64(34),
+					MemoryUtilization: aws.Float64(56),
+					MessagesDelayed:   aws.Int(10),
+				},
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tc.out, convertWorkerDeploymentConfig(tc.in))
 		})
 	}
 }

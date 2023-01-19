@@ -53,7 +53,7 @@ type WorkerServiceConfig struct {
 	PublishConfig    PublishConfig             `yaml:"publish"`
 	Network          NetworkConfig             `yaml:"network"`
 	TaskDefOverrides []OverrideRule            `yaml:"taskdef_overrides"`
-	DeployConfig     DeploymentConfiguration   `yaml:"deployment"`
+	DeployConfig     WorkerDeploymentConfig    `yaml:"deployment"`
 	Observability    Observability             `yaml:"observability"`
 }
 
@@ -229,10 +229,10 @@ func NewWorkerService(props WorkerServiceProps) *WorkerService {
 }
 
 // setSubscriptionQueueDefaults function modifies the manifest to have
-// 1. FIFO Topic names without ".fifo" suffix.
-// 2. If there are both FIFO and Standard topic subscriptions are specified then set
-//    default events queue to FIFO and add standard topic-specific queue for all the standard topic subscriptions.
-// 3. If there are only Standard topic subscriptions are specified then do nothing and return.
+//  1. FIFO Topic names without ".fifo" suffix.
+//  2. If there are both FIFO and Standard topic subscriptions are specified then set
+//     default events queue to FIFO and add standard topic-specific queue for all the standard topic subscriptions.
+//  3. If there are only Standard topic subscriptions are specified then do nothing and return.
 func setSubscriptionQueueDefaults(topics []TopicSubscription, eventsQueue *SQSQueue) {
 	var isFIFOEnabled bool
 	for _, topic := range topics {

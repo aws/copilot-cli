@@ -1,11 +1,5 @@
 {{range $name, $value := .Variables}}
-{{if $.EnvAddonsFeatureFlag}}
 - Name: {{$name}}
   Value: {{if not $value.RequiresImport}} {{- $value.Value | printf "%q"}} {{ else }}
     Fn::ImportValue: {{ quote $value.Value -}} {{- end}}
-{{- else }} {{if not $value.RequiresImport}} {{/* includes only variables that are not using the unreleased env addons feature */}}
-- Name: {{$name}}
-  Value: {{ quote $value.Value }}
-  {{- end}} {{/* end if not .RequiresImport */}}
-{{- end}} {{/* end if .EnvAddonsFeatureFlag */}}
 {{- end}}
