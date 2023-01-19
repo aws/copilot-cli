@@ -50,8 +50,7 @@ func TestACM_ValidateCertAliases(t *testing.T) {
 					CertificateArn: aws.String("mockCertARN"),
 				}).Return(&acm.DescribeCertificateOutput{
 					Certificate: &acm.CertificateDetail{
-						DomainName:              aws.String("example.com"),
-						SubjectAlternativeNames: aws.StringSlice([]string{"*.copilot.com"}),
+						SubjectAlternativeNames: aws.StringSlice([]string{"example.com", "*.copilot.com"}),
 					},
 				}, nil)
 			},
@@ -66,15 +65,14 @@ func TestACM_ValidateCertAliases(t *testing.T) {
 					CertificateArn: aws.String("mockCertARN1"),
 				}).Return(&acm.DescribeCertificateOutput{
 					Certificate: &acm.CertificateDetail{
-						DomainName:              aws.String("copilot.com"),
-						SubjectAlternativeNames: aws.StringSlice([]string{"*.copilot.com"}),
+						SubjectAlternativeNames: aws.StringSlice([]string{"copilot.com", "*.copilot.com"}),
 					},
 				}, nil)
 				m.client.EXPECT().DescribeCertificateWithContext(gomock.Any(), &acm.DescribeCertificateInput{
 					CertificateArn: aws.String("mockCertARN2"),
 				}).Return(&acm.DescribeCertificateOutput{
 					Certificate: &acm.CertificateDetail{
-						DomainName: aws.String("example.com"),
+						SubjectAlternativeNames: aws.StringSlice([]string{"example.com"}),
 					},
 				}, nil)
 			},
