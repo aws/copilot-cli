@@ -34,6 +34,8 @@ Parameters:
     Type: Number
     Default: 30
 Conditions:
+  IsGovCloud:
+    !Equals [!Ref "AWS::Partition", "aws-us-gov"]
   HasAddons:
     !Not [!Equals [!Ref AddonsTemplateURL, ""]]
   HasEnvFile:
