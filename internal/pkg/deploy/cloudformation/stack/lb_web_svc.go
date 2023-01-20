@@ -38,8 +38,7 @@ type LoadBalancedWebService struct {
 	publicSubnetCIDRBlocks []string
 	appInfo                deploy.AppInformation
 
-	parser               loadBalancedWebSvcReadParser
-	EnvAddonsFeatureFlag bool
+	parser loadBalancedWebSvcReadParser
 }
 
 // LoadBalancedWebServiceOption is used to configuring an optional field for LoadBalancedWebService.
@@ -204,14 +203,6 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 
 	// Set container-level feature flag.
 	logConfig := convertLogging(s.manifest.Logging)
-	if logConfig != nil {
-		logConfig.EnvAddonsFeatureFlag = s.EnvAddonsFeatureFlag
-	}
-	for _, sidecar := range sidecars {
-		if sidecar != nil {
-			sidecar.EnvAddonsFeatureFlag = s.EnvAddonsFeatureFlag
-		}
-	}
 	content, err := s.parser.ParseLoadBalancedWebService(template.WorkloadOpts{
 		AppName:            s.app,
 		EnvName:            s.env,
@@ -262,10 +253,9 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		Observability: template.ObservabilityOpts{
 			Tracing: strings.ToUpper(aws.StringValue(s.manifest.Observability.Tracing)),
 		},
-		HostedZoneAliases:    aliasesFor,
-		PermissionsBoundary:  s.permBound,
-		EnvAddonsFeatureFlag: s.EnvAddonsFeatureFlag, // Feature flag for main container
-		PortMappings:         portMappings[s.name],
+		HostedZoneAliases:   aliasesFor,
+		PermissionsBoundary: s.permBound,
+    PortMappings:         portMappings[s.name],
 	})
 	if err != nil {
 		return "", err

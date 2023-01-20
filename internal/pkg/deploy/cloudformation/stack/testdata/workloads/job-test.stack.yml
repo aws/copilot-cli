@@ -153,8 +153,12 @@ Resources:
             Value: !Sub '${WorkloadName}'
           - Name: COPILOT_SNS_TOPIC_ARNS
             Value: '{"mytopic.fifo":"arn:aws:sns:us-west-2:123456789123:my-app-test-job-mytopic.fifo"}'
+          - Name: DB_NAME
+            Value:
+              Fn::ImportValue: "MYDB"
           - Name: COPILOT_MOUNT_POINTS
             Value: '{"managedEFSVolume":"/etc/mount1"}'
+
           EnvironmentFiles:
           - !If
             - HasEnvFile

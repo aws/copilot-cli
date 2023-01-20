@@ -836,20 +836,35 @@ func convertEntryPoint(entrypoint manifest.EntryPointOverride) ([]string, error)
 	return out, nil
 }
 
-func convertDeploymentConfig(in manifest.DeploymentConfiguration) template.DeploymentConfigurationOpts {
+func convertDeploymentControllerConfig(in manifest.DeploymentControllerConfig) template.DeploymentConfigurationOpts {
 	out := template.DeploymentConfigurationOpts{
 		MinHealthyPercent: minHealthyPercentDefault,
 		MaxPercent:        maxPercentDefault,
-		Rollback: template.RollingUpdateRollbackConfig{
-			AlarmNames:        in.RollbackAlarms.Basic,
-			CPUUtilization:    in.RollbackAlarms.Advanced.CPUUtilization,
-			MemoryUtilization: in.RollbackAlarms.Advanced.MemoryUtilization,
-		},
 	}
-
 	if strings.EqualFold(aws.StringValue(in.Rolling), manifest.ECSRecreateRollingUpdateStrategy) {
 		out.MinHealthyPercent = minHealthyPercentRecreate
 		out.MaxPercent = maxPercentRecreate
+	}
+	return out
+}
+
+func convertDeploymentConfig(in manifest.DeploymentConfig) template.DeploymentConfigurationOpts {
+	out := convertDeploymentControllerConfig(in.DeploymentControllerConfig)
+	out.Rollback = template.RollingUpdateRollbackConfig{
+		AlarmNames:        in.RollbackAlarms.Basic,
+		CPUUtilization:    in.RollbackAlarms.Advanced.CPUUtilization,
+		MemoryUtilization: in.RollbackAlarms.Advanced.MemoryUtilization,
+	}
+	return out
+}
+
+func convertWorkerDeploymentConfig(in manifest.WorkerDeploymentConfig) template.DeploymentConfigurationOpts {
+	out := convertDeploymentControllerConfig(in.DeploymentControllerConfig)
+	out.Rollback = template.RollingUpdateRollbackConfig{
+		AlarmNames:        in.WorkerRollbackAlarms.Basic,
+		CPUUtilization:    in.WorkerRollbackAlarms.Advanced.CPUUtilization,
+		MemoryUtilization: in.WorkerRollbackAlarms.Advanced.MemoryUtilization,
+		MessagesDelayed:   in.WorkerRollbackAlarms.Advanced.MessagesDelayed,
 	}
 	return out
 }

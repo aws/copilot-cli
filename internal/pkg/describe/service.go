@@ -475,6 +475,30 @@ func (e containerEnvVars) humanString(w io.Writer) {
 	printTable(w, headers, rows)
 }
 
+// rdwsSecret contains secrets for an rdws service.
+type rdwsSecret struct {
+	Environment string `json:"environment"`
+	Name        string `json:"name"`
+	ValueFrom   string `json:"value"`
+}
+
+type rdwsSecrets []*rdwsSecret
+
+func (e rdwsSecrets) humanString(w io.Writer) {
+	headers := []string{"Name", "Environment", "Value"}
+	var rows [][]string
+	sort.SliceStable(e, func(i, j int) bool {
+		if e[i].Name == e[j].Name {
+			return e[i].Environment < e[j].Environment
+		}
+		return e[i].Name < e[j].Name
+	})
+	for _, v := range e {
+		rows = append(rows, []string{v.Name, v.Environment, v.ValueFrom})
+	}
+	printTable(w, headers, rows)
+}
+
 type secret struct {
 	Name        string `json:"name"`
 	Container   string `json:"container"`

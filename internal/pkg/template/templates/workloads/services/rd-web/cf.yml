@@ -82,6 +82,25 @@ Resources:
           ImageRepositoryType: !Ref ImageRepositoryType
           ImageConfiguration:
             Port: !Ref ContainerPort
+            {{- if hasSecrets .}}
+            RuntimeEnvironmentSecrets:
+            {{- range $name, $secret := .Secrets}}
+              - Name: {{$name}}
+            {{- if $secret.RequiresImport}}
+                Value:
+                  Fn::ImportValue: {{ quote $secret.ValueFrom }}
+            {{- else}}
+                Value: {{if not $secret.RequiresSub }} {{$secret.ValueFrom}} {{- else}} !Sub 'arn:${AWS::Partition}:{{$secret.Service}}:${AWS::Region}:${AWS::AccountId}:{{$secret.ValueFrom}}' {{- end}}
+            {{- end}}   
+            {{- end}}
+            {{- end}}
+            {{- if .NestedStack}}{{$stackName := .NestedStack.StackName}}
+            {{- range $secret := .NestedStack.SecretOutputs}}
+            - Name: {{toSnakeCase $secret}}
+              Value:
+                Fn::GetAtt: [{{$stackName}}, Outputs.{{$secret}}]
+            {{- end}}
+            {{- end}}
             RuntimeEnvironmentVariables:
               - Name: COPILOT_APPLICATION_NAME
                 Value: !Ref AppName

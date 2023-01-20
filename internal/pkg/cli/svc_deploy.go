@@ -117,6 +117,11 @@ func newSvcDeployer(o *deploySvcOpts) (workloadDeployer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read manifest file for %s: %w", o.name, err)
 	}
+	ovrdr, err := clideploy.NewOverrider(o.ws.WorkloadOverridesPath(o.name), o.appName, o.envName, afero.NewOsFs(), o.sessProvider)
+	if err != nil {
+		return nil, err
+	}
+
 	content := o.appliedDynamicMft.Manifest()
 	var deployer workloadDeployer
 	in := clideploy.WorkloadDeployerInput{
@@ -128,6 +133,7 @@ func newSvcDeployer(o *deploySvcOpts) (workloadDeployer, error) {
 		Mft:              content,
 		RawMft:           raw,
 		EnvVersionGetter: o.envFeaturesDescriber,
+		Overrider:        ovrdr,
 	}
 	switch t := content.(type) {
 	case *manifest.LoadBalancedWebService:
