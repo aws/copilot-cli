@@ -18,7 +18,11 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
 )
 
-const fmtAppRunnerSvcLogGroupName = "/aws/apprunner/%s/%s/service"
+const (
+	fmtAppRunnerSvcLogGroupName = "/aws/apprunner/%s/%s/service"
+	autoscalingAlarmType        = "Auto Scaling"
+	rollbackAlarmType           = "Rollback"
+)
 
 type targetHealthGetter interface {
 	TargetsHealth(targetGroupARN string) ([]*elbv2.TargetHealth, error)
@@ -163,11 +167,12 @@ func (s *ecsStatusDescriber) Describe() (HumanJSONStringer, error) {
 		return nil, err
 	}
 	alarms = append(alarms, autoscalingAlarms...)
-	rollbackAlarms, err := s.ecsServiceRollbackAlarms(s.app, s. env)
+	rollbackAlarms, err := s.ecsServiceRollbackAlarms(s.app, s.env, s.svc)
 	if err != nil {
 		return nil, err
 	}
 	alarms = append(alarms, rollbackAlarms...)
+
 	var tasksTargetHealth []taskTargetHealth
 	targetGroupsARN := service.TargetGroups()
 	for _, groupARN := range targetGroupsARN {
@@ -202,13 +207,20 @@ func (s *ecsStatusDescriber) ecsServiceAutoscalingAlarms(cluster, service string
 	if err != nil {
 		return nil, fmt.Errorf("get auto scaling CloudWatch alarms: %w", err)
 	}
+	for i := range alarms {
+		alarms[i].Type = autoscalingAlarmType
+	}
 	return alarms, nil
 }
 
-func (s *ecsStatusDescriber) ecsServiceRollbackAlarms(app, env string) ([]cloudwatch.AlarmStatus, error) {
-	alarms, err := s.cwSvcGetter.AlarmStatusesFromNamePrefix(fmt.Sprintf("%s-%s", app, env))
+func (s *ecsStatusDescriber) ecsServiceRollbackAlarms(app, env, svc string) ([]cloudwatch.AlarmStatus, error) {
+	// This will not fetch the correct Copilot-generated alarms if the alarm name exceeds 255 characters, due to the balanced truncating. This will also not fetch imported ABR alarms.
+	alarms, err := s.cwSvcGetter.AlarmStatusesFromNamePrefix(fmt.Sprintf("%s-%s-%s-Copilot", app, env, svc))
 	if err != nil {
-		return nil, fmt.Errorf("get CloudWatch alarms with cluster and service names: %w", err)
+		return nil, fmt.Errorf("get CloudWatch alarms with app, env, and svc names: %w", err)
+	}
+	for i := range alarms {
+		alarms[i].Type = rollbackAlarmType
 	}
 	return alarms, nil
 }

@@ -122,6 +122,7 @@ func (cw *CloudWatch) AlarmStatusesFromNamePrefix(prefix string) ([]AlarmStatus,
 	return alarmStatuses, nil
 }
 
+// TODO(jwh): change to use generics??
 func (cw *CloudWatch) compositeAlarmsStatus(alarms []*cloudwatch.CompositeAlarm) []AlarmStatus {
 	var alarmStatusList []AlarmStatus
 	for _, alarm := range alarms {
