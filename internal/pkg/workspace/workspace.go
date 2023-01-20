@@ -45,6 +45,7 @@ const (
 	SummaryFileName = ".workspace"
 
 	addonsDirName             = "addons"
+	overridesDirName          = "overrides"
 	pipelinesDirName          = "pipelines"
 	environmentsDirName       = "environments"
 	maximumParentDirsToSearch = 5
@@ -75,10 +76,12 @@ type Workspace struct {
 	logger func(format string, args ...interface{})
 }
 
+var getWd = os.Getwd
+
 // Use returns an existing workspace, searching for a copilot/ directory from the current wd,
 // up to 5 levels above. It returns ErrWorkspaceNotFound if no copilot/ directory is found.
 func Use(fs afero.Fs) (*Workspace, error) {
-	workingDirAbs, err := os.Getwd()
+	workingDirAbs, err := getWd()
 	if err != nil {
 		return nil, fmt.Errorf("get working directory: %w", err)
 	}
@@ -101,7 +104,7 @@ func Use(fs afero.Fs) (*Workspace, error) {
 
 // Create creates a new Workspace in the current working directory for appName with summary if it doesn't already exist.
 func Create(appName string, fs afero.Fs) (*Workspace, error) {
-	workingDirAbs, err := os.Getwd()
+	workingDirAbs, err := getWd()
 	if err != nil {
 		return nil, fmt.Errorf("get working directory: %w", err)
 	}
@@ -442,6 +445,16 @@ func (ws *Workspace) WorkloadAddonsPath(name string) string {
 // WorkloadAddonFilePath returns the path of an addon file for a given workload.
 func (ws *Workspace) WorkloadAddonFilePath(wkldName, fName string) string {
 	return filepath.Join(ws.WorkloadAddonsPath(wkldName), fName)
+}
+
+// EnvOverridesPath returns the default path to the overrides/ directory for environments.
+func (ws *Workspace) EnvOverridesPath() string {
+	return filepath.Join(ws.copilotDirAbs, environmentsDirName, overridesDirName)
+}
+
+// WorkloadOverridesPath returns the default path to the overrides/ directory for a given workload.
+func (ws *Workspace) WorkloadOverridesPath(name string) string {
+	return filepath.Join(ws.copilotDirAbs, name, overridesDirName)
 }
 
 // ListFiles returns a list of file paths to all the files under the dir.
