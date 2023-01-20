@@ -1,0 +1,28 @@
+Parameters:
+  App:
+    Type: String
+    Description: Your application's name.
+  Env:
+    Type: String
+    Description: The environment name your service, job, or workflow is being deployed to.
+  Name:
+    Type: String
+    Description: Your workload's name.
+  ServiceSecurityGroupId:
+    Type: String
+    Description: The security group associated with the VPC connector.
+Resources:
+  {{logicalIDSafe .ClusterName}}ClusterSecurityGroupIngressFromWorkload:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      Description: !Sub Ingress from workload ${Name}.
+      ToPort: {{ - if eq .Engine "MySQL" }} 3306 {{- else}} 5432 {{- end}}
+      FromPort: {{ - if eq .Engine "MySQL" }} 3306 {{- else}} 5432 {{- end}}
+      GroupId:
+        Fn::ImportValue: !Sub "${App}-${Env}--{{logicalIDSafe .ClusterName}}DBClusterSecurityGroup"
+      IpProtocol: tcp
+      SourceSecurityGroupId: !Ref ServiceSecurityGroup
+Outputs:
+  {{logicalIDSafe .ClusterName}}AuroraServerlessSecret: # injected as {{ logicalIDSafe .ClusterName | printf "%sAuroraServerlessSecret" | envVarSecret | toSnakeCase}} environment variable by Copilot.
+    Description: "The JSON secret that holds the database username and password. Fields are 'host', 'port', 'dbname', 'username', 'password', 'dbClusterIdentifier' and 'engine'"
+    Value: { Fn::ImportValue: { Fn::Sub: "${App}-${Env}-{{logicalIDSafe .ClusterName}}AuroraSecret" }}
