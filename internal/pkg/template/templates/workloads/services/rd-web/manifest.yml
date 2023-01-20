@@ -65,6 +65,9 @@ network:
 #
 # tags:                         # Pass tags as key value pairs.
 #   project: project-name
+#
+# secrets:                      # Pass secrets from AWS Systems Manager (SSM) Parameter Store and Secrets Manager.
+#   GITHUB_TOKEN: GITHUB_TOKEN  # The key is the name of the environment variable, the value is the name of an SSM parameter.
 
 # You can override any of the values defined above by environment.
 # environments:

@@ -78,6 +78,7 @@ func (d *RDWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 	var routes []*RDWSRoute
 	var configs []*ServiceConfig
 	var envVars envVars
+	var secrets []*rdwsSecret
 	resources := make(map[string][]*stack.Resource)
 	for _, env := range environments {
 		describer, err := d.initAppRunnerDescriber(env)
@@ -118,6 +119,14 @@ func (d *RDWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 				Value:       v.Value,
 			})
 		}
+
+		for _, v := range service.EnvironmentSecrets {
+			secrets = append(secrets, &rdwsSecret{
+				Environment: env,
+				Name:        v.Name,
+				ValueFrom:   v.Value,
+			})
+		}
 		observabilities = append(observabilities, observabilityInEnv{
 			Environment: env,
 			Tracing:     formatTracingConfiguration(service.Observability.TraceConfiguration),
@@ -143,6 +152,7 @@ func (d *RDWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 		Variables:               envVars,
 		Resources:               resources,
 		Observability:           observabilities,
+		Secrets:                 secrets,
 
 		environments: environments,
 	}, nil
@@ -232,6 +242,7 @@ type rdWebSvcDesc struct {
 	Variables               envVars                 `json:"variables"`
 	Resources               deployedSvcResources    `json:"resources,omitempty"`
 	Observability           observabilityPerEnv     `json:"observability,omitempty"`
+	Secrets                 rdwsSecrets             `json:"secrets,omitempty"`
 
 	environments []string `json:"-"`
 }
@@ -274,6 +285,12 @@ func (w *rdWebSvcDesc) HumanString() string {
 	fmt.Fprint(writer, color.Bold.Sprint("\nVariables\n\n"))
 	writer.Flush()
 	w.Variables.humanString(writer)
+
+	if len(w.Secrets) != 0 {
+		fmt.Fprint(writer, color.Bold.Sprint("\nSecrets\n\n"))
+		writer.Flush()
+		w.Secrets.humanString(writer)
+	}
 
 	if len(w.Resources) != 0 {
 		fmt.Fprint(writer, color.Bold.Sprint("\nResources\n"))
