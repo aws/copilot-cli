@@ -57,7 +57,7 @@ Resources:
           !Sub '${App}-${Env}-VpcId'
       Tags:
         - Key: Name
-          Value: !Sub 'copilot-${App}-${Env}-${Name}-Aurora'
+          Value: !Sub '${App}-${Env}-${Name}-Aurora'
 
   {{logicalIDSafe .ClusterName}}AuroraSecret:
     Metadata:
