@@ -22,7 +22,7 @@ Parameters:
   PrivateSubnets:
     Type: String
     Description: The IDs of the private subnets in which to create the Aurora Serverless v2 cluster.
-    Default: """
+    Default: ""
 
 Mappings:
   {{logicalIDSafe .ClusterName}}EnvScalingConfigurationMap: {{range $env := .Envs}}
@@ -166,7 +166,7 @@ Resources:
       TargetType: AWS::RDS::DBCluster
 
 Outputs:
-  {{logicalIDSafe .ClusterName}}Secret: # injected as {{envVarSecret .ClusterName | toSnakeCase}} environment variable by Copilot.
+  {{logicalIDSafe .ClusterName}}Secret:
     Description: "The JSON secret that holds the database username and password. Fields are 'host', 'port', 'dbname', 'username', 'password', 'dbClusterIdentifier' and 'engine'"
     Value: !Ref {{logicalIDSafe .ClusterName}}AuroraSecret
     Export:
