@@ -75,7 +75,7 @@ func TestBackendService_Template(t *testing.T) {
 		require.EqualError(t, err, "parse addons parameters for api: some error")
 	})
 
-	t.Run("returns an error when failed to convert sidecar configuration", func(t *testing.T) {
+	t.Run("returns an error when failed to parse sidecar's exposed port", func(t *testing.T) {
 		// GIVEN
 		mft := manifest.NewBackendService(manifest.BackendServiceProps{
 			WorkloadProps: manifest.WorkloadProps{
@@ -101,7 +101,41 @@ func TestBackendService_Template(t *testing.T) {
 		_, err = svc.Template()
 
 		// THEN
-		require.EqualError(t, err, "exposed ports configuration for service api: cannot parse port mapping from 80/80/80")
+		require.EqualError(t, err, "parse exposed ports in service manifest api: cannot parse port mapping from 80/80/80")
+	})
+
+	t.Run("returns an error when failed to convert sidecar configuration", func(t *testing.T) {
+		// GIVEN
+		mft := manifest.NewBackendService(manifest.BackendServiceProps{
+			WorkloadProps: manifest.WorkloadProps{
+				Name:       "api",
+				Dockerfile: testDockerfile,
+			},
+			Port: 8080,
+		})
+		mft.Sidecars = map[string]*manifest.SidecarConfig{
+			"xray": {
+				Port: aws.String("80"),
+				ImageOverride: manifest.ImageOverride{
+					Command: manifest.CommandOverride{
+						String: aws.String("[bad'command]"),
+					},
+				},
+			},
+		}
+		svc, err := NewBackendService(BackendServiceConfig{
+			App:         &config.Application{},
+			EnvManifest: &manifest.Environment{},
+			Manifest:    mft,
+			Addons:      mockAddons{},
+		})
+		require.NoError(t, err)
+
+		// WHEN
+		_, err = svc.Template()
+
+		// THEN
+		require.EqualError(t, err, `convert the sidecar configuration for service api: convert "command" to string slice: convert string into tokens using shell-style rules: EOF found when expecting closing quote`)
 	})
 
 	t.Run("returns an error when failed to parse autoscaling template", func(t *testing.T) {
@@ -432,7 +466,6 @@ Outputs:
 			Sidecars: []*template.SidecarOpts{
 				{
 					Name: "envoy",
-					Port: aws.String("443"),
 					PortMappings: []*template.PortMapping{
 						{
 							Protocol:      "tcp",

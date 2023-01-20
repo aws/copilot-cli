@@ -6,6 +6,7 @@ package manifest
 import (
 	"errors"
 	"fmt"
+	"github.com/aws/copilot-cli/internal/pkg/template"
 	"math"
 	"sort"
 	"strconv"
@@ -509,7 +510,9 @@ func (cfg NetworkLoadBalancerConfiguration) exposedPorts(exposedPorts []ExposedP
 	if err != nil {
 		return nil, err
 	}
-	if protocol == nil {
+	if strings.ToLower(aws.StringValue(protocol)) == "udp" {
+		protocol = aws.String("udp")
+	} else {
 		protocol = aws.String("tcp")
 	}
 
@@ -547,7 +550,9 @@ func (sidecar SidecarConfig) exposedPorts(sidecarName string) ([]ExposedPort, er
 	if err != nil {
 		return nil, err
 	}
-	if protocol == nil {
+	if strings.ToLower(aws.StringValue(protocol)) == "udp" {
+		protocol = aws.String("udp")
+	} else {
 		protocol = aws.String("tcp")
 	}
 	port, err := strconv.ParseUint(aws.StringValue(sidecarPort), 10, 16)
@@ -569,4 +574,80 @@ func sortExposedPorts(exposedPorts []ExposedPort) []ExposedPort {
 		return exposedPorts[i].Port < exposedPorts[j].Port
 	})
 	return exposedPorts
+}
+
+// HTTPLoadBalancerTarget returns target container and target port for the ALB configuration.
+func (s *LoadBalancedWebService) HTTPLoadBalancerTarget(exposedPorts []ExposedPort, rrTargetContainer *string, rrTargetPort *uint16) (targetContainer *string, targetPort *string) {
+	// Route load balancer traffic to main container by default.
+	targetContainer = s.Name
+	targetPort = aws.String(s.ContainerPort())
+
+	rrTarget := rrTargetContainer
+	if rrTarget != nil && *rrTarget != *targetContainer {
+		targetContainer = rrTarget
+		targetPort = s.Sidecars[aws.StringValue(targetContainer)].Port
+	}
+	// Route load balancer traffic to the target_port if mentioned.
+	if container, port := httpLoadBalancerTarget(exposedPorts, rrTargetPort); port != nil {
+		targetPort = port
+	} else if container != nil {
+		targetContainer = container
+	}
+	return
+}
+
+// HTTPLoadBalancerTarget returns target container and target port for the ALB configuration.
+func (s *BackendService) HTTPLoadBalancerTarget(exposedPorts []ExposedPort, rrTargetContainer *string, rrTargetPort *uint16) (targetContainer *string, targetPort *string) {
+	// Route load balancer traffic to main container by default.
+	targetContainer = s.Name
+	targetPort = aws.String(s.ContainerPort())
+
+	rrTarget := rrTargetContainer
+	if rrTarget != nil && *rrTarget != *targetContainer {
+		targetContainer = rrTarget
+		targetPort = s.Sidecars[aws.StringValue(targetContainer)].Port
+	}
+	// Route load balancer traffic to the target_port if mentioned.
+	if container, port := httpLoadBalancerTarget(exposedPorts, rrTargetPort); port != nil {
+		targetPort = port
+	} else if container != nil {
+		targetContainer = container
+	}
+	return
+}
+
+func httpLoadBalancerTarget(exposedPorts []ExposedPort, rrTargetPort *uint16) (targetContainer *string, targetPort *string) {
+
+	// Route load balancer traffic to the target_port if mentioned.
+	if rrTargetPort != nil {
+		targetPort = aws.String(template.StrconvUint16(aws.Uint16Value(rrTargetPort)))
+		if container := findContainerNameGivenPort(aws.Uint16Value(rrTargetPort), exposedPorts); container != "" {
+			targetContainer = aws.String(container)
+		}
+	}
+	return
+}
+
+// ContainerPort returns the main container port.
+func (s *LoadBalancedWebService) ContainerPort() string {
+	return strconv.FormatUint(uint64(aws.Uint16Value(s.ImageConfig.Port)), 10)
+}
+
+// ContainerPort returns the main container port if given.
+func (s *BackendService) ContainerPort() string {
+	port := template.NoExposedContainerPort
+	if s.BackendServiceConfig.ImageConfig.Port != nil {
+		port = strconv.FormatUint(uint64(aws.Uint16Value(s.BackendServiceConfig.ImageConfig.Port)), 10)
+	}
+	return port
+}
+
+// findContainerNameGivenPort searches through exposed ports in the manifest to find the container name that matches the given port.
+func findContainerNameGivenPort(port uint16, exposedPorts []ExposedPort) string {
+	for _, portConfig := range exposedPorts {
+		if portConfig.Port == port {
+			return portConfig.ContainerName
+		}
+	}
+	return ""
 }

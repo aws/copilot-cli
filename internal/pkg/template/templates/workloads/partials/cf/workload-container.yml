@@ -30,8 +30,8 @@
   PortMappings:
   {{- range $portMapping := .PortMappings }}
     - ContainerPort: {{ $portMapping.ContainerPort }}
-      Protocol: {{if eq $portMapping.Protocol "udp"}}udp{{else}}tcp{{end}}
-  {{- if and (eq $.HTTPTargetContainer.Name $.WorkloadName) (isEqual $.HTTPTargetContainer.Port $portMapping.ContainerPort)}}
+      Protocol: {{ $portMapping.Protocol }}
+  {{- if and (eq $.HTTPTargetContainer.Name $.WorkloadName) (eq $.HTTPTargetContainer.Port (strconvUint16 $portMapping.ContainerPort))}}
       Name: target
     {{- end}}
   {{- end}}
@@ -41,8 +41,8 @@
   PortMappings:
   {{- range $portMapping := .PortMappings}}
     - ContainerPort: {{$portMapping.ContainerPort}}
-      Protocol: {{if eq $portMapping.Protocol "udp"}}udp{{else}}tcp{{end}}
-  {{- if and (eq $.HTTPTargetContainer.Name $.WorkloadName) (isEqual $.HTTPTargetContainer.Port $portMapping.ContainerPort)}}
+      Protocol: {{ $portMapping.Protocol }}
+  {{- if and (eq $.HTTPTargetContainer.Name $.WorkloadName) (eq $.HTTPTargetContainer.Port (strconvUint16 $portMapping.ContainerPort ))}}
       Name: target
   {{- end}}
   {{- end}}

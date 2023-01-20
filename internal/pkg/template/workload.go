@@ -142,7 +142,7 @@ type SidecarOpts struct {
 	EntryPoint   []string
 	Command      []string
 	HealthCheck  *ContainerHealthCheck
-  PortMappings         []*PortMapping
+	PortMappings []*PortMapping
 }
 
 // PortMapping holds container port mapping configuration.
@@ -240,9 +240,9 @@ func (tg HTTPTargetContainer) IsHTTPS() bool {
 	return tg.Port == "443"
 }
 
-// IsEqual returns true if httpContainerPort and port mapping port are equal.
-func IsEqual(s string, p uint16) bool {
-	return s == strconv.FormatUint(uint64(p), 10)
+// StrconvUint16 returns string converted from uint16.
+func StrconvUint16(val uint16) string {
+	return strconv.FormatUint(uint64(val), 10)
 }
 
 // HTTPHealthCheckOpts holds configuration that's needed for HTTP Health Check.
@@ -713,9 +713,14 @@ type WorkloadOpts struct {
 	SerializedManifest string // Raw manifest file used to deploy the workload.
 	EnvVersion         string
 
+	// Configuration for the main container.
+	PortMappings []*PortMapping
+	Variables    map[string]Variable
+	Secrets      map[string]Secret
+	EntryPoint   []string
+	Command      []string
+
 	// Additional options that are common between **all** workload templates.
-	Variables                map[string]Variable
-	Secrets                  map[string]Secret
 	Aliases                  []string
 	HTTPSListener            bool
 	Tags                     map[string]string        // Used by App Runner workloads to tag App Runner service resources
@@ -730,8 +735,6 @@ type WorkloadOpts struct {
 	Network                  NetworkOpts
 	ExecuteCommand           *ExecuteCommandOpts
 	Platform                 RuntimePlatformOpts
-	EntryPoint               []string
-	Command                  []string
 	DomainAlias              string
 	DockerLabels             map[string]string
 	DependsOn                map[string]string
@@ -778,9 +781,6 @@ type WorkloadOpts struct {
 
 	// Additional options for worker service templates.
 	Subscribe *SubscribeOpts
-  
-  // Multiple ports configurations
-	PortMappings []*PortMapping
 }
 
 // HealthCheckProtocol returns the protocol for the Load Balancer health check,
@@ -878,7 +878,7 @@ func withSvcParsingFuncs() ParseOption {
 			"pluralWord":           english.PluralWord,
 			"contains":             contains,
 			"requiresVPCConnector": requiresVPCConnector,
-			"isEqual":              IsEqual,
+			"strconvUint16":        StrconvUint16,
 		})
 	}
 }

@@ -34,18 +34,12 @@ func Test_convertSidecar(t *testing.T) {
 		wanted    *template.SidecarOpts
 		wantedErr error
 	}{
-		"invalid port": {
-			inPort: aws.String("b/a/d/P/o/r/t"),
-
-			wantedErr: fmt.Errorf("cannot parse port mapping from b/a/d/P/o/r/t"),
-		},
 		"good port without protocol": {
 			inPort:      aws.String("2000"),
 			inEssential: true,
 
 			wanted: &template.SidecarOpts{
 				Name:       "foo",
-				Port:       aws.String("2000"),
 				CredsParam: mockCredsParam,
 				Image:      mockImage,
 				Secrets:    mockSecrets,
@@ -59,8 +53,6 @@ func Test_convertSidecar(t *testing.T) {
 
 			wanted: &template.SidecarOpts{
 				Name:       "foo",
-				Port:       aws.String("2000"),
-				Protocol:   aws.String("udp"),
 				CredsParam: mockCredsParam,
 				Image:      mockImage,
 				Secrets:    mockSecrets,
@@ -77,7 +69,6 @@ func Test_convertSidecar(t *testing.T) {
 
 			wanted: &template.SidecarOpts{
 				Name:       "foo",
-				Port:       aws.String("2000"),
 				CredsParam: mockCredsParam,
 				Image:      mockImage,
 				Secrets:    mockSecrets,
@@ -97,7 +88,6 @@ func Test_convertSidecar(t *testing.T) {
 
 			wanted: &template.SidecarOpts{
 				Name:       "foo",
-				Port:       aws.String("2000"),
 				CredsParam: mockCredsParam,
 				Image:      mockImage,
 				Secrets:    mockSecrets,
@@ -222,7 +212,7 @@ func Test_convertSidecar(t *testing.T) {
 					HealthCheck:   tc.inHealthCheck,
 				},
 			}
-			got, err := convertSidecar(sidecar, nil)
+			got, err := convertSidecars(sidecar, nil)
 
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())

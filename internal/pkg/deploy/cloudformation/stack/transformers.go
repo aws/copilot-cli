@@ -66,17 +66,7 @@ var (
 	}
 )
 
-// findContainerNameGivenPort searches through exposed ports in the manifest to find the container name that matches the given port.
-func findContainerNameGivenPort(port uint16, exposedPorts []manifest.ExposedPort) string {
-	for _, portConfig := range exposedPorts {
-		if portConfig.Port == port {
-			return portConfig.ContainerName
-		}
-	}
-	return ""
-}
-
-func convertPortMapping(exposedPorts []manifest.ExposedPort) map[string][]*template.PortMapping {
+func convertPortMappings(exposedPorts []manifest.ExposedPort) map[string][]*template.PortMapping {
 	portMapping := make(map[string][]*template.PortMapping)
 	for _, exposedPort := range exposedPorts {
 		out := &template.PortMapping{
@@ -90,7 +80,7 @@ func convertPortMapping(exposedPorts []manifest.ExposedPort) map[string][]*templ
 }
 
 // convertSidecar converts the manifest sidecar configuration into a format parsable by the templates pkg.
-func convertSidecar(sidecarsMap map[string]*manifest.SidecarConfig, portMappings map[string][]*template.PortMapping) ([]*template.SidecarOpts, error) {
+func convertSidecars(sidecarsMap map[string]*manifest.SidecarConfig, portMappings map[string][]*template.PortMapping) ([]*template.SidecarOpts, error) {
 	if sidecarsMap == nil {
 		return nil, nil
 	}
@@ -105,10 +95,6 @@ func convertSidecar(sidecarsMap map[string]*manifest.SidecarConfig, portMappings
 	var sidecars []*template.SidecarOpts
 	for _, name := range keys {
 		config := sidecarsMap[name]
-		port, protocol, err := manifest.ParsePortMapping(config.Port)
-		if err != nil {
-			return nil, err
-		}
 		entrypoint, err := convertEntryPoint(config.EntryPoint)
 		if err != nil {
 			return nil, err
@@ -122,8 +108,6 @@ func convertSidecar(sidecarsMap map[string]*manifest.SidecarConfig, portMappings
 			Name:       name,
 			Image:      config.Image,
 			Essential:  config.Essential,
-			Port:       port,
-			Protocol:   protocol,
 			CredsParam: config.CredsParam,
 			Secrets:    convertSecrets(config.Secrets),
 			Variables:  convertEnvVars(config.Variables),
@@ -525,7 +509,7 @@ func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (networkLoadBalanc
 				HealthCheck:     hc,
 				Stickiness:      nlbConfig.Stickiness,
 			},
-			MainContainerPort: s.containerPort(),
+			MainContainerPort: s.manifest.ContainerPort(),
 		},
 	}
 

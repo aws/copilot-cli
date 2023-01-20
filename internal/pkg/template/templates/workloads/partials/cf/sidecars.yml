@@ -54,10 +54,10 @@
   PortMappings:
     {{- range $portMapping := .PortMappings }}
     - ContainerPort: {{ $portMapping.ContainerPort }}
-  {{- if and (eq $.HTTPTargetContainer.Name $sidecar.Name) (isEqual $.HTTPTargetContainer.Port $portMapping.ContainerPort)}}
+  {{- if and (eq $.HTTPTargetContainer.Name $sidecar.Name) (eq $.HTTPTargetContainer.Port (strconvUint16 $portMapping.ContainerPort))}}
       Name: target
-    {{- end}}
-      Protocol: {{if eq $portMapping.Protocol "udp"}}udp{{else}}tcp{{end}}
+  {{- end}}
+      Protocol: {{ $portMapping.Protocol }}
 {{- end}}
 {{- end}}
 {{- if $sidecar.HealthCheck}}

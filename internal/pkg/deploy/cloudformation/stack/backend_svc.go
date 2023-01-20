@@ -89,10 +89,10 @@ func (s *BackendService) Template() (string, error) {
 	}
 	exposedPorts, err := s.manifest.ExposedPorts()
 	if err != nil {
-		return "", fmt.Errorf("exposed ports configuration for service %s: %w", s.name, err)
+		return "", fmt.Errorf("parse exposed ports in service manifest %s: %w", s.name, err)
 	}
-	portMappings := convertPortMapping(exposedPorts)
-	sidecars, err := convertSidecar(s.manifest.Sidecars, portMappings)
+	portMappings := convertPortMappings(exposedPorts)
+	sidecars, err := convertSidecars(s.manifest.Sidecars, portMappings)
 	if err != nil {
 		return "", fmt.Errorf("convert the sidecar configuration for service %s: %w", s.name, err)
 	}
@@ -145,57 +145,71 @@ func (s *BackendService) Template() (string, error) {
 	if s.manifest.Network.Connect.Enabled() {
 		scConfig = convertServiceConnect(s.manifest.Network.Connect)
 	}
-	targetContainer, targetContainerPort := s.httpLoadBalancerTarget(exposedPorts)
+	targetContainer, targetContainerPort := s.manifest.HTTPLoadBalancerTarget(exposedPorts, s.manifest.RoutingRule.GetTargetContainer(), s.manifest.RoutingRule.TargetPort)
 	content, err := s.parser.ParseBackendService(template.WorkloadOpts{
+		// Workload parameters.
 		AppName:            s.app,
 		EnvName:            s.env,
-		WorkloadName:       s.name,
-		SerializedManifest: string(s.rawManifest),
 		EnvVersion:         s.rc.EnvVersion,
-
-		Variables:          convertEnvVars(s.manifest.BackendServiceConfig.Variables),
-		Secrets:            convertSecrets(s.manifest.BackendServiceConfig.Secrets),
-		Aliases:            aliases,
-		HTTPSListener:      s.httpsEnabled,
-		HTTPRedirect:       s.httpsEnabled,
-		NestedStack:        addonsOutputs,
-		AddonsExtraParams:  addonsParams,
-		Sidecars:           sidecars,
-		Autoscaling:        autoscaling,
-		CapacityProviders:  capacityProviders,
-		DesiredCountOnSpot: desiredCountOnSpot,
-		ExecuteCommand:     convertExecuteCommand(&s.manifest.ExecuteCommand),
+		SerializedManifest: string(s.rawManifest),
 		WorkloadType:       manifest.BackendServiceType,
-		HealthCheck:        convertContainerHealthCheck(s.manifest.BackendServiceConfig.ImageConfig.HealthCheck),
+		WorkloadName:       s.name,
+
+		// Configuration for the main container.
+		EntryPoint:   entrypoint,
+		Command:      command,
+		HealthCheck:  convertContainerHealthCheck(s.manifest.BackendServiceConfig.ImageConfig.HealthCheck),
+		PortMappings: portMappings[s.name],
+		Secrets:      convertSecrets(s.manifest.BackendServiceConfig.Secrets),
+		Variables:    convertEnvVars(s.manifest.BackendServiceConfig.Variables),
+
+		// Additional options that are common between **all** workload templates.
+		AddonsExtraParams:       addonsParams,
+		Autoscaling:             autoscaling,
+		CapacityProviders:       capacityProviders,
+		CredentialsParameter:    aws.StringValue(s.manifest.ImageConfig.Image.Credentials),
+		DeploymentConfiguration: convertDeploymentConfig(s.manifest.DeployConfig),
+		DesiredCountOnSpot:      desiredCountOnSpot,
+		DependsOn:               convertDependsOn(s.manifest.ImageConfig.Image.DependsOn),
+		DockerLabels:            s.manifest.ImageConfig.Image.DockerLabels,
+		ExecuteCommand:          convertExecuteCommand(&s.manifest.ExecuteCommand),
+		LogConfig:               convertLogging(s.manifest.Logging),
+		NestedStack:             addonsOutputs,
+		Network:                 convertNetworkConfig(s.manifest.Network),
+		Publish:                 publishers,
+		PermissionsBoundary:     s.permBound,
+		Platform:                convertPlatform(s.manifest.Platform),
+		Storage:                 convertStorageOpts(s.manifest.Name, s.manifest.Storage),
+
+		// ALB configs.
+		ALBEnabled:          s.albEnabled,
+		Aliases:             aliases,
+		AllowedSourceIps:    allowedSourceIPs,
+		DeregistrationDelay: deregistrationDelay,
+		HostedZoneAliases:   hostedZoneAliases,
+		HTTPSListener:       s.httpsEnabled,
+		HTTPRedirect:        s.httpsEnabled,
 		HTTPTargetContainer: template.HTTPTargetContainer{
 			Port: aws.StringValue(targetContainerPort),
 			Name: aws.StringValue(targetContainer),
 		},
+		HTTPHealthCheck: convertHTTPHealthCheck(&s.manifest.RoutingRule.HealthCheck),
+		HTTPVersion:     convertHTTPVersion(s.manifest.RoutingRule.ProtocolVersion),
+
+		// Custom Resource Config.
+		CustomResources: crs,
+
+		// Sidecar config.
+		Sidecars: sidecars,
+
+		// service connect and service discovery options.
 		ServiceConnect:           scConfig,
-		HTTPHealthCheck:          convertHTTPHealthCheck(&s.manifest.RoutingRule.HealthCheck),
-		DeregistrationDelay:      deregistrationDelay,
-		AllowedSourceIps:         allowedSourceIPs,
-		CustomResources:          crs,
-		LogConfig:                convertLogging(s.manifest.Logging),
-		DockerLabels:             s.manifest.ImageConfig.Image.DockerLabels,
-		Storage:                  convertStorageOpts(s.manifest.Name, s.manifest.Storage),
-		Network:                  convertNetworkConfig(s.manifest.Network),
-		DeploymentConfiguration:  convertDeploymentConfig(s.manifest.DeployConfig),
-		EntryPoint:               entrypoint,
-		Command:                  command,
-		DependsOn:                convertDependsOn(s.manifest.ImageConfig.Image.DependsOn),
-		CredentialsParameter:     aws.StringValue(s.manifest.ImageConfig.Image.Credentials),
 		ServiceDiscoveryEndpoint: s.rc.ServiceDiscoveryEndpoint,
-		Publish:                  publishers,
-		Platform:                 convertPlatform(s.manifest.Platform),
-		HTTPVersion:              convertHTTPVersion(s.manifest.RoutingRule.ProtocolVersion),
-		ALBEnabled:               s.albEnabled,
+
+		// Additional options for request driven web service templates.
 		Observability: template.ObservabilityOpts{
 			Tracing: strings.ToUpper(aws.StringValue(s.manifest.Observability.Tracing)),
 		},
-		HostedZoneAliases:   hostedZoneAliases,
-		PermissionsBoundary: s.permBound,
-		PortMappings:        portMappings[s.name],
 	})
 	if err != nil {
 		return "", fmt.Errorf("parse backend service template: %w", err)
@@ -205,38 +219,6 @@ func (s *BackendService) Template() (string, error) {
 		return "", fmt.Errorf("apply task definition overrides: %w", err)
 	}
 	return string(overriddenTpl), nil
-}
-
-func (s *BackendService) httpLoadBalancerTarget(exposedPorts []manifest.ExposedPort) (targetContainer *string, targetPort *string) {
-	// Route load balancer traffic to main container by default.
-	targetContainer = aws.String(s.name)
-	targetPort = aws.String(s.containerPort())
-
-	rrTarget := s.manifest.RoutingRule.GetTargetContainer()
-	if rrTarget != nil && *rrTarget != *targetContainer {
-		targetContainer = rrTarget
-		targetPort = s.manifest.Sidecars[aws.StringValue(targetContainer)].Port
-	}
-
-	// Route load balancer traffic to the target_port if mentioned.
-	if s.manifest.RoutingRule.TargetPort != nil {
-		port := aws.Uint16Value(s.manifest.RoutingRule.TargetPort)
-		targetPort = aws.String(strconv.FormatUint(uint64(port), 10))
-		if containerName := findContainerNameGivenPort(port, exposedPorts); containerName != "" {
-			targetContainer = aws.String(containerName)
-		}
-	}
-
-	return
-}
-
-func (s *BackendService) containerPort() string {
-	port := template.NoExposedContainerPort
-	if s.manifest.BackendServiceConfig.ImageConfig.Port != nil {
-		port = strconv.FormatUint(uint64(aws.Uint16Value(s.manifest.BackendServiceConfig.ImageConfig.Port)), 10)
-	}
-
-	return port
 }
 
 // Parameters returns the list of CloudFormation parameters used by the template.
@@ -250,11 +232,11 @@ func (s *BackendService) Parameters() ([]*cloudformation.Parameter, error) {
 	if err != nil {
 		return nil, err
 	}
-	targetContainer, targetPort := s.httpLoadBalancerTarget(exposedPorts)
+	targetContainer, targetPort := s.manifest.HTTPLoadBalancerTarget(exposedPorts, s.manifest.RoutingRule.GetTargetContainer(), s.manifest.RoutingRule.TargetPort)
 	params = append(params, []*cloudformation.Parameter{
 		{
 			ParameterKey:   aws.String(WorkloadContainerPortParamKey),
-			ParameterValue: aws.String(s.containerPort()),
+			ParameterValue: aws.String(s.manifest.ContainerPort()),
 		},
 		{
 			ParameterKey:   aws.String(WorkloadEnvFileARNParamKey),
