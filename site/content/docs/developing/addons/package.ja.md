@@ -63,10 +63,10 @@ zip が必要な一部のリソース (`AWS::Serverless::Function` など) で�
 このアーキテクチャは、データを保存する際のレイテンシを最小にする必要がある Service がある場合に便利ですが、データを処理するのに時間がかかる別のプロセスをキックオフすることができます。
 
 
-#### 前提条件:
+#### 前提条件
 - [デプロイされた Copilot Service](../../concepts/services.ja.md)
 
-#### 手順:
+#### 手順
 
 1. `copilot storage init`  を実行して、Service 用の DynamoDB テーブル Addon を生成します。(詳細は[こちら](../storage.ja.md))
 2. 生成された [`AWS::DynamoDB::Table`](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-dynamodb-table.html) リソースに [`StreamSpecification`](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-dynamodb-table.html#cfn-dynamodb-table-streamspecification) プロパティを追加します。

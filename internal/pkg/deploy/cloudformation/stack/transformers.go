@@ -812,20 +812,35 @@ func convertEntryPoint(entrypoint manifest.EntryPointOverride) ([]string, error)
 	return out, nil
 }
 
-func convertDeploymentConfig(in manifest.DeploymentConfiguration) template.DeploymentConfigurationOpts {
+func convertDeploymentControllerConfig(in manifest.DeploymentControllerConfig) template.DeploymentConfigurationOpts {
 	out := template.DeploymentConfigurationOpts{
 		MinHealthyPercent: minHealthyPercentDefault,
-		MaxPercent: maxPercentDefault,
-		Rollback: template.RollingUpdateRollbackConfig{
-			AlarmNames:        in.RollbackAlarms.Basic,
-			CPUUtilization:    in.RollbackAlarms.Advanced.CPUUtilization,
-			MemoryUtilization: in.RollbackAlarms.Advanced.MemoryUtilization,
-		},
+		MaxPercent:        maxPercentDefault,
 	}
-
 	if strings.EqualFold(aws.StringValue(in.Rolling), manifest.ECSRecreateRollingUpdateStrategy) {
 		out.MinHealthyPercent = minHealthyPercentRecreate
 		out.MaxPercent = maxPercentRecreate
+	}
+	return out
+}
+
+func convertDeploymentConfig(in manifest.DeploymentConfig) template.DeploymentConfigurationOpts {
+	out := convertDeploymentControllerConfig(in.DeploymentControllerConfig)
+	out.Rollback = template.RollingUpdateRollbackConfig{
+		AlarmNames:        in.RollbackAlarms.Basic,
+		CPUUtilization:    in.RollbackAlarms.Advanced.CPUUtilization,
+		MemoryUtilization: in.RollbackAlarms.Advanced.MemoryUtilization,
+	}
+	return out
+}
+
+func convertWorkerDeploymentConfig(in manifest.WorkerDeploymentConfig) template.DeploymentConfigurationOpts {
+	out := convertDeploymentControllerConfig(in.DeploymentControllerConfig)
+	out.Rollback = template.RollingUpdateRollbackConfig{
+		AlarmNames:        in.WorkerRollbackAlarms.Basic,
+		CPUUtilization:    in.WorkerRollbackAlarms.Advanced.CPUUtilization,
+		MemoryUtilization: in.WorkerRollbackAlarms.Advanced.MemoryUtilization,
+		MessagesDelayed:   in.WorkerRollbackAlarms.Advanced.MessagesDelayed,
 	}
 	return out
 }
@@ -1046,15 +1061,21 @@ func convertEnvVars(variables map[string]manifest.Variable) map[string]template.
 	return m
 }
 
+// convertSecrets converts the manifest Secrets into a format parsable by the templates pkg.
 func convertSecrets(secrets map[string]manifest.Secret) map[string]template.Secret {
 	if len(secrets) == 0 {
 		return nil
 	}
-	m := make(map[string]template.Secret)
+	m := make(map[string]template.Secret, len(secrets))
+	var tplSecret template.Secret
 	for name, mftSecret := range secrets {
-		var tplSecret template.Secret = template.SecretFromSSMOrARN(mftSecret.Value())
-		if mftSecret.IsSecretsManagerName() {
+		switch {
+		case mftSecret.IsSecretsManagerName():
 			tplSecret = template.SecretFromSecretsManager(mftSecret.Value())
+		case mftSecret.RequiresImport():
+			tplSecret = template.SecretFromImportedSSMOrARN(mftSecret.Value())
+		default:
+			tplSecret = template.SecretFromPlainSSMOrARN(mftSecret.Value())
 		}
 		m[name] = tplSecret
 	}

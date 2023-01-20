@@ -333,9 +333,10 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 							Path: stringP("/"),
 						},
 					},
-					DeployConfig: DeploymentConfiguration{
-						Rolling: aws.String("mockName"),
-					},
+					DeployConfig: DeploymentConfig{
+						DeploymentControllerConfig: DeploymentControllerConfig{
+							Rolling: aws.String("mockName"),
+						}},
 				},
 			},
 			wantedErrorMsgPrefix: `validate "deployment"`,
@@ -529,9 +530,10 @@ func TestBackendService_validate(t *testing.T) {
 							},
 						},
 					},
-					DeployConfig: DeploymentConfiguration{
-						Rolling: aws.String("mockName"),
-					},
+					DeployConfig: DeploymentConfig{
+						DeploymentControllerConfig: DeploymentControllerConfig{
+							Rolling: aws.String("mockName"),
+						}},
 				},
 			},
 			wantedErrorMsgPrefix: `validate "deployment":`,
@@ -954,9 +956,10 @@ func TestWorkerService_validate(t *testing.T) {
 							},
 						},
 					},
-					DeployConfig: DeploymentConfiguration{
-						Rolling: aws.String("mockName"),
-					},
+					DeployConfig: WorkerDeploymentConfig{
+						DeploymentControllerConfig: DeploymentControllerConfig{
+							Rolling: aws.String("mockName"),
+						}},
 				},
 			},
 			wantedErrorMsgPrefix: `validate "deployment":`,
@@ -3364,32 +3367,35 @@ func TestValidateARM(t *testing.T) {
 	}
 }
 
-func TestDeploymentConfiguration_validate(t *testing.T) {
+func TestDeploymentConfig_validate(t *testing.T) {
 	testCases := map[string]struct {
-		deployConfig DeploymentConfiguration
+		deployConfig DeploymentConfig
 		wanted       string
 	}{
 		"error if deploy config has invalid rolling strategy": {
-			deployConfig: DeploymentConfiguration{
-				Rolling: aws.String("unknown"),
-			},
+			deployConfig: DeploymentConfig{
+				DeploymentControllerConfig: DeploymentControllerConfig{
+					Rolling: aws.String("unknown"),
+				}},
 			wanted: `invalid rolling deployment strategy "unknown", must be one of default or recreate`,
 		},
 		"ok if deployment strategy is recreate": {
-			deployConfig: DeploymentConfiguration{
-				Rolling: aws.String("recreate"),
-			},
+			deployConfig: DeploymentConfig{
+				DeploymentControllerConfig: DeploymentControllerConfig{
+					Rolling: aws.String("recreate"),
+				}},
 		},
 		"ok if deployment strategy is default": {
-			deployConfig: DeploymentConfiguration{
-				Rolling: aws.String("default"),
-			},
+			deployConfig: DeploymentConfig{
+				DeploymentControllerConfig: DeploymentControllerConfig{
+					Rolling: aws.String("default"),
+				}},
 		},
 		"ok if deployment is empty": {
-			deployConfig: DeploymentConfiguration{},
+			deployConfig: DeploymentConfig{},
 		},
 		"ok if deployment strategy is empty but alarm indicated": {
-			deployConfig: DeploymentConfiguration{
+			deployConfig: DeploymentConfig{
 				RollbackAlarms: BasicToUnion[[]string, AlarmArgs]([]string{"alarmName"})},
 		},
 	}
@@ -3547,6 +3553,74 @@ func TestValidateExposedPorts(t *testing.T) {
 				},
 			},
 			wanted: nil,
+		},
+		"should not return an error if alb and nlb target_port trying to expose same container port of the primary container": {
+			in: validateExposedPortsOpts{
+				mainContainerName: "mockMainContainer",
+				mainContainerPort: aws.Uint16(5000),
+				sidecarConfig: map[string]*SidecarConfig{
+					"foo": {
+						Port: aws.String("8080"),
+					},
+					"nginx": {
+						Port: aws.String("80"),
+					},
+				},
+				alb: &RoutingRuleConfiguration{
+					TargetPort: aws.Uint16(5001),
+				},
+				nlb: &NetworkLoadBalancerConfiguration{
+					Port:       aws.String("5001/tcp"),
+					TargetPort: aws.Int(5001),
+				},
+			},
+		},
+		"should not return an error if alb and nlb target_port trying to expose same container port sidecar container": {
+			in: validateExposedPortsOpts{
+				mainContainerName: "mockMainContainer",
+				mainContainerPort: aws.Uint16(5000),
+				sidecarConfig: map[string]*SidecarConfig{
+					"foo": {
+						Port: aws.String("8080"),
+					},
+					"nginx": {
+						Port: aws.String("80"),
+					},
+				},
+				alb: &RoutingRuleConfiguration{
+					TargetPort:      aws.Uint16(5001),
+					TargetContainer: aws.String("foo"),
+				},
+				nlb: &NetworkLoadBalancerConfiguration{
+					Port:            aws.String("5001/tcp"),
+					TargetPort:      aws.Int(5001),
+					TargetContainer: aws.String("foo"),
+				},
+			},
+		},
+		"should return an error if alb and nlb target_port trying to expose same container port of different containers": {
+			in: validateExposedPortsOpts{
+				mainContainerName: "mockMainContainer",
+				mainContainerPort: aws.Uint16(5000),
+				sidecarConfig: map[string]*SidecarConfig{
+					"foo": {
+						Port: aws.String("8080"),
+					},
+					"nginx": {
+						Port: aws.String("80"),
+					},
+				},
+				alb: &RoutingRuleConfiguration{
+					TargetPort:      aws.Uint16(5001),
+					TargetContainer: aws.String("foo"),
+				},
+				nlb: &NetworkLoadBalancerConfiguration{
+					Port:            aws.String("5001/tcp"),
+					TargetPort:      aws.Int(5001),
+					TargetContainer: aws.String("nginx"),
+				},
+			},
+			wanted: fmt.Errorf(`containers "nginx" and "foo" are exposing the same port 5001`),
 		},
 	}
 	for name, tc := range testCases {

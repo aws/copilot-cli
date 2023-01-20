@@ -28,10 +28,6 @@ retries: 3
 # Optional. The timeout after which to stop the job if it's still running. You can use the units (h, m, s).
 timeout: 1h
 
-variables:
-  DB_NAME: # This variable should not render in template because it is guarded out by feature flag.
-    from_cfn: MYDB
-
 storage:
   ephemeral: 200
   volumes:
@@ -44,6 +40,12 @@ publish:
   topics:
     - name: mytopic
       fifo: true
+secrets:
+  SQL_PASS: SQL_PASS
+  GIT_USERNAME:
+    from_cfn: stack-SSMGHUserName
+  DB:
+    secretsmanager: demo/test/mysql
 
 sidecars:
   nginx:
@@ -57,6 +59,12 @@ sidecars:
       NGINX_PORT: 8080
     labels:
       com.amazonaws.ecs.copilot.sidecars.nginx.description: tricky
+    secrets:
+      SQL_PASS: SQL_PASS      
+      GIT_USERNAME:
+        from_cfn: stack-SSMGHUserName
+      DB:
+        secretsmanager: 'demo/testing/mysql'
 
 network:
   vpc:
@@ -71,7 +79,9 @@ environments:
     image:
       labels:
         com.amazonaws.ecs.copilot.coollabel: Synecdoche
-
+    variables:
+      DB_NAME: # This variable should not render in template because it is guarded out by feature flag.
+        from_cfn: MYDB
 # Optional fields for more advanced use-cases.
 #
 #variables:                    # Pass environment variables as key value pairs.

@@ -131,6 +131,14 @@ Resources:
       ContainerDefinitions:
         - Name: !Ref WorkloadName
           Image: !Ref ContainerImage
+          Secrets:
+            - Name: DB
+              ValueFrom: !Sub 'arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:demo/test/mysql'
+            - Name: GIT_USERNAME
+              ValueFrom:
+                Fn::ImportValue: "stack-SSMGHUserName"
+            - Name: SQL_PASS
+              ValueFrom: SQL_PASS
           # We pipe certain environment variables directly into the task definition.
           # This lets customers have access to, for example, their LB endpoint - which they'd
           # have no way of otherwise determining.
@@ -145,8 +153,12 @@ Resources:
             Value: !Sub '${WorkloadName}'
           - Name: COPILOT_SNS_TOPIC_ARNS
             Value: '{"mytopic.fifo":"arn:aws:sns:us-west-2:123456789123:my-app-test-job-mytopic.fifo"}'
+          - Name: DB_NAME
+            Value:
+              Fn::ImportValue: "MYDB"
           - Name: COPILOT_MOUNT_POINTS
             Value: '{"managedEFSVolume":"/etc/mount1"}'
+
           EnvironmentFiles:
           - !If
             - HasEnvFile
@@ -198,6 +210,14 @@ Resources:
               Value: '8080'
             - Name: COPILOT_MOUNT_POINTS
               Value: '{"managedEFSVolume":"/var/www"}'
+          Secrets:
+            - Name: DB
+              ValueFrom: !Sub 'arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:demo/testing/mysql'
+            - Name: GIT_USERNAME
+              ValueFrom:
+                Fn::ImportValue: "stack-SSMGHUserName"
+            - Name: SQL_PASS
+              ValueFrom: SQL_PASS
           Essential: true
           DockerLabels:
             com.amazonaws.ecs.copilot.sidecars.nginx.description: tricky

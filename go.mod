@@ -4,9 +4,9 @@ go 1.18
 
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.2
-	github.com/aws/aws-sdk-go v1.44.171
+	github.com/aws/aws-sdk-go v1.44.180
 	github.com/briandowns/spinner v1.20.0
-	github.com/dustin/go-humanize v1.0.0
+	github.com/dustin/go-humanize v1.0.1
 	github.com/fatih/color v1.13.0
 	github.com/fatih/structs v1.1.0
 	github.com/golang/mock v1.6.0
@@ -15,7 +15,7 @@ require (
 	github.com/imdario/mergo v0.3.13
 	github.com/lnquy/cron v1.1.1
 	github.com/moby/buildkit v0.9.3
-	github.com/onsi/ginkgo/v2 v2.6.1
+	github.com/onsi/ginkgo/v2 v2.7.0
 	github.com/onsi/gomega v1.24.2
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/spf13/afero v1.9.3
@@ -25,7 +25,7 @@ require (
 	github.com/xlab/treeprint v1.1.0
 	golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4
 	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4
-	golang.org/x/text v0.5.0
+	golang.org/x/text v0.6.0
 	gopkg.in/ini.v1 v1.67.0
 	gopkg.in/yaml.v3 v3.0.1
 )

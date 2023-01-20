@@ -10,7 +10,7 @@ image:
 http:
   path: '/'
   redirect_to_https: false
-  alias: ["cloudfront.copilot-e2e-tests.ecs.aws.dev"]
+  alias: ["cloudfront.${DOMAINNAME}"]
 
 cpu: 256
 memory: 512

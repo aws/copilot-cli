@@ -918,6 +918,36 @@ func TestWorkspace_EnvAddonsPath(t *testing.T) {
 	}
 }
 
+func TestWorkspace_EnvOverridesPath(t *testing.T) {
+	// GIVEN
+	defer func() { getWd = os.Getwd }()
+
+	getWd = func() (dir string, err error) {
+		return ".", nil
+	}
+	fs := afero.NewMemMapFs()
+	ws, err := Create("demo", fs)
+
+	// THEN
+	require.NoError(t, err)
+	require.Equal(t, filepath.Join("copilot", "environments", "overrides"), ws.EnvOverridesPath())
+}
+
+func TestWorkspace_WorkloadOverridesPath(t *testing.T) {
+	// GIVEN
+	defer func() { getWd = os.Getwd }()
+
+	getWd = func() (dir string, err error) {
+		return ".", nil
+	}
+	fs := afero.NewMemMapFs()
+	ws, err := Create("demo", fs)
+
+	// THEN
+	require.NoError(t, err)
+	require.Equal(t, filepath.Join("copilot", "frontend", "overrides"), ws.WorkloadOverridesPath("frontend"))
+}
+
 func TestWorkspace_EnvAddonFilePath(t *testing.T) {
 	mockWorkingDirAbs := "/app"
 	testCases := map[string]struct {

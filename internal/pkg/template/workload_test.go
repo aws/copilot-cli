@@ -144,7 +144,7 @@ func TestHasSecrets(t *testing.T) {
 		"service has secrets": {
 			in: WorkloadOpts{
 				Secrets: map[string]Secret{
-					"hello": SecretFromSSMOrARN("world"),
+					"hello": SecretFromPlainSSMOrARN("world"),
 				},
 			},
 			wanted: true,
@@ -272,16 +272,36 @@ func TestHTTPTargetContainer_IsHTTPS(t *testing.T) {
 	require.False(t, HTTPTargetContainer{Port: "8080"}.IsHTTPS())
 }
 
-func TestSsmOrSecretARN_RequiresSub(t *testing.T) {
-	require.False(t, ssmOrSecretARN{}.RequiresSub(), "SSM Parameter Store or secret ARNs do not require !Sub")
+func TestPlainSSMOrSecretARN_RequiresSub(t *testing.T) {
+	require.False(t, plainSSMOrSecretARN{}.RequiresSub(), "plain SSM Parameter Store or secret ARNs do not require !Sub")
 }
 
-func TestSsmOrSecretARN_ValueFrom(t *testing.T) {
-	require.Equal(t, "/github/token", SecretFromSSMOrARN("/github/token").ValueFrom())
+func TestPlainSSMOrSecretARN_RequiresImport(t *testing.T) {
+	require.False(t, plainSSMOrSecretARN{}.RequiresImport(), "plain SSM Parameter Store or secret ARNs do not require !ImportValue")
+}
+
+func TestPlainSSMOrSecretARN_ValueFrom(t *testing.T) {
+	require.Equal(t, "/github/token", SecretFromPlainSSMOrARN("/github/token").ValueFrom())
+}
+
+func TestImportedSSMOrSecretARN_RequiresSub(t *testing.T) {
+	require.False(t, importedSSMorSecretARN{}.RequiresSub(), "imported SSM Parameter Store or secret ARNs do not require !Sub")
+}
+
+func TestImportedSSMOrSecretARN_RequiresImport(t *testing.T) {
+	require.True(t, importedSSMorSecretARN{}.RequiresImport(), "imported SSM Parameter Store or secret ARNs requires !ImportValue")
+}
+
+func TestImportedSSMOrSecretARN_ValueFrom(t *testing.T) {
+	require.Equal(t, "stack-SSMGHTokenName", SecretFromImportedSSMOrARN("stack-SSMGHTokenName").ValueFrom())
 }
 
 func TestSecretsManagerName_RequiresSub(t *testing.T) {
 	require.True(t, secretsManagerName{}.RequiresSub(), "secrets referring to a SecretsManager name need to be expanded to a full ARN")
+}
+
+func TestSecretsManagerName_RequiresImport(t *testing.T) {
+	require.False(t, secretsManagerName{}.RequiresImport(), "secrets referring to a SecretsManager name do not require !ImportValue")
 }
 
 func TestSecretsManagerName_Service(t *testing.T) {
@@ -431,32 +451,31 @@ func TestEnvControllerParameters(t *testing.T) {
 
 func TestRollingUpdateRollbackConfig_TruncateAlarmName(t *testing.T) {
 	testCases := map[string]struct {
-		config   RollingUpdateRollbackConfig
-		inApp    string
-		inEnv    string
-		inSvc    string
+		config      RollingUpdateRollbackConfig
+		inApp       string
+		inEnv       string
+		inSvc       string
 		inAlarmType string
-		expected string
+		expected    string
 	}{
 		"with no need to truncate": {
-			inApp: "shortAppName",
-			inEnv: "shortEnvName",
-			inSvc: "shortSvcName",
+			inApp:       "shortAppName",
+			inEnv:       "shortEnvName",
+			inSvc:       "shortSvcName",
 			inAlarmType: "CopilotRollbackMemAlarm",
-			expected: "shortAppName-shortEnvName-shortSvcName-CopilotRollbackMemAlarm",
+			expected:    "shortAppName-shortEnvName-shortSvcName-CopilotRollbackMemAlarm",
 		},
 		"with need to truncate at 76 chars per element": {
-			inApp: "12345678911234567892123456789312345678941234567895123456789612345678971234567898",
-			inEnv: "12345678911234567892123456789312345678941234567895123456789612345678971234567898",
-			inSvc: "12345678911234567892123456789312345678941234567895123456789612345678971234567898",
+			inApp:       "12345678911234567892123456789312345678941234567895123456789612345678971234567898",
+			inEnv:       "12345678911234567892123456789312345678941234567895123456789612345678971234567898",
+			inSvc:       "12345678911234567892123456789312345678941234567895123456789612345678971234567898",
 			inAlarmType: "CopilotRollbackCPUAlarm",
-			expected: "1234567891123456789212345678931234567894123456789512345678961234567897123456-1234567891123456789212345678931234567894123456789512345678961234567897123456-1234567891123456789212345678931234567894123456789512345678961234567897123456-CopilotRollbackCPUAlarm",
+			expected:    "1234567891123456789212345678931234567894123456789512345678961234567897123456-1234567891123456789212345678931234567894123456789512345678961234567897123456-1234567891123456789212345678931234567894123456789512345678961234567897123456-CopilotRollbackCPUAlarm",
 		},
-		
 	}
 	for name, tc := range testCases {
-	t.Run(name, func(t *testing.T) {
-		require.Equal(t, tc.expected, tc.config.TruncateAlarmName(tc.inApp, tc.inEnv, tc.inSvc, tc.inAlarmType))
-	})}
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tc.expected, tc.config.TruncateAlarmName(tc.inApp, tc.inEnv, tc.inSvc, tc.inAlarmType))
+		})
+	}
 }
-

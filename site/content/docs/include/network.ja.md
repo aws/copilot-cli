@@ -8,7 +8,7 @@ Service に対し [Service Connect](../developing/svc-to-svc-communication.ja.md
 
 Map として利用すると、Service で利用するエリアスを指定出来ます。エリアスは Environment 内でユニークである必要があります。
 
-<span class="parent-field">network.</span><a id="network-connect-alias" href="#network-connect-alias" class="field">`alias`</a> <span class="type">String</span>  
+<span class="parent-field">network.connect.</span><a id="network-connect-alias" href="#network-connect-alias" class="field">`alias`</a> <span class="type">String</span>  
 Service Connect 経由で公開する Service のカスタム DNS　名です。デフォルトは Service 名です。
 
 <span class="parent-field">network.</span><a id="network-vpc" href="#network-vpc" class="field">`vpc`</a> <span class="type">Map</span>    

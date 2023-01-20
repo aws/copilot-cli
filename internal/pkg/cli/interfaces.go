@@ -295,6 +295,7 @@ type wsWlDirReader interface {
 	workspacePathGetter
 	wlLister
 	wsEnvironmentsLister
+	WorkloadOverridesPath(string) string
 	Summary() (*workspace.Summary, error)
 }
 

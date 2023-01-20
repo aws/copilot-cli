@@ -21,6 +21,7 @@ Parameters:
     Default: "false"
   InstanceType:
     Type: 'AWS::SSM::Parameter::Value<String>'
+    Default: mini
 Mappings:
   MyTableDynamoDBSettings:
     test:
