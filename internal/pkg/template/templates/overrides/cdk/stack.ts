@@ -10,6 +10,10 @@ interface TransformedStackProps extends cdk.StackProps {
 }
 
 export class TransformedStack extends cdk.Stack {
+    public readonly template: cdk.cloudformation_include.CfnInclude;
+    public readonly appName: string;
+    public readonly envName: string;
+
     constructor (scope: cdk.App, id: string, props: TransformedStackProps) {
         super(scope, id, props);
         this.template = new cdk.cloudformation_include.CfnInclude(this, 'Template', {
