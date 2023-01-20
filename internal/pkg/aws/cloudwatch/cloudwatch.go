@@ -101,6 +101,27 @@ func (cw *CloudWatch) AlarmStatus(alarms []string) ([]AlarmStatus, error) {
 	return alarmStatus, nil
 }
 
+// AlarmStatusesFromNamePrefix returns the status of all alarms whose names begin with the given prefix.
+func (cw *CloudWatch) AlarmStatusesFromNamePrefix(prefix string) ([]AlarmStatus, error) {
+	alarmResp := &cloudwatch.DescribeAlarmsOutput{}
+	var alarmStatuses []AlarmStatus
+	for {
+		alarmResp, err := cw.client.DescribeAlarms(&cloudwatch.DescribeAlarmsInput{
+			AlarmNamePrefix: aws.String(prefix),
+			NextToken:       alarmResp.NextToken,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("describe CloudWatch alarms: %w", err)
+		}
+		alarmStatuses = append(alarmStatuses, cw.compositeAlarmsStatus(alarmResp.CompositeAlarms)...)
+		alarmStatuses = append(alarmStatuses, cw.metricAlarmsStatus(alarmResp.MetricAlarms)...)
+		if alarmResp.NextToken == nil {
+			break
+		}
+	}
+	return alarmStatuses, nil
+}
+
 func (cw *CloudWatch) compositeAlarmsStatus(alarms []*cloudwatch.CompositeAlarm) []AlarmStatus {
 	var alarmStatusList []AlarmStatus
 	for _, alarm := range alarms {

@@ -27,6 +27,7 @@ type targetHealthGetter interface {
 type alarmStatusGetter interface {
 	AlarmsWithTags(tags map[string]string) ([]cloudwatch.AlarmStatus, error)
 	AlarmStatus(alarms []string) ([]cloudwatch.AlarmStatus, error)
+	AlarmStatusesFromNamePrefix(prefix string) ([]cloudwatch.AlarmStatus, error)
 }
 
 type logGetter interface {
@@ -162,7 +163,11 @@ func (s *ecsStatusDescriber) Describe() (HumanJSONStringer, error) {
 		return nil, err
 	}
 	alarms = append(alarms, autoscalingAlarms...)
-
+	rollbackAlarms, err := s.ecsServiceRollbackAlarms(s.app, s. env)
+	if err != nil {
+		return nil, err
+	}
+	alarms = append(alarms, rollbackAlarms...)
 	var tasksTargetHealth []taskTargetHealth
 	targetGroupsARN := service.TargetGroups()
 	for _, groupARN := range targetGroupsARN {
@@ -196,6 +201,14 @@ func (s *ecsStatusDescriber) ecsServiceAutoscalingAlarms(cluster, service string
 	alarms, err := s.cwSvcGetter.AlarmStatus(alarmNames)
 	if err != nil {
 		return nil, fmt.Errorf("get auto scaling CloudWatch alarms: %w", err)
+	}
+	return alarms, nil
+}
+
+func (s *ecsStatusDescriber) ecsServiceRollbackAlarms(app, env string) ([]cloudwatch.AlarmStatus, error) {
+	alarms, err := s.cwSvcGetter.AlarmStatusesFromNamePrefix(fmt.Sprintf("%s-%s", app, env))
+	if err != nil {
+		return nil, fmt.Errorf("get CloudWatch alarms with cluster and service names: %w", err)
 	}
 	return alarms, nil
 }
