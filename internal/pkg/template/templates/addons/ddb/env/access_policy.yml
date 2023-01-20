@@ -1,0 +1,58 @@
+Parameters:
+  App:
+    Type: String
+    Description: Your application's name.
+  Env:
+    Type: String
+    Description: The environment name your service, job, or workflow is being deployed to.
+  Name:
+    Type: String
+    Description: Your workload's name.
+Resources:
+  {{logicalIDSafe .Name}}DdbTableAccessPolicy:
+    Metadata:
+      'aws:copilot:description': !Sub
+        - 'An IAM managed policy for your service to access the ${Table} DDB table of your environment'
+        - Table: { Fn::ImportValue: { Fn::Sub: "${App}-${Env}-{{logicalIDSafe .Name}}TableName" } }
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: !Sub
+        - Grants CRUD access to the Dynamo DB table ${Table}
+        - Table: { Fn::ImportValue: { Fn::Sub: "${App}-${Env}-{{logicalIDSafe .Name}}TableName" } }
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: DDBActions
+            Effect: Allow
+            Action:
+              - dynamodb:BatchGet*
+              - dynamodb:DescribeStream
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+              - dynamodb:Query
+              - dynamodb:Scan
+              - dynamodb:BatchWrite*
+              - dynamodb:Create*
+              - dynamodb:Delete*
+              - dynamodb:Update*
+              - dynamodb:PutItem
+            Resource: 
+              Fn::ImportValue: !Sub "${App}-${Env}-{{logicalIDSafe .Name}}TableArn"
+          - Sid: DDBLSIActions
+            Action:
+              - dynamodb:Query
+              - dynamodb:Scan
+            Effect: Allow
+            Resource: !Sub
+              - ${ TableARN }/index/*
+              - TableARN: { Fn::ImportValue: { Fn::Sub: "${App}-${Env}-{{logicalIDSafe .Name}}TableArn" }}
+
+Outputs:
+  {{envVarName .Name}}DdbTableName:
+    # Injected as {{envVarName .Name | printf "%sDdbTableName" | toSnakeCase}} environment variable into your main container.
+    Description: "The name of the DynamoDB table."
+    Value: { Fn::ImportValue: { Fn::Sub: "${App}-${Env}-{{logicalIDSafe .Name}}TableName" }}
+  {{logicalIDSafe .Name}}DdbTableAccessPolicy:
+    Description: "The IAM managed policy to attach to the task role to give access to the DynamoDB table."
+    Value: !Ref {{logicalIDSafe .Name}}DdbTableAccessPolicy
+
