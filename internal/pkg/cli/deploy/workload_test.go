@@ -13,6 +13,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/copilot-cli/internal/pkg/override"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
@@ -408,6 +410,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				s3Client:           m.mockUploader,
 				imageBuilderPusher: m.mockImageBuilderPusher,
 				templateFS:         fakeTemplateFS(),
+				overrider:          new(override.Noop),
 			}
 			if m.mockAddons != nil {
 				wkldDeployer.addons = m.mockAddons
@@ -1121,6 +1124,7 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 						endpointGetter:   m.mockEndpointGetter,
 						spinner:          m.mockSpinner,
 						envVersionGetter: m.mockEnvVersionGetter,
+						overrider:        new(override.Noop),
 					},
 					newSvcUpdater: func(f func(*session.Session) serviceForceUpdater) serviceForceUpdater {
 						return m.mockServiceForceUpdater
