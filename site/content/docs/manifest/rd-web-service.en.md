@@ -25,6 +25,10 @@ List of all available properties for a `'Request-Driven Web Service'` manifest.
           owner: frontend
         observability:
           tracing: awsxray
+        secrets:
+          GITHUB_TOKEN: GITHUB_TOKEN
+          DB_SECRET:
+            secretsmanager: '${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/mysql'
 
         environments:
           test:
@@ -212,6 +216,8 @@ Optional. Override the default command in the image.
 
 <a id="variables" href="#variables" class="field">`variables`</a> <span class="type">Map</span>  
 Key-value pairs that represent environment variables that will be passed to your service. Copilot will include a number of environment variables by default for you.
+
+{% include 'secrets.en.md' %}
 
 {% include 'publish.en.md' %}
 

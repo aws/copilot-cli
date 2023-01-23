@@ -25,6 +25,10 @@
           owner: frontend
         observability:
           tracing: awsxray
+        secrets:
+          GITHUB_TOKEN: GITHUB_TOKEN
+          DB_SECRET:
+            secretsmanager: '${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/mysql'
     
         environments:
           test:
@@ -210,6 +214,8 @@ Copilot で生成された VPC を使用する場合、Copilot はインター�
 
 <a id="variables" href="#variables" class="field">`variables`</a> <span class="type">Map</span>  
 Copilot は Service 名などを常に環境変数としてインスタンスに対して渡します。本フィールドではそれら以外に追加で渡したい環境変数をキー・値のペアで指定します。
+
+{% include 'secrets.ja.md' %}
 
 {% include 'publish.ja.md' %}
 
