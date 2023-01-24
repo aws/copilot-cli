@@ -34,7 +34,7 @@ const (
 	envParamCreateHTTPSListenerKey         = "CreateHTTPSListener"
 	envParamCreateInternalHTTPSListenerKey = "CreateInternalHTTPSListener"
 	envParamImportVPCIDKey                 = "ImportedVPCID"
-	envParamImportPrivateSubnetsKey        = "ImportPrivateSubnets"
+	envParamImportPrivateSubnetsKey        = "ImportedPrivateSubnets"
 )
 
 // Output keys.
@@ -195,8 +195,8 @@ func (e *Env) Parameters() ([]*cloudformation.Parameter, error) {
 	if len(e.importPrivateCertARNs()) != 0 {
 		internalHTTPSListener = "true"
 	}
-	importedVPCID := ""
-	importedPrivateSubnets := ""
+	var importedVPCID string
+	var importedPrivateSubnets string
 	if vpc := e.in.Mft.Network.VPC.ImportedVPC(); vpc != nil {
 		importedVPCID = vpc.ID
 		importedPrivateSubnets = strings.Join(vpc.PrivateSubnetIDs, ",")
@@ -303,7 +303,6 @@ type transformParameterFunc func(new, old *cloudformation.Parameter) *cloudforma
 // 2. The transform functions are applied in a convolutional manner.
 // 3. If the parameter `old` is passed in as `nil`, the parameter does not exist in the old template.
 func (e *Env) transformParameters(currParams, oldParams []*cloudformation.Parameter, transformFunc ...transformParameterFunc) ([]*cloudformation.Parameter, error) {
-
 	// Make a map out of `currParams` and out of `oldParams`.
 	curr := make(map[string]*cloudformation.Parameter)
 	for _, p := range currParams {
