@@ -1,0 +1,28 @@
+# The manifest for the "test" environment.
+# Read the full specification for the "Environment" type at:
+#  https://aws.github.io/copilot-cli/docs/manifest/environment/
+
+# Your environment name will be used in naming your resources like VPC, cluster, etc.
+name: test
+type: Environment
+
+# Import your own VPC and subnets or configure how they should be created.
+# network:
+#   vpc:
+#     id:
+
+# Configure the load balancers in your environment, once created.
+# http:
+#   public:
+#   private:
+
+# Configure observability for your environment resources.
+observability:
+  container_insights: false
+
+secrets:                      # Pass secrets from AWS Systems Manager (SSM) Parameter Store and Secrets Manager.
+  my-ssm-secret: "arn:aws:ssm:us-east-1:123456789123:parameter/jan11ssm"
+  MY_FROM_CFN_SECRET:
+    from_cfn: my-other-stack-exported-secret
+  MY_SECRETS_MANAGER_SECRET:
+    secretsmanager: mysecretsmanagername
