@@ -485,9 +485,9 @@ func TestServiceStatus_Describe(t *testing.T) {
 						UpdatedTimes: updateTime,
 					},
 					{
-						Arn: 		"mockAlarmArn3",
-						Condition: "mockCondition",
-						Name: "mockApp-mockEnv-mockSvc-CopilotRolloverAlarm",
+						Arn:          "mockAlarmArn3",
+						Condition:    "mockCondition",
+						Name:         "mockApp-mockEnv-mockSvc-CopilotRolloverAlarm",
 						Status:       "OK",
 						Type:         "Rollback",
 						UpdatedTimes: updateTime,
