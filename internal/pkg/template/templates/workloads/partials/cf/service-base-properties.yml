@@ -76,7 +76,10 @@ ServiceConnectConfiguration:
           {{- end}}
   {{- end}}
   {{- else}}
-  Enabled: False
+  !If
+    - IsGovCloud
+    - !Ref AWS::NoValue
+    - Enabled: False
   {{- end}}
 NetworkConfiguration:
   AwsvpcConfiguration:

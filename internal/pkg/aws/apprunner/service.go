@@ -25,10 +25,17 @@ type Service struct {
 	Port                 string
 	EnvironmentVariables []*EnvironmentVariable
 	Observability        ObservabilityConfiguration
+	EnvironmentSecrets   []*EnvironmentSecret
 }
 
 // EnvironmentVariable contains the name and value of an environment variable.
 type EnvironmentVariable struct {
+	Name  string
+	Value string
+}
+
+// EnvironmentSecret contains the name and value of a Secret from SSM Parameter Store or Secrets Manager.
+type EnvironmentSecret struct {
 	Name  string
 	Value string
 }

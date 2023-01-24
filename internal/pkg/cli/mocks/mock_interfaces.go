@@ -2885,6 +2885,20 @@ func (mr *MockwsWlDirReaderMockRecorder) Summary() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Summary", reflect.TypeOf((*MockwsWlDirReader)(nil).Summary))
 }
 
+// WorkloadOverridesPath mocks base method.
+func (m *MockwsWlDirReader) WorkloadOverridesPath(arg0 string) string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WorkloadOverridesPath", arg0)
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// WorkloadOverridesPath indicates an expected call of WorkloadOverridesPath.
+func (mr *MockwsWlDirReaderMockRecorder) WorkloadOverridesPath(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WorkloadOverridesPath", reflect.TypeOf((*MockwsWlDirReader)(nil).WorkloadOverridesPath), arg0)
+}
+
 // MockwsEnvironmentReader is a mock of wsEnvironmentReader interface.
 type MockwsEnvironmentReader struct {
 	ctrl     *gomock.Controller

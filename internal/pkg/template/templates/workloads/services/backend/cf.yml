@@ -50,6 +50,8 @@ Parameters:
     Default: false
   {{- end}}
 Conditions:
+  IsGovCloud:
+    !Equals [!Ref "AWS::Partition", "aws-us-gov"]
   HasAddons:
     !Not [!Equals [!Ref AddonsTemplateURL, ""]]
   HasEnvFile:

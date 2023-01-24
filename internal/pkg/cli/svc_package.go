@@ -117,6 +117,10 @@ func newWorkloadStackGenerator(o *packageSvcOpts) (workloadStackGenerator, error
 	if err != nil {
 		return nil, fmt.Errorf("read manifest file for %s: %w", o.name, err)
 	}
+	ovrdr, err := clideploy.NewOverrider(o.ws.WorkloadOverridesPath(o.name), o.appName, o.envName, o.fs, o.sessProvider)
+	if err != nil {
+		return nil, err
+	}
 
 	content := o.appliedDynamicMft.Manifest()
 	var deployer workloadStackGenerator
@@ -129,6 +133,7 @@ func newWorkloadStackGenerator(o *packageSvcOpts) (workloadStackGenerator, error
 		Mft:              content,
 		RawMft:           raw,
 		EnvVersionGetter: o.envFeaturesDescriber,
+		Overrider:        ovrdr,
 	}
 	switch t := content.(type) {
 	case *manifest.LoadBalancedWebService:
