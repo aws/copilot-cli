@@ -195,8 +195,8 @@ func (e *Env) Parameters() ([]*cloudformation.Parameter, error) {
 	if len(e.importPrivateCertARNs()) != 0 {
 		internalHTTPSListener = "true"
 	}
-	importedVPCID := ""
-	importedPrivateSubnets := ""
+	var importedVPCID string
+	var importedPrivateSubnets string
 	if vpc := e.in.Mft.Network.VPC.ImportedVPC(); vpc != nil {
 		importedVPCID = vpc.ID
 		importedPrivateSubnets = strings.Join(vpc.PrivateSubnetIDs, ",")
