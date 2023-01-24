@@ -48,7 +48,7 @@ Resources:
       VpcId: !Ref VPCID
       Tags:
         - Key: Name
-          Value: !Sub '${App}-${Env}-AuroraCluster'
+          Value: !Sub 'copilot-${App}-${Env}-Aurora'
 
   {{logicalIDSafe .ClusterName}}DBClusterSecurityGroup:
     Metadata:
@@ -59,7 +59,7 @@ Resources:
       VpcId: !Ref VPCID
       Tags:
         - Key: Name
-          Value: !Sub '${App}-${Env}-AuroraCluster'
+          Value: !Sub 'copilot-${App}-${Env}-Aurora'
   
   {{logicalIDSafe .ClusterName}}DBClusterSecurityGroupIngressFromWorkload:
     Type: AWS::EC2::SecurityGroupIngress
