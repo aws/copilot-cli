@@ -217,7 +217,7 @@ func (s *ecsStatusDescriber) ecsServiceRollbackAlarms(app, env, svc string) ([]c
 	// This will not fetch the correct Copilot-generated alarms if the alarm name exceeds 255 characters, due to the balanced truncating. This will also not fetch imported ABR alarms.
 	alarms, err := s.cwSvcGetter.AlarmStatusesFromNamePrefix(fmt.Sprintf("%s-%s-%s-Copilot", app, env, svc))
 	if err != nil {
-		return nil, fmt.Errorf("get CloudWatch alarms with app, env, and svc names: %w", err)
+		return nil, fmt.Errorf("get Copilot-created CloudWatch alarms: %w", err)
 	}
 	for i := range alarms {
 		alarms[i].Type = rollbackAlarmType

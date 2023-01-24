@@ -104,14 +104,18 @@ func (cw *CloudWatch) AlarmStatus(alarms []string) ([]AlarmStatus, error) {
 // AlarmStatusesFromNamePrefix returns the status of all alarms whose names begin with the given prefix.
 func (cw *CloudWatch) AlarmStatusesFromNamePrefix(prefix string) ([]AlarmStatus, error) {
 	alarmResp := &cloudwatch.DescribeAlarmsOutput{}
+	var err error
 	var alarmStatuses []AlarmStatus
 	for {
-		alarmResp, err := cw.client.DescribeAlarms(&cloudwatch.DescribeAlarmsInput{
+		alarmResp, err = cw.client.DescribeAlarms(&cloudwatch.DescribeAlarmsInput{
 			AlarmNamePrefix: aws.String(prefix),
 			NextToken:       alarmResp.NextToken,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("describe CloudWatch alarms: %w", err)
+		}
+		if alarmResp == nil {
+			return nil, nil
 		}
 		alarmStatuses = append(alarmStatuses, cw.compositeAlarmsStatus(alarmResp.CompositeAlarms)...)
 		alarmStatuses = append(alarmStatuses, cw.metricAlarmsStatus(alarmResp.MetricAlarms)...)
@@ -122,7 +126,6 @@ func (cw *CloudWatch) AlarmStatusesFromNamePrefix(prefix string) ([]AlarmStatus,
 	return alarmStatuses, nil
 }
 
-// TODO(jwh): change to use generics??
 func (cw *CloudWatch) compositeAlarmsStatus(alarms []*cloudwatch.CompositeAlarm) []AlarmStatus {
 	var alarmStatusList []AlarmStatus
 	for _, alarm := range alarms {

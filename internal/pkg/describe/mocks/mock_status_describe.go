@@ -91,6 +91,21 @@ func (mr *MockalarmStatusGetterMockRecorder) AlarmStatus(alarms interface{}) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AlarmStatus", reflect.TypeOf((*MockalarmStatusGetter)(nil).AlarmStatus), alarms)
 }
 
+// AlarmStatusesFromNamePrefix mocks base method.
+func (m *MockalarmStatusGetter) AlarmStatusesFromNamePrefix(prefix string) ([]cloudwatch.AlarmStatus, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AlarmStatusesFromNamePrefix", prefix)
+	ret0, _ := ret[0].([]cloudwatch.AlarmStatus)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// AlarmStatusesFromNamePrefix indicates an expected call of AlarmStatusesFromNamePrefix.
+func (mr *MockalarmStatusGetterMockRecorder) AlarmStatusesFromNamePrefix(prefix interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AlarmStatusesFromNamePrefix", reflect.TypeOf((*MockalarmStatusGetter)(nil).AlarmStatusesFromNamePrefix), prefix)
+}
+
 // AlarmsWithTags mocks base method.
 func (m *MockalarmStatusGetter) AlarmsWithTags(tags map[string]string) ([]cloudwatch.AlarmStatus, error) {
 	m.ctrl.T.Helper()
