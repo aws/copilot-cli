@@ -128,9 +128,12 @@ func (c *rollingUpdateComponent) renderRollbacks(out io.Writer) (numLines int, e
 	if len(c.rollbackMsgs) == 0 {
 		return 0, nil
 	}
-	components := make([]Renderer, len(c.rollbackMsgs)+2)
+	var components []Renderer
 
-	heading := fmt.Sprintf("%s%s", color.BoldFgYellow.Sprintf("! "), color.Faint.Sprintf("Alarm-Based Rollback Event"))
+	heading := fmt.Sprintf("%s%s", color.BoldFgYellow.Sprintf("! "), color.Faint.Sprintf("Latest alarm-based rollback event"))
+	if l := len(c.rollbackMsgs); l > 1 {
+		heading = fmt.Sprintf("Latest %d alarm-based rollback events", l)
+	}
 	components = []Renderer{
 		&singleLineComponent{}, // Add an empty line before rendering failure events.
 		&singleLineComponent{
@@ -138,10 +141,16 @@ func (c *rollingUpdateComponent) renderRollbacks(out io.Writer) (numLines int, e
 			Padding: c.padding,
 		},
 	}
-	for idx, msg := range c.rollbackMsgs {
-		components[idx+2] = &singleLineComponent{
-			Text:    msg,
-			Padding: c.padding,
+	for _, msg := range c.rollbackMsgs {
+		for i, truncatedMsg := range splitByLength(msg, maxCellLength) {
+			pretty := fmt.Sprintf(" %s", truncatedMsg)
+			if i == 0 {
+				pretty = fmt.Sprintf("- %s", truncatedMsg)
+			}
+			components = append(components, &singleLineComponent{
+				Text:    pretty,
+				Padding: c.padding + nestedComponentPadding,
+			})
 		}
 	}
 	return renderComponents(out, components)
