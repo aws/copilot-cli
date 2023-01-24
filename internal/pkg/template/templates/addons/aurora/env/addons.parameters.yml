@@ -1,9 +1,3 @@
 Parameters:
-  VPCID: 
-    - !If IsVPCImported
-    - !Ref ImportedVPCID
-    - !Ref VPC
-  PrivateSubnets:
-    - !If IsVPCImported
-    - !Ref ImportedPrivateSubnets
-    - !Join [ ',', [ !Ref PrivateSubnet1, !Ref PrivateSubnet2 ] ]
+  VPCID: !Ref VPC
+  PrivateSubnets: !Join [ ',', [ !Ref PrivateSubnet1, !Ref PrivateSubnet2 ] ]

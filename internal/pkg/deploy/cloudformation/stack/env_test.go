@@ -194,25 +194,30 @@ func TestEnv_Template(t *testing.T) {
 }
 
 func TestEnv_Parameters(t *testing.T) {
+	deploymentInput := mockDeployEnvironmentInput()
+	deploymentInputWithDNS := mockDeployEnvironmentInput()
+	deploymentInputWithDNS.App.Domain = "ecs.aws"
+	deploymentInputWithPrivateDNS := mockDeployEnvironmentInput()
+	deploymentInputWithPrivateDNS.Mft.HTTPConfig.Private.Certificates = []string{"arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789012"}
 	testCases := map[string]struct {
-		input     func() *EnvConfig
+		input     *EnvConfig
 		oldParams []*cloudformation.Parameter
 		want      []*cloudformation.Parameter
 	}{
 		"without DNS": {
-			input: mockDeployEnvironmentInput,
+			input: deploymentInput,
 			want: []*cloudformation.Parameter{
 				{
 					ParameterKey:   aws.String(envParamAppNameKey),
-					ParameterValue: aws.String("project"),
+					ParameterValue: aws.String(deploymentInput.App.Name),
 				},
 				{
 					ParameterKey:   aws.String(envParamEnvNameKey),
-					ParameterValue: aws.String("env"),
+					ParameterValue: aws.String(deploymentInput.Name),
 				},
 				{
 					ParameterKey:   aws.String(envParamToolsAccountPrincipalKey),
-					ParameterValue: aws.String("arn:aws:iam::000000000:root"),
+					ParameterValue: aws.String(deploymentInput.App.AccountPrincipalARN),
 				},
 				{
 					ParameterKey:   aws.String(envParamAppDNSKey),
@@ -258,38 +263,26 @@ func TestEnv_Parameters(t *testing.T) {
 					ParameterKey:   aws.String(envParamAppRunnerPrivateWorkloadsKey),
 					ParameterValue: aws.String(""),
 				},
-				{
-					ParameterKey:   aws.String(envParamImportVPCIDKey),
-					ParameterValue: aws.String(""),
-				},
-				{
-					ParameterKey:   aws.String(envParamImportPrivateSubnetsKey),
-					ParameterValue: aws.String(""),
-				},
 			},
 		},
 		"with DNS": {
-			input: func() *EnvConfig {
-				conf := mockDeployEnvironmentInput()
-				conf.App.Domain = "ecs.aws"
-				return conf
-			},
+			input: deploymentInputWithDNS,
 			want: []*cloudformation.Parameter{
 				{
 					ParameterKey:   aws.String(envParamAppNameKey),
-					ParameterValue: aws.String("project"),
+					ParameterValue: aws.String(deploymentInputWithDNS.App.Name),
 				},
 				{
 					ParameterKey:   aws.String(envParamEnvNameKey),
-					ParameterValue: aws.String("env"),
+					ParameterValue: aws.String(deploymentInputWithDNS.Name),
 				},
 				{
 					ParameterKey:   aws.String(envParamToolsAccountPrincipalKey),
-					ParameterValue: aws.String("arn:aws:iam::000000000:root"),
+					ParameterValue: aws.String(deploymentInputWithDNS.App.AccountPrincipalARN),
 				},
 				{
 					ParameterKey:   aws.String(envParamAppDNSKey),
-					ParameterValue: aws.String("ecs.aws"),
+					ParameterValue: aws.String(deploymentInputWithDNS.App.Domain),
 				},
 				{
 					ParameterKey:   aws.String(envParamAppDNSDelegationRoleKey),
@@ -331,34 +324,22 @@ func TestEnv_Parameters(t *testing.T) {
 					ParameterKey:   aws.String(envParamAppRunnerPrivateWorkloadsKey),
 					ParameterValue: aws.String(""),
 				},
-				{
-					ParameterKey:   aws.String(envParamImportVPCIDKey),
-					ParameterValue: aws.String(""),
-				},
-				{
-					ParameterKey:   aws.String(envParamImportPrivateSubnetsKey),
-					ParameterValue: aws.String(""),
-				},
 			},
 		},
 		"with private DNS only": {
-			input: func() *EnvConfig {
-				conf := mockDeployEnvironmentInput()
-				conf.Mft.HTTPConfig.Private.Certificates = []string{"arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789012"}
-				return conf
-			},
+			input: deploymentInputWithPrivateDNS,
 			want: []*cloudformation.Parameter{
 				{
 					ParameterKey:   aws.String(envParamAppNameKey),
-					ParameterValue: aws.String("project"),
+					ParameterValue: aws.String(deploymentInput.App.Name),
 				},
 				{
 					ParameterKey:   aws.String(envParamEnvNameKey),
-					ParameterValue: aws.String("env"),
+					ParameterValue: aws.String(deploymentInput.Name),
 				},
 				{
 					ParameterKey:   aws.String(envParamToolsAccountPrincipalKey),
-					ParameterValue: aws.String("arn:aws:iam::000000000:root"),
+					ParameterValue: aws.String(deploymentInput.App.AccountPrincipalARN),
 				},
 				{
 					ParameterKey:   aws.String(envParamAppDNSKey),
@@ -404,91 +385,10 @@ func TestEnv_Parameters(t *testing.T) {
 					ParameterKey:   aws.String(envParamAppRunnerPrivateWorkloadsKey),
 					ParameterValue: aws.String(""),
 				},
-				{
-					ParameterKey:   aws.String(envParamImportVPCIDKey),
-					ParameterValue: aws.String(""),
-				},
-				{
-					ParameterKey:   aws.String(envParamImportPrivateSubnetsKey),
-					ParameterValue: aws.String(""),
-				},
-			},
-		},
-		"with imported VPC parameters": {
-			input: func() *EnvConfig {
-				conf := mockDeployEnvironmentInput()
-				conf.Mft.Network.VPC.ID = aws.String("mockVPCID")
-				return conf
-			},
-			want: []*cloudformation.Parameter{
-				{
-					ParameterKey:   aws.String(envParamAppNameKey),
-					ParameterValue: aws.String("project"),
-				},
-				{
-					ParameterKey:   aws.String(envParamEnvNameKey),
-					ParameterValue: aws.String("env"),
-				},
-				{
-					ParameterKey:   aws.String(envParamToolsAccountPrincipalKey),
-					ParameterValue: aws.String("arn:aws:iam::000000000:root"),
-				},
-				{
-					ParameterKey:   aws.String(envParamAppDNSKey),
-					ParameterValue: aws.String(""),
-				},
-				{
-					ParameterKey:   aws.String(envParamAppDNSDelegationRoleKey),
-					ParameterValue: aws.String(""),
-				},
-				{
-					ParameterKey:   aws.String(EnvParamAliasesKey),
-					ParameterValue: aws.String(""),
-				},
-				{
-					ParameterKey:   aws.String(EnvParamALBWorkloadsKey),
-					ParameterValue: aws.String(""),
-				},
-				{
-					ParameterKey:   aws.String(envParamInternalALBWorkloadsKey),
-					ParameterValue: aws.String(""),
-				},
-				{
-					ParameterKey:   aws.String(envParamEFSWorkloadsKey),
-					ParameterValue: aws.String(""),
-				},
-				{
-					ParameterKey:   aws.String(envParamNATWorkloadsKey),
-					ParameterValue: aws.String(""),
-				},
-				{
-					ParameterKey:   aws.String(EnvParamServiceDiscoveryEndpoint),
-					ParameterValue: aws.String("env.project.local"),
-				},
-				{
-					ParameterKey:   aws.String(envParamCreateHTTPSListenerKey),
-					ParameterValue: aws.String("false"),
-				},
-				{
-					ParameterKey:   aws.String(envParamCreateInternalHTTPSListenerKey),
-					ParameterValue: aws.String("false"),
-				},
-				{
-					ParameterKey:   aws.String(envParamAppRunnerPrivateWorkloadsKey),
-					ParameterValue: aws.String(""),
-				},
-				{
-					ParameterKey:   aws.String(envParamImportVPCIDKey),
-					ParameterValue: aws.String("mockVPCID"),
-				},
-				{
-					ParameterKey:   aws.String(envParamImportPrivateSubnetsKey),
-					ParameterValue: aws.String(""),
-				},
 			},
 		},
 		"should use default value for new EnvControllerParameters": {
-			input: mockDeployEnvironmentInput,
+			input: deploymentInput,
 			oldParams: []*cloudformation.Parameter{
 				{
 					ParameterKey:   aws.String(EnvParamALBWorkloadsKey),
@@ -508,15 +408,15 @@ func TestEnv_Parameters(t *testing.T) {
 				},
 				{
 					ParameterKey:   aws.String(envParamAppNameKey),
-					ParameterValue: aws.String("project"),
+					ParameterValue: aws.String(deploymentInput.App.Name),
 				},
 				{
 					ParameterKey:   aws.String(envParamEnvNameKey),
-					ParameterValue: aws.String("env"),
+					ParameterValue: aws.String(deploymentInput.Name),
 				},
 				{
 					ParameterKey:   aws.String(envParamToolsAccountPrincipalKey),
-					ParameterValue: aws.String("arn:aws:iam::000000000:root"),
+					ParameterValue: aws.String(deploymentInput.App.AccountPrincipalARN),
 				},
 				{
 					ParameterKey:   aws.String(envParamAppDNSKey),
@@ -547,15 +447,15 @@ func TestEnv_Parameters(t *testing.T) {
 			want: []*cloudformation.Parameter{
 				{
 					ParameterKey:   aws.String(envParamAppNameKey),
-					ParameterValue: aws.String("project"),
+					ParameterValue: aws.String(deploymentInput.App.Name),
 				},
 				{
 					ParameterKey:   aws.String(envParamEnvNameKey),
-					ParameterValue: aws.String("env"),
+					ParameterValue: aws.String(deploymentInput.Name),
 				},
 				{
 					ParameterKey:   aws.String(envParamToolsAccountPrincipalKey),
-					ParameterValue: aws.String("arn:aws:iam::000000000:root"),
+					ParameterValue: aws.String(deploymentInput.App.AccountPrincipalARN),
 				},
 				{
 					ParameterKey:   aws.String(envParamAppDNSKey),
@@ -600,19 +500,11 @@ func TestEnv_Parameters(t *testing.T) {
 				{
 					ParameterKey:   aws.String(envParamAppRunnerPrivateWorkloadsKey),
 					ParameterValue: aws.String("rdws-backend"),
-				},
-				{
-					ParameterKey:   aws.String(envParamImportVPCIDKey),
-					ParameterValue: aws.String(""),
-				},
-				{
-					ParameterKey:   aws.String(envParamImportPrivateSubnetsKey),
-					ParameterValue: aws.String(""),
 				},
 			},
 		},
 		"should retain the values from EnvControllerParameters": {
-			input: mockDeployEnvironmentInput,
+			input: deploymentInput,
 			oldParams: []*cloudformation.Parameter{
 				{
 					ParameterKey:   aws.String(EnvParamALBWorkloadsKey),
@@ -640,15 +532,15 @@ func TestEnv_Parameters(t *testing.T) {
 				},
 				{
 					ParameterKey:   aws.String(envParamAppNameKey),
-					ParameterValue: aws.String("project"),
+					ParameterValue: aws.String(deploymentInput.App.Name),
 				},
 				{
 					ParameterKey:   aws.String(envParamEnvNameKey),
-					ParameterValue: aws.String("env"),
+					ParameterValue: aws.String(deploymentInput.Name),
 				},
 				{
 					ParameterKey:   aws.String(envParamToolsAccountPrincipalKey),
-					ParameterValue: aws.String("arn:aws:iam::000000000:root"),
+					ParameterValue: aws.String(deploymentInput.App.AccountPrincipalARN),
 				},
 				{
 					ParameterKey:   aws.String(envParamAppDNSKey),
@@ -675,15 +567,15 @@ func TestEnv_Parameters(t *testing.T) {
 			want: []*cloudformation.Parameter{
 				{
 					ParameterKey:   aws.String(envParamAppNameKey),
-					ParameterValue: aws.String("project"),
+					ParameterValue: aws.String(deploymentInput.App.Name),
 				},
 				{
 					ParameterKey:   aws.String(envParamEnvNameKey),
-					ParameterValue: aws.String("env"),
+					ParameterValue: aws.String(deploymentInput.Name),
 				},
 				{
 					ParameterKey:   aws.String(envParamToolsAccountPrincipalKey),
-					ParameterValue: aws.String("arn:aws:iam::000000000:root"),
+					ParameterValue: aws.String(deploymentInput.App.AccountPrincipalARN),
 				},
 				{
 					ParameterKey:   aws.String(envParamAppDNSKey),
@@ -729,18 +621,10 @@ func TestEnv_Parameters(t *testing.T) {
 					ParameterKey:   aws.String(envParamAppRunnerPrivateWorkloadsKey),
 					ParameterValue: aws.String("rdws-backend"),
 				},
-				{
-					ParameterKey:   aws.String(envParamImportVPCIDKey),
-					ParameterValue: aws.String(""),
-				},
-				{
-					ParameterKey:   aws.String(envParamImportPrivateSubnetsKey),
-					ParameterValue: aws.String(""),
-				},
 			},
 		},
 		"should not include old parameters that are deleted": {
-			input: mockDeployEnvironmentInput,
+			input: deploymentInput,
 			oldParams: []*cloudformation.Parameter{
 				{
 					ParameterKey: aws.String("deprecated"),
@@ -767,15 +651,15 @@ func TestEnv_Parameters(t *testing.T) {
 				},
 				{
 					ParameterKey:   aws.String(envParamAppNameKey),
-					ParameterValue: aws.String("project"),
+					ParameterValue: aws.String(deploymentInput.App.Name),
 				},
 				{
 					ParameterKey:   aws.String(envParamEnvNameKey),
-					ParameterValue: aws.String("env"),
+					ParameterValue: aws.String(deploymentInput.Name),
 				},
 				{
 					ParameterKey:   aws.String(envParamToolsAccountPrincipalKey),
-					ParameterValue: aws.String("arn:aws:iam::000000000:root"),
+					ParameterValue: aws.String(deploymentInput.App.AccountPrincipalARN),
 				},
 				{
 					ParameterKey:   aws.String(envParamAppDNSKey),
@@ -806,15 +690,15 @@ func TestEnv_Parameters(t *testing.T) {
 			want: []*cloudformation.Parameter{
 				{
 					ParameterKey:   aws.String(envParamAppNameKey),
-					ParameterValue: aws.String("project"),
+					ParameterValue: aws.String(deploymentInput.App.Name),
 				},
 				{
 					ParameterKey:   aws.String(envParamEnvNameKey),
-					ParameterValue: aws.String("env"),
+					ParameterValue: aws.String(deploymentInput.Name),
 				},
 				{
 					ParameterKey:   aws.String(envParamToolsAccountPrincipalKey),
-					ParameterValue: aws.String("arn:aws:iam::000000000:root"),
+					ParameterValue: aws.String(deploymentInput.App.AccountPrincipalARN),
 				},
 				{
 					ParameterKey:   aws.String(envParamAppDNSKey),
@@ -858,20 +742,12 @@ func TestEnv_Parameters(t *testing.T) {
 				},
 				{
 					ParameterKey:   aws.String(envParamAppRunnerPrivateWorkloadsKey),
-					ParameterValue: aws.String(""),
-				},
-				{
-					ParameterKey:   aws.String(envParamImportVPCIDKey),
-					ParameterValue: aws.String(""),
-				},
-				{
-					ParameterKey:   aws.String(envParamImportPrivateSubnetsKey),
 					ParameterValue: aws.String(""),
 				},
 			},
 		},
 		"should reuse old service discovery endpoint value": {
-			input: mockDeployEnvironmentInput,
+			input: deploymentInput,
 			oldParams: []*cloudformation.Parameter{
 				{
 					ParameterKey:   aws.String(EnvParamServiceDiscoveryEndpoint),
@@ -899,15 +775,15 @@ func TestEnv_Parameters(t *testing.T) {
 				},
 				{
 					ParameterKey:   aws.String(envParamAppNameKey),
-					ParameterValue: aws.String("project"),
+					ParameterValue: aws.String(deploymentInput.App.Name),
 				},
 				{
 					ParameterKey:   aws.String(envParamEnvNameKey),
-					ParameterValue: aws.String("env"),
+					ParameterValue: aws.String(deploymentInput.Name),
 				},
 				{
 					ParameterKey:   aws.String(envParamToolsAccountPrincipalKey),
-					ParameterValue: aws.String("arn:aws:iam::000000000:root"),
+					ParameterValue: aws.String(deploymentInput.App.AccountPrincipalARN),
 				},
 				{
 					ParameterKey:   aws.String(envParamAppDNSKey),
@@ -934,15 +810,15 @@ func TestEnv_Parameters(t *testing.T) {
 			want: []*cloudformation.Parameter{
 				{
 					ParameterKey:   aws.String(envParamAppNameKey),
-					ParameterValue: aws.String("project"),
+					ParameterValue: aws.String(deploymentInput.App.Name),
 				},
 				{
 					ParameterKey:   aws.String(envParamEnvNameKey),
-					ParameterValue: aws.String("env"),
+					ParameterValue: aws.String(deploymentInput.Name),
 				},
 				{
 					ParameterKey:   aws.String(envParamToolsAccountPrincipalKey),
-					ParameterValue: aws.String("arn:aws:iam::000000000:root"),
+					ParameterValue: aws.String(deploymentInput.App.AccountPrincipalARN),
 				},
 				{
 					ParameterKey:   aws.String(envParamAppDNSKey),
@@ -986,20 +862,12 @@ func TestEnv_Parameters(t *testing.T) {
 				},
 				{
 					ParameterKey:   aws.String(envParamAppRunnerPrivateWorkloadsKey),
-					ParameterValue: aws.String(""),
-				},
-				{
-					ParameterKey:   aws.String(envParamImportVPCIDKey),
-					ParameterValue: aws.String(""),
-				},
-				{
-					ParameterKey:   aws.String(envParamImportPrivateSubnetsKey),
 					ParameterValue: aws.String(""),
 				},
 			},
 		},
 		"should use app.local endpoint service discovery endpoint if it is a new parameter": {
-			input: mockDeployEnvironmentInput,
+			input: deploymentInput,
 			oldParams: []*cloudformation.Parameter{
 				{
 					ParameterKey:   aws.String(EnvParamALBWorkloadsKey),
@@ -1007,15 +875,15 @@ func TestEnv_Parameters(t *testing.T) {
 				},
 				{
 					ParameterKey:   aws.String(envParamAppNameKey),
-					ParameterValue: aws.String("project"),
+					ParameterValue: aws.String(deploymentInput.App.Name),
 				},
 				{
 					ParameterKey:   aws.String(envParamEnvNameKey),
-					ParameterValue: aws.String("env"),
+					ParameterValue: aws.String(deploymentInput.Name),
 				},
 				{
 					ParameterKey:   aws.String(envParamToolsAccountPrincipalKey),
-					ParameterValue: aws.String("arn:aws:iam::000000000:root"),
+					ParameterValue: aws.String(deploymentInput.App.AccountPrincipalARN),
 				},
 				{
 					ParameterKey:   aws.String(envParamAppDNSKey),
@@ -1034,15 +902,15 @@ func TestEnv_Parameters(t *testing.T) {
 			want: []*cloudformation.Parameter{
 				{
 					ParameterKey:   aws.String(envParamAppNameKey),
-					ParameterValue: aws.String("project"),
+					ParameterValue: aws.String(deploymentInput.App.Name),
 				},
 				{
 					ParameterKey:   aws.String(envParamEnvNameKey),
-					ParameterValue: aws.String("env"),
+					ParameterValue: aws.String(deploymentInput.Name),
 				},
 				{
 					ParameterKey:   aws.String(envParamToolsAccountPrincipalKey),
-					ParameterValue: aws.String("arn:aws:iam::000000000:root"),
+					ParameterValue: aws.String(deploymentInput.App.AccountPrincipalARN),
 				},
 				{
 					ParameterKey:   aws.String(envParamAppDNSKey),
@@ -1088,14 +956,6 @@ func TestEnv_Parameters(t *testing.T) {
 					ParameterKey:   aws.String(envParamAppRunnerPrivateWorkloadsKey),
 					ParameterValue: aws.String(""),
 				},
-				{
-					ParameterKey:   aws.String(envParamImportVPCIDKey),
-					ParameterValue: aws.String(""),
-				},
-				{
-					ParameterKey:   aws.String(envParamImportPrivateSubnetsKey),
-					ParameterValue: aws.String(""),
-				},
 			},
 		},
 	}
@@ -1103,7 +963,7 @@ func TestEnv_Parameters(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			env := &Env{
-				in:         tc.input(),
+				in:         tc.input,
 				prevParams: tc.oldParams,
 			}
 			params, err := env.Parameters()
