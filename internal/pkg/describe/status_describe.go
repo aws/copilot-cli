@@ -215,7 +215,7 @@ func (s *ecsStatusDescriber) ecsServiceAutoscalingAlarms(cluster, service string
 
 func (s *ecsStatusDescriber) ecsServiceRollbackAlarms(app, env, svc string) ([]cloudwatch.AlarmStatus, error) {
 	// This will not fetch imported alarms, as we filter by the Copilot-generated prefix of alarm names. This will also not fetch Copilot-generated alarms with names exceeding 255 characters, due to the balanced truncating of `TruncateAlarmName`.
-	alarms, err := s.cwSvcGetter.AlarmStatusesFromNamePrefix(fmt.Sprintf("%s-%s-%s-Copilot", app, env, svc))
+	alarms, err := s.cwSvcGetter.AlarmStatusesFromNamePrefix(fmt.Sprintf("%s-%s-%s-CopilotRollback", app, env, svc))
 	if err != nil {
 		return nil, fmt.Errorf("get Copilot-created CloudWatch alarms: %w", err)
 	}
