@@ -32,8 +32,8 @@ const (
 	auroraServerlessVersionV2 = "v2"
 )
 
+// Engine types for RDS Aurora Serverless.
 const (
-	// Engine types for RDS Aurora Serverless.
 	RDSEngineTypeMySQL      = "MySQL"
 	RDSEngineTypePostgreSQL = "PostgreSQL"
 )
