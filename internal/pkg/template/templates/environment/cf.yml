@@ -660,8 +660,8 @@ Resources:
       Parameters:
         App: !Ref AppName
         Env: !Ref EnvironmentName
-        {{- if .Addons.ExtraParams }}
-        {{ .Addons.ExtraParams }}
+        {{- if .Addons.ExtraParams}}
+{{ .Addons.ExtraParams  | indent 8 }}
         {{- end}}
       TemplateURL: {{.Addons.URL}}
 {{- end }}
