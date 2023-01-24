@@ -23,6 +23,43 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type mockOverrider struct {
+	out []byte
+	err error
+}
+
+func (m *mockOverrider) Override(_ []byte) ([]byte, error) {
+	return m.out, m.err
+}
+
+func TestWrapWithTemplateOverrider(t *testing.T) {
+	t.Run("should return the overriden Template", func(t *testing.T) {
+		// GIVEN
+		var stack StackConfiguration = &mockStackConfig{template: "hello"}
+		ovrdr := &mockOverrider{out: []byte("bye")}
+
+		// WHEN
+		stack = WrapWithTemplateOverrider(stack, ovrdr)
+		tpl, err := stack.Template()
+
+		// THEN
+		require.NoError(t, err)
+		require.Equal(t, "bye", tpl)
+	})
+	t.Run("should return a wrapped error when Override call fails", func(t *testing.T) {
+		// GIVEN
+		var stack StackConfiguration = &mockStackConfig{template: "hello"}
+		ovrdr := &mockOverrider{err: errors.New("some error")}
+
+		// WHEN
+		stack = WrapWithTemplateOverrider(stack, ovrdr)
+		_, err := stack.Template()
+
+		// THEN
+		require.ErrorContains(t, err, "override template:")
+	})
+}
+
 func TestIsEmptyErr(t *testing.T) {
 	testCases := map[string]struct {
 		err    error
