@@ -501,6 +501,14 @@ func TestEnv_Parameters(t *testing.T) {
 					ParameterKey:   aws.String(envParamAppRunnerPrivateWorkloadsKey),
 					ParameterValue: aws.String("rdws-backend"),
 				},
+				{
+					ParameterKey:   aws.String(envParamImportVPCIDKey),
+					ParameterValue: aws.String(""),
+				},
+				{
+					ParameterKey:   aws.String(envParamImportPrivateSubnetsKey),
+					ParameterValue: aws.String(""),
+				},
 			},
 		},
 		"should retain the values from EnvControllerParameters": {
@@ -620,6 +628,14 @@ func TestEnv_Parameters(t *testing.T) {
 				{
 					ParameterKey:   aws.String(envParamAppRunnerPrivateWorkloadsKey),
 					ParameterValue: aws.String("rdws-backend"),
+				},
+				{
+					ParameterKey:   aws.String(envParamImportVPCIDKey),
+					ParameterValue: aws.String(""),
+				},
+				{
+					ParameterKey:   aws.String(envParamImportPrivateSubnetsKey),
+					ParameterValue: aws.String(""),
 				},
 			},
 		},
@@ -744,6 +760,14 @@ func TestEnv_Parameters(t *testing.T) {
 					ParameterKey:   aws.String(envParamAppRunnerPrivateWorkloadsKey),
 					ParameterValue: aws.String(""),
 				},
+				{
+					ParameterKey:   aws.String(envParamImportVPCIDKey),
+					ParameterValue: aws.String(""),
+				},
+				{
+					ParameterKey:   aws.String(envParamImportPrivateSubnetsKey),
+					ParameterValue: aws.String(""),
+				},
 			},
 		},
 		"should reuse old service discovery endpoint value": {
@@ -864,6 +888,14 @@ func TestEnv_Parameters(t *testing.T) {
 					ParameterKey:   aws.String(envParamAppRunnerPrivateWorkloadsKey),
 					ParameterValue: aws.String(""),
 				},
+				{
+					ParameterKey:   aws.String(envParamImportVPCIDKey),
+					ParameterValue: aws.String(""),
+				},
+				{
+					ParameterKey:   aws.String(envParamImportPrivateSubnetsKey),
+					ParameterValue: aws.String(""),
+				},
 			},
 		},
 		"should use app.local endpoint service discovery endpoint if it is a new parameter": {
@@ -954,6 +986,14 @@ func TestEnv_Parameters(t *testing.T) {
 				},
 				{
 					ParameterKey:   aws.String(envParamAppRunnerPrivateWorkloadsKey),
+					ParameterValue: aws.String(""),
+				},
+				{
+					ParameterKey:   aws.String(envParamImportVPCIDKey),
+					ParameterValue: aws.String(""),
+				},
+				{
+					ParameterKey:   aws.String(envParamImportPrivateSubnetsKey),
 					ParameterValue: aws.String(""),
 				},
 			},
