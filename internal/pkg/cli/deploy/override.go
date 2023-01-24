@@ -1,0 +1,53 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+package deploy
+
+import (
+	"errors"
+	"fmt"
+
+	"github.com/aws/copilot-cli/internal/pkg/override"
+	"github.com/aws/copilot-cli/internal/pkg/term/log"
+	"github.com/spf13/afero"
+)
+
+// An Overrider transforms the content in body to out.
+type Overrider interface {
+	Override(body []byte) (out []byte, err error)
+}
+
+// UserAgentAdder is the interface that adds values to the User-Agent HTTP request header.
+type UserAgentAdder interface {
+	UserAgentExtras(extras ...string)
+}
+
+// NewOverrider looks up if a CDK or YAMLPatch Overrider exists at pathsToOverriderDir and initializes the respective Overrider.
+// If the directory is empty, then returns a noop Overrider.
+func NewOverrider(pathToOverridesDir, app, env string, fs afero.Fs, sess UserAgentAdder) (Overrider, error) {
+	info, err := override.Lookup(pathToOverridesDir, fs)
+	if err != nil {
+		var errNotExist *override.ErrNotExist
+		if errors.As(err, &errNotExist) {
+			return new(override.Noop), nil
+		}
+		return nil, fmt.Errorf("look up overrider at %q: %w", pathToOverridesDir, err)
+	}
+	switch {
+	case info.IsCDK():
+		sess.UserAgentExtras("override cdk")
+		return override.WithCDK(pathToOverridesDir, override.CDKOpts{
+			Stdout: log.OutputWriter,
+			FS:     fs,
+			EnvVars: map[string]string{
+				"COPILOT_APPLICATION_NAME": app,
+				"COPILOT_ENVIRONMENT_NAME": env,
+			},
+		}), nil
+	case info.IsYAMLPatch():
+		sess.UserAgentExtras("override yamlpatch")
+		return new(override.Noop), nil
+	default:
+		return new(override.Noop), nil
+	}
+}

@@ -42,6 +42,7 @@ var testRDWebServiceManifest = &manifest.RequestDrivenWebService{
 			"LOG_LEVEL": {},
 			"NODE_ENV":  {},
 		},
+		Secrets: map[string]manifest.Secret{"foo": {}},
 		RequestDrivenWebServiceHttpConfig: manifest.RequestDrivenWebServiceHttpConfig{
 			HealthCheckConfiguration: manifest.HealthCheckArgsOrString{
 				Union: manifest.BasicToUnion[string, manifest.HTTPHealthCheckArgs]("/"),
@@ -175,6 +176,7 @@ func TestRequestDrivenWebService_Template(t *testing.T) {
 							"LOG_LEVEL": template.PlainVariable(""),
 							"NODE_ENV":  template.PlainVariable(""),
 						},
+						Secrets:           map[string]template.Secret{"foo": template.SecretFromPlainSSMOrARN("")},
 						Tags:              c.manifest.Tags,
 						Count:             c.manifest.Count,
 						EnableHealthCheck: true,
@@ -209,6 +211,7 @@ func TestRequestDrivenWebService_Template(t *testing.T) {
 						WorkloadName:             "frontend",
 						WorkloadType:             manifest.RequestDrivenWebServiceType,
 						Variables:                convertEnvVars(c.manifest.Variables),
+						Secrets:                  convertSecrets(c.manifest.RequestDrivenWebServiceConfig.Secrets),
 						Tags:                     c.manifest.Tags,
 						ServiceDiscoveryEndpoint: mockSD,
 						EnableHealthCheck:        true,
@@ -253,6 +256,7 @@ Outputs:
 						WorkloadName:             "frontend",
 						WorkloadType:             manifest.RequestDrivenWebServiceType,
 						Variables:                convertEnvVars(c.manifest.Variables),
+						Secrets:                  convertSecrets(c.manifest.RequestDrivenWebServiceConfig.Secrets),
 						Tags:                     c.manifest.Tags,
 						ServiceDiscoveryEndpoint: mockSD,
 						NestedStack: &template.WorkloadNestedStackOpts{

@@ -49,6 +49,8 @@ Outputs:
   {{envVarName .Name}}:
     Description: "The name of a user-defined bucket."
     Value: !Ref {{logicalIDSafe .Name}}Bucket
+    Export:
+      Name: !Sub ${App}-${Env}-{{logicalIDSafe .Name}}BucketName
   {{logicalIDSafe .Name}}BucketARN:
     Description: "The ARN of the {{.Name}} bucket."
     Value: !GetAtt {{logicalIDSafe .Name}}Bucket.Arn
