@@ -414,6 +414,79 @@ func TestEnv_Parameters(t *testing.T) {
 				},
 			},
 		},
+		"with imported VPC parameters": {
+			input: func() *EnvConfig {
+				conf := mockDeployEnvironmentInput()
+				conf.Mft.Network.VPC.ID = aws.String("mockVPCID")
+				return conf
+			},
+			want: []*cloudformation.Parameter{
+				{
+					ParameterKey:   aws.String(envParamAppNameKey),
+					ParameterValue: aws.String("project"),
+				},
+				{
+					ParameterKey:   aws.String(envParamEnvNameKey),
+					ParameterValue: aws.String("env"),
+				},
+				{
+					ParameterKey:   aws.String(envParamToolsAccountPrincipalKey),
+					ParameterValue: aws.String("arn:aws:iam::000000000:root"),
+				},
+				{
+					ParameterKey:   aws.String(envParamAppDNSKey),
+					ParameterValue: aws.String(""),
+				},
+				{
+					ParameterKey:   aws.String(envParamAppDNSDelegationRoleKey),
+					ParameterValue: aws.String(""),
+				},
+				{
+					ParameterKey:   aws.String(EnvParamAliasesKey),
+					ParameterValue: aws.String(""),
+				},
+				{
+					ParameterKey:   aws.String(EnvParamALBWorkloadsKey),
+					ParameterValue: aws.String(""),
+				},
+				{
+					ParameterKey:   aws.String(envParamInternalALBWorkloadsKey),
+					ParameterValue: aws.String(""),
+				},
+				{
+					ParameterKey:   aws.String(envParamEFSWorkloadsKey),
+					ParameterValue: aws.String(""),
+				},
+				{
+					ParameterKey:   aws.String(envParamNATWorkloadsKey),
+					ParameterValue: aws.String(""),
+				},
+				{
+					ParameterKey:   aws.String(EnvParamServiceDiscoveryEndpoint),
+					ParameterValue: aws.String("env.project.local"),
+				},
+				{
+					ParameterKey:   aws.String(envParamCreateHTTPSListenerKey),
+					ParameterValue: aws.String("false"),
+				},
+				{
+					ParameterKey:   aws.String(envParamCreateInternalHTTPSListenerKey),
+					ParameterValue: aws.String("false"),
+				},
+				{
+					ParameterKey:   aws.String(envParamAppRunnerPrivateWorkloadsKey),
+					ParameterValue: aws.String(""),
+				},
+				{
+					ParameterKey:   aws.String(envParamImportVPCIDKey),
+					ParameterValue: aws.String("mockVPCID"),
+				},
+				{
+					ParameterKey:   aws.String(envParamImportPrivateSubnetsKey),
+					ParameterValue: aws.String(""),
+				},
+			},
+		},
 		"should use default value for new EnvControllerParameters": {
 			input: mockDeployEnvironmentInput,
 			oldParams: []*cloudformation.Parameter{

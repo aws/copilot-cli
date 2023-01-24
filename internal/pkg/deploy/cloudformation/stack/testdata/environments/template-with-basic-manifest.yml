@@ -36,7 +36,12 @@ Parameters:
     AllowedValues: [true, false]
   ServiceDiscoveryEndpoint:
     Type: String
+  ImportedVPCID:
+    Type: String
+  ImportedPrivateSubnets:
+    Type: String
 Conditions:
+  IsVPCImported: !Not [!Equals [!Ref ImportedVPCID, ""]]
   CreateALB:
     !Not [!Equals [ !Ref ALBWorkloads, "" ]]
   CreateInternalALB:
