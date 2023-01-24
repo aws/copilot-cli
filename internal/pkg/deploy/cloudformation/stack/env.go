@@ -5,6 +5,7 @@ package stack
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
@@ -32,6 +33,8 @@ const (
 	envParamAppRunnerPrivateWorkloadsKey   = "AppRunnerPrivateWorkloads"
 	envParamCreateHTTPSListenerKey         = "CreateHTTPSListener"
 	envParamCreateInternalHTTPSListenerKey = "CreateInternalHTTPSListener"
+	envParamImportVPCIDKey                 = "ImportedVPCID"
+	envParamImportPrivateSubnetsKey        = "ImportPrivateSubnets"
 )
 
 // Output keys.
@@ -192,6 +195,12 @@ func (e *Env) Parameters() ([]*cloudformation.Parameter, error) {
 	if len(e.importPrivateCertARNs()) != 0 {
 		internalHTTPSListener = "true"
 	}
+	importedVPCID := ""
+	importedPrivateSubnets := ""
+	if vpc := e.in.Mft.Network.VPC.ImportedVPC(); vpc != nil {
+		importedVPCID = vpc.ID
+		importedPrivateSubnets = strings.Join(vpc.PrivateSubnetIDs, ",")
+	}
 	currParams := []*cloudformation.Parameter{
 		{
 			ParameterKey:   aws.String(envParamAppNameKey),
@@ -248,6 +257,14 @@ func (e *Env) Parameters() ([]*cloudformation.Parameter, error) {
 		{
 			ParameterKey:   aws.String(envParamAppRunnerPrivateWorkloadsKey),
 			ParameterValue: aws.String(""),
+		},
+		{
+			ParameterKey:   aws.String(envParamImportVPCIDKey),
+			ParameterValue: aws.String(importedVPCID),
+		},
+		{
+			ParameterKey:   aws.String(envParamImportPrivateSubnetsKey),
+			ParameterValue: aws.String(importedPrivateSubnets),
 		},
 	}
 	if e.prevParams == nil {
