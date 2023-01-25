@@ -29,6 +29,7 @@ const (
 	envDynamoDBAccessPolicyTemplatePath = "addons/ddb/env/access_policy.yml"
 	envRDSTemplatePath                  = "addons/aurora/env/serverlessv2.yml"
 	envRDSForRDWSTemplatePath           = "addons/aurora/env/rdws/serverlessv2.yml"
+	envRDSIngressForRDWSTemplatePath    = "addons/aurora/env/rdws/ingress.yml"
 )
 
 const (
@@ -291,6 +292,16 @@ func NewEnvServerlessTemplate(input RDSProps) *RDSTemplate {
 		RDSProps: input,
 		parser:   template.New(),
 		tmplPath: tmplPath,
+	}
+}
+
+// NewEnvServerlessRDWSIngressTemplate creates a marshaler for the security group ingress attached to an RDWS
+// for permissions into an environment-level Aurora Serverless v2 addon.
+func NewEnvServerlessRDWSIngressTemplate(input RDSProps) *RDSTemplate {
+	return &RDSTemplate{
+		RDSProps: input,
+		parser:   template.New(),
+		tmplPath: envRDSIngressForRDWSTemplatePath,
 	}
 }
 
