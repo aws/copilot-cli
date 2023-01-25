@@ -15,6 +15,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
@@ -165,7 +166,7 @@ func (d *lbWebSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*s
 		return nil, fmt.Errorf("create stack configuration: %w", err)
 	}
 	return &svcStackConfigurationOutput{
-		conf: conf,
+		conf: cloudformation.WrapWithTemplateOverrider(conf, d.overrider),
 		svcUpdater: d.newSvcUpdater(func(s *session.Session) serviceForceUpdater {
 			return ecs.New(s)
 		}),
