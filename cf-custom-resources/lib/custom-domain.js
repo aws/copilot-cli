@@ -182,6 +182,7 @@ const writeARecord = async function (
   }
 };
 
+// Example error message: "InvalidChangeBatch: [Tried to delete resource record set [name='a.domain.com.', type='A'] but it was not found]"
 const isRecordSetNotFoundErr = (err) => err.message.includes("Tried to delete resource record set") && err.message.includes("but it was not found")
 
 /**
