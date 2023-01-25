@@ -10,7 +10,7 @@ Your application configuration (which services and environments belong to it) is
 
 ## Creating an App
 
-To set up an application, you can just run `copilot init`. You'll be asked if you want to set up an app or choose an use app.
+To set up an application, you can just run `copilot init`. You'll be asked if you want to set up an app or choose an existing app.
 
 ```bash
 copilot init
