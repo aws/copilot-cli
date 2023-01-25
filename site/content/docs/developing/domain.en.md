@@ -78,7 +78,7 @@ Under the hood, Copilot
 <iframe width="560" height="315" src="https://www.youtube.com/embed/Oyr-n59mVjI" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 
 ### Use domain in your existing validated certificates
-If you'd like more granular control over the generated ACM certificate or the [default `alias` options](#customized-domain-alias) aren't flexible enough, you can specify the `--import-cert-arns` flag when creating the environment to import validated ACM certificates that include the alias. For example:
+If you'd like more granular control over the generated ACM certificate, or if the [default `alias` options](#customized-domain-alias) aren't flexible enough, you can specify the `--import-cert-arns` flag when creating the environment to import validated ACM certificates that include the alias. For example:
 
 ```console
 $ copilot env init --import-cert-arns arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789012
@@ -93,9 +93,9 @@ http:
       - arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789012
 ```
 
-Then, in your service's manifest, you can either:
+Then, in your service's manifest, you can:
 
-1. Specify the ID of the [`hosted zone`](../manifest/lb-web-service.en.md#http-hosted-zone) into which Copilot should insert the A record:
+- Specify the ID of the [`hosted zone`](../manifest/lb-web-service.en.md#http-hosted-zone) into which Copilot should insert the A record:
 ``` yaml
 # in copilot/{service name}/manifest.yml
 http:
@@ -103,7 +103,7 @@ http:
   alias: example.aws
   hosted_zone: Z0873220N255IR3MTNR4
 ```
-2. Alternatively, deploy the service without the `hosted_zone` field, then manually add the DNS name of the Application Load Balancer (ALB) created in that environment as an A record where your alias domain is hosted.
+- Alternatively, deploy the service without the `hosted_zone` field, then manually add the DNS name of the Application Load Balancer (ALB) created in that environment as an A record where your alias domain is hosted.
 
 We have [an example](../../blogs/release-v118.en.md#certificate-import) of Option 2 in our blog posts.
 
