@@ -56,7 +56,7 @@ func TestWrapWithTemplateOverrider(t *testing.T) {
 		_, err := stack.Template()
 
 		// THEN
-		require.ErrorContains(t, err, "override template:")
+		require.EqualError(t, err, "override template: some error")
 	})
 }
 
