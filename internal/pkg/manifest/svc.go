@@ -582,16 +582,20 @@ func (s *LoadBalancedWebService) HTTPLoadBalancerTarget(exposedPorts []ExposedPo
 	targetContainer = s.Name
 	targetPort = aws.String(s.ContainerPort())
 
-	rrTarget := rrTargetContainer
-	if rrTarget != nil && *rrTarget != *targetContainer {
-		targetContainer = rrTarget
-		targetPort = s.Sidecars[aws.StringValue(targetContainer)].Port
+	if rrTargetContainer == nil && rrTargetPort == nil { // both targetPort and targetContainer are nil.
+		return
 	}
-	// Route load balancer traffic to the target_port if mentioned.
-	if container, port := httpLoadBalancerTarget(exposedPorts, rrTargetPort); port != nil {
+
+	if container, port := httpLoadBalancerTarget(exposedPorts, rrTargetPort); port == nil { // targetPort is nil.
+		if *rrTargetContainer != *targetContainer {
+			targetContainer = rrTargetContainer
+			targetPort = s.Sidecars[aws.StringValue(targetContainer)].Port
+		}
+	} else { // targetContainer is nil or both targetContainer and targetPort are not nil.
 		targetPort = port
-	} else if container != nil {
-		targetContainer = container
+		if container != nil {
+			targetContainer = container
+		}
 	}
 	return
 }
@@ -602,16 +606,20 @@ func (s *BackendService) HTTPLoadBalancerTarget(exposedPorts []ExposedPort, rrTa
 	targetContainer = s.Name
 	targetPort = aws.String(s.ContainerPort())
 
-	rrTarget := rrTargetContainer
-	if rrTarget != nil && *rrTarget != *targetContainer {
-		targetContainer = rrTarget
-		targetPort = s.Sidecars[aws.StringValue(targetContainer)].Port
+	if rrTargetContainer == nil && rrTargetPort == nil { // both targetPort and targetContainer are nil.
+		return
 	}
-	// Route load balancer traffic to the target_port if mentioned.
-	if container, port := httpLoadBalancerTarget(exposedPorts, rrTargetPort); port != nil {
+
+	if container, port := httpLoadBalancerTarget(exposedPorts, rrTargetPort); port == nil { // targetPort is nil.
+		if *rrTargetContainer != *targetContainer {
+			targetContainer = rrTargetContainer
+			targetPort = s.Sidecars[aws.StringValue(targetContainer)].Port
+		}
+	} else { // targetContainer is nil or both targetContainer and targetPort are not nil.
 		targetPort = port
-	} else if container != nil {
-		targetContainer = container
+		if container != nil {
+			targetContainer = container
+		}
 	}
 	return
 }
