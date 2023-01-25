@@ -55,18 +55,18 @@ var storageTemplateFunctions = map[string]interface{}{
 	"toSnakeCase":   template.ToSnakeCaseFunc,
 }
 
-// StorageProps holds basic input properties for addon.NewDDBTemplate() or addon.NewS3Template().
+// StorageProps holds basic input properties for S3Props and DynamoDBProps.
 type StorageProps struct {
 	Name string
 }
 
-// S3Props contains S3-specific properties for addon.NewS3Template().
+// S3Props contains S3-specific properties.
 type S3Props struct {
 	*StorageProps
 }
 
-// NewS3Template creates a new S3 marshaler which can be used to write CF via addonWriter.
-func NewS3Template(input *S3Props) *S3Template {
+// NewWorkloadS3Template creates a marshaler for a workload-level S3 addon.
+func NewWorkloadS3Template(input *S3Props) *S3Template {
 	return &S3Template{
 		S3Props:  *input,
 		parser:   template.New(),
@@ -110,7 +110,7 @@ func (s *S3Template) MarshalBinary() ([]byte, error) {
 	return content.Bytes(), nil
 }
 
-// DynamoDBProps contains DynamoDB-specific properties for addon.NewDDBTemplate().
+// DynamoDBProps contains DynamoDB-specific properties.
 type DynamoDBProps struct {
 	*StorageProps
 	Attributes   []DDBAttribute
@@ -120,9 +120,9 @@ type DynamoDBProps struct {
 	HasLSI       bool
 }
 
-// NewDDBTemplate creates a DynamoDB cloudformation template specifying attributes,
+// NewWorkloadDDBTemplate creates a marshaler for a workload-level DynamoDB addon specifying attributes,
 // primary key schema, and local secondary index configuration.
-func NewDDBTemplate(input *DynamoDBProps) *DynamoDBTemplate {
+func NewWorkloadDDBTemplate(input *DynamoDBProps) *DynamoDBTemplate {
 	return &DynamoDBTemplate{
 		DynamoDBProps: *input,
 		parser:        template.New(),
@@ -248,7 +248,7 @@ type DDBLocalSecondaryIndex struct {
 	Name         *string
 }
 
-// RDSProps holds RDS-specific properties for addon.NewRDSTemplate().
+// RDSProps holds RDS-specific properties.
 type RDSProps struct {
 	WorkloadType   string   // The type of the workload associated with the RDS addon.
 	ClusterName    string   // The name of the cluster.
@@ -258,8 +258,8 @@ type RDSProps struct {
 	Envs           []string // The copilot environments found inside the current app.
 }
 
-// NewServerlessV1Template creates a new RDS marshaler which can be used to write an Aurora Serverless v1 CloudFormation template.
-func NewServerlessV1Template(input RDSProps) *RDSTemplate {
+// NewWorkloadServerlessV1Template creates a marshaler for a workload-level Aurora Serverless v1 addon.
+func NewWorkloadServerlessV1Template(input RDSProps) *RDSTemplate {
 	tmplPath := rdsTemplatePath
 	if input.WorkloadType == manifest.RequestDrivenWebServiceType {
 		tmplPath = rdsRDWSTemplatePath
@@ -271,8 +271,8 @@ func NewServerlessV1Template(input RDSProps) *RDSTemplate {
 	}
 }
 
-// NewServerlessV2Template creates a new RDS marshaler which can be used to write an Aurora Serverless v2 CloudFormation template.
-func NewServerlessV2Template(input RDSProps) *RDSTemplate {
+// NewWorkloadServerlessV2Template creates a marshaler for a workload-level Aurora Serverless v2 addon.
+func NewWorkloadServerlessV2Template(input RDSProps) *RDSTemplate {
 	tmplPath := rdsV2TemplatePath
 	if input.WorkloadType == manifest.RequestDrivenWebServiceType {
 		tmplPath = rdsRDWSV2TemplatePath
