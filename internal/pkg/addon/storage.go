@@ -23,7 +23,8 @@ const (
 	rdsRDWSV2TemplatePath = "addons/aurora/rdws/serverlessv2.yml"
 	rdsRDWSParamsPath     = "addons/aurora/rdws/addons.parameters.yml"
 
-	envS3TemplatePath = "addons/s3/env/cf.yml"
+	envS3TemplatePath             = "addons/s3/env/cf.yml"
+	envS3AccessPolicyTemplatePath = "addons/s3/env/access_policy.yml"
 )
 
 const (
@@ -66,6 +67,25 @@ func NewS3Template(input *S3Props) *S3Template {
 	}
 }
 
+// NewEnvS3Template creates a new marshaler for an environment-level S3 addon.
+func NewEnvS3Template(input *S3Props) *S3Template {
+	return &S3Template{
+		S3Props:  *input,
+		parser:   template.New(),
+		tmplPath: envS3TemplatePath,
+	}
+}
+
+// NewEnvS3AccessPolicyTemplate creates a new marshaler for the access policy attached to a workload
+// for permissions into an environment-level S3 addon.
+func NewEnvS3AccessPolicyTemplate(input *S3Props) *S3Template {
+	return &S3Template{
+		S3Props:  *input,
+		parser:   template.New(),
+		tmplPath: envS3AccessPolicyTemplatePath,
+	}
+}
+
 // S3Template contains configuration options which fully describe an S3 bucket.
 // Implements the encoding.BinaryMarshaler interface.
 type S3Template struct {
@@ -81,15 +101,6 @@ func (s *S3Template) MarshalBinary() ([]byte, error) {
 		return nil, err
 	}
 	return content.Bytes(), nil
-}
-
-// NewEnvS3Template creates a new marshaler for environment-level S3 which can be used to write CF via addonWriter.
-func NewEnvS3Template(input *S3Props) *S3Template {
-	return &S3Template{
-		S3Props:  *input,
-		parser:   template.New(),
-		tmplPath: envS3TemplatePath,
-	}
 }
 
 // DynamoDBProps contains DynamoDB-specific properties for addon.NewDDBTemplate().
