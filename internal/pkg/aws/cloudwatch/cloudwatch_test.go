@@ -81,6 +81,7 @@ func TestCloudWatch_AlarmsWithTags(t *testing.T) {
 		"return if no alarms found": {
 			setupMocks: func(m cloudWatchMocks) {
 				m.rg.EXPECT().GetResourcesByTags(cloudwatchResourceType, gomock.Eq(testTags)).Return([]*rg.Resource{}, nil)
+				m.cw.EXPECT().DescribeAlarms(gomock.Any()).Return(nil, nil)
 			},
 
 			wantAlarmStatus: nil,
@@ -500,7 +501,7 @@ func TestCloudWatch_AlarmStatusesFromNamePrefix(t *testing.T) {
 				client: mockcwClient,
 			}
 
-			gotAlarmStatuses, gotErr := cwSvc.AlarmStatusesFromNamePrefix(mockPrefix)
+			gotAlarmStatuses, gotErr := cwSvc.AlarmStatuses(WithPrefix(mockPrefix))
 			if gotErr != nil {
 				require.EqualError(t, gotErr, tc.wantedErr.Error())
 			} else {

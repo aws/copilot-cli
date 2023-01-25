@@ -76,34 +76,23 @@ func (m *MockalarmStatusGetter) EXPECT() *MockalarmStatusGetterMockRecorder {
 	return m.recorder
 }
 
-// AlarmStatus mocks base method.
-func (m *MockalarmStatusGetter) AlarmStatus(alarms []string) ([]cloudwatch.AlarmStatus, error) {
+// AlarmStatuses mocks base method.
+func (m *MockalarmStatusGetter) AlarmStatuses(arg0 ...cloudwatch.DescribeAlarmOpts) ([]cloudwatch.AlarmStatus, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AlarmStatus", alarms)
+	varargs := []interface{}{}
+	for _, a := range arg0 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "AlarmStatuses", varargs...)
 	ret0, _ := ret[0].([]cloudwatch.AlarmStatus)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// AlarmStatus indicates an expected call of AlarmStatus.
-func (mr *MockalarmStatusGetterMockRecorder) AlarmStatus(alarms interface{}) *gomock.Call {
+// AlarmStatuses indicates an expected call of AlarmStatuses.
+func (mr *MockalarmStatusGetterMockRecorder) AlarmStatuses(arg0 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AlarmStatus", reflect.TypeOf((*MockalarmStatusGetter)(nil).AlarmStatus), alarms)
-}
-
-// AlarmStatusesFromNamePrefix mocks base method.
-func (m *MockalarmStatusGetter) AlarmStatusesFromNamePrefix(prefix string) ([]cloudwatch.AlarmStatus, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AlarmStatusesFromNamePrefix", prefix)
-	ret0, _ := ret[0].([]cloudwatch.AlarmStatus)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// AlarmStatusesFromNamePrefix indicates an expected call of AlarmStatusesFromNamePrefix.
-func (mr *MockalarmStatusGetterMockRecorder) AlarmStatusesFromNamePrefix(prefix interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AlarmStatusesFromNamePrefix", reflect.TypeOf((*MockalarmStatusGetter)(nil).AlarmStatusesFromNamePrefix), prefix)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AlarmStatuses", reflect.TypeOf((*MockalarmStatusGetter)(nil).AlarmStatuses), arg0...)
 }
 
 // AlarmsWithTags mocks base method.

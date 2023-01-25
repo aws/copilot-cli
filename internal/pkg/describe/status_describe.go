@@ -30,8 +30,7 @@ type targetHealthGetter interface {
 
 type alarmStatusGetter interface {
 	AlarmsWithTags(tags map[string]string) ([]cloudwatch.AlarmStatus, error)
-	AlarmStatus(alarms []string) ([]cloudwatch.AlarmStatus, error)
-	AlarmStatusesFromNamePrefix(prefix string) ([]cloudwatch.AlarmStatus, error)
+	AlarmStatuses(...cloudwatch.DescribeAlarmOpts) ([]cloudwatch.AlarmStatus, error)
 }
 
 type logGetter interface {
@@ -151,8 +150,8 @@ func (s *ecsStatusDescriber) Describe() (HumanJSONStringer, error) {
 		}
 		stoppedTaskStatus = append(stoppedTaskStatus, *status)
 	}
-
-	var alarms []cloudwatch.AlarmStatus
+	// Using a map then converting it to a slice to avoid duplication.
+	alarms := make(map[string]cloudwatch.AlarmStatus)
 	taggedAlarms, err := s.cwSvcGetter.AlarmsWithTags(map[string]string{
 		deploy.AppTagKey:     s.app,
 		deploy.EnvTagKey:     s.env,
@@ -161,18 +160,29 @@ func (s *ecsStatusDescriber) Describe() (HumanJSONStringer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get tagged CloudWatch alarms: %w", err)
 	}
-	alarms = append(alarms, taggedAlarms...)
+	for _, alarm := range taggedAlarms {
+		alarms[alarm.Name] = alarm
+	}
 	autoscalingAlarms, err := s.ecsServiceAutoscalingAlarms(svcDesc.ClusterName, svcDesc.Name)
 	if err != nil {
 		return nil, err
 	}
-	alarms = append(alarms, autoscalingAlarms...)
+	for _, alarm := range autoscalingAlarms {
+		alarms[alarm.Name] = alarm
+	}
 	rollbackAlarms, err := s.ecsServiceRollbackAlarms(s.app, s.env, s.svc)
 	if err != nil {
 		return nil, err
 	}
-	alarms = append(alarms, rollbackAlarms...)
-
+	for _, alarm := range rollbackAlarms {
+		alarms[alarm.Name] = alarm
+	}
+	alarmList := make([]cloudwatch.AlarmStatus, len(alarms))
+	i := 0
+	for _, v := range alarms {
+		alarmList[i] = v
+		i++
+	}
 	var tasksTargetHealth []taskTargetHealth
 	targetGroupsARN := service.TargetGroups()
 	for _, groupARN := range targetGroupsARN {
@@ -192,7 +202,7 @@ func (s *ecsStatusDescriber) Describe() (HumanJSONStringer, error) {
 	return &ecsServiceStatus{
 		Service:                  service.ServiceStatus(),
 		DesiredRunningTasks:      taskStatus,
-		Alarms:                   alarms,
+		Alarms:                   alarmList,
 		StoppedTasks:             stoppedTaskStatus,
 		TargetHealthDescriptions: tasksTargetHealth,
 	}, nil
@@ -203,7 +213,7 @@ func (s *ecsStatusDescriber) ecsServiceAutoscalingAlarms(cluster, service string
 	if err != nil {
 		return nil, fmt.Errorf("retrieve auto scaling alarm names for ECS service %s/%s: %w", cluster, service, err)
 	}
-	alarms, err := s.cwSvcGetter.AlarmStatus(alarmNames)
+	alarms, err := s.cwSvcGetter.AlarmStatuses(cloudwatch.WithNames(alarmNames))
 	if err != nil {
 		return nil, fmt.Errorf("get auto scaling CloudWatch alarms: %w", err)
 	}
@@ -215,7 +225,7 @@ func (s *ecsStatusDescriber) ecsServiceAutoscalingAlarms(cluster, service string
 
 func (s *ecsStatusDescriber) ecsServiceRollbackAlarms(app, env, svc string) ([]cloudwatch.AlarmStatus, error) {
 	// This will not fetch imported alarms, as we filter by the Copilot-generated prefix of alarm names. This will also not fetch Copilot-generated alarms with names exceeding 255 characters, due to the balanced truncating of `TruncateAlarmName`.
-	alarms, err := s.cwSvcGetter.AlarmStatusesFromNamePrefix(fmt.Sprintf("%s-%s-%s-CopilotRollback", app, env, svc))
+	alarms, err := s.cwSvcGetter.AlarmStatuses(cloudwatch.WithPrefix(fmt.Sprintf("%s-%s-%s-CopilotRollback", app, env, svc)))
 	if err != nil {
 		return nil, fmt.Errorf("get Copilot-created CloudWatch alarms: %w", err)
 	}

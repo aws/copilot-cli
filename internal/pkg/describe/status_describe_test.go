@@ -148,7 +148,7 @@ func TestServiceStatus_Describe(t *testing.T) {
 					m.ecsServiceGetter.EXPECT().Service(mockCluster, mockService).Return(&awsecs.Service{}, nil),
 					m.alarmStatusGetter.EXPECT().AlarmsWithTags(gomock.Any()).Return([]cloudwatch.AlarmStatus{}, nil),
 					m.aas.EXPECT().ECSServiceAlarmNames(mockCluster, mockService).Return([]string{"mockAlarmName"}, nil),
-					m.alarmStatusGetter.EXPECT().AlarmStatus([]string{"mockAlarmName"}).Return(nil, mockError),
+					m.alarmStatusGetter.EXPECT().AlarmStatuses(gomock.Any()).Return(nil, mockError),
 				)
 			},
 
@@ -161,8 +161,8 @@ func TestServiceStatus_Describe(t *testing.T) {
 					m.ecsServiceGetter.EXPECT().Service(mockCluster, mockService).Return(&awsecs.Service{}, nil),
 					m.alarmStatusGetter.EXPECT().AlarmsWithTags(gomock.Any()).Return([]cloudwatch.AlarmStatus{}, nil),
 					m.aas.EXPECT().ECSServiceAlarmNames(mockCluster, mockService).Return([]string{"mockAlarmName"}, nil),
-					m.alarmStatusGetter.EXPECT().AlarmStatus([]string{"mockAlarmName"}).Return(nil, nil),
-					m.alarmStatusGetter.EXPECT().AlarmStatusesFromNamePrefix("mockApp-mockEnv-mockSvc-CopilotRollback").Return(nil, mockError),
+					m.alarmStatusGetter.EXPECT().AlarmStatuses(gomock.Any()).Return(nil, nil),
+					m.alarmStatusGetter.EXPECT().AlarmStatuses(gomock.Any()).Return(nil, mockError),
 				)
 			},
 			wantedError: fmt.Errorf("get Copilot-created CloudWatch alarms: some error"),
@@ -185,8 +185,8 @@ func TestServiceStatus_Describe(t *testing.T) {
 					}, nil),
 					m.alarmStatusGetter.EXPECT().AlarmsWithTags(gomock.Any()).Return([]cloudwatch.AlarmStatus{}, nil),
 					m.aas.EXPECT().ECSServiceAlarmNames(gomock.Any(), gomock.Any()).Return([]string{}, nil),
-					m.alarmStatusGetter.EXPECT().AlarmStatus(gomock.Any()).Return([]cloudwatch.AlarmStatus{}, nil),
-					m.alarmStatusGetter.EXPECT().AlarmStatusesFromNamePrefix("mockApp-mockEnv-mockSvc-CopilotRollback").Return(nil, nil),
+					m.alarmStatusGetter.EXPECT().AlarmStatuses(gomock.Any()).Return(nil, nil),
+					m.alarmStatusGetter.EXPECT().AlarmStatuses(gomock.Any()).Return(nil, nil),
 					m.targetHealthGetter.EXPECT().TargetsHealth("group-1").Return(nil, errors.New("some error")),
 				)
 			},
@@ -199,7 +199,7 @@ func TestServiceStatus_Describe(t *testing.T) {
 					},
 					LastDeploymentAt: startTime,
 				},
-				Alarms: nil,
+				Alarms: []cloudwatch.AlarmStatus{},
 				DesiredRunningTasks: []awsecs.TaskStatus{
 					{
 						ID:        "1234567890123456789",
@@ -273,8 +273,8 @@ func TestServiceStatus_Describe(t *testing.T) {
 						"copilot-service":     "mockSvc",
 					}).Return([]cloudwatch.AlarmStatus{}, nil),
 					m.aas.EXPECT().ECSServiceAlarmNames(mockCluster, mockService).Return([]string{}, nil),
-					m.alarmStatusGetter.EXPECT().AlarmStatus([]string{}).Return([]cloudwatch.AlarmStatus{}, nil),
-					m.alarmStatusGetter.EXPECT().AlarmStatusesFromNamePrefix("mockApp-mockEnv-mockSvc-CopilotRollback").Return(nil, nil),
+					m.alarmStatusGetter.EXPECT().AlarmStatuses(gomock.Any()).Return([]cloudwatch.AlarmStatus{}, nil),
+					m.alarmStatusGetter.EXPECT().AlarmStatuses(gomock.Any()).Return(nil, nil),
 					m.targetHealthGetter.EXPECT().TargetsHealth("group-1").Return([]*elbv2.TargetHealth{
 						{
 							Target: &elbv2api.TargetDescription{
@@ -329,7 +329,7 @@ func TestServiceStatus_Describe(t *testing.T) {
 					LastDeploymentAt: startTime,
 					TaskDefinition:   "mockTaskDefinition",
 				},
-				Alarms: nil,
+				Alarms: []cloudwatch.AlarmStatus{},
 				DesiredRunningTasks: []awsecs.TaskStatus{
 					{
 						ID: "task-with-private-ip-being-target",
@@ -429,7 +429,7 @@ func TestServiceStatus_Describe(t *testing.T) {
 						},
 					}, nil),
 					m.aas.EXPECT().ECSServiceAlarmNames(mockCluster, mockService).Return([]string{"mockAlarm2"}, nil),
-					m.alarmStatusGetter.EXPECT().AlarmStatus([]string{"mockAlarm2"}).Return([]cloudwatch.AlarmStatus{
+					m.alarmStatusGetter.EXPECT().AlarmStatuses(gomock.Any()).Return([]cloudwatch.AlarmStatus{
 						{
 							Arn:          "mockAlarmArn2",
 							Name:         "mockAlarm2",
@@ -439,7 +439,7 @@ func TestServiceStatus_Describe(t *testing.T) {
 							UpdatedTimes: updateTime,
 						},
 					}, nil),
-					m.alarmStatusGetter.EXPECT().AlarmStatusesFromNamePrefix("mockApp-mockEnv-mockSvc-CopilotRollback").Return(
+					m.alarmStatusGetter.EXPECT().AlarmStatuses(gomock.Any()).Return(
 						[]cloudwatch.AlarmStatus{
 							{
 								Arn:          "mockAlarmArn3",
