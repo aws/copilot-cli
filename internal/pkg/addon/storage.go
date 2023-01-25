@@ -118,8 +118,8 @@ type DynamoDBProps struct {
 func NewDDBTemplate(input *DynamoDBProps) *DynamoDBTemplate {
 	return &DynamoDBTemplate{
 		DynamoDBProps: *input,
-
-		parser: template.New(),
+		parser:        template.New(),
+		tmplPath:      dynamoDbTemplatePath,
 	}
 }
 
@@ -127,13 +127,13 @@ func NewDDBTemplate(input *DynamoDBProps) *DynamoDBTemplate {
 // Implements the encoding.BinaryMarshaler interface.
 type DynamoDBTemplate struct {
 	DynamoDBProps
-
-	parser template.Parser
+	parser   template.Parser
+	tmplPath string
 }
 
 // MarshalBinary serializes the content of the template into binary.
 func (d *DynamoDBTemplate) MarshalBinary() ([]byte, error) {
-	content, err := d.parser.Parse(dynamoDbTemplatePath, *d, template.WithFuncs(storageTemplateFunctions))
+	content, err := d.parser.Parse(d.tmplPath, *d, template.WithFuncs(storageTemplateFunctions))
 	if err != nil {
 		return nil, err
 	}

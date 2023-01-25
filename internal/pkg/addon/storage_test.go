@@ -27,7 +27,7 @@ func TestDynamoDBTemplate_MarshalBinary(t *testing.T) {
 			mockDependencies: func(ctrl *gomock.Controller, ddb *DynamoDBTemplate) {
 				m := mocks.NewMockParser(ctrl)
 				ddb.parser = m
-				m.EXPECT().Parse(dynamoDbTemplatePath, *ddb, gomock.Any()).Return(nil, errors.New("some error"))
+				m.EXPECT().Parse("mockPath", *ddb, gomock.Any()).Return(nil, errors.New("some error"))
 			},
 
 			wantedError: errors.New("some error"),
@@ -36,7 +36,7 @@ func TestDynamoDBTemplate_MarshalBinary(t *testing.T) {
 			mockDependencies: func(ctrl *gomock.Controller, ddb *DynamoDBTemplate) {
 				m := mocks.NewMockParser(ctrl)
 				ddb.parser = m
-				m.EXPECT().Parse(dynamoDbTemplatePath, *ddb, gomock.Any()).Return(&template.Content{Buffer: bytes.NewBufferString("hello")}, nil)
+				m.EXPECT().Parse("mockPath", *ddb, gomock.Any()).Return(&template.Content{Buffer: bytes.NewBufferString("hello")}, nil)
 
 			},
 
@@ -49,7 +49,9 @@ func TestDynamoDBTemplate_MarshalBinary(t *testing.T) {
 			// GIVEN
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			addon := &DynamoDBTemplate{}
+			addon := &DynamoDBTemplate{
+				tmplPath: "mockPath",
+			}
 			tc.mockDependencies(ctrl, addon)
 
 			// WHEN
