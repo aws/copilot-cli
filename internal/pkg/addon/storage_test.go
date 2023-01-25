@@ -138,7 +138,7 @@ func TestRDSTemplate_MarshalBinary(t *testing.T) {
 			mockDependencies: func(ctrl *gomock.Controller, r *RDSTemplate) {
 				m := mocks.NewMockParser(ctrl)
 				r.parser = m
-				m.EXPECT().Parse(gomock.Eq(rdsTemplatePath), *r, gomock.Any()).
+				m.EXPECT().Parse(gomock.Eq("mockPath"), *r, gomock.Any()).
 					Return(&template.Content{Buffer: bytes.NewBufferString("psql")}, nil)
 
 			},
@@ -150,7 +150,7 @@ func TestRDSTemplate_MarshalBinary(t *testing.T) {
 			mockDependencies: func(ctrl *gomock.Controller, r *RDSTemplate) {
 				m := mocks.NewMockParser(ctrl)
 				r.parser = m
-				m.EXPECT().Parse(gomock.Eq(rdsTemplatePath), *r, gomock.Any()).
+				m.EXPECT().Parse(gomock.Eq("mockPath"), *r, gomock.Any()).
 					Return(&template.Content{Buffer: bytes.NewBufferString("mysql")}, nil)
 
 			},
@@ -163,7 +163,7 @@ func TestRDSTemplate_MarshalBinary(t *testing.T) {
 			mockDependencies: func(ctrl *gomock.Controller, r *RDSTemplate) {
 				m := mocks.NewMockParser(ctrl)
 				r.parser = m
-				m.EXPECT().Parse(gomock.Eq(rdsRDWSTemplatePath), *r, gomock.Any()).
+				m.EXPECT().Parse(gomock.Eq("mockPath"), *r, gomock.Any()).
 					Return(&template.Content{Buffer: bytes.NewBufferString("mysql")}, nil)
 			},
 			wantedBinary: []byte("mysql"),
@@ -174,7 +174,7 @@ func TestRDSTemplate_MarshalBinary(t *testing.T) {
 			mockDependencies: func(ctrl *gomock.Controller, r *RDSTemplate) {
 				m := mocks.NewMockParser(ctrl)
 				r.parser = m
-				m.EXPECT().Parse(gomock.Eq(rdsV2TemplatePath), *r, gomock.Any()).
+				m.EXPECT().Parse(gomock.Eq("mockPath"), *r, gomock.Any()).
 					Return(&template.Content{Buffer: bytes.NewBufferString("psql")}, nil)
 
 			},
@@ -186,7 +186,7 @@ func TestRDSTemplate_MarshalBinary(t *testing.T) {
 			mockDependencies: func(ctrl *gomock.Controller, r *RDSTemplate) {
 				m := mocks.NewMockParser(ctrl)
 				r.parser = m
-				m.EXPECT().Parse(gomock.Eq(rdsV2TemplatePath), *r, gomock.Any()).
+				m.EXPECT().Parse(gomock.Eq("mockPath"), *r, gomock.Any()).
 					Return(&template.Content{Buffer: bytes.NewBufferString("mysql")}, nil)
 
 			},
@@ -199,7 +199,7 @@ func TestRDSTemplate_MarshalBinary(t *testing.T) {
 			mockDependencies: func(ctrl *gomock.Controller, r *RDSTemplate) {
 				m := mocks.NewMockParser(ctrl)
 				r.parser = m
-				m.EXPECT().Parse(gomock.Eq(rdsRDWSV2TemplatePath), *r, gomock.Any()).
+				m.EXPECT().Parse(gomock.Eq("mockPath"), *r, gomock.Any()).
 					Return(&template.Content{Buffer: bytes.NewBufferString("mysql")}, nil)
 			},
 			wantedBinary: []byte("mysql"),
@@ -213,10 +213,10 @@ func TestRDSTemplate_MarshalBinary(t *testing.T) {
 			defer ctrl.Finish()
 			addon := &RDSTemplate{
 				RDSProps: RDSProps{
-					WorkloadType:            tc.workloadType,
-					auroraServerlessVersion: tc.version,
-					Engine:                  tc.engine,
+					WorkloadType: tc.workloadType,
+					Engine:       tc.engine,
 				},
+				tmplPath: "mockPath",
 			}
 			tc.mockDependencies(ctrl, addon)
 
