@@ -33,7 +33,7 @@ if you are using a Network Load Balancer.
 
 For example, `https://kudo.test.coolapp.example.aws` or `kudo-nlb.test.coolapp.example.aws:443`.
 
-**Customized domain alias**
+#### Customized domain alias
 
 If you don't like the default domain name Copilot assigns to your service, you can set a custom [alias](https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/resource-record-sets-choosing-alias-non-alias.html) for your service by editing your [manifest's](../manifest/lb-web-service.en.md#http-alias) `alias` section.
 The following snippet sets an alias to your service.
@@ -52,13 +52,16 @@ nlb:
   alias: example-v1.aws
 ```
 
-However, since we [delegate responsibility for the subdomain to Route 53](https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/CreatingNewSubdomain.html#UpdateDNSParentDomain), the alias you specify must be in one of these three hosted zones:
+However, since we [delegate responsibility for the subdomain to Route 53](https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/CreatingNewSubdomain.html#UpdateDNSParentDomain), the alias you specify must follow one of the following Copilot-enabled patterns:
 
-- root: `${DomainName}`
-- app: `${AppName}.${DomainName}`
-- env: `${EnvName}.${AppName}.${DomainName}`
+- `{domain}`, such as `example.aws`
+- `{subdomain}.{domain}`, such as `v1.example.aws`
+- `{appName}.{domain}`, such as `coolapp.example.aws`
+- `{subdomain}.{appName}.{domain}`, such as `v1.coolapp.example.aws`
+- `{envName}.{appName}.{domain}`, such as `test.coolapp.example.aws`
+- `{subdomain}.{envName}.{appName}.{domain}`, such as `v1.test.coolapp.example.aws`
 
-**What happens under the hood?**
+#### What happens under the hood?
 
 Under the hood, Copilot
 
@@ -70,15 +73,24 @@ Under the hood, Copilot
     - Your network load balancer's TLS listener, if the alias is for `nlb.alias` and TLS termination is enabled.
 * creates an optional A record for your alias
 
-**What does it look like?**
+#### What does it look like?
 
 <iframe width="560" height="315" src="https://www.youtube.com/embed/Oyr-n59mVjI" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 
 ### Use domain in your existing validated certificates
-If you own a domain outside of Route53 or for compliance reasons want to use an `alias` from your existing ACM certificates, you can specify the `--import-cert-arns` flag when creating the environment to import validated ACM certificates that include the alias. For example:
+If you'd like more granular control over the generated ACM certificate or the [default `alias` options](#customized-domain-alias) aren't flexible enough, you can specify the `--import-cert-arns` flag when creating the environment to import validated ACM certificates that include the alias. For example:
 
-```
+```console
 $ copilot env init --import-cert-arns arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789012
+```
+Alternatively, you can always add the certificate later by modifying the [environment manifest](../manifest/environment.en.md):
+
+```yaml
+type: Environment
+http:
+  public:
+    certificates:
+      - arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789012
 ```
 
 Then, in your service's manifest, you can either:
@@ -91,7 +103,7 @@ http:
   alias: example.aws
   hosted_zone: Z0873220N255IR3MTNR4
 ```
-2. Deploy the service without the `hosted_zone` field, then manually add the DNS name of the Application Load Balancer (ALB) created in that environment as an A record where your alias domain is hosted.
+2. Alternatively, deploy the service without the `hosted_zone` field, then manually add the DNS name of the Application Load Balancer (ALB) created in that environment as an A record where your alias domain is hosted.
 
 We have [an example](../../blogs/release-v118.en.md#certificate-import) of Option 2 in our blog posts.
 
