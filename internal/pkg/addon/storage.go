@@ -27,6 +27,8 @@ const (
 	envS3AccessPolicyTemplatePath       = "addons/s3/env/access_policy.yml"
 	envDynamoDBTemplatePath             = "addons/ddb/env/cf.yml"
 	envDynamoDBAccessPolicyTemplatePath = "addons/ddb/env/access_policy.yml"
+	envRDSTemplatePath                  = "addons/aurora/env/serverlessv2.yml"
+	envRDSForRDWSTemplatePath           = "addons/aurora/env/rdws/serverlessv2.yml"
 )
 
 const (
@@ -271,6 +273,19 @@ func NewServerlessV2Template(input RDSProps) *RDSTemplate {
 	tmplPath := rdsV2TemplatePath
 	if input.WorkloadType == manifest.RequestDrivenWebServiceType {
 		tmplPath = rdsRDWSV2TemplatePath
+	}
+	return &RDSTemplate{
+		RDSProps: input,
+		parser:   template.New(),
+		tmplPath: tmplPath,
+	}
+}
+
+// NewEnvServerlessTemplate creates a marshaler for an environment-level Aurora Serverless v2 addon.
+func NewEnvServerlessTemplate(input RDSProps) *RDSTemplate {
+	tmplPath := envRDSTemplatePath
+	if input.WorkloadType == manifest.RequestDrivenWebServiceType {
+		tmplPath = envRDSForRDWSTemplatePath
 	}
 	return &RDSTemplate{
 		RDSProps: input,
