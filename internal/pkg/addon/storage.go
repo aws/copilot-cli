@@ -28,8 +28,10 @@ const (
 	envDynamoDBTemplatePath             = "addons/ddb/env/cf.yml"
 	envDynamoDBAccessPolicyTemplatePath = "addons/ddb/env/access_policy.yml"
 	envRDSTemplatePath                  = "addons/aurora/env/serverlessv2.yml"
+	envRDSParamsPath                    = "addons/aurora/env/addons.parameters.yml"
 	envRDSForRDWSTemplatePath           = "addons/aurora/env/rdws/serverlessv2.yml"
 	envRDSIngressForRDWSTemplatePath    = "addons/aurora/env/rdws/ingress.yml"
+	envRDSIngressForRDWSParamsPath      = "addons/aurora/env/rdws/ingress.addons.parameters.yml"
 )
 
 const (
@@ -327,6 +329,23 @@ func NewRDSParams() *RDSParams {
 	return &RDSParams{
 		parser:   template.New(),
 		tmplPath: rdsRDWSParamsPath,
+	}
+}
+
+// NewEnvRDSParams creates a parameter marshaler for an environment-level RDS addon.
+func NewEnvRDSParams() *RDSParams {
+	return &RDSParams{
+		parser:   template.New(),
+		tmplPath: envRDSParamsPath,
+	}
+}
+
+// NewEnvRDSIngressParams creates a parameter marshaler for the ingress attached to an RDWS
+// for permissions into an environment-level RDS addon.
+func NewEnvRDSIngressParams() *RDSParams {
+	return &RDSParams{
+		parser:   template.New(),
+		tmplPath: envRDSIngressForRDWSParamsPath,
 	}
 }
 
