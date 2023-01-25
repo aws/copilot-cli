@@ -249,7 +249,8 @@ func TestRDSParams_MarshalBinary(t *testing.T) {
 			mockDependencies: func(ctrl *gomock.Controller, r *RDSParams) {
 				m := mocks.NewMockParser(ctrl)
 				r.parser = m
-				m.EXPECT().Parse(gomock.Eq(rdsRDWSParamsPath), *r, gomock.Any()).
+				r.tmplPath = "mockPath"
+				m.EXPECT().Parse(gomock.Eq("mockPath"), *r, gomock.Any()).
 					Return(&template.Content{Buffer: bytes.NewBufferString("bloop")}, nil)
 
 			},

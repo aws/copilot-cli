@@ -325,18 +325,20 @@ func (r *RDSTemplate) MarshalBinary() ([]byte, error) {
 // NewRDSParams creates a new RDS parameters marshaler.
 func NewRDSParams() *RDSParams {
 	return &RDSParams{
-		parser: template.New(),
+		parser:   template.New(),
+		tmplPath: rdsRDWSParamsPath,
 	}
 }
 
 // RDSParams represents the addons.parameters.yml file for a RDS Aurora Serverless cluster.
 type RDSParams struct {
-	parser template.Parser
+	parser   template.Parser
+	tmplPath string
 }
 
 // MarshalBinary serializes the content of the params file into binary.
 func (r *RDSParams) MarshalBinary() ([]byte, error) {
-	content, err := r.parser.Parse(rdsRDWSParamsPath, *r, template.WithFuncs(storageTemplateFunctions))
+	content, err := r.parser.Parse(r.tmplPath, *r, template.WithFuncs(storageTemplateFunctions))
 	if err != nil {
 		return nil, err
 	}
