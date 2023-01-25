@@ -23,8 +23,10 @@ const (
 	rdsRDWSV2TemplatePath = "addons/aurora/rdws/serverlessv2.yml"
 	rdsRDWSParamsPath     = "addons/aurora/rdws/addons.parameters.yml"
 
-	envS3TemplatePath             = "addons/s3/env/cf.yml"
-	envS3AccessPolicyTemplatePath = "addons/s3/env/access_policy.yml"
+	envS3TemplatePath                   = "addons/s3/env/cf.yml"
+	envS3AccessPolicyTemplatePath       = "addons/s3/env/access_policy.yml"
+	envDynamoDBTemplatePath             = "addons/ddb/env/cf.yml"
+	envDynamoDBAccessPolicyTemplatePath = "addons/ddb/env/access_policy.yml"
 )
 
 const (
@@ -120,6 +122,25 @@ func NewDDBTemplate(input *DynamoDBProps) *DynamoDBTemplate {
 		DynamoDBProps: *input,
 		parser:        template.New(),
 		tmplPath:      dynamoDbTemplatePath,
+	}
+}
+
+// NewEnvDDBTemplate creates a marshaller for an environment-level DynamoDB addon.
+func NewEnvDDBTemplate(input *DynamoDBProps) *DynamoDBTemplate {
+	return &DynamoDBTemplate{
+		DynamoDBProps: *input,
+		parser:        template.New(),
+		tmplPath:      envDynamoDBTemplatePath,
+	}
+}
+
+// NewEnvDDBAccessPolicyTemplate creates a marshaller for the access policy attached to a workload
+// for permissions into an environment-level DynamoDB addon.
+func NewEnvDDBAccessPolicyTemplate(input *DynamoDBProps) *DynamoDBTemplate {
+	return &DynamoDBTemplate{
+		DynamoDBProps: *input,
+		parser:        template.New(),
+		tmplPath:      envDynamoDBAccessPolicyTemplatePath,
 	}
 }
 
