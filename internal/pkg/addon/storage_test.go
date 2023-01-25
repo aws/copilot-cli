@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/template/mocks"
 	"github.com/golang/mock/gomock"
@@ -540,4 +541,100 @@ func TestBuildLocalSecondaryIndex(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestConstructors(t *testing.T) {
+	t.Run("marshaler for workload-level S3", func(t *testing.T) {
+		out := NewWorkloadS3Template(&S3Props{})
+		require.Equal(t, s3TemplatePath, out.tmplPath)
+	})
+
+	t.Run("marshaler for env-level S3", func(t *testing.T) {
+		out := NewEnvS3Template(&S3Props{})
+		require.Equal(t, envS3TemplatePath, out.tmplPath)
+	})
+
+	t.Run("marshaler for the access policy of an env-level S3", func(t *testing.T) {
+		out := NewEnvS3AccessPolicyTemplate(&S3Props{})
+		require.Equal(t, envS3AccessPolicyTemplatePath, out.tmplPath)
+	})
+
+	t.Run("marshaler for workload-level ddb", func(t *testing.T) {
+		out := NewWorkloadDDBTemplate(&DynamoDBProps{})
+		require.Equal(t, dynamoDbTemplatePath, out.tmplPath)
+	})
+
+	t.Run("marshaler for env-level ddb", func(t *testing.T) {
+		out := NewEnvDDBTemplate(&DynamoDBProps{})
+		require.Equal(t, envDynamoDBTemplatePath, out.tmplPath)
+	})
+
+	t.Run("marshaler for the access policy of an env-level ddb", func(t *testing.T) {
+		out := NewEnvDDBAccessPolicyTemplate(&DynamoDBProps{})
+		require.Equal(t, envDynamoDBAccessPolicyTemplatePath, out.tmplPath)
+	})
+
+	t.Run("marshaler for non-RDWS workload-level aurora serverless v1", func(t *testing.T) {
+		out := NewWorkloadServerlessV1Template(RDSProps{
+			WorkloadType: manifest.LoadBalancedWebServiceType,
+		})
+		require.Equal(t, rdsTemplatePath, out.tmplPath)
+	})
+
+	t.Run("marshaler for non-RDWS workload-level aurora serverless v2", func(t *testing.T) {
+		out := NewWorkloadServerlessV2Template(RDSProps{
+			WorkloadType: manifest.LoadBalancedWebServiceType,
+		})
+		require.Equal(t, rdsV2TemplatePath, out.tmplPath)
+	})
+
+	t.Run("parameter marshaler for RDWS workload-level aurora serverless v1/v2", func(t *testing.T) {
+		out := NewRDSParams()
+		require.Equal(t, rdsRDWSParamsPath, out.tmplPath)
+	})
+
+	t.Run("marshaler for RDWS workload-level aurora serverless v1", func(t *testing.T) {
+		out := NewWorkloadServerlessV1Template(RDSProps{
+			WorkloadType: manifest.RequestDrivenWebServiceType,
+		})
+		require.Equal(t, rdsRDWSTemplatePath, out.tmplPath)
+	})
+
+	t.Run("marshaler for RDWS workload-level aurora serverless v2", func(t *testing.T) {
+		out := NewWorkloadServerlessV2Template(RDSProps{
+			WorkloadType: manifest.RequestDrivenWebServiceType,
+		})
+		require.Equal(t, rdsRDWSV2TemplatePath, out.tmplPath)
+	})
+
+	t.Run("parameter marshaler for env-level aurora accessible by a workload", func(t *testing.T) {
+		out := NewEnvRDSParams()
+		require.Equal(t, envRDSParamsPath, out.tmplPath)
+	})
+
+	t.Run("marshaler for env-level aurora accessible by a non-RDWS", func(t *testing.T) {
+		out := NewEnvServerlessTemplate(RDSProps{
+			WorkloadType: manifest.LoadBalancedWebServiceType,
+		})
+		require.Equal(t, envRDSTemplatePath, out.tmplPath)
+	})
+
+	t.Run("marshaler for env-level aurora accessible by an RDWS", func(t *testing.T) {
+		out := NewEnvServerlessTemplate(RDSProps{
+			WorkloadType: manifest.RequestDrivenWebServiceType,
+		})
+		require.Equal(t, envRDSForRDWSTemplatePath, out.tmplPath)
+	})
+
+	t.Run("parameter marshaler for the ingress attached to an RDWS for an env-level aurora", func(t *testing.T) {
+		out := NewEnvRDSIngressParams()
+		require.Equal(t, envRDSIngressForRDWSParamsPath, out.tmplPath)
+	})
+
+	t.Run("marshaler for the ingress attached to an RDWS for an env-level aurora", func(t *testing.T) {
+		out := NewEnvServerlessRDWSIngressTemplate(RDSProps{
+			WorkloadType: manifest.RequestDrivenWebServiceType,
+		})
+		require.Equal(t, envRDSIngressForRDWSTemplatePath, out.tmplPath)
+	})
 }
