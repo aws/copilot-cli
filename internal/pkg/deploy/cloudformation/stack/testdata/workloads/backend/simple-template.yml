@@ -35,6 +35,7 @@ Parameters:
   TargetPort:
     Type: Number
 Conditions:
+  IsGovCloud: !Equals [!Ref "AWS::Partition", "aws-us-gov"]
   HasAddons: !Not [!Equals [!Ref AddonsTemplateURL, ""]]
   HasEnvFile: !Not [!Equals [!Ref EnvFileARN, ""]]
   ExposePort: !Not [!Equals [!Ref TargetPort, -1]]

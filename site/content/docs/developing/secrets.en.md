@@ -11,9 +11,6 @@ or in [AWS Secrets Manager](https://docs.aws.amazon.com/secretsmanager/latest/us
 
 You can easily create a secret in SSM as a `SecureString` using [`copilot secret init`](../commands/secret-init.en.md)! 
 
-!!! attention
-    Secrets are not supported for Request-Driven Web Services.
-
 ## Bring Your Own Secrets
 
 ### In SSM

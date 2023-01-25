@@ -8,9 +8,6 @@ $ copilot secret init
 
 A secret can have different values in each of your existing environments, and is accessible by your services or jobs from the same application and environment.
 
-!!! attention 
-    Secrets are not supported for Request-Driven Web Services.
-
 ## What are the flags?
 ```
   -a, --app string              Name of the application.

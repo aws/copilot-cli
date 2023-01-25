@@ -45,6 +45,7 @@ Parameters:
     Type: String
     Default: false
 Conditions:
+  IsGovCloud: !Equals [!Ref "AWS::Partition", "aws-us-gov"]
   IsDefaultRootPath: !Equals [!Ref RulePath, "/"]
   HasAssociatedDomain: !Equals [!Ref DNSDelegated, true]
   HasAddons: !Not [!Equals [!Ref AddonsTemplateURL, ""]]
@@ -432,8 +433,10 @@ Resources: # If a bucket URL is specified, that means the template exists.
         MaximumPercent: 200
       PropagateTags: SERVICE
       LaunchType: FARGATE
-      ServiceConnectConfiguration:
-        Enabled: False
+      ServiceConnectConfiguration: !If
+        - IsGovCloud
+        - !Ref AWS::NoValue
+        - Enabled: False
       NetworkConfiguration:
         AwsvpcConfiguration:
           AssignPublicIp: ENABLED
