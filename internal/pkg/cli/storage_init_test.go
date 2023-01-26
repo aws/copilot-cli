@@ -24,6 +24,7 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 		inStorageType       string
 		inSvcName           string
 		inStorageName       string
+		inLifecycle         string
 		inPartition         string
 		inSort              string
 		inLSISorts          []string
@@ -66,6 +67,13 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 			inSvcName:     "frontend",
 			inStorageName: "my-bucket",
 			wantedErr:     errors.New("retrieve local workload names: wanted err"),
+		},
+		"bad lifecycle option": {
+			mockWs:      func(m *mocks.MockwsAddonManager) {},
+			mockStore:   func(m *mocks.Mockstore) {},
+			inAppName:   "bowie",
+			inLifecycle: "weird input",
+			wantedErr:   errors.New(`invalid lifecycle; must be one of "workload" or "environment"`),
 		},
 		"successfully validates valid s3 bucket name": {
 			mockWs:        func(m *mocks.MockwsAddonManager) {},
@@ -211,6 +219,7 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 					storageType:             tc.inStorageType,
 					storageName:             tc.inStorageName,
 					workloadName:            tc.inSvcName,
+					lifecycle:               tc.inLifecycle,
 					partitionKey:            tc.inPartition,
 					sortKey:                 tc.inSort,
 					lsiSorts:                tc.inLSISorts,
