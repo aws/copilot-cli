@@ -215,6 +215,7 @@ func newStorageInitOpts(vars initStorageVars) (*initStorageOpts, error) {
 	}, nil
 }
 
+// Validate returns an error if the values passed by flags are invalid.
 func (o *initStorageOpts) Validate() error {
 	if o.appName == "" {
 		return errNoAppInWorkspace
@@ -264,6 +265,37 @@ func (o *initStorageOpts) Validate() error {
 	return nil
 }
 
+func (o *initStorageOpts) validateWorkloadName() error {
+	names, err := o.ws.ListWorkloads()
+	if err != nil {
+		return fmt.Errorf("retrieve local workload names: %w", err)
+	}
+	for _, name := range names {
+		if o.workloadName == name {
+			return nil
+		}
+	}
+	return fmt.Errorf("workload %s not found in the workspace", o.workloadName)
+}
+
+func (o *initStorageOpts) validateStorageType() error {
+	if err := validateStorageType(o.storageType, validateStorageTypeOpts{
+		ws:           o.ws,
+		workloadName: o.workloadName,
+	}); err != nil {
+		if errors.Is(err, errRDWSNotConnectedToVPC) {
+			log.Errorf(`Your %s needs to be connected to a VPC in order to use a %s resource.
+You can enable VPC connectivity by updating your manifest with:
+%s
+`, manifest.RequestDrivenWebServiceType, o.storageType, color.HighlightCodeBlock(`network:
+  vpc:
+    placement: private`))
+		}
+		return err
+	}
+	return nil
+}
+
 func (o *initStorageOpts) validateDDB() error {
 	if o.partitionKey != "" {
 		if err := validateKey(o.partitionKey); err != nil {
@@ -292,6 +324,17 @@ func (o *initStorageOpts) validateDDB() error {
 	return nil
 }
 
+func (o *initStorageOpts) validateServerlessVersion() error {
+	for _, valid := range auroraServerlessVersions {
+		if o.auroraServerlessVersion == valid {
+			return nil
+		}
+	}
+	fmtErrInvalidServerlessVersion := "invalid Aurora Serverless version %s: must be one of %s"
+	return fmt.Errorf(fmtErrInvalidServerlessVersion, o.auroraServerlessVersion, prettify(auroraServerlessVersions))
+}
+
+// Ask asks for fields that are required but not passed in.
 func (o *initStorageOpts) Ask() error {
 	if err := o.askStorageWl(); err != nil {
 		return err
@@ -347,39 +390,6 @@ func (o *initStorageOpts) askStorageType() error {
 	return o.validateStorageType()
 }
 
-func (o *initStorageOpts) validateStorageType() error {
-	if err := validateStorageType(o.storageType, validateStorageTypeOpts{
-		ws:           o.ws,
-		workloadName: o.workloadName,
-	}); err != nil {
-		if errors.Is(err, errRDWSNotConnectedToVPC) {
-			log.Errorf(`Your %s needs to be connected to a VPC in order to use a %s resource.
-You can enable VPC connectivity by updating your manifest with:
-%s
-`, manifest.RequestDrivenWebServiceType, o.storageType, color.HighlightCodeBlock(`network:
-  vpc:
-    placement: private`))
-		}
-		return err
-	}
-	return nil
-}
-
-func (o *initStorageOpts) askStorageNameWithDefault(friendlyText, defaultName string, validator func(interface{}) error) error {
-	name, err := o.prompt.Get(fmt.Sprintf(fmtStorageInitNamePrompt,
-		color.HighlightUserInput(friendlyText)),
-		storageInitNameHelp,
-		validator,
-		prompt.WithFinalMessage("Storage resource name:"),
-		prompt.WithDefaultInput(defaultName))
-
-	if err != nil {
-		return fmt.Errorf("input storage name: %w", err)
-	}
-	o.storageName = name
-	return nil
-}
-
 func (o *initStorageOpts) askStorageName() error {
 	if o.storageName != "" {
 		return nil
@@ -402,6 +412,21 @@ func (o *initStorageOpts) askStorageName() error {
 		storageInitNameHelp,
 		validator,
 		prompt.WithFinalMessage("Storage resource name:"))
+	if err != nil {
+		return fmt.Errorf("input storage name: %w", err)
+	}
+	o.storageName = name
+	return nil
+}
+
+func (o *initStorageOpts) askStorageNameWithDefault(friendlyText, defaultName string, validator func(interface{}) error) error {
+	name, err := o.prompt.Get(fmt.Sprintf(fmtStorageInitNamePrompt,
+		color.HighlightUserInput(friendlyText)),
+		storageInitNameHelp,
+		validator,
+		prompt.WithFinalMessage("Storage resource name:"),
+		prompt.WithDefaultInput(defaultName))
+
 	if err != nil {
 		return fmt.Errorf("input storage name: %w", err)
 	}
@@ -561,16 +586,6 @@ func (o *initStorageOpts) askDynamoLSIConfig() error {
 	}
 }
 
-func (o *initStorageOpts) validateServerlessVersion() error {
-	for _, valid := range auroraServerlessVersions {
-		if o.auroraServerlessVersion == valid {
-			return nil
-		}
-	}
-	fmtErrInvalidServerlessVersion := "invalid Aurora Serverless version %s: must be one of %s"
-	return fmt.Errorf(fmtErrInvalidServerlessVersion, o.auroraServerlessVersion, prettify(auroraServerlessVersions))
-}
-
 func (o *initStorageOpts) askAuroraEngineType() error {
 	if o.rdsEngine != "" {
 		return nil
@@ -613,19 +628,7 @@ func (o *initStorageOpts) askAuroraInitialDBName() error {
 	return nil
 }
 
-func (o *initStorageOpts) validateWorkloadName() error {
-	names, err := o.ws.ListWorkloads()
-	if err != nil {
-		return fmt.Errorf("retrieve local workload names: %w", err)
-	}
-	for _, name := range names {
-		if o.workloadName == name {
-			return nil
-		}
-	}
-	return fmt.Errorf("workload %s not found in the workspace", o.workloadName)
-}
-
+// Execute deploys a new environment with CloudFormation and adds it to SSM.
 func (o *initStorageOpts) Execute() error {
 	if err := o.readWorkloadType(); err != nil {
 		return err
@@ -651,6 +654,19 @@ func (o *initStorageOpts) Execute() error {
 		)
 	}
 	log.Infoln()
+	return nil
+}
+
+func (o *initStorageOpts) readWorkloadType() error {
+	mft, err := o.ws.ReadWorkloadManifest(o.workloadName)
+	if err != nil {
+		return fmt.Errorf("read manifest for %s: %w", o.workloadName, err)
+	}
+	t, err := mft.WorkloadType()
+	if err != nil {
+		return fmt.Errorf("read 'type' from manifest for %s: %w", o.workloadName, err)
+	}
+	o.workloadType = t
 	return nil
 }
 
@@ -794,19 +810,7 @@ func (o *initStorageOpts) environmentNames() ([]string, error) {
 	return envNames, nil
 }
 
-func (o *initStorageOpts) readWorkloadType() error {
-	mft, err := o.ws.ReadWorkloadManifest(o.workloadName)
-	if err != nil {
-		return fmt.Errorf("read manifest for %s: %w", o.workloadName, err)
-	}
-	t, err := mft.WorkloadType()
-	if err != nil {
-		return fmt.Errorf("read 'type' from manifest for %s: %w", o.workloadName, err)
-	}
-	o.workloadType = t
-	return nil
-}
-
+// RecommendActions returns follow-up actions the user can take after successfully executing the command.
 func (o *initStorageOpts) RecommendActions() error {
 	var (
 		retrieveEnvVarCode string
