@@ -57,6 +57,7 @@ type LoadBalancedWebServiceConfig struct {
 	NLBConfig        NetworkLoadBalancerConfiguration `yaml:"nlb"`
 	DeployConfig     DeploymentConfig                 `yaml:"deployment"`
 	Observability    Observability                    `yaml:"observability"`
+	ExposedPort      []ExposedPort
 }
 
 // LoadBalancedWebServiceProps contains properties for creating a new load balanced fargate service manifest.
@@ -262,5 +263,17 @@ func (lbws *LoadBalancedWebService) ExposedPorts() ([]ExposedPort, error) {
 	}
 	exposedPorts = append(exposedPorts, out...)
 	lbws.cachedExposedPorts = sortExposedPorts(exposedPorts)
+	lbws.prepareParsedContainerConfigs(lbws.cachedExposedPorts)
 	return lbws.cachedExposedPorts, nil
+}
+
+func (s *LoadBalancedWebService) prepareParsedContainerConfigs(exposedPorts []ExposedPort) {
+	parsedMap := prepareParsedExposedPortsMap(exposedPorts)
+	for k, v := range parsedMap {
+		if s.Sidecars[k] != nil {
+			s.Sidecars[k].ExposedPorts = append(s.Sidecars[k].ExposedPorts, v...)
+		} else {
+			s.ExposedPort = append(s.ExposedPort, v...)
+		}
+	}
 }

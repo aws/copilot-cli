@@ -31,8 +31,8 @@ type ScheduledJob struct {
 	Workload           `yaml:",inline"`
 	ScheduledJobConfig `yaml:",inline"`
 	Environments       map[string]*ScheduledJobConfig `yaml:",flow"`
-
-	parser template.Parser
+	cachedExposedPorts []ExposedPort
+	parser             template.Parser
 }
 
 func (s *ScheduledJob) subnets() *SubnetListOrArgs {
@@ -51,6 +51,7 @@ type ScheduledJobConfig struct {
 	Network                 NetworkConfig  `yaml:"network"`
 	PublishConfig           PublishConfig  `yaml:"publish"`
 	TaskDefOverrides        []OverrideRule `yaml:"taskdef_overrides"`
+	ExposedPort             []ExposedPort
 }
 
 // JobTriggerConfig represents the configuration for the event that triggers the job.
@@ -203,5 +204,18 @@ func (j *ScheduledJob) ExposedPorts() ([]ExposedPort, error) {
 		}
 		exposedPorts = append(exposedPorts, out...)
 	}
-	return sortExposedPorts(exposedPorts), nil
+	j.cachedExposedPorts = sortExposedPorts(exposedPorts)
+	j.prepareParsedContainerConfigs(j.cachedExposedPorts)
+	return j.cachedExposedPorts, nil
+}
+
+func (s *ScheduledJob) prepareParsedContainerConfigs(exposedPorts []ExposedPort) {
+	parsedMap := prepareParsedExposedPortsMap(exposedPorts)
+	for k, v := range parsedMap {
+		if s.Sidecars[k] != nil {
+			s.Sidecars[k].ExposedPorts = append(s.Sidecars[k].ExposedPorts, v...)
+		} else {
+			s.ExposedPort = append(s.ExposedPort, v...)
+		}
+	}
 }

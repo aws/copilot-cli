@@ -18,9 +18,9 @@ type BackendService struct {
 	Workload             `yaml:",inline"`
 	BackendServiceConfig `yaml:",inline"`
 	// Use *BackendServiceConfig because of https://github.com/imdario/mergo/issues/146
-	Environments map[string]*BackendServiceConfig `yaml:",flow"`
-
-	parser template.Parser
+	Environments       map[string]*BackendServiceConfig `yaml:",flow"`
+	cachedExposedPorts []ExposedPort
+	parser             template.Parser
 }
 
 // BackendServiceConfig holds the configuration that can be overridden per environments.
@@ -36,6 +36,7 @@ type BackendServiceConfig struct {
 	TaskDefOverrides []OverrideRule            `yaml:"taskdef_overrides"`
 	DeployConfig     DeploymentConfig          `yaml:"deployment"`
 	Observability    Observability             `yaml:"observability"`
+	ExposedPort      []ExposedPort
 }
 
 // BackendServiceProps represents the configuration needed to create a backend service.
@@ -191,6 +192,10 @@ func newDefaultBackendService() *BackendService {
 
 // ExposedPorts returns all the ports that are container ports available to receive traffic.
 func (b *BackendService) ExposedPorts() ([]ExposedPort, error) {
+	if b.cachedExposedPorts != nil {
+		return b.cachedExposedPorts, nil
+	}
+
 	var exposedPorts []ExposedPort
 
 	workloadName := aws.StringValue(b.Name)
@@ -203,6 +208,18 @@ func (b *BackendService) ExposedPorts() ([]ExposedPort, error) {
 		exposedPorts = append(exposedPorts, out...)
 	}
 	exposedPorts = append(exposedPorts, b.RoutingRule.exposedPorts(exposedPorts, workloadName)...)
+	b.cachedExposedPorts = sortExposedPorts(exposedPorts)
+	b.prepareParsedContainerConfigs(b.cachedExposedPorts)
+	return b.cachedExposedPorts, nil
+}
 
-	return sortExposedPorts(exposedPorts), nil
+func (s *BackendService) prepareParsedContainerConfigs(exposedPorts []ExposedPort) {
+	parsedMap := prepareParsedExposedPortsMap(exposedPorts)
+	for k, v := range parsedMap {
+		if s.Sidecars[k] != nil {
+			s.Sidecars[k].ExposedPorts = append(s.Sidecars[k].ExposedPorts, v...)
+		} else {
+			s.ExposedPort = append(s.ExposedPort, v...)
+		}
+	}
 }

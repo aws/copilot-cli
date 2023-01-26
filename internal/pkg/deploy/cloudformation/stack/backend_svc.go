@@ -87,12 +87,11 @@ func (s *BackendService) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	exposedPorts, err := s.manifest.ExposedPorts()
+	_, err = s.manifest.ExposedPorts()
 	if err != nil {
 		return "", fmt.Errorf("parse exposed ports in service manifest %s: %w", s.name, err)
 	}
-	portMappings := convertPortMappings(exposedPorts)
-	sidecars, err := convertSidecars(s.manifest.Sidecars, portMappings)
+	sidecars, err := convertSidecars(s.manifest.Sidecars)
 	if err != nil {
 		return "", fmt.Errorf("convert the sidecar configuration for service %s: %w", s.name, err)
 	}
@@ -162,7 +161,7 @@ func (s *BackendService) Template() (string, error) {
 		EntryPoint:   entrypoint,
 		Command:      command,
 		HealthCheck:  convertContainerHealthCheck(s.manifest.BackendServiceConfig.ImageConfig.HealthCheck),
-		PortMappings: portMappings[s.name],
+		PortMappings: convertPortMappings(s.manifest.ExposedPort),
 		Secrets:      convertSecrets(s.manifest.BackendServiceConfig.Secrets),
 		Variables:    convertEnvVars(s.manifest.BackendServiceConfig.Variables),
 

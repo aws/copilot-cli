@@ -66,21 +66,21 @@ var (
 	}
 )
 
-func convertPortMappings(exposedPorts []manifest.ExposedPort) map[string][]*template.PortMapping {
-	portMapping := make(map[string][]*template.PortMapping)
+func convertPortMappings(exposedPorts []manifest.ExposedPort) []*template.PortMapping {
+	var portMapping []*template.PortMapping
 	for _, exposedPort := range exposedPorts {
 		out := &template.PortMapping{
 			ContainerPort: exposedPort.Port,
 			Protocol:      exposedPort.Protocol,
 			ContainerName: exposedPort.ContainerName,
 		}
-		portMapping[exposedPort.ContainerName] = append(portMapping[exposedPort.ContainerName], out)
+		portMapping = append(portMapping, out)
 	}
 	return portMapping
 }
 
 // convertSidecar converts the manifest sidecar configuration into a format parsable by the templates pkg.
-func convertSidecars(sidecarsMap map[string]*manifest.SidecarConfig, portMappings map[string][]*template.PortMapping) ([]*template.SidecarOpts, error) {
+func convertSidecars(sidecarsMap map[string]*manifest.SidecarConfig) ([]*template.SidecarOpts, error) {
 	if sidecarsMap == nil {
 		return nil, nil
 	}
@@ -119,7 +119,7 @@ func convertSidecars(sidecarsMap map[string]*manifest.SidecarConfig, portMapping
 			EntryPoint:   entrypoint,
 			HealthCheck:  convertContainerHealthCheck(config.HealthCheck),
 			Command:      command,
-			PortMappings: portMappings[name],
+			PortMappings: convertPortMappings(config.ExposedPorts),
 		})
 	}
 	return sidecars, nil

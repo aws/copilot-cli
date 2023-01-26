@@ -28,9 +28,9 @@ type WorkerService struct {
 	Workload            `yaml:",inline"`
 	WorkerServiceConfig `yaml:",inline"`
 	// Use *WorkerServiceConfig because of https://github.com/imdario/mergo/issues/146
-	Environments map[string]*WorkerServiceConfig `yaml:",flow"`
-
-	parser template.Parser
+	Environments       map[string]*WorkerServiceConfig `yaml:",flow"`
+	cachedExposedPorts []ExposedPort
+	parser             template.Parser
 }
 
 // Publish returns the list of topics where notifications can be published.
@@ -55,6 +55,7 @@ type WorkerServiceConfig struct {
 	TaskDefOverrides []OverrideRule            `yaml:"taskdef_overrides"`
 	DeployConfig     WorkerDeploymentConfig    `yaml:"deployment"`
 	Observability    Observability             `yaml:"observability"`
+	ExposedPort      []ExposedPort
 }
 
 // SubscribeConfig represents the configurable options for setting up subscriptions.
@@ -370,6 +371,10 @@ func newDefaultWorkerService() *WorkerService {
 
 // ExposedPorts returns all the ports that are sidecar container ports available to receive traffic.
 func (ws *WorkerService) ExposedPorts() ([]ExposedPort, error) {
+	if ws.cachedExposedPorts != nil {
+		return ws.cachedExposedPorts, nil
+	}
+
 	var exposedPorts []ExposedPort
 	for name, sidecar := range ws.Sidecars {
 		out, err := sidecar.exposedPorts(name)
@@ -378,5 +383,19 @@ func (ws *WorkerService) ExposedPorts() ([]ExposedPort, error) {
 		}
 		exposedPorts = append(exposedPorts, out...)
 	}
-	return sortExposedPorts(exposedPorts), nil
+
+	ws.cachedExposedPorts = sortExposedPorts(exposedPorts)
+	ws.prepareParsedContainerConfigs(ws.cachedExposedPorts)
+	return ws.cachedExposedPorts, nil
+}
+
+func (s *WorkerService) prepareParsedContainerConfigs(exposedPorts []ExposedPort) {
+	parsedMap := prepareParsedExposedPortsMap(exposedPorts)
+	for k, v := range parsedMap {
+		if s.Sidecars[k] != nil {
+			s.Sidecars[k].ExposedPorts = append(s.Sidecars[k].ExposedPorts, v...)
+		} else {
+			s.ExposedPort = append(s.ExposedPort, v...)
+		}
+	}
 }

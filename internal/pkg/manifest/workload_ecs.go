@@ -310,6 +310,7 @@ type SidecarConfig struct {
 	DependsOn     DependsOn            `yaml:"depends_on"`
 	HealthCheck   ContainerHealthCheck `yaml:"healthcheck"`
 	ImageOverride `yaml:",inline"`
+	ExposedPorts  []ExposedPort
 }
 
 // OverrideRule holds the manifest overriding rule for CloudFormation template.

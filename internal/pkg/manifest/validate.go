@@ -126,6 +126,11 @@ func (d DeploymentConfig) validate() error {
 	return nil
 }
 
+// no-op method
+func (port ExposedPort) validate() error {
+	return nil
+}
+
 func (w WorkerDeploymentConfig) validate() error {
 	if w.isEmpty() {
 		return nil
@@ -224,6 +229,9 @@ func (l LoadBalancedWebServiceConfig) validate() error {
 	}
 	if err = l.DeployConfig.validate(); err != nil {
 		return fmt.Errorf(`validate "deployment": %w`, err)
+	}
+	for _, exposedPort := range l.ExposedPort {
+		return exposedPort.validate()
 	}
 	return nil
 }
@@ -327,6 +335,9 @@ func (b BackendServiceConfig) validate() error {
 		}); err != nil {
 			return fmt.Errorf("validate ARM: %w", err)
 		}
+	}
+	for _, exposedPort := range b.ExposedPort {
+		return exposedPort.validate()
 	}
 	return nil
 }
@@ -449,6 +460,9 @@ func (w WorkerServiceConfig) validate() error {
 			return fmt.Errorf("validate ARM: %w", err)
 		}
 	}
+	for _, exposedPort := range w.ExposedPort {
+		return exposedPort.validate()
+	}
 	return nil
 }
 
@@ -529,6 +543,9 @@ func (s ScheduledJobConfig) validate() error {
 		}); err != nil {
 			return fmt.Errorf("validate ARM: %w", err)
 		}
+	}
+	for _, exposedPort := range s.ExposedPort {
+		return exposedPort.validate()
 	}
 	return nil
 }

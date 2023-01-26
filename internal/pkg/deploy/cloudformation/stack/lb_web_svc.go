@@ -130,12 +130,11 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	exposedPorts, err := s.manifest.ExposedPorts()
+	_, err = s.manifest.ExposedPorts()
 	if err != nil {
 		return "", fmt.Errorf("parse exposed ports in service manifest %s: %w", s.name, err)
 	}
-	portMappings := convertPortMappings(exposedPorts)
-	sidecars, err := convertSidecars(s.manifest.Sidecars, portMappings)
+	sidecars, err := convertSidecars(s.manifest.Sidecars)
 	if err != nil {
 		return "", fmt.Errorf("convert the sidecar configuration for service %s: %w", s.name, err)
 	}
@@ -219,7 +218,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		Command:      command,
 		EntryPoint:   entrypoint,
 		HealthCheck:  convertContainerHealthCheck(s.manifest.ImageConfig.HealthCheck),
-		PortMappings: portMappings[s.name],
+		PortMappings: convertPortMappings(s.manifest.ExposedPort),
 		Secrets:      convertSecrets(s.manifest.TaskConfig.Secrets),
 		Variables:    convertEnvVars(s.manifest.TaskConfig.Variables),
 

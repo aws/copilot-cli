@@ -666,3 +666,11 @@ func findContainerNameGivenPort(port uint16, exposedPorts []ExposedPort) string 
 	}
 	return ""
 }
+
+func prepareParsedExposedPortsMap(exposedPorts []ExposedPort) map[string][]ExposedPort {
+	parsedMap := make(map[string][]ExposedPort)
+	for _, exposedPort := range exposedPorts {
+		parsedMap[exposedPort.ContainerName] = append(parsedMap[exposedPort.ContainerName], exposedPort)
+	}
+	return parsedMap
+}
