@@ -114,7 +114,7 @@ func (cw *CloudWatch) AlarmStatuses(opts ...DescribeAlarmOpts) ([]AlarmStatus, e
 			return nil, fmt.Errorf("describe CloudWatch alarms: %w", err)
 		}
 		if alarmResp == nil {
-			return nil, nil
+			break
 		}
 		alarmStatuses = append(alarmStatuses, cw.compositeAlarmsStatus(alarmResp.CompositeAlarms)...)
 		alarmStatuses = append(alarmStatuses, cw.metricAlarmsStatus(alarmResp.MetricAlarms)...)
