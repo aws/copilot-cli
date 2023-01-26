@@ -38,9 +38,9 @@ type LoadBalancedWebService struct {
 	Workload                     `yaml:",inline"`
 	LoadBalancedWebServiceConfig `yaml:",inline"`
 	// Use *LoadBalancedWebServiceConfig because of https://github.com/imdario/mergo/issues/146
-	Environments map[string]*LoadBalancedWebServiceConfig `yaml:",flow"` // Fields to override per environment.
-
-	parser template.Parser
+	Environments       map[string]*LoadBalancedWebServiceConfig `yaml:",flow"` // Fields to override per environment.
+	cachedExposedPorts []ExposedPort
+	parser             template.Parser
 }
 
 // LoadBalancedWebServiceConfig holds the configuration for a load balanced web service.
@@ -242,8 +242,10 @@ func (c *NetworkLoadBalancerConfiguration) IsEmpty() bool {
 
 // ExposedPorts returns all the ports that are container ports available to receive traffic.
 func (lbws *LoadBalancedWebService) ExposedPorts() ([]ExposedPort, error) {
+	if lbws.cachedExposedPorts != nil {
+		return lbws.cachedExposedPorts, nil
+	}
 	var exposedPorts []ExposedPort
-
 	workloadName := aws.StringValue(lbws.Name)
 	exposedPorts = append(exposedPorts, lbws.ImageConfig.exposedPorts(workloadName)...)
 	for name, sidecar := range lbws.Sidecars {
@@ -259,5 +261,6 @@ func (lbws *LoadBalancedWebService) ExposedPorts() ([]ExposedPort, error) {
 		return nil, err
 	}
 	exposedPorts = append(exposedPorts, out...)
-	return sortExposedPorts(exposedPorts), nil
+	lbws.cachedExposedPorts = sortExposedPorts(exposedPorts)
+	return lbws.cachedExposedPorts, nil
 }

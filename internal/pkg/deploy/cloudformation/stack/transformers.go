@@ -509,7 +509,7 @@ func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (networkLoadBalanc
 				HealthCheck:     hc,
 				Stickiness:      nlbConfig.Stickiness,
 			},
-			MainContainerPort: s.manifest.ContainerPort(),
+			MainContainerPort: s.manifest.MainContainerPort(),
 		},
 	}
 

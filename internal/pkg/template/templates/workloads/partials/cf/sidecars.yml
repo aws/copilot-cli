@@ -50,9 +50,9 @@
   Essential: {{$sidecar.Essential}}
 {{- end}}
 {{include "image-overrides" . | indent 2}}
-{{- if .PortMappings}}
+{{- if $sidecar.PortMappings}}
   PortMappings:
-    {{- range $portMapping := .PortMappings }}
+    {{- range $portMapping := $sidecar.PortMappings }}
     - ContainerPort: {{ $portMapping.ContainerPort }}
   {{- if and (eq $.HTTPTargetContainer.Name $sidecar.Name) (eq $.HTTPTargetContainer.Port (strconvUint16 $portMapping.ContainerPort))}}
       Name: target

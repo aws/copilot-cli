@@ -200,7 +200,10 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		scConfig = convertServiceConnect(s.manifest.Network.Connect)
 	}
 
-	targetContainer, targetContainerPort := s.manifest.HTTPLoadBalancerTarget(exposedPorts, s.manifest.RoutingRule.GetTargetContainer(), s.manifest.RoutingRule.TargetPort)
+	targetContainer, targetContainerPort, err := s.manifest.HTTPLoadBalancerTarget()
+	if err != nil {
+		return "", err
+	}
 	// Set container-level feature flag.
 	logConfig := convertLogging(s.manifest.Logging)
 	content, err := s.parser.ParseLoadBalancedWebService(template.WorkloadOpts{
@@ -289,15 +292,14 @@ func (s *LoadBalancedWebService) Parameters() ([]*cloudformation.Parameter, erro
 	if err != nil {
 		return nil, err
 	}
-	exposedPorts, err := s.manifest.ExposedPorts()
+	targetContainer, targetPort, err := s.manifest.HTTPLoadBalancerTarget()
 	if err != nil {
 		return nil, err
 	}
-	targetContainer, targetPort := s.manifest.HTTPLoadBalancerTarget(exposedPorts, s.manifest.RoutingRule.GetTargetContainer(), s.manifest.RoutingRule.TargetPort)
 	wkldParams = append(wkldParams, []*cloudformation.Parameter{
 		{
 			ParameterKey:   aws.String(WorkloadContainerPortParamKey),
-			ParameterValue: aws.String(s.manifest.ContainerPort()),
+			ParameterValue: aws.String(s.manifest.MainContainerPort()),
 		},
 		{
 			ParameterKey:   aws.String(LBWebServiceDNSDelegatedParamKey),

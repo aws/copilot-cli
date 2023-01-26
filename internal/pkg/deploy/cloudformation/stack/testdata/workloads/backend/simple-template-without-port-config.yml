@@ -38,6 +38,7 @@ Conditions:
   HasAddons: !Not [!Equals [!Ref AddonsTemplateURL, ""]]
   HasEnvFile: !Not [!Equals [!Ref EnvFileARN, ""]]
   ExposePort: !Not [!Equals [!Ref TargetPort, -1]]
+  IsGovCloud: !Equals [!Ref "AWS::Partition", "aws-us-gov"]
 Resources:
   LogGroup:
     Metadata:

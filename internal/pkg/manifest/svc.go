@@ -506,14 +506,9 @@ func (cfg NetworkLoadBalancerConfiguration) exposedPorts(exposedPorts []ExposedP
 	if cfg.IsEmpty() {
 		return nil, nil
 	}
-	nlbPort, protocol, err := ParsePortMapping(cfg.Port)
+	nlbPort, _, err := ParsePortMapping(cfg.Port)
 	if err != nil {
 		return nil, err
-	}
-	if strings.ToLower(aws.StringValue(protocol)) == "udp" {
-		protocol = aws.String("udp")
-	} else {
-		protocol = aws.String("tcp")
 	}
 
 	port, err := strconv.ParseUint(aws.StringValue(nlbPort), 10, 16)
@@ -536,7 +531,7 @@ func (cfg NetworkLoadBalancerConfiguration) exposedPorts(exposedPorts []ExposedP
 	return []ExposedPort{
 		{
 			Port:          targetPort,
-			Protocol:      aws.StringValue(protocol),
+			Protocol:      "tcp",
 			ContainerName: targetContainer,
 		},
 	}, nil
@@ -546,14 +541,13 @@ func (sidecar SidecarConfig) exposedPorts(sidecarName string) ([]ExposedPort, er
 	if sidecar.Port == nil {
 		return nil, nil
 	}
-	sidecarPort, protocol, err := ParsePortMapping(sidecar.Port)
+	sidecarPort, protocolPtr, err := ParsePortMapping(sidecar.Port)
 	if err != nil {
 		return nil, err
 	}
-	if strings.ToLower(aws.StringValue(protocol)) == "udp" {
-		protocol = aws.String("udp")
-	} else {
-		protocol = aws.String("tcp")
+	protocol := aws.StringValue(protocolPtr)
+	if protocolPtr == nil {
+		protocol = "tcp"
 	}
 	port, err := strconv.ParseUint(aws.StringValue(sidecarPort), 10, 16)
 	if err != nil {
@@ -562,7 +556,7 @@ func (sidecar SidecarConfig) exposedPorts(sidecarName string) ([]ExposedPort, er
 	return []ExposedPort{
 		{
 			Port:          uint16(port),
-			Protocol:      aws.StringValue(protocol),
+			Protocol:      strings.ToLower(protocol),
 			ContainerName: sidecarName,
 		},
 	}, nil
@@ -577,11 +571,17 @@ func sortExposedPorts(exposedPorts []ExposedPort) []ExposedPort {
 }
 
 // HTTPLoadBalancerTarget returns target container and target port for the ALB configuration.
-func (s *LoadBalancedWebService) HTTPLoadBalancerTarget(exposedPorts []ExposedPort, rrTargetContainer *string, rrTargetPort *uint16) (targetContainer *string, targetPort *string) {
+func (s *LoadBalancedWebService) HTTPLoadBalancerTarget() (targetContainer *string, targetPort *string, err error) {
+	exposedPorts, err := s.ExposedPorts()
+	if err != nil {
+		return nil, nil, err
+	}
 	// Route load balancer traffic to main container by default.
 	targetContainer = s.Name
-	targetPort = aws.String(s.ContainerPort())
+	targetPort = aws.String(s.MainContainerPort())
 
+	rrTargetContainer := s.RoutingRule.TargetContainer
+	rrTargetPort := s.RoutingRule.TargetPort
 	if rrTargetContainer == nil && rrTargetPort == nil { // both targetPort and targetContainer are nil.
 		return
 	}
@@ -601,11 +601,18 @@ func (s *LoadBalancedWebService) HTTPLoadBalancerTarget(exposedPorts []ExposedPo
 }
 
 // HTTPLoadBalancerTarget returns target container and target port for the ALB configuration.
-func (s *BackendService) HTTPLoadBalancerTarget(exposedPorts []ExposedPort, rrTargetContainer *string, rrTargetPort *uint16) (targetContainer *string, targetPort *string) {
+func (s *BackendService) HTTPLoadBalancerTarget() (targetContainer *string, targetPort *string, err error) {
+	exposedPorts, err := s.ExposedPorts()
+	if err != nil {
+		return nil, nil, err
+	}
+
 	// Route load balancer traffic to main container by default.
 	targetContainer = s.Name
-	targetPort = aws.String(s.ContainerPort())
+	targetPort = aws.String(s.MainContainerPort())
 
+	rrTargetContainer := s.RoutingRule.TargetContainer
+	rrTargetPort := s.RoutingRule.TargetPort
 	if rrTargetContainer == nil && rrTargetPort == nil { // both targetPort and targetContainer are nil.
 		return
 	}
@@ -636,13 +643,13 @@ func httpLoadBalancerTarget(exposedPorts []ExposedPort, rrTargetPort *uint16) (t
 	return
 }
 
-// ContainerPort returns the main container port.
-func (s *LoadBalancedWebService) ContainerPort() string {
+// MainContainerPort returns the main container port.
+func (s *LoadBalancedWebService) MainContainerPort() string {
 	return strconv.FormatUint(uint64(aws.Uint16Value(s.ImageConfig.Port)), 10)
 }
 
-// ContainerPort returns the main container port if given.
-func (s *BackendService) ContainerPort() string {
+// MainContainerPort returns the main container port if given.
+func (s *BackendService) MainContainerPort() string {
 	port := template.NoExposedContainerPort
 	if s.BackendServiceConfig.ImageConfig.Port != nil {
 		port = strconv.FormatUint(uint64(aws.Uint16Value(s.BackendServiceConfig.ImageConfig.Port)), 10)
