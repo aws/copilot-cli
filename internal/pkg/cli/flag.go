@@ -14,42 +14,47 @@ import (
 // Long flag names.
 const (
 	// Common flags.
-	nameFlag       = "name"
-	appFlag        = "app"
-	envFlag        = "env"
-	workloadFlag   = "workload"
-	svcTypeFlag    = "svc-type"
-	jobTypeFlag    = "job-type"
-	typeFlag       = "type"
-	profileFlag    = "profile"
-	yesFlag        = "yes"
-	jsonFlag       = "json"
-	allFlag        = "all"
-	forceFlag      = "force"
-	noRollbackFlag = "no-rollback"
-	manifestFlag   = "manifest"
+	nameFlag         = "name"
+	appFlag          = "app"
+	envFlag          = "env"
+	workloadFlag     = "workload"
+	svcTypeFlag      = "svc-type"
+	jobTypeFlag      = "job-type"
+	typeFlag         = "type"
+	profileFlag      = "profile"
+	yesFlag          = "yes"
+	jsonFlag         = "json"
+	allFlag          = "all"
+	forceFlag        = "force"
+	noRollbackFlag   = "no-rollback"
+	manifestFlag     = "manifest"
+	resourceTagsFlag = "resource-tags"
 
-	// Command specific flags.
+	// Build flags.
 	dockerFileFlag        = "dockerfile"
 	dockerFileContextFlag = "build-context"
 	imageTagFlag          = "tag"
-	resourceTagsFlag      = "resource-tags"
 	stackOutputDirFlag    = "output-dir"
 	uploadAssetsFlag      = "upload-assets"
-	limitFlag             = "limit"
-	lastFlag              = "last"
-	followFlag            = "follow"
-	previousFlag          = "previous"
-	sinceFlag             = "since"
-	startTimeFlag         = "start-time"
-	endTimeFlag           = "end-time"
-	tasksFlag             = "tasks"
-	logGroupFlag          = "log-group"
-	containerLogFlag      = "container"
-	prodEnvFlag           = "prod"
 	deployFlag            = "deploy"
-	resourcesFlag         = "resources"
 
+	// Flags for operational commands.
+	limitFlag                   = "limit"
+	lastFlag                    = "last"
+	followFlag                  = "follow"
+	previousFlag                = "previous"
+	sinceFlag                   = "since"
+	startTimeFlag               = "start-time"
+	endTimeFlag                 = "end-time"
+	tasksFlag                   = "tasks"
+	logGroupFlag                = "log-group"
+	containerLogFlag            = "container"
+	includeStateMachineLogsFlag = "include-state-machine"
+	resourcesFlag               = "resources"
+	taskIDFlag                  = "task-id"
+	containerFlag               = "container"
+
+	// Flags for CI/CD.
 	githubURLFlag         = "github-url"
 	repoURLFlag           = "url"
 	githubAccessTokenFlag = "github-access-token"
@@ -57,16 +62,10 @@ const (
 	envsFlag              = "environments"
 	pipelineTypeFlag      = "pipeline-type"
 
-	domainNameFlag   = "domain"
-	localFlag        = "local"
-	deleteSecretFlag = "delete-secret"
-	svcPortFlag      = "port"
+	// Flags for ls.
+	localFlag = "local"
 
-	noSubscriptionFlag  = "no-subscribe"
-	subscribeTopicsFlag = "subscribe-topics"
-
-	ingressTypeFlag = "ingress-type"
-
+	// Flags for storage.
 	storageTypeFlag                    = "storage-type"
 	storagePartitionKeyFlag            = "partition-key"
 	storageSortKeyFlag                 = "sort-key"
@@ -78,6 +77,7 @@ const (
 	storageRDSInitialDBFlag            = "initial-db"
 	storageRDSParameterGroupFlag       = "parameter-group"
 
+	// Flags for one-off tasks.
 	taskGroupNameFlag            = "task-group-name"
 	countFlag                    = "count"
 	cpuFlag                      = "cpu"
@@ -99,6 +99,7 @@ const (
 	osFlag                       = "platform-os"
 	archFlag                     = "platform-arch"
 
+	// Flags for environment configurations.
 	vpcIDFlag                      = "import-vpc-id"
 	publicSubnetsFlag              = "import-public-subnets"
 	privateSubnetsFlag             = "import-private-subnets"
@@ -111,28 +112,30 @@ const (
 	overridePrivateSubnetCIDRsFlag = "override-private-cidrs"
 
 	enableContainerInsightsFlag = "container-insights"
-
-	defaultConfigFlag = "default-config"
+	defaultConfigFlag           = "default-config"
 
 	accessKeyIDFlag     = "aws-access-key-id"
 	secretAccessKeyFlag = "aws-secret-access-key"
 	sessionTokenFlag    = "aws-session-token"
 	regionFlag          = "region"
 
-	retriesFlag  = "retries"
-	timeoutFlag  = "timeout"
-	scheduleFlag = "schedule"
-
-	taskIDFlag    = "task-id"
-	containerFlag = "container"
-
+	// Flags for creating secrets.
 	valuesFlag        = "values"
 	overwriteFlag     = "overwrite"
 	inputFilePathFlag = "cli-input-yaml"
 
-	includeStateMachineLogsFlag = "include-state-machine"
-
+	// Other.
+	svcPortFlag             = "port"
+	noSubscriptionFlag      = "no-subscribe"
+	subscribeTopicsFlag     = "subscribe-topics"
+	ingressTypeFlag         = "ingress-type"
+	retriesFlag             = "retries"
+	timeoutFlag             = "timeout"
+	scheduleFlag            = "schedule"
+	domainNameFlag          = "domain"
 	permissionsBoundaryFlag = "permissions-boundary"
+	prodEnvFlag             = "prod"
+	deleteSecretFlag        = "delete-secret"
 )
 
 // Short flag names.
@@ -209,34 +212,28 @@ Must be one of %s`, english.OxfordWordSeries(rdwsIngressOptions, "or"))
 )
 
 const (
-	appFlagDescription            = "Name of the application."
-	envFlagDescription            = "Name of the environment."
-	svcFlagDescription            = "Name of the service."
-	jobFlagDescription            = "Name of the job."
-	workloadFlagDescription       = "Name of the service or job."
-	nameFlagDescription           = "Name of the service, job, or task group."
-	pipelineFlagDescription       = "Name of the pipeline."
-	profileFlagDescription        = "Name of the profile."
-	yesFlagDescription            = "Skips confirmation prompt."
-	execYesFlagDescription        = "Optional. Whether to update the Session Manager Plugin."
-	jsonFlagDescription           = "Optional. Output in JSON format."
-	forceFlagDescription          = "Optional. Force a new service deployment using the existing image."
-	forceEnvDeployFlagDescription = "Optional. Force update the environment stack template."
-	noRollbackFlagDescription     = `Optional. Disable automatic stack 
+	// Common flags
+	appFlagDescription          = "Name of the application."
+	envFlagDescription          = "Name of the environment."
+	svcFlagDescription          = "Name of the service."
+	jobFlagDescription          = "Name of the job."
+	workloadFlagDescription     = "Name of the service or job."
+	nameFlagDescription         = "Name of the service, job, or task group."
+	yesFlagDescription          = "Skips confirmation prompt."
+	resourceTagsFlagDescription = `Optional. Labels with a key and value separated by commas.
+Allows you to categorize resources.`
+
+	// Deployment.
+	deployTestFlagDescription = `Deploy your service or job to a "test" environment.`
+	forceFlagDescription      = "Optional. Force a new service deployment using the existing image."
+	noRollbackFlagDescription = `Optional. Disable automatic stack 
 rollback in case of deployment failure.
 We do not recommend using this flag for a
 production environment.`
-	manifestFlagDescription    = "Optional. Output the manifest file used for the deployment."
-	svcManifestFlagDescription = `Optional. Name of the environment in which the service was deployed;
-output the manifest file used for that deployment.`
+	forceEnvDeployFlagDescription = "Optional. Force update the environment stack template."
 
-	imageTagFlagDescription     = `Optional. The container image tag.`
-	resourceTagsFlagDescription = `Optional. Labels with a key and value separated by commas.
-Allows you to categorize resources.`
-	stackOutputDirFlagDescription = "Optional. Writes the stack template and template configuration to a directory."
-	uploadAssetsFlagDescription   = `Optional. Whether to upload assets (container images, Lambda functions, etc.).
-Uploaded asset locations are filled in the template configuration.`
-	prodEnvFlagDescription = "If the environment contains production services."
+	// Operational.
+	jsonFlagDescription = "Optional. Output in JSON format."
 
 	limitFlagDescription = `Optional. The maximum number of log events returned. Default is 10
 unless any time filtering flags are set.`
@@ -255,26 +252,37 @@ Defaults to all logs. Only one of end-time / follow may be used.`
 	logGroupFlagDescription                = "Optional. Only return logs from specific log group."
 	containerLogFlagDescription            = "Optional. Return only logs from a specific container."
 
-	deployTestFlagDescription        = `Deploy your service or job to a "test" environment.`
-	githubURLFlagDescription         = "(Deprecated.) Use '--url' instead. Repository URL to trigger your pipeline."
-	githubAccessTokenFlagDescription = "GitHub personal access token for your repository."
-	gitBranchFlagDescription         = "Branch used to trigger your pipeline."
-	pipelineEnvsFlagDescription      = "Environments to add to the pipeline."
-	pipelineTypeFlagDescription      = `The type of pipeline. Must be either "Workloads" or "Environments".`
-	domainNameFlagDescription        = "Optional. Your existing custom domain name."
 	envResourcesFlagDescription      = "Optional. Show the resources in your environment."
 	svcResourcesFlagDescription      = "Optional. Show the resources in your service."
 	pipelineResourcesFlagDescription = "Optional. Show the resources in your pipeline."
 	localSvcFlagDescription          = "Only show services in the workspace."
 	localJobFlagDescription          = "Only show jobs in the workspace."
 	localPipelineFlagDescription     = "Only show pipelines in the workspace."
-	deleteSecretFlagDescription      = "Deletes AWS Secrets Manager secret associated with a pipeline source repository."
-	svcPortFlagDescription           = "The port on which your service listens."
 
-	noSubscriptionFlagDescription  = "Optional. Turn off selection for adding subscriptions for worker services."
-	subscribeTopicsFlagDescription = `Optional. SNS Topics to subscribe to from other services in your application.
-Must be of format '<svcName>:<topicName>'`
+	svcManifestFlagDescription = `Optional. Name of the environment in which the service was deployed;
+output the manifest file used for that deployment.`
+	manifestFlagDescription = "Optional. Output the manifest file used for the deployment."
 
+	execYesFlagDescription     = "Optional. Whether to update the Session Manager Plugin."
+	taskIDFlagDescription      = "Optional. ID of the task you want to exec in."
+	execCommandFlagDescription = `Optional. The command that is passed to a running container.`
+	containerFlagDescription   = "Optional. The specific container you want to exec in. By default the first essential container will be used."
+
+	// Build.
+	imageTagFlagDescription     = `Optional. The container image tag.`
+	uploadAssetsFlagDescription = `Optional. Whether to upload assets (container images, Lambda functions, etc.).
+Uploaded asset locations are filled in the template configuration.`
+	stackOutputDirFlagDescription = "Optional. Writes the stack template and template configuration to a directory."
+
+	// CI/CD.
+	pipelineFlagDescription          = "Name of the pipeline."
+	githubURLFlagDescription         = "(Deprecated.) Use '--url' instead. Repository URL to trigger your pipeline."
+	githubAccessTokenFlagDescription = "GitHub personal access token for your repository."
+	gitBranchFlagDescription         = "Branch used to trigger your pipeline."
+	pipelineEnvsFlagDescription      = "Environments to add to the pipeline."
+	pipelineTypeFlagDescription      = `The type of pipeline. Must be either "Workloads" or "Environments".`
+
+	// Storage.
 	storageFlagDescription             = "Name of the storage resource to create."
 	storageWorkloadFlagDescription     = "Name of the service or job to associate with storage."
 	storagePartitionKeyFlagDescription = `Partition key for the DDB table.
@@ -291,6 +299,7 @@ Must be either "MySQL" or "PostgreSQL".`
 	storageRDSInitialDBFlagDescription      = "The initial database to create in the cluster."
 	storageRDSParameterGroupFlagDescription = "Optional. The name of the parameter group to associate with the cluster."
 
+	// One-off tasks.
 	countFlagDescription         = "Optional. The number of tasks to set up."
 	cpuFlagDescription           = "Optional. The number of CPU units to reserve for each task."
 	memoryFlagDescription        = "Optional. The amount of memory to reserve in MiB for each task."
@@ -312,6 +321,7 @@ To use it for an ECS service, specify --generate-cmd <cluster name>/<service nam
 Alternatively, if the service or job is created with Copilot, specify --generate-cmd <application>/<environment>/<service or job name>.
 Cannot be specified with any other flags.`
 
+	// Environment configurations.
 	vpcIDFlagDescription              = "Optional. Use an existing VPC ID."
 	publicSubnetsFlagDescription      = "Optional. Use existing public subnet IDs."
 	privateSubnetsFlagDescription     = "Optional. Use existing private subnet IDs."
@@ -330,14 +340,21 @@ Cannot be specified with --default-config or any of the --override flags.`
 (default 10.0.2.0/24,10.0.3.0/24)`
 
 	enableContainerInsightsFlagDescription = "Optional. Enable CloudWatch Container Insights."
+	defaultConfigFlagDescription           = "Optional. Skip prompting and use default environment configuration."
 
-	defaultConfigFlagDescription = "Optional. Skip prompting and use default environment configuration."
-
+	profileFlagDescription         = "Name of the profile."
 	accessKeyIDFlagDescription     = "Optional. An AWS access key."
 	secretAccessKeyFlagDescription = "Optional. An AWS secret access key."
 	sessionTokenFlagDescription    = "Optional. An AWS session token for temporary credentials."
 	envRegionTokenFlagDescription  = "Optional. An AWS region where the environment will be created."
 
+	// Other.
+	domainNameFlagDescription      = "Optional. Your existing custom domain name."
+	deleteSecretFlagDescription    = "Deletes AWS Secrets Manager secret associated with a pipeline source repository."
+	svcPortFlagDescription         = "The port on which your service listens."
+	noSubscriptionFlagDescription  = "Optional. Turn off selection for adding subscriptions for worker services."
+	subscribeTopicsFlagDescription = `Optional. SNS Topics to subscribe to from other services in your application.
+Must be of format '<svcName>:<topicName>'`
 	retriesFlagDescription = "Optional. The number of times to try restarting the job on a failure."
 	timeoutFlagDescription = `Optional. The total execution time for the task, including retries.
 Accepts valid Go duration strings. For example: "2h", "1h30m", "900s".`
@@ -346,15 +363,9 @@ Accepts cron expressions of the format (M H DoM M DoW) and schedule definition s
 For example: "0 * * * *", "@daily", "@weekly", "@every 1h30m".
 AWS Schedule Expressions of the form "rate(10 minutes)" or "cron(0 12 L * ? 2021)"
 are also accepted.`
-
-	upgradeAllEnvsDescription = "Optional. Upgrade all environments."
-
-	taskIDFlagDescription      = "Optional. ID of the task you want to exec in."
-	execCommandFlagDescription = `Optional. The command that is passed to a running container.`
-	containerFlagDescription   = "Optional. The specific container you want to exec in. By default the first essential container will be used."
-
-	secretOverwriteFlagDescription = "Optional. Whether to overwrite an existing secret."
-
+	upgradeAllEnvsDescription          = "Optional. Upgrade all environments."
+	secretOverwriteFlagDescription     = "Optional. Whether to overwrite an existing secret."
 	permissionsBoundaryFlagDescription = `Optional. The name of an existing IAM policy with which to set a
 permissions boundary for all roles generated within the application.`
+	prodEnvFlagDescription = "If the environment contains production services."
 )
