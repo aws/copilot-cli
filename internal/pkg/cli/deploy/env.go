@@ -96,7 +96,6 @@ type envDeployer struct {
 	envDeployer              environmentDeployer
 	patcher                  patcher
 	newStack                 func(input *cfnstack.EnvConfig, forceUpdateID string, prevParams []*awscfn.Parameter) deploycfn.StackConfiguration
-	overrider                Overrider
 	envDescriber             envDescriber
 	lbDescriber              lbDescriber
 	newServiceStackDescriber func(string) stackDescriber
@@ -164,10 +163,9 @@ func NewEnvDeployer(in *NewEnvDeployerInput) (*envDeployer, error) {
 			Env:             in.Env,
 		},
 		newStack: func(in *cfnstack.EnvConfig, lastForceUpdateID string, oldParams []*awscfn.Parameter) deploycfn.StackConfiguration {
-			conf := cfnstack.NewEnvConfigFromExistingStack(in, lastForceUpdateID, oldParams)
-			return deploycfn.WrapWithTemplateOverrider(conf, overrider)
+			stack := cfnstack.NewEnvConfigFromExistingStack(in, lastForceUpdateID, oldParams)
+			return deploycfn.WrapWithTemplateOverrider(stack, overrider)
 		},
-		overrider:    overrider,
 		envDescriber: envDescriber,
 		lbDescriber:  elbv2.New(envManagerSession),
 		newServiceStackDescriber: func(svc string) stackDescriber {
