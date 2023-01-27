@@ -660,7 +660,7 @@ func (o *initStorageOpts) Execute() error {
 		return err
 	}
 	for _, addon := range addonBlobs {
-		path, err := o.ws.WriteAddon(addon.blob, o.workloadName, addon.name)
+		path, err := o.ws.Write(addon.blob, o.ws.WorkloadAddonFilePath(o.workloadName, fmt.Sprintf("%s.yml", addon.name)))
 		if err != nil {
 			e, ok := err.(*workspace.ErrFileExists)
 			if !ok {
