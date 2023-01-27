@@ -20,7 +20,7 @@ import (
 type CDK struct {
 	rootAbsPath string // Absolute path to the overrides/ directory.
 
-	out  io.Writer // Writer for any os/exec calls.
+	w    io.Writer // Writer to pipe stdout and stderr content from os/exec calls.
 	fs   afero.Fs  // OS file system.
 	exec struct {
 		LookPath func(file string) (string, error)
@@ -30,7 +30,7 @@ type CDK struct {
 
 // CDKOpts is optional configuration for initializing a CDK Overrider.
 type CDKOpts struct {
-	Stdout     io.Writer                                   // Pipe any stdout output from any os/exec calls. If nil default to io.Discard.
+	ExecWriter io.Writer                                   // Writer to forward stdout and stderr writes from os/exec calls. If nil default to io.Discard.
 	FS         afero.Fs                                    // File system interface. If nil, defaults to the OS file system.
 	EnvVars    map[string]string                           // Environment variables key value pairs to pass to the "cdk synth" command.
 	LookPathFn func(executable string) (string, error)     // Search for the executable under $PATH. Defaults to exec.LookPath.
@@ -39,9 +39,9 @@ type CDKOpts struct {
 
 // WithCDK instantiates a new CDK Overrider with root being the path to the overrides/ directory.
 func WithCDK(root string, opts CDKOpts) *CDK {
-	stdout := io.Discard
-	if opts.Stdout != nil {
-		stdout = opts.Stdout
+	writer := io.Discard
+	if opts.ExecWriter != nil {
+		writer = opts.ExecWriter
 	}
 
 	fs := afero.NewOsFs()
@@ -71,7 +71,7 @@ func WithCDK(root string, opts CDKOpts) *CDK {
 
 	return &CDK{
 		rootAbsPath: root,
-		out:         stdout,
+		w:           writer,
 		fs:          fs,
 		exec: struct {
 			LookPath func(file string) (string, error)
@@ -103,7 +103,8 @@ func (cdk *CDK) install() error {
 	}
 
 	cmd := cdk.exec.Command("npm", "install")
-	cmd.Stdout = cdk.out
+	cmd.Stdout = cdk.w
+	cmd.Stderr = cdk.w
 
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf(`run %q: %w`, cmd.String(), err)
@@ -125,7 +126,8 @@ func (cdk *CDK) transform(body []byte) ([]byte, error) {
 	// This way clients don't need to install the CDK toolkit separately.
 	cmd := cdk.exec.Command(filepath.Join("node_modules", "aws-cdk", "bin", "cdk"), "synth", "--no-version-reporting")
 	buf := new(bytes.Buffer)
-	cmd.Stdout = io.MultiWriter(buf, cdk.out)
+	cmd.Stdout = buf
+	cmd.Stderr = cdk.w
 	if err := cmd.Run(); err != nil {
 		return nil, fmt.Errorf(`run %q: %w`, cmd.String(), err)
 	}
