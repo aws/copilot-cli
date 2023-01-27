@@ -96,7 +96,7 @@ type envDeployer struct {
 	appCFN                   appResourcesGetter
 	envDeployer              environmentDeployer
 	patcher                  patcher
-	newStackSerializer       func(input *cfnstack.EnvConfig, forceUpdateID string, prevParams []*awscfn.Parameter) deploycfn.StackConfiguration
+	newStack                 func(input *cfnstack.EnvConfig, forceUpdateID string, prevParams []*awscfn.Parameter) deploycfn.StackConfiguration
 	overrider                Overrider
 	envDescriber             envDescriber
 	lbDescriber              lbDescriber
@@ -164,7 +164,7 @@ func NewEnvDeployer(in *NewEnvDeployerInput) (*envDeployer, error) {
 			TemplatePatcher: cfnClient,
 			Env:             in.Env,
 		},
-		newStackSerializer: func(in *cfnstack.EnvConfig, lastForceUpdateID string, oldParams []*awscfn.Parameter) deploycfn.StackConfiguration {
+		newStack: func(in *cfnstack.EnvConfig, lastForceUpdateID string, oldParams []*awscfn.Parameter) deploycfn.StackConfiguration {
 			conf := cfnstack.NewEnvConfigFromExistingStack(in, lastForceUpdateID, oldParams)
 			return deploycfn.WrapWithTemplateOverrider(conf, overrider)
 		},
@@ -263,7 +263,7 @@ func (d *envDeployer) GenerateCloudFormationTemplate(in *DeployEnvironmentInput)
 	if err != nil {
 		return nil, fmt.Errorf("retrieve environment stack force update ID: %w", err)
 	}
-	stack := d.newStackSerializer(stackInput, lastForceUpdateID, oldParams)
+	stack := d.newStack(stackInput, lastForceUpdateID, oldParams)
 	tpl, err := stack.Template()
 	if err != nil {
 		return nil, fmt.Errorf("generate stack template: %w", err)
@@ -298,8 +298,8 @@ func (d *envDeployer) DeployEnvironment(in *DeployEnvironmentInput) error {
 	if in.DisableRollback {
 		opts = append(opts, awscloudformation.WithDisableRollback())
 	}
-	conf := d.newStackSerializer(stackInput, lastForceUpdateID, oldParams)
-	return d.envDeployer.UpdateAndRenderEnvironment(conf, stackInput.ArtifactBucketARN, opts...)
+	stack := d.newStack(stackInput, lastForceUpdateID, oldParams)
+	return d.envDeployer.UpdateAndRenderEnvironment(stack, stackInput.ArtifactBucketARN, opts...)
 }
 
 func (d *envDeployer) getAppRegionalResources() (*cfnstack.AppRegionalResources, error) {
