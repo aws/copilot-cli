@@ -340,9 +340,9 @@ func EnvParamsForRDS() *RDSParams {
 	}
 }
 
-// RDWSParamsForEnvRDSIngress creates a parameter marshaler for the ingress attached to an RDWS
+// RDWSParamsForEnvRDS creates a parameter marshaler for the ingress attached to an RDWS
 // for permissions into an environment-level RDS addon.
-func RDWSParamsForEnvRDSIngress() *RDSParams {
+func RDWSParamsForEnvRDS() *RDSParams {
 	return &RDSParams{
 		parser:   template.New(),
 		tmplPath: envRDSIngressForRDWSParamsPath,

@@ -627,7 +627,7 @@ func TestConstructors(t *testing.T) {
 	})
 
 	t.Run("parameter marshaler for the ingress attached to an RDWS for an env-level aurora", func(t *testing.T) {
-		out := RDWSParamsForEnvRDSIngress()
+		out := RDWSParamsForEnvRDS()
 		require.Equal(t, envRDSIngressForRDWSParamsPath, out.tmplPath)
 	})
 
