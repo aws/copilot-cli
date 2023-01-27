@@ -13,6 +13,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/aws/copilot-cli/internal/pkg/override"
+
 	awscfn "github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
@@ -94,7 +96,8 @@ type envDeployer struct {
 	appCFN                   appResourcesGetter
 	envDeployer              environmentDeployer
 	patcher                  patcher
-	newStackSerializer       func(input *cfnstack.EnvConfig, forceUpdateID string, prevParams []*awscfn.Parameter) stackSerializer
+	newStackSerializer       func(input *cfnstack.EnvConfig, forceUpdateID string, prevParams []*awscfn.Parameter) deploycfn.StackConfiguration
+	overrider                Overrider
 	envDescriber             envDescriber
 	lbDescriber              lbDescriber
 	newServiceStackDescriber func(string) stackDescriber
@@ -116,6 +119,7 @@ type NewEnvDeployerInput struct {
 	SessionProvider *sessions.Provider
 	ConfigStore     describe.ConfigStoreSvc
 	Workspace       WorkspaceAddonsReaderPathGetter
+	Overrider       Overrider
 }
 
 // NewEnvDeployer constructs an environment deployer.
@@ -140,6 +144,10 @@ func NewEnvDeployer(in *NewEnvDeployerInput) (*envDeployer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("initialize env describer: %w", err)
 	}
+	overrider := in.Overrider
+	if overrider == nil {
+		overrider = new(override.Noop)
+	}
 	cfnClient := deploycfn.New(envManagerSession, deploycfn.WithProgressTracker(os.Stderr))
 	deployer := &envDeployer{
 		app: in.App,
@@ -156,9 +164,11 @@ func NewEnvDeployer(in *NewEnvDeployerInput) (*envDeployer, error) {
 			TemplatePatcher: cfnClient,
 			Env:             in.Env,
 		},
-		newStackSerializer: func(in *cfnstack.EnvConfig, lastForceUpdateID string, oldParams []*awscfn.Parameter) stackSerializer {
-			return cfnstack.NewEnvConfigFromExistingStack(in, lastForceUpdateID, oldParams)
+		newStackSerializer: func(in *cfnstack.EnvConfig, lastForceUpdateID string, oldParams []*awscfn.Parameter) deploycfn.StackConfiguration {
+			conf := cfnstack.NewEnvConfigFromExistingStack(in, lastForceUpdateID, oldParams)
+			return deploycfn.WrapWithTemplateOverrider(conf, overrider)
 		},
+		overrider:    overrider,
 		envDescriber: envDescriber,
 		lbDescriber:  elbv2.New(envManagerSession),
 		newServiceStackDescriber: func(svc string) stackDescriber {
@@ -288,7 +298,7 @@ func (d *envDeployer) DeployEnvironment(in *DeployEnvironmentInput) error {
 	if in.DisableRollback {
 		opts = append(opts, awscloudformation.WithDisableRollback())
 	}
-	conf := cfnstack.NewEnvConfigFromExistingStack(stackInput, lastForceUpdateID, oldParams)
+	conf := d.newStackSerializer(stackInput, lastForceUpdateID, oldParams)
 	return d.envDeployer.UpdateAndRenderEnvironment(conf, stackInput.ArtifactBucketARN, opts...)
 }
 

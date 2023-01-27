@@ -11,6 +11,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
+	cfnmocks "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/mocks"
+
 	"github.com/aws/aws-sdk-go/aws"
 	awscfn "github.com/aws/aws-sdk-go/service/cloudformation"
 	awselb "github.com/aws/aws-sdk-go/service/elbv2"
@@ -34,7 +37,7 @@ type envDeployerMocks struct {
 	appCFN           *mocks.MockappResourcesGetter
 	envDeployer      *mocks.MockenvironmentDeployer
 	patcher          *mocks.Mockpatcher
-	stackSerializer  *mocks.MockstackSerializer
+	stackSerializer  *cfnmocks.MockStackConfiguration
 	envDescriber     *mocks.MockenvDescriber
 	lbDescriber      *mocks.MocklbDescriber
 	stackDescribers  map[string]*mocks.MockstackDescriber
@@ -390,7 +393,7 @@ func TestEnvDeployer_GenerateCloudFormationTemplate(t *testing.T) {
 			m := &envDeployerMocks{
 				appCFN:          mocks.NewMockappResourcesGetter(ctrl),
 				envDeployer:     mocks.NewMockenvironmentDeployer(ctrl),
-				stackSerializer: mocks.NewMockstackSerializer(ctrl),
+				stackSerializer: cfnmocks.NewMockStackConfiguration(ctrl),
 			}
 			tc.setUpMocks(m)
 			d := envDeployer{
@@ -401,7 +404,7 @@ func TestEnvDeployer_GenerateCloudFormationTemplate(t *testing.T) {
 				},
 				appCFN:      m.appCFN,
 				envDeployer: m.envDeployer,
-				newStackSerializer: func(_ *cfnstack.EnvConfig, _ string, _ []*awscfn.Parameter) stackSerializer {
+				newStackSerializer: func(_ *cfnstack.EnvConfig, _ string, _ []*awscfn.Parameter) cloudformation.StackConfiguration {
 					return m.stackSerializer
 				},
 				parseAddons: func() (stackBuilder, error) {
@@ -549,6 +552,7 @@ func TestEnvDeployer_DeployEnvironment(t *testing.T) {
 				appCFN:           mocks.NewMockappResourcesGetter(ctrl),
 				envDeployer:      mocks.NewMockenvironmentDeployer(ctrl),
 				prefixListGetter: mocks.NewMockprefixListGetter(ctrl),
+				stackSerializer:  cfnmocks.NewMockStackConfiguration(ctrl),
 			}
 			tc.setUpMocks(m)
 			d := envDeployer{
@@ -562,6 +566,9 @@ func TestEnvDeployer_DeployEnvironment(t *testing.T) {
 				envDeployer:      m.envDeployer,
 				prefixListGetter: m.prefixListGetter,
 				parseAddons:      m.parseAddons,
+				newStackSerializer: func(_ *cfnstack.EnvConfig, _ string, _ []*awscfn.Parameter) cloudformation.StackConfiguration {
+					return m.stackSerializer
+				},
 			}
 			mockIn := &DeployEnvironmentInput{
 				RootUserARN: "mockRootUserARN",
