@@ -974,7 +974,7 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 
 			mockWs: func(m *mocks.MockwsAddonManager) {
 				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte("type: Worker Service"), nil)
-				m.EXPECT().WorkloadAddonFilePath(gomock.Eq(wantedSvcName), gomock.Eq(fmt.Sprintf("my-bucket.yml"))).Return("mockPath")
+				m.EXPECT().WorkloadAddonFilePath(gomock.Eq(wantedSvcName), gomock.Eq("my-bucket.yml")).Return("mockPath")
 				m.EXPECT().Write(gomock.Any(), "mockPath").Return("/frontend/addons/my-bucket.yml", nil)
 			},
 
@@ -991,7 +991,7 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 
 			mockWs: func(m *mocks.MockwsAddonManager) {
 				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte("type: Backend Service"), nil)
-				m.EXPECT().WorkloadAddonFilePath(gomock.Eq(wantedSvcName), gomock.Eq(fmt.Sprintf("my-table.yml"))).Return("mockPath")
+				m.EXPECT().WorkloadAddonFilePath(gomock.Eq(wantedSvcName), gomock.Eq("my-bucket.yml")).Return("mockPath")
 				m.EXPECT().Write(gomock.Any(), "mockPath").Return("/frontend/addons/my-table.yml", nil)
 			},
 
@@ -1008,7 +1008,7 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 
 			mockWs: func(m *mocks.MockwsAddonManager) {
 				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte("type: Backend Service"), nil)
-				m.EXPECT().WorkloadAddonFilePath(gomock.Eq(wantedSvcName), gomock.Eq(fmt.Sprintf("my-table.yml"))).Return("mockPath")
+				m.EXPECT().WorkloadAddonFilePath(gomock.Eq(wantedSvcName), gomock.Eq("my-table.yml")).Return("mockPath")
 				m.EXPECT().Write(gomock.Any(), "mockPath").Return("/frontend/addons/my-table.yml", nil)
 			},
 
@@ -1024,7 +1024,7 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 
 			mockWs: func(m *mocks.MockwsAddonManager) {
 				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte("type: Load Balanced Web Service"), nil)
-				m.EXPECT().WorkloadAddonFilePath(gomock.Eq(wantedSvcName), gomock.Eq(fmt.Sprintf("mycluster.yml"))).Return("mockPath")
+				m.EXPECT().WorkloadAddonFilePath(gomock.Eq(wantedSvcName), gomock.Eq("mycluster.yml")).Return("mockPath")
 				m.EXPECT().Write(gomock.Any(), "mockPath").Return("/frontend/addons/mycluster.yml", nil)
 			},
 			mockStore: func(m *mocks.Mockstore) {
@@ -1042,9 +1042,9 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 
 			mockWs: func(m *mocks.MockwsAddonManager) {
 				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte("type: Request-Driven Web Service"), nil)
-				m.EXPECT().WorkloadAddonFilePath(gomock.Eq(wantedSvcName), gomock.Eq(fmt.Sprintf("mycluster.yml"))).Return("mockTmplPath")
+				m.EXPECT().WorkloadAddonFilePath(gomock.Eq(wantedSvcName), gomock.Eq("mycluster.yml")).Return("mockTmplPath")
 				m.EXPECT().Write(gomock.Any(), "mockTmplPath").Return("/frontend/addons/mycluster.yml", nil)
-				m.EXPECT().WorkloadAddonFilePath(gomock.Eq(wantedSvcName), gomock.Eq(fmt.Sprintf("addons.parameters.yml"))).Return("mockParamsPath")
+				m.EXPECT().WorkloadAddonFilePath(gomock.Eq(wantedSvcName), gomock.Eq("addons.parameters.yml")).Return("mockParamsPath")
 				m.EXPECT().Write(gomock.Any(), "mockParamsPath").Return("/frontend/addons/addons.parameters.yml", nil)
 			},
 			mockStore: func(m *mocks.Mockstore) {
@@ -1060,7 +1060,7 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 
 			mockWs: func(m *mocks.MockwsAddonManager) {
 				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte("type: Load Balanced Web Service"), nil)
-				m.EXPECT().WorkloadAddonFilePath(gomock.Eq(wantedSvcName), gomock.Eq(fmt.Sprintf("my-bucket.yml"))).Return("mockPath")
+				m.EXPECT().WorkloadAddonFilePath(gomock.Eq(wantedSvcName), gomock.Eq("my-bucket.yml")).Return("mockPath")
 				m.EXPECT().Write(gomock.Any(), "mockPath").Return("/frontend/addons/my-bucket.yml", nil).Return("", fileExistsError)
 			},
 			mockStore: func(m *mocks.Mockstore) {
@@ -1089,7 +1089,7 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 
 			mockWs: func(m *mocks.MockwsAddonManager) {
 				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte("type: Load Balanced Web Service"), nil)
-				m.EXPECT().WorkloadAddonFilePath(gomock.Eq(wantedSvcName), gomock.Eq(fmt.Sprintf("my-bucket.yml"))).Return("mockPath")
+				m.EXPECT().WorkloadAddonFilePath(gomock.Eq(wantedSvcName), gomock.Eq("my-bucket.yml")).Return("mockPath")
 				m.EXPECT().Write(gomock.Any(), "mockPath").Return("", errors.New("some error"))
 			},
 
