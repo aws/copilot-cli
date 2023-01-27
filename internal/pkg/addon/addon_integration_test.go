@@ -24,7 +24,7 @@ func TestAddons(t *testing.T) {
 		outFileName    string
 	}{
 		"aurora": {
-			addonMarshaler: addon.NewWorkloadServerlessV2Template(addon.RDSProps{
+			addonMarshaler: addon.WorkloadServerlessV2Template(addon.RDSProps{
 				ClusterName:   "aurora",
 				Engine:        "MySQL",
 				InitialDBName: "main",
@@ -33,7 +33,7 @@ func TestAddons(t *testing.T) {
 			outFileName: "aurora.yml",
 		},
 		"ddb": {
-			addonMarshaler: addon.NewWorkloadDDBTemplate(&addon.DynamoDBProps{
+			addonMarshaler: addon.WorkloadDDBTemplate(&addon.DynamoDBProps{
 				StorageProps: &addon.StorageProps{
 					Name: "ddb",
 				},
@@ -65,7 +65,7 @@ func TestAddons(t *testing.T) {
 			outFileName: "ddb.yml",
 		},
 		"s3": {
-			addonMarshaler: addon.NewWorkloadS3Template(&addon.S3Props{
+			addonMarshaler: addon.WorkloadS3Template(&addon.S3Props{
 				StorageProps: &addon.StorageProps{
 					Name: "bucket",
 				},

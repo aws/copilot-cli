@@ -65,8 +65,8 @@ type S3Props struct {
 	*StorageProps
 }
 
-// NewWorkloadS3Template creates a marshaler for a workload-level S3 addon.
-func NewWorkloadS3Template(input *S3Props) *S3Template {
+// WorkloadS3Template creates a marshaler for a workload-level S3 addon.
+func WorkloadS3Template(input *S3Props) *S3Template {
 	return &S3Template{
 		S3Props:  *input,
 		parser:   template.New(),
@@ -74,8 +74,8 @@ func NewWorkloadS3Template(input *S3Props) *S3Template {
 	}
 }
 
-// NewEnvS3Template creates a new marshaler for an environment-level S3 addon.
-func NewEnvS3Template(input *S3Props) *S3Template {
+// EnvS3Template creates a new marshaler for an environment-level S3 addon.
+func EnvS3Template(input *S3Props) *S3Template {
 	return &S3Template{
 		S3Props:  *input,
 		parser:   template.New(),
@@ -83,9 +83,9 @@ func NewEnvS3Template(input *S3Props) *S3Template {
 	}
 }
 
-// NewEnvS3AccessPolicyTemplate creates a new marshaler for the access policy attached to a workload
+// EnvS3AccessPolicyTemplate creates a new marshaler for the access policy attached to a workload
 // for permissions into an environment-level S3 addon.
-func NewEnvS3AccessPolicyTemplate(input *S3Props) *S3Template {
+func EnvS3AccessPolicyTemplate(input *S3Props) *S3Template {
 	return &S3Template{
 		S3Props:  *input,
 		parser:   template.New(),
@@ -120,9 +120,9 @@ type DynamoDBProps struct {
 	HasLSI       bool
 }
 
-// NewWorkloadDDBTemplate creates a marshaler for a workload-level DynamoDB addon specifying attributes,
+// WorkloadDDBTemplate creates a marshaler for a workload-level DynamoDB addon specifying attributes,
 // primary key schema, and local secondary index configuration.
-func NewWorkloadDDBTemplate(input *DynamoDBProps) *DynamoDBTemplate {
+func WorkloadDDBTemplate(input *DynamoDBProps) *DynamoDBTemplate {
 	return &DynamoDBTemplate{
 		DynamoDBProps: *input,
 		parser:        template.New(),
@@ -130,8 +130,8 @@ func NewWorkloadDDBTemplate(input *DynamoDBProps) *DynamoDBTemplate {
 	}
 }
 
-// NewEnvDDBTemplate creates a marshaller for an environment-level DynamoDB addon.
-func NewEnvDDBTemplate(input *DynamoDBProps) *DynamoDBTemplate {
+// EnvDDBTemplate creates a marshaller for an environment-level DynamoDB addon.
+func EnvDDBTemplate(input *DynamoDBProps) *DynamoDBTemplate {
 	return &DynamoDBTemplate{
 		DynamoDBProps: *input,
 		parser:        template.New(),
@@ -139,9 +139,9 @@ func NewEnvDDBTemplate(input *DynamoDBProps) *DynamoDBTemplate {
 	}
 }
 
-// NewEnvDDBAccessPolicyTemplate creates a marshaller for the access policy attached to a workload
+// EnvDDBAccessPolicyTemplate creates a marshaller for the access policy attached to a workload
 // for permissions into an environment-level DynamoDB addon.
-func NewEnvDDBAccessPolicyTemplate(input *DynamoDBProps) *DynamoDBTemplate {
+func EnvDDBAccessPolicyTemplate(input *DynamoDBProps) *DynamoDBTemplate {
 	return &DynamoDBTemplate{
 		DynamoDBProps: *input,
 		parser:        template.New(),
@@ -258,8 +258,8 @@ type RDSProps struct {
 	Envs           []string // The copilot environments found inside the current app.
 }
 
-// NewWorkloadServerlessV1Template creates a marshaler for a workload-level Aurora Serverless v1 addon.
-func NewWorkloadServerlessV1Template(input RDSProps) *RDSTemplate {
+// WorkloadServerlessV1Template creates a marshaler for a workload-level Aurora Serverless v1 addon.
+func WorkloadServerlessV1Template(input RDSProps) *RDSTemplate {
 	tmplPath := rdsTemplatePath
 	if input.WorkloadType == manifest.RequestDrivenWebServiceType {
 		tmplPath = rdsRDWSTemplatePath
@@ -271,8 +271,8 @@ func NewWorkloadServerlessV1Template(input RDSProps) *RDSTemplate {
 	}
 }
 
-// NewWorkloadServerlessV2Template creates a marshaler for a workload-level Aurora Serverless v2 addon.
-func NewWorkloadServerlessV2Template(input RDSProps) *RDSTemplate {
+// WorkloadServerlessV2Template creates a marshaler for a workload-level Aurora Serverless v2 addon.
+func WorkloadServerlessV2Template(input RDSProps) *RDSTemplate {
 	tmplPath := rdsV2TemplatePath
 	if input.WorkloadType == manifest.RequestDrivenWebServiceType {
 		tmplPath = rdsRDWSV2TemplatePath
@@ -284,8 +284,8 @@ func NewWorkloadServerlessV2Template(input RDSProps) *RDSTemplate {
 	}
 }
 
-// NewEnvServerlessTemplate creates a marshaler for an environment-level Aurora Serverless v2 addon.
-func NewEnvServerlessTemplate(input RDSProps) *RDSTemplate {
+// EnvServerlessTemplate creates a marshaler for an environment-level Aurora Serverless v2 addon.
+func EnvServerlessTemplate(input RDSProps) *RDSTemplate {
 	tmplPath := envRDSTemplatePath
 	if input.WorkloadType == manifest.RequestDrivenWebServiceType {
 		tmplPath = envRDSForRDWSTemplatePath
@@ -297,9 +297,9 @@ func NewEnvServerlessTemplate(input RDSProps) *RDSTemplate {
 	}
 }
 
-// NewEnvServerlessRDWSIngressTemplate creates a marshaler for the security group ingress attached to an RDWS
+// EnvServerlessRDWSIngressTemplate creates a marshaler for the security group ingress attached to an RDWS
 // for permissions into an environment-level Aurora Serverless v2 addon.
-func NewEnvServerlessRDWSIngressTemplate(input RDSProps) *RDSTemplate {
+func EnvServerlessRDWSIngressTemplate(input RDSProps) *RDSTemplate {
 	return &RDSTemplate{
 		RDSProps: input,
 		parser:   template.New(),
@@ -324,25 +324,25 @@ func (r *RDSTemplate) MarshalBinary() ([]byte, error) {
 	return content.Bytes(), nil
 }
 
-// NewRDSParams creates a new RDS parameters marshaler.
-func NewRDSParams() *RDSParams {
+// RDWSParamsForRDS creates a new RDS parameters marshaler.
+func RDWSParamsForRDS() *RDSParams {
 	return &RDSParams{
 		parser:   template.New(),
 		tmplPath: rdsRDWSParamsPath,
 	}
 }
 
-// NewEnvRDSParams creates a parameter marshaler for an environment-level RDS addon.
-func NewEnvRDSParams() *RDSParams {
+// EnvParamsForRDS creates a parameter marshaler for an environment-level RDS addon.
+func EnvParamsForRDS() *RDSParams {
 	return &RDSParams{
 		parser:   template.New(),
 		tmplPath: envRDSParamsPath,
 	}
 }
 
-// NewEnvRDSIngressParams creates a parameter marshaler for the ingress attached to an RDWS
+// RDWSParamsForEnvRDSIngress creates a parameter marshaler for the ingress attached to an RDWS
 // for permissions into an environment-level RDS addon.
-func NewEnvRDSIngressParams() *RDSParams {
+func RDWSParamsForEnvRDSIngress() *RDSParams {
 	return &RDSParams{
 		parser:   template.New(),
 		tmplPath: envRDSIngressForRDWSParamsPath,

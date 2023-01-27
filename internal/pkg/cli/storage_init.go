@@ -710,7 +710,7 @@ func (o *initStorageOpts) newAddonParams() (encoding.BinaryMarshaler, error) {
 	if o.workloadType != manifest.RequestDrivenWebServiceType {
 		return nil, errUnavailableAddonParams
 	}
-	return addon.NewRDSParams(), nil
+	return addon.RDWSParamsForRDS(), nil
 }
 
 func (o *initStorageOpts) newDDBTemplate() (*addon.DynamoDBTemplate, error) {
@@ -736,7 +736,7 @@ func (o *initStorageOpts) newDDBTemplate() (*addon.DynamoDBTemplate, error) {
 		}
 	}
 
-	return addon.NewWorkloadDDBTemplate(&props), nil
+	return addon.WorkloadDDBTemplate(&props), nil
 }
 
 func (o *initStorageOpts) newS3Template() (*addon.S3Template, error) {
@@ -745,7 +745,7 @@ func (o *initStorageOpts) newS3Template() (*addon.S3Template, error) {
 			Name: o.storageName,
 		},
 	}
-	return addon.NewWorkloadS3Template(props), nil
+	return addon.WorkloadS3Template(props), nil
 }
 
 func (o *initStorageOpts) newRDSTemplate() (*addon.RDSTemplate, error) {
@@ -774,9 +774,9 @@ func (o *initStorageOpts) newRDSTemplate() (*addon.RDSTemplate, error) {
 
 	switch v := o.auroraServerlessVersion; v {
 	case auroraServerlessVersionV1:
-		return addon.NewWorkloadServerlessV1Template(props), nil
+		return addon.WorkloadServerlessV1Template(props), nil
 	case auroraServerlessVersionV2:
-		return addon.NewWorkloadServerlessV2Template(props), nil
+		return addon.WorkloadServerlessV2Template(props), nil
 	default:
 		return nil, fmt.Errorf("unknown Aurora serverless version %q", v)
 	}
