@@ -4,6 +4,11 @@
 
 const aws = require("aws-sdk");
 
+const changeRecordAction = {
+  Upsert: "UPSERT",
+  Delete: "DELETE",
+}
+
 // These are used for test purposes only
 let defaultResponseURL;
 let defaultLogGroup;
@@ -158,16 +163,27 @@ const writeARecord = async function (
     hostedZoneCache.set(domain, hostedZoneId);
   }
   console.log(`${action} A record into Hosted Zone ${hostedZoneId}`);
-  const changeBatch = await updateRecords(
-    route53,
-    hostedZoneId,
-    action,
-    alias,
-    accessDNS,
-    accessHostedZone
-  );
-  await waitForRecordChange(route53, changeBatch.ChangeInfo.Id);
+  try {
+    const changeBatch = await updateRecords(
+      route53,
+      hostedZoneId,
+      action,
+      alias,
+      accessDNS,
+      accessHostedZone
+    );
+    await waitForRecordChange(route53, changeBatch.ChangeInfo.Id);
+  } catch (err) {
+    if (action === changeRecordAction.Delete && isRecordSetNotFoundErr(err)) {
+      console.log(`${err.message}; Copilot is ignoring this record.`);
+      return;
+    }
+    throw err;
+  }
 };
+
+// Example error message: "InvalidChangeBatch: [Tried to delete resource record set [name='a.domain.com.', type='A'] but it was not found]"
+const isRecordSetNotFoundErr = (err) => err.message.includes("Tried to delete resource record set") && err.message.includes("but it was not found")
 
 /**
  * Custom domain handler, invoked by Lambda.
@@ -214,7 +230,7 @@ exports.handler = async function (event, context) {
           props.PublicAccessDNS,
           props.PublicAccessHostedZone,
           aliasTypes,
-          "UPSERT"
+          changeRecordAction.Upsert,
         );
         break;
       case "Update":
@@ -225,7 +241,7 @@ exports.handler = async function (event, context) {
           props.PublicAccessDNS,
           props.PublicAccessHostedZone,
           aliasTypes,
-          "UPSERT"
+          changeRecordAction.Upsert,
         );
         // After upserting new aliases, delete unused ones. For example: previously we have ["foo.com", "bar.com"],
         // and now the aliases param is updated to just ["foo.com"] then we'll delete "bar.com".
@@ -242,7 +258,7 @@ exports.handler = async function (event, context) {
           props.PublicAccessDNS,
           props.PublicAccessHostedZone,
           aliasTypes,
-          "DELETE"
+          changeRecordAction.Delete,
         );
         break;
       case "Delete":
@@ -253,7 +269,7 @@ exports.handler = async function (event, context) {
           props.PublicAccessDNS,
           props.PublicAccessHostedZone,
           aliasTypes,
-          "DELETE"
+          changeRecordAction.Delete
         );
         break;
       default:
