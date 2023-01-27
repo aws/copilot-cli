@@ -301,6 +301,7 @@ type wsWlDirReader interface {
 
 type wsEnvironmentReader interface {
 	wsEnvironmentsLister
+	EnvOverridesPath() string
 	ReadEnvironmentManifest(mftDirName string) (workspace.EnvironmentManifest, error)
 }
 

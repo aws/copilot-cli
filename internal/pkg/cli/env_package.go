@@ -113,12 +113,17 @@ func newPackageEnvOpts(vars packageEnvVars) (*packageEnvOpts, error) {
 		if err != nil {
 			return nil, err
 		}
+		ovrdr, err := deploy.NewOverrider(ws.EnvOverridesPath(), envCfg.App, envCfg.Name, fs, sessProvider)
+		if err != nil {
+			return nil, err
+		}
 		return deploy.NewEnvDeployer(&deploy.NewEnvDeployerInput{
 			App:             appCfg,
 			Env:             envCfg,
 			SessionProvider: sessProvider,
 			ConfigStore:     opts.cfgStore,
 			Workspace:       ws,
+			Overrider:       ovrdr,
 		})
 	}
 	return opts, nil
