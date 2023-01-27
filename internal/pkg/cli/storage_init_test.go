@@ -991,7 +991,7 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 
 			mockWs: func(m *mocks.MockwsAddonManager) {
 				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte("type: Backend Service"), nil)
-				m.EXPECT().WorkloadAddonFilePath(gomock.Eq(wantedSvcName), gomock.Eq("my-bucket.yml")).Return("mockPath")
+				m.EXPECT().WorkloadAddonFilePath(gomock.Eq(wantedSvcName), gomock.Eq("my-table.yml")).Return("mockPath")
 				m.EXPECT().Write(gomock.Any(), "mockPath").Return("/frontend/addons/my-table.yml", nil)
 			},
 
