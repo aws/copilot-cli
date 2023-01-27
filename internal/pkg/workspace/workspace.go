@@ -482,6 +482,16 @@ func (ws *Workspace) ReadFile(fPath string) ([]byte, error) {
 	return ws.fs.ReadFile(fPath)
 }
 
+// Write writes the content under the path relative to "copilot/" directory.
+// If successful returns the full path of the file, otherwise an empty string and an error.
+func (ws *Workspace) Write(content encoding.BinaryMarshaler, path string) (string, error) {
+	data, err := content.MarshalBinary()
+	if err != nil {
+		return "", fmt.Errorf("marshal binary content: %w", err)
+	}
+	return ws.write(data, path)
+}
+
 // WriteAddon writes the content of an addon file under "{svc}/addons/{name}.yml".
 // If successful returns the full path of the file, otherwise an empty string and an error.
 func (ws *Workspace) WriteAddon(content encoding.BinaryMarshaler, svc, name string) (string, error) {

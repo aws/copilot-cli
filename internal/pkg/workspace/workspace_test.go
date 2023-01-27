@@ -1214,6 +1214,115 @@ func TestWorkspace_WriteAddon(t *testing.T) {
 	}
 }
 
+func TestWorkspace_Write(t *testing.T) {
+	testCases := map[string]struct {
+		marshaler mockBinaryMarshaler
+		path      string
+
+		wantedPath string
+		wantedErr  error
+	}{
+		"writes addons file with content": {
+			marshaler: mockBinaryMarshaler{
+				content: []byte("hello"),
+			},
+			path:       filepath.FromSlash("webhook/addons/s3.yml"),
+			wantedPath: filepath.FromSlash("/copilot/webhook/addons/s3.yml"),
+		},
+		"wraps error if cannot marshal to binary": {
+			marshaler: mockBinaryMarshaler{
+				err: errors.New("some error"),
+			},
+			path:      filepath.FromSlash("webhook/addons/s3.yml"),
+			wantedErr: errors.New("marshal binary content: some error"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			fs := afero.NewMemMapFs()
+			utils := &afero.Afero{
+				Fs: fs,
+			}
+			utils.MkdirAll(filepath.Join("/", "copilot", "webhook"), 0755)
+			ws := &Workspace{
+				workingDirAbs: "/",
+				copilotDirAbs: "/copilot",
+				fs:            utils,
+			}
+
+			// WHEN
+			actualPath, actualErr := ws.Write(tc.marshaler, tc.path)
+
+			// THEN
+			if tc.wantedErr != nil {
+				require.EqualError(t, actualErr, tc.wantedErr.Error(), "expected the same error")
+			} else {
+				require.Equal(t, tc.wantedPath, actualPath, "expected the same path")
+				out, err := utils.ReadFile(tc.wantedPath)
+				require.NoError(t, err)
+				require.Equal(t, tc.marshaler.content, out, "expected the contents of the file to match")
+			}
+		})
+	}
+}
+
+func TestWorkspace_WriteEnvironmentAddon(t *testing.T) {
+	testCases := map[string]struct {
+		marshaler   mockBinaryMarshaler
+		storageName string
+
+		wantedPath string
+		wantedErr  error
+	}{
+		"writes addons file with content": {
+			marshaler: mockBinaryMarshaler{
+				content: []byte("hello"),
+			},
+			storageName: "s3",
+			wantedPath:  filepath.FromSlash("/copilot/environments/addons/s3.yml"),
+		},
+		"wraps error if cannot marshal to binary": {
+			marshaler: mockBinaryMarshaler{
+				err: errors.New("some error"),
+			},
+			storageName: "s3",
+			wantedErr:   errors.New("marshal binary addon content for s3: some error"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			fs := afero.NewMemMapFs()
+			utils := &afero.Afero{
+				Fs: fs,
+			}
+			utils.MkdirAll(filepath.Join("/", "copilot", "environments"), 0755)
+			ws := &Workspace{
+				workingDirAbs: "/",
+				copilotDirAbs: "/copilot",
+				fs:            utils,
+			}
+
+			// WHEN
+			actualPath, actualErr := ws.WriteEnvironmentAddon(tc.marshaler, tc.storageName)
+
+			// THEN
+			if tc.wantedErr != nil {
+				require.EqualError(t, actualErr, tc.wantedErr.Error(), "expected the same error")
+			} else {
+				require.Equal(t, tc.wantedPath, actualPath, "expected the same path")
+				out, err := ws.fs.ReadFile(tc.wantedPath)
+				require.NoError(t, err)
+				require.Equal(t, tc.marshaler.content, out, "expected the contents of the file to match")
+			}
+		})
+	}
+}
+
+>>>>>>> afd5a069 (implement worksapce.Write)
 func TestWorkspace_ReadWorkloadManifest(t *testing.T) {
 	const (
 		mockCopilotDir   = "/copilot"
