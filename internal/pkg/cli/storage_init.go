@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
+	"github.com/dustin/go-humanize/english"
 
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -26,6 +27,13 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
+
+const (
+	lifecycleEnvironmentLevel = "environment"
+	lifecycleWorkloadLevel    = "workload"
+)
+
+var validLifecycleOptions = []string{lifecycleWorkloadLevel, lifecycleEnvironmentLevel}
 
 const (
 	dynamoDBStorageType = "DynamoDB"
@@ -158,6 +166,7 @@ type initStorageVars struct {
 	storageType  string
 	storageName  string
 	workloadName string
+	lifecycle    string
 
 	// Dynamo DB specific values collected via flags or prompts
 	partitionKey string
@@ -250,13 +259,16 @@ func (o *initStorageOpts) Validate() error {
 	if err := o.validateDDB(); err != nil {
 		return err
 	}
-
+	if o.lifecycle != "" {
+		if err := o.validateStorageLifecycle(); err != nil {
+			return err
+		}
+	}
 	if o.auroraServerlessVersion != "" {
 		if err := o.validateServerlessVersion(); err != nil {
 			return err
 		}
 	}
-
 	if o.rdsEngine != "" {
 		if err := validateEngine(o.rdsEngine); err != nil {
 			return err
@@ -294,6 +306,15 @@ You can enable VPC connectivity by updating your manifest with:
 		return err
 	}
 	return nil
+}
+
+func (o *initStorageOpts) validateStorageLifecycle() error {
+	for _, valid := range validLifecycleOptions {
+		if o.lifecycle == valid {
+			return nil
+		}
+	}
+	return fmt.Errorf("invalid lifecycle; must be one of %s", english.OxfordWordSeries(quoteStringSlice(validLifecycleOptions), "or"))
 }
 
 func (o *initStorageOpts) validateDDB() error {
@@ -726,7 +747,7 @@ func (o *initStorageOpts) newAddonParams() (encoding.BinaryMarshaler, error) {
 	if o.workloadType != manifest.RequestDrivenWebServiceType {
 		return nil, errUnavailableAddonParams
 	}
-	return addon.NewRDSParams(), nil
+	return addon.RDWSParamsForRDS(), nil
 }
 
 func (o *initStorageOpts) newDDBTemplate() (*addon.DynamoDBTemplate, error) {
@@ -752,7 +773,7 @@ func (o *initStorageOpts) newDDBTemplate() (*addon.DynamoDBTemplate, error) {
 		}
 	}
 
-	return addon.NewDDBTemplate(&props), nil
+	return addon.WorkloadDDBTemplate(&props), nil
 }
 
 func (o *initStorageOpts) newS3Template() (*addon.S3Template, error) {
@@ -761,7 +782,7 @@ func (o *initStorageOpts) newS3Template() (*addon.S3Template, error) {
 			Name: o.storageName,
 		},
 	}
-	return addon.NewS3Template(props), nil
+	return addon.WorkloadS3Template(props), nil
 }
 
 func (o *initStorageOpts) newRDSTemplate() (*addon.RDSTemplate, error) {
@@ -790,9 +811,9 @@ func (o *initStorageOpts) newRDSTemplate() (*addon.RDSTemplate, error) {
 
 	switch v := o.auroraServerlessVersion; v {
 	case auroraServerlessVersionV1:
-		return addon.NewServerlessV1Template(props), nil
+		return addon.WorkloadServerlessV1Template(props), nil
 	case auroraServerlessVersionV2:
-		return addon.NewServerlessV2Template(props), nil
+		return addon.WorkloadServerlessV2Template(props), nil
 	default:
 		return nil, fmt.Errorf("unknown Aurora serverless version %q", v)
 	}
@@ -882,6 +903,7 @@ Resource names are injected into your containers as environment variables for ea
 	cmd.Flags().StringVarP(&vars.storageName, nameFlag, nameFlagShort, "", storageFlagDescription)
 	cmd.Flags().StringVarP(&vars.storageType, storageTypeFlag, typeFlagShort, "", storageTypeFlagDescription)
 	cmd.Flags().StringVarP(&vars.workloadName, workloadFlag, workloadFlagShort, "", storageWorkloadFlagDescription)
+	cmd.Flags().StringVarP(&vars.lifecycle, storageLifecycleFlag, "", lifecycleWorkloadLevel, storageLifecycleFlagDescription)
 
 	cmd.Flags().StringVar(&vars.partitionKey, storagePartitionKeyFlag, "", storagePartitionKeyFlagDescription)
 	cmd.Flags().StringVar(&vars.sortKey, storageSortKeyFlag, "", storageSortKeyFlagDescription)
