@@ -33,7 +33,7 @@ func TestWorkload_Template(t *testing.T) {
 		"return ErrAddonsNotFound if addons doesn't exist in a service": {
 			workloadName: testSvcName,
 			setupMocks: func(m addonMocks) {
-				m.ws.EXPECT().WorkloadAddonsPath(testSvcName).Return("mockPath")
+				m.ws.EXPECT().WorkloadAddonsAbsPath(testSvcName).Return("mockPath")
 				m.ws.EXPECT().ListFiles("mockPath").Return(nil, testErr)
 			},
 			wantedErr: fmt.Errorf("list addons under path mockPath: %w", &ErrAddonsNotFound{
@@ -43,7 +43,7 @@ func TestWorkload_Template(t *testing.T) {
 		"return ErrAddonsNotFound if addons doesn't exist in a job": {
 			workloadName: testJobName,
 			setupMocks: func(m addonMocks) {
-				m.ws.EXPECT().WorkloadAddonsPath(testJobName).Return("mockPath")
+				m.ws.EXPECT().WorkloadAddonsAbsPath(testJobName).Return("mockPath")
 				m.ws.EXPECT().ListFiles("mockPath").Return(nil, testErr)
 			},
 			wantedErr: fmt.Errorf("list addons under path mockPath: %w", &ErrAddonsNotFound{
@@ -53,7 +53,7 @@ func TestWorkload_Template(t *testing.T) {
 		"return ErrAddonsNotFound if addons directory is empty in a service": {
 			workloadName: testSvcName,
 			setupMocks: func(m addonMocks) {
-				m.ws.EXPECT().WorkloadAddonsPath(testSvcName).Return("mockPath")
+				m.ws.EXPECT().WorkloadAddonsAbsPath(testSvcName).Return("mockPath")
 				m.ws.EXPECT().ListFiles("mockPath").Return([]string{}, nil)
 			},
 			wantedErr: &ErrAddonsNotFound{
@@ -63,7 +63,7 @@ func TestWorkload_Template(t *testing.T) {
 		"return ErrAddonsNotFound if addons directory does not contain yaml files in a service": {
 			workloadName: testSvcName,
 			setupMocks: func(m addonMocks) {
-				m.ws.EXPECT().WorkloadAddonsPath(testSvcName).Return("mockPath")
+				m.ws.EXPECT().WorkloadAddonsAbsPath(testSvcName).Return("mockPath")
 				m.ws.EXPECT().ListFiles("mockPath").Return([]string{"gitkeep"}, nil)
 			},
 			wantedErr: &ErrAddonsNotFound{
@@ -73,7 +73,7 @@ func TestWorkload_Template(t *testing.T) {
 		"ignore addons.parameters.yml files": {
 			workloadName: testSvcName,
 			setupMocks: func(m addonMocks) {
-				m.ws.EXPECT().WorkloadAddonsPath(testSvcName).Return("mockPath")
+				m.ws.EXPECT().WorkloadAddonsAbsPath(testSvcName).Return("mockPath")
 				m.ws.EXPECT().ListFiles("mockPath").Return([]string{"addons.parameters.yml", "addons.parameters.yaml"}, nil)
 			},
 			wantedErr: &ErrAddonsNotFound{
@@ -83,15 +83,15 @@ func TestWorkload_Template(t *testing.T) {
 		"return err on invalid Metadata fields": {
 			workloadName: testSvcName,
 			setupMocks: func(m addonMocks) {
-				m.ws.EXPECT().WorkloadAddonsPath(testSvcName).Return("mockPath")
+				m.ws.EXPECT().WorkloadAddonsAbsPath(testSvcName).Return("mockPath")
 				m.ws.EXPECT().ListFiles("mockPath").Return([]string{"first.yaml", "invalid-metadata.yaml"}, nil)
 
 				first, _ := os.ReadFile(filepath.Join("testdata", "merge", "first.yaml"))
-				m.ws.EXPECT().WorkloadAddonFilePath(testSvcName, "first.yaml").Return("mockPath")
+				m.ws.EXPECT().WorkloadAddonFileAbsPath(testSvcName, "first.yaml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return(first, nil)
 
 				second, _ := os.ReadFile(filepath.Join("testdata", "merge", "invalid-metadata.yaml"))
-				m.ws.EXPECT().WorkloadAddonFilePath(testSvcName, "invalid-metadata.yaml").Return("mockPath")
+				m.ws.EXPECT().WorkloadAddonFileAbsPath(testSvcName, "invalid-metadata.yaml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return(second, nil)
 			},
 			wantedErr: errors.New(`metadata key "Services" defined in "first.yaml" at Ln 4, Col 7 is different than in "invalid-metadata.yaml" at Ln 3, Col 5`),
@@ -99,15 +99,15 @@ func TestWorkload_Template(t *testing.T) {
 		"returns err on invalid Parameters fields": {
 			workloadName: testSvcName,
 			setupMocks: func(m addonMocks) {
-				m.ws.EXPECT().WorkloadAddonsPath(testSvcName).Return("mockPath")
+				m.ws.EXPECT().WorkloadAddonsAbsPath(testSvcName).Return("mockPath")
 				m.ws.EXPECT().ListFiles("mockPath").Return([]string{"first.yaml", "invalid-parameters.yaml"}, nil)
 
 				first, _ := os.ReadFile(filepath.Join("testdata", "merge", "first.yaml"))
-				m.ws.EXPECT().WorkloadAddonFilePath(testSvcName, "first.yaml").Return("mockPath")
+				m.ws.EXPECT().WorkloadAddonFileAbsPath(testSvcName, "first.yaml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return(first, nil)
 
 				second, _ := os.ReadFile(filepath.Join("testdata", "merge", "invalid-parameters.yaml"))
-				m.ws.EXPECT().WorkloadAddonFilePath(testSvcName, "invalid-parameters.yaml").Return("mockPath")
+				m.ws.EXPECT().WorkloadAddonFileAbsPath(testSvcName, "invalid-parameters.yaml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return(second, nil)
 			},
 			wantedErr: errors.New(`parameter logical ID "Name" defined in "first.yaml" at Ln 15, Col 9 is different than in "invalid-parameters.yaml" at Ln 3, Col 7`),
@@ -115,15 +115,15 @@ func TestWorkload_Template(t *testing.T) {
 		"returns err on invalid Mappings fields": {
 			workloadName: testSvcName,
 			setupMocks: func(m addonMocks) {
-				m.ws.EXPECT().WorkloadAddonsPath(testSvcName).Return("mockPath")
+				m.ws.EXPECT().WorkloadAddonsAbsPath(testSvcName).Return("mockPath")
 				m.ws.EXPECT().ListFiles("mockPath").Return([]string{"first.yaml", "invalid-mappings.yaml"}, nil)
 
 				first, _ := os.ReadFile(filepath.Join("testdata", "merge", "first.yaml"))
-				m.ws.EXPECT().WorkloadAddonFilePath(testSvcName, "first.yaml").Return("mockPath")
+				m.ws.EXPECT().WorkloadAddonFileAbsPath(testSvcName, "first.yaml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return(first, nil)
 
 				second, _ := os.ReadFile(filepath.Join("testdata", "merge", "invalid-mappings.yaml"))
-				m.ws.EXPECT().WorkloadAddonFilePath(testSvcName, "invalid-mappings.yaml").Return("mockPath")
+				m.ws.EXPECT().WorkloadAddonFileAbsPath(testSvcName, "invalid-mappings.yaml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return(second, nil)
 			},
 			wantedErr: errors.New(`mapping "MyTableDynamoDBSettings.test" defined in "first.yaml" at Ln 21, Col 13 is different than in "invalid-mappings.yaml" at Ln 4, Col 7`),
@@ -131,15 +131,15 @@ func TestWorkload_Template(t *testing.T) {
 		"returns err on invalid Conditions fields": {
 			workloadName: testSvcName,
 			setupMocks: func(m addonMocks) {
-				m.ws.EXPECT().WorkloadAddonsPath(testSvcName).Return("mockPath")
+				m.ws.EXPECT().WorkloadAddonsAbsPath(testSvcName).Return("mockPath")
 				m.ws.EXPECT().ListFiles("mockPath").Return([]string{"first.yaml", "invalid-conditions.yaml"}, nil)
 
 				first, _ := os.ReadFile(filepath.Join("testdata", "merge", "first.yaml"))
-				m.ws.EXPECT().WorkloadAddonFilePath(testSvcName, "first.yaml").Return("mockPath")
+				m.ws.EXPECT().WorkloadAddonFileAbsPath(testSvcName, "first.yaml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return(first, nil)
 
 				second, _ := os.ReadFile(filepath.Join("testdata", "merge", "invalid-conditions.yaml"))
-				m.ws.EXPECT().WorkloadAddonFilePath(testSvcName, "invalid-conditions.yaml").Return("mockPath")
+				m.ws.EXPECT().WorkloadAddonFileAbsPath(testSvcName, "invalid-conditions.yaml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return(second, nil)
 			},
 			wantedErr: errors.New(`condition "IsProd" defined in "first.yaml" at Ln 28, Col 13 is different than in "invalid-conditions.yaml" at Ln 2, Col 13`),
@@ -147,15 +147,15 @@ func TestWorkload_Template(t *testing.T) {
 		"returns err on invalid Resources fields": {
 			workloadName: testSvcName,
 			setupMocks: func(m addonMocks) {
-				m.ws.EXPECT().WorkloadAddonsPath(testSvcName).Return("mockPath")
+				m.ws.EXPECT().WorkloadAddonsAbsPath(testSvcName).Return("mockPath")
 				m.ws.EXPECT().ListFiles("mockPath").Return([]string{"first.yaml", "invalid-resources.yaml"}, nil)
 
 				first, _ := os.ReadFile(filepath.Join("testdata", "merge", "first.yaml"))
-				m.ws.EXPECT().WorkloadAddonFilePath(testSvcName, "first.yaml").Return("mockPath")
+				m.ws.EXPECT().WorkloadAddonFileAbsPath(testSvcName, "first.yaml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return(first, nil)
 
 				second, _ := os.ReadFile(filepath.Join("testdata", "merge", "invalid-resources.yaml"))
-				m.ws.EXPECT().WorkloadAddonFilePath(testSvcName, "invalid-resources.yaml").Return("mockPath")
+				m.ws.EXPECT().WorkloadAddonFileAbsPath(testSvcName, "invalid-resources.yaml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return(second, nil)
 			},
 			wantedErr: errors.New(`resource "MyTable" defined in "first.yaml" at Ln 34, Col 9 is different than in "invalid-resources.yaml" at Ln 3, Col 5`),
@@ -163,15 +163,15 @@ func TestWorkload_Template(t *testing.T) {
 		"returns err on invalid Outputs fields": {
 			workloadName: testSvcName,
 			setupMocks: func(m addonMocks) {
-				m.ws.EXPECT().WorkloadAddonsPath(testSvcName).Return("mockPath")
+				m.ws.EXPECT().WorkloadAddonsAbsPath(testSvcName).Return("mockPath")
 				m.ws.EXPECT().ListFiles("mockPath").Return([]string{"first.yaml", "invalid-outputs.yaml"}, nil)
 
 				first, _ := os.ReadFile(filepath.Join("testdata", "merge", "first.yaml"))
-				m.ws.EXPECT().WorkloadAddonFilePath(testSvcName, "first.yaml").Return("mockPath")
+				m.ws.EXPECT().WorkloadAddonFileAbsPath(testSvcName, "first.yaml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return(first, nil)
 
 				second, _ := os.ReadFile(filepath.Join("testdata", "merge", "invalid-outputs.yaml"))
-				m.ws.EXPECT().WorkloadAddonFilePath(testSvcName, "invalid-outputs.yaml").Return("mockPath")
+				m.ws.EXPECT().WorkloadAddonFileAbsPath(testSvcName, "invalid-outputs.yaml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return(second, nil)
 			},
 			wantedErr: errors.New(`output "MyTableAccessPolicy" defined in "first.yaml" at Ln 85, Col 9 is different than in "invalid-outputs.yaml" at Ln 3, Col 5`),
@@ -179,15 +179,15 @@ func TestWorkload_Template(t *testing.T) {
 		"merge fields successfully": {
 			workloadName: testSvcName,
 			setupMocks: func(m addonMocks) {
-				m.ws.EXPECT().WorkloadAddonsPath(testSvcName).Return("mockPath")
+				m.ws.EXPECT().WorkloadAddonsAbsPath(testSvcName).Return("mockPath")
 				m.ws.EXPECT().ListFiles("mockPath").Return([]string{"first.yaml", "second.yaml"}, nil)
 
 				first, _ := os.ReadFile(filepath.Join("testdata", "merge", "first.yaml"))
-				m.ws.EXPECT().WorkloadAddonFilePath(testSvcName, "first.yaml").Return("mockPath")
+				m.ws.EXPECT().WorkloadAddonFileAbsPath(testSvcName, "first.yaml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return(first, nil)
 
 				second, _ := os.ReadFile(filepath.Join("testdata", "merge", "second.yaml"))
-				m.ws.EXPECT().WorkloadAddonFilePath(testSvcName, "second.yaml").Return("mockPath")
+				m.ws.EXPECT().WorkloadAddonFileAbsPath(testSvcName, "second.yaml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return(second, nil)
 			},
 			wantedTemplate: func() string {
@@ -243,7 +243,7 @@ func TestWorkload_Parameters(t *testing.T) {
 	}{
 		"returns ErrAddonsNotFound if there is no addons/ directory defined": {
 			setupMocks: func(m addonMocks) {
-				m.ws.EXPECT().WorkloadAddonsPath("api").Return("mockPath")
+				m.ws.EXPECT().WorkloadAddonsAbsPath("api").Return("mockPath")
 				m.ws.EXPECT().ListFiles("mockPath").Return(nil, errors.New("some error"))
 			},
 			wantedErr: fmt.Errorf(`list addons under path mockPath: %w`, &ErrAddonsNotFound{
@@ -252,50 +252,50 @@ func TestWorkload_Parameters(t *testing.T) {
 		},
 		"returns empty string and nil if there are no parameter files under addons/": {
 			setupMocks: func(m addonMocks) {
-				m.ws.EXPECT().WorkloadAddonsPath("api").Return("mockPath")
+				m.ws.EXPECT().WorkloadAddonsAbsPath("api").Return("mockPath")
 				m.ws.EXPECT().ListFiles("mockPath").Return([]string{"database.yaml"}, nil)
-				m.ws.EXPECT().WorkloadAddonFilePath("api", "database.yaml").Return("mockPath")
+				m.ws.EXPECT().WorkloadAddonFileAbsPath("api", "database.yaml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return([]byte(mockTemplate), nil)
 			},
 		},
 		"returns an error if there are multiple parameter files defined under addons/": {
 			setupMocks: func(m addonMocks) {
-				m.ws.EXPECT().WorkloadAddonsPath("api").Return("mockPath")
+				m.ws.EXPECT().WorkloadAddonsAbsPath("api").Return("mockPath")
 				m.ws.EXPECT().ListFiles("mockPath").Return([]string{"database.yml", "addons.parameters.yml", "addons.parameters.yaml"}, nil)
-				m.ws.EXPECT().WorkloadAddonFilePath("api", "database.yml").Return("mockPath")
+				m.ws.EXPECT().WorkloadAddonFileAbsPath("api", "database.yml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return(nil, nil)
 			},
 			wantedErr: errors.New("defining addons.parameters.yaml and addons.parameters.yml is not allowed under addons/"),
 		},
 		"returns an error if cannot read parameter file under addons/": {
 			setupMocks: func(m addonMocks) {
-				m.ws.EXPECT().WorkloadAddonsPath("api").Return("mockPath")
+				m.ws.EXPECT().WorkloadAddonsAbsPath("api").Return("mockPath")
 				m.ws.EXPECT().ListFiles("mockPath").Return([]string{"template.yml", "addons.parameters.yml"}, nil)
-				m.ws.EXPECT().WorkloadAddonFilePath("api", "template.yml").Return("mockPath")
+				m.ws.EXPECT().WorkloadAddonFileAbsPath("api", "template.yml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return(nil, nil)
-				m.ws.EXPECT().WorkloadAddonFilePath("api", "addons.parameters.yml").Return("mockPath")
+				m.ws.EXPECT().WorkloadAddonFileAbsPath("api", "addons.parameters.yml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return(nil, errors.New("some error"))
 			},
 			wantedErr: errors.New("read parameter file addons.parameters.yml under path mockPath: some error"),
 		},
 		"returns an error if there are no 'Parameters' field defined in a parameters file": {
 			setupMocks: func(m addonMocks) {
-				m.ws.EXPECT().WorkloadAddonsPath("api").Return("mockPath")
+				m.ws.EXPECT().WorkloadAddonsAbsPath("api").Return("mockPath")
 				m.ws.EXPECT().ListFiles("mockPath").Return([]string{"template.yaml", "addons.parameters.yml"}, nil)
-				m.ws.EXPECT().WorkloadAddonFilePath("api", "template.yaml").Return("mockPath")
+				m.ws.EXPECT().WorkloadAddonFileAbsPath("api", "template.yaml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return(nil, nil)
-				m.ws.EXPECT().WorkloadAddonFilePath("api", "addons.parameters.yml").Return("mockPath")
+				m.ws.EXPECT().WorkloadAddonFileAbsPath("api", "addons.parameters.yml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return([]byte(""), nil)
 			},
 			wantedErr: errors.New("must define field 'Parameters' in file addons.parameters.yml under path mockPath"),
 		},
 		"returns an error if reserved parameter fields is redefined in a parameters file": {
 			setupMocks: func(m addonMocks) {
-				m.ws.EXPECT().WorkloadAddonsPath("api").Return("mockPath")
+				m.ws.EXPECT().WorkloadAddonsAbsPath("api").Return("mockPath")
 				m.ws.EXPECT().ListFiles("mockPath").Return([]string{"template.yaml", "addons.parameters.yml"}, nil)
-				m.ws.EXPECT().WorkloadAddonFilePath("api", "template.yaml").Return("mockPath")
+				m.ws.EXPECT().WorkloadAddonFileAbsPath("api", "template.yaml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return([]byte(mockTemplate), nil)
-				m.ws.EXPECT().WorkloadAddonFilePath("api", "addons.parameters.yml").Return("mockParametersPath")
+				m.ws.EXPECT().WorkloadAddonFileAbsPath("api", "addons.parameters.yml").Return("mockParametersPath")
 				m.ws.EXPECT().ReadFile("mockParametersPath").Return([]byte(`
 Parameters:
   App: !Ref AppName
@@ -310,9 +310,9 @@ Parameters:
 		},
 		"returns the content of Parameters on success": {
 			setupMocks: func(m addonMocks) {
-				m.ws.EXPECT().WorkloadAddonsPath("api").Return("mockPath")
+				m.ws.EXPECT().WorkloadAddonsAbsPath("api").Return("mockPath")
 				m.ws.EXPECT().ListFiles("mockPath").Return([]string{"template.yaml", "addons.parameters.yaml"}, nil)
-				m.ws.EXPECT().WorkloadAddonFilePath("api", "template.yaml").Return("mockPath")
+				m.ws.EXPECT().WorkloadAddonFileAbsPath("api", "template.yaml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return([]byte(`Parameters:
   App:
     Type: String
@@ -329,7 +329,7 @@ Parameters:
   DiscoveryServiceArn:
     Type: String
 `), nil)
-				m.ws.EXPECT().WorkloadAddonFilePath("api", "addons.parameters.yaml").Return("mockParametersPath")
+				m.ws.EXPECT().WorkloadAddonFileAbsPath("api", "addons.parameters.yaml").Return("mockParametersPath")
 				m.ws.EXPECT().ReadFile("mockParametersPath").Return([]byte(`
 Parameters:
   EventsQueue: 
@@ -388,7 +388,7 @@ func TestEnv_Template(t *testing.T) {
 	}{
 		"return ErrAddonsNotFound if addons doesn't exist in an environment": {
 			setupMocks: func(m addonMocks) {
-				m.ws.EXPECT().EnvAddonsPath().Return("mockPath")
+				m.ws.EXPECT().EnvAddonsAbsPath().Return("mockPath")
 				m.ws.EXPECT().ListFiles("mockPath").Return(nil, testErr)
 			},
 			wantedErr: fmt.Errorf("list addons under path mockPath: %w", &ErrAddonsNotFound{
@@ -397,126 +397,126 @@ func TestEnv_Template(t *testing.T) {
 		},
 		"return ErrAddonsNotFound if addons directory is empty in an environment": {
 			setupMocks: func(m addonMocks) {
-				m.ws.EXPECT().EnvAddonsPath().Return("mockPath")
+				m.ws.EXPECT().EnvAddonsAbsPath().Return("mockPath")
 				m.ws.EXPECT().ListFiles("mockPath").Return([]string{}, nil)
 			},
 			wantedErr: &ErrAddonsNotFound{},
 		},
 		"return ErrAddonsNotFound if addons directory does not contain yaml files in an environment": {
 			setupMocks: func(m addonMocks) {
-				m.ws.EXPECT().EnvAddonsPath().Return("mockPath")
+				m.ws.EXPECT().EnvAddonsAbsPath().Return("mockPath")
 				m.ws.EXPECT().ListFiles("mockPath").Return([]string{"gitkeep"}, nil)
 			},
 			wantedErr: &ErrAddonsNotFound{},
 		},
 		"ignore addons.parameters.yml files": {
 			setupMocks: func(m addonMocks) {
-				m.ws.EXPECT().EnvAddonsPath().Return("mockPath")
+				m.ws.EXPECT().EnvAddonsAbsPath().Return("mockPath")
 				m.ws.EXPECT().ListFiles("mockPath").Return([]string{"addons.parameters.yml", "addons.parameters.yaml"}, nil)
 			},
 			wantedErr: &ErrAddonsNotFound{},
 		},
 		"return err on invalid Metadata fields": {
 			setupMocks: func(m addonMocks) {
-				m.ws.EXPECT().EnvAddonsPath().Return("mockPath")
+				m.ws.EXPECT().EnvAddonsAbsPath().Return("mockPath")
 				m.ws.EXPECT().ListFiles("mockPath").Return([]string{"first.yaml", "invalid-metadata.yaml"}, nil)
 
 				first, _ := os.ReadFile(filepath.Join("testdata", "merge", "first.yaml"))
-				m.ws.EXPECT().EnvAddonFilePath("first.yaml").Return("mockPath")
+				m.ws.EXPECT().EnvAddonFileAbsPath("first.yaml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return(first, nil)
 
 				second, _ := os.ReadFile(filepath.Join("testdata", "merge", "invalid-metadata.yaml"))
-				m.ws.EXPECT().EnvAddonFilePath("invalid-metadata.yaml").Return("mockPath")
+				m.ws.EXPECT().EnvAddonFileAbsPath("invalid-metadata.yaml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return(second, nil)
 			},
 			wantedErr: errors.New(`metadata key "Services" defined in "first.yaml" at Ln 4, Col 7 is different than in "invalid-metadata.yaml" at Ln 3, Col 5`),
 		},
 		"returns err on invalid Parameters fields": {
 			setupMocks: func(m addonMocks) {
-				m.ws.EXPECT().EnvAddonsPath().Return("mockPath")
+				m.ws.EXPECT().EnvAddonsAbsPath().Return("mockPath")
 				m.ws.EXPECT().ListFiles("mockPath").Return([]string{"first.yaml", "invalid-parameters.yaml"}, nil)
 
 				first, _ := os.ReadFile(filepath.Join("testdata", "merge", "first.yaml"))
-				m.ws.EXPECT().EnvAddonFilePath("first.yaml").Return("mockPath")
+				m.ws.EXPECT().EnvAddonFileAbsPath("first.yaml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return(first, nil)
 
 				second, _ := os.ReadFile(filepath.Join("testdata", "merge", "invalid-parameters.yaml"))
-				m.ws.EXPECT().EnvAddonFilePath("invalid-parameters.yaml").Return("mockPath")
+				m.ws.EXPECT().EnvAddonFileAbsPath("invalid-parameters.yaml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return(second, nil)
 			},
 			wantedErr: errors.New(`parameter logical ID "Name" defined in "first.yaml" at Ln 15, Col 9 is different than in "invalid-parameters.yaml" at Ln 3, Col 7`),
 		},
 		"returns err on invalid Mappings fields": {
 			setupMocks: func(m addonMocks) {
-				m.ws.EXPECT().EnvAddonsPath().Return("mockPath")
+				m.ws.EXPECT().EnvAddonsAbsPath().Return("mockPath")
 				m.ws.EXPECT().ListFiles("mockPath").Return([]string{"first.yaml", "invalid-mappings.yaml"}, nil)
 
 				first, _ := os.ReadFile(filepath.Join("testdata", "merge", "first.yaml"))
-				m.ws.EXPECT().EnvAddonFilePath("first.yaml").Return("mockPath")
+				m.ws.EXPECT().EnvAddonFileAbsPath("first.yaml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return(first, nil)
 
 				second, _ := os.ReadFile(filepath.Join("testdata", "merge", "invalid-mappings.yaml"))
-				m.ws.EXPECT().EnvAddonFilePath("invalid-mappings.yaml").Return("mockPath")
+				m.ws.EXPECT().EnvAddonFileAbsPath("invalid-mappings.yaml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return(second, nil)
 			},
 			wantedErr: errors.New(`mapping "MyTableDynamoDBSettings.test" defined in "first.yaml" at Ln 21, Col 13 is different than in "invalid-mappings.yaml" at Ln 4, Col 7`),
 		},
 		"returns err on invalid Conditions fields": {
 			setupMocks: func(m addonMocks) {
-				m.ws.EXPECT().EnvAddonsPath().Return("mockPath")
+				m.ws.EXPECT().EnvAddonsAbsPath().Return("mockPath")
 				m.ws.EXPECT().ListFiles("mockPath").Return([]string{"first.yaml", "invalid-conditions.yaml"}, nil)
 
 				first, _ := os.ReadFile(filepath.Join("testdata", "merge", "first.yaml"))
-				m.ws.EXPECT().EnvAddonFilePath("first.yaml").Return("mockPath")
+				m.ws.EXPECT().EnvAddonFileAbsPath("first.yaml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return(first, nil)
 
 				second, _ := os.ReadFile(filepath.Join("testdata", "merge", "invalid-conditions.yaml"))
-				m.ws.EXPECT().EnvAddonFilePath("invalid-conditions.yaml").Return("mockPath")
+				m.ws.EXPECT().EnvAddonFileAbsPath("invalid-conditions.yaml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return(second, nil)
 			},
 			wantedErr: errors.New(`condition "IsProd" defined in "first.yaml" at Ln 28, Col 13 is different than in "invalid-conditions.yaml" at Ln 2, Col 13`),
 		},
 		"returns err on invalid Resources fields": {
 			setupMocks: func(m addonMocks) {
-				m.ws.EXPECT().EnvAddonsPath().Return("mockPath")
+				m.ws.EXPECT().EnvAddonsAbsPath().Return("mockPath")
 				m.ws.EXPECT().ListFiles("mockPath").Return([]string{"first.yaml", "invalid-resources.yaml"}, nil)
 
 				first, _ := os.ReadFile(filepath.Join("testdata", "merge", "first.yaml"))
-				m.ws.EXPECT().EnvAddonFilePath("first.yaml").Return("mockPath")
+				m.ws.EXPECT().EnvAddonFileAbsPath("first.yaml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return(first, nil)
 
 				second, _ := os.ReadFile(filepath.Join("testdata", "merge", "invalid-resources.yaml"))
-				m.ws.EXPECT().EnvAddonFilePath("invalid-resources.yaml").Return("mockPath")
+				m.ws.EXPECT().EnvAddonFileAbsPath("invalid-resources.yaml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return(second, nil)
 			},
 			wantedErr: errors.New(`resource "MyTable" defined in "first.yaml" at Ln 34, Col 9 is different than in "invalid-resources.yaml" at Ln 3, Col 5`),
 		},
 		"returns err on invalid Outputs fields": {
 			setupMocks: func(m addonMocks) {
-				m.ws.EXPECT().EnvAddonsPath().Return("mockPath")
+				m.ws.EXPECT().EnvAddonsAbsPath().Return("mockPath")
 				m.ws.EXPECT().ListFiles("mockPath").Return([]string{"first.yaml", "invalid-outputs.yaml"}, nil)
 
 				first, _ := os.ReadFile(filepath.Join("testdata", "merge", "first.yaml"))
-				m.ws.EXPECT().EnvAddonFilePath("first.yaml").Return("mockPath")
+				m.ws.EXPECT().EnvAddonFileAbsPath("first.yaml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return(first, nil)
 
 				second, _ := os.ReadFile(filepath.Join("testdata", "merge", "invalid-outputs.yaml"))
-				m.ws.EXPECT().EnvAddonFilePath("invalid-outputs.yaml").Return("mockPath")
+				m.ws.EXPECT().EnvAddonFileAbsPath("invalid-outputs.yaml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return(second, nil)
 			},
 			wantedErr: errors.New(`output "MyTableAccessPolicy" defined in "first.yaml" at Ln 85, Col 9 is different than in "invalid-outputs.yaml" at Ln 3, Col 5`),
 		},
 		"merge fields successfully": {
 			setupMocks: func(m addonMocks) {
-				m.ws.EXPECT().EnvAddonsPath().Return("mockPath")
+				m.ws.EXPECT().EnvAddonsAbsPath().Return("mockPath")
 				m.ws.EXPECT().ListFiles("mockPath").Return([]string{"first.yaml", "second.yaml"}, nil)
 
 				first, _ := os.ReadFile(filepath.Join("testdata", "merge", "env", "first.yaml"))
-				m.ws.EXPECT().EnvAddonFilePath("first.yaml").Return("mockPath")
+				m.ws.EXPECT().EnvAddonFileAbsPath("first.yaml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return(first, nil)
 
 				second, _ := os.ReadFile(filepath.Join("testdata", "merge", "env", "second.yaml"))
-				m.ws.EXPECT().EnvAddonFilePath("second.yaml").Return("mockPath")
+				m.ws.EXPECT().EnvAddonFileAbsPath("second.yaml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return(second, nil)
 			},
 			wantedTemplate: func() string {
@@ -568,7 +568,7 @@ func TestEnv_Parameters(t *testing.T) {
 	}{
 		"returns ErrAddonsNotFound if there is no addons/ directory defined": {
 			setupMocks: func(m addonMocks) {
-				m.ws.EXPECT().EnvAddonsPath().Return("mockPath")
+				m.ws.EXPECT().EnvAddonsAbsPath().Return("mockPath")
 				m.ws.EXPECT().ListFiles("mockPath").Return(nil, errors.New("some error"))
 			},
 			wantedErr: fmt.Errorf("list addons under path mockPath: %w", &ErrAddonsNotFound{
@@ -577,50 +577,50 @@ func TestEnv_Parameters(t *testing.T) {
 		},
 		"returns empty string and nil if there are no parameter files under addons/": {
 			setupMocks: func(m addonMocks) {
-				m.ws.EXPECT().EnvAddonsPath().Return("mockPath")
+				m.ws.EXPECT().EnvAddonsAbsPath().Return("mockPath")
 				m.ws.EXPECT().ListFiles("mockPath").Return([]string{"database.yaml"}, nil)
-				m.ws.EXPECT().EnvAddonFilePath("database.yaml").Return("mockPath")
+				m.ws.EXPECT().EnvAddonFileAbsPath("database.yaml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return([]byte(mockTemplate), nil)
 			},
 		},
 		"returns an error if there are multiple parameter files defined under addons/": {
 			setupMocks: func(m addonMocks) {
-				m.ws.EXPECT().EnvAddonsPath().Return("mockPath")
+				m.ws.EXPECT().EnvAddonsAbsPath().Return("mockPath")
 				m.ws.EXPECT().ListFiles("mockPath").Return([]string{"database.yml", "addons.parameters.yml", "addons.parameters.yaml"}, nil)
-				m.ws.EXPECT().EnvAddonFilePath("database.yml").Return("mockPath")
+				m.ws.EXPECT().EnvAddonFileAbsPath("database.yml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return(nil, nil)
 			},
 			wantedErr: errors.New("defining addons.parameters.yaml and addons.parameters.yml is not allowed under addons/"),
 		},
 		"returns an error if cannot read parameter file under addons/": {
 			setupMocks: func(m addonMocks) {
-				m.ws.EXPECT().EnvAddonsPath().Return("mockPath")
+				m.ws.EXPECT().EnvAddonsAbsPath().Return("mockPath")
 				m.ws.EXPECT().ListFiles("mockPath").Return([]string{"template.yml", "addons.parameters.yml"}, nil)
-				m.ws.EXPECT().EnvAddonFilePath("template.yml").Return("mockPath")
+				m.ws.EXPECT().EnvAddonFileAbsPath("template.yml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return(nil, nil)
-				m.ws.EXPECT().EnvAddonFilePath("addons.parameters.yml").Return("mockPath")
+				m.ws.EXPECT().EnvAddonFileAbsPath("addons.parameters.yml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return(nil, errors.New("some error"))
 			},
 			wantedErr: errors.New("read parameter file addons.parameters.yml under path mockPath: some error"),
 		},
 		"returns an error if there are no 'Parameters' field defined in a parameters file": {
 			setupMocks: func(m addonMocks) {
-				m.ws.EXPECT().EnvAddonsPath().Return("mockPath")
+				m.ws.EXPECT().EnvAddonsAbsPath().Return("mockPath")
 				m.ws.EXPECT().ListFiles("mockPath").Return([]string{"template.yaml", "addons.parameters.yml"}, nil)
-				m.ws.EXPECT().EnvAddonFilePath("template.yaml").Return("mockPath")
+				m.ws.EXPECT().EnvAddonFileAbsPath("template.yaml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return(nil, nil)
-				m.ws.EXPECT().EnvAddonFilePath("addons.parameters.yml").Return("mockPath")
+				m.ws.EXPECT().EnvAddonFileAbsPath("addons.parameters.yml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return([]byte(""), nil)
 			},
 			wantedErr: errors.New("must define field 'Parameters' in file addons.parameters.yml under path mockPath"),
 		},
 		"returns an error if reserved parameter fields is redefined in a parameters file": {
 			setupMocks: func(m addonMocks) {
-				m.ws.EXPECT().EnvAddonsPath().Return("mockPath")
+				m.ws.EXPECT().EnvAddonsAbsPath().Return("mockPath")
 				m.ws.EXPECT().ListFiles("mockPath").Return([]string{"template.yaml", "addons.parameters.yml"}, nil)
-				m.ws.EXPECT().EnvAddonFilePath("template.yaml").Return("mockPath")
+				m.ws.EXPECT().EnvAddonFileAbsPath("template.yaml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return([]byte(mockTemplate), nil)
-				m.ws.EXPECT().EnvAddonFilePath("addons.parameters.yml").Return("mockPath")
+				m.ws.EXPECT().EnvAddonFileAbsPath("addons.parameters.yml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return([]byte(`
 Parameters:
   App: !Ref AppName
@@ -634,9 +634,9 @@ Parameters:
 		},
 		"returns the content of Parameters on success": {
 			setupMocks: func(m addonMocks) {
-				m.ws.EXPECT().EnvAddonsPath().Return("mockPath")
+				m.ws.EXPECT().EnvAddonsAbsPath().Return("mockPath")
 				m.ws.EXPECT().ListFiles("mockPath").Return([]string{"template.yaml", "addons.parameters.yaml"}, nil)
-				m.ws.EXPECT().EnvAddonFilePath("template.yaml").Return("mockPath")
+				m.ws.EXPECT().EnvAddonFileAbsPath("template.yaml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return([]byte(`Parameters:
   App:
     Type: String
@@ -651,7 +651,7 @@ Parameters:
   DiscoveryServiceArn:
     Type: String
 `), nil)
-				m.ws.EXPECT().EnvAddonFilePath("addons.parameters.yaml").Return("mockPath")
+				m.ws.EXPECT().EnvAddonFileAbsPath("addons.parameters.yaml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return([]byte(`
 Parameters:
   EventsQueue: 

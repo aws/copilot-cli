@@ -887,7 +887,7 @@ func TestIsInGitRepository(t *testing.T) {
 	}
 }
 
-func TestWorkspace_EnvAddonsPath(t *testing.T) {
+func TestWorkspace_EnvAddonsAbsPath(t *testing.T) {
 	mockWorkingDirAbs := "/app"
 	testCases := map[string]struct {
 		fs         func() afero.Fs
@@ -912,7 +912,7 @@ func TestWorkspace_EnvAddonsPath(t *testing.T) {
 				},
 			}
 
-			got := ws.EnvAddonsPath()
+			got := ws.EnvAddonsAbsPath()
 			require.Equal(t, tc.wantedPath, got)
 		})
 	}
@@ -948,7 +948,7 @@ func TestWorkspace_WorkloadOverridesPath(t *testing.T) {
 	require.Equal(t, filepath.Join("copilot", "frontend", "overrides"), ws.WorkloadOverridesPath("frontend"))
 }
 
-func TestWorkspace_EnvAddonFilePath(t *testing.T) {
+func TestWorkspace_EnvAddonFileAbsPath(t *testing.T) {
 	mockWorkingDirAbs := "/app"
 	testCases := map[string]struct {
 		fName      string
@@ -976,13 +976,13 @@ func TestWorkspace_EnvAddonFilePath(t *testing.T) {
 				},
 			}
 
-			got := ws.EnvAddonFilePath(tc.fName)
+			got := ws.EnvAddonFileAbsPath(tc.fName)
 			require.Equal(t, tc.wantedPath, got)
 		})
 	}
 }
 
-func TestWorkspace_WorkloadAddonsPath(t *testing.T) {
+func TestWorkspace_WorkloadAddonsAbsPath(t *testing.T) {
 	mockWorkingDirAbs := "/app"
 	testCases := map[string]struct {
 		fs         func() afero.Fs
@@ -1007,13 +1007,13 @@ func TestWorkspace_WorkloadAddonsPath(t *testing.T) {
 				},
 			}
 
-			got := ws.WorkloadAddonsPath("mockSvc")
+			got := ws.WorkloadAddonsAbsPath("mockSvc")
 			require.Equal(t, tc.wantedPath, got)
 		})
 	}
 }
 
-func TestWorkspace_WorkloadAddonFilePath(t *testing.T) {
+func TestWorkspace_WorkloadAddonFileAbsPath(t *testing.T) {
 	mockWorkingDirAbs := "/app"
 	testCases := map[string]struct {
 		svc        string
@@ -1043,7 +1043,7 @@ func TestWorkspace_WorkloadAddonFilePath(t *testing.T) {
 				},
 			}
 
-			got := ws.WorkloadAddonFilePath(tc.svc, tc.fName)
+			got := ws.WorkloadAddonFileAbsPath(tc.svc, tc.fName)
 			require.Equal(t, tc.wantedPath, got)
 		})
 	}

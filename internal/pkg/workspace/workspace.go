@@ -427,24 +427,24 @@ func (ws *Workspace) DeleteWorkspaceFile() error {
 	return ws.fs.Remove(filepath.Join(CopilotDirName, SummaryFileName))
 }
 
-// EnvAddonsPath returns the addons/ directory file path for environments.
-func (ws *Workspace) EnvAddonsPath() string {
+// EnvAddonsAbsPath returns the absolute path for the addons/ directory of environments.
+func (ws *Workspace) EnvAddonsAbsPath() string {
 	return filepath.Join(ws.copilotDirAbs, environmentsDirName, addonsDirName)
 }
 
-// EnvAddonFilePath returns the path of an addon file for environments.
-func (ws *Workspace) EnvAddonFilePath(fName string) string {
-	return filepath.Join(ws.EnvAddonsPath(), fName)
+// EnvAddonFileAbsPath returns the absolute path of an addon file for environments.
+func (ws *Workspace) EnvAddonFileAbsPath(fName string) string {
+	return filepath.Join(ws.EnvAddonsAbsPath(), fName)
 }
 
-// WorkloadAddonsPath returns the addons/ directory file path for a given workload.
-func (ws *Workspace) WorkloadAddonsPath(name string) string {
+// WorkloadAddonsAbsPath returns the absolute path for the addons/ directory file path of a given workload.
+func (ws *Workspace) WorkloadAddonsAbsPath(name string) string {
 	return filepath.Join(ws.copilotDirAbs, name, addonsDirName)
 }
 
-// WorkloadAddonFilePath returns the path of an addon file for a given workload.
-func (ws *Workspace) WorkloadAddonFilePath(wkldName, fName string) string {
-	return filepath.Join(ws.WorkloadAddonsPath(wkldName), fName)
+// WorkloadAddonFileAbsPath returns the absolute path of an addon file for a given workload.
+func (ws *Workspace) WorkloadAddonFileAbsPath(wkldName, fName string) string {
+	return filepath.Join(ws.WorkloadAddonsAbsPath(wkldName), fName)
 }
 
 // EnvOverridesPath returns the default path to the overrides/ directory for environments.
