@@ -639,7 +639,7 @@ func (o *initStorageOpts) Execute() error {
 		return err
 	}
 	for _, addon := range addonBlobs {
-		path, err := o.ws.WriteAddon(addon.blob, o.workloadName, addon.name)
+		path, err := o.ws.Write(addon.blob, o.ws.WorkloadAddonFilePath(o.workloadName, fmt.Sprintf("%s.%s", addon.name, addon.extension)))
 		if err != nil {
 			e, ok := err.(*workspace.ErrFileExists)
 			if !ok {
@@ -674,6 +674,7 @@ type addonBlob struct {
 	name        string
 	description string
 	blob        encoding.BinaryMarshaler
+	extension   string
 }
 
 func (o *initStorageOpts) addonBlobs() ([]addonBlob, error) {
@@ -686,6 +687,7 @@ func (o *initStorageOpts) addonBlobs() ([]addonBlob, error) {
 			name:        o.storageName,
 			description: "template",
 			blob:        templateBlob,
+			extension:   "yml",
 		},
 	}
 	paramsBlob, err := o.newAddonParams()
@@ -699,6 +701,7 @@ func (o *initStorageOpts) addonBlobs() ([]addonBlob, error) {
 		name:        "addons.parameters",
 		description: "parameters",
 		blob:        paramsBlob,
+		extension:   "yml",
 	}), nil
 }
 
