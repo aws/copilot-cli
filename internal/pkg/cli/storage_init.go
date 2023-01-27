@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
+	"github.com/dustin/go-humanize/english"
 
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -26,6 +27,13 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
+
+const (
+	lifecycleEnvironmentLevel = "environment"
+	lifecycleWorkloadLevel    = "workload"
+)
+
+var validLifecycleOptions = []string{lifecycleWorkloadLevel, lifecycleEnvironmentLevel}
 
 const (
 	dynamoDBStorageType = "DynamoDB"
@@ -158,6 +166,7 @@ type initStorageVars struct {
 	storageType  string
 	storageName  string
 	workloadName string
+	lifecycle    string
 
 	// Dynamo DB specific values collected via flags or prompts
 	partitionKey string
@@ -250,13 +259,16 @@ func (o *initStorageOpts) Validate() error {
 	if err := o.validateDDB(); err != nil {
 		return err
 	}
-
+	if o.lifecycle != "" {
+		if err := o.validateStorageLifecycle(); err != nil {
+			return err
+		}
+	}
 	if o.auroraServerlessVersion != "" {
 		if err := o.validateServerlessVersion(); err != nil {
 			return err
 		}
 	}
-
 	if o.rdsEngine != "" {
 		if err := validateEngine(o.rdsEngine); err != nil {
 			return err
@@ -294,6 +306,15 @@ You can enable VPC connectivity by updating your manifest with:
 		return err
 	}
 	return nil
+}
+
+func (o *initStorageOpts) validateStorageLifecycle() error {
+	for _, valid := range validLifecycleOptions {
+		if o.lifecycle == valid {
+			return nil
+		}
+	}
+	return fmt.Errorf("invalid lifecycle; must be one of %s", english.OxfordWordSeries(quoteStringSlice(validLifecycleOptions), "or"))
 }
 
 func (o *initStorageOpts) validateDDB() error {
@@ -882,6 +903,7 @@ Resource names are injected into your containers as environment variables for ea
 	cmd.Flags().StringVarP(&vars.storageName, nameFlag, nameFlagShort, "", storageFlagDescription)
 	cmd.Flags().StringVarP(&vars.storageType, storageTypeFlag, typeFlagShort, "", storageTypeFlagDescription)
 	cmd.Flags().StringVarP(&vars.workloadName, workloadFlag, workloadFlagShort, "", storageWorkloadFlagDescription)
+	cmd.Flags().StringVarP(&vars.lifecycle, storageLifecycleFlag, "", lifecycleWorkloadLevel, storageLifecycleFlagDescription)
 
 	cmd.Flags().StringVar(&vars.partitionKey, storagePartitionKeyFlag, "", storagePartitionKeyFlagDescription)
 	cmd.Flags().StringVar(&vars.sortKey, storageSortKeyFlag, "", storageSortKeyFlagDescription)
