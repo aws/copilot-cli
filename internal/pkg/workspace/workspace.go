@@ -447,6 +447,16 @@ func (ws *Workspace) WorkloadAddonFileAbsPath(wkldName, fName string) string {
 	return filepath.Join(ws.WorkloadAddonsAbsPath(wkldName), fName)
 }
 
+// WorkloadAddonFilePath returns the path under the workspace of an addon file for a given workload.
+func (ws *Workspace) WorkloadAddonFilePath(wkldName, fName string) string {
+	return filepath.Join(wkldName, addonsDirName, fName)
+}
+
+// EnvAddonFilePath returns the path under the workspace of an addon file for environments.
+func (ws *Workspace) EnvAddonFilePath(fName string) string {
+	return filepath.Join(environmentsDirName, addonsDirName, fName)
+}
+
 // EnvOverridesPath returns the default path to the overrides/ directory for environments.
 func (ws *Workspace) EnvOverridesPath() string {
 	return filepath.Join(ws.copilotDirAbs, environmentsDirName, overridesDirName)

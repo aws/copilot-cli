@@ -918,6 +918,16 @@ func TestWorkspace_EnvAddonsAbsPath(t *testing.T) {
 	}
 }
 
+func TestWorkspace_WorkloadAddonFilePath(t *testing.T) {
+	ws := &Workspace{}
+	require.Equal(t, filepath.FromSlash("webhook/addons/db.yml"), ws.WorkloadAddonFilePath("webhook", "db.yml"))
+}
+
+func TestWorkspace_EnvAddonFilePath(t *testing.T) {
+	ws := &Workspace{}
+	require.Equal(t, filepath.FromSlash("environments/addons/db.yml"), ws.EnvAddonFilePath("db.yml"))
+}
+
 func TestWorkspace_EnvOverridesPath(t *testing.T) {
 	// GIVEN
 	defer func() { getWd = os.Getwd }()
