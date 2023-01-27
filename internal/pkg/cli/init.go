@@ -156,6 +156,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		store:           configStore,
 		sessionProvider: sessProvider,
 		identity:        id,
+		fs:              fs,
 		newInterpolator: newManifestInterpolator,
 	}
 	deploySvcCmd := &deploySvcOpts{

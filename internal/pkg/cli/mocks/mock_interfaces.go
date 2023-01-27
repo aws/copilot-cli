@@ -2922,6 +2922,20 @@ func (m *MockwsEnvironmentReader) EXPECT() *MockwsEnvironmentReaderMockRecorder 
 	return m.recorder
 }
 
+// EnvOverridesPath mocks base method.
+func (m *MockwsEnvironmentReader) EnvOverridesPath() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnvOverridesPath")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// EnvOverridesPath indicates an expected call of EnvOverridesPath.
+func (mr *MockwsEnvironmentReaderMockRecorder) EnvOverridesPath() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnvOverridesPath", reflect.TypeOf((*MockwsEnvironmentReader)(nil).EnvOverridesPath))
+}
+
 // ListEnvironments mocks base method.
 func (m *MockwsEnvironmentReader) ListEnvironments() ([]string, error) {
 	m.ctrl.T.Helper()
