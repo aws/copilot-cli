@@ -299,17 +299,54 @@ func (lc *Logging) GetEnableMetadata() *string {
 
 // SidecarConfig represents the configurable options for setting up a sidecar container.
 type SidecarConfig struct {
-	Port          *string              `yaml:"port"`
-	Image         *string              `yaml:"image"`
-	Essential     *bool                `yaml:"essential"`
-	CredsParam    *string              `yaml:"credentialsParameter"`
-	Variables     map[string]Variable  `yaml:"variables"`
-	Secrets       map[string]Secret    `yaml:"secrets"`
-	MountPoints   []SidecarMountPoint  `yaml:"mount_points"`
-	DockerLabels  map[string]string    `yaml:"labels"`
-	DependsOn     DependsOn            `yaml:"depends_on"`
-	HealthCheck   ContainerHealthCheck `yaml:"healthcheck"`
+	Port          *string                            `yaml:"port"`
+	Image         Union[*string, SidecarImageConfig] `yaml:"image"`
+	Essential     *bool                              `yaml:"essential"`
+	CredsParam    *string                            `yaml:"credentialsParameter"`
+	Variables     map[string]Variable                `yaml:"variables"`
+	Secrets       map[string]Secret                  `yaml:"secrets"`
+	MountPoints   []SidecarMountPoint                `yaml:"mount_points"`
+	DockerLabels  map[string]string                  `yaml:"labels"`
+	DependsOn     DependsOn                          `yaml:"depends_on"`
+	HealthCheck   ContainerHealthCheck               `yaml:"healthcheck"`
 	ImageOverride `yaml:",inline"`
+}
+
+// SidecarImageConfig represents the docker build arguments and location of the existing image.
+type SidecarImageConfig struct {
+	Build    Union[*string, DockerBuildArgs] // `yaml:"build"`
+	Location *string                         // `yaml:"location"`
+}
+
+// UnmarshalYAML overrides the default YAML unmarshaling logic for the Image
+// struct, allowing it to perform more complex unmarshaling behavior.
+// This method implements the yaml.Unmarshaler (v3) interface.
+func (s *SidecarImageConfig) UnmarshalYAML(value *yaml.Node) error {
+	type scImageConfig SidecarImageConfig
+	if err := value.Decode((*scImageConfig)(s)); err != nil {
+		return err
+	}
+	if !s.Build.IsZero() && s.Location != nil {
+		return &errFieldMutualExclusive{
+			firstField:  "build",
+			secondField: "location",
+			mustExist:   true,
+		}
+	}
+	return nil
+}
+
+// SidecarImageURI returns the URI of the image.
+func (s *SidecarConfig) SidecarImageURI() *string {
+	// Prefer to use the "Image" string in SidecarConfig. Otherwise,
+	// "Location" in SidecarImageConfig. If no image URI is specified, return nil.
+	if s.Image.Basic != nil {
+		return s.Image.Basic
+	}
+	if s.Image.Advanced.Location != nil {
+		return s.Image.Advanced.Location
+	}
+	return nil
 }
 
 // OverrideRule holds the manifest overriding rule for CloudFormation template.

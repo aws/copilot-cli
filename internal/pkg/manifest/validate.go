@@ -1326,6 +1326,9 @@ func (s SidecarConfig) validate() error {
 	if err := s.DependsOn.validate(); err != nil {
 		return fmt.Errorf(`validate "depends_on": %w`, err)
 	}
+	if err := s.Image.Advanced.validate(); err != nil {
+		return fmt.Errorf(`validate "sidecar_imageconfig: %w`, err)
+	}
 	return s.ImageOverride.validate()
 }
 
@@ -2041,4 +2044,9 @@ func contains(name string, names []string) bool {
 		}
 	}
 	return false
+}
+
+// validate is a no-op for SidecarImageConfig.
+func (s SidecarImageConfig) validate() error {
+	return nil
 }

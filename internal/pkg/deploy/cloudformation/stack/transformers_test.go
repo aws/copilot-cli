@@ -211,7 +211,7 @@ func Test_convertSidecar(t *testing.T) {
 			sidecar := map[string]*manifest.SidecarConfig{
 				"foo": {
 					CredsParam:    mockCredsParam,
-					Image:         mockImage,
+					Image:         manifest.Union[*string, manifest.SidecarImageConfig]{Basic: mockImage},
 					Secrets:       map[string]manifest.Secret{"foo": {}},
 					Variables:     map[string]manifest.Variable{"foo": {}},
 					Essential:     aws.Bool(tc.inEssential),

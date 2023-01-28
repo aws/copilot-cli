@@ -5,6 +5,7 @@ package manifest
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -140,6 +141,36 @@ variables:
 			} else {
 				require.NoError(t, err)
 				require.Equal(t, tc.wanted, s)
+			}
+		})
+	}
+}
+
+func TestSidecarImageConfig_UnmarshalYAML(t *testing.T) {
+	testCases := map[string]struct {
+		inContent []byte
+
+		wantedError error
+	}{
+		"error if both build and location are set": {
+			inContent: []byte(`build: mockBuild
+location: mockLocation`),
+			wantedError: fmt.Errorf(`must specify one of "build" and "location"`),
+		},
+		"success": {
+			inContent: []byte(`location: mockLocation`),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			i := SidecarImageConfig{}
+			err := yaml.Unmarshal(tc.inContent, &i)
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, "mockLocation", aws.StringValue(i.Location))
 			}
 		})
 	}
@@ -474,6 +505,42 @@ func TestLogging_GetEnableMetadata(t *testing.T) {
 			}
 			got := l.GetEnableMetadata()
 
+			require.Equal(t, tc.wanted, got)
+		})
+	}
+}
+
+func Test_SidecarImageURI(t *testing.T) {
+	testCases := map[string]struct {
+		in     SidecarConfig
+		wanted *string
+	}{
+		"empty SidecarConfig": {},
+		"should return URI is provided directly through `image` ": {
+			in: SidecarConfig{
+				Image: Union[*string, SidecarImageConfig]{
+					Basic: aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+				},
+			},
+			wanted: aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+		},
+		"should return the URI if provided through `image.location` field": {
+			in: SidecarConfig{
+				Image: Union[*string, SidecarImageConfig]{
+					Advanced: SidecarImageConfig{
+						Location: aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+					},
+				},
+			},
+			wanted: aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// WHEN
+			got := tc.in.SidecarImageURI()
+
+			// THEN
 			require.Equal(t, tc.wanted, got)
 		})
 	}

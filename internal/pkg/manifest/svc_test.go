@@ -147,7 +147,7 @@ environments:
 						Sidecars: map[string]*SidecarConfig{
 							"xray": {
 								Port:       aws.String("2000/udp"),
-								Image:      aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+								Image:      BasicToUnion[*string, SidecarImageConfig](aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon")),
 								CredsParam: aws.String("some arn"),
 							},
 						},

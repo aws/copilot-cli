@@ -97,7 +97,7 @@ func convertSidecar(s map[string]*manifest.SidecarConfig) ([]*template.SidecarOp
 		mp := convertSidecarMountPoints(config.MountPoints)
 		sidecars = append(sidecars, &template.SidecarOpts{
 			Name:       name,
-			Image:      config.Image,
+			Image:      config.SidecarImageURI(),
 			Essential:  config.Essential,
 			Port:       port,
 			Protocol:   protocol,
