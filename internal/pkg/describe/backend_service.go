@@ -150,9 +150,14 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 		if err != nil {
 			return nil, fmt.Errorf("retrieve environment variables: %w", err)
 		}
+		deployment, err := svcDescr.DeploymentType()
+		if err != nil {
+			return nil, fmt.Errorf("retrieve rollback alarm names: %w", err)
+		}
 		configs = append(configs, &ECSServiceConfig{
 			ServiceConfig: &ServiceConfig{
 				Environment: env,
+				Deployment:  deployment,
 				Port:        port,
 				CPU:         svcParams[cfnstack.WorkloadTaskCPUParamKey],
 				Memory:      svcParams[cfnstack.WorkloadTaskMemoryParamKey],

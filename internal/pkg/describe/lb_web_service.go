@@ -130,6 +130,7 @@ func (d *LBWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 	svcConnects := make(serviceConnects)
 	var envVars []*containerEnvVar
 	var secrets []*secret
+	var alarms  []string
 	for _, env := range environments {
 		svcDescr, err := d.initECSServiceDescribers(env)
 		if err != nil {
@@ -155,9 +156,14 @@ func (d *LBWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 		if err != nil {
 			return nil, fmt.Errorf("get stack parameters for service %s: %w", d.svc, err)
 		}
+		deploymentType, err := svcDescr.DeploymentType()
+		if err != nil {
+			return nil, fmt.Errorf("retrieve deployment type: %w", err)
+		}
 		configs = append(configs, &ECSServiceConfig{
 			ServiceConfig: &ServiceConfig{
 				Environment: env,
+				Deployment:  deploymentType,
 				Port:        svcParams[cfnstack.WorkloadTargetPortParamKey],
 				CPU:         svcParams[cfnstack.WorkloadTaskCPUParamKey],
 				Memory:      svcParams[cfnstack.WorkloadTaskMemoryParamKey],
@@ -165,6 +171,10 @@ func (d *LBWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 			},
 			Tasks: svcParams[cfnstack.WorkloadTaskCountParamKey],
 		})
+		alarms, err = svcDescr.DeploymentConfigAlarmNames()
+		if err != nil {
+			return nil, fmt.Errorf("retrieve rollback alarm names: %w", err)
+		}
 		envDescr, err := d.initEnvDescribers(env)
 		if err != nil {
 			return nil, err
@@ -204,6 +214,7 @@ func (d *LBWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 			Type:             manifest.LoadBalancedWebServiceType,
 			App:              d.app,
 			Configurations:   configs,
+			Alarms:           alarms,
 			Routes:           routes,
 			ServiceDiscovery: svcDiscoveries,
 			ServiceConnect:   svcConnects,
@@ -258,6 +269,17 @@ func (w *webSvcDesc) HumanString() string {
 	fmt.Fprint(writer, color.Bold.Sprint("\nConfigurations\n\n"))
 	writer.Flush()
 	w.Configurations.humanString(writer)
+	if len(w.Alarms) > 0 {
+		fmt.Fprint(writer, color.Bold.Sprint("\nRollback Alarms\n\n"))
+		writer.Flush()
+		headers := []string{"Name"}
+		fmt.Fprintf(writer, "  %s\n", strings.Join(headers, "\t"))
+		fmt.Fprintf(writer, "  %s\n", strings.Join(underline(headers), "\t"))
+		for _, alarm := range w.Alarms {
+			fmt.Fprintf(writer, "  %s\n", alarm)
+		}
+		fmt.Fprint(writer, "\n")
+	}
 	fmt.Fprint(writer, color.Bold.Sprint("\nRoutes\n\n"))
 	writer.Flush()
 	headers := []string{"Environment", "URL"}

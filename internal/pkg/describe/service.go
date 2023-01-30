@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws"
 	"io"
 	"net/url"
 	"sort"
@@ -75,6 +76,8 @@ type ecsDescriber interface {
 	Platform() (*awsecs.ContainerPlatform, error)
 	EnvVars() ([]*awsecs.ContainerEnvVar, error)
 	Secrets() ([]*awsecs.ContainerSecret, error)
+	DeploymentConfigAlarmNames() ([]string, error)
+	DeploymentType() (string, error)
 }
 
 type apprunnerDescriber interface {
@@ -91,6 +94,7 @@ type ecsSvcDesc struct {
 	Type             string               `json:"type"`
 	App              string               `json:"application"`
 	Configurations   ecsConfigurations    `json:"configurations"`
+	Alarms           []string             `json:"rollbackalarms,omitempty"`
 	Routes           []*WebServiceRoute   `json:"routes"`
 	ServiceDiscovery serviceDiscoveries   `json:"serviceDiscovery"`
 	ServiceConnect   serviceConnects      `json:"serviceConnect,omitempty"`
@@ -296,6 +300,29 @@ func (d *ecsServiceDescriber) ServiceConnectDNSNames() ([]string, error) {
 	return service.ServiceConnectAliases(), nil
 }
 
+// DeploymentConfigAlarmNames returns the rollback alarm names of a service.
+func (d *ecsServiceDescriber) DeploymentConfigAlarmNames() ([]string, error) {
+	service, err := d.ecsClient.Service(d.app, d.env, d.service)
+	if err != nil {
+		return nil, fmt.Errorf("get service %s: %w", d.service, err)
+	}
+	return aws.StringValueSlice(service.DeploymentConfiguration.Alarms.AlarmNames), nil
+}
+
+// DeploymentType returns 'Alarm-Based Rollback' or 'Default'.
+func (d *ecsServiceDescriber) DeploymentType() (string, error) {
+	deploymentType := "Default"
+	var err error
+	alarmNames, err := d.DeploymentConfigAlarmNames()
+	if alarmNames != nil {
+		deploymentType = "Alarm-Based Rollback"
+	}
+	if err != nil {
+		return "", err
+	}
+	return deploymentType, nil
+}
+
 // ServiceARN retrieves the ARN of the app runner service.
 func (d *appRunnerServiceDescriber) ServiceARN() (string, error) {
 	serviceStackResources, err := d.ServiceStackResources()
@@ -399,6 +426,7 @@ type ServiceConfig struct {
 	CPU         string `json:"cpu"`
 	Memory      string `json:"memory"`
 	Platform    string `json:"platform,omitempty"`
+	Deployment  string `json:"deployment,omitempty"`
 }
 
 type ECSServiceConfig struct {
@@ -412,10 +440,10 @@ type appRunnerConfigurations []*ServiceConfig
 type ecsConfigurations []*ECSServiceConfig
 
 func (c ecsConfigurations) humanString(w io.Writer) {
-	headers := []string{"Environment", "Tasks", "CPU (vCPU)", "Memory (MiB)", "Platform", "Port"}
+	headers := []string{"Environment", "Deployment", "Tasks", "CPU (vCPU)", "Memory (MiB)", "Platform", "Port"}
 	var rows [][]string
 	for _, config := range c {
-		rows = append(rows, []string{config.Environment, config.Tasks, cpuToString(config.CPU), config.Memory, config.Platform, config.Port})
+		rows = append(rows, []string{config.Environment, config.Deployment, config.Tasks, cpuToString(config.CPU), config.Memory, config.Platform, config.Port})
 	}
 
 	printTable(w, headers, rows)
