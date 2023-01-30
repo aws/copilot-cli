@@ -227,7 +227,7 @@ Environment Addon からの値は、ワークロード Addon またはワーク�
 ##### ワークロード Manifest からの参照
 
 また、Environment Addon から [`variables`](../../manifest/lb-web-service.ja.md#variables-from-cfn)、[`secrets`](../../manifest/lb-web-service.ja.md#secrets-from-cfn)、[`security_groups`](../../manifest/lb-web-service.ja.md#network-vpc-security-groups-from-cfn) のワークロード Manifest で、その値がエクスポートされている限り、その値を参照することができます。
-これを行うには、ワークロード マニフェストでその値のエクスポート名を持つ `from_cfn` フィールドを使用します。
+これを行うには、ワークロード Manifest でその値のエクスポート名を持つ `from_cfn` フィールドを使用します。
 
 
 ???- note "例: `from_cfn` の使用"
