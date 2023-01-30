@@ -659,7 +659,7 @@ func (o *initStorageOpts) Execute() error {
 		return err
 	}
 	for _, addon := range addonBlobs {
-		path, err := o.ws.Write(addon.blob, o.ws.WorkloadAddonFilePath(o.workloadName, fmt.Sprintf("%s.yml", addon.name)))
+		path, err := o.ws.Write(addon.blob, addon.path)
 		if err != nil {
 			e, ok := err.(*workspace.ErrFileExists)
 			if !ok {
@@ -691,65 +691,38 @@ func (o *initStorageOpts) readWorkloadType() error {
 }
 
 type addonBlob struct {
-	name        string
 	description string
 	blob        encoding.BinaryMarshaler
+	path        string
 }
 
 func (o *initStorageOpts) addonBlobs() ([]addonBlob, error) {
-	templateBlob, err := o.newAddonTemplate()
+	switch {
+	case o.lifecycle == lifecycleWorkloadLevel && o.storageType == s3StorageType:
+		return o.wkldS3AddonBlobs()
+	case o.lifecycle == lifecycleWorkloadLevel && o.storageType == dynamoDBStorageType:
+		return o.wkldDDBAddonBlobs()
+	case o.lifecycle == lifecycleWorkloadLevel && o.storageType == rdsStorageType:
+		return o.wkldRDSAddonBlobs()
+	}
+	return nil, fmt.Errorf("storage type %s doesn't have a CF template", o.storageType)
+}
+
+func (o *initStorageOpts) wkldDDBAddonBlobs() ([]addonBlob, error) {
+	props, err := o.ddbProps()
 	if err != nil {
 		return nil, err
 	}
-	blobs := []addonBlob{
+	return []addonBlob{
 		{
-			name:        o.storageName,
+			path:        o.ws.WorkloadAddonFilePath(o.workloadName, fmt.Sprintf("%s.yml", o.storageName)),
 			description: "template",
-			blob:        templateBlob,
+			blob:        addon.WorkloadDDBTemplate(props),
 		},
-	}
-	paramsBlob, err := o.newAddonParams()
-	if err != nil {
-		if errors.Is(err, errUnavailableAddonParams) { // The addon does not need any parameters.
-			return blobs, nil
-		}
-		return nil, err
-	}
-	return append(blobs, addonBlob{
-		name:        "addons.parameters",
-		description: "parameters",
-		blob:        paramsBlob,
-	}), nil
+	}, nil
 }
 
-func (o *initStorageOpts) newAddonTemplate() (encoding.BinaryMarshaler, error) {
-	var templateBlob encoding.BinaryMarshaler
-	err := fmt.Errorf("storage type %s doesn't have a CF template", o.storageType)
-	switch o.storageType {
-	case dynamoDBStorageType:
-		templateBlob, err = o.newDDBTemplate()
-	case s3StorageType:
-		templateBlob, err = o.newS3Template()
-	case rdsStorageType:
-		templateBlob, err = o.newRDSTemplate()
-	}
-	if err != nil {
-		return nil, err
-	}
-	return templateBlob, nil
-}
-
-func (o *initStorageOpts) newAddonParams() (encoding.BinaryMarshaler, error) {
-	if o.storageType != rdsStorageType {
-		return nil, errUnavailableAddonParams
-	}
-	if o.workloadType != manifest.RequestDrivenWebServiceType {
-		return nil, errUnavailableAddonParams
-	}
-	return addon.RDWSParamsForRDS(), nil
-}
-
-func (o *initStorageOpts) newDDBTemplate() (*addon.DynamoDBTemplate, error) {
+func (o *initStorageOpts) ddbProps() (*addon.DynamoDBProps, error) {
 	props := addon.DynamoDBProps{
 		StorageProps: &addon.StorageProps{
 			Name: o.storageName,
@@ -771,20 +744,58 @@ func (o *initStorageOpts) newDDBTemplate() (*addon.DynamoDBTemplate, error) {
 			return nil, err
 		}
 	}
-
-	return addon.WorkloadDDBTemplate(&props), nil
+	return &props, nil
 }
 
-func (o *initStorageOpts) newS3Template() (*addon.S3Template, error) {
-	props := &addon.S3Props{
+func (o *initStorageOpts) wkldS3AddonBlobs() ([]addonBlob, error) {
+	return []addonBlob{
+		{
+			path:        o.ws.WorkloadAddonFilePath(o.workloadName, fmt.Sprintf("%s.yml", o.storageName)),
+			description: "template",
+			blob:        addon.WorkloadS3Template(o.s3Props()),
+		},
+	}, nil
+}
+
+func (o *initStorageOpts) s3Props() *addon.S3Props {
+	return &addon.S3Props{
 		StorageProps: &addon.StorageProps{
 			Name: o.storageName,
 		},
 	}
-	return addon.WorkloadS3Template(props), nil
 }
 
-func (o *initStorageOpts) newRDSTemplate() (*addon.RDSTemplate, error) {
+func (o *initStorageOpts) wkldRDSAddonBlobs() ([]addonBlob, error) {
+	props, err := o.rdsProps()
+	if err != nil {
+		return nil, err
+	}
+	var blobs []addonBlob
+	var tmplBlob encoding.BinaryMarshaler
+	switch v := o.auroraServerlessVersion; v {
+	case auroraServerlessVersionV1:
+		tmplBlob = addon.WorkloadServerlessV1Template(props)
+	case auroraServerlessVersionV2:
+		tmplBlob = addon.WorkloadServerlessV2Template(props)
+	default:
+		return nil, fmt.Errorf("unknown Aurora serverless version %q", v)
+	}
+	blobs = append(blobs, addonBlob{
+		path:        o.ws.WorkloadAddonFilePath(o.workloadName, fmt.Sprintf("%s.yml", o.storageName)),
+		description: "template",
+		blob:        tmplBlob,
+	})
+	if o.workloadType != manifest.RequestDrivenWebServiceType {
+		return blobs, nil
+	}
+	return append(blobs, addonBlob{
+		path:        o.ws.WorkloadAddonFilePath(o.workloadName, "addons.parameters.yml"),
+		description: "parameters",
+		blob:        addon.RDWSParamsForRDS(),
+	}), nil
+}
+
+func (o *initStorageOpts) rdsProps() (addon.RDSProps, error) {
 	var engine string
 	switch o.rdsEngine {
 	case engineTypeMySQL:
@@ -792,30 +803,21 @@ func (o *initStorageOpts) newRDSTemplate() (*addon.RDSTemplate, error) {
 	case engineTypePostgreSQL:
 		engine = addon.RDSEngineTypePostgreSQL
 	default:
-		return nil, errors.New("unknown engine type")
+		return addon.RDSProps{}, errors.New("unknown engine type")
 	}
 
 	envs, err := o.environmentNames()
 	if err != nil {
-		return nil, err
+		return addon.RDSProps{}, err
 	}
-	props := addon.RDSProps{
+	return addon.RDSProps{
 		ClusterName:    o.storageName,
 		Engine:         engine,
 		InitialDBName:  o.rdsInitialDBName,
 		ParameterGroup: o.rdsParameterGroup,
 		Envs:           envs,
 		WorkloadType:   o.workloadType,
-	}
-
-	switch v := o.auroraServerlessVersion; v {
-	case auroraServerlessVersionV1:
-		return addon.WorkloadServerlessV1Template(props), nil
-	case auroraServerlessVersionV2:
-		return addon.WorkloadServerlessV2Template(props), nil
-	default:
-		return nil, fmt.Errorf("unknown Aurora serverless version %q", v)
-	}
+	}, nil
 }
 
 func (o *initStorageOpts) environmentNames() ([]string, error) {

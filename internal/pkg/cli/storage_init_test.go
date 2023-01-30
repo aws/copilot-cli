@@ -1127,6 +1127,8 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 					auroraServerlessVersion: tc.inServerlessVersion,
 					rdsEngine:               tc.inEngine,
 					rdsParameterGroup:       tc.inParameterGroup,
+
+					lifecycle: lifecycleWorkloadLevel,
 				},
 				appName: tc.inAppName,
 				ws:      mockAddon,
