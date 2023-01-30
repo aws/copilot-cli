@@ -27,6 +27,8 @@ const (
 	WorkerServiceType = "Worker Service"
 )
 
+const defaultNLBProtocol = TCP
+
 // ServiceTypes returns the list of supported service manifest types.
 func ServiceTypes() []string {
 	return []string{
@@ -569,4 +571,47 @@ func sortExposedPorts(exposedPorts []ExposedPort) []ExposedPort {
 		return exposedPorts[i].Port < exposedPorts[j].Port
 	})
 	return exposedPorts
+}
+
+// ParseNLBPortMapping returns parsed NLB port and protocol.
+func ParseNLBPortMapping(nlbPort *string) (port *string, protocol *string, err error) {
+	port, protocol, err = ParsePortMapping(nlbPort)
+	if err != nil {
+		return nil, nil, err
+	}
+	if protocol == nil {
+		protocol = aws.String(defaultNLBProtocol)
+	}
+	return
+}
+
+// NetworkLoadBalancerTarget returns target container and target port for the NLB configuration.
+func (s *LoadBalancedWebService) NetworkLoadBalancerTarget() (targetContainer *string, targetPort *string, err error) {
+	// Configure target container and port.
+	targetContainer = s.Name
+	if s.NLBConfig.TargetContainer != nil {
+		targetContainer = s.NLBConfig.TargetContainer
+	}
+
+	// Parse listener port and protocol.
+	port, _, err := ParseNLBPortMapping(s.NLBConfig.Port)
+	if err != nil {
+		return nil, nil, err
+	}
+	// By default, the target port is the same as listener port.
+	targetPort = port
+	if targetContainer != s.Name {
+		// If the target container is a sidecar container, the target port is the exposed sidecar port.
+		sideCarPort := s.Sidecars[aws.StringValue(targetContainer)].Port // We validated that a sidecar container exposes a port if it is a target container.
+		port, _, err := ParsePortMapping(sideCarPort)
+		if err != nil {
+			return nil, nil, err
+		}
+		targetPort = port
+	}
+	// Finally, if a target port is explicitly specified, use that value.
+	if s.NLBConfig.TargetPort != nil {
+		targetPort = aws.String(strconv.Itoa(aws.IntValue(s.NLBConfig.TargetPort)))
+	}
+	return
 }
