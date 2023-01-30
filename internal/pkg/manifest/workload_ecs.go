@@ -310,7 +310,13 @@ type SidecarConfig struct {
 	DependsOn     DependsOn            `yaml:"depends_on"`
 	HealthCheck   ContainerHealthCheck `yaml:"healthcheck"`
 	ImageOverride `yaml:",inline"`
-	ExposedPorts  []ExposedPort
+}
+
+// ParsedSidecarConfig is a custom type which holds SidecarConfig with exposed ports.
+type ParsedSidecarConfig struct {
+	Name         string
+	Container    *SidecarConfig
+	ExposedPorts []ExposedPort // Contains the ports that are exposed by the sidecar
 }
 
 // OverrideRule holds the manifest overriding rule for CloudFormation template.

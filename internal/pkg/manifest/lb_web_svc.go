@@ -39,7 +39,7 @@ type LoadBalancedWebService struct {
 	LoadBalancedWebServiceConfig `yaml:",inline"`
 	// Use *LoadBalancedWebServiceConfig because of https://github.com/imdario/mergo/issues/146
 	Environments       map[string]*LoadBalancedWebServiceConfig `yaml:",flow"` // Fields to override per environment.
-	cachedExposedPorts []ExposedPort
+	cachedExposedPorts map[string][]ExposedPort
 	parser             template.Parser
 }
 
@@ -57,7 +57,6 @@ type LoadBalancedWebServiceConfig struct {
 	NLBConfig        NetworkLoadBalancerConfiguration `yaml:"nlb"`
 	DeployConfig     DeploymentConfig                 `yaml:"deployment"`
 	Observability    Observability                    `yaml:"observability"`
-	ExposedPort      []ExposedPort
 }
 
 // LoadBalancedWebServiceProps contains properties for creating a new load balanced fargate service manifest.
@@ -241,8 +240,8 @@ func (c *NetworkLoadBalancerConfiguration) IsEmpty() bool {
 		c.SSLPolicy == nil && c.Stickiness == nil && c.Aliases.IsEmpty()
 }
 
-// ExposedPorts returns all the ports that are container ports available to receive traffic.
-func (lbws *LoadBalancedWebService) ExposedPorts() ([]ExposedPort, error) {
+// exposedPorts returns all the ports that are container ports available to receive traffic.
+func (lbws *LoadBalancedWebService) exposedPorts() (map[string][]ExposedPort, error) {
 	if lbws.cachedExposedPorts != nil {
 		return lbws.cachedExposedPorts, nil
 	}
@@ -262,18 +261,32 @@ func (lbws *LoadBalancedWebService) ExposedPorts() ([]ExposedPort, error) {
 		return nil, err
 	}
 	exposedPorts = append(exposedPorts, out...)
-	lbws.cachedExposedPorts = sortExposedPorts(exposedPorts)
-	lbws.prepareParsedContainerConfigs(lbws.cachedExposedPorts)
+	lbws.cachedExposedPorts = prepareParsedExposedPortsMap(sortExposedPorts(exposedPorts))
 	return lbws.cachedExposedPorts, nil
 }
 
-func (s *LoadBalancedWebService) prepareParsedContainerConfigs(exposedPorts []ExposedPort) {
-	parsedMap := prepareParsedExposedPortsMap(exposedPorts)
-	for k, v := range parsedMap {
-		if s.Sidecars[k] != nil {
-			s.Sidecars[k].ExposedPorts = append(s.Sidecars[k].ExposedPorts, v...)
-		} else {
-			s.ExposedPort = append(s.ExposedPort, v...)
-		}
+// Sidecar returns SidecarConfig with the parsed exposed ports of the sidecars.
+func (s *LoadBalancedWebService) Sidecar() ([]ParsedSidecarConfig, error) {
+	exposedPorts, err := s.exposedPorts()
+	if err != nil {
+		return nil, err
 	}
+	var parsedSidecars []ParsedSidecarConfig
+	for name, container := range s.Sidecars {
+		parsedSidecars = append(parsedSidecars, ParsedSidecarConfig{
+			Name:         name,
+			ExposedPorts: exposedPorts[name],
+			Container:    container,
+		})
+	}
+	return sortSidecars(parsedSidecars), nil
+}
+
+// PrimaryContainer returns the parsed exposed ports of the primary container.
+func (s *LoadBalancedWebService) PrimaryContainer() ([]ExposedPort, error) {
+	exposedPorts, err := s.exposedPorts()
+	if err != nil {
+		return nil, err
+	}
+	return sortExposedPorts(exposedPorts[aws.StringValue(s.Name)]), nil
 }

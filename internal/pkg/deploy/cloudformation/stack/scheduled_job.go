@@ -136,13 +136,13 @@ func (j *ScheduledJob) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	_, err = j.manifest.ExposedPorts()
+	sidecars, err := j.manifest.Sidecar()
 	if err != nil {
 		return "", fmt.Errorf("parse exposed ports in service manifest %s: %w", j.name, err)
 	}
-	sidecars, err := convertSidecars(j.manifest.Sidecars)
+	tmplSidecars, err := convertSidecars(sidecars)
 	if err != nil {
-		return "", fmt.Errorf("convert the sidecar configuration for job %s: %w", j.name, err)
+		return "", fmt.Errorf("convert the sidecar configuration for service %s: %w", j.name, err)
 	}
 	publishers, err := convertPublish(j.manifest.Publish(), j.rc.AccountID, j.rc.Region, j.app, j.env, j.name)
 	if err != nil {
@@ -176,7 +176,7 @@ func (j *ScheduledJob) Template() (string, error) {
 		WorkloadType:             manifest.ScheduledJobType,
 		NestedStack:              addonsOutputs,
 		AddonsExtraParams:        addonsParams,
-		Sidecars:                 sidecars,
+		Sidecars:                 tmplSidecars,
 		ScheduleExpression:       schedule,
 		StateMachine:             stateMachine,
 		HealthCheck:              convertContainerHealthCheck(j.manifest.ImageConfig.HealthCheck),
@@ -195,7 +195,6 @@ func (j *ScheduledJob) Template() (string, error) {
 
 		CustomResources:     crs,
 		PermissionsBoundary: j.permBound,
-		PortMappings:        convertPortMappings(j.manifest.ExposedPort),
 	})
 	if err != nil {
 		return "", fmt.Errorf("parse scheduled job template: %w", err)

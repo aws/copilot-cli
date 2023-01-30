@@ -77,11 +77,11 @@ func (s *WorkerService) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	_, err = s.manifest.ExposedPorts()
+	sidecars, err := s.manifest.Sidecar()
 	if err != nil {
 		return "", fmt.Errorf("parse exposed ports in service manifest %s: %w", s.name, err)
 	}
-	sidecars, err := convertSidecars(s.manifest.Sidecars)
+	tmplSidecars, err := convertSidecars(sidecars)
 	if err != nil {
 		return "", fmt.Errorf("convert the sidecar configuration for service %s: %w", s.name, err)
 	}
@@ -131,7 +131,7 @@ func (s *WorkerService) Template() (string, error) {
 		Secrets:                  convertSecrets(s.manifest.WorkerServiceConfig.Secrets),
 		NestedStack:              addonsOutputs,
 		AddonsExtraParams:        addonsParams,
-		Sidecars:                 sidecars,
+		Sidecars:                 tmplSidecars,
 		Autoscaling:              autoscaling,
 		CapacityProviders:        capacityProviders,
 		DesiredCountOnSpot:       desiredCountOnSpot,
@@ -157,7 +157,6 @@ func (s *WorkerService) Template() (string, error) {
 			Tracing: strings.ToUpper(aws.StringValue(s.manifest.Observability.Tracing)),
 		},
 		PermissionsBoundary: s.permBound,
-		PortMappings:        convertPortMappings(s.manifest.ExposedPort),
 	})
 	if err != nil {
 		return "", fmt.Errorf("parse worker service template: %w", err)

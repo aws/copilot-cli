@@ -198,18 +198,22 @@ func Test_convertSidecar(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			sidecar := map[string]*manifest.SidecarConfig{
-				"foo": {
-					CredsParam:    mockCredsParam,
-					Image:         mockImage,
-					Secrets:       map[string]manifest.Secret{"foo": {}},
-					Variables:     map[string]manifest.Variable{"foo": {}},
-					Essential:     aws.Bool(tc.inEssential),
-					Port:          tc.inPort,
-					DockerLabels:  tc.inLabels,
-					DependsOn:     tc.inDependsOn,
-					ImageOverride: tc.inImageOverride,
-					HealthCheck:   tc.inHealthCheck,
+			sidecar := []manifest.ParsedSidecarConfig{
+				{
+					Name:         "foo",
+					ExposedPorts: []manifest.ExposedPort{},
+					Container: &manifest.SidecarConfig{
+						CredsParam:    mockCredsParam,
+						Image:         mockImage,
+						Secrets:       map[string]manifest.Secret{"foo": {}},
+						Variables:     map[string]manifest.Variable{"foo": {}},
+						Essential:     aws.Bool(tc.inEssential),
+						Port:          tc.inPort,
+						DockerLabels:  tc.inLabels,
+						DependsOn:     tc.inDependsOn,
+						ImageOverride: tc.inImageOverride,
+						HealthCheck:   tc.inHealthCheck,
+					},
 				},
 			}
 			got, err := convertSidecars(sidecar)

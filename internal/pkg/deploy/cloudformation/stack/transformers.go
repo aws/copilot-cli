@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"hash/crc32"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -80,44 +79,32 @@ func convertPortMappings(exposedPorts []manifest.ExposedPort) []*template.PortMa
 }
 
 // convertSidecar converts the manifest sidecar configuration into a format parsable by the templates pkg.
-func convertSidecars(sidecarsMap map[string]*manifest.SidecarConfig) ([]*template.SidecarOpts, error) {
-	if sidecarsMap == nil {
-		return nil, nil
-	}
-
-	// Sort the sidecars so that the order is consistent and the integration test won't be flaky.
-	keys := make([]string, 0, len(sidecarsMap))
-	for k := range sidecarsMap {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-
+func convertSidecars(sidecarList []manifest.ParsedSidecarConfig) ([]*template.SidecarOpts, error) {
 	var sidecars []*template.SidecarOpts
-	for _, name := range keys {
-		config := sidecarsMap[name]
-		entrypoint, err := convertEntryPoint(config.EntryPoint)
+	for _, config := range sidecarList {
+		entrypoint, err := convertEntryPoint(config.Container.EntryPoint)
 		if err != nil {
 			return nil, err
 		}
-		command, err := convertCommand(config.Command)
+		command, err := convertCommand(config.Container.Command)
 		if err != nil {
 			return nil, err
 		}
-		mp := convertSidecarMountPoints(config.MountPoints)
+		mp := convertSidecarMountPoints(config.Container.MountPoints)
 		sidecars = append(sidecars, &template.SidecarOpts{
-			Name:       name,
-			Image:      config.Image,
-			Essential:  config.Essential,
-			CredsParam: config.CredsParam,
-			Secrets:    convertSecrets(config.Secrets),
-			Variables:  convertEnvVars(config.Variables),
+			Name:       config.Name,
+			Image:      config.Container.Image,
+			Essential:  config.Container.Essential,
+			CredsParam: config.Container.CredsParam,
+			Secrets:    convertSecrets(config.Container.Secrets),
+			Variables:  convertEnvVars(config.Container.Variables),
 			Storage: template.SidecarStorageOpts{
 				MountPoints: mp,
 			},
-			DockerLabels: config.DockerLabels,
-			DependsOn:    convertDependsOn(config.DependsOn),
+			DockerLabels: config.Container.DockerLabels,
+			DependsOn:    convertDependsOn(config.Container.DependsOn),
 			EntryPoint:   entrypoint,
-			HealthCheck:  convertContainerHealthCheck(config.HealthCheck),
+			HealthCheck:  convertContainerHealthCheck(config.Container.HealthCheck),
 			Command:      command,
 			PortMappings: convertPortMappings(config.ExposedPorts),
 		})

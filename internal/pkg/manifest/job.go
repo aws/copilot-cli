@@ -31,7 +31,7 @@ type ScheduledJob struct {
 	Workload           `yaml:",inline"`
 	ScheduledJobConfig `yaml:",inline"`
 	Environments       map[string]*ScheduledJobConfig `yaml:",flow"`
-	cachedExposedPorts []ExposedPort
+	cachedExposedPorts map[string][]ExposedPort
 	parser             template.Parser
 }
 
@@ -51,7 +51,6 @@ type ScheduledJobConfig struct {
 	Network                 NetworkConfig  `yaml:"network"`
 	PublishConfig           PublishConfig  `yaml:"publish"`
 	TaskDefOverrides        []OverrideRule `yaml:"taskdef_overrides"`
-	ExposedPort             []ExposedPort
 }
 
 // JobTriggerConfig represents the configuration for the event that triggers the job.
@@ -194,8 +193,8 @@ func newDefaultScheduledJob() *ScheduledJob {
 	}
 }
 
-// ExposedPorts returns all the ports that are sidecar container ports available to receive traffic.
-func (j *ScheduledJob) ExposedPorts() ([]ExposedPort, error) {
+// exposedPorts returns all the ports that are sidecar container ports available to receive traffic.
+func (j *ScheduledJob) exposedPorts() (map[string][]ExposedPort, error) {
 	var exposedPorts []ExposedPort
 	for name, sidecar := range j.Sidecars {
 		out, err := sidecar.exposedPorts(name)
@@ -204,18 +203,23 @@ func (j *ScheduledJob) ExposedPorts() ([]ExposedPort, error) {
 		}
 		exposedPorts = append(exposedPorts, out...)
 	}
-	j.cachedExposedPorts = sortExposedPorts(exposedPorts)
-	j.prepareParsedContainerConfigs(j.cachedExposedPorts)
+	j.cachedExposedPorts = prepareParsedExposedPortsMap(sortExposedPorts(exposedPorts))
 	return j.cachedExposedPorts, nil
 }
 
-func (s *ScheduledJob) prepareParsedContainerConfigs(exposedPorts []ExposedPort) {
-	parsedMap := prepareParsedExposedPortsMap(exposedPorts)
-	for k, v := range parsedMap {
-		if s.Sidecars[k] != nil {
-			s.Sidecars[k].ExposedPorts = append(s.Sidecars[k].ExposedPorts, v...)
-		} else {
-			s.ExposedPort = append(s.ExposedPort, v...)
-		}
+// Sidecar returns SidecarConfig with the parsed exposed ports of the sidecars.
+func (j *ScheduledJob) Sidecar() ([]ParsedSidecarConfig, error) {
+	exposedPorts, err := j.exposedPorts()
+	if err != nil {
+		return nil, err
 	}
+	var parsedSidecars []ParsedSidecarConfig
+	for name, container := range j.Sidecars {
+		parsedSidecars = append(parsedSidecars, ParsedSidecarConfig{
+			Name:         name,
+			ExposedPorts: exposedPorts[name],
+			Container:    container,
+		})
+	}
+	return sortSidecars(parsedSidecars), nil
 }

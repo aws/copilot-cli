@@ -19,7 +19,7 @@ type BackendService struct {
 	BackendServiceConfig `yaml:",inline"`
 	// Use *BackendServiceConfig because of https://github.com/imdario/mergo/issues/146
 	Environments       map[string]*BackendServiceConfig `yaml:",flow"`
-	cachedExposedPorts []ExposedPort
+	cachedExposedPorts map[string][]ExposedPort
 	parser             template.Parser
 }
 
@@ -36,7 +36,6 @@ type BackendServiceConfig struct {
 	TaskDefOverrides []OverrideRule            `yaml:"taskdef_overrides"`
 	DeployConfig     DeploymentConfig          `yaml:"deployment"`
 	Observability    Observability             `yaml:"observability"`
-	ExposedPort      []ExposedPort
 }
 
 // BackendServiceProps represents the configuration needed to create a backend service.
@@ -190,8 +189,8 @@ func newDefaultBackendService() *BackendService {
 	}
 }
 
-// ExposedPorts returns all the ports that are container ports available to receive traffic.
-func (b *BackendService) ExposedPorts() ([]ExposedPort, error) {
+// exposedPorts returns all the ports that are container ports available to receive traffic.
+func (b *BackendService) exposedPorts() (map[string][]ExposedPort, error) {
 	if b.cachedExposedPorts != nil {
 		return b.cachedExposedPorts, nil
 	}
@@ -208,18 +207,32 @@ func (b *BackendService) ExposedPorts() ([]ExposedPort, error) {
 		exposedPorts = append(exposedPorts, out...)
 	}
 	exposedPorts = append(exposedPorts, b.RoutingRule.exposedPorts(exposedPorts, workloadName)...)
-	b.cachedExposedPorts = sortExposedPorts(exposedPorts)
-	b.prepareParsedContainerConfigs(b.cachedExposedPorts)
+	b.cachedExposedPorts = prepareParsedExposedPortsMap(sortExposedPorts(exposedPorts))
 	return b.cachedExposedPorts, nil
 }
 
-func (s *BackendService) prepareParsedContainerConfigs(exposedPorts []ExposedPort) {
-	parsedMap := prepareParsedExposedPortsMap(exposedPorts)
-	for k, v := range parsedMap {
-		if s.Sidecars[k] != nil {
-			s.Sidecars[k].ExposedPorts = append(s.Sidecars[k].ExposedPorts, v...)
-		} else {
-			s.ExposedPort = append(s.ExposedPort, v...)
-		}
+// Sidecar returns SidecarConfig with the parsed exposed ports of the sidecars.
+func (b *BackendService) Sidecar() ([]ParsedSidecarConfig, error) {
+	exposedPorts, err := b.exposedPorts()
+	if err != nil {
+		return nil, err
 	}
+	var parsedSidecars []ParsedSidecarConfig
+	for name, container := range b.Sidecars {
+		parsedSidecars = append(parsedSidecars, ParsedSidecarConfig{
+			Name:         name,
+			ExposedPorts: exposedPorts[name],
+			Container:    container,
+		})
+	}
+	return sortSidecars(parsedSidecars), nil
+}
+
+// PrimaryContainer returns parsed exposed ports of the primary container.
+func (b *BackendService) PrimaryContainer() ([]ExposedPort, error) {
+	exposedPorts, err := b.exposedPorts()
+	if err != nil {
+		return nil, err
+	}
+	return sortExposedPorts(exposedPorts[aws.StringValue(b.Name)]), nil
 }

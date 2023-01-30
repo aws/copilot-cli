@@ -570,9 +570,17 @@ func sortExposedPorts(exposedPorts []ExposedPort) []ExposedPort {
 	return exposedPorts
 }
 
+func sortSidecars(sidecars []ParsedSidecarConfig) []ParsedSidecarConfig {
+	// Sort the sidecars so that the order is consistent and the integration test won't be flaky.
+	sort.Slice(sidecars, func(i, j int) bool {
+		return sidecars[i].Name < sidecars[j].Name
+	})
+	return sidecars
+}
+
 // HTTPLoadBalancerTarget returns target container and target port for the ALB configuration.
 func (s *LoadBalancedWebService) HTTPLoadBalancerTarget() (targetContainer *string, targetPort *string, err error) {
-	exposedPorts, err := s.ExposedPorts()
+	exposedPorts, err := s.exposedPorts()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -602,7 +610,7 @@ func (s *LoadBalancedWebService) HTTPLoadBalancerTarget() (targetContainer *stri
 
 // HTTPLoadBalancerTarget returns target container and target port for the ALB configuration.
 func (s *BackendService) HTTPLoadBalancerTarget() (targetContainer *string, targetPort *string, err error) {
-	exposedPorts, err := s.ExposedPorts()
+	exposedPorts, err := s.exposedPorts()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -631,12 +639,16 @@ func (s *BackendService) HTTPLoadBalancerTarget() (targetContainer *string, targ
 	return
 }
 
-func httpLoadBalancerTarget(exposedPorts []ExposedPort, rrTargetPort *uint16) (targetContainer *string, targetPort *string) {
+func httpLoadBalancerTarget(exposedPorts map[string][]ExposedPort, rrTargetPort *uint16) (targetContainer *string, targetPort *string) {
 
+	var exposedPortList []ExposedPort
+	for _, value := range exposedPorts {
+		exposedPortList = append(exposedPortList, value...)
+	}
 	// Route load balancer traffic to the target_port if mentioned.
 	if rrTargetPort != nil {
 		targetPort = aws.String(template.StrconvUint16(aws.Uint16Value(rrTargetPort)))
-		if container := findContainerNameGivenPort(aws.Uint16Value(rrTargetPort), exposedPorts); container != "" {
+		if container := findContainerNameGivenPort(aws.Uint16Value(rrTargetPort), exposedPortList); container != "" {
 			targetContainer = aws.String(container)
 		}
 	}

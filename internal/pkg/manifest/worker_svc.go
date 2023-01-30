@@ -29,7 +29,7 @@ type WorkerService struct {
 	WorkerServiceConfig `yaml:",inline"`
 	// Use *WorkerServiceConfig because of https://github.com/imdario/mergo/issues/146
 	Environments       map[string]*WorkerServiceConfig `yaml:",flow"`
-	cachedExposedPorts []ExposedPort
+	cachedExposedPorts map[string][]ExposedPort
 	parser             template.Parser
 }
 
@@ -55,7 +55,6 @@ type WorkerServiceConfig struct {
 	TaskDefOverrides []OverrideRule            `yaml:"taskdef_overrides"`
 	DeployConfig     WorkerDeploymentConfig    `yaml:"deployment"`
 	Observability    Observability             `yaml:"observability"`
-	ExposedPort      []ExposedPort
 }
 
 // SubscribeConfig represents the configurable options for setting up subscriptions.
@@ -369,8 +368,8 @@ func newDefaultWorkerService() *WorkerService {
 	}
 }
 
-// ExposedPorts returns all the ports that are sidecar container ports available to receive traffic.
-func (ws *WorkerService) ExposedPorts() ([]ExposedPort, error) {
+// exposedPorts returns all the ports that are sidecar container ports available to receive traffic.
+func (ws *WorkerService) exposedPorts() (map[string][]ExposedPort, error) {
 	if ws.cachedExposedPorts != nil {
 		return ws.cachedExposedPorts, nil
 	}
@@ -384,18 +383,23 @@ func (ws *WorkerService) ExposedPorts() ([]ExposedPort, error) {
 		exposedPorts = append(exposedPorts, out...)
 	}
 
-	ws.cachedExposedPorts = sortExposedPorts(exposedPorts)
-	ws.prepareParsedContainerConfigs(ws.cachedExposedPorts)
+	ws.cachedExposedPorts = prepareParsedExposedPortsMap(sortExposedPorts(exposedPorts))
 	return ws.cachedExposedPorts, nil
 }
 
-func (s *WorkerService) prepareParsedContainerConfigs(exposedPorts []ExposedPort) {
-	parsedMap := prepareParsedExposedPortsMap(exposedPorts)
-	for k, v := range parsedMap {
-		if s.Sidecars[k] != nil {
-			s.Sidecars[k].ExposedPorts = append(s.Sidecars[k].ExposedPorts, v...)
-		} else {
-			s.ExposedPort = append(s.ExposedPort, v...)
-		}
+// Sidecar returns SidecarConfig with the parsed exposed ports of the sidecars.
+func (ws *WorkerService) Sidecar() ([]ParsedSidecarConfig, error) {
+	exposedPorts, err := ws.exposedPorts()
+	if err != nil {
+		return nil, err
 	}
+	var parsedSidecars []ParsedSidecarConfig
+	for name, container := range ws.Sidecars {
+		parsedSidecars = append(parsedSidecars, ParsedSidecarConfig{
+			Name:         name,
+			ExposedPorts: exposedPorts[name],
+			Container:    container,
+		})
+	}
+	return sortSidecars(parsedSidecars), nil
 }
