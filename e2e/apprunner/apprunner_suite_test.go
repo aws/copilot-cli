@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/aws/copilot-cli/e2e/internal/client"
+	"github.com/aws/copilot-cli/e2e/internal/command"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -20,7 +21,8 @@ const feSvcName = "front-end"
 const beSvcName = "back-end"
 const envName = "test"
 
-/**
+/*
+*
 The Init Suite runs through the copilot init workflow for a brand new
 application. It creates a single environment, deploys a service to it, and then
 tears it down.
@@ -36,10 +38,15 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(err).NotTo(HaveOccurred())
 	appName = fmt.Sprintf("e2e-apprunner-%d", time.Now().Unix())
+	// err = command.Run("aws", []string{"secretsmanager", "create-secret", "--name", "MyTestSecret", "--secret-string", "{\"user\":\"yohanthr\",\"password\":\"EXAMPLE-PASSWORD\"}", "--tags", "Key=copilot-application,Value=", appName, "Key=copilot-environment,Value=test"})
+	err = command.Run("aws", []string{"ssm", "put-parameter", "--name", "my-ssm-param", "--value", "abcd1234", "--type", "String", "--tags", "[{\"Key\":\"copilot-application\",\"Value\":\"" + appName + "\"},{\"Key\":\"copilot-environment\", \"Value\":\"" + envName + "\"}]"})
+	Expect(err).NotTo(HaveOccurred())
 })
 
 var _ = AfterSuite(func() {
 	_, err := cli.AppDelete()
+	Expect(err).NotTo(HaveOccurred())
+	err = command.Run("aws", []string{"ssm", "delete-parameter", "--name", "my-ssm-param"})
 	Expect(err).NotTo(HaveOccurred())
 	_ = client.NewAWS().DeleteAllDBClusterSnapshots()
 })

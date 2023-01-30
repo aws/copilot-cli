@@ -54,8 +54,3 @@ network:
 #   test:
 #     variables:
 #       LOG_LEVEL: debug        # Log level for the "test" environment.
-
-secrets:                      # Pass secrets from AWS Systems Manager (SSM) Parameter Store and Secrets Manager.
-  my-ssm-secret: "arn:aws:ssm:us-east-1:067305307211:parameter/test-ssm-secret"
-  MY_SECRETS_MANAGER_SECRET:
-    secretsmanager: yrs-secret-name

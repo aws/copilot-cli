@@ -112,7 +112,7 @@ var _ = Describe("App Runner", Ordered, func() {
 		})
 	})
 
-	Context("run svc show to retrieve the service configuration, resources, and endpoint, then query the service", func() {
+	Context("run svc show to retrieve the service configuration, resources, secrets, and endpoint, then query the service", func() {
 		var (
 			svc            *client.SvcShowOutput
 			svcShowError   error
@@ -162,6 +162,18 @@ var _ = Describe("App Runner", Ordered, func() {
 			}
 			for _, variable := range svc.Variables {
 				Expect(variable.Value).To(Equal(expectedVars[variable.Name]))
+			}
+		})
+
+		It("should return correct secrets", func() {
+			fmt.Printf("\n\nsecrets: %+v\n\n", svc.Secrets)
+			expectedSecrets := map[string]string{
+				"COPILOT_ENVIRONMENT_NAME": envName,
+				"COPILOT_SERVICE_NAME":     feSvcName,
+				"my-ssm-param":             "my-ssm-param",
+			}
+			for _, secret := range svc.Secrets {
+				Expect(secret.Value).To(Equal(expectedSecrets[secret.Name]))
 			}
 		})
 
