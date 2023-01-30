@@ -970,16 +970,19 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 		inInitialDBName     string
 		inParameterGroup    string
 
+		inLifecycle string
+
 		mockWs    func(m *mocks.MockwsAddonManager)
 		mockStore func(m *mocks.Mockstore)
 
 		wantedErr error
 	}{
-		"happy calls for S3": {
+		"happy calls for wkld S3": {
 			inAppName:     wantedAppName,
 			inStorageType: s3StorageType,
 			inSvcName:     wantedSvcName,
 			inStorageName: "my-bucket",
+			inLifecycle:   lifecycleWorkloadLevel,
 
 			mockWs: func(m *mocks.MockwsAddonManager) {
 				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte("type: Worker Service"), nil)
@@ -989,7 +992,7 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 
 			wantedErr: nil,
 		},
-		"happy calls for DDB": {
+		"happy calls for wkld DDB": {
 			inAppName:     wantedAppName,
 			inStorageType: dynamoDBStorageType,
 			inSvcName:     wantedSvcName,
@@ -997,6 +1000,7 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 			inNoLSI:       true,
 			inNoSort:      true,
 			inPartition:   wantedPartitionKey,
+			inLifecycle:   lifecycleWorkloadLevel,
 
 			mockWs: func(m *mocks.MockwsAddonManager) {
 				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte("type: Backend Service"), nil)
@@ -1006,7 +1010,7 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 
 			wantedErr: nil,
 		},
-		"happy calls for DDB with LSI": {
+		"happy calls for wkld DDB with LSI": {
 			inAppName:     wantedAppName,
 			inStorageType: dynamoDBStorageType,
 			inSvcName:     wantedSvcName,
@@ -1014,6 +1018,7 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 			inPartition:   wantedPartitionKey,
 			inSort:        wantedSortKey,
 			inLSISorts:    []string{"goodness:Number"},
+			inLifecycle:   lifecycleWorkloadLevel,
 
 			mockWs: func(m *mocks.MockwsAddonManager) {
 				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte("type: Backend Service"), nil)
@@ -1023,13 +1028,14 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 
 			wantedErr: nil,
 		},
-		"happy calls for RDS with LBWS": {
+		"happy calls for wkld RDS with LBWS": {
 			inSvcName:           wantedSvcName,
 			inStorageType:       rdsStorageType,
 			inStorageName:       "mycluster",
 			inServerlessVersion: auroraServerlessVersionV1,
 			inEngine:            engineTypeMySQL,
 			inParameterGroup:    "mygroup",
+			inLifecycle:         lifecycleWorkloadLevel,
 
 			mockWs: func(m *mocks.MockwsAddonManager) {
 				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte("type: Load Balanced Web Service"), nil)
@@ -1041,13 +1047,14 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 			},
 			wantedErr: nil,
 		},
-		"happy calls for RDS with a RDWS": {
+		"happy calls for wkld RDS with a RDWS": {
 			inSvcName:           wantedSvcName,
 			inStorageType:       rdsStorageType,
 			inStorageName:       "mycluster",
 			inServerlessVersion: auroraServerlessVersionV1,
 			inEngine:            engineTypeMySQL,
 			inParameterGroup:    "mygroup",
+			inLifecycle:         lifecycleWorkloadLevel,
 
 			mockWs: func(m *mocks.MockwsAddonManager) {
 				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte("type: Request-Driven Web Service"), nil)
@@ -1061,11 +1068,109 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 			},
 			wantedErr: nil,
 		},
+		"happy calls for env S3": {
+			inAppName:     wantedAppName,
+			inStorageType: s3StorageType,
+			inSvcName:     wantedSvcName,
+			inStorageName: "my-bucket",
+			inLifecycle:   lifecycleEnvironmentLevel,
+
+			mockWs: func(m *mocks.MockwsAddonManager) {
+				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte("type: Worker Service"), nil)
+				m.EXPECT().EnvAddonFilePath(gomock.Eq("my-bucket.yml")).Return("mockEnvTemplatePath")
+				m.EXPECT().WorkloadAddonFilePath(gomock.Eq(wantedSvcName), gomock.Eq("my-bucket-access-policy.yml")).Return("mockWkldTemplatePath")
+				m.EXPECT().Write(gomock.Any(), "mockEnvTemplatePath").Return("mockEnvTemplatePath", nil)
+				m.EXPECT().Write(gomock.Any(), "mockWkldTemplatePath").Return("mockWkldTemplatePath", nil)
+			},
+		},
+		"happy calls for env DDB": {
+			inAppName:     wantedAppName,
+			inStorageType: dynamoDBStorageType,
+			inSvcName:     wantedSvcName,
+			inStorageName: "my-table",
+			inNoLSI:       true,
+			inNoSort:      true,
+			inPartition:   wantedPartitionKey,
+			inLifecycle:   lifecycleEnvironmentLevel,
+
+			mockWs: func(m *mocks.MockwsAddonManager) {
+				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte("type: Worker Service"), nil)
+				m.EXPECT().EnvAddonFilePath(gomock.Eq("my-table.yml")).Return("mockEnvTemplatePath")
+				m.EXPECT().WorkloadAddonFilePath(gomock.Eq(wantedSvcName), gomock.Eq("my-table-access-policy.yml")).Return("mockWkldTemplatePath")
+				m.EXPECT().Write(gomock.Any(), "mockEnvTemplatePath").Return("mockEnvTemplatePath", nil)
+				m.EXPECT().Write(gomock.Any(), "mockWkldTemplatePath").Return("mockWkldTemplatePath", nil)
+			},
+		},
+		"happy calls for env DDB with LSI": {
+			inAppName:     wantedAppName,
+			inStorageType: dynamoDBStorageType,
+			inSvcName:     wantedSvcName,
+			inStorageName: "my-table",
+			inPartition:   wantedPartitionKey,
+			inSort:        wantedSortKey,
+			inLSISorts:    []string{"goodness:Number"},
+			inLifecycle:   lifecycleEnvironmentLevel,
+
+			mockWs: func(m *mocks.MockwsAddonManager) {
+				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte("type: Backend Service"), nil)
+				m.EXPECT().EnvAddonFilePath(gomock.Eq("my-table.yml")).Return("mockEnvTemplatePath")
+				m.EXPECT().WorkloadAddonFilePath(gomock.Eq(wantedSvcName), gomock.Eq("my-table-access-policy.yml")).Return("mockWkldTemplatePath")
+				m.EXPECT().Write(gomock.Any(), "mockEnvTemplatePath").Return("mockEnvTemplatePath", nil)
+				m.EXPECT().Write(gomock.Any(), "mockWkldTemplatePath").Return("mockWkldTemplatePath", nil)
+			},
+		},
+		"happy calls for env RDS with LBWS": {
+			inSvcName:           wantedSvcName,
+			inStorageType:       rdsStorageType,
+			inStorageName:       "mycluster",
+			inServerlessVersion: auroraServerlessVersionV1,
+			inEngine:            engineTypeMySQL,
+			inParameterGroup:    "mygroup",
+			inLifecycle:         lifecycleEnvironmentLevel,
+
+			mockWs: func(m *mocks.MockwsAddonManager) {
+				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte("type: Load Balanced Web Service"), nil)
+				m.EXPECT().EnvAddonFilePath(gomock.Eq("mycluster.yml")).Return("mockEnvTemplatePath")
+				m.EXPECT().EnvAddonFilePath(gomock.Eq("addons.parameters.yml")).Return("mockEnvParametersPath")
+				m.EXPECT().Write(gomock.Any(), "mockEnvTemplatePath").Return("mockEnvTemplatePath", nil)
+				m.EXPECT().Write(gomock.Any(), "mockEnvParametersPath").Return("mockEnvParametersPath", nil)
+			},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().ListEnvironments(gomock.Any()).AnyTimes()
+			},
+			wantedErr: nil,
+		},
+		"happy calls for env RDS with a RDWS": {
+			inSvcName:           wantedSvcName,
+			inStorageType:       rdsStorageType,
+			inStorageName:       "mycluster",
+			inServerlessVersion: auroraServerlessVersionV1,
+			inEngine:            engineTypeMySQL,
+			inParameterGroup:    "mygroup",
+			inLifecycle:         lifecycleEnvironmentLevel,
+
+			mockWs: func(m *mocks.MockwsAddonManager) {
+				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte("type: Request-Driven Web Service"), nil)
+				m.EXPECT().EnvAddonFilePath(gomock.Eq("mycluster.yml")).Return("mockEnvTemplatePath")
+				m.EXPECT().EnvAddonFilePath(gomock.Eq("addons.parameters.yml")).Return("mockEnvParametersPath")
+				m.EXPECT().WorkloadAddonFilePath(gomock.Eq(wantedSvcName), gomock.Eq("mycluster-ingress.yml")).Return("mockWkldTmplPath")
+				m.EXPECT().WorkloadAddonFilePath(gomock.Eq(wantedSvcName), gomock.Eq("addons.parameters.yml")).Return("mockWkldParamsPath")
+				m.EXPECT().Write(gomock.Any(), "mockEnvTemplatePath").Return("mockEnvTemplatePath", nil)
+				m.EXPECT().Write(gomock.Any(), "mockEnvParametersPath").Return("mockEnvParametersPath", nil)
+				m.EXPECT().Write(gomock.Any(), "mockWkldTmplPath").Return("mockWkldTmplPath", nil)
+				m.EXPECT().Write(gomock.Any(), "mockWkldParamsPath").Return("mockWkldParamsPath", nil)
+			},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().ListEnvironments(gomock.Any()).AnyTimes()
+			},
+			wantedErr: nil,
+		},
 		"error addon exists": {
 			inAppName:     wantedAppName,
 			inStorageType: s3StorageType,
 			inSvcName:     wantedSvcName,
 			inStorageName: "my-bucket",
+			inLifecycle:   lifecycleWorkloadLevel,
 
 			mockWs: func(m *mocks.MockwsAddonManager) {
 				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte("type: Load Balanced Web Service"), nil)
@@ -1083,6 +1188,7 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 			inStorageType: s3StorageType,
 			inSvcName:     wantedSvcName,
 			inStorageName: "my-bucket",
+			inLifecycle:   lifecycleWorkloadLevel,
 
 			mockWs: func(m *mocks.MockwsAddonManager) {
 				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, errors.New("some error"))
@@ -1095,6 +1201,7 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 			inStorageType: s3StorageType,
 			inSvcName:     wantedSvcName,
 			inStorageName: "my-bucket",
+			inLifecycle:   lifecycleWorkloadLevel,
 
 			mockWs: func(m *mocks.MockwsAddonManager) {
 				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte("type: Load Balanced Web Service"), nil)
@@ -1128,7 +1235,7 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 					rdsEngine:               tc.inEngine,
 					rdsParameterGroup:       tc.inParameterGroup,
 
-					lifecycle: lifecycleWorkloadLevel,
+					lifecycle: tc.inLifecycle,
 				},
 				appName: tc.inAppName,
 				ws:      mockAddon,

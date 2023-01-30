@@ -704,6 +704,12 @@ func (o *initStorageOpts) addonBlobs() ([]addonBlob, error) {
 		return o.wkldDDBAddonBlobs()
 	case o.lifecycle == lifecycleWorkloadLevel && o.storageType == rdsStorageType:
 		return o.wkldRDSAddonBlobs()
+	case o.lifecycle == lifecycleEnvironmentLevel && o.storageType == s3StorageType:
+		return o.envS3AddonBlobs()
+	case o.lifecycle == lifecycleEnvironmentLevel && o.storageType == dynamoDBStorageType:
+		return o.envDDBAddonBlobs()
+	case o.lifecycle == lifecycleEnvironmentLevel && o.storageType == rdsStorageType:
+		return o.envRDSAddonBlobs()
 	}
 	return nil, fmt.Errorf("storage type %s doesn't have a CF template", o.storageType)
 }
@@ -718,6 +724,25 @@ func (o *initStorageOpts) wkldDDBAddonBlobs() ([]addonBlob, error) {
 			path:        o.ws.WorkloadAddonFilePath(o.workloadName, fmt.Sprintf("%s.yml", o.storageName)),
 			description: "template",
 			blob:        addon.WorkloadDDBTemplate(props),
+		},
+	}, nil
+}
+
+func (o *initStorageOpts) envDDBAddonBlobs() ([]addonBlob, error) {
+	props, err := o.ddbProps()
+	if err != nil {
+		return nil, err
+	}
+	return []addonBlob{
+		{
+			path:        o.ws.EnvAddonFilePath(fmt.Sprintf("%s.yml", o.storageName)),
+			description: "template",
+			blob:        addon.EnvDDBTemplate(props),
+		},
+		{
+			path:        o.ws.WorkloadAddonFilePath(o.workloadName, fmt.Sprintf("%s-access-policy.yml", o.storageName)),
+			description: "template",
+			blob:        addon.EnvDDBAccessPolicyTemplate(props),
 		},
 	}, nil
 }
@@ -753,6 +778,22 @@ func (o *initStorageOpts) wkldS3AddonBlobs() ([]addonBlob, error) {
 			path:        o.ws.WorkloadAddonFilePath(o.workloadName, fmt.Sprintf("%s.yml", o.storageName)),
 			description: "template",
 			blob:        addon.WorkloadS3Template(o.s3Props()),
+		},
+	}, nil
+}
+
+func (o *initStorageOpts) envS3AddonBlobs() ([]addonBlob, error) {
+	props := o.s3Props()
+	return []addonBlob{
+		{
+			path:        o.ws.EnvAddonFilePath(fmt.Sprintf("%s.yml", o.storageName)),
+			description: "template",
+			blob:        addon.EnvS3Template(props),
+		},
+		{
+			path:        o.ws.WorkloadAddonFilePath(o.workloadName, fmt.Sprintf("%s-access-policy.yml", o.storageName)),
+			description: "template",
+			blob:        addon.EnvS3AccessPolicyTemplate(props),
 		},
 	}, nil
 }
@@ -793,6 +834,40 @@ func (o *initStorageOpts) wkldRDSAddonBlobs() ([]addonBlob, error) {
 		description: "parameters",
 		blob:        addon.RDWSParamsForRDS(),
 	}), nil
+}
+
+func (o *initStorageOpts) envRDSAddonBlobs() ([]addonBlob, error) {
+	props, err := o.rdsProps()
+	if err != nil {
+		return nil, err
+	}
+	blobs := []addonBlob{
+		{
+			path:        o.ws.EnvAddonFilePath(fmt.Sprintf("%s.yml", o.storageName)),
+			description: "template",
+			blob:        addon.EnvServerlessTemplate(props),
+		},
+		{
+			path:        o.ws.EnvAddonFilePath("addons.parameters.yml"),
+			description: "parameters",
+			blob:        addon.EnvParamsForRDS(),
+		},
+	}
+	if o.workloadType != manifest.RequestDrivenWebServiceType {
+		return blobs, nil
+	}
+	return append(blobs,
+		addonBlob{
+			path:        o.ws.WorkloadAddonFilePath(o.workloadName, fmt.Sprintf("%s-ingress.yml", o.storageName)),
+			description: "template",
+			blob:        addon.EnvServerlessRDWSIngressTemplate(props),
+		},
+		addonBlob{
+			path:        o.ws.WorkloadAddonFilePath(o.workloadName, "addons.parameters.yml"),
+			description: "parameters",
+			blob:        addon.RDWSParamsForEnvRDS(),
+		},
+	), nil
 }
 
 func (o *initStorageOpts) rdsProps() (addon.RDSProps, error) {
