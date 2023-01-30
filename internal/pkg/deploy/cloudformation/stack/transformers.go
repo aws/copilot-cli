@@ -458,6 +458,9 @@ func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (networkLoadBalanc
 
 	// Parse targetContainer and targetPort for the Network Load Balancer targets.
 	targetContainer, targetPort, err := s.manifest.NetworkLoadBalancerTarget()
+	if err != nil {
+		return networkLoadBalancerConfig{}, err
+	}
 
 	// Parse listener port and protocol.
 	port, protocol, err := manifest.ParseNLBPortMapping(nlbConfig.Port)
