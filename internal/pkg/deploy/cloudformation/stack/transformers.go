@@ -41,6 +41,7 @@ const (
 	defaultIAM             = disabled
 	defaultReadOnly        = true
 	defaultWritePermission = false
+	defaultNLBProtocol     = manifest.TCP
 )
 
 // Supported capacityproviders for Fargate services
@@ -463,9 +464,13 @@ func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (networkLoadBalanc
 	}
 
 	// Parse listener port and protocol.
-	port, protocol, err := manifest.ParseNLBPortMapping(nlbConfig.Port)
+	port, protocol, err := manifest.ParsePortMapping(nlbConfig.Port)
 	if err != nil {
 		return networkLoadBalancerConfig{}, err
+	}
+
+	if protocol == nil {
+		protocol = aws.String(defaultNLBProtocol)
 	}
 
 	aliases, err := convertAlias(nlbConfig.Aliases)

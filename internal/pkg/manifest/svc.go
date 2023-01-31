@@ -27,8 +27,6 @@ const (
 	WorkerServiceType = "Worker Service"
 )
 
-const defaultNLBProtocol = TCP
-
 // ServiceTypes returns the list of supported service manifest types.
 func ServiceTypes() []string {
 	return []string{
@@ -573,18 +571,6 @@ func sortExposedPorts(exposedPorts []ExposedPort) []ExposedPort {
 	return exposedPorts
 }
 
-// ParseNLBPortMapping returns parsed NLB port and protocol.
-func ParseNLBPortMapping(nlbPort *string) (port *string, protocol *string, err error) {
-	port, protocol, err = ParsePortMapping(nlbPort)
-	if err != nil {
-		return nil, nil, err
-	}
-	if protocol == nil {
-		protocol = aws.String(defaultNLBProtocol)
-	}
-	return
-}
-
 // NetworkLoadBalancerTarget returns target container and target port for the NLB configuration.
 func (s *LoadBalancedWebService) NetworkLoadBalancerTarget() (targetContainer *string, targetPort *string, err error) {
 	// Configure target container and port.
@@ -594,7 +580,7 @@ func (s *LoadBalancedWebService) NetworkLoadBalancerTarget() (targetContainer *s
 	}
 
 	// Parse listener port and protocol.
-	port, _, err := ParseNLBPortMapping(s.NLBConfig.Port)
+	port, _, err := ParsePortMapping(s.NLBConfig.Port)
 	if err != nil {
 		return nil, nil, err
 	}
