@@ -191,7 +191,7 @@ func newDefaultBackendService() *BackendService {
 
 // ExposedPorts returns all the ports that are container ports available to receive traffic.
 func (b *BackendService) ExposedPorts() (ParsedContainerConfig, error) {
-	if b.cachedExposedPorts.ExposedPorts != nil || b.cachedExposedPorts.ContainerPortMappings != nil {
+	if b.cachedExposedPorts.ContainerToPortsMapping != nil || b.cachedExposedPorts.PortToContainerMapping != nil {
 		return b.cachedExposedPorts, nil
 	}
 
@@ -207,6 +207,6 @@ func (b *BackendService) ExposedPorts() (ParsedContainerConfig, error) {
 		exposedPorts = append(exposedPorts, out...)
 	}
 	exposedPorts = append(exposedPorts, b.RoutingRule.exposedPorts(exposedPorts, workloadName)...)
-	b.cachedExposedPorts.ContainerPortMappings, b.cachedExposedPorts.ExposedPorts = prepareParsedExposedPortsMap(sortExposedPorts(exposedPorts))
+	b.cachedExposedPorts.ContainerToPortsMapping, b.cachedExposedPorts.PortToContainerMapping = prepareParsedExposedPortsMap(sortExposedPorts(exposedPorts))
 	return b.cachedExposedPorts, nil
 }

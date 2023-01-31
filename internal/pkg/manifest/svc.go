@@ -46,8 +46,8 @@ type Range struct {
 
 // ParsedContainerConfig holds exposed ports configuration.
 type ParsedContainerConfig struct {
-	ContainerPortMappings map[string][]ExposedPort // holds exposed ports list for all the containers
-	ExposedPorts          map[uint16]string        // holds port to container mapping
+	ContainerToPortsMapping map[string][]ExposedPort // holds exposed ports list for all the containers
+	PortToContainerMapping  map[uint16]string        // holds port to container mapping
 }
 
 // IsEmpty returns whether Range is empty.
@@ -657,8 +657,8 @@ func (s *BackendService) HTTPLoadBalancerTarget() (targetContainer *string, targ
 func httpLoadBalancerTarget(exposedPorts ParsedContainerConfig, rrTargetPort *uint16) (targetContainer *string, targetPort *string) {
 	// Route load balancer traffic to the target_port if mentioned.
 	targetPort = aws.String(template.StrconvUint16(aws.Uint16Value(rrTargetPort)))
-	if exposedPorts.ExposedPorts[aws.Uint16Value(rrTargetPort)] != "" {
-		targetContainer = aws.String(exposedPorts.ExposedPorts[aws.Uint16Value(rrTargetPort)])
+	if exposedPorts.PortToContainerMapping[aws.Uint16Value(rrTargetPort)] != "" {
+		targetContainer = aws.String(exposedPorts.PortToContainerMapping[aws.Uint16Value(rrTargetPort)])
 	}
 	return
 }

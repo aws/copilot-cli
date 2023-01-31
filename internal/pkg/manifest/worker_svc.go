@@ -370,7 +370,7 @@ func newDefaultWorkerService() *WorkerService {
 
 // ExposedPorts returns all the ports that are sidecar container ports available to receive traffic.
 func (ws *WorkerService) ExposedPorts() (ParsedContainerConfig, error) {
-	if ws.cachedExposedPorts.ExposedPorts != nil || ws.cachedExposedPorts.ContainerPortMappings != nil {
+	if ws.cachedExposedPorts.ContainerToPortsMapping != nil || ws.cachedExposedPorts.PortToContainerMapping != nil {
 		return ws.cachedExposedPorts, nil
 	}
 
@@ -383,6 +383,6 @@ func (ws *WorkerService) ExposedPorts() (ParsedContainerConfig, error) {
 		exposedPorts = append(exposedPorts, out...)
 	}
 
-	ws.cachedExposedPorts.ContainerPortMappings, ws.cachedExposedPorts.ExposedPorts = prepareParsedExposedPortsMap(sortExposedPorts(exposedPorts))
+	ws.cachedExposedPorts.ContainerToPortsMapping, ws.cachedExposedPorts.PortToContainerMapping = prepareParsedExposedPortsMap(sortExposedPorts(exposedPorts))
 	return ws.cachedExposedPorts, nil
 }

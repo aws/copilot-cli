@@ -195,7 +195,7 @@ func newDefaultScheduledJob() *ScheduledJob {
 
 // ExposedPorts returns all the ports that are sidecar container ports available to receive traffic.
 func (j *ScheduledJob) ExposedPorts() (ParsedContainerConfig, error) {
-	if j.cachedExposedPorts.ExposedPorts != nil || j.cachedExposedPorts.ContainerPortMappings != nil {
+	if j.cachedExposedPorts.ContainerToPortsMapping != nil || j.cachedExposedPorts.PortToContainerMapping != nil {
 		return j.cachedExposedPorts, nil
 	}
 	var exposedPorts []ExposedPort
@@ -206,6 +206,6 @@ func (j *ScheduledJob) ExposedPorts() (ParsedContainerConfig, error) {
 		}
 		exposedPorts = append(exposedPorts, out...)
 	}
-	j.cachedExposedPorts.ContainerPortMappings, j.cachedExposedPorts.ExposedPorts = prepareParsedExposedPortsMap(sortExposedPorts(exposedPorts))
+	j.cachedExposedPorts.ContainerToPortsMapping, j.cachedExposedPorts.PortToContainerMapping = prepareParsedExposedPortsMap(sortExposedPorts(exposedPorts))
 	return j.cachedExposedPorts, nil
 }

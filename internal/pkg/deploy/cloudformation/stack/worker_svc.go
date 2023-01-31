@@ -81,7 +81,7 @@ func (s *WorkerService) Template() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("parse exposed ports in service manifest %s: %w", s.name, err)
 	}
-	tmplSidecars, err := convertSidecars(s.manifest.Sidecars, exposedPorts.ContainerPortMappings)
+	tmplSidecars, err := convertSidecars(s.manifest.Sidecars, exposedPorts.ContainerToPortsMapping)
 	if err != nil {
 		return "", fmt.Errorf("convert the sidecar configuration for service %s: %w", s.name, err)
 	}

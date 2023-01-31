@@ -242,7 +242,7 @@ func (c *NetworkLoadBalancerConfiguration) IsEmpty() bool {
 
 // ExposedPorts returns all the ports that are container ports available to receive traffic.
 func (lbws *LoadBalancedWebService) ExposedPorts() (ParsedContainerConfig, error) {
-	if lbws.cachedExposedPorts.ExposedPorts != nil || lbws.cachedExposedPorts.ContainerPortMappings != nil {
+	if lbws.cachedExposedPorts.ContainerToPortsMapping != nil || lbws.cachedExposedPorts.PortToContainerMapping != nil {
 		return lbws.cachedExposedPorts, nil
 	}
 	var exposedPorts []ExposedPort
@@ -261,6 +261,6 @@ func (lbws *LoadBalancedWebService) ExposedPorts() (ParsedContainerConfig, error
 		return ParsedContainerConfig{}, err
 	}
 	exposedPorts = append(exposedPorts, out...)
-	lbws.cachedExposedPorts.ContainerPortMappings, lbws.cachedExposedPorts.ExposedPorts = prepareParsedExposedPortsMap(sortExposedPorts(exposedPorts))
+	lbws.cachedExposedPorts.ContainerToPortsMapping, lbws.cachedExposedPorts.PortToContainerMapping = prepareParsedExposedPortsMap(sortExposedPorts(exposedPorts))
 	return lbws.cachedExposedPorts, nil
 }
