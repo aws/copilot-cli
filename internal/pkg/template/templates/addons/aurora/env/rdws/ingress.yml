@@ -22,7 +22,3 @@ Resources:
         Fn::ImportValue: !Sub "${App}-${Env}-{{logicalIDSafe .ClusterName}}DBClusterSecurityGroup"
       IpProtocol: tcp
       SourceSecurityGroupId: !Ref ServiceSecurityGroupId
-Outputs:
-  {{logicalIDSafe .ClusterName}}AuroraServerlessSecret: # injected as {{ logicalIDSafe .ClusterName | printf "%sAuroraServerlessSecret" | envVarSecret | toSnakeCase}} environment variable by Copilot.
-    Description: "The JSON secret that holds the database username and password. Fields are 'host', 'port', 'dbname', 'username', 'password', 'dbClusterIdentifier' and 'engine'"
-    Value: { Fn::ImportValue: { Fn::Sub: "${App}-${Env}-{{logicalIDSafe .ClusterName}}AuroraSecret" }}
