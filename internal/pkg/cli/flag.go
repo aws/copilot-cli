@@ -67,6 +67,7 @@ const (
 
 	// Flags for storage.
 	storageTypeFlag                    = "storage-type"
+	storageLifecycleFlag               = "lifecycle"
 	storagePartitionKeyFlag            = "partition-key"
 	storageSortKeyFlag                 = "sort-key"
 	storageNoSortFlag                  = "no-sort"
@@ -285,6 +286,7 @@ Uploaded asset locations are filled in the template configuration.`
 	// Storage.
 	storageFlagDescription             = "Name of the storage resource to create."
 	storageWorkloadFlagDescription     = "Name of the service or job to associate with storage."
+	storageLifecycleFlagDescription    = "Whether the storage should be created and deleted at the same time as a workload or as the environment"
 	storagePartitionKeyFlagDescription = `Partition key for the DDB table.
 Must be of the format '<keyName>:<dataType>'.`
 	storageSortKeyFlagDescription = `Optional. Sort key for the DDB table.
