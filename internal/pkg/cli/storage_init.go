@@ -160,8 +160,6 @@ var engineTypes = []string{
 	engineTypePostgreSQL,
 }
 
-var errUnavailableAddonParams = errors.New("addon does not require parameters")
-
 type initStorageVars struct {
 	storageType  string
 	storageName  string
