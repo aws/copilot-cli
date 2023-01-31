@@ -312,13 +312,6 @@ type SidecarConfig struct {
 	ImageOverride `yaml:",inline"`
 }
 
-// ParsedSidecarConfig is a custom type which holds SidecarConfig with exposed ports.
-type ParsedSidecarConfig struct {
-	Name         string
-	Container    *SidecarConfig
-	ExposedPorts []ExposedPort // Contains the ports that are exposed by the sidecar
-}
-
 // OverrideRule holds the manifest overriding rule for CloudFormation template.
 type OverrideRule struct {
 	Path  string    `yaml:"path"`

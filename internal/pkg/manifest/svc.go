@@ -44,7 +44,7 @@ type Range struct {
 	RangeConfig RangeConfig
 }
 
-// ParsedContainerConfig holds exposed ports configuration
+// ParsedContainerConfig holds exposed ports configuration.
 type ParsedContainerConfig struct {
 	ContainerPortMappings map[string][]ExposedPort // holds exposed ports list for all the containers
 	ExposedPorts          map[uint16]string        // holds port to container mapping
