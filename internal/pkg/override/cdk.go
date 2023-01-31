@@ -7,7 +7,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/fs"
+	"os"
 	"os/exec"
 	"path/filepath"
 
@@ -62,7 +62,7 @@ func WithCDK(root string, opts CDKOpts) *CDK {
 			envs[idx] = fmt.Sprintf("%s=%s", k, v)
 			idx += 1
 		}
-		cmd.Env = envs
+		cmd.Env = append(os.Environ(), envs...)
 		return cmd
 	}
 	if opts.CommandFn != nil {
@@ -113,7 +113,7 @@ func (cdk *CDK) install() error {
 
 func (cdk *CDK) transform(body []byte) ([]byte, error) {
 	buildPath := filepath.Join(cdk.rootAbsPath, ".build")
-	if err := cdk.fs.MkdirAll(buildPath, fs.ModeDir); err != nil {
+	if err := cdk.fs.MkdirAll(buildPath, 0755); err != nil {
 		return nil, fmt.Errorf("create %s directory to store the CloudFormation template body: %w", buildPath, err)
 	}
 	inputPath := filepath.Join(buildPath, "in.yml")

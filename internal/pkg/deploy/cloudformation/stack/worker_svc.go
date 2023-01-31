@@ -139,7 +139,7 @@ func (s *WorkerService) Template() (string, error) {
 		CustomResources:          crs,
 		Storage:                  convertStorageOpts(s.manifest.Name, s.manifest.Storage),
 		Network:                  convertNetworkConfig(s.manifest.Network),
-		DeploymentConfiguration:  convertDeploymentConfig(s.manifest.DeployConfig),
+		DeploymentConfiguration:  convertWorkerDeploymentConfig(s.manifest.WorkerServiceConfig.DeployConfig),
 		EntryPoint:               entrypoint,
 		ServiceConnect:           scConfig,
 		Command:                  command,

@@ -112,6 +112,44 @@ func (mr *MockStackConfigurationMockRecorder) Template() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Template", reflect.TypeOf((*MockStackConfiguration)(nil).Template))
 }
 
+// MockOverrider is a mock of Overrider interface.
+type MockOverrider struct {
+	ctrl     *gomock.Controller
+	recorder *MockOverriderMockRecorder
+}
+
+// MockOverriderMockRecorder is the mock recorder for MockOverrider.
+type MockOverriderMockRecorder struct {
+	mock *MockOverrider
+}
+
+// NewMockOverrider creates a new mock instance.
+func NewMockOverrider(ctrl *gomock.Controller) *MockOverrider {
+	mock := &MockOverrider{ctrl: ctrl}
+	mock.recorder = &MockOverriderMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockOverrider) EXPECT() *MockOverriderMockRecorder {
+	return m.recorder
+}
+
+// Override mocks base method.
+func (m *MockOverrider) Override(body []byte) ([]byte, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Override", body)
+	ret0, _ := ret[0].([]byte)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Override indicates an expected call of Override.
+func (mr *MockOverriderMockRecorder) Override(body interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Override", reflect.TypeOf((*MockOverrider)(nil).Override), body)
+}
+
 // MockecsClient is a mock of ecsClient interface.
 type MockecsClient struct {
 	ctrl     *gomock.Controller

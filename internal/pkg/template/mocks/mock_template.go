@@ -5,6 +5,7 @@
 package mocks
 
 import (
+	fs "io/fs"
 	reflect "reflect"
 
 	template "github.com/aws/copilot-cli/internal/pkg/template"
@@ -148,4 +149,72 @@ func (m *MockReadParser) Read(path string) (*template.Content, error) {
 func (mr *MockReadParserMockRecorder) Read(path interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Read", reflect.TypeOf((*MockReadParser)(nil).Read), path)
+}
+
+// MockosFS is a mock of osFS interface.
+type MockosFS struct {
+	ctrl     *gomock.Controller
+	recorder *MockosFSMockRecorder
+}
+
+// MockosFSMockRecorder is the mock recorder for MockosFS.
+type MockosFSMockRecorder struct {
+	mock *MockosFS
+}
+
+// NewMockosFS creates a new mock instance.
+func NewMockosFS(ctrl *gomock.Controller) *MockosFS {
+	mock := &MockosFS{ctrl: ctrl}
+	mock.recorder = &MockosFSMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockosFS) EXPECT() *MockosFSMockRecorder {
+	return m.recorder
+}
+
+// Open mocks base method.
+func (m *MockosFS) Open(name string) (fs.File, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Open", name)
+	ret0, _ := ret[0].(fs.File)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Open indicates an expected call of Open.
+func (mr *MockosFSMockRecorder) Open(name interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Open", reflect.TypeOf((*MockosFS)(nil).Open), name)
+}
+
+// ReadDir mocks base method.
+func (m *MockosFS) ReadDir(name string) ([]fs.DirEntry, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReadDir", name)
+	ret0, _ := ret[0].([]fs.DirEntry)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ReadDir indicates an expected call of ReadDir.
+func (mr *MockosFSMockRecorder) ReadDir(name interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadDir", reflect.TypeOf((*MockosFS)(nil).ReadDir), name)
+}
+
+// ReadFile mocks base method.
+func (m *MockosFS) ReadFile(name string) ([]byte, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReadFile", name)
+	ret0, _ := ret[0].([]byte)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ReadFile indicates an expected call of ReadFile.
+func (mr *MockosFSMockRecorder) ReadFile(name interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadFile", reflect.TypeOf((*MockosFS)(nil).ReadFile), name)
 }

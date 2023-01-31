@@ -406,4 +406,46 @@ describe("DNS Validated Certificate Handler", () => {
         expect(request.isDone()).toBe(true);
       });
   });
+
+  test("Ignore error if trying to delete an A-record that does not exist", () => {
+    const changeResourceRecordSetsFake = sinon.fake.rejects(new Error("InvalidChangeBatch: [Tried to delete resource record set [name='v1.foobar.com.', type='A'] but it was not found]"));
+
+    const listHostedZonesByNameFake = sinon.fake.resolves({
+      HostedZones: [
+        {
+          Id: `/hostedzone/${testHostedZoneId}`,
+        },
+      ],
+    });
+
+    AWS.mock(
+      "Route53",
+      "changeResourceRecordSets",
+      changeResourceRecordSetsFake
+    );
+    AWS.mock("Route53", "listHostedZonesByName", listHostedZonesByNameFake);
+
+    const request = nock(ResponseURL)
+      .put("/", (body) => {
+        return body.Status === "SUCCESS";
+      })
+      .reply(200);
+    return LambdaTester(handler.handler)
+      .event({
+        RequestType: "Delete",
+        ResourceProperties: {
+          AppName: testAppName,
+          EnvName: testEnvName,
+          DomainName: testDomainName,
+          Aliases: testAliases,
+          Region: "us-east-1",
+          PublicAccessDNS: testAccessDNS,
+          PublicAccessHostedZone: testLBHostedZone,
+          AppDNSRole: testRootDNSRole,
+        },
+      })
+      .expectResolve(() => {
+        expect(request.isDone()).toBe(true);
+      });
+  });
 });

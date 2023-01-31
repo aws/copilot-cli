@@ -45,6 +45,7 @@ const (
 	SummaryFileName = ".workspace"
 
 	addonsDirName             = "addons"
+	overridesDirName          = "overrides"
 	pipelinesDirName          = "pipelines"
 	environmentsDirName       = "environments"
 	maximumParentDirsToSearch = 5
@@ -75,10 +76,12 @@ type Workspace struct {
 	logger func(format string, args ...interface{})
 }
 
+var getWd = os.Getwd
+
 // Use returns an existing workspace, searching for a copilot/ directory from the current wd,
 // up to 5 levels above. It returns ErrWorkspaceNotFound if no copilot/ directory is found.
 func Use(fs afero.Fs) (*Workspace, error) {
-	workingDirAbs, err := os.Getwd()
+	workingDirAbs, err := getWd()
 	if err != nil {
 		return nil, fmt.Errorf("get working directory: %w", err)
 	}
@@ -101,7 +104,7 @@ func Use(fs afero.Fs) (*Workspace, error) {
 
 // Create creates a new Workspace in the current working directory for appName with summary if it doesn't already exist.
 func Create(appName string, fs afero.Fs) (*Workspace, error) {
-	workingDirAbs, err := os.Getwd()
+	workingDirAbs, err := getWd()
 	if err != nil {
 		return nil, fmt.Errorf("get working directory: %w", err)
 	}
@@ -424,24 +427,44 @@ func (ws *Workspace) DeleteWorkspaceFile() error {
 	return ws.fs.Remove(filepath.Join(CopilotDirName, SummaryFileName))
 }
 
-// EnvAddonsPath returns the addons/ directory file path for environments.
-func (ws *Workspace) EnvAddonsPath() string {
+// EnvAddonsAbsPath returns the absolute path for the addons/ directory of environments.
+func (ws *Workspace) EnvAddonsAbsPath() string {
 	return filepath.Join(ws.copilotDirAbs, environmentsDirName, addonsDirName)
 }
 
-// EnvAddonFilePath returns the path of an addon file for environments.
-func (ws *Workspace) EnvAddonFilePath(fName string) string {
-	return filepath.Join(ws.EnvAddonsPath(), fName)
+// EnvAddonFileAbsPath returns the absolute path of an addon file for environments.
+func (ws *Workspace) EnvAddonFileAbsPath(fName string) string {
+	return filepath.Join(ws.EnvAddonsAbsPath(), fName)
 }
 
-// WorkloadAddonsPath returns the addons/ directory file path for a given workload.
-func (ws *Workspace) WorkloadAddonsPath(name string) string {
+// WorkloadAddonsAbsPath returns the absolute path for the addons/ directory file path of a given workload.
+func (ws *Workspace) WorkloadAddonsAbsPath(name string) string {
 	return filepath.Join(ws.copilotDirAbs, name, addonsDirName)
 }
 
-// WorkloadAddonFilePath returns the path of an addon file for a given workload.
+// WorkloadAddonFileAbsPath returns the absolute path of an addon file for a given workload.
+func (ws *Workspace) WorkloadAddonFileAbsPath(wkldName, fName string) string {
+	return filepath.Join(ws.WorkloadAddonsAbsPath(wkldName), fName)
+}
+
+// WorkloadAddonFilePath returns the path under the workspace of an addon file for a given workload.
 func (ws *Workspace) WorkloadAddonFilePath(wkldName, fName string) string {
-	return filepath.Join(ws.WorkloadAddonsPath(wkldName), fName)
+	return filepath.Join(wkldName, addonsDirName, fName)
+}
+
+// EnvAddonFilePath returns the path under the workspace of an addon file for environments.
+func (ws *Workspace) EnvAddonFilePath(fName string) string {
+	return filepath.Join(environmentsDirName, addonsDirName, fName)
+}
+
+// EnvOverridesPath returns the default path to the overrides/ directory for environments.
+func (ws *Workspace) EnvOverridesPath() string {
+	return filepath.Join(ws.copilotDirAbs, environmentsDirName, overridesDirName)
+}
+
+// WorkloadOverridesPath returns the default path to the overrides/ directory for a given workload.
+func (ws *Workspace) WorkloadOverridesPath(name string) string {
+	return filepath.Join(ws.copilotDirAbs, name, overridesDirName)
 }
 
 // ListFiles returns a list of file paths to all the files under the dir.
@@ -467,6 +490,16 @@ func (ws *Workspace) ReadFile(fPath string) ([]byte, error) {
 		return nil, &ErrFileNotExists{FileName: fPath}
 	}
 	return ws.fs.ReadFile(fPath)
+}
+
+// Write writes the content under the path relative to "copilot/" directory.
+// If successful returns the full path of the file, otherwise an empty string and an error.
+func (ws *Workspace) Write(content encoding.BinaryMarshaler, path string) (string, error) {
+	data, err := content.MarshalBinary()
+	if err != nil {
+		return "", fmt.Errorf("marshal binary content: %w", err)
+	}
+	return ws.write(data, path)
 }
 
 // WriteAddon writes the content of an addon file under "{svc}/addons/{name}.yml".
