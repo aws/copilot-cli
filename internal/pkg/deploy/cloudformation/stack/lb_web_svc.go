@@ -131,11 +131,11 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		return "", err
 	}
 
-	sidecars, err := s.manifest.Sidecar()
+	exposedPorts, err := s.manifest.ExposedPorts()
 	if err != nil {
 		return "", fmt.Errorf("parse exposed ports in service manifest %s: %w", s.name, err)
 	}
-	tmplSidecars, err := convertSidecars(sidecars)
+	tmplSidecars, err := convertSidecars(s.manifest.Sidecars, exposedPorts.ContainerPortMappings)
 	if err != nil {
 		return "", fmt.Errorf("convert the sidecar configuration for service %s: %w", s.name, err)
 	}
@@ -209,10 +209,6 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	}
 	// Set container-level feature flag.
 	logConfig := convertLogging(s.manifest.Logging)
-	primaryContainerPorts, err := s.manifest.PrimaryContainer()
-	if err != nil {
-		return "", fmt.Errorf("parse exposed ports in service manifest %s: %w", s.name, err)
-	}
 	content, err := s.parser.ParseLoadBalancedWebService(template.WorkloadOpts{
 		// Workload parameters.
 		AppName:            s.app,
@@ -226,7 +222,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		Command:      command,
 		EntryPoint:   entrypoint,
 		HealthCheck:  convertContainerHealthCheck(s.manifest.ImageConfig.HealthCheck),
-		PortMappings: convertPortMappings(primaryContainerPorts),
+		PortMappings: convertPortMappings(exposedPorts.ContainerPortMappings[s.name]),
 		Secrets:      convertSecrets(s.manifest.TaskConfig.Secrets),
 		Variables:    convertEnvVars(s.manifest.TaskConfig.Variables),
 

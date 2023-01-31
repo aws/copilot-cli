@@ -29,7 +29,7 @@ type WorkerService struct {
 	WorkerServiceConfig `yaml:",inline"`
 	// Use *WorkerServiceConfig because of https://github.com/imdario/mergo/issues/146
 	Environments       map[string]*WorkerServiceConfig `yaml:",flow"`
-	cachedExposedPorts map[string][]ExposedPort
+	cachedExposedPorts ParsedContainerConfig
 	parser             template.Parser
 }
 
@@ -368,9 +368,9 @@ func newDefaultWorkerService() *WorkerService {
 	}
 }
 
-// exposedPorts returns all the ports that are sidecar container ports available to receive traffic.
-func (ws *WorkerService) exposedPorts() (map[string][]ExposedPort, error) {
-	if ws.cachedExposedPorts != nil {
+// ExposedPorts returns all the ports that are sidecar container ports available to receive traffic.
+func (ws *WorkerService) ExposedPorts() (ParsedContainerConfig, error) {
+	if ws.cachedExposedPorts.ExposedPorts != nil || ws.cachedExposedPorts.ContainerPortMappings != nil {
 		return ws.cachedExposedPorts, nil
 	}
 
@@ -378,28 +378,11 @@ func (ws *WorkerService) exposedPorts() (map[string][]ExposedPort, error) {
 	for name, sidecar := range ws.Sidecars {
 		out, err := sidecar.exposedPorts(name)
 		if err != nil {
-			return nil, err
+			return ParsedContainerConfig{}, err
 		}
 		exposedPorts = append(exposedPorts, out...)
 	}
 
-	ws.cachedExposedPorts = prepareParsedExposedPortsMap(sortExposedPorts(exposedPorts))
+	ws.cachedExposedPorts.ContainerPortMappings, ws.cachedExposedPorts.ExposedPorts = prepareParsedExposedPortsMap(sortExposedPorts(exposedPorts))
 	return ws.cachedExposedPorts, nil
-}
-
-// Sidecar returns SidecarConfig with the parsed exposed ports of the sidecars.
-func (ws *WorkerService) Sidecar() ([]ParsedSidecarConfig, error) {
-	exposedPorts, err := ws.exposedPorts()
-	if err != nil {
-		return nil, err
-	}
-	var parsedSidecars []ParsedSidecarConfig
-	for name, container := range ws.Sidecars {
-		parsedSidecars = append(parsedSidecars, ParsedSidecarConfig{
-			Name:         name,
-			ExposedPorts: exposedPorts[name],
-			Container:    container,
-		})
-	}
-	return sortSidecars(parsedSidecars), nil
 }

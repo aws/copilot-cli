@@ -44,6 +44,12 @@ type Range struct {
 	RangeConfig RangeConfig
 }
 
+// ParsedContainerConfig holds exposed ports configuration
+type ParsedContainerConfig struct {
+	ContainerPortMappings map[string][]ExposedPort // holds exposed ports list for all the containers
+	ExposedPorts          map[uint16]string        // holds port to container mapping
+}
+
 // IsEmpty returns whether Range is empty.
 func (r *Range) IsEmpty() bool {
 	return r.Value == nil && r.RangeConfig.IsEmpty()
@@ -570,17 +576,9 @@ func sortExposedPorts(exposedPorts []ExposedPort) []ExposedPort {
 	return exposedPorts
 }
 
-func sortSidecars(sidecars []ParsedSidecarConfig) []ParsedSidecarConfig {
-	// Sort the sidecars so that the order is consistent and the integration test won't be flaky.
-	sort.Slice(sidecars, func(i, j int) bool {
-		return sidecars[i].Name < sidecars[j].Name
-	})
-	return sidecars
-}
-
 // HTTPLoadBalancerTarget returns target container and target port for the ALB configuration.
 func (s *LoadBalancedWebService) HTTPLoadBalancerTarget() (targetContainer *string, targetPort *string, err error) {
-	exposedPorts, err := s.exposedPorts()
+	exposedPorts, err := s.ExposedPorts()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -594,23 +592,32 @@ func (s *LoadBalancedWebService) HTTPLoadBalancerTarget() (targetContainer *stri
 		return
 	}
 
-	if container, port := httpLoadBalancerTarget(exposedPorts, rrTargetPort); port == nil { // targetPort is nil.
-		if *rrTargetContainer != *targetContainer {
+	if rrTargetPort == nil {
+		if rrTargetContainer != s.Name {
 			targetContainer = rrTargetContainer
-			targetPort = s.Sidecars[aws.StringValue(targetContainer)].Port
+			targetPort = s.Sidecars[aws.StringValue(rrTargetContainer)].Port
 		}
-	} else { // targetContainer is nil or both targetContainer and targetPort are not nil.
+		return
+	}
+
+	if rrTargetContainer == nil {
+		container, port := httpLoadBalancerTarget(exposedPorts, rrTargetPort)
 		targetPort = port
 		if container != nil {
 			targetContainer = container
 		}
+		return
 	}
+
+	targetContainer = rrTargetContainer
+	targetPort = aws.String(template.StrconvUint16(aws.Uint16Value(rrTargetPort)))
+
 	return
 }
 
 // HTTPLoadBalancerTarget returns target container and target port for the ALB configuration.
 func (s *BackendService) HTTPLoadBalancerTarget() (targetContainer *string, targetPort *string, err error) {
-	exposedPorts, err := s.exposedPorts()
+	exposedPorts, err := s.ExposedPorts()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -625,32 +632,33 @@ func (s *BackendService) HTTPLoadBalancerTarget() (targetContainer *string, targ
 		return
 	}
 
-	if container, port := httpLoadBalancerTarget(exposedPorts, rrTargetPort); port == nil { // targetPort is nil.
-		if *rrTargetContainer != *targetContainer {
+	if rrTargetPort == nil {
+		if rrTargetContainer != s.Name {
 			targetContainer = rrTargetContainer
-			targetPort = s.Sidecars[aws.StringValue(targetContainer)].Port
+			targetPort = s.Sidecars[aws.StringValue(rrTargetContainer)].Port
 		}
-	} else { // targetContainer is nil or both targetContainer and targetPort are not nil.
+		return
+	}
+
+	if rrTargetContainer == nil {
+		container, port := httpLoadBalancerTarget(exposedPorts, rrTargetPort)
 		targetPort = port
 		if container != nil {
 			targetContainer = container
 		}
+		return
 	}
+
+	targetContainer = rrTargetContainer
+	targetPort = aws.String(template.StrconvUint16(aws.Uint16Value(rrTargetPort)))
 	return
 }
 
-func httpLoadBalancerTarget(exposedPorts map[string][]ExposedPort, rrTargetPort *uint16) (targetContainer *string, targetPort *string) {
-
-	var exposedPortList []ExposedPort
-	for _, value := range exposedPorts {
-		exposedPortList = append(exposedPortList, value...)
-	}
+func httpLoadBalancerTarget(exposedPorts ParsedContainerConfig, rrTargetPort *uint16) (targetContainer *string, targetPort *string) {
 	// Route load balancer traffic to the target_port if mentioned.
-	if rrTargetPort != nil {
-		targetPort = aws.String(template.StrconvUint16(aws.Uint16Value(rrTargetPort)))
-		if container := findContainerNameGivenPort(aws.Uint16Value(rrTargetPort), exposedPortList); container != "" {
-			targetContainer = aws.String(container)
-		}
+	targetPort = aws.String(template.StrconvUint16(aws.Uint16Value(rrTargetPort)))
+	if exposedPorts.ExposedPorts[aws.Uint16Value(rrTargetPort)] != "" {
+		targetContainer = aws.String(exposedPorts.ExposedPorts[aws.Uint16Value(rrTargetPort)])
 	}
 	return
 }
@@ -669,20 +677,12 @@ func (s *BackendService) MainContainerPort() string {
 	return port
 }
 
-// findContainerNameGivenPort searches through exposed ports in the manifest to find the container name that matches the given port.
-func findContainerNameGivenPort(port uint16, exposedPorts []ExposedPort) string {
-	for _, portConfig := range exposedPorts {
-		if portConfig.Port == port {
-			return portConfig.ContainerName
-		}
-	}
-	return ""
-}
-
-func prepareParsedExposedPortsMap(exposedPorts []ExposedPort) map[string][]ExposedPort {
-	parsedMap := make(map[string][]ExposedPort)
+func prepareParsedExposedPortsMap(exposedPorts []ExposedPort) (map[string][]ExposedPort, map[uint16]string) {
+	parsedContainerMap := make(map[string][]ExposedPort)
+	parsedExposedPortMap := make(map[uint16]string)
 	for _, exposedPort := range exposedPorts {
-		parsedMap[exposedPort.ContainerName] = append(parsedMap[exposedPort.ContainerName], exposedPort)
+		parsedContainerMap[exposedPort.ContainerName] = append(parsedContainerMap[exposedPort.ContainerName], exposedPort)
+		parsedExposedPortMap[exposedPort.Port] = exposedPort.ContainerName
 	}
-	return parsedMap
+	return parsedContainerMap, parsedExposedPortMap
 }

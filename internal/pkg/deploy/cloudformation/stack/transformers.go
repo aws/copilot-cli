@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"hash/crc32"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -78,35 +79,46 @@ func convertPortMappings(exposedPorts []manifest.ExposedPort) []*template.PortMa
 	return portMapping
 }
 
-// convertSidecar converts the manifest sidecar configuration into a format parsable by the templates pkg.
-func convertSidecars(sidecarList []manifest.ParsedSidecarConfig) ([]*template.SidecarOpts, error) {
+// convertSidecars converts the manifest sidecar configuration into a format parsable by the templates pkg.
+func convertSidecars(s map[string]*manifest.SidecarConfig, exposedPorts map[string][]manifest.ExposedPort) ([]*template.SidecarOpts, error) {
 	var sidecars []*template.SidecarOpts
-	for _, config := range sidecarList {
-		entrypoint, err := convertEntryPoint(config.Container.EntryPoint)
+	if s == nil {
+		return nil, nil
+	}
+
+	// Sort the sidecars so that the order is consistent and the integration test won't be flaky.
+	keys := make([]string, 0, len(s))
+	for k := range s {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, name := range keys {
+		config := s[name]
+		entrypoint, err := convertEntryPoint(config.EntryPoint)
 		if err != nil {
 			return nil, err
 		}
-		command, err := convertCommand(config.Container.Command)
+		command, err := convertCommand(config.Command)
 		if err != nil {
 			return nil, err
 		}
-		mp := convertSidecarMountPoints(config.Container.MountPoints)
+		mp := convertSidecarMountPoints(config.MountPoints)
 		sidecars = append(sidecars, &template.SidecarOpts{
-			Name:       config.Name,
-			Image:      config.Container.Image,
-			Essential:  config.Container.Essential,
-			CredsParam: config.Container.CredsParam,
-			Secrets:    convertSecrets(config.Container.Secrets),
-			Variables:  convertEnvVars(config.Container.Variables),
+			Name:       name,
+			Image:      config.Image,
+			Essential:  config.Essential,
+			CredsParam: config.CredsParam,
+			Secrets:    convertSecrets(config.Secrets),
+			Variables:  convertEnvVars(config.Variables),
 			Storage: template.SidecarStorageOpts{
 				MountPoints: mp,
 			},
-			DockerLabels: config.Container.DockerLabels,
-			DependsOn:    convertDependsOn(config.Container.DependsOn),
+			DockerLabels: config.DockerLabels,
+			DependsOn:    convertDependsOn(config.DependsOn),
 			EntryPoint:   entrypoint,
-			HealthCheck:  convertContainerHealthCheck(config.Container.HealthCheck),
+			HealthCheck:  convertContainerHealthCheck(config.HealthCheck),
 			Command:      command,
-			PortMappings: convertPortMappings(config.ExposedPorts),
+			PortMappings: convertPortMappings(exposedPorts[name]),
 		})
 	}
 	return sidecars, nil

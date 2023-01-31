@@ -19,7 +19,7 @@ type BackendService struct {
 	BackendServiceConfig `yaml:",inline"`
 	// Use *BackendServiceConfig because of https://github.com/imdario/mergo/issues/146
 	Environments       map[string]*BackendServiceConfig `yaml:",flow"`
-	cachedExposedPorts map[string][]ExposedPort
+	cachedExposedPorts ParsedContainerConfig
 	parser             template.Parser
 }
 
@@ -189,9 +189,9 @@ func newDefaultBackendService() *BackendService {
 	}
 }
 
-// exposedPorts returns all the ports that are container ports available to receive traffic.
-func (b *BackendService) exposedPorts() (map[string][]ExposedPort, error) {
-	if b.cachedExposedPorts != nil {
+// ExposedPorts returns all the ports that are container ports available to receive traffic.
+func (b *BackendService) ExposedPorts() (ParsedContainerConfig, error) {
+	if b.cachedExposedPorts.ExposedPorts != nil || b.cachedExposedPorts.ContainerPortMappings != nil {
 		return b.cachedExposedPorts, nil
 	}
 
@@ -202,37 +202,11 @@ func (b *BackendService) exposedPorts() (map[string][]ExposedPort, error) {
 	for name, sidecar := range b.Sidecars {
 		out, err := sidecar.exposedPorts(name)
 		if err != nil {
-			return nil, err
+			return ParsedContainerConfig{}, err
 		}
 		exposedPorts = append(exposedPorts, out...)
 	}
 	exposedPorts = append(exposedPorts, b.RoutingRule.exposedPorts(exposedPorts, workloadName)...)
-	b.cachedExposedPorts = prepareParsedExposedPortsMap(sortExposedPorts(exposedPorts))
+	b.cachedExposedPorts.ContainerPortMappings, b.cachedExposedPorts.ExposedPorts = prepareParsedExposedPortsMap(sortExposedPorts(exposedPorts))
 	return b.cachedExposedPorts, nil
-}
-
-// Sidecar returns SidecarConfig with the parsed exposed ports of the sidecars.
-func (b *BackendService) Sidecar() ([]ParsedSidecarConfig, error) {
-	exposedPorts, err := b.exposedPorts()
-	if err != nil {
-		return nil, err
-	}
-	var parsedSidecars []ParsedSidecarConfig
-	for name, container := range b.Sidecars {
-		parsedSidecars = append(parsedSidecars, ParsedSidecarConfig{
-			Name:         name,
-			ExposedPorts: exposedPorts[name],
-			Container:    container,
-		})
-	}
-	return sortSidecars(parsedSidecars), nil
-}
-
-// PrimaryContainer returns parsed exposed ports of the primary container.
-func (b *BackendService) PrimaryContainer() ([]ExposedPort, error) {
-	exposedPorts, err := b.exposedPorts()
-	if err != nil {
-		return nil, err
-	}
-	return sortExposedPorts(exposedPorts[aws.StringValue(b.Name)]), nil
 }
