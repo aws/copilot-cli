@@ -657,6 +657,9 @@ func (o *initStorageOpts) Execute() error {
 		return err
 	}
 	for _, addon := range addonBlobs {
+		if isWorkloadLevel := !addon.isEnvLevel; isWorkloadLevel && !o.workloadExists {
+			continue
+		}
 		path, err := o.ws.Write(addon.blob, addon.path)
 		if err != nil {
 			e, ok := err.(*workspace.ErrFileExists)
@@ -692,6 +695,7 @@ type addonBlob struct {
 	description string
 	blob        encoding.BinaryMarshaler
 	path        string
+	isEnvLevel  bool
 }
 
 func (o *initStorageOpts) addonBlobs() ([]addonBlob, error) {
@@ -741,6 +745,7 @@ func (o *initStorageOpts) envDDBAddonBlobs() ([]addonBlob, error) {
 			path:        o.ws.EnvAddonFilePath(fmt.Sprintf("%s.yml", o.storageName)),
 			description: "template",
 			blob:        addon.EnvDDBTemplate(props),
+			isEnvLevel:  true,
 		},
 		{
 			path:        o.ws.WorkloadAddonFilePath(o.workloadName, fmt.Sprintf("%s-access-policy.yml", o.storageName)),
@@ -792,6 +797,7 @@ func (o *initStorageOpts) envS3AddonBlobs() ([]addonBlob, error) {
 			path:        o.ws.EnvAddonFilePath(fmt.Sprintf("%s.yml", o.storageName)),
 			description: "template",
 			blob:        addon.EnvS3Template(props),
+			isEnvLevel:  true,
 		},
 		{
 			path:        o.ws.WorkloadAddonFilePath(o.workloadName, fmt.Sprintf("%s-access-policy.yml", o.storageName)),
@@ -849,11 +855,13 @@ func (o *initStorageOpts) envRDSAddonBlobs() ([]addonBlob, error) {
 			path:        o.ws.EnvAddonFilePath(fmt.Sprintf("%s.yml", o.storageName)),
 			description: "template",
 			blob:        addon.EnvServerlessTemplate(props),
+			isEnvLevel:  true,
 		},
 		{
 			path:        o.ws.EnvAddonFilePath("addons.parameters.yml"),
 			description: "parameters",
 			blob:        addon.EnvParamsForRDS(),
+			isEnvLevel:  true,
 		},
 	}
 	if o.workloadType != manifest.RequestDrivenWebServiceType {

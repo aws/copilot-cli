@@ -972,8 +972,9 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 
 		inLifecycle string
 
-		mockWs    func(m *mocks.MockwsAddonManager)
-		mockStore func(m *mocks.Mockstore)
+		mockWs         func(m *mocks.MockwsAddonManager)
+		mockStore      func(m *mocks.Mockstore)
+		mockWkldAbsent bool
 
 		wantedErr error
 	}{
@@ -1163,7 +1164,27 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 			mockStore: func(m *mocks.Mockstore) {
 				m.EXPECT().ListEnvironments(gomock.Any()).AnyTimes()
 			},
-			wantedErr: nil,
+		},
+		"do not attempt to write workload ingress for an env RDS if workload is not in the workspace": {
+			inSvcName:           wantedSvcName,
+			inStorageType:       rdsStorageType,
+			inStorageName:       "mycluster",
+			inServerlessVersion: auroraServerlessVersionV1,
+			inEngine:            engineTypeMySQL,
+			inParameterGroup:    "mygroup",
+			inLifecycle:         lifecycleEnvironmentLevel,
+			mockWkldAbsent:      true,
+			mockWs: func(m *mocks.MockwsAddonManager) {
+				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte("type: Request-Driven Web Service"), nil)
+				m.EXPECT().EnvAddonFilePath(gomock.Eq("mycluster.yml")).Return("mockEnvPath")
+				m.EXPECT().EnvAddonFilePath(gomock.Eq("addons.parameters.yml")).Return("mockEnvPath")
+				m.EXPECT().WorkloadAddonFilePath(gomock.Eq(wantedSvcName), gomock.Eq("mycluster-ingress.yml")).Return("mockWkldPath")
+				m.EXPECT().WorkloadAddonFilePath(gomock.Eq(wantedSvcName), gomock.Eq("addons.parameters.yml")).Return("mockWkldPath")
+				m.EXPECT().Write(gomock.Any(), gomock.Not(gomock.Eq("mockWkldPath"))).Return("mockEnvTemplatePath", nil).Times(2)
+			},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().ListEnvironments(gomock.Any()).AnyTimes()
+			},
 		},
 		"error addon exists": {
 			inAppName:     wantedAppName,
@@ -1237,9 +1258,10 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 
 					lifecycle: tc.inLifecycle,
 				},
-				appName: tc.inAppName,
-				ws:      mockAddon,
-				store:   mockStore,
+				appName:        tc.inAppName,
+				ws:             mockAddon,
+				store:          mockStore,
+				workloadExists: !tc.mockWkldAbsent,
 			}
 			tc.mockWs(mockAddon)
 			if tc.mockStore != nil {
