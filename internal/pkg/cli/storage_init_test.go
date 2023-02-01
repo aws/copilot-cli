@@ -46,7 +46,7 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 		},
 		"svc not in workspace": {
 			mockWs: func(m *mocks.MockwsAddonManager) {
-				m.EXPECT().ListWorkloads().Return([]string{"bad", "workspace"}, nil)
+				m.EXPECT().WorkloadExists(gomock.Eq("frontend")).Return(false, nil)
 			},
 			mockStore: func(m *mocks.Mockstore) {},
 
@@ -58,7 +58,7 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 		},
 		"workspace error": {
 			mockWs: func(m *mocks.MockwsAddonManager) {
-				m.EXPECT().ListWorkloads().Return(nil, errors.New("wanted err"))
+				m.EXPECT().WorkloadExists(gomock.Eq("frontend")).Return(false, errors.New("wanted err"))
 			},
 			mockStore: func(m *mocks.Mockstore) {},
 
@@ -66,7 +66,7 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 			inStorageType: s3StorageType,
 			inSvcName:     "frontend",
 			inStorageName: "my-bucket",
-			wantedErr:     errors.New("retrieve local workload names: wanted err"),
+			wantedErr:     errors.New("check if frontend exists in the workspace: wanted err"),
 		},
 		"bad lifecycle option": {
 			mockWs:      func(m *mocks.MockwsAddonManager) {},

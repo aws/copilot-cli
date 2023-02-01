@@ -3192,21 +3192,6 @@ func (mr *MockwsAddonManagerMockRecorder) EnvAddonFilePath(fName interface{}) *g
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnvAddonFilePath", reflect.TypeOf((*MockwsAddonManager)(nil).EnvAddonFilePath), fName)
 }
 
-// ListWorkloads mocks base method.
-func (m *MockwsAddonManager) ListWorkloads() ([]string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListWorkloads")
-	ret0, _ := ret[0].([]string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListWorkloads indicates an expected call of ListWorkloads.
-func (mr *MockwsAddonManagerMockRecorder) ListWorkloads() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListWorkloads", reflect.TypeOf((*MockwsAddonManager)(nil).ListWorkloads))
-}
-
 // ReadWorkloadManifest mocks base method.
 func (m *MockwsAddonManager) ReadWorkloadManifest(name string) (workspace.WorkloadManifest, error) {
 	m.ctrl.T.Helper()
@@ -3234,6 +3219,21 @@ func (m *MockwsAddonManager) WorkloadAddonFilePath(wkldName, fName string) strin
 func (mr *MockwsAddonManagerMockRecorder) WorkloadAddonFilePath(wkldName, fName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WorkloadAddonFilePath", reflect.TypeOf((*MockwsAddonManager)(nil).WorkloadAddonFilePath), wkldName, fName)
+}
+
+// WorkloadExists mocks base method.
+func (m *MockwsAddonManager) WorkloadExists(name string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WorkloadExists", name)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// WorkloadExists indicates an expected call of WorkloadExists.
+func (mr *MockwsAddonManagerMockRecorder) WorkloadExists(name interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WorkloadExists", reflect.TypeOf((*MockwsAddonManager)(nil).WorkloadExists), name)
 }
 
 // Write mocks base method.

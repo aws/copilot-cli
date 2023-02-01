@@ -192,7 +192,8 @@ type initStorageOpts struct {
 	prompt prompter
 
 	// Cached data.
-	workloadType string
+	workloadType   string
+	workloadExists bool
 }
 
 func newStorageInitOpts(vars initStorageVars) (*initStorageOpts, error) {
@@ -276,16 +277,15 @@ func (o *initStorageOpts) Validate() error {
 }
 
 func (o *initStorageOpts) validateWorkloadName() error {
-	names, err := o.ws.ListWorkloads()
+	exists, err := o.ws.WorkloadExists(o.workloadName)
 	if err != nil {
-		return fmt.Errorf("retrieve local workload names: %w", err)
+		return fmt.Errorf("check if %s exists in the workspace: %w", o.workloadName, err)
 	}
-	for _, name := range names {
-		if o.workloadName == name {
-			return nil
-		}
+	o.workloadExists = exists
+	if !exists {
+		return fmt.Errorf("workload %s not found in the workspace", o.workloadName)
 	}
-	return fmt.Errorf("workload %s not found in the workspace", o.workloadName)
+	return nil
 }
 
 func (o *initStorageOpts) validateStorageType() error {
