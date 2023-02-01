@@ -168,11 +168,19 @@ var _ = Describe("App Runner", Ordered, func() {
 		It("should return correct secrets", func() {
 			fmt.Printf("\n\nsecrets: %+v\n\n", svc.Secrets)
 			expectedSecrets := map[string]string{
-				"COPILOT_ENVIRONMENT_NAME": envName,
-				"COPILOT_SERVICE_NAME":     feSvcName,
-				"my-ssm-param":             "my-ssm-param",
+				"my-ssm-param": "e2e-apprunner-ssm-param",
 			}
 			for _, secret := range svc.Secrets {
+				Expect(secret.Value).To(Equal(expectedSecrets[secret.Name]))
+			}
+		})
+
+		It("should return correct secrets for backendSvc", func() {
+			fmt.Printf("\n\nsecrets: %+v\n\n", backendSvc.Secrets)
+			expectedSecrets := map[string]string{
+				"USER_CREDS": "arn:aws:secretsmanager:us-east-1:067305307211:secret:e2e-apprunner-MyTestSecret",
+			}
+			for _, secret := range backendSvc.Secrets {
 				Expect(secret.Value).To(Equal(expectedSecrets[secret.Name]))
 			}
 		})

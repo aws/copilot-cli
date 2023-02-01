@@ -21,8 +21,7 @@ const feSvcName = "front-end"
 const beSvcName = "back-end"
 const envName = "test"
 
-/*
-*
+/**
 The Init Suite runs through the copilot init workflow for a brand new
 application. It creates a single environment, deploys a service to it, and then
 tears it down.
@@ -38,14 +37,18 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(err).NotTo(HaveOccurred())
 	appName = fmt.Sprintf("e2e-apprunner-%d", time.Now().Unix())
-	err = command.Run("aws", []string{"ssm", "put-parameter", "--name", "my-ssm-param", "--value", "abcd1234", "--type", "String", "--tags", "[{\"Key\":\"copilot-application\",\"Value\":\"" + appName + "\"},{\"Key\":\"copilot-environment\", \"Value\":\"" + envName + "\"}]"})
+	err = command.Run("aws", []string{"ssm", "put-parameter", "--name", "e2e-apprunner-ssm-param", "--value", "abcd1234", "--type", "String", "--tags", "[{\"Key\":\"copilot-application\",\"Value\":\"" + appName + "\"},{\"Key\":\"copilot-environment\", \"Value\":\"" + envName + "\"}]"})
+	Expect(err).NotTo(HaveOccurred())
+	err = command.Run("aws", []string{"secretsmanager", "create-secret", "--name", "e2e-apprunner-MyTestSecret", "--secret-string", "\"{\"user\":\"diegor\",\"password\":\"EXAMPLE-PASSWORD\"}\"", "--tags", "[{\"Key\":\"copilot-application\",\"Value\":\"" + appName + "\"},{\"Key\":\"copilot-environment\", \"Value\":\"" + envName + "\"}]"})
 	Expect(err).NotTo(HaveOccurred())
 })
 
 var _ = AfterSuite(func() {
 	_, err := cli.AppDelete()
 	Expect(err).NotTo(HaveOccurred())
-	err = command.Run("aws", []string{"ssm", "delete-parameter", "--name", "my-ssm-param"})
+	err = command.Run("aws", []string{"ssm", "delete-parameter", "--name", "e2e-apprunner-ssm-param"})
+	Expect(err).NotTo(HaveOccurred())
+	err = command.Run("aws", []string{"secretsmanager", "delete-secret", "--secret-id", "e2e-apprunner-MyTestSecret", "--force-delete-without-recovery"})
 	Expect(err).NotTo(HaveOccurred())
 	_ = client.NewAWS().DeleteAllDBClusterSnapshots()
 })
