@@ -43,7 +43,7 @@ Addon とは、デフォルトでは Copilot に統合されていない追加�
 
 #### はじめに
 ##### Step 1: CloudFormation で追加の AWS リソースをモデル化する
-現在、Addon は CloudFormation を使ったモデリングのみ対応しています。Environment Addon の場合は以下が必須です。
+現在、Addon は CloudFormation を使ったリソースの定義のみサポートしています。Environment Addon の場合は以下が必須です。
 
 1. `Parameters` に `App` と `Env` を持たせる。
 2. 少なくとも 1 つの `Resource` を含ませる。
@@ -176,7 +176,7 @@ Outputs:
 
 ワークロード Addon にて、[`Fn::ImportValue`](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/intrinsic-function-reference-importvalue.html) 関数を使用して Environment Addon からエクスポートした値をインポートします。
 
-上記の例の続きで、`db-front` Service が `MyTable` にアクセスするようにしたいとします。`db-front` Service にアクセスするための IAM ポリシーを持つワークロード Addmon を作成します。
+上記の例の続きで、`db-front` Service が `MyTable` にアクセスするようにしたいとします。`db-front` Service にアクセスするための IAM ポリシーを持つワークロード Addon を作成します。
 
 ```yaml
 Parameters:
@@ -377,6 +377,6 @@ CloudFront のディストリビューション ID は、`copilot env show --res
 
 - [最新 CLI バージョン](../docs/getting-started/install.ja.md)のダウンロード
 - [スタートガイド](../docs/getting-started/first-app-tutorial.ja.md)を試す
-- [GitHub](https://github.com/aws/copilot-cli/releases/tag/v1.24.0) でリリースノートの全文を読む
+- [GitHub](https://github.com/aws/copilot-cli/releases/tag/v1.25.0) でリリースノートの全文を読む
 
 今回のリリースの翻訳はソリューションアーキテクトの杉本が担当しました。
