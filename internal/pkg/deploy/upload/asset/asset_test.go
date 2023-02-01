@@ -66,11 +66,9 @@ func Test_Upload(t *testing.T) {
 			// Set it up
 			tc.mockFileSystem(fs)
 
-			files, err := Upload(&UploadInput{
-				Source:   tc.inSource,
+			files, err := Upload(&afero.Afero{Fs: fs}, tc.inSource, "", &UploadOpts{
 				Excludes: tc.inExcludes,
 				Includes: tc.inIncludes,
-				Reader:   &afero.Afero{Fs: fs},
 			})
 			if tc.expectedError == nil {
 				require.NoError(t, err)

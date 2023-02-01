@@ -1,117 +1,119 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-// Package customresource provides functionality to upload Copilot custom resources.
+// Package asset provides functionality to manage static assets.
 package asset
 
 import (
 	"fmt"
 	"io"
+	"io/fs"
 	"path/filepath"
 
 	"github.com/spf13/afero"
 )
 
-type filterAction int
-
-const (
-	include filterAction = iota + 1
-	exclude
-)
-
 // UploadFunc is the function signature to upload contents to a destination.
 type UploadFunc func(dest string, contents io.Reader) (url string, err error)
 
-// UploadInput is the input of Upload.
-type UploadInput struct {
-	Source      string
-	Destination string
-	Includes    []string
-	Excludes    []string
-	Upload      UploadFunc
-	Reader      *afero.Afero
+type UploadOpts struct {
+	Includes []string   // Relative path under source to include back files that are excluded in the upload.
+	Excludes []string   // Relative path under source to exclude in the upload.
+	UploadFn UploadFunc // Custom implementation on how to upload the contents under a file. Defaults to S3UploadFn.
 }
 
 // Upload uploads static assets to Cloud Storage.
-func Upload(in *UploadInput) ([]string, error) {
-	files, err := listFiles(in.Reader, in.Source)
-	if err != nil {
-		return nil, err
-	}
-	filter := filter{buildPatterns(in.Includes, in.Excludes)}
-	filteredFiles, err := filter.apply(files)
-	if err != nil {
-		return nil, err
+func Upload(fs *afero.Afero, source, destination string, opts *UploadOpts) ([]string, error) {
+	matcher := buildCompositeMatchers(buildIncludeMatchers(opts.Includes), buildExcludeMatchers(opts.Excludes))
+	var paths []string
+	pathsPtr := &paths
+	if err := fs.Walk(source, walkFnWithMatcher(pathsPtr, matcher)); err != nil {
+		return nil, fmt.Errorf("walk the file tree rooted at %s: %w", source, err)
 	}
 	// TODO: read file and upload. Remove file names from return.
-	return filteredFiles, nil
+	return *pathsPtr, nil
 }
 
-func buildPatterns(includes, excludes []string) []pattern {
-	var filterPatterns []pattern
-	// Make sure exclude patterns are applied before include patterns.
-	for _, syntax := range excludes {
-		filterPatterns = append(filterPatterns, pattern{
-			action: exclude,
-			syntax: syntax,
-		})
+func walkFnWithMatcher(pathsPtr *[]string, matcher filepathMatcher) filepath.WalkFunc {
+	return func(path string, info fs.FileInfo, err error) error {
+		if info.IsDir() {
+			return nil
+		}
+		ok, err := matcher.match(path)
+		if err != nil {
+			return err
+		}
+		if ok {
+			*pathsPtr = append(*pathsPtr, path)
+		}
+		return nil
 	}
-	for _, syntax := range includes {
-		filterPatterns = append(filterPatterns, pattern{
-			action: include,
-			syntax: syntax,
-		})
-	}
-	return filterPatterns
 }
 
-func listFiles(fs *afero.Afero, path string) ([]string, error) {
-	files, err := fs.ReadDir(path)
+type filepathMatcher interface {
+	match(path string) (bool, error)
+}
+
+type includeMatcher string
+
+func buildIncludeMatchers(includes []string) []filepathMatcher {
+	var matchers []filepathMatcher
+	for _, include := range includes {
+		matchers = append(matchers, includeMatcher(include))
+	}
+	return matchers
+}
+
+func (m includeMatcher) match(path string) (bool, error) {
+	return match(string(m), path)
+}
+
+type excludeMatcher string
+
+func buildExcludeMatchers(excludes []string) []filepathMatcher {
+	var matchers []filepathMatcher
+	for _, exclude := range excludes {
+		matchers = append(matchers, excludeMatcher(exclude))
+	}
+	return matchers
+}
+
+func (m excludeMatcher) match(path string) (bool, error) {
+	return match(string(m), path)
+}
+
+type compositeMatcher []filepathMatcher
+
+func buildCompositeMatchers(includeMatchers, excludeMatchers []filepathMatcher) compositeMatcher {
+	var matchers []filepathMatcher
+	for _, matcher := range excludeMatchers {
+		matchers = append(matchers, matcher)
+	}
+	for _, matcher := range includeMatchers {
+		matchers = append(matchers, matcher)
+	}
+	return matchers
+}
+
+func (m compositeMatcher) match(path string) (bool, error) {
+	shouldInclude := true
+	for _, matcher := range m {
+		isMatch, err := matcher.match(path)
+		if err != nil {
+			return false, err
+		}
+		if !isMatch {
+			continue
+		}
+		_, shouldInclude = matcher.(includeMatcher)
+	}
+	return shouldInclude, nil
+}
+
+func match(pattern, path string) (bool, error) {
+	isMatch, err := filepath.Match(pattern, path)
 	if err != nil {
-		return nil, fmt.Errorf("read directory %s: %w", path, err)
+		return false, fmt.Errorf("match file path %s against pattern %s: %w", path, pattern, err)
 	}
-	var found []string
-	for _, file := range files {
-		if file.IsDir() {
-			subFound, err := listFiles(fs, filepath.Join(path, file.Name()))
-			if err != nil {
-				return nil, err
-			}
-			found = append(found, subFound...)
-		} else {
-			found = append(found, filepath.Join(path, file.Name()))
-		}
-	}
-	return found, nil
-}
-
-// pattern uses shell file name pattern.
-type pattern struct {
-	action filterAction
-	syntax string
-}
-
-type filter struct {
-	patterns []pattern
-}
-
-func (f *filter) apply(files []string) ([]string, error) {
-	var filtered []string
-	for _, file := range files {
-		shouldInclude := true
-		for _, p := range f.patterns {
-			isMatch, err := filepath.Match(p.syntax, file)
-			if err != nil {
-				return nil, fmt.Errorf("match file path %s against pattern %s: %w", file, p.syntax, err)
-			}
-			if !isMatch {
-				continue
-			}
-			shouldInclude = p.action == include
-		}
-		if shouldInclude {
-			filtered = append(filtered, file)
-		}
-	}
-	return filtered, nil
+	return isMatch, nil
 }
