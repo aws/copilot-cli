@@ -177,6 +177,16 @@ func (ws *Workspace) Summary() (*Summary, error) {
 	return ws.summary, ws.summaryErr
 }
 
+// WorkloadExists returns true if a workload exists in the workspace.
+func (ws *Workspace) WorkloadExists(name string) (bool, error) {
+	path := filepath.Join(ws.copilotDirAbs, name, manifestFileName)
+	exists, err := ws.fs.Exists(path)
+	if err != nil {
+		return false, fmt.Errorf("check if %s exists: %w", path, err)
+	}
+	return exists, nil
+}
+
 // ListServices returns the names of the services in the workspace.
 func (ws *Workspace) ListServices() ([]string, error) {
 	return ws.listWorkloads(func(wlType string) bool {

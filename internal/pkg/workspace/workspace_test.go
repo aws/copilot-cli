@@ -314,6 +314,36 @@ func TestWorkspace_Use(t *testing.T) {
 	}
 }
 
+func TestWorkspace_WorkloadExists(t *testing.T) {
+	t.Run("returns true if workload exists in the workspace", func(t *testing.T) {
+		fs := afero.NewMemMapFs()
+		_, _ = fs.Create("/copilot/api/manifest.yml")
+		ws := &Workspace{
+			copilotDirAbs: "/copilot",
+			fs: &afero.Afero{
+				Fs: fs,
+			},
+		}
+		got, err := ws.WorkloadExists("api")
+		require.NoError(t, err)
+		require.True(t, got)
+	})
+
+	t.Run("returns false if workload does not in the workspace", func(t *testing.T) {
+		fs := afero.NewMemMapFs()
+		_, _ = fs.Create("a/copilot/api/manifest.yml")
+		ws := &Workspace{
+			copilotDirAbs: "b/copilot",
+			fs: &afero.Afero{
+				Fs: fs,
+			},
+		}
+		got, err := ws.WorkloadExists("api")
+		require.NoError(t, err)
+		require.False(t, got)
+	})
+}
+
 func TestWorkspace_ListServices(t *testing.T) {
 	testCases := map[string]struct {
 		copilotDir string
