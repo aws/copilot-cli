@@ -93,7 +93,7 @@ Aurora Serverless is an on-demand autoscaling configuration for Amazon Aurora, a
 	fmtStorageInitNamePrompt = "What would you like to " + color.Emphasize("name") + " this %s?"
 	storageInitNameHelp      = "The name of this storage resource. You can use the following characters: a-zA-Z0-9-_"
 
-	storageInitSvcPrompt = "Which " + color.Emphasize("workload") + " need access to the storage?"
+	storageInitSvcPrompt = "Which " + color.Emphasize("workload") + " needs access to the storage?"
 )
 
 // DDB-specific questions and help prompts.
