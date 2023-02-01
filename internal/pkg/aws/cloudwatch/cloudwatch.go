@@ -59,7 +59,7 @@ func New(s *session.Session) *CloudWatch {
 	}
 }
 
-// AlarmsWithTags returns all the CloudWatch alarms that have the resource tags.
+// AlarmsWithTags returns the statuses of all the CloudWatch alarms that have the resource tags.
 func (cw *CloudWatch) AlarmsWithTags(tags map[string]string) ([]AlarmStatus, error) {
 	var alarmNames []string
 	resources, err := cw.rgClient.GetResourcesByTags(cloudwatchResourceType, tags)
@@ -101,9 +101,7 @@ func (cw *CloudWatch) AlarmStatuses(opts ...DescribeAlarmOpts) ([]AlarmStatus, e
 	var alarmStatuses []AlarmStatus
 	var err error
 	alarmResp := &cloudwatch.DescribeAlarmsOutput{}
-	in := &cloudwatch.DescribeAlarmsInput{
-		NextToken: alarmResp.NextToken,
-	}
+	in := &cloudwatch.DescribeAlarmsInput{}
 	
 	for _, opt := range opts {
 		opt(in)

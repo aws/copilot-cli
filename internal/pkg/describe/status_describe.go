@@ -178,7 +178,7 @@ func (s *ecsStatusDescriber) Describe() (HumanJSONStringer, error) {
 		alarms[alarm.Name] = alarm
 	}
 	alarmList := make([]cloudwatch.AlarmStatus, len(alarms))
-	i := 0
+	var i int
 	for _, v := range alarms {
 		alarmList[i] = v
 		i++
