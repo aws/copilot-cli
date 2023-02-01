@@ -86,6 +86,11 @@ func newJobDeployer(o *deployJobOpts) (workloadDeployer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read manifest file for %s: %w", o.name, err)
 	}
+	ovrdr, err := deploy.NewOverrider(o.ws.WorkloadOverridesPath(o.name), o.appName, o.envName, afero.NewOsFs(), o.sessProvider)
+	if err != nil {
+		return nil, err
+	}
+
 	content := o.appliedDynamicMft.Manifest()
 	in := deploy.WorkloadDeployerInput{
 		SessionProvider:  o.sessProvider,
@@ -96,6 +101,7 @@ func newJobDeployer(o *deployJobOpts) (workloadDeployer, error) {
 		Mft:              content,
 		RawMft:           raw,
 		EnvVersionGetter: o.envFeaturesDescriber,
+		Overrider:        ovrdr,
 	}
 	var deployer workloadDeployer
 	switch t := content.(type) {

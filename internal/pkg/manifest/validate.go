@@ -113,13 +113,33 @@ func (l LoadBalancedWebService) validate() error {
 	return nil
 }
 
-func (d DeploymentConfiguration) validate() error {
+func (d DeploymentConfig) validate() error {
 	if d.isEmpty() {
 		return nil
 	}
 	if err := d.RollbackAlarms.validate(); err != nil {
 		return fmt.Errorf(`validate "rollback_alarms": %w`, err)
 	}
+	if err := d.DeploymentControllerConfig.validate(); err != nil {
+		return fmt.Errorf(`validate "rolling": %w`, err)
+	}
+	return nil
+}
+
+func (w WorkerDeploymentConfig) validate() error {
+	if w.isEmpty() {
+		return nil
+	}
+	if err := w.WorkerRollbackAlarms.validate(); err != nil {
+		return fmt.Errorf(`validate "rollback_alarms": %w`, err)
+	}
+	if err := w.DeploymentControllerConfig.validate(); err != nil {
+		return fmt.Errorf(`validate "deployment controller strategy": %w`, err)
+	}
+	return nil
+}
+
+func (d DeploymentControllerConfig) validate() error {
 	if d.Rolling != nil {
 		for _, validStrategy := range ecsRollingUpdateStrategies {
 			if strings.EqualFold(aws.StringValue(d.Rolling), validStrategy) {
@@ -134,6 +154,10 @@ func (d DeploymentConfiguration) validate() error {
 }
 
 func (a AlarmArgs) validate() error {
+	return nil
+}
+
+func (w WorkerAlarmArgs) validate() error {
 	return nil
 }
 
@@ -347,9 +371,6 @@ func (r RequestDrivenWebServiceConfig) validate() error {
 // validate returns nil if WorkerService is configured correctly.
 func (w WorkerService) validate() error {
 	var err error
-	if err = w.DeployConfig.validate(); err != nil {
-		return fmt.Errorf(`validate "deployment": %w`, err)
-	}
 	if err = w.WorkerServiceConfig.validate(); err != nil {
 		return err
 	}
@@ -375,6 +396,9 @@ func (w WorkerService) validate() error {
 // validate returns nil if WorkerServiceConfig is configured correctly.
 func (w WorkerServiceConfig) validate() error {
 	var err error
+	if err = w.DeployConfig.validate(); err != nil {
+		return fmt.Errorf(`validate "deployment": %w`, err)
+	}
 	if err = w.ImageConfig.validate(); err != nil {
 		return fmt.Errorf(`validate "image": %w`, err)
 	}

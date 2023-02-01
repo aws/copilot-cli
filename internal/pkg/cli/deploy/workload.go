@@ -143,6 +143,7 @@ type workloadDeployer struct {
 	spinner            spinner
 	templateFS         template.Reader
 	envVersionGetter   versionGetter
+	overrider          Overrider
 
 	// Cached variables.
 	defaultSess              *session.Session
@@ -162,6 +163,7 @@ type WorkloadDeployerInput struct {
 	Mft              interface{} // Interpolated, applied, and unmarshaled manifest.
 	RawMft           []byte      // Content of the manifest file without any transformations.
 	EnvVersionGetter versionGetter
+	Overrider        Overrider
 }
 
 // newWorkloadDeployer is the constructor for workloadDeployer.
@@ -235,6 +237,7 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 		spinner:            termprogress.NewSpinner(log.DiagnosticWriter),
 		templateFS:         template.New(),
 		envVersionGetter:   in.EnvVersionGetter,
+		overrider:          in.Overrider,
 
 		defaultSess:              defaultSession,
 		defaultSessWithEnvRegion: defaultSessEnvRegion,
@@ -260,7 +263,7 @@ func (d *workloadDeployer) generateCloudFormationTemplate(conf stackSerializer) 
 	*GenerateCloudFormationTemplateOutput, error) {
 	tpl, err := conf.Template()
 	if err != nil {
-		return nil, fmt.Errorf("generate stack template: %w", err)
+		return nil, err
 	}
 	params, err := conf.SerializedParameters()
 	if err != nil {

@@ -38,10 +38,10 @@ var (
 
 // WorkspaceAddonsReader finds and reads addons from a workspace.
 type WorkspaceAddonsReader interface {
-	WorkloadAddonsPath(name string) string
-	WorkloadAddonFilePath(wkldName, fName string) string
-	EnvAddonsPath() string
-	EnvAddonFilePath(fName string) string
+	WorkloadAddonsAbsPath(name string) string
+	WorkloadAddonFileAbsPath(wkldName, fName string) string
+	EnvAddonsAbsPath() string
+	EnvAddonFileAbsPath(fName string) string
 	ListFiles(dirPath string) ([]string, error)
 	ReadFile(fPath string) ([]byte, error)
 }
@@ -77,10 +77,10 @@ func ParseFromWorkload(workloadName string, ws WorkspaceAddonsReader) (*Workload
 	parser := parser{
 		ws: ws,
 		addonsDirPath: func() string {
-			return ws.WorkloadAddonsPath(workloadName)
+			return ws.WorkloadAddonsAbsPath(workloadName)
 		},
 		addonsFilePath: func(fName string) string {
-			return ws.WorkloadAddonFilePath(workloadName, fName)
+			return ws.WorkloadAddonFileAbsPath(workloadName, fName)
 		},
 		validateParameters: func(tplParams, customParams yaml.Node) error {
 			return validateParameters(tplParams, customParams, wkldAddonsParameterReservedKeys)
@@ -103,8 +103,8 @@ func ParseFromWorkload(workloadName string, ws WorkspaceAddonsReader) (*Workload
 func ParseFromEnv(ws WorkspaceAddonsReader) (*EnvironmentStack, error) {
 	parser := parser{
 		ws:             ws,
-		addonsDirPath:  ws.EnvAddonsPath,
-		addonsFilePath: ws.EnvAddonFilePath,
+		addonsDirPath:  ws.EnvAddonsAbsPath,
+		addonsFilePath: ws.EnvAddonFileAbsPath,
 		validateParameters: func(tplParams, customParams yaml.Node) error {
 			return validateParameters(tplParams, customParams, envAddonsParameterReservedKeys)
 		},

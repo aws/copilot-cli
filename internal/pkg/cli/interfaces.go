@@ -295,11 +295,13 @@ type wsWlDirReader interface {
 	workspacePathGetter
 	wlLister
 	wsEnvironmentsLister
+	WorkloadOverridesPath(string) string
 	Summary() (*workspace.Summary, error)
 }
 
 type wsEnvironmentReader interface {
 	wsEnvironmentsLister
+	EnvOverridesPath() string
 	ReadEnvironmentManifest(mftDirName string) (workspace.EnvironmentManifest, error)
 }
 
@@ -319,7 +321,9 @@ type wsAppManager interface {
 }
 
 type wsAddonManager interface {
-	WriteAddon(f encoding.BinaryMarshaler, svc, name string) (string, error)
+	Write(content encoding.BinaryMarshaler, path string) (string, error)
+	WorkloadAddonFilePath(wkldName, fName string) string
+	EnvAddonFilePath(fName string) string
 	manifestReader
 	wlLister
 }

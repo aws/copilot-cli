@@ -104,6 +104,6 @@ func (d *jobDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*jobSta
 		return nil, fmt.Errorf("create stack configuration: %w", err)
 	}
 	return &jobStackConfigurationOutput{
-		conf: conf,
+		conf: cloudformation.WrapWithTemplateOverrider(conf, d.overrider),
 	}, nil
 }
