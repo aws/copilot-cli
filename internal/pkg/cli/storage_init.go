@@ -714,7 +714,7 @@ func (o *initStorageOpts) addonBlobs() ([]addonBlob, error) {
 	case option{lifecycleEnvironmentLevel, rdsStorageType}:
 		return o.envRDSAddonBlobs()
 	}
-	return nil, fmt.Errorf("storage type %s doesn't have a CF template", o.storageType)
+	return nil, fmt.Errorf("storage type %s is not supported yet", o.storageType)
 }
 
 func (o *initStorageOpts) wkldDDBAddonBlobs() ([]addonBlob, error) {
