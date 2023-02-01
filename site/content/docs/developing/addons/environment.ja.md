@@ -3,7 +3,7 @@
 CLI で "Addon" と呼ばれる追加の AWS リソースは、[Service または Environment の Manifest](../../manifest/overview.ja.md) がデフォルトで統合しない、任意の追加の AWS サービスです。
 例えば Addon は、Service が読み取りまたは書き込みを必要とする DynamoDB テーブル、S3 バケット、または RDS Aurora Serverless クラスターとすることができます。
 
-ワークロードの追加リソース ([Load Balanced Web Service](../../manifest/lb-web-service.ja.md) や [Scheduled Job](../../manifest/scheduled-job.ja.md) など) を定義することができます。
+ワークロード ([Load Balanced Web Service](../../manifest/lb-web-service.ja.md) や [Scheduled Job](../../manifest/scheduled-job.ja.md) など) の追加リソースを定義することができます。
 ワークロードの Addon のライフサイクルは、ワークロードによって管理され、ワークロードが削除されると削除されます。
 
 または、Environment に対して追加の共有可能なリソースを定義することができます。
@@ -12,7 +12,7 @@ Environment Addon は、Environment が削除されない限り、削除され�
 このページでは、Environment レベルの Addon を作成する方法を説明します。
 ワークロードレベル Addon については、[AWS CloudFormation によるワークロードリソース追加モデリング](./workload.ja.md) を参照してください。
 
-## どのように S3 バケット、DDB テーブル、Aurora サーバーレスクラスターを追加するのか？
+## どのように S3 バケット、DDB テーブル、Aurora Serverless クラスターを追加するのか？
 
 !!!caution "" 
   v1.25.0 では、`copilot storage init` は Environment レベルでの Addon 作成に対応していません。
