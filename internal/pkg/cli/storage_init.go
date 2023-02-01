@@ -695,18 +695,23 @@ type addonBlob struct {
 }
 
 func (o *initStorageOpts) addonBlobs() ([]addonBlob, error) {
-	switch {
-	case o.lifecycle == lifecycleWorkloadLevel && o.storageType == s3StorageType:
+	type option struct {
+		lifecycle   string
+		storageType string
+	}
+	selection := option{o.lifecycle, o.storageType}
+	switch selection {
+	case option{lifecycleWorkloadLevel, s3StorageType}:
 		return o.wkldS3AddonBlobs()
-	case o.lifecycle == lifecycleWorkloadLevel && o.storageType == dynamoDBStorageType:
+	case option{lifecycleWorkloadLevel, dynamoDBStorageType}:
 		return o.wkldDDBAddonBlobs()
-	case o.lifecycle == lifecycleWorkloadLevel && o.storageType == rdsStorageType:
+	case option{lifecycleWorkloadLevel, rdsStorageType}:
 		return o.wkldRDSAddonBlobs()
-	case o.lifecycle == lifecycleEnvironmentLevel && o.storageType == s3StorageType:
+	case option{lifecycleEnvironmentLevel, s3StorageType}:
 		return o.envS3AddonBlobs()
-	case o.lifecycle == lifecycleEnvironmentLevel && o.storageType == dynamoDBStorageType:
+	case option{lifecycleEnvironmentLevel, dynamoDBStorageType}:
 		return o.envDDBAddonBlobs()
-	case o.lifecycle == lifecycleEnvironmentLevel && o.storageType == rdsStorageType:
+	case option{lifecycleEnvironmentLevel, rdsStorageType}:
 		return o.envRDSAddonBlobs()
 	}
 	return nil, fmt.Errorf("storage type %s doesn't have a CF template", o.storageType)
