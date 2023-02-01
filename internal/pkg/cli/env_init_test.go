@@ -922,11 +922,13 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 				},
 				sessProvider: mocks.sessProvider,
 				selVPC:       mocks.selVPC,
-				selCreds:     mocks.selCreds,
-				ec2Client:    mocks.ec2Client,
-				prompt:       mocks.prompt,
-				selApp:       mocks.selApp,
-				store:        mocks.store,
+				selCreds: func() (credsSelector, error) {
+					return mocks.selCreds, nil
+				},
+				ec2Client: mocks.ec2Client,
+				prompt:    mocks.prompt,
+				selApp:    mocks.selApp,
+				store:     mocks.store,
 			}
 
 			// WHEN
