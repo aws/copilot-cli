@@ -380,3 +380,4 @@ CloudFront のディストリビューション ID は、`copilot env show --res
 - [GitHub](https://github.com/aws/copilot-cli/releases/tag/v1.25.0) でリリースノートの全文を読む
 
 今回のリリースの翻訳はソリューションアーキテクトの杉本が担当しました。
+
