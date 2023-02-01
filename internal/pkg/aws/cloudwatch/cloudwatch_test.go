@@ -24,12 +24,8 @@ type cloudWatchMocks struct {
 
 func TestCloudWatch_AlarmsWithTags(t *testing.T) {
 	const (
-		svcName      = "mockSvc"
-		envName      = "mockEnv"
 		appName      = "mockApp"
 		mockAlarmArn = "arn:aws:cloudwatch:us-west-2:1234567890:alarm:mockAlarmName"
-
-		mockArn3 = mockAlarmArn + "3"
 	)
 	mockError := errors.New("some error")
 	testTags := map[string]string{
