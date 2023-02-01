@@ -99,15 +99,13 @@ func (cw *CloudWatch) AlarmStatuses(opts ...DescribeAlarmOpts) ([]AlarmStatus, e
 		return nil, nil
 	}
 	var alarmStatuses []AlarmStatus
-	var err error
-	alarmResp := &cloudwatch.DescribeAlarmsOutput{}
 	in := &cloudwatch.DescribeAlarmsInput{}
 	
 	for _, opt := range opts {
 		opt(in)
 	}
 	for {
-		alarmResp, err = cw.client.DescribeAlarms(in)
+		alarmResp, err := cw.client.DescribeAlarms(in)
 		if err != nil {
 			return nil, fmt.Errorf("describe CloudWatch alarms: %w", err)
 		}
