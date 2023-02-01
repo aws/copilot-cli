@@ -572,32 +572,33 @@ func sortExposedPorts(exposedPorts []ExposedPort) []ExposedPort {
 }
 
 // NetworkLoadBalancerTarget returns target container and target port for the NLB configuration.
-func (s *LoadBalancedWebService) NetworkLoadBalancerTarget() (targetContainer *string, targetPort *string, err error) {
+// This method should be called only when NLB config is not empty.
+func (s *LoadBalancedWebService) NetworkLoadBalancerTarget() (targetContainer string, targetPort string, err error) {
 	// Configure target container and port.
-	targetContainer = s.Name
+	targetContainer = aws.StringValue(s.Name)
 	if s.NLBConfig.TargetContainer != nil {
-		targetContainer = s.NLBConfig.TargetContainer
+		targetContainer = aws.StringValue(s.NLBConfig.TargetContainer)
 	}
 
 	// Parse listener port and protocol.
 	port, _, err := ParsePortMapping(s.NLBConfig.Port)
 	if err != nil {
-		return nil, nil, err
+		return "", "", err
 	}
 	// By default, the target port is the same as listener port.
-	targetPort = port
-	if targetContainer != s.Name {
+	targetPort = aws.StringValue(port)
+	if targetContainer != aws.StringValue(s.Name) {
 		// If the target container is a sidecar container, the target port is the exposed sidecar port.
-		sideCarPort := s.Sidecars[aws.StringValue(targetContainer)].Port // We validated that a sidecar container exposes a port if it is a target container.
+		sideCarPort := s.Sidecars[targetContainer].Port // We validated that a sidecar container exposes a port if it is a target container.
 		port, _, err := ParsePortMapping(sideCarPort)
 		if err != nil {
-			return nil, nil, err
+			return "", "", err
 		}
-		targetPort = port
+		targetPort = aws.StringValue(port)
 	}
 	// Finally, if a target port is explicitly specified, use that value.
 	if s.NLBConfig.TargetPort != nil {
-		targetPort = aws.String(strconv.Itoa(aws.IntValue(s.NLBConfig.TargetPort)))
+		targetPort = strconv.Itoa(aws.IntValue(s.NLBConfig.TargetPort))
 	}
 	return
 }

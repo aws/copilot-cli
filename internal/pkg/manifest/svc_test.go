@@ -961,8 +961,8 @@ func TestParsePortMapping(t *testing.T) {
 func TestLoadBalancedWebService_NetworkLoadBalancerTarget(t *testing.T) {
 	testCases := map[string]struct {
 		in                    LoadBalancedWebService
-		wantedTargetContainer *string
-		wantedTargetPort      *string
+		wantedTargetContainer string
+		wantedTargetPort      string
 		wantedErr             error
 	}{
 		"should return primary container name/nlb port as targetContainer/targetPort in case targetContainer and targetPort is not given ": {
@@ -978,8 +978,8 @@ func TestLoadBalancedWebService_NetworkLoadBalancerTarget(t *testing.T) {
 					},
 				},
 			},
-			wantedTargetContainer: aws.String("foo"),
-			wantedTargetPort:      aws.String("80"),
+			wantedTargetContainer: "foo",
+			wantedTargetPort:      "80",
 		},
 		"should return targetContainer and targetPort as is if they are given ": {
 			in: LoadBalancedWebService{
@@ -1001,8 +1001,8 @@ func TestLoadBalancedWebService_NetworkLoadBalancerTarget(t *testing.T) {
 					},
 				},
 			},
-			wantedTargetContainer: aws.String("bar"),
-			wantedTargetPort:      aws.String("81"),
+			wantedTargetContainer: "bar",
+			wantedTargetPort:      "81",
 		},
 		"should return error if targetPort is of incorrect type": {
 			in: LoadBalancedWebService{

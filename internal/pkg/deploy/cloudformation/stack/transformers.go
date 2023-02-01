@@ -486,8 +486,8 @@ func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (networkLoadBalanc
 			Listener: template.NetworkLoadBalancerListener{
 				Port:            aws.StringValue(port),
 				Protocol:        strings.ToUpper(aws.StringValue(protocol)),
-				TargetContainer: aws.StringValue(targetContainer),
-				TargetPort:      aws.StringValue(targetPort),
+				TargetContainer: targetContainer,
+				TargetPort:      targetPort,
 				SSLPolicy:       nlbConfig.SSLPolicy,
 				Aliases:         aliases,
 				HealthCheck:     hc,
