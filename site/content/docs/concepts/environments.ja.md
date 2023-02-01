@@ -50,7 +50,7 @@ Manifest で [`http`](../manifest/backend-service.ja.md#http)フィールドが�
 
 ## Environment のカスタマイズ
 
-既存の Environment リソースをインポートする、コマンドでフラグを使う、[env Manifest](../manifest/environment.ja.md) を変更するといった方法で、デフォルトの設定をすることができます。もし、現在設定可能なリソースよりも多くの種類のリソースをカスタマイズしたい場合は、お気軽にユースケースを添えた GitHub イシューを作成してください！
+既存の Environment リソースをインポートする、コマンドでフラグを使う、[Environment Manifest](../manifest/environment.ja.md) を変更するといった方法で、デフォルトの設定をすることができます。もし、現在設定可能なリソースよりも多くの種類のリソースをカスタマイズしたい場合は、お気軽にユースケースを添えた GitHub イシューを作成してください！
 
 もっと詳しく知りたい方は、[Environment のリソースをカスタマイズする](../developing/custom-environment-resources.ja.md)ページをご覧ください。
 
