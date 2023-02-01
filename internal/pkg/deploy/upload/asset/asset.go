@@ -23,11 +23,11 @@ type UploadOpts struct {
 }
 
 // Upload uploads static assets to Cloud Storage.
-func Upload(fs *afero.Afero, source, destination string, opts *UploadOpts) ([]string, error) {
+func Upload(fs afero.Fs, source, destination string, opts *UploadOpts) ([]string, error) {
 	matcher := buildCompositeMatchers(buildIncludeMatchers(opts.Includes), buildExcludeMatchers(opts.Excludes))
 	var paths []string
 	pathsPtr := &paths
-	if err := fs.Walk(source, walkFnWithMatcher(pathsPtr, matcher)); err != nil {
+	if err := afero.Walk(fs, source, walkFnWithMatcher(pathsPtr, matcher)); err != nil {
 		return nil, fmt.Errorf("walk the file tree rooted at %s: %w", source, err)
 	}
 	// TODO: read file and upload. Remove file names from return.
