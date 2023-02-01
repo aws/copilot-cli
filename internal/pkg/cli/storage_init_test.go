@@ -246,6 +246,12 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 	}
 }
 
+type mockStorageInitAsk struct {
+	prompt *mocks.Mockprompter
+	sel    *mocks.MockwsSelector
+	ws     *mocks.MockwsAddonManager
+}
+
 func TestStorageInitOpts_Ask(t *testing.T) {
 	const (
 		wantedAppName      = "ddos"
@@ -274,6 +280,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 		inDBEngine          string
 		inInitialDBName     string
 
+		mock       func(m *mockStorageInitAsk)
 		mockPrompt func(m *mocks.Mockprompter)
 		mockCfg    func(m *mocks.MockwsSelector)
 		mockWS     func(m *mocks.MockwsAddonManager)
@@ -287,7 +294,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			inSvcName:     wantedSvcName,
 			inStorageName: wantedBucketName,
 
-			mockPrompt: func(m *mocks.Mockprompter) {
+			mock: func(m *mockStorageInitAsk) {
 				options := []prompt.Option{
 					{
 						Value: dynamoDBStorageTypeOption,
@@ -302,11 +309,8 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 						Hint:  "SQL",
 					},
 				}
-				m.EXPECT().SelectOption(gomock.Any(), gomock.Any(), gomock.Eq(options), gomock.Any()).Return(s3StorageType, nil)
+				m.prompt.EXPECT().SelectOption(gomock.Any(), gomock.Any(), gomock.Eq(options), gomock.Any()).Return(s3StorageType, nil)
 			},
-			mockCfg: func(m *mocks.MockwsSelector) {},
-
-			wantedErr: nil,
 		},
 		"error if storage type not gotten": {
 			inAppName:     wantedAppName,
@@ -901,9 +905,11 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockPrompt := mocks.NewMockprompter(ctrl)
-			mockConfig := mocks.NewMockwsSelector(ctrl)
-			mockWS := mocks.NewMockwsAddonManager(ctrl)
+			m := mockStorageInitAsk{
+				prompt: mocks.NewMockprompter(ctrl),
+				sel:    mocks.NewMockwsSelector(ctrl),
+				ws:     mocks.NewMockwsAddonManager(ctrl),
+			}
 			opts := initStorageOpts{
 				initStorageVars: initStorageVars{
 					storageType:  tc.inStorageType,
@@ -920,15 +926,11 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 					rdsInitialDBName:        tc.inInitialDBName,
 				},
 				appName: tc.inAppName,
-				sel:     mockConfig,
-				prompt:  mockPrompt,
-				ws:      mockWS,
+				sel:     m.sel,
+				prompt:  m.prompt,
+				ws:      m.ws,
 			}
-			tc.mockPrompt(mockPrompt)
-			tc.mockCfg(mockConfig)
-			if tc.mockWS != nil {
-				tc.mockWS(mockWS)
-			}
+			tc.mock(&m)
 			// WHEN
 			err := opts.Ask()
 
