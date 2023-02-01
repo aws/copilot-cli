@@ -36,6 +36,9 @@ func Upload(fs *afero.Afero, source, destination string, opts *UploadOpts) ([]st
 
 func walkFnWithMatcher(pathsPtr *[]string, matcher filepathMatcher) filepath.WalkFunc {
 	return func(path string, info fs.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
 		if info.IsDir() {
 			return nil
 		}
@@ -82,17 +85,12 @@ func (m excludeMatcher) match(path string) (bool, error) {
 	return match(string(m), path)
 }
 
+// compositeMatcher is a composite matcher consisting of include matchers and exclude matchers.
+// Note that exclude matchers will be applied before include matchers.
 type compositeMatcher []filepathMatcher
 
 func buildCompositeMatchers(includeMatchers, excludeMatchers []filepathMatcher) compositeMatcher {
-	var matchers []filepathMatcher
-	for _, matcher := range excludeMatchers {
-		matchers = append(matchers, matcher)
-	}
-	for _, matcher := range includeMatchers {
-		matchers = append(matchers, matcher)
-	}
-	return matchers
+	return append(excludeMatchers, includeMatchers...)
 }
 
 func (m compositeMatcher) match(path string) (bool, error) {
