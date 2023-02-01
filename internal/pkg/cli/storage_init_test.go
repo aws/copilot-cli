@@ -235,10 +235,6 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 		wantedTableName    = "coolTable"
 		wantedPartitionKey = "DogName:String"
 		wantedSortKey      = "PhotoId:Number"
-
-		wantedServerlessVersion = auroraServerlessVersionV2
-		wantedInitialDBName     = "mydb"
-		wantedDBEngine          = engineTypePostgreSQL
 	)
 	testCases := map[string]struct {
 		inAppName     string
@@ -322,32 +318,6 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 					Return(wantedBucketName, nil)
 			},
 		},
-		"asks for cluster name for RDS storage": {
-			inAppName:           wantedAppName,
-			inSvcName:           wantedSvcName,
-			inStorageType:       rdsStorageType,
-			inServerlessVersion: wantedServerlessVersion,
-			inDBEngine:          wantedDBEngine,
-			inInitialDBName:     wantedInitialDBName,
-
-			mock: func(m *mockStorageInitAsk) {
-				m.prompt.EXPECT().Get(
-					gomock.Eq("What would you like to name this Database Cluster?"),
-					gomock.Any(),
-					gomock.Any(),
-					gomock.Any(),
-				).Return(wantedBucketName, nil)
-				m.ws.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(workspace.WorkloadManifest("type: Load Balanced Web Service"), nil)
-			},
-			wantedVars: &initStorageVars{
-				storageType:             rdsStorageType,
-				storageName:             wantedBucketName,
-				workloadName:            wantedSvcName,
-				auroraServerlessVersion: wantedServerlessVersion,
-				rdsEngine:               wantedDBEngine,
-				rdsInitialDBName:        wantedInitialDBName,
-			},
-		},
 		"error if storage name not returned": {
 			inAppName:     wantedAppName,
 			inSvcName:     wantedSvcName,
@@ -367,87 +337,6 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			inSort:        wantedSortKey,
 			inLSISorts:    []string{"email:String"},
 			mock:          func(m *mockStorageInitAsk) {},
-		},
-		"asks for engine if not specified": {
-			inAppName:     wantedAppName,
-			inSvcName:     wantedSvcName,
-			inStorageName: wantedBucketName,
-
-			inStorageType:       rdsStorageType,
-			inServerlessVersion: wantedServerlessVersion,
-			inInitialDBName:     wantedInitialDBName,
-
-			mock: func(m *mockStorageInitAsk) {
-				m.prompt.EXPECT().SelectOne(gomock.Eq(storageInitRDSDBEnginePrompt), gomock.Any(), gomock.Any(), gomock.Any()).
-					Return(wantedDBEngine, nil)
-				m.ws.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(workspace.WorkloadManifest("type: Load Balanced Web Service"), nil)
-
-			},
-			wantedVars: &initStorageVars{
-				storageType:             rdsStorageType,
-				storageName:             wantedBucketName,
-				workloadName:            wantedSvcName,
-				auroraServerlessVersion: wantedServerlessVersion,
-				rdsInitialDBName:        wantedInitialDBName,
-				rdsEngine:               wantedDBEngine,
-			},
-		},
-		"error if engine not gotten": {
-			inAppName:     wantedAppName,
-			inSvcName:     wantedSvcName,
-			inStorageName: wantedBucketName,
-
-			inStorageType:       rdsStorageType,
-			inServerlessVersion: wantedServerlessVersion,
-			inInitialDBName:     wantedInitialDBName,
-
-			mock: func(m *mockStorageInitAsk) {
-				m.prompt.EXPECT().SelectOne(storageInitRDSDBEnginePrompt, gomock.Any(), gomock.Any(), gomock.Any()).
-					Return("", errors.New("some error"))
-				m.ws.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(workspace.WorkloadManifest("type: Load Balanced Web Service"), nil)
-
-			},
-			wantedErr: errors.New("select database engine: some error"),
-		},
-		"asks for initial database name": {
-			inAppName:     wantedAppName,
-			inSvcName:     wantedSvcName,
-			inStorageName: wantedBucketName,
-
-			inStorageType:       rdsStorageType,
-			inServerlessVersion: wantedServerlessVersion,
-			inDBEngine:          wantedDBEngine,
-
-			mock: func(m *mockStorageInitAsk) {
-				m.prompt.EXPECT().Get(gomock.Eq(storageInitRDSInitialDBNamePrompt), gomock.Any(), gomock.Any(), gomock.Any()).
-					Return(wantedInitialDBName, nil)
-				m.ws.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(workspace.WorkloadManifest("type: Load Balanced Web Service"), nil)
-			},
-			wantedVars: &initStorageVars{
-				storageType:             rdsStorageType,
-				storageName:             wantedBucketName,
-				workloadName:            wantedSvcName,
-				auroraServerlessVersion: wantedServerlessVersion,
-				rdsEngine:               wantedDBEngine,
-				rdsInitialDBName:        wantedInitialDBName,
-			},
-		},
-		"error if initial database name not gotten": {
-			inAppName:     wantedAppName,
-			inSvcName:     wantedSvcName,
-			inStorageName: wantedBucketName,
-
-			inStorageType:       rdsStorageType,
-			inServerlessVersion: wantedServerlessVersion,
-			inDBEngine:          wantedDBEngine,
-
-			mock: func(m *mockStorageInitAsk) {
-				m.prompt.EXPECT().Get(storageInitRDSInitialDBNamePrompt, gomock.Any(), gomock.Any(), gomock.Any()).
-					Return("", errors.New("some error"))
-				m.ws.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(workspace.WorkloadManifest("type: Load Balanced Web Service"), nil)
-
-			},
-			wantedErr: fmt.Errorf("input initial database name: some error"),
 		},
 	}
 	for name, tc := range testCases {
@@ -816,6 +705,162 @@ func TestStorageInitOpts_AskDDB(t *testing.T) {
 				appName: "ddos",
 				prompt:  m.prompt,
 			}
+			// WHEN
+			err := opts.Ask()
+
+			// THEN
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.NoError(t, err)
+			}
+			if tc.wantedVars != nil {
+				require.Equal(t, *tc.wantedVars, opts.initStorageVars)
+			}
+		})
+	}
+}
+
+func TestStorageInitOpts_AskRDS(t *testing.T) {
+	const (
+		wantedSvcName     = "frontend"
+		wantedClusterName = "cookie"
+
+		wantedServerlessVersion = auroraServerlessVersionV2
+		wantedInitialDBName     = "mydb"
+		wantedDBEngine          = engineTypePostgreSQL
+	)
+	testCases := map[string]struct {
+		inStorageName string
+		inPartition   string
+		inSort        string
+		inLSISorts    []string
+		inNoLSI       bool
+		inNoSort      bool
+
+		inServerlessVersion string
+		inDBEngine          string
+		inInitialDBName     string
+
+		mock func(m *mockStorageInitAsk)
+
+		wantedErr  error
+		wantedVars *initStorageVars
+	}{
+		"asks for cluster name for RDS storage": {
+			inServerlessVersion: wantedServerlessVersion,
+			inDBEngine:          wantedDBEngine,
+			inInitialDBName:     wantedInitialDBName,
+
+			mock: func(m *mockStorageInitAsk) {
+				m.prompt.EXPECT().Get(
+					gomock.Eq("What would you like to name this Database Cluster?"),
+					gomock.Any(),
+					gomock.Any(),
+					gomock.Any(),
+				).Return(wantedClusterName, nil)
+				m.ws.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(workspace.WorkloadManifest("type: Load Balanced Web Service"), nil)
+			},
+			wantedVars: &initStorageVars{
+				storageType:             rdsStorageType,
+				storageName:             wantedClusterName,
+				workloadName:            wantedSvcName,
+				auroraServerlessVersion: wantedServerlessVersion,
+				rdsEngine:               wantedDBEngine,
+				rdsInitialDBName:        wantedInitialDBName,
+			},
+		},
+		"asks for engine if not specified": {
+			inStorageName:       wantedClusterName,
+			inServerlessVersion: wantedServerlessVersion,
+			inInitialDBName:     wantedInitialDBName,
+
+			mock: func(m *mockStorageInitAsk) {
+				m.prompt.EXPECT().SelectOne(gomock.Eq(storageInitRDSDBEnginePrompt), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(wantedDBEngine, nil)
+				m.ws.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(workspace.WorkloadManifest("type: Load Balanced Web Service"), nil)
+
+			},
+			wantedVars: &initStorageVars{
+				storageType:             rdsStorageType,
+				storageName:             wantedClusterName,
+				workloadName:            wantedSvcName,
+				auroraServerlessVersion: wantedServerlessVersion,
+				rdsInitialDBName:        wantedInitialDBName,
+				rdsEngine:               wantedDBEngine,
+			},
+		},
+		"error if engine not gotten": {
+			inStorageName:       wantedClusterName,
+			inServerlessVersion: wantedServerlessVersion,
+			inInitialDBName:     wantedInitialDBName,
+
+			mock: func(m *mockStorageInitAsk) {
+				m.prompt.EXPECT().SelectOne(storageInitRDSDBEnginePrompt, gomock.Any(), gomock.Any(), gomock.Any()).
+					Return("", errors.New("some error"))
+				m.ws.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(workspace.WorkloadManifest("type: Load Balanced Web Service"), nil)
+
+			},
+			wantedErr: errors.New("select database engine: some error"),
+		},
+		"asks for initial database name": {
+			inStorageName:       wantedClusterName,
+			inServerlessVersion: wantedServerlessVersion,
+			inDBEngine:          wantedDBEngine,
+
+			mock: func(m *mockStorageInitAsk) {
+				m.prompt.EXPECT().Get(gomock.Eq(storageInitRDSInitialDBNamePrompt), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(wantedInitialDBName, nil)
+				m.ws.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(workspace.WorkloadManifest("type: Load Balanced Web Service"), nil)
+			},
+			wantedVars: &initStorageVars{
+				storageType:             rdsStorageType,
+				storageName:             wantedClusterName,
+				workloadName:            wantedSvcName,
+				auroraServerlessVersion: wantedServerlessVersion,
+				rdsEngine:               wantedDBEngine,
+				rdsInitialDBName:        wantedInitialDBName,
+			},
+		},
+		"error if initial database name not gotten": {
+			inStorageName:       wantedClusterName,
+			inServerlessVersion: wantedServerlessVersion,
+			inDBEngine:          wantedDBEngine,
+
+			mock: func(m *mockStorageInitAsk) {
+				m.prompt.EXPECT().Get(storageInitRDSInitialDBNamePrompt, gomock.Any(), gomock.Any(), gomock.Any()).
+					Return("", errors.New("some error"))
+				m.ws.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(workspace.WorkloadManifest("type: Load Balanced Web Service"), nil)
+
+			},
+			wantedErr: fmt.Errorf("input initial database name: some error"),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			m := mockStorageInitAsk{
+				prompt: mocks.NewMockprompter(ctrl),
+				ws:     mocks.NewMockwsAddonManager(ctrl),
+			}
+			opts := initStorageOpts{
+				initStorageVars: initStorageVars{
+					storageType:  rdsStorageType,
+					workloadName: wantedSvcName,
+					storageName:  tc.inStorageName,
+
+					auroraServerlessVersion: tc.inServerlessVersion,
+					rdsEngine:               tc.inDBEngine,
+					rdsInitialDBName:        tc.inInitialDBName,
+				},
+				appName: "ddos",
+				prompt:  m.prompt,
+				ws:      m.ws,
+			}
+			tc.mock(&m)
 			// WHEN
 			err := opts.Ask()
 
