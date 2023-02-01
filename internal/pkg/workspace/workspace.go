@@ -52,8 +52,6 @@ const (
 	legacyPipelineFileName    = "pipeline.yml"
 	manifestFileName          = "manifest.yml"
 	buildspecFileName         = "buildspec.yml"
-
-	ymlFileExtension = ".yml"
 )
 
 // Summary is a description of what's associated with this workspace.
