@@ -6,10 +6,10 @@
 
 ## シークレットの追加方法
 
-シークレットを追加するには、シークレットを SecureString として [AWS Systems Manager パラメータストア](https://docs.aws.amazon.com/ja_jp/systems-manager/latest/userguide/systems-manager-parameter-store.html) (SSM) 、または [AWS Secrets Manager](https://docs.aws.amazon.com/ja_jp/secretsmanager/latest/userguide/intro.html) に保存する必要があります。そして、SSM パラメータへの参照を [Manifest](../manifest/overview.ja.md) に追加します。
+シークレットを追加するには、シークレットを [AWS Systems Manager パラメータストア](https://docs.aws.amazon.com/ja_jp/systems-manager/latest/userguide/systems-manager-parameter-store.html) (SSM) 、
+または [AWS Secrets Manager](https://docs.aws.amazon.com/ja_jp/secretsmanager/latest/userguide/intro.html) に保存する必要があります。そして、SSM パラメータへの参照を [Manifest](../manifest/overview.ja.md) に追加します。
 
-[`copilot secret init`](../commands/secret-init.ja.md) コマンドを利用することで簡単にシークレットを作成できます！
-
+[`copilot secret init`](../commands/secret-init.ja.md) コマンドを利用することで、SSM に簡単に `SecureString` としてシークレットを作成できます！
 
 !!! attention
     Request-Driven Web Service はシークレットの利用をサポートしていません。

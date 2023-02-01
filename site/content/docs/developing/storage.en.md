@@ -13,7 +13,7 @@ $ copilot storage init -t S3
 $ copilot storage init -n my-bucket -t S3 -w api
 ```
 
-The above command will create the Cloudformation template for an S3 bucket in the [addons](../addons/workload) directory for the "api" service. The next time you run `copilot deploy -n api`, the bucket will be created, permission to access it will be added to the `api` task role, and the name of the bucket will be injected into the `api` container under the environment variable `MY_BUCKET_NAME`.
+The above command will create the Cloudformation template for an S3 bucket in the [addons](./addons/workload.en.md) directory for the "api" service. The next time you run `copilot deploy -n api`, the bucket will be created, permission to access it will be added to the `api` task role, and the name of the bucket will be injected into the `api` container under the environment variable `MY_BUCKET_NAME`.
 
 !!!info
     All names are converted into SCREAMING_SNAKE_CASE based on their use of hyphens or underscores. You can view the environment variables for a given service by running `copilot svc show`.

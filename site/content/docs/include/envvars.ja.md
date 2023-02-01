@@ -3,6 +3,9 @@
 <a id="variables" href="#variables" class="field">`variables`</a> <span class="type">Map</span>  
 Copilot は Service 名などを常に環境変数としてタスクに対して渡します。本フィールドではそれら以外に追加で渡したい環境変数をキーバーリューのペアで指定します。
 
+<span class="parent-field">variables.</span><a id="variables-from-cfn" href="#variables-from-cfn" class="field">`from_cfn`</a> <span class="type">String</span>  
+[CloudFormation スタックエクスポート](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/using-cfn-stack-exports.html)の名称。
+
 <div class="separator"></div>
 
 <a id="env_file" href="#env_file" class="field">`env_file`</a> <span class="type">String</span>  

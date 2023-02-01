@@ -6,7 +6,7 @@
 <span class="parent-field">network.</span><a id="network-connect" href="#network-connect" class="field">`connect`</a> <span class="type">Bool or Map</span>    
 Service に対し [Service Connect](../developing/svc-to-svc-communication.ja.md#service-connect) を有効にします。Service 間のトラフィックを負荷分散し、より弾力的にします。デフォルトは `false` です。
 
-Map として利用すると、Service で利用するエリアスを指定出来ます。エリアスは Environment 内でユニークである必要があります。
+Map として利用すると、Service で利用するエイリアスを指定出来ます。エイリアスは Environment 内でユニークである必要があります。
 
 <span class="parent-field">network.connect.</span><a id="network-connect-alias" href="#network-connect-alias" class="field">`alias`</a> <span class="type">String</span>  
 Service Connect 経由で公開する Service のカスタム DNS　名です。デフォルトは Service 名です。
@@ -56,7 +56,7 @@ network:
   vpc:
     security_groups: [sg-0001, sg-0002]
 ```
-Copilot にはセキュリティグループが含まれており、Environment 内のコンテナ同士が通信できるようになっています。デフォルトのセキュリティグループを無効にするには、Map 形式で以下のように指定します。
+Copilot にはセキュリティグループが含まれており、Environment 内のコンテナ同士が通信できるようになっています。デフォルトのセキュリティグループを無効にするには、`Map` 形式で以下のように指定します。
 ```yaml
 network:
   vpc:
@@ -65,8 +65,14 @@ network:
       groups: [sg-0001, sg-0002]
 ```
 
+<span class="parent-field">network.vpc.security_groups.</span><a id="network-vpc-security-groups-from-cfn" href="#network-vpc-security-groups-from-cfn" class="field">`from_cfn`</a> <span class="type">String</span>  
+[CloudFormation スタックエクスポート](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/using-cfn-stack-exports.html)の名称。
+
 <span class="parent-field">network.vpc.security_groups.</span><a id="network-vpc-security-groups-deny-default" href="#network-vpc-security-groups-deny-default" class="field">`deny_default`</a> <span class="type">Boolean</span>  
 Environment 内のすべての Service からの侵入を許可するデフォルトのセキュリティグループを無効化します。
 
 <span class="parent-field">network.vpc.security_groups.</span><a id="network-vpc-security-groups-groups" href="#network-vpc-security-groups-groups" class="field">`groups`</a> <span class="type">Array of Strings</span>    
 タスクに関連する追加のセキュリティグループ ID。
+
+<span class="parent-field">network.vpc.security_groups.groups</span><a id="network-vpc-security-groups-groups-from-cfn" href="#network-vpc-security-groups-groups-from-cfn" class="field">`from_cfn`</a> <span class="type">String</span>  
+[CloudFormation スタックエクスポート](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/using-cfn-stack-exports.html)の名称。

@@ -6,7 +6,7 @@ Copilot は、Addon テンプレートから参照されるローカルファイ
 サポートされているリソースの全リストを見るには、[AWS CLI documentation](https://awscli.amazonaws.com/v2/documentation/api/latest/reference/cloudformation/package.html) をご覧ください。
 
 この機能は、他の Copilot Service と同じリポジトリに保存されているローカルの Lambda 関数をデプロイするために使用することができます。
-例えば、JavaScript の Lambda 関数を Copilot Service と一緒にデプロイするには、このリソースを [Addon テンプレート](./modeling.ja.md) に追加してください。
+例えば、JavaScript の Lambda 関数を Copilot Service と一緒にデプロイするには、このリソースを [Addon テンプレート](./workload.ja.md) に追加してください。
 
 ???+ note "Lambda 関数の例"
     === "copilot/service-name/addons/lambda.yml"
