@@ -12,11 +12,11 @@ Environment Addon は、Environment が削除されない限り、削除され�
 このページでは、ワークロードレベルの Addon を作成する方法を説明します。
 Environment レベル Addon については、[AWS CloudFormation による Environment リソース追加モデリング](./environment.ja.md) を参照してください。
 
-## どのように S3 バケット、DDB テーブル、Aurora サーバーレスクラスターを追加するのか？
+## どのように S3 バケット、DDB テーブル、Aurora Serverless クラスターを追加するのか？
 
 Copilot では、特定の種類の Addon を作成するために、以下のコマンドが用意されています。
 
-* [`storage init`](../../commands/storage-init.ja.md) は DynamoDB テーブル、S3 バケット、Aurora Serverless クラスタのいずれかを作成します。
+* [`storage init`](../../commands/storage-init.ja.md) は DynamoDB テーブル、S3 バケット、Aurora Serverless クラスターのいずれかを作成します。
 
 ワークスペースにて `copilot storage init` を実行すると、これらのリソースをセットアップために、いくつかの質問形式でガイドして行きます。
 
@@ -163,16 +163,16 @@ Addon リソースを特定の条件に応じて異なるように設定した�
 
 ECS タスクまたは App Runner インスタンスから Addon [`Resources`](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/resources-section-structure.html) にアクセスする方法は、次のとおりです。
 
-* ECS タスクロールや App Runner インスタンスロールに追加のポリシーを追加する必要がある場合、追加のパーミッションを保持する [IAM ManagedPolicy](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-iam-managedpolicy.html) アドオンリソースをテンプレートで定義し、それを[出力](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/outputs-section-structure.html)することができます。このパーミッションは、タスクまたはインスタンスロールにインジェクトされます。
+* ECS タスクロールや App Runner インスタンスロールに追加のポリシーを追加する必要がある場合、追加のパーミッションを保持する [IAM ManagedPolicy](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-iam-managedpolicy.html) Addon リソースをテンプレートで定義し、それを[出力](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/outputs-section-structure.html)することができます。このパーミッションは、タスクまたはインスタンスロールにインジェクトされます。
 * ECS サービスにセキュリティグループを追加する必要がある場合、テンプレートで[Security Group](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-security-group.html)を定義し、それを[出力](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/outputs-section-structure.html)として追加することができます。セキュリティグループは、自動的に ECS サービスにアタッチされます。
 * ECS タスクにシークレットを注入したい場合、テンプレートで [Secret](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-secretsmanager-secret.html) を定義し、[出力](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/outputs-section-structure.html)として追加することができます。Secret はコンテナにインジェクトされ、大文字の SNAKE_CASE で環境変数としてアクセスすることができるようになります。
-* もし、任意のリソースの値を環境変数として注入したい場合は、ECS タスクに[出力](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/outputs-section-structure.html)を作成することができます。これはコンテナにインジェクトされ、大文字の SNAKE_CASE で環境変数としてアクセスすることができる。
+* もし、任意のリソースの値を環境変数として注入したい場合は、ECS タスクに[出力](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/outputs-section-structure.html)を作成することができます。これはコンテナにインジェクトされ、大文字の SNAKE_CASE で環境変数としてアクセスすることができるようになります。
 
 ## 例
 
 ### DynamoDB テーブルのワークロード Addon テンプレート
 
-ワークロードレベルの DynamoDB テーブルアドオンのテンプレート例です。
+ワークロードレベルの DynamoDB テーブル Addon のテンプレート例です。
 ```yaml
 # これらのパラメータのいずれかを使用して、テンプレートに条件やマッピングを作成することができます。
 Parameters:
