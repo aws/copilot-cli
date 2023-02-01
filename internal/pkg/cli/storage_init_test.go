@@ -229,27 +229,15 @@ type mockStorageInitAsk struct {
 
 func TestStorageInitOpts_Ask(t *testing.T) {
 	const (
-		wantedAppName      = "ddos"
-		wantedSvcName      = "frontend"
-		wantedBucketName   = "coolBucket"
-		wantedTableName    = "coolTable"
-		wantedPartitionKey = "DogName:String"
-		wantedSortKey      = "PhotoId:Number"
+		wantedAppName    = "ddos"
+		wantedSvcName    = "frontend"
+		wantedBucketName = "coolBucket"
 	)
 	testCases := map[string]struct {
 		inAppName     string
 		inStorageType string
 		inSvcName     string
 		inStorageName string
-		inPartition   string
-		inSort        string
-		inLSISorts    []string
-		inNoLSI       bool
-		inNoSort      bool
-
-		inServerlessVersion string
-		inDBEngine          string
-		inInitialDBName     string
 
 		mock func(m *mockStorageInitAsk)
 
@@ -331,11 +319,8 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 		"no error or asks when fully specified": {
 			inAppName:     wantedAppName,
 			inSvcName:     wantedSvcName,
-			inStorageType: dynamoDBStorageType,
-			inStorageName: wantedTableName,
-			inPartition:   wantedPartitionKey,
-			inSort:        wantedSortKey,
-			inLSISorts:    []string{"email:String"},
+			inStorageType: s3StorageType,
+			inStorageName: wantedBucketName,
 			mock:          func(m *mockStorageInitAsk) {},
 		},
 	}
@@ -355,15 +340,6 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 					storageType:  tc.inStorageType,
 					storageName:  tc.inStorageName,
 					workloadName: tc.inSvcName,
-					partitionKey: tc.inPartition,
-					sortKey:      tc.inSort,
-					lsiSorts:     tc.inLSISorts,
-					noLSI:        tc.inNoLSI,
-					noSort:       tc.inNoSort,
-
-					auroraServerlessVersion: tc.inServerlessVersion,
-					rdsEngine:               tc.inDBEngine,
-					rdsInitialDBName:        tc.inInitialDBName,
 				},
 				appName: tc.inAppName,
 				sel:     m.sel,
@@ -679,6 +655,12 @@ func TestStorageInitOpts_AskDDB(t *testing.T) {
 
 			},
 			wantedErr: fmt.Errorf("get DDB alternate sort key type: some error"),
+		},
+		"do not ask for ddb config when fully specified": {
+			inPartition: wantedPartitionKey,
+			inSort:      wantedSortKey,
+			inLSISorts:  []string{"email:String"},
+			mock:        func(m *mockStorageInitAsk) {},
 		},
 	}
 	for name, tc := range testCases {
