@@ -250,7 +250,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			mock: func(m *mockStorageInitAsk) {
 				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil).AnyTimes()
 			},
-			wantedErr: errValueBadFormatWithPeriod,
+			wantedErr: fmt.Errorf("validate storage name: %w", errValueBadFormatWithPeriod),
 		},
 		"asks for storage name": {
 			inAppName:     wantedAppName,
@@ -349,7 +349,7 @@ func TestStorageInitOpts_AskDDB(t *testing.T) {
 			mock: func(m *mockStorageInitAsk) {
 				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
 			},
-			wantedErr: errValueBadFormatWithPeriodUnderscore,
+			wantedErr: fmt.Errorf("validate storage name: %w", errValueBadFormatWithPeriodUnderscore),
 		},
 		"invalid partition key": {
 			inStorageName: wantedTableName,
