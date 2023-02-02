@@ -296,9 +296,7 @@ func (s *LoadBalancedWebService) Parameters() ([]*cloudformation.Parameter, erro
 	if err != nil {
 		return nil, err
 	}
-	var targetContainer, targetPort string
-
-	targetContainer, targetPort, err = s.manifest.HTTPLoadBalancerTarget()
+	targetContainer, targetPort, err := s.manifest.HTTPLoadBalancerTarget()
 	if err != nil {
 		return nil, err
 	}
