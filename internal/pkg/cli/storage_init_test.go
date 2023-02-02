@@ -139,7 +139,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 	const (
 		wantedAppName    = "ddos"
 		wantedSvcName    = "frontend"
-		wantedBucketName = "coolBucket"
+		wantedBucketName = "cool-bucket"
 	)
 	testCases := map[string]struct {
 		inAppName     string
@@ -152,12 +152,21 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 		wantedErr  error
 		wantedVars *initStorageVars
 	}{
+		"invalid storage type": {
+			inStorageType: "box",
+			inSvcName:     "frontend",
+			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil).AnyTimes()
+			},
+			wantedErr: errors.New(`invalid storage type box: must be one of "DynamoDB", "S3", "Aurora"`),
+		},
 		"asks for storage type": {
 			inAppName:     wantedAppName,
 			inSvcName:     wantedSvcName,
 			inStorageName: wantedBucketName,
 
 			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil).AnyTimes()
 				options := []prompt.Option{
 					{
 						Value: dynamoDBStorageTypeOption,
@@ -181,9 +190,30 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			inStorageName: wantedBucketName,
 
 			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil).AnyTimes()
 				m.prompt.EXPECT().SelectOption(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("", errors.New("some error"))
 			},
 			wantedErr: fmt.Errorf("select storage type: some error"),
+		},
+		"error checking if svc is in workspace": {
+			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().WorkloadExists(gomock.Eq("frontend")).Return(false, errors.New("wanted err"))
+			},
+			inAppName:     "bowie",
+			inStorageType: s3StorageType,
+			inSvcName:     "frontend",
+			inStorageName: "my-bucket",
+			wantedErr:     errors.New("check if frontend exists in the workspace: wanted err"),
+		},
+		"invalid svc not in workspace": {
+			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().WorkloadExists(gomock.Eq("frontend")).Return(false, nil)
+			},
+			inAppName:     "bowie",
+			inStorageType: s3StorageType,
+			inSvcName:     "frontend",
+			inStorageName: "my-bucket",
+			wantedErr:     errors.New("workload frontend not found in the workspace"),
 		},
 		"asks for storage workload": {
 			inAppName:     wantedAppName,
@@ -203,12 +233,32 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			},
 			wantedErr: fmt.Errorf("retrieve local workload names: some error"),
 		},
+		"successfully validates valid s3 bucket name": {
+			inAppName:     "bowie",
+			inSvcName:     "frontend",
+			inStorageType: s3StorageType,
+			inStorageName: "my-bucket.4",
+			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil).AnyTimes()
+			},
+		},
+		"invalid s3 bucket name": {
+			inAppName:     "bowie",
+			inSvcName:     "frontend",
+			inStorageType: s3StorageType,
+			inStorageName: "mybadbucket???",
+			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil).AnyTimes()
+			},
+			wantedErr: errValueBadFormatWithPeriod,
+		},
 		"asks for storage name": {
 			inAppName:     wantedAppName,
 			inSvcName:     wantedSvcName,
 			inStorageType: s3StorageType,
 
 			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
 				m.prompt.EXPECT().Get(gomock.Eq(fmt.Sprintf(fmtStorageInitNamePrompt, color.HighlightUserInput(s3BucketFriendlyText))),
 					gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(wantedBucketName, nil)
@@ -220,6 +270,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			inStorageType: s3StorageType,
 
 			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
 				m.prompt.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("", errors.New("some error"))
 			},
 			wantedErr: fmt.Errorf("input storage name: some error"),
@@ -229,7 +280,9 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			inSvcName:     wantedSvcName,
 			inStorageType: s3StorageType,
 			inStorageName: wantedBucketName,
-			mock:          func(m *mockStorageInitAsk) {},
+			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil).AnyTimes()
+			},
 		},
 	}
 	for name, tc := range testCases {
