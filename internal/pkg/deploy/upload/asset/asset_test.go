@@ -14,7 +14,7 @@ func Test_Upload(t *testing.T) {
 	const mockContent = "mockContent"
 	testCases := map[string]struct {
 		inSource       string
-		inIncludes     []string
+		inReincludes   []string
 		inExcludes     []string
 		mockFileSystem func(fs afero.Fs)
 
@@ -30,8 +30,8 @@ func Test_Upload(t *testing.T) {
 			expectedFiles: []string{"test/copilot/.workspace"},
 		},
 		"success with include only": {
-			inSource:   "./test",
-			inIncludes: []string{"copilot/prod/manifest.yaml"},
+			inSource:     "./test",
+			inReincludes: []string{"copilot/prod/manifest.yaml"},
 			mockFileSystem: func(fs afero.Fs) {
 				afero.WriteFile(fs, "test/copilot/.workspace", []byte(mockContent), 0644)
 				afero.WriteFile(fs, "copilot/prod/manifest.yaml", []byte(mockContent), 0644)
@@ -48,9 +48,9 @@ func Test_Upload(t *testing.T) {
 			expectedFiles: []string{"test/copilot/.workspace"},
 		},
 		"success with both include and exclude": {
-			inSource:   "./",
-			inExcludes: []string{"copilot/prod/*.yaml"},
-			inIncludes: []string{"copilot/prod/manifest.yaml"},
+			inSource:     "./",
+			inExcludes:   []string{"copilot/prod/*.yaml"},
+			inReincludes: []string{"copilot/prod/manifest.yaml"},
 			mockFileSystem: func(fs afero.Fs) {
 				afero.WriteFile(fs, "test/copilot/.workspace", []byte(mockContent), 0644)
 				afero.WriteFile(fs, "copilot/prod/manifest.yaml", []byte(mockContent), 0644)
@@ -67,8 +67,8 @@ func Test_Upload(t *testing.T) {
 			tc.mockFileSystem(fs)
 
 			files, err := Upload(&afero.Afero{Fs: fs}, tc.inSource, "", &UploadOpts{
-				Excludes: tc.inExcludes,
-				Includes: tc.inIncludes,
+				Excludes:   tc.inExcludes,
+				Reincludes: tc.inReincludes,
 			})
 			if tc.expectedError == nil {
 				require.NoError(t, err)

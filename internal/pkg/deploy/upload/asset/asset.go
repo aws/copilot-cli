@@ -17,14 +17,14 @@ import (
 type UploadFunc func(dest string, contents io.Reader) (url string, err error)
 
 type UploadOpts struct {
-	Includes []string   // Relative path under source to include back files that are excluded in the upload.
-	Excludes []string   // Relative path under source to exclude in the upload.
-	UploadFn UploadFunc // Custom implementation on how to upload the contents under a file. Defaults to S3UploadFn.
+	Reincludes []string   // Relative path under source to reinclude files that are excluded in the upload.
+	Excludes   []string   // Relative path under source to exclude in the upload.
+	UploadFn   UploadFunc // Custom implementation on how to upload the contents under a file. Defaults to S3UploadFn.
 }
 
 // Upload uploads static assets to Cloud Storage.
 func Upload(fs afero.Fs, source, destination string, opts *UploadOpts) ([]string, error) {
-	matcher := buildCompositeMatchers(buildIncludeMatchers(opts.Includes), buildExcludeMatchers(opts.Excludes))
+	matcher := buildCompositeMatchers(buildReincludeMatchers(opts.Reincludes), buildExcludeMatchers(opts.Excludes))
 	var paths []string
 	pathsPtr := &paths
 	if err := afero.Walk(fs, source, walkFnWithMatcher(pathsPtr, matcher)); err != nil {
@@ -57,17 +57,17 @@ type filepathMatcher interface {
 	match(path string) (bool, error)
 }
 
-type includeMatcher string
+type reincludeMatcher string
 
-func buildIncludeMatchers(includes []string) []filepathMatcher {
+func buildReincludeMatchers(reincludes []string) []filepathMatcher {
 	var matchers []filepathMatcher
-	for _, include := range includes {
-		matchers = append(matchers, includeMatcher(include))
+	for _, reinclude := range reincludes {
+		matchers = append(matchers, reincludeMatcher(reinclude))
 	}
 	return matchers
 }
 
-func (m includeMatcher) match(path string) (bool, error) {
+func (m reincludeMatcher) match(path string) (bool, error) {
 	return match(string(m), path)
 }
 
@@ -85,25 +85,39 @@ func (m excludeMatcher) match(path string) (bool, error) {
 	return match(string(m), path)
 }
 
-// compositeMatcher is a composite matcher consisting of include matchers and exclude matchers.
-// Note that exclude matchers will be applied before include matchers.
-type compositeMatcher []filepathMatcher
+// compositeMatcher is a composite matcher consisting of reinclude matchers and exclude matchers.
+// Note that exclude matchers will be applied before reinclude matchers.
+type compositeMatcher struct {
+	reincludeMatchers []filepathMatcher
+	excludeMatchers   []filepathMatcher
+}
 
-func buildCompositeMatchers(includeMatchers, excludeMatchers []filepathMatcher) compositeMatcher {
-	return append(excludeMatchers, includeMatchers...)
+func buildCompositeMatchers(reincludeMatchers, excludeMatchers []filepathMatcher) compositeMatcher {
+	return compositeMatcher{
+		reincludeMatchers: reincludeMatchers,
+		excludeMatchers:   excludeMatchers,
+	}
 }
 
 func (m compositeMatcher) match(path string) (bool, error) {
 	shouldInclude := true
-	for _, matcher := range m {
+	for _, matcher := range m.excludeMatchers {
 		isMatch, err := matcher.match(path)
 		if err != nil {
 			return false, err
 		}
-		if !isMatch {
-			continue
+		if isMatch {
+			shouldInclude = false
 		}
-		_, shouldInclude = matcher.(includeMatcher)
+	}
+	for _, matcher := range m.reincludeMatchers {
+		isMatch, err := matcher.match(path)
+		if err != nil {
+			return false, err
+		}
+		if isMatch {
+			shouldInclude = true
+		}
 	}
 	return shouldInclude, nil
 }
