@@ -249,13 +249,12 @@ func (o *initStorageOpts) validateServerlessVersion() error {
 
 // Ask asks for fields that are required but not passed in.
 func (o *initStorageOpts) Ask() error {
-	if err := o.validateOrAskStorageWl(); err != nil {
-		return err
-	}
 	if err := o.validateOrAskStorageType(); err != nil {
 		return err
 	}
-
+	if err := o.validateOrAskStorageWl(); err != nil {
+		return err
+	}
 	// Storage name needs to be asked after workload because for Aurora the default storage name uses the workload name.
 	if err := o.validateOrAskStorageName(); err != nil {
 		return err

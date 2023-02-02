@@ -152,10 +152,8 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 		"invalid storage type": {
 			inStorageType: "box",
 			inSvcName:     "frontend",
-			mock: func(m *mockStorageInitAsk) {
-				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil).AnyTimes()
-			},
-			wantedErr: errors.New(`invalid storage type box: must be one of "DynamoDB", "S3", "Aurora"`),
+			mock:          func(m *mockStorageInitAsk) {},
+			wantedErr:     errors.New(`invalid storage type box: must be one of "DynamoDB", "S3", "Aurora"`),
 		},
 		"asks for storage type": {
 			inSvcName:     wantedSvcName,
@@ -175,7 +173,6 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			inStorageName: wantedBucketName,
 
 			mock: func(m *mockStorageInitAsk) {
-				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil).AnyTimes()
 				m.prompt.EXPECT().SelectOption(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("", errors.New("some error"))
 			},
 			wantedErr: fmt.Errorf("select storage type: some error"),
