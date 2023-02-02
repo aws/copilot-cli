@@ -351,6 +351,14 @@ func TestStorageInitOpts_AskDDB(t *testing.T) {
 			},
 			wantedErr: errValueBadFormatWithPeriodUnderscore,
 		},
+		"invalid partition key": {
+			inStorageName: wantedTableName,
+			inPartition:   "bipartite",
+			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+			},
+			wantedErr: errors.New("validate partition key: value must be of the form <name>:<T> where T is one of S, N, or B"),
+		},
 		"asks for partition key if not specified": {
 			inStorageName: wantedTableName,
 			inSort:        wantedSortKey,
@@ -402,6 +410,15 @@ func TestStorageInitOpts_AskDDB(t *testing.T) {
 				).Return("", errors.New("some error"))
 			},
 			wantedErr: fmt.Errorf("get DDB partition key datatype: some error"),
+		},
+		"invalid sort key": {
+			inStorageName: wantedTableName,
+			inPartition:   wantedSortKey,
+			inSort:        "allsortofstuff",
+			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+			},
+			wantedErr: errors.New("validate sort key: value must be of the form <name>:<T> where T is one of S, N, or B"),
 		},
 		"ask for sort key if not specified": {
 			inStorageName: wantedTableName,

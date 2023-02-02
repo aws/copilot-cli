@@ -426,7 +426,10 @@ func (o *initStorageOpts) validateOrAskStorageWl() error {
 
 func (o *initStorageOpts) validateOrAskDynamoPartitionKey() error {
 	if o.partitionKey != "" {
-		return validateKey(o.partitionKey)
+		if err := validateKey(o.partitionKey); err != nil {
+			return fmt.Errorf("validate partition key: %w", err)
+		}
+		return nil
 	}
 	keyPrompt := fmt.Sprintf(fmtStorageInitDDBKeyPrompt,
 		color.HighlightUserInput("partition key"),
@@ -459,7 +462,10 @@ func (o *initStorageOpts) validateOrAskDynamoPartitionKey() error {
 
 func (o *initStorageOpts) validateOrAskDynamoSortKey() error {
 	if o.sortKey != "" {
-		return validateKey(o.sortKey)
+		if err := validateKey(o.sortKey); err != nil {
+			return fmt.Errorf("validate sort key: %w", err)
+		}
+		return nil
 	}
 	// If the user has not specified a sort key and has specified the --no-sort flag we don't have to demand it of them.
 	if o.noSort {
