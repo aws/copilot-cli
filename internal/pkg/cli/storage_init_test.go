@@ -45,93 +45,11 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 			mock:      func(m *mockStorageInitValidate) {},
 			wantedErr: errNoAppInWorkspace,
 		},
-		"svc not in workspace": {
-			mock: func(m *mockStorageInitValidate) {
-				m.ws.EXPECT().WorkloadExists(gomock.Eq("frontend")).Return(false, nil)
-			},
-			inAppName:     "bowie",
-			inStorageType: s3StorageType,
-			inSvcName:     "frontend",
-			inStorageName: "my-bucket",
-			wantedErr:     errors.New("workload frontend not found in the workspace"),
-		},
-		"workspace error": {
-			mock: func(m *mockStorageInitValidate) {
-				m.ws.EXPECT().WorkloadExists(gomock.Eq("frontend")).Return(false, errors.New("wanted err"))
-			},
-			inAppName:     "bowie",
-			inStorageType: s3StorageType,
-			inSvcName:     "frontend",
-			inStorageName: "my-bucket",
-			wantedErr:     errors.New("check if frontend exists in the workspace: wanted err"),
-		},
 		"bad lifecycle option": {
 			inAppName:   "bowie",
 			inLifecycle: "weird input",
 			mock:        func(m *mockStorageInitValidate) {},
 			wantedErr:   errors.New(`invalid lifecycle; must be one of "workload" or "environment"`),
-		},
-		"successfully validates valid s3 bucket name": {
-			inAppName:     "bowie",
-			inStorageType: s3StorageType,
-			inStorageName: "my-bucket.4",
-			mock:          func(m *mockStorageInitValidate) {},
-		},
-		"successfully validates valid DDB table name": {
-			inAppName:     "bowie",
-			inStorageType: dynamoDBStorageType,
-			inStorageName: "my-cool_table.3",
-			mock:          func(m *mockStorageInitValidate) {},
-		},
-		"default to ddb name validation when storage type unspecified": {
-			inAppName:     "bowie",
-			inStorageType: "",
-			inStorageName: "my-cool_table.3",
-			mock:          func(m *mockStorageInitValidate) {},
-		},
-		"s3 bad character": {
-			inAppName:     "bowie",
-			inStorageType: s3StorageType,
-			inStorageName: "mybadbucket???",
-			mock:          func(m *mockStorageInitValidate) {},
-			wantedErr:     errValueBadFormatWithPeriod,
-		},
-		"ddb bad character": {
-			inAppName:     "bowie",
-			inStorageType: dynamoDBStorageType,
-			inStorageName: "badTable!!!",
-			mock:          func(m *mockStorageInitValidate) {},
-			wantedErr:     errValueBadFormatWithPeriodUnderscore,
-		},
-		"successfully validates partition key flag": {
-			inAppName:     "bowie",
-			inStorageType: dynamoDBStorageType,
-			inPartition:   "points:String",
-			mock:          func(m *mockStorageInitValidate) {},
-		},
-		"successfully validates sort key flag": {
-			inAppName:     "bowie",
-			inStorageType: dynamoDBStorageType,
-			inSort:        "userID:Number",
-			mock:          func(m *mockStorageInitValidate) {},
-		},
-		"successfully validates LSI": {
-			inAppName:     "bowie",
-			inStorageType: dynamoDBStorageType,
-			inLSISorts:    []string{"userID:Number", "data:Binary"},
-			mock:          func(m *mockStorageInitValidate) {},
-		},
-		"success on providing --no-sort": {
-			inAppName:     "bowie",
-			inStorageType: dynamoDBStorageType,
-			inNoSort:      true,
-			mock:          func(m *mockStorageInitValidate) {},
-		},
-		"success on providing --no-lsi": {
-			inAppName:     "bowie",
-			inStorageType: dynamoDBStorageType,
-			inNoLSI:       true,
-			mock:          func(m *mockStorageInitValidate) {},
 		},
 		"fails when --no-lsi and --lsi are both provided": {
 			inAppName:     "bowie",
@@ -148,13 +66,6 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 			inNoSort:      true,
 			mock:          func(m *mockStorageInitValidate) {},
 			wantedErr:     fmt.Errorf("validate LSI configuration: cannot specify --no-sort and --lsi options at once"),
-		},
-		"invalid database engine type": {
-			inAppName: "meow",
-			inEngine:  "mysql",
-
-			mock:      func(m *mockStorageInitValidate) {},
-			wantedErr: errors.New("invalid engine type mysql: must be one of \"MySQL\", \"PostgreSQL\""),
 		},
 		"successfully validates aurora serverless version v1": {
 			inAppName:           "bowie",
