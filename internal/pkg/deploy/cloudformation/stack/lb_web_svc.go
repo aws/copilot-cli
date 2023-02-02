@@ -207,6 +207,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
+
 	// Set container-level feature flag.
 	logConfig := convertLogging(s.manifest.Logging)
 	content, err := s.parser.ParseLoadBalancedWebService(template.WorkloadOpts{
@@ -253,8 +254,8 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		HTTPSListener:       s.httpsEnabled,
 		HTTPRedirect:        httpRedirect,
 		HTTPTargetContainer: template.HTTPTargetContainer{
-			Port: aws.StringValue(targetContainerPort),
-			Name: aws.StringValue(targetContainer),
+			Port: targetContainerPort,
+			Name: targetContainer,
 		},
 		HTTPHealthCheck: convertHTTPHealthCheck(&s.manifest.RoutingRule.HealthCheck),
 		HTTPVersion:     convertHTTPVersion(s.manifest.RoutingRule.ProtocolVersion),
@@ -295,7 +296,13 @@ func (s *LoadBalancedWebService) Parameters() ([]*cloudformation.Parameter, erro
 	if err != nil {
 		return nil, err
 	}
-	targetContainer, targetPort, err := s.manifest.HTTPLoadBalancerTarget()
+	var targetContainer, targetPort string
+
+	targetContainer, targetPort, err = s.manifest.HTTPLoadBalancerTarget()
+	if err != nil {
+		return nil, err
+	}
+
 	if err != nil {
 		return nil, err
 	}
@@ -310,11 +317,11 @@ func (s *LoadBalancedWebService) Parameters() ([]*cloudformation.Parameter, erro
 		},
 		{
 			ParameterKey:   aws.String(WorkloadTargetContainerParamKey),
-			ParameterValue: targetContainer,
+			ParameterValue: aws.String(targetContainer),
 		},
 		{
 			ParameterKey:   aws.String(WorkloadTargetPortParamKey),
-			ParameterValue: targetPort,
+			ParameterValue: aws.String(targetPort),
 		},
 		{
 			ParameterKey:   aws.String(WorkloadEnvFileARNParamKey),

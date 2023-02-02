@@ -577,14 +577,15 @@ func sortExposedPorts(exposedPorts []ExposedPort) []ExposedPort {
 }
 
 // HTTPLoadBalancerTarget returns target container and target port for the ALB configuration.
-func (s *LoadBalancedWebService) HTTPLoadBalancerTarget() (targetContainer *string, targetPort *string, err error) {
+// This method should be called only when ALB config is not empty.
+func (s *LoadBalancedWebService) HTTPLoadBalancerTarget() (targetContainer string, targetPort string, err error) {
 	exposedPorts, err := s.ExposedPorts()
 	if err != nil {
-		return nil, nil, err
+		return "", "", err
 	}
 	// Route load balancer traffic to main container by default.
-	targetContainer = s.Name
-	targetPort = aws.String(s.MainContainerPort())
+	targetContainer = aws.StringValue(s.Name)
+	targetPort = s.MainContainerPort()
 
 	rrTargetContainer := s.RoutingRule.TargetContainer
 	rrTargetPort := s.RoutingRule.TargetPort
@@ -592,39 +593,41 @@ func (s *LoadBalancedWebService) HTTPLoadBalancerTarget() (targetContainer *stri
 		return
 	}
 
-	if rrTargetPort == nil {
+	if rrTargetPort == nil { // when target_port is nil
 		if rrTargetContainer != s.Name {
-			targetContainer = rrTargetContainer
-			targetPort = s.Sidecars[aws.StringValue(rrTargetContainer)].Port
+			targetContainer = aws.StringValue(rrTargetContainer)
+			targetPort = aws.StringValue(s.Sidecars[aws.StringValue(rrTargetContainer)].Port)
 		}
 		return
 	}
 
-	if rrTargetContainer == nil {
+	if rrTargetContainer == nil { // when target_container is nil
 		container, port := httpLoadBalancerTarget(exposedPorts, rrTargetPort)
-		targetPort = port
+		targetPort = aws.StringValue(port)
 		if container != nil {
-			targetContainer = container
+			targetContainer = aws.StringValue(container)
 		}
 		return
 	}
 
-	targetContainer = rrTargetContainer
-	targetPort = aws.String(template.StrconvUint16(aws.Uint16Value(rrTargetPort)))
+	// when both target_port and target_container are not nil
+	targetContainer = aws.StringValue(rrTargetContainer)
+	targetPort = template.StrconvUint16(aws.Uint16Value(rrTargetPort))
 
 	return
 }
 
 // HTTPLoadBalancerTarget returns target container and target port for the ALB configuration.
-func (s *BackendService) HTTPLoadBalancerTarget() (targetContainer *string, targetPort *string, err error) {
+// This method should be called only when ALB config is not empty.
+func (s *BackendService) HTTPLoadBalancerTarget() (targetContainer string, targetPort string, err error) {
 	exposedPorts, err := s.ExposedPorts()
 	if err != nil {
-		return nil, nil, err
+		return "", "", err
 	}
 
 	// Route load balancer traffic to main container by default.
-	targetContainer = s.Name
-	targetPort = aws.String(s.MainContainerPort())
+	targetContainer = aws.StringValue(s.Name)
+	targetPort = s.MainContainerPort()
 
 	rrTargetContainer := s.RoutingRule.TargetContainer
 	rrTargetPort := s.RoutingRule.TargetPort
@@ -632,25 +635,26 @@ func (s *BackendService) HTTPLoadBalancerTarget() (targetContainer *string, targ
 		return
 	}
 
-	if rrTargetPort == nil {
+	if rrTargetPort == nil { // when target_port is nil
 		if rrTargetContainer != s.Name {
-			targetContainer = rrTargetContainer
-			targetPort = s.Sidecars[aws.StringValue(rrTargetContainer)].Port
+			targetContainer = aws.StringValue(rrTargetContainer)
+			targetPort = aws.StringValue(s.Sidecars[aws.StringValue(rrTargetContainer)].Port)
 		}
 		return
 	}
 
-	if rrTargetContainer == nil {
+	if rrTargetContainer == nil { // when target_container is nil
 		container, port := httpLoadBalancerTarget(exposedPorts, rrTargetPort)
-		targetPort = port
+		targetPort = aws.StringValue(port)
 		if container != nil {
-			targetContainer = container
+			targetContainer = aws.StringValue(container)
 		}
 		return
 	}
 
-	targetContainer = rrTargetContainer
-	targetPort = aws.String(template.StrconvUint16(aws.Uint16Value(rrTargetPort)))
+	// when both target_port and target_container are not nil
+	targetContainer = aws.StringValue(rrTargetContainer)
+	targetPort = template.StrconvUint16(aws.Uint16Value(rrTargetPort))
 	return
 }
 

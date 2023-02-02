@@ -193,8 +193,8 @@ func (s *BackendService) Template() (string, error) {
 		HTTPSListener:       s.httpsEnabled,
 		HTTPRedirect:        s.httpsEnabled,
 		HTTPTargetContainer: template.HTTPTargetContainer{
-			Port: aws.StringValue(targetContainerPort),
-			Name: aws.StringValue(targetContainer),
+			Port: targetContainerPort,
+			Name: targetContainer,
 		},
 		HTTPHealthCheck: convertHTTPHealthCheck(&s.manifest.RoutingRule.HealthCheck),
 		HTTPVersion:     convertHTTPVersion(s.manifest.RoutingRule.ProtocolVersion),
@@ -230,7 +230,6 @@ func (s *BackendService) Parameters() ([]*cloudformation.Parameter, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	targetContainer, targetPort, err := s.manifest.HTTPLoadBalancerTarget()
 	if err != nil {
 		return nil, err
@@ -246,11 +245,11 @@ func (s *BackendService) Parameters() ([]*cloudformation.Parameter, error) {
 		},
 		{
 			ParameterKey:   aws.String(WorkloadTargetContainerParamKey),
-			ParameterValue: targetContainer,
+			ParameterValue: aws.String(targetContainer),
 		},
 		{
 			ParameterKey:   aws.String(WorkloadTargetPortParamKey),
-			ParameterValue: targetPort,
+			ParameterValue: aws.String(targetPort),
 		},
 	}...)
 
