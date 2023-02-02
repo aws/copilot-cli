@@ -233,6 +233,14 @@ func (o *initStorageOpts) Validate() error {
 			return err
 		}
 	}
+	// --no-lsi and --lsi are mutually exclusive.
+	if o.noLSI && len(o.lsiSorts) != 0 {
+		return fmt.Errorf("validate LSI configuration: cannot specify --no-lsi and --lsi options at once")
+	}
+	// --no-sort and --lsi are mutually exclusive.
+	if o.noSort && len(o.lsiSorts) != 0 {
+		return fmt.Errorf("validate LSI configuration: cannot specify --no-sort and --lsi options at once")
+	}
 	if o.auroraServerlessVersion != "" {
 		if err := o.validateServerlessVersion(); err != nil {
 			return err
@@ -495,9 +503,6 @@ func (o *initStorageOpts) validateOrAskDynamoSortKey() error {
 }
 
 func (o *initStorageOpts) validateOrAskDynamoLSIConfig() error {
-	if o.noSort && len(o.lsiSorts) > 0 {
-		return fmt.Errorf("validate LSI configuration: cannot specify --no-sort and --lsi options at once")
-	}
 	// LSI has already been specified by flags.
 	if len(o.lsiSorts) > 0 {
 		return validateLSIs(o.lsiSorts)
