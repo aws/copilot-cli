@@ -125,9 +125,10 @@ VPC にパブリックサブネットとプライベートサブネットを設�
 network:
   vpc:
     id: 'vpc-12345'
-    public:
-      - id: 'subnet-11111'
-      - id: 'subnet-22222'
+    subnets:
+      public:
+        - id: 'subnet-11111'
+        - id: 'subnet-22222'
 ```
 または、Copilot で生成された VPC を構成する場合は、以下のようにします。
 ```yaml
@@ -228,9 +229,21 @@ cdn:
   certificate: "arn:aws:acm:us-east-1:1234567890:certificate/e5a6e114-b022-45b1-9339-38fbfd6db3e2"
 ```
 
+<span class="parent-field">cdn.</span><a id="cdn-static-assets" href="#cdn-static-assets" class="field">`static_assets`</a> <span class="type">Map</span>  
+任意項目。CloudFront の静的アセットに関する設定。
+
+<span class="parent-field">cdn.static_assets.</span><a id="cdn-static-assets-alias" href="#cdn-static-assets-alias" class="field">`alias`</a> <span class="type">String</span>  
+静的アセットに使用する追加の HTTPS ドメインエイリアス。
+
+<span class="parent-field">cdn.static_assets.</span><a id="cdn-static-assets-location" href="#cdn-static-assets-location" class="field">`location`</a> <span class="type">String</span>  
+S3バケットのDNSドメイン名。(例: `EXAMPLE-BUCKET.s3.us-west-2.amazonaws.com`)
+
+<span class="parent-field">cdn.static_assets.</span><a id="cdn-static-assets-path" href="#cdn-static-assets-path" class="field">`path`</a> <span class="type">String</span>  
+The path pattern (for example, `statics/*`) that specifies which requests should be forwarded to the S3 bucket.
+S3 バケットに転送するリクエストを指定するパスパターン。(例: `statics/*`)
+
 <span class="parent-field">cdn.</span><a id="cdn-tls-termination" href="#cdn-tls-termination" class="field">`terminate_tls`</a> <span class="type">Boolean</span>
 CloudFront での TLS ターミネーションを有効化します。
-
 
 <div class="separator"></div>
 
@@ -324,7 +337,7 @@ http:
 http:
   private:
     ingress:
-      vpc: true  # Enable incoming traffic within the VPC to the internal load balancer.
+      vpc: true  # VPC 内のトラフィックを内部ロードバランサーで受信できるようにします。
 ```
 ???- note "<span class="faint"> "http.private.ingress"  は、以前は "http.private.security_groups.ingress" でした</span>"
     このフィールドは、 [v1.23.0](../../blogs/release-v123.ja.md) までは、 `http.private.security_groups.ingress` でした。
@@ -335,7 +348,7 @@ http:
 VPC 内から内部ロードバランサーへのトラフィックを有効にするかどうか。
 
 <span class="parent-field">http.private.</span><a id="http-private-sslpolicy" href="#http-private-sslpolicy" class="field">`ssl_policy`</a> <span class="type">String</span>
-任意項目。 内部ロードバランサーの HTTPS リスナーに対する SSL ポリシーを指定します。
+任意項目。内部ロードバランサーの HTTPS リスナーに対する SSL ポリシーを指定します。
 
 <div class="separator"></div>
 

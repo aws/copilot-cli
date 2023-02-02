@@ -45,6 +45,7 @@ type deployEnvOpts struct {
 	sel wsEnvironmentSelector
 
 	// Dependencies to execute.
+	fs              afero.Fs
 	ws              wsEnvironmentReader
 	identity        identityService
 	newInterpolator func(app, env string) interpolator
@@ -62,7 +63,8 @@ func newEnvDeployOpts(vars deployEnvVars) (*deployEnvOpts, error) {
 		return nil, err
 	}
 	store := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
-	ws, err := workspace.Use(afero.NewOsFs())
+	fs := afero.NewOsFs()
+	ws, err := workspace.Use(fs)
 	if err != nil {
 		return nil, err
 	}
@@ -73,6 +75,7 @@ func newEnvDeployOpts(vars deployEnvVars) (*deployEnvOpts, error) {
 		sessionProvider: sessProvider,
 		sel:             selector.NewLocalEnvironmentSelector(prompt.New(), store, ws),
 
+		fs:              fs,
 		ws:              ws,
 		identity:        identity.New(defaultSess),
 		newInterpolator: newManifestInterpolator,
@@ -92,12 +95,17 @@ func newEnvDeployer(opts *deployEnvOpts, ws deploy.WorkspaceAddonsReaderPathGett
 	if err != nil {
 		return nil, err
 	}
+	ovrdr, err := deploy.NewOverrider(opts.ws.EnvOverridesPath(), env.App, env.Name, opts.fs, opts.sessionProvider)
+	if err != nil {
+		return nil, err
+	}
 	return deploy.NewEnvDeployer(&deploy.NewEnvDeployerInput{
 		App:             app,
 		Env:             env,
 		SessionProvider: opts.sessionProvider,
 		ConfigStore:     opts.store,
 		Workspace:       ws,
+		Overrider:       ovrdr,
 	})
 }
 

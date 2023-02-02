@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
+	"github.com/dustin/go-humanize/english"
 
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -26,6 +27,13 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
+
+const (
+	lifecycleEnvironmentLevel = "environment"
+	lifecycleWorkloadLevel    = "workload"
+)
+
+var validLifecycleOptions = []string{lifecycleWorkloadLevel, lifecycleEnvironmentLevel}
 
 const (
 	dynamoDBStorageType = "DynamoDB"
@@ -85,7 +93,7 @@ Aurora Serverless is an on-demand autoscaling configuration for Amazon Aurora, a
 	fmtStorageInitNamePrompt = "What would you like to " + color.Emphasize("name") + " this %s?"
 	storageInitNameHelp      = "The name of this storage resource. You can use the following characters: a-zA-Z0-9-_"
 
-	storageInitSvcPrompt = "Which " + color.Emphasize("workload") + " would you like to associate with this storage resource?"
+	storageInitSvcPrompt = "Which " + color.Emphasize("workload") + " needs access to the storage?"
 )
 
 // DDB-specific questions and help prompts.
@@ -152,12 +160,11 @@ var engineTypes = []string{
 	engineTypePostgreSQL,
 }
 
-var errUnavailableAddonParams = errors.New("addon does not require parameters")
-
 type initStorageVars struct {
 	storageType  string
 	storageName  string
 	workloadName string
+	lifecycle    string
 
 	// Dynamo DB specific values collected via flags or prompts
 	partitionKey string
@@ -185,7 +192,8 @@ type initStorageOpts struct {
 	prompt prompter
 
 	// Cached data.
-	workloadType string
+	workloadType   string
+	workloadExists bool
 }
 
 func newStorageInitOpts(vars initStorageVars) (*initStorageOpts, error) {
@@ -215,6 +223,7 @@ func newStorageInitOpts(vars initStorageVars) (*initStorageOpts, error) {
 	}, nil
 }
 
+// Validate returns an error if the values passed by flags are invalid.
 func (o *initStorageOpts) Validate() error {
 	if o.appName == "" {
 		return errNoAppInWorkspace
@@ -249,19 +258,61 @@ func (o *initStorageOpts) Validate() error {
 	if err := o.validateDDB(); err != nil {
 		return err
 	}
-
+	if o.lifecycle != "" {
+		if err := o.validateStorageLifecycle(); err != nil {
+			return err
+		}
+	}
 	if o.auroraServerlessVersion != "" {
 		if err := o.validateServerlessVersion(); err != nil {
 			return err
 		}
 	}
-
 	if o.rdsEngine != "" {
 		if err := validateEngine(o.rdsEngine); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+func (o *initStorageOpts) validateWorkloadName() error {
+	exists, err := o.ws.WorkloadExists(o.workloadName)
+	if err != nil {
+		return fmt.Errorf("check if %s exists in the workspace: %w", o.workloadName, err)
+	}
+	o.workloadExists = exists
+	if !exists {
+		return fmt.Errorf("workload %s not found in the workspace", o.workloadName)
+	}
+	return nil
+}
+
+func (o *initStorageOpts) validateStorageType() error {
+	if err := validateStorageType(o.storageType, validateStorageTypeOpts{
+		ws:           o.ws,
+		workloadName: o.workloadName,
+	}); err != nil {
+		if errors.Is(err, errRDWSNotConnectedToVPC) {
+			log.Errorf(`Your %s needs to be connected to a VPC in order to use a %s resource.
+You can enable VPC connectivity by updating your manifest with:
+%s
+`, manifest.RequestDrivenWebServiceType, o.storageType, color.HighlightCodeBlock(`network:
+  vpc:
+    placement: private`))
+		}
+		return err
+	}
+	return nil
+}
+
+func (o *initStorageOpts) validateStorageLifecycle() error {
+	for _, valid := range validLifecycleOptions {
+		if o.lifecycle == valid {
+			return nil
+		}
+	}
+	return fmt.Errorf("invalid lifecycle; must be one of %s", english.OxfordWordSeries(quoteStringSlice(validLifecycleOptions), "or"))
 }
 
 func (o *initStorageOpts) validateDDB() error {
@@ -292,6 +343,17 @@ func (o *initStorageOpts) validateDDB() error {
 	return nil
 }
 
+func (o *initStorageOpts) validateServerlessVersion() error {
+	for _, valid := range auroraServerlessVersions {
+		if o.auroraServerlessVersion == valid {
+			return nil
+		}
+	}
+	fmtErrInvalidServerlessVersion := "invalid Aurora Serverless version %s: must be one of %s"
+	return fmt.Errorf(fmtErrInvalidServerlessVersion, o.auroraServerlessVersion, prettify(auroraServerlessVersions))
+}
+
+// Ask asks for fields that are required but not passed in.
 func (o *initStorageOpts) Ask() error {
 	if err := o.askStorageWl(); err != nil {
 		return err
@@ -347,39 +409,6 @@ func (o *initStorageOpts) askStorageType() error {
 	return o.validateStorageType()
 }
 
-func (o *initStorageOpts) validateStorageType() error {
-	if err := validateStorageType(o.storageType, validateStorageTypeOpts{
-		ws:           o.ws,
-		workloadName: o.workloadName,
-	}); err != nil {
-		if errors.Is(err, errRDWSNotConnectedToVPC) {
-			log.Errorf(`Your %s needs to be connected to a VPC in order to use a %s resource.
-You can enable VPC connectivity by updating your manifest with:
-%s
-`, manifest.RequestDrivenWebServiceType, o.storageType, color.HighlightCodeBlock(`network:
-  vpc:
-    placement: private`))
-		}
-		return err
-	}
-	return nil
-}
-
-func (o *initStorageOpts) askStorageNameWithDefault(friendlyText, defaultName string, validator func(interface{}) error) error {
-	name, err := o.prompt.Get(fmt.Sprintf(fmtStorageInitNamePrompt,
-		color.HighlightUserInput(friendlyText)),
-		storageInitNameHelp,
-		validator,
-		prompt.WithFinalMessage("Storage resource name:"),
-		prompt.WithDefaultInput(defaultName))
-
-	if err != nil {
-		return fmt.Errorf("input storage name: %w", err)
-	}
-	o.storageName = name
-	return nil
-}
-
 func (o *initStorageOpts) askStorageName() error {
 	if o.storageName != "" {
 		return nil
@@ -402,6 +431,21 @@ func (o *initStorageOpts) askStorageName() error {
 		storageInitNameHelp,
 		validator,
 		prompt.WithFinalMessage("Storage resource name:"))
+	if err != nil {
+		return fmt.Errorf("input storage name: %w", err)
+	}
+	o.storageName = name
+	return nil
+}
+
+func (o *initStorageOpts) askStorageNameWithDefault(friendlyText, defaultName string, validator func(interface{}) error) error {
+	name, err := o.prompt.Get(fmt.Sprintf(fmtStorageInitNamePrompt,
+		color.HighlightUserInput(friendlyText)),
+		storageInitNameHelp,
+		validator,
+		prompt.WithFinalMessage("Storage resource name:"),
+		prompt.WithDefaultInput(defaultName))
+
 	if err != nil {
 		return fmt.Errorf("input storage name: %w", err)
 	}
@@ -561,16 +605,6 @@ func (o *initStorageOpts) askDynamoLSIConfig() error {
 	}
 }
 
-func (o *initStorageOpts) validateServerlessVersion() error {
-	for _, valid := range auroraServerlessVersions {
-		if o.auroraServerlessVersion == valid {
-			return nil
-		}
-	}
-	fmtErrInvalidServerlessVersion := "invalid Aurora Serverless version %s: must be one of %s"
-	return fmt.Errorf(fmtErrInvalidServerlessVersion, o.auroraServerlessVersion, prettify(auroraServerlessVersions))
-}
-
 func (o *initStorageOpts) askAuroraEngineType() error {
 	if o.rdsEngine != "" {
 		return nil
@@ -613,30 +647,17 @@ func (o *initStorageOpts) askAuroraInitialDBName() error {
 	return nil
 }
 
-func (o *initStorageOpts) validateWorkloadName() error {
-	names, err := o.ws.ListWorkloads()
-	if err != nil {
-		return fmt.Errorf("retrieve local workload names: %w", err)
-	}
-	for _, name := range names {
-		if o.workloadName == name {
-			return nil
-		}
-	}
-	return fmt.Errorf("workload %s not found in the workspace", o.workloadName)
-}
-
+// Execute deploys a new environment with CloudFormation and adds it to SSM.
 func (o *initStorageOpts) Execute() error {
 	if err := o.readWorkloadType(); err != nil {
 		return err
 	}
-
 	addonBlobs, err := o.addonBlobs()
 	if err != nil {
 		return err
 	}
 	for _, addon := range addonBlobs {
-		path, err := o.ws.WriteAddon(addon.blob, o.workloadName, addon.name)
+		path, err := o.ws.Write(addon.blob, addon.path)
 		if err != nil {
 			e, ok := err.(*workspace.ErrFileExists)
 			if !ok {
@@ -654,66 +675,85 @@ func (o *initStorageOpts) Execute() error {
 	return nil
 }
 
+func (o *initStorageOpts) readWorkloadType() error {
+	mft, err := o.ws.ReadWorkloadManifest(o.workloadName)
+	if err != nil {
+		return fmt.Errorf("read manifest for %s: %w", o.workloadName, err)
+	}
+	t, err := mft.WorkloadType()
+	if err != nil {
+		return fmt.Errorf("read 'type' from manifest for %s: %w", o.workloadName, err)
+	}
+	o.workloadType = t
+	return nil
+}
+
 type addonBlob struct {
-	name        string
+	path        string
 	description string
 	blob        encoding.BinaryMarshaler
 }
 
 func (o *initStorageOpts) addonBlobs() ([]addonBlob, error) {
-	templateBlob, err := o.newAddonTemplate()
+	type option struct {
+		lifecycle   string
+		storageType string
+	}
+	selection := option{o.lifecycle, o.storageType}
+	switch selection {
+	case option{lifecycleWorkloadLevel, s3StorageType}:
+		return o.wkldS3AddonBlobs()
+	case option{lifecycleWorkloadLevel, dynamoDBStorageType}:
+		return o.wkldDDBAddonBlobs()
+	case option{lifecycleWorkloadLevel, rdsStorageType}:
+		return o.wkldRDSAddonBlobs()
+	case option{lifecycleEnvironmentLevel, s3StorageType}:
+		return o.envS3AddonBlobs()
+	case option{lifecycleEnvironmentLevel, dynamoDBStorageType}:
+		return o.envDDBAddonBlobs()
+	case option{lifecycleEnvironmentLevel, rdsStorageType}:
+		return o.envRDSAddonBlobs()
+	}
+	return nil, fmt.Errorf("storage type %s is not supported yet", o.storageType)
+}
+
+func (o *initStorageOpts) wkldDDBAddonBlobs() ([]addonBlob, error) {
+	props, err := o.ddbProps()
+	if err != nil {
+		return nil, err
+	}
+	return []addonBlob{
+		{
+			path:        o.ws.WorkloadAddonFilePath(o.workloadName, fmt.Sprintf("%s.yml", o.storageName)),
+			description: "template",
+			blob:        addon.WorkloadDDBTemplate(props),
+		},
+	}, nil
+}
+
+func (o *initStorageOpts) envDDBAddonBlobs() ([]addonBlob, error) {
+	props, err := o.ddbProps()
 	if err != nil {
 		return nil, err
 	}
 	blobs := []addonBlob{
 		{
-			name:        o.storageName,
+			path:        o.ws.EnvAddonFilePath(fmt.Sprintf("%s.yml", o.storageName)),
 			description: "template",
-			blob:        templateBlob,
+			blob:        addon.EnvDDBTemplate(props),
 		},
 	}
-	paramsBlob, err := o.newAddonParams()
-	if err != nil {
-		if errors.Is(err, errUnavailableAddonParams) { // The addon does not need any parameters.
-			return blobs, nil
-		}
-		return nil, err
+	if !o.workloadExists {
+		return blobs, nil
 	}
 	return append(blobs, addonBlob{
-		name:        "addons.parameters",
-		description: "parameters",
-		blob:        paramsBlob,
+		path:        o.ws.WorkloadAddonFilePath(o.workloadName, fmt.Sprintf("%s-access-policy.yml", o.storageName)),
+		description: "template",
+		blob:        addon.EnvDDBAccessPolicyTemplate(props),
 	}), nil
 }
 
-func (o *initStorageOpts) newAddonTemplate() (encoding.BinaryMarshaler, error) {
-	var templateBlob encoding.BinaryMarshaler
-	err := fmt.Errorf("storage type %s doesn't have a CF template", o.storageType)
-	switch o.storageType {
-	case dynamoDBStorageType:
-		templateBlob, err = o.newDDBTemplate()
-	case s3StorageType:
-		templateBlob, err = o.newS3Template()
-	case rdsStorageType:
-		templateBlob, err = o.newRDSTemplate()
-	}
-	if err != nil {
-		return nil, err
-	}
-	return templateBlob, nil
-}
-
-func (o *initStorageOpts) newAddonParams() (encoding.BinaryMarshaler, error) {
-	if o.storageType != rdsStorageType {
-		return nil, errUnavailableAddonParams
-	}
-	if o.workloadType != manifest.RequestDrivenWebServiceType {
-		return nil, errUnavailableAddonParams
-	}
-	return addon.NewRDSParams(), nil
-}
-
-func (o *initStorageOpts) newDDBTemplate() (*addon.DynamoDBTemplate, error) {
+func (o *initStorageOpts) ddbProps() (*addon.DynamoDBProps, error) {
 	props := addon.DynamoDBProps{
 		StorageProps: &addon.StorageProps{
 			Name: o.storageName,
@@ -735,20 +775,112 @@ func (o *initStorageOpts) newDDBTemplate() (*addon.DynamoDBTemplate, error) {
 			return nil, err
 		}
 	}
-
-	return addon.NewDDBTemplate(&props), nil
+	return &props, nil
 }
 
-func (o *initStorageOpts) newS3Template() (*addon.S3Template, error) {
-	props := &addon.S3Props{
+func (o *initStorageOpts) wkldS3AddonBlobs() ([]addonBlob, error) {
+	return []addonBlob{
+		{
+			path:        o.ws.WorkloadAddonFilePath(o.workloadName, fmt.Sprintf("%s.yml", o.storageName)),
+			description: "template",
+			blob:        addon.WorkloadS3Template(o.s3Props()),
+		},
+	}, nil
+}
+
+func (o *initStorageOpts) envS3AddonBlobs() ([]addonBlob, error) {
+	props := o.s3Props()
+	blobs := []addonBlob{
+		{
+			path:        o.ws.EnvAddonFilePath(fmt.Sprintf("%s.yml", o.storageName)),
+			description: "template",
+			blob:        addon.EnvS3Template(props),
+		},
+	}
+	if !o.workloadExists {
+		return blobs, nil
+
+	}
+	return append(blobs, addonBlob{
+		path:        o.ws.WorkloadAddonFilePath(o.workloadName, fmt.Sprintf("%s-access-policy.yml", o.storageName)),
+		description: "template",
+		blob:        addon.EnvS3AccessPolicyTemplate(props),
+	}), nil
+}
+
+func (o *initStorageOpts) s3Props() *addon.S3Props {
+	return &addon.S3Props{
 		StorageProps: &addon.StorageProps{
 			Name: o.storageName,
 		},
 	}
-	return addon.NewS3Template(props), nil
 }
 
-func (o *initStorageOpts) newRDSTemplate() (*addon.RDSTemplate, error) {
+func (o *initStorageOpts) wkldRDSAddonBlobs() ([]addonBlob, error) {
+	props, err := o.rdsProps()
+	if err != nil {
+		return nil, err
+	}
+	var blobs []addonBlob
+	var tmplBlob encoding.BinaryMarshaler
+	switch v := o.auroraServerlessVersion; v {
+	case auroraServerlessVersionV1:
+		tmplBlob = addon.WorkloadServerlessV1Template(props)
+	case auroraServerlessVersionV2:
+		tmplBlob = addon.WorkloadServerlessV2Template(props)
+	default:
+		return nil, fmt.Errorf("unknown Aurora serverless version %q", v)
+	}
+	blobs = append(blobs, addonBlob{
+		path:        o.ws.WorkloadAddonFilePath(o.workloadName, fmt.Sprintf("%s.yml", o.storageName)),
+		description: "template",
+		blob:        tmplBlob,
+	})
+	if o.workloadType != manifest.RequestDrivenWebServiceType {
+		return blobs, nil
+	}
+	return append(blobs, addonBlob{
+		path:        o.ws.WorkloadAddonFilePath(o.workloadName, "addons.parameters.yml"),
+		description: "parameters",
+		blob:        addon.RDWSParamsForRDS(),
+	}), nil
+}
+
+func (o *initStorageOpts) envRDSAddonBlobs() ([]addonBlob, error) {
+	props, err := o.rdsProps()
+	if err != nil {
+		return nil, err
+	}
+	blobs := []addonBlob{
+		{
+			path:        o.ws.EnvAddonFilePath(fmt.Sprintf("%s.yml", o.storageName)),
+			description: "template",
+			blob:        addon.EnvServerlessTemplate(props),
+		},
+		{
+			path:        o.ws.EnvAddonFilePath("addons.parameters.yml"),
+			description: "parameters",
+			blob:        addon.EnvParamsForRDS(),
+		},
+	}
+	if o.workloadType != manifest.RequestDrivenWebServiceType || !o.workloadExists {
+		return blobs, nil
+	}
+	return append(blobs,
+		addonBlob{
+			path:        o.ws.WorkloadAddonFilePath(o.workloadName, fmt.Sprintf("%s-ingress.yml", o.storageName)),
+			description: "template",
+			blob:        addon.EnvServerlessRDWSIngressTemplate(props),
+		},
+		addonBlob{
+			path:        o.ws.WorkloadAddonFilePath(o.workloadName, "addons.parameters.yml"),
+			description: "parameters",
+			blob:        addon.RDWSParamsForEnvRDS(),
+		},
+	), nil
+}
+
+func (o *initStorageOpts) rdsProps() (addon.RDSProps, error) {
 	var engine string
 	switch o.rdsEngine {
 	case engineTypeMySQL:
@@ -756,30 +888,21 @@ func (o *initStorageOpts) newRDSTemplate() (*addon.RDSTemplate, error) {
 	case engineTypePostgreSQL:
 		engine = addon.RDSEngineTypePostgreSQL
 	default:
-		return nil, errors.New("unknown engine type")
+		return addon.RDSProps{}, errors.New("unknown engine type")
 	}
 
 	envs, err := o.environmentNames()
 	if err != nil {
-		return nil, err
+		return addon.RDSProps{}, err
 	}
-	props := addon.RDSProps{
+	return addon.RDSProps{
 		ClusterName:    o.storageName,
 		Engine:         engine,
 		InitialDBName:  o.rdsInitialDBName,
 		ParameterGroup: o.rdsParameterGroup,
 		Envs:           envs,
 		WorkloadType:   o.workloadType,
-	}
-
-	switch v := o.auroraServerlessVersion; v {
-	case auroraServerlessVersionV1:
-		return addon.NewServerlessV1Template(props), nil
-	case auroraServerlessVersionV2:
-		return addon.NewServerlessV2Template(props), nil
-	default:
-		return nil, fmt.Errorf("unknown Aurora serverless version %q", v)
-	}
+	}, nil
 }
 
 func (o *initStorageOpts) environmentNames() ([]string, error) {
@@ -794,19 +917,7 @@ func (o *initStorageOpts) environmentNames() ([]string, error) {
 	return envNames, nil
 }
 
-func (o *initStorageOpts) readWorkloadType() error {
-	mft, err := o.ws.ReadWorkloadManifest(o.workloadName)
-	if err != nil {
-		return fmt.Errorf("read manifest for %s: %w", o.workloadName, err)
-	}
-	t, err := mft.WorkloadType()
-	if err != nil {
-		return fmt.Errorf("read 'type' from manifest for %s: %w", o.workloadName, err)
-	}
-	o.workloadType = t
-	return nil
-}
-
+// RecommendActions returns follow-up actions the user can take after successfully executing the command.
 func (o *initStorageOpts) RecommendActions() error {
 	var (
 		retrieveEnvVarCode string
@@ -878,6 +989,7 @@ Resource names are injected into your containers as environment variables for ea
 	cmd.Flags().StringVarP(&vars.storageName, nameFlag, nameFlagShort, "", storageFlagDescription)
 	cmd.Flags().StringVarP(&vars.storageType, storageTypeFlag, typeFlagShort, "", storageTypeFlagDescription)
 	cmd.Flags().StringVarP(&vars.workloadName, workloadFlag, workloadFlagShort, "", storageWorkloadFlagDescription)
+	cmd.Flags().StringVarP(&vars.lifecycle, storageLifecycleFlag, "", lifecycleWorkloadLevel, storageLifecycleFlagDescription)
 
 	cmd.Flags().StringVar(&vars.partitionKey, storagePartitionKeyFlag, "", storagePartitionKeyFlagDescription)
 	cmd.Flags().StringVar(&vars.sortKey, storageSortKeyFlag, "", storageSortKeyFlagDescription)
