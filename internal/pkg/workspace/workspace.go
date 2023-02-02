@@ -52,8 +52,6 @@ const (
 	legacyPipelineFileName    = "pipeline.yml"
 	manifestFileName          = "manifest.yml"
 	buildspecFileName         = "buildspec.yml"
-
-	ymlFileExtension = ".yml"
 )
 
 // Summary is a description of what's associated with this workspace.
@@ -175,6 +173,16 @@ func (ws *Workspace) Summary() (*Summary, error) {
 		ws.summaryErr = yaml.Unmarshal(f, ws.summary)
 	})
 	return ws.summary, ws.summaryErr
+}
+
+// WorkloadExists returns true if a workload exists in the workspace.
+func (ws *Workspace) WorkloadExists(name string) (bool, error) {
+	path := filepath.Join(ws.copilotDirAbs, name, manifestFileName)
+	exists, err := ws.fs.Exists(path)
+	if err != nil {
+		return false, fmt.Errorf("check if %s exists: %w", path, err)
+	}
+	return exists, nil
 }
 
 // ListServices returns the names of the services in the workspace.
@@ -500,17 +508,6 @@ func (ws *Workspace) Write(content encoding.BinaryMarshaler, path string) (strin
 		return "", fmt.Errorf("marshal binary content: %w", err)
 	}
 	return ws.write(data, path)
-}
-
-// WriteAddon writes the content of an addon file under "{svc}/addons/{name}.yml".
-// If successful returns the full path of the file, otherwise an empty string and an error.
-func (ws *Workspace) WriteAddon(content encoding.BinaryMarshaler, svc, name string) (string, error) {
-	data, err := content.MarshalBinary()
-	if err != nil {
-		return "", fmt.Errorf("marshal binary addon content: %w", err)
-	}
-	fname := name + ymlFileExtension
-	return ws.write(data, svc, addonsDirName, fname)
 }
 
 // FileStat wraps the os.Stat function.
