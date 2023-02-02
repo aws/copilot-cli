@@ -39,9 +39,6 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 		inEngine            string
 
 		mock      func(m *mockStorageInitValidate)
-		mockWs    func(m *mocks.MockwsAddonManager)
-		mockStore func(m *mocks.Mockstore)
-
 		wantedErr error
 	}{
 		"no app in workspace": {
