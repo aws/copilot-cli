@@ -249,36 +249,6 @@ func (o *initStorageOpts) Validate() error {
 	return nil
 }
 
-func (o *initStorageOpts) validateWorkloadName() error {
-	exists, err := o.ws.WorkloadExists(o.workloadName)
-	if err != nil {
-		return fmt.Errorf("check if %s exists in the workspace: %w", o.workloadName, err)
-	}
-	o.workloadExists = exists
-	if !exists {
-		return fmt.Errorf("workload %s not found in the workspace", o.workloadName)
-	}
-	return nil
-}
-
-func (o *initStorageOpts) validateStorageType() error {
-	if err := validateStorageType(o.storageType, validateStorageTypeOpts{
-		ws:           o.ws,
-		workloadName: o.workloadName,
-	}); err != nil {
-		if errors.Is(err, errRDWSNotConnectedToVPC) {
-			log.Errorf(`Your %s needs to be connected to a VPC in order to use a %s resource.
-You can enable VPC connectivity by updating your manifest with:
-%s
-`, manifest.RequestDrivenWebServiceType, o.storageType, color.HighlightCodeBlock(`network:
-  vpc:
-    placement: private`))
-		}
-		return err
-	}
-	return nil
-}
-
 func (o *initStorageOpts) validateStorageLifecycle() error {
 	for _, valid := range validLifecycleOptions {
 		if o.lifecycle == valid {
@@ -354,6 +324,24 @@ func (o *initStorageOpts) validateOrAskStorageType() error {
 	return o.validateStorageType()
 }
 
+func (o *initStorageOpts) validateStorageType() error {
+	if err := validateStorageType(o.storageType, validateStorageTypeOpts{
+		ws:           o.ws,
+		workloadName: o.workloadName,
+	}); err != nil {
+		if errors.Is(err, errRDWSNotConnectedToVPC) {
+			log.Errorf(`Your %s needs to be connected to a VPC in order to use a %s resource.
+You can enable VPC connectivity by updating your manifest with:
+%s
+`, manifest.RequestDrivenWebServiceType, o.storageType, color.HighlightCodeBlock(`network:
+  vpc:
+    placement: private`))
+		}
+		return err
+	}
+	return nil
+}
+
 func (o *initStorageOpts) validateOrAskStorageName() error {
 	if o.storageName != "" {
 		if err := o.validateStorageName(); err != nil {
@@ -424,6 +412,18 @@ func (o *initStorageOpts) validateOrAskStorageWl() error {
 		return fmt.Errorf("retrieve local workload names: %w", err)
 	}
 	o.workloadName = workload
+	return nil
+}
+
+func (o *initStorageOpts) validateWorkloadName() error {
+	exists, err := o.ws.WorkloadExists(o.workloadName)
+	if err != nil {
+		return fmt.Errorf("check if %s exists in the workspace: %w", o.workloadName, err)
+	}
+	o.workloadExists = exists
+	if !exists {
+		return fmt.Errorf("workload %s not found in the workspace", o.workloadName)
+	}
 	return nil
 }
 
