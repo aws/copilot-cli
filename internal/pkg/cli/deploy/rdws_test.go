@@ -25,10 +25,10 @@ import (
 func TestRdwsDeployer_GenerateCloudFormationTemplate(t *testing.T) {
 	t.Run("ensure resulting CloudFormation template custom resource paths are empty", func(t *testing.T) {
 		// GIVEN
-		backend := mockBackendServiceDeployer()
+		rdws := mockRDWSDeployer()
 
 		// WHEN
-		out, err := backend.GenerateCloudFormationTemplate(&GenerateCloudFormationTemplateInput{})
+		out, err := rdws.GenerateCloudFormationTemplate(&GenerateCloudFormationTemplateInput{})
 
 		// THEN
 		require.NoError(t, err)
@@ -276,9 +276,13 @@ func mockRDWSDeployer(opts ...func(*rdwsDeployer)) *rdwsDeployer {
 			RequestDrivenWebServiceConfig: manifest.RequestDrivenWebServiceConfig{
 				ImageConfig: manifest.ImageWithPort{
 					Image: manifest.Image{
-						Build: manifest.BuildArgsOrString{BuildString: aws.String("/Dockerfile")},
+						Location: aws.String("111111111111.dkr.ecr.us-west-2.amazonaws.com/nginx:latest"),
 					},
 					Port: aws.Uint16(80),
+				},
+				InstanceConfig: manifest.AppRunnerInstanceConfig{
+					CPU:    aws.Int(1024),
+					Memory: aws.Int(2048),
 				},
 			},
 		},
