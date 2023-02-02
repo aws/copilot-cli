@@ -20,9 +20,9 @@ import (
 type CDK struct {
 	rootAbsPath string // Absolute path to the overrides/ directory.
 
-	w    io.Writer // Writer to pipe stdout and stderr content from os/exec calls.
-	fs   afero.Fs  // OS file system.
-	exec struct {
+	execWriter io.Writer // Writer to pipe stdout and stderr content from os/exec calls.
+	fs         afero.Fs  // OS file system.
+	exec       struct {
 		LookPath func(file string) (string, error)
 		Command  func(name string, args ...string) *exec.Cmd
 	} // For testing os/exec calls.
@@ -71,7 +71,7 @@ func WithCDK(root string, opts CDKOpts) *CDK {
 
 	return &CDK{
 		rootAbsPath: root,
-		w:           writer,
+		execWriter:  writer,
 		fs:          fs,
 		exec: struct {
 			LookPath func(file string) (string, error)
@@ -103,8 +103,8 @@ func (cdk *CDK) install() error {
 	}
 
 	cmd := cdk.exec.Command("npm", "install")
-	cmd.Stdout = cdk.w
-	cmd.Stderr = cdk.w
+	cmd.Stdout = cdk.execWriter
+	cmd.Stderr = cdk.execWriter
 
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf(`run %q: %w`, cmd.String(), err)
@@ -127,7 +127,7 @@ func (cdk *CDK) transform(body []byte) ([]byte, error) {
 	cmd := cdk.exec.Command(filepath.Join("node_modules", "aws-cdk", "bin", "cdk"), "synth", "--no-version-reporting")
 	buf := new(bytes.Buffer)
 	cmd.Stdout = buf
-	cmd.Stderr = cdk.w
+	cmd.Stderr = cdk.execWriter
 	if err := cmd.Run(); err != nil {
 		return nil, fmt.Errorf(`run %q: %w`, cmd.String(), err)
 	}
