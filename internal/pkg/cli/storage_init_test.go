@@ -327,31 +327,36 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 func TestStorageInitOpts_AskDDB(t *testing.T) {
 	const (
 		wantedSvcName      = "frontend"
-		wantedTableName    = "coolTable"
+		wantedTableName    = "my-cool_table.3"
 		wantedPartitionKey = "DogName:String"
 		wantedSortKey      = "PhotoId:Number"
 	)
 	testCases := map[string]struct {
-		inPartition string
-		inSort      string
-		inLSISorts  []string
-		inNoLSI     bool
-		inNoSort    bool
-
-		inServerlessVersion string
-		inDBEngine          string
-		inInitialDBName     string
+		inStorageName string
+		inPartition   string
+		inSort        string
+		inLSISorts    []string
+		inNoLSI       bool
+		inNoSort      bool
 
 		mock func(m *mockStorageInitAsk)
 
 		wantedErr  error
 		wantedVars *initStorageVars
 	}{
-		"asks for partition key if not specified": {
-			inSort:  wantedSortKey,
-			inNoLSI: true,
-
+		"invalid ddb name": {
+			inStorageName: "badTable!!!",
 			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+			},
+			wantedErr: errValueBadFormatWithPeriodUnderscore,
+		},
+		"asks for partition key if not specified": {
+			inStorageName: wantedTableName,
+			inSort:        wantedSortKey,
+			inNoLSI:       true,
+			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
 				keyPrompt := fmt.Sprintf(fmtStorageInitDDBKeyPrompt,
 					color.HighlightUserInput("partition key"),
 					color.HighlightUserInput(dynamoDBStorageType),
@@ -370,7 +375,9 @@ func TestStorageInitOpts_AskDDB(t *testing.T) {
 			},
 		},
 		"error if fail to return partition key": {
+			inStorageName: wantedTableName,
 			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
 				m.prompt.EXPECT().Get(gomock.Any(),
 					gomock.Any(),
 					gomock.Any(),
@@ -380,8 +387,9 @@ func TestStorageInitOpts_AskDDB(t *testing.T) {
 			wantedErr: fmt.Errorf("get DDB partition key: some error"),
 		},
 		"error if fail to return partition key type": {
-			inSort: wantedSortKey,
+			inStorageName: wantedTableName,
 			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
 				m.prompt.EXPECT().Get(gomock.Any(),
 					gomock.Any(),
 					gomock.Any(),
@@ -396,9 +404,11 @@ func TestStorageInitOpts_AskDDB(t *testing.T) {
 			wantedErr: fmt.Errorf("get DDB partition key datatype: some error"),
 		},
 		"ask for sort key if not specified": {
-			inPartition: wantedPartitionKey,
-			inNoLSI:     true,
+			inStorageName: wantedTableName,
+			inPartition:   wantedPartitionKey,
+			inNoLSI:       true,
 			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
 				m.prompt.EXPECT().Confirm(
 					gomock.Eq(storageInitDDBSortKeyConfirm),
 					gomock.Any(),
@@ -422,8 +432,10 @@ func TestStorageInitOpts_AskDDB(t *testing.T) {
 			},
 		},
 		"error if fail to confirm add sort key": {
-			inPartition: wantedPartitionKey,
+			inStorageName: wantedTableName,
+			inPartition:   wantedPartitionKey,
 			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
 				m.prompt.EXPECT().Confirm(
 					gomock.Eq(storageInitDDBSortKeyConfirm),
 					gomock.Any(),
@@ -433,8 +445,10 @@ func TestStorageInitOpts_AskDDB(t *testing.T) {
 			wantedErr: fmt.Errorf("confirm DDB sort key: some error"),
 		},
 		"error if fail to return sort key": {
-			inPartition: wantedPartitionKey,
+			inStorageName: wantedTableName,
+			inPartition:   wantedPartitionKey,
 			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
 				m.prompt.EXPECT().Confirm(
 					gomock.Eq(storageInitDDBSortKeyConfirm),
 					gomock.Any(),
@@ -449,8 +463,10 @@ func TestStorageInitOpts_AskDDB(t *testing.T) {
 			wantedErr: fmt.Errorf("get DDB sort key: some error"),
 		},
 		"error if fail to return sort key type": {
-			inPartition: wantedPartitionKey,
+			inStorageName: wantedTableName,
+			inPartition:   wantedPartitionKey,
 			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
 				m.prompt.EXPECT().Confirm(
 					gomock.Eq(storageInitDDBSortKeyConfirm),
 					gomock.Any(),
@@ -470,26 +486,46 @@ func TestStorageInitOpts_AskDDB(t *testing.T) {
 			wantedErr: fmt.Errorf("get DDB sort key datatype: some error"),
 		},
 		"don't ask for sort key if no-sort specified": {
-			inPartition: wantedPartitionKey,
-			inNoSort:    true,
-			inNoLSI:     true,
-			mock:        func(m *mockStorageInitAsk) {},
+			inStorageName: wantedTableName,
+			inPartition:   wantedPartitionKey,
+			inNoSort:      true,
+			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+				m.prompt.EXPECT().Confirm(
+					gomock.Eq(storageInitDDBSortKeyConfirm),
+					gomock.Any(),
+					gomock.Any(),
+				).Times(0)
+			},
 		},
 		"ok if --no-lsi and --sort-key are both specified": {
-			inPartition: wantedPartitionKey,
-			inSort:      wantedSortKey,
-			inNoLSI:     true,
-			mock:        func(m *mockStorageInitAsk) {},
+			inStorageName: wantedTableName,
+			inPartition:   wantedPartitionKey,
+			inSort:        wantedSortKey,
+			inNoLSI:       true,
+			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+			},
 		},
 		"don't ask about LSI if no-sort is specified": {
-			inPartition: wantedPartitionKey,
-			inNoSort:    true,
-			mock:        func(m *mockStorageInitAsk) {},
+			inStorageName: wantedTableName,
+			inPartition:   wantedPartitionKey,
+			inNoSort:      true,
+			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+				m.prompt.EXPECT().Confirm(
+					gomock.Eq(storageInitDDBLSIPrompt),
+					gomock.Eq(storageInitDDBLSIHelp),
+					gomock.Any(),
+				).Times(0)
+			},
 		},
 		"ask for LSI if not specified": {
-			inPartition: wantedPartitionKey,
-			inSort:      wantedSortKey,
+			inStorageName: wantedTableName,
+			inPartition:   wantedPartitionKey,
+			inSort:        wantedSortKey,
 			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
 				lsiTypePrompt := fmt.Sprintf(fmtStorageInitDDBKeyTypePrompt, color.Emphasize("alternate sort key"))
 				lsiTypeHelp := fmt.Sprintf(fmtStorageInitDDBKeyTypeHelp, "alternate sort key")
 				m.prompt.EXPECT().Confirm(
@@ -527,9 +563,11 @@ func TestStorageInitOpts_AskDDB(t *testing.T) {
 			},
 		},
 		"noLSI is set correctly if no lsis specified": {
-			inPartition: wantedPartitionKey,
-			inSort:      wantedSortKey,
+			inStorageName: wantedTableName,
+			inPartition:   wantedPartitionKey,
+			inSort:        wantedSortKey,
 			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
 				m.prompt.EXPECT().Confirm(
 					gomock.Eq(storageInitDDBLSIPrompt),
 					gomock.Eq(storageInitDDBLSIHelp),
@@ -547,8 +585,10 @@ func TestStorageInitOpts_AskDDB(t *testing.T) {
 			},
 		},
 		"noLSI is set correctly if no sort key": {
-			inPartition: wantedPartitionKey,
+			inStorageName: wantedTableName,
+			inPartition:   wantedPartitionKey,
 			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
 				m.prompt.EXPECT().Confirm(
 					gomock.Eq(storageInitDDBSortKeyConfirm),
 					gomock.Eq(storageInitDDBSortKeyHelp),
@@ -566,9 +606,11 @@ func TestStorageInitOpts_AskDDB(t *testing.T) {
 			},
 		},
 		"error if lsi name misspecified": {
-			inPartition: wantedPartitionKey,
-			inSort:      wantedSortKey,
+			inStorageName: wantedTableName,
+			inPartition:   wantedPartitionKey,
+			inSort:        wantedSortKey,
 			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
 				m.prompt.EXPECT().Confirm(
 					gomock.Eq(storageInitDDBLSIPrompt),
 					gomock.Any(),
@@ -583,9 +625,11 @@ func TestStorageInitOpts_AskDDB(t *testing.T) {
 			wantedErr: fmt.Errorf("get DDB alternate sort key name: some error"),
 		},
 		"errors if fail to confirm lsi": {
-			inPartition: wantedPartitionKey,
-			inSort:      wantedSortKey,
+			inStorageName: wantedTableName,
+			inPartition:   wantedPartitionKey,
+			inSort:        wantedSortKey,
 			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
 				m.prompt.EXPECT().Confirm(
 					gomock.Any(),
 					gomock.Any(),
@@ -595,9 +639,11 @@ func TestStorageInitOpts_AskDDB(t *testing.T) {
 			wantedErr: fmt.Errorf("confirm add alternate sort key: some error"),
 		},
 		"error if lsi type misspecified": {
-			inPartition: wantedPartitionKey,
-			inSort:      wantedSortKey,
+			inStorageName: wantedTableName,
+			inPartition:   wantedPartitionKey,
+			inSort:        wantedSortKey,
 			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
 				m.prompt.EXPECT().Confirm(
 					gomock.Any(),
 					gomock.Any(),
@@ -618,10 +664,22 @@ func TestStorageInitOpts_AskDDB(t *testing.T) {
 			wantedErr: fmt.Errorf("get DDB alternate sort key type: some error"),
 		},
 		"do not ask for ddb config when fully specified": {
-			inPartition: wantedPartitionKey,
-			inSort:      wantedSortKey,
-			inLSISorts:  []string{"email:String"},
-			mock:        func(m *mockStorageInitAsk) {},
+			inStorageName: wantedTableName,
+			inPartition:   wantedPartitionKey,
+			inSort:        wantedSortKey,
+			inLSISorts:    []string{"userID:Number", "data:Binary"},
+			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+			},
+		},
+		"successfully validate flags with non-config": {
+			inStorageName: wantedTableName,
+			inPartition:   wantedPartitionKey,
+			inNoSort:      true,
+			inNoLSI:       true,
+			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+			},
 		},
 	}
 	for name, tc := range testCases {
@@ -631,13 +689,14 @@ func TestStorageInitOpts_AskDDB(t *testing.T) {
 			defer ctrl.Finish()
 
 			m := mockStorageInitAsk{
+				ws:     mocks.NewMockwsAddonManager(ctrl),
 				prompt: mocks.NewMockprompter(ctrl),
 			}
 			tc.mock(&m)
 			opts := initStorageOpts{
 				initStorageVars: initStorageVars{
 					storageType:  dynamoDBStorageType,
-					storageName:  wantedTableName,
+					storageName:  tc.inStorageName,
 					workloadName: wantedSvcName,
 					partitionKey: tc.inPartition,
 					sortKey:      tc.inSort,
@@ -647,6 +706,7 @@ func TestStorageInitOpts_AskDDB(t *testing.T) {
 				},
 				appName: "ddos",
 				prompt:  m.prompt,
+				ws:      m.ws,
 			}
 			// WHEN
 			err := opts.Ask()
