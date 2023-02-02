@@ -137,12 +137,11 @@ type mockStorageInitAsk struct {
 
 func TestStorageInitOpts_Ask(t *testing.T) {
 	const (
-		wantedAppName    = "ddos"
+		wantedAppName    = "bowie"
 		wantedSvcName    = "frontend"
 		wantedBucketName = "cool-bucket"
 	)
 	testCases := map[string]struct {
-		inAppName     string
 		inStorageType string
 		inSvcName     string
 		inStorageName string
@@ -161,10 +160,8 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			wantedErr: errors.New(`invalid storage type box: must be one of "DynamoDB", "S3", "Aurora"`),
 		},
 		"asks for storage type": {
-			inAppName:     wantedAppName,
 			inSvcName:     wantedSvcName,
 			inStorageName: wantedBucketName,
-
 			mock: func(m *mockStorageInitAsk) {
 				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil).AnyTimes()
 				options := []prompt.Option{
@@ -183,9 +180,13 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 				}
 				m.prompt.EXPECT().SelectOption(gomock.Any(), gomock.Any(), gomock.Eq(options), gomock.Any()).Return(s3StorageType, nil)
 			},
+			wantedVars: &initStorageVars{
+				storageType:  s3StorageType,
+				storageName:  wantedBucketName,
+				workloadName: wantedSvcName,
+			},
 		},
 		"error if storage type not gotten": {
-			inAppName:     wantedAppName,
 			inSvcName:     wantedSvcName,
 			inStorageName: wantedBucketName,
 
@@ -199,7 +200,6 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			mock: func(m *mockStorageInitAsk) {
 				m.ws.EXPECT().WorkloadExists(gomock.Eq("frontend")).Return(false, errors.New("wanted err"))
 			},
-			inAppName:     "bowie",
 			inStorageType: s3StorageType,
 			inSvcName:     "frontend",
 			inStorageName: "my-bucket",
@@ -209,22 +209,24 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			mock: func(m *mockStorageInitAsk) {
 				m.ws.EXPECT().WorkloadExists(gomock.Eq("frontend")).Return(false, nil)
 			},
-			inAppName:     "bowie",
 			inStorageType: s3StorageType,
 			inSvcName:     "frontend",
 			inStorageName: "my-bucket",
 			wantedErr:     errors.New("workload frontend not found in the workspace"),
 		},
 		"asks for storage workload": {
-			inAppName:     wantedAppName,
 			inStorageName: wantedBucketName,
 			inStorageType: s3StorageType,
 			mock: func(m *mockStorageInitAsk) {
 				m.sel.EXPECT().Workload(gomock.Eq(storageInitSvcPrompt), gomock.Any()).Return(wantedSvcName, nil)
 			},
+			wantedVars: &initStorageVars{
+				storageType:  s3StorageType,
+				storageName:  wantedBucketName,
+				workloadName: wantedSvcName,
+			},
 		},
 		"error if svc not returned": {
-			inAppName:     wantedAppName,
 			inStorageName: wantedBucketName,
 			inStorageType: s3StorageType,
 			mock: func(m *mockStorageInitAsk) {
@@ -234,7 +236,6 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			wantedErr: fmt.Errorf("retrieve local workload names: some error"),
 		},
 		"successfully validates valid s3 bucket name": {
-			inAppName:     "bowie",
 			inSvcName:     "frontend",
 			inStorageType: s3StorageType,
 			inStorageName: "my-bucket.4",
@@ -243,7 +244,6 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			},
 		},
 		"invalid s3 bucket name": {
-			inAppName:     "bowie",
 			inSvcName:     "frontend",
 			inStorageType: s3StorageType,
 			inStorageName: "mybadbucket???",
@@ -253,19 +253,21 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			wantedErr: fmt.Errorf("validate storage name: %w", errValueBadFormatWithPeriod),
 		},
 		"asks for storage name": {
-			inAppName:     wantedAppName,
 			inSvcName:     wantedSvcName,
 			inStorageType: s3StorageType,
-
 			mock: func(m *mockStorageInitAsk) {
 				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
 				m.prompt.EXPECT().Get(gomock.Eq(fmt.Sprintf(fmtStorageInitNamePrompt, color.HighlightUserInput(s3BucketFriendlyText))),
 					gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(wantedBucketName, nil)
 			},
+			wantedVars: &initStorageVars{
+				storageType:  s3StorageType,
+				storageName:  wantedBucketName,
+				workloadName: wantedSvcName,
+			},
 		},
 		"error if storage name not returned": {
-			inAppName:     wantedAppName,
 			inSvcName:     wantedSvcName,
 			inStorageType: s3StorageType,
 
@@ -276,7 +278,6 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			wantedErr: fmt.Errorf("input storage name: some error"),
 		},
 		"no error or asks when fully specified": {
-			inAppName:     wantedAppName,
 			inSvcName:     wantedSvcName,
 			inStorageType: s3StorageType,
 			inStorageName: wantedBucketName,
@@ -302,7 +303,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 					storageName:  tc.inStorageName,
 					workloadName: tc.inSvcName,
 				},
-				appName: tc.inAppName,
+				appName: wantedAppName,
 				sel:     m.sel,
 				prompt:  m.prompt,
 				ws:      m.ws,
