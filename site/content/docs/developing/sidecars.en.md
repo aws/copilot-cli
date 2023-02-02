@@ -113,7 +113,7 @@ service:
       exporters: [otlp]
 ```
 
-Writing X-Ray traces needs additional IAM permissions as shown below. Include this in addons according to the [published documentation](../addons/workload)
+Writing X-Ray traces needs additional IAM permissions as shown below. Include this in addons according to the [published documentation](./addons/workload.en.md)
 
 ``` yaml
 Resources:
@@ -185,7 +185,7 @@ logging:
     log_stream_prefix: copilot/
 ```
 
-You might need to add necessary permissions to the task role so that FireLens can forward your data. You can add permissions by specifying them in your [addons](../addons/workload). For example:
+You might need to add necessary permissions to the task role so that FireLens can forward your data. You can add permissions by specifying them in your [addons](./addons/workload.en.md). For example:
 
 ``` yaml
 Resources:

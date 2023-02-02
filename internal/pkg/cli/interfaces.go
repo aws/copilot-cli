@@ -325,7 +325,7 @@ type wsAddonManager interface {
 	WorkloadAddonFilePath(wkldName, fName string) string
 	EnvAddonFilePath(fName string) string
 	manifestReader
-	wlLister
+	WorkloadExists(name string) (bool, error)
 }
 
 type uploader interface {

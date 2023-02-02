@@ -38,17 +38,6 @@ Resources:
       DBSubnetGroupDescription: Group of private subnets for Aurora Serverless v2 cluster.
       SubnetIds:
         !Split [',', !Ref PrivateSubnets]
-  
-  {{logicalIDSafe .ClusterName}}WorkloadSecurityGroup:
-    Metadata:
-      'aws:copilot:description': 'A security group for one or more workloads to access the Aurora Serverless v2 cluster {{logicalIDSafe .ClusterName}}'
-    Type: 'AWS::EC2::SecurityGroup'
-    Properties:
-      GroupDescription: !Sub 'The Security Group to access Aurora Serverless v2 cluster {{logicalIDSafe .ClusterName}}.'
-      VpcId: !Ref VPCID
-      Tags:
-        - Key: Name
-          Value: !Sub 'copilot-${App}-${Env}-Aurora'
 
   {{logicalIDSafe .ClusterName}}DBClusterSecurityGroup:
     Metadata:
@@ -60,16 +49,6 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub 'copilot-${App}-${Env}-Aurora'
-  
-  {{logicalIDSafe .ClusterName}}DBClusterSecurityGroupIngressFromWorkload:
-    Type: AWS::EC2::SecurityGroupIngress
-    Properties:
-      Description: Ingress from one or more workloads in the environment.
-      GroupId: !Ref {{logicalIDSafe .ClusterName}}DBClusterSecurityGroup
-      IpProtocol: tcp
-      ToPort: {{- if eq .Engine "MySQL"}} 3306 {{- else}} 5432 {{- end}}
-      FromPort: {{- if eq .Engine "MySQL"}} 3306 {{- else}} 5432 {{- end}}
-      SourceSecurityGroupId: !Ref {{logicalIDSafe .ClusterName}}WorkloadSecurityGroup
   
   {{logicalIDSafe .ClusterName}}AuroraSecret:
     Metadata:
@@ -168,8 +147,8 @@ Outputs:
     Value: !Ref {{logicalIDSafe .ClusterName}}AuroraSecret
     Export:
       Name: !Sub ${App}-${Env}-{{logicalIDSafe .ClusterName}}AuroraSecret
-  {{logicalIDSafe .ClusterName}}SecurityGroup:
-    Description: "The security group to attach to the workload."
-    Value: !Ref {{logicalIDSafe .ClusterName}}WorkloadSecurityGroup  
+  {{logicalIDSafe .ClusterName}}ClusterSecurityGroup:
+    Description: "The security group attached to the Aurora Serverless v2 cluster."
+    Value: !Ref {{logicalIDSafe .ClusterName}}DBClusterSecurityGroup
     Export:
-      Name: !Sub ${App}-${Env}-{{logicalIDSafe .ClusterName}}SecurityGroup
+      Name: !Sub ${App}-${Env}-{{logicalIDSafe .ClusterName}}DBClusterSecurityGroup
