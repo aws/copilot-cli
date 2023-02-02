@@ -356,7 +356,10 @@ func (o *initStorageOpts) validateOrAskStorageType() error {
 
 func (o *initStorageOpts) validateOrAskStorageName() error {
 	if o.storageName != "" {
-		return o.validateStorageName()
+		if err := o.validateStorageName(); err != nil {
+			return fmt.Errorf("validate storage name: %w", err)
+		}
+		return nil
 	}
 	var validator func(interface{}) error
 	var friendlyText string

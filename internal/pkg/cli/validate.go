@@ -59,7 +59,7 @@ var (
 	errTooManyLSIKeys                     = errors.New("number of specified LSI sort keys must be 5 or less")
 
 	// Aurora-Serverless-specific errors.
-	errInvalidRDSNameCharacters    = errors.New("value must start with a letter")
+	errInvalidRDSNameCharacters    = errors.New("value must start with a letter and followed by alphanumeric letters only")
 	errRDWSNotConnectedToVPC       = fmt.Errorf("%s requires a VPC connection", manifest.RequestDrivenWebServiceType)
 	fmtErrInvalidEngineType        = "invalid engine type %s: must be one of %s"
 	fmtErrInvalidDBNameCharacters  = "invalid database name %s: must contain only alphanumeric characters and underscore; should start with a letter"
