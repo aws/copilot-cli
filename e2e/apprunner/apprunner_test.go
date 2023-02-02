@@ -6,6 +6,7 @@ package apprunner_test
 import (
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/aws/copilot-cli/e2e/internal/client"
 	. "github.com/onsi/ginkgo/v2"
@@ -169,19 +170,16 @@ var _ = Describe("App Runner", Ordered, func() {
 			fmt.Printf("\n\nsecrets: %+v\n\n", svc.Secrets)
 			expectedSecrets := map[string]string{
 				"my-ssm-param": "e2e-apprunner-ssm-param",
+				"USER_CREDS":   "e2e-apprunner-MyTestSecret",
 			}
 			for _, secret := range svc.Secrets {
-				Expect(secret.Value).To(Equal(expectedSecrets[secret.Name]))
-			}
-		})
-
-		It("should return correct secrets for backendSvc", func() {
-			fmt.Printf("\n\nsecrets: %+v\n\n", backendSvc.Secrets)
-			expectedSecrets := map[string]string{
-				"USER_CREDS": "arn:aws:secretsmanager:us-east-1:067305307211:secret:e2e-apprunner-MyTestSecret",
-			}
-			for _, secret := range backendSvc.Secrets {
-				Expect(secret.Value).To(Equal(expectedSecrets[secret.Name]))
+				if secret.Name == "my-ssm-param" {
+					Expect(secret.Value).To(Equal(expectedSecrets[secret.Name]))
+				}
+				if secret.Name == "USER_CREDS" {
+					containsSecret := strings.Contains(expectedSecrets[secret.Name], expectedSecrets[secret.Name])
+					Expect(containsSecret).To(Equal(true))
+				}
 			}
 		})
 

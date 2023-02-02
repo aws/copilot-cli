@@ -32,3 +32,5 @@ memory: 2048
 
 secrets:                      # Pass secrets from AWS Systems Manager (SSM) Parameter Store and Secrets Manager.
   my-ssm-param: e2e-apprunner-ssm-param
+  USER_CREDS: 
+    secretsmanager: 'e2e-apprunner-MyTestSecret'
