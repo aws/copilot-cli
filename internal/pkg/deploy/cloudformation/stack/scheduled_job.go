@@ -140,7 +140,7 @@ func (j *ScheduledJob) Template() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("parse exposed ports in service manifest %s: %w", j.name, err)
 	}
-	tmplSidecars, err := convertSidecars(j.manifest.Sidecars, exposedPorts.ContainerToPortsMapping)
+	sidecars, err := convertSidecars(j.manifest.Sidecars, exposedPorts.PortsForContainer)
 	if err != nil {
 		return "", fmt.Errorf("convert the sidecar configuration for service %s: %w", j.name, err)
 	}
@@ -176,7 +176,7 @@ func (j *ScheduledJob) Template() (string, error) {
 		WorkloadType:             manifest.ScheduledJobType,
 		NestedStack:              addonsOutputs,
 		AddonsExtraParams:        addonsParams,
-		Sidecars:                 tmplSidecars,
+		Sidecars:                 sidecars,
 		ScheduleExpression:       schedule,
 		StateMachine:             stateMachine,
 		HealthCheck:              convertContainerHealthCheck(j.manifest.ImageConfig.HealthCheck),

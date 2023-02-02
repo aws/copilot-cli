@@ -38,9 +38,8 @@ type LoadBalancedWebService struct {
 	Workload                     `yaml:",inline"`
 	LoadBalancedWebServiceConfig `yaml:",inline"`
 	// Use *LoadBalancedWebServiceConfig because of https://github.com/imdario/mergo/issues/146
-	Environments       map[string]*LoadBalancedWebServiceConfig `yaml:",flow"` // Fields to override per environment.
-	cachedExposedPorts ParsedContainerConfig
-	parser             template.Parser
+	Environments map[string]*LoadBalancedWebServiceConfig `yaml:",flow"` // Fields to override per environment.
+	parser       template.Parser
 }
 
 // LoadBalancedWebServiceConfig holds the configuration for a load balanced web service.
@@ -241,26 +240,26 @@ func (c *NetworkLoadBalancerConfiguration) IsEmpty() bool {
 }
 
 // ExposedPorts returns all the ports that are container ports available to receive traffic.
-func (lbws *LoadBalancedWebService) ExposedPorts() (ParsedContainerConfig, error) {
-	if lbws.cachedExposedPorts.ContainerToPortsMapping != nil || lbws.cachedExposedPorts.PortToContainerMapping != nil {
-		return lbws.cachedExposedPorts, nil
-	}
+func (lbws *LoadBalancedWebService) ExposedPorts() (ExposedPortsIndex, error) {
 	var exposedPorts []ExposedPort
 	workloadName := aws.StringValue(lbws.Name)
 	exposedPorts = append(exposedPorts, lbws.ImageConfig.exposedPorts(workloadName)...)
 	for name, sidecar := range lbws.Sidecars {
 		out, err := sidecar.exposedPorts(name)
 		if err != nil {
-			return ParsedContainerConfig{}, err
+			return ExposedPortsIndex{}, err
 		}
 		exposedPorts = append(exposedPorts, out...)
 	}
 	exposedPorts = append(exposedPorts, lbws.RoutingRule.exposedPorts(exposedPorts, workloadName)...)
 	out, err := lbws.NLBConfig.exposedPorts(exposedPorts, workloadName)
 	if err != nil {
-		return ParsedContainerConfig{}, err
+		return ExposedPortsIndex{}, err
 	}
 	exposedPorts = append(exposedPorts, out...)
-	lbws.cachedExposedPorts.ContainerToPortsMapping, lbws.cachedExposedPorts.PortToContainerMapping = prepareParsedExposedPortsMap(sortExposedPorts(exposedPorts))
-	return lbws.cachedExposedPorts, nil
+	portsForContainer, containerForPort := prepareParsedExposedPortsMap(sortExposedPorts(exposedPorts))
+	return ExposedPortsIndex{
+		PortsForContainer: portsForContainer,
+		ContainerForPort:  containerForPort,
+	}, nil
 }

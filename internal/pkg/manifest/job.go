@@ -31,7 +31,6 @@ type ScheduledJob struct {
 	Workload           `yaml:",inline"`
 	ScheduledJobConfig `yaml:",inline"`
 	Environments       map[string]*ScheduledJobConfig `yaml:",flow"`
-	cachedExposedPorts ParsedContainerConfig
 	parser             template.Parser
 }
 
@@ -194,18 +193,18 @@ func newDefaultScheduledJob() *ScheduledJob {
 }
 
 // ExposedPorts returns all the ports that are sidecar container ports available to receive traffic.
-func (j *ScheduledJob) ExposedPorts() (ParsedContainerConfig, error) {
-	if j.cachedExposedPorts.ContainerToPortsMapping != nil || j.cachedExposedPorts.PortToContainerMapping != nil {
-		return j.cachedExposedPorts, nil
-	}
+func (j *ScheduledJob) ExposedPorts() (ExposedPortsIndex, error) {
 	var exposedPorts []ExposedPort
 	for name, sidecar := range j.Sidecars {
 		out, err := sidecar.exposedPorts(name)
 		if err != nil {
-			return ParsedContainerConfig{}, err
+			return ExposedPortsIndex{}, err
 		}
 		exposedPorts = append(exposedPorts, out...)
 	}
-	j.cachedExposedPorts.ContainerToPortsMapping, j.cachedExposedPorts.PortToContainerMapping = prepareParsedExposedPortsMap(sortExposedPorts(exposedPorts))
-	return j.cachedExposedPorts, nil
+	portsForContainer, containerForPort := prepareParsedExposedPortsMap(sortExposedPorts(exposedPorts))
+	return ExposedPortsIndex{
+		PortsForContainer: portsForContainer,
+		ContainerForPort:  containerForPort,
+	}, nil
 }

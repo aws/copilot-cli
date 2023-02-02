@@ -18,9 +18,8 @@ type BackendService struct {
 	Workload             `yaml:",inline"`
 	BackendServiceConfig `yaml:",inline"`
 	// Use *BackendServiceConfig because of https://github.com/imdario/mergo/issues/146
-	Environments       map[string]*BackendServiceConfig `yaml:",flow"`
-	cachedExposedPorts ParsedContainerConfig
-	parser             template.Parser
+	Environments map[string]*BackendServiceConfig `yaml:",flow"`
+	parser       template.Parser
 }
 
 // BackendServiceConfig holds the configuration that can be overridden per environments.
@@ -190,11 +189,7 @@ func newDefaultBackendService() *BackendService {
 }
 
 // ExposedPorts returns all the ports that are container ports available to receive traffic.
-func (b *BackendService) ExposedPorts() (ParsedContainerConfig, error) {
-	if b.cachedExposedPorts.ContainerToPortsMapping != nil || b.cachedExposedPorts.PortToContainerMapping != nil {
-		return b.cachedExposedPorts, nil
-	}
-
+func (b *BackendService) ExposedPorts() (ExposedPortsIndex, error) {
 	var exposedPorts []ExposedPort
 
 	workloadName := aws.StringValue(b.Name)
@@ -202,11 +197,14 @@ func (b *BackendService) ExposedPorts() (ParsedContainerConfig, error) {
 	for name, sidecar := range b.Sidecars {
 		out, err := sidecar.exposedPorts(name)
 		if err != nil {
-			return ParsedContainerConfig{}, err
+			return ExposedPortsIndex{}, err
 		}
 		exposedPorts = append(exposedPorts, out...)
 	}
 	exposedPorts = append(exposedPorts, b.RoutingRule.exposedPorts(exposedPorts, workloadName)...)
-	b.cachedExposedPorts.ContainerToPortsMapping, b.cachedExposedPorts.PortToContainerMapping = prepareParsedExposedPortsMap(sortExposedPorts(exposedPorts))
-	return b.cachedExposedPorts, nil
+	portsForContainer, containerForPort := prepareParsedExposedPortsMap(sortExposedPorts(exposedPorts))
+	return ExposedPortsIndex{
+		PortsForContainer: portsForContainer,
+		ContainerForPort:  containerForPort,
+	}, nil
 }

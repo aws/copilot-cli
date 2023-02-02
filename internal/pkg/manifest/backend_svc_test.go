@@ -1143,7 +1143,7 @@ func TestBackendService_ExposedPorts(t *testing.T) {
 
 			// THEN
 			require.NoError(t, err)
-			require.Equal(t, tc.wantedExposedPorts, actual.ContainerToPortsMapping)
+			require.Equal(t, tc.wantedExposedPorts, actual.PortsForContainer)
 		})
 	}
 }

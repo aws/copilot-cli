@@ -81,7 +81,7 @@ func (s *WorkerService) Template() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("parse exposed ports in service manifest %s: %w", s.name, err)
 	}
-	tmplSidecars, err := convertSidecars(s.manifest.Sidecars, exposedPorts.ContainerToPortsMapping)
+	sidecars, err := convertSidecars(s.manifest.Sidecars, exposedPorts.PortsForContainer)
 	if err != nil {
 		return "", fmt.Errorf("convert the sidecar configuration for service %s: %w", s.name, err)
 	}
@@ -131,7 +131,7 @@ func (s *WorkerService) Template() (string, error) {
 		Secrets:                  convertSecrets(s.manifest.WorkerServiceConfig.Secrets),
 		NestedStack:              addonsOutputs,
 		AddonsExtraParams:        addonsParams,
-		Sidecars:                 tmplSidecars,
+		Sidecars:                 sidecars,
 		Autoscaling:              autoscaling,
 		CapacityProviders:        capacityProviders,
 		DesiredCountOnSpot:       desiredCountOnSpot,
