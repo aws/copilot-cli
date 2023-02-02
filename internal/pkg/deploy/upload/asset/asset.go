@@ -26,11 +26,10 @@ type UploadOpts struct {
 func Upload(fs afero.Fs, source, destination string, opts *UploadOpts) ([]string, error) {
 	matcher := buildCompositeMatchers(buildReincludeMatchers(opts.Reincludes), buildExcludeMatchers(opts.Excludes))
 	var urls []string
-	urlsPtr := &urls
-	if err := afero.Walk(fs, source, walkFn(source, destination, fs, opts.UploadFn, urlsPtr, matcher)); err != nil {
+	if err := afero.Walk(fs, source, walkFn(source, destination, fs, opts.UploadFn, &urls, matcher)); err != nil {
 		return nil, fmt.Errorf("walk the file tree rooted at %q: %w", source, err)
 	}
-	return *urlsPtr, nil
+	return urls, nil
 }
 
 func walkFn(source, dest string, reader afero.Fs, upload UploadFunc, urlsPtr *[]string, matcher filepathMatcher) filepath.WalkFunc {
@@ -52,6 +51,7 @@ func walkFn(source, dest string, reader afero.Fs, upload UploadFunc, urlsPtr *[]
 		if err != nil {
 			return fmt.Errorf("open file %q: %w", path, err)
 		}
+		defer file.Close()
 		fileRel, err := filepath.Rel(source, path)
 		if err != nil {
 			return fmt.Errorf("get relative path for %q against %q: %w", path, source, err)
