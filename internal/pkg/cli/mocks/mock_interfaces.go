@@ -2691,6 +2691,59 @@ func (mr *MockwlListerMockRecorder) ListWorkloads() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListWorkloads", reflect.TypeOf((*MockwlLister)(nil).ListWorkloads))
 }
 
+// MockwsWlReader is a mock of wsWlReader interface.
+type MockwsWlReader struct {
+	ctrl     *gomock.Controller
+	recorder *MockwsWlReaderMockRecorder
+}
+
+// MockwsWlReaderMockRecorder is the mock recorder for MockwsWlReader.
+type MockwsWlReaderMockRecorder struct {
+	mock *MockwsWlReader
+}
+
+// NewMockwsWlReader creates a new mock instance.
+func NewMockwsWlReader(ctrl *gomock.Controller) *MockwsWlReader {
+	mock := &MockwsWlReader{ctrl: ctrl}
+	mock.recorder = &MockwsWlReaderMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockwsWlReader) EXPECT() *MockwsWlReaderMockRecorder {
+	return m.recorder
+}
+
+// ReadWorkloadManifest mocks base method.
+func (m *MockwsWlReader) ReadWorkloadManifest(name string) (workspace.WorkloadManifest, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReadWorkloadManifest", name)
+	ret0, _ := ret[0].(workspace.WorkloadManifest)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ReadWorkloadManifest indicates an expected call of ReadWorkloadManifest.
+func (mr *MockwsWlReaderMockRecorder) ReadWorkloadManifest(name interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadWorkloadManifest", reflect.TypeOf((*MockwsWlReader)(nil).ReadWorkloadManifest), name)
+}
+
+// WorkloadExists mocks base method.
+func (m *MockwsWlReader) WorkloadExists(name string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WorkloadExists", name)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// WorkloadExists indicates an expected call of WorkloadExists.
+func (mr *MockwsWlReaderMockRecorder) WorkloadExists(name interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WorkloadExists", reflect.TypeOf((*MockwsWlReader)(nil).WorkloadExists), name)
+}
+
 // MockwsJobDirReader is a mock of wsJobDirReader interface.
 type MockwsJobDirReader struct {
 	ctrl     *gomock.Controller
@@ -3192,21 +3245,6 @@ func (mr *MockwsAddonManagerMockRecorder) EnvAddonFilePath(fName interface{}) *g
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnvAddonFilePath", reflect.TypeOf((*MockwsAddonManager)(nil).EnvAddonFilePath), fName)
 }
 
-// ReadWorkloadManifest mocks base method.
-func (m *MockwsAddonManager) ReadWorkloadManifest(name string) (workspace.WorkloadManifest, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReadWorkloadManifest", name)
-	ret0, _ := ret[0].(workspace.WorkloadManifest)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ReadWorkloadManifest indicates an expected call of ReadWorkloadManifest.
-func (mr *MockwsAddonManagerMockRecorder) ReadWorkloadManifest(name interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadWorkloadManifest", reflect.TypeOf((*MockwsAddonManager)(nil).ReadWorkloadManifest), name)
-}
-
 // WorkloadAddonFilePath mocks base method.
 func (m *MockwsAddonManager) WorkloadAddonFilePath(wkldName, fName string) string {
 	m.ctrl.T.Helper()
@@ -3219,21 +3257,6 @@ func (m *MockwsAddonManager) WorkloadAddonFilePath(wkldName, fName string) strin
 func (mr *MockwsAddonManagerMockRecorder) WorkloadAddonFilePath(wkldName, fName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WorkloadAddonFilePath", reflect.TypeOf((*MockwsAddonManager)(nil).WorkloadAddonFilePath), wkldName, fName)
-}
-
-// WorkloadExists mocks base method.
-func (m *MockwsAddonManager) WorkloadExists(name string) (bool, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WorkloadExists", name)
-	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// WorkloadExists indicates an expected call of WorkloadExists.
-func (mr *MockwsAddonManagerMockRecorder) WorkloadExists(name interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WorkloadExists", reflect.TypeOf((*MockwsAddonManager)(nil).WorkloadExists), name)
 }
 
 // Write mocks base method.
@@ -3249,6 +3272,44 @@ func (m *MockwsAddonManager) Write(content encoding.BinaryMarshaler, path string
 func (mr *MockwsAddonManagerMockRecorder) Write(content, path interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Write", reflect.TypeOf((*MockwsAddonManager)(nil).Write), content, path)
+}
+
+// MockwsWriter is a mock of wsWriter interface.
+type MockwsWriter struct {
+	ctrl     *gomock.Controller
+	recorder *MockwsWriterMockRecorder
+}
+
+// MockwsWriterMockRecorder is the mock recorder for MockwsWriter.
+type MockwsWriterMockRecorder struct {
+	mock *MockwsWriter
+}
+
+// NewMockwsWriter creates a new mock instance.
+func NewMockwsWriter(ctrl *gomock.Controller) *MockwsWriter {
+	mock := &MockwsWriter{ctrl: ctrl}
+	mock.recorder = &MockwsWriterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockwsWriter) EXPECT() *MockwsWriterMockRecorder {
+	return m.recorder
+}
+
+// Write mocks base method.
+func (m *MockwsWriter) Write(content encoding.BinaryMarshaler, path string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Write", content, path)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Write indicates an expected call of Write.
+func (mr *MockwsWriterMockRecorder) Write(content, path interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Write", reflect.TypeOf((*MockwsWriter)(nil).Write), content, path)
 }
 
 // Mockuploader is a mock of uploader interface.

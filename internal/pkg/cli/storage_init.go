@@ -184,9 +184,10 @@ type initStorageOpts struct {
 	initStorageVars
 	appName string
 
-	fs    afero.Fs
-	ws    wsAddonManager
-	store store
+	fs      afero.Fs
+	wsAddon wsAddonManager
+	wsWkld  wsWlReader
+	store   store
 
 	sel    wsSelector
 	prompt prompter
@@ -215,11 +216,12 @@ func newStorageInitOpts(vars initStorageVars) (*initStorageOpts, error) {
 		initStorageVars: vars,
 		appName:         tryReadingAppName(),
 
-		fs:     fs,
-		store:  store,
-		ws:     ws,
-		sel:    selector.NewLocalWorkloadSelector(prompter, store, ws),
-		prompt: prompter,
+		fs:      fs,
+		store:   store,
+		wsAddon: ws,
+		wsWkld:  ws,
+		sel:     selector.NewLocalWorkloadSelector(prompter, store, ws),
+		prompt:  prompter,
 	}, nil
 }
 
@@ -326,7 +328,7 @@ func (o *initStorageOpts) validateOrAskStorageType() error {
 
 func (o *initStorageOpts) validateStorageType() error {
 	if err := validateStorageType(o.storageType, validateStorageTypeOpts{
-		ws:           o.ws,
+		ws:           o.wsWkld,
 		workloadName: o.workloadName,
 	}); err != nil {
 		if errors.Is(err, errRDWSNotConnectedToVPC) {
@@ -416,7 +418,7 @@ func (o *initStorageOpts) validateOrAskStorageWl() error {
 }
 
 func (o *initStorageOpts) validateWorkloadName() error {
-	exists, err := o.ws.WorkloadExists(o.workloadName)
+	exists, err := o.wsWkld.WorkloadExists(o.workloadName)
 	if err != nil {
 		return fmt.Errorf("check if %s exists in the workspace: %w", o.workloadName, err)
 	}
@@ -625,7 +627,7 @@ func (o *initStorageOpts) Execute() error {
 		return err
 	}
 	for _, addon := range addonBlobs {
-		path, err := o.ws.Write(addon.blob, addon.path)
+		path, err := o.wsAddon.Write(addon.blob, addon.path)
 		if err != nil {
 			e, ok := err.(*workspace.ErrFileExists)
 			if !ok {
@@ -644,7 +646,7 @@ func (o *initStorageOpts) Execute() error {
 }
 
 func (o *initStorageOpts) readWorkloadType() error {
-	mft, err := o.ws.ReadWorkloadManifest(o.workloadName)
+	mft, err := o.wsWkld.ReadWorkloadManifest(o.workloadName)
 	if err != nil {
 		return fmt.Errorf("read manifest for %s: %w", o.workloadName, err)
 	}
@@ -692,7 +694,7 @@ func (o *initStorageOpts) wkldDDBAddonBlobs() ([]addonBlob, error) {
 	}
 	return []addonBlob{
 		{
-			path:        o.ws.WorkloadAddonFilePath(o.workloadName, fmt.Sprintf("%s.yml", o.storageName)),
+			path:        o.wsAddon.WorkloadAddonFilePath(o.workloadName, fmt.Sprintf("%s.yml", o.storageName)),
 			description: "template",
 			blob:        addon.WorkloadDDBTemplate(props),
 		},
@@ -706,7 +708,7 @@ func (o *initStorageOpts) envDDBAddonBlobs() ([]addonBlob, error) {
 	}
 	blobs := []addonBlob{
 		{
-			path:        o.ws.EnvAddonFilePath(fmt.Sprintf("%s.yml", o.storageName)),
+			path:        o.wsAddon.EnvAddonFilePath(fmt.Sprintf("%s.yml", o.storageName)),
 			description: "template",
 			blob:        addon.EnvDDBTemplate(props),
 		},
@@ -715,7 +717,7 @@ func (o *initStorageOpts) envDDBAddonBlobs() ([]addonBlob, error) {
 		return blobs, nil
 	}
 	return append(blobs, addonBlob{
-		path:        o.ws.WorkloadAddonFilePath(o.workloadName, fmt.Sprintf("%s-access-policy.yml", o.storageName)),
+		path:        o.wsAddon.WorkloadAddonFilePath(o.workloadName, fmt.Sprintf("%s-access-policy.yml", o.storageName)),
 		description: "template",
 		blob:        addon.EnvDDBAccessPolicyTemplate(props),
 	}), nil
@@ -749,7 +751,7 @@ func (o *initStorageOpts) ddbProps() (*addon.DynamoDBProps, error) {
 func (o *initStorageOpts) wkldS3AddonBlobs() ([]addonBlob, error) {
 	return []addonBlob{
 		{
-			path:        o.ws.WorkloadAddonFilePath(o.workloadName, fmt.Sprintf("%s.yml", o.storageName)),
+			path:        o.wsAddon.WorkloadAddonFilePath(o.workloadName, fmt.Sprintf("%s.yml", o.storageName)),
 			description: "template",
 			blob:        addon.WorkloadS3Template(o.s3Props()),
 		},
@@ -760,7 +762,7 @@ func (o *initStorageOpts) envS3AddonBlobs() ([]addonBlob, error) {
 	props := o.s3Props()
 	blobs := []addonBlob{
 		{
-			path:        o.ws.EnvAddonFilePath(fmt.Sprintf("%s.yml", o.storageName)),
+			path:        o.wsAddon.EnvAddonFilePath(fmt.Sprintf("%s.yml", o.storageName)),
 			description: "template",
 			blob:        addon.EnvS3Template(props),
 		},
@@ -770,7 +772,7 @@ func (o *initStorageOpts) envS3AddonBlobs() ([]addonBlob, error) {
 
 	}
 	return append(blobs, addonBlob{
-		path:        o.ws.WorkloadAddonFilePath(o.workloadName, fmt.Sprintf("%s-access-policy.yml", o.storageName)),
+		path:        o.wsAddon.WorkloadAddonFilePath(o.workloadName, fmt.Sprintf("%s-access-policy.yml", o.storageName)),
 		description: "template",
 		blob:        addon.EnvS3AccessPolicyTemplate(props),
 	}), nil
@@ -800,7 +802,7 @@ func (o *initStorageOpts) wkldRDSAddonBlobs() ([]addonBlob, error) {
 		return nil, fmt.Errorf("unknown Aurora serverless version %q", v)
 	}
 	blobs = append(blobs, addonBlob{
-		path:        o.ws.WorkloadAddonFilePath(o.workloadName, fmt.Sprintf("%s.yml", o.storageName)),
+		path:        o.wsAddon.WorkloadAddonFilePath(o.workloadName, fmt.Sprintf("%s.yml", o.storageName)),
 		description: "template",
 		blob:        tmplBlob,
 	})
@@ -808,7 +810,7 @@ func (o *initStorageOpts) wkldRDSAddonBlobs() ([]addonBlob, error) {
 		return blobs, nil
 	}
 	return append(blobs, addonBlob{
-		path:        o.ws.WorkloadAddonFilePath(o.workloadName, "addons.parameters.yml"),
+		path:        o.wsAddon.WorkloadAddonFilePath(o.workloadName, "addons.parameters.yml"),
 		description: "parameters",
 		blob:        addon.RDWSParamsForRDS(),
 	}), nil
@@ -821,12 +823,12 @@ func (o *initStorageOpts) envRDSAddonBlobs() ([]addonBlob, error) {
 	}
 	blobs := []addonBlob{
 		{
-			path:        o.ws.EnvAddonFilePath(fmt.Sprintf("%s.yml", o.storageName)),
+			path:        o.wsAddon.EnvAddonFilePath(fmt.Sprintf("%s.yml", o.storageName)),
 			description: "template",
 			blob:        addon.EnvServerlessTemplate(props),
 		},
 		{
-			path:        o.ws.EnvAddonFilePath("addons.parameters.yml"),
+			path:        o.wsAddon.EnvAddonFilePath("addons.parameters.yml"),
 			description: "parameters",
 			blob:        addon.EnvParamsForRDS(),
 		},
@@ -836,12 +838,12 @@ func (o *initStorageOpts) envRDSAddonBlobs() ([]addonBlob, error) {
 	}
 	return append(blobs,
 		addonBlob{
-			path:        o.ws.WorkloadAddonFilePath(o.workloadName, fmt.Sprintf("%s-ingress.yml", o.storageName)),
+			path:        o.wsAddon.WorkloadAddonFilePath(o.workloadName, fmt.Sprintf("%s-ingress.yml", o.storageName)),
 			description: "template",
 			blob:        addon.EnvServerlessRDWSIngressTemplate(props),
 		},
 		addonBlob{
-			path:        o.ws.WorkloadAddonFilePath(o.workloadName, "addons.parameters.yml"),
+			path:        o.wsAddon.WorkloadAddonFilePath(o.workloadName, "addons.parameters.yml"),
 			description: "parameters",
 			blob:        addon.RDWSParamsForEnvRDS(),
 		},
