@@ -112,6 +112,79 @@ func TestPrompt_SelectOption(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, "Help me decide!", actual)
 	})
+	t.Run("should return value instead of friendly text", func(t *testing.T) {
+		// GIVEN
+		var p Prompt = func(p survey.Prompt, out interface{}, _ ...survey.AskOpt) error {
+			sel := p.(*prompt).prompter.(*survey.Select)
+			require.ElementsMatch(t, []string{
+				"Friendly Load Balanced Web Service  (ELB -> ECS on Fargate)",
+				"Friendly Backend Service            (ECS on Fargate)",
+				"Friendly Scheduled Job              (CW Event -> StateMachine -> Fargate)",
+			}, sel.Options)
+			result := out.(*string)
+			*result = "Friendly Load Balanced Web Service  (ELB -> ECS on Fargate)"
+			return nil
+		}
+		opts := []Option{
+			{
+				Value:        "Load Balanced Web Service",
+				Hint:         "ELB -> ECS on Fargate",
+				FriendlyText: "Friendly Load Balanced Web Service",
+			},
+			{
+				Value:        "Backend Service",
+				Hint:         "ECS on Fargate",
+				FriendlyText: "Friendly Backend Service",
+			},
+			{
+				Value:        "Scheduled Job",
+				Hint:         "CW Event -> StateMachine -> Fargate",
+				FriendlyText: "Friendly Scheduled Job",
+			},
+		}
+
+		// WHEN
+		actual, err := p.SelectOption("Which workload type?", "choose!", opts)
+
+		// THEN
+		require.NoError(t, err)
+		require.Equal(t, "Load Balanced Web Service", actual)
+	})
+	t.Run("should return value instead of friendly text without extra spaces when there are no hints", func(t *testing.T) {
+		// GIVEN
+		var p Prompt = func(p survey.Prompt, out interface{}, _ ...survey.AskOpt) error {
+			sel := p.(*prompt).prompter.(*survey.Select)
+			require.ElementsMatch(t, []string{
+				"Load Balanced Web Service  (ELB -> ECS on Fargate)",
+				"Friend! Help me decide!    ",
+				"Backend Service            (ECS on Fargate)",
+			}, sel.Options)
+			result := out.(*string)
+			*result = "Friend! Help me decide!    "
+			return nil
+		}
+		opts := []Option{
+			{
+				Value: "Load Balanced Web Service",
+				Hint:  "ELB -> ECS on Fargate",
+			},
+			{
+				Value:        "Help me decide!",
+				FriendlyText: "Friend! Help me decide!",
+			},
+			{
+				Value: "Backend Service",
+				Hint:  "ECS on Fargate",
+			},
+		}
+
+		// WHEN
+		actual, err := p.SelectOption("Which workload type?", "choose!", opts)
+
+		// THEN
+		require.NoError(t, err)
+		require.Equal(t, "Help me decide!", actual)
+	})
 }
 
 func TestPrompt_SelectOne(t *testing.T) {

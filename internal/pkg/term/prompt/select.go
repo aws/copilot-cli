@@ -40,16 +40,21 @@ var regexpSGR = regexp.MustCompile(sgr)
 
 // Option represents a choice with a hint for clarification.
 type Option struct {
-	Value string
-	Hint  string
+	Value        string // The actual value represented by the option.
+	FriendlyText string // An optional FriendlyText displayed in place of Value.
+	Hint         string // An optional Hint displayed alongside the Value or FriendlyText.
 }
 
 // String implements the fmt.Stringer interface.
 func (o Option) String() string {
-	if o.Hint == "" {
-		return fmt.Sprintf("%s\t", o.Value)
+	text := o.Value
+	if o.FriendlyText != "" {
+		text = o.FriendlyText
 	}
-	return fmt.Sprintf("%s\t%s", o.Value, color.Faint.Sprintf("(%s)", o.Hint))
+	if o.Hint == "" {
+		return fmt.Sprintf("%s\t", text)
+	}
+	return fmt.Sprintf("%s\t%s", text, color.Faint.Sprintf("(%s)", o.Hint))
 }
 
 // SelectOption prompts the user to select one option from options and returns the Value of the option.
