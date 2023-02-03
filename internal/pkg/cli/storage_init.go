@@ -420,6 +420,22 @@ func (o *initStorageOpts) validateOrAskLifecycle() error {
 	if o.lifecycle != "" {
 		return o.validateStorageLifecycle()
 	}
+	_, err := o.ws.ReadFile(o.ws.WorkloadAddonFileAbsPath(o.workloadName, fmt.Sprintf("%s.yml", o.storageName)))
+	if err == nil {
+		o.lifecycle = lifecycleWorkloadLevel
+		return nil
+	}
+	if _, ok := err.(*workspace.ErrFileNotExists); !ok {
+		return fmt.Errorf("check if %s addon exists for %s in workspace: %w", o.storageName, o.workloadName, err)
+	}
+	_, err = o.ws.ReadFile(o.ws.EnvAddonFileAbsPath(fmt.Sprintf("%s.yml", o.storageName)))
+	if err == nil {
+		o.lifecycle = lifecycleEnvironmentLevel
+		return nil
+	}
+	if _, ok := err.(*workspace.ErrFileNotExists); !ok {
+		return fmt.Errorf("check if %s exists as an environment addon in workspace: %w", o.storageName, err)
+	}
 	lifecycle, err := o.prompt.SelectOne(
 		storageInitLifecyclePrompt,
 		"just pick one",
