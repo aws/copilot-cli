@@ -49,7 +49,7 @@ func walkFn(source, dest string, reader afero.Fs, upload UploadFunc, urlsPtr *[]
 		}
 		file, err := reader.Open(path)
 		if err != nil {
-			return fmt.Errorf("open file %q: %w", path, err)
+			return fmt.Errorf("open file on path %q: %w", path, err)
 		}
 		defer file.Close()
 		fileRel, err := filepath.Rel(source, path)
