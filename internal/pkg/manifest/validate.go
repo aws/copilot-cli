@@ -533,6 +533,31 @@ func (s ScheduledJobConfig) validate() error {
 	return nil
 }
 
+// validate returns nil if StaticSite is configured correctly.
+func (s StaticSite) validate() error {
+	var err error
+	if err = s.StaticSiteConfig.validate(); err != nil {
+		return err
+	}
+	if err = s.Workload.validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s StaticSiteConfig) validate() error {
+	for _, fileupload := range s.FileUploads {
+		if err := fileupload.validate(); err != nil {
+			return fmt.Errorf(`validate "files": %w`, err)
+		}
+	}
+	return nil
+}
+
+func (f FileUpload) validate() error {
+	return nil
+}
+
 // validate returns nil if the pipeline manifest is configured correctly.
 func (p Pipeline) Validate() error {
 	if len(p.Name) > 100 {
