@@ -29,13 +29,6 @@ import (
 )
 
 const (
-	lifecycleEnvironmentLevel = "environment"
-	lifecycleWorkloadLevel    = "workload"
-)
-
-var validLifecycleOptions = []string{lifecycleWorkloadLevel, lifecycleEnvironmentLevel}
-
-const (
 	dynamoDBStorageType = "DynamoDB"
 	s3StorageType       = "S3"
 	rdsStorageType      = "Aurora"
@@ -60,6 +53,21 @@ const (
 	rdsFriendlyText           = "Database Cluster"
 )
 
+const (
+	lifecycleEnvironmentLevel = "environment"
+	lifecycleWorkloadLevel    = "workload"
+
+	lifecycleEnvironmentFriendlyTextOption = "environment yo"
+	lifecycleWorkloadFriendlyTextOption    = "workload yo"
+)
+
+var option2Lifecycle = map[string]string{
+	lifecycleEnvironmentFriendlyTextOption: lifecycleEnvironmentLevel,
+	lifecycleWorkloadFriendlyTextOption:    lifecycleWorkloadLevel,
+}
+
+var validLifecycleOptions = []string{lifecycleWorkloadLevel, lifecycleEnvironmentLevel}
+
 // General-purpose prompts, collected for all storage resources.
 var (
 	fmtStorageInitTypePrompt = "What " + color.Emphasize("type") + " of storage would you like to associate with %s?"
@@ -72,7 +80,8 @@ Aurora Serverless is an on-demand autoscaling configuration for Amazon Aurora, a
 	fmtStorageInitNamePrompt = "What would you like to " + color.Emphasize("name") + " this %s?"
 	storageInitNameHelp      = "The name of this storage resource. You can use the following characters: a-zA-Z0-9-_"
 
-	storageInitSvcPrompt = "Which " + color.Emphasize("workload") + " needs access to the storage?"
+	storageInitSvcPrompt       = "Which " + color.Emphasize("workload") + " needs access to the storage?"
+	storageInitLifecyclePrompt = "which lifecycle huh?"
 )
 
 // DDB-specific questions and help prompts.
@@ -207,11 +216,6 @@ func (o *initStorageOpts) Validate() error {
 	if o.appName == "" {
 		return errNoAppInWorkspace
 	}
-	if o.lifecycle != "" {
-		if err := o.validateStorageLifecycle(); err != nil {
-			return err
-		}
-	}
 	// --no-lsi and --lsi are mutually exclusive.
 	if o.noLSI && len(o.lsiSorts) != 0 {
 		return fmt.Errorf("validate LSI configuration: cannot specify --no-lsi and --lsi options at once")
@@ -226,15 +230,6 @@ func (o *initStorageOpts) Validate() error {
 		}
 	}
 	return nil
-}
-
-func (o *initStorageOpts) validateStorageLifecycle() error {
-	for _, valid := range validLifecycleOptions {
-		if o.lifecycle == valid {
-			return nil
-		}
-	}
-	return fmt.Errorf("invalid lifecycle; must be one of %s", english.OxfordWordSeries(quoteStringSlice(validLifecycleOptions), "or"))
 }
 
 func (o *initStorageOpts) validateServerlessVersion() error {
@@ -257,6 +252,9 @@ func (o *initStorageOpts) Ask() error {
 	}
 	// Storage name needs to be asked after workload because for Aurora the default storage name uses the workload name.
 	if err := o.validateOrAskStorageName(); err != nil {
+		return err
+	}
+	if err := o.validateOrAskLifecycle(); err != nil {
 		return err
 	}
 	switch o.storageType {
@@ -416,6 +414,30 @@ func (o *initStorageOpts) validateWorkloadName() error {
 		return fmt.Errorf("workload %s not found in the workspace", o.workloadName)
 	}
 	return nil
+}
+
+func (o *initStorageOpts) validateOrAskLifecycle() error {
+	if o.lifecycle != "" {
+		return o.validateStorageLifecycle()
+	}
+	lifecycle, err := o.prompt.SelectOne(
+		storageInitLifecyclePrompt,
+		"just pick one",
+		[]string{lifecycleWorkloadFriendlyTextOption, lifecycleEnvironmentFriendlyTextOption})
+	if err != nil {
+		return fmt.Errorf("ask for lifecycle: %w", err)
+	}
+	o.lifecycle = option2Lifecycle[lifecycle]
+	return nil
+}
+
+func (o *initStorageOpts) validateStorageLifecycle() error {
+	for _, valid := range validLifecycleOptions {
+		if o.lifecycle == valid {
+			return nil
+		}
+	}
+	return fmt.Errorf("invalid lifecycle; must be one of %s", english.OxfordWordSeries(quoteStringSlice(validLifecycleOptions), "or"))
 }
 
 func (o *initStorageOpts) validateOrAskDynamoPartitionKey() error {
@@ -948,7 +970,7 @@ Resource names are injected into your containers as environment variables for ea
 	cmd.Flags().StringVarP(&vars.storageName, nameFlag, nameFlagShort, "", storageFlagDescription)
 	cmd.Flags().StringVarP(&vars.storageType, storageTypeFlag, typeFlagShort, "", storageTypeFlagDescription)
 	cmd.Flags().StringVarP(&vars.workloadName, workloadFlag, workloadFlagShort, "", storageWorkloadFlagDescription)
-	cmd.Flags().StringVarP(&vars.lifecycle, storageLifecycleFlag, "", lifecycleWorkloadLevel, storageLifecycleFlagDescription)
+	cmd.Flags().StringVarP(&vars.lifecycle, storageLifecycleFlag, "", "", storageLifecycleFlagDescription)
 
 	cmd.Flags().StringVar(&vars.partitionKey, storagePartitionKeyFlag, "", storagePartitionKeyFlagDescription)
 	cmd.Flags().StringVar(&vars.sortKey, storageSortKeyFlag, "", storageSortKeyFlagDescription)

@@ -43,12 +43,6 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 			mock:      func(m *mockStorageInitValidate) {},
 			wantedErr: errNoAppInWorkspace,
 		},
-		"bad lifecycle option": {
-			inAppName:   "bowie",
-			inLifecycle: "weird input",
-			mock:        func(m *mockStorageInitValidate) {},
-			wantedErr:   errors.New(`invalid lifecycle; must be one of "workload" or "environment"`),
-		},
 		"fails when --no-lsi and --lsi are both provided": {
 			inAppName:     "bowie",
 			inStorageType: dynamoDBStorageType,
@@ -143,6 +137,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 		inStorageType string
 		inSvcName     string
 		inStorageName string
+		inLifecycle   string
 
 		mock func(m *mockStorageInitAsk)
 
@@ -158,6 +153,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 		"asks for storage type": {
 			inSvcName:     wantedSvcName,
 			inStorageName: wantedBucketName,
+			inLifecycle:   lifecycleWorkloadLevel,
 			mock: func(m *mockStorageInitAsk) {
 				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil).AnyTimes()
 				m.prompt.EXPECT().SelectOption(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(s3StorageType, nil)
@@ -166,6 +162,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 				storageType:  s3StorageType,
 				storageName:  wantedBucketName,
 				workloadName: wantedSvcName,
+				lifecycle:    lifecycleWorkloadLevel,
 			},
 		},
 		"error if storage type not gotten": {
@@ -198,6 +195,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 		"asks for storage workload": {
 			inStorageName: wantedBucketName,
 			inStorageType: s3StorageType,
+			inLifecycle:   lifecycleWorkloadLevel,
 			mock: func(m *mockStorageInitAsk) {
 				m.sel.EXPECT().Workload(gomock.Eq(storageInitSvcPrompt), gomock.Any()).Return(wantedSvcName, nil)
 			},
@@ -205,6 +203,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 				storageType:  s3StorageType,
 				storageName:  wantedBucketName,
 				workloadName: wantedSvcName,
+				lifecycle:    lifecycleWorkloadLevel,
 			},
 		},
 		"error if svc not returned": {
@@ -220,6 +219,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			inSvcName:     "frontend",
 			inStorageType: s3StorageType,
 			inStorageName: "my-bucket.4",
+			inLifecycle:   lifecycleEnvironmentLevel,
 			mock: func(m *mockStorageInitAsk) {
 				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil).AnyTimes()
 			},
@@ -236,6 +236,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 		"asks for storage name": {
 			inSvcName:     wantedSvcName,
 			inStorageType: s3StorageType,
+			inLifecycle:   lifecycleWorkloadLevel,
 			mock: func(m *mockStorageInitAsk) {
 				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
 				m.prompt.EXPECT().Get(gomock.Eq(fmt.Sprintf(fmtStorageInitNamePrompt, color.HighlightUserInput(s3BucketFriendlyText))),
@@ -246,6 +247,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 				storageType:  s3StorageType,
 				storageName:  wantedBucketName,
 				workloadName: wantedSvcName,
+				lifecycle:    lifecycleWorkloadLevel,
 			},
 		},
 		"error if storage name not returned": {
@@ -258,10 +260,47 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			},
 			wantedErr: fmt.Errorf("input storage name: some error"),
 		},
+		"invalid lifecycle": {
+			inSvcName:     wantedSvcName,
+			inStorageType: s3StorageType,
+			inStorageName: wantedBucketName,
+			inLifecycle:   "immortal",
+
+			mock: func(m *mockStorageInitAsk) {
+				m.wsWkld.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+			},
+			wantedErr: fmt.Errorf(`invalid lifecycle; must be one of "workload" or "environment"`),
+		},
+		"asks for lifecycle": {
+			inSvcName:     wantedSvcName,
+			inStorageType: s3StorageType,
+			inStorageName: wantedBucketName,
+			mock: func(m *mockStorageInitAsk) {
+				m.wsWkld.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+				m.prompt.EXPECT().SelectOne(storageInitLifecyclePrompt, gomock.Any(), gomock.Any()).Return(lifecycleWorkloadFriendlyTextOption, nil)
+			},
+			wantedVars: &initStorageVars{
+				storageType:  s3StorageType,
+				storageName:  wantedBucketName,
+				workloadName: wantedSvcName,
+				lifecycle:    lifecycleWorkloadLevel,
+			},
+		},
+		"error if lifecycle not gotten": {
+			inSvcName:     wantedSvcName,
+			inStorageType: s3StorageType,
+			inStorageName: wantedBucketName,
+			mock: func(m *mockStorageInitAsk) {
+				m.wsWkld.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+				m.prompt.EXPECT().SelectOne(storageInitLifecyclePrompt, gomock.Any(), gomock.Any()).Return("", errors.New("some error"))
+			},
+			wantedErr: errors.New("ask for lifecycle: some error"),
+		},
 		"no error or asks when fully specified": {
 			inSvcName:     wantedSvcName,
 			inStorageType: s3StorageType,
 			inStorageName: wantedBucketName,
+			inLifecycle:   lifecycleEnvironmentLevel,
 			mock: func(m *mockStorageInitAsk) {
 				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil).AnyTimes()
 			},
@@ -283,6 +322,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 					storageType:  tc.inStorageType,
 					storageName:  tc.inStorageName,
 					workloadName: tc.inSvcName,
+					lifecycle:    tc.inLifecycle,
 				},
 				appName: wantedAppName,
 				sel:     m.sel,
@@ -554,6 +594,7 @@ func TestStorageInitOpts_AskDDB(t *testing.T) {
 				storageName:  wantedTableName,
 				workloadName: wantedSvcName,
 				storageType:  dynamoDBStorageType,
+				lifecycle:    lifecycleWorkloadLevel,
 
 				partitionKey: wantedPartitionKey,
 				sortKey:      wantedSortKey,
@@ -577,6 +618,7 @@ func TestStorageInitOpts_AskDDB(t *testing.T) {
 				storageName:  wantedTableName,
 				workloadName: wantedSvcName,
 				storageType:  dynamoDBStorageType,
+				lifecycle:    lifecycleWorkloadLevel,
 
 				partitionKey: wantedPartitionKey,
 				sortKey:      wantedSortKey,
@@ -598,6 +640,7 @@ func TestStorageInitOpts_AskDDB(t *testing.T) {
 				storageName:  wantedTableName,
 				workloadName: wantedSvcName,
 				storageType:  dynamoDBStorageType,
+				lifecycle:    lifecycleWorkloadLevel,
 
 				partitionKey: wantedPartitionKey,
 				noLSI:        true,
@@ -702,6 +745,7 @@ func TestStorageInitOpts_AskDDB(t *testing.T) {
 					lsiSorts:     tc.inLSISorts,
 					noLSI:        tc.inNoLSI,
 					noSort:       tc.inNoSort,
+					lifecycle:    lifecycleWorkloadLevel,
 				},
 				appName: "ddos",
 				prompt:  m.prompt,
@@ -772,9 +816,11 @@ func TestStorageInitOpts_AskRDS(t *testing.T) {
 				m.ws.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(workspace.WorkloadManifest("type: Load Balanced Web Service"), nil)
 			},
 			wantedVars: &initStorageVars{
-				storageType:             rdsStorageType,
-				storageName:             wantedClusterName,
-				workloadName:            wantedSvcName,
+				storageType:  rdsStorageType,
+				storageName:  wantedClusterName,
+				workloadName: wantedSvcName,
+				lifecycle:    lifecycleEnvironmentLevel,
+
 				auroraServerlessVersion: wantedServerlessVersion,
 				rdsEngine:               wantedDBEngine,
 				rdsInitialDBName:        wantedInitialDBName,
@@ -813,9 +859,11 @@ func TestStorageInitOpts_AskRDS(t *testing.T) {
 
 			},
 			wantedVars: &initStorageVars{
-				storageType:             rdsStorageType,
-				storageName:             wantedClusterName,
-				workloadName:            wantedSvcName,
+				storageType:  rdsStorageType,
+				storageName:  wantedClusterName,
+				workloadName: wantedSvcName,
+				lifecycle:    lifecycleEnvironmentLevel,
+
 				auroraServerlessVersion: wantedServerlessVersion,
 				rdsInitialDBName:        wantedInitialDBName,
 				rdsEngine:               wantedDBEngine,
@@ -855,9 +903,11 @@ func TestStorageInitOpts_AskRDS(t *testing.T) {
 				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
 			},
 			wantedVars: &initStorageVars{
-				storageType:             rdsStorageType,
-				storageName:             wantedClusterName,
-				workloadName:            wantedSvcName,
+				storageType:  rdsStorageType,
+				storageName:  wantedClusterName,
+				workloadName: wantedSvcName,
+				lifecycle:    lifecycleEnvironmentLevel,
+
 				auroraServerlessVersion: wantedServerlessVersion,
 				rdsEngine:               wantedDBEngine,
 				rdsInitialDBName:        wantedInitialDBName,
@@ -901,6 +951,7 @@ func TestStorageInitOpts_AskRDS(t *testing.T) {
 					storageType:  rdsStorageType,
 					workloadName: wantedSvcName,
 					storageName:  tc.inStorageName,
+					lifecycle:    lifecycleEnvironmentLevel,
 
 					auroraServerlessVersion: wantedServerlessVersion,
 					rdsEngine:               tc.inDBEngine,
