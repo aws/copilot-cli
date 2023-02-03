@@ -58,7 +58,7 @@ func (p Prompt) SelectOption(message, help string, opts []Option, promptCfgs ...
 		return "", ErrEmptyOptions
 	}
 
-	choices, err := stringifyOptions(opts)
+	choices, choice2Value, err := stringifyOptions(opts)
 	if err != nil {
 		return "", err
 	}
@@ -66,7 +66,7 @@ func (p Prompt) SelectOption(message, help string, opts []Option, promptCfgs ...
 	if err != nil {
 		return "", err
 	}
-	return parseValueFromOptionFmt(result), nil
+	return choice2Value[result], nil
 }
 
 // SelectOne prompts the user with a list of options to choose from with the arrow keys.
@@ -96,7 +96,7 @@ func (p Prompt) SelectOne(message, help string, options []string, promptCfgs ...
 	return result, err
 }
 
-func stringifyOptions(opts []Option) ([]string, error) {
+func stringifyOptions(opts []Option) (choices []string, choice2Value map[string]string, err error) {
 	buf := new(strings.Builder)
 	tw := tabwriter.NewWriter(buf, minCellWidth, tabWidth, cellPaddingWidth, paddingChar, noAdditionalFormatting)
 	var lines []string
@@ -104,12 +104,17 @@ func stringifyOptions(opts []Option) ([]string, error) {
 		lines = append(lines, opt.String())
 	}
 	if _, err := tw.Write([]byte(strings.Join(lines, "\n"))); err != nil {
-		return nil, fmt.Errorf("render options: %v", err)
+		return nil, nil, fmt.Errorf("render options: %v", err)
 	}
 	if err := tw.Flush(); err != nil {
-		return nil, fmt.Errorf("flush tabwriter options: %v", err)
+		return nil, nil, fmt.Errorf("flush tabwriter options: %v", err)
 	}
-	return strings.Split(buf.String(), "\n"), nil
+	choices = strings.Split(buf.String(), "\n")
+	choice2Value = make(map[string]string)
+	for idx, choice := range choices {
+		choice2Value[choice] = opts[idx].Value
+	}
+	return choices, choice2Value, nil
 }
 
 func parseValueFromOptionFmt(formatted string) string {

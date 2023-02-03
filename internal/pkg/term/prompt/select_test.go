@@ -53,7 +53,7 @@ func TestPrompt_SelectOption(t *testing.T) {
 				"Scheduled Job              (CW Event -> StateMachine -> Fargate)",
 			}, sel.Options)
 			result := out.(*string)
-			*result = "Load Balanced Web Service     (ELB -> ECS on Fargate)"
+			*result = "Load Balanced Web Service  (ELB -> ECS on Fargate)"
 			return nil
 		}
 		opts := []Option{
