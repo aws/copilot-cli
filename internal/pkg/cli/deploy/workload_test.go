@@ -1161,6 +1161,9 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 						spinner:          m.mockSpinner,
 						envVersionGetter: m.mockEnvVersionGetter,
 						overrider:        new(override.Noop),
+						customResources: func(_ template.Reader) ([]*customresource.CustomResource, error) {
+							return nil, nil
+						},
 					},
 					newSvcUpdater: func(f func(*session.Session) serviceForceUpdater) serviceForceUpdater {
 						return m.mockServiceForceUpdater

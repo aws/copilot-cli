@@ -491,6 +491,26 @@ func (d *workloadDeployer) pushAddonsTemplateToS3Bucket() (string, error) {
 }
 
 func (d *workloadDeployer) runtimeConfig(in *StackRuntimeConfiguration) (*stack.RuntimeConfig, error) {
+	out, err := d.convertRuntimeConfig(in)
+	if err != nil {
+		return nil, err
+	}
+	// Assign defaults if not set.
+	if len(out.CustomResourcesURL) == 0 {
+		// Populate the custom resource paths that copilot should upload the resources to.
+		crs, err := d.customResources(d.templateFS)
+		if err != nil {
+			return nil, err
+		}
+		out.CustomResourcesURL = make(map[string]string)
+		for _, cr := range crs {
+			out.CustomResourcesURL[cr.Name()] = s3.URL(d.resources.Region, d.resources.S3Bucket, cr.ArtifactPath())
+		}
+	}
+	return out, nil
+}
+
+func (d *workloadDeployer) convertRuntimeConfig(in *StackRuntimeConfiguration) (*stack.RuntimeConfig, error) {
 	endpoint, err := d.endpointGetter.ServiceDiscoveryEndpoint()
 	if err != nil {
 		return nil, fmt.Errorf("get service discovery endpoint: %w", err)

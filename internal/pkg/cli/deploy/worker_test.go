@@ -9,6 +9,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
+	"github.com/aws/copilot-cli/internal/pkg/template"
+
 	"github.com/aws/copilot-cli/internal/pkg/override"
 	"gopkg.in/yaml.v3"
 
@@ -37,23 +40,19 @@ func TestWorkerSvcDeployer_GenerateCloudFormationTemplate(t *testing.T) {
 		type lambdaFn struct {
 			Properties struct {
 				Code struct {
-					S3Bucket string `yaml:"S3bucket"`
+					S3Bucket string `yaml:"S3Bucket"`
 					S3Key    string `yaml:"S3Key"`
 				} `yaml:"Code"`
 			} `yaml:"Properties"`
 		}
 		dat := struct {
 			Resources struct {
-				EnvControllerFunction            lambdaFn `yaml:"EnvControllerFunction"`
-				BacklogPerTaskCalculatorFunction lambdaFn `yaml:"BacklogPerTaskCalculatorFunction"`
+				EnvControllerFunction lambdaFn `yaml:"EnvControllerFunction"`
 			} `yaml:"Resources"`
 		}{}
 		require.NoError(t, yaml.Unmarshal([]byte(out.Template), &dat))
-		require.Empty(t, dat.Resources.EnvControllerFunction.Properties.Code.S3Bucket)
-		require.Empty(t, dat.Resources.EnvControllerFunction.Properties.Code.S3Key)
-
-		require.Empty(t, dat.Resources.BacklogPerTaskCalculatorFunction.Properties.Code.S3Bucket)
-		require.Empty(t, dat.Resources.BacklogPerTaskCalculatorFunction.Properties.Code.S3Key)
+		require.Equal(t, "stackset-demo-bucket", dat.Resources.EnvControllerFunction.Properties.Code.S3Bucket)
+		require.Contains(t, dat.Resources.EnvControllerFunction.Properties.Code.S3Key, "manual/scripts/custom-resources/")
 	})
 }
 
@@ -142,6 +141,9 @@ func TestSvcDeployOpts_stackConfiguration_worker(t *testing.T) {
 						resources:        mockResources,
 						endpointGetter:   m.mockEndpointGetter,
 						envVersionGetter: m.mockEnvVersionGetter,
+						customResources: func(_ template.Reader) ([]*customresource.CustomResource, error) {
+							return nil, nil
+						},
 					},
 					newSvcUpdater: func(f func(*session.Session) serviceForceUpdater) serviceForceUpdater {
 						return nil
@@ -245,10 +247,16 @@ func mockWorkerServiceDeployer(opts ...func(*workerSvcDeployer)) *workerSvcDeplo
 					App:  "demo",
 					Name: "test",
 				},
+				resources: &stack.AppRegionalResources{
+					Region:   "us-west-2",
+					S3Bucket: "stackset-demo-bucket",
+				},
 				envConfig:        new(manifest.Environment),
 				endpointGetter:   &mockEndpointGetter{endpoint: "demo.test.local"},
 				envVersionGetter: &mockEnvVersionGetter{version: "v1.0.0"},
 				overrider:        new(override.Noop),
+				templateFS:       fakeTemplateFS(),
+				customResources:  workerCustomResources,
 			},
 			newSvcUpdater: func(f func(*session.Session) serviceForceUpdater) serviceForceUpdater {
 				return nil
