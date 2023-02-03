@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/aws/copilot-cli/e2e/internal/client"
+	"github.com/aws/copilot-cli/e2e/internal/command"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -36,10 +37,18 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(err).NotTo(HaveOccurred())
 	appName = fmt.Sprintf("e2e-apprunner-%d", time.Now().Unix())
+	err = command.Run("aws", []string{"ssm", "put-parameter", "--name", "e2e-apprunner-ssm-param", "--value", "abcd1234", "--type", "String", "--tags", "[{\"Key\":\"copilot-application\",\"Value\":\"" + appName + "\"},{\"Key\":\"copilot-environment\", \"Value\":\"" + envName + "\"}]"})
+	Expect(err).NotTo(HaveOccurred())
+	err = command.Run("aws", []string{"secretsmanager", "create-secret", "--name", "e2e-apprunner-MyTestSecret", "--secret-string", "\"{\"user\":\"diegor\",\"password\":\"EXAMPLE-PASSWORD\"}\"", "--tags", "[{\"Key\":\"copilot-application\",\"Value\":\"" + appName + "\"},{\"Key\":\"copilot-environment\", \"Value\":\"" + envName + "\"}]"})
+	Expect(err).NotTo(HaveOccurred())
 })
 
 var _ = AfterSuite(func() {
 	_, err := cli.AppDelete()
+	Expect(err).NotTo(HaveOccurred())
+	err = command.Run("aws", []string{"ssm", "delete-parameter", "--name", "e2e-apprunner-ssm-param"})
+	Expect(err).NotTo(HaveOccurred())
+	err = command.Run("aws", []string{"secretsmanager", "delete-secret", "--secret-id", "e2e-apprunner-MyTestSecret", "--force-delete-without-recovery"})
 	Expect(err).NotTo(HaveOccurred())
 	_ = client.NewAWS().DeleteAllDBClusterSnapshots()
 })

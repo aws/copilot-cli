@@ -6,6 +6,10 @@ package deploy
 import (
 	"errors"
 	"testing"
+	"time"
+
+	"github.com/aws/copilot-cli/internal/pkg/override"
+	"gopkg.in/yaml.v3"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -15,6 +19,40 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
+
+func TestBackendSvcDeployer_GenerateCloudFormationTemplate(t *testing.T) {
+	t.Run("ensure resulting CloudFormation template custom resource paths are empty", func(t *testing.T) {
+		// GIVEN
+		backend := mockBackendServiceDeployer()
+
+		// WHEN
+		out, err := backend.GenerateCloudFormationTemplate(&GenerateCloudFormationTemplateInput{})
+
+		// THEN
+		require.NoError(t, err)
+
+		type lambdaFn struct {
+			Properties struct {
+				Code struct {
+					S3Bucket string `yaml:"S3bucket"`
+					S3Key    string `yaml:"S3Key"`
+				} `yaml:"Code"`
+			} `yaml:"Properties"`
+		}
+		dat := struct {
+			Resources struct {
+				EnvControllerFunction lambdaFn `yaml:"EnvControllerFunction"`
+				RulePriorityFunction  lambdaFn `yaml:"RulePriorityFunction"`
+			} `yaml:"Resources"`
+		}{}
+		require.NoError(t, yaml.Unmarshal([]byte(out.Template), &dat))
+		require.Empty(t, dat.Resources.EnvControllerFunction.Properties.Code.S3Bucket)
+		require.Empty(t, dat.Resources.EnvControllerFunction.Properties.Code.S3Key)
+
+		require.Empty(t, dat.Resources.RulePriorityFunction.Properties.Code.S3Bucket)
+		require.Empty(t, dat.Resources.RulePriorityFunction.Properties.Code.S3Key)
+	})
+}
 
 func TestBackendSvcDeployer_stackConfiguration(t *testing.T) {
 	const (
@@ -218,4 +256,55 @@ func TestBackendSvcDeployer_stackConfiguration(t *testing.T) {
 			}
 		})
 	}
+}
+
+func mockBackendServiceDeployer(opts ...func(*backendSvcDeployer)) *backendSvcDeployer {
+	deployer := &backendSvcDeployer{
+		svcDeployer: &svcDeployer{
+			workloadDeployer: &workloadDeployer{
+				name: "example",
+				app: &config.Application{
+					Name: "demo",
+				},
+				env: &config.Environment{
+					App:  "demo",
+					Name: "test",
+				},
+				envConfig:        new(manifest.Environment),
+				endpointGetter:   &mockEndpointGetter{endpoint: "demo.test.local"},
+				envVersionGetter: &mockEnvVersionGetter{version: "v1.0.0"},
+				overrider:        new(override.Noop),
+			},
+			newSvcUpdater: func(f func(*session.Session) serviceForceUpdater) serviceForceUpdater {
+				return nil
+			},
+			now: func() time.Time {
+				return time.Date(2020, 11, 23, 0, 0, 0, 0, time.UTC)
+			},
+		},
+		backendMft: &manifest.BackendService{
+			Workload: manifest.Workload{
+				Name: aws.String("example"),
+			},
+			BackendServiceConfig: manifest.BackendServiceConfig{
+				TaskConfig: manifest.TaskConfig{
+					Count: manifest.Count{
+						Value: aws.Int(1),
+					},
+				},
+				ImageConfig: manifest.ImageWithHealthcheckAndOptionalPort{
+					ImageWithOptionalPort: manifest.ImageWithOptionalPort{
+						Image: manifest.Image{
+							Build: manifest.BuildArgsOrString{BuildString: aws.String("/Dockerfile")},
+						},
+						Port: aws.Uint16(80),
+					},
+				},
+			},
+		},
+	}
+	for _, opt := range opts {
+		opt(deployer)
+	}
+	return deployer
 }
