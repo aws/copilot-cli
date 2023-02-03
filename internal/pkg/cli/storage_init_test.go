@@ -337,7 +337,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 				m.ws.EXPECT().ReadFile("mockWorkloadAddonPath").Return([]byte(""), &workspace.ErrFileNotExists{})
 				m.ws.EXPECT().EnvAddonFileAbsPath(fmt.Sprintf("%s.yml", wantedBucketName)).Return("mockEnvAddonPath")
 				m.ws.EXPECT().ReadFile("mockEnvAddonPath").Return([]byte(""), &workspace.ErrFileNotExists{})
-				m.prompt.EXPECT().SelectOne(storageInitLifecyclePrompt, gomock.Any(), gomock.Any()).Return(lifecycleWorkloadFriendlyTextOption, nil)
+				m.prompt.EXPECT().SelectOption(fmt.Sprintf(fmtStorageInitLifecyclePrompt, wantedSvcName), gomock.Any(), gomock.Any()).Return(lifecycleWorkloadLevel, nil)
 			},
 			wantedVars: &initStorageVars{
 				storageType:  s3StorageType,
@@ -356,7 +356,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 				m.ws.EXPECT().ReadFile("mockWorkloadAddonPath").Return([]byte(""), &workspace.ErrFileNotExists{})
 				m.ws.EXPECT().EnvAddonFileAbsPath(fmt.Sprintf("%s.yml", wantedBucketName)).Return("mockEnvAddonPath")
 				m.ws.EXPECT().ReadFile("mockEnvAddonPath").Return([]byte(""), &workspace.ErrFileNotExists{})
-				m.prompt.EXPECT().SelectOne(storageInitLifecyclePrompt, gomock.Any(), gomock.Any()).Return("", errors.New("some error"))
+				m.prompt.EXPECT().SelectOption(fmt.Sprintf(fmtStorageInitLifecyclePrompt, wantedSvcName), gomock.Any(), gomock.Any()).Return("", errors.New("some error"))
 			},
 			wantedErr: errors.New("ask for lifecycle: some error"),
 		},

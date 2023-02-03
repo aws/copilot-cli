@@ -57,14 +57,9 @@ const (
 	lifecycleEnvironmentLevel = "environment"
 	lifecycleWorkloadLevel    = "workload"
 
-	lifecycleEnvironmentFriendlyTextOption = "environment yo"
-	lifecycleWorkloadFriendlyTextOption    = "workload yo"
+	lifecycleEnvironmentFriendlyText = "No, I want the storage to be created and deleted at the environment level"
+	fmtLifecycleWorkloadFriendlyText = "Yes, the table should be create and deleted at the same time as %s"
 )
-
-var option2Lifecycle = map[string]string{
-	lifecycleEnvironmentFriendlyTextOption: lifecycleEnvironmentLevel,
-	lifecycleWorkloadFriendlyTextOption:    lifecycleWorkloadLevel,
-}
 
 var validLifecycleOptions = []string{lifecycleWorkloadLevel, lifecycleEnvironmentLevel}
 
@@ -80,8 +75,9 @@ Aurora Serverless is an on-demand autoscaling configuration for Amazon Aurora, a
 	fmtStorageInitNamePrompt = "What would you like to " + color.Emphasize("name") + " this %s?"
 	storageInitNameHelp      = "The name of this storage resource. You can use the following characters: a-zA-Z0-9-_"
 
-	storageInitSvcPrompt       = "Which " + color.Emphasize("workload") + " needs access to the storage?"
-	storageInitLifecyclePrompt = "which lifecycle huh?"
+	storageInitSvcPrompt = "Which " + color.Emphasize("workload") + " needs access to the storage?"
+
+	fmtStorageInitLifecyclePrompt = "Do you want the storage to be created and deleted with the %s service?"
 )
 
 // DDB-specific questions and help prompts.
@@ -436,14 +432,24 @@ func (o *initStorageOpts) validateOrAskLifecycle() error {
 	if _, ok := err.(*workspace.ErrFileNotExists); !ok {
 		return fmt.Errorf("check if %s exists as an environment addon in workspace: %w", o.storageName, err)
 	}
-	lifecycle, err := o.prompt.SelectOne(
-		storageInitLifecyclePrompt,
-		"just pick one",
-		[]string{lifecycleWorkloadFriendlyTextOption, lifecycleEnvironmentFriendlyTextOption})
+	options := []prompt.Option{
+		{
+			Value:        lifecycleEnvironmentLevel,
+			FriendlyText: lifecycleEnvironmentFriendlyText,
+		},
+		{
+			Value:        lifecycleWorkloadLevel,
+			FriendlyText: fmt.Sprintf(fmtLifecycleWorkloadFriendlyText, o.workloadName),
+		},
+	}
+	lifecycle, err := o.prompt.SelectOption(
+		fmt.Sprintf(fmtStorageInitLifecyclePrompt, o.workloadName),
+		"",
+		options)
 	if err != nil {
 		return fmt.Errorf("ask for lifecycle: %w", err)
 	}
-	o.lifecycle = option2Lifecycle[lifecycle]
+	o.lifecycle = lifecycle
 	return nil
 }
 
