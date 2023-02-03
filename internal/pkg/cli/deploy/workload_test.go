@@ -68,6 +68,36 @@ func fakeTemplateFS() *mockTemplateFS {
 	}
 }
 
+type mockEndpointGetter struct {
+	endpoint string
+	err      error
+}
+
+// ServiceDiscoveryEndpoint implements the endpointGetter interface.
+func (m *mockEndpointGetter) ServiceDiscoveryEndpoint() (string, error) {
+	return m.endpoint, m.err
+}
+
+type mockEnvVersionGetter struct {
+	version string
+	err     error
+}
+
+// Version implements the envVersionGetter interface.
+func (m *mockEnvVersionGetter) Version() (string, error) {
+	return m.version, m.err
+}
+
+type mockTopicLister struct {
+	topics []deploy.Topic
+	err    error
+}
+
+// ListSNSTopics implements the snsTopicsLister interface.
+func (m *mockTopicLister) ListSNSTopics(_, _ string) ([]deploy.Topic, error) {
+	return m.topics, m.err
+}
+
 type mockWorkloadMft struct {
 	fileName      string
 	buildRequired bool
