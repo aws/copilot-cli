@@ -18,8 +18,7 @@ import (
 
 type jobDeployer struct {
 	*workloadDeployer
-	jobMft          *manifest.ScheduledJob
-	customResources customResourcesFunc
+	jobMft *manifest.ScheduledJob
 }
 
 // IsServiceAvailableInRegion checks if service type exist in the given region.
@@ -29,6 +28,7 @@ func (jobDeployer) IsServiceAvailableInRegion(region string) (bool, error) {
 
 // NewJobDeployer is the constructor for jobDeployer.
 func NewJobDeployer(in *WorkloadDeployerInput) (*jobDeployer, error) {
+	in.customResources = scheduledJobCustomResources
 	wkldDeployer, err := newWorkloadDeployer(in)
 	if err != nil {
 		return nil, err
@@ -40,19 +40,20 @@ func NewJobDeployer(in *WorkloadDeployerInput) (*jobDeployer, error) {
 	return &jobDeployer{
 		workloadDeployer: wkldDeployer,
 		jobMft:           jobMft,
-		customResources: func(fs template.Reader) ([]*customresource.CustomResource, error) {
-			crs, err := customresource.ScheduledJob(fs)
-			if err != nil {
-				return nil, fmt.Errorf("read custom resources for a %q: %w", manifest.ScheduledJobType, err)
-			}
-			return crs, nil
-		},
 	}, nil
+}
+
+func scheduledJobCustomResources(fs template.Reader) ([]*customresource.CustomResource, error) {
+	crs, err := customresource.ScheduledJob(fs)
+	if err != nil {
+		return nil, fmt.Errorf("read custom resources for a %q: %w", manifest.ScheduledJobType, err)
+	}
+	return crs, nil
 }
 
 // UploadArtifacts uploads the deployment artifacts such as the container image, custom resources, addons and env files.
 func (d *jobDeployer) UploadArtifacts() (*UploadArtifactsOutput, error) {
-	return d.uploadArtifacts(d.customResources)
+	return d.uploadArtifacts()
 }
 
 // GenerateCloudFormationTemplate generates a CloudFormation template and parameters for a workload.
