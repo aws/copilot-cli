@@ -35,9 +35,8 @@ type snsTopicsLister interface {
 
 type workerSvcDeployer struct {
 	*svcDeployer
-	topicLister     snsTopicsLister
-	wsMft           *manifest.WorkerService
-	customResources customResourcesFunc
+	topicLister snsTopicsLister
+	wsMft       *manifest.WorkerService
 }
 
 // IsServiceAvailableInRegion checks if service type exist in the given region.
@@ -47,6 +46,7 @@ func (workerSvcDeployer) IsServiceAvailableInRegion(region string) (bool, error)
 
 // NewWorkerSvcDeployer is the constructor for workerSvcDeployer.
 func NewWorkerSvcDeployer(in *WorkloadDeployerInput) (*workerSvcDeployer, error) {
+	in.customResources = workerCustomResources
 	svcDeployer, err := newSvcDeployer(in)
 	if err != nil {
 		return nil, err
@@ -63,19 +63,20 @@ func NewWorkerSvcDeployer(in *WorkloadDeployerInput) (*workerSvcDeployer, error)
 		svcDeployer: svcDeployer,
 		topicLister: deployStore,
 		wsMft:       wsMft,
-		customResources: func(fs template.Reader) ([]*customresource.CustomResource, error) {
-			crs, err := customresource.Worker(fs)
-			if err != nil {
-				return nil, fmt.Errorf("read custom resources for a %q: %w", manifest.WorkerServiceType, err)
-			}
-			return crs, nil
-		},
 	}, nil
+}
+
+func workerCustomResources(fs template.Reader) ([]*customresource.CustomResource, error) {
+	crs, err := customresource.Worker(fs)
+	if err != nil {
+		return nil, fmt.Errorf("read custom resources for a %q: %w", manifest.WorkerServiceType, err)
+	}
+	return crs, nil
 }
 
 // UploadArtifacts uploads the deployment artifacts such as the container image, custom resources, addons and env files.
 func (d *workerSvcDeployer) UploadArtifacts() (*UploadArtifactsOutput, error) {
-	return d.uploadArtifacts(d.customResources)
+	return d.uploadArtifacts()
 }
 
 type workerSvcDeployOutput struct {

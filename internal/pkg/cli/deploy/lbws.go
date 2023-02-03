@@ -50,12 +50,12 @@ type lbWebSvcDeployer struct {
 	appVersionGetter       versionGetter
 	publicCIDRBlocksGetter publicCIDRBlocksGetter
 	lbMft                  *manifest.LoadBalancedWebService
-	customResources        customResourcesFunc
 	newAliasCertValidator  func(optionalRegion *string) aliasCertValidator
 }
 
 // NewLBWSDeployer is the constructor for lbWebSvcDeployer.
 func NewLBWSDeployer(in *WorkloadDeployerInput) (*lbWebSvcDeployer, error) {
+	in.customResources = lbwsCustomResources
 	svcDeployer, err := newSvcDeployer(in)
 	if err != nil {
 		return nil, err
@@ -92,14 +92,15 @@ func NewLBWSDeployer(in *WorkloadDeployerInput) (*lbWebSvcDeployer, error) {
 			})
 			return acm.New(sess)
 		},
-		customResources: func(fs template.Reader) ([]*customresource.CustomResource, error) {
-			crs, err := customresource.LBWS(fs)
-			if err != nil {
-				return nil, fmt.Errorf("read custom resources for a %q: %w", manifest.LoadBalancedWebServiceType, err)
-			}
-			return crs, nil
-		},
 	}, nil
+}
+
+func lbwsCustomResources(fs template.Reader) ([]*customresource.CustomResource, error) {
+	crs, err := customresource.LBWS(fs)
+	if err != nil {
+		return nil, fmt.Errorf("read custom resources for a %q: %w", manifest.LoadBalancedWebServiceType, err)
+	}
+	return crs, nil
 }
 
 // IsServiceAvailableInRegion checks if service type exist in the given region.
@@ -109,7 +110,7 @@ func (lbWebSvcDeployer) IsServiceAvailableInRegion(region string) (bool, error) 
 
 // UploadArtifacts uploads the deployment artifacts such as the container image, custom resources, addons and env files.
 func (d *lbWebSvcDeployer) UploadArtifacts() (*UploadArtifactsOutput, error) {
-	return d.uploadArtifacts(d.customResources)
+	return d.uploadArtifacts()
 }
 
 // GenerateCloudFormationTemplate generates a CloudFormation template and parameters for a workload.

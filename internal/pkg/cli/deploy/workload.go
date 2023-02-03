@@ -144,6 +144,7 @@ type workloadDeployer struct {
 	templateFS         template.Reader
 	envVersionGetter   versionGetter
 	overrider          Overrider
+	customResources    customResourcesFunc
 
 	// Cached variables.
 	defaultSess              *session.Session
@@ -164,6 +165,9 @@ type WorkloadDeployerInput struct {
 	RawMft           []byte      // Content of the manifest file without any transformations.
 	EnvVersionGetter versionGetter
 	Overrider        Overrider
+
+	// Workload specific configuration.
+	customResources customResourcesFunc
 }
 
 // newWorkloadDeployer is the constructor for workloadDeployer.
@@ -238,6 +242,7 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 		templateFS:         template.New(),
 		envVersionGetter:   in.EnvVersionGetter,
 		overrider:          in.Overrider,
+		customResources:    in.customResources,
 
 		defaultSess:              defaultSession,
 		defaultSessWithEnvRegion: defaultSessEnvRegion,
@@ -380,7 +385,7 @@ type UploadArtifactsOutput struct {
 	CustomResourceURLs map[string]string
 }
 
-func (d *workloadDeployer) uploadArtifacts(customResources customResourcesFunc) (*UploadArtifactsOutput, error) {
+func (d *workloadDeployer) uploadArtifacts() (*UploadArtifactsOutput, error) {
 	imageDigest, err := d.uploadContainerImage(d.imageBuilderPusher)
 	if err != nil {
 		return nil, err
@@ -398,7 +403,7 @@ func (d *workloadDeployer) uploadArtifacts(customResources customResourcesFunc) 
 		EnvFileARN:  s3Artifacts.envFileARN,
 		AddonsURL:   s3Artifacts.addonsURL,
 	}
-	crs, err := customResources(d.templateFS)
+	crs, err := d.customResources(d.templateFS)
 	if err != nil {
 		return nil, err
 	}
