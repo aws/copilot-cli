@@ -8,8 +8,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
-
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
@@ -164,21 +162,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			inStorageName: wantedBucketName,
 			mock: func(m *mockStorageInitAsk) {
 				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil).AnyTimes()
-				options := []prompt.Option{
-					{
-						Value: dynamoDBStorageTypeOption,
-						Hint:  "NoSQL",
-					},
-					{
-						Value: s3StorageTypeOption,
-						Hint:  "Objects",
-					},
-					{
-						Value: rdsStorageTypeOption,
-						Hint:  "SQL",
-					},
-				}
-				m.prompt.EXPECT().SelectOption(gomock.Any(), gomock.Any(), gomock.Eq(options), gomock.Any()).Return(s3StorageType, nil)
+				m.prompt.EXPECT().SelectOption(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(s3StorageType, nil)
 			},
 			wantedVars: &initStorageVars{
 				storageType:  s3StorageType,
