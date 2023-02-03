@@ -284,9 +284,20 @@ type wlLister interface {
 	ListWorkloads() ([]string, error)
 }
 
-type wsWlReader interface {
+type wsWorkloadReader interface {
 	manifestReader
 	WorkloadExists(name string) (bool, error)
+	WorkloadAddonFilePath(wkldName, fName string) string
+}
+
+type wsWorkloadReadWriter interface {
+	wsWorkloadReader
+	wsWriter
+}
+
+type wsReadWriter interface {
+	wsWorkloadReadWriter
+	wsEnvironmentReader
 }
 
 type wsJobDirReader interface {
@@ -308,6 +319,7 @@ type wsEnvironmentReader interface {
 	wsEnvironmentsLister
 	EnvOverridesPath() string
 	ReadEnvironmentManifest(mftDirName string) (workspace.EnvironmentManifest, error)
+	EnvAddonFilePath(fName string) string
 }
 
 type wsPipelineReader interface {
@@ -323,12 +335,6 @@ type wsPipelineGetter interface {
 
 type wsAppManager interface {
 	Summary() (*workspace.Summary, error)
-}
-
-type wsAddonManager interface {
-	wsWriter
-	WorkloadAddonFilePath(wkldName, fName string) string
-	EnvAddonFilePath(fName string) string
 }
 
 type wsWriter interface {

@@ -19,7 +19,7 @@ import (
 )
 
 type mockStorageInitValidate struct {
-	ws    *mocks.MockwsAddonManager
+	ws    *mocks.MockwsReadWriter
 	store *mocks.Mockstore
 }
 
@@ -93,7 +93,7 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			m := mockStorageInitValidate{
-				ws:    mocks.NewMockwsAddonManager(ctrl),
+				ws:    mocks.NewMockwsReadWriter(ctrl),
 				store: mocks.NewMockstore(ctrl),
 			}
 			tc.mock(&m)
@@ -112,7 +112,7 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 					rdsEngine:               tc.inEngine,
 				},
 				appName: tc.inAppName,
-				wsAddon: m.ws,
+				ws:      m.ws,
 				store:   m.store,
 			}
 
@@ -132,7 +132,7 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 type mockStorageInitAsk struct {
 	prompt *mocks.Mockprompter
 	sel    *mocks.MockwsSelector
-	wsWkld *mocks.MockwsWlReader
+	ws     *mocks.MockwsReadWriter
 }
 
 func TestStorageInitOpts_Ask(t *testing.T) {
@@ -155,7 +155,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			inStorageType: "box",
 			inSvcName:     "frontend",
 			mock: func(m *mockStorageInitAsk) {
-				m.wsWkld.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil).AnyTimes()
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil).AnyTimes()
 			},
 			wantedErr: errors.New(`invalid storage type box: must be one of "DynamoDB", "S3", "Aurora"`),
 		},
@@ -163,7 +163,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			inSvcName:     wantedSvcName,
 			inStorageName: wantedBucketName,
 			mock: func(m *mockStorageInitAsk) {
-				m.wsWkld.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil).AnyTimes()
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil).AnyTimes()
 				options := []prompt.Option{
 					{
 						Value: dynamoDBStorageTypeOption,
@@ -191,14 +191,14 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			inStorageName: wantedBucketName,
 
 			mock: func(m *mockStorageInitAsk) {
-				m.wsWkld.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil).AnyTimes()
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil).AnyTimes()
 				m.prompt.EXPECT().SelectOption(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("", errors.New("some error"))
 			},
 			wantedErr: fmt.Errorf("select storage type: some error"),
 		},
 		"error checking if svc is in workspace": {
 			mock: func(m *mockStorageInitAsk) {
-				m.wsWkld.EXPECT().WorkloadExists(gomock.Eq("frontend")).Return(false, errors.New("wanted err"))
+				m.ws.EXPECT().WorkloadExists(gomock.Eq("frontend")).Return(false, errors.New("wanted err"))
 			},
 			inStorageType: s3StorageType,
 			inSvcName:     "frontend",
@@ -207,7 +207,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 		},
 		"invalid svc not in workspace": {
 			mock: func(m *mockStorageInitAsk) {
-				m.wsWkld.EXPECT().WorkloadExists(gomock.Eq("frontend")).Return(false, nil)
+				m.ws.EXPECT().WorkloadExists(gomock.Eq("frontend")).Return(false, nil)
 			},
 			inStorageType: s3StorageType,
 			inSvcName:     "frontend",
@@ -240,7 +240,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			inStorageType: s3StorageType,
 			inStorageName: "my-bucket.4",
 			mock: func(m *mockStorageInitAsk) {
-				m.wsWkld.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil).AnyTimes()
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil).AnyTimes()
 			},
 		},
 		"invalid s3 bucket name": {
@@ -248,7 +248,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			inStorageType: s3StorageType,
 			inStorageName: "mybadbucket???",
 			mock: func(m *mockStorageInitAsk) {
-				m.wsWkld.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil).AnyTimes()
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil).AnyTimes()
 			},
 			wantedErr: fmt.Errorf("validate storage name: %w", errValueBadFormatWithPeriod),
 		},
@@ -256,7 +256,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			inSvcName:     wantedSvcName,
 			inStorageType: s3StorageType,
 			mock: func(m *mockStorageInitAsk) {
-				m.wsWkld.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
 				m.prompt.EXPECT().Get(gomock.Eq(fmt.Sprintf(fmtStorageInitNamePrompt, color.HighlightUserInput(s3BucketFriendlyText))),
 					gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(wantedBucketName, nil)
@@ -272,7 +272,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			inStorageType: s3StorageType,
 
 			mock: func(m *mockStorageInitAsk) {
-				m.wsWkld.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
 				m.prompt.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("", errors.New("some error"))
 			},
 			wantedErr: fmt.Errorf("input storage name: some error"),
@@ -282,7 +282,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			inStorageType: s3StorageType,
 			inStorageName: wantedBucketName,
 			mock: func(m *mockStorageInitAsk) {
-				m.wsWkld.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil).AnyTimes()
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil).AnyTimes()
 			},
 		},
 	}
@@ -295,7 +295,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			m := mockStorageInitAsk{
 				prompt: mocks.NewMockprompter(ctrl),
 				sel:    mocks.NewMockwsSelector(ctrl),
-				wsWkld: mocks.NewMockwsWlReader(ctrl),
+				ws:     mocks.NewMockwsReadWriter(ctrl),
 			}
 			opts := initStorageOpts{
 				initStorageVars: initStorageVars{
@@ -306,7 +306,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 				appName: wantedAppName,
 				sel:     m.sel,
 				prompt:  m.prompt,
-				wsWkld:  m.wsWkld,
+				ws:      m.ws,
 			}
 			tc.mock(&m)
 			// WHEN
@@ -348,7 +348,7 @@ func TestStorageInitOpts_AskDDB(t *testing.T) {
 		"invalid ddb name": {
 			inStorageName: "badTable!!!",
 			mock: func(m *mockStorageInitAsk) {
-				m.wsWkld.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
 			},
 			wantedErr: fmt.Errorf("validate storage name: %w", errValueBadFormatWithPeriodUnderscore),
 		},
@@ -356,7 +356,7 @@ func TestStorageInitOpts_AskDDB(t *testing.T) {
 			inStorageName: wantedTableName,
 			inPartition:   "bipartite",
 			mock: func(m *mockStorageInitAsk) {
-				m.wsWkld.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
 			},
 			wantedErr: errors.New("validate partition key: value must be of the form <name>:<T> where T is one of S, N, or B"),
 		},
@@ -365,7 +365,7 @@ func TestStorageInitOpts_AskDDB(t *testing.T) {
 			inSort:        wantedSortKey,
 			inNoLSI:       true,
 			mock: func(m *mockStorageInitAsk) {
-				m.wsWkld.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
 				keyPrompt := fmt.Sprintf(fmtStorageInitDDBKeyPrompt,
 					color.HighlightUserInput("partition key"),
 					color.HighlightUserInput(dynamoDBStorageType),
@@ -386,7 +386,7 @@ func TestStorageInitOpts_AskDDB(t *testing.T) {
 		"error if fail to return partition key": {
 			inStorageName: wantedTableName,
 			mock: func(m *mockStorageInitAsk) {
-				m.wsWkld.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
 				m.prompt.EXPECT().Get(gomock.Any(),
 					gomock.Any(),
 					gomock.Any(),
@@ -398,7 +398,7 @@ func TestStorageInitOpts_AskDDB(t *testing.T) {
 		"error if fail to return partition key type": {
 			inStorageName: wantedTableName,
 			mock: func(m *mockStorageInitAsk) {
-				m.wsWkld.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
 				m.prompt.EXPECT().Get(gomock.Any(),
 					gomock.Any(),
 					gomock.Any(),
@@ -417,7 +417,7 @@ func TestStorageInitOpts_AskDDB(t *testing.T) {
 			inPartition:   wantedSortKey,
 			inSort:        "allsortofstuff",
 			mock: func(m *mockStorageInitAsk) {
-				m.wsWkld.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
 			},
 			wantedErr: errors.New("validate sort key: value must be of the form <name>:<T> where T is one of S, N, or B"),
 		},
@@ -426,7 +426,7 @@ func TestStorageInitOpts_AskDDB(t *testing.T) {
 			inPartition:   wantedPartitionKey,
 			inNoLSI:       true,
 			mock: func(m *mockStorageInitAsk) {
-				m.wsWkld.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
 				m.prompt.EXPECT().Confirm(
 					gomock.Eq(storageInitDDBSortKeyConfirm),
 					gomock.Any(),
@@ -453,7 +453,7 @@ func TestStorageInitOpts_AskDDB(t *testing.T) {
 			inStorageName: wantedTableName,
 			inPartition:   wantedPartitionKey,
 			mock: func(m *mockStorageInitAsk) {
-				m.wsWkld.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
 				m.prompt.EXPECT().Confirm(
 					gomock.Eq(storageInitDDBSortKeyConfirm),
 					gomock.Any(),
@@ -466,7 +466,7 @@ func TestStorageInitOpts_AskDDB(t *testing.T) {
 			inStorageName: wantedTableName,
 			inPartition:   wantedPartitionKey,
 			mock: func(m *mockStorageInitAsk) {
-				m.wsWkld.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
 				m.prompt.EXPECT().Confirm(
 					gomock.Eq(storageInitDDBSortKeyConfirm),
 					gomock.Any(),
@@ -484,7 +484,7 @@ func TestStorageInitOpts_AskDDB(t *testing.T) {
 			inStorageName: wantedTableName,
 			inPartition:   wantedPartitionKey,
 			mock: func(m *mockStorageInitAsk) {
-				m.wsWkld.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
 				m.prompt.EXPECT().Confirm(
 					gomock.Eq(storageInitDDBSortKeyConfirm),
 					gomock.Any(),
@@ -508,7 +508,7 @@ func TestStorageInitOpts_AskDDB(t *testing.T) {
 			inPartition:   wantedPartitionKey,
 			inNoSort:      true,
 			mock: func(m *mockStorageInitAsk) {
-				m.wsWkld.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
 				m.prompt.EXPECT().Confirm(
 					gomock.Eq(storageInitDDBSortKeyConfirm),
 					gomock.Any(),
@@ -522,7 +522,7 @@ func TestStorageInitOpts_AskDDB(t *testing.T) {
 			inSort:        wantedSortKey,
 			inNoLSI:       true,
 			mock: func(m *mockStorageInitAsk) {
-				m.wsWkld.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
 			},
 		},
 		"don't ask about LSI if no-sort is specified": {
@@ -530,7 +530,7 @@ func TestStorageInitOpts_AskDDB(t *testing.T) {
 			inPartition:   wantedPartitionKey,
 			inNoSort:      true,
 			mock: func(m *mockStorageInitAsk) {
-				m.wsWkld.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
 				m.prompt.EXPECT().Confirm(
 					gomock.Eq(storageInitDDBLSIPrompt),
 					gomock.Eq(storageInitDDBLSIHelp),
@@ -543,7 +543,7 @@ func TestStorageInitOpts_AskDDB(t *testing.T) {
 			inPartition:   wantedPartitionKey,
 			inSort:        wantedSortKey,
 			mock: func(m *mockStorageInitAsk) {
-				m.wsWkld.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
 				lsiTypePrompt := fmt.Sprintf(fmtStorageInitDDBKeyTypePrompt, color.Emphasize("alternate sort key"))
 				lsiTypeHelp := fmt.Sprintf(fmtStorageInitDDBKeyTypeHelp, "alternate sort key")
 				m.prompt.EXPECT().Confirm(
@@ -585,7 +585,7 @@ func TestStorageInitOpts_AskDDB(t *testing.T) {
 			inPartition:   wantedPartitionKey,
 			inSort:        wantedSortKey,
 			mock: func(m *mockStorageInitAsk) {
-				m.wsWkld.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
 				m.prompt.EXPECT().Confirm(
 					gomock.Eq(storageInitDDBLSIPrompt),
 					gomock.Eq(storageInitDDBLSIHelp),
@@ -606,7 +606,7 @@ func TestStorageInitOpts_AskDDB(t *testing.T) {
 			inStorageName: wantedTableName,
 			inPartition:   wantedPartitionKey,
 			mock: func(m *mockStorageInitAsk) {
-				m.wsWkld.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
 				m.prompt.EXPECT().Confirm(
 					gomock.Eq(storageInitDDBSortKeyConfirm),
 					gomock.Eq(storageInitDDBSortKeyHelp),
@@ -628,7 +628,7 @@ func TestStorageInitOpts_AskDDB(t *testing.T) {
 			inPartition:   wantedPartitionKey,
 			inSort:        wantedSortKey,
 			mock: func(m *mockStorageInitAsk) {
-				m.wsWkld.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
 				m.prompt.EXPECT().Confirm(
 					gomock.Eq(storageInitDDBLSIPrompt),
 					gomock.Any(),
@@ -647,7 +647,7 @@ func TestStorageInitOpts_AskDDB(t *testing.T) {
 			inPartition:   wantedPartitionKey,
 			inSort:        wantedSortKey,
 			mock: func(m *mockStorageInitAsk) {
-				m.wsWkld.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
 				m.prompt.EXPECT().Confirm(
 					gomock.Any(),
 					gomock.Any(),
@@ -661,7 +661,7 @@ func TestStorageInitOpts_AskDDB(t *testing.T) {
 			inPartition:   wantedPartitionKey,
 			inSort:        wantedSortKey,
 			mock: func(m *mockStorageInitAsk) {
-				m.wsWkld.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
 				m.prompt.EXPECT().Confirm(
 					gomock.Any(),
 					gomock.Any(),
@@ -687,7 +687,7 @@ func TestStorageInitOpts_AskDDB(t *testing.T) {
 			inSort:        wantedSortKey,
 			inLSISorts:    []string{"userID:Number", "data:Binary"},
 			mock: func(m *mockStorageInitAsk) {
-				m.wsWkld.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
 			},
 		},
 		"successfully validate flags with non-config": {
@@ -696,7 +696,7 @@ func TestStorageInitOpts_AskDDB(t *testing.T) {
 			inNoSort:      true,
 			inNoLSI:       true,
 			mock: func(m *mockStorageInitAsk) {
-				m.wsWkld.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
 			},
 		},
 	}
@@ -707,7 +707,7 @@ func TestStorageInitOpts_AskDDB(t *testing.T) {
 			defer ctrl.Finish()
 
 			m := mockStorageInitAsk{
-				wsWkld: mocks.NewMockwsWlReader(ctrl),
+				ws:     mocks.NewMockwsReadWriter(ctrl),
 				prompt: mocks.NewMockprompter(ctrl),
 			}
 			tc.mock(&m)
@@ -724,7 +724,7 @@ func TestStorageInitOpts_AskDDB(t *testing.T) {
 				},
 				appName: "ddos",
 				prompt:  m.prompt,
-				wsWkld:  m.wsWkld,
+				ws:      m.ws,
 			}
 			// WHEN
 			err := opts.Ask()
@@ -771,8 +771,8 @@ func TestStorageInitOpts_AskRDS(t *testing.T) {
 		"invalid cluster name": {
 			inStorageName: "wow!such name..:doge",
 			mock: func(m *mockStorageInitAsk) {
-				m.wsWkld.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(workspace.WorkloadManifest("type: Load Balanced Web Service"), nil)
-				m.wsWkld.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+				m.ws.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(workspace.WorkloadManifest("type: Load Balanced Web Service"), nil)
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
 			},
 			wantedErr: errors.New("validate storage name: value must start with a letter and followed by alphanumeric letters only"),
 		},
@@ -781,14 +781,14 @@ func TestStorageInitOpts_AskRDS(t *testing.T) {
 			inInitialDBName: wantedInitialDBName,
 
 			mock: func(m *mockStorageInitAsk) {
-				m.wsWkld.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
 				m.prompt.EXPECT().Get(
 					gomock.Eq("What would you like to name this Database Cluster?"),
 					gomock.Any(),
 					gomock.Any(),
 					gomock.Any(),
 				).Return(wantedClusterName, nil)
-				m.wsWkld.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(workspace.WorkloadManifest("type: Load Balanced Web Service"), nil)
+				m.ws.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(workspace.WorkloadManifest("type: Load Balanced Web Service"), nil)
 			},
 			wantedVars: &initStorageVars{
 				storageType:             rdsStorageType,
@@ -807,8 +807,8 @@ func TestStorageInitOpts_AskRDS(t *testing.T) {
 					gomock.Any(),
 					gomock.Any(),
 				).Return("", errors.New("some error"))
-				m.wsWkld.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(workspace.WorkloadManifest("type: Load Balanced Web Service"), nil)
-				m.wsWkld.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+				m.ws.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(workspace.WorkloadManifest("type: Load Balanced Web Service"), nil)
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
 			},
 			wantedErr: errors.New("input storage name: some error"),
 		},
@@ -816,8 +816,8 @@ func TestStorageInitOpts_AskRDS(t *testing.T) {
 			inStorageName: wantedClusterName,
 			inDBEngine:    "mysql",
 			mock: func(m *mockStorageInitAsk) {
-				m.wsWkld.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(workspace.WorkloadManifest("type: Load Balanced Web Service"), nil)
-				m.wsWkld.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+				m.ws.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(workspace.WorkloadManifest("type: Load Balanced Web Service"), nil)
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
 			},
 			wantedErr: errors.New("invalid engine type mysql: must be one of \"MySQL\", \"PostgreSQL\""),
 		},
@@ -825,8 +825,8 @@ func TestStorageInitOpts_AskRDS(t *testing.T) {
 			inStorageName:   wantedClusterName,
 			inInitialDBName: wantedInitialDBName,
 			mock: func(m *mockStorageInitAsk) {
-				m.wsWkld.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
-				m.wsWkld.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(workspace.WorkloadManifest("type: Load Balanced Web Service"), nil)
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+				m.ws.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(workspace.WorkloadManifest("type: Load Balanced Web Service"), nil)
 				m.prompt.EXPECT().SelectOne(gomock.Eq(storageInitRDSDBEnginePrompt), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(wantedDBEngine, nil)
 
@@ -846,8 +846,8 @@ func TestStorageInitOpts_AskRDS(t *testing.T) {
 			mock: func(m *mockStorageInitAsk) {
 				m.prompt.EXPECT().SelectOne(storageInitRDSDBEnginePrompt, gomock.Any(), gomock.Any(), gomock.Any()).
 					Return("", errors.New("some error"))
-				m.wsWkld.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(workspace.WorkloadManifest("type: Load Balanced Web Service"), nil)
-				m.wsWkld.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+				m.ws.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(workspace.WorkloadManifest("type: Load Balanced Web Service"), nil)
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
 
 			},
 			wantedErr: errors.New("select database engine: some error"),
@@ -858,8 +858,8 @@ func TestStorageInitOpts_AskRDS(t *testing.T) {
 			inInitialDBName: "wow!suchweird??name!",
 
 			mock: func(m *mockStorageInitAsk) {
-				m.wsWkld.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(workspace.WorkloadManifest("type: Load Balanced Web Service"), nil)
-				m.wsWkld.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+				m.ws.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(workspace.WorkloadManifest("type: Load Balanced Web Service"), nil)
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
 			},
 			wantedErr: errors.New("invalid database name wow!suchweird??name!: must contain only alphanumeric characters and underscore; should start with a letter"),
 		},
@@ -870,8 +870,8 @@ func TestStorageInitOpts_AskRDS(t *testing.T) {
 			mock: func(m *mockStorageInitAsk) {
 				m.prompt.EXPECT().Get(gomock.Eq(storageInitRDSInitialDBNamePrompt), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(wantedInitialDBName, nil)
-				m.wsWkld.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(workspace.WorkloadManifest("type: Load Balanced Web Service"), nil)
-				m.wsWkld.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+				m.ws.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(workspace.WorkloadManifest("type: Load Balanced Web Service"), nil)
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
 			},
 			wantedVars: &initStorageVars{
 				storageType:             rdsStorageType,
@@ -889,8 +889,8 @@ func TestStorageInitOpts_AskRDS(t *testing.T) {
 			mock: func(m *mockStorageInitAsk) {
 				m.prompt.EXPECT().Get(storageInitRDSInitialDBNamePrompt, gomock.Any(), gomock.Any(), gomock.Any()).
 					Return("", errors.New("some error"))
-				m.wsWkld.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(workspace.WorkloadManifest("type: Load Balanced Web Service"), nil)
-				m.wsWkld.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+				m.ws.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(workspace.WorkloadManifest("type: Load Balanced Web Service"), nil)
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
 
 			},
 			wantedErr: fmt.Errorf("input initial database name: some error"),
@@ -900,8 +900,8 @@ func TestStorageInitOpts_AskRDS(t *testing.T) {
 			inDBEngine:      wantedDBEngine,
 			inInitialDBName: wantedInitialDBName,
 			mock: func(m *mockStorageInitAsk) {
-				m.wsWkld.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
-				m.wsWkld.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(workspace.WorkloadManifest("type: Load Balanced Web Service"), nil)
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+				m.ws.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(workspace.WorkloadManifest("type: Load Balanced Web Service"), nil)
 			},
 		},
 	}
@@ -913,7 +913,7 @@ func TestStorageInitOpts_AskRDS(t *testing.T) {
 
 			m := mockStorageInitAsk{
 				prompt: mocks.NewMockprompter(ctrl),
-				wsWkld: mocks.NewMockwsWlReader(ctrl),
+				ws:     mocks.NewMockwsReadWriter(ctrl),
 			}
 			opts := initStorageOpts{
 				initStorageVars: initStorageVars{
@@ -927,7 +927,7 @@ func TestStorageInitOpts_AskRDS(t *testing.T) {
 				},
 				appName: "ddos",
 				prompt:  m.prompt,
-				wsWkld:  m.wsWkld,
+				ws:      m.ws,
 			}
 			tc.mock(&m)
 			// WHEN
@@ -973,8 +973,7 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 
 		inLifecycle string
 
-		mockWsWkld     func(m *mocks.MockwsWlReader)
-		mockWsAddon    func(m *mocks.MockwsAddonManager)
+		mockWS         func(m *mocks.MockwsReadWriter)
 		mockStore      func(m *mocks.Mockstore)
 		mockWkldAbsent bool
 
@@ -987,10 +986,8 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 			inStorageName: "my-bucket",
 			inLifecycle:   lifecycleWorkloadLevel,
 
-			mockWsWkld: func(m *mocks.MockwsWlReader) {
+			mockWS: func(m *mocks.MockwsReadWriter) {
 				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte("type: Worker Service"), nil)
-			},
-			mockWsAddon: func(m *mocks.MockwsAddonManager) {
 				m.EXPECT().WorkloadAddonFilePath(gomock.Eq(wantedSvcName), gomock.Eq("my-bucket.yml")).Return("mockPath")
 				m.EXPECT().Write(gomock.Any(), "mockPath").Return("/frontend/addons/my-bucket.yml", nil)
 			},
@@ -1007,10 +1004,8 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 			inPartition:   wantedPartitionKey,
 			inLifecycle:   lifecycleWorkloadLevel,
 
-			mockWsWkld: func(m *mocks.MockwsWlReader) {
+			mockWS: func(m *mocks.MockwsReadWriter) {
 				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte("type: Worker Service"), nil)
-			},
-			mockWsAddon: func(m *mocks.MockwsAddonManager) {
 				m.EXPECT().WorkloadAddonFilePath(gomock.Eq(wantedSvcName), gomock.Eq("my-table.yml")).Return("mockPath")
 				m.EXPECT().Write(gomock.Any(), "mockPath").Return("/frontend/addons/my-table.yml", nil)
 			},
@@ -1027,10 +1022,8 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 			inLSISorts:    []string{"goodness:Number"},
 			inLifecycle:   lifecycleWorkloadLevel,
 
-			mockWsWkld: func(m *mocks.MockwsWlReader) {
+			mockWS: func(m *mocks.MockwsReadWriter) {
 				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte("type: Worker Service"), nil)
-			},
-			mockWsAddon: func(m *mocks.MockwsAddonManager) {
 				m.EXPECT().WorkloadAddonFilePath(gomock.Eq(wantedSvcName), gomock.Eq("my-table.yml")).Return("mockPath")
 				m.EXPECT().Write(gomock.Any(), "mockPath").Return("/frontend/addons/my-table.yml", nil)
 			},
@@ -1046,10 +1039,8 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 			inParameterGroup:    "mygroup",
 			inLifecycle:         lifecycleWorkloadLevel,
 
-			mockWsWkld: func(m *mocks.MockwsWlReader) {
+			mockWS: func(m *mocks.MockwsReadWriter) {
 				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte("type: Worker Service"), nil)
-			},
-			mockWsAddon: func(m *mocks.MockwsAddonManager) {
 				m.EXPECT().WorkloadAddonFilePath(gomock.Eq(wantedSvcName), gomock.Eq("mycluster.yml")).Return("mockPath")
 				m.EXPECT().Write(gomock.Any(), "mockPath").Return("/frontend/addons/mycluster.yml", nil)
 			},
@@ -1067,10 +1058,8 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 			inParameterGroup:    "mygroup",
 			inLifecycle:         lifecycleWorkloadLevel,
 
-			mockWsWkld: func(m *mocks.MockwsWlReader) {
+			mockWS: func(m *mocks.MockwsReadWriter) {
 				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte("type: Request-Driven Web Service"), nil)
-			},
-			mockWsAddon: func(m *mocks.MockwsAddonManager) {
 				m.EXPECT().WorkloadAddonFilePath(gomock.Eq(wantedSvcName), gomock.Eq("mycluster.yml")).Return("mockTmplPath")
 				m.EXPECT().Write(gomock.Any(), "mockTmplPath").Return("/frontend/addons/mycluster.yml", nil)
 				m.EXPECT().WorkloadAddonFilePath(gomock.Eq(wantedSvcName), gomock.Eq("addons.parameters.yml")).Return("mockParamsPath")
@@ -1088,10 +1077,8 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 			inStorageName: "my-bucket",
 			inLifecycle:   lifecycleEnvironmentLevel,
 
-			mockWsWkld: func(m *mocks.MockwsWlReader) {
+			mockWS: func(m *mocks.MockwsReadWriter) {
 				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte("type: Worker Service"), nil)
-			},
-			mockWsAddon: func(m *mocks.MockwsAddonManager) {
 				m.EXPECT().EnvAddonFilePath(gomock.Eq("my-bucket.yml")).Return("mockEnvTemplatePath")
 				m.EXPECT().WorkloadAddonFilePath(gomock.Eq(wantedSvcName), gomock.Eq("my-bucket-access-policy.yml")).Return("mockWkldTemplatePath")
 				m.EXPECT().Write(gomock.Any(), "mockEnvTemplatePath").Return("mockEnvTemplatePath", nil)
@@ -1108,10 +1095,8 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 			inPartition:   wantedPartitionKey,
 			inLifecycle:   lifecycleEnvironmentLevel,
 
-			mockWsWkld: func(m *mocks.MockwsWlReader) {
+			mockWS: func(m *mocks.MockwsReadWriter) {
 				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte("type: Worker Service"), nil)
-			},
-			mockWsAddon: func(m *mocks.MockwsAddonManager) {
 				m.EXPECT().EnvAddonFilePath(gomock.Eq("my-table.yml")).Return("mockEnvTemplatePath")
 				m.EXPECT().WorkloadAddonFilePath(gomock.Eq(wantedSvcName), gomock.Eq("my-table-access-policy.yml")).Return("mockWkldTemplatePath")
 				m.EXPECT().Write(gomock.Any(), "mockEnvTemplatePath").Return("mockEnvTemplatePath", nil)
@@ -1128,10 +1113,8 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 			inLSISorts:    []string{"goodness:Number"},
 			inLifecycle:   lifecycleEnvironmentLevel,
 
-			mockWsWkld: func(m *mocks.MockwsWlReader) {
+			mockWS: func(m *mocks.MockwsReadWriter) {
 				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte("type: Worker Service"), nil)
-			},
-			mockWsAddon: func(m *mocks.MockwsAddonManager) {
 				m.EXPECT().EnvAddonFilePath(gomock.Eq("my-table.yml")).Return("mockEnvTemplatePath")
 				m.EXPECT().WorkloadAddonFilePath(gomock.Eq(wantedSvcName), gomock.Eq("my-table-access-policy.yml")).Return("mockWkldTemplatePath")
 				m.EXPECT().Write(gomock.Any(), "mockEnvTemplatePath").Return("mockEnvTemplatePath", nil)
@@ -1147,10 +1130,8 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 			inParameterGroup:    "mygroup",
 			inLifecycle:         lifecycleEnvironmentLevel,
 
-			mockWsWkld: func(m *mocks.MockwsWlReader) {
+			mockWS: func(m *mocks.MockwsReadWriter) {
 				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte("type: Load-Balanced Web Service"), nil)
-			},
-			mockWsAddon: func(m *mocks.MockwsAddonManager) {
 				m.EXPECT().EnvAddonFilePath(gomock.Eq("mycluster.yml")).Return("mockEnvTemplatePath")
 				m.EXPECT().EnvAddonFilePath(gomock.Eq("addons.parameters.yml")).Return("mockEnvParametersPath")
 				m.EXPECT().Write(gomock.Any(), "mockEnvTemplatePath").Return("mockEnvTemplatePath", nil)
@@ -1170,10 +1151,8 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 			inParameterGroup:    "mygroup",
 			inLifecycle:         lifecycleEnvironmentLevel,
 
-			mockWsWkld: func(m *mocks.MockwsWlReader) {
+			mockWS: func(m *mocks.MockwsReadWriter) {
 				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte("type: Request-Driven Web Service"), nil)
-			},
-			mockWsAddon: func(m *mocks.MockwsAddonManager) {
 				m.EXPECT().EnvAddonFilePath(gomock.Eq("mycluster.yml")).Return("mockEnvTemplatePath")
 				m.EXPECT().EnvAddonFilePath(gomock.Eq("addons.parameters.yml")).Return("mockEnvParametersPath")
 				m.EXPECT().WorkloadAddonFilePath(gomock.Eq(wantedSvcName), gomock.Eq("mycluster-ingress.yml")).Return("mockWkldTmplPath")
@@ -1196,10 +1175,8 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 			inParameterGroup:    "mygroup",
 			inLifecycle:         lifecycleEnvironmentLevel,
 			mockWkldAbsent:      true,
-			mockWsWkld: func(m *mocks.MockwsWlReader) {
+			mockWS: func(m *mocks.MockwsReadWriter) {
 				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte("type: Worker Service"), nil)
-			},
-			mockWsAddon: func(m *mocks.MockwsAddonManager) {
 				m.EXPECT().EnvAddonFilePath(gomock.Eq("mycluster.yml")).Return("mockEnvPath")
 				m.EXPECT().EnvAddonFilePath(gomock.Eq("addons.parameters.yml")).Return("mockEnvPath")
 				m.EXPECT().Write(gomock.Any(), gomock.Not(gomock.Eq("mockWkldPath"))).Return("mockEnvTemplatePath", nil).Times(2)
@@ -1215,10 +1192,8 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 			inStorageName: "my-bucket",
 			inLifecycle:   lifecycleWorkloadLevel,
 
-			mockWsWkld: func(m *mocks.MockwsWlReader) {
+			mockWS: func(m *mocks.MockwsReadWriter) {
 				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte("type: Worker Service"), nil)
-			},
-			mockWsAddon: func(m *mocks.MockwsAddonManager) {
 				m.EXPECT().WorkloadAddonFilePath(gomock.Eq(wantedSvcName), gomock.Eq("my-bucket.yml")).Return("mockPath")
 				m.EXPECT().Write(gomock.Any(), "mockPath").Return("/frontend/addons/my-bucket.yml", nil).Return("", fileExistsError)
 			},
@@ -1234,12 +1209,9 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 			inSvcName:     wantedSvcName,
 			inStorageName: "my-bucket",
 			inLifecycle:   lifecycleWorkloadLevel,
-
-			mockWsWkld: func(m *mocks.MockwsWlReader) {
+			mockWS: func(m *mocks.MockwsReadWriter) {
 				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, errors.New("some error"))
 			},
-			mockWsAddon: func(m *mocks.MockwsAddonManager) {},
-
 			wantedErr: errors.New("read manifest for frontend: some error"),
 		},
 		"unexpected write addon error handled": {
@@ -1249,10 +1221,8 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 			inStorageName: "my-bucket",
 			inLifecycle:   lifecycleWorkloadLevel,
 
-			mockWsWkld: func(m *mocks.MockwsWlReader) {
+			mockWS: func(m *mocks.MockwsReadWriter) {
 				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte("type: Worker Service"), nil)
-			},
-			mockWsAddon: func(m *mocks.MockwsAddonManager) {
 				m.EXPECT().WorkloadAddonFilePath(gomock.Eq(wantedSvcName), gomock.Eq("my-bucket.yml")).Return("mockPath")
 				m.EXPECT().Write(gomock.Any(), "mockPath").Return("", errors.New("some error"))
 			},
@@ -1266,9 +1236,8 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockAddon := mocks.NewMockwsAddonManager(ctrl)
 			mockStore := mocks.NewMockstore(ctrl)
-			mockWsWl := mocks.NewMockwsWlReader(ctrl)
+			mockWS := mocks.NewMockwsReadWriter(ctrl)
 			opts := initStorageOpts{
 				initStorageVars: initStorageVars{
 					storageType:  tc.inStorageType,
@@ -1287,13 +1256,11 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 					lifecycle: tc.inLifecycle,
 				},
 				appName:        tc.inAppName,
-				wsAddon:        mockAddon,
-				wsWkld:         mockWsWl,
+				ws:             mockWS,
 				store:          mockStore,
 				workloadExists: !tc.mockWkldAbsent,
 			}
-			tc.mockWsAddon(mockAddon)
-			tc.mockWsWkld(mockWsWl)
+			tc.mockWS(mockWS)
 			if tc.mockStore != nil {
 				tc.mockStore(mockStore)
 			}
