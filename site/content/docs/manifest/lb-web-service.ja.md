@@ -266,7 +266,7 @@ Fargate タスクと TLS 接続します。ターゲットコンテナにイン�
 Service へのアクセスを許可する CIDR IP アドレスのリストを指定します。
 ```yaml
 http:
-allowed_source_ips: ["192.0.2.0/24", "198.51.100.10/32"]
+  allowed_source_ips: ["192.0.2.0/24", "198.51.100.10/32"]
 ```
 
 <span class="parent-field">http.</span><a id="http-alias" href="#http-alias" class="field">`alias`</a> <span class="type">String or Array of Strings or Array of Maps</span>  
@@ -287,7 +287,7 @@ http:
       hosted_zone: AN0THE9H05TED20NEID
 ```
 <span class="parent-field">http.</span><a id="http-hosted-zone" href="#http-hosted-zone" class="field">`hosted_zone`</a> <span class="type">String</span>  
-既存のプライベートホストゾーンの ID。`http.alias` と共に使用します。証明書をインポートした Environment がある場合、ロードバランサーの作成後に Copilot が A レコードを挿入するホストゾーンを指定できます。
+既存のプライベートホストゾーンの ID。`http.alias` とのみ使用可能です。証明書をインポートした Environment がある場合、ロードバランサーの作成後に Copilot が A レコードを挿入するホストゾーンを指定できます。
 ```yaml
 http:
   alias: example.com

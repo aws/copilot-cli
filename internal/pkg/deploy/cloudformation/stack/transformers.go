@@ -367,6 +367,24 @@ func convertHTTPHealthCheck(hc *manifest.HealthCheckArgsOrString) template.HTTPH
 	return opts
 }
 
+// convertNLBHealthCheck converts the NLB health check configuration into a format parsable by the templates pkg.
+func convertNLBHealthCheck(nlbHC *manifest.NLBHealthCheckArgs) template.NLBHealthCheck {
+	hc := template.NLBHealthCheck{
+		HealthyThreshold:   nlbHC.HealthyThreshold,
+		UnhealthyThreshold: nlbHC.UnhealthyThreshold,
+	}
+	if nlbHC.Port != nil {
+		hc.Port = strconv.Itoa(aws.IntValue(nlbHC.Port))
+	}
+	if nlbHC.Timeout != nil {
+		hc.Timeout = aws.Int64(int64(nlbHC.Timeout.Seconds()))
+	}
+	if nlbHC.Interval != nil {
+		hc.Interval = aws.Int64(int64(nlbHC.Interval.Seconds()))
+	}
+	return hc
+}
+
 type networkLoadBalancerConfig struct {
 	settings *template.NetworkLoadBalancer
 
@@ -446,35 +464,20 @@ func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (networkLoadBalanc
 		return networkLoadBalancerConfig{}, nil
 	}
 
+	// Parse targetContainer and targetPort for the Network Load Balancer targets.
+	targetContainer, targetPort, err := s.manifest.NetworkLoadBalancerTarget()
+	if err != nil {
+		return networkLoadBalancerConfig{}, err
+	}
+
 	// Parse listener port and protocol.
 	port, protocol, err := manifest.ParsePortMapping(nlbConfig.Port)
 	if err != nil {
 		return networkLoadBalancerConfig{}, err
 	}
+
 	if protocol == nil {
 		protocol = aws.String(defaultNLBProtocol)
-	}
-
-	// Configure target container and port.
-	targetContainer := s.name
-	if nlbConfig.TargetContainer != nil {
-		targetContainer = aws.StringValue(nlbConfig.TargetContainer)
-	}
-
-	// By default, the target port is the same as listener port.
-	targetPort := aws.StringValue(port)
-	if targetContainer != s.name {
-		// If the target container is a sidecar container, the target port is the exposed sidecar port.
-		sideCarPort := s.manifest.Sidecars[targetContainer].Port // We validated that a sidecar container exposes a port if it is a target container.
-		port, _, err := manifest.ParsePortMapping(sideCarPort)
-		if err != nil {
-			return networkLoadBalancerConfig{}, err
-		}
-		targetPort = aws.StringValue(port)
-	}
-	// Finally, if a target port is explicitly specified, use that value.
-	if nlbConfig.TargetPort != nil {
-		targetPort = strconv.Itoa(aws.IntValue(nlbConfig.TargetPort))
 	}
 
 	aliases, err := convertAlias(nlbConfig.Aliases)
@@ -482,19 +485,8 @@ func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (networkLoadBalanc
 		return networkLoadBalancerConfig{}, fmt.Errorf(`convert "nlb.alias" to string slice: %w`, err)
 	}
 
-	hc := template.NLBHealthCheck{
-		HealthyThreshold:   nlbConfig.HealthCheck.HealthyThreshold,
-		UnhealthyThreshold: nlbConfig.HealthCheck.UnhealthyThreshold,
-	}
-	if nlbConfig.HealthCheck.Port != nil {
-		hc.Port = strconv.Itoa(aws.IntValue(nlbConfig.HealthCheck.Port))
-	}
-	if nlbConfig.HealthCheck.Timeout != nil {
-		hc.Timeout = aws.Int64(int64(nlbConfig.HealthCheck.Timeout.Seconds()))
-	}
-	if nlbConfig.HealthCheck.Interval != nil {
-		hc.Interval = aws.Int64(int64(nlbConfig.HealthCheck.Interval.Seconds()))
-	}
+	hc := convertNLBHealthCheck(&nlbConfig.HealthCheck)
+
 	config := networkLoadBalancerConfig{
 		settings: &template.NetworkLoadBalancer{
 			PublicSubnetCIDRs: s.publicSubnetCIDRBlocks,

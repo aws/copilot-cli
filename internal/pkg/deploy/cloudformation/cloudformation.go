@@ -55,6 +55,38 @@ type StackConfiguration interface {
 	SerializedParameters() (string, error)
 }
 
+// An Overrider transforms the content in body to out.
+type Overrider interface {
+	Override(body []byte) (out []byte, err error)
+}
+
+// overridableStack is a StackConfiguration with overrides applied.
+type overridableStack struct {
+	StackConfiguration
+	overrider Overrider
+}
+
+// Template returns the overriden CloudFormation stack template.
+func (s *overridableStack) Template() (string, error) {
+	tpl, err := s.StackConfiguration.Template()
+	if err != nil {
+		return "", fmt.Errorf("generate stack template: %w", err)
+	}
+	out, err := s.overrider.Override([]byte(tpl))
+	if err != nil {
+		return "", fmt.Errorf("override template: %w", err)
+	}
+	return string(out), nil
+}
+
+// WrapWithTemplateOverrider returns a wrapped stack, such that Template calls returns an overriden stack template.
+func WrapWithTemplateOverrider(stack StackConfiguration, overrider Overrider) StackConfiguration {
+	return &overridableStack{
+		StackConfiguration: stack,
+		overrider:          overrider,
+	}
+}
+
 type ecsClient interface {
 	stream.ECSServiceDescriber
 }

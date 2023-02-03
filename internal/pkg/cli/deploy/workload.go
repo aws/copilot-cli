@@ -263,18 +263,14 @@ func (d *workloadDeployer) generateCloudFormationTemplate(conf stackSerializer) 
 	*GenerateCloudFormationTemplateOutput, error) {
 	tpl, err := conf.Template()
 	if err != nil {
-		return nil, fmt.Errorf("generate stack template: %w", err)
-	}
-	transformedTpl, err := d.overrider.Override([]byte(tpl))
-	if err != nil {
-		return nil, fmt.Errorf("override template: %w", err)
+		return nil, err
 	}
 	params, err := conf.SerializedParameters()
 	if err != nil {
 		return nil, fmt.Errorf("generate stack template parameters: %w", err)
 	}
 	return &GenerateCloudFormationTemplateOutput{
-		Template:   string(transformedTpl),
+		Template:   tpl,
 		Parameters: params,
 	}, nil
 }
