@@ -223,69 +223,105 @@ func newStorageInitOpts(vars initStorageVars) (*initStorageOpts, error) {
 	}, nil
 }
 
-// Validate returns an error if the values passed by flags are invalid.
+// Validate returns an error for any invalid optional flags.
 func (o *initStorageOpts) Validate() error {
 	if o.appName == "" {
 		return errNoAppInWorkspace
-	}
-	if o.workloadName != "" {
-		if err := o.validateWorkloadName(); err != nil {
-			return err
-		}
-	}
-	if o.storageType != "" {
-		if err := o.validateStorageType(); err != nil {
-			return err
-		}
-	}
-	if o.storageName != "" {
-		var err error
-		switch o.storageType {
-		case dynamoDBStorageType:
-			err = dynamoTableNameValidation(o.storageName)
-		case s3StorageType:
-			err = s3BucketNameValidation(o.storageName)
-		case rdsStorageType:
-			err = rdsNameValidation(o.storageName)
-		default:
-			// use dynamo since it's a superset of s3
-			err = dynamoTableNameValidation(o.storageName)
-		}
-		if err != nil {
-			return err
-		}
-	}
-	if err := o.validateDDB(); err != nil {
-		return err
 	}
 	if o.lifecycle != "" {
 		if err := o.validateStorageLifecycle(); err != nil {
 			return err
 		}
 	}
+	// --no-lsi and --lsi are mutually exclusive.
+	if o.noLSI && len(o.lsiSorts) != 0 {
+		return fmt.Errorf("validate LSI configuration: cannot specify --no-lsi and --lsi options at once")
+	}
+	// --no-sort and --lsi are mutually exclusive.
+	if o.noSort && len(o.lsiSorts) != 0 {
+		return fmt.Errorf("validate LSI configuration: cannot specify --no-sort and --lsi options at once")
+	}
 	if o.auroraServerlessVersion != "" {
 		if err := o.validateServerlessVersion(); err != nil {
-			return err
-		}
-	}
-	if o.rdsEngine != "" {
-		if err := validateEngine(o.rdsEngine); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (o *initStorageOpts) validateWorkloadName() error {
-	exists, err := o.ws.WorkloadExists(o.workloadName)
-	if err != nil {
-		return fmt.Errorf("check if %s exists in the workspace: %w", o.workloadName, err)
+func (o *initStorageOpts) validateStorageLifecycle() error {
+	for _, valid := range validLifecycleOptions {
+		if o.lifecycle == valid {
+			return nil
+		}
 	}
-	o.workloadExists = exists
-	if !exists {
-		return fmt.Errorf("workload %s not found in the workspace", o.workloadName)
+	return fmt.Errorf("invalid lifecycle; must be one of %s", english.OxfordWordSeries(quoteStringSlice(validLifecycleOptions), "or"))
+}
+
+func (o *initStorageOpts) validateServerlessVersion() error {
+	for _, valid := range auroraServerlessVersions {
+		if o.auroraServerlessVersion == valid {
+			return nil
+		}
+	}
+	fmtErrInvalidServerlessVersion := "invalid Aurora Serverless version %s: must be one of %s"
+	return fmt.Errorf(fmtErrInvalidServerlessVersion, o.auroraServerlessVersion, prettify(auroraServerlessVersions))
+}
+
+// Ask asks for fields that are required but not passed in.
+func (o *initStorageOpts) Ask() error {
+	if err := o.validateOrAskStorageWl(); err != nil {
+		return err
+	}
+	if err := o.validateOrAskStorageType(); err != nil {
+		return err
+	}
+
+	// Storage name needs to be asked after workload because for Aurora the default storage name uses the workload name.
+	if err := o.validateOrAskStorageName(); err != nil {
+		return err
+	}
+	switch o.storageType {
+	case dynamoDBStorageType:
+		if err := o.validateOrAskDynamoPartitionKey(); err != nil {
+			return err
+		}
+		if err := o.validateOrAskDynamoSortKey(); err != nil {
+			return err
+		}
+		if err := o.validateOrAskDynamoLSIConfig(); err != nil {
+			return err
+		}
+	case rdsStorageType:
+		if err := o.validateOrAskAuroraEngineType(); err != nil {
+			return err
+		}
+		// Ask for initial db name after engine type since the name needs to be validated accordingly.
+		if err := o.validateOrAskAuroraInitialDBName(); err != nil {
+			return err
+		}
 	}
 	return nil
+}
+
+func (o *initStorageOpts) validateOrAskStorageType() error {
+	if o.storageType != "" {
+		return o.validateStorageType()
+	}
+	var options []prompt.Option
+	for _, st := range storageTypes {
+		options = append(options, storageTypeOptions[st])
+	}
+	storageTypeOption, err := o.prompt.SelectOption(fmt.Sprintf(
+		fmtStorageInitTypePrompt, color.HighlightUserInput(o.workloadName)),
+		storageInitTypeHelp,
+		options,
+		prompt.WithFinalMessage("Storage type:"))
+	if err != nil {
+		return fmt.Errorf("select storage type: %w", err)
+	}
+	o.storageType = optionToStorageType[storageTypeOption]
+	return o.validateStorageType()
 }
 
 func (o *initStorageOpts) validateStorageType() error {
@@ -306,111 +342,11 @@ You can enable VPC connectivity by updating your manifest with:
 	return nil
 }
 
-func (o *initStorageOpts) validateStorageLifecycle() error {
-	for _, valid := range validLifecycleOptions {
-		if o.lifecycle == valid {
-			return nil
-		}
-	}
-	return fmt.Errorf("invalid lifecycle; must be one of %s", english.OxfordWordSeries(quoteStringSlice(validLifecycleOptions), "or"))
-}
-
-func (o *initStorageOpts) validateDDB() error {
-	if o.partitionKey != "" {
-		if err := validateKey(o.partitionKey); err != nil {
-			return err
-		}
-	}
-	if o.sortKey != "" {
-		if err := validateKey(o.sortKey); err != nil {
-			return err
-		}
-	}
-	// --no-lsi and --lsi are mutually exclusive.
-	if o.noLSI && len(o.lsiSorts) != 0 {
-		return fmt.Errorf("validate LSI configuration: cannot specify --no-lsi and --lsi options at once")
-	}
-
-	// --no-sort and --lsi are mutually exclusive.
-	if o.noSort && len(o.lsiSorts) != 0 {
-		return fmt.Errorf("validate LSI configuration: cannot specify --no-sort and --lsi options at once")
-	}
-	if len(o.lsiSorts) != 0 {
-		if err := validateLSIs(o.lsiSorts); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (o *initStorageOpts) validateServerlessVersion() error {
-	for _, valid := range auroraServerlessVersions {
-		if o.auroraServerlessVersion == valid {
-			return nil
-		}
-	}
-	fmtErrInvalidServerlessVersion := "invalid Aurora Serverless version %s: must be one of %s"
-	return fmt.Errorf(fmtErrInvalidServerlessVersion, o.auroraServerlessVersion, prettify(auroraServerlessVersions))
-}
-
-// Ask asks for fields that are required but not passed in.
-func (o *initStorageOpts) Ask() error {
-	if err := o.askStorageWl(); err != nil {
-		return err
-	}
-	if err := o.askStorageType(); err != nil {
-		return err
-	}
-
-	// Storage name needs to be asked after workload because for Aurora the default storage name uses the workload name.
-	if err := o.askStorageName(); err != nil {
-		return err
-	}
-	switch o.storageType {
-	case dynamoDBStorageType:
-		if err := o.askDynamoPartitionKey(); err != nil {
-			return err
-		}
-		if err := o.askDynamoSortKey(); err != nil {
-			return err
-		}
-		if err := o.askDynamoLSIConfig(); err != nil {
-			return err
-		}
-	case rdsStorageType:
-		if err := o.askAuroraEngineType(); err != nil {
-			return err
-		}
-		// Ask for initial db name after engine type since the name needs to be validated accordingly.
-		if err := o.askAuroraInitialDBName(); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (o *initStorageOpts) askStorageType() error {
-	if o.storageType != "" {
-		return o.validateStorageType()
-	}
-	var options []prompt.Option
-	for _, st := range storageTypes {
-		options = append(options, storageTypeOptions[st])
-	}
-	storageTypeOption, err := o.prompt.SelectOption(fmt.Sprintf(
-		fmtStorageInitTypePrompt, color.HighlightUserInput(o.workloadName)),
-		storageInitTypeHelp,
-		options,
-		prompt.WithFinalMessage("Storage type:"))
-	if err != nil {
-		return fmt.Errorf("select storage type: %w", err)
-	}
-	o.storageType = optionToStorageType[storageTypeOption]
-	return o.validateStorageType()
-}
-
-func (o *initStorageOpts) askStorageName() error {
+func (o *initStorageOpts) validateOrAskStorageName() error {
 	if o.storageName != "" {
+		if err := o.validateStorageName(); err != nil {
+			return fmt.Errorf("validate storage name: %w", err)
+		}
 		return nil
 	}
 	var validator func(interface{}) error
@@ -438,6 +374,20 @@ func (o *initStorageOpts) askStorageName() error {
 	return nil
 }
 
+func (o *initStorageOpts) validateStorageName() error {
+	switch o.storageType {
+	case dynamoDBStorageType:
+		return dynamoTableNameValidation(o.storageName)
+	case s3StorageType:
+		return s3BucketNameValidation(o.storageName)
+	case rdsStorageType:
+		return rdsNameValidation(o.storageName)
+	default:
+		// use dynamo since it's a superset of s3
+		return dynamoTableNameValidation(o.storageName)
+	}
+}
+
 func (o *initStorageOpts) askStorageNameWithDefault(friendlyText, defaultName string, validator func(interface{}) error) error {
 	name, err := o.prompt.Get(fmt.Sprintf(fmtStorageInitNamePrompt,
 		color.HighlightUserInput(friendlyText)),
@@ -453,9 +403,9 @@ func (o *initStorageOpts) askStorageNameWithDefault(friendlyText, defaultName st
 	return nil
 }
 
-func (o *initStorageOpts) askStorageWl() error {
+func (o *initStorageOpts) validateOrAskStorageWl() error {
 	if o.workloadName != "" {
-		return nil
+		return o.validateWorkloadName()
 	}
 	workload, err := o.sel.Workload(storageInitSvcPrompt, "")
 	if err != nil {
@@ -465,8 +415,23 @@ func (o *initStorageOpts) askStorageWl() error {
 	return nil
 }
 
-func (o *initStorageOpts) askDynamoPartitionKey() error {
+func (o *initStorageOpts) validateWorkloadName() error {
+	exists, err := o.ws.WorkloadExists(o.workloadName)
+	if err != nil {
+		return fmt.Errorf("check if %s exists in the workspace: %w", o.workloadName, err)
+	}
+	o.workloadExists = exists
+	if !exists {
+		return fmt.Errorf("workload %s not found in the workspace", o.workloadName)
+	}
+	return nil
+}
+
+func (o *initStorageOpts) validateOrAskDynamoPartitionKey() error {
 	if o.partitionKey != "" {
+		if err := validateKey(o.partitionKey); err != nil {
+			return fmt.Errorf("validate partition key: %w", err)
+		}
 		return nil
 	}
 	keyPrompt := fmt.Sprintf(fmtStorageInitDDBKeyPrompt,
@@ -498,8 +463,11 @@ func (o *initStorageOpts) askDynamoPartitionKey() error {
 	return nil
 }
 
-func (o *initStorageOpts) askDynamoSortKey() error {
+func (o *initStorageOpts) validateOrAskDynamoSortKey() error {
 	if o.sortKey != "" {
+		if err := validateKey(o.sortKey); err != nil {
+			return fmt.Errorf("validate sort key: %w", err)
+		}
 		return nil
 	}
 	// If the user has not specified a sort key and has specified the --no-sort flag we don't have to demand it of them.
@@ -543,10 +511,10 @@ func (o *initStorageOpts) askDynamoSortKey() error {
 	return nil
 }
 
-func (o *initStorageOpts) askDynamoLSIConfig() error {
+func (o *initStorageOpts) validateOrAskDynamoLSIConfig() error {
 	// LSI has already been specified by flags.
 	if len(o.lsiSorts) > 0 {
-		return nil
+		return validateLSIs(o.lsiSorts)
 	}
 	// If --no-lsi has been specified, there is no need to ask for local secondary indices.
 	if o.noLSI {
@@ -605,9 +573,9 @@ func (o *initStorageOpts) askDynamoLSIConfig() error {
 	}
 }
 
-func (o *initStorageOpts) askAuroraEngineType() error {
+func (o *initStorageOpts) validateOrAskAuroraEngineType() error {
 	if o.rdsEngine != "" {
-		return nil
+		return validateEngine(o.rdsEngine)
 	}
 	engine, err := o.prompt.SelectOne(storageInitRDSDBEnginePrompt,
 		"",
@@ -620,7 +588,7 @@ func (o *initStorageOpts) askAuroraEngineType() error {
 	return nil
 }
 
-func (o *initStorageOpts) askAuroraInitialDBName() error {
+func (o *initStorageOpts) validateOrAskAuroraInitialDBName() error {
 	var validator func(interface{}) error
 	switch o.rdsEngine {
 	case engineTypeMySQL:
