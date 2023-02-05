@@ -1327,7 +1327,7 @@ func (s SidecarConfig) validate() error {
 		return fmt.Errorf(`validate "depends_on": %w`, err)
 	}
 	if err := s.Image.Advanced.validate(); err != nil {
-		return fmt.Errorf(`validate "sidecar_imageconfig: %w`, err)
+		return fmt.Errorf(`validate "build": %w`, err)
 	}
 	return s.ImageOverride.validate()
 }
@@ -2046,7 +2046,14 @@ func contains(name string, names []string) bool {
 	return false
 }
 
-// validate is a no-op for SidecarImageConfig.
-func (s SidecarImageConfig) validate() error {
+// validate returns nil if SidecarImageConfig is configured correctly.
+func (cfg SidecarImageConfig) validate() error {
+	if !cfg.Build.IsZero() && cfg.Location != nil {
+		return &errFieldMutualExclusive{
+			firstField:  "build",
+			secondField: "location",
+			mustExist:   true,
+		}
+	}
 	return nil
 }

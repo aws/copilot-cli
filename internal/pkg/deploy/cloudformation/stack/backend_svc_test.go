@@ -424,8 +424,9 @@ Outputs:
 			},
 			Sidecars: []*template.SidecarOpts{
 				{
-					Name: "envoy",
-					Port: aws.String("443"),
+					Name:  "envoy",
+					Image: aws.String(""),
+					Port:  aws.String("443"),
 				},
 			},
 			HTTPTargetContainer: template.HTTPTargetContainer{

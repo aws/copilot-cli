@@ -82,6 +82,7 @@ func convertSidecar(s map[string]*manifest.SidecarConfig) ([]*template.SidecarOp
 	var sidecars []*template.SidecarOpts
 	for _, name := range keys {
 		config := s[name]
+		imageURI, _ := config.ImageURI()
 		port, protocol, err := manifest.ParsePortMapping(config.Port)
 		if err != nil {
 			return nil, err
@@ -97,7 +98,7 @@ func convertSidecar(s map[string]*manifest.SidecarConfig) ([]*template.SidecarOp
 		mp := convertSidecarMountPoints(config.MountPoints)
 		sidecars = append(sidecars, &template.SidecarOpts{
 			Name:       name,
-			Image:      config.SidecarImageURI(),
+			Image:      aws.String(imageURI),
 			Essential:  config.Essential,
 			Port:       port,
 			Protocol:   protocol,

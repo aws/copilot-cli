@@ -61,6 +61,16 @@ sidecars:
     port: 2000/udp
     image: 123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon
     credentialsParameter: some arn
+  nginx:
+    image:
+      build:
+        dockerfile: "web/Dockerfile"
+        context: "pathto/Dockerfile"
+        target: "build-stage"
+        cache_from:
+          - foo/bar:latest
+        args:
+          arg1: value1
 logging:
   destination:
     Name: cloudwatch
@@ -149,6 +159,23 @@ environments:
 								Port:       aws.String("2000/udp"),
 								Image:      BasicToUnion[*string, SidecarImageConfig](aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon")),
 								CredsParam: aws.String("some arn"),
+							},
+							"nginx": {
+								Image: AdvancedToUnion[*string](
+									SidecarImageConfig{
+										Build: AdvancedToUnion[*string](
+											DockerBuildArgs{
+												Dockerfile: aws.String("web/Dockerfile"),
+												Context:    aws.String("pathto/Dockerfile"),
+												Target:     aws.String("build-stage"),
+												CacheFrom:  []string{"foo/bar:latest"},
+												Args: map[string]string{
+													"arg1": "value1",
+												},
+											},
+										),
+									},
+								),
 							},
 						},
 						Logging: Logging{

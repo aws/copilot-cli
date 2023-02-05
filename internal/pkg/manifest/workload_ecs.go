@@ -318,35 +318,16 @@ type SidecarImageConfig struct {
 	Location *string                         // `yaml:"location"`
 }
 
-// UnmarshalYAML overrides the default YAML unmarshaling logic for the Image
-// struct, allowing it to perform more complex unmarshaling behavior.
-// This method implements the yaml.Unmarshaler (v3) interface.
-func (s *SidecarImageConfig) UnmarshalYAML(value *yaml.Node) error {
-	type scImageConfig SidecarImageConfig
-	if err := value.Decode((*scImageConfig)(s)); err != nil {
-		return err
+// ImageURI returns the location of the image if one is set.
+// If the image needs to be build, return "" and false.
+func (cfg *SidecarConfig) ImageURI() (string, bool) {
+	if cfg.Image.Basic != nil {
+		return aws.StringValue(cfg.Image.Basic), true
 	}
-	if !s.Build.IsZero() && s.Location != nil {
-		return &errFieldMutualExclusive{
-			firstField:  "build",
-			secondField: "location",
-			mustExist:   true,
-		}
+	if cfg.Image.Advanced.Location != nil {
+		return aws.StringValue(cfg.Image.Advanced.Location), true
 	}
-	return nil
-}
-
-// SidecarImageURI returns the URI of the image.
-func (s *SidecarConfig) SidecarImageURI() *string {
-	// Prefer to use the "Image" string in SidecarConfig. Otherwise,
-	// "Location" in SidecarImageConfig. If no image URI is specified, return nil.
-	if s.Image.Basic != nil {
-		return s.Image.Basic
-	}
-	if s.Image.Advanced.Location != nil {
-		return s.Image.Advanced.Location
-	}
-	return nil
+	return "", false
 }
 
 // OverrideRule holds the manifest overriding rule for CloudFormation template.

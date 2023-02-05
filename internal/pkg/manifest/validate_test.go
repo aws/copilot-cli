@@ -3635,3 +3635,39 @@ func TestValidateExposedPorts(t *testing.T) {
 		})
 	}
 }
+
+func TestSidecarImageConfig_validate(t *testing.T) {
+	testCases := map[string]struct {
+		in          SidecarImageConfig
+		wantedError error
+	}{
+		"should return error if both build and location are specified": {
+			in: SidecarImageConfig{
+				Build:    BasicToUnion[*string, DockerBuildArgs](aws.String("web/Dockerfile")),
+				Location: aws.String("mockLocation"),
+			},
+			wantedError: fmt.Errorf(`must specify one of "build" and "location"`),
+		},
+		"return nil if only build is specified": {
+			in: SidecarImageConfig{
+				Build: BasicToUnion[*string, DockerBuildArgs](aws.String("web/Dockerfile")),
+			},
+		},
+		"return nil if only location is specified": {
+			in: SidecarImageConfig{
+				Location: aws.String("mockLocation"),
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			err := tc.in.validate()
+
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
