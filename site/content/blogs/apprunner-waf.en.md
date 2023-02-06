@@ -1,10 +1,12 @@
-# Using WAF With AppRunner in Copilot
+# Using WAF With App Runner in Copilot
 
 Posted On: Feb 08, 2023
 
 **Siddharth Vohra**, Software Development Engineer, AWS App Runner
 
 You can now associate your AWS WAF WebACLs with your App Runner service - all in Copilot!
+
+We posted these step in our [GitHub "Show and tell" discussion section](LINK TO BE ADDED) as well! If you have any questions, feedbacks or requests that are related to AppRunner's WAF support, feel free to drop a comment there!
 
 AWS Web Application Firewall (WAF) helps you monitor requests that are forwarded to your web applications and allows you to control access to your content. To do this, you need to create a WAF Web Application Control List (ACL) which contains many rule options for your application. You can add multiple rules and create a Web ACL. Once you’ve created a Web ACL through AWS WAF Console or the AWS CLI, copy and save its ARN. To use the WAF ACL with your App Runner service managed by Copilot, follow the steps below.
 
