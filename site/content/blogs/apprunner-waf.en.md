@@ -13,7 +13,7 @@ options for your application. See [here](https://docs.aws.amazon.com/waf/latest/
 
 Step 1: If you don’t have an App Runner service created/deployed, run `copilot svc init --type "Request-Driven Web Service"` to create and configure an App Runner service.
 
-Step 2: Go to the service's directory (users/\<your username\>/copilot/\<your App Runner service name\>). If you don't have a folder called 'addons' in this directory, create a new 'addons' folder. Your folders would now look like this:  
+Step 2: Go to the service's directory (users/\<your username\>/copilot/\<your App Runner service name\>). If you don't have a folder called 'addons' in this directory, create a new 'addons' folder. In the addons folder, create two new files: `ar_waf-addon.yml` and `addons.parameters.yml`. Your folders would now look like this:  
 
   ```term
   .
@@ -24,7 +24,7 @@ Step 2: Go to the service's directory (users/\<your username\>/copilot/\<your Ap
               └── addons.parameters.yml
   ```
 
-and `ar_waf-addon.yml` would look like  
+Copy, paste and save the content below so that your `ar_waf_addon.yml` looks like:
   ```yaml
 #Addon template to add WAF configuration to your App Runner service.
 
@@ -55,7 +55,7 @@ Resources:
       WebACLArn:  <paste your WAF Web ACL ARN here> #Paste your WAF Web ACLL ARN here
   ```
 
-while `addons.parameters.yml` would look like:  
+Now, copy, paste and save the content below so that your `addons.parameters.yml` looks like: 
   ```yaml
   Parameters:
     ServiceARN: !Ref Service
@@ -81,5 +81,3 @@ Step 4: Now save the file and run `copilot svc deploy` to deploy your new App Ru
 ???+ note "Some considerations"
 -  A Web ACL can be linked to multiple services but one service can not be linked to more than one Web ACL
 - If you already have an App Runner service deployed through Copilot, all you need to do is follow Steps 2-4 and you will be able to add a WAF Web ACL to your existing App Runner service.
-
-
