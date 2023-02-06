@@ -67,14 +67,13 @@ var (
 )
 
 func convertPortMappings(exposedPorts []manifest.ExposedPort) []*template.PortMapping {
-	var portMapping []*template.PortMapping
-	for _, exposedPort := range exposedPorts {
-		out := &template.PortMapping{
+	portMapping := make([]*template.PortMapping, len(exposedPorts))
+	for idx, exposedPort := range exposedPorts {
+		portMapping[idx] = &template.PortMapping{
 			ContainerPort: exposedPort.Port,
 			Protocol:      exposedPort.Protocol,
 			ContainerName: exposedPort.ContainerName,
 		}
-		portMapping = append(portMapping, out)
 	}
 	return portMapping
 }

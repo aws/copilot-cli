@@ -142,7 +142,7 @@ func (j *ScheduledJob) Template() (string, error) {
 	}
 	sidecars, err := convertSidecars(j.manifest.Sidecars, exposedPorts.PortsForContainer)
 	if err != nil {
-		return "", fmt.Errorf("convert the sidecar configuration for service %s: %w", j.name, err)
+		return "", fmt.Errorf("convert the sidecar configuration for job %s: %w", j.name, err)
 	}
 	publishers, err := convertPublish(j.manifest.Publish(), j.rc.AccountID, j.rc.Region, j.app, j.env, j.name)
 	if err != nil {

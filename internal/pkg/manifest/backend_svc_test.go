@@ -1110,7 +1110,6 @@ func TestBackendService_ExposedPorts(t *testing.T) {
 					},
 					Sidecars: map[string]*SidecarConfig{
 						"xray": {
-							//Port:       aws.String("2000"),
 							Image:      aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
 							CredsParam: aws.String("some arn"),
 						},

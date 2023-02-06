@@ -661,6 +661,7 @@ func (s *BackendService) HTTPLoadBalancerTarget() (targetContainer string, targe
 func httpLoadBalancerTarget(exposedPorts ExposedPortsIndex, rrTargetPort *uint16) (targetContainer *string, targetPort *string) {
 	// Route load balancer traffic to the target_port if mentioned.
 	targetPort = aws.String(template.StrconvUint16(aws.Uint16Value(rrTargetPort)))
+	// It shouldn’t be possible that container is empty for the given port as exposed port assigns container to all the ports, this is just for the extra safety.
 	if exposedPorts.ContainerForPort[aws.Uint16Value(rrTargetPort)] != "" {
 		targetContainer = aws.String(exposedPorts.ContainerForPort[aws.Uint16Value(rrTargetPort)])
 	}
