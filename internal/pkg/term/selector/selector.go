@@ -921,10 +921,7 @@ func (s *ConfigSelector) Service(msg, help, app string) (string, error) {
 		return "", err
 	}
 	if len(services) == 0 {
-		log.Infof("Couldn't find any services associated with app %s, try initializing one: %s\n",
-			color.HighlightUserInput(app),
-			color.HighlightCode("copilot svc init"))
-		return "", fmt.Errorf("no services found in app %s", app)
+		return "", &ErrNoServiceInApp{appName: app}
 	}
 	if len(services) == 1 {
 		log.Infof("Only found one service, defaulting to: %s\n", color.HighlightUserInput(services[0]))
@@ -944,10 +941,7 @@ func (s *ConfigSelector) Job(msg, help, app string) (string, error) {
 		return "", err
 	}
 	if len(jobs) == 0 {
-		log.Infof("Couldn't find any jobs associated with app %s, try initializing one: %s\n",
-			color.HighlightUserInput(app),
-			color.HighlightCode("copilot job init"))
-		return "", fmt.Errorf("no jobs found in app %s", app)
+		return "", &ErrNoJobInApp{appName: app}
 	}
 	if len(jobs) == 1 {
 		log.Infof("Only found one job, defaulting to: %s\n", color.HighlightUserInput(jobs[0]))
