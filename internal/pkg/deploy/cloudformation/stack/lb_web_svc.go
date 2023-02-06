@@ -53,13 +53,14 @@ func WithNLB(cidrBlocks []string) func(s *LoadBalancedWebService) {
 
 // LoadBalancedWebServiceConfig contains fields to configure LoadBalancedWebService.
 type LoadBalancedWebServiceConfig struct {
-	App           *config.Application
-	EnvManifest   *manifest.Environment
-	Manifest      *manifest.LoadBalancedWebService
-	RawManifest   []byte // Content of the manifest file without any transformations.
-	RuntimeConfig RuntimeConfig
-	RootUserARN   string
-	Addons        NestedStackConfigurer
+	App                *config.Application
+	EnvManifest        *manifest.Environment
+	Manifest           *manifest.LoadBalancedWebService
+	RawManifest        []byte // Content of the manifest file without any transformations.
+	RuntimeConfig      RuntimeConfig
+	RootUserARN        string
+	ArtifactBucketName string
+	Addons             NestedStackConfigurer
 }
 
 // NewLoadBalancedWebService creates a new CFN stack with an ECS service from a manifest file, given the options.
@@ -89,15 +90,16 @@ func NewLoadBalancedWebService(conf LoadBalancedWebServiceConfig,
 	s := &LoadBalancedWebService{
 		ecsWkld: &ecsWkld{
 			wkld: &wkld{
-				name:        aws.StringValue(conf.Manifest.Name),
-				env:         aws.StringValue(conf.EnvManifest.Name),
-				app:         conf.App.Name,
-				permBound:   conf.App.PermissionsBoundary,
-				rc:          conf.RuntimeConfig,
-				image:       conf.Manifest.ImageConfig.Image,
-				rawManifest: conf.RawManifest,
-				parser:      parser,
-				addons:      conf.Addons,
+				name:               aws.StringValue(conf.Manifest.Name),
+				env:                aws.StringValue(conf.EnvManifest.Name),
+				app:                conf.App.Name,
+				permBound:          conf.App.PermissionsBoundary,
+				artifactBucketName: conf.ArtifactBucketName,
+				rc:                 conf.RuntimeConfig,
+				image:              conf.Manifest.ImageConfig.Image,
+				rawManifest:        conf.RawManifest,
+				parser:             parser,
+				addons:             conf.Addons,
 			},
 			logRetention:        conf.Manifest.Logging.Retention,
 			tc:                  conf.Manifest.TaskConfig,

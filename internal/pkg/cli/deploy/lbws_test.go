@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
+
 	"github.com/aws/copilot-cli/internal/pkg/template"
 
 	"gopkg.in/yaml.v3"
@@ -67,6 +69,7 @@ func mockLoadBalancedWebServiceDeployer(opts ...func(deployer *lbWebSvcDeployer)
 					App:  "demo",
 					Name: "test",
 				},
+				resources:        &stack.AppRegionalResources{},
 				envConfig:        new(manifest.Environment),
 				endpointGetter:   &mockEndpointGetter{endpoint: "demo.test.local"},
 				envVersionGetter: &mockEnvVersionGetter{version: "v1.0.0"},

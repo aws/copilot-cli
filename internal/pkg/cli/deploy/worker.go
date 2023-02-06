@@ -170,12 +170,13 @@ func (d *workerSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*
 		return nil, err
 	}
 	conf, err := stack.NewWorkerService(stack.WorkerServiceConfig{
-		App:           d.app,
-		Env:           d.env.Name,
-		Manifest:      d.wsMft,
-		RawManifest:   d.rawMft,
-		RuntimeConfig: *rc,
-		Addons:        d.addons,
+		App:                d.app,
+		Env:                d.env.Name,
+		Manifest:           d.wsMft,
+		RawManifest:        d.rawMft,
+		ArtifactBucketName: d.resources.S3Bucket,
+		RuntimeConfig:      *rc,
+		Addons:             d.addons,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("create stack configuration: %w", err)

@@ -155,13 +155,14 @@ func (d *lbWebSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*s
 		opts = append(opts, stack.WithNLB(cidrBlocks))
 	}
 	conf, err := stack.NewLoadBalancedWebService(stack.LoadBalancedWebServiceConfig{
-		App:           d.app,
-		EnvManifest:   d.envConfig,
-		Manifest:      d.lbMft,
-		RawManifest:   d.rawMft,
-		RuntimeConfig: *rc,
-		RootUserARN:   in.RootUserARN,
-		Addons:        d.addons,
+		App:                d.app,
+		EnvManifest:        d.envConfig,
+		Manifest:           d.lbMft,
+		RawManifest:        d.rawMft,
+		ArtifactBucketName: d.resources.S3Bucket,
+		RuntimeConfig:      *rc,
+		RootUserARN:        in.RootUserARN,
+		Addons:             d.addons,
 	}, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("create stack configuration: %w", err)

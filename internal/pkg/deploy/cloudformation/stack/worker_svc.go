@@ -30,12 +30,13 @@ type WorkerService struct {
 
 // WorkerServiceConfig contains data required to initialize a scheduled job stack.
 type WorkerServiceConfig struct {
-	App           *config.Application
-	Env           string
-	Manifest      *manifest.WorkerService
-	RawManifest   []byte
-	RuntimeConfig RuntimeConfig
-	Addons        NestedStackConfigurer
+	App                *config.Application
+	Env                string
+	Manifest           *manifest.WorkerService
+	ArtifactBucketName string
+	RawManifest        []byte
+	RuntimeConfig      RuntimeConfig
+	Addons             NestedStackConfigurer
 }
 
 // NewWorkerService creates a new WorkerService stack from a manifest file.
@@ -44,15 +45,16 @@ func NewWorkerService(cfg WorkerServiceConfig) (*WorkerService, error) {
 	return &WorkerService{
 		ecsWkld: &ecsWkld{
 			wkld: &wkld{
-				name:        aws.StringValue(cfg.Manifest.Name),
-				env:         cfg.Env,
-				app:         cfg.App.Name,
-				permBound:   cfg.App.PermissionsBoundary,
-				rc:          cfg.RuntimeConfig,
-				image:       cfg.Manifest.ImageConfig.Image,
-				rawManifest: cfg.RawManifest,
-				parser:      parser,
-				addons:      cfg.Addons,
+				name:               aws.StringValue(cfg.Manifest.Name),
+				env:                cfg.Env,
+				app:                cfg.App.Name,
+				permBound:          cfg.App.PermissionsBoundary,
+				artifactBucketName: cfg.ArtifactBucketName,
+				rc:                 cfg.RuntimeConfig,
+				image:              cfg.Manifest.ImageConfig.Image,
+				rawManifest:        cfg.RawManifest,
+				parser:             parser,
+				addons:             cfg.Addons,
 			},
 			logRetention:        cfg.Manifest.Logging.Retention,
 			tc:                  cfg.Manifest.TaskConfig,

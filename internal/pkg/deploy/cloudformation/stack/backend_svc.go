@@ -33,12 +33,13 @@ type BackendService struct {
 
 // BackendServiceConfig contains data required to initialize a backend service stack.
 type BackendServiceConfig struct {
-	App           *config.Application
-	EnvManifest   *manifest.Environment
-	Manifest      *manifest.BackendService
-	RawManifest   []byte // Content of the manifest file without any transformations.
-	RuntimeConfig RuntimeConfig
-	Addons        NestedStackConfigurer
+	App                *config.Application
+	EnvManifest        *manifest.Environment
+	Manifest           *manifest.BackendService
+	ArtifactBucketName string
+	RawManifest        []byte // Content of the manifest file without any transformations.
+	RuntimeConfig      RuntimeConfig
+	Addons             NestedStackConfigurer
 }
 
 // NewBackendService creates a new BackendService stack from a manifest file.
@@ -47,15 +48,16 @@ func NewBackendService(conf BackendServiceConfig) (*BackendService, error) {
 	b := &BackendService{
 		ecsWkld: &ecsWkld{
 			wkld: &wkld{
-				name:        aws.StringValue(conf.Manifest.Name),
-				env:         aws.StringValue(conf.EnvManifest.Name),
-				app:         conf.App.Name,
-				permBound:   conf.App.PermissionsBoundary,
-				rc:          conf.RuntimeConfig,
-				image:       conf.Manifest.ImageConfig.Image,
-				rawManifest: conf.RawManifest,
-				parser:      parser,
-				addons:      conf.Addons,
+				name:               aws.StringValue(conf.Manifest.Name),
+				env:                aws.StringValue(conf.EnvManifest.Name),
+				app:                conf.App.Name,
+				permBound:          conf.App.PermissionsBoundary,
+				artifactBucketName: conf.ArtifactBucketName,
+				rc:                 conf.RuntimeConfig,
+				image:              conf.Manifest.ImageConfig.Image,
+				rawManifest:        conf.RawManifest,
+				parser:             parser,
+				addons:             conf.Addons,
 			},
 			logRetention:        conf.Manifest.Logging.Retention,
 			tc:                  conf.Manifest.TaskConfig,

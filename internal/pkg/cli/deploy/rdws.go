@@ -138,11 +138,12 @@ func (d *rdwsDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*rdwsS
 			PermissionsBoundary: d.app.PermissionsBoundary,
 			AccountPrincipalARN: in.RootUserARN,
 		},
-		Env:           d.env.Name,
-		Manifest:      d.rdwsMft,
-		RawManifest:   d.rawMft,
-		RuntimeConfig: *rc,
-		Addons:        d.addons,
+		Env:                d.env.Name,
+		Manifest:           d.rdwsMft,
+		RawManifest:        d.rawMft,
+		ArtifactBucketName: d.resources.S3Bucket,
+		RuntimeConfig:      *rc,
+		Addons:             d.addons,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("create stack configuration: %w", err)

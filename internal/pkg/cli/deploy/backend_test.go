@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
+
 	"github.com/aws/copilot-cli/internal/pkg/override"
 	"gopkg.in/yaml.v3"
 
@@ -237,6 +239,7 @@ func TestBackendSvcDeployer_stackConfiguration(t *testing.T) {
 						app:              tc.App,
 						env:              tc.Env,
 						endpointGetter:   m.mockEndpointGetter,
+						resources:        &stack.AppRegionalResources{},
 						envConfig:        tc.inEnvironmentConfig(),
 						envVersionGetter: m.mockEnvVersionGetter,
 					},
@@ -270,6 +273,7 @@ func mockBackendServiceDeployer(opts ...func(*backendSvcDeployer)) *backendSvcDe
 					App:  "demo",
 					Name: "test",
 				},
+				resources:        &stack.AppRegionalResources{},
 				envConfig:        new(manifest.Environment),
 				endpointGetter:   &mockEndpointGetter{endpoint: "demo.test.local"},
 				envVersionGetter: &mockEnvVersionGetter{version: "v1.0.0"},

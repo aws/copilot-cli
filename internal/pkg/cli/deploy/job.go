@@ -94,12 +94,13 @@ func (d *jobDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*jobSta
 		return nil, err
 	}
 	conf, err := stack.NewScheduledJob(stack.ScheduledJobConfig{
-		App:           d.app,
-		Env:           d.env.Name,
-		Manifest:      d.jobMft,
-		RawManifest:   d.rawMft,
-		RuntimeConfig: *rc,
-		Addons:        d.addons,
+		App:                d.app,
+		Env:                d.env.Name,
+		Manifest:           d.jobMft,
+		RawManifest:        d.rawMft,
+		ArtifactBucketName: d.resources.S3Bucket,
+		RuntimeConfig:      *rc,
+		Addons:             d.addons,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("create stack configuration: %w", err)
