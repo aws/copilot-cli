@@ -12,7 +12,7 @@ AWS Web Application Firewall (WAF) helps you monitor requests that are forwarded
 
  Step 1: If you don’t have an App Runner service created/deployed, run `copilot svc init` to create and configure an App Runner service.
 
-Step 2: Go to the service's directory (users/\<your username\>/copilot/\<your App Runner service name\>). If you don't have a folder called 'addons' in this directory already, create a new folder and name it 'addons'. Now, go to the AR-WAF Addon discussion (Hyperlink coming soon) and follow the steps.  Your folders would now look like this:  
+Step 2: Go to the service's directory (users/\<your username\>/copilot/\<your App Runner service name\>). If you don't have a folder called 'addons' in this directory, create a new 'addons' folder. Now, go to the AR-WAF Addon discussion (Hyperlink coming soon) and follow the steps.  Your folders would now look like this:  
 
   ```term
   .
