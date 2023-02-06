@@ -243,7 +243,7 @@ func (o *initStorageOpts) Ask() error {
 	if err := o.validateOrAskStorageType(); err != nil {
 		return err
 	}
-	if err := o.validateOrAskStorageWl(); err != nil {
+	if err := o.askWorkload(); err != nil {
 		return err
 	}
 	// Storage name needs to be asked after workload because for Aurora the default storage name uses the workload name.
@@ -251,6 +251,9 @@ func (o *initStorageOpts) Ask() error {
 		return err
 	}
 	if err := o.validateOrAskLifecycle(); err != nil {
+		return err
+	}
+	if err := o.validateWorkloadNameWithLifecycle(); err != nil {
 		return err
 	}
 	switch o.storageType {
@@ -388,27 +391,16 @@ func (o *initStorageOpts) askStorageNameWithDefault(friendlyText, defaultName st
 	return nil
 }
 
-func (o *initStorageOpts) validateOrAskStorageWl() error {
+func (o *initStorageOpts) askWorkload() error {
 	if o.workloadName != "" {
-		return o.validateWorkloadName()
+		return nil
 	}
 	workload, err := o.sel.Workload(storageInitSvcPrompt, "")
 	if err != nil {
 		return fmt.Errorf("retrieve local workload names: %w", err)
 	}
 	o.workloadName = workload
-	return nil
-}
-
-func (o *initStorageOpts) validateWorkloadName() error {
-	exists, err := o.ws.WorkloadExists(o.workloadName)
-	if err != nil {
-		return fmt.Errorf("check if %s exists in the workspace: %w", o.workloadName, err)
-	}
-	o.workloadExists = exists
-	if !exists {
-		return fmt.Errorf("workload %s not found in the workspace", o.workloadName)
-	}
+	o.workloadExists = true
 	return nil
 }
 
@@ -419,6 +411,7 @@ func (o *initStorageOpts) validateOrAskLifecycle() error {
 	_, err := o.ws.ReadFile(o.ws.WorkloadAddonFileAbsPath(o.workloadName, fmt.Sprintf("%s.yml", o.storageName)))
 	if err == nil {
 		o.lifecycle = lifecycleWorkloadLevel
+		o.workloadExists = true
 		return nil
 	}
 	if _, ok := err.(*workspace.ErrFileNotExists); !ok {
@@ -460,6 +453,23 @@ func (o *initStorageOpts) validateStorageLifecycle() error {
 		}
 	}
 	return fmt.Errorf("invalid lifecycle; must be one of %s", english.OxfordWordSeries(quoteStringSlice(validLifecycleOptions), "or"))
+}
+
+// validateWorkloadNameWithLifecycle requires the workload to be in the workspace if the storage lifecycle is on workload-level.
+// Otherwise, it only caches whether the workload is present.  
+func (o *initStorageOpts) validateWorkloadNameWithLifecycle() error {
+	if o.workloadExists {
+		return nil
+	}
+	exists, err := o.ws.WorkloadExists(o.workloadName)
+	if err != nil {
+		return fmt.Errorf("check if %s exists in the workspace: %w", o.workloadName, err)
+	}
+	o.workloadExists = exists
+	if o.lifecycle == lifecycleWorkloadLevel && !exists {
+		return fmt.Errorf("workload %s not found in the workspace", o.workloadName)
+	}
+	return nil
 }
 
 func (o *initStorageOpts) validateOrAskDynamoPartitionKey() error {
