@@ -546,9 +546,9 @@ func (s StaticSite) validate() error {
 }
 
 func (s StaticSiteConfig) validate() error {
-	for _, fileupload := range s.FileUploads {
+	for idx, fileupload := range s.FileUploads {
 		if err := fileupload.validate(); err != nil {
-			return fmt.Errorf(`validate "files": %w`, err)
+			return fmt.Errorf(`validate "files[%d]": %w`, idx, err)
 		}
 	}
 	return nil
