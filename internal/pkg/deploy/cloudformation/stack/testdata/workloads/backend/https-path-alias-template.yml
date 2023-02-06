@@ -94,7 +94,10 @@ Resources:
               awslogs-region: !Ref AWS::Region
               awslogs-group: !Ref LogGroup
               awslogs-stream-prefix: copilot
-          PortMappings: !If [ExposePort, [{ContainerPort: !Ref ContainerPort, Name: target}], !Ref "AWS::NoValue"]
+          PortMappings:
+            - ContainerPort: 80
+              Protocol: tcp
+              Name: target
   ExecutionRole:
     Metadata:
       'aws:copilot:description': 'An IAM Role for the Fargate agent to make AWS API calls on your behalf'
