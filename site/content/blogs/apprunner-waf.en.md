@@ -1,4 +1,4 @@
-**# Using WAF With AppRunner in Copilot
+# Using WAF With AppRunner in Copilot
 
 Posted On: Feb 08, 2023
 
@@ -54,8 +54,8 @@ Resources:
 
 while `addons.parameters.yml` would look like:  
   ```yaml
-Parameters:
-  ServiceARN: !Ref Service
+  Parameters:
+    ServiceARN: !Ref Service
   ```
 
 Step 3: Open `ar_waf_addon.yml` and edit it to add your WebACL ARN where it is required - `Firewall.Properties.WebACLArn`. For example:   
@@ -79,4 +79,4 @@ Some considerations:
 -  A Web ACL can be linked to multiple services but one service can not be linked to more than one Web ACL
 - If you already have an App Runner service deployed through Copilot, all you need to do is follow Steps 2-4 and you will be able to add a WAF Web ACL to your existing App Runner service.
 
-**
+
