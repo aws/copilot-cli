@@ -10,21 +10,21 @@ import (
 )
 
 func TestErrNoWorkloadInApp_RecommendActions(t *testing.T) {
-	err := &ErrNoWorkloadInApp{
+	err := &errNoWorkloadInApp{
 		appName: "mockApp",
 	}
 	require.Equal(t, "Couldn't find any workloads associated with app mockApp, try initializing one: `copilot [svc/job] init`.", err.RecommendActions())
 }
 
 func TestErrNoJobInApp_RecommendActions(t *testing.T) {
-	err := &ErrNoJobInApp{
+	err := &errNoJobInApp{
 		appName: "mockApp",
 	}
 	require.Equal(t, "Couldn't find any jobs associated with app mockApp, try initializing one: `copilot job init`.", err.RecommendActions())
 }
 
 func TestErrNoServiceInApp_RecommendActions(t *testing.T) {
-	err := &ErrNoServiceInApp{
+	err := &errNoServiceInApp{
 		appName: "mockApp",
 	}
 	require.Equal(t, "Couldn't find any services associated with app mockApp, try initializing one: `copilot svc init`.", err.RecommendActions())

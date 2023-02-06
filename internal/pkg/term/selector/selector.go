@@ -921,7 +921,7 @@ func (s *ConfigSelector) Service(msg, help, app string) (string, error) {
 		return "", err
 	}
 	if len(services) == 0 {
-		return "", &ErrNoServiceInApp{appName: app}
+		return "", &errNoServiceInApp{appName: app}
 	}
 	if len(services) == 1 {
 		log.Infof("Only found one service, defaulting to: %s\n", color.HighlightUserInput(services[0]))
@@ -941,7 +941,7 @@ func (s *ConfigSelector) Job(msg, help, app string) (string, error) {
 		return "", err
 	}
 	if len(jobs) == 0 {
-		return "", &ErrNoJobInApp{appName: app}
+		return "", &errNoJobInApp{appName: app}
 	}
 	if len(jobs) == 1 {
 		log.Infof("Only found one job, defaulting to: %s\n", color.HighlightUserInput(jobs[0]))
@@ -967,7 +967,7 @@ func (s *ConfigSelector) Workload(msg, help, app string) (string, error) {
 
 	workloads := append(services, jobs...)
 	if len(workloads) == 0 {
-		return "", &ErrNoWorkloadInApp{appName: app}
+		return "", &errNoWorkloadInApp{appName: app}
 	}
 	if len(workloads) == 1 {
 		log.Infof("Only found one workload, defaulting to: %s\n", color.HighlightUserInput(workloads[0]))

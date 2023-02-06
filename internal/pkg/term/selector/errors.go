@@ -19,49 +19,49 @@ var (
 	ErrSubnetsNotFound = errors.New("no existing subnets found")
 )
 
-// ErrNoWorkloadInApp occurs when there is no workload in an application.
-type ErrNoWorkloadInApp struct {
+// errNoWorkloadInApp occurs when there is no workload in an application.
+type errNoWorkloadInApp struct {
 	appName string
 }
 
-func (e *ErrNoWorkloadInApp) Error() string {
+func (e *errNoWorkloadInApp) Error() string {
 	return fmt.Sprintf("no workloads found in app %s", e.appName)
 }
 
 // RecommendActions gives suggestions to fix the error.
-func (e *ErrNoWorkloadInApp) RecommendActions() string {
+func (e *errNoWorkloadInApp) RecommendActions() string {
 	return fmt.Sprintf("Couldn't find any workloads associated with app %s, try initializing one: %s.",
 		color.HighlightUserInput(e.appName),
 		color.HighlightCode("copilot [svc/job] init"))
 }
 
-// ErrNoJobInApp occurs when there is no job in an application.
-type ErrNoJobInApp struct {
+// errNoJobInApp occurs when there is no job in an application.
+type errNoJobInApp struct {
 	appName string
 }
 
-func (e *ErrNoJobInApp) Error() string {
+func (e *errNoJobInApp) Error() string {
 	return fmt.Sprintf("no jobs found in app %s", e.appName)
 }
 
 // RecommendActions gives suggestions to fix the error.
-func (e *ErrNoJobInApp) RecommendActions() string {
+func (e *errNoJobInApp) RecommendActions() string {
 	return fmt.Sprintf("Couldn't find any jobs associated with app %s, try initializing one: %s.",
 		color.HighlightUserInput(e.appName),
 		color.HighlightCode("copilot job init"))
 }
 
-// ErrNoServiceInApp occurs when there is no service in an application.
-type ErrNoServiceInApp struct {
+// errNoServiceInApp occurs when there is no service in an application.
+type errNoServiceInApp struct {
 	appName string
 }
 
-func (e *ErrNoServiceInApp) Error() string {
+func (e *errNoServiceInApp) Error() string {
 	return fmt.Sprintf("no services found in app %s", e.appName)
 }
 
 // RecommendActions gives suggestions to fix the error.
-func (e *ErrNoServiceInApp) RecommendActions() string {
+func (e *errNoServiceInApp) RecommendActions() string {
 	return fmt.Sprintf("Couldn't find any services associated with app %s, try initializing one: %s.",
 		color.HighlightUserInput(e.appName),
 		color.HighlightCode("copilot svc init"))
