@@ -77,7 +77,7 @@ Resources:
 
 Step 4: Now save the file and run `copilot svc deploy` to deploy your new App Runner service. Your App Runner service will now be deployed along with a WAF WebACL!  
 
-???- note "Considerations" Some considerations
+???+ note "Some considerations"
 -  A Web ACL can be linked to multiple services but one service can not be linked to more than one Web ACL
 - If you already have an App Runner service deployed through Copilot, all you need to do is follow Steps 2-4 and you will be able to add a WAF Web ACL to your existing App Runner service.
 
