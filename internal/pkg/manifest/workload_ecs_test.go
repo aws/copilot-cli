@@ -479,7 +479,7 @@ func TestLogging_GetEnableMetadata(t *testing.T) {
 	}
 }
 
-func Test_SidecarImageURI(t *testing.T) {
+func Test_ImageURI(t *testing.T) {
 	testCases := map[string]struct {
 		in        SidecarConfig
 		wantedURI string
