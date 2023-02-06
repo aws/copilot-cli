@@ -954,6 +954,7 @@ func (s *ConfigSelector) Job(msg, help, app string) (string, error) {
 	return selectedJobName, nil
 }
 
+// Workload fetches all workloads in an app and prompts the user to select one.
 func (s *ConfigSelector) Workload(msg, help, app string) (string, error) {
 	services, err := s.retrieveServices(app)
 	if err != nil {
