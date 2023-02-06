@@ -185,7 +185,7 @@ type initStorageOpts struct {
 	appName string
 
 	fs    afero.Fs
-	ws    wsAddonManager
+	ws    wsReadWriter
 	store store
 
 	sel    wsSelector
