@@ -4,59 +4,114 @@
 package asset
 
 import (
+	"errors"
+	"fmt"
+	"io"
 	"testing"
 
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
 )
 
+type fakeS3 struct {
+	objects map[string]string
+	err     error
+}
+
+func (f *fakeS3) UploadFunc() func(string, io.Reader) (string, error) {
+	return func(key string, dat io.Reader) (url string, err error) {
+		if f.err != nil {
+			return "", f.err
+		}
+		url, ok := f.objects[key]
+		if !ok {
+			return "", fmt.Errorf("key %q does not exist in fakeS3", key)
+		}
+		return url, nil
+	}
+}
+
 func Test_Upload(t *testing.T) {
 	const mockContent = "mockContent"
 	testCases := map[string]struct {
 		inSource       string
+		inDest         string
 		inReincludes   []string
 		inExcludes     []string
+		inMockS3       fakeS3
 		mockFileSystem func(fs afero.Fs)
 
-		expectedFiles []string
+		expectedURLs  []string
 		expectedError error
 	}{
-		"success without include and exclude": {
-			inSource: "./test",
+		"error if failed to upload": {
+			inSource: "test",
 			mockFileSystem: func(fs afero.Fs) {
 				afero.WriteFile(fs, "test/copilot/.workspace", []byte(mockContent), 0644)
 				afero.WriteFile(fs, "copilot/prod/manifest.yaml", []byte(mockContent), 0644)
 			},
-			expectedFiles: []string{"test/copilot/.workspace"},
+			inMockS3: fakeS3{
+				err: errors.New("some error"),
+			},
+			expectedError: fmt.Errorf(`walk the file tree rooted at "test": upload file "test/copilot/.workspace" to destination "copilot/.workspace": some error`),
+		},
+		"success without include and exclude": {
+			inSource: "test",
+			mockFileSystem: func(fs afero.Fs) {
+				afero.WriteFile(fs, "test/copilot/.workspace", []byte(mockContent), 0644)
+				afero.WriteFile(fs, "copilot/prod/manifest.yaml", []byte(mockContent), 0644)
+			},
+			inMockS3: fakeS3{
+				objects: map[string]string{
+					"copilot/.workspace": "url",
+				},
+			},
+			expectedURLs: []string{"url"},
 		},
 		"success with include only": {
-			inSource:     "./test",
+			inSource:     "test",
+			inDest:       "ws",
 			inReincludes: []string{"copilot/prod/manifest.yaml"},
 			mockFileSystem: func(fs afero.Fs) {
 				afero.WriteFile(fs, "test/copilot/.workspace", []byte(mockContent), 0644)
 				afero.WriteFile(fs, "copilot/prod/manifest.yaml", []byte(mockContent), 0644)
 			},
-			expectedFiles: []string{"test/copilot/.workspace"},
+			inMockS3: fakeS3{
+				objects: map[string]string{
+					"ws/copilot/.workspace": "url",
+				},
+			},
+			expectedURLs: []string{"url"},
 		},
 		"success with exclude only": {
-			inSource:   "./",
 			inExcludes: []string{"copilot/prod/*.yaml"},
 			mockFileSystem: func(fs afero.Fs) {
 				afero.WriteFile(fs, "test/copilot/.workspace", []byte(mockContent), 0644)
 				afero.WriteFile(fs, "copilot/prod/manifest.yaml", []byte(mockContent), 0644)
 			},
-			expectedFiles: []string{"test/copilot/.workspace"},
+			inMockS3: fakeS3{
+				objects: map[string]string{
+					"test/copilot/.workspace": "url",
+				},
+			},
+			expectedURLs: []string{"url"},
 		},
 		"success with both include and exclude": {
-			inSource:     "./",
+			inDest:       "files",
 			inExcludes:   []string{"copilot/prod/*.yaml"},
 			inReincludes: []string{"copilot/prod/manifest.yaml"},
+			inMockS3: fakeS3{
+				objects: map[string]string{
+					"files/test/copilot/.workspace":    "url1",
+					"files/copilot/prod/manifest.yaml": "url2",
+				},
+			},
 			mockFileSystem: func(fs afero.Fs) {
 				afero.WriteFile(fs, "test/copilot/.workspace", []byte(mockContent), 0644)
 				afero.WriteFile(fs, "copilot/prod/manifest.yaml", []byte(mockContent), 0644)
 				afero.WriteFile(fs, "copilot/prod/foo.yaml", []byte(mockContent), 0644)
 			},
-			expectedFiles: []string{"test/copilot/.workspace", "copilot/prod/manifest.yaml"},
+			expectedURLs: []string{"url1", "url2"},
 		},
 	}
 	for name, tc := range testCases {
@@ -66,13 +121,14 @@ func Test_Upload(t *testing.T) {
 			// Set it up
 			tc.mockFileSystem(fs)
 
-			files, err := Upload(&afero.Afero{Fs: fs}, tc.inSource, "", &UploadOpts{
+			files, err := Upload(&afero.Afero{Fs: fs}, tc.inSource, tc.inDest, &UploadOpts{
 				Excludes:   tc.inExcludes,
 				Reincludes: tc.inReincludes,
+				UploadFn:   tc.inMockS3.UploadFunc(),
 			})
 			if tc.expectedError == nil {
 				require.NoError(t, err)
-				require.ElementsMatch(t, tc.expectedFiles, files)
+				require.ElementsMatch(t, tc.expectedURLs, files)
 			} else {
 				require.Equal(t, tc.expectedError.Error(), err.Error())
 			}
