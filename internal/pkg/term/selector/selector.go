@@ -954,6 +954,31 @@ func (s *ConfigSelector) Job(msg, help, app string) (string, error) {
 	return selectedJobName, nil
 }
 
+func (s *ConfigSelector) Workload(msg, help, app string) (string, error) {
+	services, err := s.retrieveServices(app)
+	if err != nil {
+		return "", err
+	}
+	jobs, err := s.retrieveJobs(app)
+	if err != nil {
+		return "", err
+	}
+
+	workloads := append(services, jobs...)
+	if len(workloads) == 0 {
+		return "", &ErrNoWorkloadInApp{appName: app}
+	}
+	if len(workloads) == 1 {
+		log.Infof("Only found one workload, defaulting to: %s\n", color.HighlightUserInput(workloads[0]))
+		return workloads[0], nil
+	}
+	selectedWorkloadName, err := s.prompt.SelectOne(msg, help, workloads, prompt.WithFinalMessage("Workload name:"))
+	if err != nil {
+		return "", fmt.Errorf("select workload: %w", err)
+	}
+	return selectedWorkloadName, nil
+}
+
 // Environment fetches all the environments in an app and prompts the user to select one.
 func (s *AppEnvSelector) Environment(msg, help, app string, additionalOpts ...string) (string, error) {
 	envs, err := s.retrieveEnvironments(app)
