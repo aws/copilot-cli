@@ -63,15 +63,15 @@ func (p Prompt) SelectOption(message, help string, opts []Option, promptCfgs ...
 		return "", ErrEmptyOptions
 	}
 
-	choices, choice2Value, err := stringifyOptions(opts)
+	prettified, err := prettifyOptions(opts)
 	if err != nil {
 		return "", err
 	}
-	result, err := p.SelectOne(message, help, choices, promptCfgs...)
+	result, err := p.SelectOne(message, help, prettified.choices, promptCfgs...)
 	if err != nil {
 		return "", err
 	}
-	return choice2Value[result], nil
+	return prettified.choice2Value[result], nil
 }
 
 // SelectOne prompts the user with a list of options to choose from with the arrow keys.
@@ -101,7 +101,12 @@ func (p Prompt) SelectOne(message, help string, options []string, promptCfgs ...
 	return result, err
 }
 
-func stringifyOptions(opts []Option) (choices []string, choice2Value map[string]string, err error) {
+type prettyOptions struct {
+	choices      []string
+	choice2Value map[string]string
+}
+
+func prettifyOptions(opts []Option) (prettyOptions, error) {
 	buf := new(strings.Builder)
 	tw := tabwriter.NewWriter(buf, minCellWidth, tabWidth, cellPaddingWidth, paddingChar, noAdditionalFormatting)
 	var lines []string
@@ -109,17 +114,20 @@ func stringifyOptions(opts []Option) (choices []string, choice2Value map[string]
 		lines = append(lines, opt.String())
 	}
 	if _, err := tw.Write([]byte(strings.Join(lines, "\n"))); err != nil {
-		return nil, nil, fmt.Errorf("render options: %v", err)
+		return prettyOptions{}, fmt.Errorf("render options: %v", err)
 	}
 	if err := tw.Flush(); err != nil {
-		return nil, nil, fmt.Errorf("flush tabwriter options: %v", err)
+		return prettyOptions{}, fmt.Errorf("flush tabwriter options: %v", err)
 	}
-	choices = strings.Split(buf.String(), "\n")
-	choice2Value = make(map[string]string)
+	choices := strings.Split(buf.String(), "\n")
+	choice2Value := make(map[string]string)
 	for idx, choice := range choices {
 		choice2Value[choice] = opts[idx].Value
 	}
-	return choices, choice2Value, nil
+	return prettyOptions{
+		choices:      choices,
+		choice2Value: choice2Value,
+	}, nil
 }
 
 func parseValueFromOptionFmt(formatted string) string {
