@@ -17,8 +17,10 @@ import (
 )
 
 type mockStorageInitValidate struct {
-	ws    *mocks.MockwsReadWriter
-	store *mocks.Mockstore
+	ws                 *mocks.MockwsReadWriter
+	store              *mocks.Mockstore
+	isDDBConfigured    bool
+	isAuroraConfigured bool
 }
 
 func TestStorageInitOpts_Validate(t *testing.T) {
@@ -49,6 +51,36 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 			inLifecycle: "weird input",
 			mock:        func(m *mockStorageInitValidate) {},
 			wantedErr:   errors.New(`invalid lifecycle; must be one of "workload" or "environment"`),
+		},
+		"fails when --add-ingress-from is accompanied by workload name": {
+			inAppName:        "bowie",
+			inAddIngressFrom: "api",
+			inSvcName:        "nonamemonster",
+			mock:             func(m *mockStorageInitValidate) {},
+			wantedErr:        errors.New("--workload cannot be specified with --add-ingress-from"),
+		},
+		"fails when --add-ingress-from is accompanied by ddb flags": {
+			inAppName:        "bowie",
+			inAddIngressFrom: "api",
+			mock: func(m *mockStorageInitValidate) {
+				m.isDDBConfigured = true
+			},
+			wantedErr: errors.New("dynamoDB flags cannot be specified with --add-ingress-from: --partition-key, --sort-key, --no-sort, --lsi and --no-lsi"),
+		},
+		"fails when --add-ingress-from is accompanied by aurora flags": {
+			inAppName:        "bowie",
+			inAddIngressFrom: "api",
+			mock: func(m *mockStorageInitValidate) {
+				m.isAuroraConfigured = true
+			},
+			wantedErr: errors.New("aurora serverless flags cannot be specified with --add-ingress-from: --serverless-version, --engine, --initial-db and --parameter-group"),
+		},
+		"fails when --add-ingress-from is accompanied by workload-level lifecycle": {
+			inAppName:        "bowie",
+			inAddIngressFrom: "api",
+			inLifecycle:      lifecycleWorkloadLevel,
+			mock:             func(m *mockStorageInitValidate) {},
+			wantedErr:        errors.New("--lifecycle cannot be workload when --add-ingress-from is used"),
 		},
 		"fails when --add-ingress-from is not accompanied by storage name": {
 			inAppName:        "bowie",
@@ -127,6 +159,9 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 				appName: tc.inAppName,
 				ws:      m.ws,
 				store:   m.store,
+
+				isDDBConfigured:    m.isDDBConfigured,
+				isAuroraConfigured: m.isAuroraConfigured,
 			}
 
 			// WHEN

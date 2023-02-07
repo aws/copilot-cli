@@ -172,6 +172,10 @@ type initStorageOpts struct {
 	sel    wsSelector
 	prompt prompter
 
+	// Flag status.
+	isDDBConfigured    bool
+	isAuroraConfigured bool
+
 	// Cached data.
 	workloadType   string
 	workloadExists bool
@@ -236,6 +240,28 @@ func (o *initStorageOpts) Validate() error {
 }
 
 func (o *initStorageOpts) validateAddIngressFrom() error {
+	if o.workloadName != "" {
+		return fmt.Errorf("--%s cannot be specified with --%s", workloadFlag, storageAddIngressFromFlag)
+	}
+	if o.isDDBConfigured {
+		return fmt.Errorf("dynamoDB flags cannot be specified with --%s: %s",
+			storageAddIngressFromFlag,
+			english.WordSeries(mutateStringSlice(storageInitDDBFlags, func(in string) string {
+				return fmt.Sprintf("--%s", in)
+			}), "and"),
+		)
+	}
+	if o.isAuroraConfigured {
+		return fmt.Errorf("aurora serverless flags cannot be specified with --%s: %s",
+			storageAddIngressFromFlag,
+			english.WordSeries(mutateStringSlice(storageInitAuroraFlags, func(in string) string {
+				return fmt.Sprintf("--%s", in)
+			}), "and"),
+		)
+	}
+	if o.lifecycle == lifecycleWorkloadLevel {
+		return fmt.Errorf("--%s cannot be %s when --%s is used", storageLifecycleFlag, lifecycleWorkloadLevel, storageAddIngressFromFlag)
+	}
 	if o.storageName == "" {
 		return fmt.Errorf("--%s is required when --%s is used", nameFlag, storageAddIngressFromFlag)
 	}
@@ -960,6 +986,18 @@ Resource names are injected into your containers as environment variables for ea
 			opts, err := newStorageInitOpts(vars)
 			if err != nil {
 				return err
+			}
+			for _, f := range storageInitDDBFlags {
+				if cmd.Flags().Changed(f) {
+					opts.isDDBConfigured = true
+					break
+				}
+			}
+			for _, f := range storageInitAuroraFlags {
+				if cmd.Flags().Changed(f) {
+					opts.isAuroraConfigured = true
+					break
+				}
 			}
 			return run(opts)
 		}),
