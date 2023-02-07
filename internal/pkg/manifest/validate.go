@@ -535,14 +535,10 @@ func (s ScheduledJobConfig) validate() error {
 
 // validate returns nil if StaticSite is configured correctly.
 func (s StaticSite) validate() error {
-	var err error
-	if err = s.StaticSiteConfig.validate(); err != nil {
+	if err := s.StaticSiteConfig.validate(); err != nil {
 		return err
 	}
-	if err = s.Workload.validate(); err != nil {
-		return err
-	}
-	return nil
+	return s.Workload.validate()
 }
 
 func (s StaticSiteConfig) validate() error {

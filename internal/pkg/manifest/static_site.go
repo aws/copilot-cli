@@ -68,10 +68,12 @@ func (s StaticSite) applyEnv(envName string) (workloadManifest, error) {
 	return &s, nil
 }
 
+// To implement workloadManifest.
 func (s *StaticSite) subnets() *SubnetListOrArgs {
 	return nil
 }
 
+// To implement workloadManifest.
 func (s *StaticSite) requiredEnvironmentFeatures() []string {
 	return nil
 }

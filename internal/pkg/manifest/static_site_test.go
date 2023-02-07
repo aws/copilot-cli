@@ -18,7 +18,7 @@ func TestStaticSite_ApplyEnv(t *testing.T) {
 
 		wanted *StaticSite
 	}{
-		"with no existing environments": {
+		"without existing environments": {
 			in: &StaticSite{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
