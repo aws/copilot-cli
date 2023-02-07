@@ -5,6 +5,7 @@ package manifest
 
 import (
 	"errors"
+	"path/filepath"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -515,6 +516,93 @@ func Test_ImageURI(t *testing.T) {
 			// THEN
 			require.Equal(t, tc.wantedURI, uri)
 			require.Equal(t, tc.wantedOk, ok)
+		})
+	}
+}
+
+func TestSidecarBuildConfig(t *testing.T) {
+	mockWsRoot := "/root/dir"
+	testCases := map[string]struct {
+		inBuild     Union[*string, DockerBuildArgs]
+		wantedBuild DockerBuildArgs
+	}{
+		"simple case: BuildString path to dockerfile": {
+			inBuild: Union[*string, DockerBuildArgs]{
+				Basic: aws.String("web/Dockerfile"),
+			},
+			wantedBuild: DockerBuildArgs{
+				Dockerfile: aws.String(filepath.Join(mockWsRoot, "web/Dockerfile")),
+				Context:    aws.String(filepath.Join(mockWsRoot, "web")),
+			},
+		},
+		"Different context than dockerfile": {
+			inBuild: Union[*string, DockerBuildArgs]{
+				Advanced: DockerBuildArgs{
+					Dockerfile: aws.String("web/dockerfile"),
+					Context:    aws.String("Users/bowie"),
+				},
+			},
+			wantedBuild: DockerBuildArgs{
+				Dockerfile: aws.String(filepath.Join(mockWsRoot, "web/dockerfile")),
+				Context:    aws.String(filepath.Join(mockWsRoot, "Users/bowie")),
+			},
+		},
+		"no dockerfile specified": {
+			inBuild: Union[*string, DockerBuildArgs]{
+				Advanced: DockerBuildArgs{
+					Context: aws.String("Users/bowie"),
+				},
+			},
+			wantedBuild: DockerBuildArgs{
+				Dockerfile: aws.String(filepath.Join(mockWsRoot, "Users", "bowie", "Dockerfile")),
+				Context:    aws.String(filepath.Join(mockWsRoot, "Users", "bowie")),
+			},
+		},
+		"no dockerfile or context specified": {
+			inBuild: Union[*string, DockerBuildArgs]{
+				Advanced: DockerBuildArgs{
+					CacheFrom: []string{"foo/bar:latest"},
+				},
+			},
+			wantedBuild: DockerBuildArgs{
+				Dockerfile: aws.String(filepath.Join(mockWsRoot, "Dockerfile")),
+				Context:    aws.String(mockWsRoot),
+				CacheFrom:  []string{"foo/bar:latest"},
+			},
+		},
+		"including all build options": {
+			inBuild: Union[*string, DockerBuildArgs]{
+				Advanced: DockerBuildArgs{
+					Args: map[string]string{
+						"hello": "world",
+					},
+					Target: aws.String("foobar"),
+					CacheFrom: []string{
+						"foo/bar:latest",
+					},
+				},
+			},
+			wantedBuild: DockerBuildArgs{
+				Dockerfile: aws.String(filepath.Join(mockWsRoot, "Dockerfile")),
+				Context:    aws.String(mockWsRoot),
+				Args: map[string]string{
+					"hello": "world",
+				},
+				Target: aws.String("foobar"),
+				CacheFrom: []string{
+					"foo/bar:latest",
+				},
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			s := SidecarImageConfig{
+				Build: tc.inBuild,
+			}
+			got := s.BuildConfig(mockWsRoot)
+
+			require.Equal(t, tc.wantedBuild, *got)
 		})
 	}
 }

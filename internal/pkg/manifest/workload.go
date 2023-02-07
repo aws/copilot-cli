@@ -163,16 +163,29 @@ func (i Image) GetLocation() string {
 }
 
 // BuildConfig populates a docker.BuildArguments struct from the fields available in the manifest.
+func (i *Image) BuildConfig(rootDirectory string) *DockerBuildArgs {
+	df := i.dockerfile()
+	ctx := i.context()
+	dockerfile, context := getDockerfileAndContext(rootDirectory, df, ctx)
+	return &DockerBuildArgs{
+		Dockerfile: dockerfile,
+		Context:    context,
+		Args:       i.args(),
+		Target:     i.target(),
+		CacheFrom:  i.cacheFrom(),
+	}
+}
+
+// getDockerfileAndContext returns the dockerfile path and the build context
+// of both main container and sidecar container images.
 // Prefer the following hierarchy:
 // 1. Specific dockerfile, specific context
 // 2. Specific dockerfile, context = dockerfile dir
 // 3. "Dockerfile" located in context dir
 // 4. "Dockerfile" located in ws root.
-func (i *Image) BuildConfig(rootDirectory string) *DockerBuildArgs {
-	df := i.dockerfile()
-	ctx := i.context()
-	dockerfile := aws.String(filepath.Join(rootDirectory, defaultDockerfileName))
-	context := aws.String(rootDirectory)
+func getDockerfileAndContext(rootDirectory, df, ctx string) (dockerfile, context *string) {
+	dockerfile = aws.String(filepath.Join(rootDirectory, defaultDockerfileName))
+	context = aws.String(rootDirectory)
 
 	if df != "" && ctx != "" {
 		dockerfile = aws.String(filepath.Join(rootDirectory, df))
@@ -186,13 +199,7 @@ func (i *Image) BuildConfig(rootDirectory string) *DockerBuildArgs {
 		dockerfile = aws.String(filepath.Join(rootDirectory, ctx, defaultDockerfileName))
 		context = aws.String(filepath.Join(rootDirectory, ctx))
 	}
-	return &DockerBuildArgs{
-		Dockerfile: dockerfile,
-		Context:    context,
-		Args:       i.args(),
-		Target:     i.target(),
-		CacheFrom:  i.cacheFrom(),
-	}
+	return dockerfile, context
 }
 
 // dockerfile returns the path to the workload's Dockerfile. If no dockerfile is specified,

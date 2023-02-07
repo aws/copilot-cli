@@ -330,6 +330,55 @@ func (cfg *SidecarConfig) ImageURI() (string, bool) {
 	return "", false
 }
 
+// BuildConfig populates a docker.BuildArguments struct from the sidecar image fields available in the manifest.
+func (cfg *SidecarImageConfig) BuildConfig(rootDirectory string) *DockerBuildArgs {
+	df := cfg.dockerfile()
+	ctx := cfg.context()
+	dockerfile, context := getDockerfileAndContext(rootDirectory, df, ctx)
+	return &DockerBuildArgs{
+		Dockerfile: dockerfile,
+		Context:    context,
+		Args:       cfg.args(),
+		Target:     cfg.target(),
+		CacheFrom:  cfg.cacheFrom(),
+	}
+}
+
+// dockerfile returns the path to the sidecar container's Dockerfile if one is set.
+// If no dockerfile is specified, returns "".
+func (cfg *SidecarImageConfig) dockerfile() string {
+	if cfg.Build.Advanced.Dockerfile != nil {
+		return aws.StringValue(cfg.Build.Advanced.Dockerfile)
+	}
+	var dfPath string
+	if cfg.Build.Basic != nil {
+		dfPath = aws.StringValue(cfg.Build.Basic)
+	}
+	return dfPath
+}
+
+// context returns the build context directory of sidecar container's if it exists, otherwise an empty string.
+func (cfg *SidecarImageConfig) context() string {
+	return aws.StringValue(cfg.Build.Advanced.Context)
+}
+
+// args returns the args section, if it exists, to override args in the sidecar dockerfile.
+// Otherwise it returns an empty map.
+func (cfg *SidecarImageConfig) args() map[string]string {
+	return cfg.Build.Advanced.Args
+}
+
+// target returns the build target stage if it exists, otherwise nil.
+func (cfg *SidecarImageConfig) target() *string {
+	return cfg.Build.Advanced.Target
+}
+
+// cacheFrom returns the cache from build section, if it exists.
+// Otherwise it returns nil.
+func (cfg *SidecarImageConfig) cacheFrom() []string {
+	return cfg.Build.Advanced.CacheFrom
+}
+
 // OverrideRule holds the manifest overriding rule for CloudFormation template.
 type OverrideRule struct {
 	Path  string    `yaml:"path"`
