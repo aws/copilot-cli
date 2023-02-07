@@ -93,7 +93,7 @@ func WithPrefix(prefix string) DescribeAlarmOpts {
 	}
 }
 
-// AlarmStatuses returns the status of each given alarm name.
+// AlarmStatuses returns the statuses of alarms, optionally filtered (by name, prefix, etc.).
 func (cw *CloudWatch) AlarmStatuses(opts ...DescribeAlarmOpts) ([]AlarmStatus, error) {
 	if len(opts) == 0 {
 		return nil, nil
