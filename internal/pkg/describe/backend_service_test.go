@@ -112,6 +112,33 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 			},
 			wantedError: fmt.Errorf("retrieve platform: some error"),
 		},
+			"return error if fail to retrieve rollback alarm names": {
+				setupMocks: func(m lbWebSvcDescriberMocks) {
+					params := map[string]string{
+						cfnstack.WorkloadTargetPortParamKey: "5000",
+						cfnstack.WorkloadTaskCountParamKey:  "1",
+						cfnstack.WorkloadTaskCPUParamKey:    "256",
+						cfnstack.WorkloadTaskMemoryParamKey: "512",
+					}
+					gomock.InOrder(
+						m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
+						m.ecsDescriber.EXPECT().ServiceStackResources().Return(nil, nil),
+						m.ecsDescriber.EXPECT().Params().Return(params, nil),
+						m.ecsDescriber.EXPECT().ServiceConnectDNSNames().Return(nil, nil),
+						m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
+						m.ecsDescriber.EXPECT().Params().Return(params, nil),
+						m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
+						m.ecsDescriber.EXPECT().ServiceConnectDNSNames().Return(nil, nil),
+						m.ecsDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
+							OperatingSystem: "LINUX",
+							Architecture:    "X86_64",
+						}, nil),
+						m.ecsDescriber.EXPECT().DeploymentType().Return("", nil),
+						m.ecsDescriber.EXPECT().DeploymentConfigAlarmNames().Return(nil, mockErr),
+					)
+				},
+		wantedError: fmt.Errorf("retrieve rollback alarm names: some error"),
+		},
 		"return error if fail to retrieve environment variables": {
 			setupMocks: func(m lbWebSvcDescriberMocks) {
 				params := map[string]string{
@@ -133,6 +160,8 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 						OperatingSystem: "LINUX",
 						Architecture:    "X86_64",
 					}, nil),
+					m.ecsDescriber.EXPECT().DeploymentType().Return("Default", nil),
+					m.ecsDescriber.EXPECT().DeploymentConfigAlarmNames().Return(nil,nil),
 					m.ecsDescriber.EXPECT().EnvVars().Return(nil, mockErr),
 				)
 			},
@@ -159,6 +188,8 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 						OperatingSystem: "LINUX",
 						Architecture:    "X86_64",
 					}, nil),
+					m.ecsDescriber.EXPECT().DeploymentType().Return("Default", nil),
+					m.ecsDescriber.EXPECT().DeploymentConfigAlarmNames().Return(nil, nil),
 					m.ecsDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
 						{
 							Name:      "COPILOT_ENVIRONMENT_NAME",
@@ -204,7 +235,9 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 					m.ecsDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
 						OperatingSystem: "LINUX",
 						Architecture:    "X86_64",
-					}, nil),
+					}, nil),				
+					m.ecsDescriber.EXPECT().DeploymentType().Return("Default", nil),
+					m.ecsDescriber.EXPECT().DeploymentConfigAlarmNames().Return(nil, nil),
 					m.ecsDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
 						{
 							Name:      "COPILOT_ENVIRONMENT_NAME",
@@ -230,6 +263,8 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 						OperatingSystem: "LINUX",
 						Architecture:    "ARM64",
 					}, nil),
+					m.ecsDescriber.EXPECT().DeploymentType().Return("Alarm-Based Rollback", nil),
+					m.ecsDescriber.EXPECT().DeploymentConfigAlarmNames().Return(nil, nil),
 					m.ecsDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
 						{
 							Name:      "COPILOT_ENVIRONMENT_NAME",
@@ -251,6 +286,8 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 						OperatingSystem: "LINUX",
 						Architecture:    "X86_64",
 					}, nil),
+					m.ecsDescriber.EXPECT().DeploymentType().Return("Default", nil),
+					m.ecsDescriber.EXPECT().DeploymentConfigAlarmNames().Return(nil, nil),
 					m.ecsDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
 						{
 							Name:      "COPILOT_ENVIRONMENT_NAME",
@@ -290,6 +327,7 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 							ServiceConfig: &ServiceConfig{
 								CPU:         "256",
 								Environment: "test",
+								Deployment:  "Default",
 								Memory:      "512",
 								Platform:    "LINUX/X86_64",
 								Port:        "5000",
@@ -300,6 +338,7 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 							ServiceConfig: &ServiceConfig{
 								CPU:         "512",
 								Environment: "prod",
+								Deployment:  "Alarm-Based Rollback",
 								Memory:      "1024",
 								Platform:    "LINUX/ARM64",
 								Port:        "5000",
@@ -310,6 +349,7 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 							ServiceConfig: &ServiceConfig{
 								CPU:         "512",
 								Environment: "mockEnv",
+								Deployment:  "Default",
 								Memory:      "1024",
 								Platform:    "LINUX/X86_64",
 								Port:        "-",
@@ -421,6 +461,8 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 						OperatingSystem: "LINUX",
 						Architecture:    "X86_64",
 					}, nil),
+					m.ecsDescriber.EXPECT().DeploymentType().Return("Default", nil),
+					m.ecsDescriber.EXPECT().DeploymentConfigAlarmNames().Return(nil, nil),
 					m.ecsDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
 						{
 							Name:      "COPILOT_ENVIRONMENT_NAME",
@@ -448,6 +490,7 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 							ServiceConfig: &ServiceConfig{
 								CPU:         "256",
 								Environment: "test",
+								Deployment:  "Default",
 								Memory:      "512",
 								Platform:    "LINUX/X86_64",
 								Port:        "5000",

@@ -94,7 +94,7 @@ type ecsSvcDesc struct {
 	Type             string               `json:"type"`
 	App              string               `json:"application"`
 	Configurations   ecsConfigurations    `json:"configurations"`
-	Alarms           []string             `json:"rollbackalarms,omitempty"`
+	Alarms           []string             `json:"rollbackAlarms,omitempty"`
 	Routes           []*WebServiceRoute   `json:"routes"`
 	ServiceDiscovery serviceDiscoveries   `json:"serviceDiscovery"`
 	ServiceConnect   serviceConnects      `json:"serviceConnect,omitempty"`
@@ -305,6 +305,9 @@ func (d *ecsServiceDescriber) DeploymentConfigAlarmNames() ([]string, error) {
 	service, err := d.ecsClient.Service(d.app, d.env, d.service)
 	if err != nil {
 		return nil, fmt.Errorf("get service %s: %w", d.service, err)
+	}
+	if service.DeploymentConfiguration.Alarms == nil {
+		return nil, nil
 	}
 	return aws.StringValueSlice(service.DeploymentConfiguration.Alarms.AlarmNames), nil
 }

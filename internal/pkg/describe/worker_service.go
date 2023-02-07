@@ -66,6 +66,7 @@ func (d *WorkerServiceDescriber) Describe() (HumanJSONStringer, error) {
 	var configs []*ECSServiceConfig
 	var envVars []*containerEnvVar
 	var secrets []*secret
+	var alarms  []string
 	for _, env := range environments {
 		svcDescr, err := d.initECSDescriber(env)
 		if err != nil {
@@ -75,6 +76,10 @@ func (d *WorkerServiceDescriber) Describe() (HumanJSONStringer, error) {
 		if err != nil {
 			return nil, fmt.Errorf("get stack parameters for environment %s: %w", env, err)
 		}
+		deploymentType, err := svcDescr.DeploymentType()
+		if err != nil {
+			return nil, fmt.Errorf("retrieve deployment type: %w", err)
+		}
 		containerPlatform, err := svcDescr.Platform()
 		if err != nil {
 			return nil, fmt.Errorf("retrieve platform: %w", err)
@@ -82,6 +87,7 @@ func (d *WorkerServiceDescriber) Describe() (HumanJSONStringer, error) {
 		configs = append(configs, &ECSServiceConfig{
 			ServiceConfig: &ServiceConfig{
 				Environment: env,
+				Deployment:  deploymentType,
 				Port:        blankContainerPort,
 				CPU:         svcParams[cfnstack.WorkloadTaskCPUParamKey],
 				Memory:      svcParams[cfnstack.WorkloadTaskMemoryParamKey],
@@ -89,6 +95,10 @@ func (d *WorkerServiceDescriber) Describe() (HumanJSONStringer, error) {
 			},
 			Tasks: svcParams[cfnstack.WorkloadTaskCountParamKey],
 		})
+		alarms, err = svcDescr.DeploymentConfigAlarmNames()
+		if err != nil {
+			return nil, fmt.Errorf("retrieve rollback alarm names: %w", err)
+		}
 		workerSvcEnvVars, err := svcDescr.EnvVars()
 		if err != nil {
 			return nil, fmt.Errorf("retrieve environment variables: %w", err)
@@ -121,6 +131,7 @@ func (d *WorkerServiceDescriber) Describe() (HumanJSONStringer, error) {
 		Type:           manifest.WorkerServiceType,
 		App:            d.app,
 		Configurations: configs,
+		Alarms:         alarms,
 		Variables:      envVars,
 		Secrets:        secrets,
 		Resources:      resources,
@@ -145,6 +156,7 @@ type workerSvcDesc struct {
 	Type           string               `json:"type"`
 	App            string               `json:"application"`
 	Configurations ecsConfigurations    `json:"configurations"`
+	Alarms         []string             `json:"rollbackAlarms,omitempty"`
 	Variables      containerEnvVars     `json:"variables"`
 	Secrets        secrets              `json:"secrets,omitempty"`
 	Resources      deployedSvcResources `json:"resources,omitempty"`
