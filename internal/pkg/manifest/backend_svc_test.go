@@ -963,7 +963,7 @@ func TestBackendSvc_ApplyEnv_CountOverrides(t *testing.T) {
 func TestBackendService_ExposedPorts(t *testing.T) {
 	testCases := map[string]struct {
 		mft                *BackendService
-		wantedExposedPorts []ExposedPort
+		wantedExposedPorts map[string][]ExposedPort
 	}{
 		"expose primary container port through target_port": {
 			mft: &BackendService{
@@ -984,16 +984,20 @@ func TestBackendService_ExposedPorts(t *testing.T) {
 					},
 				},
 			},
-			wantedExposedPorts: []ExposedPort{
-				{
-					Port:          81,
-					ContainerName: "frontend",
-					Protocol:      "tcp",
+			wantedExposedPorts: map[string][]ExposedPort{
+				"frontend": {
+					{
+						Port:          81,
+						ContainerName: "frontend",
+						Protocol:      "tcp",
+					},
 				},
-				{
-					Port:          2000,
-					ContainerName: "xray",
-					Protocol:      "tcp",
+				"xray": {
+					{
+						Port:          2000,
+						ContainerName: "xray",
+						Protocol:      "tcp",
+					},
 				},
 			},
 		},
@@ -1021,21 +1025,25 @@ func TestBackendService_ExposedPorts(t *testing.T) {
 					},
 				},
 			},
-			wantedExposedPorts: []ExposedPort{
-				{
-					Port:          80,
-					ContainerName: "frontend",
-					Protocol:      "tcp",
+			wantedExposedPorts: map[string][]ExposedPort{
+				"frontend": {
+					{
+						Port:          80,
+						ContainerName: "frontend",
+						Protocol:      "tcp",
+					},
+					{
+						Port:          81,
+						ContainerName: "frontend",
+						Protocol:      "tcp",
+					},
 				},
-				{
-					Port:          81,
-					ContainerName: "frontend",
-					Protocol:      "tcp",
-				},
-				{
-					Port:          2000,
-					ContainerName: "xray",
-					Protocol:      "tcp",
+				"xray": {
+					{
+						Port:          2000,
+						ContainerName: "xray",
+						Protocol:      "tcp",
+					},
 				},
 			},
 		},
@@ -1063,21 +1071,25 @@ func TestBackendService_ExposedPorts(t *testing.T) {
 					},
 				},
 			},
-			wantedExposedPorts: []ExposedPort{
-				{
-					Port:          80,
-					ContainerName: "frontend",
-					Protocol:      "tcp",
+			wantedExposedPorts: map[string][]ExposedPort{
+				"frontend": {
+					{
+						Port:          80,
+						ContainerName: "frontend",
+						Protocol:      "tcp",
+					},
+					{
+						Port:          81,
+						ContainerName: "frontend",
+						Protocol:      "tcp",
+					},
 				},
-				{
-					Port:          81,
-					ContainerName: "frontend",
-					Protocol:      "tcp",
-				},
-				{
-					Port:          2000,
-					ContainerName: "xray",
-					Protocol:      "tcp",
+				"xray": {
+					{
+						Port:          2000,
+						ContainerName: "xray",
+						Protocol:      "tcp",
+					},
 				},
 			},
 		},
@@ -1098,23 +1110,27 @@ func TestBackendService_ExposedPorts(t *testing.T) {
 					},
 					Sidecars: map[string]*SidecarConfig{
 						"xray": {
-							//Port:       aws.String("2000"),
 							Image:      aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
 							CredsParam: aws.String("some arn"),
 						},
 					},
 				},
 			},
-			wantedExposedPorts: []ExposedPort{
-				{
-					Port:          80,
-					ContainerName: "frontend",
-					Protocol:      "tcp",
+
+			wantedExposedPorts: map[string][]ExposedPort{
+				"frontend": {
+					{
+						Port:          80,
+						ContainerName: "frontend",
+						Protocol:      "tcp",
+					},
 				},
-				{
-					Port:          81,
-					ContainerName: "xray",
-					Protocol:      "tcp",
+				"xray": {
+					{
+						Port:          81,
+						ContainerName: "xray",
+						Protocol:      "tcp",
+					},
 				},
 			},
 		},
@@ -1126,7 +1142,7 @@ func TestBackendService_ExposedPorts(t *testing.T) {
 
 			// THEN
 			require.NoError(t, err)
-			require.Equal(t, tc.wantedExposedPorts, actual)
+			require.Equal(t, tc.wantedExposedPorts, actual.PortsForContainer)
 		})
 	}
 }

@@ -35,10 +35,10 @@ Parameters:
   TargetPort:
     Type: Number
 Conditions:
-  IsGovCloud: !Equals [!Ref "AWS::Partition", "aws-us-gov"]
   HasAddons: !Not [!Equals [!Ref AddonsTemplateURL, ""]]
   HasEnvFile: !Not [!Equals [!Ref EnvFileARN, ""]]
   ExposePort: !Not [!Equals [!Ref TargetPort, -1]]
+  IsGovCloud: !Equals [!Ref "AWS::Partition", "aws-us-gov"]
 Resources:
   LogGroup:
     Metadata:
@@ -90,10 +90,7 @@ Resources:
               awslogs-region: !Ref AWS::Region
               awslogs-group: !Ref LogGroup
               awslogs-stream-prefix: copilot
-          PortMappings:
-            - ContainerPort: 8080
-              Protocol: tcp
-              Name: target
+
   ExecutionRole:
     Metadata:
       "aws:copilot:description": "An IAM Role for the Fargate agent to make AWS API calls on your behalf"
@@ -287,13 +284,6 @@ Resources:
             awslogs-region: !Ref AWS::Region
             awslogs-group: !Ref LogGroup
             awslogs-stream-prefix: copilot
-        Services:
-          - PortName: target
-            # Avoid using the same service with Service Discovery in a namespace.
-            DiscoveryName: !Join ["-", [!Ref WorkloadName, "sc"]]
-            ClientAliases:
-              - Port: !Ref TargetPort
-                DnsName: !Ref WorkloadName
       NetworkConfiguration:
         AwsvpcConfiguration:
           AssignPublicIp: ENABLED

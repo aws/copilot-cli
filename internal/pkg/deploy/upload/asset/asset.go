@@ -22,19 +22,17 @@ type UploadOpts struct {
 	UploadFn   UploadFunc // Custom implementation on how to upload the contents under a file. Defaults to S3UploadFn.
 }
 
-// Upload uploads static assets to Cloud Storage.
+// Upload uploads static assets to Cloud Storage and returns uploaded file URLs.
 func Upload(fs afero.Fs, source, destination string, opts *UploadOpts) ([]string, error) {
 	matcher := buildCompositeMatchers(buildReincludeMatchers(opts.Reincludes), buildExcludeMatchers(opts.Excludes))
-	var paths []string
-	pathsPtr := &paths
-	if err := afero.Walk(fs, source, walkFnWithMatcher(pathsPtr, matcher)); err != nil {
-		return nil, fmt.Errorf("walk the file tree rooted at %s: %w", source, err)
+	var urls []string
+	if err := afero.Walk(fs, source, walkFn(source, destination, fs, opts.UploadFn, &urls, matcher)); err != nil {
+		return nil, fmt.Errorf("walk the file tree rooted at %q: %w", source, err)
 	}
-	// TODO: read file and upload. Remove file names from return.
-	return *pathsPtr, nil
+	return urls, nil
 }
 
-func walkFnWithMatcher(pathsPtr *[]string, matcher filepathMatcher) filepath.WalkFunc {
+func walkFn(source, dest string, reader afero.Fs, upload UploadFunc, urlsPtr *[]string, matcher filepathMatcher) filepath.WalkFunc {
 	return func(path string, info fs.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -46,9 +44,24 @@ func walkFnWithMatcher(pathsPtr *[]string, matcher filepathMatcher) filepath.Wal
 		if err != nil {
 			return err
 		}
-		if ok {
-			*pathsPtr = append(*pathsPtr, path)
+		if !ok {
+			return nil
 		}
+		file, err := reader.Open(path)
+		if err != nil {
+			return fmt.Errorf("open file on path %q: %w", path, err)
+		}
+		defer file.Close()
+		fileRel, err := filepath.Rel(source, path)
+		if err != nil {
+			return fmt.Errorf("get relative path for %q against %q: %w", path, source, err)
+		}
+		key := filepath.Join(dest, fileRel)
+		url, err := upload(key, file)
+		if err != nil {
+			return fmt.Errorf("upload file %q to destination %q: %w", path, key, err)
+		}
+		*urlsPtr = append(*urlsPtr, url)
 		return nil
 	}
 }
