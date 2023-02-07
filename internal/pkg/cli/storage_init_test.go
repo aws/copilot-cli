@@ -122,9 +122,10 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 }
 
 type mockStorageInitAsk struct {
-	prompt *mocks.Mockprompter
-	sel    *mocks.MockwsSelector
-	ws     *mocks.MockwsReadWriter
+	prompt    *mocks.Mockprompter
+	sel       *mocks.MockwsSelector
+	configSel *mocks.MockconfigSelector
+	ws        *mocks.MockwsReadWriter
 }
 
 func TestStorageInitOpts_Ask(t *testing.T) {
@@ -174,7 +175,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			},
 			wantedErr: fmt.Errorf("select storage type: some error"),
 		},
-		"asks for storage workload": {
+		"asks for local workload when lifecycle is workload-level": {
 			inStorageName: wantedBucketName,
 			inStorageType: s3StorageType,
 			inLifecycle:   lifecycleWorkloadLevel,
@@ -188,13 +189,37 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 				lifecycle:    lifecycleWorkloadLevel,
 			},
 		},
-		"error if svc not returned": {
+		"asks for any workload if lifecycle is otherwise": {
+			inStorageName: wantedBucketName,
+			inStorageType: s3StorageType,
+			inLifecycle:   lifecycleEnvironmentLevel,
+			mock: func(m *mockStorageInitAsk) {
+				m.configSel.EXPECT().Workload(gomock.Eq(storageInitSvcPrompt), gomock.Any(), wantedAppName).Return(wantedSvcName, nil)
+				m.ws.EXPECT().WorkloadExists(wantedSvcName).Return(false, nil)
+			},
+			wantedVars: &initStorageVars{
+				storageType:  s3StorageType,
+				storageName:  wantedBucketName,
+				workloadName: wantedSvcName,
+				lifecycle:    lifecycleEnvironmentLevel,
+			},
+		},
+		"error if local workload not returned": {
+			inStorageName: wantedBucketName,
+			inStorageType: s3StorageType,
+			inLifecycle:   lifecycleWorkloadLevel,
+			mock: func(m *mockStorageInitAsk) {
+				m.sel.EXPECT().Workload(gomock.Eq(storageInitSvcPrompt), gomock.Any()).Return("", errors.New("some error"))
+			},
+			wantedErr: fmt.Errorf("retrieve local workload names: some error"),
+		},
+		"error if any workload not returned": {
 			inStorageName: wantedBucketName,
 			inStorageType: s3StorageType,
 			mock: func(m *mockStorageInitAsk) {
-				m.sel.EXPECT().Workload(gomock.Any(), gomock.Any()).Return("", errors.New("some error"))
+				m.configSel.EXPECT().Workload(gomock.Eq(storageInitSvcPrompt), gomock.Any(), wantedAppName).Return("", errors.New("some error"))
 			},
-			wantedErr: fmt.Errorf("retrieve local workload names: some error"),
+			wantedErr: fmt.Errorf("select a workload from app %s: some error", wantedAppName),
 		},
 		"successfully validates valid s3 bucket name": {
 			inSvcName:     "frontend",
@@ -381,9 +406,10 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			defer ctrl.Finish()
 
 			m := mockStorageInitAsk{
-				prompt: mocks.NewMockprompter(ctrl),
-				sel:    mocks.NewMockwsSelector(ctrl),
-				ws:     mocks.NewMockwsReadWriter(ctrl),
+				prompt:    mocks.NewMockprompter(ctrl),
+				sel:       mocks.NewMockwsSelector(ctrl),
+				configSel: mocks.NewMockconfigSelector(ctrl),
+				ws:        mocks.NewMockwsReadWriter(ctrl),
 			}
 			opts := initStorageOpts{
 				initStorageVars: initStorageVars{
@@ -392,10 +418,11 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 					workloadName: tc.inSvcName,
 					lifecycle:    tc.inLifecycle,
 				},
-				appName: wantedAppName,
-				sel:     m.sel,
-				prompt:  m.prompt,
-				ws:      m.ws,
+				appName:   wantedAppName,
+				sel:       m.sel,
+				configSel: m.configSel,
+				prompt:    m.prompt,
+				ws:        m.ws,
 			}
 			tc.mock(&m)
 			// WHEN

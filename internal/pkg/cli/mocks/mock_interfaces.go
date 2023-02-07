@@ -5423,6 +5423,21 @@ func (mr *MockconfigSelectorMockRecorder) Service(prompt, help, app interface{})
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Service", reflect.TypeOf((*MockconfigSelector)(nil).Service), prompt, help, app)
 }
 
+// Workload mocks base method.
+func (m *MockconfigSelector) Workload(prompt, help, app string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Workload", prompt, help, app)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Workload indicates an expected call of Workload.
+func (mr *MockconfigSelectorMockRecorder) Workload(prompt, help, app interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Workload", reflect.TypeOf((*MockconfigSelector)(nil).Workload), prompt, help, app)
+}
+
 // MockdeploySelector is a mock of deploySelector interface.
 type MockdeploySelector struct {
 	ctrl     *gomock.Controller

@@ -172,8 +172,9 @@ type initStorageOpts struct {
 	ws    wsReadWriter
 	store store
 
-	sel    wsSelector
-	prompt prompter
+	sel       wsSelector
+	configSel configSelector
+	prompt    prompter
 
 	// Cached data.
 	workloadType   string
@@ -199,11 +200,12 @@ func newStorageInitOpts(vars initStorageVars) (*initStorageOpts, error) {
 		initStorageVars: vars,
 		appName:         tryReadingAppName(),
 
-		fs:     fs,
-		store:  store,
-		ws:     ws,
-		sel:    selector.NewLocalWorkloadSelector(prompter, store, ws),
-		prompt: prompter,
+		fs:        fs,
+		store:     store,
+		ws:        ws,
+		sel:       selector.NewLocalWorkloadSelector(prompter, store, ws),
+		configSel: selector.NewConfigSelector(prompter, store),
+		prompt:    prompter,
 	}, nil
 }
 
@@ -395,6 +397,18 @@ func (o *initStorageOpts) askWorkload() error {
 	if o.workloadName != "" {
 		return nil
 	}
+	if o.lifecycle == lifecycleWorkloadLevel {
+		return o.askLocalWorkload()
+	}
+	workload, err := o.configSel.Workload(storageInitSvcPrompt, "", o.appName)
+	if err != nil {
+		return fmt.Errorf("select a workload from app %s: %w", o.appName, err)
+	}
+	o.workloadName = workload
+	return nil
+}
+
+func (o *initStorageOpts) askLocalWorkload() error {
 	workload, err := o.sel.Workload(storageInitSvcPrompt, "")
 	if err != nil {
 		return fmt.Errorf("retrieve local workload names: %w", err)
