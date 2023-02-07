@@ -57,8 +57,8 @@ const (
 	lifecycleEnvironmentLevel = "environment"
 	lifecycleWorkloadLevel    = "workload"
 
-	lifecycleEnvironmentFriendlyText = "No, I want the storage to be created and deleted at the environment level"
-	fmtLifecycleWorkloadFriendlyText = "Yes, the table should be create and deleted at the same time as %s"
+	lifecycleEnvironmentFriendlyText = "No, the storage should be created and deleted at the environment level"
+	fmtLifecycleWorkloadFriendlyText = "Yes, the storage should be created and deleted at the same time as %s"
 )
 
 var validLifecycleOptions = []string{lifecycleWorkloadLevel, lifecycleEnvironmentLevel}
@@ -454,7 +454,7 @@ func (o *initStorageOpts) validateOrAskLifecycle() error {
 	options := []prompt.Option{
 		{
 			Value:        lifecycleWorkloadLevel,
-			FriendlyText: fmt.Sprintf(fmtLifecycleWorkloadFriendlyText, o.workloadName),
+			FriendlyText: fmt.Sprintf(fmtLifecycleWorkloadFriendlyText, color.HighlightUserInput(o.workloadName)),
 		},
 		{
 			Value:        lifecycleEnvironmentLevel,
