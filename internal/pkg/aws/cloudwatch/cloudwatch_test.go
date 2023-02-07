@@ -175,7 +175,6 @@ func TestCloudWatch_AlarmStatuses(t *testing.T) {
 					CompositeAlarms: nil,
 				}, nil)
 			},
-
 			wantedAlarmStatuses: []AlarmStatus{
 				{
 					Arn:          mockAlarmArn,

@@ -93,16 +93,14 @@ func WithPrefix(prefix string) DescribeAlarmOpts {
 	}
 }
 
-// AlarmStatuses returns the statuses of alarms, optionally filtered (by name, prefix, etc.).
+// AlarmStatuses returns the statuses of alarms optionally filtered (by name, prefix, etc.).
 func (cw *CloudWatch) AlarmStatuses(opts ...DescribeAlarmOpts) ([]AlarmStatus, error) {
-	if len(opts) == 0 {
-		return nil, nil
-	}
 	var alarmStatuses []AlarmStatus
 	in := &cloudwatch.DescribeAlarmsInput{}
-	
-	for _, opt := range opts {
-		opt(in)
+	if len(opts) > 0 {
+		for _, opt := range opts {
+			opt(in)
+		}
 	}
 	for {
 		alarmResp, err := cw.client.DescribeAlarms(in)
