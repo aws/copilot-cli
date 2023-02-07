@@ -442,8 +442,10 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 			},
 			Sidecars: map[string]*SidecarConfig{
 				"xray": {
-					Port:  aws.String("2000/udp"),
-					Image: aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+					Port: aws.String("2000/udp"),
+					Image: Union[*string, SidecarImageConfig]{
+						Basic: aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+					},
 				},
 			},
 			Logging: Logging{
@@ -680,8 +682,10 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 					},
 					Sidecars: map[string]*SidecarConfig{
 						"xray": {
-							Port:       aws.String("2000/udp"),
-							Image:      aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							Port: aws.String("2000/udp"),
+							Image: Union[*string, SidecarImageConfig]{
+								Basic: aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							},
 							CredsParam: aws.String("some arn"),
 						},
 					},
@@ -977,8 +981,10 @@ func TestBackendService_ExposedPorts(t *testing.T) {
 					},
 					Sidecars: map[string]*SidecarConfig{
 						"xray": {
-							Port:       aws.String("2000"),
-							Image:      aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							Port: aws.String("2000"),
+							Image: Union[*string, SidecarImageConfig]{
+								Basic: aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							},
 							CredsParam: aws.String("some arn"),
 						},
 					},
@@ -1018,8 +1024,10 @@ func TestBackendService_ExposedPorts(t *testing.T) {
 					},
 					Sidecars: map[string]*SidecarConfig{
 						"xray": {
-							Port:       aws.String("2000"),
-							Image:      aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							Port: aws.String("2000"),
+							Image: Union[*string, SidecarImageConfig]{
+								Basic: aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							},
 							CredsParam: aws.String("some arn"),
 						},
 					},
@@ -1064,8 +1072,10 @@ func TestBackendService_ExposedPorts(t *testing.T) {
 					},
 					Sidecars: map[string]*SidecarConfig{
 						"xray": {
-							Port:       aws.String("2000"),
-							Image:      aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							Port: aws.String("2000"),
+							Image: Union[*string, SidecarImageConfig]{
+								Basic: aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							},
 							CredsParam: aws.String("some arn"),
 						},
 					},
@@ -1110,7 +1120,11 @@ func TestBackendService_ExposedPorts(t *testing.T) {
 					},
 					Sidecars: map[string]*SidecarConfig{
 						"xray": {
-							Image:      aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							Image: Union[*string, SidecarImageConfig]{
+								Advanced: SidecarImageConfig{
+									Location: aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+								},
+							},
 							CredsParam: aws.String("some arn"),
 						},
 					},
