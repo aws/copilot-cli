@@ -28,22 +28,24 @@
 {{- end}}
 {{- if eq .WorkloadType "Load Balanced Web Service"}}
   PortMappings:
-    - ContainerPort: !Ref ContainerPort
-    {{/* Multiple exposed port is not supported yet. Therefore, if the target container is the sidecar, the target port must be the one and only one port that the container exposes. */}}
-    {{- if eq .HTTPTargetContainer.Name .WorkloadName}}
+  {{- range $portMapping := .PortMappings }}
+    - ContainerPort: {{ $portMapping.ContainerPort }}
+      Protocol: {{ $portMapping.Protocol }}
+  {{- if and (eq $.HTTPTargetContainer.Name $.WorkloadName) (eq $.HTTPTargetContainer.Port (strconvUint16 $portMapping.ContainerPort))}}
       Name: target
-    {{- end}}
-{{- if .NLB}} {{ $nlbListener := .NLB.Listener }} 
-  {{- if and (eq $nlbListener.TargetContainer .WorkloadName) (ne $nlbListener.TargetPort .NLB.MainContainerPort)}}
-  {{/*No need to add additional port if the target port is the same as image port*/}}
-    - ContainerPort: {{$nlbListener.TargetPort}}
-      Protocol: {{if eq $nlbListener.Protocol "UDP"}}udp{{else}}tcp{{end}}
   {{- end}}
-{{- end}}
+  {{- end}}
 {{- end}} {{/* end if eq .WorkloadType "Load Balanced Web Service"*/}}
 {{- if eq .WorkloadType "Backend Service"}}
-{{- if eq .HTTPTargetContainer.Name .WorkloadName}} 
-  PortMappings: !If [ExposePort, [{ContainerPort: !Ref ContainerPort, Name: target}], !Ref "AWS::NoValue"]
+  {{- if .PortMappings}}
+  PortMappings:
+  {{- range $portMapping := .PortMappings}}
+    - ContainerPort: {{$portMapping.ContainerPort}}
+      Protocol: {{ $portMapping.Protocol }}
+  {{- if and (eq $.HTTPTargetContainer.Name $.WorkloadName) (eq $.HTTPTargetContainer.Port (strconvUint16 $portMapping.ContainerPort ))}}
+      Name: target
+  {{- end}}
+  {{- end}}
 {{- end}}
 {{- end}}
 {{- if .HealthCheck}}

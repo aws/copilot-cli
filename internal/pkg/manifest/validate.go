@@ -533,6 +533,27 @@ func (s ScheduledJobConfig) validate() error {
 	return nil
 }
 
+// validate returns nil if StaticSite is configured correctly.
+func (s StaticSite) validate() error {
+	if err := s.StaticSiteConfig.validate(); err != nil {
+		return err
+	}
+	return s.Workload.validate()
+}
+
+func (s StaticSiteConfig) validate() error {
+	for idx, fileupload := range s.FileUploads {
+		if err := fileupload.validate(); err != nil {
+			return fmt.Errorf(`validate "files[%d]": %w`, idx, err)
+		}
+	}
+	return nil
+}
+
+func (f FileUpload) validate() error {
+	return nil
+}
+
 // validate returns nil if the pipeline manifest is configured correctly.
 func (p Pipeline) Validate() error {
 	if len(p.Name) > 100 {
@@ -1326,6 +1347,9 @@ func (s SidecarConfig) validate() error {
 	if err := s.DependsOn.validate(); err != nil {
 		return fmt.Errorf(`validate "depends_on": %w`, err)
 	}
+	if err := s.Image.Advanced.validate(); err != nil {
+		return fmt.Errorf(`validate "build": %w`, err)
+	}
 	return s.ImageOverride.validate()
 }
 
@@ -2041,4 +2065,16 @@ func contains(name string, names []string) bool {
 		}
 	}
 	return false
+}
+
+// validate returns nil if SidecarImageConfig is configured correctly.
+func (cfg SidecarImageConfig) validate() error {
+	if !cfg.Build.IsZero() && cfg.Location != nil {
+		return &errFieldMutualExclusive{
+			firstField:  "build",
+			secondField: "location",
+			mustExist:   true,
+		}
+	}
+	return nil
 }

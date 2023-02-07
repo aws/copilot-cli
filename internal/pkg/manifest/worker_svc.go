@@ -29,8 +29,7 @@ type WorkerService struct {
 	WorkerServiceConfig `yaml:",inline"`
 	// Use *WorkerServiceConfig because of https://github.com/imdario/mergo/issues/146
 	Environments map[string]*WorkerServiceConfig `yaml:",flow"`
-
-	parser template.Parser
+	parser       template.Parser
 }
 
 // Publish returns the list of topics where notifications can be published.
@@ -369,14 +368,18 @@ func newDefaultWorkerService() *WorkerService {
 }
 
 // ExposedPorts returns all the ports that are sidecar container ports available to receive traffic.
-func (ws *WorkerService) ExposedPorts() ([]ExposedPort, error) {
+func (ws *WorkerService) ExposedPorts() (ExposedPortsIndex, error) {
 	var exposedPorts []ExposedPort
 	for name, sidecar := range ws.Sidecars {
 		out, err := sidecar.exposedPorts(name)
 		if err != nil {
-			return nil, err
+			return ExposedPortsIndex{}, err
 		}
 		exposedPorts = append(exposedPorts, out...)
 	}
-	return sortExposedPorts(exposedPorts), nil
+	portsForContainer, containerForPort := prepareParsedExposedPortsMap(sortExposedPorts(exposedPorts))
+	return ExposedPortsIndex{
+		PortsForContainer: portsForContainer,
+		ContainerForPort:  containerForPort,
+	}, nil
 }

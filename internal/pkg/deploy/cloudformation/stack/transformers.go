@@ -66,8 +66,21 @@ var (
 	}
 )
 
-// convertSidecar converts the manifest sidecar configuration into a format parsable by the templates pkg.
-func convertSidecar(s map[string]*manifest.SidecarConfig) ([]*template.SidecarOpts, error) {
+func convertPortMappings(exposedPorts []manifest.ExposedPort) []*template.PortMapping {
+	portMapping := make([]*template.PortMapping, len(exposedPorts))
+	for idx, exposedPort := range exposedPorts {
+		portMapping[idx] = &template.PortMapping{
+			ContainerPort: exposedPort.Port,
+			Protocol:      exposedPort.Protocol,
+			ContainerName: exposedPort.ContainerName,
+		}
+	}
+	return portMapping
+}
+
+// convertSidecars converts the manifest sidecar configuration into a format parsable by the templates pkg.
+func convertSidecars(s map[string]*manifest.SidecarConfig, exposedPorts map[string][]manifest.ExposedPort) ([]*template.SidecarOpts, error) {
+	var sidecars []*template.SidecarOpts
 	if s == nil {
 		return nil, nil
 	}
@@ -78,14 +91,9 @@ func convertSidecar(s map[string]*manifest.SidecarConfig) ([]*template.SidecarOp
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
-
-	var sidecars []*template.SidecarOpts
 	for _, name := range keys {
 		config := s[name]
-		port, protocol, err := manifest.ParsePortMapping(config.Port)
-		if err != nil {
-			return nil, err
-		}
+		imageURI, _ := config.ImageURI()
 		entrypoint, err := convertEntryPoint(config.EntryPoint)
 		if err != nil {
 			return nil, err
@@ -97,10 +105,8 @@ func convertSidecar(s map[string]*manifest.SidecarConfig) ([]*template.SidecarOp
 		mp := convertSidecarMountPoints(config.MountPoints)
 		sidecars = append(sidecars, &template.SidecarOpts{
 			Name:       name,
-			Image:      config.Image,
+			Image:      aws.String(imageURI),
 			Essential:  config.Essential,
-			Port:       port,
-			Protocol:   protocol,
 			CredsParam: config.CredsParam,
 			Secrets:    convertSecrets(config.Secrets),
 			Variables:  convertEnvVars(config.Variables),
@@ -112,6 +118,7 @@ func convertSidecar(s map[string]*manifest.SidecarConfig) ([]*template.SidecarOp
 			EntryPoint:   entrypoint,
 			HealthCheck:  convertContainerHealthCheck(config.HealthCheck),
 			Command:      command,
+			PortMappings: convertPortMappings(exposedPorts[name]),
 		})
 	}
 	return sidecars, nil
@@ -493,7 +500,7 @@ func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (networkLoadBalanc
 				HealthCheck:     hc,
 				Stickiness:      nlbConfig.Stickiness,
 			},
-			MainContainerPort: s.containerPort(),
+			MainContainerPort: s.manifest.MainContainerPort(),
 		},
 	}
 

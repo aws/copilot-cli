@@ -132,7 +132,15 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	sidecars, err := convertSidecar(s.manifest.Sidecars)
+
+	exposedPorts, err := s.manifest.ExposedPorts()
+	if err != nil {
+		return "", fmt.Errorf("parse exposed ports in service manifest %s: %w", s.name, err)
+	}
+	sidecars, err := convertSidecars(s.manifest.Sidecars, exposedPorts.PortsForContainer)
+	if err != nil {
+		return "", fmt.Errorf("convert the sidecar configuration for service %s: %w", s.name, err)
+	}
 	if err != nil {
 		return "", fmt.Errorf("convert the sidecar configuration for service %s: %w", s.name, err)
 	}
@@ -196,62 +204,83 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	if s.manifest.Network.Connect.Enabled() {
 		scConfig = convertServiceConnect(s.manifest.Network.Connect)
 	}
-	targetContainer, targetContainerPort := s.httpLoadBalancerTarget()
+
+	targetContainer, targetContainerPort, err := s.manifest.HTTPLoadBalancerTarget()
+	if err != nil {
+		return "", err
+	}
 
 	// Set container-level feature flag.
 	logConfig := convertLogging(s.manifest.Logging)
 	content, err := s.parser.ParseLoadBalancedWebService(template.WorkloadOpts{
+		// Workload parameters.
 		AppName:            s.app,
 		EnvName:            s.env,
-		WorkloadName:       s.name,
-		SerializedManifest: string(s.rawManifest),
 		EnvVersion:         s.rc.EnvVersion,
-
-		Variables:          convertEnvVars(s.manifest.TaskConfig.Variables),
-		Secrets:            convertSecrets(s.manifest.TaskConfig.Secrets),
-		Aliases:            aliases,
-		HTTPSListener:      s.httpsEnabled,
-		HTTPRedirect:       httpRedirect,
-		NestedStack:        addonsOutputs,
-		AddonsExtraParams:  addonsParams,
-		Sidecars:           sidecars,
-		LogConfig:          logConfig,
-		DockerLabels:       s.manifest.ImageConfig.Image.DockerLabels,
-		Autoscaling:        autoscaling,
-		CapacityProviders:  capacityProviders,
-		DesiredCountOnSpot: desiredCountOnSpot,
-		ExecuteCommand:     convertExecuteCommand(&s.manifest.ExecuteCommand),
+		SerializedManifest: string(s.rawManifest),
+		WorkloadName:       s.name,
 		WorkloadType:       manifest.LoadBalancedWebServiceType,
+
+		// Configuration for the main container.
+		Command:      command,
+		EntryPoint:   entrypoint,
+		HealthCheck:  convertContainerHealthCheck(s.manifest.ImageConfig.HealthCheck),
+		PortMappings: convertPortMappings(exposedPorts.PortsForContainer[s.name]),
+		Secrets:      convertSecrets(s.manifest.TaskConfig.Secrets),
+		Variables:    convertEnvVars(s.manifest.TaskConfig.Variables),
+
+		// Additional options that are common between **all** workload templates.
+		AddonsExtraParams:       addonsParams,
+		Autoscaling:             autoscaling,
+		CapacityProviders:       capacityProviders,
+		CredentialsParameter:    aws.StringValue(s.manifest.ImageConfig.Image.Credentials),
+		DesiredCountOnSpot:      desiredCountOnSpot,
+		DeploymentConfiguration: convertDeploymentConfig(s.manifest.DeployConfig),
+		DependsOn:               convertDependsOn(s.manifest.ImageConfig.Image.DependsOn),
+		DockerLabels:            s.manifest.ImageConfig.Image.DockerLabels,
+		ExecuteCommand:          convertExecuteCommand(&s.manifest.ExecuteCommand),
+		LogConfig:               logConfig,
+		NestedStack:             addonsOutputs,
+		Network:                 convertNetworkConfig(s.manifest.Network),
+		Publish:                 publishers,
+		PermissionsBoundary:     s.permBound,
+		Platform:                convertPlatform(s.manifest.Platform),
+		Storage:                 convertStorageOpts(s.manifest.Name, s.manifest.Storage),
+
+		// ALB configs.
+		ALBEnabled:          !s.manifest.RoutingRule.Disabled(),
+		Aliases:             aliases,
+		AllowedSourceIps:    allowedSourceIPs,
+		DeregistrationDelay: deregistrationDelay,
+		HostedZoneAliases:   aliasesFor,
+		HTTPSListener:       s.httpsEnabled,
+		HTTPRedirect:        httpRedirect,
 		HTTPTargetContainer: template.HTTPTargetContainer{
-			Port: aws.StringValue(targetContainerPort),
-			Name: aws.StringValue(targetContainer),
+			Port: targetContainerPort,
+			Name: targetContainer,
 		},
+		HTTPHealthCheck: convertHTTPHealthCheck(&s.manifest.RoutingRule.HealthCheck),
+		HTTPVersion:     convertHTTPVersion(s.manifest.RoutingRule.ProtocolVersion),
+
+		// NLB configs.
+		AppDNSName:           nlbConfig.appDNSName,
+		AppDNSDelegationRole: nlbConfig.appDNSDelegationRole,
+		NLB:                  nlbConfig.settings,
+
+		// service connect and service discovery options.
 		ServiceConnect:           scConfig,
-		HealthCheck:              convertContainerHealthCheck(s.manifest.ImageConfig.HealthCheck),
-		HTTPHealthCheck:          convertHTTPHealthCheck(&s.manifest.RoutingRule.HealthCheck),
-		DeregistrationDelay:      deregistrationDelay,
-		AllowedSourceIps:         allowedSourceIPs,
-		CustomResources:          crs,
-		Storage:                  convertStorageOpts(s.manifest.Name, s.manifest.Storage),
-		Network:                  convertNetworkConfig(s.manifest.Network),
-		EntryPoint:               entrypoint,
-		Command:                  command,
-		DependsOn:                convertDependsOn(s.manifest.ImageConfig.Image.DependsOn),
-		CredentialsParameter:     aws.StringValue(s.manifest.ImageConfig.Image.Credentials),
 		ServiceDiscoveryEndpoint: s.rc.ServiceDiscoveryEndpoint,
-		Publish:                  publishers,
-		Platform:                 convertPlatform(s.manifest.Platform),
-		HTTPVersion:              convertHTTPVersion(s.manifest.RoutingRule.ProtocolVersion),
-		NLB:                      nlbConfig.settings,
-		DeploymentConfiguration:  convertDeploymentConfig(s.manifest.DeployConfig),
-		AppDNSName:               nlbConfig.appDNSName,
-		AppDNSDelegationRole:     nlbConfig.appDNSDelegationRole,
-		ALBEnabled:               !s.manifest.RoutingRule.Disabled(),
+
+		// Additional options for request driven web service templates.
 		Observability: template.ObservabilityOpts{
 			Tracing: strings.ToUpper(aws.StringValue(s.manifest.Observability.Tracing)),
 		},
-		HostedZoneAliases:   aliasesFor,
-		PermissionsBoundary: s.permBound,
+
+		// Sidecar configs.
+		Sidecars: sidecars,
+
+		// Custom Resource Config.
+		CustomResources: crs,
 	})
 	if err != nil {
 		return "", err
@@ -263,35 +292,24 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	return string(overriddenTpl), nil
 }
 
-func (s *LoadBalancedWebService) httpLoadBalancerTarget() (targetContainer *string, targetPort *string) {
-	// Route load balancer traffic to main container by default.
-	targetContainer = aws.String(s.name)
-	targetPort = aws.String(s.containerPort())
-
-	rrTarget := s.manifest.RoutingRule.GetTargetContainer()
-	if rrTarget != nil && *rrTarget != *targetContainer {
-		targetContainer = rrTarget
-		targetPort = s.manifest.Sidecars[aws.StringValue(targetContainer)].Port
-	}
-
-	return
-}
-
-func (s *LoadBalancedWebService) containerPort() string {
-	return strconv.FormatUint(uint64(aws.Uint16Value(s.manifest.ImageConfig.Port)), 10)
-}
-
 // Parameters returns the list of CloudFormation parameters used by the template.
 func (s *LoadBalancedWebService) Parameters() ([]*cloudformation.Parameter, error) {
 	wkldParams, err := s.ecsWkld.Parameters()
 	if err != nil {
 		return nil, err
 	}
-	targetContainer, targetPort := s.httpLoadBalancerTarget()
+	targetContainer, targetPort, err := s.manifest.HTTPLoadBalancerTarget()
+	if err != nil {
+		return nil, err
+	}
+
+	if err != nil {
+		return nil, err
+	}
 	wkldParams = append(wkldParams, []*cloudformation.Parameter{
 		{
 			ParameterKey:   aws.String(WorkloadContainerPortParamKey),
-			ParameterValue: aws.String(s.containerPort()),
+			ParameterValue: aws.String(s.manifest.MainContainerPort()),
 		},
 		{
 			ParameterKey:   aws.String(LBWebServiceDNSDelegatedParamKey),
@@ -299,11 +317,11 @@ func (s *LoadBalancedWebService) Parameters() ([]*cloudformation.Parameter, erro
 		},
 		{
 			ParameterKey:   aws.String(WorkloadTargetContainerParamKey),
-			ParameterValue: targetContainer,
+			ParameterValue: aws.String(targetContainer),
 		},
 		{
 			ParameterKey:   aws.String(WorkloadTargetPortParamKey),
-			ParameterValue: targetPort,
+			ParameterValue: aws.String(targetPort),
 		},
 		{
 			ParameterKey:   aws.String(WorkloadEnvFileARNParamKey),
