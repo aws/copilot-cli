@@ -443,18 +443,19 @@ func (o *initStorageOpts) validateOrAskLifecycle() error {
 	}
 	options := []prompt.Option{
 		{
-			Value:        lifecycleEnvironmentLevel,
-			FriendlyText: lifecycleEnvironmentFriendlyText,
-		},
-		{
 			Value:        lifecycleWorkloadLevel,
 			FriendlyText: fmt.Sprintf(fmtLifecycleWorkloadFriendlyText, o.workloadName),
+		},
+		{
+			Value:        lifecycleEnvironmentLevel,
+			FriendlyText: lifecycleEnvironmentFriendlyText,
 		},
 	}
 	lifecycle, err := o.prompt.SelectOption(
 		fmt.Sprintf(fmtStorageInitLifecyclePrompt, o.workloadName),
 		"",
-		options)
+		options,
+		prompt.WithFinalMessage("Lifecycle: "))
 	if err != nil {
 		return fmt.Errorf("ask for lifecycle: %w", err)
 	}
