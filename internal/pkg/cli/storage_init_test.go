@@ -95,6 +95,26 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 			mock:             func(m *mockStorageInitValidate) {},
 			wantedErr:        errors.New("--storage-type is required when --add-ingress-from is used"),
 		},
+		"fails to check if --add-ingress-from workload is in the workspace": {
+			inAppName:        "bowie",
+			inAddIngressFrom: "api",
+			inStorageName:    "coolbucket",
+			inStorageType:    s3StorageType,
+			mock: func(m *mockStorageInitValidate) {
+				m.ws.EXPECT().WorkloadExists("api").Return(false, errors.New("some error"))
+			},
+			wantedErr: errors.New("check if api exists in the workspace: some error"),
+		},
+		"fails when --add-ingress-from workload is not in the workspace": {
+			inAppName:        "bowie",
+			inAddIngressFrom: "api",
+			inStorageName:    "coolbucket",
+			inStorageType:    s3StorageType,
+			mock: func(m *mockStorageInitValidate) {
+				m.ws.EXPECT().WorkloadExists("api").Return(false, nil)
+			},
+			wantedErr: errors.New("workload api not found in the workspace"),
+		},
 		"fails when --no-lsi and --lsi are both provided": {
 			inAppName:     "bowie",
 			inStorageType: dynamoDBStorageType,

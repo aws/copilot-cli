@@ -268,6 +268,14 @@ func (o *initStorageOpts) validateAddIngressFrom() error {
 	if o.storageType == "" {
 		return fmt.Errorf("--%s is required when --%s is used", storageTypeFlag, storageAddIngressFromFlag)
 	}
+	exist, err := o.ws.WorkloadExists(o.addIngressFrom)
+	if err != nil {
+		return fmt.Errorf("check if %s exists in the workspace: %w", o.addIngressFrom, err)
+	}
+	if !exist {
+		return fmt.Errorf("workload %s not found in the workspace", o.addIngressFrom)
+	}
+	o.workloadExists = true
 	return nil
 
 }
