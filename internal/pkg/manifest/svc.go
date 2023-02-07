@@ -6,6 +6,7 @@ package manifest
 import (
 	"errors"
 	"fmt"
+	"github.com/aws/copilot-cli/internal/pkg/template"
 	"math"
 	"sort"
 	"strconv"
@@ -43,6 +44,12 @@ func ServiceTypes() []string {
 type Range struct {
 	Value       *IntRangeBand // Mutually exclusive with RangeConfig
 	RangeConfig RangeConfig
+}
+
+// ExposedPortsIndex holds exposed ports configuration.
+type ExposedPortsIndex struct {
+	PortsForContainer map[string][]ExposedPort // holds exposed ports list for all the containers
+	ContainerForPort  map[uint16]string        // holds port to container mapping
 }
 
 // IsEmpty returns whether Range is empty.
@@ -507,12 +514,9 @@ func (cfg NetworkLoadBalancerConfiguration) exposedPorts(exposedPorts []ExposedP
 	if cfg.IsEmpty() {
 		return nil, nil
 	}
-	nlbPort, protocol, err := ParsePortMapping(cfg.Port)
+	nlbPort, _, err := ParsePortMapping(cfg.Port)
 	if err != nil {
 		return nil, err
-	}
-	if protocol == nil {
-		protocol = aws.String("tcp")
 	}
 
 	port, err := strconv.ParseUint(aws.StringValue(nlbPort), 10, 16)
@@ -535,7 +539,7 @@ func (cfg NetworkLoadBalancerConfiguration) exposedPorts(exposedPorts []ExposedP
 	return []ExposedPort{
 		{
 			Port:          targetPort,
-			Protocol:      aws.StringValue(protocol),
+			Protocol:      "tcp",
 			ContainerName: targetContainer,
 		},
 	}, nil
@@ -545,12 +549,13 @@ func (sidecar SidecarConfig) exposedPorts(sidecarName string) ([]ExposedPort, er
 	if sidecar.Port == nil {
 		return nil, nil
 	}
-	sidecarPort, protocol, err := ParsePortMapping(sidecar.Port)
+	sidecarPort, protocolPtr, err := ParsePortMapping(sidecar.Port)
 	if err != nil {
 		return nil, err
 	}
-	if protocol == nil {
-		protocol = aws.String("tcp")
+	protocol := aws.StringValue(protocolPtr)
+	if protocolPtr == nil {
+		protocol = "tcp"
 	}
 	port, err := strconv.ParseUint(aws.StringValue(sidecarPort), 10, 16)
 	if err != nil {
@@ -559,7 +564,7 @@ func (sidecar SidecarConfig) exposedPorts(sidecarName string) ([]ExposedPort, er
 	return []ExposedPort{
 		{
 			Port:          uint16(port),
-			Protocol:      aws.StringValue(protocol),
+			Protocol:      strings.ToLower(protocol),
 			ContainerName: sidecarName,
 		},
 	}, nil
@@ -571,6 +576,122 @@ func sortExposedPorts(exposedPorts []ExposedPort) []ExposedPort {
 		return exposedPorts[i].Port < exposedPorts[j].Port
 	})
 	return exposedPorts
+}
+
+// HTTPLoadBalancerTarget returns target container and target port for the ALB configuration.
+// This method should be called only when ALB config is not empty.
+func (s *LoadBalancedWebService) HTTPLoadBalancerTarget() (targetContainer string, targetPort string, err error) {
+	exposedPorts, err := s.ExposedPorts()
+	if err != nil {
+		return "", "", err
+	}
+	// Route load balancer traffic to main container by default.
+	targetContainer = aws.StringValue(s.Name)
+	targetPort = s.MainContainerPort()
+
+	rrTargetContainer := s.RoutingRule.TargetContainer
+	rrTargetPort := s.RoutingRule.TargetPort
+	if rrTargetContainer == nil && rrTargetPort == nil { // both targetPort and targetContainer are nil.
+		return
+	}
+
+	if rrTargetPort == nil { // when target_port is nil
+		if rrTargetContainer != s.Name {
+			targetContainer = aws.StringValue(rrTargetContainer)
+			targetPort = aws.StringValue(s.Sidecars[aws.StringValue(rrTargetContainer)].Port)
+		}
+		return
+	}
+
+	if rrTargetContainer == nil { // when target_container is nil
+		container, port := httpLoadBalancerTarget(exposedPorts, rrTargetPort)
+		targetPort = aws.StringValue(port)
+		if container != nil {
+			targetContainer = aws.StringValue(container)
+		}
+		return
+	}
+
+	// when both target_port and target_container are not nil
+	targetContainer = aws.StringValue(rrTargetContainer)
+	targetPort = template.StrconvUint16(aws.Uint16Value(rrTargetPort))
+
+	return
+}
+
+// HTTPLoadBalancerTarget returns target container and target port for the ALB configuration.
+// This method should be called only when ALB config is not empty.
+func (s *BackendService) HTTPLoadBalancerTarget() (targetContainer string, targetPort string, err error) {
+	exposedPorts, err := s.ExposedPorts()
+	if err != nil {
+		return "", "", err
+	}
+
+	// Route load balancer traffic to main container by default.
+	targetContainer = aws.StringValue(s.Name)
+	targetPort = s.MainContainerPort()
+
+	rrTargetContainer := s.RoutingRule.TargetContainer
+	rrTargetPort := s.RoutingRule.TargetPort
+	if rrTargetContainer == nil && rrTargetPort == nil { // both targetPort and targetContainer are nil.
+		return
+	}
+
+	if rrTargetPort == nil { // when target_port is nil
+		if rrTargetContainer != s.Name {
+			targetContainer = aws.StringValue(rrTargetContainer)
+			targetPort = aws.StringValue(s.Sidecars[aws.StringValue(rrTargetContainer)].Port)
+		}
+		return
+	}
+
+	if rrTargetContainer == nil { // when target_container is nil
+		container, port := httpLoadBalancerTarget(exposedPorts, rrTargetPort)
+		targetPort = aws.StringValue(port)
+		if container != nil {
+			targetContainer = aws.StringValue(container)
+		}
+		return
+	}
+
+	// when both target_port and target_container are not nil
+	targetContainer = aws.StringValue(rrTargetContainer)
+	targetPort = template.StrconvUint16(aws.Uint16Value(rrTargetPort))
+	return
+}
+
+func httpLoadBalancerTarget(exposedPorts ExposedPortsIndex, rrTargetPort *uint16) (targetContainer *string, targetPort *string) {
+	// Route load balancer traffic to the target_port if mentioned.
+	targetPort = aws.String(template.StrconvUint16(aws.Uint16Value(rrTargetPort)))
+	// It shouldn’t be possible that container is empty for the given port as exposed port assigns container to all the ports, this is just for the extra safety.
+	if exposedPorts.ContainerForPort[aws.Uint16Value(rrTargetPort)] != "" {
+		targetContainer = aws.String(exposedPorts.ContainerForPort[aws.Uint16Value(rrTargetPort)])
+	}
+	return
+}
+
+// MainContainerPort returns the main container port.
+func (s *LoadBalancedWebService) MainContainerPort() string {
+	return strconv.FormatUint(uint64(aws.Uint16Value(s.ImageConfig.Port)), 10)
+}
+
+// MainContainerPort returns the main container port if given.
+func (s *BackendService) MainContainerPort() string {
+	port := template.NoExposedContainerPort
+	if s.BackendServiceConfig.ImageConfig.Port != nil {
+		port = strconv.FormatUint(uint64(aws.Uint16Value(s.BackendServiceConfig.ImageConfig.Port)), 10)
+	}
+	return port
+}
+
+func prepareParsedExposedPortsMap(exposedPorts []ExposedPort) (map[string][]ExposedPort, map[uint16]string) {
+	parsedContainerMap := make(map[string][]ExposedPort)
+	parsedExposedPortMap := make(map[uint16]string)
+	for _, exposedPort := range exposedPorts {
+		parsedContainerMap[exposedPort.ContainerName] = append(parsedContainerMap[exposedPort.ContainerName], exposedPort)
+		parsedExposedPortMap[exposedPort.Port] = exposedPort.ContainerName
+	}
+	return parsedContainerMap, parsedExposedPortMap
 }
 
 // NetworkLoadBalancerTarget returns target container and target port for the NLB configuration.
