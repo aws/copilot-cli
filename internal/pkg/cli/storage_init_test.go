@@ -28,6 +28,7 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 		inSvcName           string
 		inStorageName       string
 		inLifecycle         string
+		inAddIngressFrom    string
 		inPartition         string
 		inSort              string
 		inLSISorts          []string
@@ -48,6 +49,19 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 			inLifecycle: "weird input",
 			mock:        func(m *mockStorageInitValidate) {},
 			wantedErr:   errors.New(`invalid lifecycle; must be one of "workload" or "environment"`),
+		},
+		"fails when --add-ingress-from is not accompanied by storage name": {
+			inAppName:        "bowie",
+			inAddIngressFrom: "api",
+			mock:             func(m *mockStorageInitValidate) {},
+			wantedErr:        errors.New("--name is required when --add-ingress-from is used"),
+		},
+		"fails when --add-ingress-from is not accompanied by storage type": {
+			inAppName:        "bowie",
+			inAddIngressFrom: "api",
+			inStorageName:    "coolbucket",
+			mock:             func(m *mockStorageInitValidate) {},
+			wantedErr:        errors.New("--storage-type is required when --add-ingress-from is used"),
 		},
 		"fails when --no-lsi and --lsi are both provided": {
 			inAppName:     "bowie",
@@ -101,6 +115,7 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 					storageName:             tc.inStorageName,
 					workloadName:            tc.inSvcName,
 					lifecycle:               tc.inLifecycle,
+					addIngressFrom:          tc.inAddIngressFrom,
 					partitionKey:            tc.inPartition,
 					sortKey:                 tc.inSort,
 					lsiSorts:                tc.inLSISorts,

@@ -214,6 +214,11 @@ func (o *initStorageOpts) Validate() error {
 			return err
 		}
 	}
+	if o.addIngressFrom != "" {
+		if err := o.validateAddIngressFrom(); err != nil {
+			return err
+		}
+	}
 	// --no-lsi and --lsi are mutually exclusive.
 	if o.noLSI && len(o.lsiSorts) != 0 {
 		return fmt.Errorf("validate LSI configuration: cannot specify --no-lsi and --lsi options at once")
@@ -228,6 +233,17 @@ func (o *initStorageOpts) Validate() error {
 		}
 	}
 	return nil
+}
+
+func (o *initStorageOpts) validateAddIngressFrom() error {
+	if o.storageName == "" {
+		return fmt.Errorf("--%s is required when --%s is used", nameFlag, storageAddIngressFromFlag)
+	}
+	if o.storageType == "" {
+		return fmt.Errorf("--%s is required when --%s is used", storageTypeFlag, storageAddIngressFromFlag)
+	}
+	return nil
+
 }
 
 func (o *initStorageOpts) validateStorageLifecycle() error {
