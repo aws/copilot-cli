@@ -280,6 +280,8 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			mock: func(m *mockStorageInitAsk) {
 				m.ws.EXPECT().WorkloadAddonFileAbsPath(wantedSvcName, fmt.Sprintf("%s.yml", wantedBucketName)).Return("mockWorkloadAddonPath")
 				m.ws.EXPECT().ReadFile("mockWorkloadAddonPath").Return([]byte(""), nil)
+				m.ws.EXPECT().WorkloadAddonFilePath(wantedSvcName, fmt.Sprintf("%s.yml", wantedBucketName)).
+					Return("mockWorkloadAddonPath") // Called in log.Info.
 			},
 			wantedVars: &initStorageVars{
 				storageType:  s3StorageType,
@@ -307,6 +309,8 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 				m.ws.EXPECT().ReadFile("mockWorkloadAddonPath").Return([]byte(""), &workspace.ErrFileNotExists{})
 				m.ws.EXPECT().EnvAddonFileAbsPath(fmt.Sprintf("%s.yml", wantedBucketName)).Return("mockEnvAddonPath")
 				m.ws.EXPECT().ReadFile("mockEnvAddonPath").Return([]byte(""), nil)
+				m.ws.EXPECT().EnvAddonFilePath(fmt.Sprintf("%s.yml", wantedBucketName)).
+					Return("mockEnvAddonPath") // Called in log.Info.
 				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
 			},
 			wantedVars: &initStorageVars{

@@ -428,6 +428,11 @@ func (o *initStorageOpts) validateOrAskLifecycle() error {
 	if err == nil {
 		o.lifecycle = lifecycleWorkloadLevel
 		o.workloadExists = true
+		log.Infof("%s %s %s\n",
+			color.Emphasize("Lifecycle:"),
+			"workload-level",
+			color.Faint.Sprintf("(found %s)", o.ws.WorkloadAddonFilePath(o.workloadName, fmt.Sprintf("%s.yml", o.storageName))),
+		)
 		return nil
 	}
 	if _, ok := err.(*workspace.ErrFileNotExists); !ok {
@@ -436,6 +441,11 @@ func (o *initStorageOpts) validateOrAskLifecycle() error {
 	_, err = o.ws.ReadFile(o.ws.EnvAddonFileAbsPath(fmt.Sprintf("%s.yml", o.storageName)))
 	if err == nil {
 		o.lifecycle = lifecycleEnvironmentLevel
+		log.Infof("%s %s %s\n",
+			color.Emphasize("Lifecycle:"),
+			"environment-level",
+			color.Faint.Sprintf("(found %s)", o.ws.EnvAddonFilePath(fmt.Sprintf("%s.yml", o.storageName))),
+		)
 		return nil
 	}
 	if _, ok := err.(*workspace.ErrFileNotExists); !ok {
