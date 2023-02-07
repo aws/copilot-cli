@@ -210,15 +210,20 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 		wantedBucketName = "cool-bucket"
 	)
 	testCases := map[string]struct {
-		inStorageType string
-		inSvcName     string
-		inStorageName string
+		inStorageType    string
+		inSvcName        string
+		inStorageName    string
+		inAddIngressFrom string
 
 		mock func(m *mockStorageInitAsk)
 
 		wantedErr  error
 		wantedVars *initStorageVars
 	}{
+		"prompt for nothing if --add-ingress-from is used": {
+			inAddIngressFrom: "api",
+			mock:             func(m *mockStorageInitAsk) {},
+		},
 		"invalid storage type": {
 			inStorageType: "box",
 			inSvcName:     "frontend",
@@ -353,9 +358,10 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			}
 			opts := initStorageOpts{
 				initStorageVars: initStorageVars{
-					storageType:  tc.inStorageType,
-					storageName:  tc.inStorageName,
-					workloadName: tc.inSvcName,
+					storageType:    tc.inStorageType,
+					storageName:    tc.inStorageName,
+					workloadName:   tc.inSvcName,
+					addIngressFrom: tc.inAddIngressFrom,
 				},
 				appName: wantedAppName,
 				sel:     m.sel,

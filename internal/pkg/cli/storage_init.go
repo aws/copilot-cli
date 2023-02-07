@@ -301,6 +301,9 @@ func (o *initStorageOpts) validateServerlessVersion() error {
 
 // Ask asks for fields that are required but not passed in.
 func (o *initStorageOpts) Ask() error {
+	if o.addIngressFrom != "" {
+		return nil
+	}
 	if err := o.validateOrAskStorageWl(); err != nil {
 		return err
 	}
