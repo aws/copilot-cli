@@ -22,8 +22,16 @@ func Test_convertSidecar(t *testing.T) {
 	mockMap := map[string]template.Variable{"foo": template.PlainVariable("")}
 	mockSecrets := map[string]template.Secret{"foo": template.SecretFromPlainSSMOrARN("")}
 	mockCredsParam := aws.String("mockCredsParam")
+	mockExposedPorts := map[string][]manifest.ExposedPort{
+		"foo": {
+			{
+				Protocol:      "tcp",
+				ContainerName: "foo",
+				Port:          uint16(2000),
+			},
+		},
+	}
 	testCases := map[string]struct {
-		inPort            *string
 		inEssential       bool
 		inLabels          map[string]string
 		inDependsOn       map[string]string
@@ -34,42 +42,45 @@ func Test_convertSidecar(t *testing.T) {
 		wanted    *template.SidecarOpts
 		wantedErr error
 	}{
-		"invalid port": {
-			inPort: aws.String("b/a/d/P/o/r/t"),
-
-			wantedErr: fmt.Errorf("cannot parse port mapping from b/a/d/P/o/r/t"),
-		},
 		"good port without protocol": {
-			inPort:      aws.String("2000"),
 			inEssential: true,
 
 			wanted: &template.SidecarOpts{
 				Name:       "foo",
-				Port:       aws.String("2000"),
 				CredsParam: mockCredsParam,
 				Image:      mockImage,
 				Secrets:    mockSecrets,
 				Variables:  mockMap,
 				Essential:  aws.Bool(true),
+				PortMappings: []*template.PortMapping{
+					{
+						Protocol:      "tcp",
+						ContainerName: "foo",
+						ContainerPort: uint16(2000),
+					},
+				},
 			},
 		},
 		"good port with protocol": {
-			inPort:      aws.String("2000/udp"),
 			inEssential: true,
 
 			wanted: &template.SidecarOpts{
 				Name:       "foo",
-				Port:       aws.String("2000"),
-				Protocol:   aws.String("udp"),
 				CredsParam: mockCredsParam,
 				Image:      mockImage,
 				Secrets:    mockSecrets,
 				Variables:  mockMap,
 				Essential:  aws.Bool(true),
+				PortMappings: []*template.PortMapping{
+					{
+						Protocol:      "tcp",
+						ContainerName: "foo",
+						ContainerPort: uint16(2000),
+					},
+				},
 			},
 		},
 		"good container dependencies": {
-			inPort:      aws.String("2000"),
 			inEssential: true,
 			inDependsOn: map[string]string{
 				"frontend": "start",
@@ -77,7 +88,6 @@ func Test_convertSidecar(t *testing.T) {
 
 			wanted: &template.SidecarOpts{
 				Name:       "foo",
-				Port:       aws.String("2000"),
 				CredsParam: mockCredsParam,
 				Image:      mockImage,
 				Secrets:    mockSecrets,
@@ -86,10 +96,16 @@ func Test_convertSidecar(t *testing.T) {
 				DependsOn: map[string]string{
 					"frontend": "START",
 				},
+				PortMappings: []*template.PortMapping{
+					{
+						Protocol:      "tcp",
+						ContainerName: "foo",
+						ContainerPort: uint16(2000),
+					},
+				},
 			},
 		},
 		"specify essential as false": {
-			inPort:      aws.String("2000"),
 			inEssential: false,
 			inLabels: map[string]string{
 				"com.amazonaws.ecs.copilot.sidecar.description": "wow",
@@ -97,7 +113,6 @@ func Test_convertSidecar(t *testing.T) {
 
 			wanted: &template.SidecarOpts{
 				Name:       "foo",
-				Port:       aws.String("2000"),
 				CredsParam: mockCredsParam,
 				Image:      mockImage,
 				Secrets:    mockSecrets,
@@ -105,6 +120,13 @@ func Test_convertSidecar(t *testing.T) {
 				Essential:  aws.Bool(false),
 				DockerLabels: map[string]string{
 					"com.amazonaws.ecs.copilot.sidecar.description": "wow",
+				},
+				PortMappings: []*template.PortMapping{
+					{
+						Protocol:      "tcp",
+						ContainerName: "foo",
+						ContainerPort: uint16(2000),
+					},
 				},
 			},
 		},
@@ -118,6 +140,13 @@ func Test_convertSidecar(t *testing.T) {
 				Essential:  aws.Bool(false),
 				EntryPoint: nil,
 				Command:    nil,
+				PortMappings: []*template.PortMapping{
+					{
+						Protocol:      "tcp",
+						ContainerName: "foo",
+						ContainerPort: uint16(2000),
+					},
+				},
 			},
 		},
 		"specify entrypoint as a string": {
@@ -134,6 +163,13 @@ func Test_convertSidecar(t *testing.T) {
 				Essential:  aws.Bool(false),
 				EntryPoint: []string{"bin"},
 				Command:    nil,
+				PortMappings: []*template.PortMapping{
+					{
+						Protocol:      "tcp",
+						ContainerName: "foo",
+						ContainerPort: uint16(2000),
+					},
+				},
 			},
 		},
 		"specify entrypoint as a string slice": {
@@ -150,6 +186,13 @@ func Test_convertSidecar(t *testing.T) {
 				Essential:  aws.Bool(false),
 				EntryPoint: []string{"bin", "arg"},
 				Command:    nil,
+				PortMappings: []*template.PortMapping{
+					{
+						Protocol:      "tcp",
+						ContainerName: "foo",
+						ContainerPort: uint16(2000),
+					},
+				},
 			},
 		},
 		"specify command as a string": {
@@ -166,6 +209,13 @@ func Test_convertSidecar(t *testing.T) {
 				Essential:  aws.Bool(false),
 				EntryPoint: nil,
 				Command:    []string{"arg"},
+				PortMappings: []*template.PortMapping{
+					{
+						Protocol:      "tcp",
+						ContainerName: "foo",
+						ContainerPort: uint16(2000),
+					},
+				},
 			},
 		},
 		"specify command as a string slice": {
@@ -182,6 +232,13 @@ func Test_convertSidecar(t *testing.T) {
 				Essential:  aws.Bool(false),
 				EntryPoint: nil,
 				Command:    []string{"arg1", "arg2"},
+				PortMappings: []*template.PortMapping{
+					{
+						Protocol:      "tcp",
+						ContainerName: "foo",
+						ContainerPort: uint16(2000),
+					},
+				},
 			},
 		},
 		"with health check": {
@@ -203,6 +260,13 @@ func Test_convertSidecar(t *testing.T) {
 					StartPeriod: aws.Int64(0),
 					Timeout:     aws.Int64(5),
 				},
+				PortMappings: []*template.PortMapping{
+					{
+						Protocol:      "tcp",
+						ContainerName: "foo",
+						ContainerPort: uint16(2000),
+					},
+				},
 			},
 		},
 	}
@@ -215,14 +279,13 @@ func Test_convertSidecar(t *testing.T) {
 					Secrets:       map[string]manifest.Secret{"foo": {}},
 					Variables:     map[string]manifest.Variable{"foo": {}},
 					Essential:     aws.Bool(tc.inEssential),
-					Port:          tc.inPort,
 					DockerLabels:  tc.inLabels,
 					DependsOn:     tc.inDependsOn,
 					ImageOverride: tc.inImageOverride,
 					HealthCheck:   tc.inHealthCheck,
 				},
 			}
-			got, err := convertSidecar(sidecar)
+			got, err := convertSidecars(sidecar, mockExposedPorts)
 
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())

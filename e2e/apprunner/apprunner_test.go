@@ -6,6 +6,7 @@ package apprunner_test
 import (
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/aws/copilot-cli/e2e/internal/client"
 	. "github.com/onsi/ginkgo/v2"
@@ -112,7 +113,7 @@ var _ = Describe("App Runner", Ordered, func() {
 		})
 	})
 
-	Context("run svc show to retrieve the service configuration, resources, and endpoint, then query the service", func() {
+	Context("run svc show to retrieve the service configuration, resources, secrets, and endpoint, then query the service", func() {
 		var (
 			svc            *client.SvcShowOutput
 			svcShowError   error
@@ -162,6 +163,23 @@ var _ = Describe("App Runner", Ordered, func() {
 			}
 			for _, variable := range svc.Variables {
 				Expect(variable.Value).To(Equal(expectedVars[variable.Name]))
+			}
+		})
+
+		It("should return correct secrets", func() {
+			fmt.Printf("\n\nsecrets: %+v\n\n", svc.Secrets)
+			expectedSecrets := map[string]string{
+				"my-ssm-param": "e2e-apprunner-ssm-param",
+				"USER_CREDS":   "e2e-apprunner-MyTestSecret",
+			}
+			for _, secret := range svc.Secrets {
+				if secret.Name == "my-ssm-param" {
+					Expect(secret.Value).To(Equal(expectedSecrets[secret.Name]))
+				}
+				if secret.Name == "USER_CREDS" {
+					containsSecret := strings.Contains(expectedSecrets[secret.Name], expectedSecrets[secret.Name])
+					Expect(containsSecret).To(Equal(true))
+				}
 			}
 		})
 

@@ -8,8 +8,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
-
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
@@ -18,12 +16,18 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type mockStorageInitValidate struct {
+	ws    *mocks.MockwsReadWriter
+	store *mocks.Mockstore
+}
+
 func TestStorageInitOpts_Validate(t *testing.T) {
 	testCases := map[string]struct {
 		inAppName           string
 		inStorageType       string
 		inSvcName           string
 		inStorageName       string
+		inLifecycle         string
 		inPartition         string
 		inSort              string
 		inLSISorts          []string
@@ -32,168 +36,52 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 		inServerlessVersion string
 		inEngine            string
 
-		mockWs    func(m *mocks.MockwsAddonManager)
-		mockStore func(m *mocks.Mockstore)
-
+		mock      func(m *mockStorageInitValidate)
 		wantedErr error
 	}{
 		"no app in workspace": {
-			mockWs:    func(m *mocks.MockwsAddonManager) {},
-			mockStore: func(m *mocks.Mockstore) {},
-
+			mock:      func(m *mockStorageInitValidate) {},
 			wantedErr: errNoAppInWorkspace,
 		},
-		"svc not in workspace": {
-			mockWs: func(m *mocks.MockwsAddonManager) {
-				m.EXPECT().ListWorkloads().Return([]string{"bad", "workspace"}, nil)
-			},
-			mockStore: func(m *mocks.Mockstore) {},
-
-			inAppName:     "bowie",
-			inStorageType: s3StorageType,
-			inSvcName:     "frontend",
-			inStorageName: "my-bucket",
-			wantedErr:     errors.New("workload frontend not found in the workspace"),
-		},
-		"workspace error": {
-			mockWs: func(m *mocks.MockwsAddonManager) {
-				m.EXPECT().ListWorkloads().Return(nil, errors.New("wanted err"))
-			},
-			mockStore: func(m *mocks.Mockstore) {},
-
-			inAppName:     "bowie",
-			inStorageType: s3StorageType,
-			inSvcName:     "frontend",
-			inStorageName: "my-bucket",
-			wantedErr:     errors.New("retrieve local workload names: wanted err"),
-		},
-		"successfully validates valid s3 bucket name": {
-			mockWs:        func(m *mocks.MockwsAddonManager) {},
-			mockStore:     func(m *mocks.Mockstore) {},
-			inAppName:     "bowie",
-			inStorageType: s3StorageType,
-			inStorageName: "my-bucket.4",
-			wantedErr:     nil,
-		},
-		"successfully validates valid DDB table name": {
-			mockWs:        func(m *mocks.MockwsAddonManager) {},
-			mockStore:     func(m *mocks.Mockstore) {},
-			inAppName:     "bowie",
-			inStorageType: dynamoDBStorageType,
-			inStorageName: "my-cool_table.3",
-			wantedErr:     nil,
-		},
-		"default to ddb name validation when storage type unspecified": {
-			mockWs:        func(m *mocks.MockwsAddonManager) {},
-			mockStore:     func(m *mocks.Mockstore) {},
-			inAppName:     "bowie",
-			inStorageType: "",
-			inStorageName: "my-cool_table.3",
-			wantedErr:     nil,
-		},
-		"s3 bad character": {
-			mockWs:        func(m *mocks.MockwsAddonManager) {},
-			mockStore:     func(m *mocks.Mockstore) {},
-			inAppName:     "bowie",
-			inStorageType: s3StorageType,
-			inStorageName: "mybadbucket???",
-			wantedErr:     errValueBadFormatWithPeriod,
-		},
-		"ddb bad character": {
-			mockWs:        func(m *mocks.MockwsAddonManager) {},
-			mockStore:     func(m *mocks.Mockstore) {},
-			inAppName:     "bowie",
-			inStorageType: dynamoDBStorageType,
-			inStorageName: "badTable!!!",
-			wantedErr:     errValueBadFormatWithPeriodUnderscore,
-		},
-		"successfully validates partition key flag": {
-			mockWs:        func(m *mocks.MockwsAddonManager) {},
-			mockStore:     func(m *mocks.Mockstore) {},
-			inAppName:     "bowie",
-			inStorageType: dynamoDBStorageType,
-			inPartition:   "points:String",
-			wantedErr:     nil,
-		},
-		"successfully validates sort key flag": {
-			mockWs:        func(m *mocks.MockwsAddonManager) {},
-			mockStore:     func(m *mocks.Mockstore) {},
-			inAppName:     "bowie",
-			inStorageType: dynamoDBStorageType,
-			inSort:        "userID:Number",
-			wantedErr:     nil,
-		},
-		"successfully validates LSI": {
-			mockWs:        func(m *mocks.MockwsAddonManager) {},
-			mockStore:     func(m *mocks.Mockstore) {},
-			inAppName:     "bowie",
-			inStorageType: dynamoDBStorageType,
-			inLSISorts:    []string{"userID:Number", "data:Binary"},
-			wantedErr:     nil,
-		},
-		"success on providing --no-sort": {
-			mockWs:        func(m *mocks.MockwsAddonManager) {},
-			mockStore:     func(m *mocks.Mockstore) {},
-			inAppName:     "bowie",
-			inStorageType: dynamoDBStorageType,
-			inNoSort:      true,
-			wantedErr:     nil,
-		},
-		"success on providing --no-lsi": {
-			mockWs:        func(m *mocks.MockwsAddonManager) {},
-			mockStore:     func(m *mocks.Mockstore) {},
-			inAppName:     "bowie",
-			inStorageType: dynamoDBStorageType,
-			inNoLSI:       true,
-			wantedErr:     nil,
+		"bad lifecycle option": {
+			inAppName:   "bowie",
+			inLifecycle: "weird input",
+			mock:        func(m *mockStorageInitValidate) {},
+			wantedErr:   errors.New(`invalid lifecycle; must be one of "workload" or "environment"`),
 		},
 		"fails when --no-lsi and --lsi are both provided": {
-			mockWs:        func(m *mocks.MockwsAddonManager) {},
-			mockStore:     func(m *mocks.Mockstore) {},
 			inAppName:     "bowie",
 			inStorageType: dynamoDBStorageType,
 			inLSISorts:    []string{"userID:Number"},
 			inNoLSI:       true,
+			mock:          func(m *mockStorageInitValidate) {},
 			wantedErr:     fmt.Errorf("validate LSI configuration: cannot specify --no-lsi and --lsi options at once"),
 		},
 		"fails when --no-sort and --lsi are both provided": {
-			mockWs:        func(m *mocks.MockwsAddonManager) {},
-			mockStore:     func(m *mocks.Mockstore) {},
 			inAppName:     "bowie",
 			inStorageType: dynamoDBStorageType,
 			inLSISorts:    []string{"userID:Number"},
 			inNoSort:      true,
+			mock:          func(m *mockStorageInitValidate) {},
 			wantedErr:     fmt.Errorf("validate LSI configuration: cannot specify --no-sort and --lsi options at once"),
 		},
-		"invalid database engine type": {
-			inAppName: "meow",
-			inEngine:  "mysql",
-
-			mockWs:    func(m *mocks.MockwsAddonManager) {},
-			mockStore: func(m *mocks.Mockstore) {},
-
-			wantedErr: errors.New("invalid engine type mysql: must be one of \"MySQL\", \"PostgreSQL\""),
-		},
 		"successfully validates aurora serverless version v1": {
-			mockWs:              func(m *mocks.MockwsAddonManager) {},
-			mockStore:           func(m *mocks.Mockstore) {},
 			inAppName:           "bowie",
 			inStorageType:       rdsStorageType,
 			inServerlessVersion: auroraServerlessVersionV1,
+			mock:                func(m *mockStorageInitValidate) {},
 		},
 		"successfully validates aurora serverless version v2": {
-			mockWs:              func(m *mocks.MockwsAddonManager) {},
-			mockStore:           func(m *mocks.Mockstore) {},
 			inAppName:           "bowie",
 			inStorageType:       rdsStorageType,
 			inServerlessVersion: auroraServerlessVersionV2,
+			mock:                func(m *mockStorageInitValidate) {},
 		},
 		"invalid aurora serverless version": {
-			mockWs:              func(m *mocks.MockwsAddonManager) {},
-			mockStore:           func(m *mocks.Mockstore) {},
 			inAppName:           "bowie",
 			inStorageType:       rdsStorageType,
 			inServerlessVersion: "weird-serverless-version",
+			mock:                func(m *mockStorageInitValidate) {},
 			wantedErr:           errors.New("invalid Aurora Serverless version weird-serverless-version: must be one of \"v1\", \"v2\""),
 		},
 	}
@@ -202,15 +90,17 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 			// GIVEN
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			mockWs := mocks.NewMockwsAddonManager(ctrl)
-			mockStore := mocks.NewMockstore(ctrl)
-			tc.mockWs(mockWs)
-			tc.mockStore(mockStore)
+			m := mockStorageInitValidate{
+				ws:    mocks.NewMockwsReadWriter(ctrl),
+				store: mocks.NewMockstore(ctrl),
+			}
+			tc.mock(&m)
 			opts := initStorageOpts{
 				initStorageVars: initStorageVars{
 					storageType:             tc.inStorageType,
 					storageName:             tc.inStorageName,
 					workloadName:            tc.inSvcName,
+					lifecycle:               tc.inLifecycle,
 					partitionKey:            tc.inPartition,
 					sortKey:                 tc.inSort,
 					lsiSorts:                tc.inLSISorts,
@@ -220,8 +110,8 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 					rdsEngine:               tc.inEngine,
 				},
 				appName: tc.inAppName,
-				ws:      mockWs,
-				store:   mockStore,
+				ws:      m.ws,
+				store:   m.store,
 			}
 
 			// WHEN
@@ -237,23 +127,196 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 	}
 }
 
+type mockStorageInitAsk struct {
+	prompt *mocks.Mockprompter
+	sel    *mocks.MockwsSelector
+	ws     *mocks.MockwsReadWriter
+}
+
 func TestStorageInitOpts_Ask(t *testing.T) {
 	const (
-		wantedAppName      = "ddos"
-		wantedSvcName      = "frontend"
-		wantedBucketName   = "coolBucket"
-		wantedTableName    = "coolTable"
-		wantedPartitionKey = "DogName:String"
-		wantedSortKey      = "PhotoId:Number"
-
-		wantedServerlessVersion = auroraServerlessVersionV2
-		wantedInitialDBName     = "mydb"
-		wantedDBEngine          = engineTypePostgreSQL
+		wantedAppName    = "bowie"
+		wantedSvcName    = "frontend"
+		wantedBucketName = "cool-bucket"
 	)
 	testCases := map[string]struct {
-		inAppName     string
 		inStorageType string
 		inSvcName     string
+		inStorageName string
+
+		mock func(m *mockStorageInitAsk)
+
+		wantedErr  error
+		wantedVars *initStorageVars
+	}{
+		"invalid storage type": {
+			inStorageType: "box",
+			inSvcName:     "frontend",
+			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil).AnyTimes()
+			},
+			wantedErr: errors.New(`invalid storage type box: must be one of "DynamoDB", "S3", "Aurora"`),
+		},
+		"asks for storage type": {
+			inSvcName:     wantedSvcName,
+			inStorageName: wantedBucketName,
+			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil).AnyTimes()
+				m.prompt.EXPECT().SelectOption(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(s3StorageType, nil)
+			},
+			wantedVars: &initStorageVars{
+				storageType:  s3StorageType,
+				storageName:  wantedBucketName,
+				workloadName: wantedSvcName,
+			},
+		},
+		"error if storage type not gotten": {
+			inSvcName:     wantedSvcName,
+			inStorageName: wantedBucketName,
+
+			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil).AnyTimes()
+				m.prompt.EXPECT().SelectOption(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("", errors.New("some error"))
+			},
+			wantedErr: fmt.Errorf("select storage type: some error"),
+		},
+		"error checking if svc is in workspace": {
+			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().WorkloadExists(gomock.Eq("frontend")).Return(false, errors.New("wanted err"))
+			},
+			inStorageType: s3StorageType,
+			inSvcName:     "frontend",
+			inStorageName: "my-bucket",
+			wantedErr:     errors.New("check if frontend exists in the workspace: wanted err"),
+		},
+		"invalid svc not in workspace": {
+			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().WorkloadExists(gomock.Eq("frontend")).Return(false, nil)
+			},
+			inStorageType: s3StorageType,
+			inSvcName:     "frontend",
+			inStorageName: "my-bucket",
+			wantedErr:     errors.New("workload frontend not found in the workspace"),
+		},
+		"asks for storage workload": {
+			inStorageName: wantedBucketName,
+			inStorageType: s3StorageType,
+			mock: func(m *mockStorageInitAsk) {
+				m.sel.EXPECT().Workload(gomock.Eq(storageInitSvcPrompt), gomock.Any()).Return(wantedSvcName, nil)
+			},
+			wantedVars: &initStorageVars{
+				storageType:  s3StorageType,
+				storageName:  wantedBucketName,
+				workloadName: wantedSvcName,
+			},
+		},
+		"error if svc not returned": {
+			inStorageName: wantedBucketName,
+			inStorageType: s3StorageType,
+			mock: func(m *mockStorageInitAsk) {
+				m.sel.EXPECT().Workload(gomock.Any(), gomock.Any()).Return("", errors.New("some error"))
+
+			},
+			wantedErr: fmt.Errorf("retrieve local workload names: some error"),
+		},
+		"successfully validates valid s3 bucket name": {
+			inSvcName:     "frontend",
+			inStorageType: s3StorageType,
+			inStorageName: "my-bucket.4",
+			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil).AnyTimes()
+			},
+		},
+		"invalid s3 bucket name": {
+			inSvcName:     "frontend",
+			inStorageType: s3StorageType,
+			inStorageName: "mybadbucket???",
+			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil).AnyTimes()
+			},
+			wantedErr: fmt.Errorf("validate storage name: %w", errValueBadFormatWithPeriod),
+		},
+		"asks for storage name": {
+			inSvcName:     wantedSvcName,
+			inStorageType: s3StorageType,
+			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+				m.prompt.EXPECT().Get(gomock.Eq(fmt.Sprintf(fmtStorageInitNamePrompt, color.HighlightUserInput(s3BucketFriendlyText))),
+					gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(wantedBucketName, nil)
+			},
+			wantedVars: &initStorageVars{
+				storageType:  s3StorageType,
+				storageName:  wantedBucketName,
+				workloadName: wantedSvcName,
+			},
+		},
+		"error if storage name not returned": {
+			inSvcName:     wantedSvcName,
+			inStorageType: s3StorageType,
+
+			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+				m.prompt.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("", errors.New("some error"))
+			},
+			wantedErr: fmt.Errorf("input storage name: some error"),
+		},
+		"no error or asks when fully specified": {
+			inSvcName:     wantedSvcName,
+			inStorageType: s3StorageType,
+			inStorageName: wantedBucketName,
+			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil).AnyTimes()
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			m := mockStorageInitAsk{
+				prompt: mocks.NewMockprompter(ctrl),
+				sel:    mocks.NewMockwsSelector(ctrl),
+				ws:     mocks.NewMockwsReadWriter(ctrl),
+			}
+			opts := initStorageOpts{
+				initStorageVars: initStorageVars{
+					storageType:  tc.inStorageType,
+					storageName:  tc.inStorageName,
+					workloadName: tc.inSvcName,
+				},
+				appName: wantedAppName,
+				sel:     m.sel,
+				prompt:  m.prompt,
+				ws:      m.ws,
+			}
+			tc.mock(&m)
+			// WHEN
+			err := opts.Ask()
+
+			// THEN
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.NoError(t, err)
+			}
+			if tc.wantedVars != nil {
+				require.Equal(t, *tc.wantedVars, opts.initStorageVars)
+			}
+		})
+	}
+}
+
+func TestStorageInitOpts_AskDDB(t *testing.T) {
+	const (
+		wantedSvcName      = "frontend"
+		wantedTableName    = "my-cool_table.3"
+		wantedPartitionKey = "DogName:String"
+		wantedSortKey      = "PhotoId:Number"
+	)
+	testCases := map[string]struct {
 		inStorageName string
 		inPartition   string
 		inSort        string
@@ -261,221 +324,94 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 		inNoLSI       bool
 		inNoSort      bool
 
-		inServerlessVersion string
-		inDBEngine          string
-		inInitialDBName     string
+		mock func(m *mockStorageInitAsk)
 
-		mockPrompt func(m *mocks.Mockprompter)
-		mockCfg    func(m *mocks.MockwsSelector)
-		mockWS     func(m *mocks.MockwsAddonManager)
-
-		wantedErr error
-
+		wantedErr  error
 		wantedVars *initStorageVars
 	}{
-		"Asks for storage type": {
-			inAppName:     wantedAppName,
-			inSvcName:     wantedSvcName,
-			inStorageName: wantedBucketName,
-
-			mockPrompt: func(m *mocks.Mockprompter) {
-				options := []prompt.Option{
-					{
-						Value: dynamoDBStorageTypeOption,
-						Hint:  "NoSQL",
-					},
-					{
-						Value: s3StorageTypeOption,
-						Hint:  "Objects",
-					},
-					{
-						Value: rdsStorageTypeOption,
-						Hint:  "SQL",
-					},
-				}
-				m.EXPECT().SelectOption(gomock.Any(), gomock.Any(), gomock.Eq(options), gomock.Any()).Return(s3StorageType, nil)
+		"invalid ddb name": {
+			inStorageName: "badTable!!!",
+			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
 			},
-			mockCfg: func(m *mocks.MockwsSelector) {},
-
-			wantedErr: nil,
+			wantedErr: fmt.Errorf("validate storage name: %w", errValueBadFormatWithPeriodUnderscore),
 		},
-		"error if storage type not gotten": {
-			inAppName:     wantedAppName,
-			inSvcName:     wantedSvcName,
-			inStorageName: wantedBucketName,
-
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOption(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("", errors.New("some error"))
+		"invalid partition key": {
+			inStorageName: wantedTableName,
+			inPartition:   "bipartite",
+			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
 			},
-			mockCfg: func(m *mocks.MockwsSelector) {},
-
-			wantedErr: fmt.Errorf("select storage type: some error"),
-		},
-		"asks for storage workload": {
-			inAppName:     wantedAppName,
-			inStorageName: wantedBucketName,
-			inStorageType: s3StorageType,
-
-			mockPrompt: func(m *mocks.Mockprompter) {},
-			mockCfg: func(m *mocks.MockwsSelector) {
-				m.EXPECT().Workload(gomock.Eq(storageInitSvcPrompt), gomock.Any()).Return(wantedSvcName, nil)
-			},
-
-			wantedErr: nil,
-		},
-		"error if svc not returned": {
-			inAppName:     wantedAppName,
-			inStorageName: wantedBucketName,
-			inStorageType: s3StorageType,
-
-			mockPrompt: func(m *mocks.Mockprompter) {},
-			mockCfg: func(m *mocks.MockwsSelector) {
-				m.EXPECT().Workload(gomock.Any(), gomock.Any()).Return("", errors.New("some error"))
-			},
-
-			wantedErr: fmt.Errorf("retrieve local workload names: some error"),
-		},
-		"asks for storage name": {
-			inAppName:     wantedAppName,
-			inSvcName:     wantedSvcName,
-			inStorageType: s3StorageType,
-
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Get(gomock.Eq(
-					fmt.Sprintf(fmtStorageInitNamePrompt,
-						color.HighlightUserInput(s3BucketFriendlyText),
-					),
-				),
-					gomock.Any(),
-					gomock.Any(),
-					gomock.Any(),
-				).Return(wantedBucketName, nil)
-			},
-			mockCfg: func(m *mocks.MockwsSelector) {},
-
-			wantedErr: nil,
-		},
-		"Asks for cluster name for RDS storage": {
-			inAppName:           wantedAppName,
-			inSvcName:           wantedSvcName,
-			inStorageType:       rdsStorageType,
-			inServerlessVersion: wantedServerlessVersion,
-			inDBEngine:          wantedDBEngine,
-			inInitialDBName:     wantedInitialDBName,
-
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Get(
-					gomock.Eq("What would you like to name this Database Cluster?"),
-					gomock.Any(),
-					gomock.Any(),
-					gomock.Any(),
-				).Return(wantedBucketName, nil)
-			},
-			mockCfg: func(m *mocks.MockwsSelector) {},
-			mockWS: func(m *mocks.MockwsAddonManager) {
-				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(workspace.WorkloadManifest("type: Load Balanced Web Service"), nil)
-			},
-
-			wantedErr: nil,
-			wantedVars: &initStorageVars{
-				storageType:             rdsStorageType,
-				storageName:             wantedBucketName,
-				workloadName:            wantedSvcName,
-				auroraServerlessVersion: wantedServerlessVersion,
-				rdsEngine:               wantedDBEngine,
-				rdsInitialDBName:        wantedInitialDBName,
-			},
-		},
-		"error if storage name not returned": {
-			inAppName:     wantedAppName,
-			inSvcName:     wantedSvcName,
-			inStorageType: s3StorageType,
-
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("", errors.New("some error"))
-			},
-			mockCfg: func(m *mocks.MockwsSelector) {},
-
-			wantedErr: fmt.Errorf("input storage name: some error"),
+			wantedErr: errors.New("validate partition key: value must be of the form <name>:<T> where T is one of S, N, or B"),
 		},
 		"asks for partition key if not specified": {
-			inAppName:     wantedAppName,
-			inSvcName:     wantedSvcName,
-			inStorageType: dynamoDBStorageType,
 			inStorageName: wantedTableName,
 			inSort:        wantedSortKey,
 			inNoLSI:       true,
-
-			mockPrompt: func(m *mocks.Mockprompter) {
+			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
 				keyPrompt := fmt.Sprintf(fmtStorageInitDDBKeyPrompt,
 					color.HighlightUserInput("partition key"),
 					color.HighlightUserInput(dynamoDBStorageType),
 				)
 				keyTypePrompt := fmt.Sprintf(fmtStorageInitDDBKeyTypePrompt, ddbKeyString)
-				m.EXPECT().Get(gomock.Eq(keyPrompt),
+				m.prompt.EXPECT().Get(gomock.Eq(keyPrompt),
 					gomock.Any(),
 					gomock.Any(),
 					gomock.Any(),
 				).Return(wantedPartitionKey, nil)
-				m.EXPECT().SelectOne(gomock.Eq(keyTypePrompt),
+				m.prompt.EXPECT().SelectOne(gomock.Eq(keyTypePrompt),
 					gomock.Any(),
 					attributeTypes,
 					gomock.Any(),
 				).Return(ddbStringType, nil)
 			},
-			mockCfg: func(m *mocks.MockwsSelector) {},
-
-			wantedErr: nil,
 		},
 		"error if fail to return partition key": {
-			inAppName:     wantedAppName,
-			inSvcName:     wantedSvcName,
-			inStorageType: dynamoDBStorageType,
 			inStorageName: wantedTableName,
-
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Get(gomock.Any(),
+			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+				m.prompt.EXPECT().Get(gomock.Any(),
 					gomock.Any(),
 					gomock.Any(),
 					gomock.Any(),
 				).Return("", errors.New("some error"))
 			},
-			mockCfg:   func(m *mocks.MockwsSelector) {},
 			wantedErr: fmt.Errorf("get DDB partition key: some error"),
 		},
 		"error if fail to return partition key type": {
-			inAppName:     wantedAppName,
-			inSvcName:     wantedSvcName,
-			inStorageType: dynamoDBStorageType,
 			inStorageName: wantedTableName,
-			inSort:        wantedSortKey,
-
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Get(gomock.Any(),
+			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+				m.prompt.EXPECT().Get(gomock.Any(),
 					gomock.Any(),
 					gomock.Any(),
 					gomock.Any(),
 				).Return(wantedPartitionKey, nil)
-				m.EXPECT().SelectOne(gomock.Any(),
+				m.prompt.EXPECT().SelectOne(gomock.Any(),
 					gomock.Any(),
 					gomock.Any(),
 					gomock.Any(),
 				).Return("", errors.New("some error"))
 			},
-			mockCfg: func(m *mocks.MockwsSelector) {},
-
 			wantedErr: fmt.Errorf("get DDB partition key datatype: some error"),
 		},
+		"invalid sort key": {
+			inStorageName: wantedTableName,
+			inPartition:   wantedSortKey,
+			inSort:        "allsortofstuff",
+			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+			},
+			wantedErr: errors.New("validate sort key: value must be of the form <name>:<T> where T is one of S, N, or B"),
+		},
 		"ask for sort key if not specified": {
-			inAppName:     wantedAppName,
-			inSvcName:     wantedSvcName,
-			inStorageType: dynamoDBStorageType,
 			inStorageName: wantedTableName,
 			inPartition:   wantedPartitionKey,
 			inNoLSI:       true,
-
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Confirm(
+			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+				m.prompt.EXPECT().Confirm(
 					gomock.Eq(storageInitDDBSortKeyConfirm),
 					gomock.Any(),
 					gomock.Any(),
@@ -485,164 +421,138 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 					color.HighlightUserInput(dynamoDBStorageType),
 				)
 				keyTypePrompt := fmt.Sprintf(fmtStorageInitDDBKeyTypePrompt, ddbKeyString)
-				m.EXPECT().Get(gomock.Eq(keyPrompt),
+				m.prompt.EXPECT().Get(gomock.Eq(keyPrompt),
 					gomock.Any(),
 					gomock.Any(),
 					gomock.Any(),
 				).Return(wantedPartitionKey, nil)
-				m.EXPECT().SelectOne(gomock.Eq(keyTypePrompt),
+				m.prompt.EXPECT().SelectOne(gomock.Eq(keyTypePrompt),
 					gomock.Any(),
 					attributeTypes,
 					gomock.Any(),
 				).Return(ddbStringType, nil)
 			},
-			mockCfg: func(m *mocks.MockwsSelector) {},
-
-			wantedErr: nil,
 		},
 		"error if fail to confirm add sort key": {
-			inAppName:     wantedAppName,
-			inSvcName:     wantedSvcName,
-			inStorageType: dynamoDBStorageType,
 			inStorageName: wantedTableName,
 			inPartition:   wantedPartitionKey,
-
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Confirm(
+			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+				m.prompt.EXPECT().Confirm(
 					gomock.Eq(storageInitDDBSortKeyConfirm),
 					gomock.Any(),
 					gomock.Any(),
 				).Return(false, errors.New("some error"))
 			},
-			mockCfg:   func(m *mocks.MockwsSelector) {},
 			wantedErr: fmt.Errorf("confirm DDB sort key: some error"),
 		},
 		"error if fail to return sort key": {
-			inAppName:     wantedAppName,
-			inSvcName:     wantedSvcName,
-			inStorageType: dynamoDBStorageType,
 			inStorageName: wantedTableName,
 			inPartition:   wantedPartitionKey,
-
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Confirm(
+			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+				m.prompt.EXPECT().Confirm(
 					gomock.Eq(storageInitDDBSortKeyConfirm),
 					gomock.Any(),
 					gomock.Any(),
 				).Return(true, nil)
-				m.EXPECT().Get(gomock.Any(),
+				m.prompt.EXPECT().Get(gomock.Any(),
 					gomock.Any(),
 					gomock.Any(),
 					gomock.Any(),
 				).Return("", errors.New("some error"))
 			},
-			mockCfg: func(m *mocks.MockwsSelector) {},
-
 			wantedErr: fmt.Errorf("get DDB sort key: some error"),
 		},
 		"error if fail to return sort key type": {
-			inAppName:     wantedAppName,
-			inSvcName:     wantedSvcName,
-			inStorageType: dynamoDBStorageType,
 			inStorageName: wantedTableName,
 			inPartition:   wantedPartitionKey,
-
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Confirm(
+			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+				m.prompt.EXPECT().Confirm(
 					gomock.Eq(storageInitDDBSortKeyConfirm),
 					gomock.Any(),
 					gomock.Any(),
 				).Return(true, nil)
-				m.EXPECT().Get(gomock.Any(),
+				m.prompt.EXPECT().Get(gomock.Any(),
 					gomock.Any(),
 					gomock.Any(),
 					gomock.Any(),
 				).Return(wantedPartitionKey, nil)
-				m.EXPECT().SelectOne(gomock.Any(),
+				m.prompt.EXPECT().SelectOne(gomock.Any(),
 					gomock.Any(),
 					gomock.Any(),
 					gomock.Any(),
 				).Return("", errors.New("some error"))
 			},
-			mockCfg: func(m *mocks.MockwsSelector) {},
-
 			wantedErr: fmt.Errorf("get DDB sort key datatype: some error"),
 		},
 		"don't ask for sort key if no-sort specified": {
-			inAppName:     wantedAppName,
-			inSvcName:     wantedSvcName,
-			inStorageType: dynamoDBStorageType,
 			inStorageName: wantedTableName,
 			inPartition:   wantedPartitionKey,
 			inNoSort:      true,
-			inNoLSI:       true,
-
-			mockPrompt: func(m *mocks.Mockprompter) {},
-			mockCfg:    func(m *mocks.MockwsSelector) {},
-
-			wantedErr: nil,
+			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+				m.prompt.EXPECT().Confirm(
+					gomock.Eq(storageInitDDBSortKeyConfirm),
+					gomock.Any(),
+					gomock.Any(),
+				).Times(0)
+			},
 		},
 		"ok if --no-lsi and --sort-key are both specified": {
-			inAppName:     wantedAppName,
-			inSvcName:     wantedSvcName,
-			inStorageType: dynamoDBStorageType,
 			inStorageName: wantedTableName,
 			inPartition:   wantedPartitionKey,
 			inSort:        wantedSortKey,
 			inNoLSI:       true,
-
-			mockPrompt: func(m *mocks.Mockprompter) {},
-			mockCfg:    func(m *mocks.MockwsSelector) {},
-			wantedErr:  nil,
+			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+			},
 		},
 		"don't ask about LSI if no-sort is specified": {
-			inAppName:     wantedAppName,
-			inSvcName:     wantedSvcName,
-			inStorageType: dynamoDBStorageType,
 			inStorageName: wantedTableName,
 			inPartition:   wantedPartitionKey,
 			inNoSort:      true,
-
-			mockPrompt: func(m *mocks.Mockprompter) {},
-			mockCfg:    func(m *mocks.MockwsSelector) {},
-
-			wantedErr: nil,
+			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+				m.prompt.EXPECT().Confirm(
+					gomock.Eq(storageInitDDBLSIPrompt),
+					gomock.Eq(storageInitDDBLSIHelp),
+					gomock.Any(),
+				).Times(0)
+			},
 		},
 		"ask for LSI if not specified": {
-			inAppName:     wantedAppName,
-			inSvcName:     wantedSvcName,
-			inStorageType: dynamoDBStorageType,
 			inStorageName: wantedTableName,
 			inPartition:   wantedPartitionKey,
 			inSort:        wantedSortKey,
-
-			mockPrompt: func(m *mocks.Mockprompter) {
+			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
 				lsiTypePrompt := fmt.Sprintf(fmtStorageInitDDBKeyTypePrompt, color.Emphasize("alternate sort key"))
 				lsiTypeHelp := fmt.Sprintf(fmtStorageInitDDBKeyTypeHelp, "alternate sort key")
-				m.EXPECT().Confirm(
+				m.prompt.EXPECT().Confirm(
 					gomock.Eq(storageInitDDBLSIPrompt),
 					gomock.Eq(storageInitDDBLSIHelp),
 					gomock.Any(),
 				).Return(true, nil)
-				m.EXPECT().Get(
+				m.prompt.EXPECT().Get(
 					gomock.Eq(storageInitDDBLSINamePrompt),
 					gomock.Eq(storageInitDDBLSINameHelp),
 					gomock.Any(),
 					gomock.Any(),
 				).Return("Email", nil)
-				m.EXPECT().SelectOne(
+				m.prompt.EXPECT().SelectOne(
 					gomock.Eq(lsiTypePrompt),
 					gomock.Eq(lsiTypeHelp),
 					gomock.Eq(attributeTypes),
 					gomock.Any(),
 				).Return(ddbStringType, nil)
-				m.EXPECT().Confirm(
+				m.prompt.EXPECT().Confirm(
 					gomock.Eq(storageInitDDBMoreLSIPrompt),
 					gomock.Eq(storageInitDDBLSIHelp),
 					gomock.Any(),
 				).Return(false, nil)
 			},
-			mockCfg: func(m *mocks.MockwsSelector) {},
 			wantedVars: &initStorageVars{
 				storageName:  wantedTableName,
 				workloadName: wantedSvcName,
@@ -655,21 +565,17 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			},
 		},
 		"noLSI is set correctly if no lsis specified": {
-			inAppName:     wantedAppName,
-			inSvcName:     wantedSvcName,
-			inStorageType: dynamoDBStorageType,
 			inStorageName: wantedTableName,
 			inPartition:   wantedPartitionKey,
 			inSort:        wantedSortKey,
-
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Confirm(
+			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+				m.prompt.EXPECT().Confirm(
 					gomock.Eq(storageInitDDBLSIPrompt),
 					gomock.Eq(storageInitDDBLSIHelp),
 					gomock.Any(),
 				).Return(false, nil)
 			},
-			mockCfg: func(m *mocks.MockwsSelector) {},
 			wantedVars: &initStorageVars{
 				storageName:  wantedTableName,
 				workloadName: wantedSvcName,
@@ -681,21 +587,16 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			},
 		},
 		"noLSI is set correctly if no sort key": {
-			inAppName:     wantedAppName,
-			inSvcName:     wantedSvcName,
-			inStorageType: dynamoDBStorageType,
 			inStorageName: wantedTableName,
 			inPartition:   wantedPartitionKey,
-
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Confirm(
+			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+				m.prompt.EXPECT().Confirm(
 					gomock.Eq(storageInitDDBSortKeyConfirm),
 					gomock.Eq(storageInitDDBSortKeyHelp),
 					gomock.Any(),
 				).Return(false, nil)
 			},
-			mockCfg: func(m *mocks.MockwsSelector) {},
-
 			wantedVars: &initStorageVars{
 				storageName:  wantedTableName,
 				workloadName: wantedSvcName,
@@ -707,183 +608,80 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			},
 		},
 		"error if lsi name misspecified": {
-			inAppName:     wantedAppName,
-			inSvcName:     wantedSvcName,
-			inStorageType: dynamoDBStorageType,
 			inStorageName: wantedTableName,
 			inPartition:   wantedPartitionKey,
 			inSort:        wantedSortKey,
-
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Confirm(
+			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+				m.prompt.EXPECT().Confirm(
 					gomock.Eq(storageInitDDBLSIPrompt),
 					gomock.Any(),
 					gomock.Any(),
 				).Return(true, nil)
-				m.EXPECT().Get(gomock.Any(),
+				m.prompt.EXPECT().Get(gomock.Any(),
 					gomock.Any(),
 					gomock.Any(),
 					gomock.Any(),
 				).Return("", errors.New("some error"))
 			},
-			mockCfg: func(m *mocks.MockwsSelector) {},
-
 			wantedErr: fmt.Errorf("get DDB alternate sort key name: some error"),
 		},
 		"errors if fail to confirm lsi": {
-			inAppName:     wantedAppName,
-			inSvcName:     wantedSvcName,
-			inStorageType: dynamoDBStorageType,
 			inStorageName: wantedTableName,
 			inPartition:   wantedPartitionKey,
 			inSort:        wantedSortKey,
-
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Confirm(
+			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+				m.prompt.EXPECT().Confirm(
 					gomock.Any(),
 					gomock.Any(),
 					gomock.Any(),
 				).Return(false, errors.New("some error"))
 			},
-			mockCfg: func(m *mocks.MockwsSelector) {},
-
 			wantedErr: fmt.Errorf("confirm add alternate sort key: some error"),
 		},
 		"error if lsi type misspecified": {
-			inAppName:     wantedAppName,
-			inSvcName:     wantedSvcName,
-			inStorageType: dynamoDBStorageType,
 			inStorageName: wantedTableName,
 			inPartition:   wantedPartitionKey,
 			inSort:        wantedSortKey,
-
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Confirm(
+			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+				m.prompt.EXPECT().Confirm(
 					gomock.Any(),
 					gomock.Any(),
 					gomock.Any(),
 				).Return(true, nil)
-				m.EXPECT().Get(gomock.Any(),
+				m.prompt.EXPECT().Get(gomock.Any(),
 					gomock.Any(),
 					gomock.Any(),
 					gomock.Any(),
 				).Return("cool", nil)
-				m.EXPECT().SelectOne(gomock.Any(),
+				m.prompt.EXPECT().SelectOne(gomock.Any(),
 					gomock.Any(),
 					gomock.Any(),
 					gomock.Any(),
 				).Return("", errors.New("some error"))
 
 			},
-			mockCfg: func(m *mocks.MockwsSelector) {},
-
 			wantedErr: fmt.Errorf("get DDB alternate sort key type: some error"),
 		},
-		"no error or asks when fully specified": {
-			inAppName:     wantedAppName,
-			inSvcName:     wantedSvcName,
-			inStorageType: dynamoDBStorageType,
+		"do not ask for ddb config when fully specified": {
 			inStorageName: wantedTableName,
 			inPartition:   wantedPartitionKey,
 			inSort:        wantedSortKey,
-			inLSISorts:    []string{"email:String"},
-
-			mockPrompt: func(m *mocks.Mockprompter) {},
-			mockCfg:    func(m *mocks.MockwsSelector) {},
-			wantedErr:  nil,
-		},
-		"asks for engine if not specified": {
-			inAppName:     wantedAppName,
-			inSvcName:     wantedSvcName,
-			inStorageName: wantedBucketName,
-
-			inStorageType:       rdsStorageType,
-			inServerlessVersion: wantedServerlessVersion,
-			inInitialDBName:     wantedInitialDBName,
-
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(gomock.Eq(storageInitRDSDBEnginePrompt), gomock.Any(), gomock.Any(), gomock.Any()).
-					Return(wantedDBEngine, nil)
-			},
-			mockCfg: func(m *mocks.MockwsSelector) {},
-			mockWS: func(m *mocks.MockwsAddonManager) {
-				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(workspace.WorkloadManifest("type: Load Balanced Web Service"), nil)
-			},
-
-			wantedVars: &initStorageVars{
-				storageType:             rdsStorageType,
-				storageName:             wantedBucketName,
-				workloadName:            wantedSvcName,
-				auroraServerlessVersion: wantedServerlessVersion,
-				rdsInitialDBName:        wantedInitialDBName,
-				rdsEngine:               wantedDBEngine,
+			inLSISorts:    []string{"userID:Number", "data:Binary"},
+			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
 			},
 		},
-		"error if engine not gotten": {
-			inAppName:     wantedAppName,
-			inSvcName:     wantedSvcName,
-			inStorageName: wantedBucketName,
-
-			inStorageType:       rdsStorageType,
-			inServerlessVersion: wantedServerlessVersion,
-			inInitialDBName:     wantedInitialDBName,
-
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(storageInitRDSDBEnginePrompt, gomock.Any(), gomock.Any(), gomock.Any()).
-					Return("", errors.New("some error"))
+		"successfully validate flags with non-config": {
+			inStorageName: wantedTableName,
+			inPartition:   wantedPartitionKey,
+			inNoSort:      true,
+			inNoLSI:       true,
+			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
 			},
-			mockCfg: func(m *mocks.MockwsSelector) {},
-			mockWS: func(m *mocks.MockwsAddonManager) {
-				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(workspace.WorkloadManifest("type: Load Balanced Web Service"), nil)
-			},
-			wantedErr: errors.New("select database engine: some error"),
-		},
-		"asks for initial database name": {
-			inAppName:     wantedAppName,
-			inSvcName:     wantedSvcName,
-			inStorageName: wantedBucketName,
-
-			inStorageType:       rdsStorageType,
-			inServerlessVersion: wantedServerlessVersion,
-			inDBEngine:          wantedDBEngine,
-
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Get(gomock.Eq(storageInitRDSInitialDBNamePrompt), gomock.Any(), gomock.Any(), gomock.Any()).
-					Return(wantedInitialDBName, nil)
-			},
-			mockCfg: func(m *mocks.MockwsSelector) {},
-			mockWS: func(m *mocks.MockwsAddonManager) {
-				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(workspace.WorkloadManifest("type: Load Balanced Web Service"), nil)
-			},
-
-			wantedVars: &initStorageVars{
-				storageType:             rdsStorageType,
-				storageName:             wantedBucketName,
-				workloadName:            wantedSvcName,
-				auroraServerlessVersion: wantedServerlessVersion,
-				rdsEngine:               wantedDBEngine,
-				rdsInitialDBName:        wantedInitialDBName,
-			},
-		},
-		"error if initial database name not gotten": {
-			inAppName:     wantedAppName,
-			inSvcName:     wantedSvcName,
-			inStorageName: wantedBucketName,
-
-			inStorageType:       rdsStorageType,
-			inServerlessVersion: wantedServerlessVersion,
-			inDBEngine:          wantedDBEngine,
-
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Get(storageInitRDSInitialDBNamePrompt, gomock.Any(), gomock.Any(), gomock.Any()).
-					Return("", errors.New("some error"))
-			},
-			mockCfg: func(m *mocks.MockwsSelector) {},
-			mockWS: func(m *mocks.MockwsAddonManager) {
-				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(workspace.WorkloadManifest("type: Load Balanced Web Service"), nil)
-			},
-
-			wantedErr: fmt.Errorf("input initial database name: some error"),
 		},
 	}
 	for name, tc := range testCases {
@@ -892,34 +690,230 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockPrompt := mocks.NewMockprompter(ctrl)
-			mockConfig := mocks.NewMockwsSelector(ctrl)
-			mockWS := mocks.NewMockwsAddonManager(ctrl)
+			m := mockStorageInitAsk{
+				ws:     mocks.NewMockwsReadWriter(ctrl),
+				prompt: mocks.NewMockprompter(ctrl),
+			}
+			tc.mock(&m)
 			opts := initStorageOpts{
 				initStorageVars: initStorageVars{
-					storageType:  tc.inStorageType,
+					storageType:  dynamoDBStorageType,
 					storageName:  tc.inStorageName,
-					workloadName: tc.inSvcName,
+					workloadName: wantedSvcName,
 					partitionKey: tc.inPartition,
 					sortKey:      tc.inSort,
 					lsiSorts:     tc.inLSISorts,
 					noLSI:        tc.inNoLSI,
 					noSort:       tc.inNoSort,
+				},
+				appName: "ddos",
+				prompt:  m.prompt,
+				ws:      m.ws,
+			}
+			// WHEN
+			err := opts.Ask()
 
-					auroraServerlessVersion: tc.inServerlessVersion,
+			// THEN
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.NoError(t, err)
+			}
+			if tc.wantedVars != nil {
+				require.Equal(t, *tc.wantedVars, opts.initStorageVars)
+			}
+		})
+	}
+}
+
+func TestStorageInitOpts_AskRDS(t *testing.T) {
+	const (
+		wantedSvcName     = "frontend"
+		wantedClusterName = "cookie"
+
+		wantedServerlessVersion = auroraServerlessVersionV2
+		wantedInitialDBName     = "mydb"
+		wantedDBEngine          = engineTypePostgreSQL
+	)
+	testCases := map[string]struct {
+		inStorageName string
+		inPartition   string
+		inSort        string
+		inLSISorts    []string
+		inNoLSI       bool
+		inNoSort      bool
+
+		inServerlessVersion string
+		inDBEngine          string
+		inInitialDBName     string
+
+		mock func(m *mockStorageInitAsk)
+
+		wantedErr  error
+		wantedVars *initStorageVars
+	}{
+		"invalid cluster name": {
+			inStorageName: "wow!such name..:doge",
+			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(workspace.WorkloadManifest("type: Load Balanced Web Service"), nil)
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+			},
+			wantedErr: errors.New("validate storage name: value must start with a letter and followed by alphanumeric letters only"),
+		},
+		"asks for cluster name for RDS storage": {
+			inDBEngine:      wantedDBEngine,
+			inInitialDBName: wantedInitialDBName,
+
+			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+				m.prompt.EXPECT().Get(
+					gomock.Eq("What would you like to name this Database Cluster?"),
+					gomock.Any(),
+					gomock.Any(),
+					gomock.Any(),
+				).Return(wantedClusterName, nil)
+				m.ws.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(workspace.WorkloadManifest("type: Load Balanced Web Service"), nil)
+			},
+			wantedVars: &initStorageVars{
+				storageType:             rdsStorageType,
+				storageName:             wantedClusterName,
+				workloadName:            wantedSvcName,
+				auroraServerlessVersion: wantedServerlessVersion,
+				rdsEngine:               wantedDBEngine,
+				rdsInitialDBName:        wantedInitialDBName,
+			},
+		},
+		"error if cluster name not gotten": {
+			mock: func(m *mockStorageInitAsk) {
+				m.prompt.EXPECT().Get(
+					gomock.Eq("What would you like to name this Database Cluster?"),
+					gomock.Any(),
+					gomock.Any(),
+					gomock.Any(),
+				).Return("", errors.New("some error"))
+				m.ws.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(workspace.WorkloadManifest("type: Load Balanced Web Service"), nil)
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+			},
+			wantedErr: errors.New("input storage name: some error"),
+		},
+		"invalid database engine type": {
+			inStorageName: wantedClusterName,
+			inDBEngine:    "mysql",
+			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(workspace.WorkloadManifest("type: Load Balanced Web Service"), nil)
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+			},
+			wantedErr: errors.New("invalid engine type mysql: must be one of \"MySQL\", \"PostgreSQL\""),
+		},
+		"asks for engine if not specified": {
+			inStorageName:   wantedClusterName,
+			inInitialDBName: wantedInitialDBName,
+			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+				m.ws.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(workspace.WorkloadManifest("type: Load Balanced Web Service"), nil)
+				m.prompt.EXPECT().SelectOne(gomock.Eq(storageInitRDSDBEnginePrompt), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(wantedDBEngine, nil)
+
+			},
+			wantedVars: &initStorageVars{
+				storageType:             rdsStorageType,
+				storageName:             wantedClusterName,
+				workloadName:            wantedSvcName,
+				auroraServerlessVersion: wantedServerlessVersion,
+				rdsInitialDBName:        wantedInitialDBName,
+				rdsEngine:               wantedDBEngine,
+			},
+		},
+		"error if engine not gotten": {
+			inStorageName:   wantedClusterName,
+			inInitialDBName: wantedInitialDBName,
+			mock: func(m *mockStorageInitAsk) {
+				m.prompt.EXPECT().SelectOne(storageInitRDSDBEnginePrompt, gomock.Any(), gomock.Any(), gomock.Any()).
+					Return("", errors.New("some error"))
+				m.ws.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(workspace.WorkloadManifest("type: Load Balanced Web Service"), nil)
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+
+			},
+			wantedErr: errors.New("select database engine: some error"),
+		},
+		"invalid initial database name": {
+			inStorageName:   wantedClusterName,
+			inDBEngine:      wantedDBEngine,
+			inInitialDBName: "wow!suchweird??name!",
+
+			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(workspace.WorkloadManifest("type: Load Balanced Web Service"), nil)
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+			},
+			wantedErr: errors.New("invalid database name wow!suchweird??name!: must contain only alphanumeric characters and underscore; should start with a letter"),
+		},
+		"asks for initial database name": {
+			inStorageName: wantedClusterName,
+			inDBEngine:    wantedDBEngine,
+
+			mock: func(m *mockStorageInitAsk) {
+				m.prompt.EXPECT().Get(gomock.Eq(storageInitRDSInitialDBNamePrompt), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(wantedInitialDBName, nil)
+				m.ws.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(workspace.WorkloadManifest("type: Load Balanced Web Service"), nil)
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+			},
+			wantedVars: &initStorageVars{
+				storageType:             rdsStorageType,
+				storageName:             wantedClusterName,
+				workloadName:            wantedSvcName,
+				auroraServerlessVersion: wantedServerlessVersion,
+				rdsEngine:               wantedDBEngine,
+				rdsInitialDBName:        wantedInitialDBName,
+			},
+		},
+		"error if initial database name not gotten": {
+			inStorageName: wantedClusterName,
+			inDBEngine:    wantedDBEngine,
+
+			mock: func(m *mockStorageInitAsk) {
+				m.prompt.EXPECT().Get(storageInitRDSInitialDBNamePrompt, gomock.Any(), gomock.Any(), gomock.Any()).
+					Return("", errors.New("some error"))
+				m.ws.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(workspace.WorkloadManifest("type: Load Balanced Web Service"), nil)
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+
+			},
+			wantedErr: fmt.Errorf("input initial database name: some error"),
+		},
+		"successfully validate rds with full config": {
+			inStorageName:   wantedClusterName,
+			inDBEngine:      wantedDBEngine,
+			inInitialDBName: wantedInitialDBName,
+			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+				m.ws.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(workspace.WorkloadManifest("type: Load Balanced Web Service"), nil)
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			m := mockStorageInitAsk{
+				prompt: mocks.NewMockprompter(ctrl),
+				ws:     mocks.NewMockwsReadWriter(ctrl),
+			}
+			opts := initStorageOpts{
+				initStorageVars: initStorageVars{
+					storageType:  rdsStorageType,
+					workloadName: wantedSvcName,
+					storageName:  tc.inStorageName,
+
+					auroraServerlessVersion: wantedServerlessVersion,
 					rdsEngine:               tc.inDBEngine,
 					rdsInitialDBName:        tc.inInitialDBName,
 				},
-				appName: tc.inAppName,
-				sel:     mockConfig,
-				prompt:  mockPrompt,
-				ws:      mockWS,
+				appName: "ddos",
+				prompt:  m.prompt,
+				ws:      m.ws,
 			}
-			tc.mockPrompt(mockPrompt)
-			tc.mockCfg(mockConfig)
-			if tc.mockWS != nil {
-				tc.mockWS(mockWS)
-			}
+			tc.mock(&m)
 			// WHEN
 			err := opts.Ask()
 
@@ -961,25 +955,30 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 		inInitialDBName     string
 		inParameterGroup    string
 
-		mockWs    func(m *mocks.MockwsAddonManager)
-		mockStore func(m *mocks.Mockstore)
+		inLifecycle string
+
+		mockWS         func(m *mocks.MockwsReadWriter)
+		mockStore      func(m *mocks.Mockstore)
+		mockWkldAbsent bool
 
 		wantedErr error
 	}{
-		"happy calls for S3": {
+		"happy calls for wkld S3": {
 			inAppName:     wantedAppName,
 			inStorageType: s3StorageType,
 			inSvcName:     wantedSvcName,
 			inStorageName: "my-bucket",
+			inLifecycle:   lifecycleWorkloadLevel,
 
-			mockWs: func(m *mocks.MockwsAddonManager) {
+			mockWS: func(m *mocks.MockwsReadWriter) {
 				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte("type: Worker Service"), nil)
-				m.EXPECT().WriteAddon(gomock.Any(), wantedSvcName, "my-bucket").Return("/frontend/addons/my-bucket.yml", nil)
+				m.EXPECT().WorkloadAddonFilePath(gomock.Eq(wantedSvcName), gomock.Eq("my-bucket.yml")).Return("mockPath")
+				m.EXPECT().Write(gomock.Any(), "mockPath").Return("/frontend/addons/my-bucket.yml", nil)
 			},
 
 			wantedErr: nil,
 		},
-		"happy calls for DDB": {
+		"happy calls for wkld DDB": {
 			inAppName:     wantedAppName,
 			inStorageType: dynamoDBStorageType,
 			inSvcName:     wantedSvcName,
@@ -987,15 +986,17 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 			inNoLSI:       true,
 			inNoSort:      true,
 			inPartition:   wantedPartitionKey,
+			inLifecycle:   lifecycleWorkloadLevel,
 
-			mockWs: func(m *mocks.MockwsAddonManager) {
-				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte("type: Backend Service"), nil)
-				m.EXPECT().WriteAddon(gomock.Any(), wantedSvcName, "my-table").Return("/frontend/addons/my-table.yml", nil)
+			mockWS: func(m *mocks.MockwsReadWriter) {
+				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte("type: Worker Service"), nil)
+				m.EXPECT().WorkloadAddonFilePath(gomock.Eq(wantedSvcName), gomock.Eq("my-table.yml")).Return("mockPath")
+				m.EXPECT().Write(gomock.Any(), "mockPath").Return("/frontend/addons/my-table.yml", nil)
 			},
 
 			wantedErr: nil,
 		},
-		"happy calls for DDB with LSI": {
+		"happy calls for wkld DDB with LSI": {
 			inAppName:     wantedAppName,
 			inStorageType: dynamoDBStorageType,
 			inSvcName:     wantedSvcName,
@@ -1003,58 +1004,182 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 			inPartition:   wantedPartitionKey,
 			inSort:        wantedSortKey,
 			inLSISorts:    []string{"goodness:Number"},
+			inLifecycle:   lifecycleWorkloadLevel,
 
-			mockWs: func(m *mocks.MockwsAddonManager) {
-				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte("type: Backend Service"), nil)
-				m.EXPECT().WriteAddon(gomock.Any(), wantedSvcName, "my-table").Return("/frontend/addons/my-table.yml", nil)
+			mockWS: func(m *mocks.MockwsReadWriter) {
+				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte("type: Worker Service"), nil)
+				m.EXPECT().WorkloadAddonFilePath(gomock.Eq(wantedSvcName), gomock.Eq("my-table.yml")).Return("mockPath")
+				m.EXPECT().Write(gomock.Any(), "mockPath").Return("/frontend/addons/my-table.yml", nil)
 			},
 
 			wantedErr: nil,
 		},
-		"happy calls for RDS with LBWS": {
+		"happy calls for wkld RDS with LBWS": {
 			inSvcName:           wantedSvcName,
 			inStorageType:       rdsStorageType,
 			inStorageName:       "mycluster",
 			inServerlessVersion: auroraServerlessVersionV1,
 			inEngine:            engineTypeMySQL,
 			inParameterGroup:    "mygroup",
+			inLifecycle:         lifecycleWorkloadLevel,
 
-			mockWs: func(m *mocks.MockwsAddonManager) {
-				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte("type: Load Balanced Web Service"), nil)
-				m.EXPECT().WriteAddon(gomock.Any(), wantedSvcName, "mycluster").Return("/frontend/addons/mycluster.yml", nil)
+			mockWS: func(m *mocks.MockwsReadWriter) {
+				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte("type: Worker Service"), nil)
+				m.EXPECT().WorkloadAddonFilePath(gomock.Eq(wantedSvcName), gomock.Eq("mycluster.yml")).Return("mockPath")
+				m.EXPECT().Write(gomock.Any(), "mockPath").Return("/frontend/addons/mycluster.yml", nil)
 			},
 			mockStore: func(m *mocks.Mockstore) {
 				m.EXPECT().ListEnvironments(gomock.Any()).AnyTimes()
 			},
 			wantedErr: nil,
 		},
-		"happy calls for RDS with a RDWS": {
+		"happy calls for wkld RDS with a RDWS": {
 			inSvcName:           wantedSvcName,
 			inStorageType:       rdsStorageType,
 			inStorageName:       "mycluster",
 			inServerlessVersion: auroraServerlessVersionV1,
 			inEngine:            engineTypeMySQL,
 			inParameterGroup:    "mygroup",
+			inLifecycle:         lifecycleWorkloadLevel,
 
-			mockWs: func(m *mocks.MockwsAddonManager) {
+			mockWS: func(m *mocks.MockwsReadWriter) {
 				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte("type: Request-Driven Web Service"), nil)
-				m.EXPECT().WriteAddon(gomock.Any(), wantedSvcName, "mycluster").Return("/frontend/addons/mycluster.yml", nil)
-				m.EXPECT().WriteAddon(gomock.Any(), wantedSvcName, "addons.parameters").Return("/frontend/addons/addons.parameters.yml", nil)
+				m.EXPECT().WorkloadAddonFilePath(gomock.Eq(wantedSvcName), gomock.Eq("mycluster.yml")).Return("mockTmplPath")
+				m.EXPECT().Write(gomock.Any(), "mockTmplPath").Return("/frontend/addons/mycluster.yml", nil)
+				m.EXPECT().WorkloadAddonFilePath(gomock.Eq(wantedSvcName), gomock.Eq("addons.parameters.yml")).Return("mockParamsPath")
+				m.EXPECT().Write(gomock.Any(), "mockParamsPath").Return("/frontend/addons/addons.parameters.yml", nil)
 			},
 			mockStore: func(m *mocks.Mockstore) {
 				m.EXPECT().ListEnvironments(gomock.Any()).AnyTimes()
 			},
 			wantedErr: nil,
+		},
+		"happy calls for env S3": {
+			inAppName:     wantedAppName,
+			inStorageType: s3StorageType,
+			inSvcName:     wantedSvcName,
+			inStorageName: "my-bucket",
+			inLifecycle:   lifecycleEnvironmentLevel,
+
+			mockWS: func(m *mocks.MockwsReadWriter) {
+				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte("type: Worker Service"), nil)
+				m.EXPECT().EnvAddonFilePath(gomock.Eq("my-bucket.yml")).Return("mockEnvTemplatePath")
+				m.EXPECT().WorkloadAddonFilePath(gomock.Eq(wantedSvcName), gomock.Eq("my-bucket-access-policy.yml")).Return("mockWkldTemplatePath")
+				m.EXPECT().Write(gomock.Any(), "mockEnvTemplatePath").Return("mockEnvTemplatePath", nil)
+				m.EXPECT().Write(gomock.Any(), "mockWkldTemplatePath").Return("mockWkldTemplatePath", nil)
+			},
+		},
+		"happy calls for env DDB": {
+			inAppName:     wantedAppName,
+			inStorageType: dynamoDBStorageType,
+			inSvcName:     wantedSvcName,
+			inStorageName: "my-table",
+			inNoLSI:       true,
+			inNoSort:      true,
+			inPartition:   wantedPartitionKey,
+			inLifecycle:   lifecycleEnvironmentLevel,
+
+			mockWS: func(m *mocks.MockwsReadWriter) {
+				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte("type: Worker Service"), nil)
+				m.EXPECT().EnvAddonFilePath(gomock.Eq("my-table.yml")).Return("mockEnvTemplatePath")
+				m.EXPECT().WorkloadAddonFilePath(gomock.Eq(wantedSvcName), gomock.Eq("my-table-access-policy.yml")).Return("mockWkldTemplatePath")
+				m.EXPECT().Write(gomock.Any(), "mockEnvTemplatePath").Return("mockEnvTemplatePath", nil)
+				m.EXPECT().Write(gomock.Any(), "mockWkldTemplatePath").Return("mockWkldTemplatePath", nil)
+			},
+		},
+		"happy calls for env DDB with LSI": {
+			inAppName:     wantedAppName,
+			inStorageType: dynamoDBStorageType,
+			inSvcName:     wantedSvcName,
+			inStorageName: "my-table",
+			inPartition:   wantedPartitionKey,
+			inSort:        wantedSortKey,
+			inLSISorts:    []string{"goodness:Number"},
+			inLifecycle:   lifecycleEnvironmentLevel,
+
+			mockWS: func(m *mocks.MockwsReadWriter) {
+				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte("type: Worker Service"), nil)
+				m.EXPECT().EnvAddonFilePath(gomock.Eq("my-table.yml")).Return("mockEnvTemplatePath")
+				m.EXPECT().WorkloadAddonFilePath(gomock.Eq(wantedSvcName), gomock.Eq("my-table-access-policy.yml")).Return("mockWkldTemplatePath")
+				m.EXPECT().Write(gomock.Any(), "mockEnvTemplatePath").Return("mockEnvTemplatePath", nil)
+				m.EXPECT().Write(gomock.Any(), "mockWkldTemplatePath").Return("mockWkldTemplatePath", nil)
+			},
+		},
+		"happy calls for env RDS with LBWS": {
+			inSvcName:           wantedSvcName,
+			inStorageType:       rdsStorageType,
+			inStorageName:       "mycluster",
+			inServerlessVersion: auroraServerlessVersionV1,
+			inEngine:            engineTypeMySQL,
+			inParameterGroup:    "mygroup",
+			inLifecycle:         lifecycleEnvironmentLevel,
+
+			mockWS: func(m *mocks.MockwsReadWriter) {
+				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte("type: Load-Balanced Web Service"), nil)
+				m.EXPECT().EnvAddonFilePath(gomock.Eq("mycluster.yml")).Return("mockEnvTemplatePath")
+				m.EXPECT().EnvAddonFilePath(gomock.Eq("addons.parameters.yml")).Return("mockEnvParametersPath")
+				m.EXPECT().Write(gomock.Any(), "mockEnvTemplatePath").Return("mockEnvTemplatePath", nil)
+				m.EXPECT().Write(gomock.Any(), "mockEnvParametersPath").Return("mockEnvParametersPath", nil)
+			},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().ListEnvironments(gomock.Any()).AnyTimes()
+			},
+			wantedErr: nil,
+		},
+		"happy calls for env RDS with a RDWS": {
+			inSvcName:           wantedSvcName,
+			inStorageType:       rdsStorageType,
+			inStorageName:       "mycluster",
+			inServerlessVersion: auroraServerlessVersionV1,
+			inEngine:            engineTypeMySQL,
+			inParameterGroup:    "mygroup",
+			inLifecycle:         lifecycleEnvironmentLevel,
+
+			mockWS: func(m *mocks.MockwsReadWriter) {
+				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte("type: Request-Driven Web Service"), nil)
+				m.EXPECT().EnvAddonFilePath(gomock.Eq("mycluster.yml")).Return("mockEnvTemplatePath")
+				m.EXPECT().EnvAddonFilePath(gomock.Eq("addons.parameters.yml")).Return("mockEnvParametersPath")
+				m.EXPECT().WorkloadAddonFilePath(gomock.Eq(wantedSvcName), gomock.Eq("mycluster-ingress.yml")).Return("mockWkldTmplPath")
+				m.EXPECT().WorkloadAddonFilePath(gomock.Eq(wantedSvcName), gomock.Eq("addons.parameters.yml")).Return("mockWkldParamsPath")
+				m.EXPECT().Write(gomock.Any(), "mockEnvTemplatePath").Return("mockEnvTemplatePath", nil)
+				m.EXPECT().Write(gomock.Any(), "mockEnvParametersPath").Return("mockEnvParametersPath", nil)
+				m.EXPECT().Write(gomock.Any(), "mockWkldTmplPath").Return("mockWkldTmplPath", nil)
+				m.EXPECT().Write(gomock.Any(), "mockWkldParamsPath").Return("mockWkldParamsPath", nil)
+			},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().ListEnvironments(gomock.Any()).AnyTimes()
+			},
+		},
+		"do not attempt to write workload ingress for an env RDS if workload is not in the workspace": {
+			inSvcName:           wantedSvcName,
+			inStorageType:       rdsStorageType,
+			inStorageName:       "mycluster",
+			inServerlessVersion: auroraServerlessVersionV1,
+			inEngine:            engineTypeMySQL,
+			inParameterGroup:    "mygroup",
+			inLifecycle:         lifecycleEnvironmentLevel,
+			mockWkldAbsent:      true,
+			mockWS: func(m *mocks.MockwsReadWriter) {
+				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte("type: Worker Service"), nil)
+				m.EXPECT().EnvAddonFilePath(gomock.Eq("mycluster.yml")).Return("mockEnvPath")
+				m.EXPECT().EnvAddonFilePath(gomock.Eq("addons.parameters.yml")).Return("mockEnvPath")
+				m.EXPECT().Write(gomock.Any(), gomock.Not(gomock.Eq("mockWkldPath"))).Return("mockEnvTemplatePath", nil).Times(2)
+			},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().ListEnvironments(gomock.Any()).AnyTimes()
+			},
 		},
 		"error addon exists": {
 			inAppName:     wantedAppName,
 			inStorageType: s3StorageType,
 			inSvcName:     wantedSvcName,
 			inStorageName: "my-bucket",
+			inLifecycle:   lifecycleWorkloadLevel,
 
-			mockWs: func(m *mocks.MockwsAddonManager) {
-				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte("type: Load Balanced Web Service"), nil)
-				m.EXPECT().WriteAddon(gomock.Any(), wantedSvcName, "my-bucket").Return("", fileExistsError)
+			mockWS: func(m *mocks.MockwsReadWriter) {
+				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte("type: Worker Service"), nil)
+				m.EXPECT().WorkloadAddonFilePath(gomock.Eq(wantedSvcName), gomock.Eq("my-bucket.yml")).Return("mockPath")
+				m.EXPECT().Write(gomock.Any(), "mockPath").Return("/frontend/addons/my-bucket.yml", nil).Return("", fileExistsError)
 			},
 			mockStore: func(m *mocks.Mockstore) {
 				m.EXPECT().ListEnvironments(gomock.Any()).AnyTimes()
@@ -1067,11 +1192,10 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 			inStorageType: s3StorageType,
 			inSvcName:     wantedSvcName,
 			inStorageName: "my-bucket",
-
-			mockWs: func(m *mocks.MockwsAddonManager) {
+			inLifecycle:   lifecycleWorkloadLevel,
+			mockWS: func(m *mocks.MockwsReadWriter) {
 				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, errors.New("some error"))
 			},
-
 			wantedErr: errors.New("read manifest for frontend: some error"),
 		},
 		"unexpected write addon error handled": {
@@ -1079,10 +1203,12 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 			inStorageType: s3StorageType,
 			inSvcName:     wantedSvcName,
 			inStorageName: "my-bucket",
+			inLifecycle:   lifecycleWorkloadLevel,
 
-			mockWs: func(m *mocks.MockwsAddonManager) {
-				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte("type: Load Balanced Web Service"), nil)
-				m.EXPECT().WriteAddon(gomock.Any(), wantedSvcName, "my-bucket").Return("", errors.New("some error"))
+			mockWS: func(m *mocks.MockwsReadWriter) {
+				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte("type: Worker Service"), nil)
+				m.EXPECT().WorkloadAddonFilePath(gomock.Eq(wantedSvcName), gomock.Eq("my-bucket.yml")).Return("mockPath")
+				m.EXPECT().Write(gomock.Any(), "mockPath").Return("", errors.New("some error"))
 			},
 
 			wantedErr: fmt.Errorf("some error"),
@@ -1094,8 +1220,8 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockAddon := mocks.NewMockwsAddonManager(ctrl)
 			mockStore := mocks.NewMockstore(ctrl)
+			mockWS := mocks.NewMockwsReadWriter(ctrl)
 			opts := initStorageOpts{
 				initStorageVars: initStorageVars{
 					storageType:  tc.inStorageType,
@@ -1110,12 +1236,15 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 					auroraServerlessVersion: tc.inServerlessVersion,
 					rdsEngine:               tc.inEngine,
 					rdsParameterGroup:       tc.inParameterGroup,
+
+					lifecycle: tc.inLifecycle,
 				},
-				appName: tc.inAppName,
-				ws:      mockAddon,
-				store:   mockStore,
+				appName:        tc.inAppName,
+				ws:             mockWS,
+				store:          mockStore,
+				workloadExists: !tc.mockWkldAbsent,
 			}
-			tc.mockWs(mockAddon)
+			tc.mockWS(mockWS)
 			if tc.mockStore != nil {
 				tc.mockStore(mockStore)
 			}

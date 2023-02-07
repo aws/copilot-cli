@@ -72,4 +72,4 @@ LOG_INFO=all
 
 ## DynamoDB テーブルやS3 バケット、RDS データベースなどの名前を確認する方法
 
-Copilot CLI を使って、DynamoDB テーブルや S3 バケット、データベースなどの追加の AWS リソースをプロビジョニングする場合、出力の値は環境変数として、Application に渡されます。より詳しい情報は、[AWS リソースを追加する](../developing/addons/modeling.ja.md)を確認してください。
+Copilot CLI を使って、DynamoDB テーブルや S3 バケット、データベースなどの追加の AWS リソースをプロビジョニングする場合、出力の値は環境変数として、Application に渡されます。より詳しい情報は、[AWS リソースを追加する](./addons/workload.ja.md)を確認してください。

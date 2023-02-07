@@ -921,10 +921,7 @@ func (s *ConfigSelector) Service(msg, help, app string) (string, error) {
 		return "", err
 	}
 	if len(services) == 0 {
-		log.Infof("Couldn't find any services associated with app %s, try initializing one: %s\n",
-			color.HighlightUserInput(app),
-			color.HighlightCode("copilot svc init"))
-		return "", fmt.Errorf("no services found in app %s", app)
+		return "", &errNoServiceInApp{appName: app}
 	}
 	if len(services) == 1 {
 		log.Infof("Only found one service, defaulting to: %s\n", color.HighlightUserInput(services[0]))
@@ -944,10 +941,7 @@ func (s *ConfigSelector) Job(msg, help, app string) (string, error) {
 		return "", err
 	}
 	if len(jobs) == 0 {
-		log.Infof("Couldn't find any jobs associated with app %s, try initializing one: %s\n",
-			color.HighlightUserInput(app),
-			color.HighlightCode("copilot job init"))
-		return "", fmt.Errorf("no jobs found in app %s", app)
+		return "", &errNoJobInApp{appName: app}
 	}
 	if len(jobs) == 1 {
 		log.Infof("Only found one job, defaulting to: %s\n", color.HighlightUserInput(jobs[0]))
@@ -958,6 +952,32 @@ func (s *ConfigSelector) Job(msg, help, app string) (string, error) {
 		return "", fmt.Errorf("select job: %w", err)
 	}
 	return selectedJobName, nil
+}
+
+// Workload fetches all workloads in an app and prompts the user to select one.
+func (s *ConfigSelector) Workload(msg, help, app string) (string, error) {
+	services, err := s.retrieveServices(app)
+	if err != nil {
+		return "", err
+	}
+	jobs, err := s.retrieveJobs(app)
+	if err != nil {
+		return "", err
+	}
+
+	workloads := append(services, jobs...)
+	if len(workloads) == 0 {
+		return "", &errNoWorkloadInApp{appName: app}
+	}
+	if len(workloads) == 1 {
+		log.Infof("Only found one workload, defaulting to: %s\n", color.HighlightUserInput(workloads[0]))
+		return workloads[0], nil
+	}
+	selectedWorkloadName, err := s.prompt.SelectOne(msg, help, workloads, prompt.WithFinalMessage("Workload name:"))
+	if err != nil {
+		return "", fmt.Errorf("select workload: %w", err)
+	}
+	return selectedWorkloadName, nil
 }
 
 // Environment fetches all the environments in an app and prompts the user to select one.

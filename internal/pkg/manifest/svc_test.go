@@ -984,3 +984,79 @@ func TestParsePortMapping(t *testing.T) {
 		})
 	}
 }
+
+func TestLoadBalancedWebService_NetworkLoadBalancerTarget(t *testing.T) {
+	testCases := map[string]struct {
+		in                    LoadBalancedWebService
+		wantedTargetContainer string
+		wantedTargetPort      string
+		wantedErr             error
+	}{
+		"should return primary container name/nlb port as targetContainer/targetPort in case targetContainer and targetPort is not given ": {
+			in: LoadBalancedWebService{
+				Workload: Workload{
+					Name: aws.String("foo"),
+					Type: aws.String("Load Balanced WebService"),
+				},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: ImageWithPortAndHealthcheck{},
+					NLBConfig: NetworkLoadBalancerConfiguration{
+						Port: aws.String("80/tcp"),
+					},
+				},
+			},
+			wantedTargetContainer: "foo",
+			wantedTargetPort:      "80",
+		},
+		"should return targetContainer and targetPort as is if they are given ": {
+			in: LoadBalancedWebService{
+				Workload: Workload{
+					Name: aws.String("foo"),
+					Type: aws.String("Load Balanced WebService"),
+				},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: ImageWithPortAndHealthcheck{},
+					NLBConfig: NetworkLoadBalancerConfiguration{
+						Port:            aws.String("80/tcp"),
+						TargetPort:      aws.Int(81),
+						TargetContainer: aws.String("bar"),
+					},
+					Sidecars: map[string]*SidecarConfig{
+						"bar": {
+							Port: aws.String("8080"),
+						},
+					},
+				},
+			},
+			wantedTargetContainer: "bar",
+			wantedTargetPort:      "81",
+		},
+		"should return error if targetPort is of incorrect type": {
+			in: LoadBalancedWebService{
+				Workload: Workload{
+					Name: aws.String("foo"),
+					Type: aws.String("Load Balanced WebService"),
+				},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: ImageWithPortAndHealthcheck{},
+					NLBConfig: NetworkLoadBalancerConfiguration{
+						Port: aws.String("80/80/80"),
+					},
+				},
+			},
+			wantedErr: errors.New(`cannot parse port mapping from 80/80/80`),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			targetContainer, targetPort, err := tc.in.NetworkLoadBalancerTarget()
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.Equal(t, tc.wantedTargetContainer, targetContainer)
+				require.Equal(t, tc.wantedTargetPort, targetPort)
+			}
+		})
+	}
+}

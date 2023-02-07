@@ -293,6 +293,13 @@ Outputs:
 			EntryPoint: []string{"/bin/echo", "hello"},
 			Command:    []string{"world"},
 			ALBEnabled: true,
+			PortMappings: []*template.PortMapping{
+				{
+					Protocol:      "tcp",
+					ContainerPort: 80,
+					ContainerName: "frontend",
+				},
+			},
 		}, actual)
 	})
 
