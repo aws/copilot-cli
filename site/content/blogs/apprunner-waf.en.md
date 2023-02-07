@@ -20,11 +20,11 @@ Step 2: Go to the service's directory (users/\<your username\>/copilot/\<your Ap
   └── copilot
       └── <your App Runner service name>
           └── addons
-              └── ar_waf_addon.yml 
+              └── waf.yml 
               └── addons.parameters.yml
   ```
 
-Copy, paste and save the content below so that your `ar_waf_addon.yml` looks like:
+Copy, paste and save the content below so that your `waf.yml` looks like:
   ```yaml
 #Addon template to add WAF configuration to your App Runner service.
 
