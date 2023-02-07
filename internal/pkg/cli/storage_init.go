@@ -971,17 +971,13 @@ Resource names are injected into your containers as environment variables for ea
 	requiredFlags.AddFlag(cmd.Flags().Lookup(workloadFlag))
 
 	ddbFlags := pflag.NewFlagSet("DynamoDB", pflag.ContinueOnError)
-	ddbFlags.AddFlag(cmd.Flags().Lookup(storagePartitionKeyFlag))
-	ddbFlags.AddFlag(cmd.Flags().Lookup(storageSortKeyFlag))
-	ddbFlags.AddFlag(cmd.Flags().Lookup(storageNoSortFlag))
-	ddbFlags.AddFlag(cmd.Flags().Lookup(storageLSIConfigFlag))
-	ddbFlags.AddFlag(cmd.Flags().Lookup(storageNoLSIFlag))
-
+	for _, f := range storageInitDDBFlags {
+		ddbFlags.AddFlag(cmd.Flags().Lookup(f))
+	}
 	auroraFlags := pflag.NewFlagSet("Aurora Serverless", pflag.ContinueOnError)
-	auroraFlags.AddFlag(cmd.Flags().Lookup(storageAuroraServerlessVersionFlag))
-	auroraFlags.AddFlag(cmd.Flags().Lookup(storageRDSEngineFlag))
-	auroraFlags.AddFlag(cmd.Flags().Lookup(storageRDSInitialDBFlag))
-	auroraFlags.AddFlag(cmd.Flags().Lookup(storageRDSParameterGroupFlag))
+	for _, f := range storageInitAuroraFlags {
+		auroraFlags.AddFlag(cmd.Flags().Lookup(f))
+	}
 
 	cmd.Annotations = map[string]string{
 		// The order of the sections we want to display.
