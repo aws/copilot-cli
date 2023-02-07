@@ -6,12 +6,13 @@ package manifest
 import (
 	"errors"
 	"fmt"
-	"github.com/aws/copilot-cli/internal/pkg/template"
 	"math"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/aws/copilot-cli/internal/pkg/template"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"gopkg.in/yaml.v3"
@@ -27,7 +28,7 @@ const (
 	// WorkerServiceType is a worker service that manages the consumption of messages.
 	WorkerServiceType = "Worker Service"
 	// StaticSiteType is a static site service that manages static assets.
-	StaticSiteType = "Static Site"
+	StaticSiteType = "Static Site Service"
 )
 
 // ServiceTypes returns the list of supported service manifest types.

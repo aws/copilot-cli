@@ -107,6 +107,7 @@ var serviceTypeHints = map[string]string{
 	manifest.LoadBalancedWebServiceType:  "Internet to ECS on Fargate",
 	manifest.BackendServiceType:          "ECS on Fargate",
 	manifest.WorkerServiceType:           "Events to SQS to ECS on Fargate",
+	manifest.StaticSiteType:              "S3 Bucket for static assets",
 }
 
 type initWkldVars struct {
@@ -302,6 +303,9 @@ func (o *initSvcOpts) Ask() error {
 	if shouldSkipAsking {
 		return nil
 	}
+	if o.wkldType == manifest.StaticSiteType {
+		return o.askStaticSite()
+	}
 	err = o.askDockerfile()
 	if err != nil {
 		return err
@@ -420,6 +424,11 @@ If you'd prefer a new default manifest, please manually delete the existing one.
 	if !errors.As(err, &errNoSuchSvc) {
 		return fmt.Errorf("validate if service exists: %w", err)
 	}
+	return nil
+}
+
+func (o *initSvcOpts) askStaticSite() error {
+	// TODO: add file selection for generating svc manifest.
 	return nil
 }
 
