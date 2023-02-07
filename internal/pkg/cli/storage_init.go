@@ -7,6 +7,7 @@ import (
 	"encoding"
 	"errors"
 	"fmt"
+	"strconv"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
@@ -235,7 +236,7 @@ func (o *initStorageOpts) validateStorageLifecycle() error {
 			return nil
 		}
 	}
-	return fmt.Errorf("invalid lifecycle; must be one of %s", english.OxfordWordSeries(quoteStringSlice(validLifecycleOptions), "or"))
+	return fmt.Errorf("invalid lifecycle; must be one of %s", english.OxfordWordSeries(mutateStringSlice(validLifecycleOptions, strconv.Quote), "or"))
 }
 
 func (o *initStorageOpts) validateServerlessVersion() error {

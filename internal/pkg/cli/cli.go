@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"github.com/dustin/go-humanize/english"
@@ -129,12 +128,14 @@ func indentListItem(multiline string) string {
 	return strings.Join(prefixedLines, "\n")
 }
 
-func quoteStringSlice(in []string) []string {
-	quoted := make([]string, len(in))
+type stringMutator func(string) string
+
+func mutateStringSlice(in []string, mutate stringMutator) []string {
+	mutant := make([]string, len(in))
 	for idx, str := range in {
-		quoted[idx] = strconv.Quote(str)
+		mutant[idx] = mutate(str)
 	}
-	return quoted
+	return mutant
 }
 
 // displayPath takes any path and returns it in a form ready to be displayed to

@@ -11,6 +11,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
@@ -409,7 +410,7 @@ func (o *initPipelineOpts) askOrValidatePipelineType() error {
 				return nil
 			}
 		}
-		return fmt.Errorf("invalid pipeline type %q; must be one of %s", o.pipelineType, english.WordSeries(quoteStringSlice(pipelineTypes), "or"))
+		return fmt.Errorf("invalid pipeline type %q; must be one of %s", o.pipelineType, english.WordSeries(mutateStringSlice(pipelineTypes, strconv.Quote), "or"))
 	}
 
 	typ, err := o.prompt.SelectOption("What type of continuous delivery pipeline is this?",
