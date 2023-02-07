@@ -144,6 +144,8 @@ var engineTypes = []string{
 	engineTypePostgreSQL,
 }
 
+const workloadTypeNonLocal = "Non Local"
+
 type initStorageVars struct {
 	storageType  string
 	storageName  string
@@ -703,6 +705,10 @@ func (o *initStorageOpts) Execute() error {
 }
 
 func (o *initStorageOpts) readWorkloadType() error {
+	if !o.workloadExists {
+		o.workloadType = workloadTypeNonLocal
+		return nil
+	}
 	mft, err := o.ws.ReadWorkloadManifest(o.workloadName)
 	if err != nil {
 		return fmt.Errorf("read manifest for %s: %w", o.workloadName, err)
@@ -928,7 +934,7 @@ func (o *initStorageOpts) rdsProps() (addon.RDSProps, error) {
 		InitialDBName:  o.rdsInitialDBName,
 		ParameterGroup: o.rdsParameterGroup,
 		Envs:           envs,
-		WorkloadType:   o.workloadType,
+		WorkloadType:   o.workloadType, // TODO(wanxiay): remove `WorkloadType` from `RDSProps`; use different constructors for RDS vs. non-RDS instead.
 	}, nil
 }
 

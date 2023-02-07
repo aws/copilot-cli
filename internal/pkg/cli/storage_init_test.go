@@ -1289,7 +1289,7 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 				m.EXPECT().ListEnvironments(gomock.Any()).AnyTimes()
 			},
 		},
-		"do not attempt to write workload ingress for an env RDS if workload is not in the workspace": {
+		"do not attempt to read manifest or write workload ingress for an env RDS if workload is not in the workspace": {
 			inSvcName:           wantedSvcName,
 			inStorageType:       rdsStorageType,
 			inStorageName:       "mycluster",
@@ -1299,7 +1299,7 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 			inLifecycle:         lifecycleEnvironmentLevel,
 			mockWkldAbsent:      true,
 			mockWS: func(m *mocks.MockwsReadWriter) {
-				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte("type: Worker Service"), nil)
+				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Times(0)
 				m.EXPECT().EnvAddonFilePath(gomock.Eq("mycluster.yml")).Return("mockEnvPath")
 				m.EXPECT().EnvAddonFilePath(gomock.Eq("addons.parameters.yml")).Return("mockEnvPath")
 				m.EXPECT().Write(gomock.Any(), gomock.Not(gomock.Eq("mockWkldPath"))).Return("mockEnvTemplatePath", nil).Times(2)
