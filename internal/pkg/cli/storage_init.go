@@ -1050,6 +1050,7 @@ Resource names are injected into your containers as environment variables for ea
 	requiredFlags.AddFlag(cmd.Flags().Lookup(nameFlag))
 	requiredFlags.AddFlag(cmd.Flags().Lookup(storageTypeFlag))
 	requiredFlags.AddFlag(cmd.Flags().Lookup(workloadFlag))
+	requiredFlags.AddFlag(cmd.Flags().Lookup(storageLifecycleFlag))
 
 	ddbFlags := pflag.NewFlagSet("DynamoDB", pflag.ContinueOnError)
 	ddbFlags.AddFlag(cmd.Flags().Lookup(storagePartitionKeyFlag))
