@@ -1,0 +1,11 @@
+name: simple-backend
+type: Backend Service
+image:
+  build: Dockerfile
+
+network:
+  connect: true
+cpu: 256
+memory: 512
+count: 1
+exec: true

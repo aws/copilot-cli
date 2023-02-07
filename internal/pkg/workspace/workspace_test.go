@@ -314,6 +314,36 @@ func TestWorkspace_Use(t *testing.T) {
 	}
 }
 
+func TestWorkspace_WorkloadExists(t *testing.T) {
+	t.Run("returns true if workload exists in the workspace", func(t *testing.T) {
+		fs := afero.NewMemMapFs()
+		_, _ = fs.Create("/copilot/api/manifest.yml")
+		ws := &Workspace{
+			copilotDirAbs: "/copilot",
+			fs: &afero.Afero{
+				Fs: fs,
+			},
+		}
+		got, err := ws.WorkloadExists("api")
+		require.NoError(t, err)
+		require.True(t, got)
+	})
+
+	t.Run("returns false if workload does not in the workspace", func(t *testing.T) {
+		fs := afero.NewMemMapFs()
+		_, _ = fs.Create("a/copilot/api/manifest.yml")
+		ws := &Workspace{
+			copilotDirAbs: "b/copilot",
+			fs: &afero.Afero{
+				Fs: fs,
+			},
+		}
+		got, err := ws.WorkloadExists("api")
+		require.NoError(t, err)
+		require.False(t, got)
+	})
+}
+
 func TestWorkspace_ListServices(t *testing.T) {
 	testCases := map[string]struct {
 		copilotDir string
@@ -1160,65 +1190,6 @@ func TestWorkspace_ReadFile(t *testing.T) {
 				require.Equal(t, tc.wantedData, data)
 			} else {
 				require.EqualError(t, err, tc.wantedErr.Error())
-			}
-		})
-	}
-}
-
-func TestWorkspace_WriteAddon(t *testing.T) {
-	testCases := map[string]struct {
-		marshaler   mockBinaryMarshaler
-		svc         string
-		storageName string
-
-		wantedPath string
-		wantedErr  error
-	}{
-		"writes addons file with content": {
-			marshaler: mockBinaryMarshaler{
-				content: []byte("hello"),
-			},
-			svc:         "webhook",
-			storageName: "s3",
-
-			wantedPath: filepath.FromSlash("/copilot/webhook/addons/s3.yml"),
-		},
-		"wraps error if cannot marshal to binary": {
-			marshaler: mockBinaryMarshaler{
-				err: errors.New("some error"),
-			},
-			svc:         "webhook",
-			storageName: "s3",
-
-			wantedErr: errors.New("marshal binary addon content: some error"),
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			fs := afero.NewMemMapFs()
-			utils := &afero.Afero{
-				Fs: fs,
-			}
-			utils.MkdirAll(filepath.Join("/", "copilot", tc.svc), 0755)
-			ws := &Workspace{
-				workingDirAbs: "/",
-				copilotDirAbs: "/copilot",
-				fs:            utils,
-			}
-
-			// WHEN
-			actualPath, actualErr := ws.WriteAddon(tc.marshaler, tc.svc, tc.storageName)
-
-			// THEN
-			if tc.wantedErr != nil {
-				require.EqualError(t, actualErr, tc.wantedErr.Error(), "expected the same error")
-			} else {
-				require.Equal(t, tc.wantedPath, actualPath, "expected the same path")
-				out, err := utils.ReadFile(tc.wantedPath)
-				require.NoError(t, err)
-				require.Equal(t, tc.marshaler.content, out, "expected the contents of the file to match")
 			}
 		})
 	}
