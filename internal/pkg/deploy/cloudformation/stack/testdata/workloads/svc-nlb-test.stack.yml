@@ -282,7 +282,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
       'aws:copilot:description': 'An ECS service to run and maintain your tasks in the environment cluster'
     Type: AWS::ECS::Service
     DependsOn:
-      - NLBListener
+      - NLBListenerFor443
     Properties:
       PlatformVersion: LATEST
       Cluster:
@@ -328,7 +328,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
       LoadBalancers:
         - ContainerName: fe
           ContainerPort: 443
-          TargetGroupArn: !Ref NLBTargetGroup
+          TargetGroupArn: !Ref NLBTargetGroupFor443
       ServiceRegistries:
         - RegistryArn: !GetAtt DiscoveryService.Arn
           Port: !Ref TargetPort
@@ -343,19 +343,19 @@ Resources: # If a bucket URL is specified, that means the template exists.
           - ","
           - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PublicSubnets'
       Type: network
-  NLBListener:
+  NLBListenerFor443:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
       DefaultActions:
-        - TargetGroupArn: !Ref NLBTargetGroup
+        - TargetGroupArn: !Ref NLBTargetGroupFor443
           Type: forward
       LoadBalancerArn: !Ref PublicNetworkLoadBalancer
-      Port: !Ref NLBPort
+      Port: 443
       Protocol: TLS
       Certificates:
         - CertificateArn: !Ref NLBCertValidatorAction
       SslPolicy: ELBSecurityPolicy-TLS13-1-2-2021-06
-  NLBTargetGroup:
+  NLBTargetGroupFor443:
     Metadata:
       'aws:copilot:description': 'A target group to connect the network load balancer to your service'
     Type: AWS::ElasticLoadBalancingV2::TargetGroup

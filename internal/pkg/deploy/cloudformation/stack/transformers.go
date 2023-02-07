@@ -479,6 +479,11 @@ func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (networkLoadBalanc
 		protocol = aws.String(defaultNLBProtocol)
 	}
 
+	var certRequired bool
+	if strings.ToUpper(aws.StringValue(protocol)) == "TLS" {
+		certRequired = true
+	}
+
 	aliases, err := convertAlias(nlbConfig.Aliases)
 	if err != nil {
 		return networkLoadBalancerConfig{}, fmt.Errorf(`convert "nlb.alias" to string slice: %w`, err)
@@ -489,17 +494,20 @@ func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (networkLoadBalanc
 	config := networkLoadBalancerConfig{
 		settings: &template.NetworkLoadBalancer{
 			PublicSubnetCIDRs: s.publicSubnetCIDRBlocks,
-			Listener: template.NetworkLoadBalancerListener{
-				Port:            aws.StringValue(port),
-				Protocol:        strings.ToUpper(aws.StringValue(protocol)),
-				TargetContainer: targetContainer,
-				TargetPort:      targetPort,
-				SSLPolicy:       nlbConfig.SSLPolicy,
-				Aliases:         aliases,
-				HealthCheck:     hc,
-				Stickiness:      nlbConfig.Stickiness,
+			Listener: []template.NetworkLoadBalancerListener{
+				{
+					Port:            aws.StringValue(port),
+					Protocol:        strings.ToUpper(aws.StringValue(protocol)),
+					TargetContainer: targetContainer,
+					TargetPort:      targetPort,
+					SSLPolicy:       nlbConfig.SSLPolicy,
+					Aliases:         aliases,
+					HealthCheck:     hc,
+					Stickiness:      nlbConfig.Stickiness,
+				},
 			},
-			MainContainerPort: s.manifest.MainContainerPort(),
+			MainContainerPort:   s.manifest.MainContainerPort(),
+			CertificateRequired: certRequired,
 		},
 	}
 

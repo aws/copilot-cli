@@ -79,7 +79,7 @@ func (d *LBWebServiceDescriber) URI(envName string) (URI, error) {
 		if resource.LogicalID == svcStackResourceALBTargetGroupLogicalID {
 			albEnabled = true
 		}
-		if resource.LogicalID == svcStackResourceNLBTargetGroupLogicalID {
+		if strings.HasPrefix(resource.LogicalID, svcStackResourceNLBTargetGroupLogicalID) {
 			nlbEnabled = true
 		}
 	}
