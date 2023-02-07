@@ -472,8 +472,10 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					},
 					Sidecars: map[string]*SidecarConfig{
 						"xray": {
-							Port:       aws.String("2000"),
-							Image:      aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							Port: aws.String("2000"),
+							Image: Union[*string, SidecarImageConfig]{
+								Basic: aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							},
 							CredsParam: aws.String("some arn"),
 						},
 					},
@@ -683,8 +685,10 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					},
 					Sidecars: map[string]*SidecarConfig{
 						"xray": {
-							Port:       aws.String("2000/udp"),
-							Image:      aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							Port: aws.String("2000/udp"),
+							Image: Union[*string, SidecarImageConfig]{
+								Basic: aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							},
 							CredsParam: aws.String("some arn"),
 							MountPoints: []SidecarMountPoint{
 								{
@@ -1757,7 +1761,7 @@ func TestLoadBalancedWebService_RequiredEnvironmentFeatures(t *testing.T) {
 func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 	testCases := map[string]struct {
 		mft                *LoadBalancedWebService
-		wantedExposedPorts []ExposedPort
+		wantedExposedPorts map[string][]ExposedPort
 	}{
 		"expose new sidecar container port through alb target_port and target_container": {
 			mft: &LoadBalancedWebService{
@@ -1779,28 +1783,34 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 					},
 					Sidecars: map[string]*SidecarConfig{
 						"xray": {
-							Port:       aws.String("2000"),
-							Image:      aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							Port: aws.String("2000"),
+							Image: Union[*string, SidecarImageConfig]{
+								Basic: aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							},
 							CredsParam: aws.String("some arn"),
 						},
 					},
 				},
 			},
-			wantedExposedPorts: []ExposedPort{
-				{
-					Port:          80,
-					ContainerName: "frontend",
-					Protocol:      "tcp",
+			wantedExposedPorts: map[string][]ExposedPort{
+				"frontend": {
+					{
+						Port:          80,
+						ContainerName: "frontend",
+						Protocol:      "tcp",
+					},
 				},
-				{
-					Port:          81,
-					ContainerName: "xray",
-					Protocol:      "tcp",
-				},
-				{
-					Port:          2000,
-					ContainerName: "xray",
-					Protocol:      "tcp",
+				"xray": {
+					{
+						Port:          81,
+						ContainerName: "xray",
+						Protocol:      "tcp",
+					},
+					{
+						Port:          2000,
+						ContainerName: "xray",
+						Protocol:      "tcp",
+					},
 				},
 			},
 		},
@@ -1823,28 +1833,34 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 					},
 					Sidecars: map[string]*SidecarConfig{
 						"xray": {
-							Port:       aws.String("2000"),
-							Image:      aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							Port: aws.String("2000"),
+							Image: Union[*string, SidecarImageConfig]{
+								Basic: aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							},
 							CredsParam: aws.String("some arn"),
 						},
 					},
 				},
 			},
-			wantedExposedPorts: []ExposedPort{
-				{
-					Port:          80,
-					ContainerName: "frontend",
-					Protocol:      "tcp",
+			wantedExposedPorts: map[string][]ExposedPort{
+				"frontend": {
+					{
+						Port:          80,
+						ContainerName: "frontend",
+						Protocol:      "tcp",
+					},
+					{
+						Port:          81,
+						ContainerName: "frontend",
+						Protocol:      "tcp",
+					},
 				},
-				{
-					Port:          81,
-					ContainerName: "frontend",
-					Protocol:      "tcp",
-				},
-				{
-					Port:          2000,
-					ContainerName: "xray",
-					Protocol:      "tcp",
+				"xray": {
+					{
+						Port:          2000,
+						ContainerName: "xray",
+						Protocol:      "tcp",
+					},
 				},
 			},
 		},
@@ -1868,28 +1884,34 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 					},
 					Sidecars: map[string]*SidecarConfig{
 						"xray": {
-							Port:       aws.String("2000"),
-							Image:      aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							Port: aws.String("2000"),
+							Image: Union[*string, SidecarImageConfig]{
+								Basic: aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							},
 							CredsParam: aws.String("some arn"),
 						},
 					},
 				},
 			},
-			wantedExposedPorts: []ExposedPort{
-				{
-					Port:          80,
-					ContainerName: "frontend",
-					Protocol:      "tcp",
+			wantedExposedPorts: map[string][]ExposedPort{
+				"frontend": {
+					{
+						Port:          80,
+						ContainerName: "frontend",
+						Protocol:      "tcp",
+					},
+					{
+						Port:          81,
+						ContainerName: "frontend",
+						Protocol:      "tcp",
+					},
 				},
-				{
-					Port:          81,
-					ContainerName: "frontend",
-					Protocol:      "tcp",
-				},
-				{
-					Port:          2000,
-					ContainerName: "xray",
-					Protocol:      "tcp",
+				"xray": {
+					{
+						Port:          2000,
+						ContainerName: "xray",
+						Protocol:      "tcp",
+					},
 				},
 			},
 		},
@@ -1913,22 +1935,28 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 					},
 					Sidecars: map[string]*SidecarConfig{
 						"xray": {
-							Image:      aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							Image: Union[*string, SidecarImageConfig]{
+								Basic: aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							},
 							CredsParam: aws.String("some arn"),
 						},
 					},
 				},
 			},
-			wantedExposedPorts: []ExposedPort{
-				{
-					Port:          80,
-					ContainerName: "frontend",
-					Protocol:      "tcp",
+			wantedExposedPorts: map[string][]ExposedPort{
+				"frontend": {
+					{
+						Port:          80,
+						ContainerName: "frontend",
+						Protocol:      "tcp",
+					},
 				},
-				{
-					Port:          81,
-					ContainerName: "xray",
-					Protocol:      "tcp",
+				"xray": {
+					{
+						Port:          81,
+						ContainerName: "xray",
+						Protocol:      "tcp",
+					},
 				},
 			},
 		},
@@ -1951,23 +1979,29 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 					},
 					Sidecars: map[string]*SidecarConfig{
 						"xray": {
-							Port:       aws.String("81"),
-							Image:      aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							Port: aws.String("81"),
+							Image: Union[*string, SidecarImageConfig]{
+								Basic: aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							},
 							CredsParam: aws.String("some arn"),
 						},
 					},
 				},
 			},
-			wantedExposedPorts: []ExposedPort{
-				{
-					Port:          80,
-					ContainerName: "frontend",
-					Protocol:      "tcp",
+			wantedExposedPorts: map[string][]ExposedPort{
+				"frontend": {
+					{
+						Port:          80,
+						ContainerName: "frontend",
+						Protocol:      "tcp",
+					},
 				},
-				{
-					Port:          81,
-					ContainerName: "xray",
-					Protocol:      "tcp",
+				"xray": {
+					{
+						Port:          81,
+						ContainerName: "xray",
+						Protocol:      "tcp",
+					},
 				},
 			},
 		},
@@ -1990,23 +2024,29 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 					},
 					Sidecars: map[string]*SidecarConfig{
 						"xray": {
-							Port:       aws.String("81"),
-							Image:      aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							Port: aws.String("81"),
+							Image: Union[*string, SidecarImageConfig]{
+								Basic: aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							},
 							CredsParam: aws.String("some arn"),
 						},
 					},
 				},
 			},
-			wantedExposedPorts: []ExposedPort{
-				{
-					Port:          80,
-					ContainerName: "frontend",
-					Protocol:      "tcp",
+			wantedExposedPorts: map[string][]ExposedPort{
+				"frontend": {
+					{
+						Port:          80,
+						ContainerName: "frontend",
+						Protocol:      "tcp",
+					},
 				},
-				{
-					Port:          81,
-					ContainerName: "xray",
-					Protocol:      "tcp",
+				"xray": {
+					{
+						Port:          81,
+						ContainerName: "xray",
+						Protocol:      "tcp",
+					},
 				},
 			},
 		},
@@ -2033,28 +2073,34 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 					},
 					Sidecars: map[string]*SidecarConfig{
 						"xray": {
-							Port:       aws.String("2000"),
-							Image:      aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							Port: aws.String("2000"),
+							Image: Union[*string, SidecarImageConfig]{
+								Basic: aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							},
 							CredsParam: aws.String("some arn"),
 						},
 					},
 				},
 			},
-			wantedExposedPorts: []ExposedPort{
-				{
-					Port:          80,
-					ContainerName: "frontend",
-					Protocol:      "tcp",
+			wantedExposedPorts: map[string][]ExposedPort{
+				"frontend": {
+					{
+						Port:          80,
+						ContainerName: "frontend",
+						Protocol:      "tcp",
+					},
+					{
+						Port:          81,
+						ContainerName: "frontend",
+						Protocol:      "tcp",
+					},
 				},
-				{
-					Port:          81,
-					ContainerName: "frontend",
-					Protocol:      "tcp",
-				},
-				{
-					Port:          2000,
-					ContainerName: "xray",
-					Protocol:      "tcp",
+				"xray": {
+					{
+						Port:          2000,
+						ContainerName: "xray",
+						Protocol:      "tcp",
+					},
 				},
 			},
 		},
@@ -2079,33 +2125,39 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 					},
 					Sidecars: map[string]*SidecarConfig{
 						"xray": {
-							Port:       aws.String("2000"),
-							Image:      aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							Port: aws.String("2000"),
+							Image: Union[*string, SidecarImageConfig]{
+								Basic: aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							},
 							CredsParam: aws.String("some arn"),
 						},
 					},
 				},
 			},
-			wantedExposedPorts: []ExposedPort{
-				{
-					Port:          80,
-					ContainerName: "frontend",
-					Protocol:      "tcp",
+			wantedExposedPorts: map[string][]ExposedPort{
+				"frontend": {
+					{
+						Port:          80,
+						ContainerName: "frontend",
+						Protocol:      "tcp",
+					},
+					{
+						Port:          81,
+						ContainerName: "frontend",
+						Protocol:      "tcp",
+					},
+					{
+						Port:          82,
+						ContainerName: "frontend",
+						Protocol:      "tcp",
+					},
 				},
-				{
-					Port:          81,
-					ContainerName: "frontend",
-					Protocol:      "tcp",
-				},
-				{
-					Port:          82,
-					ContainerName: "frontend",
-					Protocol:      "tcp",
-				},
-				{
-					Port:          2000,
-					ContainerName: "xray",
-					Protocol:      "tcp",
+				"xray": {
+					{
+						Port:          2000,
+						ContainerName: "xray",
+						Protocol:      "tcp",
+					},
 				},
 			},
 		},
@@ -2125,28 +2177,34 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 					},
 					Sidecars: map[string]*SidecarConfig{
 						"xray": {
-							Port:       aws.String("2000"),
-							Image:      aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							Port: aws.String("2000"),
+							Image: Union[*string, SidecarImageConfig]{
+								Basic: aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							},
 							CredsParam: aws.String("some arn"),
 						},
 					},
 				},
 			},
-			wantedExposedPorts: []ExposedPort{
-				{
-					Port:          80,
-					ContainerName: "frontend",
-					Protocol:      "tcp",
+			wantedExposedPorts: map[string][]ExposedPort{
+				"frontend": {
+					{
+						Port:          80,
+						ContainerName: "frontend",
+						Protocol:      "tcp",
+					},
+					{
+						Port:          82,
+						ContainerName: "frontend",
+						Protocol:      "tcp",
+					},
 				},
-				{
-					Port:          82,
-					ContainerName: "frontend",
-					Protocol:      "tcp",
-				},
-				{
-					Port:          2000,
-					ContainerName: "xray",
-					Protocol:      "tcp",
+				"xray": {
+					{
+						Port:          2000,
+						ContainerName: "xray",
+						Protocol:      "tcp",
+					},
 				},
 			},
 		},
@@ -2172,23 +2230,29 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 					},
 					Sidecars: map[string]*SidecarConfig{
 						"xray": {
-							Port:       aws.String("80"),
-							Image:      aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							Port: aws.String("80"),
+							Image: Union[*string, SidecarImageConfig]{
+								Basic: aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							},
 							CredsParam: aws.String("some arn"),
 						},
 					},
 				},
 			},
-			wantedExposedPorts: []ExposedPort{
-				{
-					Port:          80,
-					ContainerName: "xray",
-					Protocol:      "tcp",
+			wantedExposedPorts: map[string][]ExposedPort{
+				"xray": {
+					{
+						Port:          80,
+						ContainerName: "xray",
+						Protocol:      "tcp",
+					},
 				},
-				{
-					Port:          8080,
-					ContainerName: "frontend",
-					Protocol:      "tcp",
+				"frontend": {
+					{
+						Port:          8080,
+						ContainerName: "frontend",
+						Protocol:      "tcp",
+					},
 				},
 			},
 		},
@@ -2215,33 +2279,39 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 					},
 					Sidecars: map[string]*SidecarConfig{
 						"xray": {
-							Port:       aws.String("80"),
-							Image:      aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							Port: aws.String("80"),
+							Image: Union[*string, SidecarImageConfig]{
+								Basic: aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							},
 							CredsParam: aws.String("some arn"),
 						},
 					},
 				},
 			},
-			wantedExposedPorts: []ExposedPort{
-				{
-					Port:          80,
-					ContainerName: "xray",
-					Protocol:      "tcp",
+			wantedExposedPorts: map[string][]ExposedPort{
+				"frontend": {
+					{
+						Port:          8080,
+						ContainerName: "frontend",
+						Protocol:      "tcp",
+					},
+					{
+						Port:          8081,
+						ContainerName: "frontend",
+						Protocol:      "tcp",
+					},
 				},
-				{
-					Port:          8080,
-					ContainerName: "frontend",
-					Protocol:      "tcp",
-				},
-				{
-					Port:          8081,
-					ContainerName: "frontend",
-					Protocol:      "tcp",
-				},
-				{
-					Port:          8082,
-					ContainerName: "xray",
-					Protocol:      "tcp",
+				"xray": {
+					{
+						Port:          80,
+						ContainerName: "xray",
+						Protocol:      "tcp",
+					},
+					{
+						Port:          8082,
+						ContainerName: "xray",
+						Protocol:      "tcp",
+					},
 				},
 			},
 		},
@@ -2253,7 +2323,7 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 
 			// THEN
 			require.NoError(t, err)
-			require.Equal(t, tc.wantedExposedPorts, actual)
+			require.Equal(t, tc.wantedExposedPorts, actual.PortsForContainer)
 		})
 	}
 }

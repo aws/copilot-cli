@@ -39,6 +39,11 @@ func TestBackendService_TemplateAndParamsGeneration(t *testing.T) {
 			TemplatePath: filepath.Join(testDir, "simple-template.yml"),
 			ParamsPath:   filepath.Join(testDir, "simple-params.json"),
 		},
+		"simple without port config": {
+			ManifestPath: filepath.Join(testDir, "simple-manifest-without-port-config.yml"),
+			TemplatePath: filepath.Join(testDir, "simple-template-without-port-config.yml"),
+			ParamsPath:   filepath.Join(testDir, "simple-params-without-port-config.json"),
+		},
 		"http only path configured": {
 			ManifestPath: filepath.Join(testDir, "http-only-path-manifest.yml"),
 			TemplatePath: filepath.Join(testDir, "http-only-path-template.yml"),

@@ -95,12 +95,16 @@ Resources: # If a bucket URL is specified, that means the template exists.
               awslogs-group: !Ref LogGroup
               awslogs-stream-prefix: copilot
           PortMappings:
-            - ContainerPort: !Ref ContainerPort
+            - ContainerPort: 80
+              Protocol: tcp
               Name: target
         - Name: tls
           Image: 1234567890.dkr.ecr.us-west-2.amazonaws.com/proxy:cicdtest
           PortMappings:
             - ContainerPort: 82
+              Protocol: tcp
+            - ContainerPort: 443
+              Protocol: tcp
           Environment:
             - Name: COPILOT_APPLICATION_NAME
               Value: !Sub '${AppName}'

@@ -12,7 +12,7 @@
 		"ContainerPort": "8080",
 		"EnvFileARN": "",
 		"TargetContainer": "http-full-config",
-		"TargetPort": "8080",
+		"TargetPort": "8081",
 		"RulePath": "http-full-config-path",
 		"Stickiness": "true",
 		"HTTPSEnabled": "false"

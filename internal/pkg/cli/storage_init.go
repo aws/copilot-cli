@@ -54,27 +54,6 @@ const (
 	rdsStorageTypeOption      = "Aurora Serverless"
 )
 
-var optionToStorageType = map[string]string{
-	dynamoDBStorageTypeOption: dynamoDBStorageType,
-	s3StorageTypeOption:       s3StorageType,
-	rdsStorageTypeOption:      rdsStorageType,
-}
-
-var storageTypeOptions = map[string]prompt.Option{
-	dynamoDBStorageType: {
-		Value: dynamoDBStorageTypeOption,
-		Hint:  "NoSQL",
-	},
-	s3StorageType: {
-		Value: s3StorageTypeOption,
-		Hint:  "Objects",
-	},
-	rdsStorageType: {
-		Value: rdsStorageTypeOption,
-		Hint:  "SQL",
-	},
-}
-
 const (
 	s3BucketFriendlyText      = "S3 Bucket"
 	dynamoDBTableFriendlyText = "DynamoDB Table"
@@ -185,7 +164,7 @@ type initStorageOpts struct {
 	appName string
 
 	fs    afero.Fs
-	ws    wsAddonManager
+	ws    wsReadWriter
 	store store
 
 	sel    wsSelector
@@ -308,11 +287,24 @@ func (o *initStorageOpts) validateOrAskStorageType() error {
 	if o.storageType != "" {
 		return o.validateStorageType()
 	}
-	var options []prompt.Option
-	for _, st := range storageTypes {
-		options = append(options, storageTypeOptions[st])
+	options := []prompt.Option{
+		{
+			Value:        dynamoDBStorageType,
+			FriendlyText: dynamoDBStorageTypeOption,
+			Hint:         "NoSQL",
+		},
+		{
+			Value:        s3StorageType,
+			FriendlyText: s3StorageTypeOption,
+			Hint:         "Objects",
+		},
+		{
+			Value:        rdsStorageType,
+			FriendlyText: rdsStorageTypeOption,
+			Hint:         "SQL",
+		},
 	}
-	storageTypeOption, err := o.prompt.SelectOption(fmt.Sprintf(
+	result, err := o.prompt.SelectOption(fmt.Sprintf(
 		fmtStorageInitTypePrompt, color.HighlightUserInput(o.workloadName)),
 		storageInitTypeHelp,
 		options,
@@ -320,7 +312,7 @@ func (o *initStorageOpts) validateOrAskStorageType() error {
 	if err != nil {
 		return fmt.Errorf("select storage type: %w", err)
 	}
-	o.storageType = optionToStorageType[storageTypeOption]
+	o.storageType = result
 	return o.validateStorageType()
 }
 
