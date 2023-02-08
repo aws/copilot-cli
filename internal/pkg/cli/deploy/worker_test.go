@@ -245,6 +245,7 @@ func mockWorkerServiceDeployer(opts ...func(*workerSvcDeployer)) *workerSvcDeplo
 					App:  "demo",
 					Name: "test",
 				},
+				resources:        &stack.AppRegionalResources{},
 				envConfig:        new(manifest.Environment),
 				endpointGetter:   &mockEndpointGetter{endpoint: "demo.test.local"},
 				envVersionGetter: &mockEnvVersionGetter{version: "v1.0.0"},
