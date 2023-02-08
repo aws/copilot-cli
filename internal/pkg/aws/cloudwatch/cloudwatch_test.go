@@ -64,7 +64,6 @@ func TestCloudWatch_AlarmsWithTags(t *testing.T) {
 				gomock.InOrder(
 					m.rg.EXPECT().GetResourcesByTags(cloudwatchResourceType, gomock.Eq(testTags)).Return([]*rg.Resource{{ARN: mockAlarmArn}}, nil),
 					m.cw.EXPECT().DescribeAlarms(&cloudwatch.DescribeAlarmsInput{
-						NextToken:  nil,
 						AlarmNames: aws.StringSlice([]string{"mockAlarmName"}),
 					}).Return(nil, mockError),
 				)
@@ -137,7 +136,6 @@ func TestCloudWatch_AlarmStatuses(t *testing.T) {
 			setupMocks: func(m cloudWatchMocks) {
 				m.cw.EXPECT().DescribeAlarms(&cloudwatch.DescribeAlarmsInput{
 					AlarmNamePrefix: aws.String(mockPrefix),
-					NextToken:       nil,
 				}).Return(nil, mockError)
 			},
 			wantedErr: errors.New("describe CloudWatch alarms: some error"),
@@ -147,7 +145,6 @@ func TestCloudWatch_AlarmStatuses(t *testing.T) {
 			setupMocks: func(m cloudWatchMocks) {
 				m.cw.EXPECT().DescribeAlarms(&cloudwatch.DescribeAlarmsInput{
 					AlarmNamePrefix: aws.String(mockPrefix),
-					NextToken:       nil,
 				}).Return(nil, nil)
 			},
 		},
@@ -156,9 +153,7 @@ func TestCloudWatch_AlarmStatuses(t *testing.T) {
 			setupMocks: func(m cloudWatchMocks) {
 				m.cw.EXPECT().DescribeAlarms(&cloudwatch.DescribeAlarmsInput{
 					AlarmNamePrefix: aws.String(mockPrefix),
-					NextToken:       nil,
 				}).Return(&cloudwatch.DescribeAlarmsOutput{
-					NextToken: nil,
 					MetricAlarms: []*cloudwatch.MetricAlarm{
 						{
 							AlarmArn:              aws.String(mockAlarmArn),
@@ -190,10 +185,8 @@ func TestCloudWatch_AlarmStatuses(t *testing.T) {
 			setupMocks: func(m cloudWatchMocks) {
 				gomock.InOrder(
 					m.cw.EXPECT().DescribeAlarms(&cloudwatch.DescribeAlarmsInput{
-						NextToken:  nil,
 						AlarmNames: aws.StringSlice([]string{mockName}),
 					}).Return(&cloudwatch.DescribeAlarmsOutput{
-						NextToken: nil,
 						MetricAlarms: []*cloudwatch.MetricAlarm{
 							{
 								AlarmArn:              aws.String(mockAlarmArn),
@@ -227,10 +220,8 @@ func TestCloudWatch_AlarmStatuses(t *testing.T) {
 			setupMocks: func(m cloudWatchMocks) {
 				gomock.InOrder(
 					m.cw.EXPECT().DescribeAlarms(&cloudwatch.DescribeAlarmsInput{
-						NextToken:  nil,
 						AlarmNames: aws.StringSlice([]string{mockName}),
 					}).Return(&cloudwatch.DescribeAlarmsOutput{
-						NextToken: nil,
 						MetricAlarms: []*cloudwatch.MetricAlarm{
 							{
 								AlarmArn:           aws.String(mockArn1),
@@ -278,10 +269,8 @@ func TestCloudWatch_AlarmStatuses(t *testing.T) {
 			setupMocks: func(m cloudWatchMocks) {
 				gomock.InOrder(
 					m.cw.EXPECT().DescribeAlarms(&cloudwatch.DescribeAlarmsInput{
-						NextToken:  nil,
 						AlarmNames: aws.StringSlice([]string{mockName}),
 					}).Return(&cloudwatch.DescribeAlarmsOutput{
-						NextToken: nil,
 						MetricAlarms: []*cloudwatch.MetricAlarm{
 							{
 								AlarmArn:           aws.String(mockArn1),
@@ -362,7 +351,6 @@ func TestCloudWatch_AlarmStatuses(t *testing.T) {
 			setupMocks: func(m cloudWatchMocks) {
 				gomock.InOrder(
 					m.cw.EXPECT().DescribeAlarms(&cloudwatch.DescribeAlarmsInput{
-						NextToken:  nil,
 						AlarmNames: aws.StringSlice([]string{"mockAlarmName1", "mockAlarmName2"}),
 					}).Return(&cloudwatch.DescribeAlarmsOutput{
 						NextToken: aws.String("mockNextToken"),
@@ -381,7 +369,6 @@ func TestCloudWatch_AlarmStatuses(t *testing.T) {
 						NextToken:  aws.String("mockNextToken"),
 						AlarmNames: aws.StringSlice([]string{"mockAlarmName1", "mockAlarmName2"}),
 					}).Return(&cloudwatch.DescribeAlarmsOutput{
-						NextToken: nil,
 						MetricAlarms: []*cloudwatch.MetricAlarm{
 							{
 								AlarmArn:              aws.String(mockArn2),
