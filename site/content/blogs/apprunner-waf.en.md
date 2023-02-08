@@ -134,7 +134,7 @@ Resources:
  
 
 ### Step 5: Deploy your service 
-Finally, run `copilot svc deploy`! Your Request-Driven Web service will now be deployed along with a WAF WebACL!  
+Finally, run `copilot svc deploy`! Your Request-Driven Web service will now be deployed along with a WAF Web ACL!  
 
 ???+ note "Some considerations"
     - A Web ACL can be linked to multiple services but one service can not be linked to more than one Web ACL
