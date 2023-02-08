@@ -178,7 +178,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		}
 	}
 
-	aliasesFor, err := convertHostedZone(s.manifest.RoutingRule.RoutingRuleConfiguration)
+	aliasesFor, err := convertHostedZone(s.manifest.RoutingRule.RoutingRuleConfiguration.Alias, s.manifest.RoutingRule.RoutingRuleConfiguration.HostedZone)
 	if err != nil {
 		return "", err
 	}
@@ -191,6 +191,10 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		allowedSourceIPs = append(allowedSourceIPs, string(ipNet))
 	}
 	nlbConfig, err := s.convertNetworkLoadBalancer()
+	if err != nil {
+		return "", err
+	}
+	albConfig, err := s.convertApplicationLoadBalancer()
 	if err != nil {
 		return "", err
 	}
@@ -264,7 +268,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		AppDNSName:           nlbConfig.appDNSName,
 		AppDNSDelegationRole: nlbConfig.appDNSDelegationRole,
 		NLB:                  nlbConfig.settings,
-
+		ALB:                  albConfig.settings,
 		// service connect and service discovery options.
 		ServiceConnect:           scConfig,
 		ServiceDiscoveryEndpoint: s.rc.ServiceDiscoveryEndpoint,

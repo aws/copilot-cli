@@ -274,6 +274,33 @@ type importableValue interface {
 	Value() string
 }
 
+func (cfg *ApplicationLoadBalancer) GetAliases() []string {
+	var uniqueAliases []string
+	uniqueAliasMap := make(map[string]bool)
+	for _, listener := range cfg.Listener {
+		if listener.Aliases != nil {
+			uniqueAliases = append(uniqueAliases, uniqueAliasesForARecords(listener.Aliases, uniqueAliasMap)...)
+		}
+	}
+	return uniqueAliases
+}
+
+func uniqueAliasesForARecords(aliases []string, uniqueMap map[string]bool) []string {
+	list := []string{}
+	for _, entry := range aliases {
+		if _, value := uniqueMap[entry]; !value {
+			uniqueMap[entry] = true
+			list = append(list, entry)
+		}
+	}
+	return list
+}
+
+// IsHTTPS returns true if the target container's port is 443.
+func (albl ApplicationLoadBalancerRoutineRule) IsHTTPS() bool {
+	return albl.TargetPort == "443"
+}
+
 // Variable represents the value of an environment variable.
 type Variable importableValue
 
@@ -406,6 +433,21 @@ func SecretFromSecretsManager(value string) secretsManagerName {
 	}
 }
 
+// ApplicationLoadBalancerRoutineRule holds configuration that's needed for an Application Load Balancer listener.
+type ApplicationLoadBalancerRoutineRule struct {
+	// The path and protocol that the Application Load Balancer listens to.
+	Path     string
+	Protocol string
+	// The target container and port to which the traffic is routed to from the Application Load Balancer.
+	TargetContainer string
+	TargetPort      string
+
+	Aliases          []string
+	AllowedSourceIps []string
+	Stickiness       string
+	HTTPHealthCheck  HTTPHealthCheckOpts
+}
+
 // NetworkLoadBalancerListener holds configuration that's need for a Network Load Balancer listener.
 type NetworkLoadBalancerListener struct {
 	// The port and protocol that the Network Load Balancer listens to.
@@ -436,6 +478,17 @@ type NLBHealthCheck struct {
 type NetworkLoadBalancer struct {
 	PublicSubnetCIDRs []string
 	Listener          NetworkLoadBalancerListener
+	MainContainerPort string
+}
+
+// ApplicationLoadBalancer holds configuration that's needed for an Application Load Balancer.
+type ApplicationLoadBalancer struct {
+	PublicSubnetCIDRs []string
+	Listener          []ApplicationLoadBalancerRoutineRule
+	HostedZoneAliases AliasesForHostedZone
+	HTTPRedirect      bool
+	HTTPSListener     bool
+	ALBEnabled        bool
 	MainContainerPort string
 }
 
@@ -753,6 +806,7 @@ type WorkloadOpts struct {
 	DeregistrationDelay     *int64
 	AllowedSourceIps        []string
 	NLB                     *NetworkLoadBalancer
+	ALB                     *ApplicationLoadBalancer
 	DeploymentConfiguration DeploymentConfigurationOpts
 	ServiceConnect          *ServiceConnect
 
@@ -792,6 +846,24 @@ func (w WorkloadOpts) HealthCheckProtocol() string {
 	case w.HTTPTargetContainer.IsHTTPS() && w.HTTPHealthCheck.Port == "":
 		return "HTTPS"
 	case w.HTTPTargetContainer.IsHTTPS() && w.HTTPHealthCheck.Port != "443":
+		// for backwards compatability, only set HTTP if target
+		// container is https but the specified health check port is not
+		return "HTTP"
+	}
+	return ""
+}
+
+// HealthCheckProtocol returns the protocol for the Load Balancer health check,
+// or an empty string if it shouldn't be configured, defaulting to the
+// target protocol. (which is what happens, even if it isn't documented as such :))
+// https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-elasticloadbalancingv2-targetgroup.html#cfn-elasticloadbalancingv2-targetgroup-healthcheckprotocol
+func (albl ApplicationLoadBalancerRoutineRule) HealthCheckProtocol() string {
+	switch {
+	case albl.HTTPHealthCheck.Port == "443":
+		return "HTTPS"
+	case albl.IsHTTPS() && albl.HTTPHealthCheck.Port == "":
+		return "HTTPS"
+	case albl.IsHTTPS() && albl.HTTPHealthCheck.Port != "443":
 		// for backwards compatability, only set HTTP if target
 		// container is https but the specified health check port is not
 		return "HTTP"

@@ -97,12 +97,16 @@ Resources:
     Type: AWS::ECS::Service
     DependsOn:
       - EnvControllerAction
-      {{- if and .ALBEnabled .HTTPSListener}}
-      - HTTPListenerRuleWithDomain
-      - HTTPSListenerRule
-      {{ else if .ALBEnabled}}
-      - HTTPListenerRule
+      {{- if and .ALBEnabled .ALB.HTTPSListener}}
+      {{- range $listener := .ALB.Listener }}
+      - HTTPListenerRuleWithDomain{{logicalIDSafe $listener.Path}}
+      - HTTPSListenerRule{{logicalIDSafe $listener.Path}}
       {{- end}}
+      {{ else if .ALBEnabled}}
+      {{- range $listener := .ALB.Listener }}
+      - HTTPListenerRule{{logicalIDSafe $listener.Path}}
+      {{- end}}
+      {{- end }}
     Properties:
       {{- "\n"}}{{ include "service-base-properties" . | indent 6 }}
       ServiceRegistries: !If [ExposePort, [{RegistryArn: !GetAtt DiscoveryService.Arn, Port: !Ref TargetPort}], !Ref "AWS::NoValue"]
@@ -111,11 +115,12 @@ Resources:
       HealthCheckGracePeriodSeconds: {{.HTTPHealthCheck.GracePeriod}}
       {{- end }}
       LoadBalancers:
-        - ContainerName: !Ref TargetContainer
-          ContainerPort: !Ref TargetPort
-          TargetGroupArn: !Ref TargetGroup
-      {{- end}}
-
+        {{- range $listener := .ALB.Listener}}
+        - ContainerName: {{$listener.TargetContainer}}
+          ContainerPort: {{$listener.TargetPort}}
+          TargetGroupArn: !Ref {{ if eq $listener.Path "/"}}TargetGroupForDefaultPath{{ else }}TargetGroupFor{{logicalIDSafe $listener.Path}}{{ end}}
+        {{- end}}
+      {{- end }}
 {{include "efs-access-point" . | indent 2}}
 
 {{include "addons" . | indent 2}}

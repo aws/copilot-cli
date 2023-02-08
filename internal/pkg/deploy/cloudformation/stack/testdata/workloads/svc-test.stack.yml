@@ -453,25 +453,25 @@ Resources: # If a bucket URL is specified, that means the template exists.
       # This may need to be adjusted if the container takes a while to start up
       HealthCheckGracePeriodSeconds: 60
       LoadBalancers:
-        - ContainerName: !Ref TargetContainer
-          ContainerPort: !Ref TargetPort
-          TargetGroupArn: !Ref TargetGroup
+        - ContainerName: fe
+          ContainerPort: 4000
+          TargetGroupArn: !Ref TargetGroupForDefaultPath
       ServiceRegistries:
         - RegistryArn: !GetAtt DiscoveryService.Arn
           Port: !Ref TargetPort
-  TargetGroup:
+  TargetGroupForDefaultPath:
     Metadata:
       'aws:copilot:description': 'A target group to connect the load balancer to your service'
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
       HealthCheckPath: / # Default is '/'.
-      Port: !Ref TargetPort
+      Port: 4000
       Protocol: HTTP
       TargetGroupAttributes:
         - Key: deregistration_delay.timeout_seconds
           Value: 60 # ECS Default is 300; Copilot default is 60.
         - Key: stickiness.enabled
-          Value: !Ref Stickiness
+          Value: false
       TargetType: ip
       VpcId:
         Fn::ImportValue: !Sub "${AppName}-${EnvName}-VpcId"
@@ -518,7 +518,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Type: Custom::RulePriorityFunction
     Properties:
       ServiceToken: !GetAtt RulePriorityFunction.Arn
-      RulePath: !Ref RulePath
+      RulePath: "/"
       ListenerArn: !GetAtt EnvControllerAction.HTTPSListenerArn
   
   HTTPRuleWithDomainPriorityAction:
@@ -527,7 +527,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Type: Custom::RulePriorityFunction
     Properties:
       ServiceToken: !GetAtt RulePriorityFunction.Arn
-      RulePath: !Ref RulePath
+      RulePath: "/"
       ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
   
   HTTPListenerRuleWithDomain:
@@ -550,11 +550,8 @@ Resources: # If a bucket URL is specified, that means the template exists.
             Values: ["example.com"]
         - Field: 'path-pattern'
           PathPatternConfig:
-            Values: !If
-              - IsDefaultRootPath
-              - - "/*"
-              - - !Sub "/${RulePath}"
-                - !Sub "/${RulePath}/*"
+            Values:
+              - "/*"
       ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
       Priority: !GetAtt HTTPRuleWithDomainPriorityAction.Priority
   HTTPSListenerRule:
@@ -563,7 +560,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
     Properties:
       Actions:
-        - TargetGroupArn: !Ref TargetGroup
+        - TargetGroupArn: !Ref TargetGroupForDefaultPath
           Type: forward
       Conditions:
         - Field: 'host-header'
@@ -571,11 +568,8 @@ Resources: # If a bucket URL is specified, that means the template exists.
             Values: ["example.com"]
         - Field: 'path-pattern'
           PathPatternConfig:
-            Values: !If
-              - IsDefaultRootPath
-              - - "/*"
-              - - !Sub "/${RulePath}"
-                - !Sub "/${RulePath}/*"
+            Values:
+              - "/*"
       ListenerArn: !GetAtt EnvControllerAction.HTTPSListenerArn
       Priority: !GetAtt HTTPSRulePriorityAction.Priority
   AddonsStack:

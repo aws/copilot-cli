@@ -292,6 +292,33 @@ Outputs:
 			},
 			EntryPoint: []string{"/bin/echo", "hello"},
 			Command:    []string{"world"},
+			ALB: &template.ApplicationLoadBalancer{
+				Listener: []template.ApplicationLoadBalancerRoutineRule{
+					{
+						Path:            "frontend",
+						Protocol:        "TCP",
+						TargetContainer: "frontend",
+						TargetPort:      "80",
+						Aliases: []string{
+							"mockAlias",
+						},
+						HTTPHealthCheck: template.HTTPHealthCheckOpts{
+							HealthCheckPath: "/",
+							GracePeriod:     60,
+							Port:            "",
+							SuccessCodes:    "",
+						},
+						Stickiness: "false",
+					},
+				},
+				HTTPSListener: true,
+				HostedZoneAliases: template.AliasesForHostedZone{
+					"mockHostedZone": {
+						"mockAlias",
+					},
+				},
+				HTTPRedirect: true,
+			},
 			ALBEnabled: true,
 			PortMappings: []*template.PortMapping{
 				{

@@ -128,7 +128,7 @@ func (s *BackendService) Template() (string, error) {
 			return "", err
 		}
 	}
-	hostedZoneAliases, err := convertHostedZone(s.manifest.RoutingRule)
+	hostedZoneAliases, err := convertHostedZone(s.manifest.RoutingRule.Alias, s.manifest.RoutingRule.HostedZone)
 	if err != nil {
 		return "", err
 	}
@@ -148,6 +148,8 @@ func (s *BackendService) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
+
+	albConfig, err := s.convertApplicationLoadBalancer()
 
 	content, err := s.parser.ParseBackendService(template.WorkloadOpts{
 		// Workload parameters.
@@ -198,6 +200,7 @@ func (s *BackendService) Template() (string, error) {
 		},
 		HTTPHealthCheck: convertHTTPHealthCheck(&s.manifest.RoutingRule.HealthCheck),
 		HTTPVersion:     convertHTTPVersion(s.manifest.RoutingRule.ProtocolVersion),
+		ALB:             albConfig.settings,
 
 		// Custom Resource Config.
 		CustomResources: crs,

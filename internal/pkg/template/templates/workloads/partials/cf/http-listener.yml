@@ -17,33 +17,34 @@ LoadBalancerInternalDNSAlias:
             - !GetAtt EnvControllerAction.InternalWorkloadsHostedZoneName
 {{- end}}
 
-HTTPRulePriorityAction:
+{{- range $listener := .ALB.Listener}}
+HTTPRulePriorityAction{{logicalIDSafe $listener.Path}}:
   Metadata:
     'aws:copilot:description': 'A custom resource assigning priority for HTTP listener rules'
   Type: Custom::RulePriorityFunction
   Properties:
     ServiceToken: !GetAtt RulePriorityFunction.Arn
     RulePath: !Ref RulePath
-    {{- if eq .WorkloadType "Backend Service"}}
+    {{- if eq $.WorkloadType "Backend Service"}}
     ListenerArn: !GetAtt EnvControllerAction.InternalHTTPListenerArn
     {{- else}}
     ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
     {{- end}}
 
-HTTPListenerRule:
+HTTPListenerRule{{logicalIDSafe $listener.Path}}:
   Metadata:
     'aws:copilot:description': 'A HTTP listener rule for forwarding HTTP traffic'
   Type: AWS::ElasticLoadBalancingV2::ListenerRule
   Properties:
     Actions:
-      - TargetGroupArn: !Ref TargetGroup
+      - TargetGroupArn: !Ref {{ if eq $listener.Path "/"}} TargetGroupForDefaultPath {{ else }} TargetGroupFor{{ logicalIDSafe $listener.Path }} {{ end }}
         Type: forward
     Conditions:
-      {{- if .AllowedSourceIps}}
+      {{- if $listener.AllowedSourceIps}}
       - Field: 'source-ip'
         SourceIpConfig:
           Values:
-            {{- range $sourceIP := .AllowedSourceIps}}
+            {{- range $sourceIP := $listener.AllowedSourceIps}}
             - {{$sourceIP}}
             {{- end}}
       {{- end}}
@@ -60,16 +61,16 @@ HTTPListenerRule:
       - Field: 'path-pattern'
         PathPatternConfig:
           Values:
-            !If
-              - IsDefaultRootPath
-              -
-                - "/*"
-              -
-                - !Sub "/${RulePath}"
-                - !Sub "/${RulePath}/*"
-    {{- if eq .WorkloadType "Backend Service"}}
+            {{- if eq $listener.Path "/" }}
+            - /*
+            {{- else }}
+            - /{{ $listener.Path }}
+            - /{{ $listener.Path }}/*
+            {{- end }}
+    {{- if eq $.WorkloadType "Backend Service"}}
     ListenerArn: !GetAtt EnvControllerAction.InternalHTTPListenerArn
     {{- else}}
     ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
     {{- end}}
-    Priority: !GetAtt HTTPRulePriorityAction.Priority
+    Priority: !GetAtt HTTPRulePriorityAction{{logicalIDSafe $listener.Path }}.Priority
+{{- end }}

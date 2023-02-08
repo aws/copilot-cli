@@ -272,7 +272,7 @@ Resources:
     Type: AWS::ECS::Service
     DependsOn:
       - EnvControllerAction
-      - HTTPListenerRule
+      - HTTPListenerRulehttponlypathpath
     Properties:
       PlatformVersion: LATEST
       Cluster:
@@ -314,22 +314,22 @@ Resources:
         ]
       HealthCheckGracePeriodSeconds: 60
       LoadBalancers:
-        - ContainerName: !Ref TargetContainer
-          ContainerPort: !Ref TargetPort
-          TargetGroupArn: !Ref TargetGroup
-  TargetGroup:
+        - ContainerName: http-only-path
+          ContainerPort: 8080
+          TargetGroupArn: !Ref TargetGroupForhttponlypathpath
+  TargetGroupForhttponlypathpath:
     Metadata:
       "aws:copilot:description": "A target group to connect the load balancer to your service"
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
       HealthCheckPath: / # Default is '/'.
-      Port: !Ref TargetPort
+      Port: 8080
       Protocol: HTTP
       TargetGroupAttributes:
         - Key: deregistration_delay.timeout_seconds
           Value: 60 # ECS Default is 300; Copilot default is 60.
         - Key: stickiness.enabled
-          Value: !Ref Stickiness
+          Value: false
       TargetType: ip
       VpcId:
         Fn::ImportValue: !Sub "${AppName}-${EnvName}-VpcId"
@@ -386,7 +386,7 @@ Resources:
             - "."
             - - !Ref WorkloadName
               - !GetAtt EnvControllerAction.InternalWorkloadsHostedZoneName
-  HTTPRulePriorityAction:
+  HTTPRulePriorityActionhttponlypathpath:
     Metadata:
       "aws:copilot:description": "A custom resource assigning priority for HTTP listener rules"
     Type: Custom::RulePriorityFunction
@@ -394,13 +394,13 @@ Resources:
       ServiceToken: !GetAtt RulePriorityFunction.Arn
       RulePath: !Ref RulePath
       ListenerArn: !GetAtt EnvControllerAction.InternalHTTPListenerArn
-  HTTPListenerRule:
+  HTTPListenerRulehttponlypathpath:
     Metadata:
       "aws:copilot:description": "A HTTP listener rule for forwarding HTTP traffic"
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
     Properties:
       Actions:
-        - TargetGroupArn: !Ref TargetGroup
+        - TargetGroupArn: !Ref TargetGroupForhttponlypathpath
           Type: forward
       Conditions:
         - Field: "host-header"
@@ -413,13 +413,11 @@ Resources:
                   - !GetAtt EnvControllerAction.InternalWorkloadsHostedZoneName
         - Field: "path-pattern"
           PathPatternConfig:
-            Values: !If
-              - IsDefaultRootPath
-              - - "/*"
-              - - !Sub "/${RulePath}"
-                - !Sub "/${RulePath}/*"
+            Values:
+              - "/http-only-path-path"
+              - "/http-only-path-path/*"
       ListenerArn: !GetAtt EnvControllerAction.InternalHTTPListenerArn
-      Priority: !GetAtt HTTPRulePriorityAction.Priority
+      Priority: !GetAtt HTTPRulePriorityActionhttponlypathpath.Priority
   AddonsStack:
     Metadata:
       "aws:copilot:description": "An Addons CloudFormation Stack for your additional AWS resources"

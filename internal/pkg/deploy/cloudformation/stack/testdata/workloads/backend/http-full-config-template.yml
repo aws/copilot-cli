@@ -274,7 +274,7 @@ Resources:
     Type: AWS::ECS::Service
     DependsOn:
       - EnvControllerAction
-      - HTTPListenerRule
+      - HTTPListenerRulehttpfullconfigpath
     Properties:
       PlatformVersion: LATEST
       Cluster:
@@ -316,10 +316,10 @@ Resources:
         ]
       HealthCheckGracePeriodSeconds: 45
       LoadBalancers:
-        - ContainerName: !Ref TargetContainer
-          ContainerPort: !Ref TargetPort
-          TargetGroupArn: !Ref TargetGroup
-  TargetGroup:
+        - ContainerName: http-full-config
+          ContainerPort: 8081
+          TargetGroupArn: !Ref TargetGroupForhttpfullconfigpath
+  TargetGroupForhttpfullconfigpath:
     Metadata:
       "aws:copilot:description": "A target group to connect the load balancer to your service"
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
@@ -332,13 +332,13 @@ Resources:
       UnhealthyThresholdCount: 2
       HealthCheckIntervalSeconds: 15
       HealthCheckTimeoutSeconds: 10
-      Port: !Ref TargetPort
+      Port: 8081
       Protocol: HTTP
       TargetGroupAttributes:
         - Key: deregistration_delay.timeout_seconds
           Value: 5 # ECS Default is 300; Copilot default is 60.
         - Key: stickiness.enabled
-          Value: !Ref Stickiness
+          Value: true
       TargetType: ip
       VpcId:
         Fn::ImportValue: !Sub "${AppName}-${EnvName}-VpcId"
@@ -395,7 +395,7 @@ Resources:
             - "."
             - - !Ref WorkloadName
               - !GetAtt EnvControllerAction.InternalWorkloadsHostedZoneName
-  HTTPRulePriorityAction:
+  HTTPRulePriorityActionhttpfullconfigpath:
     Metadata:
       "aws:copilot:description": "A custom resource assigning priority for HTTP listener rules"
     Type: Custom::RulePriorityFunction
@@ -403,13 +403,13 @@ Resources:
       ServiceToken: !GetAtt RulePriorityFunction.Arn
       RulePath: !Ref RulePath
       ListenerArn: !GetAtt EnvControllerAction.InternalHTTPListenerArn
-  HTTPListenerRule:
+  HTTPListenerRulehttpfullconfigpath:
     Metadata:
       "aws:copilot:description": "A HTTP listener rule for forwarding HTTP traffic"
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
     Properties:
       Actions:
-        - TargetGroupArn: !Ref TargetGroup
+        - TargetGroupArn: !Ref TargetGroupForhttpfullconfigpath
           Type: forward
       Conditions:
         - Field: "source-ip"
@@ -426,13 +426,11 @@ Resources:
                   - !GetAtt EnvControllerAction.InternalWorkloadsHostedZoneName
         - Field: "path-pattern"
           PathPatternConfig:
-            Values: !If
-              - IsDefaultRootPath
-              - - "/*"
-              - - !Sub "/${RulePath}"
-                - !Sub "/${RulePath}/*"
+            Values:
+              - "/http-full-config-path"
+              - "/http-full-config-path/*"
       ListenerArn: !GetAtt EnvControllerAction.InternalHTTPListenerArn
-      Priority: !GetAtt HTTPRulePriorityAction.Priority
+      Priority: !GetAtt HTTPRulePriorityActionhttpfullconfigpath.Priority
   AddonsStack:
     Metadata:
       "aws:copilot:description": "An Addons CloudFormation Stack for your additional AWS resources"

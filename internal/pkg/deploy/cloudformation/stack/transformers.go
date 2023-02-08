@@ -138,16 +138,21 @@ func convertContainerHealthCheck(hc manifest.ContainerHealthCheck) *template.Con
 	}
 }
 
-func convertHostedZone(m manifest.RoutingRuleConfiguration) (template.AliasesForHostedZone, error) {
+func convertHostedZone(alias manifest.Alias, defaultHostedZone *string) (template.AliasesForHostedZone, error) {
 	aliasesFor := make(map[string][]string)
-	defaultHostedZone := m.HostedZone
-	if len(m.Alias.AdvancedAliases) != 0 {
-		for _, alias := range m.Alias.AdvancedAliases {
+	if len(alias.AdvancedAliases) != 0 {
+		for _, alias := range alias.AdvancedAliases {
 			if alias.HostedZone != nil {
+				if isDuplicateAliasEntry(aliasesFor[*alias.HostedZone], aws.StringValue(alias.Alias)) {
+					continue
+				}
 				aliasesFor[*alias.HostedZone] = append(aliasesFor[*alias.HostedZone], *alias.Alias)
 				continue
 			}
 			if defaultHostedZone != nil {
+				if isDuplicateAliasEntry(aliasesFor[*defaultHostedZone], aws.StringValue(alias.Alias)) {
+					continue
+				}
 				aliasesFor[*defaultHostedZone] = append(aliasesFor[*defaultHostedZone], *alias.Alias)
 			}
 		}
@@ -156,12 +161,28 @@ func convertHostedZone(m manifest.RoutingRuleConfiguration) (template.AliasesFor
 	if defaultHostedZone == nil {
 		return aliasesFor, nil
 	}
-	aliases, err := m.Alias.ToStringSlice()
+	aliases, err := alias.ToStringSlice()
 	if err != nil {
 		return nil, err
 	}
-	aliasesFor[*defaultHostedZone] = aliases
+
+	for _, alias := range aliases {
+		if isDuplicateAliasEntry(aliasesFor[*defaultHostedZone], alias) {
+			continue
+		}
+		aliasesFor[*defaultHostedZone] = append(aliasesFor[*defaultHostedZone], alias)
+	}
+
 	return aliasesFor, nil
+}
+
+func isDuplicateAliasEntry(aliasList []string, alias string) bool {
+	for _, entry := range aliasList {
+		if entry == alias {
+			return true
+		}
+	}
+	return false
 }
 
 // convertDependsOn converts image and sidecar depends on fields to have upper case statuses.
@@ -392,6 +413,14 @@ type networkLoadBalancerConfig struct {
 	appDNSName           *string
 }
 
+type applicationLoadBalancerConfig struct {
+	settings *template.ApplicationLoadBalancer
+
+	// If a domain is associated these values are not empty.
+	appDNSDelegationRole *string
+	appDNSName           *string
+}
+
 func convertELBAccessLogsConfig(mft *manifest.Environment) *template.ELBAccessLogs {
 	elbAccessLogsArgs, isELBAccessLogsSet := mft.ELBAccessLogs()
 	if !isELBAccessLogsSet {
@@ -455,6 +484,121 @@ func convertEnvSecurityGroupCfg(mft *manifest.Environment) (*template.SecurityGr
 		Ingress: ingress,
 		Egress:  egress,
 	}, nil
+}
+
+func (s *LoadBalancedWebService) convertApplicationLoadBalancer() (applicationLoadBalancerConfig, error) {
+	albConfig := s.manifest.RoutingRule
+	if albConfig.IsEmpty() {
+		return applicationLoadBalancerConfig{}, nil
+	}
+	var aliases []string
+	var err error
+	if s.httpsEnabled {
+		aliases, err = convertAlias(albConfig.Alias)
+		if err != nil {
+			return applicationLoadBalancerConfig{}, err
+		}
+	}
+
+	aliasesFor, err := convertHostedZone(albConfig.Alias, albConfig.HostedZone)
+	if err != nil {
+		return applicationLoadBalancerConfig{}, err
+	}
+
+	var allowedSourceIPs []string
+	for _, ipNet := range albConfig.AllowedSourceIps {
+		allowedSourceIPs = append(allowedSourceIPs, string(ipNet))
+	}
+
+	targetContainer, targetPort, err := s.manifest.HTTPLoadBalancerTarget()
+	if err != nil {
+		return applicationLoadBalancerConfig{}, err
+	}
+
+	httpHealthCheck := convertHTTPHealthCheck(&albConfig.HealthCheck)
+	stickiness := strconv.FormatBool(aws.BoolValue(albConfig.Stickiness))
+
+	httpRedirect := true
+	if albConfig.RedirectToHTTPS != nil {
+		httpRedirect = aws.BoolValue(albConfig.RedirectToHTTPS)
+	}
+
+	config := applicationLoadBalancerConfig{
+		settings: &template.ApplicationLoadBalancer{
+			Listener: []template.ApplicationLoadBalancerRoutineRule{
+				{
+					Protocol:         "TCP",
+					Path:             aws.StringValue(albConfig.Path),
+					TargetContainer:  targetContainer,
+					TargetPort:       targetPort,
+					Aliases:          aliases,
+					HTTPHealthCheck:  httpHealthCheck,
+					Stickiness:       stickiness,
+					AllowedSourceIps: allowedSourceIPs,
+				},
+			},
+			HTTPRedirect:      httpRedirect,
+			HTTPSListener:     s.httpsEnabled,
+			HostedZoneAliases: aliasesFor,
+		},
+	}
+
+	return config, nil
+}
+
+func (s *BackendService) convertApplicationLoadBalancer() (applicationLoadBalancerConfig, error) {
+	albConfig := s.manifest.RoutingRule
+	if albConfig.IsEmpty() {
+		return applicationLoadBalancerConfig{}, nil
+	}
+
+	var aliases []string
+	var err error
+	if s.httpsEnabled {
+		aliases, err = convertAlias(s.manifest.RoutingRule.Alias)
+	}
+
+	hostedZoneAliases, err := convertHostedZone(s.manifest.RoutingRule.Alias, s.manifest.RoutingRule.HostedZone)
+	if err != nil {
+		return applicationLoadBalancerConfig{}, fmt.Errorf(`convert "http.alias" to string slice: %w`, err)
+	}
+
+	var allowedSourceIPs []string
+	for _, ipNet := range s.manifest.RoutingRule.AllowedSourceIps {
+		allowedSourceIPs = append(allowedSourceIPs, string(ipNet))
+	}
+
+	if err != nil {
+		return applicationLoadBalancerConfig{}, fmt.Errorf("exposed ports configuration for service %s: %w", s.name, err)
+	}
+	targetContainer, targetPort, err := s.manifest.HTTPLoadBalancerTarget()
+	if err != nil {
+		return applicationLoadBalancerConfig{}, err
+	}
+
+	httpHealthCheck := convertHTTPHealthCheck(&albConfig.HealthCheck)
+	stickiness := aws.String(strconv.FormatBool(aws.BoolValue(s.manifest.RoutingRule.Stickiness)))
+	config := applicationLoadBalancerConfig{
+		settings: &template.ApplicationLoadBalancer{
+			Listener: []template.ApplicationLoadBalancerRoutineRule{
+				{
+					Protocol:         "TCP",
+					Path:             aws.StringValue(albConfig.Path),
+					TargetContainer:  targetContainer,
+					TargetPort:       targetPort,
+					Aliases:          aliases,
+					HTTPHealthCheck:  httpHealthCheck,
+					AllowedSourceIps: allowedSourceIPs,
+					Stickiness:       aws.StringValue(stickiness),
+				},
+			},
+			HTTPRedirect:      s.httpsEnabled,
+			HTTPSListener:     s.httpsEnabled,
+			MainContainerPort: s.manifest.MainContainerPort(),
+			HostedZoneAliases: hostedZoneAliases,
+		},
+	}
+	return config, nil
 }
 
 func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (networkLoadBalancerConfig, error) {
