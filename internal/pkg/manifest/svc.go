@@ -28,7 +28,7 @@ const (
 	// WorkerServiceType is a worker service that manages the consumption of messages.
 	WorkerServiceType = "Worker Service"
 	// StaticSiteType is a static site service that manages static assets.
-	StaticSiteType = "Static Site Service"
+	StaticSiteType = "Static Site"
 )
 
 // ServiceTypes returns the list of supported service manifest types.
