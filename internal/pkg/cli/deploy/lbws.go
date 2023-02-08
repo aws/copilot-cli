@@ -50,7 +50,10 @@ type lbWebSvcDeployer struct {
 	appVersionGetter       versionGetter
 	publicCIDRBlocksGetter publicCIDRBlocksGetter
 	lbMft                  *manifest.LoadBalancedWebService
-	newAliasCertValidator  func(optionalRegion *string) aliasCertValidator
+
+	// Overriden in tests.
+	newAliasCertValidator func(optionalRegion *string) aliasCertValidator
+	newStack              func() cloudformation.StackConfiguration
 }
 
 // NewLBWSDeployer is the constructor for lbWebSvcDeployer.
@@ -154,19 +157,27 @@ func (d *lbWebSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*s
 		}
 		opts = append(opts, stack.WithNLB(cidrBlocks))
 	}
-	conf, err := stack.NewLoadBalancedWebService(stack.LoadBalancedWebServiceConfig{
-		App:                d.app,
-		EnvManifest:        d.envConfig,
-		Manifest:           d.lbMft,
-		RawManifest:        d.rawMft,
-		ArtifactBucketName: d.resources.S3Bucket,
-		RuntimeConfig:      *rc,
-		RootUserARN:        in.RootUserARN,
-		Addons:             d.addons,
-	}, opts...)
-	if err != nil {
-		return nil, fmt.Errorf("create stack configuration: %w", err)
+
+	var conf cloudformation.StackConfiguration
+	switch {
+	case d.newStack != nil:
+		conf = d.newStack()
+	default:
+		conf, err = stack.NewLoadBalancedWebService(stack.LoadBalancedWebServiceConfig{
+			App:                d.app,
+			EnvManifest:        d.envConfig,
+			Manifest:           d.lbMft,
+			RawManifest:        d.rawMft,
+			ArtifactBucketName: d.resources.S3Bucket,
+			RuntimeConfig:      *rc,
+			RootUserARN:        in.RootUserARN,
+			Addons:             d.addons,
+		}, opts...)
+		if err != nil {
+			return nil, fmt.Errorf("create stack configuration: %w", err)
+		}
 	}
+
 	return &svcStackConfigurationOutput{
 		conf: cloudformation.WrapWithTemplateOverrider(conf, d.overrider),
 		svcUpdater: d.newSvcUpdater(func(s *session.Session) serviceForceUpdater {
