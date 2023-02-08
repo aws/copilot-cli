@@ -529,7 +529,7 @@ func TestConstructors(t *testing.T) {
 	})
 
 	t.Run("marshaler for the access policy of an env-level S3", func(t *testing.T) {
-		out := EnvS3AccessPolicyTemplate(&S3Props{})
+		out := EnvS3AccessPolicyTemplate(&AccessPolicyProps{})
 		require.Equal(t, envS3AccessPolicyTemplatePath, out.tmplPath)
 	})
 
@@ -544,7 +544,7 @@ func TestConstructors(t *testing.T) {
 	})
 
 	t.Run("marshaler for the access policy of an env-level ddb", func(t *testing.T) {
-		out := EnvDDBAccessPolicyTemplate(&DynamoDBProps{})
+		out := EnvDDBAccessPolicyTemplate(&AccessPolicyProps{})
 		require.Equal(t, envDynamoDBAccessPolicyTemplatePath, out.tmplPath)
 	})
 
@@ -594,7 +594,7 @@ func TestConstructors(t *testing.T) {
 	})
 
 	t.Run("marshaler for the ingress attached to an RDWS for an env-level aurora", func(t *testing.T) {
-		out := EnvServerlessRDWSIngressTemplate(RDSProps{})
+		out := EnvServerlessRDWSIngressTemplate(RDSIngressProps{})
 		require.Equal(t, envRDSIngressForRDWSTemplatePath, out.tmplPath)
 	})
 }

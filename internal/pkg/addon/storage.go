@@ -81,16 +81,6 @@ func EnvS3Template(input *S3Props) *S3Template {
 	}
 }
 
-// EnvS3AccessPolicyTemplate creates a new marshaler for the access policy attached to a workload
-// for permissions into an environment-level S3 addon.
-func EnvS3AccessPolicyTemplate(input *S3Props) *S3Template {
-	return &S3Template{
-		S3Props:  *input,
-		parser:   template.New(),
-		tmplPath: envS3AccessPolicyTemplatePath,
-	}
-}
-
 // S3Template contains configuration options which fully describe an S3 bucket.
 // Implements the encoding.BinaryMarshaler interface.
 type S3Template struct {
@@ -134,16 +124,6 @@ func EnvDDBTemplate(input *DynamoDBProps) *DynamoDBTemplate {
 		DynamoDBProps: *input,
 		parser:        template.New(),
 		tmplPath:      envDynamoDBTemplatePath,
-	}
-}
-
-// EnvDDBAccessPolicyTemplate creates a marshaller for the access policy attached to a workload
-// for permissions into an environment-level DynamoDB addon.
-func EnvDDBAccessPolicyTemplate(input *DynamoDBProps) *DynamoDBTemplate {
-	return &DynamoDBTemplate{
-		DynamoDBProps: *input,
-		parser:        template.New(),
-		tmplPath:      envDynamoDBAccessPolicyTemplatePath,
 	}
 }
 
@@ -246,6 +226,45 @@ type DDBLocalSecondaryIndex struct {
 	Name         *string
 }
 
+// AccessPolicyProps TODO
+type AccessPolicyProps StorageProps
+
+// EnvS3AccessPolicyTemplate creates a new marshaler for the access policy attached to a workload
+// for permissions into an environment-level S3 addon.
+func EnvS3AccessPolicyTemplate(input *AccessPolicyProps) *AccessPolicyTemplate {
+	return &AccessPolicyTemplate{
+		AccessPolicyProps: *input,
+		parser:            template.New(),
+		tmplPath:          envS3AccessPolicyTemplatePath,
+	}
+}
+
+// EnvDDBAccessPolicyTemplate creates a marshaller for the access policy attached to a workload
+// for permissions into an environment-level DynamoDB addon.
+func EnvDDBAccessPolicyTemplate(input *AccessPolicyProps) *AccessPolicyTemplate {
+	return &AccessPolicyTemplate{
+		AccessPolicyProps: *input,
+		parser:            template.New(),
+		tmplPath:          envDynamoDBAccessPolicyTemplatePath,
+	}
+}
+
+// AccessPolicyTemplate TODO
+type AccessPolicyTemplate struct {
+	AccessPolicyProps
+	parser   template.Parser
+	tmplPath string
+}
+
+// MarshalBinary serializes the content of the template into binary.
+func (t *AccessPolicyTemplate) MarshalBinary() ([]byte, error) {
+	content, err := t.parser.Parse(t.tmplPath, *t, template.WithFuncs(storageTemplateFunctions))
+	if err != nil {
+		return nil, err
+	}
+	return content.Bytes(), nil
+}
+
 // RDSProps holds RDS-specific properties.
 type RDSProps struct {
 	ClusterName    string   // The name of the cluster.
@@ -310,14 +329,36 @@ func EnvServerlessForRDWSTemplate(input RDSProps) *RDSTemplate {
 	}
 }
 
+// RDSIngressProps TODO
+type RDSIngressProps struct {
+	ClusterName string // The name of the cluster.
+	Engine      string // The engine type of the RDS Aurora Serverless cluster.
+}
+
 // EnvServerlessRDWSIngressTemplate creates a marshaler for the security group ingress attached to an RDWS
 // for permissions into an environment-level Aurora Serverless v2 addon.
-func EnvServerlessRDWSIngressTemplate(input RDSProps) *RDSTemplate {
-	return &RDSTemplate{
-		RDSProps: input,
-		parser:   template.New(),
-		tmplPath: envRDSIngressForRDWSTemplatePath,
+func EnvServerlessRDWSIngressTemplate(input RDSIngressProps) *RDSIngressTemplate {
+	return &RDSIngressTemplate{
+		RDSIngressProps: input,
+		parser:          template.New(),
+		tmplPath:        envRDSIngressForRDWSTemplatePath,
 	}
+}
+
+// RDSIngressTemplate TODO
+type RDSIngressTemplate struct {
+	RDSIngressProps
+	parser   template.Parser
+	tmplPath string
+}
+
+// MarshalBinary serializes the content of the template into binary.
+func (t *RDSIngressTemplate) MarshalBinary() ([]byte, error) {
+	content, err := t.parser.Parse(t.tmplPath, *t, template.WithFuncs(storageTemplateFunctions))
+	if err != nil {
+		return nil, err
+	}
+	return content.Bytes(), nil
 }
 
 // RDSTemplate contains configuration options which fully describe a RDS Aurora Serverless cluster.

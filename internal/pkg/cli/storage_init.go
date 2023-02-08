@@ -709,7 +709,9 @@ func (o *initStorageOpts) envDDBAddonBlobs() ([]addonBlob, error) {
 	return append(blobs, addonBlob{
 		path:        o.ws.WorkloadAddonFilePath(o.workloadName, fmt.Sprintf("%s-access-policy.yml", o.storageName)),
 		description: "template",
-		blob:        addon.EnvDDBAccessPolicyTemplate(props),
+		blob: addon.EnvDDBAccessPolicyTemplate(&addon.AccessPolicyProps{
+			Name: o.storageName,
+		}),
 	}), nil
 }
 
@@ -764,7 +766,9 @@ func (o *initStorageOpts) envS3AddonBlobs() ([]addonBlob, error) {
 	return append(blobs, addonBlob{
 		path:        o.ws.WorkloadAddonFilePath(o.workloadName, fmt.Sprintf("%s-access-policy.yml", o.storageName)),
 		description: "template",
-		blob:        addon.EnvS3AccessPolicyTemplate(props),
+		blob: addon.EnvS3AccessPolicyTemplate(&addon.AccessPolicyProps{
+			Name: o.storageName,
+		}),
 	}), nil
 }
 
@@ -837,7 +841,10 @@ func (o *initStorageOpts) envRDSAddonBlobs() ([]addonBlob, error) {
 		addonBlob{
 			path:        o.ws.WorkloadAddonFilePath(o.workloadName, fmt.Sprintf("%s-ingress.yml", o.storageName)),
 			description: "template",
-			blob:        addon.EnvServerlessRDWSIngressTemplate(props),
+			blob: addon.EnvServerlessRDWSIngressTemplate(addon.RDSIngressProps{
+				ClusterName: o.storageName,
+				Engine:      o.rdsEngine,
+			}),
 		},
 		addonBlob{
 			path:        o.ws.WorkloadAddonFilePath(o.workloadName, "addons.parameters.yml"),
