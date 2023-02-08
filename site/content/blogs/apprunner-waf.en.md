@@ -48,7 +48,7 @@ structure may look like:
 ```term
 .
 └── copilot/
-  └── waf-example/
+  └── waf-example/ # The name of your Request-Driven Web Service. Not necessarily "waf-example".
       └── manifest.yml
 ```
 
@@ -76,49 +76,50 @@ In the addons folder, create two new files: `waf.yml` and `addons.parameters.yml
               └── addons.parameters.yml
   ```
 
-Copy and paste the following content to the respective files:
-=== "waf.yml"
-    ```yaml
-    #Addon template to add WAF configuration to your App Runner service.
-    
-    Parameters:
-      App:
-        Type: String
-        Description: Your application's name.
-      Env:
-        Type: String
-        Description: The environment name your service, job, or workflow is being deployed to.
-      Name:
-        Type: String
-        Description: The name of the service, job, or workflow being deployed.
-      ServiceARN:
-        Type: String
-        Default: ""
-        Description: The ARN of the service being deployed.
-    
-    Resources:
-      # Configuration of the WAF Web ACL you want to asscoiate with 
-      # your App Runner service.
-      Firewall:
-        Metadata:
-          'aws:copilot:description': 'Associating your App Runner service with your WAF WebACL'
-        Type: AWS::WAFv2::WebACLAssociation
-        Properties: 
-          ResourceArn: !Sub ${ServiceARN}
-          WebACLArn:  <paste your WAF Web ACL ARN here> # Paste your WAF Web ACL ARN here.
-    ```
+Copy and paste the following content to the respective files:  
 
-=== "addons.parameters.yml"
-      ```yaml
-      Parameters:
-        ServiceARN: !Ref Service
-      ```
+=== "waf.yml"
+  ```yaml
+  #Addon template to add WAF configuration to your App Runner service.
+    
+  Parameters:
+    App:
+      Type: String
+      Description: Your application's name.
+    Env:
+      Type: String
+      Description: The environment name your service, job, or workflow is being deployed to.
+    Name:
+      Type: String
+      Description: The name of the service, job, or workflow being deployed.
+    ServiceARN:
+      Type: String
+      Default: ""
+      Description: The ARN of the service being deployed.
+    
+  Resources:
+    # Configuration of the WAF Web ACL you want to asscoiate with 
+    # your App Runner service.
+    Firewall:
+      Metadata:
+        'aws:copilot:description': 'Associating your App Runner service with your WAF WebACL'
+      Type: AWS::WAFv2::WebACLAssociation
+      Properties: 
+        ResourceArn: !Sub ${ServiceARN}
+        WebACLArn:  <paste your WAF Web ACL ARN here> # Paste your WAF Web ACL ARN here.
+  ```
+
+=== "addons.parameters.yml"  
+  ```yaml
+  Parameters:
+    ServiceARN: !Ref Service
+  ```
 
 
 ### Step 4: Populate your Web ACL ARN in `waf.yml`
 
 Open `waf.yml` and replace `<paste your WAF Web ACL ARN here>` with your the real ARN of your Web ACL resource. For example:   
-```yaml
+   ```yaml
 Resources:
   # Configuration of the WAF Web ACL you want to associate with 
   # your App Runner service
@@ -129,7 +130,7 @@ Resources:
     Properties: 
       ResourceArn: !Sub ${ServiceARN}
       WebACLArn: arn:aws:wafv2:us-east-2:123456789138:regional/webacl/mytestwebacl/3df43564-be9f-47ce-a12b-3a577d2d8913
-```
+  ```
  
 
 ### Step 5: Deploy your service 
