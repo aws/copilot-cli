@@ -125,7 +125,7 @@ Resources:
   # your App Runner service
   Firewall:
     Metadata:
-      'aws:copilot:description': 'Associating your App Runner service with your WAF WebACL'
+      'aws:copilot:description': 'Associating your App Runner service with your WAF Web ACL'
     Type: AWS::WAFv2::WebACLAssociation
     Properties: 
       ResourceArn: !Sub ${ServiceARN}
