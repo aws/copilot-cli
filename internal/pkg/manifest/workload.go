@@ -166,7 +166,7 @@ func (i Image) GetLocation() string {
 func (i *Image) BuildConfig(rootDirectory string) *DockerBuildArgs {
 	df := i.dockerfile()
 	ctx := i.context()
-	dockerfile, context := getDockerfileAndContext(rootDirectory, df, ctx)
+	dockerfile, context := dockerfileAndContext(rootDirectory, df, ctx)
 	return &DockerBuildArgs{
 		Dockerfile: dockerfile,
 		Context:    context,
@@ -176,14 +176,14 @@ func (i *Image) BuildConfig(rootDirectory string) *DockerBuildArgs {
 	}
 }
 
-// getDockerfileAndContext returns the dockerfile path and the build context
+// dockerfileAndContext returns the dockerfile path and the build context
 // of both main container and sidecar container images.
 // Prefer the following hierarchy:
 // 1. Specific dockerfile, specific context
 // 2. Specific dockerfile, context = dockerfile dir
 // 3. "Dockerfile" located in context dir
 // 4. "Dockerfile" located in ws root.
-func getDockerfileAndContext(rootDirectory, df, ctx string) (dockerfile, context *string) {
+func dockerfileAndContext(rootDirectory, df, ctx string) (dockerfile, context *string) {
 	dockerfile = aws.String(filepath.Join(rootDirectory, defaultDockerfileName))
 	context = aws.String(rootDirectory)
 

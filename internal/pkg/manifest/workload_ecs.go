@@ -334,7 +334,7 @@ func (cfg *SidecarConfig) ImageURI() (string, bool) {
 func (cfg *SidecarImageConfig) BuildConfig(rootDirectory string) *DockerBuildArgs {
 	df := cfg.dockerfile()
 	ctx := cfg.context()
-	dockerfile, context := getDockerfileAndContext(rootDirectory, df, ctx)
+	dockerfile, context := dockerfileAndContext(rootDirectory, df, ctx)
 	return &DockerBuildArgs{
 		Dockerfile: dockerfile,
 		Context:    context,
