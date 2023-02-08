@@ -295,7 +295,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
     DependsOn:
       - HTTPListenerRuleWithDomain
       - HTTPSListenerRule
-      - NLBListenerFor81
+      - NLBListener
     Properties:
       PlatformVersion: LATEST
       Cluster:
@@ -334,7 +334,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
           TargetGroupArn: !Ref TargetGroup
         - ContainerName: fe
           ContainerPort: 81
-          TargetGroupArn: !Ref NLBTargetGroupFor81
+          TargetGroupArn: !Ref NLBTargetGroup
       ServiceRegistries:
         - RegistryArn: !GetAtt DiscoveryService.Arn
           Port: !Ref TargetPort
@@ -494,16 +494,16 @@ Resources: # If a bucket URL is specified, that means the template exists.
           - ","
           - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PublicSubnets'
       Type: network
-  NLBListenerFor81:
+  NLBListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
       DefaultActions:
-        - TargetGroupArn: !Ref NLBTargetGroupFor81
+        - TargetGroupArn: !Ref NLBTargetGroup
           Type: forward
       LoadBalancerArn: !Ref PublicNetworkLoadBalancer
       Port: 81
       Protocol: TCP
-  NLBTargetGroupFor81:
+  NLBTargetGroup:
     Metadata:
       'aws:copilot:description': 'A target group to connect the network load balancer to your service'
     Type: AWS::ElasticLoadBalancingV2::TargetGroup

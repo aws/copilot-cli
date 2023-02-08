@@ -282,28 +282,20 @@ func ImportedVariable(name string) Variable {
 	return importedEnvVar(name)
 }
 
-// GetAliases return all the unique aliases specified across all the routing rules in NLB.
+// Aliases return all the unique aliases specified across all the routing rules in NLB.
 // Currently, we only have primary routing rule, but we will be getting additional routing rule soon.
-func (cfg *NetworkLoadBalancer) GetAliases() []string {
+func (cfg *NetworkLoadBalancer) Aliases() []string {
 	var uniqueAliases []string
-	uniqueAliasMap := make(map[string]bool)
+	seen := make(map[string]bool)
 	for _, listener := range cfg.Listener {
-		if listener.Aliases != nil {
-			uniqueAliases = append(uniqueAliases, uniqueAliasesForARecords(listener.Aliases, uniqueAliasMap)...)
+		for _, entry := range listener.Aliases {
+			if _, value := seen[entry]; !value {
+				seen[entry] = true
+				uniqueAliases = append(uniqueAliases, entry)
+			}
 		}
 	}
 	return uniqueAliases
-}
-
-func uniqueAliasesForARecords(aliases []string, uniqueMap map[string]bool) []string {
-	var list []string
-	for _, entry := range aliases {
-		if _, value := uniqueMap[entry]; !value {
-			uniqueMap[entry] = true
-			list = append(list, entry)
-		}
-	}
-	return list
 }
 
 // PlainVariable returns a Variable that is a plain string value.

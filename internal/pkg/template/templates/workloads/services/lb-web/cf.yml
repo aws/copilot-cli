@@ -111,8 +111,12 @@ Resources:
     {{- end}}
     {{- end}}
     {{- if .NLB}}
+    {{- if eq (len .NLB.Listener) 1 }}
+      - NLBListener
+    {{- else if gt (len .NLB.Listener) 1 }}
     {{- range $listener := .NLB.Listener }}
       - NLBListenerFor{{$listener.Port}}
+    {{- end }}
     {{- end }}
     {{- end}}
     Properties:
@@ -128,12 +132,20 @@ Resources:
           TargetGroupArn: !Ref TargetGroup
   {{- end}}
   {{- if .NLB}}
+  {{- if eq (len .NLB.Listener) 1 }}
+    {{- range $listener := .NLB.Listener }}
+        - ContainerName: {{$listener.TargetContainer}}
+          ContainerPort: {{$listener.TargetPort}}
+          TargetGroupArn: !Ref NLBTargetGroup
+    {{- end }}
+  {{- else if gt (len .NLB.Listener) 1 }}
     {{- range $listener := .NLB.Listener }}
         - ContainerName: {{$listener.TargetContainer}}
           ContainerPort: {{$listener.TargetPort}}
           TargetGroupArn: !Ref NLBTargetGroupFor{{$listener.Port}}
     {{- end }}
   {{- end}}
+  {{- end }}
       ServiceRegistries:
         - RegistryArn: !GetAtt DiscoveryService.Arn
           Port: !Ref TargetPort

@@ -480,7 +480,7 @@ func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (networkLoadBalanc
 	}
 
 	var certRequired bool
-	if strings.ToUpper(aws.StringValue(protocol)) == "TLS" {
+	if strings.ToUpper(aws.StringValue(protocol)) == manifest.TLS {
 		certRequired = true
 	}
 

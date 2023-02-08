@@ -11,6 +11,60 @@ PublicNetworkLoadBalancer:
             !Sub '${AppName}-${EnvName}-PublicSubnets'
     Type: network
 
+{{- if eq (len .NLB.Listener) 1 }}
+{{- range $listener := .NLB.Listener }}
+NLBListener:
+  Type: AWS::ElasticLoadBalancingV2::Listener
+  Properties:
+    DefaultActions:
+      - TargetGroupArn: !Ref NLBTargetGroup
+        Type: forward
+    LoadBalancerArn: !Ref PublicNetworkLoadBalancer
+    Port: {{ $listener.Port }}
+    Protocol: {{ $listener.Protocol }}
+  {{- if eq $listener.Protocol "TLS" }}
+    Certificates:
+      - CertificateArn: !Ref NLBCertValidatorAction
+    SslPolicy: {{ if $listener.SSLPolicy }}{{ $listener.SSLPolicy }}{{ else }} ELBSecurityPolicy-TLS13-1-2-2021-06 {{ end }}
+  {{- end}}
+
+NLBTargetGroup:
+  Metadata:
+    'aws:copilot:description': 'A target group to connect the network load balancer to your service'
+  Type: AWS::ElasticLoadBalancingV2::TargetGroup
+  Properties:
+    {{- if $listener.HealthCheck.HealthyThreshold }}
+    HealthyThresholdCount: {{$listener.HealthCheck.HealthyThreshold}}
+    {{- end }}
+    {{- if $listener.HealthCheck.UnhealthyThreshold }}
+    UnhealthyThresholdCount: {{$listener.HealthCheck.UnhealthyThreshold}}
+    {{- end }}
+    {{- if $listener.HealthCheck.Interval }}
+    HealthCheckIntervalSeconds: {{$listener.HealthCheck.Interval}}
+    {{- end }}
+    {{- if $listener.HealthCheck.Timeout }}
+    HealthCheckTimeoutSeconds: {{$listener.HealthCheck.Timeout}}
+    {{- end }}
+    {{- if $listener.HealthCheck.Port }}
+    HealthCheckPort: {{$listener.HealthCheck.Port}}
+    {{- end }}
+    Port: {{ $listener.TargetPort }}
+    Protocol: {{- if eq $listener.Protocol "TLS"}} TCP {{- else}} {{ $listener.Protocol }} {{- end}}
+    TargetGroupAttributes:
+      - Key: deregistration_delay.timeout_seconds
+        Value: {{$.DeregistrationDelay}}  # ECS Default is 300; Copilot default is 60.
+{{- if ne $listener.Protocol "TLS"}}
+{{- if $listener.Stickiness }} {{/*Sticky sessions are not supported with TLS listeners and TLS target groups.*/}}
+      - Key: stickiness.enabled
+        Value: {{ $listener.Stickiness }}
+{{- end}}
+{{- end}}
+    TargetType: ip
+    VpcId:
+      Fn::ImportValue:
+        !Sub "${AppName}-${EnvName}-VpcId"
+{{- end }}
+{{- else if gt (len .NLB.Listener) 1 }}
 {{- range $listener := .NLB.Listener}}
 NLBListenerFor{{ $listener.Port }}:
   Type: AWS::ElasticLoadBalancingV2::Listener
@@ -63,6 +117,7 @@ NLBTargetGroupFor{{ $listener.Port }}:
       Fn::ImportValue:
         !Sub "${AppName}-${EnvName}-VpcId"
 {{- end}}
+{{- end }}
 NLBSecurityGroup:
   Metadata:
     'aws:copilot:description': 'A security group for your network load balancer to route traffic to service'
@@ -92,7 +147,7 @@ NLBSecurityGroup:
     VpcId:
       Fn::ImportValue:
         !Sub "${AppName}-${EnvName}-VpcId"
-{{- if not .NLB.GetAliases}}
+{{- if not .NLB.Aliases}}
 NLBDNSAlias:
   Metadata:
     'aws:copilot:description': 'The default alias record for the network load balancer'
@@ -133,7 +188,7 @@ NLBCustomDomainAction:
     ServiceName: !Ref WorkloadName
     RootDNSRole: {{ .AppDNSDelegationRole }}
     DomainName:  {{ .AppDNSName }}
-    Aliases: {{ if .NLB.GetAliases }} {{ fmtSlice .NLB.GetAliases }} {{ else }} [] {{ end }}
+    Aliases: {{ if .NLB.Aliases }} {{ fmtSlice .NLB.Aliases }} {{ else }} [] {{ end }}
 
 NLBCustomDomainFunction:
   Type: AWS::Lambda::Function
@@ -213,7 +268,7 @@ NLBCertValidatorAction:
     ServiceName: !Ref WorkloadName
     RootDNSRole: {{ .AppDNSDelegationRole }}
     DomainName:  {{ .AppDNSName }}
-    Aliases: {{ if .NLB.GetAliases }} {{ fmtSlice .NLB.GetAliases }} {{ else }} [] {{ end }}
+    Aliases: {{ if .NLB.Aliases }} {{ fmtSlice .NLB.Aliases }} {{ else }} [] {{ end }}
 
 NLBCertValidatorFunction:
   Type: AWS::Lambda::Function
