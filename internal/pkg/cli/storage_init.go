@@ -781,21 +781,24 @@ func (o *initStorageOpts) wkldRDSAddonBlobs() ([]addonBlob, error) {
 	if err != nil {
 		return nil, err
 	}
-	var blobs []addonBlob
 	var tmplBlob encoding.BinaryMarshaler
-	switch v := o.auroraServerlessVersion; v {
-	case auroraServerlessVersionV1:
+	switch {
+	case o.auroraServerlessVersion == auroraServerlessVersionV1 && o.workloadType == manifest.RequestDrivenWebServiceType:
+		tmplBlob = addon.RDWSServerlessV1Template(props)
+	case o.auroraServerlessVersion == auroraServerlessVersionV1 && o.workloadType != manifest.RequestDrivenWebServiceType:
 		tmplBlob = addon.WorkloadServerlessV1Template(props)
-	case auroraServerlessVersionV2:
+	case o.auroraServerlessVersion == auroraServerlessVersionV2 && o.workloadType == manifest.RequestDrivenWebServiceType:
+		tmplBlob = addon.RDWSServerlessV2Template(props)
+	case o.auroraServerlessVersion == auroraServerlessVersionV2 && o.workloadType != manifest.RequestDrivenWebServiceType:
 		tmplBlob = addon.WorkloadServerlessV2Template(props)
 	default:
-		return nil, fmt.Errorf("unknown Aurora serverless version %q", v)
+		return nil, fmt.Errorf("unknown combination of serverless version %q and workload type %q", o.auroraServerlessVersion, o.workloadType)
 	}
-	blobs = append(blobs, addonBlob{
+	blobs := []addonBlob{{
 		path:        o.ws.WorkloadAddonFilePath(o.workloadName, fmt.Sprintf("%s.yml", o.storageName)),
 		description: "template",
 		blob:        tmplBlob,
-	})
+	}}
 	if o.workloadType != manifest.RequestDrivenWebServiceType {
 		return blobs, nil
 	}
@@ -861,7 +864,6 @@ func (o *initStorageOpts) rdsProps() (addon.RDSProps, error) {
 		InitialDBName:  o.rdsInitialDBName,
 		ParameterGroup: o.rdsParameterGroup,
 		Envs:           envs,
-		WorkloadType:   o.workloadType,
 	}, nil
 }
 
