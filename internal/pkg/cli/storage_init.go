@@ -814,11 +814,15 @@ func (o *initStorageOpts) envRDSAddonBlobs() ([]addonBlob, error) {
 	if err != nil {
 		return nil, err
 	}
+	envTmplBlob := addon.EnvServerlessTemplate(props)
+	if o.workloadType == manifest.RequestDrivenWebServiceType {
+		envTmplBlob = addon.EnvServerlessForRDWSTemplate(props)
+	}
 	blobs := []addonBlob{
 		{
 			path:        o.ws.EnvAddonFilePath(fmt.Sprintf("%s.yml", o.storageName)),
 			description: "template",
-			blob:        addon.EnvServerlessTemplate(props),
+			blob:        envTmplBlob,
 		},
 		{
 			path:        o.ws.EnvAddonFilePath("addons.parameters.yml"),
