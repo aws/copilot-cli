@@ -93,6 +93,7 @@ func convertSidecars(s map[string]*manifest.SidecarConfig, exposedPorts map[stri
 	sort.Strings(keys)
 	for _, name := range keys {
 		config := s[name]
+		imageURI, _ := config.ImageURI()
 		entrypoint, err := convertEntryPoint(config.EntryPoint)
 		if err != nil {
 			return nil, err
@@ -104,7 +105,7 @@ func convertSidecars(s map[string]*manifest.SidecarConfig, exposedPorts map[stri
 		mp := convertSidecarMountPoints(config.MountPoints)
 		sidecars = append(sidecars, &template.SidecarOpts{
 			Name:       name,
-			Image:      config.Image,
+			Image:      aws.String(imageURI),
 			Essential:  config.Essential,
 			CredsParam: config.CredsParam,
 			Secrets:    convertSecrets(config.Secrets),

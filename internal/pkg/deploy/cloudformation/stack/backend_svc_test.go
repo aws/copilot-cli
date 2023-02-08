@@ -465,7 +465,8 @@ Outputs:
 			},
 			Sidecars: []*template.SidecarOpts{
 				{
-					Name: "envoy",
+					Name:  "envoy",
+					Image: aws.String(""),
 					PortMappings: []*template.PortMapping{
 						{
 							Protocol:      "tcp",

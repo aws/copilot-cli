@@ -489,6 +489,7 @@ func (ws *Workspace) ListFiles(dirPath string) ([]string, error) {
 }
 
 // ReadFile returns the content of a file.
+// Returns ErrFileNotExists if the file does not exist.
 func (ws *Workspace) ReadFile(fPath string) ([]byte, error) {
 	exist, err := ws.fs.Exists(fPath)
 	if err != nil {
