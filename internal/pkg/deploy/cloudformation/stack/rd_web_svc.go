@@ -54,13 +54,13 @@ type RequestDrivenWebService struct {
 
 // RequestDrivenWebServiceConfig contains data required to initialize a request-driven web service stack.
 type RequestDrivenWebServiceConfig struct {
-	App         deploy.AppInformation
-	Env         string
-	Manifest    *manifest.RequestDrivenWebService
-	RawManifest []byte
-
-	RuntimeConfig RuntimeConfig
-	Addons        NestedStackConfigurer
+	App                deploy.AppInformation
+	Env                string
+	Manifest           *manifest.RequestDrivenWebService
+	RawManifest        []byte
+	ArtifactBucketName string
+	RuntimeConfig      RuntimeConfig
+	Addons             NestedStackConfigurer
 }
 
 // NewRequestDrivenWebService creates a new RequestDrivenWebService stack from a manifest file.
@@ -69,15 +69,16 @@ func NewRequestDrivenWebService(cfg RequestDrivenWebServiceConfig) (*RequestDriv
 	return &RequestDrivenWebService{
 		appRunnerWkld: &appRunnerWkld{
 			wkld: &wkld{
-				name:        aws.StringValue(cfg.Manifest.Name),
-				env:         cfg.Env,
-				app:         cfg.App.Name,
-				permBound:   cfg.App.PermissionsBoundary,
-				rc:          cfg.RuntimeConfig,
-				image:       cfg.Manifest.ImageConfig.Image,
-				rawManifest: cfg.RawManifest,
-				addons:      cfg.Addons,
-				parser:      parser,
+				name:               aws.StringValue(cfg.Manifest.Name),
+				env:                cfg.Env,
+				app:                cfg.App.Name,
+				permBound:          cfg.App.PermissionsBoundary,
+				artifactBucketName: cfg.ArtifactBucketName,
+				rc:                 cfg.RuntimeConfig,
+				image:              cfg.Manifest.ImageConfig.Image,
+				rawManifest:        cfg.RawManifest,
+				addons:             cfg.Addons,
+				parser:             parser,
 			},
 			instanceConfig:    cfg.Manifest.InstanceConfig,
 			imageConfig:       cfg.Manifest.ImageConfig,
