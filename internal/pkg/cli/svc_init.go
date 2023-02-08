@@ -303,25 +303,7 @@ func (o *initSvcOpts) Ask() error {
 	if shouldSkipAsking {
 		return nil
 	}
-	if o.wkldType == manifest.StaticSiteType {
-		return o.askStaticSite()
-	}
-	err = o.askDockerfile()
-	if err != nil {
-		return err
-	}
-	if o.dockerfilePath == "" {
-		if err := o.askImage(); err != nil {
-			return err
-		}
-	}
-	if err := o.askSvcPort(); err != nil {
-		return err
-	}
-	if err := o.askSvcPublishers(); err != nil {
-		return err
-	}
-	return nil
+	return o.askSvcDetails()
 }
 
 // Execute writes the service's manifest file and stores the service in SSM.
@@ -383,6 +365,25 @@ func (o *initSvcOpts) RecommendActions() error {
 			defaultEnvironmentName),
 	})
 	return nil
+}
+
+func (o *initSvcOpts) askSvcDetails() error {
+	if o.wkldType == manifest.StaticSiteType {
+		return o.askStaticSite()
+	}
+	err := o.askDockerfile()
+	if err != nil {
+		return err
+	}
+	if o.dockerfilePath == "" {
+		if err := o.askImage(); err != nil {
+			return err
+		}
+	}
+	if err := o.askSvcPort(); err != nil {
+		return err
+	}
+	return o.askSvcPublishers()
 }
 
 func (o *initSvcOpts) askSvcType() error {

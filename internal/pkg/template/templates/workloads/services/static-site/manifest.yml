@@ -8,18 +8,16 @@ type: {{.Type}}
 
 
 {{- if not .FileUploads}}
-# files:
-#   - source: ./static
-#     destination: static
+files:
+  - source: ./
+    destination: assets
+    exclude:
+      - copilot/
 {{- else}}
 files:
 {{- range $file := .FileUploads}}
-  - {{- if $.Source}}
-    source: {{$.Source}}
-    {{- end}}
-    {{- if $.Destination}}
+  - source: {{$.Source}}
     destination: {{$.Destination}}
-    {{- end}}
     {{- if $.Context}}
     context: {{$.Context}}
     {{- end}}
@@ -27,10 +25,10 @@ files:
     recursive: {{$.Recursive}}
     {{- end}}
     {{- if $.Reinclude.StringSlice}}
-    Reinclude: {{$.Reinclude.StringSlice}}
+    reinclude: {{$.Reinclude.StringSlice}}
     {{- end}}
     {{- if $.Exclude.StringSlice}}
-    Exclude: {{$.Exclude.StringSlice}}
+    exclude: {{$.Exclude.StringSlice}}
     {{- end}}
 {{- end}}
 {{- end}}
