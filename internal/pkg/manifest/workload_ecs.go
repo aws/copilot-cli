@@ -102,7 +102,7 @@ type DeploymentControllerConfig struct {
 	Rolling *string `yaml:"rolling"`
 }
 
-// DeploymentConfiguration represents the deployment config for an ECS service.
+// DeploymentConfig represents the deployment config for an ECS service.
 type DeploymentConfig struct {
 	DeploymentControllerConfig `yaml:",inline"`
 	RollbackAlarms             Union[[]string, AlarmArgs] // `yaml:"rollback_alarms"`
