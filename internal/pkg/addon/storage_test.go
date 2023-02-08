@@ -570,7 +570,7 @@ func TestConstructors(t *testing.T) {
 
 	t.Run("marshaler for RDWS workload-level aurora serverless v2", func(t *testing.T) {
 		out := RDWSServerlessV2Template(RDSProps{})
-		require.Equal(t, rdsRDWSV2TemplatePath, out.tmplPath)
+		require.Equal(t, rdsV2RDWSTemplatePath, out.tmplPath)
 	})
 
 	t.Run("parameter marshaler for env-level aurora accessible by a workload", func(t *testing.T) {

@@ -18,7 +18,7 @@ const (
 	rdsTemplatePath       = "addons/aurora/cf.yml"
 	rdsV2TemplatePath     = "addons/aurora/serverlessv2.yml"
 	rdsRDWSTemplatePath   = "addons/aurora/rdws/cf.yml"
-	rdsRDWSV2TemplatePath = "addons/aurora/rdws/serverlessv2.yml"
+	rdsV2RDWSTemplatePath = "addons/aurora/rdws/serverlessv2.yml"
 	rdsRDWSParamsPath     = "addons/aurora/rdws/addons.parameters.yml"
 
 	envS3TemplatePath                   = "addons/s3/env/cf.yml"
@@ -287,7 +287,7 @@ func RDWSServerlessV2Template(input RDSProps) *RDSTemplate {
 	return &RDSTemplate{
 		RDSProps: input,
 		parser:   template.New(),
-		tmplPath: rdsRDWSV2TemplatePath,
+		tmplPath: rdsV2RDWSTemplatePath,
 	}
 }
 
