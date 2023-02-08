@@ -17,10 +17,9 @@ import (
 )
 
 type mockStorageInitValidate struct {
-	ws                 *mocks.MockwsReadWriter
-	store              *mocks.Mockstore
-	isDDBConfigured    bool
-	isAuroraConfigured bool
+	ws                          *mocks.MockwsReadWriter
+	store                       *mocks.Mockstore
+	flagExclusiveWithAddIngress string
 }
 
 func TestStorageInitOpts_Validate(t *testing.T) {
@@ -63,17 +62,17 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 			inAppName:        "bowie",
 			inAddIngressFrom: "api",
 			mock: func(m *mockStorageInitValidate) {
-				m.isDDBConfigured = true
+				m.flagExclusiveWithAddIngress = storageNoLSIFlag
 			},
-			wantedErr: errors.New("dynamoDB flags cannot be specified with --add-ingress-from: --partition-key, --sort-key, --no-sort, --lsi and --no-lsi"),
+			wantedErr: errors.New("specified --no-lsi with --add-ingress-from"),
 		},
 		"fails when --add-ingress-from is accompanied by aurora flags": {
 			inAppName:        "bowie",
 			inAddIngressFrom: "api",
 			mock: func(m *mockStorageInitValidate) {
-				m.isAuroraConfigured = true
+				m.flagExclusiveWithAddIngress = storageRDSInitialDBFlag
 			},
-			wantedErr: errors.New("aurora serverless flags cannot be specified with --add-ingress-from: --serverless-version, --engine, --initial-db and --parameter-group"),
+			wantedErr: errors.New("specified --initial-db with --add-ingress-from"),
 		},
 		"fails when --add-ingress-from is accompanied by workload-level lifecycle": {
 			inAppName:        "bowie",
@@ -180,8 +179,7 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 				ws:      m.ws,
 				store:   m.store,
 
-				isDDBConfigured:    m.isDDBConfigured,
-				isAuroraConfigured: m.isAuroraConfigured,
+				configFlagExclusiveWithAddIngress: m.flagExclusiveWithAddIngress,
 			}
 
 			// WHEN

@@ -12,11 +12,6 @@ import (
 	"github.com/dustin/go-humanize/english"
 )
 
-var (
-	storageInitDDBFlags    = []string{storagePartitionKeyFlag, storageSortKeyFlag, storageNoSortFlag, storageLSIConfigFlag, storageNoLSIFlag}
-	storageInitAuroraFlags = []string{storageAuroraServerlessVersionFlag, storageRDSEngineFlag, storageRDSInitialDBFlag, storageRDSParameterGroupFlag}
-)
-
 // Long flag names.
 const (
 	// Common flags.

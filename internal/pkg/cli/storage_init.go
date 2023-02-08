@@ -140,6 +140,13 @@ var engineTypes = []string{
 	engineTypePostgreSQL,
 }
 
+var (
+	ddbFlags                       = []string{storagePartitionKeyFlag, storageSortKeyFlag, storageNoSortFlag, storageLSIConfigFlag, storageNoLSIFlag}
+	ddbFlagExclusiveWithAddIngress = ddbFlags
+	rdsFlags                       = []string{storageAuroraServerlessVersionFlag, storageRDSEngineFlag, storageRDSInitialDBFlag, storageRDSParameterGroupFlag}
+	rdsFlagExclusiveWithAddIngress = []string{storageAuroraServerlessVersionFlag, storageRDSInitialDBFlag, storageRDSParameterGroupFlag}
+)
+
 type initStorageVars struct {
 	storageType    string
 	storageName    string
@@ -173,8 +180,7 @@ type initStorageOpts struct {
 	prompt prompter
 
 	// Flag status.
-	isDDBConfigured    bool
-	isAuroraConfigured bool
+	configFlagExclusiveWithAddIngress string
 
 	// Cached data.
 	workloadType   string
@@ -243,21 +249,19 @@ func (o *initStorageOpts) validateAddIngressFrom() error {
 	if o.workloadName != "" {
 		return fmt.Errorf("--%s cannot be specified with --%s", workloadFlag, storageAddIngressFromFlag)
 	}
-	if o.isDDBConfigured {
-		return fmt.Errorf("dynamoDB flags cannot be specified with --%s: %s",
+	if o.configFlagExclusiveWithAddIngress != "" {
+		// Example: ✘ Most configuration flags are incompatible with --add-ingress-from: (DynamoDB flags) --partition-key, --sort-key, --no-sort, --lsi and --no-lsi; (Aurora serverless flags) --serverless-version, --initial-db and --parameter-group.
+		log.Errorf("Most configuration flags are incompatible with --%s: %s %s; %s %s.\n",
 			storageAddIngressFromFlag,
-			english.WordSeries(mutateStringSlice(storageInitDDBFlags, func(in string) string {
+			color.Faint.Sprintf("(DynamoDB flags)"),
+			english.WordSeries(mutateStringSlice(ddbFlagExclusiveWithAddIngress, func(in string) string {
 				return fmt.Sprintf("--%s", in)
 			}), "and"),
-		)
-	}
-	if o.isAuroraConfigured {
-		return fmt.Errorf("aurora serverless flags cannot be specified with --%s: %s",
-			storageAddIngressFromFlag,
-			english.WordSeries(mutateStringSlice(storageInitAuroraFlags, func(in string) string {
+			color.Faint.Sprintf("(Aurora serverless flags)"),
+			english.WordSeries(mutateStringSlice(rdsFlagExclusiveWithAddIngress, func(in string) string {
 				return fmt.Sprintf("--%s", in)
-			}), "and"),
-		)
+			}), "and"))
+		return fmt.Errorf(`specified --%s with --%s`, o.configFlagExclusiveWithAddIngress, storageAddIngressFromFlag)
 	}
 	if o.lifecycle == lifecycleWorkloadLevel {
 		return fmt.Errorf("--%s cannot be %s when --%s is used", storageLifecycleFlag, lifecycleWorkloadLevel, storageAddIngressFromFlag)
@@ -998,15 +1002,9 @@ Resource names are injected into your containers as environment variables for ea
 			if err != nil {
 				return err
 			}
-			for _, f := range storageInitDDBFlags {
+			for _, f := range append(ddbFlagExclusiveWithAddIngress, rdsFlagExclusiveWithAddIngress...) {
 				if cmd.Flags().Changed(f) {
-					opts.isDDBConfigured = true
-					break
-				}
-			}
-			for _, f := range storageInitAuroraFlags {
-				if cmd.Flags().Changed(f) {
-					opts.isAuroraConfigured = true
+					opts.configFlagExclusiveWithAddIngress = f
 					break
 				}
 			}
@@ -1035,21 +1033,21 @@ Resource names are injected into your containers as environment variables for ea
 	requiredFlags.AddFlag(cmd.Flags().Lookup(storageTypeFlag))
 	requiredFlags.AddFlag(cmd.Flags().Lookup(workloadFlag))
 
-	ddbFlags := pflag.NewFlagSet("DynamoDB", pflag.ContinueOnError)
-	for _, f := range storageInitDDBFlags {
-		ddbFlags.AddFlag(cmd.Flags().Lookup(f))
+	ddbFlagSet := pflag.NewFlagSet("DynamoDB", pflag.ContinueOnError)
+	for _, f := range ddbFlags {
+		ddbFlagSet.AddFlag(cmd.Flags().Lookup(f))
 	}
-	auroraFlags := pflag.NewFlagSet("Aurora Serverless", pflag.ContinueOnError)
-	for _, f := range storageInitAuroraFlags {
-		auroraFlags.AddFlag(cmd.Flags().Lookup(f))
+	auroraFlagSet := pflag.NewFlagSet("Aurora Serverless", pflag.ContinueOnError)
+	for _, f := range rdsFlags {
+		auroraFlagSet.AddFlag(cmd.Flags().Lookup(f))
 	}
 
 	cmd.Annotations = map[string]string{
 		// The order of the sections we want to display.
 		"sections":          `Required,DynamoDB,Aurora Serverless`,
 		"Required":          requiredFlags.FlagUsages(),
-		"DynamoDB":          ddbFlags.FlagUsages(),
-		"Aurora Serverless": auroraFlags.FlagUsages(),
+		"DynamoDB":          ddbFlagSet.FlagUsages(),
+		"Aurora Serverless": auroraFlagSet.FlagUsages(),
 	}
 	cmd.SetUsageTemplate(`{{h1 "Usage"}}{{if .Runnable}}
   {{.UseLine}}{{end}}{{$annotations := .Annotations}}{{$sections := split .Annotations.sections ","}}{{if gt (len $sections) 0}}
