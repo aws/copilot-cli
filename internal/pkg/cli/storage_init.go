@@ -125,8 +125,8 @@ const (
 
 	fmtRDSStorageNameDefault = "%s-cluster"
 
-	engineTypeMySQL      = "MySQL"
-	engineTypePostgreSQL = "PostgreSQL"
+	engineTypeMySQL      = addon.RDSEngineTypeMySQL
+	engineTypePostgreSQL = addon.RDSEngineTypePostgreSQL
 )
 
 var auroraServerlessVersions = []string{
@@ -848,23 +848,13 @@ func (o *initStorageOpts) envRDSAddonBlobs() ([]addonBlob, error) {
 }
 
 func (o *initStorageOpts) rdsProps() (addon.RDSProps, error) {
-	var engine string
-	switch o.rdsEngine {
-	case engineTypeMySQL:
-		engine = addon.RDSEngineTypeMySQL
-	case engineTypePostgreSQL:
-		engine = addon.RDSEngineTypePostgreSQL
-	default:
-		return addon.RDSProps{}, errors.New("unknown engine type")
-	}
-
 	envs, err := o.environmentNames()
 	if err != nil {
 		return addon.RDSProps{}, err
 	}
 	return addon.RDSProps{
 		ClusterName:    o.storageName,
-		Engine:         engine,
+		Engine:         o.rdsEngine,
 		InitialDBName:  o.rdsInitialDBName,
 		ParameterGroup: o.rdsParameterGroup,
 		Envs:           envs,
