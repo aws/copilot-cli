@@ -9,8 +9,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/aws/copilot-cli/internal/pkg/manifest"
-
 	"github.com/aws/copilot-cli/internal/pkg/template"
 )
 
@@ -250,7 +248,6 @@ type DDBLocalSecondaryIndex struct {
 
 // RDSProps holds RDS-specific properties.
 type RDSProps struct {
-	WorkloadType   string   // The type of the workload associated with the RDS addon.
 	ClusterName    string   // The name of the cluster.
 	Engine         string   // The engine type of the RDS Aurora Serverless cluster.
 	InitialDBName  string   // The name of the initial database created inside the cluster.
@@ -260,40 +257,56 @@ type RDSProps struct {
 
 // WorkloadServerlessV1Template creates a marshaler for a workload-level Aurora Serverless v1 addon.
 func WorkloadServerlessV1Template(input RDSProps) *RDSTemplate {
-	tmplPath := rdsTemplatePath
-	if input.WorkloadType == manifest.RequestDrivenWebServiceType {
-		tmplPath = rdsRDWSTemplatePath
-	}
 	return &RDSTemplate{
 		RDSProps: input,
 		parser:   template.New(),
-		tmplPath: tmplPath,
+		tmplPath: rdsTemplatePath,
+	}
+}
+
+// RDWSServerlessV1Template creates a marshaler for an Aurora Serverless v1 addon attached on an RDWS.
+func RDWSServerlessV1Template(input RDSProps) *RDSTemplate {
+	return &RDSTemplate{
+		RDSProps: input,
+		parser:   template.New(),
+		tmplPath: rdsRDWSTemplatePath,
 	}
 }
 
 // WorkloadServerlessV2Template creates a marshaler for a workload-level Aurora Serverless v2 addon.
 func WorkloadServerlessV2Template(input RDSProps) *RDSTemplate {
-	tmplPath := rdsV2TemplatePath
-	if input.WorkloadType == manifest.RequestDrivenWebServiceType {
-		tmplPath = rdsRDWSV2TemplatePath
-	}
 	return &RDSTemplate{
 		RDSProps: input,
 		parser:   template.New(),
-		tmplPath: tmplPath,
+		tmplPath: rdsV2TemplatePath,
+	}
+}
+
+// RDWSServerlessV2Template creates a marshaler for an Aurora Serverless v2 addon attached on an RDWS.
+func RDWSServerlessV2Template(input RDSProps) *RDSTemplate {
+	return &RDSTemplate{
+		RDSProps: input,
+		parser:   template.New(),
+		tmplPath: rdsRDWSV2TemplatePath,
 	}
 }
 
 // EnvServerlessTemplate creates a marshaler for an environment-level Aurora Serverless v2 addon.
 func EnvServerlessTemplate(input RDSProps) *RDSTemplate {
-	tmplPath := envRDSTemplatePath
-	if input.WorkloadType == manifest.RequestDrivenWebServiceType {
-		tmplPath = envRDSForRDWSTemplatePath
-	}
 	return &RDSTemplate{
 		RDSProps: input,
 		parser:   template.New(),
-		tmplPath: tmplPath,
+		tmplPath: envRDSTemplatePath,
+	}
+}
+
+// EnvServerlessForRDWSTemplate creates a marshaler for an environment-level Aurora Serverless v2 addon
+// whose ingress is an RDWS.
+func EnvServerlessForRDWSTemplate(input RDSProps) *RDSTemplate {
+	return &RDSTemplate{
+		RDSProps: input,
+		parser:   template.New(),
+		tmplPath: envRDSForRDWSTemplatePath,
 	}
 }
 
