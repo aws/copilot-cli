@@ -421,7 +421,15 @@ func TestServiceStatus_Describe(t *testing.T) {
 					}).Return([]cloudwatch.AlarmStatus{
 						{
 							Arn:          "mockAlarmArn1",
-							Name:         "mockAlarm1",
+							Name:         "AMetricAlarm",
+							Condition:    "mockCondition",
+							Status:       "OK",
+							Type:         "Metric",
+							UpdatedTimes: updateTime,
+						},
+						{
+							Arn:          "mockAlarmArn11",
+							Name:         "BMetricAlarm",
 							Condition:    "mockCondition",
 							Status:       "OK",
 							Type:         "Metric",
@@ -431,8 +439,16 @@ func TestServiceStatus_Describe(t *testing.T) {
 					m.aas.EXPECT().ECSServiceAlarmNames(mockCluster, mockService).Return([]string{"mockAlarm2"}, nil),
 					m.alarmStatusGetter.EXPECT().AlarmStatuses(gomock.Any()).Return([]cloudwatch.AlarmStatus{
 						{
+							Arn:          "mockAlarmArn22",
+							Name:         "BAutoScalingAlarm",
+							Condition:    "mockCondition",
+							Status:       "OK",
+							Type:         "Metric",
+							UpdatedTimes: updateTime,
+						},
+						{
 							Arn:          "mockAlarmArn2",
-							Name:         "mockAlarm2",
+							Name:         "AAutoScalingAlarm",
 							Condition:    "mockCondition",
 							Status:       "OK",
 							Type:         "Metric",
@@ -442,8 +458,16 @@ func TestServiceStatus_Describe(t *testing.T) {
 					m.alarmStatusGetter.EXPECT().AlarmStatuses(gomock.Any()).Return(
 						[]cloudwatch.AlarmStatus{
 							{
+								Arn:          "mockAlarmArn33",
+								Name:         "BmockApp-mockEnv-mockSvc-CopilotRollbackAlarm",
+								Condition:    "mockCondition",
+								Status:       "OK",
+								Type:         "Metric",
+								UpdatedTimes: updateTime,
+							},
+							{
 								Arn:          "mockAlarmArn3",
-								Name:         "mockApp-mockEnv-mockSvc-CopilotRollbackAlarm",
+								Name:         "AmockApp-mockEnv-mockSvc-CopilotRollbackAlarm",
 								Condition:    "mockCondition",
 								Status:       "OK",
 								Type:         "Metric",
@@ -469,25 +493,49 @@ func TestServiceStatus_Describe(t *testing.T) {
 				},
 				Alarms: []cloudwatch.AlarmStatus{
 					{
+						Arn:          "mockAlarmArn2",
+						Condition:    "mockCondition",
+						Name:         "AAutoScalingAlarm",
+						Status:       "OK",
+						Type:         "Auto Scaling",
+						UpdatedTimes: updateTime,
+					},
+					{
+						Arn:          "mockAlarmArn22",
+						Name:         "BAutoScalingAlarm",
+						Condition:    "mockCondition",
+						Status:       "OK",
+						Type:         "Auto Scaling",
+						UpdatedTimes: updateTime,
+					},
+					{
 						Arn:          "mockAlarmArn1",
-						Name:         "mockAlarm1",
+						Name:         "AMetricAlarm",
 						Condition:    "mockCondition",
 						Status:       "OK",
 						Type:         "Metric",
 						UpdatedTimes: updateTime,
 					},
 					{
-						Arn:          "mockAlarmArn2",
+						Arn:          "mockAlarmArn11",
+						Name:         "BMetricAlarm",
 						Condition:    "mockCondition",
-						Name:         "mockAlarm2",
 						Status:       "OK",
-						Type:         "Auto Scaling",
+						Type:         "Metric",
 						UpdatedTimes: updateTime,
 					},
 					{
 						Arn:          "mockAlarmArn3",
+						Name:         "AmockApp-mockEnv-mockSvc-CopilotRollbackAlarm",
 						Condition:    "mockCondition",
-						Name:         "mockApp-mockEnv-mockSvc-CopilotRollbackAlarm",
+						Status:       "OK",
+						Type:         "Rollback",
+						UpdatedTimes: updateTime,
+					},
+					{
+						Arn:          "mockAlarmArn33",
+						Name:         "BmockApp-mockEnv-mockSvc-CopilotRollbackAlarm",
+						Condition:    "mockCondition",
 						Status:       "OK",
 						Type:         "Rollback",
 						UpdatedTimes: updateTime,

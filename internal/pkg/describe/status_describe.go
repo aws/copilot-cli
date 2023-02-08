@@ -183,6 +183,9 @@ func (s *ecsStatusDescriber) Describe() (HumanJSONStringer, error) {
 		alarmList[i] = v
 		i++
 	}
+	// Sort by alarm type, then alarm name within type categories.
+	sort.SliceStable(alarmList, func(i, j int) bool { return alarmList[i].Name < alarmList[j].Name})
+	sort.SliceStable(alarmList, func(i, j int) bool { return alarmList[i].Type < alarmList[j].Type})
 	var tasksTargetHealth []taskTargetHealth
 	targetGroupsARN := service.TargetGroups()
 	for _, groupARN := range targetGroupsARN {
