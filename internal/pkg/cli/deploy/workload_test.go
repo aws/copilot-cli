@@ -153,6 +153,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 
 		mock                func(t *testing.T, m *deployMocks)
 		mockServiceDeployer func(deployer *workloadDeployer) artifactsUploader
+		customResourcesFunc customResourcesFunc
 
 		wantAddonsURL     string
 		wantEnvFileARN    string
@@ -202,13 +203,13 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 					return "", errors.New("did not match any custom resource")
 				}).Times(len(crs))
 			},
+			customResourcesFunc: func(fs template.Reader) ([]*customresource.CustomResource, error) {
+				return customresource.LBWS(fs)
+			},
 			mockServiceDeployer: func(deployer *workloadDeployer) artifactsUploader {
 				return &lbWebSvcDeployer{
 					svcDeployer: &svcDeployer{
 						workloadDeployer: deployer,
-					},
-					customResources: func(fs template.Reader) ([]*customresource.CustomResource, error) {
-						return customresource.LBWS(fs)
 					},
 				}
 			},
@@ -230,13 +231,13 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 					return "", errors.New("did not match any custom resource")
 				}).Times(len(crs))
 			},
+			customResourcesFunc: func(fs template.Reader) ([]*customresource.CustomResource, error) {
+				return customresource.Backend(fs)
+			},
 			mockServiceDeployer: func(deployer *workloadDeployer) artifactsUploader {
 				return &backendSvcDeployer{
 					svcDeployer: &svcDeployer{
 						workloadDeployer: deployer,
-					},
-					customResources: func(fs template.Reader) ([]*customresource.CustomResource, error) {
-						return customresource.Backend(fs)
 					},
 				}
 			},
@@ -258,13 +259,13 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 					return "", errors.New("did not match any custom resource")
 				}).Times(len(crs))
 			},
+			customResourcesFunc: func(fs template.Reader) ([]*customresource.CustomResource, error) {
+				return customresource.Worker(fs)
+			},
 			mockServiceDeployer: func(deployer *workloadDeployer) artifactsUploader {
 				return &workerSvcDeployer{
 					svcDeployer: &svcDeployer{
 						workloadDeployer: deployer,
-					},
-					customResources: func(fs template.Reader) ([]*customresource.CustomResource, error) {
-						return customresource.Worker(fs)
 					},
 				}
 			},
@@ -286,13 +287,13 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 					return "", errors.New("did not match any custom resource")
 				}).Times(len(crs))
 			},
+			customResourcesFunc: func(fs template.Reader) ([]*customresource.CustomResource, error) {
+				return customresource.RDWS(fs)
+			},
 			mockServiceDeployer: func(deployer *workloadDeployer) artifactsUploader {
 				return &rdwsDeployer{
 					svcDeployer: &svcDeployer{
 						workloadDeployer: deployer,
-					},
-					customResources: func(fs template.Reader) ([]*customresource.CustomResource, error) {
-						return customresource.RDWS(fs)
 					},
 				}
 			},
@@ -314,12 +315,12 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 					return "", errors.New("did not match any custom resource")
 				}).Times(len(crs))
 			},
+			customResourcesFunc: func(fs template.Reader) ([]*customresource.CustomResource, error) {
+				return customresource.ScheduledJob(fs)
+			},
 			mockServiceDeployer: func(deployer *workloadDeployer) artifactsUploader {
 				return &jobDeployer{
 					workloadDeployer: deployer,
-					customResources: func(fs template.Reader) ([]*customresource.CustomResource, error) {
-						return customresource.ScheduledJob(fs)
-					},
 				}
 			},
 		},
@@ -420,6 +421,13 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			}
 			tc.mock(t, m)
 
+			crFn := tc.customResourcesFunc
+			if crFn == nil {
+				crFn = func(fs template.Reader) ([]*customresource.CustomResource, error) {
+					return nil, nil
+				}
+			}
+
 			wkldDeployer := &workloadDeployer{
 				name: mockName,
 				env: &config.Environment{
@@ -441,6 +449,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				imageBuilderPusher: m.mockImageBuilderPusher,
 				templateFS:         fakeTemplateFS(),
 				overrider:          new(override.Noop),
+				customResources:    crFn,
 			}
 			if m.mockAddons != nil {
 				wkldDeployer.addons = m.mockAddons
@@ -449,9 +458,6 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			deployer = &lbWebSvcDeployer{
 				svcDeployer: &svcDeployer{
 					workloadDeployer: wkldDeployer,
-				},
-				customResources: func(fs template.Reader) ([]*customresource.CustomResource, error) {
-					return nil, nil
 				},
 			}
 			if tc.mockServiceDeployer != nil {

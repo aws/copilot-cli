@@ -76,7 +76,7 @@ func TestRDWS(t *testing.T) {
 
 	// ensure artifact paths match.
 	for _, cr := range crs {
-		require.Equal(t, wantedPaths[cr.Name()], cr.artifactPath())
+		require.Equal(t, wantedPaths[cr.Name()], cr.ArtifactPath())
 	}
 }
 
@@ -138,7 +138,7 @@ func TestLBWS(t *testing.T) {
 
 	// ensure artifact paths match.
 	for _, cr := range crs {
-		require.Equal(t, wantedPaths[cr.Name()], cr.artifactPath())
+		require.Equal(t, wantedPaths[cr.Name()], cr.ArtifactPath())
 	}
 }
 
@@ -192,7 +192,7 @@ func TestWorker(t *testing.T) {
 
 	// ensure artifact paths match.
 	for _, cr := range crs {
-		require.Equal(t, wantedPaths[cr.Name()], cr.artifactPath())
+		require.Equal(t, wantedPaths[cr.Name()], cr.ArtifactPath())
 	}
 }
 
@@ -246,7 +246,7 @@ func TestBackend(t *testing.T) {
 
 	// ensure artifact paths match.
 	for _, cr := range crs {
-		require.Equal(t, wantedPaths[cr.Name()], cr.artifactPath())
+		require.Equal(t, wantedPaths[cr.Name()], cr.ArtifactPath())
 	}
 }
 
@@ -292,7 +292,7 @@ func TestScheduledJob(t *testing.T) {
 
 	// ensure artifact paths match.
 	for _, cr := range crs {
-		require.Equal(t, wantedPaths[cr.Name()], cr.artifactPath())
+		require.Equal(t, wantedPaths[cr.Name()], cr.ArtifactPath())
 	}
 }
 
@@ -354,7 +354,7 @@ func TestEnv(t *testing.T) {
 
 	// ensure artifact paths match.
 	for _, cr := range crs {
-		require.Equal(t, wantedPaths[cr.Name()], cr.artifactPath())
+		require.Equal(t, wantedPaths[cr.Name()], cr.ArtifactPath())
 	}
 }
 

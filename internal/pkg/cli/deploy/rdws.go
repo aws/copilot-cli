@@ -35,11 +35,11 @@ type rdwsDeployer struct {
 	customResourceS3Client uploader
 	appVersionGetter       versionGetter
 	rdwsMft                *manifest.RequestDrivenWebService
-	customResources        customResourcesFunc
 }
 
 // NewRDWSDeployer is the constructor for RDWSDeployer.
 func NewRDWSDeployer(in *WorkloadDeployerInput) (*rdwsDeployer, error) {
+	in.customResources = rdwsCustomResources
 	svcDeployer, err := newSvcDeployer(in)
 	if err != nil {
 		return nil, err
@@ -57,14 +57,15 @@ func NewRDWSDeployer(in *WorkloadDeployerInput) (*rdwsDeployer, error) {
 		customResourceS3Client: s3.New(svcDeployer.defaultSessWithEnvRegion),
 		appVersionGetter:       versionGetter,
 		rdwsMft:                rdwsMft,
-		customResources: func(fs template.Reader) ([]*customresource.CustomResource, error) {
-			crs, err := customresource.RDWS(fs)
-			if err != nil {
-				return nil, fmt.Errorf("read custom resources for a %q: %w", manifest.RequestDrivenWebServiceType, err)
-			}
-			return crs, nil
-		},
 	}, nil
+}
+
+func rdwsCustomResources(fs template.Reader) ([]*customresource.CustomResource, error) {
+	crs, err := customresource.RDWS(fs)
+	if err != nil {
+		return nil, fmt.Errorf("read custom resources for a %q: %w", manifest.RequestDrivenWebServiceType, err)
+	}
+	return crs, nil
 }
 
 // IsServiceAvailableInRegion checks if service type exist in the given region.
@@ -74,7 +75,7 @@ func (rdwsDeployer) IsServiceAvailableInRegion(region string) (bool, error) {
 
 // UploadArtifacts uploads the deployment artifacts such as the container image, custom resources, addons and env files.
 func (d *rdwsDeployer) UploadArtifacts() (*UploadArtifactsOutput, error) {
-	return d.uploadArtifacts(d.customResources)
+	return d.uploadArtifacts()
 }
 
 type rdwsDeployOutput struct {
@@ -137,11 +138,12 @@ func (d *rdwsDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*rdwsS
 			PermissionsBoundary: d.app.PermissionsBoundary,
 			AccountPrincipalARN: in.RootUserARN,
 		},
-		Env:           d.env.Name,
-		Manifest:      d.rdwsMft,
-		RawManifest:   d.rawMft,
-		RuntimeConfig: *rc,
-		Addons:        d.addons,
+		Env:                d.env.Name,
+		Manifest:           d.rdwsMft,
+		RawManifest:        d.rawMft,
+		ArtifactBucketName: d.resources.S3Bucket,
+		RuntimeConfig:      *rc,
+		Addons:             d.addons,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("create stack configuration: %w", err)
