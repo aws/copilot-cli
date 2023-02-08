@@ -347,14 +347,15 @@ func (cfg *SidecarImageConfig) BuildConfig(rootDirectory string) *DockerBuildArg
 // dockerfile returns the path to the sidecar container's Dockerfile if one is set.
 // If no dockerfile is specified, returns "".
 func (cfg *SidecarImageConfig) dockerfile() string {
-	if cfg.Build.Advanced.Dockerfile != nil {
+	switch {
+	case cfg.Build.Advanced.Dockerfile != nil:
 		return aws.StringValue(cfg.Build.Advanced.Dockerfile)
+	case cfg.Build.Basic != nil:
+		return aws.StringValue(cfg.Build.Basic)
+	default:
+		return ""
 	}
-	var dfPath string
-	if cfg.Build.Basic != nil {
-		dfPath = aws.StringValue(cfg.Build.Basic)
-	}
-	return dfPath
+
 }
 
 // context returns the build context directory of sidecar container's if it exists, otherwise an empty string.
