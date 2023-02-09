@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aws/copilot-cli/internal/pkg/manifest/manifesttype"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 
 	"github.com/spf13/afero"
@@ -92,7 +92,7 @@ func TestValidateSvcName(t *testing.T) {
 	}{
 		"string as input": {
 			val:     "hello",
-			svcType: manifesttype.LoadBalancedWebServiceType,
+			svcType: manifestinfo.LoadBalancedWebServiceType,
 			wanted:  nil,
 		},
 		"number as input": {
@@ -105,27 +105,27 @@ func TestValidateSvcName(t *testing.T) {
 		},
 		"longer than 40 characters for app runner services": {
 			val:     strings.Repeat("x", 41),
-			svcType: manifesttype.RequestDrivenWebServiceType,
+			svcType: manifestinfo.RequestDrivenWebServiceType,
 			wanted:  errAppRunnerSvcNameTooLong,
 		},
 		"invalid length string": {
 			val:     strings.Repeat("s", 256),
-			svcType: manifesttype.LoadBalancedWebServiceType,
+			svcType: manifestinfo.LoadBalancedWebServiceType,
 			wanted:  errValueTooLong,
 		},
 		"does not start with letter": {
 			val:     "123chicken",
-			svcType: manifesttype.BackendServiceType,
+			svcType: manifestinfo.BackendServiceType,
 			wanted:  errValueBadFormat,
 		},
 		"contains upper-case letters": {
 			val:     "badGoose",
-			svcType: manifesttype.LoadBalancedWebServiceType,
+			svcType: manifestinfo.LoadBalancedWebServiceType,
 			wanted:  errValueBadFormat,
 		},
 		"is not a reserved name": {
 			val:     "pipelines",
-			svcType: manifesttype.LoadBalancedWebServiceType,
+			svcType: manifestinfo.LoadBalancedWebServiceType,
 			wanted:  errValueReserved,
 		},
 	}

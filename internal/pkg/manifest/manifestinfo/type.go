@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-package manifesttype
+package manifestinfo
 
 const (
 	// LoadBalancedWebServiceType is a web service with a load balancer and Fargate as compute.

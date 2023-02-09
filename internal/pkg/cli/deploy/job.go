@@ -13,7 +13,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
-	"github.com/aws/copilot-cli/internal/pkg/manifest/manifesttype"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 )
 
@@ -36,7 +36,7 @@ func NewJobDeployer(in *WorkloadDeployerInput) (*jobDeployer, error) {
 	}
 	jobMft, ok := in.Mft.(*manifest.ScheduledJob)
 	if !ok {
-		return nil, fmt.Errorf("manifest is not of type %s", manifesttype.ScheduledJobType)
+		return nil, fmt.Errorf("manifest is not of type %s", manifestinfo.ScheduledJobType)
 	}
 	return &jobDeployer{
 		workloadDeployer: wkldDeployer,
@@ -47,7 +47,7 @@ func NewJobDeployer(in *WorkloadDeployerInput) (*jobDeployer, error) {
 func scheduledJobCustomResources(fs template.Reader) ([]*customresource.CustomResource, error) {
 	crs, err := customresource.ScheduledJob(fs)
 	if err != nil {
-		return nil, fmt.Errorf("read custom resources for a %q: %w", manifesttype.ScheduledJobType, err)
+		return nil, fmt.Errorf("read custom resources for a %q: %w", manifestinfo.ScheduledJobType, err)
 	}
 	return crs, nil
 }

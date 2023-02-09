@@ -12,7 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
-	"github.com/aws/copilot-cli/internal/pkg/manifest/manifesttype"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/template/override"
 )
@@ -158,7 +158,7 @@ func (s *BackendService) Template() (string, error) {
 		EnvName:            s.env,
 		EnvVersion:         s.rc.EnvVersion,
 		SerializedManifest: string(s.rawManifest),
-		WorkloadType:       manifesttype.BackendServiceType,
+		WorkloadType:       manifestinfo.BackendServiceType,
 		WorkloadName:       s.name,
 
 		// Configuration for the main container.

@@ -13,7 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
-	"github.com/aws/copilot-cli/internal/pkg/manifest/manifesttype"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/dustin/go-humanize/english"
 
 	"github.com/aws/copilot-cli/internal/pkg/addon"
@@ -360,7 +360,7 @@ func (o *initStorageOpts) validateStorageType() error {
 			log.Errorf(`Your %s needs to be connected to a VPC in order to use a %s resource.
 You can enable VPC connectivity by updating your manifest with:
 %s
-`, manifesttype.RequestDrivenWebServiceType, o.storageType, color.HighlightCodeBlock(`network:
+`, manifestinfo.RequestDrivenWebServiceType, o.storageType, color.HighlightCodeBlock(`network:
   vpc:
     placement: private`))
 		}
@@ -915,7 +915,7 @@ func (o *initStorageOpts) wkldRDSAddonBlobs() ([]addonBlob, error) {
 		description: "template",
 		blob:        tmplBlob,
 	})
-	if o.workloadType != manifesttype.RequestDrivenWebServiceType {
+	if o.workloadType != manifestinfo.RequestDrivenWebServiceType {
 		return blobs, nil
 	}
 	return append(blobs, addonBlob{
@@ -942,7 +942,7 @@ func (o *initStorageOpts) envRDSAddonBlobs() ([]addonBlob, error) {
 			blob:        addon.EnvParamsForRDS(),
 		},
 	}
-	if o.workloadType != manifesttype.RequestDrivenWebServiceType || !o.workloadExists {
+	if o.workloadType != manifestinfo.RequestDrivenWebServiceType || !o.workloadExists {
 		return blobs, nil
 	}
 	return append(blobs,
@@ -1009,7 +1009,7 @@ func (o *initStorageOpts) RecommendActions() error {
 	case rdsStorageType:
 		newVar = template.ToSnakeCaseFunc(template.EnvVarSecretFunc(o.storageName))
 		retrieveEnvVarCode = fmt.Sprintf("const {username, host, dbname, password, port} = JSON.parse(process.env.%s)", newVar)
-		if o.workloadType == manifesttype.RequestDrivenWebServiceType {
+		if o.workloadType == manifestinfo.RequestDrivenWebServiceType {
 			newVar = fmt.Sprintf("%s_ARN", newVar)
 			retrieveEnvVarCode = fmt.Sprintf(`const AWS = require('aws-sdk');
 const client = new AWS.SecretsManager({

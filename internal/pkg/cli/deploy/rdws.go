@@ -21,7 +21,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
-	"github.com/aws/copilot-cli/internal/pkg/manifest/manifesttype"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
@@ -51,7 +51,7 @@ func NewRDWSDeployer(in *WorkloadDeployerInput) (*rdwsDeployer, error) {
 	}
 	rdwsMft, ok := in.Mft.(*manifest.RequestDrivenWebService)
 	if !ok {
-		return nil, fmt.Errorf("manifest is not of type %s", manifesttype.RequestDrivenWebServiceType)
+		return nil, fmt.Errorf("manifest is not of type %s", manifestinfo.RequestDrivenWebServiceType)
 	}
 	return &rdwsDeployer{
 		svcDeployer:            svcDeployer,
@@ -64,7 +64,7 @@ func NewRDWSDeployer(in *WorkloadDeployerInput) (*rdwsDeployer, error) {
 func rdwsCustomResources(fs template.Reader) ([]*customresource.CustomResource, error) {
 	crs, err := customresource.RDWS(fs)
 	if err != nil {
-		return nil, fmt.Errorf("read custom resources for a %q: %w", manifesttype.RequestDrivenWebServiceType, err)
+		return nil, fmt.Errorf("read custom resources for a %q: %w", manifestinfo.RequestDrivenWebServiceType, err)
 	}
 	return crs, nil
 }

@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/copilot-cli/internal/pkg/manifest/manifesttype"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/stretchr/testify/require"
 )
 
@@ -245,7 +245,7 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 						Count: Count{
 							AdvancedCount: AdvancedCount{
 								Spot:         aws.Int(123),
-								workloadType: manifesttype.LoadBalancedWebServiceType,
+								workloadType: manifestinfo.LoadBalancedWebServiceType,
 							},
 						},
 					},
@@ -507,7 +507,7 @@ func TestBackendService_validate(t *testing.T) {
 						Count: Count{
 							AdvancedCount: AdvancedCount{
 								Spot:         aws.Int(123),
-								workloadType: manifesttype.BackendServiceType,
+								workloadType: manifestinfo.BackendServiceType,
 							},
 						},
 					},
@@ -527,7 +527,7 @@ func TestBackendService_validate(t *testing.T) {
 						Count: Count{
 							AdvancedCount: AdvancedCount{
 								Spot:         aws.Int(123),
-								workloadType: manifesttype.BackendServiceType,
+								workloadType: manifestinfo.BackendServiceType,
 							},
 						},
 					},
@@ -557,7 +557,7 @@ func TestBackendService_validate(t *testing.T) {
 					TaskConfig: TaskConfig{
 						Count: Count{
 							AdvancedCount: AdvancedCount{
-								workloadType: manifesttype.BackendServiceType,
+								workloadType: manifestinfo.BackendServiceType,
 								Requests: ScalingConfigOrT[int]{
 									Value: aws.Int(128),
 								},
@@ -933,7 +933,7 @@ func TestWorkerService_validate(t *testing.T) {
 						Count: Count{
 							AdvancedCount: AdvancedCount{
 								Spot:         aws.Int(123),
-								workloadType: manifesttype.WorkerServiceType,
+								workloadType: manifestinfo.WorkerServiceType,
 							},
 						},
 					},
@@ -953,7 +953,7 @@ func TestWorkerService_validate(t *testing.T) {
 						Count: Count{
 							AdvancedCount: AdvancedCount{
 								Spot:         aws.Int(123),
-								workloadType: manifesttype.WorkerServiceType,
+								workloadType: manifestinfo.WorkerServiceType,
 							},
 						},
 					},
@@ -1810,7 +1810,7 @@ func TestAdvancedCount_validate(t *testing.T) {
 					AcceptableLatency: durationp(10 * time.Second),
 					AvgProcessingTime: durationp(1 * time.Second),
 				},
-				workloadType: manifesttype.LoadBalancedWebServiceType,
+				workloadType: manifestinfo.LoadBalancedWebServiceType,
 			},
 			wantedError: fmt.Errorf(`autoscaling field "queue_delay" is invalid with workload type Load Balanced Web Service`),
 		},
@@ -1830,21 +1830,21 @@ func TestAdvancedCount_validate(t *testing.T) {
 				ResponseTime: ScalingConfigOrT[time.Duration]{
 					Value: &timeMinute,
 				},
-				workloadType: manifesttype.WorkerServiceType,
+				workloadType: manifestinfo.WorkerServiceType,
 			},
 			wantedError: fmt.Errorf(`autoscaling fields "requests" and "response_time" are invalid with workload type Worker Service`),
 		},
 		"cannot have autoscaling for scheduled jobs": {
 			AdvancedCount: AdvancedCount{
 				Spot:         aws.Int(42),
-				workloadType: manifesttype.ScheduledJobType,
+				workloadType: manifestinfo.ScheduledJobType,
 			},
 			wantedError: errors.New("cannot have autoscaling options for workloads of type 'Scheduled Job'"),
 		},
 		"valid if only spot is specified": {
 			AdvancedCount: AdvancedCount{
 				Spot:         aws.Int(42),
-				workloadType: manifesttype.BackendServiceType,
+				workloadType: manifestinfo.BackendServiceType,
 			},
 		},
 		"valid when range and and at least one autoscaling fields are specified": {
@@ -1857,14 +1857,14 @@ func TestAdvancedCount_validate(t *testing.T) {
 					AcceptableLatency: durationp(10 * time.Second),
 					AvgProcessingTime: durationp(1 * time.Second),
 				},
-				workloadType: manifesttype.WorkerServiceType,
+				workloadType: manifestinfo.WorkerServiceType,
 			},
 		},
 		"error if both spot and autoscaling fields are specified": {
 			AdvancedCount: AdvancedCount{
 				Spot:         aws.Int(123),
 				CPU:          mockConfig,
-				workloadType: manifesttype.LoadBalancedWebServiceType,
+				workloadType: manifestinfo.LoadBalancedWebServiceType,
 			},
 			wantedError: fmt.Errorf(`must specify one, not both, of "spot" and "range/cpu_percentage/memory_percentage/requests/response_time"`),
 		},
@@ -1873,7 +1873,7 @@ func TestAdvancedCount_validate(t *testing.T) {
 				Range: Range{
 					Value: (*IntRangeBand)(aws.String("")),
 				},
-				workloadType: manifesttype.LoadBalancedWebServiceType,
+				workloadType: manifestinfo.LoadBalancedWebServiceType,
 			},
 			wantedErrorMsgPrefix: `validate "range": `,
 		},
@@ -1882,7 +1882,7 @@ func TestAdvancedCount_validate(t *testing.T) {
 				Requests: ScalingConfigOrT[int]{
 					Value: aws.Int(123),
 				},
-				workloadType: manifesttype.LoadBalancedWebServiceType,
+				workloadType: manifestinfo.LoadBalancedWebServiceType,
 			},
 			wantedError: fmt.Errorf(`"range" must be specified if "cpu_percentage", "memory_percentage", "requests" or "response_time" are specified`),
 		},
@@ -1891,7 +1891,7 @@ func TestAdvancedCount_validate(t *testing.T) {
 				Range: Range{
 					Value: (*IntRangeBand)(aws.String("1-10")),
 				},
-				workloadType: manifesttype.LoadBalancedWebServiceType,
+				workloadType: manifestinfo.LoadBalancedWebServiceType,
 			},
 			wantedError: fmt.Errorf(`must specify at least one of "cpu_percentage", "memory_percentage", "requests" or "response_time" if "range" is specified`),
 		},
@@ -1900,7 +1900,7 @@ func TestAdvancedCount_validate(t *testing.T) {
 				Range: Range{
 					Value: (*IntRangeBand)(aws.String("1-10")),
 				},
-				workloadType: manifesttype.BackendServiceType,
+				workloadType: manifestinfo.BackendServiceType,
 			},
 			wantedError: fmt.Errorf(`must specify at least one of "cpu_percentage", "memory_percentage", "requests" or "response_time" if "range" is specified`),
 		},
@@ -1909,42 +1909,42 @@ func TestAdvancedCount_validate(t *testing.T) {
 				Range: Range{
 					Value: (*IntRangeBand)(aws.String("1-10")),
 				},
-				workloadType: manifesttype.WorkerServiceType,
+				workloadType: manifestinfo.WorkerServiceType,
 			},
 			wantedError: fmt.Errorf(`must specify at least one of "cpu_percentage", "memory_percentage" or "queue_delay" if "range" is specified`),
 		},
 		"error if cooldown is specified but no autoscaling fields are specified for a Load Balanced Web Service": {
 			AdvancedCount: AdvancedCount{
 				Cooldown:     mockCooldown,
-				workloadType: manifesttype.LoadBalancedWebServiceType,
+				workloadType: manifestinfo.LoadBalancedWebServiceType,
 			},
 			wantedError: fmt.Errorf(`must specify at least one of "cpu_percentage", "memory_percentage", "requests" or "response_time" if "cooldown" is specified`),
 		},
 		"error if cooldown is specified but no autoscaling fields are specified for a Backend Service": {
 			AdvancedCount: AdvancedCount{
 				Cooldown:     mockCooldown,
-				workloadType: manifesttype.BackendServiceType,
+				workloadType: manifestinfo.BackendServiceType,
 			},
 			wantedError: fmt.Errorf(`must specify at least one of "cpu_percentage", "memory_percentage", "requests" or "response_time" if "cooldown" is specified`),
 		},
 		"error if cooldown is specified but no autoscaling fields are specified for a Worker Service": {
 			AdvancedCount: AdvancedCount{
 				Cooldown:     mockCooldown,
-				workloadType: manifesttype.WorkerServiceType,
+				workloadType: manifestinfo.WorkerServiceType,
 			},
 			wantedError: fmt.Errorf(`must specify at least one of "cpu_percentage", "memory_percentage" or "queue_delay" if "cooldown" is specified`),
 		},
 		"error if range is missing when autoscaling fields are set for Backend Service": {
 			AdvancedCount: AdvancedCount{
 				CPU:          mockConfig,
-				workloadType: manifesttype.BackendServiceType,
+				workloadType: manifestinfo.BackendServiceType,
 			},
 			wantedError: fmt.Errorf(`"range" must be specified if "cpu_percentage", "memory_percentage", "requests" or "response_time" are specified`),
 		},
 		"error if range is missing when autoscaling fields are set for Worker Service": {
 			AdvancedCount: AdvancedCount{
 				CPU:          mockConfig,
-				workloadType: manifesttype.WorkerServiceType,
+				workloadType: manifestinfo.WorkerServiceType,
 			},
 			wantedError: fmt.Errorf(`"range" must be specified if "cpu_percentage", "memory_percentage" or "queue_delay" are specified`),
 		},
@@ -1961,7 +1961,7 @@ func TestAdvancedCount_validate(t *testing.T) {
 					AcceptableLatency: nil,
 					AvgProcessingTime: durationp(1 * time.Second),
 				},
-				workloadType: manifesttype.WorkerServiceType,
+				workloadType: manifestinfo.WorkerServiceType,
 			},
 			wantedErrorMsgPrefix: `validate "queue_delay": `,
 		},
@@ -1971,7 +1971,7 @@ func TestAdvancedCount_validate(t *testing.T) {
 					Value: (*IntRangeBand)(stringP("1-2")),
 				},
 				CPU:          invalidConfig,
-				workloadType: manifesttype.LoadBalancedWebServiceType,
+				workloadType: manifestinfo.LoadBalancedWebServiceType,
 			},
 			wantedErrorMsgPrefix: `validate "cpu_percentage": `,
 		},
@@ -1981,7 +1981,7 @@ func TestAdvancedCount_validate(t *testing.T) {
 					Value: (*IntRangeBand)(stringP("1-2")),
 				},
 				CPU:          mockAdvancedInvConfig,
-				workloadType: manifesttype.LoadBalancedWebServiceType,
+				workloadType: manifestinfo.LoadBalancedWebServiceType,
 			},
 			wantedErrorMsgPrefix: `validate "cpu_percentage": `,
 		},
@@ -1991,7 +1991,7 @@ func TestAdvancedCount_validate(t *testing.T) {
 					Value: (*IntRangeBand)(stringP("1-2")),
 				},
 				Memory:       invalidConfig,
-				workloadType: manifesttype.LoadBalancedWebServiceType,
+				workloadType: manifestinfo.LoadBalancedWebServiceType,
 			},
 			wantedErrorMsgPrefix: `validate "memory_percentage": `,
 		},

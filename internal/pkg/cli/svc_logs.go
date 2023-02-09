@@ -11,7 +11,7 @@ import (
 	"time"
 
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
-	"github.com/aws/copilot-cli/internal/pkg/manifest/manifesttype"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
@@ -126,7 +126,7 @@ func newSvcLogOpts(vars svcLogsVars) (*svcLogsOpts, error) {
 			Name: opts.name,
 			Sess: sess,
 		}
-		if opts.targetSvcType != manifesttype.RequestDrivenWebServiceType {
+		if opts.targetSvcType != manifestinfo.RequestDrivenWebServiceType {
 			opts.logsSvc = logging.NewECSServiceClient(newWorkloadLoggerOpts)
 			return nil
 		}
@@ -286,7 +286,7 @@ func (o *svcLogsOpts) validateAndAskSvcEnvName() error {
 	if err != nil {
 		return fmt.Errorf("select deployed services for application %s: %w", o.appName, err)
 	}
-	if deployedService.SvcType == manifesttype.RequestDrivenWebServiceType && len(o.taskIDs) != 0 {
+	if deployedService.SvcType == manifestinfo.RequestDrivenWebServiceType && len(o.taskIDs) != 0 {
 		return fmt.Errorf("cannot use `--tasks` for App Runner service logs")
 	}
 	o.name = deployedService.Name

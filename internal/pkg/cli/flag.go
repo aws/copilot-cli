@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
-	"github.com/aws/copilot-cli/internal/pkg/manifest/manifesttype"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/dustin/go-humanize/english"
 )
 
@@ -167,7 +167,7 @@ const (
 // Descriptions for flags.
 var (
 	svcTypeFlagDescription = fmt.Sprintf(`Type of service to create. Must be one of:
-%s.`, strings.Join(applyAll(manifesttype.ServiceTypes(), strconv.Quote), ", "))
+%s.`, strings.Join(applyAll(manifestinfo.ServiceTypes(), strconv.Quote), ", "))
 	imageFlagDescription = fmt.Sprintf(`The location of an existing Docker image.
 Cannot be specified with --%s or --%s.`, dockerFileFlag, dockerFileContextFlag)
 	dockerFileFlagDescription = fmt.Sprintf(`Path to the Dockerfile.
@@ -177,9 +177,9 @@ Cannot be specified with --%s.`, imageFlag)
 	storageTypeFlagDescription = fmt.Sprintf(`Type of storage to add. Must be one of:
 %s.`, strings.Join(applyAll(storageTypes, strconv.Quote), ", "))
 	jobTypeFlagDescription = fmt.Sprintf(`Type of job to create. Must be one of:
-%s.`, strings.Join(applyAll(manifesttype.JobTypes(), strconv.Quote), ", "))
+%s.`, strings.Join(applyAll(manifestinfo.JobTypes(), strconv.Quote), ", "))
 	wkldTypeFlagDescription = fmt.Sprintf(`Type of job or svc to create. Must be one of:
-%s.`, strings.Join(applyAll(manifesttype.WorkloadTypes(), strconv.Quote), ", "))
+%s.`, strings.Join(applyAll(manifestinfo.WorkloadTypes(), strconv.Quote), ", "))
 
 	clusterFlagDescription = fmt.Sprintf(`Optional. The short name or full ARN of the cluster to run the task in. 
 Cannot be specified with --%s, --%s or --%s.`, appFlag, envFlag, taskDefaultFlag)

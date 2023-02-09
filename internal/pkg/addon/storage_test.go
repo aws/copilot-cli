@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/aws/copilot-cli/internal/pkg/manifest/manifesttype"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/template/mocks"
 	"github.com/golang/mock/gomock"
@@ -576,14 +576,14 @@ func TestConstructors(t *testing.T) {
 
 	t.Run("marshaler for non-RDWS workload-level aurora serverless v1", func(t *testing.T) {
 		out := WorkloadServerlessV1Template(RDSProps{
-			WorkloadType: manifesttype.LoadBalancedWebServiceType,
+			WorkloadType: manifestinfo.LoadBalancedWebServiceType,
 		})
 		require.Equal(t, rdsTemplatePath, out.tmplPath)
 	})
 
 	t.Run("marshaler for non-RDWS workload-level aurora serverless v2", func(t *testing.T) {
 		out := WorkloadServerlessV2Template(RDSProps{
-			WorkloadType: manifesttype.LoadBalancedWebServiceType,
+			WorkloadType: manifestinfo.LoadBalancedWebServiceType,
 		})
 		require.Equal(t, rdsV2TemplatePath, out.tmplPath)
 	})
@@ -595,14 +595,14 @@ func TestConstructors(t *testing.T) {
 
 	t.Run("marshaler for RDWS workload-level aurora serverless v1", func(t *testing.T) {
 		out := WorkloadServerlessV1Template(RDSProps{
-			WorkloadType: manifesttype.RequestDrivenWebServiceType,
+			WorkloadType: manifestinfo.RequestDrivenWebServiceType,
 		})
 		require.Equal(t, rdsRDWSTemplatePath, out.tmplPath)
 	})
 
 	t.Run("marshaler for RDWS workload-level aurora serverless v2", func(t *testing.T) {
 		out := WorkloadServerlessV2Template(RDSProps{
-			WorkloadType: manifesttype.RequestDrivenWebServiceType,
+			WorkloadType: manifestinfo.RequestDrivenWebServiceType,
 		})
 		require.Equal(t, rdsRDWSV2TemplatePath, out.tmplPath)
 	})
@@ -614,14 +614,14 @@ func TestConstructors(t *testing.T) {
 
 	t.Run("marshaler for env-level aurora accessible by a non-RDWS", func(t *testing.T) {
 		out := EnvServerlessTemplate(RDSProps{
-			WorkloadType: manifesttype.LoadBalancedWebServiceType,
+			WorkloadType: manifestinfo.LoadBalancedWebServiceType,
 		})
 		require.Equal(t, envRDSTemplatePath, out.tmplPath)
 	})
 
 	t.Run("marshaler for env-level aurora accessible by an RDWS", func(t *testing.T) {
 		out := EnvServerlessTemplate(RDSProps{
-			WorkloadType: manifesttype.RequestDrivenWebServiceType,
+			WorkloadType: manifestinfo.RequestDrivenWebServiceType,
 		})
 		require.Equal(t, envRDSForRDWSTemplatePath, out.tmplPath)
 	})
@@ -633,7 +633,7 @@ func TestConstructors(t *testing.T) {
 
 	t.Run("marshaler for the ingress attached to an RDWS for an env-level aurora", func(t *testing.T) {
 		out := EnvServerlessRDWSIngressTemplate(RDSProps{
-			WorkloadType: manifesttype.RequestDrivenWebServiceType,
+			WorkloadType: manifestinfo.RequestDrivenWebServiceType,
 		})
 		require.Equal(t, envRDSIngressForRDWSTemplatePath, out.tmplPath)
 	})

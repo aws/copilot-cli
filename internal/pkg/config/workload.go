@@ -11,7 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/ssm"
-	"github.com/aws/copilot-cli/internal/pkg/manifest/manifesttype"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 )
 
 // Workload represents a deployable long-running service or task.
@@ -88,7 +88,7 @@ func (s *Store) GetService(appName, svcName string) (*Workload, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read configuration for service %s in application %s: %w", svcName, appName, err)
 	}
-	if !manifesttype.IsTypeAService(svc.Type) {
+	if !manifestinfo.IsTypeAService(svc.Type) {
 		return nil, &ErrNoSuchService{
 			App:  appName,
 			Name: svcName,
@@ -117,7 +117,7 @@ func (s *Store) GetJob(appName, jobName string) (*Workload, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read configuration for job %s in application %s: %w", jobName, appName, err)
 	}
-	if !manifesttype.IsTypeAJob(job.Type) {
+	if !manifestinfo.IsTypeAJob(job.Type) {
 		return nil, &ErrNoSuchJob{
 			App:  appName,
 			Name: jobName,
@@ -169,7 +169,7 @@ func (s *Store) ListServices(appName string) ([]*Workload, error) {
 
 	var services []*Workload
 	for _, wkld := range wklds {
-		if manifesttype.IsTypeAService(wkld.Type) {
+		if manifestinfo.IsTypeAService(wkld.Type) {
 			services = append(services, wkld)
 		}
 	}
@@ -186,7 +186,7 @@ func (s *Store) ListJobs(appName string) ([]*Workload, error) {
 
 	var jobs []*Workload
 	for _, wkld := range wklds {
-		if manifesttype.IsTypeAJob(wkld.Type) {
+		if manifestinfo.IsTypeAJob(wkld.Type) {
 			jobs = append(jobs, wkld)
 		}
 	}

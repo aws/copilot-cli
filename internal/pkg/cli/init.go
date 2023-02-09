@@ -13,7 +13,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/iam"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
-	"github.com/aws/copilot-cli/internal/pkg/manifest/manifesttype"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
@@ -246,7 +246,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 				return err
 			}
 			switch t := wkldType; {
-			case manifesttype.IsTypeAJob(t):
+			case manifestinfo.IsTypeAJob(t):
 				jobVars := initJobVars{
 					initWkldVars: wkldVars,
 					schedule:     vars.schedule,
@@ -282,7 +282,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 				o.initWlCmd = &opts
 				o.schedule = &opts.schedule // Surfaced via pointer for logging
 				o.initWkldVars = &opts.initWkldVars
-			case manifesttype.IsTypeAService(t):
+			case manifestinfo.IsTypeAService(t):
 				svcVars := initSvcVars{
 					initWkldVars: wkldVars,
 					port:         vars.port,
@@ -367,7 +367,7 @@ containerized services that operate together.`))
 }
 
 func (o *initOpts) logWorkloadTypeAck() {
-	if manifesttype.IsTypeAJob(o.initWkldVars.wkldType) {
+	if manifestinfo.IsTypeAJob(o.initWkldVars.wkldType) {
 		log.Infof("Ok great, we'll set up a %s named %s in application %s running on the schedule %s.\n",
 			color.HighlightUserInput(o.initWkldVars.wkldType), color.HighlightUserInput(o.initWkldVars.name), color.HighlightUserInput(o.initWkldVars.appName), color.HighlightUserInput(*o.schedule))
 		return
@@ -380,7 +380,7 @@ func (o *initOpts) logWorkloadTypeAck() {
 }
 
 func (o *initOpts) deploy() error {
-	if manifesttype.IsTypeAJob(o.initWkldVars.wkldType) {
+	if manifestinfo.IsTypeAJob(o.initWkldVars.wkldType) {
 		return o.deployJob()
 	}
 	return o.deploySvc()

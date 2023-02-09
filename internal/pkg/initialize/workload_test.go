@@ -12,7 +12,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/initialize/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
-	"github.com/aws/copilot-cli/internal/pkg/manifest/manifesttype"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -37,7 +37,7 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 		wantedErr error
 	}{
 		"writes Scheduled Job manifest, and creates repositories successfully": {
-			inJobType:        manifesttype.ScheduledJobType,
+			inJobType:        manifestinfo.ScheduledJobType,
 			inAppName:        "app",
 			inJobName:        "resizer",
 			inDockerfilePath: "resizer/Dockerfile",
@@ -57,7 +57,7 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 						require.Equal(t, &config.Workload{
 							Name: "resizer",
 							App:  "app",
-							Type: manifesttype.ScheduledJobType,
+							Type: manifestinfo.ScheduledJobType,
 						}, app)
 					}).
 					Return(nil)
@@ -74,7 +74,7 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 			},
 		},
 		"using existing image": {
-			inJobType: manifesttype.ScheduledJobType,
+			inJobType: manifestinfo.ScheduledJobType,
 			inAppName: "app",
 			inJobName: "resizer",
 			inImage:   "mockImage",
@@ -84,7 +84,7 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 			mockWriter: func(m *mocks.MockWorkspace) {
 				m.EXPECT().Rel("/resizer/manifest.yml").Return("manifest.yml", nil)
 				m.EXPECT().WriteJobManifest(gomock.Any(), "resizer").Do(func(m *manifest.ScheduledJob, _ string) {
-					require.Equal(t, *m.Workload.Type, manifesttype.ScheduledJobType)
+					require.Equal(t, *m.Workload.Type, manifestinfo.ScheduledJobType)
 					require.Equal(t, *m.ImageConfig.Image.Location, "mockImage")
 				}).Return("/resizer/manifest.yml", nil)
 			},
@@ -94,7 +94,7 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 						require.Equal(t, &config.Workload{
 							Name: "resizer",
 							App:  "app",
-							Type: manifesttype.ScheduledJobType,
+							Type: manifestinfo.ScheduledJobType,
 						}, app)
 					}).
 					Return(nil)
@@ -111,7 +111,7 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 			},
 		},
 		"write manifest error": {
-			inJobType:        manifesttype.ScheduledJobType,
+			inJobType:        manifestinfo.ScheduledJobType,
 			inAppName:        "app",
 			inJobName:        "resizer",
 			inDockerfilePath: "resizer/Dockerfile",
@@ -126,7 +126,7 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 			wantedErr: errors.New("write job manifest: some error"),
 		},
 		"app error": {
-			inJobType:        manifesttype.ScheduledJobType,
+			inJobType:        manifestinfo.ScheduledJobType,
 			inAppName:        "app",
 			inJobName:        "resizer",
 			inDockerfilePath: "resizer/Dockerfile",
@@ -143,7 +143,7 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 			wantedErr: errors.New("get application app: some error"),
 		},
 		"add job to app fails": {
-			inJobType:        manifesttype.ScheduledJobType,
+			inJobType:        manifestinfo.ScheduledJobType,
 			inAppName:        "app",
 			inJobName:        "resizer",
 			inDockerfilePath: "frontend/Dockerfile",
@@ -166,7 +166,7 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 			wantedErr: errors.New("add job resizer to application app: some error"),
 		},
 		"error saving app": {
-			inJobType:        manifesttype.ScheduledJobType,
+			inJobType:        manifestinfo.ScheduledJobType,
 			inAppName:        "app",
 			inJobName:        "resizer",
 			inDockerfilePath: "resizer/Dockerfile",
@@ -273,7 +273,7 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 				m.EXPECT().ListServices("app").Return([]*config.Workload{
 					{
 						Name: "frontend",
-						Type: manifesttype.LoadBalancedWebServiceType,
+						Type: manifestinfo.LoadBalancedWebServiceType,
 					},
 				}, nil)
 			},
@@ -307,7 +307,7 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 				m.EXPECT().ListServices("app").Return([]*config.Workload{
 					{
 						Name: "another-app",
-						Type: manifesttype.LoadBalancedWebServiceType,
+						Type: manifestinfo.LoadBalancedWebServiceType,
 					},
 				}, nil)
 			},
@@ -437,7 +437,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 		wantedErr error
 	}{
 		"writes Load Balanced Web Service manifest, and creates repositories successfully": {
-			inSvcType:        manifesttype.LoadBalancedWebServiceType,
+			inSvcType:        manifestinfo.LoadBalancedWebServiceType,
 			inAppName:        "app",
 			inSvcName:        "frontend",
 			inDockerfilePath: "frontend/Dockerfile",
@@ -457,7 +457,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 						require.Equal(t, &config.Workload{
 							Name: "frontend",
 							App:  "app",
-							Type: manifesttype.LoadBalancedWebServiceType,
+							Type: manifestinfo.LoadBalancedWebServiceType,
 						}, app)
 					}).
 					Return(nil)
@@ -474,7 +474,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 			},
 		},
 		"app error": {
-			inSvcType:        manifesttype.LoadBalancedWebServiceType,
+			inSvcType:        manifestinfo.LoadBalancedWebServiceType,
 			inAppName:        "app",
 			inSvcName:        "frontend",
 			inSvcPort:        80,
@@ -490,7 +490,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 			wantedErr: errors.New("get application app: some error"),
 		},
 		"write manifest error": {
-			inSvcType:        manifesttype.LoadBalancedWebServiceType,
+			inSvcType:        manifestinfo.LoadBalancedWebServiceType,
 			inAppName:        "app",
 			inSvcName:        "frontend",
 			inDockerfilePath: "frontend/Dockerfile",
@@ -511,7 +511,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 			wantedErr: errors.New("write service manifest: some error"),
 		},
 		"add service to app fails": {
-			inSvcType:        manifesttype.LoadBalancedWebServiceType,
+			inSvcType:        manifestinfo.LoadBalancedWebServiceType,
 			inAppName:        "app",
 			inSvcName:        "frontend",
 			inSvcPort:        80,
@@ -535,7 +535,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 			wantedErr: errors.New("add service frontend to application app: some error"),
 		},
 		"error saving app": {
-			inSvcType:        manifesttype.LoadBalancedWebServiceType,
+			inSvcType:        manifestinfo.LoadBalancedWebServiceType,
 			inAppName:        "app",
 			inSvcName:        "frontend",
 			inDockerfilePath: "frontend/Dockerfile",
@@ -557,7 +557,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 			wantedErr: fmt.Errorf("saving service frontend: oops"),
 		},
 		"using existing image": {
-			inSvcType: manifesttype.BackendServiceType,
+			inSvcType: manifestinfo.BackendServiceType,
 			inAppName: "app",
 			inSvcName: "backend",
 			inImage:   "mockImage",
@@ -568,7 +568,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 				m.EXPECT().Rel("/backend/manifest.yml").Return("manifest.yml", nil)
 				m.EXPECT().WriteServiceManifest(gomock.Any(), "backend").
 					Do(func(m *manifest.BackendService, _ string) {
-						require.Equal(t, *m.Workload.Type, manifesttype.BackendServiceType)
+						require.Equal(t, *m.Workload.Type, manifestinfo.BackendServiceType)
 						require.Equal(t, *m.ImageConfig.Image.Location, "mockImage")
 						require.Empty(t, m.ImageConfig.HealthCheck)
 					}).Return("/backend/manifest.yml", nil)
@@ -579,7 +579,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 						require.Equal(t, &config.Workload{
 							Name: "backend",
 							App:  "app",
-							Type: manifesttype.BackendServiceType,
+							Type: manifestinfo.BackendServiceType,
 						}, app)
 					}).
 					Return(nil)
@@ -597,7 +597,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 			},
 		},
 		"no healthcheck options": {
-			inSvcType:        manifesttype.BackendServiceType,
+			inSvcType:        manifestinfo.BackendServiceType,
 			inAppName:        "app",
 			inSvcName:        "backend",
 			inDockerfilePath: "backend/Dockerfile",
@@ -610,7 +610,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 					m.EXPECT().Rel("/backend/manifest.yml").Return("manifest.yml", nil))
 				m.EXPECT().WriteServiceManifest(gomock.Any(), "backend").
 					Do(func(m *manifest.BackendService, _ string) {
-						require.Equal(t, *m.Workload.Type, manifesttype.BackendServiceType)
+						require.Equal(t, *m.Workload.Type, manifestinfo.BackendServiceType)
 						require.Empty(t, m.ImageConfig.HealthCheck)
 					}).Return("/backend/manifest.yml", nil)
 			},
@@ -620,7 +620,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 						require.Equal(t, &config.Workload{
 							Name: "backend",
 							App:  "app",
-							Type: manifesttype.BackendServiceType,
+							Type: manifestinfo.BackendServiceType,
 						}, app)
 					}).
 					Return(nil)
@@ -638,7 +638,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 			},
 		},
 		"default healthcheck options": {
-			inSvcType:        manifesttype.BackendServiceType,
+			inSvcType:        manifestinfo.BackendServiceType,
 			inAppName:        "app",
 			inSvcName:        "backend",
 			inDockerfilePath: "backend/Dockerfile",
@@ -658,7 +658,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 					m.EXPECT().Rel("/backend/manifest.yml").Return("manifest.yml", nil))
 				m.EXPECT().WriteServiceManifest(gomock.Any(), "backend").
 					Do(func(m *manifest.BackendService, _ string) {
-						require.Equal(t, *m.Workload.Type, manifesttype.BackendServiceType)
+						require.Equal(t, *m.Workload.Type, manifestinfo.BackendServiceType)
 						require.Equal(t, m.ImageConfig.HealthCheck, manifest.ContainerHealthCheck{
 							Interval:    &testInterval,
 							Retries:     &testRetries,
@@ -673,7 +673,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 						require.Equal(t, &config.Workload{
 							Name: "backend",
 							App:  "app",
-							Type: manifesttype.BackendServiceType,
+							Type: manifestinfo.BackendServiceType,
 						}, app)
 					}).
 					Return(nil)
@@ -690,7 +690,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 			},
 		},
 		"topic subscriptions enabled": {
-			inSvcType:        manifesttype.WorkerServiceType,
+			inSvcType:        manifestinfo.WorkerServiceType,
 			inAppName:        "app",
 			inSvcName:        "worker",
 			inDockerfilePath: "worker/Dockerfile",
@@ -709,7 +709,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 					m.EXPECT().Rel("/worker/manifest.yml").Return("manifest.yml", nil))
 				m.EXPECT().WriteServiceManifest(gomock.Any(), "worker").
 					Do(func(m *manifest.WorkerService, _ string) {
-						require.Equal(t, *m.Workload.Type, manifesttype.WorkerServiceType)
+						require.Equal(t, *m.Workload.Type, manifestinfo.WorkerServiceType)
 						require.Empty(t, m.ImageConfig.HealthCheck)
 					}).Return("/worker/manifest.yml", nil)
 			},
@@ -719,7 +719,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 						require.Equal(t, &config.Workload{
 							Name: "worker",
 							App:  "app",
-							Type: manifesttype.WorkerServiceType,
+							Type: manifestinfo.WorkerServiceType,
 						}, app)
 					}).
 					Return(nil)
@@ -737,7 +737,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 			},
 		},
 		"topic subscriptions enabled with default fifo queue": {
-			inSvcType:        manifesttype.WorkerServiceType,
+			inSvcType:        manifestinfo.WorkerServiceType,
 			inAppName:        "app",
 			inSvcName:        "worker",
 			inDockerfilePath: "worker/Dockerfile",
@@ -756,7 +756,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 					m.EXPECT().Rel("/worker/manifest.yml").Return("manifest.yml", nil))
 				m.EXPECT().WriteServiceManifest(gomock.Any(), "worker").
 					Do(func(m *manifest.WorkerService, _ string) {
-						require.Equal(t, *m.Workload.Type, manifesttype.WorkerServiceType)
+						require.Equal(t, *m.Workload.Type, manifestinfo.WorkerServiceType)
 						require.Equal(t, *m.Subscribe.Queue.FIFO.Enable, true)
 						require.Empty(t, m.ImageConfig.HealthCheck)
 					}).Return("/worker/manifest.yml", nil)
@@ -767,7 +767,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 						require.Equal(t, &config.Workload{
 							Name: "worker",
 							App:  "app",
-							Type: manifesttype.WorkerServiceType,
+							Type: manifestinfo.WorkerServiceType,
 						}, app)
 					}).
 					Return(nil)

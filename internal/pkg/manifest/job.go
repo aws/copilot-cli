@@ -5,7 +5,7 @@ package manifest
 
 import (
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/copilot-cli/internal/pkg/manifest/manifesttype"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/imdario/mergo"
 )
@@ -155,7 +155,7 @@ func (j *ScheduledJob) EnvFile() string {
 func newDefaultScheduledJob() *ScheduledJob {
 	return &ScheduledJob{
 		Workload: Workload{
-			Type: aws.String(manifesttype.ScheduledJobType),
+			Type: aws.String(manifestinfo.ScheduledJobType),
 		},
 		ScheduledJobConfig: ScheduledJobConfig{
 			ImageConfig: ImageWithHealthcheck{},
@@ -165,7 +165,7 @@ func newDefaultScheduledJob() *ScheduledJob {
 				Count: Count{
 					Value: aws.Int(1),
 					AdvancedCount: AdvancedCount{ // Leave advanced count empty while passing down the type of the workload.
-						workloadType: manifesttype.ScheduledJobType,
+						workloadType: manifestinfo.ScheduledJobType,
 					},
 				},
 			},

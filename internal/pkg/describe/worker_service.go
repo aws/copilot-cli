@@ -10,7 +10,7 @@ import (
 	"text/tabwriter"
 
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
-	"github.com/aws/copilot-cli/internal/pkg/manifest/manifesttype"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 
 	cfnstack "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/describe/stack"
@@ -118,7 +118,7 @@ func (d *WorkerServiceDescriber) Describe() (HumanJSONStringer, error) {
 
 	return &workerSvcDesc{
 		Service:        d.svc,
-		Type:           manifesttype.WorkerServiceType,
+		Type:           manifestinfo.WorkerServiceType,
 		App:            d.app,
 		Configurations: configs,
 		Variables:      envVars,

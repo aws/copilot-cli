@@ -13,7 +13,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/elbv2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
-	"github.com/aws/copilot-cli/internal/pkg/manifest/manifesttype"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 
 	cfnstack "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
@@ -186,7 +186,7 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 	return &backendSvcDesc{
 		ecsSvcDesc: ecsSvcDesc{
 			Service:          d.svc,
-			Type:             manifesttype.BackendServiceType,
+			Type:             manifestinfo.BackendServiceType,
 			App:              d.app,
 			Configurations:   configs,
 			Routes:           routes,

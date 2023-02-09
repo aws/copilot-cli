@@ -13,7 +13,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
-	"github.com/aws/copilot-cli/internal/pkg/manifest/manifesttype"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
@@ -379,7 +379,7 @@ func TestDeploySelect_Service(t *testing.T) {
 				WithWkldFilter(func(svc *DeployedWorkload) (bool, error) {
 					return svc.Env == "test1", nil
 				}),
-				WithServiceTypesFilter([]string{manifesttype.BackendServiceType}),
+				WithServiceTypesFilter([]string{manifestinfo.BackendServiceType}),
 			},
 			setupMocks: func(m deploySelectMocks) {
 				m.configSvc.
@@ -389,22 +389,22 @@ func TestDeploySelect_Service(t *testing.T) {
 						{
 							App:  testApp,
 							Name: "mockSvc1",
-							Type: manifesttype.BackendServiceType,
+							Type: manifestinfo.BackendServiceType,
 						},
 						{
 							App:  testApp,
 							Name: "mockSvc2",
-							Type: manifesttype.BackendServiceType,
+							Type: manifestinfo.BackendServiceType,
 						},
 						{
 							App:  testApp,
 							Name: "mockSvc3",
-							Type: manifesttype.LoadBalancedWebServiceType,
+							Type: manifestinfo.LoadBalancedWebServiceType,
 						},
 						{
 							App:  testApp,
 							Name: "mockJob1",
-							Type: manifesttype.ScheduledJobType,
+							Type: manifestinfo.ScheduledJobType,
 						},
 					}, nil)
 
@@ -433,7 +433,7 @@ func TestDeploySelect_Service(t *testing.T) {
 			},
 			wantEnv:     "test1",
 			wantSvc:     "mockSvc1",
-			wantSvcType: manifesttype.BackendServiceType,
+			wantSvcType: manifestinfo.BackendServiceType,
 		},
 		"filter returns error": {
 			opts: []GetDeployedWorkloadOpts{
@@ -449,17 +449,17 @@ func TestDeploySelect_Service(t *testing.T) {
 						{
 							App:  testApp,
 							Name: "mockSvc1",
-							Type: manifesttype.BackendServiceType,
+							Type: manifestinfo.BackendServiceType,
 						},
 						{
 							App:  testApp,
 							Name: "mockSvc2",
-							Type: manifesttype.BackendServiceType,
+							Type: manifestinfo.BackendServiceType,
 						},
 						{
 							App:  testApp,
 							Name: "mockSvc3",
-							Type: manifesttype.LoadBalancedWebServiceType,
+							Type: manifestinfo.LoadBalancedWebServiceType,
 						},
 					}, nil)
 
@@ -684,7 +684,7 @@ func TestDeploySelect_Job(t *testing.T) {
 				WithWkldFilter(func(job *DeployedWorkload) (bool, error) {
 					return job.Env == "test2", nil
 				}),
-				WithServiceTypesFilter([]string{manifesttype.ScheduledJobType}),
+				WithServiceTypesFilter([]string{manifestinfo.ScheduledJobType}),
 			},
 			setupMocks: func(m deploySelectMocks) {
 				m.configSvc.
@@ -694,22 +694,22 @@ func TestDeploySelect_Job(t *testing.T) {
 						{
 							App:  testApp,
 							Name: "mockSvc1",
-							Type: manifesttype.BackendServiceType,
+							Type: manifestinfo.BackendServiceType,
 						},
 						{
 							App:  testApp,
 							Name: "mockSvc2",
-							Type: manifesttype.BackendServiceType,
+							Type: manifestinfo.BackendServiceType,
 						},
 						{
 							App:  testApp,
 							Name: "mockJob1",
-							Type: manifesttype.ScheduledJobType,
+							Type: manifestinfo.ScheduledJobType,
 						},
 						{
 							App:  testApp,
 							Name: "mockJob2",
-							Type: manifesttype.ScheduledJobType,
+							Type: manifestinfo.ScheduledJobType,
 						},
 					}, nil)
 
@@ -753,17 +753,17 @@ func TestDeploySelect_Job(t *testing.T) {
 						{
 							App:  testApp,
 							Name: "mockJob1",
-							Type: manifesttype.ScheduledJobType,
+							Type: manifestinfo.ScheduledJobType,
 						},
 						{
 							App:  testApp,
 							Name: "mockJob2",
-							Type: manifesttype.ScheduledJobType,
+							Type: manifestinfo.ScheduledJobType,
 						},
 						{
 							App:  testApp,
 							Name: "mockSvc3",
-							Type: manifesttype.LoadBalancedWebServiceType,
+							Type: manifestinfo.LoadBalancedWebServiceType,
 						},
 					}, nil)
 

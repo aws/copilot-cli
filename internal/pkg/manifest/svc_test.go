@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/copilot-cli/internal/pkg/manifest/manifesttype"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 )
@@ -103,7 +103,7 @@ environments:
 				actualManifest, ok := i.(*LoadBalancedWebService)
 				require.True(t, ok)
 				wantedManifest := &LoadBalancedWebService{
-					Workload: Workload{Name: aws.String("frontend"), Type: aws.String(manifesttype.LoadBalancedWebServiceType)},
+					Workload: Workload{Name: aws.String("frontend"), Type: aws.String(manifestinfo.LoadBalancedWebServiceType)},
 					LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 						ImageConfig: ImageWithPortAndHealthcheck{
 							ImageWithPort: ImageWithPort{Image: Image{Build: BuildArgsOrString{},
@@ -134,7 +134,7 @@ environments:
 							Count: Count{
 								Value: aws.Int(1),
 								AdvancedCount: AdvancedCount{
-									workloadType: manifesttype.LoadBalancedWebServiceType,
+									workloadType: manifestinfo.LoadBalancedWebServiceType,
 								},
 							},
 							ExecuteCommand: ExecuteCommand{
@@ -287,7 +287,7 @@ secrets:
 				wantedManifest := &BackendService{
 					Workload: Workload{
 						Name: aws.String("subscribers"),
-						Type: aws.String(manifesttype.BackendServiceType),
+						Type: aws.String(manifestinfo.BackendServiceType),
 					},
 					BackendServiceConfig: BackendServiceConfig{
 						ImageConfig: ImageWithHealthcheckAndOptionalPort{
@@ -309,7 +309,7 @@ secrets:
 							Count: Count{
 								Value: aws.Int(1),
 								AdvancedCount: AdvancedCount{
-									workloadType: manifesttype.BackendServiceType,
+									workloadType: manifestinfo.BackendServiceType,
 								},
 							},
 							ExecuteCommand: ExecuteCommand{
@@ -366,7 +366,7 @@ subscribe:
 				wantedManifest := &WorkerService{
 					Workload: Workload{
 						Name: aws.String("dogcategorizer"),
-						Type: aws.String(manifesttype.WorkerServiceType),
+						Type: aws.String(manifestinfo.WorkerServiceType),
 					},
 					WorkerServiceConfig: WorkerServiceConfig{
 						ImageConfig: ImageWithHealthcheck{
@@ -382,7 +382,7 @@ subscribe:
 							Count: Count{
 								Value: aws.Int(1),
 								AdvancedCount: AdvancedCount{
-									workloadType: manifesttype.WorkerServiceType,
+									workloadType: manifestinfo.WorkerServiceType,
 								},
 							},
 							ExecuteCommand: ExecuteCommand{

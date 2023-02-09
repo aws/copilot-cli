@@ -11,7 +11,7 @@ import (
 
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
-	"github.com/aws/copilot-cli/internal/pkg/manifest/manifesttype"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
@@ -29,7 +29,7 @@ var (
 var testRDWebServiceManifest = &manifest.RequestDrivenWebService{
 	Workload: manifest.Workload{
 		Name: aws.String(testServiceName),
-		Type: aws.String(manifesttype.RequestDrivenWebServiceType),
+		Type: aws.String(manifestinfo.RequestDrivenWebServiceType),
 	},
 	RequestDrivenWebServiceConfig: manifest.RequestDrivenWebServiceConfig{
 		ImageConfig: manifest.ImageWithPort{
@@ -172,7 +172,7 @@ func TestRequestDrivenWebService_Template(t *testing.T) {
 						AppName:      "phonetool",
 						EnvName:      "test",
 						WorkloadName: "frontend",
-						WorkloadType: manifesttype.RequestDrivenWebServiceType,
+						WorkloadType: manifestinfo.RequestDrivenWebServiceType,
 						Variables: map[string]template.Variable{
 							"LOG_LEVEL": template.PlainVariable(""),
 							"NODE_ENV":  template.PlainVariable(""),
@@ -210,7 +210,7 @@ func TestRequestDrivenWebService_Template(t *testing.T) {
 						AppName:                  "phonetool",
 						EnvName:                  "test",
 						WorkloadName:             "frontend",
-						WorkloadType:             manifesttype.RequestDrivenWebServiceType,
+						WorkloadType:             manifestinfo.RequestDrivenWebServiceType,
 						Variables:                convertEnvVars(c.manifest.Variables),
 						Secrets:                  convertSecrets(c.manifest.RequestDrivenWebServiceConfig.Secrets),
 						Tags:                     c.manifest.Tags,
@@ -255,7 +255,7 @@ Outputs:
 						AppName:                  "phonetool",
 						EnvName:                  "test",
 						WorkloadName:             "frontend",
-						WorkloadType:             manifesttype.RequestDrivenWebServiceType,
+						WorkloadType:             manifestinfo.RequestDrivenWebServiceType,
 						Variables:                convertEnvVars(c.manifest.Variables),
 						Secrets:                  convertSecrets(c.manifest.RequestDrivenWebServiceConfig.Secrets),
 						Tags:                     c.manifest.Tags,

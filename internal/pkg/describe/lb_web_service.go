@@ -13,7 +13,7 @@ import (
 	"text/tabwriter"
 
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
-	"github.com/aws/copilot-cli/internal/pkg/manifest/manifesttype"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/elbv2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
@@ -201,7 +201,7 @@ func (d *LBWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 	return &webSvcDesc{
 		ecsSvcDesc: ecsSvcDesc{
 			Service:          d.svc,
-			Type:             manifesttype.LoadBalancedWebServiceType,
+			Type:             manifestinfo.LoadBalancedWebServiceType,
 			App:              d.app,
 			Configurations:   configs,
 			Routes:           routes,

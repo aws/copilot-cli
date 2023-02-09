@@ -5,7 +5,7 @@ package manifest
 
 import (
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/copilot-cli/internal/pkg/manifest/manifesttype"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/imdario/mergo"
 )
@@ -192,7 +192,7 @@ func (s *RequestDrivenWebService) requiredEnvironmentFeatures() []string {
 func newDefaultRequestDrivenWebService() *RequestDrivenWebService {
 	return &RequestDrivenWebService{
 		Workload: Workload{
-			Type: aws.String(manifesttype.RequestDrivenWebServiceType),
+			Type: aws.String(manifestinfo.RequestDrivenWebServiceType),
 		},
 		RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
 			ImageConfig: ImageWithPort{},

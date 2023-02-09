@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/copilot-cli/internal/pkg/manifest/manifesttype"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -250,11 +250,11 @@ func (a *AdvancedCount) hasAutoscaling() bool {
 
 func (a *AdvancedCount) validScalingFields() []string {
 	switch a.workloadType {
-	case manifesttype.LoadBalancedWebServiceType:
+	case manifestinfo.LoadBalancedWebServiceType:
 		return []string{"cpu_percentage", "memory_percentage", "requests", "response_time"}
-	case manifesttype.BackendServiceType:
+	case manifestinfo.BackendServiceType:
 		return []string{"cpu_percentage", "memory_percentage", "requests", "response_time"}
-	case manifesttype.WorkerServiceType:
+	case manifestinfo.WorkerServiceType:
 		return []string{"cpu_percentage", "memory_percentage", "queue_delay"}
 	default:
 		return nil
@@ -263,11 +263,11 @@ func (a *AdvancedCount) validScalingFields() []string {
 
 func (a *AdvancedCount) hasScalingFieldsSet() bool {
 	switch a.workloadType {
-	case manifesttype.LoadBalancedWebServiceType:
+	case manifestinfo.LoadBalancedWebServiceType:
 		return !a.CPU.IsEmpty() || !a.Memory.IsEmpty() || !a.Requests.IsEmpty() || !a.ResponseTime.IsEmpty()
-	case manifesttype.BackendServiceType:
+	case manifestinfo.BackendServiceType:
 		return !a.CPU.IsEmpty() || !a.Memory.IsEmpty() || !a.Requests.IsEmpty() || !a.ResponseTime.IsEmpty()
-	case manifesttype.WorkerServiceType:
+	case manifestinfo.WorkerServiceType:
 		return !a.CPU.IsEmpty() || !a.Memory.IsEmpty() || !a.QueueScaling.IsEmpty()
 	default:
 		return !a.CPU.IsEmpty() || !a.Memory.IsEmpty() || !a.Requests.IsEmpty() || !a.ResponseTime.IsEmpty() || !a.QueueScaling.IsEmpty()
@@ -278,15 +278,15 @@ func (a *AdvancedCount) getInvalidFieldsSet() []string {
 	var invalidFields []string
 
 	switch a.workloadType {
-	case manifesttype.LoadBalancedWebServiceType:
+	case manifestinfo.LoadBalancedWebServiceType:
 		if !a.QueueScaling.IsEmpty() {
 			invalidFields = append(invalidFields, "queue_delay")
 		}
-	case manifesttype.BackendServiceType:
+	case manifestinfo.BackendServiceType:
 		if !a.QueueScaling.IsEmpty() {
 			invalidFields = append(invalidFields, "queue_delay")
 		}
-	case manifesttype.WorkerServiceType:
+	case manifestinfo.WorkerServiceType:
 		if !a.Requests.IsEmpty() {
 			invalidFields = append(invalidFields, "requests")
 		}

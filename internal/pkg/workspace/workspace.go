@@ -31,7 +31,7 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/aws/copilot-cli/internal/pkg/manifest/manifesttype"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -189,7 +189,7 @@ func (ws *Workspace) WorkloadExists(name string) (bool, error) {
 // ListServices returns the names of the services in the workspace.
 func (ws *Workspace) ListServices() ([]string, error) {
 	return ws.listWorkloads(func(wlType string) bool {
-		for _, t := range manifesttype.ServiceTypes() {
+		for _, t := range manifestinfo.ServiceTypes() {
 			if wlType == t {
 				return true
 			}
@@ -201,7 +201,7 @@ func (ws *Workspace) ListServices() ([]string, error) {
 // ListJobs returns the names of all jobs in the workspace.
 func (ws *Workspace) ListJobs() ([]string, error) {
 	return ws.listWorkloads(func(wlType string) bool {
-		for _, t := range manifesttype.JobTypes() {
+		for _, t := range manifestinfo.JobTypes() {
 			if wlType == t {
 				return true
 			}
@@ -356,8 +356,8 @@ func (ws *Workspace) ReadEnvironmentManifest(mftDirName string) (EnvironmentMani
 	if err != nil {
 		return nil, err
 	}
-	if typ != manifest.EnvironmentManifestType {
-		return nil, fmt.Errorf(`manifest %s has type of "%s", not "%s"`, mftDirName, typ, manifest.EnvironmentManifestType)
+	if typ != manifest.Environmentmanifestinfo {
+		return nil, fmt.Errorf(`manifest %s has type of "%s", not "%s"`, mftDirName, typ, manifest.Environmentmanifestinfo)
 	}
 	return mft, nil
 }

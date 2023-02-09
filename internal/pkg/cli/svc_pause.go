@@ -10,7 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
-	"github.com/aws/copilot-cli/internal/pkg/manifest/manifesttype"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/apprunner"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
@@ -86,8 +86,8 @@ func newSvcPauseOpts(vars svcPauseVars) (*svcPauseOpts, error) {
 		if err != nil {
 			return fmt.Errorf("get workload: %w", err)
 		}
-		if wl.Type != manifesttype.RequestDrivenWebServiceType {
-			return fmt.Errorf("pausing a service is only supported for services with type: %s", manifesttype.RequestDrivenWebServiceType)
+		if wl.Type != manifestinfo.RequestDrivenWebServiceType {
+			return fmt.Errorf("pausing a service is only supported for services with type: %s", manifestinfo.RequestDrivenWebServiceType)
 		}
 		sess, err := sessProvider.FromRole(env.ManagerRoleARN, env.Region)
 		if err != nil {
@@ -173,7 +173,7 @@ func (o *svcPauseOpts) validateAndAskSvcEnvName() error {
 		o.appName,
 		selector.WithEnv(o.envName),
 		selector.WithName(o.svcName),
-		selector.WithServiceTypesFilter([]string{manifesttype.RequestDrivenWebServiceType}),
+		selector.WithServiceTypesFilter([]string{manifestinfo.RequestDrivenWebServiceType}),
 	)
 	if err != nil {
 		return fmt.Errorf("select deployed services for application %s: %w", o.appName, err)
