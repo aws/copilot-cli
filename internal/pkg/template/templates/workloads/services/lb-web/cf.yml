@@ -111,12 +111,8 @@ Resources:
     {{- end}}
     {{- end}}
     {{- if .NLB}}
-    {{- if eq (len .NLB.Listener) 1 }}
-      - NLBListener
-    {{- else if gt (len .NLB.Listener) 1 }}
-    {{- range $listener := .NLB.Listener }}
-      - NLBListenerFor{{$listener.Port}}
-    {{- end }}
+    {{- range $i, $listener := .NLB.Listener }}
+      - NLBListener{{ if ne $i 0 }}{{ $i }}{{ end }}
     {{- end }}
     {{- end}}
     Properties:

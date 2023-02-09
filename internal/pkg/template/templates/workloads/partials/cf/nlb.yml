@@ -10,10 +10,12 @@ PublicNetworkLoadBalancer:
         - Fn::ImportValue:
             !Sub '${AppName}-${EnvName}-PublicSubnets'
     Type: network
-
-{{- if eq (len .NLB.Listener) 1 }}
-{{- range $listener := .NLB.Listener }}
+{{- range $i, $listener := .NLB.Listener }}
+{{- if eq $i 0 }}
 NLBListener:
+{{- else }}
+NLBListener{{$i}}:
+{{- end }}
   Type: AWS::ElasticLoadBalancingV2::Listener
   Properties:
     DefaultActions:
@@ -28,60 +30,11 @@ NLBListener:
     SslPolicy: {{ if $listener.SSLPolicy }}{{ $listener.SSLPolicy }}{{ else }} ELBSecurityPolicy-TLS13-1-2-2021-06 {{ end }}
   {{- end}}
 
+{{- if eq $i 0 }}
 NLBTargetGroup:
-  Metadata:
-    'aws:copilot:description': 'A target group to connect the network load balancer to your service'
-  Type: AWS::ElasticLoadBalancingV2::TargetGroup
-  Properties:
-    {{- if $listener.HealthCheck.HealthyThreshold }}
-    HealthyThresholdCount: {{$listener.HealthCheck.HealthyThreshold}}
-    {{- end }}
-    {{- if $listener.HealthCheck.UnhealthyThreshold }}
-    UnhealthyThresholdCount: {{$listener.HealthCheck.UnhealthyThreshold}}
-    {{- end }}
-    {{- if $listener.HealthCheck.Interval }}
-    HealthCheckIntervalSeconds: {{$listener.HealthCheck.Interval}}
-    {{- end }}
-    {{- if $listener.HealthCheck.Timeout }}
-    HealthCheckTimeoutSeconds: {{$listener.HealthCheck.Timeout}}
-    {{- end }}
-    {{- if $listener.HealthCheck.Port }}
-    HealthCheckPort: {{$listener.HealthCheck.Port}}
-    {{- end }}
-    Port: {{ $listener.TargetPort }}
-    Protocol: {{- if eq $listener.Protocol "TLS"}} TCP {{- else}} {{ $listener.Protocol }} {{- end}}
-    TargetGroupAttributes:
-      - Key: deregistration_delay.timeout_seconds
-        Value: {{$.DeregistrationDelay}}  # ECS Default is 300; Copilot default is 60.
-{{- if ne $listener.Protocol "TLS"}}
-{{- if $listener.Stickiness }} {{/*Sticky sessions are not supported with TLS listeners and TLS target groups.*/}}
-      - Key: stickiness.enabled
-        Value: {{ $listener.Stickiness }}
-{{- end}}
-{{- end}}
-    TargetType: ip
-    VpcId:
-      Fn::ImportValue:
-        !Sub "${AppName}-${EnvName}-VpcId"
+{{- else }}
+NLBTargetGroup{{$i}}:
 {{- end }}
-{{- else if gt (len .NLB.Listener) 1 }}
-{{- range $listener := .NLB.Listener}}
-NLBListenerFor{{ $listener.Port }}:
-  Type: AWS::ElasticLoadBalancingV2::Listener
-  Properties:
-    DefaultActions:
-      - TargetGroupArn: !Ref NLBTargetGroupFor{{ $listener.Port }}
-        Type: forward
-    LoadBalancerArn: !Ref PublicNetworkLoadBalancer
-    Port: {{ $listener.Port }}
-    Protocol: {{ $listener.Protocol }}
-{{- if eq $listener.Protocol "TLS" }}
-    Certificates:
-      - CertificateArn: !Ref NLBCertValidatorAction
-    SslPolicy: {{ if $listener.SSLPolicy }}{{ $listener.SSLPolicy }}{{ else }} ELBSecurityPolicy-TLS13-1-2-2021-06 {{ end }}
-{{- end}}
-
-NLBTargetGroupFor{{ $listener.Port }}:
   Metadata:
     'aws:copilot:description': 'A target group to connect the network load balancer to your service'
   Type: AWS::ElasticLoadBalancingV2::TargetGroup
@@ -116,7 +69,6 @@ NLBTargetGroupFor{{ $listener.Port }}:
     VpcId:
       Fn::ImportValue:
         !Sub "${AppName}-${EnvName}-VpcId"
-{{- end}}
 {{- end }}
 NLBSecurityGroup:
   Metadata:
