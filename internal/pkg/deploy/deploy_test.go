@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws/arn"
-	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 
 	rg "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -90,17 +90,17 @@ func TestStore_ListDeployedServices(t *testing.T) {
 						{
 							App:  "mockApp",
 							Name: "mockSvc1",
-							Type: manifest.LoadBalancedWebServiceType,
+							Type: manifestinfo.LoadBalancedWebServiceType,
 						},
 						{
 							App:  "mockApp",
 							Name: "mockSvc2",
-							Type: manifest.RequestDrivenWebServiceType,
+							Type: manifestinfo.RequestDrivenWebServiceType,
 						},
 						{
 							App:  "mockApp",
 							Name: "mockJob",
-							Type: manifest.ScheduledJobType,
+							Type: manifestinfo.ScheduledJobType,
 						},
 					}, nil),
 					m.rgGetter.EXPECT().GetResourcesByTags(stackResourceType, map[string]string{
@@ -168,22 +168,22 @@ func TestStore_ListDeployedJobs(t *testing.T) {
 						{
 							App:  "mockApp",
 							Name: "mockSvc1",
-							Type: manifest.LoadBalancedWebServiceType,
+							Type: manifestinfo.LoadBalancedWebServiceType,
 						},
 						{
 							App:  "mockApp",
 							Name: "mockSvc2",
-							Type: manifest.RequestDrivenWebServiceType,
+							Type: manifestinfo.RequestDrivenWebServiceType,
 						},
 						{
 							App:  "mockApp",
 							Name: "mockJob1",
-							Type: manifest.ScheduledJobType,
+							Type: manifestinfo.ScheduledJobType,
 						},
 						{
 							App:  "mockApp",
 							Name: "mockJob2",
-							Type: manifest.ScheduledJobType,
+							Type: manifestinfo.ScheduledJobType,
 						},
 					}, nil),
 					m.rgGetter.EXPECT().GetResourcesByTags(stackResourceType, map[string]string{

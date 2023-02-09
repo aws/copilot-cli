@@ -15,7 +15,7 @@ import (
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/apprunner"
 	"github.com/aws/copilot-cli/internal/pkg/describe/stack"
-	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 )
 
@@ -145,7 +145,7 @@ func (d *RDWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 	}
 	return &rdWebSvcDesc{
 		Service:                 d.svc,
-		Type:                    manifest.RequestDrivenWebServiceType,
+		Type:                    manifestinfo.RequestDrivenWebServiceType,
 		App:                     d.app,
 		AppRunnerConfigurations: configs,
 		Routes:                  routes,

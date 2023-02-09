@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 )
@@ -700,7 +701,7 @@ func TestRedirectPlatform(t *testing.T) {
 		"returns nil if default platform": {
 			inOS:           "linux",
 			inArch:         "amd64",
-			inWorkloadType: LoadBalancedWebServiceType,
+			inWorkloadType: manifestinfo.LoadBalancedWebServiceType,
 
 			wantedPlatform: "",
 			wantedError:    nil,
@@ -708,7 +709,7 @@ func TestRedirectPlatform(t *testing.T) {
 		"returns error if App Runner + Windows": {
 			inOS:           "windows",
 			inArch:         "amd64",
-			inWorkloadType: RequestDrivenWebServiceType,
+			inWorkloadType: manifestinfo.RequestDrivenWebServiceType,
 
 			wantedPlatform: "",
 			wantedError:    errors.New("Windows is not supported for App Runner services"),

@@ -13,6 +13,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/template/override"
 )
@@ -219,7 +220,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		EnvVersion:         s.rc.EnvVersion,
 		SerializedManifest: string(s.rawManifest),
 		WorkloadName:       s.name,
-		WorkloadType:       manifest.LoadBalancedWebServiceType,
+		WorkloadType:       manifestinfo.LoadBalancedWebServiceType,
 
 		// Configuration for the main container.
 		Command:      command,
