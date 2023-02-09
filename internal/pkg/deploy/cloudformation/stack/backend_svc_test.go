@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifesttype"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
@@ -288,7 +289,7 @@ Outputs:
 			AppName:      "phonetool",
 			EnvName:      "test",
 			WorkloadName: "api",
-			WorkloadType: manifest.BackendServiceType,
+			WorkloadType: manifesttype.BackendServiceType,
 			HealthCheck: &template.ContainerHealthCheck{
 				Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
 				Interval:    aws.Int64(5),
@@ -455,7 +456,7 @@ Outputs:
 			AppName:      "phonetool",
 			EnvName:      "test",
 			WorkloadName: "api",
-			WorkloadType: manifest.BackendServiceType,
+			WorkloadType: manifesttype.BackendServiceType,
 			HealthCheck: &template.ContainerHealthCheck{
 				Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
 				Interval:    aws.Int64(5),

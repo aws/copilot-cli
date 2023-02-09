@@ -14,6 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifesttype"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
@@ -269,7 +270,7 @@ func (w *WorkloadInitializer) addWlToAppAndSSM(app *config.Application, props Wo
 
 func newJobManifest(i *JobProps) (encoding.BinaryMarshaler, error) {
 	switch i.Type {
-	case manifest.ScheduledJobType:
+	case manifesttype.ScheduledJobType:
 		return manifest.NewScheduledJob(&manifest.ScheduledJobProps{
 			WorkloadProps: &manifest.WorkloadProps{
 				Name:                    i.Name,
@@ -291,15 +292,15 @@ func newJobManifest(i *JobProps) (encoding.BinaryMarshaler, error) {
 
 func (w *WorkloadInitializer) newServiceManifest(i *ServiceProps) (encoding.BinaryMarshaler, error) {
 	switch i.Type {
-	case manifest.LoadBalancedWebServiceType:
+	case manifesttype.LoadBalancedWebServiceType:
 		return w.newLoadBalancedWebServiceManifest(i)
-	case manifest.RequestDrivenWebServiceType:
+	case manifesttype.RequestDrivenWebServiceType:
 		return w.newRequestDrivenWebServiceManifest(i), nil
-	case manifest.BackendServiceType:
+	case manifesttype.BackendServiceType:
 		return newBackendServiceManifest(i)
-	case manifest.WorkerServiceType:
+	case manifesttype.WorkerServiceType:
 		return newWorkerServiceManifest(i)
-	case manifest.StaticSiteType:
+	case manifesttype.StaticSiteType:
 		return manifest.NewStaticSite(i.Name), nil
 	default:
 		return nil, fmt.Errorf("service type %s doesn't have a manifest", i.Type)
@@ -333,7 +334,7 @@ func (w *WorkloadInitializer) newLoadBalancedWebServiceManifest(i *ServiceProps)
 	// We default to "/" for the first service, but if there's another
 	// Load Balanced Web Service, we use the svc name as the default, instead.
 	for _, existingSvc := range existingSvcs {
-		if existingSvc.Type == manifest.LoadBalancedWebServiceType && existingSvc.Name != i.Name {
+		if existingSvc.Type == manifesttype.LoadBalancedWebServiceType && existingSvc.Name != i.Name {
 			props.Path = i.Name
 			break
 		}

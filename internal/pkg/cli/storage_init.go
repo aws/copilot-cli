@@ -13,11 +13,11 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifesttype"
 	"github.com/dustin/go-humanize/english"
 
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/config"
-	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
@@ -360,7 +360,7 @@ func (o *initStorageOpts) validateStorageType() error {
 			log.Errorf(`Your %s needs to be connected to a VPC in order to use a %s resource.
 You can enable VPC connectivity by updating your manifest with:
 %s
-`, manifest.RequestDrivenWebServiceType, o.storageType, color.HighlightCodeBlock(`network:
+`, manifesttype.RequestDrivenWebServiceType, o.storageType, color.HighlightCodeBlock(`network:
   vpc:
     placement: private`))
 		}
@@ -518,7 +518,7 @@ func (o *initStorageOpts) validateStorageLifecycle() error {
 }
 
 // validateWorkloadNameWithLifecycle requires the workload to be in the workspace if the storage lifecycle is on workload-level.
-// Otherwise, it only caches whether the workload is present.  
+// Otherwise, it only caches whether the workload is present.
 func (o *initStorageOpts) validateWorkloadNameWithLifecycle() error {
 	if o.workloadExists {
 		return nil
@@ -915,7 +915,7 @@ func (o *initStorageOpts) wkldRDSAddonBlobs() ([]addonBlob, error) {
 		description: "template",
 		blob:        tmplBlob,
 	})
-	if o.workloadType != manifest.RequestDrivenWebServiceType {
+	if o.workloadType != manifesttype.RequestDrivenWebServiceType {
 		return blobs, nil
 	}
 	return append(blobs, addonBlob{
@@ -942,7 +942,7 @@ func (o *initStorageOpts) envRDSAddonBlobs() ([]addonBlob, error) {
 			blob:        addon.EnvParamsForRDS(),
 		},
 	}
-	if o.workloadType != manifest.RequestDrivenWebServiceType || !o.workloadExists {
+	if o.workloadType != manifesttype.RequestDrivenWebServiceType || !o.workloadExists {
 		return blobs, nil
 	}
 	return append(blobs,
@@ -1009,7 +1009,7 @@ func (o *initStorageOpts) RecommendActions() error {
 	case rdsStorageType:
 		newVar = template.ToSnakeCaseFunc(template.EnvVarSecretFunc(o.storageName))
 		retrieveEnvVarCode = fmt.Sprintf("const {username, host, dbname, password, port} = JSON.parse(process.env.%s)", newVar)
-		if o.workloadType == manifest.RequestDrivenWebServiceType {
+		if o.workloadType == manifesttype.RequestDrivenWebServiceType {
 			newVar = fmt.Sprintf("%s_ARN", newVar)
 			retrieveEnvVarCode = fmt.Sprintf(`const AWS = require('aws-sdk');
 const client = new AWS.SecretsManager({

@@ -11,7 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/session"
 
-	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifesttype"
 
 	rg "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -148,12 +148,12 @@ func (p *PipelineStore) ListDeployedPipelines(appName string) ([]Pipeline, error
 
 // ListDeployedServices returns the names of deployed services in an environment.
 func (s *Store) ListDeployedServices(appName string, envName string) ([]string, error) {
-	return s.listDeployedWorkloads(appName, envName, manifest.ServiceTypes())
+	return s.listDeployedWorkloads(appName, envName, manifesttype.ServiceTypes())
 }
 
 // ListDeployedJobs returns the names of deployed jobs in an environment.
 func (s *Store) ListDeployedJobs(appName string, envName string) ([]string, error) {
-	return s.listDeployedWorkloads(appName, envName, manifest.JobTypes())
+	return s.listDeployedWorkloads(appName, envName, manifesttype.JobTypes())
 }
 
 func (s *Store) listDeployedWorkloads(appName string, envName string, workloadType []string) ([]string, error) {

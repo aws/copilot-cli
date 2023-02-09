@@ -9,8 +9,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/aws/copilot-cli/internal/pkg/manifest"
-
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifesttype"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 )
 
@@ -261,7 +260,7 @@ type RDSProps struct {
 // WorkloadServerlessV1Template creates a marshaler for a workload-level Aurora Serverless v1 addon.
 func WorkloadServerlessV1Template(input RDSProps) *RDSTemplate {
 	tmplPath := rdsTemplatePath
-	if input.WorkloadType == manifest.RequestDrivenWebServiceType {
+	if input.WorkloadType == manifesttype.RequestDrivenWebServiceType {
 		tmplPath = rdsRDWSTemplatePath
 	}
 	return &RDSTemplate{
@@ -274,7 +273,7 @@ func WorkloadServerlessV1Template(input RDSProps) *RDSTemplate {
 // WorkloadServerlessV2Template creates a marshaler for a workload-level Aurora Serverless v2 addon.
 func WorkloadServerlessV2Template(input RDSProps) *RDSTemplate {
 	tmplPath := rdsV2TemplatePath
-	if input.WorkloadType == manifest.RequestDrivenWebServiceType {
+	if input.WorkloadType == manifesttype.RequestDrivenWebServiceType {
 		tmplPath = rdsRDWSV2TemplatePath
 	}
 	return &RDSTemplate{
@@ -287,7 +286,7 @@ func WorkloadServerlessV2Template(input RDSProps) *RDSTemplate {
 // EnvServerlessTemplate creates a marshaler for an environment-level Aurora Serverless v2 addon.
 func EnvServerlessTemplate(input RDSProps) *RDSTemplate {
 	tmplPath := envRDSTemplatePath
-	if input.WorkloadType == manifest.RequestDrivenWebServiceType {
+	if input.WorkloadType == manifesttype.RequestDrivenWebServiceType {
 		tmplPath = envRDSForRDWSTemplatePath
 	}
 	return &RDSTemplate{

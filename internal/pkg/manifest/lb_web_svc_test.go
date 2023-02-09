@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifesttype"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
@@ -102,7 +103,7 @@ func TestNewHTTPLoadBalancedWebService(t *testing.T) {
 			wanted: &LoadBalancedWebService{
 				Workload: Workload{
 					Name: stringP("subscribers"),
-					Type: stringP(LoadBalancedWebServiceType),
+					Type: stringP(manifesttype.LoadBalancedWebServiceType),
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					ImageConfig: ImageWithPortAndHealthcheck{
@@ -251,7 +252,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 			in: &LoadBalancedWebService{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(LoadBalancedWebServiceType),
+					Type: aws.String(manifesttype.LoadBalancedWebServiceType),
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					ImageConfig: ImageWithPortAndHealthcheck{
@@ -317,7 +318,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 			wanted: &LoadBalancedWebService{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(LoadBalancedWebServiceType),
+					Type: aws.String(manifesttype.LoadBalancedWebServiceType),
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					ImageConfig: ImageWithPortAndHealthcheck{
@@ -383,7 +384,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 			in: &LoadBalancedWebService{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(LoadBalancedWebServiceType),
+					Type: aws.String(manifesttype.LoadBalancedWebServiceType),
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					ImageConfig: ImageWithPortAndHealthcheck{
@@ -599,7 +600,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 			wanted: &LoadBalancedWebService{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(LoadBalancedWebServiceType),
+					Type: aws.String(manifesttype.LoadBalancedWebServiceType),
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					ImageConfig: ImageWithPortAndHealthcheck{
@@ -1125,7 +1126,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 			in: &LoadBalancedWebService{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(LoadBalancedWebServiceType),
+					Type: aws.String(manifesttype.LoadBalancedWebServiceType),
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					ImageConfig: ImageWithPortAndHealthcheck{
@@ -1157,7 +1158,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 			wanted: &LoadBalancedWebService{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(LoadBalancedWebServiceType),
+					Type: aws.String(manifesttype.LoadBalancedWebServiceType),
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					ImageConfig: ImageWithPortAndHealthcheck{
@@ -1174,7 +1175,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 			in: &LoadBalancedWebService{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(LoadBalancedWebServiceType),
+					Type: aws.String(manifesttype.LoadBalancedWebServiceType),
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					ImageConfig: ImageWithPortAndHealthcheck{
@@ -1202,7 +1203,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 			wanted: &LoadBalancedWebService{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(LoadBalancedWebServiceType),
+					Type: aws.String(manifesttype.LoadBalancedWebServiceType),
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					ImageConfig: ImageWithPortAndHealthcheck{
@@ -1219,7 +1220,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 			in: &LoadBalancedWebService{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(LoadBalancedWebServiceType),
+					Type: aws.String(manifesttype.LoadBalancedWebServiceType),
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					ImageConfig: ImageWithPortAndHealthcheck{
@@ -1253,7 +1254,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 			wanted: &LoadBalancedWebService{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(LoadBalancedWebServiceType),
+					Type: aws.String(manifesttype.LoadBalancedWebServiceType),
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					ImageConfig: ImageWithPortAndHealthcheck{
@@ -1272,7 +1273,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 			in: &LoadBalancedWebService{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(LoadBalancedWebServiceType),
+					Type: aws.String(manifesttype.LoadBalancedWebServiceType),
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					ImageConfig: ImageWithPortAndHealthcheck{
@@ -1302,7 +1303,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 			wanted: &LoadBalancedWebService{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(LoadBalancedWebServiceType),
+					Type: aws.String(manifesttype.LoadBalancedWebServiceType),
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					ImageConfig: ImageWithPortAndHealthcheck{
@@ -1321,7 +1322,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 			in: &LoadBalancedWebService{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(LoadBalancedWebServiceType),
+					Type: aws.String(manifesttype.LoadBalancedWebServiceType),
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					ImageOverride: ImageOverride{
@@ -1345,7 +1346,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 			wanted: &LoadBalancedWebService{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(LoadBalancedWebServiceType),
+					Type: aws.String(manifesttype.LoadBalancedWebServiceType),
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					ImageOverride: ImageOverride{
@@ -1360,7 +1361,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 			in: &LoadBalancedWebService{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(LoadBalancedWebServiceType),
+					Type: aws.String(manifesttype.LoadBalancedWebServiceType),
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					RoutingRule: RoutingRuleConfigOrBool{
@@ -1387,7 +1388,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 			wanted: &LoadBalancedWebService{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(LoadBalancedWebServiceType),
+					Type: aws.String(manifesttype.LoadBalancedWebServiceType),
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					RoutingRule: RoutingRuleConfigOrBool{
@@ -1405,7 +1406,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 			in: &LoadBalancedWebService{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(LoadBalancedWebServiceType),
+					Type: aws.String(manifesttype.LoadBalancedWebServiceType),
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					RoutingRule: RoutingRuleConfigOrBool{
@@ -1434,7 +1435,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 			wanted: &LoadBalancedWebService{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(LoadBalancedWebServiceType),
+					Type: aws.String(manifesttype.LoadBalancedWebServiceType),
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					RoutingRule: RoutingRuleConfigOrBool{
@@ -1452,7 +1453,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 			in: &LoadBalancedWebService{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(LoadBalancedWebServiceType),
+					Type: aws.String(manifesttype.LoadBalancedWebServiceType),
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					RoutingRule: RoutingRuleConfigOrBool{
@@ -1482,7 +1483,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 			wanted: &LoadBalancedWebService{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(LoadBalancedWebServiceType),
+					Type: aws.String(manifesttype.LoadBalancedWebServiceType),
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					RoutingRule: RoutingRuleConfigOrBool{
@@ -1748,7 +1749,7 @@ func TestLoadBalancedWebService_RequiredEnvironmentFeatures(t *testing.T) {
 			inSvc := LoadBalancedWebService{
 				Workload: Workload{
 					Name: aws.String("mock-svc"),
-					Type: aws.String(LoadBalancedWebServiceType),
+					Type: aws.String(manifesttype.LoadBalancedWebServiceType),
 				},
 			}
 			tc.mft(&inSvc)

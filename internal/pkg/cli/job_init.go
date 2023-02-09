@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifesttype"
 
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
 
@@ -42,11 +43,11 @@ lets you use a predefined or custom cron schedule and is good for less-frequent
 jobs or those which require specific execution schedules.`
 
 	jobInitTypeHelp = fmt.Sprintf(`A %s is a task which is invoked on a set schedule, with optional retry logic.
-To learn more see: https://git.io/JEEU4`, manifest.ScheduledJobType)
+To learn more see: https://git.io/JEEU4`, manifesttype.ScheduledJobType)
 )
 
 var jobTypeHints = map[string]string{
-	manifest.ScheduledJobType: "Scheduled event to State Machine to Fargate",
+	manifesttype.ScheduledJobType: "Scheduled event to State Machine to Fargate",
 }
 
 type initJobVars struct {
@@ -344,7 +345,7 @@ func (o *initJobOpts) askJobType() error {
 		return nil
 	}
 	// short circuit since there's only one valid job type.
-	o.wkldType = manifest.ScheduledJobType
+	o.wkldType = manifesttype.ScheduledJobType
 	return nil
 }
 
@@ -434,7 +435,7 @@ func (o *initJobOpts) askSchedule() error {
 
 func jobTypePromptOpts() []prompt.Option {
 	var options []prompt.Option
-	for _, jobType := range manifest.JobTypes() {
+	for _, jobType := range manifesttype.JobTypes() {
 		options = append(options, prompt.Option{
 			Value: jobType,
 			Hint:  jobTypeHints[jobType],

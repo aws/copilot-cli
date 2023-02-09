@@ -5,6 +5,7 @@ package manifest
 
 import (
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifesttype"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/imdario/mergo"
 )
@@ -159,7 +160,7 @@ func (s BackendService) applyEnv(envName string) (workloadManifest, error) {
 func newDefaultBackendService() *BackendService {
 	return &BackendService{
 		Workload: Workload{
-			Type: aws.String(BackendServiceType),
+			Type: aws.String(manifesttype.BackendServiceType),
 		},
 		BackendServiceConfig: BackendServiceConfig{
 			ImageConfig: ImageWithHealthcheckAndOptionalPort{},
@@ -169,7 +170,7 @@ func newDefaultBackendService() *BackendService {
 				Count: Count{
 					Value: aws.Int(1),
 					AdvancedCount: AdvancedCount{ // Leave advanced count empty while passing down the type of the workload.
-						workloadType: BackendServiceType,
+						workloadType: manifesttype.BackendServiceType,
 					},
 				},
 				ExecuteCommand: ExecuteCommand{

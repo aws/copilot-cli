@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifesttype"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
@@ -254,7 +255,7 @@ Outputs:
 			AppName:      "phonetool",
 			EnvName:      "test",
 			WorkloadName: "frontend",
-			WorkloadType: manifest.LoadBalancedWebServiceType,
+			WorkloadType: manifesttype.LoadBalancedWebServiceType,
 			HTTPHealthCheck: template.HTTPHealthCheckOpts{
 				HealthCheckPath: "/",
 				GracePeriod:     60,

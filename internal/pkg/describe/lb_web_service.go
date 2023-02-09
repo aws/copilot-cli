@@ -13,6 +13,7 @@ import (
 	"text/tabwriter"
 
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifesttype"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/elbv2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
@@ -20,7 +21,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	cfnstack "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/describe/stack"
-	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 )
 
@@ -201,7 +201,7 @@ func (d *LBWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 	return &webSvcDesc{
 		ecsSvcDesc: ecsSvcDesc{
 			Service:          d.svc,
-			Type:             manifest.LoadBalancedWebServiceType,
+			Type:             manifesttype.LoadBalancedWebServiceType,
 			App:              d.app,
 			Configurations:   configs,
 			Routes:           routes,

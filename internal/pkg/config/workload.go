@@ -7,16 +7,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/ssm"
-)
-
-const (
-	svcWorkloadType = "service"
-	jobWorkloadType = "job"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifesttype"
 )
 
 // Workload represents a deployable long-running service or task.
@@ -93,7 +88,7 @@ func (s *Store) GetService(appName, svcName string) (*Workload, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read configuration for service %s in application %s: %w", svcName, appName, err)
 	}
-	if !strings.Contains(strings.ToLower(svc.Type), svcWorkloadType) {
+	if !manifesttype.IsTypeAService(svc.Type) {
 		return nil, &ErrNoSuchService{
 			App:  appName,
 			Name: svcName,
@@ -122,7 +117,7 @@ func (s *Store) GetJob(appName, jobName string) (*Workload, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read configuration for job %s in application %s: %w", jobName, appName, err)
 	}
-	if !strings.Contains(strings.ToLower(job.Type), jobWorkloadType) {
+	if !manifesttype.IsTypeAJob(job.Type) {
 		return nil, &ErrNoSuchJob{
 			App:  appName,
 			Name: jobName,
@@ -174,7 +169,7 @@ func (s *Store) ListServices(appName string) ([]*Workload, error) {
 
 	var services []*Workload
 	for _, wkld := range wklds {
-		if strings.Contains(strings.ToLower(wkld.Type), svcWorkloadType) {
+		if manifesttype.IsTypeAService(wkld.Type) {
 			services = append(services, wkld)
 		}
 	}
@@ -191,7 +186,7 @@ func (s *Store) ListJobs(appName string) ([]*Workload, error) {
 
 	var jobs []*Workload
 	for _, wkld := range wklds {
-		if strings.Contains(strings.ToLower(wkld.Type), jobWorkloadType) {
+		if manifesttype.IsTypeAJob(wkld.Type) {
 			jobs = append(jobs, wkld)
 		}
 	}

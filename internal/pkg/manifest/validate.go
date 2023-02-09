@@ -15,6 +15,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/graph"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifesttype"
 	"github.com/dustin/go-humanize/english"
 )
 
@@ -360,7 +361,7 @@ func (r RequestDrivenWebServiceConfig) validate() error {
 	if r.Network.VPC.Placement.PlacementString != nil &&
 		*r.Network.VPC.Placement.PlacementString != PrivateSubnetPlacement {
 		return fmt.Errorf(`placement %q is not supported for %s`,
-			*r.Network.VPC.Placement.PlacementString, RequestDrivenWebServiceType)
+			*r.Network.VPC.Placement.PlacementString, manifesttype.RequestDrivenWebServiceType)
 	}
 	if err = r.Observability.validate(); err != nil {
 		return fmt.Errorf(`validate "observability": %w`, err)

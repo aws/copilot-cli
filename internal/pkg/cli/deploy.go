@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifesttype"
 	"github.com/spf13/afero"
 
 	"github.com/aws/copilot-cli/internal/pkg/exec"
@@ -68,7 +69,7 @@ func newDeployOpts(vars deployWkldVars) (*deployOpts, error) {
 
 		setupDeployCmd: func(o *deployOpts, workloadType string) {
 			switch {
-			case contains(workloadType, manifest.JobTypes()):
+			case contains(workloadType, manifesttype.JobTypes()):
 				opts := &deployJobOpts{
 					deployWkldVars: o.deployWkldVars,
 
@@ -84,7 +85,7 @@ func newDeployOpts(vars deployWkldVars) (*deployOpts, error) {
 					return newJobDeployer(opts)
 				}
 				o.deployWkld = opts
-			case contains(workloadType, manifest.ServiceTypes()):
+			case contains(workloadType, manifesttype.ServiceTypes()):
 				opts := &deploySvcOpts{
 					deployWkldVars: o.deployWkldVars,
 

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifesttype"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 )
@@ -102,7 +103,7 @@ environments:
 				actualManifest, ok := i.(*LoadBalancedWebService)
 				require.True(t, ok)
 				wantedManifest := &LoadBalancedWebService{
-					Workload: Workload{Name: aws.String("frontend"), Type: aws.String(LoadBalancedWebServiceType)},
+					Workload: Workload{Name: aws.String("frontend"), Type: aws.String(manifesttype.LoadBalancedWebServiceType)},
 					LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 						ImageConfig: ImageWithPortAndHealthcheck{
 							ImageWithPort: ImageWithPort{Image: Image{Build: BuildArgsOrString{},
@@ -133,7 +134,7 @@ environments:
 							Count: Count{
 								Value: aws.Int(1),
 								AdvancedCount: AdvancedCount{
-									workloadType: LoadBalancedWebServiceType,
+									workloadType: manifesttype.LoadBalancedWebServiceType,
 								},
 							},
 							ExecuteCommand: ExecuteCommand{
@@ -286,7 +287,7 @@ secrets:
 				wantedManifest := &BackendService{
 					Workload: Workload{
 						Name: aws.String("subscribers"),
-						Type: aws.String(BackendServiceType),
+						Type: aws.String(manifesttype.BackendServiceType),
 					},
 					BackendServiceConfig: BackendServiceConfig{
 						ImageConfig: ImageWithHealthcheckAndOptionalPort{
@@ -308,7 +309,7 @@ secrets:
 							Count: Count{
 								Value: aws.Int(1),
 								AdvancedCount: AdvancedCount{
-									workloadType: BackendServiceType,
+									workloadType: manifesttype.BackendServiceType,
 								},
 							},
 							ExecuteCommand: ExecuteCommand{
@@ -365,7 +366,7 @@ subscribe:
 				wantedManifest := &WorkerService{
 					Workload: Workload{
 						Name: aws.String("dogcategorizer"),
-						Type: aws.String(WorkerServiceType),
+						Type: aws.String(manifesttype.WorkerServiceType),
 					},
 					WorkerServiceConfig: WorkerServiceConfig{
 						ImageConfig: ImageWithHealthcheck{
@@ -381,7 +382,7 @@ subscribe:
 							Count: Count{
 								Value: aws.Int(1),
 								AdvancedCount: AdvancedCount{
-									workloadType: WorkerServiceType,
+									workloadType: manifesttype.WorkerServiceType,
 								},
 							},
 							ExecuteCommand: ExecuteCommand{

@@ -10,7 +10,7 @@ import (
 	"github.com/dustin/go-humanize/english"
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
-	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifesttype"
 )
 
 type URIAccessType int
@@ -49,11 +49,11 @@ func NewReachableService(app, svc string, store ConfigStoreSvc) (ReachableServic
 		ConfigStore: store,
 	}
 	switch cfg.Type {
-	case manifest.LoadBalancedWebServiceType:
+	case manifesttype.LoadBalancedWebServiceType:
 		return NewLBWebServiceDescriber(in)
-	case manifest.RequestDrivenWebServiceType:
+	case manifesttype.RequestDrivenWebServiceType:
 		return NewRDWebServiceDescriber(in)
-	case manifest.BackendServiceType:
+	case manifesttype.BackendServiceType:
 		return NewBackendServiceDescriber(in)
 	default:
 		return nil, fmt.Errorf("service %s is of type %s which cannot be reached over the network", svc, cfg.Type)

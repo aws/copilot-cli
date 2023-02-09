@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifesttype"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/imdario/mergo"
 	"gopkg.in/yaml.v3"
@@ -337,7 +338,7 @@ func (s *WorkerService) requiredEnvironmentFeatures() []string {
 func newDefaultWorkerService() *WorkerService {
 	return &WorkerService{
 		Workload: Workload{
-			Type: aws.String(WorkerServiceType),
+			Type: aws.String(manifesttype.WorkerServiceType),
 		},
 		WorkerServiceConfig: WorkerServiceConfig{
 			ImageConfig: ImageWithHealthcheck{},
@@ -348,7 +349,7 @@ func newDefaultWorkerService() *WorkerService {
 				Count: Count{
 					Value: aws.Int(1),
 					AdvancedCount: AdvancedCount{ // Leave advanced count empty while passing down the type of the workload.
-						workloadType: WorkerServiceType,
+						workloadType: manifesttype.WorkerServiceType,
 					},
 				},
 				ExecuteCommand: ExecuteCommand{

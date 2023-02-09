@@ -9,13 +9,13 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifesttype"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/apprunner"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
-	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
@@ -120,7 +120,7 @@ func (o *resumeSvcOpts) validateAndAskSvcEnvName() error {
 		o.appName,
 		selector.WithEnv(o.envName),
 		selector.WithName(o.svcName),
-		selector.WithServiceTypesFilter([]string{manifest.RequestDrivenWebServiceType}),
+		selector.WithServiceTypesFilter([]string{manifesttype.RequestDrivenWebServiceType}),
 	)
 	if err != nil {
 		return fmt.Errorf("select deployed service for application %s: %w", o.appName, err)
@@ -161,7 +161,7 @@ func newResumeSvcOpts(vars resumeSvcVars) (*resumeSvcOpts, error) {
 			return err
 		}
 		switch svc.Type {
-		case manifest.RequestDrivenWebServiceType:
+		case manifesttype.RequestDrivenWebServiceType:
 			sess, err := sessProvider.FromRole(env.ManagerRoleARN, env.Region)
 			if err != nil {
 				return err

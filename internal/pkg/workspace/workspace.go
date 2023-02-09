@@ -31,6 +31,7 @@ import (
 	"sort"
 	"sync"
 
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifesttype"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -188,7 +189,7 @@ func (ws *Workspace) WorkloadExists(name string) (bool, error) {
 // ListServices returns the names of the services in the workspace.
 func (ws *Workspace) ListServices() ([]string, error) {
 	return ws.listWorkloads(func(wlType string) bool {
-		for _, t := range manifest.ServiceTypes() {
+		for _, t := range manifesttype.ServiceTypes() {
 			if wlType == t {
 				return true
 			}
@@ -200,7 +201,7 @@ func (ws *Workspace) ListServices() ([]string, error) {
 // ListJobs returns the names of all jobs in the workspace.
 func (ws *Workspace) ListJobs() ([]string, error) {
 	return ws.listWorkloads(func(wlType string) bool {
-		for _, t := range manifest.JobTypes() {
+		for _, t := range manifesttype.JobTypes() {
 			if wlType == t {
 				return true
 			}

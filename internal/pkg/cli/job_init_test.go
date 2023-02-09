@@ -13,6 +13,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifesttype"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 
@@ -172,7 +173,7 @@ func TestJobInitOpts_Validate(t *testing.T) {
 func TestJobInitOpts_Ask(t *testing.T) {
 	const (
 		mockAppName          = "phonetool"
-		wantedJobType        = manifest.ScheduledJobType
+		wantedJobType        = manifesttype.ScheduledJobType
 		wantedJobName        = "cuteness-aggregator"
 		wantedDockerfilePath = "cuteness-aggregator/Dockerfile"
 		wantedImage          = "mockImage"
@@ -584,7 +585,7 @@ network:
 		"success on typical job props": {
 			inApp:              "sample",
 			inName:             "mailer",
-			inType:             manifest.ScheduledJobType,
+			inType:             manifesttype.ScheduledJobType,
 			inDf:               "./Dockerfile",
 			inSchedule:         "@hourly",
 			wantedManifestPath: "manifest/path",
@@ -641,7 +642,7 @@ network:
 		"doesn't attempt to detect and populate the platform if manifest already exists": {
 			inApp:              "sample",
 			inName:             "mailer",
-			inType:             manifest.ScheduledJobType,
+			inType:             manifesttype.ScheduledJobType,
 			inDf:               "./Dockerfile",
 			inSchedule:         "@hourly",
 			inManifestExists:   true,
@@ -686,7 +687,7 @@ network:
 		"doesn't complain if docker is unavailable": {
 			inApp:              "sample",
 			inName:             "mailer",
-			inType:             manifest.ScheduledJobType,
+			inType:             manifesttype.ScheduledJobType,
 			inDf:               "./Dockerfile",
 			inSchedule:         "@hourly",
 			wantedManifestPath: "manifest/path",
@@ -737,7 +738,7 @@ network:
 		"initialize a job in environments with only private subnets": {
 			inApp:              "sample",
 			inName:             "mailer",
-			inType:             manifest.ScheduledJobType,
+			inType:             manifesttype.ScheduledJobType,
 			inDf:               "./Dockerfile",
 			inSchedule:         "@hourly",
 			wantedManifestPath: "manifest/path",

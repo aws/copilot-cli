@@ -5,6 +5,7 @@ package manifest
 
 import (
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifesttype"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/imdario/mergo"
 )
@@ -43,7 +44,7 @@ func NewStaticSite(name string) *StaticSite {
 	return &StaticSite{
 		Workload: Workload{
 			Name: aws.String(name),
-			Type: aws.String(StaticSiteType),
+			Type: aws.String(manifesttype.StaticSiteType),
 		},
 		parser: template.New(),
 	}

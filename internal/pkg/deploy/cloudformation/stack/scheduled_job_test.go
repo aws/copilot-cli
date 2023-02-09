@@ -14,6 +14,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifesttype"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -63,7 +64,7 @@ func TestScheduledJob_Template(t *testing.T) {
 				m := mocks.NewMockscheduledJobReadParser(ctrl)
 				m.EXPECT().ParseScheduledJob(gomock.Any()).DoAndReturn(func(actual template.WorkloadOpts) (*template.Content, error) {
 					require.Equal(t, template.WorkloadOpts{
-						WorkloadType:       manifest.ScheduledJobType,
+						WorkloadType:       manifesttype.ScheduledJobType,
 						ScheduleExpression: "cron(0 0 * * ? *)",
 						StateMachine: &template.StateMachineOpts{
 							Timeout: aws.Int(5400),
@@ -91,7 +92,7 @@ func TestScheduledJob_Template(t *testing.T) {
 				m := mocks.NewMockscheduledJobReadParser(ctrl)
 				m.EXPECT().ParseScheduledJob(gomock.Any()).DoAndReturn(func(actual template.WorkloadOpts) (*template.Content, error) {
 					require.Equal(t, template.WorkloadOpts{
-						WorkloadType: manifest.ScheduledJobType,
+						WorkloadType: manifesttype.ScheduledJobType,
 						NestedStack: &template.WorkloadNestedStackOpts{
 							StackName:       addon.StackName,
 							VariableOutputs: []string{"Hello"},

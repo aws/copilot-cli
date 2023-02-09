@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifesttype"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 
 	"github.com/google/shlex"
@@ -62,11 +63,6 @@ var (
 	errUnmarshalCommand    = errors.New(`unable to unmarshal "command" into string or slice of strings`)
 )
 
-// WorkloadTypes returns the list of all manifest types.
-func WorkloadTypes() []string {
-	return append(ServiceTypes(), JobTypes()...)
-}
-
 // DynamicWorkload represents a dynamically populated workload.
 type DynamicWorkload interface {
 	ApplyEnv(envName string) (DynamicWorkload, error)
@@ -94,15 +90,15 @@ func UnmarshalWorkload(in []byte) (DynamicWorkload, error) {
 	typeVal := aws.StringValue(am.Type)
 	var m workloadManifest
 	switch typeVal {
-	case LoadBalancedWebServiceType:
+	case manifesttype.LoadBalancedWebServiceType:
 		m = newDefaultLoadBalancedWebService()
-	case RequestDrivenWebServiceType:
+	case manifesttype.RequestDrivenWebServiceType:
 		m = newDefaultRequestDrivenWebService()
-	case BackendServiceType:
+	case manifesttype.BackendServiceType:
 		m = newDefaultBackendService()
-	case WorkerServiceType:
+	case manifesttype.WorkerServiceType:
 		m = newDefaultWorkerService()
-	case ScheduledJobType:
+	case manifesttype.ScheduledJobType:
 		m = newDefaultScheduledJob()
 	default:
 		return nil, &ErrInvalidWorkloadType{Type: typeVal}
@@ -791,7 +787,7 @@ func RedirectPlatform(os, arch, wlType string) (platform string, err error) {
 		return "", nil
 	}
 	// Return an error if a platform cannot be redirected.
-	if wlType == RequestDrivenWebServiceType && os == OSWindows {
+	if wlType == manifesttype.RequestDrivenWebServiceType && os == OSWindows {
 		return "", ErrAppRunnerInvalidPlatformWindows
 	}
 	// All architectures default to 'x86_64' (though 'arm64' is now also supported); leave OS as is.

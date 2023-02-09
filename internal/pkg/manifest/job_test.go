@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifesttype"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/stretchr/testify/require"
 )
@@ -29,7 +30,7 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 			inputManifest: &ScheduledJob{
 				Workload: Workload{
 					Name: aws.String("report-generator"),
-					Type: aws.String(ScheduledJobType),
+					Type: aws.String(manifesttype.ScheduledJobType),
 				},
 				ScheduledJobConfig: ScheduledJobConfig{
 					ImageConfig: ImageWithHealthcheck{
@@ -78,7 +79,7 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 			wantedManifest: &ScheduledJob{
 				Workload: Workload{
 					Name: aws.String("report-generator"),
-					Type: aws.String(ScheduledJobType),
+					Type: aws.String(manifesttype.ScheduledJobType),
 				},
 				ScheduledJobConfig: ScheduledJobConfig{
 					ImageConfig: ImageWithHealthcheck{
@@ -122,7 +123,7 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 			inputManifest: &ScheduledJob{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(ScheduledJobType),
+					Type: aws.String(manifesttype.ScheduledJobType),
 				},
 				ScheduledJobConfig: ScheduledJobConfig{
 					ImageConfig: ImageWithHealthcheck{
@@ -150,7 +151,7 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 			wantedManifest: &ScheduledJob{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(ScheduledJobType),
+					Type: aws.String(manifesttype.ScheduledJobType),
 				},
 				ScheduledJobConfig: ScheduledJobConfig{
 					ImageConfig: ImageWithHealthcheck{
@@ -165,7 +166,7 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 			inputManifest: &ScheduledJob{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(ScheduledJobType),
+					Type: aws.String(manifesttype.ScheduledJobType),
 				},
 				ScheduledJobConfig: ScheduledJobConfig{
 					ImageConfig: ImageWithHealthcheck{
@@ -189,7 +190,7 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 			wantedManifest: &ScheduledJob{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(ScheduledJobType),
+					Type: aws.String(manifesttype.ScheduledJobType),
 				},
 				ScheduledJobConfig: ScheduledJobConfig{
 					ImageConfig: ImageWithHealthcheck{
@@ -204,7 +205,7 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 			inputManifest: &ScheduledJob{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(ScheduledJobType),
+					Type: aws.String(manifesttype.ScheduledJobType),
 				},
 				ScheduledJobConfig: ScheduledJobConfig{
 					ImageConfig: ImageWithHealthcheck{
@@ -234,7 +235,7 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 			wantedManifest: &ScheduledJob{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(ScheduledJobType),
+					Type: aws.String(manifesttype.ScheduledJobType),
 				},
 				ScheduledJobConfig: ScheduledJobConfig{
 					ImageConfig: ImageWithHealthcheck{
@@ -251,7 +252,7 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 			inputManifest: &ScheduledJob{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(ScheduledJobType),
+					Type: aws.String(manifesttype.ScheduledJobType),
 				},
 				ScheduledJobConfig: ScheduledJobConfig{
 					ImageConfig: ImageWithHealthcheck{
@@ -277,7 +278,7 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 			wantedManifest: &ScheduledJob{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(ScheduledJobType),
+					Type: aws.String(manifesttype.ScheduledJobType),
 				},
 				ScheduledJobConfig: ScheduledJobConfig{
 					ImageConfig: ImageWithHealthcheck{
@@ -370,7 +371,7 @@ func TestScheduledJob_RequiredEnvironmentFeatures(t *testing.T) {
 			inSvc := ScheduledJob{
 				Workload: Workload{
 					Name: aws.String("mock-svc"),
-					Type: aws.String(ScheduledJobType),
+					Type: aws.String(manifesttype.ScheduledJobType),
 				},
 			}
 			tc.mft(&inSvc)

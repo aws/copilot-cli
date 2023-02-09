@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifesttype"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -127,7 +128,7 @@ func (s *RequestDrivenWebService) Template() (string, error) {
 		NestedStack:          addonsOutputs,
 		AddonsExtraParams:    addonsParams,
 		EnableHealthCheck:    !s.healthCheckConfig.IsZero(),
-		WorkloadType:         manifest.RequestDrivenWebServiceType,
+		WorkloadType:         manifesttype.RequestDrivenWebServiceType,
 		Alias:                s.manifest.Alias,
 		CustomResources:      crs,
 		AWSSDKLayer:          layerARN,

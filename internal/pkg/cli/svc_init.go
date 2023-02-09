@@ -13,6 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifesttype"
 	"github.com/dustin/go-humanize/english"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -62,10 +63,10 @@ To learn more see: https://git.io/JEEJt
 
 A %s is a private service that can consume messages published to topics in your application.
 To learn more see: https://git.io/JEEJY`,
-		manifest.RequestDrivenWebServiceType,
-		manifest.LoadBalancedWebServiceType,
-		manifest.BackendServiceType,
-		manifest.WorkerServiceType,
+		manifesttype.RequestDrivenWebServiceType,
+		manifesttype.LoadBalancedWebServiceType,
+		manifesttype.BackendServiceType,
+		manifesttype.WorkerServiceType,
 	)
 
 	fmtWkldInitNamePrompt     = "What do you want to %s this %s?"
@@ -103,11 +104,11 @@ var rdwsIngressOptions = []string{
 }
 
 var serviceTypeHints = map[string]string{
-	manifest.RequestDrivenWebServiceType: "App Runner",
-	manifest.LoadBalancedWebServiceType:  "Internet to ECS on Fargate",
-	manifest.BackendServiceType:          "ECS on Fargate",
-	manifest.WorkerServiceType:           "Events to SQS to ECS on Fargate",
-	manifest.StaticSiteType:              "Internet to CDN to S3 bucket",
+	manifesttype.RequestDrivenWebServiceType: "App Runner",
+	manifesttype.LoadBalancedWebServiceType:  "Internet to ECS on Fargate",
+	manifesttype.BackendServiceType:          "ECS on Fargate",
+	manifesttype.WorkerServiceType:           "Events to SQS to ECS on Fargate",
+	manifesttype.StaticSiteType:              "Internet to CDN to S3 bucket",
 }
 
 type initWkldVars struct {
@@ -244,7 +245,7 @@ func (o *initSvcOpts) Validate() error {
 			return err
 		}
 	}
-	if o.image != "" && o.wkldType == manifest.RequestDrivenWebServiceType {
+	if o.image != "" && o.wkldType == manifesttype.RequestDrivenWebServiceType {
 		if err := validateAppRunnerImage(o.image); err != nil {
 			return err
 		}
@@ -368,7 +369,7 @@ func (o *initSvcOpts) RecommendActions() error {
 }
 
 func (o *initSvcOpts) askSvcDetails() error {
-	if o.wkldType == manifest.StaticSiteType {
+	if o.wkldType == manifesttype.StaticSiteType {
 		return o.askStaticSite()
 	}
 	err := o.askDockerfile()
@@ -449,7 +450,7 @@ func (o *initSvcOpts) askSvcName() error {
 }
 
 func (o *initSvcOpts) askIngressType() error {
-	if o.wkldType != manifest.RequestDrivenWebServiceType || o.ingressType != "" {
+	if o.wkldType != manifesttype.RequestDrivenWebServiceType || o.ingressType != "" {
 		return nil
 	}
 
@@ -467,7 +468,7 @@ func (o *initSvcOpts) askIngressType() error {
 }
 
 func (o *initSvcOpts) validateIngressType() error {
-	if o.wkldType != manifest.RequestDrivenWebServiceType {
+	if o.wkldType != manifesttype.RequestDrivenWebServiceType {
 		return nil
 	}
 	if strings.EqualFold(o.ingressType, "internet") || strings.EqualFold(o.ingressType, "environment") {
@@ -483,7 +484,7 @@ func (o *initSvcOpts) askImage() error {
 
 	validator := prompt.RequireNonEmpty
 	promptHelp := wkldInitImagePromptHelp
-	if o.wkldType == manifest.RequestDrivenWebServiceType {
+	if o.wkldType == manifesttype.RequestDrivenWebServiceType {
 		promptHelp = wkldInitAppRunnerImagePromptHelp
 		validator = validateAppRunnerImage
 	}
@@ -599,7 +600,7 @@ func (o *initSvcOpts) askSvcPort() (err error) {
 		}
 	}
 	// Skip asking if it is a backend or worker service.
-	if o.wkldType == manifest.BackendServiceType || o.wkldType == manifest.WorkerServiceType {
+	if o.wkldType == manifesttype.BackendServiceType || o.wkldType == manifesttype.WorkerServiceType {
 		return nil
 	}
 
@@ -652,12 +653,12 @@ func legitimizePlatform(engine dockerEngine, wkldType string) (manifest.Platform
 		return "", nil
 	}
 	// Return an error if a platform cannot be redirected.
-	if wkldType == manifest.RequestDrivenWebServiceType && detectedOs == manifest.OSWindows {
+	if wkldType == manifesttype.RequestDrivenWebServiceType && detectedOs == manifest.OSWindows {
 		return "", manifest.ErrAppRunnerInvalidPlatformWindows
 	}
 	// Messages are logged only if the platform was redirected.
 	msg := fmt.Sprintf("Architecture type %s has been detected. We will set platform '%s' instead. If you'd rather build and run as architecture type %s, please change the 'platform' field in your workload manifest to '%s'.\n", detectedArch, redirectedPlatform, manifest.ArchARM64, dockerengine.PlatformString(detectedOs, manifest.ArchARM64))
-	if manifest.IsArmArch(detectedArch) && wkldType == manifest.RequestDrivenWebServiceType {
+	if manifest.IsArmArch(detectedArch) && wkldType == manifesttype.RequestDrivenWebServiceType {
 		msg = fmt.Sprintf("Architecture type %s has been detected. At this time, %s architectures are not supported for App Runner workloads. We will set platform '%s' instead.\n", detectedArch, detectedArch, redirectedPlatform)
 	}
 	log.Warningf(msg)
@@ -665,7 +666,7 @@ func legitimizePlatform(engine dockerEngine, wkldType string) (manifest.Platform
 }
 
 func (o *initSvcOpts) askSvcPublishers() (err error) {
-	if o.wkldType != manifest.WorkerServiceType {
+	if o.wkldType != manifesttype.WorkerServiceType {
 		return nil
 	}
 	// publishers already specified by flags
@@ -750,7 +751,7 @@ func parseHealthCheck(df dockerfileParser) (manifest.ContainerHealthCheck, error
 
 func svcTypePromptOpts() []prompt.Option {
 	var options []prompt.Option
-	for _, svcType := range manifest.ServiceTypes() {
+	for _, svcType := range manifesttype.ServiceTypes() {
 		options = append(options, prompt.Option{
 			Value: svcType,
 			Hint:  serviceTypeHints[svcType],
