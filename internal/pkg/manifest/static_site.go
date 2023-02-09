@@ -9,6 +9,10 @@ import (
 	"github.com/imdario/mergo"
 )
 
+const (
+	staticSiteManifestPath = "workloads/services/static-site/manifest.yml"
+)
+
 // StaticSite holds the configuration to configure and upload static assets to the static site service.
 type StaticSite struct {
 	Workload         `yaml:",inline"`
@@ -66,6 +70,16 @@ func (s StaticSite) applyEnv(envName string) (workloadManifest, error) {
 	}
 	s.Environments = nil
 	return &s, nil
+}
+
+// MarshalBinary serializes the manifest object into a binary YAML document.
+// Implements the encoding.BinaryMarshaler interface.
+func (s *StaticSite) MarshalBinary() ([]byte, error) {
+	content, err := s.parser.Parse(staticSiteManifestPath, *s)
+	if err != nil {
+		return nil, err
+	}
+	return content.Bytes(), nil
 }
 
 // To implement workloadManifest.
