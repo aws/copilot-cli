@@ -186,7 +186,7 @@ func (s *Store) ListServices(appName string) ([]*Workload, error) {
 func (s *Store) ListJobs(appName string) ([]*Workload, error) {
 	wklds, err := s.listWorkloads(appName)
 	if err != nil {
-		return nil, fmt.Errorf("read service configuration for application %s: %w", appName, err)
+		return nil, fmt.Errorf("read job configuration for application %s: %w", appName, err)
 	}
 
 	var jobs []*Workload
