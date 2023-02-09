@@ -815,27 +815,29 @@ func (o *initStorageOpts) wkldDDBAddonBlobs() ([]addonBlob, error) {
 }
 
 func (o *initStorageOpts) envDDBAddonBlobs() ([]addonBlob, error) {
-	props, err := o.ddbProps()
-	if err != nil {
-		return nil, err
-	}
-	blobs := []addonBlob{
-		{
-			path:        o.ws.EnvAddonFilePath(fmt.Sprintf("%s.yml", o.storageName)),
-			description: "template",
-			blob:        addon.EnvDDBTemplate(props),
-		},
-	}
-	if !o.workloadExists {
-		return blobs, nil
-	}
-	return append(blobs, addonBlob{
+	ingressBlob := addonBlob{
 		path:        o.ws.WorkloadAddonFilePath(o.workloadName, fmt.Sprintf("%s-access-policy.yml", o.storageName)),
 		description: "template",
 		blob: addon.EnvDDBAccessPolicyTemplate(&addon.AccessPolicyProps{
 			Name: o.storageName,
 		}),
-	}), nil
+	}
+	if o.addIngressFrom != "" {
+		return []addonBlob{ingressBlob}, nil
+	}
+	props, err := o.ddbProps()
+	if err != nil {
+		return nil, err
+	}
+	tmplBlob := addonBlob{
+		path:        o.ws.EnvAddonFilePath(fmt.Sprintf("%s.yml", o.storageName)),
+		description: "template",
+		blob:        addon.EnvDDBTemplate(props),
+	}
+	if !o.workloadExists {
+		return []addonBlob{tmplBlob}, nil
+	}
+	return []addonBlob{tmplBlob, ingressBlob}, nil
 }
 
 func (o *initStorageOpts) ddbProps() (*addon.DynamoDBProps, error) {

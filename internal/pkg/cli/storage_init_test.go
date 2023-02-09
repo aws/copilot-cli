@@ -1137,10 +1137,11 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 	)
 	fileExistsError := &workspace.ErrFileExists{FileName: "my-file"}
 	testCases := map[string]struct {
-		inAppName     string
-		inStorageType string
-		inSvcName     string
-		inStorageName string
+		inAppName        string
+		inStorageType    string
+		inSvcName        string
+		inStorageName    string
+		inAddIngressFrom string
 
 		inPartition string
 		inSort      string
@@ -1348,6 +1349,20 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 				m.EXPECT().ListEnvironments(gomock.Any()).AnyTimes()
 			},
 		},
+		"add ingress for env DDB": {
+			inAppName:        wantedAppName,
+			inStorageType:    dynamoDBStorageType,
+			inStorageName:    "my-table",
+			inNoLSI:          true,
+			inNoSort:         true,
+			inPartition:      wantedPartitionKey,
+			inAddIngressFrom: wantedSvcName,
+			mockWS: func(m *mocks.MockwsReadWriter) {
+				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte("type: Worker Service"), nil)
+				m.EXPECT().WorkloadAddonFilePath(gomock.Eq(wantedSvcName), gomock.Eq("my-table-access-policy.yml")).Return("mockWkldTemplatePath")
+				m.EXPECT().Write(gomock.Any(), "mockWkldTemplatePath").Return("mockWkldTemplatePath", nil)
+			},
+		},
 		"do not attempt to read manifest or write workload ingress for an env RDS if workload is not in the workspace": {
 			inSvcName:           wantedSvcName,
 			inStorageType:       rdsStorageType,
@@ -1422,9 +1437,12 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 			mockWS := mocks.NewMockwsReadWriter(ctrl)
 			opts := initStorageOpts{
 				initStorageVars: initStorageVars{
-					storageType:  tc.inStorageType,
-					storageName:  tc.inStorageName,
-					workloadName: tc.inSvcName,
+					storageType:    tc.inStorageType,
+					storageName:    tc.inStorageName,
+					workloadName:   tc.inSvcName,
+					lifecycle:      tc.inLifecycle,
+					addIngressFrom: tc.inAddIngressFrom,
+
 					partitionKey: tc.inPartition,
 					sortKey:      tc.inSort,
 					lsiSorts:     tc.inLSISorts,
@@ -1434,8 +1452,6 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 					auroraServerlessVersion: tc.inServerlessVersion,
 					rdsEngine:               tc.inEngine,
 					rdsParameterGroup:       tc.inParameterGroup,
-
-					lifecycle: tc.inLifecycle,
 				},
 				appName:        tc.inAppName,
 				ws:             mockWS,
