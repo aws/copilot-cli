@@ -107,7 +107,7 @@ var serviceTypeHints = map[string]string{
 	manifest.LoadBalancedWebServiceType:  "Internet to ECS on Fargate",
 	manifest.BackendServiceType:          "ECS on Fargate",
 	manifest.WorkerServiceType:           "Events to SQS to ECS on Fargate",
-	manifest.StaticSiteType:              "S3 Bucket for static assets",
+	manifest.StaticSiteType:              "Internet to CDN to S3 bucket",
 }
 
 type initWkldVars struct {
