@@ -299,6 +299,8 @@ func (w *WorkloadInitializer) newServiceManifest(i *ServiceProps) (encoding.Bina
 		return newBackendServiceManifest(i)
 	case manifest.WorkerServiceType:
 		return newWorkerServiceManifest(i)
+	case manifest.StaticSiteType:
+		return manifest.NewStaticSite(i.Name), nil
 	default:
 		return nil, fmt.Errorf("service type %s doesn't have a manifest", i.Type)
 	}

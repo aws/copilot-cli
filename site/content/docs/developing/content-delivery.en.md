@@ -78,40 +78,40 @@ You can optionally have CloudFront work with an Amazon S3 bucket for faster stat
 ### Use an existing S3 bucket
 
 !!! attention
-  For security concerns, we suggest that you use a **private** S3 bucket so that all public access is blocked by default.
+    For security concerns, we suggest that you use a **private** S3 bucket so that all public access is blocked by default.
 
 The env manifest example below illustrates how to use an existing S3 bucket for CloudFront:
 
 ???+ note "Sample env manifest setup for using an existing S3 bucket with CloudFront"
-  ```yaml
-  cdn:
-    static_assets:
-      location: cf-s3-ecs-demo-bucket.s3.us-west-2.amazonaws.com
-      alias: example.com
-      path: static/*
-  ```
+    ```yaml
+    cdn:
+      static_assets:
+        location: cf-s3-ecs-demo-bucket.s3.us-west-2.amazonaws.com
+        alias: example.com
+        path: static/*
+    ```
 
 Note that `static_assets.location` is the DNS domain name of the S3 bucket (for example, `EXAMPLE-BUCKET.s3.us-west-2.amazonaws.com`). If you are not using an alias of the [app-associated root domain](../domain/#use-app-associated-root-domain), remember to create an A-record for your alias pointing to the CloudFront domain name.
 
 After getting the environment deployed using the env manifest, you need to update the bucket policy of your S3 bucket (if it is a private one), so that CloudFront can access it.
 
 ???+ note "Example S3 bucket policy that grants read-only access to CloudFront"
-  ```json
-  {
-      "Version": "2012-10-17",
-      "Statement": {
-          "Sid": "AllowCloudFrontServicePrincipalReadOnly",
-          "Effect": "Allow",
-          "Principal": {
-              "Service": "cloudfront.amazonaws.com"
-          },
-          "Action": "s3:GetObject",
-          "Resource": "arn:aws:s3:::EXAMPLE-BUCKET/*",
-          "Condition": {
-              "StringEquals": {
-                  "AWS:SourceArn": "arn:aws:cloudfront::111122223333:distribution/EDFDVBD6EXAMPLE"
-              }
-          }
-      }
-  }
-  ```
+    ```json
+    {
+        "Version": "2012-10-17",
+        "Statement": {
+            "Sid": "AllowCloudFrontServicePrincipalReadOnly",
+            "Effect": "Allow",
+            "Principal": {
+                "Service": "cloudfront.amazonaws.com"
+            },
+            "Action": "s3:GetObject",
+            "Resource": "arn:aws:s3:::EXAMPLE-BUCKET/*",
+            "Condition": {
+                "StringEquals": {
+                    "AWS:SourceArn": "arn:aws:cloudfront::111122223333:distribution/EDFDVBD6EXAMPLE"
+                }
+            }
+        }
+    }
+    ```
