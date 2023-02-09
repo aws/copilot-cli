@@ -72,4 +72,4 @@ LOG_INFO=all
 
 ## How do I know the name of my DynamoDB table, S3 bucket, RDS database, etc?
 
-When using the Copilot CLI to provision additional AWS resources such as DynamoDB tables, S3 buckets, databases, etc., any output values will be passed in as environment variables to your app. For more information, check out the [additional resources guide](../addons/workload).
+When using the Copilot CLI to provision additional AWS resources such as DynamoDB tables, S3 buckets, databases, etc., any output values will be passed in as environment variables to your app. For more information, check out the [additional resources guide](./addons/workload.en.md).

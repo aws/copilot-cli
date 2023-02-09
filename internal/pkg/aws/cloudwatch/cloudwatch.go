@@ -59,7 +59,7 @@ func New(s *session.Session) *CloudWatch {
 	}
 }
 
-// AlarmsWithTags returns all the CloudWatch alarms that have the resource tags.
+// AlarmsWithTags returns the statuses of all the CloudWatch alarms that have the resource tags.
 func (cw *CloudWatch) AlarmsWithTags(tags map[string]string) ([]AlarmStatus, error) {
 	var alarmNames []string
 	resources, err := cw.rgClient.GetResourcesByTags(cloudwatchResourceType, tags)
@@ -73,32 +73,51 @@ func (cw *CloudWatch) AlarmsWithTags(tags map[string]string) ([]AlarmStatus, err
 		}
 		alarmNames = append(alarmNames, name)
 	}
-	return cw.AlarmStatus(alarmNames)
+	return cw.AlarmStatuses(WithNames(alarmNames))
 }
 
-// AlarmStatus returns the status of each given alarm name.
-func (cw *CloudWatch) AlarmStatus(alarms []string) ([]AlarmStatus, error) {
-	if len(alarms) == 0 {
-		return nil, nil
+// DescribeAlarmOpts sets the optional parameter for DescribeAlarms
+type DescribeAlarmOpts func(input *cloudwatch.DescribeAlarmsInput)
+
+// WithNames sets DescribeAlarms to filter on alarm names.
+func WithNames(names []string) DescribeAlarmOpts {
+	return func(in *cloudwatch.DescribeAlarmsInput) {
+		in.AlarmNames = aws.StringSlice(names)
 	}
-	var alarmStatus []AlarmStatus
-	var err error
-	alarmResp := &cloudwatch.DescribeAlarmsOutput{}
+}
+
+// WithPrefix sets DescribeAlarms to filter on a name prefix.
+func WithPrefix(prefix string) DescribeAlarmOpts {
+	return func(in *cloudwatch.DescribeAlarmsInput) {
+		in.AlarmNamePrefix = aws.String(prefix)
+	}
+}
+
+// AlarmStatuses returns the statuses of alarms optionally filtered (by name, prefix, etc.).
+func (cw *CloudWatch) AlarmStatuses(opts ...DescribeAlarmOpts) ([]AlarmStatus, error) {
+	var alarmStatuses []AlarmStatus
+	in := &cloudwatch.DescribeAlarmsInput{}
+	if len(opts) > 0 {
+		for _, opt := range opts {
+			opt(in)
+		}
+	}
 	for {
-		alarmResp, err = cw.client.DescribeAlarms(&cloudwatch.DescribeAlarmsInput{
-			AlarmNames: aws.StringSlice(alarms),
-			NextToken:  alarmResp.NextToken,
-		})
+		alarmResp, err := cw.client.DescribeAlarms(in)
 		if err != nil {
 			return nil, fmt.Errorf("describe CloudWatch alarms: %w", err)
 		}
-		alarmStatus = append(alarmStatus, cw.compositeAlarmsStatus(alarmResp.CompositeAlarms)...)
-		alarmStatus = append(alarmStatus, cw.metricAlarmsStatus(alarmResp.MetricAlarms)...)
+		if alarmResp == nil {
+			break
+		}
+		alarmStatuses = append(alarmStatuses, cw.compositeAlarmsStatus(alarmResp.CompositeAlarms)...)
+		alarmStatuses = append(alarmStatuses, cw.metricAlarmsStatus(alarmResp.MetricAlarms)...)
 		if alarmResp.NextToken == nil {
 			break
 		}
+		in.NextToken = alarmResp.NextToken
 	}
-	return alarmStatus, nil
+	return alarmStatuses, nil
 }
 
 func (cw *CloudWatch) compositeAlarmsStatus(alarms []*cloudwatch.CompositeAlarm) []AlarmStatus {

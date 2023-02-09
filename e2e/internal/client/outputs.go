@@ -70,6 +70,7 @@ type SvcShowOutput struct {
 	Routes             []SvcShowRoutes                   `json:"routes"`
 	Variables          []SvcShowVariables                `json:"variables"`
 	Resources          map[string][]*SvcShowResourceInfo `json:"resources"`
+	Secrets            []SvcShowSecrets                  `json:"secrets"`
 }
 
 // SvcShowConfigurations contains serialized configuration parameters for a service.
@@ -96,6 +97,13 @@ type SvcShowServiceEndpoints struct {
 
 // SvcShowVariables contains serialized environment variables for a service.
 type SvcShowVariables struct {
+	Environment string `json:"environment"`
+	Name        string `json:"name"`
+	Value       string `json:"value"`
+}
+
+// SvcShowSecrets contains serialized secrets for a service.
+type SvcShowSecrets struct {
 	Environment string `json:"environment"`
 	Name        string `json:"name"`
 	Value       string `json:"value"`

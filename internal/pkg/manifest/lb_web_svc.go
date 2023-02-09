@@ -9,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/imdario/mergo"
 
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 )
 
@@ -39,8 +40,7 @@ type LoadBalancedWebService struct {
 	LoadBalancedWebServiceConfig `yaml:",inline"`
 	// Use *LoadBalancedWebServiceConfig because of https://github.com/imdario/mergo/issues/146
 	Environments map[string]*LoadBalancedWebServiceConfig `yaml:",flow"` // Fields to override per environment.
-
-	parser template.Parser
+	parser       template.Parser
 }
 
 // LoadBalancedWebServiceConfig holds the configuration for a load balanced web service.
@@ -121,7 +121,7 @@ func newDefaultHTTPLoadBalancedWebService() *LoadBalancedWebService {
 func newDefaultLoadBalancedWebService() *LoadBalancedWebService {
 	return &LoadBalancedWebService{
 		Workload: Workload{
-			Type: aws.String(LoadBalancedWebServiceType),
+			Type: aws.String(manifestinfo.LoadBalancedWebServiceType),
 		},
 		LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 			ImageConfig: ImageWithPortAndHealthcheck{},
@@ -131,7 +131,7 @@ func newDefaultLoadBalancedWebService() *LoadBalancedWebService {
 				Count: Count{
 					Value: aws.Int(1),
 					AdvancedCount: AdvancedCount{ // Leave advanced count empty while passing down the type of the workload.
-						workloadType: LoadBalancedWebServiceType,
+						workloadType: manifestinfo.LoadBalancedWebServiceType,
 					},
 				},
 				ExecuteCommand: ExecuteCommand{
@@ -241,23 +241,26 @@ func (c *NetworkLoadBalancerConfiguration) IsEmpty() bool {
 }
 
 // ExposedPorts returns all the ports that are container ports available to receive traffic.
-func (lbws *LoadBalancedWebService) ExposedPorts() ([]ExposedPort, error) {
+func (lbws *LoadBalancedWebService) ExposedPorts() (ExposedPortsIndex, error) {
 	var exposedPorts []ExposedPort
-
 	workloadName := aws.StringValue(lbws.Name)
 	exposedPorts = append(exposedPorts, lbws.ImageConfig.exposedPorts(workloadName)...)
 	for name, sidecar := range lbws.Sidecars {
 		out, err := sidecar.exposedPorts(name)
 		if err != nil {
-			return nil, err
+			return ExposedPortsIndex{}, err
 		}
 		exposedPorts = append(exposedPorts, out...)
 	}
 	exposedPorts = append(exposedPorts, lbws.RoutingRule.exposedPorts(exposedPorts, workloadName)...)
 	out, err := lbws.NLBConfig.exposedPorts(exposedPorts, workloadName)
 	if err != nil {
-		return nil, err
+		return ExposedPortsIndex{}, err
 	}
 	exposedPorts = append(exposedPorts, out...)
-	return sortExposedPorts(exposedPorts), nil
+	portsForContainer, containerForPort := prepareParsedExposedPortsMap(sortExposedPorts(exposedPorts))
+	return ExposedPortsIndex{
+		PortsForContainer: portsForContainer,
+		ContainerForPort:  containerForPort,
+	}, nil
 }

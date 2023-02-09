@@ -1,0 +1,41 @@
+# The manifest for the "{{.Name}}" service.
+# Read the full specification for the "{{.Type}}" type at:
+#  https://aws.github.io/copilot-cli/docs/manifest/static-site/
+
+# Your service name will be used in naming your resources like S3 buckets, etc.
+name: {{.Name}}
+type: {{.Type}}
+
+
+{{- if not .FileUploads}}
+files:
+  - source: ./
+    destination: assets
+    exclude:
+      - copilot/
+{{- else}}
+files:
+{{- range $file := .FileUploads}}
+  - source: {{$.Source}}
+    destination: {{$.Destination}}
+    {{- if $.Context}}
+    context: {{$.Context}}
+    {{- end}}
+    {{- if $.Recursive}}
+    recursive: {{$.Recursive}}
+    {{- end}}
+    {{- if $.Reinclude.StringSlice}}
+    reinclude: {{$.Reinclude.StringSlice}}
+    {{- end}}
+    {{- if $.Exclude.StringSlice}}
+    exclude: {{$.Exclude.StringSlice}}
+    {{- end}}
+{{- end}}
+{{- end}}
+
+# You can override any of the values defined above by environment.
+# environments:
+#   test:
+#     files:
+#       - source: ./blob
+#         destination: blob

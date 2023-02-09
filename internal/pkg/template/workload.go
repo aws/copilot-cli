@@ -131,8 +131,6 @@ type SidecarOpts struct {
 	Name         string
 	Image        *string
 	Essential    *bool
-	Port         *string
-	Protocol     *string
 	CredsParam   *string
 	Variables    map[string]Variable
 	Secrets      map[string]Secret
@@ -142,6 +140,14 @@ type SidecarOpts struct {
 	EntryPoint   []string
 	Command      []string
 	HealthCheck  *ContainerHealthCheck
+	PortMappings []*PortMapping
+}
+
+// PortMapping holds container port mapping configuration.
+type PortMapping struct {
+	Protocol      string
+	ContainerPort uint16
+	ContainerName string
 }
 
 // SidecarStorageOpts holds data structures for rendering Mount Points inside of a sidecar.
@@ -230,6 +236,11 @@ func (tg HTTPTargetContainer) Exposed() bool {
 // IsHTTPS returns true if the target container's port is 443.
 func (tg HTTPTargetContainer) IsHTTPS() bool {
 	return tg.Port == "443"
+}
+
+// StrconvUint16 returns string converted from uint16.
+func StrconvUint16(val uint16) string {
+	return strconv.FormatUint(uint64(val), 10)
 }
 
 // HTTPHealthCheckOpts holds configuration that's needed for HTTP Health Check.
@@ -700,9 +711,14 @@ type WorkloadOpts struct {
 	SerializedManifest string // Raw manifest file used to deploy the workload.
 	EnvVersion         string
 
+	// Configuration for the main container.
+	PortMappings []*PortMapping
+	Variables    map[string]Variable
+	Secrets      map[string]Secret
+	EntryPoint   []string
+	Command      []string
+
 	// Additional options that are common between **all** workload templates.
-	Variables                map[string]Variable
-	Secrets                  map[string]Secret
 	Aliases                  []string
 	HTTPSListener            bool
 	Tags                     map[string]string        // Used by App Runner workloads to tag App Runner service resources
@@ -717,8 +733,6 @@ type WorkloadOpts struct {
 	Network                  NetworkOpts
 	ExecuteCommand           *ExecuteCommandOpts
 	Platform                 RuntimePlatformOpts
-	EntryPoint               []string
-	Command                  []string
 	DomainAlias              string
 	DockerLabels             map[string]string
 	DependsOn                map[string]string
@@ -862,6 +876,7 @@ func withSvcParsingFuncs() ParseOption {
 			"pluralWord":           english.PluralWord,
 			"contains":             contains,
 			"requiresVPCConnector": requiresVPCConnector,
+			"strconvUint16":        StrconvUint16,
 		})
 	}
 }

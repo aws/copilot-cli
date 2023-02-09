@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/template/mocks"
 	"github.com/golang/mock/gomock"
@@ -27,7 +28,7 @@ func TestDynamoDBTemplate_MarshalBinary(t *testing.T) {
 			mockDependencies: func(ctrl *gomock.Controller, ddb *DynamoDBTemplate) {
 				m := mocks.NewMockParser(ctrl)
 				ddb.parser = m
-				m.EXPECT().Parse(dynamoDbTemplatePath, *ddb, gomock.Any()).Return(nil, errors.New("some error"))
+				m.EXPECT().Parse("mockPath", *ddb, gomock.Any()).Return(nil, errors.New("some error"))
 			},
 
 			wantedError: errors.New("some error"),
@@ -36,7 +37,7 @@ func TestDynamoDBTemplate_MarshalBinary(t *testing.T) {
 			mockDependencies: func(ctrl *gomock.Controller, ddb *DynamoDBTemplate) {
 				m := mocks.NewMockParser(ctrl)
 				ddb.parser = m
-				m.EXPECT().Parse(dynamoDbTemplatePath, *ddb, gomock.Any()).Return(&template.Content{Buffer: bytes.NewBufferString("hello")}, nil)
+				m.EXPECT().Parse("mockPath", *ddb, gomock.Any()).Return(&template.Content{Buffer: bytes.NewBufferString("hello")}, nil)
 
 			},
 
@@ -49,7 +50,9 @@ func TestDynamoDBTemplate_MarshalBinary(t *testing.T) {
 			// GIVEN
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			addon := &DynamoDBTemplate{}
+			addon := &DynamoDBTemplate{
+				tmplPath: "mockPath",
+			}
 			tc.mockDependencies(ctrl, addon)
 
 			// WHEN
@@ -73,7 +76,7 @@ func TestS3Template_MarshalBinary(t *testing.T) {
 			mockDependencies: func(ctrl *gomock.Controller, s3 *S3Template) {
 				m := mocks.NewMockParser(ctrl)
 				s3.parser = m
-				m.EXPECT().Parse(s3TemplatePath, *s3, gomock.Any()).Return(nil, errors.New("some error"))
+				m.EXPECT().Parse("mockPath", *s3, gomock.Any()).Return(nil, errors.New("some error"))
 			},
 
 			wantedError: errors.New("some error"),
@@ -82,7 +85,7 @@ func TestS3Template_MarshalBinary(t *testing.T) {
 			mockDependencies: func(ctrl *gomock.Controller, s3 *S3Template) {
 				m := mocks.NewMockParser(ctrl)
 				s3.parser = m
-				m.EXPECT().Parse(s3TemplatePath, *s3, gomock.Any()).Return(&template.Content{Buffer: bytes.NewBufferString("hello")}, nil)
+				m.EXPECT().Parse("mockPath", *s3, gomock.Any()).Return(&template.Content{Buffer: bytes.NewBufferString("hello")}, nil)
 
 			},
 
@@ -95,7 +98,9 @@ func TestS3Template_MarshalBinary(t *testing.T) {
 			// GIVEN
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			addon := &S3Template{}
+			addon := &S3Template{
+				tmplPath: "mockPath",
+			}
 			tc.mockDependencies(ctrl, addon)
 
 			// WHEN
@@ -134,7 +139,7 @@ func TestRDSTemplate_MarshalBinary(t *testing.T) {
 			mockDependencies: func(ctrl *gomock.Controller, r *RDSTemplate) {
 				m := mocks.NewMockParser(ctrl)
 				r.parser = m
-				m.EXPECT().Parse(gomock.Eq(rdsTemplatePath), *r, gomock.Any()).
+				m.EXPECT().Parse(gomock.Eq("mockPath"), *r, gomock.Any()).
 					Return(&template.Content{Buffer: bytes.NewBufferString("psql")}, nil)
 
 			},
@@ -146,7 +151,7 @@ func TestRDSTemplate_MarshalBinary(t *testing.T) {
 			mockDependencies: func(ctrl *gomock.Controller, r *RDSTemplate) {
 				m := mocks.NewMockParser(ctrl)
 				r.parser = m
-				m.EXPECT().Parse(gomock.Eq(rdsTemplatePath), *r, gomock.Any()).
+				m.EXPECT().Parse(gomock.Eq("mockPath"), *r, gomock.Any()).
 					Return(&template.Content{Buffer: bytes.NewBufferString("mysql")}, nil)
 
 			},
@@ -159,7 +164,7 @@ func TestRDSTemplate_MarshalBinary(t *testing.T) {
 			mockDependencies: func(ctrl *gomock.Controller, r *RDSTemplate) {
 				m := mocks.NewMockParser(ctrl)
 				r.parser = m
-				m.EXPECT().Parse(gomock.Eq(rdsRDWSTemplatePath), *r, gomock.Any()).
+				m.EXPECT().Parse(gomock.Eq("mockPath"), *r, gomock.Any()).
 					Return(&template.Content{Buffer: bytes.NewBufferString("mysql")}, nil)
 			},
 			wantedBinary: []byte("mysql"),
@@ -170,7 +175,7 @@ func TestRDSTemplate_MarshalBinary(t *testing.T) {
 			mockDependencies: func(ctrl *gomock.Controller, r *RDSTemplate) {
 				m := mocks.NewMockParser(ctrl)
 				r.parser = m
-				m.EXPECT().Parse(gomock.Eq(rdsV2TemplatePath), *r, gomock.Any()).
+				m.EXPECT().Parse(gomock.Eq("mockPath"), *r, gomock.Any()).
 					Return(&template.Content{Buffer: bytes.NewBufferString("psql")}, nil)
 
 			},
@@ -182,7 +187,7 @@ func TestRDSTemplate_MarshalBinary(t *testing.T) {
 			mockDependencies: func(ctrl *gomock.Controller, r *RDSTemplate) {
 				m := mocks.NewMockParser(ctrl)
 				r.parser = m
-				m.EXPECT().Parse(gomock.Eq(rdsV2TemplatePath), *r, gomock.Any()).
+				m.EXPECT().Parse(gomock.Eq("mockPath"), *r, gomock.Any()).
 					Return(&template.Content{Buffer: bytes.NewBufferString("mysql")}, nil)
 
 			},
@@ -195,7 +200,7 @@ func TestRDSTemplate_MarshalBinary(t *testing.T) {
 			mockDependencies: func(ctrl *gomock.Controller, r *RDSTemplate) {
 				m := mocks.NewMockParser(ctrl)
 				r.parser = m
-				m.EXPECT().Parse(gomock.Eq(rdsRDWSV2TemplatePath), *r, gomock.Any()).
+				m.EXPECT().Parse(gomock.Eq("mockPath"), *r, gomock.Any()).
 					Return(&template.Content{Buffer: bytes.NewBufferString("mysql")}, nil)
 			},
 			wantedBinary: []byte("mysql"),
@@ -209,10 +214,10 @@ func TestRDSTemplate_MarshalBinary(t *testing.T) {
 			defer ctrl.Finish()
 			addon := &RDSTemplate{
 				RDSProps: RDSProps{
-					WorkloadType:            tc.workloadType,
-					auroraServerlessVersion: tc.version,
-					Engine:                  tc.engine,
+					WorkloadType: tc.workloadType,
+					Engine:       tc.engine,
 				},
+				tmplPath: "mockPath",
 			}
 			tc.mockDependencies(ctrl, addon)
 
@@ -245,7 +250,8 @@ func TestRDSParams_MarshalBinary(t *testing.T) {
 			mockDependencies: func(ctrl *gomock.Controller, r *RDSParams) {
 				m := mocks.NewMockParser(ctrl)
 				r.parser = m
-				m.EXPECT().Parse(gomock.Eq(rdsRDWSParamsPath), *r, gomock.Any()).
+				r.tmplPath = "mockPath"
+				m.EXPECT().Parse(gomock.Eq("mockPath"), *r, gomock.Any()).
 					Return(&template.Content{Buffer: bytes.NewBufferString("bloop")}, nil)
 
 			},
@@ -535,4 +541,100 @@ func TestBuildLocalSecondaryIndex(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestConstructors(t *testing.T) {
+	t.Run("marshaler for workload-level S3", func(t *testing.T) {
+		out := WorkloadS3Template(&S3Props{})
+		require.Equal(t, s3TemplatePath, out.tmplPath)
+	})
+
+	t.Run("marshaler for env-level S3", func(t *testing.T) {
+		out := EnvS3Template(&S3Props{})
+		require.Equal(t, envS3TemplatePath, out.tmplPath)
+	})
+
+	t.Run("marshaler for the access policy of an env-level S3", func(t *testing.T) {
+		out := EnvS3AccessPolicyTemplate(&S3Props{})
+		require.Equal(t, envS3AccessPolicyTemplatePath, out.tmplPath)
+	})
+
+	t.Run("marshaler for workload-level ddb", func(t *testing.T) {
+		out := WorkloadDDBTemplate(&DynamoDBProps{})
+		require.Equal(t, dynamoDbTemplatePath, out.tmplPath)
+	})
+
+	t.Run("marshaler for env-level ddb", func(t *testing.T) {
+		out := EnvDDBTemplate(&DynamoDBProps{})
+		require.Equal(t, envDynamoDBTemplatePath, out.tmplPath)
+	})
+
+	t.Run("marshaler for the access policy of an env-level ddb", func(t *testing.T) {
+		out := EnvDDBAccessPolicyTemplate(&DynamoDBProps{})
+		require.Equal(t, envDynamoDBAccessPolicyTemplatePath, out.tmplPath)
+	})
+
+	t.Run("marshaler for non-RDWS workload-level aurora serverless v1", func(t *testing.T) {
+		out := WorkloadServerlessV1Template(RDSProps{
+			WorkloadType: manifestinfo.LoadBalancedWebServiceType,
+		})
+		require.Equal(t, rdsTemplatePath, out.tmplPath)
+	})
+
+	t.Run("marshaler for non-RDWS workload-level aurora serverless v2", func(t *testing.T) {
+		out := WorkloadServerlessV2Template(RDSProps{
+			WorkloadType: manifestinfo.LoadBalancedWebServiceType,
+		})
+		require.Equal(t, rdsV2TemplatePath, out.tmplPath)
+	})
+
+	t.Run("parameter marshaler for RDWS workload-level aurora serverless v1/v2", func(t *testing.T) {
+		out := RDWSParamsForRDS()
+		require.Equal(t, rdsRDWSParamsPath, out.tmplPath)
+	})
+
+	t.Run("marshaler for RDWS workload-level aurora serverless v1", func(t *testing.T) {
+		out := WorkloadServerlessV1Template(RDSProps{
+			WorkloadType: manifestinfo.RequestDrivenWebServiceType,
+		})
+		require.Equal(t, rdsRDWSTemplatePath, out.tmplPath)
+	})
+
+	t.Run("marshaler for RDWS workload-level aurora serverless v2", func(t *testing.T) {
+		out := WorkloadServerlessV2Template(RDSProps{
+			WorkloadType: manifestinfo.RequestDrivenWebServiceType,
+		})
+		require.Equal(t, rdsRDWSV2TemplatePath, out.tmplPath)
+	})
+
+	t.Run("parameter marshaler for env-level aurora accessible by a workload", func(t *testing.T) {
+		out := EnvParamsForRDS()
+		require.Equal(t, envRDSParamsPath, out.tmplPath)
+	})
+
+	t.Run("marshaler for env-level aurora accessible by a non-RDWS", func(t *testing.T) {
+		out := EnvServerlessTemplate(RDSProps{
+			WorkloadType: manifestinfo.LoadBalancedWebServiceType,
+		})
+		require.Equal(t, envRDSTemplatePath, out.tmplPath)
+	})
+
+	t.Run("marshaler for env-level aurora accessible by an RDWS", func(t *testing.T) {
+		out := EnvServerlessTemplate(RDSProps{
+			WorkloadType: manifestinfo.RequestDrivenWebServiceType,
+		})
+		require.Equal(t, envRDSForRDWSTemplatePath, out.tmplPath)
+	})
+
+	t.Run("parameter marshaler for the ingress attached to an RDWS for an env-level aurora", func(t *testing.T) {
+		out := RDWSParamsForEnvRDS()
+		require.Equal(t, envRDSIngressForRDWSParamsPath, out.tmplPath)
+	})
+
+	t.Run("marshaler for the ingress attached to an RDWS for an env-level aurora", func(t *testing.T) {
+		out := EnvServerlessRDWSIngressTemplate(RDSProps{
+			WorkloadType: manifestinfo.RequestDrivenWebServiceType,
+		})
+		require.Equal(t, envRDSIngressForRDWSTemplatePath, out.tmplPath)
+	})
 }
