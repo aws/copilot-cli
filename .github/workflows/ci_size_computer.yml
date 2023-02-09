@@ -24,7 +24,7 @@ jobs:
       - name: Get latest release with tag
         id: latestrelease
         run: |
-          echo "VERSION_TAG=$(curl -s https://api.github.com/repos/aws/copilot-cli/releases/latest | jq '.tag_name' | sed 's/\"//g')" >> $GITHUB_OUTPUT
+          echo "VERSION_TAG=$(curl -s https://api.github.com/repos/aws/copilot-cli/releases/latest --header 'authorization: Bearer ${{ secrets.GITHUB_TOKEN }}' | jq '.tag_name' | sed 's/\"//g')" >> $GITHUB_OUTPUT
 
       - name: Check out latest release tag
         uses: actions/checkout@v3
