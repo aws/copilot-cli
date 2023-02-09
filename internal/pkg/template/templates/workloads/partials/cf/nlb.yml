@@ -15,7 +15,7 @@ NLBListener{{- if ne $i 0 }}{{$i}}{{end}}:
   Type: AWS::ElasticLoadBalancingV2::Listener
   Properties:
     DefaultActions:
-      - TargetGroupArn: !Ref NLBTargetGroup
+      - TargetGroupArn: !Ref NLBTargetGroup{{- if ne $i 0 }}{{$i}}{{end}}
         Type: forward
     LoadBalancerArn: !Ref PublicNetworkLoadBalancer
     Port: {{ $listener.Port }}
