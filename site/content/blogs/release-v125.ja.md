@@ -319,7 +319,7 @@ sidecars:
 
 ```yaml
 network:
-  vpn:
+  vpc:
     security_groups:
       - sg-1234
       - from_cfn: UserDBAccessSecurityGroup
