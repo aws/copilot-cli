@@ -413,20 +413,21 @@ func (s *ecsServiceStatus) writeRunningTasks(writer io.Writer) {
 }
 
 func (s *ecsServiceStatus) writeAlarms(writer io.Writer) {
-	headers := []string{"Name", "Condition", "Last Updated", "Health"}
+	headers := []string{"Name", "Type", "Condition", "Last Updated", "Health"}
 	fmt.Fprintf(writer, "  %s\n", strings.Join(headers, "\t"))
 	fmt.Fprintf(writer, "  %s\n", strings.Join(underline(headers), "\t"))
 	for _, alarm := range s.Alarms {
 		updatedTimeSince := humanizeTime(alarm.UpdatedTimes)
-		printWithMaxWidth(writer, "  %s\t%s\t%s\t%s\n", maxAlarmStatusColumnWidth, alarm.Name, alarm.Condition, updatedTimeSince, alarmHealthColor(alarm.Status))
-		fmt.Fprintf(writer, "  %s\t%s\t%s\t%s\n", "", "", "", "")
+		printWithMaxWidth(writer, "  %s\t%s\t%s\t%s\t%s\n", maxAlarmStatusColumnWidth, alarm.Name, alarm.Type, alarm.Condition, updatedTimeSince, alarmHealthColor(alarm.Status))
+		fmt.Fprintf(writer, "  %s\t%s\t%s\t%s\t%s\n", "", "", "", "", "")
 	}
 }
 
 type ecsTaskStatus awsecs.TaskStatus
 
 // Example output:
-//   6ca7a60d          RUNNING             42            19 hours ago       -              UNKNOWN
+//
+//	6ca7a60d          RUNNING             42            19 hours ago       -              UNKNOWN
 func (ts ecsTaskStatus) humanString(opts ...ecsTaskStatusConfigOpts) string {
 	config := &ecsTaskStatusConfig{}
 	for _, opt := range opts {

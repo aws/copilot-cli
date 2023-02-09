@@ -49,10 +49,10 @@ A workload addon template can be [any valid CloudFormation template](https://doc
 you can customize your resource properties with [Conditions](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/conditions-section-structure.html) or [Mappings](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/mappings-section-structure.html).
 
 !!! info ""
-  We recommend following [Amazon IAM best practices](https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html) while defining AWS Managed Policies for the additional resources, including:
+    We recommend following [Amazon IAM best practices](https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html) while defining AWS Managed Policies for the additional resources, including:
 
-  * [Grant least privilege](https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html#grant-least-privilege) to the policies defined in your `addons/` directory.  
-  * [Use policy conditions for extra security](https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html#use-policy-conditions) to restrict your policies to access only the resources defined in your `addons/` directory.   
+    * [Grant least privilege](https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html#grant-least-privilege) to the policies defined in your `addons/` directory.  
+    * [Use policy conditions for extra security](https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html#use-policy-conditions) to restrict your policies to access only the resources defined in your `addons/` directory.   
 
 
 ### Writing the `Parameters` section
@@ -60,15 +60,15 @@ you can customize your resource properties with [Conditions](https://docs.aws.am
 There are a few parameters that Copilot requires you to define in your templates. 
 
 !!! info ""
-  ```yaml
-  Parameters:
-      App:
-          Type: String
-      Env:
-          Type: String
-      Name:
-          Type: String
-  ```
+    ```yaml
+    Parameters:
+        App:
+            Type: String
+        Env:
+            Type: String
+        Name:
+            Type: String
+    ```
 
 
 #### Customizing the `Parameters` section
@@ -87,25 +87,25 @@ If you'd like to define parameters in addition to the ones required by Copilot, 
 2. In your `addons.parameters.yml`, define the values of those additional parameters. They can refer to values from your workload stack. 
 
 ???- note "Examples: Customize addon parameters"
-  ```yaml
-  # In "webhook/addons/my-addon.yml"
-  Parameters:
-    # Required parameters by AWS Copilot.
-    App:
-      Type: String
-    Env:
-      Type: String
-    Name:
-      Type: String
-    # Additional parameters defined in addons.parameters.yml
-    ServiceName:
-      Type: String
-  ```
-  ```yaml
-  # In "webhook/addons/addons.parameters.yml"
-  Parameters:
-      ServiceName: !GetAtt Service.Name
-  ```
+    ```yaml
+    # In "webhook/addons/my-addon.yml"
+    Parameters:
+      # Required parameters by AWS Copilot.
+      App:
+        Type: String
+      Env:
+        Type: String
+      Name:
+        Type: String
+      # Additional parameters defined in addons.parameters.yml
+      ServiceName:
+        Type: String
+    ```
+    ```yaml
+    # In "webhook/addons/addons.parameters.yml"
+    Parameters:
+        ServiceName: !GetAtt Service.Name
+    ```
 
 ### Writing the `Conditions` and the `Mappings` sections
 
@@ -114,48 +114,47 @@ For example, you could conditionally configure your DB resource's capacity depen
 production or a test environment. To do so, you can use the `Conditions` section and the `Mappings` section.
 
 ???- note "Examples: Configure addons conditionally"
-
-=== "Using `Mappings`"
-  ```yaml
-  Mappings:
-      MyAuroraServerlessEnvScalingConfigurationMap:
-          dev:
-              "DBMinCapacity": 0.5
-              "DBMaxCapacity": 8   
-          test:
-              "DBMinCapacity": 1
-              "DBMaxCapacity": 32
-          prod:
-              "DBMinCapacity": 1
-              "DBMaxCapacity": 64
-  Resources:
-      MyCluster:
-          Type: AWS::RDS::DBCluster
-          Properties:
+    === "Using `Mappings`"
+        ```yaml
+        Mappings:
+            MyAuroraServerlessEnvScalingConfigurationMap:
+                dev:
+                    "DBMinCapacity": 0.5
+                    "DBMaxCapacity": 8   
+                test:
+                    "DBMinCapacity": 1
+                    "DBMaxCapacity": 32
+                prod:
+                    "DBMinCapacity": 1
+                    "DBMaxCapacity": 64
+        Resources:
+            MyCluster:
+                Type: AWS::RDS::DBCluster
+                Properties:
+                    ScalingConfiguration:
+                        MinCapacity: !FindInMap
+                            - MyAuroraServerlessEnvScalingConfigurationMap
+                            - !Ref Env
+                            - DBMinCapacity
+                        MaxCapacity: !FindInMap
+                            - MyAuroraServerlessEnvScalingConfigurationMap
+                            - !Ref Env
+                            - DBMaxCapacity
+        ```
+    
+    === "Using `Conditions`"
+        ```yaml
+        Conditions:
+          IsProd: !Equals [!Ref Env, "prod"] 
+        
+        Resources:
+          MyCluster:
+            Type: AWS::RDS::DBCluster
+            Properties:
               ScalingConfiguration:
-                  MinCapacity: !FindInMap
-                      - MyAuroraServerlessEnvScalingConfigurationMap
-                      - !Ref Env
-                      - DBMinCapacity
-                  MaxCapacity: !FindInMap
-                      - MyAuroraServerlessEnvScalingConfigurationMap
-                      - !Ref Env
-                      - DBMaxCapacity
-  ```
-
-=== "Using `Conditions`"
-  ```yaml
-  Conditions:
-    IsProd: !Equals [!Ref Env, "prod"] 
-  
-  Resources:
-    MyCluster:
-      Type: AWS::RDS::DBCluster
-      Properties:
-        ScalingConfiguration:
-            MinCapacity: !If [IsProd, 1, 0.5]
-            MaxCapacity: !If [IsProd, 8, 64]
-  ```
+                  MinCapacity: !If [IsProd, 1, 0.5]
+                  MaxCapacity: !If [IsProd, 8, 64]
+        ```
 
 
 ### Writing the [`Outputs`](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/outputs-section-structure.html) section
