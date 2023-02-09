@@ -33,9 +33,12 @@ var rdwsAliasUsedWithoutDomainFriendlyText = fmt.Sprintf("To use %s, your applic
 
 type rdwsDeployer struct {
 	*svcDeployer
+	rdwsMft *manifest.RequestDrivenWebService
+
+	// Overriden in tests.
 	customResourceS3Client uploader
 	appVersionGetter       versionGetter
-	rdwsMft                *manifest.RequestDrivenWebService
+	newStack               func() cloudformation.StackConfiguration
 }
 
 // NewRDWSDeployer is the constructor for RDWSDeployer.
@@ -132,23 +135,30 @@ func (d *rdwsDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*rdwsS
 		return nil, errors.New("alias specified when application is not associated with a domain")
 	}
 
-	conf, err := stack.NewRequestDrivenWebService(stack.RequestDrivenWebServiceConfig{
-		App: deploy.AppInformation{
-			Name:                d.app.Name,
-			Domain:              d.app.Domain,
-			PermissionsBoundary: d.app.PermissionsBoundary,
-			AccountPrincipalARN: in.RootUserARN,
-		},
-		Env:                d.env.Name,
-		Manifest:           d.rdwsMft,
-		RawManifest:        d.rawMft,
-		ArtifactBucketName: d.resources.S3Bucket,
-		RuntimeConfig:      *rc,
-		Addons:             d.addons,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("create stack configuration: %w", err)
+	var conf cloudformation.StackConfiguration
+	switch {
+	case d.newStack != nil:
+		conf = d.newStack()
+	default:
+		conf, err = stack.NewRequestDrivenWebService(stack.RequestDrivenWebServiceConfig{
+			App: deploy.AppInformation{
+				Name:                d.app.Name,
+				Domain:              d.app.Domain,
+				PermissionsBoundary: d.app.PermissionsBoundary,
+				AccountPrincipalARN: in.RootUserARN,
+			},
+			Env:                d.env.Name,
+			Manifest:           d.rdwsMft,
+			RawManifest:        d.rawMft,
+			ArtifactBucketName: d.resources.S3Bucket,
+			RuntimeConfig:      *rc,
+			Addons:             d.addons,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("create stack configuration: %w", err)
+		}
 	}
+
 	if d.rdwsMft.Alias == nil {
 		return &rdwsStackConfigurationOutput{
 			svcStackConfigurationOutput: svcStackConfigurationOutput{
