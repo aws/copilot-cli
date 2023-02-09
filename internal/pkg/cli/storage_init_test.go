@@ -17,9 +17,8 @@ import (
 )
 
 type mockStorageInitValidate struct {
-	ws                          *mocks.MockwsReadWriter
-	store                       *mocks.Mockstore
-	flagExclusiveWithAddIngress string
+	ws    *mocks.MockwsReadWriter
+	store *mocks.Mockstore
 }
 
 func TestStorageInitOpts_Validate(t *testing.T) {
@@ -156,8 +155,6 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 				appName: tc.inAppName,
 				ws:      m.ws,
 				store:   m.store,
-
-				configFlagExclusiveWithAddIngress: m.flagExclusiveWithAddIngress,
 			}
 
 			// WHEN

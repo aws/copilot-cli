@@ -180,9 +180,6 @@ type initStorageOpts struct {
 	configSel configSelector
 	prompt    prompter
 
-	// Flag status.
-	configFlagExclusiveWithAddIngress string
-
 	// Cached data.
 	workloadType   string
 	workloadExists bool
