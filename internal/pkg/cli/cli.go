@@ -128,14 +128,12 @@ func indentListItem(multiline string) string {
 	return strings.Join(prefixedLines, "\n")
 }
 
-type stringMutator func(string) string
-
-func mutateStringSlice(in []string, mutate stringMutator) []string {
-	mutant := make([]string, len(in))
-	for idx, str := range in {
-		mutant[idx] = mutate(str)
+func applyAll[T any](in []T, fn func(item T) T) []T {
+	out := make([]T, len(in))
+	for i, v := range in {
+		out[i] = fn(v)
 	}
-	return mutant
+	return out
 }
 
 // displayPath takes any path and returns it in a form ready to be displayed to

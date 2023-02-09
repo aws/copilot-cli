@@ -410,7 +410,7 @@ func (o *initPipelineOpts) askOrValidatePipelineType() error {
 				return nil
 			}
 		}
-		return fmt.Errorf("invalid pipeline type %q; must be one of %s", o.pipelineType, english.WordSeries(mutateStringSlice(pipelineTypes, strconv.Quote), "or"))
+		return fmt.Errorf("invalid pipeline type %q; must be one of %s", o.pipelineType, english.WordSeries(applyAll(pipelineTypes, strconv.Quote), "or"))
 	}
 
 	typ, err := o.prompt.SelectOption("What type of continuous delivery pipeline is this?",

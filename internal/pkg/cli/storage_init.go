@@ -254,11 +254,11 @@ func (o *initStorageOpts) validateAddIngressFrom() error {
 		log.Errorf("Most configuration flags are incompatible with --%s: %s %s; %s %s.\n",
 			storageAddIngressFromFlag,
 			color.Faint.Sprintf("(DynamoDB flags)"),
-			english.WordSeries(mutateStringSlice(ddbFlagExclusiveWithAddIngress, func(in string) string {
+			english.WordSeries(applyAll(ddbFlagExclusiveWithAddIngress, func(in string) string {
 				return fmt.Sprintf("--%s", in)
 			}), "and"),
 			color.Faint.Sprintf("(Aurora serverless flags)"),
-			english.WordSeries(mutateStringSlice(rdsFlagExclusiveWithAddIngress, func(in string) string {
+			english.WordSeries(applyAll(rdsFlagExclusiveWithAddIngress, func(in string) string {
 				return fmt.Sprintf("--%s", in)
 			}), "and"))
 		return fmt.Errorf(`specified --%s with --%s`, o.configFlagExclusiveWithAddIngress, storageAddIngressFromFlag)
@@ -290,7 +290,7 @@ func (o *initStorageOpts) validateStorageLifecycle() error {
 			return nil
 		}
 	}
-	return fmt.Errorf("invalid lifecycle; must be one of %s", english.OxfordWordSeries(mutateStringSlice(validLifecycleOptions, strconv.Quote), "or"))
+	return fmt.Errorf("invalid lifecycle; must be one of %s", english.OxfordWordSeries(applyAll(validLifecycleOptions, strconv.Quote), "or"))
 }
 
 func (o *initStorageOpts) validateServerlessVersion() error {

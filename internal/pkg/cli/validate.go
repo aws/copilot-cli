@@ -789,7 +789,7 @@ func validatePubSubName(name string) error {
 }
 
 func prettify(inputStrings []string) string {
-	prettyTypes := mutateStringSlice(inputStrings, strconv.Quote)
+	prettyTypes := applyAll(inputStrings, strconv.Quote)
 	return strings.Join(prettyTypes, ", ")
 }
 

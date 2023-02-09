@@ -166,7 +166,7 @@ const (
 // Descriptions for flags.
 var (
 	svcTypeFlagDescription = fmt.Sprintf(`Type of service to create. Must be one of:
-%s.`, strings.Join(mutateStringSlice(manifest.ServiceTypes(), strconv.Quote), ", "))
+%s.`, strings.Join(applyAll(manifest.ServiceTypes(), strconv.Quote), ", "))
 	imageFlagDescription = fmt.Sprintf(`The location of an existing Docker image.
 Cannot be specified with --%s or --%s.`, dockerFileFlag, dockerFileContextFlag)
 	dockerFileFlagDescription = fmt.Sprintf(`Path to the Dockerfile.
@@ -174,11 +174,11 @@ Cannot be specified with --%s.`, imageFlag)
 	dockerFileContextFlagDescription = fmt.Sprintf(`Path to the Docker build context.
 Cannot be specified with --%s.`, imageFlag)
 	storageTypeFlagDescription = fmt.Sprintf(`Type of storage to add. Must be one of:
-%s.`, strings.Join(mutateStringSlice(storageTypes, strconv.Quote), ", "))
+%s.`, strings.Join(applyAll(storageTypes, strconv.Quote), ", "))
 	jobTypeFlagDescription = fmt.Sprintf(`Type of job to create. Must be one of:
-%s.`, strings.Join(mutateStringSlice(manifest.JobTypes(), strconv.Quote), ", "))
+%s.`, strings.Join(applyAll(manifest.JobTypes(), strconv.Quote), ", "))
 	wkldTypeFlagDescription = fmt.Sprintf(`Type of job or svc to create. Must be one of:
-%s.`, strings.Join(mutateStringSlice(manifest.WorkloadTypes(), strconv.Quote), ", "))
+%s.`, strings.Join(applyAll(manifest.WorkloadTypes(), strconv.Quote), ", "))
 
 	clusterFlagDescription = fmt.Sprintf(`Optional. The short name or full ARN of the cluster to run the task in. 
 Cannot be specified with --%s, --%s or --%s.`, appFlag, envFlag, taskDefaultFlag)
