@@ -727,6 +727,9 @@ func (o *initStorageOpts) Execute() error {
 	if o.addIngressFrom != "" {
 		o.workloadName = o.addIngressFrom
 		o.lifecycle = lifecycleEnvironmentLevel
+		if o.storageType == rdsStorageType && o.rdsEngine == "" {
+			o.rdsEngine = addon.RDSEngineTypeMySQL
+		}
 	}
 	if err := o.readWorkloadType(); err != nil {
 		return err
@@ -939,44 +942,64 @@ func (o *initStorageOpts) wkldRDSAddonBlobs() ([]addonBlob, error) {
 }
 
 func (o *initStorageOpts) envRDSAddonBlobs() ([]addonBlob, error) {
+	if o.workloadType == manifestinfo.RequestDrivenWebServiceType {
+		return o.envRDSForRDWSAddonBlobs()
+	}
+	if o.addIngressFrom != "" {
+		return nil, nil
+	}
 	props, err := o.rdsProps()
 	if err != nil {
 		return nil, err
 	}
-	envTmplBlob := addon.EnvServerlessTemplate(props)
-	if o.workloadType == manifestinfo.RequestDrivenWebServiceType {
-		envTmplBlob = addon.EnvServerlessForRDWSTemplate(props)
+	tmplBlob := addonBlob{
+		path:        o.ws.EnvAddonFilePath(fmt.Sprintf("%s.yml", o.storageName)),
+		description: "template",
+		blob:        addon.EnvServerlessTemplate(props),
 	}
-	blobs := []addonBlob{
-		{
-			path:        o.ws.EnvAddonFilePath(fmt.Sprintf("%s.yml", o.storageName)),
-			description: "template",
-			blob:        envTmplBlob,
-		},
-		{
-			path:        o.ws.EnvAddonFilePath("addons.parameters.yml"),
-			description: "parameters",
-			blob:        addon.EnvParamsForRDS(),
-		},
+	paramBlob := addonBlob{
+		path:        o.ws.EnvAddonFilePath("addons.parameters.yml"),
+		description: "parameters",
+		blob:        addon.EnvParamsForRDS(),
 	}
-	if o.workloadType != manifestinfo.RequestDrivenWebServiceType || !o.workloadExists {
-		return blobs, nil
+	return []addonBlob{tmplBlob, paramBlob}, nil
+}
+
+func (o *initStorageOpts) envRDSForRDWSAddonBlobs() ([]addonBlob, error) {
+	rdwsIngressTmplBlob := addonBlob{
+		path:        o.ws.WorkloadAddonFilePath(o.workloadName, fmt.Sprintf("%s-ingress.yml", o.storageName)),
+		description: "template",
+		blob: addon.EnvServerlessRDWSIngressTemplate(addon.RDSIngressProps{
+			ClusterName: o.storageName,
+			Engine:      o.rdsEngine,
+		}),
 	}
-	return append(blobs,
-		addonBlob{
-			path:        o.ws.WorkloadAddonFilePath(o.workloadName, fmt.Sprintf("%s-ingress.yml", o.storageName)),
-			description: "template",
-			blob: addon.EnvServerlessRDWSIngressTemplate(addon.RDSIngressProps{
-				ClusterName: o.storageName,
-				Engine:      o.rdsEngine,
-			}),
-		},
-		addonBlob{
-			path:        o.ws.WorkloadAddonFilePath(o.workloadName, "addons.parameters.yml"),
-			description: "parameters",
-			blob:        addon.RDWSParamsForEnvRDS(),
-		},
-	), nil
+	rdwsIngressParamBlob := addonBlob{
+		path:        o.ws.WorkloadAddonFilePath(o.workloadName, "addons.parameters.yml"),
+		description: "parameters",
+		blob:        addon.RDWSParamsForEnvRDS(),
+	}
+	if o.addIngressFrom != "" {
+		return []addonBlob{rdwsIngressTmplBlob, rdwsIngressParamBlob}, nil
+	}
+	props, err := o.rdsProps()
+	if err != nil {
+		return nil, err
+	}
+	tmplBlob := addonBlob{
+		path:        o.ws.EnvAddonFilePath(fmt.Sprintf("%s.yml", o.storageName)),
+		description: "template",
+		blob:        addon.EnvServerlessForRDWSTemplate(props),
+	}
+	paramBlob := addonBlob{
+		path:        o.ws.EnvAddonFilePath("addons.parameters.yml"),
+		description: "parameters",
+		blob:        addon.EnvParamsForRDS(),
+	}
+	if o.workloadExists {
+		return []addonBlob{tmplBlob, paramBlob, rdwsIngressTmplBlob, rdwsIngressParamBlob}, nil
+	}
+	return []addonBlob{tmplBlob, paramBlob}, nil
 }
 
 func (o *initStorageOpts) rdsProps() (addon.RDSProps, error) {

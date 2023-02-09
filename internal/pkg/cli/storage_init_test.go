@@ -1325,7 +1325,7 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 			},
 			wantedErr: nil,
 		},
-		"happy calls for env RDS with a RDWS": {
+		"happy calls for env RDS with RDWS": {
 			inSvcName:           wantedSvcName,
 			inStorageType:       rdsStorageType,
 			inStorageName:       "mycluster",
@@ -1373,6 +1373,26 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte("type: Worker Service"), nil)
 				m.EXPECT().WorkloadAddonFilePath(gomock.Eq(wantedSvcName), gomock.Eq("my-bucket-access-policy.yml")).Return("mockWkldTemplatePath")
 				m.EXPECT().Write(gomock.Any(), "mockWkldTemplatePath").Return("mockWkldTemplatePath", nil)
+			},
+		},
+		"add ingress for env RDS with LBWS": {
+			inStorageType:    rdsStorageType,
+			inStorageName:    "mycluster",
+			inAddIngressFrom: wantedSvcName,
+			mockWS: func(m *mocks.MockwsReadWriter) {
+				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte("type: Load-Balanced Web Service"), nil)
+			},
+		},
+		"add ingress for env RDS with RDWS": {
+			inStorageType:    rdsStorageType,
+			inStorageName:    "mycluster",
+			inAddIngressFrom: wantedSvcName,
+			mockWS: func(m *mocks.MockwsReadWriter) {
+				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte("type: Request-Driven Web Service"), nil)
+				m.EXPECT().WorkloadAddonFilePath(gomock.Eq(wantedSvcName), gomock.Eq("mycluster-ingress.yml")).Return("mockWkldTmplPath")
+				m.EXPECT().WorkloadAddonFilePath(gomock.Eq(wantedSvcName), gomock.Eq("addons.parameters.yml")).Return("mockWkldParamsPath")
+				m.EXPECT().Write(gomock.Any(), "mockWkldTmplPath").Return("mockWkldTmplPath", nil)
+				m.EXPECT().Write(gomock.Any(), "mockWkldParamsPath").Return("mockWkldParamsPath", nil)
 			},
 		},
 		"do not attempt to read manifest or write workload ingress for an env RDS if workload is not in the workspace": {
