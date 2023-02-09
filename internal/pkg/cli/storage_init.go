@@ -7,6 +7,7 @@ import (
 	"encoding"
 	"errors"
 	"fmt"
+	"strconv"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
@@ -147,10 +148,11 @@ var engineTypes = []string{
 const workloadTypeNonLocal = "Non Local"
 
 type initStorageVars struct {
-	storageType  string
-	storageName  string
-	workloadName string
-	lifecycle    string
+	storageType    string
+	storageName    string
+	workloadName   string
+	lifecycle      string
+	addIngressFrom string
 
 	// Dynamo DB specific values collected via flags or prompts
 	partitionKey string
@@ -216,6 +218,11 @@ func (o *initStorageOpts) Validate() error {
 	if o.appName == "" {
 		return errNoAppInWorkspace
 	}
+	if o.addIngressFrom != "" {
+		if err := o.validateAddIngressFrom(); err != nil {
+			return err
+		}
+	}
 	// --no-lsi and --lsi are mutually exclusive.
 	if o.noLSI && len(o.lsiSorts) != 0 {
 		return fmt.Errorf("validate LSI configuration: cannot specify --no-lsi and --lsi options at once")
@@ -232,6 +239,31 @@ func (o *initStorageOpts) Validate() error {
 	return nil
 }
 
+func (o *initStorageOpts) validateAddIngressFrom() error {
+	if o.workloadName != "" {
+		return fmt.Errorf("--%s cannot be specified with --%s", workloadFlag, storageAddIngressFromFlag)
+	}
+	if o.lifecycle == lifecycleWorkloadLevel {
+		return fmt.Errorf("--%s cannot be %s when --%s is used", storageLifecycleFlag, lifecycleWorkloadLevel, storageAddIngressFromFlag)
+	}
+	if o.storageName == "" {
+		return fmt.Errorf("--%s is required when --%s is used", nameFlag, storageAddIngressFromFlag)
+	}
+	if o.storageType == "" {
+		return fmt.Errorf("--%s is required when --%s is used", storageTypeFlag, storageAddIngressFromFlag)
+	}
+	exist, err := o.ws.WorkloadExists(o.addIngressFrom)
+	if err != nil {
+		return fmt.Errorf("check if %s exists in the workspace: %w", o.addIngressFrom, err)
+	}
+	if !exist {
+		return fmt.Errorf("workload %s not found in the workspace", o.addIngressFrom)
+	}
+	o.workloadExists = true
+	return nil
+
+}
+
 func (o *initStorageOpts) validateServerlessVersion() error {
 	for _, valid := range auroraServerlessVersions {
 		if o.auroraServerlessVersion == valid {
@@ -244,6 +276,9 @@ func (o *initStorageOpts) validateServerlessVersion() error {
 
 // Ask asks for fields that are required but not passed in.
 func (o *initStorageOpts) Ask() error {
+	if o.addIngressFrom != "" {
+		return nil
+	}
 	if err := o.validateOrAskStorageType(); err != nil {
 		return err
 	}
@@ -479,7 +514,7 @@ func (o *initStorageOpts) validateStorageLifecycle() error {
 			return nil
 		}
 	}
-	return fmt.Errorf("invalid lifecycle; must be one of %s", english.OxfordWordSeries(quoteStringSlice(validLifecycleOptions), "or"))
+	return fmt.Errorf("invalid lifecycle; must be one of %s", english.OxfordWordSeries(applyAll(validLifecycleOptions, strconv.Quote), "or"))
 }
 
 // validateWorkloadNameWithLifecycle requires the workload to be in the workspace if the storage lifecycle is on workload-level.
@@ -1033,7 +1068,8 @@ Resource names are injected into your containers as environment variables for ea
 	cmd.Flags().StringVarP(&vars.storageName, nameFlag, nameFlagShort, "", storageFlagDescription)
 	cmd.Flags().StringVarP(&vars.storageType, storageTypeFlag, typeFlagShort, "", storageTypeFlagDescription)
 	cmd.Flags().StringVarP(&vars.workloadName, workloadFlag, workloadFlagShort, "", storageWorkloadFlagDescription)
-	cmd.Flags().StringVarP(&vars.lifecycle, storageLifecycleFlag, "", "", storageLifecycleFlagDescription)
+	cmd.Flags().StringVarP(&vars.lifecycle, storageLifecycleFlag, "", lifecycleWorkloadLevel, storageLifecycleFlagDescription)
+	cmd.Flags().StringVarP(&vars.addIngressFrom, storageAddIngressFromFlag, "", "", storageAddIngressFromFlagDescription)
 
 	cmd.Flags().StringVar(&vars.partitionKey, storagePartitionKeyFlag, "", storagePartitionKeyFlagDescription)
 	cmd.Flags().StringVar(&vars.sortKey, storageSortKeyFlag, "", storageSortKeyFlagDescription)
@@ -1046,31 +1082,32 @@ Resource names are injected into your containers as environment variables for ea
 	cmd.Flags().StringVar(&vars.rdsInitialDBName, storageRDSInitialDBFlag, "", storageRDSInitialDBFlagDescription)
 	cmd.Flags().StringVar(&vars.rdsParameterGroup, storageRDSParameterGroupFlag, "", storageRDSParameterGroupFlagDescription)
 
+	ddbFlags := []string{storagePartitionKeyFlag, storageSortKeyFlag, storageNoSortFlag, storageLSIConfigFlag, storageNoLSIFlag}
+	rdsFlags := []string{storageAuroraServerlessVersionFlag, storageRDSEngineFlag, storageRDSInitialDBFlag, storageRDSParameterGroupFlag}
+	for _, f := range append(ddbFlags, storageAuroraServerlessVersionFlag, storageRDSInitialDBFlag, storageRDSParameterGroupFlag) {
+		cmd.MarkFlagsMutuallyExclusive(storageAddIngressFromFlag, f)
+	}
 	requiredFlags := pflag.NewFlagSet("Required", pflag.ContinueOnError)
 	requiredFlags.AddFlag(cmd.Flags().Lookup(nameFlag))
 	requiredFlags.AddFlag(cmd.Flags().Lookup(storageTypeFlag))
 	requiredFlags.AddFlag(cmd.Flags().Lookup(workloadFlag))
 	requiredFlags.AddFlag(cmd.Flags().Lookup(storageLifecycleFlag))
 
-	ddbFlags := pflag.NewFlagSet("DynamoDB", pflag.ContinueOnError)
-	ddbFlags.AddFlag(cmd.Flags().Lookup(storagePartitionKeyFlag))
-	ddbFlags.AddFlag(cmd.Flags().Lookup(storageSortKeyFlag))
-	ddbFlags.AddFlag(cmd.Flags().Lookup(storageNoSortFlag))
-	ddbFlags.AddFlag(cmd.Flags().Lookup(storageLSIConfigFlag))
-	ddbFlags.AddFlag(cmd.Flags().Lookup(storageNoLSIFlag))
-
-	auroraFlags := pflag.NewFlagSet("Aurora Serverless", pflag.ContinueOnError)
-	auroraFlags.AddFlag(cmd.Flags().Lookup(storageAuroraServerlessVersionFlag))
-	auroraFlags.AddFlag(cmd.Flags().Lookup(storageRDSEngineFlag))
-	auroraFlags.AddFlag(cmd.Flags().Lookup(storageRDSInitialDBFlag))
-	auroraFlags.AddFlag(cmd.Flags().Lookup(storageRDSParameterGroupFlag))
+	ddbFlagSet := pflag.NewFlagSet("DynamoDB", pflag.ContinueOnError)
+	for _, f := range ddbFlags {
+		ddbFlagSet.AddFlag(cmd.Flags().Lookup(f))
+	}
+	auroraFlagSet := pflag.NewFlagSet("Aurora Serverless", pflag.ContinueOnError)
+	for _, f := range rdsFlags {
+		auroraFlagSet.AddFlag(cmd.Flags().Lookup(f))
+	}
 
 	cmd.Annotations = map[string]string{
 		// The order of the sections we want to display.
 		"sections":          `Required,DynamoDB,Aurora Serverless`,
 		"Required":          requiredFlags.FlagUsages(),
-		"DynamoDB":          ddbFlags.FlagUsages(),
-		"Aurora Serverless": auroraFlags.FlagUsages(),
+		"DynamoDB":          ddbFlagSet.FlagUsages(),
+		"Aurora Serverless": auroraFlagSet.FlagUsages(),
 	}
 	cmd.SetUsageTemplate(`{{h1 "Usage"}}{{if .Runnable}}
   {{.UseLine}}{{end}}{{$annotations := .Annotations}}{{$sections := split .Annotations.sections ","}}{{if gt (len $sections) 0}}
