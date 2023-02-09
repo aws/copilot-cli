@@ -724,6 +724,10 @@ func (o *initStorageOpts) validateOrAskAuroraInitialDBName() error {
 
 // Execute deploys a new environment with CloudFormation and adds it to SSM.
 func (o *initStorageOpts) Execute() error {
+	if o.addIngressFrom != "" {
+		o.workloadName = o.addIngressFrom
+		o.lifecycle = lifecycleEnvironmentLevel
+	}
 	if err := o.readWorkloadType(); err != nil {
 		return err
 	}
