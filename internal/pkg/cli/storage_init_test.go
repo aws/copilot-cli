@@ -1214,7 +1214,7 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 				m.EXPECT().Write(gomock.Any(), "mockPath").Return("/frontend/addons/mycluster.yml", nil)
 			},
 			mockStore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListEnvironments(gomock.Any()).AnyTimes()
+				m.EXPECT().ListEnvironments(gomock.Any()).Times(1)
 			},
 		},
 		"happy calls for wkld RDS with a RDWS": {
@@ -1233,7 +1233,7 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 				m.EXPECT().Write(gomock.Any(), "mockParamsPath").Return("/frontend/addons/addons.parameters.yml", nil)
 			},
 			mockStore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListEnvironments(gomock.Any()).AnyTimes()
+				m.EXPECT().ListEnvironments(gomock.Any()).Times(1)
 			},
 		},
 		"happy calls for env S3": {
@@ -1301,7 +1301,7 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 				m.EXPECT().Write(gomock.Any(), "mockEnvParametersPath").Return("mockEnvParametersPath", nil)
 			},
 			mockStore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListEnvironments(gomock.Any()).AnyTimes()
+				m.EXPECT().ListEnvironments(gomock.Any()).Times(1)
 			},
 		},
 		"happy calls for env RDS with RDWS": {
@@ -1325,7 +1325,7 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 				m.EXPECT().Write(gomock.Any(), "mockWkldParamsPath").Return("mockWkldParamsPath", nil)
 			},
 			mockStore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListEnvironments(gomock.Any()).AnyTimes()
+				m.EXPECT().ListEnvironments(gomock.Any()).Times(1)
 			},
 		},
 		"add ingress for env DDB": {
@@ -1388,7 +1388,7 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 				m.EXPECT().Write(gomock.Any(), gomock.Not(gomock.Eq("mockWkldPath"))).Return("mockEnvTemplatePath", nil).Times(2)
 			},
 			mockStore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListEnvironments(gomock.Any()).AnyTimes()
+				m.EXPECT().ListEnvironments(gomock.Any()).Times(1)
 			},
 		},
 		"error addon exists": {
