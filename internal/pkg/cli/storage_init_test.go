@@ -1363,6 +1363,18 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 				m.EXPECT().Write(gomock.Any(), "mockWkldTemplatePath").Return("mockWkldTemplatePath", nil)
 			},
 		},
+		"add ingress for env S3": {
+			inAppName:        wantedAppName,
+			inStorageType:    s3StorageType,
+			inStorageName:    "my-bucket",
+			inAddIngressFrom: wantedSvcName,
+
+			mockWS: func(m *mocks.MockwsReadWriter) {
+				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte("type: Worker Service"), nil)
+				m.EXPECT().WorkloadAddonFilePath(gomock.Eq(wantedSvcName), gomock.Eq("my-bucket-access-policy.yml")).Return("mockWkldTemplatePath")
+				m.EXPECT().Write(gomock.Any(), "mockWkldTemplatePath").Return("mockWkldTemplatePath", nil)
+			},
+		},
 		"do not attempt to read manifest or write workload ingress for an env RDS if workload is not in the workspace": {
 			inSvcName:           wantedSvcName,
 			inStorageType:       rdsStorageType,

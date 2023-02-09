@@ -876,25 +876,25 @@ func (o *initStorageOpts) wkldS3AddonBlobs() ([]addonBlob, error) {
 }
 
 func (o *initStorageOpts) envS3AddonBlobs() ([]addonBlob, error) {
-	props := o.s3Props()
-	blobs := []addonBlob{
-		{
-			path:        o.ws.EnvAddonFilePath(fmt.Sprintf("%s.yml", o.storageName)),
-			description: "template",
-			blob:        addon.EnvS3Template(props),
-		},
-	}
-	if !o.workloadExists {
-		return blobs, nil
-
-	}
-	return append(blobs, addonBlob{
+	ingressBlob := addonBlob{
 		path:        o.ws.WorkloadAddonFilePath(o.workloadName, fmt.Sprintf("%s-access-policy.yml", o.storageName)),
 		description: "template",
 		blob: addon.EnvS3AccessPolicyTemplate(&addon.AccessPolicyProps{
 			Name: o.storageName,
 		}),
-	}), nil
+	}
+	if o.addIngressFrom != "" {
+		return []addonBlob{ingressBlob}, nil
+	}
+	tmplBlob := addonBlob{
+		path:        o.ws.EnvAddonFilePath(fmt.Sprintf("%s.yml", o.storageName)),
+		description: "template",
+		blob:        addon.EnvS3Template(o.s3Props()),
+	}
+	if !o.workloadExists {
+		return []addonBlob{tmplBlob}, nil
+	}
+	return []addonBlob{tmplBlob, ingressBlob}, nil
 }
 
 func (o *initStorageOpts) s3Props() *addon.S3Props {
