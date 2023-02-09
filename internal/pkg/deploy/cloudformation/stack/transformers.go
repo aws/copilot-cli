@@ -479,11 +479,6 @@ func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (networkLoadBalanc
 		protocol = aws.String(defaultNLBProtocol)
 	}
 
-	var certRequired bool
-	if strings.ToUpper(aws.StringValue(protocol)) == manifest.TLS {
-		certRequired = true
-	}
-
 	aliases, err := convertAlias(nlbConfig.Aliases)
 	if err != nil {
 		return networkLoadBalancerConfig{}, fmt.Errorf(`convert "nlb.alias" to string slice: %w`, err)
@@ -507,7 +502,7 @@ func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (networkLoadBalanc
 				},
 			},
 			MainContainerPort:   s.manifest.MainContainerPort(),
-			CertificateRequired: certRequired,
+			CertificateRequired: strings.ToUpper(aws.StringValue(protocol)) == manifest.TLS,
 		},
 	}
 

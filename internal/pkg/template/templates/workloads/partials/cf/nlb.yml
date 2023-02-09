@@ -11,11 +11,7 @@ PublicNetworkLoadBalancer:
             !Sub '${AppName}-${EnvName}-PublicSubnets'
     Type: network
 {{- range $i, $listener := .NLB.Listener }}
-{{- if eq $i 0 }}
-NLBListener:
-{{- else }}
-NLBListener{{$i}}:
-{{- end }}
+NLBListener{{- if ne $i 0 }}{{$i}}{{end}}:
   Type: AWS::ElasticLoadBalancingV2::Listener
   Properties:
     DefaultActions:
@@ -30,11 +26,7 @@ NLBListener{{$i}}:
     SslPolicy: {{ if $listener.SSLPolicy }}{{ $listener.SSLPolicy }}{{ else }} ELBSecurityPolicy-TLS13-1-2-2021-06 {{ end }}
   {{- end}}
 
-{{- if eq $i 0 }}
-NLBTargetGroup:
-{{- else }}
-NLBTargetGroup{{$i}}:
-{{- end }}
+NLBTargetGroup{{- if ne $i 0 }}{{$i}}{{end}}:
   Metadata:
     'aws:copilot:description': 'A target group to connect the network load balancer to your service'
   Type: AWS::ElasticLoadBalancingV2::TargetGroup
