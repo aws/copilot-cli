@@ -128,19 +128,11 @@ Resources:
           TargetGroupArn: !Ref TargetGroup
   {{- end}}
   {{- if .NLB}}
-  {{- if eq (len .NLB.Listener) 1 }}
-    {{- range $listener := .NLB.Listener }}
+    {{- range $i, $listener := .NLB.Listener }}
         - ContainerName: {{$listener.TargetContainer}}
           ContainerPort: {{$listener.TargetPort}}
-          TargetGroupArn: !Ref NLBTargetGroup
+          TargetGroupArn: !Ref NLBTargetGroup{{ if ne $i 0 }}{{ $i }}{{ end }}
     {{- end }}
-  {{- else if gt (len .NLB.Listener) 1 }}
-    {{- range $listener := .NLB.Listener }}
-        - ContainerName: {{$listener.TargetContainer}}
-          ContainerPort: {{$listener.TargetPort}}
-          TargetGroupArn: !Ref NLBTargetGroupFor{{$listener.Port}}
-    {{- end }}
-  {{- end}}
   {{- end }}
       ServiceRegistries:
         - RegistryArn: !GetAtt DiscoveryService.Arn
