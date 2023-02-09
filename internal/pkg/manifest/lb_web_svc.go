@@ -9,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/imdario/mergo"
 
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 )
 
@@ -120,7 +121,7 @@ func newDefaultHTTPLoadBalancedWebService() *LoadBalancedWebService {
 func newDefaultLoadBalancedWebService() *LoadBalancedWebService {
 	return &LoadBalancedWebService{
 		Workload: Workload{
-			Type: aws.String(LoadBalancedWebServiceType),
+			Type: aws.String(manifestinfo.LoadBalancedWebServiceType),
 		},
 		LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 			ImageConfig: ImageWithPortAndHealthcheck{},
@@ -130,7 +131,7 @@ func newDefaultLoadBalancedWebService() *LoadBalancedWebService {
 				Count: Count{
 					Value: aws.Int(1),
 					AdvancedCount: AdvancedCount{ // Leave advanced count empty while passing down the type of the workload.
-						workloadType: LoadBalancedWebServiceType,
+						workloadType: manifestinfo.LoadBalancedWebServiceType,
 					},
 				},
 				ExecuteCommand: ExecuteCommand{

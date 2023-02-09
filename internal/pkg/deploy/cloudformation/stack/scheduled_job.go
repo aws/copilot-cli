@@ -12,6 +12,7 @@ import (
 	"unicode"
 
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
@@ -175,7 +176,7 @@ func (j *ScheduledJob) Template() (string, error) {
 		SerializedManifest:       string(j.rawManifest),
 		Variables:                convertEnvVars(j.manifest.Variables),
 		Secrets:                  convertSecrets(j.manifest.Secrets),
-		WorkloadType:             manifest.ScheduledJobType,
+		WorkloadType:             manifestinfo.ScheduledJobType,
 		NestedStack:              addonsOutputs,
 		AddonsExtraParams:        addonsParams,
 		Sidecars:                 sidecars,

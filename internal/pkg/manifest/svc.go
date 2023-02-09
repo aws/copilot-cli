@@ -6,39 +6,18 @@ package manifest
 import (
 	"errors"
 	"fmt"
-	"github.com/aws/copilot-cli/internal/pkg/template"
 	"math"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
+	"github.com/aws/copilot-cli/internal/pkg/template"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"gopkg.in/yaml.v3"
 )
-
-const (
-	// LoadBalancedWebServiceType is a web service with a load balancer and Fargate as compute.
-	LoadBalancedWebServiceType = "Load Balanced Web Service"
-	// RequestDrivenWebServiceType is a Request-Driven Web Service managed by AppRunner
-	RequestDrivenWebServiceType = "Request-Driven Web Service"
-	// BackendServiceType is a service that cannot be accessed from the internet but can be reached from other services.
-	BackendServiceType = "Backend Service"
-	// WorkerServiceType is a worker service that manages the consumption of messages.
-	WorkerServiceType = "Worker Service"
-	// StaticSiteType is a static site service that manages static assets.
-	StaticSiteType = "Static Site"
-)
-
-// ServiceTypes returns the list of supported service manifest types.
-func ServiceTypes() []string {
-	return []string{
-		RequestDrivenWebServiceType,
-		LoadBalancedWebServiceType,
-		BackendServiceType,
-		WorkerServiceType,
-	}
-}
 
 // Range contains either a Range or a range configuration for Autoscaling ranges.
 type Range struct {
@@ -271,11 +250,11 @@ func (a *AdvancedCount) hasAutoscaling() bool {
 
 func (a *AdvancedCount) validScalingFields() []string {
 	switch a.workloadType {
-	case LoadBalancedWebServiceType:
+	case manifestinfo.LoadBalancedWebServiceType:
 		return []string{"cpu_percentage", "memory_percentage", "requests", "response_time"}
-	case BackendServiceType:
+	case manifestinfo.BackendServiceType:
 		return []string{"cpu_percentage", "memory_percentage", "requests", "response_time"}
-	case WorkerServiceType:
+	case manifestinfo.WorkerServiceType:
 		return []string{"cpu_percentage", "memory_percentage", "queue_delay"}
 	default:
 		return nil
@@ -284,11 +263,11 @@ func (a *AdvancedCount) validScalingFields() []string {
 
 func (a *AdvancedCount) hasScalingFieldsSet() bool {
 	switch a.workloadType {
-	case LoadBalancedWebServiceType:
+	case manifestinfo.LoadBalancedWebServiceType:
 		return !a.CPU.IsEmpty() || !a.Memory.IsEmpty() || !a.Requests.IsEmpty() || !a.ResponseTime.IsEmpty()
-	case BackendServiceType:
+	case manifestinfo.BackendServiceType:
 		return !a.CPU.IsEmpty() || !a.Memory.IsEmpty() || !a.Requests.IsEmpty() || !a.ResponseTime.IsEmpty()
-	case WorkerServiceType:
+	case manifestinfo.WorkerServiceType:
 		return !a.CPU.IsEmpty() || !a.Memory.IsEmpty() || !a.QueueScaling.IsEmpty()
 	default:
 		return !a.CPU.IsEmpty() || !a.Memory.IsEmpty() || !a.Requests.IsEmpty() || !a.ResponseTime.IsEmpty() || !a.QueueScaling.IsEmpty()
@@ -299,15 +278,15 @@ func (a *AdvancedCount) getInvalidFieldsSet() []string {
 	var invalidFields []string
 
 	switch a.workloadType {
-	case LoadBalancedWebServiceType:
+	case manifestinfo.LoadBalancedWebServiceType:
 		if !a.QueueScaling.IsEmpty() {
 			invalidFields = append(invalidFields, "queue_delay")
 		}
-	case BackendServiceType:
+	case manifestinfo.BackendServiceType:
 		if !a.QueueScaling.IsEmpty() {
 			invalidFields = append(invalidFields, "queue_delay")
 		}
-	case WorkerServiceType:
+	case manifestinfo.WorkerServiceType:
 		if !a.Requests.IsEmpty() {
 			invalidFields = append(invalidFields, "requests")
 		}
@@ -348,17 +327,6 @@ func (qs *QueueScaling) AcceptableBacklogPerTask() (int, error) {
 	}
 	v := math.Ceil(float64(*qs.AcceptableLatency) / float64(*qs.AvgProcessingTime))
 	return int(v), nil
-}
-
-// IsTypeAService returns if manifest type is service.
-func IsTypeAService(t string) bool {
-	for _, serviceType := range ServiceTypes() {
-		if t == serviceType {
-			return true
-		}
-	}
-
-	return false
 }
 
 // HTTPHealthCheckArgs holds the configuration to determine if the load balanced web service is healthy.

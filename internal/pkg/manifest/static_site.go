@@ -5,8 +5,13 @@ package manifest
 
 import (
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/imdario/mergo"
+)
+
+const (
+	staticSiteManifestPath = "workloads/services/static-site/manifest.yml"
 )
 
 // StaticSite holds the configuration to configure and upload static assets to the static site service.
@@ -39,7 +44,7 @@ func NewStaticSite(name string) *StaticSite {
 	return &StaticSite{
 		Workload: Workload{
 			Name: aws.String(name),
-			Type: aws.String(StaticSiteType),
+			Type: aws.String(manifestinfo.StaticSiteType),
 		},
 		parser: template.New(),
 	}
@@ -66,6 +71,16 @@ func (s StaticSite) applyEnv(envName string) (workloadManifest, error) {
 	}
 	s.Environments = nil
 	return &s, nil
+}
+
+// MarshalBinary serializes the manifest object into a binary YAML document.
+// Implements the encoding.BinaryMarshaler interface.
+func (s *StaticSite) MarshalBinary() ([]byte, error) {
+	content, err := s.parser.Parse(staticSiteManifestPath, *s)
+	if err != nil {
+		return nil, err
+	}
+	return content.Bytes(), nil
 }
 
 // To implement workloadManifest.

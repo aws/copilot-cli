@@ -18,6 +18,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"golang.org/x/text/cases"
@@ -60,7 +61,7 @@ func NewWorkerSvcDeployer(in *WorkloadDeployerInput) (*workerSvcDeployer, error)
 	}
 	wsMft, ok := in.Mft.(*manifest.WorkerService)
 	if !ok {
-		return nil, fmt.Errorf("manifest is not of type %s", manifest.WorkerServiceType)
+		return nil, fmt.Errorf("manifest is not of type %s", manifestinfo.WorkerServiceType)
 	}
 	return &workerSvcDeployer{
 		svcDeployer: svcDeployer,
@@ -72,7 +73,7 @@ func NewWorkerSvcDeployer(in *WorkloadDeployerInput) (*workerSvcDeployer, error)
 func workerCustomResources(fs template.Reader) ([]*customresource.CustomResource, error) {
 	crs, err := customresource.Worker(fs)
 	if err != nil {
-		return nil, fmt.Errorf("read custom resources for a %q: %w", manifest.WorkerServiceType, err)
+		return nil, fmt.Errorf("read custom resources for a %q: %w", manifestinfo.WorkerServiceType, err)
 	}
 	return crs, nil
 }

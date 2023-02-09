@@ -15,6 +15,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 )
 
@@ -36,7 +37,7 @@ func NewBackendDeployer(in *WorkloadDeployerInput) (*backendSvcDeployer, error) 
 	}
 	bsMft, ok := in.Mft.(*manifest.BackendService)
 	if !ok {
-		return nil, fmt.Errorf("manifest is not of type %s", manifest.BackendServiceType)
+		return nil, fmt.Errorf("manifest is not of type %s", manifestinfo.BackendServiceType)
 	}
 	return &backendSvcDeployer{
 		svcDeployer:        svcDeployer,
@@ -48,7 +49,7 @@ func NewBackendDeployer(in *WorkloadDeployerInput) (*backendSvcDeployer, error) 
 func backendCustomResources(fs template.Reader) ([]*customresource.CustomResource, error) {
 	crs, err := customresource.Backend(fs)
 	if err != nil {
-		return nil, fmt.Errorf("read custom resources for a %q: %w", manifest.BackendServiceType, err)
+		return nil, fmt.Errorf("read custom resources for a %q: %w", manifestinfo.BackendServiceType, err)
 	}
 	return crs, nil
 }

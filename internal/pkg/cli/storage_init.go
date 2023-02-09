@@ -7,16 +7,17 @@ import (
 	"encoding"
 	"errors"
 	"fmt"
+	"strconv"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/dustin/go-humanize/english"
 
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/config"
-	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
@@ -27,13 +28,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
-
-const (
-	lifecycleEnvironmentLevel = "environment"
-	lifecycleWorkloadLevel    = "workload"
-)
-
-var validLifecycleOptions = []string{lifecycleWorkloadLevel, lifecycleEnvironmentLevel}
 
 const (
 	dynamoDBStorageType = "DynamoDB"
@@ -60,6 +54,16 @@ const (
 	rdsFriendlyText           = "Database Cluster"
 )
 
+const (
+	lifecycleEnvironmentLevel = "environment"
+	lifecycleWorkloadLevel    = "workload"
+
+	lifecycleEnvironmentFriendlyText = "No, the storage should be created and deleted at the environment level"
+	fmtLifecycleWorkloadFriendlyText = "Yes, the storage should be created and deleted at the same time as %s"
+)
+
+var validLifecycleOptions = []string{lifecycleWorkloadLevel, lifecycleEnvironmentLevel}
+
 // General-purpose prompts, collected for all storage resources.
 var (
 	fmtStorageInitTypePrompt = "What " + color.Emphasize("type") + " of storage would you like to associate with %s?"
@@ -73,6 +77,8 @@ Aurora Serverless is an on-demand autoscaling configuration for Amazon Aurora, a
 	storageInitNameHelp      = "The name of this storage resource. You can use the following characters: a-zA-Z0-9-_"
 
 	storageInitSvcPrompt = "Which " + color.Emphasize("workload") + " needs access to the storage?"
+
+	fmtStorageInitLifecyclePrompt = "Do you want the storage to be created and deleted with the %s service?"
 )
 
 // DDB-specific questions and help prompts.
@@ -139,11 +145,14 @@ var engineTypes = []string{
 	engineTypePostgreSQL,
 }
 
+const workloadTypeNonLocal = "Non Local"
+
 type initStorageVars struct {
-	storageType  string
-	storageName  string
-	workloadName string
-	lifecycle    string
+	storageType    string
+	storageName    string
+	workloadName   string
+	lifecycle      string
+	addIngressFrom string
 
 	// Dynamo DB specific values collected via flags or prompts
 	partitionKey string
@@ -167,8 +176,9 @@ type initStorageOpts struct {
 	ws    wsReadWriter
 	store store
 
-	sel    wsSelector
-	prompt prompter
+	sel       wsSelector
+	configSel configSelector
+	prompt    prompter
 
 	// Cached data.
 	workloadType   string
@@ -194,11 +204,12 @@ func newStorageInitOpts(vars initStorageVars) (*initStorageOpts, error) {
 		initStorageVars: vars,
 		appName:         tryReadingAppName(),
 
-		fs:     fs,
-		store:  store,
-		ws:     ws,
-		sel:    selector.NewLocalWorkloadSelector(prompter, store, ws),
-		prompt: prompter,
+		fs:        fs,
+		store:     store,
+		ws:        ws,
+		sel:       selector.NewLocalWorkloadSelector(prompter, store, ws),
+		configSel: selector.NewConfigSelector(prompter, store),
+		prompt:    prompter,
 	}, nil
 }
 
@@ -207,8 +218,8 @@ func (o *initStorageOpts) Validate() error {
 	if o.appName == "" {
 		return errNoAppInWorkspace
 	}
-	if o.lifecycle != "" {
-		if err := o.validateStorageLifecycle(); err != nil {
+	if o.addIngressFrom != "" {
+		if err := o.validateAddIngressFrom(); err != nil {
 			return err
 		}
 	}
@@ -228,13 +239,29 @@ func (o *initStorageOpts) Validate() error {
 	return nil
 }
 
-func (o *initStorageOpts) validateStorageLifecycle() error {
-	for _, valid := range validLifecycleOptions {
-		if o.lifecycle == valid {
-			return nil
-		}
+func (o *initStorageOpts) validateAddIngressFrom() error {
+	if o.workloadName != "" {
+		return fmt.Errorf("--%s cannot be specified with --%s", workloadFlag, storageAddIngressFromFlag)
 	}
-	return fmt.Errorf("invalid lifecycle; must be one of %s", english.OxfordWordSeries(quoteStringSlice(validLifecycleOptions), "or"))
+	if o.lifecycle == lifecycleWorkloadLevel {
+		return fmt.Errorf("--%s cannot be %s when --%s is used", storageLifecycleFlag, lifecycleWorkloadLevel, storageAddIngressFromFlag)
+	}
+	if o.storageName == "" {
+		return fmt.Errorf("--%s is required when --%s is used", nameFlag, storageAddIngressFromFlag)
+	}
+	if o.storageType == "" {
+		return fmt.Errorf("--%s is required when --%s is used", storageTypeFlag, storageAddIngressFromFlag)
+	}
+	exist, err := o.ws.WorkloadExists(o.addIngressFrom)
+	if err != nil {
+		return fmt.Errorf("check if %s exists in the workspace: %w", o.addIngressFrom, err)
+	}
+	if !exist {
+		return fmt.Errorf("workload %s not found in the workspace", o.addIngressFrom)
+	}
+	o.workloadExists = true
+	return nil
+
 }
 
 func (o *initStorageOpts) validateServerlessVersion() error {
@@ -249,15 +276,23 @@ func (o *initStorageOpts) validateServerlessVersion() error {
 
 // Ask asks for fields that are required but not passed in.
 func (o *initStorageOpts) Ask() error {
-	if err := o.validateOrAskStorageWl(); err != nil {
-		return err
+	if o.addIngressFrom != "" {
+		return nil
 	}
 	if err := o.validateOrAskStorageType(); err != nil {
 		return err
 	}
-
+	if err := o.askWorkload(); err != nil {
+		return err
+	}
 	// Storage name needs to be asked after workload because for Aurora the default storage name uses the workload name.
 	if err := o.validateOrAskStorageName(); err != nil {
+		return err
+	}
+	if err := o.validateOrAskLifecycle(); err != nil {
+		return err
+	}
+	if err := o.validateWorkloadNameWithLifecycle(); err != nil {
 		return err
 	}
 	switch o.storageType {
@@ -325,7 +360,7 @@ func (o *initStorageOpts) validateStorageType() error {
 			log.Errorf(`Your %s needs to be connected to a VPC in order to use a %s resource.
 You can enable VPC connectivity by updating your manifest with:
 %s
-`, manifest.RequestDrivenWebServiceType, o.storageType, color.HighlightCodeBlock(`network:
+`, manifestinfo.RequestDrivenWebServiceType, o.storageType, color.HighlightCodeBlock(`network:
   vpc:
     placement: private`))
 		}
@@ -395,25 +430,105 @@ func (o *initStorageOpts) askStorageNameWithDefault(friendlyText, defaultName st
 	return nil
 }
 
-func (o *initStorageOpts) validateOrAskStorageWl() error {
+func (o *initStorageOpts) askWorkload() error {
 	if o.workloadName != "" {
-		return o.validateWorkloadName()
+		return nil
 	}
-	workload, err := o.sel.Workload(storageInitSvcPrompt, "")
+	if o.lifecycle == lifecycleWorkloadLevel {
+		return o.askLocalWorkload()
+	}
+	workload, err := o.configSel.Workload(storageInitSvcPrompt, "", o.appName)
 	if err != nil {
-		return fmt.Errorf("retrieve local workload names: %w", err)
+		return fmt.Errorf("select a workload from app %s: %w", o.appName, err)
 	}
 	o.workloadName = workload
 	return nil
 }
 
-func (o *initStorageOpts) validateWorkloadName() error {
+func (o *initStorageOpts) askLocalWorkload() error {
+	workload, err := o.sel.Workload(storageInitSvcPrompt, "")
+	if err != nil {
+		return fmt.Errorf("retrieve local workload names: %w", err)
+	}
+	o.workloadName = workload
+	o.workloadExists = true
+	return nil
+}
+
+func (o *initStorageOpts) validateOrAskLifecycle() error {
+	if o.lifecycle != "" {
+		return o.validateStorageLifecycle()
+	}
+	_, err := o.ws.ReadFile(o.ws.WorkloadAddonFileAbsPath(o.workloadName, fmt.Sprintf("%s.yml", o.storageName)))
+	if err == nil {
+		o.lifecycle = lifecycleWorkloadLevel
+		o.workloadExists = true
+		log.Infof("%s %s %s\n",
+			color.Emphasize("Lifecycle:"),
+			"workload-level",
+			color.Faint.Sprintf("(found %s)", o.ws.WorkloadAddonFilePath(o.workloadName, fmt.Sprintf("%s.yml", o.storageName))),
+		)
+		return nil
+	}
+	if _, ok := err.(*workspace.ErrFileNotExists); !ok {
+		return fmt.Errorf("check if %s addon exists for %s in workspace: %w", o.storageName, o.workloadName, err)
+	}
+	_, err = o.ws.ReadFile(o.ws.EnvAddonFileAbsPath(fmt.Sprintf("%s.yml", o.storageName)))
+	if err == nil {
+		o.lifecycle = lifecycleEnvironmentLevel
+		log.Infof("%s %s %s\n",
+			color.Emphasize("Lifecycle:"),
+			"environment-level",
+			color.Faint.Sprintf("(found %s)", o.ws.EnvAddonFilePath(fmt.Sprintf("%s.yml", o.storageName))),
+		)
+		return nil
+	}
+	if _, ok := err.(*workspace.ErrFileNotExists); !ok {
+		return fmt.Errorf("check if %s exists as an environment addon in workspace: %w", o.storageName, err)
+	}
+	options := []prompt.Option{
+		{
+			Value:        lifecycleWorkloadLevel,
+			FriendlyText: fmt.Sprintf(fmtLifecycleWorkloadFriendlyText, color.HighlightUserInput(o.workloadName)),
+		},
+		{
+			Value:        lifecycleEnvironmentLevel,
+			FriendlyText: lifecycleEnvironmentFriendlyText,
+		},
+	}
+	lifecycle, err := o.prompt.SelectOption(
+		fmt.Sprintf(fmtStorageInitLifecyclePrompt, o.workloadName),
+		"",
+		options,
+		prompt.WithFinalMessage("Lifecycle: "))
+	if err != nil {
+		return fmt.Errorf("ask for lifecycle: %w", err)
+	}
+	o.lifecycle = lifecycle
+	return nil
+}
+
+func (o *initStorageOpts) validateStorageLifecycle() error {
+	for _, valid := range validLifecycleOptions {
+		if o.lifecycle == valid {
+			return nil
+		}
+	}
+	return fmt.Errorf("invalid lifecycle; must be one of %s", english.OxfordWordSeries(applyAll(validLifecycleOptions, strconv.Quote), "or"))
+}
+
+// validateWorkloadNameWithLifecycle requires the workload to be in the workspace if the storage lifecycle is on workload-level.
+// Otherwise, it only caches whether the workload is present.
+func (o *initStorageOpts) validateWorkloadNameWithLifecycle() error {
+	if o.workloadExists {
+		return nil
+	}
 	exists, err := o.ws.WorkloadExists(o.workloadName)
 	if err != nil {
 		return fmt.Errorf("check if %s exists in the workspace: %w", o.workloadName, err)
 	}
 	o.workloadExists = exists
-	if !exists {
+	if o.lifecycle == lifecycleWorkloadLevel && !exists {
 		return fmt.Errorf("workload %s not found in the workspace", o.workloadName)
 	}
 	return nil
@@ -636,6 +751,10 @@ func (o *initStorageOpts) Execute() error {
 }
 
 func (o *initStorageOpts) readWorkloadType() error {
+	if !o.workloadExists {
+		o.workloadType = workloadTypeNonLocal
+		return nil
+	}
 	mft, err := o.ws.ReadWorkloadManifest(o.workloadName)
 	if err != nil {
 		return fmt.Errorf("read manifest for %s: %w", o.workloadName, err)
@@ -796,7 +915,7 @@ func (o *initStorageOpts) wkldRDSAddonBlobs() ([]addonBlob, error) {
 		description: "template",
 		blob:        tmplBlob,
 	})
-	if o.workloadType != manifest.RequestDrivenWebServiceType {
+	if o.workloadType != manifestinfo.RequestDrivenWebServiceType {
 		return blobs, nil
 	}
 	return append(blobs, addonBlob{
@@ -823,7 +942,7 @@ func (o *initStorageOpts) envRDSAddonBlobs() ([]addonBlob, error) {
 			blob:        addon.EnvParamsForRDS(),
 		},
 	}
-	if o.workloadType != manifest.RequestDrivenWebServiceType || !o.workloadExists {
+	if o.workloadType != manifestinfo.RequestDrivenWebServiceType || !o.workloadExists {
 		return blobs, nil
 	}
 	return append(blobs,
@@ -861,7 +980,7 @@ func (o *initStorageOpts) rdsProps() (addon.RDSProps, error) {
 		InitialDBName:  o.rdsInitialDBName,
 		ParameterGroup: o.rdsParameterGroup,
 		Envs:           envs,
-		WorkloadType:   o.workloadType,
+		WorkloadType:   o.workloadType, // TODO(wanxiay): remove `WorkloadType` from `RDSProps`; use different constructors for RDS vs. non-RDS instead.
 	}, nil
 }
 
@@ -890,7 +1009,7 @@ func (o *initStorageOpts) RecommendActions() error {
 	case rdsStorageType:
 		newVar = template.ToSnakeCaseFunc(template.EnvVarSecretFunc(o.storageName))
 		retrieveEnvVarCode = fmt.Sprintf("const {username, host, dbname, password, port} = JSON.parse(process.env.%s)", newVar)
-		if o.workloadType == manifest.RequestDrivenWebServiceType {
+		if o.workloadType == manifestinfo.RequestDrivenWebServiceType {
 			newVar = fmt.Sprintf("%s_ARN", newVar)
 			retrieveEnvVarCode = fmt.Sprintf(`const AWS = require('aws-sdk');
 const client = new AWS.SecretsManager({
@@ -950,6 +1069,7 @@ Resource names are injected into your containers as environment variables for ea
 	cmd.Flags().StringVarP(&vars.storageType, storageTypeFlag, typeFlagShort, "", storageTypeFlagDescription)
 	cmd.Flags().StringVarP(&vars.workloadName, workloadFlag, workloadFlagShort, "", storageWorkloadFlagDescription)
 	cmd.Flags().StringVarP(&vars.lifecycle, storageLifecycleFlag, "", lifecycleWorkloadLevel, storageLifecycleFlagDescription)
+	cmd.Flags().StringVarP(&vars.addIngressFrom, storageAddIngressFromFlag, "", "", storageAddIngressFromFlagDescription)
 
 	cmd.Flags().StringVar(&vars.partitionKey, storagePartitionKeyFlag, "", storagePartitionKeyFlagDescription)
 	cmd.Flags().StringVar(&vars.sortKey, storageSortKeyFlag, "", storageSortKeyFlagDescription)
@@ -962,30 +1082,32 @@ Resource names are injected into your containers as environment variables for ea
 	cmd.Flags().StringVar(&vars.rdsInitialDBName, storageRDSInitialDBFlag, "", storageRDSInitialDBFlagDescription)
 	cmd.Flags().StringVar(&vars.rdsParameterGroup, storageRDSParameterGroupFlag, "", storageRDSParameterGroupFlagDescription)
 
+	ddbFlags := []string{storagePartitionKeyFlag, storageSortKeyFlag, storageNoSortFlag, storageLSIConfigFlag, storageNoLSIFlag}
+	rdsFlags := []string{storageAuroraServerlessVersionFlag, storageRDSEngineFlag, storageRDSInitialDBFlag, storageRDSParameterGroupFlag}
+	for _, f := range append(ddbFlags, storageAuroraServerlessVersionFlag, storageRDSInitialDBFlag, storageRDSParameterGroupFlag) {
+		cmd.MarkFlagsMutuallyExclusive(storageAddIngressFromFlag, f)
+	}
 	requiredFlags := pflag.NewFlagSet("Required", pflag.ContinueOnError)
 	requiredFlags.AddFlag(cmd.Flags().Lookup(nameFlag))
 	requiredFlags.AddFlag(cmd.Flags().Lookup(storageTypeFlag))
 	requiredFlags.AddFlag(cmd.Flags().Lookup(workloadFlag))
+	requiredFlags.AddFlag(cmd.Flags().Lookup(storageLifecycleFlag))
 
-	ddbFlags := pflag.NewFlagSet("DynamoDB", pflag.ContinueOnError)
-	ddbFlags.AddFlag(cmd.Flags().Lookup(storagePartitionKeyFlag))
-	ddbFlags.AddFlag(cmd.Flags().Lookup(storageSortKeyFlag))
-	ddbFlags.AddFlag(cmd.Flags().Lookup(storageNoSortFlag))
-	ddbFlags.AddFlag(cmd.Flags().Lookup(storageLSIConfigFlag))
-	ddbFlags.AddFlag(cmd.Flags().Lookup(storageNoLSIFlag))
-
-	auroraFlags := pflag.NewFlagSet("Aurora Serverless", pflag.ContinueOnError)
-	auroraFlags.AddFlag(cmd.Flags().Lookup(storageAuroraServerlessVersionFlag))
-	auroraFlags.AddFlag(cmd.Flags().Lookup(storageRDSEngineFlag))
-	auroraFlags.AddFlag(cmd.Flags().Lookup(storageRDSInitialDBFlag))
-	auroraFlags.AddFlag(cmd.Flags().Lookup(storageRDSParameterGroupFlag))
+	ddbFlagSet := pflag.NewFlagSet("DynamoDB", pflag.ContinueOnError)
+	for _, f := range ddbFlags {
+		ddbFlagSet.AddFlag(cmd.Flags().Lookup(f))
+	}
+	auroraFlagSet := pflag.NewFlagSet("Aurora Serverless", pflag.ContinueOnError)
+	for _, f := range rdsFlags {
+		auroraFlagSet.AddFlag(cmd.Flags().Lookup(f))
+	}
 
 	cmd.Annotations = map[string]string{
 		// The order of the sections we want to display.
 		"sections":          `Required,DynamoDB,Aurora Serverless`,
 		"Required":          requiredFlags.FlagUsages(),
-		"DynamoDB":          ddbFlags.FlagUsages(),
-		"Aurora Serverless": auroraFlags.FlagUsages(),
+		"DynamoDB":          ddbFlagSet.FlagUsages(),
+		"Aurora Serverless": auroraFlagSet.FlagUsages(),
 	}
 	cmd.SetUsageTemplate(`{{h1 "Usage"}}{{if .Runnable}}
   {{.UseLine}}{{end}}{{$annotations := .Annotations}}{{$sections := split .Annotations.sections ","}}{{if gt (len $sections) 0}}

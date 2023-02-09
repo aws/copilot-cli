@@ -22,6 +22,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/aws/apprunner"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 )
 
 var (
@@ -60,7 +61,7 @@ var (
 
 	// Aurora-Serverless-specific errors.
 	errInvalidRDSNameCharacters    = errors.New("value must start with a letter and followed by alphanumeric letters only")
-	errRDWSNotConnectedToVPC       = fmt.Errorf("%s requires a VPC connection", manifest.RequestDrivenWebServiceType)
+	errRDWSNotConnectedToVPC       = fmt.Errorf("%s requires a VPC connection", manifestinfo.RequestDrivenWebServiceType)
 	fmtErrInvalidEngineType        = "invalid engine type %s: must be one of %s"
 	fmtErrInvalidDBNameCharacters  = "invalid database name %s: must contain only alphanumeric characters and underscore; should start with a letter"
 	errInvalidSecretNameCharacters = errors.New("value must contain only letters, numbers, periods, hyphens and underscores")
@@ -179,7 +180,7 @@ func validateAppNameString(val interface{}) error {
 func validateSvcName(val interface{}, svcType string) error {
 	var err error
 	switch svcType {
-	case manifest.RequestDrivenWebServiceType:
+	case manifestinfo.RequestDrivenWebServiceType:
 		err = validateAppRunnerSvcName(val)
 	default:
 		err = basicNameValidation(val)
@@ -217,7 +218,7 @@ func validateSvcType(val interface{}) error {
 	if !ok {
 		return errValueNotAString
 	}
-	return validateWorkloadType(svcType, manifest.ServiceTypes(), service)
+	return validateWorkloadType(svcType, manifestinfo.ServiceTypes(), service)
 }
 
 func validateWorkloadType(wkldType string, validTypes []string, errFlavor string) error {
@@ -235,7 +236,7 @@ func validateJobType(val interface{}) error {
 	if !ok {
 		return errValueNotAString
 	}
-	return validateWorkloadType(jobType, manifest.JobTypes(), job)
+	return validateWorkloadType(jobType, manifestinfo.JobTypes(), job)
 }
 
 func validateJobName(val interface{}) error {
@@ -363,7 +364,7 @@ func validateAuroraStorageType(ws manifestReader, workloadName string) error {
 	if err != nil {
 		return fmt.Errorf("invalid storage type %s: read type of workload from manifest file for %s: %w", rdsStorageType, workloadName, err)
 	}
-	if mftType != manifest.RequestDrivenWebServiceType {
+	if mftType != manifestinfo.RequestDrivenWebServiceType {
 		return nil
 	}
 	data := struct {
@@ -789,7 +790,7 @@ func validatePubSubName(name string) error {
 }
 
 func prettify(inputStrings []string) string {
-	prettyTypes := quoteStringSlice(inputStrings)
+	prettyTypes := applyAll(inputStrings, strconv.Quote)
 	return strings.Join(prettyTypes, ", ")
 }
 

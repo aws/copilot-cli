@@ -12,7 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
-	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -260,7 +260,7 @@ func TestSvcLogs_Ask(t *testing.T) {
 				m.configStore.EXPECT().GetService(gomock.Any(), gomock.Any()).Times(0)
 				m.sel.EXPECT().DeployedService(svcLogNamePrompt, svcLogNameHelpPrompt, inputApp, gomock.Any(), gomock.Any()).
 					Return(&selector.DeployedService{
-						SvcType: manifest.RequestDrivenWebServiceType,
+						SvcType: manifestinfo.RequestDrivenWebServiceType,
 					}, nil)
 			},
 			wantedError: errors.New("cannot use `--tasks` for App Runner service logs"),

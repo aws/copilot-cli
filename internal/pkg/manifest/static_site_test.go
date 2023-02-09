@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/stretchr/testify/require"
 )
 
@@ -22,7 +23,7 @@ func TestStaticSite_ApplyEnv(t *testing.T) {
 			in: &StaticSite{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(StaticSiteType),
+					Type: aws.String(manifestinfo.StaticSiteType),
 				},
 				StaticSiteConfig: StaticSiteConfig{
 					FileUploads: []FileUpload{
@@ -44,7 +45,7 @@ func TestStaticSite_ApplyEnv(t *testing.T) {
 			wanted: &StaticSite{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(StaticSiteType),
+					Type: aws.String(manifestinfo.StaticSiteType),
 				},
 				StaticSiteConfig: StaticSiteConfig{
 					FileUploads: []FileUpload{
@@ -66,7 +67,7 @@ func TestStaticSite_ApplyEnv(t *testing.T) {
 			in: &StaticSite{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(StaticSiteType),
+					Type: aws.String(manifestinfo.StaticSiteType),
 				},
 				StaticSiteConfig: StaticSiteConfig{
 					FileUploads: []FileUpload{
@@ -94,7 +95,7 @@ func TestStaticSite_ApplyEnv(t *testing.T) {
 			wanted: &StaticSite{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(StaticSiteType),
+					Type: aws.String(manifestinfo.StaticSiteType),
 				},
 				StaticSiteConfig: StaticSiteConfig{
 					FileUploads: []FileUpload{

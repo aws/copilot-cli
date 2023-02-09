@@ -21,6 +21,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
@@ -82,7 +83,7 @@ func NewLBWSDeployer(in *WorkloadDeployerInput) (*lbWebSvcDeployer, error) {
 	}
 	lbMft, ok := in.Mft.(*manifest.LoadBalancedWebService)
 	if !ok {
-		return nil, fmt.Errorf("manifest is not of type %s", manifest.LoadBalancedWebServiceType)
+		return nil, fmt.Errorf("manifest is not of type %s", manifestinfo.LoadBalancedWebServiceType)
 	}
 	return &lbWebSvcDeployer{
 		svcDeployer:            svcDeployer,
@@ -101,7 +102,7 @@ func NewLBWSDeployer(in *WorkloadDeployerInput) (*lbWebSvcDeployer, error) {
 func lbwsCustomResources(fs template.Reader) ([]*customresource.CustomResource, error) {
 	crs, err := customresource.LBWS(fs)
 	if err != nil {
-		return nil, fmt.Errorf("read custom resources for a %q: %w", manifest.LoadBalancedWebServiceType, err)
+		return nil, fmt.Errorf("read custom resources for a %q: %w", manifestinfo.LoadBalancedWebServiceType, err)
 	}
 	return crs, nil
 }
