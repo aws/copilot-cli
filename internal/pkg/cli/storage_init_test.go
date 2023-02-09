@@ -28,6 +28,7 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 		inSvcName           string
 		inStorageName       string
 		inLifecycle         string
+		inAddIngressFrom    string
 		inPartition         string
 		inSort              string
 		inLSISorts          []string
@@ -42,6 +43,53 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 		"no app in workspace": {
 			mock:      func(m *mockStorageInitValidate) {},
 			wantedErr: errNoAppInWorkspace,
+		},
+		"fails when --add-ingress-from is accompanied by workload name": {
+			inAppName:        "bowie",
+			inAddIngressFrom: "api",
+			inSvcName:        "nonamemonster",
+			mock:             func(m *mockStorageInitValidate) {},
+			wantedErr:        errors.New("--workload cannot be specified with --add-ingress-from"),
+		},
+		"fails when --add-ingress-from is accompanied by workload-level lifecycle": {
+			inAppName:        "bowie",
+			inAddIngressFrom: "api",
+			inLifecycle:      lifecycleWorkloadLevel,
+			mock:             func(m *mockStorageInitValidate) {},
+			wantedErr:        errors.New("--lifecycle cannot be workload when --add-ingress-from is used"),
+		},
+		"fails when --add-ingress-from is not accompanied by storage name": {
+			inAppName:        "bowie",
+			inAddIngressFrom: "api",
+			mock:             func(m *mockStorageInitValidate) {},
+			wantedErr:        errors.New("--name is required when --add-ingress-from is used"),
+		},
+		"fails when --add-ingress-from is not accompanied by storage type": {
+			inAppName:        "bowie",
+			inAddIngressFrom: "api",
+			inStorageName:    "coolbucket",
+			mock:             func(m *mockStorageInitValidate) {},
+			wantedErr:        errors.New("--storage-type is required when --add-ingress-from is used"),
+		},
+		"fails to check if --add-ingress-from workload is in the workspace": {
+			inAppName:        "bowie",
+			inAddIngressFrom: "api",
+			inStorageName:    "coolbucket",
+			inStorageType:    s3StorageType,
+			mock: func(m *mockStorageInitValidate) {
+				m.ws.EXPECT().WorkloadExists("api").Return(false, errors.New("some error"))
+			},
+			wantedErr: errors.New("check if api exists in the workspace: some error"),
+		},
+		"fails when --add-ingress-from workload is not in the workspace": {
+			inAppName:        "bowie",
+			inAddIngressFrom: "api",
+			inStorageName:    "coolbucket",
+			inStorageType:    s3StorageType,
+			mock: func(m *mockStorageInitValidate) {
+				m.ws.EXPECT().WorkloadExists("api").Return(false, nil)
+			},
+			wantedErr: errors.New("workload api not found in the workspace"),
 		},
 		"fails when --no-lsi and --lsi are both provided": {
 			inAppName:     "bowie",
@@ -95,6 +143,7 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 					storageName:             tc.inStorageName,
 					workloadName:            tc.inSvcName,
 					lifecycle:               tc.inLifecycle,
+					addIngressFrom:          tc.inAddIngressFrom,
 					partitionKey:            tc.inPartition,
 					sortKey:                 tc.inSort,
 					lsiSorts:                tc.inLSISorts,
@@ -135,16 +184,21 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 		wantedBucketName = "cool-bucket"
 	)
 	testCases := map[string]struct {
-		inStorageType string
-		inSvcName     string
-		inStorageName string
-		inLifecycle   string
+		inStorageType    string
+		inSvcName        string
+		inStorageName    string
+		inLifecycle      string
+		inAddIngressFrom string
 
 		mock func(m *mockStorageInitAsk)
 
 		wantedErr  error
 		wantedVars *initStorageVars
 	}{
+		"prompt for nothing if --add-ingress-from is used": {
+			inAddIngressFrom: "api",
+			mock:             func(m *mockStorageInitAsk) {},
+		},
 		"invalid storage type": {
 			inStorageType: "box",
 			inSvcName:     "frontend",
@@ -417,10 +471,11 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			}
 			opts := initStorageOpts{
 				initStorageVars: initStorageVars{
-					storageType:  tc.inStorageType,
-					storageName:  tc.inStorageName,
-					workloadName: tc.inSvcName,
-					lifecycle:    tc.inLifecycle,
+					storageType:    tc.inStorageType,
+					storageName:    tc.inStorageName,
+					workloadName:   tc.inSvcName,
+					lifecycle:      tc.inLifecycle,
+					addIngressFrom: tc.inAddIngressFrom,
 				},
 				appName:   wantedAppName,
 				sel:       m.sel,
