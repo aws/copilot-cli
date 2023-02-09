@@ -38,9 +38,11 @@ func TestNewBackendSvc(t *testing.T) {
 					ImageConfig: ImageWithHealthcheckAndOptionalPort{
 						ImageWithOptionalPort: ImageWithOptionalPort{
 							Image: Image{
-								Build: BuildArgsOrString{
-									BuildArgs: DockerBuildArgs{
-										Dockerfile: aws.String("./subscribers/Dockerfile"),
+								ImageLocationOrBuild: ImageLocationOrBuild{
+									Build: BuildArgsOrString{
+										BuildArgs: DockerBuildArgs{
+											Dockerfile: aws.String("./subscribers/Dockerfile"),
+										},
 									},
 								},
 							},
@@ -97,7 +99,9 @@ func TestNewBackendSvc(t *testing.T) {
 					ImageConfig: ImageWithHealthcheckAndOptionalPort{
 						ImageWithOptionalPort: ImageWithOptionalPort{
 							Image: Image{
-								Location: aws.String("mockImage"),
+								ImageLocationOrBuild: ImageLocationOrBuild{
+									Location: aws.String("mockImage"),
+								},
 							},
 							Port: aws.Uint16(8080),
 						},
@@ -142,9 +146,11 @@ func TestNewBackendSvc(t *testing.T) {
 					ImageConfig: ImageWithHealthcheckAndOptionalPort{
 						ImageWithOptionalPort: ImageWithOptionalPort{
 							Image: Image{
-								Build: BuildArgsOrString{
-									BuildArgs: DockerBuildArgs{
-										Dockerfile: aws.String("./subscribers/Dockerfile"),
+								ImageLocationOrBuild: ImageLocationOrBuild{
+									Build: BuildArgsOrString{
+										BuildArgs: DockerBuildArgs{
+											Dockerfile: aws.String("./subscribers/Dockerfile"),
+										},
 									},
 								},
 							},
@@ -365,9 +371,11 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 			ImageConfig: ImageWithHealthcheckAndOptionalPort{
 				ImageWithOptionalPort: ImageWithOptionalPort{
 					Image: Image{
-						Build: BuildArgsOrString{
-							BuildArgs: DockerBuildArgs{
-								Dockerfile: aws.String("./Dockerfile"),
+						ImageLocationOrBuild: ImageLocationOrBuild{
+							Build: BuildArgsOrString{
+								BuildArgs: DockerBuildArgs{
+									Dockerfile: aws.String("./Dockerfile"),
+								},
 							},
 						},
 					},
@@ -443,7 +451,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 			Sidecars: map[string]*SidecarConfig{
 				"xray": {
 					Port: aws.String("2000/udp"),
-					Image: Union[*string, SidecarImageConfig]{
+					Image: Union[*string, ImageLocationOrBuild]{
 						Basic: aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
 					},
 				},
@@ -504,9 +512,11 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 			ImageConfig: ImageWithHealthcheckAndOptionalPort{
 				ImageWithOptionalPort: ImageWithOptionalPort{
 					Image: Image{
-						Build: BuildArgsOrString{
-							BuildArgs: DockerBuildArgs{
-								Dockerfile: aws.String("./Dockerfile"),
+						ImageLocationOrBuild: ImageLocationOrBuild{
+							Build: BuildArgsOrString{
+								BuildArgs: DockerBuildArgs{
+									Dockerfile: aws.String("./Dockerfile"),
+								},
 							},
 						},
 					},
@@ -518,7 +528,9 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 				ImageConfig: ImageWithHealthcheckAndOptionalPort{
 					ImageWithOptionalPort: ImageWithOptionalPort{
 						Image: Image{
-							Location: aws.String("env-override location"),
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Location: aws.String("env-override location"),
+							},
 						},
 					},
 				},
@@ -534,7 +546,9 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 			ImageConfig: ImageWithHealthcheckAndOptionalPort{
 				ImageWithOptionalPort: ImageWithOptionalPort{
 					Image: Image{
-						Location: aws.String("original location"),
+						ImageLocationOrBuild: ImageLocationOrBuild{
+							Location: aws.String("original location"),
+						},
 					},
 				},
 			},
@@ -544,7 +558,9 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 				ImageConfig: ImageWithHealthcheckAndOptionalPort{
 					ImageWithOptionalPort: ImageWithOptionalPort{
 						Image: Image{
-							Location: aws.String("env-override location"),
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Location: aws.String("env-override location"),
+							},
 						},
 					},
 				},
@@ -560,10 +576,12 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 			ImageConfig: ImageWithHealthcheckAndOptionalPort{
 				ImageWithOptionalPort: ImageWithOptionalPort{
 					Image: Image{
-						Build: BuildArgsOrString{
-							BuildArgs: DockerBuildArgs{
-								Dockerfile: aws.String("original dockerfile"),
-								Context:    aws.String("original context"),
+						ImageLocationOrBuild: ImageLocationOrBuild{
+							Build: BuildArgsOrString{
+								BuildArgs: DockerBuildArgs{
+									Dockerfile: aws.String("original dockerfile"),
+									Context:    aws.String("original context"),
+								},
 							},
 						},
 					},
@@ -575,8 +593,10 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 				ImageConfig: ImageWithHealthcheckAndOptionalPort{
 					ImageWithOptionalPort: ImageWithOptionalPort{
 						Image: Image{
-							Build: BuildArgsOrString{
-								BuildString: aws.String("env overridden dockerfile"),
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Build: BuildArgsOrString{
+									BuildString: aws.String("env overridden dockerfile"),
+								},
 							},
 						},
 					},
@@ -593,7 +613,9 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 			ImageConfig: ImageWithHealthcheckAndOptionalPort{
 				ImageWithOptionalPort: ImageWithOptionalPort{
 					Image: Image{
-						Location: aws.String("original location"),
+						ImageLocationOrBuild: ImageLocationOrBuild{
+							Location: aws.String("original location"),
+						},
 					},
 				},
 			},
@@ -603,8 +625,10 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 				ImageConfig: ImageWithHealthcheckAndOptionalPort{
 					ImageWithOptionalPort: ImageWithOptionalPort{
 						Image: Image{
-							Build: BuildArgsOrString{
-								BuildString: aws.String("env overridden dockerfile"),
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Build: BuildArgsOrString{
+									BuildString: aws.String("env overridden dockerfile"),
+								},
 							},
 						},
 					},
@@ -683,7 +707,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 					Sidecars: map[string]*SidecarConfig{
 						"xray": {
 							Port: aws.String("2000/udp"),
-							Image: Union[*string, SidecarImageConfig]{
+							Image: Union[*string, ImageLocationOrBuild]{
 								Basic: aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
 							},
 							CredsParam: aws.String("some arn"),
@@ -713,7 +737,9 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 					ImageConfig: ImageWithHealthcheckAndOptionalPort{
 						ImageWithOptionalPort: ImageWithOptionalPort{
 							Image: Image{
-								Location: aws.String("env-override location"),
+								ImageLocationOrBuild: ImageLocationOrBuild{
+									Location: aws.String("env-override location"),
+								},
 							},
 						},
 					},
@@ -734,7 +760,9 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 					ImageConfig: ImageWithHealthcheckAndOptionalPort{
 						ImageWithOptionalPort: ImageWithOptionalPort{
 							Image: Image{
-								Location: aws.String("env-override location"),
+								ImageLocationOrBuild: ImageLocationOrBuild{
+									Location: aws.String("env-override location"),
+								},
 							},
 						},
 					},
@@ -754,8 +782,10 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 					ImageConfig: ImageWithHealthcheckAndOptionalPort{
 						ImageWithOptionalPort: ImageWithOptionalPort{
 							Image: Image{
-								Build: BuildArgsOrString{
-									BuildString: aws.String("env overridden dockerfile"),
+								ImageLocationOrBuild: ImageLocationOrBuild{
+									Build: BuildArgsOrString{
+										BuildString: aws.String("env overridden dockerfile"),
+									},
 								},
 							},
 						},
@@ -776,8 +806,10 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 					ImageConfig: ImageWithHealthcheckAndOptionalPort{
 						ImageWithOptionalPort: ImageWithOptionalPort{
 							Image: Image{
-								Build: BuildArgsOrString{
-									BuildString: aws.String("env overridden dockerfile"),
+								ImageLocationOrBuild: ImageLocationOrBuild{
+									Build: BuildArgsOrString{
+										BuildString: aws.String("env overridden dockerfile"),
+									},
 								},
 							},
 						},
@@ -982,7 +1014,7 @@ func TestBackendService_ExposedPorts(t *testing.T) {
 					Sidecars: map[string]*SidecarConfig{
 						"xray": {
 							Port: aws.String("2000"),
-							Image: Union[*string, SidecarImageConfig]{
+							Image: Union[*string, ImageLocationOrBuild]{
 								Basic: aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
 							},
 							CredsParam: aws.String("some arn"),
@@ -1025,7 +1057,7 @@ func TestBackendService_ExposedPorts(t *testing.T) {
 					Sidecars: map[string]*SidecarConfig{
 						"xray": {
 							Port: aws.String("2000"),
-							Image: Union[*string, SidecarImageConfig]{
+							Image: Union[*string, ImageLocationOrBuild]{
 								Basic: aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
 							},
 							CredsParam: aws.String("some arn"),
@@ -1073,7 +1105,7 @@ func TestBackendService_ExposedPorts(t *testing.T) {
 					Sidecars: map[string]*SidecarConfig{
 						"xray": {
 							Port: aws.String("2000"),
-							Image: Union[*string, SidecarImageConfig]{
+							Image: Union[*string, ImageLocationOrBuild]{
 								Basic: aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
 							},
 							CredsParam: aws.String("some arn"),
@@ -1120,8 +1152,8 @@ func TestBackendService_ExposedPorts(t *testing.T) {
 					},
 					Sidecars: map[string]*SidecarConfig{
 						"xray": {
-							Image: Union[*string, SidecarImageConfig]{
-								Advanced: SidecarImageConfig{
+							Image: Union[*string, ImageLocationOrBuild]{
+								Advanced: ImageLocationOrBuild{
 									Location: aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
 								},
 							},

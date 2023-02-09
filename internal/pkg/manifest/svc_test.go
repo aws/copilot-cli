@@ -105,8 +105,11 @@ environments:
 					Workload: Workload{Name: aws.String("frontend"), Type: aws.String(LoadBalancedWebServiceType)},
 					LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 						ImageConfig: ImageWithPortAndHealthcheck{
-							ImageWithPort: ImageWithPort{Image: Image{Build: BuildArgsOrString{},
-								Location:    aws.String("foo/bar"),
+							ImageWithPort: ImageWithPort{Image: Image{
+								ImageLocationOrBuild: ImageLocationOrBuild{
+									Build:    BuildArgsOrString{},
+									Location: aws.String("foo/bar"),
+								},
 								Credentials: aws.String("some arn"),
 							}, Port: aws.Uint16(80)},
 						},
@@ -157,14 +160,14 @@ environments:
 						Sidecars: map[string]*SidecarConfig{
 							"xray": {
 								Port:       aws.String("2000/udp"),
-								Image:      BasicToUnion[*string, SidecarImageConfig](aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon")),
+								Image:      BasicToUnion[*string, ImageLocationOrBuild](aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon")),
 								CredsParam: aws.String("some arn"),
 							},
 							"nginx": {
 								Image: AdvancedToUnion[*string](
-									SidecarImageConfig{
-										Build: AdvancedToUnion[*string](
-											DockerBuildArgs{
+									ImageLocationOrBuild{
+										Build: BuildArgsOrString{
+											BuildArgs: DockerBuildArgs{
 												Dockerfile: aws.String("web/Dockerfile"),
 												Context:    aws.String("pathto/Dockerfile"),
 												Target:     aws.String("build-stage"),
@@ -173,7 +176,7 @@ environments:
 													"arg1": "value1",
 												},
 											},
-										),
+										},
 									},
 								),
 							},
@@ -292,8 +295,10 @@ secrets:
 						ImageConfig: ImageWithHealthcheckAndOptionalPort{
 							ImageWithOptionalPort: ImageWithOptionalPort{
 								Image: Image{
-									Build: BuildArgsOrString{
-										BuildString: aws.String("./subscribers/Dockerfile"),
+									ImageLocationOrBuild: ImageLocationOrBuild{
+										Build: BuildArgsOrString{
+											BuildString: aws.String("./subscribers/Dockerfile"),
+										},
 									},
 								},
 								Port: aws.Uint16(8080),
@@ -370,8 +375,10 @@ subscribe:
 					WorkerServiceConfig: WorkerServiceConfig{
 						ImageConfig: ImageWithHealthcheck{
 							Image: Image{
-								Build: BuildArgsOrString{
-									BuildString: aws.String("./dogcategorizer/Dockerfile"),
+								ImageLocationOrBuild: ImageLocationOrBuild{
+									Build: BuildArgsOrString{
+										BuildString: aws.String("./dogcategorizer/Dockerfile"),
+									},
 								},
 							},
 						},
@@ -759,7 +766,9 @@ func Test_ServiceDockerfileBuildRequired(t *testing.T) {
 					ImageConfig: ImageWithPortAndHealthcheck{
 						ImageWithPort: ImageWithPort{
 							Image: Image{
-								Location: aws.String("mockLocation"),
+								ImageLocationOrBuild: ImageLocationOrBuild{
+									Location: aws.String("mockLocation"),
+								},
 							},
 						},
 					},
@@ -772,8 +781,10 @@ func Test_ServiceDockerfileBuildRequired(t *testing.T) {
 					ImageConfig: ImageWithPortAndHealthcheck{
 						ImageWithPort: ImageWithPort{
 							Image: Image{
-								Build: BuildArgsOrString{
-									BuildString: aws.String("mockDockerfile"),
+								ImageLocationOrBuild: ImageLocationOrBuild{
+									Build: BuildArgsOrString{
+										BuildString: aws.String("mockDockerfile"),
+									},
 								},
 							},
 						},

@@ -220,7 +220,9 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 					RequestDrivenWebServiceConfig: manifest.RequestDrivenWebServiceConfig{
 						ImageConfig: manifest.ImageWithPort{
 							Image: manifest.Image{
-								Build: manifest.BuildArgsOrString{BuildString: aws.String("/Dockerfile")},
+								ImageLocationOrBuild: manifest.ImageLocationOrBuild{
+									Build: manifest.BuildArgsOrString{BuildString: aws.String("/Dockerfile")},
+								},
 							},
 							Port: aws.Uint16(80),
 						},
@@ -277,7 +279,9 @@ func mockRDWSDeployer(opts ...func(*rdwsDeployer)) *rdwsDeployer {
 			RequestDrivenWebServiceConfig: manifest.RequestDrivenWebServiceConfig{
 				ImageConfig: manifest.ImageWithPort{
 					Image: manifest.Image{
-						Location: aws.String("111111111111.dkr.ecr.us-west-2.amazonaws.com/nginx:latest"),
+						ImageLocationOrBuild: manifest.ImageLocationOrBuild{
+							Location: aws.String("111111111111.dkr.ecr.us-west-2.amazonaws.com/nginx:latest"),
+						},
 					},
 					Port: aws.Uint16(80),
 				},

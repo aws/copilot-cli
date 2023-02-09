@@ -155,7 +155,9 @@ func TestSvcDeployOpts_stackConfiguration_worker(t *testing.T) {
 					WorkerServiceConfig: manifest.WorkerServiceConfig{
 						ImageConfig: manifest.ImageWithHealthcheck{
 							Image: manifest.Image{
-								Build: manifest.BuildArgsOrString{BuildString: aws.String("/Dockerfile")},
+								ImageLocationOrBuild: manifest.ImageLocationOrBuild{
+									Build: manifest.BuildArgsOrString{BuildString: aws.String("/Dockerfile")},
+								},
 							},
 						},
 						Subscribe: manifest.SubscribeConfig{
@@ -271,7 +273,9 @@ func mockWorkerServiceDeployer(opts ...func(*workerSvcDeployer)) *workerSvcDeplo
 				},
 				ImageConfig: manifest.ImageWithHealthcheck{
 					Image: manifest.Image{
-						Build: manifest.BuildArgsOrString{BuildString: aws.String("/Dockerfile")},
+						ImageLocationOrBuild: manifest.ImageLocationOrBuild{
+							Build: manifest.BuildArgsOrString{BuildString: aws.String("/Dockerfile")},
+						},
 					},
 				},
 			},

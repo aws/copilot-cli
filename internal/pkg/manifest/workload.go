@@ -129,11 +129,16 @@ type Workload struct {
 
 // Image represents the workload's container image.
 type Image struct {
-	Build        BuildArgsOrString `yaml:"build"`           // Build an image from a Dockerfile.
-	Location     *string           `yaml:"location"`        // Use an existing image instead.
-	Credentials  *string           `yaml:"credentials"`     // ARN of the secret containing the private repository credentials.
-	DockerLabels map[string]string `yaml:"labels,flow"`     // Apply Docker labels to the container at runtime.
-	DependsOn    DependsOn         `yaml:"depends_on,flow"` // Add any sidecar dependencies.
+	ImageLocationOrBuild `yaml:",inline"`
+	Credentials          *string           `yaml:"credentials"`     // ARN of the secret containing the private repository credentials.
+	DockerLabels         map[string]string `yaml:"labels,flow"`     // Apply Docker labels to the container at runtime.
+	DependsOn            DependsOn         `yaml:"depends_on,flow"` // Add any sidecar dependencies.
+}
+
+// ImageLocationOrBuild represents the docker build arguments and location of the existing image.
+type ImageLocationOrBuild struct {
+	Build    BuildArgsOrString `yaml:"build"`    // Build an image from a Dockerfile.
+	Location *string           `yaml:"location"` // Use an existing image instead.
 }
 
 // DependsOn represents container dependency for a container.
@@ -168,7 +173,7 @@ func (i Image) GetLocation() string {
 // 2. Specific dockerfile, context = dockerfile dir
 // 3. "Dockerfile" located in context dir
 // 4. "Dockerfile" located in ws root.
-func (i *Image) BuildConfig(rootDirectory string) *DockerBuildArgs {
+func (i *ImageLocationOrBuild) BuildConfig(rootDirectory string) *DockerBuildArgs {
 	df := i.dockerfile()
 	ctx := i.context()
 	dockerfile := aws.String(filepath.Join(rootDirectory, defaultDockerfileName))
@@ -197,7 +202,7 @@ func (i *Image) BuildConfig(rootDirectory string) *DockerBuildArgs {
 
 // dockerfile returns the path to the workload's Dockerfile. If no dockerfile is specified,
 // returns "".
-func (i *Image) dockerfile() string {
+func (i *ImageLocationOrBuild) dockerfile() string {
 	// Prefer to use the "Dockerfile" string in BuildArgs. Otherwise,
 	// "BuildString". If no dockerfile specified, return "".
 	if i.Build.BuildArgs.Dockerfile != nil {
@@ -213,24 +218,24 @@ func (i *Image) dockerfile() string {
 }
 
 // context returns the build context directory if it exists, otherwise an empty string.
-func (i *Image) context() string {
+func (i *ImageLocationOrBuild) context() string {
 	return aws.StringValue(i.Build.BuildArgs.Context)
 }
 
 // args returns the args section, if it exists, to override args in the dockerfile.
 // Otherwise it returns an empty map.
-func (i *Image) args() map[string]string {
+func (i *ImageLocationOrBuild) args() map[string]string {
 	return i.Build.BuildArgs.Args
 }
 
 // target returns the build target stage if it exists, otherwise nil.
-func (i *Image) target() *string {
+func (i *ImageLocationOrBuild) target() *string {
 	return i.Build.BuildArgs.Target
 }
 
 // cacheFrom returns the cache from build section, if it exists.
 // Otherwise it returns nil.
-func (i *Image) cacheFrom() []string {
+func (i *ImageLocationOrBuild) cacheFrom() []string {
 	return i.Build.BuildArgs.CacheFrom
 }
 

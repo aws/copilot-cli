@@ -299,7 +299,9 @@ func mockBackendServiceDeployer(opts ...func(*backendSvcDeployer)) *backendSvcDe
 				ImageConfig: manifest.ImageWithHealthcheckAndOptionalPort{
 					ImageWithOptionalPort: manifest.ImageWithOptionalPort{
 						Image: manifest.Image{
-							Build: manifest.BuildArgsOrString{BuildString: aws.String("/Dockerfile")},
+							ImageLocationOrBuild: manifest.ImageLocationOrBuild{
+								Build: manifest.BuildArgsOrString{BuildString: aws.String("/Dockerfile")},
+							},
 						},
 						Port: aws.Uint16(80),
 					},

@@ -74,9 +74,11 @@ func TestNewWorkerSvc(t *testing.T) {
 				WorkerServiceConfig: WorkerServiceConfig{
 					ImageConfig: ImageWithHealthcheck{
 						Image: Image{
-							Build: BuildArgsOrString{
-								BuildArgs: DockerBuildArgs{
-									Dockerfile: aws.String("./testers/Dockerfile"),
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Build: BuildArgsOrString{
+									BuildArgs: DockerBuildArgs{
+										Dockerfile: aws.String("./testers/Dockerfile"),
+									},
 								},
 							},
 						},
@@ -128,9 +130,11 @@ func TestNewWorkerSvc(t *testing.T) {
 				WorkerServiceConfig: WorkerServiceConfig{
 					ImageConfig: ImageWithHealthcheck{
 						Image: Image{
-							Build: BuildArgsOrString{
-								BuildArgs: DockerBuildArgs{
-									Dockerfile: aws.String("./testers/Dockerfile"),
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Build: BuildArgsOrString{
+									BuildArgs: DockerBuildArgs{
+										Dockerfile: aws.String("./testers/Dockerfile"),
+									},
 								},
 							},
 						},
@@ -189,9 +193,11 @@ func TestNewWorkerSvc(t *testing.T) {
 				WorkerServiceConfig: WorkerServiceConfig{
 					ImageConfig: ImageWithHealthcheck{
 						Image: Image{
-							Build: BuildArgsOrString{
-								BuildArgs: DockerBuildArgs{
-									Dockerfile: aws.String("./testers/Dockerfile"),
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Build: BuildArgsOrString{
+									BuildArgs: DockerBuildArgs{
+										Dockerfile: aws.String("./testers/Dockerfile"),
+									},
 								},
 							},
 						},
@@ -266,9 +272,11 @@ func TestNewWorkerSvc(t *testing.T) {
 				WorkerServiceConfig: WorkerServiceConfig{
 					ImageConfig: ImageWithHealthcheck{
 						Image: Image{
-							Build: BuildArgsOrString{
-								BuildArgs: DockerBuildArgs{
-									Dockerfile: aws.String("./testers/Dockerfile"),
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Build: BuildArgsOrString{
+									BuildArgs: DockerBuildArgs{
+										Dockerfile: aws.String("./testers/Dockerfile"),
+									},
 								},
 							},
 						},
@@ -333,9 +341,11 @@ func TestNewWorkerSvc(t *testing.T) {
 				WorkerServiceConfig: WorkerServiceConfig{
 					ImageConfig: ImageWithHealthcheck{
 						Image: Image{
-							Build: BuildArgsOrString{
-								BuildArgs: DockerBuildArgs{
-									Dockerfile: aws.String("./testers/Dockerfile"),
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Build: BuildArgsOrString{
+									BuildArgs: DockerBuildArgs{
+										Dockerfile: aws.String("./testers/Dockerfile"),
+									},
 								},
 							},
 						},
@@ -403,9 +413,11 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 		WorkerServiceConfig: WorkerServiceConfig{
 			ImageConfig: ImageWithHealthcheck{
 				Image: Image{
-					Build: BuildArgsOrString{
-						BuildArgs: DockerBuildArgs{
-							Dockerfile: aws.String("./Dockerfile"),
+					ImageLocationOrBuild: ImageLocationOrBuild{
+						Build: BuildArgsOrString{
+							BuildArgs: DockerBuildArgs{
+								Dockerfile: aws.String("./Dockerfile"),
+							},
 						},
 					},
 				},
@@ -470,7 +482,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 			Sidecars: map[string]*SidecarConfig{
 				"xray": {
 					Port: aws.String("2000/udp"),
-					Image: Union[*string, SidecarImageConfig]{
+					Image: Union[*string, ImageLocationOrBuild]{
 						Basic: aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
 					},
 				},
@@ -544,9 +556,11 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 		WorkerServiceConfig: WorkerServiceConfig{
 			ImageConfig: ImageWithHealthcheck{
 				Image: Image{
-					Build: BuildArgsOrString{
-						BuildArgs: DockerBuildArgs{
-							Dockerfile: aws.String("./Dockerfile"),
+					ImageLocationOrBuild: ImageLocationOrBuild{
+						Build: BuildArgsOrString{
+							BuildArgs: DockerBuildArgs{
+								Dockerfile: aws.String("./Dockerfile"),
+							},
 						},
 					},
 				},
@@ -556,7 +570,9 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 			"prod-iad": {
 				ImageConfig: ImageWithHealthcheck{
 					Image: Image{
-						Location: aws.String("env-override location"),
+						ImageLocationOrBuild: ImageLocationOrBuild{
+							Location: aws.String("env-override location"),
+						},
 					},
 				},
 			},
@@ -570,7 +586,9 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 		WorkerServiceConfig: WorkerServiceConfig{
 			ImageConfig: ImageWithHealthcheck{
 				Image: Image{
-					Location: aws.String("original location"),
+					ImageLocationOrBuild: ImageLocationOrBuild{
+						Location: aws.String("original location"),
+					},
 				},
 			},
 		},
@@ -578,7 +596,9 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 			"prod-iad": {
 				ImageConfig: ImageWithHealthcheck{
 					Image: Image{
-						Location: aws.String("env-override location"),
+						ImageLocationOrBuild: ImageLocationOrBuild{
+							Location: aws.String("env-override location"),
+						},
 					},
 				},
 			},
@@ -592,10 +612,12 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 		WorkerServiceConfig: WorkerServiceConfig{
 			ImageConfig: ImageWithHealthcheck{
 				Image: Image{
-					Build: BuildArgsOrString{
-						BuildArgs: DockerBuildArgs{
-							Dockerfile: aws.String("original dockerfile"),
-							Context:    aws.String("original context"),
+					ImageLocationOrBuild: ImageLocationOrBuild{
+						Build: BuildArgsOrString{
+							BuildArgs: DockerBuildArgs{
+								Dockerfile: aws.String("original dockerfile"),
+								Context:    aws.String("original context"),
+							},
 						},
 					},
 				},
@@ -605,8 +627,10 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 			"prod-iad": {
 				ImageConfig: ImageWithHealthcheck{
 					Image: Image{
-						Build: BuildArgsOrString{
-							BuildString: aws.String("env overridden dockerfile"),
+						ImageLocationOrBuild: ImageLocationOrBuild{
+							Build: BuildArgsOrString{
+								BuildString: aws.String("env overridden dockerfile"),
+							},
 						},
 					},
 				},
@@ -621,7 +645,9 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 		WorkerServiceConfig: WorkerServiceConfig{
 			ImageConfig: ImageWithHealthcheck{
 				Image: Image{
-					Location: aws.String("original location"),
+					ImageLocationOrBuild: ImageLocationOrBuild{
+						Location: aws.String("original location"),
+					},
 				},
 			},
 		},
@@ -629,8 +655,10 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 			"prod-iad": {
 				ImageConfig: ImageWithHealthcheck{
 					Image: Image{
-						Build: BuildArgsOrString{
-							BuildString: aws.String("env overridden dockerfile"),
+						ImageLocationOrBuild: ImageLocationOrBuild{
+							Build: BuildArgsOrString{
+								BuildString: aws.String("env overridden dockerfile"),
+							},
 						},
 					},
 				},
@@ -895,7 +923,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 					Sidecars: map[string]*SidecarConfig{
 						"xray": {
 							Port: aws.String("2000/udp"),
-							Image: Union[*string, SidecarImageConfig]{
+							Image: Union[*string, ImageLocationOrBuild]{
 								Basic: aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
 							},
 							CredsParam: aws.String("some arn"),
@@ -932,7 +960,9 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 				WorkerServiceConfig: WorkerServiceConfig{
 					ImageConfig: ImageWithHealthcheck{
 						Image: Image{
-							Location: aws.String("env-override location"),
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Location: aws.String("env-override location"),
+							},
 						},
 					},
 				},
@@ -951,7 +981,9 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 				WorkerServiceConfig: WorkerServiceConfig{
 					ImageConfig: ImageWithHealthcheck{
 						Image: Image{
-							Location: aws.String("env-override location"),
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Location: aws.String("env-override location"),
+							},
 						},
 					},
 				},
@@ -969,8 +1001,10 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 				WorkerServiceConfig: WorkerServiceConfig{
 					ImageConfig: ImageWithHealthcheck{
 						Image: Image{
-							Build: BuildArgsOrString{
-								BuildString: aws.String("env overridden dockerfile"),
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Build: BuildArgsOrString{
+									BuildString: aws.String("env overridden dockerfile"),
+								},
 							},
 						},
 					},
@@ -989,8 +1023,10 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 				WorkerServiceConfig: WorkerServiceConfig{
 					ImageConfig: ImageWithHealthcheck{
 						Image: Image{
-							Build: BuildArgsOrString{
-								BuildString: aws.String("env overridden dockerfile"),
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Build: BuildArgsOrString{
+									BuildString: aws.String("env overridden dockerfile"),
+								},
 							},
 						},
 					},
