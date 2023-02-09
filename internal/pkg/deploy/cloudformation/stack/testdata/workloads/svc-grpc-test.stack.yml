@@ -450,11 +450,11 @@ Resources: # If a bucket URL is specified, that means the template exists.
       LoadBalancers:
         - ContainerName: gRPC
           ContainerPort: 50051
-          TargetGroupArn: !Ref TargetGroupForDefaultPath
+          TargetGroupArn: !Ref TargetGroup
       ServiceRegistries:
         - RegistryArn: !GetAtt DiscoveryService.Arn
           Port: !Ref TargetPort
-  TargetGroupForDefaultPath:
+  TargetGroup:
     Metadata:
       'aws:copilot:description': 'A target group to connect the load balancer to your service'
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
@@ -556,7 +556,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
     Properties:
       Actions:
-        - TargetGroupArn: !Ref TargetGroupForDefaultPath
+        - TargetGroupArn: !Ref TargetGroup
           Type: forward
       Conditions:
         - Field: 'host-header'

@@ -104,13 +104,13 @@ Resources:
     DependsOn:
     {{- if .ALBEnabled}}
     {{- if .ALB.HTTPSListener }}
-    {{- range $listener := .ALB.Listener }}
-      - HTTPListenerRuleWithDomain{{logicalIDSafe $listener.Path}}
-      - HTTPSListenerRule{{logicalIDSafe $listener.Path}}
+    {{- range $i, $listener := .ALB.Listener }}
+      - HTTPListenerRuleWithDomain{{ if ne $i 0 }}{{ $i }}{{ end }}
+      - HTTPSListenerRule{{ if ne $i 0 }}{{ $i }}{{ end }}
     {{- end }}
     {{- else}}
-    {{- range $listener := .ALB.Listener }}
-      - HTTPListenerRule{{logicalIDSafe $listener.Path}}
+    {{- range $i, $listener := .ALB.Listener }}
+      - HTTPListenerRule{{ if ne $i 0 }}{{ $i }}{{ end }}
     {{- end }}
     {{- end}}
     {{- end}}
@@ -125,10 +125,10 @@ Resources:
       {{- end }}
       LoadBalancers:
   {{- if .ALBEnabled}}
-  {{- range $listener := .ALB.Listener}}
+  {{- range $i, $listener := .ALB.Listener}}
         - ContainerName: {{$listener.TargetContainer}}
           ContainerPort: {{$listener.TargetPort}}
-          TargetGroupArn: !Ref {{ if eq $listener.Path "/"}}TargetGroupForDefaultPath{{ else }}TargetGroupFor{{logicalIDSafe $listener.Path}}{{ end}}
+          TargetGroupArn: !Ref TargetGroup{{ if ne $i 0 }}{{ $i }}{{ end }}
   {{- end}}
   {{- end}}
   {{- if .NLB}}

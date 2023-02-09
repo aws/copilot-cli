@@ -1,9 +1,5 @@
-{{- range $listener := .ALB.Listener}}
-{{- if eq $listener.Path "/"}}
-TargetGroupForDefaultPath:
-{{- else }}
-TargetGroupFor{{logicalIDSafe $listener.Path}}:
-{{- end }}
+{{- range $i, $listener := .ALB.Listener}}
+TargetGroup{{ if ne $i 0 }}{{ $i }}{{ end }}:
   Metadata:
     'aws:copilot:description': "A target group to connect the load balancer to your service"
   Type: AWS::ElasticLoadBalancingV2::TargetGroup

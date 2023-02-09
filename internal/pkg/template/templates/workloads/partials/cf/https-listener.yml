@@ -45,8 +45,8 @@ LoadBalancerDNSAlias{{$hostedZoneID}}:
 {{- end}}
 {{- end}}
 
-{{- range $listener := .ALB.Listener}}
-HTTPSRulePriorityAction{{logicalIDSafe $listener.Path}}:
+{{- range $i, $listener := .ALB.Listener}}
+HTTPSRulePriorityAction{{ if ne $i 0 }}{{ $i }}{{ end }}:
   Metadata:
     'aws:copilot:description': 'A custom resource assigning priority for HTTPS listener rules'
   Type: Custom::RulePriorityFunction
@@ -59,7 +59,7 @@ HTTPSRulePriorityAction{{logicalIDSafe $listener.Path}}:
     ListenerArn: !GetAtt EnvControllerAction.HTTPSListenerArn
     {{- end}}
 
-HTTPRuleWithDomainPriorityAction{{logicalIDSafe $listener.Path}}:
+HTTPRuleWithDomainPriorityAction{{ if ne $i 0 }}{{ $i }}{{ end }}:
   Metadata:
     'aws:copilot:description': 'A custom resource assigning priority for HTTP listener rules'
   Type: Custom::RulePriorityFunction
@@ -72,7 +72,7 @@ HTTPRuleWithDomainPriorityAction{{logicalIDSafe $listener.Path}}:
     ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
     {{- end}}
 
-HTTPListenerRuleWithDomain{{logicalIDSafe $listener.Path}}:
+HTTPListenerRuleWithDomain{{ if ne $i 0 }}{{ $i }}{{ end }}:
   Metadata:
     {{- if $.ALB.HTTPRedirect}}
     'aws:copilot:description': 'An HTTP listener rule that redirects HTTP to HTTPS'
@@ -92,7 +92,7 @@ HTTPListenerRuleWithDomain{{logicalIDSafe $listener.Path}}:
           Query: "#{query}"
           StatusCode: HTTP_301
       {{- else}}
-      - TargetGroupArn: !Ref {{ if eq $listener.Path "/"}} TargetGroupDefaultPath {{ else }}TargetGroup{{ logicalIDSafe $listener.Path }}{{ end }}
+      - TargetGroupArn: !Ref TargetGroup{{ if ne $i 0 }}{{ $i }}{{ end }}
         Type: forward
       {{- end}}
     Conditions:
@@ -132,15 +132,15 @@ HTTPListenerRuleWithDomain{{logicalIDSafe $listener.Path}}:
     {{- else}}
     ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
     {{- end}}
-    Priority: !GetAtt HTTPRuleWithDomainPriorityAction{{logicalIDSafe $listener.Path}}.Priority
+    Priority: !GetAtt HTTPRuleWithDomainPriorityAction{{ if ne $i 0 }}{{ $i }}{{ end }}.Priority
 
-HTTPSListenerRule{{logicalIDSafe $listener.Path}}:
+HTTPSListenerRule{{ if ne $i 0 }}{{ $i }}{{ end }}:
   Metadata:
     'aws:copilot:description': 'An HTTPS listener rule for forwarding HTTPS traffic to your tasks'
   Type: AWS::ElasticLoadBalancingV2::ListenerRule
   Properties:
     Actions:
-      - TargetGroupArn: !Ref {{ if eq $listener.Path "/"}} TargetGroupForDefaultPath {{ else }} TargetGroupFor{{ logicalIDSafe $listener.Path }} {{ end }}
+      - TargetGroupArn: !Ref TargetGroup{{ if ne $i 0 }}{{ $i }}{{ end }}
         Type: forward
     Conditions:
       {{- if $listener.AllowedSourceIps}}
@@ -179,5 +179,5 @@ HTTPSListenerRule{{logicalIDSafe $listener.Path}}:
     {{- else}}
     ListenerArn: !GetAtt EnvControllerAction.HTTPSListenerArn
     {{- end}}
-    Priority: !GetAtt HTTPSRulePriorityAction{{logicalIDSafe $listener.Path }}.Priority
+    Priority: !GetAtt HTTPSRulePriorityAction{{ if ne $i 0 }}{{ $i }}{{ end }}.Priority
 {{- end }}

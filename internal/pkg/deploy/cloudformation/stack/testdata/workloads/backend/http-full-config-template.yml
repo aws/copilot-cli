@@ -274,7 +274,7 @@ Resources:
     Type: AWS::ECS::Service
     DependsOn:
       - EnvControllerAction
-      - HTTPListenerRulehttpfullconfigpath
+      - HTTPListenerRule
     Properties:
       PlatformVersion: LATEST
       Cluster:
@@ -318,8 +318,8 @@ Resources:
       LoadBalancers:
         - ContainerName: http-full-config
           ContainerPort: 8081
-          TargetGroupArn: !Ref TargetGroupForhttpfullconfigpath
-  TargetGroupForhttpfullconfigpath:
+          TargetGroupArn: !Ref TargetGroup
+  TargetGroup:
     Metadata:
       "aws:copilot:description": "A target group to connect the load balancer to your service"
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
@@ -395,21 +395,21 @@ Resources:
             - "."
             - - !Ref WorkloadName
               - !GetAtt EnvControllerAction.InternalWorkloadsHostedZoneName
-  HTTPRulePriorityActionhttpfullconfigpath:
+  HTTPRulePriorityAction:
     Metadata:
       "aws:copilot:description": "A custom resource assigning priority for HTTP listener rules"
     Type: Custom::RulePriorityFunction
     Properties:
       ServiceToken: !GetAtt RulePriorityFunction.Arn
-      RulePath: !Ref RulePath
+      RulePath: http-full-config-path
       ListenerArn: !GetAtt EnvControllerAction.InternalHTTPListenerArn
-  HTTPListenerRulehttpfullconfigpath:
+  HTTPListenerRule:
     Metadata:
       "aws:copilot:description": "A HTTP listener rule for forwarding HTTP traffic"
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
     Properties:
       Actions:
-        - TargetGroupArn: !Ref TargetGroupForhttpfullconfigpath
+        - TargetGroupArn: !Ref TargetGroup
           Type: forward
       Conditions:
         - Field: "source-ip"
@@ -430,7 +430,7 @@ Resources:
               - "/http-full-config-path"
               - "/http-full-config-path/*"
       ListenerArn: !GetAtt EnvControllerAction.InternalHTTPListenerArn
-      Priority: !GetAtt HTTPRulePriorityActionhttpfullconfigpath.Priority
+      Priority: !GetAtt HTTPRulePriorityAction.Priority
   AddonsStack:
     Metadata:
       "aws:copilot:description": "An Addons CloudFormation Stack for your additional AWS resources"
