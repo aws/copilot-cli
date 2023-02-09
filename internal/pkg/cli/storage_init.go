@@ -140,13 +140,6 @@ var engineTypes = []string{
 	engineTypePostgreSQL,
 }
 
-var (
-	ddbFlags                       = []string{storagePartitionKeyFlag, storageSortKeyFlag, storageNoSortFlag, storageLSIConfigFlag, storageNoLSIFlag}
-	ddbFlagExclusiveWithAddIngress = ddbFlags
-	rdsFlags                       = []string{storageAuroraServerlessVersionFlag, storageRDSEngineFlag, storageRDSInitialDBFlag, storageRDSParameterGroupFlag}
-	rdsFlagExclusiveWithAddIngress = []string{storageAuroraServerlessVersionFlag, storageRDSInitialDBFlag, storageRDSParameterGroupFlag}
-)
-
 type initStorageVars struct {
 	storageType    string
 	storageName    string
@@ -248,20 +241,6 @@ func (o *initStorageOpts) Validate() error {
 func (o *initStorageOpts) validateAddIngressFrom() error {
 	if o.workloadName != "" {
 		return fmt.Errorf("--%s cannot be specified with --%s", workloadFlag, storageAddIngressFromFlag)
-	}
-	if o.configFlagExclusiveWithAddIngress != "" {
-		// Example: ✘ Most configuration flags are incompatible with --add-ingress-from: (DynamoDB flags) --partition-key, --sort-key, --no-sort, --lsi and --no-lsi; (Aurora serverless flags) --serverless-version, --initial-db and --parameter-group.
-		log.Errorf("Most configuration flags are incompatible with --%s: %s %s; %s %s.\n",
-			storageAddIngressFromFlag,
-			color.Faint.Sprintf("(DynamoDB flags)"),
-			english.WordSeries(applyAll(ddbFlagExclusiveWithAddIngress, func(in string) string {
-				return fmt.Sprintf("--%s", in)
-			}), "and"),
-			color.Faint.Sprintf("(Aurora serverless flags)"),
-			english.WordSeries(applyAll(rdsFlagExclusiveWithAddIngress, func(in string) string {
-				return fmt.Sprintf("--%s", in)
-			}), "and"))
-		return fmt.Errorf(`specified --%s with --%s`, o.configFlagExclusiveWithAddIngress, storageAddIngressFromFlag)
 	}
 	if o.lifecycle == lifecycleWorkloadLevel {
 		return fmt.Errorf("--%s cannot be %s when --%s is used", storageLifecycleFlag, lifecycleWorkloadLevel, storageAddIngressFromFlag)
@@ -1002,12 +981,6 @@ Resource names are injected into your containers as environment variables for ea
 			if err != nil {
 				return err
 			}
-			for _, f := range append(ddbFlagExclusiveWithAddIngress, rdsFlagExclusiveWithAddIngress...) {
-				if cmd.Flags().Changed(f) {
-					opts.configFlagExclusiveWithAddIngress = f
-					break
-				}
-			}
 			return run(opts)
 		}),
 	}
@@ -1028,6 +1001,11 @@ Resource names are injected into your containers as environment variables for ea
 	cmd.Flags().StringVar(&vars.rdsInitialDBName, storageRDSInitialDBFlag, "", storageRDSInitialDBFlagDescription)
 	cmd.Flags().StringVar(&vars.rdsParameterGroup, storageRDSParameterGroupFlag, "", storageRDSParameterGroupFlagDescription)
 
+	ddbFlags := []string{storagePartitionKeyFlag, storageSortKeyFlag, storageNoSortFlag, storageLSIConfigFlag, storageNoLSIFlag}
+	rdsFlags := []string{storageAuroraServerlessVersionFlag, storageRDSEngineFlag, storageRDSInitialDBFlag, storageRDSParameterGroupFlag}
+	for _, f := range append(ddbFlags, storageAuroraServerlessVersionFlag, storageRDSInitialDBFlag, storageRDSParameterGroupFlag) {
+		cmd.MarkFlagsMutuallyExclusive(storageAddIngressFromFlag, f)
+	}
 	requiredFlags := pflag.NewFlagSet("Required", pflag.ContinueOnError)
 	requiredFlags.AddFlag(cmd.Flags().Lookup(nameFlag))
 	requiredFlags.AddFlag(cmd.Flags().Lookup(storageTypeFlag))

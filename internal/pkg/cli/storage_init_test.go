@@ -58,22 +58,6 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 			mock:             func(m *mockStorageInitValidate) {},
 			wantedErr:        errors.New("--workload cannot be specified with --add-ingress-from"),
 		},
-		"fails when --add-ingress-from is accompanied by ddb flags": {
-			inAppName:        "bowie",
-			inAddIngressFrom: "api",
-			mock: func(m *mockStorageInitValidate) {
-				m.flagExclusiveWithAddIngress = storageNoLSIFlag
-			},
-			wantedErr: errors.New("specified --no-lsi with --add-ingress-from"),
-		},
-		"fails when --add-ingress-from is accompanied by aurora flags": {
-			inAppName:        "bowie",
-			inAddIngressFrom: "api",
-			mock: func(m *mockStorageInitValidate) {
-				m.flagExclusiveWithAddIngress = storageRDSInitialDBFlag
-			},
-			wantedErr: errors.New("specified --initial-db with --add-ingress-from"),
-		},
 		"fails when --add-ingress-from is accompanied by workload-level lifecycle": {
 			inAppName:        "bowie",
 			inAddIngressFrom: "api",
