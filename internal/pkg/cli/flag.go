@@ -289,7 +289,7 @@ Uploaded asset locations are filled in the template configuration.`
 	storageFlagDescription               = "Name of the storage resource to create."
 	storageWorkloadFlagDescription       = "Name of the service or job to associate with storage."
 	storageLifecycleFlagDescription      = "Whether the storage should be created and deleted at the same time as a workload or as the environment"
-	storageAddIngressFromFlagDescription = `The workload that needs access to an environment-level storage.
+	storageAddIngressFromFlagDescription = `The workload that needs access to an environment-level addon.
 Must be specified with --name and --storage-type.`
 	storagePartitionKeyFlagDescription = `Partition key for the DDB table.
 Must be of the format '<keyName>:<dataType>'.`
