@@ -40,7 +40,6 @@ type rollingUpdateComponent struct {
 	// Data to render.
 	deployments  []stream.ECSDeployment
 	failureMsgs  []string
-	rollbackMsgs []string
 
 	// Style configuration for the component.
 	padding           int
@@ -51,12 +50,11 @@ type rollingUpdateComponent struct {
 	mu     sync.Mutex               // Lock used to mutate data to render.
 }
 
-// Listen updates the deployment statuses, and rollback and failure event messages as events are streamed.
+// Listen updates the deployment statuses and failure event messages as events are streamed.
 func (c *rollingUpdateComponent) Listen() {
 	for ev := range c.stream {
 		c.mu.Lock()
 		c.deployments = ev.Deployments
-		c.rollbackMsgs = append(c.rollbackMsgs, ev.Rollbacks...)
 		c.failureMsgs = append(c.failureMsgs, ev.LatestFailureEvents...)
 		if len(c.failureMsgs) > c.maxLenFailureMsgs {
 			c.failureMsgs = c.failureMsgs[len(c.failureMsgs)-c.maxLenFailureMsgs:]
@@ -73,12 +71,6 @@ func (c *rollingUpdateComponent) Render(out io.Writer) (numLines int, err error)
 	buf := new(bytes.Buffer)
 
 	nl, err := c.renderDeployments(buf)
-	if err != nil {
-		return 0, err
-	}
-	numLines += nl
-
-	nl, err = c.renderRollbacks(buf)
 	if err != nil {
 		return 0, err
 	}
@@ -122,38 +114,6 @@ func (c *rollingUpdateComponent) renderDeployments(out io.Writer) (numLines int,
 		return 0, fmt.Errorf("render deployments table: %w", err)
 	}
 	return nl, err
-}
-
-func (c *rollingUpdateComponent) renderRollbacks(out io.Writer) (numLines int, err error) {
-	if len(c.rollbackMsgs) == 0 {
-		return 0, nil
-	}
-	var components []Renderer
-
-	heading := fmt.Sprintf("%s%s", color.BoldFgYellow.Sprintf("! "), color.Faint.Sprintf("Latest alarm-based rollback event"))
-	if l := len(c.rollbackMsgs); l > 1 {
-		heading = fmt.Sprintf("Latest %d alarm-based rollback events", l)
-	}
-	components = []Renderer{
-		&singleLineComponent{}, // Add an empty line before rendering failure events.
-		&singleLineComponent{
-			Text:    heading,
-			Padding: c.padding,
-		},
-	}
-	for _, msg := range c.rollbackMsgs {
-		for i, truncatedMsg := range splitByLength(msg, maxCellLength) {
-			pretty := fmt.Sprintf(" %s", truncatedMsg)
-			if i == 0 {
-				pretty = fmt.Sprintf("- %s", truncatedMsg)
-			}
-			components = append(components, &singleLineComponent{
-				Text:    pretty,
-				Padding: c.padding + nestedComponentPadding,
-			})
-		}
-	}
-	return renderComponents(out, components)
 }
 
 func (c *rollingUpdateComponent) renderFailureMsgs(out io.Writer) (numLines int, err error) {

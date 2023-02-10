@@ -43,7 +43,6 @@ func TestRollingUpdateComponent_Listen(t *testing.T) {
 						RolloutState:    "COMPLETED",
 					},
 				},
-				Rollbacks: []string{"alarm triggered"},
 				LatestFailureEvents: []string{"event1", "event2", "event3"},
 			}
 			events <- stream.ECSService{
@@ -56,7 +55,6 @@ func TestRollingUpdateComponent_Listen(t *testing.T) {
 						RolloutState:    "COMPLETED",
 					},
 				},
-				Rollbacks: []string{"deployment rolled back"},
 				LatestFailureEvents: []string{"event4"},
 			}
 			close(events)
@@ -73,7 +71,6 @@ func TestRollingUpdateComponent_Listen(t *testing.T) {
 				RolloutState:    "COMPLETED",
 			},
 		}, c.deployments, "expected only the latest deployment to be stored")
-		require.Equal(t, []string{"alarm triggered", "deployment rolled back"}, c.rollbackMsgs, "expected rollback event messages to be stored")
 		require.Equal(t, []string{"event3", "event4"}, c.failureMsgs, "expected max len failure msgs to be respected")
 	})
 }
@@ -137,14 +134,6 @@ func TestRollingUpdateComponent_Render(t *testing.T) {
   - (service my-svc) (task 1234) failed container health checks.
 `,
 		},
-		"should render a rollback event": {
-			inRollbackMsgs: []string{"(service my-svc) (service my-svc) deployment ecs-svc/0205655736282798388 deployment failed: alarm detected.", "(service my-svc) rolling back to deployment ecs-svc/9086637243870003494."},
-
-			wantedNumLines: 2,
-			wantedOut: `(service my-svc) (service my-svc) deployment ecs-svc/0205655736282798388 deployment failed: alarm detected.
-(service my-svc) rolling back to deployment ecs-svc/9086637243870003494.
-`,
-		},
 	}
 
 	for name, tc := range testCases {
@@ -153,7 +142,6 @@ func TestRollingUpdateComponent_Render(t *testing.T) {
 			buf := new(strings.Builder)
 			c := &rollingUpdateComponent{
 				deployments: tc.inDeployments,
-				rollbackMsgs: tc.inRollbackMsgs,
 				failureMsgs: tc.inFailureMsgs,
 			}
 
