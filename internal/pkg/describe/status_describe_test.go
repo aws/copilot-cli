@@ -167,6 +167,83 @@ func TestServiceStatus_Describe(t *testing.T) {
 			},
 			wantedError: fmt.Errorf("get Copilot-created CloudWatch alarms: some error"),
 		},
+		"do not get status of extraneous alarms": {
+			setupMocks: func(m serviceStatusDescriberMocks) {
+				gomock.InOrder(
+					m.serviceDescriber.EXPECT().DescribeService("mockApp", "mockEnv", "mockSvc").Return(&ecs.ServiceDesc{
+						ClusterName: mockCluster,
+						Name:        mockService,
+						Tasks: []*awsecs.Task{
+							{
+								TaskArn:      aws.String("arn:aws:ecs:us-west-2:123456789012:task/mockCluster/1234567890123456789"),
+								StartedAt:    &startTime,
+								HealthStatus: aws.String("HEALTHY"),
+								LastStatus:   aws.String("RUNNING"),
+								Containers: []*ecsapi.Container{
+									{
+										Image:       aws.String("mockImageID1"),
+										ImageDigest: aws.String("69671a968e8ec3648e2697417750e"),
+									},
+								},
+								StoppedAt:     &stopTime,
+								StoppedReason: aws.String("some reason"),
+							},
+						},
+					}, nil),
+					m.ecsServiceGetter.EXPECT().Service(mockCluster, mockService).Return(&awsecs.Service{
+						Status:       aws.String("ACTIVE"),
+						DesiredCount: aws.Int64(1),
+						RunningCount: aws.Int64(1),
+						Deployments: []*ecsapi.Deployment{
+							{
+								UpdatedAt:      &startTime,
+								TaskDefinition: aws.String("mockTaskDefinition"),
+							},
+						},
+					}, nil),
+					m.alarmStatusGetter.EXPECT().AlarmsWithTags(map[string]string{
+						"copilot-application": "mockApp",
+						"copilot-environment": "mockEnv",
+						"copilot-service":     "mockSvc",
+					}).Return(nil, nil),
+					m.aas.EXPECT().ECSServiceAlarmNames(mockCluster, mockService).Return(nil, nil),
+					m.alarmStatusGetter.EXPECT().AlarmStatuses(gomock.Any()).Return(nil, nil),
+				)
+			},
+
+			wantedContent: &ecsServiceStatus{
+				Service: awsecs.ServiceStatus{
+					DesiredCount: 1,
+					RunningCount: 1,
+					Status:       "ACTIVE",
+					Deployments: []awsecs.Deployment{
+						{
+							UpdatedAt:      startTime,
+							TaskDefinition: "mockTaskDefinition",
+						},
+					},
+					LastDeploymentAt: startTime,
+					TaskDefinition:   "mockTaskDefinition",
+				},
+				Alarms: []cloudwatch.AlarmStatus{},
+				DesiredRunningTasks: []awsecs.TaskStatus{
+					{
+						Health:     "HEALTHY",
+						LastStatus: "RUNNING",
+						ID:         "1234567890123456789",
+						Images: []awsecs.Image{
+							{
+								Digest: "69671a968e8ec3648e2697417750e",
+								ID:     "mockImageID1",
+							},
+						},
+						StartedAt:     startTime,
+						StoppedAt:     stopTime,
+						StoppedReason: "some reason",
+					},
+				},
+			},
+		},
 		"do not error out if failed to get a service's target group health": {
 			setupMocks: func(m serviceStatusDescriberMocks) {
 				gomock.InOrder(
@@ -561,7 +638,6 @@ func TestServiceStatus_Describe(t *testing.T) {
 						StoppedReason: "some reason",
 					},
 				},
-				//rendererConfigurer: &barRendererConfigurer{},
 			},
 		},
 	}

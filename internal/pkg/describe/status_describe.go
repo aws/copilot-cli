@@ -216,6 +216,9 @@ func (s *ecsStatusDescriber) ecsServiceAutoscalingAlarms(cluster, service string
 	if err != nil {
 		return nil, fmt.Errorf("retrieve auto scaling alarm names for ECS service %s/%s: %w", cluster, service, err)
 	}
+	if alarmNames == nil {
+		return nil, nil
+	}
 	alarms, err := s.cwSvcGetter.AlarmStatuses(cloudwatch.WithNames(alarmNames))
 	if err != nil {
 		return nil, fmt.Errorf("get auto scaling CloudWatch alarms: %w", err)

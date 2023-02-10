@@ -73,6 +73,9 @@ func (cw *CloudWatch) AlarmsWithTags(tags map[string]string) ([]AlarmStatus, err
 		}
 		alarmNames = append(alarmNames, name)
 	}
+	if len(alarmNames) == 0 {
+		return nil, nil
+	}
 	return cw.AlarmStatuses(WithNames(alarmNames))
 }
 
@@ -94,6 +97,8 @@ func WithPrefix(prefix string) DescribeAlarmOpts {
 }
 
 // AlarmStatuses returns the statuses of alarms optionally filtered (by name, prefix, etc.).
+// If the optional parameter is passed in but is nil, the statuses of ALL alarms in the
+// account will be returned!
 func (cw *CloudWatch) AlarmStatuses(opts ...DescribeAlarmOpts) ([]AlarmStatus, error) {
 	var alarmStatuses []AlarmStatus
 	in := &cloudwatch.DescribeAlarmsInput{}
