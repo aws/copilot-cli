@@ -20,6 +20,9 @@ import (
 type jobDeployer struct {
 	*workloadDeployer
 	jobMft *manifest.ScheduledJob
+
+	// Overriden in tests.
+	newStack func() cloudformation.StackConfiguration
 }
 
 // IsServiceAvailableInRegion checks if service type exist in the given region.
@@ -94,18 +97,26 @@ func (d *jobDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*jobSta
 	if err != nil {
 		return nil, err
 	}
-	conf, err := stack.NewScheduledJob(stack.ScheduledJobConfig{
-		App:                d.app,
-		Env:                d.env.Name,
-		Manifest:           d.jobMft,
-		RawManifest:        d.rawMft,
-		ArtifactBucketName: d.resources.S3Bucket,
-		RuntimeConfig:      *rc,
-		Addons:             d.addons,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("create stack configuration: %w", err)
+
+	var conf cloudformation.StackConfiguration
+	switch {
+	case d.newStack != nil:
+		conf = d.newStack()
+	default:
+		conf, err = stack.NewScheduledJob(stack.ScheduledJobConfig{
+			App:                d.app,
+			Env:                d.env.Name,
+			Manifest:           d.jobMft,
+			RawManifest:        d.rawMft,
+			ArtifactBucketName: d.resources.S3Bucket,
+			RuntimeConfig:      *rc,
+			Addons:             d.addons,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("create stack configuration: %w", err)
+		}
 	}
+	
 	return &jobStackConfigurationOutput{
 		conf: cloudformation.WrapWithTemplateOverrider(conf, d.overrider),
 	}, nil

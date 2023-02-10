@@ -36,8 +36,11 @@ type snsTopicsLister interface {
 
 type workerSvcDeployer struct {
 	*svcDeployer
+	wsMft *manifest.WorkerService
+
+	// Overriden in tests.
 	topicLister snsTopicsLister
-	wsMft       *manifest.WorkerService
+	newStack    func() cloudformation.StackConfiguration
 }
 
 // IsServiceAvailableInRegion checks if service type exist in the given region.
@@ -170,18 +173,26 @@ func (d *workerSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*
 	if err = validateTopicsExist(subs, topicARNs, d.app.Name, d.env.Name); err != nil {
 		return nil, err
 	}
-	conf, err := stack.NewWorkerService(stack.WorkerServiceConfig{
-		App:                d.app,
-		Env:                d.env.Name,
-		Manifest:           d.wsMft,
-		RawManifest:        d.rawMft,
-		ArtifactBucketName: d.resources.S3Bucket,
-		RuntimeConfig:      *rc,
-		Addons:             d.addons,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("create stack configuration: %w", err)
+
+	var conf cloudformation.StackConfiguration
+	switch {
+	case d.newStack != nil:
+		conf = d.newStack()
+	default:
+		conf, err = stack.NewWorkerService(stack.WorkerServiceConfig{
+			App:                d.app,
+			Env:                d.env.Name,
+			Manifest:           d.wsMft,
+			RawManifest:        d.rawMft,
+			ArtifactBucketName: d.resources.S3Bucket,
+			RuntimeConfig:      *rc,
+			Addons:             d.addons,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("create stack configuration: %w", err)
+		}
 	}
+	
 	return &workerSvcStackConfigurationOutput{
 		svcStackConfigurationOutput: svcStackConfigurationOutput{
 			conf: cloudformation.WrapWithTemplateOverrider(conf, d.overrider),
