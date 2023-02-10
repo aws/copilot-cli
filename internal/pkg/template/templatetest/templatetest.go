@@ -47,3 +47,10 @@ func (fs Stub) ParseEnvBootstrap(data *template.EnvOpts, options ...template.Par
 		Buffer: bytes.NewBufferString("data"),
 	}, nil
 }
+
+// ParseLoadBalancedWebService returns a dummy template.Content with "data" in it.
+func (fs Stub) ParseLoadBalancedWebService(_ template.WorkloadOpts) (*template.Content, error) {
+	return &template.Content{
+		Buffer: bytes.NewBufferString("data"),
+	}, nil
+}

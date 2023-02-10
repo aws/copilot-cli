@@ -39,6 +39,7 @@ type envReadParser interface {
 // embedFS is the interface to parse any embedded templates.
 type embedFS interface {
 	backendSvcReadParser
+	loadBalancedWebSvcReadParser
 	envReadParser
 }
 

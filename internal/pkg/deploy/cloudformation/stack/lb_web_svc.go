@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -34,7 +36,8 @@ type LoadBalancedWebService struct {
 	publicSubnetCIDRBlocks []string
 	appInfo                deploy.AppInformation
 
-	parser loadBalancedWebSvcReadParser
+	parser   loadBalancedWebSvcReadParser
+	localCRs []uploadable // Custom resources that have not been uploaded yet.
 }
 
 // LoadBalancedWebServiceOption is used to configuring an optional field for LoadBalancedWebService.
@@ -62,7 +65,10 @@ type LoadBalancedWebServiceConfig struct {
 // NewLoadBalancedWebService creates a new CFN stack with an ECS service from a manifest file, given the options.
 func NewLoadBalancedWebService(conf LoadBalancedWebServiceConfig,
 	opts ...LoadBalancedWebServiceOption) (*LoadBalancedWebService, error) {
-	parser := template.New()
+	crs, err := customresource.LBWS(fs)
+	if err != nil {
+		return nil, fmt.Errorf("load balanced web service custom resources: %w", err)
+	}
 	var dnsDelegationEnabled, httpsEnabled bool
 	var appInfo deploy.AppInformation
 
@@ -94,7 +100,7 @@ func NewLoadBalancedWebService(conf LoadBalancedWebServiceConfig,
 				rc:                 conf.RuntimeConfig,
 				image:              conf.Manifest.ImageConfig.Image,
 				rawManifest:        conf.RawManifest,
-				parser:             parser,
+				parser:             fs,
 				addons:             conf.Addons,
 			},
 			logRetention:        conf.Manifest.Logging.Retention,
@@ -106,7 +112,8 @@ func NewLoadBalancedWebService(conf LoadBalancedWebServiceConfig,
 		appInfo:              appInfo,
 		dnsDelegationEnabled: dnsDelegationEnabled,
 
-		parser: parser,
+		parser:   fs,
+		localCRs: uploadableCRs(crs).convert(),
 	}
 	for _, opt := range opts {
 		opt(s)
