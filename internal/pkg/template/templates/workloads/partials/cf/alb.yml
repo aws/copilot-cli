@@ -33,8 +33,8 @@ TargetGroup{{ if ne $i 0 }}{{ $i }}{{ end }}:
     {{- else }}
     Protocol: HTTP
     {{- end }}
-    {{- if $.HTTPVersion}}
-    ProtocolVersion: {{$.HTTPVersion}}
+    {{- if $listener.HTTPVersion}}
+    ProtocolVersion: {{$listener.HTTPVersion}}
     {{- end}}
     TargetGroupAttributes:
       - Key: deregistration_delay.timeout_seconds

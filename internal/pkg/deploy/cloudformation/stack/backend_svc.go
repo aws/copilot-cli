@@ -122,23 +122,9 @@ func (s *BackendService) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	var aliases []string
-	if s.httpsEnabled {
-		if aliases, err = convertAlias(s.manifest.RoutingRule.Alias); err != nil {
-			return "", err
-		}
-	}
-	hostedZoneAliases, err := convertHostedZone(s.manifest.RoutingRule.Alias, s.manifest.RoutingRule.HostedZone)
-	if err != nil {
-		return "", err
-	}
 	var deregistrationDelay *int64 = aws.Int64(60)
 	if s.manifest.RoutingRule.DeregistrationDelay != nil {
 		deregistrationDelay = aws.Int64(int64(s.manifest.RoutingRule.DeregistrationDelay.Seconds()))
-	}
-	var allowedSourceIPs []string
-	for _, ipNet := range s.manifest.RoutingRule.AllowedSourceIps {
-		allowedSourceIPs = append(allowedSourceIPs, string(ipNet))
 	}
 	var scConfig *template.ServiceConnect
 	if s.manifest.Network.Connect.Enabled() {
@@ -188,18 +174,12 @@ func (s *BackendService) Template() (string, error) {
 
 		// ALB configs.
 		ALBEnabled:          s.albEnabled,
-		Aliases:             aliases,
-		AllowedSourceIps:    allowedSourceIPs,
 		DeregistrationDelay: deregistrationDelay,
-		HostedZoneAliases:   hostedZoneAliases,
-		HTTPSListener:       s.httpsEnabled,
-		HTTPRedirect:        s.httpsEnabled,
 		HTTPTargetContainer: template.HTTPTargetContainer{
 			Port: targetContainerPort,
 			Name: targetContainer,
 		},
 		HTTPHealthCheck: convertHTTPHealthCheck(&s.manifest.RoutingRule.HealthCheck),
-		HTTPVersion:     convertHTTPVersion(s.manifest.RoutingRule.ProtocolVersion),
 		ALB:             albConfig.settings,
 
 		// Custom Resource Config.

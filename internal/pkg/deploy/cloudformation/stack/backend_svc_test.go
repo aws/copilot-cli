@@ -296,7 +296,6 @@ Outputs:
 				StartPeriod: aws.Int64(0),
 				Timeout:     aws.Int64(10),
 			},
-			HostedZoneAliases: make(template.AliasesForHostedZone),
 			HTTPTargetContainer: template.HTTPTargetContainer{
 				Port: "8080",
 				Name: "api",
@@ -489,9 +488,7 @@ Outputs:
 				Interval:           aws.Int64(61),
 				GracePeriod:        60,
 			},
-			HostedZoneAliases:   make(template.AliasesForHostedZone),
 			DeregistrationDelay: aws.Int64(59),
-			AllowedSourceIps:    []string{"10.0.1.0/24"},
 			CustomResources: map[string]template.S3ObjectLocation{
 				"EnvControllerFunction": {
 					Bucket: "my-bucket",

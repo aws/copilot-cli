@@ -488,7 +488,7 @@ func convertEnvSecurityGroupCfg(mft *manifest.Environment) (*template.SecurityGr
 
 func (s *LoadBalancedWebService) convertApplicationLoadBalancer() (applicationLoadBalancerConfig, error) {
 	albConfig := s.manifest.RoutingRule
-	if albConfig.IsEmpty() {
+	if albConfig.Disabled() || albConfig.IsEmpty() {
 		return applicationLoadBalancerConfig{}, nil
 	}
 	var aliases []string
@@ -502,21 +502,13 @@ func (s *LoadBalancedWebService) convertApplicationLoadBalancer() (applicationLo
 
 	aliasesFor, err := convertHostedZone(albConfig.Alias, albConfig.HostedZone)
 	if err != nil {
-		return applicationLoadBalancerConfig{}, err
-	}
-
-	var allowedSourceIPs []string
-	for _, ipNet := range albConfig.AllowedSourceIps {
-		allowedSourceIPs = append(allowedSourceIPs, string(ipNet))
+		return applicationLoadBalancerConfig{}, fmt.Errorf(`convert "http.alias" to string slice: %w`, err)
 	}
 
 	targetContainer, targetPort, err := s.manifest.HTTPLoadBalancerTarget()
 	if err != nil {
 		return applicationLoadBalancerConfig{}, err
 	}
-
-	httpHealthCheck := convertHTTPHealthCheck(&albConfig.HealthCheck)
-	stickiness := strconv.FormatBool(aws.BoolValue(albConfig.Stickiness))
 
 	httpRedirect := true
 	if albConfig.RedirectToHTTPS != nil {
@@ -532,9 +524,10 @@ func (s *LoadBalancedWebService) convertApplicationLoadBalancer() (applicationLo
 					TargetContainer:  targetContainer,
 					TargetPort:       targetPort,
 					Aliases:          aliases,
-					HTTPHealthCheck:  httpHealthCheck,
-					Stickiness:       stickiness,
-					AllowedSourceIps: allowedSourceIPs,
+					HTTPHealthCheck:  convertHTTPHealthCheck(&albConfig.HealthCheck),
+					Stickiness:       strconv.FormatBool(aws.BoolValue(albConfig.Stickiness)),
+					AllowedSourceIps: convertAllowedSourceIPs(albConfig.AllowedSourceIps),
+					HTTPVersion:      aws.StringValue(convertHTTPVersion(albConfig.ProtocolVersion)),
 				},
 			},
 			HTTPRedirect:      httpRedirect,
@@ -555,29 +548,22 @@ func (s *BackendService) convertApplicationLoadBalancer() (applicationLoadBalanc
 	var aliases []string
 	var err error
 	if s.httpsEnabled {
-		aliases, err = convertAlias(s.manifest.RoutingRule.Alias)
+		aliases, err = convertAlias(albConfig.Alias)
+		if err != nil {
+			return applicationLoadBalancerConfig{}, err
+		}
 	}
 
-	hostedZoneAliases, err := convertHostedZone(s.manifest.RoutingRule.Alias, s.manifest.RoutingRule.HostedZone)
+	hostedZoneAliases, err := convertHostedZone(albConfig.Alias, albConfig.HostedZone)
 	if err != nil {
 		return applicationLoadBalancerConfig{}, fmt.Errorf(`convert "http.alias" to string slice: %w`, err)
 	}
 
-	var allowedSourceIPs []string
-	for _, ipNet := range s.manifest.RoutingRule.AllowedSourceIps {
-		allowedSourceIPs = append(allowedSourceIPs, string(ipNet))
-	}
-
-	if err != nil {
-		return applicationLoadBalancerConfig{}, fmt.Errorf("exposed ports configuration for service %s: %w", s.name, err)
-	}
 	targetContainer, targetPort, err := s.manifest.HTTPLoadBalancerTarget()
 	if err != nil {
 		return applicationLoadBalancerConfig{}, err
 	}
 
-	httpHealthCheck := convertHTTPHealthCheck(&albConfig.HealthCheck)
-	stickiness := aws.String(strconv.FormatBool(aws.BoolValue(s.manifest.RoutingRule.Stickiness)))
 	config := applicationLoadBalancerConfig{
 		settings: &template.ApplicationLoadBalancer{
 			Listener: []template.ApplicationLoadBalancerRoutineRule{
@@ -587,9 +573,10 @@ func (s *BackendService) convertApplicationLoadBalancer() (applicationLoadBalanc
 					TargetContainer:  targetContainer,
 					TargetPort:       targetPort,
 					Aliases:          aliases,
-					HTTPHealthCheck:  httpHealthCheck,
-					AllowedSourceIps: allowedSourceIPs,
-					Stickiness:       aws.StringValue(stickiness),
+					HTTPHealthCheck:  convertHTTPHealthCheck(&albConfig.HealthCheck),
+					AllowedSourceIps: convertAllowedSourceIPs(albConfig.AllowedSourceIps),
+					Stickiness:       strconv.FormatBool(aws.BoolValue(albConfig.Stickiness)),
+					HTTPVersion:      aws.StringValue(convertHTTPVersion(s.manifest.RoutingRule.ProtocolVersion)),
 				},
 			},
 			HTTPRedirect:      s.httpsEnabled,
@@ -660,6 +647,14 @@ func convertExecuteCommand(e *manifest.ExecuteCommand) *template.ExecuteCommandO
 		return nil
 	}
 	return &template.ExecuteCommandOpts{}
+}
+
+func convertAllowedSourceIPs(allowedSourceIPs []manifest.IPNet) []string {
+	var sourceIPs []string
+	for _, ipNet := range allowedSourceIPs {
+		sourceIPs = append(sourceIPs, string(ipNet))
+	}
+	return sourceIPs
 }
 
 func convertServiceConnect(s manifest.ServiceConnectBoolOrArgs) *template.ServiceConnect {

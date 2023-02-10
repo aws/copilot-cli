@@ -274,26 +274,18 @@ type importableValue interface {
 	Value() string
 }
 
-func (cfg *ApplicationLoadBalancer) GetAliases() []string {
+func (cfg *ApplicationLoadBalancer) Aliases() []string {
 	var uniqueAliases []string
-	uniqueAliasMap := make(map[string]bool)
+	seen := make(map[string]bool)
 	for _, listener := range cfg.Listener {
-		if listener.Aliases != nil {
-			uniqueAliases = append(uniqueAliases, uniqueAliasesForARecords(listener.Aliases, uniqueAliasMap)...)
+		for _, entry := range listener.Aliases {
+			if _, value := seen[entry]; !value {
+				seen[entry] = true
+				uniqueAliases = append(uniqueAliases, entry)
+			}
 		}
 	}
 	return uniqueAliases
-}
-
-func uniqueAliasesForARecords(aliases []string, uniqueMap map[string]bool) []string {
-	list := []string{}
-	for _, entry := range aliases {
-		if _, value := uniqueMap[entry]; !value {
-			uniqueMap[entry] = true
-			list = append(list, entry)
-		}
-	}
-	return list
 }
 
 // IsHTTPS returns true if the target container's port is 443.
@@ -446,6 +438,7 @@ type ApplicationLoadBalancerRoutineRule struct {
 	AllowedSourceIps []string
 	Stickiness       string
 	HTTPHealthCheck  HTTPHealthCheckOpts
+	HTTPVersion      string
 }
 
 // NetworkLoadBalancerListener holds configuration that's need for a Network Load Balancer listener.

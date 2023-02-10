@@ -259,12 +259,6 @@ Outputs:
 				HealthCheckPath: "/",
 				GracePeriod:     60,
 			},
-			HostedZoneAliases: template.AliasesForHostedZone{
-				"mockHostedZone": []string{"mockAlias"},
-			},
-			Aliases:             []string{"mockAlias"},
-			HTTPSListener:       true,
-			HTTPRedirect:        true,
 			DeregistrationDelay: aws.Int64(60),
 			HTTPTargetContainer: template.HTTPTargetContainer{
 				Name: "frontend",
