@@ -74,12 +74,13 @@ func newPackageJobOpts(vars packageJobVars) (*packageJobOpts, error) {
 	}
 
 	opts.newPackageCmd = func(o *packageJobOpts) {
+		gitTag := imageTagFromGit(o.runner)
 		opts.packageCmd = &packageSvcOpts{
 			packageSvcVars: packageSvcVars{
 				name:         o.name,
 				envName:      o.envName,
 				appName:      o.appName,
-				tag:          imageTagFromGit(o.runner, o.tag),
+				tag:          o.tag,
 				outputDir:    o.outputDir,
 				uploadAssets: o.uploadAssets,
 			},
@@ -94,6 +95,7 @@ func newPackageJobOpts(vars packageJobVars) (*packageJobOpts, error) {
 			fs:                fs,
 			sessProvider:      sessProvider,
 			newStackGenerator: newWorkloadStackGenerator,
+			gitTag:            gitTag,
 		}
 	}
 	return opts, nil

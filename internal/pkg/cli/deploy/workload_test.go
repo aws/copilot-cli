@@ -14,6 +14,7 @@ import (
 	"time"
 
 	cloudformation0 "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -25,7 +26,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
-	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/override"
 	"github.com/aws/copilot-cli/internal/pkg/template"
@@ -179,11 +179,12 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 		mockServiceDeployer func(deployer *workloadDeployer) artifactsUploader
 		customResourcesFunc customResourcesFunc
 
-		wantAddonsURL     string
-		wantEnvFileARN    string
-		wantImageDigest   *string
-		wantBuildRequired bool
-		wantErr           error
+		wantAddonsURL        string
+		wantEnvFileARN       string
+		wantImageDigest      *string
+		wantedscImageDigests map[string]string
+		wantBuildRequired    bool
+		wantErr              error
 	}{
 		"error if failed to build and push image": {
 			inBuildRequired: true,

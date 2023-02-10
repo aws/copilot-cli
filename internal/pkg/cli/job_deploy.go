@@ -42,6 +42,7 @@ type deployJobOpts struct {
 	newJobDeployer       func() (workloadDeployer, error)
 	envFeaturesDescriber versionCompatibilityChecker
 	sel                  wsSelector
+	gitTag               string
 
 	// cached variables
 	targetApp         *config.Application
@@ -98,6 +99,7 @@ func newJobDeployer(o *deployJobOpts) (workloadDeployer, error) {
 		App:              o.targetApp,
 		Env:              o.targetEnv,
 		ImageTag:         o.imageTag,
+		GitTag:           o.gitTag,
 		Mft:              content,
 		RawMft:           raw,
 		EnvVersionGetter: o.envFeaturesDescriber,
@@ -214,7 +216,7 @@ After fixing the deployment, you can:
 }
 
 func (o *deployJobOpts) configureClients() error {
-	o.imageTag = imageTagFromGit(o.cmd, o.imageTag) // Best effort assign git tag.
+	o.gitTag = imageTagFromGit(o.cmd) // Best effort assign git tag.
 	env, err := o.store.GetEnvironment(o.appName, o.envName)
 	if err != nil {
 		return err

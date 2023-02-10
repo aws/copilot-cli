@@ -62,6 +62,7 @@ type deploySvcOpts struct {
 	spinner progress
 	sel     wsSelector
 	prompt  prompter
+	gitTag  string
 
 	// cached variables
 	targetApp         *config.Application
@@ -130,6 +131,7 @@ func newSvcDeployer(o *deploySvcOpts) (workloadDeployer, error) {
 		App:              targetApp,
 		Env:              o.targetEnv,
 		ImageTag:         o.imageTag,
+		GitTag:           o.gitTag,
 		Mft:              content,
 		RawMft:           raw,
 		EnvVersionGetter: o.envFeaturesDescriber,
@@ -323,7 +325,7 @@ func (o *deploySvcOpts) validateOrAskEnvName() error {
 }
 
 func (o *deploySvcOpts) configureClients() error {
-	o.imageTag = imageTagFromGit(o.cmd, o.imageTag) // Best effort assign git tag.
+	o.gitTag = imageTagFromGit(o.cmd) // Best effort assign git tag.
 	env, err := o.store.GetEnvironment(o.appName, o.envName)
 	if err != nil {
 		return fmt.Errorf("get environment %s configuration: %w", o.envName, err)

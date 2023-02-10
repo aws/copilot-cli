@@ -37,6 +37,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
+	"github.com/google/uuid"
 	"github.com/spf13/afero"
 )
 
@@ -128,6 +129,7 @@ type workloadDeployer struct {
 	app           *config.Application
 	env           *config.Environment
 	imageTag      string
+	gitTag        string
 	resources     *stack.AppRegionalResources
 	mft           interface{}
 	rawMft        []byte
@@ -165,6 +167,7 @@ type WorkloadDeployerInput struct {
 	RawMft           []byte      // Content of the manifest file without any transformations.
 	EnvVersionGetter versionGetter
 	Overrider        Overrider
+	GitTag           string
 
 	// Workload specific configuration.
 	customResources customResourcesFunc
@@ -230,6 +233,7 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 		app:                in.App,
 		env:                in.Env,
 		imageTag:           in.ImageTag,
+		gitTag:             in.GitTag,
 		resources:          resources,
 		workspacePath:      ws.Path(),
 		fs:                 &afero.Afero{Fs: afero.NewOsFs()},
@@ -302,27 +306,51 @@ func (d *workloadDeployer) forceDeploy(in *forceDeployInput) error {
 	return nil
 }
 
-func (d *workloadDeployer) uploadContainerImage(imgBuilderPusher imageBuilderPusher) (*string, error) {
+func (d *workloadDeployer) uploadContainerImage(imgBuilderPusher imageBuilderPusher) (*string, map[string]string, error) {
 	required, err := manifest.DockerfileBuildRequired(d.mft)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if !required {
-		return nil, nil
+		return nil, nil, nil
+	}
+	scBuildRequired, err := scDockerfileBuildRequired(d.mft)
+	if err != nil {
+		return nil, nil, err
+	}
+	if scBuildRequired == nil {
+		return nil, nil, nil
+	}
+	id, err := uuid.NewRandom()
+	if err != nil {
+		return nil, nil, fmt.Errorf("generate random uuid for tagging main and sidecar iamges:%w", err)
 	}
 	// If it is built from local Dockerfile, build and push to the ECR repo.
-	buildArg, err := buildArgs(d.name, d.imageTag, d.workspacePath, d.mft)
+	buildArg, err := buildArgs(d.name, d.imageTag, d.gitTag, id.String(), d.workspacePath, d.mft)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	digest, err := imgBuilderPusher.BuildAndPush(dockerengine.New(exec.NewCmd()), buildArg)
 	if err != nil {
-		return nil, fmt.Errorf("build and push image: %w", err)
+		return nil, nil, fmt.Errorf("build and push main container image: %w", err)
 	}
-	return aws.String(digest), nil
+	args, err := scbuildArgs(d.name, d.gitTag, id.String(), d.workspacePath, d.mft)
+	if err != nil {
+		return nil, nil, err
+	}
+	scdigests := make(map[string]string, len(args))
+	for k, v := range args {
+		if scBuildRequired[k] {
+			scdigests[k], err = imgBuilderPusher.BuildAndPush(dockerengine.New(exec.NewCmd()), v)
+			if err != nil {
+				return nil, nil, fmt.Errorf("build and push sidecar container images: %w", err)
+			}
+		}
+	}
+	return aws.String(digest), scdigests, nil
 }
 
-func buildArgs(name, imageTag, workspacePath string, unmarshaledManifest interface{}) (*dockerengine.BuildArguments, error) {
+func buildArgs(name, imageTag, gitTag, uuid, workspacePath string, unmarshaledManifest interface{}) (*dockerengine.BuildArguments, error) {
 	type dfArgs interface {
 		BuildArgs(rootDirectory string) *manifest.DockerBuildArgs
 		ContainerPlatform() string
@@ -330,10 +358,6 @@ func buildArgs(name, imageTag, workspacePath string, unmarshaledManifest interfa
 	mf, ok := unmarshaledManifest.(dfArgs)
 	if !ok {
 		return nil, fmt.Errorf("%s does not have required methods BuildArgs() and ContainerPlatform()", name)
-	}
-	var tags []string
-	if imageTag != "" {
-		tags = append(tags, imageTag)
 	}
 	args := mf.BuildArgs(workspacePath)
 	return &dockerengine.BuildArguments{
@@ -343,8 +367,85 @@ func buildArgs(name, imageTag, workspacePath string, unmarshaledManifest interfa
 		CacheFrom:  args.CacheFrom,
 		Target:     aws.StringValue(args.Target),
 		Platform:   mf.ContainerPlatform(),
-		Tags:       tags,
+		Tags:       mainContainerTags(imageTag, gitTag, uuid),
 	}, nil
+}
+
+// mainContainerTags() returns tags for workload main container image.
+// 1. If userTag is not provided and not in git repository then return "uuid" and "latest".
+// 2. If userTag is not provided and in git repository then return "commitId" and "latest".
+// 3. If userTag is provided and not in git repository then return "userTag" and "latest".
+// 4. If userTag is provided and in git repository then return "userTag" and "latest".
+func mainContainerTags(userTag, gitTag, uuid string) []string {
+	var tags []string
+	tags = append(tags, "latest")
+	if userTag == "" && gitTag == "" {
+		tags = append(tags, uuid)
+	}
+	ugTag := userOrGitTag(userTag, gitTag)
+	if ugTag != "" {
+		tags = append(tags, ugTag)
+	}
+	return tags
+}
+
+func userOrGitTag(userTag, gitTag string) string {
+	if userTag != "" {
+		return userTag
+	}
+	return gitTag
+}
+
+// scDockerfileBuildRequired returns if the sidecar container images should be built from local Dockerfile.
+func scDockerfileBuildRequired(svc interface{}) (map[string]bool, error) {
+	type manifest interface {
+		SidecarBuildRequired() map[string]bool
+	}
+	mf, ok := svc.(manifest)
+	if !ok {
+		return nil, fmt.Errorf("manifest does not have required methods SidecarBuildRequired()")
+	}
+	return mf.SidecarBuildRequired(), nil
+}
+
+func scbuildArgs(name, gitTag, uuid, workspacePath string, unmarshaledManifest interface{}) (map[string]*dockerengine.BuildArguments, error) {
+	type dfArgs interface {
+		SidecarBuildArgs(wsRoot string) map[string]*manifest.DockerBuildArgs
+		ContainerPlatform() string
+	}
+	mf, ok := unmarshaledManifest.(dfArgs)
+	if !ok {
+		return nil, fmt.Errorf("%s does not have required methods SidecarBuildArgs() and ContainerPlatform()", name)
+	}
+	args := mf.SidecarBuildArgs(workspacePath)
+	deBuildArgs := make(map[string]*dockerengine.BuildArguments, len(args))
+	for k, v := range args {
+		deBuildArgs[k] = &dockerengine.BuildArguments{
+			Dockerfile: aws.StringValue(v.Dockerfile),
+			Context:    aws.StringValue(v.Context),
+			Args:       v.Args,
+			CacheFrom:  v.CacheFrom,
+			Target:     aws.StringValue(v.Target),
+			Platform:   mf.ContainerPlatform(),
+			Tags:       scContainerTags(k, gitTag, uuid),
+		}
+	}
+	return deBuildArgs, nil
+}
+
+// scContainerTags() returns tags for sidecar container images in a workload.
+// 1. If user is not in git repository then return "sidecarName-latest" and "sidecarName-uuid".
+// 2. If user is in git repository then return "sidecarName-latest" and "sidecarName-gitCommitId".
+func scContainerTags(scName, gitTag, uuid string) []string {
+	var tags []string
+	defaultScTag := fmt.Sprintf("%s-%s", scName, "latest")
+	tags = append(tags, defaultScTag)
+	if gitTag != "" {
+		tags = append(tags, fmt.Sprintf("%s-%s", scName, gitTag))
+	} else {
+		tags = append(tags, fmt.Sprintf("%s-%s", scName, uuid))
+	}
+	return tags
 }
 
 type uploadArtifactsToS3Input struct {
@@ -386,7 +487,7 @@ type UploadArtifactsOutput struct {
 }
 
 func (d *workloadDeployer) uploadArtifacts() (*UploadArtifactsOutput, error) {
-	imageDigest, err := d.uploadContainerImage(d.imageBuilderPusher)
+	imageDigest, _, err := d.uploadContainerImage(d.imageBuilderPusher)
 	if err != nil {
 		return nil, err
 	}
@@ -517,7 +618,7 @@ func (d *workloadDeployer) runtimeConfig(in *StackRuntimeConfiguration) (*stack.
 		AdditionalTags:    in.Tags,
 		Image: &stack.ECRImage{
 			RepoURL:  d.resources.RepositoryURLs[d.name],
-			ImageTag: d.imageTag,
+			ImageTag: userOrGitTag(d.imageTag, d.gitTag),
 			Digest:   aws.StringValue(in.ImageDigest),
 		},
 		ServiceDiscoveryEndpoint: endpoint,

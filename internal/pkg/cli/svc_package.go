@@ -62,6 +62,7 @@ type packageSvcOpts struct {
 	newInterpolator      func(app, env string) interpolator
 	newStackGenerator    func(*packageSvcOpts) (workloadStackGenerator, error)
 	envFeaturesDescriber versionCompatibilityChecker
+	gitTag               string
 
 	// cached variables
 	targetApp         *config.Application
@@ -130,6 +131,7 @@ func newWorkloadStackGenerator(o *packageSvcOpts) (workloadStackGenerator, error
 		App:              targetApp,
 		Env:              targetEnv,
 		ImageTag:         o.tag,
+		GitTag:           o.gitTag,
 		Mft:              content,
 		RawMft:           raw,
 		EnvVersionGetter: o.envFeaturesDescriber,
@@ -260,7 +262,7 @@ func (o *packageSvcOpts) validateOrAskEnvName() error {
 }
 
 func (o *packageSvcOpts) configureClients() error {
-	o.tag = imageTagFromGit(o.runner, o.tag) // Best effort assign git tag.
+	o.gitTag = imageTagFromGit(o.runner) // Best effort assign git tag.
 	// client to retrieve an application's resources created with CloudFormation.
 	defaultSess, err := o.sessProvider.Default()
 	if err != nil {
