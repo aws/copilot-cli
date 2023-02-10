@@ -2068,8 +2068,8 @@ func contains(name string, names []string) bool {
 }
 
 // validate returns nil if ImageLocationOrBuild is configured correctly.
-func (cfg ImageLocationOrBuild) validate() error {
-	if !cfg.Build.isEmpty() && cfg.Location != nil {
+func (i ImageLocationOrBuild) validate() error {
+	if !i.Build.isEmpty() && i.Location != nil {
 		return &errFieldMutualExclusive{
 			firstField:  "build",
 			secondField: "location",
