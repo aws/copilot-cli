@@ -226,7 +226,7 @@ type DDBLocalSecondaryIndex struct {
 	Name         *string
 }
 
-// AccessPolicyProps TODO
+// AccessPolicyProps holds properties to configure an access policy to an S3 or DDB storage.
 type AccessPolicyProps StorageProps
 
 // EnvS3AccessPolicyTemplate creates a new marshaler for the access policy attached to a workload
@@ -249,7 +249,8 @@ func EnvDDBAccessPolicyTemplate(input *AccessPolicyProps) *AccessPolicyTemplate 
 	}
 }
 
-// AccessPolicyTemplate TODO
+// AccessPolicyTemplate contains configuration options which describe an access policy to an S3 or DDB storage.
+// Implements the encoding.BinaryMarshaler interface.
 type AccessPolicyTemplate struct {
 	AccessPolicyProps
 	parser   template.Parser
@@ -329,7 +330,7 @@ func EnvServerlessForRDWSTemplate(input RDSProps) *RDSTemplate {
 	}
 }
 
-// RDSIngressProps TODO
+// RDSIngressProps holds properties to create a security group ingress to an RDS storage.
 type RDSIngressProps struct {
 	ClusterName string // The name of the cluster.
 	Engine      string // The engine type of the RDS Aurora Serverless cluster.
@@ -345,7 +346,8 @@ func EnvServerlessRDWSIngressTemplate(input RDSIngressProps) *RDSIngressTemplate
 	}
 }
 
-// RDSIngressTemplate TODO
+// RDSIngressTemplate contains configuration options which describe an ingress to an RDS cluster.
+// Implements the encoding.BinaryMarshaler interface.
 type RDSIngressTemplate struct {
 	RDSIngressProps
 	parser   template.Parser
@@ -361,7 +363,7 @@ func (t *RDSIngressTemplate) MarshalBinary() ([]byte, error) {
 	return content.Bytes(), nil
 }
 
-// RDSTemplate contains configuration options which fully describe a RDS Aurora Serverless cluster.
+// RDSTemplate contains configuration options which fully describe aa RDS Aurora Serverless cluster.
 // Implements the encoding.BinaryMarshaler interface.
 type RDSTemplate struct {
 	RDSProps
