@@ -962,6 +962,7 @@ func TestEnv_Parameters(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			env, err := NewEnvConfigFromExistingStack(tc.input, "", tc.oldParams)
+			require.NoError(t, err)
 			params, err := env.Parameters()
 			require.NoError(t, err)
 			require.ElementsMatch(t, tc.want, params)
