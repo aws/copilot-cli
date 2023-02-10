@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -21,7 +23,8 @@ type WorkerService struct {
 	*ecsWkld
 	manifest *manifest.WorkerService
 
-	parser workerSvcReadParser
+	parser   workerSvcReadParser
+	localCRs []uploadable // Custom resources that have not been uploaded yet.
 }
 
 // WorkerServiceConfig contains data required to initialize a scheduled job stack.
@@ -37,7 +40,10 @@ type WorkerServiceConfig struct {
 
 // NewWorkerService creates a new WorkerService stack from a manifest file.
 func NewWorkerService(cfg WorkerServiceConfig) (*WorkerService, error) {
-	parser := template.New()
+	crs, err := customresource.Worker(fs)
+	if err != nil {
+		return nil, fmt.Errorf("worker service custom resources: %w", err)
+	}
 	return &WorkerService{
 		ecsWkld: &ecsWkld{
 			wkld: &wkld{
@@ -49,7 +55,7 @@ func NewWorkerService(cfg WorkerServiceConfig) (*WorkerService, error) {
 				rc:                 cfg.RuntimeConfig,
 				image:              cfg.Manifest.ImageConfig.Image,
 				rawManifest:        cfg.RawManifest,
-				parser:             parser,
+				parser:             fs,
 				addons:             cfg.Addons,
 			},
 			logRetention:        cfg.Manifest.Logging.Retention,
@@ -57,7 +63,8 @@ func NewWorkerService(cfg WorkerServiceConfig) (*WorkerService, error) {
 			taskDefOverrideFunc: override.CloudFormationTemplate,
 		},
 		manifest: cfg.Manifest,
-		parser:   parser,
+		parser:   fs,
+		localCRs: uploadableCRs(crs).convert(),
 	}, nil
 }
 

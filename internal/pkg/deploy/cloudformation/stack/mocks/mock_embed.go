@@ -607,6 +607,21 @@ func (mr *MockembedFSMockRecorder) ParseScheduledJob(arg0 interface{}) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ParseScheduledJob", reflect.TypeOf((*MockembedFS)(nil).ParseScheduledJob), arg0)
 }
 
+// ParseWorkerService mocks base method.
+func (m *MockembedFS) ParseWorkerService(arg0 template.WorkloadOpts) (*template.Content, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ParseWorkerService", arg0)
+	ret0, _ := ret[0].(*template.Content)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ParseWorkerService indicates an expected call of ParseWorkerService.
+func (mr *MockembedFSMockRecorder) ParseWorkerService(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ParseWorkerService", reflect.TypeOf((*MockembedFS)(nil).ParseWorkerService), arg0)
+}
+
 // Read mocks base method.
 func (m *MockembedFS) Read(path string) (*template.Content, error) {
 	m.ctrl.T.Helper()

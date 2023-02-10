@@ -63,7 +63,14 @@ func (fs Stub) ParseRequestDrivenWebService(_ template.WorkloadOpts) (*template.
 }
 
 // ParseScheduledJob returns a dummy template.Content with "data" in it.
-func (fs Stub) ParseScheduledJob(opts template.WorkloadOpts) (*template.Content, error) {
+func (fs Stub) ParseScheduledJob(_ template.WorkloadOpts) (*template.Content, error) {
+	return &template.Content{
+		Buffer: bytes.NewBufferString("data"),
+	}, nil
+}
+
+// ParseWorkerService returns a dummy template.Content with "data" in it.
+func (fs Stub) ParseWorkerService(_ template.WorkloadOpts) (*template.Content, error) {
 	return &template.Content{
 		Buffer: bytes.NewBufferString("data"),
 	}, nil
