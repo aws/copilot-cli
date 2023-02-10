@@ -592,6 +592,21 @@ func (mr *MockembedFSMockRecorder) ParseRequestDrivenWebService(arg0 interface{}
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ParseRequestDrivenWebService", reflect.TypeOf((*MockembedFS)(nil).ParseRequestDrivenWebService), arg0)
 }
 
+// ParseScheduledJob mocks base method.
+func (m *MockembedFS) ParseScheduledJob(arg0 template.WorkloadOpts) (*template.Content, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ParseScheduledJob", arg0)
+	ret0, _ := ret[0].(*template.Content)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ParseScheduledJob indicates an expected call of ParseScheduledJob.
+func (mr *MockembedFSMockRecorder) ParseScheduledJob(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ParseScheduledJob", reflect.TypeOf((*MockembedFS)(nil).ParseScheduledJob), arg0)
+}
+
 // Read mocks base method.
 func (m *MockembedFS) Read(path string) (*template.Content, error) {
 	m.ctrl.T.Helper()
