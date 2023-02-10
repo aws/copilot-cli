@@ -27,11 +27,6 @@ const (
 	ScheduledJobScheduleParamKey = "Schedule"
 )
 
-type scheduledJobReadParser interface {
-	template.ReadParser
-	ParseScheduledJob(template.WorkloadOpts) (*template.Content, error)
-}
-
 // ScheduledJob represents the configuration needed to create a Cloudformation stack from a
 // scheduled job manfiest.
 type ScheduledJob struct {

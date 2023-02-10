@@ -39,11 +39,6 @@ var awsSDKLayerForRegion = map[string]*string{
 	"me-south-1":     aws.String("arn:aws:lambda:me-south-1:507411403535:layer:AWSLambda-Node-AWS-SDK:10"),
 }
 
-type requestDrivenWebSvcReadParser interface {
-	template.ReadParser
-	ParseRequestDrivenWebService(template.WorkloadOpts) (*template.Content, error)
-}
-
 // RequestDrivenWebService represents the configuration needed to create a CloudFormation stack from a request-drive web service manifest.
 type RequestDrivenWebService struct {
 	*appRunnerWkld

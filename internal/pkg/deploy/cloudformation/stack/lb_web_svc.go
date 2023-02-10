@@ -25,11 +25,6 @@ const (
 	LBWebServiceNLBPortParamKey      = "NLBPort"
 )
 
-type loadBalancedWebSvcReadParser interface {
-	template.ReadParser
-	ParseLoadBalancedWebService(template.WorkloadOpts) (*template.Content, error)
-}
-
 // LoadBalancedWebService represents the configuration needed to create a CloudFormation stack from a load balanced web service manifest.
 type LoadBalancedWebService struct {
 	*ecsWkld

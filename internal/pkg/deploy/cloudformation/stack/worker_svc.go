@@ -16,11 +16,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/template/override"
 )
 
-type workerSvcReadParser interface {
-	template.ReadParser
-	ParseWorkerService(template.WorkloadOpts) (*template.Content, error)
-}
-
 // WorkerService represents the configuration needed to create a CloudFormation stack from a worker service manifest.
 type WorkerService struct {
 	*ecsWkld
