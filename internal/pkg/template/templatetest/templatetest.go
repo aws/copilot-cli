@@ -54,3 +54,10 @@ func (fs Stub) ParseLoadBalancedWebService(_ template.WorkloadOpts) (*template.C
 		Buffer: bytes.NewBufferString("data"),
 	}, nil
 }
+
+// ParseRequestDrivenWebService returns a dummy template.Content with "data" in it.
+func (fs Stub) ParseRequestDrivenWebService(_ template.WorkloadOpts) (*template.Content, error) {
+	return &template.Content{
+		Buffer: bytes.NewBufferString("data"),
+	}, nil
+}

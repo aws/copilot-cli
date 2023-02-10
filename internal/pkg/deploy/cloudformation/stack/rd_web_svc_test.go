@@ -9,8 +9,11 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/aws/copilot-cli/internal/pkg/addon"
+	"github.com/aws/copilot-cli/internal/pkg/template/templatetest"
+
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
+
+	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -56,6 +59,11 @@ var testRDWebServiceManifest = &manifest.RequestDrivenWebService{
 }
 
 func TestRequestDrivenWebService_NewRequestDrivenWebService(t *testing.T) {
+	t.Cleanup(func() {
+		fs = realEmbedFS
+	})
+	fs = templatetest.Stub{}
+
 	type testInput struct {
 		mft     *manifest.RequestDrivenWebService
 		env     string
@@ -130,7 +138,6 @@ func TestRequestDrivenWebService_NewRequestDrivenWebService(t *testing.T) {
 			require.Equal(t, tc.wantedStack.instanceConfig, stack.instanceConfig)
 			require.Equal(t, tc.wantedStack.imageConfig, stack.imageConfig)
 			require.NotNil(t, stack.addons)
-			require.NotNil(t, stack.parser)
 		})
 	}
 }

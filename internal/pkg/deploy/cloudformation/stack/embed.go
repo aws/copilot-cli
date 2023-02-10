@@ -40,6 +40,7 @@ type envReadParser interface {
 type embedFS interface {
 	backendSvcReadParser
 	loadBalancedWebSvcReadParser
+	requestDrivenWebSvcReadParser
 	envReadParser
 }
 

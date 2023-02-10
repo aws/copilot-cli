@@ -577,6 +577,21 @@ func (mr *MockembedFSMockRecorder) ParseLoadBalancedWebService(arg0 interface{})
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ParseLoadBalancedWebService", reflect.TypeOf((*MockembedFS)(nil).ParseLoadBalancedWebService), arg0)
 }
 
+// ParseRequestDrivenWebService mocks base method.
+func (m *MockembedFS) ParseRequestDrivenWebService(arg0 template.WorkloadOpts) (*template.Content, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ParseRequestDrivenWebService", arg0)
+	ret0, _ := ret[0].(*template.Content)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ParseRequestDrivenWebService indicates an expected call of ParseRequestDrivenWebService.
+func (mr *MockembedFSMockRecorder) ParseRequestDrivenWebService(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ParseRequestDrivenWebService", reflect.TypeOf((*MockembedFS)(nil).ParseRequestDrivenWebService), arg0)
+}
+
 // Read mocks base method.
 func (m *MockembedFS) Read(path string) (*template.Content, error) {
 	m.ctrl.T.Helper()
