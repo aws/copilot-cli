@@ -79,7 +79,7 @@ func TestCloudWatch_AlarmsWithTags(t *testing.T) {
 
 			wantAlarmStatus: nil,
 		},
-		"success": {
+		"should invoke DescribeAlarms on alarms that have matching tags": {
 			setupMocks: func(m cloudWatchMocks) {
 				gomock.InOrder(
 					m.rg.EXPECT().GetResourcesByTags(cloudwatchResourceType, gomock.Eq(testTags)).Return([]*rg.Resource{{ARN: mockAlarmArn}}, nil),
