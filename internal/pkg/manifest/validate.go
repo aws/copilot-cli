@@ -653,6 +653,9 @@ func (i ImageWithPort) validate() error {
 // validate returns nil if Image is configured correctly.
 func (i Image) validate() error {
 	var err error
+	if err := i.ImageLocationOrBuild.validate(); err != nil {
+		return err
+	}
 	if err = i.Build.validate(); err != nil {
 		return fmt.Errorf(`validate "build": %w`, err)
 	}
