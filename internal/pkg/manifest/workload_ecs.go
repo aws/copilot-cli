@@ -106,14 +106,12 @@ type DeploymentControllerConfig struct {
 type DeploymentConfig struct {
 	DeploymentControllerConfig `yaml:",inline"`
 	RollbackAlarms             Union[[]string, AlarmArgs]  `yaml:"rollback_alarms"`
-	// The rollback_alarms manifest field is a no-op until the EDS-CFN ABR bug is fixed.
 }
 
 // WorkerDeploymentConfig represents the deployment strategies for a worker service.
 type WorkerDeploymentConfig struct {
 	DeploymentControllerConfig `yaml:",inline"`
 	WorkerRollbackAlarms       Union[[]string, WorkerAlarmArgs]  `yaml:"rollback_alarms"`
-	// The rollback_alarms manifest field is a no-op until the EDS-CFN ABR bug is fixed.
 }
 
 func (d *DeploymentConfig) isEmpty() bool {
