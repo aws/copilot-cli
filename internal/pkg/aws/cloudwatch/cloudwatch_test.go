@@ -28,6 +28,7 @@ func TestCloudWatch_AlarmsWithTags(t *testing.T) {
 		mockAlarmArn = "arn:aws:cloudwatch:us-west-2:1234567890:alarm:mockAlarmName"
 	)
 	mockError := errors.New("some error")
+	mockTime, _ := time.Parse(time.RFC3339, "2006-01-02T15:04:05+00:00")
 	testTags := map[string]string{
 		"copilot-application": appName,
 	}
@@ -74,12 +75,45 @@ func TestCloudWatch_AlarmsWithTags(t *testing.T) {
 		"return if no alarms found": {
 			setupMocks: func(m cloudWatchMocks) {
 				m.rg.EXPECT().GetResourcesByTags(cloudwatchResourceType, gomock.Eq(testTags)).Return([]*rg.Resource{}, nil)
-				m.cw.EXPECT().DescribeAlarms(gomock.Any()).Return(nil, nil)
 			},
 
 			wantAlarmStatus: nil,
 		},
-	}
+		"should invoke DescribeAlarms on alarms that have matching tags": {
+			setupMocks: func(m cloudWatchMocks) {
+				gomock.InOrder(
+					m.rg.EXPECT().GetResourcesByTags(cloudwatchResourceType, gomock.Eq(testTags)).Return([]*rg.Resource{{ARN: mockAlarmArn}}, nil),
+					m.cw.EXPECT().DescribeAlarms(&cloudwatch.DescribeAlarmsInput{
+						AlarmNames: aws.StringSlice([]string{"mockAlarmName"}),
+					}).Return(&cloudwatch.DescribeAlarmsOutput{
+						MetricAlarms: []*cloudwatch.MetricAlarm{
+							{
+								AlarmArn:           aws.String(mockAlarmArn),
+								AlarmName:          aws.String("mockAlarmName"),
+								ComparisonOperator: aws.String(cloudwatch.ComparisonOperatorGreaterThanOrEqualToThreshold),
+								EvaluationPeriods:  aws.Int64(int64(300)),
+								Period:             aws.Int64(int64(5)),
+								Threshold:          aws.Float64(float64(70)),
+								MetricName:         aws.String("mockMetricName"),
+								StateValue:         aws.String("mockState"),
+								StateUpdatedTimestamp: &mockTime,
+
+							},
+						},
+						CompositeAlarms: nil,
+					}, nil))
+			},
+			wantAlarmStatus: []AlarmStatus{
+				{
+					Arn:       mockAlarmArn,
+					Name:      "mockAlarmName",
+					Type:      "Metric",
+					Condition: "mockMetricName ≥ 70.00 for 300 datapoints within 25 minutes",
+					Status:    "mockState",
+					UpdatedTimes: mockTime,
+
+				}},
+		}}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {

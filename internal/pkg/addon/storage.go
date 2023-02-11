@@ -9,7 +9,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 )
 
@@ -19,7 +18,7 @@ const (
 	rdsTemplatePath       = "addons/aurora/cf.yml"
 	rdsV2TemplatePath     = "addons/aurora/serverlessv2.yml"
 	rdsRDWSTemplatePath   = "addons/aurora/rdws/cf.yml"
-	rdsRDWSV2TemplatePath = "addons/aurora/rdws/serverlessv2.yml"
+	rdsV2RDWSTemplatePath = "addons/aurora/rdws/serverlessv2.yml"
 	rdsRDWSParamsPath     = "addons/aurora/rdws/addons.parameters.yml"
 
 	envS3TemplatePath                   = "addons/s3/env/cf.yml"
@@ -82,16 +81,6 @@ func EnvS3Template(input *S3Props) *S3Template {
 	}
 }
 
-// EnvS3AccessPolicyTemplate creates a new marshaler for the access policy attached to a workload
-// for permissions into an environment-level S3 addon.
-func EnvS3AccessPolicyTemplate(input *S3Props) *S3Template {
-	return &S3Template{
-		S3Props:  *input,
-		parser:   template.New(),
-		tmplPath: envS3AccessPolicyTemplatePath,
-	}
-}
-
 // S3Template contains configuration options which fully describe an S3 bucket.
 // Implements the encoding.BinaryMarshaler interface.
 type S3Template struct {
@@ -135,16 +124,6 @@ func EnvDDBTemplate(input *DynamoDBProps) *DynamoDBTemplate {
 		DynamoDBProps: *input,
 		parser:        template.New(),
 		tmplPath:      envDynamoDBTemplatePath,
-	}
-}
-
-// EnvDDBAccessPolicyTemplate creates a marshaller for the access policy attached to a workload
-// for permissions into an environment-level DynamoDB addon.
-func EnvDDBAccessPolicyTemplate(input *DynamoDBProps) *DynamoDBTemplate {
-	return &DynamoDBTemplate{
-		DynamoDBProps: *input,
-		parser:        template.New(),
-		tmplPath:      envDynamoDBAccessPolicyTemplatePath,
 	}
 }
 
@@ -247,9 +226,48 @@ type DDBLocalSecondaryIndex struct {
 	Name         *string
 }
 
+// AccessPolicyProps holds properties to configure an access policy to an S3 or DDB storage.
+type AccessPolicyProps StorageProps
+
+// EnvS3AccessPolicyTemplate creates a new marshaler for the access policy attached to a workload
+// for permissions into an environment-level S3 addon.
+func EnvS3AccessPolicyTemplate(input *AccessPolicyProps) *AccessPolicyTemplate {
+	return &AccessPolicyTemplate{
+		AccessPolicyProps: *input,
+		parser:            template.New(),
+		tmplPath:          envS3AccessPolicyTemplatePath,
+	}
+}
+
+// EnvDDBAccessPolicyTemplate creates a marshaller for the access policy attached to a workload
+// for permissions into an environment-level DynamoDB addon.
+func EnvDDBAccessPolicyTemplate(input *AccessPolicyProps) *AccessPolicyTemplate {
+	return &AccessPolicyTemplate{
+		AccessPolicyProps: *input,
+		parser:            template.New(),
+		tmplPath:          envDynamoDBAccessPolicyTemplatePath,
+	}
+}
+
+// AccessPolicyTemplate contains configuration options which describe an access policy to an S3 or DDB storage.
+// Implements the encoding.BinaryMarshaler interface.
+type AccessPolicyTemplate struct {
+	AccessPolicyProps
+	parser   template.Parser
+	tmplPath string
+}
+
+// MarshalBinary serializes the content of the template into binary.
+func (t *AccessPolicyTemplate) MarshalBinary() ([]byte, error) {
+	content, err := t.parser.Parse(t.tmplPath, *t, template.WithFuncs(storageTemplateFunctions))
+	if err != nil {
+		return nil, err
+	}
+	return content.Bytes(), nil
+}
+
 // RDSProps holds RDS-specific properties.
 type RDSProps struct {
-	WorkloadType   string   // The type of the workload associated with the RDS addon.
 	ClusterName    string   // The name of the cluster.
 	Engine         string   // The engine type of the RDS Aurora Serverless cluster.
 	InitialDBName  string   // The name of the initial database created inside the cluster.
@@ -259,54 +277,93 @@ type RDSProps struct {
 
 // WorkloadServerlessV1Template creates a marshaler for a workload-level Aurora Serverless v1 addon.
 func WorkloadServerlessV1Template(input RDSProps) *RDSTemplate {
-	tmplPath := rdsTemplatePath
-	if input.WorkloadType == manifestinfo.RequestDrivenWebServiceType {
-		tmplPath = rdsRDWSTemplatePath
-	}
 	return &RDSTemplate{
 		RDSProps: input,
 		parser:   template.New(),
-		tmplPath: tmplPath,
+		tmplPath: rdsTemplatePath,
+	}
+}
+
+// RDWSServerlessV1Template creates a marshaler for an Aurora Serverless v1 addon attached on an RDWS.
+func RDWSServerlessV1Template(input RDSProps) *RDSTemplate {
+	return &RDSTemplate{
+		RDSProps: input,
+		parser:   template.New(),
+		tmplPath: rdsRDWSTemplatePath,
 	}
 }
 
 // WorkloadServerlessV2Template creates a marshaler for a workload-level Aurora Serverless v2 addon.
 func WorkloadServerlessV2Template(input RDSProps) *RDSTemplate {
-	tmplPath := rdsV2TemplatePath
-	if input.WorkloadType == manifestinfo.RequestDrivenWebServiceType {
-		tmplPath = rdsRDWSV2TemplatePath
-	}
 	return &RDSTemplate{
 		RDSProps: input,
 		parser:   template.New(),
-		tmplPath: tmplPath,
+		tmplPath: rdsV2TemplatePath,
+	}
+}
+
+// RDWSServerlessV2Template creates a marshaler for an Aurora Serverless v2 addon attached on an RDWS.
+func RDWSServerlessV2Template(input RDSProps) *RDSTemplate {
+	return &RDSTemplate{
+		RDSProps: input,
+		parser:   template.New(),
+		tmplPath: rdsV2RDWSTemplatePath,
 	}
 }
 
 // EnvServerlessTemplate creates a marshaler for an environment-level Aurora Serverless v2 addon.
 func EnvServerlessTemplate(input RDSProps) *RDSTemplate {
-	tmplPath := envRDSTemplatePath
-	if input.WorkloadType == manifestinfo.RequestDrivenWebServiceType {
-		tmplPath = envRDSForRDWSTemplatePath
-	}
 	return &RDSTemplate{
 		RDSProps: input,
 		parser:   template.New(),
-		tmplPath: tmplPath,
+		tmplPath: envRDSTemplatePath,
 	}
+}
+
+// EnvServerlessForRDWSTemplate creates a marshaler for an environment-level Aurora Serverless v2 addon
+// whose ingress is an RDWS.
+func EnvServerlessForRDWSTemplate(input RDSProps) *RDSTemplate {
+	return &RDSTemplate{
+		RDSProps: input,
+		parser:   template.New(),
+		tmplPath: envRDSForRDWSTemplatePath,
+	}
+}
+
+// RDSIngressProps holds properties to create a security group ingress to an RDS storage.
+type RDSIngressProps struct {
+	ClusterName string // The name of the cluster.
+	Engine      string // The engine type of the RDS Aurora Serverless cluster.
 }
 
 // EnvServerlessRDWSIngressTemplate creates a marshaler for the security group ingress attached to an RDWS
 // for permissions into an environment-level Aurora Serverless v2 addon.
-func EnvServerlessRDWSIngressTemplate(input RDSProps) *RDSTemplate {
-	return &RDSTemplate{
-		RDSProps: input,
-		parser:   template.New(),
-		tmplPath: envRDSIngressForRDWSTemplatePath,
+func EnvServerlessRDWSIngressTemplate(input RDSIngressProps) *RDSIngressTemplate {
+	return &RDSIngressTemplate{
+		RDSIngressProps: input,
+		parser:          template.New(),
+		tmplPath:        envRDSIngressForRDWSTemplatePath,
 	}
 }
 
-// RDSTemplate contains configuration options which fully describe a RDS Aurora Serverless cluster.
+// RDSIngressTemplate contains configuration options which describe an ingress to an RDS cluster.
+// Implements the encoding.BinaryMarshaler interface.
+type RDSIngressTemplate struct {
+	RDSIngressProps
+	parser   template.Parser
+	tmplPath string
+}
+
+// MarshalBinary serializes the content of the template into binary.
+func (t *RDSIngressTemplate) MarshalBinary() ([]byte, error) {
+	content, err := t.parser.Parse(t.tmplPath, *t, template.WithFuncs(storageTemplateFunctions))
+	if err != nil {
+		return nil, err
+	}
+	return content.Bytes(), nil
+}
+
+// RDSTemplate contains configuration options which fully describe aa RDS Aurora Serverless cluster.
 // Implements the encoding.BinaryMarshaler interface.
 type RDSTemplate struct {
 	RDSProps
