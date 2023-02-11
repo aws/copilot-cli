@@ -263,7 +263,6 @@ func TestServiceStatus_Describe(t *testing.T) {
 					m.alarmStatusGetter.EXPECT().AlarmsWithTags(gomock.Any()).Return([]cloudwatch.AlarmStatus{}, nil),
 					m.aas.EXPECT().ECSServiceAlarmNames(gomock.Any(), gomock.Any()).Return([]string{}, nil),
 					m.alarmStatusGetter.EXPECT().AlarmStatuses(gomock.Any()).Return(nil, nil),
-					m.alarmStatusGetter.EXPECT().AlarmStatuses(gomock.Any()).Return(nil, nil),
 					m.targetHealthGetter.EXPECT().TargetsHealth("group-1").Return(nil, errors.New("some error")),
 				)
 			},
@@ -285,7 +284,6 @@ func TestServiceStatus_Describe(t *testing.T) {
 				},
 				StoppedTasks:             nil,
 				TargetHealthDescriptions: nil,
-				//rendererConfigurer:       &barRendererConfigurer{},
 			},
 		},
 		"retrieve all target health information in service": {
@@ -350,7 +348,6 @@ func TestServiceStatus_Describe(t *testing.T) {
 						"copilot-service":     "mockSvc",
 					}).Return([]cloudwatch.AlarmStatus{}, nil),
 					m.aas.EXPECT().ECSServiceAlarmNames(mockCluster, mockService).Return([]string{}, nil),
-					m.alarmStatusGetter.EXPECT().AlarmStatuses(gomock.Any()).Return([]cloudwatch.AlarmStatus{}, nil),
 					m.alarmStatusGetter.EXPECT().AlarmStatuses(gomock.Any()).Return(nil, nil),
 					m.targetHealthGetter.EXPECT().TargetsHealth("group-1").Return([]*elbv2.TargetHealth{
 						{
