@@ -190,6 +190,7 @@ func (o *deployJobOpts) Execute() error {
 	if _, err = deployer.DeployWorkload(&deploy.DeployWorkloadInput{
 		StackRuntimeConfiguration: deploy.StackRuntimeConfiguration{
 			ImageDigest:        uploadOut.ImageDigest,
+			ScImageDigests:     uploadOut.ScImageDigests,
 			EnvFileARN:         uploadOut.EnvFileARN,
 			AddonsURL:          uploadOut.AddonsURL,
 			RootUserARN:        o.rootUserARN,

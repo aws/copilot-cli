@@ -88,12 +88,18 @@ type fileReader interface {
 	ReadFile(string) ([]byte, error)
 }
 
+type dfArgs interface {
+	SidecarBuildArgs(wsRoot string) map[string]*manifest.DockerBuildArgs
+	ContainerPlatform() string
+}
+
 // StackRuntimeConfiguration contains runtime configuration for a workload CloudFormation stack.
 type StackRuntimeConfiguration struct {
 	// Use *string for three states (see https://github.com/aws/copilot-cli/pull/3268#discussion_r806060230)
 	// This is mainly to keep the `workload package` behavior backward-compatible, otherwise our old pipeline buildspec would break,
 	// since previously we parsed the env region from a mock ECR URL that we generated from `workload package``.
 	ImageDigest        *string
+	ScImageDigests     map[string]string
 	EnvFileARN         string
 	AddonsURL          string
 	RootUserARN        string
@@ -314,19 +320,12 @@ func (d *workloadDeployer) uploadContainerImage(imgBuilderPusher imageBuilderPus
 	if !required {
 		return nil, nil, nil
 	}
-	scBuildRequired, err := scDockerfileBuildRequired(d.mft)
+	UUIDTag, err := generateUUID()
 	if err != nil {
 		return nil, nil, err
 	}
-	if scBuildRequired == nil {
-		return nil, nil, nil
-	}
-	id, err := uuid.NewRandom()
-	if err != nil {
-		return nil, nil, fmt.Errorf("generate random uuid for tagging main and sidecar iamges:%w", err)
-	}
 	// If it is built from local Dockerfile, build and push to the ECR repo.
-	buildArg, err := buildArgs(d.name, d.imageTag, d.gitTag, id.String(), d.workspacePath, d.mft)
+	buildArg, err := buildArgs(d.name, d.imageTag, d.gitTag, UUIDTag, d.workspacePath, d.mft)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -334,20 +333,27 @@ func (d *workloadDeployer) uploadContainerImage(imgBuilderPusher imageBuilderPus
 	if err != nil {
 		return nil, nil, fmt.Errorf("build and push main container image: %w", err)
 	}
-	args, err := scbuildArgs(d.name, d.gitTag, id.String(), d.workspacePath, d.mft)
-	if err != nil {
-		return nil, nil, err
+	args := scbuildArgs(d.name, d.gitTag, UUIDTag, d.workspacePath, d.mft)
+	if args == nil {
+		return aws.String(digest), nil, nil
 	}
 	scdigests := make(map[string]string, len(args))
 	for k, v := range args {
-		if scBuildRequired[k] {
-			scdigests[k], err = imgBuilderPusher.BuildAndPush(dockerengine.New(exec.NewCmd()), v)
-			if err != nil {
-				return nil, nil, fmt.Errorf("build and push sidecar container images: %w", err)
-			}
+		scdigests[k], err = imgBuilderPusher.BuildAndPush(dockerengine.New(exec.NewCmd()), v)
+		if err != nil {
+			return nil, nil, fmt.Errorf("build and push sidecar container images: %w", err)
 		}
 	}
 	return aws.String(digest), scdigests, nil
+}
+
+// generateUUID generates a random UUID to tag main and sidecar containers.
+func generateUUID() (string, error) {
+	id, err := uuid.NewRandom()
+	if err != nil {
+		return "", fmt.Errorf("generate random uuid to tag main and sidecar images: %w", err)
+	}
+	return id.String(), err
 }
 
 func buildArgs(name, imageTag, gitTag, uuid, workspacePath string, unmarshaledManifest interface{}) (*dockerengine.BuildArguments, error) {
@@ -379,16 +385,17 @@ func buildArgs(name, imageTag, gitTag, uuid, workspacePath string, unmarshaledMa
 func mainContainerTags(userTag, gitTag, uuid string) []string {
 	var tags []string
 	tags = append(tags, "latest")
-	if userTag == "" && gitTag == "" {
-		tags = append(tags, uuid)
-	}
 	ugTag := userOrGitTag(userTag, gitTag)
 	if ugTag != "" {
 		tags = append(tags, ugTag)
+	} else {
+		tags = append(tags, uuid)
 	}
 	return tags
 }
 
+// userOrGitTag returns if the user provided their own tag.
+// Otherwise, return git commit id.
 func userOrGitTag(userTag, gitTag string) string {
 	if userTag != "" {
 		return userTag
@@ -396,28 +403,16 @@ func userOrGitTag(userTag, gitTag string) string {
 	return gitTag
 }
 
-// scDockerfileBuildRequired returns if the sidecar container images should be built from local Dockerfile.
-func scDockerfileBuildRequired(svc interface{}) (map[string]bool, error) {
-	type manifest interface {
-		SidecarBuildRequired() map[string]bool
-	}
-	mf, ok := svc.(manifest)
-	if !ok {
-		return nil, fmt.Errorf("manifest does not have required methods SidecarBuildRequired()")
-	}
-	return mf.SidecarBuildRequired(), nil
-}
-
-func scbuildArgs(name, gitTag, uuid, workspacePath string, unmarshaledManifest interface{}) (map[string]*dockerengine.BuildArguments, error) {
-	type dfArgs interface {
-		SidecarBuildArgs(wsRoot string) map[string]*manifest.DockerBuildArgs
-		ContainerPlatform() string
-	}
+// scbuildArgs returns the map of dockerengine build arguments for the each sidecar that requires a native build from dockerfile.
+func scbuildArgs(name, gitTag, uuid, workspacePath string, unmarshaledManifest interface{}) map[string]*dockerengine.BuildArguments {
 	mf, ok := unmarshaledManifest.(dfArgs)
-	if !ok {
-		return nil, fmt.Errorf("%s does not have required methods SidecarBuildArgs() and ContainerPlatform()", name)
+	var args map[string]*manifest.DockerBuildArgs
+	if ok {
+		args = mf.SidecarBuildArgs(workspacePath)
 	}
-	args := mf.SidecarBuildArgs(workspacePath)
+	if args == nil {
+		return nil
+	}
 	deBuildArgs := make(map[string]*dockerengine.BuildArguments, len(args))
 	for k, v := range args {
 		deBuildArgs[k] = &dockerengine.BuildArguments{
@@ -430,7 +425,7 @@ func scbuildArgs(name, gitTag, uuid, workspacePath string, unmarshaledManifest i
 			Tags:       scContainerTags(k, gitTag, uuid),
 		}
 	}
-	return deBuildArgs, nil
+	return deBuildArgs
 }
 
 // scContainerTags() returns tags for sidecar container images in a workload.
@@ -481,13 +476,14 @@ type customResourcesFunc func(fs template.Reader) ([]*customresource.CustomResou
 // UploadArtifactsOutput is the output of UploadArtifacts.
 type UploadArtifactsOutput struct {
 	ImageDigest        *string
+	ScImageDigests     map[string]string
 	EnvFileARN         string
 	AddonsURL          string
 	CustomResourceURLs map[string]string
 }
 
 func (d *workloadDeployer) uploadArtifacts() (*UploadArtifactsOutput, error) {
-	imageDigest, _, err := d.uploadContainerImage(d.imageBuilderPusher)
+	imageDigest, scImageDigests, err := d.uploadContainerImage(d.imageBuilderPusher)
 	if err != nil {
 		return nil, err
 	}
@@ -500,9 +496,10 @@ func (d *workloadDeployer) uploadArtifacts() (*UploadArtifactsOutput, error) {
 	}
 
 	out := &UploadArtifactsOutput{
-		ImageDigest: imageDigest,
-		EnvFileARN:  s3Artifacts.envFileARN,
-		AddonsURL:   s3Artifacts.addonsURL,
+		ImageDigest:    imageDigest,
+		ScImageDigests: scImageDigests,
+		EnvFileARN:     s3Artifacts.envFileARN,
+		AddonsURL:      s3Artifacts.addonsURL,
 	}
 	crs, err := d.customResources(d.templateFS)
 	if err != nil {
@@ -617,9 +614,10 @@ func (d *workloadDeployer) runtimeConfig(in *StackRuntimeConfiguration) (*stack.
 		EnvFileARN:        in.EnvFileARN,
 		AdditionalTags:    in.Tags,
 		Image: &stack.ECRImage{
-			RepoURL:  d.resources.RepositoryURLs[d.name],
-			ImageTag: userOrGitTag(d.imageTag, d.gitTag),
-			Digest:   aws.StringValue(in.ImageDigest),
+			RepoURL:        d.resources.RepositoryURLs[d.name],
+			ImageTag:       userOrGitTag(d.imageTag, d.gitTag),
+			Digest:         aws.StringValue(in.ImageDigest),
+			ScImageDigests: in.ScImageDigests,
 		},
 		ServiceDiscoveryEndpoint: endpoint,
 		AccountID:                d.env.AccountID,

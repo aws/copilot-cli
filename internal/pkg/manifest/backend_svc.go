@@ -124,6 +124,20 @@ func (s *BackendService) BuildArgs(wsRoot string) *DockerBuildArgs {
 	return s.ImageConfig.Image.BuildConfig(wsRoot)
 }
 
+// SidecarBuildArgs returns a map of docker build arguments for sidecar container images.
+func (s *BackendService) SidecarBuildArgs(wsRoot string) map[string]*DockerBuildArgs {
+	if len(s.Sidecars) == 0 {
+		return nil
+	}
+	buildArgs := make(map[string]*DockerBuildArgs, len(s.Sidecars))
+	for k, v := range s.Sidecars {
+		if _, ok := v.ImageURI(); !ok {
+			buildArgs[k] = v.Image.Advanced.BuildConfig(wsRoot)
+		}
+	}
+	return buildArgs
+}
+
 // EnvFile returns the location of the env file against the ws root directory.
 func (s *BackendService) EnvFile() string {
 	return aws.StringValue(s.TaskConfig.EnvFile)

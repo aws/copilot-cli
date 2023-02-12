@@ -141,6 +141,20 @@ func (j *ScheduledJob) BuildArgs(wsRoot string) *DockerBuildArgs {
 	return j.ImageConfig.Image.BuildConfig(wsRoot)
 }
 
+// SidecarBuildArgs returns a map of docker build arguments for sidecar container images.
+func (j *ScheduledJob) SidecarBuildArgs(wsRoot string) map[string]*DockerBuildArgs {
+	if len(j.Sidecars) == 0 {
+		return nil
+	}
+	buildArgs := make(map[string]*DockerBuildArgs, len(j.Sidecars))
+	for k, v := range j.Sidecars {
+		if _, ok := v.ImageURI(); !ok {
+			buildArgs[k] = v.Image.Advanced.BuildConfig(wsRoot)
+		}
+	}
+	return buildArgs
+}
+
 // BuildRequired returns if the service requires building from the local Dockerfile.
 func (j *ScheduledJob) BuildRequired() (bool, error) {
 	return requiresBuild(j.ImageConfig.Image)

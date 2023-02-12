@@ -175,7 +175,11 @@ http:
   alias: 'hunter.com'
 cpu: 256
 memory: 512
-count: 1`
+count: 1
+sidecars:
+  nginx:
+    image:
+      build: "hello/Dockerfile"`
 	)
 	testCases := map[string]struct {
 		inVars packageSvcVars
@@ -201,11 +205,17 @@ count: 1`
 				m.ws.EXPECT().ReadWorkloadManifest("api").Return([]byte(lbwsMft), nil)
 				m.generator.EXPECT().UploadArtifacts().Return(&deploy.UploadArtifactsOutput{
 					ImageDigest: aws.String(mockDigest),
+					ScImageDigests: map[string]string{
+						"nginx": "mockSidecarDigest",
+					},
 				}, nil)
 				m.generator.EXPECT().GenerateCloudFormationTemplate(&deploy.GenerateCloudFormationTemplateInput{
 					StackRuntimeConfiguration: deploy.StackRuntimeConfiguration{
 						ImageDigest: aws.String(mockDigest),
 						RootUserARN: mockARN,
+						ScImageDigests: map[string]string{
+							"nginx": "mockSidecarDigest",
+						},
 					},
 				}).Return(&deploy.GenerateCloudFormationTemplateOutput{
 					Template:   "mystack",

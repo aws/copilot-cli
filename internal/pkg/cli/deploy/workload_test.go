@@ -15,6 +15,7 @@ import (
 
 	cloudformation0 "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
+	"github.com/google/uuid"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -101,8 +102,9 @@ func (m *mockTopicLister) ListSNSTopics(_, _ string) ([]deploy.Topic, error) {
 }
 
 type mockWorkloadMft struct {
-	fileName      string
-	buildRequired bool
+	fileName        string
+	buildRequired   bool
+	dockerBuildArgs map[string]*manifest.DockerBuildArgs
 }
 
 func (m *mockWorkloadMft) EnvFile() string {
@@ -154,7 +156,8 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 		mockWorkspacePath   = "."
 		mockEnvFile         = "foo.env"
 		mockS3Bucket        = "mockBucket"
-		mockImageTag        = "mockImageTag"
+		mockLatestTag       = "latest"
+		mockUuid            = "31323334-3536-4738-b930-313233333435"
 		mockAddonsS3URL     = "https://mockS3DomainName/mockPath"
 		mockBadEnvFileS3URL = "badURL"
 		mockEnvFileS3URL    = "https://stackset-demo-infrastruc-pipelinebuiltartifactbuc-11dj7ctf52wyf.s3.us-west-2.amazonaws.com/manual/1638391936/env"
@@ -171,45 +174,105 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 		UploadArtifacts() (*UploadArtifactsOutput, error)
 	}
 	tests := map[string]struct {
-		inEnvFile       string
-		inBuildRequired bool
-		inRegion        string
+		inEnvFile         string
+		inBuildRequired   bool
+		inDockerBuildArgs map[string]*manifest.DockerBuildArgs
+		inRegion          string
+		inUserTag         string
+		inGitTag          string
 
 		mock                func(t *testing.T, m *deployMocks)
 		mockServiceDeployer func(deployer *workloadDeployer) artifactsUploader
 		customResourcesFunc customResourcesFunc
 
-		wantAddonsURL        string
-		wantEnvFileARN       string
-		wantImageDigest      *string
-		wantedscImageDigests map[string]string
-		wantBuildRequired    bool
-		wantErr              error
+		wantAddonsURL      string
+		wantEnvFileARN     string
+		wantImageDigest    *string
+		wantScImageDigests map[string]string
+		wantBuildRequired  bool
+		wantErr            error
 	}{
 		"error if failed to build and push image": {
 			inBuildRequired: true,
+			inUserTag:       "v1.0",
 			mock: func(t *testing.T, m *deployMocks) {
 				m.mockImageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
 					Dockerfile: "mockDockerfile",
 					Context:    "mockContext",
 					Platform:   "mockContainerPlatform",
-					Tags:       []string{mockImageTag},
+					Tags:       []string{"latest", "v1.0"},
 				}).Return("", mockError)
 			},
-			wantErr: fmt.Errorf("build and push image: some error"),
+			wantErr: fmt.Errorf("build and push main container image: some error"),
 		},
-		"build and push image successfully": {
+		"build and push main container image successfully with usertag": {
 			inBuildRequired: true,
+			inUserTag:       "v2.0",
+			inGitTag:        "0de83a78334c6425",
 			mock: func(t *testing.T, m *deployMocks) {
 				m.mockImageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
 					Dockerfile: "mockDockerfile",
 					Context:    "mockContext",
 					Platform:   "mockContainerPlatform",
-					Tags:       []string{mockImageTag},
+					Tags:       []string{mockLatestTag, "v2.0"},
 				}).Return("mockDigest", nil)
 				m.mockAddons = nil
 			},
 			wantImageDigest: aws.String("mockDigest"),
+		},
+		"build and push main container image successfully with git commit id": {
+			inBuildRequired: true,
+			inGitTag:        "0de83a78334c6425",
+			mock: func(t *testing.T, m *deployMocks) {
+				m.mockImageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
+					Dockerfile: "mockDockerfile",
+					Context:    "mockContext",
+					Platform:   "mockContainerPlatform",
+					Tags:       []string{mockLatestTag, "0de83a78334c6425"},
+				}).Return("mockDigest", nil)
+				m.mockAddons = nil
+			},
+			wantImageDigest: aws.String("mockDigest"),
+		},
+		"build and push both main container and sidecar images successfully": {
+			inBuildRequired: true,
+			inUserTag:       "v1.0",
+			inDockerBuildArgs: map[string]*manifest.DockerBuildArgs{
+				"nginx": {
+					Dockerfile: aws.String("sidecarMockDockerfile"),
+					Context:    aws.String("sidecarMockContext"),
+				},
+				"logging": {
+					Dockerfile: aws.String("web/Dockerfile"),
+					Context:    aws.String("Users/bowie"),
+				},
+			},
+			mock: func(t *testing.T, m *deployMocks) {
+				m.mockImageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
+					Dockerfile: "mockDockerfile",
+					Context:    "mockContext",
+					Platform:   "mockContainerPlatform",
+					Tags:       []string{"latest", "v1.0"},
+				}).Return("mockDigest", nil)
+				m.mockImageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
+					Dockerfile: "sidecarMockDockerfile",
+					Context:    "sidecarMockContext",
+					Platform:   "mockContainerPlatform",
+					Tags:       []string{fmt.Sprintf("nginx-%s", mockLatestTag), fmt.Sprintf("nginx-%s", mockUuid)},
+				}).Return("sidecarMockDigest", nil)
+				m.mockImageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
+					Dockerfile: "web/Dockerfile",
+					Context:    "Users/bowie",
+					Platform:   "mockContainerPlatform",
+					Tags:       []string{"logging-latest", fmt.Sprintf("logging-%s", mockUuid)},
+				}).Return("sidecarMockDigest2", nil)
+				m.mockAddons = nil
+			},
+			wantImageDigest: aws.String("mockDigest"),
+			wantScImageDigests: map[string]string{
+				"nginx":   "sidecarMockDigest",
+				"logging": "sidecarMockDigest2",
+			},
 		},
 		"should retrieve Load Balanced Web Service custom resource URLs": {
 			mock: func(t *testing.T, m *deployMocks) {
@@ -435,6 +498,9 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+			seed := bytes.NewBufferString("12345678901233456789") // always generate the same UUID
+			uuid.SetRand(seed)
+			defer uuid.SetRand(nil)
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
@@ -463,11 +529,13 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 					Name: mockAppName,
 				},
 				resources:     mockResources,
-				imageTag:      mockImageTag,
+				imageTag:      tc.inUserTag,
+				gitTag:        tc.inGitTag,
 				workspacePath: mockWorkspacePath,
 				mft: &mockWorkloadMft{
-					fileName:      tc.inEnvFile,
-					buildRequired: tc.inBuildRequired,
+					fileName:        tc.inEnvFile,
+					buildRequired:   tc.inBuildRequired,
+					dockerBuildArgs: tc.inDockerBuildArgs,
 				},
 				fs:                 m.mockFileReader,
 				s3Client:           m.mockUploader,
@@ -498,6 +566,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				require.Equal(t, tc.wantAddonsURL, got.AddonsURL)
 				require.Equal(t, tc.wantEnvFileARN, got.EnvFileARN)
 				require.Equal(t, tc.wantImageDigest, got.ImageDigest)
+				require.Equal(t, tc.wantScImageDigests, got.ScImageDigests)
 			}
 		})
 	}

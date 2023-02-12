@@ -82,9 +82,10 @@ type RuntimeConfig struct {
 // ECRImage represents configuration about the pushed ECR image that is needed to
 // create a CloudFormation stack.
 type ECRImage struct {
-	RepoURL  string // RepoURL is the ECR repository URL the container image should be pushed to.
-	ImageTag string // Tag is the container image's unique tag.
-	Digest   string // The image digest.
+	RepoURL        string            // RepoURL is the ECR repository URL the container image should be pushed to.
+	ImageTag       string            // Tag is the container image's unique tag.
+	Digest         string            // The image digest.
+	ScImageDigests map[string]string // ImageDigests of sidecar container Images.
 }
 
 // GetLocation returns the ECR image URI.

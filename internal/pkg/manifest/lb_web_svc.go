@@ -191,20 +191,16 @@ func (s *LoadBalancedWebService) BuildArgs(wsRoot string) *DockerBuildArgs {
 	return s.ImageConfig.Image.BuildConfig(wsRoot)
 }
 
-// SidecarBuildRequired returns map of sidecar names that a build is required or not.
-func (s *LoadBalancedWebService) SidecarBuildRequired() map[string]bool {
-	isBuildRequired := make(map[string]bool, len(s.Sidecars))
-	for k, v := range s.Sidecars {
-		_, ok := v.ImageURI()
-		isBuildRequired[k] = !ok
-	}
-	return isBuildRequired
-}
-
+// SidecarBuildArgs returns a map of docker build arguments for sidecar container images.
 func (s *LoadBalancedWebService) SidecarBuildArgs(wsRoot string) map[string]*DockerBuildArgs {
+	if len(s.Sidecars) == 0 {
+		return nil
+	}
 	buildArgs := make(map[string]*DockerBuildArgs, len(s.Sidecars))
 	for k, v := range s.Sidecars {
-		buildArgs[k] = v.Image.Advanced.BuildConfig(wsRoot)
+		if _, ok := v.ImageURI(); !ok {
+			buildArgs[k] = v.Image.Advanced.BuildConfig(wsRoot)
+		}
 	}
 	return buildArgs
 }
