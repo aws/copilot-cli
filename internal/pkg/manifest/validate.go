@@ -2069,8 +2069,7 @@ func contains(name string, names []string) bool {
 
 // validate returns nil if ImageLocationOrBuild is configured correctly.
 func (i ImageLocationOrBuild) validate() error {
-	var err error
-	if err = i.Build.validate(); err != nil {
+	if err := i.Build.validate(); err != nil {
 		return fmt.Errorf(`validate "build": %w`, err)
 	}
 	if !i.Build.isEmpty() && i.Location != nil {
