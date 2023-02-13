@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/aws/copilot-cli/internal/pkg/aws/profile"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/dustin/go-humanize/english"
@@ -25,7 +26,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/iam"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
-	"github.com/aws/copilot-cli/internal/pkg/aws/profile"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -167,7 +167,7 @@ type initEnvOpts struct {
 	prog           progress
 	prompt         prompter
 	selVPC         ec2Selector
-	selCreds       credsSelector
+	selCreds       func() (credsSelector, error)
 	selApp         appSelector
 	appCFN         appResourcesGetter
 	manifestWriter environmentManifestWriter
@@ -186,10 +186,7 @@ func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
 		return nil, err
 	}
 	store := config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
-	cfg, err := profile.NewConfig()
-	if err != nil {
-		return nil, fmt.Errorf("read named profiles: %w", err)
-	}
+
 	prompter := prompt.New()
 	ws, err := workspace.Use(afero.NewOsFs())
 	if err != nil {
@@ -203,10 +200,16 @@ func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
 		identity:     identity.New(defaultSession),
 		prog:         termprogress.NewSpinner(log.DiagnosticWriter),
 		prompt:       prompter,
-		selCreds: &selector.CredsSelect{
-			Session: sessProvider,
-			Profile: cfg,
-			Prompt:  prompter,
+		selCreds: func() (credsSelector, error) {
+			cfg, err := profile.NewConfig()
+			if err != nil {
+				return nil, fmt.Errorf("read named profiles: %w", err)
+			}
+			return &selector.CredsSelect{
+				Session: sessProvider,
+				Profile: cfg,
+				Prompt:  prompt.New(),
+			}, nil
 		},
 		selApp:         selector.NewAppEnvSelector(prompt.New(), store),
 		appCFN:         deploycfn.New(defaultSession, deploycfn.WithProgressTracker(os.Stderr)),
@@ -400,7 +403,12 @@ func (o *initEnvOpts) askEnvSession() error {
 		o.sess = sess
 		return nil
 	}
-	sess, err := o.selCreds.Creds(fmt.Sprintf(fmtEnvInitCredsPrompt, color.HighlightUserInput(o.name)), envInitCredsHelpPrompt)
+
+	selCreds, err := o.selCreds()
+	if err != nil {
+		return err
+	}
+	sess, err := selCreds.Creds(fmt.Sprintf(fmtEnvInitCredsPrompt, color.HighlightUserInput(o.name)), envInitCredsHelpPrompt)
 	if err != nil {
 		return fmt.Errorf("select creds: %w", err)
 	}

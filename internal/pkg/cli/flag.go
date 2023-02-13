@@ -5,9 +5,11 @@ package cli
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/dustin/go-humanize/english"
 )
 
@@ -67,6 +69,8 @@ const (
 
 	// Flags for storage.
 	storageTypeFlag                    = "storage-type"
+	storageLifecycleFlag               = "lifecycle"
+	storageAddIngressFromFlag          = "add-ingress-from"
 	storagePartitionKeyFlag            = "partition-key"
 	storageSortKeyFlag                 = "sort-key"
 	storageNoSortFlag                  = "no-sort"
@@ -163,7 +167,7 @@ const (
 // Descriptions for flags.
 var (
 	svcTypeFlagDescription = fmt.Sprintf(`Type of service to create. Must be one of:
-%s.`, strings.Join(quoteStringSlice(manifest.ServiceTypes()), ", "))
+%s.`, strings.Join(applyAll(manifestinfo.ServiceTypes(), strconv.Quote), ", "))
 	imageFlagDescription = fmt.Sprintf(`The location of an existing Docker image.
 Cannot be specified with --%s or --%s.`, dockerFileFlag, dockerFileContextFlag)
 	dockerFileFlagDescription = fmt.Sprintf(`Path to the Dockerfile.
@@ -171,11 +175,11 @@ Cannot be specified with --%s.`, imageFlag)
 	dockerFileContextFlagDescription = fmt.Sprintf(`Path to the Docker build context.
 Cannot be specified with --%s.`, imageFlag)
 	storageTypeFlagDescription = fmt.Sprintf(`Type of storage to add. Must be one of:
-%s.`, strings.Join(quoteStringSlice(storageTypes), ", "))
+%s.`, strings.Join(applyAll(storageTypes, strconv.Quote), ", "))
 	jobTypeFlagDescription = fmt.Sprintf(`Type of job to create. Must be one of:
-%s.`, strings.Join(quoteStringSlice(manifest.JobTypes()), ", "))
+%s.`, strings.Join(applyAll(manifestinfo.JobTypes(), strconv.Quote), ", "))
 	wkldTypeFlagDescription = fmt.Sprintf(`Type of job or svc to create. Must be one of:
-%s.`, strings.Join(quoteStringSlice(manifest.WorkloadTypes()), ", "))
+%s.`, strings.Join(applyAll(manifestinfo.WorkloadTypes(), strconv.Quote), ", "))
 
 	clusterFlagDescription = fmt.Sprintf(`Optional. The short name or full ARN of the cluster to run the task in. 
 Cannot be specified with --%s, --%s or --%s.`, appFlag, envFlag, taskDefaultFlag)
@@ -283,8 +287,12 @@ Uploaded asset locations are filled in the template configuration.`
 	pipelineTypeFlagDescription      = `The type of pipeline. Must be either "Workloads" or "Environments".`
 
 	// Storage.
-	storageFlagDescription             = "Name of the storage resource to create."
-	storageWorkloadFlagDescription     = "Name of the service or job to associate with storage."
+	storageFlagDescription               = "Name of the storage resource to create."
+	storageWorkloadFlagDescription       = "Name of the service or job to associate with storage."
+	storageLifecycleFlagDescription      = "Whether the storage should be created and deleted at the same time as a workload or as the environment"
+	storageAddIngressFromFlagDescription = `The workload that needs access to an environment-level addon.
+Must be specified with --name and --storage-type.
+Can be specified with --engine.`
 	storagePartitionKeyFlagDescription = `Partition key for the DDB table.
 Must be of the format '<keyName>:<dataType>'.`
 	storageSortKeyFlagDescription = `Optional. Sort key for the DDB table.

@@ -13,7 +13,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
-	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
@@ -379,7 +379,7 @@ func TestDeploySelect_Service(t *testing.T) {
 				WithWkldFilter(func(svc *DeployedWorkload) (bool, error) {
 					return svc.Env == "test1", nil
 				}),
-				WithServiceTypesFilter([]string{manifest.BackendServiceType}),
+				WithServiceTypesFilter([]string{manifestinfo.BackendServiceType}),
 			},
 			setupMocks: func(m deploySelectMocks) {
 				m.configSvc.
@@ -389,22 +389,22 @@ func TestDeploySelect_Service(t *testing.T) {
 						{
 							App:  testApp,
 							Name: "mockSvc1",
-							Type: manifest.BackendServiceType,
+							Type: manifestinfo.BackendServiceType,
 						},
 						{
 							App:  testApp,
 							Name: "mockSvc2",
-							Type: manifest.BackendServiceType,
+							Type: manifestinfo.BackendServiceType,
 						},
 						{
 							App:  testApp,
 							Name: "mockSvc3",
-							Type: manifest.LoadBalancedWebServiceType,
+							Type: manifestinfo.LoadBalancedWebServiceType,
 						},
 						{
 							App:  testApp,
 							Name: "mockJob1",
-							Type: manifest.ScheduledJobType,
+							Type: manifestinfo.ScheduledJobType,
 						},
 					}, nil)
 
@@ -433,7 +433,7 @@ func TestDeploySelect_Service(t *testing.T) {
 			},
 			wantEnv:     "test1",
 			wantSvc:     "mockSvc1",
-			wantSvcType: manifest.BackendServiceType,
+			wantSvcType: manifestinfo.BackendServiceType,
 		},
 		"filter returns error": {
 			opts: []GetDeployedWorkloadOpts{
@@ -449,17 +449,17 @@ func TestDeploySelect_Service(t *testing.T) {
 						{
 							App:  testApp,
 							Name: "mockSvc1",
-							Type: manifest.BackendServiceType,
+							Type: manifestinfo.BackendServiceType,
 						},
 						{
 							App:  testApp,
 							Name: "mockSvc2",
-							Type: manifest.BackendServiceType,
+							Type: manifestinfo.BackendServiceType,
 						},
 						{
 							App:  testApp,
 							Name: "mockSvc3",
-							Type: manifest.LoadBalancedWebServiceType,
+							Type: manifestinfo.LoadBalancedWebServiceType,
 						},
 					}, nil)
 
@@ -684,7 +684,7 @@ func TestDeploySelect_Job(t *testing.T) {
 				WithWkldFilter(func(job *DeployedWorkload) (bool, error) {
 					return job.Env == "test2", nil
 				}),
-				WithServiceTypesFilter([]string{manifest.ScheduledJobType}),
+				WithServiceTypesFilter([]string{manifestinfo.ScheduledJobType}),
 			},
 			setupMocks: func(m deploySelectMocks) {
 				m.configSvc.
@@ -694,22 +694,22 @@ func TestDeploySelect_Job(t *testing.T) {
 						{
 							App:  testApp,
 							Name: "mockSvc1",
-							Type: manifest.BackendServiceType,
+							Type: manifestinfo.BackendServiceType,
 						},
 						{
 							App:  testApp,
 							Name: "mockSvc2",
-							Type: manifest.BackendServiceType,
+							Type: manifestinfo.BackendServiceType,
 						},
 						{
 							App:  testApp,
 							Name: "mockJob1",
-							Type: manifest.ScheduledJobType,
+							Type: manifestinfo.ScheduledJobType,
 						},
 						{
 							App:  testApp,
 							Name: "mockJob2",
-							Type: manifest.ScheduledJobType,
+							Type: manifestinfo.ScheduledJobType,
 						},
 					}, nil)
 
@@ -753,17 +753,17 @@ func TestDeploySelect_Job(t *testing.T) {
 						{
 							App:  testApp,
 							Name: "mockJob1",
-							Type: manifest.ScheduledJobType,
+							Type: manifestinfo.ScheduledJobType,
 						},
 						{
 							App:  testApp,
 							Name: "mockJob2",
-							Type: manifest.ScheduledJobType,
+							Type: manifestinfo.ScheduledJobType,
 						},
 						{
 							App:  testApp,
 							Name: "mockSvc3",
-							Type: manifest.LoadBalancedWebServiceType,
+							Type: manifestinfo.LoadBalancedWebServiceType,
 						},
 					}, nil)
 
@@ -1884,6 +1884,117 @@ func TestConfigSelect_Job(t *testing.T) {
 			}
 
 			got, err := sel.Job("Select a job", "Help text", appName)
+			if tc.wantErr != nil {
+				require.EqualError(t, err, tc.wantErr.Error())
+			} else {
+				require.Equal(t, tc.want, got)
+			}
+		})
+	}
+}
+
+func TestConfigSelect_Workload(t *testing.T) {
+	appName := "myapp"
+	testCases := map[string]struct {
+		setupMocks func(m configSelectMocks)
+		wantErr    error
+		want       string
+	}{
+		"with no workloads": {
+			setupMocks: func(m configSelectMocks) {
+				m.workloadLister.EXPECT().ListServices(gomock.Eq(appName)).Return([]*config.Workload{}, nil)
+				m.workloadLister.EXPECT().ListJobs(gomock.Eq(appName)).Return([]*config.Workload{}, nil)
+				m.prompt.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			},
+			wantErr: fmt.Errorf("no workloads found in app myapp"),
+		},
+		"with only one service (skips prompting)": {
+			setupMocks: func(m configSelectMocks) {
+				m.workloadLister.EXPECT().ListServices(gomock.Eq(appName)).Return([]*config.Workload{
+					{
+						App:  appName,
+						Name: "service1",
+						Type: "load balanced web service",
+					},
+				}, nil)
+				m.workloadLister.EXPECT().ListJobs(gomock.Eq(appName)).Return([]*config.Workload{}, nil)
+				m.prompt.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			},
+			want: "service1",
+		},
+		"with multiple workloads": {
+			setupMocks: func(m configSelectMocks) {
+				m.workloadLister.EXPECT().ListServices(gomock.Eq(appName)).Return([]*config.Workload{
+					{
+						App:  appName,
+						Name: "service1",
+						Type: "load balanced web service",
+					},
+					{
+						App:  appName,
+						Name: "service2",
+						Type: "backend service",
+					},
+				}, nil)
+				m.workloadLister.EXPECT().ListJobs(gomock.Eq(appName)).Return([]*config.Workload{
+					{
+						App:  appName,
+						Name: "job1",
+						Type: "scheduled job",
+					},
+				}, nil)
+				m.prompt.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Eq([]string{"service1", "service2", "job1"}), gomock.Any()).Return("service2", nil).Times(1)
+			},
+			want: "service2",
+		},
+		"with error selecting services": {
+			setupMocks: func(m configSelectMocks) {
+				m.workloadLister.EXPECT().ListServices(gomock.Eq(appName)).Return([]*config.Workload{
+					{
+						App:  appName,
+						Name: "service1",
+						Type: "load balanced web service",
+					},
+					{
+						App:  appName,
+						Name: "service2",
+						Type: "backend service",
+					},
+				}, nil)
+				m.workloadLister.EXPECT().ListJobs(gomock.Eq(appName)).Return([]*config.Workload{
+					{
+						App:  appName,
+						Name: "job1",
+						Type: "scheduled job",
+					},
+				}, nil)
+				m.prompt.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Eq([]string{"service1", "service2", "job1"}), gomock.Any()).Return("", errors.New("some error")).Times(1)
+			},
+			wantErr: fmt.Errorf("select workload: some error"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockconfigLister := mocks.NewMockconfigLister(ctrl)
+			mockprompt := mocks.NewMockprompter(ctrl)
+			mocks := configSelectMocks{
+				workloadLister: mockconfigLister,
+				prompt:         mockprompt,
+			}
+			tc.setupMocks(mocks)
+
+			sel := ConfigSelector{
+				AppEnvSelector: &AppEnvSelector{
+					prompt: mockprompt,
+				},
+				workloadLister: mockconfigLister,
+			}
+
+			got, err := sel.Workload("Select a service", "Help text", appName)
 			if tc.wantErr != nil {
 				require.EqualError(t, err, tc.wantErr.Error())
 			} else {

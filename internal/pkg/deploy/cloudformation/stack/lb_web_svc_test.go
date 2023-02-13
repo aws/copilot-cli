@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
@@ -254,7 +255,7 @@ Outputs:
 			AppName:      "phonetool",
 			EnvName:      "test",
 			WorkloadName: "frontend",
-			WorkloadType: manifest.LoadBalancedWebServiceType,
+			WorkloadType: manifestinfo.LoadBalancedWebServiceType,
 			HTTPHealthCheck: template.HTTPHealthCheckOpts{
 				HealthCheckPath: "/",
 				GracePeriod:     60,
@@ -293,6 +294,13 @@ Outputs:
 			EntryPoint: []string{"/bin/echo", "hello"},
 			Command:    []string{"world"},
 			ALBEnabled: true,
+			PortMappings: []*template.PortMapping{
+				{
+					Protocol:      "tcp",
+					ContainerPort: 80,
+					ContainerName: "frontend",
+				},
+			},
 		}, actual)
 	})
 

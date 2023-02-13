@@ -1,0 +1,24 @@
+Parameters:
+  App:
+    Type: String
+    Description: Your application's name.
+  Env:
+    Type: String
+    Description: The environment name your request-driven web service is being deployed to.
+  Name:
+    Type: String
+    Description: Your workload's name.
+  ServiceSecurityGroupId:
+    Type: String
+    Description: The security group associated with the VPC connector.
+Resources:
+  {{logicalIDSafe .ClusterName}}ClusterSecurityGroupIngressFromWorkload:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      Description: !Sub Ingress from workload ${Name}.
+      ToPort: {{- if eq .Engine "MySQL" }} 3306 {{- else}} 5432 {{- end}}
+      FromPort: {{- if eq .Engine "MySQL" }} 3306 {{- else}} 5432 {{- end}}
+      GroupId:
+        Fn::ImportValue: !Sub "${App}-${Env}-{{logicalIDSafe .ClusterName}}DBClusterSecurityGroup"
+      IpProtocol: tcp
+      SourceSecurityGroupId: !Ref ServiceSecurityGroupId

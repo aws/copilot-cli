@@ -39,7 +39,8 @@
               awslogs-group: !Ref LogGroup
               awslogs-stream-prefix: copilot
           PortMappings:
-            - ContainerPort: !Ref ContainerPort
+            - ContainerPort: 5000
+              Protocol: tcp
               Name: target
             - ContainerPort: 2056
               Protocol: "udp"

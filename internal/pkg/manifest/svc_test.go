@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 )
@@ -61,6 +62,16 @@ sidecars:
     port: 2000/udp
     image: 123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon
     credentialsParameter: some arn
+  nginx:
+    image:
+      build:
+        dockerfile: "web/Dockerfile"
+        context: "pathto/Dockerfile"
+        target: "build-stage"
+        cache_from:
+          - foo/bar:latest
+        args:
+          arg1: value1
 logging:
   destination:
     Name: cloudwatch
@@ -92,7 +103,7 @@ environments:
 				actualManifest, ok := i.(*LoadBalancedWebService)
 				require.True(t, ok)
 				wantedManifest := &LoadBalancedWebService{
-					Workload: Workload{Name: aws.String("frontend"), Type: aws.String(LoadBalancedWebServiceType)},
+					Workload: Workload{Name: aws.String("frontend"), Type: aws.String(manifestinfo.LoadBalancedWebServiceType)},
 					LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 						ImageConfig: ImageWithPortAndHealthcheck{
 							ImageWithPort: ImageWithPort{Image: Image{Build: BuildArgsOrString{},
@@ -123,7 +134,7 @@ environments:
 							Count: Count{
 								Value: aws.Int(1),
 								AdvancedCount: AdvancedCount{
-									workloadType: LoadBalancedWebServiceType,
+									workloadType: manifestinfo.LoadBalancedWebServiceType,
 								},
 							},
 							ExecuteCommand: ExecuteCommand{
@@ -147,8 +158,25 @@ environments:
 						Sidecars: map[string]*SidecarConfig{
 							"xray": {
 								Port:       aws.String("2000/udp"),
-								Image:      aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+								Image:      BasicToUnion[*string, SidecarImageConfig](aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon")),
 								CredsParam: aws.String("some arn"),
+							},
+							"nginx": {
+								Image: AdvancedToUnion[*string](
+									SidecarImageConfig{
+										Build: AdvancedToUnion[*string](
+											DockerBuildArgs{
+												Dockerfile: aws.String("web/Dockerfile"),
+												Context:    aws.String("pathto/Dockerfile"),
+												Target:     aws.String("build-stage"),
+												CacheFrom:  []string{"foo/bar:latest"},
+												Args: map[string]string{
+													"arg1": "value1",
+												},
+											},
+										),
+									},
+								),
 							},
 						},
 						Logging: Logging{
@@ -259,7 +287,7 @@ secrets:
 				wantedManifest := &BackendService{
 					Workload: Workload{
 						Name: aws.String("subscribers"),
-						Type: aws.String(BackendServiceType),
+						Type: aws.String(manifestinfo.BackendServiceType),
 					},
 					BackendServiceConfig: BackendServiceConfig{
 						ImageConfig: ImageWithHealthcheckAndOptionalPort{
@@ -281,7 +309,7 @@ secrets:
 							Count: Count{
 								Value: aws.Int(1),
 								AdvancedCount: AdvancedCount{
-									workloadType: BackendServiceType,
+									workloadType: manifestinfo.BackendServiceType,
 								},
 							},
 							ExecuteCommand: ExecuteCommand{
@@ -338,7 +366,7 @@ subscribe:
 				wantedManifest := &WorkerService{
 					Workload: Workload{
 						Name: aws.String("dogcategorizer"),
-						Type: aws.String(WorkerServiceType),
+						Type: aws.String(manifestinfo.WorkerServiceType),
 					},
 					WorkerServiceConfig: WorkerServiceConfig{
 						ImageConfig: ImageWithHealthcheck{
@@ -354,7 +382,7 @@ subscribe:
 							Count: Count{
 								Value: aws.Int(1),
 								AdvancedCount: AdvancedCount{
-									workloadType: WorkerServiceType,
+									workloadType: manifestinfo.WorkerServiceType,
 								},
 							},
 							ExecuteCommand: ExecuteCommand{
@@ -953,6 +981,82 @@ func TestParsePortMapping(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, gotPort, tc.wantedPort)
 				require.Equal(t, gotProtocol, tc.wantedProtocol)
+			}
+		})
+	}
+}
+
+func TestLoadBalancedWebService_NetworkLoadBalancerTarget(t *testing.T) {
+	testCases := map[string]struct {
+		in                    LoadBalancedWebService
+		wantedTargetContainer string
+		wantedTargetPort      string
+		wantedErr             error
+	}{
+		"should return primary container name/nlb port as targetContainer/targetPort in case targetContainer and targetPort is not given ": {
+			in: LoadBalancedWebService{
+				Workload: Workload{
+					Name: aws.String("foo"),
+					Type: aws.String("Load Balanced WebService"),
+				},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: ImageWithPortAndHealthcheck{},
+					NLBConfig: NetworkLoadBalancerConfiguration{
+						Port: aws.String("80/tcp"),
+					},
+				},
+			},
+			wantedTargetContainer: "foo",
+			wantedTargetPort:      "80",
+		},
+		"should return targetContainer and targetPort as is if they are given ": {
+			in: LoadBalancedWebService{
+				Workload: Workload{
+					Name: aws.String("foo"),
+					Type: aws.String("Load Balanced WebService"),
+				},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: ImageWithPortAndHealthcheck{},
+					NLBConfig: NetworkLoadBalancerConfiguration{
+						Port:            aws.String("80/tcp"),
+						TargetPort:      aws.Int(81),
+						TargetContainer: aws.String("bar"),
+					},
+					Sidecars: map[string]*SidecarConfig{
+						"bar": {
+							Port: aws.String("8080"),
+						},
+					},
+				},
+			},
+			wantedTargetContainer: "bar",
+			wantedTargetPort:      "81",
+		},
+		"should return error if targetPort is of incorrect type": {
+			in: LoadBalancedWebService{
+				Workload: Workload{
+					Name: aws.String("foo"),
+					Type: aws.String("Load Balanced WebService"),
+				},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: ImageWithPortAndHealthcheck{},
+					NLBConfig: NetworkLoadBalancerConfiguration{
+						Port: aws.String("80/80/80"),
+					},
+				},
+			},
+			wantedErr: errors.New(`cannot parse port mapping from 80/80/80`),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			targetContainer, targetPort, err := tc.in.NetworkLoadBalancerTarget()
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.Equal(t, tc.wantedTargetContainer, targetContainer)
+				require.Equal(t, tc.wantedTargetPort, targetPort)
 			}
 		})
 	}

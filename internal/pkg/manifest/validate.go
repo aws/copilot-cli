@@ -15,6 +15,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/graph"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/dustin/go-humanize/english"
 )
 
@@ -360,7 +361,7 @@ func (r RequestDrivenWebServiceConfig) validate() error {
 	if r.Network.VPC.Placement.PlacementString != nil &&
 		*r.Network.VPC.Placement.PlacementString != PrivateSubnetPlacement {
 		return fmt.Errorf(`placement %q is not supported for %s`,
-			*r.Network.VPC.Placement.PlacementString, RequestDrivenWebServiceType)
+			*r.Network.VPC.Placement.PlacementString, manifestinfo.RequestDrivenWebServiceType)
 	}
 	if err = r.Observability.validate(); err != nil {
 		return fmt.Errorf(`validate "observability": %w`, err)
@@ -530,6 +531,27 @@ func (s ScheduledJobConfig) validate() error {
 			return fmt.Errorf("validate ARM: %w", err)
 		}
 	}
+	return nil
+}
+
+// validate returns nil if StaticSite is configured correctly.
+func (s StaticSite) validate() error {
+	if err := s.StaticSiteConfig.validate(); err != nil {
+		return err
+	}
+	return s.Workload.validate()
+}
+
+func (s StaticSiteConfig) validate() error {
+	for idx, fileupload := range s.FileUploads {
+		if err := fileupload.validate(); err != nil {
+			return fmt.Errorf(`validate "files[%d]": %w`, idx, err)
+		}
+	}
+	return nil
+}
+
+func (f FileUpload) validate() error {
 	return nil
 }
 
@@ -1326,6 +1348,9 @@ func (s SidecarConfig) validate() error {
 	if err := s.DependsOn.validate(); err != nil {
 		return fmt.Errorf(`validate "depends_on": %w`, err)
 	}
+	if err := s.Image.Advanced.validate(); err != nil {
+		return fmt.Errorf(`validate "build": %w`, err)
+	}
 	return s.ImageOverride.validate()
 }
 
@@ -2041,4 +2066,16 @@ func contains(name string, names []string) bool {
 		}
 	}
 	return false
+}
+
+// validate returns nil if SidecarImageConfig is configured correctly.
+func (cfg SidecarImageConfig) validate() error {
+	if !cfg.Build.IsZero() && cfg.Location != nil {
+		return &errFieldMutualExclusive{
+			firstField:  "build",
+			secondField: "location",
+			mustExist:   true,
+		}
+	}
+	return nil
 }

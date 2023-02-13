@@ -40,16 +40,21 @@ var regexpSGR = regexp.MustCompile(sgr)
 
 // Option represents a choice with a hint for clarification.
 type Option struct {
-	Value string
-	Hint  string
+	Value        string // The actual value represented by the option.
+	FriendlyText string // An optional FriendlyText displayed in place of Value.
+	Hint         string // An optional Hint displayed alongside the Value or FriendlyText.
 }
 
 // String implements the fmt.Stringer interface.
 func (o Option) String() string {
-	if o.Hint == "" {
-		return fmt.Sprintf("%s\t", o.Value)
+	text := o.Value
+	if o.FriendlyText != "" {
+		text = o.FriendlyText
 	}
-	return fmt.Sprintf("%s\t%s", o.Value, color.Faint.Sprintf("(%s)", o.Hint))
+	if o.Hint == "" {
+		return fmt.Sprintf("%s\t", text)
+	}
+	return fmt.Sprintf("%s\t%s", text, color.Faint.Sprintf("(%s)", o.Hint))
 }
 
 // SelectOption prompts the user to select one option from options and returns the Value of the option.
@@ -58,15 +63,15 @@ func (p Prompt) SelectOption(message, help string, opts []Option, promptCfgs ...
 		return "", ErrEmptyOptions
 	}
 
-	choices, err := stringifyOptions(opts)
+	prettified, err := prettifyOptions(opts)
 	if err != nil {
 		return "", err
 	}
-	result, err := p.SelectOne(message, help, choices, promptCfgs...)
+	result, err := p.SelectOne(message, help, prettified.choices, promptCfgs...)
 	if err != nil {
 		return "", err
 	}
-	return parseValueFromOptionFmt(result), nil
+	return prettified.choice2Value[result], nil
 }
 
 // SelectOne prompts the user with a list of options to choose from with the arrow keys.
@@ -96,7 +101,12 @@ func (p Prompt) SelectOne(message, help string, options []string, promptCfgs ...
 	return result, err
 }
 
-func stringifyOptions(opts []Option) ([]string, error) {
+type prettyOptions struct {
+	choices      []string
+	choice2Value map[string]string
+}
+
+func prettifyOptions(opts []Option) (prettyOptions, error) {
 	buf := new(strings.Builder)
 	tw := tabwriter.NewWriter(buf, minCellWidth, tabWidth, cellPaddingWidth, paddingChar, noAdditionalFormatting)
 	var lines []string
@@ -104,12 +114,20 @@ func stringifyOptions(opts []Option) ([]string, error) {
 		lines = append(lines, opt.String())
 	}
 	if _, err := tw.Write([]byte(strings.Join(lines, "\n"))); err != nil {
-		return nil, fmt.Errorf("render options: %v", err)
+		return prettyOptions{}, fmt.Errorf("render options: %v", err)
 	}
 	if err := tw.Flush(); err != nil {
-		return nil, fmt.Errorf("flush tabwriter options: %v", err)
+		return prettyOptions{}, fmt.Errorf("flush tabwriter options: %v", err)
 	}
-	return strings.Split(buf.String(), "\n"), nil
+	choices := strings.Split(buf.String(), "\n")
+	choice2Value := make(map[string]string)
+	for idx, choice := range choices {
+		choice2Value[choice] = opts[idx].Value
+	}
+	return prettyOptions{
+		choices:      choices,
+		choice2Value: choice2Value,
+	}, nil
 }
 
 func parseValueFromOptionFmt(formatted string) string {

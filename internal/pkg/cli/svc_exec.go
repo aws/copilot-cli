@@ -12,6 +12,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -22,7 +23,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/exec"
-	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
@@ -113,8 +113,8 @@ func (o *svcExecOpts) Execute() error {
 	if err != nil {
 		return fmt.Errorf("get workload: %w", err)
 	}
-	if wkld.Type == manifest.RequestDrivenWebServiceType {
-		return fmt.Errorf("executing a command in a running container part of a service is not supported for services with type: '%s'", manifest.RequestDrivenWebServiceType)
+	if wkld.Type == manifestinfo.RequestDrivenWebServiceType {
+		return fmt.Errorf("executing a command in a running container part of a service is not supported for services with type: '%s'", manifestinfo.RequestDrivenWebServiceType)
 	}
 	sess, err := o.envSession()
 	if err != nil {
