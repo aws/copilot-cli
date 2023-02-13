@@ -14,6 +14,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 
@@ -78,7 +79,7 @@ func TestSvcInitOpts_Validate(t *testing.T) {
 		"fail if image not supported by App Runner": {
 			inAppName: "phonetool",
 			inImage:   "amazon/amazon-ecs-sample",
-			inSvcType: manifest.RequestDrivenWebServiceType,
+			inSvcType: manifestinfo.RequestDrivenWebServiceType,
 
 			setupMocks: func(m initSvcMocks) {
 				m.mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{}, nil)
@@ -198,8 +199,8 @@ func TestSvcInitOpts_Validate(t *testing.T) {
 func TestSvcInitOpts_Ask(t *testing.T) {
 	const (
 		mockAppName          = "phonetool"
-		wantedSvcType        = manifest.LoadBalancedWebServiceType
-		appRunnerSvcType     = manifest.RequestDrivenWebServiceType
+		wantedSvcType        = manifestinfo.LoadBalancedWebServiceType
+		appRunnerSvcType     = manifestinfo.RequestDrivenWebServiceType
 		wantedSvcName        = "frontend"
 		badAppRunnerSvcName  = "iamoverfortycharacterlongandaninvalidrdwsname"
 		wantedDockerfilePath = "frontend/Dockerfile"
@@ -351,19 +352,19 @@ type: Request-Driven Web Service`), nil)
 			setupMocks: func(m initSvcMocks) {
 				m.mockPrompt.EXPECT().SelectOption(gomock.Eq(fmt.Sprintf(fmtSvcInitSvcTypePrompt, "service type")), gomock.Any(), gomock.Eq([]prompt.Option{
 					{
-						Value: manifest.RequestDrivenWebServiceType,
+						Value: manifestinfo.RequestDrivenWebServiceType,
 						Hint:  "App Runner",
 					},
 					{
-						Value: manifest.LoadBalancedWebServiceType,
+						Value: manifestinfo.LoadBalancedWebServiceType,
 						Hint:  "Internet to ECS on Fargate",
 					},
 					{
-						Value: manifest.BackendServiceType,
+						Value: manifestinfo.BackendServiceType,
 						Hint:  "ECS on Fargate",
 					},
 					{
-						Value: manifest.WorkerServiceType,
+						Value: manifestinfo.WorkerServiceType,
 						Hint:  "Events to SQS to ECS on Fargate",
 					},
 				}), gomock.Any()).
@@ -799,7 +800,7 @@ network:
 			inAppName:        "sample",
 			inSvcName:        "frontend",
 			inDockerfilePath: "./Dockerfile",
-			inSvcType:        manifest.LoadBalancedWebServiceType,
+			inSvcType:        manifestinfo.LoadBalancedWebServiceType,
 
 			inSvcPort: 80,
 
@@ -831,7 +832,7 @@ network:
 			inAppName:        "sample",
 			inSvcName:        "frontend",
 			inDockerfilePath: "./Dockerfile",
-			inSvcType:        manifest.BackendServiceType,
+			inSvcType:        manifestinfo.BackendServiceType,
 
 			mockSvcInit: func(m *mocks.MocksvcInitializer) {
 				m.EXPECT().Service(&initialize.ServiceProps{
@@ -860,7 +861,7 @@ network:
 			inAppName:        "sample",
 			inSvcName:        "frontend",
 			inDockerfilePath: "./Dockerfile",
-			inSvcType:        manifest.LoadBalancedWebServiceType,
+			inSvcType:        manifestinfo.LoadBalancedWebServiceType,
 			inSvcPort:        80,
 			inManifestExists: true,
 
@@ -891,7 +892,7 @@ network:
 			inAppName:        "sample",
 			inSvcName:        "frontend",
 			inDockerfilePath: "./Dockerfile",
-			inSvcType:        manifest.LoadBalancedWebServiceType,
+			inSvcType:        manifestinfo.LoadBalancedWebServiceType,
 
 			inSvcPort: 80,
 
@@ -923,7 +924,7 @@ network:
 			inAppName:        "sample",
 			inSvcName:        "frontend",
 			inDockerfilePath: "./Dockerfile",
-			inSvcType:        manifest.LoadBalancedWebServiceType,
+			inSvcType:        manifestinfo.LoadBalancedWebServiceType,
 
 			inSvcPort: 80,
 
@@ -958,7 +959,7 @@ network:
 			inAppName:        "sample",
 			inSvcName:        "frontend",
 			inDockerfilePath: "./Dockerfile",
-			inSvcType:        manifest.LoadBalancedWebServiceType,
+			inSvcType:        manifestinfo.LoadBalancedWebServiceType,
 
 			inSvcPort: 80,
 
@@ -993,7 +994,7 @@ network:
 			inAppName:        "sample",
 			inSvcName:        "frontend",
 			inDockerfilePath: "./Dockerfile",
-			inSvcType:        manifest.WorkerServiceType,
+			inSvcType:        manifestinfo.WorkerServiceType,
 
 			mockSvcInit: func(m *mocks.MocksvcInitializer) {
 				m.EXPECT().Service(&initialize.ServiceProps{
@@ -1036,7 +1037,7 @@ network:
 			inSvcName:        "backend",
 			inDockerfilePath: "",
 			inImage:          "nginx:latest",
-			inSvcType:        manifest.BackendServiceType,
+			inSvcType:        manifestinfo.BackendServiceType,
 
 			mockSvcInit: func(m *mocks.MocksvcInitializer) {
 				m.EXPECT().Service(&initialize.ServiceProps{
@@ -1061,7 +1062,7 @@ network:
 			inSvcName:        "frontend",
 			inDockerfilePath: "",
 			inImage:          "nginx:latest",
-			inSvcType:        manifest.LoadBalancedWebServiceType,
+			inSvcType:        manifestinfo.LoadBalancedWebServiceType,
 
 			mockSvcInit: func(m *mocks.MocksvcInitializer) {
 				m.EXPECT().Service(&initialize.ServiceProps{
@@ -1092,7 +1093,7 @@ network:
 			inAppName:        "sample",
 			inSvcName:        "appRunner",
 			inDockerfilePath: "./Dockerfile",
-			inSvcType:        manifest.RequestDrivenWebServiceType,
+			inSvcType:        manifestinfo.RequestDrivenWebServiceType,
 
 			inSvcPort: 80,
 
@@ -1119,7 +1120,7 @@ network:
 			inAppName:        "sample",
 			inSvcName:        "frontend",
 			inDockerfilePath: "./Dockerfile",
-			inSvcType:        manifest.LoadBalancedWebServiceType,
+			inSvcType:        manifestinfo.LoadBalancedWebServiceType,
 
 			inSvcPort: 80,
 
@@ -1162,7 +1163,7 @@ network:
 			inAppName:        "sample",
 			inSvcName:        "frontend",
 			inDockerfilePath: "./Dockerfile",
-			inSvcType:        manifest.LoadBalancedWebServiceType,
+			inSvcType:        manifestinfo.LoadBalancedWebServiceType,
 
 			inSvcPort: 80,
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {

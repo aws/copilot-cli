@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
@@ -69,7 +70,7 @@ func TestNewWorkerSvc(t *testing.T) {
 			wantedManifest: &WorkerService{
 				Workload: Workload{
 					Name: aws.String("testers"),
-					Type: aws.String(WorkerServiceType),
+					Type: aws.String(manifestinfo.WorkerServiceType),
 				},
 				WorkerServiceConfig: WorkerServiceConfig{
 					ImageConfig: ImageWithHealthcheck{
@@ -125,7 +126,7 @@ func TestNewWorkerSvc(t *testing.T) {
 			wantedManifest: &WorkerService{
 				Workload: Workload{
 					Name: aws.String("testers"),
-					Type: aws.String(WorkerServiceType),
+					Type: aws.String(manifestinfo.WorkerServiceType),
 				},
 				WorkerServiceConfig: WorkerServiceConfig{
 					ImageConfig: ImageWithHealthcheck{
@@ -188,7 +189,7 @@ func TestNewWorkerSvc(t *testing.T) {
 			wantedManifest: &WorkerService{
 				Workload: Workload{
 					Name: aws.String("testers"),
-					Type: aws.String(WorkerServiceType),
+					Type: aws.String(manifestinfo.WorkerServiceType),
 				},
 				WorkerServiceConfig: WorkerServiceConfig{
 					ImageConfig: ImageWithHealthcheck{
@@ -267,7 +268,7 @@ func TestNewWorkerSvc(t *testing.T) {
 			wantedManifest: &WorkerService{
 				Workload: Workload{
 					Name: aws.String("testers"),
-					Type: aws.String(WorkerServiceType),
+					Type: aws.String(manifestinfo.WorkerServiceType),
 				},
 				WorkerServiceConfig: WorkerServiceConfig{
 					ImageConfig: ImageWithHealthcheck{
@@ -336,7 +337,7 @@ func TestNewWorkerSvc(t *testing.T) {
 			wantedManifest: &WorkerService{
 				Workload: Workload{
 					Name: aws.String("testers"),
-					Type: aws.String(WorkerServiceType),
+					Type: aws.String(manifestinfo.WorkerServiceType),
 				},
 				WorkerServiceConfig: WorkerServiceConfig{
 					ImageConfig: ImageWithHealthcheck{
@@ -408,7 +409,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 	mockWorkerServiceWithNoEnvironments := WorkerService{
 		Workload: Workload{
 			Name: aws.String("phonetool"),
-			Type: aws.String(WorkerServiceType),
+			Type: aws.String(manifestinfo.WorkerServiceType),
 		},
 		WorkerServiceConfig: WorkerServiceConfig{
 			ImageConfig: ImageWithHealthcheck{
@@ -551,7 +552,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 	mockWorkerServiceWithImageOverrideBuildByLocation := WorkerService{
 		Workload: Workload{
 			Name: aws.String("phonetool"),
-			Type: aws.String(WorkerServiceType),
+			Type: aws.String(manifestinfo.WorkerServiceType),
 		},
 		WorkerServiceConfig: WorkerServiceConfig{
 			ImageConfig: ImageWithHealthcheck{
@@ -581,7 +582,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 	mockWorkerServiceWithImageOverrideLocationByLocation := WorkerService{
 		Workload: Workload{
 			Name: aws.String("phonetool"),
-			Type: aws.String(WorkerServiceType),
+			Type: aws.String(manifestinfo.WorkerServiceType),
 		},
 		WorkerServiceConfig: WorkerServiceConfig{
 			ImageConfig: ImageWithHealthcheck{
@@ -607,7 +608,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 	mockWorkerServiceWithImageOverrideBuildByBuild := WorkerService{
 		Workload: Workload{
 			Name: aws.String("phonetool"),
-			Type: aws.String(WorkerServiceType),
+			Type: aws.String(manifestinfo.WorkerServiceType),
 		},
 		WorkerServiceConfig: WorkerServiceConfig{
 			ImageConfig: ImageWithHealthcheck{
@@ -640,7 +641,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 	mockWorkerServiceWithImageOverrideLocationByBuild := WorkerService{
 		Workload: Workload{
 			Name: aws.String("phonetool"),
-			Type: aws.String(WorkerServiceType),
+			Type: aws.String(manifestinfo.WorkerServiceType),
 		},
 		WorkerServiceConfig: WorkerServiceConfig{
 			ImageConfig: ImageWithHealthcheck{
@@ -668,7 +669,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 	mockWorkerServiceWithSubscribeNilOverride := WorkerService{
 		Workload: Workload{
 			Name: aws.String("phonetool"),
-			Type: aws.String(WorkerServiceType),
+			Type: aws.String(manifestinfo.WorkerServiceType),
 		},
 		WorkerServiceConfig: WorkerServiceConfig{
 			Subscribe: SubscribeConfig{
@@ -690,7 +691,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 	mockWorkerServiceWithNilSubscribeOverride := WorkerService{
 		Workload: Workload{
 			Name: aws.String("phonetool"),
-			Type: aws.String(WorkerServiceType),
+			Type: aws.String(manifestinfo.WorkerServiceType),
 		},
 		WorkerServiceConfig: WorkerServiceConfig{
 			Subscribe: SubscribeConfig{},
@@ -712,7 +713,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 	mockWorkerServiceWithEmptySubscribeOverride := WorkerService{
 		Workload: Workload{
 			Name: aws.String("phonetool"),
-			Type: aws.String(WorkerServiceType),
+			Type: aws.String(manifestinfo.WorkerServiceType),
 		},
 		WorkerServiceConfig: WorkerServiceConfig{
 			Subscribe: SubscribeConfig{
@@ -734,7 +735,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 	mockWorkerServiceWithSubscribeTopicNilOverride := WorkerService{
 		Workload: Workload{
 			Name: aws.String("phonetool"),
-			Type: aws.String(WorkerServiceType),
+			Type: aws.String(manifestinfo.WorkerServiceType),
 		},
 		WorkerServiceConfig: WorkerServiceConfig{
 			Subscribe: SubscribeConfig{
@@ -758,7 +759,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 	mockWorkerServiceWithNilSubscribeTopicOverride := WorkerService{
 		Workload: Workload{
 			Name: aws.String("phonetool"),
-			Type: aws.String(WorkerServiceType),
+			Type: aws.String(manifestinfo.WorkerServiceType),
 		},
 		WorkerServiceConfig: WorkerServiceConfig{
 			Subscribe: SubscribeConfig{
@@ -782,7 +783,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 	mockWorkerServiceWithSubscribeTopicEmptyOverride := WorkerService{
 		Workload: Workload{
 			Name: aws.String("phonetool"),
-			Type: aws.String(WorkerServiceType),
+			Type: aws.String(manifestinfo.WorkerServiceType),
 		},
 		WorkerServiceConfig: WorkerServiceConfig{
 			Subscribe: SubscribeConfig{
@@ -806,7 +807,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 	mockWorkerServiceWithSubscribeQueueNilOverride := WorkerService{
 		Workload: Workload{
 			Name: aws.String("phonetool"),
-			Type: aws.String(WorkerServiceType),
+			Type: aws.String(manifestinfo.WorkerServiceType),
 		},
 		WorkerServiceConfig: WorkerServiceConfig{
 			Subscribe: SubscribeConfig{
@@ -824,7 +825,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 	mockWorkerServiceWithNilSubscribeQueueOverride := WorkerService{
 		Workload: Workload{
 			Name: aws.String("phonetool"),
-			Type: aws.String(WorkerServiceType),
+			Type: aws.String(manifestinfo.WorkerServiceType),
 		},
 		WorkerServiceConfig: WorkerServiceConfig{
 			Subscribe: SubscribeConfig{
@@ -842,7 +843,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 	mockWorkerServiceWithSubscribeQueueEmptyOverride := WorkerService{
 		Workload: Workload{
 			Name: aws.String("phonetool"),
-			Type: aws.String(WorkerServiceType),
+			Type: aws.String(manifestinfo.WorkerServiceType),
 		},
 		WorkerServiceConfig: WorkerServiceConfig{
 			Subscribe: SubscribeConfig{
@@ -955,7 +956,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 			wanted: &WorkerService{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(WorkerServiceType),
+					Type: aws.String(manifestinfo.WorkerServiceType),
 				},
 				WorkerServiceConfig: WorkerServiceConfig{
 					ImageConfig: ImageWithHealthcheck{
@@ -976,7 +977,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 			wanted: &WorkerService{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(WorkerServiceType),
+					Type: aws.String(manifestinfo.WorkerServiceType),
 				},
 				WorkerServiceConfig: WorkerServiceConfig{
 					ImageConfig: ImageWithHealthcheck{
@@ -996,7 +997,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 			wanted: &WorkerService{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(WorkerServiceType),
+					Type: aws.String(manifestinfo.WorkerServiceType),
 				},
 				WorkerServiceConfig: WorkerServiceConfig{
 					ImageConfig: ImageWithHealthcheck{
@@ -1018,7 +1019,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 			wanted: &WorkerService{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(WorkerServiceType),
+					Type: aws.String(manifestinfo.WorkerServiceType),
 				},
 				WorkerServiceConfig: WorkerServiceConfig{
 					ImageConfig: ImageWithHealthcheck{
@@ -1040,7 +1041,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 			wanted: &WorkerService{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(WorkerServiceType),
+					Type: aws.String(manifestinfo.WorkerServiceType),
 				},
 				WorkerServiceConfig: WorkerServiceConfig{
 					Subscribe: SubscribeConfig{
@@ -1063,7 +1064,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 			wanted: &WorkerService{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(WorkerServiceType),
+					Type: aws.String(manifestinfo.WorkerServiceType),
 				},
 				WorkerServiceConfig: WorkerServiceConfig{
 					Subscribe: SubscribeConfig{
@@ -1086,7 +1087,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 			wanted: &WorkerService{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(WorkerServiceType),
+					Type: aws.String(manifestinfo.WorkerServiceType),
 				},
 				WorkerServiceConfig: WorkerServiceConfig{
 					ImageConfig: ImageWithHealthcheck{
@@ -1112,7 +1113,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 			wanted: &WorkerService{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(WorkerServiceType),
+					Type: aws.String(manifestinfo.WorkerServiceType),
 				},
 				WorkerServiceConfig: WorkerServiceConfig{
 					Subscribe: SubscribeConfig{
@@ -1135,7 +1136,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 			wanted: &WorkerService{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(WorkerServiceType),
+					Type: aws.String(manifestinfo.WorkerServiceType),
 				},
 				WorkerServiceConfig: WorkerServiceConfig{
 					Subscribe: SubscribeConfig{
@@ -1158,7 +1159,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 			wanted: &WorkerService{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(WorkerServiceType),
+					Type: aws.String(manifestinfo.WorkerServiceType),
 				},
 				WorkerServiceConfig: WorkerServiceConfig{
 					ImageConfig: ImageWithHealthcheck{
@@ -1184,7 +1185,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 			wanted: &WorkerService{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(WorkerServiceType),
+					Type: aws.String(manifestinfo.WorkerServiceType),
 				},
 				WorkerServiceConfig: WorkerServiceConfig{
 					Subscribe: SubscribeConfig{
@@ -1201,7 +1202,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 			wanted: &WorkerService{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(WorkerServiceType),
+					Type: aws.String(manifestinfo.WorkerServiceType),
 				},
 				WorkerServiceConfig: WorkerServiceConfig{
 					Subscribe: SubscribeConfig{
@@ -1218,7 +1219,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 			wanted: &WorkerService{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(WorkerServiceType),
+					Type: aws.String(manifestinfo.WorkerServiceType),
 				},
 				WorkerServiceConfig: WorkerServiceConfig{
 					ImageConfig: ImageWithHealthcheck{
@@ -1557,7 +1558,7 @@ func TestWorkerService_RequiredEnvironmentFeatures(t *testing.T) {
 			inSvc := WorkerService{
 				Workload: Workload{
 					Name: aws.String("mock-svc"),
-					Type: aws.String(WorkerServiceType),
+					Type: aws.String(manifestinfo.WorkerServiceType),
 				},
 			}
 			tc.mft(&inSvc)

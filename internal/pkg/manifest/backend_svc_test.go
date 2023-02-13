@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
@@ -32,7 +33,7 @@ func TestNewBackendSvc(t *testing.T) {
 			wantedManifest: &BackendService{
 				Workload: Workload{
 					Name: aws.String("subscribers"),
-					Type: aws.String(BackendServiceType),
+					Type: aws.String(manifestinfo.BackendServiceType),
 				},
 				BackendServiceConfig: BackendServiceConfig{
 					ImageConfig: ImageWithHealthcheckAndOptionalPort{
@@ -93,7 +94,7 @@ func TestNewBackendSvc(t *testing.T) {
 			wantedManifest: &BackendService{
 				Workload: Workload{
 					Name: aws.String("subscribers"),
-					Type: aws.String(BackendServiceType),
+					Type: aws.String(manifestinfo.BackendServiceType),
 				},
 				BackendServiceConfig: BackendServiceConfig{
 					ImageConfig: ImageWithHealthcheckAndOptionalPort{
@@ -140,7 +141,7 @@ func TestNewBackendSvc(t *testing.T) {
 			wantedManifest: &BackendService{
 				Workload: Workload{
 					Name: aws.String("subscribers"),
-					Type: aws.String(BackendServiceType),
+					Type: aws.String(manifestinfo.BackendServiceType),
 				},
 				BackendServiceConfig: BackendServiceConfig{
 					ImageConfig: ImageWithHealthcheckAndOptionalPort{
@@ -270,7 +271,7 @@ func TestBackendService_RequiredEnvironmentFeatures(t *testing.T) {
 			inSvc := BackendService{
 				Workload: Workload{
 					Name: aws.String("mock-svc"),
-					Type: aws.String(BackendServiceType),
+					Type: aws.String(manifestinfo.BackendServiceType),
 				},
 			}
 			tc.mft(&inSvc)
@@ -365,7 +366,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 	mockBackendServiceWithNoEnvironments := BackendService{
 		Workload: Workload{
 			Name: aws.String("phonetool"),
-			Type: aws.String(BackendServiceType),
+			Type: aws.String(manifestinfo.BackendServiceType),
 		},
 		BackendServiceConfig: BackendServiceConfig{
 			ImageConfig: ImageWithHealthcheckAndOptionalPort{
@@ -506,7 +507,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 	mockBackendServiceWithImageOverrideBuildByLocation := BackendService{
 		Workload: Workload{
 			Name: aws.String("phonetool"),
-			Type: aws.String(BackendServiceType),
+			Type: aws.String(manifestinfo.BackendServiceType),
 		},
 		BackendServiceConfig: BackendServiceConfig{
 			ImageConfig: ImageWithHealthcheckAndOptionalPort{
@@ -540,7 +541,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 	mockBackendServiceWithImageOverrideLocationByLocation := BackendService{
 		Workload: Workload{
 			Name: aws.String("phonetool"),
-			Type: aws.String(BackendServiceType),
+			Type: aws.String(manifestinfo.BackendServiceType),
 		},
 		BackendServiceConfig: BackendServiceConfig{
 			ImageConfig: ImageWithHealthcheckAndOptionalPort{
@@ -570,7 +571,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 	mockBackendServiceWithImageOverrideBuildByBuild := BackendService{
 		Workload: Workload{
 			Name: aws.String("phonetool"),
-			Type: aws.String(BackendServiceType),
+			Type: aws.String(manifestinfo.BackendServiceType),
 		},
 		BackendServiceConfig: BackendServiceConfig{
 			ImageConfig: ImageWithHealthcheckAndOptionalPort{
@@ -607,7 +608,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 	mockBackendServiceWithImageOverrideLocationByBuild := BackendService{
 		Workload: Workload{
 			Name: aws.String("phonetool"),
-			Type: aws.String(BackendServiceType),
+			Type: aws.String(manifestinfo.BackendServiceType),
 		},
 		BackendServiceConfig: BackendServiceConfig{
 			ImageConfig: ImageWithHealthcheckAndOptionalPort{
@@ -731,7 +732,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 			wanted: &BackendService{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(BackendServiceType),
+					Type: aws.String(manifestinfo.BackendServiceType),
 				},
 				BackendServiceConfig: BackendServiceConfig{
 					ImageConfig: ImageWithHealthcheckAndOptionalPort{
@@ -754,7 +755,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 			wanted: &BackendService{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(BackendServiceType),
+					Type: aws.String(manifestinfo.BackendServiceType),
 				},
 				BackendServiceConfig: BackendServiceConfig{
 					ImageConfig: ImageWithHealthcheckAndOptionalPort{
@@ -776,7 +777,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 			wanted: &BackendService{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(BackendServiceType),
+					Type: aws.String(manifestinfo.BackendServiceType),
 				},
 				BackendServiceConfig: BackendServiceConfig{
 					ImageConfig: ImageWithHealthcheckAndOptionalPort{
@@ -800,7 +801,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 			wanted: &BackendService{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(BackendServiceType),
+					Type: aws.String(manifestinfo.BackendServiceType),
 				},
 				BackendServiceConfig: BackendServiceConfig{
 					ImageConfig: ImageWithHealthcheckAndOptionalPort{

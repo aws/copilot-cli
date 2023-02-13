@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
+
 	"github.com/aws/copilot-cli/internal/pkg/override"
 	"gopkg.in/yaml.v3"
 
@@ -231,6 +233,9 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 						},
 					},
 				},
+				newStack: func() cloudformation.StackConfiguration {
+					return new(stubCloudFormationStack)
+				},
 			}
 
 			got, gotErr := deployer.stackConfiguration(&StackRuntimeConfiguration{
@@ -290,6 +295,9 @@ func mockRDWSDeployer(opts ...func(*rdwsDeployer)) *rdwsDeployer {
 					Memory: aws.Int(2048),
 				},
 			},
+		},
+		newStack: func() cloudformation.StackConfiguration {
+			return new(stubCloudFormationStack)
 		},
 	}
 	for _, opt := range opts {

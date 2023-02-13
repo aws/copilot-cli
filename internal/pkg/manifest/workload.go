@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 
 	"github.com/google/shlex"
@@ -62,11 +63,6 @@ var (
 	errUnmarshalCommand    = errors.New(`unable to unmarshal "command" into string or slice of strings`)
 )
 
-// WorkloadTypes returns the list of all manifest types.
-func WorkloadTypes() []string {
-	return append(ServiceTypes(), JobTypes()...)
-}
-
 // DynamicWorkload represents a dynamically populated workload.
 type DynamicWorkload interface {
 	ApplyEnv(envName string) (DynamicWorkload, error)
@@ -85,7 +81,7 @@ type workloadManifest interface {
 
 // UnmarshalWorkload deserializes the YAML input stream into a workload manifest object.
 // If an error occurs during deserialization, then returns the error.
-// If the workload type in the manifest is invalid, then returns an ErrInvalidManifestType.
+// If the workload type in the manifest is invalid, then returns an ErrInvalidmanifestinfo.
 func UnmarshalWorkload(in []byte) (DynamicWorkload, error) {
 	am := Workload{}
 	if err := yaml.Unmarshal(in, &am); err != nil {
@@ -94,15 +90,15 @@ func UnmarshalWorkload(in []byte) (DynamicWorkload, error) {
 	typeVal := aws.StringValue(am.Type)
 	var m workloadManifest
 	switch typeVal {
-	case LoadBalancedWebServiceType:
+	case manifestinfo.LoadBalancedWebServiceType:
 		m = newDefaultLoadBalancedWebService()
-	case RequestDrivenWebServiceType:
+	case manifestinfo.RequestDrivenWebServiceType:
 		m = newDefaultRequestDrivenWebService()
-	case BackendServiceType:
+	case manifestinfo.BackendServiceType:
 		m = newDefaultBackendService()
-	case WorkerServiceType:
+	case manifestinfo.WorkerServiceType:
 		m = newDefaultWorkerService()
-	case ScheduledJobType:
+	case manifestinfo.ScheduledJobType:
 		m = newDefaultScheduledJob()
 	default:
 		return nil, &ErrInvalidWorkloadType{Type: typeVal}
@@ -796,7 +792,7 @@ func RedirectPlatform(os, arch, wlType string) (platform string, err error) {
 		return "", nil
 	}
 	// Return an error if a platform cannot be redirected.
-	if wlType == RequestDrivenWebServiceType && os == OSWindows {
+	if wlType == manifestinfo.RequestDrivenWebServiceType && os == OSWindows {
 		return "", ErrAppRunnerInvalidPlatformWindows
 	}
 	// All architectures default to 'x86_64' (though 'arm64' is now also supported); leave OS as is.

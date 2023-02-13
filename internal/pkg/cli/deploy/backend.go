@@ -15,13 +15,17 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 )
 
 type backendSvcDeployer struct {
 	*svcDeployer
-	backendMft         *manifest.BackendService
+	backendMft *manifest.BackendService
+
+	// Overriden in tests.
 	aliasCertValidator aliasCertValidator
+	newStack           func() cloudformation.StackConfiguration
 }
 
 // NewBackendDeployer is the constructor for backendSvcDeployer.
@@ -33,7 +37,7 @@ func NewBackendDeployer(in *WorkloadDeployerInput) (*backendSvcDeployer, error) 
 	}
 	bsMft, ok := in.Mft.(*manifest.BackendService)
 	if !ok {
-		return nil, fmt.Errorf("manifest is not of type %s", manifest.BackendServiceType)
+		return nil, fmt.Errorf("manifest is not of type %s", manifestinfo.BackendServiceType)
 	}
 	return &backendSvcDeployer{
 		svcDeployer:        svcDeployer,
@@ -45,7 +49,7 @@ func NewBackendDeployer(in *WorkloadDeployerInput) (*backendSvcDeployer, error) 
 func backendCustomResources(fs template.Reader) ([]*customresource.CustomResource, error) {
 	crs, err := customresource.Backend(fs)
 	if err != nil {
-		return nil, fmt.Errorf("read custom resources for a %q: %w", manifest.BackendServiceType, err)
+		return nil, fmt.Errorf("read custom resources for a %q: %w", manifestinfo.BackendServiceType, err)
 	}
 	return crs, nil
 }
@@ -90,18 +94,26 @@ func (d *backendSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (
 	if err := d.validateALBRuntime(); err != nil {
 		return nil, err
 	}
-	conf, err := stack.NewBackendService(stack.BackendServiceConfig{
-		App:                d.app,
-		EnvManifest:        d.envConfig,
-		Manifest:           d.backendMft,
-		RawManifest:        d.rawMft,
-		ArtifactBucketName: d.resources.S3Bucket,
-		RuntimeConfig:      *rc,
-		Addons:             d.addons,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("create stack configuration: %w", err)
+
+	var conf cloudformation.StackConfiguration
+	switch {
+	case d.newStack != nil:
+		conf = d.newStack()
+	default:
+		conf, err = stack.NewBackendService(stack.BackendServiceConfig{
+			App:                d.app,
+			EnvManifest:        d.envConfig,
+			Manifest:           d.backendMft,
+			RawManifest:        d.rawMft,
+			ArtifactBucketName: d.resources.S3Bucket,
+			RuntimeConfig:      *rc,
+			Addons:             d.addons,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("create stack configuration: %w", err)
+		}
 	}
+
 	return &svcStackConfigurationOutput{
 		conf: cloudformation.WrapWithTemplateOverrider(conf, d.overrider),
 		svcUpdater: d.newSvcUpdater(func(s *session.Session) serviceForceUpdater {

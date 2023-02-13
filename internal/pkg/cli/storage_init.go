@@ -13,11 +13,11 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/dustin/go-humanize/english"
 
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/config"
-	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
@@ -131,8 +131,8 @@ const (
 
 	fmtRDSStorageNameDefault = "%s-cluster"
 
-	engineTypeMySQL      = "MySQL"
-	engineTypePostgreSQL = "PostgreSQL"
+	engineTypeMySQL      = addon.RDSEngineTypeMySQL
+	engineTypePostgreSQL = addon.RDSEngineTypePostgreSQL
 )
 
 var auroraServerlessVersions = []string{
@@ -360,7 +360,7 @@ func (o *initStorageOpts) validateStorageType() error {
 			log.Errorf(`Your %s needs to be connected to a VPC in order to use a %s resource.
 You can enable VPC connectivity by updating your manifest with:
 %s
-`, manifest.RequestDrivenWebServiceType, o.storageType, color.HighlightCodeBlock(`network:
+`, manifestinfo.RequestDrivenWebServiceType, o.storageType, color.HighlightCodeBlock(`network:
   vpc:
     placement: private`))
 		}
@@ -518,7 +518,7 @@ func (o *initStorageOpts) validateStorageLifecycle() error {
 }
 
 // validateWorkloadNameWithLifecycle requires the workload to be in the workspace if the storage lifecycle is on workload-level.
-// Otherwise, it only caches whether the workload is present.  
+// Otherwise, it only caches whether the workload is present.
 func (o *initStorageOpts) validateWorkloadNameWithLifecycle() error {
 	if o.workloadExists {
 		return nil
@@ -828,7 +828,9 @@ func (o *initStorageOpts) envDDBAddonBlobs() ([]addonBlob, error) {
 	return append(blobs, addonBlob{
 		path:        o.ws.WorkloadAddonFilePath(o.workloadName, fmt.Sprintf("%s-access-policy.yml", o.storageName)),
 		description: "template",
-		blob:        addon.EnvDDBAccessPolicyTemplate(props),
+		blob: addon.EnvDDBAccessPolicyTemplate(&addon.AccessPolicyProps{
+			Name: o.storageName,
+		}),
 	}), nil
 }
 
@@ -883,7 +885,9 @@ func (o *initStorageOpts) envS3AddonBlobs() ([]addonBlob, error) {
 	return append(blobs, addonBlob{
 		path:        o.ws.WorkloadAddonFilePath(o.workloadName, fmt.Sprintf("%s-access-policy.yml", o.storageName)),
 		description: "template",
-		blob:        addon.EnvS3AccessPolicyTemplate(props),
+		blob: addon.EnvS3AccessPolicyTemplate(&addon.AccessPolicyProps{
+			Name: o.storageName,
+		}),
 	}), nil
 }
 
@@ -900,22 +904,25 @@ func (o *initStorageOpts) wkldRDSAddonBlobs() ([]addonBlob, error) {
 	if err != nil {
 		return nil, err
 	}
-	var blobs []addonBlob
 	var tmplBlob encoding.BinaryMarshaler
-	switch v := o.auroraServerlessVersion; v {
-	case auroraServerlessVersionV1:
+	switch {
+	case o.auroraServerlessVersion == auroraServerlessVersionV1 && o.workloadType == manifestinfo.RequestDrivenWebServiceType:
+		tmplBlob = addon.RDWSServerlessV1Template(props)
+	case o.auroraServerlessVersion == auroraServerlessVersionV1 && o.workloadType != manifestinfo.RequestDrivenWebServiceType:
 		tmplBlob = addon.WorkloadServerlessV1Template(props)
-	case auroraServerlessVersionV2:
+	case o.auroraServerlessVersion == auroraServerlessVersionV2 && o.workloadType == manifestinfo.RequestDrivenWebServiceType:
+		tmplBlob = addon.RDWSServerlessV2Template(props)
+	case o.auroraServerlessVersion == auroraServerlessVersionV2 && o.workloadType != manifestinfo.RequestDrivenWebServiceType:
 		tmplBlob = addon.WorkloadServerlessV2Template(props)
 	default:
-		return nil, fmt.Errorf("unknown Aurora serverless version %q", v)
+		return nil, fmt.Errorf("unknown combination of serverless version %q and workload type %q", o.auroraServerlessVersion, o.workloadType)
 	}
-	blobs = append(blobs, addonBlob{
+	blobs := []addonBlob{{
 		path:        o.ws.WorkloadAddonFilePath(o.workloadName, fmt.Sprintf("%s.yml", o.storageName)),
 		description: "template",
 		blob:        tmplBlob,
-	})
-	if o.workloadType != manifest.RequestDrivenWebServiceType {
+	}}
+	if o.workloadType != manifestinfo.RequestDrivenWebServiceType {
 		return blobs, nil
 	}
 	return append(blobs, addonBlob{
@@ -930,11 +937,15 @@ func (o *initStorageOpts) envRDSAddonBlobs() ([]addonBlob, error) {
 	if err != nil {
 		return nil, err
 	}
+	envTmplBlob := addon.EnvServerlessTemplate(props)
+	if o.workloadType == manifestinfo.RequestDrivenWebServiceType {
+		envTmplBlob = addon.EnvServerlessForRDWSTemplate(props)
+	}
 	blobs := []addonBlob{
 		{
 			path:        o.ws.EnvAddonFilePath(fmt.Sprintf("%s.yml", o.storageName)),
 			description: "template",
-			blob:        addon.EnvServerlessTemplate(props),
+			blob:        envTmplBlob,
 		},
 		{
 			path:        o.ws.EnvAddonFilePath("addons.parameters.yml"),
@@ -942,14 +953,17 @@ func (o *initStorageOpts) envRDSAddonBlobs() ([]addonBlob, error) {
 			blob:        addon.EnvParamsForRDS(),
 		},
 	}
-	if o.workloadType != manifest.RequestDrivenWebServiceType || !o.workloadExists {
+	if o.workloadType != manifestinfo.RequestDrivenWebServiceType || !o.workloadExists {
 		return blobs, nil
 	}
 	return append(blobs,
 		addonBlob{
 			path:        o.ws.WorkloadAddonFilePath(o.workloadName, fmt.Sprintf("%s-ingress.yml", o.storageName)),
 			description: "template",
-			blob:        addon.EnvServerlessRDWSIngressTemplate(props),
+			blob: addon.EnvServerlessRDWSIngressTemplate(addon.RDSIngressProps{
+				ClusterName: o.storageName,
+				Engine:      o.rdsEngine,
+			}),
 		},
 		addonBlob{
 			path:        o.ws.WorkloadAddonFilePath(o.workloadName, "addons.parameters.yml"),
@@ -960,27 +974,16 @@ func (o *initStorageOpts) envRDSAddonBlobs() ([]addonBlob, error) {
 }
 
 func (o *initStorageOpts) rdsProps() (addon.RDSProps, error) {
-	var engine string
-	switch o.rdsEngine {
-	case engineTypeMySQL:
-		engine = addon.RDSEngineTypeMySQL
-	case engineTypePostgreSQL:
-		engine = addon.RDSEngineTypePostgreSQL
-	default:
-		return addon.RDSProps{}, errors.New("unknown engine type")
-	}
-
 	envs, err := o.environmentNames()
 	if err != nil {
 		return addon.RDSProps{}, err
 	}
 	return addon.RDSProps{
 		ClusterName:    o.storageName,
-		Engine:         engine,
+		Engine:         o.rdsEngine,
 		InitialDBName:  o.rdsInitialDBName,
 		ParameterGroup: o.rdsParameterGroup,
 		Envs:           envs,
-		WorkloadType:   o.workloadType, // TODO(wanxiay): remove `WorkloadType` from `RDSProps`; use different constructors for RDS vs. non-RDS instead.
 	}, nil
 }
 
@@ -1009,7 +1012,7 @@ func (o *initStorageOpts) RecommendActions() error {
 	case rdsStorageType:
 		newVar = template.ToSnakeCaseFunc(template.EnvVarSecretFunc(o.storageName))
 		retrieveEnvVarCode = fmt.Sprintf("const {username, host, dbname, password, port} = JSON.parse(process.env.%s)", newVar)
-		if o.workloadType == manifest.RequestDrivenWebServiceType {
+		if o.workloadType == manifestinfo.RequestDrivenWebServiceType {
 			newVar = fmt.Sprintf("%s_ARN", newVar)
 			retrieveEnvVarCode = fmt.Sprintf(`const AWS = require('aws-sdk');
 const client = new AWS.SecretsManager({

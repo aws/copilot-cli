@@ -13,10 +13,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/copilot-cli/internal/pkg/override"
+	cloudformation0 "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
+	sdkcfn "github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/cli/deploy/mocks"
@@ -26,6 +27,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/override"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
@@ -120,6 +122,28 @@ func (m *mockWorkloadMft) BuildArgs(rootDirectory string) *manifest.DockerBuildA
 
 func (m *mockWorkloadMft) ContainerPlatform() string {
 	return "mockContainerPlatform"
+}
+
+// stubCloudFormationStack implements the cloudformation.StackConfiguration interface.
+type stubCloudFormationStack struct{}
+
+func (s *stubCloudFormationStack) StackName() string {
+	return "demo"
+}
+func (s *stubCloudFormationStack) Template() (string, error) {
+	return `
+Resources:
+  Queue:
+    Type: AWS::SQS::Queue`, nil
+}
+func (s *stubCloudFormationStack) Parameters() ([]*sdkcfn.Parameter, error) {
+	return []*sdkcfn.Parameter{}, nil
+}
+func (s *stubCloudFormationStack) Tags() []*sdkcfn.Tag {
+	return []*sdkcfn.Tag{}
+}
+func (s *stubCloudFormationStack) SerializedParameters() (string, error) {
+	return "", nil
 }
 
 func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
@@ -1198,6 +1222,9 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 						},
 						NLBConfig: tc.inNLB,
 					},
+				},
+				newStack: func() cloudformation0.StackConfiguration {
+					return new(stubCloudFormationStack)
 				},
 			}
 

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/template/mocks"
 	"github.com/golang/mock/gomock"
@@ -35,7 +36,7 @@ func TestNewRequestDrivenWebService(t *testing.T) {
 			wantedStruct: &RequestDrivenWebService{
 				Workload: Workload{
 					Name: aws.String("frontend"),
-					Type: aws.String(RequestDrivenWebServiceType),
+					Type: aws.String(manifestinfo.RequestDrivenWebServiceType),
 				},
 				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
 					ImageConfig: ImageWithPort{
@@ -96,7 +97,7 @@ func TestRequestDrivenWebService_UnmarshalYaml(t *testing.T) {
 			wantedStruct: RequestDrivenWebService{
 				Workload: Workload{
 					Name: aws.String("test-service"),
-					Type: aws.String(RequestDrivenWebServiceType),
+					Type: aws.String(manifestinfo.RequestDrivenWebServiceType),
 				},
 				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
 					ImageConfig: ImageWithPort{
@@ -424,7 +425,7 @@ func TestRequestDrivenWebService_ApplyEnv(t *testing.T) {
 			in: &RequestDrivenWebService{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(LoadBalancedWebServiceType),
+					Type: aws.String(manifestinfo.RequestDrivenWebServiceType),
 				},
 				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
 					ImageConfig: ImageWithPort{
@@ -456,7 +457,7 @@ func TestRequestDrivenWebService_ApplyEnv(t *testing.T) {
 			wanted: &RequestDrivenWebService{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(LoadBalancedWebServiceType),
+					Type: aws.String(manifestinfo.RequestDrivenWebServiceType),
 				},
 				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
 					ImageConfig: ImageWithPort{
@@ -473,7 +474,7 @@ func TestRequestDrivenWebService_ApplyEnv(t *testing.T) {
 			in: &RequestDrivenWebService{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(LoadBalancedWebServiceType),
+					Type: aws.String(manifestinfo.RequestDrivenWebServiceType),
 				},
 				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
 					ImageConfig: ImageWithPort{
@@ -501,7 +502,7 @@ func TestRequestDrivenWebService_ApplyEnv(t *testing.T) {
 			wanted: &RequestDrivenWebService{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(LoadBalancedWebServiceType),
+					Type: aws.String(manifestinfo.RequestDrivenWebServiceType),
 				},
 				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
 					ImageConfig: ImageWithPort{
@@ -518,7 +519,7 @@ func TestRequestDrivenWebService_ApplyEnv(t *testing.T) {
 			in: &RequestDrivenWebService{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(LoadBalancedWebServiceType),
+					Type: aws.String(manifestinfo.RequestDrivenWebServiceType),
 				},
 				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
 					ImageConfig: ImageWithPort{
@@ -552,7 +553,7 @@ func TestRequestDrivenWebService_ApplyEnv(t *testing.T) {
 			wanted: &RequestDrivenWebService{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(LoadBalancedWebServiceType),
+					Type: aws.String(manifestinfo.RequestDrivenWebServiceType),
 				},
 				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
 					ImageConfig: ImageWithPort{
@@ -571,7 +572,7 @@ func TestRequestDrivenWebService_ApplyEnv(t *testing.T) {
 			in: &RequestDrivenWebService{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(LoadBalancedWebServiceType),
+					Type: aws.String(manifestinfo.RequestDrivenWebServiceType),
 				},
 				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
 					ImageConfig: ImageWithPort{
@@ -601,7 +602,7 @@ func TestRequestDrivenWebService_ApplyEnv(t *testing.T) {
 			wanted: &RequestDrivenWebService{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(LoadBalancedWebServiceType),
+					Type: aws.String(manifestinfo.RequestDrivenWebServiceType),
 				},
 				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
 					ImageConfig: ImageWithPort{
@@ -655,7 +656,7 @@ func TestRequestDrivenWebService_RequiredEnvironmentFeatures(t *testing.T) {
 			inSvc := RequestDrivenWebService{
 				Workload: Workload{
 					Name: aws.String("mock-svc"),
-					Type: aws.String(RequestDrivenWebServiceType),
+					Type: aws.String(manifestinfo.RequestDrivenWebServiceType),
 				},
 			}
 			tc.mft(&inSvc)

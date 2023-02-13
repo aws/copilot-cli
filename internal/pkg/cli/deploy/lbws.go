@@ -21,6 +21,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
@@ -50,7 +51,10 @@ type lbWebSvcDeployer struct {
 	appVersionGetter       versionGetter
 	publicCIDRBlocksGetter publicCIDRBlocksGetter
 	lbMft                  *manifest.LoadBalancedWebService
-	newAliasCertValidator  func(optionalRegion *string) aliasCertValidator
+
+	// Overriden in tests.
+	newAliasCertValidator func(optionalRegion *string) aliasCertValidator
+	newStack              func() cloudformation.StackConfiguration
 }
 
 // NewLBWSDeployer is the constructor for lbWebSvcDeployer.
@@ -79,7 +83,7 @@ func NewLBWSDeployer(in *WorkloadDeployerInput) (*lbWebSvcDeployer, error) {
 	}
 	lbMft, ok := in.Mft.(*manifest.LoadBalancedWebService)
 	if !ok {
-		return nil, fmt.Errorf("manifest is not of type %s", manifest.LoadBalancedWebServiceType)
+		return nil, fmt.Errorf("manifest is not of type %s", manifestinfo.LoadBalancedWebServiceType)
 	}
 	return &lbWebSvcDeployer{
 		svcDeployer:            svcDeployer,
@@ -98,7 +102,7 @@ func NewLBWSDeployer(in *WorkloadDeployerInput) (*lbWebSvcDeployer, error) {
 func lbwsCustomResources(fs template.Reader) ([]*customresource.CustomResource, error) {
 	crs, err := customresource.LBWS(fs)
 	if err != nil {
-		return nil, fmt.Errorf("read custom resources for a %q: %w", manifest.LoadBalancedWebServiceType, err)
+		return nil, fmt.Errorf("read custom resources for a %q: %w", manifestinfo.LoadBalancedWebServiceType, err)
 	}
 	return crs, nil
 }
@@ -154,19 +158,27 @@ func (d *lbWebSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*s
 		}
 		opts = append(opts, stack.WithNLB(cidrBlocks))
 	}
-	conf, err := stack.NewLoadBalancedWebService(stack.LoadBalancedWebServiceConfig{
-		App:                d.app,
-		EnvManifest:        d.envConfig,
-		Manifest:           d.lbMft,
-		RawManifest:        d.rawMft,
-		ArtifactBucketName: d.resources.S3Bucket,
-		RuntimeConfig:      *rc,
-		RootUserARN:        in.RootUserARN,
-		Addons:             d.addons,
-	}, opts...)
-	if err != nil {
-		return nil, fmt.Errorf("create stack configuration: %w", err)
+
+	var conf cloudformation.StackConfiguration
+	switch {
+	case d.newStack != nil:
+		conf = d.newStack()
+	default:
+		conf, err = stack.NewLoadBalancedWebService(stack.LoadBalancedWebServiceConfig{
+			App:                d.app,
+			EnvManifest:        d.envConfig,
+			Manifest:           d.lbMft,
+			RawManifest:        d.rawMft,
+			ArtifactBucketName: d.resources.S3Bucket,
+			RuntimeConfig:      *rc,
+			RootUserARN:        in.RootUserARN,
+			Addons:             d.addons,
+		}, opts...)
+		if err != nil {
+			return nil, fmt.Errorf("create stack configuration: %w", err)
+		}
 	}
+
 	return &svcStackConfigurationOutput{
 		conf: cloudformation.WrapWithTemplateOverrider(conf, d.overrider),
 		svcUpdater: d.newSvcUpdater(func(s *session.Session) serviceForceUpdater {
