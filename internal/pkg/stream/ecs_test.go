@@ -197,11 +197,13 @@ func TestECSDeploymentStreamer_Fetch(t *testing.T) {
 			out: &ecs.Service{
 				Events: []*awsecs.ServiceEvent{
 					{
+						// Failure event
 						Id:        aws.String("1"),
 						Message:   aws.String("(service my-svc) deployment ecs-svc/0205655736282798388 deployment failed: alarm detected."),
 						CreatedAt: aws.Time(startDate.Add(1 * time.Minute)),
 					},
 					{
+						// Failure event
 						Id:        aws.String("2"),
 						Message:   aws.String("(service my-svc) rolling back to deployment ecs-svc/9086637243870003494."),
 						CreatedAt: aws.Time(startDate.Add(1 * time.Minute)),
