@@ -7,6 +7,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
+
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
+
+	"github.com/aws/copilot-cli/internal/pkg/template"
+
 	"gopkg.in/yaml.v3"
 
 	"github.com/stretchr/testify/require"
@@ -65,10 +71,13 @@ func mockLoadBalancedWebServiceDeployer(opts ...func(deployer *lbWebSvcDeployer)
 					App:  "demo",
 					Name: "test",
 				},
+				resources:        &stack.AppRegionalResources{},
 				envConfig:        new(manifest.Environment),
 				endpointGetter:   &mockEndpointGetter{endpoint: "demo.test.local"},
 				envVersionGetter: &mockEnvVersionGetter{version: "v1.0.0"},
 				overrider:        new(override.Noop),
+				templateFS:       template.New(),
+				customResources:  lbwsCustomResources,
 			},
 			newSvcUpdater: func(f func(*session.Session) serviceForceUpdater) serviceForceUpdater {
 				return nil
@@ -90,7 +99,9 @@ func mockLoadBalancedWebServiceDeployer(opts ...func(deployer *lbWebSvcDeployer)
 				ImageConfig: manifest.ImageWithPortAndHealthcheck{
 					ImageWithPort: manifest.ImageWithPort{
 						Image: manifest.Image{
-							Build: manifest.BuildArgsOrString{BuildString: aws.String("/Dockerfile")},
+							ImageLocationOrBuild: manifest.ImageLocationOrBuild{
+								Build: manifest.BuildArgsOrString{BuildString: aws.String("/Dockerfile")},
+							},
 						},
 						Port: aws.Uint16(80),
 					},
@@ -101,6 +112,9 @@ func mockLoadBalancedWebServiceDeployer(opts ...func(deployer *lbWebSvcDeployer)
 					},
 				},
 			},
+		},
+		newStack: func() cloudformation.StackConfiguration {
+			return new(stubCloudFormationStack)
 		},
 	}
 	for _, opt := range opts {

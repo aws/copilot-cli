@@ -11,11 +11,11 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
-	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
@@ -66,7 +66,7 @@ func newSvcStatusOpts(vars svcStatusVars) (*svcStatusOpts, error) {
 			if err != nil {
 				return fmt.Errorf("retrieve %s from application %s: %w", o.appName, o.svcName, err)
 			}
-			if wkld.Type == manifest.RequestDrivenWebServiceType {
+			if wkld.Type == manifestinfo.RequestDrivenWebServiceType {
 				d, err := describe.NewAppRunnerStatusDescriber(&describe.NewServiceStatusConfig{
 					App:         o.appName,
 					Env:         o.envName,

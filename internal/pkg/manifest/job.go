@@ -5,25 +5,14 @@ package manifest
 
 import (
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/imdario/mergo"
 )
 
 const (
-	// ScheduledJobType is a recurring ECS Fargate task which runs on a schedule.
-	ScheduledJobType = "Scheduled Job"
-)
-
-const (
 	scheduledJobManifestPath = "workloads/jobs/scheduled-job/manifest.yml"
 )
-
-// JobTypes returns the list of supported job manifest types.
-func JobTypes() []string {
-	return []string{
-		ScheduledJobType,
-	}
-}
 
 // ScheduledJob holds the configuration to build a container image that is run
 // periodically in a given environment with timeout and retry logic.
@@ -166,7 +155,7 @@ func (j *ScheduledJob) EnvFile() string {
 func newDefaultScheduledJob() *ScheduledJob {
 	return &ScheduledJob{
 		Workload: Workload{
-			Type: aws.String(ScheduledJobType),
+			Type: aws.String(manifestinfo.ScheduledJobType),
 		},
 		ScheduledJobConfig: ScheduledJobConfig{
 			ImageConfig: ImageWithHealthcheck{},
@@ -176,7 +165,7 @@ func newDefaultScheduledJob() *ScheduledJob {
 				Count: Count{
 					Value: aws.Int(1),
 					AdvancedCount: AdvancedCount{ // Leave advanced count empty while passing down the type of the workload.
-						workloadType: ScheduledJobType,
+						workloadType: manifestinfo.ScheduledJobType,
 					},
 				},
 			},

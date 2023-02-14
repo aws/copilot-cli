@@ -10,7 +10,7 @@ import (
 	"github.com/dustin/go-humanize/english"
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
-	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 )
 
 type URIAccessType int
@@ -49,11 +49,11 @@ func NewReachableService(app, svc string, store ConfigStoreSvc) (ReachableServic
 		ConfigStore: store,
 	}
 	switch cfg.Type {
-	case manifest.LoadBalancedWebServiceType:
+	case manifestinfo.LoadBalancedWebServiceType:
 		return NewLBWebServiceDescriber(in)
-	case manifest.RequestDrivenWebServiceType:
+	case manifestinfo.RequestDrivenWebServiceType:
 		return NewRDWebServiceDescriber(in)
-	case manifest.BackendServiceType:
+	case manifestinfo.BackendServiceType:
 		return NewBackendServiceDescriber(in)
 	default:
 		return nil, fmt.Errorf("service %s is of type %s which cannot be reached over the network", svc, cfg.Type)
@@ -79,7 +79,7 @@ func (d *LBWebServiceDescriber) URI(envName string) (URI, error) {
 		if strings.HasPrefix(resource.LogicalID, svcStackResourceALBTargetGroupLogicalID) {
 			albEnabled = true
 		}
-		if resource.LogicalID == svcStackResourceNLBTargetGroupLogicalID {
+		if strings.HasPrefix(resource.LogicalID, svcStackResourceNLBTargetGroupLogicalID) {
 			nlbEnabled = true
 		}
 	}

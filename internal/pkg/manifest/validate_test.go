@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/stretchr/testify/require"
 )
 
@@ -17,7 +18,9 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 	testImageConfig := ImageWithPortAndHealthcheck{
 		ImageWithPort: ImageWithPort{
 			Image: Image{
-				Build: BuildArgsOrString{BuildString: aws.String("mockBuild")},
+				ImageLocationOrBuild: ImageLocationOrBuild{
+					Build: BuildArgsOrString{BuildString: aws.String("mockBuild")},
+				},
 			},
 			Port: uint16P(80),
 		},
@@ -34,8 +37,10 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 					ImageConfig: ImageWithPortAndHealthcheck{
 						ImageWithPort: ImageWithPort{
 							Image: Image{
-								Build:    BuildArgsOrString{BuildString: aws.String("mockBuild")},
-								Location: aws.String("mockLocation"),
+								ImageLocationOrBuild: ImageLocationOrBuild{
+									Build:    BuildArgsOrString{BuildString: aws.String("mockBuild")},
+									Location: aws.String("mockLocation"),
+								},
 							},
 						},
 					},
@@ -244,7 +249,7 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 						Count: Count{
 							AdvancedCount: AdvancedCount{
 								Spot:         aws.Int(123),
-								workloadType: LoadBalancedWebServiceType,
+								workloadType: manifestinfo.LoadBalancedWebServiceType,
 							},
 						},
 					},
@@ -365,7 +370,9 @@ func TestBackendService_validate(t *testing.T) {
 	testImageConfig := ImageWithHealthcheckAndOptionalPort{
 		ImageWithOptionalPort: ImageWithOptionalPort{
 			Image: Image{
-				Build: BuildArgsOrString{BuildString: aws.String("mockBuild")},
+				ImageLocationOrBuild: ImageLocationOrBuild{
+					Build: BuildArgsOrString{BuildString: aws.String("mockBuild")},
+				},
 			},
 		},
 	}
@@ -381,8 +388,10 @@ func TestBackendService_validate(t *testing.T) {
 					ImageConfig: ImageWithHealthcheckAndOptionalPort{
 						ImageWithOptionalPort: ImageWithOptionalPort{
 							Image: Image{
-								Build:    BuildArgsOrString{BuildString: aws.String("mockBuild")},
-								Location: aws.String("mockLocation"),
+								ImageLocationOrBuild: ImageLocationOrBuild{
+									Build:    BuildArgsOrString{BuildString: aws.String("mockBuild")},
+									Location: aws.String("mockLocation"),
+								},
 							},
 						},
 					},
@@ -506,7 +515,7 @@ func TestBackendService_validate(t *testing.T) {
 						Count: Count{
 							AdvancedCount: AdvancedCount{
 								Spot:         aws.Int(123),
-								workloadType: BackendServiceType,
+								workloadType: manifestinfo.BackendServiceType,
 							},
 						},
 					},
@@ -526,7 +535,7 @@ func TestBackendService_validate(t *testing.T) {
 						Count: Count{
 							AdvancedCount: AdvancedCount{
 								Spot:         aws.Int(123),
-								workloadType: BackendServiceType,
+								workloadType: manifestinfo.BackendServiceType,
 							},
 						},
 					},
@@ -556,7 +565,7 @@ func TestBackendService_validate(t *testing.T) {
 					TaskConfig: TaskConfig{
 						Count: Count{
 							AdvancedCount: AdvancedCount{
-								workloadType: BackendServiceType,
+								workloadType: manifestinfo.BackendServiceType,
 								Requests: ScalingConfigOrT[int]{
 									Value: aws.Int(128),
 								},
@@ -649,8 +658,10 @@ func TestRequestDrivenWebService_validate(t *testing.T) {
 				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
 					ImageConfig: ImageWithPort{
 						Image: Image{
-							Build:    BuildArgsOrString{BuildString: aws.String("mockBuild")},
-							Location: aws.String("mockLocation"),
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Build:    BuildArgsOrString{BuildString: aws.String("mockBuild")},
+								Location: aws.String("mockLocation"),
+							},
 						},
 					},
 				},
@@ -665,7 +676,9 @@ func TestRequestDrivenWebService_validate(t *testing.T) {
 				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
 					ImageConfig: ImageWithPort{
 						Image: Image{
-							Build: BuildArgsOrString{BuildString: aws.String("mockBuild")},
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Build: BuildArgsOrString{BuildString: aws.String("mockBuild")},
+							},
 						},
 						Port: uint16P(80),
 					},
@@ -688,7 +701,9 @@ func TestRequestDrivenWebService_validate(t *testing.T) {
 				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
 					ImageConfig: ImageWithPort{
 						Image: Image{
-							Build: BuildArgsOrString{BuildString: aws.String("mockBuild")},
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Build: BuildArgsOrString{BuildString: aws.String("mockBuild")},
+							},
 						},
 						Port: uint16P(80),
 					},
@@ -711,7 +726,9 @@ func TestRequestDrivenWebService_validate(t *testing.T) {
 				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
 					ImageConfig: ImageWithPort{
 						Image: Image{
-							Location: stringP("mockLocation"),
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Location: stringP("mockLocation"),
+							},
 						},
 						Port: uint16P(80),
 					},
@@ -727,7 +744,9 @@ func TestRequestDrivenWebService_validate(t *testing.T) {
 				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
 					ImageConfig: ImageWithPort{
 						Image: Image{
-							Build: BuildArgsOrString{BuildString: aws.String("mockBuild")},
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Build: BuildArgsOrString{BuildString: aws.String("mockBuild")},
+							},
 						},
 						Port: uint16P(80),
 					},
@@ -743,7 +762,9 @@ func TestRequestDrivenWebService_validate(t *testing.T) {
 				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
 					ImageConfig: ImageWithPort{
 						Image: Image{
-							Location: stringP("mockLocation"),
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Location: stringP("mockLocation"),
+							},
 						},
 						Port: uint16P(80),
 					},
@@ -779,7 +800,9 @@ func TestRequestDrivenWebService_validate(t *testing.T) {
 func TestWorkerService_validate(t *testing.T) {
 	testImageConfig := ImageWithHealthcheck{
 		Image: Image{
-			Build: BuildArgsOrString{BuildString: aws.String("mockBuild")},
+			ImageLocationOrBuild: ImageLocationOrBuild{
+				Build: BuildArgsOrString{BuildString: aws.String("mockBuild")},
+			},
 		},
 	}
 	testCases := map[string]struct {
@@ -793,8 +816,10 @@ func TestWorkerService_validate(t *testing.T) {
 				WorkerServiceConfig: WorkerServiceConfig{
 					ImageConfig: ImageWithHealthcheck{
 						Image: Image{
-							Build:    BuildArgsOrString{BuildString: aws.String("mockBuild")},
-							Location: aws.String("mockLocation"),
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Build:    BuildArgsOrString{BuildString: aws.String("mockBuild")},
+								Location: aws.String("mockLocation"),
+							},
 						},
 					},
 				},
@@ -932,7 +957,7 @@ func TestWorkerService_validate(t *testing.T) {
 						Count: Count{
 							AdvancedCount: AdvancedCount{
 								Spot:         aws.Int(123),
-								workloadType: WorkerServiceType,
+								workloadType: manifestinfo.WorkerServiceType,
 							},
 						},
 					},
@@ -952,7 +977,7 @@ func TestWorkerService_validate(t *testing.T) {
 						Count: Count{
 							AdvancedCount: AdvancedCount{
 								Spot:         aws.Int(123),
-								workloadType: WorkerServiceType,
+								workloadType: manifestinfo.WorkerServiceType,
 							},
 						},
 					},
@@ -1004,7 +1029,9 @@ func TestWorkerService_validate(t *testing.T) {
 func TestScheduledJob_validate(t *testing.T) {
 	testImageConfig := ImageWithHealthcheck{
 		Image: Image{
-			Build: BuildArgsOrString{BuildString: aws.String("mockBuild")},
+			ImageLocationOrBuild: ImageLocationOrBuild{
+				Build: BuildArgsOrString{BuildString: aws.String("mockBuild")},
+			},
 		},
 	}
 	testCases := map[string]struct {
@@ -1018,8 +1045,10 @@ func TestScheduledJob_validate(t *testing.T) {
 				ScheduledJobConfig: ScheduledJobConfig{
 					ImageConfig: ImageWithHealthcheck{
 						Image: Image{
-							Build:    BuildArgsOrString{BuildString: aws.String("mockBuild")},
-							Location: aws.String("mockLocation"),
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Build:    BuildArgsOrString{BuildString: aws.String("mockBuild")},
+								Location: aws.String("mockLocation"),
+							},
 						},
 					},
 				},
@@ -1265,7 +1294,9 @@ func TestImageWithPort_validate(t *testing.T) {
 		"error if port is not specified": {
 			ImageWithPort: ImageWithPort{
 				Image: Image{
-					Location: aws.String("mockLocation"),
+					ImageLocationOrBuild: ImageLocationOrBuild{
+						Location: aws.String("mockLocation"),
+					},
 				},
 			},
 			wantedError: fmt.Errorf(`"port" must be specified`),
@@ -1293,10 +1324,12 @@ func TestImage_validate(t *testing.T) {
 	}{
 		"error if build and location both specified": {
 			Image: Image{
-				Build: BuildArgsOrString{
-					BuildString: aws.String("mockBuild"),
+				ImageLocationOrBuild: ImageLocationOrBuild{
+					Build: BuildArgsOrString{
+						BuildString: aws.String("mockBuild"),
+					},
+					Location: aws.String("mockLocation"),
 				},
-				Location: aws.String("mockLocation"),
 			},
 			wantedError: fmt.Errorf(`must specify one of "build" and "location"`),
 		},
@@ -1306,11 +1339,14 @@ func TestImage_validate(t *testing.T) {
 		},
 		"error if fail to validate depends_on": {
 			Image: Image{
-				Location: aws.String("mockLocation"),
+				ImageLocationOrBuild: ImageLocationOrBuild{
+					Location: aws.String("mockLocation"),
+				},
 				DependsOn: DependsOn{
 					"foo": "bar",
 				},
 			},
+
 			wantedErrorMsgPrefix: `validate "depends_on":`,
 		},
 	}
@@ -1809,7 +1845,7 @@ func TestAdvancedCount_validate(t *testing.T) {
 					AcceptableLatency: durationp(10 * time.Second),
 					AvgProcessingTime: durationp(1 * time.Second),
 				},
-				workloadType: LoadBalancedWebServiceType,
+				workloadType: manifestinfo.LoadBalancedWebServiceType,
 			},
 			wantedError: fmt.Errorf(`autoscaling field "queue_delay" is invalid with workload type Load Balanced Web Service`),
 		},
@@ -1829,21 +1865,21 @@ func TestAdvancedCount_validate(t *testing.T) {
 				ResponseTime: ScalingConfigOrT[time.Duration]{
 					Value: &timeMinute,
 				},
-				workloadType: WorkerServiceType,
+				workloadType: manifestinfo.WorkerServiceType,
 			},
 			wantedError: fmt.Errorf(`autoscaling fields "requests" and "response_time" are invalid with workload type Worker Service`),
 		},
 		"cannot have autoscaling for scheduled jobs": {
 			AdvancedCount: AdvancedCount{
 				Spot:         aws.Int(42),
-				workloadType: ScheduledJobType,
+				workloadType: manifestinfo.ScheduledJobType,
 			},
 			wantedError: errors.New("cannot have autoscaling options for workloads of type 'Scheduled Job'"),
 		},
 		"valid if only spot is specified": {
 			AdvancedCount: AdvancedCount{
 				Spot:         aws.Int(42),
-				workloadType: BackendServiceType,
+				workloadType: manifestinfo.BackendServiceType,
 			},
 		},
 		"valid when range and and at least one autoscaling fields are specified": {
@@ -1856,14 +1892,14 @@ func TestAdvancedCount_validate(t *testing.T) {
 					AcceptableLatency: durationp(10 * time.Second),
 					AvgProcessingTime: durationp(1 * time.Second),
 				},
-				workloadType: WorkerServiceType,
+				workloadType: manifestinfo.WorkerServiceType,
 			},
 		},
 		"error if both spot and autoscaling fields are specified": {
 			AdvancedCount: AdvancedCount{
 				Spot:         aws.Int(123),
 				CPU:          mockConfig,
-				workloadType: LoadBalancedWebServiceType,
+				workloadType: manifestinfo.LoadBalancedWebServiceType,
 			},
 			wantedError: fmt.Errorf(`must specify one, not both, of "spot" and "range/cpu_percentage/memory_percentage/requests/response_time"`),
 		},
@@ -1872,7 +1908,7 @@ func TestAdvancedCount_validate(t *testing.T) {
 				Range: Range{
 					Value: (*IntRangeBand)(aws.String("")),
 				},
-				workloadType: LoadBalancedWebServiceType,
+				workloadType: manifestinfo.LoadBalancedWebServiceType,
 			},
 			wantedErrorMsgPrefix: `validate "range": `,
 		},
@@ -1881,7 +1917,7 @@ func TestAdvancedCount_validate(t *testing.T) {
 				Requests: ScalingConfigOrT[int]{
 					Value: aws.Int(123),
 				},
-				workloadType: LoadBalancedWebServiceType,
+				workloadType: manifestinfo.LoadBalancedWebServiceType,
 			},
 			wantedError: fmt.Errorf(`"range" must be specified if "cpu_percentage", "memory_percentage", "requests" or "response_time" are specified`),
 		},
@@ -1890,7 +1926,7 @@ func TestAdvancedCount_validate(t *testing.T) {
 				Range: Range{
 					Value: (*IntRangeBand)(aws.String("1-10")),
 				},
-				workloadType: LoadBalancedWebServiceType,
+				workloadType: manifestinfo.LoadBalancedWebServiceType,
 			},
 			wantedError: fmt.Errorf(`must specify at least one of "cpu_percentage", "memory_percentage", "requests" or "response_time" if "range" is specified`),
 		},
@@ -1899,7 +1935,7 @@ func TestAdvancedCount_validate(t *testing.T) {
 				Range: Range{
 					Value: (*IntRangeBand)(aws.String("1-10")),
 				},
-				workloadType: BackendServiceType,
+				workloadType: manifestinfo.BackendServiceType,
 			},
 			wantedError: fmt.Errorf(`must specify at least one of "cpu_percentage", "memory_percentage", "requests" or "response_time" if "range" is specified`),
 		},
@@ -1908,42 +1944,42 @@ func TestAdvancedCount_validate(t *testing.T) {
 				Range: Range{
 					Value: (*IntRangeBand)(aws.String("1-10")),
 				},
-				workloadType: WorkerServiceType,
+				workloadType: manifestinfo.WorkerServiceType,
 			},
 			wantedError: fmt.Errorf(`must specify at least one of "cpu_percentage", "memory_percentage" or "queue_delay" if "range" is specified`),
 		},
 		"error if cooldown is specified but no autoscaling fields are specified for a Load Balanced Web Service": {
 			AdvancedCount: AdvancedCount{
 				Cooldown:     mockCooldown,
-				workloadType: LoadBalancedWebServiceType,
+				workloadType: manifestinfo.LoadBalancedWebServiceType,
 			},
 			wantedError: fmt.Errorf(`must specify at least one of "cpu_percentage", "memory_percentage", "requests" or "response_time" if "cooldown" is specified`),
 		},
 		"error if cooldown is specified but no autoscaling fields are specified for a Backend Service": {
 			AdvancedCount: AdvancedCount{
 				Cooldown:     mockCooldown,
-				workloadType: BackendServiceType,
+				workloadType: manifestinfo.BackendServiceType,
 			},
 			wantedError: fmt.Errorf(`must specify at least one of "cpu_percentage", "memory_percentage", "requests" or "response_time" if "cooldown" is specified`),
 		},
 		"error if cooldown is specified but no autoscaling fields are specified for a Worker Service": {
 			AdvancedCount: AdvancedCount{
 				Cooldown:     mockCooldown,
-				workloadType: WorkerServiceType,
+				workloadType: manifestinfo.WorkerServiceType,
 			},
 			wantedError: fmt.Errorf(`must specify at least one of "cpu_percentage", "memory_percentage" or "queue_delay" if "cooldown" is specified`),
 		},
 		"error if range is missing when autoscaling fields are set for Backend Service": {
 			AdvancedCount: AdvancedCount{
 				CPU:          mockConfig,
-				workloadType: BackendServiceType,
+				workloadType: manifestinfo.BackendServiceType,
 			},
 			wantedError: fmt.Errorf(`"range" must be specified if "cpu_percentage", "memory_percentage", "requests" or "response_time" are specified`),
 		},
 		"error if range is missing when autoscaling fields are set for Worker Service": {
 			AdvancedCount: AdvancedCount{
 				CPU:          mockConfig,
-				workloadType: WorkerServiceType,
+				workloadType: manifestinfo.WorkerServiceType,
 			},
 			wantedError: fmt.Errorf(`"range" must be specified if "cpu_percentage", "memory_percentage" or "queue_delay" are specified`),
 		},
@@ -1960,7 +1996,7 @@ func TestAdvancedCount_validate(t *testing.T) {
 					AcceptableLatency: nil,
 					AvgProcessingTime: durationp(1 * time.Second),
 				},
-				workloadType: WorkerServiceType,
+				workloadType: manifestinfo.WorkerServiceType,
 			},
 			wantedErrorMsgPrefix: `validate "queue_delay": `,
 		},
@@ -1970,7 +2006,7 @@ func TestAdvancedCount_validate(t *testing.T) {
 					Value: (*IntRangeBand)(stringP("1-2")),
 				},
 				CPU:          invalidConfig,
-				workloadType: LoadBalancedWebServiceType,
+				workloadType: manifestinfo.LoadBalancedWebServiceType,
 			},
 			wantedErrorMsgPrefix: `validate "cpu_percentage": `,
 		},
@@ -1980,7 +2016,7 @@ func TestAdvancedCount_validate(t *testing.T) {
 					Value: (*IntRangeBand)(stringP("1-2")),
 				},
 				CPU:          mockAdvancedInvConfig,
-				workloadType: LoadBalancedWebServiceType,
+				workloadType: manifestinfo.LoadBalancedWebServiceType,
 			},
 			wantedErrorMsgPrefix: `validate "cpu_percentage": `,
 		},
@@ -1990,7 +2026,7 @@ func TestAdvancedCount_validate(t *testing.T) {
 					Value: (*IntRangeBand)(stringP("1-2")),
 				},
 				Memory:       invalidConfig,
-				workloadType: LoadBalancedWebServiceType,
+				workloadType: manifestinfo.LoadBalancedWebServiceType,
 			},
 			wantedErrorMsgPrefix: `validate "memory_percentage": `,
 		},
@@ -3629,6 +3665,42 @@ func TestValidateExposedPorts(t *testing.T) {
 
 			if tc.wanted != nil {
 				require.EqualError(t, err, tc.wanted.Error())
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestImageLocationOrBuild_validate(t *testing.T) {
+	testCases := map[string]struct {
+		in          ImageLocationOrBuild
+		wantedError error
+	}{
+		"should return error if both build and location are specified": {
+			in: ImageLocationOrBuild{
+				Build:    BuildArgsOrString{BuildString: aws.String("web/Dockerfile")},
+				Location: aws.String("mockLocation"),
+			},
+			wantedError: fmt.Errorf(`must specify one of "build" and "location"`),
+		},
+		"return nil if only build is specified": {
+			in: ImageLocationOrBuild{
+				Build: BuildArgsOrString{BuildString: aws.String("web/Dockerfile")},
+			},
+		},
+		"return nil if only location is specified": {
+			in: ImageLocationOrBuild{
+				Location: aws.String("mockLocation"),
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			err := tc.in.validate()
+
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
 				require.NoError(t, err)
 			}

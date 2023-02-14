@@ -15,6 +15,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/graph"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/dustin/go-humanize/english"
 )
 
@@ -35,7 +36,7 @@ const (
 const (
 	// Protocols.
 	TCP = "TCP"
-	tls = "TLS"
+	TLS = "TLS"
 	udp = "UDP"
 
 	// Tracing vendors.
@@ -52,7 +53,7 @@ var (
 
 	essentialContainerDependsOnValidStatuses = []string{dependsOnStart, dependsOnHealthy}
 	dependsOnValidStatuses                   = []string{dependsOnStart, dependsOnComplete, dependsOnSuccess, dependsOnHealthy}
-	nlbValidProtocols                        = []string{TCP, tls}
+	nlbValidProtocols                        = []string{TCP, TLS}
 	validContainerProtocols                  = []string{TCP, udp}
 	TracingValidVendors                      = []string{awsXRAY}
 	ecsRollingUpdateStrategies               = []string{ECSDefaultRollingUpdateStrategy, ECSRecreateRollingUpdateStrategy}
@@ -360,7 +361,7 @@ func (r RequestDrivenWebServiceConfig) validate() error {
 	if r.Network.VPC.Placement.PlacementString != nil &&
 		*r.Network.VPC.Placement.PlacementString != PrivateSubnetPlacement {
 		return fmt.Errorf(`placement %q is not supported for %s`,
-			*r.Network.VPC.Placement.PlacementString, RequestDrivenWebServiceType)
+			*r.Network.VPC.Placement.PlacementString, manifestinfo.RequestDrivenWebServiceType)
 	}
 	if err = r.Observability.validate(); err != nil {
 		return fmt.Errorf(`validate "observability": %w`, err)
@@ -533,6 +534,27 @@ func (s ScheduledJobConfig) validate() error {
 	return nil
 }
 
+// validate returns nil if StaticSite is configured correctly.
+func (s StaticSite) validate() error {
+	if err := s.StaticSiteConfig.validate(); err != nil {
+		return err
+	}
+	return s.Workload.validate()
+}
+
+func (s StaticSiteConfig) validate() error {
+	for idx, fileupload := range s.FileUploads {
+		if err := fileupload.validate(); err != nil {
+			return fmt.Errorf(`validate "files[%d]": %w`, idx, err)
+		}
+	}
+	return nil
+}
+
+func (f FileUpload) validate() error {
+	return nil
+}
+
 // validate returns nil if the pipeline manifest is configured correctly.
 func (p Pipeline) Validate() error {
 	if len(p.Name) > 100 {
@@ -632,8 +654,8 @@ func (i ImageWithPort) validate() error {
 // validate returns nil if Image is configured correctly.
 func (i Image) validate() error {
 	var err error
-	if err = i.Build.validate(); err != nil {
-		return fmt.Errorf(`validate "build": %w`, err)
+	if err := i.ImageLocationOrBuild.validate(); err != nil {
+		return err
 	}
 	if i.Build.isEmpty() == (i.Location == nil) {
 		return &errFieldMutualExclusive{
@@ -1325,6 +1347,9 @@ func (s SidecarConfig) validate() error {
 	}
 	if err := s.DependsOn.validate(); err != nil {
 		return fmt.Errorf(`validate "depends_on": %w`, err)
+	}
+	if err := s.Image.Advanced.validate(); err != nil {
+		return fmt.Errorf(`validate "build": %w`, err)
 	}
 	return s.ImageOverride.validate()
 }
@@ -2041,4 +2066,19 @@ func contains(name string, names []string) bool {
 		}
 	}
 	return false
+}
+
+// validate returns nil if ImageLocationOrBuild is configured correctly.
+func (i ImageLocationOrBuild) validate() error {
+	if err := i.Build.validate(); err != nil {
+		return fmt.Errorf(`validate "build": %w`, err)
+	}
+	if !i.Build.isEmpty() && i.Location != nil {
+		return &errFieldMutualExclusive{
+			firstField:  "build",
+			secondField: "location",
+			mustExist:   true,
+		}
+	}
+	return nil
 }

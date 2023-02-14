@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
+
 	"github.com/aws/copilot-cli/internal/pkg/override"
 	"gopkg.in/yaml.v3"
 
@@ -220,7 +222,9 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 					RequestDrivenWebServiceConfig: manifest.RequestDrivenWebServiceConfig{
 						ImageConfig: manifest.ImageWithPort{
 							Image: manifest.Image{
-								Build: manifest.BuildArgsOrString{BuildString: aws.String("/Dockerfile")},
+								ImageLocationOrBuild: manifest.ImageLocationOrBuild{
+									Build: manifest.BuildArgsOrString{BuildString: aws.String("/Dockerfile")},
+								},
 							},
 							Port: aws.Uint16(80),
 						},
@@ -228,6 +232,9 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 							Alias: aws.String(tc.inAlias),
 						},
 					},
+				},
+				newStack: func() cloudformation.StackConfiguration {
+					return new(stubCloudFormationStack)
 				},
 			}
 
@@ -257,6 +264,7 @@ func mockRDWSDeployer(opts ...func(*rdwsDeployer)) *rdwsDeployer {
 					App:  "demo",
 					Name: "test",
 				},
+				resources:        &stack.AppRegionalResources{},
 				envConfig:        new(manifest.Environment),
 				endpointGetter:   &mockEndpointGetter{endpoint: "demo.test.local"},
 				envVersionGetter: &mockEnvVersionGetter{version: "v1.0.0"},
@@ -276,7 +284,9 @@ func mockRDWSDeployer(opts ...func(*rdwsDeployer)) *rdwsDeployer {
 			RequestDrivenWebServiceConfig: manifest.RequestDrivenWebServiceConfig{
 				ImageConfig: manifest.ImageWithPort{
 					Image: manifest.Image{
-						Location: aws.String("111111111111.dkr.ecr.us-west-2.amazonaws.com/nginx:latest"),
+						ImageLocationOrBuild: manifest.ImageLocationOrBuild{
+							Location: aws.String("111111111111.dkr.ecr.us-west-2.amazonaws.com/nginx:latest"),
+						},
 					},
 					Port: aws.Uint16(80),
 				},
@@ -285,6 +295,9 @@ func mockRDWSDeployer(opts ...func(*rdwsDeployer)) *rdwsDeployer {
 					Memory: aws.Int(2048),
 				},
 			},
+		},
+		newStack: func() cloudformation.StackConfiguration {
+			return new(stubCloudFormationStack)
 		},
 	}
 	for _, opt := range opts {

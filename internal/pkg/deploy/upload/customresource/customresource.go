@@ -68,7 +68,8 @@ func (cr *CustomResource) Name() string {
 	return cr.name
 }
 
-func (cr *CustomResource) artifactPath() string {
+// ArtifactPath returns the S3 object key where the custom resource should be stored.
+func (cr *CustomResource) ArtifactPath() string {
 	return artifactpath.CustomResource(strings.ToLower(cr.Name()), cr.zip.Bytes())
 }
 
@@ -165,7 +166,7 @@ type UploadFunc func(key string, contents io.Reader) (url string, err error)
 func Upload(upload UploadFunc, crs []*CustomResource) (map[string]string, error) {
 	urls := make(map[string]string)
 	for _, cr := range crs {
-		url, err := upload(cr.artifactPath(), cr.zipReader())
+		url, err := upload(cr.ArtifactPath(), cr.zipReader())
 		if err != nil {
 			return nil, fmt.Errorf("upload custom resource %q: %w", cr.Name(), err)
 		}

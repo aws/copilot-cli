@@ -21,6 +21,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
@@ -32,14 +33,17 @@ var rdwsAliasUsedWithoutDomainFriendlyText = fmt.Sprintf("To use %s, your applic
 
 type rdwsDeployer struct {
 	*svcDeployer
+	rdwsMft *manifest.RequestDrivenWebService
+
+	// Overriden in tests.
 	customResourceS3Client uploader
 	appVersionGetter       versionGetter
-	rdwsMft                *manifest.RequestDrivenWebService
-	customResources        customResourcesFunc
+	newStack               func() cloudformation.StackConfiguration
 }
 
 // NewRDWSDeployer is the constructor for RDWSDeployer.
 func NewRDWSDeployer(in *WorkloadDeployerInput) (*rdwsDeployer, error) {
+	in.customResources = rdwsCustomResources
 	svcDeployer, err := newSvcDeployer(in)
 	if err != nil {
 		return nil, err
@@ -50,21 +54,22 @@ func NewRDWSDeployer(in *WorkloadDeployerInput) (*rdwsDeployer, error) {
 	}
 	rdwsMft, ok := in.Mft.(*manifest.RequestDrivenWebService)
 	if !ok {
-		return nil, fmt.Errorf("manifest is not of type %s", manifest.RequestDrivenWebServiceType)
+		return nil, fmt.Errorf("manifest is not of type %s", manifestinfo.RequestDrivenWebServiceType)
 	}
 	return &rdwsDeployer{
 		svcDeployer:            svcDeployer,
 		customResourceS3Client: s3.New(svcDeployer.defaultSessWithEnvRegion),
 		appVersionGetter:       versionGetter,
 		rdwsMft:                rdwsMft,
-		customResources: func(fs template.Reader) ([]*customresource.CustomResource, error) {
-			crs, err := customresource.RDWS(fs)
-			if err != nil {
-				return nil, fmt.Errorf("read custom resources for a %q: %w", manifest.RequestDrivenWebServiceType, err)
-			}
-			return crs, nil
-		},
 	}, nil
+}
+
+func rdwsCustomResources(fs template.Reader) ([]*customresource.CustomResource, error) {
+	crs, err := customresource.RDWS(fs)
+	if err != nil {
+		return nil, fmt.Errorf("read custom resources for a %q: %w", manifestinfo.RequestDrivenWebServiceType, err)
+	}
+	return crs, nil
 }
 
 // IsServiceAvailableInRegion checks if service type exist in the given region.
@@ -74,7 +79,7 @@ func (rdwsDeployer) IsServiceAvailableInRegion(region string) (bool, error) {
 
 // UploadArtifacts uploads the deployment artifacts such as the container image, custom resources, addons and env files.
 func (d *rdwsDeployer) UploadArtifacts() (*UploadArtifactsOutput, error) {
-	return d.uploadArtifacts(d.customResources)
+	return d.uploadArtifacts()
 }
 
 type rdwsDeployOutput struct {
@@ -130,22 +135,30 @@ func (d *rdwsDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*rdwsS
 		return nil, errors.New("alias specified when application is not associated with a domain")
 	}
 
-	conf, err := stack.NewRequestDrivenWebService(stack.RequestDrivenWebServiceConfig{
-		App: deploy.AppInformation{
-			Name:                d.app.Name,
-			Domain:              d.app.Domain,
-			PermissionsBoundary: d.app.PermissionsBoundary,
-			AccountPrincipalARN: in.RootUserARN,
-		},
-		Env:           d.env.Name,
-		Manifest:      d.rdwsMft,
-		RawManifest:   d.rawMft,
-		RuntimeConfig: *rc,
-		Addons:        d.addons,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("create stack configuration: %w", err)
+	var conf cloudformation.StackConfiguration
+	switch {
+	case d.newStack != nil:
+		conf = d.newStack()
+	default:
+		conf, err = stack.NewRequestDrivenWebService(stack.RequestDrivenWebServiceConfig{
+			App: deploy.AppInformation{
+				Name:                d.app.Name,
+				Domain:              d.app.Domain,
+				PermissionsBoundary: d.app.PermissionsBoundary,
+				AccountPrincipalARN: in.RootUserARN,
+			},
+			Env:                d.env.Name,
+			Manifest:           d.rdwsMft,
+			RawManifest:        d.rawMft,
+			ArtifactBucketName: d.resources.S3Bucket,
+			RuntimeConfig:      *rc,
+			Addons:             d.addons,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("create stack configuration: %w", err)
+		}
 	}
+
 	if d.rdwsMft.Alias == nil {
 		return &rdwsStackConfigurationOutput{
 			svcStackConfigurationOutput: svcStackConfigurationOutput{

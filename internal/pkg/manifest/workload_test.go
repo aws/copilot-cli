@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 )
@@ -296,8 +297,10 @@ func TestBuildArgs_UnmarshalYAML(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			b := Image{
-				Build: BuildArgsOrString{
-					BuildString: aws.String("./default"),
+				ImageLocationOrBuild: ImageLocationOrBuild{
+					Build: BuildArgsOrString{
+						BuildString: aws.String("./default"),
+					},
 				},
 			}
 			err := yaml.Unmarshal(tc.inContent, &b)
@@ -700,7 +703,7 @@ func TestRedirectPlatform(t *testing.T) {
 		"returns nil if default platform": {
 			inOS:           "linux",
 			inArch:         "amd64",
-			inWorkloadType: LoadBalancedWebServiceType,
+			inWorkloadType: manifestinfo.LoadBalancedWebServiceType,
 
 			wantedPlatform: "",
 			wantedError:    nil,
@@ -708,7 +711,7 @@ func TestRedirectPlatform(t *testing.T) {
 		"returns error if App Runner + Windows": {
 			inOS:           "windows",
 			inArch:         "amd64",
-			inWorkloadType: RequestDrivenWebServiceType,
+			inWorkloadType: manifestinfo.RequestDrivenWebServiceType,
 
 			wantedPlatform: "",
 			wantedError:    errors.New("Windows is not supported for App Runner services"),
@@ -838,7 +841,9 @@ func TestBuildConfig(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			s := Image{
-				Build: tc.inBuild,
+				ImageLocationOrBuild: ImageLocationOrBuild{
+					Build: tc.inBuild,
+				},
 			}
 			got := s.BuildConfig(mockWsRoot)
 

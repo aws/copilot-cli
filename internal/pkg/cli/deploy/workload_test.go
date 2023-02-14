@@ -13,10 +13,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/copilot-cli/internal/pkg/override"
+	cloudformation0 "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
+	sdkcfn "github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/cli/deploy/mocks"
@@ -26,6 +27,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/override"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
@@ -122,6 +124,28 @@ func (m *mockWorkloadMft) ContainerPlatform() string {
 	return "mockContainerPlatform"
 }
 
+// stubCloudFormationStack implements the cloudformation.StackConfiguration interface.
+type stubCloudFormationStack struct{}
+
+func (s *stubCloudFormationStack) StackName() string {
+	return "demo"
+}
+func (s *stubCloudFormationStack) Template() (string, error) {
+	return `
+Resources:
+  Queue:
+    Type: AWS::SQS::Queue`, nil
+}
+func (s *stubCloudFormationStack) Parameters() ([]*sdkcfn.Parameter, error) {
+	return []*sdkcfn.Parameter{}, nil
+}
+func (s *stubCloudFormationStack) Tags() []*sdkcfn.Tag {
+	return []*sdkcfn.Tag{}
+}
+func (s *stubCloudFormationStack) SerializedParameters() (string, error) {
+	return "", nil
+}
+
 func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 	const (
 		mockName            = "mockWkld"
@@ -153,6 +177,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 
 		mock                func(t *testing.T, m *deployMocks)
 		mockServiceDeployer func(deployer *workloadDeployer) artifactsUploader
+		customResourcesFunc customResourcesFunc
 
 		wantAddonsURL     string
 		wantEnvFileARN    string
@@ -202,13 +227,13 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 					return "", errors.New("did not match any custom resource")
 				}).Times(len(crs))
 			},
+			customResourcesFunc: func(fs template.Reader) ([]*customresource.CustomResource, error) {
+				return customresource.LBWS(fs)
+			},
 			mockServiceDeployer: func(deployer *workloadDeployer) artifactsUploader {
 				return &lbWebSvcDeployer{
 					svcDeployer: &svcDeployer{
 						workloadDeployer: deployer,
-					},
-					customResources: func(fs template.Reader) ([]*customresource.CustomResource, error) {
-						return customresource.LBWS(fs)
 					},
 				}
 			},
@@ -230,13 +255,13 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 					return "", errors.New("did not match any custom resource")
 				}).Times(len(crs))
 			},
+			customResourcesFunc: func(fs template.Reader) ([]*customresource.CustomResource, error) {
+				return customresource.Backend(fs)
+			},
 			mockServiceDeployer: func(deployer *workloadDeployer) artifactsUploader {
 				return &backendSvcDeployer{
 					svcDeployer: &svcDeployer{
 						workloadDeployer: deployer,
-					},
-					customResources: func(fs template.Reader) ([]*customresource.CustomResource, error) {
-						return customresource.Backend(fs)
 					},
 				}
 			},
@@ -258,13 +283,13 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 					return "", errors.New("did not match any custom resource")
 				}).Times(len(crs))
 			},
+			customResourcesFunc: func(fs template.Reader) ([]*customresource.CustomResource, error) {
+				return customresource.Worker(fs)
+			},
 			mockServiceDeployer: func(deployer *workloadDeployer) artifactsUploader {
 				return &workerSvcDeployer{
 					svcDeployer: &svcDeployer{
 						workloadDeployer: deployer,
-					},
-					customResources: func(fs template.Reader) ([]*customresource.CustomResource, error) {
-						return customresource.Worker(fs)
 					},
 				}
 			},
@@ -286,13 +311,13 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 					return "", errors.New("did not match any custom resource")
 				}).Times(len(crs))
 			},
+			customResourcesFunc: func(fs template.Reader) ([]*customresource.CustomResource, error) {
+				return customresource.RDWS(fs)
+			},
 			mockServiceDeployer: func(deployer *workloadDeployer) artifactsUploader {
 				return &rdwsDeployer{
 					svcDeployer: &svcDeployer{
 						workloadDeployer: deployer,
-					},
-					customResources: func(fs template.Reader) ([]*customresource.CustomResource, error) {
-						return customresource.RDWS(fs)
 					},
 				}
 			},
@@ -314,12 +339,12 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 					return "", errors.New("did not match any custom resource")
 				}).Times(len(crs))
 			},
+			customResourcesFunc: func(fs template.Reader) ([]*customresource.CustomResource, error) {
+				return customresource.ScheduledJob(fs)
+			},
 			mockServiceDeployer: func(deployer *workloadDeployer) artifactsUploader {
 				return &jobDeployer{
 					workloadDeployer: deployer,
-					customResources: func(fs template.Reader) ([]*customresource.CustomResource, error) {
-						return customresource.ScheduledJob(fs)
-					},
 				}
 			},
 		},
@@ -420,6 +445,13 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			}
 			tc.mock(t, m)
 
+			crFn := tc.customResourcesFunc
+			if crFn == nil {
+				crFn = func(fs template.Reader) ([]*customresource.CustomResource, error) {
+					return nil, nil
+				}
+			}
+
 			wkldDeployer := &workloadDeployer{
 				name: mockName,
 				env: &config.Environment{
@@ -441,6 +473,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				imageBuilderPusher: m.mockImageBuilderPusher,
 				templateFS:         fakeTemplateFS(),
 				overrider:          new(override.Noop),
+				customResources:    crFn,
 			}
 			if m.mockAddons != nil {
 				wkldDeployer.addons = m.mockAddons
@@ -449,9 +482,6 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			deployer = &lbWebSvcDeployer{
 				svcDeployer: &svcDeployer{
 					workloadDeployer: wkldDeployer,
-				},
-				customResources: func(fs template.Reader) ([]*customresource.CustomResource, error) {
-					return nil, nil
 				},
 			}
 			if tc.mockServiceDeployer != nil {
@@ -1176,7 +1206,9 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 						ImageConfig: manifest.ImageWithPortAndHealthcheck{
 							ImageWithPort: manifest.ImageWithPort{
 								Image: manifest.Image{
-									Build: manifest.BuildArgsOrString{BuildString: aws.String("/Dockerfile")},
+									ImageLocationOrBuild: manifest.ImageLocationOrBuild{
+										Build: manifest.BuildArgsOrString{BuildString: aws.String("/Dockerfile")},
+									},
 								},
 								Port: aws.Uint16(80),
 							},
@@ -1190,6 +1222,9 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 						},
 						NLBConfig: tc.inNLB,
 					},
+				},
+				newStack: func() cloudformation0.StackConfiguration {
+					return new(stubCloudFormationStack)
 				},
 			}
 

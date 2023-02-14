@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 )
@@ -61,6 +62,16 @@ sidecars:
     port: 2000/udp
     image: 123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon
     credentialsParameter: some arn
+  nginx:
+    image:
+      build:
+        dockerfile: "web/Dockerfile"
+        context: "pathto/Dockerfile"
+        target: "build-stage"
+        cache_from:
+          - foo/bar:latest
+        args:
+          arg1: value1
 logging:
   destination:
     Name: cloudwatch
@@ -92,11 +103,14 @@ environments:
 				actualManifest, ok := i.(*LoadBalancedWebService)
 				require.True(t, ok)
 				wantedManifest := &LoadBalancedWebService{
-					Workload: Workload{Name: aws.String("frontend"), Type: aws.String(LoadBalancedWebServiceType)},
+					Workload: Workload{Name: aws.String("frontend"), Type: aws.String(manifestinfo.LoadBalancedWebServiceType)},
 					LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 						ImageConfig: ImageWithPortAndHealthcheck{
-							ImageWithPort: ImageWithPort{Image: Image{Build: BuildArgsOrString{},
-								Location:    aws.String("foo/bar"),
+							ImageWithPort: ImageWithPort{Image: Image{
+								ImageLocationOrBuild: ImageLocationOrBuild{
+									Build:    BuildArgsOrString{},
+									Location: aws.String("foo/bar"),
+								},
 								Credentials: aws.String("some arn"),
 							}, Port: aws.Uint16(80)},
 						},
@@ -123,7 +137,7 @@ environments:
 							Count: Count{
 								Value: aws.Int(1),
 								AdvancedCount: AdvancedCount{
-									workloadType: LoadBalancedWebServiceType,
+									workloadType: manifestinfo.LoadBalancedWebServiceType,
 								},
 							},
 							ExecuteCommand: ExecuteCommand{
@@ -147,8 +161,25 @@ environments:
 						Sidecars: map[string]*SidecarConfig{
 							"xray": {
 								Port:       aws.String("2000/udp"),
-								Image:      aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+								Image:      BasicToUnion[*string, ImageLocationOrBuild](aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon")),
 								CredsParam: aws.String("some arn"),
+							},
+							"nginx": {
+								Image: AdvancedToUnion[*string](
+									ImageLocationOrBuild{
+										Build: BuildArgsOrString{
+											BuildArgs: DockerBuildArgs{
+												Dockerfile: aws.String("web/Dockerfile"),
+												Context:    aws.String("pathto/Dockerfile"),
+												Target:     aws.String("build-stage"),
+												CacheFrom:  []string{"foo/bar:latest"},
+												Args: map[string]string{
+													"arg1": "value1",
+												},
+											},
+										},
+									},
+								),
 							},
 						},
 						Logging: Logging{
@@ -259,14 +290,16 @@ secrets:
 				wantedManifest := &BackendService{
 					Workload: Workload{
 						Name: aws.String("subscribers"),
-						Type: aws.String(BackendServiceType),
+						Type: aws.String(manifestinfo.BackendServiceType),
 					},
 					BackendServiceConfig: BackendServiceConfig{
 						ImageConfig: ImageWithHealthcheckAndOptionalPort{
 							ImageWithOptionalPort: ImageWithOptionalPort{
 								Image: Image{
-									Build: BuildArgsOrString{
-										BuildString: aws.String("./subscribers/Dockerfile"),
+									ImageLocationOrBuild: ImageLocationOrBuild{
+										Build: BuildArgsOrString{
+											BuildString: aws.String("./subscribers/Dockerfile"),
+										},
 									},
 								},
 								Port: aws.Uint16(8080),
@@ -281,7 +314,7 @@ secrets:
 							Count: Count{
 								Value: aws.Int(1),
 								AdvancedCount: AdvancedCount{
-									workloadType: BackendServiceType,
+									workloadType: manifestinfo.BackendServiceType,
 								},
 							},
 							ExecuteCommand: ExecuteCommand{
@@ -338,13 +371,15 @@ subscribe:
 				wantedManifest := &WorkerService{
 					Workload: Workload{
 						Name: aws.String("dogcategorizer"),
-						Type: aws.String(WorkerServiceType),
+						Type: aws.String(manifestinfo.WorkerServiceType),
 					},
 					WorkerServiceConfig: WorkerServiceConfig{
 						ImageConfig: ImageWithHealthcheck{
 							Image: Image{
-								Build: BuildArgsOrString{
-									BuildString: aws.String("./dogcategorizer/Dockerfile"),
+								ImageLocationOrBuild: ImageLocationOrBuild{
+									Build: BuildArgsOrString{
+										BuildString: aws.String("./dogcategorizer/Dockerfile"),
+									},
 								},
 							},
 						},
@@ -354,7 +389,7 @@ subscribe:
 							Count: Count{
 								Value: aws.Int(1),
 								AdvancedCount: AdvancedCount{
-									workloadType: WorkerServiceType,
+									workloadType: manifestinfo.WorkerServiceType,
 								},
 							},
 							ExecuteCommand: ExecuteCommand{
@@ -732,7 +767,9 @@ func Test_ServiceDockerfileBuildRequired(t *testing.T) {
 					ImageConfig: ImageWithPortAndHealthcheck{
 						ImageWithPort: ImageWithPort{
 							Image: Image{
-								Location: aws.String("mockLocation"),
+								ImageLocationOrBuild: ImageLocationOrBuild{
+									Location: aws.String("mockLocation"),
+								},
 							},
 						},
 					},
@@ -745,8 +782,10 @@ func Test_ServiceDockerfileBuildRequired(t *testing.T) {
 					ImageConfig: ImageWithPortAndHealthcheck{
 						ImageWithPort: ImageWithPort{
 							Image: Image{
-								Build: BuildArgsOrString{
-									BuildString: aws.String("mockDockerfile"),
+								ImageLocationOrBuild: ImageLocationOrBuild{
+									Build: BuildArgsOrString{
+										BuildString: aws.String("mockDockerfile"),
+									},
 								},
 							},
 						},
