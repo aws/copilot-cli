@@ -935,7 +935,7 @@ func (o *initStorageOpts) wkldRDSAddonBlobs() ([]addonBlob, error) {
 		return blobs, nil
 	}
 	return append(blobs, addonBlob{
-		path:        o.ws.WorkloadAddonFilePath(o.workloadName, "addons.parameters.yml"),
+		path:        o.ws.WorkloadAddonFilePath(o.workloadName, workspace.AddonsParametersFileName),
 		description: "parameters",
 		blob:        addon.RDWSParamsForRDS(),
 	}), nil
@@ -958,7 +958,7 @@ func (o *initStorageOpts) envRDSAddonBlobs() ([]addonBlob, error) {
 		blob:        addon.EnvServerlessTemplate(props),
 	}
 	paramBlob := addonBlob{
-		path:        o.ws.EnvAddonFilePath("addons.parameters.yml"),
+		path:        o.ws.EnvAddonFilePath(workspace.AddonsParametersFileName),
 		description: "parameters",
 		blob:        addon.EnvParamsForRDS(),
 	}
@@ -975,7 +975,7 @@ func (o *initStorageOpts) envRDSForRDWSAddonBlobs() ([]addonBlob, error) {
 		}),
 	}
 	rdwsIngressParamBlob := addonBlob{
-		path:        o.ws.WorkloadAddonFilePath(o.workloadName, "addons.parameters.yml"),
+		path:        o.ws.WorkloadAddonFilePath(o.workloadName, workspace.AddonsParametersFileName),
 		description: "parameters",
 		blob:        addon.RDWSParamsForEnvRDS(),
 	}
@@ -992,7 +992,7 @@ func (o *initStorageOpts) envRDSForRDWSAddonBlobs() ([]addonBlob, error) {
 		blob:        addon.EnvServerlessForRDWSTemplate(props),
 	}
 	paramBlob := addonBlob{
-		path:        o.ws.EnvAddonFilePath("addons.parameters.yml"),
+		path:        o.ws.EnvAddonFilePath(workspace.AddonsParametersFileName),
 		description: "parameters",
 		blob:        addon.EnvParamsForRDS(),
 	}
