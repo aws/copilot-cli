@@ -20,8 +20,6 @@ import (
 type workerSvcDescriberMocks struct {
 	storeSvc     *mocks.MockDeployedEnvServicesLister
 	ecsDescriber *mocks.MockecsDescriber
-	envDescriber *mocks.MockenvDescriber
-	lbDescriber  *mocks.MocklbDescriber
 }
 
 func TestWorkerServiceDescriber_Describe(t *testing.T) {
