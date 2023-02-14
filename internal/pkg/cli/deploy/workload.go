@@ -338,9 +338,6 @@ func (d *workloadDeployer) uploadContainerImage(imgBuilderPusher imageBuilderPus
 		}
 	}
 	args := scbuildArgs(d.name, d.gitTag, UUIDTag, d.workspacePath, d.mft)
-	if args == nil {
-		return aws.String(digest), nil, nil
-	}
 	scdigests := make(map[string]string, len(args))
 	ctx, cancelWait := context.WithTimeout(context.Background(), waitForImageBuildAndPush)
 	defer cancelWait()
@@ -358,6 +355,9 @@ func (d *workloadDeployer) uploadContainerImage(imgBuilderPusher imageBuilderPus
 	}
 	if err := g.Wait(); err != nil {
 		return nil, nil, err
+	}
+	if !required {
+		return nil, scdigests, nil
 	}
 	return aws.String(digest), scdigests, nil
 }
@@ -526,7 +526,6 @@ func (d *workloadDeployer) uploadArtifacts() (*UploadArtifactsOutput, error) {
 	if err != nil {
 		return nil, fmt.Errorf("upload custom resources for %q: %w", d.name, err)
 	}
-	log.Infoln(urls)
 	out.CustomResourceURLs = urls
 	return out, nil
 }
