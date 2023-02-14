@@ -12,6 +12,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
+
 	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/template/override"
@@ -93,6 +95,7 @@ func convertSidecars(s map[string]*manifest.SidecarConfig, exposedPorts map[stri
 	sort.Strings(keys)
 	for _, name := range keys {
 		config := s[name]
+		imageURI, _ := config.ImageURI()
 		entrypoint, err := convertEntryPoint(config.EntryPoint)
 		if err != nil {
 			return nil, err
@@ -104,7 +107,7 @@ func convertSidecars(s map[string]*manifest.SidecarConfig, exposedPorts map[stri
 		mp := convertSidecarMountPoints(config.MountPoints)
 		sidecars = append(sidecars, &template.SidecarOpts{
 			Name:       name,
-			Image:      config.Image,
+			Image:      aws.String(imageURI),
 			Essential:  config.Essential,
 			CredsParam: config.CredsParam,
 			Secrets:    convertSecrets(config.Secrets),
@@ -1096,4 +1099,14 @@ func convertCustomResources(urlForFunc map[string]string) (map[string]template.S
 		}
 	}
 	return out, nil
+}
+
+type uploadableCRs []*customresource.CustomResource
+
+func (in uploadableCRs) convert() []uploadable {
+	out := make([]uploadable, len(in))
+	for i, cr := range in {
+		out[i] = cr
+	}
+	return out
 }

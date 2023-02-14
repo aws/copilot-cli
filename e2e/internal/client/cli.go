@@ -147,6 +147,7 @@ type StorageInitRequest struct {
 	StorageName  string
 	StorageType  string
 	WorkloadName string
+	Lifecycle    string
 
 	RDSEngine     string
 	InitialDBName string

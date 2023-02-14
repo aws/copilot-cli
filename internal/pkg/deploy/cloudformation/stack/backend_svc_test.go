@@ -9,7 +9,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/copilot-cli/internal/pkg/template/templatetest"
+
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
@@ -33,6 +36,11 @@ var (
 )
 
 func TestBackendService_Template(t *testing.T) {
+	t.Cleanup(func() {
+		fs = realEmbedFS
+	})
+	fs = templatetest.Stub{}
+
 	t.Run("returns a wrapped error when addons template parsing fails", func(t *testing.T) {
 		// GIVEN
 		svc, err := NewBackendService(BackendServiceConfig{
@@ -288,7 +296,7 @@ Outputs:
 			AppName:      "phonetool",
 			EnvName:      "test",
 			WorkloadName: "api",
-			WorkloadType: manifest.BackendServiceType,
+			WorkloadType: manifestinfo.BackendServiceType,
 			HealthCheck: &template.ContainerHealthCheck{
 				Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
 				Interval:    aws.Int64(5),
@@ -455,7 +463,7 @@ Outputs:
 			AppName:      "phonetool",
 			EnvName:      "test",
 			WorkloadName: "api",
-			WorkloadType: manifest.BackendServiceType,
+			WorkloadType: manifestinfo.BackendServiceType,
 			HealthCheck: &template.ContainerHealthCheck{
 				Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
 				Interval:    aws.Int64(5),
@@ -465,7 +473,8 @@ Outputs:
 			},
 			Sidecars: []*template.SidecarOpts{
 				{
-					Name: "envoy",
+					Name:  "envoy",
+					Image: aws.String(""),
 					PortMappings: []*template.PortMapping{
 						{
 							Protocol:      "tcp",
@@ -553,7 +562,9 @@ func TestBackendService_Parameters(t *testing.T) {
 				env:  testEnvName,
 				app:  testAppName,
 				image: manifest.Image{
-					Location: aws.String("mockLocation"),
+					ImageLocationOrBuild: manifest.ImageLocationOrBuild{
+						Location: aws.String("mockLocation"),
+					},
 				},
 			},
 			tc: testBackendSvcManifest.BackendServiceConfig.TaskConfig,

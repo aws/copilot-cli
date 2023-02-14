@@ -6,6 +6,10 @@ package deploy
 import (
 	"testing"
 
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
+
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
+
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 
@@ -56,6 +60,7 @@ func mockJobDeployer(opts ...func(*jobDeployer)) *jobDeployer {
 				App:  "demo",
 				Name: "test",
 			},
+			resources:        &stack.AppRegionalResources{},
 			envConfig:        new(manifest.Environment),
 			endpointGetter:   &mockEndpointGetter{endpoint: "demo.test.local"},
 			envVersionGetter: &mockEnvVersionGetter{version: "v1.0.0"},
@@ -76,10 +81,15 @@ func mockJobDeployer(opts ...func(*jobDeployer)) *jobDeployer {
 				},
 				ImageConfig: manifest.ImageWithHealthcheck{
 					Image: manifest.Image{
-						Build: manifest.BuildArgsOrString{BuildString: aws.String("/Dockerfile")},
+						ImageLocationOrBuild: manifest.ImageLocationOrBuild{
+							Build: manifest.BuildArgsOrString{BuildString: aws.String("/Dockerfile")},
+						},
 					},
 				},
 			},
+		},
+		newStack: func() cloudformation.StackConfiguration {
+			return new(stubCloudFormationStack)
 		},
 	}
 	for _, opt := range opts {

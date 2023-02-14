@@ -12,7 +12,9 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/template/override"
 )
@@ -24,11 +26,6 @@ const (
 	LBWebServiceNLBPortParamKey      = "NLBPort"
 )
 
-type loadBalancedWebSvcReadParser interface {
-	template.ReadParser
-	ParseLoadBalancedWebService(template.WorkloadOpts) (*template.Content, error)
-}
-
 // LoadBalancedWebService represents the configuration needed to create a CloudFormation stack from a load balanced web service manifest.
 type LoadBalancedWebService struct {
 	*ecsWkld
@@ -38,7 +35,8 @@ type LoadBalancedWebService struct {
 	publicSubnetCIDRBlocks []string
 	appInfo                deploy.AppInformation
 
-	parser loadBalancedWebSvcReadParser
+	parser   loadBalancedWebSvcReadParser
+	localCRs []uploadable // Custom resources that have not been uploaded yet.
 }
 
 // LoadBalancedWebServiceOption is used to configuring an optional field for LoadBalancedWebService.
@@ -53,19 +51,23 @@ func WithNLB(cidrBlocks []string) func(s *LoadBalancedWebService) {
 
 // LoadBalancedWebServiceConfig contains fields to configure LoadBalancedWebService.
 type LoadBalancedWebServiceConfig struct {
-	App           *config.Application
-	EnvManifest   *manifest.Environment
-	Manifest      *manifest.LoadBalancedWebService
-	RawManifest   []byte // Content of the manifest file without any transformations.
-	RuntimeConfig RuntimeConfig
-	RootUserARN   string
-	Addons        NestedStackConfigurer
+	App                *config.Application
+	EnvManifest        *manifest.Environment
+	Manifest           *manifest.LoadBalancedWebService
+	RawManifest        []byte // Content of the manifest file without any transformations.
+	RuntimeConfig      RuntimeConfig
+	RootUserARN        string
+	ArtifactBucketName string
+	Addons             NestedStackConfigurer
 }
 
 // NewLoadBalancedWebService creates a new CFN stack with an ECS service from a manifest file, given the options.
 func NewLoadBalancedWebService(conf LoadBalancedWebServiceConfig,
 	opts ...LoadBalancedWebServiceOption) (*LoadBalancedWebService, error) {
-	parser := template.New()
+	crs, err := customresource.LBWS(fs)
+	if err != nil {
+		return nil, fmt.Errorf("load balanced web service custom resources: %w", err)
+	}
 	var dnsDelegationEnabled, httpsEnabled bool
 	var appInfo deploy.AppInformation
 
@@ -89,15 +91,16 @@ func NewLoadBalancedWebService(conf LoadBalancedWebServiceConfig,
 	s := &LoadBalancedWebService{
 		ecsWkld: &ecsWkld{
 			wkld: &wkld{
-				name:        aws.StringValue(conf.Manifest.Name),
-				env:         aws.StringValue(conf.EnvManifest.Name),
-				app:         conf.App.Name,
-				permBound:   conf.App.PermissionsBoundary,
-				rc:          conf.RuntimeConfig,
-				image:       conf.Manifest.ImageConfig.Image,
-				rawManifest: conf.RawManifest,
-				parser:      parser,
-				addons:      conf.Addons,
+				name:               aws.StringValue(conf.Manifest.Name),
+				env:                aws.StringValue(conf.EnvManifest.Name),
+				app:                conf.App.Name,
+				permBound:          conf.App.PermissionsBoundary,
+				artifactBucketName: conf.ArtifactBucketName,
+				rc:                 conf.RuntimeConfig,
+				image:              conf.Manifest.ImageConfig.Image,
+				rawManifest:        conf.RawManifest,
+				parser:             fs,
+				addons:             conf.Addons,
 			},
 			logRetention:        conf.Manifest.Logging.Retention,
 			tc:                  conf.Manifest.TaskConfig,
@@ -108,7 +111,8 @@ func NewLoadBalancedWebService(conf LoadBalancedWebServiceConfig,
 		appInfo:              appInfo,
 		dnsDelegationEnabled: dnsDelegationEnabled,
 
-		parser: parser,
+		parser:   fs,
+		localCRs: uploadableCRs(crs).convert(),
 	}
 	for _, opt := range opts {
 		opt(s)
@@ -217,7 +221,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		EnvVersion:         s.rc.EnvVersion,
 		SerializedManifest: string(s.rawManifest),
 		WorkloadName:       s.name,
-		WorkloadType:       manifest.LoadBalancedWebServiceType,
+		WorkloadType:       manifestinfo.LoadBalancedWebServiceType,
 
 		// Configuration for the main container.
 		Command:      command,

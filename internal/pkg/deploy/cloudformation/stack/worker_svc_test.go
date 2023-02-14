@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/addon"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
@@ -153,7 +154,7 @@ Outputs:
 						AppName:      "phonetool",
 						EnvName:      "test",
 						WorkloadName: "frontend",
-						WorkloadType: manifest.WorkerServiceType,
+						WorkloadType: manifestinfo.WorkerServiceType,
 						HealthCheck: &template.ContainerHealthCheck{
 							Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
 							Interval:    aws.Int64(5),
@@ -267,7 +268,9 @@ func TestWorkerService_Parameters(t *testing.T) {
 				env:  testEnvName,
 				app:  testAppName,
 				image: manifest.Image{
-					Location: aws.String("mockLocation"),
+					ImageLocationOrBuild: manifest.ImageLocationOrBuild{
+						Location: aws.String("mockLocation"),
+					},
 				},
 			},
 			tc: testWorkerSvcManifest.WorkerServiceConfig.TaskConfig,
