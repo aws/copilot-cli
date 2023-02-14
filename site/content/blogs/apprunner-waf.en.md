@@ -1,6 +1,6 @@
 # Using WAF With App Runner in Copilot
 
-Posted On: Feb 08, 2023
+Posted On: Feb 23, 2023
 
 **Siddharth Vohra**, Software Development Engineer, AWS App Runner
 
