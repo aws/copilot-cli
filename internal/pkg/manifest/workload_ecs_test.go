@@ -488,7 +488,7 @@ func Test_ImageURI(t *testing.T) {
 		"empty SidecarConfig": {},
 		"should return URI if provided directly through `image` ": {
 			in: SidecarConfig{
-				Image: Union[*string, SidecarImageConfig]{
+				Image: Union[*string, ImageLocationOrBuild]{
 					Basic: aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
 				},
 			},
@@ -497,8 +497,8 @@ func Test_ImageURI(t *testing.T) {
 		},
 		"should return the URI if provided through `image.location` field": {
 			in: SidecarConfig{
-				Image: Union[*string, SidecarImageConfig]{
-					Advanced: SidecarImageConfig{
+				Image: Union[*string, ImageLocationOrBuild]{
+					Advanced: ImageLocationOrBuild{
 						Location: aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
 					},
 				},
