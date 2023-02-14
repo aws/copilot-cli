@@ -1405,7 +1405,7 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 				m.EXPECT().ListEnvironments(gomock.Any()).Times(1)
 			},
 		},
-		"error addon exists": {
+		"do not error out if addon exists": {
 			inStorageType: s3StorageType,
 			inSvcName:     wantedSvcName,
 			inStorageName: "my-bucket",
@@ -1419,8 +1419,6 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 			mockStore: func(m *mocks.Mockstore) {
 				m.EXPECT().ListEnvironments(gomock.Any()).AnyTimes()
 			},
-
-			wantedErr: fmt.Errorf("addon file already exists: %w", fileExistsError),
 		},
 		"unexpected read workload manifest error handled": {
 			inStorageType: s3StorageType,

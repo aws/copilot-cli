@@ -730,18 +730,21 @@ func (o *initStorageOpts) Execute() error {
 	}
 	for _, addon := range addonBlobs {
 		path, err := o.ws.Write(addon.blob, addon.path)
-		if err != nil {
-			e, ok := err.(*workspace.ErrFileExists)
-			if !ok {
-				return err
-			}
-			return fmt.Errorf("addon file already exists: %w", e)
+		if err == nil {
+			log.Successf("Wrote CloudFormation %s at %s\n",
+				addon.description,
+				color.HighlightResource(displayPath(path)),
+			)
+			continue
 		}
-		path = displayPath(path)
-		log.Successf("Wrote CloudFormation %s at %s\n",
-			addon.description,
-			color.HighlightResource(path),
-		)
+		_, ok := err.(*workspace.ErrFileExists)
+		if ok {
+			log.Successf("CloudFormation %s already exists at %s, skipping writing it.\n",
+				addon.description,
+				color.HighlightResource(displayPath(addon.path)))
+			continue
+		}
+		return err
 	}
 	log.Infoln()
 	return nil
