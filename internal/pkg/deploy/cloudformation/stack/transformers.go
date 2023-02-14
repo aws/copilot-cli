@@ -12,6 +12,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
+
 	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/template/override"
@@ -1094,4 +1096,14 @@ func convertCustomResources(urlForFunc map[string]string) (map[string]template.S
 		}
 	}
 	return out, nil
+}
+
+type uploadableCRs []*customresource.CustomResource
+
+func (in uploadableCRs) convert() []uploadable {
+	out := make([]uploadable, len(in))
+	for i, cr := range in {
+		out[i] = cr
+	}
+	return out
 }
