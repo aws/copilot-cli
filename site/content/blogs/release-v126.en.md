@@ -20,7 +20,7 @@ Copilot v1.26 brings several new features and improvements:
 - **Service alarm-based rollback**: [See detailed section](#service-alarm-based-rollback).
 - **`storage init` for environment addons**: [See detailed section](#storage-init-for-environment-addons).
 - **Sidecar image build**: [See detailed section](#sidecar-image-build).
-- **Request-Driven Web Service secrets support**: [See detailed section](#request-driven-web-service-secret-support).
+- **Request-Driven Web Service secrets support**: [See detailed section](#request-driven-web-service-secrets-support).
 
 ???+ note "What’s AWS Copilot?"
 
