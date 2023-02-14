@@ -19,7 +19,12 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 )
 
-const notFound = "NotFound"
+const (
+	// S3 EndpointsID
+	EndpointsID = s3.EndpointsID
+
+	notFound = "NotFound"
+)
 
 type s3ManagerAPI interface {
 	Upload(input *s3manager.UploadInput, options ...func(*s3manager.Uploader)) (*s3manager.UploadOutput, error)

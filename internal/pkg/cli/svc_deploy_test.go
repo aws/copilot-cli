@@ -140,8 +140,7 @@ func TestSvcDeployOpts_Execute(t *testing.T) {
 	)
 	mockError := errors.New("some error")
 	testCases := map[string]struct {
-		mock func(m *deployMocks)
-
+		mock        func(m *deployMocks)
 		wantedError error
 	}{
 		"error out if fail to read workload manifest": {
