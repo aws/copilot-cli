@@ -259,7 +259,6 @@ func (o *initStorageOpts) validateAddIngressFrom() error {
 	if !exist {
 		return fmt.Errorf("workload %s not found in the workspace", o.addIngressFrom)
 	}
-	o.workloadExists = true
 	return nil
 
 }
@@ -451,7 +450,6 @@ func (o *initStorageOpts) askLocalWorkload() error {
 		return fmt.Errorf("retrieve local workload names: %w", err)
 	}
 	o.workloadName = workload
-	o.workloadExists = true
 	return nil
 }
 
@@ -462,7 +460,6 @@ func (o *initStorageOpts) validateOrAskLifecycle() error {
 	_, err := o.ws.ReadFile(o.ws.WorkloadAddonFileAbsPath(o.workloadName, fmt.Sprintf("%s.yml", o.storageName)))
 	if err == nil {
 		o.lifecycle = lifecycleWorkloadLevel
-		o.workloadExists = true
 		log.Infof("%s %s %s\n",
 			color.Emphasize("Lifecycle:"),
 			"workload-level",
@@ -520,14 +517,10 @@ func (o *initStorageOpts) validateStorageLifecycle() error {
 // validateWorkloadNameWithLifecycle requires the workload to be in the workspace if the storage lifecycle is on workload-level.
 // Otherwise, it only caches whether the workload is present.
 func (o *initStorageOpts) validateWorkloadNameWithLifecycle() error {
-	if o.workloadExists {
-		return nil
-	}
 	exists, err := o.ws.WorkloadExists(o.workloadName)
 	if err != nil {
 		return fmt.Errorf("check if %s exists in the workspace: %w", o.workloadName, err)
 	}
-	o.workloadExists = exists
 	if o.lifecycle == lifecycleWorkloadLevel && !exists {
 		return fmt.Errorf("workload %s not found in the workspace", o.workloadName)
 	}
@@ -724,12 +717,9 @@ func (o *initStorageOpts) validateOrAskAuroraInitialDBName() error {
 
 // Execute deploys a new environment with CloudFormation and adds it to SSM.
 func (o *initStorageOpts) Execute() error {
-	if o.addIngressFrom != "" {
-		o.workloadName = o.addIngressFrom
-		o.lifecycle = lifecycleEnvironmentLevel
-		if o.storageType == rdsStorageType && o.rdsEngine == "" {
-			o.rdsEngine = addon.RDSEngineTypeMySQL
-		}
+	o.consumeFlags()
+	if err := o.checkWorkloadExists(); err != nil {
+		return err
 	}
 	if err := o.readWorkloadType(); err != nil {
 		return err
@@ -754,6 +744,26 @@ func (o *initStorageOpts) Execute() error {
 		)
 	}
 	log.Infoln()
+	return nil
+}
+
+func (o *initStorageOpts) consumeFlags() {
+	if o.addIngressFrom == "" {
+		return
+	}
+	o.workloadName = o.addIngressFrom
+	o.lifecycle = lifecycleEnvironmentLevel
+	if o.storageType == rdsStorageType && o.rdsEngine == "" {
+		o.rdsEngine = addon.RDSEngineTypeMySQL
+	}
+}
+
+func (o *initStorageOpts) checkWorkloadExists() error {
+	exist, err := o.ws.WorkloadExists(o.workloadName)
+	if err != nil {
+		return fmt.Errorf("check if %s exists in the workspace: %w", o.workloadName, err)
+	}
+	o.workloadExists = exist
 	return nil
 }
 
