@@ -17,7 +17,7 @@ CPURollbackAlarm:
     MetricName: 'CPUUtilization'
     ComparisonOperator: 'GreaterThanOrEqualToThreshold'
     DatapointsToAlarm: 2
-    EvaluationPeriods: 2
+    EvaluationPeriods: 3
     Period: 60
     Statistic: 'Average'
     Threshold: {{.DeploymentConfiguration.Rollback.CPUUtilization}}
@@ -44,7 +44,7 @@ MemoryRollbackAlarm:
     MetricName: 'MemoryUtilization'
     ComparisonOperator: 'GreaterThanOrEqualToThreshold'
     DatapointsToAlarm: 2
-    EvaluationPeriods: 2
+    EvaluationPeriods: 3
     Period: 60
     Statistic: 'Average'
     Threshold: {{.DeploymentConfiguration.Rollback.MemoryUtilization}}
