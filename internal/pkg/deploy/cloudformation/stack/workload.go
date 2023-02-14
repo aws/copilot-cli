@@ -111,16 +111,23 @@ type location interface {
 	GetLocation() string
 }
 
+// uploadable is the interface for an object that can be uploaded to an S3 bucket.
+type uploadable interface {
+	Name() string
+	ArtifactPath() string
+}
+
 // wkld represents a generic containerized workload.
 // A workload can be a long-running service, an ephemeral task, or a periodic task.
 type wkld struct {
-	name        string
-	env         string
-	app         string
-	permBound   string
-	rc          RuntimeConfig
-	image       location
-	rawManifest []byte // Content of the manifest file without any transformations.
+	name               string
+	env                string
+	app                string
+	permBound          string
+	artifactBucketName string
+	rc                 RuntimeConfig
+	image              location
+	rawManifest        []byte // Content of the manifest file without any transformations.
 
 	parser template.Parser
 	addons NestedStackConfigurer

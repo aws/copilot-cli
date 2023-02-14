@@ -15,7 +15,8 @@ http:
     interval: 15s
     timeout: 10s
     grace_period: 45s
-
+  target_container: http-full-config
+  target_port: 8081
 network:
   connect: false
 

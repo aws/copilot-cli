@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/stretchr/testify/require"
 )
@@ -29,12 +30,14 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 			inputManifest: &ScheduledJob{
 				Workload: Workload{
 					Name: aws.String("report-generator"),
-					Type: aws.String(ScheduledJobType),
+					Type: aws.String(manifestinfo.ScheduledJobType),
 				},
 				ScheduledJobConfig: ScheduledJobConfig{
 					ImageConfig: ImageWithHealthcheck{
 						Image: Image{
-							Location: aws.String("nginx"),
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Location: aws.String("nginx"),
+							},
 						},
 					},
 					On: JobTriggerConfig{
@@ -78,12 +81,14 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 			wantedManifest: &ScheduledJob{
 				Workload: Workload{
 					Name: aws.String("report-generator"),
-					Type: aws.String(ScheduledJobType),
+					Type: aws.String(manifestinfo.ScheduledJobType),
 				},
 				ScheduledJobConfig: ScheduledJobConfig{
 					ImageConfig: ImageWithHealthcheck{
 						Image: Image{
-							Location: aws.String("nginx"),
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Location: aws.String("nginx"),
+							},
 						},
 					},
 					On: JobTriggerConfig{
@@ -122,14 +127,16 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 			inputManifest: &ScheduledJob{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(ScheduledJobType),
+					Type: aws.String(manifestinfo.ScheduledJobType),
 				},
 				ScheduledJobConfig: ScheduledJobConfig{
 					ImageConfig: ImageWithHealthcheck{
 						Image: Image{
-							Build: BuildArgsOrString{
-								BuildArgs: DockerBuildArgs{
-									Dockerfile: aws.String("./Dockerfile"),
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Build: BuildArgsOrString{
+									BuildArgs: DockerBuildArgs{
+										Dockerfile: aws.String("./Dockerfile"),
+									},
 								},
 							},
 						},
@@ -139,7 +146,9 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 					"prod-iad": {
 						ImageConfig: ImageWithHealthcheck{
 							Image: Image{
-								Location: aws.String("env-override location"),
+								ImageLocationOrBuild: ImageLocationOrBuild{
+									Location: aws.String("env-override location"),
+								},
 							},
 						},
 					},
@@ -150,12 +159,14 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 			wantedManifest: &ScheduledJob{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(ScheduledJobType),
+					Type: aws.String(manifestinfo.ScheduledJobType),
 				},
 				ScheduledJobConfig: ScheduledJobConfig{
 					ImageConfig: ImageWithHealthcheck{
 						Image: Image{
-							Location: aws.String("env-override location"),
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Location: aws.String("env-override location"),
+							},
 						},
 					},
 				},
@@ -165,12 +176,14 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 			inputManifest: &ScheduledJob{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(ScheduledJobType),
+					Type: aws.String(manifestinfo.ScheduledJobType),
 				},
 				ScheduledJobConfig: ScheduledJobConfig{
 					ImageConfig: ImageWithHealthcheck{
 						Image: Image{
-							Location: aws.String("default location"),
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Location: aws.String("default location"),
+							},
 						},
 					},
 				},
@@ -178,7 +191,9 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 					"prod-iad": {
 						ImageConfig: ImageWithHealthcheck{
 							Image: Image{
-								Location: aws.String("env-override location"),
+								ImageLocationOrBuild: ImageLocationOrBuild{
+									Location: aws.String("env-override location"),
+								},
 							},
 						},
 					},
@@ -189,12 +204,14 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 			wantedManifest: &ScheduledJob{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(ScheduledJobType),
+					Type: aws.String(manifestinfo.ScheduledJobType),
 				},
 				ScheduledJobConfig: ScheduledJobConfig{
 					ImageConfig: ImageWithHealthcheck{
 						Image: Image{
-							Location: aws.String("env-override location"),
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Location: aws.String("env-override location"),
+							},
 						},
 					},
 				},
@@ -204,14 +221,16 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 			inputManifest: &ScheduledJob{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(ScheduledJobType),
+					Type: aws.String(manifestinfo.ScheduledJobType),
 				},
 				ScheduledJobConfig: ScheduledJobConfig{
 					ImageConfig: ImageWithHealthcheck{
 						Image: Image{
-							Build: BuildArgsOrString{
-								BuildArgs: DockerBuildArgs{
-									Dockerfile: aws.String("./Dockerfile"),
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Build: BuildArgsOrString{
+									BuildArgs: DockerBuildArgs{
+										Dockerfile: aws.String("./Dockerfile"),
+									},
 								},
 							},
 						},
@@ -221,8 +240,10 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 					"prod-iad": {
 						ImageConfig: ImageWithHealthcheck{
 							Image: Image{
-								Build: BuildArgsOrString{
-									BuildString: aws.String("overridden build string"),
+								ImageLocationOrBuild: ImageLocationOrBuild{
+									Build: BuildArgsOrString{
+										BuildString: aws.String("overridden build string"),
+									},
 								},
 							},
 						},
@@ -234,13 +255,15 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 			wantedManifest: &ScheduledJob{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(ScheduledJobType),
+					Type: aws.String(manifestinfo.ScheduledJobType),
 				},
 				ScheduledJobConfig: ScheduledJobConfig{
 					ImageConfig: ImageWithHealthcheck{
 						Image: Image{
-							Build: BuildArgsOrString{
-								BuildString: aws.String("overridden build string"),
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Build: BuildArgsOrString{
+									BuildString: aws.String("overridden build string"),
+								},
 							},
 						},
 					},
@@ -251,12 +274,14 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 			inputManifest: &ScheduledJob{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(ScheduledJobType),
+					Type: aws.String(manifestinfo.ScheduledJobType),
 				},
 				ScheduledJobConfig: ScheduledJobConfig{
 					ImageConfig: ImageWithHealthcheck{
 						Image: Image{
-							Location: aws.String("default location"),
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Location: aws.String("default location"),
+							},
 						},
 					},
 				},
@@ -264,8 +289,10 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 					"prod-iad": {
 						ImageConfig: ImageWithHealthcheck{
 							Image: Image{
-								Build: BuildArgsOrString{
-									BuildString: aws.String("overridden build string"),
+								ImageLocationOrBuild: ImageLocationOrBuild{
+									Build: BuildArgsOrString{
+										BuildString: aws.String("overridden build string"),
+									},
 								},
 							},
 						},
@@ -277,13 +304,15 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 			wantedManifest: &ScheduledJob{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(ScheduledJobType),
+					Type: aws.String(manifestinfo.ScheduledJobType),
 				},
 				ScheduledJobConfig: ScheduledJobConfig{
 					ImageConfig: ImageWithHealthcheck{
 						Image: Image{
-							Build: BuildArgsOrString{
-								BuildString: aws.String("overridden build string"),
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Build: BuildArgsOrString{
+									BuildString: aws.String("overridden build string"),
+								},
 							},
 						},
 					},
@@ -370,7 +399,7 @@ func TestScheduledJob_RequiredEnvironmentFeatures(t *testing.T) {
 			inSvc := ScheduledJob{
 				Workload: Workload{
 					Name: aws.String("mock-svc"),
-					Type: aws.String(ScheduledJobType),
+					Type: aws.String(manifestinfo.ScheduledJobType),
 				},
 			}
 			tc.mft(&inSvc)

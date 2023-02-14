@@ -7,59 +7,64 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/template/override"
 )
-
-type workerSvcReadParser interface {
-	template.ReadParser
-	ParseWorkerService(template.WorkloadOpts) (*template.Content, error)
-}
 
 // WorkerService represents the configuration needed to create a CloudFormation stack from a worker service manifest.
 type WorkerService struct {
 	*ecsWkld
 	manifest *manifest.WorkerService
 
-	parser workerSvcReadParser
+	parser   workerSvcReadParser
+	localCRs []uploadable // Custom resources that have not been uploaded yet.
 }
 
 // WorkerServiceConfig contains data required to initialize a scheduled job stack.
 type WorkerServiceConfig struct {
-	App           *config.Application
-	Env           string
-	Manifest      *manifest.WorkerService
-	RawManifest   []byte
-	RuntimeConfig RuntimeConfig
-	Addons        NestedStackConfigurer
+	App                *config.Application
+	Env                string
+	Manifest           *manifest.WorkerService
+	ArtifactBucketName string
+	RawManifest        []byte
+	RuntimeConfig      RuntimeConfig
+	Addons             NestedStackConfigurer
 }
 
 // NewWorkerService creates a new WorkerService stack from a manifest file.
 func NewWorkerService(cfg WorkerServiceConfig) (*WorkerService, error) {
-	parser := template.New()
+	crs, err := customresource.Worker(fs)
+	if err != nil {
+		return nil, fmt.Errorf("worker service custom resources: %w", err)
+	}
 	return &WorkerService{
 		ecsWkld: &ecsWkld{
 			wkld: &wkld{
-				name:        aws.StringValue(cfg.Manifest.Name),
-				env:         cfg.Env,
-				app:         cfg.App.Name,
-				permBound:   cfg.App.PermissionsBoundary,
-				rc:          cfg.RuntimeConfig,
-				image:       cfg.Manifest.ImageConfig.Image,
-				rawManifest: cfg.RawManifest,
-				parser:      parser,
-				addons:      cfg.Addons,
+				name:               aws.StringValue(cfg.Manifest.Name),
+				env:                cfg.Env,
+				app:                cfg.App.Name,
+				permBound:          cfg.App.PermissionsBoundary,
+				artifactBucketName: cfg.ArtifactBucketName,
+				rc:                 cfg.RuntimeConfig,
+				image:              cfg.Manifest.ImageConfig.Image,
+				rawManifest:        cfg.RawManifest,
+				parser:             fs,
+				addons:             cfg.Addons,
 			},
 			logRetention:        cfg.Manifest.Logging.Retention,
 			tc:                  cfg.Manifest.TaskConfig,
 			taskDefOverrideFunc: override.CloudFormationTemplate,
 		},
 		manifest: cfg.Manifest,
-		parser:   parser,
+		parser:   fs,
+		localCRs: uploadableCRs(crs).convert(),
 	}, nil
 }
 
@@ -77,7 +82,11 @@ func (s *WorkerService) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	sidecars, err := convertSidecar(s.manifest.Sidecars)
+	exposedPorts, err := s.manifest.ExposedPorts()
+	if err != nil {
+		return "", fmt.Errorf("parse exposed ports in service manifest %s: %w", s.name, err)
+	}
+	sidecars, err := convertSidecars(s.manifest.Sidecars, exposedPorts.PortsForContainer)
 	if err != nil {
 		return "", fmt.Errorf("convert the sidecar configuration for service %s: %w", s.name, err)
 	}
@@ -132,7 +141,7 @@ func (s *WorkerService) Template() (string, error) {
 		CapacityProviders:        capacityProviders,
 		DesiredCountOnSpot:       desiredCountOnSpot,
 		ExecuteCommand:           convertExecuteCommand(&s.manifest.ExecuteCommand),
-		WorkloadType:             manifest.WorkerServiceType,
+		WorkloadType:             manifestinfo.WorkerServiceType,
 		HealthCheck:              convertContainerHealthCheck(s.manifest.WorkerServiceConfig.ImageConfig.HealthCheck),
 		LogConfig:                convertLogging(s.manifest.Logging),
 		DockerLabels:             s.manifest.ImageConfig.Image.DockerLabels,

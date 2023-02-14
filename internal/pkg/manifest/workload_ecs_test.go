@@ -478,3 +478,43 @@ func TestLogging_GetEnableMetadata(t *testing.T) {
 		})
 	}
 }
+
+func Test_ImageURI(t *testing.T) {
+	testCases := map[string]struct {
+		in        SidecarConfig
+		wantedURI string
+		wantedOk  bool
+	}{
+		"empty SidecarConfig": {},
+		"should return URI if provided directly through `image` ": {
+			in: SidecarConfig{
+				Image: Union[*string, ImageLocationOrBuild]{
+					Basic: aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+				},
+			},
+			wantedURI: "123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon",
+			wantedOk:  true,
+		},
+		"should return the URI if provided through `image.location` field": {
+			in: SidecarConfig{
+				Image: Union[*string, ImageLocationOrBuild]{
+					Advanced: ImageLocationOrBuild{
+						Location: aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+					},
+				},
+			},
+			wantedURI: "123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon",
+			wantedOk:  true,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// WHEN
+			uri, ok := tc.in.ImageURI()
+
+			// THEN
+			require.Equal(t, tc.wantedURI, uri)
+			require.Equal(t, tc.wantedOk, ok)
+		})
+	}
+}

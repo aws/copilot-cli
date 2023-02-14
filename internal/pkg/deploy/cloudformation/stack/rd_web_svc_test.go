@@ -9,8 +9,12 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/aws/copilot-cli/internal/pkg/addon"
+	"github.com/aws/copilot-cli/internal/pkg/template/templatetest"
+
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
+
+	"github.com/aws/copilot-cli/internal/pkg/addon"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
@@ -28,7 +32,7 @@ var (
 var testRDWebServiceManifest = &manifest.RequestDrivenWebService{
 	Workload: manifest.Workload{
 		Name: aws.String(testServiceName),
-		Type: aws.String(manifest.RequestDrivenWebServiceType),
+		Type: aws.String(manifestinfo.RequestDrivenWebServiceType),
 	},
 	RequestDrivenWebServiceConfig: manifest.RequestDrivenWebServiceConfig{
 		ImageConfig: manifest.ImageWithPort{
@@ -55,6 +59,11 @@ var testRDWebServiceManifest = &manifest.RequestDrivenWebService{
 }
 
 func TestRequestDrivenWebService_NewRequestDrivenWebService(t *testing.T) {
+	t.Cleanup(func() {
+		fs = realEmbedFS
+	})
+	fs = templatetest.Stub{}
+
 	type testInput struct {
 		mft     *manifest.RequestDrivenWebService
 		env     string
@@ -129,7 +138,6 @@ func TestRequestDrivenWebService_NewRequestDrivenWebService(t *testing.T) {
 			require.Equal(t, tc.wantedStack.instanceConfig, stack.instanceConfig)
 			require.Equal(t, tc.wantedStack.imageConfig, stack.imageConfig)
 			require.NotNil(t, stack.addons)
-			require.NotNil(t, stack.parser)
 		})
 	}
 }
@@ -171,7 +179,7 @@ func TestRequestDrivenWebService_Template(t *testing.T) {
 						AppName:      "phonetool",
 						EnvName:      "test",
 						WorkloadName: "frontend",
-						WorkloadType: manifest.RequestDrivenWebServiceType,
+						WorkloadType: manifestinfo.RequestDrivenWebServiceType,
 						Variables: map[string]template.Variable{
 							"LOG_LEVEL": template.PlainVariable(""),
 							"NODE_ENV":  template.PlainVariable(""),
@@ -209,7 +217,7 @@ func TestRequestDrivenWebService_Template(t *testing.T) {
 						AppName:                  "phonetool",
 						EnvName:                  "test",
 						WorkloadName:             "frontend",
-						WorkloadType:             manifest.RequestDrivenWebServiceType,
+						WorkloadType:             manifestinfo.RequestDrivenWebServiceType,
 						Variables:                convertEnvVars(c.manifest.Variables),
 						Secrets:                  convertSecrets(c.manifest.RequestDrivenWebServiceConfig.Secrets),
 						Tags:                     c.manifest.Tags,
@@ -254,7 +262,7 @@ Outputs:
 						AppName:                  "phonetool",
 						EnvName:                  "test",
 						WorkloadName:             "frontend",
-						WorkloadType:             manifest.RequestDrivenWebServiceType,
+						WorkloadType:             manifestinfo.RequestDrivenWebServiceType,
 						Variables:                convertEnvVars(c.manifest.Variables),
 						Secrets:                  convertSecrets(c.manifest.RequestDrivenWebServiceConfig.Secrets),
 						Tags:                     c.manifest.Tags,
@@ -358,8 +366,12 @@ func TestRequestDrivenWebService_Parameters(t *testing.T) {
 	}{
 		"all required fields specified": {
 			imageConfig: manifest.ImageWithPort{
-				Image: manifest.Image{Location: aws.String("public.ecr.aws/aws-containers/hello-app-runner:latest")},
-				Port:  aws.Uint16(80),
+				Image: manifest.Image{
+					ImageLocationOrBuild: manifest.ImageLocationOrBuild{
+						Location: aws.String("public.ecr.aws/aws-containers/hello-app-runner:latest"),
+					},
+				},
+				Port: aws.Uint16(80),
 			},
 			instanceConfig: manifest.AppRunnerInstanceConfig{
 				CPU:    aws.Int(1024),
@@ -396,7 +408,11 @@ func TestRequestDrivenWebService_Parameters(t *testing.T) {
 		},
 		"error when port unspecified": {
 			imageConfig: manifest.ImageWithPort{
-				Image: manifest.Image{Location: aws.String("public.ecr.aws/aws-containers/hello-app-runner:latest")},
+				Image: manifest.Image{
+					ImageLocationOrBuild: manifest.ImageLocationOrBuild{
+						Location: aws.String("public.ecr.aws/aws-containers/hello-app-runner:latest"),
+					},
+				},
 			},
 			instanceConfig: manifest.AppRunnerInstanceConfig{
 				CPU:    aws.Int(1024),
@@ -406,8 +422,12 @@ func TestRequestDrivenWebService_Parameters(t *testing.T) {
 		},
 		"error when CPU unspecified": {
 			imageConfig: manifest.ImageWithPort{
-				Port:  aws.Uint16(80),
-				Image: manifest.Image{Location: aws.String("public.ecr.aws/aws-containers/hello-app-runner:latest")},
+				Port: aws.Uint16(80),
+				Image: manifest.Image{
+					ImageLocationOrBuild: manifest.ImageLocationOrBuild{
+						Location: aws.String("public.ecr.aws/aws-containers/hello-app-runner:latest"),
+					},
+				},
 			},
 			instanceConfig: manifest.AppRunnerInstanceConfig{
 				Memory: aws.Int(1024),
@@ -416,8 +436,12 @@ func TestRequestDrivenWebService_Parameters(t *testing.T) {
 		},
 		"error when memory unspecified": {
 			imageConfig: manifest.ImageWithPort{
-				Port:  aws.Uint16(80),
-				Image: manifest.Image{Location: aws.String("public.ecr.aws/aws-containers/hello-app-runner:latest")},
+				Port: aws.Uint16(80),
+				Image: manifest.Image{
+					ImageLocationOrBuild: manifest.ImageLocationOrBuild{
+						Location: aws.String("public.ecr.aws/aws-containers/hello-app-runner:latest"),
+					},
+				},
 			},
 			instanceConfig: manifest.AppRunnerInstanceConfig{
 				CPU: aws.Int(1024),

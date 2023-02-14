@@ -14,8 +14,8 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// EnvironmentManifestType identifies that the type of manifest is environment manifest.
-const EnvironmentManifestType = "Environment"
+// Environmentmanifestinfo identifies that the type of manifest is environment manifest.
+const Environmentmanifestinfo = "Environment"
 
 var environmentManifestPath = "environment/manifest.yml"
 
@@ -64,7 +64,7 @@ func FromEnvConfig(cfg *config.Environment, parser template.Parser) *Environment
 	return &Environment{
 		Workload: Workload{
 			Name: stringP(cfg.Name),
-			Type: stringP(EnvironmentManifestType),
+			Type: stringP(Environmentmanifestinfo),
 		},
 		EnvironmentConfig: EnvironmentConfig{
 			Network: environmentNetworkConfig{

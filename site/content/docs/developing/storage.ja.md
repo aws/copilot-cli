@@ -14,7 +14,7 @@ $ copilot storage init -t S3
 $ copilot storage init -n my-bucket -t S3 -w api
 ```
 
-このコマンドにより、"api" Service の [addons](../developing/addons/modeling.ja.md) ディレクトリに S3 バケットを定義した CloudFormation テンプレートが作成されます。続いて `copilot deploy -n api` を実行することで S3 バケットが作成されます。`api` タスクロールに S3 バケットへのアクセス権限が付与され、バケット名が `api` コンテナの環境変数に `MY_BUCKET_NAME` の形で設定されます。
+このコマンドにより、"api" Service の [addons](./addons/workload.ja.md) ディレクトリに S3 バケットを定義した CloudFormation テンプレートが作成されます。続いて `copilot deploy -n api` を実行することで S3 バケットが作成されます。`api` タスクロールに S3 バケットへのアクセス権限が付与され、バケット名が `api` コンテナの環境変数に `MY_BUCKET_NAME` の形で設定されます。
 
 !!!info
     すべての名前は、ハイフンやアンダースコアに基づいて SCREAMING_SNAKE_CASE のように変換されます。`copilot svc show` を実行することで、Service の環境変数を確認できます。

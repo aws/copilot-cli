@@ -5,6 +5,7 @@ package manifest
 
 import (
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/imdario/mergo"
 )
@@ -19,8 +20,7 @@ type BackendService struct {
 	BackendServiceConfig `yaml:",inline"`
 	// Use *BackendServiceConfig because of https://github.com/imdario/mergo/issues/146
 	Environments map[string]*BackendServiceConfig `yaml:",flow"`
-
-	parser template.Parser
+	parser       template.Parser
 }
 
 // BackendServiceConfig holds the configuration that can be overridden per environments.
@@ -160,7 +160,7 @@ func (s BackendService) applyEnv(envName string) (workloadManifest, error) {
 func newDefaultBackendService() *BackendService {
 	return &BackendService{
 		Workload: Workload{
-			Type: aws.String(BackendServiceType),
+			Type: aws.String(manifestinfo.BackendServiceType),
 		},
 		BackendServiceConfig: BackendServiceConfig{
 			ImageConfig: ImageWithHealthcheckAndOptionalPort{},
@@ -170,7 +170,7 @@ func newDefaultBackendService() *BackendService {
 				Count: Count{
 					Value: aws.Int(1),
 					AdvancedCount: AdvancedCount{ // Leave advanced count empty while passing down the type of the workload.
-						workloadType: BackendServiceType,
+						workloadType: manifestinfo.BackendServiceType,
 					},
 				},
 				ExecuteCommand: ExecuteCommand{
@@ -190,7 +190,7 @@ func newDefaultBackendService() *BackendService {
 }
 
 // ExposedPorts returns all the ports that are container ports available to receive traffic.
-func (b *BackendService) ExposedPorts() ([]ExposedPort, error) {
+func (b *BackendService) ExposedPorts() (ExposedPortsIndex, error) {
 	var exposedPorts []ExposedPort
 
 	workloadName := aws.StringValue(b.Name)
@@ -198,11 +198,14 @@ func (b *BackendService) ExposedPorts() ([]ExposedPort, error) {
 	for name, sidecar := range b.Sidecars {
 		out, err := sidecar.exposedPorts(name)
 		if err != nil {
-			return nil, err
+			return ExposedPortsIndex{}, err
 		}
 		exposedPorts = append(exposedPorts, out...)
 	}
 	exposedPorts = append(exposedPorts, b.RoutingRule.exposedPorts(exposedPorts, workloadName)...)
-
-	return sortExposedPorts(exposedPorts), nil
+	portsForContainer, containerForPort := prepareParsedExposedPortsMap(sortExposedPorts(exposedPorts))
+	return ExposedPortsIndex{
+		PortsForContainer: portsForContainer,
+		ContainerForPort:  containerForPort,
+	}, nil
 }

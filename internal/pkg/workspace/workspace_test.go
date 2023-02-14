@@ -314,6 +314,36 @@ func TestWorkspace_Use(t *testing.T) {
 	}
 }
 
+func TestWorkspace_WorkloadExists(t *testing.T) {
+	t.Run("returns true if workload exists in the workspace", func(t *testing.T) {
+		fs := afero.NewMemMapFs()
+		_, _ = fs.Create("/copilot/api/manifest.yml")
+		ws := &Workspace{
+			copilotDirAbs: "/copilot",
+			fs: &afero.Afero{
+				Fs: fs,
+			},
+		}
+		got, err := ws.WorkloadExists("api")
+		require.NoError(t, err)
+		require.True(t, got)
+	})
+
+	t.Run("returns false if workload does not in the workspace", func(t *testing.T) {
+		fs := afero.NewMemMapFs()
+		_, _ = fs.Create("a/copilot/api/manifest.yml")
+		ws := &Workspace{
+			copilotDirAbs: "b/copilot",
+			fs: &afero.Afero{
+				Fs: fs,
+			},
+		}
+		got, err := ws.WorkloadExists("api")
+		require.NoError(t, err)
+		require.False(t, got)
+	})
+}
+
 func TestWorkspace_ListServices(t *testing.T) {
 	testCases := map[string]struct {
 		copilotDir string
@@ -887,7 +917,7 @@ func TestIsInGitRepository(t *testing.T) {
 	}
 }
 
-func TestWorkspace_EnvAddonsPath(t *testing.T) {
+func TestWorkspace_EnvAddonsAbsPath(t *testing.T) {
 	mockWorkingDirAbs := "/app"
 	testCases := map[string]struct {
 		fs         func() afero.Fs
@@ -912,10 +942,20 @@ func TestWorkspace_EnvAddonsPath(t *testing.T) {
 				},
 			}
 
-			got := ws.EnvAddonsPath()
+			got := ws.EnvAddonsAbsPath()
 			require.Equal(t, tc.wantedPath, got)
 		})
 	}
+}
+
+func TestWorkspace_WorkloadAddonFilePath(t *testing.T) {
+	ws := &Workspace{}
+	require.Equal(t, filepath.FromSlash("webhook/addons/db.yml"), ws.WorkloadAddonFilePath("webhook", "db.yml"))
+}
+
+func TestWorkspace_EnvAddonFilePath(t *testing.T) {
+	ws := &Workspace{}
+	require.Equal(t, filepath.FromSlash("environments/addons/db.yml"), ws.EnvAddonFilePath("db.yml"))
 }
 
 func TestWorkspace_EnvOverridesPath(t *testing.T) {
@@ -948,7 +988,7 @@ func TestWorkspace_WorkloadOverridesPath(t *testing.T) {
 	require.Equal(t, filepath.Join("copilot", "frontend", "overrides"), ws.WorkloadOverridesPath("frontend"))
 }
 
-func TestWorkspace_EnvAddonFilePath(t *testing.T) {
+func TestWorkspace_EnvAddonFileAbsPath(t *testing.T) {
 	mockWorkingDirAbs := "/app"
 	testCases := map[string]struct {
 		fName      string
@@ -976,13 +1016,13 @@ func TestWorkspace_EnvAddonFilePath(t *testing.T) {
 				},
 			}
 
-			got := ws.EnvAddonFilePath(tc.fName)
+			got := ws.EnvAddonFileAbsPath(tc.fName)
 			require.Equal(t, tc.wantedPath, got)
 		})
 	}
 }
 
-func TestWorkspace_WorkloadAddonsPath(t *testing.T) {
+func TestWorkspace_WorkloadAddonsAbsPath(t *testing.T) {
 	mockWorkingDirAbs := "/app"
 	testCases := map[string]struct {
 		fs         func() afero.Fs
@@ -1007,13 +1047,13 @@ func TestWorkspace_WorkloadAddonsPath(t *testing.T) {
 				},
 			}
 
-			got := ws.WorkloadAddonsPath("mockSvc")
+			got := ws.WorkloadAddonsAbsPath("mockSvc")
 			require.Equal(t, tc.wantedPath, got)
 		})
 	}
 }
 
-func TestWorkspace_WorkloadAddonFilePath(t *testing.T) {
+func TestWorkspace_WorkloadAddonFileAbsPath(t *testing.T) {
 	mockWorkingDirAbs := "/app"
 	testCases := map[string]struct {
 		svc        string
@@ -1043,7 +1083,7 @@ func TestWorkspace_WorkloadAddonFilePath(t *testing.T) {
 				},
 			}
 
-			got := ws.WorkloadAddonFilePath(tc.svc, tc.fName)
+			got := ws.WorkloadAddonFileAbsPath(tc.svc, tc.fName)
 			require.Equal(t, tc.wantedPath, got)
 		})
 	}
@@ -1155,11 +1195,10 @@ func TestWorkspace_ReadFile(t *testing.T) {
 	}
 }
 
-func TestWorkspace_WriteAddon(t *testing.T) {
+func TestWorkspace_Write(t *testing.T) {
 	testCases := map[string]struct {
-		marshaler   mockBinaryMarshaler
-		svc         string
-		storageName string
+		marshaler mockBinaryMarshaler
+		path      string
 
 		wantedPath string
 		wantedErr  error
@@ -1168,19 +1207,15 @@ func TestWorkspace_WriteAddon(t *testing.T) {
 			marshaler: mockBinaryMarshaler{
 				content: []byte("hello"),
 			},
-			svc:         "webhook",
-			storageName: "s3",
-
+			path:       filepath.FromSlash("webhook/addons/s3.yml"),
 			wantedPath: filepath.FromSlash("/copilot/webhook/addons/s3.yml"),
 		},
 		"wraps error if cannot marshal to binary": {
 			marshaler: mockBinaryMarshaler{
 				err: errors.New("some error"),
 			},
-			svc:         "webhook",
-			storageName: "s3",
-
-			wantedErr: errors.New("marshal binary addon content: some error"),
+			path:      filepath.FromSlash("webhook/addons/s3.yml"),
+			wantedErr: errors.New("marshal binary content: some error"),
 		},
 	}
 
@@ -1191,7 +1226,7 @@ func TestWorkspace_WriteAddon(t *testing.T) {
 			utils := &afero.Afero{
 				Fs: fs,
 			}
-			utils.MkdirAll(filepath.Join("/", "copilot", tc.svc), 0755)
+			utils.MkdirAll(filepath.Join("/", "copilot", "webhook"), 0755)
 			ws := &Workspace{
 				workingDirAbs: "/",
 				copilotDirAbs: "/copilot",
@@ -1199,7 +1234,7 @@ func TestWorkspace_WriteAddon(t *testing.T) {
 			}
 
 			// WHEN
-			actualPath, actualErr := ws.WriteAddon(tc.marshaler, tc.svc, tc.storageName)
+			actualPath, actualErr := ws.Write(tc.marshaler, tc.path)
 
 			// THEN
 			if tc.wantedErr != nil {

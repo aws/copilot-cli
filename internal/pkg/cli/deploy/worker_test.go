@@ -9,6 +9,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
+
+	"github.com/aws/copilot-cli/internal/pkg/override"
+	"gopkg.in/yaml.v3"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/cli/deploy/mocks"
@@ -19,6 +24,40 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
+
+func TestWorkerSvcDeployer_GenerateCloudFormationTemplate(t *testing.T) {
+	t.Run("ensure resulting CloudFormation template custom resource paths are empty", func(t *testing.T) {
+		// GIVEN
+		worker := mockWorkerServiceDeployer()
+
+		// WHEN
+		out, err := worker.GenerateCloudFormationTemplate(&GenerateCloudFormationTemplateInput{})
+
+		// THEN
+		require.NoError(t, err)
+
+		type lambdaFn struct {
+			Properties struct {
+				Code struct {
+					S3Bucket string `yaml:"S3bucket"`
+					S3Key    string `yaml:"S3Key"`
+				} `yaml:"Code"`
+			} `yaml:"Properties"`
+		}
+		dat := struct {
+			Resources struct {
+				EnvControllerFunction            lambdaFn `yaml:"EnvControllerFunction"`
+				BacklogPerTaskCalculatorFunction lambdaFn `yaml:"BacklogPerTaskCalculatorFunction"`
+			} `yaml:"Resources"`
+		}{}
+		require.NoError(t, yaml.Unmarshal([]byte(out.Template), &dat))
+		require.Empty(t, dat.Resources.EnvControllerFunction.Properties.Code.S3Bucket)
+		require.Empty(t, dat.Resources.EnvControllerFunction.Properties.Code.S3Key)
+
+		require.Empty(t, dat.Resources.BacklogPerTaskCalculatorFunction.Properties.Code.S3Bucket)
+		require.Empty(t, dat.Resources.BacklogPerTaskCalculatorFunction.Properties.Code.S3Key)
+	})
+}
 
 func TestSvcDeployOpts_stackConfiguration_worker(t *testing.T) {
 	mockError := errors.New("some error")
@@ -118,13 +157,18 @@ func TestSvcDeployOpts_stackConfiguration_worker(t *testing.T) {
 					WorkerServiceConfig: manifest.WorkerServiceConfig{
 						ImageConfig: manifest.ImageWithHealthcheck{
 							Image: manifest.Image{
-								Build: manifest.BuildArgsOrString{BuildString: aws.String("/Dockerfile")},
+								ImageLocationOrBuild: manifest.ImageLocationOrBuild{
+									Build: manifest.BuildArgsOrString{BuildString: aws.String("/Dockerfile")},
+								},
 							},
 						},
 						Subscribe: manifest.SubscribeConfig{
 							Topics: mockTopics,
 						},
 					},
+				},
+				newStack: func() cloudformation.StackConfiguration {
+					return new(stubCloudFormationStack)
 				},
 			}
 
@@ -194,4 +238,59 @@ func Test_validateTopicsExist(t *testing.T) {
 			}
 		})
 	}
+}
+
+func mockWorkerServiceDeployer(opts ...func(*workerSvcDeployer)) *workerSvcDeployer {
+	deployer := &workerSvcDeployer{
+		svcDeployer: &svcDeployer{
+			workloadDeployer: &workloadDeployer{
+				name: "example",
+				app: &config.Application{
+					Name: "demo",
+				},
+				env: &config.Environment{
+					App:  "demo",
+					Name: "test",
+				},
+				resources:        &stack.AppRegionalResources{},
+				envConfig:        new(manifest.Environment),
+				endpointGetter:   &mockEndpointGetter{endpoint: "demo.test.local"},
+				envVersionGetter: &mockEnvVersionGetter{version: "v1.0.0"},
+				overrider:        new(override.Noop),
+			},
+			newSvcUpdater: func(f func(*session.Session) serviceForceUpdater) serviceForceUpdater {
+				return nil
+			},
+			now: func() time.Time {
+				return time.Date(2020, 11, 23, 0, 0, 0, 0, time.UTC)
+			},
+		},
+		topicLister: &mockTopicLister{},
+		wsMft: &manifest.WorkerService{
+			Workload: manifest.Workload{
+				Name: aws.String("example"),
+			},
+			WorkerServiceConfig: manifest.WorkerServiceConfig{
+				TaskConfig: manifest.TaskConfig{
+					Count: manifest.Count{
+						Value: aws.Int(1),
+					},
+				},
+				ImageConfig: manifest.ImageWithHealthcheck{
+					Image: manifest.Image{
+						ImageLocationOrBuild: manifest.ImageLocationOrBuild{
+							Build: manifest.BuildArgsOrString{BuildString: aws.String("/Dockerfile")},
+						},
+					},
+				},
+			},
+		},
+		newStack: func() cloudformation.StackConfiguration {
+			return new(stubCloudFormationStack)
+		},
+	}
+	for _, opt := range opts {
+		opt(deployer)
+	}
+	return deployer
 }

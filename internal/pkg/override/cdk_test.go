@@ -61,8 +61,8 @@ func TestCDK_Override(t *testing.T) {
 		_ = mockFS.MkdirAll(root, 0755)
 		mockFS = afero.NewBasePathFs(mockFS, root)
 		cdk := WithCDK(root, CDKOpts{
-			Stdout: new(bytes.Buffer),
-			FS:     mockFS,
+			ExecWriter: new(bytes.Buffer),
+			FS:         mockFS,
 			LookPathFn: func(file string) (string, error) {
 				return "/bin/npm", nil
 			},
@@ -88,8 +88,8 @@ func TestCDK_Override(t *testing.T) {
 	t.Run("should return a wrapped error if cdk synth fails", func(t *testing.T) {
 		// GIVEN
 		cdk := WithCDK("", CDKOpts{
-			Stdout: new(bytes.Buffer),
-			FS:     afero.NewMemMapFs(),
+			ExecWriter: new(bytes.Buffer),
+			FS:         afero.NewMemMapFs(),
 			LookPathFn: func(file string) (string, error) {
 				return "/bin/npm", nil
 			},
@@ -111,8 +111,8 @@ func TestCDK_Override(t *testing.T) {
 		binPath := filepath.Join("node_modules", "aws-cdk", "bin", "cdk")
 		buf := new(strings.Builder)
 		cdk := WithCDK("", CDKOpts{
-			Stdout: buf,
-			FS:     afero.NewMemMapFs(),
+			ExecWriter: buf,
+			FS:         afero.NewMemMapFs(),
 			LookPathFn: func(file string) (string, error) {
 				return "/bin/npm", nil
 			},
@@ -122,17 +122,18 @@ func TestCDK_Override(t *testing.T) {
 		})
 
 		// WHEN
-		_, err := cdk.Override(nil)
+		out, err := cdk.Override(nil)
 
 		// THEN
 		require.NoError(t, err)
-		require.Equal(t, fmt.Sprintf("npm install\n%s synth --no-version-reporting\n", binPath), buf.String())
+		require.Equal(t, "npm install\n", buf.String())
+		require.Equal(t, fmt.Sprintf("%s synth --no-version-reporting\n", binPath), string(out))
 	})
 	t.Run("should return the transformed document", func(t *testing.T) {
 		buf := new(strings.Builder)
 		cdk := WithCDK("", CDKOpts{
-			Stdout: buf,
-			FS:     afero.NewMemMapFs(),
+			ExecWriter: buf,
+			FS:         afero.NewMemMapFs(),
 			LookPathFn: func(file string) (string, error) {
 				return "/bin/npm", nil
 			},

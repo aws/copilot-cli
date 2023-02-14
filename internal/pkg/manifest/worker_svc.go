@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/imdario/mergo"
 	"gopkg.in/yaml.v3"
@@ -29,8 +30,7 @@ type WorkerService struct {
 	WorkerServiceConfig `yaml:",inline"`
 	// Use *WorkerServiceConfig because of https://github.com/imdario/mergo/issues/146
 	Environments map[string]*WorkerServiceConfig `yaml:",flow"`
-
-	parser template.Parser
+	parser       template.Parser
 }
 
 // Publish returns the list of topics where notifications can be published.
@@ -338,7 +338,7 @@ func (s *WorkerService) requiredEnvironmentFeatures() []string {
 func newDefaultWorkerService() *WorkerService {
 	return &WorkerService{
 		Workload: Workload{
-			Type: aws.String(WorkerServiceType),
+			Type: aws.String(manifestinfo.WorkerServiceType),
 		},
 		WorkerServiceConfig: WorkerServiceConfig{
 			ImageConfig: ImageWithHealthcheck{},
@@ -349,7 +349,7 @@ func newDefaultWorkerService() *WorkerService {
 				Count: Count{
 					Value: aws.Int(1),
 					AdvancedCount: AdvancedCount{ // Leave advanced count empty while passing down the type of the workload.
-						workloadType: WorkerServiceType,
+						workloadType: manifestinfo.WorkerServiceType,
 					},
 				},
 				ExecuteCommand: ExecuteCommand{
@@ -369,14 +369,18 @@ func newDefaultWorkerService() *WorkerService {
 }
 
 // ExposedPorts returns all the ports that are sidecar container ports available to receive traffic.
-func (ws *WorkerService) ExposedPorts() ([]ExposedPort, error) {
+func (ws *WorkerService) ExposedPorts() (ExposedPortsIndex, error) {
 	var exposedPorts []ExposedPort
 	for name, sidecar := range ws.Sidecars {
 		out, err := sidecar.exposedPorts(name)
 		if err != nil {
-			return nil, err
+			return ExposedPortsIndex{}, err
 		}
 		exposedPorts = append(exposedPorts, out...)
 	}
-	return sortExposedPorts(exposedPorts), nil
+	portsForContainer, containerForPort := prepareParsedExposedPortsMap(sortExposedPorts(exposedPorts))
+	return ExposedPortsIndex{
+		PortsForContainer: portsForContainer,
+		ContainerForPort:  containerForPort,
+	}, nil
 }

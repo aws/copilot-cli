@@ -121,6 +121,7 @@ var _ = Describe("addons flow", func() {
 				StorageName:   rdsStorageName,
 				StorageType:   rdsStorageType,
 				WorkloadName:  svcName,
+				Lifecycle:     "workload",
 				RDSEngine:     rdsEngine,
 				InitialDBName: rdsInitialDB,
 			})
@@ -143,6 +144,7 @@ var _ = Describe("addons flow", func() {
 				StorageName:  s3StorageName,
 				StorageType:  s3StorageType,
 				WorkloadName: svcName,
+				Lifecycle:    "workload",
 			})
 		})
 

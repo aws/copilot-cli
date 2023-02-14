@@ -5,25 +5,14 @@ package manifest
 
 import (
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/imdario/mergo"
 )
 
 const (
-	// ScheduledJobType is a recurring ECS Fargate task which runs on a schedule.
-	ScheduledJobType = "Scheduled Job"
-)
-
-const (
 	scheduledJobManifestPath = "workloads/jobs/scheduled-job/manifest.yml"
 )
-
-// JobTypes returns the list of supported job manifest types.
-func JobTypes() []string {
-	return []string{
-		ScheduledJobType,
-	}
-}
 
 // ScheduledJob holds the configuration to build a container image that is run
 // periodically in a given environment with timeout and retry logic.
@@ -31,8 +20,7 @@ type ScheduledJob struct {
 	Workload           `yaml:",inline"`
 	ScheduledJobConfig `yaml:",inline"`
 	Environments       map[string]*ScheduledJobConfig `yaml:",flow"`
-
-	parser template.Parser
+	parser             template.Parser
 }
 
 func (s *ScheduledJob) subnets() *SubnetListOrArgs {
@@ -167,7 +155,7 @@ func (j *ScheduledJob) EnvFile() string {
 func newDefaultScheduledJob() *ScheduledJob {
 	return &ScheduledJob{
 		Workload: Workload{
-			Type: aws.String(ScheduledJobType),
+			Type: aws.String(manifestinfo.ScheduledJobType),
 		},
 		ScheduledJobConfig: ScheduledJobConfig{
 			ImageConfig: ImageWithHealthcheck{},
@@ -177,7 +165,7 @@ func newDefaultScheduledJob() *ScheduledJob {
 				Count: Count{
 					Value: aws.Int(1),
 					AdvancedCount: AdvancedCount{ // Leave advanced count empty while passing down the type of the workload.
-						workloadType: ScheduledJobType,
+						workloadType: manifestinfo.ScheduledJobType,
 					},
 				},
 			},
@@ -194,14 +182,18 @@ func newDefaultScheduledJob() *ScheduledJob {
 }
 
 // ExposedPorts returns all the ports that are sidecar container ports available to receive traffic.
-func (j *ScheduledJob) ExposedPorts() ([]ExposedPort, error) {
+func (j *ScheduledJob) ExposedPorts() (ExposedPortsIndex, error) {
 	var exposedPorts []ExposedPort
 	for name, sidecar := range j.Sidecars {
 		out, err := sidecar.exposedPorts(name)
 		if err != nil {
-			return nil, err
+			return ExposedPortsIndex{}, err
 		}
 		exposedPorts = append(exposedPorts, out...)
 	}
-	return sortExposedPorts(exposedPorts), nil
+	portsForContainer, containerForPort := prepareParsedExposedPortsMap(sortExposedPorts(exposedPorts))
+	return ExposedPortsIndex{
+		PortsForContainer: portsForContainer,
+		ContainerForPort:  containerForPort,
+	}, nil
 }

@@ -9,7 +9,10 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/aws/copilot-cli/internal/pkg/template/templatetest"
+
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
@@ -103,6 +106,11 @@ func TestLoadBalancedWebService_StackName(t *testing.T) {
 }
 
 func TestLoadBalancedWebService_Template(t *testing.T) {
+	t.Cleanup(func() {
+		fs = realEmbedFS
+	})
+	fs = templatetest.Stub{}
+
 	t.Run("returns a wrapped error when addons template parsing fails", func(t *testing.T) {
 		// GIVEN
 		lbws, err := NewLoadBalancedWebService(LoadBalancedWebServiceConfig{
@@ -254,7 +262,7 @@ Outputs:
 			AppName:      "phonetool",
 			EnvName:      "test",
 			WorkloadName: "frontend",
-			WorkloadType: manifest.LoadBalancedWebServiceType,
+			WorkloadType: manifestinfo.LoadBalancedWebServiceType,
 			HTTPHealthCheck: template.HTTPHealthCheckOpts{
 				HealthCheckPath: "/",
 				GracePeriod:     60,
@@ -293,6 +301,13 @@ Outputs:
 			EntryPoint: []string{"/bin/echo", "hello"},
 			Command:    []string{"world"},
 			ALBEnabled: true,
+			PortMappings: []*template.PortMapping{
+				{
+					Protocol:      "tcp",
+					ContainerPort: 80,
+					ContainerName: "frontend",
+				},
+			},
 		}, actual)
 	})
 

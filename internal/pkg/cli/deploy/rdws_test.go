@@ -7,6 +7,12 @@ import (
 	"errors"
 	"fmt"
 	"testing"
+	"time"
+
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
+
+	"github.com/aws/copilot-cli/internal/pkg/override"
+	"gopkg.in/yaml.v3"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -17,6 +23,36 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
+
+func TestRdwsDeployer_GenerateCloudFormationTemplate(t *testing.T) {
+	t.Run("ensure resulting CloudFormation template custom resource paths are empty", func(t *testing.T) {
+		// GIVEN
+		rdws := mockRDWSDeployer()
+
+		// WHEN
+		out, err := rdws.GenerateCloudFormationTemplate(&GenerateCloudFormationTemplateInput{})
+
+		// THEN
+		require.NoError(t, err)
+
+		type lambdaFn struct {
+			Properties struct {
+				Code struct {
+					S3Bucket string `yaml:"S3bucket"`
+					S3Key    string `yaml:"S3Key"`
+				} `yaml:"Code"`
+			} `yaml:"Properties"`
+		}
+		dat := struct {
+			Resources struct {
+				EnvControllerFunction lambdaFn `yaml:"EnvControllerFunction"`
+			} `yaml:"Resources"`
+		}{}
+		require.NoError(t, yaml.Unmarshal([]byte(out.Template), &dat))
+		require.Empty(t, dat.Resources.EnvControllerFunction.Properties.Code.S3Bucket)
+		require.Empty(t, dat.Resources.EnvControllerFunction.Properties.Code.S3Key)
+	})
+}
 
 type deployRDSvcMocks struct {
 	mockAppVersionGetter *mocks.MockversionGetter
@@ -186,7 +222,9 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 					RequestDrivenWebServiceConfig: manifest.RequestDrivenWebServiceConfig{
 						ImageConfig: manifest.ImageWithPort{
 							Image: manifest.Image{
-								Build: manifest.BuildArgsOrString{BuildString: aws.String("/Dockerfile")},
+								ImageLocationOrBuild: manifest.ImageLocationOrBuild{
+									Build: manifest.BuildArgsOrString{BuildString: aws.String("/Dockerfile")},
+								},
 							},
 							Port: aws.Uint16(80),
 						},
@@ -194,6 +232,9 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 							Alias: aws.String(tc.inAlias),
 						},
 					},
+				},
+				newStack: func() cloudformation.StackConfiguration {
+					return new(stubCloudFormationStack)
 				},
 			}
 
@@ -209,4 +250,58 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 			}
 		})
 	}
+}
+
+func mockRDWSDeployer(opts ...func(*rdwsDeployer)) *rdwsDeployer {
+	deployer := &rdwsDeployer{
+		svcDeployer: &svcDeployer{
+			workloadDeployer: &workloadDeployer{
+				name: "example",
+				app: &config.Application{
+					Name: "demo",
+				},
+				env: &config.Environment{
+					App:  "demo",
+					Name: "test",
+				},
+				resources:        &stack.AppRegionalResources{},
+				envConfig:        new(manifest.Environment),
+				endpointGetter:   &mockEndpointGetter{endpoint: "demo.test.local"},
+				envVersionGetter: &mockEnvVersionGetter{version: "v1.0.0"},
+				overrider:        new(override.Noop),
+			},
+			newSvcUpdater: func(f func(*session.Session) serviceForceUpdater) serviceForceUpdater {
+				return nil
+			},
+			now: func() time.Time {
+				return time.Date(2020, 11, 23, 0, 0, 0, 0, time.UTC)
+			},
+		},
+		rdwsMft: &manifest.RequestDrivenWebService{
+			Workload: manifest.Workload{
+				Name: aws.String("example"),
+			},
+			RequestDrivenWebServiceConfig: manifest.RequestDrivenWebServiceConfig{
+				ImageConfig: manifest.ImageWithPort{
+					Image: manifest.Image{
+						ImageLocationOrBuild: manifest.ImageLocationOrBuild{
+							Location: aws.String("111111111111.dkr.ecr.us-west-2.amazonaws.com/nginx:latest"),
+						},
+					},
+					Port: aws.Uint16(80),
+				},
+				InstanceConfig: manifest.AppRunnerInstanceConfig{
+					CPU:    aws.Int(1024),
+					Memory: aws.Int(2048),
+				},
+			},
+		},
+		newStack: func() cloudformation.StackConfiguration {
+			return new(stubCloudFormationStack)
+		},
+	}
+	for _, opt := range opts {
+		opt(deployer)
+	}
+	return deployer
 }

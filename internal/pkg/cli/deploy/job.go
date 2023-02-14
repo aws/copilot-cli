@@ -13,13 +13,16 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 )
 
 type jobDeployer struct {
 	*workloadDeployer
-	jobMft          *manifest.ScheduledJob
-	customResources customResourcesFunc
+	jobMft *manifest.ScheduledJob
+
+	// Overriden in tests.
+	newStack func() cloudformation.StackConfiguration
 }
 
 // IsServiceAvailableInRegion checks if service type exist in the given region.
@@ -29,30 +32,32 @@ func (jobDeployer) IsServiceAvailableInRegion(region string) (bool, error) {
 
 // NewJobDeployer is the constructor for jobDeployer.
 func NewJobDeployer(in *WorkloadDeployerInput) (*jobDeployer, error) {
+	in.customResources = scheduledJobCustomResources
 	wkldDeployer, err := newWorkloadDeployer(in)
 	if err != nil {
 		return nil, err
 	}
 	jobMft, ok := in.Mft.(*manifest.ScheduledJob)
 	if !ok {
-		return nil, fmt.Errorf("manifest is not of type %s", manifest.ScheduledJobType)
+		return nil, fmt.Errorf("manifest is not of type %s", manifestinfo.ScheduledJobType)
 	}
 	return &jobDeployer{
 		workloadDeployer: wkldDeployer,
 		jobMft:           jobMft,
-		customResources: func(fs template.Reader) ([]*customresource.CustomResource, error) {
-			crs, err := customresource.ScheduledJob(fs)
-			if err != nil {
-				return nil, fmt.Errorf("read custom resources for a %q: %w", manifest.ScheduledJobType, err)
-			}
-			return crs, nil
-		},
 	}, nil
+}
+
+func scheduledJobCustomResources(fs template.Reader) ([]*customresource.CustomResource, error) {
+	crs, err := customresource.ScheduledJob(fs)
+	if err != nil {
+		return nil, fmt.Errorf("read custom resources for a %q: %w", manifestinfo.ScheduledJobType, err)
+	}
+	return crs, nil
 }
 
 // UploadArtifacts uploads the deployment artifacts such as the container image, custom resources, addons and env files.
 func (d *jobDeployer) UploadArtifacts() (*UploadArtifactsOutput, error) {
-	return d.uploadArtifacts(d.customResources)
+	return d.uploadArtifacts()
 }
 
 // GenerateCloudFormationTemplate generates a CloudFormation template and parameters for a workload.
@@ -92,18 +97,27 @@ func (d *jobDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*jobSta
 	if err != nil {
 		return nil, err
 	}
-	conf, err := stack.NewScheduledJob(stack.ScheduledJobConfig{
-		App:           d.app,
-		Env:           d.env.Name,
-		Manifest:      d.jobMft,
-		RawManifest:   d.rawMft,
-		RuntimeConfig: *rc,
-		Addons:        d.addons,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("create stack configuration: %w", err)
+
+	var conf cloudformation.StackConfiguration
+	switch {
+	case d.newStack != nil:
+		conf = d.newStack()
+	default:
+		conf, err = stack.NewScheduledJob(stack.ScheduledJobConfig{
+			App:                d.app,
+			Env:                d.env.Name,
+			Manifest:           d.jobMft,
+			RawManifest:        d.rawMft,
+			ArtifactBucketName: d.resources.S3Bucket,
+			RuntimeConfig:      *rc,
+			Addons:             d.addons,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("create stack configuration: %w", err)
+		}
 	}
+	
 	return &jobStackConfigurationOutput{
-		conf: conf,
+		conf: cloudformation.WrapWithTemplateOverrider(conf, d.overrider),
 	}, nil
 }

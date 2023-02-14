@@ -31,6 +31,7 @@ import (
 	"sort"
 	"sync"
 
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -43,6 +44,8 @@ const (
 	CopilotDirName = "copilot"
 	// SummaryFileName is the name of the file that is associated with the application.
 	SummaryFileName = ".workspace"
+	// AddonsParametersFileName is the name of the file that define extra parameters for an addon.
+	AddonsParametersFileName = "addons.parameters.yml"
 
 	addonsDirName             = "addons"
 	overridesDirName          = "overrides"
@@ -52,8 +55,6 @@ const (
 	legacyPipelineFileName    = "pipeline.yml"
 	manifestFileName          = "manifest.yml"
 	buildspecFileName         = "buildspec.yml"
-
-	ymlFileExtension = ".yml"
 )
 
 // Summary is a description of what's associated with this workspace.
@@ -177,10 +178,20 @@ func (ws *Workspace) Summary() (*Summary, error) {
 	return ws.summary, ws.summaryErr
 }
 
+// WorkloadExists returns true if a workload exists in the workspace.
+func (ws *Workspace) WorkloadExists(name string) (bool, error) {
+	path := filepath.Join(ws.copilotDirAbs, name, manifestFileName)
+	exists, err := ws.fs.Exists(path)
+	if err != nil {
+		return false, fmt.Errorf("check if %s exists: %w", path, err)
+	}
+	return exists, nil
+}
+
 // ListServices returns the names of the services in the workspace.
 func (ws *Workspace) ListServices() ([]string, error) {
 	return ws.listWorkloads(func(wlType string) bool {
-		for _, t := range manifest.ServiceTypes() {
+		for _, t := range manifestinfo.ServiceTypes() {
 			if wlType == t {
 				return true
 			}
@@ -192,7 +203,7 @@ func (ws *Workspace) ListServices() ([]string, error) {
 // ListJobs returns the names of all jobs in the workspace.
 func (ws *Workspace) ListJobs() ([]string, error) {
 	return ws.listWorkloads(func(wlType string) bool {
-		for _, t := range manifest.JobTypes() {
+		for _, t := range manifestinfo.JobTypes() {
 			if wlType == t {
 				return true
 			}
@@ -347,8 +358,8 @@ func (ws *Workspace) ReadEnvironmentManifest(mftDirName string) (EnvironmentMani
 	if err != nil {
 		return nil, err
 	}
-	if typ != manifest.EnvironmentManifestType {
-		return nil, fmt.Errorf(`manifest %s has type of "%s", not "%s"`, mftDirName, typ, manifest.EnvironmentManifestType)
+	if typ != manifest.Environmentmanifestinfo {
+		return nil, fmt.Errorf(`manifest %s has type of "%s", not "%s"`, mftDirName, typ, manifest.Environmentmanifestinfo)
 	}
 	return mft, nil
 }
@@ -427,24 +438,34 @@ func (ws *Workspace) DeleteWorkspaceFile() error {
 	return ws.fs.Remove(filepath.Join(CopilotDirName, SummaryFileName))
 }
 
-// EnvAddonsPath returns the addons/ directory file path for environments.
-func (ws *Workspace) EnvAddonsPath() string {
+// EnvAddonsAbsPath returns the absolute path for the addons/ directory of environments.
+func (ws *Workspace) EnvAddonsAbsPath() string {
 	return filepath.Join(ws.copilotDirAbs, environmentsDirName, addonsDirName)
 }
 
-// EnvAddonFilePath returns the path of an addon file for environments.
-func (ws *Workspace) EnvAddonFilePath(fName string) string {
-	return filepath.Join(ws.EnvAddonsPath(), fName)
+// EnvAddonFileAbsPath returns the absolute path of an addon file for environments.
+func (ws *Workspace) EnvAddonFileAbsPath(fName string) string {
+	return filepath.Join(ws.EnvAddonsAbsPath(), fName)
 }
 
-// WorkloadAddonsPath returns the addons/ directory file path for a given workload.
-func (ws *Workspace) WorkloadAddonsPath(name string) string {
+// WorkloadAddonsAbsPath returns the absolute path for the addons/ directory file path of a given workload.
+func (ws *Workspace) WorkloadAddonsAbsPath(name string) string {
 	return filepath.Join(ws.copilotDirAbs, name, addonsDirName)
 }
 
-// WorkloadAddonFilePath returns the path of an addon file for a given workload.
+// WorkloadAddonFileAbsPath returns the absolute path of an addon file for a given workload.
+func (ws *Workspace) WorkloadAddonFileAbsPath(wkldName, fName string) string {
+	return filepath.Join(ws.WorkloadAddonsAbsPath(wkldName), fName)
+}
+
+// WorkloadAddonFilePath returns the path under the workspace of an addon file for a given workload.
 func (ws *Workspace) WorkloadAddonFilePath(wkldName, fName string) string {
-	return filepath.Join(ws.WorkloadAddonsPath(wkldName), fName)
+	return filepath.Join(wkldName, addonsDirName, fName)
+}
+
+// EnvAddonFilePath returns the path under the workspace of an addon file for environments.
+func (ws *Workspace) EnvAddonFilePath(fName string) string {
+	return filepath.Join(environmentsDirName, addonsDirName, fName)
 }
 
 // EnvOverridesPath returns the default path to the overrides/ directory for environments.
@@ -471,6 +492,7 @@ func (ws *Workspace) ListFiles(dirPath string) ([]string, error) {
 }
 
 // ReadFile returns the content of a file.
+// Returns ErrFileNotExists if the file does not exist.
 func (ws *Workspace) ReadFile(fPath string) ([]byte, error) {
 	exist, err := ws.fs.Exists(fPath)
 	if err != nil {
@@ -482,15 +504,14 @@ func (ws *Workspace) ReadFile(fPath string) ([]byte, error) {
 	return ws.fs.ReadFile(fPath)
 }
 
-// WriteAddon writes the content of an addon file under "{svc}/addons/{name}.yml".
+// Write writes the content under the path relative to "copilot/" directory.
 // If successful returns the full path of the file, otherwise an empty string and an error.
-func (ws *Workspace) WriteAddon(content encoding.BinaryMarshaler, svc, name string) (string, error) {
+func (ws *Workspace) Write(content encoding.BinaryMarshaler, path string) (string, error) {
 	data, err := content.MarshalBinary()
 	if err != nil {
-		return "", fmt.Errorf("marshal binary addon content: %w", err)
+		return "", fmt.Errorf("marshal binary content: %w", err)
 	}
-	fname := name + ymlFileExtension
-	return ws.write(data, svc, addonsDirName, fname)
+	return ws.write(data, path)
 }
 
 // FileStat wraps the os.Stat function.

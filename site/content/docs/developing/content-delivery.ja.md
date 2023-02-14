@@ -71,3 +71,47 @@ cdn:
 ```
 
 `CloudFront → Application Load Balancer (ALB) → ECS` の通信は、HTTP のみになります。エンドユーザに地理的に近いエンドポイントで TLS を終端させる事で、 TLS ハンドシェイクを高速化させる利点があります。
+
+## S3 バケットで CloudFront を使うには？
+Environment Manifest で `cdn.static_assets` を設定することで、CloudFront が Amazon S3 バケットと連携し、静的コンテンツを高速に配信することも可能です。
+
+### 既存の S3 バケットの利用
+
+!!! attention
+    セキュリティの観点から、**プライベート**な S3 バケットを使用し、デフォルトですべてのパブリックアクセスがブロックされるようにすることをお勧めします。
+
+以下の Environment Manifest の例では、既存の S3 バケットを CloudFront 用に使用する方法を説明しています。
+
+???+ note "既存の S3 バケットを CloudFront で使用するための Environment Manifest 設定例"
+    ```yaml
+    cdn:
+      static_assets:
+        location: cf-s3-ecs-demo-bucket.s3.us-west-2.amazonaws.com
+        alias: example.com
+        path: static/*
+    ```
+
+`static_assets.location` は S3 バケットの DNS ドメイン名 (例えば、`EXAMPLE-BUCKET.s3.us-west-2.amazonaws.com` など) にします。[Application に関連するルートドメイン](./domain.ja.md#application-に関連するルートドメインを使用する)のエイリアスを使用していない場合は、CloudFront のドメイン名を指すエイリアスの A レコードを忘れずに作成してください。
+
+Environment Manifest で Environment をデプロイした後は、(プライベートバケットの場合) S3 バケットのバケットポリシーを更新して、CloudFront がアクセスできるようにする必要があります。
+
+???+ note "CloudFront に読み取り専用アクセスを許可する S3 バケットポリシーの例"
+    ```json
+    {
+        "Version": "2012-10-17",
+        "Statement": {
+            "Sid": "AllowCloudFrontServicePrincipalReadOnly",
+            "Effect": "Allow",
+            "Principal": {
+                "Service": "cloudfront.amazonaws.com"
+            },
+            "Action": "s3:GetObject",
+            "Resource": "arn:aws:s3:::EXAMPLE-BUCKET/*",
+            "Condition": {
+                "StringEquals": {
+                    "AWS:SourceArn": "arn:aws:cloudfront::111122223333:distribution/EDFDVBD6EXAMPLE"
+                }
+            }
+        }
+    }
+    ```

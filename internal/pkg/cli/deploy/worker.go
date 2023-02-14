@@ -13,10 +13,12 @@ import (
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"golang.org/x/text/cases"
@@ -34,9 +36,11 @@ type snsTopicsLister interface {
 
 type workerSvcDeployer struct {
 	*svcDeployer
-	topicLister     snsTopicsLister
-	wsMft           *manifest.WorkerService
-	customResources customResourcesFunc
+	wsMft *manifest.WorkerService
+
+	// Overriden in tests.
+	topicLister snsTopicsLister
+	newStack    func() cloudformation.StackConfiguration
 }
 
 // IsServiceAvailableInRegion checks if service type exist in the given region.
@@ -46,6 +50,7 @@ func (workerSvcDeployer) IsServiceAvailableInRegion(region string) (bool, error)
 
 // NewWorkerSvcDeployer is the constructor for workerSvcDeployer.
 func NewWorkerSvcDeployer(in *WorkloadDeployerInput) (*workerSvcDeployer, error) {
+	in.customResources = workerCustomResources
 	svcDeployer, err := newSvcDeployer(in)
 	if err != nil {
 		return nil, err
@@ -56,25 +61,26 @@ func NewWorkerSvcDeployer(in *WorkloadDeployerInput) (*workerSvcDeployer, error)
 	}
 	wsMft, ok := in.Mft.(*manifest.WorkerService)
 	if !ok {
-		return nil, fmt.Errorf("manifest is not of type %s", manifest.WorkerServiceType)
+		return nil, fmt.Errorf("manifest is not of type %s", manifestinfo.WorkerServiceType)
 	}
 	return &workerSvcDeployer{
 		svcDeployer: svcDeployer,
 		topicLister: deployStore,
 		wsMft:       wsMft,
-		customResources: func(fs template.Reader) ([]*customresource.CustomResource, error) {
-			crs, err := customresource.Worker(fs)
-			if err != nil {
-				return nil, fmt.Errorf("read custom resources for a %q: %w", manifest.WorkerServiceType, err)
-			}
-			return crs, nil
-		},
 	}, nil
+}
+
+func workerCustomResources(fs template.Reader) ([]*customresource.CustomResource, error) {
+	crs, err := customresource.Worker(fs)
+	if err != nil {
+		return nil, fmt.Errorf("read custom resources for a %q: %w", manifestinfo.WorkerServiceType, err)
+	}
+	return crs, nil
 }
 
 // UploadArtifacts uploads the deployment artifacts such as the container image, custom resources, addons and env files.
 func (d *workerSvcDeployer) UploadArtifacts() (*UploadArtifactsOutput, error) {
-	return d.uploadArtifacts(d.customResources)
+	return d.uploadArtifacts()
 }
 
 type workerSvcDeployOutput struct {
@@ -167,20 +173,29 @@ func (d *workerSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*
 	if err = validateTopicsExist(subs, topicARNs, d.app.Name, d.env.Name); err != nil {
 		return nil, err
 	}
-	conf, err := stack.NewWorkerService(stack.WorkerServiceConfig{
-		App:           d.app,
-		Env:           d.env.Name,
-		Manifest:      d.wsMft,
-		RawManifest:   d.rawMft,
-		RuntimeConfig: *rc,
-		Addons:        d.addons,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("create stack configuration: %w", err)
+
+	var conf cloudformation.StackConfiguration
+	switch {
+	case d.newStack != nil:
+		conf = d.newStack()
+	default:
+		conf, err = stack.NewWorkerService(stack.WorkerServiceConfig{
+			App:                d.app,
+			Env:                d.env.Name,
+			Manifest:           d.wsMft,
+			RawManifest:        d.rawMft,
+			ArtifactBucketName: d.resources.S3Bucket,
+			RuntimeConfig:      *rc,
+			Addons:             d.addons,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("create stack configuration: %w", err)
+		}
 	}
+	
 	return &workerSvcStackConfigurationOutput{
 		svcStackConfigurationOutput: svcStackConfigurationOutput{
-			conf: conf,
+			conf: cloudformation.WrapWithTemplateOverrider(conf, d.overrider),
 			svcUpdater: d.newSvcUpdater(func(s *session.Session) serviceForceUpdater {
 				return ecs.New(s)
 			}),
