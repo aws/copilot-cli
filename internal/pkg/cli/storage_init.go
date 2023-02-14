@@ -1059,6 +1059,16 @@ func (o *initStorageOpts) environmentNames() ([]string, error) {
 
 // RecommendActions returns follow-up actions the user can take after successfully executing the command.
 func (o *initStorageOpts) RecommendActions() error {
+	switch o.lifecycle {
+	case lifecycleWorkloadLevel:
+		logRecommendedActions(o.actionsForWorkloadStorage())
+	case lifecycleEnvironmentLevel:
+		logRecommendedActions(nil)
+	}
+	return nil
+}
+
+func (o *initStorageOpts) actionsForWorkloadStorage() []string {
 	var (
 		retrieveEnvVarCode string
 		newVar             string
@@ -1091,11 +1101,10 @@ For example, in JavaScript you can write:
 
 	deployCmd := fmt.Sprintf("copilot deploy --name %s", o.workloadName)
 	actionDeploy := fmt.Sprintf("Run %s to deploy your storage resources.", color.HighlightCode(deployCmd))
-	logRecommendedActions([]string{
+	return []string{
 		actionRetrieveEnvVar,
 		actionDeploy,
-	})
-	return nil
+	}
 }
 
 // buildStorageInitCmd builds the command and adds it to the CLI.
