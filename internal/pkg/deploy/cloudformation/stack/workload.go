@@ -77,15 +77,15 @@ type RuntimeConfig struct {
 	AccountID                string
 	Region                   string
 	EnvVersion               string
+	ScECRImage               SidecarECRImage
 }
 
 // ECRImage represents configuration about the pushed ECR image that is needed to
 // create a CloudFormation stack.
 type ECRImage struct {
-	RepoURL        string            // RepoURL is the ECR repository URL the container image should be pushed to.
-	ImageTag       string            // Tag is the container image's unique tag.
-	Digest         string            // The image digest.
-	ScImageDigests map[string]string // ImageDigests of sidecar container Images.
+	RepoURL  string // RepoURL is the ECR repository URL the container image should be pushed to.
+	ImageTag string // Tag is the container image's unique tag.
+	Digest   string // The image digest.
 }
 
 // GetLocation returns the ECR image URI.
@@ -100,6 +100,22 @@ func (i ECRImage) GetLocation() string {
 		return fmt.Sprintf("%s@%s", i.RepoURL, i.Digest)
 	}
 	return fmt.Sprintf("%s:%s", i.RepoURL, "latest")
+}
+
+type SidecarECRImage struct {
+	RepoURL             string
+	SidecarImageTag     string
+	SidecarImageDigests map[string]string
+}
+
+func (s SidecarECRImage) getSidecarLocation(scName string) string {
+	if digest, ok := s.SidecarImageDigests[scName]; ok {
+		return fmt.Sprintf("%s@%s", s.RepoURL, digest)
+	}
+	if s.SidecarImageTag != "" {
+		return fmt.Sprintf("%s:%s-%s", s.RepoURL, scName, s.SidecarImageTag)
+	}
+	return ""
 }
 
 // NestedStackConfigurer configures a nested stack that deploys addons.

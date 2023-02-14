@@ -5,12 +5,14 @@ package deploy
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -39,12 +41,14 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/google/uuid"
 	"github.com/spf13/afero"
+	"golang.org/x/sync/errgroup"
 )
 
 const (
 	fmtForceUpdateSvcStart    = "Forcing an update for service %s from environment %s"
 	fmtForceUpdateSvcFailed   = "Failed to force an update for service %s from environment %s: %v.\n"
 	fmtForceUpdateSvcComplete = "Forced an update for service %s from environment %s.\n"
+	waitForImageBuildAndPush  = 100 * time.Second
 )
 
 // ActionRecommender contains methods that output action recommendation.
@@ -317,32 +321,43 @@ func (d *workloadDeployer) uploadContainerImage(imgBuilderPusher imageBuilderPus
 	if err != nil {
 		return nil, nil, err
 	}
-	if !required {
-		return nil, nil, nil
-	}
 	UUIDTag, err := generateUUID()
 	if err != nil {
 		return nil, nil, err
 	}
-	// If it is built from local Dockerfile, build and push to the ECR repo.
-	buildArg, err := buildArgs(d.name, d.imageTag, d.gitTag, UUIDTag, d.workspacePath, d.mft)
-	if err != nil {
-		return nil, nil, err
-	}
-	digest, err := imgBuilderPusher.BuildAndPush(dockerengine.New(exec.NewCmd()), buildArg)
-	if err != nil {
-		return nil, nil, fmt.Errorf("build and push main container image: %w", err)
+	var digest string
+	if required {
+		// If it is built from local Dockerfile, build and push to the ECR repo.
+		buildArg, err := buildArgs(d.name, d.imageTag, d.gitTag, UUIDTag, d.workspacePath, d.mft)
+		if err != nil {
+			return nil, nil, err
+		}
+		digest, err = imgBuilderPusher.BuildAndPush(dockerengine.New(exec.NewCmd()), buildArg)
+		if err != nil {
+			return nil, nil, fmt.Errorf("build and push main container image: %w", err)
+		}
 	}
 	args := scbuildArgs(d.name, d.gitTag, UUIDTag, d.workspacePath, d.mft)
 	if args == nil {
 		return aws.String(digest), nil, nil
 	}
 	scdigests := make(map[string]string, len(args))
+	ctx, cancelWait := context.WithTimeout(context.Background(), waitForImageBuildAndPush)
+	defer cancelWait()
+	g, _ := errgroup.WithContext(ctx)
 	for k, v := range args {
-		scdigests[k], err = imgBuilderPusher.BuildAndPush(dockerengine.New(exec.NewCmd()), v)
-		if err != nil {
-			return nil, nil, fmt.Errorf("build and push sidecar container images: %w", err)
-		}
+		scName := k
+		dArgs := v
+		g.Go(func() error {
+			scdigests[scName], err = imgBuilderPusher.BuildAndPush(dockerengine.New(exec.NewCmd()), dArgs)
+			if err != nil {
+				return err
+			}
+			return nil
+		})
+	}
+	if err := g.Wait(); err != nil {
+		return nil, nil, err
 	}
 	return aws.String(digest), scdigests, nil
 }
@@ -511,6 +526,7 @@ func (d *workloadDeployer) uploadArtifacts() (*UploadArtifactsOutput, error) {
 	if err != nil {
 		return nil, fmt.Errorf("upload custom resources for %q: %w", d.name, err)
 	}
+	log.Infoln(urls)
 	out.CustomResourceURLs = urls
 	return out, nil
 }
@@ -607,6 +623,11 @@ func (d *workloadDeployer) runtimeConfig(in *StackRuntimeConfiguration) (*stack.
 			Region:                   d.env.Region,
 			CustomResourcesURL:       in.CustomResourceURLs,
 			EnvVersion:               envVersion,
+			ScECRImage: stack.SidecarECRImage{
+				RepoURL:             d.resources.RepositoryURLs[d.name],
+				SidecarImageTag:     d.gitTag,
+				SidecarImageDigests: in.ScImageDigests,
+			},
 		}, nil
 	}
 	return &stack.RuntimeConfig{
@@ -614,16 +635,20 @@ func (d *workloadDeployer) runtimeConfig(in *StackRuntimeConfiguration) (*stack.
 		EnvFileARN:        in.EnvFileARN,
 		AdditionalTags:    in.Tags,
 		Image: &stack.ECRImage{
-			RepoURL:        d.resources.RepositoryURLs[d.name],
-			ImageTag:       userOrGitTag(d.imageTag, d.gitTag),
-			Digest:         aws.StringValue(in.ImageDigest),
-			ScImageDigests: in.ScImageDigests,
+			RepoURL:  d.resources.RepositoryURLs[d.name],
+			ImageTag: userOrGitTag(d.imageTag, d.gitTag),
+			Digest:   aws.StringValue(in.ImageDigest),
 		},
 		ServiceDiscoveryEndpoint: endpoint,
 		AccountID:                d.env.AccountID,
 		Region:                   d.env.Region,
 		CustomResourcesURL:       in.CustomResourceURLs,
 		EnvVersion:               envVersion,
+		ScECRImage: stack.SidecarECRImage{
+			RepoURL:             d.resources.RepositoryURLs[d.name],
+			SidecarImageTag:     d.gitTag,
+			SidecarImageDigests: in.ScImageDigests,
+		},
 	}, nil
 }
 

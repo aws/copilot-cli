@@ -79,7 +79,7 @@ func convertPortMappings(exposedPorts []manifest.ExposedPort) []*template.PortMa
 }
 
 // convertSidecars converts the manifest sidecar configuration into a format parsable by the templates pkg.
-func convertSidecars(s map[string]*manifest.SidecarConfig, exposedPorts map[string][]manifest.ExposedPort) ([]*template.SidecarOpts, error) {
+func convertSidecars(s map[string]*manifest.SidecarConfig, exposedPorts map[string][]manifest.ExposedPort, i SidecarECRImage) ([]*template.SidecarOpts, error) {
 	var sidecars []*template.SidecarOpts
 	if s == nil {
 		return nil, nil
@@ -93,7 +93,12 @@ func convertSidecars(s map[string]*manifest.SidecarConfig, exposedPorts map[stri
 	sort.Strings(keys)
 	for _, name := range keys {
 		config := s[name]
-		imageURI, _ := config.ImageURI()
+		var imageURI string
+		if uri, ok := config.ImageURI(); ok {
+			imageURI = uri
+		} else {
+			imageURI = i.getSidecarLocation(name)
+		}
 		entrypoint, err := convertEntryPoint(config.EntryPoint)
 		if err != nil {
 			return nil, err

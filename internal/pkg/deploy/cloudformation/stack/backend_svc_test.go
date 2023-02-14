@@ -6,6 +6,7 @@ package stack
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -237,6 +238,18 @@ func TestBackendService_Template(t *testing.T) {
 			PlacementString: &privatePlacement,
 		}
 		mft.Network.VPC.SecurityGroups = manifest.SecurityGroupsIDsOrConfig{}
+		mft.BackendServiceConfig.Sidecars = map[string]*manifest.SidecarConfig{
+			"logging": {
+				Image: manifest.Union[*string, manifest.ImageLocationOrBuild]{
+					Advanced: manifest.ImageLocationOrBuild{
+						Build: manifest.BuildArgsOrString{
+							BuildString: aws.String("./Dockerfile"),
+						},
+					},
+				},
+				Port: aws.String("8080"),
+			},
+		}
 
 		var actual template.WorkloadOpts
 		parser := mocks.NewMockbackendSvcReadParser(ctrl)
@@ -269,6 +282,12 @@ Outputs:
 				Image: &ECRImage{
 					RepoURL:  testImageRepoURL,
 					ImageTag: testImageTag,
+				},
+				ScECRImage: SidecarECRImage{
+					RepoURL: "copilot/web",
+					SidecarImageDigests: map[string]string{
+						"logging": "testImageDigest",
+					},
 				},
 				CustomResourcesURL: map[string]string{
 					"EnvControllerFunction":       "https://my-bucket.s3.Region.amazonaws.com/sha1/envcontroller.zip",
@@ -338,6 +357,19 @@ Outputs:
 					Protocol:      "tcp",
 					ContainerName: "api",
 					ContainerPort: 8080,
+				},
+			},
+			Sidecars: []*template.SidecarOpts{
+				{
+					Name: "logging",
+					PortMappings: []*template.PortMapping{
+						{
+							Protocol:      "tcp",
+							ContainerName: "logging",
+							ContainerPort: 8080,
+						},
+					},
+					Image: aws.String(fmt.Sprintf("%s@%s", "copilot/web", "testImageDigest")),
 				},
 			},
 		}, actual)

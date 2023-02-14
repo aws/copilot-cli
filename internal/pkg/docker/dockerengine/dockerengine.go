@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
@@ -37,6 +38,12 @@ const (
 const (
 	credStoreECRLogin = "ecr-login" // set on `credStore` attribute in docker configuration file
 )
+
+// When parallel build and push happens to ECR repository multiple images are trying to perform `docker login` to same ECR.
+// This will produce an error "error storing credentials - err: exit status 1, out: The specified item already exists in the keychain."
+// In order to avoid this we invoke `docker login` function only once.
+// Related issue link https://github.com/pulumi/pulumi-docker/issues/362
+var loginOnce = sync.Once{}
 
 // CmdClient represents the docker client to interact with the server via external commands.
 type CmdClient struct {
@@ -133,10 +140,13 @@ func (c CmdClient) Build(in *BuildArguments) error {
 
 // Login will run a `docker login` command against the Service repository URI with the input uri and auth data.
 func (c CmdClient) Login(uri, username, password string) error {
-	err := c.runner.Run("docker",
-		[]string{"login", "-u", username, "--password-stdin", uri},
-		exec.Stdin(strings.NewReader(password)))
-
+	var err error
+	loginOnce.Do(
+		func() {
+			err = c.runner.Run("docker",
+				[]string{"login", "-u", username, "--password-stdin", uri},
+				exec.Stdin(strings.NewReader(password)))
+		})
 	if err != nil {
 		return fmt.Errorf("authenticate to ECR: %w", err)
 	}
@@ -161,8 +171,8 @@ func (c CmdClient) Push(uri string, tags ...string) (digest string, err error) {
 		}
 	}
 	buf := new(strings.Builder)
-	if err := c.runner.Run("docker", []string{"inspect", "--format", "'{{json (index .RepoDigests 0)}}'", uri}, exec.Stdout(buf)); err != nil {
-		return "", fmt.Errorf("inspect image digest for %s: %w", uri, err)
+	if err := c.runner.Run("docker", []string{"inspect", "--format", "'{{json (index .RepoDigests 0)}}'", imageName(uri, tags[0])}, exec.Stdout(buf)); err != nil {
+		return "", fmt.Errorf("inspect image digest for %s: %w", imageName(uri, tags[0]), err)
 	}
 	repoDigest := strings.Trim(strings.TrimSpace(buf.String()), `"'`) // remove new lines and quotes from output
 	parts := strings.SplitAfter(repoDigest, "@")

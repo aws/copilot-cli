@@ -9,6 +9,7 @@ import (
 	"fmt"
 	osexec "os/exec"
 	"path/filepath"
+	"sync"
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/exec"
@@ -230,6 +231,7 @@ func TestDockerCommand_Login(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			controller := gomock.NewController(t)
 			test.setupMocks(controller)
+			loginOnce = sync.Once{}
 			s := CmdClient{
 				runner: mockCmd,
 			}
@@ -252,13 +254,13 @@ func TestDockerCommand_Push(t *testing.T) {
 		m := NewMockCmd(ctrl)
 		m.EXPECT().Run("docker", []string{"push", "aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app:alpha"}).Return(nil)
 		m.EXPECT().Run("docker", []string{"push", "aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app:g123bfc"}).Return(nil)
-		m.EXPECT().Run("docker", []string{"inspect", "--format", "'{{json (index .RepoDigests 0)}}'", "aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app"}, gomock.Any()).
+		m.EXPECT().Run("docker", []string{"inspect", "--format", "'{{json (index .RepoDigests 0)}}'", "aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app:alpha"}, gomock.Any()).
 			Do(func(_ string, _ []string, opt exec.CmdOption) {
 				cmd := &osexec.Cmd{}
 				opt(cmd)
 				_, _ = cmd.Stdout.Write([]byte("\"aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app@sha256:f1d4ae3f7261a72e98c6ebefe9985cf10a0ea5bd762585a43e0700ed99863807\"\n"))
 			}).Return(nil)
-		m.EXPECT().Run("docker", []string{"inspect", "--format", "'{{json (index .RepoDigests 0)}}'", "aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app"}, gomock.Any()).
+		m.EXPECT().Run("docker", []string{"inspect", "--format", "'{{json (index .RepoDigests 0)}}'", "aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app:g123bfc"}, gomock.Any()).
 			Do(func(_ string, _ []string, opt exec.CmdOption) {
 				cmd := &osexec.Cmd{}
 				opt(cmd)
@@ -283,7 +285,7 @@ func TestDockerCommand_Push(t *testing.T) {
 		defer ctrl.Finish()
 		m := NewMockCmd(ctrl)
 		m.EXPECT().Run("docker", []string{"push", "aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app:alpha", "--quiet"}).Return(nil)
-		m.EXPECT().Run("docker", []string{"inspect", "--format", "'{{json (index .RepoDigests 0)}}'", "aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app"}, gomock.Any()).
+		m.EXPECT().Run("docker", []string{"inspect", "--format", "'{{json (index .RepoDigests 0)}}'", "aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app:alpha"}, gomock.Any()).
 			Do(func(_ string, _ []string, opt exec.CmdOption) {
 				cmd := &osexec.Cmd{}
 				opt(cmd)
@@ -329,7 +331,7 @@ func TestDockerCommand_Push(t *testing.T) {
 		defer ctrl.Finish()
 		m := NewMockCmd(ctrl)
 		m.EXPECT().Run("docker", []string{"push", "uri:alpha"}).Return(nil)
-		m.EXPECT().Run("docker", []string{"inspect", "--format", "'{{json (index .RepoDigests 0)}}'", "uri"}, gomock.Any()).Return(errors.New("some error"))
+		m.EXPECT().Run("docker", []string{"inspect", "--format", "'{{json (index .RepoDigests 0)}}'", "uri:alpha"}, gomock.Any()).Return(errors.New("some error"))
 
 		// WHEN
 		cmd := CmdClient{
@@ -339,7 +341,7 @@ func TestDockerCommand_Push(t *testing.T) {
 		_, err := cmd.Push("uri", "alpha")
 
 		// THEN
-		require.EqualError(t, err, "inspect image digest for uri: some error")
+		require.EqualError(t, err, "inspect image digest for uri:alpha: some error")
 	})
 	t.Run("returns an error if the repo digest cannot be parsed for the pushed image", func(t *testing.T) {
 		// GIVEN
@@ -348,13 +350,13 @@ func TestDockerCommand_Push(t *testing.T) {
 		m := NewMockCmd(ctrl)
 		m.EXPECT().Run("docker", []string{"push", "aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app:alpha"}).Return(nil)
 		m.EXPECT().Run("docker", []string{"push", "aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app:g123bfc"}).Return(nil)
-		m.EXPECT().Run("docker", []string{"inspect", "--format", "'{{json (index .RepoDigests 0)}}'", "aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app"}, gomock.Any()).
+		m.EXPECT().Run("docker", []string{"inspect", "--format", "'{{json (index .RepoDigests 0)}}'", "aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app:alpha"}, gomock.Any()).
 			Do(func(_ string, _ []string, opt exec.CmdOption) {
 				cmd := &osexec.Cmd{}
 				opt(cmd)
 				_, _ = cmd.Stdout.Write([]byte(""))
 			}).Return(nil)
-		m.EXPECT().Run("docker", []string{"inspect", "--format", "'{{json (index .RepoDigests 0)}}'", "aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app"}, gomock.Any()).
+		m.EXPECT().Run("docker", []string{"inspect", "--format", "'{{json (index .RepoDigests 0)}}'", "aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app:g123bfc"}, gomock.Any()).
 			Do(func(_ string, _ []string, opt exec.CmdOption) {
 				cmd := &osexec.Cmd{}
 				opt(cmd)
