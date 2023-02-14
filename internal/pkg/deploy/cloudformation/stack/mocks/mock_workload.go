@@ -101,6 +101,57 @@ func (mr *MocklocationMockRecorder) GetLocation() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLocation", reflect.TypeOf((*Mocklocation)(nil).GetLocation))
 }
 
+// Mockuploadable is a mock of uploadable interface.
+type Mockuploadable struct {
+	ctrl     *gomock.Controller
+	recorder *MockuploadableMockRecorder
+}
+
+// MockuploadableMockRecorder is the mock recorder for Mockuploadable.
+type MockuploadableMockRecorder struct {
+	mock *Mockuploadable
+}
+
+// NewMockuploadable creates a new mock instance.
+func NewMockuploadable(ctrl *gomock.Controller) *Mockuploadable {
+	mock := &Mockuploadable{ctrl: ctrl}
+	mock.recorder = &MockuploadableMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *Mockuploadable) EXPECT() *MockuploadableMockRecorder {
+	return m.recorder
+}
+
+// ArtifactPath mocks base method.
+func (m *Mockuploadable) ArtifactPath() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ArtifactPath")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// ArtifactPath indicates an expected call of ArtifactPath.
+func (mr *MockuploadableMockRecorder) ArtifactPath() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ArtifactPath", reflect.TypeOf((*Mockuploadable)(nil).ArtifactPath))
+}
+
+// Name mocks base method.
+func (m *Mockuploadable) Name() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Name")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// Name indicates an expected call of Name.
+func (mr *MockuploadableMockRecorder) Name() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Name", reflect.TypeOf((*Mockuploadable)(nil).Name))
+}
+
 // MocktemplateConfigurer is a mock of templateConfigurer interface.
 type MocktemplateConfigurer struct {
 	ctrl     *gomock.Controller

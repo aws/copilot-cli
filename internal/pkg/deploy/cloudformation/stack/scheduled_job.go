@@ -11,12 +11,12 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/aws/copilot-cli/internal/pkg/config"
-	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/template/override"
 	"github.com/robfig/cron/v3"
@@ -27,18 +27,14 @@ const (
 	ScheduledJobScheduleParamKey = "Schedule"
 )
 
-type scheduledJobReadParser interface {
-	template.ReadParser
-	ParseScheduledJob(template.WorkloadOpts) (*template.Content, error)
-}
-
 // ScheduledJob represents the configuration needed to create a Cloudformation stack from a
 // scheduled job manfiest.
 type ScheduledJob struct {
 	*ecsWkld
 	manifest *manifest.ScheduledJob
 
-	parser scheduledJobReadParser
+	parser   scheduledJobReadParser
+	localCRs []uploadable // Custom resources that have not been uploaded yet.
 }
 
 var (
@@ -104,7 +100,10 @@ type ScheduledJobConfig struct {
 
 // NewScheduledJob creates a new ScheduledJob stack from a manifest file.
 func NewScheduledJob(cfg ScheduledJobConfig) (*ScheduledJob, error) {
-	parser := template.New()
+	crs, err := customresource.ScheduledJob(fs)
+	if err != nil {
+		return nil, fmt.Errorf("scheduled job custom resources: %w", err)
+	}
 	return &ScheduledJob{
 		ecsWkld: &ecsWkld{
 			wkld: &wkld{
@@ -116,7 +115,7 @@ func NewScheduledJob(cfg ScheduledJobConfig) (*ScheduledJob, error) {
 				rc:                 cfg.RuntimeConfig,
 				image:              cfg.Manifest.ImageConfig.Image,
 				rawManifest:        cfg.RawManifest,
-				parser:             parser,
+				parser:             fs,
 				addons:             cfg.Addons,
 			},
 			logRetention:        cfg.Manifest.Logging.Retention,
@@ -125,7 +124,8 @@ func NewScheduledJob(cfg ScheduledJobConfig) (*ScheduledJob, error) {
 		},
 		manifest: cfg.Manifest,
 
-		parser: parser,
+		parser:   fs,
+		localCRs: uploadableCRs(crs).convert(),
 	}, nil
 }
 
