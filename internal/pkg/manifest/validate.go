@@ -108,6 +108,7 @@ func (l LoadBalancedWebService) validate() error {
 		mainContainerPort: l.ImageConfig.Port,
 		sidecarConfig:     l.Sidecars,
 		alb:               &l.RoutingRule.RoutingRuleConfiguration,
+		nlb:               &l.NLBConfig,
 	}); err != nil {
 		return fmt.Errorf("validate unique exposed ports: %w", err)
 	}
