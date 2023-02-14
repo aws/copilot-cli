@@ -654,8 +654,8 @@ func (i ImageWithPort) validate() error {
 // validate returns nil if Image is configured correctly.
 func (i Image) validate() error {
 	var err error
-	if err = i.Build.validate(); err != nil {
-		return fmt.Errorf(`validate "build": %w`, err)
+	if err := i.ImageLocationOrBuild.validate(); err != nil {
+		return err
 	}
 	if i.Build.isEmpty() == (i.Location == nil) {
 		return &errFieldMutualExclusive{
@@ -2068,9 +2068,12 @@ func contains(name string, names []string) bool {
 	return false
 }
 
-// validate returns nil if SidecarImageConfig is configured correctly.
-func (cfg SidecarImageConfig) validate() error {
-	if !cfg.Build.IsZero() && cfg.Location != nil {
+// validate returns nil if ImageLocationOrBuild is configured correctly.
+func (i ImageLocationOrBuild) validate() error {
+	if err := i.Build.validate(); err != nil {
+		return fmt.Errorf(`validate "build": %w`, err)
+	}
+	if !i.Build.isEmpty() && i.Location != nil {
 		return &errFieldMutualExclusive{
 			firstField:  "build",
 			secondField: "location",

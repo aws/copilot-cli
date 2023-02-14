@@ -81,7 +81,9 @@ func mockJobDeployer(opts ...func(*jobDeployer)) *jobDeployer {
 				},
 				ImageConfig: manifest.ImageWithHealthcheck{
 					Image: manifest.Image{
-						Build: manifest.BuildArgsOrString{BuildString: aws.String("/Dockerfile")},
+						ImageLocationOrBuild: manifest.ImageLocationOrBuild{
+							Build: manifest.BuildArgsOrString{BuildString: aws.String("/Dockerfile")},
+						},
 					},
 				},
 			},

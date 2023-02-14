@@ -1206,7 +1206,9 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 						ImageConfig: manifest.ImageWithPortAndHealthcheck{
 							ImageWithPort: manifest.ImageWithPort{
 								Image: manifest.Image{
-									Build: manifest.BuildArgsOrString{BuildString: aws.String("/Dockerfile")},
+									ImageLocationOrBuild: manifest.ImageLocationOrBuild{
+										Build: manifest.BuildArgsOrString{BuildString: aws.String("/Dockerfile")},
+									},
 								},
 								Port: aws.Uint16(80),
 							},
