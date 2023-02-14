@@ -17,6 +17,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type workerSvcDescriberMocks struct {
+	storeSvc     *mocks.MockDeployedEnvServicesLister
+	ecsDescriber *mocks.MockecsDescriber
+	envDescriber *mocks.MockenvDescriber
+	lbDescriber  *mocks.MocklbDescriber
+}
+
 func TestWorkerServiceDescriber_Describe(t *testing.T) {
 	const (
 		testApp = "phonetool"
@@ -29,13 +36,13 @@ func TestWorkerServiceDescriber_Describe(t *testing.T) {
 	testCases := map[string]struct {
 		shouldOutputResources bool
 
-		setupMocks func(mocks lbWebSvcDescriberMocks)
+		setupMocks func(mocks workerSvcDescriberMocks)
 
 		wantedWorkerSvc *workerSvcDesc
 		wantedError     error
 	}{
 		"return error if fail to list environment": {
-			setupMocks: func(m lbWebSvcDescriberMocks) {
+			setupMocks: func(m workerSvcDescriberMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return(nil, mockErr),
 				)
@@ -43,7 +50,7 @@ func TestWorkerServiceDescriber_Describe(t *testing.T) {
 			wantedError: fmt.Errorf("list deployed environments for application phonetool: some error"),
 		},
 		"return error if fail to retrieve service deployment configuration": {
-			setupMocks: func(m lbWebSvcDescriberMocks) {
+			setupMocks: func(m workerSvcDescriberMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
 					m.ecsDescriber.EXPECT().Params().Return(nil, mockErr),
@@ -52,7 +59,7 @@ func TestWorkerServiceDescriber_Describe(t *testing.T) {
 			wantedError: fmt.Errorf("get stack parameters for environment test: some error"),
 		},
 		"return error if fail to retrieve deployment type": {
-			setupMocks: func(m lbWebSvcDescriberMocks) {
+			setupMocks: func(m workerSvcDescriberMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
 					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
@@ -66,7 +73,7 @@ func TestWorkerServiceDescriber_Describe(t *testing.T) {
 			wantedError: fmt.Errorf("retrieve deployment type: some error"),
 		},
 		"return error if fail to retrieve platform": {
-			setupMocks: func(m lbWebSvcDescriberMocks) {
+			setupMocks: func(m workerSvcDescriberMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
 					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
@@ -81,7 +88,7 @@ func TestWorkerServiceDescriber_Describe(t *testing.T) {
 			wantedError: fmt.Errorf("retrieve platform: some error"),
 		},
 		"return error if fail to retrieve environment variables": {
-			setupMocks: func(m lbWebSvcDescriberMocks) {
+			setupMocks: func(m workerSvcDescriberMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
 					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
@@ -94,13 +101,14 @@ func TestWorkerServiceDescriber_Describe(t *testing.T) {
 						OperatingSystem: "LINUX",
 						Architecture:    "X86_64",
 					}, nil),
+					m.ecsDescriber.EXPECT().DeploymentConfigAlarmNames().Return(nil, nil),
 					m.ecsDescriber.EXPECT().EnvVars().Return(nil, mockErr),
 				)
 			},
 			wantedError: fmt.Errorf("retrieve environment variables: some error"),
 		},
 		"return error if fail to retrieve secrets": {
-			setupMocks: func(m lbWebSvcDescriberMocks) {
+			setupMocks: func(m workerSvcDescriberMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
 
@@ -114,6 +122,7 @@ func TestWorkerServiceDescriber_Describe(t *testing.T) {
 						OperatingSystem: "LINUX",
 						Architecture:    "X86_64",
 					}, nil),
+					m.ecsDescriber.EXPECT().DeploymentConfigAlarmNames().Return(nil, nil),
 					m.ecsDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
 						{
 							Name:      "COPILOT_ENVIRONMENT_NAME",
@@ -128,7 +137,7 @@ func TestWorkerServiceDescriber_Describe(t *testing.T) {
 		},
 		"success": {
 			shouldOutputResources: true,
-			setupMocks: func(m lbWebSvcDescriberMocks) {
+			setupMocks: func(m workerSvcDescriberMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv, prodEnv, mockEnv}, nil),
 
@@ -142,6 +151,7 @@ func TestWorkerServiceDescriber_Describe(t *testing.T) {
 						OperatingSystem: "LINUX",
 						Architecture:    "X86_64",
 					}, nil),
+					m.ecsDescriber.EXPECT().DeploymentConfigAlarmNames().Return(nil, nil),
 					m.ecsDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
 						{
 							Name:      "COPILOT_ENVIRONMENT_NAME",
@@ -166,6 +176,7 @@ func TestWorkerServiceDescriber_Describe(t *testing.T) {
 						OperatingSystem: "LINUX",
 						Architecture:    "ARM64",
 					}, nil),
+					m.ecsDescriber.EXPECT().DeploymentConfigAlarmNames().Return(nil, nil),
 					m.ecsDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
 						{
 							Name:      "COPILOT_ENVIRONMENT_NAME",
@@ -190,6 +201,7 @@ func TestWorkerServiceDescriber_Describe(t *testing.T) {
 						OperatingSystem: "LINUX",
 						Architecture:    "X86_64",
 					}, nil),
+					m.ecsDescriber.EXPECT().DeploymentConfigAlarmNames().Return(nil, nil),
 					m.ecsDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
 						{
 							Name:      "COPILOT_ENVIRONMENT_NAME",
@@ -330,7 +342,7 @@ func TestWorkerServiceDescriber_Describe(t *testing.T) {
 
 			mockStore := mocks.NewMockDeployedEnvServicesLister(ctrl)
 			mockSvcDescriber := mocks.NewMockecsDescriber(ctrl)
-			mocks := lbWebSvcDescriberMocks{
+			mocks := workerSvcDescriberMocks{
 				storeSvc:     mockStore,
 				ecsDescriber: mockSvcDescriber,
 			}

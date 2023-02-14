@@ -317,11 +317,11 @@ func (d *ecsServiceDescriber) DeploymentType() (string, error) {
 	deploymentType := "Default"
 	var err error
 	alarmNames, err := d.DeploymentConfigAlarmNames()
+	if err != nil {
+		return "", fmt.Errorf("retrieve alarm names: %w", err)
+	}
 	if alarmNames != nil {
 		deploymentType = "Alarm-Based Rollback"
-	}
-	if err != nil {
-		return "", err
 	}
 	return deploymentType, nil
 }

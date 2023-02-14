@@ -17,6 +17,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type backendSvcDescriberMocks struct {
+	storeSvc     *mocks.MockDeployedEnvServicesLister
+	ecsDescriber *mocks.MockecsDescriber
+	envDescriber *mocks.MockenvDescriber
+	lbDescriber  *mocks.MocklbDescriber
+}
+
 func TestBackendServiceDescriber_Describe(t *testing.T) {
 	const (
 		testApp = "phonetool"
@@ -29,13 +36,13 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 	testCases := map[string]struct {
 		shouldOutputResources bool
 
-		setupMocks func(mocks lbWebSvcDescriberMocks)
+		setupMocks func(mocks backendSvcDescriberMocks)
 
 		wantedBackendSvc *backendSvcDesc
 		wantedError      error
 	}{
 		"return error if fail to list environment": {
-			setupMocks: func(m lbWebSvcDescriberMocks) {
+			setupMocks: func(m backendSvcDescriberMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return(nil, mockErr),
 				)
@@ -43,7 +50,7 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 			wantedError: fmt.Errorf("list deployed environments for application phonetool: some error"),
 		},
 		"return error if fail to retrieve service deployment configuration": {
-			setupMocks: func(m lbWebSvcDescriberMocks) {
+			setupMocks: func(m backendSvcDescriberMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
 					m.ecsDescriber.EXPECT().ServiceStackResources().Return(nil, nil),
@@ -53,7 +60,7 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 			wantedError: fmt.Errorf("retrieve service URI: get stack parameters for environment test: some error"),
 		},
 		"return error if fail to retrieve svc discovery endpoint": {
-			setupMocks: func(m lbWebSvcDescriberMocks) {
+			setupMocks: func(m backendSvcDescriberMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
 					m.ecsDescriber.EXPECT().ServiceStackResources().Return(nil, nil),
@@ -70,7 +77,7 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 			wantedError: fmt.Errorf("retrieve service URI: retrieve service discovery endpoint for environment test: some error"),
 		},
 		"return error if fail to retrieve service connect dns names": {
-			setupMocks: func(m lbWebSvcDescriberMocks) {
+			setupMocks: func(m backendSvcDescriberMocks) {
 				params := map[string]string{
 					cfnstack.WorkloadTargetPortParamKey: "5000",
 					cfnstack.WorkloadTaskCountParamKey:  "1",
@@ -91,7 +98,7 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 			wantedError: fmt.Errorf("retrieve service connect DNS names: some error"),
 		},
 		"return error if fail to retrieve platform": {
-			setupMocks: func(m lbWebSvcDescriberMocks) {
+			setupMocks: func(m backendSvcDescriberMocks) {
 				params := map[string]string{
 					cfnstack.WorkloadTargetPortParamKey: "5000",
 					cfnstack.WorkloadTaskCountParamKey:  "1",
@@ -112,35 +119,35 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 			},
 			wantedError: fmt.Errorf("retrieve platform: some error"),
 		},
-			"return error if fail to retrieve rollback alarm names": {
-				setupMocks: func(m lbWebSvcDescriberMocks) {
-					params := map[string]string{
-						cfnstack.WorkloadTargetPortParamKey: "5000",
-						cfnstack.WorkloadTaskCountParamKey:  "1",
-						cfnstack.WorkloadTaskCPUParamKey:    "256",
-						cfnstack.WorkloadTaskMemoryParamKey: "512",
-					}
-					gomock.InOrder(
-						m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
-						m.ecsDescriber.EXPECT().ServiceStackResources().Return(nil, nil),
-						m.ecsDescriber.EXPECT().Params().Return(params, nil),
-						m.ecsDescriber.EXPECT().ServiceConnectDNSNames().Return(nil, nil),
-						m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
-						m.ecsDescriber.EXPECT().Params().Return(params, nil),
-						m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
-						m.ecsDescriber.EXPECT().ServiceConnectDNSNames().Return(nil, nil),
-						m.ecsDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
-							OperatingSystem: "LINUX",
-							Architecture:    "X86_64",
-						}, nil),
-						m.ecsDescriber.EXPECT().DeploymentType().Return("", nil),
-						m.ecsDescriber.EXPECT().DeploymentConfigAlarmNames().Return(nil, mockErr),
-					)
-				},
-		wantedError: fmt.Errorf("retrieve rollback alarm names: some error"),
+		"return error if fail to retrieve rollback alarm names": {
+			setupMocks: func(m backendSvcDescriberMocks) {
+				params := map[string]string{
+					cfnstack.WorkloadTargetPortParamKey: "5000",
+					cfnstack.WorkloadTaskCountParamKey:  "1",
+					cfnstack.WorkloadTaskCPUParamKey:    "256",
+					cfnstack.WorkloadTaskMemoryParamKey: "512",
+				}
+				gomock.InOrder(
+					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
+					m.ecsDescriber.EXPECT().ServiceStackResources().Return(nil, nil),
+					m.ecsDescriber.EXPECT().Params().Return(params, nil),
+					m.ecsDescriber.EXPECT().ServiceConnectDNSNames().Return(nil, nil),
+					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
+					m.ecsDescriber.EXPECT().Params().Return(params, nil),
+					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
+					m.ecsDescriber.EXPECT().ServiceConnectDNSNames().Return(nil, nil),
+					m.ecsDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
+						OperatingSystem: "LINUX",
+						Architecture:    "X86_64",
+					}, nil),
+					m.ecsDescriber.EXPECT().DeploymentType().Return("", nil),
+					m.ecsDescriber.EXPECT().DeploymentConfigAlarmNames().Return(nil, mockErr),
+				)
+			},
+			wantedError: fmt.Errorf("retrieve rollback alarm names: some error"),
 		},
 		"return error if fail to retrieve environment variables": {
-			setupMocks: func(m lbWebSvcDescriberMocks) {
+			setupMocks: func(m backendSvcDescriberMocks) {
 				params := map[string]string{
 					cfnstack.WorkloadTargetPortParamKey: "5000",
 					cfnstack.WorkloadTaskCountParamKey:  "1",
@@ -161,14 +168,14 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 						Architecture:    "X86_64",
 					}, nil),
 					m.ecsDescriber.EXPECT().DeploymentType().Return("Default", nil),
-					m.ecsDescriber.EXPECT().DeploymentConfigAlarmNames().Return(nil,nil),
+					m.ecsDescriber.EXPECT().DeploymentConfigAlarmNames().Return(nil, nil),
 					m.ecsDescriber.EXPECT().EnvVars().Return(nil, mockErr),
 				)
 			},
 			wantedError: fmt.Errorf("retrieve environment variables: some error"),
 		},
 		"return error if fail to retrieve secrets": {
-			setupMocks: func(m lbWebSvcDescriberMocks) {
+			setupMocks: func(m backendSvcDescriberMocks) {
 				params := map[string]string{
 					cfnstack.WorkloadTargetPortParamKey: "80",
 					cfnstack.WorkloadTaskCountParamKey:  "1",
@@ -204,7 +211,7 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 		},
 		"success": {
 			shouldOutputResources: true,
-			setupMocks: func(m lbWebSvcDescriberMocks) {
+			setupMocks: func(m backendSvcDescriberMocks) {
 				testParams := map[string]string{
 					cfnstack.WorkloadTargetPortParamKey: "5000",
 					cfnstack.WorkloadTaskCountParamKey:  "1",
@@ -235,7 +242,7 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 					m.ecsDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
 						OperatingSystem: "LINUX",
 						Architecture:    "X86_64",
-					}, nil),				
+					}, nil),
 					m.ecsDescriber.EXPECT().DeploymentType().Return("Default", nil),
 					m.ecsDescriber.EXPECT().DeploymentConfigAlarmNames().Return(nil, nil),
 					m.ecsDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
@@ -428,7 +435,7 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 		},
 		"internal alb success http": {
 			shouldOutputResources: true,
-			setupMocks: func(m lbWebSvcDescriberMocks) {
+			setupMocks: func(m backendSvcDescriberMocks) {
 				params := map[string]string{
 					cfnstack.WorkloadTargetPortParamKey: "5000",
 					cfnstack.WorkloadTaskCountParamKey:  "1",
@@ -553,7 +560,7 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mocks := lbWebSvcDescriberMocks{
+			mocks := backendSvcDescriberMocks{
 				storeSvc:     mocks.NewMockDeployedEnvServicesLister(ctrl),
 				ecsDescriber: mocks.NewMockecsDescriber(ctrl),
 				envDescriber: mocks.NewMockenvDescriber(ctrl),
@@ -600,10 +607,10 @@ func TestBackendSvcDesc_String(t *testing.T) {
 
 Configurations
 
-  Environment  Tasks     CPU (vCPU)  Memory (MiB)  Platform      Port
-  -----------  -----     ----------  ------------  --------      ----
-  test         1         0.25        512           LINUX/X86_64  80
-  prod         3         0.5         1024          LINUX/ARM64   5000
+  Environment  Deployment            Tasks     CPU (vCPU)  Memory (MiB)  Platform      Port
+  -----------  ----------            -----     ----------  ------------  --------      ----
+  test         Alarm-Based Rollback  1         0.25        512           LINUX/X86_64  80
+  prod         Default               3         0.5         1024          LINUX/ARM64   5000
 
 Internal Service Endpoint
 
@@ -634,7 +641,7 @@ Resources
   prod
     AWS::EC2::SecurityGroupIngress  ContainerSecurityGroupIngressFromPublicALB
 `,
-			wantedJSONString: "{\"service\":\"my-svc\",\"type\":\"Backend Service\",\"application\":\"my-app\",\"configurations\":[{\"environment\":\"test\",\"port\":\"80\",\"cpu\":\"256\",\"memory\":\"512\",\"platform\":\"LINUX/X86_64\",\"tasks\":\"1\"},{\"environment\":\"prod\",\"port\":\"5000\",\"cpu\":\"512\",\"memory\":\"1024\",\"platform\":\"LINUX/ARM64\",\"tasks\":\"3\"}],\"routes\":null,\"serviceDiscovery\":[{\"environment\":[\"prod\"],\"endpoint\":\"http://my-svc.prod.my-app.local:5000\"},{\"environment\":[\"test\"],\"endpoint\":\"http://my-svc.test.my-app.local:5000\"}],\"variables\":[{\"environment\":\"prod\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"prod\",\"container\":\"container\"},{\"environment\":\"test\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"test\",\"container\":\"container\"}],\"secrets\":[{\"name\":\"GITHUB_WEBHOOK_SECRET\",\"container\":\"container\",\"environment\":\"test\",\"valueFrom\":\"GH_WEBHOOK_SECRET\"},{\"name\":\"SOME_OTHER_SECRET\",\"container\":\"container\",\"environment\":\"prod\",\"valueFrom\":\"SHHHHH\"}],\"resources\":{\"prod\":[{\"type\":\"AWS::EC2::SecurityGroupIngress\",\"physicalID\":\"ContainerSecurityGroupIngressFromPublicALB\"}],\"test\":[{\"type\":\"AWS::EC2::SecurityGroup\",\"physicalID\":\"sg-0758ed6b233743530\"}]}}\n",
+			wantedJSONString: "{\"service\":\"my-svc\",\"type\":\"Backend Service\",\"application\":\"my-app\",\"configurations\":[{\"environment\":\"test\",\"port\":\"80\",\"cpu\":\"256\",\"memory\":\"512\",\"platform\":\"LINUX/X86_64\",\"deployment\":\"Alarm-Based Rollback\",\"tasks\":\"1\"},{\"environment\":\"prod\",\"port\":\"5000\",\"cpu\":\"512\",\"memory\":\"1024\",\"platform\":\"LINUX/ARM64\",\"deployment\":\"Default\",\"tasks\":\"3\"}],\"routes\":null,\"serviceDiscovery\":[{\"environment\":[\"prod\"],\"endpoint\":\"http://my-svc.prod.my-app.local:5000\"},{\"environment\":[\"test\"],\"endpoint\":\"http://my-svc.test.my-app.local:5000\"}],\"variables\":[{\"environment\":\"prod\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"prod\",\"container\":\"container\"},{\"environment\":\"test\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"test\",\"container\":\"container\"}],\"secrets\":[{\"name\":\"GITHUB_WEBHOOK_SECRET\",\"container\":\"container\",\"environment\":\"test\",\"valueFrom\":\"GH_WEBHOOK_SECRET\"},{\"name\":\"SOME_OTHER_SECRET\",\"container\":\"container\",\"environment\":\"prod\",\"valueFrom\":\"SHHHHH\"}],\"resources\":{\"prod\":[{\"type\":\"AWS::EC2::SecurityGroupIngress\",\"physicalID\":\"ContainerSecurityGroupIngressFromPublicALB\"}],\"test\":[{\"type\":\"AWS::EC2::SecurityGroup\",\"physicalID\":\"sg-0758ed6b233743530\"}]}}\n",
 		},
 	}
 
@@ -647,6 +654,7 @@ Resources
 						Environment: "test",
 						Memory:      "512",
 						Platform:    "LINUX/X86_64",
+						Deployment:  "Alarm-Based Rollback",
 						Port:        "80",
 					},
 					Tasks: "1",
@@ -657,6 +665,7 @@ Resources
 						Environment: "prod",
 						Memory:      "1024",
 						Platform:    "LINUX/ARM64",
+						Deployment:  "Default",
 						Port:        "5000",
 					},
 					Tasks: "3",
