@@ -102,9 +102,8 @@ func (m *mockTopicLister) ListSNSTopics(_, _ string) ([]deploy.Topic, error) {
 }
 
 type mockWorkloadMft struct {
-	fileName        string
-	buildRequired   bool
-	dockerBuildArgs map[string]*manifest.DockerBuildArgs
+	fileName      string
+	buildRequired bool
 }
 
 func (m *mockWorkloadMft) EnvFile() string {

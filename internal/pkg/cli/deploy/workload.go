@@ -356,6 +356,7 @@ func (d *workloadDeployer) uploadContainerImage(imgBuilderPusher imageBuilderPus
 	if err := g.Wait(); err != nil {
 		return nil, nil, err
 	}
+	// The below if loop is for simple test cases.
 	if !required {
 		return nil, scdigests, nil
 	}
