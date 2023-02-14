@@ -1,5 +1,5 @@
 ---
-title: 'AWS Copilot v1.26: Service alarm based rollback, sidecar image build, and `storage init` for env addons'
+title: 'AWS Copilot v1.26: Automate rollbacks with CloudWatch alarms, build sidecar images, and `storage init` for env addons'
 twitter_title: 'AWS Copilot v1.26'
 image: ''
 image_alt: ''
@@ -7,7 +7,7 @@ image_width: '1051'
 image_height: '747'
 ---
 
-# AWS Copilot v1.26: Service alarm-based rollback, `storage init` for env addons, and sidecar image build
+# AWS Copilot v1.26: Automate rollbacks with CloudWatch alarms, build sidecar images, and `storage init` for env addons
 
 Posted On: Feb 20, 2023
 
