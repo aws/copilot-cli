@@ -18,7 +18,9 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 	testImageConfig := ImageWithPortAndHealthcheck{
 		ImageWithPort: ImageWithPort{
 			Image: Image{
-				Build: BuildArgsOrString{BuildString: aws.String("mockBuild")},
+				ImageLocationOrBuild: ImageLocationOrBuild{
+					Build: BuildArgsOrString{BuildString: aws.String("mockBuild")},
+				},
 			},
 			Port: uint16P(80),
 		},
@@ -35,8 +37,10 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 					ImageConfig: ImageWithPortAndHealthcheck{
 						ImageWithPort: ImageWithPort{
 							Image: Image{
-								Build:    BuildArgsOrString{BuildString: aws.String("mockBuild")},
-								Location: aws.String("mockLocation"),
+								ImageLocationOrBuild: ImageLocationOrBuild{
+									Build:    BuildArgsOrString{BuildString: aws.String("mockBuild")},
+									Location: aws.String("mockLocation"),
+								},
 							},
 						},
 					},
@@ -366,7 +370,9 @@ func TestBackendService_validate(t *testing.T) {
 	testImageConfig := ImageWithHealthcheckAndOptionalPort{
 		ImageWithOptionalPort: ImageWithOptionalPort{
 			Image: Image{
-				Build: BuildArgsOrString{BuildString: aws.String("mockBuild")},
+				ImageLocationOrBuild: ImageLocationOrBuild{
+					Build: BuildArgsOrString{BuildString: aws.String("mockBuild")},
+				},
 			},
 		},
 	}
@@ -382,8 +388,10 @@ func TestBackendService_validate(t *testing.T) {
 					ImageConfig: ImageWithHealthcheckAndOptionalPort{
 						ImageWithOptionalPort: ImageWithOptionalPort{
 							Image: Image{
-								Build:    BuildArgsOrString{BuildString: aws.String("mockBuild")},
-								Location: aws.String("mockLocation"),
+								ImageLocationOrBuild: ImageLocationOrBuild{
+									Build:    BuildArgsOrString{BuildString: aws.String("mockBuild")},
+									Location: aws.String("mockLocation"),
+								},
 							},
 						},
 					},
@@ -650,8 +658,10 @@ func TestRequestDrivenWebService_validate(t *testing.T) {
 				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
 					ImageConfig: ImageWithPort{
 						Image: Image{
-							Build:    BuildArgsOrString{BuildString: aws.String("mockBuild")},
-							Location: aws.String("mockLocation"),
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Build:    BuildArgsOrString{BuildString: aws.String("mockBuild")},
+								Location: aws.String("mockLocation"),
+							},
 						},
 					},
 				},
@@ -666,7 +676,9 @@ func TestRequestDrivenWebService_validate(t *testing.T) {
 				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
 					ImageConfig: ImageWithPort{
 						Image: Image{
-							Build: BuildArgsOrString{BuildString: aws.String("mockBuild")},
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Build: BuildArgsOrString{BuildString: aws.String("mockBuild")},
+							},
 						},
 						Port: uint16P(80),
 					},
@@ -689,7 +701,9 @@ func TestRequestDrivenWebService_validate(t *testing.T) {
 				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
 					ImageConfig: ImageWithPort{
 						Image: Image{
-							Build: BuildArgsOrString{BuildString: aws.String("mockBuild")},
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Build: BuildArgsOrString{BuildString: aws.String("mockBuild")},
+							},
 						},
 						Port: uint16P(80),
 					},
@@ -712,7 +726,9 @@ func TestRequestDrivenWebService_validate(t *testing.T) {
 				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
 					ImageConfig: ImageWithPort{
 						Image: Image{
-							Location: stringP("mockLocation"),
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Location: stringP("mockLocation"),
+							},
 						},
 						Port: uint16P(80),
 					},
@@ -728,7 +744,9 @@ func TestRequestDrivenWebService_validate(t *testing.T) {
 				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
 					ImageConfig: ImageWithPort{
 						Image: Image{
-							Build: BuildArgsOrString{BuildString: aws.String("mockBuild")},
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Build: BuildArgsOrString{BuildString: aws.String("mockBuild")},
+							},
 						},
 						Port: uint16P(80),
 					},
@@ -744,7 +762,9 @@ func TestRequestDrivenWebService_validate(t *testing.T) {
 				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
 					ImageConfig: ImageWithPort{
 						Image: Image{
-							Location: stringP("mockLocation"),
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Location: stringP("mockLocation"),
+							},
 						},
 						Port: uint16P(80),
 					},
@@ -780,7 +800,9 @@ func TestRequestDrivenWebService_validate(t *testing.T) {
 func TestWorkerService_validate(t *testing.T) {
 	testImageConfig := ImageWithHealthcheck{
 		Image: Image{
-			Build: BuildArgsOrString{BuildString: aws.String("mockBuild")},
+			ImageLocationOrBuild: ImageLocationOrBuild{
+				Build: BuildArgsOrString{BuildString: aws.String("mockBuild")},
+			},
 		},
 	}
 	testCases := map[string]struct {
@@ -794,8 +816,10 @@ func TestWorkerService_validate(t *testing.T) {
 				WorkerServiceConfig: WorkerServiceConfig{
 					ImageConfig: ImageWithHealthcheck{
 						Image: Image{
-							Build:    BuildArgsOrString{BuildString: aws.String("mockBuild")},
-							Location: aws.String("mockLocation"),
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Build:    BuildArgsOrString{BuildString: aws.String("mockBuild")},
+								Location: aws.String("mockLocation"),
+							},
 						},
 					},
 				},
@@ -1005,7 +1029,9 @@ func TestWorkerService_validate(t *testing.T) {
 func TestScheduledJob_validate(t *testing.T) {
 	testImageConfig := ImageWithHealthcheck{
 		Image: Image{
-			Build: BuildArgsOrString{BuildString: aws.String("mockBuild")},
+			ImageLocationOrBuild: ImageLocationOrBuild{
+				Build: BuildArgsOrString{BuildString: aws.String("mockBuild")},
+			},
 		},
 	}
 	testCases := map[string]struct {
@@ -1019,8 +1045,10 @@ func TestScheduledJob_validate(t *testing.T) {
 				ScheduledJobConfig: ScheduledJobConfig{
 					ImageConfig: ImageWithHealthcheck{
 						Image: Image{
-							Build:    BuildArgsOrString{BuildString: aws.String("mockBuild")},
-							Location: aws.String("mockLocation"),
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Build:    BuildArgsOrString{BuildString: aws.String("mockBuild")},
+								Location: aws.String("mockLocation"),
+							},
 						},
 					},
 				},
@@ -1266,7 +1294,9 @@ func TestImageWithPort_validate(t *testing.T) {
 		"error if port is not specified": {
 			ImageWithPort: ImageWithPort{
 				Image: Image{
-					Location: aws.String("mockLocation"),
+					ImageLocationOrBuild: ImageLocationOrBuild{
+						Location: aws.String("mockLocation"),
+					},
 				},
 			},
 			wantedError: fmt.Errorf(`"port" must be specified`),
@@ -1294,10 +1324,12 @@ func TestImage_validate(t *testing.T) {
 	}{
 		"error if build and location both specified": {
 			Image: Image{
-				Build: BuildArgsOrString{
-					BuildString: aws.String("mockBuild"),
+				ImageLocationOrBuild: ImageLocationOrBuild{
+					Build: BuildArgsOrString{
+						BuildString: aws.String("mockBuild"),
+					},
+					Location: aws.String("mockLocation"),
 				},
-				Location: aws.String("mockLocation"),
 			},
 			wantedError: fmt.Errorf(`must specify one of "build" and "location"`),
 		},
@@ -1307,11 +1339,14 @@ func TestImage_validate(t *testing.T) {
 		},
 		"error if fail to validate depends_on": {
 			Image: Image{
-				Location: aws.String("mockLocation"),
+				ImageLocationOrBuild: ImageLocationOrBuild{
+					Location: aws.String("mockLocation"),
+				},
 				DependsOn: DependsOn{
 					"foo": "bar",
 				},
 			},
+
 			wantedErrorMsgPrefix: `validate "depends_on":`,
 		},
 	}
@@ -3637,25 +3672,25 @@ func TestValidateExposedPorts(t *testing.T) {
 	}
 }
 
-func TestSidecarImageConfig_validate(t *testing.T) {
+func TestImageLocationOrBuild_validate(t *testing.T) {
 	testCases := map[string]struct {
-		in          SidecarImageConfig
+		in          ImageLocationOrBuild
 		wantedError error
 	}{
 		"should return error if both build and location are specified": {
-			in: SidecarImageConfig{
-				Build:    BasicToUnion[*string, DockerBuildArgs](aws.String("web/Dockerfile")),
+			in: ImageLocationOrBuild{
+				Build:    BuildArgsOrString{BuildString: aws.String("web/Dockerfile")},
 				Location: aws.String("mockLocation"),
 			},
 			wantedError: fmt.Errorf(`must specify one of "build" and "location"`),
 		},
 		"return nil if only build is specified": {
-			in: SidecarImageConfig{
-				Build: BasicToUnion[*string, DockerBuildArgs](aws.String("web/Dockerfile")),
+			in: ImageLocationOrBuild{
+				Build: BuildArgsOrString{BuildString: aws.String("web/Dockerfile")},
 			},
 		},
 		"return nil if only location is specified": {
-			in: SidecarImageConfig{
+			in: ImageLocationOrBuild{
 				Location: aws.String("mockLocation"),
 			},
 		},

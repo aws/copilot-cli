@@ -40,9 +40,11 @@ func TestNewHTTPLoadBalancedWebService(t *testing.T) {
 					ImageConfig: ImageWithPortAndHealthcheck{
 						ImageWithPort: ImageWithPort{
 							Image: Image{
-								Build: BuildArgsOrString{
-									BuildArgs: DockerBuildArgs{
-										Dockerfile: stringP("./Dockerfile"),
+								ImageLocationOrBuild: ImageLocationOrBuild{
+									Build: BuildArgsOrString{
+										BuildArgs: DockerBuildArgs{
+											Dockerfile: stringP("./Dockerfile"),
+										},
 									},
 								},
 							},
@@ -109,9 +111,11 @@ func TestNewHTTPLoadBalancedWebService(t *testing.T) {
 					ImageConfig: ImageWithPortAndHealthcheck{
 						ImageWithPort: ImageWithPort{
 							Image: Image{
-								Build: BuildArgsOrString{
-									BuildArgs: DockerBuildArgs{
-										Dockerfile: aws.String("./subscribers/Dockerfile"),
+								ImageLocationOrBuild: ImageLocationOrBuild{
+									Build: BuildArgsOrString{
+										BuildArgs: DockerBuildArgs{
+											Dockerfile: aws.String("./subscribers/Dockerfile"),
+										},
 									},
 								},
 							},
@@ -258,9 +262,11 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					ImageConfig: ImageWithPortAndHealthcheck{
 						ImageWithPort: ImageWithPort{
 							Image: Image{
-								Build: BuildArgsOrString{
-									BuildArgs: DockerBuildArgs{
-										Dockerfile: aws.String("./Dockerfile"),
+								ImageLocationOrBuild: ImageLocationOrBuild{
+									Build: BuildArgsOrString{
+										BuildArgs: DockerBuildArgs{
+											Dockerfile: aws.String("./Dockerfile"),
+										},
 									},
 								},
 							},
@@ -324,9 +330,11 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					ImageConfig: ImageWithPortAndHealthcheck{
 						ImageWithPort: ImageWithPort{
 							Image: Image{
-								Build: BuildArgsOrString{
-									BuildArgs: DockerBuildArgs{
-										Dockerfile: aws.String("./Dockerfile"),
+								ImageLocationOrBuild: ImageLocationOrBuild{
+									Build: BuildArgsOrString{
+										BuildArgs: DockerBuildArgs{
+											Dockerfile: aws.String("./Dockerfile"),
+										},
 									},
 								},
 							},
@@ -390,9 +398,11 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					ImageConfig: ImageWithPortAndHealthcheck{
 						ImageWithPort: ImageWithPort{
 							Image: Image{
-								Build: BuildArgsOrString{
-									BuildArgs: DockerBuildArgs{
-										Dockerfile: aws.String("./Dockerfile"),
+								ImageLocationOrBuild: ImageLocationOrBuild{
+									Build: BuildArgsOrString{
+										BuildArgs: DockerBuildArgs{
+											Dockerfile: aws.String("./Dockerfile"),
+										},
 									},
 								},
 							},
@@ -474,7 +484,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					Sidecars: map[string]*SidecarConfig{
 						"xray": {
 							Port: aws.String("2000"),
-							Image: Union[*string, SidecarImageConfig]{
+							Image: Union[*string, ImageLocationOrBuild]{
 								Basic: aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
 							},
 							CredsParam: aws.String("some arn"),
@@ -501,9 +511,11 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						ImageConfig: ImageWithPortAndHealthcheck{
 							ImageWithPort: ImageWithPort{
 								Image: Image{
-									Build: BuildArgsOrString{
-										BuildArgs: DockerBuildArgs{
-											Dockerfile: aws.String("./RealDockerfile"),
+									ImageLocationOrBuild: ImageLocationOrBuild{
+										Build: BuildArgsOrString{
+											BuildArgs: DockerBuildArgs{
+												Dockerfile: aws.String("./RealDockerfile"),
+											},
 										},
 									},
 								},
@@ -606,9 +618,11 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					ImageConfig: ImageWithPortAndHealthcheck{
 						ImageWithPort: ImageWithPort{
 							Image: Image{
-								Build: BuildArgsOrString{
-									BuildArgs: DockerBuildArgs{
-										Dockerfile: aws.String("./RealDockerfile"),
+								ImageLocationOrBuild: ImageLocationOrBuild{
+									Build: BuildArgsOrString{
+										BuildArgs: DockerBuildArgs{
+											Dockerfile: aws.String("./RealDockerfile"),
+										},
 									},
 								},
 							},
@@ -687,7 +701,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					Sidecars: map[string]*SidecarConfig{
 						"xray": {
 							Port: aws.String("2000/udp"),
-							Image: Union[*string, SidecarImageConfig]{
+							Image: Union[*string, ImageLocationOrBuild]{
 								Basic: aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
 							},
 							CredsParam: aws.String("some arn"),
@@ -1132,9 +1146,11 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					ImageConfig: ImageWithPortAndHealthcheck{
 						ImageWithPort: ImageWithPort{
 							Image: Image{
-								Build: BuildArgsOrString{
-									BuildArgs: DockerBuildArgs{
-										Dockerfile: aws.String("./Dockerfile"),
+								ImageLocationOrBuild: ImageLocationOrBuild{
+									Build: BuildArgsOrString{
+										BuildArgs: DockerBuildArgs{
+											Dockerfile: aws.String("./Dockerfile"),
+										},
 									},
 								},
 							},
@@ -1146,7 +1162,9 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						ImageConfig: ImageWithPortAndHealthcheck{
 							ImageWithPort: ImageWithPort{
 								Image: Image{
-									Location: aws.String("env-override location"),
+									ImageLocationOrBuild: ImageLocationOrBuild{
+										Location: aws.String("env-override location"),
+									},
 								},
 							},
 						},
@@ -1164,7 +1182,9 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					ImageConfig: ImageWithPortAndHealthcheck{
 						ImageWithPort: ImageWithPort{
 							Image: Image{
-								Location: aws.String("env-override location"),
+								ImageLocationOrBuild: ImageLocationOrBuild{
+									Location: aws.String("env-override location"),
+								},
 							},
 						},
 					},
@@ -1181,7 +1201,9 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					ImageConfig: ImageWithPortAndHealthcheck{
 						ImageWithPort: ImageWithPort{
 							Image: Image{
-								Location: aws.String("default location"),
+								ImageLocationOrBuild: ImageLocationOrBuild{
+									Location: aws.String("default location"),
+								},
 							},
 						},
 					},
@@ -1191,7 +1213,9 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						ImageConfig: ImageWithPortAndHealthcheck{
 							ImageWithPort: ImageWithPort{
 								Image: Image{
-									Location: aws.String("env-override location"),
+									ImageLocationOrBuild: ImageLocationOrBuild{
+										Location: aws.String("env-override location"),
+									},
 								},
 							},
 						},
@@ -1209,7 +1233,9 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					ImageConfig: ImageWithPortAndHealthcheck{
 						ImageWithPort: ImageWithPort{
 							Image: Image{
-								Location: aws.String("env-override location"),
+								ImageLocationOrBuild: ImageLocationOrBuild{
+									Location: aws.String("env-override location"),
+								},
 							},
 						},
 					},
@@ -1226,9 +1252,11 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					ImageConfig: ImageWithPortAndHealthcheck{
 						ImageWithPort: ImageWithPort{
 							Image: Image{
-								Build: BuildArgsOrString{
-									BuildArgs: DockerBuildArgs{
-										Dockerfile: aws.String("./Dockerfile"),
+								ImageLocationOrBuild: ImageLocationOrBuild{
+									Build: BuildArgsOrString{
+										BuildArgs: DockerBuildArgs{
+											Dockerfile: aws.String("./Dockerfile"),
+										},
 									},
 								},
 							},
@@ -1240,8 +1268,10 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						ImageConfig: ImageWithPortAndHealthcheck{
 							ImageWithPort: ImageWithPort{
 								Image: Image{
-									Build: BuildArgsOrString{
-										BuildString: aws.String("overridden build string"),
+									ImageLocationOrBuild: ImageLocationOrBuild{
+										Build: BuildArgsOrString{
+											BuildString: aws.String("overridden build string"),
+										},
 									},
 								},
 							},
@@ -1260,8 +1290,10 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					ImageConfig: ImageWithPortAndHealthcheck{
 						ImageWithPort: ImageWithPort{
 							Image: Image{
-								Build: BuildArgsOrString{
-									BuildString: aws.String("overridden build string"),
+								ImageLocationOrBuild: ImageLocationOrBuild{
+									Build: BuildArgsOrString{
+										BuildString: aws.String("overridden build string"),
+									},
 								},
 							},
 						},
@@ -1279,7 +1311,9 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					ImageConfig: ImageWithPortAndHealthcheck{
 						ImageWithPort: ImageWithPort{
 							Image: Image{
-								Location: aws.String("default location"),
+								ImageLocationOrBuild: ImageLocationOrBuild{
+									Location: aws.String("default location"),
+								},
 							},
 						},
 					},
@@ -1289,8 +1323,10 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						ImageConfig: ImageWithPortAndHealthcheck{
 							ImageWithPort: ImageWithPort{
 								Image: Image{
-									Build: BuildArgsOrString{
-										BuildString: aws.String("overridden build string"),
+									ImageLocationOrBuild: ImageLocationOrBuild{
+										Build: BuildArgsOrString{
+											BuildString: aws.String("overridden build string"),
+										},
 									},
 								},
 							},
@@ -1309,8 +1345,10 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					ImageConfig: ImageWithPortAndHealthcheck{
 						ImageWithPort: ImageWithPort{
 							Image: Image{
-								Build: BuildArgsOrString{
-									BuildString: aws.String("overridden build string"),
+								ImageLocationOrBuild: ImageLocationOrBuild{
+									Build: BuildArgsOrString{
+										BuildString: aws.String("overridden build string"),
+									},
 								},
 							},
 						},
@@ -1578,25 +1616,31 @@ func TestLoadBalancedWebService_BuildRequired(t *testing.T) {
 	}{
 		"error if both build and location are set or not set": {
 			image: Image{
-				Build: BuildArgsOrString{
-					BuildString: aws.String("mockBuildString"),
+				ImageLocationOrBuild: ImageLocationOrBuild{
+					Build: BuildArgsOrString{
+						BuildString: aws.String("mockBuildString"),
+					},
+					Location: aws.String("mockLocation"),
 				},
-				Location: aws.String("mockLocation"),
 			},
 			wantErr: fmt.Errorf(`either "image.build" or "image.location" needs to be specified in the manifest`),
 		},
 		"return true if location is not set": {
 			image: Image{
-				Build: BuildArgsOrString{
-					BuildString: aws.String("mockBuildString"),
+				ImageLocationOrBuild: ImageLocationOrBuild{
+					Build: BuildArgsOrString{
+						BuildString: aws.String("mockBuildString"),
+					},
 				},
 			},
 			want: true,
 		},
 		"return false if location is set": {
 			image: Image{
-				Build:    BuildArgsOrString{},
-				Location: aws.String("mockLocation"),
+				ImageLocationOrBuild: ImageLocationOrBuild{
+					Build:    BuildArgsOrString{},
+					Location: aws.String("mockLocation"),
+				},
 			},
 			want: false,
 		},
@@ -1785,7 +1829,7 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 					Sidecars: map[string]*SidecarConfig{
 						"xray": {
 							Port: aws.String("2000"),
-							Image: Union[*string, SidecarImageConfig]{
+							Image: Union[*string, ImageLocationOrBuild]{
 								Basic: aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
 							},
 							CredsParam: aws.String("some arn"),
@@ -1835,7 +1879,7 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 					Sidecars: map[string]*SidecarConfig{
 						"xray": {
 							Port: aws.String("2000"),
-							Image: Union[*string, SidecarImageConfig]{
+							Image: Union[*string, ImageLocationOrBuild]{
 								Basic: aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
 							},
 							CredsParam: aws.String("some arn"),
@@ -1886,7 +1930,7 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 					Sidecars: map[string]*SidecarConfig{
 						"xray": {
 							Port: aws.String("2000"),
-							Image: Union[*string, SidecarImageConfig]{
+							Image: Union[*string, ImageLocationOrBuild]{
 								Basic: aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
 							},
 							CredsParam: aws.String("some arn"),
@@ -1936,7 +1980,7 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 					},
 					Sidecars: map[string]*SidecarConfig{
 						"xray": {
-							Image: Union[*string, SidecarImageConfig]{
+							Image: Union[*string, ImageLocationOrBuild]{
 								Basic: aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
 							},
 							CredsParam: aws.String("some arn"),
@@ -1981,7 +2025,7 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 					Sidecars: map[string]*SidecarConfig{
 						"xray": {
 							Port: aws.String("81"),
-							Image: Union[*string, SidecarImageConfig]{
+							Image: Union[*string, ImageLocationOrBuild]{
 								Basic: aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
 							},
 							CredsParam: aws.String("some arn"),
@@ -2026,7 +2070,7 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 					Sidecars: map[string]*SidecarConfig{
 						"xray": {
 							Port: aws.String("81"),
-							Image: Union[*string, SidecarImageConfig]{
+							Image: Union[*string, ImageLocationOrBuild]{
 								Basic: aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
 							},
 							CredsParam: aws.String("some arn"),
@@ -2075,7 +2119,7 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 					Sidecars: map[string]*SidecarConfig{
 						"xray": {
 							Port: aws.String("2000"),
-							Image: Union[*string, SidecarImageConfig]{
+							Image: Union[*string, ImageLocationOrBuild]{
 								Basic: aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
 							},
 							CredsParam: aws.String("some arn"),
@@ -2127,7 +2171,7 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 					Sidecars: map[string]*SidecarConfig{
 						"xray": {
 							Port: aws.String("2000"),
-							Image: Union[*string, SidecarImageConfig]{
+							Image: Union[*string, ImageLocationOrBuild]{
 								Basic: aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
 							},
 							CredsParam: aws.String("some arn"),
@@ -2179,7 +2223,7 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 					Sidecars: map[string]*SidecarConfig{
 						"xray": {
 							Port: aws.String("2000"),
-							Image: Union[*string, SidecarImageConfig]{
+							Image: Union[*string, ImageLocationOrBuild]{
 								Basic: aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
 							},
 							CredsParam: aws.String("some arn"),
@@ -2232,7 +2276,7 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 					Sidecars: map[string]*SidecarConfig{
 						"xray": {
 							Port: aws.String("80"),
-							Image: Union[*string, SidecarImageConfig]{
+							Image: Union[*string, ImageLocationOrBuild]{
 								Basic: aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
 							},
 							CredsParam: aws.String("some arn"),
@@ -2281,7 +2325,7 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 					Sidecars: map[string]*SidecarConfig{
 						"xray": {
 							Port: aws.String("80"),
-							Image: Union[*string, SidecarImageConfig]{
+							Image: Union[*string, ImageLocationOrBuild]{
 								Basic: aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
 							},
 							CredsParam: aws.String("some arn"),

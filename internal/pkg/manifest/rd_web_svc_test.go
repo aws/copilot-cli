@@ -41,9 +41,11 @@ func TestNewRequestDrivenWebService(t *testing.T) {
 				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
 					ImageConfig: ImageWithPort{
 						Image: Image{
-							Build: BuildArgsOrString{
-								BuildArgs: DockerBuildArgs{
-									Dockerfile: aws.String("./Dockerfile"),
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Build: BuildArgsOrString{
+									BuildArgs: DockerBuildArgs{
+										Dockerfile: aws.String("./Dockerfile"),
+									},
 								},
 							},
 						},
@@ -100,8 +102,10 @@ func TestRequestDrivenWebService_UnmarshalYaml(t *testing.T) {
 				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
 					ImageConfig: ImageWithPort{
 						Image: Image{
-							Build: BuildArgsOrString{
-								BuildString: aws.String("./Dockerfile"),
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Build: BuildArgsOrString{
+									BuildString: aws.String("./Dockerfile"),
+								},
 							},
 						},
 						Port: aws.Uint16(80),
@@ -123,7 +127,9 @@ func TestRequestDrivenWebService_UnmarshalYaml(t *testing.T) {
 				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
 					ImageConfig: ImageWithPort{
 						Image: Image{
-							Location: aws.String("test-repository/image@digest"),
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Location: aws.String("test-repository/image@digest"),
+							},
 						},
 					},
 				},
@@ -147,13 +153,15 @@ func TestRequestDrivenWebService_UnmarshalYaml(t *testing.T) {
 				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
 					ImageConfig: ImageWithPort{
 						Image: Image{
-							Build: BuildArgsOrString{
-								BuildArgs: DockerBuildArgs{
-									Context:    aws.String("context/dir"),
-									Dockerfile: aws.String("./Dockerfile"),
-									Target:     aws.String("build-stage"),
-									CacheFrom:  []string{"image:tag"},
-									Args:       map[string]string{"a": "1", "b": "2"},
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Build: BuildArgsOrString{
+									BuildArgs: DockerBuildArgs{
+										Context:    aws.String("context/dir"),
+										Dockerfile: aws.String("./Dockerfile"),
+										Target:     aws.String("build-stage"),
+										CacheFrom:  []string{"image:tag"},
+										Args:       map[string]string{"a": "1", "b": "2"},
+									},
 								},
 							},
 						},
@@ -422,9 +430,11 @@ func TestRequestDrivenWebService_ApplyEnv(t *testing.T) {
 				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
 					ImageConfig: ImageWithPort{
 						Image: Image{
-							Build: BuildArgsOrString{
-								BuildArgs: DockerBuildArgs{
-									Dockerfile: aws.String("./Dockerfile"),
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Build: BuildArgsOrString{
+									BuildArgs: DockerBuildArgs{
+										Dockerfile: aws.String("./Dockerfile"),
+									},
 								},
 							},
 						},
@@ -434,7 +444,9 @@ func TestRequestDrivenWebService_ApplyEnv(t *testing.T) {
 					"prod-iad": {
 						ImageConfig: ImageWithPort{
 							Image: Image{
-								Location: aws.String("env-override location"),
+								ImageLocationOrBuild: ImageLocationOrBuild{
+									Location: aws.String("env-override location"),
+								},
 							},
 						},
 					},
@@ -450,7 +462,9 @@ func TestRequestDrivenWebService_ApplyEnv(t *testing.T) {
 				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
 					ImageConfig: ImageWithPort{
 						Image: Image{
-							Location: aws.String("env-override location"),
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Location: aws.String("env-override location"),
+							},
 						},
 					},
 				},
@@ -465,7 +479,9 @@ func TestRequestDrivenWebService_ApplyEnv(t *testing.T) {
 				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
 					ImageConfig: ImageWithPort{
 						Image: Image{
-							Location: aws.String("default location"),
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Location: aws.String("default location"),
+							},
 						},
 					},
 				},
@@ -473,7 +489,9 @@ func TestRequestDrivenWebService_ApplyEnv(t *testing.T) {
 					"prod-iad": {
 						ImageConfig: ImageWithPort{
 							Image: Image{
-								Location: aws.String("env-override location"),
+								ImageLocationOrBuild: ImageLocationOrBuild{
+									Location: aws.String("env-override location"),
+								},
 							},
 						},
 					},
@@ -489,7 +507,9 @@ func TestRequestDrivenWebService_ApplyEnv(t *testing.T) {
 				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
 					ImageConfig: ImageWithPort{
 						Image: Image{
-							Location: aws.String("env-override location"),
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Location: aws.String("env-override location"),
+							},
 						},
 					},
 				},
@@ -504,9 +524,11 @@ func TestRequestDrivenWebService_ApplyEnv(t *testing.T) {
 				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
 					ImageConfig: ImageWithPort{
 						Image: Image{
-							Build: BuildArgsOrString{
-								BuildArgs: DockerBuildArgs{
-									Dockerfile: aws.String("./Dockerfile"),
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Build: BuildArgsOrString{
+									BuildArgs: DockerBuildArgs{
+										Dockerfile: aws.String("./Dockerfile"),
+									},
 								},
 							},
 						},
@@ -516,8 +538,10 @@ func TestRequestDrivenWebService_ApplyEnv(t *testing.T) {
 					"prod-iad": {
 						ImageConfig: ImageWithPort{
 							Image: Image{
-								Build: BuildArgsOrString{
-									BuildString: aws.String("overridden build string"),
+								ImageLocationOrBuild: ImageLocationOrBuild{
+									Build: BuildArgsOrString{
+										BuildString: aws.String("overridden build string"),
+									},
 								},
 							},
 						},
@@ -534,8 +558,10 @@ func TestRequestDrivenWebService_ApplyEnv(t *testing.T) {
 				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
 					ImageConfig: ImageWithPort{
 						Image: Image{
-							Build: BuildArgsOrString{
-								BuildString: aws.String("overridden build string"),
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Build: BuildArgsOrString{
+									BuildString: aws.String("overridden build string"),
+								},
 							},
 						},
 					},
@@ -551,7 +577,9 @@ func TestRequestDrivenWebService_ApplyEnv(t *testing.T) {
 				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
 					ImageConfig: ImageWithPort{
 						Image: Image{
-							Location: aws.String("default location"),
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Location: aws.String("default location"),
+							},
 						},
 					},
 				},
@@ -559,8 +587,10 @@ func TestRequestDrivenWebService_ApplyEnv(t *testing.T) {
 					"prod-iad": {
 						ImageConfig: ImageWithPort{
 							Image: Image{
-								Build: BuildArgsOrString{
-									BuildString: aws.String("overridden build string"),
+								ImageLocationOrBuild: ImageLocationOrBuild{
+									Build: BuildArgsOrString{
+										BuildString: aws.String("overridden build string"),
+									},
 								},
 							},
 						},
@@ -577,8 +607,10 @@ func TestRequestDrivenWebService_ApplyEnv(t *testing.T) {
 				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
 					ImageConfig: ImageWithPort{
 						Image: Image{
-							Build: BuildArgsOrString{
-								BuildString: aws.String("overridden build string"),
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Build: BuildArgsOrString{
+									BuildString: aws.String("overridden build string"),
+								},
 							},
 						},
 					},
