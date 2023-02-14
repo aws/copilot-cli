@@ -36,7 +36,7 @@ const (
 const (
 	// Protocols.
 	TCP = "TCP"
-	tls = "TLS"
+	TLS = "TLS"
 	udp = "UDP"
 
 	// Tracing vendors.
@@ -53,7 +53,7 @@ var (
 
 	essentialContainerDependsOnValidStatuses = []string{dependsOnStart, dependsOnHealthy}
 	dependsOnValidStatuses                   = []string{dependsOnStart, dependsOnComplete, dependsOnSuccess, dependsOnHealthy}
-	nlbValidProtocols                        = []string{TCP, tls}
+	nlbValidProtocols                        = []string{TCP, TLS}
 	validContainerProtocols                  = []string{TCP, udp}
 	TracingValidVendors                      = []string{awsXRAY}
 	ecsRollingUpdateStrategies               = []string{ECSDefaultRollingUpdateStrategy, ECSRecreateRollingUpdateStrategy}
