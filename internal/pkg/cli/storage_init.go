@@ -528,7 +528,7 @@ func (o *initStorageOpts) validateWorkloadNameWithLifecycle() error {
 			return fmt.Errorf("check if environments are managed in the workspace: %w", err)
 		}
 		if !environmentsExist {
-			return &errEnvironmentsNotInWorkspace{}
+			return &errNoEnvironmentInWorkspace{}
 		}
 		return nil
 	}
@@ -1184,14 +1184,14 @@ func (e *errWorkloadNotInWorkspace) RecommendActions() string {
 	return fmt.Sprintf("Run %s in the workspace where %s is instead.", color.HighlightCode("copilot storage init"), color.HighlightUserInput(e.workloadName))
 }
 
-type errEnvironmentsNotInWorkspace struct{}
+type errNoEnvironmentInWorkspace struct{}
 
-func (e *errEnvironmentsNotInWorkspace) Error() string {
+func (e *errNoEnvironmentInWorkspace) Error() string {
 	return "environments are not managed in the workspace"
 }
 
 // RecommendActions suggests actions to fix the error.
-func (e *errEnvironmentsNotInWorkspace) RecommendActions() string {
+func (e *errNoEnvironmentInWorkspace) RecommendActions() string {
 	return fmt.Sprintf("Run %s in the workspace where environments are managed instaed.", color.HighlightCode("copilot storage init"))
 }
 
