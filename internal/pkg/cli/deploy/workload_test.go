@@ -102,8 +102,9 @@ func (m *mockTopicLister) ListSNSTopics(_, _ string) ([]deploy.Topic, error) {
 }
 
 type mockWorkloadMft struct {
-	fileName      string
-	buildRequired bool
+	fileName          string
+	buildRequired     bool
+	scDockerBuildArgs map[string]*manifest.DockerBuildArgs
 }
 
 func (m *mockWorkloadMft) EnvFile() string {
@@ -119,6 +120,10 @@ func (m *mockWorkloadMft) BuildArgs(rootDirectory string) *manifest.DockerBuildA
 		Dockerfile: aws.String("mockDockerfile"),
 		Context:    aws.String("mockContext"),
 	}
+}
+
+func (m *mockWorkloadMft) SidecarBuildArgs(rootDirectory string) map[string]*manifest.DockerBuildArgs {
+	return m.scDockerBuildArgs
 }
 
 func (m *mockWorkloadMft) ContainerPlatform() string {
@@ -156,7 +161,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 		mockEnvFile         = "foo.env"
 		mockS3Bucket        = "mockBucket"
 		mockLatestTag       = "latest"
-		mockUuid            = "31323334-3536-4738-b930-313233333435"
+		mockUUID            = "31323334-3536-4738-b930-313233333435"
 		mockAddonsS3URL     = "https://mockS3DomainName/mockPath"
 		mockBadEnvFileS3URL = "badURL"
 		mockEnvFileS3URL    = "https://stackset-demo-infrastruc-pipelinebuiltartifactbuc-11dj7ctf52wyf.s3.us-west-2.amazonaws.com/manual/1638391936/env"
@@ -173,12 +178,12 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 		UploadArtifacts() (*UploadArtifactsOutput, error)
 	}
 	tests := map[string]struct {
-		inEnvFile       string
-		inBuildRequired bool
-		inRegion        string
-		inUserTag       string
-		inGitTag        string
-
+		inEnvFile           string
+		inBuildRequired     bool
+		inRegion            string
+		inUserTag           string
+		inGitTag            string
+		scDockerBuildArgs   map[string]*manifest.DockerBuildArgs
 		mock                func(t *testing.T, m *deployMocks)
 		mockServiceDeployer func(deployer *workloadDeployer) artifactsUploader
 		customResourcesFunc customResourcesFunc
@@ -216,7 +221,8 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				}).Return("mockDigest", nil)
 				m.mockAddons = nil
 			},
-			wantImageDigest: aws.String("mockDigest"),
+			wantImageDigest:    aws.String("mockDigest"),
+			wantScImageDigests: map[string]string{},
 		},
 		"build and push main container image successfully with git commit id": {
 			inBuildRequired: true,
@@ -230,7 +236,8 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				}).Return("mockDigest", nil)
 				m.mockAddons = nil
 			},
-			wantImageDigest: aws.String("mockDigest"),
+			wantImageDigest:    aws.String("mockDigest"),
+			wantScImageDigests: map[string]string{},
 		},
 		"build and push main container image with uuid": {
 			inBuildRequired: true,
@@ -239,11 +246,52 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 					Dockerfile: "mockDockerfile",
 					Context:    "mockContext",
 					Platform:   "mockContainerPlatform",
-					Tags:       []string{mockLatestTag, mockUuid},
+					Tags:       []string{mockLatestTag, mockUUID},
 				}).Return("mockDigest", nil)
 				m.mockAddons = nil
 			},
+			wantImageDigest:    aws.String("mockDigest"),
+			wantScImageDigests: map[string]string{},
+		},
+		"build and push both main container and sidecar images successfully": {
+			inBuildRequired: true,
+			inUserTag:       "v1.0",
+			scDockerBuildArgs: map[string]*manifest.DockerBuildArgs{
+				"nginx": {
+					Dockerfile: aws.String("sidecarMockDockerfile"),
+					Context:    aws.String("sidecarMockContext"),
+				},
+				"logging": {
+					Dockerfile: aws.String("web/Dockerfile"),
+					Context:    aws.String("Users/bowie"),
+				},
+			},
+			mock: func(t *testing.T, m *deployMocks) {
+				m.mockImageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
+					Dockerfile: "mockDockerfile",
+					Context:    "mockContext",
+					Platform:   "mockContainerPlatform",
+					Tags:       []string{"latest", "v1.0"},
+				}).Return("mockDigest", nil)
+				m.mockImageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
+					Dockerfile: "sidecarMockDockerfile",
+					Context:    "sidecarMockContext",
+					Platform:   "mockContainerPlatform",
+					Tags:       []string{fmt.Sprintf("nginx-%s", mockLatestTag), fmt.Sprintf("nginx-%s", mockUUID)},
+				}).Return("sidecarMockDigest", nil)
+				m.mockImageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
+					Dockerfile: "web/Dockerfile",
+					Context:    "Users/bowie",
+					Platform:   "mockContainerPlatform",
+					Tags:       []string{"logging-latest", fmt.Sprintf("logging-%s", mockUUID)},
+				}).Return("sidecarMockDigest2", nil)
+				m.mockAddons = nil
+			},
 			wantImageDigest: aws.String("mockDigest"),
+			wantScImageDigests: map[string]string{
+				"nginx":   "sidecarMockDigest",
+				"logging": "sidecarMockDigest2",
+			},
 		},
 		"should retrieve Load Balanced Web Service custom resource URLs": {
 			mock: func(t *testing.T, m *deployMocks) {
@@ -272,6 +320,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 					},
 				}
 			},
+			wantScImageDigests: map[string]string{},
 		},
 		"should retrieve Backend Service custom resource URLs": {
 			mock: func(t *testing.T, m *deployMocks) {
@@ -300,6 +349,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 					},
 				}
 			},
+			wantScImageDigests: map[string]string{},
 		},
 		"should retrieve Worker Service custom resource URLs": {
 			mock: func(t *testing.T, m *deployMocks) {
@@ -328,6 +378,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 					},
 				}
 			},
+			wantScImageDigests: map[string]string{},
 		},
 		"should retrieve Request-Driven Web Service custom resource URLs": {
 			mock: func(t *testing.T, m *deployMocks) {
@@ -356,6 +407,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 					},
 				}
 			},
+			wantScImageDigests: map[string]string{},
 		},
 		"should retrieve Scheduled Job custom resource URLs": {
 			mock: func(t *testing.T, m *deployMocks) {
@@ -382,6 +434,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 					workloadDeployer: deployer,
 				}
 			},
+			wantScImageDigests: map[string]string{},
 		},
 		"error if fail to read env file": {
 			inEnvFile: mockEnvFile,
@@ -433,8 +486,9 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 					Return(mockAddonsS3URL, nil)
 			},
 
-			wantAddonsURL:  mockAddonsS3URL,
-			wantEnvFileARN: mockEnvFileS3ARN,
+			wantAddonsURL:      mockAddonsS3URL,
+			wantEnvFileARN:     mockEnvFileS3ARN,
+			wantScImageDigests: map[string]string{},
 		},
 		"should return error if fail to upload to S3 bucket": {
 			inRegion: "us-west-2",
@@ -451,6 +505,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			mock: func(t *testing.T, m *deployMocks) {
 				m.mockAddons = nil
 			},
+			wantScImageDigests: map[string]string{},
 		},
 		"should fail if packaging addons fails": {
 			mock: func(t *testing.T, m *deployMocks) {
@@ -504,8 +559,9 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				gitTag:        tc.inGitTag,
 				workspacePath: mockWorkspacePath,
 				mft: &mockWorkloadMft{
-					fileName:      tc.inEnvFile,
-					buildRequired: tc.inBuildRequired,
+					fileName:          tc.inEnvFile,
+					buildRequired:     tc.inBuildRequired,
+					scDockerBuildArgs: tc.scDockerBuildArgs,
 				},
 				fs:                 m.mockFileReader,
 				s3Client:           m.mockUploader,
@@ -536,6 +592,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				require.Equal(t, tc.wantAddonsURL, got.AddonsURL)
 				require.Equal(t, tc.wantEnvFileARN, got.EnvFileARN)
 				require.Equal(t, tc.wantImageDigest, got.ImageDigest)
+				require.Equal(t, tc.wantScImageDigests, got.ScImageDigests)
 			}
 		})
 	}

@@ -337,7 +337,7 @@ func (d *workloadDeployer) uploadContainerImage(imgBuilderPusher imageBuilderPus
 			return nil, nil, fmt.Errorf("build and push main container image: %w", err)
 		}
 	}
-	args := scbuildArgs(d.name, d.gitTag, UUIDTag, d.workspacePath, d.mft)
+	args := scBuildArgs(d.name, d.gitTag, UUIDTag, d.workspacePath, d.mft)
 	scdigests := make(map[string]string, len(args))
 	ctx, cancelWait := context.WithTimeout(context.Background(), waitForImageBuildAndPush)
 	defer cancelWait()
@@ -419,8 +419,8 @@ func userOrGitTag(userTag, gitTag string) string {
 	return gitTag
 }
 
-// scbuildArgs returns the map of dockerengine build arguments for the each sidecar that requires a native build from dockerfile.
-func scbuildArgs(name, gitTag, uuid, workspacePath string, unmarshaledManifest interface{}) map[string]*dockerengine.BuildArguments {
+// scBuildArgs returns the map of dockerengine build arguments for the each sidecar that requires a native build from dockerfile.
+func scBuildArgs(name, gitTag, uuid, workspacePath string, unmarshaledManifest interface{}) map[string]*dockerengine.BuildArguments {
 	mf, ok := unmarshaledManifest.(dfArgs)
 	var args map[string]*manifest.DockerBuildArgs
 	if ok {
