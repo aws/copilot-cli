@@ -1141,28 +1141,32 @@ func (o *initStorageOpts) actionsForEnvStorage() []string {
 }
 
 func (o *initStorageOpts) manifestSuggestion() string {
-	if o.storageType == s3StorageType {
+	logicalIDSafeStorageName := template.StripNonAlphaNumFunc(o.storageName)
+	switch {
+	case o.storageType == s3StorageType:
 		return fmt.Sprintf(`variables:
   DB_NAME:
-    from_cfn: ${COPILOT_APPLICATION_NAME}-${COPILOT_ENVIRONMENT_NAME}-%sBucket`, template.StripNonAlphaNumFunc(o.storageName))
-	}
-	if o.storageType == dynamoDBStorageType {
+    from_cfn: ${COPILOT_APPLICATION_NAME}-${COPILOT_ENVIRONMENT_NAME}-%sBucket`, logicalIDSafeStorageName)
+	case o.storageType == dynamoDBStorageType:
 		return fmt.Sprintf(`variables:
   DB_NAME:
-    from_cfn: ${COPILOT_APPLICATION_NAME}-${COPILOT_ENVIRONMENT_NAME}-%sTableName`, template.StripNonAlphaNumFunc(o.storageName))
-	}
-	// Storage type is Aurora serverless.
-	secretSnippet := fmt.Sprintf(`secrets:
+    from_cfn: ${COPILOT_APPLICATION_NAME}-${COPILOT_ENVIRONMENT_NAME}-%sTableName`, logicalIDSafeStorageName)
+	case o.storageType == rdsStorageType && o.workloadType == manifestinfo.RequestDrivenWebServiceType:
+		return fmt.Sprintf(`secrets:
   DB_SECRET:
-    from_cfn: ${COPILOT_APPLICATION_NAME}-${COPILOT_ENVIRONMENT_NAME}-%sAuroraSecret`, template.StripNonAlphaNumFunc(o.storageName))
-	if o.workloadType == manifestinfo.RequestDrivenWebServiceType {
-		return secretSnippet
-	}
-	networkSnippet := fmt.Sprintf(`network:
+    from_cfn: ${COPILOT_APPLICATION_NAME}-${COPILOT_ENVIRONMENT_NAME}-%sAuroraSecret`, logicalIDSafeStorageName)
+	case o.storageType == rdsStorageType && o.workloadType != manifestinfo.RequestDrivenWebServiceType:
+		return fmt.Sprintf(`network:
   vpc:
     security_groups:
-      - from_cfn: ${COPILOT_APPLICATION_NAME}-${COPILOT_ENVIRONMENT_NAME}-%sSecurityGroup`, template.StripNonAlphaNumFunc(o.storageName))
-	return networkSnippet + "\n" + secretSnippet
+      - from_cfn: ${COPILOT_APPLICATION_NAME}-${COPILOT_ENVIRONMENT_NAME}-%sSecurityGroup
+secrets:
+  DB_SECRET:
+    from_cfn: ${COPILOT_APPLICATION_NAME}-${COPILOT_ENVIRONMENT_NAME}-%sAuroraSecret`,
+			logicalIDSafeStorageName, logicalIDSafeStorageName)
+
+	}
+	return ""
 }
 
 func (o *initStorageOpts) addIngressSuggestion() string {
