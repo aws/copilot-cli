@@ -2963,6 +2963,21 @@ func (mr *MockwsReadWriterMockRecorder) EnvOverridesPath() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnvOverridesPath", reflect.TypeOf((*MockwsReadWriter)(nil).EnvOverridesPath))
 }
 
+// EnvironmentsExist mocks base method.
+func (m *MockwsReadWriter) EnvironmentsExist() (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnvironmentsExist")
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// EnvironmentsExist indicates an expected call of EnvironmentsExist.
+func (mr *MockwsReadWriterMockRecorder) EnvironmentsExist() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnvironmentsExist", reflect.TypeOf((*MockwsReadWriter)(nil).EnvironmentsExist))
+}
+
 // ListEnvironments mocks base method.
 func (m *MockwsReadWriter) ListEnvironments() ([]string, error) {
 	m.ctrl.T.Helper()
@@ -3352,6 +3367,21 @@ func (m *MockwsEnvironmentReader) EnvOverridesPath() string {
 func (mr *MockwsEnvironmentReaderMockRecorder) EnvOverridesPath() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnvOverridesPath", reflect.TypeOf((*MockwsEnvironmentReader)(nil).EnvOverridesPath))
+}
+
+// EnvironmentsExist mocks base method.
+func (m *MockwsEnvironmentReader) EnvironmentsExist() (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnvironmentsExist")
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// EnvironmentsExist indicates an expected call of EnvironmentsExist.
+func (mr *MockwsEnvironmentReaderMockRecorder) EnvironmentsExist() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnvironmentsExist", reflect.TypeOf((*MockwsEnvironmentReader)(nil).EnvironmentsExist))
 }
 
 // ListEnvironments mocks base method.

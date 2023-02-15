@@ -522,6 +522,16 @@ func (o *initStorageOpts) validateStorageLifecycle() error {
 // validateWorkloadNameWithLifecycle requires the workload to be in the workspace if the storage lifecycle is on workload-level.
 // Otherwise, it only caches whether the workload is present.
 func (o *initStorageOpts) validateWorkloadNameWithLifecycle() error {
+	if o.lifecycle == lifecycleEnvironmentLevel {
+		environmentsExist, err := o.ws.EnvironmentsExist()
+		if err != nil {
+			return fmt.Errorf("check if environments are managed in the workspace: %w", err)
+		}
+		if !environmentsExist {
+			return &errEnvironmentsNotInWorkspace{}
+		}
+		return nil
+	}
 	exists, err := o.ws.WorkloadExists(o.workloadName)
 	if err != nil {
 		return fmt.Errorf("check if %s exists in the workspace: %w", o.workloadName, err)

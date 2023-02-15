@@ -250,7 +250,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			inLifecycle:   lifecycleEnvironmentLevel,
 			mock: func(m *mockStorageInitAsk) {
 				m.configSel.EXPECT().Workload(gomock.Eq(storageInitSvcPrompt), gomock.Any(), wantedAppName).Return(wantedSvcName, nil)
-				m.ws.EXPECT().WorkloadExists(wantedSvcName).Return(false, nil)
+				m.ws.EXPECT().EnvironmentsExist().Return(true, nil)
 			},
 			wantedVars: &initStorageVars{
 				storageType:  s3StorageType,
@@ -282,6 +282,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			inStorageName: "my-bucket.4",
 			inLifecycle:   lifecycleEnvironmentLevel,
 			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().EnvironmentsExist().Return(true, nil)
 				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil).AnyTimes()
 			},
 		},
@@ -367,7 +368,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 				m.ws.EXPECT().ReadFile("mockEnvAddonPath").Return([]byte(""), nil)
 				m.ws.EXPECT().EnvAddonFilePath(fmt.Sprintf("%s.yml", wantedBucketName)).
 					Return("mockEnvAddonPath") // Called in log.Info.
-				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil)
+				m.ws.EXPECT().EnvironmentsExist().Return(true, nil)
 			},
 			wantedVars: &initStorageVars{
 				storageType:  s3StorageType,
@@ -420,11 +421,31 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			},
 			wantedErr: errors.New("ask for lifecycle: some error"),
 		},
-		"error checking if workload is in workspace": {
+		"error checking if any environment is in workspace": {
 			inStorageType: s3StorageType,
 			inSvcName:     "frontend",
 			inStorageName: "my-bucket",
 			inLifecycle:   lifecycleEnvironmentLevel,
+			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().EnvironmentsExist().Return(false, errors.New("wanted err"))
+			},
+			wantedErr: errors.New("check if environments are managed in the workspace: wanted err"),
+		},
+		"error if environments are not managed in workspace for a env-level storage": {
+			inStorageType: s3StorageType,
+			inSvcName:     "frontend",
+			inStorageName: "my-bucket",
+			inLifecycle:   lifecycleEnvironmentLevel,
+			mock: func(m *mockStorageInitAsk) {
+				m.ws.EXPECT().EnvironmentsExist().Return(false, nil)
+			},
+			wantedErr: errors.New("environments are not managed in the workspace"),
+		},
+		"error checking if workload is in workspace": {
+			inStorageType: s3StorageType,
+			inSvcName:     "frontend",
+			inStorageName: "my-bucket",
+			inLifecycle:   lifecycleWorkloadLevel,
 			mock: func(m *mockStorageInitAsk) {
 				m.ws.EXPECT().WorkloadExists(gomock.Eq("frontend")).Return(false, errors.New("wanted err"))
 			},
@@ -446,7 +467,8 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			inStorageName: "my-bucket",
 			inLifecycle:   lifecycleEnvironmentLevel,
 			mock: func(m *mockStorageInitAsk) {
-				m.ws.EXPECT().WorkloadExists(gomock.Eq("frontend")).Return(false, nil)
+				m.ws.EXPECT().EnvironmentsExist().Return(true, nil)
+				m.ws.EXPECT().WorkloadExists(gomock.Eq("frontend")).Times(0)
 			},
 		},
 		"no error or asks when fully specified": {
@@ -455,7 +477,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			inStorageName: wantedBucketName,
 			inLifecycle:   lifecycleEnvironmentLevel,
 			mock: func(m *mockStorageInitAsk) {
-				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil).AnyTimes()
+				m.ws.EXPECT().EnvironmentsExist().Return(true, nil)
 			},
 		},
 	}
