@@ -45,7 +45,7 @@ You can now add your secrets (from SSM Parameter Store or AWS Secrets Manager) t
     secret-name-as-env-variable: secret-name-from-aws
 ```
 And deploy! Your service can now access the secret as an environment variable.
-For more detailed use of the secrets field:
+For more detailed use of the `secrets` field:
 ```yaml
 secrets:
   # SecretsManager
