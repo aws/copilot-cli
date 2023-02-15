@@ -50,7 +50,7 @@ Similar to other service types such as Load-Balanced Web Service, you need to fi
 Then simply update your Request-Driven Web Service manifest with:
 ```yaml
   secrets:
-    secret-name-as-env-variable: secret-name-from-aws
+    GITHUB_TOKEN: GH_TOKEN_SECRET
 ```
 And deploy! Your service can now access the secret as an environment variable.
 
