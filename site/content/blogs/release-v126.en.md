@@ -37,8 +37,7 @@ Copilot v1.26 brings several new features and improvements:
 ## `storage init` for environment addons
 
 ## Sidecar image build
-You can now build Sidecar container images natively from a Dockerfile. Copilot builds and pushes multiple sidecar container images in parallel
-to the same ECR repository of your main container.
+You can now use Copilot to build sidecar container images natively from a Dockerfile, and get them pushed to ECR.
 You can modify your workload manifest as below.
 
 You can just specify the path to your Dockerfile as string.
