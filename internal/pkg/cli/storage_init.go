@@ -750,7 +750,7 @@ func (o *initStorageOpts) Execute() error {
 			addon.description,
 			color.HighlightResource(displayPath(addon.path)))
 		if addon.description == blobDescriptionParameters {
-			log.Infoln(addon.recommendedAction())
+			log.Infoln(indentBy(color.Faint.Sprintf(addon.recommendedAction()), 2))
 		}
 	}
 	log.Infoln()
@@ -805,8 +805,7 @@ func (b *addonBlob) recommendedAction() string {
 	if err != nil {
 		return "" // Best effort to read the content in order to make suggestions.
 	}
-	msg := color.Faint.Sprintf("Make sure that %s has the following snippet:\n%s", color.HighlightResource(displayPath(b.path)), color.HighlightCodeBlock(string(data)))
-	return msg
+	return fmt.Sprintf("Check that %s has the following snippet:\n%s", displayPath(b.path), color.HighlightCodeBlock(string(data)))
 }
 
 func (o *initStorageOpts) addonBlobs() ([]addonBlob, error) {
