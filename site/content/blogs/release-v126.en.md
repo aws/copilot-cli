@@ -37,6 +37,47 @@ Copilot v1.26 brings several new features and improvements:
 ## `storage init` for environment addons
 
 ## Sidecar image build
+You can now build Sidecar container images natively from a Dockerfile. Copilot builds and pushes multiple sidecar container images in parallel
+to the same ECR repository of your main container.
+You can modify your workload manifest as below.
+
+You can just specify the path to your Dockerfile as string.
+
+```yaml
+sidecars:
+  nginx:
+    build: path/to/dockerfile
+```
+
+You can also specify build as a map.
+
+```yaml
+sidecars:
+  nginx:
+    build:
+      dockerfile: path/to/dockerfile
+      context: context/dir
+      target: build-stage
+      cache_from:
+        - image: tag
+      args: value
+```
+
+You can specify an existing image name instead of building from a Dockerfile.
+
+```yaml
+sidecars:
+  nginx:
+    image: 123457839156.dkr.ecr.us-west-2.amazonaws.com/demo/front:nginx-latest
+```
+Or you can provide the image name using location field.
+
+```yaml
+sidecars:
+  nginx:
+  image:
+    location:  123457839156.dkr.ecr.us-west-2.amazonaws.com/demo/front:nginx-latest
+```
 
 ## Request-Driven Web Service secret support
 

@@ -2,8 +2,40 @@
 <a id="port" href="#port" class="field">`port`</a> <span class="type">Integer</span>  
 Port of the container to expose (optional).
 
-<a id="image" href="#image" class="field">`image`</a> <span class="type">String</span>  
-Image URL for the sidecar container (required).
+<a id="image" href="#image" class="field">`image`</a> <span class="type">String or Map</span>  
+Image URL for the sidecar container or parameters related to Docker build configuration.
+```yaml
+sidecars:
+  nginx:
+    image: 123457839156.dkr.ecr.us-west-2.amazonaws.com/demo/front:nginx-latest
+```
+
+<span class="parent-field">image.</span><a id="image-build" href="#image-build" class="field">`build`</a> <span class="type">String or Map</span> 
+Build sidecar container images natively from a Dockerfile with optional arguments.
+
+If you specify the path of your Dockerfile as string, Copilot assume that the build context should be the dirname of the string you specify. Workload manifest looks like below
+```yaml
+sidecars:
+  nginx:
+    build: path/to/dockerfile
+```
+<span class="parent-field">image.build.</span><a id="image-build-dockerfile" href="#image-build-dockerfile" class="field">`dockerfile`</a> <span class="type">String</span>
+The path to directory of dockerfile.
+
+<span class="parent-field">image.build.</span><a id="image-build-context" href="#image-build-context" class="field">`context`</a> <span class="type">String</span> 
+The path of directory that will be passed as build context to docker build command. 
+
+<span class="parent-field">image.build.</span><a id="image-build-target" href="#image-build-target" class="field">`target`</a> <span class="type">String</span> 
+Specify a build stage in a multi-stage Dockerfile.
+
+<span class="parent-field">image.build.</span><a id="image-build-cache_from" href="#image-build-cache_from" class="field">`cache_from`</a> <span class="type">Array of Strings</span>
+Specify one or more images from which to cache the intermediate image layers during the docker build process.
+
+<span class="parent-field">image.build.</span><a id="image-build-args" href="#image-build-args" class="field">`args`</a> <span class="type">Map</span>
+Set Environment Variables or build-time variables that can be set when building a Docker image.
+
+<span class="parent-field">image.</span><a id="image-location" href="#image-location" class="field">`location`</a> <span class="type">String</span> 
+You can specify an existing image name instead of building container from a Dockerfile. Mutually exclusive with [`image.build`](#image-build).
 
 <a id="essential" href="#essential" class="field">`essential`</a> <span class="type">Bool</span>  
 Whether the sidecar container is an essential container (optional, default true).
