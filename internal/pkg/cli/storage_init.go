@@ -527,7 +527,9 @@ func (o *initStorageOpts) validateWorkloadNameWithLifecycle() error {
 		return fmt.Errorf("check if %s exists in the workspace: %w", o.workloadName, err)
 	}
 	if o.lifecycle == lifecycleWorkloadLevel && !exists {
-		return fmt.Errorf("workload %s not found in the workspace", o.workloadName)
+		return &errWorkloadNotInWorkspace{
+			workloadName: o.workloadName,
+		}
 	}
 	return nil
 }
@@ -1157,6 +1159,30 @@ func (o *initStorageOpts) addIngressSuggestion() string {
 	return fmt.Sprintf(`copilot storage init -n %s \
 --storage-type %s \
 --add-ingress-from %s`, o.storageName, o.storageType, o.workloadName)
+}
+
+type errWorkloadNotInWorkspace struct {
+	workloadName string
+}
+
+func (e *errWorkloadNotInWorkspace) Error() string {
+	return fmt.Sprintf("workload %s not found in the workspace", e.workloadName)
+}
+
+// RecommendedActions suggests actions to fix the error.
+func (e *errWorkloadNotInWorkspace) RecommendedActions() string {
+	return "just fly away"
+}
+
+type errEnvironmentsNotInWorkspace struct{}
+
+func (e *errEnvironmentsNotInWorkspace) Error() string {
+	return fmt.Sprintf("environments are not managed in the workspace")
+}
+
+// RecommendedActions suggests actions to fix the error.
+func (e *errEnvironmentsNotInWorkspace) RecommendedActions() string {
+	return "just fly away"
 }
 
 // buildStorageInitCmd builds the command and adds it to the CLI.
