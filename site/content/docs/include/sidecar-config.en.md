@@ -4,6 +4,7 @@ Port of the container to expose (optional).
 
 <a id="image" href="#image" class="field">`image`</a> <span class="type">String or Map</span>  
 Image URL for the sidecar container or parameters related to Docker build configuration.
+
 ```yaml
 sidecars:
   nginx:
