@@ -357,6 +357,7 @@ func (d *workloadDeployer) uploadContainerImage(imgBuilderPusher imageBuilderPus
 	if !required {
 		return nil, scDigests, nil
 	}
+	log.Infoln(scDigests)
 	return aws.String(digest), scDigests, nil
 }
 

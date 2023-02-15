@@ -5,6 +5,7 @@ package deploy
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -16,6 +17,7 @@ import (
 	cloudformation0 "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 	"github.com/google/uuid"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -194,6 +196,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 		wantScImageDigests map[string]string
 		wantBuildRequired  bool
 		wantErr            error
+		ctx                context.Context
 	}{
 		"error if failed to build and push image": {
 			inBuildRequired: true,
@@ -257,10 +260,6 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			inBuildRequired: true,
 			inUserTag:       "v1.0",
 			scDockerBuildArgs: map[string]*manifest.DockerBuildArgs{
-				"nginx": {
-					Dockerfile: aws.String("sidecarMockDockerfile"),
-					Context:    aws.String("sidecarMockContext"),
-				},
 				"logging": {
 					Dockerfile: aws.String("web/Dockerfile"),
 					Context:    aws.String("Users/bowie"),
@@ -273,24 +272,23 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 					Platform:   "mockContainerPlatform",
 					Tags:       []string{"latest", "v1.0"},
 				}).Return("mockDigest", nil)
-				m.mockImageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
-					Dockerfile: "sidecarMockDockerfile",
-					Context:    "sidecarMockContext",
-					Platform:   "mockContainerPlatform",
-					Tags:       []string{fmt.Sprintf("nginx-%s", mockLatestTag), fmt.Sprintf("nginx-%s", mockUUID)},
-				}).Return("sidecarMockDigest", nil)
-				m.mockImageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
-					Dockerfile: "web/Dockerfile",
-					Context:    "Users/bowie",
-					Platform:   "mockContainerPlatform",
-					Tags:       []string{"logging-latest", fmt.Sprintf("logging-%s", mockUUID)},
-				}).Return("sidecarMockDigest2", nil)
+				ctx := context.Background()
+				g, _ := errgroup.WithContext(ctx)
+				g.Go(func() error {
+					m.mockImageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
+						Dockerfile: "web/Dockerfile",
+						Context:    "Users/bowie",
+						Platform:   "mockContainerPlatform",
+						Tags:       []string{"logging-latest", fmt.Sprintf("logging-%s", mockUUID)},
+					}).Return("sidecarMockDigest1", nil)
+					return nil
+				})
 				m.mockAddons = nil
+				g.Wait()
 			},
 			wantImageDigest: aws.String("mockDigest"),
 			wantScImageDigests: map[string]string{
-				"nginx":   "sidecarMockDigest",
-				"logging": "sidecarMockDigest2",
+				"logging": "sidecarMockDigest1",
 			},
 		},
 		"should retrieve Load Balanced Web Service custom resource URLs": {
