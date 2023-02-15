@@ -1187,7 +1187,7 @@ func (e *errWorkloadNotInWorkspace) RecommendActions() string {
 type errEnvironmentsNotInWorkspace struct{}
 
 func (e *errEnvironmentsNotInWorkspace) Error() string {
-	return fmt.Sprintf("environments are not managed in the workspace")
+	return "environments are not managed in the workspace"
 }
 
 // RecommendActions suggests actions to fix the error.
