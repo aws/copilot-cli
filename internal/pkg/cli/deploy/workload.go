@@ -12,7 +12,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -48,7 +47,6 @@ const (
 	fmtForceUpdateSvcStart    = "Forcing an update for service %s from environment %s"
 	fmtForceUpdateSvcFailed   = "Failed to force an update for service %s from environment %s: %v.\n"
 	fmtForceUpdateSvcComplete = "Forced an update for service %s from environment %s.\n"
-	waitForImageBuildAndPush  = 100 * time.Second
 )
 
 // ActionRecommender contains methods that output action recommendation.
@@ -338,15 +336,14 @@ func (d *workloadDeployer) uploadContainerImage(imgBuilderPusher imageBuilderPus
 		}
 	}
 	args := scBuildArgs(d.name, d.gitTag, UUIDTag, d.workspacePath, d.mft)
-	scdigests := make(map[string]string, len(args))
-	ctx, cancelWait := context.WithTimeout(context.Background(), waitForImageBuildAndPush)
-	defer cancelWait()
+	scDigests := make(map[string]string, len(args))
+	ctx := context.Background()
 	g, _ := errgroup.WithContext(ctx)
 	for k, v := range args {
 		scName := k
 		dArgs := v
 		g.Go(func() error {
-			scdigests[scName], err = imgBuilderPusher.BuildAndPush(dockerengine.New(exec.NewCmd()), dArgs)
+			scDigests[scName], err = imgBuilderPusher.BuildAndPush(dockerengine.New(exec.NewCmd()), dArgs)
 			if err != nil {
 				return err
 			}
@@ -358,9 +355,9 @@ func (d *workloadDeployer) uploadContainerImage(imgBuilderPusher imageBuilderPus
 	}
 	// The below if loop is for simple test cases.
 	if !required {
-		return nil, scdigests, nil
+		return nil, scDigests, nil
 	}
-	return aws.String(digest), scdigests, nil
+	return aws.String(digest), scDigests, nil
 }
 
 // generateUUID generates a random UUID to tag main and sidecar containers.
