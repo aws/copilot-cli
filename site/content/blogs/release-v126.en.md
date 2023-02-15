@@ -39,7 +39,7 @@ Copilot v1.26 brings several new features and improvements:
 ## Sidecar image build
 
 ## Request-Driven Web Service secrets support
-You can now add your secrets(SSM Parameter Store or AWS Secrets Manager) to your App Runner service as environment variables using Copilot. First ensure that your secrets are tagged correctly. Then simply update your Request-Driven Web Service manifest with:
+You can now add your secrets (from SSM Parameter Store or AWS Secrets Manager) to your App Runner service as environment variables using Copilot. First ensure that your secrets are tagged correctly. Then simply update your Request-Driven Web Service manifest with:
 ```yaml
   secrets:
     secret-name-as-env-variable: secret-name-from-aws
