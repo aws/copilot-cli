@@ -53,6 +53,7 @@ Then simply update your Request-Driven Web Service manifest with:
     secret-name-as-env-variable: secret-name-from-aws
 ```
 And deploy! Your service can now access the secret as an environment variable.
+
 For more detailed use of the `secrets` field:
 ```yaml
 secrets:
