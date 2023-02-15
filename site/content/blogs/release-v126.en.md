@@ -57,7 +57,7 @@ And deploy! Your service can now access the secret as an environment variable.
 For more detailed use of the `secrets` field:
 ```yaml
 secrets:
-  # SecretsManager
+  # To inject a secret from SecretsManager.
   # (Recommended) Option 1. Referring to the secret by name.
   DB:
     secretsmanager: 'demo/test/mysql'
