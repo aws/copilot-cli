@@ -506,8 +506,8 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 		require.NoError(t, err)
 		lastForceUpdateID, err := deployer.ForceUpdateOutputID(environmentToDeploy.App.Name, environmentToDeploy.Name)
 		require.NoError(t, err)
-		conf := stack.NewEnvConfigFromExistingStack(&environmentToDeploy, lastForceUpdateID, oldParams)
-
+		conf, err := stack.NewEnvConfigFromExistingStack(&environmentToDeploy, lastForceUpdateID, oldParams)
+		require.NoError(t, err)
 		// Deploy the environment and wait for it to be complete.
 		require.NoError(t, deployer.UpdateAndRenderEnvironment(conf, environmentToDeploy.ArtifactBucketARN))
 

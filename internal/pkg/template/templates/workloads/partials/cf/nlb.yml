@@ -10,58 +10,58 @@ PublicNetworkLoadBalancer:
         - Fn::ImportValue:
             !Sub '${AppName}-${EnvName}-PublicSubnets'
     Type: network
-
-NLBListener:
+{{- range $i, $listener := .NLB.Listener }}
+NLBListener{{- if ne $i 0 }}{{$i}}{{end}}:
   Type: AWS::ElasticLoadBalancingV2::Listener
   Properties:
     DefaultActions:
-      - TargetGroupArn: !Ref NLBTargetGroup
+      - TargetGroupArn: !Ref NLBTargetGroup{{- if ne $i 0 }}{{$i}}{{end}}
         Type: forward
     LoadBalancerArn: !Ref PublicNetworkLoadBalancer
-    Port: !Ref NLBPort
-    Protocol: {{ .NLB.Listener.Protocol }}
-{{- if eq .NLB.Listener.Protocol "TLS" }}
+    Port: {{ $listener.Port }}
+    Protocol: {{ $listener.Protocol }}
+  {{- if eq $listener.Protocol "TLS" }}
     Certificates:
       - CertificateArn: !Ref NLBCertValidatorAction
-    SslPolicy: {{ if .NLB.Listener.SSLPolicy }}{{ .NLB.Listener.SSLPolicy }}{{ else }} ELBSecurityPolicy-TLS13-1-2-2021-06 {{ end }}
-{{- end}}
+    SslPolicy: {{ if $listener.SSLPolicy }}{{ $listener.SSLPolicy }}{{ else }} ELBSecurityPolicy-TLS13-1-2-2021-06 {{ end }}
+  {{- end}}
 
-NLBTargetGroup:
+NLBTargetGroup{{- if ne $i 0 }}{{$i}}{{end}}:
   Metadata:
     'aws:copilot:description': 'A target group to connect the network load balancer to your service'
   Type: AWS::ElasticLoadBalancingV2::TargetGroup
   Properties:
-    {{- if .NLB.Listener.HealthCheck.HealthyThreshold }}
-    HealthyThresholdCount: {{.NLB.Listener.HealthCheck.HealthyThreshold}}
+    {{- if $listener.HealthCheck.HealthyThreshold }}
+    HealthyThresholdCount: {{$listener.HealthCheck.HealthyThreshold}}
     {{- end }}
-    {{- if .NLB.Listener.HealthCheck.UnhealthyThreshold }}
-    UnhealthyThresholdCount: {{.NLB.Listener.HealthCheck.UnhealthyThreshold}}
+    {{- if $listener.HealthCheck.UnhealthyThreshold }}
+    UnhealthyThresholdCount: {{$listener.HealthCheck.UnhealthyThreshold}}
     {{- end }}
-    {{- if .NLB.Listener.HealthCheck.Interval }}
-    HealthCheckIntervalSeconds: {{.NLB.Listener.HealthCheck.Interval}}
+    {{- if $listener.HealthCheck.Interval }}
+    HealthCheckIntervalSeconds: {{$listener.HealthCheck.Interval}}
     {{- end }}
-    {{- if .NLB.Listener.HealthCheck.Timeout }}
-    HealthCheckTimeoutSeconds: {{.NLB.Listener.HealthCheck.Timeout}}
+    {{- if $listener.HealthCheck.Timeout }}
+    HealthCheckTimeoutSeconds: {{$listener.HealthCheck.Timeout}}
     {{- end }}
-    {{- if .NLB.Listener.HealthCheck.Port }}
-    HealthCheckPort: {{.NLB.Listener.HealthCheck.Port}}
+    {{- if $listener.HealthCheck.Port }}
+    HealthCheckPort: {{$listener.HealthCheck.Port}}
     {{- end }}
-    Port: {{ .NLB.Listener.TargetPort }}
-    Protocol: {{- if eq .NLB.Listener.Protocol "TLS"}} TCP {{- else}} {{ .NLB.Listener.Protocol }} {{- end}}
+    Port: {{ $listener.TargetPort }}
+    Protocol: {{- if eq $listener.Protocol "TLS"}} TCP {{- else}} {{ $listener.Protocol }} {{- end}}
     TargetGroupAttributes:
       - Key: deregistration_delay.timeout_seconds
-        Value: {{.DeregistrationDelay}}  # ECS Default is 300; Copilot default is 60.
-{{- if ne .NLB.Listener.Protocol "TLS"}}
-{{- if .NLB.Listener.Stickiness }} {{/*Sticky sessions are not supported with TLS listeners and TLS target groups.*/}}
+        Value: {{$.DeregistrationDelay}}  # ECS Default is 300; Copilot default is 60.
+{{- if ne $listener.Protocol "TLS"}}
+{{- if $listener.Stickiness }} {{/*Sticky sessions are not supported with TLS listeners and TLS target groups.*/}}
       - Key: stickiness.enabled
-        Value: {{ .NLB.Listener.Stickiness }}
+        Value: {{ $listener.Stickiness }}
 {{- end}}
 {{- end}}
     TargetType: ip
     VpcId:
       Fn::ImportValue:
         !Sub "${AppName}-${EnvName}-VpcId"
-
+{{- end }}
 NLBSecurityGroup:
   Metadata:
     'aws:copilot:description': 'A security group for your network load balancer to route traffic to service'
@@ -70,18 +70,20 @@ NLBSecurityGroup:
     GroupDescription: Allow access from the network load balancer to service
     SecurityGroupIngress:
 {{range $cidr := .NLB.PublicSubnetCIDRs}}
+  {{- range $listener := $.NLB.Listener}}
       - CidrIp: {{$cidr}}
         Description: Ingress to allow access from Network Load Balancer subnet
-        FromPort: {{ $.NLB.Listener.TargetPort }}
-        IpProtocol: {{- if eq $.NLB.Listener.Protocol "TLS" }} TCP {{- else }} {{ $.NLB.Listener.Protocol }} {{- end}}
-        ToPort: {{ $.NLB.Listener.TargetPort }}
-      {{- if $.NLB.Listener.HealthCheck.Port}}{{- if ne $.NLB.Listener.HealthCheck.Port $.NLB.Listener.Port}}
+        FromPort: {{ $listener.TargetPort }}
+        IpProtocol: {{- if eq $listener.Protocol "TLS" }} TCP {{- else }} {{ $listener.Protocol }} {{- end}}
+        ToPort: {{ $listener.TargetPort }}
+      {{- if $listener.HealthCheck.Port}}{{- if ne $listener.HealthCheck.Port $listener.Port}}
       - CidrIp: {{$cidr}}
         Description: Ingress to allow access from Network Load Balancer subnet for health check
-        FromPort: {{ $.NLB.Listener.HealthCheck.Port }}
-        ToPort: {{ $.NLB.Listener.HealthCheck.Port }}
+        FromPort: {{ $listener.HealthCheck.Port }}
+        ToPort: {{ $listener.HealthCheck.Port }}
         IpProtocol: TCP
       {{- end}}{{- end}}
+  {{- end}}
 {{end}}
     Tags:
       - Key: Name
@@ -89,7 +91,7 @@ NLBSecurityGroup:
     VpcId:
       Fn::ImportValue:
         !Sub "${AppName}-${EnvName}-VpcId"
-{{- if not .NLB.Listener.Aliases}}
+{{- if not .NLB.Aliases}}
 NLBDNSAlias:
   Metadata:
     'aws:copilot:description': 'The default alias record for the network load balancer'
@@ -130,7 +132,7 @@ NLBCustomDomainAction:
     ServiceName: !Ref WorkloadName
     RootDNSRole: {{ .AppDNSDelegationRole }}
     DomainName:  {{ .AppDNSName }}
-    Aliases: !Split [",", !Ref NLBAliases]
+    Aliases: {{ if .NLB.Aliases }} {{ fmtSlice .NLB.Aliases }} {{ else }} [] {{ end }}
 
 NLBCustomDomainFunction:
   Type: AWS::Lambda::Function
@@ -193,7 +195,7 @@ NLBCustomDomainRole:
     ManagedPolicyArns:
       - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
 {{- end}}
-{{- if eq .NLB.Listener.Protocol "TLS" }}
+{{- if .NLB.CertificateRequired }}
 NLBCertValidatorAction:
   Metadata:
     'aws:copilot:description': "Request and validate the certificate for your Network Load Balancer"
@@ -210,7 +212,7 @@ NLBCertValidatorAction:
     ServiceName: !Ref WorkloadName
     RootDNSRole: {{ .AppDNSDelegationRole }}
     DomainName:  {{ .AppDNSName }}
-    Aliases: {{ if .NLB.Listener.Aliases }} !Split [",", !Ref NLBAliases] {{ else }} [] {{ end }}
+    Aliases: {{ if .NLB.Aliases }} {{ fmtSlice .NLB.Aliases }} {{ else }} [] {{ end }}
 
 NLBCertValidatorFunction:
   Type: AWS::Lambda::Function

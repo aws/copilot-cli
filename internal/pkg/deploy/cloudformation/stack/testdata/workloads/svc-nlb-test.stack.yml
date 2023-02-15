@@ -350,7 +350,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
         - TargetGroupArn: !Ref NLBTargetGroup
           Type: forward
       LoadBalancerArn: !Ref PublicNetworkLoadBalancer
-      Port: !Ref NLBPort
+      Port: 443
       Protocol: TLS
       Certificates:
         - CertificateArn: !Ref NLBCertValidatorAction
