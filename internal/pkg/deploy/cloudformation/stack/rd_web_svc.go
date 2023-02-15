@@ -7,11 +7,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/aws/copilot-cli/internal/pkg/deploy"
-	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
-
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 )
 
@@ -39,18 +39,14 @@ var awsSDKLayerForRegion = map[string]*string{
 	"me-south-1":     aws.String("arn:aws:lambda:me-south-1:507411403535:layer:AWSLambda-Node-AWS-SDK:10"),
 }
 
-type requestDrivenWebSvcReadParser interface {
-	template.ReadParser
-	ParseRequestDrivenWebService(template.WorkloadOpts) (*template.Content, error)
-}
-
 // RequestDrivenWebService represents the configuration needed to create a CloudFormation stack from a request-drive web service manifest.
 type RequestDrivenWebService struct {
 	*appRunnerWkld
 	manifest *manifest.RequestDrivenWebService
 	app      deploy.AppInformation
 
-	parser requestDrivenWebSvcReadParser
+	parser   requestDrivenWebSvcReadParser
+	localCRs []uploadable // Custom resources that have not been uploaded yet.
 }
 
 // RequestDrivenWebServiceConfig contains data required to initialize a request-driven web service stack.
@@ -66,7 +62,10 @@ type RequestDrivenWebServiceConfig struct {
 
 // NewRequestDrivenWebService creates a new RequestDrivenWebService stack from a manifest file.
 func NewRequestDrivenWebService(cfg RequestDrivenWebServiceConfig) (*RequestDrivenWebService, error) {
-	parser := template.New()
+	crs, err := customresource.RDWS(fs)
+	if err != nil {
+		return nil, fmt.Errorf("request-driven web service custom resources: %w", err)
+	}
 	return &RequestDrivenWebService{
 		appRunnerWkld: &appRunnerWkld{
 			wkld: &wkld{
@@ -79,7 +78,7 @@ func NewRequestDrivenWebService(cfg RequestDrivenWebServiceConfig) (*RequestDriv
 				image:              cfg.Manifest.ImageConfig.Image,
 				rawManifest:        cfg.RawManifest,
 				addons:             cfg.Addons,
-				parser:             parser,
+				parser:             fs,
 			},
 			instanceConfig:    cfg.Manifest.InstanceConfig,
 			imageConfig:       cfg.Manifest.ImageConfig,
@@ -87,7 +86,8 @@ func NewRequestDrivenWebService(cfg RequestDrivenWebServiceConfig) (*RequestDriv
 		},
 		app:      cfg.App,
 		manifest: cfg.Manifest,
-		parser:   parser,
+		parser:   fs,
+		localCRs: uploadableCRs(crs).convert(),
 	}, nil
 }
 

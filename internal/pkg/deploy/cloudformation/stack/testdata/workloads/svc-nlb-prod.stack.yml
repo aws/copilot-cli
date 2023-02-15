@@ -358,7 +358,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
         - TargetGroupArn: !Ref NLBTargetGroup
           Type: forward
       LoadBalancerArn: !Ref PublicNetworkLoadBalancer
-      Port: !Ref NLBPort
+      Port: 443
       Protocol: TLS
       Certificates:
         - CertificateArn: !Ref NLBCertValidatorAction
@@ -414,7 +414,8 @@ Resources: # If a bucket URL is specified, that means the template exists.
       ServiceName: !Ref WorkloadName
       RootDNSRole: arn:aws:iam::123456789123:role/my-app-DNSDelegationRole
       DomainName: example.com
-      Aliases: !Split [",", !Ref NLBAliases]
+      Aliases:
+        - nlb.example.com
   NLBCustomDomainFunction:
     Type: AWS::Lambda::Function
     Condition: HasAssociatedDomain
@@ -481,7 +482,8 @@ Resources: # If a bucket URL is specified, that means the template exists.
       ServiceName: !Ref WorkloadName
       RootDNSRole: arn:aws:iam::123456789123:role/my-app-DNSDelegationRole
       DomainName: example.com
-      Aliases: !Split [",", !Ref NLBAliases]
+      Aliases:
+        - nlb.example.com
   NLBCertValidatorFunction:
     Type: AWS::Lambda::Function
     Condition: HasAssociatedDomain

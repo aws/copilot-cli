@@ -44,6 +44,8 @@ const (
 	CopilotDirName = "copilot"
 	// SummaryFileName is the name of the file that is associated with the application.
 	SummaryFileName = ".workspace"
+	// AddonsParametersFileName is the name of the file that define extra parameters for an addon.
+	AddonsParametersFileName = "addons.parameters.yml"
 
 	addonsDirName             = "addons"
 	overridesDirName          = "overrides"

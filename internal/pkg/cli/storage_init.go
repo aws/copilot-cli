@@ -259,7 +259,6 @@ func (o *initStorageOpts) validateAddIngressFrom() error {
 	if !exist {
 		return fmt.Errorf("workload %s not found in the workspace", o.addIngressFrom)
 	}
-	o.workloadExists = true
 	return nil
 
 }
@@ -451,7 +450,6 @@ func (o *initStorageOpts) askLocalWorkload() error {
 		return fmt.Errorf("retrieve local workload names: %w", err)
 	}
 	o.workloadName = workload
-	o.workloadExists = true
 	return nil
 }
 
@@ -462,7 +460,6 @@ func (o *initStorageOpts) validateOrAskLifecycle() error {
 	_, err := o.ws.ReadFile(o.ws.WorkloadAddonFileAbsPath(o.workloadName, fmt.Sprintf("%s.yml", o.storageName)))
 	if err == nil {
 		o.lifecycle = lifecycleWorkloadLevel
-		o.workloadExists = true
 		log.Infof("%s %s %s\n",
 			color.Emphasize("Lifecycle:"),
 			"workload-level",
@@ -520,14 +517,10 @@ func (o *initStorageOpts) validateStorageLifecycle() error {
 // validateWorkloadNameWithLifecycle requires the workload to be in the workspace if the storage lifecycle is on workload-level.
 // Otherwise, it only caches whether the workload is present.
 func (o *initStorageOpts) validateWorkloadNameWithLifecycle() error {
-	if o.workloadExists {
-		return nil
-	}
 	exists, err := o.ws.WorkloadExists(o.workloadName)
 	if err != nil {
 		return fmt.Errorf("check if %s exists in the workspace: %w", o.workloadName, err)
 	}
-	o.workloadExists = exists
 	if o.lifecycle == lifecycleWorkloadLevel && !exists {
 		return fmt.Errorf("workload %s not found in the workspace", o.workloadName)
 	}
@@ -724,6 +717,10 @@ func (o *initStorageOpts) validateOrAskAuroraInitialDBName() error {
 
 // Execute deploys a new environment with CloudFormation and adds it to SSM.
 func (o *initStorageOpts) Execute() error {
+	o.consumeFlags()
+	if err := o.checkWorkloadExists(); err != nil {
+		return err
+	}
 	if err := o.readWorkloadType(); err != nil {
 		return err
 	}
@@ -747,6 +744,26 @@ func (o *initStorageOpts) Execute() error {
 		)
 	}
 	log.Infoln()
+	return nil
+}
+
+func (o *initStorageOpts) consumeFlags() {
+	if o.addIngressFrom == "" {
+		return
+	}
+	o.workloadName = o.addIngressFrom
+	o.lifecycle = lifecycleEnvironmentLevel
+	if o.storageType == rdsStorageType && o.rdsEngine == "" {
+		o.rdsEngine = addon.RDSEngineTypeMySQL
+	}
+}
+
+func (o *initStorageOpts) checkWorkloadExists() error {
+	exist, err := o.ws.WorkloadExists(o.workloadName)
+	if err != nil {
+		return fmt.Errorf("check if %s exists in the workspace: %w", o.workloadName, err)
+	}
+	o.workloadExists = exist
 	return nil
 }
 
@@ -811,27 +828,29 @@ func (o *initStorageOpts) wkldDDBAddonBlobs() ([]addonBlob, error) {
 }
 
 func (o *initStorageOpts) envDDBAddonBlobs() ([]addonBlob, error) {
-	props, err := o.ddbProps()
-	if err != nil {
-		return nil, err
-	}
-	blobs := []addonBlob{
-		{
-			path:        o.ws.EnvAddonFilePath(fmt.Sprintf("%s.yml", o.storageName)),
-			description: "template",
-			blob:        addon.EnvDDBTemplate(props),
-		},
-	}
-	if !o.workloadExists {
-		return blobs, nil
-	}
-	return append(blobs, addonBlob{
+	ingressBlob := addonBlob{
 		path:        o.ws.WorkloadAddonFilePath(o.workloadName, fmt.Sprintf("%s-access-policy.yml", o.storageName)),
 		description: "template",
 		blob: addon.EnvDDBAccessPolicyTemplate(&addon.AccessPolicyProps{
 			Name: o.storageName,
 		}),
-	}), nil
+	}
+	if o.addIngressFrom != "" {
+		return []addonBlob{ingressBlob}, nil
+	}
+	props, err := o.ddbProps()
+	if err != nil {
+		return nil, err
+	}
+	tmplBlob := addonBlob{
+		path:        o.ws.EnvAddonFilePath(fmt.Sprintf("%s.yml", o.storageName)),
+		description: "template",
+		blob:        addon.EnvDDBTemplate(props),
+	}
+	if !o.workloadExists {
+		return []addonBlob{tmplBlob}, nil
+	}
+	return []addonBlob{tmplBlob, ingressBlob}, nil
 }
 
 func (o *initStorageOpts) ddbProps() (*addon.DynamoDBProps, error) {
@@ -870,25 +889,25 @@ func (o *initStorageOpts) wkldS3AddonBlobs() ([]addonBlob, error) {
 }
 
 func (o *initStorageOpts) envS3AddonBlobs() ([]addonBlob, error) {
-	props := o.s3Props()
-	blobs := []addonBlob{
-		{
-			path:        o.ws.EnvAddonFilePath(fmt.Sprintf("%s.yml", o.storageName)),
-			description: "template",
-			blob:        addon.EnvS3Template(props),
-		},
-	}
-	if !o.workloadExists {
-		return blobs, nil
-
-	}
-	return append(blobs, addonBlob{
+	ingressBlob := addonBlob{
 		path:        o.ws.WorkloadAddonFilePath(o.workloadName, fmt.Sprintf("%s-access-policy.yml", o.storageName)),
 		description: "template",
 		blob: addon.EnvS3AccessPolicyTemplate(&addon.AccessPolicyProps{
 			Name: o.storageName,
 		}),
-	}), nil
+	}
+	if o.addIngressFrom != "" {
+		return []addonBlob{ingressBlob}, nil
+	}
+	tmplBlob := addonBlob{
+		path:        o.ws.EnvAddonFilePath(fmt.Sprintf("%s.yml", o.storageName)),
+		description: "template",
+		blob:        addon.EnvS3Template(o.s3Props()),
+	}
+	if !o.workloadExists {
+		return []addonBlob{tmplBlob}, nil
+	}
+	return []addonBlob{tmplBlob, ingressBlob}, nil
 }
 
 func (o *initStorageOpts) s3Props() *addon.S3Props {
@@ -926,51 +945,71 @@ func (o *initStorageOpts) wkldRDSAddonBlobs() ([]addonBlob, error) {
 		return blobs, nil
 	}
 	return append(blobs, addonBlob{
-		path:        o.ws.WorkloadAddonFilePath(o.workloadName, "addons.parameters.yml"),
+		path:        o.ws.WorkloadAddonFilePath(o.workloadName, workspace.AddonsParametersFileName),
 		description: "parameters",
 		blob:        addon.RDWSParamsForRDS(),
 	}), nil
 }
 
 func (o *initStorageOpts) envRDSAddonBlobs() ([]addonBlob, error) {
+	if o.workloadType == manifestinfo.RequestDrivenWebServiceType {
+		return o.envRDSForRDWSAddonBlobs()
+	}
+	if o.addIngressFrom != "" {
+		return nil, nil
+	}
 	props, err := o.rdsProps()
 	if err != nil {
 		return nil, err
 	}
-	envTmplBlob := addon.EnvServerlessTemplate(props)
-	if o.workloadType == manifestinfo.RequestDrivenWebServiceType {
-		envTmplBlob = addon.EnvServerlessForRDWSTemplate(props)
+	tmplBlob := addonBlob{
+		path:        o.ws.EnvAddonFilePath(fmt.Sprintf("%s.yml", o.storageName)),
+		description: "template",
+		blob:        addon.EnvServerlessTemplate(props),
 	}
-	blobs := []addonBlob{
-		{
-			path:        o.ws.EnvAddonFilePath(fmt.Sprintf("%s.yml", o.storageName)),
-			description: "template",
-			blob:        envTmplBlob,
-		},
-		{
-			path:        o.ws.EnvAddonFilePath("addons.parameters.yml"),
-			description: "parameters",
-			blob:        addon.EnvParamsForRDS(),
-		},
+	paramBlob := addonBlob{
+		path:        o.ws.EnvAddonFilePath(workspace.AddonsParametersFileName),
+		description: "parameters",
+		blob:        addon.EnvParamsForRDS(),
 	}
-	if o.workloadType != manifestinfo.RequestDrivenWebServiceType || !o.workloadExists {
-		return blobs, nil
+	return []addonBlob{tmplBlob, paramBlob}, nil
+}
+
+func (o *initStorageOpts) envRDSForRDWSAddonBlobs() ([]addonBlob, error) {
+	rdwsIngressTmplBlob := addonBlob{
+		path:        o.ws.WorkloadAddonFilePath(o.workloadName, fmt.Sprintf("%s-ingress.yml", o.storageName)),
+		description: "template",
+		blob: addon.EnvServerlessRDWSIngressTemplate(addon.RDSIngressProps{
+			ClusterName: o.storageName,
+			Engine:      o.rdsEngine,
+		}),
 	}
-	return append(blobs,
-		addonBlob{
-			path:        o.ws.WorkloadAddonFilePath(o.workloadName, fmt.Sprintf("%s-ingress.yml", o.storageName)),
-			description: "template",
-			blob: addon.EnvServerlessRDWSIngressTemplate(addon.RDSIngressProps{
-				ClusterName: o.storageName,
-				Engine:      o.rdsEngine,
-			}),
-		},
-		addonBlob{
-			path:        o.ws.WorkloadAddonFilePath(o.workloadName, "addons.parameters.yml"),
-			description: "parameters",
-			blob:        addon.RDWSParamsForEnvRDS(),
-		},
-	), nil
+	rdwsIngressParamBlob := addonBlob{
+		path:        o.ws.WorkloadAddonFilePath(o.workloadName, workspace.AddonsParametersFileName),
+		description: "parameters",
+		blob:        addon.RDWSParamsForEnvRDS(),
+	}
+	if o.addIngressFrom != "" {
+		return []addonBlob{rdwsIngressTmplBlob, rdwsIngressParamBlob}, nil
+	}
+	props, err := o.rdsProps()
+	if err != nil {
+		return nil, err
+	}
+	tmplBlob := addonBlob{
+		path:        o.ws.EnvAddonFilePath(fmt.Sprintf("%s.yml", o.storageName)),
+		description: "template",
+		blob:        addon.EnvServerlessForRDWSTemplate(props),
+	}
+	paramBlob := addonBlob{
+		path:        o.ws.EnvAddonFilePath(workspace.AddonsParametersFileName),
+		description: "parameters",
+		blob:        addon.EnvParamsForRDS(),
+	}
+	if o.workloadExists {
+		return []addonBlob{tmplBlob, paramBlob, rdwsIngressTmplBlob, rdwsIngressParamBlob}, nil
+	}
+	return []addonBlob{tmplBlob, paramBlob}, nil
 }
 
 func (o *initStorageOpts) rdsProps() (addon.RDSProps, error) {
