@@ -1179,9 +1179,9 @@ func (e *errWorkloadNotInWorkspace) Error() string {
 	return fmt.Sprintf("workload %s not found in the workspace", e.workloadName)
 }
 
-// RecommendedActions suggests actions to fix the error.
-func (e *errWorkloadNotInWorkspace) RecommendedActions() string {
-	return "just fly away"
+// RecommendActions suggests actions to fix the error.
+func (e *errWorkloadNotInWorkspace) RecommendActions() string {
+	return fmt.Sprintf("Run %s in the workspace where %s is", color.HighlightCode("copilot storage init"), color.HighlightUserInput(e.workloadName))
 }
 
 type errEnvironmentsNotInWorkspace struct{}
@@ -1190,9 +1190,9 @@ func (e *errEnvironmentsNotInWorkspace) Error() string {
 	return fmt.Sprintf("environments are not managed in the workspace")
 }
 
-// RecommendedActions suggests actions to fix the error.
-func (e *errEnvironmentsNotInWorkspace) RecommendedActions() string {
-	return "just fly away"
+// RecommendActions suggests actions to fix the error.
+func (e *errEnvironmentsNotInWorkspace) RecommendActions() string {
+	return fmt.Sprintf("Run %s in the workspace where environments are managed)", color.HighlightCode("copilot storage init"))
 }
 
 // buildStorageInitCmd builds the command and adds it to the CLI.
