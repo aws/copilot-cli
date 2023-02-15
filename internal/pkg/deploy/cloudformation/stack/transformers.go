@@ -418,10 +418,6 @@ type networkLoadBalancerConfig struct {
 
 type applicationLoadBalancerConfig struct {
 	settings *template.ApplicationLoadBalancer
-
-	// If a domain is associated these values are not empty.
-	appDNSDelegationRole *string
-	appDNSName           *string
 }
 
 func convertELBAccessLogsConfig(mft *manifest.Environment) *template.ELBAccessLogs {
