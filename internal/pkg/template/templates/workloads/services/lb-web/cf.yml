@@ -103,17 +103,15 @@ Resources:
     Type: AWS::ECS::Service
     DependsOn:
     {{- if .ALBEnabled}}
-    {{- if .ALB.HTTPSListener }}
     {{- range $i, $listener := .ALB.Listener }}
+      {{- if $.ALB.HTTPSListener }}
       - HTTPListenerRuleWithDomain{{ if ne $i 0 }}{{ $i }}{{ end }}
       - HTTPSListenerRule{{ if ne $i 0 }}{{ $i }}{{ end }}
-    {{- end }}
-    {{- else}}
-    {{- range $i, $listener := .ALB.Listener }}
+      {{- else}}
       - HTTPListenerRule{{ if ne $i 0 }}{{ $i }}{{ end }}
+      {{- end}}
+    {{- end}}
     {{- end }}
-    {{- end}}
-    {{- end}}
     {{- if .NLB}}
     {{- range $i, $listener := .NLB.Listener }}
       - NLBListener{{ if ne $i 0 }}{{ $i }}{{ end }}

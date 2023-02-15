@@ -97,15 +97,15 @@ Resources:
     Type: AWS::ECS::Service
     DependsOn:
       - EnvControllerAction
-      {{- if and .ALBEnabled .ALB.HTTPSListener}}
+      {{- if .ALBEnabled }}
       {{- range $i, $listener := .ALB.Listener }}
+      {{- if $.ALB.HTTPSListener}}
       - HTTPListenerRuleWithDomain{{ if ne $i 0 }}{{ $i }}{{ end }}
       - HTTPSListenerRule{{ if ne $i 0 }}{{ $i }}{{ end }}
-      {{- end}}
-      {{- else if .ALBEnabled}}
-      {{- range $i, $listener := .ALB.Listener }}
+      {{- else }}
       - HTTPListenerRule{{ if ne $i 0 }}{{ $i }}{{ end }}
       {{- end}}
+      {{- end }}
       {{- end }}
     Properties:
       {{- "\n"}}{{ include "service-base-properties" . | indent 6 }}

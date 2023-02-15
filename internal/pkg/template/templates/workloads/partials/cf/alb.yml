@@ -24,8 +24,8 @@ TargetGroup{{ if ne $i 0 }}{{ $i }}{{ end }}:
     {{- if $listener.HTTPHealthCheck.Timeout}}
     HealthCheckTimeoutSeconds: {{$listener.HTTPHealthCheck.Timeout}}
     {{- end}}
-    {{- if .HealthCheckProtocol}}
-    HealthCheckProtocol: {{.HealthCheckProtocol}}
+    {{- if $listener.HealthCheckProtocol}}
+    HealthCheckProtocol: {{$listener.HealthCheckProtocol}}
     {{- end}}
     Port: {{$listener.TargetPort}}
     {{- if $listener.IsHTTPS }}

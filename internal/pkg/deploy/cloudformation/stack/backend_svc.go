@@ -141,6 +141,9 @@ func (s *BackendService) Template() (string, error) {
 	}
 
 	albConfig, err := s.convertApplicationLoadBalancer()
+	if err != nil {
+		return "", err
+	}
 
 	content, err := s.parser.ParseBackendService(template.WorkloadOpts{
 		// Workload parameters.

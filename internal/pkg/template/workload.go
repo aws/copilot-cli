@@ -233,11 +233,6 @@ func (tg HTTPTargetContainer) Exposed() bool {
 	return tg.Port != "" && tg.Port != NoExposedContainerPort
 }
 
-// IsHTTPS returns true if the target container's port is 443.
-func (tg HTTPTargetContainer) IsHTTPS() bool {
-	return tg.Port == "443"
-}
-
 // StrconvUint16 returns string converted from uint16.
 func StrconvUint16(val uint16) string {
 	return strconv.FormatUint(uint64(val), 10)
@@ -259,12 +254,6 @@ type HTTPHealthCheckOpts struct {
 	DeregistrationDelay *int64
 }
 
-// IsHTTPS returns true if the Health Check Port is configured
-// as a HTTPS port.
-func (h HTTPHealthCheckOpts) IsHTTPS() bool {
-	return h.Port == "443"
-}
-
 type importable interface {
 	RequiresImport() bool
 }
@@ -272,20 +261,6 @@ type importable interface {
 type importableValue interface {
 	importable
 	Value() string
-}
-
-func (cfg *ApplicationLoadBalancer) Aliases() []string {
-	var uniqueAliases []string
-	seen := make(map[string]bool)
-	for _, listener := range cfg.Listener {
-		for _, entry := range listener.Aliases {
-			if _, value := seen[entry]; !value {
-				seen[entry] = true
-				uniqueAliases = append(uniqueAliases, entry)
-			}
-		}
-	}
-	return uniqueAliases
 }
 
 // IsHTTPS returns true if the target container's port is 443.
@@ -309,12 +284,37 @@ func (cfg *NetworkLoadBalancer) Aliases() []string {
 	for _, listener := range cfg.Listener {
 		for _, entry := range listener.Aliases {
 			if _, value := seen[entry]; !value {
-				seen[entry] = true
-				uniqueAliases = append(uniqueAliases, entry)
+				uniqueAliases = append(uniqueAliases, uniqueEntriesFromList(listener.Aliases, seen)...)
 			}
 		}
 	}
 	return uniqueAliases
+}
+
+// Aliases return all the unique aliases specified across all the routing rules in ALB.
+// Currently, we only have primary routing rule, but we will be getting additional routing rule soon.
+func (cfg *ApplicationLoadBalancer) Aliases() []string {
+	var uniqueAliases []string
+	seen := make(map[string]bool)
+	for _, listener := range cfg.Listener {
+		for _, entry := range listener.Aliases {
+			if _, value := seen[entry]; !value {
+				uniqueAliases = append(uniqueAliases, uniqueEntriesFromList(listener.Aliases, seen)...)
+			}
+		}
+	}
+	return uniqueAliases
+}
+
+func uniqueEntriesFromList(aliases []string, uniqueMap map[string]bool) []string {
+	var list []string
+	for _, entry := range aliases {
+		if _, value := uniqueMap[entry]; !value {
+			uniqueMap[entry] = true
+			list = append(list, entry)
+		}
+	}
+	return list
 }
 
 // PlainVariable returns a Variable that is a plain string value.
@@ -843,24 +843,6 @@ type WorkloadOpts struct {
 
 	// Additional options for worker service templates.
 	Subscribe *SubscribeOpts
-}
-
-// HealthCheckProtocol returns the protocol for the Load Balancer health check,
-// or an empty string if it shouldn't be configured, defaulting to the
-// target protocol. (which is what happens, even if it isn't documented as such :))
-// https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-elasticloadbalancingv2-targetgroup.html#cfn-elasticloadbalancingv2-targetgroup-healthcheckprotocol
-func (w WorkloadOpts) HealthCheckProtocol() string {
-	switch {
-	case w.HTTPHealthCheck.Port == "443":
-		return "HTTPS"
-	case w.HTTPTargetContainer.IsHTTPS() && w.HTTPHealthCheck.Port == "":
-		return "HTTPS"
-	case w.HTTPTargetContainer.IsHTTPS() && w.HTTPHealthCheck.Port != "443":
-		// for backwards compatability, only set HTTP if target
-		// container is https but the specified health check port is not
-		return "HTTP"
-	}
-	return ""
 }
 
 // HealthCheckProtocol returns the protocol for the Load Balancer health check,

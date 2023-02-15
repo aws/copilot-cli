@@ -241,12 +241,13 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 			Name: targetContainer,
 		},
 		HTTPHealthCheck: convertHTTPHealthCheck(&s.manifest.RoutingRule.HealthCheck),
+		ALB:             albConfig.settings,
 
 		// NLB configs.
 		AppDNSName:           nlbConfig.appDNSName,
 		AppDNSDelegationRole: nlbConfig.appDNSDelegationRole,
 		NLB:                  nlbConfig.settings,
-		ALB:                  albConfig.settings,
+
 		// service connect and service discovery options.
 		ServiceConnect:           scConfig,
 		ServiceDiscoveryEndpoint: s.rc.ServiceDiscoveryEndpoint,

@@ -494,6 +494,7 @@ func (s *LoadBalancedWebService) convertApplicationLoadBalancer() (applicationLo
 	if albConfig.Disabled() || albConfig.IsEmpty() {
 		return applicationLoadBalancerConfig{}, nil
 	}
+
 	var aliases []string
 	var err error
 	if s.httpsEnabled {
@@ -579,7 +580,7 @@ func (s *BackendService) convertApplicationLoadBalancer() (applicationLoadBalanc
 					HTTPHealthCheck:  convertHTTPHealthCheck(&albConfig.HealthCheck),
 					AllowedSourceIps: convertAllowedSourceIPs(albConfig.AllowedSourceIps),
 					Stickiness:       strconv.FormatBool(aws.BoolValue(albConfig.Stickiness)),
-					HTTPVersion:      aws.StringValue(convertHTTPVersion(s.manifest.RoutingRule.ProtocolVersion)),
+					HTTPVersion:      aws.StringValue(convertHTTPVersion(albConfig.ProtocolVersion)),
 				},
 			},
 			HTTPRedirect:      s.httpsEnabled,
