@@ -23,7 +23,7 @@ const (
 	rollOutEmpty               = ""
 )
 
-var ecsEventFailureKeywords = []string{"fail", "unhealthy", "error", "throttle", "unable", "missing", "alarm", "rolling"}
+var ecsEventFailureKeywords = []string{"fail", "unhealthy", "error", "throttle", "unable", "missing", "alarm detected", "rolling back"}
 
 // ECSServiceDescriber is the interface to describe an ECS service.
 type ECSServiceDescriber interface {
@@ -152,8 +152,7 @@ func (s *ECSDeploymentStreamer) Fetch() (next time.Time, done bool, err error) {
 		if _, ok := s.pastEventIDs[id]; ok {
 			break
 		}
-		msg := aws.StringValue(event.Message)
-		if isFailureServiceEvent(msg) {
+		if msg := aws.StringValue(event.Message); isFailureServiceEvent(msg) {
 			failureMsgs = append(failureMsgs, msg)
 		}
 		s.pastEventIDs[id] = true
