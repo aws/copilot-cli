@@ -1063,7 +1063,7 @@ func (o *initStorageOpts) RecommendActions() error {
 	case lifecycleWorkloadLevel:
 		logRecommendedActions(o.actionsForWorkloadStorage())
 	case lifecycleEnvironmentLevel:
-		logRecommendedActions(nil)
+		logRecommendedActions(o.actionsForEnvStorage())
 	}
 	return nil
 }
@@ -1105,6 +1105,59 @@ For example, in JavaScript you can write:
 		actionRetrieveEnvVar,
 		actionDeploy,
 	}
+}
+
+func (o *initStorageOpts) actionsForEnvStorage() []string {
+	envDeployAction := fmt.Sprintf("Run %s to deploy your environment storage resources.", color.HighlightCode("copilot env deploy"))
+	svcMftAction := fmt.Sprintf("Update the manifest for your %q workload:\n%s", o.workloadName, color.HighlightCodeBlock(o.manifestSuggestion()))
+	svcDeployAction := fmt.Sprintf("Run %s to deploy the workload so that %s has access to %s storage.",
+		color.HighlightCode(fmt.Sprintf("copilot svc deploy --name %s", o.workloadName)),
+		color.HighlightUserInput(o.workloadName),
+		color.HighlightUserInput(o.storageName))
+	addIngressAction := fmt.Sprintf("From the workspace where %s is, run:\n%s",
+		color.HighlightUserInput(o.workloadName),
+		color.HighlightCodeBlock(o.addIngressSuggestion()))
+	if envAndWkldWritten := o.addIngressFrom == "" && o.workloadExists; envAndWkldWritten {
+		return []string{envDeployAction, svcMftAction, svcDeployAction}
+	}
+	if onlyEnv := !o.workloadExists; onlyEnv {
+		return []string{envDeployAction, addIngressAction}
+	}
+	if onlyWkld := o.addIngressFrom != ""; onlyWkld {
+		return []string{svcMftAction, svcDeployAction}
+	}
+	return nil
+}
+
+func (o *initStorageOpts) manifestSuggestion() string {
+	if o.storageType == s3StorageType {
+		return fmt.Sprintf(`variables:
+  DB_NAME:
+    from_cfn: ${COPILOT_APPLICATION_NAME}-${COPILOT_ENVIRONMENT_NAME}-%sBucket`, template.StripNonAlphaNumFunc(o.storageName))
+	}
+	if o.storageType == dynamoDBStorageType {
+		return fmt.Sprintf(`variables:
+  DB_NAME:
+    from_cfn: ${COPILOT_APPLICATION_NAME}-${COPILOT_ENVIRONMENT_NAME}-%sTableName`, template.StripNonAlphaNumFunc(o.storageName))
+	}
+	// Storage type is Aurora serverless.
+	secretSnippet := fmt.Sprintf(`secrets:
+  DB_SECRET:
+    from_cfn: ${COPILOT_APPLICATION_NAME}-${COPILOT_ENVIRONMENT_NAME}-%sAuroraSecret`, template.StripNonAlphaNumFunc(o.storageName))
+	if o.workloadType == manifestinfo.RequestDrivenWebServiceType {
+		return secretSnippet
+	}
+	networkSnippet := fmt.Sprintf(`network:
+  vpc:
+    security_groups:
+      - from_cfn: ${COPILOT_APPLICATION_NAME}-${COPILOT_ENVIRONMENT_NAME}-%sSecurityGroup`, template.StripNonAlphaNumFunc(o.storageName))
+	return networkSnippet + "\n" + secretSnippet
+}
+
+func (o *initStorageOpts) addIngressSuggestion() string {
+	return fmt.Sprintf(`copilot storage init -n %s \
+--storage-type %s \
+--add-ingress-from %s`, o.storageName, o.storageType, o.workloadName)
 }
 
 // buildStorageInitCmd builds the command and adds it to the CLI.
