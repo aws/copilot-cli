@@ -354,7 +354,7 @@ func TestWorkspace_EnvironmentsExist(t *testing.T) {
 				Fs: fs,
 			},
 		}
-		got, err := ws.EnvironmentsExist()
+		got, err := ws.HasEnvironment()
 		require.NoError(t, err)
 		require.True(t, got)
 	})
@@ -368,7 +368,7 @@ func TestWorkspace_EnvironmentsExist(t *testing.T) {
 				Fs: fs,
 			},
 		}
-		got, err := ws.EnvironmentsExist()
+		got, err := ws.HasEnvironment()
 		require.NoError(t, err)
 		require.False(t, got)
 	})

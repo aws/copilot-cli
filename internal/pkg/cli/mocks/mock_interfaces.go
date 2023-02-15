@@ -2963,19 +2963,19 @@ func (mr *MockwsReadWriterMockRecorder) EnvOverridesPath() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnvOverridesPath", reflect.TypeOf((*MockwsReadWriter)(nil).EnvOverridesPath))
 }
 
-// EnvironmentsExist mocks base method.
-func (m *MockwsReadWriter) EnvironmentsExist() (bool, error) {
+// HasEnvironment mocks base method.
+func (m *MockwsReadWriter) HasEnvironment() (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EnvironmentsExist")
+	ret := m.ctrl.Call(m, "HasEnvironment")
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// EnvironmentsExist indicates an expected call of EnvironmentsExist.
-func (mr *MockwsReadWriterMockRecorder) EnvironmentsExist() *gomock.Call {
+// HasEnvironment indicates an expected call of HasEnvironment.
+func (mr *MockwsReadWriterMockRecorder) HasEnvironment() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnvironmentsExist", reflect.TypeOf((*MockwsReadWriter)(nil).EnvironmentsExist))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasEnvironment", reflect.TypeOf((*MockwsReadWriter)(nil).HasEnvironment))
 }
 
 // ListEnvironments mocks base method.
@@ -3369,19 +3369,19 @@ func (mr *MockwsEnvironmentReaderMockRecorder) EnvOverridesPath() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnvOverridesPath", reflect.TypeOf((*MockwsEnvironmentReader)(nil).EnvOverridesPath))
 }
 
-// EnvironmentsExist mocks base method.
-func (m *MockwsEnvironmentReader) EnvironmentsExist() (bool, error) {
+// HasEnvironment mocks base method.
+func (m *MockwsEnvironmentReader) HasEnvironment() (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EnvironmentsExist")
+	ret := m.ctrl.Call(m, "HasEnvironment")
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// EnvironmentsExist indicates an expected call of EnvironmentsExist.
-func (mr *MockwsEnvironmentReaderMockRecorder) EnvironmentsExist() *gomock.Call {
+// HasEnvironment indicates an expected call of HasEnvironment.
+func (mr *MockwsEnvironmentReaderMockRecorder) HasEnvironment() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnvironmentsExist", reflect.TypeOf((*MockwsEnvironmentReader)(nil).EnvironmentsExist))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasEnvironment", reflect.TypeOf((*MockwsEnvironmentReader)(nil).HasEnvironment))
 }
 
 // ListEnvironments mocks base method.
