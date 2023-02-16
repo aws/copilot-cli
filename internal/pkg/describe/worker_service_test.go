@@ -56,20 +56,6 @@ func TestWorkerServiceDescriber_Describe(t *testing.T) {
 			},
 			wantedError: fmt.Errorf("get stack parameters for environment test: some error"),
 		},
-		"return error if fail to retrieve deployment type": {
-			setupMocks: func(m workerSvcDescriberMocks) {
-				gomock.InOrder(
-					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
-					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
-						cfnstack.WorkloadTaskCountParamKey:  "1",
-						cfnstack.WorkloadTaskCPUParamKey:    "256",
-						cfnstack.WorkloadTaskMemoryParamKey: "512",
-					}, nil),
-					m.ecsDescriber.EXPECT().DeploymentType().Return("", mockErr),
-				)
-			},
-			wantedError: fmt.Errorf("retrieve deployment type: some error"),
-		},
 		"return error if fail to retrieve platform": {
 			setupMocks: func(m workerSvcDescriberMocks) {
 				gomock.InOrder(
@@ -79,7 +65,6 @@ func TestWorkerServiceDescriber_Describe(t *testing.T) {
 						cfnstack.WorkloadTaskCPUParamKey:    "256",
 						cfnstack.WorkloadTaskMemoryParamKey: "512",
 					}, nil),
-					m.ecsDescriber.EXPECT().DeploymentType().Return("Default", nil),
 					m.ecsDescriber.EXPECT().Platform().Return(nil, errors.New("some error")),
 				)
 			},
@@ -94,7 +79,6 @@ func TestWorkerServiceDescriber_Describe(t *testing.T) {
 						cfnstack.WorkloadTaskMemoryParamKey: "512",
 						cfnstack.WorkloadTaskCPUParamKey:    "256",
 					}, nil),
-					m.ecsDescriber.EXPECT().DeploymentType().Return("Default", nil),
 					m.ecsDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
 						OperatingSystem: "LINUX",
 						Architecture:    "X86_64",
@@ -115,7 +99,6 @@ func TestWorkerServiceDescriber_Describe(t *testing.T) {
 						cfnstack.WorkloadTaskCPUParamKey:    "256",
 						cfnstack.WorkloadTaskMemoryParamKey: "512",
 					}, nil),
-					m.ecsDescriber.EXPECT().DeploymentType().Return("Default", nil),
 					m.ecsDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
 						OperatingSystem: "LINUX",
 						Architecture:    "X86_64",
@@ -144,7 +127,6 @@ func TestWorkerServiceDescriber_Describe(t *testing.T) {
 						cfnstack.WorkloadTaskCPUParamKey:    "256",
 						cfnstack.WorkloadTaskMemoryParamKey: "512",
 					}, nil),
-					m.ecsDescriber.EXPECT().DeploymentType().Return("Default", nil),
 					m.ecsDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
 						OperatingSystem: "LINUX",
 						Architecture:    "X86_64",
@@ -169,7 +151,6 @@ func TestWorkerServiceDescriber_Describe(t *testing.T) {
 						cfnstack.WorkloadTaskCPUParamKey:    "512",
 						cfnstack.WorkloadTaskMemoryParamKey: "1024",
 					}, nil),
-					m.ecsDescriber.EXPECT().DeploymentType().Return("Alarm-Based Rollback", nil),
 					m.ecsDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
 						OperatingSystem: "LINUX",
 						Architecture:    "ARM64",
@@ -194,7 +175,6 @@ func TestWorkerServiceDescriber_Describe(t *testing.T) {
 						cfnstack.WorkloadTaskCPUParamKey:    "512",
 						cfnstack.WorkloadTaskMemoryParamKey: "1024",
 					}, nil),
-					m.ecsDescriber.EXPECT().DeploymentType().Return("Default", nil),
 					m.ecsDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
 						OperatingSystem: "LINUX",
 						Architecture:    "X86_64",
@@ -238,7 +218,6 @@ func TestWorkerServiceDescriber_Describe(t *testing.T) {
 						ServiceConfig: &ServiceConfig{
 							CPU:         "256",
 							Environment: "test",
-							Deployment:  "Default",
 							Memory:      "512",
 							Platform:    "LINUX/X86_64",
 							Port:        "-",
@@ -249,7 +228,6 @@ func TestWorkerServiceDescriber_Describe(t *testing.T) {
 						ServiceConfig: &ServiceConfig{
 							CPU:         "512",
 							Environment: "prod",
-							Deployment:  "Alarm-Based Rollback",
 							Memory:      "1024",
 							Platform:    "LINUX/ARM64",
 							Port:        "-",
@@ -260,7 +238,6 @@ func TestWorkerServiceDescriber_Describe(t *testing.T) {
 						ServiceConfig: &ServiceConfig{
 							CPU:         "512",
 							Environment: "mockEnv",
-							Deployment:  "Default",
 							Memory:      "1024",
 							Platform:    "LINUX/X86_64",
 							Port:        "-",
@@ -383,10 +360,17 @@ func TestWorkerSvcDesc_String(t *testing.T) {
 
 Configurations
 
-  Environment  Deployment            Tasks     CPU (vCPU)  Memory (MiB)  Platform      Port
-  -----------  ----------            -----     ----------  ------------  --------      ----
-  test         Default               1         0.25        512           LINUX/X86_64  -
-  prod         Alarm-Based Rollback  3         0.5         1024          LINUX/ARM64     "
+  Environment  Tasks     CPU (vCPU)  Memory (MiB)  Platform      Port
+  -----------  -----     ----------  ------------  --------      ----
+  test         1         0.25        512           LINUX/X86_64  -
+  prod         3         0.5         1024          LINUX/ARM64     "
+
+Rollback Alarms
+
+  Name
+  ----
+  alarm1
+  alarm2
 
 Variables
 
@@ -410,7 +394,7 @@ Resources
   prod
     AWS::EC2::SecurityGroupIngress  ContainerSecurityGroupIngressFromPublicALB
 `,
-			wantedJSONString: "{\"service\":\"my-svc\",\"type\":\"Worker Service\",\"application\":\"my-app\",\"configurations\":[{\"environment\":\"test\",\"port\":\"-\",\"cpu\":\"256\",\"memory\":\"512\",\"platform\":\"LINUX/X86_64\",\"deployment\":\"Default\",\"tasks\":\"1\"},{\"environment\":\"prod\",\"port\":\"-\",\"cpu\":\"512\",\"memory\":\"1024\",\"platform\":\"LINUX/ARM64\",\"deployment\":\"Alarm-Based Rollback\",\"tasks\":\"3\"}],\"variables\":[{\"environment\":\"prod\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"prod\",\"container\":\"container\"},{\"environment\":\"test\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"test\",\"container\":\"container\"}],\"secrets\":[{\"name\":\"A_SECRET\",\"container\":\"container\",\"environment\":\"prod\",\"valueFrom\":\"SECRET\"},{\"name\":\"GITHUB_WEBHOOK_SECRET\",\"container\":\"container\",\"environment\":\"test\",\"valueFrom\":\"GH_WEBHOOK_SECRET\"}],\"resources\":{\"prod\":[{\"type\":\"AWS::EC2::SecurityGroupIngress\",\"physicalID\":\"ContainerSecurityGroupIngressFromPublicALB\"}],\"test\":[{\"type\":\"AWS::EC2::SecurityGroup\",\"physicalID\":\"sg-0758ed6b233743530\"}]}}\n",
+			wantedJSONString: "{\"service\":\"my-svc\",\"type\":\"Worker Service\",\"application\":\"my-app\",\"configurations\":[{\"environment\":\"test\",\"port\":\"-\",\"cpu\":\"256\",\"memory\":\"512\",\"platform\":\"LINUX/X86_64\",\"tasks\":\"1\"},{\"environment\":\"prod\",\"port\":\"-\",\"cpu\":\"512\",\"memory\":\"1024\",\"platform\":\"LINUX/ARM64\",\"tasks\":\"3\"}],\"rollbackAlarms\":[\"alarm1\",\"alarm2\"],\"variables\":[{\"environment\":\"prod\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"prod\",\"container\":\"container\"},{\"environment\":\"test\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"test\",\"container\":\"container\"}],\"secrets\":[{\"name\":\"A_SECRET\",\"container\":\"container\",\"environment\":\"prod\",\"valueFrom\":\"SECRET\"},{\"name\":\"GITHUB_WEBHOOK_SECRET\",\"container\":\"container\",\"environment\":\"test\",\"valueFrom\":\"GH_WEBHOOK_SECRET\"}],\"resources\":{\"prod\":[{\"type\":\"AWS::EC2::SecurityGroupIngress\",\"physicalID\":\"ContainerSecurityGroupIngressFromPublicALB\"}],\"test\":[{\"type\":\"AWS::EC2::SecurityGroup\",\"physicalID\":\"sg-0758ed6b233743530\"}]}}\n",
 		},
 	}
 
@@ -421,7 +405,6 @@ Resources
 					ServiceConfig: &ServiceConfig{
 						CPU:         "256",
 						Environment: "test",
-						Deployment:  "Default",
 						Memory:      "512",
 						Platform:    "LINUX/X86_64",
 						Port:        "-",
@@ -432,7 +415,6 @@ Resources
 					ServiceConfig: &ServiceConfig{
 						CPU:         "512",
 						Environment: "prod",
-						Deployment:  "Alarm-Based Rollback",
 						Memory:      "1024",
 						Platform:    "LINUX/ARM64",
 						Port:        "-",
@@ -490,6 +472,7 @@ Resources
 				Service:        "my-svc",
 				Type:           "Worker Service",
 				Configurations: config,
+				Alarms:         []string{"alarm1", "alarm2"},
 				App:            "my-app",
 				Variables:      envVars,
 				Secrets:        secrets,

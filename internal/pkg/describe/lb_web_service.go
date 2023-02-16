@@ -156,14 +156,9 @@ func (d *LBWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 		if err != nil {
 			return nil, fmt.Errorf("get stack parameters for service %s: %w", d.svc, err)
 		}
-		deploymentType, err := svcDescr.DeploymentType()
-		if err != nil {
-			return nil, fmt.Errorf("retrieve deployment type: %w", err)
-		}
 		configs = append(configs, &ECSServiceConfig{
 			ServiceConfig: &ServiceConfig{
 				Environment: env,
-				Deployment:  deploymentType,
 				Port:        svcParams[cfnstack.WorkloadTargetPortParamKey],
 				CPU:         svcParams[cfnstack.WorkloadTaskCPUParamKey],
 				Memory:      svcParams[cfnstack.WorkloadTaskMemoryParamKey],

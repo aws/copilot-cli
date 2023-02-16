@@ -77,7 +77,6 @@ type ecsDescriber interface {
 	EnvVars() ([]*awsecs.ContainerEnvVar, error)
 	Secrets() ([]*awsecs.ContainerSecret, error)
 	DeploymentConfigAlarmNames() ([]string, error)
-	DeploymentType() (string, error)
 }
 
 type apprunnerDescriber interface {
@@ -312,20 +311,6 @@ func (d *ecsServiceDescriber) DeploymentConfigAlarmNames() ([]string, error) {
 	return aws.StringValueSlice(service.DeploymentConfiguration.Alarms.AlarmNames), nil
 }
 
-// DeploymentType returns 'Alarm-Based Rollback' or 'Default'.
-func (d *ecsServiceDescriber) DeploymentType() (string, error) {
-	deploymentType := "Default"
-	var err error
-	alarmNames, err := d.DeploymentConfigAlarmNames()
-	if err != nil {
-		return "", fmt.Errorf("retrieve alarm names: %w", err)
-	}
-	if alarmNames != nil {
-		deploymentType = "Alarm-Based Rollback"
-	}
-	return deploymentType, nil
-}
-
 // ServiceARN retrieves the ARN of the app runner service.
 func (d *appRunnerServiceDescriber) ServiceARN() (string, error) {
 	serviceStackResources, err := d.ServiceStackResources()
@@ -429,7 +414,6 @@ type ServiceConfig struct {
 	CPU         string `json:"cpu"`
 	Memory      string `json:"memory"`
 	Platform    string `json:"platform,omitempty"`
-	Deployment  string `json:"deployment,omitempty"`
 }
 
 type ECSServiceConfig struct {
@@ -443,10 +427,10 @@ type appRunnerConfigurations []*ServiceConfig
 type ecsConfigurations []*ECSServiceConfig
 
 func (c ecsConfigurations) humanString(w io.Writer) {
-	headers := []string{"Environment", "Deployment", "Tasks", "CPU (vCPU)", "Memory (MiB)", "Platform", "Port"}
+	headers := []string{"Environment", "Tasks", "CPU (vCPU)", "Memory (MiB)", "Platform", "Port"}
 	var rows [][]string
 	for _, config := range c {
-		rows = append(rows, []string{config.Environment, config.Deployment, config.Tasks, cpuToString(config.CPU), config.Memory, config.Platform, config.Port})
+		rows = append(rows, []string{config.Environment, config.Tasks, cpuToString(config.CPU), config.Memory, config.Platform, config.Port})
 	}
 
 	printTable(w, headers, rows)
