@@ -532,15 +532,18 @@ func (o *initStorageOpts) validateWorkloadNameWithLifecycle() error {
 		}
 		return nil
 	}
-	exists, err := o.ws.WorkloadExists(o.workloadName)
-	if err != nil {
-		return fmt.Errorf("check if %s exists in the workspace: %w", o.workloadName, err)
-	}
-	if o.lifecycle == lifecycleWorkloadLevel && !exists {
-		return &errWorkloadNotInWorkspace{
-			workloadName: o.workloadName,
+	if o.lifecycle == lifecycleWorkloadLevel {
+		exists, err := o.ws.WorkloadExists(o.workloadName)
+		if err != nil {
+			return fmt.Errorf("check if %s exists in the workspace: %w", o.workloadName, err)
+		}
+		if !exists {
+			return &errWorkloadNotInWorkspace{
+				workloadName: o.workloadName,
+			}
 		}
 	}
+
 	return nil
 }
 
