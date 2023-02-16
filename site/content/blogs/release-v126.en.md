@@ -72,7 +72,7 @@ secrets:
   DB: 'arn:aws:secretsmanager:us-west-2:111122223333:secret:demo/test/mysql-Yi6mvL'
  
   # To inject a secret from SSM Parameter Store
-  # (Recommended) Option 1. Referring to the secret by ARN.
+  # Option 1. Referring to the secret by ARN.
   GITHUB_WEBHOOK_SECRET: 'arn:aws:ssm:us-east-1:615525334900:parameter/GH_WEBHOOK_SECRET'
 
   # Option 2. Referring to the secret by name.
