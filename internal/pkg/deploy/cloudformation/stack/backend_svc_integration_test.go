@@ -121,6 +121,7 @@ func TestBackendService_TemplateAndParamsGeneration(t *testing.T) {
 					}
 				}
 			}
+			resetCustomResourceLocations(actualTmpl)
 
 			var expectedTmpl map[any]any
 			require.NoError(t, yaml.Unmarshal(tmplBytes, &expectedTmpl))
