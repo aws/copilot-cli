@@ -66,8 +66,7 @@ var validLifecycleOptions = []string{lifecycleWorkloadLevel, lifecycleEnvironmen
 
 // General-purpose prompts, collected for all storage resources.
 var (
-	fmtStorageInitTypePrompt = "What " + color.Emphasize("type") + " of storage would you like to associate with %s?"
-	storageInitTypeHelp      = `The type of storage you'd like to add to your workload. 
+	storageInitTypeHelp = `The type of storage you'd like to add to your workload.
 DynamoDB is a key-value and document database that delivers single-digit millisecond performance at any scale.
 S3 is a web object store built to store and retrieve any amount of data from anywhere on the Internet.
 Aurora Serverless is an on-demand autoscaling configuration for Amazon Aurora, a MySQL and PostgreSQL-compatible relational database.
@@ -338,8 +337,7 @@ func (o *initStorageOpts) validateOrAskStorageType() error {
 			Hint:         "SQL",
 		},
 	}
-	result, err := o.prompt.SelectOption(fmt.Sprintf(
-		fmtStorageInitTypePrompt, color.HighlightUserInput(o.workloadName)),
+	result, err := o.prompt.SelectOption(o.storageTypePrompt(),
 		storageInitTypeHelp,
 		options,
 		prompt.WithFinalMessage("Storage type:"))
@@ -348,6 +346,13 @@ func (o *initStorageOpts) validateOrAskStorageType() error {
 	}
 	o.storageType = result
 	return o.validateStorageType()
+}
+
+func (o *initStorageOpts) storageTypePrompt() string {
+	if o.workloadName == "" {
+		return "What " + color.Emphasize("type") + " of storage would you like to create?"
+	}
+	return fmt.Sprintf("What "+color.Emphasize("type")+" of storage would you like to associate with %s?", color.HighlightUserInput(o.workloadName))
 }
 
 func (o *initStorageOpts) validateStorageType() error {
