@@ -147,6 +147,11 @@ var engineTypes = []string{
 
 const workloadTypeNonLocal = "Non Local"
 
+const (
+	blobDescriptionParameters = "parameters"
+	blobDescriptionTemplate   = "template"
+)
+
 type initStorageVars struct {
 	storageType    string
 	storageName    string
@@ -517,13 +522,28 @@ func (o *initStorageOpts) validateStorageLifecycle() error {
 // validateWorkloadNameWithLifecycle requires the workload to be in the workspace if the storage lifecycle is on workload-level.
 // Otherwise, it only caches whether the workload is present.
 func (o *initStorageOpts) validateWorkloadNameWithLifecycle() error {
-	exists, err := o.ws.WorkloadExists(o.workloadName)
-	if err != nil {
-		return fmt.Errorf("check if %s exists in the workspace: %w", o.workloadName, err)
+	if o.lifecycle == lifecycleEnvironmentLevel {
+		hasEnv, err := o.ws.HasEnvironments()
+		if err != nil {
+			return fmt.Errorf("check if environments directory exists in the workspace: %w", err)
+		}
+		if !hasEnv {
+			return &errNoEnvironmentInWorkspace{}
+		}
+		return nil
 	}
-	if o.lifecycle == lifecycleWorkloadLevel && !exists {
-		return fmt.Errorf("workload %s not found in the workspace", o.workloadName)
+	if o.lifecycle == lifecycleWorkloadLevel {
+		exists, err := o.ws.WorkloadExists(o.workloadName)
+		if err != nil {
+			return fmt.Errorf("check if %s exists in the workspace: %w", o.workloadName, err)
+		}
+		if !exists {
+			return &errWorkloadNotInWorkspace{
+				workloadName: o.workloadName,
+			}
+		}
 	}
+
 	return nil
 }
 
@@ -730,18 +750,23 @@ func (o *initStorageOpts) Execute() error {
 	}
 	for _, addon := range addonBlobs {
 		path, err := o.ws.Write(addon.blob, addon.path)
-		if err != nil {
-			e, ok := err.(*workspace.ErrFileExists)
-			if !ok {
-				return err
-			}
-			return fmt.Errorf("addon file already exists: %w", e)
+		if err == nil {
+			log.Successf("Wrote CloudFormation %s at %s\n",
+				addon.description,
+				color.HighlightResource(displayPath(path)),
+			)
+			continue
 		}
-		path = displayPath(path)
-		log.Successf("Wrote CloudFormation %s at %s\n",
+		var errFileExists *workspace.ErrFileExists
+		if !errors.As(err, &errFileExists) {
+			return err
+		}
+		log.Successf("CloudFormation %s already exists at %s, skipping writing it.\n",
 			addon.description,
-			color.HighlightResource(path),
-		)
+			color.HighlightResource(displayPath(addon.path)))
+		if addon.description == blobDescriptionParameters {
+			log.Infoln(indentBy(color.Faint.Sprintf(addon.recommendedAction()), 2))
+		}
 	}
 	log.Infoln()
 	return nil
@@ -790,6 +815,14 @@ type addonBlob struct {
 	blob        encoding.BinaryMarshaler
 }
 
+func (b *addonBlob) recommendedAction() string {
+	data, err := b.blob.MarshalBinary()
+	if err != nil {
+		return "" // Best effort to read the content in order to make suggestions.
+	}
+	return fmt.Sprintf("Check that %s has the following snippet:\n%s", displayPath(b.path), color.HighlightCodeBlock(string(data)))
+}
+
 func (o *initStorageOpts) addonBlobs() ([]addonBlob, error) {
 	type option struct {
 		lifecycle   string
@@ -821,7 +854,7 @@ func (o *initStorageOpts) wkldDDBAddonBlobs() ([]addonBlob, error) {
 	return []addonBlob{
 		{
 			path:        o.ws.WorkloadAddonFilePath(o.workloadName, fmt.Sprintf("%s.yml", o.storageName)),
-			description: "template",
+			description: blobDescriptionTemplate,
 			blob:        addon.WorkloadDDBTemplate(props),
 		},
 	}, nil
@@ -830,7 +863,7 @@ func (o *initStorageOpts) wkldDDBAddonBlobs() ([]addonBlob, error) {
 func (o *initStorageOpts) envDDBAddonBlobs() ([]addonBlob, error) {
 	ingressBlob := addonBlob{
 		path:        o.ws.WorkloadAddonFilePath(o.workloadName, fmt.Sprintf("%s-access-policy.yml", o.storageName)),
-		description: "template",
+		description: blobDescriptionTemplate,
 		blob: addon.EnvDDBAccessPolicyTemplate(&addon.AccessPolicyProps{
 			Name: o.storageName,
 		}),
@@ -844,7 +877,7 @@ func (o *initStorageOpts) envDDBAddonBlobs() ([]addonBlob, error) {
 	}
 	tmplBlob := addonBlob{
 		path:        o.ws.EnvAddonFilePath(fmt.Sprintf("%s.yml", o.storageName)),
-		description: "template",
+		description: blobDescriptionTemplate,
 		blob:        addon.EnvDDBTemplate(props),
 	}
 	if !o.workloadExists {
@@ -882,7 +915,7 @@ func (o *initStorageOpts) wkldS3AddonBlobs() ([]addonBlob, error) {
 	return []addonBlob{
 		{
 			path:        o.ws.WorkloadAddonFilePath(o.workloadName, fmt.Sprintf("%s.yml", o.storageName)),
-			description: "template",
+			description: blobDescriptionTemplate,
 			blob:        addon.WorkloadS3Template(o.s3Props()),
 		},
 	}, nil
@@ -891,7 +924,7 @@ func (o *initStorageOpts) wkldS3AddonBlobs() ([]addonBlob, error) {
 func (o *initStorageOpts) envS3AddonBlobs() ([]addonBlob, error) {
 	ingressBlob := addonBlob{
 		path:        o.ws.WorkloadAddonFilePath(o.workloadName, fmt.Sprintf("%s-access-policy.yml", o.storageName)),
-		description: "template",
+		description: blobDescriptionTemplate,
 		blob: addon.EnvS3AccessPolicyTemplate(&addon.AccessPolicyProps{
 			Name: o.storageName,
 		}),
@@ -901,7 +934,7 @@ func (o *initStorageOpts) envS3AddonBlobs() ([]addonBlob, error) {
 	}
 	tmplBlob := addonBlob{
 		path:        o.ws.EnvAddonFilePath(fmt.Sprintf("%s.yml", o.storageName)),
-		description: "template",
+		description: blobDescriptionTemplate,
 		blob:        addon.EnvS3Template(o.s3Props()),
 	}
 	if !o.workloadExists {
@@ -938,7 +971,7 @@ func (o *initStorageOpts) wkldRDSAddonBlobs() ([]addonBlob, error) {
 	}
 	blobs := []addonBlob{{
 		path:        o.ws.WorkloadAddonFilePath(o.workloadName, fmt.Sprintf("%s.yml", o.storageName)),
-		description: "template",
+		description: blobDescriptionTemplate,
 		blob:        tmplBlob,
 	}}
 	if o.workloadType != manifestinfo.RequestDrivenWebServiceType {
@@ -946,7 +979,7 @@ func (o *initStorageOpts) wkldRDSAddonBlobs() ([]addonBlob, error) {
 	}
 	return append(blobs, addonBlob{
 		path:        o.ws.WorkloadAddonFilePath(o.workloadName, workspace.AddonsParametersFileName),
-		description: "parameters",
+		description: blobDescriptionParameters,
 		blob:        addon.RDWSParamsForRDS(),
 	}), nil
 }
@@ -964,12 +997,12 @@ func (o *initStorageOpts) envRDSAddonBlobs() ([]addonBlob, error) {
 	}
 	tmplBlob := addonBlob{
 		path:        o.ws.EnvAddonFilePath(fmt.Sprintf("%s.yml", o.storageName)),
-		description: "template",
+		description: blobDescriptionTemplate,
 		blob:        addon.EnvServerlessTemplate(props),
 	}
 	paramBlob := addonBlob{
 		path:        o.ws.EnvAddonFilePath(workspace.AddonsParametersFileName),
-		description: "parameters",
+		description: blobDescriptionParameters,
 		blob:        addon.EnvParamsForRDS(),
 	}
 	return []addonBlob{tmplBlob, paramBlob}, nil
@@ -978,7 +1011,7 @@ func (o *initStorageOpts) envRDSAddonBlobs() ([]addonBlob, error) {
 func (o *initStorageOpts) envRDSForRDWSAddonBlobs() ([]addonBlob, error) {
 	rdwsIngressTmplBlob := addonBlob{
 		path:        o.ws.WorkloadAddonFilePath(o.workloadName, fmt.Sprintf("%s-ingress.yml", o.storageName)),
-		description: "template",
+		description: blobDescriptionTemplate,
 		blob: addon.EnvServerlessRDWSIngressTemplate(addon.RDSIngressProps{
 			ClusterName: o.storageName,
 			Engine:      o.rdsEngine,
@@ -986,7 +1019,7 @@ func (o *initStorageOpts) envRDSForRDWSAddonBlobs() ([]addonBlob, error) {
 	}
 	rdwsIngressParamBlob := addonBlob{
 		path:        o.ws.WorkloadAddonFilePath(o.workloadName, workspace.AddonsParametersFileName),
-		description: "parameters",
+		description: blobDescriptionParameters,
 		blob:        addon.RDWSParamsForEnvRDS(),
 	}
 	if o.addIngressFrom != "" {
@@ -998,12 +1031,12 @@ func (o *initStorageOpts) envRDSForRDWSAddonBlobs() ([]addonBlob, error) {
 	}
 	tmplBlob := addonBlob{
 		path:        o.ws.EnvAddonFilePath(fmt.Sprintf("%s.yml", o.storageName)),
-		description: "template",
+		description: blobDescriptionTemplate,
 		blob:        addon.EnvServerlessForRDWSTemplate(props),
 	}
 	paramBlob := addonBlob{
 		path:        o.ws.EnvAddonFilePath(workspace.AddonsParametersFileName),
-		description: "parameters",
+		description: blobDescriptionParameters,
 		blob:        addon.EnvParamsForRDS(),
 	}
 	if o.workloadExists {
@@ -1040,6 +1073,16 @@ func (o *initStorageOpts) environmentNames() ([]string, error) {
 
 // RecommendActions returns follow-up actions the user can take after successfully executing the command.
 func (o *initStorageOpts) RecommendActions() error {
+	switch o.lifecycle {
+	case lifecycleWorkloadLevel:
+		logRecommendedActions(o.actionsForWorkloadStorage())
+	case lifecycleEnvironmentLevel:
+		logRecommendedActions(o.actionsForEnvStorage())
+	}
+	return nil
+}
+
+func (o *initStorageOpts) actionsForWorkloadStorage() []string {
 	var (
 		retrieveEnvVarCode string
 		newVar             string
@@ -1072,11 +1115,90 @@ For example, in JavaScript you can write:
 
 	deployCmd := fmt.Sprintf("copilot deploy --name %s", o.workloadName)
 	actionDeploy := fmt.Sprintf("Run %s to deploy your storage resources.", color.HighlightCode(deployCmd))
-	logRecommendedActions([]string{
+	return []string{
 		actionRetrieveEnvVar,
 		actionDeploy,
-	})
+	}
+}
+
+func (o *initStorageOpts) actionsForEnvStorage() []string {
+	envDeployAction := fmt.Sprintf("Run %s to deploy your environment storage resources.", color.HighlightCode("copilot env deploy"))
+	svcMftAction := fmt.Sprintf("Update the manifest for your %q workload:\n%s", o.workloadName, color.HighlightCodeBlock(o.manifestSuggestion()))
+	svcDeployAction := fmt.Sprintf("Run %s to deploy the workload so that %s has access to %s storage.",
+		color.HighlightCode(fmt.Sprintf("copilot svc deploy --name %s", o.workloadName)),
+		color.HighlightUserInput(o.workloadName),
+		color.HighlightUserInput(o.storageName))
+	addIngressAction := fmt.Sprintf("From the workspace where %s is, run:\n%s",
+		color.HighlightUserInput(o.workloadName),
+		color.HighlightCodeBlock(o.addIngressSuggestion()))
+	if envAndWkldWritten := o.addIngressFrom == "" && o.workloadExists; envAndWkldWritten {
+		return []string{envDeployAction, svcMftAction, svcDeployAction}
+	}
+	if onlyEnv := !o.workloadExists; onlyEnv {
+		return []string{envDeployAction, addIngressAction}
+	}
+	if onlyWkld := o.addIngressFrom != ""; onlyWkld {
+		return []string{svcMftAction, svcDeployAction}
+	}
 	return nil
+}
+
+func (o *initStorageOpts) manifestSuggestion() string {
+	logicalIDSafeStorageName := template.StripNonAlphaNumFunc(o.storageName)
+	switch {
+	case o.storageType == s3StorageType:
+		return fmt.Sprintf(`variables:
+  DB_NAME:
+    from_cfn: ${COPILOT_APPLICATION_NAME}-${COPILOT_ENVIRONMENT_NAME}-%sBucket`, logicalIDSafeStorageName)
+	case o.storageType == dynamoDBStorageType:
+		return fmt.Sprintf(`variables:
+  DB_NAME:
+    from_cfn: ${COPILOT_APPLICATION_NAME}-${COPILOT_ENVIRONMENT_NAME}-%sTableName`, logicalIDSafeStorageName)
+	case o.storageType == rdsStorageType && o.workloadType == manifestinfo.RequestDrivenWebServiceType:
+		return fmt.Sprintf(`secrets:
+  DB_SECRET:
+    from_cfn: ${COPILOT_APPLICATION_NAME}-${COPILOT_ENVIRONMENT_NAME}-%sAuroraSecret`, logicalIDSafeStorageName)
+	case o.storageType == rdsStorageType && o.workloadType != manifestinfo.RequestDrivenWebServiceType:
+		return fmt.Sprintf(`network:
+  vpc:
+    security_groups:
+      - from_cfn: ${COPILOT_APPLICATION_NAME}-${COPILOT_ENVIRONMENT_NAME}-%sSecurityGroup
+secrets:
+  DB_SECRET:
+    from_cfn: ${COPILOT_APPLICATION_NAME}-${COPILOT_ENVIRONMENT_NAME}-%sAuroraSecret`,
+			logicalIDSafeStorageName, logicalIDSafeStorageName)
+	}
+	return ""
+}
+
+func (o *initStorageOpts) addIngressSuggestion() string {
+	return fmt.Sprintf(`copilot storage init -n %s \
+--storage-type %s \
+--add-ingress-from %s`, o.storageName, o.storageType, o.workloadName)
+}
+
+type errWorkloadNotInWorkspace struct {
+	workloadName string
+}
+
+func (e *errWorkloadNotInWorkspace) Error() string {
+	return fmt.Sprintf("workload %s not found in the workspace", e.workloadName)
+}
+
+// RecommendActions suggests actions to fix the error.
+func (e *errWorkloadNotInWorkspace) RecommendActions() string {
+	return fmt.Sprintf("Run %s in the workspace where %s is instead.", color.HighlightCode("copilot storage init"), color.HighlightUserInput(e.workloadName))
+}
+
+type errNoEnvironmentInWorkspace struct{}
+
+func (e *errNoEnvironmentInWorkspace) Error() string {
+	return "environments are not managed in the workspace"
+}
+
+// RecommendActions suggests actions to fix the error.
+func (e *errNoEnvironmentInWorkspace) RecommendActions() string {
+	return fmt.Sprintf("Run %s in the workspace where environments are managed instaed.", color.HighlightCode("copilot storage init"))
 }
 
 // buildStorageInitCmd builds the command and adds it to the CLI.
@@ -1110,7 +1232,7 @@ Resource names are injected into your containers as environment variables for ea
 	cmd.Flags().StringVarP(&vars.storageName, nameFlag, nameFlagShort, "", storageFlagDescription)
 	cmd.Flags().StringVarP(&vars.storageType, storageTypeFlag, typeFlagShort, "", storageTypeFlagDescription)
 	cmd.Flags().StringVarP(&vars.workloadName, workloadFlag, workloadFlagShort, "", storageWorkloadFlagDescription)
-	cmd.Flags().StringVarP(&vars.lifecycle, storageLifecycleFlag, "", lifecycleWorkloadLevel, storageLifecycleFlagDescription)
+	cmd.Flags().StringVarP(&vars.lifecycle, storageLifecycleFlag, "", "", storageLifecycleFlagDescription)
 	cmd.Flags().StringVarP(&vars.addIngressFrom, storageAddIngressFromFlag, "", "", storageAddIngressFromFlagDescription)
 
 	cmd.Flags().StringVar(&vars.partitionKey, storagePartitionKeyFlag, "", storagePartitionKeyFlagDescription)

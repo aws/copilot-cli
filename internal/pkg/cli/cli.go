@@ -128,6 +128,15 @@ func indentListItem(multiline string) string {
 	return strings.Join(prefixedLines, "\n")
 }
 
+func indentBy(multiline string, indentCount int) string {
+	var prefixedLines []string
+	for _, line := range strings.Split(multiline, "\n") {
+		prefix := strings.Repeat(" ", indentCount)
+		prefixedLines = append(prefixedLines, fmt.Sprintf("%s%s", prefix, line))
+	}
+	return strings.Join(prefixedLines, "\n")
+}
+
 func applyAll[T any](in []T, fn func(item T) T) []T {
 	out := make([]T, len(in))
 	for i, v := range in {
