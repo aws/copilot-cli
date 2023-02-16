@@ -157,7 +157,7 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 			},
 			Tasks: svcParams[cfnstack.WorkloadTaskCountParamKey],
 		})
-		alarms, err = svcDescr.DeploymentConfigAlarmNames()
+		alarms, err = svcDescr.RollbackAlarmNames()
 		if err != nil {
 			return nil, fmt.Errorf("retrieve rollback alarm names: %w", err)
 
@@ -247,13 +247,8 @@ func (w *backendSvcDesc) HumanString() string {
 	if len(w.Alarms) > 0 {
 		fmt.Fprint(writer, color.Bold.Sprint("\nRollback Alarms\n\n"))
 		writer.Flush()
-		headers := []string{"Name"}
-		fmt.Fprintf(writer, "  %s\n", strings.Join(headers, "\t"))
-		fmt.Fprintf(writer, "  %s\n", strings.Join(underline(headers), "\t"))
-		for _, alarm := range w.Alarms {
-			fmt.Fprintf(writer, "  %s\n", alarm)
-		}
-		fmt.Fprint(writer, "\n")
+		alarms := rollbackAlarms(w.Alarms)
+		alarms.humanString(writer)
 	}
 	if len(w.Routes) > 0 {
 		fmt.Fprint(writer, color.Bold.Sprint("\nRoutes\n\n"))

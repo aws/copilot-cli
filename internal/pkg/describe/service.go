@@ -76,7 +76,7 @@ type ecsDescriber interface {
 	Platform() (*awsecs.ContainerPlatform, error)
 	EnvVars() ([]*awsecs.ContainerEnvVar, error)
 	Secrets() ([]*awsecs.ContainerSecret, error)
-	DeploymentConfigAlarmNames() ([]string, error)
+	RollbackAlarmNames() ([]string, error)
 }
 
 type apprunnerDescriber interface {
@@ -299,8 +299,7 @@ func (d *ecsServiceDescriber) ServiceConnectDNSNames() ([]string, error) {
 	return service.ServiceConnectAliases(), nil
 }
 
-// DeploymentConfigAlarmNames returns the rollback alarm names of a service.
-func (d *ecsServiceDescriber) DeploymentConfigAlarmNames() ([]string, error) {
+func (d *ecsServiceDescriber) RollbackAlarmNames() ([]string, error) {
 	service, err := d.ecsClient.Service(d.app, d.env, d.service)
 	if err != nil {
 		return nil, fmt.Errorf("get service %s: %w", d.service, err)
@@ -444,6 +443,17 @@ func (c appRunnerConfigurations) humanString(w io.Writer) {
 	}
 
 	printTable(w, headers, rows)
+}
+
+type rollbackAlarms []string
+
+func (abr rollbackAlarms) humanString(w io.Writer) {
+	headers := []string{"Name"}
+	fmt.Fprintf(w, "  %s\n", strings.Join(headers, "\t"))
+	fmt.Fprintf(w, "  %s\n", strings.Join(underline(headers), "\t"))
+	for _, alarm := range abr {
+		fmt.Fprintf(w, "  %s\n", alarm)
+	}
 }
 
 // envVar contains serialized environment variables for a service.

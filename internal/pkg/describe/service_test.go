@@ -289,7 +289,7 @@ func TestServiceDescriber_EnvVars(t *testing.T) {
 	}
 }
 
-func TestServiceDescriber_DeploymentConfigAlarmNames(t *testing.T) {
+func TestServiceDescriber_RollbackAlarmNames(t *testing.T) {
 	const (
 		testApp = "phonetool"
 		testSvc = "svc"
@@ -364,7 +364,7 @@ func TestServiceDescriber_DeploymentConfigAlarmNames(t *testing.T) {
 			}
 
 			// WHEN
-			actual, err := d.DeploymentConfigAlarmNames()
+			actual, err := d.RollbackAlarmNames()
 
 			// THEN
 			if tc.wantedError != nil {

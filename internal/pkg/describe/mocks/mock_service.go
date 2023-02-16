@@ -392,36 +392,6 @@ func (m *MockecsDescriber) EXPECT() *MockecsDescriberMockRecorder {
 	return m.recorder
 }
 
-// DeploymentConfigAlarmNames mocks base method.
-func (m *MockecsDescriber) DeploymentConfigAlarmNames() ([]string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeploymentConfigAlarmNames")
-	ret0, _ := ret[0].([]string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// DeploymentConfigAlarmNames indicates an expected call of DeploymentConfigAlarmNames.
-func (mr *MockecsDescriberMockRecorder) DeploymentConfigAlarmNames() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeploymentConfigAlarmNames", reflect.TypeOf((*MockecsDescriber)(nil).DeploymentConfigAlarmNames))
-}
-
-// DeploymentType mocks base method.
-func (m *MockecsDescriber) DeploymentType() (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeploymentType")
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// DeploymentType indicates an expected call of DeploymentType.
-func (mr *MockecsDescriberMockRecorder) DeploymentType() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeploymentType", reflect.TypeOf((*MockecsDescriber)(nil).DeploymentType))
-}
-
 // EnvVars mocks base method.
 func (m *MockecsDescriber) EnvVars() ([]*ecs.ContainerEnvVar, error) {
 	m.ctrl.T.Helper()
@@ -495,6 +465,21 @@ func (m *MockecsDescriber) Platform() (*ecs.ContainerPlatform, error) {
 func (mr *MockecsDescriberMockRecorder) Platform() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Platform", reflect.TypeOf((*MockecsDescriber)(nil).Platform))
+}
+
+// RollbackAlarmNames mocks base method.
+func (m *MockecsDescriber) RollbackAlarmNames() ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RollbackAlarmNames")
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RollbackAlarmNames indicates an expected call of RollbackAlarmNames.
+func (mr *MockecsDescriberMockRecorder) RollbackAlarmNames() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RollbackAlarmNames", reflect.TypeOf((*MockecsDescriber)(nil).RollbackAlarmNames))
 }
 
 // Secrets mocks base method.
