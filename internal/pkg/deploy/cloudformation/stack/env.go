@@ -106,7 +106,7 @@ func (cfg *EnvConfig) loadCustomResourceURLs(crs []uploadable) error {
 	if err != nil {
 		return fmt.Errorf("parse artifact bucket ARN: %w", err)
 	}
-	cfg.CustomResourcesURLs = customResourceURLs("us-west-2" /* region is ignored when parsing URLs */, bucket, crs)
+	cfg.CustomResourcesURLs = customResourceURLs("dummy" /* region is ignored when parsing URLs */, bucket, crs)
 	return nil
 }
 

@@ -9,13 +9,10 @@ import (
 	"io"
 	"strings"
 
-	awsarn "github.com/aws/aws-sdk-go/aws/arn"
-
-	"github.com/aws/aws-sdk-go/aws/endpoints"
-
-	"github.com/aws/aws-sdk-go/aws/awserr"
-
 	"github.com/aws/aws-sdk-go/aws"
+	awsarn "github.com/aws/aws-sdk-go/aws/arn"
+	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
