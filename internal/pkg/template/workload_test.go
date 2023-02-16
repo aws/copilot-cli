@@ -471,3 +471,36 @@ func TestRollingUpdateRollbackConfig_TruncateAlarmName(t *testing.T) {
 		})
 	}
 }
+
+func TestApplicationLoadBalancer_Aliases(t *testing.T) {
+	tests := map[string]struct {
+		opts     ApplicationLoadBalancer
+		expected []string
+	}{
+		"LBWS with multiple listener rules having multiple aliases each": {
+			opts: ApplicationLoadBalancer{
+				Listener: []ApplicationLoadBalancerRoutineRule{
+					{
+						Aliases: []string{
+							"testAlias1",
+							"testAlias2",
+						},
+					},
+					{
+						Aliases: []string{
+							"testAlias1",
+							"testAlias3",
+						},
+					},
+				},
+			},
+			expected: []string{"testAlias1", "testAlias2", "testAlias3"},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tc.expected, tc.opts.Aliases())
+		})
+	}
+}

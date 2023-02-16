@@ -782,8 +782,6 @@ type WorkloadOpts struct {
 	Command      []string
 
 	// Additional options that are common between **all** workload templates.
-	Aliases                  []string
-	HTTPSListener            bool
 	Tags                     map[string]string        // Used by App Runner workloads to tag App Runner service resources
 	NestedStack              *WorkloadNestedStackOpts // Outputs from nested stacks such as the addons stack.
 	AddonsExtraParams        string                   // Additional user defined Parameters for the addons stack.
@@ -801,12 +799,9 @@ type WorkloadOpts struct {
 	DependsOn                map[string]string
 	Publish                  *PublishOpts
 	ServiceDiscoveryEndpoint string
-	HTTPVersion              *string
 	ALBEnabled               bool
-	HostedZoneAliases        AliasesForHostedZone
 	CredentialsParameter     string
 	PermissionsBoundary      string
-	HTTPRedirect             bool
 
 	// Additional options for service templates.
 	WorkloadType            string
@@ -814,7 +809,6 @@ type WorkloadOpts struct {
 	HTTPTargetContainer     HTTPTargetContainer
 	HTTPHealthCheck         HTTPHealthCheckOpts
 	DeregistrationDelay     *int64
-	AllowedSourceIps        []string
 	NLB                     *NetworkLoadBalancer
 	ALB                     *ApplicationLoadBalancer
 	DeploymentConfiguration DeploymentConfigurationOpts
@@ -849,13 +843,13 @@ type WorkloadOpts struct {
 // or an empty string if it shouldn't be configured, defaulting to the
 // target protocol. (which is what happens, even if it isn't documented as such :))
 // https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-elasticloadbalancingv2-targetgroup.html#cfn-elasticloadbalancingv2-targetgroup-healthcheckprotocol
-func (albl ApplicationLoadBalancerRoutineRule) HealthCheckProtocol() string {
+func (alb ApplicationLoadBalancerRoutineRule) HealthCheckProtocol() string {
 	switch {
-	case albl.HTTPHealthCheck.Port == "443":
+	case alb.HTTPHealthCheck.Port == "443":
 		return "HTTPS"
-	case albl.IsHTTPS() && albl.HTTPHealthCheck.Port == "":
+	case alb.IsHTTPS() && alb.HTTPHealthCheck.Port == "":
 		return "HTTPS"
-	case albl.IsHTTPS() && albl.HTTPHealthCheck.Port != "443":
+	case alb.IsHTTPS() && alb.HTTPHealthCheck.Port != "443":
 		// for backwards compatability, only set HTTP if target
 		// container is https but the specified health check port is not
 		return "HTTP"
