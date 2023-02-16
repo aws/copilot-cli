@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/addon"
@@ -77,6 +79,16 @@ type RuntimeConfig struct {
 	AccountID                string
 	Region                   string
 	EnvVersion               string
+}
+
+func (cfg *RuntimeConfig) loadCustomResourceURLs(bucket string, crs []uploadable) {
+	if len(cfg.CustomResourcesURL) != 0 {
+		return
+	}
+	cfg.CustomResourcesURL = make(map[string]string, len(crs))
+	for _, cr := range crs {
+		cfg.CustomResourcesURL[cr.Name()] = s3.URL(cfg.Region, bucket, cr.ArtifactPath())
+	}
 }
 
 // ECRImage represents configuration about the pushed ECR image that is needed to
