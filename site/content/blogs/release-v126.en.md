@@ -45,7 +45,8 @@ You can just specify the path to your Dockerfile as string.
 ```yaml
 sidecars:
   nginx:
-    build: path/to/dockerfile
+    image:
+      build: path/to/dockerfile
 ```
 
 You can also specify build as a map.
@@ -53,13 +54,14 @@ You can also specify build as a map.
 ```yaml
 sidecars:
   nginx:
-    build:
-      dockerfile: path/to/dockerfile
-      context: context/dir
-      target: build-stage
-      cache_from:
-        - image: tag
-      args: value
+    image:
+      build:
+        dockerfile: path/to/dockerfile
+        context: context/dir
+        target: build-stage
+        cache_from:
+          - image: tag
+        args: value
 ```
 
 You can specify an existing image name instead of building from a Dockerfile.
@@ -74,8 +76,8 @@ Or you can provide the image name using location field.
 ```yaml
 sidecars:
   nginx:
-  image:
-    location:  123457839156.dkr.ecr.us-west-2.amazonaws.com/demo/front:nginx-latest
+    image:
+      location:  123457839156.dkr.ecr.us-west-2.amazonaws.com/demo/front:nginx-latest
 ```
 
 ## Request-Driven Web Service secret support

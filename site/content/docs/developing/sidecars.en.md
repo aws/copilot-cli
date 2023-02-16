@@ -57,13 +57,14 @@ Below is an example of specifying docker build arguments for a sidecar container
 ```yaml
 sidecars:
   nginx:
-    build:
-      dockerfile: path/to/dockerfile
-      context: context/dir
-      target: build-stage
-      cache_from:
-        - image: tag
-      args: value
+    image:
+      build:
+        dockerfile: path/to/dockerfile
+        context: context/dir
+        target: build-stage
+        cache_from:
+          - image: tag
+        args: value
 ```
 
 Below is a fragment of a manifest including an EFS volume in both the service and sidecar container.
