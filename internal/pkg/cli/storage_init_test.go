@@ -429,7 +429,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			mock: func(m *mockStorageInitAsk) {
 				m.ws.EXPECT().HasEnvironment().Return(false, errors.New("wanted err"))
 			},
-			wantedErr: errors.New("check if environments are managed in the workspace: wanted err"),
+			wantedErr: errors.New("check if environments directory exists in the workspace: wanted err"),
 		},
 		"error if environments are not managed in workspace for a env-level storage": {
 			inStorageType: s3StorageType,

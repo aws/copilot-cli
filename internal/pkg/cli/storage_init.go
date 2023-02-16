@@ -525,7 +525,7 @@ func (o *initStorageOpts) validateWorkloadNameWithLifecycle() error {
 	if o.lifecycle == lifecycleEnvironmentLevel {
 		hasEnv, err := o.ws.HasEnvironment()
 		if err != nil {
-			return fmt.Errorf("check if environments are managed in the workspace: %w", err)
+			return fmt.Errorf("check if environments directory exists in the workspace: %w", err)
 		}
 		if !hasEnv {
 			return &errNoEnvironmentInWorkspace{}
@@ -1167,7 +1167,6 @@ secrets:
   DB_SECRET:
     from_cfn: ${COPILOT_APPLICATION_NAME}-${COPILOT_ENVIRONMENT_NAME}-%sAuroraSecret`,
 			logicalIDSafeStorageName, logicalIDSafeStorageName)
-
 	}
 	return ""
 }
