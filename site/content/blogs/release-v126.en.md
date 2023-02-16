@@ -36,14 +36,14 @@ Copilot v1.26 brings several new features and improvements:
 
 ## `storage init` for environment addons
 
-Previously, `copilot storage init` only supports storage addon that is attached to your workload: 
-you need to run `copilot svc deploy` in order to deploy the storage, and the storage is deleted along with the service
+Previously, `copilot storage init` only supported storage addons attached to workloads: you need to run 
+`copilot svc deploy` in order to deploy the storage, and the storage is deleted along with the service
 when you run `copilot svc delete`.
 
-Now, you have the option to create an environment-level storage addon: the storage will be deployed as you run `copilot env deploy`,
-and won't be deleted until you delete the whole environment by running `copilot env delete`.
+Now, you have the option to create environment-level storage addons: the storage is deployed when you run `copilot env deploy`,
+and isn't deleted until you delete the whole environment by running `copilot env delete`.
 
-Similar to the workload-level storage, the environment-level storage is under the hood just another [environment addon](../docs/developing/addons/environment.en.md)!
+Similar to the workload-level storage, the environment-level storage is, under the hood, just another [environment addon](../docs/developing/addons/environment.en.md)!
 
 ### Best Practice By Default
 Following the best practice in the microservice world, Copilot encourages you to set up storages that are each accessible
@@ -82,7 +82,7 @@ copilot storage init \
 ```
 
 After you've answered all the prompts or skipped them by flags, Copilot will generate the CloudFormation template that defines the DynamoDB storage
-under your "copilot/environments" directory. In addition, it will generate the access policy that grants "api" service 
+under your "copilot/environments" directory. In addition, it will generate the necessary access policy; here, one that grants "api" service 
 access to the "movies" storage. The access policy is created as a workload-level addon that lives and dies with your service.
 
 !!! note ""
