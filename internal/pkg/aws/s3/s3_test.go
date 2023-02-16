@@ -340,6 +340,42 @@ func TestS3_ParseURL(t *testing.T) {
 	}
 }
 
+func Test_ParseARN(t *testing.T) {
+	type wanted struct {
+		bucket string
+		key    string
+		err    error
+	}
+	testCases := map[string]struct {
+		in     string
+		wanted wanted
+	}{
+		"bad bad arn": {
+			in:     "i am not an arn at all",
+			wanted: wanted{err: errors.New("invalid S3 ARN")},
+		},
+		"parses an S3 bucket arn": {
+			in:     "arn:aws:s3:::amplify-demo-dev-94628-deployment",
+			wanted: wanted{bucket: "amplify-demo-dev-94628-deployment"},
+		},
+		"parses an S3 object arn": {
+			in:     "arn:aws:s3:::amplify-demo-dev-94628-deployment/studio-backend/auth/demo6a968da2/build/parameters.json",
+			wanted: wanted{bucket: "amplify-demo-dev-94628-deployment", key: "studio-backend/auth/demo6a968da2/build/parameters.json"},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			bucket, key, err := ParseARN(tc.in)
+			if tc.wanted.err != nil {
+				require.ErrorContains(t, err, tc.wanted.err.Error())
+				return
+			}
+			require.Equal(t, tc.wanted.bucket, bucket)
+			require.Equal(t, tc.wanted.key, key)
+		})
+	}
+}
+
 func TestURL(t *testing.T) {
 	testCases := map[string]struct {
 		region string

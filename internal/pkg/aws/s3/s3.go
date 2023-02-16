@@ -9,6 +9,8 @@ import (
 	"io"
 	"strings"
 
+	awsarn "github.com/aws/aws-sdk-go/aws/arn"
+
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -148,6 +150,21 @@ func ParseURL(url string) (bucket string, key string, err error) {
 	}
 
 	return strings.Join(split[:bucketEndIdx], "."), parsedURL[1], nil
+}
+
+// ParseARN parses an S3 bucket or object ARN.
+// For example, a bucket arn "arn:aws:s3:::my-bucket" returns "my-bucket", "", nil.
+// Whereas, an object arn "arn:aws:s3:::my-bucket/key.json" returns "my-bucket, "key.json", nil
+func ParseARN(arn string) (bucket, key string, err error) {
+	parsedARN, err := awsarn.Parse(arn)
+	if err != nil {
+		return "", "", fmt.Errorf("invalid S3 ARN: %w", err)
+	}
+	parts := strings.SplitN(parsedARN.Resource, "/", 2)
+	if len(parts) == 1 {
+		return parts[0], "", nil
+	}
+	return parts[0], parts[1], nil
 }
 
 // URL returns a virtual-hosted–style S3 url for the object stored at key in a bucket created in the specified region.
