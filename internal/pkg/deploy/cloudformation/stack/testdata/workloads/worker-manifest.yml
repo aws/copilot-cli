@@ -25,7 +25,7 @@ deployment:
     cpu_utilization: 70
     memory_utilization: 50
     messages_delayed: 5
-    
+
 publish:
   topics:
     - name: givesOtherdogs
