@@ -2963,19 +2963,19 @@ func (mr *MockwsReadWriterMockRecorder) EnvOverridesPath() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnvOverridesPath", reflect.TypeOf((*MockwsReadWriter)(nil).EnvOverridesPath))
 }
 
-// HasEnvironment mocks base method.
-func (m *MockwsReadWriter) HasEnvironment() (bool, error) {
+// HasEnvironments mocks base method.
+func (m *MockwsReadWriter) HasEnvironments() (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "HasEnvironment")
+	ret := m.ctrl.Call(m, "HasEnvironments")
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// HasEnvironment indicates an expected call of HasEnvironment.
-func (mr *MockwsReadWriterMockRecorder) HasEnvironment() *gomock.Call {
+// HasEnvironments indicates an expected call of HasEnvironments.
+func (mr *MockwsReadWriterMockRecorder) HasEnvironments() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasEnvironment", reflect.TypeOf((*MockwsReadWriter)(nil).HasEnvironment))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasEnvironments", reflect.TypeOf((*MockwsReadWriter)(nil).HasEnvironments))
 }
 
 // ListEnvironments mocks base method.
@@ -3369,19 +3369,19 @@ func (mr *MockwsEnvironmentReaderMockRecorder) EnvOverridesPath() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnvOverridesPath", reflect.TypeOf((*MockwsEnvironmentReader)(nil).EnvOverridesPath))
 }
 
-// HasEnvironment mocks base method.
-func (m *MockwsEnvironmentReader) HasEnvironment() (bool, error) {
+// HasEnvironments mocks base method.
+func (m *MockwsEnvironmentReader) HasEnvironments() (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "HasEnvironment")
+	ret := m.ctrl.Call(m, "HasEnvironments")
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// HasEnvironment indicates an expected call of HasEnvironment.
-func (mr *MockwsEnvironmentReaderMockRecorder) HasEnvironment() *gomock.Call {
+// HasEnvironments indicates an expected call of HasEnvironments.
+func (mr *MockwsEnvironmentReaderMockRecorder) HasEnvironments() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasEnvironment", reflect.TypeOf((*MockwsEnvironmentReader)(nil).HasEnvironment))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasEnvironments", reflect.TypeOf((*MockwsEnvironmentReader)(nil).HasEnvironments))
 }
 
 // ListEnvironments mocks base method.

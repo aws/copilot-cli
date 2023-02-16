@@ -523,7 +523,7 @@ func (o *initStorageOpts) validateStorageLifecycle() error {
 // Otherwise, it only caches whether the workload is present.
 func (o *initStorageOpts) validateWorkloadNameWithLifecycle() error {
 	if o.lifecycle == lifecycleEnvironmentLevel {
-		hasEnv, err := o.ws.HasEnvironment()
+		hasEnv, err := o.ws.HasEnvironments()
 		if err != nil {
 			return fmt.Errorf("check if environments directory exists in the workspace: %w", err)
 		}

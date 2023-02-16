@@ -188,8 +188,8 @@ func (ws *Workspace) WorkloadExists(name string) (bool, error) {
 	return exists, nil
 }
 
-// HasEnvironment returns true if the workspace manages environments.
-func (ws *Workspace) HasEnvironment() (bool, error) {
+// HasEnvironments returns true if the workspace manages environments.
+func (ws *Workspace) HasEnvironments() (bool, error) {
 	path := filepath.Join(ws.copilotDirAbs, environmentsDirName)
 	exists, err := ws.fs.Exists(path)
 	if err != nil {

@@ -250,7 +250,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			inLifecycle:   lifecycleEnvironmentLevel,
 			mock: func(m *mockStorageInitAsk) {
 				m.configSel.EXPECT().Workload(gomock.Eq(storageInitSvcPrompt), gomock.Any(), wantedAppName).Return(wantedSvcName, nil)
-				m.ws.EXPECT().HasEnvironment().Return(true, nil)
+				m.ws.EXPECT().HasEnvironments().Return(true, nil)
 			},
 			wantedVars: &initStorageVars{
 				storageType:  s3StorageType,
@@ -282,7 +282,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			inStorageName: "my-bucket.4",
 			inLifecycle:   lifecycleEnvironmentLevel,
 			mock: func(m *mockStorageInitAsk) {
-				m.ws.EXPECT().HasEnvironment().Return(true, nil)
+				m.ws.EXPECT().HasEnvironments().Return(true, nil)
 				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil).AnyTimes()
 			},
 		},
@@ -368,7 +368,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 				m.ws.EXPECT().ReadFile("mockEnvAddonPath").Return([]byte(""), nil)
 				m.ws.EXPECT().EnvAddonFilePath(fmt.Sprintf("%s.yml", wantedBucketName)).
 					Return("mockEnvAddonPath") // Called in log.Info.
-				m.ws.EXPECT().HasEnvironment().Return(true, nil)
+				m.ws.EXPECT().HasEnvironments().Return(true, nil)
 			},
 			wantedVars: &initStorageVars{
 				storageType:  s3StorageType,
@@ -427,7 +427,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			inStorageName: "my-bucket",
 			inLifecycle:   lifecycleEnvironmentLevel,
 			mock: func(m *mockStorageInitAsk) {
-				m.ws.EXPECT().HasEnvironment().Return(false, errors.New("wanted err"))
+				m.ws.EXPECT().HasEnvironments().Return(false, errors.New("wanted err"))
 			},
 			wantedErr: errors.New("check if environments directory exists in the workspace: wanted err"),
 		},
@@ -437,7 +437,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			inStorageName: "my-bucket",
 			inLifecycle:   lifecycleEnvironmentLevel,
 			mock: func(m *mockStorageInitAsk) {
-				m.ws.EXPECT().HasEnvironment().Return(false, nil)
+				m.ws.EXPECT().HasEnvironments().Return(false, nil)
 			},
 			wantedErr: errors.New("environments are not managed in the workspace"),
 		},
@@ -467,7 +467,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			inStorageName: "my-bucket",
 			inLifecycle:   lifecycleEnvironmentLevel,
 			mock: func(m *mockStorageInitAsk) {
-				m.ws.EXPECT().HasEnvironment().Return(true, nil)
+				m.ws.EXPECT().HasEnvironments().Return(true, nil)
 				m.ws.EXPECT().WorkloadExists(gomock.Eq("frontend")).Times(0)
 			},
 		},
@@ -477,7 +477,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			inStorageName: wantedBucketName,
 			inLifecycle:   lifecycleEnvironmentLevel,
 			mock: func(m *mockStorageInitAsk) {
-				m.ws.EXPECT().HasEnvironment().Return(true, nil)
+				m.ws.EXPECT().HasEnvironments().Return(true, nil)
 			},
 		},
 	}
@@ -981,7 +981,7 @@ func TestStorageInitOpts_AskRDS(t *testing.T) {
 			inInitialDBName: wantedInitialDBName,
 
 			mock: func(m *mockStorageInitAsk) {
-				m.ws.EXPECT().HasEnvironment().Return(true, nil).AnyTimes()
+				m.ws.EXPECT().HasEnvironments().Return(true, nil).AnyTimes()
 				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil).AnyTimes()
 				m.prompt.EXPECT().Get(
 					gomock.Eq("What would you like to name this Database Cluster?"),
@@ -1019,7 +1019,7 @@ func TestStorageInitOpts_AskRDS(t *testing.T) {
 			inDBEngine:    "mysql",
 			mock: func(m *mockStorageInitAsk) {
 				m.ws.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(workspace.WorkloadManifest("type: Load Balanced Web Service"), nil)
-				m.ws.EXPECT().HasEnvironment().Return(true, nil).AnyTimes()
+				m.ws.EXPECT().HasEnvironments().Return(true, nil).AnyTimes()
 				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil).AnyTimes()
 			},
 			wantedErr: errors.New("invalid engine type mysql: must be one of \"MySQL\", \"PostgreSQL\""),
@@ -1028,7 +1028,7 @@ func TestStorageInitOpts_AskRDS(t *testing.T) {
 			inStorageName:   wantedClusterName,
 			inInitialDBName: wantedInitialDBName,
 			mock: func(m *mockStorageInitAsk) {
-				m.ws.EXPECT().HasEnvironment().Return(true, nil).AnyTimes()
+				m.ws.EXPECT().HasEnvironments().Return(true, nil).AnyTimes()
 				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil).AnyTimes()
 				m.ws.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(workspace.WorkloadManifest("type: Load Balanced Web Service"), nil)
 				m.prompt.EXPECT().SelectOne(gomock.Eq(storageInitRDSDBEnginePrompt), gomock.Any(), gomock.Any(), gomock.Any()).
@@ -1053,7 +1053,7 @@ func TestStorageInitOpts_AskRDS(t *testing.T) {
 				m.prompt.EXPECT().SelectOne(storageInitRDSDBEnginePrompt, gomock.Any(), gomock.Any(), gomock.Any()).
 					Return("", errors.New("some error"))
 				m.ws.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(workspace.WorkloadManifest("type: Load Balanced Web Service"), nil)
-				m.ws.EXPECT().HasEnvironment().Return(true, nil).AnyTimes()
+				m.ws.EXPECT().HasEnvironments().Return(true, nil).AnyTimes()
 				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil).AnyTimes()
 
 			},
@@ -1066,7 +1066,7 @@ func TestStorageInitOpts_AskRDS(t *testing.T) {
 
 			mock: func(m *mockStorageInitAsk) {
 				m.ws.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(workspace.WorkloadManifest("type: Load Balanced Web Service"), nil)
-				m.ws.EXPECT().HasEnvironment().Return(true, nil).AnyTimes()
+				m.ws.EXPECT().HasEnvironments().Return(true, nil).AnyTimes()
 				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil).AnyTimes()
 			},
 			wantedErr: errors.New("invalid database name wow!suchweird??name!: must contain only alphanumeric characters and underscore; should start with a letter"),
@@ -1079,7 +1079,7 @@ func TestStorageInitOpts_AskRDS(t *testing.T) {
 				m.prompt.EXPECT().Get(gomock.Eq(storageInitRDSInitialDBNamePrompt), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(wantedInitialDBName, nil)
 				m.ws.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(workspace.WorkloadManifest("type: Load Balanced Web Service"), nil)
-				m.ws.EXPECT().HasEnvironment().Return(true, nil).AnyTimes()
+				m.ws.EXPECT().HasEnvironments().Return(true, nil).AnyTimes()
 				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil).AnyTimes()
 			},
 			wantedVars: &initStorageVars{
@@ -1101,7 +1101,7 @@ func TestStorageInitOpts_AskRDS(t *testing.T) {
 				m.prompt.EXPECT().Get(storageInitRDSInitialDBNamePrompt, gomock.Any(), gomock.Any(), gomock.Any()).
 					Return("", errors.New("some error"))
 				m.ws.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(workspace.WorkloadManifest("type: Load Balanced Web Service"), nil)
-				m.ws.EXPECT().HasEnvironment().Return(true, nil).AnyTimes()
+				m.ws.EXPECT().HasEnvironments().Return(true, nil).AnyTimes()
 				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil).AnyTimes()
 			},
 			wantedErr: fmt.Errorf("input initial database name: some error"),
@@ -1111,7 +1111,7 @@ func TestStorageInitOpts_AskRDS(t *testing.T) {
 			inDBEngine:      wantedDBEngine,
 			inInitialDBName: wantedInitialDBName,
 			mock: func(m *mockStorageInitAsk) {
-				m.ws.EXPECT().HasEnvironment().Return(true, nil).AnyTimes()
+				m.ws.EXPECT().HasEnvironments().Return(true, nil).AnyTimes()
 				m.ws.EXPECT().WorkloadExists(gomock.Any()).Return(true, nil).AnyTimes()
 				m.ws.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(workspace.WorkloadManifest("type: Load Balanced Web Service"), nil)
 			},
