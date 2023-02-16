@@ -404,8 +404,8 @@ func TestEnvDeployer_GenerateCloudFormationTemplate(t *testing.T) {
 				},
 				appCFN:      m.appCFN,
 				envDeployer: m.envDeployer,
-				newStack: func(_ *cfnstack.EnvConfig, _ string, _ []*awscfn.Parameter) cloudformation.StackConfiguration {
-					return m.stackSerializer
+				newStack: func(_ *cfnstack.EnvConfig, _ string, _ []*awscfn.Parameter) (cloudformation.StackConfiguration, error) {
+					return m.stackSerializer, nil
 				},
 				parseAddons: func() (stackBuilder, error) {
 					return nil, &addon.ErrAddonsNotFound{}
@@ -566,8 +566,8 @@ func TestEnvDeployer_DeployEnvironment(t *testing.T) {
 				envDeployer:      m.envDeployer,
 				prefixListGetter: m.prefixListGetter,
 				parseAddons:      m.parseAddons,
-				newStack: func(_ *cfnstack.EnvConfig, _ string, _ []*awscfn.Parameter) cloudformation.StackConfiguration {
-					return m.stackSerializer
+				newStack: func(_ *cfnstack.EnvConfig, _ string, _ []*awscfn.Parameter) (cloudformation.StackConfiguration, error) {
+					return m.stackSerializer, nil
 				},
 			}
 			mockIn := &DeployEnvironmentInput{

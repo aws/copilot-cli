@@ -415,6 +415,12 @@ Scale up or down based on the service average response time.
 {% include 'exec.en.md' %}
 
 {% include 'deployment.en.md' %}
+```yaml
+deployment:
+  rollback_alarms:
+    cpu_utilization: 70    // Percentage value at or above which alarm is triggered.
+    memory_utilization: 50 // Percentage value at or above which alarm is triggered.
+```
 
 {% include 'entrypoint.en.md' %}
 

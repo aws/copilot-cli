@@ -12,6 +12,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
+
 	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/template/override"
@@ -490,17 +492,20 @@ func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (networkLoadBalanc
 	config := networkLoadBalancerConfig{
 		settings: &template.NetworkLoadBalancer{
 			PublicSubnetCIDRs: s.publicSubnetCIDRBlocks,
-			Listener: template.NetworkLoadBalancerListener{
-				Port:            aws.StringValue(port),
-				Protocol:        strings.ToUpper(aws.StringValue(protocol)),
-				TargetContainer: targetContainer,
-				TargetPort:      targetPort,
-				SSLPolicy:       nlbConfig.SSLPolicy,
-				Aliases:         aliases,
-				HealthCheck:     hc,
-				Stickiness:      nlbConfig.Stickiness,
+			Listener: []template.NetworkLoadBalancerListener{
+				{
+					Port:            aws.StringValue(port),
+					Protocol:        strings.ToUpper(aws.StringValue(protocol)),
+					TargetContainer: targetContainer,
+					TargetPort:      targetPort,
+					SSLPolicy:       nlbConfig.SSLPolicy,
+					Aliases:         aliases,
+					HealthCheck:     hc,
+					Stickiness:      nlbConfig.Stickiness,
+				},
 			},
-			MainContainerPort: s.manifest.MainContainerPort(),
+			MainContainerPort:   s.manifest.MainContainerPort(),
+			CertificateRequired: strings.ToUpper(aws.StringValue(protocol)) == manifest.TLS,
 		},
 	}
 
@@ -1094,4 +1099,14 @@ func convertCustomResources(urlForFunc map[string]string) (map[string]template.S
 		}
 	}
 	return out, nil
+}
+
+type uploadableCRs []*customresource.CustomResource
+
+func (in uploadableCRs) convert() []uploadable {
+	out := make([]uploadable, len(in))
+	for i, cr := range in {
+		out[i] = cr
+	}
+	return out
 }

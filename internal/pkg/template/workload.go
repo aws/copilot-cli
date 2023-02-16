@@ -282,6 +282,22 @@ func ImportedVariable(name string) Variable {
 	return importedEnvVar(name)
 }
 
+// Aliases return all the unique aliases specified across all the routing rules in NLB.
+// Currently, we only have primary routing rule, but we will be getting additional routing rule soon.
+func (cfg *NetworkLoadBalancer) Aliases() []string {
+	var uniqueAliases []string
+	seen := make(map[string]bool)
+	for _, listener := range cfg.Listener {
+		for _, entry := range listener.Aliases {
+			if _, value := seen[entry]; !value {
+				seen[entry] = true
+				uniqueAliases = append(uniqueAliases, entry)
+			}
+		}
+	}
+	return uniqueAliases
+}
+
 // PlainVariable returns a Variable that is a plain string value.
 func PlainVariable(value string) Variable {
 	return plainEnvVar(value)
@@ -434,9 +450,10 @@ type NLBHealthCheck struct {
 
 // NetworkLoadBalancer holds configuration that's needed for a Network Load Balancer.
 type NetworkLoadBalancer struct {
-	PublicSubnetCIDRs []string
-	Listener          NetworkLoadBalancerListener
-	MainContainerPort string
+	PublicSubnetCIDRs   []string
+	Listener            []NetworkLoadBalancerListener
+	MainContainerPort   string
+	CertificateRequired bool
 }
 
 // ServiceConnect holds configuration for ECS Service Connect.
