@@ -110,7 +110,7 @@ secrets:
   # Option 2. Referring to the secret by name.
   GITHUB_WEBHOOK_SECRET: GITHUB_WEBHOOK_SECRET
 ```
-See the [manifest specification](../../docs/manifest/rd-web-service/#secrets). To learn more about injecting secrets into your services, see [the secrets page](../../docs/developing/secrets.en.md)
+See the [manifest specification](../docs/manifest/rd-web-service/#secrets). To learn more about injecting secrets into your services, see [the secrets page](../docs/developing/secrets.en.md)
 
 ## What’s next?
 
