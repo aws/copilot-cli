@@ -20,7 +20,7 @@ Copilot v1.26 brings several new features and improvements:
 - **Service alarm-based rollback**: [See detailed section](#service-alarm-based-rollback).
 - **`storage init` for environment addons**: [See detailed section](#storage-init-for-environment-addons).
 - **Sidecar image build**: [See detailed section](#sidecar-image-build).
-- **Request-Driven Web Service secret support**: [See detailed section](#request-driven-web-service-secret-support).
+- **Request-Driven Web Service secrets support**: [See detailed section](#request-driven-web-service-secrets-support).
 
 ???+ note "What’s AWS Copilot?"
 
@@ -70,7 +70,47 @@ With rollback alarms configured in your service manifest, each time you run `svc
 
 ## Sidecar image build
 
-## Request-Driven Web Service secret support
+## Request-Driven Web Service secrets support
+You can now add your secrets (from SSM Parameter Store or AWS Secrets Manager) to your App Runner service as environment variables using Copilot. 
+
+Similar to other service types such as Load-Balanced Web Service, you need to first add the following tags to your secrets:
+| Key                     | Value                                                       |
+| ----------------------- | ----------------------------------------------------------- |
+| `copilot-application`   | Application name from which you want to access the secret   |
+| `copilot-environment`   | Environment name from which you want to access the secret   |
+
+Then simply update your Request-Driven Web Service manifest with:
+```yaml
+  secrets:
+    GITHUB_TOKEN: GH_TOKEN_SECRET
+```
+And deploy! Your service can now access the secret as an environment variable.
+
+For more detailed use of the `secrets` field:
+```yaml
+secrets:
+  # To inject a secret from SecretsManager.
+  # (Recommended) Option 1. Referring to the secret by name.
+  DB:
+    secretsmanager: 'demo/test/mysql'
+  # You can refer to a specific key in the JSON blob.
+  DB_PASSWORD:
+    secretsmanager: 'demo/test/mysql:password::'
+  # You can substitute predefined environment variables to keep your manifest succinct.
+  DB_PASSWORD:
+        secretsmanager: '${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/mysql:password::'
+
+  # Option 2. Alternatively, you can refer to the secret by ARN.
+  DB: 'arn:aws:secretsmanager:us-west-2:111122223333:secret:demo/test/mysql-Yi6mvL'
+ 
+  # To inject a secret from SSM Parameter Store
+  # Option 1. Referring to the secret by ARN.
+  GITHUB_WEBHOOK_SECRET: 'arn:aws:ssm:us-east-1:615525334900:parameter/GH_WEBHOOK_SECRET'
+
+  # Option 2. Referring to the secret by name.
+  GITHUB_WEBHOOK_SECRET: GITHUB_WEBHOOK_SECRET
+```
+See the [manifest specification](../../docs/manifest/rd-web-service/#secrets). To learn more about injecting secrets into your services, see [the secrets page](../../docs/developing/secrets.en.md)
 
 ## What’s next?
 
