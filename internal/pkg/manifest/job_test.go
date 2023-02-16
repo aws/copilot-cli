@@ -35,7 +35,9 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 				ScheduledJobConfig: ScheduledJobConfig{
 					ImageConfig: ImageWithHealthcheck{
 						Image: Image{
-							Location: aws.String("nginx"),
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Location: aws.String("nginx"),
+							},
 						},
 					},
 					On: JobTriggerConfig{
@@ -84,7 +86,9 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 				ScheduledJobConfig: ScheduledJobConfig{
 					ImageConfig: ImageWithHealthcheck{
 						Image: Image{
-							Location: aws.String("nginx"),
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Location: aws.String("nginx"),
+							},
 						},
 					},
 					On: JobTriggerConfig{
@@ -128,9 +132,11 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 				ScheduledJobConfig: ScheduledJobConfig{
 					ImageConfig: ImageWithHealthcheck{
 						Image: Image{
-							Build: BuildArgsOrString{
-								BuildArgs: DockerBuildArgs{
-									Dockerfile: aws.String("./Dockerfile"),
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Build: BuildArgsOrString{
+									BuildArgs: DockerBuildArgs{
+										Dockerfile: aws.String("./Dockerfile"),
+									},
 								},
 							},
 						},
@@ -140,7 +146,9 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 					"prod-iad": {
 						ImageConfig: ImageWithHealthcheck{
 							Image: Image{
-								Location: aws.String("env-override location"),
+								ImageLocationOrBuild: ImageLocationOrBuild{
+									Location: aws.String("env-override location"),
+								},
 							},
 						},
 					},
@@ -156,7 +164,9 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 				ScheduledJobConfig: ScheduledJobConfig{
 					ImageConfig: ImageWithHealthcheck{
 						Image: Image{
-							Location: aws.String("env-override location"),
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Location: aws.String("env-override location"),
+							},
 						},
 					},
 				},
@@ -171,7 +181,9 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 				ScheduledJobConfig: ScheduledJobConfig{
 					ImageConfig: ImageWithHealthcheck{
 						Image: Image{
-							Location: aws.String("default location"),
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Location: aws.String("default location"),
+							},
 						},
 					},
 				},
@@ -179,7 +191,9 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 					"prod-iad": {
 						ImageConfig: ImageWithHealthcheck{
 							Image: Image{
-								Location: aws.String("env-override location"),
+								ImageLocationOrBuild: ImageLocationOrBuild{
+									Location: aws.String("env-override location"),
+								},
 							},
 						},
 					},
@@ -195,7 +209,9 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 				ScheduledJobConfig: ScheduledJobConfig{
 					ImageConfig: ImageWithHealthcheck{
 						Image: Image{
-							Location: aws.String("env-override location"),
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Location: aws.String("env-override location"),
+							},
 						},
 					},
 				},
@@ -210,9 +226,11 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 				ScheduledJobConfig: ScheduledJobConfig{
 					ImageConfig: ImageWithHealthcheck{
 						Image: Image{
-							Build: BuildArgsOrString{
-								BuildArgs: DockerBuildArgs{
-									Dockerfile: aws.String("./Dockerfile"),
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Build: BuildArgsOrString{
+									BuildArgs: DockerBuildArgs{
+										Dockerfile: aws.String("./Dockerfile"),
+									},
 								},
 							},
 						},
@@ -222,8 +240,10 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 					"prod-iad": {
 						ImageConfig: ImageWithHealthcheck{
 							Image: Image{
-								Build: BuildArgsOrString{
-									BuildString: aws.String("overridden build string"),
+								ImageLocationOrBuild: ImageLocationOrBuild{
+									Build: BuildArgsOrString{
+										BuildString: aws.String("overridden build string"),
+									},
 								},
 							},
 						},
@@ -240,8 +260,10 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 				ScheduledJobConfig: ScheduledJobConfig{
 					ImageConfig: ImageWithHealthcheck{
 						Image: Image{
-							Build: BuildArgsOrString{
-								BuildString: aws.String("overridden build string"),
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Build: BuildArgsOrString{
+									BuildString: aws.String("overridden build string"),
+								},
 							},
 						},
 					},
@@ -257,7 +279,9 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 				ScheduledJobConfig: ScheduledJobConfig{
 					ImageConfig: ImageWithHealthcheck{
 						Image: Image{
-							Location: aws.String("default location"),
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Location: aws.String("default location"),
+							},
 						},
 					},
 				},
@@ -265,8 +289,10 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 					"prod-iad": {
 						ImageConfig: ImageWithHealthcheck{
 							Image: Image{
-								Build: BuildArgsOrString{
-									BuildString: aws.String("overridden build string"),
+								ImageLocationOrBuild: ImageLocationOrBuild{
+									Build: BuildArgsOrString{
+										BuildString: aws.String("overridden build string"),
+									},
 								},
 							},
 						},
@@ -283,8 +309,10 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 				ScheduledJobConfig: ScheduledJobConfig{
 					ImageConfig: ImageWithHealthcheck{
 						Image: Image{
-							Build: BuildArgsOrString{
-								BuildString: aws.String("overridden build string"),
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Build: BuildArgsOrString{
+									BuildString: aws.String("overridden build string"),
+								},
 							},
 						},
 					},

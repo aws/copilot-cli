@@ -99,7 +99,9 @@ func mockLoadBalancedWebServiceDeployer(opts ...func(deployer *lbWebSvcDeployer)
 				ImageConfig: manifest.ImageWithPortAndHealthcheck{
 					ImageWithPort: manifest.ImageWithPort{
 						Image: manifest.Image{
-							Build: manifest.BuildArgsOrString{BuildString: aws.String("/Dockerfile")},
+							ImageLocationOrBuild: manifest.ImageLocationOrBuild{
+								Build: manifest.BuildArgsOrString{BuildString: aws.String("/Dockerfile")},
+							},
 						},
 						Port: aws.Uint16(80),
 					},

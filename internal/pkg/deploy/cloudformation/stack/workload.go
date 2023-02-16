@@ -111,6 +111,12 @@ type location interface {
 	GetLocation() string
 }
 
+// uploadable is the interface for an object that can be uploaded to an S3 bucket.
+type uploadable interface {
+	Name() string
+	ArtifactPath() string
+}
+
 // wkld represents a generic containerized workload.
 // A workload can be a long-running service, an ephemeral task, or a periodic task.
 type wkld struct {

@@ -11,16 +11,12 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/template/override"
 )
-
-type backendSvcReadParser interface {
-	template.ReadParser
-	ParseBackendService(template.WorkloadOpts) (*template.Content, error)
-}
 
 // BackendService represents the configuration needed to create a CloudFormation stack from a backend service manifest.
 type BackendService struct {
@@ -29,7 +25,8 @@ type BackendService struct {
 	httpsEnabled bool
 	albEnabled   bool
 
-	parser backendSvcReadParser
+	parser   backendSvcReadParser
+	localCRs []uploadable // Custom resources that have not been uploaded yet.
 }
 
 // BackendServiceConfig contains data required to initialize a backend service stack.
@@ -45,7 +42,11 @@ type BackendServiceConfig struct {
 
 // NewBackendService creates a new BackendService stack from a manifest file.
 func NewBackendService(conf BackendServiceConfig) (*BackendService, error) {
-	parser := template.New()
+	crs, err := customresource.Backend(fs)
+	if err != nil {
+		return nil, fmt.Errorf("backend service custom resources: %w", err)
+	}
+
 	b := &BackendService{
 		ecsWkld: &ecsWkld{
 			wkld: &wkld{
@@ -57,7 +58,7 @@ func NewBackendService(conf BackendServiceConfig) (*BackendService, error) {
 				rc:                 conf.RuntimeConfig,
 				image:              conf.Manifest.ImageConfig.Image,
 				rawManifest:        conf.RawManifest,
-				parser:             parser,
+				parser:             fs,
 				addons:             conf.Addons,
 			},
 			logRetention:        conf.Manifest.Logging.Retention,
@@ -65,8 +66,9 @@ func NewBackendService(conf BackendServiceConfig) (*BackendService, error) {
 			taskDefOverrideFunc: override.CloudFormationTemplate,
 		},
 		manifest:   conf.Manifest,
-		parser:     parser,
+		parser:     fs,
 		albEnabled: !conf.Manifest.RoutingRule.IsEmpty(),
+		localCRs:   uploadableCRs(crs).convert(),
 	}
 
 	if len(conf.EnvManifest.HTTPConfig.Private.Certificates) != 0 {

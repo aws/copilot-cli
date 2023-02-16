@@ -297,8 +297,10 @@ func TestBuildArgs_UnmarshalYAML(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			b := Image{
-				Build: BuildArgsOrString{
-					BuildString: aws.String("./default"),
+				ImageLocationOrBuild: ImageLocationOrBuild{
+					Build: BuildArgsOrString{
+						BuildString: aws.String("./default"),
+					},
 				},
 			}
 			err := yaml.Unmarshal(tc.inContent, &b)
@@ -839,7 +841,9 @@ func TestBuildConfig(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			s := Image{
-				Build: tc.inBuild,
+				ImageLocationOrBuild: ImageLocationOrBuild{
+					Build: tc.inBuild,
+				},
 			}
 			got := s.BuildConfig(mockWsRoot)
 
