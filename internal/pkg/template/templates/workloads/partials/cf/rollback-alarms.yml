@@ -52,7 +52,7 @@ MemoryRollbackAlarm:
 {{- end}}
 
 {{- if .DeploymentConfiguration.Rollback.MessagesDelayed}}
-MessagesDelayedAlarm:
+MessagesDelayedRollbackAlarm:
   Metadata:
     'aws:copilot:description': "A CloudWatch alarm associated with number of messages delayed for deployment rollbacks"
   Type: AWS::CloudWatch::Alarm
