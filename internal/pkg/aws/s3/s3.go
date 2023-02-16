@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	// S3 EndpointsID
+	// ID to look up S3 service endpoints.
 	EndpointsID = s3.EndpointsID
 
 	notFound = "NotFound"
