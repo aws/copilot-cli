@@ -38,8 +38,8 @@ func ListeningRollingUpdateRenderer(streamer ECSServiceSubscriber, opts RenderOp
 
 type rollingUpdateComponent struct {
 	// Data to render.
-	deployments []stream.ECSDeployment
-	failureMsgs []string
+	deployments  []stream.ECSDeployment
+	failureMsgs  []string
 
 	// Style configuration for the component.
 	padding           int

@@ -199,48 +199,60 @@ func TestECSDeploymentStreamer_Fetch(t *testing.T) {
 					{
 						// Failure event
 						Id:        aws.String("1"),
-						Message:   aws.String("(service my-svc) failed to register targets in (target-group 1234) with (error some-error)"),
+						Message:   aws.String("(service my-svc) deployment ecs-svc/0205655736282798388 deployment failed: alarm detected."),
 						CreatedAt: aws.Time(startDate.Add(1 * time.Minute)),
 					},
 					{
-						// Success event
+						// Failure event
 						Id:        aws.String("2"),
-						Message:   aws.String("(service my-svc) registered 1 targets in (target-group 1234)"),
+						Message:   aws.String("(service my-svc) rolling back to deployment ecs-svc/9086637243870003494."),
 						CreatedAt: aws.Time(startDate.Add(1 * time.Minute)),
 					},
 					{
 						// Failure event
 						Id:        aws.String("3"),
+						Message:   aws.String("(service my-svc) failed to register targets in (target-group 1234) with (error some-error)"),
+						CreatedAt: aws.Time(startDate.Add(1 * time.Minute)),
+					},
+					{
+						// Success event
+						Id:        aws.String("4"),
+						Message:   aws.String("(service my-svc) registered 1 targets in (target-group 1234)"),
+						CreatedAt: aws.Time(startDate.Add(1 * time.Minute)),
+					},
+					{
+						// Failure event
+						Id:        aws.String("5"),
 						Message:   aws.String("(service my-svc) failed to launch a task with (error some-error)."),
 						CreatedAt: aws.Time(startDate.Add(1 * time.Minute)),
 					},
 					{
 						// Failure event
-						Id:        aws.String("4"),
+						Id:        aws.String("6"),
 						Message:   aws.String("(service my-svc) (task 1234) failed container health checks."),
 						CreatedAt: aws.Time(startDate.Add(1 * time.Minute)),
 					},
 					{
 						// Success event
-						Id:        aws.String("5"),
+						Id:        aws.String("7"),
 						Message:   aws.String("(service my-svc) has started 1 tasks: (task 1234)."),
 						CreatedAt: aws.Time(startDate.Add(1 * time.Minute)),
 					},
 					{
 						// Failure event
-						Id:        aws.String("6"),
+						Id:        aws.String("8"),
 						Message:   aws.String("(service my-svc) (deployment 123) deployment failed: some-error."),
 						CreatedAt: aws.Time(startDate.Add(1 * time.Minute)),
 					},
 					{
 						// Failure event
-						Id:        aws.String("7"),
+						Id:        aws.String("9"),
 						Message:   aws.String("(service my-svc) was unable to place a task."),
 						CreatedAt: aws.Time(startDate.Add(1 * time.Minute)),
 					},
 					{
 						// Failure event
-						Id:        aws.String("8"),
+						Id:        aws.String("10"),
 						Message:   aws.String("(service my-svc) (port 80) is unhealthy in (target-group 1234) due to (reason some-error)."),
 						CreatedAt: aws.Time(startDate.Add(1 * time.Minute)),
 					},
@@ -264,6 +276,8 @@ func TestECSDeploymentStreamer_Fetch(t *testing.T) {
 		require.Equal(t, []ECSService{
 			{
 				LatestFailureEvents: []string{
+					"(service my-svc) deployment ecs-svc/0205655736282798388 deployment failed: alarm detected.",
+					"(service my-svc) rolling back to deployment ecs-svc/9086637243870003494.",
 					"(service my-svc) failed to register targets in (target-group 1234) with (error some-error)",
 					"(service my-svc) failed to launch a task with (error some-error).",
 					"(service my-svc) (task 1234) failed container health checks.",
@@ -337,7 +351,7 @@ func TestECSDeploymentStreamer_Fetch(t *testing.T) {
 
 		// THEN
 		require.NoError(t, err)
-		require.Equal(t, 1, len(streamer.eventsToFlush), "should have only event to flush")
+		require.Equal(t, 1, len(streamer.eventsToFlush), "should have only one event to flush")
 		require.Nil(t, streamer.eventsToFlush[0].LatestFailureEvents, "there should be no failed events emitted")
 	})
 }
