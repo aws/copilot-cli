@@ -757,8 +757,8 @@ func (o *initStorageOpts) Execute() error {
 			)
 			continue
 		}
-		_, ok := err.(*workspace.ErrFileExists)
-		if !ok {
+		var errFileExists *workspace.ErrFileExists
+		if !errors.As(err, &errFileExists) {
 			return err
 		}
 		log.Successf("CloudFormation %s already exists at %s, skipping writing it.\n",
