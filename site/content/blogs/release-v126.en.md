@@ -101,9 +101,9 @@ addon files.
 	│         ├── addons.parameters.yml   # The extra parameters required by the Aurora Serverless v2 storage.     
 	│         └── user.yml                # An Aurora Serverless v2 storage
 	└── api                               # "api" is a Request-Driven Web Service
-			└── addons/
-						├── addons.parameters.yml   # The extra parameters required by the ingress resource.    
-						└── user-ingress.yml        # A security group ingress that grants "api" access to the "api" storage"
+	    └── addons/
+	          ├── addons.parameters.yml   # The extra parameters required by the ingress resource.    
+	          └── user-ingress.yml        # A security group ingress that grants "api" access to the "api" storage"
 	```
 
 At the same time, Copilot will print out a series of recommended actions on your terminal to help you finish the deployment. For example,
