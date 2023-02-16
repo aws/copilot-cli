@@ -343,6 +343,13 @@ Scale up and down cooldown fields for queue delay autoscaling.
 {% include 'exec.en.md' %}
 
 {% include 'deployment.en.md' %}
+```yaml 
+deployment:
+  rollback_alarms:
+    cpu_utilization: 70    // Percentage value at or above which alarm is triggered.
+    memory_utilization: 50 // Percentage value at or above which alarm is triggered.
+    messages_delayed: 5    // Number of delayed messages in the queue at or above which alarm is triggered. 
+```
 
 {% include 'entrypoint.en.md' %}
 
