@@ -255,7 +255,7 @@ func TestS3_EmptyBucket(t *testing.T) {
 			mockS3Client: func(m *mocks.Mocks3API) {
 				m.EXPECT().HeadBucket(&s3.HeadBucketInput{
 					Bucket: aws.String("mockBucket"),
-				}).Return(nil, awserr.New(notFound, "message", nil))
+				}).Return(nil, awserr.New(errCodeNotFound, "message", nil))
 			},
 
 			wantErr: nil,
@@ -308,17 +308,26 @@ func TestS3_ParseURL(t *testing.T) {
 			inURL:     "badURL",
 			wantError: fmt.Errorf("cannot parse S3 URL badURL into bucket name and key"),
 		},
-		"success": {
+		"return error S3 URI": {
+			inURL:     "s3://",
+			wantError: fmt.Errorf("cannot parse S3 URI s3:// into bucket name and key"),
+		},
+		"parses S3 URI": {
+			inURL:            "s3://amplify-demo-dev-94628-deployment/auth/amplify-meta.json",
+			wantedBucketName: "amplify-demo-dev-94628-deployment",
+			wantedKey:        "auth/amplify-meta.json",
+		},
+		"parses object URL": {
 			inURL:            "https://stackset-myapp-infrastru-pipelinebuiltartifactbuc-1nk5t9zkymh8r.s3-us-west-2.amazonaws.com/scripts/dns-cert-validator/dd2278811c3",
 			wantedBucketName: "stackset-myapp-infrastru-pipelinebuiltartifactbuc-1nk5t9zkymh8r",
 			wantedKey:        "scripts/dns-cert-validator/dd2278811c3",
 		},
-		"success with dots": {
+		"parses object URL with dots": {
 			inURL:            "https://bucket.with.dots.in.name.s3.us-west-2.amazonaws.com/scripts/dns-cert-validator/dd2278811c3",
 			wantedBucketName: "bucket.with.dots.in.name",
 			wantedKey:        "scripts/dns-cert-validator/dd2278811c3",
 		},
-		"success with dots legacy URL": {
+		"parses legacy object URL with dots": {
 			inURL:            "https://bucket.with.dots.in.name.s3-us-west-2.amazonaws.com/scripts/dns-cert-validator/dd2278811c3",
 			wantedBucketName: "bucket.with.dots.in.name",
 			wantedKey:        "scripts/dns-cert-validator/dd2278811c3",

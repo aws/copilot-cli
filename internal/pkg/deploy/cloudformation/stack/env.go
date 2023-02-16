@@ -106,7 +106,10 @@ func (cfg *EnvConfig) loadCustomResourceURLs(crs []uploadable) error {
 	if err != nil {
 		return fmt.Errorf("parse artifact bucket ARN: %w", err)
 	}
-	cfg.CustomResourcesURLs = customResourceURLs("dummy" /* region is ignored when parsing URLs */, bucket, crs)
+	cfg.CustomResourcesURLs = make(map[string]string, len(crs))
+	for _, cr := range crs {
+		cfg.CustomResourcesURLs[cr.Name()] = s3.Location(bucket, cr.ArtifactPath())
+	}
 	return nil
 }
 

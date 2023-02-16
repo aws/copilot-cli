@@ -22,7 +22,11 @@ const (
 	// ID to look up S3 service endpoints.
 	EndpointsID = s3.EndpointsID
 
-	notFound = "NotFound"
+	// Error codes.
+	errCodeNotFound = "NotFound"
+
+	// Object location prefixes.
+	s3URIPrefix = "s3://"
 )
 
 type s3ManagerAPI interface {
@@ -124,29 +128,15 @@ func (s *S3) EmptyBucket(bucket string) error {
 	}
 }
 
-// ParseURL parses S3 object URL and returns the bucket name and the key.
-// For example: https://stackset-myapp-infrastru-pipelinebuiltartifactbuc-1nk5t9zkymh8r.s3-us-west-2.amazonaws.com/scripts/dns-cert-validator/dd2278811c3
-// returns "stackset-myapp-infrastru-pipelinebuiltartifactbuc-1nk5t9zkymh8r" and
-// "scripts/dns-cert-validator/dd2278811c3"
+// ParseURL parses Object URLs or s3 URIs and returns the bucket name and the key.
+// For example, the object URL: "https://stackset-myapp-infrastru-pipelinebuiltartifactbuc-1nk5t9zkymh8r.s3-us-west-2.amazonaws.com/scripts/dns-cert-validator/dd2278811c3"
+// or alternativey, the s3 URI: "s3://stackset-myapp-infrastru-pipelinebuiltartifactbuc-1nk5t9zkymh8r/scripts/dns-cert-validator/dd2278811c3"
+// Returns "stackset-myapp-infrastru-pipelinebuiltartifactbuc-1nk5t9zkymh8r" and  "scripts/dns-cert-validator/dd2278811c3"
 func ParseURL(url string) (bucket string, key string, err error) {
-	parsedURL := strings.SplitN(strings.TrimPrefix(url, "https://"), "/", 2)
-	if len(parsedURL) != 2 {
-		return "", "", fmt.Errorf("cannot parse S3 URL %s into bucket name and key", url)
+	if strings.HasPrefix(url, s3URIPrefix) {
+		return parseS3URI(url)
 	}
-
-	// go through the host backwards and find the first piece that
-	// starts with 's3' - the rest of the host (to the left of 's3')
-	// is the bucket name. this is to support both URL host formats:
-	// <bucket>.s3-<region>.amazonaws.com and <bucket>.s3.<region>.amazonaws.com
-	split := strings.Split(parsedURL[0], ".")
-	bucketEndIdx := len(split) - 1
-	for ; bucketEndIdx > 0; bucketEndIdx-- {
-		if strings.HasPrefix(split[bucketEndIdx], "s3") {
-			break
-		}
-	}
-
-	return strings.Join(split[:bucketEndIdx], "."), parsedURL[1], nil
+	return parseObjectURL(url)
 }
 
 // ParseARN parses an S3 bucket or object ARN.
@@ -195,7 +185,7 @@ func (s *S3) isBucketExists(bucket string) (bool, error) {
 	}
 	_, err := s.s3Client.HeadBucket(input)
 	if err != nil {
-		if aerr, ok := err.(awserr.Error); ok && aerr.Code() == notFound {
+		if aerr, ok := err.(awserr.Error); ok && aerr.Code() == errCodeNotFound {
 			return false, nil
 		}
 		return false, err
@@ -216,4 +206,33 @@ func (s *S3) upload(bucket, key string, buf io.Reader) (string, error) {
 		return "", fmt.Errorf("upload %s to bucket %s: %w", key, bucket, err)
 	}
 	return resp.Location, nil
+}
+
+func parseS3URI(uri string) (bucket, key string, err error) {
+	parsed := strings.SplitN(strings.TrimPrefix(uri, s3URIPrefix), "/", 2)
+	if len(parsed) != 2 {
+		return "", "", fmt.Errorf("cannot parse S3 URI %s into bucket name and key", uri)
+	}
+	return parsed[0], parsed[1], nil
+}
+
+func parseObjectURL(url string) (bucket, key string, err error) {
+	parsedURL := strings.SplitN(strings.TrimPrefix(url, "https://"), "/", 2)
+	if len(parsedURL) != 2 {
+		return "", "", fmt.Errorf("cannot parse S3 URL %s into bucket name and key", url)
+	}
+
+	// go through the host backwards and find the first piece that
+	// starts with 's3' - the rest of the host (to the left of 's3')
+	// is the bucket name. this is to support both URL host formats:
+	// <bucket>.s3-<region>.amazonaws.com and <bucket>.s3.<region>.amazonaws.com
+	split := strings.Split(parsedURL[0], ".")
+	bucketEndIdx := len(split) - 1
+	for ; bucketEndIdx > 0; bucketEndIdx-- {
+		if strings.HasPrefix(split[bucketEndIdx], "s3") {
+			break
+		}
+	}
+
+	return strings.Join(split[:bucketEndIdx], "."), parsedURL[1], nil
 }

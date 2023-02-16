@@ -85,15 +85,10 @@ func (cfg *RuntimeConfig) loadCustomResourceURLs(bucket string, crs []uploadable
 	if len(cfg.CustomResourcesURL) != 0 {
 		return
 	}
-	cfg.CustomResourcesURL = customResourceURLs(cfg.Region, bucket, crs)
-}
-
-func customResourceURLs(region, bucket string, crs []uploadable) map[string]string {
-	out := make(map[string]string, len(crs))
+	cfg.CustomResourcesURL = make(map[string]string, len(crs))
 	for _, cr := range crs {
-		out[cr.Name()] = s3.URL(region, bucket, cr.ArtifactPath())
+		cfg.CustomResourcesURL[cr.Name()] = s3.URL(cfg.Region, bucket, cr.ArtifactPath())
 	}
-	return out
 }
 
 // ECRImage represents configuration about the pushed ECR image that is needed to
