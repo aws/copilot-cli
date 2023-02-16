@@ -247,8 +247,7 @@ func (w *backendSvcDesc) HumanString() string {
 	if len(w.Alarms) > 0 {
 		fmt.Fprint(writer, color.Bold.Sprint("\nRollback Alarms\n\n"))
 		writer.Flush()
-		alarms := rollbackAlarms(w.Alarms)
-		alarms.humanString(writer)
+		rollbackAlarms(w.Alarms).humanString(writer)
 	}
 	if len(w.Routes) > 0 {
 		fmt.Fprint(writer, color.Bold.Sprint("\nRoutes\n\n"))

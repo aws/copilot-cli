@@ -299,6 +299,7 @@ func (d *ecsServiceDescriber) ServiceConnectDNSNames() ([]string, error) {
 	return service.ServiceConnectAliases(), nil
 }
 
+// RollbackAlarmNames returns the rollback alarm names of a service.
 func (d *ecsServiceDescriber) RollbackAlarmNames() ([]string, error) {
 	service, err := d.ecsClient.Service(d.app, d.env, d.service)
 	if err != nil {
