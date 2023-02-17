@@ -15,8 +15,11 @@ For workload-level addons, visit [Modeling Additional Workload Resources with AW
 
 ## How do I add an S3 bucket, a DDB Table, or an Aurora Serverless cluster?
 
-!!!caution "" 
-    As of v1.25.0, `copilot storage init` does not support creating addons at the environment-level.
+Copilot provides the following commands to help you create certain kinds of addons:
+
+* [`storage init`](../../commands/storage-init.en.md) will create a DynamoDB table, an S3 bucket, or an Aurora Serverless cluster.
+
+You can run `copilot storage init` from your workspace and be guided through some questions to help you set up these resources.
 
 
 ## How to add other resources?
