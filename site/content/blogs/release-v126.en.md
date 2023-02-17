@@ -40,10 +40,10 @@ Previously, `copilot storage init` only supported storage addons attached to wor
 `copilot svc deploy` in order to deploy the storage, and the storage is deleted along with the service
 when you run `copilot svc delete`.
 
-Now, you have the option to create environment-level storage addons: the storage is deployed when you run `copilot env deploy`,
+Now, you have the option to create environment storage addons: the storage is deployed when you run `copilot env deploy`,
 and isn't deleted until you delete the environment by running `copilot env delete`.
 
-Similar to the workload-level storage, the environment-level storage is, under the hood, just another [environment addon](../docs/developing/addons/environment.en.md)!
+Similar to the workload storage, the environment storage is, under the hood, just another [environment addon](../docs/developing/addons/environment.en.md)!
 
 ### Best Practice By Default
 Following the best practice in the microservice world, Copilot encourages you to set up storages that are each accessible
@@ -104,7 +104,7 @@ CloudFormation files.
 
 ???- note "Sample Files generated for an Aurora Serverless fronted by a Request-Driven Web Service"
 	```
-	# Example: an environment-level Aurora Serverless v2 storage, faced by a Request-Driven Web Service.
+	# Example: an Aurora Serverless v2 storage whose lifecycle is at the environment-level, faced by a Request-Driven Web Service.
 	copilot/
 	├── environments/
 	│   └── addons/   
