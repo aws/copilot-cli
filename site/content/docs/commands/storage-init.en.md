@@ -10,10 +10,13 @@ After running this command, the CLI creates an `addons` subdirectory inside your
 ## What are the flags?
 ```
 Required Flags
+  -l, --lifecycle string      Whether the storage should be created and deleted
+                              at the same time as an workload or an environment.
+                              Must be one of: "workload" or "environment".
   -n, --name string           Name of the storage resource to create.
   -t, --storage-type string   Type of storage to add. Must be one of:
                               "DynamoDB", "S3", "Aurora".
-  -w, --workload string       Name of the service or job to associate with storage.
+  -w, --workload string       Name of the service/job that access the storage.
 
 DynamoDB Flags
       --lsi stringArray        Optional. Attribute to use as an alternate sort key. May be specified up to 5 times.
@@ -24,12 +27,20 @@ DynamoDB Flags
                                Must be of the format '<keyName>:<dataType>'.
       --sort-key string        Optional. Sort key for the DDB table.
                                Must be of the format '<keyName>:<dataType>'.
+
 Aurora Serverless Flags
       --engine string               The database engine used in the cluster.
                                     Must be either "MySQL" or "PostgreSQL".
       --initial-db string           The initial database to create in the cluster.
       --parameter-group string      Optional. The name of the parameter group to associate with the cluster.
-      --serverless-version string   Optional. Aurora Serverless version. Must be either "v1" or "v2". (default "v2")
+      --serverless-version string   Optional. Aurora Serverless version.
+                                    Must be either "v1" or "v2". (default "v2")
+
+Others Flags
+      --add-ingress-from string   The workload that needs access to an
+                                  environment storage. Must be specified with
+                                  "--name" and "--storage-type".
+                                  Can be specified with "--engine".
 ```
 
 ## How can I use it? 
