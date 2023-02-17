@@ -45,10 +45,16 @@ and isn't deleted until you delete the environment by running `copilot env delet
 
 Similar to the workload storage, the environment storage is, under the hood, just another [environment addon](../docs/developing/addons/environment.en.md)!
 
-### Best Practice By Default
-Following the best practice in the microservice world, Copilot encourages you to set up storages that are each accessible
-by only one service, instead of monolith storages that are shared by all microservices. Therefore, Copilot assumes
-that your storage is designed to be accessed by one of your services or jobs.
+### [Database-Per-Service](https://docs.aws.amazon.com/prescriptive-guidance/latest/modernization-data-persistence/database-per-service.html) By Default
+In the microservice world, it is generally recommended to set up data storages that are each private to a microservices,
+instead of monolith storages that are shared by multiple services.
+This pattern preserves the core characteristics of microservices - loose coupling.
+Copilot encourages you to follow this database-per-service pattern. By default, a storage resource that Copilot generates
+is assumed to be accessed by one service or job.
+
+!!!note ""
+	However, each product has its own unique situation. If you do need your data storage to be shared by multiple service,
+	you can modify the CloudFormation template that Copilot generates for you to achieve your goal.
 
 Here is an example of prompts that you might see.
 
