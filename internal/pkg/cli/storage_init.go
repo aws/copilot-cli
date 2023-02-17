@@ -1212,14 +1212,12 @@ Storage resources are addons, either for a workload or the environments.`,
 		Example: `
   Create an S3 bucket named "my-bucket" attached to the "frontend" service.
   /code $ copilot storage init -n my-bucket -t S3 -w frontend
-  Create a basic DynamoDB table named "my-table" attached to the "frontend" service with a sort key specified.
+  Create an environment S3 bucket fronted by the "api" service.
+  /code $ copilot storage init -n my-bucket -t S3 -w api --lifecycle environment
+  Create a DynamoDB table with a sort key.
   /code $ copilot storage init -n my-table -t DynamoDB -w frontend --partition-key Email:S --sort-key UserId:N --no-lsi
-  Create a DynamoDB table with multiple alternate sort keys.
-  /code $ copilot storage init -n my-table -t DynamoDB -w frontend --partition-key Email:S --sort-key UserId:N --lsi Points:N --lsi Goodness:N
-  Create an RDS Aurora Serverless v2 cluster using PostgreSQL as the database engine.
-  /code $ copilot storage init -n my-cluster -t Aurora -w frontend --engine PostgreSQL --initial-db testdb
-  Create an RDS Aurora Serverless v1 cluster using MySQL as the database engine.
-  /code $ copilot storage init -n my-cluster -t Aurora --serverless-version v1 -w frontend --engine MySQL --initial-db testdb`,
+  Create an RDS Aurora Serverless v2 cluster using PostgreSQL.
+  /code $ copilot storage init -n my-cluster -t Aurora -w frontend --engine PostgreSQL --initial-db testdb`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newStorageInitOpts(vars)
 			if err != nil {
