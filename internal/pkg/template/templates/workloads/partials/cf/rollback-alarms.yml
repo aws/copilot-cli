@@ -4,7 +4,7 @@ CPURollbackAlarm:
     'aws:copilot:description': "A CloudWatch alarm associated with CPU utilization for deployment rollbacks"
   Type: AWS::CloudWatch::Alarm
   Properties:
-    AlarmDescription: "Roll back ECS service if CPU utilization is greater than or equal to {{.DeploymentConfiguration.Rollback.CPUUtilization}}% twice in 2 minutes."
+    AlarmDescription: "Roll back ECS service if CPU utilization is greater than or equal to {{.DeploymentConfiguration.Rollback.CPUUtilization}}% twice in 3 minutes."
     AlarmName: {{.DeploymentConfiguration.Rollback.TruncateAlarmName .AppName .EnvName .WorkloadName "CopilotRollbackCPUAlarm"}}
     Namespace: 'AWS/ECS'
     Dimensions:
@@ -31,7 +31,7 @@ MemoryRollbackAlarm:
     'aws:copilot:description': "A CloudWatch alarm associated with memory utilization for deployment rollbacks"
   Type: AWS::CloudWatch::Alarm
   Properties:
-    AlarmDescription: "Roll back ECS service if memory utilization is greater than or equal to {{.DeploymentConfiguration.Rollback.MemoryUtilization}}% twice in 2 minutes."
+    AlarmDescription: "Roll back ECS service if memory utilization is greater than or equal to {{.DeploymentConfiguration.Rollback.MemoryUtilization}}% twice in 3 minutes."
     AlarmName: {{.DeploymentConfiguration.Rollback.TruncateAlarmName .AppName .EnvName .WorkloadName "CopilotRollbackMemAlarm"}}
     Namespace: 'AWS/ECS'
     Dimensions:
@@ -52,12 +52,12 @@ MemoryRollbackAlarm:
 {{- end}}
 
 {{- if .DeploymentConfiguration.Rollback.MessagesDelayed}}
-MessagesDelayedAlarm:
+MessagesDelayedRollbackAlarm:
   Metadata:
     'aws:copilot:description': "A CloudWatch alarm associated with number of messages delayed for deployment rollbacks"
   Type: AWS::CloudWatch::Alarm
   Properties:
-    AlarmDescription: "Roll back worker service if number of messages delayed is greater or equal to {{.DeploymentConfiguration.Rollback.MessagesDelayed}} twice in 90 seconds."
+    AlarmDescription: "Roll back worker service if number of messages delayed is greater or equal to {{.DeploymentConfiguration.Rollback.MessagesDelayed}} twice in 3 minutes."
     AlarmName: {{.DeploymentConfiguration.Rollback.TruncateAlarmName .AppName .EnvName .WorkloadName "CopilotRollbackMsgsDelayedAlarm"}}
     Namespace: 'AWS/SQS'
     Dimensions:
