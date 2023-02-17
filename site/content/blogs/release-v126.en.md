@@ -46,15 +46,16 @@ and isn't deleted until you delete the environment by running `copilot env delet
 Similar to the workload storage, the environment storage is, under the hood, just another [environment addon](../docs/developing/addons/environment.en.md)!
 
 ### [Database-Per-Service](https://docs.aws.amazon.com/prescriptive-guidance/latest/modernization-data-persistence/database-per-service.html) By Default
-In the microservice world, it is generally recommended to set up data storages that are each private to a microservices,
+In the microservice world, it is generally recommended to set up data storage resources that are each private to a microservice,
 instead of monolith storages that are shared by multiple services.
 This pattern preserves the core characteristics of microservices - loose coupling.
 Copilot encourages you to follow this database-per-service pattern. By default, a storage resource that Copilot generates
 is assumed to be accessed by one service or job.
 
 !!!note ""
-    However, each product has its own unique situation. If you do need your data storage to be shared by multiple service,
-    you can modify the CloudFormation template that Copilot generates for you to achieve your goal.
+    However, each user has its own unique situation. If you do need your data storage to be shared among multiple service,
+    you can modify the Copilot-generated CloudFormation template in order to achieve your goal.
+
 
 Here is an example of prompts that you might see.
 !!! info ""
@@ -85,8 +86,9 @@ copilot storage init \
 --lifecycle "environment"
 ```
 
-After you've answered all the prompts or skipped them by flags, Copilot will generate the CloudFormation template that defines the DynamoDB storage
-under your `copilot/environments` directory. In addition, it will generate the necessary access policy; here, one that grants "api" service
+
+After you've answered all the prompts or skipped them by using flags, Copilot will generate the CloudFormation template that defines the DynamoDB storage resource
+under your `copilot/environments` directory. In addition, it will generate the necessary access policy; here is one that grants "api" service 
 access to the "movies" storage. The access policy is created as a workload addon, meaning that it is deployed and
 deleted at the same time as the "api" service.
 !!! info ""
