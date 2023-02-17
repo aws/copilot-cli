@@ -82,7 +82,8 @@ copilot storage init \
 
 After you've answered all the prompts or skipped them by flags, Copilot will generate the CloudFormation template that defines the DynamoDB storage
 under your "copilot/environments" directory. In addition, it will generate the necessary access policy; here, one that grants "api" service 
-access to the "movies" storage. The access policy is created as a workload-level addon that lives and dies with your service.
+access to the "movies" storage. The access policy is created as a workload addon, meaning that it is deployed and
+deleted at the same time as the "api" service.
 
 !!! note ""
 	```
