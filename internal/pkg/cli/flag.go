@@ -160,6 +160,7 @@ const (
 	gitBranchFlagShort         = "b"
 	envsFlagShort              = "e"
 	pipelineTypeShort          = "p"
+	storageLifecycleShort      = "l"
 
 	scheduleFlagShort = "s"
 )
