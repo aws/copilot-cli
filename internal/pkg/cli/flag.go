@@ -181,7 +181,7 @@ Cannot be specified with --%s.`, imageFlag)
 at the same time as an workload or an environment.
 Must be one of: %s.`, english.OxfordWordSeries(applyAll(validLifecycleOptions, strconv.Quote), "or"))
 	storageAddIngressFromFlagDescription = fmt.Sprintf(`The workload that needs access to an
-environment storage. Must be specified with
+environment storage resource. Must be specified with
 %q and %q.
 Can be specified with %q.`,
 		fmt.Sprintf("--%s", nameFlag),
