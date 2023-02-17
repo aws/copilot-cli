@@ -3,9 +3,28 @@
 $ copilot storage init
 ```
 ## What does it do?
-`copilot storage init` creates a new storage resource attached to one of your workloads, accessible from inside your service container via a friendly environment variable. You can specify either *S3*, *DynamoDB* or *Aurora* as the resource type.
+`copilot storage init` creates a new storage resource as addons.
 
-After running this command, the CLI creates an `addons` subdirectory inside your `copilot/service` directory if it does not exist. When you run `copilot svc deploy`, your newly initialized storage resource is created in the environment you're deploying to. By default, only the service you specify during `storage init` will have access to that storage resource.
+By default, Copilot follows the "database-per-service" pattern:
+only the service or job that you specify during `storage init` will have access to that storage resource.
+The storage is accessible from inside the service's containers via a friendly environment variable.
+
+!!!note ""
+	However, each product has its own unique situation. If you do need your data storage to be shared by multiple service,
+	you can modify the CloudFormation template that Copilot generates for you to achieve your goal.
+
+A storage can be created as a [workload addon](../developing/addons/workload.en.md):
+it is attached to one of your services or jobs, and is deployed and deleted at the same time as the workload.
+For example, when you run `copilot svc deploy --name api`, the storage resource will be deployed along with "api"
+to the target environment.
+
+Alternatively, a storage can be created as an [environment addon](../developing/addons/environment.en.md):
+it is attached to environments, and is deployed and deleted at the same time as an environment.
+For example, when you run `copilot env deploy --name test`, the storage resource will be deployed along with the
+"test" environment.
+
+You can specify either *S3*, *DynamoDB* or *Aurora* as the resource type.
+
 
 ## What are the flags?
 ```
