@@ -36,7 +36,7 @@ Copilot v1.26 brings several new features and improvements:
 
 ## `storage init` for environment addons
 
-Previously, `copilot storage init` only supported storage addons attached to workloads: you need to run 
+Previously, `copilot storage init` only supported storage addons attached to workloads: you need to run
 `copilot svc deploy` in order to deploy the storage, and the storage is deleted along with the service
 when you run `copilot svc delete`.
 
@@ -53,20 +53,20 @@ Copilot encourages you to follow this database-per-service pattern. By default, 
 is assumed to be accessed by one service or job.
 
 !!!note ""
-	However, each product has its own unique situation. If you do need your data storage to be shared by multiple service,
-	you can modify the CloudFormation template that Copilot generates for you to achieve your goal.
+    However, each product has its own unique situation. If you do need your data storage to be shared by multiple service,
+    you can modify the CloudFormation template that Copilot generates for you to achieve your goal.
 
 Here is an example of prompts that you might see.
+!!! info ""
 
-!!! note ""
-	```term
-	$ copilot storage init
+    ```term
+    $ copilot storage init
     What type of storage would you like to create?
     > DynamoDB            (NoSQL)
       S3                  (Objects)
       Aurora Serverless   (SQL)
 
-    Which workload needs access to the storage? 
+    Which workload needs access to the storage?
     > api
       backend
 
@@ -75,8 +75,7 @@ Here is an example of prompts that you might see.
     Do you want the storage to be created and deleted with the api service?
       Yes, the storage should be created and deleted at the same time as api
     > No, the storage should be created and deleted at the environment level
-	```
-
+    ```
 You can skip the prompts using the flags. The following command is equivalent to the prompts above:
 ```console
 copilot storage init \
@@ -87,40 +86,39 @@ copilot storage init \
 ```
 
 After you've answered all the prompts or skipped them by flags, Copilot will generate the CloudFormation template that defines the DynamoDB storage
-under your "copilot/environments" directory. In addition, it will generate the necessary access policy; here, one that grants "api" service 
+under your "copilot/environments" directory. In addition, it will generate the necessary access policy; here, one that grants "api" service
 access to the "movies" storage. The access policy is created as a workload addon, meaning that it is deployed and
 deleted at the same time as the "api" service.
-
-!!! note ""
-	```
-	copilot/
-	├── environments/
-	│   ├── addons/         
-	│   │     └── movies.yml                # <- The CloudFormation template that defines the "movies" DynamoDB storage.
-	│   └── test/
-	│         └── manifest.yml
-	└── api
-	    ├── addons/
-	    │     └── movies-access-policy.yml  # <- The CloudFormation template that defines the access policy.
-	    └─── manifest.yml
-	```
+!!! info ""
+    ```
+    copilot/
+    ├── environments/
+    │   ├── addons/         
+    │   │   └── movies.yml                # <- The CloudFormation template that defines the "movies" DynamoDB storage.
+    │   └── test/
+    │       └── manifest.yml
+    └── api
+        ├── addons/
+        │   └── movies-access-policy.yml  # <- The CloudFormation template that defines the access policy.
+        └─── manifest.yml
+    ```
 
 Depending on the storage type, and the type of the workload that is fronting the storage, Copilot may generate different
 CloudFormation files.
 
-???- note "Sample Files generated for an Aurora Serverless fronted by a Request-Driven Web Service"
-	```
-	# Example: an Aurora Serverless v2 storage whose lifecycle is at the environment-level, faced by a Request-Driven Web Service.
-	copilot/
-	├── environments/
-	│   └── addons/   
-	│         ├── addons.parameters.yml   # The extra parameters required by the Aurora Serverless v2 storage.     
-	│         └── user.yml                # An Aurora Serverless v2 storage
-	└── api                               # "api" is a Request-Driven Web Service
-	    └── addons/
-	          ├── addons.parameters.yml   # The extra parameters required by the ingress resource.    
-	          └── user-ingress.yml        # A security group ingress that grants "api" access to the "api" storage"
-	```
+???- note "Sample files generated for an Aurora Serverless fronted by a Request-Driven Web Service"
+    ```
+    # Example: an Aurora Serverless v2 storage whose lifecycle is at the environment-level, faced by a Request-Driven Web Service.
+    copilot/
+    ├── environments/
+    │   └── addons/
+    │         ├── addons.parameters.yml   # The extra parameters required by the Aurora Serverless v2 storage.
+    │         └── user.yml                # An Aurora Serverless v2 storage
+    └── api                               # "api" is a Request-Driven Web Service
+        └── addons/
+            ├── addons.parameters.yml   # The extra parameters required by the ingress resource.
+            └── user-ingress.yml        # A security group ingress that grants "api" access to the "api" storage"
+    ```
 
 
 
