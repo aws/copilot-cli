@@ -10,8 +10,8 @@ only the service or job that you specify during `storage init` will have access 
 The storage is accessible from inside the service's containers via a friendly environment variable.
 
 !!!note ""
-	However, each product has its own unique situation. If you do need your data storage to be shared by multiple service,
-	you can modify the CloudFormation template that Copilot generates for you to achieve your goal.
+    However, each user has its own unique situation. If you do need your data storage to be shared among multiple service,
+    you can modify the Copilot-generated CloudFormation template in order to achieve your goal.
 
 A storage resource can be created as a [workload addon](../developing/addons/workload.en.md):
 it is attached to one of your services or jobs, and is deployed and deleted at the same time as the workload.
