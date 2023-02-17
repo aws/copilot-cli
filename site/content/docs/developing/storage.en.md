@@ -21,7 +21,7 @@ and the name of the bucket will be injected into the `api` container under the e
     All names are converted into SCREAMING_SNAKE_CASE based on their use of hyphens or underscores. You can view the environment variables for a given service by running `copilot svc show`.
 
 You can also create a [DynamoDB table](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Introduction.html) using `copilot storage init`.
-For example, to create the Cloudformation template for a table with a sort key and a local secondary index, you could run the following command.
+For example, to create the Cloudformation template for a table with a sort key and a local secondary index, you could run the following command:
 
 ```console
 # For a guided experience.
@@ -51,11 +51,11 @@ $ copilot storage init -n my-cluster -t Aurora --serverless-version v1
 ### Environment storage
 
 The `-l` flag is short for `--lifecycle`. In the examples above, the value to the `-l` flag is `workload`.
-This means that the storages will be created as a service addon or a job addon. The storage will be deployed
+This means that the storage resources will be created as a service addon or a job addon. The storage will be deployed
 when you run `copilot [svc/job] deploy`, and will be deleted when you run `copilot [svc/job] delete`.
 
 Alternatively, if you want your storage to persist even after you delete the service or the job, you can create
-an environment storage. An environment storage is created as an environment addon: it is deployed when you run
+an environment storage resource. An environment storage resource is created as an environment addon: it is deployed when you run
 `copilot env deploy`, and isn't deleted until you run `copilot env delete`.
 
 ## File Systems
