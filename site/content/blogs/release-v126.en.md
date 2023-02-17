@@ -48,8 +48,7 @@ Similar to the workload-level storage, the environment-level storage is, under t
 ### Best Practice By Default
 Following the best practice in the microservice world, Copilot encourages you to set up storages that are each accessible
 by only one service, instead of monolith storages that are shared by all microservices. Therefore, Copilot assumes
-that your storage is designed to be accessed by one of your services or jobs, even when it is meant to live and die
-with the environment. 
+that your storage is designed to be accessed by one of your services or jobs.
 
 Here is an example of prompts that you might see.
 
