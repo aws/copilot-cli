@@ -1263,16 +1263,16 @@ Storage resources are addons, either for a workload or the environments.`,
 		auroraFlagSet.AddFlag(cmd.Flags().Lookup(f))
 	}
 
-	othersFlagSet := pflag.NewFlagSet("Others", pflag.ContinueOnError)
-	othersFlagSet.AddFlag(cmd.Flags().Lookup(storageAddIngressFromFlag))
+	optionalFlagSet := pflag.NewFlagSet("Optional", pflag.ContinueOnError)
+	optionalFlagSet.AddFlag(cmd.Flags().Lookup(storageAddIngressFromFlag))
 
 	cmd.Annotations = map[string]string{
 		// The order of the sections we want to display.
-		"sections":          `Required,DynamoDB,Aurora Serverless,Others`,
+		"sections":          `Required,DynamoDB,Aurora Serverless,Optional`,
 		"Required":          requiredFlags.FlagUsages(),
 		"DynamoDB":          ddbFlagSet.FlagUsages(),
 		"Aurora Serverless": auroraFlagSet.FlagUsages(),
-		"Others":            othersFlagSet.FlagUsages(),
+		"Optional":          optionalFlagSet.FlagUsages(),
 	}
 	cmd.SetUsageTemplate(`{{h1 "Usage"}}{{if .Runnable}}
   {{.UseLine}}{{end}}{{$annotations := .Annotations}}{{$sections := split .Annotations.sections ","}}{{if gt (len $sections) 0}}
