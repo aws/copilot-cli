@@ -130,7 +130,7 @@ func (s *S3) EmptyBucket(bucket string) error {
 
 // ParseURL parses Object URLs or s3 URIs and returns the bucket name and the key.
 // For example, the object URL: "https://stackset-myapp-infrastru-pipelinebuiltartifactbuc-1nk5t9zkymh8r.s3-us-west-2.amazonaws.com/scripts/dns-cert-validator/dd2278811c3"
-// or alternativey, the s3 URI: "s3://stackset-myapp-infrastru-pipelinebuiltartifactbuc-1nk5t9zkymh8r/scripts/dns-cert-validator/dd2278811c3"
+// or alternatively, the s3 URI: "s3://stackset-myapp-infrastru-pipelinebuiltartifactbuc-1nk5t9zkymh8r/scripts/dns-cert-validator/dd2278811c3"
 // Returns "stackset-myapp-infrastru-pipelinebuiltartifactbuc-1nk5t9zkymh8r" and  "scripts/dns-cert-validator/dd2278811c3"
 func ParseURL(url string) (bucket string, key string, err error) {
 	if strings.HasPrefix(url, s3URIPrefix) {
@@ -208,6 +208,10 @@ func (s *S3) upload(bucket, key string, buf io.Reader) (string, error) {
 	return resp.Location, nil
 }
 
+// parseS3URI parses the bucket name and object key from a [s3:// URI].
+// For example: s3://mybucket/puppy.jpg
+//
+// [s3:// URI]: https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-bucket-intro.html#accessing-a-bucket-using-S3-format
 func parseS3URI(uri string) (bucket, key string, err error) {
 	parsed := strings.SplitN(strings.TrimPrefix(uri, s3URIPrefix), "/", 2)
 	if len(parsed) != 2 {
@@ -216,6 +220,10 @@ func parseS3URI(uri string) (bucket, key string, err error) {
 	return parsed[0], parsed[1], nil
 }
 
+// parseObjectURL parses the bucket name and object key from a [virtual-hosted-style access URL].
+// For example: https://DOC-EXAMPLE-BUCKET1.s3.us-west-2.amazonaws.com/puppy.png
+//
+// [virtual-hosted-style access URL]: https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-bucket-intro.html#virtual-host-style-url-ex
 func parseObjectURL(url string) (bucket, key string, err error) {
 	parsedURL := strings.SplitN(strings.TrimPrefix(url, "https://"), "/", 2)
 	if len(parsedURL) != 2 {
