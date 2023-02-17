@@ -181,8 +181,8 @@ Cannot be specified with --%s.`, imageFlag)
 at the same time as an workload or an environment.
 Must be one of: %s.`, english.OxfordWordSeries(applyAll(validLifecycleOptions, strconv.Quote), "or"))
 	storageAddIngressFromFlagDescription = fmt.Sprintf(`The workload that needs access to an
-environment storage. Must be specified with
-%q and %q.
+environment storage resource. Must be
+specified with %q and %q.
 Can be specified with %q.`,
 		fmt.Sprintf("--%s", nameFlag),
 		fmt.Sprintf("--%s", storageTypeFlag),
@@ -299,7 +299,7 @@ Uploaded asset locations are filled in the template configuration.`
 
 	// Storage.
 	storageFlagDescription             = "Name of the storage resource to create."
-	storageWorkloadFlagDescription     = "Name of the service/job that access the storage."
+	storageWorkloadFlagDescription     = "Name of the service/job that accesses the storage."
 	storagePartitionKeyFlagDescription = `Partition key for the DDB table.
 Must be of the format '<keyName>:<dataType>'.`
 	storageSortKeyFlagDescription = `Optional. Sort key for the DDB table.
