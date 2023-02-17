@@ -1208,8 +1208,7 @@ func buildStorageInitCmd() *cobra.Command {
 		Use:   "init",
 		Short: "Creates a new AWS CloudFormation template for a storage resource.",
 		Long: `Creates a new AWS CloudFormation template for a storage resource.
-Storage resources are stored in the Copilot addons directory (e.g. ./copilot/frontend/addons) for a given workload and deployed to your environments when you run ` + color.HighlightCode("copilot deploy") + `. 
-Resource names are injected into your containers as environment variables for easy access.`,
+Storage resources are addons, either for a workload or the environments.`,
 		Example: `
   Create an S3 bucket named "my-bucket" attached to the "frontend" service.
   /code $ copilot storage init -n my-bucket -t S3 -w frontend
