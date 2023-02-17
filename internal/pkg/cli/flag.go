@@ -178,7 +178,7 @@ Cannot be specified with --%s.`, imageFlag)
 	storageTypeFlagDescription = fmt.Sprintf(`Type of storage to add. Must be one of:
 %s.`, strings.Join(applyAll(storageTypes, strconv.Quote), ", "))
 	storageLifecycleFlagDescription = fmt.Sprintf(`Whether the storage should be created and deleted
-at the same time as an workload or an environment.
+at the same time as a workload or an environment.
 Must be one of: %s.`, english.OxfordWordSeries(applyAll(validLifecycleOptions, strconv.Quote), "or"))
 	storageAddIngressFromFlagDescription = fmt.Sprintf(`The workload that needs access to an
 environment storage resource. Must be
