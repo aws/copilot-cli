@@ -1211,9 +1211,9 @@ func buildStorageInitCmd() *cobra.Command {
 Storage resources are addons, either for a workload or the environments.`,
 		Example: `
   Create an S3 bucket named "my-bucket" attached to the "frontend" service.
-  /code $ copilot storage init -n my-bucket -t S3 -w frontend
+  /code $ copilot storage init -n my-bucket -t S3 -w frontend -l workload
   Create an environment S3 bucket fronted by the "api" service.
-  /code $ copilot storage init -n my-bucket -t S3 -w api --lifecycle environment
+  /code $ copilot storage init -n my-bucket -t S3 -w api -l environment
   Create a DynamoDB table with a sort key.
   /code $ copilot storage init -n my-table -t DynamoDB -w frontend --partition-key Email:S --sort-key UserId:N --no-lsi
   Create an RDS Aurora Serverless v2 cluster using PostgreSQL.
