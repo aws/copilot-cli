@@ -111,12 +111,47 @@ $ copilot storage init \
 
 
 ## What happens under the hood?
-Copilot writes a Cloudformation template specifying the S3 bucket or DDB table to the `addons` dir. When you run `copilot svc deploy`, the CLI merges this template with all the other templates in the addons directory to create a nested stack associated with your service. This nested stack describes all the additional resources you've associated with that service and is deployed wherever your service is deployed. 
+Copilot writes a Cloudformation template specifying the S3 bucket, DDB table, or Aurora Serverless cluster to the `addons` dir. 
+When you run `copilot [svc/job/env] deploy`, the CLI merges this template with all the other templates in the addons 
+directory to create a nested stack associated with your service or environment. 
+This nested stack describes all the [additional resources](../developing/addons/workload.en.md) you've associated with 
+that service or environments, and is deployed wherever your service or environments are deployed. 
 
-This means that after running
+### Example scenarios
+#### S3 storage attached to a service
 ```console
-$ copilot storage init -n bucket -t S3 -w fe
-$ copilot svc deploy -n fe -e test
-$ copilot svc deploy -n fe -e prod
+$ copilot storage init --storage-type S3 --name bucket \
+--workload fe --lifecycle workload
 ```
-there will be two buckets deployed, one in the "test" env and one in the "prod" env, accessible only to the "fe" service in its respective environment. 
+This generates a CloudFormation template for an S3 bucket, attached to the "fe" service.
+```console
+$ copilot svc deploy --name fe --env test
+$ copilot svc deploy --name fe --env prod
+```
+After running these commands, there will be two buckets deployed,
+one in the "test" env and one in the "prod" env,
+accessible only to the "fe" service in its respective environment.
+
+#### S3 storage attached to environments
+
+```console
+$ copilot storage init --storage-type S3 --name bucket \
+--workload fe --lifecycle environment
+```
+
+This generates a CloudFormation template for an S3 bucket that will be deployed and deleted at the same time as an environment.
+In addition, it will generate a CloudFormation template for the access policy that grants "fe" access
+to the "bucket" resource.
+```console
+$ copilot env deploy --name test
+$ copilot env deploy --name prod
+```
+After running the commands, there will be two buckets deployed, one in the "test" env and one in the "prod" env.
+
+```console
+$ copilot svc deploy --name fe --env test
+$ copilot svc deploy --name fe --env prod
+```
+
+The service "fe" will be deployed with the access policy that is generated.
+It is now able to access the S3 bucket in the respective environment.
