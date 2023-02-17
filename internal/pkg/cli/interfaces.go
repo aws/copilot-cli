@@ -319,6 +319,7 @@ type wsWlDirReader interface {
 
 type wsEnvironmentReader interface {
 	wsEnvironmentsLister
+	HasEnvironments() (bool, error)
 	EnvOverridesPath() string
 	ReadEnvironmentManifest(mftDirName string) (workspace.EnvironmentManifest, error)
 	EnvAddonFilePath(fName string) string
