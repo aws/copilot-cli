@@ -176,6 +176,16 @@ Cannot be specified with --%s.`, imageFlag)
 Cannot be specified with --%s.`, imageFlag)
 	storageTypeFlagDescription = fmt.Sprintf(`Type of storage to add. Must be one of:
 %s.`, strings.Join(applyAll(storageTypes, strconv.Quote), ", "))
+	storageLifecycleFlagDescription = fmt.Sprintf(`Whether the storage should be created and deleted
+at the same time as an workload or an environment.
+Must be one of: %s.`, english.OxfordWordSeries(applyAll(validLifecycleOptions, strconv.Quote), "or"))
+	storageAddIngressFromFlagDescription = fmt.Sprintf(`The workload that needs access to an
+environment storage. Must be specified with
+%q and %q.
+Can be specified with %q.`,
+		fmt.Sprintf("--%s", nameFlag),
+		fmt.Sprintf("--%s", storageTypeFlag),
+		fmt.Sprintf("--%s", storageRDSEngineFlag))
 	jobTypeFlagDescription = fmt.Sprintf(`Type of job to create. Must be one of:
 %s.`, strings.Join(applyAll(manifestinfo.JobTypes(), strconv.Quote), ", "))
 	wkldTypeFlagDescription = fmt.Sprintf(`Type of job or svc to create. Must be one of:
@@ -287,12 +297,8 @@ Uploaded asset locations are filled in the template configuration.`
 	pipelineTypeFlagDescription      = `The type of pipeline. Must be either "Workloads" or "Environments".`
 
 	// Storage.
-	storageFlagDescription               = "Name of the storage resource to create."
-	storageWorkloadFlagDescription       = "Name of the service or job to associate with storage."
-	storageLifecycleFlagDescription      = "Whether the storage should be created and deleted at the same time as a workload or as the environment"
-	storageAddIngressFromFlagDescription = `The workload that needs access to an environment-level addon.
-Must be specified with --name and --storage-type.
-Can be specified with --engine.`
+	storageFlagDescription             = "Name of the storage resource to create."
+	storageWorkloadFlagDescription     = "Name of the service/job that access the storage."
 	storagePartitionKeyFlagDescription = `Partition key for the DDB table.
 Must be of the format '<keyName>:<dataType>'.`
 	storageSortKeyFlagDescription = `Optional. Sort key for the DDB table.
@@ -301,8 +307,9 @@ Must be of the format '<keyName>:<dataType>'.`
 	storageNoLSIFlagDescription     = `Optional. Don't ask about configuring alternate sort keys.`
 	storageLSIConfigFlagDescription = `Optional. Attribute to use as an alternate sort key. May be specified up to 5 times.
 Must be of the format '<keyName>:<dataType>'.`
-	storageAuroraServerlessVersionFlagDescription = `Optional. Aurora Serverless version. Must be either "v1" or "v2".`
-	storageRDSEngineFlagDescription               = `The database engine used in the cluster.
+	storageAuroraServerlessVersionFlagDescription = `Optional. Aurora Serverless version.
+Must be either "v1" or "v2".`
+	storageRDSEngineFlagDescription = `The database engine used in the cluster.
 Must be either "MySQL" or "PostgreSQL".`
 	storageRDSInitialDBFlagDescription      = "The initial database to create in the cluster."
 	storageRDSParameterGroupFlagDescription = "Optional. The name of the parameter group to associate with the cluster."

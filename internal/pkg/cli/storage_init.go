@@ -1266,12 +1266,16 @@ Resource names are injected into your containers as environment variables for ea
 		auroraFlagSet.AddFlag(cmd.Flags().Lookup(f))
 	}
 
+	othersFlagSet := pflag.NewFlagSet("Others", pflag.ContinueOnError)
+	othersFlagSet.AddFlag(cmd.Flags().Lookup(storageAddIngressFromFlag))
+
 	cmd.Annotations = map[string]string{
 		// The order of the sections we want to display.
-		"sections":          `Required,DynamoDB,Aurora Serverless`,
+		"sections":          `Required,DynamoDB,Aurora Serverless,Others`,
 		"Required":          requiredFlags.FlagUsages(),
 		"DynamoDB":          ddbFlagSet.FlagUsages(),
 		"Aurora Serverless": auroraFlagSet.FlagUsages(),
+		"Others":            othersFlagSet.FlagUsages(),
 	}
 	cmd.SetUsageTemplate(`{{h1 "Usage"}}{{if .Runnable}}
   {{.UseLine}}{{end}}{{$annotations := .Annotations}}{{$sections := split .Annotations.sections ","}}{{if gt (len $sections) 0}}
