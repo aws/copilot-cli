@@ -47,19 +47,31 @@ Others Flags
 Create an S3 bucket named "my-bucket" attached to the "frontend" service.
 
 ```console
-$ copilot storage init -n my-bucket -t S3 -w frontend
+$ copilot storage init -n my-bucket -t S3 -w frontend -l workload
 ```
+
+Create an environment S3 bucket named "my-bucket", fronted by the "api" service.
+```console
+$ copilot storage init \
+  -t S3 -n my-bucket \
+  -w api -l environment
+```
+
 Create a basic DynamoDB table named "my-table" attached to the "frontend" service with a sort key specified.
 
 ```console
-$ copilot storage init -n my-table -t DynamoDB -w frontend --partition-key Email:S --sort-key UserId:N --no-lsi
+$ copilot storage init -t DynamoDB -n my-table \
+  -w frontend -l workload \
+  --partition-key Email:S \
+  --sort-key UserId:N \
+  --no-lsi
 ```
 
 Create a DynamoDB table with multiple alternate sort keys.
 
 ```console
-$ copilot storage init \
-  -n my-table -t DynamoDB -w frontend \
+$ copilot storage init -t DynamoDB -n my-table \
+  -w frontend \
   --partition-key Email:S \
   --sort-key UserId:N \
   --lsi Points:N \
@@ -77,6 +89,7 @@ Create an RDS Aurora Serverless v1 cluster using MySQL as the database engine wi
 $ copilot storage init \
   -n my-cluster -t Aurora --serverless-version v1 -w frontend --engine MySQL --initial-db testdb
 ```
+
 
 ## What happens under the hood?
 Copilot writes a Cloudformation template specifying the S3 bucket or DDB table to the `addons` dir. When you run `copilot svc deploy`, the CLI merges this template with all the other templates in the addons directory to create a nested stack associated with your service. This nested stack describes all the additional resources you've associated with that service and is deployed wherever your service is deployed. 
