@@ -393,7 +393,7 @@ func TestEnvDeployer_GenerateCloudFormationTemplate(t *testing.T) {
 			},
 			wantedError: errors.New("some error"),
 		},
-		"return an error when addons template cannot be retrieved if the URL isn't provided": {
+		"return an error if the URL isn't provided and addons template cannot be retrieved": {
 			setUpMocks: func(m *envDeployerMocks, ctrl *gomock.Controller) {
 				m.appCFN.EXPECT().GetAppResourcesByRegion(mockApp, mockEnvRegion).Return(&cfnstack.AppRegionalResources{
 					S3Bucket: "mockS3Bucket",
