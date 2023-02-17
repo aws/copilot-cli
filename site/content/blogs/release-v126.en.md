@@ -41,7 +41,7 @@ Previously, `copilot storage init` only supported storage addons attached to wor
 when you run `copilot svc delete`.
 
 Now, you have the option to create environment-level storage addons: the storage is deployed when you run `copilot env deploy`,
-and isn't deleted until you delete the whole environment by running `copilot env delete`.
+and isn't deleted until you delete the environment by running `copilot env delete`.
 
 Similar to the workload-level storage, the environment-level storage is, under the hood, just another [environment addon](../docs/developing/addons/environment.en.md)!
 
