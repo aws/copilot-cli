@@ -6,6 +6,7 @@ package progress
 import (
 	"bytes"
 	"fmt"
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatch"
 	"io"
 	"strconv"
 	"sync"
@@ -40,6 +41,7 @@ type rollingUpdateComponent struct {
 	// Data to render.
 	deployments  []stream.ECSDeployment
 	failureMsgs  []string
+	alarms       []cloudwatch.AlarmStatus
 
 	// Style configuration for the component.
 	padding           int
@@ -77,6 +79,12 @@ func (c *rollingUpdateComponent) Render(out io.Writer) (numLines int, err error)
 	numLines += nl
 
 	nl, err = c.renderFailureMsgs(buf)
+	if err != nil {
+		return 0, err
+	}
+	numLines += nl
+	
+	nl, err = c.renderAlarms(buf)
 	if err != nil {
 		return 0, err
 	}
@@ -147,6 +155,27 @@ func (c *rollingUpdateComponent) renderFailureMsgs(out io.Writer) (numLines int,
 		}
 	}
 	return renderComponents(out, components)
+}
+
+func (c *rollingUpdateComponent) renderAlarms(out io.Writer) (numLines int, err error) {
+	if len(c.alarms) == 0 {
+		return 0, nil
+	} 
+	header := []string{"Name", "Status"}
+	var rows [][]string
+	for _, a := range c.alarms {
+		rows = append(rows, []string{
+			a.Name,
+			a.Status,
+		})
+	}
+	table := newTableComponent(color.Faint.Sprintf("Alarms"), header, rows)
+	table.Padding = c.padding
+	nl, err := table.Render(out)
+	if err != nil {
+		return 0, fmt.Errorf("render alarms table: %w", err)
+	}
+	return nl, err
 }
 
 func reverseStrings(arr []string) []string {

@@ -89,6 +89,7 @@ func WrapWithTemplateOverrider(stack StackConfiguration, overrider Overrider) St
 
 type ecsClient interface {
 	stream.ECSServiceDescriber
+	stream.CloudWatchDescriber
 }
 
 type cfnClient interface {

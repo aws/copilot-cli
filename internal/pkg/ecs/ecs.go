@@ -7,6 +7,7 @@ package ecs
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatch"
 	"strings"
 	"time"
 
@@ -45,6 +46,7 @@ type ecsClient interface {
 	TaskDefinition(taskDefName string) (*ecs.TaskDefinition, error)
 	UpdateService(clusterName, serviceName string, opts ...ecs.UpdateServiceOpts) error
 	DescribeTasks(cluster string, taskARNs []string) ([]*ecs.Task, error)
+	AlarmStatuses(opts ...cloudwatch.DescribeAlarmOpts) ([]cloudwatch.AlarmStatus, error)
 }
 
 type stepFunctionsClient interface {

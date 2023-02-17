@@ -310,6 +310,7 @@ type ecsServiceResourceComponent struct {
 	// Required inputs.
 	cfnStream    <-chan stream.StackEvent   // Subscribed stream to initialize the deploymentRenderer.
 	ecsDescriber stream.ECSServiceDescriber // Client needed to create an ECSDeploymentStreamer.
+	cwDescriber  stream.CloudWatchDescriber // Client needed to create a CloudwatchAlarmStreamer.
 	logicalID    string                     // LogicalID for the service.
 
 	// Optional inputs.
@@ -398,7 +399,7 @@ func (c *ecsServiceResourceComponent) Done() <-chan struct{} {
 
 func (c *ecsServiceResourceComponent) newListeningRollingUpdateRenderer(serviceARN string, startTime time.Time) DynamicRenderer {
 	cluster, service := parseServiceARN(serviceARN)
-	streamer := stream.NewECSDeploymentStreamer(c.ecsDescriber, cluster, service, startTime)
+	streamer := stream.NewECSDeploymentStreamer(c.ecsDescriber, c.cwDescriber, cluster, service, startTime)
 	renderer := ListeningRollingUpdateRenderer(streamer, NestedRenderOptions(c.renderOpts))
 	c.group.Go(func() error {
 		return stream.Stream(c.ctx, streamer)
