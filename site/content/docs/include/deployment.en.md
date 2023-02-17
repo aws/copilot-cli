@@ -11,7 +11,7 @@ Rolling deployment strategy. Valid values are
 
 <span class="parent-field">deployment.</span><a id="deployment-rollback-alarms" href="#deployment-rollback-alarms" class="field">`rollback_alarms`</a> <span class="type">Array of Strings or Map</span>
 !!! info
-    If an alarm is in the ALARM state at the beginning of a deployment, Amazon ECS will not monitor alarms for the duration of that deployment (Amazon ECS ignores the alarm configuration).
+    If an alarm is in "In alarm" state at the beginning of a deployment, Amazon ECS will NOT monitor alarms for the duration of that deployment. For more details, read the docs [here](https://docs.aws.amazon.com/AmazonECS/latest/userguide/deployment-alarm-failure.html).
 
 As a list of strings, the names of existing CloudWatch alarms to associate with your service that may trigger a [deployment rollback](https://docs.aws.amazon.com/AmazonECS/latest/userguide/deployment-alarm-failure.html).
 ```yaml
