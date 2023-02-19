@@ -30,13 +30,9 @@ func hasUncommitedGitChanges(r execRunner) (bool, error) {
 }
 
 // imageTagFromGit returns the image tag to apply in case the user is in a git repository.
-// If the user provided their own tag, then just use that.
 // If there is a clean git commit with no local changes, then return the git commit id.
 // Otherwise, returns the empty string.
-func imageTagFromGit(r execRunner, userTag string) string {
-	if userTag != "" {
-		return userTag
-	}
+func imageTagFromGit(r execRunner) string {
 	commit, err := describeGitChanges(r)
 	if err != nil {
 		return ""

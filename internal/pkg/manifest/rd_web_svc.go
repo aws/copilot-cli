@@ -160,8 +160,10 @@ func (s *RequestDrivenWebService) ContainerPlatform() string {
 }
 
 // BuildArgs returns a docker.BuildArguments object given a ws root directory.
-func (s *RequestDrivenWebService) BuildArgs(wsRoot string) *DockerBuildArgs {
-	return s.ImageConfig.Image.BuildConfig(wsRoot)
+func (s *RequestDrivenWebService) BuildArgs(wsRoot string) map[string]*DockerBuildArgs {
+	buildArgs := make(map[string]*DockerBuildArgs, 1)
+	buildArgs[aws.StringValue(s.Name)] = s.ImageConfig.Image.BuildConfig(wsRoot)
+	return buildArgs
 }
 
 func (s RequestDrivenWebService) applyEnv(envName string) (workloadManifest, error) {

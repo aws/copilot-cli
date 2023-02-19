@@ -62,6 +62,7 @@ type packageSvcOpts struct {
 	newInterpolator      func(app, env string) interpolator
 	newStackGenerator    func(*packageSvcOpts) (workloadStackGenerator, error)
 	envFeaturesDescriber versionCompatibilityChecker
+	gitShortCommit       string
 
 	// cached variables
 	targetApp         *config.Application
@@ -125,11 +126,14 @@ func newWorkloadStackGenerator(o *packageSvcOpts) (workloadStackGenerator, error
 	content := o.appliedDynamicMft.Manifest()
 	var deployer workloadStackGenerator
 	in := clideploy.WorkloadDeployerInput{
-		SessionProvider:  o.sessProvider,
-		Name:             o.name,
-		App:              targetApp,
-		Env:              targetEnv,
-		ImageTag:         o.tag,
+		SessionProvider: o.sessProvider,
+		Name:            o.name,
+		App:             targetApp,
+		Env:             targetEnv,
+		RuntimeImage: clideploy.RuntimeImage{
+			CustomTag:      o.tag,
+			GitShortCommit: o.gitShortCommit,
+		},
 		Mft:              content,
 		RawMft:           raw,
 		EnvVersionGetter: o.envFeaturesDescriber,
@@ -260,7 +264,7 @@ func (o *packageSvcOpts) validateOrAskEnvName() error {
 }
 
 func (o *packageSvcOpts) configureClients() error {
-	o.tag = imageTagFromGit(o.runner, o.tag) // Best effort assign git tag.
+	o.gitShortCommit = imageTagFromGit(o.runner) // Best effort assign git tag.
 	// client to retrieve an application's resources created with CloudFormation.
 	defaultSess, err := o.sessProvider.Default()
 	if err != nil {

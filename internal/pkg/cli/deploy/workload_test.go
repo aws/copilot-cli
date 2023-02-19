@@ -14,6 +14,7 @@ import (
 	"time"
 
 	cloudformation0 "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
+	"github.com/google/uuid"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -113,11 +114,13 @@ func (m *mockWorkloadMft) BuildRequired() (bool, error) {
 	return m.buildRequired, nil
 }
 
-func (m *mockWorkloadMft) BuildArgs(rootDirectory string) *manifest.DockerBuildArgs {
-	return &manifest.DockerBuildArgs{
+func (m *mockWorkloadMft) BuildArgs(rootDirectory string) map[string]*manifest.DockerBuildArgs {
+	args := make(map[string]*manifest.DockerBuildArgs)
+	args["mockWkld"] = &manifest.DockerBuildArgs{
 		Dockerfile: aws.String("mockDockerfile"),
 		Context:    aws.String("mockContext"),
 	}
+	return args
 }
 
 func (m *mockWorkloadMft) ContainerPlatform() string {
@@ -154,7 +157,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 		mockWorkspacePath   = "."
 		mockEnvFile         = "foo.env"
 		mockS3Bucket        = "mockBucket"
-		mockImageTag        = "mockImageTag"
+		mockUUID            = "31323334-3536-4738-b930-313233333435"
 		mockAddonsS3URL     = "https://mockS3DomainName/mockPath"
 		mockBadEnvFileS3URL = "badURL"
 		mockEnvFileS3URL    = "https://stackset-demo-infrastruc-pipelinebuiltartifactbuc-11dj7ctf52wyf.s3.us-west-2.amazonaws.com/manual/1638391936/env"
@@ -174,6 +177,8 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 		inEnvFile       string
 		inBuildRequired bool
 		inRegion        string
+		inMockUserTag   string
+		inMockGitTag    string
 
 		mock                func(t *testing.T, m *deployMocks)
 		mockServiceDeployer func(deployer *workloadDeployer) artifactsUploader
@@ -187,24 +192,55 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 	}{
 		"error if failed to build and push image": {
 			inBuildRequired: true,
+			inMockUserTag:   "v1.0",
 			mock: func(t *testing.T, m *deployMocks) {
 				m.mockImageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
 					Dockerfile: "mockDockerfile",
 					Context:    "mockContext",
 					Platform:   "mockContainerPlatform",
-					Tags:       []string{mockImageTag},
+					Tags:       []string{"v1.0"},
 				}).Return("", mockError)
 			},
 			wantErr: fmt.Errorf("build and push image: some error"),
 		},
-		"build and push image successfully": {
+		"build and push image with usertag successfully": {
+			inBuildRequired: true,
+			inMockUserTag:   "v1.0",
+			inMockGitTag:    "gitTag",
+			mock: func(t *testing.T, m *deployMocks) {
+				m.mockImageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
+					Dockerfile: "mockDockerfile",
+					Context:    "mockContext",
+					Platform:   "mockContainerPlatform",
+					Tags:       []string{"v1.0"},
+				}).Return("mockDigest", nil)
+				m.mockAddons = nil
+			},
+			wantImageDigest: aws.String("mockDigest"),
+		},
+
+		"build and push image with gitshortcommit successfully": {
+			inBuildRequired: true,
+			inMockGitTag:    "gitTag",
+			mock: func(t *testing.T, m *deployMocks) {
+				m.mockImageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
+					Dockerfile: "mockDockerfile",
+					Context:    "mockContext",
+					Platform:   "mockContainerPlatform",
+					Tags:       []string{"gitTag"},
+				}).Return("mockDigest", nil)
+				m.mockAddons = nil
+			},
+			wantImageDigest: aws.String("mockDigest"),
+		},
+		"build and push image with uuid successfully": {
 			inBuildRequired: true,
 			mock: func(t *testing.T, m *deployMocks) {
 				m.mockImageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
 					Dockerfile: "mockDockerfile",
 					Context:    "mockContext",
 					Platform:   "mockContainerPlatform",
-					Tags:       []string{mockImageTag},
+					Tags:       []string{mockUUID},
 				}).Return("mockDigest", nil)
 				m.mockAddons = nil
 			},
@@ -434,6 +470,9 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+			seed := bytes.NewBufferString("12345678901233456789") // always generate the same UUID
+			uuid.SetRand(seed)
+			defer uuid.SetRand(nil)
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
@@ -461,8 +500,12 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				app: &config.Application{
 					Name: mockAppName,
 				},
-				resources:     mockResources,
-				imageTag:      mockImageTag,
+				resources: mockResources,
+				runtimeImage: RuntimeImage{
+					CustomTag:      tc.inMockUserTag,
+					GitShortCommit: tc.inMockGitTag,
+					UUID:           mockUUID,
+				},
 				workspacePath: mockWorkspacePath,
 				mft: &mockWorkloadMft{
 					fileName:      tc.inEnvFile,

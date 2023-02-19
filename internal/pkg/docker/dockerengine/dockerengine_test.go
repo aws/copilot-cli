@@ -250,7 +250,7 @@ func TestDockerCommand_Push(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 		m := NewMockCmd(ctrl)
-		m.EXPECT().Run("docker", []string{"push", "aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app"}).Return(nil)
+		m.EXPECT().Run("docker", []string{"push", "aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app:latest"}).Return(nil)
 		m.EXPECT().Run("docker", []string{"push", "aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app:g123bfc"}).Return(nil)
 		m.EXPECT().Run("docker", []string{"inspect", "--format", "'{{json (index .RepoDigests 0)}}'", "aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app"}, gomock.Any()).
 			Do(func(_ string, _ []string, opt exec.CmdOption) {
@@ -264,7 +264,7 @@ func TestDockerCommand_Push(t *testing.T) {
 			runner:    m,
 			lookupEnv: emptyLookupEnv,
 		}
-		digest, err := cmd.Push("aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app", "g123bfc")
+		digest, err := cmd.Push("aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app", "latest", "g123bfc")
 
 		// THEN
 		require.NoError(t, err)
@@ -275,7 +275,7 @@ func TestDockerCommand_Push(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 		m := NewMockCmd(ctrl)
-		m.EXPECT().Run("docker", []string{"push", "aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app", "--quiet"}).Return(nil)
+		m.EXPECT().Run("docker", []string{"push", "aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app:latest", "--quiet"}).Return(nil)
 		m.EXPECT().Run("docker", []string{"inspect", "--format", "'{{json (index .RepoDigests 0)}}'", "aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app"}, gomock.Any()).
 			Do(func(_ string, _ []string, opt exec.CmdOption) {
 				cmd := &osexec.Cmd{}
@@ -293,7 +293,7 @@ func TestDockerCommand_Push(t *testing.T) {
 				return "", false
 			},
 		}
-		digest, err := cmd.Push("aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app")
+		digest, err := cmd.Push("aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app", "latest")
 
 		// THEN
 		require.NoError(t, err)
@@ -311,17 +311,17 @@ func TestDockerCommand_Push(t *testing.T) {
 			runner:    m,
 			lookupEnv: emptyLookupEnv,
 		}
-		_, err := cmd.Push("uri")
+		_, err := cmd.Push("uri", "latest")
 
 		// THEN
-		require.EqualError(t, err, "docker push uri: some error")
+		require.EqualError(t, err, "docker push uri:latest: some error")
 	})
 	t.Run("returns a wrapped error on failure to retrieve image digest", func(t *testing.T) {
 		// GIVEN
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 		m := NewMockCmd(ctrl)
-		m.EXPECT().Run("docker", []string{"push", "uri"}).Return(nil)
+		m.EXPECT().Run("docker", []string{"push", "uri:latest"}).Return(nil)
 		m.EXPECT().Run("docker", []string{"inspect", "--format", "'{{json (index .RepoDigests 0)}}'", "uri"}, gomock.Any()).Return(errors.New("some error"))
 
 		// WHEN
@@ -329,7 +329,7 @@ func TestDockerCommand_Push(t *testing.T) {
 			runner:    m,
 			lookupEnv: emptyLookupEnv,
 		}
-		_, err := cmd.Push("uri")
+		_, err := cmd.Push("uri", "latest")
 
 		// THEN
 		require.EqualError(t, err, "inspect image digest for uri: some error")
@@ -339,7 +339,7 @@ func TestDockerCommand_Push(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 		m := NewMockCmd(ctrl)
-		m.EXPECT().Run("docker", []string{"push", "aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app"}).Return(nil)
+		m.EXPECT().Run("docker", []string{"push", "aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app:latest"}).Return(nil)
 		m.EXPECT().Run("docker", []string{"push", "aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app:g123bfc"}).Return(nil)
 		m.EXPECT().Run("docker", []string{"inspect", "--format", "'{{json (index .RepoDigests 0)}}'", "aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app"}, gomock.Any()).
 			Do(func(_ string, _ []string, opt exec.CmdOption) {
@@ -353,7 +353,7 @@ func TestDockerCommand_Push(t *testing.T) {
 			runner:    m,
 			lookupEnv: emptyLookupEnv,
 		}
-		_, err := cmd.Push("aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app", "g123bfc")
+		_, err := cmd.Push("aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app", "latest", "g123bfc")
 
 		// THEN
 		require.EqualError(t, err, "parse the digest from the repo digest ''")

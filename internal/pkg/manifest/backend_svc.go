@@ -120,8 +120,10 @@ func (s *BackendService) BuildRequired() (bool, error) {
 }
 
 // BuildArgs returns a docker.BuildArguments object for the service given a workspace root directory.
-func (s *BackendService) BuildArgs(wsRoot string) *DockerBuildArgs {
-	return s.ImageConfig.Image.BuildConfig(wsRoot)
+func (s *BackendService) BuildArgs(wsRoot string) map[string]*DockerBuildArgs {
+	buildArgs := make(map[string]*DockerBuildArgs, len(s.Sidecars)+1)
+	buildArgs[aws.StringValue(s.Name)] = s.ImageConfig.Image.BuildConfig(wsRoot)
+	return buildArgs
 }
 
 // EnvFile returns the location of the env file against the ws root directory.

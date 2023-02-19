@@ -37,6 +37,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
+	"github.com/google/uuid"
 	"github.com/spf13/afero"
 )
 
@@ -44,6 +45,7 @@ const (
 	fmtForceUpdateSvcStart    = "Forcing an update for service %s from environment %s"
 	fmtForceUpdateSvcFailed   = "Failed to force an update for service %s from environment %s: %v.\n"
 	fmtForceUpdateSvcComplete = "Forced an update for service %s from environment %s.\n"
+	imageTagLatest            = "latest"
 )
 
 // ActionRecommender contains methods that output action recommendation.
@@ -127,7 +129,7 @@ type workloadDeployer struct {
 	name          string
 	app           *config.Application
 	env           *config.Environment
-	imageTag      string
+	runtimeImage  RuntimeImage
 	resources     *stack.AppRegionalResources
 	mft           interface{}
 	rawMft        []byte
@@ -160,7 +162,7 @@ type WorkloadDeployerInput struct {
 	Name             string
 	App              *config.Application
 	Env              *config.Environment
-	ImageTag         string
+	RuntimeImage     RuntimeImage
 	Mft              interface{} // Interpolated, applied, and unmarshaled manifest.
 	RawMft           []byte      // Content of the manifest file without any transformations.
 	EnvVersionGetter versionGetter
@@ -168,6 +170,14 @@ type WorkloadDeployerInput struct {
 
 	// Workload specific configuration.
 	customResources customResourcesFunc
+}
+
+// RuntimeImage is the configuration of image digest and tags of an ECR image.
+type RuntimeImage struct {
+	Digest         string
+	CustomTag      string
+	GitShortCommit string
+	UUID           string
 }
 
 // newWorkloadDeployer is the constructor for workloadDeployer.
@@ -224,12 +234,17 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unmarshal the manifest used to deploy environment %s: %w", in.Env.Name, err)
 	}
+	uuidTag, err := generateUUID()
+	if err != nil {
+		return nil, err
+	}
+	in.RuntimeImage.UUID = uuidTag
 
 	return &workloadDeployer{
 		name:               in.Name,
 		app:                in.App,
 		env:                in.Env,
-		imageTag:           in.ImageTag,
+		runtimeImage:       in.RuntimeImage,
 		resources:          resources,
 		workspacePath:      ws.Path(),
 		fs:                 &afero.Afero{Fs: afero.NewOsFs()},
@@ -302,6 +317,33 @@ func (d *workloadDeployer) forceDeploy(in *forceDeployInput) error {
 	return nil
 }
 
+// generateUUID generates a random UUID to tag main and sidecar container images.
+func generateUUID() (string, error) {
+	id, err := uuid.NewRandom()
+	if err != nil {
+		return "", fmt.Errorf("generate random uuid to tag workload images: %w", err)
+	}
+	return id.String(), nil
+}
+
+// ReferenceTag returns the tag that should be used to reference the image.
+func (i RuntimeImage) ReferenceTag() string {
+	cgTag := i.customOrGitTag()
+	if cgTag != "" {
+		return cgTag
+	}
+	return i.UUID
+}
+
+// userOrGitTag returns if the user provided their own tag.
+// Otherwise, return git short commit id.
+func (i RuntimeImage) customOrGitTag() string {
+	if i.CustomTag != "" {
+		return i.CustomTag
+	}
+	return i.GitShortCommit
+}
+
 func (d *workloadDeployer) uploadContainerImage(imgBuilderPusher imageBuilderPusher) (*string, error) {
 	required, err := manifest.DockerfileBuildRequired(d.mft)
 	if err != nil {
@@ -311,20 +353,27 @@ func (d *workloadDeployer) uploadContainerImage(imgBuilderPusher imageBuilderPus
 		return nil, nil
 	}
 	// If it is built from local Dockerfile, build and push to the ECR repo.
-	buildArg, err := buildArgs(d.name, d.imageTag, d.workspacePath, d.mft)
+	buildArg, err := buildArgs(d.name, d.workspacePath, d.runtimeImage, d.mft)
 	if err != nil {
 		return nil, err
 	}
-	digest, err := imgBuilderPusher.BuildAndPush(dockerengine.New(exec.NewCmd()), buildArg)
-	if err != nil {
-		return nil, fmt.Errorf("build and push image: %w", err)
+	digests := make(map[string]RuntimeImage, len(buildArg))
+	for k, v := range buildArg {
+		digest, err := imgBuilderPusher.BuildAndPush(dockerengine.New(exec.NewCmd()), v)
+		if err != nil {
+			return nil, fmt.Errorf("build and push image: %w", err)
+		}
+		digests[k] = RuntimeImage{
+			Digest: digest,
+		}
 	}
-	return aws.String(digest), nil
+	image := digests[d.name]
+	return &image.Digest, nil
 }
 
-func buildArgs(name, imageTag, workspacePath string, unmarshaledManifest interface{}) (*dockerengine.BuildArguments, error) {
+func buildArgs(name, workspacePath string, i RuntimeImage, unmarshaledManifest interface{}) (map[string]*dockerengine.BuildArguments, error) {
 	type dfArgs interface {
-		BuildArgs(rootDirectory string) *manifest.DockerBuildArgs
+		BuildArgs(rootDirectory string) map[string]*manifest.DockerBuildArgs
 		ContainerPlatform() string
 	}
 	mf, ok := unmarshaledManifest.(dfArgs)
@@ -332,19 +381,21 @@ func buildArgs(name, imageTag, workspacePath string, unmarshaledManifest interfa
 		return nil, fmt.Errorf("%s does not have required methods BuildArgs() and ContainerPlatform()", name)
 	}
 	var tags []string
-	if imageTag != "" {
-		tags = append(tags, imageTag)
-	}
+	tags = append(tags, imageTagLatest, i.ReferenceTag())
 	args := mf.BuildArgs(workspacePath)
-	return &dockerengine.BuildArguments{
-		Dockerfile: *args.Dockerfile,
-		Context:    *args.Context,
-		Args:       args.Args,
-		CacheFrom:  args.CacheFrom,
-		Target:     aws.StringValue(args.Target),
-		Platform:   mf.ContainerPlatform(),
-		Tags:       tags,
-	}, nil
+	dArgs := make(map[string]*dockerengine.BuildArguments, len(args))
+	for k, v := range args {
+		dArgs[k] = &dockerengine.BuildArguments{
+			Dockerfile: aws.StringValue(v.Dockerfile),
+			Context:    aws.StringValue(v.Context),
+			Args:       v.Args,
+			CacheFrom:  v.CacheFrom,
+			Target:     aws.StringValue(v.Target),
+			Platform:   mf.ContainerPlatform(),
+			Tags:       tags,
+		}
+	}
+	return dArgs, nil
 }
 
 type uploadArtifactsToS3Input struct {
@@ -517,7 +568,7 @@ func (d *workloadDeployer) runtimeConfig(in *StackRuntimeConfiguration) (*stack.
 		AdditionalTags:    in.Tags,
 		Image: &stack.ECRImage{
 			RepoURL:  d.resources.RepositoryURLs[d.name],
-			ImageTag: d.imageTag,
+			ImageTag: d.runtimeImage.customOrGitTag(),
 			Digest:   aws.StringValue(in.ImageDigest),
 		},
 		ServiceDiscoveryEndpoint: endpoint,

@@ -187,8 +187,10 @@ func (s *LoadBalancedWebService) BuildRequired() (bool, error) {
 }
 
 // BuildArgs returns a docker.BuildArguments object given a ws root directory.
-func (s *LoadBalancedWebService) BuildArgs(wsRoot string) *DockerBuildArgs {
-	return s.ImageConfig.Image.BuildConfig(wsRoot)
+func (s *LoadBalancedWebService) BuildArgs(wsRoot string) map[string]*DockerBuildArgs {
+	buildArgs := make(map[string]*DockerBuildArgs, len(s.Sidecars)+1)
+	buildArgs[aws.StringValue(s.Name)] = s.ImageConfig.Image.BuildConfig(wsRoot)
+	return buildArgs
 }
 
 // EnvFile returns the location of the env file against the ws root directory.

@@ -146,7 +146,7 @@ func (c CmdClient) Login(uri, username, password string) error {
 
 // Push pushes the images with the specified tags and ecr repository URI, and returns the image digest on success.
 func (c CmdClient) Push(uri string, tags ...string) (digest string, err error) {
-	images := []string{uri}
+	images := []string{}
 	for _, tag := range tags {
 		images = append(images, imageName(uri, tag))
 	}
@@ -225,9 +225,6 @@ func (c CmdClient) GetPlatform() (os, arch string, err error) {
 }
 
 func imageName(uri, tag string) string {
-	if tag == "" {
-		return uri // If no tag is specified build with latest.
-	}
 	return fmt.Sprintf("%s:%s", uri, tag)
 }
 
