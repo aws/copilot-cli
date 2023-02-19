@@ -198,7 +198,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 					Dockerfile: "mockDockerfile",
 					Context:    "mockContext",
 					Platform:   "mockContainerPlatform",
-					Tags:       []string{"v1.0"},
+					Tags:       []string{"latest", "v1.0"},
 				}).Return("", mockError)
 			},
 			wantErr: fmt.Errorf("build and push image: some error"),
@@ -212,7 +212,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 					Dockerfile: "mockDockerfile",
 					Context:    "mockContext",
 					Platform:   "mockContainerPlatform",
-					Tags:       []string{"v1.0"},
+					Tags:       []string{"latest", "v1.0"},
 				}).Return("mockDigest", nil)
 				m.mockAddons = nil
 			},
@@ -227,7 +227,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 					Dockerfile: "mockDockerfile",
 					Context:    "mockContext",
 					Platform:   "mockContainerPlatform",
-					Tags:       []string{"gitTag"},
+					Tags:       []string{"latest", "gitTag"},
 				}).Return("mockDigest", nil)
 				m.mockAddons = nil
 			},
@@ -240,7 +240,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 					Dockerfile: "mockDockerfile",
 					Context:    "mockContext",
 					Platform:   "mockContainerPlatform",
-					Tags:       []string{mockUUID},
+					Tags:       []string{"latest", mockUUID},
 				}).Return("mockDigest", nil)
 				m.mockAddons = nil
 			},
