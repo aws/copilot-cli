@@ -364,7 +364,10 @@ func (d *workloadDeployer) uploadContainerImage(imgBuilderPusher imageBuilderPus
 			return nil, fmt.Errorf("build and push image: %w", err)
 		}
 		digests[k] = RuntimeImage{
-			Digest: digest,
+			Digest:         digest,
+			CustomTag:      d.runtimeImage.CustomTag,
+			GitShortCommit: d.runtimeImage.GitShortCommit,
+			UUID:           d.runtimeImage.UUID,
 		}
 	}
 	image := digests[d.name]
