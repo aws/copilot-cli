@@ -357,20 +357,20 @@ func (d *workloadDeployer) uploadContainerImage(imgBuilderPusher imageBuilderPus
 	if err != nil {
 		return nil, err
 	}
-	digests := make(map[string]RuntimeImage, len(buildArg))
+	images := make(map[string]RuntimeImage, len(buildArg))
 	for k, v := range buildArg {
 		digest, err := imgBuilderPusher.BuildAndPush(dockerengine.New(exec.NewCmd()), v)
 		if err != nil {
 			return nil, fmt.Errorf("build and push image: %w", err)
 		}
-		digests[k] = RuntimeImage{
+		images[k] = RuntimeImage{
 			Digest:         digest,
 			CustomTag:      d.runtimeImage.CustomTag,
 			GitShortCommit: d.runtimeImage.GitShortCommit,
 			UUID:           d.runtimeImage.UUID,
 		}
 	}
-	image := digests[d.name]
+	image := images[d.name]
 	return &image.Digest, nil
 }
 
