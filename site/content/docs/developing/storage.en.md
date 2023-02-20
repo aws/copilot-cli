@@ -4,28 +4,31 @@ There are two ways to add persistence to Copilot workloads: using [`copilot stor
 
 ## Database and Artifacts
 
-To add a database or S3 bucket to your job or service, simply run [`copilot storage init`](../commands/storage-init.en.md).
+To add a database or S3 bucket to your service, job, or environment, simply run [`copilot storage init`](../commands/storage-init.en.md).
 ```console
 # For a guided experience.
 $ copilot storage init -t S3
 
-# To create a bucket named "my-bucket" accessible by the "api" service.
-$ copilot storage init -n my-bucket -t S3 -w api
+# To create a bucket named "my-bucket" that is accessible by the "api" service, and is deployed and deleted with "api".
+$ copilot storage init -n my-bucket -t S3 -w api -l workload
 ```
 
-The above command will create the Cloudformation template for an S3 bucket in the [addons](./addons/workload.en.md) directory for the "api" service. The next time you run `copilot deploy -n api`, the bucket will be created, permission to access it will be added to the `api` task role, and the name of the bucket will be injected into the `api` container under the environment variable `MY_BUCKET_NAME`.
+The above command will create the Cloudformation template for an S3 bucket in the [addons](./addons/workload.en.md) directory for the "api" service.
+The next time you run `copilot deploy -n api`, the bucket will be created, permission to access it will be added to the `api` task role,
+and the name of the bucket will be injected into the `api` container under the environment variable `MY_BUCKET_NAME`.
 
 !!!info
     All names are converted into SCREAMING_SNAKE_CASE based on their use of hyphens or underscores. You can view the environment variables for a given service by running `copilot svc show`.
 
-You can also create a [DynamoDB table](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Introduction.html) using `copilot storage init`. For example, to create the Cloudformation template for a table with a sort key and a local secondary index, you could run the following command.
+You can also create a [DynamoDB table](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Introduction.html) using `copilot storage init`.
+For example, to create the Cloudformation template for a table with a sort key and a local secondary index, you could run the following command:
 
 ```console
 # For a guided experience.
 $ copilot storage init -t DynamoDB
 
 # Or skip the prompts by providing flags.
-$ copilot storage init -n users -t DynamoDB -w api --partition-key id:N --sort-key email:S --lsi post-count:N
+$ copilot storage init -n users -t DynamoDB -w api -l workload --partition-key id:N --sort-key email:S --lsi post-count:N
 ```
 
 This will create a DynamoDB table called `${app}-${env}-${svc}-users`. Its partition key will be `id`, a `Number` attribute; its sort key will be `email`, a `String` attribute; and it will have a [local secondary index](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/LSI.html) (essentially an alternate sort key) on the `Number` attribute `post-count`.
@@ -36,7 +39,7 @@ It is also possible to create an [RDS Aurora Serverless v2](https://docs.aws.ama
 $ copilot storage init -t Aurora
 
 # Or skip the prompts by providing flags.
-$ copilot storage init -n my-cluster -t Aurora -w api --engine PostgreSQL --initial-db my_db
+$ copilot storage init -n my-cluster -t Aurora -w api -l workload --engine PostgreSQL --initial-db my_db
 ```
 This will create an RDS Aurora Serverless v2 cluster that uses PostgreSQL engine with a database named `my_db`. An environment variable named `MYCLUSTER_SECRET` is injected into your workload as a JSON string. The fields are `'host'`, `'port'`, `'dbname'`, `'username'`, `'password'`, `'dbClusterIdentifier'` and `'engine'`.
 
@@ -44,6 +47,16 @@ To create an [RDS Aurora Serverless v1](https://docs.aws.amazon.com/AmazonRDS/la
 ```console
 $ copilot storage init -n my-cluster -t Aurora --serverless-version v1
 ```
+
+### Environment storage
+
+The `-l` flag is short for `--lifecycle`. In the examples above, the value to the `-l` flag is `workload`.
+This means that the storage resources will be created as a service addon or a job addon. The storage will be deployed
+when you run `copilot [svc/job] deploy`, and will be deleted when you run `copilot [svc/job] delete`.
+
+Alternatively, if you want your storage to persist even after you delete the service or the job, you can create
+an environment storage resource. An environment storage resource is created as an environment addon: it is deployed when you run
+`copilot env deploy`, and isn't deleted until you run `copilot env delete`.
 
 ## File Systems
 There are two ways to use an EFS file system with Copilot: using managed EFS, and importing your own filesystem.
