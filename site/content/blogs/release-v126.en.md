@@ -67,6 +67,97 @@ With rollback alarms configured in your service manifest, each time you run `svc
 
 ## `storage init` for environment addons
 
+Previously, `copilot storage init` only supported storage addons attached to workloads: you need to run
+`copilot svc deploy` in order to deploy the storage, and the storage is deleted along with the service
+when you run `copilot svc delete`.
+
+Now, you have the option to create environment storage addons: the storage is deployed when you run `copilot env deploy`,
+and isn't deleted until you delete the environment by running `copilot env delete`.
+
+Similar to the workload storage, the environment storage is, under the hood, just another [environment addon](../docs/developing/addons/environment.en.md)!
+
+### [Database-Per-Service](https://docs.aws.amazon.com/prescriptive-guidance/latest/modernization-data-persistence/database-per-service.html) By Default
+In the microservice world, it is generally recommended to set up data storage resources that are each private to a microservice,
+instead of monolith storages that are shared by multiple services.
+This pattern preserves the core characteristics of microservices - loose coupling.
+Copilot encourages you to follow this database-per-service pattern. By default, a storage resource that Copilot generates
+is assumed to be accessed by one service or job.
+
+!!!note ""
+    However, each user has its own unique situation. If you do need your data storage to be shared among multiple service,
+    you can modify the Copilot-generated CloudFormation template in order to achieve your goal.
+
+
+Here is an example of prompts that you might see.
+!!! info ""
+
+    ```term
+    $ copilot storage init
+    What type of storage would you like to create?
+    > DynamoDB            (NoSQL)
+      S3                  (Objects)
+      Aurora Serverless   (SQL)
+
+    Which workload needs access to the storage?
+    > api
+      backend
+
+    What would you like to name this DynamoDB Table? movies
+
+    Do you want the storage to be created and deleted with the api service?
+      Yes, the storage should be created and deleted at the same time as api
+    > No, the storage should be created and deleted at the environment level
+    ```
+You can skip the prompts using the flags. The following command is equivalent to the prompts above:
+```console
+copilot storage init \
+--storage-type "DynamoDB" \
+--workload "api" \
+--name "movies" \
+--lifecycle "environment"
+```
+
+
+After you've answered all the prompts or skipped them by using flags, Copilot will generate the CloudFormation template that defines the DynamoDB storage resource
+under your `copilot/environments` directory. In addition, it will generate the necessary access policy; here is one that grants "api" service 
+access to the "movies" storage. The access policy is created as a workload addon, meaning that it is deployed and
+deleted at the same time as the "api" service.
+!!! info ""
+    ```
+    copilot/
+    ├── environments/
+    │   ├── addons/         
+    │   │   └── movies.yml                # <- The CloudFormation template that defines the "movies" DynamoDB storage.
+    │   └── test/
+    │       └── manifest.yml
+    └── api
+        ├── addons/
+        │   └── movies-access-policy.yml  # <- The CloudFormation template that defines the access policy.
+        └─── manifest.yml
+    ```
+
+Depending on the storage type, and the type of the workload that is fronting the storage, Copilot may generate different
+CloudFormation files.
+
+???- note "Sample files generated for an Aurora Serverless fronted by a Request-Driven Web Service"
+    ```
+    # Example: an Aurora Serverless v2 storage whose lifecycle is at the environment-level, faced by a Request-Driven Web Service.
+    copilot/
+    ├── environments/
+    │   └── addons/
+    │         ├── addons.parameters.yml   # The extra parameters required by the Aurora Serverless v2 storage.
+    │         └── user.yml                # An Aurora Serverless v2 storage
+    └── api                               # "api" is a Request-Driven Web Service
+        └── addons/
+            ├── addons.parameters.yml   # The extra parameters required by the ingress resource.
+            └── user-ingress.yml        # A security group ingress that grants "api" access to the "api" storage"
+    ```
+
+
+
+Also check out our [storage page](../docs/developing/storage.en.md) for more information!
+
+
 ## Request-Driven Web Service secrets support
 You can now add your secrets (from SSM Parameter Store or AWS Secrets Manager) to your App Runner service as environment variables using Copilot.
 
