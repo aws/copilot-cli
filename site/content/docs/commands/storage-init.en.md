@@ -8,7 +8,7 @@ $ copilot storage init
 By default, Copilot follows the "database-per-service" pattern:
 only the service or job that you specify during `storage init` will have access to that storage resource.
 The storage is accessible from inside the service's containers via a friendly environment variable that
-holds the name of your storage resource or credential information that is required is access the resource.
+holds the name of your storage resource or credential information for accessing the resource.
 
 !!!note ""
     However, each user has its own unique situation. If you do need your data storage to be shared among multiple service,
