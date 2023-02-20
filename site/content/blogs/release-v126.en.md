@@ -1,5 +1,5 @@
 ---
-title: 'AWS Copilot v1.26: Automate rollbacks with CloudWatch alarms, build sidecar images, and `storage init` for env addons'
+title: 'AWS Copilot v1.26: Automate rollbacks with CloudWatch alarms, `storage init` for env addons, and RDWS secrets support'
 twitter_title: 'AWS Copilot v1.26'
 image: ''
 image_alt: ''
@@ -7,7 +7,7 @@ image_width: '1051'
 image_height: '747'
 ---
 
-# AWS Copilot v1.26: Automate rollbacks with CloudWatch alarms, build sidecar images, and `storage init` for env addons
+# AWS Copilot v1.26: Automate rollbacks with CloudWatch alarms, `storage init` for env addons, and RDWS secrets support
 
 Posted On: Feb 20, 2023
 
@@ -19,7 +19,6 @@ Copilot v1.26 brings several new features and improvements:
 
 - **Service alarm-based rollback**: [See detailed section](#service-alarm-based-rollback).
 - **`storage init` for environment addons**: [See detailed section](#storage-init-for-environment-addons).
-- **Sidecar image build**: [See detailed section](#sidecar-image-build).
 - **Request-Driven Web Service secrets support**: [See detailed section](#request-driven-web-service-secrets-support).
 
 ???+ note "What’s AWS Copilot?"
@@ -64,14 +63,12 @@ For worker services, you may also create an alarm to monitor `ApproximateNumberO
     Period: 60
     Statistic: 'Average'
     ```
-With rollback alarms configured in your service manifest, each time you run `svc deploy` after the initial deployment (when there is no existing deployment to roll back to), ECS will poll your alarms and trigger a rollback if there is a breach. 
+With rollback alarms configured in your service manifest, each time you run `svc deploy` after the initial deployment (when there is no existing deployment to roll back to), ECS will poll your alarms and trigger a rollback if there is a breach.
 
 ## `storage init` for environment addons
 
-## Sidecar image build
-
 ## Request-Driven Web Service secrets support
-You can now add your secrets (from SSM Parameter Store or AWS Secrets Manager) to your App Runner service as environment variables using Copilot. 
+You can now add your secrets (from SSM Parameter Store or AWS Secrets Manager) to your App Runner service as environment variables using Copilot.
 
 Similar to other service types such as Load-Balanced Web Service, you need to first add the following tags to your secrets:
 | Key                     | Value                                                       |
@@ -102,7 +99,7 @@ secrets:
 
   # Option 2. Alternatively, you can refer to the secret by ARN.
   DB: 'arn:aws:secretsmanager:us-west-2:111122223333:secret:demo/test/mysql-Yi6mvL'
- 
+
   # To inject a secret from SSM Parameter Store
   # Option 1. Referring to the secret by ARN.
   GITHUB_WEBHOOK_SECRET: 'arn:aws:ssm:us-east-1:615525334900:parameter/GH_WEBHOOK_SECRET'
