@@ -8,7 +8,6 @@ import (
 	"io"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 
@@ -200,11 +199,19 @@ count: 1`
 			setupMocks: func(m *svcPackageExecuteMock) {
 				m.ws.EXPECT().ReadWorkloadManifest("api").Return([]byte(lbwsMft), nil)
 				m.generator.EXPECT().UploadArtifacts().Return(&deploy.UploadArtifactsOutput{
-					ImageDigest: aws.String(mockDigest),
+					ImageDigests: map[string]deploy.ContainerImageIdentifier{
+						"api": {
+							Digest: mockDigest,
+						},
+					},
 				}, nil)
 				m.generator.EXPECT().GenerateCloudFormationTemplate(&deploy.GenerateCloudFormationTemplateInput{
 					StackRuntimeConfiguration: deploy.StackRuntimeConfiguration{
-						ImageDigest: aws.String(mockDigest),
+						ImageDigests: map[string]deploy.ContainerImageIdentifier{
+							"api": {
+								Digest: mockDigest,
+							},
+						},
 						RootUserARN: mockARN,
 					},
 				}).Return(&deploy.GenerateCloudFormationTemplateOutput{

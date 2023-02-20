@@ -186,7 +186,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 
 		wantAddonsURL     string
 		wantEnvFileARN    string
-		wantImageDigest   *string
+		wantImages        map[string]ContainerImageIdentifier
 		wantBuildRequired bool
 		wantErr           error
 	}{
@@ -216,7 +216,14 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				}).Return("mockDigest", nil)
 				m.mockAddons = nil
 			},
-			wantImageDigest: aws.String("mockDigest"),
+			wantImages: map[string]ContainerImageIdentifier{
+				mockName: {
+					Digest:            "mockDigest",
+					CustomTag:         "v1.0",
+					GitShortCommitTag: "gitTag",
+					uuidTag:           mockUUID,
+				},
+			},
 		},
 
 		"build and push image with gitshortcommit successfully": {
@@ -231,7 +238,13 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				}).Return("mockDigest", nil)
 				m.mockAddons = nil
 			},
-			wantImageDigest: aws.String("mockDigest"),
+			wantImages: map[string]ContainerImageIdentifier{
+				mockName: {
+					Digest:            "mockDigest",
+					GitShortCommitTag: "gitTag",
+					uuidTag:           mockUUID,
+				},
+			},
 		},
 		"build and push image with uuid successfully": {
 			inBuildRequired: true,
@@ -244,7 +257,14 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				}).Return("mockDigest", nil)
 				m.mockAddons = nil
 			},
-			wantImageDigest: aws.String("mockDigest"),
+			wantImages: map[string]ContainerImageIdentifier{
+				mockName: {
+					Digest:            "mockDigest",
+					CustomTag:         "",
+					GitShortCommitTag: "",
+					uuidTag:           mockUUID,
+				},
+			},
 		},
 		"should retrieve Load Balanced Web Service custom resource URLs": {
 			mock: func(t *testing.T, m *deployMocks) {
@@ -539,7 +559,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				require.NoError(t, gotErr)
 				require.Equal(t, tc.wantAddonsURL, got.AddonsURL)
 				require.Equal(t, tc.wantEnvFileARN, got.EnvFileARN)
-				require.Equal(t, tc.wantImageDigest, got.ImageDigest)
+				require.Equal(t, tc.wantImages, got.ImageDigests)
 			}
 		})
 	}
