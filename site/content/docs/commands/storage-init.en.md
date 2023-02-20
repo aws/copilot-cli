@@ -116,7 +116,7 @@ Copilot writes a Cloudformation template specifying the S3 bucket, DDB table, or
 When you run `copilot [svc/job/env] deploy`, the CLI merges this template with all the other templates in the addons 
 directory to create a nested stack associated with your service or environment. 
 This nested stack describes all the [additional resources](../developing/addons/workload.en.md) you've associated with 
-that service or the environment, and is deployed wherever your service or an environment is deployed. 
+that service or the environment, and is deployed wherever your service or environment is deployed. 
 
 ### Example scenarios
 #### S3 storage attached to a service
