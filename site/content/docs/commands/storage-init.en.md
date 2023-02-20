@@ -147,7 +147,7 @@ to the "bucket" resource.
 $ copilot env deploy --name test
 $ copilot env deploy --name prod
 ```
-After running the commands, there will be two buckets deployed in "test" and "prod" environment, respectively.
+After running the commands, there will be two buckets deployed, one each in the "test" and "prod" environments.
 
 ```console
 $ copilot svc deploy --name fe --env test
