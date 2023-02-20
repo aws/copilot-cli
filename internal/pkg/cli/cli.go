@@ -118,11 +118,29 @@ func logRecommendedActions(actions []string) {
 
 func indentListItem(multiline string) string {
 	var prefixedLines []string
+	var inCodeBlock bool
 	for i, line := range strings.Split(multiline, "\n") {
-		prefix := "    "
-		if i == 0 {
-			prefix = "  - "
+		if strings.Contains(line, "```") {
+			inCodeBlock = !inCodeBlock
 		}
+		var prefix string
+		switch {
+		case i == 0:
+			prefix = "  - "
+		case inCodeBlock, strings.Contains(line, "```"):
+			prefix = ""
+		default:
+			prefix = "    "
+		}
+		prefixedLines = append(prefixedLines, fmt.Sprintf("%s%s", prefix, line))
+	}
+	return strings.Join(prefixedLines, "\n")
+}
+
+func indentBy(multiline string, indentCount int) string {
+	var prefixedLines []string
+	for _, line := range strings.Split(multiline, "\n") {
+		prefix := strings.Repeat(" ", indentCount)
 		prefixedLines = append(prefixedLines, fmt.Sprintf("%s%s", prefix, line))
 	}
 	return strings.Join(prefixedLines, "\n")
