@@ -98,7 +98,7 @@ secrets:
     secretsmanager: 'demo/test/mysql:password::'
   # You can substitute predefined environment variables to keep your manifest succinct.
   DB_PASSWORD:
-        secretsmanager: '${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/mysql:password::'
+    secretsmanager: '${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/mysql:password::'
 
   # Option 2. Alternatively, you can refer to the secret by ARN.
   DB: 'arn:aws:secretsmanager:us-west-2:111122223333:secret:demo/test/mysql-Yi6mvL'
