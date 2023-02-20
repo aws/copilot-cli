@@ -98,9 +98,9 @@ func newJobDeployer(o *deployJobOpts) (workloadDeployer, error) {
 		Name:            o.name,
 		App:             o.targetApp,
 		Env:             o.targetEnv,
-		RuntimeImage: deploy.RuntimeImage{
-			CustomTag:      o.imageTag,
-			GitShortCommit: o.gitShortCommit,
+		Image: deploy.ContainerImageIdentifier{
+			CustomTag:         o.imageTag,
+			GitShortCommitTag: o.gitShortCommit,
 		},
 		Mft:              content,
 		RawMft:           raw,

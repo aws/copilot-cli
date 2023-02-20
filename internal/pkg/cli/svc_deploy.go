@@ -130,9 +130,9 @@ func newSvcDeployer(o *deploySvcOpts) (workloadDeployer, error) {
 		Name:            o.name,
 		App:             targetApp,
 		Env:             o.targetEnv,
-		RuntimeImage: clideploy.RuntimeImage{
-			CustomTag:      o.imageTag,
-			GitShortCommit: o.gitShortCommit,
+		Image: clideploy.ContainerImageIdentifier{
+			CustomTag:         o.imageTag,
+			GitShortCommitTag: o.gitShortCommit,
 		},
 		Mft:              content,
 		RawMft:           raw,

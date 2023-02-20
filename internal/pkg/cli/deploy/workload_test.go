@@ -501,10 +501,10 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 					Name: mockAppName,
 				},
 				resources: mockResources,
-				runtimeImage: RuntimeImage{
-					CustomTag:      tc.inMockUserTag,
-					GitShortCommit: tc.inMockGitTag,
-					UUID:           mockUUID,
+				image: ContainerImageIdentifier{
+					CustomTag:         tc.inMockUserTag,
+					GitShortCommitTag: tc.inMockGitTag,
+					uuidTag:           mockUUID,
 				},
 				workspacePath: mockWorkspacePath,
 				mft: &mockWorkloadMft{

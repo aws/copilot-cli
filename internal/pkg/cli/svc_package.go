@@ -130,9 +130,9 @@ func newWorkloadStackGenerator(o *packageSvcOpts) (workloadStackGenerator, error
 		Name:            o.name,
 		App:             targetApp,
 		Env:             targetEnv,
-		RuntimeImage: clideploy.RuntimeImage{
-			CustomTag:      o.tag,
-			GitShortCommit: o.gitShortCommit,
+		Image: clideploy.ContainerImageIdentifier{
+			CustomTag:         o.tag,
+			GitShortCommitTag: o.gitShortCommit,
 		},
 		Mft:              content,
 		RawMft:           raw,

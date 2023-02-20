@@ -160,9 +160,9 @@ func (s *RequestDrivenWebService) ContainerPlatform() string {
 }
 
 // BuildArgs returns a docker.BuildArguments object given a ws root directory.
-func (s *RequestDrivenWebService) BuildArgs(wsRoot string) map[string]*DockerBuildArgs {
+func (s *RequestDrivenWebService) BuildArgs(contextDir string) map[string]*DockerBuildArgs {
 	buildArgs := make(map[string]*DockerBuildArgs, 1)
-	buildArgs[aws.StringValue(s.Name)] = s.ImageConfig.Image.BuildConfig(wsRoot)
+	buildArgs[aws.StringValue(s.Name)] = s.ImageConfig.Image.BuildConfig(contextDir)
 	return buildArgs
 }
 

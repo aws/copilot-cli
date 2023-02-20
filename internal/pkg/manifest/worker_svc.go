@@ -277,9 +277,9 @@ func (s *WorkerService) BuildRequired() (bool, error) {
 }
 
 // BuildArgs returns a docker.BuildArguments object for the service given a workspace root directory
-func (s *WorkerService) BuildArgs(wsRoot string) map[string]*DockerBuildArgs {
+func (s *WorkerService) BuildArgs(contextDir string) map[string]*DockerBuildArgs {
 	buildArgs := make(map[string]*DockerBuildArgs, len(s.Sidecars)+1)
-	buildArgs[aws.StringValue(s.Name)] = s.ImageConfig.Image.BuildConfig(wsRoot)
+	buildArgs[aws.StringValue(s.Name)] = s.ImageConfig.Image.BuildConfig(contextDir)
 	return buildArgs
 }
 
