@@ -98,8 +98,8 @@ Resources:
     DependsOn:
       - EnvControllerAction
       {{- if .ALBEnabled }}
-      {{- range $i, $listener := .ALB.Listener }}
-      {{- if $.ALB.HTTPSListener}}
+      {{- range $i, $rule := .ALB.Rules }}
+      {{- if $.ALB.IsHTTPS}}
       - HTTPListenerRuleWithDomain{{ if ne $i 0 }}{{ $i }}{{ end }}
       - HTTPSListenerRule{{ if ne $i 0 }}{{ $i }}{{ end }}
       {{- else }}
@@ -115,9 +115,9 @@ Resources:
       HealthCheckGracePeriodSeconds: {{.HTTPHealthCheck.GracePeriod}}
       {{- end }}
       LoadBalancers:
-        {{- range $i, $listener := .ALB.Listener}}
-        - ContainerName: {{$listener.TargetContainer}}
-          ContainerPort: {{$listener.TargetPort}}
+        {{- range $i, $rule := .ALB.Rules}}
+        - ContainerName: {{$rule.TargetContainer}}
+          ContainerPort: {{$rule.TargetPort}}
           TargetGroupArn: !Ref TargetGroup{{ if ne $i 0 }}{{ $i }}{{ end }}
         {{- end}}
       {{- end }}

@@ -524,11 +524,10 @@ Outputs:
 			},
 			EntryPoint: []string{"enter", "from"},
 			Command:    []string{"here"},
-			ALB: &template.ApplicationLoadBalancer{
-				Listener: []template.ApplicationLoadBalancerRoutineRule{
+			ALB: &template.ALBListener{
+				Rules: []template.ALBListenerRule{
 					{
 						Path:            "/albPath",
-						Protocol:        "TCP",
 						TargetContainer: "envoy",
 						TargetPort:      "443",
 						HTTPHealthCheck: template.HTTPHealthCheckOpts{

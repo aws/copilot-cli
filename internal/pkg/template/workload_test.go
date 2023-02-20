@@ -267,9 +267,9 @@ func TestRuntimePlatformOpts_IsDefault(t *testing.T) {
 }
 
 func TestHTTPTargetContainer_IsHTTPS(t *testing.T) {
-	require.True(t, ApplicationLoadBalancerRoutineRule{TargetPort: "443"}.IsHTTPS())
-	require.False(t, ApplicationLoadBalancerRoutineRule{}.IsHTTPS())
-	require.False(t, ApplicationLoadBalancerRoutineRule{TargetPort: "8080"}.IsHTTPS())
+	require.True(t, ALBListenerRule{TargetPort: "443"}.IsHTTPS())
+	require.False(t, ALBListenerRule{}.IsHTTPS())
+	require.False(t, ALBListenerRule{TargetPort: "8080"}.IsHTTPS())
 }
 
 func TestPlainSSMOrSecretARN_RequiresSub(t *testing.T) {
@@ -314,16 +314,16 @@ func TestSecretsManagerName_ValueFrom(t *testing.T) {
 
 func TestWorkload_HealthCheckProtocol(t *testing.T) {
 	testCases := map[string]struct {
-		opts     ApplicationLoadBalancerRoutineRule
+		opts     ALBListenerRule
 		expected string
 	}{
 		"target port 80, health check port unset": {
-			opts: ApplicationLoadBalancerRoutineRule{
+			opts: ALBListenerRule{
 				TargetPort: "80",
 			},
 		},
 		"target port 80, health check port 443": {
-			opts: ApplicationLoadBalancerRoutineRule{
+			opts: ALBListenerRule{
 				TargetPort: "80",
 				HTTPHealthCheck: HTTPHealthCheckOpts{
 					Port: "443",
@@ -332,13 +332,13 @@ func TestWorkload_HealthCheckProtocol(t *testing.T) {
 			expected: "HTTPS",
 		},
 		"target port 443, health check port unset": {
-			opts: ApplicationLoadBalancerRoutineRule{
+			opts: ALBListenerRule{
 				TargetPort: "443",
 			},
 			expected: "HTTPS",
 		},
 		"target port 443, health check port 80": {
-			opts: ApplicationLoadBalancerRoutineRule{
+			opts: ALBListenerRule{
 				TargetPort: "443",
 				HTTPHealthCheck: HTTPHealthCheckOpts{
 					Port: "80",
@@ -474,12 +474,12 @@ func TestRollingUpdateRollbackConfig_TruncateAlarmName(t *testing.T) {
 
 func TestApplicationLoadBalancer_Aliases(t *testing.T) {
 	tests := map[string]struct {
-		opts     ApplicationLoadBalancer
+		opts     ALBListener
 		expected []string
 	}{
 		"LBWS with multiple listener rules having multiple aliases each": {
-			opts: ApplicationLoadBalancer{
-				Listener: []ApplicationLoadBalancerRoutineRule{
+			opts: ALBListener{
+				Rules: []ALBListenerRule{
 					{
 						Aliases: []string{
 							"testAlias1",

@@ -103,8 +103,8 @@ Resources:
     Type: AWS::ECS::Service
     DependsOn:
     {{- if .ALBEnabled}}
-    {{- range $i, $listener := .ALB.Listener }}
-      {{- if $.ALB.HTTPSListener }}
+    {{- range $i, $rule := .ALB.Rules }}
+      {{- if $.ALB.IsHTTPS }}
       - HTTPListenerRuleWithDomain{{ if ne $i 0 }}{{ $i }}{{ end }}
       - HTTPSListenerRule{{ if ne $i 0 }}{{ $i }}{{ end }}
       {{- else}}
@@ -125,9 +125,9 @@ Resources:
       {{- end }}
       LoadBalancers:
   {{- if .ALBEnabled}}
-  {{- range $i, $listener := .ALB.Listener}}
-        - ContainerName: {{$listener.TargetContainer}}
-          ContainerPort: {{$listener.TargetPort}}
+  {{- range $i, $rule := .ALB.Rules}}
+        - ContainerName: {{$rule.TargetContainer}}
+          ContainerPort: {{$rule.TargetPort}}
           TargetGroupArn: !Ref TargetGroup{{ if ne $i 0 }}{{ $i }}{{ end }}
   {{- end}}
   {{- end}}

@@ -1,46 +1,46 @@
-{{- range $i, $listener := .ALB.Listener}}
+{{- range $i, $rule := .ALB.Rules}}
 TargetGroup{{ if ne $i 0 }}{{ $i }}{{ end }}:
   Metadata:
     'aws:copilot:description': "A target group to connect the load balancer to your service"
   Type: AWS::ElasticLoadBalancingV2::TargetGroup
   Properties:
-    HealthCheckPath: {{$listener.HTTPHealthCheck.HealthCheckPath}} # Default is '/'.
-    {{- if $listener.HTTPHealthCheck.Port}}
-    HealthCheckPort: {{$listener.HTTPHealthCheck.Port}} # Default is 'traffic-port'.
+    HealthCheckPath: {{$rule.HTTPHealthCheck.HealthCheckPath}} # Default is '/'.
+    {{- if $rule.HTTPHealthCheck.Port}}
+    HealthCheckPort: {{$rule.HTTPHealthCheck.Port}} # Default is 'traffic-port'.
     {{- end}}
-    {{- if $listener.HTTPHealthCheck.SuccessCodes}}
+    {{- if $rule.HTTPHealthCheck.SuccessCodes}}
     Matcher:
-      HttpCode: {{$listener.HTTPHealthCheck.SuccessCodes}}
+      HttpCode: {{$rule.HTTPHealthCheck.SuccessCodes}}
     {{- end}}
-    {{- if $listener.HTTPHealthCheck.HealthyThreshold}}
-    HealthyThresholdCount: {{$listener.HTTPHealthCheck.HealthyThreshold}}
+    {{- if $rule.HTTPHealthCheck.HealthyThreshold}}
+    HealthyThresholdCount: {{$rule.HTTPHealthCheck.HealthyThreshold}}
     {{- end}}
-    {{- if $listener.HTTPHealthCheck.UnhealthyThreshold}}
-    UnhealthyThresholdCount: {{$listener.HTTPHealthCheck.UnhealthyThreshold}}
+    {{- if $rule.HTTPHealthCheck.UnhealthyThreshold}}
+    UnhealthyThresholdCount: {{$rule.HTTPHealthCheck.UnhealthyThreshold}}
     {{- end}}
-    {{- if $listener.HTTPHealthCheck.Interval}}
-    HealthCheckIntervalSeconds: {{$listener.HTTPHealthCheck.Interval}}
+    {{- if $rule.HTTPHealthCheck.Interval}}
+    HealthCheckIntervalSeconds: {{$rule.HTTPHealthCheck.Interval}}
     {{- end}}
-    {{- if $listener.HTTPHealthCheck.Timeout}}
-    HealthCheckTimeoutSeconds: {{$listener.HTTPHealthCheck.Timeout}}
+    {{- if $rule.HTTPHealthCheck.Timeout}}
+    HealthCheckTimeoutSeconds: {{$rule.HTTPHealthCheck.Timeout}}
     {{- end}}
-    {{- if $listener.HealthCheckProtocol}}
-    HealthCheckProtocol: {{$listener.HealthCheckProtocol}}
+    {{- if $rule.HealthCheckProtocol}}
+    HealthCheckProtocol: {{$rule.HealthCheckProtocol}}
     {{- end}}
-    Port: {{$listener.TargetPort}}
-    {{- if $listener.IsHTTPS }}
+    Port: {{$rule.TargetPort}}
+    {{- if $rule.IsHTTPS }}
     Protocol: HTTPS
     {{- else }}
     Protocol: HTTP
     {{- end }}
-    {{- if $listener.HTTPVersion}}
-    ProtocolVersion: {{$listener.HTTPVersion}}
+    {{- if $rule.HTTPVersion}}
+    ProtocolVersion: {{$rule.HTTPVersion}}
     {{- end}}
     TargetGroupAttributes:
       - Key: deregistration_delay.timeout_seconds
         Value: {{$.DeregistrationDelay}} # ECS Default is 300; Copilot default is 60.
       - Key: stickiness.enabled
-        Value: {{$listener.Stickiness}}
+        Value: {{$rule.Stickiness}}
     TargetType: ip
     VpcId:
       Fn::ImportValue:
@@ -90,7 +90,7 @@ RulePriorityFunctionRole:
                 - elasticloadbalancing:DescribeRules
               Resource: "*"
 
-{{- if .ALB.HTTPSListener}}
+{{- if .ALB.IsHTTPS}}
 {{include "https-listener" .}}
 {{- else}}
 {{include "http-listener" .}}

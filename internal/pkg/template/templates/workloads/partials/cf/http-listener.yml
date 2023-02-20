@@ -17,14 +17,14 @@ LoadBalancerInternalDNSAlias:
             - !GetAtt EnvControllerAction.InternalWorkloadsHostedZoneName
 {{- end}}
 
-{{- range $i, $listener := .ALB.Listener}}
+{{- range $i, $rule := .ALB.Rules}}
 HTTPRulePriorityAction{{ if ne $i 0 }}{{ $i }}{{ end }}:
   Metadata:
     'aws:copilot:description': 'A custom resource assigning priority for HTTP listener rules'
   Type: Custom::RulePriorityFunction
   Properties:
     ServiceToken: !GetAtt RulePriorityFunction.Arn
-    RulePath: {{$listener.Path}}
+    RulePath: {{$rule.Path}}
     {{- if eq $.WorkloadType "Backend Service"}}
     ListenerArn: !GetAtt EnvControllerAction.InternalHTTPListenerArn
     {{- else}}
@@ -40,11 +40,11 @@ HTTPListenerRule{{ if ne $i 0 }}{{ $i }}{{ end }}:
       - TargetGroupArn: !Ref TargetGroup{{ if ne $i 0 }}{{ $i }}{{ end }}
         Type: forward
     Conditions:
-      {{- if $listener.AllowedSourceIps}}
+      {{- if $rule.AllowedSourceIps}}
       - Field: 'source-ip'
         SourceIpConfig:
           Values:
-            {{- range $sourceIP := $listener.AllowedSourceIps}}
+            {{- range $sourceIP := $rule.AllowedSourceIps}}
             - {{$sourceIP}}
             {{- end}}
       {{- end}}
@@ -61,11 +61,11 @@ HTTPListenerRule{{ if ne $i 0 }}{{ $i }}{{ end }}:
       - Field: 'path-pattern'
         PathPatternConfig:
           Values:
-            {{- if eq $listener.Path "/" }}
+            {{- if eq $rule.Path "/" }}
             - /*
             {{- else }}
-            - /{{ $listener.Path }}
-            - /{{ $listener.Path }}/*
+            - /{{ $rule.Path }}
+            - /{{ $rule.Path }}/*
             {{- end }}
     {{- if eq $.WorkloadType "Backend Service"}}
     ListenerArn: !GetAtt EnvControllerAction.InternalHTTPListenerArn

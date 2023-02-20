@@ -294,11 +294,10 @@ Outputs:
 			},
 			EntryPoint: []string{"/bin/echo", "hello"},
 			Command:    []string{"world"},
-			ALB: &template.ApplicationLoadBalancer{
-				Listener: []template.ApplicationLoadBalancerRoutineRule{
+			ALB: &template.ALBListener{
+				Rules: []template.ALBListenerRule{
 					{
 						Path:            "frontend",
-						Protocol:        "TCP",
 						TargetContainer: "frontend",
 						TargetPort:      "80",
 						Aliases: []string{
@@ -313,13 +312,13 @@ Outputs:
 						Stickiness: "false",
 					},
 				},
-				HTTPSListener: true,
+				IsHTTPS: true,
 				HostedZoneAliases: template.AliasesForHostedZone{
 					"mockHostedZone": {
 						"mockAlias",
 					},
 				},
-				HTTPRedirect: true,
+				RedirectToHTTPS: true,
 			},
 			ALBEnabled: true,
 			PortMappings: []*template.PortMapping{

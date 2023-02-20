@@ -417,7 +417,7 @@ type networkLoadBalancerConfig struct {
 }
 
 type applicationLoadBalancerConfig struct {
-	settings *template.ApplicationLoadBalancer
+	settings *template.ALBListener
 }
 
 func convertELBAccessLogsConfig(mft *manifest.Environment) *template.ELBAccessLogs {
@@ -516,10 +516,9 @@ func (s *LoadBalancedWebService) convertApplicationLoadBalancer() (applicationLo
 	}
 
 	config := applicationLoadBalancerConfig{
-		settings: &template.ApplicationLoadBalancer{
-			Listener: []template.ApplicationLoadBalancerRoutineRule{
+		settings: &template.ALBListener{
+			Rules: []template.ALBListenerRule{
 				{
-					Protocol:         "TCP",
 					Path:             aws.StringValue(albConfig.Path),
 					TargetContainer:  targetContainer,
 					TargetPort:       targetPort,
@@ -530,8 +529,8 @@ func (s *LoadBalancedWebService) convertApplicationLoadBalancer() (applicationLo
 					HTTPVersion:      aws.StringValue(convertHTTPVersion(albConfig.ProtocolVersion)),
 				},
 			},
-			HTTPRedirect:      httpRedirect,
-			HTTPSListener:     s.httpsEnabled,
+			RedirectToHTTPS:   httpRedirect,
+			IsHTTPS:           s.httpsEnabled,
 			HostedZoneAliases: aliasesFor,
 		},
 	}
@@ -565,10 +564,9 @@ func (s *BackendService) convertApplicationLoadBalancer() (applicationLoadBalanc
 	}
 
 	config := applicationLoadBalancerConfig{
-		settings: &template.ApplicationLoadBalancer{
-			Listener: []template.ApplicationLoadBalancerRoutineRule{
+		settings: &template.ALBListener{
+			Rules: []template.ALBListenerRule{
 				{
-					Protocol:         "TCP",
 					Path:             aws.StringValue(albConfig.Path),
 					TargetContainer:  targetContainer,
 					TargetPort:       targetPort,
@@ -579,8 +577,8 @@ func (s *BackendService) convertApplicationLoadBalancer() (applicationLoadBalanc
 					HTTPVersion:      aws.StringValue(convertHTTPVersion(albConfig.ProtocolVersion)),
 				},
 			},
-			HTTPRedirect:      s.httpsEnabled,
-			HTTPSListener:     s.httpsEnabled,
+			RedirectToHTTPS:   s.httpsEnabled,
+			IsHTTPS:           s.httpsEnabled,
 			MainContainerPort: s.manifest.MainContainerPort(),
 			HostedZoneAliases: hostedZoneAliases,
 		},
