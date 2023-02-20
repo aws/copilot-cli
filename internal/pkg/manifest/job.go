@@ -136,7 +136,7 @@ func (j *ScheduledJob) Publish() []Topic {
 	return j.ScheduledJobConfig.PublishConfig.publishedTopics()
 }
 
-// BuildArgs returns a docker.BuildArguments object for the job given a workspace root.
+// BuildArgs returns a docker.BuildArguments object for the job given a context directory.
 func (j *ScheduledJob) BuildArgs(contextDir string) map[string]*DockerBuildArgs {
 	buildArgs := make(map[string]*DockerBuildArgs, len(j.Sidecars)+1)
 	buildArgs[aws.StringValue(j.Name)] = j.ImageConfig.Image.BuildConfig(contextDir)

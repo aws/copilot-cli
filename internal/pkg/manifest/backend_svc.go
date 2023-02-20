@@ -119,7 +119,7 @@ func (s *BackendService) BuildRequired() (bool, error) {
 	return requiresBuild(s.ImageConfig.Image)
 }
 
-// BuildArgs returns a docker.BuildArguments object for the service given a workspace root directory.
+// BuildArgs returns a docker.BuildArguments object for the service given a context directory.
 func (s *BackendService) BuildArgs(contextDir string) map[string]*DockerBuildArgs {
 	buildArgs := make(map[string]*DockerBuildArgs, len(s.Sidecars)+1)
 	buildArgs[aws.StringValue(s.Name)] = s.ImageConfig.Image.BuildConfig(contextDir)

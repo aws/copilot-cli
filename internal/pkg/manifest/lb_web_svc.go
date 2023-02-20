@@ -186,7 +186,7 @@ func (s *LoadBalancedWebService) BuildRequired() (bool, error) {
 	return requiresBuild(s.ImageConfig.Image)
 }
 
-// BuildArgs returns a docker.BuildArguments object given a ws root directory.
+// BuildArgs returns a docker.BuildArguments object given a context directory.
 func (s *LoadBalancedWebService) BuildArgs(contextDir string) map[string]*DockerBuildArgs {
 	buildArgs := make(map[string]*DockerBuildArgs, len(s.Sidecars)+1)
 	buildArgs[aws.StringValue(s.Name)] = s.ImageConfig.Image.BuildConfig(contextDir)

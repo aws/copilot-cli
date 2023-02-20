@@ -179,7 +179,7 @@ type ContainerImageIdentifier struct {
 	Digest            string
 	CustomTag         string
 	GitShortCommitTag string
-	uuidTag           string // If not specified, a random UUID is generated.
+	uuidTag           string
 }
 
 // newWorkloadDeployer is the constructor for workloadDeployer.
