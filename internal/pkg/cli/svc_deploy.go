@@ -144,6 +144,8 @@ func newSvcDeployer(o *deploySvcOpts) (workloadDeployer, error) {
 		deployer, err = clideploy.NewRDWSDeployer(&in)
 	case *manifest.WorkerService:
 		deployer, err = clideploy.NewWorkerSvcDeployer(&in)
+	case *manifest.StaticSite:
+		deployer, err = clideploy.NewStaticSiteDeployer(&in)
 	default:
 		return nil, fmt.Errorf("unknown manifest type %T while creating the CloudFormation stack", t)
 	}

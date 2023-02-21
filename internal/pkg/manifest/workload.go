@@ -98,6 +98,8 @@ func UnmarshalWorkload(in []byte) (DynamicWorkload, error) {
 		m = newDefaultBackendService()
 	case manifestinfo.WorkerServiceType:
 		m = newDefaultWorkerService()
+	case manifestinfo.StaticSiteType:
+		m = newDefaultStaticSite()
 	case manifestinfo.ScheduledJobType:
 		m = newDefaultScheduledJob()
 	default:
@@ -320,7 +322,8 @@ func (s *StringSliceOrString) isEmpty() bool {
 	return s.String == nil && len(s.StringSlice) == 0
 }
 
-func (s *StringSliceOrString) toStringSlice() []string {
+// ToStringSlice converts an StringSliceOrString to a slice of string.
+func (s *StringSliceOrString) ToStringSlice() []string {
 	if s.StringSlice != nil {
 		return s.StringSlice
 	}
@@ -589,7 +592,7 @@ func (dyn *dynamicSubnets) load() error {
 	for k, v := range dyn.cfg.FromTags {
 		values := v.StringSlice
 		if v.String != nil {
-			values = v.toStringSlice()
+			values = v.ToStringSlice()
 		}
 		filters = append(filters, ec2.FilterForTags(k, values...))
 	}
