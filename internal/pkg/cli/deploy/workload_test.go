@@ -712,7 +712,9 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 		},
 		"fail to get public CIDR blocks": {
 			inNLB: manifest.NetworkLoadBalancerConfiguration{
-				Port: aws.String("443/tcp"),
+				PrimaryRoutingRule: manifest.NetworkLoadBalancerRoutingRule{
+					Port: aws.String("443/tcp"),
+				},
 			},
 			inEnvironment: &config.Environment{
 				Name:   mockEnvName,
@@ -745,8 +747,10 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 		},
 		"nlb alias used while app is not associated with a domain": {
 			inNLB: manifest.NetworkLoadBalancerConfiguration{
-				Port:    aws.String("80"),
-				Aliases: manifest.Alias{AdvancedAliases: mockAlias},
+				PrimaryRoutingRule: manifest.NetworkLoadBalancerRoutingRule{
+					Port:    aws.String("80"),
+					Aliases: manifest.Alias{AdvancedAliases: mockAlias},
+				},
 			},
 			inEnvironment: &config.Environment{
 				Name:   mockEnvName,
@@ -764,8 +768,10 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 		"nlb alias used while env has imported certs": {
 			inAliases: manifest.Alias{AdvancedAliases: mockAlias},
 			inNLB: manifest.NetworkLoadBalancerConfiguration{
-				Port:    aws.String("80"),
-				Aliases: manifest.Alias{AdvancedAliases: mockAlias},
+				PrimaryRoutingRule: manifest.NetworkLoadBalancerRoutingRule{
+					Port:    aws.String("80"),
+					Aliases: manifest.Alias{AdvancedAliases: mockAlias},
+				},
 			},
 			inEnvironment: &config.Environment{
 				Name:   mockEnvName,
@@ -839,8 +845,10 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 		},
 		"fail to enable nlb alias because of incompatible app version": {
 			inNLB: manifest.NetworkLoadBalancerConfiguration{
-				Port:    aws.String("80"),
-				Aliases: manifest.Alias{AdvancedAliases: mockAlias},
+				PrimaryRoutingRule: manifest.NetworkLoadBalancerRoutingRule{
+					Port:    aws.String("80"),
+					Aliases: manifest.Alias{AdvancedAliases: mockAlias},
+				},
 			},
 			inEnvironment: &config.Environment{
 				Name:   mockEnvName,
@@ -878,10 +886,12 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 		},
 		"fail to enable nlb alias because of invalid alias": {
 			inNLB: manifest.NetworkLoadBalancerConfiguration{
-				Port: aws.String("80"),
-				Aliases: manifest.Alias{AdvancedAliases: []manifest.AdvancedAlias{
-					{Alias: aws.String("v1.v2.mockDomain")},
-				}},
+				PrimaryRoutingRule: manifest.NetworkLoadBalancerRoutingRule{
+					Port: aws.String("80"),
+					Aliases: manifest.Alias{AdvancedAliases: []manifest.AdvancedAlias{
+						{Alias: aws.String("v1.v2.mockDomain")},
+					}},
+				},
 			},
 			inEnvironment: &config.Environment{
 				Name:   mockEnvName,

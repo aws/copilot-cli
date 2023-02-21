@@ -478,7 +478,7 @@ func (rr RoutingRuleConfiguration) exposedPorts(exposedPorts []ExposedPort, work
 
 // exportPorts returns any new ports that should be exposed given the network load balancer
 // configuration that's not part of the existing containerPorts.
-func (cfg NetworkLoadBalancerConfiguration) exposedPorts(exposedPorts []ExposedPort, workloadName string) ([]ExposedPort, error) {
+func (cfg NetworkLoadBalancerRoutingRule) exposedPorts(exposedPorts []ExposedPort, workloadName string) ([]ExposedPort, error) {
 	if cfg.IsEmpty() {
 		return nil, nil
 	}
@@ -667,12 +667,12 @@ func prepareParsedExposedPortsMap(exposedPorts []ExposedPort) (map[string][]Expo
 func (s *LoadBalancedWebService) NetworkLoadBalancerTarget() (targetContainer string, targetPort string, err error) {
 	// Configure target container and port.
 	targetContainer = aws.StringValue(s.Name)
-	if s.NLBConfig.TargetContainer != nil {
-		targetContainer = aws.StringValue(s.NLBConfig.TargetContainer)
+	if s.NLBConfig.PrimaryRoutingRule.TargetContainer != nil {
+		targetContainer = aws.StringValue(s.NLBConfig.PrimaryRoutingRule.TargetContainer)
 	}
 
 	// Parse listener port and protocol.
-	port, _, err := ParsePortMapping(s.NLBConfig.Port)
+	port, _, err := ParsePortMapping(s.NLBConfig.PrimaryRoutingRule.Port)
 	if err != nil {
 		return "", "", err
 	}
@@ -688,8 +688,8 @@ func (s *LoadBalancedWebService) NetworkLoadBalancerTarget() (targetContainer st
 		targetPort = aws.StringValue(port)
 	}
 	// Finally, if a target port is explicitly specified, use that value.
-	if s.NLBConfig.TargetPort != nil {
-		targetPort = strconv.Itoa(aws.IntValue(s.NLBConfig.TargetPort))
+	if s.NLBConfig.PrimaryRoutingRule.TargetPort != nil {
+		targetPort = strconv.Itoa(aws.IntValue(s.NLBConfig.PrimaryRoutingRule.TargetPort))
 	}
 	return
 }

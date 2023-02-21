@@ -151,7 +151,7 @@ func (d *lbWebSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*s
 		return nil, err
 	}
 	var opts []stack.LoadBalancedWebServiceOption
-	if !d.lbMft.NLBConfig.IsEmpty() {
+	if !d.lbMft.NLBConfig.PrimaryRoutingRule.IsEmpty() {
 		cidrBlocks, err := d.publicCIDRBlocksGetter.PublicCIDRBlocks()
 		if err != nil {
 			return nil, fmt.Errorf("get public CIDR blocks information from the VPC of environment %s: %w", d.env.Name, err)
@@ -246,7 +246,7 @@ func (d *lbWebSvcDeployer) validateALBRuntime() error {
 }
 
 func (d *lbWebSvcDeployer) validateNLBRuntime() error {
-	if d.lbMft.NLBConfig.Aliases.IsEmpty() {
+	if d.lbMft.NLBConfig.PrimaryRoutingRule.Aliases.IsEmpty() {
 		return nil
 	}
 
@@ -262,7 +262,15 @@ func (d *lbWebSvcDeployer) validateNLBRuntime() error {
 		logAppVersionOutdatedError(aws.StringValue(d.lbMft.Name))
 		return err
 	}
-	return validateLBWSAlias(d.lbMft.NLBConfig.Aliases, d.app, d.env.Name)
+	if err := validateLBWSAlias(d.lbMft.NLBConfig.PrimaryRoutingRule.Aliases, d.app, d.env.Name); err != nil {
+		return err
+	}
+	for _, additionalRule := range d.lbMft.NLBConfig.AdditionalRoutingRules {
+		if err := validateLBWSAlias(additionalRule.Aliases, d.app, d.env.Name); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func validateLBWSAlias(aliases manifest.Alias, app *config.Application, envName string) error {
@@ -271,7 +279,7 @@ func validateLBWSAlias(aliases manifest.Alias, app *config.Application, envName 
 	}
 	aliasList, err := aliases.ToStringSlice()
 	if err != nil {
-		return fmt.Errorf(`convert 'http.alias' to string slice: %w`, err)
+		return fmt.Errorf(`convert 'nlb.alias' to string slice: %w`, err)
 	}
 	for _, alias := range aliasList {
 		// Alias should be within either env, app, or root hosted zone.

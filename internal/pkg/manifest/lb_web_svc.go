@@ -226,6 +226,11 @@ func (s LoadBalancedWebService) applyEnv(envName string) (workloadManifest, erro
 
 // NetworkLoadBalancerConfiguration holds options for a network load balancer
 type NetworkLoadBalancerConfiguration struct {
+	PrimaryRoutingRule     NetworkLoadBalancerRoutingRule   `yaml:",inline"`
+	AdditionalRoutingRules []NetworkLoadBalancerRoutingRule `yaml:"additional_rules"`
+}
+
+type NetworkLoadBalancerRoutingRule struct {
 	Port            *string            `yaml:"port"`
 	HealthCheck     NLBHealthCheckArgs `yaml:"healthcheck"`
 	TargetContainer *string            `yaml:"target_container"`
@@ -235,7 +240,7 @@ type NetworkLoadBalancerConfiguration struct {
 	Aliases         Alias              `yaml:"alias"`
 }
 
-func (c *NetworkLoadBalancerConfiguration) IsEmpty() bool {
+func (c *NetworkLoadBalancerRoutingRule) IsEmpty() bool {
 	return c.Port == nil && c.HealthCheck.isEmpty() && c.TargetContainer == nil && c.TargetPort == nil &&
 		c.SSLPolicy == nil && c.Stickiness == nil && c.Aliases.IsEmpty()
 }
@@ -244,7 +249,9 @@ func (c *NetworkLoadBalancerConfiguration) IsEmpty() bool {
 func (lbws *LoadBalancedWebService) ExposedPorts() (ExposedPortsIndex, error) {
 	var exposedPorts []ExposedPort
 	workloadName := aws.StringValue(lbws.Name)
+	// port from image.port
 	exposedPorts = append(exposedPorts, lbws.ImageConfig.exposedPorts(workloadName)...)
+	// port from sidecar[x].image.port
 	for name, sidecar := range lbws.Sidecars {
 		out, err := sidecar.exposedPorts(name)
 		if err != nil {
@@ -252,12 +259,19 @@ func (lbws *LoadBalancedWebService) ExposedPorts() (ExposedPortsIndex, error) {
 		}
 		exposedPorts = append(exposedPorts, out...)
 	}
+	// port from http.target_port
 	exposedPorts = append(exposedPorts, lbws.RoutingRule.exposedPorts(exposedPorts, workloadName)...)
-	out, err := lbws.NLBConfig.exposedPorts(exposedPorts, workloadName)
+	// port from nlb.target_port
+	out, err := lbws.NLBConfig.PrimaryRoutingRule.exposedPorts(exposedPorts, workloadName)
 	if err != nil {
 		return ExposedPortsIndex{}, err
 	}
 	exposedPorts = append(exposedPorts, out...)
+	// port from nlb.additional_rule[x].target_port
+	for _, additionalRule := range lbws.NLBConfig.AdditionalRoutingRules {
+		out, err = additionalRule.exposedPorts(exposedPorts, workloadName)
+		exposedPorts = append(exposedPorts, out...)
+	}
 	portsForContainer, containerForPort := prepareParsedExposedPortsMap(sortExposedPorts(exposedPorts))
 	return ExposedPortsIndex{
 		PortsForContainer: portsForContainer,

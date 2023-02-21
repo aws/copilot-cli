@@ -1013,7 +1013,9 @@ func TestLoadBalancedWebService_NetworkLoadBalancerTarget(t *testing.T) {
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					ImageConfig: ImageWithPortAndHealthcheck{},
 					NLBConfig: NetworkLoadBalancerConfiguration{
-						Port: aws.String("80/tcp"),
+						PrimaryRoutingRule: NetworkLoadBalancerRoutingRule{
+							Port: aws.String("80/tcp"),
+						},
 					},
 				},
 			},
@@ -1029,9 +1031,11 @@ func TestLoadBalancedWebService_NetworkLoadBalancerTarget(t *testing.T) {
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					ImageConfig: ImageWithPortAndHealthcheck{},
 					NLBConfig: NetworkLoadBalancerConfiguration{
-						Port:            aws.String("80/tcp"),
-						TargetPort:      aws.Int(81),
-						TargetContainer: aws.String("bar"),
+						PrimaryRoutingRule: NetworkLoadBalancerRoutingRule{
+							Port:            aws.String("80/tcp"),
+							TargetPort:      aws.Int(81),
+							TargetContainer: aws.String("bar"),
+						},
 					},
 					Sidecars: map[string]*SidecarConfig{
 						"bar": {
@@ -1052,7 +1056,9 @@ func TestLoadBalancedWebService_NetworkLoadBalancerTarget(t *testing.T) {
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					ImageConfig: ImageWithPortAndHealthcheck{},
 					NLBConfig: NetworkLoadBalancerConfiguration{
-						Port: aws.String("80/80/80"),
+						PrimaryRoutingRule: NetworkLoadBalancerRoutingRule{
+							Port: aws.String("80/80/80"),
+						},
 					},
 				},
 			},

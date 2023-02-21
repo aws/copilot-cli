@@ -90,10 +90,20 @@ func (l LoadBalancedWebService) validate() error {
 	if err = validateTargetContainer(validateTargetContainerOpts{
 		mainContainerName: aws.StringValue(l.Name),
 		mainContainerPort: l.ImageConfig.Port,
-		targetContainer:   l.NLBConfig.TargetContainer,
+		targetContainer:   l.NLBConfig.PrimaryRoutingRule.TargetContainer,
 		sidecarConfig:     l.Sidecars,
 	}); err != nil {
 		return fmt.Errorf("validate network load balancer target: %w", err)
+	}
+	for _, additionalRules := range l.NLBConfig.AdditionalRoutingRules {
+		if err = validateTargetContainer(validateTargetContainerOpts{
+			mainContainerName: aws.StringValue(l.Name),
+			mainContainerPort: l.ImageConfig.Port,
+			targetContainer:   additionalRules.TargetContainer,
+			sidecarConfig:     l.Sidecars,
+		}); err != nil {
+			return fmt.Errorf("validate HTTP load balancer target: %w", err)
+		}
 	}
 	if err = validateContainerDeps(validateDependenciesOpts{
 		sidecarConfig:     l.Sidecars,
@@ -166,7 +176,7 @@ func (w WorkerAlarmArgs) validate() error {
 // validate returns nil if LoadBalancedWebServiceConfig is configured correctly.
 func (l LoadBalancedWebServiceConfig) validate() error {
 	var err error
-	if l.RoutingRule.Disabled() && l.NLBConfig.IsEmpty() {
+	if l.RoutingRule.Disabled() && l.NLBConfig.PrimaryRoutingRule.IsEmpty() {
 		return &errAtLeastOneFieldMustBeSpecified{
 			missingFields: []string{"http", "nlb"},
 		}
@@ -843,6 +853,18 @@ func (ip IPNet) validate() error {
 
 // validate returns nil if NetworkLoadBalancerConfiguration is configured correctly.
 func (c NetworkLoadBalancerConfiguration) validate() error {
+	if err := c.PrimaryRoutingRule.validate(); err != nil {
+		return fmt.Errorf("validate primary routing rule; %s", err.Error())
+	}
+	for idx, additionalRule := range c.AdditionalRoutingRules {
+		if err := additionalRule.validate(); err != nil {
+			return fmt.Errorf("validate additional_rules[%d]; %s", idx+1, err.Error())
+		}
+	}
+	return nil
+}
+
+func (c NetworkLoadBalancerRoutingRule) validate() error {
 	if c.IsEmpty() {
 		return nil
 	}
@@ -1925,10 +1947,10 @@ func populateNLBPortsAndValidate(containerNameFor map[uint16]string, opts valida
 		return nil
 	}
 	nlb := opts.nlb
-	if nlb.Port == nil {
+	if nlb.PrimaryRoutingRule.Port == nil {
 		return nil
 	}
-	nlbPort, _, err := ParsePortMapping(nlb.Port)
+	/*nlbPort, _, err := ParsePortMapping(nlb.PrimaryRoutingRule.Port)
 	if err != nil {
 		return err
 	}
@@ -1936,25 +1958,78 @@ func populateNLBPortsAndValidate(containerNameFor map[uint16]string, opts valida
 	if err != nil {
 		return err
 	}
-	containerPort := uint16(port)
-	if nlb.TargetPort != nil {
-		containerPort = uint16(aws.IntValue(nlb.TargetPort))
+	targetPort := uint16(port)
+	if nlb.PrimaryRoutingRule.TargetPort != nil {
+		targetPort = uint16(aws.IntValue(nlb.PrimaryRoutingRule.TargetPort))
 	}
-	if exposed, ok := containerNameFor[containerPort]; ok {
-		if nlb.TargetContainer != nil && aws.StringValue(nlb.TargetContainer) != exposed {
+	if err := errOnContainersExposingSamePort(containerNameFor, uint16(aws.IntValue(nlb.PrimaryRoutingRule.TargetPort)), nlb.PrimaryRoutingRule.TargetContainer); err != nil {
+		return err
+	}
+	targetContainer := opts.mainContainerName
+	if nlb.PrimaryRoutingRule.TargetContainer != nil {
+		targetContainer = aws.StringValue(nlb.PrimaryRoutingRule.TargetContainer)
+	}
+	containerNameFor[targetPort] = targetContainer*/
+
+	if err := commonFunction(nlb.PrimaryRoutingRule, containerNameFor, opts); err != nil {
+		return err
+	}
+
+	for _, additionalRule := range nlb.AdditionalRoutingRules {
+		/*targetPort = uint16(port)
+		if additionalRule.TargetPort != nil {
+			targetPort = uint16(aws.IntValue(additionalRule.TargetPort))
+		}
+		if err := errOnContainersExposingSamePort(containerNameFor, uint16(aws.IntValue(additionalRule.TargetPort)), additionalRule.TargetContainer); err != nil {
+			return err
+		}
+		targetContainer = opts.mainContainerName
+		if additionalRule.TargetContainer != nil {
+			targetContainer = aws.StringValue(additionalRule.TargetContainer)
+		}
+		containerNameFor[uint16(aws.IntValue(additionalRule.TargetPort))] = targetContainer*/
+		if err := commonFunction(additionalRule, containerNameFor, opts); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func commonFunction(rule NetworkLoadBalancerRoutingRule, containerNameFor map[uint16]string, opts validateExposedPortsOpts) error {
+	nlbPort, _, err := ParsePortMapping(rule.Port)
+	if err != nil {
+		return err
+	}
+	port, err := strconv.ParseUint(aws.StringValue(nlbPort), 10, 16)
+	if err != nil {
+		return err
+	}
+	targetPort := uint16(port)
+	if rule.TargetPort != nil {
+		targetPort = uint16(aws.IntValue(rule.TargetPort))
+	}
+	if err = errOnContainersExposingSamePort(containerNameFor, uint16(aws.IntValue(rule.TargetPort)), rule.TargetContainer); err != nil {
+		return err
+	}
+	targetContainer := opts.mainContainerName
+	if rule.TargetContainer != nil {
+		targetContainer = aws.StringValue(rule.TargetContainer)
+	}
+	containerNameFor[targetPort] = targetContainer
+	return nil
+}
+
+func errOnContainersExposingSamePort(containerNameFor map[uint16]string, targetPort uint16, targetContainer *string) error {
+	if exposed, ok := containerNameFor[targetPort]; ok {
+		if targetContainer != nil && exposed != aws.StringValue(targetContainer) {
 			return &errContainersExposingSamePort{
-				firstContainer:  aws.StringValue(nlb.TargetContainer),
+				firstContainer:  aws.StringValue(targetContainer),
 				secondContainer: exposed,
-				port:            containerPort,
+				port:            targetPort,
 			}
 		}
 	}
-	targetContainerName := opts.mainContainerName
-	if nlb.TargetContainer != nil {
-		targetContainerName = aws.StringValue(nlb.TargetContainer)
-	}
-	containerNameFor[containerPort] = targetContainerName
-
 	return nil
 }
 

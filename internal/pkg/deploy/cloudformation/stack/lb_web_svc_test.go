@@ -756,7 +756,9 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 		"nlb enabled": {
 			setupManifest: func(service *manifest.LoadBalancedWebService) {
 				service.NLBConfig = manifest.NetworkLoadBalancerConfiguration{
-					Port: aws.String("443/tcp"),
+					PrimaryRoutingRule: manifest.NetworkLoadBalancerRoutingRule{
+						Port: aws.String("443/tcp"),
+					},
 				}
 			},
 			expectedParams: append(expectedParams, []*cloudformation.Parameter{
@@ -801,13 +803,15 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 		"nlb alias enabled": {
 			setupManifest: func(service *manifest.LoadBalancedWebService) {
 				service.NLBConfig = manifest.NetworkLoadBalancerConfiguration{
-					Aliases: manifest.Alias{
-						AdvancedAliases: []manifest.AdvancedAlias{
-							{Alias: aws.String("example.com")},
-							{Alias: aws.String("v1.example.com")},
+					PrimaryRoutingRule: manifest.NetworkLoadBalancerRoutingRule{
+						Aliases: manifest.Alias{
+							AdvancedAliases: []manifest.AdvancedAlias{
+								{Alias: aws.String("example.com")},
+								{Alias: aws.String("v1.example.com")},
+							},
 						},
+						Port: aws.String("443/tcp"),
 					},
-					Port: aws.String("443/tcp"),
 				}
 			},
 			expectedParams: append(expectedParams, []*cloudformation.Parameter{
