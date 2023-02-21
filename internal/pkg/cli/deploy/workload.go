@@ -174,7 +174,7 @@ type WorkloadDeployerInput struct {
 	customResources customResourcesFunc
 }
 
-// ContainerImageIdentifier is the configuration of image digest and tags of an ECR image.
+// ContainerImageIdentifier is the configuration of the image digest and tags of an ECR image.
 type ContainerImageIdentifier struct {
 	Digest            string
 	CustomTag         string
@@ -238,7 +238,7 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 	}
 	id, err := uuid.NewRandom()
 	if err != nil {
-		return nil, fmt.Errorf("generate random uuid to tag workload images: %w", err)
+		return nil, fmt.Errorf("generate a random UUID to tag workload images: %w", err)
 	}
 	in.Image.uuidTag = id.String()
 
