@@ -56,7 +56,7 @@ func (d *staticSiteDeployer) DeployWorkload(in *DeployWorkloadInput) (ActionReco
 // UploadArtifacts uploads static assets to the app stackset bucket.
 func (d *staticSiteDeployer) UploadArtifacts() (*UploadArtifactsOutput, error) {
 	for _, f := range d.staticSiteMft.FileUploads {
-		_, err := d.uploadFn(d.fs, filepath.Join(f.Context, f.Source), f.Destination,
+		if _, err := d.uploadFn(d.fs, filepath.Join(f.Context, f.Source), f.Destination,
 			&asset.UploadOpts{
 				Reincludes: f.Reinclude.ToStringSlice(),
 				Excludes:   f.Exclude.ToStringSlice(),
@@ -64,8 +64,7 @@ func (d *staticSiteDeployer) UploadArtifacts() (*UploadArtifactsOutput, error) {
 				UploadFn: func(key string, contents io.Reader) (string, error) {
 					return d.s3Client.Upload(d.bucketName, key, contents)
 				},
-			})
-		if err != nil {
+			}); err != nil {
 			return nil, err
 		}
 	}
