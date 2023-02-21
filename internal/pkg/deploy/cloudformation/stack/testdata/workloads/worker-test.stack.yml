@@ -26,6 +26,12 @@ Metadata:
         msg_processing_time: 1s
     exec: true     # Enable running commands in your container.
 
+    deployment:
+      rollback_alarms:
+        cpu_utilization: 70
+        memory_utilization: 50
+        messages_delayed: 5
+
     publish:
       topics:
         - name: givesOtherdogs
@@ -615,6 +621,13 @@ Resources:
           Rollback: true
         MinimumHealthyPercent: 100
         MaximumPercent: 200
+        Alarms:
+          AlarmNames:
+            - my-app-test-dogworker-CopilotRollbackCPUAlarm
+            - my-app-test-dogworker-CopilotRollbackMemAlarm
+            - my-app-test-dogworker-CopilotRollbackMsgsDelayedAlarm
+          Enable: true
+          Rollback: true
       PlatformVersion: LATEST
       PropagateTags: SERVICE
       EnableExecuteCommand: true
@@ -1064,6 +1077,69 @@ Resources:
         Env: !Ref EnvName
         Name: !Ref WorkloadName
       TemplateURL: !Ref AddonsTemplateURL
+  CPURollbackAlarm:
+    Metadata:
+      'aws:copilot:description': "A CloudWatch alarm associated with CPU utilization for deployment rollbacks"
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: "Roll back ECS service if CPU utilization is greater than or equal to 70% twice in 3 minutes."
+      AlarmName: my-app-test-dogworker-CopilotRollbackCPUAlarm
+      Namespace: 'AWS/ECS'
+      Dimensions:
+        - Name: ClusterName
+          Value:
+            Fn::ImportValue: !Sub '${AppName}-${EnvName}-ClusterId'
+        - Name: ServiceName
+          Value: !Select [ 2, !Split [ "/", !Ref Service ] ]
+      MetricName: 'CPUUtilization'
+      ComparisonOperator: 'GreaterThanOrEqualToThreshold'
+      DatapointsToAlarm: 2
+      EvaluationPeriods: 3
+      Period: 60
+      Statistic: 'Average'
+      Threshold: 70
+      Unit: 'Percent'
+  MemoryRollbackAlarm:
+    Metadata:
+      'aws:copilot:description': "A CloudWatch alarm associated with memory utilization for deployment rollbacks"
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: "Roll back ECS service if memory utilization is greater than or equal to 50% twice in 3 minutes."
+      AlarmName: my-app-test-dogworker-CopilotRollbackMemAlarm
+      Namespace: 'AWS/ECS'
+      Dimensions:
+        - Name: ClusterName
+          Value:
+            Fn::ImportValue: !Sub '${AppName}-${EnvName}-ClusterId'
+        - Name: ServiceName
+          Value: !Select [ 2, !Split [ "/", !Ref Service ] ]
+      MetricName: 'MemoryUtilization'
+      ComparisonOperator: 'GreaterThanOrEqualToThreshold'
+      DatapointsToAlarm: 2
+      EvaluationPeriods: 3
+      Period: 60
+      Statistic: 'Average'
+      Threshold: 50
+      Unit: 'Percent'
+  MessagesDelayedRollbackAlarm:
+    Metadata:
+      'aws:copilot:description': "A CloudWatch alarm associated with number of messages delayed for deployment rollbacks"
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: "Roll back worker service if number of messages delayed is greater than or equal to 5 twice in 3 minutes."
+      AlarmName: my-app-test-dogworker-CopilotRollbackMsgsDelayedAlarm
+      Namespace: 'AWS/SQS'
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt EventsQueue.QueueName
+      MetricName: 'ApproximateNumberOfMessagesDelayed'
+      ComparisonOperator: 'GreaterThanOrEqualToThreshold'
+      DatapointsToAlarm: 2
+      EvaluationPeriods: 3
+      Period: 60
+      Statistic: 'Average'
+      Threshold: 5
+      Unit: 'Count'
   EnvControllerAction:
     Metadata:
       'aws:copilot:description': "Update your environment's shared resources"

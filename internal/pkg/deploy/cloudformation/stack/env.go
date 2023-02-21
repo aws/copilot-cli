@@ -6,6 +6,8 @@ package stack
 import (
 	"fmt"
 
+	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
@@ -57,12 +59,6 @@ var (
 
 var fmtServiceDiscoveryEndpoint = "%s.%s.local"
 
-type envReadParser interface {
-	template.ReadParser
-	ParseEnv(data *template.EnvOpts) (*template.Content, error)
-	ParseEnvBootstrap(data *template.EnvOpts, options ...template.ParseOption) (*template.Content, error)
-}
-
 // Addons contains information about a packaged addons.
 type Addons struct {
 	S3ObjectURL string                // S3ObjectURL is the URL where the addons template is uploaded.
@@ -107,24 +103,35 @@ type Env struct {
 	lastForceUpdateID string
 	prevParams        []*cloudformation.Parameter
 	parser            envReadParser
+	localCRs          []uploadable // Custom resources that have not been uploaded yet.
 }
 
 // NewEnvStackConfig returns a CloudFormation stack configuration for deploying a brand-new environment.
-func NewEnvStackConfig(input *EnvConfig) *Env {
-	return &Env{
-		in:     input,
-		parser: template.New(),
+func NewEnvStackConfig(input *EnvConfig) (*Env, error) {
+	crs, err := customresource.Env(fs)
+	if err != nil {
+		return nil, fmt.Errorf("environment custom resources: %w", err)
 	}
+	return &Env{
+		in:       input,
+		parser:   fs,
+		localCRs: uploadableCRs(crs).convert(),
+	}, nil
 }
 
 // NewEnvConfigFromExistingStack returns a CloudFormation stack configuration for updating an environment.
-func NewEnvConfigFromExistingStack(in *EnvConfig, lastForceUpdateID string, prevParams []*cloudformation.Parameter) *Env {
+func NewEnvConfigFromExistingStack(in *EnvConfig, lastForceUpdateID string, prevParams []*cloudformation.Parameter) (*Env, error) {
+	crs, err := customresource.Env(fs)
+	if err != nil {
+		return nil, fmt.Errorf("environment custom resources: %w", err)
+	}
 	return &Env{
 		in:                in,
 		prevParams:        prevParams,
 		lastForceUpdateID: lastForceUpdateID,
-		parser:            template.New(),
-	}
+		parser:            fs,
+		localCRs:          uploadableCRs(crs).convert(),
+	}, nil
 }
 
 // Template returns the environment CloudFormation template.

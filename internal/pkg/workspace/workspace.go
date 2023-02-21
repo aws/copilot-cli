@@ -44,6 +44,8 @@ const (
 	CopilotDirName = "copilot"
 	// SummaryFileName is the name of the file that is associated with the application.
 	SummaryFileName = ".workspace"
+	// AddonsParametersFileName is the name of the file that define extra parameters for an addon.
+	AddonsParametersFileName = "addons.parameters.yml"
 
 	addonsDirName             = "addons"
 	overridesDirName          = "overrides"
@@ -179,6 +181,16 @@ func (ws *Workspace) Summary() (*Summary, error) {
 // WorkloadExists returns true if a workload exists in the workspace.
 func (ws *Workspace) WorkloadExists(name string) (bool, error) {
 	path := filepath.Join(ws.copilotDirAbs, name, manifestFileName)
+	exists, err := ws.fs.Exists(path)
+	if err != nil {
+		return false, fmt.Errorf("check if %s exists: %w", path, err)
+	}
+	return exists, nil
+}
+
+// HasEnvironments returns true if the workspace manages environments.
+func (ws *Workspace) HasEnvironments() (bool, error) {
+	path := filepath.Join(ws.copilotDirAbs, environmentsDirName)
 	exists, err := ws.fs.Exists(path)
 	if err != nil {
 		return false, fmt.Errorf("check if %s exists: %w", path, err)

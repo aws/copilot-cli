@@ -309,7 +309,8 @@ network:
 			require.NoError(t, yaml.Unmarshal(wanted, wantedObj))
 
 			// WHEN
-			envStack := stack.NewEnvStackConfig(tc.input)
+			envStack, err := stack.NewEnvStackConfig(tc.input)
+			require.NoError(t, err)
 			actual, err := envStack.Template()
 			require.NoError(t, err, "serialize template")
 			actualObj := make(map[any]any)
@@ -428,13 +429,15 @@ observability:
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// WHEN
-			originalStack := stack.NewEnvStackConfig(tc.originalManifest)
+			originalStack, err := stack.NewEnvStackConfig(tc.originalManifest)
+			require.NoError(t, err)
 			originalTmpl, err := originalStack.Template()
 			require.NoError(t, err, "should serialize the template given the original environment manifest")
 			originalObj := make(map[any]any)
 			require.NoError(t, yaml.Unmarshal([]byte(originalTmpl), originalObj))
 
-			newStack := stack.NewEnvStackConfig(tc.newManifest)
+			newStack, err := stack.NewEnvStackConfig(tc.newManifest)
+			require.NoError(t, err)
 			newTmpl, err := newStack.Template()
 			require.NoError(t, err, "should serialize the template given a migrated environment manifest")
 			newObj := make(map[any]any)

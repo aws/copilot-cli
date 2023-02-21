@@ -111,7 +111,9 @@ Resources:
     {{- end}}
     {{- end}}
     {{- if .NLB}}
-      - NLBListener
+    {{- range $i, $listener := .NLB.Listener }}
+      - NLBListener{{ if ne $i 0 }}{{ $i }}{{ end }}
+    {{- end }}
     {{- end}}
     Properties:
 {{include "service-base-properties" . | indent 6}}
@@ -126,10 +128,12 @@ Resources:
           TargetGroupArn: !Ref TargetGroup
   {{- end}}
   {{- if .NLB}}
-        - ContainerName: {{.NLB.Listener.TargetContainer}}
-          ContainerPort:  {{.NLB.Listener.TargetPort}}
-          TargetGroupArn: !Ref NLBTargetGroup
-  {{- end}}
+    {{- range $i, $listener := .NLB.Listener }}
+        - ContainerName: {{$listener.TargetContainer}}
+          ContainerPort: {{$listener.TargetPort}}
+          TargetGroupArn: !Ref NLBTargetGroup{{ if ne $i 0 }}{{ $i }}{{ end }}
+    {{- end }}
+  {{- end }}
       ServiceRegistries:
         - RegistryArn: !GetAtt DiscoveryService.Arn
           Port: !Ref TargetPort
