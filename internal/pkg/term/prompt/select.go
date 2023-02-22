@@ -74,6 +74,27 @@ func (p Prompt) SelectOption(message, help string, opts []Option, promptCfgs ...
 	return prettified.choice2Value[result], nil
 }
 
+// MultiSelectOptions prompts the user to select multiple options and returns the value field from the options.
+func (p Prompt) MultiSelectOptions(message, help string, opts []Option, promptCfgs ...PromptConfig) ([]string, error) {
+	if len(opts) <= 0 {
+		return nil, ErrEmptyOptions
+	}
+
+	prettified, err := prettifyOptions(opts)
+	if err != nil {
+		return nil, err
+	}
+	choices, err := p.MultiSelect(message, help, prettified.choices, nil, promptCfgs...)
+	if err != nil {
+		return nil, err
+	}
+	values := make([]string, len(choices))
+	for i, choice := range choices {
+		values[i] = prettified.choice2Value[choice]
+	}
+	return values, nil
+}
+
 // SelectOne prompts the user with a list of options to choose from with the arrow keys.
 func (p Prompt) SelectOne(message, help string, options []string, promptCfgs ...PromptConfig) (string, error) {
 	if len(options) <= 0 {

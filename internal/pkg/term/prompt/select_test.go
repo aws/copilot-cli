@@ -187,6 +187,45 @@ func TestPrompt_SelectOption(t *testing.T) {
 	})
 }
 
+func TestPrompt_MultiSelectOptions(t *testing.T) {
+	// GIVEN
+	var p Prompt = func(p survey.Prompt, out interface{}, _ ...survey.AskOpt) error {
+		sel := p.(*prompt).prompter.(*survey.MultiSelect)
+		require.ElementsMatch(t, []string{
+			"Service                    (AWS::ECS::Service)",
+			"DiscoveryService           (AWS::ServiceDiscovery::Service)",
+			"PublicNetworkLoadBalancer  (AWS::ElasticLoadBalancingV2::LoadBalancer)",
+		}, sel.Options)
+		result := out.(*[]string)
+		*result = []string{
+			"Service                    (AWS::ECS::Service)",
+			"PublicNetworkLoadBalancer  (AWS::ElasticLoadBalancingV2::LoadBalancer)",
+		}
+		return nil
+	}
+	opts := []Option{
+		{
+			Value: "Service",
+			Hint:  "AWS::ECS::Service",
+		},
+		{
+			Value: "DiscoveryService",
+			Hint:  "AWS::ServiceDiscovery::Service",
+		},
+		{
+			Value: "PublicNetworkLoadBalancer",
+			Hint:  "AWS::ElasticLoadBalancingV2::LoadBalancer",
+		},
+	}
+
+	// WHEN
+	actual, err := p.MultiSelectOptions("Which resource?", "choose!", opts)
+
+	// THEN
+	require.NoError(t, err)
+	require.Equal(t, []string{"Service", "PublicNetworkLoadBalancer"}, actual)
+}
+
 func TestPrompt_SelectOne(t *testing.T) {
 	mockError := fmt.Errorf("error")
 	mockMessage := "Which droid is best droid?"
