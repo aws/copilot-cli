@@ -25,8 +25,7 @@ type BackendService struct {
 	httpsEnabled bool
 	albEnabled   bool
 
-	parser   backendSvcReadParser
-	localCRs []uploadable // Custom resources that have not been uploaded yet.
+	parser backendSvcReadParser
 }
 
 // BackendServiceConfig contains data required to initialize a backend service stack.
@@ -46,6 +45,7 @@ func NewBackendService(conf BackendServiceConfig) (*BackendService, error) {
 	if err != nil {
 		return nil, fmt.Errorf("backend service custom resources: %w", err)
 	}
+	conf.RuntimeConfig.loadCustomResourceURLs(conf.ArtifactBucketName, uploadableCRs(crs).convert())
 
 	b := &BackendService{
 		ecsWkld: &ecsWkld{
@@ -68,7 +68,6 @@ func NewBackendService(conf BackendServiceConfig) (*BackendService, error) {
 		manifest:   conf.Manifest,
 		parser:     fs,
 		albEnabled: !conf.Manifest.RoutingRule.IsEmpty(),
-		localCRs:   uploadableCRs(crs).convert(),
 	}
 
 	if len(conf.EnvManifest.HTTPConfig.Private.Certificates) != 0 {
