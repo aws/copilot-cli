@@ -202,16 +202,18 @@ var _ = Describe("sidecars flow", func() {
 			Expect(err).NotTo(HaveOccurred(), "read addons dir")
 
 			for _, fd := range fds {
-				destFile, err := os.Create(fmt.Sprintf("./copilot/hello/addons/%s", fd.Name()))
-				Expect(err).NotTo(HaveOccurred(), "create destination file")
-				defer destFile.Close()
+				func() {
+					destFile, err := os.Create(fmt.Sprintf("./copilot/hello/addons/%s", fd.Name()))
+					Expect(err).NotTo(HaveOccurred(), "create destination file")
+					defer destFile.Close()
 
-				srcFile, err := os.Open(fmt.Sprintf("./hello/addons/%s", fd.Name()))
-				Expect(err).NotTo(HaveOccurred(), "open source file")
-				defer srcFile.Close()
+					srcFile, err := os.Open(fmt.Sprintf("./hello/addons/%s", fd.Name()))
+					Expect(err).NotTo(HaveOccurred(), "open source file")
+					defer srcFile.Close()
 
-				_, err = io.Copy(destFile, srcFile)
-				Expect(err).NotTo(HaveOccurred(), "copy file")
+					_, err = io.Copy(destFile, srcFile)
+					Expect(err).NotTo(HaveOccurred(), "copy file")
+				}()
 			}
 		})
 	})
