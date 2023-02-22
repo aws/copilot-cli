@@ -303,6 +303,79 @@ func (mr *MockworkerSvcReadParserMockRecorder) Read(path interface{}) *gomock.Ca
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Read", reflect.TypeOf((*MockworkerSvcReadParser)(nil).Read), path)
 }
 
+// MockstaticSiteReadParser is a mock of staticSiteReadParser interface.
+type MockstaticSiteReadParser struct {
+	ctrl     *gomock.Controller
+	recorder *MockstaticSiteReadParserMockRecorder
+}
+
+// MockstaticSiteReadParserMockRecorder is the mock recorder for MockstaticSiteReadParser.
+type MockstaticSiteReadParserMockRecorder struct {
+	mock *MockstaticSiteReadParser
+}
+
+// NewMockstaticSiteReadParser creates a new mock instance.
+func NewMockstaticSiteReadParser(ctrl *gomock.Controller) *MockstaticSiteReadParser {
+	mock := &MockstaticSiteReadParser{ctrl: ctrl}
+	mock.recorder = &MockstaticSiteReadParserMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockstaticSiteReadParser) EXPECT() *MockstaticSiteReadParserMockRecorder {
+	return m.recorder
+}
+
+// Parse mocks base method.
+func (m *MockstaticSiteReadParser) Parse(path string, data interface{}, options ...template.ParseOption) (*template.Content, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{path, data}
+	for _, a := range options {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Parse", varargs...)
+	ret0, _ := ret[0].(*template.Content)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Parse indicates an expected call of Parse.
+func (mr *MockstaticSiteReadParserMockRecorder) Parse(path, data interface{}, options ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{path, data}, options...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Parse", reflect.TypeOf((*MockstaticSiteReadParser)(nil).Parse), varargs...)
+}
+
+// ParseStaticSite mocks base method.
+func (m *MockstaticSiteReadParser) ParseStaticSite(arg0 template.WorkloadOpts) (*template.Content, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ParseStaticSite", arg0)
+	ret0, _ := ret[0].(*template.Content)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ParseStaticSite indicates an expected call of ParseStaticSite.
+func (mr *MockstaticSiteReadParserMockRecorder) ParseStaticSite(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ParseStaticSite", reflect.TypeOf((*MockstaticSiteReadParser)(nil).ParseStaticSite), arg0)
+}
+
+// Read mocks base method.
+func (m *MockstaticSiteReadParser) Read(path string) (*template.Content, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Read", path)
+	ret0, _ := ret[0].(*template.Content)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Read indicates an expected call of Read.
+func (mr *MockstaticSiteReadParserMockRecorder) Read(path interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Read", reflect.TypeOf((*MockstaticSiteReadParser)(nil).Read), path)
+}
+
 // MockscheduledJobReadParser is a mock of scheduledJobReadParser interface.
 type MockscheduledJobReadParser struct {
 	ctrl     *gomock.Controller
@@ -605,6 +678,21 @@ func (m *MockembedFS) ParseScheduledJob(arg0 template.WorkloadOpts) (*template.C
 func (mr *MockembedFSMockRecorder) ParseScheduledJob(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ParseScheduledJob", reflect.TypeOf((*MockembedFS)(nil).ParseScheduledJob), arg0)
+}
+
+// ParseStaticSite mocks base method.
+func (m *MockembedFS) ParseStaticSite(arg0 template.WorkloadOpts) (*template.Content, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ParseStaticSite", arg0)
+	ret0, _ := ret[0].(*template.Content)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ParseStaticSite indicates an expected call of ParseStaticSite.
+func (mr *MockembedFSMockRecorder) ParseStaticSite(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ParseStaticSite", reflect.TypeOf((*MockembedFS)(nil).ParseStaticSite), arg0)
 }
 
 // ParseWorkerService mocks base method.

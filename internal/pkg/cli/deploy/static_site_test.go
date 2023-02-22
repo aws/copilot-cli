@@ -10,7 +10,9 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/asset"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
 )
@@ -48,6 +50,13 @@ func TestStaticSiteDeployer_UploadArtifacts(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			deployer := &staticSiteDeployer{
+				svcDeployer: &svcDeployer{
+					workloadDeployer: &workloadDeployer{
+						customResources: func(fs template.Reader) ([]*customresource.CustomResource, error) {
+							return nil, nil
+						},
+					},
+				},
 				staticSiteMft: &manifest.StaticSite{
 					StaticSiteConfig: manifest.StaticSiteConfig{
 						FileUploads: []manifest.FileUpload{

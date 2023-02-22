@@ -146,6 +146,8 @@ func newWorkloadStackGenerator(o *packageSvcOpts) (workloadStackGenerator, error
 		deployer, err = clideploy.NewWorkerSvcDeployer(&in)
 	case *manifest.ScheduledJob:
 		deployer, err = clideploy.NewJobDeployer(&in)
+	case *manifest.StaticSite:
+		deployer, err = clideploy.NewStaticSiteDeployer(&in)
 	default:
 		return nil, fmt.Errorf("unknown manifest type %T while creating the CloudFormation stack", t)
 	}

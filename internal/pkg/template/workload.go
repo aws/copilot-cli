@@ -33,6 +33,7 @@ const (
 	rdWebSvcTplName     = "rd-web"
 	backendSvcTplName   = "backend"
 	workerSvcTplName    = "worker"
+	staticSiteTplName   = "static-site"
 	scheduledJobTplName = "scheduled-job"
 )
 
@@ -836,6 +837,11 @@ func (t *Template) ParseBackendService(data WorkloadOpts) (*Content, error) {
 // ParseWorkerService parses a worker service's CloudFormation template with the specified data object and returns its content.
 func (t *Template) ParseWorkerService(data WorkloadOpts) (*Content, error) {
 	return t.parseSvc(workerSvcTplName, data, withSvcParsingFuncs())
+}
+
+// ParseStaticSite parses a static site service's CloudFormation template with the specified data object and returns its content.
+func (t *Template) ParseStaticSite(data WorkloadOpts) (*Content, error) {
+	return t.parseSvc(staticSiteTplName, data, withSvcParsingFuncs())
 }
 
 // ParseScheduledJob parses a scheduled job's Cloudformation Template
