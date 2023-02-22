@@ -5,7 +5,7 @@ package multi_svc_app_test
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -258,7 +258,7 @@ var _ = Describe("Multiple Service App", func() {
 
 				// Read the response - our deployed apps should return a body with their
 				// name as the value.
-				bodyBytes, err := ioutil.ReadAll(resp.Body)
+				bodyBytes, err := io.ReadAll(resp.Body)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(string(bodyBytes)).To(Equal(svcName))
 			}
@@ -333,7 +333,7 @@ var _ = Describe("Multiple Service App", func() {
 
 			// Read the response - our deployed apps should return a body with their
 			// name as the value.
-			bodyBytes, err := ioutil.ReadAll(resp.Body)
+			bodyBytes, err := io.ReadAll(resp.Body)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(bodyBytes)).To(Equal("back-end-service"))
 		})
@@ -376,7 +376,7 @@ var _ = Describe("Multiple Service App", func() {
 				if fetchErr != nil {
 					return "", fetchErr
 				}
-				bodyBytes, err := ioutil.ReadAll(resp.Body)
+				bodyBytes, err := io.ReadAll(resp.Body)
 				if err != nil {
 					return "", err
 				}
@@ -407,7 +407,7 @@ var _ = Describe("Multiple Service App", func() {
 
 			// Read the response - successfully overridden build arg will result
 			// in a response of "open sesame"
-			bodyBytes, err := ioutil.ReadAll(resp.Body)
+			bodyBytes, err := io.ReadAll(resp.Body)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(bodyBytes)).To(Equal("open sesame"))
 		})
