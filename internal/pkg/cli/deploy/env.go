@@ -405,7 +405,7 @@ func (d *envDeployer) buildStackInput(in *DeployEnvironmentInput) (*cfnstack.Env
 	}, nil
 }
 
-func (d *envDeployer) buildAddonsInput(region, bucket, fallbackURL string) (*cfnstack.Addons, error) {
+func (d *envDeployer) buildAddonsInput(region, bucket, uploadURL string) (*cfnstack.Addons, error) {
 	parsedAddons, err := d.parseAddons()
 	if err != nil {
 		var notFoundErr *addon.ErrAddonsNotFound
@@ -414,9 +414,9 @@ func (d *envDeployer) buildAddonsInput(region, bucket, fallbackURL string) (*cfn
 		}
 		return nil, err
 	}
-	if fallbackURL != "" {
+	if uploadURL != "" {
 		return &cfnstack.Addons{
-			S3ObjectURL: fallbackURL,
+			S3ObjectURL: uploadURL,
 			Stack:       parsedAddons,
 		}, nil
 	}
