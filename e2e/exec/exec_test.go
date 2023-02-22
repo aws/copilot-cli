@@ -5,7 +5,7 @@ package exec_test
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -169,7 +169,7 @@ var _ = Describe("exec flow", func() {
 			}, "60s", "1s").Should(Equal(200))
 			// Read the response - our deployed service should return a body with its
 			// name as the value.
-			bodyBytes, err := ioutil.ReadAll(resp.Body)
+			bodyBytes, err := io.ReadAll(resp.Body)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(bodyBytes)).To(Equal(svcName))
 		})
@@ -219,7 +219,7 @@ var _ = Describe("exec flow", func() {
 				}, "60s", "1s").Should(Equal(200))
 				// Our deployed service should return a body with the new content
 				// as the value.
-				bodyBytes, err := ioutil.ReadAll(resp.Body)
+				bodyBytes, err := io.ReadAll(resp.Body)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(strings.TrimSpace(string(bodyBytes))).To(Equal(newContent))
 				time.Sleep(3 * time.Second)

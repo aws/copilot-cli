@@ -6,7 +6,7 @@ package worker_test
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"strconv"
@@ -222,7 +222,7 @@ publish:
 					return fmt.Errorf("response status is %d and not %d", resp.StatusCode, http.StatusOK)
 				}
 
-				body, err := ioutil.ReadAll(resp.Body)
+				body, err := io.ReadAll(resp.Body)
 				if err != nil {
 					return err
 				}
@@ -254,7 +254,7 @@ publish:
 					return fmt.Errorf("response status is %d and not %d", resp.StatusCode, http.StatusOK)
 				}
 
-				body, err := ioutil.ReadAll(resp.Body)
+				body, err := io.ReadAll(resp.Body)
 				if err != nil {
 					return err
 				}
