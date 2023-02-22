@@ -5,9 +5,9 @@ package multi_svc_app_test
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"os"
+	"io"
 	"path/filepath"
 
 	"github.com/aws/copilot-cli/regression/client"
@@ -63,7 +63,7 @@ var _ = Describe("regression", func() {
 				}, "60s", "1s").Should(Equal(200))
 
 				By("Having their names as the value in response body")
-				bodyBytes, err := ioutil.ReadAll(resp.Body)
+				bodyBytes, err := io.ReadAll(resp.Body)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(string(bodyBytes)).To(Equal(expectedWorkloadResponse[svcName]))
 			}
@@ -86,7 +86,7 @@ var _ = Describe("regression", func() {
 			Expect(resp.StatusCode).To(Equal(200))
 
 			By("Getting the expected response body")
-			bodyBytes, err := ioutil.ReadAll(resp.Body)
+			bodyBytes, err := io.ReadAll(resp.Body)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(bodyBytes)).To(Equal(expectedWorkloadResponse["back-end-service-discovery"]))
 
@@ -101,7 +101,7 @@ var _ = Describe("regression", func() {
 				if fetchErr != nil {
 					return "", fetchErr
 				}
-				bodyBytes, err := ioutil.ReadAll(resp.Body)
+				bodyBytes, err := io.ReadAll(resp.Body)
 				if err != nil {
 					return "", err
 				}
