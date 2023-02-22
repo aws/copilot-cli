@@ -6,6 +6,8 @@ package stack
 import (
 	"fmt"
 
+	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
+
 	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -96,6 +98,21 @@ type EnvConfig struct {
 	ForceUpdate         bool
 }
 
+func (cfg *EnvConfig) loadCustomResourceURLs(crs []uploadable) error {
+	if len(cfg.CustomResourcesURLs) != 0 {
+		return nil
+	}
+	bucket, _, err := s3.ParseARN(cfg.ArtifactBucketARN)
+	if err != nil {
+		return fmt.Errorf("parse artifact bucket ARN: %w", err)
+	}
+	cfg.CustomResourcesURLs = make(map[string]string, len(crs))
+	for _, cr := range crs {
+		cfg.CustomResourcesURLs[cr.Name()] = s3.Location(bucket, cr.ArtifactPath())
+	}
+	return nil
+}
+
 // Env is for providing all the values to set up an
 // environment stack and to interpret the outputs from it.
 type Env struct {
@@ -103,7 +120,6 @@ type Env struct {
 	lastForceUpdateID string
 	prevParams        []*cloudformation.Parameter
 	parser            envReadParser
-	localCRs          []uploadable // Custom resources that have not been uploaded yet.
 }
 
 // NewEnvStackConfig returns a CloudFormation stack configuration for deploying a brand-new environment.
@@ -112,10 +128,12 @@ func NewEnvStackConfig(input *EnvConfig) (*Env, error) {
 	if err != nil {
 		return nil, fmt.Errorf("environment custom resources: %w", err)
 	}
+	if err := input.loadCustomResourceURLs(uploadableCRs(crs).convert()); err != nil {
+		return nil, err
+	}
 	return &Env{
-		in:       input,
-		parser:   fs,
-		localCRs: uploadableCRs(crs).convert(),
+		in:     input,
+		parser: fs,
 	}, nil
 }
 
@@ -125,12 +143,14 @@ func NewEnvConfigFromExistingStack(in *EnvConfig, lastForceUpdateID string, prev
 	if err != nil {
 		return nil, fmt.Errorf("environment custom resources: %w", err)
 	}
+	if err := in.loadCustomResourceURLs(uploadableCRs(crs).convert()); err != nil {
+		return nil, err
+	}
 	return &Env{
 		in:                in,
 		prevParams:        prevParams,
 		lastForceUpdateID: lastForceUpdateID,
 		parser:            fs,
-		localCRs:          uploadableCRs(crs).convert(),
 	}, nil
 }
 
