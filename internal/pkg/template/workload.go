@@ -264,8 +264,8 @@ type importableValue interface {
 }
 
 // IsHTTPS returns true if the target container's port is 443.
-func (alb ALBListenerRule) IsHTTPS() bool {
-	return alb.TargetPort == "443"
+func (lr ALBListenerRule) IsHTTPS() bool {
+	return lr.TargetPort == "443"
 }
 
 // Variable represents the value of an environment variable.
@@ -840,13 +840,13 @@ type WorkloadOpts struct {
 // or an empty string if it shouldn't be configured, defaulting to the
 // target protocol. (which is what happens, even if it isn't documented as such :))
 // https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-elasticloadbalancingv2-targetgroup.html#cfn-elasticloadbalancingv2-targetgroup-healthcheckprotocol
-func (alb ALBListenerRule) HealthCheckProtocol() string {
+func (lr ALBListenerRule) HealthCheckProtocol() string {
 	switch {
-	case alb.HTTPHealthCheck.Port == "443":
+	case lr.HTTPHealthCheck.Port == "443":
 		return "HTTPS"
-	case alb.IsHTTPS() && alb.HTTPHealthCheck.Port == "":
+	case lr.IsHTTPS() && lr.HTTPHealthCheck.Port == "":
 		return "HTTPS"
-	case alb.IsHTTPS() && alb.HTTPHealthCheck.Port != "443":
+	case lr.IsHTTPS() && lr.HTTPHealthCheck.Port != "443":
 		// for backwards compatability, only set HTTP if target
 		// container is https but the specified health check port is not
 		return "HTTP"

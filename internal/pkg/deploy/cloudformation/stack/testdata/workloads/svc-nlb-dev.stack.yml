@@ -51,7 +51,6 @@ Parameters:
     Default: false
 Conditions:
   IsGovCloud: !Equals [!Ref "AWS::Partition", "aws-us-gov"]
-  IsDefaultRootPath: !Equals [!Ref RulePath, "/"]
   HasAssociatedDomain: !Equals [!Ref DNSDelegated, true]
   HasAddons: !Not [!Equals [!Ref AddonsTemplateURL, ""]]
   HasEnvFile: !Not [!Equals [!Ref EnvFileARN, ""]]

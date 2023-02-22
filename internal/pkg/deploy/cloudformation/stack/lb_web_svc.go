@@ -241,7 +241,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 			Name: targetContainer,
 		},
 		HTTPHealthCheck: convertHTTPHealthCheck(&s.manifest.RoutingRule.HealthCheck),
-		ALB:             albConfig.settings,
+		ALB:             albConfig,
 
 		// NLB configs.
 		AppDNSName:           nlbConfig.appDNSName,

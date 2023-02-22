@@ -416,10 +416,6 @@ type networkLoadBalancerConfig struct {
 	appDNSName           *string
 }
 
-type applicationLoadBalancerConfig struct {
-	settings *template.ALBListener
-}
-
 func convertELBAccessLogsConfig(mft *manifest.Environment) *template.ELBAccessLogs {
 	elbAccessLogsArgs, isELBAccessLogsSet := mft.ELBAccessLogs()
 	if !isELBAccessLogsSet {
@@ -485,103 +481,128 @@ func convertEnvSecurityGroupCfg(mft *manifest.Environment) (*template.SecurityGr
 	}, nil
 }
 
-func (s *LoadBalancedWebService) convertApplicationLoadBalancer() (applicationLoadBalancerConfig, error) {
+func (s *LoadBalancedWebService) convertApplicationLoadBalancer() (*template.ALBListener, error) {
 	albConfig := s.manifest.RoutingRule
 	if albConfig.Disabled() || albConfig.IsEmpty() {
-		return applicationLoadBalancerConfig{}, nil
+		return nil, nil
 	}
-
-	var aliases []string
-	var err error
-	if s.httpsEnabled {
-		aliases, err = convertAlias(albConfig.Alias)
-		if err != nil {
-			return applicationLoadBalancerConfig{}, err
-		}
+	var rules []template.ALBListenerRule
+	// build listener rule config from primary rule config from manifest.
+	rule, err := RoutingRuleConfigOrBoolConverter{
+		rule:         albConfig,
+		manifest:     s.manifest,
+		httpsEnabled: s.httpsEnabled,
+	}.convert()
+	if err != nil {
+		return nil, nil
 	}
-
 	aliasesFor, err := convertHostedZone(albConfig.Alias, albConfig.HostedZone)
 	if err != nil {
-		return applicationLoadBalancerConfig{}, fmt.Errorf(`convert "http.alias" to string slice: %w`, err)
+		return nil, fmt.Errorf(`convert "http.alias" to string slice: %w`, err)
 	}
+	rules = append(rules, *rule)
 
-	targetContainer, targetPort, err := s.manifest.HTTPLoadBalancerTarget()
-	if err != nil {
-		return applicationLoadBalancerConfig{}, err
-	}
+	// TODO: @pbhingre build listener rule config from additional rules from manifest.
 
 	httpRedirect := true
 	if albConfig.RedirectToHTTPS != nil {
 		httpRedirect = aws.BoolValue(albConfig.RedirectToHTTPS)
 	}
 
-	config := applicationLoadBalancerConfig{
-		settings: &template.ALBListener{
-			Rules: []template.ALBListenerRule{
-				{
-					Path:             aws.StringValue(albConfig.Path),
-					TargetContainer:  targetContainer,
-					TargetPort:       targetPort,
-					Aliases:          aliases,
-					HTTPHealthCheck:  convertHTTPHealthCheck(&albConfig.HealthCheck),
-					Stickiness:       strconv.FormatBool(aws.BoolValue(albConfig.Stickiness)),
-					AllowedSourceIps: convertAllowedSourceIPs(albConfig.AllowedSourceIps),
-					HTTPVersion:      aws.StringValue(convertHTTPVersion(albConfig.ProtocolVersion)),
-				},
-			},
-			RedirectToHTTPS:   httpRedirect,
-			IsHTTPS:           s.httpsEnabled,
-			HostedZoneAliases: aliasesFor,
-		},
+	config := &template.ALBListener{
+		Rules:             rules,
+		RedirectToHTTPS:   httpRedirect,
+		IsHTTPS:           s.httpsEnabled,
+		HostedZoneAliases: aliasesFor,
 	}
 
 	return config, nil
 }
 
-func (s *BackendService) convertApplicationLoadBalancer() (applicationLoadBalancerConfig, error) {
+func (s *BackendService) convertApplicationLoadBalancer() (*template.ALBListener, error) {
 	albConfig := s.manifest.RoutingRule
 	if albConfig.IsEmpty() {
-		return applicationLoadBalancerConfig{}, nil
+		return nil, nil
+	}
+	var rules []template.ALBListenerRule
+	// build listener rule config from primary rule config from manifest.
+	rule, err := routingRuleConfigConverter{
+		rule:         albConfig,
+		manifest:     s.manifest,
+		httpsEnabled: s.httpsEnabled,
+	}.convert()
+	if err != nil {
+		return nil, nil
+	}
+	rules = append(rules, *rule)
+	hostedZoneAliases, err := convertHostedZone(albConfig.Alias, albConfig.HostedZone)
+	if err != nil {
+		return nil, fmt.Errorf(`convert "http.alias" to string slice: %w`, err)
 	}
 
+	// TODO: @pbhingre build listener rule config from additional rules from manifest.
+
+	config := &template.ALBListener{
+		Rules:             rules,
+		RedirectToHTTPS:   s.httpsEnabled,
+		IsHTTPS:           s.httpsEnabled,
+		MainContainerPort: s.manifest.MainContainerPort(),
+		HostedZoneAliases: hostedZoneAliases,
+	}
+
+	return config, nil
+}
+
+type loadBalancerTargeter interface {
+	HTTPLoadBalancerTarget() (string, string, error)
+	MainContainerPort() string
+}
+
+type routingRuleConfigConverter struct {
+	rule         manifest.RoutingRuleConfiguration
+	manifest     loadBalancerTargeter
+	httpsEnabled bool
+}
+
+// RoutingRuleConfigOrBoolConverter holds routing rule config for LBWS.
+type RoutingRuleConfigOrBoolConverter struct {
+	rule         manifest.RoutingRuleConfigOrBool
+	manifest     loadBalancerTargeter
+	httpsEnabled bool
+}
+
+func (conv RoutingRuleConfigOrBoolConverter) convert() (*template.ALBListenerRule, error) {
+	return routingRuleConfigConverter{
+		rule:         conv.rule.RoutingRuleConfiguration,
+		manifest:     conv.manifest,
+		httpsEnabled: conv.httpsEnabled,
+	}.convert()
+}
+
+func (conv routingRuleConfigConverter) convert() (*template.ALBListenerRule, error) {
 	var aliases []string
 	var err error
-	if s.httpsEnabled {
-		aliases, err = convertAlias(albConfig.Alias)
+	if conv.httpsEnabled {
+		aliases, err = convertAlias(conv.rule.Alias)
 		if err != nil {
-			return applicationLoadBalancerConfig{}, err
+			return nil, err
 		}
 	}
 
-	hostedZoneAliases, err := convertHostedZone(albConfig.Alias, albConfig.HostedZone)
+	targetContainer, targetPort, err := conv.manifest.HTTPLoadBalancerTarget()
 	if err != nil {
-		return applicationLoadBalancerConfig{}, fmt.Errorf(`convert "http.alias" to string slice: %w`, err)
+		return nil, err
 	}
 
-	targetContainer, targetPort, err := s.manifest.HTTPLoadBalancerTarget()
-	if err != nil {
-		return applicationLoadBalancerConfig{}, err
-	}
-
-	config := applicationLoadBalancerConfig{
-		settings: &template.ALBListener{
-			Rules: []template.ALBListenerRule{
-				{
-					Path:             aws.StringValue(albConfig.Path),
-					TargetContainer:  targetContainer,
-					TargetPort:       targetPort,
-					Aliases:          aliases,
-					HTTPHealthCheck:  convertHTTPHealthCheck(&albConfig.HealthCheck),
-					AllowedSourceIps: convertAllowedSourceIPs(albConfig.AllowedSourceIps),
-					Stickiness:       strconv.FormatBool(aws.BoolValue(albConfig.Stickiness)),
-					HTTPVersion:      aws.StringValue(convertHTTPVersion(albConfig.ProtocolVersion)),
-				},
-			},
-			RedirectToHTTPS:   s.httpsEnabled,
-			IsHTTPS:           s.httpsEnabled,
-			MainContainerPort: s.manifest.MainContainerPort(),
-			HostedZoneAliases: hostedZoneAliases,
-		},
+	config := &template.ALBListenerRule{
+		Path:             aws.StringValue(conv.rule.Path),
+		TargetContainer:  targetContainer,
+		TargetPort:       targetPort,
+		Aliases:          aliases,
+		HTTPHealthCheck:  convertHTTPHealthCheck(&conv.rule.HealthCheck),
+		AllowedSourceIps: convertAllowedSourceIPs(conv.rule.AllowedSourceIps),
+		Stickiness:       strconv.FormatBool(aws.BoolValue(conv.rule.Stickiness)),
+		HTTPVersion:      aws.StringValue(convertHTTPVersion(conv.rule.ProtocolVersion)),
 	}
 	return config, nil
 }

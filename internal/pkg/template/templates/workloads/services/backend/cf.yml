@@ -58,10 +58,6 @@ Conditions:
     !Not [!Equals [!Ref EnvFileARN, ""]]
   ExposePort:
     !Not [!Equals [!Ref TargetPort, -1]]
-  {{- if .ALBEnabled}}
-  IsDefaultRootPath:
-    !Equals [!Ref RulePath, "/"]
-  {{- end}}
 Resources:
 {{include "loggroup" . | indent 2}}
 

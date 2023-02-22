@@ -61,10 +61,6 @@ Parameters:
 Conditions:
   IsGovCloud:
     !Equals [!Ref "AWS::Partition", "aws-us-gov"]
-{{- if .ALBEnabled}}
-  IsDefaultRootPath:
-    !Equals [!Ref RulePath, "/"]
-{{- end}}
   HasAssociatedDomain:
     !Equals [!Ref DNSDelegated, true]
   HasAddons: # If a bucket URL is specified, that means the template exists.
