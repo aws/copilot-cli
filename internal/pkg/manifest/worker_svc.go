@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/imdario/mergo"
 	"gopkg.in/yaml.v3"
@@ -275,9 +276,11 @@ func (s *WorkerService) BuildRequired() (bool, error) {
 	return requiresBuild(s.ImageConfig.Image)
 }
 
-// BuildArgs returns a docker.BuildArguments object for the service given a workspace root directory
-func (s *WorkerService) BuildArgs(wsRoot string) *DockerBuildArgs {
-	return s.ImageConfig.Image.BuildConfig(wsRoot)
+// BuildArgs returns a docker.BuildArguments object for the service given a context directory
+func (s *WorkerService) BuildArgs(contextDir string) map[string]*DockerBuildArgs {
+	buildArgs := make(map[string]*DockerBuildArgs, len(s.Sidecars)+1)
+	buildArgs[aws.StringValue(s.Name)] = s.ImageConfig.Image.BuildConfig(contextDir)
+	return buildArgs
 }
 
 // EnvFile returns the location of the env file against the ws root directory.
@@ -337,7 +340,7 @@ func (s *WorkerService) requiredEnvironmentFeatures() []string {
 func newDefaultWorkerService() *WorkerService {
 	return &WorkerService{
 		Workload: Workload{
-			Type: aws.String(WorkerServiceType),
+			Type: aws.String(manifestinfo.WorkerServiceType),
 		},
 		WorkerServiceConfig: WorkerServiceConfig{
 			ImageConfig: ImageWithHealthcheck{},
@@ -348,7 +351,7 @@ func newDefaultWorkerService() *WorkerService {
 				Count: Count{
 					Value: aws.Int(1),
 					AdvancedCount: AdvancedCount{ // Leave advanced count empty while passing down the type of the workload.
-						workloadType: WorkerServiceType,
+						workloadType: manifestinfo.WorkerServiceType,
 					},
 				},
 				ExecuteCommand: ExecuteCommand{

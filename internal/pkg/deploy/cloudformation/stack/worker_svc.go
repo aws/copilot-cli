@@ -7,18 +7,16 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/template/override"
 )
-
-type workerSvcReadParser interface {
-	template.ReadParser
-	ParseWorkerService(template.WorkloadOpts) (*template.Content, error)
-}
 
 // WorkerService represents the configuration needed to create a CloudFormation stack from a worker service manifest.
 type WorkerService struct {
@@ -41,7 +39,12 @@ type WorkerServiceConfig struct {
 
 // NewWorkerService creates a new WorkerService stack from a manifest file.
 func NewWorkerService(cfg WorkerServiceConfig) (*WorkerService, error) {
-	parser := template.New()
+	crs, err := customresource.Worker(fs)
+	if err != nil {
+		return nil, fmt.Errorf("worker service custom resources: %w", err)
+	}
+	cfg.RuntimeConfig.loadCustomResourceURLs(cfg.ArtifactBucketName, uploadableCRs(crs).convert())
+
 	return &WorkerService{
 		ecsWkld: &ecsWkld{
 			wkld: &wkld{
@@ -53,7 +56,7 @@ func NewWorkerService(cfg WorkerServiceConfig) (*WorkerService, error) {
 				rc:                 cfg.RuntimeConfig,
 				image:              cfg.Manifest.ImageConfig.Image,
 				rawManifest:        cfg.RawManifest,
-				parser:             parser,
+				parser:             fs,
 				addons:             cfg.Addons,
 			},
 			logRetention:        cfg.Manifest.Logging.Retention,
@@ -61,7 +64,7 @@ func NewWorkerService(cfg WorkerServiceConfig) (*WorkerService, error) {
 			taskDefOverrideFunc: override.CloudFormationTemplate,
 		},
 		manifest: cfg.Manifest,
-		parser:   parser,
+		parser:   fs,
 	}, nil
 }
 
@@ -138,7 +141,7 @@ func (s *WorkerService) Template() (string, error) {
 		CapacityProviders:        capacityProviders,
 		DesiredCountOnSpot:       desiredCountOnSpot,
 		ExecuteCommand:           convertExecuteCommand(&s.manifest.ExecuteCommand),
-		WorkloadType:             manifest.WorkerServiceType,
+		WorkloadType:             manifestinfo.WorkerServiceType,
 		HealthCheck:              convertContainerHealthCheck(s.manifest.WorkerServiceConfig.ImageConfig.HealthCheck),
 		LogConfig:                convertLogging(s.manifest.Logging),
 		DockerLabels:             s.manifest.ImageConfig.Image.DockerLabels,

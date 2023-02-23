@@ -7,16 +7,17 @@ import (
 	"encoding"
 	"errors"
 	"fmt"
+	"strconv"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/dustin/go-humanize/english"
 
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/config"
-	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
@@ -27,13 +28,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
-
-const (
-	lifecycleEnvironmentLevel = "environment"
-	lifecycleWorkloadLevel    = "workload"
-)
-
-var validLifecycleOptions = []string{lifecycleWorkloadLevel, lifecycleEnvironmentLevel}
 
 const (
 	dynamoDBStorageType = "DynamoDB"
@@ -60,10 +54,19 @@ const (
 	rdsFriendlyText           = "Database Cluster"
 )
 
+const (
+	lifecycleEnvironmentLevel = "environment"
+	lifecycleWorkloadLevel    = "workload"
+
+	lifecycleEnvironmentFriendlyText = "No, the storage should be created and deleted at the environment level"
+	fmtLifecycleWorkloadFriendlyText = "Yes, the storage should be created and deleted at the same time as %s"
+)
+
+var validLifecycleOptions = []string{lifecycleWorkloadLevel, lifecycleEnvironmentLevel}
+
 // General-purpose prompts, collected for all storage resources.
 var (
-	fmtStorageInitTypePrompt = "What " + color.Emphasize("type") + " of storage would you like to associate with %s?"
-	storageInitTypeHelp      = `The type of storage you'd like to add to your workload. 
+	storageInitTypeHelp = `The type of storage you'd like to add to your workload.
 DynamoDB is a key-value and document database that delivers single-digit millisecond performance at any scale.
 S3 is a web object store built to store and retrieve any amount of data from anywhere on the Internet.
 Aurora Serverless is an on-demand autoscaling configuration for Amazon Aurora, a MySQL and PostgreSQL-compatible relational database.
@@ -73,6 +76,8 @@ Aurora Serverless is an on-demand autoscaling configuration for Amazon Aurora, a
 	storageInitNameHelp      = "The name of this storage resource. You can use the following characters: a-zA-Z0-9-_"
 
 	storageInitSvcPrompt = "Which " + color.Emphasize("workload") + " needs access to the storage?"
+
+	fmtStorageInitLifecyclePrompt = "Do you want the storage to be created and deleted with the %s service?"
 )
 
 // DDB-specific questions and help prompts.
@@ -125,8 +130,8 @@ const (
 
 	fmtRDSStorageNameDefault = "%s-cluster"
 
-	engineTypeMySQL      = "MySQL"
-	engineTypePostgreSQL = "PostgreSQL"
+	engineTypeMySQL      = addon.RDSEngineTypeMySQL
+	engineTypePostgreSQL = addon.RDSEngineTypePostgreSQL
 )
 
 var auroraServerlessVersions = []string{
@@ -139,11 +144,19 @@ var engineTypes = []string{
 	engineTypePostgreSQL,
 }
 
+const workloadTypeNonLocal = "Non Local"
+
+const (
+	blobDescriptionParameters = "parameters"
+	blobDescriptionTemplate   = "template"
+)
+
 type initStorageVars struct {
-	storageType  string
-	storageName  string
-	workloadName string
-	lifecycle    string
+	storageType    string
+	storageName    string
+	workloadName   string
+	lifecycle      string
+	addIngressFrom string
 
 	// Dynamo DB specific values collected via flags or prompts
 	partitionKey string
@@ -167,8 +180,9 @@ type initStorageOpts struct {
 	ws    wsReadWriter
 	store store
 
-	sel    wsSelector
-	prompt prompter
+	sel       wsSelector
+	configSel configSelector
+	prompt    prompter
 
 	// Cached data.
 	workloadType   string
@@ -194,11 +208,12 @@ func newStorageInitOpts(vars initStorageVars) (*initStorageOpts, error) {
 		initStorageVars: vars,
 		appName:         tryReadingAppName(),
 
-		fs:     fs,
-		store:  store,
-		ws:     ws,
-		sel:    selector.NewLocalWorkloadSelector(prompter, store, ws),
-		prompt: prompter,
+		fs:        fs,
+		store:     store,
+		ws:        ws,
+		sel:       selector.NewLocalWorkloadSelector(prompter, store, ws),
+		configSel: selector.NewConfigSelector(prompter, store),
+		prompt:    prompter,
 	}, nil
 }
 
@@ -207,8 +222,8 @@ func (o *initStorageOpts) Validate() error {
 	if o.appName == "" {
 		return errNoAppInWorkspace
 	}
-	if o.lifecycle != "" {
-		if err := o.validateStorageLifecycle(); err != nil {
+	if o.addIngressFrom != "" {
+		if err := o.validateAddIngressFrom(); err != nil {
 			return err
 		}
 	}
@@ -228,13 +243,28 @@ func (o *initStorageOpts) Validate() error {
 	return nil
 }
 
-func (o *initStorageOpts) validateStorageLifecycle() error {
-	for _, valid := range validLifecycleOptions {
-		if o.lifecycle == valid {
-			return nil
-		}
+func (o *initStorageOpts) validateAddIngressFrom() error {
+	if o.workloadName != "" {
+		return fmt.Errorf("--%s cannot be specified with --%s", workloadFlag, storageAddIngressFromFlag)
 	}
-	return fmt.Errorf("invalid lifecycle; must be one of %s", english.OxfordWordSeries(quoteStringSlice(validLifecycleOptions), "or"))
+	if o.lifecycle == lifecycleWorkloadLevel {
+		return fmt.Errorf("--%s cannot be %s when --%s is used", storageLifecycleFlag, lifecycleWorkloadLevel, storageAddIngressFromFlag)
+	}
+	if o.storageName == "" {
+		return fmt.Errorf("--%s is required when --%s is used", nameFlag, storageAddIngressFromFlag)
+	}
+	if o.storageType == "" {
+		return fmt.Errorf("--%s is required when --%s is used", storageTypeFlag, storageAddIngressFromFlag)
+	}
+	exist, err := o.ws.WorkloadExists(o.addIngressFrom)
+	if err != nil {
+		return fmt.Errorf("check if %s exists in the workspace: %w", o.addIngressFrom, err)
+	}
+	if !exist {
+		return fmt.Errorf("workload %s not found in the workspace", o.addIngressFrom)
+	}
+	return nil
+
 }
 
 func (o *initStorageOpts) validateServerlessVersion() error {
@@ -249,15 +279,23 @@ func (o *initStorageOpts) validateServerlessVersion() error {
 
 // Ask asks for fields that are required but not passed in.
 func (o *initStorageOpts) Ask() error {
-	if err := o.validateOrAskStorageWl(); err != nil {
-		return err
+	if o.addIngressFrom != "" {
+		return nil
 	}
 	if err := o.validateOrAskStorageType(); err != nil {
 		return err
 	}
-
+	if err := o.askWorkload(); err != nil {
+		return err
+	}
 	// Storage name needs to be asked after workload because for Aurora the default storage name uses the workload name.
 	if err := o.validateOrAskStorageName(); err != nil {
+		return err
+	}
+	if err := o.validateOrAskLifecycle(); err != nil {
+		return err
+	}
+	if err := o.validateWorkloadNameWithLifecycle(); err != nil {
 		return err
 	}
 	switch o.storageType {
@@ -304,8 +342,7 @@ func (o *initStorageOpts) validateOrAskStorageType() error {
 			Hint:         "SQL",
 		},
 	}
-	result, err := o.prompt.SelectOption(fmt.Sprintf(
-		fmtStorageInitTypePrompt, color.HighlightUserInput(o.workloadName)),
+	result, err := o.prompt.SelectOption(o.storageTypePrompt(),
 		storageInitTypeHelp,
 		options,
 		prompt.WithFinalMessage("Storage type:"))
@@ -314,6 +351,13 @@ func (o *initStorageOpts) validateOrAskStorageType() error {
 	}
 	o.storageType = result
 	return o.validateStorageType()
+}
+
+func (o *initStorageOpts) storageTypePrompt() string {
+	if o.workloadName == "" {
+		return "What " + color.Emphasize("type") + " of storage would you like to create?"
+	}
+	return fmt.Sprintf("What "+color.Emphasize("type")+" of storage would you like to associate with %s?", color.HighlightUserInput(o.workloadName))
 }
 
 func (o *initStorageOpts) validateStorageType() error {
@@ -325,7 +369,7 @@ func (o *initStorageOpts) validateStorageType() error {
 			log.Errorf(`Your %s needs to be connected to a VPC in order to use a %s resource.
 You can enable VPC connectivity by updating your manifest with:
 %s
-`, manifest.RequestDrivenWebServiceType, o.storageType, color.HighlightCodeBlock(`network:
+`, manifestinfo.RequestDrivenWebServiceType, o.storageType, color.HighlightCodeBlock(`network:
   vpc:
     placement: private`))
 		}
@@ -395,10 +439,22 @@ func (o *initStorageOpts) askStorageNameWithDefault(friendlyText, defaultName st
 	return nil
 }
 
-func (o *initStorageOpts) validateOrAskStorageWl() error {
+func (o *initStorageOpts) askWorkload() error {
 	if o.workloadName != "" {
-		return o.validateWorkloadName()
+		return nil
 	}
+	if o.lifecycle == lifecycleWorkloadLevel {
+		return o.askLocalWorkload()
+	}
+	workload, err := o.configSel.Workload(storageInitSvcPrompt, "", o.appName)
+	if err != nil {
+		return fmt.Errorf("select a workload from app %s: %w", o.appName, err)
+	}
+	o.workloadName = workload
+	return nil
+}
+
+func (o *initStorageOpts) askLocalWorkload() error {
 	workload, err := o.sel.Workload(storageInitSvcPrompt, "")
 	if err != nil {
 		return fmt.Errorf("retrieve local workload names: %w", err)
@@ -407,15 +463,92 @@ func (o *initStorageOpts) validateOrAskStorageWl() error {
 	return nil
 }
 
-func (o *initStorageOpts) validateWorkloadName() error {
-	exists, err := o.ws.WorkloadExists(o.workloadName)
+func (o *initStorageOpts) validateOrAskLifecycle() error {
+	if o.lifecycle != "" {
+		return o.validateStorageLifecycle()
+	}
+	_, err := o.ws.ReadFile(o.ws.WorkloadAddonFileAbsPath(o.workloadName, fmt.Sprintf("%s.yml", o.storageName)))
+	if err == nil {
+		o.lifecycle = lifecycleWorkloadLevel
+		log.Infof("%s %s %s\n",
+			color.Emphasize("Lifecycle:"),
+			"workload-level",
+			color.Faint.Sprintf("(found %s)", o.ws.WorkloadAddonFilePath(o.workloadName, fmt.Sprintf("%s.yml", o.storageName))),
+		)
+		return nil
+	}
+	if _, ok := err.(*workspace.ErrFileNotExists); !ok {
+		return fmt.Errorf("check if %s addon exists for %s in workspace: %w", o.storageName, o.workloadName, err)
+	}
+	_, err = o.ws.ReadFile(o.ws.EnvAddonFileAbsPath(fmt.Sprintf("%s.yml", o.storageName)))
+	if err == nil {
+		o.lifecycle = lifecycleEnvironmentLevel
+		log.Infof("%s %s %s\n",
+			color.Emphasize("Lifecycle:"),
+			"environment-level",
+			color.Faint.Sprintf("(found %s)", o.ws.EnvAddonFilePath(fmt.Sprintf("%s.yml", o.storageName))),
+		)
+		return nil
+	}
+	if _, ok := err.(*workspace.ErrFileNotExists); !ok {
+		return fmt.Errorf("check if %s exists as an environment addon in workspace: %w", o.storageName, err)
+	}
+	options := []prompt.Option{
+		{
+			Value:        lifecycleWorkloadLevel,
+			FriendlyText: fmt.Sprintf(fmtLifecycleWorkloadFriendlyText, color.HighlightUserInput(o.workloadName)),
+		},
+		{
+			Value:        lifecycleEnvironmentLevel,
+			FriendlyText: lifecycleEnvironmentFriendlyText,
+		},
+	}
+	lifecycle, err := o.prompt.SelectOption(
+		fmt.Sprintf(fmtStorageInitLifecyclePrompt, o.workloadName),
+		"",
+		options,
+		prompt.WithFinalMessage("Lifecycle: "))
 	if err != nil {
-		return fmt.Errorf("check if %s exists in the workspace: %w", o.workloadName, err)
+		return fmt.Errorf("ask for lifecycle: %w", err)
 	}
-	o.workloadExists = exists
-	if !exists {
-		return fmt.Errorf("workload %s not found in the workspace", o.workloadName)
+	o.lifecycle = lifecycle
+	return nil
+}
+
+func (o *initStorageOpts) validateStorageLifecycle() error {
+	for _, valid := range validLifecycleOptions {
+		if o.lifecycle == valid {
+			return nil
+		}
 	}
+	return fmt.Errorf("invalid lifecycle; must be one of %s", english.OxfordWordSeries(applyAll(validLifecycleOptions, strconv.Quote), "or"))
+}
+
+// validateWorkloadNameWithLifecycle requires the workload to be in the workspace if the storage lifecycle is on workload-level.
+// Otherwise, it only caches whether the workload is present.
+func (o *initStorageOpts) validateWorkloadNameWithLifecycle() error {
+	if o.lifecycle == lifecycleEnvironmentLevel {
+		hasEnv, err := o.ws.HasEnvironments()
+		if err != nil {
+			return fmt.Errorf("check if environments directory exists in the workspace: %w", err)
+		}
+		if !hasEnv {
+			return &errNoEnvironmentInWorkspace{}
+		}
+		return nil
+	}
+	if o.lifecycle == lifecycleWorkloadLevel {
+		exists, err := o.ws.WorkloadExists(o.workloadName)
+		if err != nil {
+			return fmt.Errorf("check if %s exists in the workspace: %w", o.workloadName, err)
+		}
+		if !exists {
+			return &errWorkloadNotInWorkspace{
+				workloadName: o.workloadName,
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -609,6 +742,10 @@ func (o *initStorageOpts) validateOrAskAuroraInitialDBName() error {
 
 // Execute deploys a new environment with CloudFormation and adds it to SSM.
 func (o *initStorageOpts) Execute() error {
+	o.consumeFlags()
+	if err := o.checkWorkloadExists(); err != nil {
+		return err
+	}
 	if err := o.readWorkloadType(); err != nil {
 		return err
 	}
@@ -618,24 +755,53 @@ func (o *initStorageOpts) Execute() error {
 	}
 	for _, addon := range addonBlobs {
 		path, err := o.ws.Write(addon.blob, addon.path)
-		if err != nil {
-			e, ok := err.(*workspace.ErrFileExists)
-			if !ok {
-				return err
-			}
-			return fmt.Errorf("addon file already exists: %w", e)
+		if err == nil {
+			log.Successf("Wrote CloudFormation %s at %s\n",
+				addon.description,
+				color.HighlightResource(displayPath(path)),
+			)
+			continue
 		}
-		path = displayPath(path)
-		log.Successf("Wrote CloudFormation %s at %s\n",
+		var errFileExists *workspace.ErrFileExists
+		if !errors.As(err, &errFileExists) {
+			return err
+		}
+		log.Successf("CloudFormation %s already exists at %s, skipping writing it.\n",
 			addon.description,
-			color.HighlightResource(path),
-		)
+			color.HighlightResource(displayPath(addon.path)))
+		if addon.description == blobDescriptionParameters {
+			log.Infoln(indentBy(color.Faint.Sprintf(addon.recommendedAction()), 2))
+		}
 	}
 	log.Infoln()
 	return nil
 }
 
+func (o *initStorageOpts) consumeFlags() {
+	if o.addIngressFrom == "" {
+		return
+	}
+	o.workloadName = o.addIngressFrom
+	o.lifecycle = lifecycleEnvironmentLevel
+	if o.storageType == rdsStorageType && o.rdsEngine == "" {
+		o.rdsEngine = addon.RDSEngineTypeMySQL
+	}
+}
+
+func (o *initStorageOpts) checkWorkloadExists() error {
+	exist, err := o.ws.WorkloadExists(o.workloadName)
+	if err != nil {
+		return fmt.Errorf("check if %s exists in the workspace: %w", o.workloadName, err)
+	}
+	o.workloadExists = exist
+	return nil
+}
+
 func (o *initStorageOpts) readWorkloadType() error {
+	if !o.workloadExists {
+		o.workloadType = workloadTypeNonLocal
+		return nil
+	}
 	mft, err := o.ws.ReadWorkloadManifest(o.workloadName)
 	if err != nil {
 		return fmt.Errorf("read manifest for %s: %w", o.workloadName, err)
@@ -652,6 +818,14 @@ type addonBlob struct {
 	path        string
 	description string
 	blob        encoding.BinaryMarshaler
+}
+
+func (b *addonBlob) recommendedAction() string {
+	data, err := b.blob.MarshalBinary()
+	if err != nil {
+		return "" // Best effort to read the content in order to make suggestions.
+	}
+	return fmt.Sprintf("Check that %s has the following snippet:\n%s", displayPath(b.path), color.HighlightCodeBlock(string(data)))
 }
 
 func (o *initStorageOpts) addonBlobs() ([]addonBlob, error) {
@@ -685,32 +859,36 @@ func (o *initStorageOpts) wkldDDBAddonBlobs() ([]addonBlob, error) {
 	return []addonBlob{
 		{
 			path:        o.ws.WorkloadAddonFilePath(o.workloadName, fmt.Sprintf("%s.yml", o.storageName)),
-			description: "template",
+			description: blobDescriptionTemplate,
 			blob:        addon.WorkloadDDBTemplate(props),
 		},
 	}, nil
 }
 
 func (o *initStorageOpts) envDDBAddonBlobs() ([]addonBlob, error) {
+	ingressBlob := addonBlob{
+		path:        o.ws.WorkloadAddonFilePath(o.workloadName, fmt.Sprintf("%s-access-policy.yml", o.storageName)),
+		description: blobDescriptionTemplate,
+		blob: addon.EnvDDBAccessPolicyTemplate(&addon.AccessPolicyProps{
+			Name: o.storageName,
+		}),
+	}
+	if o.addIngressFrom != "" {
+		return []addonBlob{ingressBlob}, nil
+	}
 	props, err := o.ddbProps()
 	if err != nil {
 		return nil, err
 	}
-	blobs := []addonBlob{
-		{
-			path:        o.ws.EnvAddonFilePath(fmt.Sprintf("%s.yml", o.storageName)),
-			description: "template",
-			blob:        addon.EnvDDBTemplate(props),
-		},
+	tmplBlob := addonBlob{
+		path:        o.ws.EnvAddonFilePath(fmt.Sprintf("%s.yml", o.storageName)),
+		description: blobDescriptionTemplate,
+		blob:        addon.EnvDDBTemplate(props),
 	}
 	if !o.workloadExists {
-		return blobs, nil
+		return []addonBlob{tmplBlob}, nil
 	}
-	return append(blobs, addonBlob{
-		path:        o.ws.WorkloadAddonFilePath(o.workloadName, fmt.Sprintf("%s-access-policy.yml", o.storageName)),
-		description: "template",
-		blob:        addon.EnvDDBAccessPolicyTemplate(props),
-	}), nil
+	return []addonBlob{tmplBlob, ingressBlob}, nil
 }
 
 func (o *initStorageOpts) ddbProps() (*addon.DynamoDBProps, error) {
@@ -742,30 +920,32 @@ func (o *initStorageOpts) wkldS3AddonBlobs() ([]addonBlob, error) {
 	return []addonBlob{
 		{
 			path:        o.ws.WorkloadAddonFilePath(o.workloadName, fmt.Sprintf("%s.yml", o.storageName)),
-			description: "template",
+			description: blobDescriptionTemplate,
 			blob:        addon.WorkloadS3Template(o.s3Props()),
 		},
 	}, nil
 }
 
 func (o *initStorageOpts) envS3AddonBlobs() ([]addonBlob, error) {
-	props := o.s3Props()
-	blobs := []addonBlob{
-		{
-			path:        o.ws.EnvAddonFilePath(fmt.Sprintf("%s.yml", o.storageName)),
-			description: "template",
-			blob:        addon.EnvS3Template(props),
-		},
+	ingressBlob := addonBlob{
+		path:        o.ws.WorkloadAddonFilePath(o.workloadName, fmt.Sprintf("%s-access-policy.yml", o.storageName)),
+		description: blobDescriptionTemplate,
+		blob: addon.EnvS3AccessPolicyTemplate(&addon.AccessPolicyProps{
+			Name: o.storageName,
+		}),
+	}
+	if o.addIngressFrom != "" {
+		return []addonBlob{ingressBlob}, nil
+	}
+	tmplBlob := addonBlob{
+		path:        o.ws.EnvAddonFilePath(fmt.Sprintf("%s.yml", o.storageName)),
+		description: blobDescriptionTemplate,
+		blob:        addon.EnvS3Template(o.s3Props()),
 	}
 	if !o.workloadExists {
-		return blobs, nil
-
+		return []addonBlob{tmplBlob}, nil
 	}
-	return append(blobs, addonBlob{
-		path:        o.ws.WorkloadAddonFilePath(o.workloadName, fmt.Sprintf("%s-access-policy.yml", o.storageName)),
-		description: "template",
-		blob:        addon.EnvS3AccessPolicyTemplate(props),
-	}), nil
+	return []addonBlob{tmplBlob, ingressBlob}, nil
 }
 
 func (o *initStorageOpts) s3Props() *addon.S3Props {
@@ -781,87 +961,106 @@ func (o *initStorageOpts) wkldRDSAddonBlobs() ([]addonBlob, error) {
 	if err != nil {
 		return nil, err
 	}
-	var blobs []addonBlob
 	var tmplBlob encoding.BinaryMarshaler
-	switch v := o.auroraServerlessVersion; v {
-	case auroraServerlessVersionV1:
+	switch {
+	case o.auroraServerlessVersion == auroraServerlessVersionV1 && o.workloadType == manifestinfo.RequestDrivenWebServiceType:
+		tmplBlob = addon.RDWSServerlessV1Template(props)
+	case o.auroraServerlessVersion == auroraServerlessVersionV1 && o.workloadType != manifestinfo.RequestDrivenWebServiceType:
 		tmplBlob = addon.WorkloadServerlessV1Template(props)
-	case auroraServerlessVersionV2:
+	case o.auroraServerlessVersion == auroraServerlessVersionV2 && o.workloadType == manifestinfo.RequestDrivenWebServiceType:
+		tmplBlob = addon.RDWSServerlessV2Template(props)
+	case o.auroraServerlessVersion == auroraServerlessVersionV2 && o.workloadType != manifestinfo.RequestDrivenWebServiceType:
 		tmplBlob = addon.WorkloadServerlessV2Template(props)
 	default:
-		return nil, fmt.Errorf("unknown Aurora serverless version %q", v)
+		return nil, fmt.Errorf("unknown combination of serverless version %q and workload type %q", o.auroraServerlessVersion, o.workloadType)
 	}
-	blobs = append(blobs, addonBlob{
+	blobs := []addonBlob{{
 		path:        o.ws.WorkloadAddonFilePath(o.workloadName, fmt.Sprintf("%s.yml", o.storageName)),
-		description: "template",
+		description: blobDescriptionTemplate,
 		blob:        tmplBlob,
-	})
-	if o.workloadType != manifest.RequestDrivenWebServiceType {
+	}}
+	if o.workloadType != manifestinfo.RequestDrivenWebServiceType {
 		return blobs, nil
 	}
 	return append(blobs, addonBlob{
-		path:        o.ws.WorkloadAddonFilePath(o.workloadName, "addons.parameters.yml"),
-		description: "parameters",
+		path:        o.ws.WorkloadAddonFilePath(o.workloadName, workspace.AddonsParametersFileName),
+		description: blobDescriptionParameters,
 		blob:        addon.RDWSParamsForRDS(),
 	}), nil
 }
 
 func (o *initStorageOpts) envRDSAddonBlobs() ([]addonBlob, error) {
+	if o.workloadType == manifestinfo.RequestDrivenWebServiceType {
+		return o.envRDSForRDWSAddonBlobs()
+	}
+	if o.addIngressFrom != "" {
+		return nil, nil
+	}
 	props, err := o.rdsProps()
 	if err != nil {
 		return nil, err
 	}
-	blobs := []addonBlob{
-		{
-			path:        o.ws.EnvAddonFilePath(fmt.Sprintf("%s.yml", o.storageName)),
-			description: "template",
-			blob:        addon.EnvServerlessTemplate(props),
-		},
-		{
-			path:        o.ws.EnvAddonFilePath("addons.parameters.yml"),
-			description: "parameters",
-			blob:        addon.EnvParamsForRDS(),
-		},
+	tmplBlob := addonBlob{
+		path:        o.ws.EnvAddonFilePath(fmt.Sprintf("%s.yml", o.storageName)),
+		description: blobDescriptionTemplate,
+		blob:        addon.EnvServerlessTemplate(props),
 	}
-	if o.workloadType != manifest.RequestDrivenWebServiceType || !o.workloadExists {
-		return blobs, nil
+	paramBlob := addonBlob{
+		path:        o.ws.EnvAddonFilePath(workspace.AddonsParametersFileName),
+		description: blobDescriptionParameters,
+		blob:        addon.EnvParamsForRDS(),
 	}
-	return append(blobs,
-		addonBlob{
-			path:        o.ws.WorkloadAddonFilePath(o.workloadName, fmt.Sprintf("%s-ingress.yml", o.storageName)),
-			description: "template",
-			blob:        addon.EnvServerlessRDWSIngressTemplate(props),
-		},
-		addonBlob{
-			path:        o.ws.WorkloadAddonFilePath(o.workloadName, "addons.parameters.yml"),
-			description: "parameters",
-			blob:        addon.RDWSParamsForEnvRDS(),
-		},
-	), nil
+	return []addonBlob{tmplBlob, paramBlob}, nil
+}
+
+func (o *initStorageOpts) envRDSForRDWSAddonBlobs() ([]addonBlob, error) {
+	rdwsIngressTmplBlob := addonBlob{
+		path:        o.ws.WorkloadAddonFilePath(o.workloadName, fmt.Sprintf("%s-ingress.yml", o.storageName)),
+		description: blobDescriptionTemplate,
+		blob: addon.EnvServerlessRDWSIngressTemplate(addon.RDSIngressProps{
+			ClusterName: o.storageName,
+			Engine:      o.rdsEngine,
+		}),
+	}
+	rdwsIngressParamBlob := addonBlob{
+		path:        o.ws.WorkloadAddonFilePath(o.workloadName, workspace.AddonsParametersFileName),
+		description: blobDescriptionParameters,
+		blob:        addon.RDWSParamsForEnvRDS(),
+	}
+	if o.addIngressFrom != "" {
+		return []addonBlob{rdwsIngressTmplBlob, rdwsIngressParamBlob}, nil
+	}
+	props, err := o.rdsProps()
+	if err != nil {
+		return nil, err
+	}
+	tmplBlob := addonBlob{
+		path:        o.ws.EnvAddonFilePath(fmt.Sprintf("%s.yml", o.storageName)),
+		description: blobDescriptionTemplate,
+		blob:        addon.EnvServerlessForRDWSTemplate(props),
+	}
+	paramBlob := addonBlob{
+		path:        o.ws.EnvAddonFilePath(workspace.AddonsParametersFileName),
+		description: blobDescriptionParameters,
+		blob:        addon.EnvParamsForRDS(),
+	}
+	if o.workloadExists {
+		return []addonBlob{tmplBlob, paramBlob, rdwsIngressTmplBlob, rdwsIngressParamBlob}, nil
+	}
+	return []addonBlob{tmplBlob, paramBlob}, nil
 }
 
 func (o *initStorageOpts) rdsProps() (addon.RDSProps, error) {
-	var engine string
-	switch o.rdsEngine {
-	case engineTypeMySQL:
-		engine = addon.RDSEngineTypeMySQL
-	case engineTypePostgreSQL:
-		engine = addon.RDSEngineTypePostgreSQL
-	default:
-		return addon.RDSProps{}, errors.New("unknown engine type")
-	}
-
 	envs, err := o.environmentNames()
 	if err != nil {
 		return addon.RDSProps{}, err
 	}
 	return addon.RDSProps{
 		ClusterName:    o.storageName,
-		Engine:         engine,
+		Engine:         o.rdsEngine,
 		InitialDBName:  o.rdsInitialDBName,
 		ParameterGroup: o.rdsParameterGroup,
 		Envs:           envs,
-		WorkloadType:   o.workloadType,
 	}, nil
 }
 
@@ -879,6 +1078,16 @@ func (o *initStorageOpts) environmentNames() ([]string, error) {
 
 // RecommendActions returns follow-up actions the user can take after successfully executing the command.
 func (o *initStorageOpts) RecommendActions() error {
+	switch o.lifecycle {
+	case lifecycleWorkloadLevel:
+		logRecommendedActions(o.actionsForWorkloadStorage())
+	case lifecycleEnvironmentLevel:
+		logRecommendedActions(o.actionsForEnvStorage())
+	}
+	return nil
+}
+
+func (o *initStorageOpts) actionsForWorkloadStorage() []string {
 	var (
 		retrieveEnvVarCode string
 		newVar             string
@@ -890,7 +1099,7 @@ func (o *initStorageOpts) RecommendActions() error {
 	case rdsStorageType:
 		newVar = template.ToSnakeCaseFunc(template.EnvVarSecretFunc(o.storageName))
 		retrieveEnvVarCode = fmt.Sprintf("const {username, host, dbname, password, port} = JSON.parse(process.env.%s)", newVar)
-		if o.workloadType == manifest.RequestDrivenWebServiceType {
+		if o.workloadType == manifestinfo.RequestDrivenWebServiceType {
 			newVar = fmt.Sprintf("%s_ARN", newVar)
 			retrieveEnvVarCode = fmt.Sprintf(`const AWS = require('aws-sdk');
 const client = new AWS.SecretsManager({
@@ -911,11 +1120,90 @@ For example, in JavaScript you can write:
 
 	deployCmd := fmt.Sprintf("copilot deploy --name %s", o.workloadName)
 	actionDeploy := fmt.Sprintf("Run %s to deploy your storage resources.", color.HighlightCode(deployCmd))
-	logRecommendedActions([]string{
+	return []string{
 		actionRetrieveEnvVar,
 		actionDeploy,
-	})
+	}
+}
+
+func (o *initStorageOpts) actionsForEnvStorage() []string {
+	envDeployAction := fmt.Sprintf("Run %s to deploy your environment storage resources.", color.HighlightCode("copilot env deploy"))
+	svcMftAction := fmt.Sprintf("Update the manifest for your %q workload:\n%s", o.workloadName, color.HighlightCodeBlock(o.manifestSuggestion()))
+	svcDeployAction := fmt.Sprintf("Run %s to deploy the workload so that %s has access to %s storage.",
+		color.HighlightCode(fmt.Sprintf("copilot svc deploy --name %s", o.workloadName)),
+		color.HighlightUserInput(o.workloadName),
+		color.HighlightUserInput(o.storageName))
+	addIngressAction := fmt.Sprintf("From the workspace where %s is, run:\n%s",
+		color.HighlightUserInput(o.workloadName),
+		color.HighlightCodeBlock(o.addIngressSuggestion()))
+	if envAndWkldWritten := o.addIngressFrom == "" && o.workloadExists; envAndWkldWritten {
+		return []string{envDeployAction, svcMftAction, svcDeployAction}
+	}
+	if onlyEnv := !o.workloadExists; onlyEnv {
+		return []string{envDeployAction, addIngressAction}
+	}
+	if onlyWkld := o.addIngressFrom != ""; onlyWkld {
+		return []string{svcMftAction, svcDeployAction}
+	}
 	return nil
+}
+
+func (o *initStorageOpts) manifestSuggestion() string {
+	logicalIDSafeStorageName := template.StripNonAlphaNumFunc(o.storageName)
+	switch {
+	case o.storageType == s3StorageType:
+		return fmt.Sprintf(`variables:
+  DB_NAME:
+    from_cfn: ${COPILOT_APPLICATION_NAME}-${COPILOT_ENVIRONMENT_NAME}-%sBucket`, logicalIDSafeStorageName)
+	case o.storageType == dynamoDBStorageType:
+		return fmt.Sprintf(`variables:
+  DB_NAME:
+    from_cfn: ${COPILOT_APPLICATION_NAME}-${COPILOT_ENVIRONMENT_NAME}-%sTableName`, logicalIDSafeStorageName)
+	case o.storageType == rdsStorageType && o.workloadType == manifestinfo.RequestDrivenWebServiceType:
+		return fmt.Sprintf(`secrets:
+  DB_SECRET:
+    from_cfn: ${COPILOT_APPLICATION_NAME}-${COPILOT_ENVIRONMENT_NAME}-%sAuroraSecret`, logicalIDSafeStorageName)
+	case o.storageType == rdsStorageType && o.workloadType != manifestinfo.RequestDrivenWebServiceType:
+		return fmt.Sprintf(`network:
+  vpc:
+    security_groups:
+      - from_cfn: ${COPILOT_APPLICATION_NAME}-${COPILOT_ENVIRONMENT_NAME}-%sSecurityGroup
+secrets:
+  DB_SECRET:
+    from_cfn: ${COPILOT_APPLICATION_NAME}-${COPILOT_ENVIRONMENT_NAME}-%sAuroraSecret`,
+			logicalIDSafeStorageName, logicalIDSafeStorageName)
+	}
+	return ""
+}
+
+func (o *initStorageOpts) addIngressSuggestion() string {
+	return fmt.Sprintf(`copilot storage init -n %s \
+--storage-type %s \
+--add-ingress-from %s`, o.storageName, o.storageType, o.workloadName)
+}
+
+type errWorkloadNotInWorkspace struct {
+	workloadName string
+}
+
+func (e *errWorkloadNotInWorkspace) Error() string {
+	return fmt.Sprintf("workload %s not found in the workspace", e.workloadName)
+}
+
+// RecommendActions suggests actions to fix the error.
+func (e *errWorkloadNotInWorkspace) RecommendActions() string {
+	return fmt.Sprintf("Run %s in the workspace where %s is instead.", color.HighlightCode("copilot storage init"), color.HighlightUserInput(e.workloadName))
+}
+
+type errNoEnvironmentInWorkspace struct{}
+
+func (e *errNoEnvironmentInWorkspace) Error() string {
+	return "environments are not managed in the workspace"
+}
+
+// RecommendActions suggests actions to fix the error.
+func (e *errNoEnvironmentInWorkspace) RecommendActions() string {
+	return fmt.Sprintf("Run %s in the workspace where environments are managed instaed.", color.HighlightCode("copilot storage init"))
 }
 
 // buildStorageInitCmd builds the command and adds it to the CLI.
@@ -925,19 +1213,16 @@ func buildStorageInitCmd() *cobra.Command {
 		Use:   "init",
 		Short: "Creates a new AWS CloudFormation template for a storage resource.",
 		Long: `Creates a new AWS CloudFormation template for a storage resource.
-Storage resources are stored in the Copilot addons directory (e.g. ./copilot/frontend/addons) for a given workload and deployed to your environments when you run ` + color.HighlightCode("copilot deploy") + `. 
-Resource names are injected into your containers as environment variables for easy access.`,
+Storage resources are addons, either for a workload or the environments.`,
 		Example: `
   Create an S3 bucket named "my-bucket" attached to the "frontend" service.
-  /code $ copilot storage init -n my-bucket -t S3 -w frontend
-  Create a basic DynamoDB table named "my-table" attached to the "frontend" service with a sort key specified.
+  /code $ copilot storage init -n my-bucket -t S3 -w frontend -l workload
+  Create an environment S3 bucket fronted by the "api" service.
+  /code $ copilot storage init -n my-bucket -t S3 -w api -l environment
+  Create a DynamoDB table with a sort key.
   /code $ copilot storage init -n my-table -t DynamoDB -w frontend --partition-key Email:S --sort-key UserId:N --no-lsi
-  Create a DynamoDB table with multiple alternate sort keys.
-  /code $ copilot storage init -n my-table -t DynamoDB -w frontend --partition-key Email:S --sort-key UserId:N --lsi Points:N --lsi Goodness:N
-  Create an RDS Aurora Serverless v2 cluster using PostgreSQL as the database engine.
-  /code $ copilot storage init -n my-cluster -t Aurora -w frontend --engine PostgreSQL --initial-db testdb
-  Create an RDS Aurora Serverless v1 cluster using MySQL as the database engine.
-  /code $ copilot storage init -n my-cluster -t Aurora --serverless-version v1 -w frontend --engine MySQL --initial-db testdb`,
+  Create an RDS Aurora Serverless v2 cluster using PostgreSQL.
+  /code $ copilot storage init -n my-cluster -t Aurora -w frontend --engine PostgreSQL --initial-db testdb`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newStorageInitOpts(vars)
 			if err != nil {
@@ -949,7 +1234,8 @@ Resource names are injected into your containers as environment variables for ea
 	cmd.Flags().StringVarP(&vars.storageName, nameFlag, nameFlagShort, "", storageFlagDescription)
 	cmd.Flags().StringVarP(&vars.storageType, storageTypeFlag, typeFlagShort, "", storageTypeFlagDescription)
 	cmd.Flags().StringVarP(&vars.workloadName, workloadFlag, workloadFlagShort, "", storageWorkloadFlagDescription)
-	cmd.Flags().StringVarP(&vars.lifecycle, storageLifecycleFlag, "", lifecycleWorkloadLevel, storageLifecycleFlagDescription)
+	cmd.Flags().StringVarP(&vars.lifecycle, storageLifecycleFlag, storageLifecycleShort, "", storageLifecycleFlagDescription)
+	cmd.Flags().StringVarP(&vars.addIngressFrom, storageAddIngressFromFlag, "", "", storageAddIngressFromFlagDescription)
 
 	cmd.Flags().StringVar(&vars.partitionKey, storagePartitionKeyFlag, "", storagePartitionKeyFlagDescription)
 	cmd.Flags().StringVar(&vars.sortKey, storageSortKeyFlag, "", storageSortKeyFlagDescription)
@@ -962,30 +1248,36 @@ Resource names are injected into your containers as environment variables for ea
 	cmd.Flags().StringVar(&vars.rdsInitialDBName, storageRDSInitialDBFlag, "", storageRDSInitialDBFlagDescription)
 	cmd.Flags().StringVar(&vars.rdsParameterGroup, storageRDSParameterGroupFlag, "", storageRDSParameterGroupFlagDescription)
 
+	ddbFlags := []string{storagePartitionKeyFlag, storageSortKeyFlag, storageNoSortFlag, storageLSIConfigFlag, storageNoLSIFlag}
+	rdsFlags := []string{storageAuroraServerlessVersionFlag, storageRDSEngineFlag, storageRDSInitialDBFlag, storageRDSParameterGroupFlag}
+	for _, f := range append(ddbFlags, storageAuroraServerlessVersionFlag, storageRDSInitialDBFlag, storageRDSParameterGroupFlag) {
+		cmd.MarkFlagsMutuallyExclusive(storageAddIngressFromFlag, f)
+	}
 	requiredFlags := pflag.NewFlagSet("Required", pflag.ContinueOnError)
 	requiredFlags.AddFlag(cmd.Flags().Lookup(nameFlag))
 	requiredFlags.AddFlag(cmd.Flags().Lookup(storageTypeFlag))
 	requiredFlags.AddFlag(cmd.Flags().Lookup(workloadFlag))
+	requiredFlags.AddFlag(cmd.Flags().Lookup(storageLifecycleFlag))
 
-	ddbFlags := pflag.NewFlagSet("DynamoDB", pflag.ContinueOnError)
-	ddbFlags.AddFlag(cmd.Flags().Lookup(storagePartitionKeyFlag))
-	ddbFlags.AddFlag(cmd.Flags().Lookup(storageSortKeyFlag))
-	ddbFlags.AddFlag(cmd.Flags().Lookup(storageNoSortFlag))
-	ddbFlags.AddFlag(cmd.Flags().Lookup(storageLSIConfigFlag))
-	ddbFlags.AddFlag(cmd.Flags().Lookup(storageNoLSIFlag))
+	ddbFlagSet := pflag.NewFlagSet("DynamoDB", pflag.ContinueOnError)
+	for _, f := range ddbFlags {
+		ddbFlagSet.AddFlag(cmd.Flags().Lookup(f))
+	}
+	auroraFlagSet := pflag.NewFlagSet("Aurora Serverless", pflag.ContinueOnError)
+	for _, f := range rdsFlags {
+		auroraFlagSet.AddFlag(cmd.Flags().Lookup(f))
+	}
 
-	auroraFlags := pflag.NewFlagSet("Aurora Serverless", pflag.ContinueOnError)
-	auroraFlags.AddFlag(cmd.Flags().Lookup(storageAuroraServerlessVersionFlag))
-	auroraFlags.AddFlag(cmd.Flags().Lookup(storageRDSEngineFlag))
-	auroraFlags.AddFlag(cmd.Flags().Lookup(storageRDSInitialDBFlag))
-	auroraFlags.AddFlag(cmd.Flags().Lookup(storageRDSParameterGroupFlag))
+	optionalFlagSet := pflag.NewFlagSet("Optional", pflag.ContinueOnError)
+	optionalFlagSet.AddFlag(cmd.Flags().Lookup(storageAddIngressFromFlag))
 
 	cmd.Annotations = map[string]string{
 		// The order of the sections we want to display.
-		"sections":          `Required,DynamoDB,Aurora Serverless`,
+		"sections":          `Required,DynamoDB,Aurora Serverless,Optional`,
 		"Required":          requiredFlags.FlagUsages(),
-		"DynamoDB":          ddbFlags.FlagUsages(),
-		"Aurora Serverless": auroraFlags.FlagUsages(),
+		"DynamoDB":          ddbFlagSet.FlagUsages(),
+		"Aurora Serverless": auroraFlagSet.FlagUsages(),
+		"Optional":          optionalFlagSet.FlagUsages(),
 	}
 	cmd.SetUsageTemplate(`{{h1 "Usage"}}{{if .Runnable}}
   {{.UseLine}}{{end}}{{$annotations := .Annotations}}{{$sections := split .Annotations.sections ","}}{{if gt (len $sections) 0}}

@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
+
 	"github.com/aws/copilot-cli/internal/pkg/override"
 	"gopkg.in/yaml.v3"
 
@@ -155,13 +157,18 @@ func TestSvcDeployOpts_stackConfiguration_worker(t *testing.T) {
 					WorkerServiceConfig: manifest.WorkerServiceConfig{
 						ImageConfig: manifest.ImageWithHealthcheck{
 							Image: manifest.Image{
-								Build: manifest.BuildArgsOrString{BuildString: aws.String("/Dockerfile")},
+								ImageLocationOrBuild: manifest.ImageLocationOrBuild{
+									Build: manifest.BuildArgsOrString{BuildString: aws.String("/Dockerfile")},
+								},
 							},
 						},
 						Subscribe: manifest.SubscribeConfig{
 							Topics: mockTopics,
 						},
 					},
+				},
+				newStack: func() cloudformation.StackConfiguration {
+					return new(stubCloudFormationStack)
 				},
 			}
 
@@ -271,10 +278,15 @@ func mockWorkerServiceDeployer(opts ...func(*workerSvcDeployer)) *workerSvcDeplo
 				},
 				ImageConfig: manifest.ImageWithHealthcheck{
 					Image: manifest.Image{
-						Build: manifest.BuildArgsOrString{BuildString: aws.String("/Dockerfile")},
+						ImageLocationOrBuild: manifest.ImageLocationOrBuild{
+							Build: manifest.BuildArgsOrString{BuildString: aws.String("/Dockerfile")},
+						},
 					},
 				},
 			},
+		},
+		newStack: func() cloudformation.StackConfiguration {
+			return new(stubCloudFormationStack)
 		},
 	}
 	for _, opt := range opts {

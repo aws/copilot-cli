@@ -5,6 +5,7 @@ package manifest
 
 import (
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/imdario/mergo"
 )
@@ -118,9 +119,11 @@ func (s *BackendService) BuildRequired() (bool, error) {
 	return requiresBuild(s.ImageConfig.Image)
 }
 
-// BuildArgs returns a docker.BuildArguments object for the service given a workspace root directory.
-func (s *BackendService) BuildArgs(wsRoot string) *DockerBuildArgs {
-	return s.ImageConfig.Image.BuildConfig(wsRoot)
+// BuildArgs returns a docker.BuildArguments object for the service given a context directory.
+func (s *BackendService) BuildArgs(contextDir string) map[string]*DockerBuildArgs {
+	buildArgs := make(map[string]*DockerBuildArgs, len(s.Sidecars)+1)
+	buildArgs[aws.StringValue(s.Name)] = s.ImageConfig.Image.BuildConfig(contextDir)
+	return buildArgs
 }
 
 // EnvFile returns the location of the env file against the ws root directory.
@@ -159,7 +162,7 @@ func (s BackendService) applyEnv(envName string) (workloadManifest, error) {
 func newDefaultBackendService() *BackendService {
 	return &BackendService{
 		Workload: Workload{
-			Type: aws.String(BackendServiceType),
+			Type: aws.String(manifestinfo.BackendServiceType),
 		},
 		BackendServiceConfig: BackendServiceConfig{
 			ImageConfig: ImageWithHealthcheckAndOptionalPort{},
@@ -169,7 +172,7 @@ func newDefaultBackendService() *BackendService {
 				Count: Count{
 					Value: aws.Int(1),
 					AdvancedCount: AdvancedCount{ // Leave advanced count empty while passing down the type of the workload.
-						workloadType: BackendServiceType,
+						workloadType: manifestinfo.BackendServiceType,
 					},
 				},
 				ExecuteCommand: ExecuteCommand{

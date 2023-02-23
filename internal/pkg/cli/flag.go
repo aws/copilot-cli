@@ -5,9 +5,11 @@ package cli
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/dustin/go-humanize/english"
 )
 
@@ -68,6 +70,7 @@ const (
 	// Flags for storage.
 	storageTypeFlag                    = "storage-type"
 	storageLifecycleFlag               = "lifecycle"
+	storageAddIngressFromFlag          = "add-ingress-from"
 	storagePartitionKeyFlag            = "partition-key"
 	storageSortKeyFlag                 = "sort-key"
 	storageNoSortFlag                  = "no-sort"
@@ -157,6 +160,7 @@ const (
 	gitBranchFlagShort         = "b"
 	envsFlagShort              = "e"
 	pipelineTypeShort          = "p"
+	storageLifecycleShort      = "l"
 
 	scheduleFlagShort = "s"
 )
@@ -164,7 +168,7 @@ const (
 // Descriptions for flags.
 var (
 	svcTypeFlagDescription = fmt.Sprintf(`Type of service to create. Must be one of:
-%s.`, strings.Join(quoteStringSlice(manifest.ServiceTypes()), ", "))
+%s.`, strings.Join(applyAll(manifestinfo.ServiceTypes(), strconv.Quote), ", "))
 	imageFlagDescription = fmt.Sprintf(`The location of an existing Docker image.
 Cannot be specified with --%s or --%s.`, dockerFileFlag, dockerFileContextFlag)
 	dockerFileFlagDescription = fmt.Sprintf(`Path to the Dockerfile.
@@ -172,11 +176,21 @@ Cannot be specified with --%s.`, imageFlag)
 	dockerFileContextFlagDescription = fmt.Sprintf(`Path to the Docker build context.
 Cannot be specified with --%s.`, imageFlag)
 	storageTypeFlagDescription = fmt.Sprintf(`Type of storage to add. Must be one of:
-%s.`, strings.Join(quoteStringSlice(storageTypes), ", "))
+%s.`, strings.Join(applyAll(storageTypes, strconv.Quote), ", "))
+	storageLifecycleFlagDescription = fmt.Sprintf(`Whether the storage should be created and deleted
+at the same time as a workload or an environment.
+Must be one of: %s.`, english.OxfordWordSeries(applyAll(validLifecycleOptions, strconv.Quote), "or"))
+	storageAddIngressFromFlagDescription = fmt.Sprintf(`The workload that needs access to an
+environment storage resource. Must be
+specified with %q and %q.
+Can be specified with %q.`,
+		fmt.Sprintf("--%s", nameFlag),
+		fmt.Sprintf("--%s", storageTypeFlag),
+		fmt.Sprintf("--%s", storageRDSEngineFlag))
 	jobTypeFlagDescription = fmt.Sprintf(`Type of job to create. Must be one of:
-%s.`, strings.Join(quoteStringSlice(manifest.JobTypes()), ", "))
+%s.`, strings.Join(applyAll(manifestinfo.JobTypes(), strconv.Quote), ", "))
 	wkldTypeFlagDescription = fmt.Sprintf(`Type of job or svc to create. Must be one of:
-%s.`, strings.Join(quoteStringSlice(manifest.WorkloadTypes()), ", "))
+%s.`, strings.Join(applyAll(manifestinfo.WorkloadTypes(), strconv.Quote), ", "))
 
 	clusterFlagDescription = fmt.Sprintf(`Optional. The short name or full ARN of the cluster to run the task in. 
 Cannot be specified with --%s, --%s or --%s.`, appFlag, envFlag, taskDefaultFlag)
@@ -285,8 +299,7 @@ Uploaded asset locations are filled in the template configuration.`
 
 	// Storage.
 	storageFlagDescription             = "Name of the storage resource to create."
-	storageWorkloadFlagDescription     = "Name of the service or job to associate with storage."
-	storageLifecycleFlagDescription    = "Whether the storage should be created and deleted at the same time as a workload or as the environment"
+	storageWorkloadFlagDescription     = "Name of the service/job that accesses the storage."
 	storagePartitionKeyFlagDescription = `Partition key for the DDB table.
 Must be of the format '<keyName>:<dataType>'.`
 	storageSortKeyFlagDescription = `Optional. Sort key for the DDB table.
@@ -295,8 +308,9 @@ Must be of the format '<keyName>:<dataType>'.`
 	storageNoLSIFlagDescription     = `Optional. Don't ask about configuring alternate sort keys.`
 	storageLSIConfigFlagDescription = `Optional. Attribute to use as an alternate sort key. May be specified up to 5 times.
 Must be of the format '<keyName>:<dataType>'.`
-	storageAuroraServerlessVersionFlagDescription = `Optional. Aurora Serverless version. Must be either "v1" or "v2".`
-	storageRDSEngineFlagDescription               = `The database engine used in the cluster.
+	storageAuroraServerlessVersionFlagDescription = `Optional. Aurora Serverless version.
+Must be either "v1" or "v2".`
+	storageRDSEngineFlagDescription = `The database engine used in the cluster.
 Must be either "MySQL" or "PostgreSQL".`
 	storageRDSInitialDBFlagDescription      = "The initial database to create in the cluster."
 	storageRDSParameterGroupFlagDescription = "Optional. The name of the parameter group to associate with the cluster."

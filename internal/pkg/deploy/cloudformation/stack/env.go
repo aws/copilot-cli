@@ -6,6 +6,10 @@ package stack
 import (
 	"fmt"
 
+	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
+
+	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
@@ -57,12 +61,6 @@ var (
 
 var fmtServiceDiscoveryEndpoint = "%s.%s.local"
 
-type envReadParser interface {
-	template.ReadParser
-	ParseEnv(data *template.EnvOpts) (*template.Content, error)
-	ParseEnvBootstrap(data *template.EnvOpts, options ...template.ParseOption) (*template.Content, error)
-}
-
 // Addons contains information about a packaged addons.
 type Addons struct {
 	S3ObjectURL string                // S3ObjectURL is the URL where the addons template is uploaded.
@@ -100,6 +98,21 @@ type EnvConfig struct {
 	ForceUpdate         bool
 }
 
+func (cfg *EnvConfig) loadCustomResourceURLs(crs []uploadable) error {
+	if len(cfg.CustomResourcesURLs) != 0 {
+		return nil
+	}
+	bucket, _, err := s3.ParseARN(cfg.ArtifactBucketARN)
+	if err != nil {
+		return fmt.Errorf("parse artifact bucket ARN: %w", err)
+	}
+	cfg.CustomResourcesURLs = make(map[string]string, len(crs))
+	for _, cr := range crs {
+		cfg.CustomResourcesURLs[cr.Name()] = s3.Location(bucket, cr.ArtifactPath())
+	}
+	return nil
+}
+
 // Env is for providing all the values to set up an
 // environment stack and to interpret the outputs from it.
 type Env struct {
@@ -110,21 +123,35 @@ type Env struct {
 }
 
 // NewEnvStackConfig returns a CloudFormation stack configuration for deploying a brand-new environment.
-func NewEnvStackConfig(input *EnvConfig) *Env {
+func NewEnvStackConfig(input *EnvConfig) (*Env, error) {
+	crs, err := customresource.Env(fs)
+	if err != nil {
+		return nil, fmt.Errorf("environment custom resources: %w", err)
+	}
+	if err := input.loadCustomResourceURLs(uploadableCRs(crs).convert()); err != nil {
+		return nil, err
+	}
 	return &Env{
 		in:     input,
-		parser: template.New(),
-	}
+		parser: fs,
+	}, nil
 }
 
 // NewEnvConfigFromExistingStack returns a CloudFormation stack configuration for updating an environment.
-func NewEnvConfigFromExistingStack(in *EnvConfig, lastForceUpdateID string, prevParams []*cloudformation.Parameter) *Env {
+func NewEnvConfigFromExistingStack(in *EnvConfig, lastForceUpdateID string, prevParams []*cloudformation.Parameter) (*Env, error) {
+	crs, err := customresource.Env(fs)
+	if err != nil {
+		return nil, fmt.Errorf("environment custom resources: %w", err)
+	}
+	if err := in.loadCustomResourceURLs(uploadableCRs(crs).convert()); err != nil {
+		return nil, err
+	}
 	return &Env{
 		in:                in,
 		prevParams:        prevParams,
 		lastForceUpdateID: lastForceUpdateID,
-		parser:            template.New(),
-	}
+		parser:            fs,
+	}, nil
 }
 
 // Template returns the environment CloudFormation template.

@@ -102,18 +102,16 @@ type DeploymentControllerConfig struct {
 	Rolling *string `yaml:"rolling"`
 }
 
-// DeploymentConfiguration represents the deployment config for an ECS service.
+// DeploymentConfig represents the deployment config for an ECS service.
 type DeploymentConfig struct {
 	DeploymentControllerConfig `yaml:",inline"`
-	RollbackAlarms             Union[[]string, AlarmArgs] // `yaml:"rollback_alarms"`
-	// The rollback_alarms manifest field is a no-op until the EDS-CFN ABR bug is fixed.
+	RollbackAlarms             Union[[]string, AlarmArgs]  `yaml:"rollback_alarms"`
 }
 
 // WorkerDeploymentConfig represents the deployment strategies for a worker service.
 type WorkerDeploymentConfig struct {
 	DeploymentControllerConfig `yaml:",inline"`
-	WorkerRollbackAlarms       Union[[]string, WorkerAlarmArgs] // `yaml:"rollback_alarms"`
-	// The rollback_alarms manifest field is a no-op until the EDS-CFN ABR bug is fixed.
+	WorkerRollbackAlarms       Union[[]string, WorkerAlarmArgs]  `yaml:"rollback_alarms"`
 }
 
 func (d *DeploymentConfig) isEmpty() bool {
@@ -299,23 +297,17 @@ func (lc *Logging) GetEnableMetadata() *string {
 
 // SidecarConfig represents the configurable options for setting up a sidecar container.
 type SidecarConfig struct {
-	Port          *string                            `yaml:"port"`
-	Image         Union[*string, SidecarImageConfig] `yaml:"image"`
-	Essential     *bool                              `yaml:"essential"`
-	CredsParam    *string                            `yaml:"credentialsParameter"`
-	Variables     map[string]Variable                `yaml:"variables"`
-	Secrets       map[string]Secret                  `yaml:"secrets"`
-	MountPoints   []SidecarMountPoint                `yaml:"mount_points"`
-	DockerLabels  map[string]string                  `yaml:"labels"`
-	DependsOn     DependsOn                          `yaml:"depends_on"`
-	HealthCheck   ContainerHealthCheck               `yaml:"healthcheck"`
+	Port          *string                              `yaml:"port"`
+	Image         Union[*string, ImageLocationOrBuild] `yaml:"image"`
+	Essential     *bool                                `yaml:"essential"`
+	CredsParam    *string                              `yaml:"credentialsParameter"`
+	Variables     map[string]Variable                  `yaml:"variables"`
+	Secrets       map[string]Secret                    `yaml:"secrets"`
+	MountPoints   []SidecarMountPoint                  `yaml:"mount_points"`
+	DockerLabels  map[string]string                    `yaml:"labels"`
+	DependsOn     DependsOn                            `yaml:"depends_on"`
+	HealthCheck   ContainerHealthCheck                 `yaml:"healthcheck"`
 	ImageOverride `yaml:",inline"`
-}
-
-// SidecarImageConfig represents the docker build arguments and location of the existing image.
-type SidecarImageConfig struct {
-	Build    Union[*string, DockerBuildArgs] // `yaml:"build"`
-	Location *string                         // `yaml:"location"`
 }
 
 // ImageURI returns the location of the image if one is set.

@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/aws/copilot-cli/internal/pkg/template/templatetest"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -21,24 +23,27 @@ import (
 )
 
 func TestEnv_Template(t *testing.T) {
+	t.Cleanup(func() {
+		fs = realEmbedFS
+	})
+
 	t.Run("error parsing template", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
 		// GIVEN
 		inEnvConfig := mockDeployEnvironmentInput()
-		mockParser := mocks.NewMockenvReadParser(ctrl)
+		mockParser := mocks.NewMockembedFS(ctrl)
+		fs = mockParser
 
 		// EXPECT
+		mockParser.EXPECT().Read(gomock.Any()).Return(&template.Content{Buffer: bytes.NewBufferString("data")}, nil).AnyTimes()
 		mockParser.EXPECT().ParseEnv(gomock.Any()).Return(nil, errors.New("some error"))
 
 		// WHEN
-		envStack := &Env{
-			in:                inEnvConfig,
-			lastForceUpdateID: "mockPreviousForceUpdateID",
-			parser:            mockParser,
-		}
-		_, err := envStack.Template()
+		envStack, err := NewEnvConfigFromExistingStack(inEnvConfig, "mockPreviousForceUpdateID", nil)
+		require.NoError(t, err)
+		_, err = envStack.Template()
 
 		// THEN
 		require.EqualError(t, errors.New("some error"), err.Error())
@@ -50,21 +55,19 @@ func TestEnv_Template(t *testing.T) {
 		// GIVEN
 		inEnvConfig := mockDeployEnvironmentInput()
 		mockAddonsConfig := mocks.NewMockNestedStackConfigurer(ctrl)
-		mockParser := mocks.NewMockenvReadParser(ctrl)
 		inEnvConfig.Addons = &Addons{
 			S3ObjectURL: "mockAddonsURL",
 			Stack:       mockAddonsConfig,
 		}
+		fs = templatetest.Stub{}
+
 		// EXPECT
 		mockAddonsConfig.EXPECT().Parameters().Return("", errors.New("some error"))
 
 		// WHEN
-		envStack := &Env{
-			in:                inEnvConfig,
-			lastForceUpdateID: "mockPreviousForceUpdateID",
-			parser:            mockParser,
-		}
-		_, err := envStack.Template()
+		envStack, err := NewEnvConfigFromExistingStack(inEnvConfig, "mockPreviousForceUpdateID", nil)
+		require.NoError(t, err)
+		_, err = envStack.Template()
 
 		// THEN
 		require.EqualError(t, errors.New("parse extra parameters for environment addons: some error"), err.Error())
@@ -76,14 +79,13 @@ func TestEnv_Template(t *testing.T) {
 		// GIVEN
 		inEnvConfig := mockDeployEnvironmentInput()
 		mockAddonsConfig := mocks.NewMockNestedStackConfigurer(ctrl)
-		mockParser := mocks.NewMockenvReadParser(ctrl)
+		mockAddonsConfig.EXPECT().Parameters().Return("mockAddonsExtraParameters", nil)
 		inEnvConfig.Addons = &Addons{
 			S3ObjectURL: "mockAddonsURL",
 			Stack:       mockAddonsConfig,
 		}
-
-		// EXPECT
-		mockAddonsConfig.EXPECT().Parameters().Return("mockAddonsExtraParameters", nil)
+		mockParser := mocks.NewMockembedFS(ctrl)
+		mockParser.EXPECT().Read(gomock.Any()).Return(&template.Content{Buffer: bytes.NewBufferString("data")}, nil).AnyTimes()
 		mockParser.EXPECT().ParseEnv(gomock.Any()).DoAndReturn(func(data *template.EnvOpts) (*template.Content, error) {
 			require.Equal(t, &template.Addons{
 				URL:         "mockAddonsURL",
@@ -91,13 +93,11 @@ func TestEnv_Template(t *testing.T) {
 			}, data.Addons)
 			return &template.Content{Buffer: bytes.NewBufferString("mockTemplate")}, nil
 		})
+		fs = mockParser
 
 		// WHEN
-		envStack := &Env{
-			in:                inEnvConfig,
-			lastForceUpdateID: "mockPreviousForceUpdateID",
-			parser:            mockParser,
-		}
+		envStack, err := NewEnvConfigFromExistingStack(inEnvConfig, "mockPreviousForceUpdateID", nil)
+		require.NoError(t, err)
 		got, err := envStack.Template()
 
 		// THEN
@@ -111,20 +111,17 @@ func TestEnv_Template(t *testing.T) {
 		// GIVEN
 		inEnvConfig := mockDeployEnvironmentInput()
 		inEnvConfig.ForceUpdate = true
-		mockParser := mocks.NewMockenvReadParser(ctrl)
-
-		// EXPECT
+		mockParser := mocks.NewMockembedFS(ctrl)
+		mockParser.EXPECT().Read(gomock.Any()).Return(&template.Content{Buffer: bytes.NewBufferString("data")}, nil).AnyTimes()
 		mockParser.EXPECT().ParseEnv(gomock.Any()).DoAndReturn(func(data *template.EnvOpts) (*template.Content, error) {
 			require.NotEqual(t, "mockPreviousForceUpdateID", data.ForceUpdateID)
 			return &template.Content{Buffer: bytes.NewBufferString("mockTemplate")}, nil
 		})
+		fs = mockParser
 
 		// WHEN
-		envStack := &Env{
-			in:                inEnvConfig,
-			lastForceUpdateID: "mockPreviousForceUpdateID",
-			parser:            mockParser,
-		}
+		envStack, err := NewEnvConfigFromExistingStack(inEnvConfig, "mockPreviousForceUpdateID", nil)
+		require.NoError(t, err)
 		got, err := envStack.Template()
 
 		// THEN
@@ -137,9 +134,8 @@ func TestEnv_Template(t *testing.T) {
 
 		// GIVEN
 		inEnvConfig := mockDeployEnvironmentInput()
-		mockParser := mocks.NewMockenvReadParser(ctrl)
-
-		// EXPECT
+		mockParser := mocks.NewMockembedFS(ctrl)
+		mockParser.EXPECT().Read(gomock.Any()).Return(&template.Content{Buffer: bytes.NewBufferString("data")}, nil).AnyTimes()
 		mockParser.EXPECT().ParseEnv(gomock.Any()).DoAndReturn(func(data *template.EnvOpts) (*template.Content, error) {
 			require.Equal(t, &template.EnvOpts{
 				AppName: "project",
@@ -172,19 +168,62 @@ func TestEnv_Template(t *testing.T) {
 				Telemetry: &template.Telemetry{
 					EnableContainerInsights: false,
 				},
-
+				ArtifactBucketARN:  "arn:aws:s3:::mockbucket",
 				SerializedManifest: "name: env\ntype: Environment\n",
 				ForceUpdateID:      "mockPreviousForceUpdateID",
 			}, data)
 			return &template.Content{Buffer: bytes.NewBufferString("mockTemplate")}, nil
 		})
+		fs = mockParser
 
 		// WHEN
-		envStack := &Env{
-			in:                inEnvConfig,
-			lastForceUpdateID: "mockPreviousForceUpdateID",
-			parser:            mockParser,
-		}
+		envStack, err := NewEnvConfigFromExistingStack(inEnvConfig, "mockPreviousForceUpdateID", nil)
+		require.NoError(t, err)
+		got, err := envStack.Template()
+
+		// THEN
+		require.NoError(t, err)
+		require.Equal(t, mockTemplate, got)
+	})
+	t.Run("should return template body with local custom resources when not uploaded", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		// GIVEN
+		inEnvConfig := mockDeployEnvironmentInput()
+		inEnvConfig.CustomResourcesURLs = nil
+		mockParser := mocks.NewMockembedFS(ctrl)
+		mockParser.EXPECT().Read(gomock.Any()).Return(&template.Content{Buffer: bytes.NewBufferString("data")}, nil).AnyTimes()
+		mockParser.EXPECT().ParseEnv(gomock.Any()).DoAndReturn(func(data *template.EnvOpts) (*template.Content, error) {
+			require.Equal(t, map[string]template.S3ObjectLocation{
+				"CertificateReplicatorFunction": {
+					Bucket: "mockbucket",
+					Key:    "manual/scripts/custom-resources/certificatereplicatorfunction/8932747ba5dbff619d89b92d0033ef1d04f7dd1b055e073254907d4e38e3976d.zip",
+				},
+				"CertificateValidationFunction": {
+					Bucket: "mockbucket",
+					Key:    "manual/scripts/custom-resources/certificatevalidationfunction/8932747ba5dbff619d89b92d0033ef1d04f7dd1b055e073254907d4e38e3976d.zip",
+				},
+				"DNSDelegationFunction": {
+					Bucket: "mockbucket",
+					Key:    "manual/scripts/custom-resources/dnsdelegationfunction/8932747ba5dbff619d89b92d0033ef1d04f7dd1b055e073254907d4e38e3976d.zip",
+				},
+				"UniqueJSONValuesFunction": {
+					Bucket: "mockbucket",
+					Key:    "manual/scripts/custom-resources/uniquejsonvaluesfunction/8932747ba5dbff619d89b92d0033ef1d04f7dd1b055e073254907d4e38e3976d.zip",
+				},
+				"CustomDomainFunction": {
+					Bucket: "mockbucket",
+					Key:    "manual/scripts/custom-resources/customdomainfunction/8932747ba5dbff619d89b92d0033ef1d04f7dd1b055e073254907d4e38e3976d.zip",
+				},
+			}, data.CustomResources)
+			return &template.Content{Buffer: bytes.NewBufferString("mockTemplate")}, nil
+		})
+		fs = mockParser
+
+		// WHEN
+		envStack, err := NewEnvConfigFromExistingStack(inEnvConfig, "mockPreviousForceUpdateID", nil)
+		require.NoError(t, err)
 		got, err := envStack.Template()
 
 		// THEN
@@ -194,6 +233,11 @@ func TestEnv_Template(t *testing.T) {
 }
 
 func TestEnv_Parameters(t *testing.T) {
+	t.Cleanup(func() {
+		fs = realEmbedFS
+	})
+	fs = templatetest.Stub{}
+
 	deploymentInput := mockDeployEnvironmentInput()
 	deploymentInputWithDNS := mockDeployEnvironmentInput()
 	deploymentInputWithDNS.App.Domain = "ecs.aws"
@@ -962,10 +1006,8 @@ func TestEnv_Parameters(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			env := &Env{
-				in:         tc.input,
-				prevParams: tc.oldParams,
-			}
+			env, err := NewEnvConfigFromExistingStack(tc.input, "", tc.oldParams)
+			require.NoError(t, err)
 			params, err := env.Parameters()
 			require.NoError(t, err)
 			require.ElementsMatch(t, tc.want, params)
@@ -1226,6 +1268,7 @@ func mockDeployEnvironmentInput() *EnvConfig {
 			"DNSDelegationFunction":         "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey2",
 			"CustomDomainFunction":          "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey4",
 		},
+		ArtifactBucketARN: "arn:aws:s3:::mockbucket",
 		Mft: &manifest.Environment{
 			Workload: manifest.Workload{
 				Name: aws.String("env"),

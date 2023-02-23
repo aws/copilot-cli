@@ -9,7 +9,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/copilot-cli/internal/pkg/template/templatetest"
+
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
@@ -33,6 +36,11 @@ var (
 )
 
 func TestBackendService_Template(t *testing.T) {
+	t.Cleanup(func() {
+		fs = realEmbedFS
+	})
+	fs = templatetest.Stub{}
+
 	t.Run("returns a wrapped error when addons template parsing fails", func(t *testing.T) {
 		// GIVEN
 		svc, err := NewBackendService(BackendServiceConfig{
@@ -288,7 +296,7 @@ Outputs:
 			AppName:      "phonetool",
 			EnvName:      "test",
 			WorkloadName: "api",
-			WorkloadType: manifest.BackendServiceType,
+			WorkloadType: manifestinfo.BackendServiceType,
 			HealthCheck: &template.ContainerHealthCheck{
 				Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
 				Interval:    aws.Int64(5),
@@ -436,12 +444,9 @@ Outputs:
 					RepoURL:  testImageRepoURL,
 					ImageTag: testImageTag,
 				},
-				CustomResourcesURL: map[string]string{
-					"EnvControllerFunction":       "https://my-bucket.s3.Region.amazonaws.com/sha1/envcontroller.zip",
-					"DynamicDesiredCountFunction": "https://my-bucket.s3.Region.amazonaws.com/sha2/count.zip",
-				},
 			},
-			Addons: addons,
+			Addons:             addons,
+			ArtifactBucketName: "my-bucket",
 		})
 		svc.parser = parser
 		require.NoError(t, err)
@@ -455,7 +460,7 @@ Outputs:
 			AppName:      "phonetool",
 			EnvName:      "test",
 			WorkloadName: "api",
-			WorkloadType: manifest.BackendServiceType,
+			WorkloadType: manifestinfo.BackendServiceType,
 			HealthCheck: &template.ContainerHealthCheck{
 				Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
 				Interval:    aws.Int64(5),
@@ -496,11 +501,15 @@ Outputs:
 			CustomResources: map[string]template.S3ObjectLocation{
 				"EnvControllerFunction": {
 					Bucket: "my-bucket",
-					Key:    "sha1/envcontroller.zip",
+					Key:    "manual/scripts/custom-resources/envcontrollerfunction/8932747ba5dbff619d89b92d0033ef1d04f7dd1b055e073254907d4e38e3976d.zip",
 				},
 				"DynamicDesiredCountFunction": {
 					Bucket: "my-bucket",
-					Key:    "sha2/count.zip",
+					Key:    "manual/scripts/custom-resources/dynamicdesiredcountfunction/8932747ba5dbff619d89b92d0033ef1d04f7dd1b055e073254907d4e38e3976d.zip",
+				},
+				"RulePriorityFunction": {
+					Bucket: "my-bucket",
+					Key:    "manual/scripts/custom-resources/rulepriorityfunction/8932747ba5dbff619d89b92d0033ef1d04f7dd1b055e073254907d4e38e3976d.zip",
 				},
 			},
 			ExecuteCommand: &template.ExecuteCommandOpts{},
@@ -554,7 +563,9 @@ func TestBackendService_Parameters(t *testing.T) {
 				env:  testEnvName,
 				app:  testAppName,
 				image: manifest.Image{
-					Location: aws.String("mockLocation"),
+					ImageLocationOrBuild: manifest.ImageLocationOrBuild{
+						Location: aws.String("mockLocation"),
+					},
 				},
 			},
 			tc: testBackendSvcManifest.BackendServiceConfig.TaskConfig,

@@ -116,8 +116,8 @@ func Test_SSM_Service_Integration(t *testing.T) {
 
 	store := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
 	applicationToCreate := config.Application{Name: randStringBytes(10), Version: "1.0"}
-	apiService := config.Workload{Name: "api", App: applicationToCreate.Name, Type: "LBFargateService"}
-	feService := config.Workload{Name: "front-end", App: applicationToCreate.Name, Type: "LBFargateService"}
+	apiService := config.Workload{Name: "api", App: applicationToCreate.Name, Type: "Load Balanced Web Service"}
+	feService := config.Workload{Name: "front-end", App: applicationToCreate.Name, Type: "Load Balanced Web Service"}
 
 	defer func() {
 		store.DeleteService(applicationToCreate.Name, apiService.Name)

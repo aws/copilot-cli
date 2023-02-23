@@ -14,11 +14,11 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
-	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
@@ -78,7 +78,7 @@ func newShowSvcOpts(vars showSvcVars) (*showSvcOpts, error) {
 			return err
 		}
 		switch svc.Type {
-		case manifest.LoadBalancedWebServiceType:
+		case manifestinfo.LoadBalancedWebServiceType:
 			d, err = describe.NewLBWebServiceDescriber(describe.NewServiceConfig{
 				App:             opts.appName,
 				Svc:             opts.svcName,
@@ -86,7 +86,7 @@ func newShowSvcOpts(vars showSvcVars) (*showSvcOpts, error) {
 				DeployStore:     deployStore,
 				EnableResources: opts.shouldOutputResources,
 			})
-		case manifest.RequestDrivenWebServiceType:
+		case manifestinfo.RequestDrivenWebServiceType:
 			d, err = describe.NewRDWebServiceDescriber(describe.NewServiceConfig{
 				App:             opts.appName,
 				Svc:             opts.svcName,
@@ -94,7 +94,7 @@ func newShowSvcOpts(vars showSvcVars) (*showSvcOpts, error) {
 				DeployStore:     deployStore,
 				EnableResources: opts.shouldOutputResources,
 			})
-		case manifest.BackendServiceType:
+		case manifestinfo.BackendServiceType:
 			d, err = describe.NewBackendServiceDescriber(describe.NewServiceConfig{
 				App:             opts.appName,
 				Svc:             opts.svcName,
@@ -102,7 +102,7 @@ func newShowSvcOpts(vars showSvcVars) (*showSvcOpts, error) {
 				DeployStore:     deployStore,
 				EnableResources: opts.shouldOutputResources,
 			})
-		case manifest.WorkerServiceType:
+		case manifestinfo.WorkerServiceType:
 			d, err = describe.NewWorkerServiceDescriber(describe.NewServiceConfig{
 				App:             opts.appName,
 				Svc:             opts.svcName,

@@ -79,7 +79,7 @@ func newPackageJobOpts(vars packageJobVars) (*packageJobOpts, error) {
 				name:         o.name,
 				envName:      o.envName,
 				appName:      o.appName,
-				tag:          imageTagFromGit(o.runner, o.tag),
+				tag:          o.tag,
 				outputDir:    o.outputDir,
 				uploadAssets: o.uploadAssets,
 			},
@@ -94,6 +94,7 @@ func newPackageJobOpts(vars packageJobVars) (*packageJobOpts, error) {
 			fs:                fs,
 			sessProvider:      sessProvider,
 			newStackGenerator: newWorkloadStackGenerator,
+			gitShortCommit:    imageTagFromGit(o.runner),
 		}
 	}
 	return opts, nil

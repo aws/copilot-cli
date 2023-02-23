@@ -9,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/imdario/mergo"
 
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 )
 
@@ -120,7 +121,7 @@ func newDefaultHTTPLoadBalancedWebService() *LoadBalancedWebService {
 func newDefaultLoadBalancedWebService() *LoadBalancedWebService {
 	return &LoadBalancedWebService{
 		Workload: Workload{
-			Type: aws.String(LoadBalancedWebServiceType),
+			Type: aws.String(manifestinfo.LoadBalancedWebServiceType),
 		},
 		LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 			ImageConfig: ImageWithPortAndHealthcheck{},
@@ -130,7 +131,7 @@ func newDefaultLoadBalancedWebService() *LoadBalancedWebService {
 				Count: Count{
 					Value: aws.Int(1),
 					AdvancedCount: AdvancedCount{ // Leave advanced count empty while passing down the type of the workload.
-						workloadType: LoadBalancedWebServiceType,
+						workloadType: manifestinfo.LoadBalancedWebServiceType,
 					},
 				},
 				ExecuteCommand: ExecuteCommand{
@@ -185,9 +186,11 @@ func (s *LoadBalancedWebService) BuildRequired() (bool, error) {
 	return requiresBuild(s.ImageConfig.Image)
 }
 
-// BuildArgs returns a docker.BuildArguments object given a ws root directory.
-func (s *LoadBalancedWebService) BuildArgs(wsRoot string) *DockerBuildArgs {
-	return s.ImageConfig.Image.BuildConfig(wsRoot)
+// BuildArgs returns a docker.BuildArguments object given a context directory.
+func (s *LoadBalancedWebService) BuildArgs(contextDir string) map[string]*DockerBuildArgs {
+	buildArgs := make(map[string]*DockerBuildArgs, len(s.Sidecars)+1)
+	buildArgs[aws.StringValue(s.Name)] = s.ImageConfig.Image.BuildConfig(contextDir)
+	return buildArgs
 }
 
 // EnvFile returns the location of the env file against the ws root directory.

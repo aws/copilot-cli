@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
+
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 
 	"github.com/aws/copilot-cli/internal/pkg/template"
@@ -97,7 +99,9 @@ func mockLoadBalancedWebServiceDeployer(opts ...func(deployer *lbWebSvcDeployer)
 				ImageConfig: manifest.ImageWithPortAndHealthcheck{
 					ImageWithPort: manifest.ImageWithPort{
 						Image: manifest.Image{
-							Build: manifest.BuildArgsOrString{BuildString: aws.String("/Dockerfile")},
+							ImageLocationOrBuild: manifest.ImageLocationOrBuild{
+								Build: manifest.BuildArgsOrString{BuildString: aws.String("/Dockerfile")},
+							},
 						},
 						Port: aws.Uint16(80),
 					},
@@ -108,6 +112,9 @@ func mockLoadBalancedWebServiceDeployer(opts ...func(deployer *lbWebSvcDeployer)
 					},
 				},
 			},
+		},
+		newStack: func() cloudformation.StackConfiguration {
+			return new(stubCloudFormationStack)
 		},
 	}
 	for _, opt := range opts {

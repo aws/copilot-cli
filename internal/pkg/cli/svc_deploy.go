@@ -59,9 +59,10 @@ type deploySvcOpts struct {
 	newSvcDeployer       func() (workloadDeployer, error)
 	envFeaturesDescriber versionCompatibilityChecker
 
-	spinner progress
-	sel     wsSelector
-	prompt  prompter
+	spinner        progress
+	sel            wsSelector
+	prompt         prompter
+	gitShortCommit string
 
 	// cached variables
 	targetApp         *config.Application
@@ -125,11 +126,14 @@ func newSvcDeployer(o *deploySvcOpts) (workloadDeployer, error) {
 	content := o.appliedDynamicMft.Manifest()
 	var deployer workloadDeployer
 	in := clideploy.WorkloadDeployerInput{
-		SessionProvider:  o.sessProvider,
-		Name:             o.name,
-		App:              targetApp,
-		Env:              o.targetEnv,
-		ImageTag:         o.imageTag,
+		SessionProvider: o.sessProvider,
+		Name:            o.name,
+		App:             targetApp,
+		Env:             o.targetEnv,
+		Image: clideploy.ContainerImageIdentifier{
+			CustomTag:         o.imageTag,
+			GitShortCommitTag: o.gitShortCommit,
+		},
 		Mft:              content,
 		RawMft:           raw,
 		EnvVersionGetter: o.envFeaturesDescriber,
@@ -144,6 +148,8 @@ func newSvcDeployer(o *deploySvcOpts) (workloadDeployer, error) {
 		deployer, err = clideploy.NewRDWSDeployer(&in)
 	case *manifest.WorkerService:
 		deployer, err = clideploy.NewWorkerSvcDeployer(&in)
+	case *manifest.StaticSite:
+		deployer, err = clideploy.NewStaticSiteDeployer(&in)
 	default:
 		return nil, fmt.Errorf("unknown manifest type %T while creating the CloudFormation stack", t)
 	}
@@ -323,7 +329,7 @@ func (o *deploySvcOpts) validateOrAskEnvName() error {
 }
 
 func (o *deploySvcOpts) configureClients() error {
-	o.imageTag = imageTagFromGit(o.cmd, o.imageTag) // Best effort assign git tag.
+	o.gitShortCommit = imageTagFromGit(o.cmd) // Best effort assign git tag.
 	env, err := o.store.GetEnvironment(o.appName, o.envName)
 	if err != nil {
 		return fmt.Errorf("get environment %s configuration: %w", o.envName, err)

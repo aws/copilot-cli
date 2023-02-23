@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/addon"
@@ -79,6 +81,16 @@ type RuntimeConfig struct {
 	EnvVersion               string
 }
 
+func (cfg *RuntimeConfig) loadCustomResourceURLs(bucket string, crs []uploadable) {
+	if len(cfg.CustomResourcesURL) != 0 {
+		return
+	}
+	cfg.CustomResourcesURL = make(map[string]string, len(crs))
+	for _, cr := range crs {
+		cfg.CustomResourcesURL[cr.Name()] = s3.URL(cfg.Region, bucket, cr.ArtifactPath())
+	}
+}
+
 // ECRImage represents configuration about the pushed ECR image that is needed to
 // create a CloudFormation stack.
 type ECRImage struct {
@@ -109,6 +121,12 @@ type NestedStackConfigurer interface {
 
 type location interface {
 	GetLocation() string
+}
+
+// uploadable is the interface for an object that can be uploaded to an S3 bucket.
+type uploadable interface {
+	Name() string
+	ArtifactPath() string
 }
 
 // wkld represents a generic containerized workload.

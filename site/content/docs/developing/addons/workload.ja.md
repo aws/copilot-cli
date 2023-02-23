@@ -29,14 +29,14 @@ Copilot では、特定の種類の Addon を作成するために、以下の�
 2. `copilot [svc/job] deploy` を実行すると、カスタムアドオンのテンプレートがワークロードスタックと一緒にデプロイされます。
 
 ???- note "ワークロード Addon によるワークスペースのレイアウト例"
-  ```term
-  .
-  └── copilot
-      └── webhook
-          ├── addons # Service "webhook" に関連する Addon の格納
-          │   └── mytable-ddb.yaml
-          └── manifest.yaml 
-  ```
+    ```term
+    .
+    └── copilot
+        └── webhook
+            ├── addons # Service "webhook" に関連する Addon の格納
+            │   └── mytable-ddb.yaml
+            └── manifest.yaml
+    ```
 
 ## Addon テンプレートとはどのようなものか？
 ワークロード Addon テンプレートは、以下を満たす[有効な CloudFormation テンプレート](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/template-anatomy.html)であれば、どのようなものでも使用可能です。
@@ -47,10 +47,10 @@ Copilot では、特定の種類の Addon を作成するために、以下の�
 リソースプロパティは、[Conditions](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/conditions-section-structure.html) や [Mappings](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/mappings-section-structure.html) を使ってカスタマイズすることができます。
 
 !!! info ""
-  [Amazon IAM のベストプラクティス](https://docs.aws.amazon.com/ja_jp/IAM/latest/UserGuide/best-practices.html)に従って、追加リソースの AWS Managed Policies を定義することをお勧めします。
+    [Amazon IAM のベストプラクティス](https://docs.aws.amazon.com/ja_jp/IAM/latest/UserGuide/best-practices.html)に従って、追加リソースの AWS Managed Policies を定義することをお勧めします。
 
-  * `addons/` ディレクトリに定義されているポリシーに[最小特権アクセス許可を適用します](https://docs.aws.amazon.com/ja_jp/IAM/latest/UserGuide/best-practices.html#grant-least-privilege)。
-  * [セキュリティ強化のためのポリシー条件を利用して](https://docs.aws.amazon.com/ja_jp/IAM/latest/UserGuide/best-practices.html#use-policy-conditions)、`addons/` ディレクトリに定義されたリソースのみにアクセスするようにポリシーを制限します。
+    * `addons/` ディレクトリに定義されているポリシーに[最小特権アクセス許可を適用します](https://docs.aws.amazon.com/ja_jp/IAM/latest/UserGuide/best-practices.html#grant-least-privilege)。
+    * [セキュリティ強化のためのポリシー条件を利用して](https://docs.aws.amazon.com/ja_jp/IAM/latest/UserGuide/best-practices.html#use-policy-conditions)、`addons/` ディレクトリに定義されたリソースのみにアクセスするようにポリシーを制限します。
 
 
 ### `Parameters` セクションの書き方
@@ -58,15 +58,15 @@ Copilot では、特定の種類の Addon を作成するために、以下の�
 Copilot では、テンプレートに定義する必要があるパラメータがいくつかあります。
 
 !!! info ""
-  ```yaml
-  Parameters:
-      App:
-          Type: String
-      Env:
-          Type: String
-      Name:
-          Type: String
-  ```
+    ```yaml
+    Parameters:
+        App:
+            Type: String
+        Env:
+            Type: String
+        Name:
+            Type: String
+    ```
 
 
 #### `Parameters` セクションのカスタマイズ
@@ -84,25 +84,25 @@ Copilot が必要とするパラメータ以外にパラメータを定義した
 2. `addons.parameters.yml` にて、これらの追加パラメータの値を定義します。これらは、ワークロードスタックの値を参照することができます。
 
 ???- note "例: Addon パラメータのカスタマイズ"
-  ```yaml
-  # In "webhook/addons/my-addon.yml"
-  Parameters:
-    # Required parameters by AWS Copilot.
-    App:
-      Type: String
-    Env:
-      Type: String
-    Name:
-      Type: String
-    # Additional parameters defined in addons.parameters.yml
-    ServiceName:
-      Type: String
-  ```
-  ```yaml
-  # In "webhook/addons/addons.parameters.yml"
-  Parameters:
-      ServiceName: !GetAtt Service.Name
-  ```
+    ```yaml
+    # "webhook/addons/my-addon.yml" にて
+    Parameters:
+      # AWS Copilotで必要なパラメータ
+      App:
+        Type: String
+      Env:
+        Type: String
+      Name:
+        Type: String
+      # addons.parameters.yml で定義された追加パラメータ
+      ServiceName:
+        Type: String
+    ```
+    ```yaml
+    # "webhook/addons/addons.parameters.yml" にて
+    Parameters:
+        ServiceName: !GetAtt Service.Name
+    ```
 
 ### `Conditions` と `Mappings` セクションの書き方
 
@@ -111,48 +111,47 @@ Addon リソースを特定の条件に応じて異なるように設定した�
 これを行うには、`Conditions` セクションと `Mappings` セクションを使用します。
 
 ???- note "例: Addon を条件付きで設定"
-
-=== "`Mappings` の利用"
-  ```yaml
-  Mappings:
-      MyAuroraServerlessEnvScalingConfigurationMap:
-          dev:
-              "DBMinCapacity": 0.5
-              "DBMaxCapacity": 8   
-          test:
-              "DBMinCapacity": 1
-              "DBMaxCapacity": 32
-          prod:
-              "DBMinCapacity": 1
-              "DBMaxCapacity": 64
-  Resources:
-      MyCluster:
-          Type: AWS::RDS::DBCluster
-          Properties:
+    === "`Mappings` の利用"
+        ```yaml
+        Mappings:
+            MyAuroraServerlessEnvScalingConfigurationMap:
+                dev:
+                    "DBMinCapacity": 0.5
+                    "DBMaxCapacity": 8
+                test:
+                    "DBMinCapacity": 1
+                    "DBMaxCapacity": 32
+                prod:
+                    "DBMinCapacity": 1
+                    "DBMaxCapacity": 64
+        Resources:
+            MyCluster:
+                Type: AWS::RDS::DBCluster
+                Properties:
+                    ScalingConfiguration:
+                        MinCapacity: !FindInMap
+                            - MyAuroraServerlessEnvScalingConfigurationMap
+                            - !Ref Env
+                            - DBMinCapacity
+                        MaxCapacity: !FindInMap
+                            - MyAuroraServerlessEnvScalingConfigurationMap
+                            - !Ref Env
+                            - DBMaxCapacity
+        ```
+    
+    === "`Conditions` の利用"
+        ```yaml
+        Conditions:
+          IsProd: !Equals [!Ref Env, "prod"]
+        
+        Resources:
+          MyCluster:
+            Type: AWS::RDS::DBCluster
+            Properties:
               ScalingConfiguration:
-                  MinCapacity: !FindInMap
-                      - MyAuroraServerlessEnvScalingConfigurationMap
-                      - !Ref Env
-                      - DBMinCapacity
-                  MaxCapacity: !FindInMap
-                      - MyAuroraServerlessEnvScalingConfigurationMap
-                      - !Ref Env
-                      - DBMaxCapacity
-  ```
-
-=== "`Conditions` の利用"
-  ```yaml
-  Conditions:
-    IsProd: !Equals [!Ref Env, "prod"] 
-  
-  Resources:
-    MyCluster:
-      Type: AWS::RDS::DBCluster
-      Properties:
-        ScalingConfiguration:
-            MinCapacity: !If [IsProd, 1, 0.5]
-            MaxCapacity: !If [IsProd, 8, 64]
-  ```
+                  MinCapacity: !If [IsProd, 1, 0.5]
+                  MaxCapacity: !If [IsProd, 8, 64]
+        ```
 
 
 ### [`Outputs`](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/outputs-section-structure.html) セクションの書き方

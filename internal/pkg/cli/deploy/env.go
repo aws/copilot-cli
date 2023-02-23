@@ -95,7 +95,7 @@ type envDeployer struct {
 	appCFN                   appResourcesGetter
 	envDeployer              environmentDeployer
 	patcher                  patcher
-	newStack                 func(input *cfnstack.EnvConfig, forceUpdateID string, prevParams []*awscfn.Parameter) deploycfn.StackConfiguration
+	newStack                 func(input *cfnstack.EnvConfig, forceUpdateID string, prevParams []*awscfn.Parameter) (deploycfn.StackConfiguration, error)
 	envDescriber             envDescriber
 	lbDescriber              lbDescriber
 	newServiceStackDescriber func(string) stackDescriber
@@ -162,9 +162,12 @@ func NewEnvDeployer(in *NewEnvDeployerInput) (*envDeployer, error) {
 			TemplatePatcher: cfnClient,
 			Env:             in.Env,
 		},
-		newStack: func(in *cfnstack.EnvConfig, lastForceUpdateID string, oldParams []*awscfn.Parameter) deploycfn.StackConfiguration {
-			stack := cfnstack.NewEnvConfigFromExistingStack(in, lastForceUpdateID, oldParams)
-			return deploycfn.WrapWithTemplateOverrider(stack, overrider)
+		newStack: func(in *cfnstack.EnvConfig, lastForceUpdateID string, oldParams []*awscfn.Parameter) (deploycfn.StackConfiguration, error) {
+			stack, err := cfnstack.NewEnvConfigFromExistingStack(in, lastForceUpdateID, oldParams)
+			if err != nil {
+				return nil, err
+			}
+			return deploycfn.WrapWithTemplateOverrider(stack, overrider), nil
 		},
 		envDescriber: envDescriber,
 		lbDescriber:  elbv2.New(envManagerSession),
@@ -260,7 +263,10 @@ func (d *envDeployer) GenerateCloudFormationTemplate(in *DeployEnvironmentInput)
 	if err != nil {
 		return nil, fmt.Errorf("retrieve environment stack force update ID: %w", err)
 	}
-	stack := d.newStack(stackInput, lastForceUpdateID, oldParams)
+	stack, err := d.newStack(stackInput, lastForceUpdateID, oldParams)
+	if err != nil {
+		return nil, err
+	}
 	tpl, err := stack.Template()
 	if err != nil {
 		return nil, fmt.Errorf("generate stack template: %w", err)
@@ -295,7 +301,10 @@ func (d *envDeployer) DeployEnvironment(in *DeployEnvironmentInput) error {
 	if in.DisableRollback {
 		opts = append(opts, awscloudformation.WithDisableRollback())
 	}
-	stack := d.newStack(stackInput, lastForceUpdateID, oldParams)
+	stack, err := d.newStack(stackInput, lastForceUpdateID, oldParams)
+	if err != nil {
+		return err
+	}
 	return d.envDeployer.UpdateAndRenderEnvironment(stack, stackInput.ArtifactBucketARN, opts...)
 }
 
@@ -370,17 +379,9 @@ func (d *envDeployer) buildStackInput(in *DeployEnvironmentInput) (*cfnstack.Env
 	if err != nil {
 		return nil, err
 	}
-	parsedAddons, err := d.parseAddons()
-	var notFoundErr *addon.ErrAddonsNotFound
-	if err != nil && !errors.As(err, &notFoundErr) {
+	addons, err := d.buildAddonsInput(resources.Region, resources.S3Bucket, in.AddonsURL)
+	if err != nil {
 		return nil, err
-	}
-	var addons *cfnstack.Addons
-	if err == nil {
-		addons = &cfnstack.Addons{
-			S3ObjectURL: in.AddonsURL,
-			Stack:       parsedAddons,
-		}
 	}
 	return &cfnstack.EnvConfig{
 		Name: d.env.Name,
@@ -401,6 +402,31 @@ func (d *envDeployer) buildStackInput(in *DeployEnvironmentInput) (*cfnstack.Env
 		RawMft:               in.RawManifest,
 		PermissionsBoundary:  in.PermissionsBoundary,
 		Version:              deploy.LatestEnvTemplateVersion,
+	}, nil
+}
+
+func (d *envDeployer) buildAddonsInput(region, bucket, uploadURL string) (*cfnstack.Addons, error) {
+	parsedAddons, err := d.parseAddons()
+	if err != nil {
+		var notFoundErr *addon.ErrAddonsNotFound
+		if errors.As(err, &notFoundErr) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	if uploadURL != "" {
+		return &cfnstack.Addons{
+			S3ObjectURL: uploadURL,
+			Stack:       parsedAddons,
+		}, nil
+	}
+	tpl, err := parsedAddons.Template()
+	if err != nil {
+		return nil, fmt.Errorf("render addons template: %w", err)
+	}
+	return &cfnstack.Addons{
+		S3ObjectURL: s3.URL(region, bucket, artifactpath.EnvironmentAddons([]byte(tpl))),
+		Stack:       parsedAddons,
 	}, nil
 }
 

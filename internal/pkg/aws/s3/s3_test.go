@@ -255,7 +255,7 @@ func TestS3_EmptyBucket(t *testing.T) {
 			mockS3Client: func(m *mocks.Mocks3API) {
 				m.EXPECT().HeadBucket(&s3.HeadBucketInput{
 					Bucket: aws.String("mockBucket"),
-				}).Return(nil, awserr.New(notFound, "message", nil))
+				}).Return(nil, awserr.New(errCodeNotFound, "message", nil))
 			},
 
 			wantErr: nil,
@@ -308,17 +308,26 @@ func TestS3_ParseURL(t *testing.T) {
 			inURL:     "badURL",
 			wantError: fmt.Errorf("cannot parse S3 URL badURL into bucket name and key"),
 		},
-		"success": {
+		"return error S3 URI": {
+			inURL:     "s3://",
+			wantError: fmt.Errorf("cannot parse S3 URI s3:// into bucket name and key"),
+		},
+		"parses S3 URI": {
+			inURL:            "s3://amplify-demo-dev-94628-deployment/auth/amplify-meta.json",
+			wantedBucketName: "amplify-demo-dev-94628-deployment",
+			wantedKey:        "auth/amplify-meta.json",
+		},
+		"parses object URL": {
 			inURL:            "https://stackset-myapp-infrastru-pipelinebuiltartifactbuc-1nk5t9zkymh8r.s3-us-west-2.amazonaws.com/scripts/dns-cert-validator/dd2278811c3",
 			wantedBucketName: "stackset-myapp-infrastru-pipelinebuiltartifactbuc-1nk5t9zkymh8r",
 			wantedKey:        "scripts/dns-cert-validator/dd2278811c3",
 		},
-		"success with dots": {
+		"parses object URL with dots": {
 			inURL:            "https://bucket.with.dots.in.name.s3.us-west-2.amazonaws.com/scripts/dns-cert-validator/dd2278811c3",
 			wantedBucketName: "bucket.with.dots.in.name",
 			wantedKey:        "scripts/dns-cert-validator/dd2278811c3",
 		},
-		"success with dots legacy URL": {
+		"parses legacy object URL with dots": {
 			inURL:            "https://bucket.with.dots.in.name.s3-us-west-2.amazonaws.com/scripts/dns-cert-validator/dd2278811c3",
 			wantedBucketName: "bucket.with.dots.in.name",
 			wantedKey:        "scripts/dns-cert-validator/dd2278811c3",
@@ -336,6 +345,42 @@ func TestS3_ParseURL(t *testing.T) {
 				require.Equal(t, tc.wantedBucketName, gotBucketName)
 				require.Equal(t, tc.wantedKey, gotKey)
 			}
+		})
+	}
+}
+
+func Test_ParseARN(t *testing.T) {
+	type wanted struct {
+		bucket string
+		key    string
+		err    error
+	}
+	testCases := map[string]struct {
+		in     string
+		wanted wanted
+	}{
+		"bad bad arn": {
+			in:     "i am not an arn at all",
+			wanted: wanted{err: errors.New("invalid S3 ARN")},
+		},
+		"parses an S3 bucket arn": {
+			in:     "arn:aws:s3:::amplify-demo-dev-94628-deployment",
+			wanted: wanted{bucket: "amplify-demo-dev-94628-deployment"},
+		},
+		"parses an S3 object arn": {
+			in:     "arn:aws:s3:::amplify-demo-dev-94628-deployment/studio-backend/auth/demo6a968da2/build/parameters.json",
+			wanted: wanted{bucket: "amplify-demo-dev-94628-deployment", key: "studio-backend/auth/demo6a968da2/build/parameters.json"},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			bucket, key, err := ParseARN(tc.in)
+			if tc.wanted.err != nil {
+				require.ErrorContains(t, err, tc.wanted.err.Error())
+				return
+			}
+			require.Equal(t, tc.wanted.bucket, bucket)
+			require.Equal(t, tc.wanted.key, key)
 		})
 	}
 }

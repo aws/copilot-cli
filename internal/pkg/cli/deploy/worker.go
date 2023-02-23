@@ -18,6 +18,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"golang.org/x/text/cases"
@@ -35,8 +36,11 @@ type snsTopicsLister interface {
 
 type workerSvcDeployer struct {
 	*svcDeployer
+	wsMft *manifest.WorkerService
+
+	// Overriden in tests.
 	topicLister snsTopicsLister
-	wsMft       *manifest.WorkerService
+	newStack    func() cloudformation.StackConfiguration
 }
 
 // IsServiceAvailableInRegion checks if service type exist in the given region.
@@ -57,7 +61,7 @@ func NewWorkerSvcDeployer(in *WorkloadDeployerInput) (*workerSvcDeployer, error)
 	}
 	wsMft, ok := in.Mft.(*manifest.WorkerService)
 	if !ok {
-		return nil, fmt.Errorf("manifest is not of type %s", manifest.WorkerServiceType)
+		return nil, fmt.Errorf("manifest is not of type %s", manifestinfo.WorkerServiceType)
 	}
 	return &workerSvcDeployer{
 		svcDeployer: svcDeployer,
@@ -69,7 +73,7 @@ func NewWorkerSvcDeployer(in *WorkloadDeployerInput) (*workerSvcDeployer, error)
 func workerCustomResources(fs template.Reader) ([]*customresource.CustomResource, error) {
 	crs, err := customresource.Worker(fs)
 	if err != nil {
-		return nil, fmt.Errorf("read custom resources for a %q: %w", manifest.WorkerServiceType, err)
+		return nil, fmt.Errorf("read custom resources for a %q: %w", manifestinfo.WorkerServiceType, err)
 	}
 	return crs, nil
 }
@@ -169,18 +173,26 @@ func (d *workerSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*
 	if err = validateTopicsExist(subs, topicARNs, d.app.Name, d.env.Name); err != nil {
 		return nil, err
 	}
-	conf, err := stack.NewWorkerService(stack.WorkerServiceConfig{
-		App:                d.app,
-		Env:                d.env.Name,
-		Manifest:           d.wsMft,
-		RawManifest:        d.rawMft,
-		ArtifactBucketName: d.resources.S3Bucket,
-		RuntimeConfig:      *rc,
-		Addons:             d.addons,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("create stack configuration: %w", err)
+
+	var conf cloudformation.StackConfiguration
+	switch {
+	case d.newStack != nil:
+		conf = d.newStack()
+	default:
+		conf, err = stack.NewWorkerService(stack.WorkerServiceConfig{
+			App:                d.app,
+			Env:                d.env.Name,
+			Manifest:           d.wsMft,
+			RawManifest:        d.rawMft,
+			ArtifactBucketName: d.resources.S3Bucket,
+			RuntimeConfig:      *rc,
+			Addons:             d.addons,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("create stack configuration: %w", err)
+		}
 	}
+	
 	return &workerSvcStackConfigurationOutput{
 		svcStackConfigurationOutput: svcStackConfigurationOutput{
 			conf: cloudformation.WrapWithTemplateOverrider(conf, d.overrider),

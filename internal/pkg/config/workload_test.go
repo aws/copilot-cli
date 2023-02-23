@@ -15,12 +15,12 @@ import (
 )
 
 func TestStore_ListServices(t *testing.T) {
-	frontendService := Workload{Name: "fe", App: "chicken", Type: "Load Balanced Fargate Service"}
+	frontendService := Workload{Name: "fe", App: "chicken", Type: "Load Balanced Web Service"}
 	frontendServiceString, err := marshal(frontendService)
 	frontendServicePath := fmt.Sprintf(fmtWkldParamPath, frontendService.App, frontendService.Name)
 	require.NoError(t, err, "Marshal svc should not fail")
 
-	apiService := Workload{Name: "api", App: "chicken", Type: "Load Balanced Fargate Service"}
+	apiService := Workload{Name: "api", App: "chicken", Type: "Load Balanced Web Service"}
 	apiServiceString, err := marshal(apiService)
 	apiServicePath := fmt.Sprintf(fmtWkldParamPath, apiService.App, apiService.Name)
 	require.NoError(t, err, "Marshal svc should not fail")
@@ -305,7 +305,7 @@ func TestStore_ListJobs(t *testing.T) {
 }
 
 func TestStore_GetService(t *testing.T) {
-	testService := Workload{Name: "api", App: "chicken", Type: "Load Balanced Fargate Service"}
+	testService := Workload{Name: "api", App: "chicken", Type: "Load Balanced Web Service"}
 	testServiceString, err := marshal(testService)
 	testServicePath := fmt.Sprintf(fmtWkldParamPath, testService.App, testService.Name)
 	require.NoError(t, err, "Marshal svc should not fail")

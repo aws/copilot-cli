@@ -6,6 +6,8 @@ package deploy
 import (
 	"testing"
 
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
+
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 
 	"github.com/stretchr/testify/require"
@@ -79,10 +81,15 @@ func mockJobDeployer(opts ...func(*jobDeployer)) *jobDeployer {
 				},
 				ImageConfig: manifest.ImageWithHealthcheck{
 					Image: manifest.Image{
-						Build: manifest.BuildArgsOrString{BuildString: aws.String("/Dockerfile")},
+						ImageLocationOrBuild: manifest.ImageLocationOrBuild{
+							Build: manifest.BuildArgsOrString{BuildString: aws.String("/Dockerfile")},
+						},
 					},
 				},
 			},
+		},
+		newStack: func() cloudformation.StackConfiguration {
+			return new(stubCloudFormationStack)
 		},
 	}
 	for _, opt := range opts {

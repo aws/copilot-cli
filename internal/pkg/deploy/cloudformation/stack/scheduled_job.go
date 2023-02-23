@@ -11,11 +11,12 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/aws/copilot-cli/internal/pkg/config"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/template/override"
 	"github.com/robfig/cron/v3"
@@ -25,11 +26,6 @@ import (
 const (
 	ScheduledJobScheduleParamKey = "Schedule"
 )
-
-type scheduledJobReadParser interface {
-	template.ReadParser
-	ParseScheduledJob(template.WorkloadOpts) (*template.Content, error)
-}
 
 // ScheduledJob represents the configuration needed to create a Cloudformation stack from a
 // scheduled job manfiest.
@@ -103,7 +99,12 @@ type ScheduledJobConfig struct {
 
 // NewScheduledJob creates a new ScheduledJob stack from a manifest file.
 func NewScheduledJob(cfg ScheduledJobConfig) (*ScheduledJob, error) {
-	parser := template.New()
+	crs, err := customresource.ScheduledJob(fs)
+	if err != nil {
+		return nil, fmt.Errorf("scheduled job custom resources: %w", err)
+	}
+	cfg.RuntimeConfig.loadCustomResourceURLs(cfg.ArtifactBucketName, uploadableCRs(crs).convert())
+
 	return &ScheduledJob{
 		ecsWkld: &ecsWkld{
 			wkld: &wkld{
@@ -115,7 +116,7 @@ func NewScheduledJob(cfg ScheduledJobConfig) (*ScheduledJob, error) {
 				rc:                 cfg.RuntimeConfig,
 				image:              cfg.Manifest.ImageConfig.Image,
 				rawManifest:        cfg.RawManifest,
-				parser:             parser,
+				parser:             fs,
 				addons:             cfg.Addons,
 			},
 			logRetention:        cfg.Manifest.Logging.Retention,
@@ -124,7 +125,7 @@ func NewScheduledJob(cfg ScheduledJobConfig) (*ScheduledJob, error) {
 		},
 		manifest: cfg.Manifest,
 
-		parser: parser,
+		parser: fs,
 	}, nil
 }
 
@@ -175,7 +176,7 @@ func (j *ScheduledJob) Template() (string, error) {
 		SerializedManifest:       string(j.rawManifest),
 		Variables:                convertEnvVars(j.manifest.Variables),
 		Secrets:                  convertSecrets(j.manifest.Secrets),
-		WorkloadType:             manifest.ScheduledJobType,
+		WorkloadType:             manifestinfo.ScheduledJobType,
 		NestedStack:              addonsOutputs,
 		AddonsExtraParams:        addonsParams,
 		Sidecars:                 sidecars,

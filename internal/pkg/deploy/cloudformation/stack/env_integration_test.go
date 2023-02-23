@@ -309,7 +309,8 @@ network:
 			require.NoError(t, yaml.Unmarshal(wanted, wantedObj))
 
 			// WHEN
-			envStack := stack.NewEnvStackConfig(tc.input)
+			envStack, err := stack.NewEnvStackConfig(tc.input)
+			require.NoError(t, err)
 			actual, err := envStack.Template()
 			require.NoError(t, err, "serialize template")
 			actualObj := make(map[any]any)
@@ -428,13 +429,15 @@ observability:
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// WHEN
-			originalStack := stack.NewEnvStackConfig(tc.originalManifest)
+			originalStack, err := stack.NewEnvStackConfig(tc.originalManifest)
+			require.NoError(t, err)
 			originalTmpl, err := originalStack.Template()
 			require.NoError(t, err, "should serialize the template given the original environment manifest")
 			originalObj := make(map[any]any)
 			require.NoError(t, yaml.Unmarshal([]byte(originalTmpl), originalObj))
 
-			newStack := stack.NewEnvStackConfig(tc.newManifest)
+			newStack, err := stack.NewEnvStackConfig(tc.newManifest)
+			require.NoError(t, err)
 			newTmpl, err := newStack.Template()
 			require.NoError(t, err, "should serialize the template given a migrated environment manifest")
 			newObj := make(map[any]any)
@@ -478,4 +481,25 @@ func compareStackTemplateSection(t *testing.T, key, wanted, actual reflect.Value
 		fmt.Sprintf("%q does not exist in the expected template", key.Interface()))
 	require.Equal(t, actual.MapIndex(key).Interface(), wanted.MapIndex(key).Interface(),
 		fmt.Sprintf("Comparing %q", key.Interface()))
+}
+
+func resetCustomResourceLocations(template map[any]any) {
+	resources := template["Resources"].(map[string]any)
+	functions := []string{
+		"EnvControllerFunction", "DynamicDesiredCountFunction", "BacklogPerTaskCalculatorFunction",
+		"RulePriorityFunction", "NLBCustomDomainFunction", "NLBCertValidatorFunction",
+		"CustomDomainFunction", "CertificateValidationFunction", "DNSDelegationFunction",
+		"CertificateReplicatorFunction", "UniqueJSONValuesFunction",
+	}
+	for _, fnName := range functions {
+		resource, ok := resources[fnName]
+		if !ok {
+			continue
+		}
+		fn := resource.(map[string]any)
+		props := fn["Properties"].(map[string]any)
+		code := props["Code"].(map[string]any)
+		code["S3Bucket"] = nil
+		code["S3Key"] = nil
+	}
 }

@@ -148,7 +148,7 @@ func (a *Alias) UnmarshalYAML(value *yaml.Node) error {
 // ToStringSlice converts an Alias to a slice of string.
 func (a *Alias) ToStringSlice() ([]string, error) {
 	if len(a.AdvancedAliases) == 0 {
-		return a.StringSliceOrString.toStringSlice(), nil
+		return a.StringSliceOrString.ToStringSlice(), nil
 	}
 	aliases := make([]string, len(a.AdvancedAliases))
 	for i, advancedAlias := range a.AdvancedAliases {

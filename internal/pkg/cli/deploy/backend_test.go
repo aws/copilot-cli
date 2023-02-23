@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
+
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 
 	"github.com/aws/copilot-cli/internal/pkg/override"
@@ -249,6 +251,9 @@ func TestBackendSvcDeployer_stackConfiguration(t *testing.T) {
 				},
 				backendMft:         tc.Manifest,
 				aliasCertValidator: m.mockValidator,
+				newStack: func() cloudformation.StackConfiguration {
+					return new(stubCloudFormationStack)
+				},
 			}
 
 			_, err := deployer.stackConfiguration(&StackRuntimeConfiguration{})
@@ -299,12 +304,17 @@ func mockBackendServiceDeployer(opts ...func(*backendSvcDeployer)) *backendSvcDe
 				ImageConfig: manifest.ImageWithHealthcheckAndOptionalPort{
 					ImageWithOptionalPort: manifest.ImageWithOptionalPort{
 						Image: manifest.Image{
-							Build: manifest.BuildArgsOrString{BuildString: aws.String("/Dockerfile")},
+							ImageLocationOrBuild: manifest.ImageLocationOrBuild{
+								Build: manifest.BuildArgsOrString{BuildString: aws.String("/Dockerfile")},
+							},
 						},
 						Port: aws.Uint16(80),
 					},
 				},
 			},
+		},
+		newStack: func() cloudformation.StackConfiguration {
+			return new(stubCloudFormationStack)
 		},
 	}
 	for _, opt := range opts {

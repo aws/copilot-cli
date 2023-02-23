@@ -5,6 +5,7 @@ package manifest
 
 import (
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/imdario/mergo"
 )
@@ -158,9 +159,11 @@ func (s *RequestDrivenWebService) ContainerPlatform() string {
 	return platformString(s.InstanceConfig.Platform.OS(), s.InstanceConfig.Platform.Arch())
 }
 
-// BuildArgs returns a docker.BuildArguments object given a ws root directory.
-func (s *RequestDrivenWebService) BuildArgs(wsRoot string) *DockerBuildArgs {
-	return s.ImageConfig.Image.BuildConfig(wsRoot)
+// BuildArgs returns a docker.BuildArguments object given a context directory.
+func (s *RequestDrivenWebService) BuildArgs(contextDir string) map[string]*DockerBuildArgs {
+	buildArgs := make(map[string]*DockerBuildArgs, 1)
+	buildArgs[aws.StringValue(s.Name)] = s.ImageConfig.Image.BuildConfig(contextDir)
+	return buildArgs
 }
 
 func (s RequestDrivenWebService) applyEnv(envName string) (workloadManifest, error) {
@@ -191,7 +194,7 @@ func (s *RequestDrivenWebService) requiredEnvironmentFeatures() []string {
 func newDefaultRequestDrivenWebService() *RequestDrivenWebService {
 	return &RequestDrivenWebService{
 		Workload: Workload{
-			Type: aws.String(RequestDrivenWebServiceType),
+			Type: aws.String(manifestinfo.RequestDrivenWebServiceType),
 		},
 		RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
 			ImageConfig: ImageWithPort{},

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/template/mocks"
 	"github.com/golang/mock/gomock"
@@ -35,14 +36,16 @@ func TestNewRequestDrivenWebService(t *testing.T) {
 			wantedStruct: &RequestDrivenWebService{
 				Workload: Workload{
 					Name: aws.String("frontend"),
-					Type: aws.String(RequestDrivenWebServiceType),
+					Type: aws.String(manifestinfo.RequestDrivenWebServiceType),
 				},
 				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
 					ImageConfig: ImageWithPort{
 						Image: Image{
-							Build: BuildArgsOrString{
-								BuildArgs: DockerBuildArgs{
-									Dockerfile: aws.String("./Dockerfile"),
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Build: BuildArgsOrString{
+									BuildArgs: DockerBuildArgs{
+										Dockerfile: aws.String("./Dockerfile"),
+									},
 								},
 							},
 						},
@@ -94,13 +97,15 @@ func TestRequestDrivenWebService_UnmarshalYaml(t *testing.T) {
 			wantedStruct: RequestDrivenWebService{
 				Workload: Workload{
 					Name: aws.String("test-service"),
-					Type: aws.String(RequestDrivenWebServiceType),
+					Type: aws.String(manifestinfo.RequestDrivenWebServiceType),
 				},
 				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
 					ImageConfig: ImageWithPort{
 						Image: Image{
-							Build: BuildArgsOrString{
-								BuildString: aws.String("./Dockerfile"),
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Build: BuildArgsOrString{
+									BuildString: aws.String("./Dockerfile"),
+								},
 							},
 						},
 						Port: aws.Uint16(80),
@@ -122,7 +127,9 @@ func TestRequestDrivenWebService_UnmarshalYaml(t *testing.T) {
 				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
 					ImageConfig: ImageWithPort{
 						Image: Image{
-							Location: aws.String("test-repository/image@digest"),
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Location: aws.String("test-repository/image@digest"),
+							},
 						},
 					},
 				},
@@ -146,13 +153,15 @@ func TestRequestDrivenWebService_UnmarshalYaml(t *testing.T) {
 				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
 					ImageConfig: ImageWithPort{
 						Image: Image{
-							Build: BuildArgsOrString{
-								BuildArgs: DockerBuildArgs{
-									Context:    aws.String("context/dir"),
-									Dockerfile: aws.String("./Dockerfile"),
-									Target:     aws.String("build-stage"),
-									CacheFrom:  []string{"image:tag"},
-									Args:       map[string]string{"a": "1", "b": "2"},
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Build: BuildArgsOrString{
+									BuildArgs: DockerBuildArgs{
+										Context:    aws.String("context/dir"),
+										Dockerfile: aws.String("./Dockerfile"),
+										Target:     aws.String("build-stage"),
+										CacheFrom:  []string{"image:tag"},
+										Args:       map[string]string{"a": "1", "b": "2"},
+									},
 								},
 							},
 						},
@@ -416,14 +425,16 @@ func TestRequestDrivenWebService_ApplyEnv(t *testing.T) {
 			in: &RequestDrivenWebService{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(LoadBalancedWebServiceType),
+					Type: aws.String(manifestinfo.RequestDrivenWebServiceType),
 				},
 				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
 					ImageConfig: ImageWithPort{
 						Image: Image{
-							Build: BuildArgsOrString{
-								BuildArgs: DockerBuildArgs{
-									Dockerfile: aws.String("./Dockerfile"),
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Build: BuildArgsOrString{
+									BuildArgs: DockerBuildArgs{
+										Dockerfile: aws.String("./Dockerfile"),
+									},
 								},
 							},
 						},
@@ -433,7 +444,9 @@ func TestRequestDrivenWebService_ApplyEnv(t *testing.T) {
 					"prod-iad": {
 						ImageConfig: ImageWithPort{
 							Image: Image{
-								Location: aws.String("env-override location"),
+								ImageLocationOrBuild: ImageLocationOrBuild{
+									Location: aws.String("env-override location"),
+								},
 							},
 						},
 					},
@@ -444,12 +457,14 @@ func TestRequestDrivenWebService_ApplyEnv(t *testing.T) {
 			wanted: &RequestDrivenWebService{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(LoadBalancedWebServiceType),
+					Type: aws.String(manifestinfo.RequestDrivenWebServiceType),
 				},
 				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
 					ImageConfig: ImageWithPort{
 						Image: Image{
-							Location: aws.String("env-override location"),
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Location: aws.String("env-override location"),
+							},
 						},
 					},
 				},
@@ -459,12 +474,14 @@ func TestRequestDrivenWebService_ApplyEnv(t *testing.T) {
 			in: &RequestDrivenWebService{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(LoadBalancedWebServiceType),
+					Type: aws.String(manifestinfo.RequestDrivenWebServiceType),
 				},
 				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
 					ImageConfig: ImageWithPort{
 						Image: Image{
-							Location: aws.String("default location"),
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Location: aws.String("default location"),
+							},
 						},
 					},
 				},
@@ -472,7 +489,9 @@ func TestRequestDrivenWebService_ApplyEnv(t *testing.T) {
 					"prod-iad": {
 						ImageConfig: ImageWithPort{
 							Image: Image{
-								Location: aws.String("env-override location"),
+								ImageLocationOrBuild: ImageLocationOrBuild{
+									Location: aws.String("env-override location"),
+								},
 							},
 						},
 					},
@@ -483,12 +502,14 @@ func TestRequestDrivenWebService_ApplyEnv(t *testing.T) {
 			wanted: &RequestDrivenWebService{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(LoadBalancedWebServiceType),
+					Type: aws.String(manifestinfo.RequestDrivenWebServiceType),
 				},
 				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
 					ImageConfig: ImageWithPort{
 						Image: Image{
-							Location: aws.String("env-override location"),
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Location: aws.String("env-override location"),
+							},
 						},
 					},
 				},
@@ -498,14 +519,16 @@ func TestRequestDrivenWebService_ApplyEnv(t *testing.T) {
 			in: &RequestDrivenWebService{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(LoadBalancedWebServiceType),
+					Type: aws.String(manifestinfo.RequestDrivenWebServiceType),
 				},
 				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
 					ImageConfig: ImageWithPort{
 						Image: Image{
-							Build: BuildArgsOrString{
-								BuildArgs: DockerBuildArgs{
-									Dockerfile: aws.String("./Dockerfile"),
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Build: BuildArgsOrString{
+									BuildArgs: DockerBuildArgs{
+										Dockerfile: aws.String("./Dockerfile"),
+									},
 								},
 							},
 						},
@@ -515,8 +538,10 @@ func TestRequestDrivenWebService_ApplyEnv(t *testing.T) {
 					"prod-iad": {
 						ImageConfig: ImageWithPort{
 							Image: Image{
-								Build: BuildArgsOrString{
-									BuildString: aws.String("overridden build string"),
+								ImageLocationOrBuild: ImageLocationOrBuild{
+									Build: BuildArgsOrString{
+										BuildString: aws.String("overridden build string"),
+									},
 								},
 							},
 						},
@@ -528,13 +553,15 @@ func TestRequestDrivenWebService_ApplyEnv(t *testing.T) {
 			wanted: &RequestDrivenWebService{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(LoadBalancedWebServiceType),
+					Type: aws.String(manifestinfo.RequestDrivenWebServiceType),
 				},
 				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
 					ImageConfig: ImageWithPort{
 						Image: Image{
-							Build: BuildArgsOrString{
-								BuildString: aws.String("overridden build string"),
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Build: BuildArgsOrString{
+									BuildString: aws.String("overridden build string"),
+								},
 							},
 						},
 					},
@@ -545,12 +572,14 @@ func TestRequestDrivenWebService_ApplyEnv(t *testing.T) {
 			in: &RequestDrivenWebService{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(LoadBalancedWebServiceType),
+					Type: aws.String(manifestinfo.RequestDrivenWebServiceType),
 				},
 				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
 					ImageConfig: ImageWithPort{
 						Image: Image{
-							Location: aws.String("default location"),
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Location: aws.String("default location"),
+							},
 						},
 					},
 				},
@@ -558,8 +587,10 @@ func TestRequestDrivenWebService_ApplyEnv(t *testing.T) {
 					"prod-iad": {
 						ImageConfig: ImageWithPort{
 							Image: Image{
-								Build: BuildArgsOrString{
-									BuildString: aws.String("overridden build string"),
+								ImageLocationOrBuild: ImageLocationOrBuild{
+									Build: BuildArgsOrString{
+										BuildString: aws.String("overridden build string"),
+									},
 								},
 							},
 						},
@@ -571,13 +602,15 @@ func TestRequestDrivenWebService_ApplyEnv(t *testing.T) {
 			wanted: &RequestDrivenWebService{
 				Workload: Workload{
 					Name: aws.String("phonetool"),
-					Type: aws.String(LoadBalancedWebServiceType),
+					Type: aws.String(manifestinfo.RequestDrivenWebServiceType),
 				},
 				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
 					ImageConfig: ImageWithPort{
 						Image: Image{
-							Build: BuildArgsOrString{
-								BuildString: aws.String("overridden build string"),
+							ImageLocationOrBuild: ImageLocationOrBuild{
+								Build: BuildArgsOrString{
+									BuildString: aws.String("overridden build string"),
+								},
 							},
 						},
 					},
@@ -623,7 +656,7 @@ func TestRequestDrivenWebService_RequiredEnvironmentFeatures(t *testing.T) {
 			inSvc := RequestDrivenWebService{
 				Workload: Workload{
 					Name: aws.String("mock-svc"),
-					Type: aws.String(RequestDrivenWebServiceType),
+					Type: aws.String(manifestinfo.RequestDrivenWebServiceType),
 				},
 			}
 			tc.mft(&inSvc)
