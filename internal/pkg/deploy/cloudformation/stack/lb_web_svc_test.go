@@ -240,9 +240,11 @@ Outputs:
 			},
 			Manifest: mft,
 			RuntimeConfig: RuntimeConfig{
-				Image: &ECRImage{
-					RepoURL:  testImageRepoURL,
-					ImageTag: testImageTag,
+				Images: map[string]ECRImage{
+					"test": {
+						RepoURL:  testImageRepoURL,
+						ImageTag: testImageTag,
+					},
 				},
 				AccountID: "0123456789012",
 				Region:    "us-west-2",
@@ -924,9 +926,11 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 						env:  testEnvName,
 						app:  testAppName,
 						rc: RuntimeConfig{
-							Image: &ECRImage{
-								RepoURL:  testImageRepoURL,
-								ImageTag: testImageTag,
+							Images: map[string]ECRImage{
+								aws.StringValue(testManifest.Name): {
+									RepoURL:  testImageRepoURL,
+									ImageTag: testImageTag,
+								},
 							},
 						},
 					},
@@ -967,9 +971,11 @@ func TestLoadBalancedWebService_SerializedParameters(t *testing.T) {
 				env:  testEnvName,
 				app:  testAppName,
 				rc: RuntimeConfig{
-					Image: &ECRImage{
-						RepoURL:  testImageRepoURL,
-						ImageTag: testImageTag,
+					Images: map[string]ECRImage{
+						"frontend": {
+							RepoURL:  testImageRepoURL,
+							ImageTag: testImageTag,
+						},
 					},
 					AdditionalTags: map[string]string{
 						"owner": "boss",
@@ -1029,9 +1035,11 @@ func TestLoadBalancedWebService_Tags(t *testing.T) {
 				env:  testEnvName,
 				app:  testAppName,
 				rc: RuntimeConfig{
-					Image: &ECRImage{
-						RepoURL:  testImageRepoURL,
-						ImageTag: testImageTag,
+					Images: map[string]ECRImage{
+						"frontend": {
+							RepoURL:  testImageRepoURL,
+							ImageTag: testImageTag,
+						},
 					},
 					AdditionalTags: map[string]string{
 						"owner":              "boss",
