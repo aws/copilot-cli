@@ -46,7 +46,7 @@ func TestCredsSelect_Creds(t *testing.T) {
 				profile := mocks.NewMockNames(ctrl)
 				profile.EXPECT().Names().Return([]string{"test", "prod"})
 
-				prompter := mocks.NewMockprompter(ctrl)
+				prompter := mocks.NewMockPrompter(ctrl)
 				prompter.EXPECT().SelectOne("message", "help", []string{
 					"Enter temporary credentials",
 					"[profile test]",
@@ -68,7 +68,7 @@ func TestCredsSelect_Creds(t *testing.T) {
 				profile := mocks.NewMockNames(ctrl)
 				profile.EXPECT().Names().Return(nil)
 
-				prompter := mocks.NewMockprompter(ctrl)
+				prompter := mocks.NewMockPrompter(ctrl)
 				prompter.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("Enter temporary credentials", nil)
 
 				provider := mocks.NewMockSessionProvider(ctrl)
