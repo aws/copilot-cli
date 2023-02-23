@@ -55,11 +55,9 @@ type ActionRecommender interface {
 	RecommendedActions() []string
 }
 
-// NoopActionRecommender represents an ActionRecommender that does not recommend anything.
-type NoopActionRecommender struct{}
+type noopActionRecommender struct{}
 
-// RecommendedActions returns the recommended actions after deployment.
-func (NoopActionRecommender) RecommendedActions() []string {
+func (noopActionRecommender) RecommendedActions() []string {
 	return nil
 }
 

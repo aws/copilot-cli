@@ -82,7 +82,7 @@ func (d *staticSiteDeployer) DeployWorkload(in *DeployWorkloadInput) (ActionReco
 	}); err != nil {
 		return nil, err
 	}
-	return NoopActionRecommender{}, nil
+	return noopActionRecommender{}, nil
 }
 
 // UploadArtifacts uploads static assets to the app stackset bucket.
