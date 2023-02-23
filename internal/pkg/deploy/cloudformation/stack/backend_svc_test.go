@@ -273,9 +273,11 @@ Outputs:
 			},
 			Manifest: mft,
 			RuntimeConfig: RuntimeConfig{
-				Image: &ECRImage{
-					RepoURL:  testImageRepoURL,
-					ImageTag: testImageTag,
+				Images: map[string]ECRImage{
+					"test": {
+						RepoURL:  testImageRepoURL,
+						ImageTag: testImageTag,
+					},
 				},
 				CustomResourcesURL: map[string]string{
 					"EnvControllerFunction":       "https://my-bucket.s3.Region.amazonaws.com/sha1/envcontroller.zip",
@@ -440,9 +442,11 @@ Outputs:
 			},
 			Manifest: mft,
 			RuntimeConfig: RuntimeConfig{
-				Image: &ECRImage{
-					RepoURL:  testImageRepoURL,
-					ImageTag: testImageTag,
+				Images: map[string]ECRImage{
+					"test": {
+						RepoURL:  testImageRepoURL,
+						ImageTag: testImageTag,
+					},
 				},
 			},
 			Addons:             addons,

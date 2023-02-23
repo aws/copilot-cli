@@ -93,10 +93,7 @@ type fileReader interface {
 
 // StackRuntimeConfiguration contains runtime configuration for a workload CloudFormation stack.
 type StackRuntimeConfiguration struct {
-	// Use *string for three states (see https://github.com/aws/copilot-cli/pull/3268#discussion_r806060230)
-	// This is mainly to keep the `workload package` behavior backward-compatible, otherwise our old pipeline buildspec would break,
-	// since previously we parsed the env region from a mock ECR URL that we generated from `workload package``.
-	ImageDigest        *string
+	ImageDigests       map[string]ContainerImageIdentifier // Container name to image.
 	EnvFileARN         string
 	AddonsURL          string
 	RootUserARN        string
@@ -336,7 +333,7 @@ func (img ContainerImageIdentifier) customOrGitTag() string {
 	return img.GitShortCommitTag
 }
 
-func (d *workloadDeployer) uploadContainerImage(imgBuilderPusher imageBuilderPusher) (*string, error) {
+func (d *workloadDeployer) uploadContainerImages(imgBuilderPusher imageBuilderPusher) (map[string]ContainerImageIdentifier, error) {
 	required, err := manifest.DockerfileBuildRequired(d.mft)
 	if err != nil {
 		return nil, err
@@ -362,8 +359,7 @@ func (d *workloadDeployer) uploadContainerImage(imgBuilderPusher imageBuilderPus
 			uuidTag:           d.image.uuidTag,
 		}
 	}
-	image := images[d.name]
-	return &image.Digest, nil
+	return images, nil
 }
 
 func buildArgsPerContainer(name, workspacePath string, img ContainerImageIdentifier, unmarshaledManifest interface{}) (map[string]*dockerengine.BuildArguments, error) {
@@ -425,14 +421,14 @@ type customResourcesFunc func(fs template.Reader) ([]*customresource.CustomResou
 
 // UploadArtifactsOutput is the output of UploadArtifacts.
 type UploadArtifactsOutput struct {
-	ImageDigest        *string
+	ImageDigests       map[string]ContainerImageIdentifier // Container name to image.
 	EnvFileARN         string
 	AddonsURL          string
 	CustomResourceURLs map[string]string
 }
 
 func (d *workloadDeployer) uploadArtifacts() (*UploadArtifactsOutput, error) {
-	imageDigest, err := d.uploadContainerImage(d.imageBuilderPusher)
+	imageDigests, err := d.uploadContainerImages(d.imageBuilderPusher)
 	if err != nil {
 		return nil, err
 	}
@@ -445,9 +441,9 @@ func (d *workloadDeployer) uploadArtifacts() (*UploadArtifactsOutput, error) {
 	}
 
 	out := &UploadArtifactsOutput{
-		ImageDigest: imageDigest,
-		EnvFileARN:  s3Artifacts.envFileARN,
-		AddonsURL:   s3Artifacts.addonsURL,
+		ImageDigests: imageDigests,
+		EnvFileARN:   s3Artifacts.envFileARN,
+		AddonsURL:    s3Artifacts.addonsURL,
 	}
 	crs, err := d.customResources(d.templateFS)
 	if err != nil {
@@ -545,7 +541,7 @@ func (d *workloadDeployer) runtimeConfig(in *StackRuntimeConfiguration) (*stack.
 	if err != nil {
 		return nil, fmt.Errorf("get version of environment %q: %w", d.env.Name, err)
 	}
-	if len(aws.StringValue(in.ImageDigest)) == 0 {
+	if len(in.ImageDigests) == 0 {
 		return &stack.RuntimeConfig{
 			AddonsTemplateURL:        in.AddonsURL,
 			EnvFileARN:               in.EnvFileARN,
@@ -557,15 +553,19 @@ func (d *workloadDeployer) runtimeConfig(in *StackRuntimeConfiguration) (*stack.
 			EnvVersion:               envVersion,
 		}, nil
 	}
-	return &stack.RuntimeConfig{
-		AddonsTemplateURL: in.AddonsURL,
-		EnvFileARN:        in.EnvFileARN,
-		AdditionalTags:    in.Tags,
-		Image: &stack.ECRImage{
+	images := make(map[string]stack.ECRImage, len(in.ImageDigests))
+	for container, img := range in.ImageDigests {
+		images[container] = stack.ECRImage{
 			RepoURL:  d.resources.RepositoryURLs[d.name],
-			ImageTag: d.image.customOrGitTag(),
-			Digest:   aws.StringValue(in.ImageDigest),
-		},
+			ImageTag: img.customOrGitTag(),
+			Digest:   img.Digest,
+		}
+	}
+	return &stack.RuntimeConfig{
+		AddonsTemplateURL:        in.AddonsURL,
+		EnvFileARN:               in.EnvFileARN,
+		AdditionalTags:           in.Tags,
+		Images:                   images,
 		ServiceDiscoveryEndpoint: endpoint,
 		AccountID:                d.env.AccountID,
 		Region:                   d.env.Region,
