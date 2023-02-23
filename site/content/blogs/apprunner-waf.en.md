@@ -27,7 +27,7 @@ If you don't have one already, you need to first create a WAF ACL with rule opti
 for your application (See [here](https://docs.aws.amazon.com/waf/latest/developerguide/web-acl-creating.html) for more on creating your own Web ACL).
 
 Once your Web ACL is ready, note down its ARN. 
-To use the WAF ACL with your Request-Driven Web Service, follow the steps below.  
+To use the WAF Web ACL with your Request-Driven Web Service, follow the steps below.  
 
 ### Step 1 (Optional): Create a Request-Driven Web Service
 If you don’t already have a Request-Driven Web Service, 
@@ -118,7 +118,7 @@ Copy and paste the following content to the respective files:
 
 ### Step 4: Populate your Web ACL ARN in `waf.yml`
 
-Open `waf.yml` and replace `<paste your WAF Web ACL ARN here>` with your the real ARN of your Web ACL resource. For example:   
+Open `waf.yml` and replace `<paste your WAF Web ACL ARN here>` with the ARN of your Web ACL resource. For example:   
 ```yaml
 Resources:
   # Configuration of the WAF Web ACL you want to associate with 
@@ -134,7 +134,7 @@ Resources:
  
 
 ### Step 5: Deploy your service 
-Finally, run `copilot svc deploy`! Your Request-Driven Web service will now be deployed along with a WAF Web ACL!  
+Finally, run `copilot svc deploy`! Your Request-Driven Web service will now be deployed and be associated with a WAF Web ACL!  
 
 ???+ note "Some considerations"
     - A Web ACL can be linked to multiple services but one service can not be linked to more than one Web ACL
