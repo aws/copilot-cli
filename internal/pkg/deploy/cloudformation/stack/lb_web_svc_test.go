@@ -247,7 +247,8 @@ Outputs:
 				AccountID: "0123456789012",
 				Region:    "us-west-2",
 			},
-			Addons: mockAddons{},
+			Addons:             mockAddons{},
+			ArtifactBucketName: "bucket",
 		}, func(s *LoadBalancedWebService) {
 			s.parser = parser
 		})
@@ -288,7 +289,28 @@ Outputs:
 				Timeout:     aws.Int64(5),
 				Retries:     aws.Int64(5),
 			},
-			CustomResources: make(map[string]template.S3ObjectLocation),
+			CustomResources: map[string]template.S3ObjectLocation{
+				"DynamicDesiredCountFunction": {
+					Bucket: "bucket",
+					Key:    "manual/scripts/custom-resources/dynamicdesiredcountfunction/8932747ba5dbff619d89b92d0033ef1d04f7dd1b055e073254907d4e38e3976d.zip",
+				},
+				"EnvControllerFunction": {
+					Bucket: "bucket",
+					Key:    "manual/scripts/custom-resources/envcontrollerfunction/8932747ba5dbff619d89b92d0033ef1d04f7dd1b055e073254907d4e38e3976d.zip",
+				},
+				"NLBCertValidatorFunction": {
+					Bucket: "bucket",
+					Key:    "manual/scripts/custom-resources/nlbcertvalidatorfunction/8932747ba5dbff619d89b92d0033ef1d04f7dd1b055e073254907d4e38e3976d.zip",
+				},
+				"NLBCustomDomainFunction": {
+					Bucket: "bucket",
+					Key:    "manual/scripts/custom-resources/nlbcustomdomainfunction/8932747ba5dbff619d89b92d0033ef1d04f7dd1b055e073254907d4e38e3976d.zip",
+				},
+				"RulePriorityFunction": {
+					Bucket: "bucket",
+					Key:    "manual/scripts/custom-resources/rulepriorityfunction/8932747ba5dbff619d89b92d0033ef1d04f7dd1b055e073254907d4e38e3976d.zip",
+				},
+			},
 			Network: template.NetworkOpts{
 				AssignPublicIP: template.EnablePublicIP,
 				SubnetsType:    template.PublicSubnetsPlacement,

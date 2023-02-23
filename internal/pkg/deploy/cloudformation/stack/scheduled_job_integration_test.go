@@ -89,6 +89,7 @@ func TestScheduledJob_Template(t *testing.T) {
 		mExpected := make(map[interface{}]interface{})
 		require.NoError(t, yaml.Unmarshal(expectedBytes, mExpected))
 		// Cut out zip file from EnvControllerAction
+		resetCustomResourceLocations(mActual)
 		compareStackTemplate(t, mExpected, mActual)
 	})
 
