@@ -25,7 +25,7 @@ import (
 type deploySelectMocks struct {
 	deploySvc *mocks.MockdeployedWorkloadsRetriever
 	configSvc *mocks.MockconfigLister
-	prompt    *mocks.Mockprompter
+	prompt    *mocks.MockPrompter
 }
 
 func TestDeploySelect_Topics(t *testing.T) {
@@ -98,7 +98,7 @@ func TestDeploySelect_Topics(t *testing.T) {
 
 			mockdeploySvc := mocks.NewMockdeployedWorkloadsRetriever(ctrl)
 			mockconfigSvc := mocks.NewMockconfigLister(ctrl)
-			mockprompt := mocks.NewMockprompter(ctrl)
+			mockprompt := mocks.NewMockPrompter(ctrl)
 			mocks := deploySelectMocks{
 				deploySvc: mockdeploySvc,
 				configSvc: mockconfigSvc,
@@ -492,7 +492,7 @@ func TestDeploySelect_Service(t *testing.T) {
 
 			mockdeploySvc := mocks.NewMockdeployedWorkloadsRetriever(ctrl)
 			mockconfigSvc := mocks.NewMockconfigLister(ctrl)
-			mockprompt := mocks.NewMockprompter(ctrl)
+			mockprompt := mocks.NewMockPrompter(ctrl)
 			mocks := deploySelectMocks{
 				deploySvc: mockdeploySvc,
 				configSvc: mockconfigSvc,
@@ -796,7 +796,7 @@ func TestDeploySelect_Job(t *testing.T) {
 
 			mockdeploySvc := mocks.NewMockdeployedWorkloadsRetriever(ctrl)
 			mockconfigSvc := mocks.NewMockconfigLister(ctrl)
-			mockprompt := mocks.NewMockprompter(ctrl)
+			mockprompt := mocks.NewMockPrompter(ctrl)
 			mocks := deploySelectMocks{
 				deploySvc: mockdeploySvc,
 				configSvc: mockconfigSvc,
@@ -830,7 +830,7 @@ func TestDeploySelect_Job(t *testing.T) {
 
 type workspaceSelectMocks struct {
 	ws           *mocks.MockworkspaceRetriever
-	prompt       *mocks.Mockprompter
+	prompt       *mocks.MockPrompter
 	configLister *mocks.MockconfigLister
 }
 
@@ -1089,7 +1089,7 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 
 			mockwsRetriever := mocks.NewMockworkspaceRetriever(ctrl)
 			MockconfigLister := mocks.NewMockconfigLister(ctrl)
-			mockprompt := mocks.NewMockprompter(ctrl)
+			mockprompt := mocks.NewMockPrompter(ctrl)
 			mocks := workspaceSelectMocks{
 				ws:           mockwsRetriever,
 				configLister: MockconfigLister,
@@ -1387,7 +1387,7 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 
 			mockwsRetriever := mocks.NewMockworkspaceRetriever(ctrl)
 			MockconfigLister := mocks.NewMockconfigLister(ctrl)
-			mockprompt := mocks.NewMockprompter(ctrl)
+			mockprompt := mocks.NewMockPrompter(ctrl)
 			mocks := workspaceSelectMocks{
 				ws:           mockwsRetriever,
 				configLister: MockconfigLister,
@@ -1604,7 +1604,7 @@ func TestWorkspaceSelect_EnvironmentsInWorkspace(t *testing.T) {
 			m := workspaceSelectMocks{
 				ws:           mocks.NewMockworkspaceRetriever(ctrl),
 				configLister: mocks.NewMockconfigLister(ctrl),
-				prompt:       mocks.NewMockprompter(ctrl),
+				prompt:       mocks.NewMockPrompter(ctrl),
 			}
 			tc.setupMocks(m)
 
@@ -1628,7 +1628,7 @@ func TestWorkspaceSelect_EnvironmentsInWorkspace(t *testing.T) {
 
 type configSelectMocks struct {
 	workloadLister *mocks.MockconfigLister
-	prompt         *mocks.Mockprompter
+	prompt         *mocks.MockPrompter
 }
 
 func TestConfigSelect_Service(t *testing.T) {
@@ -1738,7 +1738,7 @@ func TestConfigSelect_Service(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockconfigLister := mocks.NewMockconfigLister(ctrl)
-			mockprompt := mocks.NewMockprompter(ctrl)
+			mockprompt := mocks.NewMockPrompter(ctrl)
 			mocks := configSelectMocks{
 				workloadLister: mockconfigLister,
 				prompt:         mockprompt,
@@ -1869,7 +1869,7 @@ func TestConfigSelect_Job(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockconfigLister := mocks.NewMockconfigLister(ctrl)
-			mockprompt := mocks.NewMockprompter(ctrl)
+			mockprompt := mocks.NewMockPrompter(ctrl)
 			mocks := configSelectMocks{
 				workloadLister: mockconfigLister,
 				prompt:         mockprompt,
@@ -1980,7 +1980,7 @@ func TestConfigSelect_Workload(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockconfigLister := mocks.NewMockconfigLister(ctrl)
-			mockprompt := mocks.NewMockprompter(ctrl)
+			mockprompt := mocks.NewMockPrompter(ctrl)
 			mocks := configSelectMocks{
 				workloadLister: mockconfigLister,
 				prompt:         mockprompt,
@@ -2006,7 +2006,7 @@ func TestConfigSelect_Workload(t *testing.T) {
 
 type environmentMocks struct {
 	envLister *mocks.MockconfigLister
-	prompt    *mocks.Mockprompter
+	prompt    *mocks.MockPrompter
 }
 
 func TestSelect_Environment(t *testing.T) {
@@ -2148,7 +2148,7 @@ func TestSelect_Environment(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockenvLister := mocks.NewMockconfigLister(ctrl)
-			mockprompt := mocks.NewMockprompter(ctrl)
+			mockprompt := mocks.NewMockPrompter(ctrl)
 			mocks := environmentMocks{
 				envLister: mockenvLister,
 				prompt:    mockprompt,
@@ -2355,7 +2355,7 @@ func TestSelect_Environments(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockenvLister := mocks.NewMockconfigLister(ctrl)
-			mockprompt := mocks.NewMockprompter(ctrl)
+			mockprompt := mocks.NewMockPrompter(ctrl)
 			mocks := environmentMocks{
 				envLister: mockenvLister,
 				prompt:    mockprompt,
@@ -2381,7 +2381,7 @@ func TestSelect_Environments(t *testing.T) {
 
 type applicationMocks struct {
 	appLister *mocks.MockconfigLister
-	prompt    *mocks.Mockprompter
+	prompt    *mocks.MockPrompter
 }
 
 func TestSelect_Application(t *testing.T) {
@@ -2480,7 +2480,7 @@ func TestSelect_Application(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockappLister := mocks.NewMockconfigLister(ctrl)
-			mockprompt := mocks.NewMockprompter(ctrl)
+			mockprompt := mocks.NewMockPrompter(ctrl)
 			mocks := applicationMocks{
 				appLister: mockappLister,
 				prompt:    mockprompt,
@@ -2503,7 +2503,7 @@ func TestSelect_Application(t *testing.T) {
 }
 
 type wsPipelineSelectMocks struct {
-	prompt *mocks.Mockprompter
+	prompt *mocks.MockPrompter
 	ws     *mocks.MockwsPipelinesLister
 }
 
@@ -2583,7 +2583,7 @@ func TestWorkspaceSelect_WsPipeline(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockwsPipelinesLister := mocks.NewMockwsPipelinesLister(ctrl)
-			mockprompt := mocks.NewMockprompter(ctrl)
+			mockprompt := mocks.NewMockPrompter(ctrl)
 			mocks := wsPipelineSelectMocks{
 				prompt: mockprompt,
 				ws:     mockwsPipelinesLister,
@@ -2605,7 +2605,7 @@ func TestWorkspaceSelect_WsPipeline(t *testing.T) {
 }
 
 type codePipelineSelectMocks struct {
-	prompt *mocks.Mockprompter
+	prompt *mocks.MockPrompter
 	cp     *mocks.MockcodePipelineLister
 }
 
@@ -2672,7 +2672,7 @@ func TestCodePipelineSelect_DeployedPipeline(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockCodePipelinesLister := mocks.NewMockcodePipelineLister(ctrl)
-			mockPrompt := mocks.NewMockprompter(ctrl)
+			mockPrompt := mocks.NewMockPrompter(ctrl)
 			mocks := codePipelineSelectMocks{
 				prompt: mockPrompt,
 				cp:     mockCodePipelinesLister,
@@ -2703,7 +2703,7 @@ func TestSelect_CFTask(t *testing.T) {
 		inOpts           []GetDeployedTaskOpts
 
 		mockStore  func(*mocks.MockconfigLister)
-		mockPrompt func(*mocks.Mockprompter)
+		mockPrompt func(*mocks.MockPrompter)
 		mockCF     func(*mocks.MocktaskStackDescriber)
 
 		wantedErr  error
@@ -2728,7 +2728,7 @@ func TestSelect_CFTask(t *testing.T) {
 					},
 				}, nil)
 			},
-			mockPrompt: func(m *mocks.Mockprompter) {
+			mockPrompt: func(m *mocks.MockPrompter) {
 				m.EXPECT().SelectOne(
 					gomock.Any(), gomock.Any(),
 					[]string{
@@ -2749,7 +2749,7 @@ func TestSelect_CFTask(t *testing.T) {
 			mockCF: func(m *mocks.MocktaskStackDescriber) {
 				m.EXPECT().ListTaskStacks("phonetool", "prod-iad").Return(nil, errors.New("some error"))
 			},
-			mockPrompt: func(m *mocks.Mockprompter) {},
+			mockPrompt: func(m *mocks.MockPrompter) {},
 			wantedErr:  errors.New("get tasks in environment prod-iad: some error"),
 		},
 		"with default cluster task": {
@@ -2767,7 +2767,7 @@ func TestSelect_CFTask(t *testing.T) {
 					},
 				}, nil)
 			},
-			mockPrompt: func(m *mocks.Mockprompter) {
+			mockPrompt: func(m *mocks.MockPrompter) {
 				m.EXPECT().SelectOne(
 					gomock.Any(), gomock.Any(),
 					[]string{
@@ -2788,7 +2788,7 @@ func TestSelect_CFTask(t *testing.T) {
 			mockCF: func(m *mocks.MocktaskStackDescriber) {
 				m.EXPECT().ListDefaultTaskStacks().Return(nil, errors.New("some error"))
 			},
-			mockPrompt: func(m *mocks.Mockprompter) {},
+			mockPrompt: func(m *mocks.MockPrompter) {},
 			wantedErr:  errors.New("get tasks in default cluster: some error"),
 		},
 	}
@@ -2797,7 +2797,7 @@ func TestSelect_CFTask(t *testing.T) {
 			// GIVEN
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			p := mocks.NewMockprompter(ctrl)
+			p := mocks.NewMockPrompter(ctrl)
 			s := mocks.NewMockconfigLister(ctrl)
 			cf := mocks.NewMocktaskStackDescriber(ctrl)
 			tc.mockPrompt(p)
@@ -2827,7 +2827,7 @@ func TestSelect_CFTask(t *testing.T) {
 
 type taskSelectMocks struct {
 	taskLister *mocks.MocktaskLister
-	prompt     *mocks.Mockprompter
+	prompt     *mocks.MockPrompter
 }
 
 func TestTaskSelect_Task(t *testing.T) {
@@ -2948,7 +2948,7 @@ func TestTaskSelect_Task(t *testing.T) {
 			defer ctrl.Finish()
 
 			mocktaskLister := mocks.NewMocktaskLister(ctrl)
-			mockprompt := mocks.NewMockprompter(ctrl)
+			mockprompt := mocks.NewMockPrompter(ctrl)
 			mocks := taskSelectMocks{
 				taskLister: mocktaskLister,
 				prompt:     mockprompt,
