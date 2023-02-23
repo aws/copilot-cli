@@ -93,7 +93,7 @@ type fileReader interface {
 
 // StackRuntimeConfiguration contains runtime configuration for a workload CloudFormation stack.
 type StackRuntimeConfiguration struct {
-	ImageDigests       map[string]ContainerImageIdentifier
+	ImageDigests       map[string]ContainerImageIdentifier // Container name to image.
 	EnvFileARN         string
 	AddonsURL          string
 	RootUserARN        string
@@ -333,7 +333,7 @@ func (img ContainerImageIdentifier) customOrGitTag() string {
 	return img.GitShortCommitTag
 }
 
-func (d *workloadDeployer) uploadContainerImage(imgBuilderPusher imageBuilderPusher) (map[string]ContainerImageIdentifier, error) {
+func (d *workloadDeployer) uploadContainerImages(imgBuilderPusher imageBuilderPusher) (map[string]ContainerImageIdentifier, error) {
 	required, err := manifest.DockerfileBuildRequired(d.mft)
 	if err != nil {
 		return nil, err
@@ -421,14 +421,14 @@ type customResourcesFunc func(fs template.Reader) ([]*customresource.CustomResou
 
 // UploadArtifactsOutput is the output of UploadArtifacts.
 type UploadArtifactsOutput struct {
-	ImageDigests       map[string]ContainerImageIdentifier
+	ImageDigests       map[string]ContainerImageIdentifier // Container name to image.
 	EnvFileARN         string
 	AddonsURL          string
 	CustomResourceURLs map[string]string
 }
 
 func (d *workloadDeployer) uploadArtifacts() (*UploadArtifactsOutput, error) {
-	imageDigests, err := d.uploadContainerImage(d.imageBuilderPusher)
+	imageDigests, err := d.uploadContainerImages(d.imageBuilderPusher)
 	if err != nil {
 		return nil, err
 	}
@@ -553,7 +553,7 @@ func (d *workloadDeployer) runtimeConfig(in *StackRuntimeConfiguration) (*stack.
 			EnvVersion:               envVersion,
 		}, nil
 	}
-	images := make(map[string]stack.ECRImage)
+	images := make(map[string]stack.ECRImage, len(in.ImageDigests))
 	for container, img := range in.ImageDigests {
 		images[container] = stack.ECRImage{
 			RepoURL:  d.resources.RepositoryURLs[d.name],
