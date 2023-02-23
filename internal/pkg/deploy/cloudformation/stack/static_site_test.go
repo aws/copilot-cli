@@ -79,7 +79,7 @@ func TestStaticSite_NewStaticSite(t *testing.T) {
 
 			addons := mocks.NewMockNestedStackConfigurer(ctrl)
 
-			stack, err := NewStaticSite(StaticSiteConfig{
+			stack, err := NewStaticSite(&StaticSiteConfig{
 				EnvManifest: &manifest.Environment{
 					Workload: manifest.Workload{
 						Name: &tc.input.env,
@@ -106,19 +106,22 @@ func TestStaticSite_NewStaticSite(t *testing.T) {
 }
 
 func TestStaticSite_SerializedParameters(t *testing.T) {
-	c := &StaticSite{
-		wkld: &wkld{
-			name: "frontend",
-			env:  testEnvName,
-			app:  testAppName,
-			rc: RuntimeConfig{
-				AdditionalTags: map[string]string{
-					"owner": "copilot",
-				},
+	c, _ := NewStaticSite(&StaticSiteConfig{
+		EnvManifest: &manifest.Environment{
+			Workload: manifest.Workload{
+				Name: aws.String(testEnvName),
 			},
 		},
-		manifest: testStaticSiteManifest,
-	}
+		App: &config.Application{
+			Name: testAppName,
+		},
+		Manifest: testStaticSiteManifest,
+		RuntimeConfig: RuntimeConfig{
+			AdditionalTags: map[string]string{
+				"owner": "copilot",
+			},
+		},
+	})
 
 	params, err := c.SerializedParameters()
 	require.NoError(t, err)

@@ -64,7 +64,7 @@ func (*staticSiteDeployer) IsServiceAvailableInRegion(region string) (bool, erro
 // GenerateCloudFormationTemplate generates a CloudFormation template and parameters for a workload.
 func (d *staticSiteDeployer) GenerateCloudFormationTemplate(in *GenerateCloudFormationTemplateInput) (
 	*GenerateCloudFormationTemplateOutput, error) {
-	conf, err := d.stackConfiguration(in.StackRuntimeConfiguration)
+	conf, err := d.stackConfiguration(&in.StackRuntimeConfiguration)
 	if err != nil {
 		return nil, err
 	}
@@ -73,13 +73,16 @@ func (d *staticSiteDeployer) GenerateCloudFormationTemplate(in *GenerateCloudFor
 
 // DeployWorkload deploys a static site service using CloudFormation.
 func (d *staticSiteDeployer) DeployWorkload(in *DeployWorkloadInput) (ActionRecommender, error) {
-	conf, err := d.stackConfiguration(in.StackRuntimeConfiguration)
+	conf, err := d.stackConfiguration(&in.StackRuntimeConfiguration)
 	if err != nil {
 		return nil, err
 	}
-	return nil, d.deploy(in.Options, svcStackConfigurationOutput{
+	if err := d.deploy(in.Options, svcStackConfigurationOutput{
 		conf: cloudformation.WrapWithTemplateOverrider(conf, d.overrider),
-	})
+	}); err != nil {
+		return nil, err
+	}
+	return nil, nil
 }
 
 // UploadArtifacts uploads static assets to the app stackset bucket.
@@ -100,12 +103,12 @@ func (d *staticSiteDeployer) UploadArtifacts() (*UploadArtifactsOutput, error) {
 	return d.uploadArtifacts()
 }
 
-func (d *staticSiteDeployer) stackConfiguration(in StackRuntimeConfiguration) (cloudformation.StackConfiguration, error) {
-	rc, err := d.runtimeConfig(&in)
+func (d *staticSiteDeployer) stackConfiguration(in *StackRuntimeConfiguration) (cloudformation.StackConfiguration, error) {
+	rc, err := d.runtimeConfig(in)
 	if err != nil {
 		return nil, err
 	}
-	conf, err := stack.NewStaticSite(stack.StaticSiteConfig{
+	conf, err := stack.NewStaticSite(&stack.StaticSiteConfig{
 		App:                d.app,
 		EnvManifest:        d.envConfig,
 		Manifest:           d.staticSiteMft,

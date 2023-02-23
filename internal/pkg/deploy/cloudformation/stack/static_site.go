@@ -37,7 +37,7 @@ type StaticSiteConfig struct {
 }
 
 // NewStaticSite creates a new CFN stack from a manifest file, given the options.
-func NewStaticSite(conf StaticSiteConfig) (*StaticSite, error) {
+func NewStaticSite(conf *StaticSiteConfig) (*StaticSite, error) {
 	crs, err := customresource.StaticSite(fs)
 	if err != nil {
 		return nil, fmt.Errorf("static site custom resources: %w", err)
