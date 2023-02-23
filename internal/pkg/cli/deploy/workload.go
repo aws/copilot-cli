@@ -55,6 +55,12 @@ type ActionRecommender interface {
 	RecommendedActions() []string
 }
 
+type noopActionRecommender struct{}
+
+func (noopActionRecommender) RecommendedActions() []string {
+	return nil
+}
+
 type imageBuilderPusher interface {
 	BuildAndPush(docker repository.ContainerLoginBuildPusher, args *dockerengine.BuildArguments) (string, error)
 }
