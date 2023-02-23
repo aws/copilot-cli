@@ -335,9 +335,11 @@ Outputs:
 						env:  testEnvName,
 						app:  testAppName,
 						rc: RuntimeConfig{
-							Image: &ECRImage{
-								RepoURL:  testImageRepoURL,
-								ImageTag: testImageTag,
+							Images: map[string]ECRImage{
+								"testServiceName": {
+									RepoURL:  testImageRepoURL,
+									ImageTag: testImageTag,
+								},
 							},
 							ServiceDiscoveryEndpoint: mockSD,
 							AccountID:                "0123456789012",
@@ -493,9 +495,11 @@ func TestRequestDrivenWebService_SerializedParameters(t *testing.T) {
 				env:  testEnvName,
 				app:  testAppName,
 				rc: RuntimeConfig{
-					Image: &ECRImage{
-						RepoURL:  testImageRepoURL,
-						ImageTag: testImageTag,
+					Images: map[string]ECRImage{
+						aws.StringValue(testRDWebServiceManifest.Name): {
+							RepoURL:  testImageRepoURL,
+							ImageTag: testImageTag,
+						},
 					},
 				},
 			},

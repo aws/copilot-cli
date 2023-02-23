@@ -181,9 +181,11 @@ DiscoveryServiceArn: !GetAtt DiscoveryService.Arn`,
 						env:  testJobEnvName,
 						app:  testJobAppName,
 						rc: RuntimeConfig{
-							Image: &ECRImage{
-								ImageTag: testJobImageTag,
-								RepoURL:  testJobImageRepoURL,
+							Images: map[string]ECRImage{
+								"testServiceName": {
+									RepoURL:  testImageRepoURL,
+									ImageTag: testImageTag,
+								},
 							},
 							AccountID: "0123456789012",
 							Region:    "us-west-2",
@@ -523,9 +525,11 @@ func TestScheduledJob_Parameters(t *testing.T) {
 						env:  testEnvName,
 						app:  testAppName,
 						rc: RuntimeConfig{
-							Image: &ECRImage{
-								RepoURL:  testImageRepoURL,
-								ImageTag: testImageTag,
+							Images: map[string]ECRImage{
+								"frontend": {
+									RepoURL:  testImageRepoURL,
+									ImageTag: testImageTag,
+								},
 							},
 						},
 					},
@@ -565,9 +569,11 @@ func TestScheduledJob_SerializedParameters(t *testing.T) {
 				env:  testEnvName,
 				app:  testAppName,
 				rc: RuntimeConfig{
-					Image: &ECRImage{
-						RepoURL:  testImageRepoURL,
-						ImageTag: testImageTag,
+					Images: map[string]ECRImage{
+						aws.StringValue(testScheduledJobManifest.Name): {
+							RepoURL:  testImageRepoURL,
+							ImageTag: testImageTag,
+						},
 					},
 					AdditionalTags: map[string]string{
 						"owner": "boss",
