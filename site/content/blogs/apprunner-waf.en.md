@@ -18,7 +18,7 @@ This blog post will show you how to easily enable the protection using AWS Copil
 
 
 !!!info
-    We posted these steps in our [GitHub "Show and tell" discussion section](LINK TO BE ADDED) as well! If you have any questions, feedbacks or requests that are related to App Runner's WAF support, feel free to drop a comment there!
+    We posted these steps in our [GitHub "Show and tell" discussion section](https://github.com/aws/copilot-cli/discussions/4542) as well! If you have any questions, feedbacks or requests that are related to App Runner's WAF support, feel free to drop a comment there!
 
 
 ### Prerequisite
