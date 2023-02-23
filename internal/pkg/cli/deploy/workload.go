@@ -55,6 +55,14 @@ type ActionRecommender interface {
 	RecommendedActions() []string
 }
 
+// NoopActionRecommender represents an ActionRecommender that does not recommend anything.
+type NoopActionRecommender struct{}
+
+// RecommendedActions returns the recommended actions after deployment.
+func (NoopActionRecommender) RecommendedActions() []string {
+	return nil
+}
+
 type imageBuilderPusher interface {
 	BuildAndPush(docker repository.ContainerLoginBuildPusher, args *dockerengine.BuildArguments) (string, error)
 }

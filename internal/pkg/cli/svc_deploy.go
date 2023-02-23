@@ -274,9 +274,7 @@ func (o *deploySvcOpts) RecommendActions() error {
 		return err
 	}
 	recommendations = append(recommendations, uriRecs...)
-	if o.deployRecs != nil {
-		recommendations = append(recommendations, o.deployRecs.RecommendedActions()...)
-	}
+	recommendations = append(recommendations, o.deployRecs.RecommendedActions()...)
 	recommendations = append(recommendations, o.publishRecommendedActions()...)
 	logRecommendedActions(recommendations)
 	return nil
