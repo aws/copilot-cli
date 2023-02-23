@@ -235,7 +235,7 @@ func (o *deploySvcOpts) Execute() error {
 	}
 	deployRecs, err := deployer.DeployWorkload(&clideploy.DeployWorkloadInput{
 		StackRuntimeConfiguration: clideploy.StackRuntimeConfiguration{
-			ImageDigest:        uploadOut.ImageDigest,
+			ImageDigests:       uploadOut.ImageDigests,
 			EnvFileARN:         uploadOut.EnvFileARN,
 			AddonsURL:          uploadOut.AddonsURL,
 			RootUserARN:        o.rootUserARN,
