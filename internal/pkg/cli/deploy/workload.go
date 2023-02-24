@@ -392,10 +392,10 @@ func buildArgsPerContainer(name, workspacePath string, img ContainerImageIdentif
 		return nil, fmt.Errorf("check if manifest requires building from local Dockerfile: %w", err)
 	}
 	dArgs := make(map[string]*dockerengine.BuildArguments, len(argsPerContainer))
+	tags := []string{imageTagLatest, img.Tag()}
 	for container, buildArgs := range argsPerContainer {
-		tags := []string{imageTagLatest, img.Tag()}
 		if container != name {
-			tags = append(tags, fmt.Sprintf("%s-%s", container, imageTagLatest), fmt.Sprintf("%s-%s", container, img.nonCustomTag()))
+			tags = []string{fmt.Sprintf("%s-%s", container, imageTagLatest), fmt.Sprintf("%s-%s", container, img.nonCustomTag())}
 		}
 		dArgs[container] = &dockerengine.BuildArguments{
 			Dockerfile: aws.StringValue(buildArgs.Dockerfile),
@@ -590,7 +590,7 @@ func (d *workloadDeployer) runtimeConfig(in *StackRuntimeConfiguration) (*stack.
 		AddonsTemplateURL:        in.AddonsURL,
 		EnvFileARN:               in.EnvFileARN,
 		AdditionalTags:           in.Tags,
-		Images:                   images,
+		PushedImages:             images,
 		ServiceDiscoveryEndpoint: endpoint,
 		AccountID:                d.env.AccountID,
 		Region:                   d.env.Region,

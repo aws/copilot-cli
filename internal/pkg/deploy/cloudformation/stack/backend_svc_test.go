@@ -274,7 +274,7 @@ Outputs:
 			},
 			Manifest: mft,
 			RuntimeConfig: RuntimeConfig{
-				Images: map[string]ECRImage{
+				PushedImages: map[string]ECRImage{
 					"test": {
 						RepoURL:  testImageRepoURL,
 						ImageTag: testImageTag,
@@ -455,7 +455,7 @@ Outputs:
 			},
 			Manifest: mft,
 			RuntimeConfig: RuntimeConfig{
-				Images: map[string]ECRImage{
+				PushedImages: map[string]ECRImage{
 					"test": {
 						RepoURL:  testImageRepoURL,
 						ImageTag: testImageTag,

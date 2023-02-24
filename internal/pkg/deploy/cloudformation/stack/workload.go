@@ -69,7 +69,7 @@ const (
 // RuntimeConfig represents configuration that's defined outside of the manifest file
 // that is needed to create a CloudFormation stack.
 type RuntimeConfig struct {
-	Images             map[string]ECRImage // Optional. Image location in an ECR repository.
+	PushedImages       map[string]ECRImage // Optional. Image location in an ECR repository.
 	AddonsTemplateURL  string              // Optional. S3 object URL for the addons template.
 	EnvFileARN         string              // Optional. S3 object ARN for the env file.
 	AdditionalTags     map[string]string   // AdditionalTags are labels applied to resources in the workload stack.
@@ -171,8 +171,8 @@ func (w *wkld) Parameters() ([]*cloudformation.Parameter, error) {
 	if w.image != nil {
 		img = w.image.GetLocation()
 	}
-	if w.rc.Images != nil {
-		img = w.rc.Images[w.name].GetLocation()
+	if w.rc.PushedImages != nil {
+		img = w.rc.PushedImages[w.name].GetLocation()
 	}
 	return []*cloudformation.Parameter{
 		{
@@ -381,8 +381,8 @@ func (w *appRunnerWkld) Parameters() ([]*cloudformation.Parameter, error) {
 	if w.image != nil {
 		img = w.image.GetLocation()
 	}
-	if w.rc.Images != nil {
-		img = w.rc.Images[w.name].GetLocation()
+	if w.rc.PushedImages != nil {
+		img = w.rc.PushedImages[w.name].GetLocation()
 	}
 
 	imageRepositoryType, err := apprunner.DetermineImageRepositoryType(img)

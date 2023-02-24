@@ -19,7 +19,7 @@ import (
 
 func Test_convertSidecar(t *testing.T) {
 	mockRunTimeConfig := RuntimeConfig{
-		Images: map[string]ECRImage{
+		PushedImages: map[string]ECRImage{
 			"foo": {
 				RepoURL:  "535307839156.dkr.ecr.us-west-2.amazonaws.com/web",
 				ImageTag: "v1.0",
@@ -27,7 +27,7 @@ func Test_convertSidecar(t *testing.T) {
 			},
 		},
 	}
-	mockImage := aws.String(fmt.Sprintf("%s:%s-%s", mockRunTimeConfig.Images["foo"].RepoURL, "foo", mockRunTimeConfig.Images["foo"].ImageTag))
+	mockImage := aws.String(fmt.Sprintf("%s:%s-%s", mockRunTimeConfig.PushedImages["foo"].RepoURL, "foo", mockRunTimeConfig.PushedImages["foo"].ImageTag))
 	mockMap := map[string]template.Variable{"foo": template.PlainVariable("")}
 	mockSecrets := map[string]template.Secret{"foo": template.SecretFromPlainSSMOrARN("")}
 	mockCredsParam := aws.String("mockCredsParam")
