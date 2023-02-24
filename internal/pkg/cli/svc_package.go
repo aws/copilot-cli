@@ -150,6 +150,8 @@ func newWorkloadStackGenerator(o *packageSvcOpts) (workloadStackGenerator, error
 		deployer, err = clideploy.NewWorkerSvcDeployer(&in)
 	case *manifest.ScheduledJob:
 		deployer, err = clideploy.NewJobDeployer(&in)
+	case *manifest.StaticSite:
+		deployer, err = clideploy.NewStaticSiteDeployer(&in)
 	default:
 		return nil, fmt.Errorf("unknown manifest type %T while creating the CloudFormation stack", t)
 	}
@@ -341,7 +343,7 @@ func (o *packageSvcOpts) getWorkloadStack(generator workloadStackGenerator) (*cf
 		StackRuntimeConfiguration: clideploy.StackRuntimeConfiguration{
 			RootUserARN:        o.rootUserARN,
 			Tags:               targetApp.Tags,
-			ImageDigest:        uploadOut.ImageDigest,
+			ImageDigests:       uploadOut.ImageDigests,
 			EnvFileARN:         uploadOut.EnvFileARN,
 			AddonsURL:          uploadOut.AddonsURL,
 			CustomResourceURLs: uploadOut.CustomResourceURLs,

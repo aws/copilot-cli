@@ -235,7 +235,7 @@ func (o *deploySvcOpts) Execute() error {
 	}
 	deployRecs, err := deployer.DeployWorkload(&clideploy.DeployWorkloadInput{
 		StackRuntimeConfiguration: clideploy.StackRuntimeConfiguration{
-			ImageDigest:        uploadOut.ImageDigest,
+			ImageDigests:       uploadOut.ImageDigests,
 			EnvFileARN:         uploadOut.EnvFileARN,
 			AddonsURL:          uploadOut.AddonsURL,
 			RootUserARN:        o.rootUserARN,
@@ -274,9 +274,7 @@ func (o *deploySvcOpts) RecommendActions() error {
 		return err
 	}
 	recommendations = append(recommendations, uriRecs...)
-	if o.deployRecs != nil {
-		recommendations = append(recommendations, o.deployRecs.RecommendedActions()...)
-	}
+	recommendations = append(recommendations, o.deployRecs.RecommendedActions()...)
 	recommendations = append(recommendations, o.publishRecommendedActions()...)
 	logRecommendedActions(recommendations)
 	return nil

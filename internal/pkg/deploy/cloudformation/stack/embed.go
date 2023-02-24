@@ -25,6 +25,11 @@ type workerSvcReadParser interface {
 	ParseWorkerService(template.WorkloadOpts) (*template.Content, error)
 }
 
+type staticSiteReadParser interface {
+	template.ReadParser
+	ParseStaticSite(template.WorkloadOpts) (*template.Content, error)
+}
+
 type scheduledJobReadParser interface {
 	template.ReadParser
 	ParseScheduledJob(template.WorkloadOpts) (*template.Content, error)
@@ -41,6 +46,7 @@ type embedFS interface {
 	backendSvcReadParser
 	loadBalancedWebSvcReadParser
 	requestDrivenWebSvcReadParser
+	staticSiteReadParser
 	scheduledJobReadParser
 	workerSvcReadParser
 	envReadParser

@@ -836,7 +836,7 @@ func DockerfileBuildRequired(svc interface{}) (bool, error) {
 	}
 	mf, ok := svc.(manifest)
 	if !ok {
-		return false, fmt.Errorf("manifest does not have required methods BuildRequired()")
+		return false, nil
 	}
 	required, err := mf.BuildRequired()
 	if err != nil {

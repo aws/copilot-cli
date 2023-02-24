@@ -140,6 +140,11 @@ func Backend(fs template.Reader) ([]*CustomResource, error) {
 	})
 }
 
+// StaticSite returns the custom resources for a static site service.
+func StaticSite(fs template.Reader) ([]*CustomResource, error) {
+	return buildCustomResources(fs, map[string]string{})
+}
+
 // ScheduledJob returns the custom resources for a scheduled job.
 func ScheduledJob(fs template.Reader) ([]*CustomResource, error) {
 	return buildCustomResources(fs, map[string]string{
