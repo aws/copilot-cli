@@ -102,8 +102,9 @@ func (m *mockTopicLister) ListSNSTopics(_, _ string) ([]deploy.Topic, error) {
 }
 
 type mockWorkloadMft struct {
-	fileName      string
-	buildRequired bool
+	fileName        string
+	buildRequired   bool
+	dockerBuildArgs map[string]*manifest.DockerBuildArgs
 }
 
 func (m *mockWorkloadMft) EnvFile() string {
@@ -114,13 +115,8 @@ func (m *mockWorkloadMft) BuildRequired() (bool, error) {
 	return m.buildRequired, nil
 }
 
-func (m *mockWorkloadMft) BuildArgs(rootDirectory string) map[string]*manifest.DockerBuildArgs {
-	args := make(map[string]*manifest.DockerBuildArgs)
-	args["mockWkld"] = &manifest.DockerBuildArgs{
-		Dockerfile: aws.String("mockDockerfile"),
-		Context:    aws.String("mockContext"),
-	}
-	return args
+func (m *mockWorkloadMft) BuildArgs(rootDirectory string) (map[string]*manifest.DockerBuildArgs, error) {
+	return m.dockerBuildArgs, nil
 }
 
 func (m *mockWorkloadMft) ContainerPlatform() string {
@@ -174,11 +170,12 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 		UploadArtifacts() (*UploadArtifactsOutput, error)
 	}
 	tests := map[string]struct {
-		inEnvFile       string
-		inBuildRequired bool
-		inRegion        string
-		inMockUserTag   string
-		inMockGitTag    string
+		inEnvFile         string
+		inBuildRequired   bool
+		inRegion          string
+		inMockUserTag     string
+		inMockGitTag      string
+		inDockerBuildArgs map[string]*manifest.DockerBuildArgs
 
 		mock                func(t *testing.T, m *deployMocks)
 		mockServiceDeployer func(deployer *workloadDeployer) artifactsUploader
@@ -193,6 +190,12 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 		"error if failed to build and push image": {
 			inBuildRequired: true,
 			inMockUserTag:   "v1.0",
+			inDockerBuildArgs: map[string]*manifest.DockerBuildArgs{
+				"mockWkld": {
+					Dockerfile: aws.String("mockDockerfile"),
+					Context:    aws.String("mockContext"),
+				},
+			},
 			mock: func(t *testing.T, m *deployMocks) {
 				m.mockImageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
 					Dockerfile: "mockDockerfile",
@@ -207,6 +210,12 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			inBuildRequired: true,
 			inMockUserTag:   "v1.0",
 			inMockGitTag:    "gitTag",
+			inDockerBuildArgs: map[string]*manifest.DockerBuildArgs{
+				"mockWkld": {
+					Dockerfile: aws.String("mockDockerfile"),
+					Context:    aws.String("mockContext"),
+				},
+			},
 			mock: func(t *testing.T, m *deployMocks) {
 				m.mockImageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
 					Dockerfile: "mockDockerfile",
@@ -229,6 +238,12 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 		"build and push image with gitshortcommit successfully": {
 			inBuildRequired: true,
 			inMockGitTag:    "gitTag",
+			inDockerBuildArgs: map[string]*manifest.DockerBuildArgs{
+				"mockWkld": {
+					Dockerfile: aws.String("mockDockerfile"),
+					Context:    aws.String("mockContext"),
+				},
+			},
 			mock: func(t *testing.T, m *deployMocks) {
 				m.mockImageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
 					Dockerfile: "mockDockerfile",
@@ -248,6 +263,12 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 		},
 		"build and push image with uuid successfully": {
 			inBuildRequired: true,
+			inDockerBuildArgs: map[string]*manifest.DockerBuildArgs{
+				"mockWkld": {
+					Dockerfile: aws.String("mockDockerfile"),
+					Context:    aws.String("mockContext"),
+				},
+			},
 			mock: func(t *testing.T, m *deployMocks) {
 				m.mockImageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
 					Dockerfile: "mockDockerfile",
@@ -528,8 +549,9 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				},
 				workspacePath: mockWorkspacePath,
 				mft: &mockWorkloadMft{
-					fileName:      tc.inEnvFile,
-					buildRequired: tc.inBuildRequired,
+					fileName:        tc.inEnvFile,
+					buildRequired:   tc.inBuildRequired,
+					dockerBuildArgs: tc.inDockerBuildArgs,
 				},
 				fs:                 m.mockFileReader,
 				s3Client:           m.mockUploader,

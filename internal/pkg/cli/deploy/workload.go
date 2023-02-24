@@ -339,18 +339,26 @@ func (img ContainerImageIdentifier) customOrGitTag() string {
 	return img.GitShortCommitTag
 }
 
+// sidecarReferenceTag returns the tag that should be used to reference the image.
+func (img ContainerImageIdentifier) sidecarReferenceTag() string {
+	if img.GitShortCommitTag != "" {
+		return img.GitShortCommitTag
+	}
+	return img.uuidTag
+}
+
 func (d *workloadDeployer) uploadContainerImages(imgBuilderPusher imageBuilderPusher) (map[string]ContainerImageIdentifier, error) {
 	required, err := manifest.DockerfileBuildRequired(d.mft)
 	if err != nil {
 		return nil, err
 	}
-	if !required {
-		return nil, nil
-	}
 	// If it is built from local Dockerfile, build and push to the ECR repo.
 	buildArgsPerContainer, err := buildArgsPerContainer(d.name, d.workspacePath, d.image, d.mft)
 	if err != nil {
 		return nil, err
+	}
+	if !required && len(buildArgsPerContainer) == 0 {
+		return nil, nil
 	}
 	images := make(map[string]ContainerImageIdentifier, len(buildArgsPerContainer))
 	for name, buildArgs := range buildArgsPerContainer {
@@ -370,24 +378,32 @@ func (d *workloadDeployer) uploadContainerImages(imgBuilderPusher imageBuilderPu
 
 func buildArgsPerContainer(name, workspacePath string, img ContainerImageIdentifier, unmarshaledManifest interface{}) (map[string]*dockerengine.BuildArguments, error) {
 	type dfArgs interface {
-		BuildArgs(rootDirectory string) map[string]*manifest.DockerBuildArgs
+		BuildArgs(rootDirectory string) (map[string]*manifest.DockerBuildArgs, error)
 		ContainerPlatform() string
 	}
 	mf, ok := unmarshaledManifest.(dfArgs)
 	if !ok {
 		return nil, fmt.Errorf("%s does not have required methods BuildArgs() and ContainerPlatform()", name)
 	}
-	var tags []string
-	tags = append(tags, imageTagLatest, img.ReferenceTag())
-	args := mf.BuildArgs(workspacePath)
-	dArgs := make(map[string]*dockerengine.BuildArguments, len(args))
-	for k, v := range args {
-		dArgs[k] = &dockerengine.BuildArguments{
-			Dockerfile: aws.StringValue(v.Dockerfile),
-			Context:    aws.StringValue(v.Context),
-			Args:       v.Args,
-			CacheFrom:  v.CacheFrom,
-			Target:     aws.StringValue(v.Target),
+	argsPerContainer, err := mf.BuildArgs(workspacePath)
+	if err != nil {
+		return nil, fmt.Errorf("check if manifest requires building from local Dockerfile: %w", err)
+	}
+	dArgs := make(map[string]*dockerengine.BuildArguments, len(argsPerContainer))
+	for container, buildArgs := range argsPerContainer {
+		var tags []string
+		if container == name {
+			tags = append(tags, imageTagLatest, img.ReferenceTag())
+		} else {
+			defaultScImgTag := fmt.Sprintf("%s-%s", container, imageTagLatest)
+			tags = append(tags, defaultScImgTag, fmt.Sprintf("%s-%s", container, img.sidecarReferenceTag()))
+		}
+		dArgs[container] = &dockerengine.BuildArguments{
+			Dockerfile: aws.StringValue(buildArgs.Dockerfile),
+			Context:    aws.StringValue(buildArgs.Context),
+			Args:       buildArgs.Args,
+			CacheFrom:  buildArgs.CacheFrom,
+			Target:     aws.StringValue(buildArgs.Target),
 			Platform:   mf.ContainerPlatform(),
 			Tags:       tags,
 		}
@@ -561,9 +577,15 @@ func (d *workloadDeployer) runtimeConfig(in *StackRuntimeConfiguration) (*stack.
 	}
 	images := make(map[string]stack.ECRImage, len(in.ImageDigests))
 	for container, img := range in.ImageDigests {
+		var imageTag string
+		if container == d.name {
+			imageTag = img.customOrGitTag()
+		} else {
+			imageTag = img.GitShortCommitTag
+		}
 		images[container] = stack.ECRImage{
 			RepoURL:  d.resources.RepositoryURLs[d.name],
-			ImageTag: img.customOrGitTag(),
+			ImageTag: imageTag,
 			Digest:   img.Digest,
 		}
 	}

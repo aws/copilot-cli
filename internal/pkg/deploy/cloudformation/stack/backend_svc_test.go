@@ -6,6 +6,7 @@ package stack
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -405,7 +406,19 @@ Outputs:
 		}
 		mft.Sidecars = map[string]*manifest.SidecarConfig{
 			"envoy": {
+				Image: manifest.Union[*string, manifest.ImageLocationOrBuild]{
+					Advanced: manifest.ImageLocationOrBuild{
+						Build: manifest.BuildArgsOrString{
+							BuildString: aws.String("./Dockerfile"),
+						},
+					},
+				},
 				Port: aws.String("443"),
+			},
+			"nginx": {
+				Image: manifest.Union[*string, manifest.ImageLocationOrBuild]{
+					Basic: aws.String("mockImageURL"),
+				},
 			},
 		}
 		privatePlacement := manifest.PrivateSubnetPlacement
@@ -447,6 +460,10 @@ Outputs:
 						RepoURL:  testImageRepoURL,
 						ImageTag: testImageTag,
 					},
+					"envoy": {
+						RepoURL:  testImageRepoURL,
+						ImageTag: testImageTag,
+					},
 				},
 			},
 			Addons:             addons,
@@ -475,7 +492,7 @@ Outputs:
 			Sidecars: []*template.SidecarOpts{
 				{
 					Name:  "envoy",
-					Image: aws.String(""),
+					Image: aws.String(fmt.Sprintf("%s:%s-%s", testImageRepoURL, "envoy", testImageTag)),
 					PortMappings: []*template.PortMapping{
 						{
 							Protocol:      "tcp",
@@ -483,6 +500,11 @@ Outputs:
 							ContainerPort: 443,
 						},
 					},
+				},
+				{
+					Name:         "nginx",
+					Image:        aws.String("mockImageURL"),
+					PortMappings: []*template.PortMapping{},
 				},
 			},
 			HTTPTargetContainer: template.HTTPTargetContainer{

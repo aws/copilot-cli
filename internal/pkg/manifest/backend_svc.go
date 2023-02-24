@@ -120,10 +120,21 @@ func (s *BackendService) BuildRequired() (bool, error) {
 }
 
 // BuildArgs returns a docker.BuildArguments object for the service given a context directory.
-func (s *BackendService) BuildArgs(contextDir string) map[string]*DockerBuildArgs {
+func (s *BackendService) BuildArgs(contextDir string) (map[string]*DockerBuildArgs, error) {
+	required, err := requiresBuild(s.ImageConfig.Image)
+	if err != nil {
+		return nil, err
+	}
 	buildArgs := make(map[string]*DockerBuildArgs, len(s.Sidecars)+1)
-	buildArgs[aws.StringValue(s.Name)] = s.ImageConfig.Image.BuildConfig(contextDir)
-	return buildArgs
+	if required {
+		buildArgs[aws.StringValue(s.Name)] = s.ImageConfig.Image.BuildConfig(contextDir)
+	}
+	for name, config := range s.Sidecars {
+		if _, ok := config.ImageURI(); !ok {
+			buildArgs[name] = config.Image.Advanced.BuildConfig(contextDir)
+		}
+	}
+	return buildArgs, nil
 }
 
 // EnvFile returns the location of the env file against the ws root directory.
