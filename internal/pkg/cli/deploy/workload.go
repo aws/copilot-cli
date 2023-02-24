@@ -325,8 +325,10 @@ func (img ContainerImageIdentifier) Tag() string {
 	return img.GitShortCommitTag
 }
 
-// sidecarReferenceTag returns the tag that should be used to reference the image.
-func (img ContainerImageIdentifier) sidecarReferenceTag() string {
+// nonCustomTag returns the tag that should be used to reference the image.
+// If the image identifier has a non-empty GitShortCommitTag field, that value is returned.
+// Otherwise, the uuidTag field is returned.
+func (img ContainerImageIdentifier) nonCustomTag() string {
 	if img.GitShortCommitTag != "" {
 		return img.GitShortCommitTag
 	}
