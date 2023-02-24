@@ -162,6 +162,7 @@ Also check out our [storage page](../docs/developing/storage.en.md) for more inf
 You can now add your secrets (from SSM Parameter Store or AWS Secrets Manager) to your App Runner service as environment variables using Copilot.
 
 Similar to other service types such as Load-Balanced Web Service, you need to first add the following tags to your secrets:
+
 | Key                     | Value                                                       |
 | ----------------------- | ----------------------------------------------------------- |
 | `copilot-application`   | Application name from which you want to access the secret   |
