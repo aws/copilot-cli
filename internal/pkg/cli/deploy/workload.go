@@ -323,7 +323,7 @@ func (d *workloadDeployer) forceDeploy(in *forceDeployInput) error {
 }
 
 // ReferenceTag returns the tag that should be used to reference the image.
-func (img ContainerImageIdentifier) ReferenceTag() string {
+func (img ContainerImageIdentifier) Tag() string {
 	if tag := img.customOrGitTag(); tag != "" {
 		return tag
 	}
@@ -339,8 +339,10 @@ func (img ContainerImageIdentifier) customOrGitTag() string {
 	return img.GitShortCommitTag
 }
 
-// sidecarReferenceTag returns the tag that should be used to reference the image.
-func (img ContainerImageIdentifier) sidecarReferenceTag() string {
+// nonCustomTag returns the tag that should be used to reference the image.
+// If the image identifier has a non-empty GitShortCommitTag field, that value is returned.
+// Otherwise, the uuidTag field is returned.
+func (img ContainerImageIdentifier) nonCustomTag() string {
 	if img.GitShortCommitTag != "" {
 		return img.GitShortCommitTag
 	}
@@ -391,12 +393,9 @@ func buildArgsPerContainer(name, workspacePath string, img ContainerImageIdentif
 	}
 	dArgs := make(map[string]*dockerengine.BuildArguments, len(argsPerContainer))
 	for container, buildArgs := range argsPerContainer {
-		var tags []string
-		if container == name {
-			tags = append(tags, imageTagLatest, img.ReferenceTag())
-		} else {
-			defaultScImgTag := fmt.Sprintf("%s-%s", container, imageTagLatest)
-			tags = append(tags, defaultScImgTag, fmt.Sprintf("%s-%s", container, img.sidecarReferenceTag()))
+		tags := []string{imageTagLatest, img.Tag()}
+		if container != name {
+			tags = append(tags, fmt.Sprintf("%s-%s", container, imageTagLatest), fmt.Sprintf("%s-%s", container, img.nonCustomTag()))
 		}
 		dArgs[container] = &dockerengine.BuildArguments{
 			Dockerfile: aws.StringValue(buildArgs.Dockerfile),
@@ -577,10 +576,8 @@ func (d *workloadDeployer) runtimeConfig(in *StackRuntimeConfiguration) (*stack.
 	}
 	images := make(map[string]stack.ECRImage, len(in.ImageDigests))
 	for container, img := range in.ImageDigests {
-		var imageTag string
-		if container == d.name {
-			imageTag = img.customOrGitTag()
-		} else {
+		imageTag := img.customOrGitTag()
+		if container != d.name {
 			imageTag = img.GitShortCommitTag
 		}
 		images[container] = stack.ECRImage{
