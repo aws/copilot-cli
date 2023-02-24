@@ -325,6 +325,14 @@ func (img ContainerImageIdentifier) Tag() string {
 	return img.GitShortCommitTag
 }
 
+// sidecarReferenceTag returns the tag that should be used to reference the image.
+func (img ContainerImageIdentifier) sidecarReferenceTag() string {
+	if img.GitShortCommitTag != "" {
+		return img.GitShortCommitTag
+	}
+	return img.uuidTag
+}
+
 func (d *workloadDeployer) uploadContainerImages(imgBuilderPusher imageBuilderPusher) (map[string]ContainerImageIdentifier, error) {
 	// If it is built from local Dockerfile, build and push to the ECR repo.
 	buildArgsPerContainer, err := buildArgsPerContainer(d.name, d.workspacePath, d.image, d.mft)

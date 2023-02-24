@@ -468,6 +468,10 @@ Outputs:
 						MainContainerName: "test",
 						ContainerName:     "envoy",
 					},
+					"envoy": {
+						RepoURL:  testImageRepoURL,
+						ImageTag: testImageTag,
+					},
 				},
 			},
 			Addons:             addons,

@@ -175,11 +175,11 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 		UploadArtifacts() (*UploadArtifactsOutput, error)
 	}
 	tests := map[string]struct {
-		inEnvFile       string
-		customEnvFiles  map[string]string
-		inRegion        string
-		inMockUserTag   string
-		inMockGitTag    string
+		inEnvFile         string
+		customEnvFiles    map[string]string
+		inRegion          string
+		inMockUserTag     string
+		inMockGitTag      string
 		inDockerBuildArgs map[string]*manifest.DockerBuildArgs
 
 		mock                func(t *testing.T, m *deployMocks)
