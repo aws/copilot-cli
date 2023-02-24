@@ -270,12 +270,13 @@ type Logging struct {
 	ConfigFile     *string             `yaml:"configFilePath"`
 	Variables      map[string]Variable `yaml:"variables"`
 	Secrets        map[string]Secret   `yaml:"secrets"`
+	EnvFile        *string             `yaml:"env_file"`
 }
 
 // IsEmpty returns empty if the struct has all zero members.
 func (lc *Logging) IsEmpty() bool {
-	return lc.Image == nil && lc.Destination == nil && lc.EnableMetadata == nil &&
-		lc.SecretOptions == nil && lc.ConfigFile == nil && lc.Variables == nil && lc.Secrets == nil
+	return lc.Image == nil && lc.Destination == nil && lc.EnableMetadata == nil && lc.SecretOptions == nil &&
+		lc.ConfigFile == nil && lc.Variables == nil && lc.Secrets == nil && lc.EnvFile == nil
 }
 
 // LogImage returns the default Fluent Bit image if not otherwise configured.
@@ -302,6 +303,7 @@ type SidecarConfig struct {
 	Essential     *bool                                `yaml:"essential"`
 	CredsParam    *string                              `yaml:"credentialsParameter"`
 	Variables     map[string]Variable                  `yaml:"variables"`
+	EnvFile       *string                              `yaml:"env_file"`
 	Secrets       map[string]Secret                    `yaml:"secrets"`
 	MountPoints   []SidecarMountPoint                  `yaml:"mount_points"`
 	DockerLabels  map[string]string                    `yaml:"labels"`

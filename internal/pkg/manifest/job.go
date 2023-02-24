@@ -146,9 +146,20 @@ func (j *ScheduledJob) BuildRequired() (bool, error) {
 	return requiresBuild(j.ImageConfig.Image)
 }
 
-// EnvFile returns the location of the env file against the ws root directory.
-func (j *ScheduledJob) EnvFile() string {
-	return aws.StringValue(j.TaskConfig.EnvFile)
+// EnvFiles returns the locations of all env files against the ws root directory.
+// This method returns a map[string]string where the keys are container names
+// and the values are either env file paths or empty strings.
+func (j *ScheduledJob) EnvFiles() map[string]string {
+	envFiles := make(map[string]string)
+	// Grab the workload container's env file, if present.
+	envFiles[aws.StringValue(j.Name)] = aws.StringValue(j.TaskConfig.EnvFile)
+	// Grab sidecar env files, if present.
+	for name, sidecar := range j.Sidecars {
+		envFiles[name] = aws.StringValue(sidecar.EnvFile)
+	}
+	// If the Firelens Sidecar Pattern has an env file specified, get it as well.
+	envFiles[firelensContainerName] = aws.StringValue(j.Logging.EnvFile)
+	return envFiles
 }
 
 // newDefaultScheduledJob returns an empty ScheduledJob with only the default values set.

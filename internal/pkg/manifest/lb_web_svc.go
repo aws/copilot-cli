@@ -191,9 +191,20 @@ func (s *LoadBalancedWebService) BuildArgs(wsRoot string) *DockerBuildArgs {
 	return s.ImageConfig.Image.BuildConfig(wsRoot)
 }
 
-// EnvFile returns the location of the env file against the ws root directory.
-func (s *LoadBalancedWebService) EnvFile() string {
-	return aws.StringValue(s.TaskConfig.EnvFile)
+// EnvFiles returns the locations of all env files against the ws root directory.
+// This method returns a map[string]string where the keys are container names
+// and the values are either env file paths or empty strings.
+func (s *LoadBalancedWebService) EnvFiles() map[string]string {
+	envFiles := make(map[string]string)
+	// Grab the workload container's env file, if present.
+	envFiles[aws.StringValue(s.Name)] = aws.StringValue(s.TaskConfig.EnvFile)
+	// Grab sidecar env files, if present.
+	for name, sidecar := range s.Sidecars {
+		envFiles[name] = aws.StringValue(sidecar.EnvFile)
+	}
+	// If the Firelens Sidecar Pattern has an env file specified, get it as well.
+	envFiles[firelensContainerName] = aws.StringValue(s.Logging.EnvFile)
+	return envFiles
 }
 
 func (s *LoadBalancedWebService) subnets() *SubnetListOrArgs {
