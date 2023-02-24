@@ -287,6 +287,46 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				},
 			},
 		},
+		"build and push sidecar container images only with git tag succesfully": {
+			inDockerBuildArgs: map[string]*manifest.DockerBuildArgs{
+				"nginx": {
+					Dockerfile: aws.String("sidecarMockDockerfile"),
+					Context:    aws.String("sidecarMockContext"),
+				},
+				"logging": {
+					Dockerfile: aws.String("web/Dockerfile"),
+					Context:    aws.String("Users/bowie"),
+				},
+			},
+			inMockGitTag: "gitTag",
+			mock: func(t *testing.T, m *deployMocks) {
+				m.mockImageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
+					Dockerfile: "sidecarMockDockerfile",
+					Context:    "sidecarMockContext",
+					Platform:   "mockContainerPlatform",
+					Tags:       []string{fmt.Sprintf("nginx-%s", "latest"), fmt.Sprintf("nginx-%s", "gitTag")},
+				}).Return("sidecarMockDigest1", nil)
+				m.mockImageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
+					Dockerfile: "web/Dockerfile",
+					Context:    "Users/bowie",
+					Platform:   "mockContainerPlatform",
+					Tags:       []string{"logging-latest", fmt.Sprintf("logging-%s", "gitTag")},
+				}).Return("sidecarMockDigest2", nil)
+				m.mockAddons = nil
+			},
+			wantImages: map[string]ContainerImageIdentifier{
+				"nginx": {
+					Digest:            "sidecarMockDigest1",
+					GitShortCommitTag: "gitTag",
+					uuidTag:           mockUUID,
+				},
+				"logging": {
+					Digest:            "sidecarMockDigest2",
+					GitShortCommitTag: "gitTag",
+					uuidTag:           mockUUID,
+				},
+			},
+		},
 		"should retrieve Load Balanced Web Service custom resource URLs": {
 			mock: func(t *testing.T, m *deployMocks) {
 				// Ignore addon uploads.
