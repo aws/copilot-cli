@@ -373,6 +373,7 @@ func buildArgsPerContainer(name, workspacePath string, img ContainerImageIdentif
 		return nil, fmt.Errorf("check if manifest requires building from local Dockerfile: %w", err)
 	}
 	dArgs := make(map[string]*dockerengine.BuildArguments, len(argsPerContainer))
+	tags := []string{imageTagLatest, img.Tag()}
 	for container, buildArgs := range argsPerContainer {
 		tags := []string{imageTagLatest}
 		if img.Tag() != "" {
