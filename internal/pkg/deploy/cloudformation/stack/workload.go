@@ -130,7 +130,7 @@ func (i ECRImage) URI() string {
 
 // GetSidecarLocation returns the sidecar container ECR image URI.
 // Prefer referring the image using git short commit id as <sidecarname>-<gitshortcommitid>.
-// // Otherwise, each image after a push to ECR will get a digest and we refer to the image via the digest.
+// Otherwise, each image after a push to ECR will get a digest and we refer to the image via the digest.
 // Finally, if no digest or tag is present, this occurs with the "package" commands, we default to the <sidecarname>-<latest> tag.
 func (i ECRImage) GetSidecarLocation(name string) string {
 	if i.ImageTag != "" {
