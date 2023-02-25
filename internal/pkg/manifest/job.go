@@ -156,11 +156,6 @@ func (j *ScheduledJob) BuildArgs(contextDir string) (map[string]*DockerBuildArgs
 	return buildArgs, nil
 }
 
-// BuildRequired returns if the service requires building from the local Dockerfile.
-func (j *ScheduledJob) BuildRequired() (bool, error) {
-	return requiresBuild(j.ImageConfig.Image)
-}
-
 // EnvFile returns the location of the env file against the ws root directory.
 func (j *ScheduledJob) EnvFile() string {
 	return aws.StringValue(j.TaskConfig.EnvFile)

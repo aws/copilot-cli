@@ -350,16 +350,12 @@ func (img ContainerImageIdentifier) nonCustomTag() string {
 }
 
 func (d *workloadDeployer) uploadContainerImages(imgBuilderPusher imageBuilderPusher) (map[string]ContainerImageIdentifier, error) {
-	required, err := manifest.DockerfileBuildRequired(d.mft)
-	if err != nil {
-		return nil, err
-	}
 	// If it is built from local Dockerfile, build and push to the ECR repo.
 	buildArgsPerContainer, err := buildArgsPerContainer(d.name, d.workspacePath, d.image, d.mft)
 	if err != nil {
 		return nil, err
 	}
-	if !required && len(buildArgsPerContainer) == 0 {
+	if len(buildArgsPerContainer) == 0 {
 		return nil, nil
 	}
 	images := make(map[string]ContainerImageIdentifier, len(buildArgsPerContainer))

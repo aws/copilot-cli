@@ -271,11 +271,6 @@ func (s *WorkerService) MarshalBinary() ([]byte, error) {
 	return content.Bytes(), nil
 }
 
-// BuildRequired returns if the service requires building from the local Dockerfile.
-func (s *WorkerService) BuildRequired() (bool, error) {
-	return requiresBuild(s.ImageConfig.Image)
-}
-
 // BuildArgs returns a docker.BuildArguments object for the service given a context directory
 func (s *WorkerService) BuildArgs(contextDir string) (map[string]*DockerBuildArgs, error) {
 	required, err := requiresBuild(s.ImageConfig.Image)

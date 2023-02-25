@@ -181,11 +181,6 @@ func (s *LoadBalancedWebService) Publish() []Topic {
 	return s.LoadBalancedWebServiceConfig.PublishConfig.publishedTopics()
 }
 
-// BuildRequired returns if the service requires building from the local Dockerfile.
-func (s *LoadBalancedWebService) BuildRequired() (bool, error) {
-	return requiresBuild(s.ImageConfig.Image)
-}
-
 // BuildArgs returns a docker.BuildArguments object given a context directory.
 func (s *LoadBalancedWebService) BuildArgs(contextDir string) (map[string]*DockerBuildArgs, error) {
 	required, err := requiresBuild(s.ImageConfig.Image)

@@ -103,16 +103,11 @@ func (m *mockTopicLister) ListSNSTopics(_, _ string) ([]deploy.Topic, error) {
 
 type mockWorkloadMft struct {
 	fileName        string
-	buildRequired   bool
 	dockerBuildArgs map[string]*manifest.DockerBuildArgs
 }
 
 func (m *mockWorkloadMft) EnvFile() string {
 	return m.fileName
-}
-
-func (m *mockWorkloadMft) BuildRequired() (bool, error) {
-	return m.buildRequired, nil
 }
 
 func (m *mockWorkloadMft) BuildArgs(rootDirectory string) (map[string]*manifest.DockerBuildArgs, error) {
@@ -171,7 +166,6 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 	}
 	tests := map[string]struct {
 		inEnvFile         string
-		inBuildRequired   bool
 		inRegion          string
 		inMockUserTag     string
 		inMockGitTag      string
@@ -188,8 +182,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 		wantErr           error
 	}{
 		"error if failed to build and push image": {
-			inBuildRequired: true,
-			inMockUserTag:   "v1.0",
+			inMockUserTag: "v1.0",
 			inDockerBuildArgs: map[string]*manifest.DockerBuildArgs{
 				"mockWkld": {
 					Dockerfile: aws.String("mockDockerfile"),
@@ -207,9 +200,8 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			wantErr: fmt.Errorf("build and push image: some error"),
 		},
 		"build and push image with usertag successfully": {
-			inBuildRequired: true,
-			inMockUserTag:   "v1.0",
-			inMockGitTag:    "gitTag",
+			inMockUserTag: "v1.0",
+			inMockGitTag:  "gitTag",
 			inDockerBuildArgs: map[string]*manifest.DockerBuildArgs{
 				"mockWkld": {
 					Dockerfile: aws.String("mockDockerfile"),
@@ -236,8 +228,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 		},
 
 		"build and push image with gitshortcommit successfully": {
-			inBuildRequired: true,
-			inMockGitTag:    "gitTag",
+			inMockGitTag: "gitTag",
 			inDockerBuildArgs: map[string]*manifest.DockerBuildArgs{
 				"mockWkld": {
 					Dockerfile: aws.String("mockDockerfile"),
@@ -262,7 +253,6 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			},
 		},
 		"build and push image with uuid successfully": {
-			inBuildRequired: true,
 			inDockerBuildArgs: map[string]*manifest.DockerBuildArgs{
 				"mockWkld": {
 					Dockerfile: aws.String("mockDockerfile"),
@@ -590,7 +580,6 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				workspacePath: mockWorkspacePath,
 				mft: &mockWorkloadMft{
 					fileName:        tc.inEnvFile,
-					buildRequired:   tc.inBuildRequired,
 					dockerBuildArgs: tc.inDockerBuildArgs,
 				},
 				fs:                 m.mockFileReader,

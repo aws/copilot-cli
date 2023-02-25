@@ -146,11 +146,6 @@ func (s *RequestDrivenWebService) Publish() []Topic {
 	return s.RequestDrivenWebServiceConfig.PublishConfig.publishedTopics()
 }
 
-// BuildRequired returns if the service requires building from the local Dockerfile.
-func (s *RequestDrivenWebService) BuildRequired() (bool, error) {
-	return requiresBuild(s.ImageConfig.Image)
-}
-
 // ContainerPlatform returns the platform for the service.
 func (s *RequestDrivenWebService) ContainerPlatform() string {
 	if s.InstanceConfig.Platform.IsEmpty() {

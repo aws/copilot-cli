@@ -4,7 +4,6 @@
 package manifest
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
@@ -1604,70 +1603,6 @@ func TestLoadBalancedWebService_Publish(t *testing.T) {
 
 			// THEN
 			require.Equal(t, tc.wantedTopics, actual)
-		})
-	}
-}
-
-func TestLoadBalancedWebService_BuildRequired(t *testing.T) {
-	testCases := map[string]struct {
-		image   Image
-		want    bool
-		wantErr error
-	}{
-		"error if both build and location are set or not set": {
-			image: Image{
-				ImageLocationOrBuild: ImageLocationOrBuild{
-					Build: BuildArgsOrString{
-						BuildString: aws.String("mockBuildString"),
-					},
-					Location: aws.String("mockLocation"),
-				},
-			},
-			wantErr: fmt.Errorf(`either "image.build" or "image.location" needs to be specified in the manifest`),
-		},
-		"return true if location is not set": {
-			image: Image{
-				ImageLocationOrBuild: ImageLocationOrBuild{
-					Build: BuildArgsOrString{
-						BuildString: aws.String("mockBuildString"),
-					},
-				},
-			},
-			want: true,
-		},
-		"return false if location is set": {
-			image: Image{
-				ImageLocationOrBuild: ImageLocationOrBuild{
-					Build:    BuildArgsOrString{},
-					Location: aws.String("mockLocation"),
-				},
-			},
-			want: false,
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			manifest := &LoadBalancedWebService{
-				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-					ImageConfig: ImageWithPortAndHealthcheck{
-						ImageWithPort: ImageWithPort{
-							Image: tc.image,
-						},
-					},
-				},
-			}
-
-			// WHEN
-			got, gotErr := manifest.BuildRequired()
-
-			// THEN
-			if gotErr != nil {
-				require.EqualError(t, gotErr, tc.wantErr.Error())
-			} else {
-				require.Equal(t, tc.want, got)
-			}
 		})
 	}
 }

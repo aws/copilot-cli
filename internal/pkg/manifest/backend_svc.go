@@ -114,11 +114,6 @@ func (s *BackendService) Publish() []Topic {
 	return s.BackendServiceConfig.PublishConfig.publishedTopics()
 }
 
-// BuildRequired returns if the service requires building from the local Dockerfile.
-func (s *BackendService) BuildRequired() (bool, error) {
-	return requiresBuild(s.ImageConfig.Image)
-}
-
 // BuildArgs returns a docker.BuildArguments object for the service given a context directory.
 func (s *BackendService) BuildArgs(contextDir string) (map[string]*DockerBuildArgs, error) {
 	required, err := requiresBuild(s.ImageConfig.Image)
