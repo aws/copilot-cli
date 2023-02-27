@@ -4,6 +4,7 @@
 package cli
 
 import (
+	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
@@ -39,7 +40,16 @@ type overrideSvcOpts struct {
 }
 
 func newOverrideSvcOpts(_ overrideVars) (*overrideSvcOpts, error) {
-	return nil, nil
+	fs := afero.NewOsFs()
+	ws, err := workspace.Use(fs)
+	if err != nil {
+		return nil, err
+	}
+
+	return &overrideSvcOpts{
+		ws: ws,
+		fs: fs,
+	}, nil
 }
 
 // Validate returns an error for any invalid optional flags.
