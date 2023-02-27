@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatch"
 	"io"
 	"net/url"
 	"sort"
@@ -86,6 +87,10 @@ type apprunnerDescriber interface {
 	ServiceARN() (string, error)
 	ServiceURL() (string, error)
 	IsPrivate() (bool, error)
+}
+
+type cwAlarmDescriber interface {
+	AlarmDescriptions(opts ...cloudwatch.DescribeAlarmOpts) ([]cloudwatch.AlarmDescription, error)
 }
 
 type ecsSvcDesc struct {
@@ -452,6 +457,9 @@ func (abr rollbackAlarms) humanString(w io.Writer) {
 	headers := []string{"Name"}
 	fmt.Fprintf(w, "  %s\n", strings.Join(headers, "\t"))
 	fmt.Fprintf(w, "  %s\n", strings.Join(underline(headers), "\t"))
+	// make a map of name:description then adapt fmt.Fprintf
+	// also format the description using the pieces
+	cwAlarmDescriber.AlarmDescriptions(cloudwatch.WithNames(abr))
 	for _, alarm := range abr {
 		fmt.Fprintf(w, "  %s\n", alarm)
 	}
