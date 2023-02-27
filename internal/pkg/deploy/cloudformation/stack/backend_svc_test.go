@@ -469,8 +469,10 @@ Outputs:
 						ContainerName:     "envoy",
 					},
 					"envoy": {
-						RepoURL:  testImageRepoURL,
-						ImageTag: testImageTag,
+						RepoURL:           testImageRepoURL,
+						ImageTag:          testImageTag,
+						MainContainerName: "test",
+						ContainerName:     "envoy",
 					},
 				},
 			},
