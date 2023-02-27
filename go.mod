@@ -21,7 +21,7 @@ require (
 	github.com/spf13/afero v1.9.3
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/pflag v1.0.5
-	github.com/stretchr/testify v1.8.1
+	github.com/stretchr/testify v1.8.2
 	github.com/xlab/treeprint v1.1.0
 	golang.org/x/mod v0.8.0
 	golang.org/x/sync v0.1.0
