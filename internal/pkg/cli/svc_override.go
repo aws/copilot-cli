@@ -39,7 +39,7 @@ type overrideSvcOpts struct {
 	fs afero.Fs
 }
 
-func newOverrideSvcOpts(_ overrideVars) (*overrideSvcOpts, error) {
+func newOverrideSvcOpts(vars overrideVars) (*overrideSvcOpts, error) {
 	fs := afero.NewOsFs()
 	ws, err := workspace.Use(fs)
 	if err != nil {
@@ -47,8 +47,9 @@ func newOverrideSvcOpts(_ overrideVars) (*overrideSvcOpts, error) {
 	}
 
 	return &overrideSvcOpts{
-		ws: ws,
-		fs: fs,
+		overrideVars: vars,
+		ws:           ws,
+		fs:           fs,
 	}, nil
 }
 

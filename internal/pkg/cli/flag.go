@@ -225,7 +225,7 @@ Mutually exclusive with the -%s ,--%s and --%s flags.`, nameFlagShort, nameFlag,
 
 	iacToolFlagDescription = fmt.Sprintf(`Infrastructure as code tool to override a template.
 Must be one of: %s.`, strings.Join(applyAll(iacToolkits, strconv.Quote), ", "))
-	cdkLanguageFlagDescription = fmt.Sprintf(`Optional. The Cloud Development Kit language.`)
+	cdkLanguageFlagDescription = `Optional. The Cloud Development Kit language.`
 
 	repoURLFlagDescription = fmt.Sprintf(`The repository URL to trigger your pipeline.
 Supported providers are: %s.`, strings.Join(manifest.PipelineProviders, ", "))
