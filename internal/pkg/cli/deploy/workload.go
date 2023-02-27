@@ -322,7 +322,7 @@ func (d *workloadDeployer) forceDeploy(in *forceDeployInput) error {
 	return nil
 }
 
-// ReferenceTag returns the tag that should be used to reference the image.
+// Tag returns the tag that should be used to reference the image.
 func (img ContainerImageIdentifier) Tag() string {
 	if tag := img.customOrGitTag(); tag != "" {
 		return tag
@@ -388,8 +388,8 @@ func buildArgsPerContainer(name, workspacePath string, img ContainerImageIdentif
 		return nil, fmt.Errorf("check if manifest requires building from local Dockerfile: %w", err)
 	}
 	dArgs := make(map[string]*dockerengine.BuildArguments, len(argsPerContainer))
-	tags := []string{imageTagLatest, img.Tag()}
 	for container, buildArgs := range argsPerContainer {
+		tags := []string{imageTagLatest, img.Tag()}
 		if container != name {
 			tags = []string{fmt.Sprintf("%s-%s", container, imageTagLatest), fmt.Sprintf("%s-%s", container, img.nonCustomTag())}
 		}
@@ -572,6 +572,9 @@ func (d *workloadDeployer) runtimeConfig(in *StackRuntimeConfiguration) (*stack.
 	}
 	images := make(map[string]stack.ECRImage, len(in.ImageDigests))
 	for container, img := range in.ImageDigests {
+		// Currently we do not tag sidecar container images with custom tag provided by the user.
+		// This is the reason for having different ImageTag for main and sidecar container images
+		// that is needed to create CloudFormation stack.
 		imageTag := img.customOrGitTag()
 		if container != d.name {
 			imageTag = img.GitShortCommitTag
