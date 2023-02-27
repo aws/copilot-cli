@@ -577,9 +577,11 @@ func (d *workloadDeployer) runtimeConfig(in *StackRuntimeConfiguration) (*stack.
 			imageTag = img.GitShortCommitTag
 		}
 		images[container] = stack.ECRImage{
-			RepoURL:  d.resources.RepositoryURLs[d.name],
-			ImageTag: imageTag,
-			Digest:   img.Digest,
+			RepoURL:           d.resources.RepositoryURLs[d.name],
+			ImageTag:          imageTag,
+			Digest:            img.Digest,
+			MainContainerName: d.name,
+			ContainerName:     container,
 		}
 	}
 	return &stack.RuntimeConfig{

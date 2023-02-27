@@ -21,9 +21,11 @@ func Test_convertSidecar(t *testing.T) {
 	mockRunTimeConfig := RuntimeConfig{
 		PushedImages: map[string]ECRImage{
 			"foo": {
-				RepoURL:  "535307839156.dkr.ecr.us-west-2.amazonaws.com/web",
-				ImageTag: "v1.0",
-				Digest:   "abcdef",
+				RepoURL:           "535307839156.dkr.ecr.us-west-2.amazonaws.com/web",
+				ImageTag:          "v1.0",
+				Digest:            "abcdef",
+				MainContainerName: "mockMainContainer",
+				ContainerName:     "foo",
 			},
 		},
 	}

@@ -9,6 +9,7 @@ import (
 	"strconv"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
+	"github.com/aws/copilot-cli/internal/pkg/term/log"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
@@ -95,37 +96,38 @@ func (cfg *RuntimeConfig) loadCustomResourceURLs(bucket string, crs []uploadable
 // ECRImage represents configuration about the pushed ECR image that is needed to
 // create a CloudFormation stack.
 type ECRImage struct {
-	RepoURL  string // RepoURL is the ECR repository URL the container image should be pushed to.
-	ImageTag string // Tag is the container image's unique tag.
-	Digest   string // The image digest.
+	RepoURL           string // RepoURL is the ECR repository URL the container image should be pushed to.
+	ImageTag          string // Tag is the container image's unique tag.
+	Digest            string // The image digest.
+	ContainerName     string // The container name.
+	MainContainerName string // The workload's container name.
 }
 
-// GetLocation returns the ECR image URI.
+// URI returns the ECR image URI.
 // If a tag is provided by the user or discovered from git then prioritize referring to the image via the tag.
 // Otherwise, each image after a push to ECR will get a digest and we refer to the image via the digest.
 // Finally, if no digest or tag is present, this occurs with the "package" commands, we default to the "latest" tag.
-func (i ECRImage) GetLocation() string {
-	if i.ImageTag != "" {
-		return fmt.Sprintf("%s:%s", i.RepoURL, i.ImageTag)
+func (i ECRImage) URI() string {
+	log.Infoln("main container", i.MainContainerName)
+	log.Infoln("container", i.ContainerName)
+	if i.ContainerName == i.MainContainerName {
+		if i.ImageTag != "" {
+			return fmt.Sprintf("%s:%s", i.RepoURL, i.ImageTag)
+		}
+		if i.Digest != "" {
+			return fmt.Sprintf("%s@%s", i.RepoURL, i.Digest)
+		}
+		return fmt.Sprintf("%s:%s", i.RepoURL, "latest")
+	} else {
+		if i.ImageTag != "" {
+			return fmt.Sprintf("%s:%s-%s", i.RepoURL, i.ContainerName, i.ImageTag)
+		}
+		if i.Digest != "" {
+			return fmt.Sprintf("%s@%s", i.RepoURL, i.Digest)
+		}
+		return fmt.Sprintf("%s:%s-%s", i.RepoURL, i.ContainerName, "latest")
 	}
-	if i.Digest != "" {
-		return fmt.Sprintf("%s@%s", i.RepoURL, i.Digest)
-	}
-	return fmt.Sprintf("%s:%s", i.RepoURL, "latest")
-}
 
-// GetSidecarLocation returns the sidecar container ECR image URI.
-// Prefer referring the image using git short commit id as <sidecarname>-<gitshortcommitid>.
-// Otherwise, each image after a push to ECR will get a digest and we refer to the image via the digest.
-// Finally, if no digest or tag is present, this occurs with the "package" commands, we default to the <sidecarname>-<latest> tag.
-func (i ECRImage) GetSidecarLocation(name string) string {
-	if i.ImageTag != "" {
-		return fmt.Sprintf("%s:%s-%s", i.RepoURL, name, i.ImageTag)
-	}
-	if i.Digest != "" {
-		return fmt.Sprintf("%s@%s", i.RepoURL, i.Digest)
-	}
-	return fmt.Sprintf("%s:%s-%s", i.RepoURL, name, "latest")
 }
 
 // NestedStackConfigurer configures a nested stack that deploys addons.
@@ -172,7 +174,7 @@ func (w *wkld) Parameters() ([]*cloudformation.Parameter, error) {
 		img = w.image.GetLocation()
 	}
 	if w.rc.PushedImages != nil {
-		img = w.rc.PushedImages[w.name].GetLocation()
+		img = w.rc.PushedImages[w.name].URI()
 	}
 	return []*cloudformation.Parameter{
 		{
@@ -382,7 +384,7 @@ func (w *appRunnerWkld) Parameters() ([]*cloudformation.Parameter, error) {
 		img = w.image.GetLocation()
 	}
 	if w.rc.PushedImages != nil {
-		img = w.rc.PushedImages[w.name].GetLocation()
+		img = w.rc.PushedImages[w.name].URI()
 	}
 
 	imageRepositoryType, err := apprunner.DetermineImageRepositoryType(img)

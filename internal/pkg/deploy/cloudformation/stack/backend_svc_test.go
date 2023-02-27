@@ -457,12 +457,16 @@ Outputs:
 			RuntimeConfig: RuntimeConfig{
 				PushedImages: map[string]ECRImage{
 					"test": {
-						RepoURL:  testImageRepoURL,
-						ImageTag: testImageTag,
+						RepoURL:           testImageRepoURL,
+						ImageTag:          testImageTag,
+						MainContainerName: "test",
+						ContainerName:     "test",
 					},
 					"envoy": {
-						RepoURL:  testImageRepoURL,
-						ImageTag: testImageTag,
+						RepoURL:           testImageRepoURL,
+						ImageTag:          testImageTag,
+						MainContainerName: "test",
+						ContainerName:     "envoy",
 					},
 				},
 			},
