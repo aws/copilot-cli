@@ -115,16 +115,14 @@ func (i ECRImage) URI() string {
 			return fmt.Sprintf("%s@%s", i.RepoURL, i.Digest)
 		}
 		return fmt.Sprintf("%s:%s", i.RepoURL, "latest")
-	} else {
-		if i.ImageTag != "" {
-			return fmt.Sprintf("%s:%s-%s", i.RepoURL, i.ContainerName, i.ImageTag)
-		}
-		if i.Digest != "" {
-			return fmt.Sprintf("%s@%s", i.RepoURL, i.Digest)
-		}
-		return fmt.Sprintf("%s:%s-%s", i.RepoURL, i.ContainerName, "latest")
 	}
-
+	if i.ImageTag != "" {
+		return fmt.Sprintf("%s:%s-%s", i.RepoURL, i.ContainerName, i.ImageTag)
+	}
+	if i.Digest != "" {
+		return fmt.Sprintf("%s@%s", i.RepoURL, i.Digest)
+	}
+	return fmt.Sprintf("%s:%s-%s", i.RepoURL, i.ContainerName, "latest")
 }
 
 // NestedStackConfigurer configures a nested stack that deploys addons.
