@@ -9,7 +9,6 @@ import (
 	"strconv"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
-	"github.com/aws/copilot-cli/internal/pkg/term/log"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
@@ -108,8 +107,6 @@ type ECRImage struct {
 // Otherwise, each image after a push to ECR will get a digest and we refer to the image via the digest.
 // Finally, if no digest or tag is present, this occurs with the "package" commands, we default to the "latest" tag.
 func (i ECRImage) URI() string {
-	log.Infoln("main container", i.MainContainerName)
-	log.Infoln("container", i.ContainerName)
 	if i.ContainerName == i.MainContainerName {
 		if i.ImageTag != "" {
 			return fmt.Sprintf("%s:%s", i.RepoURL, i.ImageTag)
