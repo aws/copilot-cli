@@ -218,17 +218,20 @@ func TestStaticSite_Parameters(t *testing.T) {
 			testManifest := manifest.NewStaticSite("frontend")
 
 			// GIVEN
-			conf := &StaticSite{
-				wkld: &wkld{
-					name: aws.StringValue(testManifest.Name),
-					env:  testEnvName,
-					app:  testAppName,
-					rc: RuntimeConfig{
-						AddonsTemplateURL: "mockURL",
+			conf, _ := NewStaticSite(&StaticSiteConfig{
+				App: &config.Application{
+					Name: testAppName,
+				},
+				RuntimeConfig: RuntimeConfig{
+					AddonsTemplateURL: "mockURL",
+				},
+				EnvManifest: &manifest.Environment{
+					Workload: manifest.Workload{
+						Name: aws.String(testEnvName),
 					},
 				},
-				manifest: testManifest,
-			}
+				Manifest: testManifest,
+			})
 
 			// WHEN
 			params, err := conf.Parameters()
