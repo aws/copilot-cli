@@ -7,7 +7,6 @@ package ecs
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatch"
 	"strings"
 	"time"
 
@@ -48,10 +47,6 @@ type ecsClient interface {
 	DescribeTasks(cluster string, taskARNs []string) ([]*ecs.Task, error)
 }
 
-type cwClient interface {
-	AlarmStatuses(opts ...cloudwatch.DescribeAlarmOpts) ([]cloudwatch.AlarmStatus, error)
-}
-
 type stepFunctionsClient interface {
 	StateMachineDefinition(stateMachineARN string) (string, error)
 }
@@ -68,7 +63,6 @@ type ServiceDesc struct {
 type Client struct {
 	rgGetter       resourceGetter
 	ecsClient      ecsClient
-	cwClient       cwClient
 	StepFuncClient stepFunctionsClient
 }
 
@@ -77,7 +71,6 @@ func New(sess *session.Session) *Client {
 	return &Client{
 		rgGetter:       resourcegroups.New(sess),
 		ecsClient:      ecs.New(sess),
-		cwClient:       cloudwatch.New(sess),
 		StepFuncClient: stepfunctions.New(sess),
 	}
 }
