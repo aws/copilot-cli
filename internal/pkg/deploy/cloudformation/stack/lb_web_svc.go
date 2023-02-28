@@ -142,9 +142,6 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("convert the sidecar configuration for service %s: %w", s.name, err)
 	}
-	if err != nil {
-		return "", fmt.Errorf("convert the sidecar configuration for service %s: %w", s.name, err)
-	}
 	publishers, err := convertPublish(s.manifest.Publish(), s.rc.AccountID, s.rc.Region, s.app, s.env, s.name)
 	if err != nil {
 		return "", fmt.Errorf(`convert "publish" field for service %s: %w`, s.name, err)
