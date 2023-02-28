@@ -102,8 +102,9 @@ func (o *overrideSvcOpts) validateAppName() error {
 	if o.appName == "" {
 		return errNoAppInWorkspace
 	}
-	if _, err := o.appConfig(); err != nil {
-		return err
+	_, err := o.cfgStore.GetApplication(o.appName)
+	if err != nil {
+		return fmt.Errorf("get application %q configuration: %w", o.appName, err)
 	}
 	return nil
 }
@@ -117,14 +118,6 @@ func (o *overrideSvcOpts) validateCDKLang() error {
 	return fmt.Errorf("%q is not a valid CDK language: must be one of: %s",
 		o.cdkLang,
 		strings.Join(applyAll(validCDKLangs, strconv.Quote), ", "))
-}
-
-func (o *overrideSvcOpts) appConfig() (*config.Application, error) {
-	appCfg, err := o.cfgStore.GetApplication(o.appName)
-	if err != nil {
-		return nil, fmt.Errorf("get application %q configuration: %w", o.appName, err)
-	}
-	return appCfg, nil
 }
 
 func buildSvcOverrideCmd() *cobra.Command {
