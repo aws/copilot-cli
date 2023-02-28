@@ -93,6 +93,8 @@ func TestWorkerService_Template(t *testing.T) {
 		mExpected := make(map[interface{}]interface{})
 
 		require.NoError(t, yaml.Unmarshal(expected, mExpected))
+
+		resetCustomResourceLocations(mActual)
 		compareStackTemplate(t, mExpected, mActual)
 	})
 

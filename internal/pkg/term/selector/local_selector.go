@@ -23,11 +23,11 @@ const (
 
 // staticSelector selects from a list of static options.
 type staticSelector struct {
-	prompt prompter
+	prompt Prompter
 }
 
 // NewStaticSelector constructs a staticSelector.
-func NewStaticSelector(prompt prompter) *staticSelector {
+func NewStaticSelector(prompt Prompter) *staticSelector {
 	return &staticSelector{
 		prompt: prompt,
 	}
@@ -127,13 +127,13 @@ func (s *staticSelector) askCron(scheduleValidator prompt.ValidatorFunc) (string
 
 // localFileSelector selects from a local file system where a workspace does not necessarily exist.
 type localFileSelector struct {
-	prompt        prompter
+	prompt        Prompter
 	fs            *afero.Afero
 	workingDirAbs string
 }
 
 // NewLocalFileSelector constructs a localFileSelector.
-func NewLocalFileSelector(prompt prompter, fs afero.Fs) (*localFileSelector, error) {
+func NewLocalFileSelector(prompt Prompter, fs afero.Fs) (*localFileSelector, error) {
 	workingDirAbs, err := os.Getwd()
 	if err != nil {
 		return nil, fmt.Errorf("get working directory: %w", err)

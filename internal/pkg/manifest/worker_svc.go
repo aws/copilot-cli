@@ -276,9 +276,11 @@ func (s *WorkerService) BuildRequired() (bool, error) {
 	return requiresBuild(s.ImageConfig.Image)
 }
 
-// BuildArgs returns a docker.BuildArguments object for the service given a workspace root directory
-func (s *WorkerService) BuildArgs(wsRoot string) *DockerBuildArgs {
-	return s.ImageConfig.Image.BuildConfig(wsRoot)
+// BuildArgs returns a docker.BuildArguments object for the service given a context directory
+func (s *WorkerService) BuildArgs(contextDir string) map[string]*DockerBuildArgs {
+	buildArgs := make(map[string]*DockerBuildArgs, len(s.Sidecars)+1)
+	buildArgs[aws.StringValue(s.Name)] = s.ImageConfig.Image.BuildConfig(contextDir)
+	return buildArgs
 }
 
 // EnvFile returns the location of the env file against the ws root directory.

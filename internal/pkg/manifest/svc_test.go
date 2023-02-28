@@ -753,8 +753,6 @@ func Test_ServiceDockerfileBuildRequired(t *testing.T) {
 	}{
 		"invalid type": {
 			svc: struct{}{},
-
-			wantedErr: fmt.Errorf("manifest does not have required methods BuildRequired()"),
 		},
 		"fail to check": {
 			svc: &LoadBalancedWebService{},

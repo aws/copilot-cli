@@ -1,11 +1,11 @@
 module github.com/aws/copilot-cli
 
-go 1.18
+go 1.20
 
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.2
-	github.com/aws/aws-sdk-go v1.44.204
-	github.com/briandowns/spinner v1.21.0
+	github.com/aws/aws-sdk-go v1.44.209
+	github.com/briandowns/spinner v1.22.0
 	github.com/dustin/go-humanize v1.0.1
 	github.com/fatih/color v1.14.1
 	github.com/fatih/structs v1.1.0
@@ -18,10 +18,10 @@ require (
 	github.com/onsi/ginkgo/v2 v2.8.3
 	github.com/onsi/gomega v1.27.1
 	github.com/robfig/cron/v3 v3.0.1
-	github.com/spf13/afero v1.9.3
+	github.com/spf13/afero v1.9.4
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/pflag v1.0.5
-	github.com/stretchr/testify v1.8.1
+	github.com/stretchr/testify v1.8.2
 	github.com/xlab/treeprint v1.1.0
 	golang.org/x/mod v0.8.0
 	golang.org/x/sync v0.1.0

@@ -85,7 +85,7 @@ func (d *jobDeployer) DeployWorkload(in *DeployWorkloadInput) (ActionRecommender
 	if err := d.deployer.DeployService(stackConfigOutput.conf, d.resources.S3Bucket, opts...); err != nil {
 		return nil, fmt.Errorf("deploy job: %w", err)
 	}
-	return nil, nil
+	return noopActionRecommender{}, nil
 }
 
 type jobStackConfigurationOutput struct {
@@ -116,7 +116,7 @@ func (d *jobDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*jobSta
 			return nil, fmt.Errorf("create stack configuration: %w", err)
 		}
 	}
-	
+
 	return &jobStackConfigurationOutput{
 		conf: cloudformation.WrapWithTemplateOverrider(conf, d.overrider),
 	}, nil
