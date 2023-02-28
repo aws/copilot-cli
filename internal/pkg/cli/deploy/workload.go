@@ -93,7 +93,7 @@ type StackRuntimeConfiguration struct {
 	// This is mainly to keep the `workload package` behavior backward-compatible, otherwise our old pipeline buildspec would break,
 	// since previously we parsed the env region from a mock ECR URL that we generated from `workload package``.
 	ImageDigest        *string
-	EnvFileARN         string
+	EnvFileARNs        map[string]string
 	AddonsURL          string
 	RootUserARN        string
 	Tags               map[string]string
@@ -353,12 +353,12 @@ type uploadArtifactsToS3Input struct {
 }
 
 type uploadArtifactsToS3Output struct {
-	envFileARN string
-	addonsURL  string
+	envFileARNs map[string]string // map[container name]ARN
+	addonsURL   string
 }
 
 func (d *workloadDeployer) uploadArtifactsToS3(in *uploadArtifactsToS3Input) (uploadArtifactsToS3Output, error) {
-	envFileARN, err := d.pushEnvFileToS3Bucket(&pushEnvFilesToS3BucketInput{
+	envFileARNs, err := d.pushEnvFilesToS3Bucket(&pushEnvFilesToS3BucketInput{
 		fs:       in.fs,
 		uploader: in.uploader,
 	})
@@ -370,8 +370,8 @@ func (d *workloadDeployer) uploadArtifactsToS3(in *uploadArtifactsToS3Input) (up
 		return uploadArtifactsToS3Output{}, err
 	}
 	return uploadArtifactsToS3Output{
-		envFileARN: envFileARN,
-		addonsURL:  addonsURL,
+		envFileARNs: envFileARNs,
+		addonsURL:   addonsURL,
 	}, nil
 }
 
@@ -380,7 +380,7 @@ type customResourcesFunc func(fs template.Reader) ([]*customresource.CustomResou
 // UploadArtifactsOutput is the output of UploadArtifacts.
 type UploadArtifactsOutput struct {
 	ImageDigest        *string
-	EnvFileARN         string
+	EnvFileARNs        map[string]string // map[container name]envFileARN
 	AddonsURL          string
 	CustomResourceURLs map[string]string
 }
@@ -400,7 +400,7 @@ func (d *workloadDeployer) uploadArtifacts() (*UploadArtifactsOutput, error) {
 
 	out := &UploadArtifactsOutput{
 		ImageDigest: imageDigest,
-		EnvFileARN:  s3Artifacts.envFileARN,
+		EnvFileARNs: s3Artifacts.envFileARNs,
 		AddonsURL:   s3Artifacts.addonsURL,
 	}
 	crs, err := d.customResources(d.templateFS)
@@ -422,43 +422,74 @@ type pushEnvFilesToS3BucketInput struct {
 	uploader uploader
 }
 
-func (d *workloadDeployer) pushEnvFileToS3Bucket(in *pushEnvFilesToS3BucketInput) (string, error) {
-	path := envFile(d.mft)
-	if path == "" {
-		return "", nil
+// pushEnvFilesToS3Bucket collects all environment files required by the workload container and any sidecars,
+// uploads each one exactly once, and returns a map structured in the following way. map[containerName]envFileARN
+// Example content:
+//
+//	{
+//	  "frontend": "arn:aws:s3:::bucket/key1",
+//	  "firelens_log_router": "arn:aws:s3:::bucket/key2",
+//	  "nginx": "arn:aws:s3:::bucket/key1"
+//	}
+func (d *workloadDeployer) pushEnvFilesToS3Bucket(in *pushEnvFilesToS3BucketInput) (map[string]string, error) {
+	envFilesByContainer := envFiles(d.mft)
+	uniqueEnvFiles := make(map[string][]string)
+	// Invert the map of containers to env files to get the unique env files to upload.
+	for container, path := range envFilesByContainer {
+		if path == "" {
+			continue
+		}
+		if containers, ok := uniqueEnvFiles[path]; !ok {
+			uniqueEnvFiles[path] = []string{container}
+		} else {
+			uniqueEnvFiles[path] = append(containers, container)
+		}
 	}
-	content, err := in.fs.ReadFile(filepath.Join(d.workspacePath, path))
-	if err != nil {
-		return "", fmt.Errorf("read env file %s: %w", path, err)
+	// Upload each file to s3 exactly once and generate its ARN.
+	// Save those ARNs in a map from container name to env file ARN and return.
+	envFileARNs := make(map[string]string)
+	// Initialize the map with empty strings for all containers so that the primary workload condition
+	for container, _ := range envFilesByContainer {
+		envFileARNs[container] = ""
 	}
-	reader := bytes.NewReader(content)
-	url, err := in.uploader.Upload(d.resources.S3Bucket, artifactpath.EnvFiles(path, content), reader)
-	if err != nil {
-		return "", fmt.Errorf("put env file %s artifact to bucket %s: %w", path, d.resources.S3Bucket, err)
+	for path, containers := range uniqueEnvFiles {
+		content, err := in.fs.ReadFile(filepath.Join(d.workspacePath, path))
+		if err != nil {
+			return nil, fmt.Errorf("read env file %s: %w", path, err)
+		}
+		reader := bytes.NewReader(content)
+		url, err := in.uploader.Upload(d.resources.S3Bucket, artifactpath.EnvFiles(path, content), reader)
+		if err != nil {
+			return nil, fmt.Errorf("put env file %s artifact to bucket %s: %w", path, d.resources.S3Bucket, err)
+		}
+		bucket, key, err := s3.ParseURL(url)
+		if err != nil {
+			return nil, fmt.Errorf("parse s3 url: %w", err)
+		}
+		// The app and environment are always within the same partition.
+		partition, err := partitions.Region(d.env.Region).Partition()
+		if err != nil {
+			return nil, err
+		}
+		for _, container := range containers {
+			envFileARNs[container] = s3.FormatARN(partition.ID(), fmt.Sprintf("%s/%s", bucket, key))
+		}
 	}
-	bucket, key, err := s3.ParseURL(url)
-	if err != nil {
-		return "", fmt.Errorf("parse s3 url: %w", err)
-	}
-	// The app and environment are always within the same partition.
-	partition, err := partitions.Region(d.env.Region).Partition()
-	if err != nil {
-		return "", err
-	}
-	envFileARN := s3.FormatARN(partition.ID(), fmt.Sprintf("%s/%s", bucket, key))
-	return envFileARN, nil
+	return envFileARNs, nil
 }
 
-func envFile(unmarshaledManifest interface{}) string {
+// envFiles gets a map from container name to env file for all containers in the task,
+// including sidecars and Firelens logging.
+func envFiles(unmarshaledManifest interface{}) map[string]string {
 	type envFile interface {
-		EnvFile() string
+		EnvFiles() map[string]string
 	}
 	mf, ok := unmarshaledManifest.(envFile)
 	if ok {
-		return mf.EnvFile()
+		return mf.EnvFiles()
 	}
 	// If the manifest type doesn't support envFiles, ignore and move forward.
-	return ""
+	return nil
 }
 
 func (d *workloadDeployer) pushAddonsTemplateToS3Bucket() (string, error) {
@@ -502,7 +533,7 @@ func (d *workloadDeployer) runtimeConfig(in *StackRuntimeConfiguration) (*stack.
 	if len(aws.StringValue(in.ImageDigest)) == 0 {
 		return &stack.RuntimeConfig{
 			AddonsTemplateURL:        in.AddonsURL,
-			EnvFileARN:               in.EnvFileARN,
+			EnvFileARNs:              in.EnvFileARNs,
 			AdditionalTags:           in.Tags,
 			ServiceDiscoveryEndpoint: endpoint,
 			AccountID:                d.env.AccountID,
@@ -513,7 +544,7 @@ func (d *workloadDeployer) runtimeConfig(in *StackRuntimeConfiguration) (*stack.
 	}
 	return &stack.RuntimeConfig{
 		AddonsTemplateURL: in.AddonsURL,
-		EnvFileARN:        in.EnvFileARN,
+		EnvFileARNs:       in.EnvFileARNs,
 		AdditionalTags:    in.Tags,
 		Image: &stack.ECRImage{
 			RepoURL:  d.resources.RepositoryURLs[d.name],

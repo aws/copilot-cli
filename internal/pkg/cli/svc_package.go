@@ -338,7 +338,7 @@ func (o *packageSvcOpts) getWorkloadStack(generator workloadStackGenerator) (*cf
 			RootUserARN:        o.rootUserARN,
 			Tags:               targetApp.Tags,
 			ImageDigest:        uploadOut.ImageDigest,
-			EnvFileARN:         uploadOut.EnvFileARN,
+			EnvFileARNs:        uploadOut.EnvFileARNs,
 			AddonsURL:          uploadOut.AddonsURL,
 			CustomResourceURLs: uploadOut.CustomResourceURLs,
 		},
