@@ -11,9 +11,7 @@ Parameters:
 Resources:
   {{logicalIDSafe .Name}}BucketAccessPolicy:
     Metadata:
-      'aws:copilot:description': !Sub
-        - 'An IAM managed policy for your service to access the ${Bucket} bucket of  your environment'
-        - Bucket: { Fn::ImportValue: { Fn::Sub: "${App}-${Env}-{{logicalIDSafe .Name}}BucketName" }}
+      'aws:copilot:description': 'An IAM managed policy for your service to access the bucket of your environment'
     Type: AWS::IAM::ManagedPolicy
     Properties:
       Description: !Sub
