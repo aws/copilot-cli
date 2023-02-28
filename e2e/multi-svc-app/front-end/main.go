@@ -6,7 +6,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -53,7 +53,7 @@ func ServiceGet(w http.ResponseWriter, req *http.Request, ps httprouter.Params) 
 	}
 	log.Println("Get on service discovery endpoint Succeeded")
 	defer resp.Body.Close()
-	body, _ := ioutil.ReadAll(resp.Body)
+	body, _ := io.ReadAll(resp.Body)
 	w.WriteHeader(http.StatusOK)
 	w.Write(body)
 }

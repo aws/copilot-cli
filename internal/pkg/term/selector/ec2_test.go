@@ -15,7 +15,7 @@ import (
 )
 
 type ec2SelectMocks struct {
-	prompt *mocks.Mockprompter
+	prompt *mocks.MockPrompter
 	ec2Svc *mocks.MockVPCSubnetLister
 }
 
@@ -90,7 +90,7 @@ func TestEc2Select_VPC(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockec2Svc := mocks.NewMockVPCSubnetLister(ctrl)
-			mockprompt := mocks.NewMockprompter(ctrl)
+			mockprompt := mocks.NewMockPrompter(ctrl)
 			mocks := ec2SelectMocks{
 				ec2Svc: mockec2Svc,
 				prompt: mockprompt,
@@ -193,7 +193,7 @@ func TestEc2Select_Subnets(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockec2Svc := mocks.NewMockVPCSubnetLister(ctrl)
-			mockprompt := mocks.NewMockprompter(ctrl)
+			mockprompt := mocks.NewMockPrompter(ctrl)
 			mocks := ec2SelectMocks{
 				ec2Svc: mockec2Svc,
 				prompt: mockprompt,

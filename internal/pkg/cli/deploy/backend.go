@@ -83,7 +83,7 @@ func (d *backendSvcDeployer) DeployWorkload(in *DeployWorkloadInput) (ActionReco
 	if err := d.deploy(in.Options, *stackConfigOutput); err != nil {
 		return nil, err
 	}
-	return nil, nil
+	return noopActionRecommender{}, nil
 }
 
 func (d *backendSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*svcStackConfigurationOutput, error) {

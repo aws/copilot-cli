@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/addon"
@@ -66,17 +68,27 @@ const (
 // RuntimeConfig represents configuration that's defined outside of the manifest file
 // that is needed to create a CloudFormation stack.
 type RuntimeConfig struct {
-	Image              *ECRImage         // Optional. Image location in an ECR repository.
-	AddonsTemplateURL  string            // Optional. S3 object URL for the addons template.
-	EnvFileARN         string            // Optional. S3 object ARN for the env file.
-	AdditionalTags     map[string]string // AdditionalTags are labels applied to resources in the workload stack.
-	CustomResourcesURL map[string]string // Mapping of Custom Resource Function Name to the S3 URL where the function zip file is stored.
+	Images             map[string]ECRImage // Optional. Image location in an ECR repository.
+	AddonsTemplateURL  string              // Optional. S3 object URL for the addons template.
+	EnvFileARN         string              // Optional. S3 object ARN for the env file.
+	AdditionalTags     map[string]string   // AdditionalTags are labels applied to resources in the workload stack.
+	CustomResourcesURL map[string]string   // Mapping of Custom Resource Function Name to the S3 URL where the function zip file is stored.
 
 	// The target environment metadata.
 	ServiceDiscoveryEndpoint string // Endpoint for the service discovery namespace in the environment.
 	AccountID                string
 	Region                   string
 	EnvVersion               string
+}
+
+func (cfg *RuntimeConfig) loadCustomResourceURLs(bucket string, crs []uploadable) {
+	if len(cfg.CustomResourcesURL) != 0 {
+		return
+	}
+	cfg.CustomResourcesURL = make(map[string]string, len(crs))
+	for _, cr := range crs {
+		cfg.CustomResourcesURL[cr.Name()] = s3.URL(cfg.Region, bucket, cr.ArtifactPath())
+	}
 }
 
 // ECRImage represents configuration about the pushed ECR image that is needed to
@@ -144,8 +156,8 @@ func (w *wkld) Parameters() ([]*cloudformation.Parameter, error) {
 	if w.image != nil {
 		img = w.image.GetLocation()
 	}
-	if w.rc.Image != nil {
-		img = w.rc.Image.GetLocation()
+	if w.rc.Images != nil {
+		img = w.rc.Images[w.name].GetLocation()
 	}
 	return []*cloudformation.Parameter{
 		{
@@ -354,8 +366,8 @@ func (w *appRunnerWkld) Parameters() ([]*cloudformation.Parameter, error) {
 	if w.image != nil {
 		img = w.image.GetLocation()
 	}
-	if w.rc.Image != nil {
-		img = w.rc.Image.GetLocation()
+	if w.rc.Images != nil {
+		img = w.rc.Images[w.name].GetLocation()
 	}
 
 	imageRepositoryType, err := apprunner.DetermineImageRepositoryType(img)

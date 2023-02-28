@@ -75,3 +75,10 @@ func (fs Stub) ParseWorkerService(_ template.WorkloadOpts) (*template.Content, e
 		Buffer: bytes.NewBufferString("data"),
 	}, nil
 }
+
+// ParseStaticSite returns a dummy template.Content with "data" in it.
+func (fs Stub) ParseStaticSite(_ template.WorkloadOpts) (*template.Content, error) {
+	return &template.Content{
+		Buffer: bytes.NewBufferString("data"),
+	}, nil
+}

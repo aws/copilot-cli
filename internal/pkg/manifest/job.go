@@ -136,9 +136,11 @@ func (j *ScheduledJob) Publish() []Topic {
 	return j.ScheduledJobConfig.PublishConfig.publishedTopics()
 }
 
-// BuildArgs returns a docker.BuildArguments object for the job given a workspace root.
-func (j *ScheduledJob) BuildArgs(wsRoot string) *DockerBuildArgs {
-	return j.ImageConfig.Image.BuildConfig(wsRoot)
+// BuildArgs returns a docker.BuildArguments object for the job given a context directory.
+func (j *ScheduledJob) BuildArgs(contextDir string) map[string]*DockerBuildArgs {
+	buildArgs := make(map[string]*DockerBuildArgs, len(j.Sidecars)+1)
+	buildArgs[aws.StringValue(j.Name)] = j.ImageConfig.Image.BuildConfig(contextDir)
+	return buildArgs
 }
 
 // BuildRequired returns if the service requires building from the local Dockerfile.
