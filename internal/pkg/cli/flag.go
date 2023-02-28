@@ -223,7 +223,7 @@ Mutually exclusive with the --%s flag.`, inputFilePathFlag)
 	secretInputFilePathFlagDescription = fmt.Sprintf(`Optional. A YAML file in which the secret values are specified.
 Mutually exclusive with the -%s ,--%s and --%s flags.`, nameFlagShort, nameFlag, valuesFlag)
 
-	iacToolFlagDescription = fmt.Sprintf(`Infrastructure as code tool to override a template.
+	iacToolFlagDescription = fmt.Sprintf(`Infrastructure as Code tool to override a template.
 Must be one of: %s.`, strings.Join(applyAll(iacToolkits, strconv.Quote), ", "))
 	cdkLanguageFlagDescription = `Optional. The Cloud Development Kit language.`
 

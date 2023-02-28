@@ -79,7 +79,7 @@ func buildSvcOverrideCmd() *cobra.Command {
 		Hidden: true,
 		Use:    "override",
 		Short:  "Override the AWS CloudFormation template of a service.",
-		Long: `Scaffold infrastructure as code patch files. 
+		Long: `Scaffold Infrastructure as Code patch files. 
 Customize the patch files to change resource properties, delete 
 or add new resources to the service's AWS CloudFormation template.`,
 		Example: `
