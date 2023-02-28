@@ -1828,7 +1828,7 @@ func validateContainerDeps(opts validateDependenciesOpts) error {
 		isEssential: true,
 	}
 	if !opts.logging.IsEmpty() {
-		containerDependencies[firelensContainerName] = containerDependency{}
+		containerDependencies[FirelensContainerName] = containerDependency{}
 	}
 	for name, config := range opts.sidecarConfig {
 		containerDependencies[name] = containerDependency{

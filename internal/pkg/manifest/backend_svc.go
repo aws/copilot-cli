@@ -136,7 +136,7 @@ func (s *BackendService) EnvFiles() map[string]string {
 		envFiles[name] = aws.StringValue(sidecar.EnvFile)
 	}
 	// If the Firelens Sidecar Pattern has an env file specified, get it as well.
-	envFiles[firelensContainerName] = aws.StringValue(s.Logging.EnvFile)
+	envFiles[FirelensContainerName] = aws.StringValue(s.Logging.EnvFile)
 	return envFiles
 }
 

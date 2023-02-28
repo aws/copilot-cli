@@ -158,7 +158,7 @@ func (j *ScheduledJob) EnvFiles() map[string]string {
 		envFiles[name] = aws.StringValue(sidecar.EnvFile)
 	}
 	// If the Firelens Sidecar Pattern has an env file specified, get it as well.
-	envFiles[firelensContainerName] = aws.StringValue(j.Logging.EnvFile)
+	envFiles[FirelensContainerName] = aws.StringValue(j.Logging.EnvFile)
 	return envFiles
 }
 
