@@ -230,7 +230,7 @@ func (o *deploySvcOpts) Execute() error {
 	deployRecs, err := deployer.DeployWorkload(&clideploy.DeployWorkloadInput{
 		StackRuntimeConfiguration: clideploy.StackRuntimeConfiguration{
 			ImageDigest:        uploadOut.ImageDigest,
-			EnvFileARN:         uploadOut.EnvFileARN,
+			EnvFileARNs:        uploadOut.EnvFileARNs,
 			AddonsURL:          uploadOut.AddonsURL,
 			RootUserARN:        o.rootUserARN,
 			Tags:               tags.Merge(targetApp.Tags, o.resourceTags),
