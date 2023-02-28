@@ -11,7 +11,7 @@ and allows you to control access to your content.
 You can protect your application by blocking or allowing web requests based on criteria that you specify, 
 such as the IP addresses that requests originate from or the values of query strings.
 
-Today, AWS announced the WAF support for AWS App Runner. 
+Today, AWS announced [WAF support for AWS App Runner](https://aws.amazon.com/about-aws/whats-new/2023/02/aws-app-runner-web-application-firewall-enhanced-security/). 
 This means that you can now protect your [Request-Driven Web Services](../docs/concepts/services.en.md#request-driven-web-service) with AWS WAF. 
 This blog post will show you how to easily enable the protection using AWS Copilot.
 
