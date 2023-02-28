@@ -66,5 +66,51 @@ ExecutionRole:
                       - ':s3:::'
                       - !Select [0, !Split ['/', !Select [5, !Split [':', !Ref EnvFileARN]]]]
         - !Ref AWS::NoValue
+      {{- if .LogConfig}}
+      - !If
+        - HasLoggingEnvFile
+        - PolicyName: !Join ['', [!Ref AppName, '-', !Ref EnvName, '-', !Ref WorkloadName, GetLoggingEnvFilePolicy]]
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action:
+                  - 's3:GetObject'
+                Resource:
+                  - !Ref LoggingEnvFileARN
+              - Effect: 'Allow'
+                Action:
+                  - 's3:GetBucketLocation'
+                Resource:
+                  - !Join
+                    - ''
+                    - - 'arn:'
+                      - !Ref AWS::Partition
+                      - ':s3:::'
+                      - !Select [0, !Split ['/', !Select [5, !Split [':', !Ref LoggingEnvFileARN]]]]
+      {{- end}}
+      {{- range $sidecar := .Sidecars}}
+      - !If
+        - Has{{$sidecar.Name}}EnvFile
+        - PolicyName: !Join [ '', [ !Ref AppName, '-', !Ref EnvName, '-', !Ref WorkloadName, Get{{$sidecar.Name}}EnvFilePolicy ] ]
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action:
+                  - 's3:GetObject'
+                Resource:
+                  - !Ref {{$sidecar.Name}}EnvFileARN
+              - Effect: 'Allow'
+                Action:
+                  - 's3:GetBucketLocation'
+                Resource:
+                  - !Join
+                    - ''
+                    - - 'arn:'
+                      - !Ref AWS::Partition
+                      - ':s3:::'
+                      - !Select [ 0, !Split [ '/', !Select [ 5, !Split [ ':', !Ref {{$sidecar.Name}}EnvFileARN]]]]
+      {{- end}}
     ManagedPolicyArns:
       - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy'
