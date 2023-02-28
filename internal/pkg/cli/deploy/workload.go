@@ -445,13 +445,14 @@ func (d *workloadDeployer) pushEnvFilesToS3Bucket(in *pushEnvFilesToS3BucketInpu
 			uniqueEnvFiles[path] = append(containers, container)
 		}
 	}
+
+	if len(uniqueEnvFiles) == 0 {
+		return nil, nil
+	}
 	// Upload each file to s3 exactly once and generate its ARN.
 	// Save those ARNs in a map from container name to env file ARN and return.
 	envFileARNs := make(map[string]string)
-	// Initialize the map with empty strings for all containers so that the primary workload condition
-	for container, _ := range envFilesByContainer {
-		envFileARNs[container] = ""
-	}
+
 	for path, containers := range uniqueEnvFiles {
 		content, err := in.fs.ReadFile(filepath.Join(d.workspacePath, path))
 		if err != nil {

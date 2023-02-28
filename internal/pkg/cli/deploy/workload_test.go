@@ -101,12 +101,19 @@ func (m *mockTopicLister) ListSNSTopics(_, _ string) ([]deploy.Topic, error) {
 }
 
 type mockWorkloadMft struct {
-	fileName      string
-	buildRequired bool
+	wkldFileName   string
+	buildRequired  bool
+	workloadName   string
+	customEnvFiles map[string]string
 }
 
-func (m *mockWorkloadMft) EnvFile() string {
-	return m.fileName
+func (m *mockWorkloadMft) EnvFiles() map[string]string {
+	if m.customEnvFiles != nil {
+		return m.customEnvFiles
+	}
+	return map[string]string{
+		m.workloadName: m.wkldFileName,
+	}
 }
 
 func (m *mockWorkloadMft) BuildRequired() (bool, error) {
@@ -146,6 +153,10 @@ func (s *stubCloudFormationStack) SerializedParameters() (string, error) {
 	return "", nil
 }
 
+func mockEnvFilePath(path string) string {
+	return fmt.Sprintf("%s/%s/%s/%s.env", "manual", "env-files", path, "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
+}
+
 func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 	const (
 		mockName            = "mockWkld"
@@ -158,20 +169,22 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 		mockAddonsS3URL     = "https://mockS3DomainName/mockPath"
 		mockBadEnvFileS3URL = "badURL"
 		mockEnvFileS3URL    = "https://stackset-demo-infrastruc-pipelinebuiltartifactbuc-11dj7ctf52wyf.s3.us-west-2.amazonaws.com/manual/1638391936/env"
+		mockEnvFileS3URL2   = "https://stackset-demo-infrastruc-pipelinebuiltartifactbuc-11dj7ctf52wyf.s3.us-west-2.amazonaws.com/manual/1638391936/envbar"
 		mockEnvFileS3ARN    = "arn:aws:s3:::stackset-demo-infrastruc-pipelinebuiltartifactbuc-11dj7ctf52wyf/manual/1638391936/env"
+		mockEnvFileS3ARN2   = "arn:aws:s3:::stackset-demo-infrastruc-pipelinebuiltartifactbuc-11dj7ctf52wyf/manual/1638391936/envbar"
 	)
+	var mockEnvFilesOutput = map[string]string{"mockWkld": mockEnvFileS3ARN}
 	mockResources := &stack.AppRegionalResources{
 		S3Bucket: mockS3Bucket,
 	}
-	mockEnvFilePath := fmt.Sprintf("%s/%s/%s/%s.env", "manual", "env-files", mockEnvFile, "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
 	mockAddonPath := fmt.Sprintf("%s/%s/%s/%s.yml", "manual", "addons", mockName, "1307990e6ba5ca145eb35e99182a9bec46531bc54ddf656a602c780fa0240dee")
 	mockError := errors.New("some error")
-
 	type artifactsUploader interface {
 		UploadArtifacts() (*UploadArtifactsOutput, error)
 	}
 	tests := map[string]struct {
 		inEnvFile       string
+		customEnvFiles  map[string]string
 		inBuildRequired bool
 		inRegion        string
 
@@ -180,7 +193,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 		customResourcesFunc customResourcesFunc
 
 		wantAddonsURL     string
-		wantEnvFileARN    string
+		wantEnvFileARNs   map[string]string
 		wantImageDigest   *string
 		wantBuildRequired bool
 		wantErr           error
@@ -356,11 +369,50 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			},
 			wantErr: fmt.Errorf("read env file foo.env: some error"),
 		},
+		"successfully share one env file between containers": {
+			customEnvFiles: map[string]string{"nginx": mockEnvFile, mockName: mockEnvFile},
+			inRegion:       "us-west-2",
+			mock: func(t *testing.T, m *deployMocks) {
+				m.mockFileReader.EXPECT().ReadFile(filepath.Join(mockWorkspacePath, mockEnvFile)).Return([]byte{}, nil)
+				m.mockUploader.EXPECT().Upload(mockS3Bucket, mockEnvFilePath(mockEnvFile), gomock.Any()).Return(mockEnvFileS3URL, nil)
+				m.mockAddons.EXPECT().Package(gomock.Any()).Return(nil)
+				m.mockAddons.EXPECT().Template().Return("", nil)
+				m.mockUploader.EXPECT().Upload(gomock.Any(), gomock.Any(), gomock.Any()).Return(mockAddonsS3URL, nil)
+			},
+			wantEnvFileARNs: map[string]string{"nginx": mockEnvFileS3ARN, mockName: mockEnvFileS3ARN},
+			wantAddonsURL:   mockAddonsS3URL,
+		},
+		"upload multiple env files": {
+			customEnvFiles: map[string]string{"nginx": mockEnvFile, mockName: "bar.env"},
+			inRegion:       "us-west-2",
+			mock: func(t *testing.T, m *deployMocks) {
+				m.mockFileReader.EXPECT().ReadFile(filepath.Join(mockWorkspacePath, mockEnvFile)).Return([]byte{}, nil)
+				m.mockUploader.EXPECT().Upload(mockS3Bucket, mockEnvFilePath(mockEnvFile), gomock.Any()).Return(mockEnvFileS3URL, nil)
+				m.mockFileReader.EXPECT().ReadFile(filepath.Join(mockWorkspacePath, "bar.env")).Return([]byte{}, nil)
+				m.mockUploader.EXPECT().Upload(mockS3Bucket, mockEnvFilePath("bar.env"), gomock.Any()).Return(mockEnvFileS3URL2, nil)
+				m.mockAddons.EXPECT().Package(gomock.Any()).Return(nil)
+				m.mockAddons.EXPECT().Template().Return("", nil)
+				m.mockUploader.EXPECT().Upload(gomock.Any(), gomock.Any(), gomock.Any()).Return(mockAddonsS3URL, nil)
+			},
+			wantEnvFileARNs: map[string]string{"nginx": mockEnvFileS3ARN, mockName: mockEnvFileS3ARN2},
+			wantAddonsURL:   mockAddonsS3URL,
+		},
+		"success with no env files present but logging sidecar exists": {
+			inRegion:       "us-west-2",
+			customEnvFiles: map[string]string{manifest.FirelensContainerName: "", mockName: ""},
+			mock: func(t *testing.T, m *deployMocks) {
+				m.mockAddons.EXPECT().Package(gomock.Any()).Return(nil)
+				m.mockAddons.EXPECT().Template().Return("", nil)
+				m.mockUploader.EXPECT().Upload(gomock.Any(), gomock.Any(), gomock.Any()).Return(mockAddonsS3URL, nil)
+			},
+			wantEnvFileARNs: nil,
+			wantAddonsURL:   mockAddonsS3URL,
+		},
 		"error if fail to put env file to s3 bucket": {
 			inEnvFile: mockEnvFile,
 			mock: func(t *testing.T, m *deployMocks) {
 				m.mockFileReader.EXPECT().ReadFile(filepath.Join(mockWorkspacePath, mockEnvFile)).Return([]byte{}, nil)
-				m.mockUploader.EXPECT().Upload(mockS3Bucket, mockEnvFilePath, gomock.Any()).
+				m.mockUploader.EXPECT().Upload(mockS3Bucket, mockEnvFilePath(mockEnvFile), gomock.Any()).
 					Return("", mockError)
 			},
 			wantErr: fmt.Errorf("put env file foo.env artifact to bucket mockBucket: some error"),
@@ -369,7 +421,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			inEnvFile: mockEnvFile,
 			mock: func(t *testing.T, m *deployMocks) {
 				m.mockFileReader.EXPECT().ReadFile(filepath.Join(mockWorkspacePath, mockEnvFile)).Return([]byte{}, nil)
-				m.mockUploader.EXPECT().Upload(mockS3Bucket, mockEnvFilePath, gomock.Any()).
+				m.mockUploader.EXPECT().Upload(mockS3Bucket, mockEnvFilePath(mockEnvFile), gomock.Any()).
 					Return(mockBadEnvFileS3URL, nil)
 
 			},
@@ -380,7 +432,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			inRegion:  "sun-south-0",
 			mock: func(t *testing.T, m *deployMocks) {
 				m.mockFileReader.EXPECT().ReadFile(filepath.Join(mockWorkspacePath, mockEnvFile)).Return([]byte{}, nil)
-				m.mockUploader.EXPECT().Upload(mockS3Bucket, mockEnvFilePath, gomock.Any()).
+				m.mockUploader.EXPECT().Upload(mockS3Bucket, mockEnvFilePath(mockEnvFile), gomock.Any()).
 					Return(mockEnvFileS3URL, nil)
 			},
 			wantErr: fmt.Errorf("find the partition for region sun-south-0"),
@@ -390,7 +442,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			inRegion:  "us-west-2",
 			mock: func(t *testing.T, m *deployMocks) {
 				m.mockFileReader.EXPECT().ReadFile(filepath.Join(mockWorkspacePath, mockEnvFile)).Return([]byte{}, nil)
-				m.mockUploader.EXPECT().Upload(mockS3Bucket, mockEnvFilePath, gomock.Any()).
+				m.mockUploader.EXPECT().Upload(mockS3Bucket, mockEnvFilePath(mockEnvFile), gomock.Any()).
 					Return(mockEnvFileS3URL, nil)
 				m.mockAddons.EXPECT().Package(gomock.Any()).Return(nil)
 				m.mockAddons.EXPECT().Template().Return("some data", nil)
@@ -398,8 +450,8 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 					Return(mockAddonsS3URL, nil)
 			},
 
-			wantAddonsURL:  mockAddonsS3URL,
-			wantEnvFileARN: mockEnvFileS3ARN,
+			wantAddonsURL:   mockAddonsS3URL,
+			wantEnvFileARNs: mockEnvFilesOutput,
 		},
 		"should return error if fail to upload to S3 bucket": {
 			inRegion: "us-west-2",
@@ -465,8 +517,10 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				imageTag:      mockImageTag,
 				workspacePath: mockWorkspacePath,
 				mft: &mockWorkloadMft{
-					fileName:      tc.inEnvFile,
-					buildRequired: tc.inBuildRequired,
+					workloadName:   mockName,
+					customEnvFiles: tc.customEnvFiles,
+					wkldFileName:   tc.inEnvFile,
+					buildRequired:  tc.inBuildRequired,
 				},
 				fs:                 m.mockFileReader,
 				s3Client:           m.mockUploader,
@@ -495,7 +549,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			} else {
 				require.NoError(t, gotErr)
 				require.Equal(t, tc.wantAddonsURL, got.AddonsURL)
-				require.Equal(t, tc.wantEnvFileARN, got.EnvFileARN)
+				require.Equal(t, tc.wantEnvFileARNs, got.EnvFileARNs)
 				require.Equal(t, tc.wantImageDigest, got.ImageDigest)
 			}
 		})
