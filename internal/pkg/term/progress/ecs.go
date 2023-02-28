@@ -39,9 +39,9 @@ func ListeningRollingUpdateRenderer(streamer ECSServiceSubscriber, opts RenderOp
 
 type rollingUpdateComponent struct {
 	// Data to render.
-	deployments  []stream.ECSDeployment
-	failureMsgs  []string
-	alarms       []cloudwatch.AlarmStatus
+	deployments []stream.ECSDeployment
+	failureMsgs []string
+	alarms      []cloudwatch.AlarmStatus
 
 	// Style configuration for the component.
 	padding           int
@@ -84,7 +84,7 @@ func (c *rollingUpdateComponent) Render(out io.Writer) (numLines int, err error)
 		return 0, err
 	}
 	numLines += nl
-	
+
 	nl, err = c.renderAlarms(buf)
 	if err != nil {
 		return 0, err
@@ -161,7 +161,7 @@ func (c *rollingUpdateComponent) renderFailureMsgs(out io.Writer) (numLines int,
 func (c *rollingUpdateComponent) renderAlarms(out io.Writer) (numLines int, err error) {
 	if len(c.alarms) == 0 {
 		return 0, nil
-	} 
+	}
 	header := []string{"Name", "State"}
 	var rows [][]string
 	for _, a := range c.alarms {

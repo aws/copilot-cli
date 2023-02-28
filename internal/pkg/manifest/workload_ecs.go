@@ -105,13 +105,13 @@ type DeploymentControllerConfig struct {
 // DeploymentConfig represents the deployment config for an ECS service.
 type DeploymentConfig struct {
 	DeploymentControllerConfig `yaml:",inline"`
-	RollbackAlarms             Union[[]string, AlarmArgs]  `yaml:"rollback_alarms"`
+	RollbackAlarms             Union[[]string, AlarmArgs] `yaml:"rollback_alarms"`
 }
 
 // WorkerDeploymentConfig represents the deployment strategies for a worker service.
 type WorkerDeploymentConfig struct {
 	DeploymentControllerConfig `yaml:",inline"`
-	WorkerRollbackAlarms       Union[[]string, WorkerAlarmArgs]  `yaml:"rollback_alarms"`
+	WorkerRollbackAlarms       Union[[]string, WorkerAlarmArgs] `yaml:"rollback_alarms"`
 }
 
 func (d *DeploymentConfig) isEmpty() bool {

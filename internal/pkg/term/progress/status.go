@@ -76,7 +76,7 @@ func prettifyElapsedTime(sw *stopWatch) string {
 func prettifyAlarmState(state string) string {
 	pretty := fmt.Sprintf("[%s]", state)
 	switch state {
-	case alarmOKState: 
+	case alarmOKState:
 		pretty = color.Green.Sprintf("[%s]", state)
 	case inAlarmState:
 		pretty = color.Red.Sprintf("[%s]", state)
