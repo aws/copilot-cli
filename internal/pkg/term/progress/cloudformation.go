@@ -80,7 +80,7 @@ func ListeningResourceRenderer(streamer StackSubscriber, logicalID, description 
 
 // ListeningECSServiceResourceRenderer is a ListeningResourceRenderer for the ECS service cloudformation resource
 // and a ListeningRollingUpdateRenderer to render deployments.
-func ListeningECSServiceResourceRenderer(streamer StackSubscriber, ecsDescriber stream.ECSServiceDescriber, logicalID, description string, opts ECSServiceRendererOpts) DynamicRenderer {
+func ListeningECSServiceResourceRenderer(streamer StackSubscriber, ecsDescriber stream.ECSServiceDescriber, cwDescriber stream.CloudWatchDescriber, logicalID, description string, opts ECSServiceRendererOpts) DynamicRenderer {
 	g := new(errgroup.Group)
 	ctx := context.Background()
 	if opts.Group != nil {
@@ -92,6 +92,7 @@ func ListeningECSServiceResourceRenderer(streamer StackSubscriber, ecsDescriber 
 	comp := &ecsServiceResourceComponent{
 		cfnStream:    streamer.Subscribe(),
 		ecsDescriber: ecsDescriber,
+		cwDescriber:  cwDescriber,
 		logicalID:    logicalID,
 
 		group:      g,

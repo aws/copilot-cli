@@ -125,7 +125,7 @@ func (cw *CloudWatch) AlarmStatuses(opts ...DescribeAlarmOpts) ([]AlarmStatus, e
 	return alarmStatuses, nil
 }
 
-func (cw *CloudWatch) CompositeAlarmsStatus(alarms []*cloudwatch.CompositeAlarm) []AlarmStatus {
+func (cw *CloudWatch) compositeAlarmsStatus(alarms []*cloudwatch.CompositeAlarm) []AlarmStatus {
 	var alarmStatusList []AlarmStatus
 	for _, alarm := range alarms {
 		if alarm == nil {

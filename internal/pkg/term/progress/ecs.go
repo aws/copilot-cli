@@ -61,6 +61,7 @@ func (c *rollingUpdateComponent) Listen() {
 		if len(c.failureMsgs) > c.maxLenFailureMsgs {
 			c.failureMsgs = c.failureMsgs[len(c.failureMsgs)-c.maxLenFailureMsgs:]
 		}
+		c.alarms = ev.Alarms
 		c.mu.Unlock()
 	}
 	close(c.done)
@@ -161,12 +162,12 @@ func (c *rollingUpdateComponent) renderAlarms(out io.Writer) (numLines int, err 
 	if len(c.alarms) == 0 {
 		return 0, nil
 	} 
-	header := []string{"Name", "Status"}
+	header := []string{"Name", "State"}
 	var rows [][]string
 	for _, a := range c.alarms {
 		rows = append(rows, []string{
 			a.Name,
-			a.Status,
+			prettifyAlarmState(a.Status),
 		})
 	}
 	table := newTableComponent(color.Faint.Sprintf("Alarms"), header, rows)

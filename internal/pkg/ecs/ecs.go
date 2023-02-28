@@ -46,6 +46,9 @@ type ecsClient interface {
 	TaskDefinition(taskDefName string) (*ecs.TaskDefinition, error)
 	UpdateService(clusterName, serviceName string, opts ...ecs.UpdateServiceOpts) error
 	DescribeTasks(cluster string, taskARNs []string) ([]*ecs.Task, error)
+}
+
+type cwClient interface {
 	AlarmStatuses(opts ...cloudwatch.DescribeAlarmOpts) ([]cloudwatch.AlarmStatus, error)
 }
 
@@ -65,6 +68,7 @@ type ServiceDesc struct {
 type Client struct {
 	rgGetter       resourceGetter
 	ecsClient      ecsClient
+	cwClient       cwClient
 	StepFuncClient stepFunctionsClient
 }
 
@@ -73,6 +77,7 @@ func New(sess *session.Session) *Client {
 	return &Client{
 		rgGetter:       resourcegroups.New(sess),
 		ecsClient:      ecs.New(sess),
+		cwClient:       cloudwatch.New(sess),
 		StepFuncClient: stepfunctions.New(sess),
 	}
 }

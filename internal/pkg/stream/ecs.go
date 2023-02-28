@@ -132,17 +132,17 @@ func (s *ECSDeploymentStreamer) Fetch() (next time.Time, done bool, err error) {
 		return next, false, fmt.Errorf("fetch service description: %w", err)
 	}
 	s.retries = 0
-	var alarmNames []string
-	for _, alarmName := range out.DeploymentConfiguration.Alarms.AlarmNames {
-		alarmNames = append(alarmNames, aws.StringValue(alarmName))
-	}
-	alarms, err := s.cw.AlarmStatuses(cloudwatch.WithNames(alarmNames))
-	if err != nil {
-		if request.IsErrorThrottle(err) {
-			s.retries += 1
-			return nextFetchDate(s.clock, s.rand, s.retries), false, nil
+	alarmNames := aws.StringValueSlice(out.DeploymentConfiguration.Alarms.AlarmNames)
+	var alarms []cloudwatch.AlarmStatus
+	if len(alarmNames) > 0 {
+		alarms, err = s.cw.AlarmStatuses(cloudwatch.WithNames(alarmNames))
+		if err != nil {
+			if request.IsErrorThrottle(err) {
+				s.retries += 1
+				return nextFetchDate(s.clock, s.rand, s.retries), false, nil
+			}
+			return next, false, fmt.Errorf("retrieve alarm statuses: %w", err)
 		}
-		return next, false, fmt.Errorf("retrieve alarm statuses: %w", err)
 	}
 	var deployments []ECSDeployment
 	for _, deployment := range out.Deployments {

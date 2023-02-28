@@ -7,7 +7,6 @@ package ecs
 import (
 	"errors"
 	"fmt"
-	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatch"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -115,33 +114,6 @@ func (e *ECS) Service(clusterName, serviceName string) (*Service, error) {
 	}
 	return nil, fmt.Errorf("cannot find service %s", serviceName)
 }
-
-func (e *ECS) AlarmStatuses(opts ...cloudwatch.DescribeAlarmOpts) ([]cloudwatch.AlarmStatus, error) {
-	var alarmStatuses []AlarmStatus
-	in := &cloudwatch.DescribeAlarmsInput{}
-	if len(opts) > 0 {
-		for _, opt := range opts {
-			opt(in)
-		}
-	}
-	for {
-		alarmResp, err := cw.client.DescribeAlarms(in)
-		if err != nil {
-			return nil, fmt.Errorf("describe CloudWatch alarms: %w", err)
-		}
-		if alarmResp == nil {
-			break
-		}
-		alarmStatuses = append(alarmStatuses, cloudwatch.CompositeAlarmsStatus(alarmResp.CompositeAlarms)...)
-		alarmStatuses = append(alarmStatuses, cw.metricAlarmsStatus(alarmResp.MetricAlarms)...)
-		if alarmResp.NextToken == nil {
-			break
-		}
-		in.NextToken = alarmResp.NextToken
-	}
-	return alarmStatuses, nil
-}
-
 
 // UpdateServiceOpts sets the optional parameter for UpdateService.
 type UpdateServiceOpts func(*ecs.UpdateServiceInput)
