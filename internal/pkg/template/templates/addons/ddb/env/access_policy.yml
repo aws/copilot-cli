@@ -11,7 +11,7 @@ Parameters:
 Resources:
   {{logicalIDSafe .Name}}DdbTableAccessPolicy:
     Metadata:
-      'aws:copilot:description': 'An IAM managed policy for your service to access the DDB table of your environment'
+      'aws:copilot:description': 'An IAM managed policy for your service to access a DDB table in your environment'
     Type: AWS::IAM::ManagedPolicy
     Properties:
       Description: !Sub
