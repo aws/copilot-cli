@@ -12,6 +12,8 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
+	"github.com/aws/copilot-cli/internal/pkg/template"
 )
 
 // StaticSite represents the configuration needed to create a CloudFormation stack from a static site service manifest.
@@ -63,12 +65,62 @@ func NewStaticSite(conf *StaticSiteConfig) (*StaticSite, error) {
 
 // Template returns the CloudFormation template for the service parametrized for the environment.
 func (s *StaticSite) Template() (string, error) {
-	return "", nil
+	crs, err := convertCustomResources(s.rc.CustomResourcesURL)
+	if err != nil {
+		return "", err
+	}
+	addonsParams, err := s.addonsParameters()
+	if err != nil {
+		return "", err
+	}
+	addonsOutputs, err := s.addonsOutputs()
+	if err != nil {
+		return "", err
+	}
+
+	content, err := s.parser.ParseStaticSite(template.WorkloadOpts{
+		// Workload parameters.
+		AppName:            s.app,
+		EnvName:            s.env,
+		EnvVersion:         s.rc.EnvVersion,
+		SerializedManifest: string(s.rawManifest),
+		WorkloadName:       s.name,
+		WorkloadType:       manifestinfo.StaticSiteType,
+
+		// Additional options that are common between **all** workload templates.
+		AddonsExtraParams:   addonsParams,
+		NestedStack:         addonsOutputs,
+		PermissionsBoundary: s.permBound,
+
+		// Custom Resource Config.
+		CustomResources: crs,
+	})
+	if err != nil {
+		return "", err
+	}
+	return content.String(), nil
 }
 
 // Parameters returns the list of CloudFormation parameters used by the template.
 func (s *StaticSite) Parameters() ([]*cloudformation.Parameter, error) {
-	return nil, nil
+	return []*cloudformation.Parameter{
+		{
+			ParameterKey:   aws.String(WorkloadAppNameParamKey),
+			ParameterValue: aws.String(s.app),
+		},
+		{
+			ParameterKey:   aws.String(WorkloadEnvNameParamKey),
+			ParameterValue: aws.String(s.env),
+		},
+		{
+			ParameterKey:   aws.String(WorkloadNameParamKey),
+			ParameterValue: aws.String(s.name),
+		},
+		{
+			ParameterKey:   aws.String(WorkloadAddonsTemplateURLParamKey),
+			ParameterValue: aws.String(s.rc.AddonsTemplateURL),
+		},
+	}, nil
 }
 
 // SerializedParameters returns the CloudFormation stack's parameters serialized to a JSON document.
