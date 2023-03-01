@@ -59,7 +59,7 @@ func New(cmd Cmd) CmdClient {
 // BuildArguments holds the arguments that can be passed while building a container.
 type BuildArguments struct {
 	URI        string            // Required. Location of ECR Repo. Used to generate image name in conjunction with tag.
-	Tags       []string          // Optional. List of tags to apply to the image besides "latest".
+	Tags       []string          // Required. List of tags to apply to the image.
 	Dockerfile string            // Required. Dockerfile to pass to `docker build` via --file flag.
 	Context    string            // Optional. Build context directory to pass to `docker build`.
 	Target     string            // Optional. The target build stage to pass to `docker build`.

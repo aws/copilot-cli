@@ -37,7 +37,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
-	"github.com/google/uuid"
 	"github.com/spf13/afero"
 )
 
@@ -182,7 +181,6 @@ type ContainerImageIdentifier struct {
 	Digest            string
 	CustomTag         string
 	GitShortCommitTag string
-	uuidTag           string
 }
 
 // newWorkloadDeployer is the constructor for workloadDeployer.
@@ -239,11 +237,6 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unmarshal the manifest used to deploy environment %s: %w", in.Env.Name, err)
 	}
-	id, err := uuid.NewRandom()
-	if err != nil {
-		return nil, fmt.Errorf("generate a random UUID to tag workload images: %w", err)
-	}
-	in.Image.uuidTag = id.String()
 
 	return &workloadDeployer{
 		name:               in.Name,
@@ -323,30 +316,13 @@ func (d *workloadDeployer) forceDeploy(in *forceDeployInput) error {
 }
 
 // Tag returns the tag that should be used to reference the image.
-func (img ContainerImageIdentifier) Tag() string {
-	if tag := img.customOrGitTag(); tag != "" {
-		return tag
-	}
-	return img.uuidTag
-}
-
-// userOrGitTag returns if the user provided their own tag.
+// If the user provided their own tag then just use that
 // Otherwise, return git short commit id.
-func (img ContainerImageIdentifier) customOrGitTag() string {
+func (img ContainerImageIdentifier) Tag() string {
 	if img.CustomTag != "" {
 		return img.CustomTag
 	}
 	return img.GitShortCommitTag
-}
-
-// nonCustomTag returns the tag that should be used to reference the image.
-// If the image identifier has a non-empty GitShortCommitTag field, that value is returned.
-// Otherwise, the uuidTag field is returned.
-func (img ContainerImageIdentifier) nonCustomTag() string {
-	if img.GitShortCommitTag != "" {
-		return img.GitShortCommitTag
-	}
-	return img.uuidTag
 }
 
 func (d *workloadDeployer) uploadContainerImages(imgBuilderPusher imageBuilderPusher) (map[string]ContainerImageIdentifier, error) {
@@ -368,7 +344,6 @@ func (d *workloadDeployer) uploadContainerImages(imgBuilderPusher imageBuilderPu
 			Digest:            digest,
 			CustomTag:         d.image.CustomTag,
 			GitShortCommitTag: d.image.GitShortCommitTag,
-			uuidTag:           d.image.uuidTag,
 		}
 	}
 	return images, nil
@@ -389,9 +364,15 @@ func buildArgsPerContainer(name, workspacePath string, img ContainerImageIdentif
 	}
 	dArgs := make(map[string]*dockerengine.BuildArguments, len(argsPerContainer))
 	for container, buildArgs := range argsPerContainer {
-		tags := []string{imageTagLatest, img.Tag()}
+		tags := []string{imageTagLatest}
+		if img.Tag() != "" {
+			tags = append(tags, img.Tag())
+		}
 		if container != name {
-			tags = []string{fmt.Sprintf("%s-%s", container, imageTagLatest), fmt.Sprintf("%s-%s", container, img.nonCustomTag())}
+			tags = []string{fmt.Sprintf("%s-%s", container, imageTagLatest)}
+			if img.GitShortCommitTag != "" {
+				tags = append(tags, fmt.Sprintf("%s-%s", container, img.GitShortCommitTag))
+			}
 		}
 		dArgs[container] = &dockerengine.BuildArguments{
 			Dockerfile: aws.StringValue(buildArgs.Dockerfile),
@@ -575,7 +556,7 @@ func (d *workloadDeployer) runtimeConfig(in *StackRuntimeConfiguration) (*stack.
 		// Currently we do not tag sidecar container images with custom tag provided by the user.
 		// This is the reason for having different ImageTag for main and sidecar container images
 		// that is needed to create CloudFormation stack.
-		imageTag := img.customOrGitTag()
+		imageTag := img.Tag()
 		if container != d.name {
 			imageTag = img.GitShortCommitTag
 		}
