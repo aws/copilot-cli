@@ -356,21 +356,14 @@ func (w *ecsWkld) envFileParams() []*cloudformation.Parameter {
 	// if it exists.
 	if !w.logging.IsEmpty() {
 		params = append(params, &cloudformation.Parameter{
-			ParameterKey:   aws.String(FmtSidecarEnvFileARNParamKey),
+			ParameterKey:   aws.String(WorkloadLoggingEnvFileARNParamKey),
 			ParameterValue: aws.String(w.rc.EnvFileARNs[manifest.FirelensContainerName]), // String maps return "" if a key doesn't exist.
 		})
 	}
-
-	for containerName, envFileARN := range w.rc.EnvFileARNs {
-		if containerName == w.name {
-			continue
-		}
-		if containerName == manifest.FirelensContainerName {
-			continue
-		}
+	for containerName, _ := range w.sidecars {
 		params = append(params, &cloudformation.Parameter{
 			ParameterKey:   aws.String(fmt.Sprintf(FmtSidecarEnvFileARNParamKey, containerName)),
-			ParameterValue: aws.String(envFileARN),
+			ParameterValue: aws.String(w.rc.EnvFileARNs[containerName]),
 		})
 	}
 	return params

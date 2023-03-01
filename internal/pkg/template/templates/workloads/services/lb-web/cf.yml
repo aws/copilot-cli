@@ -46,7 +46,7 @@ Parameters:
 {{- range $sidecar := .Sidecars }}
   {{$sidecar.Name}}EnvFileARN:
     Type: String
-    Description: 'URL of the environment file for the {{$sidecar.Name}} sidecar'
+    Description: 'URL of the environment file for the {{$sidecar.Name}} sidecar.'
     Default: ""
 {{- end }}
   TargetContainer:

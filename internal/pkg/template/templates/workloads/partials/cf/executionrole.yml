@@ -88,11 +88,12 @@ ExecutionRole:
                       - !Ref AWS::Partition
                       - ':s3:::'
                       - !Select [0, !Split ['/', !Select [5, !Split [':', !Ref LoggingEnvFileARN]]]]
-      {{- end}}
+        - !Ref AWS::NoValue
+      {{- end }}
       {{- range $sidecar := .Sidecars}}
       - !If
         - Has{{$sidecar.Name}}EnvFile
-        - PolicyName: !Join [ '', [ !Ref AppName, '-', !Ref EnvName, '-', !Ref WorkloadName, Get{{$sidecar.Name}}EnvFilePolicy ] ]
+        - PolicyName: !Join ['', [!Ref AppName, '-', !Ref EnvName, '-', !Ref WorkloadName, Get{{$sidecar.Name}}EnvFilePolicy]]
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
@@ -110,7 +111,8 @@ ExecutionRole:
                     - - 'arn:'
                       - !Ref AWS::Partition
                       - ':s3:::'
-                      - !Select [ 0, !Split [ '/', !Select [ 5, !Split [ ':', !Ref {{$sidecar.Name}}EnvFileARN]]]]
-      {{- end}}
+                      - !Select [0, !Split ['/', !Select [5, !Split [':', !Ref {{$sidecar.Name}}EnvFileARN]]]]
+        - !Ref AWS::NoValue
+      {{- end }}
     ManagedPolicyArns:
       - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy'
