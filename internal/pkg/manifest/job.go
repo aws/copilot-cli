@@ -152,7 +152,7 @@ func (j *ScheduledJob) BuildRequired() (bool, error) {
 // This method returns a map[string]string where the keys are container names
 // and the values are either env file paths or empty strings.
 func (j *ScheduledJob) EnvFiles() map[string]string {
-	envFiles := make(map[string]string)
+	envFiles := make(map[string]string, len(j.Sidecars)+2)
 	// Grab the workload container's env file, if present.
 	envFiles[aws.StringValue(j.Name)] = aws.StringValue(j.TaskConfig.EnvFile)
 	// Grab sidecar env files, if present.
