@@ -133,7 +133,7 @@ func (s *ECSDeploymentStreamer) Fetch() (next time.Time, done bool, err error) {
 	}
 	s.retries = 0
 	var alarms []cloudwatch.AlarmStatus
-	if out.DeploymentConfiguration != nil && out.DeploymentConfiguration.Alarms != nil {
+	if out.DeploymentConfiguration != nil && out.DeploymentConfiguration.Alarms != nil && aws.BoolValue(out.DeploymentConfiguration.Alarms.Enable) {
 		alarmNames := aws.StringValueSlice(out.DeploymentConfiguration.Alarms.AlarmNames)
 		alarms, err = s.cw.AlarmStatuses(cloudwatch.WithNames(alarmNames))
 		if err != nil {
