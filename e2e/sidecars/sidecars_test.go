@@ -55,7 +55,7 @@ sidecars:
     image: %s    # Image URL for sidecar container.
     variables:
       NGINX_PORT: %s
-	env_file: ./magic.env
+    env_file: ./magic.env
 logging:
   env_file: ./magic.env
   destination:
