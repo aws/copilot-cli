@@ -372,7 +372,7 @@ func (w *ecsWkld) envFileParams() []*cloudformation.Parameter {
 			ParameterValue: aws.String(w.rc.EnvFileARNs[manifest.FirelensContainerName]), // String maps return "" if a key doesn't exist.
 		})
 	}
-	for containerName, _ := range w.sidecars {
+	for containerName := range w.sidecars {
 		params = append(params, &cloudformation.Parameter{
 			ParameterKey:   aws.String(fmt.Sprintf(FmtSidecarEnvFileARNParamKey, containerName)),
 			ParameterValue: aws.String(w.rc.EnvFileARNs[containerName]),
