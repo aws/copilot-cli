@@ -145,8 +145,9 @@ func TestRollingUpdateComponent_Render(t *testing.T) {
 					Status:       "ALARM",
 				},
 			},
-			wantedNumLines: 4,
-			wantedOut: `Alarms
+			wantedNumLines: 5,
+			wantedOut: `
+Alarms
   Name    State
   alarm1  [OK]
   alarm2  [ALARM]

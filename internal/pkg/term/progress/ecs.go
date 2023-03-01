@@ -172,11 +172,11 @@ func (c *rollingUpdateComponent) renderAlarms(out io.Writer) (numLines int, err 
 	}
 	table := newTableComponent(color.Faint.Sprintf("Alarms"), header, rows)
 	table.Padding = c.padding
-	nl, err := table.Render(out)
-	if err != nil {
-		return 0, fmt.Errorf("render alarms table: %w", err)
+	components := []Renderer {
+		&singleLineComponent{}, // Add an empty line before rendering alarms table.
+		table,
 	}
-	return nl, err
+	return renderComponents(out, components)
 }
 
 func reverseStrings(arr []string) []string {
