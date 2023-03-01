@@ -33,8 +33,7 @@ type ScheduledJob struct {
 	*ecsWkld
 	manifest *manifest.ScheduledJob
 
-	parser   scheduledJobReadParser
-	localCRs []uploadable // Custom resources that have not been uploaded yet.
+	parser scheduledJobReadParser
 }
 
 var (
@@ -104,6 +103,8 @@ func NewScheduledJob(cfg ScheduledJobConfig) (*ScheduledJob, error) {
 	if err != nil {
 		return nil, fmt.Errorf("scheduled job custom resources: %w", err)
 	}
+	cfg.RuntimeConfig.loadCustomResourceURLs(cfg.ArtifactBucketName, uploadableCRs(crs).convert())
+
 	return &ScheduledJob{
 		ecsWkld: &ecsWkld{
 			wkld: &wkld{
@@ -125,8 +126,7 @@ func NewScheduledJob(cfg ScheduledJobConfig) (*ScheduledJob, error) {
 		},
 		manifest: cfg.Manifest,
 
-		parser:   fs,
-		localCRs: uploadableCRs(crs).convert(),
+		parser: fs,
 	}, nil
 }
 

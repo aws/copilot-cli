@@ -91,11 +91,12 @@ var presetSchedules = []prompt.Option{
 	{Value: yearly, Hint: "At midnight, Jan 1st UTC"},
 }
 
-// prompter wraps the methods to ask for inputs from the terminal.
-type prompter interface {
+// Prompter wraps the methods to ask for inputs from the terminal.
+type Prompter interface {
 	Get(message, help string, validator prompt.ValidatorFunc, promptOpts ...prompt.PromptConfig) (string, error)
 	SelectOne(message, help string, options []string, promptOpts ...prompt.PromptConfig) (string, error)
 	SelectOption(message, help string, opts []prompt.Option, promptCfgs ...prompt.PromptConfig) (value string, err error)
+	MultiSelectOptions(message, help string, opts []prompt.Option, promptCfgs ...prompt.PromptConfig) ([]string, error)
 	MultiSelect(message, help string, options []string, validator prompt.ValidatorFunc, promptOpts ...prompt.PromptConfig) ([]string, error)
 	Confirm(message, help string, promptOpts ...prompt.PromptConfig) (bool, error)
 }
@@ -165,7 +166,7 @@ type taskLister interface {
 
 // AppEnvSelector prompts users to select the name of an application or environment.
 type AppEnvSelector struct {
-	prompt       prompter
+	prompt       Prompter
 	appEnvLister appEnvLister
 }
 
@@ -189,19 +190,19 @@ type LocalEnvironmentSelector struct {
 
 // WorkspaceSelector selects from local workspace.
 type WorkspaceSelector struct {
-	prompt prompter
+	prompt Prompter
 	ws     workspaceRetriever
 }
 
 // WsPipelineSelector is a workspace pipeline selector.
 type WsPipelineSelector struct {
-	prompt prompter
+	prompt Prompter
 	ws     wsPipelinesLister
 }
 
 // CodePipelineSelector is a selector for deployed pipelines.
 type CodePipelineSelector struct {
-	prompt         prompter
+	prompt         Prompter
 	pipelineLister codePipelineLister
 }
 
@@ -230,7 +231,7 @@ type CFTaskSelector struct {
 }
 
 // NewCFTaskSelect constructs a CFTaskSelector.
-func NewCFTaskSelect(prompt prompter, store configLister, cf taskStackDescriber) *CFTaskSelector {
+func NewCFTaskSelect(prompt Prompter, store configLister, cf taskStackDescriber) *CFTaskSelector {
 	return &CFTaskSelector{
 		AppEnvSelector: NewAppEnvSelector(prompt, store),
 		cfStore:        cf,
@@ -257,7 +258,7 @@ func TaskWithDefaultCluster() GetDeployedTaskOpts {
 
 // TaskSelector is a Copilot running task selector.
 type TaskSelector struct {
-	prompt         prompter
+	prompt         Prompter
 	lister         taskLister
 	app            string
 	env            string
@@ -267,7 +268,7 @@ type TaskSelector struct {
 }
 
 // NewAppEnvSelector returns a selector that chooses applications or environments.
-func NewAppEnvSelector(prompt prompter, store appEnvLister) *AppEnvSelector {
+func NewAppEnvSelector(prompt Prompter, store appEnvLister) *AppEnvSelector {
 	return &AppEnvSelector{
 		prompt:       prompt,
 		appEnvLister: store,
@@ -275,7 +276,7 @@ func NewAppEnvSelector(prompt prompter, store appEnvLister) *AppEnvSelector {
 }
 
 // NewConfigSelector returns a new selector that chooses applications, environments, or services from the config store.
-func NewConfigSelector(prompt prompter, store configLister) *ConfigSelector {
+func NewConfigSelector(prompt Prompter, store configLister) *ConfigSelector {
 	return &ConfigSelector{
 		AppEnvSelector: NewAppEnvSelector(prompt, store),
 		workloadLister: store,
@@ -284,7 +285,7 @@ func NewConfigSelector(prompt prompter, store configLister) *ConfigSelector {
 
 // NewLocalWorkloadSelector returns a new selector that chooses applications and environments from the config store, but
 // services from the local workspace.
-func NewLocalWorkloadSelector(prompt prompter, store configLister, ws workspaceRetriever) *LocalWorkloadSelector {
+func NewLocalWorkloadSelector(prompt Prompter, store configLister, ws workspaceRetriever) *LocalWorkloadSelector {
 	return &LocalWorkloadSelector{
 		ConfigSelector: NewConfigSelector(prompt, store),
 		ws:             ws,
@@ -293,7 +294,7 @@ func NewLocalWorkloadSelector(prompt prompter, store configLister, ws workspaceR
 
 // NewLocalEnvironmentSelector returns a new selector that chooses applications from the config store, but an environment
 // from the local workspace.
-func NewLocalEnvironmentSelector(prompt prompter, store configLister, ws workspaceRetriever) *LocalEnvironmentSelector {
+func NewLocalEnvironmentSelector(prompt Prompter, store configLister, ws workspaceRetriever) *LocalEnvironmentSelector {
 	return &LocalEnvironmentSelector{
 		AppEnvSelector: NewAppEnvSelector(prompt, store),
 		ws:             ws,
@@ -301,7 +302,7 @@ func NewLocalEnvironmentSelector(prompt prompter, store configLister, ws workspa
 }
 
 // NewWorkspaceSelector returns a new selector that prompts for local information.
-func NewWorkspaceSelector(prompt prompter, ws workspaceRetriever) *WorkspaceSelector {
+func NewWorkspaceSelector(prompt Prompter, ws workspaceRetriever) *WorkspaceSelector {
 	return &WorkspaceSelector{
 		prompt: prompt,
 		ws:     ws,
@@ -309,7 +310,7 @@ func NewWorkspaceSelector(prompt prompter, ws workspaceRetriever) *WorkspaceSele
 }
 
 // NewWsPipelineSelector returns a new selector with pipelines from the local workspace.
-func NewWsPipelineSelector(prompt prompter, ws wsPipelinesLister) *WsPipelineSelector {
+func NewWsPipelineSelector(prompt Prompter, ws wsPipelinesLister) *WsPipelineSelector {
 	return &WsPipelineSelector{
 		prompt: prompt,
 		ws:     ws,
@@ -317,7 +318,7 @@ func NewWsPipelineSelector(prompt prompter, ws wsPipelinesLister) *WsPipelineSel
 }
 
 // NewAppPipelineSelector returns new selectors with deployed pipelines and apps.
-func NewAppPipelineSelector(prompt prompter, store configLister, lister codePipelineLister) *AppPipelineSelector {
+func NewAppPipelineSelector(prompt Prompter, store configLister, lister codePipelineLister) *AppPipelineSelector {
 	return &AppPipelineSelector{
 		AppEnvSelector: NewAppEnvSelector(prompt, store),
 		CodePipelineSelector: &CodePipelineSelector{
@@ -328,7 +329,7 @@ func NewAppPipelineSelector(prompt prompter, store configLister, lister codePipe
 }
 
 // NewDeploySelect returns a new selector that chooses services and environments from the deploy store.
-func NewDeploySelect(prompt prompter, configStore configLister, deployStore deployedWorkloadsRetriever) *DeploySelector {
+func NewDeploySelect(prompt Prompter, configStore configLister, deployStore deployedWorkloadsRetriever) *DeploySelector {
 	return &DeploySelector{
 		ConfigSelector: NewConfigSelector(prompt, configStore),
 		deployStoreSvc: deployStore,
@@ -336,7 +337,7 @@ func NewDeploySelect(prompt prompter, configStore configLister, deployStore depl
 }
 
 // NewTaskSelector returns a new selector that chooses a running task.
-func NewTaskSelector(prompt prompter, lister taskLister) *TaskSelector {
+func NewTaskSelector(prompt Prompter, lister taskLister) *TaskSelector {
 	return &TaskSelector{
 		prompt: prompt,
 		lister: lister,

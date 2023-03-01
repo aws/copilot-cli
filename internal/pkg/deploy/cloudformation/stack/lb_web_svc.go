@@ -35,8 +35,7 @@ type LoadBalancedWebService struct {
 	publicSubnetCIDRBlocks []string
 	appInfo                deploy.AppInformation
 
-	parser   loadBalancedWebSvcReadParser
-	localCRs []uploadable // Custom resources that have not been uploaded yet.
+	parser loadBalancedWebSvcReadParser
 }
 
 // LoadBalancedWebServiceOption is used to configuring an optional field for LoadBalancedWebService.
@@ -68,9 +67,10 @@ func NewLoadBalancedWebService(conf LoadBalancedWebServiceConfig,
 	if err != nil {
 		return nil, fmt.Errorf("load balanced web service custom resources: %w", err)
 	}
+	conf.RuntimeConfig.loadCustomResourceURLs(conf.ArtifactBucketName, uploadableCRs(crs).convert())
+
 	var dnsDelegationEnabled, httpsEnabled bool
 	var appInfo deploy.AppInformation
-
 	if conf.App.Domain != "" {
 		dnsDelegationEnabled = true
 		appInfo = deploy.AppInformation{
@@ -112,8 +112,7 @@ func NewLoadBalancedWebService(conf LoadBalancedWebServiceConfig,
 		appInfo:              appInfo,
 		dnsDelegationEnabled: dnsDelegationEnabled,
 
-		parser:   fs,
-		localCRs: uploadableCRs(crs).convert(),
+		parser: fs,
 	}
 	for _, opt := range opts {
 		opt(s)
@@ -141,9 +140,6 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		return "", fmt.Errorf("parse exposed ports in service manifest %s: %w", s.name, err)
 	}
 	sidecars, err := convertSidecars(s.manifest.Sidecars, exposedPorts.PortsForContainer)
-	if err != nil {
-		return "", fmt.Errorf("convert the sidecar configuration for service %s: %w", s.name, err)
-	}
 	if err != nil {
 		return "", fmt.Errorf("convert the sidecar configuration for service %s: %w", s.name, err)
 	}

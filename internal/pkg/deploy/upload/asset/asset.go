@@ -20,24 +20,45 @@ type UploadOpts struct {
 	Reincludes []string   // Relative path under source to reinclude files that are excluded in the upload.
 	Excludes   []string   // Relative path under source to exclude in the upload.
 	UploadFn   UploadFunc // Custom implementation on how to upload the contents under a file. Defaults to S3UploadFn.
+	Recursive  bool       // Whether to walk recursively.
 }
 
 // Upload uploads static assets to Cloud Storage and returns uploaded file URLs.
 func Upload(fs afero.Fs, source, destination string, opts *UploadOpts) ([]string, error) {
 	matcher := buildCompositeMatchers(buildReincludeMatchers(opts.Reincludes), buildExcludeMatchers(opts.Excludes))
 	var urls []string
-	if err := afero.Walk(fs, source, walkFn(source, destination, fs, opts.UploadFn, &urls, matcher)); err != nil {
-		return nil, fmt.Errorf("walk the file tree rooted at %q: %w", source, err)
+	info, err := fs.Stat(source)
+	if err != nil {
+		return nil, fmt.Errorf("get stat for file %q: %w", source, err)
+	}
+	paths := []string{source}
+	if info.IsDir() {
+		files, err := afero.ReadDir(fs, source)
+		if err != nil {
+			return nil, fmt.Errorf("read directory %q: %w", source, err)
+		}
+		paths = make([]string, len(files))
+		for i, f := range files {
+			paths[i] = filepath.Join(source, f.Name())
+		}
+	}
+	for _, path := range paths {
+		if err := afero.Walk(fs, path, walkFn(source, destination, opts.Recursive, fs, opts.UploadFn, &urls, matcher)); err != nil {
+			return nil, fmt.Errorf("walk the file tree rooted at %q: %w", source, err)
+		}
 	}
 	return urls, nil
 }
 
-func walkFn(source, dest string, reader afero.Fs, upload UploadFunc, urlsPtr *[]string, matcher filepathMatcher) filepath.WalkFunc {
+func walkFn(source, dest string, recursive bool, reader afero.Fs, upload UploadFunc, urlsPtr *[]string, matcher filepathMatcher) filepath.WalkFunc {
 	return func(path string, info fs.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 		if info.IsDir() {
+			if !recursive {
+				return fs.SkipDir
+			}
 			return nil
 		}
 		ok, err := matcher.match(path)

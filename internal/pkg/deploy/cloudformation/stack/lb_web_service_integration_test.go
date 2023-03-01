@@ -131,6 +131,8 @@ func TestLoadBalancedWebService_TemplateInteg(t *testing.T) {
 			expectedBytes := []byte(expected)
 			mExpected := make(map[interface{}]interface{})
 			require.NoError(t, yaml.Unmarshal(expectedBytes, mExpected))
+
+			resetCustomResourceLocations(mActual)
 			compareStackTemplate(t, mExpected, mActual)
 		})
 

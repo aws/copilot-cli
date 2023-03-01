@@ -43,7 +43,7 @@ func TestRDWS(t *testing.T) {
 			},
 		},
 	}
-	wantedPaths := map[string]string{
+	fakePaths := map[string]string{
 		"CustomDomainFunction":  "manual/scripts/custom-resources/customdomainfunction/2611784f21e91e499306dac066aae5fd8f2ba664b38073bdd3198d2e041c076e.zip",
 		"EnvControllerFunction": "manual/scripts/custom-resources/envcontrollerfunction/72297cacaeab3a267e371c17ea3f0235905b0da51410eb31c10f7c66ba944044.zip",
 	}
@@ -76,7 +76,7 @@ func TestRDWS(t *testing.T) {
 
 	// ensure artifact paths match.
 	for _, cr := range crs {
-		require.Equal(t, wantedPaths[cr.Name()], cr.ArtifactPath())
+		require.Equal(t, fakePaths[cr.Name()], cr.ArtifactPath())
 	}
 }
 
@@ -101,7 +101,7 @@ func TestLBWS(t *testing.T) {
 			},
 		},
 	}
-	wantedPaths := map[string]string{
+	fakePaths := map[string]string{
 		"DynamicDesiredCountFunction": "manual/scripts/custom-resources/dynamicdesiredcountfunction/2611784f21e91e499306dac066aae5fd8f2ba664b38073bdd3198d2e041c076e.zip",
 		"EnvControllerFunction":       "manual/scripts/custom-resources/envcontrollerfunction/72297cacaeab3a267e371c17ea3f0235905b0da51410eb31c10f7c66ba944044.zip",
 		"RulePriorityFunction":        "manual/scripts/custom-resources/rulepriorityfunction/1385d258950a50faf4b5cd7deeecbc4bcc79a0d41d631e3977cffa0332e6f0c6.zip",
@@ -138,7 +138,7 @@ func TestLBWS(t *testing.T) {
 
 	// ensure artifact paths match.
 	for _, cr := range crs {
-		require.Equal(t, wantedPaths[cr.Name()], cr.ArtifactPath())
+		require.Equal(t, fakePaths[cr.Name()], cr.ArtifactPath())
 	}
 }
 
@@ -157,7 +157,7 @@ func TestWorker(t *testing.T) {
 			},
 		},
 	}
-	wantedPaths := map[string]string{
+	fakePaths := map[string]string{
 		"DynamicDesiredCountFunction":      "manual/scripts/custom-resources/dynamicdesiredcountfunction/2611784f21e91e499306dac066aae5fd8f2ba664b38073bdd3198d2e041c076e.zip",
 		"BacklogPerTaskCalculatorFunction": "manual/scripts/custom-resources/backlogpertaskcalculatorfunction/bc925d682cb47de9c65ed9cc5438ee51d9e2b9b39ca6b57bb9adda81b0091b30.zip",
 		"EnvControllerFunction":            "manual/scripts/custom-resources/envcontrollerfunction/72297cacaeab3a267e371c17ea3f0235905b0da51410eb31c10f7c66ba944044.zip",
@@ -192,7 +192,7 @@ func TestWorker(t *testing.T) {
 
 	// ensure artifact paths match.
 	for _, cr := range crs {
-		require.Equal(t, wantedPaths[cr.Name()], cr.ArtifactPath())
+		require.Equal(t, fakePaths[cr.Name()], cr.ArtifactPath())
 	}
 }
 
@@ -211,7 +211,7 @@ func TestBackend(t *testing.T) {
 			},
 		},
 	}
-	wantedPaths := map[string]string{
+	fakePaths := map[string]string{
 		"DynamicDesiredCountFunction": "manual/scripts/custom-resources/dynamicdesiredcountfunction/2611784f21e91e499306dac066aae5fd8f2ba664b38073bdd3198d2e041c076e.zip",
 		"EnvControllerFunction":       "manual/scripts/custom-resources/envcontrollerfunction/72297cacaeab3a267e371c17ea3f0235905b0da51410eb31c10f7c66ba944044.zip",
 		"RulePriorityFunction":        "manual/scripts/custom-resources/rulepriorityfunction/1385d258950a50faf4b5cd7deeecbc4bcc79a0d41d631e3977cffa0332e6f0c6.zip",
@@ -246,7 +246,61 @@ func TestBackend(t *testing.T) {
 
 	// ensure artifact paths match.
 	for _, cr := range crs {
-		require.Equal(t, wantedPaths[cr.Name()], cr.ArtifactPath())
+		require.Equal(t, fakePaths[cr.Name()], cr.ArtifactPath())
+	}
+}
+
+func TestStaticSite(t *testing.T) {
+	// GIVEN
+	fakeFS := &fakeTemplateReader{
+		files: map[string]*template.Content{
+			"custom-resources/desired-count-delegation.js": {
+				Buffer: bytes.NewBufferString("custom domain app runner"),
+			},
+			"custom-resources/alb-rule-priority-generator.js": {
+				Buffer: bytes.NewBufferString("rule priority"),
+			},
+			"custom-resources/env-controller.js": {
+				Buffer: bytes.NewBufferString("env controller"),
+			},
+		},
+	}
+	fakePaths := map[string]string{
+		"DynamicDesiredCountFunction": "manual/scripts/custom-resources/dynamicdesiredcountfunction/2611784f21e91e499306dac066aae5fd8f2ba664b38073bdd3198d2e041c076e.zip",
+		"EnvControllerFunction":       "manual/scripts/custom-resources/envcontrollerfunction/72297cacaeab3a267e371c17ea3f0235905b0da51410eb31c10f7c66ba944044.zip",
+		"RulePriorityFunction":        "manual/scripts/custom-resources/rulepriorityfunction/1385d258950a50faf4b5cd7deeecbc4bcc79a0d41d631e3977cffa0332e6f0c6.zip",
+	}
+
+	// WHEN
+	crs, err := StaticSite(fakeFS)
+
+	// THEN
+	require.NoError(t, err)
+	require.Equal(t, fakeFS.matchCount, 0, "expected path calls do not match")
+
+	actualFnNames := make([]string, len(crs))
+	for i, cr := range crs {
+		actualFnNames[i] = cr.Name()
+	}
+	require.ElementsMatch(t,
+		[]string{},
+		actualFnNames, "function names must match")
+
+	// ensure the zip files contain an index.js file.
+	for _, cr := range crs {
+		buf := new(bytes.Buffer)
+		size, err := buf.ReadFrom(cr.zipReader())
+		require.NoError(t, err)
+		r, err := zip.NewReader(bytes.NewReader(buf.Bytes()), size)
+		require.NoError(t, err)
+
+		_, err = r.Open("index.js")
+		require.NoError(t, err, "an index.js file must be present in all custom resources")
+	}
+
+	// ensure artifact paths match.
+	for _, cr := range crs {
+		require.Equal(t, fakePaths[cr.Name()], cr.ArtifactPath())
 	}
 }
 
@@ -259,7 +313,7 @@ func TestScheduledJob(t *testing.T) {
 			},
 		},
 	}
-	wantedPaths := map[string]string{
+	fakePaths := map[string]string{
 		"EnvControllerFunction": "manual/scripts/custom-resources/envcontrollerfunction/72297cacaeab3a267e371c17ea3f0235905b0da51410eb31c10f7c66ba944044.zip",
 	}
 
@@ -292,7 +346,7 @@ func TestScheduledJob(t *testing.T) {
 
 	// ensure artifact paths match.
 	for _, cr := range crs {
-		require.Equal(t, wantedPaths[cr.Name()], cr.ArtifactPath())
+		require.Equal(t, fakePaths[cr.Name()], cr.ArtifactPath())
 	}
 }
 
@@ -317,7 +371,7 @@ func TestEnv(t *testing.T) {
 			},
 		},
 	}
-	wantedPaths := map[string]string{
+	fakePaths := map[string]string{
 		"CertificateValidationFunction": "manual/scripts/custom-resources/certificatevalidationfunction/ef49fd0cefe5525c1b98ab66614bfaebdf57dfa513a7de0d0677fc024b2f0a2b.zip",
 		"CustomDomainFunction":          "manual/scripts/custom-resources/customdomainfunction/01baf83827dca2ff7df3cdf24f6ad354b3fa4f9b7cda39b5bf91de378f81c791.zip",
 		"DNSDelegationFunction":         "manual/scripts/custom-resources/dnsdelegationfunction/17ec5f580cdb9c1d7c6b5b91decee031592547629a6bfed7cd33b9229f61ab19.zip",
@@ -354,7 +408,7 @@ func TestEnv(t *testing.T) {
 
 	// ensure artifact paths match.
 	for _, cr := range crs {
-		require.Equal(t, wantedPaths[cr.Name()], cr.ArtifactPath())
+		require.Equal(t, fakePaths[cr.Name()], cr.ArtifactPath())
 	}
 }
 

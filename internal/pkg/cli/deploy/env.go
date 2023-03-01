@@ -379,17 +379,9 @@ func (d *envDeployer) buildStackInput(in *DeployEnvironmentInput) (*cfnstack.Env
 	if err != nil {
 		return nil, err
 	}
-	parsedAddons, err := d.parseAddons()
-	var notFoundErr *addon.ErrAddonsNotFound
-	if err != nil && !errors.As(err, &notFoundErr) {
+	addons, err := d.buildAddonsInput(resources.Region, resources.S3Bucket, in.AddonsURL)
+	if err != nil {
 		return nil, err
-	}
-	var addons *cfnstack.Addons
-	if err == nil {
-		addons = &cfnstack.Addons{
-			S3ObjectURL: in.AddonsURL,
-			Stack:       parsedAddons,
-		}
 	}
 	return &cfnstack.EnvConfig{
 		Name: d.env.Name,
@@ -410,6 +402,31 @@ func (d *envDeployer) buildStackInput(in *DeployEnvironmentInput) (*cfnstack.Env
 		RawMft:               in.RawManifest,
 		PermissionsBoundary:  in.PermissionsBoundary,
 		Version:              deploy.LatestEnvTemplateVersion,
+	}, nil
+}
+
+func (d *envDeployer) buildAddonsInput(region, bucket, uploadURL string) (*cfnstack.Addons, error) {
+	parsedAddons, err := d.parseAddons()
+	if err != nil {
+		var notFoundErr *addon.ErrAddonsNotFound
+		if errors.As(err, &notFoundErr) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	if uploadURL != "" {
+		return &cfnstack.Addons{
+			S3ObjectURL: uploadURL,
+			Stack:       parsedAddons,
+		}, nil
+	}
+	tpl, err := parsedAddons.Template()
+	if err != nil {
+		return nil, fmt.Errorf("render addons template: %w", err)
+	}
+	return &cfnstack.Addons{
+		S3ObjectURL: s3.URL(region, bucket, artifactpath.EnvironmentAddons([]byte(tpl))),
+		Stack:       parsedAddons,
 	}, nil
 }
 

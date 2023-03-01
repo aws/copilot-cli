@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"math/rand"
 	"strings"
-	"time"
 
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
@@ -82,7 +81,6 @@ func newSvcExecOpts(vars execVars) (*svcExecOpts, error) {
 			return awsecs.New(s)
 		},
 		randInt: func(x int) int {
-			rand.Seed(time.Now().Unix())
 			return rand.Intn(x)
 		},
 		ssmPluginManager: exec.NewSSMPluginCommand(nil),

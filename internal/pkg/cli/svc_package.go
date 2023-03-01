@@ -62,6 +62,7 @@ type packageSvcOpts struct {
 	newInterpolator      func(app, env string) interpolator
 	newStackGenerator    func(*packageSvcOpts) (workloadStackGenerator, error)
 	envFeaturesDescriber versionCompatibilityChecker
+	gitShortCommit       string
 
 	// cached variables
 	targetApp         *config.Application
@@ -125,11 +126,14 @@ func newWorkloadStackGenerator(o *packageSvcOpts) (workloadStackGenerator, error
 	content := o.appliedDynamicMft.Manifest()
 	var deployer workloadStackGenerator
 	in := clideploy.WorkloadDeployerInput{
-		SessionProvider:  o.sessProvider,
-		Name:             o.name,
-		App:              targetApp,
-		Env:              targetEnv,
-		ImageTag:         o.tag,
+		SessionProvider: o.sessProvider,
+		Name:            o.name,
+		App:             targetApp,
+		Env:             targetEnv,
+		Image: clideploy.ContainerImageIdentifier{
+			CustomTag:         o.tag,
+			GitShortCommitTag: o.gitShortCommit,
+		},
 		Mft:              content,
 		RawMft:           raw,
 		EnvVersionGetter: o.envFeaturesDescriber,
@@ -146,6 +150,8 @@ func newWorkloadStackGenerator(o *packageSvcOpts) (workloadStackGenerator, error
 		deployer, err = clideploy.NewWorkerSvcDeployer(&in)
 	case *manifest.ScheduledJob:
 		deployer, err = clideploy.NewJobDeployer(&in)
+	case *manifest.StaticSite:
+		deployer, err = clideploy.NewStaticSiteDeployer(&in)
 	default:
 		return nil, fmt.Errorf("unknown manifest type %T while creating the CloudFormation stack", t)
 	}
@@ -260,7 +266,7 @@ func (o *packageSvcOpts) validateOrAskEnvName() error {
 }
 
 func (o *packageSvcOpts) configureClients() error {
-	o.tag = imageTagFromGit(o.runner, o.tag) // Best effort assign git tag.
+	o.gitShortCommit = imageTagFromGit(o.runner) // Best effort assign git tag.
 	// client to retrieve an application's resources created with CloudFormation.
 	defaultSess, err := o.sessProvider.Default()
 	if err != nil {
@@ -337,8 +343,8 @@ func (o *packageSvcOpts) getWorkloadStack(generator workloadStackGenerator) (*cf
 		StackRuntimeConfiguration: clideploy.StackRuntimeConfiguration{
 			RootUserARN:        o.rootUserARN,
 			Tags:               targetApp.Tags,
-			ImageDigest:        uploadOut.ImageDigest,
 			EnvFileARNs:        uploadOut.EnvFileARNs,
+			ImageDigests:       uploadOut.ImageDigests,
 			AddonsURL:          uploadOut.AddonsURL,
 			CustomResourceURLs: uploadOut.CustomResourceURLs,
 		},

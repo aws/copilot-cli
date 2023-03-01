@@ -23,8 +23,7 @@ type WorkerService struct {
 	*ecsWkld
 	manifest *manifest.WorkerService
 
-	parser   workerSvcReadParser
-	localCRs []uploadable // Custom resources that have not been uploaded yet.
+	parser workerSvcReadParser
 }
 
 // WorkerServiceConfig contains data required to initialize a scheduled job stack.
@@ -44,6 +43,8 @@ func NewWorkerService(cfg WorkerServiceConfig) (*WorkerService, error) {
 	if err != nil {
 		return nil, fmt.Errorf("worker service custom resources: %w", err)
 	}
+	cfg.RuntimeConfig.loadCustomResourceURLs(cfg.ArtifactBucketName, uploadableCRs(crs).convert())
+
 	return &WorkerService{
 		ecsWkld: &ecsWkld{
 			wkld: &wkld{
@@ -65,7 +66,6 @@ func NewWorkerService(cfg WorkerServiceConfig) (*WorkerService, error) {
 		},
 		manifest: cfg.Manifest,
 		parser:   fs,
-		localCRs: uploadableCRs(crs).convert(),
 	}, nil
 }
 

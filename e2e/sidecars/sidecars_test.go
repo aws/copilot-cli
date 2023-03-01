@@ -6,7 +6,6 @@ package sidecars_test
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math/rand"
 	"net/http"
 	"os"
@@ -195,27 +194,29 @@ var _ = Describe("sidecars flow", func() {
 		It("overwrite existing manifest", func() {
 			logGroupName := fmt.Sprintf("%s-test-%s", appName, svcName)
 			newManifest = fmt.Sprintf(manifest, sidecarImageURI, nginxPort, logGroupName)
-			err := ioutil.WriteFile("./copilot/hello/manifest.yml", []byte(newManifest), 0644)
+			err := os.WriteFile("./copilot/hello/manifest.yml", []byte(newManifest), 0644)
 			Expect(err).NotTo(HaveOccurred(), "overwrite manifest")
 		})
 		It("add addons folder for Firelens permissions", func() {
 			err := os.MkdirAll("./copilot/hello/addons", 0777)
 			Expect(err).NotTo(HaveOccurred(), "create addons dir")
 
-			fds, err := ioutil.ReadDir("./hello/addons")
+			fds, err := os.ReadDir("./hello/addons")
 			Expect(err).NotTo(HaveOccurred(), "read addons dir")
 
 			for _, fd := range fds {
-				destFile, err := os.Create(fmt.Sprintf("./copilot/hello/addons/%s", fd.Name()))
-				Expect(err).NotTo(HaveOccurred(), "create destination file")
-				defer destFile.Close()
+				func() {
+					destFile, err := os.Create(fmt.Sprintf("./copilot/hello/addons/%s", fd.Name()))
+					Expect(err).NotTo(HaveOccurred(), "create destination file")
+					defer destFile.Close()
 
-				srcFile, err := os.Open(fmt.Sprintf("./hello/addons/%s", fd.Name()))
-				Expect(err).NotTo(HaveOccurred(), "open source file")
-				defer srcFile.Close()
+					srcFile, err := os.Open(fmt.Sprintf("./hello/addons/%s", fd.Name()))
+					Expect(err).NotTo(HaveOccurred(), "open source file")
+					defer srcFile.Close()
 
-				_, err = io.Copy(destFile, srcFile)
-				Expect(err).NotTo(HaveOccurred(), "copy file")
+					_, err = io.Copy(destFile, srcFile)
+					Expect(err).NotTo(HaveOccurred(), "copy file")
+				}()
 			}
 		})
 	})
@@ -259,7 +260,7 @@ var _ = Describe("sidecars flow", func() {
 
 			// Read the response - our deployed apps should return a body with their
 			// name as the value.
-			bodyBytes, err := ioutil.ReadAll(resp.Body)
+			bodyBytes, err := io.ReadAll(resp.Body)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(bodyBytes)).To(Equal("Ready"))
 		})
