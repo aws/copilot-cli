@@ -16,8 +16,8 @@ DeploymentConfiguration:
     Rollback: true
   MinimumHealthyPercent: {{ .DeploymentConfiguration.MinHealthyPercent }}
   MaximumPercent: {{ .DeploymentConfiguration.MaxPercent }}
-  {{- if .DeploymentConfiguration.Rollback.HasRollbackAlarms }}
   Alarms:
+  {{- if .DeploymentConfiguration.Rollback.HasRollbackAlarms }}
     {{- if .DeploymentConfiguration.Rollback.AlarmNames }}
     AlarmNames: {{ fmtSlice (quoteSlice .DeploymentConfiguration.Rollback.AlarmNames) }}
     {{- else if .DeploymentConfiguration.Rollback.HasCustomAlarms }}
@@ -33,8 +33,11 @@ DeploymentConfiguration:
       {{- end }}
     {{- end }}
     Enable: true
+  {{- else }}
+    AlarmNames: []
+    Enable: false
+  {{- end}}
     Rollback: true
-  {{- end }}
 PropagateTags: SERVICE
 {{- if .ExecuteCommand }}
 EnableExecuteCommand: true
