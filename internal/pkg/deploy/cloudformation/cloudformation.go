@@ -8,24 +8,21 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatch"
 	"io"
 	"os"
 	"strings"
 	"time"
-
-	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
-
-	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
-
-	"github.com/aws/copilot-cli/internal/pkg/aws/codestar"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	sdkcloudformation "github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation/stackset"
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatch"
+	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
+	"github.com/aws/copilot-cli/internal/pkg/aws/codestar"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
+	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/stream"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
