@@ -115,7 +115,7 @@ describe("ALB Rule Priority Generator", () => {
         RequestId: testRequestId,
         ResourceProperties: {
           ListenerArn: testALBListenerArn,
-          RulePath: "/api",
+          RulePath: ["/api"],
         },
         LogicalResourceId: "mockID",
       })
@@ -167,7 +167,7 @@ describe("ALB Rule Priority Generator", () => {
         RequestId: testRequestId,
         ResourceProperties: {
           ListenerArn: testALBListenerArn,
-          RulePath: "/",
+          RulePath: ["/"],
         },
         LogicalResourceId: "mockID",
       })
@@ -215,7 +215,7 @@ describe("ALB Rule Priority Generator", () => {
         RequestId: testRequestId,
         ResourceProperties: {
           ListenerArn: testALBListenerArn,
-          RulePath: "/api",
+          RulePath: ["/api"],
         },
       })
       .expectResolve(() => {
@@ -292,7 +292,7 @@ describe("ALB Rule Priority Generator", () => {
         RequestId: testRequestId,
         ResourceProperties: {
           ListenerArn: testALBListenerArn,
-          RulePath: "/api",
+          RulePath: ["/api"],
         },
       })
       .expectResolve(() => {
@@ -367,7 +367,7 @@ describe("ALB Rule Priority Generator", () => {
         RequestId: testRequestId,
         ResourceProperties: {
           ListenerArn: testALBListenerArn,
-          RulePath: "/",
+          RulePath: ["/"],
         },
       })
       .expectResolve(() => {
@@ -452,7 +452,7 @@ describe("ALB Rule Priority Generator", () => {
         RequestId: testRequestId,
         ResourceProperties: {
           ListenerArn: testALBListenerArn,
-          RulePath: "/api",
+          RulePath: ["/api"],
         },
       })
       .expectResolve(() => {

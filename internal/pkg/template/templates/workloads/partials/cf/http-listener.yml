@@ -23,7 +23,7 @@ HTTPRulePriorityAction:
   Type: Custom::RulePriorityFunction
   Properties:
     ServiceToken: !GetAtt RulePriorityFunction.Arn
-    RulePath: !Ref RulePath
+    RulePath: !Split [",", !Ref RulePath]
     {{- if eq .WorkloadType "Backend Service"}}
     ListenerArn: !GetAtt EnvControllerAction.InternalHTTPListenerArn
     {{- else}}

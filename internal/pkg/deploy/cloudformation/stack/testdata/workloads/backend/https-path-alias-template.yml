@@ -311,7 +311,7 @@ Resources:
     Type: Custom::RulePriorityFunction
     Properties:
       ServiceToken: !GetAtt RulePriorityFunction.Arn
-      RulePath: !Ref RulePath
+      RulePath: !Split [",", !Ref RulePath]
       ListenerArn: !GetAtt EnvControllerAction.InternalHTTPSListenerArn
   
   HTTPRuleWithDomainPriorityAction:
@@ -320,7 +320,7 @@ Resources:
     Type: Custom::RulePriorityFunction
     Properties:
       ServiceToken: !GetAtt RulePriorityFunction.Arn
-      RulePath: !Ref RulePath
+      RulePath: !Split [",", !Ref RulePath]
       ListenerArn: !GetAtt EnvControllerAction.InternalHTTPListenerArn
 
   HTTPListenerRuleWithDomain:

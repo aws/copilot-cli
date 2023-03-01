@@ -383,7 +383,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Type: Custom::RulePriorityFunction
     Properties:
       ServiceToken: !GetAtt RulePriorityFunction.Arn
-      RulePath: !Ref RulePath
+      RulePath: !Split [",", !Ref RulePath]
       ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
   HTTPListenerRule:
     Metadata:
