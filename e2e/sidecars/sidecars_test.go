@@ -33,6 +33,7 @@ image:
   port: 3000
   depends_on:
     nginx: start
+env_file: ./magic.env
 
 http:
   # Requests to this path will be forwarded to your service. 
@@ -55,7 +56,9 @@ sidecars:
     image: %s    # Image URL for sidecar container.
     variables:
       NGINX_PORT: %s
+	env_file: ./magic.env
 logging:
+  env_file: ./magic.env
   destination:
     Name: cloudwatch
     region: us-east-1
