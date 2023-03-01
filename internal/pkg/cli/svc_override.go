@@ -245,10 +245,10 @@ func (o *overrideSvcOpts) newSvcPackageCmd(tplBuf stringWriteCloser) (executor, 
 
 func (o *overrideSvcOpts) askIaCTool() error {
 	msg := fmt.Sprintf("Which Infrastructure as Code tool would you like to use to override %q?", o.name)
-	help := fmt.Sprintf(`The AWS Cloud Development Kit (CDK) lets you override templates using
+	help := `The AWS Cloud Development Kit (CDK) lets you override templates using
 the expressive power of programming languages.
 This option is recommended for users that need to override several resources.
-To learn more about the CDK: https://docs.aws.amazon.com/cdk/v2/guide/home.html`)
+To learn more about the CDK: https://docs.aws.amazon.com/cdk/v2/guide/home.html`
 	tool, err := o.prompt.SelectOne(msg, help, validIaCTools, prompt.WithFinalMessage("IaC tool:"))
 	if err != nil {
 		return fmt.Errorf("select IaC tool: %v", err)
