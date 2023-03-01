@@ -58,6 +58,8 @@ Here's a quick guide showing you how to add environment variables to your app by
 
 Additionally, if you want to add environment variables in bulk, you can list them in an [env file](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/taskdef-envfiles.html#taskdef-envfiles-considerations). And then specify its path (from the root of the workspace) in the `env_file` field of your [manifest](../manifest/overview.en.md).
 
+You may specify an env file at the root of your workspace for the main container, in any sidecar container definition, or under the `logging` field to pass an environment file to the Firelens sidecar container.
+
 ```yaml
 # in copilot/{service name}/manifest.yml
 env_file: log.env
@@ -68,6 +70,26 @@ And in `log.env` we could have
 #This is a comment and will be ignored
 LOG_LEVEL=debug
 LOG_INFO=all
+```
+In a sidecar definition:
+```yaml
+sidecars:
+  nginx:
+    image: nginx:latest
+    env_file: ./nginx.env
+    port: 8080
+```
+
+In the logging container:
+```yaml
+logging:
+  retention: 1
+  destination:
+    Name: cloudwatch
+    region: us-west-2
+    log_group_name: /copilot/logs/
+    log_stream_prefix: copilot/
+  env_file: ./logging.env
 ```
 
 ## How do I know the name of my DynamoDB table, S3 bucket, RDS database, etc?
