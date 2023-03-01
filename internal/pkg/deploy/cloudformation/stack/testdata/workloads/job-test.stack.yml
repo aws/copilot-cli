@@ -29,11 +29,17 @@ Parameters:
     Description: 'URL of the environment file.'
     Type: String
     Default: ""
+  nginxEnvFileARN:
+    Description: 'URL of the environment file for the nginx sidecar.'
+    Type: String
+    Default: ""
 Conditions: 
   HasAddons: # If a bucket URL is specified, that means the template exists.
     !Not [!Equals [!Ref AddonsTemplateURL, ""]]
   HasEnvFile:
     !Not [!Equals [!Ref EnvFileARN, ""]]
+  HasnginxEnvFile:
+    !Not [!Equals [!Ref nginxEnvFileARN, ""]]
 Resources: 
   LogGroup:
     Metadata:
@@ -294,6 +300,28 @@ Resources:
                         - !Ref AWS::Partition
                         - ':s3:::'
                         - !Select [0, !Split ['/', !Select [5, !Split [':', !Ref EnvFileARN]]]]
+          - !Ref AWS::NoValue
+        - !If
+          - HasnginxEnvFile
+          - PolicyName: !Join ['', [!Ref AppName, '-', !Ref EnvName, '-', !Ref WorkloadName, GetnginxEnvFilePolicy]]
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: 'Allow'
+                  Action:
+                    - 's3:GetObject'
+                  Resource:
+                    - !Ref nginxEnvFileARN
+                - Effect: 'Allow'
+                  Action:
+                    - 's3:GetBucketLocation'
+                  Resource:
+                    - !Join
+                      - ''
+                      - - 'arn:'
+                        - !Ref AWS::Partition
+                        - ':s3:::'
+                        - !Select [0, !Split ['/', !Select [5, !Split [':', !Ref nginxEnvFileARN]]]]
           - !Ref AWS::NoValue
       ManagedPolicyArns:
         - 'arn:${AWS::Partition}:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy'
