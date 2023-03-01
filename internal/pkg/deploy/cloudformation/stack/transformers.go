@@ -494,11 +494,11 @@ func (s *LoadBalancedWebService) convertApplicationLoadBalancer() (*template.ALB
 		httpsEnabled: s.httpsEnabled,
 	}.convert()
 	if err != nil {
-		return nil, nil
+		return nil, err
 	}
 	aliasesFor, err := convertHostedZone(albConfig.Alias, albConfig.HostedZone)
 	if err != nil {
-		return nil, fmt.Errorf(`convert "http.alias" to string slice: %w`, err)
+		return nil, err
 	}
 	rules = append(rules, *rule)
 
@@ -532,12 +532,12 @@ func (s *BackendService) convertApplicationLoadBalancer() (*template.ALBListener
 		httpsEnabled: s.httpsEnabled,
 	}.convert()
 	if err != nil {
-		return nil, nil
+		return nil, err
 	}
 	rules = append(rules, *rule)
 	hostedZoneAliases, err := convertHostedZone(albConfig.Alias, albConfig.HostedZone)
 	if err != nil {
-		return nil, fmt.Errorf(`convert "http.alias" to string slice: %w`, err)
+		return nil, err
 	}
 
 	// TODO: @pbhingre build listener rule config from additional rules from manifest.

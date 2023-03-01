@@ -284,7 +284,8 @@ func (cfg *NetworkLoadBalancer) Aliases() []string {
 	for _, listener := range cfg.Listener {
 		for _, entry := range listener.Aliases {
 			if _, value := seen[entry]; !value {
-				uniqueAliases = append(uniqueAliases, uniqueEntriesFromList(listener.Aliases, seen)...)
+				uniqueAliases = append(uniqueAliases, entry)
+				seen[entry] = true
 			}
 		}
 	}
@@ -299,22 +300,12 @@ func (cfg *ALBListener) Aliases() []string {
 	for _, listener := range cfg.Rules {
 		for _, entry := range listener.Aliases {
 			if _, value := seen[entry]; !value {
-				uniqueAliases = append(uniqueAliases, uniqueEntriesFromList(listener.Aliases, seen)...)
+				uniqueAliases = append(uniqueAliases, entry)
+				seen[entry] = true
 			}
 		}
 	}
 	return uniqueAliases
-}
-
-func uniqueEntriesFromList(aliases []string, seen map[string]bool) []string {
-	var list []string
-	for _, entry := range aliases {
-		if _, value := seen[entry]; !value {
-			seen[entry] = true
-			list = append(list, entry)
-		}
-	}
-	return list
 }
 
 // PlainVariable returns a Variable that is a plain string value.

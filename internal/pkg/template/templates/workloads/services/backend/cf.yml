@@ -39,7 +39,7 @@ Parameters:
     Type: String
   TargetPort:
     Type: Number
-  {{- if .ALBEnabled}}
+  {{- if .ALB}}
   HTTPSEnabled:
     Type: String
     AllowedValues: [true, false]
@@ -82,7 +82,7 @@ Resources:
 {{include "autoscaling" . | indent 2}}
 {{- end}}
 
-{{- if .ALBEnabled}}
+{{- if .ALB}}
 {{include "alb" . | indent 2}}
 {{end}}
 {{include "rollback-alarms" . | indent 2}}
@@ -93,7 +93,7 @@ Resources:
     Type: AWS::ECS::Service
     DependsOn:
       - EnvControllerAction
-      {{- if .ALBEnabled }}
+      {{- if .ALB }}
       {{- range $i, $rule := .ALB.Rules }}
       {{- if $.ALB.IsHTTPS}}
       - HTTPListenerRuleWithDomain{{ if ne $i 0 }}{{ $i }}{{ end }}
@@ -106,7 +106,7 @@ Resources:
     Properties:
       {{- "\n"}}{{ include "service-base-properties" . | indent 6 }}
       ServiceRegistries: !If [ExposePort, [{RegistryArn: !GetAtt DiscoveryService.Arn, Port: !Ref TargetPort}], !Ref "AWS::NoValue"]
-      {{- if .ALBEnabled}}
+      {{- if .ALB}}
       {{- if .HTTPHealthCheck.GracePeriod }}
       HealthCheckGracePeriodSeconds: {{.HTTPHealthCheck.GracePeriod}}
       {{- end }}
