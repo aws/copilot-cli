@@ -36,6 +36,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
+	"github.com/aws/copilot-cli/internal/pkg/version"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/spf13/afero"
 )
@@ -362,6 +363,13 @@ func buildArgsPerContainer(name, workspacePath string, img ContainerImageIdentif
 	if err != nil {
 		return nil, fmt.Errorf("check if manifest requires building from local Dockerfile: %w", err)
 	}
+	// Add labels to ECR images with docker build call
+	labels := map[string]string{
+		"builder": "copilot-cli",
+	}
+	if version.Version != "" {
+		labels["version"] = version.Version
+	}
 	dArgs := make(map[string]*dockerengine.BuildArguments, len(argsPerContainer))
 	for container, buildArgs := range argsPerContainer {
 		tags := []string{imageTagLatest}
@@ -375,13 +383,15 @@ func buildArgsPerContainer(name, workspacePath string, img ContainerImageIdentif
 			}
 		}
 		dArgs[container] = &dockerengine.BuildArguments{
-			Dockerfile: aws.StringValue(buildArgs.Dockerfile),
-			Context:    aws.StringValue(buildArgs.Context),
-			Args:       buildArgs.Args,
-			CacheFrom:  buildArgs.CacheFrom,
-			Target:     aws.StringValue(buildArgs.Target),
-			Platform:   mf.ContainerPlatform(),
-			Tags:       tags,
+			Dockerfile:    aws.StringValue(buildArgs.Dockerfile),
+			Context:       aws.StringValue(buildArgs.Context),
+			Args:          buildArgs.Args,
+			CacheFrom:     buildArgs.CacheFrom,
+			Target:        aws.StringValue(buildArgs.Target),
+			Platform:      mf.ContainerPlatform(),
+			Tags:          tags,
+			ContainerName: container,
+			Labels:        labels,
 		}
 	}
 	return dArgs, nil

@@ -28,18 +28,21 @@ func TestDockerCommand_Build(t *testing.T) {
 	mockTag1 := "tag1"
 	mockTag2 := "tag2"
 	mockTag3 := "tag3"
+	mockContainerName := "mockWkld"
 
 	var mockCmd *MockCmd
 
 	tests := map[string]struct {
-		path       string
-		context    string
-		tags       []string
-		args       map[string]string
-		target     string
-		cacheFrom  []string
-		envVars    map[string]string
-		setupMocks func(controller *gomock.Controller)
+		path          string
+		context       string
+		tags          []string
+		args          map[string]string
+		target        string
+		cacheFrom     []string
+		envVars       map[string]string
+		containerName string
+		labels        map[string]string
+		setupMocks    func(controller *gomock.Controller)
 
 		wantedError error
 	}{
@@ -151,6 +154,25 @@ func TestDockerCommand_Build(t *testing.T) {
 					"-f", "mockPath/to/mockDockerfile"}).Return(nil)
 			},
 		},
+
+		"success with labels": {
+			path:          mockPath,
+			containerName: mockContainerName,
+			labels: map[string]string{
+				"builder":   "copilot-cli",
+				"container": mockContainerName,
+			},
+			setupMocks: func(c *gomock.Controller) {
+				mockCmd = NewMockCmd(c)
+				mockCmd.EXPECT().Run("docker", []string{"build",
+					"-t", mockURI,
+					"--label", "builder=copilot-cli",
+					"--label", "container=mockWkld",
+					filepath.FromSlash("mockPath/to"),
+					"-f", "mockPath/to/mockDockerfile"}).Return(nil)
+			},
+		},
+
 		"runs with cache_from and target fields": {
 			path:      mockPath,
 			tags:      []string{"latest"},
@@ -183,13 +205,15 @@ func TestDockerCommand_Build(t *testing.T) {
 				},
 			}
 			buildInput := BuildArguments{
-				Context:    tc.context,
-				Dockerfile: tc.path,
-				URI:        mockURI,
-				Args:       tc.args,
-				Target:     tc.target,
-				CacheFrom:  tc.cacheFrom,
-				Tags:       tc.tags,
+				Context:       tc.context,
+				Dockerfile:    tc.path,
+				URI:           mockURI,
+				Args:          tc.args,
+				Target:        tc.target,
+				CacheFrom:     tc.cacheFrom,
+				Tags:          tc.tags,
+				ContainerName: tc.containerName,
+				Labels:        tc.labels,
 			}
 			got := s.Build(&buildInput)
 

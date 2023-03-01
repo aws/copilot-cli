@@ -202,10 +202,14 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			},
 			mock: func(t *testing.T, m *deployMocks) {
 				m.mockImageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
-					Dockerfile: "mockDockerfile",
-					Context:    "mockContext",
-					Platform:   "mockContainerPlatform",
-					Tags:       []string{"latest", "v1.0"},
+					Dockerfile:    "mockDockerfile",
+					Context:       "mockContext",
+					Platform:      "mockContainerPlatform",
+					Tags:          []string{"latest", "v1.0"},
+					ContainerName: "mockWkld",
+					Labels: map[string]string{
+						"builder": "copilot-cli",
+					},
 				}).Return("", mockError)
 			},
 			wantErr: fmt.Errorf("build and push image: some error"),
@@ -221,10 +225,14 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			},
 			mock: func(t *testing.T, m *deployMocks) {
 				m.mockImageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
-					Dockerfile: "mockDockerfile",
-					Context:    "mockContext",
-					Platform:   "mockContainerPlatform",
-					Tags:       []string{"latest", "v1.0"},
+					Dockerfile:    "mockDockerfile",
+					Context:       "mockContext",
+					Platform:      "mockContainerPlatform",
+					Tags:          []string{"latest", "v1.0"},
+					ContainerName: "mockWkld",
+					Labels: map[string]string{
+						"builder": "copilot-cli",
+					},
 				}).Return("mockDigest", nil)
 				m.mockAddons = nil
 			},
@@ -247,10 +255,14 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			},
 			mock: func(t *testing.T, m *deployMocks) {
 				m.mockImageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
-					Dockerfile: "mockDockerfile",
-					Context:    "mockContext",
-					Platform:   "mockContainerPlatform",
-					Tags:       []string{"latest", "gitTag"},
+					Dockerfile:    "mockDockerfile",
+					Context:       "mockContext",
+					Platform:      "mockContainerPlatform",
+					Tags:          []string{"latest", "gitTag"},
+					ContainerName: "mockWkld",
+					Labels: map[string]string{
+						"builder": "copilot-cli",
+					},
 				}).Return("mockDigest", nil)
 				m.mockAddons = nil
 			},
@@ -275,16 +287,24 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			inMockGitTag: "gitTag",
 			mock: func(t *testing.T, m *deployMocks) {
 				m.mockImageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
-					Dockerfile: "sidecarMockDockerfile",
-					Context:    "sidecarMockContext",
-					Platform:   "mockContainerPlatform",
-					Tags:       []string{fmt.Sprintf("nginx-%s", "latest"), fmt.Sprintf("nginx-%s", "gitTag")},
+					Dockerfile:    "sidecarMockDockerfile",
+					Context:       "sidecarMockContext",
+					Platform:      "mockContainerPlatform",
+					Tags:          []string{fmt.Sprintf("nginx-%s", "latest"), fmt.Sprintf("nginx-%s", "gitTag")},
+					ContainerName: "nginx",
+					Labels: map[string]string{
+						"builder": "copilot-cli",
+					},
 				}).Return("sidecarMockDigest1", nil)
 				m.mockImageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
-					Dockerfile: "web/Dockerfile",
-					Context:    "Users/bowie",
-					Platform:   "mockContainerPlatform",
-					Tags:       []string{"logging-latest", fmt.Sprintf("logging-%s", "gitTag")},
+					Dockerfile:    "web/Dockerfile",
+					Context:       "Users/bowie",
+					Platform:      "mockContainerPlatform",
+					Tags:          []string{"logging-latest", fmt.Sprintf("logging-%s", "gitTag")},
+					ContainerName: "logging",
+					Labels: map[string]string{
+						"builder": "copilot-cli",
+					},
 				}).Return("sidecarMockDigest2", nil)
 				m.mockAddons = nil
 			},
