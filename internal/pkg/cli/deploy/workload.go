@@ -325,16 +325,6 @@ func (img ContainerImageIdentifier) Tag() string {
 	return img.GitShortCommitTag
 }
 
-// nonCustomTag returns the tag that should be used to reference the image.
-// If the image identifier has a non-empty GitShortCommitTag field, that value is returned.
-// Otherwise, the uuidTag field is returned.
-func (img ContainerImageIdentifier) nonCustomTag() string {
-	if img.GitShortCommitTag != "" {
-		return img.GitShortCommitTag
-	}
-	return img.uuidTag
-}
-
 func (d *workloadDeployer) uploadContainerImages(imgBuilderPusher imageBuilderPusher) (map[string]ContainerImageIdentifier, error) {
 	// If it is built from local Dockerfile, build and push to the ECR repo.
 	buildArgsPerContainer, err := buildArgsPerContainer(d.name, d.workspacePath, d.image, d.mft)
