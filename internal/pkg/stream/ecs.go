@@ -5,7 +5,6 @@ package stream
 
 import (
 	"fmt"
-	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatch"
 	"math/rand"
 	"strings"
 	"sync"
@@ -13,6 +12,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/request"
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatch"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 )
 
