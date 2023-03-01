@@ -197,7 +197,7 @@ func (s *LoadBalancedWebService) BuildArgs(contextDir string) map[string]*Docker
 // This method returns a map[string]string where the keys are container names
 // and the values are either env file paths or empty strings.
 func (s *LoadBalancedWebService) EnvFiles() map[string]string {
-	envFiles := make(map[string]string, len(s.Sidecars)+2)
+	envFiles := make(map[string]string)
 	// Grab the workload container's env file, if present.
 	envFiles[aws.StringValue(s.Name)] = aws.StringValue(s.TaskConfig.EnvFile)
 	// Grab sidecar env files, if present.
