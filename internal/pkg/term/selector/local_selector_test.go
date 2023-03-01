@@ -20,12 +20,12 @@ func TestConfigurationSelector_Schedule(t *testing.T) {
 	scheduleTypeHelp := "NO"
 
 	testCases := map[string]struct {
-		mockPrompt     func(*mocks.Mockprompter)
+		mockPrompt     func(*mocks.MockPrompter)
 		wantedSchedule string
 		wantedErr      error
 	}{
 		"error asking schedule type": {
-			mockPrompt: func(m *mocks.Mockprompter) {
+			mockPrompt: func(m *mocks.MockPrompter) {
 				gomock.InOrder(
 					m.EXPECT().SelectOne(scheduleTypePrompt, scheduleTypeHelp, scheduleTypes, gomock.Any()).Return("", errors.New("some error")),
 				)
@@ -33,7 +33,7 @@ func TestConfigurationSelector_Schedule(t *testing.T) {
 			wantedErr: errors.New("get schedule type: some error"),
 		},
 		"ask for rate": {
-			mockPrompt: func(m *mocks.Mockprompter) {
+			mockPrompt: func(m *mocks.MockPrompter) {
 				gomock.InOrder(
 					m.EXPECT().SelectOne(scheduleTypePrompt, scheduleTypeHelp, scheduleTypes, gomock.Any()).Return(rate, nil),
 					m.EXPECT().Get(ratePrompt, rateHelp, gomock.Any(), gomock.Any()).Return("1h30m", nil),
@@ -42,7 +42,7 @@ func TestConfigurationSelector_Schedule(t *testing.T) {
 			wantedSchedule: "@every 1h30m",
 		},
 		"error getting rate": {
-			mockPrompt: func(m *mocks.Mockprompter) {
+			mockPrompt: func(m *mocks.MockPrompter) {
 				gomock.InOrder(
 					m.EXPECT().SelectOne(scheduleTypePrompt, scheduleTypeHelp, scheduleTypes, gomock.Any()).Return(rate, nil),
 					m.EXPECT().Get(ratePrompt, rateHelp, gomock.Any(), gomock.Any()).Return("", fmt.Errorf("some error")),
@@ -51,7 +51,7 @@ func TestConfigurationSelector_Schedule(t *testing.T) {
 			wantedErr: errors.New("get schedule rate: some error"),
 		},
 		"ask for cron": {
-			mockPrompt: func(m *mocks.Mockprompter) {
+			mockPrompt: func(m *mocks.MockPrompter) {
 				gomock.InOrder(
 					m.EXPECT().SelectOne(scheduleTypePrompt, scheduleTypeHelp, scheduleTypes, gomock.Any()).Return(fixedSchedule, nil),
 					m.EXPECT().SelectOption(schedulePrompt, scheduleHelp, presetSchedules, gomock.Any()).Return("Daily", nil),
@@ -60,7 +60,7 @@ func TestConfigurationSelector_Schedule(t *testing.T) {
 			wantedSchedule: "@daily",
 		},
 		"error getting cron": {
-			mockPrompt: func(m *mocks.Mockprompter) {
+			mockPrompt: func(m *mocks.MockPrompter) {
 				gomock.InOrder(
 					m.EXPECT().SelectOne(scheduleTypePrompt, scheduleTypeHelp, scheduleTypes, gomock.Any()).Return(fixedSchedule, nil),
 					m.EXPECT().SelectOption(schedulePrompt, scheduleHelp, presetSchedules, gomock.Any()).Return("", errors.New("some error")),
@@ -69,7 +69,7 @@ func TestConfigurationSelector_Schedule(t *testing.T) {
 			wantedErr: errors.New("get preset schedule: some error"),
 		},
 		"ask for custom schedule": {
-			mockPrompt: func(m *mocks.Mockprompter) {
+			mockPrompt: func(m *mocks.MockPrompter) {
 				gomock.InOrder(
 					m.EXPECT().SelectOne(scheduleTypePrompt, scheduleTypeHelp, scheduleTypes, gomock.Any()).Return(fixedSchedule, nil),
 					m.EXPECT().SelectOption(schedulePrompt, scheduleHelp, presetSchedules, gomock.Any()).Return("Custom", nil),
@@ -80,7 +80,7 @@ func TestConfigurationSelector_Schedule(t *testing.T) {
 			wantedSchedule: "0 * * * *",
 		},
 		"error getting custom schedule": {
-			mockPrompt: func(m *mocks.Mockprompter) {
+			mockPrompt: func(m *mocks.MockPrompter) {
 				gomock.InOrder(
 					m.EXPECT().SelectOne(scheduleTypePrompt, scheduleTypeHelp, scheduleTypes, gomock.Any()).Return(fixedSchedule, nil),
 					m.EXPECT().SelectOption(schedulePrompt, scheduleHelp, presetSchedules, gomock.Any()).Return("Custom", nil),
@@ -90,7 +90,7 @@ func TestConfigurationSelector_Schedule(t *testing.T) {
 			wantedErr: errors.New("get custom schedule: some error"),
 		},
 		"error confirming custom schedule": {
-			mockPrompt: func(m *mocks.Mockprompter) {
+			mockPrompt: func(m *mocks.MockPrompter) {
 				gomock.InOrder(
 					m.EXPECT().SelectOne(scheduleTypePrompt, scheduleTypeHelp, scheduleTypes, gomock.Any()).Return(fixedSchedule, nil),
 					m.EXPECT().SelectOption(schedulePrompt, scheduleHelp, presetSchedules, gomock.Any()).Return("Custom", nil),
@@ -101,7 +101,7 @@ func TestConfigurationSelector_Schedule(t *testing.T) {
 			wantedErr: errors.New("confirm cron schedule: some error"),
 		},
 		"custom schedule using valid definition string results in no confirm": {
-			mockPrompt: func(m *mocks.Mockprompter) {
+			mockPrompt: func(m *mocks.MockPrompter) {
 				gomock.InOrder(
 					m.EXPECT().SelectOne(scheduleTypePrompt, scheduleTypeHelp, scheduleTypes, gomock.Any()).Return(fixedSchedule, nil),
 					m.EXPECT().SelectOption(schedulePrompt, scheduleHelp, presetSchedules, gomock.Any()).Return("Custom", nil),
@@ -116,7 +116,7 @@ func TestConfigurationSelector_Schedule(t *testing.T) {
 			// GIVEN
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			p := mocks.NewMockprompter(ctrl)
+			p := mocks.NewMockPrompter(ctrl)
 			tc.mockPrompt(p)
 			sel := staticSelector{
 				prompt: p,
@@ -139,7 +139,7 @@ func TestConfigurationSelector_Schedule(t *testing.T) {
 
 func TestLocalFileSelector_Dockerfile(t *testing.T) {
 	testCases := map[string]struct {
-		mockPrompt     func(*mocks.Mockprompter)
+		mockPrompt     func(*mocks.MockPrompter)
 		mockFileSystem func(fs afero.Fs)
 
 		wantedErr        error
@@ -154,7 +154,7 @@ func TestLocalFileSelector_Dockerfile(t *testing.T) {
 				_ = afero.WriteFile(mockFS, "frontend/Dockerfile", []byte("FROM nginx"), 0644)
 				_ = afero.WriteFile(mockFS, "backend/my.dockerfile", []byte("FROM nginx"), 0644)
 			},
-			mockPrompt: func(m *mocks.Mockprompter) {
+			mockPrompt: func(m *mocks.MockPrompter) {
 				m.EXPECT().SelectOne(
 					gomock.Any(), gomock.Any(),
 					gomock.Eq([]string{
@@ -171,7 +171,7 @@ func TestLocalFileSelector_Dockerfile(t *testing.T) {
 		},
 		"prompts user for custom path": {
 			mockFileSystem: func(mockFS afero.Fs) {},
-			mockPrompt: func(m *mocks.Mockprompter) {
+			mockPrompt: func(m *mocks.MockPrompter) {
 				m.EXPECT().SelectOne(
 					gomock.Any(), gomock.Any(),
 					gomock.Eq([]string{
@@ -191,7 +191,7 @@ func TestLocalFileSelector_Dockerfile(t *testing.T) {
 		},
 		"returns an error if fail to select Dockerfile": {
 			mockFileSystem: func(mockFS afero.Fs) {},
-			mockPrompt: func(m *mocks.Mockprompter) {
+			mockPrompt: func(m *mocks.MockPrompter) {
 				m.EXPECT().SelectOne(
 					gomock.Any(),
 					gomock.Any(),
@@ -208,7 +208,7 @@ func TestLocalFileSelector_Dockerfile(t *testing.T) {
 			mockFileSystem: func(mockFS afero.Fs) {
 				_ = afero.WriteFile(mockFS, "Dockerfile", []byte("FROM nginx"), 0644)
 			},
-			mockPrompt: func(m *mocks.Mockprompter) {
+			mockPrompt: func(m *mocks.MockPrompter) {
 				m.EXPECT().SelectOne(
 					gomock.Any(), gomock.Any(),
 					gomock.Eq([]string{
@@ -234,7 +234,7 @@ func TestLocalFileSelector_Dockerfile(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			p := mocks.NewMockprompter(ctrl)
+			p := mocks.NewMockPrompter(ctrl)
 			fs := &afero.Afero{Fs: afero.NewMemMapFs()}
 			tc.mockFileSystem(fs)
 			tc.mockPrompt(p)

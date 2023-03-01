@@ -66,8 +66,7 @@ var validLifecycleOptions = []string{lifecycleWorkloadLevel, lifecycleEnvironmen
 
 // General-purpose prompts, collected for all storage resources.
 var (
-	fmtStorageInitTypePrompt = "What " + color.Emphasize("type") + " of storage would you like to associate with %s?"
-	storageInitTypeHelp      = `The type of storage you'd like to add to your workload. 
+	storageInitTypeHelp = `The type of storage you'd like to add to your workload.
 DynamoDB is a key-value and document database that delivers single-digit millisecond performance at any scale.
 S3 is a web object store built to store and retrieve any amount of data from anywhere on the Internet.
 Aurora Serverless is an on-demand autoscaling configuration for Amazon Aurora, a MySQL and PostgreSQL-compatible relational database.
@@ -343,8 +342,7 @@ func (o *initStorageOpts) validateOrAskStorageType() error {
 			Hint:         "SQL",
 		},
 	}
-	result, err := o.prompt.SelectOption(fmt.Sprintf(
-		fmtStorageInitTypePrompt, color.HighlightUserInput(o.workloadName)),
+	result, err := o.prompt.SelectOption(o.storageTypePrompt(),
 		storageInitTypeHelp,
 		options,
 		prompt.WithFinalMessage("Storage type:"))
@@ -353,6 +351,13 @@ func (o *initStorageOpts) validateOrAskStorageType() error {
 	}
 	o.storageType = result
 	return o.validateStorageType()
+}
+
+func (o *initStorageOpts) storageTypePrompt() string {
+	if o.workloadName == "" {
+		return "What " + color.Emphasize("type") + " of storage would you like to create?"
+	}
+	return fmt.Sprintf("What "+color.Emphasize("type")+" of storage would you like to associate with %s?", color.HighlightUserInput(o.workloadName))
 }
 
 func (o *initStorageOpts) validateStorageType() error {
@@ -1208,19 +1213,16 @@ func buildStorageInitCmd() *cobra.Command {
 		Use:   "init",
 		Short: "Creates a new AWS CloudFormation template for a storage resource.",
 		Long: `Creates a new AWS CloudFormation template for a storage resource.
-Storage resources are stored in the Copilot addons directory (e.g. ./copilot/frontend/addons) for a given workload and deployed to your environments when you run ` + color.HighlightCode("copilot deploy") + `. 
-Resource names are injected into your containers as environment variables for easy access.`,
+Storage resources are addons, either for a workload or the environments.`,
 		Example: `
   Create an S3 bucket named "my-bucket" attached to the "frontend" service.
-  /code $ copilot storage init -n my-bucket -t S3 -w frontend
-  Create a basic DynamoDB table named "my-table" attached to the "frontend" service with a sort key specified.
+  /code $ copilot storage init -n my-bucket -t S3 -w frontend -l workload
+  Create an environment S3 bucket fronted by the "api" service.
+  /code $ copilot storage init -n my-bucket -t S3 -w api -l environment
+  Create a DynamoDB table with a sort key.
   /code $ copilot storage init -n my-table -t DynamoDB -w frontend --partition-key Email:S --sort-key UserId:N --no-lsi
-  Create a DynamoDB table with multiple alternate sort keys.
-  /code $ copilot storage init -n my-table -t DynamoDB -w frontend --partition-key Email:S --sort-key UserId:N --lsi Points:N --lsi Goodness:N
-  Create an RDS Aurora Serverless v2 cluster using PostgreSQL as the database engine.
-  /code $ copilot storage init -n my-cluster -t Aurora -w frontend --engine PostgreSQL --initial-db testdb
-  Create an RDS Aurora Serverless v1 cluster using MySQL as the database engine.
-  /code $ copilot storage init -n my-cluster -t Aurora --serverless-version v1 -w frontend --engine MySQL --initial-db testdb`,
+  Create an RDS Aurora Serverless v2 cluster using PostgreSQL.
+  /code $ copilot storage init -n my-cluster -t Aurora -w frontend --engine PostgreSQL --initial-db testdb`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newStorageInitOpts(vars)
 			if err != nil {
@@ -1232,7 +1234,7 @@ Resource names are injected into your containers as environment variables for ea
 	cmd.Flags().StringVarP(&vars.storageName, nameFlag, nameFlagShort, "", storageFlagDescription)
 	cmd.Flags().StringVarP(&vars.storageType, storageTypeFlag, typeFlagShort, "", storageTypeFlagDescription)
 	cmd.Flags().StringVarP(&vars.workloadName, workloadFlag, workloadFlagShort, "", storageWorkloadFlagDescription)
-	cmd.Flags().StringVarP(&vars.lifecycle, storageLifecycleFlag, "", "", storageLifecycleFlagDescription)
+	cmd.Flags().StringVarP(&vars.lifecycle, storageLifecycleFlag, storageLifecycleShort, "", storageLifecycleFlagDescription)
 	cmd.Flags().StringVarP(&vars.addIngressFrom, storageAddIngressFromFlag, "", "", storageAddIngressFromFlagDescription)
 
 	cmd.Flags().StringVar(&vars.partitionKey, storagePartitionKeyFlag, "", storagePartitionKeyFlagDescription)
@@ -1266,12 +1268,16 @@ Resource names are injected into your containers as environment variables for ea
 		auroraFlagSet.AddFlag(cmd.Flags().Lookup(f))
 	}
 
+	optionalFlagSet := pflag.NewFlagSet("Optional", pflag.ContinueOnError)
+	optionalFlagSet.AddFlag(cmd.Flags().Lookup(storageAddIngressFromFlag))
+
 	cmd.Annotations = map[string]string{
 		// The order of the sections we want to display.
-		"sections":          `Required,DynamoDB,Aurora Serverless`,
+		"sections":          `Required,DynamoDB,Aurora Serverless,Optional`,
 		"Required":          requiredFlags.FlagUsages(),
 		"DynamoDB":          ddbFlagSet.FlagUsages(),
 		"Aurora Serverless": auroraFlagSet.FlagUsages(),
+		"Optional":          optionalFlagSet.FlagUsages(),
 	}
 	cmd.SetUsageTemplate(`{{h1 "Usage"}}{{if .Runnable}}
   {{.UseLine}}{{end}}{{$annotations := .Annotations}}{{$sections := split .Annotations.sections ","}}{{if gt (len $sections) 0}}

@@ -20,6 +20,12 @@ count:
     msg_processing_time: 1s
 exec: true     # Enable running commands in your container.
 
+deployment:
+  rollback_alarms:
+    cpu_utilization: 70
+    memory_utilization: 50
+    messages_delayed: 5
+
 publish:
   topics:
     - name: givesOtherdogs

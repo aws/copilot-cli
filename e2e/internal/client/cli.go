@@ -571,6 +571,7 @@ func (cli *CLI) StorageInit(opts *StorageInitRequest) (string, error) {
 		"--name", opts.StorageName,
 		"--storage-type", opts.StorageType,
 		"--workload", opts.WorkloadName,
+		"--lifecycle", opts.Lifecycle,
 	}
 
 	if opts.RDSEngine != "" {
