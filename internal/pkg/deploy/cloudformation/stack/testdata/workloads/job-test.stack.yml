@@ -217,6 +217,12 @@ Resources:
               Value: '8080'
             - Name: COPILOT_MOUNT_POINTS
               Value: '{"managedEFSVolume":"/var/www"}'
+          EnvironmentFiles:
+          - !If
+            - HasnginxEnvFile
+            - Type: s3
+              Value: !Ref nginxEnvFileARN
+            - !Ref AWS::NoValue
           Secrets:
             - Name: DB
               ValueFrom: !Sub 'arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:demo/testing/mysql'
