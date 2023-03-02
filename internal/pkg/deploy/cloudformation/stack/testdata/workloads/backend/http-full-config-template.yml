@@ -39,6 +39,8 @@ Parameters:
     AllowedValues: [true, false]
   RulePath:
     Type: String
+  RulePathSlice:
+    Type: CommaDelimitedList
   Stickiness:
     Type: String
     Default: false
@@ -401,7 +403,7 @@ Resources:
     Type: Custom::RulePriorityFunction
     Properties:
       ServiceToken: !GetAtt RulePriorityFunction.Arn
-      RulePath: !Split [",", !Ref RulePath]
+      RulePath: !Ref RulePathSlice
       ListenerArn: !GetAtt EnvControllerAction.InternalHTTPListenerArn
   HTTPListenerRule:
     Metadata:
