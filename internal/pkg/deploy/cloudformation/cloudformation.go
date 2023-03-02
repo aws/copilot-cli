@@ -408,11 +408,18 @@ func (cf CloudFormation) changeRenderers(in changeRenderersInput) ([]progress.Re
 			}
 			renderer = r
 		case aws.StringValue(change.ResourceChange.ResourceType) == ecsServiceResourceType:
-			renderer = progress.ListeningECSServiceResourceRenderer(in.stackStreamer, cf.ecsClient, cf.cwClient, logicalID, description, progress.ECSServiceRendererOpts{
-				Group:      in.g,
-				Ctx:        in.ctx,
-				RenderOpts: in.opts,
-			})
+			renderer = progress.ListeningECSServiceResourceRenderer(progress.ECSServiceRendererCfg{
+				Streamer:    in.stackStreamer,
+				ECSClient:   cf.ecsClient,
+				CWClient:    cf.cwClient,
+				LogicalID:   logicalID,
+				Description: description,
+			},
+				progress.ECSServiceRendererOpts{
+					Group:      in.g,
+					Ctx:        in.ctx,
+					RenderOpts: in.opts,
+				})
 		case change.ResourceChange.ChangeSetId != nil:
 			// The resource change is a nested stack.
 			changeSetID := aws.StringValue(change.ResourceChange.ChangeSetId)

@@ -33,7 +33,16 @@ type ResourceRendererOpts struct {
 	RenderOpts RenderOptions
 }
 
-// ECSServiceRendererOpts is optional configuration for a listening ECS service renderer.
+// ECSServiceRendererCfg holds required configuration for initializing an ECS service renderer.
+type ECSServiceRendererCfg struct {
+	Streamer    StackSubscriber
+	ECSClient   stream.ECSServiceDescriber
+	CWClient    stream.CloudWatchDescriber
+	LogicalID   string
+	Description string
+}
+
+// ECSServiceRendererOpts holds optional configuration for a listening ECS service renderer.
 type ECSServiceRendererOpts struct {
 	Group      *errgroup.Group
 	Ctx        context.Context
@@ -80,7 +89,7 @@ func ListeningResourceRenderer(streamer StackSubscriber, logicalID, description 
 
 // ListeningECSServiceResourceRenderer is a ListeningResourceRenderer for the ECS service cloudformation resource
 // and a ListeningRollingUpdateRenderer to render deployments.
-func ListeningECSServiceResourceRenderer(streamer StackSubscriber, ecsDescriber stream.ECSServiceDescriber, cwDescriber stream.CloudWatchDescriber, logicalID, description string, opts ECSServiceRendererOpts) DynamicRenderer {
+func ListeningECSServiceResourceRenderer(cfg ECSServiceRendererCfg, opts ECSServiceRendererOpts) DynamicRenderer {
 	g := new(errgroup.Group)
 	ctx := context.Background()
 	if opts.Group != nil {
@@ -90,15 +99,14 @@ func ListeningECSServiceResourceRenderer(streamer StackSubscriber, ecsDescriber 
 		ctx = opts.Ctx
 	}
 	comp := &ecsServiceResourceComponent{
-		cfnStream:    streamer.Subscribe(),
-		ecsDescriber: ecsDescriber,
-		cwDescriber:  cwDescriber,
-		logicalID:    logicalID,
-
-		group:      g,
-		ctx:        ctx,
-		renderOpts: opts.RenderOpts,
-		resourceRenderer: ListeningResourceRenderer(streamer, logicalID, description, ResourceRendererOpts{
+		cfnStream:    cfg.Streamer.Subscribe(),
+		ecsDescriber: cfg.ECSClient,
+		cwDescriber:  cfg.CWClient,
+		logicalID:    cfg.LogicalID,
+		group:        g,
+		ctx:          ctx,
+		renderOpts:   opts.RenderOpts,
+		resourceRenderer: ListeningResourceRenderer(cfg.Streamer, cfg.LogicalID, cfg.Description, ResourceRendererOpts{
 			RenderOpts: opts.RenderOpts,
 		}),
 		done: make(chan struct{}),
