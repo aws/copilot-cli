@@ -183,7 +183,16 @@ func (s *LoadBalancedWebService) Publish() []Topic {
 
 // BuildArgs returns a docker.BuildArguments object given a context directory.
 func (s *LoadBalancedWebService) BuildArgs(contextDir string) (map[string]*DockerBuildArgs, error) {
-	return buildArgs(contextDir, s.Name, s.ImageConfig.Image, s.Sidecars)
+	required, err := requiresBuild(s.ImageConfig.Image)
+	if err != nil {
+		return nil, err
+	}
+	// Creating an map to store buildArgs of all sidecar images and main container image.
+	buildArgsPerContainer := make(map[string]*DockerBuildArgs, len(s.Sidecars)+1)
+	if required {
+		buildArgsPerContainer[aws.StringValue(s.Name)] = s.ImageConfig.Image.BuildConfig(contextDir)
+	}
+	return buildArgs(contextDir, buildArgsPerContainer, s.Sidecars)
 }
 
 // EnvFile returns the location of the env file against the ws root directory.

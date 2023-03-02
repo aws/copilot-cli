@@ -414,16 +414,7 @@ func (hc *ContainerHealthCheck) ApplyIfNotSet(other *ContainerHealthCheck) {
 	}
 }
 
-func buildArgs(contextDir string, name *string, img Image, sc map[string]*SidecarConfig) (map[string]*DockerBuildArgs, error) {
-	required, err := requiresBuild(img)
-	if err != nil {
-		return nil, err
-	}
-	// Creating an map to store buildArgs of all sidecar images and main container image.
-	buildArgs := make(map[string]*DockerBuildArgs, len(sc)+1)
-	if required {
-		buildArgs[aws.StringValue(name)] = img.BuildConfig(contextDir)
-	}
+func buildArgs(contextDir string, buildArgs map[string]*DockerBuildArgs, sc map[string]*SidecarConfig) (map[string]*DockerBuildArgs, error) {
 	for name, config := range sc {
 		if _, ok := config.ImageURI(); !ok {
 			buildArgs[name] = config.Image.Advanced.BuildConfig(contextDir)

@@ -156,7 +156,16 @@ func (s *RequestDrivenWebService) ContainerPlatform() string {
 
 // BuildArgs returns a docker.BuildArguments object given a context directory.
 func (s *RequestDrivenWebService) BuildArgs(contextDir string) (map[string]*DockerBuildArgs, error) {
-	return buildArgs(contextDir, s.Name, s.ImageConfig.Image, nil)
+	required, err := requiresBuild(s.ImageConfig.Image)
+	if err != nil {
+		return nil, err
+	}
+	// Creating an map to store buildArgs of all sidecar images and main container image.
+	buildArgsPerContainer := make(map[string]*DockerBuildArgs, 1)
+	if required {
+		buildArgsPerContainer[aws.StringValue(s.Name)] = s.ImageConfig.Image.BuildConfig(contextDir)
+	}
+	return buildArgsPerContainer, nil
 }
 
 func (s RequestDrivenWebService) applyEnv(envName string) (workloadManifest, error) {
