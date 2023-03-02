@@ -109,6 +109,7 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 	scEndpoints := make(serviceConnects)
 	var envVars []*containerEnvVar
 	var secrets []*secret
+	var alarms  []string
 	for _, env := range environments {
 		svcDescr, err := d.initECSServiceDescribers(env)
 		if err != nil {
@@ -146,10 +147,6 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 		if err != nil {
 			return nil, fmt.Errorf("retrieve platform: %w", err)
 		}
-		backendSvcEnvVars, err := svcDescr.EnvVars()
-		if err != nil {
-			return nil, fmt.Errorf("retrieve environment variables: %w", err)
-		}
 		configs = append(configs, &ECSServiceConfig{
 			ServiceConfig: &ServiceConfig{
 				Environment: env,
@@ -160,6 +157,15 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 			},
 			Tasks: svcParams[cfnstack.WorkloadTaskCountParamKey],
 		})
+		alarms, err = svcDescr.RollbackAlarmNames()
+		if err != nil {
+			return nil, fmt.Errorf("retrieve rollback alarm names: %w", err)
+
+		}
+		backendSvcEnvVars, err := svcDescr.EnvVars()
+		if err != nil {
+			return nil, fmt.Errorf("retrieve environment variables: %w", err)
+		}
 		envVars = append(envVars, flattenContainerEnvVars(env, backendSvcEnvVars)...)
 		webSvcSecrets, err := svcDescr.Secrets()
 		if err != nil {
@@ -189,6 +195,7 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 			Type:             manifestinfo.BackendServiceType,
 			App:              d.app,
 			Configurations:   configs,
+			Alarms:           alarms,
 			Routes:           routes,
 			ServiceDiscovery: sdEndpoints,
 			ServiceConnect:   scEndpoints,
@@ -237,6 +244,11 @@ func (w *backendSvcDesc) HumanString() string {
 	fmt.Fprint(writer, color.Bold.Sprint("\nConfigurations\n\n"))
 	writer.Flush()
 	w.Configurations.humanString(writer)
+	if len(w.Alarms) > 0 {
+		fmt.Fprint(writer, color.Bold.Sprint("\nRollback Alarms\n\n"))
+		writer.Flush()
+		rollbackAlarms(w.Alarms).humanString(writer)
+	}
 	if len(w.Routes) > 0 {
 		fmt.Fprint(writer, color.Bold.Sprint("\nRoutes\n\n"))
 		writer.Flush()

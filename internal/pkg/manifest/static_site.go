@@ -41,12 +41,18 @@ type FileUpload struct {
 
 // NewStaticSite creates a new static site service.
 func NewStaticSite(name string) *StaticSite {
+	svc := newDefaultStaticSite()
+	// Apply overrides.
+	svc.Name = stringP(name)
+	svc.parser = template.New()
+	return svc
+}
+
+func newDefaultStaticSite() *StaticSite {
 	return &StaticSite{
 		Workload: Workload{
-			Name: aws.String(name),
 			Type: aws.String(manifestinfo.StaticSiteType),
 		},
-		parser: template.New(),
 	}
 }
 

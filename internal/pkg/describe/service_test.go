@@ -289,6 +289,94 @@ func TestServiceDescriber_EnvVars(t *testing.T) {
 	}
 }
 
+func TestServiceDescriber_RollbackAlarmNames(t *testing.T) {
+	const (
+		testApp = "phonetool"
+		testSvc = "svc"
+		testEnv = "test"
+	)
+	testCases := map[string]struct {
+		setupMocks func(mocks ecsSvcDescriberMocks)
+
+		wantedAlarmNames []string
+		wantedError      error
+	}{
+		"returns error if fails to get service": {
+			setupMocks: func(m ecsSvcDescriberMocks) {
+				m.mockECSClient.EXPECT().Service(testApp, testEnv, testSvc).Return(&awsecs.Service{
+					DeploymentConfiguration: &ecsapi.DeploymentConfiguration{
+						Alarms: nil,
+					},
+				}, errors.New("some error"))
+			},
+
+			wantedError: errors.New("get service svc: some error"),
+		},
+		"returns nil if no alarms in the svc config": {
+			setupMocks: func(m ecsSvcDescriberMocks) {
+				gomock.InOrder(
+					m.mockECSClient.EXPECT().Service(testApp, testEnv, testSvc).Return(&awsecs.Service{
+						DeploymentConfiguration: &ecsapi.DeploymentConfiguration{
+							Alarms: nil,
+						},
+					}, nil),
+				)
+			},
+		},
+		"successfully returns alarm names": {
+			setupMocks: func(m ecsSvcDescriberMocks) {
+				gomock.InOrder(
+					m.mockECSClient.EXPECT().Service(testApp, testEnv, testSvc).Return(&awsecs.Service{
+						DeploymentConfiguration: &ecsapi.DeploymentConfiguration{
+							Alarms: &ecsapi.DeploymentAlarms{
+								AlarmNames: []*string{aws.String("alarm1"), aws.String("alarm2")},
+								Enable:     aws.Bool(true),
+								Rollback:   aws.Bool(true),
+							},
+						},
+					}, nil),
+				)
+			},
+			wantedAlarmNames: []string{"alarm1", "alarm2"},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockecsClient := mocks.NewMockecsClient(ctrl)
+			mocks := ecsSvcDescriberMocks{
+				mockECSClient: mockecsClient,
+			}
+
+			tc.setupMocks(mocks)
+
+			d := &ecsServiceDescriber{
+				serviceStackDescriber: &serviceStackDescriber{
+					app:     testApp,
+					service: testSvc,
+					env:     testEnv,
+				},
+				ecsClient: mockecsClient,
+			}
+
+			// WHEN
+			actual, err := d.RollbackAlarmNames()
+
+			// THEN
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedAlarmNames, actual)
+			}
+		})
+	}
+}
+
 func TestServiceDescriber_ServiceConnectDNSNames(t *testing.T) {
 	const (
 		testApp = "phonetool"

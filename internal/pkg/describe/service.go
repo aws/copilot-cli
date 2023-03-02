@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/aws/apprunner"
@@ -75,6 +76,7 @@ type ecsDescriber interface {
 	Platform() (*awsecs.ContainerPlatform, error)
 	EnvVars() ([]*awsecs.ContainerEnvVar, error)
 	Secrets() ([]*awsecs.ContainerSecret, error)
+	RollbackAlarmNames() ([]string, error)
 }
 
 type apprunnerDescriber interface {
@@ -91,6 +93,7 @@ type ecsSvcDesc struct {
 	Type             string               `json:"type"`
 	App              string               `json:"application"`
 	Configurations   ecsConfigurations    `json:"configurations"`
+	Alarms           []string             `json:"rollbackAlarms,omitempty"`
 	Routes           []*WebServiceRoute   `json:"routes"`
 	ServiceDiscovery serviceDiscoveries   `json:"serviceDiscovery"`
 	ServiceConnect   serviceConnects      `json:"serviceConnect,omitempty"`
@@ -296,6 +299,18 @@ func (d *ecsServiceDescriber) ServiceConnectDNSNames() ([]string, error) {
 	return service.ServiceConnectAliases(), nil
 }
 
+// RollbackAlarmNames returns the rollback alarm names of a service.
+func (d *ecsServiceDescriber) RollbackAlarmNames() ([]string, error) {
+	service, err := d.ecsClient.Service(d.app, d.env, d.service)
+	if err != nil {
+		return nil, fmt.Errorf("get service %s: %w", d.service, err)
+	}
+	if service.DeploymentConfiguration.Alarms == nil {
+		return nil, nil
+	}
+	return aws.StringValueSlice(service.DeploymentConfiguration.Alarms.AlarmNames), nil
+}
+
 // ServiceARN retrieves the ARN of the app runner service.
 func (d *appRunnerServiceDescriber) ServiceARN() (string, error) {
 	serviceStackResources, err := d.ServiceStackResources()
@@ -429,6 +444,17 @@ func (c appRunnerConfigurations) humanString(w io.Writer) {
 	}
 
 	printTable(w, headers, rows)
+}
+
+type rollbackAlarms []string
+
+func (abr rollbackAlarms) humanString(w io.Writer) {
+	headers := []string{"Name"}
+	fmt.Fprintf(w, "  %s\n", strings.Join(headers, "\t"))
+	fmt.Fprintf(w, "  %s\n", strings.Join(underline(headers), "\t"))
+	for _, alarm := range abr {
+		fmt.Fprintf(w, "  %s\n", alarm)
+	}
 }
 
 // envVar contains serialized environment variables for a service.

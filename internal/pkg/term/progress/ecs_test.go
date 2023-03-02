@@ -77,8 +77,8 @@ func TestRollingUpdateComponent_Listen(t *testing.T) {
 
 func TestRollingUpdateComponent_Render(t *testing.T) {
 	testCases := map[string]struct {
-		inDeployments []stream.ECSDeployment
-		inFailureMsgs []string
+		inDeployments  []stream.ECSDeployment
+		inFailureMsgs  []string
 
 		wantedNumLines int
 		wantedOut      string

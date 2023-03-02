@@ -467,6 +467,21 @@ func (mr *MockecsDescriberMockRecorder) Platform() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Platform", reflect.TypeOf((*MockecsDescriber)(nil).Platform))
 }
 
+// RollbackAlarmNames mocks base method.
+func (m *MockecsDescriber) RollbackAlarmNames() ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RollbackAlarmNames")
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RollbackAlarmNames indicates an expected call of RollbackAlarmNames.
+func (mr *MockecsDescriberMockRecorder) RollbackAlarmNames() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RollbackAlarmNames", reflect.TypeOf((*MockecsDescriber)(nil).RollbackAlarmNames))
+}
+
 // Secrets mocks base method.
 func (m *MockecsDescriber) Secrets() ([]*ecs.ContainerSecret, error) {
 	m.ctrl.T.Helper()

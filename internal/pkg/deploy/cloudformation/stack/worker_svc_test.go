@@ -210,9 +210,11 @@ Outputs:
 						env:  testEnvName,
 						app:  testAppName,
 						rc: RuntimeConfig{
-							Image: &ECRImage{
-								RepoURL:  testImageRepoURL,
-								ImageTag: testImageTag,
+							Images: map[string]ECRImage{
+								testServiceName: {
+									RepoURL:  testImageRepoURL,
+									ImageTag: testImageTag,
+								},
 							},
 							AccountID: "0123456789012",
 							Region:    "us-west-2",

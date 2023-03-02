@@ -1,6 +1,6 @@
 # We specify the base image we need for our
 # go application
-FROM golang:1.15 AS builder
+FROM public.ecr.aws/docker/library/golang:1.20 as builder
 # We create an /app directory within our
 # image that will hold our application source
 # files

@@ -344,6 +344,47 @@ func TestWorkspace_WorkloadExists(t *testing.T) {
 	})
 }
 
+func TestWorkspace_EnvironmentsExist(t *testing.T) {
+	t.Run("returns true if environments are managed in the workspace", func(t *testing.T) {
+		// GIVEN
+		defer func() { getWd = os.Getwd }()
+
+		getWd = func() (dir string, err error) {
+			return "/copilot", nil
+		}
+		fs := afero.NewMemMapFs()
+		_, _ = fs.Create("/copilot/environments/")
+		_, _ = fs.Create("/copilot/.workspace")
+		ws, err := Use(fs)
+
+		// Then
+		require.NoError(t, err)
+		got, err := ws.HasEnvironments()
+		require.NoError(t, err)
+		require.True(t, got)
+	})
+
+	t.Run("returns false if environments are not managed in the workspace", func(t *testing.T) {
+		// GIVEN
+		defer func() { getWd = os.Getwd }()
+
+		getWd = func() (dir string, err error) {
+			return "b/copilot", nil
+		}
+		fs := afero.NewMemMapFs()
+		_, _ = fs.Create("b/copilot/.workspace")
+		_, _ = fs.Create("a/copilot/environments/")
+		_, _ = fs.Create("a/copilot/.workspace")
+		ws, err := Use(fs)
+
+		// Then
+		require.NoError(t, err)
+		got, err := ws.HasEnvironments()
+		require.NoError(t, err)
+		require.False(t, got)
+	})
+}
+
 func TestWorkspace_ListServices(t *testing.T) {
 	testCases := map[string]struct {
 		copilotDir string

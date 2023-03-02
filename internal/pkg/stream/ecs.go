@@ -23,7 +23,7 @@ const (
 	rollOutEmpty               = ""
 )
 
-var ecsEventFailureKeywords = []string{"fail", "unhealthy", "error", "throttle", "unable", "missing"}
+var ecsEventFailureKeywords = []string{"fail", "unhealthy", "error", "throttle", "unable", "missing", "alarm detected", "rolling back"}
 
 // ECSServiceDescriber is the interface to describe an ECS service.
 type ECSServiceDescriber interface {
