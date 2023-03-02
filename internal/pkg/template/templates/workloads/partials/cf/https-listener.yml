@@ -45,33 +45,33 @@ LoadBalancerDNSAlias{{$hostedZoneID}}:
 {{- end}}
 {{- end}}
 
-{{- range $i, $listener := .ALB.Rules}}
-HTTPSRulePriorityAction{{ if ne $i 0 }}{{ $i }}{{ end }}:
+HTTPSRulePriorityAction:
   Metadata:
     'aws:copilot:description': 'A custom resource assigning priority for HTTPS listener rules'
   Type: Custom::RulePriorityFunction
   Properties:
     ServiceToken: !GetAtt RulePriorityFunction.Arn
-    RulePath: {{$listener.Path}}
+    RulePath: {{ fmtSlice (quoteSlice .ALB.RulePaths) }}
     {{- if eq $.WorkloadType "Backend Service" }}
     ListenerArn: !GetAtt EnvControllerAction.InternalHTTPSListenerArn
     {{- else}}
     ListenerArn: !GetAtt EnvControllerAction.HTTPSListenerArn
     {{- end}}
 
-HTTPRuleWithDomainPriorityAction{{ if ne $i 0 }}{{ $i }}{{ end }}:
+HTTPRuleWithDomainPriorityAction:
   Metadata:
     'aws:copilot:description': 'A custom resource assigning priority for HTTP listener rules'
   Type: Custom::RulePriorityFunction
   Properties:
     ServiceToken: !GetAtt RulePriorityFunction.Arn
-    RulePath: {{$listener.Path}}
+    RulePath: {{ fmtSlice (quoteSlice .ALB.RulePaths) }}
     {{- if eq $.WorkloadType "Backend Service"}}
     ListenerArn: !GetAtt EnvControllerAction.InternalHTTPListenerArn
     {{- else}}
     ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
     {{- end}}
 
+{{- range $i, $rule := .ALB.Rules}}
 HTTPListenerRuleWithDomain{{ if ne $i 0 }}{{ $i }}{{ end }}:
   Metadata:
     {{- if $.ALB.RedirectToHTTPS}}
@@ -96,18 +96,18 @@ HTTPListenerRuleWithDomain{{ if ne $i 0 }}{{ $i }}{{ end }}:
         Type: forward
       {{- end}}
     Conditions:
-      {{- if $listener.AllowedSourceIps }}
+      {{- if $rule.AllowedSourceIps }}
       - Field: 'source-ip'
         SourceIpConfig:
           Values:
-            {{- range $sourceIP := $listener.AllowedSourceIps}}
+            {{- range $sourceIP := $rule.AllowedSourceIps}}
             - {{$sourceIP}}
             {{- end}}
       {{- end}}
-      {{- if $listener.Aliases }}
+      {{- if $rule.Aliases }}
       - Field: 'host-header'
         HostHeaderConfig:
-          Values: {{ fmtSlice (quoteSlice $listener.Aliases) }}
+          Values: {{ fmtSlice (quoteSlice $rule.Aliases) }}
       {{- else }}
       - Field: 'host-header'
         HostHeaderConfig:
@@ -121,18 +121,18 @@ HTTPListenerRuleWithDomain{{ if ne $i 0 }}{{ $i }}{{ end }}:
       - Field: 'path-pattern'
         PathPatternConfig:
           Values:
-            {{- if eq $listener.Path "/"}}
+            {{- if eq $rule.Path "/"}}
             - /*
             {{- else }}
-            - /{{ $listener.Path }}
-            - /{{ $listener.Path }}/*
+            - /{{ $rule.Path }}
+            - /{{ $rule.Path }}/*
             {{- end }}
     {{- if eq $.WorkloadType "Backend Service"}}
     ListenerArn: !GetAtt EnvControllerAction.InternalHTTPListenerArn
     {{- else}}
     ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
     {{- end}}
-    Priority: !GetAtt HTTPRuleWithDomainPriorityAction{{ if ne $i 0 }}{{ $i }}{{ end }}.Priority
+    Priority: !GetAtt HTTPRuleWithDomainPriorityAction.Priority{{ if ne $i 0 }}{{ $i }}{{ end }}
 
 HTTPSListenerRule{{ if ne $i 0 }}{{ $i }}{{ end }}:
   Metadata:
@@ -143,18 +143,18 @@ HTTPSListenerRule{{ if ne $i 0 }}{{ $i }}{{ end }}:
       - TargetGroupArn: !Ref TargetGroup{{ if ne $i 0 }}{{ $i }}{{ end }}
         Type: forward
     Conditions:
-      {{- if $listener.AllowedSourceIps}}
+      {{- if $rule.AllowedSourceIps}}
       - Field: 'source-ip'
         SourceIpConfig:
           Values:
-          {{- range $sourceIP := $listener.AllowedSourceIps}}
+          {{- range $sourceIP := $rule.AllowedSourceIps}}
             - {{$sourceIP}}
           {{- end}}
       {{- end}}
-      {{- if $listener.Aliases }}
+      {{- if $rule.Aliases }}
       - Field: 'host-header'
         HostHeaderConfig:
-          Values: {{ fmtSlice (quoteSlice $listener.Aliases) }}
+          Values: {{ fmtSlice (quoteSlice $rule.Aliases) }}
       {{- else }}
       - Field: 'host-header'
         HostHeaderConfig:
@@ -168,16 +168,16 @@ HTTPSListenerRule{{ if ne $i 0 }}{{ $i }}{{ end }}:
       - Field: 'path-pattern'
         PathPatternConfig:
           Values:
-          {{- if eq $listener.Path "/" }}
+          {{- if eq $rule.Path "/" }}
             - /*
           {{- else }}
-            - /{{ $listener.Path }}
-            - /{{ $listener.Path }}/*
+            - /{{ $rule.Path }}
+            - /{{ $rule.Path }}/*
           {{- end }}
     {{- if eq $.WorkloadType "Backend Service"}}
     ListenerArn: !GetAtt EnvControllerAction.InternalHTTPSListenerArn
     {{- else}}
     ListenerArn: !GetAtt EnvControllerAction.HTTPSListenerArn
     {{- end}}
-    Priority: !GetAtt HTTPSRulePriorityAction{{ if ne $i 0 }}{{ $i }}{{ end }}.Priority
+    Priority: !GetAtt HTTPSRulePriorityAction.Priority{{ if ne $i 0 }}{{ $i }}{{ end }}
 {{- end }}

@@ -282,8 +282,8 @@ func ImportedVariable(name string) Variable {
 func (cfg *NetworkLoadBalancer) Aliases() []string {
 	var uniqueAliases []string
 	seen := make(map[string]bool)
-	for _, listener := range cfg.Listener {
-		for _, entry := range listener.Aliases {
+	for _, rule := range cfg.Listener {
+		for _, entry := range rule.Aliases {
 			if _, value := seen[entry]; !value {
 				uniqueAliases = append(uniqueAliases, entry)
 				seen[entry] = true
@@ -298,8 +298,8 @@ func (cfg *NetworkLoadBalancer) Aliases() []string {
 func (cfg *ALBListener) Aliases() []string {
 	var uniqueAliases []string
 	seen := make(map[string]bool)
-	for _, listener := range cfg.Rules {
-		for _, entry := range listener.Aliases {
+	for _, rule := range cfg.Rules {
+		for _, entry := range rule.Aliases {
 			if _, value := seen[entry]; !value {
 				uniqueAliases = append(uniqueAliases, entry)
 				seen[entry] = true
@@ -307,6 +307,15 @@ func (cfg *ALBListener) Aliases() []string {
 		}
 	}
 	return uniqueAliases
+}
+
+// RulePaths returns a slice consisting of all the routing paths mentioned across multiple listener rules.
+func (cfg *ALBListener) RulePaths() []string {
+	var rulePaths []string
+	for _, rule := range cfg.Rules {
+		rulePaths = append(rulePaths, rule.Path)
+	}
+	return rulePaths
 }
 
 // PlainVariable returns a Variable that is a plain string value.

@@ -488,8 +488,8 @@ func (s *LoadBalancedWebService) convertApplicationLoadBalancer() (*template.ALB
 	}
 	var rules []template.ALBListenerRule
 	// build listener rule config from primary rule config from manifest.
-	rule, err := RoutingRuleConfigOrBoolConverter{
-		rule:         albConfig,
+	rule, err := routingRuleConfigConverter{
+		rule:         albConfig.RoutingRuleConfiguration,
 		manifest:     s.manifest,
 		httpsEnabled: s.httpsEnabled,
 	}.convert()
@@ -562,21 +562,6 @@ type routingRuleConfigConverter struct {
 	rule         manifest.RoutingRuleConfiguration
 	manifest     loadBalancerTargeter
 	httpsEnabled bool
-}
-
-// RoutingRuleConfigOrBoolConverter holds routing rule config for LBWS.
-type RoutingRuleConfigOrBoolConverter struct {
-	rule         manifest.RoutingRuleConfigOrBool
-	manifest     loadBalancerTargeter
-	httpsEnabled bool
-}
-
-func (conv RoutingRuleConfigOrBoolConverter) convert() (*template.ALBListenerRule, error) {
-	return routingRuleConfigConverter{
-		rule:         conv.rule.RoutingRuleConfiguration,
-		manifest:     conv.manifest,
-		httpsEnabled: conv.httpsEnabled,
-	}.convert()
 }
 
 func (conv routingRuleConfigConverter) convert() (*template.ALBListenerRule, error) {
