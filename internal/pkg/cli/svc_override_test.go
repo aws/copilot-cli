@@ -5,11 +5,15 @@ package cli
 
 import (
 	"errors"
+	"fmt"
+	"path/filepath"
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/golang/mock/gomock"
+	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
 )
 
@@ -364,6 +368,78 @@ Resources:
 				// THEN
 				if tc.wanted != nil {
 					require.EqualError(t, err, tc.wanted.Error())
+				} else {
+					require.NoError(t, err)
+				}
+			})
+		}
+	})
+}
+
+func TestOverrideSvcOpts_Execute(t *testing.T) {
+	t.Run("with the CDK", func(t *testing.T) {
+		testCases := map[string]struct {
+			resources []template.CFNResource
+			initMocks func(ctrl *gomock.Controller, cmd *overrideSvcOpts)
+			wanted    error
+		}{
+			"should succeed creating IaC files without any resources": {
+				initMocks: func(ctrl *gomock.Controller, cmd *overrideSvcOpts) {
+					fs := afero.NewMemMapFs()
+					ws := mocks.NewMockwsWlDirReader(ctrl)
+					ws.EXPECT().WorkloadOverridesPath(gomock.Any()).Return(filepath.Join("copilot", "frontend", "overrides"))
+					cmd.ws = ws
+					cmd.fs = fs
+				},
+			},
+			"should succeed creating IaC files with resources": {
+				resources: []template.CFNResource{
+					{
+						Type:      "AWS::ECS::Service",
+						LogicalID: "Service",
+					},
+				},
+				initMocks: func(ctrl *gomock.Controller, cmd *overrideSvcOpts) {
+					fs := afero.NewMemMapFs()
+					ws := mocks.NewMockwsWlDirReader(ctrl)
+					ws.EXPECT().WorkloadOverridesPath(gomock.Any()).Return(filepath.Join("copilot", "frontend", "overrides"))
+					cmd.ws = ws
+					cmd.fs = fs
+				},
+			},
+			"should return a wrapped error if override files already exists": {
+				initMocks: func(ctrl *gomock.Controller, cmd *overrideSvcOpts) {
+					dir := filepath.Join("copilot", "frontend", "overrides")
+					fs := afero.NewMemMapFs()
+					_ = fs.MkdirAll(dir, 0755)
+					_ = afero.WriteFile(fs, filepath.Join(dir, "cdk.json"), []byte("content"), 0755)
+					ws := mocks.NewMockwsWlDirReader(ctrl)
+					ws.EXPECT().WorkloadOverridesPath(gomock.Any()).Return(dir)
+					cmd.ws = ws
+					cmd.fs = fs
+				},
+				wanted: fmt.Errorf("scaffold CDK application under %q", filepath.Join("copilot", "frontend", "overrides")),
+			},
+		}
+
+		for name, tc := range testCases {
+			t.Run(name, func(t *testing.T) {
+				// GIVEN
+				ctrl := gomock.NewController(t)
+				defer ctrl.Finish()
+
+				in := overrideVars{iacTool: "cdk", name: "frontend", appName: "demo", resources: tc.resources}
+				cmd := &overrideSvcOpts{
+					overrideVars: in,
+				}
+				tc.initMocks(ctrl, cmd)
+
+				// WHEN
+				err := cmd.Execute()
+
+				// THEN
+				if tc.wanted != nil {
+					require.ErrorContains(t, err, tc.wanted.Error())
 				} else {
 					require.NoError(t, err)
 				}
