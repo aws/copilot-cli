@@ -10,7 +10,6 @@
     "HTTPSEnabled": "true",
     "LogRetention": "30",
     "RulePath": "my-svc",
-    "RulePathSlice": "my-svc",
     "Stickiness": "false",
     "TargetContainer": "my-svc",
     "TargetPort": "5000",

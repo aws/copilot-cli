@@ -250,10 +250,6 @@ func (s *BackendService) Parameters() ([]*cloudformation.Parameter, error) {
 				ParameterValue: s.manifest.RoutingRule.Path,
 			},
 			{
-				ParameterKey:   aws.String(WorkloadRulePathSliceParamKey),
-				ParameterValue: aws.String(strings.Join([]string{aws.StringValue(s.manifest.RoutingRule.Path)}, ",")),
-			},
-			{
 				ParameterKey:   aws.String(WorkloadStickinessParamKey),
 				ParameterValue: aws.String(strconv.FormatBool(aws.BoolValue(s.manifest.RoutingRule.Stickiness))),
 			},
