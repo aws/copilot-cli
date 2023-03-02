@@ -75,6 +75,13 @@ type dockerConfig struct {
 
 // Build will run a `docker build` command for the given ecr repo URI and build arguments.
 func (c CmdClient) Build(in *BuildArguments) error {
+
+	// Tags must not be empty to build an docker image.
+	if len(in.Tags) == 0 {
+		return &errEmptyImageTags{
+			uri: in.URI,
+		}
+	}
 	dfDir := in.Context
 	if dfDir == "" { // Context wasn't specified use the Dockerfile's directory as context.
 		dfDir = filepath.Dir(in.Dockerfile)
@@ -161,7 +168,7 @@ func (c CmdClient) Push(uri string, tags ...string) (digest string, err error) {
 		}
 	}
 	buf := new(strings.Builder)
-	if err := c.runner.Run("docker", []string{"inspect", "--format", "'{{json (index .RepoDigests 0)}}'", uri}, exec.Stdout(buf)); err != nil {
+	if err := c.runner.Run("docker", []string{"inspect", "--format", "'{{json (index .RepoDigests 0)}}'", imageName(uri, tags[0])}, exec.Stdout(buf)); err != nil {
 		return "", fmt.Errorf("inspect image digest for %s: %w", uri, err)
 	}
 	repoDigest := strings.Trim(strings.TrimSpace(buf.String()), `"'`) // remove new lines and quotes from output
@@ -289,4 +296,12 @@ func userHomeDirectory() string {
 	}
 
 	return home
+}
+
+type errEmptyImageTags struct {
+	uri string
+}
+
+func (e *errEmptyImageTags) Error() string {
+	return fmt.Sprintf("tags should not be empty to build and push image into ECR repository %s", e.uri)
 }
