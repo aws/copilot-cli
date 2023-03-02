@@ -87,7 +87,8 @@ type ECSDeploymentStreamer struct {
 	eventsToFlush []ECSService
 	mu            sync.Mutex
 
-	retries int
+	ecsRetries int
+	cwRetries  int
 }
 
 // NewECSDeploymentStreamer creates a new ECSDeploymentStreamer that streams service descriptions
@@ -126,24 +127,13 @@ func (s *ECSDeploymentStreamer) Fetch() (next time.Time, done bool, err error) {
 	out, err := s.client.Service(s.cluster, s.service)
 	if err != nil {
 		if request.IsErrorThrottle(err) {
-			s.retries += 1
-			return nextFetchDate(s.clock, s.rand, s.retries), false, nil
+			s.ecsRetries += 1
+			return nextFetchDate(s.clock, s.rand, s.ecsRetries), false, nil
 		}
 		return next, false, fmt.Errorf("fetch service description: %w", err)
 	}
-	s.retries = 0
-	var alarms []cloudwatch.AlarmStatus
-	if out.DeploymentConfiguration != nil && out.DeploymentConfiguration.Alarms != nil && aws.BoolValue(out.DeploymentConfiguration.Alarms.Enable) {
-		alarmNames := aws.StringValueSlice(out.DeploymentConfiguration.Alarms.AlarmNames)
-		alarms, err = s.cw.AlarmStatuses(cloudwatch.WithNames(alarmNames))
-		if err != nil {
-			if request.IsErrorThrottle(err) {
-				s.retries += 1
-				return nextFetchDate(s.clock, s.rand, s.retries), false, nil
-			}
-			return next, false, fmt.Errorf("retrieve alarm statuses: %w", err)
-		}
-	}
+	s.ecsRetries = 0
+
 	var deployments []ECSDeployment
 	for _, deployment := range out.Deployments {
 		status := aws.StringValue(deployment.Status)
@@ -178,12 +168,27 @@ func (s *ECSDeploymentStreamer) Fetch() (next time.Time, done bool, err error) {
 		}
 		s.pastEventIDs[id] = true
 	}
+
+	var alarms []cloudwatch.AlarmStatus
+	if out.DeploymentConfiguration != nil && out.DeploymentConfiguration.Alarms != nil && aws.BoolValue(out.DeploymentConfiguration.Alarms.Enable) {
+		alarmNames := aws.StringValueSlice(out.DeploymentConfiguration.Alarms.AlarmNames)
+		alarms, err = s.cw.AlarmStatuses(cloudwatch.WithNames(alarmNames))
+		if err != nil {
+			if request.IsErrorThrottle(err) {
+				s.cwRetries += 1
+				return nextFetchDate(s.clock, s.rand, s.cwRetries), false, nil
+			}
+			return next, false, fmt.Errorf("retrieve alarm statuses: %w", err)
+		}
+		s.cwRetries = 0
+	}
+	
 	s.eventsToFlush = append(s.eventsToFlush, ECSService{
 		Deployments:         deployments,
 		LatestFailureEvents: failureMsgs,
 		Alarms:              alarms,
 	})
-	return nextFetchDate(s.clock, s.rand, s.retries), done, nil
+	return nextFetchDate(s.clock, s.rand, s.ecsRetries), done, nil
 }
 
 // Notify flushes all new events to the streamer's subscribers.
