@@ -4,8 +4,6 @@
 package manifest
 
 import (
-	"fmt"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/template"
@@ -140,20 +138,7 @@ func (j *ScheduledJob) Publish() []Topic {
 
 // BuildArgs returns a docker.BuildArguments object for the job given a context directory.
 func (j *ScheduledJob) BuildArgs(contextDir string) (map[string]*DockerBuildArgs, error) {
-	required, err := requiresBuild(j.ImageConfig.Image)
-	if err != nil {
-		return nil, fmt.Errorf("check if manifest requires building from local Dockerfile: %w", err)
-	}
-	buildArgs := make(map[string]*DockerBuildArgs, len(j.Sidecars)+1)
-	if required {
-		buildArgs[aws.StringValue(j.Name)] = j.ImageConfig.Image.BuildConfig(contextDir)
-	}
-	for name, config := range j.Sidecars {
-		if _, ok := config.ImageURI(); !ok {
-			buildArgs[name] = config.Image.Advanced.BuildConfig(contextDir)
-		}
-	}
-	return buildArgs, nil
+	return buildArgs(contextDir, j.Name, j.ImageConfig.Image, j.Sidecars)
 }
 
 // EnvFile returns the location of the env file against the ws root directory.

@@ -105,13 +105,13 @@ type DeploymentControllerConfig struct {
 // DeploymentConfig represents the deployment config for an ECS service.
 type DeploymentConfig struct {
 	DeploymentControllerConfig `yaml:",inline"`
-	RollbackAlarms             Union[[]string, AlarmArgs]  `yaml:"rollback_alarms"`
+	RollbackAlarms             Union[[]string, AlarmArgs] `yaml:"rollback_alarms"`
 }
 
 // WorkerDeploymentConfig represents the deployment strategies for a worker service.
 type WorkerDeploymentConfig struct {
 	DeploymentControllerConfig `yaml:",inline"`
-	WorkerRollbackAlarms       Union[[]string, WorkerAlarmArgs]  `yaml:"rollback_alarms"`
+	WorkerRollbackAlarms       Union[[]string, WorkerAlarmArgs] `yaml:"rollback_alarms"`
 }
 
 func (d *DeploymentConfig) isEmpty() bool {
@@ -412,4 +412,22 @@ func (hc *ContainerHealthCheck) ApplyIfNotSet(other *ContainerHealthCheck) {
 	if hc.StartPeriod == nil && other.StartPeriod != nil {
 		hc.StartPeriod = other.StartPeriod
 	}
+}
+
+func buildArgs(contextDir string, name *string, img Image, sc map[string]*SidecarConfig) (map[string]*DockerBuildArgs, error) {
+	required, err := requiresBuild(img)
+	if err != nil {
+		return nil, err
+	}
+	// Creating an map to store buildArgs of all sidecar images and main container image.
+	buildArgs := make(map[string]*DockerBuildArgs, len(sc)+1)
+	if required {
+		buildArgs[aws.StringValue(name)] = img.BuildConfig(contextDir)
+	}
+	for name, config := range sc {
+		if _, ok := config.ImageURI(); !ok {
+			buildArgs[name] = config.Image.Advanced.BuildConfig(contextDir)
+		}
+	}
+	return buildArgs, nil
 }
