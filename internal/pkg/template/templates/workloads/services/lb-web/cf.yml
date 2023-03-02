@@ -66,6 +66,8 @@ Parameters:
     AllowedValues: [true, false]
   RulePath:
     Type: String
+  RulePathSlice:
+    Type: CommaDelimitedList
   Stickiness:
     Type: String
     Default: false

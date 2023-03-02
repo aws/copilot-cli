@@ -331,6 +331,10 @@ func (s *LoadBalancedWebService) Parameters() ([]*cloudformation.Parameter, erro
 				ParameterValue: s.manifest.RoutingRule.Path,
 			},
 			{
+				ParameterKey:   aws.String(WorkloadRulePathSliceParamKey),
+				ParameterValue: aws.String(strings.Join([]string{aws.StringValue(s.manifest.RoutingRule.Path)}, ",")),
+			},
+			{
 				ParameterKey:   aws.String(WorkloadHTTPSParamKey),
 				ParameterValue: aws.String(strconv.FormatBool(s.httpsEnabled)),
 			},

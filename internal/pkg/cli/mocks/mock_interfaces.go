@@ -31,6 +31,7 @@ import (
 	manifest "github.com/aws/copilot-cli/internal/pkg/manifest"
 	repository "github.com/aws/copilot-cli/internal/pkg/repository"
 	task "github.com/aws/copilot-cli/internal/pkg/task"
+	template "github.com/aws/copilot-cli/internal/pkg/template"
 	prompt "github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	selector "github.com/aws/copilot-cli/internal/pkg/term/selector"
 	workspace "github.com/aws/copilot-cli/internal/pkg/workspace"
@@ -5358,6 +5359,44 @@ func (mr *MockappEnvSelectorMockRecorder) Environment(prompt, help, app interfac
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{prompt, help, app}, additionalOpts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Environment", reflect.TypeOf((*MockappEnvSelector)(nil).Environment), varargs...)
+}
+
+// MockcfnSelector is a mock of cfnSelector interface.
+type MockcfnSelector struct {
+	ctrl     *gomock.Controller
+	recorder *MockcfnSelectorMockRecorder
+}
+
+// MockcfnSelectorMockRecorder is the mock recorder for MockcfnSelector.
+type MockcfnSelectorMockRecorder struct {
+	mock *MockcfnSelector
+}
+
+// NewMockcfnSelector creates a new mock instance.
+func NewMockcfnSelector(ctrl *gomock.Controller) *MockcfnSelector {
+	mock := &MockcfnSelector{ctrl: ctrl}
+	mock.recorder = &MockcfnSelectorMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockcfnSelector) EXPECT() *MockcfnSelectorMockRecorder {
+	return m.recorder
+}
+
+// Resources mocks base method.
+func (m *MockcfnSelector) Resources(msg, finalMsg, help, body string) ([]template.CFNResource, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Resources", msg, finalMsg, help, body)
+	ret0, _ := ret[0].([]template.CFNResource)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Resources indicates an expected call of Resources.
+func (mr *MockcfnSelectorMockRecorder) Resources(msg, finalMsg, help, body interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Resources", reflect.TypeOf((*MockcfnSelector)(nil).Resources), msg, finalMsg, help, body)
 }
 
 // MockconfigSelector is a mock of configSelector interface.

@@ -129,7 +129,7 @@ const (
 	inputFilePathFlag = "cli-input-yaml"
 
 	// Flags for overriding templates.
-	iacToolFlag     = "toolkit"
+	iacToolFlag     = "tool"
 	cdkLanguageFlag = "cdk-language"
 
 	// Other.
@@ -224,7 +224,7 @@ Mutually exclusive with the --%s flag.`, inputFilePathFlag)
 Mutually exclusive with the -%s ,--%s and --%s flags.`, nameFlagShort, nameFlag, valuesFlag)
 
 	iacToolFlagDescription = fmt.Sprintf(`Infrastructure as Code tool to override a template.
-Must be one of: %s.`, strings.Join(applyAll(iacToolkits, strconv.Quote), ", "))
+Must be one of: %s.`, strings.Join(applyAll(validIaCTools, strconv.Quote), ", "))
 	cdkLanguageFlagDescription = `Optional. The Cloud Development Kit language.`
 
 	repoURLFlagDescription = fmt.Sprintf(`The repository URL to trigger your pipeline.
