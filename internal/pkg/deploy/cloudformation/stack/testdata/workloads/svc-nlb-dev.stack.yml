@@ -46,6 +46,8 @@ Parameters:
     AllowedValues: [true, false]
   RulePath:
     Type: String
+  RulePathSlice:
+    Type: CommaDelimitedList
   Stickiness:
     Type: String
     Default: false
@@ -308,6 +310,10 @@ Resources: # If a bucket URL is specified, that means the template exists.
           Rollback: true
         MinimumHealthyPercent: 100
         MaximumPercent: 200
+        Alarms:
+          AlarmNames: []
+          Enable: false
+          Rollback: true
       PropagateTags: SERVICE
       ServiceConnectConfiguration: !If
         - IsGovCloud
@@ -415,7 +421,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Type: Custom::RulePriorityFunction
     Properties:
       ServiceToken: !GetAtt RulePriorityFunction.Arn
-      RulePath: !Ref RulePath
+      RulePath: !Ref RulePathSlice
       ListenerArn: !GetAtt EnvControllerAction.HTTPSListenerArn
   
   HTTPRuleWithDomainPriorityAction:
@@ -424,7 +430,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Type: Custom::RulePriorityFunction
     Properties:
       ServiceToken: !GetAtt RulePriorityFunction.Arn
-      RulePath: !Ref RulePath
+      RulePath: !Ref RulePathSlice
       ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
   
   HTTPListenerRuleWithDomain:
