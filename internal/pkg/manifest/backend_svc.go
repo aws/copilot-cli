@@ -130,16 +130,7 @@ func (s *BackendService) BuildArgs(contextDir string) map[string]*DockerBuildArg
 // This method returns a map[string]string where the keys are container names
 // and the values are either env file paths or empty strings.
 func (s *BackendService) EnvFiles() map[string]string {
-	envFiles := make(map[string]string)
-	// Grab the workload container's env file, if present.
-	envFiles[aws.StringValue(s.Name)] = aws.StringValue(s.TaskConfig.EnvFile)
-	// Grab sidecar env files, if present.
-	for name, sidecar := range s.Sidecars {
-		envFiles[name] = aws.StringValue(sidecar.EnvFile)
-	}
-	// If the Firelens Sidecar Pattern has an env file specified, get it as well.
-	envFiles[FirelensContainerName] = aws.StringValue(s.Logging.EnvFile)
-	return envFiles
+	return envFiles(s.Name, s.TaskConfig, s.Logging, s.Sidecars)
 }
 
 func (s *BackendService) subnets() *SubnetListOrArgs {

@@ -20,6 +20,7 @@ var cli *client.CLI
 var aws *client.AWS
 var docker *client.Docker
 var appName string
+var envName string
 var svcName string
 var sidecarImageURI string
 var sidecarRepoName string
@@ -37,6 +38,7 @@ var _ = BeforeSuite(func() {
 	aws = client.NewAWS()
 	docker = client.NewDocker()
 	appName = fmt.Sprintf("e2e-sidecars-%d", time.Now().Unix())
+	envName = "test"
 	svcName = "hello"
 	sidecarRepoName = fmt.Sprintf("e2e-sidecars-nginx-%d", time.Now().Unix())
 })

@@ -152,16 +152,7 @@ func (j *ScheduledJob) BuildRequired() (bool, error) {
 // This method returns a map[string]string where the keys are container names
 // and the values are either env file paths or empty strings.
 func (j *ScheduledJob) EnvFiles() map[string]string {
-	envFiles := make(map[string]string)
-	// Grab the workload container's env file, if present.
-	envFiles[aws.StringValue(j.Name)] = aws.StringValue(j.TaskConfig.EnvFile)
-	// Grab sidecar env files, if present.
-	for name, sidecar := range j.Sidecars {
-		envFiles[name] = aws.StringValue(sidecar.EnvFile)
-	}
-	// If the Firelens Sidecar Pattern has an env file specified, get it as well.
-	envFiles[FirelensContainerName] = aws.StringValue(j.Logging.EnvFile)
-	return envFiles
+	return envFiles(j.Name, j.TaskConfig, j.Logging, j.Sidecars)
 }
 
 // newDefaultScheduledJob returns an empty ScheduledJob with only the default values set.

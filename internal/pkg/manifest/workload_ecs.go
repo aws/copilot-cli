@@ -105,13 +105,13 @@ type DeploymentControllerConfig struct {
 // DeploymentConfig represents the deployment config for an ECS service.
 type DeploymentConfig struct {
 	DeploymentControllerConfig `yaml:",inline"`
-	RollbackAlarms             Union[[]string, AlarmArgs]  `yaml:"rollback_alarms"`
+	RollbackAlarms             Union[[]string, AlarmArgs] `yaml:"rollback_alarms"`
 }
 
 // WorkerDeploymentConfig represents the deployment strategies for a worker service.
 type WorkerDeploymentConfig struct {
 	DeploymentControllerConfig `yaml:",inline"`
-	WorkerRollbackAlarms       Union[[]string, WorkerAlarmArgs]  `yaml:"rollback_alarms"`
+	WorkerRollbackAlarms       Union[[]string, WorkerAlarmArgs] `yaml:"rollback_alarms"`
 }
 
 func (d *DeploymentConfig) isEmpty() bool {
@@ -414,4 +414,17 @@ func (hc *ContainerHealthCheck) ApplyIfNotSet(other *ContainerHealthCheck) {
 	if hc.StartPeriod == nil && other.StartPeriod != nil {
 		hc.StartPeriod = other.StartPeriod
 	}
+}
+
+func envFiles(name *string, tc TaskConfig, lc Logging, sc map[string]*SidecarConfig) map[string]string {
+	envFiles := make(map[string]string)
+	// Grab the workload container's env file, if present.
+	envFiles[aws.StringValue(name)] = aws.StringValue(tc.EnvFile)
+	// Grab sidecar env files, if present.
+	for sidecarName, sidecar := range sc {
+		envFiles[sidecarName] = aws.StringValue(sidecar.EnvFile)
+	}
+	// If the Firelens Sidecar Pattern has an env file specified, get it as well.
+	envFiles[FirelensContainerName] = aws.StringValue(lc.EnvFile)
+	return envFiles
 }
