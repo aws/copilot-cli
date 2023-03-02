@@ -53,14 +53,17 @@ func (sb *closableStringBuilder) Close() error {
 }
 
 type overrideVars struct {
-	name      string
-	envName   string // Optional.
-	appName   string
-	iacTool   string
-	resources []template.CFNResource
+	name    string
+	envName string // Optional.
+	appName string
+	iacTool string
 
 	// CDK override engine flags.
 	cdkLang string
+
+	// We prompt for resources if the user does not opt-in to skipping.
+	skipResources bool
+	resources     []template.CFNResource
 }
 
 type overrideSvcOpts struct {
@@ -215,7 +218,7 @@ func (o *overrideSvcOpts) validateIaCTool() error {
 }
 
 func (o *overrideSvcOpts) askResourcesToOverride() error {
-	if len(o.resources) != 0 {
+	if o.skipResources {
 		return nil
 	}
 
@@ -310,5 +313,6 @@ or add new resources to the service's AWS CloudFormation template.`,
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
 	cmd.Flags().StringVar(&vars.iacTool, iacToolFlag, "", iacToolFlagDescription)
 	cmd.Flags().StringVar(&vars.cdkLang, cdkLanguageFlag, typescriptCDKLang, cdkLanguageFlagDescription)
+	cmd.Flags().BoolVar(&vars.skipResources, skipResourcesFlag, false, skipResourcesFlagDescription)
 	return cmd
 }

@@ -288,9 +288,18 @@ func TestOverrideSvcOpts_Ask(t *testing.T) {
 	})
 	t.Run("ask for which template resources to override", func(t *testing.T) {
 		testCases := map[string]struct {
+			skip      bool
 			initMocks func(ctrl *gomock.Controller, cmd *overrideSvcOpts)
 			wanted    error
 		}{
+			"should skip prompting for resources if the user opts-in to generating empty files": {
+				skip: true,
+				initMocks: func(ctrl *gomock.Controller, cmd *overrideSvcOpts) {
+					mockPrompt := mocks.NewMockcfnSelector(ctrl)
+					mockPrompt.EXPECT().Resources(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+					cmd.cfnPrompt = mockPrompt
+				},
+			},
 			"should return an error if package command cannot be initialized": {
 				initMocks: func(ctrl *gomock.Controller, cmd *overrideSvcOpts) {
 					cmd.packageCmd = func(_ stringWriteCloser) (executor, error) {
@@ -341,7 +350,7 @@ Resources:
 				mockWS := mocks.NewMockwsWlDirReader(ctrl)
 				mockWS.EXPECT().ListServices().Return([]string{"frontend"}, nil).AnyTimes()
 
-				in := overrideVars{iacTool: "cdk", name: "frontend", appName: "demo"}
+				in := overrideVars{iacTool: "cdk", name: "frontend", appName: "demo", skipResources: tc.skip}
 				cmd := &overrideSvcOpts{
 					overrideVars: in,
 					cfgStore:     mockSSM,
