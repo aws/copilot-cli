@@ -165,17 +165,6 @@ exports.nextAvailableRulePriorityHandler = async function (event, context) {
     switch (event.RequestType) {
       case "Create":
       case "Update":
-        if (event.ResourceProperties.RulePath.length == 1){
-          if (event.ResourceProperties.RulePath[0] === "/") {
-            responseData.Priority = await calculateNextRootRulePriority(
-                event.ResourceProperties.ListenerArn
-            );
-          } else {
-            responseData.Priority = await calculateNextRulePriority(
-                event.ResourceProperties.ListenerArn
-            );
-          }
-        } else {
           for (let i=0; i < event.ResourceProperties.RulePath.length; i++){
             if (event.ResourceProperties.RulePath[i] === "/") {
               if (nextRootRuleNumber == null){
@@ -183,17 +172,25 @@ exports.nextAvailableRulePriorityHandler = async function (event, context) {
                     event.ResourceProperties.ListenerArn
                 );
               }
-              responseData["Priority"+i]  = nextRootRuleNumber--;
+              if (i == 0) {
+                responseData["Priority"]  = nextRootRuleNumber--;
+              } else {
+                responseData["Priority"+i]  = nextRootRuleNumber--;
+              }
+
             } else {
               if (nextNonRootRuleNumber == null) {
                 nextNonRootRuleNumber = await calculateNextRulePriority(
                     event.ResourceProperties.ListenerArn
                 );
               }
-              responseData["Priority"+i]  = nextNonRootRuleNumber++;
+              if (i == 0) {
+                responseData["Priority"] = nextNonRootRuleNumber++;
+              } else {
+                responseData["Priority"+i] = nextNonRootRuleNumber++;
+              }
             }
           }
-        }
         break;
       // Do nothing on delete, since this isn't a "real" resource.
       case "Delete":

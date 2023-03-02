@@ -474,4 +474,84 @@ describe("ALB Rule Priority Generator", () => {
         expect(request.isDone()).toBe(true);
       });
   });
+  test("Create operation returns non-root rule priority max + number of rules in case of multiple ports", () => {
+    // This set of rules has the default, 3 and 5 rule priorities. We don't try to fill
+    // in the gaps, we just create one that is 1 + the max. In this case, 6.
+    const describeRulesFake = sinon.fake.resolves({
+      Rules: [
+        {
+          Priority: "default",
+          Conditions: [],
+          RuleArn:
+              "arn:aws:elasticloadbalancing:us-west-2:000000000:listener-rule/app/rule",
+          IsDefault: true,
+          Actions: [
+            {
+              TargetGroupArn:
+                  "arn:aws:elasticloadbalancing:us-west-2:000000000:targetgroup/tg",
+              Type: "forward",
+            },
+          ],
+        },
+        {
+          Priority: "3",
+          Conditions: [],
+          RuleArn:
+              "arn:aws:elasticloadbalancing:us-west-2:000000000:listener-rule/app/rule",
+          IsDefault: true,
+          Actions: [
+            {
+              TargetGroupArn:
+                  "arn:aws:elasticloadbalancing:us-west-2:000000000:targetgroup/tg",
+              Type: "forward",
+            },
+          ],
+        },
+        {
+          Priority: "5",
+          Conditions: [],
+          RuleArn:
+              "arn:aws:elasticloadbalancing:us-west-2:000000000:listener-rule/app/rule",
+          IsDefault: true,
+          Actions: [
+            {
+              TargetGroupArn:
+                  "arn:aws:elasticloadbalancing:us-west-2:000000000:targetgroup/tg",
+              Type: "forward",
+            },
+          ],
+        },
+      ],
+    });
+
+    AWS.mock("ELBv2", "describeRules", describeRulesFake);
+    const request = nock(ResponseURL)
+        .put("/", (body) => {
+          return body.Status === "SUCCESS" &&
+              body.Data.Priority == 6 &&
+              body.Data.Priority2 == 7 &&
+              body.Data.Priority1 == 50000;
+        })
+        .reply(200);
+
+    return LambdaTester(albRulePriorityHandler.nextAvailableRulePriorityHandler)
+        .event({
+          RequestType: "Create",
+          RequestId: testRequestId,
+          ResourceProperties: {
+            ListenerArn: testALBListenerArn,
+            RulePath: ["/api", "/", "admin"],
+          },
+        })
+        .expectResolve(() => {
+          sinon.assert.calledWith(
+              describeRulesFake,
+              sinon.match({
+                ListenerArn: testALBListenerArn,
+              })
+          );
+          expect(request.isDone()).toBe(true);
+        });
+  });
+
 });
