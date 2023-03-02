@@ -322,6 +322,10 @@ Resources: # If a bucket URL is specified, that means the template exists.
           Rollback: true
         MinimumHealthyPercent: 100
         MaximumPercent: 200
+        Alarms:
+          AlarmNames: []
+          Enable: false
+          Rollback: true
       PropagateTags: SERVICE
       ServiceConnectConfiguration: !If
         - IsGovCloud
