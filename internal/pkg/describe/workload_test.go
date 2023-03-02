@@ -184,7 +184,7 @@ func Test_WorkloadManifest(t *testing.T) {
 	}
 }
 
-func TestServiceDescriber_ServiceStackResources(t *testing.T) {
+func TestServiceDescriber_StackResources(t *testing.T) {
 	const (
 		testApp  = "phonetool"
 		testEnv  = "test"
@@ -260,7 +260,7 @@ func TestServiceDescriber_ServiceStackResources(t *testing.T) {
 			}
 
 			// WHEN
-			actual, err := d.ServiceStackResources()
+			actual, err := d.StackResources()
 
 			// THEN
 			if tc.wantedError != nil {

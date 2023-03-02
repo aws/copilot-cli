@@ -66,7 +66,7 @@ func (d *WorkerServiceDescriber) Describe() (HumanJSONStringer, error) {
 	var configs []*ECSServiceConfig
 	var envVars []*containerEnvVar
 	var secrets []*secret
-	var alarms  []string
+	var alarms []string
 	for _, env := range environments {
 		svcDescr, err := d.initECSDescriber(env)
 		if err != nil {
@@ -113,7 +113,7 @@ func (d *WorkerServiceDescriber) Describe() (HumanJSONStringer, error) {
 			if err != nil {
 				return nil, err
 			}
-			stackResources, err := svcDescr.ServiceStackResources()
+			stackResources, err := svcDescr.StackResources()
 			if err != nil {
 				return nil, fmt.Errorf("retrieve service resources: %w", err)
 			}

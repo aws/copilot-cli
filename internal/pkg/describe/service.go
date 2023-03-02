@@ -62,7 +62,7 @@ type apprunnerClient interface {
 type workloadDescriber interface {
 	Params() (map[string]string, error)
 	Outputs() (map[string]string, error)
-	ServiceStackResources() ([]*stack.Resource, error)
+	StackResources() ([]*stack.Resource, error)
 	Manifest() ([]byte, error)
 }
 
@@ -121,7 +121,7 @@ type NewServiceConfig struct {
 }
 
 func newECSServiceDescriber(opt NewServiceConfig, env string) (*ecsServiceDescriber, error) {
-	stackDescriber, err := newWorkloadStackDescriber(newWkldConfig{
+	stackDescriber, err := newWorkloadStackDescriber(workloadConfig{
 		app:         opt.App,
 		name:        opt.Svc,
 		configStore: opt.ConfigStore,
@@ -136,7 +136,7 @@ func newECSServiceDescriber(opt NewServiceConfig, env string) (*ecsServiceDescri
 }
 
 func newAppRunnerServiceDescriber(opt NewServiceConfig, env string) (*appRunnerServiceDescriber, error) {
-	stackDescriber, err := newWorkloadStackDescriber(newWkldConfig{
+	stackDescriber, err := newWorkloadStackDescriber(workloadConfig{
 		app:         opt.App,
 		name:        opt.Svc,
 		configStore: opt.ConfigStore,
@@ -208,12 +208,12 @@ func (d *ecsServiceDescriber) RollbackAlarmNames() ([]string, error) {
 
 // ServiceARN retrieves the ARN of the app runner service.
 func (d *appRunnerServiceDescriber) ServiceARN() (string, error) {
-	serviceStackResources, err := d.ServiceStackResources()
+	StackResources, err := d.StackResources()
 	if err != nil {
 		return "", err
 	}
 
-	for _, resource := range serviceStackResources {
+	for _, resource := range StackResources {
 		arn := resource.PhysicalID
 		if resource.Type == apprunnerServiceType && arn != "" {
 			return arn, nil
@@ -226,12 +226,12 @@ func (d *appRunnerServiceDescriber) ServiceARN() (string, error) {
 // vpcIngressConnectionARN returns the ARN of the VPC Ingress Connection
 // for this service. If one does not exist, it returns errVPCIngressConnectionNotFound.
 func (d *appRunnerServiceDescriber) vpcIngressConnectionARN() (string, error) {
-	serviceStackResources, err := d.ServiceStackResources()
+	StackResources, err := d.StackResources()
 	if err != nil {
 		return "", err
 	}
 
-	for _, resource := range serviceStackResources {
+	for _, resource := range StackResources {
 		arn := resource.PhysicalID
 		if resource.Type == apprunnerVPCIngressConnectionType && arn != "" {
 			return arn, nil

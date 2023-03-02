@@ -29,14 +29,14 @@ type workloadStackDescriber struct {
 	stackResources []*stack.Resource
 }
 
-type newWkldConfig struct {
+type workloadConfig struct {
 	app         string
 	name        string
 	configStore ConfigStoreSvc
 }
 
 // newWorkloadStackDescriber instantiates the core elements of a new workload.
-func newWorkloadStackDescriber(opt newWkldConfig, env string) (*workloadStackDescriber, error) {
+func newWorkloadStackDescriber(opt workloadConfig, env string) (*workloadStackDescriber, error) {
 	environment, err := opt.configStore.GetEnvironment(opt.app, env)
 	if err != nil {
 		return nil, fmt.Errorf("get environment %s: %w", env, err)
@@ -55,7 +55,7 @@ func newWorkloadStackDescriber(opt newWkldConfig, env string) (*workloadStackDes
 	}, nil
 }
 
-// Params returns the parameters of the service stack.
+// Params returns the parameters of the workload stack.
 func (d *workloadStackDescriber) Params() (map[string]string, error) {
 	if d.params != nil {
 		return d.params, nil
@@ -81,8 +81,8 @@ func (d *workloadStackDescriber) Outputs() (map[string]string, error) {
 	return descr.Outputs, nil
 }
 
-// ServiceStackResources returns the filtered service stack resources created by CloudFormation.
-func (d *workloadStackDescriber) ServiceStackResources() ([]*stack.Resource, error) {
+// StackResources returns the workload stack resources created by CloudFormation.
+func (d *workloadStackDescriber) StackResources() ([]*stack.Resource, error) {
 	if len(d.stackResources) != 0 {
 		return d.stackResources, nil
 	}
