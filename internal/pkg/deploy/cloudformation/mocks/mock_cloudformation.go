@@ -12,6 +12,7 @@ import (
 	cloudformation "github.com/aws/aws-sdk-go/service/cloudformation"
 	cloudformation0 "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	stackset "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation/stackset"
+	cloudwatch "github.com/aws/copilot-cli/internal/pkg/aws/cloudwatch"
 	ecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	gomock "github.com/golang/mock/gomock"
 )
@@ -186,6 +187,48 @@ func (m *MockecsClient) Service(clusterName, serviceName string) (*ecs.Service, 
 func (mr *MockecsClientMockRecorder) Service(clusterName, serviceName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Service", reflect.TypeOf((*MockecsClient)(nil).Service), clusterName, serviceName)
+}
+
+// MockcwClient is a mock of cwClient interface.
+type MockcwClient struct {
+	ctrl     *gomock.Controller
+	recorder *MockcwClientMockRecorder
+}
+
+// MockcwClientMockRecorder is the mock recorder for MockcwClient.
+type MockcwClientMockRecorder struct {
+	mock *MockcwClient
+}
+
+// NewMockcwClient creates a new mock instance.
+func NewMockcwClient(ctrl *gomock.Controller) *MockcwClient {
+	mock := &MockcwClient{ctrl: ctrl}
+	mock.recorder = &MockcwClientMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockcwClient) EXPECT() *MockcwClientMockRecorder {
+	return m.recorder
+}
+
+// AlarmStatuses mocks base method.
+func (m *MockcwClient) AlarmStatuses(opts ...cloudwatch.DescribeAlarmOpts) ([]cloudwatch.AlarmStatus, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "AlarmStatuses", varargs...)
+	ret0, _ := ret[0].([]cloudwatch.AlarmStatus)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// AlarmStatuses indicates an expected call of AlarmStatuses.
+func (mr *MockcwClientMockRecorder) AlarmStatuses(opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AlarmStatuses", reflect.TypeOf((*MockcwClient)(nil).AlarmStatuses), opts...)
 }
 
 // MockcfnClient is a mock of cfnClient interface.

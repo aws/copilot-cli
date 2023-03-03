@@ -5,6 +5,7 @@ package stream
 
 import (
 	"errors"
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatch"
 	"testing"
 	"time"
 
@@ -19,7 +20,16 @@ type mockECS struct {
 	err error
 }
 
+type mockCW struct {
+	out []cloudwatch.AlarmStatus
+	err error
+}
+
 func (m mockECS) Service(clusterName, serviceName string) (*ecs.Service, error) {
+	return m.out, m.err
+}
+
+func (m mockCW) AlarmStatuses(opts ...cloudwatch.DescribeAlarmOpts) ([]cloudwatch.AlarmStatus, error) {
 	return m.out, m.err
 }
 
@@ -54,7 +64,8 @@ func TestECSDeploymentStreamer_Fetch(t *testing.T) {
 		m := mockECS{
 			err: errors.New("some error"),
 		}
-		streamer := NewECSDeploymentStreamer(m, "my-cluster", "my-svc", time.Now())
+		cw := mockCW{}
+		streamer := NewECSDeploymentStreamer(m, cw, "my-cluster", "my-svc", time.Now())
 
 		// WHEN
 		_, _, err := streamer.Fetch()
@@ -62,7 +73,31 @@ func TestECSDeploymentStreamer_Fetch(t *testing.T) {
 		// THEN
 		require.EqualError(t, err, "fetch service description: some error")
 	})
-	t.Run("stores events until deployment is done", func(t *testing.T) {
+	t.Run("returns a wrapped error on alarm statuses call failure", func(t *testing.T) {
+		// GIVEN
+		m := mockECS{
+			out: &ecs.Service{
+				DeploymentConfiguration: &awsecs.DeploymentConfiguration{
+					Alarms: &awsecs.DeploymentAlarms{
+						AlarmNames: []*string{aws.String("alarm1"), aws.String("alarm2")},
+						Enable:     aws.Bool(true),
+						Rollback:   aws.Bool(true),
+					},
+				},
+			},
+		}
+		cw := mockCW{
+			err: errors.New("some error"),
+		}
+		streamer := NewECSDeploymentStreamer(m, cw, "my-cluster", "my-svc", time.Now())
+
+		// WHEN
+		_, _, err := streamer.Fetch()
+
+		// THEN
+		require.EqualError(t, err, "retrieve alarm statuses: some error")
+	})
+	t.Run("stores events, alarms, and failures until deployment is done", func(t *testing.T) {
 		// GIVEN
 		oldStartDate := time.Date(2020, time.November, 23, 17, 0, 0, 0, time.UTC)
 		startDate := time.Date(2020, time.November, 23, 18, 0, 0, 0, time.UTC)
@@ -90,9 +125,40 @@ func TestECSDeploymentStreamer_Fetch(t *testing.T) {
 						UpdatedAt:      aws.Time(oldStartDate),
 					},
 				},
+				DeploymentConfiguration: &awsecs.DeploymentConfiguration{
+					Alarms: &awsecs.DeploymentAlarms{
+						AlarmNames: []*string{aws.String("alarm1"), aws.String("alarm2")},
+						Enable:     aws.Bool(true),
+						Rollback:   aws.Bool(true),
+					},
+				},
+				Events: []*awsecs.ServiceEvent{
+					{
+						CreatedAt: aws.Time(startDate),
+						Id:        aws.String("id1"),
+						Message:   aws.String("deployment failed: alarm detected"),
+					},
+					{
+						CreatedAt: aws.Time(startDate),
+						Id:        aws.String("id2"),
+						Message:   aws.String("rolling back to deployment X"),
+					},
+				},
 			},
 		}
-		streamer := NewECSDeploymentStreamer(m, "my-cluster", "my-svc", startDate)
+		cw := mockCW{
+			out: []cloudwatch.AlarmStatus{
+				{
+					Name:   "alarm1",
+					Status: "OK",
+				},
+				{
+					Name:   "alarm2",
+					Status: "ALARM",
+				},
+			},
+		}
+		streamer := NewECSDeploymentStreamer(m, cw, "my-cluster", "my-svc", startDate)
 
 		// WHEN
 		_, done, err := streamer.Fetch()
@@ -123,7 +189,17 @@ func TestECSDeploymentStreamer_Fetch(t *testing.T) {
 						UpdatedAt:       oldStartDate,
 					},
 				},
-				LatestFailureEvents: nil,
+				Alarms: []cloudwatch.AlarmStatus{
+					{
+						Name:   "alarm1",
+						Status: "OK",
+					},
+					{
+						Name:   "alarm2",
+						Status: "ALARM",
+					},
+				},
+				LatestFailureEvents: []string{"deployment failed: alarm detected", "rolling back to deployment X"},
 			},
 		}, streamer.eventsToFlush)
 		require.True(t, done, "there should be no more work to do since the deployment is completed")
@@ -154,9 +230,16 @@ func TestECSDeploymentStreamer_Fetch(t *testing.T) {
 						UpdatedAt:      aws.Time(oldStartDate),
 					},
 				},
+				DeploymentConfiguration: &awsecs.DeploymentConfiguration{
+					DeploymentCircuitBreaker: &awsecs.DeploymentCircuitBreaker{
+						Enable:   aws.Bool(false),
+						Rollback: aws.Bool(true),
+					},
+				},
 			},
 		}
-		streamer := NewECSDeploymentStreamer(m, "my-cluster", "my-svc", startDate)
+		cw := mockCW{}
+		streamer := NewECSDeploymentStreamer(m, cw, "my-cluster", "my-svc", startDate)
 
 		// WHEN
 		_, done, err := streamer.Fetch()
