@@ -45,6 +45,7 @@ const (
 	WorkloadTargetPortParamKey      = "TargetPort"
 	WorkloadHTTPSParamKey           = "HTTPSEnabled"
 	WorkloadRulePathParamKey        = "RulePath"
+	WorkloadRulePathSliceParamKey   = "RulePathSlice"
 	WorkloadStickinessParamKey      = "Stickiness"
 )
 

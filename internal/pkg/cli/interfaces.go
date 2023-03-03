@@ -7,13 +7,12 @@ import (
 	"encoding"
 	"io"
 
-	"github.com/aws/copilot-cli/internal/pkg/aws/secretsmanager"
-
 	"github.com/aws/aws-sdk-go/aws/session"
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
+	"github.com/aws/copilot-cli/internal/pkg/aws/secretsmanager"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ssm"
 	clideploy "github.com/aws/copilot-cli/internal/pkg/cli/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -30,6 +29,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/repository"
 	"github.com/aws/copilot-cli/internal/pkg/task"
+	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
@@ -486,6 +486,10 @@ type appSelector interface {
 type appEnvSelector interface {
 	appSelector
 	Environment(prompt, help, app string, additionalOpts ...string) (string, error)
+}
+
+type cfnSelector interface {
+	Resources(msg, finalMsg, help, body string) ([]template.CFNResource, error)
 }
 
 type configSelector interface {
