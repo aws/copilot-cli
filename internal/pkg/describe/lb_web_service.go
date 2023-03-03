@@ -12,6 +12,7 @@ import (
 	"strings"
 	"text/tabwriter"
 
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatch"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 
@@ -59,8 +60,10 @@ type LBWebServiceDescriber struct {
 	initECSServiceDescribers func(string) (ecsDescriber, error)
 	initEnvDescribers        func(string) (envDescriber, error)
 	initLBDescriber          func(string) (lbDescriber, error)
+	initCWDescriber          func(string) (cwAlarmDescriber, error)
 	ecsServiceDescribers     map[string]ecsDescriber
 	envDescriber             map[string]envDescriber
+	cwAlarmDescribers        map[string]cwAlarmDescriber
 }
 
 // NewLBWebServiceDescriber instantiates a load balanced service describer.
@@ -114,6 +117,20 @@ func NewLBWebServiceDescriber(opt NewServiceConfig) (*LBWebServiceDescriber, err
 		describer.envDescriber[env] = envDescr
 		return envDescr, nil
 	}
+	describer.initCWDescriber = func(envName string) (cwAlarmDescriber, error) {
+		if describer, ok := describer.cwAlarmDescribers[envName]; ok {
+			return describer, nil
+		}
+		env, err := opt.ConfigStore.GetEnvironment(opt.App, envName)
+		if err != nil {
+			return nil, fmt.Errorf("get environment %s: %w", envName, err)
+		}
+		sess, err := sessions.ImmutableProvider().FromRole(env.ManagerRoleARN, env.Region)
+		if err != nil {
+			return nil, err
+		}
+		return cloudwatch.New(sess), nil
+	}
 	return describer, nil
 }
 
@@ -130,7 +147,7 @@ func (d *LBWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 	svcConnects := make(serviceConnects)
 	var envVars []*containerEnvVar
 	var secrets []*secret
-	var alarms  []string
+	var alarmDescriptions []cloudwatch.AlarmDescription
 	for _, env := range environments {
 		svcDescr, err := d.initECSServiceDescribers(env)
 		if err != nil {
@@ -166,9 +183,23 @@ func (d *LBWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 			},
 			Tasks: svcParams[cfnstack.WorkloadTaskCountParamKey],
 		})
-		alarms, err = svcDescr.RollbackAlarmNames()
+		alarmNames, err := svcDescr.RollbackAlarmNames()
 		if err != nil {
 			return nil, fmt.Errorf("retrieve rollback alarm names: %w", err)
+		}
+		if alarmNames != nil {
+			cwAlarmDescr, err := d.initCWDescriber(env)
+			if err != nil {
+				return nil, err
+			}
+			alarms, err := cwAlarmDescr.AlarmDescriptions(alarmNames)
+			if err != nil {
+				return nil, fmt.Errorf("retrieve alarm descriptions: %w", err)
+			}
+			for _, alarm := range alarms {
+				alarm.Environment = env
+				alarmDescriptions = append(alarmDescriptions, alarm)
+			}
 		}
 		envDescr, err := d.initEnvDescribers(env)
 		if err != nil {
@@ -205,17 +236,17 @@ func (d *LBWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 
 	return &webSvcDesc{
 		ecsSvcDesc: ecsSvcDesc{
-			Service:          d.svc,
-			Type:             manifestinfo.LoadBalancedWebServiceType,
-			App:              d.app,
-			Configurations:   configs,
-			Alarms:           alarms,
-			Routes:           routes,
-			ServiceDiscovery: svcDiscoveries,
-			ServiceConnect:   svcConnects,
-			Variables:        envVars,
-			Secrets:          secrets,
-			Resources:        resources,
+			Service:           d.svc,
+			Type:              manifestinfo.LoadBalancedWebServiceType,
+			App:               d.app,
+			Configurations:    configs,
+			AlarmDescriptions: alarmDescriptions,
+			Routes:            routes,
+			ServiceDiscovery:  svcDiscoveries,
+			ServiceConnect:    svcConnects,
+			Variables:         envVars,
+			Secrets:           secrets,
+			Resources:         resources,
 
 			environments: environments,
 		},
@@ -264,10 +295,10 @@ func (w *webSvcDesc) HumanString() string {
 	fmt.Fprint(writer, color.Bold.Sprint("\nConfigurations\n\n"))
 	writer.Flush()
 	w.Configurations.humanString(writer)
-	if len(w.Alarms) > 0 {
+	if len(w.AlarmDescriptions) > 0 {
 		fmt.Fprint(writer, color.Bold.Sprint("\nRollback Alarms\n\n"))
 		writer.Flush()
-		rollbackAlarms(w.Alarms).humanString(writer)
+		rollbackAlarms(w.AlarmDescriptions).humanString(writer)
 	}
 	fmt.Fprint(writer, color.Bold.Sprint("\nRoutes\n\n"))
 	writer.Flush()

@@ -53,13 +53,15 @@ type AlarmStatus struct {
 
 // AlarmDescription contains CloudWatch alarm config.
 type AlarmDescription struct {
-	AlarmDescription   string  `json:"alarmDescription"`
+	Name               string  `json:"name"`
+	Description        string  `json:"description"`
 	MetricName         string  `json:"metricName"`
 	ComparisonOperator string  `json:"comparisonOperator"`
 	DatapointsToAlarm  int64   `json:"datapointsToAlarm"`
 	EvaluationPeriods  int64   `json:"evaluationPeriods"`
 	Threshold          float64 `json:"threshold"`
 	Unit               string  `json:"unit"`
+	Environment        string  `json:"environment"`
 }
 
 // New returns a CloudWatch struct configured against the input session.
@@ -136,16 +138,11 @@ func (cw *CloudWatch) AlarmStatuses(opts ...DescribeAlarmOpts) ([]AlarmStatus, e
 	return alarmStatuses, nil
 }
 
-// AlarmDescriptions returns the config of alarms optionally filtered (by name, prefix, etc.).
-// If the optional parameter is passed in but is nil, the statuses of ALL alarms in the
-// account will be returned!
-func (cw *CloudWatch) AlarmDescriptions(opts ...DescribeAlarmOpts) ([]AlarmDescription, error) {
+// AlarmDescriptions returns the config of alarms filtered by name.
+func (cw *CloudWatch) AlarmDescriptions(alarmNames []string) ([]AlarmDescription, error) {
 	var alarmDescriptions []AlarmDescription
-	in := &cloudwatch.DescribeAlarmsInput{}
-	if len(opts) > 0 {
-		for _, opt := range opts {
-			opt(in)
-		}
+	in := &cloudwatch.DescribeAlarmsInput{
+		AlarmNames: aws.StringSlice(alarmNames),
 	}
 	for {
 		alarmResp, err := cw.client.DescribeAlarms(in)
@@ -173,7 +170,8 @@ func (cw *CloudWatch) compositeAlarmsDescriptions(alarms []*cloudwatch.Composite
 			continue
 		}
 		alarmDescriptionList = append(alarmDescriptionList, AlarmDescription{
-			AlarmDescription: aws.StringValue(alarm.AlarmDescription),
+			Name:        aws.StringValue(alarm.AlarmName),
+			Description: aws.StringValue(alarm.AlarmDescription),
 		})
 	}
 	return alarmDescriptionList
@@ -186,6 +184,8 @@ func (cw *CloudWatch) metricAlarmsDescriptions(alarms []*cloudwatch.MetricAlarm)
 			continue
 		}
 		alarmDescriptionsList = append(alarmDescriptionsList, AlarmDescription{
+			Name:               aws.StringValue(alarm.AlarmName),
+			Description:        aws.StringValue(alarm.AlarmDescription),
 			MetricName:         aws.StringValue(alarm.MetricName),
 			ComparisonOperator: aws.StringValue(alarm.ComparisonOperator),
 			DatapointsToAlarm:  aws.Int64Value(alarm.DatapointsToAlarm),

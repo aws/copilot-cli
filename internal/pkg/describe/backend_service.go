@@ -10,6 +10,7 @@ import (
 	"strings"
 	"text/tabwriter"
 
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatch"
 	"github.com/aws/copilot-cli/internal/pkg/aws/elbv2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
@@ -38,8 +39,10 @@ type BackendServiceDescriber struct {
 	initECSServiceDescribers func(string) (ecsDescriber, error)
 	initEnvDescribers        func(string) (envDescriber, error)
 	initLBDescriber          func(string) (lbDescriber, error)
+	initCWDescriber          func(string) (cwAlarmDescriber, error)
 	ecsServiceDescribers     map[string]ecsDescriber
 	envStackDescriber        map[string]envDescriber
+	cwAlarmDescribers        map[string]cwAlarmDescriber
 }
 
 // NewBackendServiceDescriber instantiates a backend service describer.
@@ -78,6 +81,20 @@ func NewBackendServiceDescriber(opt NewServiceConfig) (*BackendServiceDescriber,
 		describer.ecsServiceDescribers[env] = svcDescr
 		return svcDescr, nil
 	}
+	describer.initCWDescriber = func(envName string) (cwAlarmDescriber, error) {
+		if describer, ok := describer.cwAlarmDescribers[envName]; ok {
+			return describer, nil
+		}
+		env, err := opt.ConfigStore.GetEnvironment(opt.App, envName)
+		if err != nil {
+			return nil, fmt.Errorf("get environment %s: %w", envName, err)
+		}
+		sess, err := sessions.ImmutableProvider().FromRole(env.ManagerRoleARN, env.Region)
+		if err != nil {
+			return nil, err
+		}
+		return cloudwatch.New(sess), nil
+	}
 	describer.initEnvDescribers = func(env string) (envDescriber, error) {
 		if describer, ok := describer.envStackDescriber[env]; ok {
 			return describer, nil
@@ -109,7 +126,7 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 	scEndpoints := make(serviceConnects)
 	var envVars []*containerEnvVar
 	var secrets []*secret
-	var alarms  []string
+	var alarmDescriptions []cloudwatch.AlarmDescription
 	for _, env := range environments {
 		svcDescr, err := d.initECSServiceDescribers(env)
 		if err != nil {
@@ -157,10 +174,22 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 			},
 			Tasks: svcParams[cfnstack.WorkloadTaskCountParamKey],
 		})
-		alarms, err = svcDescr.RollbackAlarmNames()
-		if err != nil {
-			return nil, fmt.Errorf("retrieve rollback alarm names: %w", err)
-
+		alarmNames, err := svcDescr.RollbackAlarmNames()
+		if alarmNames != nil {
+			if err != nil {
+				return nil, fmt.Errorf("retrieve rollback alarm names: %w", err)
+			}
+			cwAlarmDescr, err := d.initCWDescriber(env)
+			if err != nil {
+				return nil, err
+			}
+			alarmDescriptions, err = cwAlarmDescr.AlarmDescriptions(alarmNames)
+			if err != nil {
+				return nil, fmt.Errorf("retrieve alarm descriptions: %w", err)
+			}
+			for _, alarm := range alarmDescriptions {
+				alarm.Environment = env
+			}
 		}
 		backendSvcEnvVars, err := svcDescr.EnvVars()
 		if err != nil {
@@ -191,17 +220,17 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 
 	return &backendSvcDesc{
 		ecsSvcDesc: ecsSvcDesc{
-			Service:          d.svc,
-			Type:             manifestinfo.BackendServiceType,
-			App:              d.app,
-			Configurations:   configs,
-			Alarms:           alarms,
-			Routes:           routes,
-			ServiceDiscovery: sdEndpoints,
-			ServiceConnect:   scEndpoints,
-			Variables:        envVars,
-			Secrets:          secrets,
-			Resources:        resources,
+			Service:           d.svc,
+			Type:              manifestinfo.BackendServiceType,
+			App:               d.app,
+			Configurations:    configs,
+			AlarmDescriptions: alarmDescriptions,
+			Routes:            routes,
+			ServiceDiscovery:  sdEndpoints,
+			ServiceConnect:    scEndpoints,
+			Variables:         envVars,
+			Secrets:           secrets,
+			Resources:         resources,
 
 			environments: environments,
 		},
@@ -244,10 +273,10 @@ func (w *backendSvcDesc) HumanString() string {
 	fmt.Fprint(writer, color.Bold.Sprint("\nConfigurations\n\n"))
 	writer.Flush()
 	w.Configurations.humanString(writer)
-	if len(w.Alarms) > 0 {
+	if len(w.AlarmDescriptions) > 0 {
 		fmt.Fprint(writer, color.Bold.Sprint("\nRollback Alarms\n\n"))
 		writer.Flush()
-		rollbackAlarms(w.Alarms).humanString(writer)
+		rollbackAlarms(w.AlarmDescriptions).humanString(writer)
 	}
 	if len(w.Routes) > 0 {
 		fmt.Fprint(writer, color.Bold.Sprint("\nRoutes\n\n"))

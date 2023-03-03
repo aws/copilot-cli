@@ -90,21 +90,21 @@ type apprunnerDescriber interface {
 }
 
 type cwAlarmDescriber interface {
-	AlarmDescriptions(opts ...cloudwatch.DescribeAlarmOpts) ([]cloudwatch.AlarmDescription, error)
+	AlarmDescriptions([]string) ([]cloudwatch.AlarmDescription, error)
 }
 
 type ecsSvcDesc struct {
-	Service          string               `json:"service"`
-	Type             string               `json:"type"`
-	App              string               `json:"application"`
-	Configurations   ecsConfigurations    `json:"configurations"`
-	Alarms           []string             `json:"rollbackAlarms,omitempty"`
-	Routes           []*WebServiceRoute   `json:"routes"`
-	ServiceDiscovery serviceDiscoveries   `json:"serviceDiscovery"`
-	ServiceConnect   serviceConnects      `json:"serviceConnect,omitempty"`
-	Variables        containerEnvVars     `json:"variables"`
-	Secrets          secrets              `json:"secrets,omitempty"`
-	Resources        deployedSvcResources `json:"resources,omitempty"`
+	Service           string                        `json:"service"`
+	Type              string                        `json:"type"`
+	App               string                        `json:"application"`
+	Configurations    ecsConfigurations             `json:"configurations"`
+	AlarmDescriptions []cloudwatch.AlarmDescription `json:"alarmDescriptions,omitempty"`
+	Routes            []*WebServiceRoute            `json:"routes"`
+	ServiceDiscovery  serviceDiscoveries            `json:"serviceDiscovery"`
+	ServiceConnect    serviceConnects               `json:"serviceConnect,omitempty"`
+	Variables         containerEnvVars              `json:"variables"`
+	Secrets           secrets                       `json:"secrets,omitempty"`
+	Resources         deployedSvcResources          `json:"resources,omitempty"`
 
 	environments []string `json:"-"`
 }
@@ -451,18 +451,16 @@ func (c appRunnerConfigurations) humanString(w io.Writer) {
 	printTable(w, headers, rows)
 }
 
-type rollbackAlarms []string
+type rollbackAlarms []cloudwatch.AlarmDescription
 
 func (abr rollbackAlarms) humanString(w io.Writer) {
-	headers := []string{"Name"}
-	fmt.Fprintf(w, "  %s\n", strings.Join(headers, "\t"))
-	fmt.Fprintf(w, "  %s\n", strings.Join(underline(headers), "\t"))
-	// make a map of name:description then adapt fmt.Fprintf
-	// also format the description using the pieces
-	cwAlarmDescriber.AlarmDescriptions(cloudwatch.WithNames(abr))
+	headers := []string{"Name", "Environment", "Description"}
+	var rows [][]string
 	for _, alarm := range abr {
-		fmt.Fprintf(w, "  %s\n", alarm)
+		rows = append(rows, []string{alarm.Name, alarm.Environment, alarm.Description})
 	}
+
+	printTable(w, headers, rows)
 }
 
 // envVar contains serialized environment variables for a service.
