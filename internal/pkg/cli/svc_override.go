@@ -54,6 +54,7 @@ func (sb *closableStringBuilder) Close() error {
 
 type overrideVars struct {
 	name      string
+	envName   string // Optional.
 	appName   string
 	iacTool   string
 	resources []template.CFNResource
@@ -108,6 +109,9 @@ func (o *overrideSvcOpts) Validate() error {
 	if err := o.validateAppName(); err != nil {
 		return err
 	}
+	if err := o.validateEnvName(); err != nil {
+		return err
+	}
 	return o.validateCDKLang()
 }
 
@@ -138,7 +142,18 @@ func (o *overrideSvcOpts) validateAppName() error {
 	}
 	_, err := o.cfgStore.GetApplication(o.appName)
 	if err != nil {
-		return fmt.Errorf("get application %q configuration: %w", o.appName, err)
+		return fmt.Errorf("get application %q configuration: %v", o.appName, err)
+	}
+	return nil
+}
+
+func (o *overrideSvcOpts) validateEnvName() error {
+	if o.envName == "" {
+		return nil
+	}
+	_, err := o.cfgStore.GetEnvironment(o.appName, o.envName)
+	if err != nil {
+		return fmt.Errorf("get environment %q configuration: %v", o.envName, err)
 	}
 	return nil
 }
@@ -224,16 +239,13 @@ func (o *overrideSvcOpts) askResourcesToOverride() error {
 }
 
 func (o *overrideSvcOpts) newSvcPackageCmd(tplBuf stringWriteCloser) (executor, error) {
-	envs, err := o.cfgStore.ListEnvironments(o.appName)
+	envName, err := o.targetEnvName()
 	if err != nil {
-		return nil, fmt.Errorf("list environments in application %q: %v", o.appName, err)
-	}
-	if len(envs) == 0 {
-		return nil, fmt.Errorf("no environments found in application %q", o.appName)
+		return nil, err
 	}
 	cmd, err := newPackageSvcOpts(packageSvcVars{
 		name:    o.name,
-		envName: envs[0].Name, // Use any environment to get a sample CloudFormation template for the service.
+		envName: envName,
 		appName: o.appName,
 	})
 	if err != nil {
@@ -241,6 +253,22 @@ func (o *overrideSvcOpts) newSvcPackageCmd(tplBuf stringWriteCloser) (executor, 
 	}
 	cmd.templateWriter = tplBuf
 	return cmd, nil
+}
+
+// targetEnvName returns the name of the environment to use when running "svc package".
+// If the user does not explicitly provide an environment, default to a random environment.
+func (o *overrideSvcOpts) targetEnvName() (string, error) {
+	if o.envName != "" {
+		return o.envName, nil
+	}
+	envs, err := o.cfgStore.ListEnvironments(o.appName)
+	if err != nil {
+		return "", fmt.Errorf("list environments in application %q: %v", o.appName, err)
+	}
+	if len(envs) == 0 {
+		return "", fmt.Errorf("no environments found in application %q", o.appName)
+	}
+	return envs[0].Name, nil
 }
 
 func (o *overrideSvcOpts) askIaCTool() error {
@@ -278,6 +306,7 @@ or add new resources to the service's AWS CloudFormation template.`,
 		}),
 	}
 	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, "", svcFlagDescription)
+	cmd.Flags().StringVarP(&vars.envName, envFlag, envFlagShort, "", overrideEnvFlagDescription)
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
 	cmd.Flags().StringVar(&vars.iacTool, iacToolFlag, "", iacToolFlagDescription)
 	cmd.Flags().StringVar(&vars.cdkLang, cdkLanguageFlag, typescriptCDKLang, cdkLanguageFlagDescription)
