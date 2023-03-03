@@ -37,9 +37,6 @@ Parameters:
   HTTPSEnabled:
     Type: String
     AllowedValues: [true, false]
-  Stickiness:
-    Type: String
-    Default: false
 Conditions:
   IsGovCloud: !Equals [!Ref "AWS::Partition", "aws-us-gov"]
   HasAddons: !Not [!Equals [!Ref AddonsTemplateURL, ""]]

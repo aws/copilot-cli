@@ -43,9 +43,6 @@ Parameters:
   HTTPSEnabled:
     Type: String
     AllowedValues: [true, false]
-  Stickiness:
-    Type: String
-    Default: false
   {{- end}}
 Conditions:
   IsGovCloud:
