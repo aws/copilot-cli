@@ -4,6 +4,8 @@
 package manifest
 
 import (
+	"fmt"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -2304,6 +2306,94 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 			// THEN
 			require.NoError(t, err)
 			require.Equal(t, tc.wantedExposedPorts, actual.PortsForContainer)
+		})
+	}
+}
+
+func TestLoadBalancedWebService_BuildArgs(t *testing.T) {
+	mockContextDir := "/root/dir"
+	testCases := map[string]struct {
+		in              *LoadBalancedWebService
+		wantedBuildArgs map[string]*DockerBuildArgs
+		wantedErr       error
+	}{
+		"error if both build and location are set": {
+			in: &LoadBalancedWebService{
+				Workload: Workload{
+					Name: aws.String("mock-svc"),
+					Type: aws.String(manifestinfo.LoadBalancedWebServiceType),
+				},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: ImageWithPortAndHealthcheck{
+						ImageWithPort: ImageWithPort{
+							Image: Image{
+								ImageLocationOrBuild: ImageLocationOrBuild{
+									Build: BuildArgsOrString{
+										BuildString: aws.String("web/Dockerfile"),
+									},
+									Location: aws.String("mockURI"),
+								},
+							},
+						},
+					},
+				},
+			},
+			wantedErr: fmt.Errorf(`either "image.build" or "image.location" needs to be specified in the manifest`),
+		},
+
+		"return main container and sidecar container build args": {
+			in: &LoadBalancedWebService{
+				Workload: Workload{
+					Name: aws.String("mock-svc"),
+					Type: aws.String(manifestinfo.LoadBalancedWebServiceType),
+				},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: ImageWithPortAndHealthcheck{
+						ImageWithPort: ImageWithPort{
+							Image: Image{
+								ImageLocationOrBuild: ImageLocationOrBuild{
+									Build: BuildArgsOrString{
+										BuildString: aws.String("web/Dockerfile"),
+									},
+								},
+							},
+						},
+					},
+					Sidecars: map[string]*SidecarConfig{
+						"nginx": {
+							Image: Union[*string, ImageLocationOrBuild]{
+								Advanced: ImageLocationOrBuild{
+									Build: BuildArgsOrString{
+										BuildString: aws.String("backend/Dockerfile"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			wantedBuildArgs: map[string]*DockerBuildArgs{
+				"mock-svc": {
+					Dockerfile: aws.String(filepath.Join(mockContextDir, "web/Dockerfile")),
+					Context:    aws.String(filepath.Join(mockContextDir, filepath.Dir("web/Dockerfile"))),
+				},
+				"nginx": {
+					Dockerfile: aws.String(filepath.Join(mockContextDir, "backend/Dockerfile")),
+					Context:    aws.String(filepath.Join(mockContextDir, filepath.Dir("backend/Dockerfile"))),
+				},
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// WHEN
+			got, gotErr := tc.in.BuildArgs(mockContextDir)
+			// THEN
+			if gotErr != nil {
+				require.EqualError(t, gotErr, tc.wantedErr.Error())
+			} else {
+				require.Equal(t, tc.wantedBuildArgs, got)
+			}
 		})
 	}
 }
