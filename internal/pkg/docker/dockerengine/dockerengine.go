@@ -90,7 +90,6 @@ func (c CmdClient) Build(in *BuildArguments) error {
 	args := []string{"build"}
 
 	// Add additional image tags to the docker build call.
-	args = append(args, "-t", in.URI)
 	for _, tag := range in.Tags {
 		args = append(args, "-t", imageName(in.URI, tag))
 	}
@@ -168,7 +167,7 @@ func (c CmdClient) Push(uri string, tags ...string) (digest string, err error) {
 		}
 	}
 	buf := new(strings.Builder)
-	if err := c.runner.Run("docker", []string{"inspect", "--format", "'{{json (index .RepoDigests 0)}}'", imageName(uri, tags[0])}, exec.Stdout(buf)); err != nil {
+	if err := c.runner.Run("docker", []string{"inspect", "--format", "'{{json (index .RepoDigests 0)}}'", uri}, exec.Stdout(buf)); err != nil {
 		return "", fmt.Errorf("inspect image digest for %s: %w", uri, err)
 	}
 	repoDigest := strings.Trim(strings.TrimSpace(buf.String()), `"'`) // remove new lines and quotes from output
