@@ -10,6 +10,7 @@
     "HTTPSEnabled": "true",
     "LogRetention": "1",
     "RulePath": "/",
+    "RulePathSlice": "/",
     "Stickiness": "false",
     "TargetContainer": "nginx",
     "TargetPort": "8080",

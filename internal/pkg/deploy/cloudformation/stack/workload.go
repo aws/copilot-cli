@@ -45,6 +45,7 @@ const (
 	WorkloadTargetPortParamKey      = "TargetPort"
 	WorkloadHTTPSParamKey           = "HTTPSEnabled"
 	WorkloadRulePathParamKey        = "RulePath"
+	WorkloadRulePathSliceParamKey   = "RulePathSlice"
 	WorkloadStickinessParamKey      = "Stickiness"
 )
 
@@ -147,7 +148,7 @@ type wkld struct {
 
 // StackName returns the name of the stack.
 func (w *wkld) StackName() string {
-	return NameForService(w.app, w.env, w.name)
+	return NameForWorkload(w.app, w.env, w.name)
 }
 
 // Parameters returns the list of CloudFormation parameters used by the template.

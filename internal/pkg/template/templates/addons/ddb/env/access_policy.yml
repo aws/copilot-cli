@@ -11,9 +11,7 @@ Parameters:
 Resources:
   {{logicalIDSafe .Name}}DdbTableAccessPolicy:
     Metadata:
-      'aws:copilot:description': !Sub
-        - 'An IAM managed policy for your service to access the ${Table} DDB table of your environment'
-        - Table: { Fn::ImportValue: { Fn::Sub: "${App}-${Env}-{{logicalIDSafe .Name}}TableName" } }
+      'aws:copilot:description': 'An IAM managed policy for your service to access a DDB table in your environment'
     Type: AWS::IAM::ManagedPolicy
     Properties:
       Description: !Sub
