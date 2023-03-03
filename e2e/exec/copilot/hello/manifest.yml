@@ -1,0 +1,16 @@
+# We're creating the manifest ahead of time as we want to test the service with a count > 1.
+name: hello
+type: Load Balanced Web Service
+image:
+  build: 
+    dockerfile: hello/Dockerfile
+    context: hello
+  port: 80
+
+http:
+  path: '/'
+
+cpu: 256
+memory: 512
+count: 2
+exec: true
