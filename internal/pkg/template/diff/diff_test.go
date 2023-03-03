@@ -14,7 +14,7 @@ func TestConstructDiffTree(t *testing.T) {
 	testCases := map[string]struct {
 		curr        string
 		old         string
-		wanted      *DiffNode
+		wanted      *Node
 		wantedError error
 	}{
 		"add a map":                {},
@@ -26,16 +26,16 @@ func TestConstructDiffTree(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			got, err := ConstructDiffTree([]byte(tc.curr), []byte(tc.old))
+			got, err := Parse([]byte(tc.curr), []byte(tc.old))
 			if tc.wantedError != nil {
 				require.Equal(t, tc.wanted, err)
 			}
-			require.True(t, equalTree(got, &DiffNode{}, t))
+			require.True(t, equalTree(got, &Node{}, t))
 		})
 	}
 }
 
-func equalLeaves(a, b *DiffNode, t *testing.T) bool {
+func equalLeaves(a, b *Node, t *testing.T) bool {
 	aNew, err := yaml.Marshal(a.newValue)
 	require.NoError(t, err)
 	bNew, err := yaml.Marshal(b.newValue)
@@ -47,7 +47,7 @@ func equalLeaves(a, b *DiffNode, t *testing.T) bool {
 	return string(aNew) == string(bNew) && string(aOld) == string(bOld)
 }
 
-func equalTree(a, b *DiffNode, t *testing.T) bool {
+func equalTree(a, b *Node, t *testing.T) bool {
 	if a.key != b.key || len(a.children) != len(b.children) {
 		return false
 	}
