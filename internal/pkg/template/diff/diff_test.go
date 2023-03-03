@@ -4,6 +4,7 @@
 package diff
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -141,14 +142,19 @@ func TestConstructDiffTree(t *testing.T) {
 				return nil
 			},
 		},
+		"error unmarshalling": {
+			curr:        `	!!1?Mary:`,
+			wantedError: errors.New("unmarshal current template: yaml: found character that cannot start any token"),
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			got, err := Parse([]byte(tc.curr), []byte(tc.old))
 			if tc.wantedError != nil {
-				require.Equal(t, tc.wantedError, err)
+				require.EqualError(t, err, tc.wantedError.Error())
 			}
 			if tc.wanted != nil {
+				require.NoError(t, err)
 				require.True(t, equalTree(got, tc.wanted(), t))
 			}
 		})

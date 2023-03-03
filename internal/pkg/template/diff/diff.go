@@ -68,7 +68,7 @@ func parse(curr, old *yaml.Node, key string) (*Node, error) {
 		return nil, fmt.Errorf("unknown combination of node kinds: %v, %v", curr.Kind, old.Kind)
 	}
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("parse YAML content with key %s: %w", key, err)
 	}
 	if len(children) == 0 {
 		return nil, nil
