@@ -264,11 +264,6 @@ type importableValue interface {
 	Value() string
 }
 
-// IsHTTPS returns true if the target container's port is 443.
-func (lr ALBListenerRule) IsHTTPS() bool {
-	return lr.TargetPort == "443"
-}
-
 // Variable represents the value of an environment variable.
 type Variable importableValue
 
@@ -282,8 +277,8 @@ func ImportedVariable(name string) Variable {
 func (cfg *NetworkLoadBalancer) Aliases() []string {
 	var uniqueAliases []string
 	seen := make(map[string]bool)
-	for _, rule := range cfg.Listener {
-		for _, entry := range rule.Aliases {
+	for _, listener := range cfg.Listener {
+		for _, entry := range listener.Aliases {
 			if _, value := seen[entry]; !value {
 				uniqueAliases = append(uniqueAliases, entry)
 				seen[entry] = true
@@ -845,9 +840,9 @@ func (lr ALBListenerRule) HealthCheckProtocol() string {
 	switch {
 	case lr.HTTPHealthCheck.Port == "443":
 		return "HTTPS"
-	case lr.IsHTTPS() && lr.HTTPHealthCheck.Port == "":
+	case lr.TargetPort == "443" && lr.HTTPHealthCheck.Port == "":
 		return "HTTPS"
-	case lr.IsHTTPS() && lr.HTTPHealthCheck.Port != "443":
+	case lr.TargetPort == "443" && lr.HTTPHealthCheck.Port != "443":
 		// for backwards compatability, only set HTTP if target
 		// container is https but the specified health check port is not
 		return "HTTP"

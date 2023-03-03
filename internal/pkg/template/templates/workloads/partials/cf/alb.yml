@@ -28,7 +28,7 @@ TargetGroup{{ if ne $i 0 }}{{ $i }}{{ end }}:
     HealthCheckProtocol: {{$rule.HealthCheckProtocol}}
     {{- end}}
     Port: {{$rule.TargetPort}}
-    {{- if $rule.IsHTTPS }}
+    {{- if eq $rule.TargetPort "443" }}
     Protocol: HTTPS
     {{- else }}
     Protocol: HTTP

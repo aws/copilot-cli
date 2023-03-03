@@ -266,12 +266,6 @@ func TestRuntimePlatformOpts_IsDefault(t *testing.T) {
 	}
 }
 
-func TestHTTPTargetContainer_IsHTTPS(t *testing.T) {
-	require.True(t, ALBListenerRule{TargetPort: "443"}.IsHTTPS())
-	require.False(t, ALBListenerRule{}.IsHTTPS())
-	require.False(t, ALBListenerRule{TargetPort: "8080"}.IsHTTPS())
-}
-
 func TestPlainSSMOrSecretARN_RequiresSub(t *testing.T) {
 	require.False(t, plainSSMOrSecretARN{}.RequiresSub(), "plain SSM Parameter Store or secret ARNs do not require !Sub")
 }
@@ -312,7 +306,7 @@ func TestSecretsManagerName_ValueFrom(t *testing.T) {
 	require.Equal(t, "secret:aes128-1a2b3c", SecretFromSecretsManager("aes128-1a2b3c").ValueFrom())
 }
 
-func TestWorkload_HealthCheckProtocol(t *testing.T) {
+func TestALBListenerRule_HealthCheckProtocol(t *testing.T) {
 	testCases := map[string]struct {
 		opts     ALBListenerRule
 		expected string
@@ -495,6 +489,63 @@ func TestApplicationLoadBalancer_Aliases(t *testing.T) {
 				},
 			},
 			expected: []string{"testAlias1", "testAlias2", "testAlias3"},
+		},
+		"LBWS having no aliases": {
+			opts: ALBListener{
+				Rules: []ALBListenerRule{
+					{
+						Aliases: []string{},
+					},
+					{
+						Aliases: []string{},
+					},
+				},
+			},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tc.expected, tc.opts.Aliases())
+		})
+	}
+}
+
+func TestNetworkLoadBalancer_Aliases(t *testing.T) {
+	tests := map[string]struct {
+		opts     NetworkLoadBalancer
+		expected []string
+	}{
+		"LBWS with NLB having multiple listener rules with multiple aliases each": {
+			opts: NetworkLoadBalancer{
+				Listener: []NetworkLoadBalancerListener{
+					{
+						Aliases: []string{
+							"testAlias1",
+							"testAlias2",
+						},
+					},
+					{
+						Aliases: []string{
+							"testAlias1",
+							"testAlias3",
+						},
+					},
+				},
+			},
+			expected: []string{"testAlias1", "testAlias2", "testAlias3"},
+		},
+		"LBWS with NLB having no aliases": {
+			opts: NetworkLoadBalancer{
+				Listener: []NetworkLoadBalancerListener{
+					{
+						Aliases: []string{},
+					},
+					{
+						Aliases: []string{},
+					},
+				},
+			},
 		},
 	}
 
