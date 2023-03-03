@@ -18,7 +18,18 @@ import (
 )
 
 func Test_convertSidecar(t *testing.T) {
-	mockImage := aws.String("mockImage")
+	mockRunTimeConfig := RuntimeConfig{
+		PushedImages: map[string]ECRImage{
+			"foo": {
+				RepoURL:           "535307839156.dkr.ecr.us-west-2.amazonaws.com/web",
+				ImageTag:          "v1.0",
+				Digest:            "abcdef",
+				MainContainerName: "mockMainContainer",
+				ContainerName:     "foo",
+			},
+		},
+	}
+	mockImage := aws.String(fmt.Sprintf("%s:%s-%s", mockRunTimeConfig.PushedImages["foo"].RepoURL, "foo", mockRunTimeConfig.PushedImages["foo"].ImageTag))
 	mockMap := map[string]template.Variable{"foo": template.PlainVariable("")}
 	mockSecrets := map[string]template.Secret{"foo": template.SecretFromPlainSSMOrARN("")}
 	mockCredsParam := aws.String("mockCredsParam")
@@ -274,8 +285,14 @@ func Test_convertSidecar(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			sidecar := map[string]*manifest.SidecarConfig{
 				"foo": {
-					CredsParam:    mockCredsParam,
-					Image:         manifest.Union[*string, manifest.ImageLocationOrBuild]{Basic: mockImage},
+					CredsParam: mockCredsParam,
+					Image: manifest.Union[*string, manifest.ImageLocationOrBuild]{
+						Advanced: manifest.ImageLocationOrBuild{
+							Build: manifest.BuildArgsOrString{
+								BuildString: aws.String("./Dockerfile"),
+							},
+						},
+					},
 					Secrets:       map[string]manifest.Secret{"foo": {}},
 					Variables:     map[string]manifest.Variable{"foo": {}},
 					Essential:     aws.Bool(tc.inEssential),
@@ -285,7 +302,7 @@ func Test_convertSidecar(t *testing.T) {
 					HealthCheck:   tc.inHealthCheck,
 				},
 			}
-			got, err := convertSidecars(sidecar, mockExposedPorts)
+			got, err := convertSidecars(sidecar, mockExposedPorts, mockRunTimeConfig)
 
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())

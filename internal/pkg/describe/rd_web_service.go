@@ -132,7 +132,7 @@ func (d *RDWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 			Tracing:     formatTracingConfiguration(service.Observability.TraceConfiguration),
 		})
 		if d.enableResources {
-			stackResources, err := describer.ServiceStackResources()
+			stackResources, err := describer.StackResources()
 			if err != nil {
 				return nil, fmt.Errorf("retrieve service resources: %w", err)
 			}

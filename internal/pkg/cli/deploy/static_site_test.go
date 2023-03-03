@@ -55,6 +55,7 @@ func TestStaticSiteDeployer_UploadArtifacts(t *testing.T) {
 						customResources: func(fs template.Reader) ([]*customresource.CustomResource, error) {
 							return nil, nil
 						},
+						mft: &mockWorkloadMft{},
 					},
 				},
 				staticSiteMft: &manifest.StaticSite{
