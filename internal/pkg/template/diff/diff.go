@@ -96,7 +96,7 @@ func parseMap(curr, old *yaml.Node) (map[string]*Node, error) {
 		return nil, err
 	}
 	children := make(map[string]*Node)
-	for k, _ := range unionOfKeys(currMap, oldMap) {
+	for k := range unionOfKeys(currMap, oldMap) {
 		var currV, oldV *yaml.Node
 		if v, ok := oldMap[k]; ok {
 			oldV = &v
@@ -117,10 +117,10 @@ func parseMap(curr, old *yaml.Node) (map[string]*Node, error) {
 
 func unionOfKeys[T any](a, b map[string]T) map[string]struct{} {
 	exists, keys := struct{}{}, make(map[string]struct{})
-	for k, _ := range a {
+	for k := range a {
 		keys[k] = exists
 	}
-	for k, _ := range b {
+	for k := range b {
 		keys[k] = exists
 	}
 	return keys
