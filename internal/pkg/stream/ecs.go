@@ -188,7 +188,7 @@ func (s *ECSDeploymentStreamer) Fetch() (next time.Time, done bool, err error) {
 		LatestFailureEvents: failureMsgs,
 		Alarms:              alarms,
 	})
-	return nextFetchDate(s.clock, s.rand, s.ecsRetries), done, nil
+	return nextFetchDate(s.clock, s.rand, 0), done, nil
 }
 
 // Notify flushes all new events to the streamer's subscribers.
