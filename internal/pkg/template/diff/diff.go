@@ -8,7 +8,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Node represents a difference between two YAML documents.
+// Node represents a segment on a difference between two YAML documents.
 type Node struct {
 	key      string
 	children map[string]*Node // A list of non-empty pointers to the children nodes.
