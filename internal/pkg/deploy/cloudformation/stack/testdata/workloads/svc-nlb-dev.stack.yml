@@ -36,11 +36,6 @@ Parameters:
     Type: String
   TargetPort:
     Type: Number
-  NLBAliases:
-    Type: String
-    Default: ""
-  NLBPort:
-    Type: String
   HTTPSEnabled:
     Type: String
     AllowedValues: [true, false]
