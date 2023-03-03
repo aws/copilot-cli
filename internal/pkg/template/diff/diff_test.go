@@ -54,7 +54,7 @@ func equalTree(a, b *Node, t *testing.T) bool {
 	if len(a.children) == 0 {
 		return equalLeaves(a, b, t)
 	}
-	for k, _ := range a.children {
+	for k := range a.children {
 		if equal := equalTree(a.children[k], b.children[k], t); !equal {
 			return false
 		}
