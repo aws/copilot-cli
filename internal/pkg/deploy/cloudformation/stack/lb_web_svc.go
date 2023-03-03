@@ -102,7 +102,8 @@ func NewLoadBalancedWebService(conf LoadBalancedWebServiceConfig,
 				parser:             fs,
 				addons:             conf.Addons,
 			},
-			logRetention:        conf.Manifest.Logging.Retention,
+			logging:             conf.Manifest.Logging,
+			sidecars:            conf.Manifest.Sidecars,
 			tc:                  conf.Manifest.TaskConfig,
 			taskDefOverrideFunc: override.CloudFormationTemplate,
 		},
@@ -320,10 +321,6 @@ func (s *LoadBalancedWebService) Parameters() ([]*cloudformation.Parameter, erro
 		{
 			ParameterKey:   aws.String(WorkloadTargetPortParamKey),
 			ParameterValue: aws.String(targetPort),
-		},
-		{
-			ParameterKey:   aws.String(WorkloadEnvFileARNParamKey),
-			ParameterValue: aws.String(s.rc.EnvFileARN),
 		},
 	}...)
 
