@@ -13,8 +13,8 @@ type Node struct {
 	key      string
 	children map[string]*Node // A list of non-empty pointers to the children nodes.
 
-	oldValue *yaml.Node // Only populated for a leaf node.
-	newValue *yaml.Node // Only populated for a leaf node.
+	oldValue *yaml.Node // Only populated for a leaf node (i.e. that has no child node).
+	newValue *yaml.Node // Only populated for a leaf node (i.e. that has no child node).
 }
 
 // Parse constructs a diff tree that represent the differences between two YAML documents.
