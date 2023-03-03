@@ -195,9 +195,11 @@ func (s *LoadBalancedWebService) BuildArgs(contextDir string) (map[string]*Docke
 	return buildArgs(contextDir, buildArgsPerContainer, s.Sidecars)
 }
 
-// EnvFile returns the location of the env file against the ws root directory.
-func (s *LoadBalancedWebService) EnvFile() string {
-	return aws.StringValue(s.TaskConfig.EnvFile)
+// EnvFiles returns the locations of all env files against the ws root directory.
+// This method returns a map[string]string where the keys are container names
+// and the values are either env file paths or empty strings.
+func (s *LoadBalancedWebService) EnvFiles() map[string]string {
+	return envFiles(s.Name, s.TaskConfig, s.Logging, s.Sidecars)
 }
 
 func (s *LoadBalancedWebService) subnets() *SubnetListOrArgs {

@@ -192,7 +192,7 @@ func (o *deployJobOpts) Execute() error {
 	if _, err = deployer.DeployWorkload(&deploy.DeployWorkloadInput{
 		StackRuntimeConfiguration: deploy.StackRuntimeConfiguration{
 			ImageDigests:       uploadOut.ImageDigests,
-			EnvFileARN:         uploadOut.EnvFileARN,
+			EnvFileARNs:        uploadOut.EnvFileARNs,
 			AddonsURL:          uploadOut.AddonsURL,
 			RootUserARN:        o.rootUserARN,
 			Tags:               tags.Merge(o.targetApp.Tags, o.resourceTags),

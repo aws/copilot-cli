@@ -150,9 +150,11 @@ func (j *ScheduledJob) BuildArgs(contextDir string) (map[string]*DockerBuildArgs
 	return buildArgs(contextDir, buildArgsPerContainer, j.Sidecars)
 }
 
-// EnvFile returns the location of the env file against the ws root directory.
-func (j *ScheduledJob) EnvFile() string {
-	return aws.StringValue(j.TaskConfig.EnvFile)
+// EnvFiles returns the locations of all env files against the ws root directory.
+// This method returns a map[string]string where the keys are container names
+// and the values are either env file paths or empty strings.
+func (j *ScheduledJob) EnvFiles() map[string]string {
+	return envFiles(j.Name, j.TaskConfig, j.Logging, j.Sidecars)
 }
 
 // newDefaultScheduledJob returns an empty ScheduledJob with only the default values set.

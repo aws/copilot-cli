@@ -32,11 +32,14 @@ const (
 
 // Parameter logical IDs for workloads on ECS.
 const (
-	WorkloadTaskCPUParamKey      = "TaskCPU"
-	WorkloadTaskMemoryParamKey   = "TaskMemory"
-	WorkloadTaskCountParamKey    = "TaskCount"
-	WorkloadLogRetentionParamKey = "LogRetention"
-	WorkloadEnvFileARNParamKey   = "EnvFileARN"
+	WorkloadTaskCPUParamKey           = "TaskCPU"
+	WorkloadTaskMemoryParamKey        = "TaskMemory"
+	WorkloadTaskCountParamKey         = "TaskCount"
+	WorkloadLogRetentionParamKey      = "LogRetention"
+	WorkloadEnvFileARNParamKey        = "EnvFileARN"
+	WorkloadLoggingEnvFileARNParamKey = "LoggingEnvFileARN"
+
+	FmtSidecarEnvFileARNParamKey = "%sEnvFileARN"
 )
 
 // Parameter logical IDs for workloads on ECS with a Load Balancer.
@@ -71,7 +74,7 @@ const (
 type RuntimeConfig struct {
 	PushedImages       map[string]ECRImage // Optional. Image location in an ECR repository.
 	AddonsTemplateURL  string              // Optional. S3 object URL for the addons template.
-	EnvFileARN         string              // Optional. S3 object ARN for the env file.
+	EnvFileARNs        map[string]string   // Optional. S3 object ARNs for any env files. Map keys are container names.
 	AdditionalTags     map[string]string   // AdditionalTags are labels applied to resources in the workload stack.
 	CustomResourcesURL map[string]string   // Mapping of Custom Resource Function Name to the S3 URL where the function zip file is stored.
 
@@ -320,8 +323,9 @@ func envVarOutputNames(outputs []addon.Output) []string {
 
 type ecsWkld struct {
 	*wkld
-	tc           manifest.TaskConfig
-	logRetention *int
+	tc       manifest.TaskConfig
+	logging  manifest.Logging
+	sidecars map[string]*manifest.SidecarConfig
 
 	// Overriden in unit tests.
 	taskDefOverrideFunc func(overrideRules []override.Rule, origTemp []byte) ([]byte, error)
@@ -333,15 +337,16 @@ func (w *ecsWkld) Parameters() ([]*cloudformation.Parameter, error) {
 	if err != nil {
 		return nil, err
 	}
+	envFileParameters := append(wkldParameters, w.envFileParams()...)
 	desiredCount, err := w.tc.Count.Desired()
 	if err != nil {
 		return nil, err
 	}
 	logRetention := ecsWkldLogRetentionDefault
-	if w.logRetention != nil {
-		logRetention = aws.IntValue(w.logRetention)
+	if w.logging.Retention != nil {
+		logRetention = aws.IntValue(w.logging.Retention)
 	}
-	return append(wkldParameters, []*cloudformation.Parameter{
+	return append(envFileParameters, []*cloudformation.Parameter{
 		{
 			ParameterKey:   aws.String(WorkloadTaskCPUParamKey),
 			ParameterValue: aws.String(strconv.Itoa(aws.IntValue(w.tc.CPU))),
@@ -359,6 +364,33 @@ func (w *ecsWkld) Parameters() ([]*cloudformation.Parameter, error) {
 			ParameterValue: aws.String(strconv.Itoa(logRetention)),
 		},
 	}...), nil
+}
+
+// envFileParams decides which containers have Environment files and gets the appropriate Environment File ARN.
+// This will always at least contain the `EnvFileARN` parameter for the main workload container.
+func (w *ecsWkld) envFileParams() []*cloudformation.Parameter {
+	params := []*cloudformation.Parameter{
+		{
+			ParameterKey:   aws.String(WorkloadEnvFileARNParamKey),
+			ParameterValue: aws.String(w.rc.EnvFileARNs[w.name]),
+		},
+	}
+	// Decide whether to inject a Log container env file. If there is log configuration
+	// in the manifest, we should inject either an empty string or the configured env file arn,
+	// if it exists.
+	if !w.logging.IsEmpty() {
+		params = append(params, &cloudformation.Parameter{
+			ParameterKey:   aws.String(WorkloadLoggingEnvFileARNParamKey),
+			ParameterValue: aws.String(w.rc.EnvFileARNs[manifest.FirelensContainerName]), // String maps return "" if a key doesn't exist.
+		})
+	}
+	for containerName := range w.sidecars {
+		params = append(params, &cloudformation.Parameter{
+			ParameterKey:   aws.String(fmt.Sprintf(FmtSidecarEnvFileARNParamKey, containerName)),
+			ParameterValue: aws.String(w.rc.EnvFileARNs[containerName]),
+		})
+	}
+	return params
 }
 
 type appRunnerWkld struct {

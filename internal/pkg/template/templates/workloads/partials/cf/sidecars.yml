@@ -6,6 +6,12 @@
 {{if .LogConfig.Variables}}
 {{include "variables" .LogConfig | indent 2 }}
 {{end}}
+  EnvironmentFiles:
+    - !If
+      - HasLoggingEnvFile
+      - Type: "s3"
+        Value: !Ref LoggingEnvFileARN
+      - !Ref "AWS::NoValue"
 {{- if .LogConfig.Secrets}}
   Secrets:
   {{- range $name, $secret := .LogConfig.Secrets}}
@@ -72,6 +78,12 @@
 {{/* "$" denotes the parent WorkloadOpts, whereas "." is the individual container. */}}
 {{include "envvars-common" $ | indent 2}}
 {{include "envvars-container" . | indent 2}}
+  EnvironmentFiles:
+    - !If
+      - Has{{$sidecar.Name}}EnvFile
+      - Type: "s3"
+        Value: !Ref {{$sidecar.Name}}EnvFileARN
+      - !Ref "AWS::NoValue"
 {{- if $sidecar.Secrets}}
   Secrets:
   {{- range $name, $secret := $sidecar.Secrets}}
