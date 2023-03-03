@@ -303,5 +303,5 @@ type errEmptyImageTags struct {
 }
 
 func (e *errEmptyImageTags) Error() string {
-	return fmt.Sprintf("tags to reference an image should not be empty for building and pushing into ECR repository %s", e.uri)
+	return fmt.Sprintf("tags to reference an image should not be empty for building and pushing into the ECR repository %s", e.uri)
 }
