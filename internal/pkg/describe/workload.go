@@ -91,13 +91,14 @@ func (d *workloadStackDescriber) StackResources() ([]*stack.Resource, error) {
 		return nil, err
 	}
 	var resources []*stack.Resource
-	ignoredResources := map[string]bool{
-		rulePriorityFunction: true,
-		waitCondition:        true,
-		waitConditionHandle:  true,
+	ignored := struct{}{}
+	ignoredResources := map[string]struct{}{
+		rulePriorityFunction: ignored,
+		waitCondition:        ignored,
+		waitConditionHandle:  ignored,
 	}
 	for _, svcResource := range svcResources {
-		if !ignoredResources[svcResource.Type] {
+		if _, ok := ignoredResources[svcResource.Type]; !ok {
 			resources = append(resources, svcResource)
 		}
 	}
