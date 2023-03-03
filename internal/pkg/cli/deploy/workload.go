@@ -37,7 +37,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
-	"github.com/google/uuid"
 	"github.com/spf13/afero"
 )
 
@@ -182,7 +181,6 @@ type ContainerImageIdentifier struct {
 	Digest            string
 	CustomTag         string
 	GitShortCommitTag string
-	uuidTag           string
 }
 
 // newWorkloadDeployer is the constructor for workloadDeployer.
@@ -239,11 +237,6 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unmarshal the manifest used to deploy environment %s: %w", in.Env.Name, err)
 	}
-	id, err := uuid.NewRandom()
-	if err != nil {
-		return nil, fmt.Errorf("generate a random UUID to tag workload images: %w", err)
-	}
-	in.Image.uuidTag = id.String()
 
 	return &workloadDeployer{
 		name:               in.Name,
@@ -322,17 +315,10 @@ func (d *workloadDeployer) forceDeploy(in *forceDeployInput) error {
 	return nil
 }
 
-// ReferenceTag returns the tag that should be used to reference the image.
-func (img ContainerImageIdentifier) ReferenceTag() string {
-	if tag := img.customOrGitTag(); tag != "" {
-		return tag
-	}
-	return img.uuidTag
-}
-
-// userOrGitTag returns if the user provided their own tag.
+// Tag returns the tag that should be used to reference the image.
+// If the user provided their own tag then just use that
 // Otherwise, return git short commit id.
-func (img ContainerImageIdentifier) customOrGitTag() string {
+func (img ContainerImageIdentifier) Tag() string {
 	if img.CustomTag != "" {
 		return img.CustomTag
 	}
@@ -340,17 +326,13 @@ func (img ContainerImageIdentifier) customOrGitTag() string {
 }
 
 func (d *workloadDeployer) uploadContainerImages(imgBuilderPusher imageBuilderPusher) (map[string]ContainerImageIdentifier, error) {
-	required, err := manifest.DockerfileBuildRequired(d.mft)
-	if err != nil {
-		return nil, err
-	}
-	if !required {
-		return nil, nil
-	}
 	// If it is built from local Dockerfile, build and push to the ECR repo.
 	buildArgsPerContainer, err := buildArgsPerContainer(d.name, d.workspacePath, d.image, d.mft)
 	if err != nil {
 		return nil, err
+	}
+	if len(buildArgsPerContainer) == 0 {
+		return nil, nil
 	}
 	images := make(map[string]ContainerImageIdentifier, len(buildArgsPerContainer))
 	for name, buildArgs := range buildArgsPerContainer {
@@ -362,7 +344,6 @@ func (d *workloadDeployer) uploadContainerImages(imgBuilderPusher imageBuilderPu
 			Digest:            digest,
 			CustomTag:         d.image.CustomTag,
 			GitShortCommitTag: d.image.GitShortCommitTag,
-			uuidTag:           d.image.uuidTag,
 		}
 	}
 	return images, nil
@@ -370,24 +351,35 @@ func (d *workloadDeployer) uploadContainerImages(imgBuilderPusher imageBuilderPu
 
 func buildArgsPerContainer(name, workspacePath string, img ContainerImageIdentifier, unmarshaledManifest interface{}) (map[string]*dockerengine.BuildArguments, error) {
 	type dfArgs interface {
-		BuildArgs(rootDirectory string) map[string]*manifest.DockerBuildArgs
+		BuildArgs(rootDirectory string) (map[string]*manifest.DockerBuildArgs, error)
 		ContainerPlatform() string
 	}
 	mf, ok := unmarshaledManifest.(dfArgs)
 	if !ok {
 		return nil, fmt.Errorf("%s does not have required methods BuildArgs() and ContainerPlatform()", name)
 	}
-	var tags []string
-	tags = append(tags, imageTagLatest, img.ReferenceTag())
-	args := mf.BuildArgs(workspacePath)
-	dArgs := make(map[string]*dockerengine.BuildArguments, len(args))
-	for k, v := range args {
-		dArgs[k] = &dockerengine.BuildArguments{
-			Dockerfile: aws.StringValue(v.Dockerfile),
-			Context:    aws.StringValue(v.Context),
-			Args:       v.Args,
-			CacheFrom:  v.CacheFrom,
-			Target:     aws.StringValue(v.Target),
+	argsPerContainer, err := mf.BuildArgs(workspacePath)
+	if err != nil {
+		return nil, fmt.Errorf("check if manifest requires building from local Dockerfile: %w", err)
+	}
+	dArgs := make(map[string]*dockerengine.BuildArguments, len(argsPerContainer))
+	for container, buildArgs := range argsPerContainer {
+		tags := []string{imageTagLatest}
+		if img.Tag() != "" {
+			tags = append(tags, img.Tag())
+		}
+		if container != name {
+			tags = []string{fmt.Sprintf("%s-%s", container, imageTagLatest)}
+			if img.GitShortCommitTag != "" {
+				tags = append(tags, fmt.Sprintf("%s-%s", container, img.GitShortCommitTag))
+			}
+		}
+		dArgs[container] = &dockerengine.BuildArguments{
+			Dockerfile: aws.StringValue(buildArgs.Dockerfile),
+			Context:    aws.StringValue(buildArgs.Context),
+			Args:       buildArgs.Args,
+			CacheFrom:  buildArgs.CacheFrom,
+			Target:     aws.StringValue(buildArgs.Target),
 			Platform:   mf.ContainerPlatform(),
 			Tags:       tags,
 		}
@@ -593,17 +585,26 @@ func (d *workloadDeployer) runtimeConfig(in *StackRuntimeConfiguration) (*stack.
 	}
 	images := make(map[string]stack.ECRImage, len(in.ImageDigests))
 	for container, img := range in.ImageDigests {
+		// Currently we do not tag sidecar container images with custom tag provided by the user.
+		// This is the reason for having different ImageTag for main and sidecar container images
+		// that is needed to create CloudFormation stack.
+		imageTag := img.Tag()
+		if container != d.name {
+			imageTag = img.GitShortCommitTag
+		}
 		images[container] = stack.ECRImage{
-			RepoURL:  d.resources.RepositoryURLs[d.name],
-			ImageTag: img.customOrGitTag(),
-			Digest:   img.Digest,
+			RepoURL:           d.resources.RepositoryURLs[d.name],
+			ImageTag:          imageTag,
+			Digest:            img.Digest,
+			MainContainerName: d.name,
+			ContainerName:     container,
 		}
 	}
 	return &stack.RuntimeConfig{
 		AddonsTemplateURL:        in.AddonsURL,
 		EnvFileARNs:              in.EnvFileARNs,
 		AdditionalTags:           in.Tags,
-		Images:                   images,
+		PushedImages:             images,
 		ServiceDiscoveryEndpoint: endpoint,
 		AccountID:                d.env.AccountID,
 		Region:                   d.env.Region,

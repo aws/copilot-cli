@@ -144,7 +144,7 @@ func (j *ScheduledJob) Template() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("parse exposed ports in service manifest %s: %w", j.name, err)
 	}
-	sidecars, err := convertSidecars(j.manifest.Sidecars, exposedPorts.PortsForContainer)
+	sidecars, err := convertSidecars(j.manifest.Sidecars, exposedPorts.PortsForContainer, j.rc)
 	if err != nil {
 		return "", fmt.Errorf("convert the sidecar configuration for job %s: %w", j.name, err)
 	}

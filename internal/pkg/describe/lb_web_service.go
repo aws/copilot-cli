@@ -130,7 +130,7 @@ func (d *LBWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 	svcConnects := make(serviceConnects)
 	var envVars []*containerEnvVar
 	var secrets []*secret
-	var alarms  []string
+	var alarms []string
 	for _, env := range environments {
 		svcDescr, err := d.initECSServiceDescribers(env)
 		if err != nil {
@@ -195,7 +195,7 @@ func (d *LBWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 			if err != nil {
 				return nil, err
 			}
-			stackResources, err := svcDescr.ServiceStackResources()
+			stackResources, err := svcDescr.StackResources()
 			if err != nil {
 				return nil, fmt.Errorf("retrieve service resources: %w", err)
 			}

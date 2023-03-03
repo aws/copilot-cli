@@ -428,3 +428,12 @@ func envFiles(name *string, tc TaskConfig, lc Logging, sc map[string]*SidecarCon
 	envFiles[FirelensContainerName] = aws.StringValue(lc.EnvFile)
 	return envFiles
 }
+
+func buildArgs(contextDir string, buildArgs map[string]*DockerBuildArgs, sc map[string]*SidecarConfig) (map[string]*DockerBuildArgs, error) {
+	for name, config := range sc {
+		if _, ok := config.ImageURI(); !ok {
+			buildArgs[name] = config.Image.Advanced.BuildConfig(contextDir)
+		}
+	}
+	return buildArgs, nil
+}

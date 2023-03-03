@@ -72,7 +72,7 @@ const (
 // RuntimeConfig represents configuration that's defined outside of the manifest file
 // that is needed to create a CloudFormation stack.
 type RuntimeConfig struct {
-	Images             map[string]ECRImage // Optional. Image location in an ECR repository.
+	PushedImages       map[string]ECRImage // Optional. Image location in an ECR repository.
 	AddonsTemplateURL  string              // Optional. S3 object URL for the addons template.
 	EnvFileARNs        map[string]string   // Optional. S3 object ARNs for any env files. Map keys are container names.
 	AdditionalTags     map[string]string   // AdditionalTags are labels applied to resources in the workload stack.
@@ -98,23 +98,34 @@ func (cfg *RuntimeConfig) loadCustomResourceURLs(bucket string, crs []uploadable
 // ECRImage represents configuration about the pushed ECR image that is needed to
 // create a CloudFormation stack.
 type ECRImage struct {
-	RepoURL  string // RepoURL is the ECR repository URL the container image should be pushed to.
-	ImageTag string // Tag is the container image's unique tag.
-	Digest   string // The image digest.
+	RepoURL           string // RepoURL is the ECR repository URL the container image should be pushed to.
+	ImageTag          string // Tag is the container image's unique tag.
+	Digest            string // The image digest.
+	ContainerName     string // The container name.
+	MainContainerName string // The workload's container name.
 }
 
-// GetLocation returns the ECR image URI.
+// URI returns the ECR image URI.
 // If a tag is provided by the user or discovered from git then prioritize referring to the image via the tag.
 // Otherwise, each image after a push to ECR will get a digest and we refer to the image via the digest.
 // Finally, if no digest or tag is present, this occurs with the "package" commands, we default to the "latest" tag.
-func (i ECRImage) GetLocation() string {
+func (i ECRImage) URI() string {
+	if i.ContainerName == i.MainContainerName {
+		if i.ImageTag != "" {
+			return fmt.Sprintf("%s:%s", i.RepoURL, i.ImageTag)
+		}
+		if i.Digest != "" {
+			return fmt.Sprintf("%s@%s", i.RepoURL, i.Digest)
+		}
+		return fmt.Sprintf("%s:%s", i.RepoURL, "latest")
+	}
 	if i.ImageTag != "" {
-		return fmt.Sprintf("%s:%s", i.RepoURL, i.ImageTag)
+		return fmt.Sprintf("%s:%s-%s", i.RepoURL, i.ContainerName, i.ImageTag)
 	}
 	if i.Digest != "" {
 		return fmt.Sprintf("%s@%s", i.RepoURL, i.Digest)
 	}
-	return fmt.Sprintf("%s:%s", i.RepoURL, "latest")
+	return fmt.Sprintf("%s:%s-%s", i.RepoURL, i.ContainerName, "latest")
 }
 
 // NestedStackConfigurer configures a nested stack that deploys addons.
@@ -151,7 +162,7 @@ type wkld struct {
 
 // StackName returns the name of the stack.
 func (w *wkld) StackName() string {
-	return NameForService(w.app, w.env, w.name)
+	return NameForWorkload(w.app, w.env, w.name)
 }
 
 // Parameters returns the list of CloudFormation parameters used by the template.
@@ -160,8 +171,8 @@ func (w *wkld) Parameters() ([]*cloudformation.Parameter, error) {
 	if w.image != nil {
 		img = w.image.GetLocation()
 	}
-	if w.rc.Images != nil {
-		img = w.rc.Images[w.name].GetLocation()
+	if w.rc.PushedImages != nil {
+		img = w.rc.PushedImages[w.name].URI()
 	}
 	return []*cloudformation.Parameter{
 		{
@@ -399,8 +410,8 @@ func (w *appRunnerWkld) Parameters() ([]*cloudformation.Parameter, error) {
 	if w.image != nil {
 		img = w.image.GetLocation()
 	}
-	if w.rc.Images != nil {
-		img = w.rc.Images[w.name].GetLocation()
+	if w.rc.PushedImages != nil {
+		img = w.rc.PushedImages[w.name].URI()
 	}
 
 	imageRepositoryType, err := apprunner.DetermineImageRepositoryType(img)

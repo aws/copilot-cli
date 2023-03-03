@@ -240,7 +240,7 @@ Outputs:
 			},
 			Manifest: mft,
 			RuntimeConfig: RuntimeConfig{
-				Images: map[string]ECRImage{
+				PushedImages: map[string]ECRImage{
 					"test": {
 						RepoURL:  testImageRepoURL,
 						ImageTag: testImageTag,
@@ -958,7 +958,7 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 						env:  testEnvName,
 						app:  testAppName,
 						rc: RuntimeConfig{
-							Images: map[string]ECRImage{
+							PushedImages: map[string]ECRImage{
 								aws.StringValue(testManifest.Name): {
 									RepoURL:  testImageRepoURL,
 									ImageTag: testImageTag,
@@ -1003,7 +1003,7 @@ func TestLoadBalancedWebService_SerializedParameters(t *testing.T) {
 				env:  testEnvName,
 				app:  testAppName,
 				rc: RuntimeConfig{
-					Images: map[string]ECRImage{
+					PushedImages: map[string]ECRImage{
 						"frontend": {
 							RepoURL:  testImageRepoURL,
 							ImageTag: testImageTag,
@@ -1068,7 +1068,7 @@ func TestLoadBalancedWebService_Tags(t *testing.T) {
 				env:  testEnvName,
 				app:  testAppName,
 				rc: RuntimeConfig{
-					Images: map[string]ECRImage{
+					PushedImages: map[string]ECRImage{
 						"frontend": {
 							RepoURL:  testImageRepoURL,
 							ImageTag: testImageTag,

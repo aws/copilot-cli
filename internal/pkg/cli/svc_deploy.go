@@ -249,7 +249,7 @@ func (o *deploySvcOpts) Execute() error {
 	})
 	if err != nil {
 		if o.disableRollback {
-			stackName := stack.NameForService(o.targetApp.Name, o.targetEnv.Name, o.name)
+			stackName := stack.NameForWorkload(o.targetApp.Name, o.targetEnv.Name, o.name)
 			rollbackCmd := fmt.Sprintf("aws cloudformation rollback-stack --stack-name %s --role-arn %s", stackName, o.targetEnv.ExecutionRoleARN)
 			log.Infof(`It seems like you have disabled automatic stack rollback for this deployment. To debug, you can:
 * Run %s to inspect the service log.
