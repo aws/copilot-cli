@@ -39,6 +39,8 @@ Parameters:
     AllowedValues: [true, false]
   RulePath:
     Type: String
+  RulePathSlice:
+    Type: CommaDelimitedList
   Stickiness:
     Type: String
     Default: false
@@ -407,6 +409,10 @@ Resources:
           Rollback: true
         MinimumHealthyPercent: 100
         MaximumPercent: 200
+        Alarms:
+          AlarmNames: []
+          Enable: false
+          Rollback: true
       PropagateTags: SERVICE
       EnableExecuteCommand: true
       LaunchType: FARGATE
@@ -514,7 +520,7 @@ Resources:
     Type: Custom::RulePriorityFunction
     Properties:
       ServiceToken: !GetAtt RulePriorityFunction.Arn
-      RulePath: !Ref RulePath
+      RulePath: !Ref RulePathSlice
       ListenerArn: !GetAtt EnvControllerAction.InternalHTTPListenerArn
   HTTPListenerRule:
     Metadata:
