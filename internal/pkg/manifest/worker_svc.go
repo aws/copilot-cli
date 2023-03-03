@@ -271,16 +271,18 @@ func (s *WorkerService) MarshalBinary() ([]byte, error) {
 	return content.Bytes(), nil
 }
 
-// BuildRequired returns if the service requires building from the local Dockerfile.
-func (s *WorkerService) BuildRequired() (bool, error) {
-	return requiresBuild(s.ImageConfig.Image)
-}
-
 // BuildArgs returns a docker.BuildArguments object for the service given a context directory
-func (s *WorkerService) BuildArgs(contextDir string) map[string]*DockerBuildArgs {
-	buildArgs := make(map[string]*DockerBuildArgs, len(s.Sidecars)+1)
-	buildArgs[aws.StringValue(s.Name)] = s.ImageConfig.Image.BuildConfig(contextDir)
-	return buildArgs
+func (s *WorkerService) BuildArgs(contextDir string) (map[string]*DockerBuildArgs, error) {
+	required, err := requiresBuild(s.ImageConfig.Image)
+	if err != nil {
+		return nil, err
+	}
+	// Creating an map to store buildArgs of all sidecar images and main container image.
+	buildArgsPerContainer := make(map[string]*DockerBuildArgs, len(s.Sidecars)+1)
+	if required {
+		buildArgsPerContainer[aws.StringValue(s.Name)] = s.ImageConfig.Image.BuildConfig(contextDir)
+	}
+	return buildArgs(contextDir, buildArgsPerContainer, s.Sidecars)
 }
 
 // EnvFile returns the location of the env file against the ws root directory.

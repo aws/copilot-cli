@@ -56,7 +56,7 @@ func TestAutoscalingIntegration_Validate(t *testing.T) {
 		},
 		Manifest: v,
 		RuntimeConfig: stack.RuntimeConfig{
-			Images: map[string]stack.ECRImage{
+			PushedImages: map[string]stack.ECRImage{
 				aws.StringValue(v.Name): {
 					RepoURL:  imageURL,
 					ImageTag: imageTag,

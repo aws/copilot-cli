@@ -137,15 +137,17 @@ func (j *ScheduledJob) Publish() []Topic {
 }
 
 // BuildArgs returns a docker.BuildArguments object for the job given a context directory.
-func (j *ScheduledJob) BuildArgs(contextDir string) map[string]*DockerBuildArgs {
-	buildArgs := make(map[string]*DockerBuildArgs, len(j.Sidecars)+1)
-	buildArgs[aws.StringValue(j.Name)] = j.ImageConfig.Image.BuildConfig(contextDir)
-	return buildArgs
-}
-
-// BuildRequired returns if the service requires building from the local Dockerfile.
-func (j *ScheduledJob) BuildRequired() (bool, error) {
-	return requiresBuild(j.ImageConfig.Image)
+func (j *ScheduledJob) BuildArgs(contextDir string) (map[string]*DockerBuildArgs, error) {
+	required, err := requiresBuild(j.ImageConfig.Image)
+	if err != nil {
+		return nil, err
+	}
+	// Creating an map to store buildArgs of all sidecar images and main container image.
+	buildArgsPerContainer := make(map[string]*DockerBuildArgs, len(j.Sidecars)+1)
+	if required {
+		buildArgsPerContainer[aws.StringValue(j.Name)] = j.ImageConfig.Image.BuildConfig(contextDir)
+	}
+	return buildArgs(contextDir, buildArgsPerContainer, j.Sidecars)
 }
 
 // EnvFile returns the location of the env file against the ws root directory.

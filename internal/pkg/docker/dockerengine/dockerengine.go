@@ -59,7 +59,7 @@ func New(cmd Cmd) CmdClient {
 // BuildArguments holds the arguments that can be passed while building a container.
 type BuildArguments struct {
 	URI        string            // Required. Location of ECR Repo. Used to generate image name in conjunction with tag.
-	Tags       []string          // Optional. List of tags to apply to the image besides "latest".
+	Tags       []string          // Required. List of tags to apply to the image.
 	Dockerfile string            // Required. Dockerfile to pass to `docker build` via --file flag.
 	Context    string            // Optional. Build context directory to pass to `docker build`.
 	Target     string            // Optional. The target build stage to pass to `docker build`.
@@ -75,6 +75,13 @@ type dockerConfig struct {
 
 // Build will run a `docker build` command for the given ecr repo URI and build arguments.
 func (c CmdClient) Build(in *BuildArguments) error {
+
+	// Tags must not be empty to build an docker image.
+	if len(in.Tags) == 0 {
+		return &errEmptyImageTags{
+			uri: in.URI,
+		}
+	}
 	dfDir := in.Context
 	if dfDir == "" { // Context wasn't specified use the Dockerfile's directory as context.
 		dfDir = filepath.Dir(in.Dockerfile)
@@ -83,7 +90,6 @@ func (c CmdClient) Build(in *BuildArguments) error {
 	args := []string{"build"}
 
 	// Add additional image tags to the docker build call.
-	args = append(args, "-t", in.URI)
 	for _, tag := range in.Tags {
 		args = append(args, "-t", imageName(in.URI, tag))
 	}
@@ -289,4 +295,12 @@ func userHomeDirectory() string {
 	}
 
 	return home
+}
+
+type errEmptyImageTags struct {
+	uri string
+}
+
+func (e *errEmptyImageTags) Error() string {
+	return fmt.Sprintf("tags to reference an image should not be empty for building and pushing into the ECR repository %s", e.uri)
 }
