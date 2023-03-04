@@ -11,7 +11,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func TestConstructDiffTree(t *testing.T) {
+func TestFrom_Parse(t *testing.T) {
 	testCases := map[string]struct {
 		curr        string
 		old         string
