@@ -37,13 +37,13 @@ func (from From) Parse(to []byte) (*Node, error) {
 		return nil, fmt.Errorf("unmarshal old template: %w", err)
 	}
 
-	return (*fromYAMLNode)(&fromNode).parse(&toNode, "")
+	return (*fromYAML)(&fromNode).parse(&toNode, "")
 
 }
 
-type fromYAMLNode yaml.Node
+type fromYAML yaml.Node
 
-func (from *fromYAMLNode) parse(to *yaml.Node, key string) (*Node, error) {
+func (from *fromYAML) parse(to *yaml.Node, key string) (*Node, error) {
 	if to == nil || from == nil {
 		return &Node{
 			key:      key,
@@ -89,11 +89,11 @@ func isYAMLLeaf(node *yaml.Node) bool {
 	return len(node.Content) == 0
 }
 
-func (from *fromYAMLNode) parseSequence(to *yaml.Node) (map[string]*Node, error) {
+func (from *fromYAML) parseSequence(to *yaml.Node) (map[string]*Node, error) {
 	return nil, nil
 }
 
-func (from *fromYAMLNode) parseMap(to *yaml.Node) (map[string]*Node, error) {
+func (from *fromYAML) parseMap(to *yaml.Node) (map[string]*Node, error) {
 	currMap, oldMap := make(map[string]yaml.Node), make(map[string]yaml.Node)
 	if err := to.Decode(currMap); err != nil {
 		return nil, err
@@ -110,7 +110,7 @@ func (from *fromYAMLNode) parseMap(to *yaml.Node) (map[string]*Node, error) {
 		if v, ok := currMap[k]; ok {
 			currV = &v
 		}
-		kDiff, err := (*fromYAMLNode)(oldV).parse(currV, k)
+		kDiff, err := (*fromYAML)(oldV).parse(currV, k)
 		if err != nil {
 			return nil, err
 		}
