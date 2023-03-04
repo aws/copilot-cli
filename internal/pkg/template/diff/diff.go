@@ -59,6 +59,7 @@ func parse(from, to *yaml.Node, key string) (*Node, error) {
 			oldValue: from,
 		}, nil
 	}
+
 	var children map[string]*Node
 	var err error
 	switch {
