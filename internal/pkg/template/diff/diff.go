@@ -19,22 +19,25 @@ type Node struct {
 	newValue *yaml.Node // Only populated for a leaf node (i.e. that has no child node).
 }
 
-// Parse constructs a diff tree that represent the differences between two YAML documents.
-func Parse(curr, old []byte) (*Node, error) {
-	var currNode, oldNode yaml.Node
-	if err := yaml.Unmarshal(curr, &currNode); err != nil {
-		return nil, fmt.Errorf("unmarshal current template: %w", err)
-	}
-	if err := yaml.Unmarshal(old, &oldNode); err != nil {
-		return nil, fmt.Errorf("unmarshal old template: %w", err)
-	}
-	return parse(&currNode, &oldNode, "")
-
-}
-
 // String returns the string representation of the tree stemmed from the diffNode n.
 func (n *Node) String() string {
 	return ""
+}
+
+// From is the YAML document that another YAML document is compared against.
+type From []byte
+
+// Parse constructs a diff tree that represent the differences of a YAML document against the From document.
+func (from From) Parse(to []byte) (*Node, error) {
+	var toNode, fromNode yaml.Node
+	if err := yaml.Unmarshal(to, &toNode); err != nil {
+		return nil, fmt.Errorf("unmarshal current template: %w", err)
+	}
+	if err := yaml.Unmarshal(from, &fromNode); err != nil {
+		return nil, fmt.Errorf("unmarshal old template: %w", err)
+	}
+	return parse(&toNode, &fromNode, "")
+
 }
 
 func parse(curr, old *yaml.Node, key string) (*Node, error) {

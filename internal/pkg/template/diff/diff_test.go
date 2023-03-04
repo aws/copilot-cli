@@ -149,7 +149,7 @@ func TestConstructDiffTree(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			got, err := Parse([]byte(tc.curr), []byte(tc.old))
+			got, err := From(tc.old).Parse([]byte(tc.curr))
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())
 			}
