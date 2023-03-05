@@ -1,7 +1,8 @@
 # 認証情報
 
-この章では、みなさんの AWS Copilot CLI 体験を最高のものにするために『認証情報についての推奨事項』を説明していきます。
+AWS Copilotは、AWS APIへのアクセス、[アプリケーションのメタデータ](concepts/applications.ja.md)の保存と検索、アプリケーションのワークロードの展開と運用にAWSクレデンシャルを使用します。
 
+AWS認証情報の設定方法については、[AWS CLIのドキュメント](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-quickstart.html)で詳しく説明されています。
 ## Application 用の認証情報
 
 Copilot は[デフォルトの認証情報プロバイダーチェーン](https://docs.aws.amazon.com/ja_jp/sdk-for-go/v1/developer-guide/configuring-sdk.html#specifying-credentials)に沿って認証情報を検索し、認証情報を使用して Service と Environment が関連づけられた [Application のメタデータ](concepts/applications.ja.md)を保存または検索します。
