@@ -227,7 +227,7 @@ func (s LoadBalancedWebService) applyEnv(envName string) (workloadManifest, erro
 // NetworkLoadBalancerConfiguration holds options for a network load balancer
 type NetworkLoadBalancerConfiguration struct {
 	PrimaryRoutingRule     NetworkLoadBalancerRoutingRule   `yaml:",inline"`
-	AdditionalRoutingRules []NetworkLoadBalancerRoutingRule `yaml:"additional_rules"`
+	AdditionalRoutingRules []NetworkLoadBalancerRoutingRule // `yaml:"additional_rules"`
 }
 
 type NetworkLoadBalancerRoutingRule struct {
