@@ -10,8 +10,8 @@ Job や Service に、データベースや S3 バケットを追加するには
 # ウィザードに従い S3 バケットを作成する
 $ copilot storage init -t S3
 
-# "api" Service からアクセス可能な "my-bucket" という名前の S3 バケットを作成する
-$ copilot storage init -n my-bucket -t S3 -w api
+# "api" Service からアクセス可能な "my-bucket" という名前の S3 バケットを作成し、"api"でデプロイと削除を行います。
+$ copilot storage init -n my-bucket -t S3 -w api -l workload
 ```
 
 このコマンドにより、"api" Service の [addons](./addons/workload.ja.md) ディレクトリに S3 バケットを定義した CloudFormation テンプレートが作成されます。続いて `copilot deploy -n api` を実行することで S3 バケットが作成されます。`api` タスクロールに S3 バケットへのアクセス権限が付与され、バケット名が `api` コンテナの環境変数に `MY_BUCKET_NAME` の形で設定されます。
@@ -26,7 +26,7 @@ $ copilot storage init -n my-bucket -t S3 -w api
 $ copilot storage init -t DynamoDB
 
 # もしくは、DynamoDB テーブルの作成に必要な情報をフラグで指定する
-$ copilot storage init -n users -t DynamoDB -w api --partition-key id:N --sort-key email:S --lsi post-count:N
+$ copilot storage init -n users -t DynamoDB -w api -l workload --partition-key id:N --sort-key email:S --lsi post-count:N
 ```
 
 このコマンドにより `${app}-${env}-${svc}-users` という名前の DynamoDB テーブルが作成されます。パーティションキーは `id` となり、データ型は数値です。ソートキーは `email` となり、データ型は文字列です。また、[ローカルセカンダリインデックス](https://docs.aws.amazon.com/ja_jp/amazondynamodb/latest/developerguide/LSI.html) (代替のソートキー) として、データ型が数値である `post-count` が作成されます。
@@ -37,7 +37,7 @@ $ copilot storage init -n users -t DynamoDB -w api --partition-key id:N --sort-k
 $ copilot storage init -t Aurora
 
 # もしくは、RDS Aurora Serverless クラスターの作成に必要な情報をフラグで指定する
-$ copilot storage init -n my-cluster -t Aurora -w api --engine PostgreSQL --initial-db my_db
+$ copilot storage init -n my-cluster -t Aurora -w api -l workload --engine PostgreSQL --initial-db my_db
 ```
 このコマンドにより PostgreSQL エンジンを使用する `my_db` という名前のデータベースを持つ RDS Aurora Serverless v2 クラスターが作成されます。JSON 文字列として `MYCLUSTER_SECRET` という名前の環境変数がワークロードに追加されます。この JSON 文字列は、`'host'`、`'port'`、`'dbname'`、`'username'`、`'password'`、`'dbClusterIdentifier'`、`'engine'` フィールドを含みます。
 
@@ -45,6 +45,15 @@ $ copilot storage init -n my-cluster -t Aurora -w api --engine PostgreSQL --init
 ```console
 $ copilot storage init -n my-cluster -t Aurora --serverless-version v1
 ```
+
+### 環境ストレージ
+
+`-l` フラグは `--lifecycle` の略である。上記の例では、`-l` フラグの値は `workload` です。
+これは、ストレージリソースがサービスアドオンまたはジョブアドオンとして作成されることを意味します。
+ストレージは `copilot [svc/job] deploy` を実行するとデプロイされ、`copilot [svc/job] delete` を実行すると削除されます。
+
+また、サービスやジョブを削除してもストレージを維持したい場合は、環境ストレージリソースを作成することができます。環境ストレージリソースは環境アドオンとして作成され、`copilot env deploy`を実行すると展開され、`copilot env delete`を実行するまで削除されることはありません。
+
 
 ## ファイルシステム
 Copilot で EFS ファイルシステムを使う方法は２つあります: Copilot 管理の EFS、あるいは既存の EFS ファイルシステムのインポートです。
