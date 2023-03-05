@@ -334,6 +334,14 @@ SQS メッセージ 1 件あたりの平均処理時間。例えば、`"250ms"`�
 
 {% include 'deployment.ja.md' %}
 
+```yaml 
+deployment:
+  rollback_alarms:
+    cpu_utilization: 70    // Percentage value at or above which alarm is triggered.
+    memory_utilization: 50 // Percentage value at or above which alarm is triggered.
+    messages_delayed: 5    // Number of delayed messages in the queue at or above which alarm is triggered. 
+```
+
 {% include 'entrypoint.ja.md' %}
 
 {% include 'command.ja.md' %}

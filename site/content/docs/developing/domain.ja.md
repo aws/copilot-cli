@@ -36,7 +36,7 @@ ${SvcName}-nlb.${EnvName}.${AppName}.${DomainName}
 
 具体的には、 `https://kudo.test.coolapp.example.aws` や `kudo-nlb.test.coolapp.example.aws:443` となります。
 
-**ドメインエイリアスのカスタマイズ**
+#### ドメインエイリアスのカスタマイズ
 
 Copilot が Service に割り当てるデフォルトのドメイン名を使いたくない場合は、[Manifest](../manifest/overview.ja.md) の `alias` セクションを編集して、サービスのカスタム[エイリアス](https://docs.aws.amazon.com/ja_jp/Route53/latest/DeveloperGuide/resource-record-sets-choosing-alias-non-alias.html)を設定することができます。以下のスニペットは Service にエイリアスを設定する例です。
 
@@ -54,13 +54,16 @@ nlb:
   alias: example-v1.aws
 ```
 
-ただし、[サブドメインの権限を Route 53 に委任している](https://docs.aws.amazon.com/ja_jp/Route53/latest/DeveloperGuide/CreatingNewSubdomain.html#UpdateDNSParentDomain)ため、指定するエイリアスは、以下 3 つのホストゾーンのいずれかに含まれている必要があります。
+ただし、[サブドメインの権限を Route 53 に委任している](https://docs.aws.amazon.com/ja_jp/Route53/latest/DeveloperGuide/CreatingNewSubdomain.html#UpdateDNSParentDomain)ため、指定するエイリアスは、以下の Copilot 対応パターンのいずれかに従ってください。
 
-- root: `${DomainName}`
-- app: `${AppName}.${DomainName}`
-- env: `${EnvName}.${AppName}.${DomainName}`
+- `{domain}`, such as `example.aws`
+- `{subdomain}.{domain}`, such as `v1.example.aws`
+- `{appName}.{domain}`, such as `coolapp.example.aws`
+- `{subdomain}.{appName}.{domain}`, such as `v1.coolapp.example.aws`
+- `{envName}.{appName}.{domain}`, such as `test.coolapp.example.aws`
+- `{subdomain}.{envName}.{appName}.{domain}`, such as `v1.test.coolapp.example.aws`
 
-**裏で何がおきているか**
+#### 裏で何がおきているか
 
 裏側では Copilot は
 
@@ -72,21 +75,31 @@ nlb:
     - エイリアスが `nlb.alias` として利用されていて、 TLS ターミーネーションが有効な場合、 Network Load Balancer の TLS リスナーと関連づけて
 * エイリアス用でオプションの A レコードを作成しています。
 
-**どのように見えるか**
+#### どのように見えるか
 
 [![AWS Copilot CLI v1.8.0 Release Highlights](https://img.youtube.com/vi/Oyr-n59mVjI/0.jpg)](https://www.youtube.com/embed/Oyr-n59mVjI)
 
 ### 既存の有効な証明書に含まれるドメインを使用する
 
-Route53 以外のドメインを所有している場合や、コンプライアンス上の理由から既存の ACM 証明書の `alias` を使用したい場合、Environment 構築時に `--import-cert-arns` フラグを指定することで、エイリアスを含む検証済みの ACM 証明書をインポートすることができます。例えば以下のようになります。
+生成されるACM証明書をより細かく制御したい場合や、[default `alias` options](#customized-domain-alias) が十分に柔軟でない場合は、環境を作る際に `--import-cert-arns` フラッグを指定して、別名を含む検証済みのACM証明書をインポートすることが可能です。例えば、以下のような感じです。
 
-```
+```console
 $ copilot env init --import-cert-arns arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789012
+```
+
+また、[環境マニフェスト](../manifest/environment.en.md)を修正することで、後からいつでも証明書を追加することができます。
+
+```yaml
+type: Environment
+http:
+  public:
+    certificates:
+      - arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789012
 ```
 
 Service の Manifest において、次のどちらかを行います。
 
-1. Copilot が A レコードを追加する[ホストゾーン](../manifest/lb-web-service.ja.md#http-hosted-zone)の ID を指定します。
+- Copilot が A レコードを追加する[ホストゾーン](../manifest/lb-web-service.ja.md#http-hosted-zone)の ID を指定します。
 ``` yaml
 # in copilot/{service name}/manifest.yml
 http:
@@ -94,7 +107,7 @@ http:
   alias: example.aws
   hosted_zone: Z0873220N255IR3MTNR4
 ```
-2. `hosted_zone` フィールドを指定せずに Service をデプロイし、 その Environment に作成した ALB （Application Load Balancer） の DNS を、エイリアスのドメインがホストされている場所に A レコードとして手動で追加してください。
+- `hosted_zone` フィールドを指定せずに Service をデプロイし、 その Environment に作成した ALB （Application Load Balancer） の DNS を、エイリアスのドメインがホストされている場所に A レコードとして手動で追加してください。
 
 ブログ記事にも 2 つ目の[例](../../blogs/release-v118.ja.md#certificate-import)を掲載しています。
 
