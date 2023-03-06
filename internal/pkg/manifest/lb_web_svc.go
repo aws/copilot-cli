@@ -249,9 +249,9 @@ func (c *NetworkLoadBalancerRoutingRule) IsEmpty() bool {
 func (lbws *LoadBalancedWebService) ExposedPorts() (ExposedPortsIndex, error) {
 	var exposedPorts []ExposedPort
 	workloadName := aws.StringValue(lbws.Name)
-	// port from image.port
+	// port from image.port.
 	exposedPorts = append(exposedPorts, lbws.ImageConfig.exposedPorts(workloadName)...)
-	// port from sidecar[x].image.port
+	// port from sidecar[x].image.port.
 	for name, sidecar := range lbws.Sidecars {
 		out, err := sidecar.exposedPorts(name)
 		if err != nil {
@@ -259,15 +259,15 @@ func (lbws *LoadBalancedWebService) ExposedPorts() (ExposedPortsIndex, error) {
 		}
 		exposedPorts = append(exposedPorts, out...)
 	}
-	// port from http.target_port
+	// port from http.target_port.
 	exposedPorts = append(exposedPorts, lbws.RoutingRule.exposedPorts(exposedPorts, workloadName)...)
-	// port from nlb.target_port
+	// port from nlb.target_port.
 	out, err := lbws.NLBConfig.PrimaryRoutingRule.exposedPorts(exposedPorts, workloadName)
 	if err != nil {
 		return ExposedPortsIndex{}, err
 	}
 	exposedPorts = append(exposedPorts, out...)
-	// port from nlb.additional_rule[x].target_port
+	// port from nlb.additional_rule[x].target_port.
 	for _, additionalRule := range lbws.NLBConfig.AdditionalRoutingRules {
 		out, err = additionalRule.exposedPorts(exposedPorts, workloadName)
 		exposedPorts = append(exposedPorts, out...)
