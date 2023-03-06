@@ -40,7 +40,7 @@ func TestECRImage_GetLocation(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			require.Equal(t, tc.wanted, tc.in.GetLocation())
+			require.Equal(t, tc.wanted, tc.in.URI())
 		})
 	}
 }

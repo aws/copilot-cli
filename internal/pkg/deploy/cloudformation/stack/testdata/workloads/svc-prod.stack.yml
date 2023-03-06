@@ -32,6 +32,18 @@ Parameters:
     Description: 'URL of the environment file.'
     Type: String
     Default: ""
+  LoggingEnvFileARN:
+    Description: 'URL of the environment file for the logging sidecar.'
+    Type: String
+    Default: ""
+  nginxEnvFileARN:
+    Description: 'URL of the environment file for the nginx sidecar.'
+    Type: String
+    Default: ""
+  operationEnvFileARN:
+    Description: 'URL of the environment file for the operation sidecar.'
+    Type: String
+    Default: ""
   TargetContainer:
     Type: String
   TargetPort:
@@ -52,6 +64,9 @@ Conditions:
   HasAssociatedDomain: !Equals [!Ref DNSDelegated, true]
   HasAddons: !Not [!Equals [!Ref AddonsTemplateURL, ""]]
   HasEnvFile: !Not [!Equals [!Ref EnvFileARN, ""]]
+  HasLoggingEnvFile: !Not [!Equals [!Ref LoggingEnvFileARN, ""]]
+  HasnginxEnvFile: !Not [!Equals [!Ref nginxEnvFileARN, ""]]
+  HasoperationEnvFile: !Not [!Equals [!Ref operationEnvFileARN, ""]]
 Resources: # If a bucket URL is specified, that means the template exists.
   LogGroup:
     Metadata:
@@ -153,6 +168,12 @@ Resources: # If a bucket URL is specified, that means the template exists.
                 Fn::ImportValue: "MyDB"
             - Name: TEST
               Value: "TEST"
+          EnvironmentFiles:
+            - !If
+              - HasLoggingEnvFile
+              - Type: "s3"
+                Value: !Ref LoggingEnvFileARN
+              - !Ref "AWS::NoValue"
           Secrets:
             - Name: GITHUB_TOKEN
               ValueFrom: GITHUB_TOKEN
@@ -207,6 +228,12 @@ Resources: # If a bucket URL is specified, that means the template exists.
                 Fn::ImportValue: "MyDB"
             - Name: NGINX_PORT
               Value: "80"
+          EnvironmentFiles:
+            - !If
+              - HasnginxEnvFile
+              - Type: "s3"
+                Value: !Ref nginxEnvFileARN
+              - !Ref "AWS::NoValue"
           LogConfiguration:
             LogDriver: awslogs
             Options:
@@ -231,6 +258,12 @@ Resources: # If a bucket URL is specified, that means the template exists.
               Value: '{"givesdogs":"arn:aws:sns:us-west-2:123456789123:my-app-prod-fe-givesdogs","mytopic.fifo":"arn:aws:sns:us-west-2:123456789123:my-app-prod-fe-mytopic.fifo"}'
             - Name: COPILOT_LB_DNS
               Value: !GetAtt EnvControllerAction.PublicLoadBalancerDNSName
+          EnvironmentFiles:
+            - !If
+              - HasoperationEnvFile
+              - Type: "s3"
+                Value: !Ref operationEnvFileARN
+              - !Ref "AWS::NoValue"
           LogConfiguration:
             LogDriver: awslogs
             Options:
@@ -300,6 +333,72 @@ Resources: # If a bucket URL is specified, that means the template exists.
                         - !Ref AWS::Partition
                         - ':s3:::'
                         - !Select [0, !Split ['/', !Select [5, !Split [':', !Ref EnvFileARN]]]]
+          - !Ref AWS::NoValue
+        - !If
+          - HasLoggingEnvFile
+          - PolicyName: !Join ['', [!Ref AppName, '-', !Ref EnvName, '-', !Ref WorkloadName, GetLoggingEnvFilePolicy]]
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: 'Allow'
+                  Action:
+                    - 's3:GetObject'
+                  Resource:
+                    - !Ref LoggingEnvFileARN
+                - Effect: 'Allow'
+                  Action:
+                    - 's3:GetBucketLocation'
+                  Resource:
+                    - !Join
+                      - ''
+                      - - 'arn:'
+                        - !Ref AWS::Partition
+                        - ':s3:::'
+                        - !Select [0, !Split ['/', !Select [5, !Split [':', !Ref LoggingEnvFileARN]]]]
+          - !Ref AWS::NoValue
+        - !If
+          - HasnginxEnvFile
+          - PolicyName: !Join ['', [!Ref AppName, '-', !Ref EnvName, '-', !Ref WorkloadName, GetnginxEnvFilePolicy]]
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: 'Allow'
+                  Action:
+                    - 's3:GetObject'
+                  Resource:
+                    - !Ref nginxEnvFileARN
+                - Effect: 'Allow'
+                  Action:
+                    - 's3:GetBucketLocation'
+                  Resource:
+                    - !Join
+                      - ''
+                      - - 'arn:'
+                        - !Ref AWS::Partition
+                        - ':s3:::'
+                        - !Select [0, !Split ['/', !Select [5, !Split [':', !Ref nginxEnvFileARN]]]]
+          - !Ref AWS::NoValue
+        - !If
+          - HasoperationEnvFile
+          - PolicyName: !Join ['', [!Ref AppName, '-', !Ref EnvName, '-', !Ref WorkloadName, GetoperationEnvFilePolicy]]
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: 'Allow'
+                  Action:
+                    - 's3:GetObject'
+                  Resource:
+                    - !Ref operationEnvFileARN
+                - Effect: 'Allow'
+                  Action:
+                    - 's3:GetBucketLocation'
+                  Resource:
+                    - !Join
+                      - ''
+                      - - 'arn:'
+                        - !Ref AWS::Partition
+                        - ':s3:::'
+                        - !Select [0, !Split ['/', !Select [5, !Split [':', !Ref operationEnvFileARN]]]]
           - !Ref AWS::NoValue
       ManagedPolicyArns:
         - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy'

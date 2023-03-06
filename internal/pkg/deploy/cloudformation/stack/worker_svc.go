@@ -59,7 +59,8 @@ func NewWorkerService(cfg WorkerServiceConfig) (*WorkerService, error) {
 				parser:             fs,
 				addons:             cfg.Addons,
 			},
-			logRetention:        cfg.Manifest.Logging.Retention,
+			logging:             cfg.Manifest.Logging,
+			sidecars:            cfg.Manifest.Sidecars,
 			tc:                  cfg.Manifest.TaskConfig,
 			taskDefOverrideFunc: override.CloudFormationTemplate,
 		},
@@ -86,7 +87,7 @@ func (s *WorkerService) Template() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("parse exposed ports in service manifest %s: %w", s.name, err)
 	}
-	sidecars, err := convertSidecars(s.manifest.Sidecars, exposedPorts.PortsForContainer)
+	sidecars, err := convertSidecars(s.manifest.Sidecars, exposedPorts.PortsForContainer, s.rc)
 	if err != nil {
 		return "", fmt.Errorf("convert the sidecar configuration for service %s: %w", s.name, err)
 	}
@@ -179,10 +180,7 @@ func (s *WorkerService) Parameters() ([]*cloudformation.Parameter, error) {
 	if err != nil {
 		return nil, err
 	}
-	return append(wkldParams, &cloudformation.Parameter{
-		ParameterKey:   aws.String(WorkloadEnvFileARNParamKey),
-		ParameterValue: aws.String(s.rc.EnvFileARN),
-	}), nil
+	return wkldParams, nil
 }
 
 // SerializedParameters returns the CloudFormation stack's parameters serialized to a JSON document.

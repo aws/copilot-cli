@@ -146,11 +146,6 @@ func (s *RequestDrivenWebService) Publish() []Topic {
 	return s.RequestDrivenWebServiceConfig.PublishConfig.publishedTopics()
 }
 
-// BuildRequired returns if the service requires building from the local Dockerfile.
-func (s *RequestDrivenWebService) BuildRequired() (bool, error) {
-	return requiresBuild(s.ImageConfig.Image)
-}
-
 // ContainerPlatform returns the platform for the service.
 func (s *RequestDrivenWebService) ContainerPlatform() string {
 	if s.InstanceConfig.Platform.IsEmpty() {
@@ -160,10 +155,17 @@ func (s *RequestDrivenWebService) ContainerPlatform() string {
 }
 
 // BuildArgs returns a docker.BuildArguments object given a context directory.
-func (s *RequestDrivenWebService) BuildArgs(contextDir string) map[string]*DockerBuildArgs {
-	buildArgs := make(map[string]*DockerBuildArgs, 1)
-	buildArgs[aws.StringValue(s.Name)] = s.ImageConfig.Image.BuildConfig(contextDir)
-	return buildArgs
+func (s *RequestDrivenWebService) BuildArgs(contextDir string) (map[string]*DockerBuildArgs, error) {
+	required, err := requiresBuild(s.ImageConfig.Image)
+	if err != nil {
+		return nil, err
+	}
+	// Creating an map to store buildArgs of all sidecar images and main container image.
+	buildArgsPerContainer := make(map[string]*DockerBuildArgs, 1)
+	if required {
+		buildArgsPerContainer[aws.StringValue(s.Name)] = s.ImageConfig.Image.BuildConfig(contextDir)
+	}
+	return buildArgsPerContainer, nil
 }
 
 func (s RequestDrivenWebService) applyEnv(envName string) (workloadManifest, error) {

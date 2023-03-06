@@ -13,18 +13,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
-
-	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
-
-	"github.com/aws/copilot-cli/internal/pkg/aws/codestar"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	sdkcloudformation "github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation/stackset"
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatch"
+	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
+	"github.com/aws/copilot-cli/internal/pkg/aws/codestar"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
+	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/stream"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
@@ -89,6 +87,10 @@ func WrapWithTemplateOverrider(stack StackConfiguration, overrider Overrider) St
 
 type ecsClient interface {
 	stream.ECSServiceDescriber
+}
+
+type cwClient interface {
+	stream.CloudWatchDescriber
 }
 
 type cfnClient interface {
@@ -172,6 +174,7 @@ type CloudFormation struct {
 	codeStarClient codeStarClient
 	cpClient       codePipelineClient
 	ecsClient      ecsClient
+	cwClient       cwClient
 	regionalClient func(region string) cfnClient
 	appStackSet    stackSetClient
 	s3Client       s3Client
@@ -181,7 +184,7 @@ type CloudFormation struct {
 	// cached variables.
 	cachedDeployedStack *cloudformation.StackDescription
 
-	// Overriden in tests.
+	// Overridden in tests.
 	renderStackSet func(input renderStackSetInput) error
 }
 
@@ -192,6 +195,7 @@ func New(sess *session.Session, opts ...OptFn) CloudFormation {
 		codeStarClient: codestar.New(sess),
 		cpClient:       codepipeline.New(sess),
 		ecsClient:      ecs.New(sess),
+		cwClient:       cloudwatch.New(sess),
 		regionalClient: func(region string) cfnClient {
 			return cloudformation.New(sess.Copy(&aws.Config{
 				Region: aws.String(region),
@@ -404,11 +408,18 @@ func (cf CloudFormation) changeRenderers(in changeRenderersInput) ([]progress.Re
 			}
 			renderer = r
 		case aws.StringValue(change.ResourceChange.ResourceType) == ecsServiceResourceType:
-			renderer = progress.ListeningECSServiceResourceRenderer(in.stackStreamer, cf.ecsClient, logicalID, description, progress.ECSServiceRendererOpts{
-				Group:      in.g,
-				Ctx:        in.ctx,
-				RenderOpts: in.opts,
-			})
+			renderer = progress.ListeningECSServiceResourceRenderer(progress.ECSServiceRendererCfg{
+				Streamer:    in.stackStreamer,
+				ECSClient:   cf.ecsClient,
+				CWClient:    cf.cwClient,
+				LogicalID:   logicalID,
+				Description: description,
+			},
+				progress.ECSServiceRendererOpts{
+					Group:      in.g,
+					Ctx:        in.ctx,
+					RenderOpts: in.opts,
+				})
 		case change.ResourceChange.ChangeSetId != nil:
 			// The resource change is a nested stack.
 			changeSetID := aws.StringValue(change.ResourceChange.ChangeSetId)

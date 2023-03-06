@@ -16,7 +16,7 @@ import (
 
 // Defaults for Firelens configuration.
 const (
-	firelensContainerName = "firelens_log_router"
+	FirelensContainerName = "firelens_log_router"
 	defaultFluentbitImage = "public.ecr.aws/aws-observability/aws-for-fluent-bit:stable"
 )
 
@@ -105,13 +105,13 @@ type DeploymentControllerConfig struct {
 // DeploymentConfig represents the deployment config for an ECS service.
 type DeploymentConfig struct {
 	DeploymentControllerConfig `yaml:",inline"`
-	RollbackAlarms             Union[[]string, AlarmArgs]  `yaml:"rollback_alarms"`
+	RollbackAlarms             Union[[]string, AlarmArgs] `yaml:"rollback_alarms"`
 }
 
 // WorkerDeploymentConfig represents the deployment strategies for a worker service.
 type WorkerDeploymentConfig struct {
 	DeploymentControllerConfig `yaml:",inline"`
-	WorkerRollbackAlarms       Union[[]string, WorkerAlarmArgs]  `yaml:"rollback_alarms"`
+	WorkerRollbackAlarms       Union[[]string, WorkerAlarmArgs] `yaml:"rollback_alarms"`
 }
 
 func (d *DeploymentConfig) isEmpty() bool {
@@ -270,12 +270,13 @@ type Logging struct {
 	ConfigFile     *string             `yaml:"configFilePath"`
 	Variables      map[string]Variable `yaml:"variables"`
 	Secrets        map[string]Secret   `yaml:"secrets"`
+	EnvFile        *string             `yaml:"env_file"`
 }
 
 // IsEmpty returns empty if the struct has all zero members.
 func (lc *Logging) IsEmpty() bool {
-	return lc.Image == nil && lc.Destination == nil && lc.EnableMetadata == nil &&
-		lc.SecretOptions == nil && lc.ConfigFile == nil && lc.Variables == nil && lc.Secrets == nil
+	return lc.Image == nil && lc.Destination == nil && lc.EnableMetadata == nil && lc.SecretOptions == nil &&
+		lc.ConfigFile == nil && lc.Variables == nil && lc.Secrets == nil && lc.EnvFile == nil
 }
 
 // LogImage returns the default Fluent Bit image if not otherwise configured.
@@ -302,6 +303,7 @@ type SidecarConfig struct {
 	Essential     *bool                                `yaml:"essential"`
 	CredsParam    *string                              `yaml:"credentialsParameter"`
 	Variables     map[string]Variable                  `yaml:"variables"`
+	EnvFile       *string                              `yaml:"env_file"`
 	Secrets       map[string]Secret                    `yaml:"secrets"`
 	MountPoints   []SidecarMountPoint                  `yaml:"mount_points"`
 	DockerLabels  map[string]string                    `yaml:"labels"`
@@ -412,4 +414,26 @@ func (hc *ContainerHealthCheck) ApplyIfNotSet(other *ContainerHealthCheck) {
 	if hc.StartPeriod == nil && other.StartPeriod != nil {
 		hc.StartPeriod = other.StartPeriod
 	}
+}
+
+func envFiles(name *string, tc TaskConfig, lc Logging, sc map[string]*SidecarConfig) map[string]string {
+	envFiles := make(map[string]string)
+	// Grab the workload container's env file, if present.
+	envFiles[aws.StringValue(name)] = aws.StringValue(tc.EnvFile)
+	// Grab sidecar env files, if present.
+	for sidecarName, sidecar := range sc {
+		envFiles[sidecarName] = aws.StringValue(sidecar.EnvFile)
+	}
+	// If the Firelens Sidecar Pattern has an env file specified, get it as well.
+	envFiles[FirelensContainerName] = aws.StringValue(lc.EnvFile)
+	return envFiles
+}
+
+func buildArgs(contextDir string, buildArgs map[string]*DockerBuildArgs, sc map[string]*SidecarConfig) (map[string]*DockerBuildArgs, error) {
+	for name, config := range sc {
+		if _, ok := config.ImageURI(); !ok {
+			buildArgs[name] = config.Image.Advanced.BuildConfig(contextDir)
+		}
+	}
+	return buildArgs, nil
 }

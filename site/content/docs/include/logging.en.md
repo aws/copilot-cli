@@ -20,3 +20,6 @@ Optional. The secrets to pass to the log configuration.
 
 <span class="parent-field">logging.</span><a id="logging-configFilePath" href="#logging-configFilePath" class="field">`configFilePath`</a> <span class="type">Map</span>  
 Optional. The full config file path in your custom Fluent Bit image.
+
+<span class="parent-field">logging.</span><a id="logging-envFile" href="#logging-envFile" class="field">`env_file`</a> <span class="type">String</span>  
+The path to a file from the root of your workspace containing the environment variables to pass to the logging sidecar container. For more information about the environment variable file, see [Considerations for specifying environment variable files](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/taskdef-envfiles.html#taskdef-envfiles-considerations).

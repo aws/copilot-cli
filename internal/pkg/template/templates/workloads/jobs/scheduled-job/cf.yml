@@ -34,11 +34,31 @@ Parameters:
     Description: 'URL of the environment file.'
     Type: String
     Default: ""
+{{- if .LogConfig}}
+  LoggingEnvFileARN:
+    Type: String
+    Description: 'URL of the environment file for the logging sidecar.'
+    Default: ""
+{{- end}}
+{{- range $sidecar := .Sidecars }}
+  {{$sidecar.Name}}EnvFileARN:
+    Type: String
+    Description: 'URL of the environment file for the {{$sidecar.Name}} sidecar.'
+    Default: ""
+{{- end }}
 Conditions: 
   HasAddons: # If a bucket URL is specified, that means the template exists.
     !Not [!Equals [!Ref AddonsTemplateURL, ""]]
   HasEnvFile:
     !Not [!Equals [!Ref EnvFileARN, ""]]
+{{- if .LogConfig}}
+  HasLoggingEnvFile:
+    !Not [!Equals [!Ref LoggingEnvFileARN, ""]]
+{{- end}}
+{{- range $sidecar := .Sidecars }}
+  Has{{$sidecar.Name}}EnvFile:
+    !Not [!Equals [!Ref {{$sidecar.Name}}EnvFileARN, ""]]
+{{- end }}
 Resources: 
 {{include "loggroup" . | indent 2}}
 
