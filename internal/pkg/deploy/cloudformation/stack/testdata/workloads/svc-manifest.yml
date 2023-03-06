@@ -97,6 +97,7 @@ environments:
         TEST: TEST
         DB_NAME:
           from_cfn: MyDB
+      env_file: ./logging.env
       secrets:
         GITHUB_TOKEN: GITHUB_TOKEN
         MONGO_DB:
