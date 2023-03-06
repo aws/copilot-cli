@@ -37,39 +37,37 @@ func (from From) Parse(to []byte) (*Node, error) {
 		return nil, fmt.Errorf("unmarshal old template: %w", err)
 	}
 
-	return (*fromYAML)(&fromNode).parse(&toNode, "")
+	return parse(&fromNode, &toNode, "")
 
 }
 
-type fromYAML yaml.Node
-
-func (from *fromYAML) parse(to *yaml.Node, key string) (*Node, error) {
+func parse(from, to *yaml.Node, key string) (*Node, error) {
 	if to == nil || from == nil {
 		return &Node{
 			key:      key,
-			oldValue: (*yaml.Node)(from),
+			oldValue: from,
 			newValue: to,
 		}, nil
 	}
-	if isYAMLLeaf(to) && isYAMLLeaf((*yaml.Node)(from)) {
+	if isYAMLLeaf(to) && isYAMLLeaf(from) {
 		if to.Value == from.Value {
 			return nil, nil
 		}
 		return &Node{
 			key:      key,
 			newValue: to,
-			oldValue: (*yaml.Node)(from),
+			oldValue: from,
 		}, nil
 	}
 	var children map[string]*Node
 	var err error
 	switch {
 	case to.Kind == yaml.SequenceNode && from.Kind == yaml.SequenceNode:
-		children, err = from.parseSequence(to)
+		children, err = parseSequence(from, to)
 	case to.Kind == yaml.DocumentNode && from.Kind == yaml.DocumentNode:
 		fallthrough
 	case to.Kind == yaml.MappingNode && from.Kind == yaml.MappingNode:
-		children, err = from.parseMap(to)
+		children, err = parseMap(from, to)
 	default:
 		return nil, fmt.Errorf("unknown combination of node kinds: %v, %v", to.Kind, from.Kind)
 	}
@@ -89,16 +87,16 @@ func isYAMLLeaf(node *yaml.Node) bool {
 	return len(node.Content) == 0
 }
 
-func (from *fromYAML) parseSequence(to *yaml.Node) (map[string]*Node, error) {
+func parseSequence(from, to *yaml.Node) (map[string]*Node, error) {
 	return nil, nil
 }
 
-func (from *fromYAML) parseMap(to *yaml.Node) (map[string]*Node, error) {
+func parseMap(from, to *yaml.Node) (map[string]*Node, error) {
 	currMap, oldMap := make(map[string]yaml.Node), make(map[string]yaml.Node)
 	if err := to.Decode(currMap); err != nil {
 		return nil, err
 	}
-	if err := (*yaml.Node)(from).Decode(oldMap); err != nil {
+	if err := from.Decode(oldMap); err != nil {
 		return nil, err
 	}
 	children := make(map[string]*Node)
@@ -110,7 +108,7 @@ func (from *fromYAML) parseMap(to *yaml.Node) (map[string]*Node, error) {
 		if v, ok := currMap[k]; ok {
 			currV = &v
 		}
-		kDiff, err := (*fromYAML)(oldV).parse(currV, k)
+		kDiff, err := parse(oldV, currV, k)
 		if err != nil {
 			return nil, err
 		}
