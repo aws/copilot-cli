@@ -270,6 +270,9 @@ func (lbws *LoadBalancedWebService) ExposedPorts() (ExposedPortsIndex, error) {
 	// port from nlb.additional_rule[x].target_port.
 	for _, additionalRule := range lbws.NLBConfig.AdditionalRoutingRules {
 		out, err = additionalRule.exposedPorts(exposedPorts, workloadName)
+		if err != nil {
+			return ExposedPortsIndex{}, err
+		}
 		exposedPorts = append(exposedPorts, out...)
 	}
 	portsForContainer, containerForPort := prepareParsedExposedPortsMap(sortExposedPorts(exposedPorts))
