@@ -141,8 +141,8 @@ func (cdk *CDK) cleanUp(body []byte) ([]byte, error) {
 // ScaffoldWithCDK bootstraps a CDK application under dir/ to override the seed CloudFormation resources.
 // If the directory is not empty, then returns an error.
 func ScaffoldWithCDK(fs afero.Fs, dir string, seeds []template.CFNResource) error {
-	// Ignore errors on purpose. IsEmpty returns false if the directory does not exist, hence we should only check
-	// if the dir is empty if it also exists.
+	// If the directory does not exist, [afero.IsEmpty] returns false and an error.
+	// Therefore, we only want to check if a directory is empty only if it also exists.
 	exists, _ := afero.Exists(fs, dir)
 	isEmpty, _ := afero.IsEmpty(fs, dir)
 	if exists && !isEmpty {

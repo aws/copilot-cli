@@ -229,8 +229,9 @@ Must be one of: %s.`, strings.Join(applyAll(validIaCTools, strconv.Quote), ", ")
 	cdkLanguageFlagDescription = `Optional. The Cloud Development Kit language.`
 	overrideEnvFlagDescription = `Optional. Name of the environment to use when retrieving resources in a template.
 Defaults to a random environment.`
-	skipResourcesFlagDescription = `Optional. Skip asking for which resources to override and generate empty patch files.`
-	repoURLFlagDescription       = fmt.Sprintf(`The repository URL to trigger your pipeline.
+	skipResourcesFlagDescription = `Optional. Skip asking for which resources to override and generate empty IaC extension files.`
+
+	repoURLFlagDescription = fmt.Sprintf(`The repository URL to trigger your pipeline.
 Supported providers are: %s.`, strings.Join(manifest.PipelineProviders, ", "))
 
 	ingressTypeFlagDescription = fmt.Sprintf(`Required for a Request-Driven Web Service. Allowed source of traffic to your service.

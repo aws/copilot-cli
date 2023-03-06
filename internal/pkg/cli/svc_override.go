@@ -310,9 +310,10 @@ func buildSvcOverrideCmd() *cobra.Command {
 		Hidden: true,
 		Use:    "override",
 		Short:  "Override the AWS CloudFormation template of a service.",
-		Long: `Scaffold Infrastructure as Code patch files. 
-Customize the patch files to change resource properties, delete 
-or add new resources to the service's AWS CloudFormation template.`,
+		Long: `Scaffold Infrastructure as Code (IaC) extension files. 
+The generated files allow you to extend and override Copilot generated AWS CloudFormation template.
+You can edit the files to change existing resource properties, delete 
+or add new resources to the service's template.`,
 		Example: `
   Create a new Cloud Development Kit application to override the "frontend" service template.
   /code $ copilot svc override -n frontend --tool cdk`,
