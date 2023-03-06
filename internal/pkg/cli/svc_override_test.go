@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
+	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -51,6 +52,55 @@ func TestOverrideSvcOpts_Validate(t *testing.T) {
 				// THEN
 				if tc.wanted != nil {
 					require.EqualError(t, err, tc.wanted.Error())
+				} else {
+					require.NoError(t, err)
+				}
+			})
+		}
+	})
+	t.Run("validate environment name", func(t *testing.T) {
+		testCases := map[string]struct {
+			envName   string
+			initMocks func(ctrl *gomock.Controller, cmd *overrideSvcOpts)
+
+			wanted error
+		}{
+			"skip validating if environment name is empty": {
+				initMocks: func(ctrl *gomock.Controller, cmd *overrideSvcOpts) {
+					mockSSM := mocks.NewMockstore(ctrl)
+					mockSSM.EXPECT().GetApplication(gomock.Any()).AnyTimes()
+					cmd.cfgStore = mockSSM
+				},
+			},
+			"return a wrapped error if the environment flag value does not exist": {
+				envName: "test",
+				initMocks: func(ctrl *gomock.Controller, cmd *overrideSvcOpts) {
+					mockSSM := mocks.NewMockstore(ctrl)
+					mockSSM.EXPECT().GetApplication(gomock.Any()).AnyTimes()
+					mockSSM.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Return(nil, &config.ErrNoSuchEnvironment{})
+					cmd.cfgStore = mockSSM
+				},
+				wanted: errors.New(`get environment "test" configuration`),
+			},
+		}
+		for name, tc := range testCases {
+			t.Run(name, func(t *testing.T) {
+				// GIVEN
+				ctrl := gomock.NewController(t)
+				defer ctrl.Finish()
+
+				in := overrideVars{appName: "demo", envName: tc.envName, cdkLang: "typescript"}
+				cmd := &overrideSvcOpts{overrideVars: in}
+				if tc.initMocks != nil {
+					tc.initMocks(ctrl, cmd)
+				}
+
+				// WHEN
+				err := cmd.Validate()
+
+				// THEN
+				if tc.wanted != nil {
+					require.ErrorContains(t, err, tc.wanted.Error())
 				} else {
 					require.NoError(t, err)
 				}
