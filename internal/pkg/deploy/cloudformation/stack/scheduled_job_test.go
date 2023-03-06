@@ -181,7 +181,7 @@ DiscoveryServiceArn: !GetAtt DiscoveryService.Arn`,
 						env:  testJobEnvName,
 						app:  testJobAppName,
 						rc: RuntimeConfig{
-							Images: map[string]ECRImage{
+							PushedImages: map[string]ECRImage{
 								"testServiceName": {
 									RepoURL:  testImageRepoURL,
 									ImageTag: testImageTag,
@@ -525,7 +525,7 @@ func TestScheduledJob_Parameters(t *testing.T) {
 						env:  testEnvName,
 						app:  testAppName,
 						rc: RuntimeConfig{
-							Images: map[string]ECRImage{
+							PushedImages: map[string]ECRImage{
 								"frontend": {
 									RepoURL:  testImageRepoURL,
 									ImageTag: testImageTag,
@@ -569,7 +569,7 @@ func TestScheduledJob_SerializedParameters(t *testing.T) {
 				env:  testEnvName,
 				app:  testAppName,
 				rc: RuntimeConfig{
-					Images: map[string]ECRImage{
+					PushedImages: map[string]ECRImage{
 						aws.StringValue(testScheduledJobManifest.Name): {
 							RepoURL:  testImageRepoURL,
 							ImageTag: testImageTag,

@@ -10,6 +10,7 @@
     "HTTPSEnabled": "true",
     "LogRetention": "30",
     "RulePath": "/",
+    "RulePathSlice": "/",
     "Stickiness": "false",
     "TargetContainer": "fe",
     "TargetPort": "4000",

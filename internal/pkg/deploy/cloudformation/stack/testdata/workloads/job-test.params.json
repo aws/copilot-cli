@@ -10,7 +10,8 @@
     "TaskCPU": "256",
     "TaskCount": "1",
     "TaskMemory": "512",
-    "WorkloadName": "job"
+    "WorkloadName": "job",
+    "nginxEnvFileARN": ""
   },
   "Tags": {
     "copilot-application": "my-app",

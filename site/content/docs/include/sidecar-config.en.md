@@ -17,6 +17,10 @@ Environment variables for the sidecar container (optional)
 <a id="secrets" href="#secrets" class="field">`secrets`</a> <span class="type">Map</span>  
 Secrets to expose to the sidecar container (optional)
 
+<a id="envFile" href="#envFile" class="field">`env_file`</a> <span class="type">String</span>  
+The path to a file from the root of your workspace containing the environment variables to pass to the sidecar container. For more information about the environment variable file, see [Considerations for specifying environment variable files](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/taskdef-envfiles.html#taskdef-envfiles-considerations).
+
+
 <a id="mount-points" href="#mount-points" class="field">`mount_points`</a> <span class="type">Array of Maps</span>  
 Mount paths for EFS volumes specified at the service level (optional).
 

@@ -335,7 +335,7 @@ Outputs:
 						env:  testEnvName,
 						app:  testAppName,
 						rc: RuntimeConfig{
-							Images: map[string]ECRImage{
+							PushedImages: map[string]ECRImage{
 								"testServiceName": {
 									RepoURL:  testImageRepoURL,
 									ImageTag: testImageTag,
@@ -495,7 +495,7 @@ func TestRequestDrivenWebService_SerializedParameters(t *testing.T) {
 				env:  testEnvName,
 				app:  testAppName,
 				rc: RuntimeConfig{
-					Images: map[string]ECRImage{
+					PushedImages: map[string]ECRImage{
 						aws.StringValue(testRDWebServiceManifest.Name): {
 							RepoURL:  testImageRepoURL,
 							ImageTag: testImageTag,

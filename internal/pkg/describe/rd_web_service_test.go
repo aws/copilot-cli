@@ -128,7 +128,7 @@ func TestRDWebServiceDescriber_Describe(t *testing.T) {
 					m.ecsSvcDescriber.EXPECT().Service().Return(&apprunner.Service{}, nil),
 					m.ecsSvcDescriber.EXPECT().ServiceURL().Return("", nil),
 					m.ecsSvcDescriber.EXPECT().IsPrivate().Return(false, nil),
-					m.ecsSvcDescriber.EXPECT().ServiceStackResources().Return(nil, mockErr),
+					m.ecsSvcDescriber.EXPECT().StackResources().Return(nil, mockErr),
 				)
 			},
 			wantedError: fmt.Errorf("retrieve service resources: some error"),
@@ -159,7 +159,7 @@ func TestRDWebServiceDescriber_Describe(t *testing.T) {
 					}, nil),
 					m.ecsSvcDescriber.EXPECT().ServiceURL().Return("https://6znxd4ra33.public.us-east-1.apprunner.amazonaws.com", nil),
 					m.ecsSvcDescriber.EXPECT().IsPrivate().Return(true, nil),
-					m.ecsSvcDescriber.EXPECT().ServiceStackResources().Return([]*stack.Resource{
+					m.ecsSvcDescriber.EXPECT().StackResources().Return([]*stack.Resource{
 						{
 							Type:       "AWS::AppRunner::Service",
 							PhysicalID: "arn:aws:apprunner:us-east-1:111111111111:service/testapp-test-testsvc",
@@ -186,7 +186,7 @@ func TestRDWebServiceDescriber_Describe(t *testing.T) {
 					}, nil),
 					m.ecsSvcDescriber.EXPECT().ServiceURL().Return("https://tumkjmvjjf.public.us-east-1.apprunner.amazonaws.com", nil),
 					m.ecsSvcDescriber.EXPECT().IsPrivate().Return(false, nil),
-					m.ecsSvcDescriber.EXPECT().ServiceStackResources().Return([]*stack.Resource{
+					m.ecsSvcDescriber.EXPECT().StackResources().Return([]*stack.Resource{
 						{
 							Type:       "AWS::AppRunner::Service",
 							PhysicalID: "arn:aws:apprunner:us-east-1:111111111111:service/testapp-prod-testsvc",
@@ -296,7 +296,7 @@ func TestRDWebServiceDescriber_Describe(t *testing.T) {
 					}, nil),
 					m.ecsSvcDescriber.EXPECT().ServiceURL().Return("https://6znxd4ra33.public.us-east-1.apprunner.amazonaws.com", nil),
 					m.ecsSvcDescriber.EXPECT().IsPrivate().Return(true, nil),
-					m.ecsSvcDescriber.EXPECT().ServiceStackResources().Return([]*stack.Resource{
+					m.ecsSvcDescriber.EXPECT().StackResources().Return([]*stack.Resource{
 						{
 							Type:       "AWS::AppRunner::Service",
 							PhysicalID: "arn:aws:apprunner:us-east-1:111111111111:service/testapp-test-testsvc",
@@ -323,7 +323,7 @@ func TestRDWebServiceDescriber_Describe(t *testing.T) {
 					}, nil),
 					m.ecsSvcDescriber.EXPECT().ServiceURL().Return("https://tumkjmvjjf.public.us-east-1.apprunner.amazonaws.com", nil),
 					m.ecsSvcDescriber.EXPECT().IsPrivate().Return(false, nil),
-					m.ecsSvcDescriber.EXPECT().ServiceStackResources().Return([]*stack.Resource{
+					m.ecsSvcDescriber.EXPECT().StackResources().Return([]*stack.Resource{
 						{
 							Type:       "AWS::AppRunner::Service",
 							PhysicalID: "arn:aws:apprunner:us-east-1:111111111111:service/testapp-prod-testsvc",

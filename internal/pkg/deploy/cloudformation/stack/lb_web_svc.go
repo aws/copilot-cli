@@ -102,7 +102,8 @@ func NewLoadBalancedWebService(conf LoadBalancedWebServiceConfig,
 				parser:             fs,
 				addons:             conf.Addons,
 			},
-			logRetention:        conf.Manifest.Logging.Retention,
+			logging:             conf.Manifest.Logging,
+			sidecars:            conf.Manifest.Sidecars,
 			tc:                  conf.Manifest.TaskConfig,
 			taskDefOverrideFunc: override.CloudFormationTemplate,
 		},
@@ -138,7 +139,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("parse exposed ports in service manifest %s: %w", s.name, err)
 	}
-	sidecars, err := convertSidecars(s.manifest.Sidecars, exposedPorts.PortsForContainer)
+	sidecars, err := convertSidecars(s.manifest.Sidecars, exposedPorts.PortsForContainer, s.rc)
 	if err != nil {
 		return "", fmt.Errorf("convert the sidecar configuration for service %s: %w", s.name, err)
 	}
@@ -321,10 +322,6 @@ func (s *LoadBalancedWebService) Parameters() ([]*cloudformation.Parameter, erro
 			ParameterKey:   aws.String(WorkloadTargetPortParamKey),
 			ParameterValue: aws.String(targetPort),
 		},
-		{
-			ParameterKey:   aws.String(WorkloadEnvFileARNParamKey),
-			ParameterValue: aws.String(s.rc.EnvFileARN),
-		},
 	}...)
 
 	if !s.manifest.RoutingRule.Disabled() {
@@ -332,6 +329,10 @@ func (s *LoadBalancedWebService) Parameters() ([]*cloudformation.Parameter, erro
 			{
 				ParameterKey:   aws.String(WorkloadRulePathParamKey),
 				ParameterValue: s.manifest.RoutingRule.Path,
+			},
+			{
+				ParameterKey:   aws.String(WorkloadRulePathSliceParamKey),
+				ParameterValue: aws.String(strings.Join([]string{aws.StringValue(s.manifest.RoutingRule.Path)}, ",")),
 			},
 			{
 				ParameterKey:   aws.String(WorkloadHTTPSParamKey),

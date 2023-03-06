@@ -15,7 +15,8 @@
     "TaskCPU": "256",
     "TaskCount": "5",
     "TaskMemory": "512",
-    "WorkloadName": "fe"
+    "WorkloadName": "fe",
+    "tlsEnvFileARN": ""
   },
   "Tags": {
     "copilot-application": "my-app",
