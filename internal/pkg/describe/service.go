@@ -7,16 +7,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatch"
-	"io"
-	"net/url"
-	"sort"
-	"strings"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/aws/apprunner"
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatch"
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -24,6 +19,10 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/describe/stack"
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
 	"gopkg.in/yaml.v3"
+	"io"
+	"net/url"
+	"sort"
+	"strings"
 )
 
 const (
@@ -37,6 +36,8 @@ const (
 	apprunnerServiceType              = "AWS::AppRunner::Service"
 	apprunnerVPCIngressConnectionType = "AWS::AppRunner::VpcIngressConnection"
 )
+
+const maxAlarmShowColumnWidth = 40
 
 // ConfigStoreSvc wraps methods of config store.
 type ConfigStoreSvc interface {
@@ -455,12 +456,12 @@ type rollbackAlarms []cloudwatch.AlarmDescription
 
 func (abr rollbackAlarms) humanString(w io.Writer) {
 	headers := []string{"Name", "Environment", "Description"}
-	var rows [][]string
+	fmt.Fprintf(w, "  %s\n", strings.Join(headers, "\t"))
+	fmt.Fprintf(w, "  %s\n", strings.Join(underline(headers), "\t"))
 	for _, alarm := range abr {
-		rows = append(rows, []string{alarm.Name, alarm.Environment, alarm.Description})
+		printWithMaxWidth(w, "  %s\t%s\t%s\n", maxAlarmShowColumnWidth, alarm.Name, alarm.Environment, alarm.Description)
+		fmt.Fprintf(w, "  %s\t%s\t%s\n", "", "", "")
 	}
-
-	printTable(w, headers, rows)
 }
 
 // envVar contains serialized environment variables for a service.
