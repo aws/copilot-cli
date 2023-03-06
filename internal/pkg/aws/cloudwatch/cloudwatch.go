@@ -52,15 +52,10 @@ type AlarmStatus struct {
 }
 
 // AlarmDescription contains CloudWatch alarm config.
+// Also available: MetricName, ComparisonOperator, DatapointsToAlarm, EvaluationPeriods, Threshold, Unit.
 type AlarmDescription struct {
 	Name               string  `json:"name"`
 	Description        string  `json:"description"`
-	MetricName         string  `json:"metricName"`
-	ComparisonOperator string  `json:"comparisonOperator"`
-	DatapointsToAlarm  int64   `json:"datapointsToAlarm"`
-	EvaluationPeriods  int64   `json:"evaluationPeriods"`
-	Threshold          float64 `json:"threshold"`
-	Unit               string  `json:"unit"`
 	Environment        string  `json:"environment"`
 }
 
@@ -162,7 +157,6 @@ func (cw *CloudWatch) AlarmDescriptions(alarmNames []string) ([]AlarmDescription
 	return alarmDescriptions, nil
 }
 
-// TODO: change to use generics
 func (cw *CloudWatch) compositeAlarmsDescriptions(alarms []*cloudwatch.CompositeAlarm) []AlarmDescription {
 	var alarmDescriptionList []AlarmDescription
 	for _, alarm := range alarms {
@@ -186,12 +180,6 @@ func (cw *CloudWatch) metricAlarmsDescriptions(alarms []*cloudwatch.MetricAlarm)
 		alarmDescriptionsList = append(alarmDescriptionsList, AlarmDescription{
 			Name:               aws.StringValue(alarm.AlarmName),
 			Description:        aws.StringValue(alarm.AlarmDescription),
-			MetricName:         aws.StringValue(alarm.MetricName),
-			ComparisonOperator: aws.StringValue(alarm.ComparisonOperator),
-			DatapointsToAlarm:  aws.Int64Value(alarm.DatapointsToAlarm),
-			EvaluationPeriods:  aws.Int64Value(alarm.EvaluationPeriods),
-			Threshold:          aws.Float64Value(alarm.Threshold),
-			Unit:               aws.StringValue(alarm.Unit),
 		})
 	}
 	return alarmDescriptionsList
