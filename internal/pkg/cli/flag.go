@@ -128,6 +128,10 @@ const (
 	overwriteFlag     = "overwrite"
 	inputFilePathFlag = "cli-input-yaml"
 
+	// Flags for overriding templates.
+	iacToolFlag     = "tool"
+	cdkLanguageFlag = "cdk-language"
+
 	// Other.
 	svcPortFlag             = "port"
 	noSubscriptionFlag      = "no-subscribe"
@@ -160,6 +164,7 @@ const (
 	gitBranchFlagShort         = "b"
 	envsFlagShort              = "e"
 	pipelineTypeShort          = "p"
+	storageLifecycleShort      = "l"
 
 	scheduleFlagShort = "s"
 )
@@ -176,6 +181,16 @@ Cannot be specified with --%s.`, imageFlag)
 Cannot be specified with --%s.`, imageFlag)
 	storageTypeFlagDescription = fmt.Sprintf(`Type of storage to add. Must be one of:
 %s.`, strings.Join(applyAll(storageTypes, strconv.Quote), ", "))
+	storageLifecycleFlagDescription = fmt.Sprintf(`Whether the storage should be created and deleted
+at the same time as a workload or an environment.
+Must be one of: %s.`, english.OxfordWordSeries(applyAll(validLifecycleOptions, strconv.Quote), "or"))
+	storageAddIngressFromFlagDescription = fmt.Sprintf(`The workload that needs access to an
+environment storage resource. Must be
+specified with %q and %q.
+Can be specified with %q.`,
+		fmt.Sprintf("--%s", nameFlag),
+		fmt.Sprintf("--%s", storageTypeFlag),
+		fmt.Sprintf("--%s", storageRDSEngineFlag))
 	jobTypeFlagDescription = fmt.Sprintf(`Type of job to create. Must be one of:
 %s.`, strings.Join(applyAll(manifestinfo.JobTypes(), strconv.Quote), ", "))
 	wkldTypeFlagDescription = fmt.Sprintf(`Type of job or svc to create. Must be one of:
@@ -207,6 +222,12 @@ Mutually exclusive with the --%s flag.`, inputFilePathFlag)
 Mutually exclusive with the --%s flag.`, inputFilePathFlag)
 	secretInputFilePathFlagDescription = fmt.Sprintf(`Optional. A YAML file in which the secret values are specified.
 Mutually exclusive with the -%s ,--%s and --%s flags.`, nameFlagShort, nameFlag, valuesFlag)
+
+	iacToolFlagDescription = fmt.Sprintf(`Infrastructure as Code tool to override a template.
+Must be one of: %s.`, strings.Join(applyAll(validIaCTools, strconv.Quote), ", "))
+	cdkLanguageFlagDescription = `Optional. The Cloud Development Kit language.`
+	overrideEnvFlagDescription = `Optional. Name of the environment to use when retrieving resources in a template.
+Defaults to a random environment.`
 
 	repoURLFlagDescription = fmt.Sprintf(`The repository URL to trigger your pipeline.
 Supported providers are: %s.`, strings.Join(manifest.PipelineProviders, ", "))
@@ -287,12 +308,8 @@ Uploaded asset locations are filled in the template configuration.`
 	pipelineTypeFlagDescription      = `The type of pipeline. Must be either "Workloads" or "Environments".`
 
 	// Storage.
-	storageFlagDescription               = "Name of the storage resource to create."
-	storageWorkloadFlagDescription       = "Name of the service or job to associate with storage."
-	storageLifecycleFlagDescription      = "Whether the storage should be created and deleted at the same time as a workload or as the environment"
-	storageAddIngressFromFlagDescription = `The workload that needs access to an environment-level addon.
-Must be specified with --name and --storage-type.
-Can be specified with --engine.`
+	storageFlagDescription             = "Name of the storage resource to create."
+	storageWorkloadFlagDescription     = "Name of the service/job that accesses the storage."
 	storagePartitionKeyFlagDescription = `Partition key for the DDB table.
 Must be of the format '<keyName>:<dataType>'.`
 	storageSortKeyFlagDescription = `Optional. Sort key for the DDB table.
@@ -301,8 +318,9 @@ Must be of the format '<keyName>:<dataType>'.`
 	storageNoLSIFlagDescription     = `Optional. Don't ask about configuring alternate sort keys.`
 	storageLSIConfigFlagDescription = `Optional. Attribute to use as an alternate sort key. May be specified up to 5 times.
 Must be of the format '<keyName>:<dataType>'.`
-	storageAuroraServerlessVersionFlagDescription = `Optional. Aurora Serverless version. Must be either "v1" or "v2".`
-	storageRDSEngineFlagDescription               = `The database engine used in the cluster.
+	storageAuroraServerlessVersionFlagDescription = `Optional. Aurora Serverless version.
+Must be either "v1" or "v2".`
+	storageRDSEngineFlagDescription = `The database engine used in the cluster.
 Must be either "MySQL" or "PostgreSQL".`
 	storageRDSInitialDBFlagDescription      = "The initial database to create in the cluster."
 	storageRDSParameterGroupFlagDescription = "Optional. The name of the parameter group to associate with the cluster."

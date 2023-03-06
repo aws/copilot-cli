@@ -482,3 +482,24 @@ func compareStackTemplateSection(t *testing.T, key, wanted, actual reflect.Value
 	require.Equal(t, actual.MapIndex(key).Interface(), wanted.MapIndex(key).Interface(),
 		fmt.Sprintf("Comparing %q", key.Interface()))
 }
+
+func resetCustomResourceLocations(template map[any]any) {
+	resources := template["Resources"].(map[string]any)
+	functions := []string{
+		"EnvControllerFunction", "DynamicDesiredCountFunction", "BacklogPerTaskCalculatorFunction",
+		"RulePriorityFunction", "NLBCustomDomainFunction", "NLBCertValidatorFunction",
+		"CustomDomainFunction", "CertificateValidationFunction", "DNSDelegationFunction",
+		"CertificateReplicatorFunction", "UniqueJSONValuesFunction",
+	}
+	for _, fnName := range functions {
+		resource, ok := resources[fnName]
+		if !ok {
+			continue
+		}
+		fn := resource.(map[string]any)
+		props := fn["Properties"].(map[string]any)
+		code := props["Code"].(map[string]any)
+		code["S3Bucket"] = nil
+		code["S3Key"] = nil
+	}
+}

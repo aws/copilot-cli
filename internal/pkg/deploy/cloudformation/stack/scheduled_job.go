@@ -33,8 +33,7 @@ type ScheduledJob struct {
 	*ecsWkld
 	manifest *manifest.ScheduledJob
 
-	parser   scheduledJobReadParser
-	localCRs []uploadable // Custom resources that have not been uploaded yet.
+	parser scheduledJobReadParser
 }
 
 var (
@@ -104,6 +103,8 @@ func NewScheduledJob(cfg ScheduledJobConfig) (*ScheduledJob, error) {
 	if err != nil {
 		return nil, fmt.Errorf("scheduled job custom resources: %w", err)
 	}
+	cfg.RuntimeConfig.loadCustomResourceURLs(cfg.ArtifactBucketName, uploadableCRs(crs).convert())
+
 	return &ScheduledJob{
 		ecsWkld: &ecsWkld{
 			wkld: &wkld{
@@ -118,14 +119,14 @@ func NewScheduledJob(cfg ScheduledJobConfig) (*ScheduledJob, error) {
 				parser:             fs,
 				addons:             cfg.Addons,
 			},
-			logRetention:        cfg.Manifest.Logging.Retention,
+			sidecars:            cfg.Manifest.Sidecars,
+			logging:             cfg.Manifest.Logging,
 			tc:                  cfg.Manifest.TaskConfig,
 			taskDefOverrideFunc: override.CloudFormationTemplate,
 		},
 		manifest: cfg.Manifest,
 
-		parser:   fs,
-		localCRs: uploadableCRs(crs).convert(),
+		parser: fs,
 	}, nil
 }
 
@@ -143,7 +144,7 @@ func (j *ScheduledJob) Template() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("parse exposed ports in service manifest %s: %w", j.name, err)
 	}
-	sidecars, err := convertSidecars(j.manifest.Sidecars, exposedPorts.PortsForContainer)
+	sidecars, err := convertSidecars(j.manifest.Sidecars, exposedPorts.PortsForContainer, j.rc)
 	if err != nil {
 		return "", fmt.Errorf("convert the sidecar configuration for job %s: %w", j.name, err)
 	}
@@ -223,10 +224,6 @@ func (j *ScheduledJob) Parameters() ([]*cloudformation.Parameter, error) {
 		{
 			ParameterKey:   aws.String(ScheduledJobScheduleParamKey),
 			ParameterValue: aws.String(schedule),
-		},
-		{
-			ParameterKey:   aws.String(WorkloadEnvFileARNParamKey),
-			ParameterValue: aws.String(j.rc.EnvFileARN),
 		},
 	}...), nil
 }

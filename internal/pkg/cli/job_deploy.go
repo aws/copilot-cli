@@ -42,6 +42,7 @@ type deployJobOpts struct {
 	newJobDeployer       func() (workloadDeployer, error)
 	envFeaturesDescriber versionCompatibilityChecker
 	sel                  wsSelector
+	gitShortCommit       string
 
 	// cached variables
 	targetApp         *config.Application
@@ -93,11 +94,14 @@ func newJobDeployer(o *deployJobOpts) (workloadDeployer, error) {
 
 	content := o.appliedDynamicMft.Manifest()
 	in := deploy.WorkloadDeployerInput{
-		SessionProvider:  o.sessProvider,
-		Name:             o.name,
-		App:              o.targetApp,
-		Env:              o.targetEnv,
-		ImageTag:         o.imageTag,
+		SessionProvider: o.sessProvider,
+		Name:            o.name,
+		App:             o.targetApp,
+		Env:             o.targetEnv,
+		Image: deploy.ContainerImageIdentifier{
+			CustomTag:         o.imageTag,
+			GitShortCommitTag: o.gitShortCommit,
+		},
 		Mft:              content,
 		RawMft:           raw,
 		EnvVersionGetter: o.envFeaturesDescriber,
@@ -187,8 +191,8 @@ func (o *deployJobOpts) Execute() error {
 	}
 	if _, err = deployer.DeployWorkload(&deploy.DeployWorkloadInput{
 		StackRuntimeConfiguration: deploy.StackRuntimeConfiguration{
-			ImageDigest:        uploadOut.ImageDigest,
-			EnvFileARN:         uploadOut.EnvFileARN,
+			ImageDigests:       uploadOut.ImageDigests,
+			EnvFileARNs:        uploadOut.EnvFileARNs,
 			AddonsURL:          uploadOut.AddonsURL,
 			RootUserARN:        o.rootUserARN,
 			Tags:               tags.Merge(o.targetApp.Tags, o.resourceTags),
@@ -199,7 +203,7 @@ func (o *deployJobOpts) Execute() error {
 		},
 	}); err != nil {
 		if o.disableRollback {
-			stackName := stack.NameForService(o.targetApp.Name, o.targetEnv.Name, o.name)
+			stackName := stack.NameForWorkload(o.targetApp.Name, o.targetEnv.Name, o.name)
 			rollbackCmd := fmt.Sprintf("aws cloudformation rollback-stack --stack-name %s --role-arn %s", stackName, o.targetEnv.ExecutionRoleARN)
 			log.Infof(`It seems like you have disabled automatic stack rollback for this deployment. To debug, you can visit the AWS console to inspect the errors.
 After fixing the deployment, you can:
@@ -214,7 +218,7 @@ After fixing the deployment, you can:
 }
 
 func (o *deployJobOpts) configureClients() error {
-	o.imageTag = imageTagFromGit(o.cmd, o.imageTag) // Best effort assign git tag.
+	o.gitShortCommit = imageTagFromGit(o.cmd) // Best effort assign git tag.
 	env, err := o.store.GetEnvironment(o.appName, o.envName)
 	if err != nil {
 		return err

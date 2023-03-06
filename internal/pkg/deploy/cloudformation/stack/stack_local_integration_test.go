@@ -74,9 +74,11 @@ func Test_Stack_Local_Integration(t *testing.T) {
 		EnvManifest: envConfig,
 		Manifest:    v,
 		RuntimeConfig: stack.RuntimeConfig{
-			Image: &stack.ECRImage{
-				RepoURL:  imageURL,
-				ImageTag: imageTag,
+			PushedImages: map[string]stack.ECRImage{
+				aws.StringValue(v.Name): {
+					RepoURL:  imageURL,
+					ImageTag: imageTag,
+				},
 			},
 			EnvVersion: "v1.42.0",
 		},

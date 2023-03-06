@@ -136,7 +136,7 @@ func (d *lbWebSvcDeployer) DeployWorkload(in *DeployWorkloadInput) (ActionRecomm
 	if err := d.deploy(in.Options, *stackConfigOutput); err != nil {
 		return nil, err
 	}
-	return nil, nil
+	return noopActionRecommender{}, nil
 }
 
 func (d *lbWebSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*svcStackConfigurationOutput, error) {

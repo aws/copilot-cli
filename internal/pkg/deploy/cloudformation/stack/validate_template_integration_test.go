@@ -56,9 +56,11 @@ func TestAutoscalingIntegration_Validate(t *testing.T) {
 		},
 		Manifest: v,
 		RuntimeConfig: stack.RuntimeConfig{
-			Image: &stack.ECRImage{
-				RepoURL:  imageURL,
-				ImageTag: imageTag,
+			PushedImages: map[string]stack.ECRImage{
+				aws.StringValue(v.Name): {
+					RepoURL:  imageURL,
+					ImageTag: imageTag,
+				},
 			},
 			ServiceDiscoveryEndpoint: "test.app.local",
 			CustomResourcesURL: map[string]string{

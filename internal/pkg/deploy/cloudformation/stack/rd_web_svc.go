@@ -45,8 +45,7 @@ type RequestDrivenWebService struct {
 	manifest *manifest.RequestDrivenWebService
 	app      deploy.AppInformation
 
-	parser   requestDrivenWebSvcReadParser
-	localCRs []uploadable // Custom resources that have not been uploaded yet.
+	parser requestDrivenWebSvcReadParser
 }
 
 // RequestDrivenWebServiceConfig contains data required to initialize a request-driven web service stack.
@@ -66,6 +65,8 @@ func NewRequestDrivenWebService(cfg RequestDrivenWebServiceConfig) (*RequestDriv
 	if err != nil {
 		return nil, fmt.Errorf("request-driven web service custom resources: %w", err)
 	}
+	cfg.RuntimeConfig.loadCustomResourceURLs(cfg.ArtifactBucketName, uploadableCRs(crs).convert())
+
 	return &RequestDrivenWebService{
 		appRunnerWkld: &appRunnerWkld{
 			wkld: &wkld{
@@ -87,7 +88,6 @@ func NewRequestDrivenWebService(cfg RequestDrivenWebServiceConfig) (*RequestDriv
 		app:      cfg.App,
 		manifest: cfg.Manifest,
 		parser:   fs,
-		localCRs: uploadableCRs(crs).convert(),
 	}, nil
 }
 

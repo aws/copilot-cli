@@ -96,6 +96,8 @@ func TestRDWS_Template(t *testing.T) {
 		require.NoError(t, yaml.Unmarshal(wantedTemplate, wanted), "unmarshal wanted template to map[interface{}]interface{}")
 		actual := make(map[interface{}]interface{})
 		require.NoError(t, yaml.Unmarshal([]byte(actualTemplate), actual), "unmarshal actual template to map[interface{}]interface{}")
+
+		resetCustomResourceLocations(actual)
 		compareStackTemplate(t, wanted, actual)
 	}
 }

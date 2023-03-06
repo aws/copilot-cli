@@ -7,7 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -53,7 +53,7 @@ func ProxyRequest(w http.ResponseWriter, r *http.Request) {
 	defer resp.Body.Close()
 	log.Println("Did request")
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		handleErr("read response: %s", err)
 		return

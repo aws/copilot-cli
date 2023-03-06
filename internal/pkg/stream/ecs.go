@@ -12,6 +12,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/request"
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatch"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 )
 
@@ -23,11 +24,16 @@ const (
 	rollOutEmpty               = ""
 )
 
-var ecsEventFailureKeywords = []string{"fail", "unhealthy", "error", "throttle", "unable", "missing"}
+var ecsEventFailureKeywords = []string{"fail", "unhealthy", "error", "throttle", "unable", "missing", "alarm detected", "rolling back"}
 
 // ECSServiceDescriber is the interface to describe an ECS service.
 type ECSServiceDescriber interface {
 	Service(clusterName, serviceName string) (*ecs.Service, error)
+}
+
+// CloudWatchDescriber is the interface to describe CW alarms.
+type CloudWatchDescriber interface {
+	AlarmStatuses(opts ...cloudwatch.DescribeAlarmOpts) ([]cloudwatch.AlarmStatus, error)
 }
 
 // ECSDeployment represent an ECS rolling update deployment.
@@ -62,11 +68,13 @@ func (d ECSDeployment) done() bool {
 type ECSService struct {
 	Deployments         []ECSDeployment
 	LatestFailureEvents []string
+	Alarms              []cloudwatch.AlarmStatus
 }
 
 // ECSDeploymentStreamer is a Streamer for ECSService descriptions until the deployment is completed.
 type ECSDeploymentStreamer struct {
 	client                 ECSServiceDescriber
+	cw                     CloudWatchDescriber
 	clock                  clock
 	cluster                string
 	rand                   func(n int) int
@@ -79,14 +87,16 @@ type ECSDeploymentStreamer struct {
 	eventsToFlush []ECSService
 	mu            sync.Mutex
 
-	retries int
+	ecsRetries int
+	cwRetries  int
 }
 
 // NewECSDeploymentStreamer creates a new ECSDeploymentStreamer that streams service descriptions
 // since the deployment creation time and until the primary deployment is completed.
-func NewECSDeploymentStreamer(ecs ECSServiceDescriber, cluster, service string, deploymentCreationTime time.Time) *ECSDeploymentStreamer {
+func NewECSDeploymentStreamer(ecs ECSServiceDescriber, cw CloudWatchDescriber, cluster, service string, deploymentCreationTime time.Time) *ECSDeploymentStreamer {
 	return &ECSDeploymentStreamer{
 		client:                 ecs,
+		cw:                     cw,
 		clock:                  realClock{},
 		rand:                   rand.Intn,
 		cluster:                cluster,
@@ -117,12 +127,13 @@ func (s *ECSDeploymentStreamer) Fetch() (next time.Time, done bool, err error) {
 	out, err := s.client.Service(s.cluster, s.service)
 	if err != nil {
 		if request.IsErrorThrottle(err) {
-			s.retries += 1
-			return nextFetchDate(s.clock, s.rand, s.retries), false, nil
+			s.ecsRetries += 1
+			return nextFetchDate(s.clock, s.rand, s.ecsRetries), false, nil
 		}
 		return next, false, fmt.Errorf("fetch service description: %w", err)
 	}
-	s.retries = 0
+	s.ecsRetries = 0
+
 	var deployments []ECSDeployment
 	for _, deployment := range out.Deployments {
 		status := aws.StringValue(deployment.Status)
@@ -157,11 +168,27 @@ func (s *ECSDeploymentStreamer) Fetch() (next time.Time, done bool, err error) {
 		}
 		s.pastEventIDs[id] = true
 	}
+
+	var alarms []cloudwatch.AlarmStatus
+	if out.DeploymentConfiguration != nil && out.DeploymentConfiguration.Alarms != nil && aws.BoolValue(out.DeploymentConfiguration.Alarms.Enable) {
+		alarmNames := aws.StringValueSlice(out.DeploymentConfiguration.Alarms.AlarmNames)
+		alarms, err = s.cw.AlarmStatuses(cloudwatch.WithNames(alarmNames))
+		if err != nil {
+			if request.IsErrorThrottle(err) {
+				s.cwRetries += 1
+				return nextFetchDate(s.clock, s.rand, s.cwRetries), false, nil
+			}
+			return next, false, fmt.Errorf("retrieve alarm statuses: %w", err)
+		}
+		s.cwRetries = 0
+	}
+	
 	s.eventsToFlush = append(s.eventsToFlush, ECSService{
 		Deployments:         deployments,
 		LatestFailureEvents: failureMsgs,
+		Alarms:              alarms,
 	})
-	return nextFetchDate(s.clock, s.rand, s.retries), done, nil
+	return nextFetchDate(s.clock, s.rand, 0), done, nil
 }
 
 // Notify flushes all new events to the streamer's subscribers.

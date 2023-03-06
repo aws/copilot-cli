@@ -6,7 +6,6 @@ package sidecars_test
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math/rand"
 	"net/http"
 	"os"
@@ -33,6 +32,7 @@ image:
   port: 3000
   depends_on:
     nginx: start
+env_file: ./magic.env
 
 http:
   # Requests to this path will be forwarded to your service. 
@@ -55,7 +55,9 @@ sidecars:
     image: %s    # Image URL for sidecar container.
     variables:
       NGINX_PORT: %s
+    env_file: ./magic.env
 logging:
+  env_file: ./magic.env
   destination:
     Name: cloudwatch
     region: us-east-1
@@ -103,7 +105,7 @@ var _ = Describe("sidecars flow", func() {
 		BeforeAll(func() {
 			_, testEnvInitErr = cli.EnvInit(&client.EnvInitRequest{
 				AppName: appName,
-				EnvName: "test",
+				EnvName: envName,
 				Profile: "default",
 			})
 		})
@@ -118,7 +120,7 @@ var _ = Describe("sidecars flow", func() {
 		BeforeAll(func() {
 			_, envDeployErr = cli.EnvDeploy(&client.EnvDeployRequest{
 				AppName: appName,
-				Name:    "test",
+				Name:    envName,
 			})
 		})
 
@@ -192,27 +194,29 @@ var _ = Describe("sidecars flow", func() {
 		It("overwrite existing manifest", func() {
 			logGroupName := fmt.Sprintf("%s-test-%s", appName, svcName)
 			newManifest = fmt.Sprintf(manifest, sidecarImageURI, nginxPort, logGroupName)
-			err := ioutil.WriteFile("./copilot/hello/manifest.yml", []byte(newManifest), 0644)
+			err := os.WriteFile("./copilot/hello/manifest.yml", []byte(newManifest), 0644)
 			Expect(err).NotTo(HaveOccurred(), "overwrite manifest")
 		})
 		It("add addons folder for Firelens permissions", func() {
 			err := os.MkdirAll("./copilot/hello/addons", 0777)
 			Expect(err).NotTo(HaveOccurred(), "create addons dir")
 
-			fds, err := ioutil.ReadDir("./hello/addons")
+			fds, err := os.ReadDir("./hello/addons")
 			Expect(err).NotTo(HaveOccurred(), "read addons dir")
 
 			for _, fd := range fds {
-				destFile, err := os.Create(fmt.Sprintf("./copilot/hello/addons/%s", fd.Name()))
-				Expect(err).NotTo(HaveOccurred(), "create destination file")
-				defer destFile.Close()
+				func() {
+					destFile, err := os.Create(fmt.Sprintf("./copilot/hello/addons/%s", fd.Name()))
+					Expect(err).NotTo(HaveOccurred(), "create destination file")
+					defer destFile.Close()
 
-				srcFile, err := os.Open(fmt.Sprintf("./hello/addons/%s", fd.Name()))
-				Expect(err).NotTo(HaveOccurred(), "open source file")
-				defer srcFile.Close()
+					srcFile, err := os.Open(fmt.Sprintf("./hello/addons/%s", fd.Name()))
+					Expect(err).NotTo(HaveOccurred(), "open source file")
+					defer srcFile.Close()
 
-				_, err = io.Copy(destFile, srcFile)
-				Expect(err).NotTo(HaveOccurred(), "copy file")
+					_, err = io.Copy(destFile, srcFile)
+					Expect(err).NotTo(HaveOccurred(), "copy file")
+				}()
 			}
 		})
 	})
@@ -224,7 +228,7 @@ var _ = Describe("sidecars flow", func() {
 		BeforeAll(func() {
 			_, appDeployErr = cli.SvcDeploy(&client.SvcDeployInput{
 				Name:     svcName,
-				EnvName:  "test",
+				EnvName:  envName,
 				ImageTag: "gallopinggurdey",
 			})
 		})
@@ -243,7 +247,7 @@ var _ = Describe("sidecars flow", func() {
 
 			// Call each environment's endpoint and ensure it returns a 200
 			route := svc.Routes[0]
-			Expect(route.Environment).To(Equal("test"))
+			Expect(route.Environment).To(Equal(envName))
 			uri := route.URL + "/health-check"
 
 			// Service should be ready.
@@ -256,9 +260,18 @@ var _ = Describe("sidecars flow", func() {
 
 			// Read the response - our deployed apps should return a body with their
 			// name as the value.
-			bodyBytes, err := ioutil.ReadAll(resp.Body)
+			bodyBytes, err := io.ReadAll(resp.Body)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(bodyBytes)).To(Equal("Ready"))
+		})
+
+		It("should have env file in sidecar definitions", func() {
+			taskDefinitionName := fmt.Sprintf("%s-%s-%s", appName, envName, svcName)
+			envFiles, err := aws.GetEnvFilesFromTaskDefinition(taskDefinitionName)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(envFiles).To(HaveKey(svcName))
+			Expect(envFiles).To(HaveKey("nginx"))
+			Expect(envFiles).To(HaveKey("firelens_log_router"))
 		})
 
 		It("svc logs should display logs", func() {
@@ -269,7 +282,7 @@ var _ = Describe("sidecars flow", func() {
 				svcLogs, svcLogsErr = cli.SvcLogs(&client.SvcLogsRequest{
 					AppName: appName,
 					Name:    svcName,
-					EnvName: "test",
+					EnvName: envName,
 					Since:   "1h",
 				})
 				if svcLogsErr != nil {

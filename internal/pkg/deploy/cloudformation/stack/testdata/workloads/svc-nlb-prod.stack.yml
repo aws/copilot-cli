@@ -32,6 +32,10 @@ Parameters:
     Description: 'URL of the environment file.'
     Type: String
     Default: ""
+  tlsEnvFileARN:
+    Description: 'URL of the environment file for the tls sidecar.'
+    Type: String
+    Default: ""
   TargetContainer:
     Type: String
   TargetPort:
@@ -46,6 +50,7 @@ Conditions:
   HasAssociatedDomain: !Equals [!Ref DNSDelegated, true]
   HasAddons: !Not [!Equals [!Ref AddonsTemplateURL, ""]]
   HasEnvFile: !Not [!Equals [!Ref EnvFileARN, ""]]
+  HastlsEnvFile: !Not [!Equals [!Ref tlsEnvFileARN, ""]]
 Resources: # If a bucket URL is specified, that means the template exists.
   LogGroup:
     Metadata:
@@ -114,6 +119,12 @@ Resources: # If a bucket URL is specified, that means the template exists.
               Value: !Sub '${EnvName}'
             - Name: COPILOT_SERVICE_NAME
               Value: !Sub '${WorkloadName}'
+          EnvironmentFiles:
+            - !If
+              - HastlsEnvFile
+              - Type: s3
+                Value: !Ref tlsEnvFileARN
+              - !Ref: AWS::NoValue
           LogConfiguration:
             LogDriver: awslogs
             Options:
@@ -184,6 +195,28 @@ Resources: # If a bucket URL is specified, that means the template exists.
                         - !Ref AWS::Partition
                         - ':s3:::'
                         - !Select [0, !Split ['/', !Select [5, !Split [':', !Ref EnvFileARN]]]]
+          - !Ref AWS::NoValue
+        - !If
+          - HastlsEnvFile
+          - PolicyName: !Join ['', [!Ref AppName, '-', !Ref EnvName, '-', !Ref WorkloadName, GettlsEnvFilePolicy]]
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: 'Allow'
+                  Action:
+                    - 's3:GetObject'
+                  Resource:
+                    - !Ref tlsEnvFileARN
+                - Effect: 'Allow'
+                  Action:
+                    - 's3:GetBucketLocation'
+                  Resource:
+                    - !Join
+                      - ''
+                      - - 'arn:'
+                        - !Ref AWS::Partition
+                        - ':s3:::'
+                        - !Select [0, !Split ['/', !Select [5, !Split [':', !Ref tlsEnvFileARN]]]]
           - !Ref AWS::NoValue
       ManagedPolicyArns:
         - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy'
@@ -315,6 +348,10 @@ Resources: # If a bucket URL is specified, that means the template exists.
           Rollback: true
         MinimumHealthyPercent: 100
         MaximumPercent: 200
+        Alarms:
+          AlarmNames: []
+          Enable: false
+          Rollback: true
       PropagateTags: SERVICE
       LaunchType: FARGATE
       ServiceConnectConfiguration: !If

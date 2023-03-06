@@ -1338,6 +1338,12 @@ func (l Logging) validate() error {
 	if l.IsEmpty() {
 		return nil
 	}
+	if l.EnvFile != nil {
+		envFile := aws.StringValue(l.EnvFile)
+		if filepath.Ext(envFile) != envFileExt {
+			return fmt.Errorf("environment file %s must have a %s file extension", envFile, envFileExt)
+		}
+	}
 	return nil
 }
 
@@ -1373,6 +1379,12 @@ func (s SidecarConfig) validate() error {
 	}
 	if err := s.Image.Advanced.validate(); err != nil {
 		return fmt.Errorf(`validate "build": %w`, err)
+	}
+	if s.EnvFile != nil {
+		envFile := aws.StringValue(s.EnvFile)
+		if filepath.Ext(envFile) != envFileExt {
+			return fmt.Errorf("environment file %s must have a %s file extension", envFile, envFileExt)
+		}
 	}
 	return s.ImageOverride.validate()
 }
@@ -1838,7 +1850,7 @@ func validateContainerDeps(opts validateDependenciesOpts) error {
 		isEssential: true,
 	}
 	if !opts.logging.IsEmpty() {
-		containerDependencies[firelensContainerName] = containerDependency{}
+		containerDependencies[FirelensContainerName] = containerDependency{}
 	}
 	for name, config := range opts.sidecarConfig {
 		containerDependencies[name] = containerDependency{

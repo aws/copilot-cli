@@ -114,6 +114,26 @@ func (mr *MockprompterMockRecorder) MultiSelect(message, help, options, validato
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MultiSelect", reflect.TypeOf((*Mockprompter)(nil).MultiSelect), varargs...)
 }
 
+// MultiSelectOptions mocks base method.
+func (m *Mockprompter) MultiSelectOptions(message, help string, opts []prompt.Option, promptCfgs ...prompt.PromptConfig) ([]string, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{message, help, opts}
+	for _, a := range promptCfgs {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "MultiSelectOptions", varargs...)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// MultiSelectOptions indicates an expected call of MultiSelectOptions.
+func (mr *MockprompterMockRecorder) MultiSelectOptions(message, help, opts interface{}, promptCfgs ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{message, help, opts}, promptCfgs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MultiSelectOptions", reflect.TypeOf((*Mockprompter)(nil).MultiSelectOptions), varargs...)
+}
+
 // SelectOne mocks base method.
 func (m *Mockprompter) SelectOne(message, help string, options []string, promptOpts ...prompt.PromptConfig) (string, error) {
 	m.ctrl.T.Helper()

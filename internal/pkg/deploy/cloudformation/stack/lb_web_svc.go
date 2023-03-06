@@ -35,8 +35,7 @@ type LoadBalancedWebService struct {
 	publicSubnetCIDRBlocks []string
 	appInfo                deploy.AppInformation
 
-	parser   loadBalancedWebSvcReadParser
-	localCRs []uploadable // Custom resources that have not been uploaded yet.
+	parser loadBalancedWebSvcReadParser
 }
 
 // LoadBalancedWebServiceOption is used to configuring an optional field for LoadBalancedWebService.
@@ -68,9 +67,10 @@ func NewLoadBalancedWebService(conf LoadBalancedWebServiceConfig,
 	if err != nil {
 		return nil, fmt.Errorf("load balanced web service custom resources: %w", err)
 	}
+	conf.RuntimeConfig.loadCustomResourceURLs(conf.ArtifactBucketName, uploadableCRs(crs).convert())
+
 	var dnsDelegationEnabled, httpsEnabled bool
 	var appInfo deploy.AppInformation
-
 	if conf.App.Domain != "" {
 		dnsDelegationEnabled = true
 		appInfo = deploy.AppInformation{
@@ -102,7 +102,8 @@ func NewLoadBalancedWebService(conf LoadBalancedWebServiceConfig,
 				parser:             fs,
 				addons:             conf.Addons,
 			},
-			logRetention:        conf.Manifest.Logging.Retention,
+			logging:             conf.Manifest.Logging,
+			sidecars:            conf.Manifest.Sidecars,
 			tc:                  conf.Manifest.TaskConfig,
 			taskDefOverrideFunc: override.CloudFormationTemplate,
 		},
@@ -111,8 +112,7 @@ func NewLoadBalancedWebService(conf LoadBalancedWebServiceConfig,
 		appInfo:              appInfo,
 		dnsDelegationEnabled: dnsDelegationEnabled,
 
-		parser:   fs,
-		localCRs: uploadableCRs(crs).convert(),
+		parser: fs,
 	}
 	for _, opt := range opts {
 		opt(s)
@@ -139,10 +139,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("parse exposed ports in service manifest %s: %w", s.name, err)
 	}
-	sidecars, err := convertSidecars(s.manifest.Sidecars, exposedPorts.PortsForContainer)
-	if err != nil {
-		return "", fmt.Errorf("convert the sidecar configuration for service %s: %w", s.name, err)
-	}
+	sidecars, err := convertSidecars(s.manifest.Sidecars, exposedPorts.PortsForContainer, s.rc)
 	if err != nil {
 		return "", fmt.Errorf("convert the sidecar configuration for service %s: %w", s.name, err)
 	}
@@ -325,10 +322,6 @@ func (s *LoadBalancedWebService) Parameters() ([]*cloudformation.Parameter, erro
 			ParameterKey:   aws.String(WorkloadTargetPortParamKey),
 			ParameterValue: aws.String(targetPort),
 		},
-		{
-			ParameterKey:   aws.String(WorkloadEnvFileARNParamKey),
-			ParameterValue: aws.String(s.rc.EnvFileARN),
-		},
 	}...)
 
 	if !s.manifest.RoutingRule.Disabled() {
@@ -336,6 +329,10 @@ func (s *LoadBalancedWebService) Parameters() ([]*cloudformation.Parameter, erro
 			{
 				ParameterKey:   aws.String(WorkloadRulePathParamKey),
 				ParameterValue: s.manifest.RoutingRule.Path,
+			},
+			{
+				ParameterKey:   aws.String(WorkloadRulePathSliceParamKey),
+				ParameterValue: aws.String(strings.Join([]string{aws.StringValue(s.manifest.RoutingRule.Path)}, ",")),
 			},
 			{
 				ParameterKey:   aws.String(WorkloadHTTPSParamKey),

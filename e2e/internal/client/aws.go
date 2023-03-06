@@ -387,3 +387,43 @@ func (a *AWS) DeleteAllDBClusterSnapshots() error {
 	}
 	return nil
 }
+
+type environmentFile struct {
+	Value string `json:"value"`
+	Type  string `json:"type"`
+}
+type containerDefinition struct {
+	Name             string            `json:"name"`
+	EnvironmentFiles []environmentFile `json:"environmentFiles"`
+}
+
+// GetEnvFilesFromTaskDefinition describes the given task definition, then returns a map of all
+// existing environment files where the keys are container names and the values are S3 locations.
+func (a *AWS) GetEnvFilesFromTaskDefinition(taskDefinitionName string) (map[string]string, error) {
+	command := strings.Join([]string{
+		"ecs",
+		"describe-task-definition",
+		"--task-definition",
+		taskDefinitionName,
+	}, " ")
+	var b bytes.Buffer
+	err := a.exec(command, cmd.Stdout(&b))
+	if err != nil {
+		return nil, err
+	}
+	var containerDefinitions struct {
+		TaskDefinition struct {
+			ContainerDefinitions []containerDefinition `json:"containerDefinitions"`
+		} `json:"taskDefinition"`
+	}
+	if err = json.Unmarshal(b.Bytes(), &containerDefinitions); err != nil {
+		return nil, err
+	}
+	envFiles := make(map[string]string)
+	for _, container := range containerDefinitions.TaskDefinition.ContainerDefinitions {
+		if len(container.EnvironmentFiles) > 0 {
+			envFiles[container.Name] = container.EnvironmentFiles[0].Value
+		}
+	}
+	return envFiles, nil
+}

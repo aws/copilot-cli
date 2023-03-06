@@ -5,6 +5,7 @@ package stream
 
 import (
 	"errors"
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatch"
 	"testing"
 	"time"
 
@@ -19,7 +20,16 @@ type mockECS struct {
 	err error
 }
 
+type mockCW struct {
+	out []cloudwatch.AlarmStatus
+	err error
+}
+
 func (m mockECS) Service(clusterName, serviceName string) (*ecs.Service, error) {
+	return m.out, m.err
+}
+
+func (m mockCW) AlarmStatuses(opts ...cloudwatch.DescribeAlarmOpts) ([]cloudwatch.AlarmStatus, error) {
 	return m.out, m.err
 }
 
@@ -54,7 +64,8 @@ func TestECSDeploymentStreamer_Fetch(t *testing.T) {
 		m := mockECS{
 			err: errors.New("some error"),
 		}
-		streamer := NewECSDeploymentStreamer(m, "my-cluster", "my-svc", time.Now())
+		cw := mockCW{}
+		streamer := NewECSDeploymentStreamer(m, cw, "my-cluster", "my-svc", time.Now())
 
 		// WHEN
 		_, _, err := streamer.Fetch()
@@ -62,7 +73,31 @@ func TestECSDeploymentStreamer_Fetch(t *testing.T) {
 		// THEN
 		require.EqualError(t, err, "fetch service description: some error")
 	})
-	t.Run("stores events until deployment is done", func(t *testing.T) {
+	t.Run("returns a wrapped error on alarm statuses call failure", func(t *testing.T) {
+		// GIVEN
+		m := mockECS{
+			out: &ecs.Service{
+				DeploymentConfiguration: &awsecs.DeploymentConfiguration{
+					Alarms: &awsecs.DeploymentAlarms{
+						AlarmNames: []*string{aws.String("alarm1"), aws.String("alarm2")},
+						Enable:     aws.Bool(true),
+						Rollback:   aws.Bool(true),
+					},
+				},
+			},
+		}
+		cw := mockCW{
+			err: errors.New("some error"),
+		}
+		streamer := NewECSDeploymentStreamer(m, cw, "my-cluster", "my-svc", time.Now())
+
+		// WHEN
+		_, _, err := streamer.Fetch()
+
+		// THEN
+		require.EqualError(t, err, "retrieve alarm statuses: some error")
+	})
+	t.Run("stores events, alarms, and failures until deployment is done", func(t *testing.T) {
 		// GIVEN
 		oldStartDate := time.Date(2020, time.November, 23, 17, 0, 0, 0, time.UTC)
 		startDate := time.Date(2020, time.November, 23, 18, 0, 0, 0, time.UTC)
@@ -90,9 +125,40 @@ func TestECSDeploymentStreamer_Fetch(t *testing.T) {
 						UpdatedAt:      aws.Time(oldStartDate),
 					},
 				},
+				DeploymentConfiguration: &awsecs.DeploymentConfiguration{
+					Alarms: &awsecs.DeploymentAlarms{
+						AlarmNames: []*string{aws.String("alarm1"), aws.String("alarm2")},
+						Enable:     aws.Bool(true),
+						Rollback:   aws.Bool(true),
+					},
+				},
+				Events: []*awsecs.ServiceEvent{
+					{
+						CreatedAt: aws.Time(startDate),
+						Id:        aws.String("id1"),
+						Message:   aws.String("deployment failed: alarm detected"),
+					},
+					{
+						CreatedAt: aws.Time(startDate),
+						Id:        aws.String("id2"),
+						Message:   aws.String("rolling back to deployment X"),
+					},
+				},
 			},
 		}
-		streamer := NewECSDeploymentStreamer(m, "my-cluster", "my-svc", startDate)
+		cw := mockCW{
+			out: []cloudwatch.AlarmStatus{
+				{
+					Name:   "alarm1",
+					Status: "OK",
+				},
+				{
+					Name:   "alarm2",
+					Status: "ALARM",
+				},
+			},
+		}
+		streamer := NewECSDeploymentStreamer(m, cw, "my-cluster", "my-svc", startDate)
 
 		// WHEN
 		_, done, err := streamer.Fetch()
@@ -123,7 +189,17 @@ func TestECSDeploymentStreamer_Fetch(t *testing.T) {
 						UpdatedAt:       oldStartDate,
 					},
 				},
-				LatestFailureEvents: nil,
+				Alarms: []cloudwatch.AlarmStatus{
+					{
+						Name:   "alarm1",
+						Status: "OK",
+					},
+					{
+						Name:   "alarm2",
+						Status: "ALARM",
+					},
+				},
+				LatestFailureEvents: []string{"deployment failed: alarm detected", "rolling back to deployment X"},
 			},
 		}, streamer.eventsToFlush)
 		require.True(t, done, "there should be no more work to do since the deployment is completed")
@@ -154,9 +230,16 @@ func TestECSDeploymentStreamer_Fetch(t *testing.T) {
 						UpdatedAt:      aws.Time(oldStartDate),
 					},
 				},
+				DeploymentConfiguration: &awsecs.DeploymentConfiguration{
+					DeploymentCircuitBreaker: &awsecs.DeploymentCircuitBreaker{
+						Enable:   aws.Bool(false),
+						Rollback: aws.Bool(true),
+					},
+				},
 			},
 		}
-		streamer := NewECSDeploymentStreamer(m, "my-cluster", "my-svc", startDate)
+		cw := mockCW{}
+		streamer := NewECSDeploymentStreamer(m, cw, "my-cluster", "my-svc", startDate)
 
 		// WHEN
 		_, done, err := streamer.Fetch()
@@ -199,48 +282,60 @@ func TestECSDeploymentStreamer_Fetch(t *testing.T) {
 					{
 						// Failure event
 						Id:        aws.String("1"),
-						Message:   aws.String("(service my-svc) failed to register targets in (target-group 1234) with (error some-error)"),
+						Message:   aws.String("(service my-svc) deployment ecs-svc/0205655736282798388 deployment failed: alarm detected."),
 						CreatedAt: aws.Time(startDate.Add(1 * time.Minute)),
 					},
 					{
-						// Success event
+						// Failure event
 						Id:        aws.String("2"),
-						Message:   aws.String("(service my-svc) registered 1 targets in (target-group 1234)"),
+						Message:   aws.String("(service my-svc) rolling back to deployment ecs-svc/9086637243870003494."),
 						CreatedAt: aws.Time(startDate.Add(1 * time.Minute)),
 					},
 					{
 						// Failure event
 						Id:        aws.String("3"),
+						Message:   aws.String("(service my-svc) failed to register targets in (target-group 1234) with (error some-error)"),
+						CreatedAt: aws.Time(startDate.Add(1 * time.Minute)),
+					},
+					{
+						// Success event
+						Id:        aws.String("4"),
+						Message:   aws.String("(service my-svc) registered 1 targets in (target-group 1234)"),
+						CreatedAt: aws.Time(startDate.Add(1 * time.Minute)),
+					},
+					{
+						// Failure event
+						Id:        aws.String("5"),
 						Message:   aws.String("(service my-svc) failed to launch a task with (error some-error)."),
 						CreatedAt: aws.Time(startDate.Add(1 * time.Minute)),
 					},
 					{
 						// Failure event
-						Id:        aws.String("4"),
+						Id:        aws.String("6"),
 						Message:   aws.String("(service my-svc) (task 1234) failed container health checks."),
 						CreatedAt: aws.Time(startDate.Add(1 * time.Minute)),
 					},
 					{
 						// Success event
-						Id:        aws.String("5"),
+						Id:        aws.String("7"),
 						Message:   aws.String("(service my-svc) has started 1 tasks: (task 1234)."),
 						CreatedAt: aws.Time(startDate.Add(1 * time.Minute)),
 					},
 					{
 						// Failure event
-						Id:        aws.String("6"),
+						Id:        aws.String("8"),
 						Message:   aws.String("(service my-svc) (deployment 123) deployment failed: some-error."),
 						CreatedAt: aws.Time(startDate.Add(1 * time.Minute)),
 					},
 					{
 						// Failure event
-						Id:        aws.String("7"),
+						Id:        aws.String("9"),
 						Message:   aws.String("(service my-svc) was unable to place a task."),
 						CreatedAt: aws.Time(startDate.Add(1 * time.Minute)),
 					},
 					{
 						// Failure event
-						Id:        aws.String("8"),
+						Id:        aws.String("10"),
 						Message:   aws.String("(service my-svc) (port 80) is unhealthy in (target-group 1234) due to (reason some-error)."),
 						CreatedAt: aws.Time(startDate.Add(1 * time.Minute)),
 					},
@@ -264,6 +359,8 @@ func TestECSDeploymentStreamer_Fetch(t *testing.T) {
 		require.Equal(t, []ECSService{
 			{
 				LatestFailureEvents: []string{
+					"(service my-svc) deployment ecs-svc/0205655736282798388 deployment failed: alarm detected.",
+					"(service my-svc) rolling back to deployment ecs-svc/9086637243870003494.",
 					"(service my-svc) failed to register targets in (target-group 1234) with (error some-error)",
 					"(service my-svc) failed to launch a task with (error some-error).",
 					"(service my-svc) (task 1234) failed container health checks.",
@@ -337,7 +434,7 @@ func TestECSDeploymentStreamer_Fetch(t *testing.T) {
 
 		// THEN
 		require.NoError(t, err)
-		require.Equal(t, 1, len(streamer.eventsToFlush), "should have only event to flush")
+		require.Equal(t, 1, len(streamer.eventsToFlush), "should have only one event to flush")
 		require.Nil(t, streamer.eventsToFlush[0].LatestFailureEvents, "there should be no failed events emitted")
 	})
 }

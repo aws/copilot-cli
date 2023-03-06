@@ -271,19 +271,25 @@ func (s *WorkerService) MarshalBinary() ([]byte, error) {
 	return content.Bytes(), nil
 }
 
-// BuildRequired returns if the service requires building from the local Dockerfile.
-func (s *WorkerService) BuildRequired() (bool, error) {
-	return requiresBuild(s.ImageConfig.Image)
+// BuildArgs returns a docker.BuildArguments object for the service given a context directory
+func (s *WorkerService) BuildArgs(contextDir string) (map[string]*DockerBuildArgs, error) {
+	required, err := requiresBuild(s.ImageConfig.Image)
+	if err != nil {
+		return nil, err
+	}
+	// Creating an map to store buildArgs of all sidecar images and main container image.
+	buildArgsPerContainer := make(map[string]*DockerBuildArgs, len(s.Sidecars)+1)
+	if required {
+		buildArgsPerContainer[aws.StringValue(s.Name)] = s.ImageConfig.Image.BuildConfig(contextDir)
+	}
+	return buildArgs(contextDir, buildArgsPerContainer, s.Sidecars)
 }
 
-// BuildArgs returns a docker.BuildArguments object for the service given a workspace root directory
-func (s *WorkerService) BuildArgs(wsRoot string) *DockerBuildArgs {
-	return s.ImageConfig.Image.BuildConfig(wsRoot)
-}
-
-// EnvFile returns the location of the env file against the ws root directory.
-func (s *WorkerService) EnvFile() string {
-	return aws.StringValue(s.TaskConfig.EnvFile)
+// EnvFiles returns the locations of all env files against the ws root directory.
+// This method returns a map[string]string where the keys are container names
+// and the values are either env file paths or empty strings.
+func (s *WorkerService) EnvFiles() map[string]string {
+	return envFiles(s.Name, s.TaskConfig, s.Logging, s.Sidecars)
 }
 
 // Subscriptions returns a list of TopicSubscriotion objects which represent the SNS topics the service

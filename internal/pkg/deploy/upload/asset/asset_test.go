@@ -38,6 +38,7 @@ func Test_Upload(t *testing.T) {
 		inDest         string
 		inReincludes   []string
 		inExcludes     []string
+		inRecursive    bool
 		inMockS3       fakeS3
 		mockFileSystem func(fs afero.Fs)
 
@@ -45,7 +46,8 @@ func Test_Upload(t *testing.T) {
 		expectedError error
 	}{
 		"error if failed to upload": {
-			inSource: "test",
+			inSource:    "test",
+			inRecursive: true,
 			mockFileSystem: func(fs afero.Fs) {
 				afero.WriteFile(fs, "test/copilot/.workspace", []byte(mockContent), 0644)
 				afero.WriteFile(fs, "copilot/prod/manifest.yaml", []byte(mockContent), 0644)
@@ -56,7 +58,8 @@ func Test_Upload(t *testing.T) {
 			expectedError: fmt.Errorf(`walk the file tree rooted at "test": upload file "test/copilot/.workspace" to destination "copilot/.workspace": some error`),
 		},
 		"success without include and exclude": {
-			inSource: "test",
+			inSource:    "test",
+			inRecursive: true,
 			mockFileSystem: func(fs afero.Fs) {
 				afero.WriteFile(fs, "test/copilot/.workspace", []byte(mockContent), 0644)
 				afero.WriteFile(fs, "copilot/prod/manifest.yaml", []byte(mockContent), 0644)
@@ -68,9 +71,26 @@ func Test_Upload(t *testing.T) {
 			},
 			expectedURLs: []string{"url"},
 		},
+		"success without recursive": {
+			inSource: "test",
+			mockFileSystem: func(fs afero.Fs) {
+				afero.WriteFile(fs, "test/copilot/.workspace", []byte(mockContent), 0644)
+				afero.WriteFile(fs, "test/manifest.yaml", []byte(mockContent), 0644)
+				afero.WriteFile(fs, "test/foo", []byte(mockContent), 0644)
+			},
+			inMockS3: fakeS3{
+				objects: map[string]string{
+					"copilot/.workspace": "url1",
+					"manifest.yaml":      "url2",
+					"foo":                "url3",
+				},
+			},
+			expectedURLs: []string{"url2", "url3"},
+		},
 		"success with include only": {
 			inSource:     "test",
 			inDest:       "ws",
+			inRecursive:  true,
 			inReincludes: []string{"copilot/prod/manifest.yaml"},
 			mockFileSystem: func(fs afero.Fs) {
 				afero.WriteFile(fs, "test/copilot/.workspace", []byte(mockContent), 0644)
@@ -84,7 +104,8 @@ func Test_Upload(t *testing.T) {
 			expectedURLs: []string{"url"},
 		},
 		"success with exclude only": {
-			inExcludes: []string{"copilot/prod/*.yaml"},
+			inExcludes:  []string{"copilot/prod/*.yaml"},
+			inRecursive: true,
 			mockFileSystem: func(fs afero.Fs) {
 				afero.WriteFile(fs, "test/copilot/.workspace", []byte(mockContent), 0644)
 				afero.WriteFile(fs, "copilot/prod/manifest.yaml", []byte(mockContent), 0644)
@@ -100,6 +121,7 @@ func Test_Upload(t *testing.T) {
 			inDest:       "files",
 			inExcludes:   []string{"copilot/prod/*.yaml"},
 			inReincludes: []string{"copilot/prod/manifest.yaml"},
+			inRecursive:  true,
 			inMockS3: fakeS3{
 				objects: map[string]string{
 					"files/test/copilot/.workspace":    "url1",
@@ -124,6 +146,7 @@ func Test_Upload(t *testing.T) {
 			files, err := Upload(&afero.Afero{Fs: fs}, tc.inSource, tc.inDest, &UploadOpts{
 				Excludes:   tc.inExcludes,
 				Reincludes: tc.inReincludes,
+				Recursive:  tc.inRecursive,
 				UploadFn:   tc.inMockS3.UploadFunc(),
 			})
 			if tc.expectedError == nil {

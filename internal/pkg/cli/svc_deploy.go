@@ -59,9 +59,10 @@ type deploySvcOpts struct {
 	newSvcDeployer       func() (workloadDeployer, error)
 	envFeaturesDescriber versionCompatibilityChecker
 
-	spinner progress
-	sel     wsSelector
-	prompt  prompter
+	spinner        progress
+	sel            wsSelector
+	prompt         prompter
+	gitShortCommit string
 
 	// cached variables
 	targetApp         *config.Application
@@ -125,11 +126,14 @@ func newSvcDeployer(o *deploySvcOpts) (workloadDeployer, error) {
 	content := o.appliedDynamicMft.Manifest()
 	var deployer workloadDeployer
 	in := clideploy.WorkloadDeployerInput{
-		SessionProvider:  o.sessProvider,
-		Name:             o.name,
-		App:              targetApp,
-		Env:              o.targetEnv,
-		ImageTag:         o.imageTag,
+		SessionProvider: o.sessProvider,
+		Name:            o.name,
+		App:             targetApp,
+		Env:             o.targetEnv,
+		Image: clideploy.ContainerImageIdentifier{
+			CustomTag:         o.imageTag,
+			GitShortCommitTag: o.gitShortCommit,
+		},
 		Mft:              content,
 		RawMft:           raw,
 		EnvVersionGetter: o.envFeaturesDescriber,
@@ -144,6 +148,8 @@ func newSvcDeployer(o *deploySvcOpts) (workloadDeployer, error) {
 		deployer, err = clideploy.NewRDWSDeployer(&in)
 	case *manifest.WorkerService:
 		deployer, err = clideploy.NewWorkerSvcDeployer(&in)
+	case *manifest.StaticSite:
+		deployer, err = clideploy.NewStaticSiteDeployer(&in)
 	default:
 		return nil, fmt.Errorf("unknown manifest type %T while creating the CloudFormation stack", t)
 	}
@@ -229,8 +235,8 @@ func (o *deploySvcOpts) Execute() error {
 	}
 	deployRecs, err := deployer.DeployWorkload(&clideploy.DeployWorkloadInput{
 		StackRuntimeConfiguration: clideploy.StackRuntimeConfiguration{
-			ImageDigest:        uploadOut.ImageDigest,
-			EnvFileARN:         uploadOut.EnvFileARN,
+			ImageDigests:       uploadOut.ImageDigests,
+			EnvFileARNs:        uploadOut.EnvFileARNs,
 			AddonsURL:          uploadOut.AddonsURL,
 			RootUserARN:        o.rootUserARN,
 			Tags:               tags.Merge(targetApp.Tags, o.resourceTags),
@@ -243,7 +249,7 @@ func (o *deploySvcOpts) Execute() error {
 	})
 	if err != nil {
 		if o.disableRollback {
-			stackName := stack.NameForService(o.targetApp.Name, o.targetEnv.Name, o.name)
+			stackName := stack.NameForWorkload(o.targetApp.Name, o.targetEnv.Name, o.name)
 			rollbackCmd := fmt.Sprintf("aws cloudformation rollback-stack --stack-name %s --role-arn %s", stackName, o.targetEnv.ExecutionRoleARN)
 			log.Infof(`It seems like you have disabled automatic stack rollback for this deployment. To debug, you can:
 * Run %s to inspect the service log.
@@ -268,9 +274,7 @@ func (o *deploySvcOpts) RecommendActions() error {
 		return err
 	}
 	recommendations = append(recommendations, uriRecs...)
-	if o.deployRecs != nil {
-		recommendations = append(recommendations, o.deployRecs.RecommendedActions()...)
-	}
+	recommendations = append(recommendations, o.deployRecs.RecommendedActions()...)
 	recommendations = append(recommendations, o.publishRecommendedActions()...)
 	logRecommendedActions(recommendations)
 	return nil
@@ -323,7 +327,7 @@ func (o *deploySvcOpts) validateOrAskEnvName() error {
 }
 
 func (o *deploySvcOpts) configureClients() error {
-	o.imageTag = imageTagFromGit(o.cmd, o.imageTag) // Best effort assign git tag.
+	o.gitShortCommit = imageTagFromGit(o.cmd) // Best effort assign git tag.
 	env, err := o.store.GetEnvironment(o.appName, o.envName)
 	if err != nil {
 		return fmt.Errorf("get environment %s configuration: %w", o.envName, err)

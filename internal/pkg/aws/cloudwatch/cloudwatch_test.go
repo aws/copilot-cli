@@ -88,16 +88,15 @@ func TestCloudWatch_AlarmsWithTags(t *testing.T) {
 					}).Return(&cloudwatch.DescribeAlarmsOutput{
 						MetricAlarms: []*cloudwatch.MetricAlarm{
 							{
-								AlarmArn:           aws.String(mockAlarmArn),
-								AlarmName:          aws.String("mockAlarmName"),
-								ComparisonOperator: aws.String(cloudwatch.ComparisonOperatorGreaterThanOrEqualToThreshold),
-								EvaluationPeriods:  aws.Int64(int64(300)),
-								Period:             aws.Int64(int64(5)),
-								Threshold:          aws.Float64(float64(70)),
-								MetricName:         aws.String("mockMetricName"),
-								StateValue:         aws.String("mockState"),
+								AlarmArn:              aws.String(mockAlarmArn),
+								AlarmName:             aws.String("mockAlarmName"),
+								ComparisonOperator:    aws.String(cloudwatch.ComparisonOperatorGreaterThanOrEqualToThreshold),
+								EvaluationPeriods:     aws.Int64(int64(300)),
+								Period:                aws.Int64(int64(5)),
+								Threshold:             aws.Float64(float64(70)),
+								MetricName:            aws.String("mockMetricName"),
+								StateValue:            aws.String("mockState"),
 								StateUpdatedTimestamp: &mockTime,
-
 							},
 						},
 						CompositeAlarms: nil,
@@ -105,13 +104,12 @@ func TestCloudWatch_AlarmsWithTags(t *testing.T) {
 			},
 			wantAlarmStatus: []AlarmStatus{
 				{
-					Arn:       mockAlarmArn,
-					Name:      "mockAlarmName",
-					Type:      "Metric",
-					Condition: "mockMetricName ≥ 70.00 for 300 datapoints within 25 minutes",
-					Status:    "mockState",
+					Arn:          mockAlarmArn,
+					Name:         "mockAlarmName",
+					Type:         "Metric",
+					Condition:    "mockMetricName ≥ 70.00 for 300 datapoints within 25 minutes",
+					Status:       "mockState",
 					UpdatedTimes: mockTime,
-
 				}},
 		}}
 

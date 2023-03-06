@@ -45,10 +45,19 @@ const (
 	fmtForceUpdateSvcFailed   = "Failed to force an update for service %s from environment %s: %v.\n"
 	fmtForceUpdateSvcComplete = "Forced an update for service %s from environment %s.\n"
 )
+const (
+	imageTagLatest = "latest"
+)
 
 // ActionRecommender contains methods that output action recommendation.
 type ActionRecommender interface {
 	RecommendedActions() []string
+}
+
+type noopActionRecommender struct{}
+
+func (noopActionRecommender) RecommendedActions() []string {
+	return nil
 }
 
 type imageBuilderPusher interface {
@@ -89,11 +98,8 @@ type fileReader interface {
 
 // StackRuntimeConfiguration contains runtime configuration for a workload CloudFormation stack.
 type StackRuntimeConfiguration struct {
-	// Use *string for three states (see https://github.com/aws/copilot-cli/pull/3268#discussion_r806060230)
-	// This is mainly to keep the `workload package` behavior backward-compatible, otherwise our old pipeline buildspec would break,
-	// since previously we parsed the env region from a mock ECR URL that we generated from `workload package``.
-	ImageDigest        *string
-	EnvFileARN         string
+	ImageDigests       map[string]ContainerImageIdentifier // Container name to image.
+	EnvFileARNs        map[string]string
 	AddonsURL          string
 	RootUserARN        string
 	Tags               map[string]string
@@ -127,7 +133,7 @@ type workloadDeployer struct {
 	name          string
 	app           *config.Application
 	env           *config.Environment
-	imageTag      string
+	image         ContainerImageIdentifier
 	resources     *stack.AppRegionalResources
 	mft           interface{}
 	rawMft        []byte
@@ -160,7 +166,7 @@ type WorkloadDeployerInput struct {
 	Name             string
 	App              *config.Application
 	Env              *config.Environment
-	ImageTag         string
+	Image            ContainerImageIdentifier
 	Mft              interface{} // Interpolated, applied, and unmarshaled manifest.
 	RawMft           []byte      // Content of the manifest file without any transformations.
 	EnvVersionGetter versionGetter
@@ -168,6 +174,13 @@ type WorkloadDeployerInput struct {
 
 	// Workload specific configuration.
 	customResources customResourcesFunc
+}
+
+// ContainerImageIdentifier is the configuration of the image digest and tags of an ECR image.
+type ContainerImageIdentifier struct {
+	Digest            string
+	CustomTag         string
+	GitShortCommitTag string
 }
 
 // newWorkloadDeployer is the constructor for workloadDeployer.
@@ -229,7 +242,7 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 		name:               in.Name,
 		app:                in.App,
 		env:                in.Env,
-		imageTag:           in.ImageTag,
+		image:              in.Image,
 		resources:          resources,
 		workspacePath:      ws.Path(),
 		fs:                 &afero.Afero{Fs: afero.NewOsFs()},
@@ -302,49 +315,76 @@ func (d *workloadDeployer) forceDeploy(in *forceDeployInput) error {
 	return nil
 }
 
-func (d *workloadDeployer) uploadContainerImage(imgBuilderPusher imageBuilderPusher) (*string, error) {
-	required, err := manifest.DockerfileBuildRequired(d.mft)
-	if err != nil {
-		return nil, err
+// Tag returns the tag that should be used to reference the image.
+// If the user provided their own tag then just use that
+// Otherwise, return git short commit id.
+func (img ContainerImageIdentifier) Tag() string {
+	if img.CustomTag != "" {
+		return img.CustomTag
 	}
-	if !required {
-		return nil, nil
-	}
-	// If it is built from local Dockerfile, build and push to the ECR repo.
-	buildArg, err := buildArgs(d.name, d.imageTag, d.workspacePath, d.mft)
-	if err != nil {
-		return nil, err
-	}
-	digest, err := imgBuilderPusher.BuildAndPush(dockerengine.New(exec.NewCmd()), buildArg)
-	if err != nil {
-		return nil, fmt.Errorf("build and push image: %w", err)
-	}
-	return aws.String(digest), nil
+	return img.GitShortCommitTag
 }
 
-func buildArgs(name, imageTag, workspacePath string, unmarshaledManifest interface{}) (*dockerengine.BuildArguments, error) {
+func (d *workloadDeployer) uploadContainerImages(imgBuilderPusher imageBuilderPusher) (map[string]ContainerImageIdentifier, error) {
+	// If it is built from local Dockerfile, build and push to the ECR repo.
+	buildArgsPerContainer, err := buildArgsPerContainer(d.name, d.workspacePath, d.image, d.mft)
+	if err != nil {
+		return nil, err
+	}
+	if len(buildArgsPerContainer) == 0 {
+		return nil, nil
+	}
+	images := make(map[string]ContainerImageIdentifier, len(buildArgsPerContainer))
+	for name, buildArgs := range buildArgsPerContainer {
+		digest, err := imgBuilderPusher.BuildAndPush(dockerengine.New(exec.NewCmd()), buildArgs)
+		if err != nil {
+			return nil, fmt.Errorf("build and push image: %w", err)
+		}
+		images[name] = ContainerImageIdentifier{
+			Digest:            digest,
+			CustomTag:         d.image.CustomTag,
+			GitShortCommitTag: d.image.GitShortCommitTag,
+		}
+	}
+	return images, nil
+}
+
+func buildArgsPerContainer(name, workspacePath string, img ContainerImageIdentifier, unmarshaledManifest interface{}) (map[string]*dockerengine.BuildArguments, error) {
 	type dfArgs interface {
-		BuildArgs(rootDirectory string) *manifest.DockerBuildArgs
+		BuildArgs(rootDirectory string) (map[string]*manifest.DockerBuildArgs, error)
 		ContainerPlatform() string
 	}
 	mf, ok := unmarshaledManifest.(dfArgs)
 	if !ok {
 		return nil, fmt.Errorf("%s does not have required methods BuildArgs() and ContainerPlatform()", name)
 	}
-	var tags []string
-	if imageTag != "" {
-		tags = append(tags, imageTag)
+	argsPerContainer, err := mf.BuildArgs(workspacePath)
+	if err != nil {
+		return nil, fmt.Errorf("check if manifest requires building from local Dockerfile: %w", err)
 	}
-	args := mf.BuildArgs(workspacePath)
-	return &dockerengine.BuildArguments{
-		Dockerfile: *args.Dockerfile,
-		Context:    *args.Context,
-		Args:       args.Args,
-		CacheFrom:  args.CacheFrom,
-		Target:     aws.StringValue(args.Target),
-		Platform:   mf.ContainerPlatform(),
-		Tags:       tags,
-	}, nil
+	dArgs := make(map[string]*dockerengine.BuildArguments, len(argsPerContainer))
+	for container, buildArgs := range argsPerContainer {
+		tags := []string{imageTagLatest}
+		if img.Tag() != "" {
+			tags = append(tags, img.Tag())
+		}
+		if container != name {
+			tags = []string{fmt.Sprintf("%s-%s", container, imageTagLatest)}
+			if img.GitShortCommitTag != "" {
+				tags = append(tags, fmt.Sprintf("%s-%s", container, img.GitShortCommitTag))
+			}
+		}
+		dArgs[container] = &dockerengine.BuildArguments{
+			Dockerfile: aws.StringValue(buildArgs.Dockerfile),
+			Context:    aws.StringValue(buildArgs.Context),
+			Args:       buildArgs.Args,
+			CacheFrom:  buildArgs.CacheFrom,
+			Target:     aws.StringValue(buildArgs.Target),
+			Platform:   mf.ContainerPlatform(),
+			Tags:       tags,
+		}
+	}
+	return dArgs, nil
 }
 
 type uploadArtifactsToS3Input struct {
@@ -353,12 +393,12 @@ type uploadArtifactsToS3Input struct {
 }
 
 type uploadArtifactsToS3Output struct {
-	envFileARN string
-	addonsURL  string
+	envFileARNs map[string]string // map[container name]ARN
+	addonsURL   string
 }
 
 func (d *workloadDeployer) uploadArtifactsToS3(in *uploadArtifactsToS3Input) (uploadArtifactsToS3Output, error) {
-	envFileARN, err := d.pushEnvFileToS3Bucket(&pushEnvFilesToS3BucketInput{
+	envFileARNs, err := d.pushEnvFilesToS3Bucket(&pushEnvFilesToS3BucketInput{
 		fs:       in.fs,
 		uploader: in.uploader,
 	})
@@ -370,8 +410,8 @@ func (d *workloadDeployer) uploadArtifactsToS3(in *uploadArtifactsToS3Input) (up
 		return uploadArtifactsToS3Output{}, err
 	}
 	return uploadArtifactsToS3Output{
-		envFileARN: envFileARN,
-		addonsURL:  addonsURL,
+		envFileARNs: envFileARNs,
+		addonsURL:   addonsURL,
 	}, nil
 }
 
@@ -379,14 +419,14 @@ type customResourcesFunc func(fs template.Reader) ([]*customresource.CustomResou
 
 // UploadArtifactsOutput is the output of UploadArtifacts.
 type UploadArtifactsOutput struct {
-	ImageDigest        *string
-	EnvFileARN         string
+	ImageDigests       map[string]ContainerImageIdentifier // Container name to image.
+	EnvFileARNs        map[string]string                   // map[container name]envFileARN
 	AddonsURL          string
 	CustomResourceURLs map[string]string
 }
 
 func (d *workloadDeployer) uploadArtifacts() (*UploadArtifactsOutput, error) {
-	imageDigest, err := d.uploadContainerImage(d.imageBuilderPusher)
+	imageDigests, err := d.uploadContainerImages(d.imageBuilderPusher)
 	if err != nil {
 		return nil, err
 	}
@@ -399,9 +439,9 @@ func (d *workloadDeployer) uploadArtifacts() (*UploadArtifactsOutput, error) {
 	}
 
 	out := &UploadArtifactsOutput{
-		ImageDigest: imageDigest,
-		EnvFileARN:  s3Artifacts.envFileARN,
-		AddonsURL:   s3Artifacts.addonsURL,
+		ImageDigests: imageDigests,
+		EnvFileARNs:  s3Artifacts.envFileARNs,
+		AddonsURL:    s3Artifacts.addonsURL,
 	}
 	crs, err := d.customResources(d.templateFS)
 	if err != nil {
@@ -422,43 +462,75 @@ type pushEnvFilesToS3BucketInput struct {
 	uploader uploader
 }
 
-func (d *workloadDeployer) pushEnvFileToS3Bucket(in *pushEnvFilesToS3BucketInput) (string, error) {
-	path := envFile(d.mft)
-	if path == "" {
-		return "", nil
+// pushEnvFilesToS3Bucket collects all environment files required by the workload container and any sidecars,
+// uploads each one exactly once, and returns a map structured in the following way. map[containerName]envFileARN
+// Example content:
+//
+//	{
+//	  "frontend": "arn:aws:s3:::bucket/key1",
+//	  "firelens_log_router": "arn:aws:s3:::bucket/key2",
+//	  "nginx": "arn:aws:s3:::bucket/key1"
+//	}
+func (d *workloadDeployer) pushEnvFilesToS3Bucket(in *pushEnvFilesToS3BucketInput) (map[string]string, error) {
+	envFilesByContainer := envFiles(d.mft)
+	uniqueEnvFiles := make(map[string][]string)
+	// Invert the map of containers to env files to get the unique env files to upload.
+	for container, path := range envFilesByContainer {
+		if path == "" {
+			continue
+		}
+		if containers, ok := uniqueEnvFiles[path]; !ok {
+			uniqueEnvFiles[path] = []string{container}
+		} else {
+			uniqueEnvFiles[path] = append(containers, container)
+		}
 	}
-	content, err := in.fs.ReadFile(filepath.Join(d.workspacePath, path))
-	if err != nil {
-		return "", fmt.Errorf("read env file %s: %w", path, err)
+
+	if len(uniqueEnvFiles) == 0 {
+		return nil, nil
 	}
-	reader := bytes.NewReader(content)
-	url, err := in.uploader.Upload(d.resources.S3Bucket, artifactpath.EnvFiles(path, content), reader)
-	if err != nil {
-		return "", fmt.Errorf("put env file %s artifact to bucket %s: %w", path, d.resources.S3Bucket, err)
+	// Upload each file to s3 exactly once and generate its ARN.
+	// Save those ARNs in a map from container name to env file ARN and return.
+	envFileARNs := make(map[string]string)
+
+	for path, containers := range uniqueEnvFiles {
+		content, err := in.fs.ReadFile(filepath.Join(d.workspacePath, path))
+		if err != nil {
+			return nil, fmt.Errorf("read env file %s: %w", path, err)
+		}
+		reader := bytes.NewReader(content)
+		url, err := in.uploader.Upload(d.resources.S3Bucket, artifactpath.EnvFiles(path, content), reader)
+		if err != nil {
+			return nil, fmt.Errorf("put env file %s artifact to bucket %s: %w", path, d.resources.S3Bucket, err)
+		}
+		bucket, key, err := s3.ParseURL(url)
+		if err != nil {
+			return nil, fmt.Errorf("parse s3 url: %w", err)
+		}
+		// The app and environment are always within the same partition.
+		partition, err := partitions.Region(d.env.Region).Partition()
+		if err != nil {
+			return nil, err
+		}
+		for _, container := range containers {
+			envFileARNs[container] = s3.FormatARN(partition.ID(), fmt.Sprintf("%s/%s", bucket, key))
+		}
 	}
-	bucket, key, err := s3.ParseURL(url)
-	if err != nil {
-		return "", fmt.Errorf("parse s3 url: %w", err)
-	}
-	// The app and environment are always within the same partition.
-	partition, err := partitions.Region(d.env.Region).Partition()
-	if err != nil {
-		return "", err
-	}
-	envFileARN := s3.FormatARN(partition.ID(), fmt.Sprintf("%s/%s", bucket, key))
-	return envFileARN, nil
+	return envFileARNs, nil
 }
 
-func envFile(unmarshaledManifest interface{}) string {
+// envFiles gets a map from container name to env file for all containers in the task,
+// including sidecars and Firelens logging.
+func envFiles(unmarshaledManifest interface{}) map[string]string {
 	type envFile interface {
-		EnvFile() string
+		EnvFiles() map[string]string
 	}
 	mf, ok := unmarshaledManifest.(envFile)
 	if ok {
-		return mf.EnvFile()
+		return mf.EnvFiles()
 	}
 	// If the manifest type doesn't support envFiles, ignore and move forward.
-	return ""
+	return nil
 }
 
 func (d *workloadDeployer) pushAddonsTemplateToS3Bucket() (string, error) {
@@ -499,10 +571,10 @@ func (d *workloadDeployer) runtimeConfig(in *StackRuntimeConfiguration) (*stack.
 	if err != nil {
 		return nil, fmt.Errorf("get version of environment %q: %w", d.env.Name, err)
 	}
-	if len(aws.StringValue(in.ImageDigest)) == 0 {
+	if len(in.ImageDigests) == 0 {
 		return &stack.RuntimeConfig{
 			AddonsTemplateURL:        in.AddonsURL,
-			EnvFileARN:               in.EnvFileARN,
+			EnvFileARNs:              in.EnvFileARNs,
 			AdditionalTags:           in.Tags,
 			ServiceDiscoveryEndpoint: endpoint,
 			AccountID:                d.env.AccountID,
@@ -511,15 +583,28 @@ func (d *workloadDeployer) runtimeConfig(in *StackRuntimeConfiguration) (*stack.
 			EnvVersion:               envVersion,
 		}, nil
 	}
+	images := make(map[string]stack.ECRImage, len(in.ImageDigests))
+	for container, img := range in.ImageDigests {
+		// Currently we do not tag sidecar container images with custom tag provided by the user.
+		// This is the reason for having different ImageTag for main and sidecar container images
+		// that is needed to create CloudFormation stack.
+		imageTag := img.Tag()
+		if container != d.name {
+			imageTag = img.GitShortCommitTag
+		}
+		images[container] = stack.ECRImage{
+			RepoURL:           d.resources.RepositoryURLs[d.name],
+			ImageTag:          imageTag,
+			Digest:            img.Digest,
+			MainContainerName: d.name,
+			ContainerName:     container,
+		}
+	}
 	return &stack.RuntimeConfig{
-		AddonsTemplateURL: in.AddonsURL,
-		EnvFileARN:        in.EnvFileARN,
-		AdditionalTags:    in.Tags,
-		Image: &stack.ECRImage{
-			RepoURL:  d.resources.RepositoryURLs[d.name],
-			ImageTag: d.imageTag,
-			Digest:   aws.StringValue(in.ImageDigest),
-		},
+		AddonsTemplateURL:        in.AddonsURL,
+		EnvFileARNs:              in.EnvFileARNs,
+		AdditionalTags:           in.Tags,
+		PushedImages:             images,
 		ServiceDiscoveryEndpoint: endpoint,
 		AccountID:                d.env.AccountID,
 		Region:                   d.env.Region,

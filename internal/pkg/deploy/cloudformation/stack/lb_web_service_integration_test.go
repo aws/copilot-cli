@@ -113,6 +113,7 @@ func TestLoadBalancedWebService_TemplateInteg(t *testing.T) {
 				EnvVersion:               "v1.42.0",
 			},
 		})
+		require.NoError(t, err, "stack should be able to be initialized")
 		tpl, err := serializer.Template()
 		require.NoError(t, err, "template should render")
 		regExpGUID := regexp.MustCompile(`([a-f\d]{8}-)([a-f\d]{4}-){3}([a-f\d]{12})`) // Matches random guids
@@ -130,6 +131,8 @@ func TestLoadBalancedWebService_TemplateInteg(t *testing.T) {
 			expectedBytes := []byte(expected)
 			mExpected := make(map[interface{}]interface{})
 			require.NoError(t, yaml.Unmarshal(expectedBytes, mExpected))
+
+			resetCustomResourceLocations(mActual)
 			compareStackTemplate(t, mExpected, mActual)
 		})
 

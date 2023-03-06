@@ -6,6 +6,7 @@ package stack
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -273,9 +274,11 @@ Outputs:
 			},
 			Manifest: mft,
 			RuntimeConfig: RuntimeConfig{
-				Image: &ECRImage{
-					RepoURL:  testImageRepoURL,
-					ImageTag: testImageTag,
+				PushedImages: map[string]ECRImage{
+					"test": {
+						RepoURL:  testImageRepoURL,
+						ImageTag: testImageTag,
+					},
 				},
 				CustomResourcesURL: map[string]string{
 					"EnvControllerFunction":       "https://my-bucket.s3.Region.amazonaws.com/sha1/envcontroller.zip",
@@ -403,7 +406,19 @@ Outputs:
 		}
 		mft.Sidecars = map[string]*manifest.SidecarConfig{
 			"envoy": {
+				Image: manifest.Union[*string, manifest.ImageLocationOrBuild]{
+					Advanced: manifest.ImageLocationOrBuild{
+						Build: manifest.BuildArgsOrString{
+							BuildString: aws.String("./Dockerfile"),
+						},
+					},
+				},
 				Port: aws.String("443"),
+			},
+			"nginx": {
+				Image: manifest.Union[*string, manifest.ImageLocationOrBuild]{
+					Basic: aws.String("mockImageURL"),
+				},
 			},
 		}
 		privatePlacement := manifest.PrivateSubnetPlacement
@@ -440,16 +455,23 @@ Outputs:
 			},
 			Manifest: mft,
 			RuntimeConfig: RuntimeConfig{
-				Image: &ECRImage{
-					RepoURL:  testImageRepoURL,
-					ImageTag: testImageTag,
-				},
-				CustomResourcesURL: map[string]string{
-					"EnvControllerFunction":       "https://my-bucket.s3.Region.amazonaws.com/sha1/envcontroller.zip",
-					"DynamicDesiredCountFunction": "https://my-bucket.s3.Region.amazonaws.com/sha2/count.zip",
+				PushedImages: map[string]ECRImage{
+					"test": {
+						RepoURL:           testImageRepoURL,
+						ImageTag:          testImageTag,
+						MainContainerName: "test",
+						ContainerName:     "test",
+					},
+					"envoy": {
+						RepoURL:           testImageRepoURL,
+						ImageTag:          testImageTag,
+						MainContainerName: "test",
+						ContainerName:     "envoy",
+					},
 				},
 			},
-			Addons: addons,
+			Addons:             addons,
+			ArtifactBucketName: "my-bucket",
 		})
 		svc.parser = parser
 		require.NoError(t, err)
@@ -474,7 +496,7 @@ Outputs:
 			Sidecars: []*template.SidecarOpts{
 				{
 					Name:  "envoy",
-					Image: aws.String(""),
+					Image: aws.String(fmt.Sprintf("%s:%s-%s", testImageRepoURL, "envoy", testImageTag)),
 					PortMappings: []*template.PortMapping{
 						{
 							Protocol:      "tcp",
@@ -482,6 +504,11 @@ Outputs:
 							ContainerPort: 443,
 						},
 					},
+				},
+				{
+					Name:         "nginx",
+					Image:        aws.String("mockImageURL"),
+					PortMappings: []*template.PortMapping{},
 				},
 			},
 			HTTPTargetContainer: template.HTTPTargetContainer{
@@ -504,11 +531,15 @@ Outputs:
 			CustomResources: map[string]template.S3ObjectLocation{
 				"EnvControllerFunction": {
 					Bucket: "my-bucket",
-					Key:    "sha1/envcontroller.zip",
+					Key:    "manual/scripts/custom-resources/envcontrollerfunction/8932747ba5dbff619d89b92d0033ef1d04f7dd1b055e073254907d4e38e3976d.zip",
 				},
 				"DynamicDesiredCountFunction": {
 					Bucket: "my-bucket",
-					Key:    "sha2/count.zip",
+					Key:    "manual/scripts/custom-resources/dynamicdesiredcountfunction/8932747ba5dbff619d89b92d0033ef1d04f7dd1b055e073254907d4e38e3976d.zip",
+				},
+				"RulePriorityFunction": {
+					Bucket: "my-bucket",
+					Key:    "manual/scripts/custom-resources/rulepriorityfunction/8932747ba5dbff619d89b92d0033ef1d04f7dd1b055e073254907d4e38e3976d.zip",
 				},
 			},
 			ExecuteCommand: &template.ExecuteCommandOpts{},

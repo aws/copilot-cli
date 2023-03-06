@@ -130,6 +130,7 @@ func (d *LBWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 	svcConnects := make(serviceConnects)
 	var envVars []*containerEnvVar
 	var secrets []*secret
+	var alarms []string
 	for _, env := range environments {
 		svcDescr, err := d.initECSServiceDescribers(env)
 		if err != nil {
@@ -165,6 +166,10 @@ func (d *LBWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 			},
 			Tasks: svcParams[cfnstack.WorkloadTaskCountParamKey],
 		})
+		alarms, err = svcDescr.RollbackAlarmNames()
+		if err != nil {
+			return nil, fmt.Errorf("retrieve rollback alarm names: %w", err)
+		}
 		envDescr, err := d.initEnvDescribers(env)
 		if err != nil {
 			return nil, err
@@ -190,7 +195,7 @@ func (d *LBWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 			if err != nil {
 				return nil, err
 			}
-			stackResources, err := svcDescr.ServiceStackResources()
+			stackResources, err := svcDescr.StackResources()
 			if err != nil {
 				return nil, fmt.Errorf("retrieve service resources: %w", err)
 			}
@@ -204,6 +209,7 @@ func (d *LBWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 			Type:             manifestinfo.LoadBalancedWebServiceType,
 			App:              d.app,
 			Configurations:   configs,
+			Alarms:           alarms,
 			Routes:           routes,
 			ServiceDiscovery: svcDiscoveries,
 			ServiceConnect:   svcConnects,
@@ -258,6 +264,11 @@ func (w *webSvcDesc) HumanString() string {
 	fmt.Fprint(writer, color.Bold.Sprint("\nConfigurations\n\n"))
 	writer.Flush()
 	w.Configurations.humanString(writer)
+	if len(w.Alarms) > 0 {
+		fmt.Fprint(writer, color.Bold.Sprint("\nRollback Alarms\n\n"))
+		writer.Flush()
+		rollbackAlarms(w.Alarms).humanString(writer)
+	}
 	fmt.Fprint(writer, color.Bold.Sprint("\nRoutes\n\n"))
 	writer.Flush()
 	headers := []string{"Environment", "URL"}

@@ -66,6 +66,7 @@ func (d *WorkerServiceDescriber) Describe() (HumanJSONStringer, error) {
 	var configs []*ECSServiceConfig
 	var envVars []*containerEnvVar
 	var secrets []*secret
+	var alarms []string
 	for _, env := range environments {
 		svcDescr, err := d.initECSDescriber(env)
 		if err != nil {
@@ -89,6 +90,10 @@ func (d *WorkerServiceDescriber) Describe() (HumanJSONStringer, error) {
 			},
 			Tasks: svcParams[cfnstack.WorkloadTaskCountParamKey],
 		})
+		alarms, err = svcDescr.RollbackAlarmNames()
+		if err != nil {
+			return nil, fmt.Errorf("retrieve rollback alarm names: %w", err)
+		}
 		workerSvcEnvVars, err := svcDescr.EnvVars()
 		if err != nil {
 			return nil, fmt.Errorf("retrieve environment variables: %w", err)
@@ -108,7 +113,7 @@ func (d *WorkerServiceDescriber) Describe() (HumanJSONStringer, error) {
 			if err != nil {
 				return nil, err
 			}
-			stackResources, err := svcDescr.ServiceStackResources()
+			stackResources, err := svcDescr.StackResources()
 			if err != nil {
 				return nil, fmt.Errorf("retrieve service resources: %w", err)
 			}
@@ -121,6 +126,7 @@ func (d *WorkerServiceDescriber) Describe() (HumanJSONStringer, error) {
 		Type:           manifestinfo.WorkerServiceType,
 		App:            d.app,
 		Configurations: configs,
+		Alarms:         alarms,
 		Variables:      envVars,
 		Secrets:        secrets,
 		Resources:      resources,
@@ -145,6 +151,7 @@ type workerSvcDesc struct {
 	Type           string               `json:"type"`
 	App            string               `json:"application"`
 	Configurations ecsConfigurations    `json:"configurations"`
+	Alarms         []string             `json:"rollbackAlarms,omitempty"`
 	Variables      containerEnvVars     `json:"variables"`
 	Secrets        secrets              `json:"secrets,omitempty"`
 	Resources      deployedSvcResources `json:"resources,omitempty"`
@@ -173,6 +180,11 @@ func (w *workerSvcDesc) HumanString() string {
 	fmt.Fprint(writer, color.Bold.Sprint("\nConfigurations\n\n"))
 	writer.Flush()
 	w.Configurations.humanString(writer)
+	if len(w.Alarms) > 0 {
+		fmt.Fprint(writer, color.Bold.Sprint("\nRollback Alarms\n\n"))
+		writer.Flush()
+		rollbackAlarms(w.Alarms).humanString(writer)
+	}
 	fmt.Fprint(writer, color.Bold.Sprint("\nVariables\n\n"))
 	writer.Flush()
 	w.Variables.humanString(writer)
