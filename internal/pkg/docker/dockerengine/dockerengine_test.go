@@ -157,6 +157,7 @@ func TestDockerCommand_Build(t *testing.T) {
 
 		"success with labels": {
 			path:          mockPath,
+			tags:          []string{"latest"},
 			containerName: mockContainerName,
 			labels: map[string]string{
 				"builder":   "copilot-cli",
@@ -165,7 +166,7 @@ func TestDockerCommand_Build(t *testing.T) {
 			setupMocks: func(c *gomock.Controller) {
 				mockCmd = NewMockCmd(c)
 				mockCmd.EXPECT().Run("docker", []string{"build",
-					"-t", mockURI,
+					"-t", fmt.Sprintf("%s:%s", mockURI, "latest"),
 					"--label", "builder=copilot-cli",
 					"--label", "container=mockWkld",
 					filepath.FromSlash("mockPath/to"),
