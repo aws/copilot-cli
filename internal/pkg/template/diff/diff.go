@@ -42,11 +42,12 @@ func (from From) Parse(to []byte) (*Node, error) {
 }
 
 func parse(from, to *yaml.Node, key string) (*Node, error) {
-	if to == nil || from == nil {
+	// Handle base cases.
+	if (to == nil || from == nil) || to.Kind != from.Kind {
 		return &Node{
 			key:      key,
-			oldValue: from,
 			newValue: to,
+			oldValue: from,
 		}, nil
 	}
 	if isYAMLLeaf(to) && isYAMLLeaf(from) {
