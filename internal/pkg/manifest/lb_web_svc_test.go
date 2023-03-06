@@ -2437,6 +2437,58 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 				},
 			},
 		},
+		"nlb exposing new ports of the main and sidecar containers through primary and additional rules without mentioning the target_port or target_container": {
+			mft: &LoadBalancedWebService{
+				Workload: Workload{
+					Name: aws.String("frontend"),
+				},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: ImageWithPortAndHealthcheck{
+						ImageWithPort: ImageWithPort{
+							Port: aws.Uint16(8080),
+						},
+					},
+					RoutingRule: RoutingRuleConfigOrBool{
+						Enabled: aws.Bool(false),
+					},
+					Sidecars: map[string]*SidecarConfig{
+						"xray": {
+							Port: aws.String("80"),
+							Image: Union[*string, ImageLocationOrBuild]{
+								Basic: aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							},
+							CredsParam: aws.String("some arn"),
+						},
+					},
+					NLBConfig: NetworkLoadBalancerConfiguration{
+						PrimaryRoutingRule: NetworkLoadBalancerRoutingRule{
+							Port: aws.String("8080/tcp"),
+						},
+						AdditionalRoutingRules: []NetworkLoadBalancerRoutingRule{
+							{
+								Port: aws.String("80/tcp"),
+							},
+						},
+					},
+				},
+			},
+			wantedExposedPorts: map[string][]ExposedPort{
+				"frontend": {
+					{
+						Port:          8080,
+						ContainerName: "frontend",
+						Protocol:      "tcp",
+					},
+				},
+				"xray": {
+					{
+						Port:          80,
+						ContainerName: "xray",
+						Protocol:      "tcp",
+					},
+				},
+			},
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
