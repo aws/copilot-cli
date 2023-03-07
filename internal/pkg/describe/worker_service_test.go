@@ -181,13 +181,13 @@ func TestWorkerServiceDescriber_Describe(t *testing.T) {
 							Description: desc1,
 						},
 					}, nil),
-				m.ecsDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
-					{
-						Name:      "COPILOT_ENVIRONMENT_NAME",
-						Container: "container",
-						Value:     testEnv,
-					},
-				}, nil),
+					m.ecsDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
+						{
+							Name:      "COPILOT_ENVIRONMENT_NAME",
+							Container: "container",
+							Value:     testEnv,
+						},
+					}, nil),
 					m.ecsDescriber.EXPECT().Secrets().Return([]*ecs.ContainerSecret{
 						{
 							Name:      "GITHUB_WEBHOOK_SECRET",
@@ -302,12 +302,12 @@ func TestWorkerServiceDescriber_Describe(t *testing.T) {
 				},
 				AlarmDescriptions: []*cloudwatch.AlarmDescription{
 					{
-						Name: alarm1,
+						Name:        alarm1,
 						Description: desc1,
 						Environment: testEnv,
 					},
 					{
-						Name: alarm2,
+						Name:        alarm2,
 						Description: desc2,
 						Environment: prodEnv,
 					},
@@ -388,7 +388,7 @@ func TestWorkerServiceDescriber_Describe(t *testing.T) {
 			mocks := workerSvcDescriberMocks{
 				storeSvc:     mockStore,
 				ecsDescriber: mockSvcDescriber,
-				cwDescriber: mockCwDescriber,
+				cwDescriber:  mockCwDescriber,
 			}
 
 			tc.setupMocks(mocks)

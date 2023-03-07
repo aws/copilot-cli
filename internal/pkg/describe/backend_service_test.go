@@ -302,7 +302,7 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 					m.ecsDescriber.EXPECT().RollbackAlarmNames().Return([]string{alarm1}, nil),
 					m.cwDescriber.EXPECT().AlarmDescriptions([]string{alarm1}).Return([]*cloudwatch.AlarmDescription{
 						{
-							Name: alarm1,
+							Name:        alarm1,
 							Description: desc1,
 						},
 					}, nil),
@@ -330,7 +330,7 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 					m.ecsDescriber.EXPECT().RollbackAlarmNames().Return([]string{alarm2}, nil),
 					m.cwDescriber.EXPECT().AlarmDescriptions([]string{alarm2}).Return([]*cloudwatch.AlarmDescription{
 						{
-							Name: alarm2,
+							Name:        alarm2,
 							Description: desc2,
 						},
 					}, nil),
@@ -407,12 +407,12 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 					ServiceConnect: serviceConnects{},
 					AlarmDescriptions: []*cloudwatch.AlarmDescription{
 						{
-							Name: alarm1,
+							Name:        alarm1,
 							Description: desc1,
 							Environment: prodEnv,
 						},
 						{
-							Name: alarm2,
+							Name:        alarm2,
 							Description: desc2,
 							Environment: mockEnv,
 						},
@@ -622,7 +622,7 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 				enableResources:          tc.shouldOutputResources,
 				store:                    mocks.storeSvc,
 				initECSServiceDescribers: func(s string) (ecsDescriber, error) { return mocks.ecsDescriber, nil },
-				initCWDescriber:          func(s string) (cwAlarmDescriber, error) {return mocks.cwDescriber, nil },
+				initCWDescriber:          func(s string) (cwAlarmDescriber, error) { return mocks.cwDescriber, nil },
 				initEnvDescribers:        func(s string) (envDescriber, error) { return mocks.envDescriber, nil },
 				initLBDescriber:          func(s string) (lbDescriber, error) { return mocks.lbDescriber, nil },
 			}
@@ -726,12 +726,12 @@ Resources
 			}
 			alarmDescs := []*cloudwatch.AlarmDescription{
 				{
-					Name: "alarmName1",
+					Name:        "alarmName1",
 					Description: "alarm description 1",
 					Environment: "test",
 				},
 				{
-					Name: "alarmName2",
+					Name:        "alarmName2",
 					Description: "alarm description 2",
 					Environment: "prod",
 				},
@@ -788,16 +788,16 @@ Resources
 			}
 			backendSvc := &backendSvcDesc{
 				ecsSvcDesc: ecsSvcDesc{
-					Service:          "my-svc",
-					Type:             "Backend Service",
-					Configurations:   config,
-					App:              "my-app",
+					Service:           "my-svc",
+					Type:              "Backend Service",
+					Configurations:    config,
+					App:               "my-app",
 					AlarmDescriptions: alarmDescs,
-					Variables:        envVars,
-					Secrets:          secrets,
-					ServiceDiscovery: sds,
-					Resources:        resources,
-					environments:     []string{"test", "prod"},
+					Variables:         envVars,
+					Secrets:           secrets,
+					ServiceDiscovery:  sds,
+					Resources:         resources,
+					environments:      []string{"test", "prod"},
 				},
 			}
 			human := backendSvc.HumanString()

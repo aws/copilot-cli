@@ -179,14 +179,14 @@ func (d *WorkerServiceDescriber) Manifest(env string) ([]byte, error) {
 
 // workerSvcDesc contains serialized parameters for a worker service.
 type workerSvcDesc struct {
-	Service           string                        `json:"service"`
-	Type              string                        `json:"type"`
-	App               string                        `json:"application"`
-	Configurations    ecsConfigurations             `json:"configurations"`
+	Service           string                         `json:"service"`
+	Type              string                         `json:"type"`
+	App               string                         `json:"application"`
+	Configurations    ecsConfigurations              `json:"configurations"`
 	AlarmDescriptions []*cloudwatch.AlarmDescription `json:"rollbackAlarms,omitempty"`
-	Variables         containerEnvVars              `json:"variables"`
-	Secrets           secrets                       `json:"secrets,omitempty"`
-	Resources         deployedSvcResources          `json:"resources,omitempty"`
+	Variables         containerEnvVars               `json:"variables"`
+	Secrets           secrets                        `json:"secrets,omitempty"`
+	Resources         deployedSvcResources           `json:"resources,omitempty"`
 
 	environments []string `json:"-"`
 }

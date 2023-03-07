@@ -35,10 +35,10 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 		testALBAccessible = "true"
 		prodEnv           = "prod"
 		prodSvcPath       = "*"
-		alarm1  = "alarm1"
-		alarm2  = "alarm2"
-		desc1   = "alarm description 1"
-		desc2   = "alarm description 2"
+		alarm1            = "alarm1"
+		alarm2            = "alarm2"
+		desc1             = "alarm description 1"
+		desc2             = "alarm description 2"
 	)
 	mockParams := map[string]string{
 		cfnstack.WorkloadTargetPortParamKey: "80",
@@ -218,33 +218,33 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 		"return error if fail to retrieve alarm descriptions": {
 			setupMocks: func(m lbWebSvcDescriberMocks) {
 				gomock.InOrder(
-				m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
-				m.ecsDescriber.EXPECT().StackResources().Return([]*stack.Resource{
-					{
-						LogicalID: svcStackResourceALBTargetGroupLogicalID,
-					},
-				}, nil),
-				m.ecsDescriber.EXPECT().Params().Return(mockParams, nil),
-				m.envDescriber.EXPECT().Outputs().Return(map[string]string{
-					envOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
-				}, nil),
-				m.ecsDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
-					OperatingSystem: "LINUX",
-					Architecture:    "X86_64",
-				}, nil),
-				m.ecsDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
-					{
-						Name:      "COPILOT_ENVIRONMENT_NAME",
-						Container: "container",
-						Value:     "prod",
-					},
-				}, nil),
-				m.ecsDescriber.EXPECT().Params().Return(mockParams, nil),
-				m.ecsDescriber.EXPECT().RollbackAlarmNames().Return([]string{alarm1, alarm2}, nil),
-				m.cwDescriber.EXPECT().AlarmDescriptions([]string{alarm1,alarm2}).Return(nil, errors.New("some error")),
-			)
-		},
-		wantedError: fmt.Errorf("retrieve alarm descriptions: some error"),
+					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
+					m.ecsDescriber.EXPECT().StackResources().Return([]*stack.Resource{
+						{
+							LogicalID: svcStackResourceALBTargetGroupLogicalID,
+						},
+					}, nil),
+					m.ecsDescriber.EXPECT().Params().Return(mockParams, nil),
+					m.envDescriber.EXPECT().Outputs().Return(map[string]string{
+						envOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
+					}, nil),
+					m.ecsDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
+						OperatingSystem: "LINUX",
+						Architecture:    "X86_64",
+					}, nil),
+					m.ecsDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
+						{
+							Name:      "COPILOT_ENVIRONMENT_NAME",
+							Container: "container",
+							Value:     "prod",
+						},
+					}, nil),
+					m.ecsDescriber.EXPECT().Params().Return(mockParams, nil),
+					m.ecsDescriber.EXPECT().RollbackAlarmNames().Return([]string{alarm1, alarm2}, nil),
+					m.cwDescriber.EXPECT().AlarmDescriptions([]string{alarm1, alarm2}).Return(nil, errors.New("some error")),
+				)
+			},
+			wantedError: fmt.Errorf("retrieve alarm descriptions: some error"),
 		},
 		"return error if fail to retrieve service connect DNS names": {
 			setupMocks: func(m lbWebSvcDescriberMocks) {
@@ -494,12 +494,12 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 					},
 					AlarmDescriptions: []*cloudwatch.AlarmDescription{
 						{
-							Name: alarm1,
+							Name:        alarm1,
 							Description: desc1,
 							Environment: testEnv,
 						},
 						{
-							Name: alarm2,
+							Name:        alarm2,
 							Description: desc2,
 							Environment: prodEnv,
 						},
