@@ -55,7 +55,7 @@ func (sb *closableStringBuilder) Close() error {
 	return nil
 }
 
-type overrideVars struct {
+type overrideSvcVars struct {
 	name    string
 	envName string // Optional.
 	appName string
@@ -70,7 +70,7 @@ type overrideVars struct {
 }
 
 type overrideSvcOpts struct {
-	overrideVars
+	overrideSvcVars
 
 	// Interfaces to interact with dependencies.
 	ws         wsWlDirReader
@@ -82,7 +82,7 @@ type overrideSvcOpts struct {
 	packageCmd func(w stringWriteCloser) (executor, error)
 }
 
-func newOverrideSvcOpts(vars overrideVars) (*overrideSvcOpts, error) {
+func newOverrideSvcOpts(vars overrideSvcVars) (*overrideSvcOpts, error) {
 	fs := afero.NewOsFs()
 	ws, err := workspace.Use(fs)
 	if err != nil {
@@ -98,13 +98,13 @@ func newOverrideSvcOpts(vars overrideVars) (*overrideSvcOpts, error) {
 
 	prompt := prompt.New()
 	cmd := &overrideSvcOpts{
-		overrideVars: vars,
-		ws:           ws,
-		fs:           fs,
-		cfgStore:     cfgStore,
-		prompt:       prompt,
-		wsPrompt:     selector.NewLocalWorkloadSelector(prompt, cfgStore, ws),
-		cfnPrompt:    selector.NewCFNSelector(prompt),
+		overrideSvcVars: vars,
+		ws:              ws,
+		fs:              fs,
+		cfgStore:        cfgStore,
+		prompt:          prompt,
+		wsPrompt:        selector.NewLocalWorkloadSelector(prompt, cfgStore, ws),
+		cfnPrompt:       selector.NewCFNSelector(prompt),
 	}
 	cmd.packageCmd = cmd.newSvcPackageCmd
 	return cmd, nil
@@ -305,7 +305,7 @@ To learn more about the CDK: https://docs.aws.amazon.com/cdk/v2/guide/home.html`
 }
 
 func buildSvcOverrideCmd() *cobra.Command {
-	vars := overrideVars{}
+	vars := overrideSvcVars{}
 	cmd := &cobra.Command{
 		Hidden: true,
 		Use:    "override",
