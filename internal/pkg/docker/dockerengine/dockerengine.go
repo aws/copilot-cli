@@ -66,6 +66,7 @@ type BuildArguments struct {
 	CacheFrom  []string          // Optional. Images to consider as cache sources to pass to `docker build`
 	Platform   string            // Optional. OS/Arch to pass to `docker build`.
 	Args       map[string]string // Optional. Build args to pass via `--build-arg` flags. Equivalent to ARG directives in dockerfile.
+	Labels     map[string]string // Required. Set metadata for an image.
 }
 
 type dockerConfig struct {
@@ -125,6 +126,17 @@ func (c CmdClient) Build(in *BuildArguments) error {
 		args = append(args, "--build-arg", fmt.Sprintf("%s=%s", k, in.Args[k]))
 	}
 
+	// Add Labels to docker build call.
+	// Collect the keys in a slice to sort for test stability.
+	var labelKeys []string
+	for k := range in.Labels {
+		labelKeys = append(labelKeys, k)
+	}
+	sort.Strings(labelKeys)
+	for _, k := range labelKeys {
+		args = append(args, "--label", fmt.Sprintf("%s=%s", k, in.Labels[k]))
+	}
+
 	args = append(args, dfDir, "-f", in.Dockerfile)
 	// If host platform is not linux/amd64, show the user how the container image is being built; if the build fails (if their docker server doesn't have multi-platform-- and therefore `--platform` capability, for instance) they may see why.
 	if in.Platform != "" {
@@ -167,7 +179,11 @@ func (c CmdClient) Push(uri string, tags ...string) (digest string, err error) {
 		}
 	}
 	buf := new(strings.Builder)
-	if err := c.runner.Run("docker", []string{"inspect", "--format", "'{{json (index .RepoDigests 0)}}'", uri}, exec.Stdout(buf)); err != nil {
+	// The container image will have the same digest regardless of the associated tag.
+	// Pick the first tag and get the image's digest.
+	// For Main container we call  docker inspect --format '{{json (index .RepoDigests 0)}}' uri:latest
+	// For Sidecar container images we call docker inspect --format '{{json (index .RepoDigests 0)}}' uri:<sidecarname>-latest
+	if err := c.runner.Run("docker", []string{"inspect", "--format", "'{{json (index .RepoDigests 0)}}'", imageName(uri, tags[0])}, exec.Stdout(buf)); err != nil {
 		return "", fmt.Errorf("inspect image digest for %s: %w", uri, err)
 	}
 	repoDigest := strings.Trim(strings.TrimSpace(buf.String()), `"'`) // remove new lines and quotes from output
