@@ -396,21 +396,6 @@ func SecretFromSecretsManager(value string) secretsManagerName {
 	}
 }
 
-// ALBListenerRule holds configuration that's needed for an Application Load Balancer listener rules.
-type ALBListenerRule struct {
-	// The path that the Application Load Balancer listens to.
-	Path string
-	// The target container and port to which the traffic is routed to from the Application Load Balancer.
-	TargetContainer string
-	TargetPort      string
-
-	Aliases          []string
-	AllowedSourceIps []string
-	Stickiness       string
-	HTTPHealthCheck  HTTPHealthCheckOpts
-	HTTPVersion      string
-}
-
 // NetworkLoadBalancerListener holds configuration that's need for a Network Load Balancer listener.
 type NetworkLoadBalancerListener struct {
 	// The port and protocol that the Network Load Balancer listens to.
@@ -460,6 +445,21 @@ func (cfg *NetworkLoadBalancer) Aliases() []string {
 		}
 	}
 	return uniqueAliases
+}
+
+// ALBListenerRule holds configuration that's needed for an Application Load Balancer listener rule.
+type ALBListenerRule struct {
+	// The path that the Application Load Balancer listens to.
+	Path string
+	// The target container and port to which the traffic is routed to from the Application Load Balancer.
+	TargetContainer string
+	TargetPort      string
+
+	Aliases          []string
+	AllowedSourceIps []string
+	Stickiness       string
+	HTTPHealthCheck  HTTPHealthCheckOpts
+	HTTPVersion      string
 }
 
 // ALBListener holds configuration that's needed for an Application Load Balancer Listener.

@@ -512,14 +512,12 @@ func (s *LoadBalancedWebService) convertALBListener() (*template.ALBListener, er
 		httpRedirect = aws.BoolValue(albConfig.RedirectToHTTPS)
 	}
 
-	config := &template.ALBListener{
+	return &template.ALBListener{
 		Rules:             rules,
 		RedirectToHTTPS:   httpRedirect,
 		IsHTTPS:           s.httpsEnabled,
 		HostedZoneAliases: aliasesFor,
-	}
-
-	return config, nil
+	}, nil
 }
 
 func (s *BackendService) convertALBListener() (*template.ALBListener, error) {
@@ -545,15 +543,13 @@ func (s *BackendService) convertALBListener() (*template.ALBListener, error) {
 
 	// TODO: @pbhingre build listener rule config from additional rules from manifest.
 
-	config := &template.ALBListener{
+	return &template.ALBListener{
 		Rules:             rules,
 		RedirectToHTTPS:   s.httpsEnabled,
 		IsHTTPS:           s.httpsEnabled,
 		MainContainerPort: s.manifest.MainContainerPort(),
 		HostedZoneAliases: hostedZoneAliases,
-	}
-
-	return config, nil
+	}, nil
 }
 
 type loadBalancerTargeter interface {
