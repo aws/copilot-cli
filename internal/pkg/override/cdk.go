@@ -12,7 +12,6 @@ import (
 	"path/filepath"
 
 	"github.com/aws/copilot-cli/internal/pkg/template"
-
 	"github.com/spf13/afero"
 )
 
@@ -140,11 +139,20 @@ func (cdk *CDK) cleanUp(body []byte) ([]byte, error) {
 }
 
 // ScaffoldWithCDK bootstraps a CDK application under dir/ to override the seed CloudFormation resources.
+// If the directory is not empty, then returns an error.
 func ScaffoldWithCDK(fs afero.Fs, dir string, seeds []template.CFNResource) error {
+	// If the directory does not exist, [afero.IsEmpty] returns false and an error.
+	// Therefore, we only want to check if a directory is empty only if it also exists.
+	exists, _ := afero.Exists(fs, dir)
+	isEmpty, _ := afero.IsEmpty(fs, dir)
+	if exists && !isEmpty {
+		return fmt.Errorf("directory %q is not empty", dir)
+	}
+
 	return templates.WalkOverridesCDKDir(seeds, func(name string, content *template.Content) error {
 		path := filepath.Join(dir, name)
-		if err := fs.MkdirAll(path, 0755); err != nil {
-			return fmt.Errorf("make directories along %q: %w", path, err)
+		if err := fs.MkdirAll(filepath.Dir(path), 0755); err != nil {
+			return fmt.Errorf("make directories along %q: %w", filepath.Dir(path), err)
 		}
 		if err := afero.WriteFile(fs, path, content.Bytes(), 0644); err != nil {
 			return fmt.Errorf("write file at %q: %w", path, err)

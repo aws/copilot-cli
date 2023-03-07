@@ -6,6 +6,7 @@ package cli
 import (
 	"fmt"
 	"io"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -14,7 +15,9 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/override"
 	"github.com/aws/copilot-cli/internal/pkg/template"
+	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
@@ -53,14 +56,17 @@ func (sb *closableStringBuilder) Close() error {
 }
 
 type overrideVars struct {
-	name      string
-	envName   string // Optional.
-	appName   string
-	iacTool   string
-	resources []template.CFNResource
+	name    string
+	envName string // Optional.
+	appName string
+	iacTool string
 
 	// CDK override engine flags.
 	cdkLang string
+
+	// We prompt for resources if the user does not opt-in to skipping.
+	skipResources bool
+	resources     []template.CFNResource
 }
 
 type overrideSvcOpts struct {
@@ -127,12 +133,25 @@ func (o *overrideSvcOpts) Ask() error {
 }
 
 // Execute writes IaC override files to the local workspace.
+// This method assumes that the IaC tool chosen by the user is valid.
 func (o *overrideSvcOpts) Execute() error {
+	dir := o.ws.WorkloadOverridesPath(o.name)
+	switch o.iacTool {
+	case cdkIaCTool:
+		if err := override.ScaffoldWithCDK(o.fs, dir, o.resources); err != nil {
+			return fmt.Errorf("scaffold CDK application under %q: %v", dir, err)
+		}
+		log.Successf("Created a new CDK application at %q to override resources\n", displayPath(dir))
+	}
 	return nil
 }
 
 // RecommendActions prints optional follow-up actions.
 func (o *overrideSvcOpts) RecommendActions() error {
+	readmePath := filepath.Join(o.ws.WorkloadOverridesPath(o.name), "README.md")
+	logRecommendedActions([]string{
+		fmt.Sprintf("Please follow the instructions in %q", displayPath(readmePath)),
+	})
 	return nil
 }
 
@@ -215,7 +234,7 @@ func (o *overrideSvcOpts) validateIaCTool() error {
 }
 
 func (o *overrideSvcOpts) askResourcesToOverride() error {
-	if len(o.resources) != 0 {
+	if o.skipResources {
 		return nil
 	}
 
@@ -291,9 +310,10 @@ func buildSvcOverrideCmd() *cobra.Command {
 		Hidden: true,
 		Use:    "override",
 		Short:  "Override the AWS CloudFormation template of a service.",
-		Long: `Scaffold Infrastructure as Code patch files. 
-Customize the patch files to change resource properties, delete 
-or add new resources to the service's AWS CloudFormation template.`,
+		Long: `Scaffold Infrastructure as Code (IaC) extension files. 
+The generated files allow you to extend and override Copilot generated AWS CloudFormation template.
+You can edit the files to change existing resource properties, delete 
+or add new resources to the service's template.`,
 		Example: `
   Create a new Cloud Development Kit application to override the "frontend" service template.
   /code $ copilot svc override -n frontend --tool cdk`,
@@ -310,5 +330,6 @@ or add new resources to the service's AWS CloudFormation template.`,
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
 	cmd.Flags().StringVar(&vars.iacTool, iacToolFlag, "", iacToolFlagDescription)
 	cmd.Flags().StringVar(&vars.cdkLang, cdkLanguageFlag, typescriptCDKLang, cdkLanguageFlagDescription)
+	cmd.Flags().BoolVar(&vars.skipResources, skipResourcesFlag, false, skipResourcesFlagDescription)
 	return cmd
 }
