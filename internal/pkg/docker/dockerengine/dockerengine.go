@@ -126,14 +126,8 @@ func (c CmdClient) Build(in *BuildArguments) error {
 		args = append(args, "--build-arg", fmt.Sprintf("%s=%s", k, in.Args[k]))
 	}
 
-	// copy of Labels from BuildArguments.
-	labels := make(map[string]string, len(in.Labels))
-	for k, v := range in.Labels {
-		labels[k] = v
-	}
-
 	// Add Labels to docker build call.
-	for k, v := range labels {
+	for k, v := range in.Labels {
 		args = append(args, "--label", fmt.Sprintf("%s=%s", k, v))
 	}
 
@@ -179,6 +173,8 @@ func (c CmdClient) Push(uri string, tags ...string) (digest string, err error) {
 		}
 	}
 	buf := new(strings.Builder)
+	// The container image will have the same digest regardless of the associated tag.
+	// Pick the first tag and get the image's digest.
 	if err := c.runner.Run("docker", []string{"inspect", "--format", "'{{json (index .RepoDigests 0)}}'", imageName(uri, tags[0])}, exec.Stdout(buf)); err != nil {
 		return "", fmt.Errorf("inspect image digest for %s: %w", uri, err)
 	}
