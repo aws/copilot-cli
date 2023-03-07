@@ -39,17 +39,11 @@ Parameters:
     AllowedValues: [true, false]
   RulePath:
     Type: String
-  RulePathSlice:
-    Type: CommaDelimitedList
-  Stickiness:
-    Type: String
-    Default: false
 Conditions:
   IsGovCloud: !Equals [!Ref "AWS::Partition", "aws-us-gov"]
   HasAddons: !Not [!Equals [!Ref AddonsTemplateURL, ""]]
   HasEnvFile: !Not [!Equals [!Ref EnvFileARN, ""]]
   ExposePort: !Not [!Equals [!Ref TargetPort, -1]]
-  IsDefaultRootPath: !Equals [!Ref RulePath, "/"]
 Resources:
   LogGroup:
     Metadata:
@@ -322,8 +316,8 @@ Resources:
         ]
       HealthCheckGracePeriodSeconds: 45
       LoadBalancers:
-        - ContainerName: !Ref TargetContainer
-          ContainerPort: !Ref TargetPort
+        - ContainerName: http-full-config
+          ContainerPort: 8081
           TargetGroupArn: !Ref TargetGroup
   TargetGroup:
     Metadata:
@@ -338,13 +332,13 @@ Resources:
       UnhealthyThresholdCount: 2
       HealthCheckIntervalSeconds: 15
       HealthCheckTimeoutSeconds: 10
-      Port: !Ref TargetPort
+      Port: 8081
       Protocol: HTTP
       TargetGroupAttributes:
         - Key: deregistration_delay.timeout_seconds
           Value: 5 # ECS Default is 300; Copilot default is 60.
         - Key: stickiness.enabled
-          Value: !Ref Stickiness
+          Value: true
       TargetType: ip
       VpcId:
         Fn::ImportValue: !Sub "${AppName}-${EnvName}-VpcId"
@@ -407,7 +401,7 @@ Resources:
     Type: Custom::RulePriorityFunction
     Properties:
       ServiceToken: !GetAtt RulePriorityFunction.Arn
-      RulePath: !Ref RulePathSlice
+      RulePath: [http-full-config-path]
       ListenerArn: !GetAtt EnvControllerAction.InternalHTTPListenerArn
   HTTPListenerRule:
     Metadata:
@@ -432,11 +426,9 @@ Resources:
                   - !GetAtt EnvControllerAction.InternalWorkloadsHostedZoneName
         - Field: "path-pattern"
           PathPatternConfig:
-            Values: !If
-              - IsDefaultRootPath
-              - - "/*"
-              - - !Sub "/${RulePath}"
-                - !Sub "/${RulePath}/*"
+            Values:
+              - "/http-full-config-path"
+              - "/http-full-config-path/*"
       ListenerArn: !GetAtt EnvControllerAction.InternalHTTPListenerArn
       Priority: !GetAtt HTTPRulePriorityAction.Priority
   AddonsStack:

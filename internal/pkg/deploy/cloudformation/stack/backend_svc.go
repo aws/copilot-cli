@@ -127,29 +127,20 @@ func (s *BackendService) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	var aliases []string
-	if s.httpsEnabled {
-		if aliases, err = convertAlias(s.manifest.RoutingRule.Alias); err != nil {
-			return "", err
-		}
-	}
-	hostedZoneAliases, err := convertHostedZone(s.manifest.RoutingRule)
-	if err != nil {
-		return "", err
-	}
 	var deregistrationDelay *int64 = aws.Int64(60)
 	if s.manifest.RoutingRule.DeregistrationDelay != nil {
 		deregistrationDelay = aws.Int64(int64(s.manifest.RoutingRule.DeregistrationDelay.Seconds()))
-	}
-	var allowedSourceIPs []string
-	for _, ipNet := range s.manifest.RoutingRule.AllowedSourceIps {
-		allowedSourceIPs = append(allowedSourceIPs, string(ipNet))
 	}
 	var scConfig *template.ServiceConnect
 	if s.manifest.Network.Connect.Enabled() {
 		scConfig = convertServiceConnect(s.manifest.Network.Connect)
 	}
 	targetContainer, targetContainerPort, err := s.manifest.HTTPLoadBalancerTarget()
+	if err != nil {
+		return "", err
+	}
+
+	albListenerConfig, err := s.convertALBListener()
 	if err != nil {
 		return "", err
 	}
@@ -191,18 +182,13 @@ func (s *BackendService) Template() (string, error) {
 
 		// ALB configs.
 		ALBEnabled:          s.albEnabled,
-		Aliases:             aliases,
-		AllowedSourceIps:    allowedSourceIPs,
 		DeregistrationDelay: deregistrationDelay,
-		HostedZoneAliases:   hostedZoneAliases,
-		HTTPSListener:       s.httpsEnabled,
-		HTTPRedirect:        s.httpsEnabled,
 		HTTPTargetContainer: template.HTTPTargetContainer{
 			Port: targetContainerPort,
 			Name: targetContainer,
 		},
 		HTTPHealthCheck: convertHTTPHealthCheck(&s.manifest.RoutingRule.HealthCheck),
-		HTTPVersion:     convertHTTPVersion(s.manifest.RoutingRule.ProtocolVersion),
+		ALBListener:     albListenerConfig,
 
 		// Custom Resource Config.
 		CustomResources: crs,
@@ -259,14 +245,6 @@ func (s *BackendService) Parameters() ([]*cloudformation.Parameter, error) {
 			{
 				ParameterKey:   aws.String(WorkloadRulePathParamKey),
 				ParameterValue: s.manifest.RoutingRule.Path,
-			},
-			{
-				ParameterKey:   aws.String(WorkloadRulePathSliceParamKey),
-				ParameterValue: aws.String(strings.Join([]string{aws.StringValue(s.manifest.RoutingRule.Path)}, ",")),
-			},
-			{
-				ParameterKey:   aws.String(WorkloadStickinessParamKey),
-				ParameterValue: aws.String(strconv.FormatBool(aws.BoolValue(s.manifest.RoutingRule.Stickiness))),
 			},
 			{
 				ParameterKey:   aws.String(WorkloadHTTPSParamKey),

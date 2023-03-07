@@ -32,15 +32,15 @@ Parameters:
     Description: 'URL of the environment file.'
     Type: String
     Default: ""
-  TargetContainer:
-    Type: String
-  TargetPort:
-    Type: Number
   NLBAliases:
     Type: String
     Default: ""
   NLBPort:
     Type: String
+  TargetContainer:
+    Type: String
+  TargetPort:
+    Type: Number
 Conditions:
   IsGovCloud: !Equals [!Ref "AWS::Partition", "aws-us-gov"]
   HasAssociatedDomain: !Equals [!Ref DNSDelegated, true]

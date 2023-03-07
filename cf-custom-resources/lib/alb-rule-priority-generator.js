@@ -159,8 +159,7 @@ const getListenerRules = async function (listenerArn) {
 exports.nextAvailableRulePriorityHandler = async function (event, context) {
   let responseData = {};
   let nextRootRuleNumber, nextNonRootRuleNumber;
-  const physicalResourceId =
-      event.PhysicalResourceId || `alb-rule-priority-${event.LogicalResourceId}`;
+  const physicalResourceId = event.PhysicalResourceId || `alb-rule-priority-${event.LogicalResourceId}`;
   try {
     switch (event.RequestType) {
       case "Create":
@@ -177,7 +176,6 @@ exports.nextAvailableRulePriorityHandler = async function (event, context) {
               } else {
                 responseData["Priority"+i]  = nextRootRuleNumber--;
               }
-
             } else {
               if (nextNonRootRuleNumber == null) {
                 nextNonRootRuleNumber = await calculateNextRulePriority(
