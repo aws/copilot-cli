@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
+
 	"github.com/spf13/afero"
 
 	"github.com/aws/copilot-cli/internal/pkg/template"
@@ -78,6 +80,14 @@ func (o *overrideOpts) Validate() error {
 	return o.validateCDKLang()
 }
 
+// Ask prompts for and validates any required flags.
+func (o *overrideOpts) Ask() error {
+	if err := o.validateOrAskIaCTool(); err != nil {
+		return err
+	}
+	return o.askResourcesToOverride()
+}
+
 func (o *overrideOpts) validateAppName() error {
 	if o.appName == "" {
 		return errNoAppInWorkspace
@@ -98,4 +108,60 @@ func (o *overrideOpts) validateCDKLang() error {
 	return fmt.Errorf("%q is not a valid CDK language: must be one of: %s",
 		o.cdkLang,
 		strings.Join(applyAll(validCDKLangs, strconv.Quote), ", "))
+}
+
+func (o *overrideOpts) validateOrAskIaCTool() error {
+	if o.iacTool == "" {
+		return o.askIaCTool()
+	}
+	return o.validateIaCTool()
+}
+
+func (o *overrideOpts) askIaCTool() error {
+	msg := fmt.Sprintf("Which Infrastructure as Code tool would you like to use to override %q?", o.name)
+	help := `The AWS Cloud Development Kit (CDK) lets you override templates using
+the expressive power of programming languages.
+This option is recommended for users that need to override several resources.
+To learn more about the CDK: https://docs.aws.amazon.com/cdk/v2/guide/home.html`
+	tool, err := o.prompt.SelectOne(msg, help, validIaCTools, prompt.WithFinalMessage("IaC tool:"))
+	if err != nil {
+		return fmt.Errorf("select IaC tool: %v", err)
+	}
+	o.iacTool = tool
+	return nil
+}
+
+func (o *overrideOpts) validateIaCTool() error {
+	for _, valid := range validIaCTools {
+		if o.iacTool == valid {
+			return nil
+		}
+	}
+	return fmt.Errorf("%q is not a valid IaC tool: must be one of: %s",
+		o.iacTool,
+		strings.Join(applyAll(validIaCTools, strconv.Quote), ", "))
+}
+
+func (o *overrideOpts) askResourcesToOverride() error {
+	if o.skipResources {
+		return nil
+	}
+
+	buf := &closableStringBuilder{
+		Builder: new(strings.Builder),
+	}
+	pkgCmd, err := o.packageCmd(buf)
+	if err != nil {
+		return err
+	}
+	if err := pkgCmd.Execute(); err != nil {
+		return fmt.Errorf("generate CloudFormation template for service %q: %v", o.name, err)
+	}
+	msg := fmt.Sprintf("Which resources in %q would you like to override?", o.name)
+	resources, err := o.cfnPrompt.Resources(msg, "Resources:", "", buf.String())
+	if err != nil {
+		return err
+	}
+	o.resources = resources
+	return nil
 }
