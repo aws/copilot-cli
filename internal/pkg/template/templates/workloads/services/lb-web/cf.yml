@@ -48,7 +48,7 @@ Parameters:
   NLBPort:
     Type: String
 {{- end }}
-{{- if .ALB}}
+{{- if .ALBListener}}
   HTTPSEnabled:
     Type: String
     AllowedValues: [true, false]
@@ -95,9 +95,9 @@ Resources:
       'aws:copilot:description': 'An ECS service to run and maintain your tasks in the environment cluster'
     Type: AWS::ECS::Service
     DependsOn:
-    {{- if .ALB}}
-    {{- range $i, $rule := .ALB.Rules }}
-      {{- if $.ALB.IsHTTPS }}
+    {{- if .ALBListener}}
+    {{- range $i, $rule := .ALBListener.Rules }}
+      {{- if $.ALBListener.IsHTTPS }}
       - HTTPListenerRuleWithDomain{{ if ne $i 0 }}{{ $i }}{{ end }}
       - HTTPSListenerRule{{ if ne $i 0 }}{{ $i }}{{ end }}
       {{- else}}
@@ -117,8 +117,8 @@ Resources:
       HealthCheckGracePeriodSeconds: {{.HTTPHealthCheck.GracePeriod}}
       {{- end }}
       LoadBalancers:
-  {{- if .ALB}}
-  {{- range $i, $rule := .ALB.Rules}}
+  {{- if .ALBListener}}
+  {{- range $i, $rule := .ALBListener.Rules}}
         - ContainerName: {{$rule.TargetContainer}}
           ContainerPort: {{$rule.TargetPort}}
           TargetGroupArn: !Ref TargetGroup{{ if ne $i 0 }}{{ $i }}{{ end }}
@@ -135,7 +135,7 @@ Resources:
         - RegistryArn: !GetAtt DiscoveryService.Arn
           Port: !Ref TargetPort
 
-{{- if .ALB}}
+{{- if .ALBListener}}
 {{include "alb" . | indent 2}}
 {{- end}}
 

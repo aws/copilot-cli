@@ -1,4 +1,4 @@
-{{- range $i, $rule := .ALB.Rules}}
+{{- range $i, $rule := .ALBListener.Rules}}
 TargetGroup{{ if ne $i 0 }}{{ $i }}{{ end }}:
   Metadata:
     'aws:copilot:description': "A target group to connect the load balancer to your service"
@@ -45,7 +45,7 @@ TargetGroup{{ if ne $i 0 }}{{ $i }}{{ end }}:
     VpcId:
       Fn::ImportValue:
         !Sub "${AppName}-${EnvName}-VpcId"
-{{- end}}{{/* range $i, $rule := .ALB.Rules */}}
+{{- end}}{{/* range $i, $rule := .ALBListener.Rules */}}
 RulePriorityFunction:
   Type: AWS::Lambda::Function
   Properties:
@@ -90,7 +90,7 @@ RulePriorityFunctionRole:
                 - elasticloadbalancing:DescribeRules
               Resource: "*"
 
-{{- if .ALB.IsHTTPS}}
+{{- if .ALBListener.IsHTTPS}}
 {{include "https-listener" .}}
 {{- else}}
 {{include "http-listener" .}}

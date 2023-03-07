@@ -178,7 +178,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	albConfig, err := s.convertApplicationLoadBalancer()
+	albListenerConfig, err := s.convertALBListener()
 	if err != nil {
 		return "", err
 	}
@@ -237,7 +237,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 			Name: targetContainer,
 		},
 		HTTPHealthCheck: convertHTTPHealthCheck(&s.manifest.RoutingRule.HealthCheck),
-		ALB:             albConfig,
+		ALBListener:     albListenerConfig,
 
 		// NLB configs.
 		AppDNSName:           nlbConfig.appDNSName,

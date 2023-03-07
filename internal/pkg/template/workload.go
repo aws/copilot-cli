@@ -805,7 +805,7 @@ type WorkloadOpts struct {
 	HTTPHealthCheck         HTTPHealthCheckOpts
 	DeregistrationDelay     *int64
 	NLB                     *NetworkLoadBalancer
-	ALB                     *ALBListener
+	ALBListener             *ALBListener
 	DeploymentConfiguration DeploymentConfigurationOpts
 	ServiceConnect          *ServiceConnect
 

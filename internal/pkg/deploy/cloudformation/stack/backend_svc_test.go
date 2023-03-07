@@ -529,7 +529,7 @@ Outputs:
 			},
 			EntryPoint: []string{"enter", "from"},
 			Command:    []string{"here"},
-			ALB: &template.ALBListener{
+			ALBListener: &template.ALBListener{
 				Rules: []template.ALBListenerRule{
 					{
 						Path:            "/albPath",

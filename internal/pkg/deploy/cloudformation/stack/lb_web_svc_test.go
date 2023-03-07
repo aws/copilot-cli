@@ -318,7 +318,7 @@ Outputs:
 			},
 			EntryPoint: []string{"/bin/echo", "hello"},
 			Command:    []string{"world"},
-			ALB: &template.ALBListener{
+			ALBListener: &template.ALBListener{
 				Rules: []template.ALBListenerRule{
 					{
 						Path:            "frontend",

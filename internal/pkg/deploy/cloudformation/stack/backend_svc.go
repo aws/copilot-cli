@@ -139,7 +139,7 @@ func (s *BackendService) Template() (string, error) {
 		return "", err
 	}
 
-	albConfig, err := s.convertApplicationLoadBalancer()
+	albListenerConfig, err := s.convertALBListener()
 	if err != nil {
 		return "", err
 	}
@@ -187,7 +187,7 @@ func (s *BackendService) Template() (string, error) {
 			Name: targetContainer,
 		},
 		HTTPHealthCheck: convertHTTPHealthCheck(&s.manifest.RoutingRule.HealthCheck),
-		ALB:             albConfig,
+		ALBListener:     albListenerConfig,
 
 		// Custom Resource Config.
 		CustomResources: crs,

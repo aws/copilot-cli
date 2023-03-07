@@ -39,7 +39,7 @@ Parameters:
     Type: String
   TargetPort:
     Type: Number
-  {{- if .ALB}}
+  {{- if .ALBListener}}
   HTTPSEnabled:
     Type: String
     AllowedValues: [true, false]
@@ -79,7 +79,7 @@ Resources:
 {{include "autoscaling" . | indent 2}}
 {{- end}}
 
-{{- if .ALB}}
+{{- if .ALBListener}}
 {{include "alb" . | indent 2}}
 {{end}}
 {{include "rollback-alarms" . | indent 2}}
@@ -90,9 +90,9 @@ Resources:
     Type: AWS::ECS::Service
     DependsOn:
       - EnvControllerAction
-      {{- if .ALB }}
-      {{- range $i, $rule := .ALB.Rules }}
-      {{- if $.ALB.IsHTTPS}}
+      {{- if .ALBListener }}
+      {{- range $i, $rule := .ALBListener.Rules }}
+      {{- if $.ALBListener.IsHTTPS}}
       - HTTPListenerRuleWithDomain{{ if ne $i 0 }}{{ $i }}{{ end }}
       - HTTPSListenerRule{{ if ne $i 0 }}{{ $i }}{{ end }}
       {{- else }}
@@ -103,12 +103,12 @@ Resources:
     Properties:
       {{- "\n"}}{{ include "service-base-properties" . | indent 6 }}
       ServiceRegistries: !If [ExposePort, [{RegistryArn: !GetAtt DiscoveryService.Arn, Port: !Ref TargetPort}], !Ref "AWS::NoValue"]
-      {{- if .ALB}}
+      {{- if .ALBListener}}
       {{- if .HTTPHealthCheck.GracePeriod }}
       HealthCheckGracePeriodSeconds: {{.HTTPHealthCheck.GracePeriod}}
       {{- end }}
       LoadBalancers:
-        {{- range $i, $rule := .ALB.Rules}}
+        {{- range $i, $rule := .ALBListener.Rules}}
         - ContainerName: {{$rule.TargetContainer}}
           ContainerPort: {{$rule.TargetPort}}
           TargetGroupArn: !Ref TargetGroup{{ if ne $i 0 }}{{ $i }}{{ end }}
