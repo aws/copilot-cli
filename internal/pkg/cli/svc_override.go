@@ -15,7 +15,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/override"
-	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
@@ -25,17 +24,8 @@ import (
 )
 
 type overrideSvcVars struct {
-	name    string
+	overrideVars
 	envName string // Optional.
-	appName string
-	iacTool string
-
-	// CDK override engine flags.
-	cdkLang string
-
-	// We prompt for resources if the user does not opt-in to skipping.
-	skipResources bool
-	resources     []template.CFNResource
 }
 
 type overrideSvcOpts struct {
