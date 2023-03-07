@@ -202,13 +202,13 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			},
 			mock: func(t *testing.T, m *deployMocks) {
 				m.mockImageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
-					Dockerfile:    "mockDockerfile",
-					Context:       "mockContext",
-					Platform:      "mockContainerPlatform",
-					Tags:          []string{"latest", "v1.0"},
-					ContainerName: "mockWkld",
+					Dockerfile: "mockDockerfile",
+					Context:    "mockContext",
+					Platform:   "mockContainerPlatform",
+					Tags:       []string{"latest", "v1.0"},
 					Labels: map[string]string{
-						"builder": "copilot-cli",
+						"com.aws.copilot.image.builder":        "copilot-cli",
+						"com.aws.copilot.image.container.name": "mockWkld",
 					},
 				}).Return("", mockError)
 			},
@@ -225,13 +225,13 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			},
 			mock: func(t *testing.T, m *deployMocks) {
 				m.mockImageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
-					Dockerfile:    "mockDockerfile",
-					Context:       "mockContext",
-					Platform:      "mockContainerPlatform",
-					Tags:          []string{"latest", "v1.0"},
-					ContainerName: "mockWkld",
+					Dockerfile: "mockDockerfile",
+					Context:    "mockContext",
+					Platform:   "mockContainerPlatform",
+					Tags:       []string{"latest", "v1.0"},
 					Labels: map[string]string{
-						"builder": "copilot-cli",
+						"com.aws.copilot.image.builder":        "copilot-cli",
+						"com.aws.copilot.image.container.name": "mockWkld",
 					},
 				}).Return("mockDigest", nil)
 				m.mockAddons = nil
@@ -255,13 +255,13 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			},
 			mock: func(t *testing.T, m *deployMocks) {
 				m.mockImageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
-					Dockerfile:    "mockDockerfile",
-					Context:       "mockContext",
-					Platform:      "mockContainerPlatform",
-					Tags:          []string{"latest", "gitTag"},
-					ContainerName: "mockWkld",
+					Dockerfile: "mockDockerfile",
+					Context:    "mockContext",
+					Platform:   "mockContainerPlatform",
+					Tags:       []string{"latest", "gitTag"},
 					Labels: map[string]string{
-						"builder": "copilot-cli",
+						"com.aws.copilot.image.builder":        "copilot-cli",
+						"com.aws.copilot.image.container.name": "mockWkld",
 					},
 				}).Return("mockDigest", nil)
 				m.mockAddons = nil
@@ -287,23 +287,23 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			inMockGitTag: "gitTag",
 			mock: func(t *testing.T, m *deployMocks) {
 				m.mockImageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
-					Dockerfile:    "sidecarMockDockerfile",
-					Context:       "sidecarMockContext",
-					Platform:      "mockContainerPlatform",
-					Tags:          []string{fmt.Sprintf("nginx-%s", "latest"), fmt.Sprintf("nginx-%s", "gitTag")},
-					ContainerName: "nginx",
+					Dockerfile: "sidecarMockDockerfile",
+					Context:    "sidecarMockContext",
+					Platform:   "mockContainerPlatform",
+					Tags:       []string{fmt.Sprintf("nginx-%s", "latest"), fmt.Sprintf("nginx-%s", "gitTag")},
 					Labels: map[string]string{
-						"builder": "copilot-cli",
+						"com.aws.copilot.image.builder":        "copilot-cli",
+						"com.aws.copilot.image.container.name": "nginx",
 					},
 				}).Return("sidecarMockDigest1", nil)
 				m.mockImageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
-					Dockerfile:    "web/Dockerfile",
-					Context:       "Users/bowie",
-					Platform:      "mockContainerPlatform",
-					Tags:          []string{"logging-latest", fmt.Sprintf("logging-%s", "gitTag")},
-					ContainerName: "logging",
+					Dockerfile: "web/Dockerfile",
+					Context:    "Users/bowie",
+					Platform:   "mockContainerPlatform",
+					Tags:       []string{"logging-latest", fmt.Sprintf("logging-%s", "gitTag")},
 					Labels: map[string]string{
-						"builder": "copilot-cli",
+						"com.aws.copilot.image.builder":        "copilot-cli",
+						"com.aws.copilot.image.container.name": "logging",
 					},
 				}).Return("sidecarMockDigest2", nil)
 				m.mockAddons = nil

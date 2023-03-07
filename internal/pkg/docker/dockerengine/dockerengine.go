@@ -58,16 +58,15 @@ func New(cmd Cmd) CmdClient {
 
 // BuildArguments holds the arguments that can be passed while building a container.
 type BuildArguments struct {
-	URI           string            // Required. Location of ECR Repo. Used to generate image name in conjunction with tag.
-	Tags          []string          // Required. List of tags to apply to the image.
-	Dockerfile    string            // Required. Dockerfile to pass to `docker build` via --file flag.
-	Context       string            // Optional. Build context directory to pass to `docker build`.
-	Target        string            // Optional. The target build stage to pass to `docker build`.
-	CacheFrom     []string          // Optional. Images to consider as cache sources to pass to `docker build`
-	Platform      string            // Optional. OS/Arch to pass to `docker build`.
-	Args          map[string]string // Optional. Build args to pass via `--build-arg` flags. Equivalent to ARG directives in dockerfile.
-	ContainerName string            // Optional. Name of the Container.
-	Labels        map[string]string // Required. Set metadata for an image.
+	URI        string            // Required. Location of ECR Repo. Used to generate image name in conjunction with tag.
+	Tags       []string          // Required. List of tags to apply to the image.
+	Dockerfile string            // Required. Dockerfile to pass to `docker build` via --file flag.
+	Context    string            // Optional. Build context directory to pass to `docker build`.
+	Target     string            // Optional. The target build stage to pass to `docker build`.
+	CacheFrom  []string          // Optional. Images to consider as cache sources to pass to `docker build`
+	Platform   string            // Optional. OS/Arch to pass to `docker build`.
+	Args       map[string]string // Optional. Build args to pass via `--build-arg` flags. Equivalent to ARG directives in dockerfile.
+	Labels     map[string]string // Required. Set metadata for an image.
 }
 
 type dockerConfig struct {
@@ -127,11 +126,14 @@ func (c CmdClient) Build(in *BuildArguments) error {
 		args = append(args, "--build-arg", fmt.Sprintf("%s=%s", k, in.Args[k]))
 	}
 
-	if in.ContainerName != "" {
-		in.Labels["container"] = in.ContainerName
-	}
-	// Add Labels to docker build call.
+	// copy of Labels from BuildArguments.
+	labels := make(map[string]string, len(in.Labels))
 	for k, v := range in.Labels {
+		labels[k] = v
+	}
+
+	// Add Labels to docker build call.
+	for k, v := range labels {
 		args = append(args, "--label", fmt.Sprintf("%s=%s", k, v))
 	}
 
@@ -177,7 +179,7 @@ func (c CmdClient) Push(uri string, tags ...string) (digest string, err error) {
 		}
 	}
 	buf := new(strings.Builder)
-	if err := c.runner.Run("docker", []string{"inspect", "--format", "'{{json (index .RepoDigests 0)}}'", uri}, exec.Stdout(buf)); err != nil {
+	if err := c.runner.Run("docker", []string{"inspect", "--format", "'{{json (index .RepoDigests 0)}}'", imageName(uri, tags[0])}, exec.Stdout(buf)); err != nil {
 		return "", fmt.Errorf("inspect image digest for %s: %w", uri, err)
 	}
 	repoDigest := strings.Trim(strings.TrimSpace(buf.String()), `"'`) // remove new lines and quotes from output

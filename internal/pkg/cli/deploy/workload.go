@@ -50,6 +50,12 @@ const (
 	imageTagLatest = "latest"
 )
 
+const (
+	labelForBuilder       = "com.aws.copilot.image.builder"
+	labelForVersion       = "com.aws.copilot.image.version"
+	labelForContainerName = "com.aws.copilot.image.container.name"
+)
+
 // ActionRecommender contains methods that output action recommendation.
 type ActionRecommender interface {
 	RecommendedActions() []string
@@ -363,13 +369,6 @@ func buildArgsPerContainer(name, workspacePath string, img ContainerImageIdentif
 	if err != nil {
 		return nil, fmt.Errorf("check if manifest requires building from local Dockerfile: %w", err)
 	}
-	// Add labels to ECR images with docker build call
-	labels := map[string]string{
-		"builder": "copilot-cli",
-	}
-	if version.Version != "" {
-		labels["version"] = version.Version
-	}
 	dArgs := make(map[string]*dockerengine.BuildArguments, len(argsPerContainer))
 	for container, buildArgs := range argsPerContainer {
 		tags := []string{imageTagLatest}
@@ -382,16 +381,21 @@ func buildArgsPerContainer(name, workspacePath string, img ContainerImageIdentif
 				tags = append(tags, fmt.Sprintf("%s-%s", container, img.GitShortCommitTag))
 			}
 		}
+		labels := make(map[string]string, 3)
+		labels[labelForBuilder] = "copilot-cli"
+		if version.Version != "" {
+			labels[labelForVersion] = version.Version
+		}
+		labels[labelForContainerName] = container
 		dArgs[container] = &dockerengine.BuildArguments{
-			Dockerfile:    aws.StringValue(buildArgs.Dockerfile),
-			Context:       aws.StringValue(buildArgs.Context),
-			Args:          buildArgs.Args,
-			CacheFrom:     buildArgs.CacheFrom,
-			Target:        aws.StringValue(buildArgs.Target),
-			Platform:      mf.ContainerPlatform(),
-			Tags:          tags,
-			ContainerName: container,
-			Labels:        labels,
+			Dockerfile: aws.StringValue(buildArgs.Dockerfile),
+			Context:    aws.StringValue(buildArgs.Context),
+			Args:       buildArgs.Args,
+			CacheFrom:  buildArgs.CacheFrom,
+			Target:     aws.StringValue(buildArgs.Target),
+			Platform:   mf.ContainerPlatform(),
+			Tags:       tags,
+			Labels:     labels,
 		}
 	}
 	return dArgs, nil
