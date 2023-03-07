@@ -43,6 +43,14 @@ func TestDockerCommand_Build(t *testing.T) {
 
 		wantedError error
 	}{
+		"should error tags are not specified": {
+			path:    mockPath,
+			context: "",
+			setupMocks: func(controller *gomock.Controller) {
+				mockCmd = NewMockCmd(controller)
+			},
+			wantedError: fmt.Errorf("tags to reference an image should not be empty for building and pushing into the ECR repository %s", mockURI),
+		},
 		"should error if the docker build command fails": {
 			path:    mockPath,
 			context: "",
@@ -50,7 +58,6 @@ func TestDockerCommand_Build(t *testing.T) {
 			setupMocks: func(controller *gomock.Controller) {
 				mockCmd = NewMockCmd(controller)
 				mockCmd.EXPECT().Run("docker", []string{"build",
-					"-t", mockURI,
 					"-t", mockURI + ":" + mockTag1,
 					filepath.FromSlash("mockPath/to"),
 					"-f", "mockPath/to/mockDockerfile"}).Return(mockError)
@@ -65,13 +72,13 @@ func TestDockerCommand_Build(t *testing.T) {
 				mockCmd = NewMockCmd(controller)
 
 				mockCmd.EXPECT().Run("docker", []string{"build",
-					"-t", mockURI,
 					"-t", "mockURI:tag1", filepath.FromSlash("mockPath/to"),
 					"-f", "mockPath/to/mockDockerfile"}).Return(nil)
 			},
 		},
 		"should display quiet progress updates when in a CI environment": {
 			path:    mockPath,
+			tags:    []string{mockTag1},
 			context: "",
 			envVars: map[string]string{
 				"CI": "true",
@@ -80,7 +87,7 @@ func TestDockerCommand_Build(t *testing.T) {
 				mockCmd = NewMockCmd(controller)
 
 				mockCmd.EXPECT().Run("docker", []string{"build",
-					"-t", mockURI,
+					"-t", fmt.Sprintf("%s:%s", mockURI, mockTag1),
 					"--progress", "plain",
 					filepath.FromSlash("mockPath/to"), "-f", "mockPath/to/mockDockerfile"}).
 					Return(nil)
@@ -88,11 +95,12 @@ func TestDockerCommand_Build(t *testing.T) {
 		},
 		"context differs from path": {
 			path:    mockPath,
+			tags:    []string{mockTag1},
 			context: mockContext,
 			setupMocks: func(controller *gomock.Controller) {
 				mockCmd = NewMockCmd(controller)
 				mockCmd.EXPECT().Run("docker", []string{"build",
-					"-t", mockURI,
+					"-t", fmt.Sprintf("%s:%s", mockURI, mockTag1),
 					"mockPath",
 					"-f", "mockPath/to/mockDockerfile"}).Return(nil)
 			},
@@ -105,7 +113,6 @@ func TestDockerCommand_Build(t *testing.T) {
 				mockCmd = NewMockCmd(controller)
 
 				mockCmd.EXPECT().Run("docker", []string{"build",
-					"-t", mockURI,
 					"-t", mockURI + ":" + mockTag1,
 					"mockPath/to",
 					"-f", "mockPath/to/mockDockerfile"}).Return(nil)
@@ -118,7 +125,6 @@ func TestDockerCommand_Build(t *testing.T) {
 			setupMocks: func(controller *gomock.Controller) {
 				mockCmd = NewMockCmd(controller)
 				mockCmd.EXPECT().Run("docker", []string{"build",
-					"-t", mockURI,
 					"-t", mockURI + ":" + mockTag1,
 					"-t", mockURI + ":" + mockTag2,
 					"-t", mockURI + ":" + mockTag3,
@@ -128,6 +134,7 @@ func TestDockerCommand_Build(t *testing.T) {
 		},
 		"success with build args": {
 			path: mockPath,
+			tags: []string{"latest"},
 			args: map[string]string{
 				"GOPROXY": "direct",
 				"key":     "value",
@@ -136,7 +143,7 @@ func TestDockerCommand_Build(t *testing.T) {
 			setupMocks: func(c *gomock.Controller) {
 				mockCmd = NewMockCmd(c)
 				mockCmd.EXPECT().Run("docker", []string{"build",
-					"-t", mockURI,
+					"-t", fmt.Sprintf("%s:%s", mockURI, "latest"),
 					"--build-arg", "GOPROXY=direct",
 					"--build-arg", "abc=def",
 					"--build-arg", "key=value",
@@ -146,12 +153,13 @@ func TestDockerCommand_Build(t *testing.T) {
 		},
 		"runs with cache_from and target fields": {
 			path:      mockPath,
+			tags:      []string{"latest"},
 			target:    "foobar",
 			cacheFrom: []string{"foo/bar:latest", "foo/bar/baz:1.2.3"},
 			setupMocks: func(c *gomock.Controller) {
 				mockCmd = NewMockCmd(c)
 				mockCmd.EXPECT().Run("docker", []string{"build",
-					"-t", mockURI,
+					"-t", fmt.Sprintf("%s:%s", mockURI, "latest"),
 					"--cache-from", "foo/bar:latest",
 					"--cache-from", "foo/bar/baz:1.2.3",
 					"--target", "foobar",

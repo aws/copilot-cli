@@ -172,7 +172,7 @@ func NewEnvDeployer(in *NewEnvDeployerInput) (*envDeployer, error) {
 		envDescriber: envDescriber,
 		lbDescriber:  elbv2.New(envManagerSession),
 		newServiceStackDescriber: func(svc string) stackDescriber {
-			return stack.NewStackDescriber(cfnstack.NameForService(in.App.Name, in.Env.Name, svc), envManagerSession)
+			return stack.NewStackDescriber(cfnstack.NameForWorkload(in.App.Name, in.Env.Name, svc), envManagerSession)
 		},
 
 		ws: in.Workspace,

@@ -2399,6 +2399,12 @@ func TestSidecarConfig_validate(t *testing.T) {
 			},
 			wantedErrorPrefix: `validate "depends_on": `,
 		},
+		"error if invalid env file": {
+			config: SidecarConfig{
+				EnvFile: aws.String("foo"),
+			},
+			wantedErrorPrefix: `environment file foo must`,
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
@@ -3173,6 +3179,37 @@ func TestValidateLoadBalancerTarget(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 			}
+		})
+	}
+}
+
+func TestValidateLogging(t *testing.T) {
+	testCases := map[string]struct {
+		in          Logging
+		wantedError error
+	}{
+		"should return an error if env file has wrong extension": {
+			in: Logging{
+				EnvFile: aws.String("path/to/envFile.sh"),
+			},
+			wantedError: fmt.Errorf("environment file path/to/envFile.sh must have a .env file extension"),
+		},
+		"success": {
+			in: Logging{
+				EnvFile: aws.String("test.env"),
+			},
+			wantedError: nil,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			gotErr := tc.in.validate()
+
+			if tc.wantedError != nil {
+				require.EqualError(t, gotErr, tc.wantedError.Error())
+				return
+			}
+			require.NoError(t, gotErr)
 		})
 	}
 }

@@ -33,7 +33,16 @@ type ResourceRendererOpts struct {
 	RenderOpts RenderOptions
 }
 
-// ECSServiceRendererOpts is optional configuration for a listening ECS service renderer.
+// ECSServiceRendererCfg holds required configuration for initializing an ECS service renderer.
+type ECSServiceRendererCfg struct {
+	Streamer    StackSubscriber
+	ECSClient   stream.ECSServiceDescriber
+	CWClient    stream.CloudWatchDescriber
+	LogicalID   string
+	Description string
+}
+
+// ECSServiceRendererOpts holds optional configuration for a listening ECS service renderer.
 type ECSServiceRendererOpts struct {
 	Group      *errgroup.Group
 	Ctx        context.Context
@@ -80,7 +89,7 @@ func ListeningResourceRenderer(streamer StackSubscriber, logicalID, description 
 
 // ListeningECSServiceResourceRenderer is a ListeningResourceRenderer for the ECS service cloudformation resource
 // and a ListeningRollingUpdateRenderer to render deployments.
-func ListeningECSServiceResourceRenderer(streamer StackSubscriber, ecsDescriber stream.ECSServiceDescriber, logicalID, description string, opts ECSServiceRendererOpts) DynamicRenderer {
+func ListeningECSServiceResourceRenderer(cfg ECSServiceRendererCfg, opts ECSServiceRendererOpts) DynamicRenderer {
 	g := new(errgroup.Group)
 	ctx := context.Background()
 	if opts.Group != nil {
@@ -90,14 +99,14 @@ func ListeningECSServiceResourceRenderer(streamer StackSubscriber, ecsDescriber 
 		ctx = opts.Ctx
 	}
 	comp := &ecsServiceResourceComponent{
-		cfnStream:    streamer.Subscribe(),
-		ecsDescriber: ecsDescriber,
-		logicalID:    logicalID,
-
-		group:      g,
-		ctx:        ctx,
-		renderOpts: opts.RenderOpts,
-		resourceRenderer: ListeningResourceRenderer(streamer, logicalID, description, ResourceRendererOpts{
+		cfnStream:    cfg.Streamer.Subscribe(),
+		ecsDescriber: cfg.ECSClient,
+		cwDescriber:  cfg.CWClient,
+		logicalID:    cfg.LogicalID,
+		group:        g,
+		ctx:          ctx,
+		renderOpts:   opts.RenderOpts,
+		resourceRenderer: ListeningResourceRenderer(cfg.Streamer, cfg.LogicalID, cfg.Description, ResourceRendererOpts{
 			RenderOpts: opts.RenderOpts,
 		}),
 		done: make(chan struct{}),
@@ -310,6 +319,7 @@ type ecsServiceResourceComponent struct {
 	// Required inputs.
 	cfnStream    <-chan stream.StackEvent   // Subscribed stream to initialize the deploymentRenderer.
 	ecsDescriber stream.ECSServiceDescriber // Client needed to create an ECSDeploymentStreamer.
+	cwDescriber  stream.CloudWatchDescriber // Client needed to create a CloudwatchAlarmStreamer.
 	logicalID    string                     // LogicalID for the service.
 
 	// Optional inputs.
@@ -398,7 +408,7 @@ func (c *ecsServiceResourceComponent) Done() <-chan struct{} {
 
 func (c *ecsServiceResourceComponent) newListeningRollingUpdateRenderer(serviceARN string, startTime time.Time) DynamicRenderer {
 	cluster, service := parseServiceARN(serviceARN)
-	streamer := stream.NewECSDeploymentStreamer(c.ecsDescriber, cluster, service, startTime)
+	streamer := stream.NewECSDeploymentStreamer(c.ecsDescriber, c.cwDescriber, cluster, service, startTime)
 	renderer := ListeningRollingUpdateRenderer(streamer, NestedRenderOptions(c.renderOpts))
 	c.group.Go(func() error {
 		return stream.Stream(c.ctx, streamer)

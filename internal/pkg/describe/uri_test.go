@@ -41,7 +41,7 @@ func TestLBWebServiceDescriber_URI(t *testing.T) {
 		"fail to get stack resources of service stack": {
 			setupMocks: func(m lbWebSvcDescriberMocks) {
 				gomock.InOrder(
-					m.ecsDescriber.EXPECT().ServiceStackResources().Return(nil, mockErr),
+					m.ecsDescriber.EXPECT().StackResources().Return(nil, mockErr),
 				)
 			},
 			wantedError: fmt.Errorf("get stack resources for service jobs: some error"),
@@ -49,7 +49,7 @@ func TestLBWebServiceDescriber_URI(t *testing.T) {
 		"fail to get params of the service stack when fetching ALB uris": {
 			setupMocks: func(m lbWebSvcDescriberMocks) {
 				gomock.InOrder(
-					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*describeStack.Resource{
+					m.ecsDescriber.EXPECT().StackResources().Return([]*describeStack.Resource{
 						{
 							LogicalID: svcStackResourceALBTargetGroupLogicalID,
 						},
@@ -62,7 +62,7 @@ func TestLBWebServiceDescriber_URI(t *testing.T) {
 		"fail to get outputs of environment stack when fetching ALB uris": {
 			setupMocks: func(m lbWebSvcDescriberMocks) {
 				gomock.InOrder(
-					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*describeStack.Resource{
+					m.ecsDescriber.EXPECT().StackResources().Return([]*describeStack.Resource{
 						{
 							LogicalID: svcStackResourceALBTargetGroupLogicalID,
 						},
@@ -78,7 +78,7 @@ func TestLBWebServiceDescriber_URI(t *testing.T) {
 		"fail to get listener rule host-header": {
 			setupMocks: func(m lbWebSvcDescriberMocks) {
 				gomock.InOrder(
-					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*describeStack.Resource{
+					m.ecsDescriber.EXPECT().StackResources().Return([]*describeStack.Resource{
 						{
 							LogicalID: svcStackResourceALBTargetGroupLogicalID,
 						},
@@ -87,7 +87,7 @@ func TestLBWebServiceDescriber_URI(t *testing.T) {
 						stack.WorkloadRulePathParamKey: testSvcPath,
 						stack.WorkloadHTTPSParamKey:    "true",
 					}, nil),
-					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*describeStack.Resource{
+					m.ecsDescriber.EXPECT().StackResources().Return([]*describeStack.Resource{
 						{
 							LogicalID:  svcStackResourceHTTPSListenerRuleLogicalID,
 							Type:       svcStackResourceListenerRuleResourceType,
@@ -104,7 +104,7 @@ func TestLBWebServiceDescriber_URI(t *testing.T) {
 		"https web service": {
 			setupMocks: func(m lbWebSvcDescriberMocks) {
 				gomock.InOrder(
-					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*describeStack.Resource{
+					m.ecsDescriber.EXPECT().StackResources().Return([]*describeStack.Resource{
 						{
 							LogicalID: svcStackResourceALBTargetGroupLogicalID,
 						},
@@ -113,7 +113,7 @@ func TestLBWebServiceDescriber_URI(t *testing.T) {
 						stack.WorkloadRulePathParamKey: testSvcPath,
 						stack.WorkloadHTTPSParamKey:    "true",
 					}, nil),
-					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*describeStack.Resource{
+					m.ecsDescriber.EXPECT().StackResources().Return([]*describeStack.Resource{
 						{
 							LogicalID:  svcStackResourceHTTPSListenerRuleLogicalID,
 							Type:       svcStackResourceListenerRuleResourceType,
@@ -129,7 +129,7 @@ func TestLBWebServiceDescriber_URI(t *testing.T) {
 		"http web service": {
 			setupMocks: func(m lbWebSvcDescriberMocks) {
 				gomock.InOrder(
-					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*describeStack.Resource{
+					m.ecsDescriber.EXPECT().StackResources().Return([]*describeStack.Resource{
 						{
 							LogicalID: svcStackResourceALBTargetGroupLogicalID,
 						},
@@ -148,7 +148,7 @@ func TestLBWebServiceDescriber_URI(t *testing.T) {
 		"http web service with cloudfront": {
 			setupMocks: func(m lbWebSvcDescriberMocks) {
 				gomock.InOrder(
-					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*describeStack.Resource{
+					m.ecsDescriber.EXPECT().StackResources().Return([]*describeStack.Resource{
 						{
 							LogicalID: svcStackResourceALBTargetGroupLogicalID,
 						},
@@ -169,7 +169,7 @@ func TestLBWebServiceDescriber_URI(t *testing.T) {
 		"http web service with cloudfront and alb disabled": {
 			setupMocks: func(m lbWebSvcDescriberMocks) {
 				gomock.InOrder(
-					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*describeStack.Resource{
+					m.ecsDescriber.EXPECT().StackResources().Return([]*describeStack.Resource{
 						{
 							LogicalID: svcStackResourceALBTargetGroupLogicalID,
 						},
@@ -188,7 +188,7 @@ func TestLBWebServiceDescriber_URI(t *testing.T) {
 		},
 		"fail to get parameters of service stack when fetching NLB uris": {
 			setupMocks: func(m lbWebSvcDescriberMocks) {
-				m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*describeStack.Resource{
+				m.ecsDescriber.EXPECT().StackResources().Return([]*describeStack.Resource{
 					{
 						LogicalID: svcStackResourceNLBTargetGroupLogicalID,
 					},
@@ -199,7 +199,7 @@ func TestLBWebServiceDescriber_URI(t *testing.T) {
 		},
 		"fail to get outputs of service stack when fetching NLB uris": {
 			setupMocks: func(m lbWebSvcDescriberMocks) {
-				m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*describeStack.Resource{
+				m.ecsDescriber.EXPECT().StackResources().Return([]*describeStack.Resource{
 					{
 						LogicalID: svcStackResourceNLBTargetGroupLogicalID,
 					},
@@ -214,7 +214,7 @@ func TestLBWebServiceDescriber_URI(t *testing.T) {
 		},
 		"fail to get outputs of environment stack when fetching NLB uris": {
 			setupMocks: func(m lbWebSvcDescriberMocks) {
-				m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*describeStack.Resource{
+				m.ecsDescriber.EXPECT().StackResources().Return([]*describeStack.Resource{
 					{
 						LogicalID: svcStackResourceNLBTargetGroupLogicalID,
 					},
@@ -230,7 +230,7 @@ func TestLBWebServiceDescriber_URI(t *testing.T) {
 		"nlb web service": {
 			setupMocks: func(m lbWebSvcDescriberMocks) {
 				gomock.InOrder(
-					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*describeStack.Resource{
+					m.ecsDescriber.EXPECT().StackResources().Return([]*describeStack.Resource{
 						{
 							LogicalID: svcStackResourceNLBTargetGroupLogicalID,
 						},
@@ -249,7 +249,7 @@ func TestLBWebServiceDescriber_URI(t *testing.T) {
 		"nlb web service with default DNS name": {
 			setupMocks: func(m lbWebSvcDescriberMocks) {
 				gomock.InOrder(
-					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*describeStack.Resource{
+					m.ecsDescriber.EXPECT().StackResources().Return([]*describeStack.Resource{
 						{
 							LogicalID: svcStackResourceNLBTargetGroupLogicalID,
 						},
@@ -268,7 +268,7 @@ func TestLBWebServiceDescriber_URI(t *testing.T) {
 		"nlb web service with alias": {
 			setupMocks: func(m lbWebSvcDescriberMocks) {
 				gomock.InOrder(
-					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*describeStack.Resource{
+					m.ecsDescriber.EXPECT().StackResources().Return([]*describeStack.Resource{
 						{
 							LogicalID: svcStackResourceNLBTargetGroupLogicalID,
 						},
@@ -285,7 +285,7 @@ func TestLBWebServiceDescriber_URI(t *testing.T) {
 		"both http and nlb with alias": {
 			setupMocks: func(m lbWebSvcDescriberMocks) {
 				gomock.InOrder(
-					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*describeStack.Resource{
+					m.ecsDescriber.EXPECT().StackResources().Return([]*describeStack.Resource{
 						{
 							LogicalID: svcStackResourceNLBTargetGroupLogicalID,
 						},
@@ -297,7 +297,7 @@ func TestLBWebServiceDescriber_URI(t *testing.T) {
 						stack.WorkloadRulePathParamKey: testSvcPath,
 						stack.WorkloadHTTPSParamKey:    "true",
 					}, nil),
-					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*describeStack.Resource{
+					m.ecsDescriber.EXPECT().StackResources().Return([]*describeStack.Resource{
 						{
 							LogicalID:  svcStackResourceHTTPSListenerRuleLogicalID,
 							Type:       svcStackResourceListenerRuleResourceType,
@@ -371,7 +371,7 @@ func TestBackendServiceDescriber_URI(t *testing.T) {
 	}{
 		"should return a blank service discovery URI if there is no port exposed": {
 			setupMocks: func(m lbWebSvcDescriberMocks) {
-				m.ecsDescriber.EXPECT().ServiceStackResources().Return(nil, nil)
+				m.ecsDescriber.EXPECT().StackResources().Return(nil, nil)
 				m.ecsDescriber.EXPECT().Params().Return(map[string]string{
 					stack.WorkloadTargetPortParamKey: template.NoExposedContainerPort, // No port is set for the backend service.
 				}, nil)
@@ -380,7 +380,7 @@ func TestBackendServiceDescriber_URI(t *testing.T) {
 		},
 		"should return service connect endpoint if port is exposed": {
 			setupMocks: func(m lbWebSvcDescriberMocks) {
-				m.ecsDescriber.EXPECT().ServiceStackResources().Return(nil, nil)
+				m.ecsDescriber.EXPECT().StackResources().Return(nil, nil)
 				m.ecsDescriber.EXPECT().Params().Return(map[string]string{
 					stack.WorkloadTargetPortParamKey: "8080",
 				}, nil)
@@ -390,7 +390,7 @@ func TestBackendServiceDescriber_URI(t *testing.T) {
 		},
 		"should return service discovery endpoint if port is exposed": {
 			setupMocks: func(m lbWebSvcDescriberMocks) {
-				m.ecsDescriber.EXPECT().ServiceStackResources().Return(nil, nil)
+				m.ecsDescriber.EXPECT().StackResources().Return(nil, nil)
 				m.ecsDescriber.EXPECT().Params().Return(map[string]string{
 					stack.WorkloadTargetPortParamKey: "8080",
 				}, nil)
@@ -414,11 +414,11 @@ func TestBackendServiceDescriber_URI(t *testing.T) {
 					},
 				}
 				gomock.InOrder(
-					m.ecsDescriber.EXPECT().ServiceStackResources().Return(resources, nil),
+					m.ecsDescriber.EXPECT().StackResources().Return(resources, nil),
 					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
 						stack.WorkloadRulePathParamKey: "mySvc",
 					}, nil),
-					m.ecsDescriber.EXPECT().ServiceStackResources().Return(resources, nil),
+					m.ecsDescriber.EXPECT().StackResources().Return(resources, nil),
 					m.lbDescriber.EXPECT().ListenerRuleHostHeaders("mockRuleARN").
 						Return([]string{"jobs.test.phonetool.internal", "1234.us-west-2.internal.aws.com"}, nil),
 					m.envDescriber.EXPECT().Outputs().Return(map[string]string{
@@ -431,7 +431,7 @@ func TestBackendServiceDescriber_URI(t *testing.T) {
 		"internal url https": {
 			setupMocks: func(m lbWebSvcDescriberMocks) {
 				gomock.InOrder(
-					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*describeStack.Resource{
+					m.ecsDescriber.EXPECT().StackResources().Return([]*describeStack.Resource{
 						{
 							LogicalID: svcStackResourceALBTargetGroupLogicalID,
 						},
@@ -440,7 +440,7 @@ func TestBackendServiceDescriber_URI(t *testing.T) {
 						stack.WorkloadRulePathParamKey: "/",
 						stack.WorkloadHTTPSParamKey:    "true",
 					}, nil),
-					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*describeStack.Resource{
+					m.ecsDescriber.EXPECT().StackResources().Return([]*describeStack.Resource{
 						{
 							LogicalID:  svcStackResourceHTTPSListenerRuleLogicalID,
 							Type:       svcStackResourceListenerRuleResourceType,

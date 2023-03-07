@@ -61,7 +61,8 @@ func NewBackendService(conf BackendServiceConfig) (*BackendService, error) {
 				parser:             fs,
 				addons:             conf.Addons,
 			},
-			logRetention:        conf.Manifest.Logging.Retention,
+			logging:             conf.Manifest.Logging,
+			sidecars:            conf.Manifest.Sidecars,
 			tc:                  conf.Manifest.TaskConfig,
 			taskDefOverrideFunc: override.CloudFormationTemplate,
 		},
@@ -95,7 +96,7 @@ func (s *BackendService) Template() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("parse exposed ports in service manifest %s: %w", s.name, err)
 	}
-	sidecars, err := convertSidecars(s.manifest.Sidecars, exposedPorts.PortsForContainer)
+	sidecars, err := convertSidecars(s.manifest.Sidecars, exposedPorts.PortsForContainer, s.rc)
 	if err != nil {
 		return "", fmt.Errorf("convert the sidecar configuration for service %s: %w", s.name, err)
 	}
@@ -228,10 +229,6 @@ func (s *BackendService) Parameters() ([]*cloudformation.Parameter, error) {
 		{
 			ParameterKey:   aws.String(WorkloadContainerPortParamKey),
 			ParameterValue: aws.String(s.manifest.MainContainerPort()),
-		},
-		{
-			ParameterKey:   aws.String(WorkloadEnvFileARNParamKey),
-			ParameterValue: aws.String(s.rc.EnvFileARN),
 		},
 		{
 			ParameterKey:   aws.String(WorkloadTargetContainerParamKey),
