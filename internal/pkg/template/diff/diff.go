@@ -6,6 +6,7 @@ package diff
 
 import (
 	"fmt"
+	"strconv"
 
 	"gopkg.in/yaml.v3"
 )
@@ -88,7 +89,80 @@ func isYAMLLeaf(node *yaml.Node) bool {
 }
 
 func parseSequence(from, to *yaml.Node) (map[string]*Node, error) {
-	return nil, nil
+	toSeq, fromSeq := make([]yaml.Node, len(to.Content)), make([]yaml.Node, len(from.Content))
+	if err := to.Decode(&toSeq); err != nil {
+		return nil, err
+	}
+	if err := from.Decode(&fromSeq); err != nil {
+		return nil, err
+	}
+	seen, err := compare(fromSeq, toSeq)
+	if err != nil {
+		return nil, err
+	}
+	var index int
+	children := make(map[string]*Node)
+	for _, occurrence := range seen {
+		if occurrence.inTo == occurrence.inFrom {
+			continue
+		}
+		for i := 0; i < occurrence.inFrom-occurrence.inTo; i++ {
+			children[strconv.Itoa(index)] = &Node{
+				key:      strconv.Itoa(index),
+				oldValue: &(occurrence.node),
+			}
+			index++
+		}
+		for i := 0; i < occurrence.inTo-occurrence.inFrom; i++ {
+			children[strconv.Itoa(index)] = &Node{
+				key:      strconv.Itoa(index),
+				newValue: &(occurrence.node),
+			}
+			index++
+		}
+	}
+	return children, nil
+}
+
+type nodeOccurrence struct {
+	node   yaml.Node
+	inTo   int
+	inFrom int
+}
+
+func compare(from, to []yaml.Node) (map[string]*nodeOccurrence, error) {
+	seen := make(map[string]*nodeOccurrence)
+	for _, node := range from {
+		b, err := yaml.Marshal(node)
+		if err != nil {
+			return nil, err
+		}
+		content := string(b)
+		if v, ok := seen[content]; ok {
+			v.inFrom++
+			continue
+		}
+		seen[content] = &nodeOccurrence{
+			node:   node,
+			inFrom: 1,
+		}
+	}
+	for _, node := range to {
+		b, err := yaml.Marshal(node)
+		if err != nil {
+			return nil, err
+		}
+		content := string(b)
+		if v, ok := seen[content]; ok {
+			v.inTo++
+			continue
+		}
+		seen[content] = &nodeOccurrence{
+			node: node,
+			inTo: 1,
+		}
+	}
+	return seen, nil
 }
 
 func parseMap(from, to *yaml.Node) (map[string]*Node, error) {
