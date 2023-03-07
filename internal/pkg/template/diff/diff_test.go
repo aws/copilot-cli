@@ -72,8 +72,58 @@ func TestFrom_Parse(t *testing.T) {
 				}
 			},
 		},
-		"add an item to a list":    {},
-		"remove an item to a list": {},
+		"add a list": {
+			curr: `Mary:
+  Pulitzer: true
+  Works:
+    - Dog Songs
+    - Others`,
+			old: `Mary:
+  Pulitzer: true`,
+			wanted: func() *Node {
+				/* sentinel -> Mary -> Works: {new: seq, old: nil} */
+				leaf := &Node{
+					key:      "Works",
+					newValue: yamlNode("- Dog Songs\n- Others", t),
+				}
+				return &Node{
+					children: map[string]*Node{
+						"Mary": {
+							key: "Mary",
+							children: map[string]*Node{
+								"Works": leaf,
+							},
+						},
+					},
+				}
+			},
+		},
+		"remove a list": {
+			curr: `Mary:
+  Pulitzer: true`,
+			old: `Mary:
+  Pulitzer: true
+  Works:
+    - Dog Songs
+    - Others`,
+			wanted: func() *Node {
+				/* sentinel -> Mary -> Works: {new: nil, old: seq} */
+				leaf := &Node{
+					key:      "Works",
+					oldValue: yamlNode("- Dog Songs\n- Others", t),
+				}
+				return &Node{
+					children: map[string]*Node{
+						"Mary": {
+							key: "Mary",
+							children: map[string]*Node{
+								"Works": leaf,
+							},
+						},
+					},
+				}
+			},
+		},
 		"change keyed values": {
 			curr: `Mary:
   Height:
