@@ -31,7 +31,7 @@ func TestFrom_Parse(t *testing.T) {
 				/* sentinel -> Mary -> Weight: {new: "kg:52", old: nil} */
 				leaf := &Node{
 					key:      "Weight",
-					newValue: yamlMapNode("kg: 52", t),
+					newValue: yamlNode("kg: 52", t),
 				}
 				return &Node{
 					children: map[string]*Node{
@@ -58,7 +58,7 @@ func TestFrom_Parse(t *testing.T) {
 				/* sentinel -> Mary -> Weight: {new: nil, old: "kg:52"} */
 				leaf := &Node{
 					key:      "Weight",
-					oldValue: yamlMapNode("kg: 52", t),
+					oldValue: yamlNode("kg: 52", t),
 				}
 				return &Node{
 					children: map[string]*Node{
@@ -364,7 +364,7 @@ func TestFrom_Parse(t *testing.T) {
 	}
 }
 
-func yamlMapNode(content string, t *testing.T) *yaml.Node {
+func yamlNode(content string, t *testing.T) *yaml.Node {
 	var node yaml.Node
 	require.NoError(t, yaml.Unmarshal([]byte(content), &node), "should be able to unmarshal the wanted content")
 	// The root YAML node is a document node. We want the first content node.
