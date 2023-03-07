@@ -5,7 +5,6 @@ package cli
 
 import (
 	"fmt"
-	"io"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -24,20 +23,6 @@ import (
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
-
-type stringWriteCloser interface {
-	fmt.Stringer
-	io.WriteCloser
-}
-
-type closableStringBuilder struct {
-	*strings.Builder
-}
-
-// Close implements the io.Closer interface for a strings.Builder and is a no-op.
-func (sb *closableStringBuilder) Close() error {
-	return nil
-}
 
 type overrideSvcVars struct {
 	name    string
