@@ -25,22 +25,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const (
-	// IaC options for overrides.
-	cdkIaCTool = "cdk"
-
-	// IaC toolkit configuration.
-	typescriptCDKLang = "typescript"
-)
-
-var validIaCTools = []string{
-	cdkIaCTool,
-}
-
-var validCDKLangs = []string{
-	typescriptCDKLang,
-}
-
 type stringWriteCloser interface {
 	fmt.Stringer
 	io.WriteCloser
