@@ -29,16 +29,12 @@ type overrideSvcVars struct {
 }
 
 type overrideSvcOpts struct {
-	overrideSvcVars
+	envName string
+	*overrideOpts
 
 	// Interfaces to interact with dependencies.
-	ws         wsWlDirReader
-	fs         afero.Fs
-	cfgStore   store
-	prompt     prompter
-	wsPrompt   wsSelector
-	cfnPrompt  cfnSelector
-	packageCmd func(w stringWriteCloser) (executor, error)
+	ws       wsWlDirReader
+	wsPrompt wsSelector
 }
 
 func newOverrideSvcOpts(vars overrideSvcVars) (*overrideSvcOpts, error) {
@@ -57,13 +53,16 @@ func newOverrideSvcOpts(vars overrideSvcVars) (*overrideSvcOpts, error) {
 
 	prompt := prompt.New()
 	cmd := &overrideSvcOpts{
-		overrideSvcVars: vars,
-		ws:              ws,
-		fs:              fs,
-		cfgStore:        cfgStore,
-		prompt:          prompt,
-		wsPrompt:        selector.NewLocalWorkloadSelector(prompt, cfgStore, ws),
-		cfnPrompt:       selector.NewCFNSelector(prompt),
+		envName: vars.envName,
+		overrideOpts: &overrideOpts{
+			overrideVars: vars.overrideVars,
+			fs:           fs,
+			cfgStore:     cfgStore,
+			prompt:       prompt,
+			cfnPrompt:    selector.NewCFNSelector(prompt),
+		},
+		ws:       ws,
+		wsPrompt: selector.NewLocalWorkloadSelector(prompt, cfgStore, ws),
 	}
 	cmd.packageCmd = cmd.newSvcPackageCmd
 	return cmd, nil
@@ -71,13 +70,10 @@ func newOverrideSvcOpts(vars overrideSvcVars) (*overrideSvcOpts, error) {
 
 // Validate returns an error for any invalid optional flags.
 func (o *overrideSvcOpts) Validate() error {
-	if err := o.validateAppName(); err != nil {
+	if err := o.overrideOpts.Validate(); err != nil {
 		return err
 	}
-	if err := o.validateEnvName(); err != nil {
-		return err
-	}
-	return o.validateCDKLang()
+	return o.validateEnvName()
 }
 
 // Ask prompts for and validates any required flags.
