@@ -127,8 +127,14 @@ func (c CmdClient) Build(in *BuildArguments) error {
 	}
 
 	// Add Labels to docker build call.
-	for k, v := range in.Labels {
-		args = append(args, "--label", fmt.Sprintf("%s=%s", k, v))
+	// Collect the keys in a slice to sort for test stability.
+	var labelKeys []string
+	for k := range in.Labels {
+		labelKeys = append(labelKeys, k)
+	}
+	sort.Strings(labelKeys)
+	for _, k := range labelKeys {
+		args = append(args, "--label", fmt.Sprintf("%s=%s", k, in.Labels[k]))
 	}
 
 	args = append(args, dfDir, "-f", in.Dockerfile)

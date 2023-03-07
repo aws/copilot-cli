@@ -166,9 +166,9 @@ func TestDockerCommand_Build(t *testing.T) {
 				mockCmd = NewMockCmd(c)
 				mockCmd.EXPECT().Run("docker", []string{"build",
 					"-t", fmt.Sprintf("%s:%s", mockURI, "latest"),
-					"--label", "com.aws.copilot.image.version=v1.26.0",
 					"--label", "com.aws.copilot.image.builder=copilot-cli",
 					"--label", "com.aws.copilot.image.container.name=mockWkld",
+					"--label", "com.aws.copilot.image.version=v1.26.0",
 					filepath.FromSlash("mockPath/to"),
 					"-f", "mockPath/to/mockDockerfile"}).Return(nil)
 			},
@@ -373,7 +373,7 @@ func TestDockerCommand_Push(t *testing.T) {
 		m := NewMockCmd(ctrl)
 		m.EXPECT().Run("docker", []string{"push", "aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app:latest"}).Return(nil)
 		m.EXPECT().Run("docker", []string{"push", "aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app:g123bfc"}).Return(nil)
-		m.EXPECT().Run("docker", []string{"inspect", "--format", "'{{json (index .RepoDigests 0)}}'", "aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app"}, gomock.Any()).
+		m.EXPECT().Run("docker", []string{"inspect", "--format", "'{{json (index .RepoDigests 0)}}'", "aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app:latest"}, gomock.Any()).
 			Do(func(_ string, _ []string, opt exec.CmdOption) {
 				cmd := &osexec.Cmd{}
 				opt(cmd)
