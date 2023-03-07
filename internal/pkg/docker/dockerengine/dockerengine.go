@@ -181,6 +181,8 @@ func (c CmdClient) Push(uri string, tags ...string) (digest string, err error) {
 	buf := new(strings.Builder)
 	// The container image will have the same digest regardless of the associated tag.
 	// Pick the first tag and get the image's digest.
+	// For Main container we call  docker inspect --format '{{json (index .RepoDigests 0)}}' uri:latest
+	// For Sidecar container images we call docker inspect --format '{{json (index .RepoDigests 0)}}' uri:<sidecarname>-latest
 	if err := c.runner.Run("docker", []string{"inspect", "--format", "'{{json (index .RepoDigests 0)}}'", imageName(uri, tags[0])}, exec.Stdout(buf)); err != nil {
 		return "", fmt.Errorf("inspect image digest for %s: %w", uri, err)
 	}
