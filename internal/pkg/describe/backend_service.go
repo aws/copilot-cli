@@ -126,7 +126,7 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 	scEndpoints := make(serviceConnects)
 	var envVars []*containerEnvVar
 	var secrets []*secret
-	var alarmDescriptions []cloudwatch.AlarmDescription
+	var alarmDescriptions []*cloudwatch.AlarmDescription
 	for _, env := range environments {
 		svcDescr, err := d.initECSServiceDescribers(env)
 		if err != nil {
@@ -175,6 +175,9 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 			Tasks: svcParams[cfnstack.WorkloadTaskCountParamKey],
 		})
 		alarmNames, err := svcDescr.RollbackAlarmNames()
+		if err != nil {
+			return nil, fmt.Errorf("retrieve rollback alarm names: %w", err)
+		}
 		if alarmNames != nil {
 			if err != nil {
 				return nil, fmt.Errorf("retrieve rollback alarm names: %w", err)
@@ -183,13 +186,14 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 			if err != nil {
 				return nil, err
 			}
-			alarmDescriptions, err = cwAlarmDescr.AlarmDescriptions(alarmNames)
+			alarmDescs, err := cwAlarmDescr.AlarmDescriptions(alarmNames)
 			if err != nil {
 				return nil, fmt.Errorf("retrieve alarm descriptions: %w", err)
 			}
-			for _, alarm := range alarmDescriptions {
+			for _, alarm := range alarmDescs {
 				alarm.Environment = env
 			}
+			alarmDescriptions = append(alarmDescriptions, alarmDescs...)
 		}
 		backendSvcEnvVars, err := svcDescr.EnvVars()
 		if err != nil {

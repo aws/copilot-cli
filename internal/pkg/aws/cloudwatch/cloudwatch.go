@@ -134,8 +134,8 @@ func (cw *CloudWatch) AlarmStatuses(opts ...DescribeAlarmOpts) ([]AlarmStatus, e
 }
 
 // AlarmDescriptions returns the config of alarms filtered by name.
-func (cw *CloudWatch) AlarmDescriptions(alarmNames []string) ([]AlarmDescription, error) {
-	var alarmDescriptions []AlarmDescription
+func (cw *CloudWatch) AlarmDescriptions(alarmNames []string) ([]*AlarmDescription, error) {
+	var alarmDescriptions []*AlarmDescription
 	in := &cloudwatch.DescribeAlarmsInput{
 		AlarmNames: aws.StringSlice(alarmNames),
 	}
@@ -157,13 +157,13 @@ func (cw *CloudWatch) AlarmDescriptions(alarmNames []string) ([]AlarmDescription
 	return alarmDescriptions, nil
 }
 
-func (cw *CloudWatch) compositeAlarmsDescriptions(alarms []*cloudwatch.CompositeAlarm) []AlarmDescription {
-	var alarmDescriptionList []AlarmDescription
+func (cw *CloudWatch) compositeAlarmsDescriptions(alarms []*cloudwatch.CompositeAlarm) []*AlarmDescription {
+	var alarmDescriptionList []*AlarmDescription
 	for _, alarm := range alarms {
 		if alarm == nil {
 			continue
 		}
-		alarmDescriptionList = append(alarmDescriptionList, AlarmDescription{
+		alarmDescriptionList = append(alarmDescriptionList, &AlarmDescription{
 			Name:        aws.StringValue(alarm.AlarmName),
 			Description: aws.StringValue(alarm.AlarmDescription),
 		})
@@ -171,13 +171,13 @@ func (cw *CloudWatch) compositeAlarmsDescriptions(alarms []*cloudwatch.Composite
 	return alarmDescriptionList
 }
 
-func (cw *CloudWatch) metricAlarmsDescriptions(alarms []*cloudwatch.MetricAlarm) []AlarmDescription {
-	var alarmDescriptionsList []AlarmDescription
+func (cw *CloudWatch) metricAlarmsDescriptions(alarms []*cloudwatch.MetricAlarm) []*AlarmDescription {
+	var alarmDescriptionsList []*AlarmDescription
 	for _, alarm := range alarms {
 		if alarm == nil {
 			continue
 		}
-		alarmDescriptionsList = append(alarmDescriptionsList, AlarmDescription{
+		alarmDescriptionsList = append(alarmDescriptionsList, &AlarmDescription{
 			Name:               aws.StringValue(alarm.AlarmName),
 			Description:        aws.StringValue(alarm.AlarmDescription),
 		})

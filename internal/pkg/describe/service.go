@@ -11,7 +11,7 @@ import (
 	"net/url"
 	"sort"
 	"strings"
-	
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/copilot-cli/internal/pkg/aws/apprunner"
@@ -88,21 +88,21 @@ type apprunnerDescriber interface {
 }
 
 type cwAlarmDescriber interface {
-	AlarmDescriptions([]string) ([]cloudwatch.AlarmDescription, error)
+	AlarmDescriptions([]string) ([]*cloudwatch.AlarmDescription, error)
 }
 
 type ecsSvcDesc struct {
-	Service           string                        `json:"service"`
-	Type              string                        `json:"type"`
-	App               string                        `json:"application"`
-	Configurations    ecsConfigurations             `json:"configurations"`
-	AlarmDescriptions []cloudwatch.AlarmDescription `json:"alarmDescriptions,omitempty"`
-	Routes            []*WebServiceRoute            `json:"routes"`
-	ServiceDiscovery  serviceDiscoveries            `json:"serviceDiscovery"`
-	ServiceConnect    serviceConnects               `json:"serviceConnect,omitempty"`
-	Variables         containerEnvVars              `json:"variables"`
-	Secrets           secrets                       `json:"secrets,omitempty"`
-	Resources         deployedSvcResources          `json:"resources,omitempty"`
+	Service           string                         `json:"service"`
+	Type              string                         `json:"type"`
+	App               string                         `json:"application"`
+	Configurations    ecsConfigurations              `json:"configurations"`
+	AlarmDescriptions []*cloudwatch.AlarmDescription `json:"rollbackAlarms,omitempty"`
+	Routes            []*WebServiceRoute             `json:"routes"`
+	ServiceDiscovery  serviceDiscoveries             `json:"serviceDiscovery"`
+	ServiceConnect    serviceConnects                `json:"serviceConnect,omitempty"`
+	Variables         containerEnvVars               `json:"variables"`
+	Secrets           secrets                        `json:"secrets,omitempty"`
+	Resources         deployedSvcResources           `json:"resources,omitempty"`
 
 	environments []string `json:"-"`
 }
@@ -348,7 +348,7 @@ func (c appRunnerConfigurations) humanString(w io.Writer) {
 	printTable(w, headers, rows)
 }
 
-type rollbackAlarms []cloudwatch.AlarmDescription
+type rollbackAlarms []*cloudwatch.AlarmDescription
 
 func (abr rollbackAlarms) humanString(w io.Writer) {
 	headers := []string{"Name", "Environment", "Description"}
@@ -356,7 +356,6 @@ func (abr rollbackAlarms) humanString(w io.Writer) {
 	fmt.Fprintf(w, "  %s\n", strings.Join(underline(headers), "\t"))
 	for _, alarm := range abr {
 		printWithMaxWidth(w, "  %s\t%s\t%s\n", maxAlarmShowColumnWidth, alarm.Name, alarm.Environment, alarm.Description)
-		fmt.Fprintf(w, "  %s\t%s\t%s\n", "", "", "")
 	}
 }
 

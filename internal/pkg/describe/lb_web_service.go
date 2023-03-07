@@ -147,7 +147,7 @@ func (d *LBWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 	svcConnects := make(serviceConnects)
 	var envVars []*containerEnvVar
 	var secrets []*secret
-	var alarmDescriptions []cloudwatch.AlarmDescription
+	var alarmDescriptions []*cloudwatch.AlarmDescription
 	for _, env := range environments {
 		svcDescr, err := d.initECSServiceDescribers(env)
 		if err != nil {
@@ -198,8 +198,8 @@ func (d *LBWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 			}
 			for _, alarm := range alarms {
 				alarm.Environment = env
-				alarmDescriptions = append(alarmDescriptions, alarm)
 			}
+			alarmDescriptions = append(alarmDescriptions, alarms...)
 		}
 		envDescr, err := d.initEnvDescribers(env)
 		if err != nil {

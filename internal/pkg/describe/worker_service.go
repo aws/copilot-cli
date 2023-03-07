@@ -84,7 +84,7 @@ func (d *WorkerServiceDescriber) Describe() (HumanJSONStringer, error) {
 	var configs []*ECSServiceConfig
 	var envVars []*containerEnvVar
 	var secrets []*secret
-	var alarmDescriptions []cloudwatch.AlarmDescription
+	var alarmDescriptions []*cloudwatch.AlarmDescription
 	for _, env := range environments {
 		svcDescr, err := d.initECSDescriber(env)
 		if err != nil {
@@ -117,13 +117,14 @@ func (d *WorkerServiceDescriber) Describe() (HumanJSONStringer, error) {
 			if err != nil {
 				return nil, err
 			}
-			alarmDescriptions, err = cwAlarmDescr.AlarmDescriptions(alarmNames)
+			alarmDescs, err := cwAlarmDescr.AlarmDescriptions(alarmNames)
 			if err != nil {
 				return nil, fmt.Errorf("retrieve alarm descriptions: %w", err)
 			}
-			for _, alarm := range alarmDescriptions {
+			for _, alarm := range alarmDescs {
 				alarm.Environment = env
 			}
+			alarmDescriptions = append(alarmDescriptions, alarmDescs...)
 		}
 		workerSvcEnvVars, err := svcDescr.EnvVars()
 		if err != nil {
@@ -182,7 +183,7 @@ type workerSvcDesc struct {
 	Type              string                        `json:"type"`
 	App               string                        `json:"application"`
 	Configurations    ecsConfigurations             `json:"configurations"`
-	AlarmDescriptions []cloudwatch.AlarmDescription `json:"rollbackAlarms,omitempty"`
+	AlarmDescriptions []*cloudwatch.AlarmDescription `json:"rollbackAlarms,omitempty"`
 	Variables         containerEnvVars              `json:"variables"`
 	Secrets           secrets                       `json:"secrets,omitempty"`
 	Resources         deployedSvcResources          `json:"resources,omitempty"`
