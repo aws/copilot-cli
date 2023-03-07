@@ -14,7 +14,6 @@
 		"TargetContainer": "https-path-alias",
 		"TargetPort": "80",
 		"RulePath": "https-path-alias-path",
-		"Stickiness": "false",
 		"HTTPSEnabled": "true"
 	},
 	"Tags": {

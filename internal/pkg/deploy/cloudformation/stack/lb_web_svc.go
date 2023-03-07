@@ -316,10 +316,6 @@ func (s *LoadBalancedWebService) Parameters() ([]*cloudformation.Parameter, erro
 				ParameterKey:   aws.String(WorkloadHTTPSParamKey),
 				ParameterValue: aws.String(strconv.FormatBool(s.httpsEnabled)),
 			},
-			{
-				ParameterKey:   aws.String(WorkloadStickinessParamKey),
-				ParameterValue: aws.String(strconv.FormatBool(aws.BoolValue(s.manifest.RoutingRule.Stickiness))),
-			},
 		}...)
 	}
 	if !s.manifest.NLBConfig.IsEmpty() {

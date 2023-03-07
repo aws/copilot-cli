@@ -32,6 +32,11 @@ Parameters:
     Description: 'URL of the environment file.'
     Type: String
     Default: ""
+  NLBAliases:
+    Type: String
+    Default: ""
+  NLBPort:
+    Type: String
   TargetContainer:
     Type: String
   TargetPort:

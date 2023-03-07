@@ -14,7 +14,6 @@
 		"TargetContainer": "http-full-config",
 		"TargetPort": "8081",
 		"RulePath": "http-full-config-path",
-		"Stickiness": "true",
 		"HTTPSEnabled": "false"
 	},
 	"Tags": {

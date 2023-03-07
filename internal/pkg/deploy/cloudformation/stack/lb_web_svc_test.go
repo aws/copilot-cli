@@ -583,10 +583,6 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 					ParameterValue: aws.String("frontend"),
 				},
 				{
-					ParameterKey:   aws.String(WorkloadStickinessParamKey),
-					ParameterValue: aws.String("false"),
-				},
-				{
 					ParameterKey:   aws.String(LBWebServiceDNSDelegatedParamKey),
 					ParameterValue: aws.String("false"),
 				},
@@ -627,10 +623,6 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 					ParameterValue: aws.String("2"),
 				},
 				{
-					ParameterKey:   aws.String(WorkloadStickinessParamKey),
-					ParameterValue: aws.String("false"),
-				},
-				{
 					ParameterKey:   aws.String(LBWebServiceDNSDelegatedParamKey),
 					ParameterValue: aws.String("false"),
 				},
@@ -668,46 +660,6 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 					ParameterValue: aws.String("1"),
 				},
 				{
-					ParameterKey:   aws.String(WorkloadStickinessParamKey),
-					ParameterValue: aws.String("false"),
-				},
-				{
-					ParameterKey:   aws.String(LBWebServiceDNSDelegatedParamKey),
-					ParameterValue: aws.String("false"),
-				},
-			}...),
-		},
-		"Stickiness enabled": {
-			httpsEnabled: false,
-			setupManifest: func(service *manifest.LoadBalancedWebService) {
-				service.RoutingRule.Stickiness = aws.Bool(true)
-			},
-			expectedParams: append(expectedParams, []*cloudformation.Parameter{
-				{
-					ParameterKey:   aws.String(WorkloadRulePathParamKey),
-					ParameterValue: aws.String("frontend"),
-				},
-				{
-					ParameterKey:   aws.String(WorkloadHTTPSParamKey),
-					ParameterValue: aws.String("false"),
-				},
-				{
-					ParameterKey:   aws.String(WorkloadTargetContainerParamKey),
-					ParameterValue: aws.String("frontend"),
-				},
-				{
-					ParameterKey:   aws.String(WorkloadTargetPortParamKey),
-					ParameterValue: aws.String("80"),
-				},
-				{
-					ParameterKey:   aws.String(WorkloadTaskCountParamKey),
-					ParameterValue: aws.String("1"),
-				},
-				{
-					ParameterKey:   aws.String(WorkloadStickinessParamKey),
-					ParameterValue: aws.String("true"),
-				},
-				{
 					ParameterKey:   aws.String(LBWebServiceDNSDelegatedParamKey),
 					ParameterValue: aws.String("false"),
 				},
@@ -743,10 +695,6 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 				{
 					ParameterKey:   aws.String(WorkloadTaskCountParamKey),
 					ParameterValue: aws.String("1"),
-				},
-				{
-					ParameterKey:   aws.String(WorkloadStickinessParamKey),
-					ParameterValue: aws.String("false"),
 				},
 				{
 					ParameterKey:   aws.String(LBWebServiceDNSDelegatedParamKey),
@@ -788,10 +736,6 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 					ParameterValue: aws.String("1"),
 				},
 				{
-					ParameterKey:   aws.String(WorkloadStickinessParamKey),
-					ParameterValue: aws.String("false"),
-				},
-				{
 					ParameterKey:   aws.String(LBWebServiceDNSDelegatedParamKey),
 					ParameterValue: aws.String("true"),
 				},
@@ -823,10 +767,6 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 				{
 					ParameterKey:   aws.String(WorkloadTaskCountParamKey),
 					ParameterValue: aws.String("1"),
-				},
-				{
-					ParameterKey:   aws.String(WorkloadStickinessParamKey),
-					ParameterValue: aws.String("false"),
 				},
 				{
 					ParameterKey:   aws.String(LBWebServiceDNSDelegatedParamKey),
@@ -874,10 +814,6 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 				{
 					ParameterKey:   aws.String(WorkloadTaskCountParamKey),
 					ParameterValue: aws.String("1"),
-				},
-				{
-					ParameterKey:   aws.String(WorkloadStickinessParamKey),
-					ParameterValue: aws.String("false"),
 				},
 				{
 					ParameterKey:   aws.String(LBWebServiceDNSDelegatedParamKey),
@@ -1021,7 +957,6 @@ func TestLoadBalancedWebService_SerializedParameters(t *testing.T) {
     "HTTPSEnabled": "false",
     "LogRetention": "30",
     "RulePath": "frontend",
-    "Stickiness": "false",
     "TargetContainer": "frontend",
     "TargetPort": "80",
     "TaskCPU": "256",

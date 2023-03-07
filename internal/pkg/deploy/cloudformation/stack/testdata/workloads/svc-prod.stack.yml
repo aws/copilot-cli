@@ -39,6 +39,8 @@ Parameters:
   HTTPSEnabled:
     Type: String
     AllowedValues: [true, false]
+  RulePath:
+    Type: String
 Conditions:
   IsGovCloud: !Equals [!Ref "AWS::Partition", "aws-us-gov"]
   HasAssociatedDomain: !Equals [!Ref DNSDelegated, true]

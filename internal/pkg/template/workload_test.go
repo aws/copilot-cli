@@ -492,14 +492,7 @@ func TestApplicationLoadBalancer_Aliases(t *testing.T) {
 		},
 		"LBWS having no aliases": {
 			opts: ALBListener{
-				Rules: []ALBListenerRule{
-					{
-						Aliases: []string{},
-					},
-					{
-						Aliases: []string{},
-					},
-				},
+				Rules: []ALBListenerRule{{}, {}},
 			},
 		},
 	}
@@ -537,14 +530,7 @@ func TestNetworkLoadBalancer_Aliases(t *testing.T) {
 		},
 		"LBWS with NLB having no aliases": {
 			opts: NetworkLoadBalancer{
-				Listener: []NetworkLoadBalancerListener{
-					{
-						Aliases: []string{},
-					},
-					{
-						Aliases: []string{},
-					},
-				},
+				Listener: []NetworkLoadBalancerListener{{}, {}},
 			},
 		},
 	}

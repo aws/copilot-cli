@@ -250,10 +250,6 @@ func (s *BackendService) Parameters() ([]*cloudformation.Parameter, error) {
 				ParameterValue: s.manifest.RoutingRule.Path,
 			},
 			{
-				ParameterKey:   aws.String(WorkloadStickinessParamKey),
-				ParameterValue: aws.String(strconv.FormatBool(aws.BoolValue(s.manifest.RoutingRule.Stickiness))),
-			},
-			{
 				ParameterKey:   aws.String(WorkloadHTTPSParamKey),
 				ParameterValue: aws.String(strconv.FormatBool(s.httpsEnabled)),
 			},

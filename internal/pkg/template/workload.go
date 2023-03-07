@@ -272,47 +272,6 @@ func ImportedVariable(name string) Variable {
 	return importedEnvVar(name)
 }
 
-// Aliases return all the unique aliases specified across all the routing rules in NLB.
-// Currently, we only have primary routing rule, but we will be getting additional routing rule soon.
-func (cfg *NetworkLoadBalancer) Aliases() []string {
-	var uniqueAliases []string
-	seen := make(map[string]bool)
-	for _, listener := range cfg.Listener {
-		for _, entry := range listener.Aliases {
-			if _, value := seen[entry]; !value {
-				uniqueAliases = append(uniqueAliases, entry)
-				seen[entry] = true
-			}
-		}
-	}
-	return uniqueAliases
-}
-
-// Aliases return all the unique aliases specified across all the routing rules in ALB.
-// Currently, we only have primary routing rule, but we will be getting additional routing rule soon.
-func (cfg *ALBListener) Aliases() []string {
-	var uniqueAliases []string
-	seen := make(map[string]bool)
-	for _, rule := range cfg.Rules {
-		for _, entry := range rule.Aliases {
-			if _, value := seen[entry]; !value {
-				uniqueAliases = append(uniqueAliases, entry)
-				seen[entry] = true
-			}
-		}
-	}
-	return uniqueAliases
-}
-
-// RulePaths returns a slice consisting of all the routing paths mentioned across multiple listener rules.
-func (cfg *ALBListener) RulePaths() []string {
-	var rulePaths []string
-	for _, rule := range cfg.Rules {
-		rulePaths = append(rulePaths, rule.Path)
-	}
-	return rulePaths
-}
-
 // PlainVariable returns a Variable that is a plain string value.
 func PlainVariable(value string) Variable {
 	return plainEnvVar(value)
@@ -486,6 +445,23 @@ type NetworkLoadBalancer struct {
 	CertificateRequired bool
 }
 
+// Aliases return all the unique aliases specified across all the routing rules in NLB.
+// Currently, we only have primary routing rule, but we will be getting additional routing rule soon.
+func (cfg *NetworkLoadBalancer) Aliases() []string {
+	var uniqueAliases []string
+	seen := make(map[string]struct{})
+	exists := struct{}{}
+	for _, listener := range cfg.Listener {
+		for _, entry := range listener.Aliases {
+			if _, ok := seen[entry]; !ok {
+				uniqueAliases = append(uniqueAliases, entry)
+				seen[entry] = exists
+			}
+		}
+	}
+	return uniqueAliases
+}
+
 // ALBListener holds configuration that's needed for an Application Load Balancer Listener.
 type ALBListener struct {
 	Rules             []ALBListenerRule
@@ -493,6 +469,32 @@ type ALBListener struct {
 	RedirectToHTTPS   bool // Only relevant if HTTPSListener is true.
 	IsHTTPS           bool // True if the listener listening on port 443.
 	MainContainerPort string
+}
+
+// Aliases return all the unique aliases specified across all the routing rules in ALB.
+// Currently, we only have primary routing rule, but we will be getting additional routing rule soon.
+func (cfg *ALBListener) Aliases() []string {
+	var uniqueAliases []string
+	seen := make(map[string]struct{})
+	exists := struct{}{}
+	for _, rule := range cfg.Rules {
+		for _, entry := range rule.Aliases {
+			if _, value := seen[entry]; !value {
+				uniqueAliases = append(uniqueAliases, entry)
+				seen[entry] = exists
+			}
+		}
+	}
+	return uniqueAliases
+}
+
+// RulePaths returns a slice consisting of all the routing paths mentioned across multiple listener rules.
+func (cfg *ALBListener) RulePaths() []string {
+	var rulePaths []string
+	for _, rule := range cfg.Rules {
+		rulePaths = append(rulePaths, rule.Path)
+	}
+	return rulePaths
 }
 
 // ServiceConnect holds configuration for ECS Service Connect.
