@@ -43,7 +43,7 @@ func (from From) Parse(to []byte) (*Node, error) {
 
 func parse(from, to *yaml.Node, key string) (*Node, error) {
 	// Handle base cases.
-	if (to == nil || from == nil) || to.Kind != from.Kind {
+	if to == nil || from == nil || to.Kind != from.Kind {
 		return &Node{
 			key:      key,
 			newValue: to,
