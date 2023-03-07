@@ -127,7 +127,6 @@ func TestFrom_Parse(t *testing.T) {
 		"add a scalar item to a list": {
 			curr: `Mary:
 - <Dog Songs>
-- <Dog Songs>
 - <Kingdom of Dogs>`,
 			old: `Mary:
 - <Dog Songs>`,
@@ -173,7 +172,7 @@ func TestFrom_Parse(t *testing.T) {
 				}
 			},
 		},
-		"add a repeated item to a list": {
+		"add repeated items to a list": {
 			curr: `Mary:
 - <Dog Songs>
 - <Dog Songs>
@@ -181,7 +180,11 @@ func TestFrom_Parse(t *testing.T) {
 			old: `Mary:
 - <Dog Songs>`,
 			wanted: func() *Node {
-				/* sentinel -> Mary -> {new: "<Kingdom of Dogs>", old: nil} */
+				/* sentinel
+				-> Mary
+					-> {new: "<Dog Songs>", old: nil}
+					-> {new: "<Dog Songs>", old: nil}
+				*/
 				leaf0 := &Node{
 					key:      "0",
 					newValue: yamlScalarNode("<Dog Songs>"),
@@ -203,24 +206,30 @@ func TestFrom_Parse(t *testing.T) {
 				}
 			},
 		},
-		"remove a repeated item to a list": {
+		"remove repeated items to a list": {
 			curr: `Mary:
 - <Dog Songs>`,
 			old: `Mary:
 - <Dog Songs>
+- <Dog Songs>
 - <Dog Songs>`,
 			wanted: func() *Node {
-				/* sentinel -> Mary -> {new: nil, old: "<Kingdom of Dogs>"} */
-				leaf := &Node{
+				/* sentinel -> Mary -> {new: nil, old: "<Dog Songs>"} */
+				leaf0 := &Node{
 					key:      "0",
-					newValue: yamlScalarNode("<Dog Songs>"),
+					oldValue: yamlScalarNode("<Dog Songs>"),
+				}
+				leaf1 := &Node{
+					key:      "1",
+					oldValue: yamlScalarNode("<Dog Songs>"),
 				}
 				return &Node{
 					children: map[string]*Node{
 						"Mary": {
 							key: "Mary",
 							children: map[string]*Node{
-								"0": leaf,
+								"0": leaf0,
+								"1": leaf1,
 							},
 						},
 					},
