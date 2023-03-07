@@ -39,17 +39,11 @@ Parameters:
     AllowedValues: [true, false]
   RulePath:
     Type: String
-  RulePathSlice:
-    Type: CommaDelimitedList
-  Stickiness:
-    Type: String
-    Default: false
 Conditions:
   IsGovCloud: !Equals [!Ref "AWS::Partition", "aws-us-gov"]
   HasAddons: !Not [!Equals [!Ref AddonsTemplateURL, ""]]
   HasEnvFile: !Not [!Equals [!Ref EnvFileARN, ""]]
   ExposePort: !Not [!Equals [!Ref TargetPort, -1]]
-  IsDefaultRootPath: !Equals [!Ref RulePath, "/"]
 Resources:
   LogGroup:
     Metadata:
@@ -229,13 +223,13 @@ Resources:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
       HealthCheckPath: / # Default is '/'.
-      Port: !Ref TargetPort
+      Port: 80
       Protocol: HTTP
       TargetGroupAttributes:
         - Key: deregistration_delay.timeout_seconds
           Value: 60 # ECS Default is 300; Copilot default is 60.
         - Key: stickiness.enabled
-          Value: !Ref Stickiness
+          Value: false
       TargetType: ip
       VpcId:
         Fn::ImportValue: !Sub "${AppName}-${EnvName}-VpcId"
@@ -313,7 +307,7 @@ Resources:
     Type: Custom::RulePriorityFunction
     Properties:
       ServiceToken: !GetAtt RulePriorityFunction.Arn
-      RulePath: !Ref RulePathSlice
+      RulePath: [https-path-alias-path]
       ListenerArn: !GetAtt EnvControllerAction.InternalHTTPSListenerArn
   
   HTTPRuleWithDomainPriorityAction:
@@ -322,7 +316,7 @@ Resources:
     Type: Custom::RulePriorityFunction
     Properties:
       ServiceToken: !GetAtt RulePriorityFunction.Arn
-      RulePath: !Ref RulePathSlice
+      RulePath: [https-path-alias-path]
       ListenerArn: !GetAtt EnvControllerAction.InternalHTTPListenerArn
 
   HTTPListenerRuleWithDomain:
@@ -345,11 +339,9 @@ Resources:
             Values: ["example.com", "foobar.com", "*.foobar.com"]
         - Field: 'path-pattern'
           PathPatternConfig:
-            Values: !If
-              - IsDefaultRootPath
-              - - "/*"
-              - - !Sub "/${RulePath}"
-                - !Sub "/${RulePath}/*"
+            Values:
+              - "/https-path-alias-path"
+              - "/https-path-alias-path/*"
       ListenerArn: !GetAtt EnvControllerAction.InternalHTTPListenerArn
       Priority: !GetAtt HTTPRuleWithDomainPriorityAction.Priority # Same priority as HTTPS Listener
   HTTPSListenerRule:
@@ -366,11 +358,9 @@ Resources:
             Values: ["example.com", "foobar.com", "*.foobar.com"]
         - Field: 'path-pattern'
           PathPatternConfig:
-            Values: !If
-              - IsDefaultRootPath
-              - - "/*"
-              - - !Sub "/${RulePath}"
-                - !Sub "/${RulePath}/*"
+            Values:
+              - "/https-path-alias-path"
+              - "/https-path-alias-path/*"
       ListenerArn: !GetAtt EnvControllerAction.InternalHTTPSListenerArn
       Priority: !GetAtt HTTPSRulePriorityAction.Priority
   Service:
@@ -416,8 +406,8 @@ Resources:
       ServiceRegistries: !If [ExposePort, [{RegistryArn: !GetAtt DiscoveryService.Arn, Port: !Ref TargetPort}], !Ref "AWS::NoValue"]
       HealthCheckGracePeriodSeconds: 60
       LoadBalancers:
-        - ContainerName: !Ref TargetContainer
-          ContainerPort: !Ref TargetPort
+        - ContainerName: https-path-alias
+          ContainerPort: 80
           TargetGroupArn: !Ref TargetGroup
   AddonsStack:
     Metadata:

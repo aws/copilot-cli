@@ -51,17 +51,12 @@ Parameters:
     Type: String
   TargetPort:
     Type: Number
-  {{- if .ALBEnabled}}
+  {{- if .ALBListener}}
   HTTPSEnabled:
     Type: String
     AllowedValues: [true, false]
   RulePath:
     Type: String
-  RulePathSlice:
-    Type: CommaDelimitedList
-  Stickiness:
-    Type: String
-    Default: false
   {{- end}}
 Conditions:
   IsGovCloud:
@@ -80,10 +75,6 @@ Conditions:
 {{- end }}
   ExposePort:
     !Not [!Equals [!Ref TargetPort, -1]]
-  {{- if .ALBEnabled}}
-  IsDefaultRootPath:
-    !Equals [!Ref RulePath, "/"]
-  {{- end}}
 Resources:
 {{include "loggroup" . | indent 2}}
 
@@ -108,7 +99,7 @@ Resources:
 {{include "autoscaling" . | indent 2}}
 {{- end}}
 
-{{- if .ALBEnabled}}
+{{- if .ALBListener}}
 {{include "alb" . | indent 2}}
 {{end}}
 {{include "rollback-alarms" . | indent 2}}
@@ -119,25 +110,30 @@ Resources:
     Type: AWS::ECS::Service
     DependsOn:
       - EnvControllerAction
-      {{- if and .ALBEnabled .HTTPSListener}}
-      - HTTPListenerRuleWithDomain
-      - HTTPSListenerRule
-      {{ else if .ALBEnabled}}
-      - HTTPListenerRule
+      {{- if .ALBListener }}
+      {{- range $i, $rule := .ALBListener.Rules }}
+      {{- if $.ALBListener.IsHTTPS}}
+      - HTTPListenerRuleWithDomain{{ if ne $i 0 }}{{ $i }}{{ end }}
+      - HTTPSListenerRule{{ if ne $i 0 }}{{ $i }}{{ end }}
+      {{- else }}
+      - HTTPListenerRule{{ if ne $i 0 }}{{ $i }}{{ end }}
       {{- end}}
+      {{- end }}
+      {{- end }}
     Properties:
       {{- "\n"}}{{ include "service-base-properties" . | indent 6 }}
       ServiceRegistries: !If [ExposePort, [{RegistryArn: !GetAtt DiscoveryService.Arn, Port: !Ref TargetPort}], !Ref "AWS::NoValue"]
-      {{- if .ALBEnabled}}
+      {{- if .ALBListener}}
       {{- if .HTTPHealthCheck.GracePeriod }}
       HealthCheckGracePeriodSeconds: {{.HTTPHealthCheck.GracePeriod}}
       {{- end }}
       LoadBalancers:
-        - ContainerName: !Ref TargetContainer
-          ContainerPort: !Ref TargetPort
-          TargetGroupArn: !Ref TargetGroup
-      {{- end}}
-
+        {{- range $i, $rule := .ALBListener.Rules}}
+        - ContainerName: {{$rule.TargetContainer}}
+          ContainerPort: {{$rule.TargetPort}}
+          TargetGroupArn: !Ref TargetGroup{{ if ne $i 0 }}{{ $i }}{{ end }}
+        {{- end}}
+      {{- end }}
 {{include "efs-access-point" . | indent 2}}
 
 {{include "addons" . | indent 2}}
