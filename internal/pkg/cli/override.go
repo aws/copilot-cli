@@ -6,14 +6,15 @@ package cli
 import (
 	"fmt"
 	"io"
+	"path/filepath"
 	"strconv"
 	"strings"
 
-	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
-
-	"github.com/spf13/afero"
-
+	"github.com/aws/copilot-cli/internal/pkg/override"
 	"github.com/aws/copilot-cli/internal/pkg/template"
+	"github.com/aws/copilot-cli/internal/pkg/term/log"
+	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
+	"github.com/spf13/afero"
 )
 
 const (
@@ -69,6 +70,7 @@ type overrideOpts struct {
 	cfgStore   store
 	prompt     prompter
 	cfnPrompt  cfnSelector
+	dir        func() string
 	packageCmd func(w stringWriteCloser) (executor, error)
 }
 
@@ -86,6 +88,29 @@ func (o *overrideOpts) Ask() error {
 		return err
 	}
 	return o.askResourcesToOverride()
+}
+
+// Execute writes IaC override files to the local workspace.
+// This method assumes that the IaC tool chosen by the user is valid.
+func (o *overrideOpts) Execute() error {
+	dir := o.dir()
+	switch o.iacTool {
+	case cdkIaCTool:
+		if err := override.ScaffoldWithCDK(o.fs, dir, o.resources); err != nil {
+			return fmt.Errorf("scaffold CDK application under %q: %v", dir, err)
+		}
+		log.Successf("Created a new CDK application at %q to override resources\n", displayPath(dir))
+	}
+	return nil
+}
+
+// RecommendActions prints optional follow-up actions.
+func (o *overrideOpts) RecommendActions() error {
+	readmePath := filepath.Join(o.dir(), "README.md")
+	logRecommendedActions([]string{
+		fmt.Sprintf("Please follow the instructions in %q", displayPath(readmePath)),
+	})
+	return nil
 }
 
 func (o *overrideOpts) validateAppName() error {

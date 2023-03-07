@@ -5,15 +5,12 @@ package cli
 
 import (
 	"fmt"
-	"path/filepath"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
-	"github.com/aws/copilot-cli/internal/pkg/override"
-	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
@@ -85,24 +82,10 @@ func (o *overrideSvcOpts) Ask() error {
 // Execute writes IaC override files to the local workspace.
 // This method assumes that the IaC tool chosen by the user is valid.
 func (o *overrideSvcOpts) Execute() error {
-	dir := o.ws.WorkloadOverridesPath(o.name)
-	switch o.iacTool {
-	case cdkIaCTool:
-		if err := override.ScaffoldWithCDK(o.fs, dir, o.resources); err != nil {
-			return fmt.Errorf("scaffold CDK application under %q: %v", dir, err)
-		}
-		log.Successf("Created a new CDK application at %q to override resources\n", displayPath(dir))
+	o.overrideOpts.dir = func() string {
+		return o.ws.WorkloadOverridesPath(o.name)
 	}
-	return nil
-}
-
-// RecommendActions prints optional follow-up actions.
-func (o *overrideSvcOpts) RecommendActions() error {
-	readmePath := filepath.Join(o.ws.WorkloadOverridesPath(o.name), "README.md")
-	logRecommendedActions([]string{
-		fmt.Sprintf("Please follow the instructions in %q", displayPath(readmePath)),
-	})
-	return nil
+	return o.overrideOpts.Execute()
 }
 
 func (o *overrideSvcOpts) validateEnvName() error {
