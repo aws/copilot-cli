@@ -124,6 +124,159 @@ func TestFrom_Parse(t *testing.T) {
 				}
 			},
 		},
+		"add a scalar item to a list": {
+			curr: `Mary:
+- <Dog Songs>
+- <Dog Songs>
+- <Kingdom of Dogs>`,
+			old: `Mary:
+- <Dog Songs>`,
+			wanted: func() *Node {
+				/* sentinel -> Mary -> {new: "<Kingdom of Dogs>", old: nil} */
+				leaf := &Node{
+					key:      "0",
+					newValue: yamlScalarNode("<Kingdom of Dogs>"),
+				}
+				return &Node{
+					children: map[string]*Node{
+						"Mary": {
+							key: "Mary",
+							children: map[string]*Node{
+								"0": leaf,
+							},
+						},
+					},
+				}
+			},
+		},
+		"remove a scalar item from a list": {
+			curr: `Mary:
+- <Dog Songs>`,
+			old: `Mary:
+- <Dog Songs>
+- <Kingdom of Dogs>`,
+			wanted: func() *Node {
+				/* sentinel -> Mary -> {new: nil, old: "<Kingdom of Dogs>"} */
+				leaf := &Node{
+					key:      "0",
+					oldValue: yamlScalarNode("<Kingdom of Dogs>"),
+				}
+				return &Node{
+					children: map[string]*Node{
+						"Mary": {
+							key: "Mary",
+							children: map[string]*Node{
+								"0": leaf,
+							},
+						},
+					},
+				}
+			},
+		},
+		"add a repeated item to a list": {
+			curr: `Mary:
+- <Dog Songs>
+- <Dog Songs>
+- <Dog Songs>`,
+			old: `Mary:
+- <Dog Songs>`,
+			wanted: func() *Node {
+				/* sentinel -> Mary -> {new: "<Kingdom of Dogs>", old: nil} */
+				leaf0 := &Node{
+					key:      "0",
+					newValue: yamlScalarNode("<Dog Songs>"),
+				}
+				leaf1 := &Node{
+					key:      "1",
+					newValue: yamlScalarNode("<Dog Songs>"),
+				}
+				return &Node{
+					children: map[string]*Node{
+						"Mary": {
+							key: "Mary",
+							children: map[string]*Node{
+								"0": leaf0,
+								"1": leaf1,
+							},
+						},
+					},
+				}
+			},
+		},
+		"remove a repeated item to a list": {
+			curr: `Mary:
+- <Dog Songs>`,
+			old: `Mary:
+- <Dog Songs>
+- <Dog Songs>`,
+			wanted: func() *Node {
+				/* sentinel -> Mary -> {new: nil, old: "<Kingdom of Dogs>"} */
+				leaf := &Node{
+					key:      "0",
+					newValue: yamlScalarNode("<Dog Songs>"),
+				}
+				return &Node{
+					children: map[string]*Node{
+						"Mary": {
+							key: "Mary",
+							children: map[string]*Node{
+								"0": leaf,
+							},
+						},
+					},
+				}
+			},
+		},
+		"add a map item to a list": {
+			curr: `Mary:
+- <Dog Songs>
+- Name: Kingdom of Dogs
+  Type: Book`,
+			old: `Mary:
+- <Dog Songs>`,
+			wanted: func() *Node {
+				/* sentinel -> Mary -> {new: map, old: nil} */
+				leaf := &Node{
+					key:      "0",
+					newValue: yamlNode("Name: Kingdom of Dogs\nType: Book", t),
+				}
+				return &Node{
+					children: map[string]*Node{
+						"Mary": {
+							key: "Mary",
+							children: map[string]*Node{
+								"0": leaf,
+							},
+						},
+					},
+				}
+			},
+		},
+		"remove a map item from a list": {
+			curr: `Mary:
+- <Dog Songs>`,
+			old: `Mary:
+- <Dog Songs>
+- Name: Kingdom of Dogs
+  Type: Book`,
+			wanted: func() *Node {
+				/* sentinel -> Mary -> {new: nil, old: map} */
+				leaf := &Node{
+					key:      "0",
+					oldValue: yamlNode("Name: Kingdom of Dogs\nType: Book", t),
+				}
+				return &Node{
+					children: map[string]*Node{
+						"Mary": {
+							key: "Mary",
+							children: map[string]*Node{
+								"0": leaf,
+							},
+						},
+					},
+				}
+			},
+		},
 		"change keyed values": {
 			curr: `Mary:
   Height:
