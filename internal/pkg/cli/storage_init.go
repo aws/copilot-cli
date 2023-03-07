@@ -1154,7 +1154,7 @@ func (o *initStorageOpts) manifestSuggestion() string {
 	case o.storageType == s3StorageType:
 		return fmt.Sprintf(`variables:
   DB_NAME:
-    from_cfn: ${COPILOT_APPLICATION_NAME}-${COPILOT_ENVIRONMENT_NAME}-%sBucket`, logicalIDSafeStorageName)
+    from_cfn: ${COPILOT_APPLICATION_NAME}-${COPILOT_ENVIRONMENT_NAME}-%sBucketName`, logicalIDSafeStorageName)
 	case o.storageType == dynamoDBStorageType:
 		return fmt.Sprintf(`variables:
   DB_NAME:

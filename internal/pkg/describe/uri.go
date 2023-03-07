@@ -71,7 +71,7 @@ func (d *LBWebServiceDescriber) URI(envName string) (URI, error) {
 		return URI{}, err
 	}
 	var albEnabled, nlbEnabled bool
-	resources, err := svcDescr.ServiceStackResources()
+	resources, err := svcDescr.StackResources()
 	if err != nil {
 		return URI{}, fmt.Errorf("get stack resources for service %s: %w", d.svc, err)
 	}
@@ -161,7 +161,7 @@ func (d *BackendServiceDescriber) URI(envName string) (URI, error) {
 	if err != nil {
 		return URI{}, err
 	}
-	resources, err := svcDescr.ServiceStackResources()
+	resources, err := svcDescr.StackResources()
 	if err != nil {
 		return URI{}, fmt.Errorf("get stack resources for service %s: %w", d.svc, err)
 	}
@@ -268,7 +268,7 @@ func (d *uriDescriber) uri() (accessURI, error) {
 		return d.envDNSName(path)
 	}
 
-	svcResources, err := d.svcDescriber.ServiceStackResources()
+	svcResources, err := d.svcDescriber.StackResources()
 	if err != nil {
 		return accessURI{}, fmt.Errorf("get stack resources for service %s: %w", d.svc, err)
 	}

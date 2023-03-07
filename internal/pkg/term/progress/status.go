@@ -14,6 +14,8 @@ var (
 	notStartedStackStatus = cfnStatus{
 		value: notStartedResult{},
 	}
+	alarmOKState = "OK"
+	inAlarmState = "ALARM"
 )
 
 type result interface {
@@ -69,6 +71,19 @@ func prettifyElapsedTime(sw *stopWatch) string {
 		return ""
 	}
 	return color.Faint.Sprintf("[%.1fs]", elapsed.Seconds())
+}
+
+func prettifyAlarmState(state string) string {
+	var pretty string
+	switch state {
+	case alarmOKState:
+		pretty = color.Green.Sprintf("[%s]", state)
+	case inAlarmState:
+		pretty = color.Red.Sprintf("[%s]", state)
+	default:
+		pretty = fmt.Sprintf("[%s]", state)
+	}
+	return pretty
 }
 
 func failureReasons(statuses []cfnStatus) []string {

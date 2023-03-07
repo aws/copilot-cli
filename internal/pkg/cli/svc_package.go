@@ -343,8 +343,8 @@ func (o *packageSvcOpts) getWorkloadStack(generator workloadStackGenerator) (*cf
 		StackRuntimeConfiguration: clideploy.StackRuntimeConfiguration{
 			RootUserARN:        o.rootUserARN,
 			Tags:               targetApp.Tags,
+			EnvFileARNs:        uploadOut.EnvFileARNs,
 			ImageDigests:       uploadOut.ImageDigests,
-			EnvFileARN:         uploadOut.EnvFileARN,
 			AddonsURL:          uploadOut.AddonsURL,
 			CustomResourceURLs: uploadOut.CustomResourceURLs,
 		},

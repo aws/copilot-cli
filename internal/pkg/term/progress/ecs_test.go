@@ -4,11 +4,11 @@
 package progress
 
 import (
-	"strings"
-	"testing"
-
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatch"
 	"github.com/aws/copilot-cli/internal/pkg/stream"
 	"github.com/stretchr/testify/require"
+	"strings"
+	"testing"
 )
 
 func TestRollingUpdateComponent_Listen(t *testing.T) {
@@ -77,8 +77,9 @@ func TestRollingUpdateComponent_Listen(t *testing.T) {
 
 func TestRollingUpdateComponent_Render(t *testing.T) {
 	testCases := map[string]struct {
-		inDeployments  []stream.ECSDeployment
-		inFailureMsgs  []string
+		inDeployments []stream.ECSDeployment
+		inFailureMsgs []string
+		inAlarms      []cloudwatch.AlarmStatus
 
 		wantedNumLines int
 		wantedOut      string
@@ -133,6 +134,25 @@ func TestRollingUpdateComponent_Render(t *testing.T) {
   - (service my-svc) (task 1234) failed container health checks.
 `,
 		},
+		"should render rollback alarms and their statuses": {
+			inAlarms: []cloudwatch.AlarmStatus{
+				{
+					Name:         "alarm1",
+					Status:       "OK",
+				},
+				{
+					Name:         "alarm2",
+					Status:       "ALARM",
+				},
+			},
+			wantedNumLines: 5,
+			wantedOut: `
+Alarms
+  Name    State
+  alarm1  [OK]
+  alarm2  [ALARM]
+`,
+		},
 	}
 
 	for name, tc := range testCases {
@@ -142,6 +162,7 @@ func TestRollingUpdateComponent_Render(t *testing.T) {
 			c := &rollingUpdateComponent{
 				deployments: tc.inDeployments,
 				failureMsgs: tc.inFailureMsgs,
+				alarms:      tc.inAlarms,
 			}
 
 			// WHEN

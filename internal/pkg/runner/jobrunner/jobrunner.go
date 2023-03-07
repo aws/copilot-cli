@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-//Package jobrunner provides support for invoking jobs.
+// Package jobrunner provides support for invoking jobs.
 package jobrunner
 
 import (
@@ -58,9 +58,9 @@ func New(cfg *Config) *JobRunner {
 // Run invokes a job.
 // An error is returned if the state machine's ARN can not be derived from the job, or the execution fails.
 func (job *JobRunner) Run() error {
-	resources, err := job.cfn.StackResources(stack.NameForService(job.app, job.env, job.job))
+	resources, err := job.cfn.StackResources(stack.NameForWorkload(job.app, job.env, job.job))
 	if err != nil {
-		return fmt.Errorf("describe stack %q: %v", stack.NameForService(job.app, job.env, job.job), err)
+		return fmt.Errorf("describe stack %q: %v", stack.NameForWorkload(job.app, job.env, job.job), err)
 	}
 
 	var arn string

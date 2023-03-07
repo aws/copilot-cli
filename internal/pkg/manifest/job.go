@@ -137,20 +137,24 @@ func (j *ScheduledJob) Publish() []Topic {
 }
 
 // BuildArgs returns a docker.BuildArguments object for the job given a context directory.
-func (j *ScheduledJob) BuildArgs(contextDir string) map[string]*DockerBuildArgs {
-	buildArgs := make(map[string]*DockerBuildArgs, len(j.Sidecars)+1)
-	buildArgs[aws.StringValue(j.Name)] = j.ImageConfig.Image.BuildConfig(contextDir)
-	return buildArgs
+func (j *ScheduledJob) BuildArgs(contextDir string) (map[string]*DockerBuildArgs, error) {
+	required, err := requiresBuild(j.ImageConfig.Image)
+	if err != nil {
+		return nil, err
+	}
+	// Creating an map to store buildArgs of all sidecar images and main container image.
+	buildArgsPerContainer := make(map[string]*DockerBuildArgs, len(j.Sidecars)+1)
+	if required {
+		buildArgsPerContainer[aws.StringValue(j.Name)] = j.ImageConfig.Image.BuildConfig(contextDir)
+	}
+	return buildArgs(contextDir, buildArgsPerContainer, j.Sidecars)
 }
 
-// BuildRequired returns if the service requires building from the local Dockerfile.
-func (j *ScheduledJob) BuildRequired() (bool, error) {
-	return requiresBuild(j.ImageConfig.Image)
-}
-
-// EnvFile returns the location of the env file against the ws root directory.
-func (j *ScheduledJob) EnvFile() string {
-	return aws.StringValue(j.TaskConfig.EnvFile)
+// EnvFiles returns the locations of all env files against the ws root directory.
+// This method returns a map[string]string where the keys are container names
+// and the values are either env file paths or empty strings.
+func (j *ScheduledJob) EnvFiles() map[string]string {
+	return envFiles(j.Name, j.TaskConfig, j.Logging, j.Sidecars)
 }
 
 // newDefaultScheduledJob returns an empty ScheduledJob with only the default values set.
