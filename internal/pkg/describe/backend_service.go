@@ -179,9 +179,6 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 			return nil, fmt.Errorf("retrieve rollback alarm names: %w", err)
 		}
 		if alarmNames != nil {
-			if err != nil {
-				return nil, fmt.Errorf("retrieve rollback alarm names: %w", err)
-			}
 			cwAlarmDescr, err := d.initCWDescriber(env)
 			if err != nil {
 				return nil, err
