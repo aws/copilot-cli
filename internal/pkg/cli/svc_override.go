@@ -73,7 +73,7 @@ func (o *overrideSvcOpts) Validate() error {
 
 // Ask prompts for and validates any required flags.
 func (o *overrideSvcOpts) Ask() error {
-	if err := o.validateOrAskName(); err != nil {
+	if err := o.validateOrAskServiceName(); err != nil {
 		return err
 	}
 	return o.overrideOpts.Ask()
@@ -99,14 +99,14 @@ func (o *overrideSvcOpts) validateEnvName() error {
 	return nil
 }
 
-func (o *overrideSvcOpts) validateOrAskName() error {
+func (o *overrideSvcOpts) validateOrAskServiceName() error {
 	if o.name == "" {
-		return o.askName()
+		return o.askServiceName()
 	}
-	return o.validateName()
+	return o.validateServiceName()
 }
 
-func (o *overrideSvcOpts) validateName() error {
+func (o *overrideSvcOpts) validateServiceName() error {
 	names, err := o.ws.ListServices()
 	if err != nil {
 		return fmt.Errorf("list services in the workspace: %v", err)
@@ -117,7 +117,7 @@ func (o *overrideSvcOpts) validateName() error {
 	return nil
 }
 
-func (o *overrideSvcOpts) askName() error {
+func (o *overrideSvcOpts) askServiceName() error {
 	name, err := o.wsPrompt.Service("Which service's resources would you like to override?", "")
 	if err != nil {
 		return fmt.Errorf("select service name from workspace: %v", err)
