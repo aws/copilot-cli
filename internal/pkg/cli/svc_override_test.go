@@ -227,6 +227,7 @@ func TestOverrideSvcOpts_Ask(t *testing.T) {
 						},
 					},
 				}
+				cmd.validateOrAskName = cmd.validateOrAskServiceName
 				tc.initMocks(ctrl, cmd)
 
 				// WHEN
@@ -289,6 +290,7 @@ func TestOverrideSvcOpts_Ask(t *testing.T) {
 					},
 					ws: mockWS,
 				}
+				cmd.validateOrAskName = cmd.validateOrAskServiceName
 				if tc.initMocks != nil {
 					tc.initMocks(ctrl, cmd)
 				}
@@ -377,6 +379,7 @@ Resources:
 					},
 					ws: mockWS,
 				}
+				cmd.validateOrAskName = cmd.validateOrAskServiceName
 				tc.initMocks(ctrl, cmd)
 
 				// WHEN

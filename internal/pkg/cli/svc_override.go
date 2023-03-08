@@ -28,8 +28,9 @@ type overrideWorkloadOpts struct {
 	*overrideOpts
 
 	// Interfaces to interact with dependencies.
-	ws       wsWlDirReader
-	wsPrompt wsSelector
+	ws                wsWlDirReader
+	wsPrompt          wsSelector
+	validateOrAskName func() error
 }
 
 func newOverrideWorkloadOpts(vars overrideWorkloadVars) (*overrideWorkloadOpts, error) {
@@ -67,6 +68,7 @@ func newOverrideSvcOpts(vars overrideWorkloadVars) (*overrideWorkloadOpts, error
 	if err != nil {
 		return nil, err
 	}
+	cmd.validateOrAskName = cmd.validateOrAskServiceName
 	cmd.overrideOpts.packageCmd = cmd.newSvcPackageCmd
 	return cmd, nil
 }
@@ -81,7 +83,7 @@ func (o *overrideWorkloadOpts) Validate() error {
 
 // Ask prompts for and validates any required flags.
 func (o *overrideWorkloadOpts) Ask() error {
-	if err := o.validateOrAskServiceName(); err != nil {
+	if err := o.validateOrAskName(); err != nil {
 		return err
 	}
 	return o.overrideOpts.Ask()
