@@ -59,6 +59,14 @@ func newOverrideWorkloadOpts(vars overrideWorkloadVars) (*overrideWorkloadOpts, 
 		ws:       ws,
 		wsPrompt: selector.NewLocalWorkloadSelector(prompt, cfgStore, ws),
 	}
+	return cmd, nil
+}
+
+func newOverrideSvcOpts(vars overrideWorkloadVars) (*overrideWorkloadOpts, error) {
+	cmd, err := newOverrideWorkloadOpts(vars)
+	if err != nil {
+		return nil, err
+	}
 	cmd.overrideOpts.packageCmd = cmd.newSvcPackageCmd
 	return cmd, nil
 }
@@ -173,7 +181,7 @@ or add new resources to the service's template.`,
   Create a new Cloud Development Kit application to override the "frontend" service template.
   /code $ copilot svc override -n frontend --tool cdk`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
-			opts, err := newOverrideWorkloadOpts(vars)
+			opts, err := newOverrideSvcOpts(vars)
 			if err != nil {
 				return err
 			}
