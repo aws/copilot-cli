@@ -44,8 +44,12 @@ func TestOverrideSvcOpts_Validate(t *testing.T) {
 				ctrl := gomock.NewController(t)
 				defer ctrl.Finish()
 
-				in := overrideVars{appName: tc.appName}
-				cmd := &overrideSvcOpts{overrideVars: in}
+				vars := overrideVars{appName: tc.appName}
+				cmd := &overrideSvcOpts{
+					overrideOpts: &overrideOpts{
+						overrideVars: vars,
+					},
+				}
 				if tc.initMocks != nil {
 					tc.initMocks(ctrl, cmd)
 				}
@@ -93,8 +97,13 @@ func TestOverrideSvcOpts_Validate(t *testing.T) {
 				ctrl := gomock.NewController(t)
 				defer ctrl.Finish()
 
-				in := overrideVars{appName: "demo", envName: tc.envName, cdkLang: "typescript"}
-				cmd := &overrideSvcOpts{overrideVars: in}
+				vars := overrideVars{appName: "demo", cdkLang: "typescript"}
+				cmd := &overrideSvcOpts{
+					envName: tc.envName,
+					overrideOpts: &overrideOpts{
+						overrideVars: vars,
+					},
+				}
 				if tc.initMocks != nil {
 					tc.initMocks(ctrl, cmd)
 				}
@@ -132,10 +141,12 @@ func TestOverrideSvcOpts_Validate(t *testing.T) {
 				mockSSM := mocks.NewMockstore(ctrl)
 				mockSSM.EXPECT().GetApplication(gomock.Any()).Return(nil, nil)
 
-				in := overrideVars{cdkLang: tc.lang, appName: "demo"}
+				vars := overrideVars{appName: "demo", cdkLang: tc.lang}
 				cmd := &overrideSvcOpts{
-					overrideVars: in,
-					cfgStore:     mockSSM,
+					overrideOpts: &overrideOpts{
+						overrideVars: vars,
+						cfgStore:     mockSSM,
+					},
 				}
 
 				// WHEN
@@ -203,15 +214,17 @@ func TestOverrideSvcOpts_Ask(t *testing.T) {
 				mockCfnPrompt := mocks.NewMockcfnSelector(ctrl)
 				mockCfnPrompt.EXPECT().Resources(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 
-				in := overrideVars{name: tc.name, appName: "demo", iacTool: "cdk"}
+				vars := overrideVars{name: tc.name, appName: "demo", iacTool: "cdk"}
 				cmd := &overrideSvcOpts{
-					overrideVars: in,
-					cfgStore:     mocks.NewMockstore(ctrl),
-					cfnPrompt:    mockCfnPrompt,
-					packageCmd: func(_ stringWriteCloser) (executor, error) {
-						mockCmd := mocks.NewMockexecutor(ctrl)
-						mockCmd.EXPECT().Execute().AnyTimes()
-						return mockCmd, nil
+					overrideOpts: &overrideOpts{
+						overrideVars: vars,
+						cfgStore:     mocks.NewMockstore(ctrl),
+						cfnPrompt:    mockCfnPrompt,
+						packageCmd: func(_ stringWriteCloser) (executor, error) {
+							mockCmd := mocks.NewMockexecutor(ctrl)
+							mockCmd.EXPECT().Execute().AnyTimes()
+							return mockCmd, nil
+						},
 					},
 				}
 				tc.initMocks(ctrl, cmd)
@@ -262,17 +275,19 @@ func TestOverrideSvcOpts_Ask(t *testing.T) {
 				mockCfnPrompt := mocks.NewMockcfnSelector(ctrl)
 				mockCfnPrompt.EXPECT().Resources(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 
-				in := overrideVars{iacTool: tc.iacTool, name: "frontend", appName: "demo"}
+				vars := overrideVars{appName: "demo", name: "frontend", iacTool: tc.iacTool}
 				cmd := &overrideSvcOpts{
-					overrideVars: in,
-					cfgStore:     mockSSM,
-					ws:           mockWS,
-					cfnPrompt:    mockCfnPrompt,
-					packageCmd: func(_ stringWriteCloser) (executor, error) {
-						mockCmd := mocks.NewMockexecutor(ctrl)
-						mockCmd.EXPECT().Execute().AnyTimes()
-						return mockCmd, nil
+					overrideOpts: &overrideOpts{
+						overrideVars: vars,
+						cfgStore:     mockSSM,
+						cfnPrompt:    mockCfnPrompt,
+						packageCmd: func(_ stringWriteCloser) (executor, error) {
+							mockCmd := mocks.NewMockexecutor(ctrl)
+							mockCmd.EXPECT().Execute().AnyTimes()
+							return mockCmd, nil
+						},
 					},
+					ws: mockWS,
 				}
 				if tc.initMocks != nil {
 					tc.initMocks(ctrl, cmd)
@@ -320,7 +335,7 @@ func TestOverrideSvcOpts_Ask(t *testing.T) {
 						return mockPkgCmd, nil
 					}
 				},
-				wanted: errors.New(`generate CloudFormation template for service "frontend": some error`),
+				wanted: errors.New(`generate CloudFormation template for "frontend": some error`),
 			},
 			"should prompt for CloudFormation resources in a template": {
 				initMocks: func(ctrl *gomock.Controller, cmd *overrideSvcOpts) {
@@ -354,11 +369,13 @@ Resources:
 				mockWS := mocks.NewMockwsWlDirReader(ctrl)
 				mockWS.EXPECT().ListServices().Return([]string{"frontend"}, nil).AnyTimes()
 
-				in := overrideVars{iacTool: "cdk", name: "frontend", appName: "demo", skipResources: tc.skip}
+				vars := overrideVars{appName: "demo", name: "frontend", iacTool: "cdk", skipResources: tc.skip}
 				cmd := &overrideSvcOpts{
-					overrideVars: in,
-					cfgStore:     mockSSM,
-					ws:           mockWS,
+					overrideOpts: &overrideOpts{
+						overrideVars: vars,
+						cfgStore:     mockSSM,
+					},
+					ws: mockWS,
 				}
 				tc.initMocks(ctrl, cmd)
 
@@ -428,9 +445,11 @@ func TestOverrideSvcOpts_Execute(t *testing.T) {
 				ctrl := gomock.NewController(t)
 				defer ctrl.Finish()
 
-				in := overrideVars{iacTool: "cdk", name: "frontend", appName: "demo", resources: tc.resources}
+				vars := overrideVars{appName: "demo", name: "frontend", iacTool: "cdk", resources: tc.resources}
 				cmd := &overrideSvcOpts{
-					overrideVars: in,
+					overrideOpts: &overrideOpts{
+						overrideVars: vars,
+					},
 				}
 				tc.initMocks(ctrl, cmd)
 

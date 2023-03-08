@@ -266,12 +266,6 @@ func TestRuntimePlatformOpts_IsDefault(t *testing.T) {
 	}
 }
 
-func TestHTTPTargetContainer_IsHTTPS(t *testing.T) {
-	require.True(t, HTTPTargetContainer{Port: "443"}.IsHTTPS())
-	require.False(t, HTTPTargetContainer{}.IsHTTPS())
-	require.False(t, HTTPTargetContainer{Port: "8080"}.IsHTTPS())
-}
-
 func TestPlainSSMOrSecretARN_RequiresSub(t *testing.T) {
 	require.False(t, plainSSMOrSecretARN{}.RequiresSub(), "plain SSM Parameter Store or secret ARNs do not require !Sub")
 }
@@ -312,23 +306,19 @@ func TestSecretsManagerName_ValueFrom(t *testing.T) {
 	require.Equal(t, "secret:aes128-1a2b3c", SecretFromSecretsManager("aes128-1a2b3c").ValueFrom())
 }
 
-func TestWorkload_HealthCheckProtocol(t *testing.T) {
+func TestALBListenerRule_HealthCheckProtocol(t *testing.T) {
 	testCases := map[string]struct {
-		opts     WorkloadOpts
+		opts     ALBListenerRule
 		expected string
 	}{
 		"target port 80, health check port unset": {
-			opts: WorkloadOpts{
-				HTTPTargetContainer: HTTPTargetContainer{
-					Port: "80",
-				},
+			opts: ALBListenerRule{
+				TargetPort: "80",
 			},
 		},
 		"target port 80, health check port 443": {
-			opts: WorkloadOpts{
-				HTTPTargetContainer: HTTPTargetContainer{
-					Port: "80",
-				},
+			opts: ALBListenerRule{
+				TargetPort: "80",
 				HTTPHealthCheck: HTTPHealthCheckOpts{
 					Port: "443",
 				},
@@ -336,18 +326,14 @@ func TestWorkload_HealthCheckProtocol(t *testing.T) {
 			expected: "HTTPS",
 		},
 		"target port 443, health check port unset": {
-			opts: WorkloadOpts{
-				HTTPTargetContainer: HTTPTargetContainer{
-					Port: "443",
-				},
+			opts: ALBListenerRule{
+				TargetPort: "443",
 			},
 			expected: "HTTPS",
 		},
 		"target port 443, health check port 80": {
-			opts: WorkloadOpts{
-				HTTPTargetContainer: HTTPTargetContainer{
-					Port: "443",
-				},
+			opts: ALBListenerRule{
+				TargetPort: "443",
 				HTTPHealthCheck: HTTPHealthCheckOpts{
 					Port: "80",
 				},
@@ -476,6 +462,82 @@ func TestRollingUpdateRollbackConfig_TruncateAlarmName(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			require.Equal(t, tc.expected, tc.config.TruncateAlarmName(tc.inApp, tc.inEnv, tc.inSvc, tc.inAlarmType))
+		})
+	}
+}
+
+func TestApplicationLoadBalancer_Aliases(t *testing.T) {
+	tests := map[string]struct {
+		opts     ALBListener
+		expected []string
+	}{
+		"LBWS with multiple listener rules having multiple aliases each": {
+			opts: ALBListener{
+				Rules: []ALBListenerRule{
+					{
+						Aliases: []string{
+							"testAlias1",
+							"testAlias2",
+						},
+					},
+					{
+						Aliases: []string{
+							"testAlias1",
+							"testAlias3",
+						},
+					},
+				},
+			},
+			expected: []string{"testAlias1", "testAlias2", "testAlias3"},
+		},
+		"LBWS having no aliases": {
+			opts: ALBListener{
+				Rules: []ALBListenerRule{{}, {}},
+			},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tc.expected, tc.opts.Aliases())
+		})
+	}
+}
+
+func TestNetworkLoadBalancer_Aliases(t *testing.T) {
+	tests := map[string]struct {
+		opts     NetworkLoadBalancer
+		expected []string
+	}{
+		"LBWS with NLB having multiple listener rules with multiple aliases each": {
+			opts: NetworkLoadBalancer{
+				Listener: []NetworkLoadBalancerListener{
+					{
+						Aliases: []string{
+							"testAlias1",
+							"testAlias2",
+						},
+					},
+					{
+						Aliases: []string{
+							"testAlias1",
+							"testAlias3",
+						},
+					},
+				},
+			},
+			expected: []string{"testAlias1", "testAlias2", "testAlias3"},
+		},
+		"LBWS with NLB having no aliases": {
+			opts: NetworkLoadBalancer{
+				Listener: []NetworkLoadBalancerListener{{}, {}},
+			},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tc.expected, tc.opts.Aliases())
 		})
 	}
 }

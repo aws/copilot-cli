@@ -5,19 +5,12 @@ package cli
 
 import (
 	"fmt"
-	"io"
-	"path/filepath"
-	"strconv"
-	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
-	"github.com/aws/copilot-cli/internal/pkg/override"
-	"github.com/aws/copilot-cli/internal/pkg/template"
-	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
@@ -25,64 +18,21 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const (
-	// IaC options for overrides.
-	cdkIaCTool = "cdk"
-
-	// IaC toolkit configuration.
-	typescriptCDKLang = "typescript"
-)
-
-var validIaCTools = []string{
-	cdkIaCTool,
-}
-
-var validCDKLangs = []string{
-	typescriptCDKLang,
-}
-
-type stringWriteCloser interface {
-	fmt.Stringer
-	io.WriteCloser
-}
-
-type closableStringBuilder struct {
-	*strings.Builder
-}
-
-// Close implements the io.Closer interface for a strings.Builder and is a no-op.
-func (sb *closableStringBuilder) Close() error {
-	return nil
-}
-
-type overrideVars struct {
-	name    string
+type overrideSvcVars struct {
+	overrideVars
 	envName string // Optional.
-	appName string
-	iacTool string
-
-	// CDK override engine flags.
-	cdkLang string
-
-	// We prompt for resources if the user does not opt-in to skipping.
-	skipResources bool
-	resources     []template.CFNResource
 }
 
 type overrideSvcOpts struct {
-	overrideVars
+	envName string
+	*overrideOpts
 
 	// Interfaces to interact with dependencies.
-	ws         wsWlDirReader
-	fs         afero.Fs
-	cfgStore   store
-	prompt     prompter
-	wsPrompt   wsSelector
-	cfnPrompt  cfnSelector
-	packageCmd func(w stringWriteCloser) (executor, error)
+	ws       wsWlDirReader
+	wsPrompt wsSelector
 }
 
-func newOverrideSvcOpts(vars overrideVars) (*overrideSvcOpts, error) {
+func newOverrideSvcOpts(vars overrideSvcVars) (*overrideSvcOpts, error) {
 	fs := afero.NewOsFs()
 	ws, err := workspace.Use(fs)
 	if err != nil {
@@ -98,27 +48,27 @@ func newOverrideSvcOpts(vars overrideVars) (*overrideSvcOpts, error) {
 
 	prompt := prompt.New()
 	cmd := &overrideSvcOpts{
-		overrideVars: vars,
-		ws:           ws,
-		fs:           fs,
-		cfgStore:     cfgStore,
-		prompt:       prompt,
-		wsPrompt:     selector.NewLocalWorkloadSelector(prompt, cfgStore, ws),
-		cfnPrompt:    selector.NewCFNSelector(prompt),
+		envName: vars.envName,
+		overrideOpts: &overrideOpts{
+			overrideVars: vars.overrideVars,
+			fs:           fs,
+			cfgStore:     cfgStore,
+			prompt:       prompt,
+			cfnPrompt:    selector.NewCFNSelector(prompt),
+		},
+		ws:       ws,
+		wsPrompt: selector.NewLocalWorkloadSelector(prompt, cfgStore, ws),
 	}
-	cmd.packageCmd = cmd.newSvcPackageCmd
+	cmd.overrideOpts.packageCmd = cmd.newSvcPackageCmd
 	return cmd, nil
 }
 
 // Validate returns an error for any invalid optional flags.
 func (o *overrideSvcOpts) Validate() error {
-	if err := o.validateAppName(); err != nil {
+	if err := o.overrideOpts.Validate(); err != nil {
 		return err
 	}
-	if err := o.validateEnvName(); err != nil {
-		return err
-	}
-	return o.validateCDKLang()
+	return o.validateEnvName()
 }
 
 // Ask prompts for and validates any required flags.
@@ -126,44 +76,16 @@ func (o *overrideSvcOpts) Ask() error {
 	if err := o.validateOrAskServiceName(); err != nil {
 		return err
 	}
-	if err := o.validateOrAskIaCTool(); err != nil {
-		return err
-	}
-	return o.askResourcesToOverride()
+	return o.overrideOpts.Ask()
 }
 
 // Execute writes IaC override files to the local workspace.
 // This method assumes that the IaC tool chosen by the user is valid.
 func (o *overrideSvcOpts) Execute() error {
-	dir := o.ws.WorkloadOverridesPath(o.name)
-	switch o.iacTool {
-	case cdkIaCTool:
-		if err := override.ScaffoldWithCDK(o.fs, dir, o.resources); err != nil {
-			return fmt.Errorf("scaffold CDK application under %q: %v", dir, err)
-		}
-		log.Successf("Created a new CDK application at %q to override resources\n", displayPath(dir))
+	o.overrideOpts.dir = func() string {
+		return o.ws.WorkloadOverridesPath(o.name)
 	}
-	return nil
-}
-
-// RecommendActions prints optional follow-up actions.
-func (o *overrideSvcOpts) RecommendActions() error {
-	readmePath := filepath.Join(o.ws.WorkloadOverridesPath(o.name), "README.md")
-	logRecommendedActions([]string{
-		fmt.Sprintf("Please follow the instructions in %q", displayPath(readmePath)),
-	})
-	return nil
-}
-
-func (o *overrideSvcOpts) validateAppName() error {
-	if o.appName == "" {
-		return errNoAppInWorkspace
-	}
-	_, err := o.cfgStore.GetApplication(o.appName)
-	if err != nil {
-		return fmt.Errorf("get application %q configuration: %v", o.appName, err)
-	}
-	return nil
+	return o.overrideOpts.Execute()
 }
 
 func (o *overrideSvcOpts) validateEnvName() error {
@@ -175,17 +97,6 @@ func (o *overrideSvcOpts) validateEnvName() error {
 		return fmt.Errorf("get environment %q configuration: %v", o.envName, err)
 	}
 	return nil
-}
-
-func (o *overrideSvcOpts) validateCDKLang() error {
-	for _, valid := range validCDKLangs {
-		if o.cdkLang == valid {
-			return nil
-		}
-	}
-	return fmt.Errorf("%q is not a valid CDK language: must be one of: %s",
-		o.cdkLang,
-		strings.Join(applyAll(validCDKLangs, strconv.Quote), ", "))
 }
 
 func (o *overrideSvcOpts) validateOrAskServiceName() error {
@@ -212,48 +123,6 @@ func (o *overrideSvcOpts) askServiceName() error {
 		return fmt.Errorf("select service name from workspace: %v", err)
 	}
 	o.name = name
-	return nil
-}
-
-func (o *overrideSvcOpts) validateOrAskIaCTool() error {
-	if o.iacTool == "" {
-		return o.askIaCTool()
-	}
-	return o.validateIaCTool()
-}
-
-func (o *overrideSvcOpts) validateIaCTool() error {
-	for _, valid := range validIaCTools {
-		if o.iacTool == valid {
-			return nil
-		}
-	}
-	return fmt.Errorf("%q is not a valid IaC tool: must be one of: %s",
-		o.iacTool,
-		strings.Join(applyAll(validIaCTools, strconv.Quote), ", "))
-}
-
-func (o *overrideSvcOpts) askResourcesToOverride() error {
-	if o.skipResources {
-		return nil
-	}
-
-	buf := &closableStringBuilder{
-		Builder: new(strings.Builder),
-	}
-	pkgCmd, err := o.packageCmd(buf)
-	if err != nil {
-		return err
-	}
-	if err := pkgCmd.Execute(); err != nil {
-		return fmt.Errorf("generate CloudFormation template for service %q: %v", o.name, err)
-	}
-	msg := fmt.Sprintf("Which resources in %q would you like to override?", o.name)
-	resources, err := o.cfnPrompt.Resources(msg, "Resources:", "", buf.String())
-	if err != nil {
-		return err
-	}
-	o.resources = resources
 	return nil
 }
 
@@ -290,22 +159,8 @@ func (o *overrideSvcOpts) targetEnvName() (string, error) {
 	return envs[0].Name, nil
 }
 
-func (o *overrideSvcOpts) askIaCTool() error {
-	msg := fmt.Sprintf("Which Infrastructure as Code tool would you like to use to override %q?", o.name)
-	help := `The AWS Cloud Development Kit (CDK) lets you override templates using
-the expressive power of programming languages.
-This option is recommended for users that need to override several resources.
-To learn more about the CDK: https://docs.aws.amazon.com/cdk/v2/guide/home.html`
-	tool, err := o.prompt.SelectOne(msg, help, validIaCTools, prompt.WithFinalMessage("IaC tool:"))
-	if err != nil {
-		return fmt.Errorf("select IaC tool: %v", err)
-	}
-	o.iacTool = tool
-	return nil
-}
-
 func buildSvcOverrideCmd() *cobra.Command {
-	vars := overrideVars{}
+	vars := overrideSvcVars{}
 	cmd := &cobra.Command{
 		Hidden: true,
 		Use:    "override",
