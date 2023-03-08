@@ -12,8 +12,6 @@
     "NLBAliases": "",
     "NLBPort": "81",
     "RulePath": "/",
-    "RulePathSlice": "/",
-    "Stickiness": "false",
     "TargetContainer": "fe",
     "TargetPort": "80",
     "TaskCPU": "256",

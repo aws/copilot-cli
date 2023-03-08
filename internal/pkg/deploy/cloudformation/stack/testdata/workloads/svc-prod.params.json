@@ -11,8 +11,6 @@
     "LogRetention": "1",
     "LoggingEnvFileARN": "",
     "RulePath": "/",
-    "RulePathSlice": "/",
-    "Stickiness": "false",
     "TargetContainer": "nginx",
     "TargetPort": "8080",
     "TaskCPU": "256",
