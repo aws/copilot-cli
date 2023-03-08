@@ -18,7 +18,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type overrideSvcVars struct {
+type overrideWorkloadVars struct {
 	overrideVars
 	envName string // Optional.
 }
@@ -32,7 +32,7 @@ type overrideSvcOpts struct {
 	wsPrompt wsSelector
 }
 
-func newOverrideSvcOpts(vars overrideSvcVars) (*overrideSvcOpts, error) {
+func newOverrideSvcOpts(vars overrideWorkloadVars) (*overrideSvcOpts, error) {
 	fs := afero.NewOsFs()
 	ws, err := workspace.Use(fs)
 	if err != nil {
@@ -160,7 +160,7 @@ func (o *overrideSvcOpts) targetEnvName() (string, error) {
 }
 
 func buildSvcOverrideCmd() *cobra.Command {
-	vars := overrideSvcVars{}
+	vars := overrideWorkloadVars{}
 	cmd := &cobra.Command{
 		Hidden: true,
 		Use:    "override",
