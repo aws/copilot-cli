@@ -32,7 +32,7 @@ type overrideWorkloadOpts struct {
 	wsPrompt wsSelector
 }
 
-func newOverrideSvcOpts(vars overrideWorkloadVars) (*overrideWorkloadOpts, error) {
+func newOverrideWorkloadOpts(vars overrideWorkloadVars) (*overrideWorkloadOpts, error) {
 	fs := afero.NewOsFs()
 	ws, err := workspace.Use(fs)
 	if err != nil {
@@ -173,7 +173,7 @@ or add new resources to the service's template.`,
   Create a new Cloud Development Kit application to override the "frontend" service template.
   /code $ copilot svc override -n frontend --tool cdk`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
-			opts, err := newOverrideSvcOpts(vars)
+			opts, err := newOverrideWorkloadOpts(vars)
 			if err != nil {
 				return err
 			}
