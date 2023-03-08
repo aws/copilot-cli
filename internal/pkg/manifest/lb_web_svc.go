@@ -233,7 +233,7 @@ func (s LoadBalancedWebService) applyEnv(envName string) (workloadManifest, erro
 // NetworkLoadBalancerConfiguration holds options for a network load balancer
 type NetworkLoadBalancerConfiguration struct {
 	PrimaryRoutingRule     NetworkLoadBalancerRoutingRule   `yaml:",inline"`
-	AdditionalRoutingRules []NetworkLoadBalancerRoutingRule // `yaml:"additional_rules"`
+	AdditionalRoutingRules []NetworkLoadBalancerRoutingRule `yaml:"additional_rules"`
 }
 
 type NetworkLoadBalancerRoutingRule struct {
@@ -267,15 +267,11 @@ func (lbws *LoadBalancedWebService) ExposedPorts() (ExposedPortsIndex, error) {
 	}
 	// port from http.target_port.
 	exposedPorts = append(exposedPorts, lbws.RoutingRule.exposedPorts(exposedPorts, workloadName)...)
-	// port from nlb.target_port.
-	out, err := lbws.NLBConfig.PrimaryRoutingRule.exposedPorts(exposedPorts, workloadName)
-	if err != nil {
-		return ExposedPortsIndex{}, err
-	}
-	exposedPorts = append(exposedPorts, out...)
-	// port from nlb.additional_rule[x].target_port.
-	for _, additionalRule := range lbws.NLBConfig.AdditionalRoutingRules {
-		out, err = additionalRule.exposedPorts(exposedPorts, workloadName)
+
+	nlbRoutingRules := lbws.NLBConfig.NLBRoutingRules()
+	// port from nlb.target_port ad nlb.additional_rules[x].target_port
+	for _, rule := range nlbRoutingRules {
+		out, err := rule.exposedPorts(exposedPorts, workloadName)
 		if err != nil {
 			return ExposedPortsIndex{}, err
 		}
@@ -286,4 +282,15 @@ func (lbws *LoadBalancedWebService) ExposedPorts() (ExposedPortsIndex, error) {
 		PortsForContainer: portsForContainer,
 		ContainerForPort:  containerForPort,
 	}, nil
+}
+
+// NLBRoutingRules returns primary as well as additional rules as a list of NetworkLoadBalancerRoutingRule.
+func (cfg NetworkLoadBalancerConfiguration) NLBRoutingRules() []NetworkLoadBalancerRoutingRule {
+	var nlbRoutingRules []NetworkLoadBalancerRoutingRule
+
+	nlbRoutingRules = append(nlbRoutingRules, cfg.PrimaryRoutingRule)
+	nlbRoutingRules = append(nlbRoutingRules, cfg.AdditionalRoutingRules...)
+
+	return nlbRoutingRules
+
 }

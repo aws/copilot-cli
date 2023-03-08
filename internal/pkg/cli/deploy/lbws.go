@@ -262,11 +262,9 @@ func (d *lbWebSvcDeployer) validateNLBRuntime() error {
 		logAppVersionOutdatedError(aws.StringValue(d.lbMft.Name))
 		return err
 	}
-	if err := validateLBWSAlias(d.lbMft.NLBConfig.PrimaryRoutingRule.Aliases, d.app, d.env.Name); err != nil {
-		return err
-	}
-	for _, additionalRule := range d.lbMft.NLBConfig.AdditionalRoutingRules {
-		if err := validateLBWSAlias(additionalRule.Aliases, d.app, d.env.Name); err != nil {
+	nlbRoutingRules := d.lbMft.NLBConfig.NLBRoutingRules()
+	for _, rule := range nlbRoutingRules {
+		if err := validateLBWSAlias(rule.Aliases, d.app, d.env.Name); err != nil {
 			return err
 		}
 	}

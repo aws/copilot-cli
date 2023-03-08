@@ -178,7 +178,6 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 						},
 					},
 					NLBConfig: NetworkLoadBalancerConfiguration{
-
 						PrimaryRoutingRule: NetworkLoadBalancerRoutingRule{
 							Port:            aws.String("443"),
 							TargetContainer: aws.String("foo"),
@@ -1498,7 +1497,7 @@ func TestNetworkLoadBalancerConfiguration_validate(t *testing.T) {
 				},
 			},
 			wantedErrorMsgPrefix: `validate "nlb": `,
-			wantedError:          fmt.Errorf(`validate primary routing rule; "port" must be specified`),
+			wantedError:          fmt.Errorf(`validate nlb routing rule; "port" must be specified`),
 		},
 		"error if port unspecified in additional rules": {
 			nlb: NetworkLoadBalancerConfiguration{
@@ -1513,7 +1512,7 @@ func TestNetworkLoadBalancerConfiguration_validate(t *testing.T) {
 				},
 			},
 			wantedErrorMsgPrefix: `validate "nlb": `,
-			wantedError:          fmt.Errorf(`validate additional_rules[1]; "port" must be specified`),
+			wantedError:          fmt.Errorf(`validate nlb routing rule; "port" must be specified`),
 		},
 		"error parsing port": {
 			nlb: NetworkLoadBalancerConfiguration{
@@ -1522,7 +1521,7 @@ func TestNetworkLoadBalancerConfiguration_validate(t *testing.T) {
 				},
 			},
 			wantedErrorMsgPrefix: `validate "nlb": `,
-			wantedError:          fmt.Errorf(`validate primary routing rule; validate "port": cannot parse port mapping from sabotage/this/string`),
+			wantedError:          fmt.Errorf(`validate nlb routing rule; validate "port": cannot parse port mapping from sabotage/this/string`),
 		},
 		"error parsing port for additional rules": {
 			nlb: NetworkLoadBalancerConfiguration{
@@ -1539,7 +1538,7 @@ func TestNetworkLoadBalancerConfiguration_validate(t *testing.T) {
 				},
 			},
 			wantedErrorMsgPrefix: `validate "nlb": `,
-			wantedError:          fmt.Errorf(`validate additional_rules[2]; validate "port": cannot parse port mapping from sabotage/this/string`),
+			wantedError:          fmt.Errorf(`validate nlb routing rule; validate "port": cannot parse port mapping from sabotage/this/string`),
 		},
 		"success if port is specified without protocol": {
 			nlb: NetworkLoadBalancerConfiguration{
@@ -1567,7 +1566,7 @@ func TestNetworkLoadBalancerConfiguration_validate(t *testing.T) {
 				},
 			},
 			wantedErrorMsgPrefix: `validate "nlb": `,
-			wantedError:          fmt.Errorf(`validate primary routing rule; validate "port": invalid protocol tps; valid protocols include TCP and TLS`),
+			wantedError:          fmt.Errorf(`validate nlb routing rule; validate "port": invalid protocol tps; valid protocols include TCP and TLS`),
 		},
 		"fail if protocol is not recognized in additional rules": {
 			nlb: NetworkLoadBalancerConfiguration{
@@ -1581,7 +1580,7 @@ func TestNetworkLoadBalancerConfiguration_validate(t *testing.T) {
 				},
 			},
 			wantedErrorMsgPrefix: `validate "nlb": `,
-			wantedError:          fmt.Errorf(`validate additional_rules[1]; validate "port": invalid protocol tps; valid protocols include TCP and TLS`),
+			wantedError:          fmt.Errorf(`validate nlb routing rule; validate "port": invalid protocol tps; valid protocols include TCP and TLS`),
 		},
 		"success if tcp": {
 			nlb: NetworkLoadBalancerConfiguration{
@@ -1596,7 +1595,7 @@ func TestNetworkLoadBalancerConfiguration_validate(t *testing.T) {
 					Port: aws.String("161/udp"),
 				},
 			},
-			wantedError: fmt.Errorf(`validate primary routing rule; validate "port": invalid protocol udp; valid protocols include TCP and TLS`),
+			wantedError: fmt.Errorf(`validate nlb routing rule; validate "port": invalid protocol udp; valid protocols include TCP and TLS`),
 		},
 		"error if udp in additional rules": {
 			nlb: NetworkLoadBalancerConfiguration{
@@ -1609,7 +1608,7 @@ func TestNetworkLoadBalancerConfiguration_validate(t *testing.T) {
 					},
 				},
 			},
-			wantedError: fmt.Errorf(`validate additional_rules[1]; validate "port": invalid protocol udp; valid protocols include TCP and TLS`),
+			wantedError: fmt.Errorf(`validate nlb routing rule; validate "port": invalid protocol udp; valid protocols include TCP and TLS`),
 		},
 		"success if tls": {
 			nlb: NetworkLoadBalancerConfiguration{
@@ -1636,7 +1635,7 @@ func TestNetworkLoadBalancerConfiguration_validate(t *testing.T) {
 					Port: aws.String("443/TCP_udp"),
 				},
 			},
-			wantedError: fmt.Errorf(`validate primary routing rule; validate "port": invalid protocol TCP_udp; valid protocols include TCP and TLS`),
+			wantedError: fmt.Errorf(`validate nlb routing rule; validate "port": invalid protocol TCP_udp; valid protocols include TCP and TLS`),
 		},
 		"error if tcp_udp in additional rules": {
 			nlb: NetworkLoadBalancerConfiguration{
@@ -1649,7 +1648,7 @@ func TestNetworkLoadBalancerConfiguration_validate(t *testing.T) {
 					},
 				},
 			},
-			wantedError: fmt.Errorf(`validate additional_rules[1]; validate "port": invalid protocol TCP_udp; valid protocols include TCP and TLS`),
+			wantedError: fmt.Errorf(`validate nlb routing rule; validate "port": invalid protocol TCP_udp; valid protocols include TCP and TLS`),
 		},
 		"error if hosted zone is set": {
 			nlb: NetworkLoadBalancerConfiguration{
@@ -1665,7 +1664,7 @@ func TestNetworkLoadBalancerConfiguration_validate(t *testing.T) {
 					},
 				},
 			},
-			wantedError: fmt.Errorf(`validate primary routing rule; "hosted_zone" is not supported for Network Load Balancer`),
+			wantedError: fmt.Errorf(`validate nlb routing rule; "hosted_zone" is not supported for Network Load Balancer`),
 		},
 		"error if hosted zone is set in additional rules": {
 			nlb: NetworkLoadBalancerConfiguration{
@@ -1686,7 +1685,7 @@ func TestNetworkLoadBalancerConfiguration_validate(t *testing.T) {
 					},
 				},
 			},
-			wantedError: fmt.Errorf(`validate additional_rules[1]; "hosted_zone" is not supported for Network Load Balancer`),
+			wantedError: fmt.Errorf(`validate nlb routing rule; "hosted_zone" is not supported for Network Load Balancer`),
 		},
 	}
 
@@ -3838,6 +3837,71 @@ func TestValidateExposedPorts(t *testing.T) {
 						Port:            aws.String("5001/tcp"),
 						TargetPort:      aws.Int(5001),
 						TargetContainer: aws.String("nginx"),
+					},
+				},
+			},
+			wanted: fmt.Errorf(`containers "nginx" and "foo" are exposing the same port 5001`),
+		},
+		"should not return an error if nlb is trying to expose multiple ports": {
+			in: validateExposedPortsOpts{
+				mainContainerName: "mockMainContainer",
+				mainContainerPort: aws.Uint16(5000),
+				sidecarConfig: map[string]*SidecarConfig{
+					"foo": {
+						Port: aws.String("8080"),
+					},
+					"nginx": {
+						Port: aws.String("80"),
+					},
+				},
+				alb: &RoutingRuleConfiguration{
+					TargetPort:      aws.Uint16(5001),
+					TargetContainer: aws.String("foo"),
+				},
+				nlb: &NetworkLoadBalancerConfiguration{
+					PrimaryRoutingRule: NetworkLoadBalancerRoutingRule{
+						Port:            aws.String("5001/tcp"),
+						TargetPort:      aws.Int(5001),
+						TargetContainer: aws.String("foo"),
+					},
+					AdditionalRoutingRules: []NetworkLoadBalancerRoutingRule{
+						{
+							Port:            aws.String("5002/tcp"),
+							TargetPort:      aws.Int(5002),
+							TargetContainer: aws.String("foo"),
+						},
+					},
+				},
+			},
+		},
+		"should return an error if nlb is trying to expose same port as from different containers using additional rules": {
+			in: validateExposedPortsOpts{
+				mainContainerName: "mockMainContainer",
+				mainContainerPort: aws.Uint16(5000),
+				sidecarConfig: map[string]*SidecarConfig{
+					"foo": {
+						Port: aws.String("8080"),
+					},
+					"nginx": {
+						Port: aws.String("80"),
+					},
+				},
+				alb: &RoutingRuleConfiguration{
+					TargetPort:      aws.Uint16(5001),
+					TargetContainer: aws.String("foo"),
+				},
+				nlb: &NetworkLoadBalancerConfiguration{
+					PrimaryRoutingRule: NetworkLoadBalancerRoutingRule{
+						Port:            aws.String("5001/tcp"),
+						TargetPort:      aws.Int(5001),
+						TargetContainer: aws.String("foo"),
+					},
+					AdditionalRoutingRules: []NetworkLoadBalancerRoutingRule{
+						{
+							Port:            aws.String("5002/tcp"),
+							TargetPort:      aws.Int(5001),
+							TargetContainer: aws.String("nginx"),
+						},
 					},
 				},
 			},

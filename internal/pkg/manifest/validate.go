@@ -87,22 +87,15 @@ func (l LoadBalancedWebService) validate() error {
 	}); err != nil {
 		return fmt.Errorf("validate HTTP load balancer target: %w", err)
 	}
-	if err = validateTargetContainer(validateTargetContainerOpts{
-		mainContainerName: aws.StringValue(l.Name),
-		mainContainerPort: l.ImageConfig.Port,
-		targetContainer:   l.NLBConfig.PrimaryRoutingRule.TargetContainer,
-		sidecarConfig:     l.Sidecars,
-	}); err != nil {
-		return fmt.Errorf("validate network load balancer target: %w", err)
-	}
-	for _, additionalRules := range l.NLBConfig.AdditionalRoutingRules {
+	nlbRoutingRules := l.NLBConfig.NLBRoutingRules()
+	for _, rule := range nlbRoutingRules {
 		if err = validateTargetContainer(validateTargetContainerOpts{
 			mainContainerName: aws.StringValue(l.Name),
 			mainContainerPort: l.ImageConfig.Port,
-			targetContainer:   additionalRules.TargetContainer,
+			targetContainer:   rule.TargetContainer,
 			sidecarConfig:     l.Sidecars,
 		}); err != nil {
-			return fmt.Errorf("validate HTTP load balancer target: %w", err)
+			return fmt.Errorf("validate network load balancer target: %w", err)
 		}
 	}
 	if err = validateContainerDeps(validateDependenciesOpts{
@@ -853,12 +846,10 @@ func (ip IPNet) validate() error {
 
 // validate returns nil if NetworkLoadBalancerConfiguration is configured correctly.
 func (c NetworkLoadBalancerConfiguration) validate() error {
-	if err := c.PrimaryRoutingRule.validate(); err != nil {
-		return fmt.Errorf("validate primary routing rule; %s", err.Error())
-	}
-	for idx, additionalRule := range c.AdditionalRoutingRules {
-		if err := additionalRule.validate(); err != nil {
-			return fmt.Errorf("validate additional_rules[%d]; %s", idx+1, err.Error())
+	nlbRoutingRules := c.NLBRoutingRules()
+	for _, rule := range nlbRoutingRules {
+		if err := rule.validate(); err != nil {
+			return fmt.Errorf("validate nlb routing rule; %s", err.Error())
 		}
 	}
 	return nil
@@ -1963,12 +1954,8 @@ func populateNLBPortsAndValidate(containerNameFor map[uint16]string, opts valida
 		return nil
 	}
 
-	if err := populateAndValidateNLBPorts(nlb.PrimaryRoutingRule, containerNameFor, opts); err != nil {
-		return err
-	}
-
-	for _, additionalRule := range nlb.AdditionalRoutingRules {
-		if err := populateAndValidateNLBPorts(additionalRule, containerNameFor, opts); err != nil {
+	for _, rule := range nlb.NLBRoutingRules() {
+		if err := populateAndValidateNLBPorts(rule, containerNameFor, opts); err != nil {
 			return err
 		}
 	}
