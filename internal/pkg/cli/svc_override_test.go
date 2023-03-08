@@ -335,7 +335,7 @@ func TestOverrideSvcOpts_Ask(t *testing.T) {
 						return mockPkgCmd, nil
 					}
 				},
-				wanted: errors.New(`generate CloudFormation template for service "frontend": some error`),
+				wanted: errors.New(`generate CloudFormation template for "frontend": some error`),
 			},
 			"should prompt for CloudFormation resources in a template": {
 				initMocks: func(ctrl *gomock.Controller, cmd *overrideSvcOpts) {

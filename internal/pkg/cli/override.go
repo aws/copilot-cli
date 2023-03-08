@@ -180,7 +180,7 @@ func (o *overrideOpts) askResourcesToOverride() error {
 		return err
 	}
 	if err := pkgCmd.Execute(); err != nil {
-		return fmt.Errorf("generate CloudFormation template for service %q: %v", o.name, err)
+		return fmt.Errorf("generate CloudFormation template for %q: %v", o.name, err)
 	}
 	msg := fmt.Sprintf("Which resources in %q would you like to override?", o.name)
 	resources, err := o.cfnPrompt.Resources(msg, "Resources:", "", buf.String())
