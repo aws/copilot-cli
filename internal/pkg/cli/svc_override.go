@@ -23,7 +23,7 @@ type overrideWorkloadVars struct {
 	envName string // Optional.
 }
 
-type overrideSvcOpts struct {
+type overrideWorkloadOpts struct {
 	envName string
 	*overrideOpts
 
@@ -32,7 +32,7 @@ type overrideSvcOpts struct {
 	wsPrompt wsSelector
 }
 
-func newOverrideSvcOpts(vars overrideWorkloadVars) (*overrideSvcOpts, error) {
+func newOverrideSvcOpts(vars overrideWorkloadVars) (*overrideWorkloadOpts, error) {
 	fs := afero.NewOsFs()
 	ws, err := workspace.Use(fs)
 	if err != nil {
@@ -47,7 +47,7 @@ func newOverrideSvcOpts(vars overrideWorkloadVars) (*overrideSvcOpts, error) {
 	cfgStore := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
 
 	prompt := prompt.New()
-	cmd := &overrideSvcOpts{
+	cmd := &overrideWorkloadOpts{
 		envName: vars.envName,
 		overrideOpts: &overrideOpts{
 			overrideVars: vars.overrideVars,
@@ -64,7 +64,7 @@ func newOverrideSvcOpts(vars overrideWorkloadVars) (*overrideSvcOpts, error) {
 }
 
 // Validate returns an error for any invalid optional flags.
-func (o *overrideSvcOpts) Validate() error {
+func (o *overrideWorkloadOpts) Validate() error {
 	if err := o.overrideOpts.Validate(); err != nil {
 		return err
 	}
@@ -72,7 +72,7 @@ func (o *overrideSvcOpts) Validate() error {
 }
 
 // Ask prompts for and validates any required flags.
-func (o *overrideSvcOpts) Ask() error {
+func (o *overrideWorkloadOpts) Ask() error {
 	if err := o.validateOrAskServiceName(); err != nil {
 		return err
 	}
@@ -81,14 +81,14 @@ func (o *overrideSvcOpts) Ask() error {
 
 // Execute writes IaC override files to the local workspace.
 // This method assumes that the IaC tool chosen by the user is valid.
-func (o *overrideSvcOpts) Execute() error {
+func (o *overrideWorkloadOpts) Execute() error {
 	o.overrideOpts.dir = func() string {
 		return o.ws.WorkloadOverridesPath(o.name)
 	}
 	return o.overrideOpts.Execute()
 }
 
-func (o *overrideSvcOpts) validateEnvName() error {
+func (o *overrideWorkloadOpts) validateEnvName() error {
 	if o.envName == "" {
 		return nil
 	}
@@ -99,14 +99,14 @@ func (o *overrideSvcOpts) validateEnvName() error {
 	return nil
 }
 
-func (o *overrideSvcOpts) validateOrAskServiceName() error {
+func (o *overrideWorkloadOpts) validateOrAskServiceName() error {
 	if o.name == "" {
 		return o.askServiceName()
 	}
 	return o.validateServiceName()
 }
 
-func (o *overrideSvcOpts) validateServiceName() error {
+func (o *overrideWorkloadOpts) validateServiceName() error {
 	names, err := o.ws.ListServices()
 	if err != nil {
 		return fmt.Errorf("list services in the workspace: %v", err)
@@ -117,7 +117,7 @@ func (o *overrideSvcOpts) validateServiceName() error {
 	return nil
 }
 
-func (o *overrideSvcOpts) askServiceName() error {
+func (o *overrideWorkloadOpts) askServiceName() error {
 	name, err := o.wsPrompt.Service("Which service's resources would you like to override?", "")
 	if err != nil {
 		return fmt.Errorf("select service name from workspace: %v", err)
@@ -126,7 +126,7 @@ func (o *overrideSvcOpts) askServiceName() error {
 	return nil
 }
 
-func (o *overrideSvcOpts) newSvcPackageCmd(tplBuf stringWriteCloser) (executor, error) {
+func (o *overrideWorkloadOpts) newSvcPackageCmd(tplBuf stringWriteCloser) (executor, error) {
 	envName, err := o.targetEnvName()
 	if err != nil {
 		return nil, err
@@ -145,7 +145,7 @@ func (o *overrideSvcOpts) newSvcPackageCmd(tplBuf stringWriteCloser) (executor, 
 
 // targetEnvName returns the name of the environment to use when running "svc package".
 // If the user does not explicitly provide an environment, default to a random environment.
-func (o *overrideSvcOpts) targetEnvName() (string, error) {
+func (o *overrideWorkloadOpts) targetEnvName() (string, error) {
 	if o.envName != "" {
 		return o.envName, nil
 	}
