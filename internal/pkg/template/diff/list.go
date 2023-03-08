@@ -28,7 +28,7 @@ func longestCommonSubsequence[T comparable](a []T, b []T) []T {
 		for j := len(b) - 1; j >= 0; j-- {
 			if a[i] == b[j] {
 				lcs[i][j].eq = true
-				lcs[i][j].fromRow, lcs[i][j+1].fromCol = i+1, j+1
+				lcs[i][j].fromRow, lcs[i][j].fromCol = i+1, j+1
 				lcs[i][j].length = 1 + lcs[i+1][j+1].length
 				continue
 			}
