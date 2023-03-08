@@ -145,7 +145,17 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 	}{
 		"renders a valid template by default": {
 			opts: template.WorkloadOpts{
-				HTTPHealthCheck:          defaultHttpHealthCheck,
+				ALBListener: &template.ALBListener{
+					Rules: []template.ALBListenerRule{
+						{
+							TargetPort:      "8080",
+							TargetContainer: "main",
+							HTTPVersion:     "GRPC",
+							HTTPHealthCheck: defaultHttpHealthCheck,
+							Stickiness:      "false",
+						},
+					},
+				},
 				ServiceDiscoveryEndpoint: "test.app.local",
 				Network: template.NetworkOpts{
 					AssignPublicIP: template.EnablePublicIP,
@@ -158,8 +168,17 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 		},
 		"renders a valid grpc template by default": {
 			opts: template.WorkloadOpts{
-				HTTPVersion:              aws.String("GRPC"),
-				HTTPHealthCheck:          defaultHttpHealthCheck,
+				ALBListener: &template.ALBListener{
+					Rules: []template.ALBListenerRule{
+						{
+							TargetPort:      "8080",
+							TargetContainer: "main",
+							HTTPVersion:     "GRPC",
+							HTTPHealthCheck: defaultHttpHealthCheck,
+							Stickiness:      "false",
+						},
+					},
+				},
 				ServiceDiscoveryEndpoint: "test.app.local",
 				Network: template.NetworkOpts{
 					AssignPublicIP: template.EnablePublicIP,
@@ -172,7 +191,17 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 		},
 		"renders a valid template with addons with no outputs": {
 			opts: template.WorkloadOpts{
-				HTTPHealthCheck: defaultHttpHealthCheck,
+				ALBListener: &template.ALBListener{
+					Rules: []template.ALBListenerRule{
+						{
+							TargetPort:      "8080",
+							TargetContainer: "main",
+							HTTPVersion:     "GRPC",
+							HTTPHealthCheck: defaultHttpHealthCheck,
+							Stickiness:      "false",
+						},
+					},
+				},
 				NestedStack: &template.WorkloadNestedStackOpts{
 					StackName: "AddonsStack",
 				},
@@ -188,7 +217,17 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 		},
 		"renders a valid template with addons with outputs": {
 			opts: template.WorkloadOpts{
-				HTTPHealthCheck: defaultHttpHealthCheck,
+				ALBListener: &template.ALBListener{
+					Rules: []template.ALBListenerRule{
+						{
+							TargetPort:      "8080",
+							TargetContainer: "main",
+							HTTPVersion:     "GRPC",
+							HTTPHealthCheck: defaultHttpHealthCheck,
+							Stickiness:      "false",
+						},
+					},
+				},
 				NestedStack: &template.WorkloadNestedStackOpts{
 					StackName:       "AddonsStack",
 					VariableOutputs: []string{"TableName"},
@@ -207,7 +246,17 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 		},
 		"renders a valid template with private subnet placement": {
 			opts: template.WorkloadOpts{
-				HTTPHealthCheck: defaultHttpHealthCheck,
+				ALBListener: &template.ALBListener{
+					Rules: []template.ALBListenerRule{
+						{
+							TargetPort:      "8080",
+							TargetContainer: "main",
+							HTTPVersion:     "GRPC",
+							HTTPHealthCheck: defaultHttpHealthCheck,
+							Stickiness:      "false",
+						},
+					},
+				},
 				Network: template.NetworkOpts{
 					AssignPublicIP: template.DisablePublicIP,
 					SubnetsType:    template.PrivateSubnetsPlacement,
@@ -220,7 +269,17 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 		},
 		"renders a valid template with all storage options": {
 			opts: template.WorkloadOpts{
-				HTTPHealthCheck:          defaultHttpHealthCheck,
+				ALBListener: &template.ALBListener{
+					Rules: []template.ALBListenerRule{
+						{
+							TargetPort:      "8080",
+							TargetContainer: "main",
+							HTTPVersion:     "GRPC",
+							HTTPHealthCheck: defaultHttpHealthCheck,
+							Stickiness:      "false",
+						},
+					},
+				},
 				ServiceDiscoveryEndpoint: "test.app.local",
 				Network: template.NetworkOpts{
 					AssignPublicIP: template.EnablePublicIP,
@@ -261,7 +320,17 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 		},
 		"renders a valid template with minimal storage options": {
 			opts: template.WorkloadOpts{
-				HTTPHealthCheck:          defaultHttpHealthCheck,
+				ALBListener: &template.ALBListener{
+					Rules: []template.ALBListenerRule{
+						{
+							TargetPort:      "8080",
+							TargetContainer: "main",
+							HTTPVersion:     "GRPC",
+							HTTPHealthCheck: defaultHttpHealthCheck,
+							Stickiness:      "false",
+						},
+					},
+				},
 				ServiceDiscoveryEndpoint: "test.app.local",
 				Network: template.NetworkOpts{
 					AssignPublicIP: template.EnablePublicIP,
@@ -297,7 +366,17 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 		},
 		"renders a valid template with ephemeral storage": {
 			opts: template.WorkloadOpts{
-				HTTPHealthCheck: defaultHttpHealthCheck,
+				ALBListener: &template.ALBListener{
+					Rules: []template.ALBListenerRule{
+						{
+							TargetPort:      "8080",
+							TargetContainer: "main",
+							HTTPVersion:     "GRPC",
+							HTTPHealthCheck: defaultHttpHealthCheck,
+							Stickiness:      "false",
+						},
+					},
+				},
 				Network: template.NetworkOpts{
 					AssignPublicIP: template.EnablePublicIP,
 					SubnetsType:    template.PublicSubnetsPlacement,
@@ -313,7 +392,17 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 		},
 		"renders a valid template with entrypoint and command overrides": {
 			opts: template.WorkloadOpts{
-				HTTPHealthCheck:          defaultHttpHealthCheck,
+				ALBListener: &template.ALBListener{
+					Rules: []template.ALBListenerRule{
+						{
+							TargetPort:      "8080",
+							TargetContainer: "main",
+							HTTPVersion:     "GRPC",
+							HTTPHealthCheck: defaultHttpHealthCheck,
+							Stickiness:      "false",
+						},
+					},
+				},
 				EntryPoint:               []string{"/bin/echo", "hello"},
 				Command:                  []string{"world"},
 				ServiceDiscoveryEndpoint: "test.app.local",
@@ -329,7 +418,17 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 		"renders a valid template with additional addons parameters": {
 			opts: template.WorkloadOpts{
 				ServiceDiscoveryEndpoint: "test.app.local",
-				HTTPHealthCheck:          defaultHttpHealthCheck,
+				ALBListener: &template.ALBListener{
+					Rules: []template.ALBListenerRule{
+						{
+							TargetPort:      "8080",
+							TargetContainer: "main",
+							HTTPVersion:     "GRPC",
+							HTTPHealthCheck: defaultHttpHealthCheck,
+							Stickiness:      "false",
+						},
+					},
+				},
 				Network: template.NetworkOpts{
 					AssignPublicIP: template.EnablePublicIP,
 					SubnetsType:    template.PublicSubnetsPlacement,
@@ -345,7 +444,17 @@ DiscoveryServiceArn:
 		},
 		"renders a valid template with Windows platform": {
 			opts: template.WorkloadOpts{
-				HTTPHealthCheck: defaultHttpHealthCheck,
+				ALBListener: &template.ALBListener{
+					Rules: []template.ALBListenerRule{
+						{
+							TargetPort:      "8080",
+							TargetContainer: "main",
+							HTTPVersion:     "GRPC",
+							HTTPHealthCheck: defaultHttpHealthCheck,
+							Stickiness:      "false",
+						},
+					},
+				},
 				Network: template.NetworkOpts{
 					AssignPublicIP: template.EnablePublicIP,
 					SubnetsType:    template.PublicSubnetsPlacement,
