@@ -31,7 +31,7 @@ func TestFrom_Parse(t *testing.T) {
 				/* sentinel -> Mary -> Weight: {new: "kg:52", old: nil} */
 				leaf := &Node{
 					key:      "Weight",
-					newValue: yamlMapNode("kg: 52", t),
+					newValue: yamlNode("kg: 52", t),
 				}
 				return &Node{
 					children: map[string]*Node{
@@ -58,7 +58,7 @@ func TestFrom_Parse(t *testing.T) {
 				/* sentinel -> Mary -> Weight: {new: nil, old: "kg:52"} */
 				leaf := &Node{
 					key:      "Weight",
-					oldValue: yamlMapNode("kg: 52", t),
+					oldValue: yamlNode("kg: 52", t),
 				}
 				return &Node{
 					children: map[string]*Node{
@@ -127,6 +127,96 @@ func TestFrom_Parse(t *testing.T) {
 			},
 		},
 		"change a list item value": {},
+		"change a map to scalar": {
+			curr: `Mary:
+  Dialogue: "Said bear: 'I know I'm supposed to keep an eye on you"`,
+			old: `Mary:
+  Dialogue:
+    Bear: "I know I'm supposed to keep an eye on you"`,
+			wanted: func() *Node {
+				/* sentinel -> Mary -> Dialogue --> {new: map, old: scalar} */
+				leafDialogue := &Node{
+					key:      "Dialogue",
+					newValue: yamlScalarNode("Said bear: 'I know I'm supposed to keep an eye on you", withStyle(yaml.DoubleQuotedStyle)),
+					oldValue: yamlNode("Bear: \"I know I'm supposed to keep an eye on you\"", t),
+				}
+				return &Node{
+					children: map[string]*Node{
+						"Mary": {
+							key: "Mary",
+							children: map[string]*Node{
+								"Dialogue": leafDialogue,
+							},
+						},
+					},
+				}
+			},
+		},
+		"change a list to scalar": {
+			curr: `Mary:
+  Dialogue: "Said bear: 'I know I'm supposed to keep an eye on you; Said Dog: 'ikr'"`,
+			old: `Mary:
+  Dialogue:
+    - Bear: "I know I'm supposed to keep an eye on you"
+      Tone: disappointed
+    - Dog: "ikr"
+      Tone: pleased`,
+			wanted: func() *Node {
+				/* sentinel -> Mary -> Dialogue --> {new: list, old: scalar} */
+				leafDialogue := &Node{
+					key:      "Dialogue",
+					newValue: yamlScalarNode("Said bear: 'I know I'm supposed to keep an eye on you; Said Dog: 'ikr'", withStyle(yaml.DoubleQuotedStyle)),
+					oldValue: yamlNode(`- Bear: "I know I'm supposed to keep an eye on you"
+  Tone: disappointed
+- Dog: "ikr"
+  Tone: pleased`, t),
+				}
+				return &Node{
+					children: map[string]*Node{
+						"Mary": {
+							key: "Mary",
+							children: map[string]*Node{
+								"Dialogue": leafDialogue,
+							},
+						},
+					},
+				}
+			},
+		},
+		"change a map to list": {
+			curr: `Mary:
+  Dialogue:
+    - Bear: "I know I'm supposed to keep an eye on you"
+      Tone: disappointed
+    - Dog: "ikr"
+      Tone: pleased`,
+			old: `Mary:
+  Dialogue:
+    Bear: (disappointed) "I know I'm supposed to keep an eye on you"
+    Dog: (pleased) "ikr"`,
+			wanted: func() *Node {
+				/* sentinel -> Mary -> Dialogue --> {new: list, old: map} */
+				leafDialogue := &Node{
+					key: "Dialogue",
+					newValue: yamlNode(`- Bear: "I know I'm supposed to keep an eye on you"
+  Tone: disappointed
+- Dog: "ikr"
+  Tone: pleased`, t),
+					oldValue: yamlNode(`Bear: (disappointed) "I know I'm supposed to keep an eye on you"
+Dog: (pleased) "ikr"`, t),
+				}
+				return &Node{
+					children: map[string]*Node{
+						"Mary": {
+							key: "Mary",
+							children: map[string]*Node{
+								"Dialogue": leafDialogue,
+							},
+						},
+					},
+				}
+			},
+		},
 		"no diff": {
 			curr: `Mary:
   Height:
@@ -155,24 +245,36 @@ func TestFrom_Parse(t *testing.T) {
 			}
 			if tc.wanted != nil {
 				require.NoError(t, err)
-				require.True(t, equalTree(got, tc.wanted(), t))
+				require.True(t, equalTree(got, tc.wanted(), t), "should get the expected tree")
 			}
 		})
 	}
 }
 
-func yamlMapNode(content string, t *testing.T) *yaml.Node {
+type nodeModifier func(node *yaml.Node)
+
+func withStyle(style yaml.Style) nodeModifier {
+	return func(node *yaml.Node) {
+		node.Style = style
+	}
+}
+
+func yamlNode(content string, t *testing.T) *yaml.Node {
 	var node yaml.Node
 	require.NoError(t, yaml.Unmarshal([]byte(content), &node), "should be able to unmarshal the wanted content")
 	// The root YAML node is a document node. We want the first content node.
 	return node.Content[0]
 }
 
-func yamlScalarNode(value string) *yaml.Node {
-	return &yaml.Node{
+func yamlScalarNode(value string, opts ...nodeModifier) *yaml.Node {
+	node := &yaml.Node{
 		Kind:  yaml.ScalarNode,
 		Value: value,
 	}
+	for _, opt := range opts {
+		opt(node)
+	}
+	return node
 }
 
 func equalLeaves(a, b *Node, t *testing.T) bool {
@@ -188,8 +290,8 @@ func equalLeaves(a, b *Node, t *testing.T) bool {
 }
 
 func equalTree(a, b *Node, t *testing.T) bool {
-	if a == nil && b == nil {
-		return true
+	if a == nil || b == nil {
+		return a == nil && b == nil
 	}
 	if a.key != b.key || len(a.children) != len(b.children) {
 		return false

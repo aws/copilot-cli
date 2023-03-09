@@ -137,12 +137,12 @@ func TestRollingUpdateComponent_Render(t *testing.T) {
 		"should render rollback alarms and their statuses": {
 			inAlarms: []cloudwatch.AlarmStatus{
 				{
-					Name:         "alarm1",
-					Status:       "OK",
+					Name:   "alarm1",
+					Status: "OK",
 				},
 				{
-					Name:         "alarm2",
-					Status:       "ALARM",
+					Name:   "alarm2",
+					Status: "ALARM",
 				},
 			},
 			wantedNumLines: 5,

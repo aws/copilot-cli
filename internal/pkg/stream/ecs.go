@@ -182,7 +182,7 @@ func (s *ECSDeploymentStreamer) Fetch() (next time.Time, done bool, err error) {
 		}
 		s.cwRetries = 0
 	}
-	
+
 	s.eventsToFlush = append(s.eventsToFlush, ECSService{
 		Deployments:         deployments,
 		LatestFailureEvents: failureMsgs,
