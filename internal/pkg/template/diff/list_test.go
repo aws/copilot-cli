@@ -12,66 +12,76 @@ import (
 
 func Test_longestCommonSubsequence(t *testing.T) {
 	testCases := []struct {
-		inA    []string
-		inB    []string
-		wanted []string
+		inA     []string
+		inB     []string
+		wantedA []int
+		wantedB []int
 	}{
 		{
-			inA:    []string{"a", "b", "c"},
-			inB:    []string{"a", "b", "c"},
-			wanted: []string{"a", "b", "c"},
+			inA:     []string{"a", "b", "c"},
+			inB:     []string{"a", "b", "c"},
+			wantedA: []int{0, 1, 2},
+			wantedB: []int{0, 1, 2},
 		},
 		{
-			inA:    []string{"a", "b", "c"},
-			inB:    []string{"c"},
-			wanted: []string{"c"},
+			inA:     []string{"a", "b", "c"},
+			inB:     []string{"c"},
+			wantedA: []int{2},
+			wantedB: []int{0},
 		},
 		{
-			inA:    []string{"a", "b", "c"},
-			inB:    []string{"a", "B", "c"},
-			wanted: []string{"a", "c"},
+			inA:     []string{"a", "b", "c"},
+			inB:     []string{"a", "B", "c"},
+			wantedA: []int{0, 2},
+			wantedB: []int{0, 2},
 		},
 		{
-			inA:    []string{"a", "b", "c"},
-			inB:    []string{"a", "B", "C"},
-			wanted: []string{"a"},
+			inA:     []string{"a", "b", "c"},
+			inB:     []string{"a", "B", "C"},
+			wantedA: []int{0},
+			wantedB: []int{0},
 		},
 		{
-			inA:    []string{"a", "c", "b", "b", "d"},
-			inB:    []string{"a", "B", "b", "c", "c", "d"},
-			wanted: []string{"a", "b", "d"}, // NOTE: a, c, d is also correct
+			inA: []string{"a", "c", "b", "b", "d"},
+			inB: []string{"a", "B", "b", "c", "c", "d"},
+			// NOTE: the wanted sequence here is a,b,d; however, a, c, d is also correct.
+			wantedA: []int{0, 3, 4}, // NOTE: 0, 2, 4 is also correct.
+			wantedB: []int{0, 2, 5},
 		},
 		{
-			inA:    []string{"a", "b", "B", "B", "c", "d", "D", "d", "e", "f"},
-			inB:    []string{"a", "B", "C", "d", "d", "e", "f"},
-			wanted: []string{"a", "B", "d", "d", "e", "f"},
+			inA:     []string{"a", "b", "B", "B", "c", "d", "D", "d", "e", "f"},
+			inB:     []string{"a", "B", "C", "d", "d", "e", "f"},
+			wantedA: []int{0, 2, 5, 7, 8, 9},
+			wantedB: []int{0, 1, 3, 4, 5, 6},
 		},
 		{
 			inB: []string{},
 		},
 		{
-			inA:    []string{"a"},
-			wanted: nil,
+			inA: []string{"a"},
 		},
 		{
-			inA:    []string{"a"},
-			inB:    []string{"a"},
-			wanted: []string{"a"},
+			inA:     []string{"a"},
+			inB:     []string{"a"},
+			wantedA: []int{0},
+			wantedB: []int{0},
 		},
 		{
-			inA:    []string{"a"},
-			inB:    []string{"b"},
-			wanted: nil,
+			inA: []string{"a"},
+			inB: []string{"b"},
 		},
 		{
-			inA:    []string{"a", "b", "c", "c"},
-			inB:    []string{"c"},
-			wanted: []string{"c"},
+			inA:     []string{"a", "b", "c", "c"},
+			inB:     []string{"c"},
+			wantedA: []int{2},
+			wantedB: []int{0},
 		},
 	}
 	for idx, tc := range testCases {
-		t.Run(fmt.Sprintf("casess %v", idx), func(t *testing.T) {
-			require.Equal(t, tc.wanted, longestCommonSubsequence(tc.inA, tc.inB))
+		t.Run(fmt.Sprintf("case %v", idx), func(t *testing.T) {
+			gotA, gotB := longestCommonSubsequence(tc.inA, tc.inB)
+			require.Equal(t, tc.wantedA, gotA)
+			require.Equal(t, tc.wantedB, gotB)
 		})
 	}
 }

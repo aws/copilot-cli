@@ -3,9 +3,9 @@
 
 package diff
 
-func longestCommonSubsequence[T comparable](a []T, b []T) []T {
+func longestCommonSubsequence[T comparable](a []T, b []T) ([]int, []int) {
 	if len(a) == 0 || len(b) == 0 {
-		return nil
+		return nil, nil
 	}
 	// Initialize the matrix
 	lcs := make([][]int, len(a)+1)
@@ -31,14 +31,14 @@ func longestCommonSubsequence[T comparable](a []T, b []T) []T {
 	}
 	// Backtrace to construct the LCS.
 	var i, j int
-	var seq []T
+	var indicesA, indicesB []int
 	for {
 		if i >= len(a) || j >= len(b) {
 			break
 		}
 		switch {
 		case a[i] == b[j]:
-			seq = append(seq, a[i])
+			indicesA, indicesB = append(indicesA, i), append(indicesB, j)
 			i++
 			j++
 		case lcs[i+1][j] < lcs[i][j+1]:
@@ -47,5 +47,5 @@ func longestCommonSubsequence[T comparable](a []T, b []T) []T {
 			i++
 		}
 	}
-	return seq
+	return indicesA, indicesB
 }
