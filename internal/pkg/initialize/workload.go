@@ -307,39 +307,41 @@ func (w *WorkloadInitializer) newServiceManifest(i *ServiceProps) (encoding.Bina
 	}
 }
 
-func (w *WorkloadInitializer) newLoadBalancedWebServiceManifest(i *ServiceProps) (*manifest.LoadBalancedWebService, error) {
+func (w *WorkloadInitializer) newLoadBalancedWebServiceManifest(inProps *ServiceProps) (*manifest.LoadBalancedWebService, error) {
 	var httpVersion string
-	if i.Port == commonGRPCPort {
+	if inProps.Port == commonGRPCPort {
 		log.Infof("Detected port %s, setting HTTP protocol version to %s in the manifest.\n",
-			color.HighlightUserInput(strconv.Itoa(int(i.Port))), color.HighlightCode(manifest.GRPCProtocol))
+			color.HighlightUserInput(strconv.Itoa(int(inProps.Port))), color.HighlightCode(manifest.GRPCProtocol))
 		httpVersion = manifest.GRPCProtocol
 	}
-	props := &manifest.LoadBalancedWebServiceProps{
+	outProps := &manifest.LoadBalancedWebServiceProps{
 		WorkloadProps: &manifest.WorkloadProps{
-			Name:                    i.Name,
-			Dockerfile:              i.DockerfilePath,
-			Image:                   i.Image,
-			PrivateOnlyEnvironments: i.PrivateOnlyEnvironments,
+			Name:                    inProps.Name,
+			Dockerfile:              inProps.DockerfilePath,
+			Image:                   inProps.Image,
+			PrivateOnlyEnvironments: inProps.PrivateOnlyEnvironments,
 		},
 		Path:        "/",
-		Port:        i.Port,
+		Port:        inProps.Port,
 		HTTPVersion: httpVersion,
-		HealthCheck: i.HealthCheck,
-		Platform:    i.Platform,
+		HealthCheck: inProps.HealthCheck,
+		Platform:    inProps.Platform,
 	}
-	existingSvcs, err := w.Store.ListServices(i.App)
+	existingSvcs, err := w.Store.ListServices(inProps.App)
 	if err != nil {
 		return nil, err
 	}
-	// We default to "/" for the first service, but if there's another
+	// We default to "/" for the first service or if the application is initialized with a domain, but if there's another
 	// Load Balanced Web Service, we use the svc name as the default, instead.
-	for _, existingSvc := range existingSvcs {
-		if existingSvc.Type == manifestinfo.LoadBalancedWebServiceType && existingSvc.Name != i.Name {
-			props.Path = i.Name
-			break
+	if aws.StringValue(inProps.appDomain) == "" {
+		for _, existingSvc := range existingSvcs {
+			if existingSvc.Type == manifestinfo.LoadBalancedWebServiceType && existingSvc.Name != inProps.Name {
+				outProps.Path = inProps.Name
+				break
+			}
 		}
 	}
-	return manifest.NewLoadBalancedWebService(props), nil
+	return manifest.NewLoadBalancedWebService(outProps), nil
 }
 
 func (w *WorkloadInitializer) newRequestDrivenWebServiceManifest(i *ServiceProps) *manifest.RequestDrivenWebService {
