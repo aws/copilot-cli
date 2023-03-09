@@ -3874,7 +3874,7 @@ func TestValidateExposedPorts(t *testing.T) {
 				},
 			},
 		},
-		"should return an error if nlb is trying to expose same port as from different containers using additional rules": {
+		"should return an error if nlb is trying to expose same port as from different containers using additional listeners": {
 			in: validateExposedPortsOpts{
 				mainContainerName: "mockMainContainer",
 				mainContainerPort: aws.Uint16(5000),

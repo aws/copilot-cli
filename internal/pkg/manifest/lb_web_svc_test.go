@@ -2309,7 +2309,7 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 				},
 			},
 		},
-		"nlb exposing new ports of the main and sidecar containers through primary and additional rules": {
+		"nlb exposing new ports of the main and sidecar containers through primary and additional listeners": {
 			mft: &LoadBalancedWebService{
 				Workload: Workload{
 					Name: aws.String("frontend"),
@@ -2374,7 +2374,7 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 				},
 			},
 		},
-		"nlb exposing new ports of the main and sidecar containers through primary and additional rules without mentioning the target_port or target_container": {
+		"nlb exposing new ports of the main and sidecar containers through primary and additional listeners without mentioning the target_port or target_container": {
 			mft: &LoadBalancedWebService{
 				Workload: Workload{
 					Name: aws.String("frontend"),

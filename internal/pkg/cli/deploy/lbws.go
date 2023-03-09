@@ -265,8 +265,8 @@ func (d *lbWebSvcDeployer) validateNLBRuntime() error {
 		logAppVersionOutdatedError(aws.StringValue(d.lbMft.Name))
 		return err
 	}
-	for _, rule := range d.lbMft.NLBConfig.NLBListeners() {
-		if err := validateLBWSAlias(rule.Aliases, d.app, d.env.Name); err != nil {
+	for _, listener := range d.lbMft.NLBConfig.NLBListeners() {
+		if err := validateLBWSAlias(listener.Aliases, d.app, d.env.Name); err != nil {
 			return fmt.Errorf(`validate 'nlb.alias': %w`, err)
 		}
 	}

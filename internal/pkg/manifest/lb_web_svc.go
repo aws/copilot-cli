@@ -270,7 +270,7 @@ func (lbws *LoadBalancedWebService) ExposedPorts() (ExposedPortsIndex, error) {
 	// port from http.target_port.
 	exposedPorts = append(exposedPorts, lbws.RoutingRule.exposedPorts(exposedPorts, workloadName)...)
 
-	// port from nlb.target_port and nlb.additional_rules[x].target_port
+	// port from nlb.target_port and nlb.additional_listeners[x].target_port
 	for _, listener := range lbws.NLBConfig.NLBListeners() {
 		out, err := listener.exposedPorts(exposedPorts, workloadName)
 		if err != nil {
