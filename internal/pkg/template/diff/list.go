@@ -6,7 +6,6 @@ package diff
 type cell struct {
 	fromRow int
 	fromCol int
-	eq      bool
 	length  int
 }
 
@@ -27,7 +26,6 @@ func longestCommonSubsequence[T comparable](a []T, b []T) []T {
 	for i := len(a) - 1; i >= 0; i-- {
 		for j := len(b) - 1; j >= 0; j-- {
 			if a[i] == b[j] {
-				lcs[i][j].eq = true
 				lcs[i][j].fromRow, lcs[i][j].fromCol = i+1, j+1
 				lcs[i][j].length = 1 + lcs[i+1][j+1].length
 				continue
@@ -48,7 +46,7 @@ func longestCommonSubsequence[T comparable](a []T, b []T) []T {
 		if i >= len(a) || j >= len(b) {
 			break
 		}
-		if lcs[i][j].eq {
+		if a[i] == b[j] {
 			seq = append(seq, a[i])
 		}
 		i, j = lcs[i][j].fromRow, lcs[i][j].fromCol
