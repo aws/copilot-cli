@@ -8,9 +8,10 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 )
 
-func Test_longestCommonSubsequence(t *testing.T) {
+func Test_longestCommonSubsequence_string(t *testing.T) {
 	testCases := []struct {
 		inA     []string
 		inB     []string
@@ -85,4 +86,95 @@ func Test_longestCommonSubsequence(t *testing.T) {
 		})
 	}
 
+}
+
+func Test_longestCommonSubsequence_yamlNode(t *testing.T) {
+	testCases := map[string]struct {
+		inA     string
+		inB     string
+		wantedA []int
+		wantedB []int
+	}{
+		"map/reorder map field": { // The order of map fields should not matter.
+			inA: `- Sid: power
+  Action: '*'
+  Resources: '*'`,
+			inB: `- Sid: power
+  Resources: '*'
+  Action: '*'`,
+			wantedA: []int{0},
+			wantedB: []int{0},
+		},
+		"map/change node scalar style": { // The style should not matter.
+			inA:     `- Sid: 'power'`,
+			inB:     `- Sid: "power"`,
+			wantedA: []int{0},
+			wantedB: []int{0},
+		},
+		"map/not equal": {
+			inA: `- Sid: power
+  Action: '*'`,
+			inB: `- Sid: no power
+  Resources: '*'`,
+		},
+		"map/reorder": {
+			inA: `- Sid: power
+- Sid: less power`,
+			inB: `- Sid: less power
+- Sid: power`,
+			wantedA: []int{1}, // Note: wantedA, wantedB = [0], [1] is also correct.
+			wantedB: []int{0},
+		},
+		"scalar/change style": { // The style should not matter.
+			inA:     `['a','b']`,
+			inB:     `["a","b"]`,
+			wantedA: []int{0, 1},
+			wantedB: []int{0, 1},
+		},
+		"scalar/mixed style": { // The style should not matter.
+			inA:     `['a',"b"]`,
+			inB:     `["a",'b']`,
+			wantedA: []int{0, 1},
+			wantedB: []int{0, 1},
+		},
+		"scalar/not equal": { // The style should not matter.
+			inA:     `[a,b,c,d]`,
+			inB:     `[a,d]`,
+			wantedA: []int{0, 3},
+			wantedB: []int{0, 1},
+		},
+		"change list style": {
+			inA: `- a
+- b
+- c`,
+			inB:     `[a,b,c]`,
+			wantedA: []int{0, 1, 2}, // Note: wantedA, wantedB = [0], [1] is also correct.
+			wantedB: []int{0, 1, 2},
+		},
+		"change item kind": {
+			inA: `- a
+- b
+- c`,
+			inB: `- Sid: hey
+- a
+`,
+			wantedA: []int{0}, // Note: wantedA, wantedB = [0], [1] is also correct.
+			wantedB: []int{1},
+		},
+	}
+	for idx, tc := range testCases {
+		t.Run(idx, func(t *testing.T) {
+			var inANode, inBNode []yaml.Node
+			require.NoError(t, yaml.Unmarshal([]byte(tc.inA), &inANode))
+			require.NoError(t, yaml.Unmarshal([]byte(tc.inB), &inBNode))
+
+			gotA, gotB := longestCommonSubsequence(inANode, inBNode, func(inA, inB int) bool {
+				diff, err := parse(&(inANode[inA]), &(inBNode[inB]), "")
+				require.NoError(t, err)
+				return diff == nil
+			})
+			require.Equal(t, tc.wantedA, gotA)
+			require.Equal(t, tc.wantedB, gotB)
+		})
+	}
 }
