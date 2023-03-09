@@ -19,13 +19,12 @@ func longestCommonSubsequence[T comparable](a []T, b []T) []T {
 	// Compute the lengths of the LCS for all sub lists.
 	for i := len(a) - 1; i >= 0; i-- {
 		for j := len(b) - 1; j >= 0; j-- {
-			if a[i] == b[j] {
+			switch {
+			case a[i] == b[j]:
 				lcs[i][j] = 1 + lcs[i+1][j+1]
-				continue
-			}
-			if lcs[i+1][j] < lcs[i][j+1] {
+			case lcs[i+1][j] < lcs[i][j+1]:
 				lcs[i][j] = lcs[i][j+1]
-			} else {
+			default:
 				lcs[i][j] = lcs[i+1][j]
 			}
 		}
@@ -37,15 +36,14 @@ func longestCommonSubsequence[T comparable](a []T, b []T) []T {
 		if i >= len(a) || j >= len(b) {
 			break
 		}
-		if a[i] == b[j] {
+		switch {
+		case a[i] == b[j]:
 			seq = append(seq, a[i])
 			i++
 			j++
-			continue
-		}
-		if lcs[i+1][j] < lcs[i][j+1] {
+		case lcs[i+1][j] < lcs[i][j+1]:
 			j++
-		} else {
+		default:
 			i++
 		}
 	}
