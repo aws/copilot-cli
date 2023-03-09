@@ -17,7 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestOverrideSvcOpts_Validate(t *testing.T) {
+func TestOverrideSvc_Validate(t *testing.T) {
 	t.Run("validate application", func(t *testing.T) {
 		testCases := map[string]struct {
 			appName   string
@@ -163,7 +163,7 @@ func TestOverrideSvcOpts_Validate(t *testing.T) {
 	})
 }
 
-func TestOverrideSvcOpts_Ask(t *testing.T) {
+func TestOverrideSvc_Ask(t *testing.T) {
 	t.Run("ask or validate service name", func(t *testing.T) {
 		testCases := map[string]struct {
 			name      string
@@ -396,7 +396,7 @@ Resources:
 	})
 }
 
-func TestOverrideSvcOpts_Execute(t *testing.T) {
+func TestOverrideSvc_Execute(t *testing.T) {
 	t.Run("with the CDK", func(t *testing.T) {
 		testCases := map[string]struct {
 			resources []template.CFNResource

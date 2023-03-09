@@ -175,7 +175,7 @@ func buildSvcOverrideCmd() *cobra.Command {
 		Hidden: true,
 		Use:    "override",
 		Short:  "Override the AWS CloudFormation template of a service.",
-		Long: `Scaffold Infrastructure as Code (IaC) extension files. 
+		Long: `Scaffold Infrastructure as Code (IaC) extension files for a service. 
 The generated files allow you to extend and override Copilot generated AWS CloudFormation template.
 You can edit the files to change existing resource properties, delete 
 or add new resources to the service's template.`,
