@@ -78,10 +78,11 @@ func Test_longestCommonSubsequence(t *testing.T) {
 		},
 	}
 	for idx, tc := range testCases {
-		t.Run(fmt.Sprintf("case %v", idx), func(t *testing.T) {
-			gotA, gotB := longestCommonSubsequence(tc.inA, tc.inB)
+		t.Run(fmt.Sprintf("string case %v", idx), func(t *testing.T) {
+			gotA, gotB := longestCommonSubsequence(tc.inA, tc.inB, func(inA, inB int) bool { return tc.inA[inA] == tc.inB[inB] })
 			require.Equal(t, tc.wantedA, gotA)
 			require.Equal(t, tc.wantedB, gotB)
 		})
 	}
+
 }

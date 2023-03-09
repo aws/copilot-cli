@@ -3,7 +3,7 @@
 
 package diff
 
-func longestCommonSubsequence[T comparable](a []T, b []T) ([]int, []int) {
+func longestCommonSubsequence[T any](a []T, b []T, eq func(inA, inB int) bool) ([]int, []int) {
 	if len(a) == 0 || len(b) == 0 {
 		return nil, nil
 	}
@@ -20,7 +20,7 @@ func longestCommonSubsequence[T comparable](a []T, b []T) ([]int, []int) {
 	for i := len(a) - 1; i >= 0; i-- {
 		for j := len(b) - 1; j >= 0; j-- {
 			switch {
-			case a[i] == b[j]:
+			case eq(i, j):
 				lcs[i][j] = 1 + lcs[i+1][j+1]
 			case lcs[i+1][j] < lcs[i][j+1]:
 				lcs[i][j] = lcs[i][j+1]
@@ -37,7 +37,7 @@ func longestCommonSubsequence[T comparable](a []T, b []T) ([]int, []int) {
 			break
 		}
 		switch {
-		case a[i] == b[j]:
+		case eq(i, j):
 			indicesA, indicesB = append(indicesA, i), append(indicesB, j)
 			i++
 			j++
