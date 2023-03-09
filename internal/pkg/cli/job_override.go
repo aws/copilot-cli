@@ -15,7 +15,7 @@ func newOverrideJobOpts(vars overrideWorkloadVars) (*overrideWorkloadOpts, error
 		return nil, err
 	}
 	cmd.validateOrAskName = cmd.validateOrAskJobName
-	cmd.overrideOpts.packageCmd = cmd.newSvcPackageCmd
+	cmd.overrideOpts.packageCmd = cmd.newSvcPackageCmd // "job package" uses "svc package" under the hood.
 	return cmd, nil
 }
 
