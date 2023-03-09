@@ -14,8 +14,6 @@
 		"TargetContainer": "http-autoscaling",
 		"TargetPort": "8080",
 		"RulePath": "http-autoscaling-path",
-		"RulePathSlice": "http-autoscaling-path",
-		"Stickiness": "false",
 		"HTTPSEnabled": "false"
 	},
 	"Tags": {
