@@ -230,13 +230,14 @@ func (s LoadBalancedWebService) applyEnv(envName string) (workloadManifest, erro
 	return &s, nil
 }
 
-// NetworkLoadBalancerConfiguration holds options for a network load balancer
+// NetworkLoadBalancerConfiguration holds options for a network load balancer.
 type NetworkLoadBalancerConfiguration struct {
-	PrimaryRoutingRule     NetworkLoadBalancerRoutingRule   `yaml:",inline"`
-	AdditionalRoutingRules []NetworkLoadBalancerRoutingRule `yaml:"additional_rules"`
+	MainListener        NetworkLoadBalancerListener   `yaml:",inline"`
+	AdditionalListeners []NetworkLoadBalancerListener `yaml:"additional_listeners"`
 }
 
-type NetworkLoadBalancerRoutingRule struct {
+// NetworkLoadBalancerListener holds listener configuration for NLB.
+type NetworkLoadBalancerListener struct {
 	Port            *string            `yaml:"port"`
 	HealthCheck     NLBHealthCheckArgs `yaml:"healthcheck"`
 	TargetContainer *string            `yaml:"target_container"`
@@ -246,7 +247,8 @@ type NetworkLoadBalancerRoutingRule struct {
 	Aliases         Alias              `yaml:"alias"`
 }
 
-func (c *NetworkLoadBalancerRoutingRule) IsEmpty() bool {
+// IsEmpty returns true if NetworkLoadBalancerListener is empty.
+func (c *NetworkLoadBalancerListener) IsEmpty() bool {
 	return c.Port == nil && c.HealthCheck.isEmpty() && c.TargetContainer == nil && c.TargetPort == nil &&
 		c.SSLPolicy == nil && c.Stickiness == nil && c.Aliases.IsEmpty()
 }
@@ -268,10 +270,9 @@ func (lbws *LoadBalancedWebService) ExposedPorts() (ExposedPortsIndex, error) {
 	// port from http.target_port.
 	exposedPorts = append(exposedPorts, lbws.RoutingRule.exposedPorts(exposedPorts, workloadName)...)
 
-	nlbRoutingRules := lbws.NLBConfig.NLBRoutingRules()
 	// port from nlb.target_port and nlb.additional_rules[x].target_port
-	for _, rule := range nlbRoutingRules {
-		out, err := rule.exposedPorts(exposedPorts, workloadName)
+	for _, listener := range lbws.NLBConfig.NLBListeners() {
+		out, err := listener.exposedPorts(exposedPorts, workloadName)
 		if err != nil {
 			return ExposedPortsIndex{}, err
 		}
@@ -284,13 +285,14 @@ func (lbws *LoadBalancedWebService) ExposedPorts() (ExposedPortsIndex, error) {
 	}, nil
 }
 
-// NLBRoutingRules returns primary as well as additional rules as a list of NetworkLoadBalancerRoutingRule.
-func (cfg NetworkLoadBalancerConfiguration) NLBRoutingRules() []NetworkLoadBalancerRoutingRule {
-	var nlbRoutingRules []NetworkLoadBalancerRoutingRule
+// NLBListeners returns main as well as additional listeners as a list of NetworkLoadBalancerListener.
+func (cfg NetworkLoadBalancerConfiguration) NLBListeners() []NetworkLoadBalancerListener {
+	var nlbListeners []NetworkLoadBalancerListener
+	if !cfg.MainListener.IsEmpty() {
+		nlbListeners = append(nlbListeners, cfg.MainListener)
+	}
+	nlbListeners = append(nlbListeners, cfg.AdditionalListeners...)
 
-	nlbRoutingRules = append(nlbRoutingRules, cfg.PrimaryRoutingRule)
-	nlbRoutingRules = append(nlbRoutingRules, cfg.AdditionalRoutingRules...)
-
-	return nlbRoutingRules
+	return nlbListeners
 
 }

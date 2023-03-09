@@ -804,7 +804,7 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 		"nlb enabled": {
 			setupManifest: func(service *manifest.LoadBalancedWebService) {
 				service.NLBConfig = manifest.NetworkLoadBalancerConfiguration{
-					PrimaryRoutingRule: manifest.NetworkLoadBalancerRoutingRule{
+					MainListener: manifest.NetworkLoadBalancerListener{
 						Port: aws.String("443/tcp"),
 					},
 				}
@@ -855,7 +855,7 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 		"nlb alias enabled": {
 			setupManifest: func(service *manifest.LoadBalancedWebService) {
 				service.NLBConfig = manifest.NetworkLoadBalancerConfiguration{
-					PrimaryRoutingRule: manifest.NetworkLoadBalancerRoutingRule{
+					MainListener: manifest.NetworkLoadBalancerListener{
 						Aliases: manifest.Alias{
 							AdvancedAliases: []manifest.AdvancedAlias{
 								{Alias: aws.String("example.com")},

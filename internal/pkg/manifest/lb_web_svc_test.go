@@ -1620,7 +1620,7 @@ func TestNetworkLoadBalancerConfiguration_IsEmpty(t *testing.T) {
 		},
 		"non empty": {
 			in: NetworkLoadBalancerConfiguration{
-				PrimaryRoutingRule: NetworkLoadBalancerRoutingRule{
+				MainListener: NetworkLoadBalancerListener{
 					Port: aws.String("443"),
 				},
 			},
@@ -1630,7 +1630,7 @@ func TestNetworkLoadBalancerConfiguration_IsEmpty(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// WHEN
-			got := tc.in.PrimaryRoutingRule.IsEmpty()
+			got := tc.in.MainListener.IsEmpty()
 
 			// THEN
 			require.Equal(t, tc.wanted, got)
@@ -2052,7 +2052,7 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 						},
 					},
 					NLBConfig: NetworkLoadBalancerConfiguration{
-						PrimaryRoutingRule: NetworkLoadBalancerRoutingRule{
+						MainListener: NetworkLoadBalancerListener{
 							Port:       aws.String("85"),
 							TargetPort: aws.Int(81),
 						},
@@ -2107,7 +2107,7 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 						},
 					},
 					NLBConfig: NetworkLoadBalancerConfiguration{
-						PrimaryRoutingRule: NetworkLoadBalancerRoutingRule{
+						MainListener: NetworkLoadBalancerListener{
 							Port: aws.String("82"),
 						},
 					},
@@ -2161,7 +2161,7 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 						},
 					},
 					NLBConfig: NetworkLoadBalancerConfiguration{
-						PrimaryRoutingRule: NetworkLoadBalancerRoutingRule{
+						MainListener: NetworkLoadBalancerListener{
 							Port: aws.String("82"),
 						},
 					},
@@ -2210,7 +2210,7 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 						},
 					},
 					NLBConfig: NetworkLoadBalancerConfiguration{
-						PrimaryRoutingRule: NetworkLoadBalancerRoutingRule{
+						MainListener: NetworkLoadBalancerListener{
 							Port: aws.String("8080"),
 						},
 					},
@@ -2260,7 +2260,7 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 						},
 					},
 					NLBConfig: NetworkLoadBalancerConfiguration{
-						PrimaryRoutingRule: NetworkLoadBalancerRoutingRule{
+						MainListener: NetworkLoadBalancerListener{
 							Port:            aws.String("8082/tcp"),
 							TargetContainer: aws.String("xray"),
 						},
@@ -2333,11 +2333,11 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 						},
 					},
 					NLBConfig: NetworkLoadBalancerConfiguration{
-						PrimaryRoutingRule: NetworkLoadBalancerRoutingRule{
+						MainListener: NetworkLoadBalancerListener{
 							Port:            aws.String("8081/tcp"),
 							TargetContainer: aws.String("xray"),
 						},
-						AdditionalRoutingRules: []NetworkLoadBalancerRoutingRule{
+						AdditionalListeners: []NetworkLoadBalancerListener{
 							{
 								Port:            aws.String("8082/tls"),
 								TargetPort:      aws.Int(8083),
@@ -2398,10 +2398,10 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 						},
 					},
 					NLBConfig: NetworkLoadBalancerConfiguration{
-						PrimaryRoutingRule: NetworkLoadBalancerRoutingRule{
+						MainListener: NetworkLoadBalancerListener{
 							Port: aws.String("8080/tcp"),
 						},
-						AdditionalRoutingRules: []NetworkLoadBalancerRoutingRule{
+						AdditionalListeners: []NetworkLoadBalancerListener{
 							{
 								Port: aws.String("80/tcp"),
 							},
@@ -2523,6 +2523,71 @@ func TestLoadBalancedWebService_BuildArgs(t *testing.T) {
 			} else {
 				require.Equal(t, tc.wantedBuildArgs, got)
 			}
+		})
+	}
+}
+
+func TestNetworkLoadBalancerConfiguration_NLBListeners(t *testing.T) {
+	testCases := map[string]struct {
+		in     NetworkLoadBalancerConfiguration
+		wanted []NetworkLoadBalancerListener
+	}{
+		"return empty list if there are no Listeners provided": {
+			in: NetworkLoadBalancerConfiguration{},
+		},
+		"return non empty list if MainListener is provided": {
+			in: NetworkLoadBalancerConfiguration{
+				MainListener: NetworkLoadBalancerListener{
+					Port:            aws.String("8080/tcp"),
+					TargetContainer: stringP("main"),
+				},
+			},
+			wanted: []NetworkLoadBalancerListener{
+				{
+					Port:            stringP("8080/tcp"),
+					TargetContainer: stringP("main"),
+				},
+			},
+		},
+		"return non empty list if MainListener as well as AdditionalListeners are provided": {
+			in: NetworkLoadBalancerConfiguration{
+				MainListener: NetworkLoadBalancerListener{
+					Port:            aws.String("8080/tcp"),
+					TargetContainer: stringP("main"),
+				},
+				AdditionalListeners: []NetworkLoadBalancerListener{
+					{
+						Port:            aws.String("8081/tcp"),
+						TargetContainer: stringP("main"),
+					},
+					{
+						Port:            aws.String("8082/tcp"),
+						TargetContainer: stringP("main"),
+					},
+				},
+			},
+			wanted: []NetworkLoadBalancerListener{
+				{
+					Port:            stringP("8080/tcp"),
+					TargetContainer: stringP("main"),
+				},
+				{
+					Port:            stringP("8081/tcp"),
+					TargetContainer: stringP("main"),
+				},
+				{
+					Port:            stringP("8082/tcp"),
+					TargetContainer: stringP("main"),
+				},
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// WHEN
+			got := tc.in.NLBListeners()
+			// THEN
+			require.Equal(t, tc.wanted, got)
 		})
 	}
 }

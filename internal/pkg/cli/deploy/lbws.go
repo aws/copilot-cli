@@ -151,7 +151,7 @@ func (d *lbWebSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*s
 		return nil, err
 	}
 	var opts []stack.LoadBalancedWebServiceOption
-	if !d.lbMft.NLBConfig.PrimaryRoutingRule.IsEmpty() {
+	if !d.lbMft.NLBConfig.MainListener.IsEmpty() {
 		cidrBlocks, err := d.publicCIDRBlocksGetter.PublicCIDRBlocks()
 		if err != nil {
 			return nil, fmt.Errorf("get public CIDR blocks information from the VPC of environment %s: %w", d.env.Name, err)
@@ -239,14 +239,17 @@ func (d *lbWebSvcDeployer) validateALBRuntime() error {
 			logAppVersionOutdatedError(aws.StringValue(d.lbMft.Name))
 			return err
 		}
-		return validateLBWSAlias(d.lbMft.RoutingRule.Alias, d.app, d.env.Name)
+		if err := validateLBWSAlias(d.lbMft.RoutingRule.Alias, d.app, d.env.Name); err != nil {
+			return fmt.Errorf(`validate 'http.alias': %w`, err)
+		}
+		return nil
 	}
 	log.Errorf(ecsALBAliasUsedWithoutDomainFriendlyText)
 	return fmt.Errorf("cannot specify http.alias when application is not associated with a domain and env %s doesn't import one or more certificates", d.env.Name)
 }
 
 func (d *lbWebSvcDeployer) validateNLBRuntime() error {
-	if d.lbMft.NLBConfig.PrimaryRoutingRule.Aliases.IsEmpty() {
+	if d.lbMft.NLBConfig.MainListener.Aliases.IsEmpty() {
 		return nil
 	}
 
@@ -262,10 +265,9 @@ func (d *lbWebSvcDeployer) validateNLBRuntime() error {
 		logAppVersionOutdatedError(aws.StringValue(d.lbMft.Name))
 		return err
 	}
-	nlbRoutingRules := d.lbMft.NLBConfig.NLBRoutingRules()
-	for _, rule := range nlbRoutingRules {
+	for _, rule := range d.lbMft.NLBConfig.NLBListeners() {
 		if err := validateLBWSAlias(rule.Aliases, d.app, d.env.Name); err != nil {
-			return err
+			return fmt.Errorf(`validate 'nlb.alias': %w`, err)
 		}
 	}
 	return nil
@@ -277,7 +279,7 @@ func validateLBWSAlias(aliases manifest.Alias, app *config.Application, envName 
 	}
 	aliasList, err := aliases.ToStringSlice()
 	if err != nil {
-		return fmt.Errorf(`convert 'nlb.alias' to string slice: %w`, err)
+		return err
 	}
 	for _, alias := range aliasList {
 		// Alias should be within either env, app, or root hosted zone.
