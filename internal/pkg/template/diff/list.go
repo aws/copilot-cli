@@ -3,7 +3,9 @@
 
 package diff
 
-func longestCommonSubsequence[T any](a []T, b []T, eq func(inA, inB int) bool) ([]int, []int) {
+type eqFunc func(inA, inB int) bool
+
+func longestCommonSubsequence[T any](a []T, b []T, eq eqFunc) ([]int, []int) {
 	if len(a) == 0 || len(b) == 0 {
 		return nil, nil
 	}

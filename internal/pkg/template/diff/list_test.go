@@ -90,8 +90,11 @@ func Test_longestCommonSubsequence_string(t *testing.T) {
 
 func Test_longestCommonSubsequence_yamlNode(t *testing.T) {
 	testCases := map[string]struct {
-		inA     string
-		inB     string
+		inA string
+		inB string
+
+		mockEq eqFunc
+
 		wantedA []int
 		wantedB []int
 	}{
@@ -102,12 +105,18 @@ func Test_longestCommonSubsequence_yamlNode(t *testing.T) {
 			inB: `- Sid: power
   Resources: '*'
   Action: '*'`,
+			mockEq: func(inA, inB int) bool {
+				return true
+			},
 			wantedA: []int{0},
 			wantedB: []int{0},
 		},
 		"map/change node scalar style": { // The style should not matter.
-			inA:     `- Sid: 'power'`,
-			inB:     `- Sid: "power"`,
+			inA: `- Sid: 'power'`,
+			inB: `- Sid: "power"`,
+			mockEq: func(inA, inB int) bool {
+				return true
+			},
 			wantedA: []int{0},
 			wantedB: []int{0},
 		},
@@ -116,30 +125,45 @@ func Test_longestCommonSubsequence_yamlNode(t *testing.T) {
   Action: '*'`,
 			inB: `- Sid: no power
   Resources: '*'`,
+			mockEq: func(inA, inB int) bool {
+				return false
+			},
 		},
 		"map/reorder": {
 			inA: `- Sid: power
 - Sid: less power`,
 			inB: `- Sid: less power
 - Sid: power`,
+			mockEq: func(inA, inB int) bool {
+				return (inA == 0 && inB == 1) || (inA == 1 && inB == 0)
+			},
 			wantedA: []int{1}, // Note: wantedA, wantedB = [0], [1] is also correct.
 			wantedB: []int{0},
 		},
 		"scalar/change style": { // The style should not matter.
-			inA:     `['a','b']`,
-			inB:     `["a","b"]`,
+			inA: `['a','b']`,
+			inB: `["a","b"]`,
+			mockEq: func(inA, inB int) bool {
+				return inA == inB
+			},
 			wantedA: []int{0, 1},
 			wantedB: []int{0, 1},
 		},
 		"scalar/mixed style": { // The style should not matter.
-			inA:     `['a',"b"]`,
-			inB:     `["a",'b']`,
+			inA: `['a',"b"]`,
+			inB: `["a",'b']`,
+			mockEq: func(inA, inB int) bool {
+				return inA == inB
+			},
 			wantedA: []int{0, 1},
 			wantedB: []int{0, 1},
 		},
 		"scalar/not equal": { // The style should not matter.
-			inA:     `[a,b,c,d]`,
-			inB:     `[a,d]`,
+			inA: `[a,b,c,d]`,
+			inB: `[a,d]`,
+			mockEq: func(inA, inB int) bool {
+				return inA == 0 && inB == 0 || inA == 3 && inB == 1
+			},
 			wantedA: []int{0, 3},
 			wantedB: []int{0, 1},
 		},
@@ -147,7 +171,10 @@ func Test_longestCommonSubsequence_yamlNode(t *testing.T) {
 			inA: `- a
 - b
 - c`,
-			inB:     `[a,b,c]`,
+			inB: `[a,b,c]`,
+			mockEq: func(inA, inB int) bool {
+				return inA == inB
+			},
 			wantedA: []int{0, 1, 2}, // Note: wantedA, wantedB = [0], [1] is also correct.
 			wantedB: []int{0, 1, 2},
 		},
@@ -158,6 +185,9 @@ func Test_longestCommonSubsequence_yamlNode(t *testing.T) {
 			inB: `- Sid: hey
 - a
 `,
+			mockEq: func(inA, inB int) bool {
+				return inA == 0 && inB == 1
+			},
 			wantedA: []int{0}, // Note: wantedA, wantedB = [0], [1] is also correct.
 			wantedB: []int{1},
 		},
@@ -168,11 +198,7 @@ func Test_longestCommonSubsequence_yamlNode(t *testing.T) {
 			require.NoError(t, yaml.Unmarshal([]byte(tc.inA), &inANode))
 			require.NoError(t, yaml.Unmarshal([]byte(tc.inB), &inBNode))
 
-			gotA, gotB := longestCommonSubsequence(inANode, inBNode, func(inA, inB int) bool {
-				diff, err := parse(&(inANode[inA]), &(inBNode[inB]), "")
-				require.NoError(t, err)
-				return diff == nil
-			})
+			gotA, gotB := longestCommonSubsequence(inANode, inBNode, tc.mockEq)
 			require.Equal(t, tc.wantedA, gotA)
 			require.Equal(t, tc.wantedB, gotB)
 		})
