@@ -151,8 +151,8 @@ func TestFrom_Parse(t *testing.T) {
 						"SizeRank": {
 							key: "SizeRank",
 							children: map[string]*Node{
-								"1,1": leaf1,
-								"3,2": leaf2,
+								"0": leaf1,
+								"1": leaf2,
 							},
 						},
 					},
@@ -175,7 +175,7 @@ func TestFrom_Parse(t *testing.T) {
 						"DanceCompetition": {
 							key: "DanceCompetition",
 							children: map[string]*Node{
-								"2,2": leaf,
+								"0": leaf,
 							},
 						},
 					},
@@ -198,7 +198,7 @@ func TestFrom_Parse(t *testing.T) {
 						"PotatoChipCommittee": {
 							key: "PotatoChipCommittee",
 							children: map[string]*Node{
-								"2,2": leaf,
+								"0": leaf,
 							},
 						},
 					},
@@ -222,7 +222,7 @@ func TestFrom_Parse(t *testing.T) {
 						"DogsFavoriteShape": {
 							key: "DogsFavoriteShape",
 							children: map[string]*Node{
-								"1,1": leaf,
+								"0": leaf,
 							},
 						},
 					},

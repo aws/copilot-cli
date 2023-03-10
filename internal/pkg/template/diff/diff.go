@@ -6,6 +6,7 @@ package diff
 
 import (
 	"fmt"
+	"strconv"
 
 	"gopkg.in/yaml.v3"
 )
@@ -101,11 +102,12 @@ func parseSequence(from, to *yaml.Node) (map[string]*Node, error) {
 	lcsIdxInFrom, lcsIdxInTo := longestCommonSubsequence(fromSeq, toSeq, func(inA, inB int) bool {
 		diff, err := parse(&(fromSeq[inA]), &(toSeq[inB]), "")
 		if diff != nil { // NOTE: cache the diff only if a modification could have happened at this position.
-			cachedDiff[fmt.Sprintf("%v,%v", inA, inB)] = diff
-			cachedErr[fmt.Sprintf("%v,%v", inA, inB)] = err
+			cachedDiff[cachedKey(inA, inB)] = diff
+			cachedErr[cachedKey(inA, inB)] = err
 		}
 		return err == nil && diff == nil // NOTE: we swallow the error for now.
 	})
+	childKey := seqChildKeyFunc()
 	children := make(map[string]*Node)
 	var f, t, i int
 	for {
@@ -121,24 +123,21 @@ func parseSequence(from, to *yaml.Node) (map[string]*Node, error) {
 			// TODO(lou1415926): (x unchanged items)
 		case f != lcsF && t != lcsT: // Modification.
 			// TODO(lou1415926): handle list of maps modification
-			diff, err := cachedDiff[fmt.Sprintf("%v,%v", f, t)], cachedErr[fmt.Sprintf("%v,%v", f, t)]
+			diff, err := cachedDiff[cachedKey(f, t)], cachedErr[cachedKey(f, t)]
 			if err != nil {
 				return nil, err
 			}
-			children[fmt.Sprintf("%d,%d", f, t)] = diff
+			children[childKey()] = diff
 			f++
 			t++
-
 		case f != lcsF: // Deletion.
-			children[fmt.Sprintf("%d,%d", f, t)] = &Node{oldValue: &(fromSeq[f])}
+			children[childKey()] = &Node{oldValue: &(fromSeq[f])}
 			f++
-
 		case t != lcsT: // Insertion.
-			children[fmt.Sprintf("%d,%d", f, t)] = &Node{newValue: &(toSeq[t])}
+			children[childKey()] = &Node{newValue: &(toSeq[t])}
 			t++
 		}
 	}
-
 	for {
 		if f >= len(fromSeq) && t >= len(toSeq) {
 			break
@@ -151,11 +150,11 @@ func parseSequence(from, to *yaml.Node) (map[string]*Node, error) {
 			if err != nil {
 				return nil, err
 			}
-			children[fmt.Sprintf("%d,%d", f, t)] = diff
+			children[childKey()] = diff
 		case f < len(fromSeq): // Deletion.
-			children[fmt.Sprintf("%d,%d", f, t)] = &Node{oldValue: &(fromSeq[f])}
+			children[childKey()] = &Node{oldValue: &(fromSeq[f])}
 		case t < len(toSeq): // Insertion.
-			children[fmt.Sprintf("%d,%d", f, t)] = &Node{newValue: &(toSeq[t])}
+			children[childKey()] = &Node{newValue: &(toSeq[t])}
 		}
 		f++
 		t++
@@ -200,4 +199,17 @@ func unionOfKeys[T any](a, b map[string]T) map[string]struct{} {
 		keys[k] = exists
 	}
 	return keys
+}
+
+func cachedKey(inFrom, inTo int) string {
+	return fmt.Sprintf("%d,%d", inFrom, inTo)
+}
+
+// TODO(lou1415926): use a more meaningful key for a seq child.
+func seqChildKeyFunc() func() string {
+	idx := -1
+	return func() string {
+		idx++
+		return strconv.Itoa(idx)
+	}
 }
