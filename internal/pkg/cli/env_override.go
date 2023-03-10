@@ -129,7 +129,7 @@ func buildEnvOverrideCmd() *cobra.Command {
 		Use:    "override",
 		Short:  "Override the AWS CloudFormation template of environments.",
 		Long: `Scaffold Infrastructure as Code (IaC) extension files for environments. 
-The generated files allow you to extend and override Copilot generated AWS CloudFormation template.
+The generated files allow you to extend and override the Copilot generated AWS CloudFormation template.
 You can edit the files to change existing resource properties, delete 
 or add new resources to an environment's template.`,
 		Example: `
