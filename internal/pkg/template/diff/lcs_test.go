@@ -80,9 +80,15 @@ func Test_longestCommonSubsequence_string(t *testing.T) {
 	}
 	for idx, tc := range testCases {
 		t.Run(fmt.Sprintf("string case %v", idx), func(t *testing.T) {
-			gotA, gotB := longestCommonSubsequence(tc.inA, tc.inB, func(inA, inB int) bool { return tc.inA[inA] == tc.inB[inB] })
-			require.Equal(t, tc.wantedA, gotA)
-			require.Equal(t, tc.wantedB, gotB)
+			got := longestCommonSubsequence(tc.inA, tc.inB, func(inA, inB int) bool { return tc.inA[inA] == tc.inB[inB] })
+			var wanted []lcsIndex
+			for idx, _ := range tc.wantedA {
+				wanted = append(wanted, lcsIndex{
+					inA: tc.wantedA[idx],
+					inB: tc.wantedB[idx],
+				})
+			}
+			require.Equal(t, wanted, got)
 		})
 	}
 
@@ -197,10 +203,15 @@ func Test_longestCommonSubsequence_yamlNode(t *testing.T) {
 			var inANode, inBNode []yaml.Node
 			require.NoError(t, yaml.Unmarshal([]byte(tc.inA), &inANode))
 			require.NoError(t, yaml.Unmarshal([]byte(tc.inB), &inBNode))
-
-			gotA, gotB := longestCommonSubsequence(inANode, inBNode, tc.mockEq)
-			require.Equal(t, tc.wantedA, gotA)
-			require.Equal(t, tc.wantedB, gotB)
+			got := longestCommonSubsequence(inANode, inBNode, tc.mockEq)
+			var wanted []lcsIndex
+			for idx, _ := range tc.wantedA {
+				wanted = append(wanted, lcsIndex{
+					inA: tc.wantedA[idx],
+					inB: tc.wantedB[idx],
+				})
+			}
+			require.Equal(t, wanted, got)
 		})
 	}
 }

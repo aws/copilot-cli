@@ -5,6 +5,11 @@ package diff
 
 type eqFunc func(inA, inB int) bool
 
+type lcsIndex struct {
+	inA int
+	inB int
+}
+
 // longestCommonSubsequence computes the longest common subsequence of two lists, and returns two lists that contain 
 // the positions of the common items in the input lists, respectively.
 // When multiple correct answers exists, the function picks one of them deterministically.
@@ -13,9 +18,9 @@ type eqFunc func(inA, inB int) bool
 //   One LCS is ["a","c","d"].
 //   "a" is input_a[0] and input_b[0], "c" is in input_a[1] and input_b[3], "d" is input_a[4] and input_b[5].
 //   Therefore, the output will be [0,1,4], [0,3,5]
-func longestCommonSubsequence[T any](a []T, b []T, eq eqFunc) ([]int, []int) {
+func longestCommonSubsequence[T any](a []T, b []T, eq eqFunc) []lcsIndex {
 	if len(a) == 0 || len(b) == 0 {
-		return nil, nil
+		return nil
 	}
 	// Initialize the matrix
 	lcs := make([][]int, len(a)+1)
@@ -41,14 +46,17 @@ func longestCommonSubsequence[T any](a []T, b []T, eq eqFunc) ([]int, []int) {
 	}
 	// Backtrace to construct the LCS.
 	var i, j int
-	var indicesA, indicesB []int
+	var lcsIndices []lcsIndex
 	for {
 		if i >= len(a) || j >= len(b) {
 			break
 		}
 		switch {
 		case eq(i, j):
-			indicesA, indicesB = append(indicesA, i), append(indicesB, j)
+			lcsIndices = append(lcsIndices, lcsIndex{
+				inA: i,
+				inB: j,
+			})
 			i++
 			j++
 		case lcs[i+1][j] < lcs[i][j+1]:
@@ -57,5 +65,5 @@ func longestCommonSubsequence[T any](a []T, b []T, eq eqFunc) ([]int, []int) {
 			i++
 		}
 	}
-	return indicesA, indicesB
+	return lcsIndices
 }

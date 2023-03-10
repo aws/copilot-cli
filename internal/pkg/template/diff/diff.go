@@ -103,7 +103,7 @@ func parseSequence(from, to *yaml.Node) (map[string]*Node, error) {
 		err  error
 	}
 	cachedDiff := make(map[string]cachedEntry)
-	lcsIdxInFrom, lcsIdxInTo := longestCommonSubsequence(fromSeq, toSeq, func(idxFrom, idxTo int) bool {
+	lcsIndices := longestCommonSubsequence(fromSeq, toSeq, func(idxFrom, idxTo int) bool {
 		diff, err := parse(&(fromSeq[idxFrom]), &(toSeq[idxTo]), "")
 		if diff != nil { // NOTE: cache the diff only if a modification could have happened at this position.
 			cachedDiff[cacheKey(idxFrom, idxTo)] = cachedEntry{
@@ -115,53 +115,53 @@ func parseSequence(from, to *yaml.Node) (map[string]*Node, error) {
 	})
 	childKey := seqChildKeyFunc()
 	children := make(map[string]*Node)
-	var f, t, i int
+	var fromIdx, toIdx, i int
 	for {
-		if i >= len(lcsIdxInFrom) {
+		if i >= len(lcsIndices) {
 			break
 		}
-		lcsF, lcsT := lcsIdxInFrom[i], lcsIdxInTo[i]
+		fromIdxLCS, toIdxLCS := lcsIndices[i].inA, lcsIndices[i].inB
 		switch {
-		case f == lcsF && t == lcsT: // Match.
-			f++
-			t++
+		case fromIdx == fromIdxLCS && toIdx == toIdxLCS: // Match.
+			fromIdx++
+			toIdx++
 			i++
 			// TODO(lou1415926): (x unchanged items)
-		case f != lcsF && t != lcsT: // Modification.
+		case fromIdx != fromIdxLCS && toIdx != toIdxLCS: // Modification.
 			// TODO(lou1415926): handle list of maps modification
-			diff := cachedDiff[cacheKey(f, t)]
+			diff := cachedDiff[cacheKey(fromIdx, toIdx)]
 			if diff.err != nil {
 				return nil, diff.err
 			}
 			children[childKey()] = diff.node
-			f++
-			t++
-		case f != lcsF: // Deletion.
-			children[childKey()] = &Node{oldValue: &(fromSeq[f])}
-			f++
-		case t != lcsT: // Insertion.
-			children[childKey()] = &Node{newValue: &(toSeq[t])}
-			t++
+			fromIdx++
+			toIdx++
+		case fromIdx != fromIdxLCS: // Deletion.
+			children[childKey()] = &Node{oldValue: &(fromSeq[fromIdx])}
+			fromIdx++
+		case toIdx != toIdxLCS: // Insertion.
+			children[childKey()] = &Node{newValue: &(toSeq[toIdx])}
+			toIdx++
 		}
 	}
 	for {
-		if f >= len(fromSeq) && t >= len(toSeq) {
+		if fromIdx >= len(fromSeq) && toIdx >= len(toSeq) {
 			break
 		}
 		switch {
-		case f < len(fromSeq) && t < len(toSeq): // Modification.
-			diff, err := parse(&(fromSeq[f]), &(toSeq[t]), "")
+		case fromIdx < len(fromSeq) && toIdx < len(toSeq): // Modification.
+			diff, err := parse(&(fromSeq[fromIdx]), &(toSeq[toIdx]), "")
 			if err != nil {
 				return nil, err
 			}
 			children[childKey()] = diff
-		case f < len(fromSeq): // Deletion.
-			children[childKey()] = &Node{oldValue: &(fromSeq[f])}
-		case t < len(toSeq): // Insertion.
-			children[childKey()] = &Node{newValue: &(toSeq[t])}
+		case fromIdx < len(fromSeq): // Deletion.
+			children[childKey()] = &Node{oldValue: &(fromSeq[fromIdx])}
+		case toIdx < len(toSeq): // Insertion.
+			children[childKey()] = &Node{newValue: &(toSeq[toIdx])}
 		}
-		f++
-		t++
+		fromIdx++
+		toIdx++
 	}
 	return children, nil
 }
