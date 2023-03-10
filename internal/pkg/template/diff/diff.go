@@ -97,8 +97,13 @@ func parseSequence(from, to *yaml.Node) (map[string]*Node, error) {
 	if err := from.Decode(&fromSeq); err != nil {
 		return nil, err
 	}
+	cachedDiff, cachedErr := make(map[string]*Node), make(map[string]error)
 	lcsIdxInFrom, lcsIdxInTo := longestCommonSubsequence(fromSeq, toSeq, func(inA, inB int) bool {
 		diff, err := parse(&(fromSeq[inA]), &(toSeq[inB]), "")
+		if diff != nil { // NOTE: cache the diff only if a modification could have happened at this position.
+			cachedDiff[fmt.Sprintf("%v,%v", inA, inB)] = diff
+			cachedErr[fmt.Sprintf("%v,%v", inA, inB)] = err
+		}
 		return err == nil && diff == nil // NOTE: we swallow the error for now.
 	})
 	children := make(map[string]*Node)
@@ -115,8 +120,8 @@ func parseSequence(from, to *yaml.Node) (map[string]*Node, error) {
 			i++
 			// TODO(lou1415926): (x unchanged items)
 		case f != lcsF && t != lcsT: // Modification.
-			// TODO: cache the diff from LCS?
-			diff, err := parse(&(fromSeq[f]), &(toSeq[t]), "")
+			// TODO(lou1415926): handle list of maps modification
+			diff, err := cachedDiff[fmt.Sprintf("%v,%v", f, t)], cachedErr[fmt.Sprintf("%v,%v", f, t)]
 			if err != nil {
 				return nil, err
 			}
