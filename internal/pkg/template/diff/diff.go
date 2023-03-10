@@ -90,7 +90,75 @@ func isYAMLLeaf(node *yaml.Node) bool {
 }
 
 func parseSequence(from, to *yaml.Node) (map[string]*Node, error) {
-	return nil, nil
+	fromSeq, toSeq := make([]yaml.Node, len(from.Content)), make([]yaml.Node, len(to.Content))
+	if err := to.Decode(&toSeq); err != nil {
+		return nil, err
+	}
+	if err := from.Decode(&fromSeq); err != nil {
+		return nil, err
+	}
+	lcsIdxInFrom, lcsIdxInTo := longestCommonSubsequence(fromSeq, toSeq, func(inA, inB int) bool {
+		diff, err := parse(&(fromSeq[inA]), &(toSeq[inB]), "")
+		return err == nil && diff == nil // NOTE: we swallow the error for now.
+	})
+	children := make(map[string]*Node)
+	var f, t, i int
+	for {
+		if i >= len(lcsIdxInFrom) {
+			break
+		}
+		lcsF, lcsT := lcsIdxInFrom[i], lcsIdxInTo[i]
+		switch {
+		case f == lcsF && t == lcsT: // Match.
+			f++
+			t++
+			i++
+			// TODO: (x unchanged items)
+		case f != lcsF && t != lcsT: // Modification.
+			// TODO: cache the diff from LCS?
+			diff, err := parse(&(fromSeq[f]), &(toSeq[t]), "")
+			if err != nil {
+				return nil, err
+			}
+			children[fmt.Sprintf("%d,%d", f, t)] = diff
+			f++
+			t++
+
+		case f != lcsF: // Deletion.
+			children[fmt.Sprintf("%d,%d", f, t)] = &Node{oldValue: &(fromSeq[f])}
+			f++
+
+		case t != lcsT: // Insertion.
+			children[fmt.Sprintf("%d,%d", f, t)] = &Node{newValue: &(toSeq[t])}
+			t++
+		}
+	}
+
+	for {
+		if f >= len(fromSeq) && t >= len(toSeq) {
+			break
+		}
+		switch {
+		case f >= len(fromSeq) && t >= len(toSeq):
+			break
+		case f < len(fromSeq) && t < len(toSeq): // Modification.
+			diff, err := parse(&(fromSeq[f]), &(toSeq[t]), "")
+			if err != nil {
+				return nil, err
+			}
+			children[fmt.Sprintf("%d,%d", f, t)] = diff
+		case f < len(fromSeq): // Deletion.
+			children[fmt.Sprintf("%d,%d", f, t)] = &Node{oldValue: &(fromSeq[f])}
+		case t < len(toSeq): // Insertion.
+			children[fmt.Sprintf("%d,%d", f, t)] = &Node{newValue: &(toSeq[t])}
+		}
+		f++
+		t++
+	}
+	for k, v := range children {
+		fmt.Printf("%v:%v\n", k, v)
+	}
+	return children, nil
 }
 
 func parseMap(from, to *yaml.Node) (map[string]*Node, error) {
