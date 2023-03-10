@@ -229,7 +229,7 @@ func TestFrom_Parse(t *testing.T) {
 				}
 			},
 		},
-		"list with a map value changed": {
+		"list with a map value changed": { // TODO(lou1415926): handle list of maps modification
 			old: `StrawberryPopularitySurvey:
 - Name: Dog
   LikeStrawberry: ver much

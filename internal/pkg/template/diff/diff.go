@@ -113,7 +113,7 @@ func parseSequence(from, to *yaml.Node) (map[string]*Node, error) {
 			f++
 			t++
 			i++
-			// TODO: (x unchanged items)
+			// TODO(lou1415926): (x unchanged items)
 		case f != lcsF && t != lcsT: // Modification.
 			// TODO: cache the diff from LCS?
 			diff, err := parse(&(fromSeq[f]), &(toSeq[t]), "")
