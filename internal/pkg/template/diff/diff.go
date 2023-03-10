@@ -149,8 +149,6 @@ func parseSequence(from, to *yaml.Node) (map[string]*Node, error) {
 			break
 		}
 		switch {
-		case f >= len(fromSeq) && t >= len(toSeq):
-			break
 		case f < len(fromSeq) && t < len(toSeq): // Modification.
 			diff, err := parse(&(fromSeq[f]), &(toSeq[t]), "")
 			if err != nil {
