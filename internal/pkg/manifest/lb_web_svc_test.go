@@ -2532,9 +2532,7 @@ func TestNetworkLoadBalancerConfiguration_NLBListeners(t *testing.T) {
 		in     NetworkLoadBalancerConfiguration
 		wanted []NetworkLoadBalancerListener
 	}{
-		"return empty list if there are no Listeners provided": {
-			in: NetworkLoadBalancerConfiguration{},
-		},
+		"return empty list if there are no Listeners provided": {},
 		"return non empty list if MainListener is provided": {
 			in: NetworkLoadBalancerConfiguration{
 				MainListener: NetworkLoadBalancerListener{

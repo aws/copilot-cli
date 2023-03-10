@@ -287,12 +287,12 @@ func (lbws *LoadBalancedWebService) ExposedPorts() (ExposedPortsIndex, error) {
 
 // NLBListeners returns main as well as additional listeners as a list of NetworkLoadBalancerListener.
 func (cfg NetworkLoadBalancerConfiguration) NLBListeners() []NetworkLoadBalancerListener {
-	var nlbListeners []NetworkLoadBalancerListener
-	if !cfg.MainListener.IsEmpty() {
-		nlbListeners = append(nlbListeners, cfg.MainListener)
+	if cfg.MainListener.IsEmpty() {
+		return nil
 	}
+	var nlbListeners []NetworkLoadBalancerListener
+	nlbListeners = append(nlbListeners, cfg.MainListener)
 	nlbListeners = append(nlbListeners, cfg.AdditionalListeners...)
 
 	return nlbListeners
-
 }

@@ -87,14 +87,24 @@ func (l LoadBalancedWebService) validate() error {
 	}); err != nil {
 		return fmt.Errorf("validate HTTP load balancer target: %w", err)
 	}
-	for idx, listener := range l.NLBConfig.NLBListeners() {
+
+	if err = validateTargetContainer(validateTargetContainerOpts{
+		mainContainerName: aws.StringValue(l.Name),
+		mainContainerPort: l.ImageConfig.Port,
+		targetContainer:   l.NLBConfig.MainListener.TargetContainer,
+		sidecarConfig:     l.Sidecars,
+	}); err != nil {
+		return fmt.Errorf("validate target for nlb.listener: %w", err)
+	}
+
+	for idx, listener := range l.NLBConfig.AdditionalListeners {
 		if err = validateTargetContainer(validateTargetContainerOpts{
 			mainContainerName: aws.StringValue(l.Name),
 			mainContainerPort: l.ImageConfig.Port,
 			targetContainer:   listener.TargetContainer,
 			sidecarConfig:     l.Sidecars,
 		}); err != nil {
-			return fmt.Errorf("validate target for nlb.listener[%d]: %w", idx+1, err)
+			return fmt.Errorf("validate target for nlb.listener[%d]: %w", idx, err)
 		}
 	}
 	if err = validateContainerDeps(validateDependenciesOpts{
@@ -845,9 +855,12 @@ func (ip IPNet) validate() error {
 
 // validate returns nil if NetworkLoadBalancerConfiguration is configured correctly.
 func (c NetworkLoadBalancerConfiguration) validate() error {
-	for idx, listener := range c.NLBListeners() {
+	if err := c.MainListener.validate(); err != nil {
+		return fmt.Errorf("validate nlb.listener; %s", err)
+	}
+	for idx, listener := range c.AdditionalListeners {
 		if err := listener.validate(); err != nil {
-			return fmt.Errorf("validate nlb.listener[%d]; %s", idx+1, err)
+			return fmt.Errorf("validate nlb.listener[%d]; %s", idx, err)
 		}
 	}
 	return nil
@@ -1944,23 +1957,23 @@ func populateALBPortsAndValidate(containerNameFor map[uint16]string, opts valida
 }
 
 func populateNLBPortsAndValidate(containerNameFor map[uint16]string, opts validateExposedPortsOpts) error {
-	if opts.nlb == nil {
+	if opts.nlb == nil || opts.nlb.MainListener.IsEmpty() {
 		return nil
 	}
 	nlb := opts.nlb
-	if nlb.MainListener.Port == nil {
-		return nil
+	if err := populateAndValidateNLBPorts(nlb.MainListener, containerNameFor, opts.mainContainerName); err != nil {
+		return fmt.Errorf(`validate nlb.listener: %w`, err)
 	}
 
-	for _, listener := range nlb.NLBListeners() {
-		if err := populateAndValidateNLBPorts(listener, containerNameFor, opts); err != nil {
-			return err
+	for idx, listener := range nlb.AdditionalListeners {
+		if err := populateAndValidateNLBPorts(listener, containerNameFor, opts.mainContainerName); err != nil {
+			return fmt.Errorf(`validate nlb.listener[%d]: %w`, idx, err)
 		}
 	}
 	return nil
 }
 
-func populateAndValidateNLBPorts(listener NetworkLoadBalancerListener, containerNameFor map[uint16]string, opts validateExposedPortsOpts) error {
+func populateAndValidateNLBPorts(listener NetworkLoadBalancerListener, containerNameFor map[uint16]string, mainContainerName string) error {
 	nlbPort, _, err := ParsePortMapping(listener.Port)
 	if err != nil {
 		return err
@@ -1973,10 +1986,10 @@ func populateAndValidateNLBPorts(listener NetworkLoadBalancerListener, container
 	if listener.TargetPort != nil {
 		targetPort = uint16(aws.IntValue(listener.TargetPort))
 	}
-	if err = errOnContainersExposingSamePort(containerNameFor, uint16(aws.IntValue(listener.TargetPort)), listener.TargetContainer); err != nil {
+	if err = validateContainersNotExposingSamePort(containerNameFor, uint16(aws.IntValue(listener.TargetPort)), listener.TargetContainer); err != nil {
 		return err
 	}
-	targetContainer := opts.mainContainerName
+	targetContainer := mainContainerName
 	if listener.TargetContainer != nil {
 		targetContainer = aws.StringValue(listener.TargetContainer)
 	}
@@ -1984,7 +1997,7 @@ func populateAndValidateNLBPorts(listener NetworkLoadBalancerListener, container
 	return nil
 }
 
-func errOnContainersExposingSamePort(containerNameFor map[uint16]string, targetPort uint16, targetContainer *string) error {
+func validateContainersNotExposingSamePort(containerNameFor map[uint16]string, targetPort uint16, targetContainer *string) error {
 	container, exists := containerNameFor[targetPort]
 	if !exists {
 		return nil
