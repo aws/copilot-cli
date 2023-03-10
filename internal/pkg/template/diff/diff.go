@@ -160,9 +160,6 @@ func parseSequence(from, to *yaml.Node) (map[string]*Node, error) {
 		f++
 		t++
 	}
-	for k, v := range children {
-		fmt.Printf("%v:%v\n", k, v)
-	}
 	return children, nil
 }
 
