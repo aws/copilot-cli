@@ -91,7 +91,7 @@ func isYAMLLeaf(node *yaml.Node) bool {
 }
 
 func parseSequence(from, to *yaml.Node) (map[string]*Node, error) {
-	fromSeq, toSeq := make([]yaml.Node, len(from.Content)), make([]yaml.Node, len(to.Content))
+	var fromSeq, toSeq []yaml.Node
 	if err := to.Decode(&toSeq); err != nil {
 		return nil, err
 	}
