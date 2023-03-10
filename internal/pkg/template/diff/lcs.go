@@ -5,6 +5,14 @@ package diff
 
 type eqFunc func(inA, inB int) bool
 
+// longestCommonSubsequence computes the longest common subsequence of two lists, and returns two lists that contain 
+// the positions of the common items in the input lists, respectively.
+// When multiple correct answers exists, the function picks one of them deterministically.
+// Example:
+//   input_a = ["a", "c", "b", "b", "d"], input_b = ["a", "B", "b", "c", "c", "d"]
+//   One LCS is ["a","c","d"].
+//   "a" is input_a[0] and input_b[0], "c" is in input_a[1] and input_b[3], "d" is input_a[4] and input_b[5].
+//   Therefore, the output will be [0,1,4], [0,3,5]
 func longestCommonSubsequence[T any](a []T, b []T, eq eqFunc) ([]int, []int) {
 	if len(a) == 0 || len(b) == 0 {
 		return nil, nil
