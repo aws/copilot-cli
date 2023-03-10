@@ -51,6 +51,14 @@ type AlarmStatus struct {
 	UpdatedTimes time.Time `json:"updatedTimes"`
 }
 
+// AlarmDescription contains CloudWatch alarm config.
+// Also available: MetricName, ComparisonOperator, DatapointsToAlarm, EvaluationPeriods, Threshold, Unit.
+type AlarmDescription struct {
+	Name               string  `json:"name"`
+	Description        string  `json:"description"`
+	Environment        string  `json:"environment"`
+}
+
 // New returns a CloudWatch struct configured against the input session.
 func New(s *session.Session) *CloudWatch {
 	return &CloudWatch{
@@ -123,6 +131,58 @@ func (cw *CloudWatch) AlarmStatuses(opts ...DescribeAlarmOpts) ([]AlarmStatus, e
 		in.NextToken = alarmResp.NextToken
 	}
 	return alarmStatuses, nil
+}
+
+// AlarmDescriptions returns the config of alarms filtered by name.
+func (cw *CloudWatch) AlarmDescriptions(alarmNames []string) ([]*AlarmDescription, error) {
+	var alarmDescriptions []*AlarmDescription
+	in := &cloudwatch.DescribeAlarmsInput{
+		AlarmNames: aws.StringSlice(alarmNames),
+	}
+	for {
+		alarmResp, err := cw.client.DescribeAlarms(in)
+		if err != nil {
+			return nil, fmt.Errorf("describe CloudWatch alarms: %w", err)
+		}
+		if alarmResp == nil {
+			break
+		}
+		alarmDescriptions = append(alarmDescriptions, cw.compositeAlarmsDescriptions(alarmResp.CompositeAlarms)...)
+		alarmDescriptions = append(alarmDescriptions, cw.metricAlarmsDescriptions(alarmResp.MetricAlarms)...)
+		if alarmResp.NextToken == nil {
+			break
+		}
+		in.NextToken = alarmResp.NextToken
+	}
+	return alarmDescriptions, nil
+}
+
+func (cw *CloudWatch) compositeAlarmsDescriptions(alarms []*cloudwatch.CompositeAlarm) []*AlarmDescription {
+	var alarmDescriptionList []*AlarmDescription
+	for _, alarm := range alarms {
+		if alarm == nil {
+			continue
+		}
+		alarmDescriptionList = append(alarmDescriptionList, &AlarmDescription{
+			Name:        aws.StringValue(alarm.AlarmName),
+			Description: aws.StringValue(alarm.AlarmDescription),
+		})
+	}
+	return alarmDescriptionList
+}
+
+func (cw *CloudWatch) metricAlarmsDescriptions(alarms []*cloudwatch.MetricAlarm) []*AlarmDescription {
+	var alarmDescriptionsList []*AlarmDescription
+	for _, alarm := range alarms {
+		if alarm == nil {
+			continue
+		}
+		alarmDescriptionsList = append(alarmDescriptionsList, &AlarmDescription{
+			Name:               aws.StringValue(alarm.AlarmName),
+			Description:        aws.StringValue(alarm.AlarmDescription),
+		})
+	}
+	return alarmDescriptionsList
 }
 
 func (cw *CloudWatch) compositeAlarmsStatus(alarms []*cloudwatch.CompositeAlarm) []AlarmStatus {

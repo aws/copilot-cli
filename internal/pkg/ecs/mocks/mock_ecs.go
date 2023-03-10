@@ -7,7 +7,6 @@ package mocks
 import (
 	reflect "reflect"
 
-	cloudwatch "github.com/aws/copilot-cli/internal/pkg/aws/cloudwatch"
 	ecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	resourcegroups "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
 	gomock "github.com/golang/mock/gomock"
@@ -245,48 +244,6 @@ func (mr *MockecsClientMockRecorder) UpdateService(clusterName, serviceName inte
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{clusterName, serviceName}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateService", reflect.TypeOf((*MockecsClient)(nil).UpdateService), varargs...)
-}
-
-// MockcwClient is a mock of cwClient interface.
-type MockcwClient struct {
-	ctrl     *gomock.Controller
-	recorder *MockcwClientMockRecorder
-}
-
-// MockcwClientMockRecorder is the mock recorder for MockcwClient.
-type MockcwClientMockRecorder struct {
-	mock *MockcwClient
-}
-
-// NewMockcwClient creates a new mock instance.
-func NewMockcwClient(ctrl *gomock.Controller) *MockcwClient {
-	mock := &MockcwClient{ctrl: ctrl}
-	mock.recorder = &MockcwClientMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockcwClient) EXPECT() *MockcwClientMockRecorder {
-	return m.recorder
-}
-
-// AlarmStatuses mocks base method.
-func (m *MockcwClient) AlarmStatuses(opts ...cloudwatch.DescribeAlarmOpts) ([]cloudwatch.AlarmStatus, error) {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{}
-	for _, a := range opts {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "AlarmStatuses", varargs...)
-	ret0, _ := ret[0].([]cloudwatch.AlarmStatus)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// AlarmStatuses indicates an expected call of AlarmStatuses.
-func (mr *MockcwClientMockRecorder) AlarmStatuses(opts ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AlarmStatuses", reflect.TypeOf((*MockcwClient)(nil).AlarmStatuses), opts...)
 }
 
 // MockstepFunctionsClient is a mock of stepFunctionsClient interface.

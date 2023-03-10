@@ -15,6 +15,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/copilot-cli/internal/pkg/aws/apprunner"
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatch"
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/describe/stack"
@@ -32,6 +33,8 @@ const (
 	apprunnerServiceType              = "AWS::AppRunner::Service"
 	apprunnerVPCIngressConnectionType = "AWS::AppRunner::VpcIngressConnection"
 )
+
+const maxAlarmShowColumnWidth = 40
 
 // ConfigStoreSvc wraps methods of config store.
 type ConfigStoreSvc interface {
@@ -84,18 +87,22 @@ type apprunnerDescriber interface {
 	IsPrivate() (bool, error)
 }
 
+type cwAlarmDescriber interface {
+	AlarmDescriptions([]string) ([]*cloudwatch.AlarmDescription, error)
+}
+
 type ecsSvcDesc struct {
-	Service          string               `json:"service"`
-	Type             string               `json:"type"`
-	App              string               `json:"application"`
-	Configurations   ecsConfigurations    `json:"configurations"`
-	Alarms           []string             `json:"rollbackAlarms,omitempty"`
-	Routes           []*WebServiceRoute   `json:"routes"`
-	ServiceDiscovery serviceDiscoveries   `json:"serviceDiscovery"`
-	ServiceConnect   serviceConnects      `json:"serviceConnect,omitempty"`
-	Variables        containerEnvVars     `json:"variables"`
-	Secrets          secrets              `json:"secrets,omitempty"`
-	Resources        deployedSvcResources `json:"resources,omitempty"`
+	Service           string                         `json:"service"`
+	Type              string                         `json:"type"`
+	App               string                         `json:"application"`
+	Configurations    ecsConfigurations              `json:"configurations"`
+	AlarmDescriptions []*cloudwatch.AlarmDescription `json:"rollbackAlarms,omitempty"`
+	Routes            []*WebServiceRoute             `json:"routes"`
+	ServiceDiscovery  serviceDiscoveries             `json:"serviceDiscovery"`
+	ServiceConnect    serviceConnects                `json:"serviceConnect,omitempty"`
+	Variables         containerEnvVars               `json:"variables"`
+	Secrets           secrets                        `json:"secrets,omitempty"`
+	Resources         deployedSvcResources           `json:"resources,omitempty"`
 
 	environments []string `json:"-"`
 }
@@ -341,14 +348,14 @@ func (c appRunnerConfigurations) humanString(w io.Writer) {
 	printTable(w, headers, rows)
 }
 
-type rollbackAlarms []string
+type rollbackAlarms []*cloudwatch.AlarmDescription
 
 func (abr rollbackAlarms) humanString(w io.Writer) {
-	headers := []string{"Name"}
+	headers := []string{"Name", "Environment", "Description"}
 	fmt.Fprintf(w, "  %s\n", strings.Join(headers, "\t"))
 	fmt.Fprintf(w, "  %s\n", strings.Join(underline(headers), "\t"))
 	for _, alarm := range abr {
-		fmt.Fprintf(w, "  %s\n", alarm)
+		printWithMaxWidth(w, "  %s\t%s\t%s\n", maxAlarmShowColumnWidth, alarm.Name, alarm.Environment, alarm.Description)
 	}
 }
 
