@@ -103,10 +103,10 @@ func parseSequence(from, to *yaml.Node) (map[string]*Node, error) {
 		err  error
 	}
 	cachedDiff := make(map[string]cachedEntry)
-	lcsIdxInFrom, lcsIdxInTo := longestCommonSubsequence(fromSeq, toSeq, func(inA, inB int) bool {
-		diff, err := parse(&(fromSeq[inA]), &(toSeq[inB]), "")
+	lcsIdxInFrom, lcsIdxInTo := longestCommonSubsequence(fromSeq, toSeq, func(idxFrom, idxTo int) bool {
+		diff, err := parse(&(fromSeq[idxFrom]), &(toSeq[idxTo]), "")
 		if diff != nil { // NOTE: cache the diff only if a modification could have happened at this position.
-			cachedDiff[cachedKey(inA, inB)] = cachedEntry{
+			cachedDiff[cacheKey(idxFrom, idxTo)] = cachedEntry{
 				node: diff,
 				err:  err,
 			}
@@ -129,7 +129,7 @@ func parseSequence(from, to *yaml.Node) (map[string]*Node, error) {
 			// TODO(lou1415926): (x unchanged items)
 		case f != lcsF && t != lcsT: // Modification.
 			// TODO(lou1415926): handle list of maps modification
-			diff := cachedDiff[cachedKey(f, t)]
+			diff := cachedDiff[cacheKey(f, t)]
 			if diff.err != nil {
 				return nil, diff.err
 			}
@@ -207,7 +207,7 @@ func unionOfKeys[T any](a, b map[string]T) map[string]struct{} {
 	return keys
 }
 
-func cachedKey(inFrom, inTo int) string {
+func cacheKey(inFrom, inTo int) string {
 	return fmt.Sprintf("%d,%d", inFrom, inTo)
 }
 
