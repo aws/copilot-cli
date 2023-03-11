@@ -249,10 +249,7 @@ type NetworkLoadBalancerListener struct {
 
 // IsEmpty returns true if NetworkLoadBalancerConfiguration is empty.
 func (c *NetworkLoadBalancerConfiguration) IsEmpty() bool {
-	if c.Aliases.IsEmpty() && c.Listener.IsEmpty() && len(c.AdditionalListeners) == 0 {
-		return true
-	}
-	return false
+	return c.Aliases.IsEmpty() && c.Listener.IsEmpty() && len(c.AdditionalListeners) == 0
 }
 
 // IsEmpty returns true if NetworkLoadBalancerListener is empty.
