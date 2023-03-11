@@ -113,48 +113,26 @@ func parseSequence(fromNode, toNode *yaml.Node) (map[string]*Node, error) {
 		}
 		return err == nil && diff == nil
 	})
-	childKey, children := seqChildKeyFunc(), make(map[string]*Node)
-	lcs, from, to := newIterator(lcsIndices), newIterator(fromSeq), newIterator(toSeq)
-	for lcs.hasCurr() {
-		lcsIdxInFrom, lcxIdxInTo := lcs.curr().inA, lcs.curr().inB
-		switch {
-		case from.index() == lcsIdxInFrom && to.index() == lcxIdxInTo: // Match.
-			from.proceed()
-			to.proceed()
-			lcs.proceed()
+	childKey, children, inspector := seqChildKeyFunc(), make(map[string]*Node), newInspector(fromSeq, toSeq, lcsIndices)
+	for action := inspector.inspect(); action != done; action = inspector.inspect() {
+		switch action {
+		case match:
 			// TODO(lou1415926): (x unchanged items)
-		case from.index() != lcsIdxInFrom && to.index() != lcxIdxInTo: // Modification.
+		case modification:
 			// TODO(lou1415926): handle list of maps modification
-			diff := cachedDiff[cacheKey(from.index(), to.index())]
+			diff := cachedDiff[cacheKey(inspector.fromIndex(), inspector.toIndex())]
 			if diff.err != nil {
 				return nil, diff.err
 			}
 			children[childKey()] = diff.node
-			from.proceed()
-			to.proceed()
-		case from.index() != lcsIdxInFrom: // Deletion.
-			children[childKey()] = &Node{oldValue: &(fromSeq[from.index()])}
-			from.proceed()
-		case to.index() != lcxIdxInTo: // Insertion.
-			children[childKey()] = &Node{newValue: &(toSeq[to.index()])}
-			to.proceed()
+		case deletion:
+			item := inspector.fromItem()
+			children[childKey()] = &Node{oldValue: &item}
+		case insertion:
+			item := inspector.toItem()
+			children[childKey()] = &Node{newValue: &item}
 		}
-	}
-	for from.index() < len(fromSeq) || to.index() < len(toSeq) {
-		switch {
-		case from.index() < len(fromSeq) && to.index() < len(toSeq): // Modification.
-			diff, err := parse(&(fromSeq[from.index()]), &(toSeq[to.index()]), "")
-			if err != nil {
-				return nil, err
-			}
-			children[childKey()] = diff
-		case from.index() < len(fromSeq): // Deletion.
-			children[childKey()] = &Node{oldValue: &(fromSeq[from.index()])}
-		case to.index() < len(toSeq): // Insertion.
-			children[childKey()] = &Node{newValue: &(toSeq[to.index()])}
-		}
-		from.proceed()
-		to.proceed()
+		inspector.proceed()
 	}
 	return children, nil
 }
@@ -185,34 +163,6 @@ func parseMap(from, to *yaml.Node) (map[string]*Node, error) {
 		}
 	}
 	return children, nil
-}
-
-func newIterator[T any](data []T) iterator[T] {
-	return iterator[T]{
-		currIdx: 0,
-		data:    data,
-	}
-}
-
-type iterator[T any] struct {
-	currIdx int
-	data    []T
-}
-
-func (i *iterator[T]) index() int {
-	return i.currIdx
-}
-
-func (i *iterator[T]) curr() T {
-	return i.data[i.currIdx]
-}
-
-func (i *iterator[t]) proceed() {
-	i.currIdx++
-}
-
-func (i *iterator[T]) hasCurr() bool {
-	return i.currIdx < len(i.data)
 }
 
 func unionOfKeys[T any](a, b map[string]T) map[string]struct{} {
