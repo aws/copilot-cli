@@ -91,12 +91,12 @@ func isYAMLLeaf(node *yaml.Node) bool {
 }
 
 func parseSequence(fromNode, toNode *yaml.Node) (map[string]*Node, error) {
-	var fromSeq, toSeq []yaml.Node
-	if err := toNode.Decode(&toSeq); err != nil {
-		return nil, err
+	fromSeq, toSeq := make([]yaml.Node, len(fromNode.Content)), make([]yaml.Node, len(toNode.Content)) // NOTE: should be the same as calling `Decode`.
+	for idx, v := range fromNode.Content {
+		fromSeq[idx] = *v
 	}
-	if err := fromNode.Decode(&fromSeq); err != nil {
-		return nil, err
+	for idx, v := range toNode.Content {
+		toSeq[idx] = *v
 	}
 	type cachedEntry struct {
 		node *Node
