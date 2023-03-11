@@ -140,10 +140,7 @@ func parseSequence(fromNode, toNode *yaml.Node) (map[string]*Node, error) {
 			to.proceed()
 		}
 	}
-	for {
-		if from.index() >= len(fromSeq) && to.index() >= len(toSeq) {
-			break
-		}
+	for from.index() < len(fromSeq) || to.index() < len(toSeq) {
 		switch {
 		case from.index() < len(fromSeq) && to.index() < len(toSeq): // Modification.
 			diff, err := parse(&(fromSeq[from.index()]), &(toSeq[to.index()]), "")
