@@ -82,7 +82,7 @@ func Test_longestCommonSubsequence_string(t *testing.T) {
 		t.Run(fmt.Sprintf("string case %v", idx), func(t *testing.T) {
 			got := longestCommonSubsequence(tc.inA, tc.inB, func(inA, inB int) bool { return tc.inA[inA] == tc.inB[inB] })
 			var wanted []lcsIndex
-			for idx, _ := range tc.wantedA {
+			for idx := range tc.wantedA {
 				wanted = append(wanted, lcsIndex{
 					inA: tc.wantedA[idx],
 					inB: tc.wantedB[idx],
@@ -205,7 +205,7 @@ func Test_longestCommonSubsequence_yamlNode(t *testing.T) {
 			require.NoError(t, yaml.Unmarshal([]byte(tc.inB), &inBNode))
 			got := longestCommonSubsequence(inANode, inBNode, tc.mockEq)
 			var wanted []lcsIndex
-			for idx, _ := range tc.wantedA {
+			for idx := range tc.wantedA {
 				wanted = append(wanted, lcsIndex{
 					inA: tc.wantedA[idx],
 					inB: tc.wantedB[idx],

@@ -184,9 +184,6 @@ func parseMap(from, to *yaml.Node) (map[string]*Node, error) {
 			children[k] = kDiff
 		}
 	}
-	for k, v := range children {
-		fmt.Printf("%v: %v\n", k, v.children["0"])
-	}
 	return children, nil
 }
 
