@@ -90,12 +90,12 @@ func isYAMLLeaf(node *yaml.Node) bool {
 	return len(node.Content) == 0
 }
 
-func parseSequence(from, to *yaml.Node) (map[string]*Node, error) {
+func parseSequence(fromNode, toNode *yaml.Node) (map[string]*Node, error) {
 	var fromSeq, toSeq []yaml.Node
-	if err := to.Decode(&toSeq); err != nil {
+	if err := toNode.Decode(&toSeq); err != nil {
 		return nil, err
 	}
-	if err := from.Decode(&fromSeq); err != nil {
+	if err := fromNode.Decode(&fromSeq); err != nil {
 		return nil, err
 	}
 	type cachedEntry struct {
@@ -113,55 +113,51 @@ func parseSequence(from, to *yaml.Node) (map[string]*Node, error) {
 		}
 		return err == nil && diff == nil // NOTE: we swallow the error for now.
 	})
-	childKey := seqChildKeyFunc()
-	children := make(map[string]*Node)
-	var fromIdx, toIdx, i int
-	for {
-		if i >= len(lcsIndices) {
-			break
-		}
-		fromIdxLCS, toIdxLCS := lcsIndices[i].inA, lcsIndices[i].inB
+	childKey, children := seqChildKeyFunc(), make(map[string]*Node)
+	lcs, from, to := newIterator(lcsIndices), newIterator(fromSeq), newIterator(toSeq)
+	for lcs.hasCurr() {
+		lcsIdxInFrom, lcxIdxInTo := lcs.curr().inA, lcs.curr().inB
 		switch {
-		case fromIdx == fromIdxLCS && toIdx == toIdxLCS: // Match.
-			fromIdx++
-			toIdx++
-			i++
+		case from.index() == lcsIdxInFrom && to.index() == lcxIdxInTo: // Match.
+			from.proceed()
+			to.proceed()
+			lcs.proceed()
 			// TODO(lou1415926): (x unchanged items)
-		case fromIdx != fromIdxLCS && toIdx != toIdxLCS: // Modification.
+		case from.index() != lcsIdxInFrom && to.index() != lcxIdxInTo: // Modification.
 			// TODO(lou1415926): handle list of maps modification
-			diff := cachedDiff[cacheKey(fromIdx, toIdx)]
+			diff := cachedDiff[cacheKey(from.index(), to.index())]
 			if diff.err != nil {
 				return nil, diff.err
 			}
 			children[childKey()] = diff.node
-			fromIdx++
-			toIdx++
-		case fromIdx != fromIdxLCS: // Deletion.
-			children[childKey()] = &Node{oldValue: &(fromSeq[fromIdx])}
-			fromIdx++
-		case toIdx != toIdxLCS: // Insertion.
-			children[childKey()] = &Node{newValue: &(toSeq[toIdx])}
-			toIdx++
+			from.proceed()
+			to.proceed()
+		case from.index() != lcsIdxInFrom: // Deletion.
+			children[childKey()] = &Node{oldValue: &(fromSeq[from.index()])}
+			from.proceed()
+		case to.index() != lcxIdxInTo: // Insertion.
+			children[childKey()] = &Node{newValue: &(toSeq[to.index()])}
+			to.proceed()
 		}
 	}
 	for {
-		if fromIdx >= len(fromSeq) && toIdx >= len(toSeq) {
+		if from.index() >= len(fromSeq) && to.index() >= len(toSeq) {
 			break
 		}
 		switch {
-		case fromIdx < len(fromSeq) && toIdx < len(toSeq): // Modification.
-			diff, err := parse(&(fromSeq[fromIdx]), &(toSeq[toIdx]), "")
+		case from.index() < len(fromSeq) && to.index() < len(toSeq): // Modification.
+			diff, err := parse(&(fromSeq[from.index()]), &(toSeq[to.index()]), "")
 			if err != nil {
 				return nil, err
 			}
 			children[childKey()] = diff
-		case fromIdx < len(fromSeq): // Deletion.
-			children[childKey()] = &Node{oldValue: &(fromSeq[fromIdx])}
-		case toIdx < len(toSeq): // Insertion.
-			children[childKey()] = &Node{newValue: &(toSeq[toIdx])}
+		case from.index() < len(fromSeq): // Deletion.
+			children[childKey()] = &Node{oldValue: &(fromSeq[from.index()])}
+		case to.index() < len(toSeq): // Insertion.
+			children[childKey()] = &Node{newValue: &(toSeq[to.index()])}
 		}
-		fromIdx++
-		toIdx++
+		from.proceed()
+		to.proceed()
 	}
 	return children, nil
 }
@@ -191,7 +187,38 @@ func parseMap(from, to *yaml.Node) (map[string]*Node, error) {
 			children[k] = kDiff
 		}
 	}
+	for k, v := range children {
+		fmt.Printf("%v: %v\n", k, v.children["0"])
+	}
 	return children, nil
+}
+
+func newIterator[T any](data []T) iterator[T] {
+	return iterator[T]{
+		currIdx: 0,
+		data:    data,
+	}
+}
+
+type iterator[T any] struct {
+	currIdx int
+	data    []T
+}
+
+func (i *iterator[T]) index() int {
+	return i.currIdx
+}
+
+func (i *iterator[T]) curr() T {
+	return i.data[i.currIdx]
+}
+
+func (i *iterator[t]) proceed() {
+	i.currIdx++
+}
+
+func (i *iterator[T]) hasCurr() bool {
+	return i.currIdx < len(i.data)
 }
 
 func unionOfKeys[T any](a, b map[string]T) map[string]struct{} {
