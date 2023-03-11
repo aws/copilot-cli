@@ -90,10 +90,10 @@ func (l LoadBalancedWebService) validate() error {
 	if err = validateTargetContainer(validateTargetContainerOpts{
 		mainContainerName: aws.StringValue(l.Name),
 		mainContainerPort: l.ImageConfig.Port,
-		targetContainer:   l.NLBConfig.MainListener.TargetContainer,
+		targetContainer:   l.NLBConfig.Listener.TargetContainer,
 		sidecarConfig:     l.Sidecars,
 	}); err != nil {
-		return fmt.Errorf("validate target for nlb.listener: %w", err)
+		return fmt.Errorf("validate target for nlb: %w", err)
 	}
 	for idx, listener := range l.NLBConfig.AdditionalListeners {
 		if err = validateTargetContainer(validateTargetContainerOpts{
@@ -102,7 +102,7 @@ func (l LoadBalancedWebService) validate() error {
 			targetContainer:   listener.TargetContainer,
 			sidecarConfig:     l.Sidecars,
 		}); err != nil {
-			return fmt.Errorf("validate target for nlb.listener[%d]: %w", idx, err)
+			return fmt.Errorf("validate target for nlb.additional_listeners[%d]: %w", idx, err)
 		}
 	}
 	if err = validateContainerDeps(validateDependenciesOpts{
@@ -176,7 +176,7 @@ func (w WorkerAlarmArgs) validate() error {
 // validate returns nil if LoadBalancedWebServiceConfig is configured correctly.
 func (l LoadBalancedWebServiceConfig) validate() error {
 	var err error
-	if l.RoutingRule.Disabled() && l.NLBConfig.MainListener.IsEmpty() {
+	if l.RoutingRule.Disabled() && l.NLBConfig.IsEmpty() {
 		return &errAtLeastOneFieldMustBeSpecified{
 			missingFields: []string{"http", "nlb"},
 		}
@@ -853,21 +853,31 @@ func (ip IPNet) validate() error {
 
 // validate returns nil if NetworkLoadBalancerConfiguration is configured correctly.
 func (c NetworkLoadBalancerConfiguration) validate() error {
-	if err := c.MainListener.validate(); err != nil {
-		return fmt.Errorf("validate nlb.listener; %s", err)
+	if c.IsEmpty() {
+		return nil
+	}
+	if err := c.Listener.validate(); err != nil {
+		return fmt.Errorf("validate nlb: %w", err)
+	}
+	if err := c.Aliases.validate(); err != nil {
+		return fmt.Errorf(`validate nlb: validate "alias": %w`, err)
+	}
+	if !c.Aliases.IsEmpty() {
+		for _, advancedAlias := range c.Aliases.AdvancedAliases {
+			if advancedAlias.HostedZone != nil {
+				return fmt.Errorf(`validate nlb: "hosted_zone" is not supported for Network Load Balancer`)
+			}
+		}
 	}
 	for idx, listener := range c.AdditionalListeners {
 		if err := listener.validate(); err != nil {
-			return fmt.Errorf("validate nlb.listener[%d]; %s", idx, err)
+			return fmt.Errorf("validate nlb.additional_listeners[%d]: %w", idx, err)
 		}
 	}
 	return nil
 }
 
 func (c NetworkLoadBalancerListener) validate() error {
-	if c.IsEmpty() {
-		return nil
-	}
 	if aws.StringValue(c.Port) == "" {
 		return &errFieldMustBeSpecified{
 			missingField: "port",
@@ -878,16 +888,6 @@ func (c NetworkLoadBalancerListener) validate() error {
 	}
 	if err := c.HealthCheck.validate(); err != nil {
 		return fmt.Errorf(`validate "healthcheck": %w`, err)
-	}
-	if err := c.Aliases.validate(); err != nil {
-		return fmt.Errorf(`validate "alias": %w`, err)
-	}
-	if !c.Aliases.IsEmpty() {
-		for _, advancedAlias := range c.Aliases.AdvancedAliases {
-			if advancedAlias.HostedZone != nil {
-				return fmt.Errorf(`"hosted_zone" is not supported for Network Load Balancer`)
-			}
-		}
 	}
 	return nil
 }
@@ -1955,17 +1955,17 @@ func populateALBPortsAndValidate(containerNameFor map[uint16]string, opts valida
 }
 
 func populateNLBPortsAndValidate(containerNameFor map[uint16]string, opts validateExposedPortsOpts) error {
-	if opts.nlb == nil || opts.nlb.MainListener.IsEmpty() {
+	if opts.nlb == nil || opts.nlb.IsEmpty() {
 		return nil
 	}
 	nlb := opts.nlb
-	if err := populateAndValidateNLBPorts(nlb.MainListener, containerNameFor, opts.mainContainerName); err != nil {
-		return fmt.Errorf(`validate nlb.listener: %w`, err)
+	if err := populateAndValidateNLBPorts(nlb.Listener, containerNameFor, opts.mainContainerName); err != nil {
+		return fmt.Errorf(`validate nlb: %w`, err)
 	}
 
 	for idx, listener := range nlb.AdditionalListeners {
 		if err := populateAndValidateNLBPorts(listener, containerNameFor, opts.mainContainerName); err != nil {
-			return fmt.Errorf(`validate nlb.listener[%d]: %w`, idx, err)
+			return fmt.Errorf(`validate nlb.additional_listeners[%d]: %w`, idx, err)
 		}
 	}
 	return nil

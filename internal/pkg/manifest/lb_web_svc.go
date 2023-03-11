@@ -232,7 +232,8 @@ func (s LoadBalancedWebService) applyEnv(envName string) (workloadManifest, erro
 
 // NetworkLoadBalancerConfiguration holds options for a network load balancer.
 type NetworkLoadBalancerConfiguration struct {
-	MainListener        NetworkLoadBalancerListener   `yaml:",inline"`
+	Listener            NetworkLoadBalancerListener   `yaml:",inline"`
+	Aliases             Alias                         `yaml:"alias"`
 	AdditionalListeners []NetworkLoadBalancerListener `yaml:"additional_listeners"`
 }
 
@@ -244,13 +245,20 @@ type NetworkLoadBalancerListener struct {
 	TargetPort      *int               `yaml:"target_port"`
 	SSLPolicy       *string            `yaml:"ssl_policy"`
 	Stickiness      *bool              `yaml:"stickiness"`
-	Aliases         Alias              `yaml:"alias"`
+}
+
+// IsEmpty returns true if NetworkLoadBalancerConfiguration is empty.
+func (c *NetworkLoadBalancerConfiguration) IsEmpty() bool {
+	if c.Aliases.IsEmpty() && c.Listener.IsEmpty() && len(c.AdditionalListeners) == 0 {
+		return true
+	}
+	return false
 }
 
 // IsEmpty returns true if NetworkLoadBalancerListener is empty.
 func (c *NetworkLoadBalancerListener) IsEmpty() bool {
 	return c.Port == nil && c.HealthCheck.isEmpty() && c.TargetContainer == nil && c.TargetPort == nil &&
-		c.SSLPolicy == nil && c.Stickiness == nil && c.Aliases.IsEmpty()
+		c.SSLPolicy == nil && c.Stickiness == nil
 }
 
 // ExposedPorts returns all the ports that are container ports available to receive traffic.
@@ -287,12 +295,8 @@ func (lbws *LoadBalancedWebService) ExposedPorts() (ExposedPortsIndex, error) {
 
 // NLBListeners returns main as well as additional listeners as a list of NetworkLoadBalancerListener.
 func (cfg NetworkLoadBalancerConfiguration) NLBListeners() []NetworkLoadBalancerListener {
-	if cfg.MainListener.IsEmpty() {
+	if cfg.IsEmpty() {
 		return nil
 	}
-	var nlbListeners []NetworkLoadBalancerListener
-	nlbListeners = append(nlbListeners, cfg.MainListener)
-	nlbListeners = append(nlbListeners, cfg.AdditionalListeners...)
-
-	return nlbListeners
+	return append([]NetworkLoadBalancerListener{cfg.Listener}, cfg.AdditionalListeners...)
 }

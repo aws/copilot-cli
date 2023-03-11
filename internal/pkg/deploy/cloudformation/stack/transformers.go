@@ -465,7 +465,7 @@ func convertEnvSecurityGroupCfg(mft *manifest.Environment) (*template.SecurityGr
 
 func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (networkLoadBalancerConfig, error) {
 	nlbConfig := s.manifest.NLBConfig
-	if nlbConfig.MainListener.IsEmpty() {
+	if nlbConfig.IsEmpty() {
 		return networkLoadBalancerConfig{}, nil
 	}
 
@@ -476,7 +476,7 @@ func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (networkLoadBalanc
 	}
 
 	// Parse listener port and protocol.
-	port, protocol, err := manifest.ParsePortMapping(nlbConfig.MainListener.Port)
+	port, protocol, err := manifest.ParsePortMapping(nlbConfig.Listener.Port)
 	if err != nil {
 		return networkLoadBalancerConfig{}, err
 	}
@@ -485,12 +485,12 @@ func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (networkLoadBalanc
 		protocol = aws.String(defaultNLBProtocol)
 	}
 
-	aliases, err := convertAlias(nlbConfig.MainListener.Aliases)
+	aliases, err := convertAlias(nlbConfig.Aliases)
 	if err != nil {
 		return networkLoadBalancerConfig{}, fmt.Errorf(`convert "nlb.alias" to string slice: %w`, err)
 	}
 
-	hc := convertNLBHealthCheck(&nlbConfig.MainListener.HealthCheck)
+	hc := convertNLBHealthCheck(&nlbConfig.Listener.HealthCheck)
 
 	config := networkLoadBalancerConfig{
 		settings: &template.NetworkLoadBalancer{
@@ -501,10 +501,10 @@ func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (networkLoadBalanc
 					Protocol:        strings.ToUpper(aws.StringValue(protocol)),
 					TargetContainer: targetContainer,
 					TargetPort:      targetPort,
-					SSLPolicy:       nlbConfig.MainListener.SSLPolicy,
+					SSLPolicy:       nlbConfig.Listener.SSLPolicy,
 					Aliases:         aliases,
 					HealthCheck:     hc,
-					Stickiness:      nlbConfig.MainListener.Stickiness,
+					Stickiness:      nlbConfig.Listener.Stickiness,
 				},
 			},
 			MainContainerPort:   s.manifest.MainContainerPort(),

@@ -151,7 +151,7 @@ func (d *lbWebSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*s
 		return nil, err
 	}
 	var opts []stack.LoadBalancedWebServiceOption
-	if !d.lbMft.NLBConfig.MainListener.IsEmpty() {
+	if !d.lbMft.NLBConfig.IsEmpty() {
 		cidrBlocks, err := d.publicCIDRBlocksGetter.PublicCIDRBlocks()
 		if err != nil {
 			return nil, fmt.Errorf("get public CIDR blocks information from the VPC of environment %s: %w", d.env.Name, err)
@@ -249,7 +249,7 @@ func (d *lbWebSvcDeployer) validateALBRuntime() error {
 }
 
 func (d *lbWebSvcDeployer) validateNLBRuntime() error {
-	if d.lbMft.NLBConfig.MainListener.Aliases.IsEmpty() {
+	if d.lbMft.NLBConfig.Aliases.IsEmpty() {
 		return nil
 	}
 
@@ -265,10 +265,8 @@ func (d *lbWebSvcDeployer) validateNLBRuntime() error {
 		logAppVersionOutdatedError(aws.StringValue(d.lbMft.Name))
 		return err
 	}
-	for _, listener := range d.lbMft.NLBConfig.NLBListeners() {
-		if err := validateLBWSAlias(listener.Aliases, d.app, d.env.Name); err != nil {
-			return fmt.Errorf(`validate 'nlb.alias': %w`, err)
-		}
+	if err := validateLBWSAlias(d.lbMft.NLBConfig.Aliases, d.app, d.env.Name); err != nil {
+		return fmt.Errorf(`validate 'nlb.alias': %w`, err)
 	}
 	return nil
 }

@@ -344,15 +344,15 @@ func (s *LoadBalancedWebService) Parameters() ([]*cloudformation.Parameter, erro
 			},
 		}...)
 	}
-	if !s.manifest.NLBConfig.MainListener.IsEmpty() {
-		port, _, err := manifest.ParsePortMapping(s.manifest.NLBConfig.MainListener.Port)
+	if !s.manifest.NLBConfig.IsEmpty() {
+		port, _, err := manifest.ParsePortMapping(s.manifest.NLBConfig.Listener.Port)
 		if err != nil {
 			return nil, err
 		}
 		wkldParams = append(wkldParams, []*cloudformation.Parameter{
 			{
 				ParameterKey:   aws.String(LBWebServiceNLBAliasesParamKey),
-				ParameterValue: aws.String(s.manifest.NLBConfig.MainListener.Aliases.ToString()),
+				ParameterValue: aws.String(s.manifest.NLBConfig.Aliases.ToString()),
 			},
 			{
 				ParameterKey:   aws.String(LBWebServiceNLBPortParamKey),
