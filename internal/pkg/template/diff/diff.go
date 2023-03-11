@@ -111,7 +111,7 @@ func parseSequence(fromNode, toNode *yaml.Node) (map[string]*Node, error) {
 				err:  err,
 			}
 		}
-		return err == nil && diff == nil // NOTE: we swallow the error for now.
+		return err == nil && diff == nil
 	})
 	childKey, children := seqChildKeyFunc(), make(map[string]*Node)
 	lcs, from, to := newIterator(lcsIndices), newIterator(fromSeq), newIterator(toSeq)
