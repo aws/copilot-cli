@@ -178,7 +178,7 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 					},
 				},
 			},
-			wantedErrorMsgPrefix: `validate load balancer target for http:`,
+			wantedErrorMsgPrefix: `validate load balancer target for "http":`,
 		},
 		"error if fail to validate network load balancer target": {
 			lbConfig: LoadBalancedWebService{
@@ -582,7 +582,7 @@ func TestBackendService_validate(t *testing.T) {
 					},
 				},
 			},
-			wantedErrorMsgPrefix: `validate "http": validate http: "path" must be specified`,
+			wantedErrorMsgPrefix: `validate "http": "path" must be specified`,
 		},
 		"error if request scaling without http": {
 			config: BackendService{
@@ -632,7 +632,7 @@ func TestBackendService_validate(t *testing.T) {
 					Name: aws.String("api"),
 				},
 			},
-			wantedError: fmt.Errorf(`validate load balancer target for http: target container "api" doesn't expose a port`),
+			wantedError: fmt.Errorf(`validate load balancer target for "http": target container "api" doesn't expose a port`),
 		},
 		"error if service connect is enabled without any port exposed": {
 			config: BackendService{
@@ -1530,7 +1530,7 @@ func TestRoutingRuleConfiguration_validate(t *testing.T) {
 					},
 				},
 			},
-			wantedErrorMsgPrefix: `validate http.additional_rules[0]: validate "allowed_source_ips[1]": parse IPNet badIP: invalid CIDR address: badIP`,
+			wantedErrorMsgPrefix: `validate "additional_rules[0]": validate "allowed_source_ips[1]": parse IPNet badIP: invalid CIDR address: badIP`,
 		},
 		"error if protocol version is not valid for additional routing rule": {
 			RoutingRuleConfiguration: RoutingRuleConfiguration{
@@ -1544,7 +1544,7 @@ func TestRoutingRuleConfiguration_validate(t *testing.T) {
 					},
 				},
 			},
-			wantedErrorMsgPrefix: `validate http.additional_rules[0]: "version" field value 'quic' must be one of GRPC, HTTP1 or HTTP2`,
+			wantedErrorMsgPrefix: `validate "additional_rules[0]": "version" field value 'quic' must be one of GRPC, HTTP1 or HTTP2`,
 		},
 		"error if path is missing": {
 			RoutingRuleConfiguration: RoutingRuleConfiguration{
@@ -1557,7 +1557,7 @@ func TestRoutingRuleConfiguration_validate(t *testing.T) {
 					},
 				},
 			},
-			wantedErrorMsgPrefix: `validate http.additional_rules[0]: "path" must be specified`,
+			wantedErrorMsgPrefix: `validate "additional_rules[0]": "path" must be specified`,
 		},
 		"should not error if protocol version is not uppercase": {
 			RoutingRuleConfiguration: RoutingRuleConfiguration{
@@ -1584,7 +1584,7 @@ func TestRoutingRuleConfiguration_validate(t *testing.T) {
 					},
 				},
 			},
-			wantedErrorMsgPrefix: `validate http.additional_rules[0]: "alias" must be specified if "hosted_zone" is specified`,
+			wantedErrorMsgPrefix: `validate "additional_rules[0]": "alias" must be specified if "hosted_zone" is specified`,
 		},
 		"error if one of alias is not valid": {
 			RoutingRuleConfiguration: RoutingRuleConfiguration{
@@ -1604,7 +1604,7 @@ func TestRoutingRuleConfiguration_validate(t *testing.T) {
 					},
 				},
 			},
-			wantedErrorMsgPrefix: `validate http.additional_rules[0]: validate "alias": "name" must be specified`,
+			wantedErrorMsgPrefix: `validate "additional_rules[0]": validate "alias": "name" must be specified`,
 		},
 	}
 	for name, tc := range testCases {

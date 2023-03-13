@@ -89,7 +89,7 @@ type ALBRoutingRule struct {
 	RedirectToHTTPS *bool `yaml:"redirect_to_https"`
 }
 
-// IsEmpty returns true if RoutingRuleConfiguration has empty configuration.
+// IsEmpty returns true if ALBRoutingRule has empty configuration.
 func (r *ALBRoutingRule) IsEmpty() bool {
 	return r.Path == nil && r.ProtocolVersion == nil && r.HealthCheck.IsZero() && r.Stickiness == nil && r.Alias.IsEmpty() &&
 		r.DeregistrationDelay == nil && r.TargetContainer == nil && r.TargetPort == nil && r.AllowedSourceIps == nil &&

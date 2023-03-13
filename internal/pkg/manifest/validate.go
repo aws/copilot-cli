@@ -85,7 +85,7 @@ func (l LoadBalancedWebService) validate() error {
 		targetContainer:   l.RoutingRule.MainRoutingRule.TargetContainer,
 		sidecarConfig:     l.Sidecars,
 	}); err != nil {
-		return fmt.Errorf("validate load balancer target for http: %w", err)
+		return fmt.Errorf(`validate load balancer target for "http": %w`, err)
 	}
 	for idx, rule := range l.RoutingRule.AdditionalRoutingRules {
 		if err = validateTargetContainer(validateTargetContainerOpts{
@@ -94,7 +94,7 @@ func (l LoadBalancedWebService) validate() error {
 			targetContainer:   rule.TargetContainer,
 			sidecarConfig:     l.Sidecars,
 		}); err != nil {
-			return fmt.Errorf("validate load balancer target for http.additional_rule[%d]: %w", idx, err)
+			return fmt.Errorf(`validate load balancer target for "http.additional_rules[%d]": %w`, idx, err)
 		}
 	}
 	if err = validateTargetContainer(validateTargetContainerOpts{
@@ -258,7 +258,7 @@ func (b BackendService) validate() error {
 		targetContainer:   b.RoutingRule.MainRoutingRule.TargetContainer,
 		sidecarConfig:     b.Sidecars,
 	}); err != nil {
-		return fmt.Errorf("validate load balancer target for http: %w", err)
+		return fmt.Errorf(`validate load balancer target for "http": %w`, err)
 	}
 	for idx, rule := range b.RoutingRule.AdditionalRoutingRules {
 		if err = validateTargetContainer(validateTargetContainerOpts{
@@ -267,7 +267,7 @@ func (b BackendService) validate() error {
 			targetContainer:   rule.TargetContainer,
 			sidecarConfig:     b.Sidecars,
 		}); err != nil {
-			return fmt.Errorf("validate load balancer target for http.additional_rule[%d]: %w", idx, err)
+			return fmt.Errorf(`validate load balancer target for "http.additional_rules[%d]": %w`, idx, err)
 		}
 	}
 	if err = validateContainerDeps(validateDependenciesOpts{
@@ -762,7 +762,7 @@ func (r RoutingRuleConfiguration) validate() error {
 	}
 	// we consider the fact that primary routing rule is mandatory before you write any additional routing rules.
 	if err := r.MainRoutingRule.validate(); err != nil {
-		return fmt.Errorf("validate http: %s", err)
+		return err
 	}
 	// checking this condition here as validate method on ALBRoutingRule only validates common parameters between
 	// MainRoutingRule and AdditionalRoutingRules
@@ -775,7 +775,7 @@ func (r RoutingRuleConfiguration) validate() error {
 
 	for idx, rule := range r.AdditionalRoutingRules {
 		if err := rule.validate(); err != nil {
-			return fmt.Errorf("validate http.additional_rules[%d]: %s", idx, err)
+			return fmt.Errorf(`validate "additional_rules[%d]": %w`, idx, err)
 		}
 	}
 	return nil
