@@ -113,7 +113,7 @@ func parseSequence(fromNode, toNode *yaml.Node) (map[string]*Node, error) {
 		}
 		return err == nil && diff == nil
 	})
-	childKey, children, inspector := seqChildKeyFunc(), make(map[string]*Node), newInspector(fromSeq, toSeq, lcsIndices)
+	nextChildKey, children, inspector := seqChildKeyFunc(), make(map[string]*Node), newInspector(fromSeq, toSeq, lcsIndices)
 	for action := inspector.inspect(); action != done; action = inspector.inspect() {
 		switch action {
 		case match:
@@ -124,13 +124,13 @@ func parseSequence(fromNode, toNode *yaml.Node) (map[string]*Node, error) {
 			if diff.err != nil {
 				return nil, diff.err
 			}
-			children[childKey()] = diff.node
+			children[nextChildKey()] = diff.node
 		case deletion:
 			item := inspector.fromItem()
-			children[childKey()] = &Node{oldValue: &item}
+			children[nextChildKey()] = &Node{oldValue: &item}
 		case insertion:
 			item := inspector.toItem()
-			children[childKey()] = &Node{newValue: &item}
+			children[nextChildKey()] = &Node{newValue: &item}
 		}
 		inspector.proceed()
 	}
