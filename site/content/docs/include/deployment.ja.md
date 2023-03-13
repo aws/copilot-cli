@@ -11,9 +11,9 @@ deployment セクションには、デプロイ中に実行されるタスクの
 
 <span class="parent-field">deployment.</span><a id="deployment-rollback-alarms" href="#deployment-rollback-alarms" class="field">`rollback_alarms`</a> <span class="type">文字列またはマップの配列</span>
 !!! info
-    デプロイの開始時にアラームが「アラーム中」状態にある場合、Amazon ECS はそのデプロイの間、アラームを監視しません。詳細については、[こちらのドキュメント](https://docs.aws.amazon.com/AmazonECS/latest/userguide/deployment-alarm-failure.html)をお読みください。
+    デプロイの開始時にアラームが「In alarm」状態にある場合、Amazon ECS はそのデプロイの間、アラームを監視しません。詳細については、[こちらのドキュメント](https://docs.aws.amazon.com/ja_jp/AmazonECS/latest/userguide/deployment-alarm-failure.html)をお読みください。
 
-文字列のリストとして、[デプロイのロールバック](https://docs.aws.amazon.com/AmazonECS/latest/userguide/deployment-alarm-failure.html)を引き起こす可能性のある、サービスに関連付ける既存のCloudWatchアラームの名前を指定します。
+文字列のリストとして、[デプロイのロールバック](https://docs.aws.amazon.com/ja_jp/AmazonECS/latest/userguide/deployment-alarm-failure.html)を引き起こす可能性のある、サービスに関連付ける既存のCloudWatchアラームの名前を指定します。
 
 ```yaml
 deployment:

@@ -46,13 +46,13 @@ $ copilot storage init -n my-cluster -t Aurora -w api -l workload --engine Postg
 $ copilot storage init -n my-cluster -t Aurora --serverless-version v1
 ```
 
-### 環境ストレージ
+### Environment ストレージ
 
-`-l` フラグは `--lifecycle` の略である。上記の例では、`-l` フラグの値は `workload` です。
-これは、ストレージリソースがサービスアドオンまたはジョブアドオンとして作成されることを意味します。
+`-l` フラグは `--lifecycle` の略です。上記の例では、`-l` フラグの値は `workload` です。
+これは、ストレージリソースが Service Addon または Job Addon として作成されることを意味します。
 ストレージは `copilot [svc/job] deploy` を実行するとデプロイされ、`copilot [svc/job] delete` を実行すると削除されます。
 
-また、サービスやジョブを削除してもストレージを維持したい場合は、環境ストレージリソースを作成することができます。環境ストレージリソースは環境アドオンとして作成され、`copilot env deploy`を実行すると展開され、`copilot env delete`を実行するまで削除されることはありません。
+また、Service や Job を削除してもストレージを維持したい場合は、Environment ストレージリソースを作成することができます。Environment ストレージリソースは Environment Addonとして作成され、`copilot env deploy`を実行すると展開され、`copilot env delete`を実行するまで削除されることはありません。
 
 
 ## ファイルシステム

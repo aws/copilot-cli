@@ -81,13 +81,13 @@ nlb:
 
 ### 既存の有効な証明書に含まれるドメインを使用する
 
-生成されるACM証明書をより細かく制御したい場合や、[default `alias` options](#customized-domain-alias) が十分に柔軟でない場合は、環境を作る際に `--import-cert-arns` フラッグを指定して、別名を含む検証済みのACM証明書をインポートすることが可能です。例えば、以下のような感じです。
+生成される ACM 証明書をより細かく制御したい場合や、[default `alias` options](#customized-domain-alias) が十分に柔軟でない場合は、Environment を作る際に `--import-cert-arns` フラグを指定して、別名を含む検証済みの ACM 証明書をインポートすることが可能です。例えば、以下のような感じです。
 
 ```console
 $ copilot env init --import-cert-arns arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789012
 ```
 
-また、[環境マニフェスト](../manifest/environment.en.md)を修正することで、後からいつでも証明書を追加することができます。
+また、[Environment Manifest](../manifest/environment.en.md)を修正することで、後からいつでも証明書を追加することができます。
 
 ```yaml
 type: Environment

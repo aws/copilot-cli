@@ -3,12 +3,11 @@ image: ''
 image_alt: ''
 image_height: '747'
 image_width: '1051'
-title: 'AWS Copilot v1.26: CloudWatch アラーム、環境アドオン用の「ストレージ初期化」、および RDWS シークレットサポートによるロールバックの自動化'
+title: 'AWS Copilot v1.26: CloudWatch アラーム、Environment Addon 用の `storage init` および RDWS シークレットサポートによるロールバックの自動化'
 twitter_title: AWS Copilot v1.26
 ---
 
-# AWS Copilot v1.26: CloudWatchアラームによるロールバックの自動化、envアドオン用 `storage init`、RDWSシークレットのサポート。
-
+# AWS Copilot v1.26: CloudWatch アラーム、Environment Addon 用の `storage init` および RDWS シークレットサポートによるロールバックの自動化
 
 投稿日:2023年2月20日
 
@@ -31,17 +30,20 @@ Copilot は、さまざまなタイプのマイクロサービスの作成と運
 
 より詳細な AWS Copilot の紹介については、[Overview](../docs/concepts/overview.ja.md) を確認してください。
 
+<a id="service-alarm-based-rollback"></a>
+
 ## サービスアラームベースのロールバック
 
-[カスタム CloudWatch アラーム](https://docs.aws.amazon.com/AmazonECS/latest/userguide/deployment-alarm-failure.html) で [ECS のデプロイ状況を監視する](https://aws.amazon.com/blogs/containers/automate-rollbacks-for-amazon-ecs-rolling-deployments-with-cloudwatch-alarms/) ことができるようになりました。デプロイ中にアラームが `In alarm` 状態になった場合に、最後に完了したデプロイにロールバックするようにサービスを設定します。[サーキットブレーカー](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/deployment-circuit-breaker.html) によって、すでに失敗したデプロイをロールバックします。また、今回、障害ではないが、選択したメトリクスに従ってパフォーマンスが出ていないサービスのデプロイメントをロールバックすることもできるようになりました。
+[カスタム CloudWatch アラーム](https://docs.aws.amazon.com/ja_jp/AmazonECS/latest/userguide/deployment-alarm-failure.html) で [ECS のデプロイ状況を監視する](https://aws.amazon.com/blogs/containers/automate-rollbacks-for-amazon-ecs-rolling-deployments-with-cloudwatch-alarms/) ことができるようになりました。デプロイ中にアラームが `In alarm` 状態になった場合に、最後に完了したデプロイにロールバックするようにサービスを設定します。[サーキットブレーカー](https://docs.aws.amazon.com/ja_jp/AmazonECS/latest/developerguide/deployment-circuit-breaker.html) によって、すでに失敗したデプロイをロールバックします。また、今回、障害ではないが、選択したメトリクスに従ってパフォーマンスが出ていないサービスのデプロイメントをロールバックすることもできるようになりました。
 
-バックエンド、ワーカー、または負荷分散されたウェブサービスのマニフェストで、独自の既存の CloudWatch アラームをインポートできます。
+Backend, Worker, Load Balanced Web Service の Manifest で、独自の既存の CloudWatch アラームをインポートできます。
+
 ```yaml
     deployment:
       rollback_alarms: ["MyAlarm-ELB-4xx", "MyAlarm-ELB-5xx"]
 ```
 
-また、Copilotにお好みの閾値を設定して、CPUやメモリ使用率アラームを作成してもらうこともできます。
+また、Copilot にお好みの閾値を設定して、CPU やメモリ使用率アラームを作成してもらうこともできます。
 ```yaml
     deployment:
       rollback_alarms:
@@ -49,14 +51,14 @@ Copilot は、さまざまなタイプのマイクロサービスの作成と運
         memory_utilization: 50 // Percentage value at or above which alarm is triggered.
 ```
 
-ワーカーサービスの場合は、`ApproximateNumberOfMessagesDelayed` を監視するアラームを作成することもできます。
+Worker Service の場合は、`ApproximateNumberOfMessagesDelayed` を監視するアラームを作成することもできます。
 ```yaml
     deployment:
       rollback_alarms:
         messages_delayed: 5
 ```
 
-Copilotがお客様に代わってアラームを作成する際、いくつかのデフォルトが設定されます。
+Copilot がお客様に代わってアラームを作成する際、いくつかのデフォルトが設定されます。
 ```yaml
     ComparisonOperator: 'GreaterThanOrEqualToThreshold'
     DatapointsToAlarm: 2
@@ -65,29 +67,30 @@ Copilotがお客様に代わってアラームを作成する際、いくつか�
     Statistic: 'Average'
 ```
 
-サービスマニフェストでロールバックアラームを設定すると、最初のデプロイ後に (ロールバックする既存のデプロイがないときに) `svc deploy` を実行するたびに、ECS はアラームをポーリングし、違反があった場合はロールバックをトリガーします。
+Service Manifest でロールバックアラームを設定すると、最初のデプロイ後に (ロールバックする既存のデプロイがないときに) `svc deploy` を実行するたびに、ECS はアラームをポーリングし、違反があった場合はロールバックをトリガーします。
 
-## 環境アドオン用 `storage init` 
+<a id="storage-init-for-environment-addons"></a>
 
-以前は、`copilot storage init` はワークロードに接続されたストレージアドオンだけをサポートしていました。
-ストレージをデプロイするために `copilot svc deploy` を実行し、`copilot svc delete` を実行すると、サービスとともにストレージが削除されます。
+## Environment Addon 用 `storage init` 
 
-これで、環境ストレージアドオンを作成できるようになりました。ストレージは `copilot env deploy` を実行するとデプロイされます。
-そして、`copilot env delete` を実行して環境を削除するまで削除されません。
+以前は、`copilot storage init` はワークロードに接続されたストレージ Addon だけをサポートしていました。
+ストレージをデプロイするために `copilot svc deploy` を実行し、`copilot svc delete` を実行すると、Service とともにストレージが削除されます。
 
-ワークロードストレージと同様に、環境ストレージも内部的には [環境アドオン](../docs/developing/addons/environment.ja.md) のもう1つです。
+このバージョンから Copilot は Environment に紐づいたストレージ Addon を作成できるようになりました。ストレージは `copilot env deploy` を実行するとデプロイされます。
+そして、`copilot env delete` を実行して Environment を削除するまで削除されません。
 
-### [サービスごとのデータベース](https://docs.aws.amazon.com/prescriptive-guidance/latest/modernization-data-persistence/database-per-service.html) のデフォルト
+ワークロードストレージと同様に、Environment ストレージも内部的には [Environment Addon](../docs/developing/addons/environment.ja.md) と同じです。
 
-マイクロサービスの世界では、一般的にデータストレージリソースをそれぞれマイクロサービス専用に設定することが推奨されます。
+### デフォルトで[サービスごとのデータベースパターン](https://docs.aws.amazon.com/ja_jp/prescriptive-guidance/latest/modernization-data-persistence/database-per-service.html) を採用
+
+マイクロサービスの世界では、複数サービスで共有されるモノリスなストレージの代わりに、データストレージをそれぞれマイクロサービス専用に設定することが推奨されます。
 複数のサービスで共有されるモノリスストレージの代わりに。
-このパターンでは、マイクロサービスの核となる特徴であるルーズカップリングが維持されます。
-Copilotでは、このサービスごとのデータベースパターンに従うことを推奨しています。デフォルトでは、Copilotが生成するストレージリソース
-は、1 つのサービスまたはジョブによってアクセスされることを前提としています。
+このパターンでは、マイクロサービスの核となる特徴である疎結合が維持されます。
+Copilot では、この Service ごとのデータベースパターンに従うことを推奨しています。デフォルトでは、Copilot が生成するストレージリソースは、1 つのサービスまたは Job によってアクセスされることを前提としています。
 
 !!!note ""
-ただし、各ユーザーには独自の状況があります。データストレージを複数のサービス間で共有する必要がある場合は、
-コパイロットで生成された CloudFormation テンプレートを変更して、目的を達成することができます。
+ただし、各ユーザーには独自の状況があります。データストレージを複数の Service 間で共有する必要がある場合は、
+Copilot で生成された CloudFormation テンプレートを変更して、目的を達成することができます。
 
 表示される可能性のあるプロンプトの例を次に示します。
 !!! info ""
@@ -122,8 +125,8 @@ copilot storage init \
 
 すべてのプロンプトに答えるか、フラグを使用してプロンプトをスキップすると、Copilot は DynamoDB ストレージリソースを定義する CloudFormation テンプレートを生成します。
 これは、`copilot/environments` ディレクトリの下に生成されます。さらに、必要なアクセスポリシーを生成します。これは api サービスを許可するポリシーです
-「映画」ストレージへのアクセス。アクセスポリシーは、ワークロードアドオンとして作成されます。つまり、そのアクセスポリシーがデプロイされ、
-「api」サービスと同時に削除されました。
+これは "movies" ストレージへのアクセスを "api" Service に許可するポリシーです。アクセスポリシーはワークロード addon として作成されるので、"api" Service と同じタイミングでデプロイされ削除されます。
+
 !!! info ""
 `    copilot/
     ├── environments/
@@ -137,7 +140,7 @@ copilot storage init \
         └─── manifest.yml
    ```
 
-ストレージのタイプ、およびストレージに接するワークロードのタイプによって、Copilotが生成するCloudFormationファイルの内容は異なる場合があります。
+ストレージのタイプ、およびストレージに接するワークロードのタイプによって、Copilot が生成する CloudFormation ファイルの内容は異なる場合があります。
 
 
 ???- note "Sample files generated for an Aurora Serverless fronted by a Request-Driven Web Service"
@@ -157,25 +160,27 @@ copilot storage init \
 
 詳細については、[ストレージページ](../docs/developing/storage.ja.md) もチェックしてください。
 
-## リクエスト主導型Webサービスシークレットのサポート
+<a id="request-driven-web-service-secrets-support"></a>
+
+## Request-Driven Web Service シークレットのサポート
 
 Copilot を使用して、シークレット (SSM パラメータストアまたは AWS シークレットマネージャーから) を環境変数として App Runner サービスに追加できるようになりました。
 
-負荷分散型Webサービスなどの他のサービスタイプと同様に、最初にシークレットに次のタグを追加する必要があります。
+Load Balanced Web Service などの他のサービスタイプと同様に、最初にシークレットに次のタグを追加する必要があります。
 
 | キー | 値 |
 |-----------------------------------------------------------------------------------|
 | `copilot-application` | シークレットにアクセスしたいアプリケーション名 |
 | `copilot-environment` | シークレットにアクセスしたい環境名 |
 
-次に、リクエスト主導型Webサービスのマニフェストを次のように更新するだけです。
+次に、Request-Driven Web Service の Manifest を次のように更新するだけです。
 
 ```yaml
   secrets:
     GITHUB_TOKEN: GH_TOKEN_SECRET
 ```
 
-これでデプロイをすると、サービスはシークレットに環境変数としてアクセスできるようになりました。
+これでデプロイをすると、Service はシークレットに環境変数としてアクセスできるようになりました。
 
 `secrets` フィールドの詳細な使用方法については、
 
@@ -203,7 +208,7 @@ secrets:
   GITHUB_WEBHOOK_SECRET: GITHUB_WEBHOOK_SECRET
 ```
 
-[マニフェスト仕様](../docs/manifest/rd-web-service/#secrets) を参照してください。サービスにシークレットを挿入する方法の詳細については、[シークレットページ](../docs/developing/secrets.ja.md) を参照してください。
+[Manifest 仕様](../docs/manifest/rd-web-service/#secrets) を参照してください。Service にシークレットを挿入する方法の詳細については、[シークレット](../docs/developing/secrets.ja.md) を参照してください。
 
 ## 次は？
 
