@@ -8,11 +8,11 @@ import "gopkg.in/yaml.v3"
 type action int
 
 const (
-	match        = iota
-	modification = iota
-	deletion     = iota
-	insertion    = iota
-	done         = iota
+	match        action = iota
+	modification        = iota
+	deletion            = iota
+	insertion           = iota
+	done                = iota
 )
 
 type tracker[T any] struct {
