@@ -479,7 +479,7 @@ func (rr RoutingRuleConfiguration) exposedPorts(exposedPorts []ExposedPort, work
 // exportPorts returns any new ports that should be exposed given the network load balancer
 // configuration that's not part of the existing containerPorts.
 func (cfg NetworkLoadBalancerListener) exposedPorts(exposedPorts []ExposedPort, workloadName string) ([]ExposedPort, error) {
-	if cfg.Port == nil {
+	if cfg.IsEmpty() {
 		return nil, nil
 	}
 	nlbPort, _, err := ParsePortMapping(cfg.Port)
