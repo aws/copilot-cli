@@ -499,11 +499,11 @@ func (s *LoadBalancedWebService) convertALBListener() (*template.ALBListener, er
 	if err != nil {
 		return nil, err
 	}
+	rules = append(rules, *rule)
 	aliasesFor, err := convertHostedZone(albConfig.MainRoutingRule.Alias, albConfig.MainRoutingRule.HostedZone)
 	if err != nil {
 		return nil, err
 	}
-	rules = append(rules, *rule)
 
 	// TODO: @pbhingre build listener rule config from additional rules from manifest.
 

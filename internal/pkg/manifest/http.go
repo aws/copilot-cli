@@ -59,18 +59,17 @@ type RoutingRuleConfiguration struct {
 	AdditionalRoutingRules   []ALBRoutingRule `yaml:"additional_rules"`
 }
 
+// ALBRoutingRules returns main as well as additional routing rules as a list of ALBRoutingRule.
+func (cfg RoutingRuleConfiguration) ALBRoutingRules() []ALBRoutingRule {
+	if cfg.MainRoutingRule.IsEmpty() {
+		return nil
+	}
+	return append([]ALBRoutingRule{cfg.MainRoutingRule}, cfg.AdditionalRoutingRules...)
+}
+
 // IsEmpty returns true if RoutingRuleConfiguration has empty configuration.
 func (r *RoutingRuleConfiguration) IsEmpty() bool {
 	return r.MainRoutingRule.IsEmpty() && r.TargetContainerCamelCase == nil && len(r.AdditionalRoutingRules) == 0
-}
-
-// GetTargetContainer returns the correct target container value, if set.
-// Use this function instead of getting r.TargetContainer or r.TargetContainerCamelCase directly.
-func (r *RoutingRuleConfiguration) GetTargetContainer() *string {
-	if r.MainRoutingRule.TargetContainer != nil {
-		return r.MainRoutingRule.TargetContainer
-	}
-	return r.TargetContainerCamelCase
 }
 
 // ALBRoutingRule holds listener rule configuration for ALB.

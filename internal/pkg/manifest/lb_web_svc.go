@@ -260,8 +260,7 @@ func (lbws *LoadBalancedWebService) ExposedPorts() (ExposedPortsIndex, error) {
 		}
 		exposedPorts = append(exposedPorts, out...)
 	}
-	albRoutingRules := lbws.RoutingRule.ALBRoutingRules()
-	for _, rule := range albRoutingRules {
+	for _, rule := range lbws.RoutingRule.ALBRoutingRules() {
 		out := rule.exposedPorts(exposedPorts, workloadName)
 		exposedPorts = append(exposedPorts, out...)
 	}
@@ -275,12 +274,4 @@ func (lbws *LoadBalancedWebService) ExposedPorts() (ExposedPortsIndex, error) {
 		PortsForContainer: portsForContainer,
 		ContainerForPort:  containerForPort,
 	}, nil
-}
-
-// ALBRoutingRules returns main as well as additional routing rules as a list of ALBRoutingRule.
-func (cfg RoutingRuleConfiguration) ALBRoutingRules() []ALBRoutingRule {
-	if cfg.MainRoutingRule.IsEmpty() {
-		return nil
-	}
-	return append([]ALBRoutingRule{cfg.MainRoutingRule}, cfg.AdditionalRoutingRules...)
 }

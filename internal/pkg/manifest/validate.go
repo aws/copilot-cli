@@ -255,7 +255,7 @@ func (b BackendService) validate() error {
 	if err = validateTargetContainer(validateTargetContainerOpts{
 		mainContainerName: aws.StringValue(b.Name),
 		mainContainerPort: b.ImageConfig.Port,
-		targetContainer:   b.RoutingRule.GetTargetContainer(),
+		targetContainer:   b.RoutingRule.MainRoutingRule.TargetContainer,
 		sidecarConfig:     b.Sidecars,
 	}); err != nil {
 		return fmt.Errorf("validate load balancer target for http: %w", err)
@@ -322,7 +322,7 @@ func (b BackendServiceConfig) validate() error {
 		return fmt.Errorf(`validate "network": %w`, err)
 	}
 	if b.Network.Connect.Alias != nil {
-		if b.RoutingRule.GetTargetContainer() == nil && b.ImageConfig.Port == nil {
+		if b.RoutingRule.MainRoutingRule.TargetContainer == nil && b.ImageConfig.Port == nil {
 			return fmt.Errorf(`cannot set "network.connect.alias" when no ports are exposed`)
 		}
 	}
