@@ -54,7 +54,9 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 					ImageConfig: testImageConfig,
 					RoutingRule: RoutingRuleConfigOrBool{
 						RoutingRuleConfiguration: RoutingRuleConfiguration{
-							TargetContainer:          aws.String("mockTargetContainer"),
+							MainRoutingRule: ALBRoutingRule{
+								TargetContainer: aws.String("mockTargetContainer"),
+							},
 							TargetContainerCamelCase: aws.String("mockTargetContainer"),
 						},
 					},
@@ -75,7 +77,9 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 					},
 					RoutingRule: RoutingRuleConfigOrBool{
 						RoutingRuleConfiguration: RoutingRuleConfiguration{
-							Path: stringP("/"),
+							MainRoutingRule: ALBRoutingRule{
+								Path: stringP("/"),
+							},
 						},
 					},
 				},
@@ -95,7 +99,9 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 					},
 					RoutingRule: RoutingRuleConfigOrBool{
 						RoutingRuleConfiguration: RoutingRuleConfiguration{
-							Path: stringP("/"),
+							MainRoutingRule: ALBRoutingRule{
+								Path: stringP("/"),
+							},
 						},
 					},
 				},
@@ -113,7 +119,9 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 					},
 					RoutingRule: RoutingRuleConfigOrBool{
 						RoutingRuleConfiguration: RoutingRuleConfiguration{
-							Path: stringP("/"),
+							MainRoutingRule: ALBRoutingRule{
+								Path: stringP("/"),
+							},
 						},
 					},
 				},
@@ -131,7 +139,9 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 					},
 					RoutingRule: RoutingRuleConfigOrBool{
 						RoutingRuleConfiguration: RoutingRuleConfiguration{
-							Path: stringP("/"),
+							MainRoutingRule: ALBRoutingRule{
+								Path: stringP("/"),
+							},
 						},
 					},
 				},
@@ -144,7 +154,9 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 					ImageConfig: testImageConfig,
 					RoutingRule: RoutingRuleConfigOrBool{
 						RoutingRuleConfiguration: RoutingRuleConfiguration{
-							Path: stringP("/"),
+							MainRoutingRule: ALBRoutingRule{
+								Path: stringP("/"),
+							},
 						},
 					},
 				},
@@ -158,13 +170,15 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 					ImageConfig: testImageConfig,
 					RoutingRule: RoutingRuleConfigOrBool{
 						RoutingRuleConfiguration: RoutingRuleConfiguration{
-							Path:            stringP("/"),
-							TargetContainer: aws.String("foo"),
+							MainRoutingRule: ALBRoutingRule{
+								Path:            stringP("/"),
+								TargetContainer: aws.String("foo"),
+							},
 						},
 					},
 				},
 			},
-			wantedErrorMsgPrefix: `validate HTTP load balancer target: `,
+			wantedErrorMsgPrefix: `validate load balancer target for http:`,
 		},
 		"error if fail to validate network load balancer target": {
 			lbConfig: LoadBalancedWebService{
@@ -173,8 +187,10 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 					ImageConfig: testImageConfig,
 					RoutingRule: RoutingRuleConfigOrBool{
 						RoutingRuleConfiguration: RoutingRuleConfiguration{
-							Path:            stringP("/"),
-							TargetContainer: aws.String("mockName"),
+							MainRoutingRule: ALBRoutingRule{
+								Path:            stringP("/"),
+								TargetContainer: aws.String("mockName"),
+							},
 						},
 					},
 					NLBConfig: NetworkLoadBalancerConfiguration{
@@ -202,7 +218,9 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 					},
 					RoutingRule: RoutingRuleConfigOrBool{
 						RoutingRuleConfiguration: RoutingRuleConfiguration{
-							Path: stringP("/"),
+							MainRoutingRule: ALBRoutingRule{
+								Path: stringP("/"),
+							},
 						},
 					},
 				},
@@ -230,7 +248,9 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 					},
 					RoutingRule: RoutingRuleConfigOrBool{
 						RoutingRuleConfiguration: RoutingRuleConfiguration{
-							Path: stringP("/"),
+							MainRoutingRule: ALBRoutingRule{
+								Path: stringP("/"),
+							},
 						},
 					},
 				},
@@ -255,7 +275,9 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 					},
 					RoutingRule: RoutingRuleConfigOrBool{
 						RoutingRuleConfiguration: RoutingRuleConfiguration{
-							Path: stringP("/"),
+							MainRoutingRule: ALBRoutingRule{
+								Path: stringP("/"),
+							},
 						},
 					},
 				},
@@ -335,7 +357,9 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 					ImageConfig: testImageConfig,
 					RoutingRule: RoutingRuleConfigOrBool{
 						RoutingRuleConfiguration: RoutingRuleConfiguration{
-							Path: stringP("/"),
+							MainRoutingRule: ALBRoutingRule{
+								Path: stringP("/"),
+							},
 						},
 					},
 					DeployConfig: DeploymentConfig{
@@ -552,11 +576,13 @@ func TestBackendService_validate(t *testing.T) {
 				BackendServiceConfig: BackendServiceConfig{
 					ImageConfig: testImageConfig,
 					RoutingRule: RoutingRuleConfiguration{
-						ProtocolVersion: aws.String("GRPC"),
+						MainRoutingRule: ALBRoutingRule{
+							ProtocolVersion: aws.String("GRPC"),
+						},
 					},
 				},
 			},
-			wantedErrorMsgPrefix: `validate "http": "path" must be specified`,
+			wantedErrorMsgPrefix: `validate "http": validate http: "path" must be specified`,
 		},
 		"error if request scaling without http": {
 			config: BackendService{
@@ -596,15 +622,17 @@ func TestBackendService_validate(t *testing.T) {
 				BackendServiceConfig: BackendServiceConfig{
 					ImageConfig: testImageConfig,
 					RoutingRule: RoutingRuleConfiguration{
-						TargetContainer: aws.String("api"),
-						Path:            aws.String("/"),
+						MainRoutingRule: ALBRoutingRule{
+							TargetContainer: aws.String("api"),
+							Path:            aws.String("/"),
+						},
 					},
 				},
 				Workload: Workload{
 					Name: aws.String("api"),
 				},
 			},
-			wantedError: fmt.Errorf(`validate HTTP load balancer target: target container "api" doesn't expose a port`),
+			wantedError: fmt.Errorf(`validate load balancer target for http: target container "api" doesn't expose a port`),
 		},
 		"error if service connect is enabled without any port exposed": {
 			config: BackendService{
@@ -1393,22 +1421,16 @@ func TestDependsOn_validate(t *testing.T) {
 	}
 }
 
-func TestRoutingRule_validate(t *testing.T) {
+func TestALBRoutingRule_validate(t *testing.T) {
 	testCases := map[string]struct {
-		RoutingRule RoutingRuleConfiguration
+		ALBRoutingRule ALBRoutingRule
 
 		wantedErrorMsgPrefix string
 		wantedError          error
 	}{
-		"error if both target_container and targetContainer are specified": {
-			RoutingRule: RoutingRuleConfiguration{
-				TargetContainer:          aws.String("mockContainer"),
-				TargetContainerCamelCase: aws.String("mockContainer"),
-			},
-			wantedError: fmt.Errorf(`must specify one, not both, of "target_container" and "targetContainer"`),
-		},
 		"error if one of allowed_source_ips is not valid": {
-			RoutingRule: RoutingRuleConfiguration{
+			ALBRoutingRule: ALBRoutingRule{
+				Path: stringP("/"),
 				AllowedSourceIps: []IPNet{
 					IPNet("10.1.0.0/24"),
 					IPNet("badIP"),
@@ -1418,32 +1440,33 @@ func TestRoutingRule_validate(t *testing.T) {
 			wantedErrorMsgPrefix: `validate "allowed_source_ips[1]": `,
 		},
 		"error if protocol version is not valid": {
-			RoutingRule: RoutingRuleConfiguration{
+			ALBRoutingRule: ALBRoutingRule{
+				Path:            stringP("/"),
 				ProtocolVersion: aws.String("quic"),
 			},
 			wantedErrorMsgPrefix: `"version" field value 'quic' must be one of GRPC, HTTP1 or HTTP2`,
 		},
 		"error if path is missing": {
-			RoutingRule: RoutingRuleConfiguration{
+			ALBRoutingRule: ALBRoutingRule{
 				ProtocolVersion: aws.String("GRPC"),
 			},
 			wantedErrorMsgPrefix: `"path" must be specified`,
 		},
 		"should not error if protocol version is not uppercase": {
-			RoutingRule: RoutingRuleConfiguration{
+			ALBRoutingRule: ALBRoutingRule{
 				Path:            stringP("/"),
 				ProtocolVersion: aws.String("gRPC"),
 			},
 		},
 		"error if hosted zone set without alias": {
-			RoutingRule: RoutingRuleConfiguration{
+			ALBRoutingRule: ALBRoutingRule{
 				Path:       stringP("/"),
 				HostedZone: aws.String("ABCD1234"),
 			},
 			wantedErrorMsgPrefix: `"alias" must be specified if "hosted_zone" is specified`,
 		},
 		"error if one of alias is not valid": {
-			RoutingRule: RoutingRuleConfiguration{
+			ALBRoutingRule: ALBRoutingRule{
 				Path: stringP("/"),
 				Alias: Alias{
 					AdvancedAliases: []AdvancedAlias{
@@ -1458,7 +1481,135 @@ func TestRoutingRule_validate(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotErr := tc.RoutingRule.validate()
+			gotErr := tc.ALBRoutingRule.validate()
+
+			if tc.wantedError != nil {
+				require.EqualError(t, gotErr, tc.wantedError.Error())
+				return
+			}
+			if tc.wantedErrorMsgPrefix != "" {
+				require.Error(t, gotErr)
+				require.Contains(t, gotErr.Error(), tc.wantedErrorMsgPrefix)
+				return
+			}
+			require.NoError(t, gotErr)
+		})
+	}
+}
+
+func TestRoutingRuleConfiguration_validate(t *testing.T) {
+	testCases := map[string]struct {
+		RoutingRuleConfiguration RoutingRuleConfiguration
+		wantedErrorMsgPrefix     string
+		wantedError              error
+	}{
+		"return if routing rule configuration is nil": {},
+		"error if both target_container and targetContainer are specified": {
+			RoutingRuleConfiguration: RoutingRuleConfiguration{
+				MainRoutingRule: ALBRoutingRule{
+					Path:            stringP("/"),
+					TargetContainer: aws.String("mockContainer"),
+				},
+				TargetContainerCamelCase: aws.String("mockContainer"),
+			},
+			wantedError: fmt.Errorf(`must specify one, not both, of "target_container" and "targetContainer"`),
+		},
+		"error if one of allowed_source_ips is not valid for additional routing rules": {
+			RoutingRuleConfiguration: RoutingRuleConfiguration{
+				MainRoutingRule: ALBRoutingRule{
+					Path: stringP("/"),
+				},
+				AdditionalRoutingRules: []ALBRoutingRule{
+					{
+						Path: stringP("/admin"),
+						AllowedSourceIps: []IPNet{
+							IPNet("10.1.0.0/24"),
+							IPNet("badIP"),
+							IPNet("10.1.1.0/24"),
+						},
+					},
+				},
+			},
+			wantedErrorMsgPrefix: `validate http.additional_rules[0]: validate "allowed_source_ips[1]": parse IPNet badIP: invalid CIDR address: badIP`,
+		},
+		"error if protocol version is not valid for additional routing rule": {
+			RoutingRuleConfiguration: RoutingRuleConfiguration{
+				MainRoutingRule: ALBRoutingRule{
+					Path: stringP("/"),
+				},
+				AdditionalRoutingRules: []ALBRoutingRule{
+					{
+						Path:            stringP("/admin"),
+						ProtocolVersion: aws.String("quic"),
+					},
+				},
+			},
+			wantedErrorMsgPrefix: `validate http.additional_rules[0]: "version" field value 'quic' must be one of GRPC, HTTP1 or HTTP2`,
+		},
+		"error if path is missing": {
+			RoutingRuleConfiguration: RoutingRuleConfiguration{
+				MainRoutingRule: ALBRoutingRule{
+					Path: stringP("/"),
+				},
+				AdditionalRoutingRules: []ALBRoutingRule{
+					{
+						ProtocolVersion: aws.String("GRPC"),
+					},
+				},
+			},
+			wantedErrorMsgPrefix: `validate http.additional_rules[0]: "path" must be specified`,
+		},
+		"should not error if protocol version is not uppercase": {
+			RoutingRuleConfiguration: RoutingRuleConfiguration{
+				MainRoutingRule: ALBRoutingRule{
+					Path: stringP("/"),
+				},
+				AdditionalRoutingRules: []ALBRoutingRule{
+					{
+						Path:            stringP("/admin"),
+						ProtocolVersion: aws.String("gRPC"),
+					},
+				},
+			},
+		},
+		"error if hosted zone set without alias": {
+			RoutingRuleConfiguration: RoutingRuleConfiguration{
+				MainRoutingRule: ALBRoutingRule{
+					Path: stringP("/"),
+				},
+				AdditionalRoutingRules: []ALBRoutingRule{
+					{
+						Path:       stringP("/"),
+						HostedZone: aws.String("ABCD1234"),
+					},
+				},
+			},
+			wantedErrorMsgPrefix: `validate http.additional_rules[0]: "alias" must be specified if "hosted_zone" is specified`,
+		},
+		"error if one of alias is not valid": {
+			RoutingRuleConfiguration: RoutingRuleConfiguration{
+				MainRoutingRule: ALBRoutingRule{
+					Path: stringP("/"),
+				},
+				AdditionalRoutingRules: []ALBRoutingRule{
+					{
+						Path: stringP("/admin"),
+						Alias: Alias{
+							AdvancedAliases: []AdvancedAlias{
+								{
+									HostedZone: aws.String("mockHostedZone"),
+								},
+							},
+						},
+					},
+				},
+			},
+			wantedErrorMsgPrefix: `validate http.additional_rules[0]: validate "alias": "name" must be specified`,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			gotErr := tc.RoutingRuleConfiguration.validate()
 
 			if tc.wantedError != nil {
 				require.EqualError(t, gotErr, tc.wantedError.Error())
@@ -3544,7 +3695,9 @@ func TestValidateExposedPorts(t *testing.T) {
 					},
 				},
 				alb: &RoutingRuleConfiguration{
-					TargetPort: aws.Uint16(80),
+					MainRoutingRule: ALBRoutingRule{
+						TargetPort: aws.Uint16(80),
+					},
 				},
 			},
 			wanted: nil,
@@ -3562,8 +3715,10 @@ func TestValidateExposedPorts(t *testing.T) {
 					},
 				},
 				alb: &RoutingRuleConfiguration{
-					TargetContainer: aws.String("nginx"),
-					TargetPort:      aws.Uint16(8080),
+					MainRoutingRule: ALBRoutingRule{
+						TargetContainer: aws.String("nginx"),
+						TargetPort:      aws.Uint16(8080),
+					},
 				},
 			},
 			wanted: fmt.Errorf(`containers "nginx" and "foo" are exposing the same port 8080`),
@@ -3590,8 +3745,10 @@ func TestValidateExposedPorts(t *testing.T) {
 					},
 				},
 				alb: &RoutingRuleConfiguration{
-					TargetPort:      aws.Uint16(8080),
-					TargetContainer: aws.String("mockMainContainer"),
+					MainRoutingRule: ALBRoutingRule{
+						TargetPort:      aws.Uint16(8080),
+						TargetContainer: aws.String("mockMainContainer"),
+					},
 				},
 			},
 			wanted: nil,
@@ -3606,8 +3763,10 @@ func TestValidateExposedPorts(t *testing.T) {
 					},
 				},
 				alb: &RoutingRuleConfiguration{
-					TargetPort:      aws.Uint16(80),
-					TargetContainer: aws.String("foo"),
+					MainRoutingRule: ALBRoutingRule{
+						TargetPort:      aws.Uint16(80),
+						TargetContainer: aws.String("foo"),
+					},
 				},
 			},
 			wanted: nil,
@@ -3622,7 +3781,9 @@ func TestValidateExposedPorts(t *testing.T) {
 					},
 				},
 				alb: &RoutingRuleConfiguration{
-					TargetPort: aws.Uint16(8081),
+					MainRoutingRule: ALBRoutingRule{
+						TargetPort: aws.Uint16(8081),
+					},
 				},
 			},
 			wanted: nil,
@@ -3640,7 +3801,9 @@ func TestValidateExposedPorts(t *testing.T) {
 					},
 				},
 				alb: &RoutingRuleConfiguration{
-					TargetPort: aws.Uint16(5001),
+					MainRoutingRule: ALBRoutingRule{
+						TargetPort: aws.Uint16(5001),
+					},
 				},
 				nlb: &NetworkLoadBalancerConfiguration{
 					Port:       aws.String("5001/tcp"),
@@ -3661,8 +3824,10 @@ func TestValidateExposedPorts(t *testing.T) {
 					},
 				},
 				alb: &RoutingRuleConfiguration{
-					TargetPort:      aws.Uint16(5001),
-					TargetContainer: aws.String("foo"),
+					MainRoutingRule: ALBRoutingRule{
+						TargetPort:      aws.Uint16(5001),
+						TargetContainer: aws.String("foo"),
+					},
 				},
 				nlb: &NetworkLoadBalancerConfiguration{
 					Port:            aws.String("5001/tcp"),
@@ -3684,8 +3849,10 @@ func TestValidateExposedPorts(t *testing.T) {
 					},
 				},
 				alb: &RoutingRuleConfiguration{
-					TargetPort:      aws.Uint16(5001),
-					TargetContainer: aws.String("foo"),
+					MainRoutingRule: ALBRoutingRule{
+						TargetPort:      aws.Uint16(5001),
+						TargetContainer: aws.String("foo"),
+					},
 				},
 				nlb: &NetworkLoadBalancerConfiguration{
 					Port:            aws.String("5001/tcp"),

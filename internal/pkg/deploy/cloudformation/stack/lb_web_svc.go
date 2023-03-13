@@ -172,8 +172,8 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		return "", err
 	}
 	var deregistrationDelay *int64 = aws.Int64(60)
-	if s.manifest.RoutingRule.DeregistrationDelay != nil {
-		deregistrationDelay = aws.Int64(int64(s.manifest.RoutingRule.DeregistrationDelay.Seconds()))
+	if s.manifest.RoutingRule.MainRoutingRule.DeregistrationDelay != nil {
+		deregistrationDelay = aws.Int64(int64(s.manifest.RoutingRule.MainRoutingRule.DeregistrationDelay.Seconds()))
 	}
 	nlbConfig, err := s.convertNetworkLoadBalancer()
 	if err != nil {
@@ -237,7 +237,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 			Port: targetContainerPort,
 			Name: targetContainer,
 		},
-		HTTPHealthCheck: convertHTTPHealthCheck(&s.manifest.RoutingRule.HealthCheck),
+		HTTPHealthCheck: convertHTTPHealthCheck(&s.manifest.RoutingRule.MainRoutingRule.HealthCheck),
 		ALBListener:     albListenerConfig,
 
 		// NLB configs.
@@ -307,7 +307,7 @@ func (s *LoadBalancedWebService) Parameters() ([]*cloudformation.Parameter, erro
 		wkldParams = append(wkldParams, []*cloudformation.Parameter{
 			{
 				ParameterKey:   aws.String(WorkloadRulePathParamKey),
-				ParameterValue: s.manifest.RoutingRule.Path,
+				ParameterValue: s.manifest.RoutingRule.MainRoutingRule.Path,
 			},
 			{
 				ParameterKey:   aws.String(WorkloadHTTPSParamKey),

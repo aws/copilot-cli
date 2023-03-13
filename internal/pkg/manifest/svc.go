@@ -454,7 +454,7 @@ func (cfg ImageWithHealthcheckAndOptionalPort) exposedPorts(workloadName string)
 
 // exportPorts returns any new ports that should be exposed given the application load balancer
 // configuration that's not part of the existing containerPorts.
-func (rr RoutingRuleConfiguration) exposedPorts(exposedPorts []ExposedPort, workloadName string) []ExposedPort {
+func (rr ALBRoutingRule) exposedPorts(exposedPorts []ExposedPort, workloadName string) []ExposedPort {
 	if rr.TargetPort == nil {
 		return nil
 	}
@@ -557,8 +557,8 @@ func (s *LoadBalancedWebService) HTTPLoadBalancerTarget() (targetContainer strin
 	targetContainer = aws.StringValue(s.Name)
 	targetPort = s.MainContainerPort()
 
-	rrTargetContainer := s.RoutingRule.TargetContainer
-	rrTargetPort := s.RoutingRule.TargetPort
+	rrTargetContainer := s.RoutingRule.MainRoutingRule.TargetContainer
+	rrTargetPort := s.RoutingRule.MainRoutingRule.TargetPort
 	if rrTargetContainer == nil && rrTargetPort == nil { // both targetPort and targetContainer are nil.
 		return
 	}
@@ -599,8 +599,8 @@ func (s *BackendService) HTTPLoadBalancerTarget() (targetContainer string, targe
 	targetContainer = aws.StringValue(s.Name)
 	targetPort = s.MainContainerPort()
 
-	rrTargetContainer := s.RoutingRule.TargetContainer
-	rrTargetPort := s.RoutingRule.TargetPort
+	rrTargetContainer := s.RoutingRule.MainRoutingRule.TargetContainer
+	rrTargetPort := s.RoutingRule.MainRoutingRule.TargetPort
 	if rrTargetContainer == nil && rrTargetPort == nil { // both targetPort and targetContainer are nil.
 		return
 	}

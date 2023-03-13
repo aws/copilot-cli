@@ -86,9 +86,9 @@ func NewLoadBalancedWebService(props *LoadBalancedWebServiceProps) *LoadBalanced
 		svc.LoadBalancedWebServiceConfig.TaskConfig.Memory = aws.Int(MinWindowsTaskMemory)
 	}
 	if props.HTTPVersion != "" {
-		svc.RoutingRule.ProtocolVersion = &props.HTTPVersion
+		svc.RoutingRule.MainRoutingRule.ProtocolVersion = &props.HTTPVersion
 	}
-	svc.RoutingRule.Path = aws.String(props.Path)
+	svc.RoutingRule.MainRoutingRule.Path = aws.String(props.Path)
 	svc.parser = template.New()
 	for _, envName := range props.PrivateOnlyEnvironments {
 		svc.Environments[envName] = &LoadBalancedWebServiceConfig{
@@ -109,8 +109,10 @@ func newDefaultHTTPLoadBalancedWebService() *LoadBalancedWebService {
 	lbws := newDefaultLoadBalancedWebService()
 	lbws.RoutingRule = RoutingRuleConfigOrBool{
 		RoutingRuleConfiguration: RoutingRuleConfiguration{
-			HealthCheck: HealthCheckArgsOrString{
-				Union: BasicToUnion[string, HTTPHealthCheckArgs](DefaultHealthCheckPath),
+			MainRoutingRule: ALBRoutingRule{
+				HealthCheck: HealthCheckArgsOrString{
+					Union: BasicToUnion[string, HTTPHealthCheckArgs](DefaultHealthCheckPath),
+				},
 			},
 		},
 	}
@@ -258,7 +260,11 @@ func (lbws *LoadBalancedWebService) ExposedPorts() (ExposedPortsIndex, error) {
 		}
 		exposedPorts = append(exposedPorts, out...)
 	}
-	exposedPorts = append(exposedPorts, lbws.RoutingRule.exposedPorts(exposedPorts, workloadName)...)
+	albRoutingRules := lbws.RoutingRule.ALBRoutingRules()
+	for _, rule := range albRoutingRules {
+		out := rule.exposedPorts(exposedPorts, workloadName)
+		exposedPorts = append(exposedPorts, out...)
+	}
 	out, err := lbws.NLBConfig.exposedPorts(exposedPorts, workloadName)
 	if err != nil {
 		return ExposedPortsIndex{}, err
@@ -269,4 +275,12 @@ func (lbws *LoadBalancedWebService) ExposedPorts() (ExposedPortsIndex, error) {
 		PortsForContainer: portsForContainer,
 		ContainerForPort:  containerForPort,
 	}, nil
+}
+
+// ALBRoutingRules returns main as well as additional routing rules as a list of ALBRoutingRule.
+func (cfg RoutingRuleConfiguration) ALBRoutingRules() []ALBRoutingRule {
+	if cfg.MainRoutingRule.IsEmpty() {
+		return nil
+	}
+	return append([]ALBRoutingRule{cfg.MainRoutingRule}, cfg.AdditionalRoutingRules...)
 }

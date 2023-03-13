@@ -25,28 +25,28 @@ func TestApplyEnv_Bool(t *testing.T) {
 	}{
 		"bool value overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.RoutingRule.Stickiness = aws.Bool(false)
-				svc.Environments["test"].RoutingRule.Stickiness = aws.Bool(true)
+				svc.RoutingRule.MainRoutingRule.Stickiness = aws.Bool(false)
+				svc.Environments["test"].RoutingRule.MainRoutingRule.Stickiness = aws.Bool(true)
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.RoutingRule.Stickiness = aws.Bool(true)
+				svc.RoutingRule.MainRoutingRule.Stickiness = aws.Bool(true)
 			},
 		},
 		"bool value overridden by zero value": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.RoutingRule.Stickiness = aws.Bool(true)
-				svc.Environments["test"].RoutingRule.Stickiness = aws.Bool(false)
+				svc.RoutingRule.MainRoutingRule.Stickiness = aws.Bool(true)
+				svc.Environments["test"].RoutingRule.MainRoutingRule.Stickiness = aws.Bool(false)
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.RoutingRule.Stickiness = aws.Bool(false)
+				svc.RoutingRule.MainRoutingRule.Stickiness = aws.Bool(false)
 			},
 		},
 		"bool value not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.RoutingRule.Stickiness = aws.Bool(true)
+				svc.RoutingRule.MainRoutingRule.Stickiness = aws.Bool(true)
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.RoutingRule.Stickiness = aws.Bool(true)
+				svc.RoutingRule.MainRoutingRule.Stickiness = aws.Bool(true)
 			},
 		},
 	}
@@ -154,10 +154,12 @@ func TestApplyEnv_Int64(t *testing.T) {
 			initial := LoadBalancedWebServiceConfig{
 				RoutingRule: RoutingRuleConfigOrBool{
 					RoutingRuleConfiguration: RoutingRuleConfiguration{
-						HealthCheck: HealthCheckArgsOrString{
-							AdvancedToUnion[string](HTTPHealthCheckArgs{
-								HealthyThreshold: tc.initial,
-							}),
+						MainRoutingRule: ALBRoutingRule{
+							HealthCheck: HealthCheckArgsOrString{
+								AdvancedToUnion[string](HTTPHealthCheckArgs{
+									HealthyThreshold: tc.initial,
+								}),
+							},
 						},
 					},
 				},
@@ -165,10 +167,12 @@ func TestApplyEnv_Int64(t *testing.T) {
 			override := LoadBalancedWebServiceConfig{
 				RoutingRule: RoutingRuleConfigOrBool{
 					RoutingRuleConfiguration: RoutingRuleConfiguration{
-						HealthCheck: HealthCheckArgsOrString{
-							AdvancedToUnion[string](HTTPHealthCheckArgs{
-								HealthyThreshold: tc.override,
-							}),
+						MainRoutingRule: ALBRoutingRule{
+							HealthCheck: HealthCheckArgsOrString{
+								AdvancedToUnion[string](HTTPHealthCheckArgs{
+									HealthyThreshold: tc.override,
+								}),
+							},
 						},
 					},
 				},
@@ -176,10 +180,12 @@ func TestApplyEnv_Int64(t *testing.T) {
 			expected := LoadBalancedWebServiceConfig{
 				RoutingRule: RoutingRuleConfigOrBool{
 					RoutingRuleConfiguration: RoutingRuleConfiguration{
-						HealthCheck: HealthCheckArgsOrString{
-							AdvancedToUnion[string](HTTPHealthCheckArgs{
-								HealthyThreshold: tc.expected,
-							}),
+						MainRoutingRule: ALBRoutingRule{
+							HealthCheck: HealthCheckArgsOrString{
+								AdvancedToUnion[string](HTTPHealthCheckArgs{
+									HealthyThreshold: tc.expected,
+								}),
+							},
 						},
 					},
 				},
@@ -322,33 +328,33 @@ func TestApplyEnv_Duration(t *testing.T) {
 		"duration overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				mockDuration, mockDurationTest := 24*time.Second, 42*time.Second
-				svc.RoutingRule.DeregistrationDelay = &mockDuration
-				svc.Environments["test"].RoutingRule.DeregistrationDelay = &mockDurationTest
+				svc.RoutingRule.MainRoutingRule.DeregistrationDelay = &mockDuration
+				svc.Environments["test"].RoutingRule.MainRoutingRule.DeregistrationDelay = &mockDurationTest
 			},
 			wanted: func(svc *LoadBalancedWebService) {
 				mockDurationTest := 42 * time.Second
-				svc.RoutingRule.DeregistrationDelay = &mockDurationTest
+				svc.RoutingRule.MainRoutingRule.DeregistrationDelay = &mockDurationTest
 			},
 		},
 		"duration overridden by zero value": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				mockDuration, mockDurationTest := 24*time.Second, 0*time.Second
-				svc.RoutingRule.DeregistrationDelay = &mockDuration
-				svc.Environments["test"].RoutingRule.DeregistrationDelay = &mockDurationTest
+				svc.RoutingRule.MainRoutingRule.DeregistrationDelay = &mockDuration
+				svc.Environments["test"].RoutingRule.MainRoutingRule.DeregistrationDelay = &mockDurationTest
 			},
 			wanted: func(svc *LoadBalancedWebService) {
 				mockDurationTest := 0 * time.Second
-				svc.RoutingRule.DeregistrationDelay = &mockDurationTest
+				svc.RoutingRule.MainRoutingRule.DeregistrationDelay = &mockDurationTest
 			},
 		},
 		"duration not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				mockDuration := 24 * time.Second
-				svc.RoutingRule.DeregistrationDelay = &mockDuration
+				svc.RoutingRule.MainRoutingRule.DeregistrationDelay = &mockDuration
 			},
 			wanted: func(svc *LoadBalancedWebService) {
 				mockDurationTest := 24 * time.Second
-				svc.RoutingRule.DeregistrationDelay = &mockDurationTest
+				svc.RoutingRule.MainRoutingRule.DeregistrationDelay = &mockDurationTest
 			},
 		},
 	}

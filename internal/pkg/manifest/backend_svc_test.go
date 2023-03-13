@@ -212,7 +212,9 @@ func TestBackendService_RequiredEnvironmentFeatures(t *testing.T) {
 		"internal alb feature required": {
 			mft: func(svc *BackendService) {
 				svc.RoutingRule = RoutingRuleConfiguration{
-					Path: aws.String("/mock_path"),
+					MainRoutingRule: ALBRoutingRule{
+						Path: aws.String("/mock_path"),
+					},
 				}
 			},
 			wanted: []string{template.InternalALBFeatureName},
@@ -1010,7 +1012,9 @@ func TestBackendService_ExposedPorts(t *testing.T) {
 				BackendServiceConfig: BackendServiceConfig{
 					ImageConfig: ImageWithHealthcheckAndOptionalPort{},
 					RoutingRule: RoutingRuleConfiguration{
-						TargetPort: aws.Uint16(81),
+						MainRoutingRule: ALBRoutingRule{
+							TargetPort: aws.Uint16(81),
+						},
 					},
 					Sidecars: map[string]*SidecarConfig{
 						"xray": {
@@ -1052,8 +1056,9 @@ func TestBackendService_ExposedPorts(t *testing.T) {
 						},
 					},
 					RoutingRule: RoutingRuleConfiguration{
-						//TargetContainer: aws.String("xray"),
-						TargetPort: aws.Uint16(81),
+						MainRoutingRule: ALBRoutingRule{
+							TargetPort: aws.Uint16(81),
+						},
 					},
 					Sidecars: map[string]*SidecarConfig{
 						"xray": {
@@ -1100,8 +1105,10 @@ func TestBackendService_ExposedPorts(t *testing.T) {
 						},
 					},
 					RoutingRule: RoutingRuleConfiguration{
-						TargetContainer: aws.String("frontend"),
-						TargetPort:      aws.Uint16(81),
+						MainRoutingRule: ALBRoutingRule{
+							TargetContainer: aws.String("frontend"),
+							TargetPort:      aws.Uint16(81),
+						},
 					},
 					Sidecars: map[string]*SidecarConfig{
 						"xray": {
@@ -1148,8 +1155,10 @@ func TestBackendService_ExposedPorts(t *testing.T) {
 						},
 					},
 					RoutingRule: RoutingRuleConfiguration{
-						TargetContainer: aws.String("xray"),
-						TargetPort:      aws.Uint16(81),
+						MainRoutingRule: ALBRoutingRule{
+							TargetContainer: aws.String("xray"),
+							TargetPort:      aws.Uint16(81),
+						},
 					},
 					Sidecars: map[string]*SidecarConfig{
 						"xray": {

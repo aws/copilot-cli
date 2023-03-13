@@ -191,10 +191,10 @@ func (d *lbWebSvcDeployer) validateALBRuntime() error {
 	hasALBCerts := len(d.envConfig.HTTPConfig.Public.Certificates) != 0
 	hasCDNCerts := d.envConfig.CDNConfig.Config.Certificate != nil
 	hasImportedCerts := hasALBCerts || hasCDNCerts
-	if d.lbMft.RoutingRule.RedirectToHTTPS != nil && d.app.Domain == "" && !hasImportedCerts {
+	if d.lbMft.RoutingRule.MainRoutingRule.RedirectToHTTPS != nil && d.app.Domain == "" && !hasImportedCerts {
 		return fmt.Errorf("cannot configure http to https redirect without having a domain associated with the app %q or importing any certificates in env %q", d.app.Name, d.env.Name)
 	}
-	if d.lbMft.RoutingRule.Alias.IsEmpty() {
+	if d.lbMft.RoutingRule.MainRoutingRule.Alias.IsEmpty() {
 		if hasImportedCerts {
 			return &errSvcWithNoALBAliasDeployingToEnvWithImportedCerts{
 				name:    d.name,
@@ -203,7 +203,7 @@ func (d *lbWebSvcDeployer) validateALBRuntime() error {
 		}
 		return nil
 	}
-	importedHostedZones := d.lbMft.RoutingRule.Alias.HostedZones()
+	importedHostedZones := d.lbMft.RoutingRule.MainRoutingRule.Alias.HostedZones()
 	if len(importedHostedZones) != 0 {
 		if !hasImportedCerts {
 			return fmt.Errorf("cannot specify alias hosted zones %v when no certificates are imported in environment %q", importedHostedZones, d.env.Name)
@@ -215,7 +215,7 @@ func (d *lbWebSvcDeployer) validateALBRuntime() error {
 		}
 	}
 	if hasImportedCerts {
-		aliases, err := d.lbMft.RoutingRule.Alias.ToStringSlice()
+		aliases, err := d.lbMft.RoutingRule.MainRoutingRule.Alias.ToStringSlice()
 		if err != nil {
 			return fmt.Errorf("convert aliases to string slice: %w", err)
 		}
@@ -239,7 +239,7 @@ func (d *lbWebSvcDeployer) validateALBRuntime() error {
 			logAppVersionOutdatedError(aws.StringValue(d.lbMft.Name))
 			return err
 		}
-		return validateLBWSAlias(d.lbMft.RoutingRule.Alias, d.app, d.env.Name)
+		return validateLBWSAlias(d.lbMft.RoutingRule.MainRoutingRule.Alias, d.app, d.env.Name)
 	}
 	log.Errorf(ecsALBAliasUsedWithoutDomainFriendlyText)
 	return fmt.Errorf("cannot specify http.alias when application is not associated with a domain and env %s doesn't import one or more certificates", d.env.Name)

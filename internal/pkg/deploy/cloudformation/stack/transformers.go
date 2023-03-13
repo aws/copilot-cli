@@ -492,14 +492,14 @@ func (s *LoadBalancedWebService) convertALBListener() (*template.ALBListener, er
 	var rules []template.ALBListenerRule
 	// build listener rule config from primary rule config from manifest.
 	rule, err := routingRuleConfigConverter{
-		rule:         albConfig.RoutingRuleConfiguration,
+		rule:         albConfig.MainRoutingRule,
 		manifest:     s.manifest,
 		httpsEnabled: s.httpsEnabled,
 	}.convert()
 	if err != nil {
 		return nil, err
 	}
-	aliasesFor, err := convertHostedZone(albConfig.Alias, albConfig.HostedZone)
+	aliasesFor, err := convertHostedZone(albConfig.MainRoutingRule.Alias, albConfig.MainRoutingRule.HostedZone)
 	if err != nil {
 		return nil, err
 	}
@@ -508,8 +508,8 @@ func (s *LoadBalancedWebService) convertALBListener() (*template.ALBListener, er
 	// TODO: @pbhingre build listener rule config from additional rules from manifest.
 
 	httpRedirect := true
-	if albConfig.RedirectToHTTPS != nil {
-		httpRedirect = aws.BoolValue(albConfig.RedirectToHTTPS)
+	if albConfig.MainRoutingRule.RedirectToHTTPS != nil {
+		httpRedirect = aws.BoolValue(albConfig.MainRoutingRule.RedirectToHTTPS)
 	}
 
 	return &template.ALBListener{
@@ -528,7 +528,7 @@ func (s *BackendService) convertALBListener() (*template.ALBListener, error) {
 	var rules []template.ALBListenerRule
 	// build listener rule config from primary rule config from manifest.
 	rule, err := routingRuleConfigConverter{
-		rule:         albConfig,
+		rule:         albConfig.MainRoutingRule,
 		manifest:     s.manifest,
 		httpsEnabled: s.httpsEnabled,
 	}.convert()
@@ -536,7 +536,7 @@ func (s *BackendService) convertALBListener() (*template.ALBListener, error) {
 		return nil, err
 	}
 	rules = append(rules, *rule)
-	hostedZoneAliases, err := convertHostedZone(albConfig.Alias, albConfig.HostedZone)
+	hostedZoneAliases, err := convertHostedZone(albConfig.MainRoutingRule.Alias, albConfig.MainRoutingRule.HostedZone)
 	if err != nil {
 		return nil, err
 	}
@@ -558,7 +558,7 @@ type loadBalancerTargeter interface {
 }
 
 type routingRuleConfigConverter struct {
-	rule         manifest.RoutingRuleConfiguration
+	rule         manifest.ALBRoutingRule
 	manifest     loadBalancerTargeter
 	httpsEnabled bool
 }
