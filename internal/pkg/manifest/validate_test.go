@@ -185,7 +185,7 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 					},
 				},
 			},
-			wantedErrorMsgPrefix: `validate target for nlb: `,
+			wantedErrorMsgPrefix: `validate target for "nlb": `,
 		},
 		"error if fail to validate network load balancer target for additional listener": {
 			lbConfig: LoadBalancedWebService{
@@ -212,7 +212,7 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 					},
 				},
 			},
-			wantedErrorMsgPrefix: `validate target for nlb.additional_listeners[0]: `,
+			wantedErrorMsgPrefix: `validate target for "nlb.additional_listeners[0]": `,
 		},
 		"error if fail to validate dependencies": {
 			lbConfig: LoadBalancedWebService{
@@ -1523,8 +1523,7 @@ func TestNetworkLoadBalancerConfiguration_validate(t *testing.T) {
 					TargetContainer: aws.String("main"),
 				},
 			},
-			wantedErrorMsgPrefix: `validate "nlb": `,
-			wantedError:          fmt.Errorf(`validate nlb: "port" must be specified`),
+			wantedError: fmt.Errorf(`"port" must be specified`),
 		},
 		"error if port unspecified in additional listeners": {
 			nlb: NetworkLoadBalancerConfiguration{
@@ -1538,8 +1537,7 @@ func TestNetworkLoadBalancerConfiguration_validate(t *testing.T) {
 					},
 				},
 			},
-			wantedErrorMsgPrefix: `validate "nlb": `,
-			wantedError:          fmt.Errorf(`validate nlb.additional_listeners[0]: "port" must be specified`),
+			wantedError: fmt.Errorf(`validate "additional_listeners[0]": "port" must be specified`),
 		},
 		"error parsing port": {
 			nlb: NetworkLoadBalancerConfiguration{
@@ -1548,7 +1546,7 @@ func TestNetworkLoadBalancerConfiguration_validate(t *testing.T) {
 				},
 			},
 			wantedErrorMsgPrefix: `validate "nlb": `,
-			wantedError:          fmt.Errorf(`validate nlb: validate "port": cannot parse port mapping from sabotage/this/string`),
+			wantedError:          fmt.Errorf(`validate "port": cannot parse port mapping from sabotage/this/string`),
 		},
 		"error parsing port for additional listeners": {
 			nlb: NetworkLoadBalancerConfiguration{
@@ -1565,7 +1563,7 @@ func TestNetworkLoadBalancerConfiguration_validate(t *testing.T) {
 				},
 			},
 			wantedErrorMsgPrefix: `validate "nlb": `,
-			wantedError:          fmt.Errorf(`validate nlb.additional_listeners[1]: validate "port": cannot parse port mapping from sabotage/this/string`),
+			wantedError:          fmt.Errorf(`validate "additional_listeners[1]": validate "port": cannot parse port mapping from sabotage/this/string`),
 		},
 		"success if port is specified without protocol": {
 			nlb: NetworkLoadBalancerConfiguration{
@@ -1593,7 +1591,7 @@ func TestNetworkLoadBalancerConfiguration_validate(t *testing.T) {
 				},
 			},
 			wantedErrorMsgPrefix: `validate "nlb": `,
-			wantedError:          fmt.Errorf(`validate nlb: validate "port": invalid protocol tps; valid protocols include TCP and TLS`),
+			wantedError:          fmt.Errorf(`validate "port": invalid protocol tps; valid protocols include TCP and TLS`),
 		},
 		"fail if protocol is not recognized in additional listeners": {
 			nlb: NetworkLoadBalancerConfiguration{
@@ -1607,7 +1605,7 @@ func TestNetworkLoadBalancerConfiguration_validate(t *testing.T) {
 				},
 			},
 			wantedErrorMsgPrefix: `validate "nlb": `,
-			wantedError:          fmt.Errorf(`validate nlb.additional_listeners[0]: validate "port": invalid protocol tps; valid protocols include TCP and TLS`),
+			wantedError:          fmt.Errorf(`validate "additional_listeners[0]": validate "port": invalid protocol tps; valid protocols include TCP and TLS`),
 		},
 		"success if tcp": {
 			nlb: NetworkLoadBalancerConfiguration{
@@ -1622,7 +1620,7 @@ func TestNetworkLoadBalancerConfiguration_validate(t *testing.T) {
 					Port: aws.String("161/udp"),
 				},
 			},
-			wantedError: fmt.Errorf(`validate nlb: validate "port": invalid protocol udp; valid protocols include TCP and TLS`),
+			wantedError: fmt.Errorf(`validate "port": invalid protocol udp; valid protocols include TCP and TLS`),
 		},
 		"error if udp in additional listeners": {
 			nlb: NetworkLoadBalancerConfiguration{
@@ -1635,7 +1633,7 @@ func TestNetworkLoadBalancerConfiguration_validate(t *testing.T) {
 					},
 				},
 			},
-			wantedError: fmt.Errorf(`validate nlb.additional_listeners[0]: validate "port": invalid protocol udp; valid protocols include TCP and TLS`),
+			wantedError: fmt.Errorf(`validate "additional_listeners[0]": validate "port": invalid protocol udp; valid protocols include TCP and TLS`),
 		},
 		"error if additional listeners are defined before main listener": {
 			nlb: NetworkLoadBalancerConfiguration{
@@ -1645,7 +1643,7 @@ func TestNetworkLoadBalancerConfiguration_validate(t *testing.T) {
 					},
 				},
 			},
-			wantedError: fmt.Errorf(`validate nlb: "port" must be specified`),
+			wantedError: fmt.Errorf(`"port" must be specified`),
 		},
 		"success if tls": {
 			nlb: NetworkLoadBalancerConfiguration{
@@ -1672,7 +1670,7 @@ func TestNetworkLoadBalancerConfiguration_validate(t *testing.T) {
 					Port: aws.String("443/TCP_udp"),
 				},
 			},
-			wantedError: fmt.Errorf(`validate nlb: validate "port": invalid protocol TCP_udp; valid protocols include TCP and TLS`),
+			wantedError: fmt.Errorf(`validate "port": invalid protocol TCP_udp; valid protocols include TCP and TLS`),
 		},
 		"error if tcp_udp in additional listeners": {
 			nlb: NetworkLoadBalancerConfiguration{
@@ -1685,7 +1683,7 @@ func TestNetworkLoadBalancerConfiguration_validate(t *testing.T) {
 					},
 				},
 			},
-			wantedError: fmt.Errorf(`validate nlb.additional_listeners[0]: validate "port": invalid protocol TCP_udp; valid protocols include TCP and TLS`),
+			wantedError: fmt.Errorf(`validate "additional_listeners[0]": validate "port": invalid protocol TCP_udp; valid protocols include TCP and TLS`),
 		},
 		"error if hosted zone is set": {
 			nlb: NetworkLoadBalancerConfiguration{
@@ -1701,7 +1699,7 @@ func TestNetworkLoadBalancerConfiguration_validate(t *testing.T) {
 					},
 				},
 			},
-			wantedError: fmt.Errorf(`validate nlb: "hosted_zone" is not supported for Network Load Balancer`),
+			wantedError: fmt.Errorf(`"hosted_zone" is not supported for Network Load Balancer`),
 		},
 		"error if hosted zone is set in additional listeners": {
 			nlb: NetworkLoadBalancerConfiguration{
@@ -1722,7 +1720,7 @@ func TestNetworkLoadBalancerConfiguration_validate(t *testing.T) {
 					},
 				},
 			},
-			wantedError: fmt.Errorf(`validate nlb: "hosted_zone" is not supported for Network Load Balancer`),
+			wantedError: fmt.Errorf(`"hosted_zone" is not supported for Network Load Balancer`),
 		},
 	}
 
@@ -3877,7 +3875,7 @@ func TestValidateExposedPorts(t *testing.T) {
 					},
 				},
 			},
-			wanted: fmt.Errorf(`validate nlb: containers "nginx" and "foo" are exposing the same port 5001`),
+			wanted: fmt.Errorf(`validate "nlb": containers "nginx" and "foo" are exposing the same port 5001`),
 		},
 		"should not return an error if nlb is trying to expose multiple ports": {
 			in: validateExposedPortsOpts{
@@ -3942,7 +3940,7 @@ func TestValidateExposedPorts(t *testing.T) {
 					},
 				},
 			},
-			wanted: fmt.Errorf(`validate nlb.additional_listeners[0]: containers "nginx" and "foo" are exposing the same port 5001`),
+			wanted: fmt.Errorf(`validate "nlb.additional_listeners[0]": containers "nginx" and "foo" are exposing the same port 5001`),
 		},
 	}
 	for name, tc := range testCases {

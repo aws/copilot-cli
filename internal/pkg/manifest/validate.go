@@ -93,7 +93,7 @@ func (l LoadBalancedWebService) validate() error {
 		targetContainer:   l.NLBConfig.Listener.TargetContainer,
 		sidecarConfig:     l.Sidecars,
 	}); err != nil {
-		return fmt.Errorf("validate target for nlb: %w", err)
+		return fmt.Errorf(`validate target for "nlb": %w`, err)
 	}
 	for idx, listener := range l.NLBConfig.AdditionalListeners {
 		if err = validateTargetContainer(validateTargetContainerOpts{
@@ -102,7 +102,7 @@ func (l LoadBalancedWebService) validate() error {
 			targetContainer:   listener.TargetContainer,
 			sidecarConfig:     l.Sidecars,
 		}); err != nil {
-			return fmt.Errorf("validate target for nlb.additional_listeners[%d]: %w", idx, err)
+			return fmt.Errorf(`validate target for "nlb.additional_listeners[%d]": %w`, idx, err)
 		}
 	}
 	if err = validateContainerDeps(validateDependenciesOpts{
@@ -857,21 +857,21 @@ func (c NetworkLoadBalancerConfiguration) validate() error {
 		return nil
 	}
 	if err := c.Listener.validate(); err != nil {
-		return fmt.Errorf("validate nlb: %w", err)
+		return err
 	}
 	if err := c.Aliases.validate(); err != nil {
-		return fmt.Errorf(`validate nlb: validate "alias": %w`, err)
+		return fmt.Errorf(`validate "alias": %w`, err)
 	}
 	if !c.Aliases.IsEmpty() {
 		for _, advancedAlias := range c.Aliases.AdvancedAliases {
 			if advancedAlias.HostedZone != nil {
-				return fmt.Errorf(`validate nlb: "hosted_zone" is not supported for Network Load Balancer`)
+				return fmt.Errorf(`"hosted_zone" is not supported for Network Load Balancer`)
 			}
 		}
 	}
 	for idx, listener := range c.AdditionalListeners {
 		if err := listener.validate(); err != nil {
-			return fmt.Errorf("validate nlb.additional_listeners[%d]: %w", idx, err)
+			return fmt.Errorf(`validate "additional_listeners[%d]": %w`, idx, err)
 		}
 	}
 	return nil
@@ -1960,12 +1960,12 @@ func populateNLBPortsAndValidate(containerNameFor map[uint16]string, opts valida
 	}
 	nlb := opts.nlb
 	if err := populateAndValidateNLBPorts(nlb.Listener, containerNameFor, opts.mainContainerName); err != nil {
-		return fmt.Errorf(`validate nlb: %w`, err)
+		return fmt.Errorf(`validate "nlb": %w`, err)
 	}
 
 	for idx, listener := range nlb.AdditionalListeners {
 		if err := populateAndValidateNLBPorts(listener, containerNameFor, opts.mainContainerName); err != nil {
-			return fmt.Errorf(`validate nlb.additional_listeners[%d]: %w`, idx, err)
+			return fmt.Errorf(`validate "nlb.additional_listeners[%d]": %w`, idx, err)
 		}
 	}
 	return nil
