@@ -144,16 +144,21 @@ func convertContainerHealthCheck(hc manifest.ContainerHealthCheck) *template.Con
 	}
 }
 
-func convertHostedZone(m manifest.RoutingRuleConfiguration) (template.AliasesForHostedZone, error) {
+func convertHostedZone(alias manifest.Alias, defaultHostedZone *string) (template.AliasesForHostedZone, error) {
 	aliasesFor := make(map[string][]string)
-	defaultHostedZone := m.HostedZone
-	if len(m.Alias.AdvancedAliases) != 0 {
-		for _, alias := range m.Alias.AdvancedAliases {
+	if len(alias.AdvancedAliases) != 0 {
+		for _, alias := range alias.AdvancedAliases {
 			if alias.HostedZone != nil {
+				if isDuplicateAliasEntry(aliasesFor[*alias.HostedZone], aws.StringValue(alias.Alias)) {
+					continue
+				}
 				aliasesFor[*alias.HostedZone] = append(aliasesFor[*alias.HostedZone], *alias.Alias)
 				continue
 			}
 			if defaultHostedZone != nil {
+				if isDuplicateAliasEntry(aliasesFor[*defaultHostedZone], aws.StringValue(alias.Alias)) {
+					continue
+				}
 				aliasesFor[*defaultHostedZone] = append(aliasesFor[*defaultHostedZone], *alias.Alias)
 			}
 		}
@@ -162,12 +167,28 @@ func convertHostedZone(m manifest.RoutingRuleConfiguration) (template.AliasesFor
 	if defaultHostedZone == nil {
 		return aliasesFor, nil
 	}
-	aliases, err := m.Alias.ToStringSlice()
+	aliases, err := alias.ToStringSlice()
 	if err != nil {
 		return nil, err
 	}
-	aliasesFor[*defaultHostedZone] = aliases
+
+	for _, alias := range aliases {
+		if isDuplicateAliasEntry(aliasesFor[*defaultHostedZone], alias) {
+			continue
+		}
+		aliasesFor[*defaultHostedZone] = append(aliasesFor[*defaultHostedZone], alias)
+	}
+
 	return aliasesFor, nil
+}
+
+func isDuplicateAliasEntry(aliasList []string, alias string) bool {
+	for _, entry := range aliasList {
+		if entry == alias {
+			return true
+		}
+	}
+	return false
 }
 
 // convertDependsOn converts image and sidecar depends on fields to have upper case statuses.
@@ -463,6 +484,113 @@ func convertEnvSecurityGroupCfg(mft *manifest.Environment) (*template.SecurityGr
 	}, nil
 }
 
+func (s *LoadBalancedWebService) convertALBListener() (*template.ALBListener, error) {
+	albConfig := s.manifest.RoutingRule
+	if albConfig.Disabled() || albConfig.IsEmpty() {
+		return nil, nil
+	}
+	var rules []template.ALBListenerRule
+	// build listener rule config from primary rule config from manifest.
+	rule, err := routingRuleConfigConverter{
+		rule:         albConfig.RoutingRuleConfiguration,
+		manifest:     s.manifest,
+		httpsEnabled: s.httpsEnabled,
+	}.convert()
+	if err != nil {
+		return nil, err
+	}
+	aliasesFor, err := convertHostedZone(albConfig.Alias, albConfig.HostedZone)
+	if err != nil {
+		return nil, err
+	}
+	rules = append(rules, *rule)
+
+	// TODO: @pbhingre build listener rule config from additional rules from manifest.
+
+	httpRedirect := true
+	if albConfig.RedirectToHTTPS != nil {
+		httpRedirect = aws.BoolValue(albConfig.RedirectToHTTPS)
+	}
+
+	return &template.ALBListener{
+		Rules:             rules,
+		RedirectToHTTPS:   httpRedirect,
+		IsHTTPS:           s.httpsEnabled,
+		HostedZoneAliases: aliasesFor,
+	}, nil
+}
+
+func (s *BackendService) convertALBListener() (*template.ALBListener, error) {
+	albConfig := s.manifest.RoutingRule
+	if albConfig.IsEmpty() {
+		return nil, nil
+	}
+	var rules []template.ALBListenerRule
+	// build listener rule config from primary rule config from manifest.
+	rule, err := routingRuleConfigConverter{
+		rule:         albConfig,
+		manifest:     s.manifest,
+		httpsEnabled: s.httpsEnabled,
+	}.convert()
+	if err != nil {
+		return nil, err
+	}
+	rules = append(rules, *rule)
+	hostedZoneAliases, err := convertHostedZone(albConfig.Alias, albConfig.HostedZone)
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO: @pbhingre build listener rule config from additional rules from manifest.
+
+	return &template.ALBListener{
+		Rules:             rules,
+		RedirectToHTTPS:   s.httpsEnabled,
+		IsHTTPS:           s.httpsEnabled,
+		MainContainerPort: s.manifest.MainContainerPort(),
+		HostedZoneAliases: hostedZoneAliases,
+	}, nil
+}
+
+type loadBalancerTargeter interface {
+	HTTPLoadBalancerTarget() (string, string, error)
+	MainContainerPort() string
+}
+
+type routingRuleConfigConverter struct {
+	rule         manifest.RoutingRuleConfiguration
+	manifest     loadBalancerTargeter
+	httpsEnabled bool
+}
+
+func (conv routingRuleConfigConverter) convert() (*template.ALBListenerRule, error) {
+	var aliases []string
+	var err error
+	if conv.httpsEnabled {
+		aliases, err = convertAlias(conv.rule.Alias)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	targetContainer, targetPort, err := conv.manifest.HTTPLoadBalancerTarget()
+	if err != nil {
+		return nil, err
+	}
+
+	config := &template.ALBListenerRule{
+		Path:             aws.StringValue(conv.rule.Path),
+		TargetContainer:  targetContainer,
+		TargetPort:       targetPort,
+		Aliases:          aliases,
+		HTTPHealthCheck:  convertHTTPHealthCheck(&conv.rule.HealthCheck),
+		AllowedSourceIps: convertAllowedSourceIPs(conv.rule.AllowedSourceIps),
+		Stickiness:       strconv.FormatBool(aws.BoolValue(conv.rule.Stickiness)),
+		HTTPVersion:      aws.StringValue(convertHTTPVersion(conv.rule.ProtocolVersion)),
+	}
+	return config, nil
+}
+
 func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (networkLoadBalancerConfig, error) {
 	nlbConfig := s.manifest.NLBConfig
 	if nlbConfig.IsEmpty() {
@@ -525,6 +653,14 @@ func convertExecuteCommand(e *manifest.ExecuteCommand) *template.ExecuteCommandO
 		return nil
 	}
 	return &template.ExecuteCommandOpts{}
+}
+
+func convertAllowedSourceIPs(allowedSourceIPs []manifest.IPNet) []string {
+	var sourceIPs []string
+	for _, ipNet := range allowedSourceIPs {
+		sourceIPs = append(sourceIPs, string(ipNet))
+	}
+	return sourceIPs
 }
 
 func convertServiceConnect(s manifest.ServiceConnectBoolOrArgs) *template.ServiceConnect {

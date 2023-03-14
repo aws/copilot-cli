@@ -152,30 +152,45 @@ func TestCDK_Override(t *testing.T) {
 }
 
 func TestScaffoldWithCDK(t *testing.T) {
-	// GIVEN
-	fs := afero.NewMemMapFs()
-	dir := filepath.Join("copilot", "frontend", "overrides")
+	t.Run("scaffolds files in an empty directory", func(t *testing.T) {
+		// GIVEN
+		fs := afero.NewMemMapFs()
+		dir := filepath.Join("copilot", "frontend", "overrides")
 
-	// WHEN
-	err := ScaffoldWithCDK(fs, dir, []template.CFNResource{
-		{
-			Type:      "AWS::ECS::Service",
-			LogicalID: "Service",
-		},
+		// WHEN
+		err := ScaffoldWithCDK(fs, dir, []template.CFNResource{
+			{
+				Type:      "AWS::ECS::Service",
+				LogicalID: "Service",
+			},
+		})
+
+		// THEN
+		require.NoError(t, err)
+
+		ok, _ := afero.Exists(fs, filepath.Join(dir, "package.json"))
+		require.True(t, ok, "package.json should exist")
+
+		ok, _ = afero.Exists(fs, filepath.Join(dir, "cdk.json"))
+		require.True(t, ok, "cdk.json should exist")
+
+		ok, _ = afero.Exists(fs, filepath.Join(dir, "stack.ts"))
+		require.True(t, ok, "stack.ts should exist")
+
+		ok, _ = afero.Exists(fs, filepath.Join(dir, "bin", "override.ts"))
+		require.True(t, ok, "bin/override.ts should exist")
 	})
+	t.Run("should return an error if the directory is not empty", func(t *testing.T) {
+		// GIVEN
+		fs := afero.NewMemMapFs()
+		dir := filepath.Join("copilot", "frontend", "overrides")
+		_ = fs.MkdirAll(dir, 0755)
+		_ = afero.WriteFile(fs, filepath.Join(dir, "cdk.json"), []byte("content"), 0644)
 
-	// THEN
-	require.NoError(t, err)
+		// WHEN
+		err := ScaffoldWithCDK(fs, dir, nil)
 
-	ok, _ := afero.Exists(fs, filepath.Join(dir, "package.json"))
-	require.True(t, ok, "package.json should exist")
-
-	ok, _ = afero.Exists(fs, filepath.Join(dir, "cdk.json"))
-	require.True(t, ok, "cdk.json should exist")
-
-	ok, _ = afero.Exists(fs, filepath.Join(dir, "stack.ts"))
-	require.True(t, ok, "stack.ts should exist")
-
-	ok, _ = afero.Exists(fs, filepath.Join(dir, "bin", "override.ts"))
-	require.True(t, ok, "bin/override.ts should exist")
+		// THEN
+		require.EqualError(t, err, fmt.Sprintf("directory %q is not empty", dir))
+	})
 }

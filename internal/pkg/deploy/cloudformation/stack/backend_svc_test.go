@@ -307,7 +307,6 @@ Outputs:
 				StartPeriod: aws.Int64(0),
 				Timeout:     aws.Int64(10),
 			},
-			HostedZoneAliases: make(template.AliasesForHostedZone),
 			HTTPTargetContainer: template.HTTPTargetContainer{
 				Port: "8080",
 				Name: "api",
@@ -525,9 +524,7 @@ Outputs:
 				Interval:           aws.Int64(61),
 				GracePeriod:        60,
 			},
-			HostedZoneAliases:   make(template.AliasesForHostedZone),
 			DeregistrationDelay: aws.Int64(59),
-			AllowedSourceIps:    []string{"10.0.1.0/24"},
 			CustomResources: map[string]template.S3ObjectLocation{
 				"EnvControllerFunction": {
 					Bucket: "my-bucket",
@@ -558,6 +555,31 @@ Outputs:
 			},
 			EntryPoint: []string{"enter", "from"},
 			Command:    []string{"here"},
+			ALBListener: &template.ALBListener{
+				Rules: []template.ALBListenerRule{
+					{
+						Path:            "/albPath",
+						TargetContainer: "envoy",
+						TargetPort:      "443",
+						HTTPHealthCheck: template.HTTPHealthCheckOpts{
+							HealthCheckPath:    "/healthz",
+							GracePeriod:        60,
+							Port:               "4200",
+							SuccessCodes:       "418",
+							HealthyThreshold:   aws.Int64(64),
+							UnhealthyThreshold: aws.Int64(63),
+							Interval:           aws.Int64(61),
+							Timeout:            aws.Int64(62),
+						},
+						AllowedSourceIps: []string{
+							"10.0.1.0/24",
+						},
+						Stickiness: "true",
+					},
+				},
+				HostedZoneAliases: template.AliasesForHostedZone{},
+				MainContainerPort: "8080",
+			},
 			ALBEnabled: true,
 			PortMappings: []*template.PortMapping{
 				{
