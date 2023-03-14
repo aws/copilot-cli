@@ -190,3 +190,12 @@ func parseValueFromOptionFmt(formatted string) string {
 	}
 	return strings.TrimSpace(formatted)
 }
+
+func parseValuesFromOptions(formatted string) string {
+	options := strings.Split(formatted, ", ")
+	out := make([]string, len(options))
+	for i, option := range options {
+		out[i] = parseValueFromOptionFmt(option)
+	}
+	return strings.Join(out, ", ")
+}
