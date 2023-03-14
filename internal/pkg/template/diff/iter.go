@@ -47,13 +47,13 @@ func (i *inspector) inspect() action {
 		case fromDone && toDone:
 			action = actonDone
 		case toDone:
-			// Ex: "a,d,e" -> "a". When the inspector moves to "d" in "from", both common and "to" are done, and "d,e" are considered deleted.
+			// Ex: "a,d,e" -> "a". When the inspector moves to "d" in "from", both lcs and "to" are done, and "d,e" are considered deleted.
 			action = actionDel
 		case fromDone:
-			// Ex: "a" -> "a,d,e". When the inspector moves to "d" in "to", both common and "from" are done, and "d,e" are considered to be inserted.
+			// Ex: "a" -> "a,d,e". When the inspector moves to "d" in "to", both lcs and "from" are done, and "d,e" are considered to be inserted.
 			action = actionInsert
 		default:
-			// Ex: "a,b" -> "a,c". When the inspector moves to index 1 of both list, common is done, and b is modified into c.
+			// Ex: "a,b" -> "a,c". When the inspector moves to (b,c), lcs is done, and b is modified into c.
 			action = actionMod
 		}
 		i.currAction = action
