@@ -114,7 +114,7 @@ func parseSequence(fromNode, toNode *yaml.Node) (map[string]*Node, error) {
 		return err == nil && diff == nil
 	})
 	nextKey, children, inspector := seqChildKeyFunc(), make(map[string]*Node), newLCSStateMachine(fromSeq, toSeq, lcsIndices)
-	for action := inspector.inspect(); action != actonDone; action = inspector.inspect() {
+	for action := inspector.action(); action != actonDone; action = inspector.action() {
 		switch action {
 		case actionMatch:
 			// TODO(lou1415926): (x unchanged items)
@@ -132,7 +132,7 @@ func parseSequence(fromNode, toNode *yaml.Node) (map[string]*Node, error) {
 			item := inspector.toItem()
 			children[nextKey()] = &Node{newValue: &item}
 		}
-		inspector.proceed()
+		inspector.next()
 	}
 	return children, nil
 }

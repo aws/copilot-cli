@@ -35,7 +35,7 @@ type lcsStateMachine struct {
 	currAction action
 }
 
-func (i *lcsStateMachine) inspect() action {
+func (i *lcsStateMachine) action() action {
 	var action action
 	var (
 		lcsDone  = i.lcsIndices.index >= len(i.lcsIndices.data)
@@ -76,7 +76,7 @@ func (i *lcsStateMachine) inspect() action {
 	return action
 }
 
-func (i *lcsStateMachine) proceed() {
+func (i *lcsStateMachine) next() {
 	switch i.currAction {
 	case actionMatch:
 		i.lcsIndices.index++
