@@ -60,25 +60,16 @@ Parameters:
   NLBPort:
     Type: String
 {{- end }}
-{{- if .ALBEnabled}}
+{{- if .ALBListener}}
   HTTPSEnabled:
     Type: String
     AllowedValues: [true, false]
   RulePath:
     Type: String
-  RulePathSlice:
-    Type: CommaDelimitedList
-  Stickiness:
-    Type: String
-    Default: false
 {{- end}}
 Conditions:
   IsGovCloud:
     !Equals [!Ref "AWS::Partition", "aws-us-gov"]
-{{- if .ALBEnabled}}
-  IsDefaultRootPath:
-    !Equals [!Ref RulePath, "/"]
-{{- end}}
   HasAssociatedDomain:
     !Equals [!Ref DNSDelegated, true]
   HasAddons: # If a bucket URL is specified, that means the template exists.
@@ -124,14 +115,16 @@ Resources:
       'aws:copilot:description': 'An ECS service to run and maintain your tasks in the environment cluster'
     Type: AWS::ECS::Service
     DependsOn:
-    {{- if .ALBEnabled}}
-    {{- if .HTTPSListener}}
-      - HTTPListenerRuleWithDomain
-      - HTTPSListenerRule
-    {{- else}}
-      - HTTPListenerRule
+    {{- if .ALBListener}}
+    {{- range $i, $rule := .ALBListener.Rules }}
+      {{- if $.ALBListener.IsHTTPS }}
+      - HTTPListenerRuleWithDomain{{ if ne $i 0 }}{{ $i }}{{ end }}
+      - HTTPSListenerRule{{ if ne $i 0 }}{{ $i }}{{ end }}
+      {{- else}}
+      - HTTPListenerRule{{ if ne $i 0 }}{{ $i }}{{ end }}
+      {{- end}}
     {{- end}}
-    {{- end}}
+    {{- end }}
     {{- if .NLB}}
     {{- range $i, $listener := .NLB.Listener }}
       - NLBListener{{ if ne $i 0 }}{{ $i }}{{ end }}
@@ -144,10 +137,12 @@ Resources:
       HealthCheckGracePeriodSeconds: {{.HTTPHealthCheck.GracePeriod}}
       {{- end }}
       LoadBalancers:
-  {{- if .ALBEnabled}}
-        - ContainerName: !Ref TargetContainer
-          ContainerPort: !Ref TargetPort
-          TargetGroupArn: !Ref TargetGroup
+  {{- if .ALBListener}}
+  {{- range $i, $rule := .ALBListener.Rules}}
+        - ContainerName: {{$rule.TargetContainer}}
+          ContainerPort: {{$rule.TargetPort}}
+          TargetGroupArn: !Ref TargetGroup{{ if ne $i 0 }}{{ $i }}{{ end }}
+  {{- end}}
   {{- end}}
   {{- if .NLB}}
     {{- range $i, $listener := .NLB.Listener }}
@@ -160,7 +155,7 @@ Resources:
         - RegistryArn: !GetAtt DiscoveryService.Arn
           Port: !Ref TargetPort
 
-{{- if .ALBEnabled}}
+{{- if .ALBListener}}
 {{include "alb" . | indent 2}}
 {{- end}}
 
