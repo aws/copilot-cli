@@ -2039,21 +2039,6 @@ func populateAndValidateNLBPorts(listener NetworkLoadBalancerListener, container
 	return nil
 }
 
-func validateContainersNotExposingSamePort(containerNameFor map[uint16]string, targetPort uint16, targetContainer *string) error {
-	container, exists := containerNameFor[targetPort]
-	if !exists {
-		return nil
-	}
-	if targetContainer != nil && container != aws.StringValue(targetContainer) {
-		return &errContainersExposingSamePort{
-			firstContainer:  aws.StringValue(targetContainer),
-			secondContainer: container,
-			port:            targetPort,
-		}
-	}
-	return nil
-}
-
 func validateEssentialContainerDependency(name, status string) error {
 	for _, allowed := range essentialContainerDependsOnValidStatuses {
 		if status == allowed {

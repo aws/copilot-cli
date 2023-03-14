@@ -210,8 +210,10 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 					ImageConfig: testImageConfig,
 					RoutingRule: RoutingRuleConfigOrBool{
 						RoutingRuleConfiguration: RoutingRuleConfiguration{
-							Path:            stringP("/"),
-							TargetContainer: aws.String("mockName"),
+							MainRoutingRule: ALBRoutingRule{
+								Path:            stringP("/"),
+								TargetContainer: aws.String("mockName"),
+							},
 						},
 					},
 					NLBConfig: NetworkLoadBalancerConfiguration{
@@ -4057,8 +4059,10 @@ func TestValidateExposedPorts(t *testing.T) {
 					},
 				},
 				alb: &RoutingRuleConfiguration{
-					TargetPort:      aws.Uint16(5001),
-					TargetContainer: aws.String("foo"),
+					MainRoutingRule: ALBRoutingRule{
+						TargetPort:      aws.Uint16(5001),
+						TargetContainer: aws.String("foo"),
+					},
 				},
 				nlb: &NetworkLoadBalancerConfiguration{
 					Listener: NetworkLoadBalancerListener{
@@ -4089,8 +4093,10 @@ func TestValidateExposedPorts(t *testing.T) {
 					},
 				},
 				alb: &RoutingRuleConfiguration{
-					TargetPort:      aws.Uint16(5001),
-					TargetContainer: aws.String("foo"),
+					MainRoutingRule: ALBRoutingRule{
+						TargetPort:      aws.Uint16(5001),
+						TargetContainer: aws.String("foo"),
+					},
 				},
 				nlb: &NetworkLoadBalancerConfiguration{
 					Listener: NetworkLoadBalancerListener{
