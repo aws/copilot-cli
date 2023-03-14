@@ -38,11 +38,11 @@ type inspector struct {
 func (i *inspector) inspect() action {
 	var action action
 	var (
-		commonDone = i.lcsIndices.index >= len(i.lcsIndices.data)
-		fromDone   = i.from.index >= len(i.from.data)
-		toDone     = i.to.index >= len(i.to.data)
+		lcsDone  = i.lcsIndices.index >= len(i.lcsIndices.data)
+		fromDone = i.from.index >= len(i.from.data)
+		toDone   = i.to.index >= len(i.to.data)
 	)
-	if commonDone {
+	if lcsDone {
 		switch {
 		case fromDone && toDone:
 			action = actonDone
