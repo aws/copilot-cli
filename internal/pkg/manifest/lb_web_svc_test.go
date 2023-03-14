@@ -1620,7 +1620,9 @@ func TestNetworkLoadBalancerConfiguration_IsEmpty(t *testing.T) {
 		},
 		"non empty": {
 			in: NetworkLoadBalancerConfiguration{
-				Port: aws.String("443"),
+				Listener: NetworkLoadBalancerListener{
+					Port: aws.String("443"),
+				},
 			},
 		},
 	}
@@ -2050,8 +2052,10 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 						},
 					},
 					NLBConfig: NetworkLoadBalancerConfiguration{
-						Port:       aws.String("85"),
-						TargetPort: aws.Int(81),
+						Listener: NetworkLoadBalancerListener{
+							Port:       aws.String("85"),
+							TargetPort: aws.Int(81),
+						},
 					},
 					Sidecars: map[string]*SidecarConfig{
 						"xray": {
@@ -2103,7 +2107,9 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 						},
 					},
 					NLBConfig: NetworkLoadBalancerConfiguration{
-						Port: aws.String("82"),
+						Listener: NetworkLoadBalancerListener{
+							Port: aws.String("82"),
+						},
 					},
 					Sidecars: map[string]*SidecarConfig{
 						"xray": {
@@ -2155,7 +2161,9 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 						},
 					},
 					NLBConfig: NetworkLoadBalancerConfiguration{
-						Port: aws.String("82"),
+						Listener: NetworkLoadBalancerListener{
+							Port: aws.String("82"),
+						},
 					},
 					Sidecars: map[string]*SidecarConfig{
 						"xray": {
@@ -2202,7 +2210,9 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 						},
 					},
 					NLBConfig: NetworkLoadBalancerConfiguration{
-						Port: aws.String("8080"),
+						Listener: NetworkLoadBalancerListener{
+							Port: aws.String("8080"),
+						},
 					},
 					RoutingRule: RoutingRuleConfigOrBool{
 						RoutingRuleConfiguration: RoutingRuleConfiguration{
@@ -2250,8 +2260,10 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 						},
 					},
 					NLBConfig: NetworkLoadBalancerConfiguration{
-						Port:            aws.String("8082/tcp"),
-						TargetContainer: aws.String("xray"),
+						Listener: NetworkLoadBalancerListener{
+							Port:            aws.String("8082/tcp"),
+							TargetContainer: aws.String("xray"),
+						},
 					},
 					RoutingRule: RoutingRuleConfigOrBool{
 						RoutingRuleConfiguration: RoutingRuleConfiguration{
@@ -2291,6 +2303,123 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 					},
 					{
 						Port:          8082,
+						ContainerName: "xray",
+						Protocol:      "tcp",
+					},
+				},
+			},
+		},
+		"nlb exposing new ports of the main and sidecar containers through main and additional listeners": {
+			mft: &LoadBalancedWebService{
+				Workload: Workload{
+					Name: aws.String("frontend"),
+				},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: ImageWithPortAndHealthcheck{
+						ImageWithPort: ImageWithPort{
+							Port: aws.Uint16(8080),
+						},
+					},
+					RoutingRule: RoutingRuleConfigOrBool{
+						Enabled: aws.Bool(false),
+					},
+					Sidecars: map[string]*SidecarConfig{
+						"xray": {
+							Port: aws.String("80"),
+							Image: Union[*string, ImageLocationOrBuild]{
+								Basic: aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							},
+							CredsParam: aws.String("some arn"),
+						},
+					},
+					NLBConfig: NetworkLoadBalancerConfiguration{
+						Listener: NetworkLoadBalancerListener{
+							Port:            aws.String("8081/tcp"),
+							TargetContainer: aws.String("xray"),
+						},
+						AdditionalListeners: []NetworkLoadBalancerListener{
+							{
+								Port:            aws.String("8082/tls"),
+								TargetPort:      aws.Int(8083),
+								TargetContainer: aws.String("xray"),
+							},
+						},
+					},
+				},
+			},
+			wantedExposedPorts: map[string][]ExposedPort{
+				"frontend": {
+					{
+						Port:          8080,
+						ContainerName: "frontend",
+						Protocol:      "tcp",
+					},
+				},
+				"xray": {
+					{
+						Port:          80,
+						ContainerName: "xray",
+						Protocol:      "tcp",
+					},
+					{
+						Port:          8081,
+						ContainerName: "xray",
+						Protocol:      "tcp",
+					},
+					{
+						Port:          8083,
+						ContainerName: "xray",
+						Protocol:      "tcp",
+					},
+				},
+			},
+		},
+		"nlb exposing new ports of the main and sidecar containers through main and additional listeners without mentioning the target_port or target_container": {
+			mft: &LoadBalancedWebService{
+				Workload: Workload{
+					Name: aws.String("frontend"),
+				},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: ImageWithPortAndHealthcheck{
+						ImageWithPort: ImageWithPort{
+							Port: aws.Uint16(8080),
+						},
+					},
+					RoutingRule: RoutingRuleConfigOrBool{
+						Enabled: aws.Bool(false),
+					},
+					Sidecars: map[string]*SidecarConfig{
+						"xray": {
+							Port: aws.String("80"),
+							Image: Union[*string, ImageLocationOrBuild]{
+								Basic: aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							},
+							CredsParam: aws.String("some arn"),
+						},
+					},
+					NLBConfig: NetworkLoadBalancerConfiguration{
+						Listener: NetworkLoadBalancerListener{
+							Port: aws.String("8080/tcp"),
+						},
+						AdditionalListeners: []NetworkLoadBalancerListener{
+							{
+								Port: aws.String("80/tcp"),
+							},
+						},
+					},
+				},
+			},
+			wantedExposedPorts: map[string][]ExposedPort{
+				"frontend": {
+					{
+						Port:          8080,
+						ContainerName: "frontend",
+						Protocol:      "tcp",
+					},
+				},
+				"xray": {
+					{
+						Port:          80,
 						ContainerName: "xray",
 						Protocol:      "tcp",
 					},
@@ -2394,6 +2523,69 @@ func TestLoadBalancedWebService_BuildArgs(t *testing.T) {
 			} else {
 				require.Equal(t, tc.wantedBuildArgs, got)
 			}
+		})
+	}
+}
+
+func TestNetworkLoadBalancerConfiguration_NLBListeners(t *testing.T) {
+	testCases := map[string]struct {
+		in     NetworkLoadBalancerConfiguration
+		wanted []NetworkLoadBalancerListener
+	}{
+		"return empty list if there are no Listeners provided": {},
+		"return non empty list if main listener is provided": {
+			in: NetworkLoadBalancerConfiguration{
+				Listener: NetworkLoadBalancerListener{
+					Port:            aws.String("8080/tcp"),
+					TargetContainer: stringP("main"),
+				},
+			},
+			wanted: []NetworkLoadBalancerListener{
+				{
+					Port:            stringP("8080/tcp"),
+					TargetContainer: stringP("main"),
+				},
+			},
+		},
+		"return non empty list if main listener as well as AdditionalListeners are provided": {
+			in: NetworkLoadBalancerConfiguration{
+				Listener: NetworkLoadBalancerListener{
+					Port:            aws.String("8080/tcp"),
+					TargetContainer: stringP("main"),
+				},
+				AdditionalListeners: []NetworkLoadBalancerListener{
+					{
+						Port:            aws.String("8081/tcp"),
+						TargetContainer: stringP("main"),
+					},
+					{
+						Port:            aws.String("8082/tcp"),
+						TargetContainer: stringP("main"),
+					},
+				},
+			},
+			wanted: []NetworkLoadBalancerListener{
+				{
+					Port:            stringP("8080/tcp"),
+					TargetContainer: stringP("main"),
+				},
+				{
+					Port:            stringP("8081/tcp"),
+					TargetContainer: stringP("main"),
+				},
+				{
+					Port:            stringP("8082/tcp"),
+					TargetContainer: stringP("main"),
+				},
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// WHEN
+			got := tc.in.NLBListeners()
+			// THEN
+			require.Equal(t, tc.wanted, got)
 		})
 	}
 }
