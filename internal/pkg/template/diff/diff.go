@@ -6,7 +6,6 @@ package diff
 
 import (
 	"fmt"
-	"strconv"
 
 	"gopkg.in/yaml.v3"
 )
@@ -212,13 +211,4 @@ func unionOfKeys[T any](a, b map[string]T) map[string]struct{} {
 
 func cacheKey(inFrom, inTo int) string {
 	return fmt.Sprintf("%d,%d", inFrom, inTo)
-}
-
-// TODO(lou1415926): use a more meaningful key for a seq child.
-func seqChildKeyFunc() func() string {
-	idx := -1
-	return func() string {
-		idx++
-		return strconv.Itoa(idx)
-	}
 }
