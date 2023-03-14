@@ -865,7 +865,9 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 		},
 		"fail to get public CIDR blocks": {
 			inNLB: manifest.NetworkLoadBalancerConfiguration{
-				Port: aws.String("443/tcp"),
+				Listener: manifest.NetworkLoadBalancerListener{
+					Port: aws.String("443/tcp"),
+				},
 			},
 			inEnvironment: &config.Environment{
 				Name:   mockEnvName,
@@ -898,7 +900,9 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 		},
 		"nlb alias used while app is not associated with a domain": {
 			inNLB: manifest.NetworkLoadBalancerConfiguration{
-				Port:    aws.String("80"),
+				Listener: manifest.NetworkLoadBalancerListener{
+					Port: aws.String("80"),
+				},
 				Aliases: manifest.Alias{AdvancedAliases: mockAlias},
 			},
 			inEnvironment: &config.Environment{
@@ -917,7 +921,9 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 		"nlb alias used while env has imported certs": {
 			inAliases: manifest.Alias{AdvancedAliases: mockAlias},
 			inNLB: manifest.NetworkLoadBalancerConfiguration{
-				Port:    aws.String("80"),
+				Listener: manifest.NetworkLoadBalancerListener{
+					Port: aws.String("80"),
+				},
 				Aliases: manifest.Alias{AdvancedAliases: mockAlias},
 			},
 			inEnvironment: &config.Environment{
@@ -992,7 +998,9 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 		},
 		"fail to enable nlb alias because of incompatible app version": {
 			inNLB: manifest.NetworkLoadBalancerConfiguration{
-				Port:    aws.String("80"),
+				Listener: manifest.NetworkLoadBalancerListener{
+					Port: aws.String("80"),
+				},
 				Aliases: manifest.Alias{AdvancedAliases: mockAlias},
 			},
 			inEnvironment: &config.Environment{
@@ -1027,11 +1035,13 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 				m.mockEnvVersionGetter.EXPECT().Version().Return("v1.42.0", nil)
 			},
-			wantErr: fmt.Errorf(`alias "v1.v2.mockDomain" is not supported in hosted zones managed by Copilot`),
+			wantErr: fmt.Errorf(`validate 'http.alias': alias "v1.v2.mockDomain" is not supported in hosted zones managed by Copilot`),
 		},
 		"fail to enable nlb alias because of invalid alias": {
 			inNLB: manifest.NetworkLoadBalancerConfiguration{
-				Port: aws.String("80"),
+				Listener: manifest.NetworkLoadBalancerListener{
+					Port: aws.String("80"),
+				},
 				Aliases: manifest.Alias{AdvancedAliases: []manifest.AdvancedAlias{
 					{Alias: aws.String("v1.v2.mockDomain")},
 				}},
@@ -1049,7 +1059,7 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 				m.mockEnvVersionGetter.EXPECT().Version().Return("v1.42.0", nil)
 			},
-			wantErr: fmt.Errorf(`alias "v1.v2.mockDomain" is not supported in hosted zones managed by Copilot`),
+			wantErr: fmt.Errorf(`validate 'nlb.alias': alias "v1.v2.mockDomain" is not supported in hosted zones managed by Copilot`),
 		},
 		"error if fail to deploy service": {
 			inEnvironment: &config.Environment{
