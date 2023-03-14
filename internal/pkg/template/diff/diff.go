@@ -13,8 +13,6 @@ import (
 
 // Node represents a segment on a difference between two YAML documents.
 type Node interface {
-	String() string
-
 	key() string
 	newValue() *yaml.Node
 	oldValue() *yaml.Node
@@ -44,11 +42,6 @@ func (n *basicNode) oldValue() *yaml.Node {
 // String returns the string representation of the tree stemmed from the diffNode n.
 func (n *basicNode) children() map[string]Node {
 	return n.childNodes
-}
-
-// String returns the string representation of the tree stemmed from the diffNode n.
-func (n *basicNode) String() string {
-	return ""
 }
 
 type seqNode struct {
