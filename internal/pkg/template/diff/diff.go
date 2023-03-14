@@ -16,12 +16,12 @@ type Node interface {
 	key() string
 	newValue() *yaml.Node
 	oldValue() *yaml.Node
-	children() map[string]Node
+	children() []Node
 }
 
 type basicNode struct {
 	keyValue   string
-	childNodes map[string]Node // A list of non-empty pointers to the children nodes.
+	childNodes []Node // A list of non-empty pointers to the children nodes.
 
 	oldV *yaml.Node // Only populated for a leaf node (i.e. that has no child node).
 	newV *yaml.Node // Only populated for a leaf node (i.e. that has no child node).
@@ -39,12 +39,11 @@ func (n *basicNode) oldValue() *yaml.Node {
 	return n.oldV
 }
 
-// String returns the string representation of the tree stemmed from the diffNode n.
-func (n *basicNode) children() map[string]Node {
+func (n *basicNode) children() []Node {
 	return n.childNodes
 }
 
-type seqNode struct {
+type seqItemNode struct {
 	basicNode
 }
 
@@ -84,7 +83,7 @@ func parse(from, to *yaml.Node, key string) (Node, error) {
 		}, nil
 	}
 
-	var children map[string]Node
+	var children []Node
 	var err error
 	switch {
 	case to.Kind == yaml.SequenceNode && from.Kind == yaml.SequenceNode:
@@ -112,7 +111,7 @@ func isYAMLLeaf(node *yaml.Node) bool {
 	return len(node.Content) == 0
 }
 
-func parseSequence(fromNode, toNode *yaml.Node) (map[string]Node, error) {
+func parseSequence(fromNode, toNode *yaml.Node) ([]Node, error) {
 	fromSeq, toSeq := make([]yaml.Node, len(fromNode.Content)), make([]yaml.Node, len(toNode.Content)) // NOTE: should be the same as calling `Decode`.
 	for idx, v := range fromNode.Content {
 		fromSeq[idx] = *v
@@ -135,7 +134,10 @@ func parseSequence(fromNode, toNode *yaml.Node) (map[string]Node, error) {
 		}
 		return err == nil && diff == nil
 	})
-	nextKey, children, inspector := seqChildKeyFunc(), make(map[string]Node), newLCSStateMachine(fromSeq, toSeq, lcsIndices)
+	if len(fromSeq) == len(toSeq) && len(lcsIndices) == len(fromSeq) {
+		return nil, nil
+	}
+	children, inspector := make([]Node, 0), newLCSStateMachine(fromSeq, toSeq, lcsIndices)
 	for action := inspector.action(); action != actonDone; action = inspector.action() {
 		switch action {
 		case actionMatch:
@@ -146,30 +148,30 @@ func parseSequence(fromNode, toNode *yaml.Node) (map[string]Node, error) {
 			if diff.err != nil {
 				return nil, diff.err
 			}
-			children[nextKey()] = &seqNode{
+			children = append(children, &seqItemNode{
 				basicNode: *(diff.node.(*basicNode)),
-			}
+			})
 		case actionDel:
 			item := inspector.fromItem()
-			children[nextKey()] = &seqNode{
+			children = append(children, &seqItemNode{
 				basicNode{
 					oldV: &item,
 				},
-			}
+			})
 		case actionInsert:
 			item := inspector.toItem()
-			children[nextKey()] = &seqNode{
+			children = append(children, &seqItemNode{
 				basicNode{
 					newV: &item,
 				},
-			}
+			})
 		}
 		inspector.next()
 	}
 	return children, nil
 }
 
-func parseMap(from, to *yaml.Node) (map[string]Node, error) {
+func parseMap(from, to *yaml.Node) ([]Node, error) {
 	currMap, oldMap := make(map[string]yaml.Node), make(map[string]yaml.Node)
 	if err := to.Decode(currMap); err != nil {
 		return nil, err
@@ -177,7 +179,7 @@ func parseMap(from, to *yaml.Node) (map[string]Node, error) {
 	if err := from.Decode(oldMap); err != nil {
 		return nil, err
 	}
-	children := make(map[string]Node)
+	children := make([]Node, 0)
 	for k := range unionOfKeys(currMap, oldMap) {
 		var currV, oldV *yaml.Node
 		if v, ok := oldMap[k]; ok {
@@ -191,7 +193,7 @@ func parseMap(from, to *yaml.Node) (map[string]Node, error) {
 			return nil, err
 		}
 		if kDiff != nil {
-			children[k] = kDiff
+			children = append(children, kDiff)
 		}
 	}
 	return children, nil

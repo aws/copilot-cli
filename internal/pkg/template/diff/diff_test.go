@@ -34,12 +34,10 @@ func TestFrom_Parse(t *testing.T) {
 					newV:     yamlNode("kg: 52", t),
 				}
 				return &basicNode{
-					childNodes: map[string]Node{
-						"Mary": &basicNode{
-							keyValue: "Mary",
-							childNodes: map[string]Node{
-								"Weight": leaf,
-							},
+					childNodes: []Node{
+						&basicNode{
+							keyValue:   "Mary",
+							childNodes: []Node{leaf},
 						},
 					},
 				}
@@ -61,12 +59,10 @@ func TestFrom_Parse(t *testing.T) {
 					oldV:     yamlNode("kg: 52", t),
 				}
 				return &basicNode{
-					childNodes: map[string]Node{
-						"Mary": &basicNode{
-							keyValue: "Mary",
-							childNodes: map[string]Node{
-								"Weight": leaf,
-							},
+					childNodes: []Node{
+						&basicNode{
+							keyValue:   "Mary",
+							childNodes: []Node{leaf},
 						},
 					},
 				}
@@ -106,17 +102,15 @@ func TestFrom_Parse(t *testing.T) {
 					oldV:     yamlScalarNode("muscle"),
 				}
 				return &basicNode{
-					childNodes: map[string]Node{
-						"Mary": &basicNode{
+					childNodes: []Node{
+						&basicNode{
 							keyValue: "Mary",
-							childNodes: map[string]Node{
-								"CanFight":     leafCanFight,
-								"FavoriteWord": leafFavWord,
-								"Height": &basicNode{
-									keyValue: "Height",
-									childNodes: map[string]Node{
-										"cm": leafCM,
-									},
+							childNodes: []Node{
+								leafCanFight,
+								leafFavWord,
+								&basicNode{
+									keyValue:   "Height",
+									childNodes: []Node{leafCM},
 								},
 							},
 						},
@@ -147,13 +141,10 @@ func TestFrom_Parse(t *testing.T) {
 					newV: yamlScalarNode("dog"),
 				}
 				return &basicNode{
-					childNodes: map[string]Node{
-						"SizeRank": &basicNode{
-							keyValue: "SizeRank",
-							childNodes: map[string]Node{
-								"0": leaf1,
-								"1": leaf2,
-							},
+					childNodes: []Node{
+						&basicNode{
+							keyValue:   "SizeRank",
+							childNodes: []Node{leaf1, leaf2},
 						},
 					},
 				}
@@ -171,12 +162,10 @@ func TestFrom_Parse(t *testing.T) {
 					newV: yamlScalarNode("mouse"),
 				}
 				return &basicNode{
-					childNodes: map[string]Node{
-						"DanceCompetition": &basicNode{
-							keyValue: "DanceCompetition",
-							childNodes: map[string]Node{
-								"0": leaf,
-							},
+					childNodes: []Node{
+						&basicNode{
+							keyValue:   "DanceCompetition",
+							childNodes: []Node{leaf},
 						},
 					},
 				}
@@ -194,12 +183,10 @@ func TestFrom_Parse(t *testing.T) {
 					oldV: yamlScalarNode("cat"),
 				}
 				return &basicNode{
-					childNodes: map[string]Node{
-						"PotatoChipCommittee": &basicNode{
-							keyValue: "PotatoChipCommittee",
-							childNodes: map[string]Node{
-								"0": leaf,
-							},
+					childNodes: []Node{
+						&basicNode{
+							keyValue:   "PotatoChipCommittee",
+							childNodes: []Node{leaf},
 						},
 					},
 				}
@@ -218,12 +205,10 @@ func TestFrom_Parse(t *testing.T) {
 					newV: yamlScalarNode("ellipse"),
 				}
 				return &basicNode{
-					childNodes: map[string]Node{
-						"DogsFavoriteShape": &basicNode{
-							keyValue: "DogsFavoriteShape",
-							childNodes: map[string]Node{
-								"0": leaf,
-							},
+					childNodes: []Node{
+						&basicNode{
+							keyValue:   "DogsFavoriteShape",
+							childNodes: []Node{leaf},
 						},
 					},
 				}
@@ -259,12 +244,10 @@ func TestFrom_Parse(t *testing.T) {
 					oldV:     yamlNode("Bear: \"I know I'm supposed to keep an eye on you\"", t),
 				}
 				return &basicNode{
-					childNodes: map[string]Node{
-						"Mary": &basicNode{
-							keyValue: "Mary",
-							childNodes: map[string]Node{
-								"Dialogue": leafDialogue,
-							},
+					childNodes: []Node{
+						&basicNode{
+							keyValue:   "Mary",
+							childNodes: []Node{leafDialogue},
 						},
 					},
 				}
@@ -290,12 +273,10 @@ func TestFrom_Parse(t *testing.T) {
   Tone: pleased`, t),
 				}
 				return &basicNode{
-					childNodes: map[string]Node{
-						"Mary": &basicNode{
-							keyValue: "Mary",
-							childNodes: map[string]Node{
-								"Dialogue": leafDialogue,
-							},
+					childNodes: []Node{
+						&basicNode{
+							keyValue:   "Mary",
+							childNodes: []Node{leafDialogue},
 						},
 					},
 				}
@@ -324,12 +305,10 @@ func TestFrom_Parse(t *testing.T) {
 Dog: (pleased) "ikr"`, t),
 				}
 				return &basicNode{
-					childNodes: map[string]Node{
-						"Mary": &basicNode{
-							keyValue: "Mary",
-							childNodes: map[string]Node{
-								"Dialogue": leafDialogue,
-							},
+					childNodes: []Node{
+						&basicNode{
+							keyValue:   "Mary",
+							childNodes: []Node{leafDialogue},
 						},
 					},
 				}
@@ -417,8 +396,14 @@ func equalTree(a, b Node, t *testing.T) bool {
 	if len(a.children()) == 0 {
 		return equalLeaves(a, b, t)
 	}
-	for k := range a.children() {
-		if equal := equalTree(a.children()[k], b.children()[k], t); !equal {
+	aKeyToChild, bKeyToChild := make(map[string]Node), make(map[string]Node)
+	for i := 0; i < len(a.children()); i++ {
+		aChild, bChild := a.children()[i], b.children()[i]
+		aKeyToChild[aChild.key()] = aChild
+		bKeyToChild[bChild.key()] = bChild
+	}
+	for k := range aKeyToChild {
+		if equal := equalTree(aKeyToChild[k], bKeyToChild[k], t); !equal {
 			return false
 		}
 	}
