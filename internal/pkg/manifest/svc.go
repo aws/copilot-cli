@@ -664,32 +664,45 @@ func prepareParsedExposedPortsMap(exposedPorts []ExposedPort) (map[string][]Expo
 
 // NetworkLoadBalancerTarget returns target container and target port for the NLB configuration.
 // This method should be called only when NLB config is not empty.
-func (s *LoadBalancedWebService) NetworkLoadBalancerTarget() (targetContainer string, targetPort string, err error) {
-	// Configure target container and port.
-	targetContainer = aws.StringValue(s.Name)
-	if s.NLBConfig.Listener.TargetContainer != nil {
-		targetContainer = aws.StringValue(s.NLBConfig.Listener.TargetContainer)
+func (s *LoadBalancedWebService) NetworkLoadBalancerTarget(lContainer string, lPort *int, nlbPort string) (targetContainer string, targetPort string, err error) {
+	exposedPorts, err := s.ExposedPorts()
+	if err != nil {
+		return "", "", err
 	}
 
+	// Configure target container and port.
+	targetContainer = aws.StringValue(s.Name)
 	// Parse listener port and protocol.
-	port, _, err := ParsePortMapping(s.NLBConfig.Listener.Port)
+	port, _, err := ParsePortMapping(aws.String(nlbPort))
 	if err != nil {
 		return "", "", err
 	}
 	// By default, the target port is the same as listener port.
 	targetPort = aws.StringValue(port)
-	if targetContainer != aws.StringValue(s.Name) {
-		// If the target container is a sidecar container, the target port is the exposed sidecar port.
-		sideCarPort := s.Sidecars[targetContainer].Port // We validated that a sidecar container exposes a port if it is a target container.
-		port, _, err := ParsePortMapping(sideCarPort)
-		if err != nil {
-			return "", "", err
+
+	if lContainer == "" && lPort == nil { // both targetPort and targetContainer are nil.
+		return
+	}
+
+	if lPort == nil { // when target_port is nil
+		if lContainer != aws.StringValue(s.Name) {
+			targetContainer = lContainer
+			targetPort = aws.StringValue(s.Sidecars[lContainer].Port)
 		}
+		return
+	}
+
+	if lContainer == "" { // when target_container is nil
+		container, port := httpLoadBalancerTarget(exposedPorts, uint16P(uint16(aws.IntValue(lPort))))
 		targetPort = aws.StringValue(port)
+		if container != nil {
+			targetContainer = aws.StringValue(container)
+		}
+		return
 	}
-	// Finally, if a target port is explicitly specified, use that value.
-	if s.NLBConfig.Listener.TargetPort != nil {
-		targetPort = strconv.Itoa(aws.IntValue(s.NLBConfig.Listener.TargetPort))
-	}
+
+	// when both target_port and target_container are not nil
+	targetContainer = lContainer
+	targetPort = template.StrconvUint16(uint16(aws.IntValue(lPort)))
 	return
 }
