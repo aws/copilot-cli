@@ -604,7 +604,7 @@ func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (networkLoadBalanc
 	}
 
 	// Parse listener port and protocol.
-	port, protocol, err := manifest.ParsePortMapping(nlbConfig.Port)
+	port, protocol, err := manifest.ParsePortMapping(nlbConfig.Listener.Port)
 	if err != nil {
 		return networkLoadBalancerConfig{}, err
 	}
@@ -618,7 +618,7 @@ func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (networkLoadBalanc
 		return networkLoadBalancerConfig{}, fmt.Errorf(`convert "nlb.alias" to string slice: %w`, err)
 	}
 
-	hc := convertNLBHealthCheck(&nlbConfig.HealthCheck)
+	hc := convertNLBHealthCheck(&nlbConfig.Listener.HealthCheck)
 
 	config := networkLoadBalancerConfig{
 		settings: &template.NetworkLoadBalancer{
@@ -629,10 +629,10 @@ func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (networkLoadBalanc
 					Protocol:        strings.ToUpper(aws.StringValue(protocol)),
 					TargetContainer: targetContainer,
 					TargetPort:      targetPort,
-					SSLPolicy:       nlbConfig.SSLPolicy,
+					SSLPolicy:       nlbConfig.Listener.SSLPolicy,
 					Aliases:         aliases,
 					HealthCheck:     hc,
-					Stickiness:      nlbConfig.Stickiness,
+					Stickiness:      nlbConfig.Listener.Stickiness,
 				},
 			},
 			MainContainerPort:   s.manifest.MainContainerPort(),

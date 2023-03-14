@@ -316,7 +316,7 @@ func (s *LoadBalancedWebService) Parameters() ([]*cloudformation.Parameter, erro
 		}...)
 	}
 	if !s.manifest.NLBConfig.IsEmpty() {
-		port, _, err := manifest.ParsePortMapping(s.manifest.NLBConfig.Port)
+		port, _, err := manifest.ParsePortMapping(s.manifest.NLBConfig.Listener.Port)
 		if err != nil {
 			return nil, err
 		}

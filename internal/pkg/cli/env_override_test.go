@@ -9,19 +9,19 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
-	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/template"
-	"github.com/golang/mock/gomock"
 	"github.com/spf13/afero"
+
+	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
 
-func TestOverrideSvc_Validate(t *testing.T) {
+func TestOverrideEnv_Validate(t *testing.T) {
 	t.Run("validate application", func(t *testing.T) {
 		testCases := map[string]struct {
 			appName   string
-			initMocks func(ctrl *gomock.Controller, cmd *overrideWorkloadOpts)
+			initMocks func(ctrl *gomock.Controller, cmd *overrideEnvOpts)
 
 			wanted error
 		}{
@@ -30,7 +30,7 @@ func TestOverrideSvc_Validate(t *testing.T) {
 			},
 			"return a wrapped error if the workspace's application cannot be fetched from the Config Store": {
 				appName: "demo",
-				initMocks: func(ctrl *gomock.Controller, cmd *overrideWorkloadOpts) {
+				initMocks: func(ctrl *gomock.Controller, cmd *overrideEnvOpts) {
 					mockSSM := mocks.NewMockstore(ctrl)
 					mockSSM.EXPECT().GetApplication(gomock.Any()).Return(nil, errors.New("some error"))
 					cmd.cfgStore = mockSSM
@@ -45,7 +45,7 @@ func TestOverrideSvc_Validate(t *testing.T) {
 				defer ctrl.Finish()
 
 				vars := overrideVars{appName: tc.appName}
-				cmd := &overrideWorkloadOpts{
+				cmd := &overrideEnvOpts{
 					overrideOpts: &overrideOpts{
 						overrideVars: vars,
 					},
@@ -68,27 +68,41 @@ func TestOverrideSvc_Validate(t *testing.T) {
 	})
 	t.Run("validate environment name", func(t *testing.T) {
 		testCases := map[string]struct {
-			envName   string
-			initMocks func(ctrl *gomock.Controller, cmd *overrideWorkloadOpts)
+			name      string
+			initMocks func(ctrl *gomock.Controller, cmd *overrideEnvOpts)
 
 			wanted error
 		}{
 			"skip validating if environment name is empty": {
-				initMocks: func(ctrl *gomock.Controller, cmd *overrideWorkloadOpts) {
+				initMocks: func(ctrl *gomock.Controller, cmd *overrideEnvOpts) {
 					mockSSM := mocks.NewMockstore(ctrl)
 					mockSSM.EXPECT().GetApplication(gomock.Any()).AnyTimes()
 					cmd.cfgStore = mockSSM
 				},
 			},
-			"return a wrapped error if the environment flag value does not exist": {
-				envName: "test",
-				initMocks: func(ctrl *gomock.Controller, cmd *overrideWorkloadOpts) {
+			"return a wrapped error if environment name from workspace cannot be retrieved": {
+				name: "test",
+				initMocks: func(ctrl *gomock.Controller, cmd *overrideEnvOpts) {
 					mockSSM := mocks.NewMockstore(ctrl)
 					mockSSM.EXPECT().GetApplication(gomock.Any()).AnyTimes()
-					mockSSM.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Return(nil, &config.ErrNoSuchEnvironment{})
+					mockWS := mocks.NewMockwsEnvironmentReader(ctrl)
+					mockWS.EXPECT().ListEnvironments().Return(nil, errors.New("some error"))
 					cmd.cfgStore = mockSSM
+					cmd.ws = mockWS
 				},
-				wanted: errors.New(`get environment "test" configuration`),
+				wanted: errors.New("list environments in the workspace: some error"),
+			},
+			"return an error if the environment does not exist in the workspace": {
+				name: "test",
+				initMocks: func(ctrl *gomock.Controller, cmd *overrideEnvOpts) {
+					mockSSM := mocks.NewMockstore(ctrl)
+					mockSSM.EXPECT().GetApplication(gomock.Any()).AnyTimes()
+					mockWS := mocks.NewMockwsEnvironmentReader(ctrl)
+					mockWS.EXPECT().ListEnvironments().Return([]string{"prod"}, nil)
+					cmd.cfgStore = mockSSM
+					cmd.ws = mockWS
+				},
+				wanted: errors.New(`environment "test" does not exist in the workspace`),
 			},
 		}
 		for name, tc := range testCases {
@@ -97,9 +111,8 @@ func TestOverrideSvc_Validate(t *testing.T) {
 				ctrl := gomock.NewController(t)
 				defer ctrl.Finish()
 
-				vars := overrideVars{appName: "demo", cdkLang: "typescript"}
-				cmd := &overrideWorkloadOpts{
-					envName: tc.envName,
+				vars := overrideVars{name: tc.name, appName: "demo", cdkLang: "typescript"}
+				cmd := &overrideEnvOpts{
 					overrideOpts: &overrideOpts{
 						overrideVars: vars,
 					},
@@ -142,7 +155,7 @@ func TestOverrideSvc_Validate(t *testing.T) {
 				mockSSM.EXPECT().GetApplication(gomock.Any()).Return(nil, nil)
 
 				vars := overrideVars{appName: "demo", cdkLang: tc.lang}
-				cmd := &overrideWorkloadOpts{
+				cmd := &overrideEnvOpts{
 					overrideOpts: &overrideOpts{
 						overrideVars: vars,
 						cfgStore:     mockSSM,
@@ -163,89 +176,38 @@ func TestOverrideSvc_Validate(t *testing.T) {
 	})
 }
 
-func TestOverrideSvc_Ask(t *testing.T) {
-	t.Run("ask or validate service name", func(t *testing.T) {
-		testCases := map[string]struct {
-			name      string
-			initMocks func(ctrl *gomock.Controller, cmd *overrideWorkloadOpts)
+func TestOverrideEnv_Ask(t *testing.T) {
+	t.Run("assign environment name", func(t *testing.T) {
+		// GIVEN
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		ws := mocks.NewMockwsEnvironmentReader(ctrl)
+		ws.EXPECT().ListEnvironments().Return([]string{"test", "prod"}, nil)
 
-			wanted error
-		}{
-			"validation passes if service exists in local workspace": {
-				name: "frontend",
-				initMocks: func(ctrl *gomock.Controller, cmd *overrideWorkloadOpts) {
-					mockWS := mocks.NewMockwsWlDirReader(ctrl)
-					mockWS.EXPECT().ListServices().Return([]string{"backend", "frontend", "worker"}, nil)
-					cmd.ws = mockWS
+		vars := overrideVars{name: "", appName: "demo", iacTool: "cdk", skipResources: true}
+		cmd := &overrideEnvOpts{
+			overrideOpts: &overrideOpts{
+				overrideVars: vars,
+				cfgStore:     mocks.NewMockstore(ctrl),
+				packageCmd: func(_ stringWriteCloser) (executor, error) {
+					mockCmd := mocks.NewMockexecutor(ctrl)
+					mockCmd.EXPECT().Execute().AnyTimes()
+					return mockCmd, nil
 				},
 			},
-			"return a wrapped error if local services cannot be retrieved from workspace": {
-				name: "frontend",
-				initMocks: func(ctrl *gomock.Controller, cmd *overrideWorkloadOpts) {
-					mockWS := mocks.NewMockwsWlDirReader(ctrl)
-					mockWS.EXPECT().ListServices().Return(nil, errors.New("some error"))
-					cmd.ws = mockWS
-				},
-				wanted: errors.New("list services in the workspace: some error"),
-			},
-			"return an error if service does not exist in the workspace": {
-				name: "frontend",
-				initMocks: func(ctrl *gomock.Controller, cmd *overrideWorkloadOpts) {
-					mockWS := mocks.NewMockwsWlDirReader(ctrl)
-					mockWS.EXPECT().ListServices().Return([]string{"backend"}, nil)
-					cmd.ws = mockWS
-				},
-				wanted: errors.New(`service "frontend" does not exist in the workspace`),
-			},
-			"should ask for the local service name if flag is not provided": {
-				name: "",
-				initMocks: func(ctrl *gomock.Controller, cmd *overrideWorkloadOpts) {
-					mockPrompt := mocks.NewMockwsSelector(ctrl)
-					mockPrompt.EXPECT().Service(gomock.Any(), gomock.Any())
-					cmd.wsPrompt = mockPrompt
-				},
-			},
+			ws: ws,
 		}
-		for name, tc := range testCases {
-			t.Run(name, func(t *testing.T) {
-				// GIVEN
-				ctrl := gomock.NewController(t)
-				defer ctrl.Finish()
-				mockCfnPrompt := mocks.NewMockcfnSelector(ctrl)
-				mockCfnPrompt.EXPECT().Resources(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 
-				vars := overrideVars{name: tc.name, appName: "demo", iacTool: "cdk"}
-				cmd := &overrideWorkloadOpts{
-					overrideOpts: &overrideOpts{
-						overrideVars: vars,
-						cfgStore:     mocks.NewMockstore(ctrl),
-						cfnPrompt:    mockCfnPrompt,
-						packageCmd: func(_ stringWriteCloser) (executor, error) {
-							mockCmd := mocks.NewMockexecutor(ctrl)
-							mockCmd.EXPECT().Execute().AnyTimes()
-							return mockCmd, nil
-						},
-					},
-				}
-				cmd.validateOrAskName = cmd.validateOrAskServiceName
-				tc.initMocks(ctrl, cmd)
+		// WHEN
+		err := cmd.Ask()
 
-				// WHEN
-				err := cmd.Ask()
-
-				// THEN
-				if tc.wanted != nil {
-					require.EqualError(t, err, tc.wanted.Error())
-				} else {
-					require.NoError(t, err)
-				}
-			})
-		}
+		// THEN
+		require.NoError(t, err)
 	})
 	t.Run("ask or validate IaC tool", func(t *testing.T) {
 		testCases := map[string]struct {
 			iacTool   string
-			initMocks func(ctrl *gomock.Controller, cmd *overrideWorkloadOpts)
+			initMocks func(ctrl *gomock.Controller, cmd *overrideEnvOpts)
 
 			wanted error
 		}{
@@ -258,7 +220,7 @@ func TestOverrideSvc_Ask(t *testing.T) {
 				wanted:  errors.New(`"terraform" is not a valid IaC tool: must be one of: "cdk"`),
 			},
 			"should ask for IaC tool name if flag is not provided": {
-				initMocks: func(ctrl *gomock.Controller, cmd *overrideWorkloadOpts) {
+				initMocks: func(ctrl *gomock.Controller, cmd *overrideEnvOpts) {
 					mockPrompt := mocks.NewMockprompter(ctrl)
 					mockPrompt.EXPECT().SelectOne(gomock.Any(), gomock.Any(), []string{"cdk"}, gomock.Any())
 					cmd.prompt = mockPrompt
@@ -271,13 +233,11 @@ func TestOverrideSvc_Ask(t *testing.T) {
 				ctrl := gomock.NewController(t)
 				defer ctrl.Finish()
 				mockSSM := mocks.NewMockstore(ctrl)
-				mockWS := mocks.NewMockwsWlDirReader(ctrl)
-				mockWS.EXPECT().ListServices().Return([]string{"frontend"}, nil).AnyTimes()
 				mockCfnPrompt := mocks.NewMockcfnSelector(ctrl)
 				mockCfnPrompt.EXPECT().Resources(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 
-				vars := overrideVars{appName: "demo", name: "frontend", iacTool: tc.iacTool}
-				cmd := &overrideWorkloadOpts{
+				vars := overrideVars{appName: "demo", name: "test", iacTool: tc.iacTool}
+				cmd := &overrideEnvOpts{
 					overrideOpts: &overrideOpts{
 						overrideVars: vars,
 						cfgStore:     mockSSM,
@@ -288,9 +248,7 @@ func TestOverrideSvc_Ask(t *testing.T) {
 							return mockCmd, nil
 						},
 					},
-					ws: mockWS,
 				}
-				cmd.validateOrAskName = cmd.validateOrAskServiceName
 				if tc.initMocks != nil {
 					tc.initMocks(ctrl, cmd)
 				}
@@ -310,19 +268,19 @@ func TestOverrideSvc_Ask(t *testing.T) {
 	t.Run("ask for which template resources to override", func(t *testing.T) {
 		testCases := map[string]struct {
 			skip      bool
-			initMocks func(ctrl *gomock.Controller, cmd *overrideWorkloadOpts)
+			initMocks func(ctrl *gomock.Controller, cmd *overrideEnvOpts)
 			wanted    error
 		}{
 			"should skip prompting for resources if the user opts-in to generating empty files": {
 				skip: true,
-				initMocks: func(ctrl *gomock.Controller, cmd *overrideWorkloadOpts) {
+				initMocks: func(ctrl *gomock.Controller, cmd *overrideEnvOpts) {
 					mockPrompt := mocks.NewMockcfnSelector(ctrl)
 					mockPrompt.EXPECT().Resources(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 					cmd.cfnPrompt = mockPrompt
 				},
 			},
 			"should return an error if package command cannot be initialized": {
-				initMocks: func(ctrl *gomock.Controller, cmd *overrideWorkloadOpts) {
+				initMocks: func(ctrl *gomock.Controller, cmd *overrideEnvOpts) {
 					cmd.packageCmd = func(_ stringWriteCloser) (executor, error) {
 						return nil, errors.New("init fail")
 					}
@@ -330,27 +288,25 @@ func TestOverrideSvc_Ask(t *testing.T) {
 				wanted: errors.New("init fail"),
 			},
 			"should return a wrapped error if package command fails to execute": {
-				initMocks: func(ctrl *gomock.Controller, cmd *overrideWorkloadOpts) {
+				initMocks: func(ctrl *gomock.Controller, cmd *overrideEnvOpts) {
 					mockPkgCmd := mocks.NewMockexecutor(ctrl)
 					mockPkgCmd.EXPECT().Execute().Return(errors.New("some error"))
 					cmd.packageCmd = func(_ stringWriteCloser) (executor, error) {
 						return mockPkgCmd, nil
 					}
 				},
-				wanted: errors.New(`generate CloudFormation template for "frontend": some error`),
+				wanted: errors.New(`generate CloudFormation template for "test": some error`),
 			},
 			"should prompt for CloudFormation resources in a template": {
-				initMocks: func(ctrl *gomock.Controller, cmd *overrideWorkloadOpts) {
+				initMocks: func(ctrl *gomock.Controller, cmd *overrideEnvOpts) {
 					mockPkgCmd := mocks.NewMockexecutor(ctrl)
 					mockPkgCmd.EXPECT().Execute().Return(nil)
 					mockPrompt := mocks.NewMockcfnSelector(ctrl)
 					template := `
-Resources:
-  Queue:
-    Type: AWS::SQS::Queue
-  Service:
-    Type: AWS::ECS::Service
-`
+	Resources:
+	  VPC:
+	    Type: AWS::EC2::VPC
+	`
 					mockPrompt.EXPECT().Resources(gomock.Any(), gomock.Any(), gomock.Any(), template).Return(nil, nil)
 
 					cmd.packageCmd = func(w stringWriteCloser) (executor, error) {
@@ -368,18 +324,14 @@ Resources:
 				ctrl := gomock.NewController(t)
 				defer ctrl.Finish()
 				mockSSM := mocks.NewMockstore(ctrl)
-				mockWS := mocks.NewMockwsWlDirReader(ctrl)
-				mockWS.EXPECT().ListServices().Return([]string{"frontend"}, nil).AnyTimes()
 
-				vars := overrideVars{appName: "demo", name: "frontend", iacTool: "cdk", skipResources: tc.skip}
-				cmd := &overrideWorkloadOpts{
+				vars := overrideVars{appName: "demo", name: "test", iacTool: "cdk", skipResources: tc.skip}
+				cmd := &overrideEnvOpts{
 					overrideOpts: &overrideOpts{
 						overrideVars: vars,
 						cfgStore:     mockSSM,
 					},
-					ws: mockWS,
 				}
-				cmd.validateOrAskName = cmd.validateOrAskServiceName
 				tc.initMocks(ctrl, cmd)
 
 				// WHEN
@@ -396,18 +348,18 @@ Resources:
 	})
 }
 
-func TestOverrideSvc_Execute(t *testing.T) {
+func TestOverrideEnv_Execute(t *testing.T) {
 	t.Run("with the CDK", func(t *testing.T) {
 		testCases := map[string]struct {
 			resources []template.CFNResource
-			initMocks func(ctrl *gomock.Controller, cmd *overrideWorkloadOpts)
+			initMocks func(ctrl *gomock.Controller, cmd *overrideEnvOpts)
 			wanted    error
 		}{
 			"should succeed creating IaC files without any resources": {
-				initMocks: func(ctrl *gomock.Controller, cmd *overrideWorkloadOpts) {
+				initMocks: func(ctrl *gomock.Controller, cmd *overrideEnvOpts) {
 					fs := afero.NewMemMapFs()
-					ws := mocks.NewMockwsWlDirReader(ctrl)
-					ws.EXPECT().WorkloadOverridesPath(gomock.Any()).Return(filepath.Join("copilot", "frontend", "overrides"))
+					ws := mocks.NewMockwsEnvironmentReader(ctrl)
+					ws.EXPECT().EnvOverridesPath().Return(filepath.Join("copilot", "environments", "overrides"))
 					cmd.ws = ws
 					cmd.fs = fs
 				},
@@ -415,30 +367,30 @@ func TestOverrideSvc_Execute(t *testing.T) {
 			"should succeed creating IaC files with resources": {
 				resources: []template.CFNResource{
 					{
-						Type:      "AWS::ECS::Service",
-						LogicalID: "Service",
+						Type:      "AWS::EC2::VPC",
+						LogicalID: "VPC",
 					},
 				},
-				initMocks: func(ctrl *gomock.Controller, cmd *overrideWorkloadOpts) {
+				initMocks: func(ctrl *gomock.Controller, cmd *overrideEnvOpts) {
 					fs := afero.NewMemMapFs()
-					ws := mocks.NewMockwsWlDirReader(ctrl)
-					ws.EXPECT().WorkloadOverridesPath(gomock.Any()).Return(filepath.Join("copilot", "frontend", "overrides"))
+					ws := mocks.NewMockwsEnvironmentReader(ctrl)
+					ws.EXPECT().EnvOverridesPath().Return(filepath.Join("copilot", "environments", "overrides"))
 					cmd.ws = ws
 					cmd.fs = fs
 				},
 			},
 			"should return a wrapped error if override files already exists": {
-				initMocks: func(ctrl *gomock.Controller, cmd *overrideWorkloadOpts) {
-					dir := filepath.Join("copilot", "frontend", "overrides")
+				initMocks: func(ctrl *gomock.Controller, cmd *overrideEnvOpts) {
+					dir := filepath.Join("copilot", "environments", "overrides")
 					fs := afero.NewMemMapFs()
 					_ = fs.MkdirAll(dir, 0755)
 					_ = afero.WriteFile(fs, filepath.Join(dir, "cdk.json"), []byte("content"), 0755)
-					ws := mocks.NewMockwsWlDirReader(ctrl)
-					ws.EXPECT().WorkloadOverridesPath(gomock.Any()).Return(dir)
+					ws := mocks.NewMockwsEnvironmentReader(ctrl)
+					ws.EXPECT().EnvOverridesPath().Return(dir)
 					cmd.ws = ws
 					cmd.fs = fs
 				},
-				wanted: fmt.Errorf("scaffold CDK application under %q", filepath.Join("copilot", "frontend", "overrides")),
+				wanted: fmt.Errorf("scaffold CDK application under %q", filepath.Join("copilot", "environments", "overrides")),
 			},
 		}
 
@@ -448,8 +400,8 @@ func TestOverrideSvc_Execute(t *testing.T) {
 				ctrl := gomock.NewController(t)
 				defer ctrl.Finish()
 
-				vars := overrideVars{appName: "demo", name: "frontend", iacTool: "cdk", resources: tc.resources}
-				cmd := &overrideWorkloadOpts{
+				vars := overrideVars{appName: "demo", name: "test", iacTool: "cdk", resources: tc.resources}
+				cmd := &overrideEnvOpts{
 					overrideOpts: &overrideOpts{
 						overrideVars: vars,
 					},

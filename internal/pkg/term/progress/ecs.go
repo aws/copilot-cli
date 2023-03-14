@@ -172,7 +172,7 @@ func (c *rollingUpdateComponent) renderAlarms(out io.Writer) (numLines int, err 
 	}
 	table := newTableComponent(color.Faint.Sprintf("Alarms"), header, rows)
 	table.Padding = c.padding
-	components := []Renderer {
+	components := []Renderer{
 		&singleLineComponent{}, // Add an empty line before rendering alarms table.
 		table,
 	}

@@ -6,6 +6,7 @@ package diff
 
 import (
 	"fmt"
+	"strconv"
 
 	"gopkg.in/yaml.v3"
 )
@@ -42,11 +43,12 @@ func (from From) Parse(to []byte) (*Node, error) {
 }
 
 func parse(from, to *yaml.Node, key string) (*Node, error) {
-	if to == nil || from == nil {
+	// Handle base cases.
+	if to == nil || from == nil || to.Kind != from.Kind {
 		return &Node{
 			key:      key,
-			oldValue: from,
 			newValue: to,
+			oldValue: from,
 		}, nil
 	}
 	if isYAMLLeaf(to) && isYAMLLeaf(from) {
@@ -59,6 +61,7 @@ func parse(from, to *yaml.Node, key string) (*Node, error) {
 			oldValue: from,
 		}, nil
 	}
+
 	var children map[string]*Node
 	var err error
 	switch {
@@ -87,8 +90,51 @@ func isYAMLLeaf(node *yaml.Node) bool {
 	return len(node.Content) == 0
 }
 
-func parseSequence(from, to *yaml.Node) (map[string]*Node, error) {
-	return nil, nil
+func parseSequence(fromNode, toNode *yaml.Node) (map[string]*Node, error) {
+	fromSeq, toSeq := make([]yaml.Node, len(fromNode.Content)), make([]yaml.Node, len(toNode.Content)) // NOTE: should be the same as calling `Decode`.
+	for idx, v := range fromNode.Content {
+		fromSeq[idx] = *v
+	}
+	for idx, v := range toNode.Content {
+		toSeq[idx] = *v
+	}
+	type cachedEntry struct {
+		node *Node
+		err  error
+	}
+	cachedDiff := make(map[string]cachedEntry)
+	lcsIndices := longestCommonSubsequence(fromSeq, toSeq, func(idxFrom, idxTo int) bool {
+		diff, err := parse(&(fromSeq[idxFrom]), &(toSeq[idxTo]), "")
+		if diff != nil { // NOTE: cache the diff only if a modification could have happened at this position.
+			cachedDiff[cacheKey(idxFrom, idxTo)] = cachedEntry{
+				node: diff,
+				err:  err,
+			}
+		}
+		return err == nil && diff == nil
+	})
+	nextKey, children, inspector := seqChildKeyFunc(), make(map[string]*Node), newLCSStateMachine(fromSeq, toSeq, lcsIndices)
+	for action := inspector.action(); action != actonDone; action = inspector.action() {
+		switch action {
+		case actionMatch:
+			// TODO(lou1415926): (x unchanged items)
+		case actionMod:
+			// TODO(lou1415926): handle list of maps modification
+			diff := cachedDiff[cacheKey(inspector.fromIndex(), inspector.toIndex())]
+			if diff.err != nil {
+				return nil, diff.err
+			}
+			children[nextKey()] = diff.node
+		case actionDel:
+			item := inspector.fromItem()
+			children[nextKey()] = &Node{oldValue: &item}
+		case actionInsert:
+			item := inspector.toItem()
+			children[nextKey()] = &Node{newValue: &item}
+		}
+		inspector.next()
+	}
+	return children, nil
 }
 
 func parseMap(from, to *yaml.Node) (map[string]*Node, error) {
@@ -128,4 +174,17 @@ func unionOfKeys[T any](a, b map[string]T) map[string]struct{} {
 		keys[k] = exists
 	}
 	return keys
+}
+
+func cacheKey(inFrom, inTo int) string {
+	return fmt.Sprintf("%d,%d", inFrom, inTo)
+}
+
+// TODO(lou1415926): use a more meaningful key for a seq child.
+func seqChildKeyFunc() func() string {
+	idx := -1
+	return func() string {
+		idx++
+		return strconv.Itoa(idx)
+	}
 }

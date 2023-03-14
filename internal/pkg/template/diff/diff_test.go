@@ -31,7 +31,7 @@ func TestFrom_Parse(t *testing.T) {
 				/* sentinel -> Mary -> Weight: {new: "kg:52", old: nil} */
 				leaf := &Node{
 					key:      "Weight",
-					newValue: yamlMapNode("kg: 52", t),
+					newValue: yamlNode("kg: 52", t),
 				}
 				return &Node{
 					children: map[string]*Node{
@@ -58,7 +58,7 @@ func TestFrom_Parse(t *testing.T) {
 				/* sentinel -> Mary -> Weight: {new: nil, old: "kg:52"} */
 				leaf := &Node{
 					key:      "Weight",
-					oldValue: yamlMapNode("kg: 52", t),
+					oldValue: yamlNode("kg: 52", t),
 				}
 				return &Node{
 					children: map[string]*Node{
@@ -72,8 +72,6 @@ func TestFrom_Parse(t *testing.T) {
 				}
 			},
 		},
-		"add an item to a list":    {},
-		"remove an item to a list": {},
 		"change keyed values": {
 			curr: `Mary:
   Height:
@@ -126,7 +124,217 @@ func TestFrom_Parse(t *testing.T) {
 				}
 			},
 		},
-		"change a list item value": {},
+		"list does not change": {
+			old:  `Alphabet: [a,b,c,d]`,
+			curr: `Alphabet: [a,b,c,d]`,
+			wanted: func() *Node {
+				return nil
+			},
+		},
+		"list reordered": {
+			old:  `SizeRank: [bear,dog,cat,mouse]`,
+			curr: `SizeRank: [bear,cat,dog,mouse]`,
+			wanted: func() *Node {
+				/* sentinel
+				   -> SizeRank
+					   -> {old: dog, new: nil} // Deletion.
+					   -> {old: nil, new: dog} // Insertion.
+				*/
+				leaf1 := &Node{
+					oldValue: yamlScalarNode("dog"),
+				}
+				leaf2 := &Node{
+					newValue: yamlScalarNode("dog"),
+				}
+				return &Node{
+					children: map[string]*Node{
+						"SizeRank": {
+							key: "SizeRank",
+							children: map[string]*Node{
+								"0": leaf1,
+								"1": leaf2,
+							},
+						},
+					},
+				}
+			},
+		},
+		"list with insertion": {
+			old:  `DanceCompetition: [dog,bear,cat]`,
+			curr: `DanceCompetition: [dog,bear,mouse,cat]`,
+			wanted: func() *Node {
+				/* sentinel
+				   -> DanceCompetition
+					   -> {old: nil, new: mouse} // Insertion.
+				*/
+				leaf := &Node{
+					newValue: yamlScalarNode("mouse"),
+				}
+				return &Node{
+					children: map[string]*Node{
+						"DanceCompetition": {
+							key: "DanceCompetition",
+							children: map[string]*Node{
+								"0": leaf,
+							},
+						},
+					},
+				}
+			},
+		},
+		"list with deletion": {
+			old:  `PotatoChipCommittee: [dog,bear,cat,mouse]`,
+			curr: `PotatoChipCommittee: [dog,bear,mouse]`,
+			wanted: func() *Node {
+				/* sentinel
+				   -> PotatoChipCommittee
+					   -> {old: cat, new: nil} // Deletion.
+				*/
+				leaf := &Node{
+					oldValue: yamlScalarNode("cat"),
+				}
+				return &Node{
+					children: map[string]*Node{
+						"PotatoChipCommittee": {
+							key: "PotatoChipCommittee",
+							children: map[string]*Node{
+								"0": leaf,
+							},
+						},
+					},
+				}
+			},
+		},
+		"list with a scalar value changed": {
+			old:  `DogsFavoriteShape: [triangle,circle,rectangle]`,
+			curr: `DogsFavoriteShape: [triangle,ellipse,rectangle]`,
+			wanted: func() *Node {
+				/* sentinel
+				   -> DogsFavoriteShape
+					   -> {old: circle, new: ellipse} // Modification.
+				*/
+				leaf := &Node{
+					oldValue: yamlScalarNode("circle"),
+					newValue: yamlScalarNode("ellipse"),
+				}
+				return &Node{
+					children: map[string]*Node{
+						"DogsFavoriteShape": {
+							key: "DogsFavoriteShape",
+							children: map[string]*Node{
+								"0": leaf,
+							},
+						},
+					},
+				}
+			},
+		},
+		"list with a map value changed": { // TODO(lou1415926): handle list of maps modification
+			old: `StrawberryPopularitySurvey:
+- Name: Dog
+  LikeStrawberry: ver much
+- Name: Bear
+  LikeStrawberry: meh
+- Name: Cat
+  LikeStrawberry: ew`,
+			curr: `StrawberryPopularitySurvey:
+- Name: Dog
+  LikeStrawberry: ver much
+- Name: Bear
+  LikeStrawberry: ok
+- Name: Cat
+  LikeStrawberry: ew`,
+		},
+		"change a map to scalar": {
+			curr: `Mary:
+  Dialogue: "Said bear: 'I know I'm supposed to keep an eye on you"`,
+			old: `Mary:
+  Dialogue:
+    Bear: "I know I'm supposed to keep an eye on you"`,
+			wanted: func() *Node {
+				/* sentinel -> Mary -> Dialogue --> {new: map, old: scalar} */
+				leafDialogue := &Node{
+					key:      "Dialogue",
+					newValue: yamlScalarNode("Said bear: 'I know I'm supposed to keep an eye on you", withStyle(yaml.DoubleQuotedStyle)),
+					oldValue: yamlNode("Bear: \"I know I'm supposed to keep an eye on you\"", t),
+				}
+				return &Node{
+					children: map[string]*Node{
+						"Mary": {
+							key: "Mary",
+							children: map[string]*Node{
+								"Dialogue": leafDialogue,
+							},
+						},
+					},
+				}
+			},
+		},
+		"change a list to scalar": {
+			curr: `Mary:
+  Dialogue: "Said bear: 'I know I'm supposed to keep an eye on you; Said Dog: 'ikr'"`,
+			old: `Mary:
+  Dialogue:
+    - Bear: "I know I'm supposed to keep an eye on you"
+      Tone: disappointed
+    - Dog: "ikr"
+      Tone: pleased`,
+			wanted: func() *Node {
+				/* sentinel -> Mary -> Dialogue --> {new: list, old: scalar} */
+				leafDialogue := &Node{
+					key:      "Dialogue",
+					newValue: yamlScalarNode("Said bear: 'I know I'm supposed to keep an eye on you; Said Dog: 'ikr'", withStyle(yaml.DoubleQuotedStyle)),
+					oldValue: yamlNode(`- Bear: "I know I'm supposed to keep an eye on you"
+  Tone: disappointed
+- Dog: "ikr"
+  Tone: pleased`, t),
+				}
+				return &Node{
+					children: map[string]*Node{
+						"Mary": {
+							key: "Mary",
+							children: map[string]*Node{
+								"Dialogue": leafDialogue,
+							},
+						},
+					},
+				}
+			},
+		},
+		"change a map to list": {
+			curr: `Mary:
+  Dialogue:
+    - Bear: "I know I'm supposed to keep an eye on you"
+      Tone: disappointed
+    - Dog: "ikr"
+      Tone: pleased`,
+			old: `Mary:
+  Dialogue:
+    Bear: (disappointed) "I know I'm supposed to keep an eye on you"
+    Dog: (pleased) "ikr"`,
+			wanted: func() *Node {
+				/* sentinel -> Mary -> Dialogue --> {new: list, old: map} */
+				leafDialogue := &Node{
+					key: "Dialogue",
+					newValue: yamlNode(`- Bear: "I know I'm supposed to keep an eye on you"
+  Tone: disappointed
+- Dog: "ikr"
+  Tone: pleased`, t),
+					oldValue: yamlNode(`Bear: (disappointed) "I know I'm supposed to keep an eye on you"
+Dog: (pleased) "ikr"`, t),
+				}
+				return &Node{
+					children: map[string]*Node{
+						"Mary": {
+							key: "Mary",
+							children: map[string]*Node{
+								"Dialogue": leafDialogue,
+							},
+						},
+					},
+				}
+			},
+		},
 		"no diff": {
 			curr: `Mary:
   Height:
@@ -155,24 +363,36 @@ func TestFrom_Parse(t *testing.T) {
 			}
 			if tc.wanted != nil {
 				require.NoError(t, err)
-				require.True(t, equalTree(got, tc.wanted(), t))
+				require.True(t, equalTree(got, tc.wanted(), t), "should get the expected tree")
 			}
 		})
 	}
 }
 
-func yamlMapNode(content string, t *testing.T) *yaml.Node {
+type nodeModifier func(node *yaml.Node)
+
+func withStyle(style yaml.Style) nodeModifier {
+	return func(node *yaml.Node) {
+		node.Style = style
+	}
+}
+
+func yamlNode(content string, t *testing.T) *yaml.Node {
 	var node yaml.Node
 	require.NoError(t, yaml.Unmarshal([]byte(content), &node), "should be able to unmarshal the wanted content")
 	// The root YAML node is a document node. We want the first content node.
 	return node.Content[0]
 }
 
-func yamlScalarNode(value string) *yaml.Node {
-	return &yaml.Node{
+func yamlScalarNode(value string, opts ...nodeModifier) *yaml.Node {
+	node := &yaml.Node{
 		Kind:  yaml.ScalarNode,
 		Value: value,
 	}
+	for _, opt := range opts {
+		opt(node)
+	}
+	return node
 }
 
 func equalLeaves(a, b *Node, t *testing.T) bool {
@@ -188,8 +408,8 @@ func equalLeaves(a, b *Node, t *testing.T) bool {
 }
 
 func equalTree(a, b *Node, t *testing.T) bool {
-	if a == nil && b == nil {
-		return true
+	if a == nil || b == nil {
+		return a == nil && b == nil
 	}
 	if a.key != b.key || len(a.children) != len(b.children) {
 		return false

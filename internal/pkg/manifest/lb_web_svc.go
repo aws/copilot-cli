@@ -232,27 +232,41 @@ func (s LoadBalancedWebService) applyEnv(envName string) (workloadManifest, erro
 	return &s, nil
 }
 
-// NetworkLoadBalancerConfiguration holds options for a network load balancer
+// NetworkLoadBalancerConfiguration holds options for a network load balancer.
 type NetworkLoadBalancerConfiguration struct {
+	Listener            NetworkLoadBalancerListener   `yaml:",inline"`
+	Aliases             Alias                         `yaml:"alias"`
+	AdditionalListeners []NetworkLoadBalancerListener `yaml:"additional_listeners"`
+}
+
+// NetworkLoadBalancerListener holds listener configuration for NLB.
+type NetworkLoadBalancerListener struct {
 	Port            *string            `yaml:"port"`
 	HealthCheck     NLBHealthCheckArgs `yaml:"healthcheck"`
 	TargetContainer *string            `yaml:"target_container"`
 	TargetPort      *int               `yaml:"target_port"`
 	SSLPolicy       *string            `yaml:"ssl_policy"`
 	Stickiness      *bool              `yaml:"stickiness"`
-	Aliases         Alias              `yaml:"alias"`
 }
 
+// IsEmpty returns true if NetworkLoadBalancerConfiguration is empty.
 func (c *NetworkLoadBalancerConfiguration) IsEmpty() bool {
+	return c.Aliases.IsEmpty() && c.Listener.IsEmpty() && len(c.AdditionalListeners) == 0
+}
+
+// IsEmpty returns true if NetworkLoadBalancerListener is empty.
+func (c *NetworkLoadBalancerListener) IsEmpty() bool {
 	return c.Port == nil && c.HealthCheck.isEmpty() && c.TargetContainer == nil && c.TargetPort == nil &&
-		c.SSLPolicy == nil && c.Stickiness == nil && c.Aliases.IsEmpty()
+		c.SSLPolicy == nil && c.Stickiness == nil
 }
 
 // ExposedPorts returns all the ports that are container ports available to receive traffic.
 func (lbws *LoadBalancedWebService) ExposedPorts() (ExposedPortsIndex, error) {
 	var exposedPorts []ExposedPort
 	workloadName := aws.StringValue(lbws.Name)
+	// port from image.port.
 	exposedPorts = append(exposedPorts, lbws.ImageConfig.exposedPorts(workloadName)...)
+	// port from sidecar[x].image.port.
 	for name, sidecar := range lbws.Sidecars {
 		out, err := sidecar.exposedPorts(name)
 		if err != nil {
@@ -260,18 +274,31 @@ func (lbws *LoadBalancedWebService) ExposedPorts() (ExposedPortsIndex, error) {
 		}
 		exposedPorts = append(exposedPorts, out...)
 	}
+	// port from http.target_port and http.additional_rules[x].target_port
 	for _, rule := range lbws.RoutingRule.ALBRoutingRules() {
 		out := rule.exposedPorts(exposedPorts, workloadName)
 		exposedPorts = append(exposedPorts, out...)
 	}
-	out, err := lbws.NLBConfig.exposedPorts(exposedPorts, workloadName)
-	if err != nil {
-		return ExposedPortsIndex{}, err
+
+	// port from nlb.target_port and nlb.additional_listeners[x].target_port
+	for _, listener := range lbws.NLBConfig.NLBListeners() {
+		out, err := listener.exposedPorts(exposedPorts, workloadName)
+		if err != nil {
+			return ExposedPortsIndex{}, err
+		}
+		exposedPorts = append(exposedPorts, out...)
 	}
-	exposedPorts = append(exposedPorts, out...)
 	portsForContainer, containerForPort := prepareParsedExposedPortsMap(sortExposedPorts(exposedPorts))
 	return ExposedPortsIndex{
 		PortsForContainer: portsForContainer,
 		ContainerForPort:  containerForPort,
 	}, nil
+}
+
+// NLBListeners returns main as well as additional listeners as a list of NetworkLoadBalancerListener.
+func (cfg NetworkLoadBalancerConfiguration) NLBListeners() []NetworkLoadBalancerListener {
+	if cfg.IsEmpty() {
+		return nil
+	}
+	return append([]NetworkLoadBalancerListener{cfg.Listener}, cfg.AdditionalListeners...)
 }

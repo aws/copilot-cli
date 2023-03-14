@@ -239,7 +239,10 @@ func (d *lbWebSvcDeployer) validateALBRuntime() error {
 			logAppVersionOutdatedError(aws.StringValue(d.lbMft.Name))
 			return err
 		}
-		return validateLBWSAlias(d.lbMft.RoutingRule.MainRoutingRule.Alias, d.app, d.env.Name)
+		if err := validateLBWSAlias(d.lbMft.RoutingRule.MainRoutingRule.Alias, d.app, d.env.Name); err != nil {
+			return fmt.Errorf(`validate 'http.alias': %w`, err)
+		}
+		return nil
 	}
 	log.Errorf(ecsALBAliasUsedWithoutDomainFriendlyText)
 	return fmt.Errorf("cannot specify http.alias when application is not associated with a domain and env %s doesn't import one or more certificates", d.env.Name)
@@ -262,7 +265,10 @@ func (d *lbWebSvcDeployer) validateNLBRuntime() error {
 		logAppVersionOutdatedError(aws.StringValue(d.lbMft.Name))
 		return err
 	}
-	return validateLBWSAlias(d.lbMft.NLBConfig.Aliases, d.app, d.env.Name)
+	if err := validateLBWSAlias(d.lbMft.NLBConfig.Aliases, d.app, d.env.Name); err != nil {
+		return fmt.Errorf(`validate 'nlb.alias': %w`, err)
+	}
+	return nil
 }
 
 func validateLBWSAlias(aliases manifest.Alias, app *config.Application, envName string) error {
@@ -271,7 +277,7 @@ func validateLBWSAlias(aliases manifest.Alias, app *config.Application, envName 
 	}
 	aliasList, err := aliases.ToStringSlice()
 	if err != nil {
-		return fmt.Errorf(`convert 'http.alias' to string slice: %w`, err)
+		return err
 	}
 	for _, alias := range aliasList {
 		// Alias should be within either env, app, or root hosted zone.

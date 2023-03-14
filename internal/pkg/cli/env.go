@@ -40,11 +40,12 @@ Environments are deployment stages shared between services.`,
 
 	cmd.AddCommand(buildEnvInitCmd())
 	cmd.AddCommand(buildEnvListCmd())
-	cmd.AddCommand(buildEnvDeleteCmd())
 	cmd.AddCommand(buildEnvShowCmd())
 	cmd.AddCommand(buildEnvUpgradeCmd())
-	cmd.AddCommand(buildEnvDeployCmd())
 	cmd.AddCommand(buildEnvPkgCmd())
+	cmd.AddCommand(buildEnvOverrideCmd())
+	cmd.AddCommand(buildEnvDeployCmd())
+	cmd.AddCommand(buildEnvDeleteCmd())
 	cmd.SetUsageTemplate(template.Usage)
 	cmd.Annotations = map[string]string{
 		"group": group.Develop,

@@ -194,12 +194,41 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 						},
 					},
 					NLBConfig: NetworkLoadBalancerConfiguration{
-						Port:            aws.String("443"),
-						TargetContainer: aws.String("foo"),
+						Listener: NetworkLoadBalancerListener{
+							Port:            aws.String("443"),
+							TargetContainer: aws.String("foo"),
+						},
 					},
 				},
 			},
-			wantedErrorMsgPrefix: `validate network load balancer target: `,
+			wantedErrorMsgPrefix: `validate target for "nlb": `,
+		},
+		"error if fail to validate network load balancer target for additional listener": {
+			lbConfig: LoadBalancedWebService{
+				Workload: Workload{Name: aws.String("mockName")},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: testImageConfig,
+					RoutingRule: RoutingRuleConfigOrBool{
+						RoutingRuleConfiguration: RoutingRuleConfiguration{
+							Path:            stringP("/"),
+							TargetContainer: aws.String("mockName"),
+						},
+					},
+					NLBConfig: NetworkLoadBalancerConfiguration{
+						Listener: NetworkLoadBalancerListener{
+							Port:            aws.String("443"),
+							TargetContainer: aws.String("mockName"),
+						},
+						AdditionalListeners: []NetworkLoadBalancerListener{
+							{
+								Port:            aws.String("444"),
+								TargetContainer: aws.String("foo"),
+							},
+						},
+					},
+				},
+			},
+			wantedErrorMsgPrefix: `validate target for "nlb.additional_listeners[0]": `,
 		},
 		"error if fail to validate dependencies": {
 			lbConfig: LoadBalancedWebService{
@@ -317,7 +346,9 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 						Enabled: aws.Bool(false),
 					},
 					NLBConfig: NetworkLoadBalancerConfiguration{
-						Port: aws.String("80"),
+						Listener: NetworkLoadBalancerListener{
+							Port: aws.String("80"),
+						},
 					},
 				},
 			},
@@ -342,7 +373,9 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 						Enabled: aws.Bool(false),
 					},
 					NLBConfig: NetworkLoadBalancerConfiguration{
-						Port: aws.String("80"),
+						Listener: NetworkLoadBalancerListener{
+							Port: aws.String("80"),
+						},
 					},
 				},
 			},
@@ -1637,55 +1670,198 @@ func TestNetworkLoadBalancerConfiguration_validate(t *testing.T) {
 		},
 		"error if port unspecified": {
 			nlb: NetworkLoadBalancerConfiguration{
-				TargetContainer: aws.String("main"),
+				Listener: NetworkLoadBalancerListener{
+					TargetContainer: aws.String("main"),
+				},
 			},
-			wantedErrorMsgPrefix: `validate "nlb": `,
-			wantedError:          fmt.Errorf(`"port" must be specified`),
+			wantedError: fmt.Errorf(`"port" must be specified`),
+		},
+		"error if port unspecified in additional listeners": {
+			nlb: NetworkLoadBalancerConfiguration{
+				Listener: NetworkLoadBalancerListener{
+					Port:            aws.String("80/tcp"),
+					TargetContainer: aws.String("main"),
+				},
+				AdditionalListeners: []NetworkLoadBalancerListener{
+					{
+						TargetContainer: aws.String("main"),
+					},
+				},
+			},
+			wantedError: fmt.Errorf(`validate "additional_listeners[0]": "port" must be specified`),
 		},
 		"error parsing port": {
 			nlb: NetworkLoadBalancerConfiguration{
-				Port: aws.String("sabotage/this/string"),
+				Listener: NetworkLoadBalancerListener{
+					Port: aws.String("sabotage/this/string"),
+				},
 			},
 			wantedErrorMsgPrefix: `validate "nlb": `,
 			wantedError:          fmt.Errorf(`validate "port": cannot parse port mapping from sabotage/this/string`),
 		},
+		"error parsing port for additional listeners": {
+			nlb: NetworkLoadBalancerConfiguration{
+				Listener: NetworkLoadBalancerListener{
+					Port: aws.String("80/tcp"),
+				},
+				AdditionalListeners: []NetworkLoadBalancerListener{
+					{
+						Port: aws.String("81/tcp"),
+					},
+					{
+						Port: aws.String("sabotage/this/string"),
+					},
+				},
+			},
+			wantedErrorMsgPrefix: `validate "nlb": `,
+			wantedError:          fmt.Errorf(`validate "additional_listeners[1]": validate "port": cannot parse port mapping from sabotage/this/string`),
+		},
 		"success if port is specified without protocol": {
 			nlb: NetworkLoadBalancerConfiguration{
-				Port: aws.String("443"),
+				Listener: NetworkLoadBalancerListener{
+					Port: aws.String("443"),
+				},
+			},
+		},
+		"success if port is specified without protocol in additional listeners": {
+			nlb: NetworkLoadBalancerConfiguration{
+				Listener: NetworkLoadBalancerListener{
+					Port: aws.String("443/tcp"),
+				},
+				AdditionalListeners: []NetworkLoadBalancerListener{
+					{
+						Port: aws.String("443"),
+					},
+				},
 			},
 		},
 		"fail if protocol is not recognized": {
 			nlb: NetworkLoadBalancerConfiguration{
-				Port: aws.String("443/tps"),
+				Listener: NetworkLoadBalancerListener{
+					Port: aws.String("443/tps"),
+				},
 			},
 			wantedErrorMsgPrefix: `validate "nlb": `,
 			wantedError:          fmt.Errorf(`validate "port": invalid protocol tps; valid protocols include TCP and TLS`),
 		},
+		"fail if protocol is not recognized in additional listeners": {
+			nlb: NetworkLoadBalancerConfiguration{
+				Listener: NetworkLoadBalancerListener{
+					Port: aws.String("443/tcp"),
+				},
+				AdditionalListeners: []NetworkLoadBalancerListener{
+					{
+						Port: aws.String("443/tps"),
+					},
+				},
+			},
+			wantedErrorMsgPrefix: `validate "nlb": `,
+			wantedError:          fmt.Errorf(`validate "additional_listeners[0]": validate "port": invalid protocol tps; valid protocols include TCP and TLS`),
+		},
 		"success if tcp": {
 			nlb: NetworkLoadBalancerConfiguration{
-				Port: aws.String("443/tcp"),
+				Listener: NetworkLoadBalancerListener{
+					Port: aws.String("443/tcp"),
+				},
 			},
 		},
 		"error if udp": {
 			nlb: NetworkLoadBalancerConfiguration{
-				Port: aws.String("161/udp"),
+				Listener: NetworkLoadBalancerListener{
+					Port: aws.String("161/udp"),
+				},
 			},
 			wantedError: fmt.Errorf(`validate "port": invalid protocol udp; valid protocols include TCP and TLS`),
 		},
+		"error if udp in additional listeners": {
+			nlb: NetworkLoadBalancerConfiguration{
+				Listener: NetworkLoadBalancerListener{
+					Port: aws.String("161/tcp"),
+				},
+				AdditionalListeners: []NetworkLoadBalancerListener{
+					{
+						Port: aws.String("161/udp"),
+					},
+				},
+			},
+			wantedError: fmt.Errorf(`validate "additional_listeners[0]": validate "port": invalid protocol udp; valid protocols include TCP and TLS`),
+		},
+		"error if additional listeners are defined before main listener": {
+			nlb: NetworkLoadBalancerConfiguration{
+				AdditionalListeners: []NetworkLoadBalancerListener{
+					{
+						Port: aws.String("161/udp"),
+					},
+				},
+			},
+			wantedError: fmt.Errorf(`"port" must be specified`),
+		},
 		"success if tls": {
 			nlb: NetworkLoadBalancerConfiguration{
-				Port: aws.String("443/tls"),
+				Listener: NetworkLoadBalancerListener{
+					Port: aws.String("443/tls"),
+				},
+			},
+		},
+		"success if tls in additional listeners": {
+			nlb: NetworkLoadBalancerConfiguration{
+				Listener: NetworkLoadBalancerListener{
+					Port: aws.String("443/tcp"),
+				},
+				AdditionalListeners: []NetworkLoadBalancerListener{
+					{
+						Port: aws.String("443/tls"),
+					},
+				},
 			},
 		},
 		"error if tcp_udp": {
 			nlb: NetworkLoadBalancerConfiguration{
-				Port: aws.String("443/TCP_udp"),
+				Listener: NetworkLoadBalancerListener{
+					Port: aws.String("443/TCP_udp"),
+				},
 			},
 			wantedError: fmt.Errorf(`validate "port": invalid protocol TCP_udp; valid protocols include TCP and TLS`),
 		},
+		"error if tcp_udp in additional listeners": {
+			nlb: NetworkLoadBalancerConfiguration{
+				Listener: NetworkLoadBalancerListener{
+					Port: aws.String("443/tcp"),
+				},
+				AdditionalListeners: []NetworkLoadBalancerListener{
+					{
+						Port: aws.String("443/TCP_udp"),
+					},
+				},
+			},
+			wantedError: fmt.Errorf(`validate "additional_listeners[0]": validate "port": invalid protocol TCP_udp; valid protocols include TCP and TLS`),
+		},
 		"error if hosted zone is set": {
 			nlb: NetworkLoadBalancerConfiguration{
-				Port: aws.String("443/tcp"),
+				Listener: NetworkLoadBalancerListener{
+					Port: aws.String("443/tcp"),
+				},
+				Aliases: Alias{
+					AdvancedAliases: []AdvancedAlias{
+						{
+							Alias:      aws.String("mockAlias"),
+							HostedZone: aws.String("mockHostedZone"),
+						},
+					},
+				},
+			},
+			wantedError: fmt.Errorf(`"hosted_zone" is not supported for Network Load Balancer`),
+		},
+		"error if hosted zone is set in additional listeners": {
+			nlb: NetworkLoadBalancerConfiguration{
+				Listener: NetworkLoadBalancerListener{
+					Port: aws.String("443/tcp"),
+				},
+				AdditionalListeners: []NetworkLoadBalancerListener{
+					{
+						Port: aws.String("80/tcp"),
+					},
+				},
 				Aliases: Alias{
 					AdvancedAliases: []AdvancedAlias{
 						{
@@ -3806,8 +3982,10 @@ func TestValidateExposedPorts(t *testing.T) {
 					},
 				},
 				nlb: &NetworkLoadBalancerConfiguration{
-					Port:       aws.String("5001/tcp"),
-					TargetPort: aws.Int(5001),
+					Listener: NetworkLoadBalancerListener{
+						Port:       aws.String("5001/tcp"),
+						TargetPort: aws.Int(5001),
+					},
 				},
 			},
 		},
@@ -3830,9 +4008,11 @@ func TestValidateExposedPorts(t *testing.T) {
 					},
 				},
 				nlb: &NetworkLoadBalancerConfiguration{
-					Port:            aws.String("5001/tcp"),
-					TargetPort:      aws.Int(5001),
-					TargetContainer: aws.String("foo"),
+					Listener: NetworkLoadBalancerListener{
+						Port:            aws.String("5001/tcp"),
+						TargetPort:      aws.Int(5001),
+						TargetContainer: aws.String("foo"),
+					},
 				},
 			},
 		},
@@ -3855,12 +4035,79 @@ func TestValidateExposedPorts(t *testing.T) {
 					},
 				},
 				nlb: &NetworkLoadBalancerConfiguration{
-					Port:            aws.String("5001/tcp"),
-					TargetPort:      aws.Int(5001),
-					TargetContainer: aws.String("nginx"),
+					Listener: NetworkLoadBalancerListener{
+						Port:            aws.String("5001/tcp"),
+						TargetPort:      aws.Int(5001),
+						TargetContainer: aws.String("nginx"),
+					},
 				},
 			},
-			wanted: fmt.Errorf(`containers "nginx" and "foo" are exposing the same port 5001`),
+			wanted: fmt.Errorf(`validate "nlb": containers "nginx" and "foo" are exposing the same port 5001`),
+		},
+		"should not return an error if nlb is trying to expose multiple ports": {
+			in: validateExposedPortsOpts{
+				mainContainerName: "mockMainContainer",
+				mainContainerPort: aws.Uint16(5000),
+				sidecarConfig: map[string]*SidecarConfig{
+					"foo": {
+						Port: aws.String("8080"),
+					},
+					"nginx": {
+						Port: aws.String("80"),
+					},
+				},
+				alb: &RoutingRuleConfiguration{
+					TargetPort:      aws.Uint16(5001),
+					TargetContainer: aws.String("foo"),
+				},
+				nlb: &NetworkLoadBalancerConfiguration{
+					Listener: NetworkLoadBalancerListener{
+						Port:            aws.String("5001/tcp"),
+						TargetPort:      aws.Int(5001),
+						TargetContainer: aws.String("foo"),
+					},
+					AdditionalListeners: []NetworkLoadBalancerListener{
+						{
+							Port:            aws.String("5002/tcp"),
+							TargetPort:      aws.Int(5002),
+							TargetContainer: aws.String("foo"),
+						},
+					},
+				},
+			},
+		},
+		"should return an error if nlb is trying to expose same port as from different containers using additional listeners": {
+			in: validateExposedPortsOpts{
+				mainContainerName: "mockMainContainer",
+				mainContainerPort: aws.Uint16(5000),
+				sidecarConfig: map[string]*SidecarConfig{
+					"foo": {
+						Port: aws.String("8080"),
+					},
+					"nginx": {
+						Port: aws.String("80"),
+					},
+				},
+				alb: &RoutingRuleConfiguration{
+					TargetPort:      aws.Uint16(5001),
+					TargetContainer: aws.String("foo"),
+				},
+				nlb: &NetworkLoadBalancerConfiguration{
+					Listener: NetworkLoadBalancerListener{
+						Port:            aws.String("5001/tcp"),
+						TargetPort:      aws.Int(5001),
+						TargetContainer: aws.String("foo"),
+					},
+					AdditionalListeners: []NetworkLoadBalancerListener{
+						{
+							Port:            aws.String("5002/tcp"),
+							TargetPort:      aws.Int(5001),
+							TargetContainer: aws.String("nginx"),
+						},
+					},
+				},
+			},
+			wanted: fmt.Errorf(`validate "nlb.additional_listeners[0]": containers "nginx" and "foo" are exposing the same port 5001`),
 		},
 	}
 	for name, tc := range testCases {

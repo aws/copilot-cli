@@ -8,6 +8,7 @@ import (
 	reflect "reflect"
 
 	apprunner "github.com/aws/copilot-cli/internal/pkg/aws/apprunner"
+	cloudwatch "github.com/aws/copilot-cli/internal/pkg/aws/cloudwatch"
 	ecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	config "github.com/aws/copilot-cli/internal/pkg/config"
 	stack "github.com/aws/copilot-cli/internal/pkg/describe/stack"
@@ -668,4 +669,42 @@ func (m *MockapprunnerDescriber) StackResources() ([]*stack.Resource, error) {
 func (mr *MockapprunnerDescriberMockRecorder) StackResources() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StackResources", reflect.TypeOf((*MockapprunnerDescriber)(nil).StackResources))
+}
+
+// MockcwAlarmDescriber is a mock of cwAlarmDescriber interface.
+type MockcwAlarmDescriber struct {
+	ctrl     *gomock.Controller
+	recorder *MockcwAlarmDescriberMockRecorder
+}
+
+// MockcwAlarmDescriberMockRecorder is the mock recorder for MockcwAlarmDescriber.
+type MockcwAlarmDescriberMockRecorder struct {
+	mock *MockcwAlarmDescriber
+}
+
+// NewMockcwAlarmDescriber creates a new mock instance.
+func NewMockcwAlarmDescriber(ctrl *gomock.Controller) *MockcwAlarmDescriber {
+	mock := &MockcwAlarmDescriber{ctrl: ctrl}
+	mock.recorder = &MockcwAlarmDescriberMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockcwAlarmDescriber) EXPECT() *MockcwAlarmDescriberMockRecorder {
+	return m.recorder
+}
+
+// AlarmDescriptions mocks base method.
+func (m *MockcwAlarmDescriber) AlarmDescriptions(arg0 []string) ([]*cloudwatch.AlarmDescription, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AlarmDescriptions", arg0)
+	ret0, _ := ret[0].([]*cloudwatch.AlarmDescription)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// AlarmDescriptions indicates an expected call of AlarmDescriptions.
+func (mr *MockcwAlarmDescriberMockRecorder) AlarmDescriptions(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AlarmDescriptions", reflect.TypeOf((*MockcwAlarmDescriber)(nil).AlarmDescriptions), arg0)
 }
