@@ -20,7 +20,7 @@ type Node interface {
 }
 
 type basicNode struct {
-	keyV       string
+	keyValue   string
 	childNodes map[string]Node // A list of non-empty pointers to the children nodes.
 
 	oldV *yaml.Node // Only populated for a leaf node (i.e. that has no child node).
@@ -28,7 +28,7 @@ type basicNode struct {
 }
 
 func (n *basicNode) key() string {
-	return n.keyV
+	return n.keyValue
 }
 
 func (n *basicNode) newValue() *yaml.Node {
@@ -60,7 +60,6 @@ func (from From) Parse(to []byte) (Node, error) {
 	if err := yaml.Unmarshal(from, &fromNode); err != nil {
 		return nil, fmt.Errorf("unmarshal old template: %w", err)
 	}
-
 	return parse(&fromNode, &toNode, "")
 
 }
@@ -69,9 +68,9 @@ func parse(from, to *yaml.Node, key string) (Node, error) {
 	// Handle base cases.
 	if to == nil || from == nil || to.Kind != from.Kind {
 		return &basicNode{
-			keyV: key,
-			newV: to,
-			oldV: from,
+			keyValue: key,
+			newV:     to,
+			oldV:     from,
 		}, nil
 	}
 	if isYAMLLeaf(to) && isYAMLLeaf(from) {
@@ -79,9 +78,9 @@ func parse(from, to *yaml.Node, key string) (Node, error) {
 			return nil, nil
 		}
 		return &basicNode{
-			keyV: key,
-			newV: to,
-			oldV: from,
+			keyValue: key,
+			newV:     to,
+			oldV:     from,
 		}, nil
 	}
 
@@ -104,7 +103,7 @@ func parse(from, to *yaml.Node, key string) (Node, error) {
 		return nil, nil
 	}
 	return &basicNode{
-		keyV:       key,
+		keyValue:   key,
 		childNodes: children,
 	}, nil
 }
