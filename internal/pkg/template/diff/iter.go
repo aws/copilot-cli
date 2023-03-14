@@ -20,22 +20,22 @@ type tracker[T any] struct {
 	data  []T
 }
 
-func newInspector(fromSeq, toSeq []yaml.Node, lcsIndices []lcsIndex) inspector {
-	return inspector{
+func newLCSStateMachine(fromSeq, toSeq []yaml.Node, lcsIndices []lcsIndex) lcsStateMachine {
+	return lcsStateMachine{
 		from:       tracker[yaml.Node]{data: fromSeq},
 		to:         tracker[yaml.Node]{data: toSeq},
 		lcsIndices: tracker[lcsIndex]{data: lcsIndices},
 	}
 }
 
-type inspector struct {
+type lcsStateMachine struct {
 	from       tracker[yaml.Node]
 	to         tracker[yaml.Node]
 	lcsIndices tracker[lcsIndex]
 	currAction action
 }
 
-func (i *inspector) inspect() action {
+func (i *lcsStateMachine) inspect() action {
 	var action action
 	var (
 		lcsDone  = i.lcsIndices.index >= len(i.lcsIndices.data)
@@ -47,13 +47,13 @@ func (i *inspector) inspect() action {
 		case fromDone && toDone:
 			action = actonDone
 		case toDone:
-			// Ex: "a,d,e" -> "a". When the inspector moves to "d" in "from", both lcs and "to" are done, and "d,e" are considered deleted.
+			// Ex: "a,d,e" -> "a". When the lcsStateMachine moves to "d" in "from", both lcs and "to" are done, and "d,e" are considered deleted.
 			action = actionDel
 		case fromDone:
-			// Ex: "a" -> "a,d,e". When the inspector moves to "d" in "to", both lcs and "from" are done, and "d,e" are considered to be inserted.
+			// Ex: "a" -> "a,d,e". When the lcsStateMachine moves to "d" in "to", both lcs and "from" are done, and "d,e" are considered to be inserted.
 			action = actionInsert
 		default:
-			// Ex: "a,b" -> "a,c". When the inspector moves to (b,c), lcs is done, and b is modified into c.
+			// Ex: "a,b" -> "a,c". When the lcsStateMachine moves to (b,c), lcs is done, and b is modified into c.
 			action = actionMod
 		}
 		i.currAction = action
@@ -66,17 +66,17 @@ func (i *inspector) inspect() action {
 	case i.from.index != commonIdx.inA && i.to.index != commonIdx.inB:
 		action = actionMod
 	case i.from.index != commonIdx.inA:
-		// Ex: "a,b,c" -> "c,1,2". When the inspector is at (a,c /(b,c), only "c" is common, a,b are considered deleted.
+		// Ex: "a,b,c" -> "c,1,2". When the lcsStateMachine is at (a,c /(b,c), only "c" is common, a,b are considered deleted.
 		action = actionDel
 	default:
-		// Ex: "a,b,c" -> "1,2,a". When the inspector is at (a,1) and (a,2), only "a" is common, "1,2" are considered inserted.
+		// Ex: "a,b,c" -> "1,2,a". When the lcsStateMachine is at (a,1) and (a,2), only "a" is common, "1,2" are considered inserted.
 		action = actionInsert
 	}
 	i.currAction = action
 	return action
 }
 
-func (i *inspector) proceed() {
+func (i *lcsStateMachine) proceed() {
 	switch i.currAction {
 	case actionMatch:
 		i.lcsIndices.index++
@@ -91,18 +91,18 @@ func (i *inspector) proceed() {
 	}
 }
 
-func (i *inspector) fromItem() yaml.Node {
+func (i *lcsStateMachine) fromItem() yaml.Node {
 	return i.from.data[i.from.index]
 }
 
-func (i *inspector) toItem() yaml.Node {
+func (i *lcsStateMachine) toItem() yaml.Node {
 	return i.to.data[i.to.index]
 }
 
-func (i *inspector) fromIndex() int {
+func (i *lcsStateMachine) fromIndex() int {
 	return i.from.index
 }
 
-func (i *inspector) toIndex() int {
+func (i *lcsStateMachine) toIndex() int {
 	return i.to.index
 }

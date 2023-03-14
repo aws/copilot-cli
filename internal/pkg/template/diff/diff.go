@@ -113,7 +113,7 @@ func parseSequence(fromNode, toNode *yaml.Node) (map[string]*Node, error) {
 		}
 		return err == nil && diff == nil
 	})
-	nextKey, children, inspector := seqChildKeyFunc(), make(map[string]*Node), newInspector(fromSeq, toSeq, lcsIndices)
+	nextKey, children, inspector := seqChildKeyFunc(), make(map[string]*Node), newLCSStateMachine(fromSeq, toSeq, lcsIndices)
 	for action := inspector.inspect(); action != actonDone; action = inspector.inspect() {
 		switch action {
 		case actionMatch:
