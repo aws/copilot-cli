@@ -114,21 +114,21 @@ func parseSequence(fromNode, toNode *yaml.Node) (map[string]*Node, error) {
 		return err == nil && diff == nil
 	})
 	nextKey, children, inspector := seqChildKeyFunc(), make(map[string]*Node), newInspector(fromSeq, toSeq, lcsIndices)
-	for action := inspector.inspect(); action != done; action = inspector.inspect() {
+	for action := inspector.inspect(); action != actonDone; action = inspector.inspect() {
 		switch action {
-		case match:
+		case actionMatch:
 			// TODO(lou1415926): (x unchanged items)
-		case modification:
+		case actionMod:
 			// TODO(lou1415926): handle list of maps modification
 			diff := cachedDiff[cacheKey(inspector.fromIndex(), inspector.toIndex())]
 			if diff.err != nil {
 				return nil, diff.err
 			}
 			children[nextKey()] = diff.node
-		case deletion:
+		case actionDel:
 			item := inspector.fromItem()
 			children[nextKey()] = &Node{oldValue: &item}
-		case insertion:
+		case actionInsert:
 			item := inspector.toItem()
 			children[nextKey()] = &Node{newValue: &item}
 		}

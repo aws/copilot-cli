@@ -8,11 +8,11 @@ import "gopkg.in/yaml.v3"
 type action int
 
 const (
-	match action = iota
-	modification
-	deletion
-	insertion
-	done
+	actionMatch action = iota
+	actionMod
+	actionDel
+	actionInsert
+	actonDone
 )
 
 type tracker[T any] struct {
@@ -45,16 +45,16 @@ func (i *inspector) inspect() action {
 	if commonDone {
 		switch {
 		case fromDone && toDone:
-			action = done
+			action = actonDone
 		case toDone:
 			// Ex: "a,d,e" -> "a". When the inspector moves to "d" in "from", both common and "to" are done, and "d,e" are considered deleted.
-			action = deletion
+			action = actionDel
 		case fromDone:
 			// Ex: "a" -> "a,d,e". When the inspector moves to "d" in "to", both common and "from" are done, and "d,e" are considered to be inserted.
-			action = insertion
+			action = actionInsert
 		default:
 			// Ex: "a,b" -> "a,c". When the inspector moves to index 1 of both list, common is done, and b is modified into c.
-			action = modification
+			action = actionMod
 		}
 		i.currAction = action
 		return action
@@ -62,15 +62,15 @@ func (i *inspector) inspect() action {
 	commonIdx := i.lcsIndices.data[i.lcsIndices.index]
 	switch {
 	case i.from.index == commonIdx.inA && i.to.index == commonIdx.inB:
-		action = match
+		action = actionMatch
 	case i.from.index != commonIdx.inA && i.to.index != commonIdx.inB:
-		action = modification
+		action = actionMod
 	case i.from.index != commonIdx.inA:
 		// Ex: "a,b,c" -> "c,1,2". When the inspector is at (a,c /(b,c), only "c" is common, a,b are considered deleted.
-		action = deletion
+		action = actionDel
 	default:
 		// Ex: "a,b,c" -> "1,2,a". When the inspector is at (a,1) and (a,2), only "a" is common, "1,2" are considered inserted.
-		action = insertion
+		action = actionInsert
 	}
 	i.currAction = action
 	return action
@@ -78,15 +78,15 @@ func (i *inspector) inspect() action {
 
 func (i *inspector) proceed() {
 	switch i.currAction {
-	case match:
+	case actionMatch:
 		i.lcsIndices.index++
 		fallthrough
-	case modification:
+	case actionMod:
 		i.from.index++
 		i.to.index++
-	case deletion:
+	case actionDel:
 		i.from.index++
-	case insertion:
+	case actionInsert:
 		i.to.index++
 	}
 }
