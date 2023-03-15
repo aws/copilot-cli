@@ -1,0 +1,31 @@
+# Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT-0
+AWSTemplateFormatVersion: 2010-09-09
+Description: CloudFormation template that represents a static site stored in S3.
+
+{{- if .SerializedManifest }}
+Metadata:
+  Manifest: |
+{{indent 4 .SerializedManifest}}
+{{- end }}
+
+Parameters:
+  AppName:
+    Type: String
+  EnvName:
+    Type: String
+  WorkloadName:
+    Type: String
+  AddonsTemplateURL:
+    Description: "URL of the addons nested stack template within the S3 bucket."
+    Type: String
+    Default: ""
+
+Conditions:
+  HasAddons:
+    !Not [!Equals [!Ref AddonsTemplateURL, ""]]
+
+Resources:
+  NullResource:
+    Type: AWS::CloudFormation::WaitConditionHandle
+  # TODO(dnrnd): create s3 bucket & lambda resources
