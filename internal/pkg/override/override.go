@@ -111,10 +111,6 @@ func lookupYAMLPatch(path string, fs afero.Fs) (Info, error) {
 	if err != nil {
 		return Info{}, fmt.Errorf("read file at %q: %w", path, err)
 	}
-	type yamlPatch struct {
-		Op   string `yaml:"op"`
-		Path string `yaml:"path"`
-	}
 	var doc []yamlPatch
 	if err := yaml.Unmarshal(content, &doc); err != nil {
 		return Info{}, fmt.Errorf("file at %q does not conform to the YAML patch document schema: %w", path, err)

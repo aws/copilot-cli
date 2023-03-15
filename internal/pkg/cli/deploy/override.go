@@ -48,7 +48,9 @@ func NewOverrider(pathToOverridesDir, app, env string, fs afero.Fs, sess UserAge
 		}), nil
 	case info.IsYAMLPatch():
 		sess.UserAgentExtras("override yamlpatch")
-		return new(override.Noop), nil
+		return override.WithPatch(pathToOverridesDir, override.PatchOpts{
+			FS: fs,
+		}), nil
 	default:
 		return new(override.Noop), nil
 	}
