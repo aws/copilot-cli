@@ -133,6 +133,7 @@ func parseSequence(fromNode, toNode *yaml.Node) ([]Node, error) {
 		}
 		return err == nil && diff == nil
 	})
+	// No difference if the two sequences have the same size and the LCS is the entire sequence.
 	if len(fromSeq) == len(toSeq) && len(lcsIndices) == len(fromSeq) {
 		return nil, nil
 	}
