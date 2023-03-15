@@ -10,17 +10,23 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Node represents a segment on a difference between two YAML documents.
-type Node interface {
+// Tree represents a difference tree between two YAML documents.
+type Tree struct {
+	root diffNode
+}
+
+// diffNode is the interface to represents the difference between two *yaml.Node.
+type diffNode interface {
 	key() string
 	newValue() *yaml.Node
 	oldValue() *yaml.Node
-	children() []Node
+	children() []diffNode
 }
 
+// node is a concrete implementation of a comparableNode.
 type node struct {
 	keyValue   string
-	childNodes []Node // A list of non-empty pointers to the children nodes.
+	childNodes []diffNode // A list of non-empty pointers to the children nodes.
 
 	oldV *yaml.Node // Only populated for a leaf node (i.e. that has no child node).
 	newV *yaml.Node // Only populated for a leaf node (i.e. that has no child node).
@@ -38,7 +44,7 @@ func (n *node) oldValue() *yaml.Node {
 	return n.oldV
 }
 
-func (n *node) children() []Node {
+func (n *node) children() []diffNode {
 	return n.childNodes
 }
 
@@ -50,19 +56,28 @@ type seqItemNode struct {
 type From []byte
 
 // Parse constructs a diff tree that represent the differences of a YAML document against the From document.
-func (from From) Parse(to []byte) (Node, error) {
+func (from From) Parse(to []byte) (Tree, error) {
 	var toNode, fromNode yaml.Node
 	if err := yaml.Unmarshal(to, &toNode); err != nil {
-		return nil, fmt.Errorf("unmarshal current template: %w", err)
+		return Tree{}, fmt.Errorf("unmarshal current template: %w", err)
 	}
 	if err := yaml.Unmarshal(from, &fromNode); err != nil {
-		return nil, fmt.Errorf("unmarshal old template: %w", err)
+		return Tree{}, fmt.Errorf("unmarshal old template: %w", err)
 	}
-	return parse(&fromNode, &toNode, "")
+	root, err := parse(&fromNode, &toNode, "")
+	if err != nil {
+		return Tree{}, err
+	}
+	if root == nil {
+		return Tree{}, nil
+	}
+	return Tree{
+		root: root,
+	}, nil
 
 }
 
-func parse(from, to *yaml.Node, key string) (Node, error) {
+func parse(from, to *yaml.Node, key string) (diffNode, error) {
 	// Handle base cases.
 	if to == nil || from == nil || to.Kind != from.Kind {
 		return &node{
@@ -82,7 +97,7 @@ func parse(from, to *yaml.Node, key string) (Node, error) {
 		}, nil
 	}
 
-	var children []Node
+	var children []diffNode
 	var err error
 	switch {
 	case to.Kind == yaml.SequenceNode && from.Kind == yaml.SequenceNode:
@@ -110,7 +125,7 @@ func isYAMLLeaf(node *yaml.Node) bool {
 	return len(node.Content) == 0
 }
 
-func parseSequence(fromNode, toNode *yaml.Node) ([]Node, error) {
+func parseSequence(fromNode, toNode *yaml.Node) ([]diffNode, error) {
 	fromSeq, toSeq := make([]yaml.Node, len(fromNode.Content)), make([]yaml.Node, len(toNode.Content)) // NOTE: should be the same as calling `Decode`.
 	for idx, v := range fromNode.Content {
 		fromSeq[idx] = *v
@@ -119,7 +134,7 @@ func parseSequence(fromNode, toNode *yaml.Node) ([]Node, error) {
 		toSeq[idx] = *v
 	}
 	type cachedEntry struct {
-		node Node
+		node diffNode
 		err  error
 	}
 	cachedDiff := make(map[string]cachedEntry)
@@ -137,7 +152,7 @@ func parseSequence(fromNode, toNode *yaml.Node) ([]Node, error) {
 	if len(fromSeq) == len(toSeq) && len(lcsIndices) == len(fromSeq) {
 		return nil, nil
 	}
-	children, inspector := make([]Node, 0), newLCSStateMachine(fromSeq, toSeq, lcsIndices)
+	children, inspector := make([]diffNode, 0), newLCSStateMachine(fromSeq, toSeq, lcsIndices)
 	for action := inspector.action(); action != actonDone; action = inspector.action() {
 		switch action {
 		case actionMatch:
@@ -176,7 +191,7 @@ func parseSequence(fromNode, toNode *yaml.Node) ([]Node, error) {
 	return children, nil
 }
 
-func parseMap(from, to *yaml.Node) ([]Node, error) {
+func parseMap(from, to *yaml.Node) ([]diffNode, error) {
 	currMap, oldMap := make(map[string]yaml.Node), make(map[string]yaml.Node)
 	if err := to.Decode(currMap); err != nil {
 		return nil, err
@@ -184,7 +199,7 @@ func parseMap(from, to *yaml.Node) ([]Node, error) {
 	if err := from.Decode(oldMap); err != nil {
 		return nil, err
 	}
-	var children []Node
+	var children []diffNode
 	for k := range unionOfKeys(currMap, oldMap) {
 		var currV, oldV *yaml.Node
 		if v, ok := oldMap[k]; ok {
