@@ -4,7 +4,10 @@
 package diff
 
 import (
+	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func Test_Integration_Parse_Write(t *testing.T) {
@@ -187,8 +190,22 @@ func Test_Integration_Parse_Write(t *testing.T) {
 			wanted: "No changes.\n",
 		},
 	}
-	for name, _ := range testCases {
+	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
+			got, err := From(tc.old).Parse([]byte(tc.curr))
+			require.NoError(t, err)
+
+			buf := strings.Builder{}
+			stringer := &Writer{
+				tree:   got,
+				writer: &buf,
+			}
+			err = stringer.Write()
+			out := buf.String()
+			if tc.wanted != "" { // TODO(lou1415926): remove this block when all tests cases are completed
+				require.NoError(t, err)
+				require.Equal(t, tc.wanted, out)
+			}
 		})
 	}
 }
