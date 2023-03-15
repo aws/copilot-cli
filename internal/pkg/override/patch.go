@@ -2,7 +2,6 @@ package override
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 
 	"github.com/spf13/afero"
@@ -31,13 +30,12 @@ func WithPatch(root string, opts PatchOpts) *Patch {
 }
 
 type yamlPatch struct {
-	Op   string `yaml:"op"`
-	Path string `yaml:"path"`
+	Op    string    `yaml:"op"`
+	Path  string    `yaml:"path"`
+	Value yaml.Node `yaml:"value"`
 }
 
 func (p *Patch) Override(body []byte) ([]byte, error) {
-	defer os.Exit(1)
-	fmt.Printf("p.Override()\n")
 	fmt.Printf("p: %+v\n", p)
 
 	patches, err := p.unmarshalPatches()
@@ -45,9 +43,25 @@ func (p *Patch) Override(body []byte) ([]byte, error) {
 		return nil, err
 	}
 
+	var root yaml.Node
+	if err := yaml.Unmarshal(body, &root); err != nil {
+		return nil, fmt.Errorf("invalid template: %w", err)
+	}
+
 	fmt.Printf("patches: %+v\n", patches)
 
-	return nil, nil
+	for _, patch := range patches {
+		if err := patch.apply(root); err != nil {
+			return nil, fmt.Errorf("unable to apply patch with operation %q at %q: %w", patch.Op, patch.Path, err)
+		}
+	}
+
+	// marshal back to []byte
+	out, err := yaml.Marshal(&root)
+	if err != nil {
+		return nil, fmt.Errorf("unable to return modified document to []byte: %w", err)
+	}
+	return out, nil
 }
 
 func (p *Patch) unmarshalPatches() ([]yamlPatch, error) {
@@ -74,4 +88,8 @@ func (p *Patch) unmarshalPatches() ([]yamlPatch, error) {
 	}
 
 	return patches, nil
+}
+
+func (y *yamlPatch) apply(root yaml.Node) error {
+	return nil
 }
