@@ -152,7 +152,8 @@ func parseSequence(fromNode, toNode *yaml.Node) ([]diffNode, error) {
 	if len(fromSeq) == len(toSeq) && len(lcsIndices) == len(fromSeq) {
 		return nil, nil
 	}
-	children, inspector := make([]diffNode, 0), newLCSStateMachine(fromSeq, toSeq, lcsIndices)
+	var children []diffNode
+	inspector := newLCSStateMachine(fromSeq, toSeq, lcsIndices)
 	for action := inspector.action(); action != actonDone; action = inspector.action() {
 		switch action {
 		case actionMatch:
