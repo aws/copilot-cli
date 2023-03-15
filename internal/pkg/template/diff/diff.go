@@ -165,7 +165,7 @@ func parseSequence(fromNode, toNode *yaml.Node) ([]diffNode, error) {
 				return nil, diff.err
 			}
 			children = append(children, &seqItemNode{
-				node: node{
+				node{
 					keyValue:   diff.node.key(),
 					childNodes: diff.node.children(),
 					oldV:       diff.node.oldValue(),
