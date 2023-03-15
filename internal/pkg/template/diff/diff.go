@@ -183,7 +183,7 @@ func parseMap(from, to *yaml.Node) ([]Node, error) {
 	if err := from.Decode(oldMap); err != nil {
 		return nil, err
 	}
-	children := make([]Node, 0)
+	var children []Node
 	for k := range unionOfKeys(currMap, oldMap) {
 		var currV, oldV *yaml.Node
 		if v, ok := oldMap[k]; ok {
