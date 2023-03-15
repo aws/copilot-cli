@@ -29,13 +29,13 @@ func TestFrom_Parse(t *testing.T) {
     cm: 168`,
 			wanted: func() Node {
 				/* sentinel -> Mary -> Weight: {new: "kg:52", old: nil} */
-				leaf := &basicNode{
+				leaf := &node{
 					keyValue: "Weight",
 					newV:     yamlNode("kg: 52", t),
 				}
-				return &basicNode{
+				return &node{
 					childNodes: []Node{
-						&basicNode{
+						&node{
 							keyValue:   "Mary",
 							childNodes: []Node{leaf},
 						},
@@ -54,13 +54,13 @@ func TestFrom_Parse(t *testing.T) {
     kg: 52`,
 			wanted: func() Node {
 				/* sentinel -> Mary -> Weight: {new: nil, old: "kg:52"} */
-				leaf := &basicNode{
+				leaf := &node{
 					keyValue: "Weight",
 					oldV:     yamlNode("kg: 52", t),
 				}
-				return &basicNode{
+				return &node{
 					childNodes: []Node{
-						&basicNode{
+						&node{
 							keyValue:   "Mary",
 							childNodes: []Node{leaf},
 						},
@@ -86,29 +86,29 @@ func TestFrom_Parse(t *testing.T) {
 					   -> CanFight: {new: no, old: yes}
 					   -> FavoriteWord: {new: peace, old: muscle}
 				*/
-				leafCM := &basicNode{
+				leafCM := &node{
 					keyValue: "cm",
 					newV:     yamlScalarNode("168"),
 					oldV:     yamlScalarNode("190"),
 				}
-				leafCanFight := &basicNode{
+				leafCanFight := &node{
 					keyValue: "CanFight",
 					newV:     yamlScalarNode("no"),
 					oldV:     yamlScalarNode("yes"),
 				}
-				leafFavWord := &basicNode{
+				leafFavWord := &node{
 					keyValue: "FavoriteWord",
 					newV:     yamlScalarNode("peace"),
 					oldV:     yamlScalarNode("muscle"),
 				}
-				return &basicNode{
+				return &node{
 					childNodes: []Node{
-						&basicNode{
+						&node{
 							keyValue: "Mary",
 							childNodes: []Node{
 								leafCanFight,
 								leafFavWord,
-								&basicNode{
+								&node{
 									keyValue:   "Height",
 									childNodes: []Node{leafCM},
 								},
@@ -134,15 +134,15 @@ func TestFrom_Parse(t *testing.T) {
 					   -> {old: dog, new: nil} // Deletion.
 					   -> {old: nil, new: dog} // Insertion.
 				*/
-				leaf1 := &basicNode{
+				leaf1 := &node{
 					oldV: yamlScalarNode("dog"),
 				}
-				leaf2 := &basicNode{
+				leaf2 := &node{
 					newV: yamlScalarNode("dog"),
 				}
-				return &basicNode{
+				return &node{
 					childNodes: []Node{
-						&basicNode{
+						&node{
 							keyValue:   "SizeRank",
 							childNodes: []Node{leaf1, leaf2},
 						},
@@ -158,12 +158,12 @@ func TestFrom_Parse(t *testing.T) {
 				   -> DanceCompetition
 					   -> {old: nil, new: mouse} // Insertion.
 				*/
-				leaf := &basicNode{
+				leaf := &node{
 					newV: yamlScalarNode("mouse"),
 				}
-				return &basicNode{
+				return &node{
 					childNodes: []Node{
-						&basicNode{
+						&node{
 							keyValue:   "DanceCompetition",
 							childNodes: []Node{leaf},
 						},
@@ -179,12 +179,12 @@ func TestFrom_Parse(t *testing.T) {
 				   -> PotatoChipCommittee
 					   -> {old: cat, new: nil} // Deletion.
 				*/
-				leaf := &basicNode{
+				leaf := &node{
 					oldV: yamlScalarNode("cat"),
 				}
-				return &basicNode{
+				return &node{
 					childNodes: []Node{
-						&basicNode{
+						&node{
 							keyValue:   "PotatoChipCommittee",
 							childNodes: []Node{leaf},
 						},
@@ -200,13 +200,13 @@ func TestFrom_Parse(t *testing.T) {
 				   -> DogsFavoriteShape
 					   -> {old: circle, new: ellipse} // Modification.
 				*/
-				leaf := &basicNode{
+				leaf := &node{
 					oldV: yamlScalarNode("circle"),
 					newV: yamlScalarNode("ellipse"),
 				}
-				return &basicNode{
+				return &node{
 					childNodes: []Node{
-						&basicNode{
+						&node{
 							keyValue:   "DogsFavoriteShape",
 							childNodes: []Node{leaf},
 						},
@@ -238,14 +238,14 @@ func TestFrom_Parse(t *testing.T) {
     Bear: "I know I'm supposed to keep an eye on you"`,
 			wanted: func() Node {
 				/* sentinel -> Mary -> Dialogue --> {new: map, old: scalar} */
-				leafDialogue := &basicNode{
+				leafDialogue := &node{
 					keyValue: "Dialogue",
 					newV:     yamlScalarNode("Said bear: 'I know I'm supposed to keep an eye on you", withStyle(yaml.DoubleQuotedStyle)),
 					oldV:     yamlNode("Bear: \"I know I'm supposed to keep an eye on you\"", t),
 				}
-				return &basicNode{
+				return &node{
 					childNodes: []Node{
-						&basicNode{
+						&node{
 							keyValue:   "Mary",
 							childNodes: []Node{leafDialogue},
 						},
@@ -264,7 +264,7 @@ func TestFrom_Parse(t *testing.T) {
       Tone: pleased`,
 			wanted: func() Node {
 				/* sentinel -> Mary -> Dialogue --> {new: list, old: scalar} */
-				leafDialogue := &basicNode{
+				leafDialogue := &node{
 					keyValue: "Dialogue",
 					newV:     yamlScalarNode("Said bear: 'I know I'm supposed to keep an eye on you; Said Dog: 'ikr'", withStyle(yaml.DoubleQuotedStyle)),
 					oldV: yamlNode(`- Bear: "I know I'm supposed to keep an eye on you"
@@ -272,9 +272,9 @@ func TestFrom_Parse(t *testing.T) {
 - Dog: "ikr"
   Tone: pleased`, t),
 				}
-				return &basicNode{
+				return &node{
 					childNodes: []Node{
-						&basicNode{
+						&node{
 							keyValue:   "Mary",
 							childNodes: []Node{leafDialogue},
 						},
@@ -295,7 +295,7 @@ func TestFrom_Parse(t *testing.T) {
     Dog: (pleased) "ikr"`,
 			wanted: func() Node {
 				/* sentinel -> Mary -> Dialogue --> {new: list, old: map} */
-				leafDialogue := &basicNode{
+				leafDialogue := &node{
 					keyValue: "Dialogue",
 					newV: yamlNode(`- Bear: "I know I'm supposed to keep an eye on you"
   Tone: disappointed
@@ -304,9 +304,9 @@ func TestFrom_Parse(t *testing.T) {
 					oldV: yamlNode(`Bear: (disappointed) "I know I'm supposed to keep an eye on you"
 Dog: (pleased) "ikr"`, t),
 				}
-				return &basicNode{
+				return &node{
 					childNodes: []Node{
-						&basicNode{
+						&node{
 							keyValue:   "Mary",
 							childNodes: []Node{leafDialogue},
 						},

@@ -18,7 +18,7 @@ type Node interface {
 	children() []Node
 }
 
-type basicNode struct {
+type node struct {
 	keyValue   string
 	childNodes []Node // A list of non-empty pointers to the children nodes.
 
@@ -26,24 +26,24 @@ type basicNode struct {
 	newV *yaml.Node // Only populated for a leaf node (i.e. that has no child node).
 }
 
-func (n *basicNode) key() string {
+func (n *node) key() string {
 	return n.keyValue
 }
 
-func (n *basicNode) newValue() *yaml.Node {
+func (n *node) newValue() *yaml.Node {
 	return n.newV
 }
 
-func (n *basicNode) oldValue() *yaml.Node {
+func (n *node) oldValue() *yaml.Node {
 	return n.oldV
 }
 
-func (n *basicNode) children() []Node {
+func (n *node) children() []Node {
 	return n.childNodes
 }
 
 type seqItemNode struct {
-	basicNode
+	node
 }
 
 // From is the YAML document that another YAML document is compared against.
@@ -65,7 +65,7 @@ func (from From) Parse(to []byte) (Node, error) {
 func parse(from, to *yaml.Node, key string) (Node, error) {
 	// Handle base cases.
 	if to == nil || from == nil || to.Kind != from.Kind {
-		return &basicNode{
+		return &node{
 			keyValue: key,
 			newV:     to,
 			oldV:     from,
@@ -75,7 +75,7 @@ func parse(from, to *yaml.Node, key string) (Node, error) {
 		if to.Value == from.Value {
 			return nil, nil
 		}
-		return &basicNode{
+		return &node{
 			keyValue: key,
 			newV:     to,
 			oldV:     from,
@@ -100,7 +100,7 @@ func parse(from, to *yaml.Node, key string) (Node, error) {
 	if len(children) == 0 {
 		return nil, nil
 	}
-	return &basicNode{
+	return &node{
 		keyValue:   key,
 		childNodes: children,
 	}, nil
@@ -148,19 +148,19 @@ func parseSequence(fromNode, toNode *yaml.Node) ([]Node, error) {
 				return nil, diff.err
 			}
 			children = append(children, &seqItemNode{
-				basicNode: *(diff.node.(*basicNode)),
+				node: *(diff.node.(*node)),
 			})
 		case actionDel:
 			item := inspector.fromItem()
 			children = append(children, &seqItemNode{
-				basicNode{
+				node{
 					oldV: &item,
 				},
 			})
 		case actionInsert:
 			item := inspector.toItem()
 			children = append(children, &seqItemNode{
-				basicNode{
+				node{
 					newV: &item,
 				},
 			})
