@@ -72,8 +72,6 @@ func TestFrom_Parse(t *testing.T) {
 				}
 			},
 		},
-		"add an item to a list":    {},
-		"remove an item to a list": {},
 		"change keyed values": {
 			curr: `Mary:
   Height:
@@ -126,7 +124,127 @@ func TestFrom_Parse(t *testing.T) {
 				}
 			},
 		},
-		"change a list item value": {},
+		"list does not change": {
+			old:  `Alphabet: [a,b,c,d]`,
+			curr: `Alphabet: [a,b,c,d]`,
+			wanted: func() *Node {
+				return nil
+			},
+		},
+		"list reordered": {
+			old:  `SizeRank: [bear,dog,cat,mouse]`,
+			curr: `SizeRank: [bear,cat,dog,mouse]`,
+			wanted: func() *Node {
+				/* sentinel
+				   -> SizeRank
+					   -> {old: dog, new: nil} // Deletion.
+					   -> {old: nil, new: dog} // Insertion.
+				*/
+				leaf1 := &Node{
+					oldValue: yamlScalarNode("dog"),
+				}
+				leaf2 := &Node{
+					newValue: yamlScalarNode("dog"),
+				}
+				return &Node{
+					children: map[string]*Node{
+						"SizeRank": {
+							key: "SizeRank",
+							children: map[string]*Node{
+								"0": leaf1,
+								"1": leaf2,
+							},
+						},
+					},
+				}
+			},
+		},
+		"list with insertion": {
+			old:  `DanceCompetition: [dog,bear,cat]`,
+			curr: `DanceCompetition: [dog,bear,mouse,cat]`,
+			wanted: func() *Node {
+				/* sentinel
+				   -> DanceCompetition
+					   -> {old: nil, new: mouse} // Insertion.
+				*/
+				leaf := &Node{
+					newValue: yamlScalarNode("mouse"),
+				}
+				return &Node{
+					children: map[string]*Node{
+						"DanceCompetition": {
+							key: "DanceCompetition",
+							children: map[string]*Node{
+								"0": leaf,
+							},
+						},
+					},
+				}
+			},
+		},
+		"list with deletion": {
+			old:  `PotatoChipCommittee: [dog,bear,cat,mouse]`,
+			curr: `PotatoChipCommittee: [dog,bear,mouse]`,
+			wanted: func() *Node {
+				/* sentinel
+				   -> PotatoChipCommittee
+					   -> {old: cat, new: nil} // Deletion.
+				*/
+				leaf := &Node{
+					oldValue: yamlScalarNode("cat"),
+				}
+				return &Node{
+					children: map[string]*Node{
+						"PotatoChipCommittee": {
+							key: "PotatoChipCommittee",
+							children: map[string]*Node{
+								"0": leaf,
+							},
+						},
+					},
+				}
+			},
+		},
+		"list with a scalar value changed": {
+			old:  `DogsFavoriteShape: [triangle,circle,rectangle]`,
+			curr: `DogsFavoriteShape: [triangle,ellipse,rectangle]`,
+			wanted: func() *Node {
+				/* sentinel
+				   -> DogsFavoriteShape
+					   -> {old: circle, new: ellipse} // Modification.
+				*/
+				leaf := &Node{
+					oldValue: yamlScalarNode("circle"),
+					newValue: yamlScalarNode("ellipse"),
+				}
+				return &Node{
+					children: map[string]*Node{
+						"DogsFavoriteShape": {
+							key: "DogsFavoriteShape",
+							children: map[string]*Node{
+								"0": leaf,
+							},
+						},
+					},
+				}
+			},
+		},
+		"list with a map value changed": { // TODO(lou1415926): handle list of maps modification
+			old: `StrawberryPopularitySurvey:
+- Name: Dog
+  LikeStrawberry: ver much
+- Name: Bear
+  LikeStrawberry: meh
+- Name: Cat
+  LikeStrawberry: ew`,
+			curr: `StrawberryPopularitySurvey:
+- Name: Dog
+  LikeStrawberry: ver much
+- Name: Bear
+  LikeStrawberry: ok
+- Name: Cat
+  LikeStrawberry: ew`,
+		},
 		"change a map to scalar": {
 			curr: `Mary:
   Dialogue: "Said bear: 'I know I'm supposed to keep an eye on you"`,
