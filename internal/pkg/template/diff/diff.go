@@ -23,7 +23,7 @@ type diffNode interface {
 	children() []diffNode
 }
 
-// node is a concrete implementation of a comparableNode.
+// node is a concrete implementation of a diffNode.
 type node struct {
 	keyValue   string
 	childNodes []diffNode // A list of non-empty pointers to the children nodes.
