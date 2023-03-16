@@ -22,16 +22,18 @@ Resources:
     Type: AWS::ECS::TaskDefinition`,
 			overrides: `
 - op: add
-  path: /Resources
+  path: /Resources/TaskDef
   value:
-    TestResource:
-      Type: AWS::Danny`,
+    Properties:
+      Prop1: value
+      Prop2: false`,
 			expected: `
 Resources:
   TaskDef:
     Type: AWS::ECS::TaskDefinition
-  TestResource:
-    Type: AWS::Danny`,
+    Properties:
+      Prop1: value
+      Prop2: false`,
 		},
 	}
 
