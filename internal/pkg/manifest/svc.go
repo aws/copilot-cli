@@ -633,12 +633,12 @@ func (s *BackendService) HTTPLoadBalancerTarget() (targetContainer string, targe
 }
 
 // targetContainerFromTargetPort returns target container and target port from the given target_port input.
-func targetContainerFromTargetPort(exposedPorts ExposedPortsIndex, rrTargetPort *uint16) (targetContainer *string, targetPort *string) {
+func targetContainerFromTargetPort(exposedPorts ExposedPortsIndex, port *uint16) (targetContainer *string, targetPort *string) {
 	// Route load balancer traffic to the target_port if mentioned.
-	targetPort = aws.String(template.StrconvUint16(aws.Uint16Value(rrTargetPort)))
+	targetPort = aws.String(template.StrconvUint16(aws.Uint16Value(port)))
 	// It shouldn’t be possible that container is empty for the given port as exposed port assigns container to all the ports, this is just for the extra safety.
-	if exposedPorts.ContainerForPort[aws.Uint16Value(rrTargetPort)] != "" {
-		targetContainer = aws.String(exposedPorts.ContainerForPort[aws.Uint16Value(rrTargetPort)])
+	if exposedPorts.ContainerForPort[aws.Uint16Value(port)] != "" {
+		targetContainer = aws.String(exposedPorts.ContainerForPort[aws.Uint16Value(port)])
 	}
 	return
 }
@@ -688,7 +688,7 @@ func (listener NetworkLoadBalancerListener) Target(exposedPorts ExposedPortsInde
 			for _, portConfig := range exposedPorts.PortsForContainer[targetContainer] {
 				if portConfig.IsContainerDefinedPort {
 					targetPort = strconv.Itoa(int(portConfig.Port))
-					/* NOTE: When the `target_port` is empty, the intented target port should be the port that is explictly exposed by the container. Consider the following example
+					/* NOTE: When the `target_port` is empty, the intended target port should be the port that is explicitly exposed by the container. Consider the following example
 										```
 					  					http:
 					  					   target_container: nginx
