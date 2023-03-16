@@ -406,13 +406,13 @@ func equalSubTree(a, b diffNode, t *testing.T) bool {
 }
 
 func equalLeaves(a, b diffNode, t *testing.T) bool {
-	aNew, err := yaml.Marshal(a.newValue())
+	aNew, err := yaml.Marshal(a.newYAML())
 	require.NoError(t, err)
-	bNew, err := yaml.Marshal(b.newValue())
+	bNew, err := yaml.Marshal(b.newYAML())
 	require.NoError(t, err)
-	aOld, err := yaml.Marshal(a.oldValue())
+	aOld, err := yaml.Marshal(a.oldYAML())
 	require.NoError(t, err)
-	bOld, err := yaml.Marshal(b.oldValue())
+	bOld, err := yaml.Marshal(b.oldYAML())
 	require.NoError(t, err)
 	return string(aNew) == string(bNew) && string(aOld) == string(bOld)
 }
