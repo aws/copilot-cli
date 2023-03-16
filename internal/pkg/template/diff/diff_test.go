@@ -391,14 +391,8 @@ func equalSubTree(a, b diffNode, t *testing.T) bool {
 	if len(a.children()) == 0 {
 		return equalLeaves(a, b, t)
 	}
-	aKeyToChild, bKeyToChild := make(map[string]diffNode), make(map[string]diffNode)
-	for i := 0; i < len(a.children()); i++ {
-		aChild, bChild := a.children()[i], b.children()[i]
-		aKeyToChild[aChild.key()] = aChild
-		bKeyToChild[bChild.key()] = bChild
-	}
-	for k := range aKeyToChild {
-		if equal := equalSubTree(aKeyToChild[k], bKeyToChild[k], t); !equal {
+	for idx, _ := range a.children() {
+		if equal := equalSubTree(a.children()[idx], b.children()[idx], t); !equal {
 			return false
 		}
 	}
