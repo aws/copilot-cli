@@ -42,8 +42,7 @@ func (s *treeWriter) writeTree(node diffNode, indent int) error {
 	var formatter formatter
 	switch node.(type) {
 	case *unchangedNode:
-		count := node.(*unchangedNode).unchangedCount()
-		content := fmt.Sprintf("(%s)", english.Plural(count, "unchanged item", "unchanged items"))
+		content := fmt.Sprintf("(%s)", english.Plural(node.(*unchangedNode).unchangedCount(), "unchanged item", "unchanged items"))
 		content = process(content, indentByFn(indent))
 		_, err := s.writer.Write([]byte(color.Faint.Sprint(content + "\n")))
 		return err
