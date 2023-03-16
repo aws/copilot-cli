@@ -5,6 +5,8 @@ package diff
 
 import (
 	"io"
+
+	"github.com/aws/copilot-cli/internal/pkg/term/color"
 )
 
 const (
@@ -79,7 +81,7 @@ func (s *treeWriter) writeMod(node diffNode, indent int, formatter formatter) er
 		return s.writeInsert(node, indent, formatter)
 	}
 	content := processMultiline(formatter.formatMod(node), prefixByFn(prefixMod), indentByFn(indent))
-	_, err := s.writer.Write([]byte(content + "\n"))
+	_, err := s.writer.Write([]byte(color.Yellow.Sprint(content + "\n")))
 	return err
 }
 
@@ -89,7 +91,7 @@ func (s *treeWriter) writeDel(node diffNode, indent int, formatter formatter) er
 		return err
 	}
 	content := processMultiline(string(raw), prefixByFn(prefixDel), indentByFn(indent))
-	_, err = s.writer.Write([]byte(content + "\n"))
+	_, err = s.writer.Write([]byte(color.Red.Sprint(content + "\n")))
 	return err
 }
 
@@ -99,6 +101,6 @@ func (s *treeWriter) writeInsert(node diffNode, indent int, formatter formatter)
 		return err
 	}
 	content := processMultiline(string(raw), prefixByFn(prefixAdd), indentByFn(indent))
-	_, err = s.writer.Write([]byte(content + "\n"))
+	_, err = s.writer.Write([]byte(color.Green.Sprint(content + "\n")))
 	return err
 }
