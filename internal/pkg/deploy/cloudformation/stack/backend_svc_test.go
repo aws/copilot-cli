@@ -385,7 +385,7 @@ Outputs:
 				Rolling: aws.String("recreate"),
 			}}
 		mft.RoutingRule = manifest.RoutingRuleConfiguration{
-			MainRoutingRule: manifest.ALBRoutingRule{
+			Main: manifest.RoutingRule{
 				Path: aws.String("/albPath"),
 				HealthCheck: manifest.HealthCheckArgsOrString{
 					Union: manifest.AdvancedToUnion[string](manifest.HTTPHealthCheckArgs{

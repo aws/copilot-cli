@@ -82,7 +82,7 @@ func (l LoadBalancedWebService) validate() error {
 	if err = validateTargetContainer(validateTargetContainerOpts{
 		mainContainerName: aws.StringValue(l.Name),
 		mainContainerPort: l.ImageConfig.Port,
-		targetContainer:   l.RoutingRule.MainRoutingRule.TargetContainer,
+		targetContainer:   l.RoutingRule.Main.TargetContainer,
 		sidecarConfig:     l.Sidecars,
 	}); err != nil {
 		return fmt.Errorf(`validate load balancer target for "http": %w`, err)
@@ -265,7 +265,7 @@ func (b BackendService) validate() error {
 	if err = validateTargetContainer(validateTargetContainerOpts{
 		mainContainerName: aws.StringValue(b.Name),
 		mainContainerPort: b.ImageConfig.Port,
-		targetContainer:   b.RoutingRule.MainRoutingRule.TargetContainer,
+		targetContainer:   b.RoutingRule.Main.TargetContainer,
 		sidecarConfig:     b.Sidecars,
 	}); err != nil {
 		return fmt.Errorf(`validate load balancer target for "http": %w`, err)
@@ -332,7 +332,7 @@ func (b BackendServiceConfig) validate() error {
 		return fmt.Errorf(`validate "network": %w`, err)
 	}
 	if b.Network.Connect.Alias != nil {
-		if b.RoutingRule.MainRoutingRule.TargetContainer == nil && b.ImageConfig.Port == nil {
+		if b.RoutingRule.Main.TargetContainer == nil && b.ImageConfig.Port == nil {
 			return fmt.Errorf(`cannot set "network.connect.alias" when no ports are exposed`)
 		}
 	}
@@ -771,12 +771,10 @@ func (r RoutingRuleConfiguration) validate() error {
 		return nil
 	}
 	// we consider the fact that primary routing rule is mandatory before you write any additional routing rules.
-	if err := r.MainRoutingRule.validate(); err != nil {
+	if err := r.Main.validate(); err != nil {
 		return err
 	}
-	// checking this condition here as validate method on ALBRoutingRule only validates common parameters between
-	// MainRoutingRule and AdditionalRoutingRules
-	if r.MainRoutingRule.TargetContainer != nil && r.TargetContainerCamelCase != nil {
+	if r.Main.TargetContainer != nil && r.TargetContainerCamelCase != nil {
 		return &errFieldMutualExclusive{
 			firstField:  "target_container",
 			secondField: "targetContainer",
@@ -801,7 +799,7 @@ func (r RoutingRuleConfigOrBool) validate() error {
 }
 
 // validate returns nil if RoutingRuleConfiguration is configured correctly.
-func (r ALBRoutingRule) validate() error {
+func (r RoutingRule) validate() error {
 	if r.Path == nil {
 		return &errFieldMustBeSpecified{
 			missingField: "path",
@@ -1966,9 +1964,9 @@ func populateALBPortsAndValidate(containerNameFor map[uint16]string, opts valida
 		return nil
 	}
 	alb := opts.alb
-	for _, rule := range alb.ALBRoutingRules() {
+	for _, rule := range alb.RoutingRules() {
 		if rule.TargetPort == nil {
-			return nil
+			continue
 		}
 		if err := validateContainersNotExposingSamePort(containerNameFor, aws.Uint16Value(rule.TargetPort), rule.TargetContainer); err != nil {
 			return err

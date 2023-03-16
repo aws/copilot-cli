@@ -116,7 +116,7 @@ environments:
 						},
 						RoutingRule: RoutingRuleConfigOrBool{
 							RoutingRuleConfiguration: RoutingRuleConfiguration{
-								MainRoutingRule: ALBRoutingRule{
+								Main: RoutingRule{
 									Alias: Alias{
 										AdvancedAliases: []AdvancedAlias{},
 										StringSliceOrString: StringSliceOrString{

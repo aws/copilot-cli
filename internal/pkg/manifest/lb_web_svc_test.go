@@ -54,7 +54,7 @@ func TestNewHTTPLoadBalancedWebService(t *testing.T) {
 					},
 					RoutingRule: RoutingRuleConfigOrBool{
 						RoutingRuleConfiguration: RoutingRuleConfiguration{
-							MainRoutingRule: ALBRoutingRule{
+							Main: RoutingRule{
 								Path: stringP("/"),
 								HealthCheck: HealthCheckArgsOrString{
 									Union: BasicToUnion[string, HTTPHealthCheckArgs]("/"),
@@ -130,7 +130,7 @@ func TestNewHTTPLoadBalancedWebService(t *testing.T) {
 					},
 					RoutingRule: RoutingRuleConfigOrBool{
 						RoutingRuleConfiguration: RoutingRuleConfiguration{
-							MainRoutingRule: ALBRoutingRule{
+							Main: RoutingRule{
 								Path:            stringP("/"),
 								ProtocolVersion: aws.String("gRPC"),
 								HealthCheck: HealthCheckArgsOrString{
@@ -231,12 +231,12 @@ func TestNewLoadBalancedWebService_UnmarshalYaml(t *testing.T) {
 			rr := newDefaultHTTPLoadBalancedWebService().RoutingRule
 			err := yaml.Unmarshal(tc.inContent, &rr)
 			require.NoError(t, err)
-			require.Equal(t, tc.wantedStruct.Advanced, rr.MainRoutingRule.HealthCheck.Advanced)
-			require.Equal(t, tc.wantedStruct.Advanced.Path, rr.MainRoutingRule.HealthCheck.Advanced.Path)
-			require.Equal(t, tc.wantedStruct.Advanced.HealthyThreshold, rr.MainRoutingRule.HealthCheck.Advanced.HealthyThreshold)
-			require.Equal(t, tc.wantedStruct.Advanced.UnhealthyThreshold, rr.MainRoutingRule.HealthCheck.Advanced.UnhealthyThreshold)
-			require.Equal(t, tc.wantedStruct.Advanced.Interval, rr.MainRoutingRule.HealthCheck.Advanced.Interval)
-			require.Equal(t, tc.wantedStruct.Advanced.Timeout, rr.MainRoutingRule.HealthCheck.Advanced.Timeout)
+			require.Equal(t, tc.wantedStruct.Advanced, rr.Main.HealthCheck.Advanced)
+			require.Equal(t, tc.wantedStruct.Advanced.Path, rr.Main.HealthCheck.Advanced.Path)
+			require.Equal(t, tc.wantedStruct.Advanced.HealthyThreshold, rr.Main.HealthCheck.Advanced.HealthyThreshold)
+			require.Equal(t, tc.wantedStruct.Advanced.UnhealthyThreshold, rr.Main.HealthCheck.Advanced.UnhealthyThreshold)
+			require.Equal(t, tc.wantedStruct.Advanced.Interval, rr.Main.HealthCheck.Advanced.Interval)
+			require.Equal(t, tc.wantedStruct.Advanced.Timeout, rr.Main.HealthCheck.Advanced.Timeout)
 		})
 	}
 }
@@ -280,7 +280,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					},
 					RoutingRule: RoutingRuleConfigOrBool{
 						RoutingRuleConfiguration: RoutingRuleConfiguration{
-							MainRoutingRule: ALBRoutingRule{
+							Main: RoutingRule{
 								Path: aws.String("/awards/*"),
 								HealthCheck: HealthCheckArgsOrString{
 									Union: BasicToUnion[string, HTTPHealthCheckArgs]("/"),
@@ -350,7 +350,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					},
 					RoutingRule: RoutingRuleConfigOrBool{
 						RoutingRuleConfiguration: RoutingRuleConfiguration{
-							MainRoutingRule: ALBRoutingRule{
+							Main: RoutingRule{
 								Path: aws.String("/awards/*"),
 								HealthCheck: HealthCheckArgsOrString{
 									Union: BasicToUnion[string, HTTPHealthCheckArgs]("/"),
@@ -420,7 +420,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					},
 					RoutingRule: RoutingRuleConfigOrBool{
 						RoutingRuleConfiguration: RoutingRuleConfiguration{
-							MainRoutingRule: ALBRoutingRule{
+							Main: RoutingRule{
 								Path: aws.String("/awards/*"),
 								HealthCheck: HealthCheckArgsOrString{
 									Union: BasicToUnion[string, HTTPHealthCheckArgs]("/"),
@@ -535,7 +535,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						},
 						RoutingRule: RoutingRuleConfigOrBool{
 							RoutingRuleConfiguration: RoutingRuleConfiguration{
-								MainRoutingRule: ALBRoutingRule{
+								Main: RoutingRule{
 									TargetContainer: aws.String("xray"),
 								},
 							},
@@ -644,7 +644,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					},
 					RoutingRule: RoutingRuleConfigOrBool{
 						RoutingRuleConfiguration: RoutingRuleConfiguration{
-							MainRoutingRule: ALBRoutingRule{
+							Main: RoutingRule{
 								Path: aws.String("/awards/*"),
 								HealthCheck: HealthCheckArgsOrString{
 									Union: BasicToUnion[string, HTTPHealthCheckArgs]("/"),
@@ -1419,7 +1419,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					RoutingRule: RoutingRuleConfigOrBool{
 						RoutingRuleConfiguration: RoutingRuleConfiguration{
-							MainRoutingRule: ALBRoutingRule{
+							Main: RoutingRule{
 								HealthCheck: HealthCheckArgsOrString{
 									Union: BasicToUnion[string, HTTPHealthCheckArgs]("path"),
 								},
@@ -1432,7 +1432,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					"prod-iad": {
 						RoutingRule: RoutingRuleConfigOrBool{
 							RoutingRuleConfiguration: RoutingRuleConfiguration{
-								MainRoutingRule: ALBRoutingRule{
+								Main: RoutingRule{
 									AllowedSourceIps: []IPNet{mockIPNet2},
 								},
 							},
@@ -1450,7 +1450,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					RoutingRule: RoutingRuleConfigOrBool{
 						RoutingRuleConfiguration: RoutingRuleConfiguration{
-							MainRoutingRule: ALBRoutingRule{
+							Main: RoutingRule{
 								HealthCheck: HealthCheckArgsOrString{
 									Union: BasicToUnion[string, HTTPHealthCheckArgs]("path"),
 								},
@@ -1470,7 +1470,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					RoutingRule: RoutingRuleConfigOrBool{
 						RoutingRuleConfiguration: RoutingRuleConfiguration{
-							MainRoutingRule: ALBRoutingRule{
+							Main: RoutingRule{
 								HealthCheck: HealthCheckArgsOrString{
 									Union: BasicToUnion[string, HTTPHealthCheckArgs]("path"),
 								},
@@ -1483,7 +1483,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					"prod-iad": {
 						RoutingRule: RoutingRuleConfigOrBool{
 							RoutingRuleConfiguration: RoutingRuleConfiguration{
-								MainRoutingRule: ALBRoutingRule{
+								Main: RoutingRule{
 									HealthCheck: HealthCheckArgsOrString{
 										Union: BasicToUnion[string, HTTPHealthCheckArgs]("another-path"),
 									},
@@ -1503,7 +1503,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					RoutingRule: RoutingRuleConfigOrBool{
 						RoutingRuleConfiguration: RoutingRuleConfiguration{
-							MainRoutingRule: ALBRoutingRule{
+							Main: RoutingRule{
 								HealthCheck: HealthCheckArgsOrString{
 									Union: BasicToUnion[string, HTTPHealthCheckArgs]("another-path"),
 								},
@@ -1523,7 +1523,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					RoutingRule: RoutingRuleConfigOrBool{
 						RoutingRuleConfiguration: RoutingRuleConfiguration{
-							MainRoutingRule: ALBRoutingRule{
+							Main: RoutingRule{
 								HealthCheck: HealthCheckArgsOrString{
 									Union: BasicToUnion[string, HTTPHealthCheckArgs]("path"),
 								},
@@ -1536,7 +1536,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					"prod-iad": {
 						RoutingRule: RoutingRuleConfigOrBool{
 							RoutingRuleConfiguration: RoutingRuleConfiguration{
-								MainRoutingRule: ALBRoutingRule{
+								Main: RoutingRule{
 									HealthCheck: HealthCheckArgsOrString{
 										Union: BasicToUnion[string, HTTPHealthCheckArgs]("another-path"),
 									},
@@ -1557,7 +1557,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					RoutingRule: RoutingRuleConfigOrBool{
 						RoutingRuleConfiguration: RoutingRuleConfiguration{
-							MainRoutingRule: ALBRoutingRule{
+							Main: RoutingRule{
 								HealthCheck: HealthCheckArgsOrString{
 									Union: BasicToUnion[string, HTTPHealthCheckArgs]("another-path"),
 								},
@@ -1792,7 +1792,7 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 					},
 					RoutingRule: RoutingRuleConfigOrBool{
 						RoutingRuleConfiguration: RoutingRuleConfiguration{
-							MainRoutingRule: ALBRoutingRule{
+							Main: RoutingRule{
 								Path:            aws.String("/"),
 								TargetContainer: aws.String("xray"),
 								TargetPort:      aws.Uint16(81),
@@ -1845,7 +1845,7 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 					},
 					RoutingRule: RoutingRuleConfigOrBool{
 						RoutingRuleConfiguration: RoutingRuleConfiguration{
-							MainRoutingRule: ALBRoutingRule{
+							Main: RoutingRule{
 								Path:       aws.String("/"),
 								TargetPort: aws.Uint16(81),
 							},
@@ -1897,7 +1897,7 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 					},
 					RoutingRule: RoutingRuleConfigOrBool{
 						RoutingRuleConfiguration: RoutingRuleConfiguration{
-							MainRoutingRule: ALBRoutingRule{
+							Main: RoutingRule{
 								Path:            aws.String("/"),
 								TargetContainer: aws.String("frontend"),
 								TargetPort:      aws.Uint16(81),
@@ -1950,7 +1950,7 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 					},
 					RoutingRule: RoutingRuleConfigOrBool{
 						RoutingRuleConfiguration: RoutingRuleConfiguration{
-							MainRoutingRule: ALBRoutingRule{
+							Main: RoutingRule{
 								Path:            aws.String("/"),
 								TargetContainer: aws.String("xray"),
 								TargetPort:      aws.Uint16(81),
@@ -1997,7 +1997,7 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 					},
 					RoutingRule: RoutingRuleConfigOrBool{
 						RoutingRuleConfiguration: RoutingRuleConfiguration{
-							MainRoutingRule: ALBRoutingRule{
+							Main: RoutingRule{
 								Path:       aws.String("/"),
 								TargetPort: aws.Uint16(81),
 							},
@@ -2044,7 +2044,7 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 					},
 					RoutingRule: RoutingRuleConfigOrBool{
 						RoutingRuleConfiguration: RoutingRuleConfiguration{
-							MainRoutingRule: ALBRoutingRule{
+							Main: RoutingRule{
 								Path:       aws.String("/"),
 								TargetPort: aws.Uint16(80),
 							},
@@ -2078,6 +2078,227 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 				},
 			},
 		},
+		"ALB exposing multiple main container ports through additional_rules": {
+			mft: &LoadBalancedWebService{
+				Workload: Workload{
+					Name: aws.String("frontend"),
+				},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: ImageWithPortAndHealthcheck{
+						ImageWithPort: ImageWithPort{
+							Port: aws.Uint16(80),
+						},
+					},
+					RoutingRule: RoutingRuleConfigOrBool{
+						RoutingRuleConfiguration: RoutingRuleConfiguration{
+							Main: RoutingRule{
+								Path:       aws.String("/"),
+								TargetPort: aws.Uint16(80),
+							},
+							AdditionalRoutingRules: []RoutingRule{
+								{
+									Path:       stringP("/admin"),
+									TargetPort: uint16P(81),
+								},
+								{
+									Path:            stringP("/additional"),
+									TargetPort:      uint16P(82),
+									TargetContainer: stringP("frontend"),
+								},
+							},
+						},
+					},
+					Sidecars: map[string]*SidecarConfig{
+						"xray": {
+							Port: aws.String("85"),
+							Image: Union[*string, ImageLocationOrBuild]{
+								Basic: aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							},
+							CredsParam: aws.String("some arn"),
+						},
+					},
+				},
+			},
+			wantedExposedPorts: map[string][]ExposedPort{
+				"frontend": {
+					{
+						Port:          80,
+						ContainerName: "frontend",
+						Protocol:      "tcp",
+					},
+					{
+						Port:          81,
+						ContainerName: "frontend",
+						Protocol:      "tcp",
+					},
+					{
+						Port:          82,
+						ContainerName: "frontend",
+						Protocol:      "tcp",
+					},
+				},
+				"xray": {
+					{
+						Port:          85,
+						ContainerName: "xray",
+						Protocol:      "tcp",
+					},
+				},
+			},
+		},
+		"ALB exposing multiple sidecar ports through additional_rules": {
+			mft: &LoadBalancedWebService{
+				Workload: Workload{
+					Name: aws.String("frontend"),
+				},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: ImageWithPortAndHealthcheck{
+						ImageWithPort: ImageWithPort{
+							Port: aws.Uint16(80),
+						},
+					},
+					RoutingRule: RoutingRuleConfigOrBool{
+						RoutingRuleConfiguration: RoutingRuleConfiguration{
+							Main: RoutingRule{
+								Path:       aws.String("/"),
+								TargetPort: aws.Uint16(80),
+							},
+							AdditionalRoutingRules: []RoutingRule{
+								{
+									Path:            stringP("/admin"),
+									TargetContainer: stringP("xray"),
+								},
+								{
+									Path:            stringP("/additional"),
+									TargetPort:      uint16P(82),
+									TargetContainer: stringP("xray"),
+								},
+							},
+						},
+					},
+					Sidecars: map[string]*SidecarConfig{
+						"xray": {
+							Port: aws.String("81"),
+							Image: Union[*string, ImageLocationOrBuild]{
+								Basic: aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							},
+							CredsParam: aws.String("some arn"),
+						},
+					},
+				},
+			},
+			wantedExposedPorts: map[string][]ExposedPort{
+				"frontend": {
+					{
+						Port:          80,
+						ContainerName: "frontend",
+						Protocol:      "tcp",
+					},
+				},
+				"xray": {
+					{
+						Port:          81,
+						ContainerName: "xray",
+						Protocol:      "tcp",
+					},
+					{
+						Port:          82,
+						ContainerName: "xray",
+						Protocol:      "tcp",
+					},
+				},
+			},
+		},
+		"ALB exposing multiple main as well as sidecar ports through additional_rules": {
+			mft: &LoadBalancedWebService{
+				Workload: Workload{
+					Name: aws.String("frontend"),
+				},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: ImageWithPortAndHealthcheck{
+						ImageWithPort: ImageWithPort{
+							Port: aws.Uint16(80),
+						},
+					},
+					RoutingRule: RoutingRuleConfigOrBool{
+						RoutingRuleConfiguration: RoutingRuleConfiguration{
+							Main: RoutingRule{
+								Path:       aws.String("/"),
+								TargetPort: aws.Uint16(80),
+							},
+							AdditionalRoutingRules: []RoutingRule{
+								{
+									Path:            stringP("/sidecaradmin"),
+									TargetContainer: stringP("xray"),
+								},
+								{
+									Path:       stringP("/sidecaradmin1"),
+									TargetPort: uint16P(81),
+								},
+								{
+									Path:            stringP("/additionalsidecar"),
+									TargetPort:      uint16P(82),
+									TargetContainer: stringP("xray"),
+								},
+								{
+									Path:            stringP("/mainadmin"),
+									TargetContainer: stringP("frontend"),
+								},
+								{
+									Path:       stringP("/mainadmin1"),
+									TargetPort: uint16P(85),
+								},
+								{
+									Path:            stringP("/additionalmaincontainer"),
+									TargetPort:      uint16P(86),
+									TargetContainer: stringP("frontend"),
+								},
+							},
+						},
+					},
+					Sidecars: map[string]*SidecarConfig{
+						"xray": {
+							Port: aws.String("81"),
+							Image: Union[*string, ImageLocationOrBuild]{
+								Basic: aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							},
+							CredsParam: aws.String("some arn"),
+						},
+					},
+				},
+			},
+			wantedExposedPorts: map[string][]ExposedPort{
+				"frontend": {
+					{
+						Port:          80,
+						ContainerName: "frontend",
+						Protocol:      "tcp",
+					},
+					{
+						Port:          85,
+						ContainerName: "frontend",
+						Protocol:      "tcp",
+					},
+					{
+						Port:          86,
+						ContainerName: "frontend",
+						Protocol:      "tcp",
+					},
+				},
+				"xray": {
+					{
+						Port:          81,
+						ContainerName: "xray",
+						Protocol:      "tcp",
+					},
+					{
+						Port:          82,
+						ContainerName: "xray",
+						Protocol:      "tcp",
+					},
+				},
+			},
+		},
 		"ALB and NLB exposes the same additional port on the main container": {
 			mft: &LoadBalancedWebService{
 				Workload: Workload{
@@ -2091,7 +2312,7 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 					},
 					RoutingRule: RoutingRuleConfigOrBool{
 						RoutingRuleConfiguration: RoutingRuleConfiguration{
-							MainRoutingRule: ALBRoutingRule{
+							Main: RoutingRule{
 								Path:       aws.String("/"),
 								TargetPort: aws.Uint16(81),
 							},
@@ -2149,7 +2370,7 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 					},
 					RoutingRule: RoutingRuleConfigOrBool{
 						RoutingRuleConfiguration: RoutingRuleConfiguration{
-							MainRoutingRule: ALBRoutingRule{
+							Main: RoutingRule{
 								TargetPort: aws.Uint16(81),
 							},
 						},
@@ -2264,7 +2485,7 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 					},
 					RoutingRule: RoutingRuleConfigOrBool{
 						RoutingRuleConfiguration: RoutingRuleConfiguration{
-							MainRoutingRule: ALBRoutingRule{
+							Main: RoutingRule{
 								Path:       aws.String("/"),
 								TargetPort: aws.Uint16(8080),
 							},
@@ -2317,7 +2538,7 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 					},
 					RoutingRule: RoutingRuleConfigOrBool{
 						RoutingRuleConfiguration: RoutingRuleConfiguration{
-							MainRoutingRule: ALBRoutingRule{
+							Main: RoutingRule{
 								Path:       aws.String("/"),
 								TargetPort: aws.Uint16(8081),
 							},

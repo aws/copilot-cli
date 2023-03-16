@@ -86,9 +86,9 @@ func NewLoadBalancedWebService(props *LoadBalancedWebServiceProps) *LoadBalanced
 		svc.LoadBalancedWebServiceConfig.TaskConfig.Memory = aws.Int(MinWindowsTaskMemory)
 	}
 	if props.HTTPVersion != "" {
-		svc.RoutingRule.MainRoutingRule.ProtocolVersion = &props.HTTPVersion
+		svc.RoutingRule.Main.ProtocolVersion = &props.HTTPVersion
 	}
-	svc.RoutingRule.MainRoutingRule.Path = aws.String(props.Path)
+	svc.RoutingRule.Main.Path = aws.String(props.Path)
 	svc.parser = template.New()
 	for _, envName := range props.PrivateOnlyEnvironments {
 		svc.Environments[envName] = &LoadBalancedWebServiceConfig{
@@ -109,7 +109,7 @@ func newDefaultHTTPLoadBalancedWebService() *LoadBalancedWebService {
 	lbws := newDefaultLoadBalancedWebService()
 	lbws.RoutingRule = RoutingRuleConfigOrBool{
 		RoutingRuleConfiguration: RoutingRuleConfiguration{
-			MainRoutingRule: ALBRoutingRule{
+			Main: RoutingRule{
 				HealthCheck: HealthCheckArgsOrString{
 					Union: BasicToUnion[string, HTTPHealthCheckArgs](DefaultHealthCheckPath),
 				},
@@ -275,9 +275,8 @@ func (lbws *LoadBalancedWebService) ExposedPorts() (ExposedPortsIndex, error) {
 		exposedPorts = append(exposedPorts, out...)
 	}
 	// port from http.target_port and http.additional_rules[x].target_port
-	for _, rule := range lbws.RoutingRule.ALBRoutingRules() {
-		out := rule.exposedPorts(exposedPorts, workloadName)
-		exposedPorts = append(exposedPorts, out...)
+	for _, rule := range lbws.RoutingRule.RoutingRules() {
+		exposedPorts = append(exposedPorts, rule.exposedPorts(exposedPorts, workloadName)...)
 	}
 
 	// port from nlb.target_port and nlb.additional_listeners[x].target_port

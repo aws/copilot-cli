@@ -201,7 +201,7 @@ Outputs:
 		mft.ImageConfig.HealthCheck = manifest.ContainerHealthCheck{
 			Retries: aws.Int(5),
 		}
-		mft.RoutingRule.MainRoutingRule.Alias = manifest.Alias{AdvancedAliases: []manifest.AdvancedAlias{
+		mft.RoutingRule.Main.Alias = manifest.Alias{AdvancedAliases: []manifest.AdvancedAlias{
 			{
 				Alias:      aws.String("mockAlias"),
 				HostedZone: aws.String("mockHostedZone"),
@@ -447,7 +447,7 @@ Outputs:
 			Path: "frontend",
 			Port: 80,
 		})
-		mft.RoutingRule.MainRoutingRule.TargetContainer = aws.String("envoy")
+		mft.RoutingRule.Main.TargetContainer = aws.String("envoy")
 		mft.Sidecars = map[string]*manifest.SidecarConfig{
 			"envoy": {
 				Port: aws.String("443"),
@@ -631,7 +631,7 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 		"with sidecar container": {
 			httpsEnabled: true,
 			setupManifest: func(service *manifest.LoadBalancedWebService) {
-				service.RoutingRule.MainRoutingRule.TargetContainer = aws.String("xray")
+				service.RoutingRule.Main.TargetContainer = aws.String("xray")
 				service.Sidecars = map[string]*manifest.SidecarConfig{
 					"xray": {
 						Port: aws.String("5000"),

@@ -33,7 +33,7 @@ func TestRoutingRuleConfigOrBool_Disabled(t *testing.T) {
 		"enabled explicitly by advanced configuration": {
 			in: RoutingRuleConfigOrBool{
 				RoutingRuleConfiguration: RoutingRuleConfiguration{
-					MainRoutingRule: ALBRoutingRule{
+					Main: RoutingRule{
 						Path: aws.String("mockPath"),
 					},
 				},
@@ -145,7 +145,7 @@ func TestAlias_UnmarshalYAML(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			r := RoutingRuleConfiguration{
-				MainRoutingRule: ALBRoutingRule{
+				Main: RoutingRule{
 					Alias: Alias{
 						StringSliceOrString: StringSliceOrString{
 							String: aws.String("wrong"),
@@ -160,8 +160,8 @@ func TestAlias_UnmarshalYAML(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 				// check memberwise dereferenced pointer equality
-				require.Equal(t, tc.wantedStruct.StringSliceOrString, r.MainRoutingRule.Alias.StringSliceOrString)
-				require.Equal(t, tc.wantedStruct.AdvancedAliases, r.MainRoutingRule.Alias.AdvancedAliases)
+				require.Equal(t, tc.wantedStruct.StringSliceOrString, r.Main.Alias.StringSliceOrString)
+				require.Equal(t, tc.wantedStruct.AdvancedAliases, r.Main.Alias.AdvancedAliases)
 			}
 		})
 	}

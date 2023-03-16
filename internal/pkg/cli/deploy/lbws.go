@@ -191,10 +191,10 @@ func (d *lbWebSvcDeployer) validateALBRuntime() error {
 	hasALBCerts := len(d.envConfig.HTTPConfig.Public.Certificates) != 0
 	hasCDNCerts := d.envConfig.CDNConfig.Config.Certificate != nil
 	hasImportedCerts := hasALBCerts || hasCDNCerts
-	if d.lbMft.RoutingRule.MainRoutingRule.RedirectToHTTPS != nil && d.app.Domain == "" && !hasImportedCerts {
+	if d.lbMft.RoutingRule.Main.RedirectToHTTPS != nil && d.app.Domain == "" && !hasImportedCerts {
 		return fmt.Errorf("cannot configure http to https redirect without having a domain associated with the app %q or importing any certificates in env %q", d.app.Name, d.env.Name)
 	}
-	if d.lbMft.RoutingRule.MainRoutingRule.Alias.IsEmpty() {
+	if d.lbMft.RoutingRule.Main.Alias.IsEmpty() {
 		if hasImportedCerts {
 			return &errSvcWithNoALBAliasDeployingToEnvWithImportedCerts{
 				name:    d.name,
@@ -203,7 +203,7 @@ func (d *lbWebSvcDeployer) validateALBRuntime() error {
 		}
 		return nil
 	}
-	importedHostedZones := d.lbMft.RoutingRule.MainRoutingRule.Alias.HostedZones()
+	importedHostedZones := d.lbMft.RoutingRule.Main.Alias.HostedZones()
 	if len(importedHostedZones) != 0 {
 		if !hasImportedCerts {
 			return fmt.Errorf("cannot specify alias hosted zones %v when no certificates are imported in environment %q", importedHostedZones, d.env.Name)
@@ -215,7 +215,7 @@ func (d *lbWebSvcDeployer) validateALBRuntime() error {
 		}
 	}
 	if hasImportedCerts {
-		aliases, err := d.lbMft.RoutingRule.MainRoutingRule.Alias.ToStringSlice()
+		aliases, err := d.lbMft.RoutingRule.Main.Alias.ToStringSlice()
 		if err != nil {
 			return fmt.Errorf("convert aliases to string slice: %w", err)
 		}
@@ -239,7 +239,7 @@ func (d *lbWebSvcDeployer) validateALBRuntime() error {
 			logAppVersionOutdatedError(aws.StringValue(d.lbMft.Name))
 			return err
 		}
-		if err := validateLBWSAlias(d.lbMft.RoutingRule.MainRoutingRule.Alias, d.app, d.env.Name); err != nil {
+		if err := validateLBWSAlias(d.lbMft.RoutingRule.Main.Alias, d.app, d.env.Name); err != nil {
 			return fmt.Errorf(`validate 'http.alias': %w`, err)
 		}
 		return nil

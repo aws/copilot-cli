@@ -128,18 +128,18 @@ func (d *backendSvcDeployer) validateALBRuntime() error {
 	}
 	hasImportedCerts := len(d.envConfig.HTTPConfig.Private.Certificates) != 0
 	switch {
-	case d.backendMft.RoutingRule.MainRoutingRule.Alias.IsEmpty() && hasImportedCerts:
+	case d.backendMft.RoutingRule.Main.Alias.IsEmpty() && hasImportedCerts:
 		return &errSvcWithNoALBAliasDeployingToEnvWithImportedCerts{
 			name:    d.name,
 			envName: d.env.Name,
 		}
-	case d.backendMft.RoutingRule.MainRoutingRule.Alias.IsEmpty():
+	case d.backendMft.RoutingRule.Main.Alias.IsEmpty():
 		return nil
 	case !hasImportedCerts:
 		return fmt.Errorf(`cannot specify "alias" in an environment without imported certs`)
 	}
 
-	aliases, err := d.backendMft.RoutingRule.MainRoutingRule.Alias.ToStringSlice()
+	aliases, err := d.backendMft.RoutingRule.Main.Alias.ToStringSlice()
 	if err != nil {
 		return fmt.Errorf("convert aliases to string slice: %w", err)
 	}

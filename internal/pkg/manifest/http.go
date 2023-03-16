@@ -40,8 +40,9 @@ func (r *RoutingRuleConfigOrBool) UnmarshalYAML(value *yaml.Node) error {
 		r.Enabled = nil
 		// this assignment lets us treat the main listener rule and additional listener rules equally
 		// because we eliminate the need for TargetContainerCamelCase by assigning its value to TargetContainer.
-		if r.TargetContainerCamelCase != nil {
-			r.MainRoutingRule.TargetContainer = r.TargetContainerCamelCase
+		if r.TargetContainerCamelCase != nil && r.Main.TargetContainer == nil {
+			r.Main.TargetContainer = r.TargetContainerCamelCase
+			r.TargetContainerCamelCase = nil
 		}
 		return nil
 	}
@@ -54,26 +55,26 @@ func (r *RoutingRuleConfigOrBool) UnmarshalYAML(value *yaml.Node) error {
 
 // RoutingRuleConfiguration holds options for application load balancer.
 type RoutingRuleConfiguration struct {
-	MainRoutingRule          ALBRoutingRule   `yaml:",inline"`
-	TargetContainerCamelCase *string          `yaml:"targetContainer"` // "targetContainerCamelCase" for backwards compatibility
-	AdditionalRoutingRules   []ALBRoutingRule `yaml:"additional_rules"`
+	Main                     RoutingRule   `yaml:",inline"`
+	TargetContainerCamelCase *string       `yaml:"targetContainer"` // "targetContainerCamelCase" for backwards compatibility
+	AdditionalRoutingRules   []RoutingRule `yaml:"additional_rules"`
 }
 
-// ALBRoutingRules returns main as well as additional routing rules as a list of ALBRoutingRule.
-func (cfg RoutingRuleConfiguration) ALBRoutingRules() []ALBRoutingRule {
-	if cfg.MainRoutingRule.IsEmpty() {
+// RoutingRules returns main as well as additional routing rules as a list of RoutingRule.
+func (cfg RoutingRuleConfiguration) RoutingRules() []RoutingRule {
+	if cfg.Main.IsEmpty() {
 		return nil
 	}
-	return append([]ALBRoutingRule{cfg.MainRoutingRule}, cfg.AdditionalRoutingRules...)
+	return append([]RoutingRule{cfg.Main}, cfg.AdditionalRoutingRules...)
 }
 
 // IsEmpty returns true if RoutingRuleConfiguration has empty configuration.
 func (r *RoutingRuleConfiguration) IsEmpty() bool {
-	return r.MainRoutingRule.IsEmpty() && r.TargetContainerCamelCase == nil && len(r.AdditionalRoutingRules) == 0
+	return r.Main.IsEmpty() && r.TargetContainerCamelCase == nil && len(r.AdditionalRoutingRules) == 0
 }
 
-// ALBRoutingRule holds listener rule configuration for ALB.
-type ALBRoutingRule struct {
+// RoutingRule holds listener rule configuration for ALB.
+type RoutingRule struct {
 	Path                *string                 `yaml:"path"`
 	ProtocolVersion     *string                 `yaml:"version"`
 	HealthCheck         HealthCheckArgsOrString `yaml:"healthcheck"`
@@ -89,8 +90,8 @@ type ALBRoutingRule struct {
 	RedirectToHTTPS *bool `yaml:"redirect_to_https"`
 }
 
-// IsEmpty returns true if ALBRoutingRule has empty configuration.
-func (r *ALBRoutingRule) IsEmpty() bool {
+// IsEmpty returns true if RoutingRule has empty configuration.
+func (r *RoutingRule) IsEmpty() bool {
 	return r.Path == nil && r.ProtocolVersion == nil && r.HealthCheck.IsZero() && r.Stickiness == nil && r.Alias.IsEmpty() &&
 		r.DeregistrationDelay == nil && r.TargetContainer == nil && r.TargetPort == nil && r.AllowedSourceIps == nil &&
 		r.HostedZone == nil && r.RedirectToHTTPS == nil
