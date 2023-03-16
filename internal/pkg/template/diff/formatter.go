@@ -11,14 +11,14 @@ import (
 )
 
 type formatter interface {
-	nodeToBytes(*yaml.Node) ([]byte, error)
+	formateYAML(*yaml.Node) ([]byte, error)
 	formatMod(node diffNode) string
 	formatPath(node diffNode) string
 }
 
 type seqItemFormatter struct{}
 
-func (f *seqItemFormatter) nodeToBytes(node *yaml.Node) ([]byte, error) {
+func (f *seqItemFormatter) formateYAML(node *yaml.Node) ([]byte, error) {
 	wrapped := &yaml.Node{
 		Kind:    yaml.SequenceNode,
 		Tag:     "!!seq",
@@ -39,7 +39,7 @@ type keyedFormatter struct {
 	key string
 }
 
-func (f *keyedFormatter) nodeToBytes(node *yaml.Node) ([]byte, error) {
+func (f *keyedFormatter) formateYAML(node *yaml.Node) ([]byte, error) {
 	wrapped := &yaml.Node{
 		Kind: yaml.MappingNode,
 		Tag:  "!!map",

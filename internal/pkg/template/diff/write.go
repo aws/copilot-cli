@@ -85,7 +85,7 @@ func (s *Writer) writeMod(node diffNode, indent int, formatter formatter) error 
 }
 
 func (s *Writer) writeDel(node diffNode, indent int, formatter formatter) error {
-	raw, err := formatter.nodeToBytes(node.oldValue())
+	raw, err := formatter.formateYAML(node.oldValue())
 	if err != nil {
 		return err
 	}
@@ -95,7 +95,7 @@ func (s *Writer) writeDel(node diffNode, indent int, formatter formatter) error 
 }
 
 func (s *Writer) writeInsert(node diffNode, indent int, formatter formatter) error {
-	raw, err := formatter.nodeToBytes(node.newValue())
+	raw, err := formatter.formateYAML(node.newValue())
 	if err != nil {
 		return err
 	}
