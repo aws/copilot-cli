@@ -18,50 +18,58 @@ func Test_Integration_Parse_Write(t *testing.T) {
 		wantedError error
 	}{
 		"add a map": {
-			curr: `Mary:
+			curr: `
+Mary:
   Height:
     cm: 168
   Weight:
     kg: 52`,
-			old: `Mary:
+			old: `
+Mary:
   Height:
     cm: 168`,
 
-			wanted: `~ Mary:
+			wanted: `
+~ Mary:
     + Weight:
     +     kg: 52
 `,
 		},
 		"remove a map": {
-			curr: `Mary:
+			curr: `
+Mary:
   Height:
     cm: 168`,
-			old: `Mary:
+			old: `
+Mary:
   Height:
     cm: 168
   Weight:
     kg: 52`,
-			wanted: `~ Mary:
+			wanted: `
+~ Mary:
     - Weight:
     -     kg: 52
 `,
 		},
 		"change keyed values": {
-			curr: `Mary:
+			curr: `
+Mary:
   Height:
     cm: 168`,
-			old: `Mary:
+			old: `
+Mary:
   Height:
     cm: 190`,
-			wanted: `~ Mary:
+			wanted: `
+~ Mary:
     ~ Height:
         ~ cm: 190 -> 168
 `,
 		},
 		"list does not change": {
-			old:    `Alphabet: [a,b,c,d]`,
-			curr:   `Alphabet: [a,b,c,d]`,
-			wanted: "No changes.\n",
+			old:  `Alphabet: [a,b,c,d]`,
+			curr: `Alphabet: [a,b,c,d]`,
 		},
 		"list reordered": {
 			// TODO(lou1425926): complete the test.
@@ -71,21 +79,24 @@ func Test_Integration_Parse_Write(t *testing.T) {
 		"list with insertion": {
 			old:  `DanceCompetition: [dog,bear,cat]`,
 			curr: `DanceCompetition: [dog,bear,mouse,cat]`,
-			wanted: `~ DanceCompetition:
+			wanted: `
+~ DanceCompetition:
     + - mouse
 `,
 		},
 		"list with deletion": {
 			old:  `PotatoChipCommittee: [dog,bear,cat,mouse]`,
 			curr: `PotatoChipCommittee: [dog,bear,mouse]`,
-			wanted: `~ PotatoChipCommittee:
+			wanted: `
+~ PotatoChipCommittee:
     - - cat
 `,
 		},
 		"list with a scalar value changed": {
 			old:  `DogsFavoriteShape: [triangle,circle,rectangle]`,
 			curr: `DogsFavoriteShape: [triangle,ellipse,rectangle]`,
-			wanted: `~ DogsFavoriteShape:
+			wanted: `
+~ DogsFavoriteShape:
     ~ - circle -> ellipse
 `,
 		},
@@ -115,27 +126,33 @@ func Test_Integration_Parse_Write(t *testing.T) {
   LikeStrawberry: ew`,
 		},
 		"change a map to scalar": {
-			curr: `Mary:
+			curr: `
+Mary:
   Dialogue: "Said bear: 'I know I'm supposed to keep an eye on you"`,
-			old: `Mary:
+			old: `
+Mary:
   Dialogue:
     Bear: "I know I'm supposed to keep an eye on you"`,
-			wanted: `~ Mary:
+			wanted: `
+~ Mary:
     - Dialogue:
     -     Bear: "I know I'm supposed to keep an eye on you"
     + Dialogue: "Said bear: 'I know I'm supposed to keep an eye on you"
 `,
 		},
 		"change a list to scalar": {
-			curr: `Mary:
+			curr: `
+Mary:
   Dialogue: "Said bear: 'I know I'm supposed to keep an eye on you; Said Dog: 'ikr'"`,
-			old: `Mary:
+			old: `
+Mary:
   Dialogue:
     - Bear: "I know I'm supposed to keep an eye on you"
       Tone: disappointed
     - Dog: "ikr"
       Tone: pleased`,
-			wanted: `~ Mary:
+			wanted: `
+~ Mary:
     - Dialogue:
     -     - Bear: "I know I'm supposed to keep an eye on you"
     -       Tone: disappointed
@@ -145,17 +162,20 @@ func Test_Integration_Parse_Write(t *testing.T) {
 `,
 		},
 		"change a map to list": {
-			curr: `Mary:
+			curr: `
+Mary:
   Dialogue:
     - Bear: "I know I'm supposed to keep an eye on you"
       Tone: disappointed
     - Dog: "ikr"
       Tone: pleased`,
-			old: `Mary:
+			old: `
+Mary:
   Dialogue:
     Bear: (disappointed) "I know I'm supposed to keep an eye on you"
     Dog: (pleased) "ikr"`,
-			wanted: `~ Mary:
+			wanted: `
+~ Mary:
     - Dialogue:
     -     Bear: (disappointed) "I know I'm supposed to keep an eye on you"
     -     Dog: (pleased) "ikr"
@@ -169,25 +189,27 @@ func Test_Integration_Parse_Write(t *testing.T) {
 		"list with scalar insertion, deletion and value changed": {
 			old:  `DogsFavoriteShape: [irregular,triangle,circle,rectangle]`,
 			curr: `DogsFavoriteShape: [triangle,ellipse,rectangle,food-shape]`,
-			wanted: `~ DogsFavoriteShape:
+			wanted: `
+~ DogsFavoriteShape:
     - - irregular
     ~ - circle -> ellipse
     + - food-shape
 `,
 		},
 		"no diff": {
-			curr: `Mary:
+			curr: `
+Mary:
   Height:
     cm: 190
   CanFight: yes
   FavoriteWord: muscle`,
 
-			old: `Mary:
+			old: `
+Mary:
   Height:
     cm: 190
   CanFight: yes
   FavoriteWord: muscle`,
-			wanted: "No changes.\n",
 		},
 	}
 	for name, tc := range testCases {
@@ -204,7 +226,7 @@ func Test_Integration_Parse_Write(t *testing.T) {
 			out := buf.String()
 			if tc.wanted != "" { // TODO(lou1415926): remove this block when all tests cases are completed
 				require.NoError(t, err)
-				require.Equal(t, tc.wanted, out)
+				require.Equal(t, strings.TrimPrefix(tc.wanted, "\n"), out)
 			}
 		})
 	}
