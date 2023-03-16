@@ -55,6 +55,30 @@ func (n *node) children() []diffNode {
 	return n.childNodes
 }
 
+type unchangedNode struct {
+	count int
+}
+
+func (n *unchangedNode) children() []diffNode {
+	return nil
+}
+
+func (n *unchangedNode) key() string {
+	return ""
+}
+
+func (n *unchangedNode) newYAML() *yaml.Node {
+	return nil
+}
+
+func (n *unchangedNode) oldYAML() *yaml.Node {
+	return nil
+}
+
+func (n *unchangedNode) unchangedCount() int {
+	return n.count
+}
+
 type seqItemNode struct {
 	node
 }
@@ -160,11 +184,19 @@ func parseSequence(fromNode, toNode *yaml.Node) ([]diffNode, error) {
 		return nil, nil
 	}
 	var children []diffNode
+	var matchCount int
 	inspector := newLCSStateMachine(fromSeq, toSeq, lcsIndices)
 	for action := inspector.action(); action != actonDone; action = inspector.action() {
+		if action == actionMatch {
+			matchCount++
+			inspector.next()
+			continue
+		}
+		if matchCount != 0 {
+			children = append(children, &unchangedNode{count: matchCount})
+			matchCount = 0
+		}
 		switch action {
-		case actionMatch:
-			// TODO(lou1415926): (x unchanged items)
 		case actionMod:
 			// TODO(lou1415926): handle list of maps modification
 			diff := cachedDiff[cacheKey(inspector.fromIndex(), inspector.toIndex())]
@@ -195,6 +227,10 @@ func parseSequence(fromNode, toNode *yaml.Node) ([]diffNode, error) {
 			})
 		}
 		inspector.next()
+	}
+	if matchCount != 0 {
+		children = append(children, &unchangedNode{count: matchCount})
+		matchCount = 0
 	}
 	return children, nil
 }
