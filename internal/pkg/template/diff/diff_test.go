@@ -405,7 +405,7 @@ func equalSubTree(a, b diffNode, t *testing.T) bool {
 	if len(a.children()) == 0 {
 		return equalLeaves(a, b, t)
 	}
-	for idx, _ := range a.children() {
+	for idx := range a.children() {
 		if equal := equalSubTree(a.children()[idx], b.children()[idx], t); !equal {
 			return false
 		}

@@ -230,7 +230,6 @@ func parseSequence(fromNode, toNode *yaml.Node) ([]diffNode, error) {
 	}
 	if matchCount != 0 {
 		children = append(children, &unchangedNode{count: matchCount})
-		matchCount = 0
 	}
 	return children, nil
 }
