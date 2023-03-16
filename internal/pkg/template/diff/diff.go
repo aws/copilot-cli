@@ -18,8 +18,8 @@ type Tree struct {
 // diffNode is the interface to represents the difference between two *yaml.Node.
 type diffNode interface {
 	key() string
-	newValue() *yaml.Node
-	oldValue() *yaml.Node
+	newYAML() *yaml.Node
+	oldYAML() *yaml.Node
 	children() []diffNode
 }
 
@@ -36,11 +36,11 @@ func (n *node) key() string {
 	return n.keyValue
 }
 
-func (n *node) newValue() *yaml.Node {
+func (n *node) newYAML() *yaml.Node {
 	return n.newV
 }
 
-func (n *node) oldValue() *yaml.Node {
+func (n *node) oldYAML() *yaml.Node {
 	return n.oldV
 }
 
@@ -168,8 +168,8 @@ func parseSequence(fromNode, toNode *yaml.Node) ([]diffNode, error) {
 				node{
 					keyValue:   diff.node.key(),
 					childNodes: diff.node.children(),
-					oldV:       diff.node.oldValue(),
-					newV:       diff.node.newValue(),
+					oldV:       diff.node.oldYAML(),
+					newV:       diff.node.newYAML(),
 				},
 			})
 		case actionDel:

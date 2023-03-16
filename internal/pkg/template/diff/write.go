@@ -48,7 +48,7 @@ func (s *Writer) write(node diffNode, indent int) error {
 	if len(node.children()) == 0 {
 		return s.writeLeaf(node, indent, formatter)
 	}
-	content := process(formatter.formatPath(node), prefixBy(prefixMod), indentBy(indent))
+	content := process(formatter.formatPath(node), prefixByFn(prefixMod), indentByFn(indent))
 	if _, err := s.writer.Write([]byte(content + "\n")); err != nil {
 		return err
 	}
@@ -63,9 +63,9 @@ func (s *Writer) write(node diffNode, indent int) error {
 
 func (s *Writer) writeLeaf(node diffNode, indent int, formatter formatter) error {
 	switch {
-	case node.oldValue() != nil && node.newValue() != nil:
+	case node.oldYAML() != nil && node.newYAML() != nil:
 		return s.writeMod(node, indent, formatter)
-	case node.oldValue() != nil:
+	case node.oldYAML() != nil:
 		return s.writeDel(node, indent, formatter)
 	default:
 		return s.writeInsert(node, indent, formatter)
@@ -73,33 +73,33 @@ func (s *Writer) writeLeaf(node diffNode, indent int, formatter formatter) error
 }
 
 func (s *Writer) writeMod(node diffNode, indent int, formatter formatter) error {
-	if node.oldValue().Kind != node.newValue().Kind {
+	if node.oldYAML().Kind != node.newYAML().Kind {
 		if err := s.writeDel(node, indent, formatter); err != nil {
 			return err
 		}
 		return s.writeInsert(node, indent, formatter)
 	}
-	content := processMultiline(formatter.formatMod(node), prefixBy(prefixMod), indentBy(indent))
+	content := processMultiline(formatter.formatMod(node), prefixByFn(prefixMod), indentByFn(indent))
 	_, err := s.writer.Write([]byte(content + "\n"))
 	return err
 }
 
 func (s *Writer) writeDel(node diffNode, indent int, formatter formatter) error {
-	raw, err := formatter.formatYAML(node.oldValue())
+	raw, err := formatter.formatYAML(node.oldYAML())
 	if err != nil {
 		return err
 	}
-	content := processMultiline(string(raw), prefixBy(prefixDel), indentBy(indent))
+	content := processMultiline(string(raw), prefixByFn(prefixDel), indentByFn(indent))
 	_, err = s.writer.Write([]byte(content + "\n"))
 	return err
 }
 
 func (s *Writer) writeInsert(node diffNode, indent int, formatter formatter) error {
-	raw, err := formatter.formatYAML(node.newValue())
+	raw, err := formatter.formatYAML(node.newYAML())
 	if err != nil {
 		return err
 	}
-	content := processMultiline(string(raw), prefixBy(prefixAdd), indentBy(indent))
+	content := processMultiline(string(raw), prefixByFn(prefixAdd), indentByFn(indent))
 	_, err = s.writer.Write([]byte(content + "\n"))
 	return err
 }

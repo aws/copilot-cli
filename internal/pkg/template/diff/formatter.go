@@ -28,7 +28,7 @@ func (f *seqItemFormatter) formatYAML(node *yaml.Node) ([]byte, error) {
 }
 
 func (f *seqItemFormatter) formatMod(node diffNode) string {
-	return fmt.Sprintf("- %s -> %s", node.oldValue().Value, node.newValue().Value)
+	return fmt.Sprintf("- %s -> %s", node.oldYAML().Value, node.newYAML().Value)
 }
 
 func (f *seqItemFormatter) formatPath(_ diffNode) string {
@@ -56,20 +56,20 @@ func (f *keyedFormatter) formatYAML(node *yaml.Node) ([]byte, error) {
 }
 
 func (f *keyedFormatter) formatMod(node diffNode) string {
-	return fmt.Sprintf("%s: %s -> %s", node.key(), node.oldValue().Value, node.newValue().Value)
+	return fmt.Sprintf("%s: %s -> %s", node.key(), node.oldYAML().Value, node.newYAML().Value)
 }
 
 func (f *keyedFormatter) formatPath(node diffNode) string {
 	return node.key() + ":"
 }
 
-func prefixBy(prefix string) func(line string) string {
+func prefixByFn(prefix string) func(line string) string {
 	return func(line string) string {
 		return fmt.Sprintf("%s %s", prefix, line)
 	}
 }
 
-func indentBy(count int) func(line string) string {
+func indentByFn(count int) func(line string) string {
 	return func(line string) string {
 		return fmt.Sprintf("%s%s", strings.Repeat(" ", count), line)
 	}
