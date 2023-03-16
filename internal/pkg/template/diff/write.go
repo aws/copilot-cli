@@ -24,8 +24,7 @@ type Writer struct {
 // Write uses the writer to write the string representation of the diff tree stemmed from the root.
 func (s *Writer) Write() error {
 	if s.tree.root == nil {
-		_, err := s.writer.Write([]byte("No changes.\n"))
-		return err
+		return nil // Return without writing anything.
 	}
 	for _, child := range s.tree.root.children() {
 		if err := s.write(child, 0); err != nil {
