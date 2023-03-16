@@ -3,6 +3,7 @@ package override
 import (
 	"fmt"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/spf13/afero"
@@ -50,17 +51,9 @@ func (p *Patch) Override(body []byte) ([]byte, error) {
 	}
 
 	for _, patch := range patches {
-		node, err := getNode(&root, patch.Path)
-		if err != nil {
+		if err := patch.apply(&root); err != nil {
 			return nil, fmt.Errorf("unable to apply patch with operation %q at %q: %w", patch.Operation, patch.Path, err)
 		}
-
-		fmt.Printf("before apply: %+v\n", nodeString(node))
-		if err := patch.apply(node); err != nil {
-			return nil, fmt.Errorf("unable to apply patch with operation %q at %q: %w", patch.Operation, patch.Path, err)
-		}
-
-		fmt.Printf("after apply: %+v\n", nodeString(node))
 	}
 
 	// marshal back to []byte
@@ -116,57 +109,111 @@ func printSplit(split []string) {
 	fmt.Printf("]\n")
 }
 
+// add's target is any map/sequence node
+// replace's target is a map/sequence/scalar node
+// remove's target is a map/sequence node
+
+// replace needs the target map/sequence node
+// remove path is the VALUE node. node should be the parent of that node.
+
+func (y yamlPatch) apply(root *yaml.Node) error {
+	switch y.Operation {
+	case "add":
+		node, err := getNode(root, y.Path)
+		if err != nil {
+			return fmt.Errorf("unable to apply patch with operation %q at %q: %w", y.Operation, y.Path, err)
+		}
+
+		node.Content = append(node.Content, y.Value.Content...)
+	case "replace":
+		node, err := getNode(root, y.Path)
+		if err != nil {
+			return fmt.Errorf("unable to apply patch with operation %q at %q: %w", y.Operation, y.Path, err)
+		}
+
+		node.Encode(y.Value)
+	case "remove":
+		split := strings.Split(y.Path, "/")
+		if len(split) == 0 {
+			// TODO remove the whole thing i guess?
+			root.Content = nil
+			return nil
+		}
+
+		key := split[len(split)-1]
+
+		node, err := getNode(root, strings.Join(split[:len(split)-1], "/"))
+		if err != nil {
+			return fmt.Errorf("unable to apply patch with operation %q at %q: %w", y.Operation, y.Path, err)
+		}
+
+		switch node.Kind {
+		case yaml.MappingNode:
+			for i := 0; i < len(node.Content); i += 2 {
+				if node.Content[i].Value == key {
+					node.Content = append(node.Content[:i], node.Content[i+2:]...)
+					return nil
+				}
+			}
+
+			return fmt.Errorf("non existant key %q in map", key)
+		case yaml.SequenceNode:
+			// TODO
+		default:
+			fmt.Printf("can't remove from yaml node of type %v\n", node.Kind)
+		}
+	}
+
+	return nil
+}
+
 func getNode(node *yaml.Node, path string) (*yaml.Node, error) {
-	fmt.Printf("getNode(%+v)\n", node)
+	if path == "" {
+		return node, nil
+	}
+
 	// follow the JSON pointer pointer down to the node path.
-	// TODO stop at the parent of the final node
 	// fix pointer syntax: https://www.rfc-editor.org/rfc/rfc6901#section-3
 	// TODO figure out how to handle the path being "/" " ".
 	split := strings.Split(strings.TrimSpace(path), "/")
 
 	switch node.Kind {
 	case yaml.DocumentNode:
-		if path == "" {
-			return node, nil
-		}
-
 		if len(node.Content) != 1 {
 			return nil, fmt.Errorf("don't support multi-doc yaml")
 		}
 
 		return getNode(node.Content[0], strings.Join(split[1:], "/"))
 	case yaml.MappingNode:
-		// base case, this is the node
-		if path == "" {
-			return node, nil
-		}
-
 		// find the requested node
 		for i := 0; i < len(node.Content); i += 2 {
 			if node.Content[i].Value == split[0] {
-				fmt.Printf("calling getNode() on %v\n", node.Content[i].Value)
 				return getNode(node.Content[i+1], strings.Join(split[1:], "/"))
 			}
 		}
 
-		return nil, fmt.Errorf("bad")
+		return nil, fmt.Errorf("key %q not found in map", split[0])
 	case yaml.SequenceNode:
-		// TODO: "-" case
+		// this key _should_ be a number or "-"
+		var idx int
+		if split[0] == "-" {
+			idx = len(node.Content)
+			// insert a new node to represent the last index
+			node.Content = append(node.Content, &yaml.Node{
+				Kind: yaml.ScalarNode,
+			})
+		} else {
+			var err error
+			idx, err = strconv.Atoi(split[0])
+			if err != nil {
+				return nil, fmt.Errorf("expected index in sequence, got %q", split[0])
+			}
+		}
+
+		fmt.Printf("returning node at idx: %v\n", idx)
+		return getNode(node.Content[idx], strings.Join(split[1:], "/"))
 	default:
 		// error
-		return nil, fmt.Errorf("bad kind: %#v", node.Kind)
+		return nil, fmt.Errorf("invalid node type %#v for path", node.Kind)
 	}
-
-	return nil, nil
-}
-
-func (y yamlPatch) apply(node *yaml.Node) error {
-	fmt.Printf("value: %+v\n", &y.Value)
-	fmt.Printf("value: %+v\n", nodeString(&y.Value))
-	switch y.Operation {
-	case "add":
-		node.Content = append(node.Content, y.Value.Content...)
-	}
-
-	return nil
 }

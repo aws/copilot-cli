@@ -35,6 +35,78 @@ Resources:
       Prop1: value
       Prop2: false`,
 		},
+		"add to sequence": {
+			yaml: `
+Resources:
+  IAMRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Policies:
+        - PolicyName: "Test"
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "*"
+                  - "**"
+                Resource:
+                  - "*"`,
+			overrides: `
+- op: add
+  path: /Resources/IAMRole/Properties/Policies/0/PolicyDocument/Statement/0/Action/-
+  value:
+    key: value
+    key2: value2`,
+			expected: `
+Resources:
+  IAMRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Policies:
+        - PolicyName: "Test"
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "*"
+                  - "**"
+                  - key: value
+                    key2: value2
+                Resource:
+                  - "*"`,
+		},
+		"remove from map": {
+			yaml: `
+Resources:
+  TaskDef:
+    Type: AWS::ECS::TaskDefinition
+    Description: asdf`,
+			overrides: `
+- op: remove
+  path: /Resources/TaskDef/Description`,
+			expected: `
+Resources:
+  TaskDef:
+    Type: AWS::ECS::TaskDefinition`,
+		},
+		"replace scalar with scalar": {
+			yaml: `
+Resources:
+  TaskDef:
+    Type: AWS::ECS::TaskDefinition
+    Description: asdf`,
+			overrides: `
+- op: replace
+  path: /Resources/TaskDef/Description
+  value: jkl;`,
+			expected: `
+Resources:
+  TaskDef:
+    Type: AWS::ECS::TaskDefinition
+    Description: jkl;`,
+		},
 	}
 
 	for name, tc := range tests {
