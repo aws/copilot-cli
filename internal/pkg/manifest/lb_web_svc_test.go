@@ -1779,10 +1779,10 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 			wantedExposedPorts: map[string][]ExposedPort{
 				"frontend": {
 					{
-						Port:          80,
-						ContainerName: "frontend",
-						Protocol:      "tcp",
-						Implicit:      true,
+						Port:                   80,
+						ContainerName:          "frontend",
+						Protocol:               "tcp",
+						IsContainerDefinedPort: true,
 					},
 				},
 				"xray": {
@@ -1792,10 +1792,10 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 						Protocol:      "tcp",
 					},
 					{
-						Port:          2000,
-						ContainerName: "xray",
-						Protocol:      "tcp",
-						Implicit:      true,
+						Port:                   2000,
+						ContainerName:          "xray",
+						Protocol:               "tcp",
+						IsContainerDefinedPort: true,
 					},
 				},
 			},
@@ -1831,10 +1831,10 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 			wantedExposedPorts: map[string][]ExposedPort{
 				"frontend": {
 					{
-						Port:          80,
-						ContainerName: "frontend",
-						Protocol:      "tcp",
-						Implicit:      true,
+						Port:                   80,
+						ContainerName:          "frontend",
+						Protocol:               "tcp",
+						IsContainerDefinedPort: true,
 					},
 					{
 						Port:          81,
@@ -1844,10 +1844,10 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 				},
 				"xray": {
 					{
-						Port:          2000,
-						ContainerName: "xray",
-						Protocol:      "tcp",
-						Implicit:      true,
+						Port:                   2000,
+						ContainerName:          "xray",
+						Protocol:               "tcp",
+						IsContainerDefinedPort: true,
 					},
 				},
 			},
@@ -1884,10 +1884,10 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 			wantedExposedPorts: map[string][]ExposedPort{
 				"frontend": {
 					{
-						Port:          80,
-						ContainerName: "frontend",
-						Protocol:      "tcp",
-						Implicit:      true,
+						Port:                   80,
+						ContainerName:          "frontend",
+						Protocol:               "tcp",
+						IsContainerDefinedPort: true,
 					},
 					{
 						Port:          81,
@@ -1897,10 +1897,10 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 				},
 				"xray": {
 					{
-						Port:          2000,
-						ContainerName: "xray",
-						Protocol:      "tcp",
-						Implicit:      true,
+						Port:                   2000,
+						ContainerName:          "xray",
+						Protocol:               "tcp",
+						IsContainerDefinedPort: true,
 					},
 				},
 			},
@@ -1936,10 +1936,10 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 			wantedExposedPorts: map[string][]ExposedPort{
 				"frontend": {
 					{
-						Port:          80,
-						ContainerName: "frontend",
-						Protocol:      "tcp",
-						Implicit:      true,
+						Port:                   80,
+						ContainerName:          "frontend",
+						Protocol:               "tcp",
+						IsContainerDefinedPort: true,
 					},
 				},
 				"xray": {
@@ -1982,18 +1982,18 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 			wantedExposedPorts: map[string][]ExposedPort{
 				"frontend": {
 					{
-						Port:          80,
-						ContainerName: "frontend",
-						Protocol:      "tcp",
-						Implicit:      true,
+						Port:                   80,
+						ContainerName:          "frontend",
+						Protocol:               "tcp",
+						IsContainerDefinedPort: true,
 					},
 				},
 				"xray": {
 					{
-						Port:          81,
-						ContainerName: "xray",
-						Protocol:      "tcp",
-						Implicit:      true,
+						Port:                   81,
+						ContainerName:          "xray",
+						Protocol:               "tcp",
+						IsContainerDefinedPort: true,
 					},
 				},
 			},
@@ -2029,18 +2029,18 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 			wantedExposedPorts: map[string][]ExposedPort{
 				"frontend": {
 					{
-						Port:          80,
-						ContainerName: "frontend",
-						Protocol:      "tcp",
-						Implicit:      true,
+						Port:                   80,
+						ContainerName:          "frontend",
+						Protocol:               "tcp",
+						IsContainerDefinedPort: true,
 					},
 				},
 				"xray": {
 					{
-						Port:          81,
-						ContainerName: "xray",
-						Protocol:      "tcp",
-						Implicit:      true,
+						Port:                   81,
+						ContainerName:          "xray",
+						Protocol:               "tcp",
+						IsContainerDefinedPort: true,
 					},
 				},
 			},
@@ -2082,10 +2082,10 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 			wantedExposedPorts: map[string][]ExposedPort{
 				"frontend": {
 					{
-						Port:          80,
-						ContainerName: "frontend",
-						Protocol:      "tcp",
-						Implicit:      true,
+						Port:                   80,
+						ContainerName:          "frontend",
+						Protocol:               "tcp",
+						IsContainerDefinedPort: true,
 					},
 					{
 						Port:          81,
@@ -2095,10 +2095,10 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 				},
 				"xray": {
 					{
-						Port:          2000,
-						ContainerName: "xray",
-						Protocol:      "tcp",
-						Implicit:      true,
+						Port:                   2000,
+						ContainerName:          "xray",
+						Protocol:               "tcp",
+						IsContainerDefinedPort: true,
 					},
 				},
 			},
@@ -2138,10 +2138,10 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 			wantedExposedPorts: map[string][]ExposedPort{
 				"frontend": {
 					{
-						Port:          80,
-						ContainerName: "frontend",
-						Protocol:      "tcp",
-						Implicit:      true,
+						Port:                   80,
+						ContainerName:          "frontend",
+						Protocol:               "tcp",
+						IsContainerDefinedPort: true,
 					},
 					{
 						Port:          81,
@@ -2156,10 +2156,10 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 				},
 				"xray": {
 					{
-						Port:          2000,
-						ContainerName: "xray",
-						Protocol:      "tcp",
-						Implicit:      true,
+						Port:                   2000,
+						ContainerName:          "xray",
+						Protocol:               "tcp",
+						IsContainerDefinedPort: true,
 					},
 				},
 			},
@@ -2194,10 +2194,10 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 			wantedExposedPorts: map[string][]ExposedPort{
 				"frontend": {
 					{
-						Port:          80,
-						ContainerName: "frontend",
-						Protocol:      "tcp",
-						Implicit:      true,
+						Port:                   80,
+						ContainerName:          "frontend",
+						Protocol:               "tcp",
+						IsContainerDefinedPort: true,
 					},
 					{
 						Port:          82,
@@ -2207,10 +2207,10 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 				},
 				"xray": {
 					{
-						Port:          2000,
-						ContainerName: "xray",
-						Protocol:      "tcp",
-						Implicit:      true,
+						Port:                   2000,
+						ContainerName:          "xray",
+						Protocol:               "tcp",
+						IsContainerDefinedPort: true,
 					},
 				},
 			},
@@ -2251,18 +2251,18 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 			wantedExposedPorts: map[string][]ExposedPort{
 				"xray": {
 					{
-						Port:          80,
-						ContainerName: "xray",
-						Protocol:      "tcp",
-						Implicit:      true,
+						Port:                   80,
+						ContainerName:          "xray",
+						Protocol:               "tcp",
+						IsContainerDefinedPort: true,
 					},
 				},
 				"frontend": {
 					{
-						Port:          8080,
-						ContainerName: "frontend",
-						Protocol:      "tcp",
-						Implicit:      true,
+						Port:                   8080,
+						ContainerName:          "frontend",
+						Protocol:               "tcp",
+						IsContainerDefinedPort: true,
 					},
 				},
 			},
@@ -2304,10 +2304,10 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 			wantedExposedPorts: map[string][]ExposedPort{
 				"frontend": {
 					{
-						Port:          8080,
-						ContainerName: "frontend",
-						Protocol:      "tcp",
-						Implicit:      true,
+						Port:                   8080,
+						ContainerName:          "frontend",
+						Protocol:               "tcp",
+						IsContainerDefinedPort: true,
 					},
 					{
 						Port:          8081,
@@ -2317,10 +2317,10 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 				},
 				"xray": {
 					{
-						Port:          80,
-						ContainerName: "xray",
-						Protocol:      "tcp",
-						Implicit:      true,
+						Port:                   80,
+						ContainerName:          "xray",
+						Protocol:               "tcp",
+						IsContainerDefinedPort: true,
 					},
 					{
 						Port:          8082,
@@ -2371,18 +2371,18 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 			wantedExposedPorts: map[string][]ExposedPort{
 				"frontend": {
 					{
-						Port:          8080,
-						ContainerName: "frontend",
-						Protocol:      "tcp",
-						Implicit:      true,
+						Port:                   8080,
+						ContainerName:          "frontend",
+						Protocol:               "tcp",
+						IsContainerDefinedPort: true,
 					},
 				},
 				"xray": {
 					{
-						Port:          80,
-						ContainerName: "xray",
-						Protocol:      "tcp",
-						Implicit:      true,
+						Port:                   80,
+						ContainerName:          "xray",
+						Protocol:               "tcp",
+						IsContainerDefinedPort: true,
 					},
 					{
 						Port:          8081,
@@ -2435,18 +2435,18 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 			wantedExposedPorts: map[string][]ExposedPort{
 				"frontend": {
 					{
-						Port:          8080,
-						ContainerName: "frontend",
-						Protocol:      "tcp",
-						Implicit:      true,
+						Port:                   8080,
+						ContainerName:          "frontend",
+						Protocol:               "tcp",
+						IsContainerDefinedPort: true,
 					},
 				},
 				"xray": {
 					{
-						Port:          80,
-						ContainerName: "xray",
-						Protocol:      "tcp",
-						Implicit:      true,
+						Port:                   80,
+						ContainerName:          "xray",
+						Protocol:               "tcp",
+						IsContainerDefinedPort: true,
 					},
 				},
 			},

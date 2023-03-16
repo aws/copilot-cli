@@ -432,10 +432,10 @@ func (cfg ImageWithPortAndHealthcheck) exposedPorts(workloadName string) []Expos
 	}
 	return []ExposedPort{
 		{
-			Port:          aws.Uint16Value(cfg.Port),
-			Protocol:      "tcp",
-			ContainerName: workloadName,
-			Implicit:      true,
+			Port:                   aws.Uint16Value(cfg.Port),
+			Protocol:               "tcp",
+			ContainerName:          workloadName,
+			IsContainerDefinedPort: true,
 		},
 	}
 
@@ -447,10 +447,10 @@ func (cfg ImageWithHealthcheckAndOptionalPort) exposedPorts(workloadName string)
 	}
 	return []ExposedPort{
 		{
-			Port:          aws.Uint16Value(cfg.Port),
-			Protocol:      "tcp",
-			ContainerName: workloadName,
-			Implicit:      true,
+			Port:                   aws.Uint16Value(cfg.Port),
+			Protocol:               "tcp",
+			ContainerName:          workloadName,
+			IsContainerDefinedPort: true,
 		},
 	}
 }
@@ -534,10 +534,10 @@ func (sidecar SidecarConfig) exposedPorts(sidecarName string) ([]ExposedPort, er
 	}
 	return []ExposedPort{
 		{
-			Port:          uint16(port),
-			Protocol:      strings.ToLower(protocol),
-			ContainerName: sidecarName,
-			Implicit:      true,
+			Port:                   uint16(port),
+			Protocol:               strings.ToLower(protocol),
+			ContainerName:          sidecarName,
+			IsContainerDefinedPort: true,
 		},
 	}, nil
 }
@@ -669,36 +669,49 @@ func prepareParsedExposedPortsMap(exposedPorts []ExposedPort) (map[string][]Expo
 
 // Target returns target container and target port for the NLB Listener configuration.
 // This method should be called only when NLB config is not empty.
-func (l NetworkLoadBalancerListener) Target(exposedPorts ExposedPortsIndex) (targetContainer string, targetPort string, err error) {
-	// Configure target container and port.
-	targetContainer = exposedPorts.WorkloadName
+func (listener NetworkLoadBalancerListener) Target(exposedPorts ExposedPortsIndex) (targetContainer string, targetPort string, err error) {
 	// Parse listener port and protocol.
-	port, _, err := ParsePortMapping(l.Port)
+	port, _, err := ParsePortMapping(listener.Port)
 	if err != nil {
 		return "", "", err
 	}
 	// By default, the target port is the same as listener port.
 	targetPort = aws.StringValue(port)
-
-	if l.TargetContainer == nil && l.TargetPort == nil { // both targetPort and targetContainer are nil.
+	targetContainer = exposedPorts.WorkloadName
+	if listener.TargetContainer == nil && listener.TargetPort == nil { // both targetPort and targetContainer are nil.
 		return
 	}
 
-	if l.TargetPort == nil { // when target_port is nil
-		if aws.StringValue(l.TargetContainer) != exposedPorts.WorkloadName {
-			targetContainer = aws.StringValue(l.TargetContainer)
+	if listener.TargetPort == nil { // when target_port is nil
+		if aws.StringValue(listener.TargetContainer) != exposedPorts.WorkloadName {
+			targetContainer = aws.StringValue(listener.TargetContainer)
 			for _, portConfig := range exposedPorts.PortsForContainer[targetContainer] {
-				if portConfig.Implicit {
+				if portConfig.IsContainerDefinedPort {
 					targetPort = strconv.Itoa(int(portConfig.Port))
+					/* NOTE: When the `target_port` is empty, the intented target port should be the port that is explictly exposed by the container. Consider the following example
+										```
+					  					http:
+					  					   target_container: nginx
+					 					   target_port: 83 # Implicitly exposed by the nginx container
+										nlb:
+										  port: 80/tcp
+										  target_container: nginx
+										 sidecars:
+										   nginx:
+										     port: 81 # Explicitly exposed by the nginx container.
+										 ```
+					 					 In this example, the target port for the NLB listener should be 81
+					*/
 				}
 			}
 		}
 		return
 	}
 
-	if l.TargetContainer == nil { // when target_container is nil
-		container, port := targetContainerFromTargetPort(exposedPorts, uint16P(uint16(aws.IntValue(l.TargetPort))))
+	if listener.TargetContainer == nil { // when target_container is nil
+		container, port := targetContainerFromTargetPort(exposedPorts, uint16P(uint16(aws.IntValue(listener.TargetPort))))
 		targetPort = aws.StringValue(port)
+		//In general, containers aren't expected to be empty. But this condition is applied for extra safety.
 		if container != nil {
 			targetContainer = aws.StringValue(container)
 		}
@@ -706,7 +719,7 @@ func (l NetworkLoadBalancerListener) Target(exposedPorts ExposedPortsIndex) (tar
 	}
 
 	// when both target_port and target_container are not nil
-	targetContainer = aws.StringValue(l.TargetContainer)
-	targetPort = template.StrconvUint16(uint16(aws.IntValue(l.TargetPort)))
+	targetContainer = aws.StringValue(listener.TargetContainer)
+	targetPort = template.StrconvUint16(uint16(aws.IntValue(listener.TargetPort)))
 	return
 }

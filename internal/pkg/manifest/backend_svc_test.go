@@ -1033,10 +1033,10 @@ func TestBackendService_ExposedPorts(t *testing.T) {
 				},
 				"xray": {
 					{
-						Port:          2000,
-						ContainerName: "xray",
-						Protocol:      "tcp",
-						Implicit:      true,
+						Port:                   2000,
+						ContainerName:          "xray",
+						Protocol:               "tcp",
+						IsContainerDefinedPort: true,
 					},
 				},
 			},
@@ -1070,10 +1070,10 @@ func TestBackendService_ExposedPorts(t *testing.T) {
 			wantedExposedPorts: map[string][]ExposedPort{
 				"frontend": {
 					{
-						Port:          80,
-						ContainerName: "frontend",
-						Protocol:      "tcp",
-						Implicit:      true,
+						Port:                   80,
+						ContainerName:          "frontend",
+						Protocol:               "tcp",
+						IsContainerDefinedPort: true,
 					},
 					{
 						Port:          81,
@@ -1083,10 +1083,10 @@ func TestBackendService_ExposedPorts(t *testing.T) {
 				},
 				"xray": {
 					{
-						Port:          2000,
-						ContainerName: "xray",
-						Protocol:      "tcp",
-						Implicit:      true,
+						Port:                   2000,
+						ContainerName:          "xray",
+						Protocol:               "tcp",
+						IsContainerDefinedPort: true,
 					},
 				},
 			},
@@ -1120,10 +1120,10 @@ func TestBackendService_ExposedPorts(t *testing.T) {
 			wantedExposedPorts: map[string][]ExposedPort{
 				"frontend": {
 					{
-						Port:          80,
-						ContainerName: "frontend",
-						Protocol:      "tcp",
-						Implicit:      true,
+						Port:                   80,
+						ContainerName:          "frontend",
+						Protocol:               "tcp",
+						IsContainerDefinedPort: true,
 					},
 					{
 						Port:          81,
@@ -1133,10 +1133,10 @@ func TestBackendService_ExposedPorts(t *testing.T) {
 				},
 				"xray": {
 					{
-						Port:          2000,
-						ContainerName: "xray",
-						Protocol:      "tcp",
-						Implicit:      true,
+						Port:                   2000,
+						ContainerName:          "xray",
+						Protocol:               "tcp",
+						IsContainerDefinedPort: true,
 					},
 				},
 			},
@@ -1172,10 +1172,10 @@ func TestBackendService_ExposedPorts(t *testing.T) {
 			wantedExposedPorts: map[string][]ExposedPort{
 				"frontend": {
 					{
-						Port:          80,
-						ContainerName: "frontend",
-						Protocol:      "tcp",
-						Implicit:      true,
+						Port:                   80,
+						ContainerName:          "frontend",
+						Protocol:               "tcp",
+						IsContainerDefinedPort: true,
 					},
 				},
 				"xray": {
