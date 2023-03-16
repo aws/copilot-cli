@@ -145,6 +145,36 @@ func NewLocalFileSelector(prompt Prompter, fs afero.Fs) (*localFileSelector, err
 	}, nil
 }
 
+// DirOrFile asks the user to select from a list of directories and files in the current directory or two levels down.
+func (s *localFileSelector) DirOrFile(selPrompt, notFoundPrompt, selHelp, notFoundHelp string, pathValidator prompt.ValidatorFunc) (string, error) {
+	dirsAndFiles, err := s.listDirsAndFiles()
+	if err != nil {
+		return "", err
+	}
+	dirsAndFiles = append(dirsAndFiles, []string{dirOrFileUseCustomPrompt}...)
+	selection, err := s.prompt.SelectOne(
+		selPrompt,
+		selHelp,
+		dirsAndFiles,
+		prompt.WithFinalMessage(staticAssetsFinalMsg),
+	)
+	if err != nil {
+		return "", fmt.Errorf("select directories and/or files: %w", err)
+	}
+	if selection != dirOrFileUseCustomPrompt {
+		return selection, nil
+	}
+	selection, err = s.prompt.Get(
+		notFoundPrompt,
+		notFoundHelp,
+		pathValidator,
+		prompt.WithFinalMessage(staticAssetsFinalMsg))
+	if err != nil {
+		return "", fmt.Errorf("get custom directory or path: %w", err)
+	}
+	return selection, nil
+}
+
 // Dockerfile asks the user to select from a list of Dockerfiles in the current
 // directory or one level down. If no dockerfiles are found, it asks for a custom path.
 func (s *localFileSelector) Dockerfile(selPrompt, notFoundPrompt, selHelp, notFoundHelp string, pathValidator prompt.ValidatorFunc) (string, error) {
@@ -217,6 +247,52 @@ func (s *localFileSelector) listDockerfiles() ([]string, error) {
 	}
 	sort.Strings(dockerfiles)
 	return dockerfiles, nil
+}
+
+// ListDirsAndFiles returns the list of directories and files within the current
+// working directory and two subdirectory levels below.
+func (s *localFileSelector) listDirsAndFiles() ([]string, error) {
+	wdDirsAndFiles, err := s.fs.ReadDir(s.workingDirAbs)
+	if err != nil {
+		return nil, fmt.Errorf("read directory: %w", err)
+	}
+	var filesAndDirs []string
+	for _, firstLevel := range wdDirsAndFiles {
+		name := firstLevel.Name()
+		if strings.HasPrefix(name, ".") || name == "copilot" {
+			continue
+		}
+		filesAndDirs = append(filesAndDirs, filepath.Dir(name)+"/"+name)
+		if firstLevel.IsDir() {
+			subFiles, err := s.fs.ReadDir(name)
+			if err != nil {
+				// swallow errors for unreadable directories
+				continue
+			}
+			for _, secondLevel := range subFiles {
+				name := secondLevel.Name()
+				if strings.HasPrefix(name, ".") {
+					continue
+				}
+				filesAndDirs = append(filesAndDirs, filepath.Dir(name)+"/"+firstLevel.Name()+"/"+name)
+				if secondLevel.IsDir() {
+					subSubFiles, err := s.fs.ReadDir(firstLevel.Name() + "/" + name)
+					if err != nil {
+						// swallow errors for unreadable directories
+						continue
+					}
+					for _, thirdLevel := range subSubFiles {
+						name := thirdLevel.Name()
+						if strings.HasPrefix(name, ".") {
+							continue
+						}
+						filesAndDirs = append(filesAndDirs, filepath.Dir(name)+"/"+firstLevel.Name()+"/"+secondLevel.Name()+"/"+name)
+					}
+				}
+			}
+		}
+	}
+	return filesAndDirs, nil
 }
 
 func presetScheduleToDefinitionString(input string) string {

@@ -529,6 +529,10 @@ type wsSelector interface {
 	Workload(msg, help string) (string, error)
 }
 
+type dirOrFileSelector interface {
+	DirOrFile(selPrompt, notFoundPrompt, selHelp, notFoundHelp string, pathValidator prompt.ValidatorFunc) (string, error)
+}
+
 type scheduleSelector interface {
 	Schedule(scheduleTypePrompt, scheduleTypeHelp string, scheduleValidator, rateValidator prompt.ValidatorFunc) (string, error)
 }

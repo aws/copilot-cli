@@ -332,11 +332,6 @@ func validatePath(fs afero.Fs, val interface{}) error {
 	return nil
 }
 
-type validateStorageTypeOpts struct {
-	ws           manifestReader
-	workloadName string
-}
-
 func validateStorageType(val interface{}, opts validateStorageTypeOpts) error {
 	storageType, ok := val.(string)
 	if !ok {

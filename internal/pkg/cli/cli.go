@@ -180,3 +180,16 @@ func displayPath(target string) string {
 	}
 	return rel
 }
+
+func isDir(fs afero.Fs, path string) (bool, error) {
+	info, err := fs.Stat(path)
+	if err != nil {
+		return false, fmt.Errorf("get Fileinfo describing %s", path)
+	}
+	return info.IsDir(), nil
+}
+
+type validateStorageTypeOpts struct {
+	ws           manifestReader
+	workloadName string
+}

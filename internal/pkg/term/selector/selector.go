@@ -60,21 +60,24 @@ For example: 0 17 ? * MON-FRI (5 pm on weekdays)
 	humanReadableCronConfirmPrompt = "Would you like to use this schedule?"
 	humanReadableCronConfirmHelp   = `Confirm whether the schedule looks right to you.
 (Y)es will continue execution. (N)o will allow you to input a different schedule.`
+
+	dirOrFileUseCustomPrompt = "Enter custom path for your static site file"
 )
 
 // Final messages displayed after prompting.
 const (
-	appNameFinalMessage = "Application:"
-	envNameFinalMessage = "Environment:"
-	svcNameFinalMsg     = "Service name:"
-	jobNameFinalMsg     = "Job name:"
-	deployedJobFinalMsg = "Job:"
-	deployedSvcFinalMsg = "Service:"
-	taskFinalMsg        = "Task:"
-	workloadFinalMsg    = "Name:"
-	dockerfileFinalMsg  = "Dockerfile:"
-	topicFinalMsg       = "Topic subscriptions:"
-	pipelineFinalMsg    = "Pipeline:"
+	appNameFinalMessage  = "Application:"
+	envNameFinalMessage  = "Environment:"
+	svcNameFinalMsg      = "Service name:"
+	jobNameFinalMsg      = "Job name:"
+	deployedJobFinalMsg  = "Job:"
+	deployedSvcFinalMsg  = "Service:"
+	taskFinalMsg         = "Task:"
+	workloadFinalMsg     = "Name:"
+	dockerfileFinalMsg   = "Dockerfile:"
+	topicFinalMsg        = "Topic subscriptions:"
+	pipelineFinalMsg     = "Pipeline:"
+	staticAssetsFinalMsg = "Source:"
 )
 
 var scheduleTypes = []string{

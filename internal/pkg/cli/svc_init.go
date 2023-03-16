@@ -91,6 +91,25 @@ These messages can be consumed by the Worker Service.`
 "Internet" will configure your service as public.`
 
 	wkldInitImagePrompt = fmt.Sprintf("What's the %s ([registry/]repository[:tag|@digest]) of the image to use?", color.Emphasize("location"))
+
+	fmtStaticSiteInitDirOrFilePrompt      = "Which " + color.Emphasize("directory or file") + " would you like to upload for %s?\nYou will have the chance to select more later."
+	staticSiteInitDirOrFileHelpPrompt     = "Directory or file to use for building your static site."
+	fmtStaticSiteInitDirOrFilePathPrompt  = "What is the path to the " + color.Emphasize("directory or file") + " for %s?"
+	staticSiteInitDirOrFilePathHelpPrompt = "Path to directory or file to use for building your static site."
+	fmtStaticSiteInitRecursivePrompt      = "Would you like to recursively upload all files in directory '%s'?"
+	fmtStaticSiteInitRecursiveHelpPrompt  = "Upload all files in and downstream from directory '%s'"
+	fmtStaticSiteInitExcludePrompt        = "Which files under '%s' would you like to " + color.Emphasize("exclude") + "?"
+	staticSiteInitExcludeHelpPrompt       = "Parameters for pattern-matching; includes '*', '?', '[sequence]', and '[!sequence]'"
+	fmtStaticSiteInitIncludePrompt        = "Which files under '%s' would you like to " + color.Emphasize("re-include") + "?"
+	staticSiteInitIncludeHelpPrompt       = "Parameters for pattern-matching; includes '*', '?', '[sequence]', and '[!sequence]'"
+	fmtStaticSiteInitDestinationPrompt    = "What is the destination where '%s' should be uploaded?"
+	staticSiteInitDestinationHelpPrompt   = "Optional. Destination in S3; default for directories is '/'."
+	staticSiteConfirmSummaryPrompt        = "Does this upload config look right to you?"
+	staticSiteConfirmSummaryHelpPrompt    = "Confirm whether this asset should be uploaded."
+
+	fmtSelectAgainPrompt     = "Would you like to %s another %s?"
+	fmtSelectAgainHelpPrompt = "You may %s multiple %s. Type 'Y' to %s another."
+	defaultGetInputNone      = "[None]"
 )
 
 const (
@@ -111,14 +130,23 @@ var serviceTypeHints = map[string]string{
 	manifestinfo.StaticSiteType:              "Internet to CDN to S3 bucket",
 }
 
+type staticAsset struct {
+	dirOrFilePath string
+	destination   string
+	recursive     bool
+	excludeFilter string
+	includeFilter string
+}
+
 type initWkldVars struct {
 	appName        string
 	wkldType       string
 	name           string
 	dockerfilePath string
-	image          string
-	subscriptions  []string
-	noSubscribe    bool
+	// TODO(jwh): allow passing in asset info via flags
+	image         string
+	subscriptions []string
+	noSubscribe   bool
 }
 
 type initSvcVars struct {
@@ -138,6 +166,7 @@ type initSvcOpts struct {
 	store        store
 	dockerEngine dockerEngine
 	sel          dockerfileSelector
+	dirFileSel   dirOrFileSelector
 	topicSel     topicSelector
 	mftReader    manifestReader
 
@@ -145,6 +174,7 @@ type initSvcOpts struct {
 	manifestPath string
 	platform     *manifest.PlatformString
 	topics       []manifest.TopicSubscription
+	staticAssets []manifest.FileUpload 
 
 	// For workspace validation.
 	wsAppName         string
@@ -198,6 +228,7 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 		prompt:       prompter,
 		sel:          sel,
 		topicSel:     snsSel,
+		dirFileSel:   sel,
 		mftReader:    ws,
 		dockerEngine: dockerengine.New(exec.NewCmd()),
 		wsAppName:    tryReadingAppName(),
@@ -430,7 +461,82 @@ If you'd prefer a new default manifest, please manually delete the existing one.
 }
 
 func (o *initSvcOpts) askStaticSite() error {
-	// TODO: add file selection for generating svc manifest.
+	again := true
+	var assets []manifest.FileUpload
+	for again {
+		source, err := o.askSource()
+		if err != nil {
+			return err
+		}
+		isDir, err := isDir(afero.NewOsFs(), source)
+		if err != nil {
+			return fmt.Errorf("check if selection is a directory: %w", err)
+		}
+		destination, err := o.askDestination(source, isDir)
+		if err != nil {
+			return err
+		}
+		var excludes []string
+		var includes []string
+
+		var recursive bool
+		if isDir {
+			recursive, err = o.askRecursive(source)
+			if err != nil {
+				return err
+			}
+		}
+		// --exclude and --include work only if --recursive is also specified https://stackoverflow.com/questions/43370710/s3-cli-includes-not-working
+		if recursive {
+			excludes, err = o.askExcludes(source)
+			if err != nil {
+				return err
+			}
+			includes, err = o.askIncludes(source)
+			if err != nil {
+				return err
+			}
+		}
+		msg := fmt.Sprintf(`
+%s
+Source: %s
+Destination: %s
+Recursive: %v`, color.Emphasize("Upload Summary:"), source, destination, recursive)
+		if recursive {
+			msg = msg + fmt.Sprintf(
+				`
+Exclude: %v
+Include: %v`, strings.Join(excludes, ", "), strings.Join(includes, ", "))
+		}
+		log.Infoln(msg)
+		add, err := o.prompt.Confirm(
+			staticSiteConfirmSummaryPrompt,
+			staticSiteConfirmSummaryHelpPrompt,
+			prompt.WithFinalMessage("Add:"),
+		)
+		if err != nil {
+			return fmt.Errorf("failed to confirm upload summary: %w", err)
+		}
+		if add {
+			assets = append(assets, manifest.FileUpload{
+				Source:      source,
+				Destination: destination,
+				Recursive:   recursive,
+				Exclude:     o.stringSliceToStringSliceOrString(excludes),
+				Reinclude:   o.stringSliceToStringSliceOrString(includes),
+			})
+		}
+
+		again, err = o.prompt.Confirm(
+			fmt.Sprintf(fmtSelectAgainPrompt, "select", "static asset"),
+			fmt.Sprintf(fmtSelectAgainHelpPrompt, "select", "assets", "specify"),
+			prompt.WithFinalMessage("Another:"),
+		)
+		if err != nil {
+			return fmt.Errorf("failed to confirm repeat: %w", err)
+		}
+	}
+	o.staticAssets = assets
 	return nil
 }
 
@@ -500,6 +606,120 @@ func (o *initSvcOpts) askImage() error {
 	}
 	o.image = image
 	return nil
+}
+
+func (o *initSvcOpts) askSource() (string, error) {
+	source, err := o.dirFileSel.DirOrFile(
+		fmt.Sprintf(fmtStaticSiteInitDirOrFilePrompt, color.HighlightUserInput(o.name)),
+		fmt.Sprintf(fmtStaticSiteInitDirOrFilePathPrompt, color.HighlightUserInput(o.name)),
+		staticSiteInitDirOrFileHelpPrompt,
+		staticSiteInitDirOrFilePathHelpPrompt,
+		func(v interface{}) error {
+			return validatePath(afero.NewOsFs(), v)
+		},
+	)
+	if err != nil {
+		return "", fmt.Errorf("select local directory or file: %w", err)
+	}
+	return source, nil
+}
+
+func (o *initSvcOpts) askDestination(source string, isDir bool) (string, error) {
+	defaultInput := defaultGetInputNone
+	if isDir {
+		defaultInput = "/"
+	}
+	dest, err := o.prompt.Get(
+		fmt.Sprintf(fmtStaticSiteInitDestinationPrompt, source),
+		staticSiteInitDestinationHelpPrompt,
+		func(val interface{}) error {
+			return nil
+		},
+		prompt.WithFinalMessage("Destination:"), prompt.WithDefaultInput(defaultInput))
+	if err != nil {
+		return "", fmt.Errorf("get destination: %w", err)
+	}
+	return dest, nil
+}
+
+func (o *initSvcOpts) askRecursive(source string) (bool, error) {
+	recursive, err := o.prompt.Confirm(
+		fmt.Sprintf(fmtStaticSiteInitRecursivePrompt, source),
+		fmt.Sprintf(fmtStaticSiteInitRecursiveHelpPrompt, source),
+		prompt.WithFinalMessage("Recursive:"))
+	if err != nil {
+		return false, fmt.Errorf("failed to confirm recursive: %w", err)
+	}
+	return recursive, nil
+}
+
+func (o *initSvcOpts) askExcludes(source string) ([]string, error) {
+	again := true
+	var excludes []string
+	for again {
+		exclude, err := o.prompt.Get(
+			fmt.Sprintf(fmtStaticSiteInitExcludePrompt, source),
+			staticSiteInitExcludeHelpPrompt,
+			func(val interface{}) error {
+				return nil
+			},
+			prompt.WithFinalMessage("Exclude:"), prompt.WithDefaultInput(defaultGetInputNone))
+		if err != nil {
+			return nil, fmt.Errorf("get exclude filter: %w", err)
+		}
+		excludes = append(excludes, exclude)
+		if exclude != defaultGetInputNone {
+			again, err = o.prompt.Confirm(
+				fmt.Sprintf(fmtSelectAgainPrompt, "enter", "exclude filter"),
+				fmt.Sprintf(fmtSelectAgainHelpPrompt, "enter", "filters", "type"),
+				prompt.WithFinalMessage("Another:"),
+			)
+			if err != nil {
+				return nil, fmt.Errorf("failed to confirm repeat: %w", err)
+			}
+		}
+	}
+	return excludes, nil
+}
+
+func (o *initSvcOpts) askIncludes(source string) ([]string, error) {
+	again := true
+	var includes []string
+	for again {
+		include, err := o.prompt.Get(
+			fmt.Sprintf(fmtStaticSiteInitIncludePrompt, source),
+			staticSiteInitIncludeHelpPrompt,
+			func(val interface{}) error {
+				return nil
+			},
+			prompt.WithFinalMessage("Include:"), prompt.WithDefaultInput(defaultGetInputNone))
+		if err != nil {
+			return nil, fmt.Errorf("get include filter: %w", err)
+		}
+		includes = append(includes, include)
+		if include != defaultGetInputNone {
+			again, err = o.prompt.Confirm(
+				fmt.Sprintf(fmtSelectAgainPrompt, "enter", "include filter"),
+				fmt.Sprintf(fmtSelectAgainHelpPrompt, "enter", "filters", "type"),
+				prompt.WithFinalMessage("Another:"),
+			)
+			if err != nil {
+				return nil, fmt.Errorf("failed to confirm repeat: %w", err)
+			}
+		}
+	}
+	return includes, nil
+}
+
+func (o *initSvcOpts) stringSliceToStringSliceOrString(strings []string) manifest.StringSliceOrString {
+	switch len(strings) {
+	case 0:
+		return manifest.StringSliceOrString{}
+	case 1:
+		return manifest.StringSliceOrString{String: aws.String(strings[0])}
+	default:
+		return manifest.StringSliceOrString{StringSlice: strings}
+	}
 }
 
 func (o *initSvcOpts) manifestAlreadyExists() (bool, error) {

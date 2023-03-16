@@ -556,7 +556,7 @@ func (f FileUpload) validate() error {
 	return nil
 }
 
-// validate returns nil if the pipeline manifest is configured correctly.
+// Validate returns nil if the pipeline manifest is configured correctly.
 func (p Pipeline) Validate() error {
 	if len(p.Name) > 100 {
 		return fmt.Errorf(`pipeline name '%s' must be shorter than 100 characters`, p.Name)
