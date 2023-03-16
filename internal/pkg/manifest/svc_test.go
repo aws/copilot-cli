@@ -1017,8 +1017,9 @@ func TestLoadBalancedWebService_NetworkLoadBalancerTarget(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
+			exposedPorts, _ := tc.in.ExposedPorts()
 			for idx, listener := range tc.in.NLBConfig.NLBListeners() {
-				targetContainer, targetPort, err := tc.in.NetworkLoadBalancerTarget(aws.StringValue(listener.TargetContainer), listener.TargetPort, aws.StringValue(listener.Port))
+				targetContainer, targetPort, err := listener.Target(exposedPorts)
 				if tc.wantedErr != nil {
 					require.EqualError(t, err, tc.wantedErr.Error())
 				} else {

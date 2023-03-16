@@ -1036,6 +1036,7 @@ func TestBackendService_ExposedPorts(t *testing.T) {
 						Port:          2000,
 						ContainerName: "xray",
 						Protocol:      "tcp",
+						Implicit:      true,
 					},
 				},
 			},
@@ -1072,6 +1073,7 @@ func TestBackendService_ExposedPorts(t *testing.T) {
 						Port:          80,
 						ContainerName: "frontend",
 						Protocol:      "tcp",
+						Implicit:      true,
 					},
 					{
 						Port:          81,
@@ -1084,6 +1086,7 @@ func TestBackendService_ExposedPorts(t *testing.T) {
 						Port:          2000,
 						ContainerName: "xray",
 						Protocol:      "tcp",
+						Implicit:      true,
 					},
 				},
 			},
@@ -1120,6 +1123,7 @@ func TestBackendService_ExposedPorts(t *testing.T) {
 						Port:          80,
 						ContainerName: "frontend",
 						Protocol:      "tcp",
+						Implicit:      true,
 					},
 					{
 						Port:          81,
@@ -1132,6 +1136,7 @@ func TestBackendService_ExposedPorts(t *testing.T) {
 						Port:          2000,
 						ContainerName: "xray",
 						Protocol:      "tcp",
+						Implicit:      true,
 					},
 				},
 			},
@@ -1170,6 +1175,7 @@ func TestBackendService_ExposedPorts(t *testing.T) {
 						Port:          80,
 						ContainerName: "frontend",
 						Protocol:      "tcp",
+						Implicit:      true,
 					},
 				},
 				"xray": {

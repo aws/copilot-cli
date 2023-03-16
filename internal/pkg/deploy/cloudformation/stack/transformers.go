@@ -591,9 +591,11 @@ func (conv routingRuleConfigConverter) convert() (*template.ALBListenerRule, err
 	return config, nil
 }
 
+type nlbListeners []template.NetworkLoadBalancerListener
+
 // isCertRequired returns true if any of the NLB listeners have protocol as TLS set.
-func isCertRequired(listeners []template.NetworkLoadBalancerListener) bool {
-	for _, listener := range listeners {
+func (ls nlbListeners) isCertRequired() bool {
+	for _, listener := range ls {
 		if listener.Protocol == manifest.TLS {
 			return true
 		}
@@ -606,11 +608,14 @@ func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (networkLoadBalanc
 	if nlbConfig.IsEmpty() {
 		return networkLoadBalancerConfig{}, nil
 	}
-
-	var listeners []template.NetworkLoadBalancerListener
-	for _, listener := range nlbConfig.NLBListeners() {
+	exposedPorts, err := s.manifest.ExposedPorts()
+	if err != nil {
+		return networkLoadBalancerConfig{}, nil
+	}
+	listeners := make(nlbListeners, len(nlbConfig.NLBListeners()))
+	for idx, listener := range nlbConfig.NLBListeners() {
 		// Parse targetContainer and targetPort for the Network Load Balancer targets.
-		targetContainer, targetPort, err := s.manifest.NetworkLoadBalancerTarget(aws.StringValue(listener.TargetContainer), listener.TargetPort, aws.StringValue(listener.Port))
+		targetContainer, targetPort, err := listener.Target(exposedPorts)
 		if err != nil {
 			return networkLoadBalancerConfig{}, err
 		}
@@ -625,16 +630,15 @@ func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (networkLoadBalanc
 			protocol = aws.String(defaultNLBProtocol)
 		}
 
-		hc := convertNLBHealthCheck(&listener.HealthCheck)
-		listeners = append(listeners, template.NetworkLoadBalancerListener{
+		listeners[idx] = template.NetworkLoadBalancerListener{
 			Port:            aws.StringValue(port),
 			Protocol:        strings.ToUpper(aws.StringValue(protocol)),
 			TargetContainer: targetContainer,
 			TargetPort:      targetPort,
 			SSLPolicy:       listener.SSLPolicy,
-			HealthCheck:     hc,
+			HealthCheck:     convertNLBHealthCheck(&listener.HealthCheck),
 			Stickiness:      listener.Stickiness,
-		})
+		}
 	}
 
 	aliases, err := convertAlias(nlbConfig.Aliases)
@@ -648,7 +652,7 @@ func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (networkLoadBalanc
 			Listener:            listeners,
 			Aliases:             aliases,
 			MainContainerPort:   s.manifest.MainContainerPort(),
-			CertificateRequired: isCertRequired(listeners),
+			CertificateRequired: listeners.isCertRequired(),
 		},
 	}
 

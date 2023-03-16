@@ -131,6 +131,7 @@ type ExposedPort struct {
 	ContainerName string // The name of the container that exposes this port.
 	Port          uint16 // The port number.
 	Protocol      string // Either "tcp" or "udp", empty means the default value that the underlying service provides.
+	Implicit      bool   // Defines if the port is the main port of the container. defaults to false.
 }
 
 // ImageWithHealthcheckAndOptionalPort represents a container image with an optional exposed port and health check.
