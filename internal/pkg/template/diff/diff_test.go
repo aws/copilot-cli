@@ -5,6 +5,7 @@ package diff
 
 import (
 	"errors"
+	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -134,11 +135,11 @@ func TestFrom_Parse(t *testing.T) {
 					   -> {old: dog, new: nil} // Deletion.
 					   -> {old: nil, new: dog} // Insertion.
 				*/
-				leaf1 := &node{
-					oldV: yamlScalarNode("dog"),
+				leaf1 := &seqItemNode{
+					node{oldV: yamlScalarNode("dog")},
 				}
-				leaf2 := &node{
-					newV: yamlScalarNode("dog"),
+				leaf2 := &seqItemNode{
+					node{newV: yamlScalarNode("dog")},
 				}
 				return &node{
 					childNodes: []diffNode{
@@ -158,8 +159,8 @@ func TestFrom_Parse(t *testing.T) {
 				   -> DanceCompetition
 					   -> {old: nil, new: mouse} // Insertion.
 				*/
-				leaf := &node{
-					newV: yamlScalarNode("mouse"),
+				leaf := &seqItemNode{
+					node{newV: yamlScalarNode("mouse")},
 				}
 				return &node{
 					childNodes: []diffNode{
@@ -179,8 +180,8 @@ func TestFrom_Parse(t *testing.T) {
 				   -> PotatoChipCommittee
 					   -> {old: cat, new: nil} // Deletion.
 				*/
-				leaf := &node{
-					oldV: yamlScalarNode("cat"),
+				leaf := &seqItemNode{
+					node{oldV: yamlScalarNode("cat")},
 				}
 				return &node{
 					childNodes: []diffNode{
@@ -200,9 +201,11 @@ func TestFrom_Parse(t *testing.T) {
 				   -> DogsFavoriteShape
 					   -> {old: circle, new: ellipse} // Modification.
 				*/
-				leaf := &node{
-					oldV: yamlScalarNode("circle"),
-					newV: yamlScalarNode("ellipse"),
+				leaf := &seqItemNode{
+					node{
+						oldV: yamlScalarNode("circle"),
+						newV: yamlScalarNode("ellipse"),
+					},
 				}
 				return &node{
 					childNodes: []diffNode{
@@ -385,7 +388,7 @@ func equalSubTree(a, b diffNode, t *testing.T) bool {
 	if a == nil || b == nil {
 		return a == nil && b == nil
 	}
-	if a.key() != b.key() || len(a.children()) != len(b.children()) {
+	if a.key() != b.key() || len(a.children()) != len(b.children()) || reflect.TypeOf(a) != reflect.TypeOf(b) {
 		return false
 	}
 	if len(a.children()) == 0 {
