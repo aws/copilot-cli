@@ -70,6 +70,7 @@ type overrideOpts struct {
 	cfgStore   store
 	prompt     prompter
 	cfnPrompt  cfnSelector
+	spinner    progress
 	dir        func() string
 	packageCmd func(w stringWriteCloser) (executor, error)
 }
