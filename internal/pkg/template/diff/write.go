@@ -15,26 +15,26 @@ const (
 
 const indentInc = 4
 
-// Writer writes the string representation of a diff tree.
-type Writer struct {
+// treeWriter writes the string representation of a diff tree.
+type treeWriter struct {
 	tree   Tree
 	writer io.Writer
 }
 
-// Write uses the writer to write the string representation of the diff tree stemmed from the root.
-func (s *Writer) Write() error {
+// write uses the writer to writeTree the string representation of the diff tree stemmed from the root.
+func (s *treeWriter) write() error {
 	if s.tree.root == nil {
 		return nil // Return without writing anything.
 	}
 	for _, child := range s.tree.root.children() {
-		if err := s.write(child, 0); err != nil {
+		if err := s.writeTree(child, 0); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (s *Writer) write(node diffNode, indent int) error {
+func (s *treeWriter) writeTree(node diffNode, indent int) error {
 	var formatter formatter
 	switch node.(type) {
 	// case *unchangedNode:
@@ -52,7 +52,7 @@ func (s *Writer) write(node diffNode, indent int) error {
 		return err
 	}
 	for _, child := range node.children() {
-		err := s.write(child, indent+indentInc)
+		err := s.writeTree(child, indent+indentInc)
 		if err != nil {
 			return err
 		}
@@ -60,7 +60,7 @@ func (s *Writer) write(node diffNode, indent int) error {
 	return nil
 }
 
-func (s *Writer) writeLeaf(node diffNode, indent int, formatter formatter) error {
+func (s *treeWriter) writeLeaf(node diffNode, indent int, formatter formatter) error {
 	switch {
 	case node.oldYAML() != nil && node.newYAML() != nil:
 		return s.writeMod(node, indent, formatter)
@@ -71,7 +71,7 @@ func (s *Writer) writeLeaf(node diffNode, indent int, formatter formatter) error
 	}
 }
 
-func (s *Writer) writeMod(node diffNode, indent int, formatter formatter) error {
+func (s *treeWriter) writeMod(node diffNode, indent int, formatter formatter) error {
 	if node.oldYAML().Kind != node.newYAML().Kind {
 		if err := s.writeDel(node, indent, formatter); err != nil {
 			return err
@@ -83,7 +83,7 @@ func (s *Writer) writeMod(node diffNode, indent int, formatter formatter) error 
 	return err
 }
 
-func (s *Writer) writeDel(node diffNode, indent int, formatter formatter) error {
+func (s *treeWriter) writeDel(node diffNode, indent int, formatter formatter) error {
 	raw, err := formatter.formatYAML(node.oldYAML())
 	if err != nil {
 		return err
@@ -93,7 +93,7 @@ func (s *Writer) writeDel(node diffNode, indent int, formatter formatter) error 
 	return err
 }
 
-func (s *Writer) writeInsert(node diffNode, indent int, formatter formatter) error {
+func (s *treeWriter) writeInsert(node diffNode, indent int, formatter formatter) error {
 	raw, err := formatter.formatYAML(node.newYAML())
 	if err != nil {
 		return err

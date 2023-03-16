@@ -6,6 +6,7 @@ package diff
 
 import (
 	"fmt"
+	"io"
 
 	"gopkg.in/yaml.v3"
 )
@@ -13,6 +14,11 @@ import (
 // Tree represents a difference tree between two YAML documents.
 type Tree struct {
 	root diffNode
+}
+
+func (t Tree) Write(w io.Writer) error {
+	tw := &treeWriter{t, w}
+	return tw.write()
 }
 
 // diffNode is the interface to represents the difference between two *yaml.Node.

@@ -214,15 +214,11 @@ Mary:
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			got, err := From(tc.old).Parse([]byte(tc.curr))
+			gotTree, err := From(tc.old).Parse([]byte(tc.curr))
 			require.NoError(t, err)
 
 			buf := strings.Builder{}
-			stringer := &Writer{
-				tree:   got,
-				writer: &buf,
-			}
-			err = stringer.Write()
+			err = gotTree.Write(&buf)
 			out := buf.String()
 			if tc.wanted != "" { // TODO(lou1415926): remove this block when all tests cases are completed
 				require.NoError(t, err)
