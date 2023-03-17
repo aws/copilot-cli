@@ -79,7 +79,7 @@ func (sm *lcsStateMachine) action() action {
 }
 
 func (sm *lcsStateMachine) peek() action {
-	var lcsIdxOld, fromIdxOld, toIdxOld, actionOld = sm.lcsIndices.index, sm.from.index, sm.to.index, sm.currAction
+	lcsIdxOld, fromIdxOld, toIdxOld, actionOld := sm.lcsIndices.index, sm.from.index, sm.to.index, sm.currAction
 	sm.next()
 	next := sm.action()
 	sm.lcsIndices.index, sm.from.index, sm.to.index, sm.currAction = lcsIdxOld, fromIdxOld, toIdxOld, actionOld
