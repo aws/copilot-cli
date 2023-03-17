@@ -173,7 +173,7 @@ func (o *overrideOpts) askResourcesToOverride() error {
 		return nil
 	}
 
-	o.spinner.Start("Generating CloudFormation template to select resources from")
+	o.spinner.Start("Generating CloudFormation template for resource selection")
 	buf := &closableStringBuilder{
 		Builder: new(strings.Builder),
 	}
