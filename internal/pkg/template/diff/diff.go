@@ -11,6 +11,11 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// For a property whose value is a list of map, map its name to the identifying property of the items.
+var mapItemsIdentifiedBy = map[string]string{
+	"ContainerDefinitions": "Name",
+}
+
 // Tree represents a difference tree between two YAML documents.
 type Tree struct {
 	root diffNode
@@ -56,6 +61,12 @@ func (n *node) children() []diffNode {
 
 type seqItemNode struct {
 	node
+	context *seqItemContext
+}
+
+type seqItemContext struct {
+	mappingNode  *yaml.Node // A seq item that needs context should have a yaml.MappingNode.
+	identifiedBy string     // The field name that a seq item of yaml.MappingNode is implicitly identified by.
 }
 
 // From is the YAML document that another YAML document is compared against.
@@ -107,7 +118,7 @@ func parse(from, to *yaml.Node, key string) (diffNode, error) {
 	var err error
 	switch {
 	case to.Kind == yaml.SequenceNode && from.Kind == yaml.SequenceNode:
-		children, err = parseSequence(from, to)
+		children, err = parseSequence(from, to, key)
 	case to.Kind == yaml.DocumentNode && from.Kind == yaml.DocumentNode:
 		fallthrough
 	case to.Kind == yaml.MappingNode && from.Kind == yaml.MappingNode:
@@ -131,7 +142,7 @@ func isYAMLLeaf(node *yaml.Node) bool {
 	return len(node.Content) == 0
 }
 
-func parseSequence(fromNode, toNode *yaml.Node) ([]diffNode, error) {
+func parseSequence(fromNode, toNode *yaml.Node, key string) ([]diffNode, error) {
 	fromSeq, toSeq := make([]yaml.Node, len(fromNode.Content)), make([]yaml.Node, len(toNode.Content)) // NOTE: should be the same as calling `Decode`.
 	for idx, v := range fromNode.Content {
 		fromSeq[idx] = *v
@@ -165,30 +176,40 @@ func parseSequence(fromNode, toNode *yaml.Node) ([]diffNode, error) {
 		case actionMatch:
 			// TODO(lou1415926): (x unchanged items)
 		case actionMod:
-			// TODO(lou1415926): handle list of maps modification
 			diff := cachedDiff[cacheKey(inspector.fromIndex(), inspector.toIndex())]
 			if diff.err != nil {
 				return nil, diff.err
 			}
+			var context *seqItemContext
+			if byKey, ok := mapItemsIdentifiedBy[key]; ok {
+				item := inspector.fromItem()
+				if item.Kind == yaml.MappingNode {
+					context = &seqItemContext{
+						mappingNode:  &item,
+						identifiedBy: byKey,
+					}
+				}
+			}
 			children = append(children, &seqItemNode{
-				node{
+				node: node{
 					keyValue:   diff.node.key(),
 					childNodes: diff.node.children(),
 					oldV:       diff.node.oldYAML(),
 					newV:       diff.node.newYAML(),
 				},
+				context: context,
 			})
 		case actionDel:
 			item := inspector.fromItem()
 			children = append(children, &seqItemNode{
-				node{
+				node: node{
 					oldV: &item,
 				},
 			})
 		case actionInsert:
 			item := inspector.toItem()
 			children = append(children, &seqItemNode{
-				node{
+				node: node{
 					newV: &item,
 				},
 			})

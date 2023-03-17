@@ -134,11 +134,11 @@ func TestFrom_Parse(t *testing.T) {
 					   -> {old: dog, new: nil} // Deletion.
 					   -> {old: nil, new: dog} // Insertion.
 				*/
-				leaf1 := &node{
-					oldV: yamlScalarNode("dog"),
+				leaf1 := &seqItemNode{
+					node: node{oldV: yamlScalarNode("dog")},
 				}
-				leaf2 := &node{
-					newV: yamlScalarNode("dog"),
+				leaf2 := &seqItemNode{
+					node: node{newV: yamlScalarNode("dog")},
 				}
 				return &node{
 					childNodes: []diffNode{
@@ -158,8 +158,8 @@ func TestFrom_Parse(t *testing.T) {
 				   -> DanceCompetition
 					   -> {old: nil, new: mouse} // Insertion.
 				*/
-				leaf := &node{
-					newV: yamlScalarNode("mouse"),
+				leaf := &seqItemNode{
+					node: node{newV: yamlScalarNode("mouse")},
 				}
 				return &node{
 					childNodes: []diffNode{
@@ -179,8 +179,8 @@ func TestFrom_Parse(t *testing.T) {
 				   -> PotatoChipCommittee
 					   -> {old: cat, new: nil} // Deletion.
 				*/
-				leaf := &node{
-					oldV: yamlScalarNode("cat"),
+				leaf := &seqItemNode{
+					node: node{oldV: yamlScalarNode("cat")},
 				}
 				return &node{
 					childNodes: []diffNode{
@@ -200,9 +200,11 @@ func TestFrom_Parse(t *testing.T) {
 				   -> DogsFavoriteShape
 					   -> {old: circle, new: ellipse} // Modification.
 				*/
-				leaf := &node{
-					oldV: yamlScalarNode("circle"),
-					newV: yamlScalarNode("ellipse"),
+				leaf := &seqItemNode{
+					node: node{
+						oldV: yamlScalarNode("circle"),
+						newV: yamlScalarNode("ellipse"),
+					},
 				}
 				return &node{
 					childNodes: []diffNode{
@@ -214,7 +216,7 @@ func TestFrom_Parse(t *testing.T) {
 				}
 			},
 		},
-		"list with a map value changed": { // TODO(lou1415926): handle list of maps modification
+		"list with a map value changed": {
 			old: `StrawberryPopularitySurvey:
 - Name: Dog
   LikeStrawberry: ver much
@@ -229,6 +231,31 @@ func TestFrom_Parse(t *testing.T) {
   LikeStrawberry: ok
 - Name: Cat
   LikeStrawberry: ew`,
+			wanted: func() diffNode {
+				leafLikeStrawberry := &node{
+					keyValue: "LikeStrawberry",
+					oldV:     yamlScalarNode("meh"),
+					newV:     yamlScalarNode("ok"),
+				}
+				return &node{
+					childNodes: []diffNode{
+						&node{
+							keyValue: "StrawberryPopularitySurvey",
+							childNodes: []diffNode{
+								&seqItemNode{
+									node: node{
+										childNodes: []diffNode{leafLikeStrawberry},
+									},
+									context: &seqItemContext{
+										mappingNode:  yamlNode("Name: Bear\nLikeStrawberry: meh", t),
+										identifiedBy: "Name",
+									},
+								},
+							},
+						},
+					},
+				}
+			},
 		},
 		"change a map to scalar": {
 			curr: `Mary:
@@ -336,6 +363,13 @@ Dog: (pleased) "ikr"`, t),
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
+			ogItemsIdentifiedBy := mapItemsIdentifiedBy
+			defer func() {
+				mapItemsIdentifiedBy = ogItemsIdentifiedBy
+			}()
+			mapItemsIdentifiedBy = map[string]string{
+				"StrawberryPopularitySurvey": "Name",
+			}
 			got, err := From(tc.old).Parse([]byte(tc.curr))
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())
@@ -391,14 +425,11 @@ func equalSubTree(a, b diffNode, t *testing.T) bool {
 	if len(a.children()) == 0 {
 		return equalLeaves(a, b, t)
 	}
-	aKeyToChild, bKeyToChild := make(map[string]diffNode), make(map[string]diffNode)
-	for i := 0; i < len(a.children()); i++ {
-		aChild, bChild := a.children()[i], b.children()[i]
-		aKeyToChild[aChild.key()] = aChild
-		bKeyToChild[bChild.key()] = bChild
+	if seqA, ok := a.(*seqItemNode); ok {
+		return seqA.context.identifiedBy == b.(*seqItemNode).context.identifiedBy
 	}
-	for k := range aKeyToChild {
-		if equal := equalSubTree(aKeyToChild[k], bKeyToChild[k], t); !equal {
+	for idx := range a.children() {
+		if equal := equalSubTree(a.children()[idx], b.children()[idx], t); !equal {
 			return false
 		}
 	}
