@@ -56,13 +56,12 @@ func (p *Patch) Override(body []byte) ([]byte, error) {
 			if err := patch.applyAdd(&root); err != nil {
 				return nil, fmt.Errorf("unable to apply %q patch at %q: %w", patch.Operation, patch.Path, err)
 			}
+		case "remove":
+			if err := patch.applyRemove(&root); err != nil {
+				return nil, fmt.Errorf("unable to apply %q patch at %q: %w", patch.Operation, patch.Path, err)
+			}
 		default:
 		}
-		/*
-			if err := patch.apply(&root); err != nil {
-				return nil, fmt.Errorf("unable to apply patch with operation %q at %q: %w", patch.Operation, patch.Path, err)
-			}
-		*/
 	}
 
 	// marshal back to []byte
@@ -163,6 +162,7 @@ func (y yamlPatch) applyAdd(node *yaml.Node) error {
 		node.Content = append(node.Content, &y.Value)
 		return nil
 	case yaml.SequenceNode:
+		// TODO idx out of range
 		idx, err := strconv.Atoi(split[0])
 		if len(split) == 1 {
 			if split[0] == "-" || split[0] == "" {
@@ -191,21 +191,60 @@ func (y yamlPatch) applyAdd(node *yaml.Node) error {
 	}
 }
 
-/*
-
-func (y yamlPatch) apply(root *yaml.Node) error {
-	switch y.Operation {
-	case "add":
-		node, err := getNode(root, y.Path)
-		if err != nil {
-			return fmt.Errorf("unable to apply patch with operation %q at %q: %w", y.Operation, y.Path, err)
+func (y yamlPatch) applyRemove(node *yaml.Node) error {
+	split := strings.Split(strings.TrimSpace(y.Path), "/")
+	switch node.Kind {
+	case yaml.DocumentNode:
+		if len(node.Content) != 1 {
+			return fmt.Errorf("don't support multi-doc yaml")
 		}
 
-		// TODO need some way to know if we are encoding (like a replace) or if we got the parent node
-		// because both are valid options - a _specific_ index to append to
+		y.Path = strings.Join(split[1:], "/")
+		return y.applyRemove(node.Content[0])
+	case yaml.MappingNode:
+		if len(split) == 1 {
+			// remove the final node
+			for i := 0; i < len(node.Content); i += 2 {
+				if node.Content[i].Value == split[0] {
+					node.Content = append(node.Content[:i], node.Content[i+2:]...)
+					return nil
+				}
+			}
+		}
 
-		// node.Kind = y.Value.Kind
-		// node.Content = append(node.Content, y.Value.Content...)
+		for i := 0; i < len(node.Content); i += 2 {
+			if node.Content[i].Value == split[0] {
+				y.Path = strings.Join(split[1:], "/")
+				return y.applyRemove(node.Content[i+1])
+			}
+		}
+
+		return fmt.Errorf("key %q not found in map", split[0])
+	case yaml.SequenceNode:
+		idx, err := strconv.Atoi(split[0])
+		if err != nil {
+			return fmt.Errorf("expected index in sequence, got %q", split[0])
+		}
+		if idx > len(node.Content)-1 {
+			return fmt.Errorf("invalid index %d for sequence of length %d", idx, len(node.Content))
+		}
+
+		if len(split) > 1 {
+			y.Path = strings.Join(split[1:], "/")
+			return y.applyRemove(node.Content[idx])
+		}
+
+		// remove sequence at index
+		node.Content = append(node.Content[:idx], node.Content[idx+1:]...)
+		return nil
+	default:
+		return nil
+	}
+}
+
+/*
+func (y yamlPatch) apply(root *yaml.Node) error {
+	switch y.Operation {
 	case "replace":
 		node, err := getNode(root, y.Path)
 		if err != nil {

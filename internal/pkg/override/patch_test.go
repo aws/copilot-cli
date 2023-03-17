@@ -153,7 +153,7 @@ Resources:
                 Resource:
                   - "*"`,
 		},
-		"remove from map": {
+		"remove scalar from map": {
 			yaml: `
 Resources:
   TaskDef:
@@ -166,6 +166,98 @@ Resources:
 Resources:
   TaskDef:
     Type: AWS::ECS::TaskDefinition`,
+		},
+		"remove map from map": {
+			yaml: `
+Resources:
+  TaskDef:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Prop1: value
+      Prop2: value`,
+			overrides: `
+- op: remove
+  path: /Resources/TaskDef/Properties`,
+			expected: `
+Resources:
+  TaskDef:
+    Type: AWS::ECS::TaskDefinition`,
+		},
+		"remove from beginning of sequence": {
+			yaml: `
+Resources:
+  - obj1: value
+    list:
+      - item0
+      - item1
+  - obj2: value
+    list:
+      - item0
+      - item1`,
+			overrides: `
+- op: remove
+  path: /Resources/1/list/0`,
+			expected: `
+Resources:
+  - obj1: value
+    list:
+      - item0
+      - item1
+  - obj2: value
+    list:
+      - item1`,
+		},
+		"remove from middle of sequence": {
+			yaml: `
+Resources:
+  - obj1: value
+    list:
+      - item0
+      - item1
+  - obj2: value
+    list:
+      - item0
+      - item1
+      - item2`,
+			overrides: `
+- op: remove
+  path: /Resources/1/list/1`,
+			expected: `
+Resources:
+  - obj1: value
+    list:
+      - item0
+      - item1
+  - obj2: value
+    list:
+      - item0
+      - item2`,
+		},
+		"remove from end of sequence": {
+			yaml: `
+Resources:
+  - obj1: value
+    list:
+      - item0
+      - item1
+  - obj2: value
+    list:
+      - item0
+      - item1
+      - item2`,
+			overrides: `
+- op: remove
+  path: /Resources/1/list/2`,
+			expected: `
+Resources:
+  - obj1: value
+    list:
+      - item0
+      - item1
+  - obj2: value
+    list:
+      - item0
+      - item1`,
 		},
 		"replace scalar with scalar": {
 			yaml: `
