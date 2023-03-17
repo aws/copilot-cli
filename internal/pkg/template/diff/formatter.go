@@ -32,8 +32,25 @@ func (f *seqItemFormatter) formatMod(node diffNode) string {
 	return fmt.Sprintf("- %s -> %s", node.oldYAML().Value, node.newYAML().Value)
 }
 
-func (f *seqItemFormatter) formatPath(_ diffNode) string {
-	return "- (changed item)"
+func (f *seqItemFormatter) formatPath(node diffNode) string {
+	defaultPath := "- (changed item)"
+	seqNode := node.(*seqItemNode)
+	if seqNode.context == nil {
+		return defaultPath
+	}
+	for _, child := range seqNode.children() {
+		if child.key() == seqNode.context.identifiedBy { // If there is a diff on the identifier property, don't include the context.
+			return defaultPath
+		}
+	}
+	contextMap := make(map[string]yaml.Node)
+	if err := seqNode.context.mappingNode.Decode(contextMap); err != nil {
+		return defaultPath
+	}
+	if valueNode, ok := contextMap[seqNode.context.identifiedBy]; ok {
+		return fmt.Sprintf("- %s: %s", seqNode.context.identifiedBy, valueNode.Value)
+	}
+	return defaultPath
 }
 
 func (f *seqItemFormatter) childIndent(curr int) int {

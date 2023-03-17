@@ -100,7 +100,7 @@ Mary:
     ~ - circle -> ellipse
 `,
 		},
-		"list with a map value changed": { // TODO(lou1415926): handle list of maps modification
+		"list with a map value changed": {
 			old: `
 StrawberryPopularitySurvey:
   - Name: Dog
@@ -131,7 +131,7 @@ StrawberryPopularitySurvey:
 			wanted: `
 ~ StrawberryPopularitySurvey:
     (1 unchanged item)
-    ~ - (changed item)
+    ~ - Name: Bear
       + ChangeOfMind: yeah
       ~ LikeStrawberry: meh -> ok
       ~ Reason(s):
@@ -232,6 +232,13 @@ Mary:
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
+			ogItemsIdentifiedBy := mapItemsIdentifiedBy
+			defer func() {
+				mapItemsIdentifiedBy = ogItemsIdentifiedBy
+			}()
+			mapItemsIdentifiedBy = map[string]string{
+				"StrawberryPopularitySurvey": "Name",
+			}
 			gotTree, err := From(tc.old).Parse([]byte(tc.curr))
 			require.NoError(t, err)
 
