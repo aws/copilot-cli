@@ -16,6 +16,7 @@
     "TaskCount": "5",
     "TaskMemory": "512",
     "WorkloadName": "fe",
+    "nginxEnvFileARN": "",
     "tlsEnvFileARN": ""
   },
   "Tags": {
