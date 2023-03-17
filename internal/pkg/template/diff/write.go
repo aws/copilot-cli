@@ -4,9 +4,11 @@
 package diff
 
 import (
+	"fmt"
 	"io"
 
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
+	"github.com/dustin/go-humanize/english"
 )
 
 const (
@@ -38,9 +40,12 @@ func (s *treeWriter) write() error {
 
 func (s *treeWriter) writeTree(node diffNode, indent int) error {
 	var formatter formatter
-	switch node.(type) {
-	// case *unchangedNode:
-	// TODO(lou1425926): handle unchanged. 
+	switch node := node.(type) {
+	case *unchangedNode:
+		content := fmt.Sprintf("(%s)", english.Plural(node.unchangedCount(), "unchanged item", "unchanged items"))
+		content = process(content, indentByFn(indent))
+		_, err := s.writer.Write([]byte(color.Faint.Sprint(content + "\n")))
+		return err
 	case *seqItemNode:
 		formatter = &seqItemFormatter{}
 	default:
