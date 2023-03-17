@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package override
 
 import (
@@ -61,7 +64,7 @@ func (p *Patch) Override(body []byte) ([]byte, error) {
 		case "remove":
 			err = patch.doRemove(&root)
 		case "replace":
-			err = patch.doReplace(&root)
+			err = patch.applyReplace(&root)
 		default:
 			return nil, fmt.Errorf("unsupported operation %q", patch.Operation)
 		}
@@ -181,7 +184,7 @@ func (y *yamlPatch) doRemove(root *yaml.Node) error {
 	})
 }
 
-func (y *yamlPatch) doReplace(root *yaml.Node) error {
+func (y *yamlPatch) applyReplace(root *yaml.Node) error {
 	return followJSONPointer(root, y.Path, func(node *yaml.Node, pointer []string) error {
 		if len(pointer) > 0 {
 			return nil
