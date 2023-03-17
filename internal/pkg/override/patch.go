@@ -51,9 +51,18 @@ func (p *Patch) Override(body []byte) ([]byte, error) {
 	}
 
 	for _, patch := range patches {
-		if err := patch.apply(&root); err != nil {
-			return nil, fmt.Errorf("unable to apply patch with operation %q at %q: %w", patch.Operation, patch.Path, err)
+		switch patch.Operation {
+		case "add":
+			if err := patch.applyAdd(&root); err != nil {
+				return nil, fmt.Errorf("unable to apply %q patch at %q: %w", patch.Operation, patch.Path, err)
+			}
+		default:
 		}
+		/*
+			if err := patch.apply(&root); err != nil {
+				return nil, fmt.Errorf("unable to apply patch with operation %q at %q: %w", patch.Operation, patch.Path, err)
+			}
+		*/
 	}
 
 	// marshal back to []byte
@@ -116,6 +125,74 @@ func printSplit(split []string) {
 // replace needs the target map/sequence node
 // remove path is the VALUE node. node should be the parent of that node.
 
+func (y yamlPatch) applyAdd(node *yaml.Node) error {
+	split := strings.Split(strings.TrimSpace(y.Path), "/")
+
+	switch node.Kind {
+	case yaml.DocumentNode:
+		if len(node.Content) != 1 {
+			return fmt.Errorf("don't support multi-doc yaml")
+		}
+
+		y.Path = strings.Join(split[1:], "/")
+		return y.applyAdd(node.Content[0])
+	case yaml.MappingNode:
+		for i := 0; i < len(node.Content); i += 2 {
+			if node.Content[i].Value == split[0] {
+				y.Path = strings.Join(split[1:], "/")
+				return y.applyAdd(node.Content[i+1])
+			}
+		}
+
+		if len(split) > 1 {
+			return fmt.Errorf("key %q not found in map", split[0])
+		}
+
+		if y.Path == "" {
+			// merging node with y.Value (which should be a map)
+			node.Content = append(node.Content, y.Value.Content...)
+			return nil
+		}
+
+		// adding this entry to node: split[0]: y.Value
+		node.Content = append(node.Content, &yaml.Node{
+			Kind:  yaml.ScalarNode,
+			Tag:   "!!str",
+			Value: split[0],
+		})
+		node.Content = append(node.Content, &y.Value)
+		return nil
+	case yaml.SequenceNode:
+		idx, err := strconv.Atoi(split[0])
+		if len(split) == 1 {
+			if split[0] == "-" || split[0] == "" {
+				// append to end of sequence
+				node.Content = append(node.Content, &y.Value)
+				return nil
+			}
+
+			if err != nil {
+				return fmt.Errorf("expected index in sequence, got %q", split[0])
+			}
+
+			// insert in the given index
+			node.Content = append(node.Content[:idx], append([]*yaml.Node{&y.Value}, node.Content[idx:]...)...)
+			return nil
+		}
+
+		if err != nil {
+			return fmt.Errorf("expected index in sequence, got %q", split[0])
+		}
+
+		y.Path = strings.Join(split[1:], "/")
+		return y.applyAdd(node.Content[idx])
+	default:
+		return fmt.Errorf("invalid node type %#v for path", node.Kind)
+	}
+}
+
+/*
+
 func (y yamlPatch) apply(root *yaml.Node) error {
 	switch y.Operation {
 	case "add":
@@ -124,7 +201,11 @@ func (y yamlPatch) apply(root *yaml.Node) error {
 			return fmt.Errorf("unable to apply patch with operation %q at %q: %w", y.Operation, y.Path, err)
 		}
 
-		node.Content = append(node.Content, y.Value.Content...)
+		// TODO need some way to know if we are encoding (like a replace) or if we got the parent node
+		// because both are valid options - a _specific_ index to append to
+
+		// node.Kind = y.Value.Kind
+		// node.Content = append(node.Content, y.Value.Content...)
 	case "replace":
 		node, err := getNode(root, y.Path)
 		if err != nil {
@@ -167,20 +248,24 @@ func (y yamlPatch) apply(root *yaml.Node) error {
 	return nil
 }
 
-func getNode(node *yaml.Node, path string) (*yaml.Node, error) {
-	if path == "" {
+var (
+	errFinalKeyNonExistent = errors.New("final key in pointer does not exist")
+)
+
+func getNode(node *yaml.Node, pointer string) (*yaml.Node, error) {
+	if pointer == "" {
 		return node, nil
 	}
 
 	// follow the JSON pointer pointer down to the node path.
 	// fix pointer syntax: https://www.rfc-editor.org/rfc/rfc6901#section-3
 	// TODO figure out how to handle the path being "/" " ".
-	split := strings.Split(strings.TrimSpace(path), "/")
+	split := strings.Split(strings.TrimSpace(pointer), "/")
 
 	switch node.Kind {
 	case yaml.DocumentNode:
 		if len(node.Content) != 1 {
-			return nil, fmt.Errorf("don't support multi-doc yaml")
+			return node, fmt.Errorf("don't support multi-doc yaml")
 		}
 
 		return getNode(node.Content[0], strings.Join(split[1:], "/"))
@@ -192,16 +277,21 @@ func getNode(node *yaml.Node, path string) (*yaml.Node, error) {
 			}
 		}
 
-		return nil, fmt.Errorf("key %q not found in map", split[0])
+		if len(split) == 1 {
+			return node, errFinalKeyNonExistent
+		}
+
+		return node, fmt.Errorf("key %q not found in map", split[0])
 	case yaml.SequenceNode:
 		// this key _should_ be a number or "-"
+		if len(split) == 1 {
+		}
+
 		var idx int
 		if split[0] == "-" {
 			idx = len(node.Content)
 			// insert a new node to represent the last index
-			node.Content = append(node.Content, &yaml.Node{
-				Kind: yaml.ScalarNode,
-			})
+			node.Content = append(node.Content, &yaml.Node{})
 		} else {
 			var err error
 			idx, err = strconv.Atoi(split[0])
@@ -210,10 +300,10 @@ func getNode(node *yaml.Node, path string) (*yaml.Node, error) {
 			}
 		}
 
-		fmt.Printf("returning node at idx: %v\n", idx)
 		return getNode(node.Content[idx], strings.Join(split[1:], "/"))
 	default:
-		// error
 		return nil, fmt.Errorf("invalid node type %#v for path", node.Kind)
 	}
 }
+
+*/

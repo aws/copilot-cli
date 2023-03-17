@@ -35,7 +35,83 @@ Resources:
       Prop1: value
       Prop2: false`,
 		},
-		"add to sequence": {
+		"add to map in pointer": {
+			yaml: `
+Resources:
+  TaskDef:
+    Type: AWS::ECS::TaskDefinition`,
+			overrides: `
+- op: add
+  path: /Resources/TaskDef/Properties
+  value:
+    Prop1: value
+    Prop2: false`,
+			expected: `
+Resources:
+  TaskDef:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Prop1: value
+      Prop2: false`,
+		},
+		"add to beginning sequence": {
+			yaml: `
+Resources:
+  TaskDef:
+    List:
+      - asdf
+      - jkl;`,
+			overrides: `
+- op: add
+  path: /Resources/TaskDef/List/0
+  value: qwerty`,
+			expected: `
+Resources:
+  TaskDef:
+    List:
+      - qwerty
+      - asdf
+      - jkl;`,
+		},
+		"add to middle sequence": {
+			yaml: `
+Resources:
+  TaskDef:
+    List:
+      - asdf
+      - jkl;`,
+			overrides: `
+- op: add
+  path: /Resources/TaskDef/List/1
+  value: qwerty`,
+			expected: `
+Resources:
+  TaskDef:
+    List:
+      - asdf
+      - qwerty
+      - jkl;`,
+		},
+		"add to end sequence using index": {
+			yaml: `
+Resources:
+  TaskDef:
+    List:
+      - asdf
+      - jkl;`,
+			overrides: `
+- op: add
+  path: /Resources/TaskDef/List/-
+  value: qwerty`,
+			expected: `
+Resources:
+  TaskDef:
+    List:
+      - asdf
+      - jkl;
+      - qwerty`,
+		},
+		"add to end sequence without index": {
 			yaml: `
 Resources:
   IAMRole:
@@ -54,7 +130,7 @@ Resources:
                   - "*"`,
 			overrides: `
 - op: add
-  path: /Resources/IAMRole/Properties/Policies/0/PolicyDocument/Statement/0/Action/-
+  path: /Resources/IAMRole/Properties/Policies/0/PolicyDocument/Statement/0/Action
   value:
     key: value
     key2: value2`,
