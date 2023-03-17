@@ -5,6 +5,7 @@ package template
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 	"unicode"
 )
@@ -43,19 +44,37 @@ type CFNResource struct {
 	LogicalID string
 }
 
+// CDKImport is the interface to import a CDK package.
+type CDKImport interface {
+	ImportName() string
+	ImportShortRename() string
+}
+
 type cfnResources []CFNResource
 
-// UniqueTypes returns the list of unique CFN types.
-func (rs cfnResources) UniqueTypes() []CFNType {
-	var uniqueTypes []CFNType
-	seen := make(map[CFNType]struct{})
+// Imports returns a list of CDK imports for a given list of CloudFormation resources.
+func (rs cfnResources) Imports() []CDKImport {
+	// Find a unique CFN type per service.
+	// For example, given "AWS::ECS::Service" and "AWS::ECS::TaskDef" we want to retain only one of them.
+	seen := make(map[string]CFNType)
 	for _, r := range rs {
-		if _, ok := seen[r.Type]; !ok {
-			uniqueTypes = append(uniqueTypes, r.Type)
+		serviceName := strings.Split(strings.ToLower(string(r.Type)), "::")[1]
+		if _, ok := seen[serviceName]; ok {
+			continue
 		}
-		seen[r.Type] = struct{}{}
+		seen[serviceName] = r.Type
 	}
-	return uniqueTypes
+
+	imports := make([]CDKImport, len(seen))
+	i := 0
+	for _, resourceType := range seen {
+		imports[i] = resourceType
+		i += 1
+	}
+	sort.Slice(imports, func(i, j int) bool { // Ensure the output is deterministic for unit tests.
+		return imports[i].ImportShortRename() < imports[j].ImportShortRename()
+	})
+	return imports
 }
 
 // CFNType is a CloudFormation resource type such as "AWS::ECS::Service".
