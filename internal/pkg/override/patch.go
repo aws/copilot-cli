@@ -54,19 +54,18 @@ func (p *Patch) Override(body []byte) ([]byte, error) {
 	}
 
 	for _, patch := range patches {
-		var applyOp func(*yaml.Node) error
+		var err error
 		switch patch.Operation {
 		case "add":
-			applyOp = patch.applyAdd
+			err = patch.doAdd(&root)
 		case "remove":
-			applyOp = patch.applyRemove
+			err = patch.doRemove(&root)
 		case "replace":
-			applyOp = patch.applyReplace
+			err = patch.doReplace(&root)
 		default:
 			return nil, fmt.Errorf("unsupported operation %q", patch.Operation)
 		}
-
-		if err := applyOp(&root); err != nil {
+		if err != nil {
 			return nil, fmt.Errorf("unable to apply %q patch at %q: %w", patch.Operation, patch.Path, err)
 		}
 	}
@@ -104,7 +103,7 @@ func (p *Patch) unmarshalPatches() ([]yamlPatch, error) {
 	return patches, nil
 }
 
-func (y *yamlPatch) applyAdd(root *yaml.Node) error {
+func (y *yamlPatch) doAdd(root *yaml.Node) error {
 	return followJSONPointer(root, y.Path, func(node *yaml.Node, pointer []string) error {
 		if len(pointer) != 1 {
 			return nil
@@ -151,7 +150,7 @@ func (y *yamlPatch) applyAdd(root *yaml.Node) error {
 	})
 }
 
-func (y *yamlPatch) applyRemove(root *yaml.Node) error {
+func (y *yamlPatch) doRemove(root *yaml.Node) error {
 	return followJSONPointer(root, y.Path, func(node *yaml.Node, pointer []string) error {
 		if len(pointer) != 1 {
 			return nil
@@ -182,7 +181,7 @@ func (y *yamlPatch) applyRemove(root *yaml.Node) error {
 	})
 }
 
-func (y *yamlPatch) applyReplace(root *yaml.Node) error {
+func (y *yamlPatch) doReplace(root *yaml.Node) error {
 	return followJSONPointer(root, y.Path, func(node *yaml.Node, pointer []string) error {
 		if len(pointer) > 0 {
 			return nil
