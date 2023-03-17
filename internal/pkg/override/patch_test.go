@@ -30,7 +30,6 @@ Resources:
 			expected: `
 Resources:
   TaskDef:
-    Type: AWS::ECS::TaskDefinition
     Properties:
       Prop1: value
       Prop2: false`,
@@ -130,7 +129,7 @@ Resources:
                   - "*"`,
 			overrides: `
 - op: add
-  path: /Resources/IAMRole/Properties/Policies/0/PolicyDocument/Statement/0/Action
+  path: /Resources/IAMRole/Properties/Policies/0/PolicyDocument/Statement/0/Action/-
   value:
     key: value
     key2: value2`,
@@ -295,6 +294,32 @@ Resources:
     - jkl;
     - - very list
       - many item`,
+		},
+		"works with special characters": {
+			yaml: `
+Resources:
+  key:
+    key~with/weirdchars/: old`,
+			overrides: `
+- op: replace
+  path: /Resources/key/key~0with~1weirdchars~1
+  value: new`,
+			expected: `
+Resources:
+  key:
+    key~with/weirdchars/: new`,
+		},
+		"empty string key works": {
+			yaml: `
+key: asdf
+"": old`,
+			overrides: `
+- op: replace
+  path: /
+  value: new`,
+			expected: `
+key: asdf
+"": new`,
 		},
 	}
 
