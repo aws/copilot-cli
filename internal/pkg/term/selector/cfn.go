@@ -5,6 +5,7 @@ package selector
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/template"
@@ -47,6 +48,12 @@ func (sel *CFNSelector) Resources(msg, finalMsg, help, body string) ([]template.
 			Hint:  resource.Type,
 		})
 	}
+	sort.Slice(options, func(i, j int) bool { // Sort options by resource type, if they're the same resource type then sort by logicalID.
+		if options[i].Hint == options[j].Hint {
+			return options[i].Value < options[j].Value
+		}
+		return options[i].Hint < options[j].Hint
+	})
 	logicalIDs, err := sel.prompt.MultiSelectOptions(msg, help, options, prompt.WithFinalMessage(finalMsg))
 	if err != nil {
 		return nil, fmt.Errorf("select CloudFormation resources: %v", err)
