@@ -14,6 +14,7 @@ type formatter interface {
 	formatYAML(*yaml.Node) ([]byte, error)
 	formatMod(node diffNode) string
 	formatPath(node diffNode) string
+	childIndent(currIndent int) int
 }
 
 type seqItemFormatter struct{}
@@ -32,7 +33,17 @@ func (f *seqItemFormatter) formatMod(node diffNode) string {
 }
 
 func (f *seqItemFormatter) formatPath(_ diffNode) string {
-	return ""
+	return "- (changed item)"
+}
+
+func (f *seqItemFormatter) childIndent(curr int) int {
+	/* A seq item diff should look like:
+	   - (item)
+	     ~ Field1: a
+	     + Field2: b
+	   Where "~ Filed1: a" and "+ Field2: b" are its children. The indentation should increase by len("- "), which is 2.
+	*/
+	return curr + 2
 }
 
 type keyedFormatter struct {
@@ -61,6 +72,10 @@ func (f *keyedFormatter) formatMod(node diffNode) string {
 
 func (f *keyedFormatter) formatPath(node diffNode) string {
 	return node.key() + ":"
+}
+
+func (f *keyedFormatter) childIndent(curr int) int {
+	return curr + indentInc
 }
 
 func prefixByFn(prefix string) func(line string) string {
