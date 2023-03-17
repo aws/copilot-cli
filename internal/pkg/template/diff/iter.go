@@ -3,7 +3,9 @@
 
 package diff
 
-import "gopkg.in/yaml.v3"
+import (
+	"gopkg.in/yaml.v3"
+)
 
 type action int
 
@@ -74,6 +76,14 @@ func (i *lcsStateMachine) action() action {
 	}
 	i.currAction = action
 	return action
+}
+
+func (i *lcsStateMachine) peek() action {
+	var lcsIdxOld, fromIdxOld, toIdxOld, actionOld = i.lcsIndices.index, i.from.index, i.to.index, i.currAction
+	i.next()
+	next := i.action()
+	i.lcsIndices.index, i.from.index, i.to.index, i.currAction = lcsIdxOld, fromIdxOld, toIdxOld, actionOld
+	return next
 }
 
 func (i *lcsStateMachine) next() {

@@ -187,16 +187,13 @@ func parseSequence(fromNode, toNode *yaml.Node) ([]diffNode, error) {
 	var matchCount int
 	inspector := newLCSStateMachine(fromSeq, toSeq, lcsIndices)
 	for action := inspector.action(); action != actonDone; action = inspector.action() {
-		if action == actionMatch {
-			matchCount++
-			inspector.next()
-			continue
-		}
-		if matchCount != 0 {
-			children = append(children, &unchangedNode{count: matchCount})
-			matchCount = 0
-		}
 		switch action {
+		case actionMatch:
+			matchCount++
+			if action := inspector.peek(); action != actionMatch {
+				children = append(children, &unchangedNode{count: matchCount})
+				matchCount = 0
+			}
 		case actionMod:
 			// TODO(lou1415926): handle list of maps modification
 			diff := cachedDiff[cacheKey(inspector.fromIndex(), inspector.toIndex())]
@@ -227,9 +224,6 @@ func parseSequence(fromNode, toNode *yaml.Node) ([]diffNode, error) {
 			})
 		}
 		inspector.next()
-	}
-	if matchCount != 0 {
-		children = append(children, &unchangedNode{count: matchCount})
 	}
 	return children, nil
 }
