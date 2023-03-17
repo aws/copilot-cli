@@ -37,12 +37,12 @@ type lcsStateMachine struct {
 	currAction action
 }
 
-func (i *lcsStateMachine) action() action {
+func (sm *lcsStateMachine) action() action {
 	var action action
 	var (
-		lcsDone  = i.lcsIndices.index >= len(i.lcsIndices.data)
-		fromDone = i.from.index >= len(i.from.data)
-		toDone   = i.to.index >= len(i.to.data)
+		lcsDone  = sm.lcsIndices.index >= len(sm.lcsIndices.data)
+		fromDone = sm.from.index >= len(sm.from.data)
+		toDone   = sm.to.index >= len(sm.to.data)
 	)
 	if lcsDone {
 		switch {
@@ -58,61 +58,61 @@ func (i *lcsStateMachine) action() action {
 			// Ex: "a,b" -> "a,c". When the lcsStateMachine moves to (b,c), lcs is done, and b is modified into c.
 			action = actionMod
 		}
-		i.currAction = action
+		sm.currAction = action
 		return action
 	}
-	commonIdx := i.lcsIndices.data[i.lcsIndices.index]
+	commonIdx := sm.lcsIndices.data[sm.lcsIndices.index]
 	switch {
-	case i.from.index == commonIdx.inA && i.to.index == commonIdx.inB:
+	case sm.from.index == commonIdx.inA && sm.to.index == commonIdx.inB:
 		action = actionMatch
-	case i.from.index != commonIdx.inA && i.to.index != commonIdx.inB:
+	case sm.from.index != commonIdx.inA && sm.to.index != commonIdx.inB:
 		action = actionMod
-	case i.from.index != commonIdx.inA:
+	case sm.from.index != commonIdx.inA:
 		// Ex: "a,b,c" -> "c,1,2". When the lcsStateMachine is at (a,c /(b,c), only "c" is common, a,b are considered deleted.
 		action = actionDel
 	default:
 		// Ex: "a,b,c" -> "1,2,a". When the lcsStateMachine is at (a,1) and (a,2), only "a" is common, "1,2" are considered inserted.
 		action = actionInsert
 	}
-	i.currAction = action
+	sm.currAction = action
 	return action
 }
 
-func (i *lcsStateMachine) peek() action {
-	var lcsIdxOld, fromIdxOld, toIdxOld, actionOld = i.lcsIndices.index, i.from.index, i.to.index, i.currAction
-	i.next()
-	next := i.action()
-	i.lcsIndices.index, i.from.index, i.to.index, i.currAction = lcsIdxOld, fromIdxOld, toIdxOld, actionOld
+func (sm *lcsStateMachine) peek() action {
+	var lcsIdxOld, fromIdxOld, toIdxOld, actionOld = sm.lcsIndices.index, sm.from.index, sm.to.index, sm.currAction
+	sm.next()
+	next := sm.action()
+	sm.lcsIndices.index, sm.from.index, sm.to.index, sm.currAction = lcsIdxOld, fromIdxOld, toIdxOld, actionOld
 	return next
 }
 
-func (i *lcsStateMachine) next() {
-	switch i.currAction {
+func (sm *lcsStateMachine) next() {
+	switch sm.currAction {
 	case actionMatch:
-		i.lcsIndices.index++
+		sm.lcsIndices.index++
 		fallthrough
 	case actionMod:
-		i.from.index++
-		i.to.index++
+		sm.from.index++
+		sm.to.index++
 	case actionDel:
-		i.from.index++
+		sm.from.index++
 	case actionInsert:
-		i.to.index++
+		sm.to.index++
 	}
 }
 
-func (i *lcsStateMachine) fromItem() yaml.Node {
-	return i.from.data[i.from.index]
+func (sm *lcsStateMachine) fromItem() yaml.Node {
+	return sm.from.data[sm.from.index]
 }
 
-func (i *lcsStateMachine) toItem() yaml.Node {
-	return i.to.data[i.to.index]
+func (sm *lcsStateMachine) toItem() yaml.Node {
+	return sm.to.data[sm.to.index]
 }
 
-func (i *lcsStateMachine) fromIndex() int {
-	return i.from.index
+func (sm *lcsStateMachine) fromIndex() int {
+	return sm.from.index
 }
 
-func (i *lcsStateMachine) toIndex() int {
-	return i.to.index
+func (sm *lcsStateMachine) toIndex() int {
+	return sm.to.index
 }
