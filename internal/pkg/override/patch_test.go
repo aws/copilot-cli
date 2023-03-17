@@ -275,6 +275,27 @@ Resources:
     Type: AWS::ECS::TaskDefinition
     Description: jkl;`,
 		},
+		"replace map with scalar": {
+			yaml: `
+Resources:
+  List:
+    - asdf
+    - key: value
+      key2: value2
+    - - very list
+      - many item`,
+			overrides: `
+- op: replace
+  path: /Resources/List/1
+  value: jkl;`,
+			expected: `
+Resources:
+  List:
+    - asdf
+    - jkl;
+    - - very list
+      - many item`,
+		},
 	}
 
 	for name, tc := range tests {

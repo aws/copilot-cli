@@ -1,6 +1,7 @@
 package override
 
 import (
+	"errors"
 	"fmt"
 	"path/filepath"
 	"strconv"
@@ -60,6 +61,10 @@ func (p *Patch) Override(body []byte) ([]byte, error) {
 			if err := patch.applyRemove(&root); err != nil {
 				return nil, fmt.Errorf("unable to apply %q patch at %q: %w", patch.Operation, patch.Path, err)
 			}
+		case "replace":
+			if err := patch.applyReplace(&root); err != nil {
+				return nil, fmt.Errorf("unable to apply %q patch at %q: %w", patch.Operation, patch.Path, err)
+			}
 		default:
 		}
 	}
@@ -117,12 +122,10 @@ func printSplit(split []string) {
 	fmt.Printf("]\n")
 }
 
-// add's target is any map/sequence node
-// replace's target is a map/sequence/scalar node
-// remove's target is a map/sequence node
-
-// replace needs the target map/sequence node
-// remove path is the VALUE node. node should be the parent of that node.
+// TODO make sure whole document selector works
+// follow the JSON pointer pointer down to the node path.
+// fix pointer syntax: https://www.rfc-editor.org/rfc/rfc6901#section-3
+// TODO figure out how to handle the path being "/" " ".
 
 func (y yamlPatch) applyAdd(node *yaml.Node) error {
 	split := strings.Split(strings.TrimSpace(y.Path), "/")
@@ -242,107 +245,68 @@ func (y yamlPatch) applyRemove(node *yaml.Node) error {
 	}
 }
 
-/*
-func (y yamlPatch) apply(root *yaml.Node) error {
-	switch y.Operation {
-	case "replace":
-		node, err := getNode(root, y.Path)
-		if err != nil {
-			return fmt.Errorf("unable to apply patch with operation %q at %q: %w", y.Operation, y.Path, err)
-		}
-
-		node.Encode(y.Value)
-	case "remove":
-		split := strings.Split(y.Path, "/")
-		if len(split) == 0 {
-			// TODO remove the whole thing i guess?
-			root.Content = nil
-			return nil
-		}
-
-		key := split[len(split)-1]
-
-		node, err := getNode(root, strings.Join(split[:len(split)-1], "/"))
-		if err != nil {
-			return fmt.Errorf("unable to apply patch with operation %q at %q: %w", y.Operation, y.Path, err)
-		}
-
-		switch node.Kind {
-		case yaml.MappingNode:
-			for i := 0; i < len(node.Content); i += 2 {
-				if node.Content[i].Value == key {
-					node.Content = append(node.Content[:i], node.Content[i+2:]...)
-					return nil
-				}
-			}
-
-			return fmt.Errorf("non existant key %q in map", key)
-		case yaml.SequenceNode:
-			// TODO
-		default:
-			fmt.Printf("can't remove from yaml node of type %v\n", node.Kind)
-		}
+func (y yamlPatch) applyReplace(node *yaml.Node) error {
+	if y.Path == "" {
+		return node.Encode(y.Value)
 	}
 
-	return nil
-}
-
-var (
-	errFinalKeyNonExistent = errors.New("final key in pointer does not exist")
-)
-
-func getNode(node *yaml.Node, pointer string) (*yaml.Node, error) {
-	if pointer == "" {
-		return node, nil
-	}
-
-	// follow the JSON pointer pointer down to the node path.
-	// fix pointer syntax: https://www.rfc-editor.org/rfc/rfc6901#section-3
-	// TODO figure out how to handle the path being "/" " ".
-	split := strings.Split(strings.TrimSpace(pointer), "/")
-
+	split := strings.Split(strings.TrimSpace(y.Path), "/")
 	switch node.Kind {
 	case yaml.DocumentNode:
 		if len(node.Content) != 1 {
-			return node, fmt.Errorf("don't support multi-doc yaml")
+			return fmt.Errorf("don't support multi-doc yaml")
 		}
 
-		return getNode(node.Content[0], strings.Join(split[1:], "/"))
+		y.Path = strings.Join(split[1:], "/")
+		return y.applyReplace(node.Content[0])
 	case yaml.MappingNode:
-		// find the requested node
 		for i := 0; i < len(node.Content); i += 2 {
 			if node.Content[i].Value == split[0] {
-				return getNode(node.Content[i+1], strings.Join(split[1:], "/"))
+				y.Path = strings.Join(split[1:], "/")
+				return y.applyReplace(node.Content[i+1])
 			}
 		}
 
-		if len(split) == 1 {
-			return node, errFinalKeyNonExistent
-		}
-
-		return node, fmt.Errorf("key %q not found in map", split[0])
+		return fmt.Errorf("key %q not found in map", split[0])
 	case yaml.SequenceNode:
-		// this key _should_ be a number or "-"
-		if len(split) == 1 {
+		idx, err := strconv.Atoi(split[0])
+		if err != nil {
+			return fmt.Errorf("expected index in sequence, got %q", split[0])
+		}
+		if idx > len(node.Content)-1 {
+			return fmt.Errorf("invalid index %d for sequence of length %d", idx, len(node.Content))
 		}
 
-		var idx int
-		if split[0] == "-" {
-			idx = len(node.Content)
-			// insert a new node to represent the last index
-			node.Content = append(node.Content, &yaml.Node{})
-		} else {
-			var err error
-			idx, err = strconv.Atoi(split[0])
-			if err != nil {
-				return nil, fmt.Errorf("expected index in sequence, got %q", split[0])
-			}
-		}
-
-		return getNode(node.Content[idx], strings.Join(split[1:], "/"))
+		y.Path = strings.Join(split[1:], "/")
+		return y.applyReplace(node.Content[idx])
 	default:
-		return nil, fmt.Errorf("invalid node type %#v for path", node.Kind)
+		return nil
 	}
 }
 
-*/
+var errStopFollowingPointer = errors.New("done")
+
+func followPointer(node *yaml.Node, pointer string, visit func(n *yaml.Node, pointer []string) error) error {
+	split := strings.Split(pointer, "/")
+	// replace each key
+
+	return followPointerHelper(node, split, visit)
+}
+
+func followPointerHelper(node *yaml.Node, pointer []string, visit func(n *yaml.Node, pointer []string) error) error {
+	visit(node, pointer)
+
+	switch node.Kind {
+	case yaml.DocumentNode:
+	case yaml.MappingNode:
+		//for i := 0; i < len(node.Content); i += 2 {
+		//	if node.Content[i].Value == split[0] {
+		//		y.Path = strings.Join(split[1:], "/")
+		//		return y.applyReplace(node.Content[i+1])
+		//	}
+		//}
+
+		return fmt.Errorf("key %q not found in map", split[0])
+	case yaml.SequenceNode:
+	}
+}
