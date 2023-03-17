@@ -247,6 +247,7 @@ func TestOverrideEnv_Ask(t *testing.T) {
 							mockCmd.EXPECT().Execute().AnyTimes()
 							return mockCmd, nil
 						},
+						spinner: &spinnerTestDouble{},
 					},
 				}
 				if tc.initMocks != nil {
@@ -330,6 +331,7 @@ func TestOverrideEnv_Ask(t *testing.T) {
 					overrideOpts: &overrideOpts{
 						overrideVars: vars,
 						cfgStore:     mockSSM,
+						spinner:      &spinnerTestDouble{},
 					},
 				}
 				tc.initMocks(ctrl, cmd)

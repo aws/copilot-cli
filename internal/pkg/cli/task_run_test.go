@@ -41,11 +41,24 @@ var defaultOpts = basicOpts{
 	inMemory: 512,
 }
 
-// NOTE: mock spinner so that it doesn't create log output when testing Execute
-type mockSpinner struct{}
+type spinnerTestDouble struct {
+	startFn func(string)
+	stopFn  func(string)
+}
 
-func (s *mockSpinner) Start(label string) {}
-func (s *mockSpinner) Stop(label string)  {}
+// Assert that spinnerTestDouble implements the [progress] interface.
+var _ progress = (*spinnerTestDouble)(nil)
+
+func (s *spinnerTestDouble) Start(label string) {
+	if s.startFn != nil {
+		s.startFn(label)
+	}
+}
+func (s *spinnerTestDouble) Stop(label string) {
+	if s.stopFn != nil {
+		s.stopFn(label)
+	}
+}
 
 func TestTaskRunOpts_Validate(t *testing.T) {
 	testCases := map[string]struct {
@@ -1169,7 +1182,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 					entrypoint: tc.inEntryPoint,
 					envFile:    tc.inEnvFile,
 				},
-				spinner:  &mockSpinner{},
+				spinner:  &spinnerTestDouble{},
 				store:    mocks.store,
 				provider: mocks.provider,
 				fs:       fs.Fs,

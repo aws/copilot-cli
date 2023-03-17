@@ -100,7 +100,7 @@ func (d *staticSiteDeployer) UploadArtifacts() (*UploadArtifactsOutput, error) {
 			return nil, err
 		}
 	}
-	return d.uploadArtifacts()
+	return d.uploadArtifacts(d.uploadArtifactsToS3, d.uploadCustomResources)
 }
 
 func (d *staticSiteDeployer) stackConfiguration(in *StackRuntimeConfiguration) (cloudformation.StackConfiguration, error) {
