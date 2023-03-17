@@ -294,19 +294,41 @@ func followPointer(node *yaml.Node, pointer string, visit func(n *yaml.Node, poi
 }
 
 func followPointerHelper(node *yaml.Node, pointer []string, visit func(n *yaml.Node, pointer []string) error) error {
-	visit(node, pointer)
+	if err := visit(node, pointer); err != nil {
+		if errors.Is(err, errStopFollowingPointer) {
+			return nil
+		}
+		return err
+	} else if len(pointer) == 0 {
+		return nil
+	}
 
 	switch node.Kind {
 	case yaml.DocumentNode:
-	case yaml.MappingNode:
-		//for i := 0; i < len(node.Content); i += 2 {
-		//	if node.Content[i].Value == split[0] {
-		//		y.Path = strings.Join(split[1:], "/")
-		//		return y.applyReplace(node.Content[i+1])
-		//	}
-		//}
+		if len(node.Content) != 1 {
+			return fmt.Errorf("don't support multi-doc yaml")
+		}
 
-		return fmt.Errorf("key %q not found in map", split[0])
+		return followPointerHelper(node, pointer[1:], visit)
+	case yaml.MappingNode:
+		for i := 0; i < len(node.Content); i += 2 {
+			if node.Content[i].Value == pointer[0] {
+				return followPointerHelper(node.Content[i+1], pointer[1:], visit)
+			}
+		}
+
+		return fmt.Errorf("key %q not found in map", pointer[0])
 	case yaml.SequenceNode:
+		idx, err := strconv.Atoi(pointer[0])
+		switch {
+		case err != nil:
+			return fmt.Errorf("expected index in sequence, got %q", pointer[0])
+		case idx > len(node.Content)-1:
+			return fmt.Errorf("invalid index %d for sequence of length %d", idx, len(node.Content))
+		}
+
+		return followPointerHelper(node.Content[idx], pointer[1:], visit)
+	default:
+		return fmt.Errorf("invalid node type %#v for path", node.Kind)
 	}
 }
