@@ -432,10 +432,10 @@ func (cfg ImageWithPortAndHealthcheck) exposedPorts(workloadName string) []Expos
 	}
 	return []ExposedPort{
 		{
-			Port:                   aws.Uint16Value(cfg.Port),
-			Protocol:               "tcp",
-			ContainerName:          workloadName,
-			IsContainerDefinedPort: true,
+			Port:                 aws.Uint16Value(cfg.Port),
+			Protocol:             "tcp",
+			ContainerName:        workloadName,
+			isDefinedByContainer: true,
 		},
 	}
 
@@ -447,10 +447,10 @@ func (cfg ImageWithHealthcheckAndOptionalPort) exposedPorts(workloadName string)
 	}
 	return []ExposedPort{
 		{
-			Port:                   aws.Uint16Value(cfg.Port),
-			Protocol:               "tcp",
-			ContainerName:          workloadName,
-			IsContainerDefinedPort: true,
+			Port:                 aws.Uint16Value(cfg.Port),
+			Protocol:             "tcp",
+			ContainerName:        workloadName,
+			isDefinedByContainer: true,
 		},
 	}
 }
@@ -534,10 +534,10 @@ func (sidecar SidecarConfig) exposedPorts(sidecarName string) ([]ExposedPort, er
 	}
 	return []ExposedPort{
 		{
-			Port:                   uint16(port),
-			Protocol:               strings.ToLower(protocol),
-			ContainerName:          sidecarName,
-			IsContainerDefinedPort: true,
+			Port:                 uint16(port),
+			Protocol:             strings.ToLower(protocol),
+			ContainerName:        sidecarName,
+			isDefinedByContainer: true,
 		},
 	}, nil
 }
@@ -667,7 +667,7 @@ func prepareParsedExposedPortsMap(exposedPorts []ExposedPort) (map[string][]Expo
 	return parsedContainerMap, parsedExposedPortMap
 }
 
-// Target returns target container and target port for the NLB Listener configuration.
+// Target returns target container and target port for a NLB listener configuration.
 // This method should be called only when NLB config is not empty.
 func (listener NetworkLoadBalancerListener) Target(exposedPorts ExposedPortsIndex) (targetContainer string, targetPort string, err error) {
 	// Parse listener port and protocol.
@@ -686,21 +686,21 @@ func (listener NetworkLoadBalancerListener) Target(exposedPorts ExposedPortsInde
 		if aws.StringValue(listener.TargetContainer) != exposedPorts.WorkloadName {
 			targetContainer = aws.StringValue(listener.TargetContainer)
 			for _, portConfig := range exposedPorts.PortsForContainer[targetContainer] {
-				if portConfig.IsContainerDefinedPort {
+				if portConfig.isDefinedByContainer {
 					targetPort = strconv.Itoa(int(portConfig.Port))
 					/* NOTE: When the `target_port` is empty, the intended target port should be the port that is explicitly exposed by the container. Consider the following example
-										```
-					  					http:
-					  					   target_container: nginx
-					 					   target_port: 83 # Implicitly exposed by the nginx container
-										nlb:
-										  port: 80/tcp
-										  target_container: nginx
-										 sidecars:
-										   nginx:
-										     port: 81 # Explicitly exposed by the nginx container.
-										 ```
-					 					 In this example, the target port for the NLB listener should be 81
+					```
+					http:
+					  target_container: nginx
+					  target_port: 83 # Implicitly exposed by the nginx container
+					nlb:
+					  port: 80/tcp
+					  target_container: nginx
+					sidecars:
+					  nginx:
+					    port: 81 # Explicitly exposed by the nginx container.
+					```
+					In this example, the target port for the NLB listener should be 81
 					*/
 				}
 			}
