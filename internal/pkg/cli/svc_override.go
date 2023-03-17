@@ -11,6 +11,8 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/term/log"
+	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
@@ -56,6 +58,7 @@ func newOverrideWorkloadOpts(vars overrideWorkloadVars) (*overrideWorkloadOpts, 
 			cfgStore:     cfgStore,
 			prompt:       prompt,
 			cfnPrompt:    selector.NewCFNSelector(prompt),
+			spinner:      termprogress.NewSpinner(log.DiagnosticWriter),
 		},
 		ws:       ws,
 		wsPrompt: selector.NewLocalWorkloadSelector(prompt, cfgStore, ws),

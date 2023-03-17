@@ -1408,3 +1408,26 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 		})
 	}
 }
+
+func TestUploadArtifacts(t *testing.T) {
+	d := &workloadDeployer{}
+	errFunc := func(out *UploadArtifactsOutput) error {
+		return errors.New("test error")
+	}
+	noErrFunc := func(out *UploadArtifactsOutput) error {
+		out.AddonsURL = "an addons url"
+		return nil
+	}
+
+	out, err := d.uploadArtifacts(noErrFunc, errFunc)
+	require.EqualError(t, err, "test error")
+	require.Nil(t, out)
+
+	out, err = d.uploadArtifacts(errFunc, noErrFunc)
+	require.EqualError(t, err, "test error")
+	require.Nil(t, out)
+
+	out, err = d.uploadArtifacts(noErrFunc)
+	require.NoError(t, err)
+	require.Equal(t, &UploadArtifactsOutput{AddonsURL: "an addons url"}, out)
+}

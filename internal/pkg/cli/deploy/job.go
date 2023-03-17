@@ -57,7 +57,7 @@ func scheduledJobCustomResources(fs template.Reader) ([]*customresource.CustomRe
 
 // UploadArtifacts uploads the deployment artifacts such as the container image, custom resources, addons and env files.
 func (d *jobDeployer) UploadArtifacts() (*UploadArtifactsOutput, error) {
-	return d.uploadArtifacts()
+	return d.uploadArtifacts(d.uploadContainerImages, d.uploadArtifactsToS3, d.uploadCustomResources)
 }
 
 // GenerateCloudFormationTemplate generates a CloudFormation template and parameters for a workload.

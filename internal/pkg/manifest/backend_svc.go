@@ -214,6 +214,7 @@ func (b *BackendService) ExposedPorts() (ExposedPortsIndex, error) {
 	}
 	portsForContainer, containerForPort := prepareParsedExposedPortsMap(sortExposedPorts(exposedPorts))
 	return ExposedPortsIndex{
+		WorkloadName:      workloadName,
 		PortsForContainer: portsForContainer,
 		ContainerForPort:  containerForPort,
 	}, nil
