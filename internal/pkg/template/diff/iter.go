@@ -14,7 +14,7 @@ const (
 	actionMod
 	actionDel
 	actionInsert
-	actonDone
+	actionDone
 )
 
 type tracker[T any] struct {
@@ -47,7 +47,7 @@ func (i *lcsStateMachine) action() action {
 	if lcsDone {
 		switch {
 		case fromDone && toDone:
-			action = actonDone
+			action = actionDone
 		case toDone:
 			// Ex: "a,d,e" -> "a". When the lcsStateMachine moves to "d" in "from", both lcs and "to" are done, and "d,e" are considered deleted.
 			action = actionDel

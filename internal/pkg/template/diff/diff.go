@@ -186,7 +186,7 @@ func parseSequence(fromNode, toNode *yaml.Node) ([]diffNode, error) {
 	var children []diffNode
 	var matchCount int
 	inspector := newLCSStateMachine(fromSeq, toSeq, lcsIndices)
-	for action := inspector.action(); action != actonDone; action = inspector.action() {
+	for action := inspector.action(); action != actionDone; action = inspector.action() {
 		switch action {
 		case actionMatch:
 			matchCount++
