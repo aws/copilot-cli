@@ -80,7 +80,7 @@ func workerCustomResources(fs template.Reader) ([]*customresource.CustomResource
 
 // UploadArtifacts uploads the deployment artifacts such as the container image, custom resources, addons and env files.
 func (d *workerSvcDeployer) UploadArtifacts() (*UploadArtifactsOutput, error) {
-	return d.uploadArtifacts()
+	return d.uploadArtifacts(d.uploadContainerImages, d.uploadArtifactsToS3, d.uploadCustomResources)
 }
 
 type workerSvcDeployOutput struct {
@@ -192,7 +192,7 @@ func (d *workerSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*
 			return nil, fmt.Errorf("create stack configuration: %w", err)
 		}
 	}
-	
+
 	return &workerSvcStackConfigurationOutput{
 		svcStackConfigurationOutput: svcStackConfigurationOutput{
 			conf: cloudformation.WrapWithTemplateOverrider(conf, d.overrider),
