@@ -2133,9 +2133,10 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 			wantedExposedPorts: map[string][]ExposedPort{
 				"frontend": {
 					{
-						Port:          80,
-						ContainerName: "frontend",
-						Protocol:      "tcp",
+						Port:                 80,
+						ContainerName:        "frontend",
+						Protocol:             "tcp",
+						isDefinedByContainer: true,
 					},
 					{
 						Port:          81,
@@ -2150,9 +2151,10 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 				},
 				"xray": {
 					{
-						Port:          85,
-						ContainerName: "xray",
-						Protocol:      "tcp",
+						Port:                 85,
+						ContainerName:        "xray",
+						Protocol:             "tcp",
+						isDefinedByContainer: true,
 					},
 				},
 			},
@@ -2201,16 +2203,18 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 			wantedExposedPorts: map[string][]ExposedPort{
 				"frontend": {
 					{
-						Port:          80,
-						ContainerName: "frontend",
-						Protocol:      "tcp",
+						Port:                 80,
+						ContainerName:        "frontend",
+						Protocol:             "tcp",
+						isDefinedByContainer: true,
 					},
 				},
 				"xray": {
 					{
-						Port:          81,
-						ContainerName: "xray",
-						Protocol:      "tcp",
+						Port:                 81,
+						ContainerName:        "xray",
+						Protocol:             "tcp",
+						isDefinedByContainer: true,
 					},
 					{
 						Port:          82,
@@ -2281,9 +2285,10 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 			wantedExposedPorts: map[string][]ExposedPort{
 				"frontend": {
 					{
-						Port:          80,
-						ContainerName: "frontend",
-						Protocol:      "tcp",
+						Port:                 80,
+						ContainerName:        "frontend",
+						Protocol:             "tcp",
+						isDefinedByContainer: true,
 					},
 					{
 						Port:          85,
@@ -2298,9 +2303,10 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 				},
 				"xray": {
 					{
-						Port:          81,
-						ContainerName: "xray",
-						Protocol:      "tcp",
+						Port:                 81,
+						ContainerName:        "xray",
+						Protocol:             "tcp",
+						isDefinedByContainer: true,
 					},
 					{
 						Port:          82,
