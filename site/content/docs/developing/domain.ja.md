@@ -38,7 +38,7 @@ ${SvcName}-nlb.${EnvName}.${AppName}.${DomainName}
 
 #### ドメインエイリアスのカスタマイズ
 
-Copilot が Service に割り当てるデフォルトのドメイン名を使いたくない場合は、[Manifest](../manifest/overview.ja.md) の `alias` セクションを編集して、サービスのカスタム[エイリアス](https://docs.aws.amazon.com/ja_jp/Route53/latest/DeveloperGuide/resource-record-sets-choosing-alias-non-alias.html)を設定することができます。以下のスニペットは Service にエイリアスを設定する例です。
+Copilot が Service に割り当てるデフォルトのドメイン名を使いたくない場合は、[Manifest](../manifest/overview.ja.md) の `alias` セクションを編集して、Service のカスタム[エイリアス](https://docs.aws.amazon.com/ja_jp/Route53/latest/DeveloperGuide/resource-record-sets-choosing-alias-non-alias.html)を設定することができます。以下のスニペットは Service にエイリアスを設定する例です。
 
 ``` yaml
 # copilot/{service name}/manifest.yml のなかで

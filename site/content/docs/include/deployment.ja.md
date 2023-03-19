@@ -13,7 +13,7 @@ deployment セクションには、デプロイ中に実行されるタスクの
 !!! info
     デプロイの開始時にアラームが「In alarm」状態にある場合、Amazon ECS はそのデプロイの間、アラームを監視しません。詳細については、[こちらのドキュメント](https://docs.aws.amazon.com/ja_jp/AmazonECS/latest/userguide/deployment-alarm-failure.html)をお読みください。
 
-文字列のリストとして、[デプロイのロールバック](https://docs.aws.amazon.com/ja_jp/AmazonECS/latest/userguide/deployment-alarm-failure.html)を引き起こす可能性のある、サービスに関連付ける既存のCloudWatchアラームの名前を指定します。
+文字列のリストとして、[デプロイのロールバック](https://docs.aws.amazon.com/ja_jp/AmazonECS/latest/userguide/deployment-alarm-failure.html)を引き起こす可能性のある、Service に関連付ける既存の CloudWatch アラームの名前を指定します。
 
 ```yaml
 deployment:

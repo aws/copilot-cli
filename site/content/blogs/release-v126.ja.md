@@ -81,12 +81,12 @@ Service Manifest でロールバックアラームを設定すると、最初の
 
 ワークロードストレージと同様に、Environment ストレージも内部的には [Environment Addon](../docs/developing/addons/environment.ja.md) と同じです。
 
-### デフォルトで[サービスごとのデータベースパターン](https://docs.aws.amazon.com/ja_jp/prescriptive-guidance/latest/modernization-data-persistence/database-per-service.html) を採用
+### デフォルトで[Database-per-service パターン](https://docs.aws.amazon.com/ja_jp/prescriptive-guidance/latest/modernization-data-persistence/database-per-service.html) を採用
 
 マイクロサービスの世界では、複数サービスで共有されるモノリスなストレージの代わりに、データストレージをそれぞれマイクロサービス専用に設定することが推奨されます。
-複数のサービスで共有されるモノリスストレージの代わりに。
+
 このパターンでは、マイクロサービスの核となる特徴である疎結合が維持されます。
-Copilot では、この Service ごとのデータベースパターンに従うことを推奨しています。デフォルトでは、Copilot が生成するストレージリソースは、1 つのサービスまたは Job によってアクセスされることを前提としています。
+Copilot では、この Service ごとのデータベースパターンに従うことを推奨しています。デフォルトでは、Copilot が生成するストレージリソースは、1 つの Service または Job によってアクセスされることを前提としています。
 
 !!!note ""
 ただし、各ユーザーには独自の状況があります。データストレージを複数の Service 間で共有する必要がある場合は、
@@ -158,15 +158,15 @@ copilot storage init \
             └── user-ingress.yml        # A security group ingress that grants "api" access to the "api" storage"
    ```
 
-詳細については、[ストレージページ](../docs/developing/storage.ja.md) もチェックしてください。
+詳細については、[ストレージ](../docs/developing/storage.ja.md) もチェックしてください。
 
 <a id="request-driven-web-service-secrets-support"></a>
 
 ## Request-Driven Web Service シークレットのサポート
 
-Copilot を使用して、シークレット (SSM パラメータストアまたは AWS シークレットマネージャーから) を環境変数として App Runner サービスに追加できるようになりました。
+Copilot を使用して、シークレット (Systems Manager パラメータストアまたは AWS Secrets Manager から) を環境変数として App Runner サービスに追加できるようになりました。
 
-Load Balanced Web Service などの他のサービスタイプと同様に、最初にシークレットに次のタグを追加する必要があります。
+Load Balanced Web Service などの他の Service タイプと同様に、最初にシークレットに次のタグを追加する必要があります。
 
 | キー | 値 |
 |-----------------------------------------------------------------------------------|

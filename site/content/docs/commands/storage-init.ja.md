@@ -6,7 +6,7 @@ $ copilot storage init
 
 `copilot storage init` は、Addon として新しいストレージリソースを作成します。
 
-デフォルトでは、Copilot は「Database per Service」パターンに従っています。
+デフォルトでは、Copilot は「Database-per-service パターン」に従っています。
 `copilot storage init`で指定した Service または Job だけが、そのストレージリソースにアクセスできます。
 ストレージは、Service のコンテナ内から、ストレージリソースの名前またはリソースにアクセスするためのクレデンシャル情報を保持する環境変数を介してアクセスできます。
 
@@ -17,7 +17,7 @@ $ copilot storage init
 これは、Service や Job の1つにアタッチされ、ワークロードと同時にデプロイされ削除されます。
 例えば、`copilot svc deploy --name api`を実行すると、リソースは「api」とともにターゲット Environment にデプロイされます。
 
-また、ストレージリソースは [Environment アドオン](../developing/addons/environment.ja.md) として作成することができます。
+また、ストレージリソースは [Environment Addon](../developing/addons/environment.ja.md) として作成することができます。
 Environment に関連づけられ、Environment と同時にデプロイされ削除されます。
 例えば、`copilot env deploy --name test`を実行すると、test という Environment と一緒にリソースがデプロイされます。
 
@@ -66,7 +66,7 @@ Optional Flags
 $ copilot storage init -n my-bucket -t S3 -w frontend -l workload
 ```
 
-`copilot storage init`は、Addon として新しいストレージリソースを作成します。"api "サービスがフロントする "my-bucket"という名前の S3 バケットを Environment 単位で作成します。
+`copilot storage init`は、Addon として新しいストレージリソースを作成します。"api" Service がフロントする "my-bucket" という名前の S3 バケットを Environment 単位で作成します。
 
 ```console
 $ copilot storage init \
@@ -110,10 +110,10 @@ $ copilot storage init \
 
 Copilot は S3 バケット、DynamoDB テーブル、または Aurora Serverless クラスターを指定する CloudFormation テンプレートを `addons` ディレクトリに書き出します
 `copilot [svc/job/env] deploy`を実行すると、CLI はこのテンプレートを `addons` ディレクトリの他のすべてのテンプレートとマージして、Service または Environment に関連するネストされたスタックを作成します。
-このネストされたスタックには、サービスまたは Environment に関連付けられたすべての [Addon リソース](../developing/addons/workload.ja.md) が記述され、Service または Environment がデプロイされる場所に展開されます。
+このネストされたスタックには、Service または Environment に関連付けられたすべての [Addon リソース](../developing/addons/workload.ja.md) が記述され、Service または Environment がデプロイされる場所に展開されます。
 
 ### シナリオの例
-#### Service に関連づけられたS3ストレージ
+#### Service に関連づけられた S3 ストレージ
 
 ```console
 $ copilot storage init --storage-type S3 --name bucket \
