@@ -100,9 +100,11 @@ func TestBackendSvcDeployer_stackConfiguration(t *testing.T) {
 			Manifest: &manifest.BackendService{
 				BackendServiceConfig: manifest.BackendServiceConfig{
 					RoutingRule: manifest.RoutingRuleConfiguration{
-						Alias: manifest.Alias{
-							AdvancedAliases: []manifest.AdvancedAlias{
-								{Alias: aws.String("go.dev")},
+						Main: manifest.RoutingRule{
+							Alias: manifest.Alias{
+								AdvancedAliases: []manifest.AdvancedAlias{
+									{Alias: aws.String("go.dev")},
+								},
 							},
 						},
 					},
@@ -129,9 +131,11 @@ func TestBackendSvcDeployer_stackConfiguration(t *testing.T) {
 			Manifest: &manifest.BackendService{
 				BackendServiceConfig: manifest.BackendServiceConfig{
 					RoutingRule: manifest.RoutingRuleConfiguration{
-						Alias: manifest.Alias{
-							AdvancedAliases: []manifest.AdvancedAlias{
-								{Alias: aws.String("go.dev")},
+						Main: manifest.RoutingRule{
+							Alias: manifest.Alias{
+								AdvancedAliases: []manifest.AdvancedAlias{
+									{Alias: aws.String("go.dev")},
+								},
 							},
 						},
 					},
@@ -159,9 +163,11 @@ func TestBackendSvcDeployer_stackConfiguration(t *testing.T) {
 			Manifest: &manifest.BackendService{
 				BackendServiceConfig: manifest.BackendServiceConfig{
 					RoutingRule: manifest.RoutingRuleConfiguration{
-						Alias: manifest.Alias{
-							AdvancedAliases: []manifest.AdvancedAlias{
-								{Alias: aws.String("go.dev")},
+						Main: manifest.RoutingRule{
+							Alias: manifest.Alias{
+								AdvancedAliases: []manifest.AdvancedAlias{
+									{Alias: aws.String("go.dev")},
+								},
 							},
 						},
 					},
@@ -188,7 +194,9 @@ func TestBackendSvcDeployer_stackConfiguration(t *testing.T) {
 			Manifest: &manifest.BackendService{
 				BackendServiceConfig: manifest.BackendServiceConfig{
 					RoutingRule: manifest.RoutingRuleConfiguration{
-						Path: aws.String("/"),
+						Main: manifest.RoutingRule{
+							Path: aws.String("/"),
+						},
 					},
 				},
 			},

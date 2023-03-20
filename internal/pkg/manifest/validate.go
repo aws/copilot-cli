@@ -82,10 +82,20 @@ func (l LoadBalancedWebService) validate() error {
 	if err = validateTargetContainer(validateTargetContainerOpts{
 		mainContainerName: aws.StringValue(l.Name),
 		mainContainerPort: l.ImageConfig.Port,
-		targetContainer:   l.RoutingRule.GetTargetContainer(),
+		targetContainer:   l.RoutingRule.Main.TargetContainer,
 		sidecarConfig:     l.Sidecars,
 	}); err != nil {
-		return fmt.Errorf("validate HTTP load balancer target: %w", err)
+		return fmt.Errorf(`validate load balancer target for "http": %w`, err)
+	}
+	for idx, rule := range l.RoutingRule.AdditionalRoutingRules {
+		if err = validateTargetContainer(validateTargetContainerOpts{
+			mainContainerName: aws.StringValue(l.Name),
+			mainContainerPort: l.ImageConfig.Port,
+			targetContainer:   rule.TargetContainer,
+			sidecarConfig:     l.Sidecars,
+		}); err != nil {
+			return fmt.Errorf(`validate load balancer target for "http.additional_rules[%d]": %w`, idx, err)
+		}
 	}
 	if err = validateTargetContainer(validateTargetContainerOpts{
 		mainContainerName: aws.StringValue(l.Name),
@@ -255,10 +265,20 @@ func (b BackendService) validate() error {
 	if err = validateTargetContainer(validateTargetContainerOpts{
 		mainContainerName: aws.StringValue(b.Name),
 		mainContainerPort: b.ImageConfig.Port,
-		targetContainer:   b.RoutingRule.GetTargetContainer(),
+		targetContainer:   b.RoutingRule.Main.TargetContainer,
 		sidecarConfig:     b.Sidecars,
 	}); err != nil {
-		return fmt.Errorf("validate HTTP load balancer target: %w", err)
+		return fmt.Errorf(`validate load balancer target for "http": %w`, err)
+	}
+	for idx, rule := range b.RoutingRule.AdditionalRoutingRules {
+		if err = validateTargetContainer(validateTargetContainerOpts{
+			mainContainerName: aws.StringValue(b.Name),
+			mainContainerPort: b.ImageConfig.Port,
+			targetContainer:   rule.TargetContainer,
+			sidecarConfig:     b.Sidecars,
+		}); err != nil {
+			return fmt.Errorf(`validate load balancer target for "http.additional_rules[%d]": %w`, idx, err)
+		}
 	}
 	if err = validateContainerDeps(validateDependenciesOpts{
 		sidecarConfig:     b.Sidecars,
@@ -312,7 +332,7 @@ func (b BackendServiceConfig) validate() error {
 		return fmt.Errorf(`validate "network": %w`, err)
 	}
 	if b.Network.Connect.Alias != nil {
-		if b.RoutingRule.GetTargetContainer() == nil && b.ImageConfig.Port == nil {
+		if b.RoutingRule.Main.TargetContainer == nil && b.ImageConfig.Port == nil {
 			return fmt.Errorf(`cannot set "network.connect.alias" when no ports are exposed`)
 		}
 	}
@@ -745,35 +765,51 @@ func (CommandOverride) validate() error {
 	return nil
 }
 
+// validate returns nil if RoutingRuleConfiguration is configured correctly.
+func (r RoutingRuleConfiguration) validate() error {
+	if r.IsEmpty() {
+		return nil
+	}
+	// we consider the fact that primary routing rule is mandatory before you write any additional routing rules.
+	if err := r.Main.validate(); err != nil {
+		return err
+	}
+	if r.Main.TargetContainer != nil && r.TargetContainerCamelCase != nil {
+		return &errFieldMutualExclusive{
+			firstField:  "target_container",
+			secondField: "targetContainer",
+		}
+	}
+
+	for idx, rule := range r.AdditionalRoutingRules {
+		if err := rule.validate(); err != nil {
+			return fmt.Errorf(`validate "additional_rules[%d]": %w`, idx, err)
+		}
+	}
+	return nil
+}
+
 // validate returns nil if RoutingRuleConfigOrBool is configured correctly.
 func (r RoutingRuleConfigOrBool) validate() error {
 	if r.Disabled() {
 		return nil
 	}
-	if r.Path == nil {
-		return &errFieldMustBeSpecified{
-			missingField: "path",
-		}
-	}
+
 	return r.RoutingRuleConfiguration.validate()
 }
 
 // validate returns nil if RoutingRuleConfiguration is configured correctly.
-func (r RoutingRuleConfiguration) validate() error {
-	if r.IsEmpty() {
-		return nil
+func (r RoutingRule) validate() error {
+	if r.Path == nil {
+		return &errFieldMustBeSpecified{
+			missingField: "path",
+		}
 	}
 	if err := r.HealthCheck.validate(); err != nil {
 		return fmt.Errorf(`validate "healthcheck": %w`, err)
 	}
 	if err := r.Alias.validate(); err != nil {
 		return fmt.Errorf(`validate "alias": %w`, err)
-	}
-	if r.TargetContainer != nil && r.TargetContainerCamelCase != nil {
-		return &errFieldMutualExclusive{
-			firstField:  "target_container",
-			secondField: "targetContainer",
-		}
 	}
 	for ind, ip := range r.AllowedSourceIps {
 		if err := ip.validate(); err != nil {
@@ -783,11 +819,6 @@ func (r RoutingRuleConfiguration) validate() error {
 	if r.ProtocolVersion != nil {
 		if !contains(strings.ToUpper(*r.ProtocolVersion), httpProtocolVersions) {
 			return fmt.Errorf(`"version" field value '%s' must be one of %s`, *r.ProtocolVersion, english.WordSeries(httpProtocolVersions, "or"))
-		}
-	}
-	if r.Path == nil {
-		return &errFieldMustBeSpecified{
-			missingField: "path",
 		}
 	}
 	if r.HostedZone != nil && r.Alias.IsEmpty() {
@@ -1929,28 +1960,39 @@ func populateALBPortsAndValidate(containerNameFor map[uint16]string, opts valida
 	// This condition takes care of the use case where target_container is set to x container and
 	// target_port exposing port 80 which is already exposed by container y.That means container x
 	// is trying to expose the port that is already being exposed by container y, so error out.
-	if opts.alb == nil {
+	if opts.alb == nil || opts.alb.IsEmpty() {
 		return nil
 	}
 	alb := opts.alb
-	if alb.TargetPort == nil {
+	for _, rule := range alb.RoutingRules() {
+		if rule.TargetPort == nil {
+			continue
+		}
+		if err := validateContainersNotExposingSamePort(containerNameFor, aws.Uint16Value(rule.TargetPort), rule.TargetContainer); err != nil {
+			return err
+		}
+		targetContainerName := opts.mainContainerName
+		if rule.TargetContainer != nil {
+			targetContainerName = aws.StringValue(rule.TargetContainer)
+		}
+		containerNameFor[aws.Uint16Value(rule.TargetPort)] = targetContainerName
+	}
+
+	return nil
+}
+
+func validateContainersNotExposingSamePort(containerNameFor map[uint16]string, targetPort uint16, targetContainer *string) error {
+	container, exists := containerNameFor[targetPort]
+	if !exists {
 		return nil
 	}
-	if exposed, ok := containerNameFor[aws.Uint16Value(alb.TargetPort)]; ok {
-		if alb.TargetContainer != nil && exposed != aws.StringValue(alb.TargetContainer) {
-			return &errContainersExposingSamePort{
-				firstContainer:  aws.StringValue(alb.TargetContainer),
-				secondContainer: exposed,
-				port:            aws.Uint16Value(alb.TargetPort),
-			}
+	if targetContainer != nil && container != aws.StringValue(targetContainer) {
+		return &errContainersExposingSamePort{
+			firstContainer:  aws.StringValue(targetContainer),
+			secondContainer: container,
+			port:            targetPort,
 		}
 	}
-	targetContainerName := opts.mainContainerName
-	if alb.TargetContainer != nil {
-		targetContainerName = aws.StringValue(alb.TargetContainer)
-	}
-	containerNameFor[aws.Uint16Value(alb.TargetPort)] = targetContainerName
-
 	return nil
 }
 
@@ -1992,21 +2034,6 @@ func populateAndValidateNLBPorts(listener NetworkLoadBalancerListener, container
 		targetContainer = aws.StringValue(listener.TargetContainer)
 	}
 	containerNameFor[targetPort] = targetContainer
-	return nil
-}
-
-func validateContainersNotExposingSamePort(containerNameFor map[uint16]string, targetPort uint16, targetContainer *string) error {
-	container, exists := containerNameFor[targetPort]
-	if !exists {
-		return nil
-	}
-	if targetContainer != nil && container != aws.StringValue(targetContainer) {
-		return &errContainersExposingSamePort{
-			firstContainer:  aws.StringValue(targetContainer),
-			secondContainer: container,
-			port:            targetPort,
-		}
-	}
 	return nil
 }
 

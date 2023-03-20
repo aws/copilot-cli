@@ -485,31 +485,31 @@ func convertEnvSecurityGroupCfg(mft *manifest.Environment) (*template.SecurityGr
 }
 
 func (s *LoadBalancedWebService) convertALBListener() (*template.ALBListener, error) {
-	albConfig := s.manifest.RoutingRule
-	if albConfig.Disabled() || albConfig.IsEmpty() {
+	rrConfig := s.manifest.RoutingRule
+	if rrConfig.Disabled() || rrConfig.IsEmpty() {
 		return nil, nil
 	}
 	var rules []template.ALBListenerRule
 	// build listener rule config from primary rule config from manifest.
 	rule, err := routingRuleConfigConverter{
-		rule:         albConfig.RoutingRuleConfiguration,
+		rule:         rrConfig.Main,
 		manifest:     s.manifest,
 		httpsEnabled: s.httpsEnabled,
 	}.convert()
 	if err != nil {
 		return nil, err
 	}
-	aliasesFor, err := convertHostedZone(albConfig.Alias, albConfig.HostedZone)
+	rules = append(rules, *rule)
+	aliasesFor, err := convertHostedZone(rrConfig.Main.Alias, rrConfig.Main.HostedZone)
 	if err != nil {
 		return nil, err
 	}
-	rules = append(rules, *rule)
 
 	// TODO: @pbhingre build listener rule config from additional rules from manifest.
 
 	httpRedirect := true
-	if albConfig.RedirectToHTTPS != nil {
-		httpRedirect = aws.BoolValue(albConfig.RedirectToHTTPS)
+	if rrConfig.Main.RedirectToHTTPS != nil {
+		httpRedirect = aws.BoolValue(rrConfig.Main.RedirectToHTTPS)
 	}
 
 	return &template.ALBListener{
@@ -521,14 +521,14 @@ func (s *LoadBalancedWebService) convertALBListener() (*template.ALBListener, er
 }
 
 func (s *BackendService) convertALBListener() (*template.ALBListener, error) {
-	albConfig := s.manifest.RoutingRule
-	if albConfig.IsEmpty() {
+	rrConfig := s.manifest.RoutingRule
+	if rrConfig.IsEmpty() {
 		return nil, nil
 	}
 	var rules []template.ALBListenerRule
 	// build listener rule config from primary rule config from manifest.
 	rule, err := routingRuleConfigConverter{
-		rule:         albConfig,
+		rule:         rrConfig.Main,
 		manifest:     s.manifest,
 		httpsEnabled: s.httpsEnabled,
 	}.convert()
@@ -536,7 +536,7 @@ func (s *BackendService) convertALBListener() (*template.ALBListener, error) {
 		return nil, err
 	}
 	rules = append(rules, *rule)
-	hostedZoneAliases, err := convertHostedZone(albConfig.Alias, albConfig.HostedZone)
+	hostedZoneAliases, err := convertHostedZone(rrConfig.Main.Alias, rrConfig.Main.HostedZone)
 	if err != nil {
 		return nil, err
 	}
@@ -558,7 +558,7 @@ type loadBalancerTargeter interface {
 }
 
 type routingRuleConfigConverter struct {
-	rule         manifest.RoutingRuleConfiguration
+	rule         manifest.RoutingRule
 	manifest     loadBalancerTargeter
 	httpsEnabled bool
 }

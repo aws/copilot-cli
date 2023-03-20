@@ -1378,9 +1378,11 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 						},
 						RoutingRule: manifest.RoutingRuleConfigOrBool{
 							RoutingRuleConfiguration: manifest.RoutingRuleConfiguration{
-								Path:            aws.String("/"),
-								Alias:           tc.inAliases,
-								RedirectToHTTPS: tc.inRedirectToHTTPS,
+								Main: manifest.RoutingRule{
+									Path:            aws.String("/"),
+									Alias:           tc.inAliases,
+									RedirectToHTTPS: tc.inRedirectToHTTPS,
+								},
 							},
 						},
 						NLBConfig: tc.inNLB,
