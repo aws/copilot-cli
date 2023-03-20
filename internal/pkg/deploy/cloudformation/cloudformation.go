@@ -231,7 +231,7 @@ func (cf CloudFormation) AddonsTemplate(stackName string) (string, error) {
 		}
 	}
 	if addonsStackName == "" {
-		return "", err
+		return "", nil
 	}
 	tmpl, err := cf.cfnClient.TemplateBody(addonsStackName)
 	if err != nil {
