@@ -6,6 +6,7 @@ package stack
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -273,7 +274,7 @@ Outputs:
 			},
 			Manifest: mft,
 			RuntimeConfig: RuntimeConfig{
-				Images: map[string]ECRImage{
+				PushedImages: map[string]ECRImage{
 					"test": {
 						RepoURL:  testImageRepoURL,
 						ImageTag: testImageTag,
@@ -306,7 +307,6 @@ Outputs:
 				StartPeriod: aws.Int64(0),
 				Timeout:     aws.Int64(10),
 			},
-			HostedZoneAliases: make(template.AliasesForHostedZone),
 			HTTPTargetContainer: template.HTTPTargetContainer{
 				Port: "8080",
 				Name: "api",
@@ -405,7 +405,19 @@ Outputs:
 		}
 		mft.Sidecars = map[string]*manifest.SidecarConfig{
 			"envoy": {
+				Image: manifest.Union[*string, manifest.ImageLocationOrBuild]{
+					Advanced: manifest.ImageLocationOrBuild{
+						Build: manifest.BuildArgsOrString{
+							BuildString: aws.String("./Dockerfile"),
+						},
+					},
+				},
 				Port: aws.String("443"),
+			},
+			"nginx": {
+				Image: manifest.Union[*string, manifest.ImageLocationOrBuild]{
+					Basic: aws.String("mockImageURL"),
+				},
 			},
 		}
 		privatePlacement := manifest.PrivateSubnetPlacement
@@ -442,10 +454,18 @@ Outputs:
 			},
 			Manifest: mft,
 			RuntimeConfig: RuntimeConfig{
-				Images: map[string]ECRImage{
+				PushedImages: map[string]ECRImage{
 					"test": {
-						RepoURL:  testImageRepoURL,
-						ImageTag: testImageTag,
+						RepoURL:           testImageRepoURL,
+						ImageTag:          testImageTag,
+						MainContainerName: "test",
+						ContainerName:     "test",
+					},
+					"envoy": {
+						RepoURL:           testImageRepoURL,
+						ImageTag:          testImageTag,
+						MainContainerName: "test",
+						ContainerName:     "envoy",
 					},
 				},
 			},
@@ -475,7 +495,7 @@ Outputs:
 			Sidecars: []*template.SidecarOpts{
 				{
 					Name:  "envoy",
-					Image: aws.String(""),
+					Image: aws.String(fmt.Sprintf("%s:%s-%s", testImageRepoURL, "envoy", testImageTag)),
 					PortMappings: []*template.PortMapping{
 						{
 							Protocol:      "tcp",
@@ -483,6 +503,11 @@ Outputs:
 							ContainerPort: 443,
 						},
 					},
+				},
+				{
+					Name:         "nginx",
+					Image:        aws.String("mockImageURL"),
+					PortMappings: []*template.PortMapping{},
 				},
 			},
 			HTTPTargetContainer: template.HTTPTargetContainer{
@@ -499,9 +524,7 @@ Outputs:
 				Interval:           aws.Int64(61),
 				GracePeriod:        60,
 			},
-			HostedZoneAliases:   make(template.AliasesForHostedZone),
 			DeregistrationDelay: aws.Int64(59),
-			AllowedSourceIps:    []string{"10.0.1.0/24"},
 			CustomResources: map[string]template.S3ObjectLocation{
 				"EnvControllerFunction": {
 					Bucket: "my-bucket",
@@ -532,6 +555,31 @@ Outputs:
 			},
 			EntryPoint: []string{"enter", "from"},
 			Command:    []string{"here"},
+			ALBListener: &template.ALBListener{
+				Rules: []template.ALBListenerRule{
+					{
+						Path:            "/albPath",
+						TargetContainer: "envoy",
+						TargetPort:      "443",
+						HTTPHealthCheck: template.HTTPHealthCheckOpts{
+							HealthCheckPath:    "/healthz",
+							GracePeriod:        60,
+							Port:               "4200",
+							SuccessCodes:       "418",
+							HealthyThreshold:   aws.Int64(64),
+							UnhealthyThreshold: aws.Int64(63),
+							Interval:           aws.Int64(61),
+							Timeout:            aws.Int64(62),
+						},
+						AllowedSourceIps: []string{
+							"10.0.1.0/24",
+						},
+						Stickiness: "true",
+					},
+				},
+				HostedZoneAliases: template.AliasesForHostedZone{},
+				MainContainerPort: "8080",
+			},
 			ALBEnabled: true,
 			PortMappings: []*template.PortMapping{
 				{

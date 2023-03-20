@@ -59,12 +59,25 @@ func TestCFNType_L1ConstructName(t *testing.T) {
 	require.Equal(t, "CfnAutoScalingGroup", CFNType("AWS::AutoScaling::AutoScalingGroup").L1ConstructName())
 }
 
-func TestCfnResources_Types(t *testing.T) {
-	require.ElementsMatch(t, []CFNType{
-		"AWS::ECR::Repository",
-		"AWS::ECS::Cluster",
-		"AWS::IAM::Role",
-	}, cfnResources([]CFNResource{
+type cdkImportTestDouble struct {
+	importNameFn      func() string
+	importShortRename func() string
+}
+
+// Assert that cdkImportTestDouble implements the CDKImport interface.
+var _ CDKImport = (*cdkImportTestDouble)(nil)
+
+func (td *cdkImportTestDouble) ImportName() string {
+	return td.importNameFn()
+}
+
+func (td *cdkImportTestDouble) ImportShortRename() string {
+	return td.importShortRename()
+}
+
+func TestCfnResources_Imports(t *testing.T) {
+	// GIVEN
+	resources := cfnResources([]CFNResource{
 		{
 			Type: "AWS::IAM::Role",
 		},
@@ -80,7 +93,46 @@ func TestCfnResources_Types(t *testing.T) {
 		{
 			Type: "AWS::ECR::Repository",
 		},
-	}).UniqueTypes())
+		{
+			Type: "AWS::ECS::Service",
+		},
+	})
+	wanted := []CDKImport{
+		&cdkImportTestDouble{
+			importNameFn: func() string {
+				return "aws_ecr"
+			},
+			importShortRename: func() string {
+				return "ecr"
+			},
+		},
+		&cdkImportTestDouble{
+			importNameFn: func() string {
+				return "aws_ecs"
+			},
+			importShortRename: func() string {
+				return "ecs"
+			},
+		},
+		&cdkImportTestDouble{
+			importNameFn: func() string {
+				return "aws_iam"
+			},
+			importShortRename: func() string {
+				return "iam"
+			},
+		},
+	}
+
+	// WHEN
+	imports := resources.Imports()
+
+	// THEN
+	require.Equal(t, len(imports), len(wanted), "expected number of imports to be equal")
+	for i, lib := range imports {
+		require.Equal(t, wanted[i].ImportName(), lib.ImportName(), "expected import names to match")
+		require.Equal(t, wanted[i].ImportShortRename(), lib.ImportShortRename(), "expected import short renames to match")
+	}
 }
 
 func TestTemplate_WalkOverridesCDKDir(t *testing.T) {
@@ -100,8 +152,8 @@ func TestTemplate_WalkOverridesCDKDir(t *testing.T) {
    "source-map-support": "^0.5.21"
  }
 }`), 0644)
-	_ = afero.WriteFile(fs, "templates/overrides/cdk/stack.ts", []byte(`{{- range $resourceType := .Resources.UniqueTypes }}
-import { {{$resourceType.ImportName}} as {{$resourceType.ImportShortRename}} } from 'aws-cdk-lib';
+	_ = afero.WriteFile(fs, "templates/overrides/cdk/stack.ts", []byte(`{{- range $import := .Resources.Imports }}
+import { {{$import.ImportName}} as {{$import.ImportShortRename}} } from 'aws-cdk-lib';
 {{- end }}
 {{range $resource := .Resources}}
 transform{{$resource.LogicalID}}() {

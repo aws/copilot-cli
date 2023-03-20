@@ -14,7 +14,6 @@ import (
 	"time"
 
 	cloudformation0 "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
-	"github.com/google/uuid"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -102,25 +101,23 @@ func (m *mockTopicLister) ListSNSTopics(_, _ string) ([]deploy.Topic, error) {
 }
 
 type mockWorkloadMft struct {
-	fileName      string
-	buildRequired bool
+	fileName        string
+	dockerBuildArgs map[string]*manifest.DockerBuildArgs
+	workloadName    string
+	customEnvFiles  map[string]string
 }
 
-func (m *mockWorkloadMft) EnvFile() string {
-	return m.fileName
-}
-
-func (m *mockWorkloadMft) BuildRequired() (bool, error) {
-	return m.buildRequired, nil
-}
-
-func (m *mockWorkloadMft) BuildArgs(rootDirectory string) map[string]*manifest.DockerBuildArgs {
-	args := make(map[string]*manifest.DockerBuildArgs)
-	args["mockWkld"] = &manifest.DockerBuildArgs{
-		Dockerfile: aws.String("mockDockerfile"),
-		Context:    aws.String("mockContext"),
+func (m *mockWorkloadMft) EnvFiles() map[string]string {
+	if m.customEnvFiles != nil {
+		return m.customEnvFiles
 	}
-	return args
+	return map[string]string{
+		m.workloadName: m.fileName,
+	}
+}
+
+func (m *mockWorkloadMft) BuildArgs(rootDirectory string) (map[string]*manifest.DockerBuildArgs, error) {
+	return m.dockerBuildArgs, nil
 }
 
 func (m *mockWorkloadMft) ContainerPlatform() string {
@@ -149,6 +146,10 @@ func (s *stubCloudFormationStack) SerializedParameters() (string, error) {
 	return "", nil
 }
 
+func mockEnvFilePath(path string) string {
+	return fmt.Sprintf("%s/%s/%s/%s.env", "manual", "env-files", path, "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
+}
+
 func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 	const (
 		mockName            = "mockWkld"
@@ -157,62 +158,81 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 		mockWorkspacePath   = "."
 		mockEnvFile         = "foo.env"
 		mockS3Bucket        = "mockBucket"
-		mockUUID            = "31323334-3536-4738-b930-313233333435"
 		mockAddonsS3URL     = "https://mockS3DomainName/mockPath"
 		mockBadEnvFileS3URL = "badURL"
 		mockEnvFileS3URL    = "https://stackset-demo-infrastruc-pipelinebuiltartifactbuc-11dj7ctf52wyf.s3.us-west-2.amazonaws.com/manual/1638391936/env"
+		mockEnvFileS3URL2   = "https://stackset-demo-infrastruc-pipelinebuiltartifactbuc-11dj7ctf52wyf.s3.us-west-2.amazonaws.com/manual/1638391936/envbar"
 		mockEnvFileS3ARN    = "arn:aws:s3:::stackset-demo-infrastruc-pipelinebuiltartifactbuc-11dj7ctf52wyf/manual/1638391936/env"
+		mockEnvFileS3ARN2   = "arn:aws:s3:::stackset-demo-infrastruc-pipelinebuiltartifactbuc-11dj7ctf52wyf/manual/1638391936/envbar"
 	)
+	var mockEnvFilesOutput = map[string]string{"mockWkld": mockEnvFileS3ARN}
 	mockResources := &stack.AppRegionalResources{
 		S3Bucket: mockS3Bucket,
 	}
-	mockEnvFilePath := fmt.Sprintf("%s/%s/%s/%s.env", "manual", "env-files", mockEnvFile, "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
 	mockAddonPath := fmt.Sprintf("%s/%s/%s/%s.yml", "manual", "addons", mockName, "1307990e6ba5ca145eb35e99182a9bec46531bc54ddf656a602c780fa0240dee")
 	mockError := errors.New("some error")
-
 	type artifactsUploader interface {
 		UploadArtifacts() (*UploadArtifactsOutput, error)
 	}
 	tests := map[string]struct {
-		inEnvFile       string
-		inBuildRequired bool
-		inRegion        string
-		inMockUserTag   string
-		inMockGitTag    string
+		inEnvFile         string
+		customEnvFiles    map[string]string
+		inRegion          string
+		inMockUserTag     string
+		inMockGitTag      string
+		inDockerBuildArgs map[string]*manifest.DockerBuildArgs
 
 		mock                func(t *testing.T, m *deployMocks)
 		mockServiceDeployer func(deployer *workloadDeployer) artifactsUploader
 		customResourcesFunc customResourcesFunc
 
 		wantAddonsURL     string
-		wantEnvFileARN    string
+		wantEnvFileARNs   map[string]string
 		wantImages        map[string]ContainerImageIdentifier
 		wantBuildRequired bool
 		wantErr           error
 	}{
 		"error if failed to build and push image": {
-			inBuildRequired: true,
-			inMockUserTag:   "v1.0",
+			inMockUserTag: "v1.0",
+			inDockerBuildArgs: map[string]*manifest.DockerBuildArgs{
+				"mockWkld": {
+					Dockerfile: aws.String("mockDockerfile"),
+					Context:    aws.String("mockContext"),
+				},
+			},
 			mock: func(t *testing.T, m *deployMocks) {
 				m.mockImageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
 					Dockerfile: "mockDockerfile",
 					Context:    "mockContext",
 					Platform:   "mockContainerPlatform",
 					Tags:       []string{"latest", "v1.0"},
+					Labels: map[string]string{
+						"com.aws.copilot.image.builder":        "copilot-cli",
+						"com.aws.copilot.image.container.name": "mockWkld",
+					},
 				}).Return("", mockError)
 			},
 			wantErr: fmt.Errorf("build and push image: some error"),
 		},
 		"build and push image with usertag successfully": {
-			inBuildRequired: true,
-			inMockUserTag:   "v1.0",
-			inMockGitTag:    "gitTag",
+			inMockUserTag: "v1.0",
+			inMockGitTag:  "gitTag",
+			inDockerBuildArgs: map[string]*manifest.DockerBuildArgs{
+				"mockWkld": {
+					Dockerfile: aws.String("mockDockerfile"),
+					Context:    aws.String("mockContext"),
+				},
+			},
 			mock: func(t *testing.T, m *deployMocks) {
 				m.mockImageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
 					Dockerfile: "mockDockerfile",
 					Context:    "mockContext",
 					Platform:   "mockContainerPlatform",
 					Tags:       []string{"latest", "v1.0"},
+					Labels: map[string]string{
+						"com.aws.copilot.image.builder":        "copilot-cli",
+						"com.aws.copilot.image.container.name": "mockWkld",
+					},
 				}).Return("mockDigest", nil)
 				m.mockAddons = nil
 			},
@@ -221,20 +241,28 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 					Digest:            "mockDigest",
 					CustomTag:         "v1.0",
 					GitShortCommitTag: "gitTag",
-					uuidTag:           mockUUID,
 				},
 			},
 		},
 
 		"build and push image with gitshortcommit successfully": {
-			inBuildRequired: true,
-			inMockGitTag:    "gitTag",
+			inMockGitTag: "gitTag",
+			inDockerBuildArgs: map[string]*manifest.DockerBuildArgs{
+				"mockWkld": {
+					Dockerfile: aws.String("mockDockerfile"),
+					Context:    aws.String("mockContext"),
+				},
+			},
 			mock: func(t *testing.T, m *deployMocks) {
 				m.mockImageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
 					Dockerfile: "mockDockerfile",
 					Context:    "mockContext",
 					Platform:   "mockContainerPlatform",
 					Tags:       []string{"latest", "gitTag"},
+					Labels: map[string]string{
+						"com.aws.copilot.image.builder":        "copilot-cli",
+						"com.aws.copilot.image.container.name": "mockWkld",
+					},
 				}).Return("mockDigest", nil)
 				m.mockAddons = nil
 			},
@@ -242,27 +270,52 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				mockName: {
 					Digest:            "mockDigest",
 					GitShortCommitTag: "gitTag",
-					uuidTag:           mockUUID,
 				},
 			},
 		},
-		"build and push image with uuid successfully": {
-			inBuildRequired: true,
+		"build and push sidecar container images only with git tag succesfully": {
+			inDockerBuildArgs: map[string]*manifest.DockerBuildArgs{
+				"nginx": {
+					Dockerfile: aws.String("sidecarMockDockerfile"),
+					Context:    aws.String("sidecarMockContext"),
+				},
+				"logging": {
+					Dockerfile: aws.String("web/Dockerfile"),
+					Context:    aws.String("Users/bowie"),
+				},
+			},
+			inMockGitTag: "gitTag",
 			mock: func(t *testing.T, m *deployMocks) {
 				m.mockImageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
-					Dockerfile: "mockDockerfile",
-					Context:    "mockContext",
+					Dockerfile: "sidecarMockDockerfile",
+					Context:    "sidecarMockContext",
 					Platform:   "mockContainerPlatform",
-					Tags:       []string{"latest", mockUUID},
-				}).Return("mockDigest", nil)
+					Tags:       []string{fmt.Sprintf("nginx-%s", "latest"), fmt.Sprintf("nginx-%s", "gitTag")},
+					Labels: map[string]string{
+						"com.aws.copilot.image.builder":        "copilot-cli",
+						"com.aws.copilot.image.container.name": "nginx",
+					},
+				}).Return("sidecarMockDigest1", nil)
+				m.mockImageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
+					Dockerfile: "web/Dockerfile",
+					Context:    "Users/bowie",
+					Platform:   "mockContainerPlatform",
+					Tags:       []string{"logging-latest", fmt.Sprintf("logging-%s", "gitTag")},
+					Labels: map[string]string{
+						"com.aws.copilot.image.builder":        "copilot-cli",
+						"com.aws.copilot.image.container.name": "logging",
+					},
+				}).Return("sidecarMockDigest2", nil)
 				m.mockAddons = nil
 			},
 			wantImages: map[string]ContainerImageIdentifier{
-				mockName: {
-					Digest:            "mockDigest",
-					CustomTag:         "",
-					GitShortCommitTag: "",
-					uuidTag:           mockUUID,
+				"nginx": {
+					Digest:            "sidecarMockDigest1",
+					GitShortCommitTag: "gitTag",
+				},
+				"logging": {
+					Digest:            "sidecarMockDigest2",
+					GitShortCommitTag: "gitTag",
 				},
 			},
 		},
@@ -412,11 +465,50 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			},
 			wantErr: fmt.Errorf("read env file foo.env: some error"),
 		},
+		"successfully share one env file between containers": {
+			customEnvFiles: map[string]string{"nginx": mockEnvFile, mockName: mockEnvFile},
+			inRegion:       "us-west-2",
+			mock: func(t *testing.T, m *deployMocks) {
+				m.mockFileReader.EXPECT().ReadFile(filepath.Join(mockWorkspacePath, mockEnvFile)).Return([]byte{}, nil)
+				m.mockUploader.EXPECT().Upload(mockS3Bucket, mockEnvFilePath(mockEnvFile), gomock.Any()).Return(mockEnvFileS3URL, nil)
+				m.mockAddons.EXPECT().Package(gomock.Any()).Return(nil)
+				m.mockAddons.EXPECT().Template().Return("", nil)
+				m.mockUploader.EXPECT().Upload(gomock.Any(), gomock.Any(), gomock.Any()).Return(mockAddonsS3URL, nil)
+			},
+			wantEnvFileARNs: map[string]string{"nginx": mockEnvFileS3ARN, mockName: mockEnvFileS3ARN},
+			wantAddonsURL:   mockAddonsS3URL,
+		},
+		"upload multiple env files": {
+			customEnvFiles: map[string]string{"nginx": mockEnvFile, mockName: "bar.env"},
+			inRegion:       "us-west-2",
+			mock: func(t *testing.T, m *deployMocks) {
+				m.mockFileReader.EXPECT().ReadFile(filepath.Join(mockWorkspacePath, mockEnvFile)).Return([]byte{}, nil)
+				m.mockUploader.EXPECT().Upload(mockS3Bucket, mockEnvFilePath(mockEnvFile), gomock.Any()).Return(mockEnvFileS3URL, nil)
+				m.mockFileReader.EXPECT().ReadFile(filepath.Join(mockWorkspacePath, "bar.env")).Return([]byte{}, nil)
+				m.mockUploader.EXPECT().Upload(mockS3Bucket, mockEnvFilePath("bar.env"), gomock.Any()).Return(mockEnvFileS3URL2, nil)
+				m.mockAddons.EXPECT().Package(gomock.Any()).Return(nil)
+				m.mockAddons.EXPECT().Template().Return("", nil)
+				m.mockUploader.EXPECT().Upload(gomock.Any(), gomock.Any(), gomock.Any()).Return(mockAddonsS3URL, nil)
+			},
+			wantEnvFileARNs: map[string]string{"nginx": mockEnvFileS3ARN, mockName: mockEnvFileS3ARN2},
+			wantAddonsURL:   mockAddonsS3URL,
+		},
+		"success with no env files present but logging sidecar exists": {
+			inRegion:       "us-west-2",
+			customEnvFiles: map[string]string{manifest.FirelensContainerName: "", mockName: ""},
+			mock: func(t *testing.T, m *deployMocks) {
+				m.mockAddons.EXPECT().Package(gomock.Any()).Return(nil)
+				m.mockAddons.EXPECT().Template().Return("", nil)
+				m.mockUploader.EXPECT().Upload(gomock.Any(), gomock.Any(), gomock.Any()).Return(mockAddonsS3URL, nil)
+			},
+			wantEnvFileARNs: nil,
+			wantAddonsURL:   mockAddonsS3URL,
+		},
 		"error if fail to put env file to s3 bucket": {
 			inEnvFile: mockEnvFile,
 			mock: func(t *testing.T, m *deployMocks) {
 				m.mockFileReader.EXPECT().ReadFile(filepath.Join(mockWorkspacePath, mockEnvFile)).Return([]byte{}, nil)
-				m.mockUploader.EXPECT().Upload(mockS3Bucket, mockEnvFilePath, gomock.Any()).
+				m.mockUploader.EXPECT().Upload(mockS3Bucket, mockEnvFilePath(mockEnvFile), gomock.Any()).
 					Return("", mockError)
 			},
 			wantErr: fmt.Errorf("put env file foo.env artifact to bucket mockBucket: some error"),
@@ -425,7 +517,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			inEnvFile: mockEnvFile,
 			mock: func(t *testing.T, m *deployMocks) {
 				m.mockFileReader.EXPECT().ReadFile(filepath.Join(mockWorkspacePath, mockEnvFile)).Return([]byte{}, nil)
-				m.mockUploader.EXPECT().Upload(mockS3Bucket, mockEnvFilePath, gomock.Any()).
+				m.mockUploader.EXPECT().Upload(mockS3Bucket, mockEnvFilePath(mockEnvFile), gomock.Any()).
 					Return(mockBadEnvFileS3URL, nil)
 
 			},
@@ -436,7 +528,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			inRegion:  "sun-south-0",
 			mock: func(t *testing.T, m *deployMocks) {
 				m.mockFileReader.EXPECT().ReadFile(filepath.Join(mockWorkspacePath, mockEnvFile)).Return([]byte{}, nil)
-				m.mockUploader.EXPECT().Upload(mockS3Bucket, mockEnvFilePath, gomock.Any()).
+				m.mockUploader.EXPECT().Upload(mockS3Bucket, mockEnvFilePath(mockEnvFile), gomock.Any()).
 					Return(mockEnvFileS3URL, nil)
 			},
 			wantErr: fmt.Errorf("find the partition for region sun-south-0"),
@@ -446,7 +538,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			inRegion:  "us-west-2",
 			mock: func(t *testing.T, m *deployMocks) {
 				m.mockFileReader.EXPECT().ReadFile(filepath.Join(mockWorkspacePath, mockEnvFile)).Return([]byte{}, nil)
-				m.mockUploader.EXPECT().Upload(mockS3Bucket, mockEnvFilePath, gomock.Any()).
+				m.mockUploader.EXPECT().Upload(mockS3Bucket, mockEnvFilePath(mockEnvFile), gomock.Any()).
 					Return(mockEnvFileS3URL, nil)
 				m.mockAddons.EXPECT().Package(gomock.Any()).Return(nil)
 				m.mockAddons.EXPECT().Template().Return("some data", nil)
@@ -454,8 +546,8 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 					Return(mockAddonsS3URL, nil)
 			},
 
-			wantAddonsURL:  mockAddonsS3URL,
-			wantEnvFileARN: mockEnvFileS3ARN,
+			wantAddonsURL:   mockAddonsS3URL,
+			wantEnvFileARNs: mockEnvFilesOutput,
 		},
 		"should return error if fail to upload to S3 bucket": {
 			inRegion: "us-west-2",
@@ -490,9 +582,6 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			seed := bytes.NewBufferString("12345678901233456789") // always generate the same UUID
-			uuid.SetRand(seed)
-			defer uuid.SetRand(nil)
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
@@ -524,12 +613,13 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				image: ContainerImageIdentifier{
 					CustomTag:         tc.inMockUserTag,
 					GitShortCommitTag: tc.inMockGitTag,
-					uuidTag:           mockUUID,
 				},
 				workspacePath: mockWorkspacePath,
 				mft: &mockWorkloadMft{
-					fileName:      tc.inEnvFile,
-					buildRequired: tc.inBuildRequired,
+					workloadName:    mockName,
+					fileName:        tc.inEnvFile,
+					customEnvFiles:  tc.customEnvFiles,
+					dockerBuildArgs: tc.inDockerBuildArgs,
 				},
 				fs:                 m.mockFileReader,
 				s3Client:           m.mockUploader,
@@ -558,7 +648,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			} else {
 				require.NoError(t, gotErr)
 				require.Equal(t, tc.wantAddonsURL, got.AddonsURL)
-				require.Equal(t, tc.wantEnvFileARN, got.EnvFileARN)
+				require.Equal(t, tc.wantEnvFileARNs, got.EnvFileARNs)
 				require.Equal(t, tc.wantImages, got.ImageDigests)
 			}
 		})
@@ -775,7 +865,9 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 		},
 		"fail to get public CIDR blocks": {
 			inNLB: manifest.NetworkLoadBalancerConfiguration{
-				Port: aws.String("443/tcp"),
+				Listener: manifest.NetworkLoadBalancerListener{
+					Port: aws.String("443/tcp"),
+				},
 			},
 			inEnvironment: &config.Environment{
 				Name:   mockEnvName,
@@ -808,7 +900,9 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 		},
 		"nlb alias used while app is not associated with a domain": {
 			inNLB: manifest.NetworkLoadBalancerConfiguration{
-				Port:    aws.String("80"),
+				Listener: manifest.NetworkLoadBalancerListener{
+					Port: aws.String("80"),
+				},
 				Aliases: manifest.Alias{AdvancedAliases: mockAlias},
 			},
 			inEnvironment: &config.Environment{
@@ -827,7 +921,9 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 		"nlb alias used while env has imported certs": {
 			inAliases: manifest.Alias{AdvancedAliases: mockAlias},
 			inNLB: manifest.NetworkLoadBalancerConfiguration{
-				Port:    aws.String("80"),
+				Listener: manifest.NetworkLoadBalancerListener{
+					Port: aws.String("80"),
+				},
 				Aliases: manifest.Alias{AdvancedAliases: mockAlias},
 			},
 			inEnvironment: &config.Environment{
@@ -902,7 +998,9 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 		},
 		"fail to enable nlb alias because of incompatible app version": {
 			inNLB: manifest.NetworkLoadBalancerConfiguration{
-				Port:    aws.String("80"),
+				Listener: manifest.NetworkLoadBalancerListener{
+					Port: aws.String("80"),
+				},
 				Aliases: manifest.Alias{AdvancedAliases: mockAlias},
 			},
 			inEnvironment: &config.Environment{
@@ -937,11 +1035,13 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 				m.mockEnvVersionGetter.EXPECT().Version().Return("v1.42.0", nil)
 			},
-			wantErr: fmt.Errorf(`alias "v1.v2.mockDomain" is not supported in hosted zones managed by Copilot`),
+			wantErr: fmt.Errorf(`validate 'http.alias': alias "v1.v2.mockDomain" is not supported in hosted zones managed by Copilot`),
 		},
 		"fail to enable nlb alias because of invalid alias": {
 			inNLB: manifest.NetworkLoadBalancerConfiguration{
-				Port: aws.String("80"),
+				Listener: manifest.NetworkLoadBalancerListener{
+					Port: aws.String("80"),
+				},
 				Aliases: manifest.Alias{AdvancedAliases: []manifest.AdvancedAlias{
 					{Alias: aws.String("v1.v2.mockDomain")},
 				}},
@@ -959,7 +1059,7 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 				m.mockEnvVersionGetter.EXPECT().Version().Return("v1.42.0", nil)
 			},
-			wantErr: fmt.Errorf(`alias "v1.v2.mockDomain" is not supported in hosted zones managed by Copilot`),
+			wantErr: fmt.Errorf(`validate 'nlb.alias': alias "v1.v2.mockDomain" is not supported in hosted zones managed by Copilot`),
 		},
 		"error if fail to deploy service": {
 			inEnvironment: &config.Environment{
@@ -1305,4 +1405,27 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestUploadArtifacts(t *testing.T) {
+	d := &workloadDeployer{}
+	errFunc := func(out *UploadArtifactsOutput) error {
+		return errors.New("test error")
+	}
+	noErrFunc := func(out *UploadArtifactsOutput) error {
+		out.AddonsURL = "an addons url"
+		return nil
+	}
+
+	out, err := d.uploadArtifacts(noErrFunc, errFunc)
+	require.EqualError(t, err, "test error")
+	require.Nil(t, out)
+
+	out, err = d.uploadArtifacts(errFunc, noErrFunc)
+	require.EqualError(t, err, "test error")
+	require.Nil(t, out)
+
+	out, err = d.uploadArtifacts(noErrFunc)
+	require.NoError(t, err)
+	require.Equal(t, &UploadArtifactsOutput{AddonsURL: "an addons url"}, out)
 }

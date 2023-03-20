@@ -234,11 +234,6 @@ func (tg HTTPTargetContainer) Exposed() bool {
 	return tg.Port != "" && tg.Port != NoExposedContainerPort
 }
 
-// IsHTTPS returns true if the target container's port is 443.
-func (tg HTTPTargetContainer) IsHTTPS() bool {
-	return tg.Port == "443"
-}
-
 // StrconvUint16 returns string converted from uint16.
 func StrconvUint16(val uint16) string {
 	return strconv.FormatUint(uint64(val), 10)
@@ -260,12 +255,6 @@ type HTTPHealthCheckOpts struct {
 	DeregistrationDelay *int64
 }
 
-// IsHTTPS returns true if the Health Check Port is configured
-// as a HTTPS port.
-func (h HTTPHealthCheckOpts) IsHTTPS() bool {
-	return h.Port == "443"
-}
-
 type importable interface {
 	RequiresImport() bool
 }
@@ -281,22 +270,6 @@ type Variable importableValue
 // ImportedVariable returns a Variable that should be imported from a stack.
 func ImportedVariable(name string) Variable {
 	return importedEnvVar(name)
-}
-
-// Aliases return all the unique aliases specified across all the routing rules in NLB.
-// Currently, we only have primary routing rule, but we will be getting additional routing rule soon.
-func (cfg *NetworkLoadBalancer) Aliases() []string {
-	var uniqueAliases []string
-	seen := make(map[string]bool)
-	for _, listener := range cfg.Listener {
-		for _, entry := range listener.Aliases {
-			if _, value := seen[entry]; !value {
-				seen[entry] = true
-				uniqueAliases = append(uniqueAliases, entry)
-			}
-		}
-	}
-	return uniqueAliases
 }
 
 // PlainVariable returns a Variable that is a plain string value.
@@ -435,7 +408,6 @@ type NetworkLoadBalancerListener struct {
 
 	SSLPolicy *string // The SSL policy applied when using TLS protocol.
 
-	Aliases     []string
 	Stickiness  *bool
 	HealthCheck NLBHealthCheck
 }
@@ -455,6 +427,57 @@ type NetworkLoadBalancer struct {
 	Listener            []NetworkLoadBalancerListener
 	MainContainerPort   string
 	CertificateRequired bool
+	Aliases             []string
+}
+
+// ALBListenerRule holds configuration that's needed for an Application Load Balancer listener rule.
+type ALBListenerRule struct {
+	// The path that the Application Load Balancer listens to.
+	Path string
+	// The target container and port to which the traffic is routed to from the Application Load Balancer.
+	TargetContainer string
+	TargetPort      string
+
+	Aliases          []string
+	AllowedSourceIps []string
+	Stickiness       string
+	HTTPHealthCheck  HTTPHealthCheckOpts
+	HTTPVersion      string
+}
+
+// ALBListener holds configuration that's needed for an Application Load Balancer Listener.
+type ALBListener struct {
+	Rules             []ALBListenerRule
+	HostedZoneAliases AliasesForHostedZone
+	RedirectToHTTPS   bool // Only relevant if HTTPSListener is true.
+	IsHTTPS           bool // True if the listener listening on port 443.
+	MainContainerPort string
+}
+
+// Aliases return all the unique aliases specified across all the routing rules in ALB.
+// Currently, we only have primary routing rule, but we will be getting additional routing rule soon.
+func (cfg *ALBListener) Aliases() []string {
+	var uniqueAliases []string
+	seen := make(map[string]struct{})
+	exists := struct{}{}
+	for _, rule := range cfg.Rules {
+		for _, entry := range rule.Aliases {
+			if _, value := seen[entry]; !value {
+				uniqueAliases = append(uniqueAliases, entry)
+				seen[entry] = exists
+			}
+		}
+	}
+	return uniqueAliases
+}
+
+// RulePaths returns a slice consisting of all the routing paths mentioned across multiple listener rules.
+func (cfg *ALBListener) RulePaths() []string {
+	var rulePaths []string
+	for _, rule := range cfg.Rules {
+		rulePaths = append(rulePaths, rule.Path)
+	}
+	return rulePaths
 }
 
 // ServiceConnect holds configuration for ECS Service Connect.
@@ -737,8 +760,6 @@ type WorkloadOpts struct {
 	Command      []string
 
 	// Additional options that are common between **all** workload templates.
-	Aliases                  []string
-	HTTPSListener            bool
 	Tags                     map[string]string        // Used by App Runner workloads to tag App Runner service resources
 	NestedStack              *WorkloadNestedStackOpts // Outputs from nested stacks such as the addons stack.
 	AddonsExtraParams        string                   // Additional user defined Parameters for the addons stack.
@@ -756,12 +777,9 @@ type WorkloadOpts struct {
 	DependsOn                map[string]string
 	Publish                  *PublishOpts
 	ServiceDiscoveryEndpoint string
-	HTTPVersion              *string
 	ALBEnabled               bool
-	HostedZoneAliases        AliasesForHostedZone
 	CredentialsParameter     string
 	PermissionsBoundary      string
-	HTTPRedirect             bool
 
 	// Additional options for service templates.
 	WorkloadType            string
@@ -769,8 +787,8 @@ type WorkloadOpts struct {
 	HTTPTargetContainer     HTTPTargetContainer
 	HTTPHealthCheck         HTTPHealthCheckOpts
 	DeregistrationDelay     *int64
-	AllowedSourceIps        []string
 	NLB                     *NetworkLoadBalancer
+	ALBListener             *ALBListener
 	DeploymentConfiguration DeploymentConfigurationOpts
 	ServiceConnect          *ServiceConnect
 
@@ -803,13 +821,13 @@ type WorkloadOpts struct {
 // or an empty string if it shouldn't be configured, defaulting to the
 // target protocol. (which is what happens, even if it isn't documented as such :))
 // https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-elasticloadbalancingv2-targetgroup.html#cfn-elasticloadbalancingv2-targetgroup-healthcheckprotocol
-func (w WorkloadOpts) HealthCheckProtocol() string {
+func (lr ALBListenerRule) HealthCheckProtocol() string {
 	switch {
-	case w.HTTPHealthCheck.Port == "443":
+	case lr.HTTPHealthCheck.Port == "443":
 		return "HTTPS"
-	case w.HTTPTargetContainer.IsHTTPS() && w.HTTPHealthCheck.Port == "":
+	case lr.TargetPort == "443" && lr.HTTPHealthCheck.Port == "":
 		return "HTTPS"
-	case w.HTTPTargetContainer.IsHTTPS() && w.HTTPHealthCheck.Port != "443":
+	case lr.TargetPort == "443" && lr.HTTPHealthCheck.Port != "443":
 		// for backwards compatability, only set HTTP if target
 		// container is https but the specified health check port is not
 		return "HTTP"

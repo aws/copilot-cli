@@ -158,23 +158,37 @@ const getListenerRules = async function (listenerArn) {
  */
 exports.nextAvailableRulePriorityHandler = async function (event, context) {
   let responseData = {};
-  const physicalResourceId =
-    event.PhysicalResourceId || `alb-rule-priority-${event.LogicalResourceId}`;
-  let isRootPath = event.ResourceProperties.RulePath === "/";
-
+  let nextRootRuleNumber, nextNonRootRuleNumber;
+  const physicalResourceId = event.PhysicalResourceId || `alb-rule-priority-${event.LogicalResourceId}`;
   try {
     switch (event.RequestType) {
       case "Create":
       case "Update":
-        if (isRootPath) {
-          responseData.Priority = await calculateNextRootRulePriority(
-            event.ResourceProperties.ListenerArn
-          );
-        } else {
-          responseData.Priority = await calculateNextRulePriority(
-            event.ResourceProperties.ListenerArn
-          );
-        }
+          for (let i=0; i < event.ResourceProperties.RulePath.length; i++){
+            if (event.ResourceProperties.RulePath[i] === "/") {
+              if (nextRootRuleNumber == null){
+                nextRootRuleNumber = await calculateNextRootRulePriority(
+                    event.ResourceProperties.ListenerArn
+                );
+              }
+              if (i == 0) {
+                responseData["Priority"]  = nextRootRuleNumber--;
+              } else {
+                responseData["Priority"+i]  = nextRootRuleNumber--;
+              }
+            } else {
+              if (nextNonRootRuleNumber == null) {
+                nextNonRootRuleNumber = await calculateNextRulePriority(
+                    event.ResourceProperties.ListenerArn
+                );
+              }
+              if (i == 0) {
+                responseData["Priority"] = nextNonRootRuleNumber++;
+              } else {
+                responseData["Priority"+i] = nextNonRootRuleNumber++;
+              }
+            }
+          }
         break;
       // Do nothing on delete, since this isn't a "real" resource.
       case "Delete":

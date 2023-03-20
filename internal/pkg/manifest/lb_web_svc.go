@@ -181,21 +181,25 @@ func (s *LoadBalancedWebService) Publish() []Topic {
 	return s.LoadBalancedWebServiceConfig.PublishConfig.publishedTopics()
 }
 
-// BuildRequired returns if the service requires building from the local Dockerfile.
-func (s *LoadBalancedWebService) BuildRequired() (bool, error) {
-	return requiresBuild(s.ImageConfig.Image)
-}
-
 // BuildArgs returns a docker.BuildArguments object given a context directory.
-func (s *LoadBalancedWebService) BuildArgs(contextDir string) map[string]*DockerBuildArgs {
-	buildArgs := make(map[string]*DockerBuildArgs, len(s.Sidecars)+1)
-	buildArgs[aws.StringValue(s.Name)] = s.ImageConfig.Image.BuildConfig(contextDir)
-	return buildArgs
+func (s *LoadBalancedWebService) BuildArgs(contextDir string) (map[string]*DockerBuildArgs, error) {
+	required, err := requiresBuild(s.ImageConfig.Image)
+	if err != nil {
+		return nil, err
+	}
+	// Creating an map to store buildArgs of all sidecar images and main container image.
+	buildArgsPerContainer := make(map[string]*DockerBuildArgs, len(s.Sidecars)+1)
+	if required {
+		buildArgsPerContainer[aws.StringValue(s.Name)] = s.ImageConfig.Image.BuildConfig(contextDir)
+	}
+	return buildArgs(contextDir, buildArgsPerContainer, s.Sidecars)
 }
 
-// EnvFile returns the location of the env file against the ws root directory.
-func (s *LoadBalancedWebService) EnvFile() string {
-	return aws.StringValue(s.TaskConfig.EnvFile)
+// EnvFiles returns the locations of all env files against the ws root directory.
+// This method returns a map[string]string where the keys are container names
+// and the values are either env file paths or empty strings.
+func (s *LoadBalancedWebService) EnvFiles() map[string]string {
+	return envFiles(s.Name, s.TaskConfig, s.Logging, s.Sidecars)
 }
 
 func (s *LoadBalancedWebService) subnets() *SubnetListOrArgs {
@@ -226,27 +230,41 @@ func (s LoadBalancedWebService) applyEnv(envName string) (workloadManifest, erro
 	return &s, nil
 }
 
-// NetworkLoadBalancerConfiguration holds options for a network load balancer
+// NetworkLoadBalancerConfiguration holds options for a network load balancer.
 type NetworkLoadBalancerConfiguration struct {
+	Listener            NetworkLoadBalancerListener   `yaml:",inline"`
+	Aliases             Alias                         `yaml:"alias"`
+	AdditionalListeners []NetworkLoadBalancerListener `yaml:"additional_listeners"`
+}
+
+// NetworkLoadBalancerListener holds listener configuration for NLB.
+type NetworkLoadBalancerListener struct {
 	Port            *string            `yaml:"port"`
 	HealthCheck     NLBHealthCheckArgs `yaml:"healthcheck"`
 	TargetContainer *string            `yaml:"target_container"`
 	TargetPort      *int               `yaml:"target_port"`
 	SSLPolicy       *string            `yaml:"ssl_policy"`
 	Stickiness      *bool              `yaml:"stickiness"`
-	Aliases         Alias              `yaml:"alias"`
 }
 
+// IsEmpty returns true if NetworkLoadBalancerConfiguration is empty.
 func (c *NetworkLoadBalancerConfiguration) IsEmpty() bool {
+	return c.Aliases.IsEmpty() && c.Listener.IsEmpty() && len(c.AdditionalListeners) == 0
+}
+
+// IsEmpty returns true if NetworkLoadBalancerListener is empty.
+func (c *NetworkLoadBalancerListener) IsEmpty() bool {
 	return c.Port == nil && c.HealthCheck.isEmpty() && c.TargetContainer == nil && c.TargetPort == nil &&
-		c.SSLPolicy == nil && c.Stickiness == nil && c.Aliases.IsEmpty()
+		c.SSLPolicy == nil && c.Stickiness == nil
 }
 
 // ExposedPorts returns all the ports that are container ports available to receive traffic.
 func (lbws *LoadBalancedWebService) ExposedPorts() (ExposedPortsIndex, error) {
 	var exposedPorts []ExposedPort
 	workloadName := aws.StringValue(lbws.Name)
+	// port from image.port.
 	exposedPorts = append(exposedPorts, lbws.ImageConfig.exposedPorts(workloadName)...)
+	// port from sidecar[x].image.port.
 	for name, sidecar := range lbws.Sidecars {
 		out, err := sidecar.exposedPorts(name)
 		if err != nil {
@@ -254,15 +272,29 @@ func (lbws *LoadBalancedWebService) ExposedPorts() (ExposedPortsIndex, error) {
 		}
 		exposedPorts = append(exposedPorts, out...)
 	}
+	// port from http.target_port.
 	exposedPorts = append(exposedPorts, lbws.RoutingRule.exposedPorts(exposedPorts, workloadName)...)
-	out, err := lbws.NLBConfig.exposedPorts(exposedPorts, workloadName)
-	if err != nil {
-		return ExposedPortsIndex{}, err
+
+	// port from nlb.target_port and nlb.additional_listeners[x].target_port
+	for _, listener := range lbws.NLBConfig.NLBListeners() {
+		out, err := listener.exposedPorts(exposedPorts, workloadName)
+		if err != nil {
+			return ExposedPortsIndex{}, err
+		}
+		exposedPorts = append(exposedPorts, out...)
 	}
-	exposedPorts = append(exposedPorts, out...)
 	portsForContainer, containerForPort := prepareParsedExposedPortsMap(sortExposedPorts(exposedPorts))
 	return ExposedPortsIndex{
+		WorkloadName:      workloadName,
 		PortsForContainer: portsForContainer,
 		ContainerForPort:  containerForPort,
 	}, nil
+}
+
+// NLBListeners returns main as well as additional listeners as a list of NetworkLoadBalancerListener.
+func (cfg NetworkLoadBalancerConfiguration) NLBListeners() []NetworkLoadBalancerListener {
+	if cfg.IsEmpty() {
+		return nil
+	}
+	return append([]NetworkLoadBalancerListener{cfg.Listener}, cfg.AdditionalListeners...)
 }

@@ -6,6 +6,7 @@ package describe
 import (
 	"errors"
 	"fmt"
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatch"
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
@@ -20,6 +21,7 @@ import (
 type backendSvcDescriberMocks struct {
 	storeSvc     *mocks.MockDeployedEnvServicesLister
 	ecsDescriber *mocks.MockecsDescriber
+	cwDescriber  *mocks.MockcwAlarmDescriber
 	envDescriber *mocks.MockenvDescriber
 	lbDescriber  *mocks.MocklbDescriber
 }
@@ -31,6 +33,10 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 		testSvc = "jobs"
 		prodEnv = "prod"
 		mockEnv = "mockEnv"
+		alarm1  = "alarm1"
+		alarm2  = "alarm2"
+		desc1   = "alarm description 1"
+		desc2   = "alarm description 2"
 	)
 	mockErr := errors.New("some error")
 	testCases := map[string]struct {
@@ -53,7 +59,7 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 			setupMocks: func(m backendSvcDescriberMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
-					m.ecsDescriber.EXPECT().ServiceStackResources().Return(nil, nil),
+					m.ecsDescriber.EXPECT().StackResources().Return(nil, nil),
 					m.ecsDescriber.EXPECT().Params().Return(nil, mockErr),
 				)
 			},
@@ -63,7 +69,7 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 			setupMocks: func(m backendSvcDescriberMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
-					m.ecsDescriber.EXPECT().ServiceStackResources().Return(nil, nil),
+					m.ecsDescriber.EXPECT().StackResources().Return(nil, nil),
 					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
 						cfnstack.WorkloadTargetPortParamKey: "80",
 						cfnstack.WorkloadTaskCountParamKey:  "1",
@@ -86,7 +92,7 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 				}
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
-					m.ecsDescriber.EXPECT().ServiceStackResources().Return(nil, nil),
+					m.ecsDescriber.EXPECT().StackResources().Return(nil, nil),
 					m.ecsDescriber.EXPECT().Params().Return(params, nil),
 					m.ecsDescriber.EXPECT().ServiceConnectDNSNames().Return(nil, nil),
 					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
@@ -107,7 +113,7 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 				}
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
-					m.ecsDescriber.EXPECT().ServiceStackResources().Return(nil, nil),
+					m.ecsDescriber.EXPECT().StackResources().Return(nil, nil),
 					m.ecsDescriber.EXPECT().Params().Return(params, nil),
 					m.ecsDescriber.EXPECT().ServiceConnectDNSNames().Return(nil, nil),
 					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
@@ -129,7 +135,7 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 				}
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
-					m.ecsDescriber.EXPECT().ServiceStackResources().Return(nil, nil),
+					m.ecsDescriber.EXPECT().StackResources().Return(nil, nil),
 					m.ecsDescriber.EXPECT().Params().Return(params, nil),
 					m.ecsDescriber.EXPECT().ServiceConnectDNSNames().Return(nil, nil),
 					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
@@ -145,6 +151,33 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 			},
 			wantedError: fmt.Errorf("retrieve rollback alarm names: some error"),
 		},
+		"return error if fail to retrieve rollback alarm descriptions": {
+			setupMocks: func(m backendSvcDescriberMocks) {
+				params := map[string]string{
+					cfnstack.WorkloadTargetPortParamKey: "5000",
+					cfnstack.WorkloadTaskCountParamKey:  "1",
+					cfnstack.WorkloadTaskCPUParamKey:    "256",
+					cfnstack.WorkloadTaskMemoryParamKey: "512",
+				}
+				gomock.InOrder(
+					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
+					m.ecsDescriber.EXPECT().StackResources().Return(nil, nil),
+					m.ecsDescriber.EXPECT().Params().Return(params, nil),
+					m.ecsDescriber.EXPECT().ServiceConnectDNSNames().Return(nil, nil),
+					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
+					m.ecsDescriber.EXPECT().Params().Return(params, nil),
+					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
+					m.ecsDescriber.EXPECT().ServiceConnectDNSNames().Return(nil, nil),
+					m.ecsDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
+						OperatingSystem: "LINUX",
+						Architecture:    "X86_64",
+					}, nil),
+					m.ecsDescriber.EXPECT().RollbackAlarmNames().Return([]string{alarm1, alarm2}, nil),
+					m.cwDescriber.EXPECT().AlarmDescriptions([]string{alarm1, alarm2}).Return(nil, errors.New("some error")),
+				)
+			},
+			wantedError: fmt.Errorf("retrieve alarm descriptions: some error"),
+		},
 		"return error if fail to retrieve environment variables": {
 			setupMocks: func(m backendSvcDescriberMocks) {
 				params := map[string]string{
@@ -155,7 +188,7 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 				}
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
-					m.ecsDescriber.EXPECT().ServiceStackResources().Return(nil, nil),
+					m.ecsDescriber.EXPECT().StackResources().Return(nil, nil),
 					m.ecsDescriber.EXPECT().Params().Return(params, nil),
 					m.ecsDescriber.EXPECT().ServiceConnectDNSNames().Return(nil, nil),
 					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
@@ -182,7 +215,7 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 				}
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
-					m.ecsDescriber.EXPECT().ServiceStackResources().Return(nil, nil),
+					m.ecsDescriber.EXPECT().StackResources().Return(nil, nil),
 					m.ecsDescriber.EXPECT().Params().Return(params, nil),
 					m.ecsDescriber.EXPECT().ServiceConnectDNSNames().Return(nil, nil),
 					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
@@ -229,7 +262,7 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 				}
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv, prodEnv, mockEnv}, nil),
-					m.ecsDescriber.EXPECT().ServiceStackResources().Return(nil, nil),
+					m.ecsDescriber.EXPECT().StackResources().Return(nil, nil),
 					m.ecsDescriber.EXPECT().Params().Return(testParams, nil),
 					m.ecsDescriber.EXPECT().ServiceConnectDNSNames().Return(nil, nil),
 					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
@@ -255,7 +288,7 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 							ValueFrom: "GH_WEBHOOK_SECRET",
 						},
 					}, nil),
-					m.ecsDescriber.EXPECT().ServiceStackResources().Return(nil, nil),
+					m.ecsDescriber.EXPECT().StackResources().Return(nil, nil),
 					m.ecsDescriber.EXPECT().Params().Return(prodParams, nil),
 					m.ecsDescriber.EXPECT().ServiceConnectDNSNames().Return(nil, nil),
 					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("prod.phonetool.local", nil),
@@ -266,7 +299,13 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 						OperatingSystem: "LINUX",
 						Architecture:    "ARM64",
 					}, nil),
-					m.ecsDescriber.EXPECT().RollbackAlarmNames().Return(nil, nil),
+					m.ecsDescriber.EXPECT().RollbackAlarmNames().Return([]string{alarm1}, nil),
+					m.cwDescriber.EXPECT().AlarmDescriptions([]string{alarm1}).Return([]*cloudwatch.AlarmDescription{
+						{
+							Name:        alarm1,
+							Description: desc1,
+						},
+					}, nil),
 					m.ecsDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
 						{
 							Name:      "COPILOT_ENVIRONMENT_NAME",
@@ -281,14 +320,20 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 							ValueFrom: "SHHHHHHHH",
 						},
 					}, nil),
-					m.ecsDescriber.EXPECT().ServiceStackResources().Return(nil, nil),
+					m.ecsDescriber.EXPECT().StackResources().Return(nil, nil),
 					m.ecsDescriber.EXPECT().Params().Return(mockParams, nil),
 					m.ecsDescriber.EXPECT().Params().Return(mockParams, nil),
 					m.ecsDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
 						OperatingSystem: "LINUX",
 						Architecture:    "X86_64",
 					}, nil),
-					m.ecsDescriber.EXPECT().RollbackAlarmNames().Return(nil, nil),
+					m.ecsDescriber.EXPECT().RollbackAlarmNames().Return([]string{alarm2}, nil),
+					m.cwDescriber.EXPECT().AlarmDescriptions([]string{alarm2}).Return([]*cloudwatch.AlarmDescription{
+						{
+							Name:        alarm2,
+							Description: desc2,
+						},
+					}, nil),
 					m.ecsDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
 						{
 							Name:      "COPILOT_ENVIRONMENT_NAME",
@@ -298,19 +343,19 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 					}, nil),
 					m.ecsDescriber.EXPECT().Secrets().Return(
 						nil, nil),
-					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*stack.Resource{
+					m.ecsDescriber.EXPECT().StackResources().Return([]*stack.Resource{
 						{
 							Type:       "AWS::EC2::SecurityGroupIngress",
 							PhysicalID: "ContainerSecurityGroupIngressFromPublicALB",
 						},
 					}, nil),
-					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*stack.Resource{
+					m.ecsDescriber.EXPECT().StackResources().Return([]*stack.Resource{
 						{
 							Type:       "AWS::EC2::SecurityGroup",
 							PhysicalID: "sg-0758ed6b233743530",
 						},
 					}, nil),
-					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*stack.Resource{
+					m.ecsDescriber.EXPECT().StackResources().Return([]*stack.Resource{
 						{
 							Type:       "AWS::EC2::SecurityGroup",
 							PhysicalID: "sg-2337435300758ed6b",
@@ -360,6 +405,18 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 						"jobs.prod.phonetool.local:5000": []string{"prod"},
 					},
 					ServiceConnect: serviceConnects{},
+					AlarmDescriptions: []*cloudwatch.AlarmDescription{
+						{
+							Name:        alarm1,
+							Description: desc1,
+							Environment: prodEnv,
+						},
+						{
+							Name:        alarm2,
+							Description: desc2,
+							Environment: mockEnv,
+						},
+					},
 					Variables: []*containerEnvVar{
 						{
 							envVar: &envVar{
@@ -448,9 +505,9 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 				}
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
-					m.ecsDescriber.EXPECT().ServiceStackResources().Return(resources, nil),
+					m.ecsDescriber.EXPECT().StackResources().Return(resources, nil),
 					m.ecsDescriber.EXPECT().Params().Return(params, nil),
-					m.ecsDescriber.EXPECT().ServiceStackResources().Return(resources, nil),
+					m.ecsDescriber.EXPECT().StackResources().Return(resources, nil),
 					m.lbDescriber.EXPECT().ListenerRuleHostHeaders("listenerRuleARN").Return([]string{"jobs.test.phonetool.internal"}, nil),
 					m.ecsDescriber.EXPECT().Params().Return(params, nil),
 					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
@@ -474,7 +531,7 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 							ValueFrom: "GH_WEBHOOK_SECRET",
 						},
 					}, nil),
-					m.ecsDescriber.EXPECT().ServiceStackResources().Return(resources, nil),
+					m.ecsDescriber.EXPECT().StackResources().Return(resources, nil),
 				)
 			},
 			wantedBackendSvc: &backendSvcDesc{
@@ -552,6 +609,7 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 			mocks := backendSvcDescriberMocks{
 				storeSvc:     mocks.NewMockDeployedEnvServicesLister(ctrl),
 				ecsDescriber: mocks.NewMockecsDescriber(ctrl),
+				cwDescriber:  mocks.NewMockcwAlarmDescriber(ctrl),
 				envDescriber: mocks.NewMockenvDescriber(ctrl),
 				lbDescriber:  mocks.NewMocklbDescriber(ctrl),
 			}
@@ -564,6 +622,7 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 				enableResources:          tc.shouldOutputResources,
 				store:                    mocks.storeSvc,
 				initECSServiceDescribers: func(s string) (ecsDescriber, error) { return mocks.ecsDescriber, nil },
+				initCWDescriber:          func(s string) (cwAlarmDescriber, error) { return mocks.cwDescriber, nil },
 				initEnvDescribers:        func(s string) (envDescriber, error) { return mocks.envDescriber, nil },
 				initLBDescriber:          func(s string) (lbDescriber, error) { return mocks.lbDescriber, nil },
 			}
@@ -601,6 +660,13 @@ Configurations
   test         1         0.25        512           LINUX/X86_64  80
   prod         3         0.5         1024          LINUX/ARM64   5000
 
+Rollback Alarms
+
+  Name        Environment  Description
+  ----        -----------  -----------
+  alarmName1  test         alarm description 1
+  alarmName2  prod         alarm description 2
+
 Internal Service Endpoint
 
   Endpoint                              Environment  Type
@@ -630,7 +696,7 @@ Resources
   prod
     AWS::EC2::SecurityGroupIngress  ContainerSecurityGroupIngressFromPublicALB
 `,
-			wantedJSONString: "{\"service\":\"my-svc\",\"type\":\"Backend Service\",\"application\":\"my-app\",\"configurations\":[{\"environment\":\"test\",\"port\":\"80\",\"cpu\":\"256\",\"memory\":\"512\",\"platform\":\"LINUX/X86_64\",\"tasks\":\"1\"},{\"environment\":\"prod\",\"port\":\"5000\",\"cpu\":\"512\",\"memory\":\"1024\",\"platform\":\"LINUX/ARM64\",\"tasks\":\"3\"}],\"routes\":null,\"serviceDiscovery\":[{\"environment\":[\"prod\"],\"endpoint\":\"http://my-svc.prod.my-app.local:5000\"},{\"environment\":[\"test\"],\"endpoint\":\"http://my-svc.test.my-app.local:5000\"}],\"variables\":[{\"environment\":\"prod\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"prod\",\"container\":\"container\"},{\"environment\":\"test\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"test\",\"container\":\"container\"}],\"secrets\":[{\"name\":\"GITHUB_WEBHOOK_SECRET\",\"container\":\"container\",\"environment\":\"test\",\"valueFrom\":\"GH_WEBHOOK_SECRET\"},{\"name\":\"SOME_OTHER_SECRET\",\"container\":\"container\",\"environment\":\"prod\",\"valueFrom\":\"SHHHHH\"}],\"resources\":{\"prod\":[{\"type\":\"AWS::EC2::SecurityGroupIngress\",\"physicalID\":\"ContainerSecurityGroupIngressFromPublicALB\"}],\"test\":[{\"type\":\"AWS::EC2::SecurityGroup\",\"physicalID\":\"sg-0758ed6b233743530\"}]}}\n",
+			wantedJSONString: "{\"service\":\"my-svc\",\"type\":\"Backend Service\",\"application\":\"my-app\",\"configurations\":[{\"environment\":\"test\",\"port\":\"80\",\"cpu\":\"256\",\"memory\":\"512\",\"platform\":\"LINUX/X86_64\",\"tasks\":\"1\"},{\"environment\":\"prod\",\"port\":\"5000\",\"cpu\":\"512\",\"memory\":\"1024\",\"platform\":\"LINUX/ARM64\",\"tasks\":\"3\"}],\"rollbackAlarms\":[{\"name\":\"alarmName1\",\"description\":\"alarm description 1\",\"environment\":\"test\"},{\"name\":\"alarmName2\",\"description\":\"alarm description 2\",\"environment\":\"prod\"}],\"routes\":null,\"serviceDiscovery\":[{\"environment\":[\"prod\"],\"endpoint\":\"http://my-svc.prod.my-app.local:5000\"},{\"environment\":[\"test\"],\"endpoint\":\"http://my-svc.test.my-app.local:5000\"}],\"variables\":[{\"environment\":\"prod\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"prod\",\"container\":\"container\"},{\"environment\":\"test\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"test\",\"container\":\"container\"}],\"secrets\":[{\"name\":\"GITHUB_WEBHOOK_SECRET\",\"container\":\"container\",\"environment\":\"test\",\"valueFrom\":\"GH_WEBHOOK_SECRET\"},{\"name\":\"SOME_OTHER_SECRET\",\"container\":\"container\",\"environment\":\"prod\",\"valueFrom\":\"SHHHHH\"}],\"resources\":{\"prod\":[{\"type\":\"AWS::EC2::SecurityGroupIngress\",\"physicalID\":\"ContainerSecurityGroupIngressFromPublicALB\"}],\"test\":[{\"type\":\"AWS::EC2::SecurityGroup\",\"physicalID\":\"sg-0758ed6b233743530\"}]}}\n",
 		},
 	}
 
@@ -656,6 +722,18 @@ Resources
 						Port:        "5000",
 					},
 					Tasks: "3",
+				},
+			}
+			alarmDescs := []*cloudwatch.AlarmDescription{
+				{
+					Name:        "alarmName1",
+					Description: "alarm description 1",
+					Environment: "test",
+				},
+				{
+					Name:        "alarmName2",
+					Description: "alarm description 2",
+					Environment: "prod",
 				},
 			}
 			envVars := []*containerEnvVar{
@@ -710,15 +788,16 @@ Resources
 			}
 			backendSvc := &backendSvcDesc{
 				ecsSvcDesc: ecsSvcDesc{
-					Service:          "my-svc",
-					Type:             "Backend Service",
-					Configurations:   config,
-					App:              "my-app",
-					Variables:        envVars,
-					Secrets:          secrets,
-					ServiceDiscovery: sds,
-					Resources:        resources,
-					environments:     []string{"test", "prod"},
+					Service:           "my-svc",
+					Type:              "Backend Service",
+					Configurations:    config,
+					App:               "my-app",
+					AlarmDescriptions: alarmDescs,
+					Variables:         envVars,
+					Secrets:           secrets,
+					ServiceDiscovery:  sds,
+					Resources:         resources,
+					environments:      []string{"test", "prod"},
 				},
 			}
 			human := backendSvc.HumanString()

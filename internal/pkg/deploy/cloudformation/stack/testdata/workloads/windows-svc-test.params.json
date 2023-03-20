@@ -10,7 +10,6 @@
     "HTTPSEnabled": "false",
     "LogRetention": "30",
     "RulePath": "/",
-    "Stickiness": "false",
     "TargetContainer": "windows-fe",
     "TargetPort": "80",
     "TaskCPU": "1024",

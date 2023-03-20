@@ -59,13 +59,14 @@ func New(cmd Cmd) CmdClient {
 // BuildArguments holds the arguments that can be passed while building a container.
 type BuildArguments struct {
 	URI        string            // Required. Location of ECR Repo. Used to generate image name in conjunction with tag.
-	Tags       []string          // Optional. List of tags to apply to the image besides "latest".
+	Tags       []string          // Required. List of tags to apply to the image.
 	Dockerfile string            // Required. Dockerfile to pass to `docker build` via --file flag.
 	Context    string            // Optional. Build context directory to pass to `docker build`.
 	Target     string            // Optional. The target build stage to pass to `docker build`.
 	CacheFrom  []string          // Optional. Images to consider as cache sources to pass to `docker build`
 	Platform   string            // Optional. OS/Arch to pass to `docker build`.
 	Args       map[string]string // Optional. Build args to pass via `--build-arg` flags. Equivalent to ARG directives in dockerfile.
+	Labels     map[string]string // Required. Set metadata for an image.
 }
 
 type dockerConfig struct {
@@ -75,6 +76,13 @@ type dockerConfig struct {
 
 // Build will run a `docker build` command for the given ecr repo URI and build arguments.
 func (c CmdClient) Build(in *BuildArguments) error {
+
+	// Tags must not be empty to build an docker image.
+	if len(in.Tags) == 0 {
+		return &errEmptyImageTags{
+			uri: in.URI,
+		}
+	}
 	dfDir := in.Context
 	if dfDir == "" { // Context wasn't specified use the Dockerfile's directory as context.
 		dfDir = filepath.Dir(in.Dockerfile)
@@ -83,7 +91,6 @@ func (c CmdClient) Build(in *BuildArguments) error {
 	args := []string{"build"}
 
 	// Add additional image tags to the docker build call.
-	args = append(args, "-t", in.URI)
 	for _, tag := range in.Tags {
 		args = append(args, "-t", imageName(in.URI, tag))
 	}
@@ -117,6 +124,17 @@ func (c CmdClient) Build(in *BuildArguments) error {
 	sort.Strings(keys)
 	for _, k := range keys {
 		args = append(args, "--build-arg", fmt.Sprintf("%s=%s", k, in.Args[k]))
+	}
+
+	// Add Labels to docker build call.
+	// Collect the keys in a slice to sort for test stability.
+	var labelKeys []string
+	for k := range in.Labels {
+		labelKeys = append(labelKeys, k)
+	}
+	sort.Strings(labelKeys)
+	for _, k := range labelKeys {
+		args = append(args, "--label", fmt.Sprintf("%s=%s", k, in.Labels[k]))
 	}
 
 	args = append(args, dfDir, "-f", in.Dockerfile)
@@ -161,7 +179,11 @@ func (c CmdClient) Push(uri string, tags ...string) (digest string, err error) {
 		}
 	}
 	buf := new(strings.Builder)
-	if err := c.runner.Run("docker", []string{"inspect", "--format", "'{{json (index .RepoDigests 0)}}'", uri}, exec.Stdout(buf)); err != nil {
+	// The container image will have the same digest regardless of the associated tag.
+	// Pick the first tag and get the image's digest.
+	// For Main container we call  docker inspect --format '{{json (index .RepoDigests 0)}}' uri:latest
+	// For Sidecar container images we call docker inspect --format '{{json (index .RepoDigests 0)}}' uri:<sidecarname>-latest
+	if err := c.runner.Run("docker", []string{"inspect", "--format", "'{{json (index .RepoDigests 0)}}'", imageName(uri, tags[0])}, exec.Stdout(buf)); err != nil {
 		return "", fmt.Errorf("inspect image digest for %s: %w", uri, err)
 	}
 	repoDigest := strings.Trim(strings.TrimSpace(buf.String()), `"'`) // remove new lines and quotes from output
@@ -289,4 +311,12 @@ func userHomeDirectory() string {
 	}
 
 	return home
+}
+
+type errEmptyImageTags struct {
+	uri string
+}
+
+func (e *errEmptyImageTags) Error() string {
+	return fmt.Sprintf("tags to reference an image should not be empty for building and pushing into the ECR repository %s", e.uri)
 }

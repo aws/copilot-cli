@@ -84,7 +84,7 @@ func init() {
 {{ end }}{{- end }}{{color "reset"}}{{end}}
 {{- color .Config.Icons.Question.Format }}{{if not .ShowAnswer}}  {{ .Config.Icons.Question.Text }}{{else}}{{ .Config.Icons.Question.Text }}{{end}}{{color "reset"}}
 {{- color "default"}}{{ .Message }}{{ .FilterMessage }}{{color "reset"}}
-{{- if .ShowAnswer}}{{color "default"}} {{.Answer}}{{color "reset"}}{{"\n"}}
+{{- if .ShowAnswer}}{{color "default"}} {{parseAnswers .Answer}}{{color "reset"}}{{"\n"}}
 {{- else }}
 	{{- "  "}}{{- color "white"}}[Use arrows to move, space to select, type to filter{{- if and .Help (not .ShowHelp)}}, {{ .Config.HelpInput }} for more help{{end}}]{{color "reset"}}
   {{- "\n"}}
@@ -101,8 +101,10 @@ func init() {
 	}
 	core.TemplateFuncsWithColor["split"] = split
 	core.TemplateFuncsWithColor["parseAnswer"] = parseValueFromOptionFmt
+	core.TemplateFuncsWithColor["parseAnswers"] = parseValuesFromOptions
 	core.TemplateFuncsNoColor["split"] = split
 	core.TemplateFuncsNoColor["parseAnswer"] = parseValueFromOptionFmt
+	core.TemplateFuncsNoColor["parseAnswers"] = parseValuesFromOptions
 }
 
 // ErrEmptyOptions indicates the input options list was empty.

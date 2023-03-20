@@ -9,14 +9,16 @@
     "EnvName": "prod",
     "HTTPSEnabled": "true",
     "LogRetention": "1",
+    "LoggingEnvFileARN": "",
     "RulePath": "/",
-    "Stickiness": "false",
     "TargetContainer": "nginx",
     "TargetPort": "8080",
     "TaskCPU": "256",
     "TaskCount": "3",
     "TaskMemory": "512",
-    "WorkloadName": "fe"
+    "WorkloadName": "fe",
+    "nginxEnvFileARN": "",
+    "operationEnvFileARN": ""
   },
   "Tags": {
     "copilot-application": "my-app",

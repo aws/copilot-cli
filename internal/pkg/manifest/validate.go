@@ -90,10 +90,20 @@ func (l LoadBalancedWebService) validate() error {
 	if err = validateTargetContainer(validateTargetContainerOpts{
 		mainContainerName: aws.StringValue(l.Name),
 		mainContainerPort: l.ImageConfig.Port,
-		targetContainer:   l.NLBConfig.TargetContainer,
+		targetContainer:   l.NLBConfig.Listener.TargetContainer,
 		sidecarConfig:     l.Sidecars,
 	}); err != nil {
-		return fmt.Errorf("validate network load balancer target: %w", err)
+		return fmt.Errorf(`validate target for "nlb": %w`, err)
+	}
+	for idx, listener := range l.NLBConfig.AdditionalListeners {
+		if err = validateTargetContainer(validateTargetContainerOpts{
+			mainContainerName: aws.StringValue(l.Name),
+			mainContainerPort: l.ImageConfig.Port,
+			targetContainer:   listener.TargetContainer,
+			sidecarConfig:     l.Sidecars,
+		}); err != nil {
+			return fmt.Errorf(`validate target for "nlb.additional_listeners[%d]": %w`, idx, err)
+		}
 	}
 	if err = validateContainerDeps(validateDependenciesOpts{
 		sidecarConfig:     l.Sidecars,
@@ -846,16 +856,8 @@ func (c NetworkLoadBalancerConfiguration) validate() error {
 	if c.IsEmpty() {
 		return nil
 	}
-	if aws.StringValue(c.Port) == "" {
-		return &errFieldMustBeSpecified{
-			missingField: "port",
-		}
-	}
-	if err := validateNLBPort(c.Port); err != nil {
-		return fmt.Errorf(`validate "port": %w`, err)
-	}
-	if err := c.HealthCheck.validate(); err != nil {
-		return fmt.Errorf(`validate "healthcheck": %w`, err)
+	if err := c.Listener.validate(); err != nil {
+		return err
 	}
 	if err := c.Aliases.validate(); err != nil {
 		return fmt.Errorf(`validate "alias": %w`, err)
@@ -866,6 +868,26 @@ func (c NetworkLoadBalancerConfiguration) validate() error {
 				return fmt.Errorf(`"hosted_zone" is not supported for Network Load Balancer`)
 			}
 		}
+	}
+	for idx, listener := range c.AdditionalListeners {
+		if err := listener.validate(); err != nil {
+			return fmt.Errorf(`validate "additional_listeners[%d]": %w`, idx, err)
+		}
+	}
+	return nil
+}
+
+func (c NetworkLoadBalancerListener) validate() error {
+	if aws.StringValue(c.Port) == "" {
+		return &errFieldMustBeSpecified{
+			missingField: "port",
+		}
+	}
+	if err := validateNLBPort(c.Port); err != nil {
+		return fmt.Errorf(`validate "port": %w`, err)
+	}
+	if err := c.HealthCheck.validate(); err != nil {
+		return fmt.Errorf(`validate "healthcheck": %w`, err)
 	}
 	return nil
 }
@@ -1316,6 +1338,12 @@ func (l Logging) validate() error {
 	if l.IsEmpty() {
 		return nil
 	}
+	if l.EnvFile != nil {
+		envFile := aws.StringValue(l.EnvFile)
+		if filepath.Ext(envFile) != envFileExt {
+			return fmt.Errorf("environment file %s must have a %s file extension", envFile, envFileExt)
+		}
+	}
 	return nil
 }
 
@@ -1351,6 +1379,12 @@ func (s SidecarConfig) validate() error {
 	}
 	if err := s.Image.Advanced.validate(); err != nil {
 		return fmt.Errorf(`validate "build": %w`, err)
+	}
+	if s.EnvFile != nil {
+		envFile := aws.StringValue(s.EnvFile)
+		if filepath.Ext(envFile) != envFileExt {
+			return fmt.Errorf("environment file %s must have a %s file extension", envFile, envFileExt)
+		}
 	}
 	return s.ImageOverride.validate()
 }
@@ -1816,7 +1850,7 @@ func validateContainerDeps(opts validateDependenciesOpts) error {
 		isEssential: true,
 	}
 	if !opts.logging.IsEmpty() {
-		containerDependencies[firelensContainerName] = containerDependency{}
+		containerDependencies[FirelensContainerName] = containerDependency{}
 	}
 	for name, config := range opts.sidecarConfig {
 		containerDependencies[name] = containerDependency{
@@ -1921,14 +1955,24 @@ func populateALBPortsAndValidate(containerNameFor map[uint16]string, opts valida
 }
 
 func populateNLBPortsAndValidate(containerNameFor map[uint16]string, opts validateExposedPortsOpts) error {
-	if opts.nlb == nil {
+	if opts.nlb == nil || opts.nlb.IsEmpty() {
 		return nil
 	}
 	nlb := opts.nlb
-	if nlb.Port == nil {
-		return nil
+	if err := populateAndValidateNLBPorts(nlb.Listener, containerNameFor, opts.mainContainerName); err != nil {
+		return fmt.Errorf(`validate "nlb": %w`, err)
 	}
-	nlbPort, _, err := ParsePortMapping(nlb.Port)
+
+	for idx, listener := range nlb.AdditionalListeners {
+		if err := populateAndValidateNLBPorts(listener, containerNameFor, opts.mainContainerName); err != nil {
+			return fmt.Errorf(`validate "nlb.additional_listeners[%d]": %w`, idx, err)
+		}
+	}
+	return nil
+}
+
+func populateAndValidateNLBPorts(listener NetworkLoadBalancerListener, containerNameFor map[uint16]string, mainContainerName string) error {
+	nlbPort, _, err := ParsePortMapping(listener.Port)
 	if err != nil {
 		return err
 	}
@@ -1936,25 +1980,33 @@ func populateNLBPortsAndValidate(containerNameFor map[uint16]string, opts valida
 	if err != nil {
 		return err
 	}
-	containerPort := uint16(port)
-	if nlb.TargetPort != nil {
-		containerPort = uint16(aws.IntValue(nlb.TargetPort))
+	targetPort := uint16(port)
+	if listener.TargetPort != nil {
+		targetPort = uint16(aws.IntValue(listener.TargetPort))
 	}
-	if exposed, ok := containerNameFor[containerPort]; ok {
-		if nlb.TargetContainer != nil && aws.StringValue(nlb.TargetContainer) != exposed {
-			return &errContainersExposingSamePort{
-				firstContainer:  aws.StringValue(nlb.TargetContainer),
-				secondContainer: exposed,
-				port:            containerPort,
-			}
+	if err = validateContainersNotExposingSamePort(containerNameFor, uint16(aws.IntValue(listener.TargetPort)), listener.TargetContainer); err != nil {
+		return err
+	}
+	targetContainer := mainContainerName
+	if listener.TargetContainer != nil {
+		targetContainer = aws.StringValue(listener.TargetContainer)
+	}
+	containerNameFor[targetPort] = targetContainer
+	return nil
+}
+
+func validateContainersNotExposingSamePort(containerNameFor map[uint16]string, targetPort uint16, targetContainer *string) error {
+	container, exists := containerNameFor[targetPort]
+	if !exists {
+		return nil
+	}
+	if targetContainer != nil && container != aws.StringValue(targetContainer) {
+		return &errContainersExposingSamePort{
+			firstContainer:  aws.StringValue(targetContainer),
+			secondContainer: container,
+			port:            targetPort,
 		}
 	}
-	targetContainerName := opts.mainContainerName
-	if nlb.TargetContainer != nil {
-		targetContainerName = aws.StringValue(nlb.TargetContainer)
-	}
-	containerNameFor[containerPort] = targetContainerName
-
 	return nil
 }
 

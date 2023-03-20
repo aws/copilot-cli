@@ -1,4 +1,4 @@
-{{- if not .Aliases}}
+{{- if not .ALBListener.Aliases}}
 LoadBalancerDNSAlias:
   Metadata:
     'aws:copilot:description': 'The default alias record for the application load balancer'
@@ -21,7 +21,7 @@ LoadBalancerDNSAlias:
         HostedZoneId: !GetAtt EnvControllerAction.PublicLoadBalancerHostedZone
         DNSName: !GetAtt EnvControllerAction.PublicLoadBalancerDNSName
 {{- else}}
-{{- range $hostedZoneID, $aliases := .HostedZoneAliases}}
+{{- range $hostedZoneID, $aliases := .ALBListener.HostedZoneAliases}}
 LoadBalancerDNSAlias{{$hostedZoneID}}:
   Metadata:
     'aws:copilot:description': 'Alias records for the application load balancer in hosted zone {{$hostedZoneID}}'
@@ -51,8 +51,8 @@ HTTPSRulePriorityAction:
   Type: Custom::RulePriorityFunction
   Properties:
     ServiceToken: !GetAtt RulePriorityFunction.Arn
-    RulePath: !Ref RulePath
-    {{- if eq .WorkloadType "Backend Service"}}
+    RulePath: {{ fmtSlice (quoteSlice .ALBListener.RulePaths) }}
+    {{- if eq $.WorkloadType "Backend Service" }}
     ListenerArn: !GetAtt EnvControllerAction.InternalHTTPSListenerArn
     {{- else}}
     ListenerArn: !GetAtt EnvControllerAction.HTTPSListenerArn
@@ -64,16 +64,17 @@ HTTPRuleWithDomainPriorityAction:
   Type: Custom::RulePriorityFunction
   Properties:
     ServiceToken: !GetAtt RulePriorityFunction.Arn
-    RulePath: !Ref RulePath
-    {{- if eq .WorkloadType "Backend Service"}}
+    RulePath: {{ fmtSlice (quoteSlice .ALBListener.RulePaths) }}
+    {{- if eq $.WorkloadType "Backend Service"}}
     ListenerArn: !GetAtt EnvControllerAction.InternalHTTPListenerArn
     {{- else}}
     ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
     {{- end}}
 
-HTTPListenerRuleWithDomain:
+{{- range $i, $rule := .ALBListener.Rules}}
+HTTPListenerRuleWithDomain{{ if ne $i 0 }}{{ $i }}{{ end }}:
   Metadata:
-    {{- if .HTTPRedirect}}
+    {{- if $.ALBListener.RedirectToHTTPS}}
     'aws:copilot:description': 'An HTTP listener rule that redirects HTTP to HTTPS'
     {{- else}}
     'aws:copilot:description': 'An HTTP listener rule for forwarding HTTP traffic to your tasks'
@@ -81,7 +82,7 @@ HTTPListenerRuleWithDomain:
   Type: AWS::ElasticLoadBalancingV2::ListenerRule
   Properties:
     Actions:
-      {{- if .HTTPRedirect}}
+      {{- if $.ALBListener.RedirectToHTTPS}}
       - Type: redirect
         RedirectConfig:
           Protocol: HTTPS
@@ -91,22 +92,22 @@ HTTPListenerRuleWithDomain:
           Query: "#{query}"
           StatusCode: HTTP_301
       {{- else}}
-      - TargetGroupArn: !Ref TargetGroup
+      - TargetGroupArn: !Ref TargetGroup{{ if ne $i 0 }}{{ $i }}{{ end }}
         Type: forward
       {{- end}}
     Conditions:
-      {{- if .AllowedSourceIps}}
+      {{- if $rule.AllowedSourceIps }}
       - Field: 'source-ip'
         SourceIpConfig:
           Values:
-            {{- range $sourceIP := .AllowedSourceIps}}
+            {{- range $sourceIP := $rule.AllowedSourceIps}}
             - {{$sourceIP}}
             {{- end}}
       {{- end}}
-      {{- if .Aliases }}
+      {{- if $rule.Aliases }}
       - Field: 'host-header'
         HostHeaderConfig:
-          Values: {{ fmtSlice (quoteSlice .Aliases) }}
+          Values: {{ fmtSlice (quoteSlice $rule.Aliases) }}
       {{- else }}
       - Field: 'host-header'
         HostHeaderConfig:
@@ -120,41 +121,40 @@ HTTPListenerRuleWithDomain:
       - Field: 'path-pattern'
         PathPatternConfig:
           Values:
-            !If
-              - IsDefaultRootPath
-              -
-                - "/*"
-              -
-                - !Sub "/${RulePath}"
-                - !Sub "/${RulePath}/*"
-    {{- if eq .WorkloadType "Backend Service"}}
+            {{- if eq $rule.Path "/"}}
+            - /*
+            {{- else }}
+            - /{{ $rule.Path }}
+            - /{{ $rule.Path }}/*
+            {{- end }}
+    {{- if eq $.WorkloadType "Backend Service"}}
     ListenerArn: !GetAtt EnvControllerAction.InternalHTTPListenerArn
     {{- else}}
     ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
     {{- end}}
-    Priority: !GetAtt HTTPRuleWithDomainPriorityAction.Priority
+    Priority: !GetAtt HTTPRuleWithDomainPriorityAction.Priority{{ if ne $i 0 }}{{ $i }}{{ end }}
 
-HTTPSListenerRule:
+HTTPSListenerRule{{ if ne $i 0 }}{{ $i }}{{ end }}:
   Metadata:
     'aws:copilot:description': 'An HTTPS listener rule for forwarding HTTPS traffic to your tasks'
   Type: AWS::ElasticLoadBalancingV2::ListenerRule
   Properties:
     Actions:
-      - TargetGroupArn: !Ref TargetGroup
+      - TargetGroupArn: !Ref TargetGroup{{ if ne $i 0 }}{{ $i }}{{ end }}
         Type: forward
     Conditions:
-      {{- if .AllowedSourceIps}}
+      {{- if $rule.AllowedSourceIps}}
       - Field: 'source-ip'
         SourceIpConfig:
           Values:
-          {{- range $sourceIP := .AllowedSourceIps}}
+          {{- range $sourceIP := $rule.AllowedSourceIps}}
             - {{$sourceIP}}
           {{- end}}
       {{- end}}
-      {{- if .Aliases }}
+      {{- if $rule.Aliases }}
       - Field: 'host-header'
         HostHeaderConfig:
-          Values: {{ fmtSlice (quoteSlice .Aliases) }}
+          Values: {{ fmtSlice (quoteSlice $rule.Aliases) }}
       {{- else }}
       - Field: 'host-header'
         HostHeaderConfig:
@@ -168,16 +168,16 @@ HTTPSListenerRule:
       - Field: 'path-pattern'
         PathPatternConfig:
           Values:
-            !If
-              - IsDefaultRootPath
-              -
-                - "/*"
-              -
-                - !Sub "/${RulePath}"
-                - !Sub "/${RulePath}/*"
-    {{- if eq .WorkloadType "Backend Service"}}
+          {{- if eq $rule.Path "/" }}
+            - /*
+          {{- else }}
+            - /{{ $rule.Path }}
+            - /{{ $rule.Path }}/*
+          {{- end }}
+    {{- if eq $.WorkloadType "Backend Service"}}
     ListenerArn: !GetAtt EnvControllerAction.InternalHTTPSListenerArn
     {{- else}}
     ListenerArn: !GetAtt EnvControllerAction.HTTPSListenerArn
     {{- end}}
-    Priority: !GetAtt HTTPSRulePriorityAction.Priority
+    Priority: !GetAtt HTTPSRulePriorityAction.Priority{{ if ne $i 0 }}{{ $i }}{{ end }}
+{{- end }}

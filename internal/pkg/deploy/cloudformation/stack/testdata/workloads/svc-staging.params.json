@@ -10,7 +10,6 @@
     "HTTPSEnabled": "true",
     "LogRetention": "30",
     "RulePath": "/",
-    "Stickiness": "false",
     "TargetContainer": "fe",
     "TargetPort": "4000",
     "TaskCPU": "256",

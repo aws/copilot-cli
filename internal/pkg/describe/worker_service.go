@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"text/tabwriter"
 
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatch"
+	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 
@@ -25,7 +27,9 @@ type WorkerServiceDescriber struct {
 
 	store             DeployedEnvServicesLister
 	initECSDescriber  func(string) (ecsDescriber, error)
+	initCWDescriber   func(string) (cwAlarmDescriber, error)
 	svcStackDescriber map[string]ecsDescriber
+	cwAlarmDescribers map[string]cwAlarmDescriber
 }
 
 // NewWorkerServiceDescriber instantiates a worker service describer.
@@ -53,6 +57,20 @@ func NewWorkerServiceDescriber(opt NewServiceConfig) (*WorkerServiceDescriber, e
 		describer.svcStackDescriber[env] = d
 		return d, nil
 	}
+	describer.initCWDescriber = func(envName string) (cwAlarmDescriber, error) {
+		if describer, ok := describer.cwAlarmDescribers[envName]; ok {
+			return describer, nil
+		}
+		env, err := opt.ConfigStore.GetEnvironment(opt.App, envName)
+		if err != nil {
+			return nil, fmt.Errorf("get environment %s: %w", envName, err)
+		}
+		sess, err := sessions.ImmutableProvider().FromRole(env.ManagerRoleARN, env.Region)
+		if err != nil {
+			return nil, err
+		}
+		return cloudwatch.New(sess), nil
+	}
 	return describer, nil
 }
 
@@ -66,7 +84,7 @@ func (d *WorkerServiceDescriber) Describe() (HumanJSONStringer, error) {
 	var configs []*ECSServiceConfig
 	var envVars []*containerEnvVar
 	var secrets []*secret
-	var alarms  []string
+	var alarmDescriptions []*cloudwatch.AlarmDescription
 	for _, env := range environments {
 		svcDescr, err := d.initECSDescriber(env)
 		if err != nil {
@@ -90,9 +108,23 @@ func (d *WorkerServiceDescriber) Describe() (HumanJSONStringer, error) {
 			},
 			Tasks: svcParams[cfnstack.WorkloadTaskCountParamKey],
 		})
-		alarms, err = svcDescr.RollbackAlarmNames()
+		alarmNames, err := svcDescr.RollbackAlarmNames()
 		if err != nil {
 			return nil, fmt.Errorf("retrieve rollback alarm names: %w", err)
+		}
+		if alarmNames != nil {
+			cwAlarmDescr, err := d.initCWDescriber(env)
+			if err != nil {
+				return nil, err
+			}
+			alarmDescs, err := cwAlarmDescr.AlarmDescriptions(alarmNames)
+			if err != nil {
+				return nil, fmt.Errorf("retrieve alarm descriptions: %w", err)
+			}
+			for _, alarm := range alarmDescs {
+				alarm.Environment = env
+			}
+			alarmDescriptions = append(alarmDescriptions, alarmDescs...)
 		}
 		workerSvcEnvVars, err := svcDescr.EnvVars()
 		if err != nil {
@@ -113,7 +145,7 @@ func (d *WorkerServiceDescriber) Describe() (HumanJSONStringer, error) {
 			if err != nil {
 				return nil, err
 			}
-			stackResources, err := svcDescr.ServiceStackResources()
+			stackResources, err := svcDescr.StackResources()
 			if err != nil {
 				return nil, fmt.Errorf("retrieve service resources: %w", err)
 			}
@@ -122,14 +154,14 @@ func (d *WorkerServiceDescriber) Describe() (HumanJSONStringer, error) {
 	}
 
 	return &workerSvcDesc{
-		Service:        d.svc,
-		Type:           manifestinfo.WorkerServiceType,
-		App:            d.app,
-		Configurations: configs,
-		Alarms:         alarms,
-		Variables:      envVars,
-		Secrets:        secrets,
-		Resources:      resources,
+		Service:           d.svc,
+		Type:              manifestinfo.WorkerServiceType,
+		App:               d.app,
+		Configurations:    configs,
+		AlarmDescriptions: alarmDescriptions,
+		Variables:         envVars,
+		Secrets:           secrets,
+		Resources:         resources,
 
 		environments: environments,
 	}, nil
@@ -147,14 +179,14 @@ func (d *WorkerServiceDescriber) Manifest(env string) ([]byte, error) {
 
 // workerSvcDesc contains serialized parameters for a worker service.
 type workerSvcDesc struct {
-	Service        string               `json:"service"`
-	Type           string               `json:"type"`
-	App            string               `json:"application"`
-	Configurations ecsConfigurations    `json:"configurations"`
-	Alarms         []string             `json:"rollbackAlarms,omitempty"`
-	Variables      containerEnvVars     `json:"variables"`
-	Secrets        secrets              `json:"secrets,omitempty"`
-	Resources      deployedSvcResources `json:"resources,omitempty"`
+	Service           string                         `json:"service"`
+	Type              string                         `json:"type"`
+	App               string                         `json:"application"`
+	Configurations    ecsConfigurations              `json:"configurations"`
+	AlarmDescriptions []*cloudwatch.AlarmDescription `json:"rollbackAlarms,omitempty"`
+	Variables         containerEnvVars               `json:"variables"`
+	Secrets           secrets                        `json:"secrets,omitempty"`
+	Resources         deployedSvcResources           `json:"resources,omitempty"`
 
 	environments []string `json:"-"`
 }
@@ -180,10 +212,10 @@ func (w *workerSvcDesc) HumanString() string {
 	fmt.Fprint(writer, color.Bold.Sprint("\nConfigurations\n\n"))
 	writer.Flush()
 	w.Configurations.humanString(writer)
-	if len(w.Alarms) > 0 {
+	if len(w.AlarmDescriptions) > 0 {
 		fmt.Fprint(writer, color.Bold.Sprint("\nRollback Alarms\n\n"))
 		writer.Flush()
-		rollbackAlarms(w.Alarms).humanString(writer)
+		rollbackAlarms(w.AlarmDescriptions).humanString(writer)
 	}
 	fmt.Fprint(writer, color.Bold.Sprint("\nVariables\n\n"))
 	writer.Flush()

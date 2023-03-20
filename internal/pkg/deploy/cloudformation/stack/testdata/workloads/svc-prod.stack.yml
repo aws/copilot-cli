@@ -32,6 +32,18 @@ Parameters:
     Description: 'URL of the environment file.'
     Type: String
     Default: ""
+  LoggingEnvFileARN:
+    Description: 'URL of the environment file for the logging sidecar.'
+    Type: String
+    Default: ""
+  nginxEnvFileARN:
+    Description: 'URL of the environment file for the nginx sidecar.'
+    Type: String
+    Default: ""
+  operationEnvFileARN:
+    Description: 'URL of the environment file for the operation sidecar.'
+    Type: String
+    Default: ""
   TargetContainer:
     Type: String
   TargetPort:
@@ -41,15 +53,14 @@ Parameters:
     AllowedValues: [true, false]
   RulePath:
     Type: String
-  Stickiness:
-    Type: String
-    Default: false
 Conditions:
   IsGovCloud: !Equals [!Ref "AWS::Partition", "aws-us-gov"]
-  IsDefaultRootPath: !Equals [!Ref RulePath, "/"]
   HasAssociatedDomain: !Equals [!Ref DNSDelegated, true]
   HasAddons: !Not [!Equals [!Ref AddonsTemplateURL, ""]]
   HasEnvFile: !Not [!Equals [!Ref EnvFileARN, ""]]
+  HasLoggingEnvFile: !Not [!Equals [!Ref LoggingEnvFileARN, ""]]
+  HasnginxEnvFile: !Not [!Equals [!Ref nginxEnvFileARN, ""]]
+  HasoperationEnvFile: !Not [!Equals [!Ref operationEnvFileARN, ""]]
 Resources: # If a bucket URL is specified, that means the template exists.
   LogGroup:
     Metadata:
@@ -151,6 +162,12 @@ Resources: # If a bucket URL is specified, that means the template exists.
                 Fn::ImportValue: "MyDB"
             - Name: TEST
               Value: "TEST"
+          EnvironmentFiles:
+            - !If
+              - HasLoggingEnvFile
+              - Type: "s3"
+                Value: !Ref LoggingEnvFileARN
+              - !Ref "AWS::NoValue"
           Secrets:
             - Name: GITHUB_TOKEN
               ValueFrom: GITHUB_TOKEN
@@ -205,6 +222,12 @@ Resources: # If a bucket URL is specified, that means the template exists.
                 Fn::ImportValue: "MyDB"
             - Name: NGINX_PORT
               Value: "80"
+          EnvironmentFiles:
+            - !If
+              - HasnginxEnvFile
+              - Type: "s3"
+                Value: !Ref nginxEnvFileARN
+              - !Ref "AWS::NoValue"
           LogConfiguration:
             LogDriver: awslogs
             Options:
@@ -229,6 +252,12 @@ Resources: # If a bucket URL is specified, that means the template exists.
               Value: '{"givesdogs":"arn:aws:sns:us-west-2:123456789123:my-app-prod-fe-givesdogs","mytopic.fifo":"arn:aws:sns:us-west-2:123456789123:my-app-prod-fe-mytopic.fifo"}'
             - Name: COPILOT_LB_DNS
               Value: !GetAtt EnvControllerAction.PublicLoadBalancerDNSName
+          EnvironmentFiles:
+            - !If
+              - HasoperationEnvFile
+              - Type: "s3"
+                Value: !Ref operationEnvFileARN
+              - !Ref "AWS::NoValue"
           LogConfiguration:
             LogDriver: awslogs
             Options:
@@ -298,6 +327,72 @@ Resources: # If a bucket URL is specified, that means the template exists.
                         - !Ref AWS::Partition
                         - ':s3:::'
                         - !Select [0, !Split ['/', !Select [5, !Split [':', !Ref EnvFileARN]]]]
+          - !Ref AWS::NoValue
+        - !If
+          - HasLoggingEnvFile
+          - PolicyName: !Join ['', [!Ref AppName, '-', !Ref EnvName, '-', !Ref WorkloadName, GetLoggingEnvFilePolicy]]
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: 'Allow'
+                  Action:
+                    - 's3:GetObject'
+                  Resource:
+                    - !Ref LoggingEnvFileARN
+                - Effect: 'Allow'
+                  Action:
+                    - 's3:GetBucketLocation'
+                  Resource:
+                    - !Join
+                      - ''
+                      - - 'arn:'
+                        - !Ref AWS::Partition
+                        - ':s3:::'
+                        - !Select [0, !Split ['/', !Select [5, !Split [':', !Ref LoggingEnvFileARN]]]]
+          - !Ref AWS::NoValue
+        - !If
+          - HasnginxEnvFile
+          - PolicyName: !Join ['', [!Ref AppName, '-', !Ref EnvName, '-', !Ref WorkloadName, GetnginxEnvFilePolicy]]
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: 'Allow'
+                  Action:
+                    - 's3:GetObject'
+                  Resource:
+                    - !Ref nginxEnvFileARN
+                - Effect: 'Allow'
+                  Action:
+                    - 's3:GetBucketLocation'
+                  Resource:
+                    - !Join
+                      - ''
+                      - - 'arn:'
+                        - !Ref AWS::Partition
+                        - ':s3:::'
+                        - !Select [0, !Split ['/', !Select [5, !Split [':', !Ref nginxEnvFileARN]]]]
+          - !Ref AWS::NoValue
+        - !If
+          - HasoperationEnvFile
+          - PolicyName: !Join ['', [!Ref AppName, '-', !Ref EnvName, '-', !Ref WorkloadName, GetoperationEnvFilePolicy]]
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: 'Allow'
+                  Action:
+                    - 's3:GetObject'
+                  Resource:
+                    - !Ref operationEnvFileARN
+                - Effect: 'Allow'
+                  Action:
+                    - 's3:GetBucketLocation'
+                  Resource:
+                    - !Join
+                      - ''
+                      - - 'arn:'
+                        - !Ref AWS::Partition
+                        - ':s3:::'
+                        - !Select [0, !Split ['/', !Select [5, !Split [':', !Ref operationEnvFileARN]]]]
           - !Ref AWS::NoValue
       ManagedPolicyArns:
         - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy'
@@ -590,8 +685,8 @@ Resources: # If a bucket URL is specified, that means the template exists.
       # This may need to be adjusted if the container takes a while to start up
       HealthCheckGracePeriodSeconds: 60
       LoadBalancers:
-        - ContainerName: !Ref TargetContainer
-          ContainerPort: !Ref TargetPort
+        - ContainerName: nginx
+          ContainerPort: 8080
           TargetGroupArn: !Ref TargetGroup
       ServiceRegistries:
         - RegistryArn: !GetAtt DiscoveryService.Arn
@@ -602,13 +697,13 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
       HealthCheckPath: / # Default is '/'.
-      Port: !Ref TargetPort
+      Port: 8080
       Protocol: HTTP
       TargetGroupAttributes:
         - Key: deregistration_delay.timeout_seconds
           Value: 60 # ECS Default is 300; Copilot default is 60.
         - Key: stickiness.enabled
-          Value: !Ref Stickiness
+          Value: false
       TargetType: ip
       VpcId:
         Fn::ImportValue: !Sub "${AppName}-${EnvName}-VpcId"
@@ -655,7 +750,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Type: Custom::RulePriorityFunction
     Properties:
       ServiceToken: !GetAtt RulePriorityFunction.Arn
-      RulePath: !Ref RulePath
+      RulePath: ["/"]
       ListenerArn: !GetAtt EnvControllerAction.HTTPSListenerArn
   
   HTTPRuleWithDomainPriorityAction:
@@ -664,7 +759,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Type: Custom::RulePriorityFunction
     Properties:
       ServiceToken: !GetAtt RulePriorityFunction.Arn
-      RulePath: !Ref RulePath
+      RulePath: ["/"]
       ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
   
   HTTPListenerRuleWithDomain:
@@ -687,11 +782,8 @@ Resources: # If a bucket URL is specified, that means the template exists.
             Values: ["example.com"]
         - Field: 'path-pattern'
           PathPatternConfig:
-            Values: !If
-              - IsDefaultRootPath
-              - - "/*"
-              - - !Sub "/${RulePath}"
-                - !Sub "/${RulePath}/*"
+            Values:
+              - "/*"
       ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
       Priority: !GetAtt HTTPRuleWithDomainPriorityAction.Priority
   HTTPSListenerRule:
@@ -708,11 +800,8 @@ Resources: # If a bucket URL is specified, that means the template exists.
             Values: ["example.com"]
         - Field: 'path-pattern'
           PathPatternConfig:
-            Values: !If
-              - IsDefaultRootPath
-              - - "/*"
-              - - !Sub "/${RulePath}"
-                - !Sub "/${RulePath}/*"
+            Values:
+              - "/*"
       ListenerArn: !GetAtt EnvControllerAction.HTTPSListenerArn
       Priority: !GetAtt HTTPSRulePriorityAction.Priority
   AddonsStack:

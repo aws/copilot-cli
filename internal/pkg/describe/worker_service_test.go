@@ -6,6 +6,7 @@ package describe
 import (
 	"errors"
 	"fmt"
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatch"
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
@@ -20,6 +21,7 @@ import (
 type workerSvcDescriberMocks struct {
 	storeSvc     *mocks.MockDeployedEnvServicesLister
 	ecsDescriber *mocks.MockecsDescriber
+	cwDescriber  *mocks.MockcwAlarmDescriber
 }
 
 func TestWorkerServiceDescriber_Describe(t *testing.T) {
@@ -29,6 +31,10 @@ func TestWorkerServiceDescriber_Describe(t *testing.T) {
 		testSvc = "jobs"
 		prodEnv = "prod"
 		mockEnv = "mockEnv"
+		alarm1  = "alarm1"
+		alarm2  = "alarm2"
+		desc1   = "alarm description 1"
+		desc2   = "alarm description 2"
 	)
 	mockErr := errors.New("some error")
 	testCases := map[string]struct {
@@ -69,6 +75,43 @@ func TestWorkerServiceDescriber_Describe(t *testing.T) {
 				)
 			},
 			wantedError: fmt.Errorf("retrieve platform: some error"),
+		},
+		"return error if fail to retrieve rollback alarm names": {
+			setupMocks: func(m workerSvcDescriberMocks) {
+				gomock.InOrder(
+					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
+					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
+						cfnstack.WorkloadTaskCountParamKey:  "1",
+						cfnstack.WorkloadTaskCPUParamKey:    "256",
+						cfnstack.WorkloadTaskMemoryParamKey: "512",
+					}, nil),
+					m.ecsDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
+						OperatingSystem: "LINUX",
+						Architecture:    "X86_64",
+					}, nil),
+					m.ecsDescriber.EXPECT().RollbackAlarmNames().Return(nil, errors.New("some error")),
+				)
+			},
+			wantedError: fmt.Errorf("retrieve rollback alarm names: some error"),
+		},
+		"return error if fail to retrieve alarm descriptions": {
+			setupMocks: func(m workerSvcDescriberMocks) {
+				gomock.InOrder(
+					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
+					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
+						cfnstack.WorkloadTaskCountParamKey:  "1",
+						cfnstack.WorkloadTaskCPUParamKey:    "256",
+						cfnstack.WorkloadTaskMemoryParamKey: "512",
+					}, nil),
+					m.ecsDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
+						OperatingSystem: "LINUX",
+						Architecture:    "X86_64",
+					}, nil),
+					m.ecsDescriber.EXPECT().RollbackAlarmNames().Return([]string{alarm1}, nil),
+					m.cwDescriber.EXPECT().AlarmDescriptions([]string{alarm1}).Return(nil, errors.New("some error")),
+				)
+			},
+			wantedError: fmt.Errorf("retrieve alarm descriptions: some error"),
 		},
 		"return error if fail to retrieve environment variables": {
 			setupMocks: func(m workerSvcDescriberMocks) {
@@ -131,7 +174,13 @@ func TestWorkerServiceDescriber_Describe(t *testing.T) {
 						OperatingSystem: "LINUX",
 						Architecture:    "X86_64",
 					}, nil),
-					m.ecsDescriber.EXPECT().RollbackAlarmNames().Return(nil, nil),
+					m.ecsDescriber.EXPECT().RollbackAlarmNames().Return([]string{alarm1}, nil),
+					m.cwDescriber.EXPECT().AlarmDescriptions([]string{alarm1}).Return([]*cloudwatch.AlarmDescription{
+						{
+							Name:        alarm1,
+							Description: desc1,
+						},
+					}, nil),
 					m.ecsDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
 						{
 							Name:      "COPILOT_ENVIRONMENT_NAME",
@@ -155,7 +204,13 @@ func TestWorkerServiceDescriber_Describe(t *testing.T) {
 						OperatingSystem: "LINUX",
 						Architecture:    "ARM64",
 					}, nil),
-					m.ecsDescriber.EXPECT().RollbackAlarmNames().Return(nil, nil),
+					m.ecsDescriber.EXPECT().RollbackAlarmNames().Return([]string{alarm2}, nil),
+					m.cwDescriber.EXPECT().AlarmDescriptions([]string{alarm2}).Return([]*cloudwatch.AlarmDescription{
+						{
+							Name:        alarm2,
+							Description: desc2,
+						},
+					}, nil),
 					m.ecsDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
 						{
 							Name:      "COPILOT_ENVIRONMENT_NAME",
@@ -189,19 +244,19 @@ func TestWorkerServiceDescriber_Describe(t *testing.T) {
 					}, nil),
 					m.ecsDescriber.EXPECT().Secrets().Return(
 						nil, nil),
-					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*stack.Resource{
+					m.ecsDescriber.EXPECT().StackResources().Return([]*stack.Resource{
 						{
 							Type:       "AWS::EC2::SecurityGroupIngress",
 							PhysicalID: "ContainerSecurityGroupIngressFromPublicALB",
 						},
 					}, nil),
-					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*stack.Resource{
+					m.ecsDescriber.EXPECT().StackResources().Return([]*stack.Resource{
 						{
 							Type:       "AWS::EC2::SecurityGroup",
 							PhysicalID: "sg-0758ed6b233743530",
 						},
 					}, nil),
-					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*stack.Resource{
+					m.ecsDescriber.EXPECT().StackResources().Return([]*stack.Resource{
 						{
 							Type:       "AWS::EC2::SecurityGroup",
 							PhysicalID: "sg-2337435300758ed6b",
@@ -243,6 +298,18 @@ func TestWorkerServiceDescriber_Describe(t *testing.T) {
 							Port:        "-",
 						},
 						Tasks: "2",
+					},
+				},
+				AlarmDescriptions: []*cloudwatch.AlarmDescription{
+					{
+						Name:        alarm1,
+						Description: desc1,
+						Environment: testEnv,
+					},
+					{
+						Name:        alarm2,
+						Description: desc2,
+						Environment: prodEnv,
 					},
 				},
 				Variables: []*containerEnvVar{
@@ -317,9 +384,11 @@ func TestWorkerServiceDescriber_Describe(t *testing.T) {
 
 			mockStore := mocks.NewMockDeployedEnvServicesLister(ctrl)
 			mockSvcDescriber := mocks.NewMockecsDescriber(ctrl)
+			mockCwDescriber := mocks.NewMockcwAlarmDescriber(ctrl)
 			mocks := workerSvcDescriberMocks{
 				storeSvc:     mockStore,
 				ecsDescriber: mockSvcDescriber,
+				cwDescriber:  mockCwDescriber,
 			}
 
 			tc.setupMocks(mocks)
@@ -330,6 +399,7 @@ func TestWorkerServiceDescriber_Describe(t *testing.T) {
 				enableResources:  tc.shouldOutputResources,
 				store:            mockStore,
 				initECSDescriber: func(s string) (ecsDescriber, error) { return mockSvcDescriber, nil },
+				initCWDescriber:  func(s string) (cwAlarmDescriber, error) { return mockCwDescriber, nil },
 			}
 
 			// WHEN
@@ -367,10 +437,10 @@ Configurations
 
 Rollback Alarms
 
-  Name
-  ----
-  alarm1
-  alarm2
+  Name        Environment  Description
+  ----        -----------  -----------
+  alarmName1  test         alarm description 1
+  alarmName2  prod         alarm description 2
 
 Variables
 
@@ -394,7 +464,7 @@ Resources
   prod
     AWS::EC2::SecurityGroupIngress  ContainerSecurityGroupIngressFromPublicALB
 `,
-			wantedJSONString: "{\"service\":\"my-svc\",\"type\":\"Worker Service\",\"application\":\"my-app\",\"configurations\":[{\"environment\":\"test\",\"port\":\"-\",\"cpu\":\"256\",\"memory\":\"512\",\"platform\":\"LINUX/X86_64\",\"tasks\":\"1\"},{\"environment\":\"prod\",\"port\":\"-\",\"cpu\":\"512\",\"memory\":\"1024\",\"platform\":\"LINUX/ARM64\",\"tasks\":\"3\"}],\"rollbackAlarms\":[\"alarm1\",\"alarm2\"],\"variables\":[{\"environment\":\"prod\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"prod\",\"container\":\"container\"},{\"environment\":\"test\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"test\",\"container\":\"container\"}],\"secrets\":[{\"name\":\"A_SECRET\",\"container\":\"container\",\"environment\":\"prod\",\"valueFrom\":\"SECRET\"},{\"name\":\"GITHUB_WEBHOOK_SECRET\",\"container\":\"container\",\"environment\":\"test\",\"valueFrom\":\"GH_WEBHOOK_SECRET\"}],\"resources\":{\"prod\":[{\"type\":\"AWS::EC2::SecurityGroupIngress\",\"physicalID\":\"ContainerSecurityGroupIngressFromPublicALB\"}],\"test\":[{\"type\":\"AWS::EC2::SecurityGroup\",\"physicalID\":\"sg-0758ed6b233743530\"}]}}\n",
+			wantedJSONString: "{\"service\":\"my-svc\",\"type\":\"Worker Service\",\"application\":\"my-app\",\"configurations\":[{\"environment\":\"test\",\"port\":\"-\",\"cpu\":\"256\",\"memory\":\"512\",\"platform\":\"LINUX/X86_64\",\"tasks\":\"1\"},{\"environment\":\"prod\",\"port\":\"-\",\"cpu\":\"512\",\"memory\":\"1024\",\"platform\":\"LINUX/ARM64\",\"tasks\":\"3\"}],\"rollbackAlarms\":[{\"name\":\"alarmName1\",\"description\":\"alarm description 1\",\"environment\":\"test\"},{\"name\":\"alarmName2\",\"description\":\"alarm description 2\",\"environment\":\"prod\"}],\"variables\":[{\"environment\":\"prod\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"prod\",\"container\":\"container\"},{\"environment\":\"test\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"test\",\"container\":\"container\"}],\"secrets\":[{\"name\":\"A_SECRET\",\"container\":\"container\",\"environment\":\"prod\",\"valueFrom\":\"SECRET\"},{\"name\":\"GITHUB_WEBHOOK_SECRET\",\"container\":\"container\",\"environment\":\"test\",\"valueFrom\":\"GH_WEBHOOK_SECRET\"}],\"resources\":{\"prod\":[{\"type\":\"AWS::EC2::SecurityGroupIngress\",\"physicalID\":\"ContainerSecurityGroupIngressFromPublicALB\"}],\"test\":[{\"type\":\"AWS::EC2::SecurityGroup\",\"physicalID\":\"sg-0758ed6b233743530\"}]}}\n",
 		},
 	}
 
@@ -440,6 +510,18 @@ Resources
 					Container: "container",
 				},
 			}
+			alarmDescs := []*cloudwatch.AlarmDescription{
+				{
+					Name:        "alarmName1",
+					Description: "alarm description 1",
+					Environment: "test",
+				},
+				{
+					Name:        "alarmName2",
+					Description: "alarm description 2",
+					Environment: "prod",
+				},
+			}
 			secrets := []*secret{
 				{
 					Name:        "GITHUB_WEBHOOK_SECRET",
@@ -469,15 +551,15 @@ Resources
 				},
 			}
 			workerSvc := &workerSvcDesc{
-				Service:        "my-svc",
-				Type:           "Worker Service",
-				Configurations: config,
-				Alarms:         []string{"alarm1", "alarm2"},
-				App:            "my-app",
-				Variables:      envVars,
-				Secrets:        secrets,
-				Resources:      resources,
-				environments:   []string{"test", "prod"},
+				Service:           "my-svc",
+				Type:              "Worker Service",
+				Configurations:    config,
+				AlarmDescriptions: alarmDescs,
+				App:               "my-app",
+				Variables:         envVars,
+				Secrets:           secrets,
+				Resources:         resources,
+				environments:      []string{"test", "prod"},
 			}
 			human := workerSvc.HumanString()
 			json, _ := workerSvc.JSONString()
