@@ -209,8 +209,7 @@ func (b *BackendService) ExposedPorts() (ExposedPortsIndex, error) {
 		exposedPorts = append(exposedPorts, out...)
 	}
 	for _, rule := range b.RoutingRule.RoutingRules() {
-		out := rule.exposedPorts(exposedPorts, workloadName)
-		exposedPorts = append(exposedPorts, out...)
+		exposedPorts = append(exposedPorts, rule.exposedPorts(exposedPorts, workloadName)...)
 	}
 	portsForContainer, containerForPort := prepareParsedExposedPortsMap(sortExposedPorts(exposedPorts))
 	return ExposedPortsIndex{
