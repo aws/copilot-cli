@@ -14,6 +14,8 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+const jsonPointerSeparator = "/"
+
 // Patch applies overrides configured as JSON Patches,
 // as defined in https://www.rfc-editor.org/rfc/rfc6902.
 type Patch struct {
@@ -21,10 +23,13 @@ type Patch struct {
 	fs          afero.Fs // OS file system.
 }
 
+// PatchOpts is optional configuration for initializing a Patch Overrider.
 type PatchOpts struct {
 	FS afero.Fs // File system interface. If nil, defaults to the OS file system.
 }
 
+// WithPatch instantiates a new Patch Overrider with root being the path to the overrides/ directory.
+// It supports a single file (cfn.patches.yml) with configured patches.
 func WithPatch(root string, opts PatchOpts) *Patch {
 	fs := afero.NewOsFs()
 	if opts.FS != nil {
@@ -45,6 +50,8 @@ type yamlPatch struct {
 	Value yaml.Node `yaml:"value"`
 }
 
+// Override returns the overriden CloudFormation template body
+// after applying YAML patches to it.
 func (p *Patch) Override(body []byte) ([]byte, error) {
 	patches, err := p.unmarshalPatches()
 	if err != nil {
@@ -69,7 +76,7 @@ func (p *Patch) Override(body []byte) ([]byte, error) {
 			return nil, fmt.Errorf("unsupported operation %q", patch.Operation)
 		}
 		if err != nil {
-			return nil, fmt.Errorf("unable to apply %q patch at %q: %w", patch.Operation, patch.Path, err)
+			return nil, fmt.Errorf("unable to apply %q patch: %w", patch.Operation, err)
 		}
 	}
 
@@ -202,23 +209,26 @@ func (y *yamlPatch) encodeAndStop(node *yaml.Node) error {
 
 var errStopFollowingPointer = errors.New("stop following pointer")
 
-func followJSONPointer(root *yaml.Node, pointer string, visit func(node *yaml.Node, pointer []string) error) error {
+type visitNodeFunc func(node *yaml.Node, remaining []string) error
+
+func followJSONPointer(root *yaml.Node, pointer string, visit visitNodeFunc) error {
 	split := strings.Split(pointer, "/")
 	for i := range split {
-		split[i] = strings.ReplaceAll(split[i], "~0", "~")
+		// apply replacements as described https://www.rfc-editor.org/rfc/rfc6901#section-4
 		split[i] = strings.ReplaceAll(split[i], "~1", "/")
+		split[i] = strings.ReplaceAll(split[i], "~0", "~")
 	}
 
-	return followJSONPointerHelper(root, split, visit)
+	return followJSONPointerHelper(root, nil, split, visit)
 }
 
-func followJSONPointerHelper(node *yaml.Node, pointer []string, visit func(node *yaml.Node, pointer []string) error) error {
-	if err := visit(node, pointer); err != nil {
+func followJSONPointerHelper(node *yaml.Node, traversed, remaining []string, visit visitNodeFunc) error {
+	if err := visit(node, remaining); err != nil {
 		if errors.Is(err, errStopFollowingPointer) {
 			return nil
 		}
-		return err
-	} else if len(pointer) == 0 {
+		return fmt.Errorf("key %q: %w", strings.Join(traversed, jsonPointerSeparator), err)
+	} else if len(remaining) == 0 {
 		return nil
 	}
 
@@ -228,26 +238,26 @@ func followJSONPointerHelper(node *yaml.Node, pointer []string, visit func(node 
 			return fmt.Errorf("don't support multi-doc yaml")
 		}
 
-		return followJSONPointerHelper(node.Content[0], pointer[1:], visit)
+		return followJSONPointerHelper(node.Content[0], append(traversed, remaining[0]), remaining[1:], visit)
 	case yaml.MappingNode:
 		for i := 0; i < len(node.Content); i += 2 {
-			if node.Content[i].Value == pointer[0] {
-				return followJSONPointerHelper(node.Content[i+1], pointer[1:], visit)
+			if node.Content[i].Value == remaining[0] {
+				return followJSONPointerHelper(node.Content[i+1], append(traversed, remaining[0]), remaining[1:], visit)
 			}
 		}
 
-		return fmt.Errorf("key %q not found in map", pointer[0])
+		return fmt.Errorf("key %q: %q not found in map", strings.Join(traversed, jsonPointerSeparator), remaining[0])
 	case yaml.SequenceNode:
-		idx, err := strconv.Atoi(pointer[0])
+		idx, err := strconv.Atoi(remaining[0])
 		switch {
 		case err != nil:
-			return fmt.Errorf("expected index in sequence, got %q", pointer[0])
+			return fmt.Errorf("key %q: expected index in sequence, got %q", strings.Join(traversed, jsonPointerSeparator), remaining[0])
 		case idx > len(node.Content)-1:
-			return fmt.Errorf("invalid index %d for sequence of length %d", idx, len(node.Content))
+			return fmt.Errorf("key %q: index %d out of bounds for sequence of length %d", strings.Join(traversed, jsonPointerSeparator), idx, len(node.Content))
 		}
 
-		return followJSONPointerHelper(node.Content[idx], pointer[1:], visit)
+		return followJSONPointerHelper(node.Content[idx], append(traversed, remaining[0]), remaining[1:], visit)
 	default:
-		return fmt.Errorf("invalid node type %#v for path", node.Kind)
+		return fmt.Errorf("key %q: invalid node type %#v", strings.Join(traversed, jsonPointerSeparator), node.Kind)
 	}
 }
