@@ -213,6 +213,11 @@ func New(sess *session.Session, opts ...OptFn) CloudFormation {
 	return client
 }
 
+// Template returns a deployed stack's template.
+func (cf CloudFormation) Template(stackName string) (string, error) {
+	return cf.cfnClient.TemplateBody(stackName)
+}
+
 // AddonsTemplate returns the environment stack's addons template, if there is any.
 func (cf CloudFormation) AddonsTemplate(stackName string) (string, error) {
 	rcs, err := cf.cfnClient.StackResources(stackName)
