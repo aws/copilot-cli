@@ -795,3 +795,70 @@ Resources:
 	require.Contains(t, buf.String(), "An Addons CloudFormation Stack for your additional AWS resources")
 	require.Contains(t, buf.String(), "A DynamoDB table to store data")
 }
+
+func TestCloudFormation_AddonsTemplate(t *testing.T) {
+	inStackName := stack.NameForEnv("app", "env")
+	testCases := map[string]struct {
+		setUpMock  func(m *mocks.MockcfnClient)
+		wantedTmpl string
+		wantedErr  error
+	}{
+		"error getting stack resources": {
+			setUpMock: func(m *mocks.MockcfnClient) {
+				m.EXPECT().StackResources(gomock.Eq(inStackName)).Return(nil, errors.New("some error"))
+			},
+			wantedErr: errors.New("get stack resources for stack app-env: some error"),
+		},
+		"error getting addons template": {
+			setUpMock: func(m *mocks.MockcfnClient) {
+				m.EXPECT().StackResources(gomock.Eq(inStackName)).Return([]*cloudformation.StackResource{
+					{
+						LogicalResourceId:  aws.String("AddonsStack"),
+						PhysicalResourceId: aws.String("mockAddonsStackARN"),
+					},
+				}, nil)
+				m.EXPECT().TemplateBody("mockAddonsStackARN").Return("", errors.New("some error"))
+			},
+			wantedErr: errors.New("get template body for addons stack mockAddonsStackARN: some error"),
+		},
+		"no nested addons stack for the stack": {
+			setUpMock: func(m *mocks.MockcfnClient) {
+				m.EXPECT().StackResources(gomock.Eq(inStackName)).Return([]*cloudformation.StackResource{
+					{
+						LogicalResourceId:  aws.String("Services"),
+						PhysicalResourceId: aws.String("mockServiceARN"),
+					},
+				}, nil)
+				m.EXPECT().TemplateBody(gomock.Any()).Times(0)
+			},
+		},
+		"returns the correct template": {
+			setUpMock: func(m *mocks.MockcfnClient) {
+				m.EXPECT().StackResources(gomock.Eq(inStackName)).Return([]*cloudformation.StackResource{
+					{
+						LogicalResourceId:  aws.String("AddonsStack"),
+						PhysicalResourceId: aws.String("mockAddonsStackARN"),
+					},
+				}, nil)
+				m.EXPECT().TemplateBody("mockAddonsStackARN").Return("mockTemplate", nil)
+			},
+			wantedTmpl: "mockTemplate",
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			m := mocks.NewMockcfnClient(ctrl)
+			tc.setUpMock(m)
+			client := CloudFormation{cfnClient: m}
+			got, gotErr := client.AddonsTemplate(inStackName)
+			if tc.wantedErr != nil {
+				require.EqualError(t, gotErr, tc.wantedErr.Error())
+			} else {
+				require.NoError(t, gotErr)
+				require.Equal(t, tc.wantedTmpl, got)
+			}
+		})
+	}
+}

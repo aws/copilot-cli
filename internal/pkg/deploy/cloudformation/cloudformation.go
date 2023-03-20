@@ -213,6 +213,28 @@ func New(sess *session.Session, opts ...OptFn) CloudFormation {
 	return client
 }
 
+// AddonsTemplate returns the environment stack's addons template, if there is any.
+func (cf CloudFormation) AddonsTemplate(stackName string) (string, error) {
+	rcs, err := cf.cfnClient.StackResources(stackName)
+	if err != nil {
+		return "", fmt.Errorf("get stack resources for stack %s: %w", stackName, err)
+	}
+	var addonsStackName string
+	for _, rc := range rcs {
+		if aws.StringValue(rc.LogicalResourceId) == "AddonsStack" {
+			addonsStackName = aws.StringValue(rc.PhysicalResourceId)
+		}
+	}
+	if addonsStackName == "" {
+		return "", err
+	}
+	tmpl, err := cf.cfnClient.TemplateBody(addonsStackName)
+	if err != nil {
+		return "", fmt.Errorf("get template body for addons stack %s: %w", addonsStackName, err)
+	}
+	return tmpl, nil
+}
+
 // IsEmptyErr returns true if the error occurred because the cloudformation resource does not exist or does not contain any sub-resources.
 func IsEmptyErr(err error) bool {
 	type isEmpty interface {
