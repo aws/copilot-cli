@@ -25,6 +25,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/stream"
+	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"golang.org/x/sync/errgroup"
@@ -226,7 +227,7 @@ func (cf CloudFormation) AddonsTemplate(stackName string) (string, error) {
 	}
 	var addonsStackName string
 	for _, rc := range rcs {
-		if aws.StringValue(rc.LogicalResourceId) == "AddonsStack" {
+		if aws.StringValue(rc.LogicalResourceId) == template.AddonsStackLogicalID {
 			addonsStackName = aws.StringValue(rc.PhysicalResourceId)
 		}
 	}
