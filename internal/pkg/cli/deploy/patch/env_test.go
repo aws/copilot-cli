@@ -11,6 +11,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/cli/deploy/patch/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -27,14 +28,14 @@ func TestEnvironmentPatcher_EnsureManagerRoleIsAllowedToUpload(t *testing.T) {
 	}{
 		"error getting environment template": {
 			setupMocks: func(m *envPatcherMock) {
-				m.templatePatcher.EXPECT().EnvironmentTemplate("mockApp", "mockEnv").
+				m.templatePatcher.EXPECT().Template(stack.NameForEnv("mockApp", "mockEnv")).
 					Return("", errors.New("some error"))
 			},
 			wantedError: errors.New(`get environment template for "mockEnv": some error`),
 		},
 		"error updating the environment template with the patch": {
 			setupMocks: func(m *envPatcherMock) {
-				m.templatePatcher.EXPECT().EnvironmentTemplate("mockApp", "mockEnv").
+				m.templatePatcher.EXPECT().Template(stack.NameForEnv("mockApp", "mockEnv")).
 					Return(`
 Metadata:
   Version: v1.7.0
@@ -72,7 +73,7 @@ Resources:
 		},
 		"success when template version is later than v1.9.0": {
 			setupMocks: func(m *envPatcherMock) {
-				m.templatePatcher.EXPECT().EnvironmentTemplate("mockApp", "mockEnv").
+				m.templatePatcher.EXPECT().Template(stack.NameForEnv("mockApp", "mockEnv")).
 					Return(`
 Metadata:
   Version: v1.9.0`, nil)
@@ -80,7 +81,7 @@ Metadata:
 		},
 		"should upgrade non-legacy environments and ignore ErrChangeSet if the environment template already has permissions to upload artifacts": {
 			setupMocks: func(m *envPatcherMock) {
-				m.templatePatcher.EXPECT().EnvironmentTemplate("mockApp", "mockEnv").Return(`
+				m.templatePatcher.EXPECT().Template(stack.NameForEnv("mockApp", "mockEnv")).Return(`
 Metadata:
   Version: v1.1.0
 Resources:
