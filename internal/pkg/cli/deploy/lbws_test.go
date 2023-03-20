@@ -108,7 +108,9 @@ func mockLoadBalancedWebServiceDeployer(opts ...func(deployer *lbWebSvcDeployer)
 				},
 				RoutingRule: manifest.RoutingRuleConfigOrBool{
 					RoutingRuleConfiguration: manifest.RoutingRuleConfiguration{
-						Path: aws.String("/"),
+						Main: manifest.RoutingRule{
+							Path: aws.String("/"),
+						},
 					},
 				},
 			},

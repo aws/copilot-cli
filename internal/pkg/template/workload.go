@@ -408,7 +408,6 @@ type NetworkLoadBalancerListener struct {
 
 	SSLPolicy *string // The SSL policy applied when using TLS protocol.
 
-	Aliases     []string
 	Stickiness  *bool
 	HealthCheck NLBHealthCheck
 }
@@ -428,23 +427,7 @@ type NetworkLoadBalancer struct {
 	Listener            []NetworkLoadBalancerListener
 	MainContainerPort   string
 	CertificateRequired bool
-}
-
-// Aliases return all the unique aliases specified across all the routing rules in NLB.
-// Currently, we only have primary routing rule, but we will be getting additional routing rule soon.
-func (cfg *NetworkLoadBalancer) Aliases() []string {
-	var uniqueAliases []string
-	seen := make(map[string]struct{})
-	exists := struct{}{}
-	for _, listener := range cfg.Listener {
-		for _, entry := range listener.Aliases {
-			if _, ok := seen[entry]; !ok {
-				uniqueAliases = append(uniqueAliases, entry)
-				seen[entry] = exists
-			}
-		}
-	}
-	return uniqueAliases
+	Aliases             []string
 }
 
 // ALBListenerRule holds configuration that's needed for an Application Load Balancer listener rule.

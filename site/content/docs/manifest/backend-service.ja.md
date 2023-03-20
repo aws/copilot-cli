@@ -317,6 +317,13 @@ Service の平均レスポンス時間に応じて、スケールアップ・ダ
 
 {% include 'deployment.ja.md' %}
 
+```yaml
+deployment:
+  rollback_alarms:
+    cpu_utilization: 70    // Percentage value at or above which alarm is triggered.
+    memory_utilization: 50 // Percentage value at or above which alarm is triggered.
+```
+
 {% include 'entrypoint.ja.md' %}
 
 {% include 'command.ja.md' %}

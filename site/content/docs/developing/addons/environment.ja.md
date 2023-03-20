@@ -14,8 +14,11 @@ Environment Addon は、Environment が削除されない限り、削除され�
 
 ## どのように S3 バケット、DDB テーブル、Aurora Serverless クラスターを追加するのか？
 
-!!!caution "" 
-    v1.25.0 では、`copilot storage init` は Environment レベルでの Addon 作成に対応していません。
+Copilot には、特定の種類の Addon を作成するのに役立つ以下のコマンドが用意されています。
+
+* [`storage init`](../../commands/storage-init.ja.md) は、DynamoDB テーブル、S3 バケット、または Aurora Serverless クラスター
+
+ワークスペースから `copilot storage init` を実行すると、これらのリソースをセットアップするのに役立ついくつかの質問をガイドしてくれます。
 
 
 ## 他のリソースを追加するには？

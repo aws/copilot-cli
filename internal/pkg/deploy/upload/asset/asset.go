@@ -41,6 +41,8 @@ func Upload(fs afero.Fs, source, destination string, opts *UploadOpts) ([]string
 		for i, f := range files {
 			paths[i] = filepath.Join(source, f.Name())
 		}
+	} else if destination == "" { // only applies to files, not folders
+		destination = source
 	}
 	for _, path := range paths {
 		if err := afero.Walk(fs, path, walkFn(source, destination, opts.Recursive, fs, opts.UploadFn, &urls, matcher)); err != nil {

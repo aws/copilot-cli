@@ -86,9 +86,9 @@ func NewLoadBalancedWebService(props *LoadBalancedWebServiceProps) *LoadBalanced
 		svc.LoadBalancedWebServiceConfig.TaskConfig.Memory = aws.Int(MinWindowsTaskMemory)
 	}
 	if props.HTTPVersion != "" {
-		svc.RoutingRule.ProtocolVersion = &props.HTTPVersion
+		svc.RoutingRule.Main.ProtocolVersion = &props.HTTPVersion
 	}
-	svc.RoutingRule.Path = aws.String(props.Path)
+	svc.RoutingRule.Main.Path = aws.String(props.Path)
 	svc.parser = template.New()
 	for _, envName := range props.PrivateOnlyEnvironments {
 		svc.Environments[envName] = &LoadBalancedWebServiceConfig{
@@ -109,8 +109,10 @@ func newDefaultHTTPLoadBalancedWebService() *LoadBalancedWebService {
 	lbws := newDefaultLoadBalancedWebService()
 	lbws.RoutingRule = RoutingRuleConfigOrBool{
 		RoutingRuleConfiguration: RoutingRuleConfiguration{
-			HealthCheck: HealthCheckArgsOrString{
-				Union: BasicToUnion[string, HTTPHealthCheckArgs](DefaultHealthCheckPath),
+			Main: RoutingRule{
+				HealthCheck: HealthCheckArgsOrString{
+					Union: BasicToUnion[string, HTTPHealthCheckArgs](DefaultHealthCheckPath),
+				},
 			},
 		},
 	}
@@ -272,8 +274,10 @@ func (lbws *LoadBalancedWebService) ExposedPorts() (ExposedPortsIndex, error) {
 		}
 		exposedPorts = append(exposedPorts, out...)
 	}
-	// port from http.target_port.
-	exposedPorts = append(exposedPorts, lbws.RoutingRule.exposedPorts(exposedPorts, workloadName)...)
+	// port from http.target_port and http.additional_rules[x].target_port
+	for _, rule := range lbws.RoutingRule.RoutingRules() {
+		exposedPorts = append(exposedPorts, rule.exposedPorts(exposedPorts, workloadName)...)
+	}
 
 	// port from nlb.target_port and nlb.additional_listeners[x].target_port
 	for _, listener := range lbws.NLBConfig.NLBListeners() {
@@ -285,6 +289,7 @@ func (lbws *LoadBalancedWebService) ExposedPorts() (ExposedPortsIndex, error) {
 	}
 	portsForContainer, containerForPort := prepareParsedExposedPortsMap(sortExposedPorts(exposedPorts))
 	return ExposedPortsIndex{
+		WorkloadName:      workloadName,
 		PortsForContainer: portsForContainer,
 		ContainerForPort:  containerForPort,
 	}, nil

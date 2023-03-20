@@ -70,6 +70,7 @@ type overrideOpts struct {
 	cfgStore   store
 	prompt     prompter
 	cfnPrompt  cfnSelector
+	spinner    progress
 	dir        func() string
 	packageCmd func(w stringWriteCloser) (executor, error)
 }
@@ -172,16 +173,20 @@ func (o *overrideOpts) askResourcesToOverride() error {
 		return nil
 	}
 
+	o.spinner.Start("Generating CloudFormation template for resource selection")
 	buf := &closableStringBuilder{
 		Builder: new(strings.Builder),
 	}
 	pkgCmd, err := o.packageCmd(buf)
 	if err != nil {
+		o.spinner.Stop("")
 		return err
 	}
 	if err := pkgCmd.Execute(); err != nil {
+		o.spinner.Stop("")
 		return fmt.Errorf("generate CloudFormation template for %q: %v", o.name, err)
 	}
+	o.spinner.Stop("")
 	msg := fmt.Sprintf("Which resources in %q would you like to override?", o.name)
 	resources, err := o.cfnPrompt.Resources(msg, "Resources:", "", buf.String())
 	if err != nil {

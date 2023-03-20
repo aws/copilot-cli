@@ -74,6 +74,7 @@ func TestOverrideJob_Ask(t *testing.T) {
 							mockCmd.EXPECT().Execute().AnyTimes()
 							return mockCmd, nil
 						},
+						spinner: &spinnerTestDouble{},
 					},
 				}
 				cmd.validateOrAskName = cmd.validateOrAskJobName

@@ -5,6 +5,7 @@ package diff
 
 import (
 	"errors"
+	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -131,20 +132,24 @@ func TestFrom_Parse(t *testing.T) {
 			wanted: func() diffNode {
 				/* sentinel
 				   -> SizeRank
+				          -> 1 unchanged item (bear)
 					   -> {old: dog, new: nil} // Deletion.
+				          -> 1 unchanged item (cat)
 					   -> {old: nil, new: dog} // Insertion.
+				          -> 1 unchanged item (mouse)
 				*/
-				leaf1 := &node{
-					oldV: yamlScalarNode("dog"),
+				leaf1 := &seqItemNode{
+					node{oldV: yamlScalarNode("dog")},
 				}
-				leaf2 := &node{
-					newV: yamlScalarNode("dog"),
+				leaf2 := &seqItemNode{
+					node{newV: yamlScalarNode("dog")},
 				}
+				unchangedBear, unchangedCat, unchangedMouse := &unchangedNode{count: 1}, &unchangedNode{count: 1}, &unchangedNode{count: 1}
 				return &node{
 					childNodes: []diffNode{
 						&node{
 							keyValue:   "SizeRank",
-							childNodes: []diffNode{leaf1, leaf2},
+							childNodes: []diffNode{unchangedBear, leaf1, unchangedCat, leaf2, unchangedMouse},
 						},
 					},
 				}
@@ -156,16 +161,19 @@ func TestFrom_Parse(t *testing.T) {
 			wanted: func() diffNode {
 				/* sentinel
 				   -> DanceCompetition
+				          -> 2 unchanged items (dog, bear)
 					   -> {old: nil, new: mouse} // Insertion.
+				          -> 1 unchanged item (cat)
 				*/
-				leaf := &node{
-					newV: yamlScalarNode("mouse"),
+				leaf := &seqItemNode{
+					node{newV: yamlScalarNode("mouse")},
 				}
+				unchangedDogBear, unchangedCat := &unchangedNode{count: 2}, &unchangedNode{count: 1}
 				return &node{
 					childNodes: []diffNode{
 						&node{
 							keyValue:   "DanceCompetition",
-							childNodes: []diffNode{leaf},
+							childNodes: []diffNode{unchangedDogBear, leaf, unchangedCat},
 						},
 					},
 				}
@@ -177,16 +185,19 @@ func TestFrom_Parse(t *testing.T) {
 			wanted: func() diffNode {
 				/* sentinel
 				   -> PotatoChipCommittee
+					   -> 2 unchanged items (dog, bear)
 					   -> {old: cat, new: nil} // Deletion.
+					   -> 1 unchanged item (mouse)
 				*/
-				leaf := &node{
-					oldV: yamlScalarNode("cat"),
+				leaf := &seqItemNode{
+					node{oldV: yamlScalarNode("cat")},
 				}
+				unchangedDobBear, unchangedMouse := &unchangedNode{count: 2}, &unchangedNode{count: 1}
 				return &node{
 					childNodes: []diffNode{
 						&node{
 							keyValue:   "PotatoChipCommittee",
-							childNodes: []diffNode{leaf},
+							childNodes: []diffNode{unchangedDobBear, leaf, unchangedMouse},
 						},
 					},
 				}
@@ -200,15 +211,18 @@ func TestFrom_Parse(t *testing.T) {
 				   -> DogsFavoriteShape
 					   -> {old: circle, new: ellipse} // Modification.
 				*/
-				leaf := &node{
-					oldV: yamlScalarNode("circle"),
-					newV: yamlScalarNode("ellipse"),
+				leaf := &seqItemNode{
+					node{
+						oldV: yamlScalarNode("circle"),
+						newV: yamlScalarNode("ellipse"),
+					},
 				}
+				unchangedTri, unchangedRec := &unchangedNode{1}, &unchangedNode{1}
 				return &node{
 					childNodes: []diffNode{
 						&node{
 							keyValue:   "DogsFavoriteShape",
-							childNodes: []diffNode{leaf},
+							childNodes: []diffNode{unchangedTri, leaf, unchangedRec},
 						},
 					},
 				}
@@ -385,20 +399,14 @@ func equalSubTree(a, b diffNode, t *testing.T) bool {
 	if a == nil || b == nil {
 		return a == nil && b == nil
 	}
-	if a.key() != b.key() || len(a.children()) != len(b.children()) {
+	if a.key() != b.key() || len(a.children()) != len(b.children()) || reflect.TypeOf(a) != reflect.TypeOf(b) {
 		return false
 	}
 	if len(a.children()) == 0 {
 		return equalLeaves(a, b, t)
 	}
-	aKeyToChild, bKeyToChild := make(map[string]diffNode), make(map[string]diffNode)
-	for i := 0; i < len(a.children()); i++ {
-		aChild, bChild := a.children()[i], b.children()[i]
-		aKeyToChild[aChild.key()] = aChild
-		bKeyToChild[bChild.key()] = bChild
-	}
-	for k := range aKeyToChild {
-		if equal := equalSubTree(aKeyToChild[k], bKeyToChild[k], t); !equal {
+	for idx := range a.children() {
+		if equal := equalSubTree(a.children()[idx], b.children()[idx], t); !equal {
 			return false
 		}
 	}
@@ -406,6 +414,9 @@ func equalSubTree(a, b diffNode, t *testing.T) bool {
 }
 
 func equalLeaves(a, b diffNode, t *testing.T) bool {
+	if _, ok := a.(*unchangedNode); ok {
+		return a.(*unchangedNode).unchangedCount() == b.(*unchangedNode).unchangedCount()
+	}
 	aNew, err := yaml.Marshal(a.newYAML())
 	require.NoError(t, err)
 	bNew, err := yaml.Marshal(b.newYAML())

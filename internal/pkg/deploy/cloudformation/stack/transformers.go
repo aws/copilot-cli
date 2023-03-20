@@ -485,31 +485,31 @@ func convertEnvSecurityGroupCfg(mft *manifest.Environment) (*template.SecurityGr
 }
 
 func (s *LoadBalancedWebService) convertALBListener() (*template.ALBListener, error) {
-	albConfig := s.manifest.RoutingRule
-	if albConfig.Disabled() || albConfig.IsEmpty() {
+	rrConfig := s.manifest.RoutingRule
+	if rrConfig.Disabled() || rrConfig.IsEmpty() {
 		return nil, nil
 	}
 	var rules []template.ALBListenerRule
 	// build listener rule config from primary rule config from manifest.
 	rule, err := routingRuleConfigConverter{
-		rule:         albConfig.RoutingRuleConfiguration,
+		rule:         rrConfig.Main,
 		manifest:     s.manifest,
 		httpsEnabled: s.httpsEnabled,
 	}.convert()
 	if err != nil {
 		return nil, err
 	}
-	aliasesFor, err := convertHostedZone(albConfig.Alias, albConfig.HostedZone)
+	rules = append(rules, *rule)
+	aliasesFor, err := convertHostedZone(rrConfig.Main.Alias, rrConfig.Main.HostedZone)
 	if err != nil {
 		return nil, err
 	}
-	rules = append(rules, *rule)
 
 	// TODO: @pbhingre build listener rule config from additional rules from manifest.
 
 	httpRedirect := true
-	if albConfig.RedirectToHTTPS != nil {
-		httpRedirect = aws.BoolValue(albConfig.RedirectToHTTPS)
+	if rrConfig.Main.RedirectToHTTPS != nil {
+		httpRedirect = aws.BoolValue(rrConfig.Main.RedirectToHTTPS)
 	}
 
 	return &template.ALBListener{
@@ -521,14 +521,14 @@ func (s *LoadBalancedWebService) convertALBListener() (*template.ALBListener, er
 }
 
 func (s *BackendService) convertALBListener() (*template.ALBListener, error) {
-	albConfig := s.manifest.RoutingRule
-	if albConfig.IsEmpty() {
+	rrConfig := s.manifest.RoutingRule
+	if rrConfig.IsEmpty() {
 		return nil, nil
 	}
 	var rules []template.ALBListenerRule
 	// build listener rule config from primary rule config from manifest.
 	rule, err := routingRuleConfigConverter{
-		rule:         albConfig,
+		rule:         rrConfig.Main,
 		manifest:     s.manifest,
 		httpsEnabled: s.httpsEnabled,
 	}.convert()
@@ -536,7 +536,7 @@ func (s *BackendService) convertALBListener() (*template.ALBListener, error) {
 		return nil, err
 	}
 	rules = append(rules, *rule)
-	hostedZoneAliases, err := convertHostedZone(albConfig.Alias, albConfig.HostedZone)
+	hostedZoneAliases, err := convertHostedZone(rrConfig.Main.Alias, rrConfig.Main.HostedZone)
 	if err != nil {
 		return nil, err
 	}
@@ -558,7 +558,7 @@ type loadBalancerTargeter interface {
 }
 
 type routingRuleConfigConverter struct {
-	rule         manifest.RoutingRuleConfiguration
+	rule         manifest.RoutingRule
 	manifest     loadBalancerTargeter
 	httpsEnabled bool
 }
@@ -591,26 +591,54 @@ func (conv routingRuleConfigConverter) convert() (*template.ALBListenerRule, err
 	return config, nil
 }
 
+type nlbListeners []template.NetworkLoadBalancerListener
+
+// isCertRequired returns true if any of the NLB listeners have protocol as TLS set.
+func (ls nlbListeners) isCertRequired() bool {
+	for _, listener := range ls {
+		if listener.Protocol == manifest.TLS {
+			return true
+		}
+	}
+	return false
+}
+
 func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (networkLoadBalancerConfig, error) {
 	nlbConfig := s.manifest.NLBConfig
 	if nlbConfig.IsEmpty() {
 		return networkLoadBalancerConfig{}, nil
 	}
-
-	// Parse targetContainer and targetPort for the Network Load Balancer targets.
-	targetContainer, targetPort, err := s.manifest.NetworkLoadBalancerTarget()
+	exposedPorts, err := s.manifest.ExposedPorts()
 	if err != nil {
-		return networkLoadBalancerConfig{}, err
+		return networkLoadBalancerConfig{}, nil
 	}
+	listeners := make(nlbListeners, len(nlbConfig.NLBListeners()))
+	for idx, listener := range nlbConfig.NLBListeners() {
+		// Parse targetContainer and targetPort for the Network Load Balancer targets.
+		targetContainer, targetPort, err := listener.Target(exposedPorts)
+		if err != nil {
+			return networkLoadBalancerConfig{}, err
+		}
 
-	// Parse listener port and protocol.
-	port, protocol, err := manifest.ParsePortMapping(nlbConfig.Listener.Port)
-	if err != nil {
-		return networkLoadBalancerConfig{}, err
-	}
+		// Parse listener port and protocol.
+		port, protocol, err := manifest.ParsePortMapping(listener.Port)
+		if err != nil {
+			return networkLoadBalancerConfig{}, err
+		}
 
-	if protocol == nil {
-		protocol = aws.String(defaultNLBProtocol)
+		if protocol == nil {
+			protocol = aws.String(defaultNLBProtocol)
+		}
+
+		listeners[idx] = template.NetworkLoadBalancerListener{
+			Port:            aws.StringValue(port),
+			Protocol:        strings.ToUpper(aws.StringValue(protocol)),
+			TargetContainer: targetContainer,
+			TargetPort:      targetPort,
+			SSLPolicy:       listener.SSLPolicy,
+			HealthCheck:     convertNLBHealthCheck(&listener.HealthCheck),
+			Stickiness:      listener.Stickiness,
+		}
 	}
 
 	aliases, err := convertAlias(nlbConfig.Aliases)
@@ -618,25 +646,13 @@ func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (networkLoadBalanc
 		return networkLoadBalancerConfig{}, fmt.Errorf(`convert "nlb.alias" to string slice: %w`, err)
 	}
 
-	hc := convertNLBHealthCheck(&nlbConfig.Listener.HealthCheck)
-
 	config := networkLoadBalancerConfig{
 		settings: &template.NetworkLoadBalancer{
-			PublicSubnetCIDRs: s.publicSubnetCIDRBlocks,
-			Listener: []template.NetworkLoadBalancerListener{
-				{
-					Port:            aws.StringValue(port),
-					Protocol:        strings.ToUpper(aws.StringValue(protocol)),
-					TargetContainer: targetContainer,
-					TargetPort:      targetPort,
-					SSLPolicy:       nlbConfig.Listener.SSLPolicy,
-					Aliases:         aliases,
-					HealthCheck:     hc,
-					Stickiness:      nlbConfig.Listener.Stickiness,
-				},
-			},
+			PublicSubnetCIDRs:   s.publicSubnetCIDRBlocks,
+			Listener:            listeners,
+			Aliases:             aliases,
 			MainContainerPort:   s.manifest.MainContainerPort(),
-			CertificateRequired: strings.ToUpper(aws.StringValue(protocol)) == manifest.TLS,
+			CertificateRequired: listeners.isCertRequired(),
 		},
 	}
 
