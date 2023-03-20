@@ -1035,7 +1035,7 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 				m.mockEnvVersionGetter.EXPECT().Version().Return("v1.42.0", nil)
 			},
-			wantErr: fmt.Errorf(`validate ALB runtime configuration for http: validate 'http.alias': alias "v1.v2.mockDomain" is not supported in hosted zones managed by Copilot`),
+			wantErr: fmt.Errorf(`validate ALB runtime configuration for http: validate 'alias': alias "v1.v2.mockDomain" is not supported in hosted zones managed by Copilot`),
 		},
 		"fail to enable nlb alias because of invalid alias": {
 			inNLB: manifest.NetworkLoadBalancerConfiguration{

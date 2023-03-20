@@ -254,7 +254,7 @@ func (d *lbWebSvcDeployer) validateALBRuntimeFor(rule manifest.RoutingRule) erro
 			return err
 		}
 		if err := validateLBWSAlias(rule.Alias, d.app, d.env.Name); err != nil {
-			return fmt.Errorf(`validate 'http.alias': %w`, err)
+			return fmt.Errorf(`validate 'alias': %w`, err)
 		}
 		return nil
 	}
