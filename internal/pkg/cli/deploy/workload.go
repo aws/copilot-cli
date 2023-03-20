@@ -276,12 +276,12 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 }
 
 // AddonsTemplate returns this workload's addon template.
-func (w *workloadDeployer) AddonsTemplate() (string, error) {
-	if w.addons == nil {
+func (d *workloadDeployer) AddonsTemplate() (string, error) {
+	if d.addons == nil {
 		return "", nil
 	}
 
-	return w.addons.Template()
+	return d.addons.Template()
 }
 
 func (d *workloadDeployer) generateCloudFormationTemplate(conf stackSerializer) (
