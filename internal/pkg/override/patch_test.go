@@ -329,12 +329,12 @@ key: asdf
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			fs := afero.NewMemMapFs()
-			file, err := fs.Create("/patches.yml")
+			file, err := fs.Create("/cfn.patches.yaml")
 			require.NoError(t, err)
 			_, err = file.WriteString(strings.TrimSpace(tc.overrides))
 			require.NoError(t, err)
 
-			p := WithPatch("/", PatchOpts{
+			p := WithPatch("/cfn.patches.yaml", PatchOpts{
 				FS: fs,
 			})
 

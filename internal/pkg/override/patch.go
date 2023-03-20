@@ -6,7 +6,6 @@ package override
 import (
 	"errors"
 	"fmt"
-	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -19,8 +18,8 @@ const jsonPointerSeparator = "/"
 // Patch applies overrides configured as JSON Patches,
 // as defined in https://www.rfc-editor.org/rfc/rfc6902.
 type Patch struct {
-	rootAbsPath string   // Absolute path to the overrides/ directory.
-	fs          afero.Fs // OS file system.
+	filePath string   // Absolute path to the overrides/ directory.
+	fs       afero.Fs // OS file system.
 }
 
 // PatchOpts is optional configuration for initializing a Patch Overrider.
@@ -30,15 +29,15 @@ type PatchOpts struct {
 
 // WithPatch instantiates a new Patch Overrider with root being the path to the overrides/ directory.
 // It supports a single file (cfn.patches.yml) with configured patches.
-func WithPatch(root string, opts PatchOpts) *Patch {
+func WithPatch(filePath string, opts PatchOpts) *Patch {
 	fs := afero.NewOsFs()
 	if opts.FS != nil {
 		fs = opts.FS
 	}
 
 	return &Patch{
-		rootAbsPath: root,
-		fs:          fs,
+		filePath: filePath,
+		fs:       fs,
 	}
 }
 
@@ -53,7 +52,7 @@ type yamlPatch struct {
 // Override returns the overriden CloudFormation template body
 // after applying YAML patches to it.
 func (p *Patch) Override(body []byte) ([]byte, error) {
-	patches, err := p.unmarshalPatches()
+	patches, err := unmarshalPatches(p.filePath, p.fs)
 	if err != nil {
 		return nil, err
 	}
@@ -73,7 +72,7 @@ func (p *Patch) Override(body []byte) ([]byte, error) {
 		case "replace":
 			err = patch.applyReplace(&root)
 		default:
-			return nil, fmt.Errorf("unsupported operation %q", patch.Operation)
+			return nil, fmt.Errorf("unsupported operation %q. supported operations are %q, %q, and %q.", patch.Operation, "add", "remove", "replace")
 		}
 		if err != nil {
 			return nil, fmt.Errorf("unable to apply %q patch: %w", patch.Operation, err)
@@ -87,27 +86,15 @@ func (p *Patch) Override(body []byte) ([]byte, error) {
 	return out, nil
 }
 
-func (p *Patch) unmarshalPatches() ([]yamlPatch, error) {
-	var patches []yamlPatch
-
-	files, err := afero.ReadDir(p.fs, p.rootAbsPath)
+func unmarshalPatches(path string, fs afero.Fs) ([]yamlPatch, error) {
+	content, err := afero.ReadFile(fs, path)
 	if err != nil {
-		return nil, fmt.Errorf("read directory %q: %w", p.rootAbsPath, err)
+		return nil, fmt.Errorf("read file at %q: %w", path, err)
 	}
 
-	for _, file := range files {
-		path := filepath.Join(p.rootAbsPath, file.Name())
-		content, err := afero.ReadFile(p.fs, path)
-		if err != nil {
-			return nil, fmt.Errorf("read file at %q: %w", path, err)
-		}
-
-		var filePatches []yamlPatch
-		if err := yaml.Unmarshal(content, &filePatches); err != nil {
-			return nil, fmt.Errorf("file at %q does not conform to the YAML patch document schema: %w", path, err)
-		}
-
-		patches = append(patches, filePatches...)
+	var patches []yamlPatch
+	if err := yaml.Unmarshal(content, &patches); err != nil {
+		return nil, fmt.Errorf("file at %q does not conform to the YAML patch document schema: %w", path, err)
 	}
 
 	return patches, nil

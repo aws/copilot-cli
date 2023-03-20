@@ -36,7 +36,7 @@ func NewOverrider(pathToOverridesDir, app, env string, fs afero.Fs, sess UserAge
 	switch {
 	case info.IsCDK():
 		sess.UserAgentExtras("override cdk")
-		return override.WithCDK(pathToOverridesDir, override.CDKOpts{
+		return override.WithCDK(info.Path(), override.CDKOpts{
 			// Write out-of-band info from sub-commands to stderr as users expect stdout to only
 			// contain the final override output.
 			ExecWriter: log.DiagnosticWriter,
@@ -48,7 +48,7 @@ func NewOverrider(pathToOverridesDir, app, env string, fs afero.Fs, sess UserAge
 		}), nil
 	case info.IsYAMLPatch():
 		sess.UserAgentExtras("override yamlpatch")
-		return override.WithPatch(pathToOverridesDir, override.PatchOpts{
+		return override.WithPatch(info.Path(), override.PatchOpts{
 			FS: fs,
 		}), nil
 	default:
