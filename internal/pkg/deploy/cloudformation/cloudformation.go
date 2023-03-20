@@ -219,7 +219,7 @@ func (cf CloudFormation) Template(stackName string) (string, error) {
 	return cf.cfnClient.TemplateBody(stackName)
 }
 
-// AddonsTemplate returns the environment stack's addons template, if there is any.
+// AddonsTemplate returns the stack's addons template, if there is any.
 func (cf CloudFormation) AddonsTemplate(stackName string) (string, error) {
 	rcs, err := cf.cfnClient.StackResources(stackName)
 	if err != nil {
