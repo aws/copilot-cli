@@ -67,9 +67,9 @@ func (p *Patch) Override(body []byte) ([]byte, error) {
 		var err error
 		switch patch.Operation {
 		case "add":
-			err = patch.doAdd(&root)
+			err = patch.applyAdd(&root)
 		case "remove":
-			err = patch.doRemove(&root)
+			err = patch.applyRemove(&root)
 		case "replace":
 			err = patch.applyReplace(&root)
 		default:
@@ -113,8 +113,8 @@ func (p *Patch) unmarshalPatches() ([]yamlPatch, error) {
 	return patches, nil
 }
 
-func (y *yamlPatch) doAdd(root *yaml.Node) error {
-	return followJSONPointer(root, y.Path, func(node *yaml.Node, pointer []string) error {
+func (p *yamlPatch) applyAdd(root *yaml.Node) error {
+	return followJSONPointer(root, p.Path, func(node *yaml.Node, pointer []string) error {
 		if len(pointer) != 1 {
 			return nil
 		}
@@ -124,7 +124,7 @@ func (y *yamlPatch) doAdd(root *yaml.Node) error {
 			// if the key is in this map, they are trying to replace it
 			for i := 0; i < len(node.Content); i += 2 {
 				if node.Content[i].Value == pointer[0] {
-					return y.encodeAndStop(node.Content[i+1])
+					return p.encodeAndStop(node.Content[i+1])
 				}
 			}
 
@@ -134,12 +134,12 @@ func (y *yamlPatch) doAdd(root *yaml.Node) error {
 				Tag:   "!!str",
 				Value: pointer[0],
 			})
-			node.Content = append(node.Content, &y.Value)
+			node.Content = append(node.Content, &p.Value)
 			return errStopFollowingPointer
 		case yaml.SequenceNode:
 			if pointer[0] == "-" || pointer[0] == "" {
 				// add to end of sequence
-				node.Content = append(node.Content, &y.Value)
+				node.Content = append(node.Content, &p.Value)
 				return errStopFollowingPointer
 			}
 
@@ -152,7 +152,7 @@ func (y *yamlPatch) doAdd(root *yaml.Node) error {
 			}
 
 			// add node at idx
-			node.Content = append(node.Content[:idx], append([]*yaml.Node{&y.Value}, node.Content[idx:]...)...)
+			node.Content = append(node.Content[:idx], append([]*yaml.Node{&p.Value}, node.Content[idx:]...)...)
 			return errStopFollowingPointer
 		}
 
@@ -160,8 +160,8 @@ func (y *yamlPatch) doAdd(root *yaml.Node) error {
 	})
 }
 
-func (y *yamlPatch) doRemove(root *yaml.Node) error {
-	return followJSONPointer(root, y.Path, func(node *yaml.Node, pointer []string) error {
+func (p *yamlPatch) applyRemove(root *yaml.Node) error {
+	return followJSONPointer(root, p.Path, func(node *yaml.Node, pointer []string) error {
 		if len(pointer) != 1 {
 			return nil
 		}
@@ -191,17 +191,17 @@ func (y *yamlPatch) doRemove(root *yaml.Node) error {
 	})
 }
 
-func (y *yamlPatch) applyReplace(root *yaml.Node) error {
-	return followJSONPointer(root, y.Path, func(node *yaml.Node, pointer []string) error {
+func (p *yamlPatch) applyReplace(root *yaml.Node) error {
+	return followJSONPointer(root, p.Path, func(node *yaml.Node, pointer []string) error {
 		if len(pointer) > 0 {
 			return nil
 		}
-		return y.encodeAndStop(node)
+		return p.encodeAndStop(node)
 	})
 }
 
-func (y *yamlPatch) encodeAndStop(node *yaml.Node) error {
-	if err := node.Encode(y.Value); err != nil {
+func (p *yamlPatch) encodeAndStop(node *yaml.Node) error {
+	if err := node.Encode(p.Value); err != nil {
 		return err
 	}
 	return errStopFollowingPointer
