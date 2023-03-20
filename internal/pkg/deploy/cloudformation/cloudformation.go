@@ -25,7 +25,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/stream"
-	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"golang.org/x/sync/errgroup"
@@ -217,28 +216,6 @@ func New(sess *session.Session, opts ...OptFn) CloudFormation {
 // Template returns a deployed stack's template.
 func (cf CloudFormation) Template(stackName string) (string, error) {
 	return cf.cfnClient.TemplateBody(stackName)
-}
-
-// AddonsTemplate returns the stack's addons template, if there is any.
-func (cf CloudFormation) AddonsTemplate(stackName string) (string, error) {
-	rcs, err := cf.cfnClient.StackResources(stackName)
-	if err != nil {
-		return "", fmt.Errorf("get stack resources for stack %s: %w", stackName, err)
-	}
-	var addonsStackName string
-	for _, rc := range rcs {
-		if aws.StringValue(rc.LogicalResourceId) == template.AddonsStackLogicalID {
-			addonsStackName = aws.StringValue(rc.PhysicalResourceId)
-		}
-	}
-	if addonsStackName == "" {
-		return "", nil
-	}
-	tmpl, err := cf.cfnClient.TemplateBody(addonsStackName)
-	if err != nil {
-		return "", fmt.Errorf("get template body for addons stack %s: %w", addonsStackName, err)
-	}
-	return tmpl, nil
 }
 
 // IsEmptyErr returns true if the error occurred because the cloudformation resource does not exist or does not contain any sub-resources.
