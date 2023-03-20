@@ -56,7 +56,7 @@ func (r *RoutingRuleConfigOrBool) UnmarshalYAML(value *yaml.Node) error {
 // RoutingRuleConfiguration holds options for application load balancer.
 type RoutingRuleConfiguration struct {
 	Main                     RoutingRule   `yaml:",inline"`
-	TargetContainerCamelCase *string       `yaml:"targetContainer"` // "targetContainerCamelCase" for backwards compatibility
+	TargetContainerCamelCase *string       `yaml:"targetContainer"` // Deprecated. "targetContainerCamelCase" for backwards compatibility
 	AdditionalRoutingRules   []RoutingRule `yaml:"additional_rules"`
 }
 
