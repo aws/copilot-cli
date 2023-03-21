@@ -63,6 +63,20 @@ func (f *keyedFormatter) formatPath(node diffNode) string {
 	return node.key() + ":"
 }
 
+type documentFormatter struct{}
+
+func (f *documentFormatter) formatYAML(node *yaml.Node) ([]byte, error) {
+	return yaml.Marshal(node)
+}
+
+func (f *documentFormatter) formatMod(_ diffNode) string {
+	return ""
+}
+
+func (f *documentFormatter) formatPath(_ diffNode) string {
+	return ""
+}
+
 func prefixByFn(prefix string) func(line string) string {
 	return func(line string) string {
 		return fmt.Sprintf("%s %s", prefix, line)

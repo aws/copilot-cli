@@ -95,7 +95,19 @@ func (from From) Parse(to []byte) (Tree, error) {
 	if err := yaml.Unmarshal(from, &fromNode); err != nil {
 		return Tree{}, fmt.Errorf("unmarshal old template: %w", err)
 	}
-	root, err := parse(&fromNode, &toNode, "")
+	var root diffNode
+	var err error
+	switch {
+	// NOTE: If Kind is 0, it means the document is empty and nothing is unmarshalled.
+	case fromNode.Kind == 0 && toNode.Kind == 0:
+		return Tree{}, nil
+	case fromNode.Kind == 0:
+		root, err = parse(nil, &toNode, "")
+	case toNode.Kind == 0:
+		root, err = parse(&fromNode, nil, "")
+	default:
+		root, err = parse(&fromNode, &toNode, "")
+	}
 	if err != nil {
 		return Tree{}, err
 	}

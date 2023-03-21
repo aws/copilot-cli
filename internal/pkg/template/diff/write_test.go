@@ -204,6 +204,22 @@ Mary:
     + - food-shape
 `,
 		},
+		"from is empty": {
+			curr: `Mary: likes animals`,
+			old:  `   `,
+			wanted: `+ Mary: likes animals
+`,
+		},
+		"to is empty": {
+			curr: `           `,
+			old:  `Mary: likes animals`,
+			wanted: `- Mary: likes animals
+`,
+		},
+		"from and to are both empty": {
+			curr: `           `,
+			old:  `  `,
+		},
 		"no diff": {
 			curr: `
 Mary:
