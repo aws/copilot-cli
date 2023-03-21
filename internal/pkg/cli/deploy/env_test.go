@@ -249,6 +249,74 @@ func TestEnvDeployer_UploadArtifacts(t *testing.T) {
 	}
 }
 
+func TestEnvDeployer_DeployDiff(t *testing.T) {
+	testCases := map[string]struct {
+		inTemplate string
+		setUpMocks func(m *deployDiffMocks)
+		wanted     string
+		checkErr   func(t *testing.T, gotErr error)
+	}{
+		"error getting the deployed template": {
+			setUpMocks: func(m *deployDiffMocks) {
+				m.mockDeployedTmplGetter.
+					EXPECT().Template(gomock.Eq(cfnstack.NameForEnv("mockApp", "mockEnv"))).
+					Return("", errors.New("some error"))
+			},
+			checkErr: func(t *testing.T, gotErr error) {
+				require.EqualError(t, gotErr, `retrieve the deployed template for "mockEnv": some error`)
+			},
+		},
+		"error parsing the diff against the deployed template": {
+			inTemplate: `!!!???what a weird template`,
+			setUpMocks: func(m *deployDiffMocks) {
+				m.mockDeployedTmplGetter.EXPECT().
+					Template(gomock.Eq(cfnstack.NameForEnv("mockApp", "mockEnv"))).
+					Return("wow such template", nil)
+			},
+			checkErr: func(t *testing.T, gotErr error) {
+				require.ErrorContains(t, gotErr, "parse the diff of the template to be deployed against the deployed template")
+			},
+		},
+		"get the correct diff": {
+			inTemplate: `peace: and love`,
+			setUpMocks: func(m *deployDiffMocks) {
+				m.mockDeployedTmplGetter.EXPECT().
+					Template(gomock.Eq(cfnstack.NameForEnv("mockApp", "mockEnv"))).
+					Return("peace: und Liebe", nil)
+			},
+			wanted: `~ peace: und Liebe -> and love
+`,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			m := &deployDiffMocks{
+				mockDeployedTmplGetter: mocks.NewMockdeployedTemplateGetter(ctrl),
+			}
+			tc.setUpMocks(m)
+			deployer := envDeployer{
+				app: &config.Application{
+					Name: "mockApp",
+				},
+				env: &config.Environment{
+					Name: "mockEnv",
+				},
+				tmplGetter: m.mockDeployedTmplGetter,
+			}
+			got, gotErr := deployer.DeployDiff(tc.inTemplate)
+			if tc.checkErr != nil {
+				tc.checkErr(t, gotErr)
+			} else {
+				require.NoError(t, gotErr)
+				require.Equal(t, tc.wanted, got)
+			}
+		})
+	}
+}
+
 func TestEnvDeployer_AddonsTemplate(t *testing.T) {
 	testCases := map[string]struct {
 		setUpMocks  func(m *envDeployerMocks)
