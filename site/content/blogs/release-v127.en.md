@@ -7,21 +7,20 @@ image_width: '1051'
 image_height: '747'
 ---
 
-# AWS Copilot v1.27: Extend Copilot, preview differences, load balancer and sidecar improvements!
+# AWS Copilot v1.27: Extend Copilot templates, additional routing rule supports, preview differences, and sidecar improvements!
 ##### Posted On: Mar 28, 2023
 
 The AWS Copilot core team is announcing the Copilot v1.27 release 🚀.  
-Our public [сommunity сhat](https://app.gitter.im/#/room/#aws_copilot-cli:gitter.im) is growing and has over 400 people online and over 2.6k stars on [GitHub](http://github.com/aws/copilot-cli/).
+Our public [сommunity сhat](https://app.gitter.im/#/room/#aws_copilot-cli:gitter.im) is growing and has over 400 people online and over 2.7k stars on [GitHub](http://github.com/aws/copilot-cli/).
 Thanks to every one of you who shows love and support for AWS Copilot.
 
 Copilot v1.27 is a big release with several new features and improvements:
 
 - **Extend Copilot templates**: You can now customize any properties in Copilot-generated AWS CloudFormation templates 
 with the AWS Cloud Development Kit (CDK) or YAML Patch overrides. [See detailed section](#extend-copilot-generated-aws-cloudformation-templates).
-- **Enable multiple listener rules for Application Load Balancers**: You can define multiple host-based or path listener rules
-routing to different containers for [application load balancers](../docs/manifest/lb-web-service.en.md#http) associated with your Load Balanced Web or Backend Service. [See detailed section](#add-multiple-host-based-or-path-based-routing-rules-to-your-application-load-balancers).
-- **Enable multiple listeners for Network Load Balancers**: You can define multiple listeners on different ports and protocols
-  routing to different containers for [network load balancers](../docs/manifest/lb-web-service.en.md#nlb) associated with your Load Balanced Web Service. [See detailed section](#add-multiple-port-and-protocol-listeners-to-your-network-load-balancers).
+- **Enable multiple listeners and listener rules**: You can define multiple host-based or path listener rules for [application load balancers](../docs/manifest/lb-web-service.en.md#http)
+or multiple listeners on different ports and protocols for [network load balancers](../docs/manifest/lb-web-service.en.md#nlb).  
+  [See detailed section](#enable-multiple-listeners-and-routing-rules-for-load-balancers).
 - **Preview CloudFormation template changes**: You can now run `copilot [noun] package` or `copilot [noun] deploy` commmands with the `--diff` flag to show differences
   between the last deployed CloudFormation template and local changes. [See detailed section](#preview-aws-cloudformation-template-changes).
 - **Build and push container images for sidecars**: Add support for `image.build` to build and push sidecar containers from local Dockerfiles. [See detailed section](#build-and-push-container-images-for-sidecar-containers).
