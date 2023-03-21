@@ -25,7 +25,7 @@ var s3Client *s3.S3
 var s3Manager *s3manager.Uploader
 var staticPath string
 
-var domainName = fmt.Sprintf("copilot-e2e-tests-%d.ecs.aws.dev", time.Now().Unix())
+var domainName = fmt.Sprintf("%d.copilot-e2e-tests.ecs.aws.dev", time.Now().Unix())
 
 func TestCloudFront(t *testing.T) {
 	RegisterFailHandler(Fail)
