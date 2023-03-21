@@ -107,6 +107,8 @@ func (p *yamlPatch) applyAdd(root *yaml.Node) error {
 		}
 
 		switch node.Kind {
+		case yaml.DocumentNode:
+			return p.encodeAndStop(node)
 		case yaml.MappingNode:
 			// if the key is in this map, they are trying to replace it
 			for i := 0; i < len(node.Content); i += 2 {
@@ -154,6 +156,10 @@ func (p *yamlPatch) applyRemove(root *yaml.Node) error {
 		}
 
 		switch node.Kind {
+		case yaml.DocumentNode:
+			// make sure we are encoding zero into node
+			p.Value = yaml.Node{}
+			return p.encodeAndStop(node)
 		case yaml.MappingNode:
 			for i := 0; i < len(node.Content); i += 2 {
 				if node.Content[i].Value == pointer[0] {
@@ -221,8 +227,8 @@ func followJSONPointerHelper(node *yaml.Node, traversed, remaining []string, vis
 
 	switch node.Kind {
 	case yaml.DocumentNode:
-		if len(node.Content) != 1 {
-			return fmt.Errorf("don't support multi-doc yaml")
+		if len(node.Content) == 0 {
+			return nil // weird, but ok ¯\_(ツ)_/¯
 		}
 
 		return followJSONPointerHelper(node.Content[0], append(traversed, remaining[0]), remaining[1:], visit)
@@ -243,7 +249,7 @@ func followJSONPointerHelper(node *yaml.Node, traversed, remaining []string, vis
 		switch {
 		case err != nil:
 			return fmt.Errorf("key %q: expected index in sequence, got %q", strings.Join(traversed, jsonPointerSeparator), remaining[0])
-		case idx > len(node.Content)-1:
+		case idx < 0 || idx > len(node.Content)-1:
 			return fmt.Errorf("key %q: index %d out of bounds for sequence of length %d", strings.Join(traversed, jsonPointerSeparator), idx, len(node.Content))
 		}
 

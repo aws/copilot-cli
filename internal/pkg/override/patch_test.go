@@ -14,9 +14,10 @@ import (
 
 func TestPatch(t *testing.T) {
 	tests := map[string]struct {
-		yaml      string
-		overrides string
-		expected  string
+		yaml        string
+		overrides   string
+		expected    string
+		expectedErr string
 	}{
 		"add to map": {
 			yaml: `
@@ -293,6 +294,43 @@ Resources:
   key:
     key~with/weirdchars/: new`,
 		},
+		"add works with doc selector": {
+			yaml: `
+Resources:
+  key: value`,
+			overrides: `
+- op: add
+  path: ""
+  value:
+    a: aaa
+    b: bbb`,
+			expected: `
+a: aaa
+b: bbb`,
+		},
+		"replace works with doc selector": {
+			yaml: `
+Resources:
+  key: value`,
+			overrides: `
+- op: replace
+  path: ""
+  value:
+    a: aaa
+    b: bbb`,
+			expected: `
+a: aaa
+b: bbb`,
+		},
+		"remove works with doc selector": {
+			yaml: `
+Resources:
+  key: value`,
+			overrides: `
+- op: remove
+  path: ""`,
+			expected: ``,
+		},
 		"empty string key works": {
 			yaml: `
 key: asdf
@@ -304,6 +342,21 @@ key: asdf
 			expected: `
 key: asdf
 "": new`,
+		},
+		"error on invalid patch file format": {
+			overrides: `
+op: add
+path: /
+value: new`,
+			expectedErr: `file at "/cfn.patches.yaml" does not conform to the YAML patch document schema: yaml: unmarshal errors:
+  line 1: cannot unmarshal !!map into []override.yamlPatch`,
+		},
+		"error on unsupported operation": {
+			overrides: `
+- op: unsupported
+  path: /
+  value: new`,
+			expectedErr: `unsupported operation "unsupported". supported operations are "add", "remove", and "replace".`,
 		},
 	}
 
@@ -320,9 +373,13 @@ key: asdf
 			})
 
 			out, err := p.Override([]byte(strings.TrimSpace(tc.yaml)))
+			if tc.expectedErr != "" {
+				require.EqualError(t, err, tc.expectedErr)
+				return
+			}
 			require.NoError(t, err)
 
-			// convert for better comparison
+			// convert for better comparison output
 			// limitation: doesn't test for comments sticking around
 			var expected map[string]interface{}
 			var actual map[string]interface{}
