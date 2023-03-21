@@ -551,7 +551,6 @@ func (s *BackendService) convertALBListener() (*template.ALBListener, error) {
 }
 
 type loadBalancerTargeter interface {
-	//HTTPLoadBalancerTarget(manifest.ExposedPortsIndex) (string, string, error)
 	MainContainerPort() string
 	ExposedPorts() (manifest.ExposedPortsIndex, error)
 }
