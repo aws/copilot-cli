@@ -33,19 +33,19 @@ func (m *MockenvironmentTemplateUpdateGetter) EXPECT() *MockenvironmentTemplateU
 	return m.recorder
 }
 
-// EnvironmentTemplate mocks base method.
-func (m *MockenvironmentTemplateUpdateGetter) EnvironmentTemplate(appName, envName string) (string, error) {
+// Template mocks base method.
+func (m *MockenvironmentTemplateUpdateGetter) Template(stackName string) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EnvironmentTemplate", appName, envName)
+	ret := m.ctrl.Call(m, "Template", stackName)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// EnvironmentTemplate indicates an expected call of EnvironmentTemplate.
-func (mr *MockenvironmentTemplateUpdateGetterMockRecorder) EnvironmentTemplate(appName, envName interface{}) *gomock.Call {
+// Template indicates an expected call of Template.
+func (mr *MockenvironmentTemplateUpdateGetterMockRecorder) Template(stackName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnvironmentTemplate", reflect.TypeOf((*MockenvironmentTemplateUpdateGetter)(nil).EnvironmentTemplate), appName, envName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Template", reflect.TypeOf((*MockenvironmentTemplateUpdateGetter)(nil).Template), stackName)
 }
 
 // UpdateEnvironmentTemplate mocks base method.
