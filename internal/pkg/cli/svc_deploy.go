@@ -73,6 +73,7 @@ type deploySvcOpts struct {
 	appliedDynamicMft manifest.DynamicWorkload
 	rootUserARN       string
 	deployRecs        clideploy.ActionRecommender
+	noDeploy          bool
 }
 
 func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
@@ -256,6 +257,7 @@ func (o *deploySvcOpts) Execute() error {
 			return fmt.Errorf("ask whether to continue with the deployment: %w", err)
 		}
 		if !contd {
+			o.noDeploy = true
 			return nil
 		}
 	}
@@ -294,6 +296,9 @@ After fixing the deployment, you can:
 
 // RecommendActions returns follow-up actions the user can take after successfully executing the command.
 func (o *deploySvcOpts) RecommendActions() error {
+	if o.noDeploy {
+		return nil
+	}
 	var recommendations []string
 	uriRecs, err := o.uriRecommendedActions()
 	if err != nil {
