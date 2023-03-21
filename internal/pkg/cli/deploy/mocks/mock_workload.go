@@ -351,21 +351,6 @@ func (m *MockdeployedTemplateGetter) EXPECT() *MockdeployedTemplateGetterMockRec
 	return m.recorder
 }
 
-// AddonsTemplate mocks base method.
-func (m *MockdeployedTemplateGetter) AddonsTemplate(stackName string) (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddonsTemplate", stackName)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// AddonsTemplate indicates an expected call of AddonsTemplate.
-func (mr *MockdeployedTemplateGetterMockRecorder) AddonsTemplate(stackName interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddonsTemplate", reflect.TypeOf((*MockdeployedTemplateGetter)(nil).AddonsTemplate), stackName)
-}
-
 // Template mocks base method.
 func (m *MockdeployedTemplateGetter) Template(stackName string) (string, error) {
 	m.ctrl.T.Helper()
