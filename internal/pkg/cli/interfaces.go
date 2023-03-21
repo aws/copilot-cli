@@ -682,6 +682,9 @@ type envDeployer interface {
 	DeployEnvironment(in *clideploy.DeployEnvironmentInput) error
 	Validate(*manifest.Environment) error
 	UploadArtifacts() (*clideploy.UploadEnvArtifactsOutput, error)
+	GenerateCloudFormationTemplate(in *clideploy.DeployEnvironmentInput) (
+		*clideploy.GenerateCloudFormationTemplateOutput, error)
+	templateDiffer
 }
 
 type envPackager interface {

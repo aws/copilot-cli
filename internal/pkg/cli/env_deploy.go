@@ -32,6 +32,7 @@ type deployEnvVars struct {
 	name            string
 	forceNewUpdate  bool
 	disableRollback bool
+	showDiff        bool
 }
 
 type deployEnvOpts struct {
@@ -150,6 +151,21 @@ func (o *deployEnvOpts) Execute() error {
 	artifacts, err := deployer.UploadArtifacts()
 	if err != nil {
 		return fmt.Errorf("upload artifacts for environment %s: %w", o.name, err)
+	}
+	if o.showDiff {
+		output, err := deployer.GenerateCloudFormationTemplate(&deploy.DeployEnvironmentInput{
+			RootUserARN:         caller.RootUserARN,
+			AddonsURL:           artifacts.AddonsURL,
+			CustomResourcesURLs: artifacts.CustomResourceURLs,
+			Manifest:            mft,
+			RawManifest:         rawMft,
+			PermissionsBoundary: o.targetApp.PermissionsBoundary,
+			ForceNewUpdate:      o.forceNewUpdate,
+		})
+		if err != nil {
+			return fmt.Errorf("generate the template for environment %s: %w", o.name, err)
+		}
+		return diff(deployer, output.Template, os.Stdout)
 	}
 	if err := deployer.DeployEnvironment(&deploy.DeployEnvironmentInput{
 		RootUserARN:         caller.RootUserARN,
@@ -295,5 +311,6 @@ Deploy an environment named "test".
 	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, "", envFlagDescription)
 	cmd.Flags().BoolVar(&vars.forceNewUpdate, forceFlag, false, forceEnvDeployFlagDescription)
 	cmd.Flags().BoolVar(&vars.disableRollback, noRollbackFlag, false, noRollbackFlagDescription)
+	cmd.Flags().BoolVar(&vars.showDiff, diffFlag, false, diffFlagDescription)
 	return cmd
 }

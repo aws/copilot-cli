@@ -7369,6 +7369,21 @@ func (m *MockenvDeployer) EXPECT() *MockenvDeployerMockRecorder {
 	return m.recorder
 }
 
+// DeployDiff mocks base method.
+func (m *MockenvDeployer) DeployDiff(inTmpl string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeployDiff", inTmpl)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeployDiff indicates an expected call of DeployDiff.
+func (mr *MockenvDeployerMockRecorder) DeployDiff(inTmpl interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployDiff", reflect.TypeOf((*MockenvDeployer)(nil).DeployDiff), inTmpl)
+}
+
 // DeployEnvironment mocks base method.
 func (m *MockenvDeployer) DeployEnvironment(in *deploy.DeployEnvironmentInput) error {
 	m.ctrl.T.Helper()
@@ -7381,6 +7396,21 @@ func (m *MockenvDeployer) DeployEnvironment(in *deploy.DeployEnvironmentInput) e
 func (mr *MockenvDeployerMockRecorder) DeployEnvironment(in interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployEnvironment", reflect.TypeOf((*MockenvDeployer)(nil).DeployEnvironment), in)
+}
+
+// GenerateCloudFormationTemplate mocks base method.
+func (m *MockenvDeployer) GenerateCloudFormationTemplate(in *deploy.DeployEnvironmentInput) (*deploy.GenerateCloudFormationTemplateOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GenerateCloudFormationTemplate", in)
+	ret0, _ := ret[0].(*deploy.GenerateCloudFormationTemplateOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GenerateCloudFormationTemplate indicates an expected call of GenerateCloudFormationTemplate.
+func (mr *MockenvDeployerMockRecorder) GenerateCloudFormationTemplate(in interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenerateCloudFormationTemplate", reflect.TypeOf((*MockenvDeployer)(nil).GenerateCloudFormationTemplate), in)
 }
 
 // UploadArtifacts mocks base method.
