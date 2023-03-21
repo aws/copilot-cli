@@ -6,6 +6,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	//"os"
 	"path/filepath"
 	"testing"
 
@@ -30,6 +31,7 @@ type initSvcMocks struct {
 	mockPrompt       *mocks.Mockprompter
 	mockSel          *mocks.MockdockerfileSelector
 	mocktopicSel     *mocks.MocktopicSelector
+	mockDirFileSel   *mocks.MockdirOrFileSelector
 	mockDockerfile   *mocks.MockdockerfileParser
 	mockDockerEngine *mocks.MockdockerEngine
 	mockMftReader    *mocks.MockmanifestReader
@@ -128,7 +130,7 @@ func TestSvcInitOpts_Validate(t *testing.T) {
 			setupMocks: func(m initSvcMocks) {
 				m.mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{}, nil)
 			},
-			mockFileSystem: func(mockFS afero.Fs) {
+			mockFileSystem: func(mockFS afero.Fs) { 
 				mockFS.MkdirAll("hello", 0755)
 				afero.WriteFile(mockFS, "hello/Dockerfile", []byte("FROM nginx"), 0644)
 			},
@@ -206,8 +208,30 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 		wantedDockerfilePath = "frontend/Dockerfile"
 		wantedSvcPort        = 80
 		wantedImage          = "mockImage"
+		mockFile			 = "my/mock/file.css"
+		mockDir 			 = "my/mock/dir"
 	)
 	mockTopic, _ := deploy.NewTopic("arn:aws:sns:us-west-2:123456789012:mockApp-mockEnv-mockWkld-orders", "mockApp", "mockEnv", "mockWkld")
+	//mockFileSystem := func(fs afero.Fs) {  // TODO(jwh): move to DirOrFile test; also do a Windows one
+	wantedAssets := []manifest.FileUpload{
+		{
+			Source:      mockFile,
+			Destination: "assets",
+			Context:     "",
+		},
+		{
+			Source:      mockDir,
+			Destination: "/",
+			Context:     "",
+			Recursive:   true,
+			Exclude:     manifest.StringSliceOrString{
+				String: aws.String("*"),
+			},
+			Reinclude:   manifest.StringSliceOrString{
+				StringSlice: []string{"dog", "c?t", "[this]", "[!that]"},
+			},
+		},
+	}
 	mockError := errors.New("mock error")
 	testCases := map[string]struct {
 		inSvcType        string
@@ -218,6 +242,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 		inSubscribeTags  []string
 		inNoSubscribe    bool
 		inIngressType    string
+		mockFileSystem   func(mockFS afero.Fs)
 
 		setupMocks func(mocks initSvcMocks)
 
@@ -225,7 +250,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 	}{
 		"invalid service type": {
 			inSvcType: "TestSvcType",
-			wantedErr: errors.New(`invalid service type TestSvcType: must be one of "Request-Driven Web Service", "Load Balanced Web Service", "Backend Service", "Worker Service"`),
+			wantedErr: errors.New(`invalid service type TestSvcType: must be one of "Request-Driven Web Service", "Load Balanced Web Service", "Backend Service", "Worker Service", "Static Site"`),
 		},
 		"invalid service name": {
 			inSvcType: wantedSvcType,
@@ -692,6 +717,203 @@ type: Request-Driven Web Service`), nil)
 				).Return([]deploy.Topic{*mockTopic}, nil)
 			},
 		},
+		"error if source not selected successfully": {
+			inSvcType: manifestinfo.StaticSiteType,
+			inSvcName: wantedSvcName,
+			setupMocks: func(m initSvcMocks) {
+				m.mockStore.EXPECT().GetService(mockAppName, wantedSvcName).Return(nil, &config.ErrNoSuchService{})
+				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
+				m.mockDirFileSel.EXPECT().DirOrFile(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("", mockError)
+			},
+			wantedErr: fmt.Errorf("select local directory or file: mock error"),
+		},
+		"error if fileinfo not found": {
+			inSvcType: manifestinfo.StaticSiteType,
+			inSvcName: wantedSvcName,
+			setupMocks: func(m initSvcMocks) {
+				m.mockStore.EXPECT().GetService(mockAppName, wantedSvcName).Return(nil, &config.ErrNoSuchService{})
+				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
+				m.mockDirFileSel.EXPECT().DirOrFile(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(mockFile, nil)
+			},
+			wantedErr: fmt.Errorf("get Fileinfo describing my/mock/file.css: open my/mock/file.css: file does not exist"),
+		},
+		"error if destination not selected successfully": {
+			inSvcType: manifestinfo.StaticSiteType,
+			inSvcName: wantedSvcName,
+			mockFileSystem: func(mockFS afero.Fs) {
+				_ = mockFS.MkdirAll("my/mock", 0755)
+				_ = afero.WriteFile(mockFS, "my/mock/file.css", []byte("yoohoo"), 0644)
+			},
+			setupMocks: func(m initSvcMocks) {
+				m.mockStore.EXPECT().GetService(mockAppName, wantedSvcName).Return(nil, &config.ErrNoSuchService{})
+				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
+				m.mockDirFileSel.EXPECT().DirOrFile(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(mockFile, nil)
+				m.mockPrompt.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("", mockError)
+			},
+			wantedErr: fmt.Errorf("get destination: mock error"),
+		},
+		"error if recursion not set successfully": {
+			inSvcType: manifestinfo.StaticSiteType,
+			inSvcName: wantedSvcName,
+			mockFileSystem: func(mockFS afero.Fs) {
+				_ = mockFS.MkdirAll("my/mock/dir", 0755)
+			},
+			setupMocks: func(m initSvcMocks) {
+				m.mockStore.EXPECT().GetService(mockAppName, wantedSvcName).Return(nil, &config.ErrNoSuchService{})
+				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
+				m.mockDirFileSel.EXPECT().DirOrFile(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(mockDir, nil)
+				m.mockPrompt.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("/", nil)
+				m.mockPrompt.EXPECT().Confirm(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, mockError)
+			},
+			wantedErr: fmt.Errorf("specify recursion: mock error"),
+		},
+		"error if exclude filters not set successfully": {
+			inSvcType: manifestinfo.StaticSiteType,
+			inSvcName: wantedSvcName,
+			mockFileSystem: func(mockFS afero.Fs) {
+				_ = mockFS.MkdirAll("my/mock/dir", 0755)
+			},
+			setupMocks: func(m initSvcMocks) {
+				m.mockStore.EXPECT().GetService(mockAppName, wantedSvcName).Return(nil, &config.ErrNoSuchService{})
+				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
+				m.mockDirFileSel.EXPECT().DirOrFile(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(mockDir, nil)
+				m.mockPrompt.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("/", nil)
+				m.mockPrompt.EXPECT().Confirm(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
+				m.mockPrompt.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("", mockError)
+			},
+			wantedErr: fmt.Errorf("get exclude filter: mock error"),
+		},
+		"error if fail to confirm repeat for exclude": {
+			inSvcType: manifestinfo.StaticSiteType,
+			inSvcName: wantedSvcName,
+			mockFileSystem: func(mockFS afero.Fs) {
+				_ = mockFS.MkdirAll("my/mock/dir", 0755)
+			},
+			setupMocks: func(m initSvcMocks) {
+				m.mockStore.EXPECT().GetService(mockAppName, wantedSvcName).Return(nil, &config.ErrNoSuchService{})
+				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
+				m.mockDirFileSel.EXPECT().DirOrFile(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(mockDir, nil)
+				m.mockPrompt.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("/", nil)
+				m.mockPrompt.EXPECT().Confirm(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
+				m.mockPrompt.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("*", nil)
+				m.mockPrompt.EXPECT().Confirm(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, mockError)
+			},
+			wantedErr: fmt.Errorf("confirm another exclude filter: mock error"),
+		},
+		"error if include filters not set successfully": {
+			inSvcType: manifestinfo.StaticSiteType,
+			inSvcName: wantedSvcName,
+			mockFileSystem: func(mockFS afero.Fs) {
+				_ = mockFS.MkdirAll("my/mock/dir", 0755)
+			},
+			setupMocks: func(m initSvcMocks) {
+				m.mockStore.EXPECT().GetService(mockAppName, wantedSvcName).Return(nil, &config.ErrNoSuchService{})
+				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
+				m.mockDirFileSel.EXPECT().DirOrFile(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(mockDir, nil)
+				m.mockPrompt.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("/", nil)
+				m.mockPrompt.EXPECT().Confirm(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
+				m.mockPrompt.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("*", nil)
+				m.mockPrompt.EXPECT().Confirm(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, nil)
+				m.mockPrompt.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("", mockError)
+			},
+			wantedErr: fmt.Errorf("get include filter: mock error"),
+		},
+		"error if fail to confirm repeat for include": {
+			inSvcType: manifestinfo.StaticSiteType,
+			inSvcName: wantedSvcName,
+			mockFileSystem: func(mockFS afero.Fs) {
+				_ = mockFS.MkdirAll("my/mock/dir", 0755)
+			},
+			setupMocks: func(m initSvcMocks) {
+				m.mockStore.EXPECT().GetService(mockAppName, wantedSvcName).Return(nil, &config.ErrNoSuchService{})
+				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
+				m.mockDirFileSel.EXPECT().DirOrFile(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(mockDir, nil)
+				m.mockPrompt.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("/", nil)
+				m.mockPrompt.EXPECT().Confirm(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
+				m.mockPrompt.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("*", nil)
+				m.mockPrompt.EXPECT().Confirm(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, nil)
+				m.mockPrompt.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("something", nil)
+				m.mockPrompt.EXPECT().Confirm(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, mockError)
+			},
+			wantedErr: fmt.Errorf("confirm another include filter: mock error"),
+		},
+		"error if fail to confirm Upload Summary": {
+			inSvcType: manifestinfo.StaticSiteType,
+			inSvcName: wantedSvcName,
+			mockFileSystem: func(mockFS afero.Fs) {
+				_ = mockFS.MkdirAll("my/mock/dir", 0755)
+			},
+			setupMocks: func(m initSvcMocks) {
+				m.mockStore.EXPECT().GetService(mockAppName, wantedSvcName).Return(nil, &config.ErrNoSuchService{})
+				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
+				m.mockDirFileSel.EXPECT().DirOrFile(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(mockDir, nil)
+				m.mockPrompt.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("/", nil)
+				m.mockPrompt.EXPECT().Confirm(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
+				m.mockPrompt.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("*", nil)
+				m.mockPrompt.EXPECT().Confirm(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, nil)
+				m.mockPrompt.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("something", nil)
+				m.mockPrompt.EXPECT().Confirm(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, nil)
+				m.mockPrompt.EXPECT().Confirm(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, mockError)
+			},
+			wantedErr: fmt.Errorf("confirm upload summary: mock error"),
+		},
+		"error if fail to confirm upload another asset": {
+			inSvcType: manifestinfo.StaticSiteType,
+			inSvcName: wantedSvcName,
+			mockFileSystem: func(mockFS afero.Fs) {
+				_ = mockFS.MkdirAll("my/mock/dir", 0755)
+			},
+			setupMocks: func(m initSvcMocks) {
+				m.mockStore.EXPECT().GetService(mockAppName, wantedSvcName).Return(nil, &config.ErrNoSuchService{})
+				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
+				m.mockDirFileSel.EXPECT().DirOrFile(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(mockDir, nil)
+				m.mockPrompt.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("/", nil)
+				m.mockPrompt.EXPECT().Confirm(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
+				m.mockPrompt.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("*", nil)
+				m.mockPrompt.EXPECT().Confirm(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, nil)
+				m.mockPrompt.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("something", nil)
+				m.mockPrompt.EXPECT().Confirm(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, nil)
+				m.mockPrompt.EXPECT().Confirm(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
+				m.mockPrompt.EXPECT().Confirm(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, mockError)
+			},
+			wantedErr: fmt.Errorf("confirm another asset: mock error"),
+		},
+		"successfully prompt for and return multiple assets (with recursion, multiple exclude and include filters) to upload; include one rejected option": {
+			inSvcType: manifestinfo.StaticSiteType,
+			inSvcName: wantedSvcName,
+			mockFileSystem: func(mockFS afero.Fs) {
+				_ = mockFS.MkdirAll("my/mock/dir", 0755)
+				_ = afero.WriteFile(mockFS, "my/mock/file.css", []byte("yoohoo"), 0644)
+				_ = afero.WriteFile(mockFS, "my/mock/file.html", []byte("yoohoo"), 0644)
+			},
+			setupMocks: func(m initSvcMocks) {
+				m.mockStore.EXPECT().GetService(mockAppName, wantedSvcName).Return(nil, &config.ErrNoSuchService{})
+				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
+				m.mockDirFileSel.EXPECT().DirOrFile(gomock.Any(), gomock.Any(),gomock.Any(), gomock.Any(), gomock.Any()).Return(mockFile, nil)
+				m.mockPrompt.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("assets", nil)
+				m.mockPrompt.EXPECT().Confirm(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
+				m.mockPrompt.EXPECT().Confirm(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
+				m.mockDirFileSel.EXPECT().DirOrFile(gomock.Any(), gomock.Any(),gomock.Any(), gomock.Any(), gomock.Any()).Return("my/mock/file.html", nil)
+				m.mockPrompt.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("[None]", nil)
+				m.mockPrompt.EXPECT().Confirm(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, nil)
+				m.mockPrompt.EXPECT().Confirm(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
+				m.mockDirFileSel.EXPECT().DirOrFile(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(mockDir, nil)
+				m.mockPrompt.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("/", nil)
+				m.mockPrompt.EXPECT().Confirm(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
+				m.mockPrompt.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("*", nil)
+				m.mockPrompt.EXPECT().Confirm(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, nil)
+				m.mockPrompt.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("dog", nil)
+				m.mockPrompt.EXPECT().Confirm(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
+				m.mockPrompt.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("c?t", nil)
+				m.mockPrompt.EXPECT().Confirm(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
+				m.mockPrompt.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("[this]", nil)
+				m.mockPrompt.EXPECT().Confirm(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
+				m.mockPrompt.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("[!that]", nil)
+				m.mockPrompt.EXPECT().Confirm(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, nil)
+				m.mockPrompt.EXPECT().Confirm(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
+				m.mockPrompt.EXPECT().Confirm(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, nil)
+			},
+		},
 	}
 
 	for name, tc := range testCases {
@@ -704,6 +926,7 @@ type: Request-Driven Web Service`), nil)
 			mockDockerfile := mocks.NewMockdockerfileParser(ctrl)
 			mockSel := mocks.NewMockdockerfileSelector(ctrl)
 			mockTopicSel := mocks.NewMocktopicSelector(ctrl)
+			mockDirOrFileSel := mocks.NewMockdirOrFileSelector(ctrl)
 			mockDockerEngine := mocks.NewMockdockerEngine(ctrl)
 			mockManifestReader := mocks.NewMockmanifestReader(ctrl)
 			mockStore := mocks.NewMockstore(ctrl)
@@ -712,6 +935,7 @@ type: Request-Driven Web Service`), nil)
 				mockDockerfile:   mockDockerfile,
 				mockSel:          mockSel,
 				mocktopicSel:     mockTopicSel,
+				mockDirFileSel:   mockDirOrFileSel,
 				mockDockerEngine: mockDockerEngine,
 				mockMftReader:    mockManifestReader,
 				mockStore:        mockStore,
@@ -744,7 +968,11 @@ type: Request-Driven Web Service`), nil)
 				mftReader:    mockManifestReader,
 				sel:          mockSel,
 				topicSel:     mockTopicSel,
+				dirFileSel:   mockDirOrFileSel,
 				dockerEngine: mockDockerEngine,
+			}
+			if tc.mockFileSystem != nil {
+				tc.mockFileSystem(opts.fs)
 			}
 
 			// WHEN
@@ -760,6 +988,9 @@ type: Request-Driven Web Service`), nil)
 				}
 				if opts.image != "" {
 					require.Equal(t, wantedImage, opts.image)
+				}
+				if opts.staticAssets != nil {
+					require.Equal(t, wantedAssets, opts.staticAssets)
 				}
 			}
 		})

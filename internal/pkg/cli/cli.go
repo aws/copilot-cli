@@ -184,7 +184,7 @@ func displayPath(target string) string {
 func isDir(fs afero.Fs, path string) (bool, error) {
 	info, err := fs.Stat(path)
 	if err != nil {
-		return false, fmt.Errorf("get Fileinfo describing %s", path)
+		return false, fmt.Errorf("get Fileinfo describing %s: %w", path, err)
 	}
 	return info.IsDir(), nil
 }

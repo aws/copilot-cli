@@ -468,9 +468,9 @@ func (o *initSvcOpts) askStaticSite() error {
 		if err != nil {
 			return err
 		}
-		isDir, err := isDir(afero.NewOsFs(), source)
+		isDir, err := isDir(o.fs, source)
 		if err != nil {
-			return fmt.Errorf("check if selection is a directory: %w", err)
+			return err
 		}
 		destination, err := o.askDestination(source, isDir)
 		if err != nil {
@@ -478,7 +478,6 @@ func (o *initSvcOpts) askStaticSite() error {
 		}
 		var excludes []string
 		var includes []string
-
 		var recursive bool
 		if isDir {
 			recursive, err = o.askRecursive(source)
@@ -515,7 +514,7 @@ Include: %v`, strings.Join(excludes, ", "), strings.Join(includes, ", "))
 			prompt.WithFinalMessage("Add:"),
 		)
 		if err != nil {
-			return fmt.Errorf("failed to confirm upload summary: %w", err)
+			return fmt.Errorf("confirm upload summary: %w", err)
 		}
 		if add {
 			assets = append(assets, manifest.FileUpload{
@@ -533,7 +532,7 @@ Include: %v`, strings.Join(excludes, ", "), strings.Join(includes, ", "))
 			prompt.WithFinalMessage("Another:"),
 		)
 		if err != nil {
-			return fmt.Errorf("failed to confirm repeat: %w", err)
+			return fmt.Errorf("confirm another asset: %w", err)
 		}
 	}
 	o.staticAssets = assets
@@ -648,7 +647,7 @@ func (o *initSvcOpts) askRecursive(source string) (bool, error) {
 		fmt.Sprintf(fmtStaticSiteInitRecursiveHelpPrompt, source),
 		prompt.WithFinalMessage("Recursive:"))
 	if err != nil {
-		return false, fmt.Errorf("failed to confirm recursive: %w", err)
+		return false, fmt.Errorf("specify recursion: %w", err)
 	}
 	return recursive, nil
 }
@@ -675,8 +674,10 @@ func (o *initSvcOpts) askExcludes(source string) ([]string, error) {
 				prompt.WithFinalMessage("Another:"),
 			)
 			if err != nil {
-				return nil, fmt.Errorf("failed to confirm repeat: %w", err)
+				return nil, fmt.Errorf("confirm another exclude filter: %w", err)
 			}
+		} else {
+			again = false
 		}
 	}
 	return excludes, nil
@@ -704,8 +705,10 @@ func (o *initSvcOpts) askIncludes(source string) ([]string, error) {
 				prompt.WithFinalMessage("Another:"),
 			)
 			if err != nil {
-				return nil, fmt.Errorf("failed to confirm repeat: %w", err)
+				return nil, fmt.Errorf("confirm another include filter: %w", err)
 			}
+		} else {
+			again = false
 		}
 	}
 	return includes, nil

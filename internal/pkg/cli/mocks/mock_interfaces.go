@@ -5870,6 +5870,44 @@ func (mr *MockwsSelectorMockRecorder) Workload(msg, help interface{}) *gomock.Ca
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Workload", reflect.TypeOf((*MockwsSelector)(nil).Workload), msg, help)
 }
 
+// MockdirOrFileSelector is a mock of dirOrFileSelector interface.
+type MockdirOrFileSelector struct {
+	ctrl     *gomock.Controller
+	recorder *MockdirOrFileSelectorMockRecorder
+}
+
+// MockdirOrFileSelectorMockRecorder is the mock recorder for MockdirOrFileSelector.
+type MockdirOrFileSelectorMockRecorder struct {
+	mock *MockdirOrFileSelector
+}
+
+// NewMockdirOrFileSelector creates a new mock instance.
+func NewMockdirOrFileSelector(ctrl *gomock.Controller) *MockdirOrFileSelector {
+	mock := &MockdirOrFileSelector{ctrl: ctrl}
+	mock.recorder = &MockdirOrFileSelectorMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockdirOrFileSelector) EXPECT() *MockdirOrFileSelectorMockRecorder {
+	return m.recorder
+}
+
+// DirOrFile mocks base method.
+func (m *MockdirOrFileSelector) DirOrFile(selPrompt, notFoundPrompt, selHelp, notFoundHelp string, pathValidator prompt.ValidatorFunc) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DirOrFile", selPrompt, notFoundPrompt, selHelp, notFoundHelp, pathValidator)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DirOrFile indicates an expected call of DirOrFile.
+func (mr *MockdirOrFileSelectorMockRecorder) DirOrFile(selPrompt, notFoundPrompt, selHelp, notFoundHelp, pathValidator interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DirOrFile", reflect.TypeOf((*MockdirOrFileSelector)(nil).DirOrFile), selPrompt, notFoundPrompt, selHelp, notFoundHelp, pathValidator)
+}
+
 // MockscheduleSelector is a mock of scheduleSelector interface.
 type MockscheduleSelector struct {
 	ctrl     *gomock.Controller
