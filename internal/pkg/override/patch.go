@@ -235,6 +235,10 @@ func followJSONPointerHelper(node *yaml.Node, traversed, remaining []string, vis
 
 		return fmt.Errorf("key %q: %q not found in map", strings.Join(traversed, jsonPointerSeparator), remaining[0])
 	case yaml.SequenceNode:
+		if remaining[0] == "-" {
+			return followJSONPointerHelper(node.Content[len(node.Content)-1], append(traversed, remaining[0]), remaining[1:], visit)
+		}
+
 		idx, err := strconv.Atoi(remaining[0])
 		switch {
 		case err != nil:
