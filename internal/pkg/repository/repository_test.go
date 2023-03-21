@@ -123,13 +123,11 @@ func TestRepository_BuildAndPush(t *testing.T) {
 func Test_Login(t *testing.T) {
 	const mockRepoURI = "mockRepoURI"
 	testCases := map[string]struct {
-		inURI        string
 		inMockDocker func(m *mocks.MockContainerLoginBuildPusher)
 		mockRegistry func(m *mocks.MockRegistry)
 		wantedError  error
 	}{
 		"failed to get auth": {
-			inURI: "mockRepoURI",
 			mockRegistry: func(m *mocks.MockRegistry) {
 				m.EXPECT().Auth().Return("", "", errors.New("error getting auth"))
 			},
@@ -140,7 +138,6 @@ func Test_Login(t *testing.T) {
 			wantedError: errors.New("get auth: error getting auth"),
 		},
 		"failed to login": {
-			inURI: "mockRepoURI",
 			mockRegistry: func(m *mocks.MockRegistry) {
 				m.EXPECT().Auth().Return("my-name", "my-pwd", nil)
 			},
@@ -151,7 +148,6 @@ func Test_Login(t *testing.T) {
 			wantedError: fmt.Errorf("login to repo %s: error logging in", mockRepoURI),
 		},
 		"no error when performing login": {
-			inURI: "mockRepoURI",
 			mockRegistry: func(m *mocks.MockRegistry) {
 				m.EXPECT().Auth().Return("my-name", "my-pwd", nil)
 			},
