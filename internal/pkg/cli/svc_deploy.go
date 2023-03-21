@@ -42,6 +42,7 @@ type deployWkldVars struct {
 	resourceTags    map[string]string
 	forceNewUpdate  bool // NOTE: this variable is not applicable for a job workload currently.
 	disableRollback bool
+	showDiff        bool
 
 	// To facilitate unit tests.
 	clientConfigured bool
@@ -232,6 +233,22 @@ func (o *deploySvcOpts) Execute() error {
 	targetApp, err := o.getTargetApp()
 	if err != nil {
 		return err
+	}
+	if o.showDiff {
+		output, err := deployer.GenerateCloudFormationTemplate(&clideploy.GenerateCloudFormationTemplateInput{
+			StackRuntimeConfiguration: clideploy.StackRuntimeConfiguration{
+				RootUserARN:        o.rootUserARN,
+				Tags:               targetApp.Tags,
+				EnvFileARNs:        uploadOut.EnvFileARNs,
+				ImageDigests:       uploadOut.ImageDigests,
+				AddonsURL:          uploadOut.AddonsURL,
+				CustomResourceURLs: uploadOut.CustomResourceURLs,
+			},
+		})
+		if err != nil {
+			return fmt.Errorf("generate workload %s template against environment %s: %w", o.name, o.envName, err)
+		}
+		return diff(deployer, output.Template, os.Stdout)
 	}
 	deployRecs, err := deployer.DeployWorkload(&clideploy.DeployWorkloadInput{
 		StackRuntimeConfiguration: clideploy.StackRuntimeConfiguration{
@@ -574,6 +591,6 @@ func buildSvcDeployCmd() *cobra.Command {
 	cmd.Flags().StringToStringVar(&vars.resourceTags, resourceTagsFlag, nil, resourceTagsFlagDescription)
 	cmd.Flags().BoolVar(&vars.forceNewUpdate, forceFlag, false, forceFlagDescription)
 	cmd.Flags().BoolVar(&vars.disableRollback, noRollbackFlag, false, noRollbackFlagDescription)
-
+	cmd.Flags().BoolVar(&vars.showDiff, diffFlag, false, diffFlagDescription)
 	return cmd
 }
