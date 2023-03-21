@@ -24,6 +24,10 @@ func TestPackageJobOpts_Validate(t *testing.T) {
 		inEnvName string
 		inJobName string
 
+		inShowDiff     bool
+		inOutputDir    string
+		inUploadAssets bool
+
 		setupMocks func()
 
 		wantedErrorS string
@@ -72,6 +76,29 @@ func TestPackageJobOpts_Validate(t *testing.T) {
 				EnvironmentName: "test",
 			}).Error(),
 		},
+		"error if diff is specified with output-dir": {
+			inAppName:    "phonetool",
+			inShowDiff:   true,
+			inOutputDir:  "what/a/dir",
+			setupMocks:   func() {},
+			wantedErrorS: "`--diff` cannot be specified together with `--output-dir`",
+		},
+		"error if diff is specified with upload-assets": {
+			inAppName:      "phonetool",
+			inShowDiff:     true,
+			inUploadAssets: true,
+			setupMocks:     func() {},
+			wantedErrorS:   "`--diff` cannot be specified together with `--upload-assets`",
+		},
+		"no diff": {
+			inAppName:  "phonetool",
+			setupMocks: func() {},
+		},
+		"diff": {
+			inAppName:  "phonetool",
+			inShowDiff: true,
+			setupMocks: func() {},
+		},
 	}
 
 	for name, tc := range testCases {
@@ -90,6 +117,10 @@ func TestPackageJobOpts_Validate(t *testing.T) {
 					name:    tc.inJobName,
 					envName: tc.inEnvName,
 					appName: tc.inAppName,
+
+					showDiff:     tc.inShowDiff,
+					outputDir:    tc.inOutputDir,
+					uploadAssets: tc.inUploadAssets,
 				},
 				ws:    mockWorkspace,
 				store: mockStore,
