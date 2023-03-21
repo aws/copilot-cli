@@ -333,7 +333,8 @@ Outputs:
 							Port:            "",
 							SuccessCodes:    "",
 						},
-						Stickiness: "false",
+						Stickiness:      "false",
+						RedirectToHTTPS: true,
 					},
 				},
 				IsHTTPS: true,
@@ -342,7 +343,6 @@ Outputs:
 						"mockAlias",
 					},
 				},
-				RedirectToHTTPS: true,
 			},
 			ALBEnabled: true,
 			PortMappings: []*template.PortMapping{

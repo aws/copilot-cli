@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.2
-	github.com/aws/aws-sdk-go v1.44.219
+	github.com/aws/aws-sdk-go v1.44.224
 	github.com/briandowns/spinner v1.23.0
 	github.com/dustin/go-humanize v1.0.1
 	github.com/fatih/color v1.15.0
@@ -16,7 +16,7 @@ require (
 	github.com/lnquy/cron v1.1.1
 	github.com/moby/buildkit v0.9.3
 	github.com/onsi/ginkgo/v2 v2.9.1
-	github.com/onsi/gomega v1.27.3
+	github.com/onsi/gomega v1.27.4
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/spf13/afero v1.9.5
 	github.com/spf13/cobra v1.6.1
