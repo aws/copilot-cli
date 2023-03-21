@@ -7113,6 +7113,21 @@ func (m *MockworkloadDeployer) EXPECT() *MockworkloadDeployerMockRecorder {
 	return m.recorder
 }
 
+// DeployDiff mocks base method.
+func (m *MockworkloadDeployer) DeployDiff(inTmpl string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeployDiff", inTmpl)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeployDiff indicates an expected call of DeployDiff.
+func (mr *MockworkloadDeployerMockRecorder) DeployDiff(inTmpl interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployDiff", reflect.TypeOf((*MockworkloadDeployer)(nil).DeployDiff), inTmpl)
+}
+
 // DeployWorkload mocks base method.
 func (m *MockworkloadDeployer) DeployWorkload(in *deploy.DeployWorkloadInput) (deploy.ActionRecommender, error) {
 	m.ctrl.T.Helper()
