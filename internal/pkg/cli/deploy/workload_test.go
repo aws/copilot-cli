@@ -36,7 +36,7 @@ import (
 )
 
 type deployMocks struct {
-	mockRepositoryService      *mocks.MockRepositoryService
+	mockRepositoryService      *mocks.MockrepositoryService
 	mockEndpointGetter         *mocks.MockendpointGetter
 	mockSpinner                *mocks.Mockspinner
 	mockPublicCIDRBlocksGetter *mocks.MockpublicCIDRBlocksGetter
@@ -592,7 +592,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			m := &deployMocks{
 				mockUploader:          mocks.NewMockuploader(ctrl),
 				mockAddons:            mocks.NewMockstackBuilder(ctrl),
-				mockRepositoryService: mocks.NewMockRepositoryService(ctrl),
+				mockRepositoryService: mocks.NewMockrepositoryService(ctrl),
 				mockFileReader:        mocks.NewMockfileReader(ctrl),
 			}
 			tc.mock(t, m)

@@ -13,7 +13,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 
-	clideploy "github.com/aws/copilot-cli/internal/pkg/cli/deploy/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
@@ -746,7 +745,7 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 
 type runTaskMocks struct {
 	deployer             *mocks.MocktaskDeployer
-	repository           *clideploy.MockRepositoryService
+	repository           *mocks.MockrepositoryService
 	runner               *mocks.MocktaskRunner
 	store                *mocks.Mockstore
 	eventsWriter         *mocks.MockeventsWriter
@@ -1160,7 +1159,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 
 			mocks := runTaskMocks{
 				deployer:             mocks.NewMocktaskDeployer(ctrl),
-				repository:           clideploy.NewMockRepositoryService(ctrl),
+				repository:           mocks.NewMockrepositoryService(ctrl),
 				runner:               mocks.NewMocktaskRunner(ctrl),
 				store:                mocks.NewMockstore(ctrl),
 				eventsWriter:         mocks.NewMockeventsWriter(ctrl),

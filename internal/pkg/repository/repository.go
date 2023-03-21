@@ -80,7 +80,7 @@ func (r *Repository) URI() (string, error) {
 	return uri, nil
 }
 
-// Login authenticates with a Docker registry by performing a Docker login,
+// Login authenticates with a ECR registry by performing a Docker login,
 // but only if the `credStore` attribute value is not set to `ecr-login`.
 // If the `credStore` value is `ecr-login`, no login is performed.
 // Returns an error if any error occurs during the login process.

@@ -40,7 +40,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
-	clideploy "github.com/aws/copilot-cli/internal/pkg/cli/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
@@ -155,7 +154,7 @@ type runTaskOpts struct {
 
 	// Fields below are configured at runtime.
 	deployer             taskDeployer
-	repository           clideploy.RepositoryService
+	repository           repositoryService
 	runner               taskRunner
 	eventsWriter         eventsWriter
 	defaultClusterGetter defaultClusterGetter
@@ -961,7 +960,7 @@ func (o *runTaskOpts) buildAndPushImage() error {
 	if o.dockerfileContextPath != "" {
 		ctx = o.dockerfileContextPath
 	}
-	if err := clideploy.LoginToDockerClient(o.repository); err != nil {
+	if err := o.repository.Login(dockerengine.New(exec.NewCmd())); err != nil {
 		return err
 	}
 	if _, err := o.repository.BuildAndPush(dockerengine.New(exec.NewCmd()), &dockerengine.BuildArguments{

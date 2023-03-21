@@ -68,8 +68,7 @@ func (noopActionRecommender) RecommendedActions() []string {
 	return nil
 }
 
-type RepositoryService interface {
-	URI() (string, error)
+type repositoryService interface {
 	Login(docker repository.ContainerLoginBuildPusher) error
 	BuildAndPush(docker repository.ContainerLoginBuildPusher, args *dockerengine.BuildArguments) (string, error)
 }
@@ -157,7 +156,7 @@ type workloadDeployer struct {
 	fs               fileReader
 	s3Client         uploader
 	addons           stackBuilder
-	repository       RepositoryService
+	repository       repositoryService
 	deployer         serviceDeployer
 	tmplGetter       deployedTemplateGetter
 	endpointGetter   endpointGetter
@@ -367,7 +366,7 @@ func (d *workloadDeployer) uploadContainerImages(out *UploadArtifactsOutput) err
 		return nil
 	}
 	out.ImageDigests = make(map[string]ContainerImageIdentifier, len(buildArgsPerContainer))
-	if err := LoginToDockerClient(d.repository); err != nil {
+	if err := loginToDockerClient(d.repository); err != nil {
 		return err
 	}
 	for name, buildArgs := range buildArgsPerContainer {
@@ -384,9 +383,9 @@ func (d *workloadDeployer) uploadContainerImages(out *UploadArtifactsOutput) err
 	return nil
 }
 
-// LoginToDockerClient logs in to the Docker client using the provided RepositoryService.
+// loginToDockerClient logs in to the Docker client using the provided RepositoryService.
 // Returns an error if any error occurs during the login process.
-func LoginToDockerClient(rs RepositoryService) error {
+func loginToDockerClient(rs repositoryService) error {
 	if err := rs.Login(dockerengine.New(exec.NewCmd())); err != nil {
 		return fmt.Errorf("login to docker: %w", err)
 	}
