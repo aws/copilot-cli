@@ -441,18 +441,6 @@ func contains(s string, items []string) bool {
 	return false
 }
 
-func diff(differ templateDiffer, tmpl string, writer io.WriteCloser) error {
-	out, err := differ.DeployDiff(tmpl)
-	if err != nil {
-		return err
-	}
-	if out == "" {
-		out = "No changes.\n"
-	}
-	_, err = writer.Write([]byte(out))
-	return err
-}
-
 // buildSvcPackageCmd builds the command for printing a service's CloudFormation template.
 func buildSvcPackageCmd() *cobra.Command {
 	vars := packageSvcVars{}

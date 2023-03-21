@@ -578,6 +578,18 @@ func (e *errFeatureIncompatibleWithEnvironment) RecommendActions() string {
 
 }
 
+func diff(differ templateDiffer, tmpl string, writer io.Writer) error {
+	out, err := differ.DeployDiff(tmpl)
+	if err != nil {
+		return err
+	}
+	if out == "" {
+		out = "No changes.\n"
+	}
+	_, err = writer.Write([]byte(out))
+	return err
+}
+
 // buildSvcDeployCmd builds the `svc deploy` subcommand.
 func buildSvcDeployCmd() *cobra.Command {
 	vars := deployWkldVars{}
