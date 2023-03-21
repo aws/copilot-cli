@@ -358,7 +358,7 @@ type environmentDeployer interface {
 	CreateAndRenderEnvironment(conf cloudformation.StackConfiguration, bucketARN string) error
 	DeleteEnvironment(appName, envName, cfnExecRoleARN string) error
 	GetEnvironment(appName, envName string) (*config.Environment, error)
-	EnvironmentTemplate(appName, envName string) (string, error)
+	Template(stackName string) (string, error)
 	UpdateEnvironmentTemplate(appName, envName, templateBody, cfnExecRoleARN string) error
 }
 

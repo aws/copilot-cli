@@ -18,7 +18,7 @@ type errSvcWithNoALBAliasDeployingToEnvWithImportedCerts struct {
 }
 
 func (e *errSvcWithNoALBAliasDeployingToEnvWithImportedCerts) Error() string {
-	return fmt.Sprintf("cannot deploy service %s without http.alias to environment %s with certificate imported", e.name, e.envName)
+	return fmt.Sprintf(`cannot deploy service %s without "alias" to environment %s with certificate imported`, e.name, e.envName)
 }
 
 type errSvcWithALBAliasHostedZoneWithCDNEnabled struct {

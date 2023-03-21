@@ -81,7 +81,9 @@ Mary:
 			curr: `DanceCompetition: [dog,bear,mouse,cat]`,
 			wanted: `
 ~ DanceCompetition:
+    (2 unchanged items)
     + - mouse
+    (1 unchanged item)
 `,
 		},
 		"list with deletion": {
@@ -89,7 +91,9 @@ Mary:
 			curr: `PotatoChipCommittee: [dog,bear,mouse]`,
 			wanted: `
 ~ PotatoChipCommittee:
+    (2 unchanged items)
     - - cat
+    (1 unchanged item)
 `,
 		},
 		"list with a scalar value changed": {
@@ -97,7 +101,9 @@ Mary:
 			curr: `DogsFavoriteShape: [triangle,ellipse,rectangle]`,
 			wanted: `
 ~ DogsFavoriteShape:
+    (1 unchanged item)
     ~ - circle -> ellipse
+    (1 unchanged item)
 `,
 		},
 		"list with a map value changed": { // TODO(lou1415926): handle list of maps modification
@@ -192,9 +198,27 @@ Mary:
 			wanted: `
 ~ DogsFavoriteShape:
     - - irregular
+    (1 unchanged item)
     ~ - circle -> ellipse
+    (1 unchanged item)
     + - food-shape
 `,
+		},
+		"from is empty": {
+			curr: `Mary: likes animals`,
+			old:  `   `,
+			wanted: `+ Mary: likes animals
+`,
+		},
+		"to is empty": {
+			curr: `           `,
+			old:  `Mary: likes animals`,
+			wanted: `- Mary: likes animals
+`,
+		},
+		"from and to are both empty": {
+			curr: `           `,
+			old:  `  `,
 		},
 		"no diff": {
 			curr: `

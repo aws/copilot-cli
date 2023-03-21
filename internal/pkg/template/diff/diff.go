@@ -7,6 +7,7 @@ package diff
 import (
 	"fmt"
 	"io"
+	"sort"
 
 	"gopkg.in/yaml.v3"
 )
@@ -54,6 +55,30 @@ func (n *node) children() []diffNode {
 	return n.childNodes
 }
 
+type unchangedNode struct {
+	count int
+}
+
+func (n *unchangedNode) children() []diffNode {
+	return nil
+}
+
+func (n *unchangedNode) key() string {
+	return ""
+}
+
+func (n *unchangedNode) newYAML() *yaml.Node {
+	return nil
+}
+
+func (n *unchangedNode) oldYAML() *yaml.Node {
+	return nil
+}
+
+func (n *unchangedNode) unchangedCount() int {
+	return n.count
+}
+
 type seqItemNode struct {
 	node
 }
@@ -70,7 +95,19 @@ func (from From) Parse(to []byte) (Tree, error) {
 	if err := yaml.Unmarshal(from, &fromNode); err != nil {
 		return Tree{}, fmt.Errorf("unmarshal old template: %w", err)
 	}
-	root, err := parse(&fromNode, &toNode, "")
+	var root diffNode
+	var err error
+	switch {
+	// NOTE: If Kind is 0, it means the document is empty and nothing is unmarshalled.
+	case fromNode.Kind == 0 && toNode.Kind == 0:
+		return Tree{}, nil
+	case fromNode.Kind == 0:
+		root, err = parse(nil, &toNode, "")
+	case toNode.Kind == 0:
+		root, err = parse(&fromNode, nil, "")
+	default:
+		root, err = parse(&fromNode, &toNode, "")
+	}
 	if err != nil {
 		return Tree{}, err
 	}
@@ -159,11 +196,16 @@ func parseSequence(fromNode, toNode *yaml.Node) ([]diffNode, error) {
 		return nil, nil
 	}
 	var children []diffNode
+	var matchCount int
 	inspector := newLCSStateMachine(fromSeq, toSeq, lcsIndices)
-	for action := inspector.action(); action != actonDone; action = inspector.action() {
+	for action := inspector.action(); action != actionDone; action = inspector.action() {
 		switch action {
 		case actionMatch:
-			// TODO(lou1415926): (x unchanged items)
+			matchCount++
+			if action := inspector.peek(); action != actionMatch {
+				children = append(children, &unchangedNode{count: matchCount})
+				matchCount = 0
+			}
 		case actionMod:
 			// TODO(lou1415926): handle list of maps modification
 			diff := cachedDiff[cacheKey(inspector.fromIndex(), inspector.toIndex())]
@@ -206,8 +248,10 @@ func parseMap(from, to *yaml.Node) ([]diffNode, error) {
 	if err := from.Decode(oldMap); err != nil {
 		return nil, err
 	}
+	keys := unionOfKeys(currMap, oldMap)
+	sort.SliceStable(keys, func(i, j int) bool { return keys[i] < keys[j] }) // NOTE: to avoid flaky unit tests.
 	var children []diffNode
-	for k := range unionOfKeys(currMap, oldMap) {
+	for _, k := range keys {
 		var currV, oldV *yaml.Node
 		if v, ok := oldMap[k]; ok {
 			oldV = &v
@@ -226,7 +270,7 @@ func parseMap(from, to *yaml.Node) ([]diffNode, error) {
 	return children, nil
 }
 
-func unionOfKeys[T any](a, b map[string]T) map[string]struct{} {
+func unionOfKeys[T any](a, b map[string]T) []string {
 	exists, keys := struct{}{}, make(map[string]struct{})
 	for k := range a {
 		keys[k] = exists
@@ -234,7 +278,12 @@ func unionOfKeys[T any](a, b map[string]T) map[string]struct{} {
 	for k := range b {
 		keys[k] = exists
 	}
-	return keys
+	keySlice, idx := make([]string, len(keys)), 0
+	for k := range keys {
+		keySlice[idx] = k
+		idx++
+	}
+	return keySlice
 }
 
 func cacheKey(inFrom, inTo int) string {

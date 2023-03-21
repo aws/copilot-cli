@@ -128,14 +128,14 @@ func (s *BackendService) Template() (string, error) {
 		return "", err
 	}
 	var deregistrationDelay *int64 = aws.Int64(60)
-	if s.manifest.RoutingRule.DeregistrationDelay != nil {
-		deregistrationDelay = aws.Int64(int64(s.manifest.RoutingRule.DeregistrationDelay.Seconds()))
+	if s.manifest.RoutingRule.Main.DeregistrationDelay != nil {
+		deregistrationDelay = aws.Int64(int64(s.manifest.RoutingRule.Main.DeregistrationDelay.Seconds()))
 	}
 	var scConfig *template.ServiceConnect
 	if s.manifest.Network.Connect.Enabled() {
 		scConfig = convertServiceConnect(s.manifest.Network.Connect)
 	}
-	targetContainer, targetContainerPort, err := s.manifest.HTTPLoadBalancerTarget()
+	targetContainer, targetContainerPort, err := s.manifest.RoutingRule.Main.Target(exposedPorts)
 	if err != nil {
 		return "", err
 	}
@@ -187,7 +187,7 @@ func (s *BackendService) Template() (string, error) {
 			Port: targetContainerPort,
 			Name: targetContainer,
 		},
-		HTTPHealthCheck: convertHTTPHealthCheck(&s.manifest.RoutingRule.HealthCheck),
+		HTTPHealthCheck: convertHTTPHealthCheck(&s.manifest.RoutingRule.Main.HealthCheck),
 		ALBListener:     albListenerConfig,
 
 		// Custom Resource Config.
@@ -221,7 +221,14 @@ func (s *BackendService) Parameters() ([]*cloudformation.Parameter, error) {
 	if err != nil {
 		return nil, err
 	}
-	targetContainer, targetPort, err := s.manifest.HTTPLoadBalancerTarget()
+	exposedPorts, err := s.manifest.ExposedPorts()
+	if err != nil {
+		return nil, fmt.Errorf("parse exposed ports in service manifest %s: %w", s.name, err)
+	}
+	targetContainer, targetPort, err := s.manifest.RoutingRule.Main.Target(exposedPorts)
+	if targetPort == "" {
+		targetPort = s.manifest.MainContainerPort()
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -244,7 +251,7 @@ func (s *BackendService) Parameters() ([]*cloudformation.Parameter, error) {
 		params = append(params, []*cloudformation.Parameter{
 			{
 				ParameterKey:   aws.String(WorkloadRulePathParamKey),
-				ParameterValue: s.manifest.RoutingRule.Path,
+				ParameterValue: s.manifest.RoutingRule.Main.Path,
 			},
 			{
 				ParameterKey:   aws.String(WorkloadHTTPSParamKey),
