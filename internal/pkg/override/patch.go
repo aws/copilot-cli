@@ -101,6 +101,10 @@ func unmarshalPatches(path string, fs afero.Fs) ([]yamlPatch, error) {
 }
 
 func (p *yamlPatch) applyAdd(root *yaml.Node) error {
+	if p.Value.IsZero() {
+		return fmt.Errorf("value required")
+	}
+
 	return followJSONPointer(root, p.Path, func(node *yaml.Node, pointer []string) error {
 		if len(pointer) != 1 {
 			return nil
@@ -185,6 +189,10 @@ func (p *yamlPatch) applyRemove(root *yaml.Node) error {
 }
 
 func (p *yamlPatch) applyReplace(root *yaml.Node) error {
+	if p.Value.IsZero() {
+		return fmt.Errorf("value required")
+	}
+
 	return followJSONPointer(root, p.Path, func(node *yaml.Node, pointer []string) error {
 		if len(pointer) > 0 {
 			return nil
