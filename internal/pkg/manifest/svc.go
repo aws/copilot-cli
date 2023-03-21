@@ -641,7 +641,6 @@ func prepareParsedExposedPortsMap(exposedPorts []ExposedPort) (map[string][]Expo
 }
 
 // Target returns target container and target port for a NLB listener configuration.
-// This method should be called only when NLB config is not empty.
 func (listener NetworkLoadBalancerListener) Target(exposedPorts ExposedPortsIndex) (targetContainer string, targetPort string, err error) {
 	// Parse listener port and protocol.
 	port, _, err := ParsePortMapping(listener.Port)
