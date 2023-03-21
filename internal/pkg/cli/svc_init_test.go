@@ -392,6 +392,10 @@ type: Request-Driven Web Service`), nil)
 						Value: manifestinfo.WorkerServiceType,
 						Hint:  "Events to SQS to ECS on Fargate",
 					},
+					{
+						Value: manifestinfo.StaticSiteType,
+						Hint: "Internet to CDN to S3 bucket",
+					},
 				}), gomock.Any()).
 					Return(wantedSvcType, nil)
 				m.mockStore.EXPECT().GetService(mockAppName, wantedSvcName).Return(nil, &config.ErrNoSuchService{}).Times(2)
