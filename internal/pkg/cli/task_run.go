@@ -7,13 +7,15 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
-	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
-	"github.com/aws/copilot-cli/internal/pkg/template/artifactpath"
-	"golang.org/x/mod/semver"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
+	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
+	"github.com/aws/copilot-cli/internal/pkg/exec"
+	"github.com/aws/copilot-cli/internal/pkg/template/artifactpath"
+	"golang.org/x/mod/semver"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
@@ -38,11 +40,11 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
+	clideploy "github.com/aws/copilot-cli/internal/pkg/cli/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
-	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/repository"
 	"github.com/aws/copilot-cli/internal/pkg/task"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
@@ -153,7 +155,7 @@ type runTaskOpts struct {
 
 	// Fields below are configured at runtime.
 	deployer             taskDeployer
-	repository           repositoryService
+	repository           clideploy.RepositoryService
 	runner               taskRunner
 	eventsWriter         eventsWriter
 	defaultClusterGetter defaultClusterGetter
@@ -521,7 +523,7 @@ func (o *runTaskOpts) validateEnvCompatibilityForGenerateJobCmd(app, env string)
 	if err != nil {
 		return fmt.Errorf("retrieve version of environment stack %q in application %q: %v", env, app, err)
 	}
-	// The '--generate-cmd' flag was introduced in env v1.4.0. In env v1.8.0, EnvManagerRole took over, but 
+	// The '--generate-cmd' flag was introduced in env v1.4.0. In env v1.8.0, EnvManagerRole took over, but
 	//"states:DescribeStateMachine" permissions weren't added until 1.12.2.
 	if semver.Compare(version, "v1.12.2") < 0 {
 		return &errFeatureIncompatibleWithEnvironment{
@@ -958,6 +960,9 @@ func (o *runTaskOpts) buildAndPushImage() error {
 	ctx := filepath.Dir(o.dockerfilePath)
 	if o.dockerfileContextPath != "" {
 		ctx = o.dockerfileContextPath
+	}
+	if err := clideploy.LoginToDockerClient(o.repository); err != nil {
+		return err
 	}
 	if _, err := o.repository.BuildAndPush(dockerengine.New(exec.NewCmd()), &dockerengine.BuildArguments{
 		Dockerfile: o.dockerfilePath,

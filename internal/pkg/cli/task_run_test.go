@@ -11,16 +11,15 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
-
 	"github.com/aws/aws-sdk-go/aws/session"
 
+	clideploy "github.com/aws/copilot-cli/internal/pkg/cli/deploy/mocks"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
-
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
 	ecsMocks "github.com/aws/copilot-cli/internal/pkg/ecs/mocks"
 
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
-	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/task"
 
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -747,7 +746,7 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 
 type runTaskMocks struct {
 	deployer             *mocks.MocktaskDeployer
-	repository           *mocks.MockrepositoryService
+	repository           *clideploy.MockRepositoryService
 	runner               *mocks.MocktaskRunner
 	store                *mocks.Mockstore
 	eventsWriter         *mocks.MockeventsWriter
@@ -762,6 +761,7 @@ func mockHasDefaultCluster(m runTaskMocks) {
 }
 
 func mockRepositoryAnytime(m runTaskMocks) {
+	m.repository.EXPECT().Login(gomock.Any())
 	m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Any()).AnyTimes()
 	m.repository.EXPECT().URI().AnyTimes()
 }
@@ -844,7 +844,8 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 					Command:    []string{},
 					EntryPoint: []string{},
 				}).Return(nil)
-				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Eq(&defaultBuildArguments))
+				m.repository.EXPECT().Login(gomock.Any())
+				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Any())
 				m.repository.EXPECT().URI().Return(mockRepoURI, errors.New("some error"))
 				mockHasDefaultCluster(m)
 			},
@@ -860,8 +861,9 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 					Command:    []string{},
 					EntryPoint: []string{},
 				}).Return(nil)
-				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Eq(&defaultBuildArguments))
 				m.repository.EXPECT().URI().Return(mockRepoURI, nil)
+				m.repository.EXPECT().Login(gomock.Any())
+				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Eq(&defaultBuildArguments))
 				m.deployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
 					Name:       inGroupName,
 					Image:      "uri/repo:latest",
@@ -913,6 +915,8 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 				m.provider.EXPECT().Default().Return(&session.Session{}, nil)
 				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).AnyTimes()
 				m.deployer.EXPECT().DeployTask(gomock.Any()).AnyTimes()
+				m.repository.EXPECT().URI().Return(mockRepoURI, nil)
+				m.repository.EXPECT().Login(gomock.Any())
 				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Eq(
 					&dockerengine.BuildArguments{
 						Context: filepath.Dir(defaultDockerfilePath),
@@ -930,6 +934,8 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 				m.provider.EXPECT().Default().Return(&session.Session{}, nil)
 				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).AnyTimes()
 				m.deployer.EXPECT().DeployTask(gomock.Any()).AnyTimes()
+				m.repository.EXPECT().URI().Return(mockRepoURI, nil)
+				m.repository.EXPECT().Login(gomock.Any())
 				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Eq(
 					&dockerengine.BuildArguments{
 						Context: "../../other",
@@ -953,8 +959,9 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 					Command:    []string{"/bin/sh", "-c", "curl $ECS_CONTAINER_METADATA_URI_V4"},
 					EntryPoint: []string{"exec", "some command"},
 				}).Times(1).Return(nil)
-				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Eq(&defaultBuildArguments))
 				m.repository.EXPECT().URI().Return(mockRepoURI, nil)
+				m.repository.EXPECT().Login(gomock.Any())
+				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Eq(&defaultBuildArguments))
 				m.deployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
 					Name:       inGroupName,
 					Image:      "uri/repo:latest",
@@ -1032,7 +1039,6 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 				m.provider.EXPECT().FromRole(gomock.Any(), gomock.Any())
 				m.store.EXPECT().GetApplication("my-app").Return(nil, errors.New("some error"))
 				m.deployer.EXPECT().DeployTask(gomock.Any(), gomock.Len(1)).AnyTimes() // NOTE: matching length because gomock is unable to match function arguments.
-				mockRepositoryAnytime(m)
 				m.runner.EXPECT().Run().AnyTimes()
 				m.defaultClusterGetter.EXPECT().HasDefaultCluster().Times(0)
 			},
@@ -1064,7 +1070,6 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 				m.uploader.EXPECT().Upload("arn:aws:s3:::bigbucket", key,
 					bytes.NewReader([]byte("SOMETHING=VALUE"))).Return(arn, nil)
 				m.deployer.EXPECT().DeployTask(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
-				mockRepositoryAnytime(m)
 				m.runner.EXPECT().Run().AnyTimes()
 			},
 		},
@@ -1155,7 +1160,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 
 			mocks := runTaskMocks{
 				deployer:             mocks.NewMocktaskDeployer(ctrl),
-				repository:           mocks.NewMockrepositoryService(ctrl),
+				repository:           clideploy.NewMockRepositoryService(ctrl),
 				runner:               mocks.NewMocktaskRunner(ctrl),
 				store:                mocks.NewMockstore(ctrl),
 				eventsWriter:         mocks.NewMockeventsWriter(ctrl),

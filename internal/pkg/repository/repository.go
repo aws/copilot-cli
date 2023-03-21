@@ -61,18 +61,6 @@ func (r *Repository) BuildAndPush(docker ContainerLoginBuildPusher, args *docker
 		return "", fmt.Errorf("build Dockerfile at %s: %w", args.Dockerfile, err)
 	}
 
-	// Perform docker login only if credStore attribute value != ecr-login
-	if !docker.IsEcrCredentialHelperEnabled(args.URI) {
-		username, password, err := r.registry.Auth()
-		if err != nil {
-			return "", fmt.Errorf("get auth: %w", err)
-		}
-
-		if err := docker.Login(args.URI, username, password); err != nil {
-			return "", fmt.Errorf("login to repo %s: %w", r.name, err)
-		}
-	}
-
 	digest, err = docker.Push(args.URI, args.Tags...)
 	if err != nil {
 		return "", fmt.Errorf("push to repo %s: %w", r.name, err)
@@ -90,4 +78,26 @@ func (r *Repository) URI() (string, error) {
 		return "", fmt.Errorf("get repository URI: %w", err)
 	}
 	return uri, nil
+}
+
+// Login authenticates with a Docker registry by performing a Docker login,
+// but only if the `credStore` attribute value is not set to `ecr-login`.
+// If the `credStore` value is `ecr-login`, no login is performed.
+// Returns an error if any error occurs during the login process.
+func (r *Repository) Login(docker ContainerLoginBuildPusher) error {
+	uri, err := r.URI()
+	if err != nil {
+		return fmt.Errorf("retrieve URI for repository: %w", err)
+	}
+	if !docker.IsEcrCredentialHelperEnabled(uri) {
+		username, password, err := r.registry.Auth()
+		if err != nil {
+			return fmt.Errorf("get auth: %w", err)
+		}
+
+		if err := docker.Login(uri, username, password); err != nil {
+			return fmt.Errorf("login to repo %s: %w", uri, err)
+		}
+	}
+	return nil
 }

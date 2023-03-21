@@ -52,31 +52,31 @@ func (mr *MockActionRecommenderMockRecorder) RecommendedActions() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecommendedActions", reflect.TypeOf((*MockActionRecommender)(nil).RecommendedActions))
 }
 
-// MockimageBuilderPusher is a mock of imageBuilderPusher interface.
-type MockimageBuilderPusher struct {
+// MockRepositoryService is a mock of RepositoryService interface.
+type MockRepositoryService struct {
 	ctrl     *gomock.Controller
-	recorder *MockimageBuilderPusherMockRecorder
+	recorder *MockRepositoryServiceMockRecorder
 }
 
-// MockimageBuilderPusherMockRecorder is the mock recorder for MockimageBuilderPusher.
-type MockimageBuilderPusherMockRecorder struct {
-	mock *MockimageBuilderPusher
+// MockRepositoryServiceMockRecorder is the mock recorder for MockRepositoryService.
+type MockRepositoryServiceMockRecorder struct {
+	mock *MockRepositoryService
 }
 
-// NewMockimageBuilderPusher creates a new mock instance.
-func NewMockimageBuilderPusher(ctrl *gomock.Controller) *MockimageBuilderPusher {
-	mock := &MockimageBuilderPusher{ctrl: ctrl}
-	mock.recorder = &MockimageBuilderPusherMockRecorder{mock}
+// NewMockRepositoryService creates a new mock instance.
+func NewMockRepositoryService(ctrl *gomock.Controller) *MockRepositoryService {
+	mock := &MockRepositoryService{ctrl: ctrl}
+	mock.recorder = &MockRepositoryServiceMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockimageBuilderPusher) EXPECT() *MockimageBuilderPusherMockRecorder {
+func (m *MockRepositoryService) EXPECT() *MockRepositoryServiceMockRecorder {
 	return m.recorder
 }
 
 // BuildAndPush mocks base method.
-func (m *MockimageBuilderPusher) BuildAndPush(docker repository.ContainerLoginBuildPusher, args *dockerengine.BuildArguments) (string, error) {
+func (m *MockRepositoryService) BuildAndPush(docker repository.ContainerLoginBuildPusher, args *dockerengine.BuildArguments) (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "BuildAndPush", docker, args)
 	ret0, _ := ret[0].(string)
@@ -85,9 +85,38 @@ func (m *MockimageBuilderPusher) BuildAndPush(docker repository.ContainerLoginBu
 }
 
 // BuildAndPush indicates an expected call of BuildAndPush.
-func (mr *MockimageBuilderPusherMockRecorder) BuildAndPush(docker, args interface{}) *gomock.Call {
+func (mr *MockRepositoryServiceMockRecorder) BuildAndPush(docker, args interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BuildAndPush", reflect.TypeOf((*MockimageBuilderPusher)(nil).BuildAndPush), docker, args)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BuildAndPush", reflect.TypeOf((*MockRepositoryService)(nil).BuildAndPush), docker, args)
+}
+
+// Login mocks base method.
+func (m *MockRepositoryService) Login(docker repository.ContainerLoginBuildPusher) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Login", docker)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Login indicates an expected call of Login.
+func (mr *MockRepositoryServiceMockRecorder) Login(docker interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Login", reflect.TypeOf((*MockRepositoryService)(nil).Login), docker)
+}
+
+// URI mocks base method.
+func (m *MockRepositoryService) URI() (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "URI")
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// URI indicates an expected call of URI.
+func (mr *MockRepositoryServiceMockRecorder) URI() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "URI", reflect.TypeOf((*MockRepositoryService)(nil).URI))
 }
 
 // Mocktemplater is a mock of templater interface.

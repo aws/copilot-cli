@@ -68,7 +68,9 @@ func (noopActionRecommender) RecommendedActions() []string {
 	return nil
 }
 
-type imageBuilderPusher interface {
+type RepositoryService interface {
+	URI() (string, error)
+	Login(docker repository.ContainerLoginBuildPusher) error
 	BuildAndPush(docker repository.ContainerLoginBuildPusher, args *dockerengine.BuildArguments) (string, error)
 }
 
@@ -152,18 +154,18 @@ type workloadDeployer struct {
 	workspacePath string
 
 	// Dependencies.
-	fs                 fileReader
-	s3Client           uploader
-	addons             stackBuilder
-	imageBuilderPusher imageBuilderPusher
-	deployer           serviceDeployer
-	tmplGetter         deployedTemplateGetter
-	endpointGetter     endpointGetter
-	spinner            spinner
-	templateFS         template.Reader
-	envVersionGetter   versionGetter
-	overrider          Overrider
-	customResources    customResourcesFunc
+	fs               fileReader
+	s3Client         uploader
+	addons           stackBuilder
+	repository       RepositoryService
+	deployer         serviceDeployer
+	tmplGetter       deployedTemplateGetter
+	endpointGetter   endpointGetter
+	spinner          spinner
+	templateFS       template.Reader
+	envVersionGetter versionGetter
+	overrider        Overrider
+	customResources  customResourcesFunc
 
 	// Cached variables.
 	defaultSess              *session.Session
@@ -230,7 +232,7 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 	}
 
 	repoName := fmt.Sprintf("%s/%s", in.App.Name, in.Name)
-	imageBuilderPusher := repository.NewWithURI(
+	repository := repository.NewWithURI(
 		ecr.New(defaultSessEnvRegion), repoName, resources.RepositoryURLs[in.Name])
 	store := config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
 	envDescriber, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
@@ -253,25 +255,24 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 
 	cfn := cloudformation.New(envSession, cloudformation.WithProgressTracker(os.Stderr))
 	return &workloadDeployer{
-		name:               in.Name,
-		app:                in.App,
-		env:                in.Env,
-		image:              in.Image,
-		resources:          resources,
-		workspacePath:      ws.Path(),
-		fs:                 &afero.Afero{Fs: afero.NewOsFs()},
-		s3Client:           s3.New(envSession),
-		addons:             addons,
-		imageBuilderPusher: imageBuilderPusher,
-		deployer:           cfn,
-		tmplGetter:         cfn,
-		endpointGetter:     envDescriber,
-		spinner:            termprogress.NewSpinner(log.DiagnosticWriter),
-		templateFS:         template.New(),
-		envVersionGetter:   in.EnvVersionGetter,
-		overrider:          in.Overrider,
-		customResources:    in.customResources,
-
+		name:                     in.Name,
+		app:                      in.App,
+		env:                      in.Env,
+		image:                    in.Image,
+		resources:                resources,
+		workspacePath:            ws.Path(),
+		fs:                       &afero.Afero{Fs: afero.NewOsFs()},
+		s3Client:                 s3.New(envSession),
+		addons:                   addons,
+		repository:               repository,
+		deployer:                 cfn,
+		tmplGetter:               cfn,
+		endpointGetter:           envDescriber,
+		spinner:                  termprogress.NewSpinner(log.DiagnosticWriter),
+		templateFS:               template.New(),
+		envVersionGetter:         in.EnvVersionGetter,
+		overrider:                in.Overrider,
+		customResources:          in.customResources,
 		defaultSess:              defaultSession,
 		defaultSessWithEnvRegion: defaultSessEnvRegion,
 		envSess:                  envSession,
@@ -366,8 +367,11 @@ func (d *workloadDeployer) uploadContainerImages(out *UploadArtifactsOutput) err
 		return nil
 	}
 	out.ImageDigests = make(map[string]ContainerImageIdentifier, len(buildArgsPerContainer))
+	if err := LoginToDockerClient(d.repository); err != nil {
+		return err
+	}
 	for name, buildArgs := range buildArgsPerContainer {
-		digest, err := d.imageBuilderPusher.BuildAndPush(dockerengine.New(exec.NewCmd()), buildArgs)
+		digest, err := d.repository.BuildAndPush(dockerengine.New(exec.NewCmd()), buildArgs)
 		if err != nil {
 			return fmt.Errorf("build and push image: %w", err)
 		}
@@ -376,6 +380,15 @@ func (d *workloadDeployer) uploadContainerImages(out *UploadArtifactsOutput) err
 			CustomTag:         d.image.CustomTag,
 			GitShortCommitTag: d.image.GitShortCommitTag,
 		}
+	}
+	return nil
+}
+
+// LoginToDockerClient logs in to the Docker client using the provided RepositoryService.
+// Returns an error if any error occurs during the login process.
+func LoginToDockerClient(rs RepositoryService) error {
+	if err := rs.Login(dockerengine.New(exec.NewCmd())); err != nil {
+		return fmt.Errorf("login to docker: %w", err)
 	}
 	return nil
 }
