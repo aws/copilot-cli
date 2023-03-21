@@ -328,6 +328,59 @@ func (mr *MockserviceDeployerMockRecorder) DeployService(conf, bucketName interf
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployService", reflect.TypeOf((*MockserviceDeployer)(nil).DeployService), varargs...)
 }
 
+// MockdeployedTemplateGetter is a mock of deployedTemplateGetter interface.
+type MockdeployedTemplateGetter struct {
+	ctrl     *gomock.Controller
+	recorder *MockdeployedTemplateGetterMockRecorder
+}
+
+// MockdeployedTemplateGetterMockRecorder is the mock recorder for MockdeployedTemplateGetter.
+type MockdeployedTemplateGetterMockRecorder struct {
+	mock *MockdeployedTemplateGetter
+}
+
+// NewMockdeployedTemplateGetter creates a new mock instance.
+func NewMockdeployedTemplateGetter(ctrl *gomock.Controller) *MockdeployedTemplateGetter {
+	mock := &MockdeployedTemplateGetter{ctrl: ctrl}
+	mock.recorder = &MockdeployedTemplateGetterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockdeployedTemplateGetter) EXPECT() *MockdeployedTemplateGetterMockRecorder {
+	return m.recorder
+}
+
+// AddonsTemplate mocks base method.
+func (m *MockdeployedTemplateGetter) AddonsTemplate(stackName string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AddonsTemplate", stackName)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// AddonsTemplate indicates an expected call of AddonsTemplate.
+func (mr *MockdeployedTemplateGetterMockRecorder) AddonsTemplate(stackName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddonsTemplate", reflect.TypeOf((*MockdeployedTemplateGetter)(nil).AddonsTemplate), stackName)
+}
+
+// Template mocks base method.
+func (m *MockdeployedTemplateGetter) Template(stackName string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Template", stackName)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Template indicates an expected call of Template.
+func (mr *MockdeployedTemplateGetterMockRecorder) Template(stackName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Template", reflect.TypeOf((*MockdeployedTemplateGetter)(nil).Template), stackName)
+}
+
 // Mockspinner is a mock of spinner interface.
 type Mockspinner struct {
 	ctrl     *gomock.Controller
