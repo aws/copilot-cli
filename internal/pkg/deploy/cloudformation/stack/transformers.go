@@ -570,7 +570,7 @@ func (conv routingRuleConfigConverter) convert() (*template.ALBListenerRule, err
 	if err != nil {
 		return nil, err
 	}
-	targetContainer, targetPort, err := conv.rule.HTTPLoadBalancerTarget(exposedPorts)
+	targetContainer, targetPort, err := conv.rule.Target(exposedPorts)
 	if err != nil {
 		return nil, err
 	}
@@ -615,7 +615,7 @@ func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (networkLoadBalanc
 	}
 	exposedPorts, err := s.manifest.ExposedPorts()
 	if err != nil {
-		return networkLoadBalancerConfig{}, nil
+		return networkLoadBalancerConfig{}, err
 	}
 	listeners := make(nlbListeners, len(nlbConfig.NLBListeners()))
 	for idx, listener := range nlbConfig.NLBListeners() {

@@ -550,9 +550,9 @@ func sortExposedPorts(exposedPorts []ExposedPort) []ExposedPort {
 	return exposedPorts
 }
 
-// HTTPLoadBalancerTarget returns target container and target port for the ALB configuration.
+// Target returns target container and target port for the ALB configuration.
 // This method should be called only when ALB config is not empty.
-func (rr *RoutingRule) HTTPLoadBalancerTarget(exposedPorts ExposedPortsIndex) (targetContainer string, targetPort string, err error) {
+func (rr *RoutingRule) Target(exposedPorts ExposedPortsIndex) (targetContainer string, targetPort string, err error) {
 	// Route load balancer traffic to main container by default.
 	targetContainer = exposedPorts.WorkloadName
 	for _, portConfig := range exposedPorts.PortsForContainer[targetContainer] {
