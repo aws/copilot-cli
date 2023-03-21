@@ -126,18 +126,18 @@ func (d *backendSvcDeployer) validateALBRuntime() error {
 	if d.backendMft.RoutingRule.IsEmpty() {
 		return nil
 	}
-	if err := d.validateALBRuntimeFor(d.backendMft.RoutingRule.Main); err != nil {
+	if err := d.validateRuntimeRoutingRule(d.backendMft.RoutingRule.Main); err != nil {
 		return fmt.Errorf(`validate ALB runtime configuration for "http": %w`, err)
 	}
 	for idx, rule := range d.backendMft.RoutingRule.AdditionalRoutingRules {
-		if err := d.validateALBRuntimeFor(rule); err != nil {
+		if err := d.validateRuntimeRoutingRule(rule); err != nil {
 			return fmt.Errorf(`validate ALB runtime configuration for "http.additional_rules[%d]": %w`, idx, err)
 		}
 	}
 	return nil
 }
 
-func (d *backendSvcDeployer) validateALBRuntimeFor(rule manifest.RoutingRule) error {
+func (d *backendSvcDeployer) validateRuntimeRoutingRule(rule manifest.RoutingRule) error {
 	if rule.IsEmpty() {
 		return nil
 	}

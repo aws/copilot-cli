@@ -189,19 +189,19 @@ func (d *lbWebSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*s
 
 func (d *lbWebSvcDeployer) validateALBRuntime() error {
 
-	if err := d.validateALBRuntimeFor(d.lbMft.RoutingRule.Main); err != nil {
+	if err := d.validateRuntimeRoutingRule(d.lbMft.RoutingRule.Main); err != nil {
 		return fmt.Errorf(`validate ALB runtime configuration for "http": %w`, err)
 	}
 
 	for idx, rule := range d.lbMft.RoutingRule.AdditionalRoutingRules {
-		if err := d.validateALBRuntimeFor(rule); err != nil {
+		if err := d.validateRuntimeRoutingRule(rule); err != nil {
 			return fmt.Errorf(`validate ALB runtime configuration for "http.additional_rule[%d]": %w`, idx, err)
 		}
 	}
 	return nil
 }
 
-func (d *lbWebSvcDeployer) validateALBRuntimeFor(rule manifest.RoutingRule) error {
+func (d *lbWebSvcDeployer) validateRuntimeRoutingRule(rule manifest.RoutingRule) error {
 	hasALBCerts := len(d.envConfig.HTTPConfig.Public.Certificates) != 0
 	hasCDNCerts := d.envConfig.CDNConfig.Config.Certificate != nil
 	hasImportedCerts := hasALBCerts || hasCDNCerts
