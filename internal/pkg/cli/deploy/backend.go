@@ -127,11 +127,11 @@ func (d *backendSvcDeployer) validateALBRuntime() error {
 		return nil
 	}
 	if err := d.validateALBRuntimeFor(d.backendMft.RoutingRule.Main); err != nil {
-		return fmt.Errorf("validate ALB runtime configuration for http: %w", err)
+		return fmt.Errorf(`validate ALB runtime configuration for "http": %w`, err)
 	}
 	for idx, rule := range d.backendMft.RoutingRule.AdditionalRoutingRules {
 		if err := d.validateALBRuntimeFor(rule); err != nil {
-			return fmt.Errorf("validate ALB runtime configuration for http.additional_rules[%d]: %w", idx, err)
+			return fmt.Errorf(`validate ALB runtime configuration for "http.additional_rules[%d]": %w`, idx, err)
 		}
 	}
 	return nil

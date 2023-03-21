@@ -190,12 +190,12 @@ func (d *lbWebSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*s
 func (d *lbWebSvcDeployer) validateALBRuntime() error {
 
 	if err := d.validateALBRuntimeFor(d.lbMft.RoutingRule.Main); err != nil {
-		return fmt.Errorf("validate ALB runtime configuration for http: %w", err)
+		return fmt.Errorf(`validate ALB runtime configuration for "http": %w`, err)
 	}
 
 	for idx, rule := range d.lbMft.RoutingRule.AdditionalRoutingRules {
 		if err := d.validateALBRuntimeFor(rule); err != nil {
-			return fmt.Errorf("validate ALB runtime configuration for http.additional_rule[%d]: %w", idx, err)
+			return fmt.Errorf(`validate ALB runtime configuration for "http.additional_rule[%d]": %w`, idx, err)
 		}
 	}
 	return nil

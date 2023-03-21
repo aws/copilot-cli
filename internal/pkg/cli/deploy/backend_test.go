@@ -114,7 +114,7 @@ func TestBackendSvcDeployer_stackConfiguration(t *testing.T) {
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return(mockAppName+".local", nil)
 				m.mockEnvVersionGetter.EXPECT().Version().Return("v1.42.0", nil)
 			},
-			expectedErr: `validate ALB runtime configuration for http: cannot specify "alias" in an environment without imported certs`,
+			expectedErr: `validate ALB runtime configuration for "http": cannot specify "alias" in an environment without imported certs`,
 		},
 		"failure if cert validation fails": {
 			App: &config.Application{
@@ -146,7 +146,7 @@ func TestBackendSvcDeployer_stackConfiguration(t *testing.T) {
 				m.mockEnvVersionGetter.EXPECT().Version().Return("v1.42.0", nil)
 				m.mockValidator.EXPECT().ValidateCertAliases([]string{"go.dev"}, []string{"mockCertARN"}).Return(errors.New("some error"))
 			},
-			expectedErr: "validate ALB runtime configuration for http: validate aliases against the imported certificate for env mock-env: some error",
+			expectedErr: "validate ALB runtime configuration for \"http\": validate aliases against the imported certificate for env mock-env: some error",
 		},
 		"success if cert validation succeeds": {
 			App: &config.Application{
@@ -214,7 +214,7 @@ func TestBackendSvcDeployer_stackConfiguration(t *testing.T) {
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return(mockAppName+".local", nil)
 				m.mockEnvVersionGetter.EXPECT().Version().Return("v1.42.0", nil)
 			},
-			expectedErr: `validate ALB runtime configuration for http: cannot deploy service mock-svc without "alias" to environment mock-env with certificate imported`,
+			expectedErr: `validate ALB runtime configuration for "http": cannot deploy service mock-svc without "alias" to environment mock-env with certificate imported`,
 		},
 		"failure if env has imported certs but no alias set in additional rules": {
 			App: &config.Application{
@@ -252,7 +252,7 @@ func TestBackendSvcDeployer_stackConfiguration(t *testing.T) {
 				m.mockEnvVersionGetter.EXPECT().Version().Return("v1.42.0", nil)
 				m.mockValidator.EXPECT().ValidateCertAliases([]string{"go.test"}, []string{"mockCertARN"}).Return(nil)
 			},
-			expectedErr: `validate ALB runtime configuration for http.additional_rules[0]: cannot deploy service mock-svc without "alias" to environment mock-env with certificate imported`,
+			expectedErr: `validate ALB runtime configuration for "http.additional_rules[0]": cannot deploy service mock-svc without "alias" to environment mock-env with certificate imported`,
 		},
 		"success if env has imported certs but alb not configured": {
 			App: &config.Application{
