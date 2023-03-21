@@ -213,6 +213,11 @@ func New(sess *session.Session, opts ...OptFn) CloudFormation {
 	return client
 }
 
+// Template returns a deployed stack's template.
+func (cf CloudFormation) Template(stackName string) (string, error) {
+	return cf.cfnClient.TemplateBody(stackName)
+}
+
 // IsEmptyErr returns true if the error occurred because the cloudformation resource does not exist or does not contain any sub-resources.
 func IsEmptyErr(err error) bool {
 	type isEmpty interface {

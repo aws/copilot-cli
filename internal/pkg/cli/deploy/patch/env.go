@@ -13,13 +13,14 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"golang.org/x/mod/semver"
 	"gopkg.in/yaml.v3"
 )
 
 type environmentTemplateUpdateGetter interface {
-	EnvironmentTemplate(appName, envName string) (string, error)
+	Template(stackName string) (string, error)
 	UpdateEnvironmentTemplate(appName, envName, templateBody, cfnExecRoleARN string) error
 }
 
@@ -38,7 +39,7 @@ type EnvironmentPatcher struct {
 // EnsureManagerRoleIsAllowedToUpload checks if the environment manager role has the necessary permissions to upload  
 // objects to bucket and patches the permissions if not.
 func (p *EnvironmentPatcher) EnsureManagerRoleIsAllowedToUpload(bucket string) error {
-	body, err := p.TemplatePatcher.EnvironmentTemplate(p.Env.App, p.Env.Name)
+	body, err := p.TemplatePatcher.Template(stack.NameForEnv(p.Env.App, p.Env.Name))
 	if err != nil {
 		return fmt.Errorf("get environment template for %q: %w", p.Env.Name, err)
 	}
