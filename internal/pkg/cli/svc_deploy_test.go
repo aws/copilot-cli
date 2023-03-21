@@ -6,6 +6,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -130,6 +131,8 @@ type deployMocks struct {
 	mockWsReader             *mocks.MockwsWlDirReader
 	mockEnvFeaturesDescriber *mocks.MockversionCompatibilityChecker
 	mockMft                  *mockWorkloadMft
+	mockDiffWriter           *strings.Builder
+	mockPrompter             *mocks.Mockprompter
 }
 
 func TestSvcDeployOpts_Execute(t *testing.T) {
@@ -140,7 +143,9 @@ func TestSvcDeployOpts_Execute(t *testing.T) {
 	)
 	mockError := errors.New("some error")
 	testCases := map[string]struct {
+		inShowDiff  bool
 		mock        func(m *deployMocks)
+		wantedDiff  string
 		wantedError error
 	}{
 		"error out if fail to read workload manifest": {
@@ -200,6 +205,148 @@ func TestSvcDeployOpts_Execute(t *testing.T) {
 
 			wantedError: fmt.Errorf("upload deploy resources for service frontend: some error"),
 		},
+		"error if failed to generate the template to show diff": {
+			inShowDiff: true,
+			mock: func(m *deployMocks) {
+				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte(""), nil)
+				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
+				m.mockMft = &mockWorkloadMft{
+					mockRequiredEnvironmentFeatures: func() []string {
+						return []string{"mockFeature1"}
+					},
+				}
+				m.mockEnvFeaturesDescriber.EXPECT().Version().Return("v1.mock", nil)
+				m.mockEnvFeaturesDescriber.EXPECT().AvailableFeatures().Return([]string{"mockFeature1", "mockFeature2"}, nil)
+				m.mockDeployer.EXPECT().IsServiceAvailableInRegion("").Return(false, nil)
+				m.mockDeployer.EXPECT().UploadArtifacts().Return(&clideploy.UploadArtifactsOutput{}, nil)
+				m.mockDeployer.EXPECT().GenerateCloudFormationTemplate(gomock.Any()).Return(nil, errors.New("some error"))
+			},
+			wantedError: fmt.Errorf("generate the template for workload %q against environment %q: some error", mockSvcName, mockEnvName),
+		},
+		"error if failed to generate the diff": {
+			inShowDiff: true,
+			mock: func(m *deployMocks) {
+				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte(""), nil)
+				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
+				m.mockMft = &mockWorkloadMft{
+					mockRequiredEnvironmentFeatures: func() []string {
+						return []string{"mockFeature1"}
+					},
+				}
+				m.mockEnvFeaturesDescriber.EXPECT().Version().Return("v1.mock", nil)
+				m.mockEnvFeaturesDescriber.EXPECT().AvailableFeatures().Return([]string{"mockFeature1", "mockFeature2"}, nil)
+				m.mockDeployer.EXPECT().IsServiceAvailableInRegion("").Return(false, nil)
+				m.mockDeployer.EXPECT().UploadArtifacts().Return(&clideploy.UploadArtifactsOutput{}, nil)
+				m.mockDeployer.EXPECT().GenerateCloudFormationTemplate(gomock.Any()).Return(&clideploy.GenerateCloudFormationTemplateOutput{}, nil)
+				m.mockDeployer.EXPECT().DeployDiff(gomock.Any()).Return("", errors.New("some error"))
+			},
+			wantedError: errors.New("generate diff: some error"),
+		},
+		"write 'no changes' if there is no diff": {
+			inShowDiff: true,
+			mock: func(m *deployMocks) {
+				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte(""), nil)
+				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
+				m.mockMft = &mockWorkloadMft{
+					mockRequiredEnvironmentFeatures: func() []string {
+						return []string{"mockFeature1"}
+					},
+				}
+				m.mockEnvFeaturesDescriber.EXPECT().Version().Return("v1.mock", nil)
+				m.mockEnvFeaturesDescriber.EXPECT().AvailableFeatures().Return([]string{"mockFeature1", "mockFeature2"}, nil)
+				m.mockDeployer.EXPECT().IsServiceAvailableInRegion("").Return(false, nil)
+				m.mockDeployer.EXPECT().UploadArtifacts().Return(&clideploy.UploadArtifactsOutput{}, nil)
+				m.mockDeployer.EXPECT().GenerateCloudFormationTemplate(gomock.Any()).Return(&clideploy.GenerateCloudFormationTemplateOutput{}, nil)
+				m.mockDeployer.EXPECT().DeployDiff(gomock.Any()).Return("", nil)
+				m.mockDiffWriter = &strings.Builder{}
+				m.mockPrompter.EXPECT().Confirm(gomock.Eq("Continue with the deployment?"), gomock.Any(), gomock.Any()).Return(false, nil)
+			},
+			wantedDiff: "No changes.\n",
+		},
+		"write the correct diff": {
+			inShowDiff: true,
+			mock: func(m *deployMocks) {
+				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte(""), nil)
+				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
+				m.mockMft = &mockWorkloadMft{
+					mockRequiredEnvironmentFeatures: func() []string {
+						return []string{"mockFeature1"}
+					},
+				}
+				m.mockEnvFeaturesDescriber.EXPECT().Version().Return("v1.mock", nil)
+				m.mockEnvFeaturesDescriber.EXPECT().AvailableFeatures().Return([]string{"mockFeature1", "mockFeature2"}, nil)
+				m.mockDeployer.EXPECT().IsServiceAvailableInRegion("").Return(false, nil)
+				m.mockDeployer.EXPECT().UploadArtifacts().Return(&clideploy.UploadArtifactsOutput{}, nil)
+				m.mockDeployer.EXPECT().GenerateCloudFormationTemplate(gomock.Any()).Return(&clideploy.GenerateCloudFormationTemplateOutput{}, nil)
+				m.mockDeployer.EXPECT().DeployDiff(gomock.Any()).Return("mock diff", nil)
+				m.mockDiffWriter = &strings.Builder{}
+				m.mockPrompter.EXPECT().Confirm(gomock.Eq("Continue with the deployment?"), gomock.Any(), gomock.Any()).Return(false, nil)
+			},
+			wantedDiff: "mock diff",
+		},
+		"error if fail to ask whether to continue the deployment": {
+			inShowDiff: true,
+			mock: func(m *deployMocks) {
+				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte(""), nil)
+				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
+				m.mockMft = &mockWorkloadMft{
+					mockRequiredEnvironmentFeatures: func() []string {
+						return []string{"mockFeature1"}
+					},
+				}
+				m.mockEnvFeaturesDescriber.EXPECT().Version().Return("v1.mock", nil)
+				m.mockEnvFeaturesDescriber.EXPECT().AvailableFeatures().Return([]string{"mockFeature1", "mockFeature2"}, nil)
+				m.mockDeployer.EXPECT().IsServiceAvailableInRegion("").Return(false, nil)
+				m.mockDeployer.EXPECT().UploadArtifacts().Return(&clideploy.UploadArtifactsOutput{}, nil)
+				m.mockDeployer.EXPECT().GenerateCloudFormationTemplate(gomock.Any()).Return(&clideploy.GenerateCloudFormationTemplateOutput{}, nil)
+				m.mockDeployer.EXPECT().DeployDiff(gomock.Any()).Return("mock diff", nil)
+				m.mockDiffWriter = &strings.Builder{}
+				m.mockPrompter.EXPECT().Confirm(gomock.Eq("Continue with the deployment?"), gomock.Any(), gomock.Any()).Return(false, errors.New("some error"))
+			},
+			wantedError: errors.New("ask whether to continue with the deployment: some error"),
+		},
+		"do not deploy if asked to": {
+			inShowDiff: true,
+			mock: func(m *deployMocks) {
+				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte(""), nil)
+				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
+				m.mockMft = &mockWorkloadMft{
+					mockRequiredEnvironmentFeatures: func() []string {
+						return []string{"mockFeature1"}
+					},
+				}
+				m.mockEnvFeaturesDescriber.EXPECT().Version().Return("v1.mock", nil)
+				m.mockEnvFeaturesDescriber.EXPECT().AvailableFeatures().Return([]string{"mockFeature1", "mockFeature2"}, nil)
+				m.mockDeployer.EXPECT().IsServiceAvailableInRegion("").Return(false, nil)
+				m.mockDeployer.EXPECT().UploadArtifacts().Return(&clideploy.UploadArtifactsOutput{}, nil)
+				m.mockDeployer.EXPECT().GenerateCloudFormationTemplate(gomock.Any()).Return(&clideploy.GenerateCloudFormationTemplateOutput{}, nil)
+				m.mockDeployer.EXPECT().DeployDiff(gomock.Any()).Return("mock diff", nil)
+				m.mockDiffWriter = &strings.Builder{}
+				m.mockPrompter.EXPECT().Confirm(gomock.Eq("Continue with the deployment?"), gomock.Any(), gomock.Any()).Return(false, nil)
+				m.mockDeployer.EXPECT().DeployWorkload(gomock.Any()).Times(0)
+			},
+		},
+		"deploy if asked to": {
+			inShowDiff: true,
+			mock: func(m *deployMocks) {
+				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte(""), nil)
+				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
+				m.mockMft = &mockWorkloadMft{
+					mockRequiredEnvironmentFeatures: func() []string {
+						return []string{"mockFeature1"}
+					},
+				}
+				m.mockEnvFeaturesDescriber.EXPECT().Version().Return("v1.mock", nil)
+				m.mockEnvFeaturesDescriber.EXPECT().AvailableFeatures().Return([]string{"mockFeature1", "mockFeature2"}, nil)
+				m.mockDeployer.EXPECT().IsServiceAvailableInRegion("").Return(false, nil)
+				m.mockDeployer.EXPECT().UploadArtifacts().Return(&clideploy.UploadArtifactsOutput{}, nil)
+				m.mockDeployer.EXPECT().GenerateCloudFormationTemplate(gomock.Any()).Return(&clideploy.GenerateCloudFormationTemplateOutput{}, nil)
+				m.mockDeployer.EXPECT().DeployDiff(gomock.Any()).Return("mock diff", nil)
+				m.mockDiffWriter = &strings.Builder{}
+				m.mockPrompter.EXPECT().Confirm(gomock.Eq("Continue with the deployment?"), gomock.Any(), gomock.Any()).Return(true, nil)
+				m.mockDeployer.EXPECT().DeployWorkload(gomock.Any()).Times(1)
+			},
+		},
 		"error if failed to deploy service": {
 			mock: func(m *deployMocks) {
 				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte(""), nil)
@@ -247,14 +394,16 @@ func TestSvcDeployOpts_Execute(t *testing.T) {
 				mockInterpolator:         mocks.NewMockinterpolator(ctrl),
 				mockWsReader:             mocks.NewMockwsWlDirReader(ctrl),
 				mockEnvFeaturesDescriber: mocks.NewMockversionCompatibilityChecker(ctrl),
+				mockPrompter:             mocks.NewMockprompter(ctrl),
 			}
 			tc.mock(m)
 
 			opts := deploySvcOpts{
 				deployWkldVars: deployWkldVars{
-					appName: mockAppName,
-					name:    mockSvcName,
-					envName: mockEnvName,
+					appName:  mockAppName,
+					name:     mockSvcName,
+					envName:  mockEnvName,
+					showDiff: tc.inShowDiff,
 
 					clientConfigured: true,
 				},
@@ -269,8 +418,11 @@ func TestSvcDeployOpts_Execute(t *testing.T) {
 					return m.mockMft, nil
 				},
 				envFeaturesDescriber: m.mockEnvFeaturesDescriber,
-				targetApp:            &config.Application{},
-				targetEnv:            &config.Environment{},
+				prompt:               m.mockPrompter,
+				diffWriter:           m.mockDiffWriter,
+
+				targetApp: &config.Application{},
+				targetEnv: &config.Environment{},
 			}
 
 			// WHEN
@@ -281,6 +433,9 @@ func TestSvcDeployOpts_Execute(t *testing.T) {
 				require.NoError(t, err)
 			} else {
 				require.EqualError(t, err, tc.wantedError.Error())
+			}
+			if tc.wantedDiff != "" {
+				require.Equal(t, tc.wantedDiff, m.mockDiffWriter.String())
 			}
 		})
 	}

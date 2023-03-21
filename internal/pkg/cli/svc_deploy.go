@@ -5,6 +5,8 @@ package cli
 
 import (
 	"fmt"
+	"io"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -59,6 +61,7 @@ type deploySvcOpts struct {
 	sessProvider         *sessions.Provider
 	newSvcDeployer       func() (workloadDeployer, error)
 	envFeaturesDescriber versionCompatibilityChecker
+	diffWriter           io.Writer
 
 	spinner        progress
 	sel            wsSelector
@@ -103,6 +106,7 @@ func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
 		newInterpolator: newManifestInterpolator,
 		cmd:             exec.NewCmd(),
 		sessProvider:    sessProvider,
+		diffWriter:      os.Stdout,
 	}
 	opts.newSvcDeployer = func() (workloadDeployer, error) {
 		// NOTE: Defined as a struct member to facilitate unit testing.
@@ -247,9 +251,9 @@ func (o *deploySvcOpts) Execute() error {
 			},
 		})
 		if err != nil {
-			return fmt.Errorf("generate workload %s template against environment %s: %w", o.name, o.envName, err)
+			return fmt.Errorf("generate the template for workload %q against environment %q: %w", o.name, o.envName, err)
 		}
-		if err := diff(deployer, output.Template, os.Stdout); err != nil {
+		if err := diff(deployer, output.Template, o.diffWriter); err != nil {
 			return err
 		}
 		contd, err := o.prompt.Confirm("Continue with the deployment?", "")
