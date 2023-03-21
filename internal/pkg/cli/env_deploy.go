@@ -43,7 +43,8 @@ type deployEnvOpts struct {
 	sessionProvider *sessions.Provider
 
 	// Dependencies to ask.
-	sel wsEnvironmentSelector
+	sel    wsEnvironmentSelector
+	prompt prompter
 
 	// Dependencies to execute.
 	fs              afero.Fs
@@ -69,12 +70,14 @@ func newEnvDeployOpts(vars deployEnvVars) (*deployEnvOpts, error) {
 	if err != nil {
 		return nil, err
 	}
+	prompter := prompt.New()
 	opts := &deployEnvOpts{
 		deployEnvVars: vars,
 
 		store:           store,
 		sessionProvider: sessProvider,
-		sel:             selector.NewLocalEnvironmentSelector(prompt.New(), store, ws),
+		sel:             selector.NewLocalEnvironmentSelector(prompter, store, ws),
+		prompt:          prompter,
 
 		fs:              fs,
 		ws:              ws,
@@ -165,7 +168,16 @@ func (o *deployEnvOpts) Execute() error {
 		if err != nil {
 			return fmt.Errorf("generate the template for environment %s: %w", o.name, err)
 		}
-		return diff(deployer, output.Template, os.Stdout)
+		if err := diff(deployer, output.Template, os.Stdout); err != nil {
+			return err
+		}
+		contd, err := o.prompt.Confirm("Continue with the deployment?", "")
+		if err != nil {
+			return fmt.Errorf("ask whether to continue with the deployment: %w", err)
+		}
+		if !contd {
+			return nil
+		}
 	}
 	if err := deployer.DeployEnvironment(&deploy.DeployEnvironmentInput{
 		RootUserARN:         caller.RootUserARN,

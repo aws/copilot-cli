@@ -5,6 +5,7 @@ package cli
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -42,6 +43,7 @@ type deployJobOpts struct {
 	newJobDeployer       func() (workloadDeployer, error)
 	envFeaturesDescriber versionCompatibilityChecker
 	sel                  wsSelector
+	prompt               prompter
 	gitShortCommit       string
 
 	// cached variables
@@ -71,6 +73,7 @@ func newJobDeployOpts(vars deployWkldVars) (*deployJobOpts, error) {
 		ws:              ws,
 		unmarshal:       manifest.UnmarshalWorkload,
 		sel:             selector.NewLocalWorkloadSelector(prompter, store, ws),
+		prompt:          prompter,
 		sessProvider:    sessProvider,
 		newInterpolator: newManifestInterpolator,
 		cmd:             exec.NewCmd(),
@@ -188,6 +191,31 @@ func (o *deployJobOpts) Execute() error {
 	uploadOut, err := deployer.UploadArtifacts()
 	if err != nil {
 		return fmt.Errorf("upload deploy resources for job %s: %w", o.name, err)
+	}
+	if o.showDiff {
+		output, err := deployer.GenerateCloudFormationTemplate(&deploy.GenerateCloudFormationTemplateInput{
+			StackRuntimeConfiguration: deploy.StackRuntimeConfiguration{
+				RootUserARN:        o.rootUserARN,
+				Tags:               o.targetApp.Tags,
+				EnvFileARNs:        uploadOut.EnvFileARNs,
+				ImageDigests:       uploadOut.ImageDigests,
+				AddonsURL:          uploadOut.AddonsURL,
+				CustomResourceURLs: uploadOut.CustomResourceURLs,
+			},
+		})
+		if err != nil {
+			return fmt.Errorf("generate workload %s template against environment %s: %w", o.name, o.envName, err)
+		}
+		if err := diff(deployer, output.Template, os.Stdout); err != nil {
+			return err
+		}
+		contd, err := o.prompt.Confirm("Continue with the deployment?", "")
+		if err != nil {
+			return fmt.Errorf("ask whether to continue with the deployment: %w", err)
+		}
+		if !contd {
+			return nil
+		}
 	}
 	if _, err = deployer.DeployWorkload(&deploy.DeployWorkloadInput{
 		StackRuntimeConfiguration: deploy.StackRuntimeConfiguration{

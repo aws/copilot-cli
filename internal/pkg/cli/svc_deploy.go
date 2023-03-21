@@ -248,7 +248,16 @@ func (o *deploySvcOpts) Execute() error {
 		if err != nil {
 			return fmt.Errorf("generate workload %s template against environment %s: %w", o.name, o.envName, err)
 		}
-		return diff(deployer, output.Template, os.Stdout)
+		if err := diff(deployer, output.Template, os.Stdout); err != nil {
+			return err
+		}
+		contd, err := o.prompt.Confirm("Continue with the deployment?", "")
+		if err != nil {
+			return fmt.Errorf("ask whether to continue with the deployment: %w", err)
+		}
+		if !contd {
+			return nil
+		}
 	}
 	deployRecs, err := deployer.DeployWorkload(&clideploy.DeployWorkloadInput{
 		StackRuntimeConfiguration: clideploy.StackRuntimeConfiguration{
