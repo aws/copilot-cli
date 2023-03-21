@@ -135,7 +135,7 @@ func (s *BackendService) Template() (string, error) {
 	if s.manifest.Network.Connect.Enabled() {
 		scConfig = convertServiceConnect(s.manifest.Network.Connect)
 	}
-	targetContainer, targetContainerPort, err := s.manifest.HTTPLoadBalancerTarget()
+	targetContainer, targetContainerPort, err := s.manifest.RoutingRule.Main.Target(exposedPorts)
 	if err != nil {
 		return "", err
 	}
@@ -221,7 +221,14 @@ func (s *BackendService) Parameters() ([]*cloudformation.Parameter, error) {
 	if err != nil {
 		return nil, err
 	}
-	targetContainer, targetPort, err := s.manifest.HTTPLoadBalancerTarget()
+	exposedPorts, err := s.manifest.ExposedPorts()
+	if err != nil {
+		return nil, fmt.Errorf("parse exposed ports in service manifest %s: %w", s.name, err)
+	}
+	targetContainer, targetPort, err := s.manifest.RoutingRule.Main.Target(exposedPorts)
+	if targetPort == "" {
+		targetPort = s.manifest.MainContainerPort()
+	}
 	if err != nil {
 		return nil, err
 	}

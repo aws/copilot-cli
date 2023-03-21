@@ -443,13 +443,13 @@ type ALBListenerRule struct {
 	Stickiness       string
 	HTTPHealthCheck  HTTPHealthCheckOpts
 	HTTPVersion      string
+	RedirectToHTTPS  bool // Only relevant if HTTPSListener is true.
 }
 
 // ALBListener holds configuration that's needed for an Application Load Balancer Listener.
 type ALBListener struct {
 	Rules             []ALBListenerRule
 	HostedZoneAliases AliasesForHostedZone
-	RedirectToHTTPS   bool // Only relevant if HTTPSListener is true.
 	IsHTTPS           bool // True if the listener listening on port 443.
 	MainContainerPort string
 }
