@@ -124,7 +124,7 @@ func (p *yamlPatch) applyAdd(root *yaml.Node) error {
 			node.Content = append(node.Content, &p.Value)
 			return errStopFollowingPointer
 		case yaml.SequenceNode:
-			if pointer[0] == "-" || pointer[0] == "" {
+			if pointer[0] == "-" {
 				// add to end of sequence
 				node.Content = append(node.Content, &p.Value)
 				return errStopFollowingPointer

@@ -94,26 +94,7 @@ Resources:
       - qwerty
       - jkl;`,
 		},
-		"add to end sequence using index": {
-			yaml: `
-Resources:
-  TaskDef:
-    List:
-      - asdf
-      - jkl;`,
-			overrides: `
-- op: add
-  path: /Resources/TaskDef/List/-
-  value: qwerty`,
-			expected: `
-Resources:
-  TaskDef:
-    List:
-      - asdf
-      - jkl;
-      - qwerty`,
-		},
-		"add to end sequence without index": {
+		"add to end sequence": {
 			yaml: `
 Resources:
   IAMRole:
