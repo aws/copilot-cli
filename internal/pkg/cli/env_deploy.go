@@ -27,6 +27,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const continueDeploymentPrompt = "Continue with the deployment?"
+
 type deployEnvVars struct {
 	appName         string
 	name            string
@@ -166,12 +168,12 @@ func (o *deployEnvOpts) Execute() error {
 			ForceNewUpdate:      o.forceNewUpdate,
 		})
 		if err != nil {
-			return fmt.Errorf("generate the template for environment %s: %w", o.name, err)
+			return fmt.Errorf("generate the template for environment %q: %w", o.name, err)
 		}
 		if err := diff(deployer, output.Template, os.Stdout); err != nil {
-			return err
+			return fmt.Errorf("generate diff for environment %q: %w", o.name, err)
 		}
-		contd, err := o.prompt.Confirm("Continue with the deployment?", "")
+		contd, err := o.prompt.Confirm(continueDeploymentPrompt, "")
 		if err != nil {
 			return fmt.Errorf("ask whether to continue with the deployment: %w", err)
 		}
