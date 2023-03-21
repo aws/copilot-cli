@@ -5,6 +5,7 @@ package cli
 
 import (
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -45,6 +46,7 @@ type deployJobOpts struct {
 	sel                  wsSelector
 	prompt               prompter
 	gitShortCommit       string
+	diffWriter           io.Writer
 
 	// cached variables
 	targetApp         *config.Application
@@ -77,6 +79,7 @@ func newJobDeployOpts(vars deployWkldVars) (*deployJobOpts, error) {
 		sessProvider:    sessProvider,
 		newInterpolator: newManifestInterpolator,
 		cmd:             exec.NewCmd(),
+		diffWriter:      os.Stdout,
 	}
 	opts.newJobDeployer = func() (workloadDeployer, error) {
 		// NOTE: Defined as a struct member to facilitate unit testing.
@@ -204,9 +207,9 @@ func (o *deployJobOpts) Execute() error {
 			},
 		})
 		if err != nil {
-			return fmt.Errorf("generate workload %s template against environment %s: %w", o.name, o.envName, err)
+			return fmt.Errorf("generate the template for job %q against environment %q: %w", o.name, o.envName, err)
 		}
-		if err := diff(deployer, output.Template, os.Stdout); err != nil {
+		if err := diff(deployer, output.Template, o.diffWriter); err != nil {
 			return err
 		}
 		contd, err := o.prompt.Confirm("Continue with the deployment?", "")
