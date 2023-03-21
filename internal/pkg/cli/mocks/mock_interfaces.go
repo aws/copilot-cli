@@ -7309,6 +7309,44 @@ func (mr *MockworkloadStackGeneratorMockRecorder) UploadArtifacts() *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadArtifacts", reflect.TypeOf((*MockworkloadStackGenerator)(nil).UploadArtifacts))
 }
 
+// MocktemplateDiffer is a mock of templateDiffer interface.
+type MocktemplateDiffer struct {
+	ctrl     *gomock.Controller
+	recorder *MocktemplateDifferMockRecorder
+}
+
+// MocktemplateDifferMockRecorder is the mock recorder for MocktemplateDiffer.
+type MocktemplateDifferMockRecorder struct {
+	mock *MocktemplateDiffer
+}
+
+// NewMocktemplateDiffer creates a new mock instance.
+func NewMocktemplateDiffer(ctrl *gomock.Controller) *MocktemplateDiffer {
+	mock := &MocktemplateDiffer{ctrl: ctrl}
+	mock.recorder = &MocktemplateDifferMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MocktemplateDiffer) EXPECT() *MocktemplateDifferMockRecorder {
+	return m.recorder
+}
+
+// DeployDiff mocks base method.
+func (m *MocktemplateDiffer) DeployDiff(inTmpl string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeployDiff", inTmpl)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeployDiff indicates an expected call of DeployDiff.
+func (mr *MocktemplateDifferMockRecorder) DeployDiff(inTmpl interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployDiff", reflect.TypeOf((*MocktemplateDiffer)(nil).DeployDiff), inTmpl)
+}
+
 // Mockrunner is a mock of runner interface.
 type Mockrunner struct {
 	ctrl     *gomock.Controller
