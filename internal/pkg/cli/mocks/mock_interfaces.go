@@ -7128,6 +7128,21 @@ func (mr *MockworkloadDeployerMockRecorder) DeployWorkload(in interface{}) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployWorkload", reflect.TypeOf((*MockworkloadDeployer)(nil).DeployWorkload), in)
 }
 
+// GenerateCloudFormationTemplate mocks base method.
+func (m *MockworkloadDeployer) GenerateCloudFormationTemplate(in *deploy.GenerateCloudFormationTemplateInput) (*deploy.GenerateCloudFormationTemplateOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GenerateCloudFormationTemplate", in)
+	ret0, _ := ret[0].(*deploy.GenerateCloudFormationTemplateOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GenerateCloudFormationTemplate indicates an expected call of GenerateCloudFormationTemplate.
+func (mr *MockworkloadDeployerMockRecorder) GenerateCloudFormationTemplate(in interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenerateCloudFormationTemplate", reflect.TypeOf((*MockworkloadDeployer)(nil).GenerateCloudFormationTemplate), in)
+}
+
 // IsServiceAvailableInRegion mocks base method.
 func (m *MockworkloadDeployer) IsServiceAvailableInRegion(region string) (bool, error) {
 	m.ctrl.T.Helper()
@@ -7156,6 +7171,44 @@ func (m *MockworkloadDeployer) UploadArtifacts() (*deploy.UploadArtifactsOutput,
 func (mr *MockworkloadDeployerMockRecorder) UploadArtifacts() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadArtifacts", reflect.TypeOf((*MockworkloadDeployer)(nil).UploadArtifacts))
+}
+
+// MocktemplateDiffer is a mock of templateDiffer interface.
+type MocktemplateDiffer struct {
+	ctrl     *gomock.Controller
+	recorder *MocktemplateDifferMockRecorder
+}
+
+// MocktemplateDifferMockRecorder is the mock recorder for MocktemplateDiffer.
+type MocktemplateDifferMockRecorder struct {
+	mock *MocktemplateDiffer
+}
+
+// NewMocktemplateDiffer creates a new mock instance.
+func NewMocktemplateDiffer(ctrl *gomock.Controller) *MocktemplateDiffer {
+	mock := &MocktemplateDiffer{ctrl: ctrl}
+	mock.recorder = &MocktemplateDifferMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MocktemplateDiffer) EXPECT() *MocktemplateDifferMockRecorder {
+	return m.recorder
+}
+
+// DeployDiff mocks base method.
+func (m *MocktemplateDiffer) DeployDiff(inTmpl string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeployDiff", inTmpl)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeployDiff indicates an expected call of DeployDiff.
+func (mr *MocktemplateDifferMockRecorder) DeployDiff(inTmpl interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployDiff", reflect.TypeOf((*MocktemplateDiffer)(nil).DeployDiff), inTmpl)
 }
 
 // MockworkloadStackGenerator is a mock of workloadStackGenerator interface.
@@ -7194,6 +7247,21 @@ func (m *MockworkloadStackGenerator) AddonsTemplate() (string, error) {
 func (mr *MockworkloadStackGeneratorMockRecorder) AddonsTemplate() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddonsTemplate", reflect.TypeOf((*MockworkloadStackGenerator)(nil).AddonsTemplate))
+}
+
+// DeployDiff mocks base method.
+func (m *MockworkloadStackGenerator) DeployDiff(inTmpl string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeployDiff", inTmpl)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeployDiff indicates an expected call of DeployDiff.
+func (mr *MockworkloadStackGeneratorMockRecorder) DeployDiff(inTmpl interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployDiff", reflect.TypeOf((*MockworkloadStackGenerator)(nil).DeployDiff), inTmpl)
 }
 
 // GenerateCloudFormationTemplate mocks base method.
