@@ -34,6 +34,8 @@ const (
 	scriptDirName                  = "scripts"
 )
 
+const AddonsStackLogicalID = "AddonsStack"
+
 // Groups of files that belong to the same stack.
 var (
 	envCustomResourceFiles = []string{

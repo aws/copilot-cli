@@ -13,6 +13,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -229,7 +230,7 @@ func TestDeleteEnvOpts_Execute(t *testing.T) {
 				prog.EXPECT().Start(gomock.Any())
 
 				deployer := mocks.NewMockenvironmentDeployer(ctrl)
-				deployer.EXPECT().EnvironmentTemplate(gomock.Any(), gomock.Any()).Return(`
+				deployer.EXPECT().Template(gomock.Any()).Return(`
 Resources:
   EnableLongARNFormatAction:
     Type: Custom::EnableLongARNFormatFunction
@@ -289,7 +290,7 @@ Resources:
 				prog.EXPECT().Start(gomock.Any())
 
 				deployer := mocks.NewMockenvironmentDeployer(ctrl)
-				deployer.EXPECT().EnvironmentTemplate(gomock.Any(), gomock.Any()).Return(`
+				deployer.EXPECT().Template(gomock.Any()).Return(`
 Resources:
   CloudformationExecutionRole:
     DeletionPolicy: Retain
@@ -325,7 +326,7 @@ Resources:
 				prog.EXPECT().Start(gomock.Any()).AnyTimes()
 
 				deployer := mocks.NewMockenvironmentDeployer(ctrl)
-				deployer.EXPECT().EnvironmentTemplate("phonetool", "test").Return(`
+				deployer.EXPECT().Template(stack.NameForEnv("phonetool", "test")).Return(`
 Resources:
   CloudformationExecutionRole:
     DeletionPolicy: Retain

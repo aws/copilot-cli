@@ -11,6 +11,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/resourcegroupstaggingapi"
@@ -269,7 +270,7 @@ func (o *deleteEnvOpts) validateNoRunningServices() error {
 // In case we encounter a legacy stack, we need to first update the stack to make sure these roles are retained and then
 // proceed with the regular flow.
 func (o *deleteEnvOpts) ensureRolesAreRetained() error {
-	body, err := o.deployer.EnvironmentTemplate(o.appName, o.name)
+	body, err := o.deployer.Template(stack.NameForEnv(o.appName, o.name))
 	if err != nil {
 		var stackDoesNotExist *awscfn.ErrStackNotFound
 		if errors.As(err, &stackDoesNotExist) {

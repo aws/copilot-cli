@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation/stackset"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 
 	"github.com/aws/aws-sdk-go/aws"
 	sdkcloudformation "github.com/aws/aws-sdk-go/service/cloudformation"
@@ -794,4 +795,50 @@ Resources:
 	require.Contains(t, buf.String(), "An ECS cluster")
 	require.Contains(t, buf.String(), "An Addons CloudFormation Stack for your additional AWS resources")
 	require.Contains(t, buf.String(), "A DynamoDB table to store data")
+}
+
+func TestCloudFormation_Template(t *testing.T) {
+	inStackName := stack.NameForEnv("phonetool", "test")
+	testCases := map[string]struct {
+		inClient       func(ctrl *gomock.Controller) *mocks.MockcfnClient
+		wantedTemplate string
+		wantedError    error
+	}{
+		"error getting the template body": {
+			inClient: func(ctrl *gomock.Controller) *mocks.MockcfnClient {
+				m := mocks.NewMockcfnClient(ctrl)
+				m.EXPECT().TemplateBody("phonetool-test").Return("", errors.New("some error"))
+				return m
+			},
+			wantedError: errors.New("some error"),
+		},
+		"returns the template body": {
+			inClient: func(ctrl *gomock.Controller) *mocks.MockcfnClient {
+				m := mocks.NewMockcfnClient(ctrl)
+				m.EXPECT().TemplateBody("phonetool-test").Return("mockTemplate", nil)
+				return m
+			},
+			wantedTemplate: "mockTemplate",
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			cf := &CloudFormation{
+				cfnClient: tc.inClient(ctrl),
+			}
+
+			// WHEN
+			got, gotErr := cf.Template(inStackName)
+			if tc.wantedError != nil {
+				require.EqualError(t, gotErr, tc.wantedError.Error())
+			} else {
+				require.NoError(t, gotErr)
+				require.Equal(t, tc.wantedTemplate, got)
+			}
+		})
+	}
 }

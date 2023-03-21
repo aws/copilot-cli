@@ -188,13 +188,27 @@ func (d *lbWebSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*s
 }
 
 func (d *lbWebSvcDeployer) validateALBRuntime() error {
+
+	if err := d.validateRuntimeRoutingRule(d.lbMft.RoutingRule.Main); err != nil {
+		return fmt.Errorf(`validate ALB runtime configuration for "http": %w`, err)
+	}
+
+	for idx, rule := range d.lbMft.RoutingRule.AdditionalRoutingRules {
+		if err := d.validateRuntimeRoutingRule(rule); err != nil {
+			return fmt.Errorf(`validate ALB runtime configuration for "http.additional_rule[%d]": %w`, idx, err)
+		}
+	}
+	return nil
+}
+
+func (d *lbWebSvcDeployer) validateRuntimeRoutingRule(rule manifest.RoutingRule) error {
 	hasALBCerts := len(d.envConfig.HTTPConfig.Public.Certificates) != 0
 	hasCDNCerts := d.envConfig.CDNConfig.Config.Certificate != nil
 	hasImportedCerts := hasALBCerts || hasCDNCerts
-	if d.lbMft.RoutingRule.RedirectToHTTPS != nil && d.app.Domain == "" && !hasImportedCerts {
+	if rule.RedirectToHTTPS != nil && d.app.Domain == "" && !hasImportedCerts {
 		return fmt.Errorf("cannot configure http to https redirect without having a domain associated with the app %q or importing any certificates in env %q", d.app.Name, d.env.Name)
 	}
-	if d.lbMft.RoutingRule.Alias.IsEmpty() {
+	if rule.Alias.IsEmpty() {
 		if hasImportedCerts {
 			return &errSvcWithNoALBAliasDeployingToEnvWithImportedCerts{
 				name:    d.name,
@@ -203,7 +217,7 @@ func (d *lbWebSvcDeployer) validateALBRuntime() error {
 		}
 		return nil
 	}
-	importedHostedZones := d.lbMft.RoutingRule.Alias.HostedZones()
+	importedHostedZones := rule.Alias.HostedZones()
 	if len(importedHostedZones) != 0 {
 		if !hasImportedCerts {
 			return fmt.Errorf("cannot specify alias hosted zones %v when no certificates are imported in environment %q", importedHostedZones, d.env.Name)
@@ -215,7 +229,7 @@ func (d *lbWebSvcDeployer) validateALBRuntime() error {
 		}
 	}
 	if hasImportedCerts {
-		aliases, err := d.lbMft.RoutingRule.Alias.ToStringSlice()
+		aliases, err := rule.Alias.ToStringSlice()
 		if err != nil {
 			return fmt.Errorf("convert aliases to string slice: %w", err)
 		}
@@ -239,13 +253,13 @@ func (d *lbWebSvcDeployer) validateALBRuntime() error {
 			logAppVersionOutdatedError(aws.StringValue(d.lbMft.Name))
 			return err
 		}
-		if err := validateLBWSAlias(d.lbMft.RoutingRule.Alias, d.app, d.env.Name); err != nil {
-			return fmt.Errorf(`validate 'http.alias': %w`, err)
+		if err := validateLBWSAlias(rule.Alias, d.app, d.env.Name); err != nil {
+			return fmt.Errorf(`validate 'alias': %w`, err)
 		}
 		return nil
 	}
 	log.Errorf(ecsALBAliasUsedWithoutDomainFriendlyText)
-	return fmt.Errorf("cannot specify http.alias when application is not associated with a domain and env %s doesn't import one or more certificates", d.env.Name)
+	return fmt.Errorf(`cannot specify "alias" when application is not associated with a domain and env %s doesn't import one or more certificates`, d.env.Name)
 }
 
 func (d *lbWebSvcDeployer) validateNLBRuntime() error {
