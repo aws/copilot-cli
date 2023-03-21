@@ -46,19 +46,6 @@ func TestRepository_BuildAndPush(t *testing.T) {
 			inMockDocker: func(m *mocks.MockContainerLoginBuildPusher) {},
 			wantedError:  errors.New("get repository URI: some error"),
 		},
-		// "failed to get auth": {
-		// 	inURI: defaultDockerArguments.URI,
-		// 	mockRegistry: func(m *mocks.MockRegistry) {
-		// 		m.EXPECT().Auth().Return("", "", errors.New("error getting auth"))
-		// 	},
-		// 	inMockDocker: func(m *mocks.MockContainerLoginBuildPusher) {
-		// 		m.EXPECT().Build(gomock.Any()).AnyTimes()
-		// 		m.EXPECT().IsEcrCredentialHelperEnabled(defaultDockerArguments.URI).Return(false)
-		// 		m.EXPECT().Login(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
-		// 		m.EXPECT().Push(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
-		// 	},
-		// 	wantedError: errors.New("get auth: error getting auth"),
-		// },
 		"failed to build image": {
 			inURI: defaultDockerArguments.URI,
 			mockRegistry: func(m *mocks.MockRegistry) {
@@ -71,19 +58,6 @@ func TestRepository_BuildAndPush(t *testing.T) {
 			},
 			wantedError: fmt.Errorf("build Dockerfile at %s: error building image", inDockerfilePath),
 		},
-		// "failed to login": {
-		// 	inURI: defaultDockerArguments.URI,
-		// 	mockRegistry: func(m *mocks.MockRegistry) {
-		// 		m.EXPECT().Auth().Return("my-name", "my-pwd", nil)
-		// 	},
-		// 	inMockDocker: func(m *mocks.MockContainerLoginBuildPusher) {
-		// 		m.EXPECT().Build(gomock.Any()).AnyTimes()
-		// 		m.EXPECT().IsEcrCredentialHelperEnabled(defaultDockerArguments.URI).Return(false)
-		// 		m.EXPECT().Login(mockRepoURI, "my-name", "my-pwd").Return(errors.New("error logging in"))
-		// 		m.EXPECT().Push(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
-		// 	},
-		// 	wantedError: fmt.Errorf("login to repo %s: error logging in", inRepoName),
-		// },
 		"failed to push": {
 			inURI: defaultDockerArguments.URI,
 			// mockRegistry: func(m *mocks.MockRegistry) {
@@ -101,7 +75,6 @@ func TestRepository_BuildAndPush(t *testing.T) {
 			inURI: defaultDockerArguments.URI,
 			inMockDocker: func(m *mocks.MockContainerLoginBuildPusher) {
 				m.EXPECT().Build(&defaultDockerArguments).Return(nil).Times(1)
-				// m.EXPECT().IsEcrCredentialHelperEnabled(defaultDockerArguments.URI).Return(true)
 				m.EXPECT().Push(mockRepoURI, mockTag1, mockTag2, mockTag3).Return("sha256:f1d4ae3f7261a72e98c6ebefe9985cf10a0ea5bd762585a43e0700ed99863807", nil)
 			},
 			wantedDigest: "sha256:f1d4ae3f7261a72e98c6ebefe9985cf10a0ea5bd762585a43e0700ed99863807",
@@ -109,12 +82,9 @@ func TestRepository_BuildAndPush(t *testing.T) {
 		"success": {
 			mockRegistry: func(m *mocks.MockRegistry) {
 				m.EXPECT().RepositoryURI(inRepoName).Return(defaultDockerArguments.URI, nil)
-				// m.EXPECT().Auth().Return("my-name", "my-pwd", nil).Times(1)
 			},
 			inMockDocker: func(m *mocks.MockContainerLoginBuildPusher) {
 				m.EXPECT().Build(&defaultDockerArguments).Return(nil).Times(1)
-				// m.EXPECT().IsEcrCredentialHelperEnabled(defaultDockerArguments.URI).Return(false)
-				// m.EXPECT().Login(mockRepoURI, "my-name", "my-pwd").Return(nil).Times(1)
 				m.EXPECT().Push(mockRepoURI, mockTag1, mockTag2, mockTag3).Return("sha256:f1d4ae3f7261a72e98c6ebefe9985cf10a0ea5bd762585a43e0700ed99863807", nil)
 			},
 			wantedDigest: "sha256:f1d4ae3f7261a72e98c6ebefe9985cf10a0ea5bd762585a43e0700ed99863807",
