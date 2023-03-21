@@ -274,7 +274,7 @@ func TestEnvDeployer_DeployDiff(t *testing.T) {
 					Return("wow such template", nil)
 			},
 			checkErr: func(t *testing.T, gotErr error) {
-				require.ErrorContains(t, gotErr, "parse the diff of the template to be deployed against the deployed template")
+				require.ErrorContains(t, gotErr, `parse the diff against the deployed env stack "mockEnv"`)
 			},
 		},
 		"get the correct diff": {

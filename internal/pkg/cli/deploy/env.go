@@ -231,7 +231,7 @@ func (d *envDeployer) DeployDiff(template string) (string, error) {
 	}
 	diffTree, err := diff.From(tmpl).Parse([]byte(template))
 	if err != nil {
-		return "", fmt.Errorf("parse the diff of the template to be deployed against the deployed template: %w", err)
+		return "", fmt.Errorf("parse the diff against the deployed env stack %q: %w", d.env.Name, err)
 	}
 	buf := strings.Builder{}
 	if err := diffTree.Write(&buf); err != nil {
