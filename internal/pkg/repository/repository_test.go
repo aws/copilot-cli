@@ -53,20 +53,14 @@ func TestRepository_BuildAndPush(t *testing.T) {
 			},
 			inMockDocker: func(m *mocks.MockContainerLoginBuildPusher) {
 				m.EXPECT().Build(&defaultDockerArguments).Return(errors.New("error building image"))
-				// m.EXPECT().Login(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 				m.EXPECT().Push(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
 			wantedError: fmt.Errorf("build Dockerfile at %s: error building image", inDockerfilePath),
 		},
 		"failed to push": {
 			inURI: defaultDockerArguments.URI,
-			// mockRegistry: func(m *mocks.MockRegistry) {
-			// 	m.EXPECT().Auth().Times(1)
-			// },
 			inMockDocker: func(m *mocks.MockContainerLoginBuildPusher) {
 				m.EXPECT().Build(&defaultDockerArguments).Times(1)
-				// m.EXPECT().IsEcrCredentialHelperEnabled(defaultDockerArguments.URI).Return(false)
-				// m.EXPECT().Login(gomock.Any(), gomock.Any(), gomock.Any()).Times(1)
 				m.EXPECT().Push(mockRepoURI, mockTag1, mockTag2, mockTag3).Return("", errors.New("error pushing image"))
 			},
 			wantedError: errors.New("push to repo my-repo: error pushing image"),
