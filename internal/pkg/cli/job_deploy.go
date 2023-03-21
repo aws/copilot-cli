@@ -212,7 +212,7 @@ func (o *deployJobOpts) Execute() error {
 		if err := diff(deployer, output.Template, o.diffWriter); err != nil {
 			return err
 		}
-		contd, err := o.prompt.Confirm("Continue with the deployment?", "")
+		contd, err := o.prompt.Confirm(continueDeploymentPrompt, "")
 		if err != nil {
 			return fmt.Errorf("ask whether to continue with the deployment: %w", err)
 		}
