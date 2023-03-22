@@ -378,7 +378,7 @@ Metadata:
 				}
 			},
 		},
-		"no": {
+		"no diff": {
 			old: `Description: CloudFormation environment template for infrastructure shared among Copilot workloads.
 Metadata:
   Manifest: I don't see any difference.`,
