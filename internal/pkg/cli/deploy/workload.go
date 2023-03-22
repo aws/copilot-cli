@@ -33,6 +33,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/repository"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/template/artifactpath"
+	"github.com/aws/copilot-cli/internal/pkg/template/diff"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
@@ -94,6 +95,10 @@ type serviceDeployer interface {
 	DeployService(conf cloudformation.StackConfiguration, bucketName string, opts ...awscloudformation.StackOption) error
 }
 
+type deployedTemplateGetter interface {
+	Template(stackName string) (string, error)
+}
+
 type spinner interface {
 	Start(label string)
 	Stop(label string)
@@ -152,6 +157,7 @@ type workloadDeployer struct {
 	addons             stackBuilder
 	imageBuilderPusher imageBuilderPusher
 	deployer           serviceDeployer
+	tmplGetter         deployedTemplateGetter
 	endpointGetter     endpointGetter
 	spinner            spinner
 	templateFS         template.Reader
@@ -245,6 +251,7 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 		return nil, fmt.Errorf("unmarshal the manifest used to deploy environment %s: %w", in.Env.Name, err)
 	}
 
+	cfn := cloudformation.New(envSession, cloudformation.WithProgressTracker(os.Stderr))
 	return &workloadDeployer{
 		name:               in.Name,
 		app:                in.App,
@@ -256,7 +263,8 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 		s3Client:           s3.New(envSession),
 		addons:             addons,
 		imageBuilderPusher: imageBuilderPusher,
-		deployer:           cloudformation.New(envSession, cloudformation.WithProgressTracker(os.Stderr)),
+		deployer:           cfn,
+		tmplGetter:         cfn,
 		endpointGetter:     envDescriber,
 		spinner:            termprogress.NewSpinner(log.DiagnosticWriter),
 		templateFS:         template.New(),
@@ -275,13 +283,29 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 	}, nil
 }
 
+// DeployDiff returns the stringified diff of the template against the deployed template of the workload.
+func (d *workloadDeployer) DeployDiff(template string) (string, error) {
+	tmpl, err := d.tmplGetter.Template(stack.NameForWorkload(d.app.Name, d.env.Name, d.name))
+	if err != nil {
+		return "", fmt.Errorf("retrieve the deployed template for %q: %w", d.name, err)
+	}
+	diffTree, err := diff.From(tmpl).Parse([]byte(template))
+	if err != nil {
+		return "", fmt.Errorf("parse the diff against the deployed %q in environment %q: %w", d.name, d.env.Name, err)
+	}
+	buf := strings.Builder{}
+	if err := diffTree.Write(&buf); err != nil {
+		return "", err
+	}
+	return buf.String(), nil
+}
+
 // AddonsTemplate returns this workload's addon template.
-func (w *workloadDeployer) AddonsTemplate() (string, error) {
-	if w.addons == nil {
+func (d *workloadDeployer) AddonsTemplate() (string, error) {
+	if d.addons == nil {
 		return "", nil
 	}
-
-	return w.addons.Template()
+	return d.addons.Template()
 }
 
 func (d *workloadDeployer) generateCloudFormationTemplate(conf stackSerializer) (
