@@ -356,7 +356,7 @@ value: new`,
 - op: unsupported
   path: /
   value: new`,
-			expectedErr: `unsupported operation "unsupported". supported operations are "add", "remove", and "replace".`,
+			expectedErr: `unsupported operation "unsupported": supported operations are "add", "remove", and "replace".`,
 		},
 		"error in map following path": {
 			yaml: `
@@ -404,7 +404,7 @@ a:
 - op: add
   path: /a/b/1/e
   value: val`,
-			expectedErr: `unable to apply "add" patch: key "/a/b/1": invalid node type 0x8`,
+			expectedErr: `unable to apply "add" patch: key "/a/b/1": invalid node type scalar`,
 		},
 		"error add with no value": {
 			overrides: `

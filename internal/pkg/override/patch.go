@@ -72,7 +72,7 @@ func (p *Patch) Override(body []byte) ([]byte, error) {
 		case "replace":
 			err = patch.applyReplace(&root)
 		default:
-			return nil, fmt.Errorf("unsupported operation %q. supported operations are %q, %q, and %q.", patch.Operation, "add", "remove", "replace")
+			return nil, fmt.Errorf("unsupported operation %q: supported operations are %q, %q, and %q.", patch.Operation, "add", "remove", "replace")
 		}
 		if err != nil {
 			return nil, fmt.Errorf("unable to apply %q patch: %w", patch.Operation, err)
@@ -263,6 +263,25 @@ func followJSONPointerHelper(node *yaml.Node, traversed, remaining []string, vis
 
 		return followJSONPointerHelper(node.Content[idx], append(traversed, remaining[0]), remaining[1:], visit)
 	default:
-		return fmt.Errorf("key %q: invalid node type %#v", strings.Join(traversed, jsonPointerSeparator), node.Kind)
+		return fmt.Errorf("key %q: invalid node type %s", strings.Join(traversed, jsonPointerSeparator), nodeKindStringer(node.Kind))
+	}
+}
+
+type nodeKindStringer yaml.Kind
+
+func (k nodeKindStringer) String() string {
+	switch yaml.Kind(k) {
+	case yaml.DocumentNode:
+		return "document"
+	case yaml.SequenceNode:
+		return "sequence"
+	case yaml.MappingNode:
+		return "mapping"
+	case yaml.ScalarNode:
+		return "scalar"
+	case yaml.AliasNode:
+		return "alias"
+	default:
+		return fmt.Sprintf("%#v", k)
 	}
 }
