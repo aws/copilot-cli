@@ -116,19 +116,21 @@ environments:
 						},
 						RoutingRule: RoutingRuleConfigOrBool{
 							RoutingRuleConfiguration: RoutingRuleConfiguration{
-								Alias: Alias{
-									AdvancedAliases: []AdvancedAlias{},
-									StringSliceOrString: StringSliceOrString{
-										StringSlice: []string{
-											"foobar.com",
-											"v1.foobar.com",
+								Main: RoutingRule{
+									Alias: Alias{
+										AdvancedAliases: []AdvancedAlias{},
+										StringSliceOrString: StringSliceOrString{
+											StringSlice: []string{
+												"foobar.com",
+												"v1.foobar.com",
+											},
 										},
 									},
+									Path:             aws.String("svc"),
+									TargetContainer:  aws.String("frontend"),
+									HealthCheck:      HealthCheckArgsOrString{},
+									AllowedSourceIps: []IPNet{IPNet("10.1.0.0/24"), IPNet("10.1.1.0/24")},
 								},
-								Path:             aws.String("svc"),
-								TargetContainer:  aws.String("frontend"),
-								HealthCheck:      HealthCheckArgsOrString{},
-								AllowedSourceIps: []IPNet{IPNet("10.1.0.0/24"), IPNet("10.1.1.0/24")},
 							},
 						},
 						TaskConfig: TaskConfig{

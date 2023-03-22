@@ -3768,21 +3768,6 @@ func (mr *MockenvironmentDeployerMockRecorder) DeleteEnvironment(appName, envNam
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteEnvironment", reflect.TypeOf((*MockenvironmentDeployer)(nil).DeleteEnvironment), appName, envName, cfnExecRoleARN)
 }
 
-// EnvironmentTemplate mocks base method.
-func (m *MockenvironmentDeployer) EnvironmentTemplate(appName, envName string) (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EnvironmentTemplate", appName, envName)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// EnvironmentTemplate indicates an expected call of EnvironmentTemplate.
-func (mr *MockenvironmentDeployerMockRecorder) EnvironmentTemplate(appName, envName interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnvironmentTemplate", reflect.TypeOf((*MockenvironmentDeployer)(nil).EnvironmentTemplate), appName, envName)
-}
-
 // GetEnvironment mocks base method.
 func (m *MockenvironmentDeployer) GetEnvironment(appName, envName string) (*config.Environment, error) {
 	m.ctrl.T.Helper()
@@ -3796,6 +3781,21 @@ func (m *MockenvironmentDeployer) GetEnvironment(appName, envName string) (*conf
 func (mr *MockenvironmentDeployerMockRecorder) GetEnvironment(appName, envName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEnvironment", reflect.TypeOf((*MockenvironmentDeployer)(nil).GetEnvironment), appName, envName)
+}
+
+// Template mocks base method.
+func (m *MockenvironmentDeployer) Template(stackName string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Template", stackName)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Template indicates an expected call of Template.
+func (mr *MockenvironmentDeployerMockRecorder) Template(stackName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Template", reflect.TypeOf((*MockenvironmentDeployer)(nil).Template), stackName)
 }
 
 // UpdateEnvironmentTemplate mocks base method.
@@ -4620,21 +4620,6 @@ func (mr *MockdeployerMockRecorder) DeployApp(in interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployApp", reflect.TypeOf((*Mockdeployer)(nil).DeployApp), in)
 }
 
-// EnvironmentTemplate mocks base method.
-func (m *Mockdeployer) EnvironmentTemplate(appName, envName string) (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EnvironmentTemplate", appName, envName)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// EnvironmentTemplate indicates an expected call of EnvironmentTemplate.
-func (mr *MockdeployerMockRecorder) EnvironmentTemplate(appName, envName interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnvironmentTemplate", reflect.TypeOf((*Mockdeployer)(nil).EnvironmentTemplate), appName, envName)
-}
-
 // GetAppResourcesByRegion mocks base method.
 func (m *Mockdeployer) GetAppResourcesByRegion(app *config.Application, region string) (*stack.AppRegionalResources, error) {
 	m.ctrl.T.Helper()
@@ -4708,6 +4693,21 @@ func (m *Mockdeployer) PipelineExists(env *deploy0.CreatePipelineInput) (bool, e
 func (mr *MockdeployerMockRecorder) PipelineExists(env interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PipelineExists", reflect.TypeOf((*Mockdeployer)(nil).PipelineExists), env)
+}
+
+// Template mocks base method.
+func (m *Mockdeployer) Template(stackName string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Template", stackName)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Template indicates an expected call of Template.
+func (mr *MockdeployerMockRecorder) Template(stackName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Template", reflect.TypeOf((*Mockdeployer)(nil).Template), stackName)
 }
 
 // UpdateEnvironmentTemplate mocks base method.
