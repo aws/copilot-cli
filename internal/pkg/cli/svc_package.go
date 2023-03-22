@@ -166,14 +166,6 @@ func newWorkloadStackGenerator(o *packageSvcOpts) (workloadStackGenerator, error
 
 // Validate returns an error for any invalid optional flags.
 func (o *packageSvcOpts) Validate() error {
-	if o.showDiff {
-		if o.outputDir != "" {
-			return fmt.Errorf("`--%s` cannot be specified together with `--%s`", diffFlag, stackOutputDirFlag)
-		}
-		if o.uploadAssets {
-			return fmt.Errorf("`--%s` cannot be specified together with `--%s`", diffFlag, uploadAssetsFlag)
-		}
-	}
 	return nil
 }
 
@@ -485,5 +477,8 @@ func buildSvcPackageCmd() *cobra.Command {
 	cmd.Flags().StringVar(&vars.outputDir, stackOutputDirFlag, "", stackOutputDirFlagDescription)
 	cmd.Flags().BoolVar(&vars.uploadAssets, uploadAssetsFlag, false, uploadAssetsFlagDescription)
 	cmd.Flags().BoolVar(&vars.showDiff, diffFlag, false, diffFlagDescription)
+
+	cmd.MarkFlagsMutuallyExclusive(diffFlag, stackOutputDirFlag)
+	cmd.MarkFlagsMutuallyExclusive(diffFlag, uploadAssetsFlag)
 	return cmd
 }
