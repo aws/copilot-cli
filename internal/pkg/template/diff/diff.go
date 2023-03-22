@@ -207,7 +207,6 @@ func parseSequence(fromNode, toNode *yaml.Node) ([]diffNode, error) {
 				matchCount = 0
 			}
 		case actionMod:
-			// TODO(lou1415926): handle list of maps modification
 			diff := cachedDiff[cacheKey(inspector.fromIndex(), inspector.toIndex())]
 			if diff.err != nil {
 				return nil, diff.err

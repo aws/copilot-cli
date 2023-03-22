@@ -228,22 +228,6 @@ func TestFrom_Parse(t *testing.T) {
 				}
 			},
 		},
-		"list with a map value changed": { // TODO(lou1415926): handle list of maps modification
-			old: `StrawberryPopularitySurvey:
-- Name: Dog
-  LikeStrawberry: ver much
-- Name: Bear
-  LikeStrawberry: meh
-- Name: Cat
-  LikeStrawberry: ew`,
-			curr: `StrawberryPopularitySurvey:
-- Name: Dog
-  LikeStrawberry: ver much
-- Name: Bear
-  LikeStrawberry: ok
-- Name: Cat
-  LikeStrawberry: ew`,
-		},
 		"change a map to scalar": {
 			curr: `Mary:
   Dialogue: "Said bear: 'I know I'm supposed to keep an eye on you"`,

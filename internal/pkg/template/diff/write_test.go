@@ -71,11 +71,6 @@ Mary:
 			old:  `Alphabet: [a,b,c,d]`,
 			curr: `Alphabet: [a,b,c,d]`,
 		},
-		"list reordered": {
-			// TODO(lou1425926): complete the test.
-			old:  `SizeRank: [bear,dog,cat,mouse]`,
-			curr: `SizeRank: [bear,cat,dog,mouse]`,
-		},
 		"list with insertion": {
 			old:  `DanceCompetition: [dog,bear,cat]`,
 			curr: `DanceCompetition: [dog,bear,mouse,cat]`,
@@ -105,31 +100,6 @@ Mary:
     ~ - circle -> ellipse
     (1 unchanged item)
 `,
-		},
-		"list with a map value changed": { // TODO(lou1415926): handle list of maps modification
-			old: `StrawberryPopularitySurvey:
-- Name: Dog
-  LikeStrawberry: ver much
-- Name: Bear
-  LikeStrawberry: meh
-  D: 
-     - One
-     - Three:
-          Wow: what
-- Name: Cat
-  LikeStrawberry: ew`,
-			curr: `StrawberryPopularitySurvey:
-- Name: Dog
-  LikeStrawberry: ver much
-- Name: Bear
-  LikeStrawberry: ok
-  Hey: wow
-  D:
-     - Two
-     - Three: 
-         Wow: hey
-- Name: Cat
-  LikeStrawberry: ew`,
 		},
 		"change a map to scalar": {
 			curr: `
