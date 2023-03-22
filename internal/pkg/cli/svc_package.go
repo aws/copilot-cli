@@ -58,7 +58,6 @@ type packageSvcOpts struct {
 	runner               execRunner
 	sessProvider         *sessions.Provider
 	sel                  wsSelector
-	prompt               prompter
 	unmarshal            func([]byte) (manifest.DynamicWorkload, error)
 	newInterpolator      func(app, env string) interpolator
 	newStackGenerator    func(*packageSvcOpts) (workloadStackGenerator, error)
@@ -96,7 +95,6 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 		unmarshal:         manifest.UnmarshalWorkload,
 		runner:            exec.NewCmd(),
 		sel:               selector.NewLocalWorkloadSelector(prompter, store, ws),
-		prompt:            prompter,
 		templateWriter:    os.Stdout,
 		paramsWriter:      discardFile{},
 		addonsWriter:      discardFile{},
