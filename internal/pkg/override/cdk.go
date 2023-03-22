@@ -160,3 +160,24 @@ func ScaffoldWithCDK(fs afero.Fs, dir string, seeds []template.CFNResource) erro
 		return nil
 	})
 }
+
+func ScaffoldWithYAMLPatch(fs afero.Fs, dir string) error {
+	// If the directory does not exist, [afero.IsEmpty] returns false and an error.
+	// Therefore, we only want to check if a directory is empty only if it also exists.
+	exists, _ := afero.Exists(fs, dir)
+	isEmpty, _ := afero.IsEmpty(fs, dir)
+	if exists && !isEmpty {
+		return fmt.Errorf("directory %q is not empty", dir)
+	}
+
+	return templates.WalkOverridesYAMLPatchDir(func(name string, content *template.Content) error {
+		path := filepath.Join(dir, name)
+		if err := fs.MkdirAll(filepath.Dir(path), 0755); err != nil {
+			return fmt.Errorf("make directories along %q: %w", filepath.Dir(path), err)
+		}
+		if err := afero.WriteFile(fs, path, content.Bytes(), 0644); err != nil {
+			return fmt.Errorf("write file at %q: %w", path, err)
+		}
+		return nil
+	})
+}

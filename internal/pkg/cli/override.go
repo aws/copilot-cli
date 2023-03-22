@@ -20,6 +20,7 @@ import (
 const (
 	// IaC options for overrides.
 	cdkIaCTool = "cdk"
+	yamlPatch  = "CloudFormation YAML patches"
 
 	// IaC toolkit configuration.
 	typescriptCDKLang = "typescript"
@@ -27,6 +28,7 @@ const (
 
 var validIaCTools = []string{
 	cdkIaCTool,
+	yamlPatch,
 }
 
 var validCDKLangs = []string{
@@ -101,6 +103,11 @@ func (o *overrideOpts) Execute() error {
 			return fmt.Errorf("scaffold CDK application under %q: %v", dir, err)
 		}
 		log.Successf("Created a new CDK application at %q to override resources\n", displayPath(dir))
+	case yamlPatch:
+		if err := override.ScaffoldWithYAMLPatch(o.fs, dir); err != nil {
+			return fmt.Errorf("scaffold CFN YAML patches under %q: %v", dir, err)
+		}
+		log.Successf("Created a YAML patch file under %q to override resources\n", displayPath(dir))
 	}
 	return nil
 }
@@ -169,7 +176,7 @@ func (o *overrideOpts) validateIaCTool() error {
 }
 
 func (o *overrideOpts) askResourcesToOverride() error {
-	if o.skipResources {
+	if o.skipResources || o.iacTool == yamlPatch {
 		return nil
 	}
 
