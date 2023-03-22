@@ -226,11 +226,11 @@ func (s *BackendService) Parameters() ([]*cloudformation.Parameter, error) {
 		return nil, fmt.Errorf("parse exposed ports in service manifest %s: %w", s.name, err)
 	}
 	targetContainer, targetPort, err := s.manifest.RoutingRule.Main.Target(exposedPorts)
-	if targetPort == "" {
-		targetPort = s.manifest.MainContainerPort()
-	}
 	if err != nil {
 		return nil, err
+	}
+	if targetPort == "" {
+		targetPort = s.manifest.MainContainerPort()
 	}
 	params = append(params, []*cloudformation.Parameter{
 		{

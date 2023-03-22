@@ -284,10 +284,6 @@ func (s *LoadBalancedWebService) Parameters() ([]*cloudformation.Parameter, erro
 	if err != nil {
 		return nil, err
 	}
-
-	if err != nil {
-		return nil, err
-	}
 	wkldParams = append(wkldParams, []*cloudformation.Parameter{
 		{
 			ParameterKey:   aws.String(WorkloadContainerPortParamKey),
