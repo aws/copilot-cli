@@ -87,7 +87,7 @@ type seqItemNode struct {
 type From []byte
 
 // Parse constructs a diff tree that represent the differences of a YAML document against the From document.
-func (from From) Parse(to []byte) (Tree, error) {
+func (from From) Parse(to []byte, overrider overrider) (Tree, error) {
 	var toNode, fromNode yaml.Node
 	if err := yaml.Unmarshal(to, &toNode); err != nil {
 		return Tree{}, fmt.Errorf("unmarshal current template: %w", err)
@@ -102,11 +102,11 @@ func (from From) Parse(to []byte) (Tree, error) {
 	case fromNode.Kind == 0 && toNode.Kind == 0:
 		return Tree{}, nil
 	case fromNode.Kind == 0:
-		root, err = parse(nil, &toNode, "")
+		root, err = parse(nil, &toNode, "", overrider)
 	case toNode.Kind == 0:
-		root, err = parse(&fromNode, nil, "")
+		root, err = parse(&fromNode, nil, "", overrider)
 	default:
-		root, err = parse(&fromNode, &toNode, "")
+		root, err = parse(&fromNode, &toNode, "", overrider)
 	}
 	if err != nil {
 		return Tree{}, err
@@ -120,7 +120,10 @@ func (from From) Parse(to []byte) (Tree, error) {
 
 }
 
-func parse(from, to *yaml.Node, key string) (diffNode, error) {
+func parse(from, to *yaml.Node, key string, overrider overrider) (diffNode, error) {
+	if overrider.match(from, to, key) {
+		return overrider.parse(from, to, key)
+	}
 	// Handle base cases.
 	if to == nil || from == nil || to.Kind != from.Kind {
 		return &node{
@@ -144,11 +147,11 @@ func parse(from, to *yaml.Node, key string) (diffNode, error) {
 	var err error
 	switch {
 	case to.Kind == yaml.SequenceNode && from.Kind == yaml.SequenceNode:
-		children, err = parseSequence(from, to)
+		children, err = parseSequence(from, to, overrider)
 	case to.Kind == yaml.DocumentNode && from.Kind == yaml.DocumentNode:
 		fallthrough
 	case to.Kind == yaml.MappingNode && from.Kind == yaml.MappingNode:
-		children, err = parseMap(from, to)
+		children, err = parseMap(from, to, overrider)
 	default:
 		return nil, fmt.Errorf("unknown combination of node kinds: %v, %v", to.Kind, from.Kind)
 	}
@@ -168,7 +171,7 @@ func isYAMLLeaf(node *yaml.Node) bool {
 	return len(node.Content) == 0
 }
 
-func parseSequence(fromNode, toNode *yaml.Node) ([]diffNode, error) {
+func parseSequence(fromNode, toNode *yaml.Node, overrider overrider) ([]diffNode, error) {
 	fromSeq, toSeq := make([]yaml.Node, len(fromNode.Content)), make([]yaml.Node, len(toNode.Content)) // NOTE: should be the same as calling `Decode`.
 	for idx, v := range fromNode.Content {
 		fromSeq[idx] = *v
@@ -182,7 +185,7 @@ func parseSequence(fromNode, toNode *yaml.Node) ([]diffNode, error) {
 	}
 	cachedDiff := make(map[string]cachedEntry)
 	lcsIndices := longestCommonSubsequence(fromSeq, toSeq, func(idxFrom, idxTo int) bool {
-		diff, err := parse(&(fromSeq[idxFrom]), &(toSeq[idxTo]), "")
+		diff, err := parse(&(fromSeq[idxFrom]), &(toSeq[idxTo]), "", overrider)
 		if diff != nil { // NOTE: cache the diff only if a modification could have happened at this position.
 			cachedDiff[cacheKey(idxFrom, idxTo)] = cachedEntry{
 				node: diff,
@@ -239,7 +242,7 @@ func parseSequence(fromNode, toNode *yaml.Node) ([]diffNode, error) {
 	return children, nil
 }
 
-func parseMap(from, to *yaml.Node) ([]diffNode, error) {
+func parseMap(from, to *yaml.Node, overrider overrider) ([]diffNode, error) {
 	currMap, oldMap := make(map[string]yaml.Node), make(map[string]yaml.Node)
 	if err := to.Decode(currMap); err != nil {
 		return nil, err
@@ -258,7 +261,7 @@ func parseMap(from, to *yaml.Node) ([]diffNode, error) {
 		if v, ok := currMap[k]; ok {
 			currV = &v
 		}
-		kDiff, err := parse(oldV, currV, k)
+		kDiff, err := parse(oldV, currV, k, overrider)
 		if err != nil {
 			return nil, err
 		}

@@ -334,11 +334,68 @@ Dog: (pleased) "ikr"`, t),
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			got, err := From(tc.old).Parse([]byte(tc.curr))
+			got, err := From(tc.old).Parse([]byte(tc.curr), &noneOverrider{})
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+				require.True(t, equalTree(got, Tree{tc.wanted()}, t), "should get the expected tree")
 			}
-			if tc.wanted != nil {
+		})
+	}
+}
+
+func TestFrom_Parse_CFN(t *testing.T) {
+	testCases := map[string]struct {
+		curr        string
+		old         string
+		wanted      func() diffNode
+		wantedError error
+	}{
+		"diff in metadata manifest is ignored": {
+			old: `Description: CloudFormation environment template for infrastructure shared among Copilot workloads.
+Metadata:
+  Version: v1.26.0
+  Manifest: I don't see any difference.`,
+			curr: `Description: CloudFormation environment template for infrastructure shared among Copilot workloads.
+Metadata:
+  Version: v1.27.0
+  Manifest: There is definitely a difference.`,
+			wanted: func() diffNode {
+				/* sentinel -> Metadata -> Version*/
+				leaf := &node{
+					keyValue: "Version",
+					oldV:     yamlScalarNode("v1.26.0"),
+					newV:     yamlScalarNode("v1.27.0"),
+				}
+				return &node{
+					childNodes: []diffNode{
+						&node{
+							keyValue:   "Metadata",
+							childNodes: []diffNode{leaf},
+						},
+					},
+				}
+			},
+		},
+		"no": {
+			old: `Description: CloudFormation environment template for infrastructure shared among Copilot workloads.
+Metadata:
+  Manifest: I don't see any difference.`,
+			curr: `Description: CloudFormation environment template for infrastructure shared among Copilot workloads.
+Metadata:
+  Manifest: There is definitely a difference.`,
+			wanted: func() diffNode {
+				return nil
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got, err := From(tc.old).Parse([]byte(tc.curr), CFNOverrider())
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
 				require.NoError(t, err)
 				require.True(t, equalTree(got, Tree{tc.wanted()}, t), "should get the expected tree")
 			}
