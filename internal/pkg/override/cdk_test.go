@@ -67,7 +67,7 @@ func TestCDK_Override(t *testing.T) {
 				return "/bin/npm", nil
 			},
 			CommandFn: func(name string, args ...string) *exec.Cmd {
-				return exec.Command("echo", append([]string{name}, args...)...)
+				return exec.Command("echo")
 			},
 		})
 
@@ -117,7 +117,7 @@ func TestCDK_Override(t *testing.T) {
 				return "/bin/npm", nil
 			},
 			CommandFn: func(name string, args ...string) *exec.Cmd {
-				return exec.Command("echo", append([]string{name}, args...)...)
+				return exec.Command("echo", fmt.Sprintf("Description: %s", strings.Join(append([]string{name}, args...), " ")))
 			},
 		})
 
@@ -126,28 +126,8 @@ func TestCDK_Override(t *testing.T) {
 
 		// THEN
 		require.NoError(t, err)
-		require.Equal(t, "npm install\n", buf.String())
-		require.Equal(t, fmt.Sprintf("%s synth --no-version-reporting\n", binPath), string(out))
-	})
-	t.Run("should return the transformed document", func(t *testing.T) {
-		buf := new(strings.Builder)
-		cdk := WithCDK("", CDKOpts{
-			ExecWriter: buf,
-			FS:         afero.NewMemMapFs(),
-			LookPathFn: func(file string) (string, error) {
-				return "/bin/npm", nil
-			},
-			CommandFn: func(name string, args ...string) *exec.Cmd {
-				return exec.Command("echo", "sample cloudformation template")
-			},
-		})
-
-		// WHEN
-		out, err := cdk.Override(nil)
-
-		// THEN
-		require.NoError(t, err)
-		require.Equal(t, "sample cloudformation template\n", string(out))
+		require.Contains(t, buf.String(), "npm install")
+		require.Contains(t, string(out), fmt.Sprintf("%s synth --no-version-reporting", binPath))
 	})
 	t.Run("should return the transformed document with CDK metadata stripped and description updated", func(t *testing.T) {
 		buf := new(strings.Builder)
