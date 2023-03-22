@@ -27,48 +27,6 @@ import (
 	"github.com/golang/mock/gomock"
 )
 
-func TestPackageEnvOpts_Validate(t *testing.T) {
-	testCases := map[string]struct {
-		inShowDiff     bool
-		inOutputDir    string
-		inUploadAssets bool
-		wantedErr      error
-	}{
-		"error if diff is specified with output-dir": {
-			inShowDiff:  true,
-			inOutputDir: "what/a/dir",
-			wantedErr:   errors.New("`--diff` cannot be specified together with `--output-dir`"),
-		},
-		"error if diff is specified with upload-assets": {
-			inShowDiff:     true,
-			inUploadAssets: true,
-			wantedErr:      errors.New("`--diff` cannot be specified together with `--upload-assets`"),
-		},
-		"no diff": {},
-		"diff": {
-			inShowDiff: true,
-		},
-	}
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			opts := &packageEnvOpts{
-				packageEnvVars: packageEnvVars{
-					showDiff:     tc.inShowDiff,
-					outputDir:    tc.inOutputDir,
-					uploadAssets: tc.inUploadAssets,
-				},
-			}
-			// WHEN
-			err := opts.Validate()
-			if tc.wantedErr != nil {
-				require.EqualError(t, err, tc.wantedErr.Error())
-			} else {
-				require.NoError(t, err)
-			}
-		})
-	}
-}
-
 func TestPackageEnvOpts_Ask(t *testing.T) {
 	testCases := map[string]struct {
 		in        packageEnvVars
