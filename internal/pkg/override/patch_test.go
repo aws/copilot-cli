@@ -104,7 +104,7 @@ Resources:
       - jkl;`,
 			overrides: `
 - op: add
-  path: /Resources/TaskDef/List/3
+  path: /Resources/TaskDef/List/2
   value: qwerty`,
 			expected: `
 Resources:
