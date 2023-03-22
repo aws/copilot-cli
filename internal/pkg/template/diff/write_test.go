@@ -12,10 +12,9 @@ import (
 
 func Test_Integration_Parse_Write(t *testing.T) {
 	testCases := map[string]struct {
-		curr        string
-		old         string
-		wanted      string
-		wantedError error
+		curr   string
+		old    string
+		wanted string
 	}{
 		"add a map": {
 			curr: `
@@ -208,16 +207,74 @@ Mary:
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotTree, err := From(tc.old).Parse([]byte(tc.curr))
+			gotTree, err := From(tc.old).Parse([]byte(tc.curr), &noneOverrider{})
 			require.NoError(t, err)
 
 			buf := strings.Builder{}
 			err = gotTree.Write(&buf)
 			out := buf.String()
-			if tc.wanted != "" { // TODO(lou1415926): remove this block when all tests cases are completed
-				require.NoError(t, err)
-				require.Equal(t, strings.TrimPrefix(tc.wanted, "\n"), out)
-			}
+			require.NoError(t, err)
+			require.Equal(t, strings.TrimPrefix(tc.wanted, "\n"), out)
+		})
+	}
+}
+
+func Test_Integration_Parse_Write_WithOverride(t *testing.T) {
+	testCases := map[string]struct {
+		curr      string
+		old       string
+		overrider overrider
+		wanted    string
+	}{
+		"no override": {
+			old: `Description: CloudFormation environment template for infrastructure shared among Copilot workloads.
+Metadata:
+  Version: v1.26.0
+  Manifest: I don't see any difference.`,
+			curr: `Description: CloudFormation environment template for infrastructure shared among Copilot workloads.
+Metadata:
+  Version: v1.27.0
+  Manifest: There is definitely a difference.`,
+			overrider: &noneOverrider{},
+			wanted: `
+~ Metadata:
+    ~ Manifest: I don't see any difference. -> There is definitely a difference.
+    ~ Version: v1.26.0 -> v1.27.0
+`,
+		},
+		"ignore metadata manifest": {
+			old: `Description: CloudFormation environment template for infrastructure shared among Copilot workloads.
+Metadata:
+  Version: v1.26.0
+  Manifest: I don't see any difference.`,
+			curr: `Description: CloudFormation environment template for infrastructure shared among Copilot workloads.
+Metadata:
+  Version: v1.27.0
+  Manifest: There is definitely a difference.`,
+			overrider: CFNOverrider(),
+			wanted: `
+~ Metadata:
+    ~ Version: v1.26.0 -> v1.27.0
+`,
+		},
+		"no diff": {
+			old: `Description: CloudFormation environment template for infrastructure shared among Copilot workloads.
+Metadata:
+  Manifest: I don't see any difference.`,
+			curr: `Description: CloudFormation environment template for infrastructure shared among Copilot workloads.
+Metadata:
+  Manifest: There is definitely a difference.`,
+			overrider: CFNOverrider(),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			gotTree, err := From(tc.old).Parse([]byte(tc.curr), tc.overrider)
+			require.NoError(t, err)
+			buf := strings.Builder{}
+			err = gotTree.Write(&buf)
+			require.NoError(t, err)
+			require.Equal(t, strings.TrimPrefix(tc.wanted, "\n"), buf.String())
 		})
 	}
 }
