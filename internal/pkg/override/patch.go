@@ -140,7 +140,7 @@ func (p *yamlPatch) applyAdd(root *yaml.Node) error {
 			switch {
 			case err != nil:
 				return fmt.Errorf("expected index in sequence, got %q", pointer[0])
-			case idx < 0 || idx > len(node.Content)-1:
+			case idx < 0 || idx > len(node.Content):
 				return fmt.Errorf("invalid index %d for sequence of length %d", idx, len(node.Content))
 			}
 
