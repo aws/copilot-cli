@@ -32,7 +32,7 @@ func TestRoutingRuleConfigOrBool_Disabled(t *testing.T) {
 		},
 		"enabled explicitly by advanced configuration": {
 			in: RoutingRuleConfigOrBool{
-				RoutingRuleConfiguration: RoutingRuleConfiguration{
+				HTTP: HTTP{
 					Main: RoutingRule{
 						Path: aws.String("mockPath"),
 					},
@@ -144,7 +144,7 @@ func TestAlias_UnmarshalYAML(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			r := RoutingRuleConfiguration{
+			r := HTTP{
 				Main: RoutingRule{
 					Alias: Alias{
 						StringSliceOrString: StringSliceOrString{

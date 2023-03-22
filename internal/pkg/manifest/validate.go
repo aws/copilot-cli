@@ -127,7 +127,7 @@ func (l LoadBalancedWebService) validate() error {
 		mainContainerName: aws.StringValue(l.Name),
 		mainContainerPort: l.ImageConfig.Port,
 		sidecarConfig:     l.Sidecars,
-		alb:               &l.RoutingRule.RoutingRuleConfiguration,
+		alb:               &l.RoutingRule.HTTP,
 		nlb:               &l.NLBConfig,
 	}); err != nil {
 		return fmt.Errorf("validate unique exposed ports: %w", err)
@@ -765,8 +765,8 @@ func (CommandOverride) validate() error {
 	return nil
 }
 
-// validate returns nil if RoutingRuleConfiguration is configured correctly.
-func (r RoutingRuleConfiguration) validate() error {
+// validate returns nil if HTTP is configured correctly.
+func (r HTTP) validate() error {
 	if r.IsEmpty() {
 		return nil
 	}
@@ -795,10 +795,10 @@ func (r RoutingRuleConfigOrBool) validate() error {
 		return nil
 	}
 
-	return r.RoutingRuleConfiguration.validate()
+	return r.HTTP.validate()
 }
 
-// validate returns nil if RoutingRuleConfiguration is configured correctly.
+// validate returns nil if HTTP is configured correctly.
 func (r RoutingRule) validate() error {
 	if r.Path == nil {
 		return &errFieldMustBeSpecified{
@@ -1819,7 +1819,7 @@ func (s Secret) validate() error {
 type validateExposedPortsOpts struct {
 	mainContainerName string
 	mainContainerPort *uint16
-	alb               *RoutingRuleConfiguration
+	alb               *HTTP
 	nlb               *NetworkLoadBalancerConfiguration
 	sidecarConfig     map[string]*SidecarConfig
 }

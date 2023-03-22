@@ -27,7 +27,7 @@ type BackendService struct {
 type BackendServiceConfig struct {
 	ImageConfig      ImageWithHealthcheckAndOptionalPort `yaml:"image,flow"`
 	ImageOverride    `yaml:",inline"`
-	RoutingRule      RoutingRuleConfiguration `yaml:"http,flow"`
+	RoutingRule      HTTP `yaml:"http,flow"`
 	TaskConfig       `yaml:",inline"`
 	Logging          Logging                   `yaml:"logging,flow"`
 	Sidecars         map[string]*SidecarConfig `yaml:"sidecars"` // NOTE: keep the pointers because `mergo` doesn't automatically deep merge map's value unless it's a pointer type.

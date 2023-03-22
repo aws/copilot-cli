@@ -153,7 +153,7 @@ func TestApplyEnv_Int64(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			initial := LoadBalancedWebServiceConfig{
 				RoutingRule: RoutingRuleConfigOrBool{
-					RoutingRuleConfiguration: RoutingRuleConfiguration{
+					HTTP: HTTP{
 						Main: RoutingRule{
 							HealthCheck: HealthCheckArgsOrString{
 								AdvancedToUnion[string](HTTPHealthCheckArgs{
@@ -166,7 +166,7 @@ func TestApplyEnv_Int64(t *testing.T) {
 			}
 			override := LoadBalancedWebServiceConfig{
 				RoutingRule: RoutingRuleConfigOrBool{
-					RoutingRuleConfiguration: RoutingRuleConfiguration{
+					HTTP: HTTP{
 						Main: RoutingRule{
 							HealthCheck: HealthCheckArgsOrString{
 								AdvancedToUnion[string](HTTPHealthCheckArgs{
@@ -179,7 +179,7 @@ func TestApplyEnv_Int64(t *testing.T) {
 			}
 			expected := LoadBalancedWebServiceConfig{
 				RoutingRule: RoutingRuleConfigOrBool{
-					RoutingRuleConfiguration: RoutingRuleConfiguration{
+					HTTP: HTTP{
 						Main: RoutingRule{
 							HealthCheck: HealthCheckArgsOrString{
 								AdvancedToUnion[string](HTTPHealthCheckArgs{

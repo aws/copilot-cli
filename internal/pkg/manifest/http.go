@@ -14,7 +14,7 @@ import (
 
 // RoutingRuleConfigOrBool holds advanced configuration for routing rule or a boolean switch.
 type RoutingRuleConfigOrBool struct {
-	RoutingRuleConfiguration
+	HTTP
 	Enabled *bool
 }
 
@@ -26,7 +26,7 @@ func (r *RoutingRuleConfigOrBool) Disabled() bool {
 // UnmarshalYAML implements the yaml(v3) interface. It allows https routing rule to be specified as a
 // bool or a struct alternately.
 func (r *RoutingRuleConfigOrBool) UnmarshalYAML(value *yaml.Node) error {
-	if err := value.Decode(&r.RoutingRuleConfiguration); err != nil {
+	if err := value.Decode(&r.HTTP); err != nil {
 		switch err.(type) {
 		case *yaml.TypeError:
 			break
@@ -35,8 +35,8 @@ func (r *RoutingRuleConfigOrBool) UnmarshalYAML(value *yaml.Node) error {
 		}
 	}
 
-	if !r.RoutingRuleConfiguration.IsEmpty() {
-		// Unmarshalled successfully to r.RoutingRuleConfiguration, unset r.Enabled, and return.
+	if !r.HTTP.IsEmpty() {
+		// Unmarshalled successfully to r.HTTP, unset r.Enabled, and return.
 		r.Enabled = nil
 		// this assignment lets us treat the main listener rule and additional listener rules equally
 		// because we eliminate the need for TargetContainerCamelCase by assigning its value to TargetContainer.
@@ -53,23 +53,23 @@ func (r *RoutingRuleConfigOrBool) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
-// RoutingRuleConfiguration holds options for application load balancer.
-type RoutingRuleConfiguration struct {
+// HTTP holds options for application load balancer.
+type HTTP struct {
 	Main                     RoutingRule   `yaml:",inline"`
 	TargetContainerCamelCase *string       `yaml:"targetContainer"` // Deprecated. Maintained for backwards compatibility, use [RoutingRule.TargetContainer] instead.
 	AdditionalRoutingRules   []RoutingRule `yaml:"additional_rules"`
 }
 
 // RoutingRules returns main as well as additional routing rules as a list of RoutingRule.
-func (cfg RoutingRuleConfiguration) RoutingRules() []RoutingRule {
+func (cfg HTTP) RoutingRules() []RoutingRule {
 	if cfg.Main.IsEmpty() {
 		return nil
 	}
 	return append([]RoutingRule{cfg.Main}, cfg.AdditionalRoutingRules...)
 }
 
-// IsEmpty returns true if RoutingRuleConfiguration has empty configuration.
-func (r *RoutingRuleConfiguration) IsEmpty() bool {
+// IsEmpty returns true if HTTP has empty configuration.
+func (r *HTTP) IsEmpty() bool {
 	return r.Main.IsEmpty() && r.TargetContainerCamelCase == nil && len(r.AdditionalRoutingRules) == 0
 }
 

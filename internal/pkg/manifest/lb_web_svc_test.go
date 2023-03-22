@@ -53,7 +53,7 @@ func TestNewHTTPLoadBalancedWebService(t *testing.T) {
 						},
 					},
 					RoutingRule: RoutingRuleConfigOrBool{
-						RoutingRuleConfiguration: RoutingRuleConfiguration{
+						HTTP: HTTP{
 							Main: RoutingRule{
 								Path: stringP("/"),
 								HealthCheck: HealthCheckArgsOrString{
@@ -129,7 +129,7 @@ func TestNewHTTPLoadBalancedWebService(t *testing.T) {
 						},
 					},
 					RoutingRule: RoutingRuleConfigOrBool{
-						RoutingRuleConfiguration: RoutingRuleConfiguration{
+						HTTP: HTTP{
 							Main: RoutingRule{
 								Path:            stringP("/"),
 								ProtocolVersion: aws.String("gRPC"),
@@ -279,7 +279,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						},
 					},
 					RoutingRule: RoutingRuleConfigOrBool{
-						RoutingRuleConfiguration: RoutingRuleConfiguration{
+						HTTP: HTTP{
 							Main: RoutingRule{
 								Path: aws.String("/awards/*"),
 								HealthCheck: HealthCheckArgsOrString{
@@ -349,7 +349,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						},
 					},
 					RoutingRule: RoutingRuleConfigOrBool{
-						RoutingRuleConfiguration: RoutingRuleConfiguration{
+						HTTP: HTTP{
 							Main: RoutingRule{
 								Path: aws.String("/awards/*"),
 								HealthCheck: HealthCheckArgsOrString{
@@ -419,7 +419,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						},
 					},
 					RoutingRule: RoutingRuleConfigOrBool{
-						RoutingRuleConfiguration: RoutingRuleConfiguration{
+						HTTP: HTTP{
 							Main: RoutingRule{
 								Path: aws.String("/awards/*"),
 								HealthCheck: HealthCheckArgsOrString{
@@ -534,7 +534,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							},
 						},
 						RoutingRule: RoutingRuleConfigOrBool{
-							RoutingRuleConfiguration: RoutingRuleConfiguration{
+							HTTP: HTTP{
 								Main: RoutingRule{
 									TargetContainer: aws.String("xray"),
 								},
@@ -643,7 +643,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						},
 					},
 					RoutingRule: RoutingRuleConfigOrBool{
-						RoutingRuleConfiguration: RoutingRuleConfiguration{
+						HTTP: HTTP{
 							Main: RoutingRule{
 								Path: aws.String("/awards/*"),
 								HealthCheck: HealthCheckArgsOrString{
@@ -1418,7 +1418,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					RoutingRule: RoutingRuleConfigOrBool{
-						RoutingRuleConfiguration: RoutingRuleConfiguration{
+						HTTP: HTTP{
 							Main: RoutingRule{
 								HealthCheck: HealthCheckArgsOrString{
 									Union: BasicToUnion[string, HTTPHealthCheckArgs]("path"),
@@ -1431,7 +1431,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 				Environments: map[string]*LoadBalancedWebServiceConfig{
 					"prod-iad": {
 						RoutingRule: RoutingRuleConfigOrBool{
-							RoutingRuleConfiguration: RoutingRuleConfiguration{
+							HTTP: HTTP{
 								Main: RoutingRule{
 									AllowedSourceIps: []IPNet{mockIPNet2},
 								},
@@ -1449,7 +1449,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					RoutingRule: RoutingRuleConfigOrBool{
-						RoutingRuleConfiguration: RoutingRuleConfiguration{
+						HTTP: HTTP{
 							Main: RoutingRule{
 								HealthCheck: HealthCheckArgsOrString{
 									Union: BasicToUnion[string, HTTPHealthCheckArgs]("path"),
@@ -1469,7 +1469,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					RoutingRule: RoutingRuleConfigOrBool{
-						RoutingRuleConfiguration: RoutingRuleConfiguration{
+						HTTP: HTTP{
 							Main: RoutingRule{
 								HealthCheck: HealthCheckArgsOrString{
 									Union: BasicToUnion[string, HTTPHealthCheckArgs]("path"),
@@ -1482,7 +1482,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 				Environments: map[string]*LoadBalancedWebServiceConfig{
 					"prod-iad": {
 						RoutingRule: RoutingRuleConfigOrBool{
-							RoutingRuleConfiguration: RoutingRuleConfiguration{
+							HTTP: HTTP{
 								Main: RoutingRule{
 									HealthCheck: HealthCheckArgsOrString{
 										Union: BasicToUnion[string, HTTPHealthCheckArgs]("another-path"),
@@ -1502,7 +1502,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					RoutingRule: RoutingRuleConfigOrBool{
-						RoutingRuleConfiguration: RoutingRuleConfiguration{
+						HTTP: HTTP{
 							Main: RoutingRule{
 								HealthCheck: HealthCheckArgsOrString{
 									Union: BasicToUnion[string, HTTPHealthCheckArgs]("another-path"),
@@ -1522,7 +1522,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					RoutingRule: RoutingRuleConfigOrBool{
-						RoutingRuleConfiguration: RoutingRuleConfiguration{
+						HTTP: HTTP{
 							Main: RoutingRule{
 								HealthCheck: HealthCheckArgsOrString{
 									Union: BasicToUnion[string, HTTPHealthCheckArgs]("path"),
@@ -1535,7 +1535,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 				Environments: map[string]*LoadBalancedWebServiceConfig{
 					"prod-iad": {
 						RoutingRule: RoutingRuleConfigOrBool{
-							RoutingRuleConfiguration: RoutingRuleConfiguration{
+							HTTP: HTTP{
 								Main: RoutingRule{
 									HealthCheck: HealthCheckArgsOrString{
 										Union: BasicToUnion[string, HTTPHealthCheckArgs]("another-path"),
@@ -1556,7 +1556,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					RoutingRule: RoutingRuleConfigOrBool{
-						RoutingRuleConfiguration: RoutingRuleConfiguration{
+						HTTP: HTTP{
 							Main: RoutingRule{
 								HealthCheck: HealthCheckArgsOrString{
 									Union: BasicToUnion[string, HTTPHealthCheckArgs]("another-path"),
@@ -1791,7 +1791,7 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 						},
 					},
 					RoutingRule: RoutingRuleConfigOrBool{
-						RoutingRuleConfiguration: RoutingRuleConfiguration{
+						HTTP: HTTP{
 							Main: RoutingRule{
 								Path:            aws.String("/"),
 								TargetContainer: aws.String("xray"),
@@ -1846,7 +1846,7 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 						},
 					},
 					RoutingRule: RoutingRuleConfigOrBool{
-						RoutingRuleConfiguration: RoutingRuleConfiguration{
+						HTTP: HTTP{
 							Main: RoutingRule{
 								Path:       aws.String("/"),
 								TargetPort: aws.Uint16(81),
@@ -1900,7 +1900,7 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 						},
 					},
 					RoutingRule: RoutingRuleConfigOrBool{
-						RoutingRuleConfiguration: RoutingRuleConfiguration{
+						HTTP: HTTP{
 							Main: RoutingRule{
 								Path:            aws.String("/"),
 								TargetContainer: aws.String("frontend"),
@@ -1955,7 +1955,7 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 						},
 					},
 					RoutingRule: RoutingRuleConfigOrBool{
-						RoutingRuleConfiguration: RoutingRuleConfiguration{
+						HTTP: HTTP{
 							Main: RoutingRule{
 								Path:            aws.String("/"),
 								TargetContainer: aws.String("xray"),
@@ -2003,7 +2003,7 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 						},
 					},
 					RoutingRule: RoutingRuleConfigOrBool{
-						RoutingRuleConfiguration: RoutingRuleConfiguration{
+						HTTP: HTTP{
 							Main: RoutingRule{
 								Path:       aws.String("/"),
 								TargetPort: aws.Uint16(81),
@@ -2052,7 +2052,7 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 						},
 					},
 					RoutingRule: RoutingRuleConfigOrBool{
-						RoutingRuleConfiguration: RoutingRuleConfiguration{
+						HTTP: HTTP{
 							Main: RoutingRule{
 								Path:       aws.String("/"),
 								TargetPort: aws.Uint16(80),
@@ -2101,7 +2101,7 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 						},
 					},
 					RoutingRule: RoutingRuleConfigOrBool{
-						RoutingRuleConfiguration: RoutingRuleConfiguration{
+						HTTP: HTTP{
 							Main: RoutingRule{
 								Path:       aws.String("/"),
 								TargetPort: aws.Uint16(80),
@@ -2171,7 +2171,7 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 						},
 					},
 					RoutingRule: RoutingRuleConfigOrBool{
-						RoutingRuleConfiguration: RoutingRuleConfiguration{
+						HTTP: HTTP{
 							Main: RoutingRule{
 								Path:       aws.String("/"),
 								TargetPort: aws.Uint16(80),
@@ -2236,7 +2236,7 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 						},
 					},
 					RoutingRule: RoutingRuleConfigOrBool{
-						RoutingRuleConfiguration: RoutingRuleConfiguration{
+						HTTP: HTTP{
 							Main: RoutingRule{
 								Path:       aws.String("/"),
 								TargetPort: aws.Uint16(80),
@@ -2328,7 +2328,7 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 						},
 					},
 					RoutingRule: RoutingRuleConfigOrBool{
-						RoutingRuleConfiguration: RoutingRuleConfiguration{
+						HTTP: HTTP{
 							Main: RoutingRule{
 								Path:       aws.String("/"),
 								TargetPort: aws.Uint16(81),
@@ -2388,7 +2388,7 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 						},
 					},
 					RoutingRule: RoutingRuleConfigOrBool{
-						RoutingRuleConfiguration: RoutingRuleConfiguration{
+						HTTP: HTTP{
 							Main: RoutingRule{
 								TargetPort: aws.Uint16(81),
 							},
@@ -2507,7 +2507,7 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 						},
 					},
 					RoutingRule: RoutingRuleConfigOrBool{
-						RoutingRuleConfiguration: RoutingRuleConfiguration{
+						HTTP: HTTP{
 							Main: RoutingRule{
 								Path:       aws.String("/"),
 								TargetPort: aws.Uint16(8080),
@@ -2562,7 +2562,7 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 						},
 					},
 					RoutingRule: RoutingRuleConfigOrBool{
-						RoutingRuleConfiguration: RoutingRuleConfiguration{
+						HTTP: HTTP{
 							Main: RoutingRule{
 								Path:       aws.String("/"),
 								TargetPort: aws.Uint16(8081),

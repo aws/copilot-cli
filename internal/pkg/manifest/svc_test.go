@@ -115,7 +115,7 @@ environments:
 							}, Port: aws.Uint16(80)},
 						},
 						RoutingRule: RoutingRuleConfigOrBool{
-							RoutingRuleConfiguration: RoutingRuleConfiguration{
+							HTTP: HTTP{
 								Main: RoutingRule{
 									Alias: Alias{
 										AdvancedAliases: []AdvancedAlias{},

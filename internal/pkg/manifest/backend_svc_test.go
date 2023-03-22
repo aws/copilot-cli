@@ -211,7 +211,7 @@ func TestBackendService_RequiredEnvironmentFeatures(t *testing.T) {
 		},
 		"internal alb feature required": {
 			mft: func(svc *BackendService) {
-				svc.RoutingRule = RoutingRuleConfiguration{
+				svc.RoutingRule = HTTP{
 					Main: RoutingRule{
 						Path: aws.String("/mock_path"),
 					},
@@ -1011,7 +1011,7 @@ func TestBackendService_ExposedPorts(t *testing.T) {
 				},
 				BackendServiceConfig: BackendServiceConfig{
 					ImageConfig: ImageWithHealthcheckAndOptionalPort{},
-					RoutingRule: RoutingRuleConfiguration{
+					RoutingRule: HTTP{
 						Main: RoutingRule{
 							TargetPort: aws.Uint16(81),
 						},
@@ -1056,7 +1056,7 @@ func TestBackendService_ExposedPorts(t *testing.T) {
 							Port: aws.Uint16(80),
 						},
 					},
-					RoutingRule: RoutingRuleConfiguration{
+					RoutingRule: HTTP{
 						Main: RoutingRule{
 							TargetPort: aws.Uint16(81),
 						},
@@ -1107,7 +1107,7 @@ func TestBackendService_ExposedPorts(t *testing.T) {
 							Port: aws.Uint16(80),
 						},
 					},
-					RoutingRule: RoutingRuleConfiguration{
+					RoutingRule: HTTP{
 						Main: RoutingRule{
 							TargetContainer: aws.String("frontend"),
 							TargetPort:      aws.Uint16(81),
@@ -1159,7 +1159,7 @@ func TestBackendService_ExposedPorts(t *testing.T) {
 							Port: aws.Uint16(80),
 						},
 					},
-					RoutingRule: RoutingRuleConfiguration{
+					RoutingRule: HTTP{
 						Main: RoutingRule{
 							TargetContainer: aws.String("xray"),
 							TargetPort:      aws.Uint16(81),

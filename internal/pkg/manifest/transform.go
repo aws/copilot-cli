@@ -523,12 +523,12 @@ func (t routingRuleConfigOrBoolTransformer) Transformer(typ reflect.Type) func(d
 	return func(dst, src reflect.Value) error {
 		dstStruct, srcStruct := dst.Interface().(RoutingRuleConfigOrBool), src.Interface().(RoutingRuleConfigOrBool)
 
-		if !srcStruct.RoutingRuleConfiguration.IsEmpty() {
+		if !srcStruct.HTTP.IsEmpty() {
 			dstStruct.Enabled = nil
 		}
 
 		if srcStruct.Enabled != nil {
-			dstStruct.RoutingRuleConfiguration = RoutingRuleConfiguration{}
+			dstStruct.HTTP = HTTP{}
 		}
 
 		if dst.CanSet() { // For extra safety to prevent panicking.

@@ -108,7 +108,7 @@ func NewLoadBalancedWebService(props *LoadBalancedWebServiceProps) *LoadBalanced
 func newDefaultHTTPLoadBalancedWebService() *LoadBalancedWebService {
 	lbws := newDefaultLoadBalancedWebService()
 	lbws.RoutingRule = RoutingRuleConfigOrBool{
-		RoutingRuleConfiguration: RoutingRuleConfiguration{
+		HTTP: HTTP{
 			Main: RoutingRule{
 				HealthCheck: HealthCheckArgsOrString{
 					Union: BasicToUnion[string, HTTPHealthCheckArgs](DefaultHealthCheckPath),

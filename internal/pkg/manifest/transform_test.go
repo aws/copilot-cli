@@ -1189,14 +1189,14 @@ func TestRoutingRuleConfigOrBoolTransformer_Transformer(t *testing.T) {
 				r.Enabled = aws.Bool(true)
 			},
 			override: func(r *RoutingRuleConfigOrBool) {
-				r.RoutingRuleConfiguration = RoutingRuleConfiguration{
+				r.HTTP = HTTP{
 					Main: RoutingRule{
 						Path: aws.String("mockPath"),
 					},
 				}
 			},
 			wanted: func(r *RoutingRuleConfigOrBool) {
-				r.RoutingRuleConfiguration = RoutingRuleConfiguration{
+				r.HTTP = HTTP{
 					Main: RoutingRule{
 						Path: aws.String("mockPath"),
 					},
@@ -1205,7 +1205,7 @@ func TestRoutingRuleConfigOrBoolTransformer_Transformer(t *testing.T) {
 		},
 		"config set to empty if bool is not nil": {
 			original: func(r *RoutingRuleConfigOrBool) {
-				r.RoutingRuleConfiguration = RoutingRuleConfiguration{
+				r.HTTP = HTTP{
 					Main: RoutingRule{
 						Path: aws.String("mockPath"),
 					},
