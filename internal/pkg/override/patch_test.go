@@ -413,6 +413,18 @@ a:
   value: val`,
 			expectedErr: `unable to apply "add" patch: key "/a/b": expected index in sequence, got "e"`,
 		},
+		"error invalid index sequence - in middle of path": {
+			yaml: `
+a:
+  b:
+    - key: abcd
+    - key: efgh`,
+			overrides: `
+- op: add
+  path: /a/b/-/key
+  value: val`,
+			expectedErr: `unable to apply "add" patch: key "/a/b": expected index in sequence, got "-"`,
+		},
 		"error targeting scalar while following path": {
 			yaml: `
 a:
