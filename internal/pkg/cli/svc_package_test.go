@@ -400,7 +400,11 @@ count: 1`
 			err := opts.Execute()
 
 			// THEN
-			require.EqualError(t, err, tc.wantedErr.Error())
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.NoError(t, err)
+			}
 			require.Equal(t, stackBuf.String(), tc.wantedStack)
 			require.Equal(t, paramsBuf.String(), tc.wantedParams)
 			require.Equal(t, addonsBuf.String(), tc.wantedAddons)
