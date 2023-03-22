@@ -5,13 +5,13 @@ package diff
 
 import "gopkg.in/yaml.v3"
 
-type overrider interface {
-	match(from, to *yaml.Node, key string) bool
-	parse(from, to *yaml.Node, key string) (diffNode, error)
+type Overrider interface {
+	Match(from, to *yaml.Node, key string) bool
+	Parse(from, to *yaml.Node, key string) (diffNode, error)
 }
 
-// CFNOverrider returns an overrider that handles special behaviors when parsing the diff tree of two CFN documents written in YAML.
-func CFNOverrider() overrider {
+// CFNOverrider returns an Overrider that handles special behaviors when parsing the diff tree of two CFN documents written in YAML.
+func CFNOverrider() Overrider {
 	// return &noneOverrider{}
 	return &ignorer{
 		curr: &ignoreSegment{
@@ -32,7 +32,8 @@ type ignorer struct {
 	curr *ignoreSegment
 }
 
-func (m *ignorer) match(_, _ *yaml.Node, key string) bool {
+// Match returns true if the difference between the from and to at the key should be ignored.
+func (m *ignorer) Match(_, _ *yaml.Node, key string) bool {
 	if key != m.curr.key {
 		return false
 	}
@@ -43,15 +44,19 @@ func (m *ignorer) match(_, _ *yaml.Node, key string) bool {
 	return false
 }
 
-func (m *ignorer) parse(from, to *yaml.Node, key string) (diffNode, error) {
+// Parse is a no-op for an ignorer.
+func (m *ignorer) Parse(_, _ *yaml.Node, _ string) (diffNode, error) {
 	return nil, nil
 }
 
 type noneOverrider struct{}
 
-func (_ *noneOverrider) match(_, _ *yaml.Node, _ string) bool {
+// Match always returns false for a noneOverrider.
+func (_ *noneOverrider) Match(_, _ *yaml.Node, _ string) bool {
 	return false
 }
-func (m *noneOverrider) parse(_, _ *yaml.Node, _ string) (diffNode, error) {
+
+// Parse is a no-op for a noneOverrider.
+func (m *noneOverrider) Parse(_, _ *yaml.Node, _ string) (diffNode, error) {
 	return nil, nil
 }

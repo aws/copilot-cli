@@ -223,7 +223,7 @@ func Test_Integration_Parse_Write_WithOverride(t *testing.T) {
 	testCases := map[string]struct {
 		curr      string
 		old       string
-		overrider overrider
+		overrider Overrider
 		wanted    string
 	}{
 		"no override": {

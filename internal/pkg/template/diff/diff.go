@@ -87,7 +87,7 @@ type seqItemNode struct {
 type From []byte
 
 // Parse constructs a diff tree that represent the differences of a YAML document against the From document.
-func (from From) Parse(to []byte, overrider overrider) (Tree, error) {
+func (from From) Parse(to []byte, overrider Overrider) (Tree, error) {
 	var toNode, fromNode yaml.Node
 	if err := yaml.Unmarshal(to, &toNode); err != nil {
 		return Tree{}, fmt.Errorf("unmarshal current template: %w", err)
@@ -120,9 +120,9 @@ func (from From) Parse(to []byte, overrider overrider) (Tree, error) {
 
 }
 
-func parse(from, to *yaml.Node, key string, overrider overrider) (diffNode, error) {
-	if overrider.match(from, to, key) {
-		return overrider.parse(from, to, key)
+func parse(from, to *yaml.Node, key string, overrider Overrider) (diffNode, error) {
+	if overrider.Match(from, to, key) {
+		return overrider.Parse(from, to, key)
 	}
 	// Handle base cases.
 	if to == nil || from == nil || to.Kind != from.Kind {
@@ -171,7 +171,7 @@ func isYAMLLeaf(node *yaml.Node) bool {
 	return len(node.Content) == 0
 }
 
-func parseSequence(fromNode, toNode *yaml.Node, overrider overrider) ([]diffNode, error) {
+func parseSequence(fromNode, toNode *yaml.Node, overrider Overrider) ([]diffNode, error) {
 	fromSeq, toSeq := make([]yaml.Node, len(fromNode.Content)), make([]yaml.Node, len(toNode.Content)) // NOTE: should be the same as calling `Decode`.
 	for idx, v := range fromNode.Content {
 		fromSeq[idx] = *v
@@ -242,7 +242,7 @@ func parseSequence(fromNode, toNode *yaml.Node, overrider overrider) ([]diffNode
 	return children, nil
 }
 
-func parseMap(from, to *yaml.Node, overrider overrider) ([]diffNode, error) {
+func parseMap(from, to *yaml.Node, overrider Overrider) ([]diffNode, error) {
 	currMap, oldMap := make(map[string]yaml.Node), make(map[string]yaml.Node)
 	if err := to.Decode(currMap); err != nil {
 		return nil, err
