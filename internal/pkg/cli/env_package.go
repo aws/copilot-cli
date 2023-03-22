@@ -66,6 +66,7 @@ type packageEnvOpts struct {
 	tplWriter    io.WriteCloser
 	paramsWriter io.WriteCloser
 	addonsWriter io.WriteCloser
+	diffWriter   io.Writer
 
 	newInterpolator func(appName, envName string) interpolator
 	newEnvPackager  func() (envPackager, error)
@@ -100,6 +101,7 @@ func newPackageEnvOpts(vars packageEnvVars) (*packageEnvOpts, error) {
 		tplWriter:    os.Stdout,
 		paramsWriter: discardFile{},
 		addonsWriter: discardFile{},
+		diffWriter:   os.Stdout,
 
 		newInterpolator: func(appName, envName string) interpolator {
 			return manifest.NewInterpolator(appName, envName)
@@ -196,6 +198,9 @@ func (o *packageEnvOpts) Execute() error {
 	})
 	if err != nil {
 		return fmt.Errorf("generate CloudFormation template from environment %q manifest: %v", o.envName, err)
+	}
+	if o.showDiff {
+		return diff(packager, res.Template, o.diffWriter)
 	}
 	addonsTemplate, err := packager.AddonsTemplate()
 	if err != nil {
