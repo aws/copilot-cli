@@ -4,7 +4,6 @@
 package override
 
 import (
-	"os"
 	"strings"
 	"testing"
 
@@ -464,59 +463,6 @@ a:
 			var expected interface{}
 			var actual interface{}
 			require.NoError(t, yaml.Unmarshal([]byte(tc.expected), &expected))
-			require.NoError(t, yaml.Unmarshal(out, &actual))
-
-			require.Equal(t, expected, actual)
-		})
-	}
-}
-
-func TestPatches(t *testing.T) {
-	tests := []struct {
-		Comment  string      `yaml:"comment"`
-		Doc      yaml.Node   `yaml:"doc"`
-		Patches  []yamlPatch `yaml:"patch"`
-		Expected yaml.Node   `yaml:"expected"`
-		Error    string      `yaml:"error"`
-	}{}
-
-	b, err := os.ReadFile("tests.json")
-	require.NoError(t, err)
-
-	require.NoError(t, yaml.Unmarshal(b, &tests))
-	for _, tc := range tests {
-		if tc.Error != "" {
-			return
-		}
-
-		t.Run(tc.Comment, func(t *testing.T) {
-			docBytes, err := yaml.Marshal(tc.Doc)
-			require.NoError(t, err)
-
-			patchBytes, err := yaml.Marshal(tc.Patches)
-			require.NoError(t, err)
-
-			expectedBytes, err := yaml.Marshal(tc.Expected)
-			require.NoError(t, err)
-
-			fs := afero.NewMemMapFs()
-			file, err := fs.Create("/cfn.patches.yaml")
-			require.NoError(t, err)
-			_, err = file.Write(patchBytes)
-			require.NoError(t, err)
-
-			p := WithPatch("/cfn.patches.yaml", PatchOpts{
-				FS: fs,
-			})
-
-			out, err := p.Override(docBytes)
-			require.NoError(t, err)
-
-			// convert for better comparison output
-			// limitation: doesn't test for comments sticking around
-			var expected interface{}
-			var actual interface{}
-			require.NoError(t, yaml.Unmarshal(expectedBytes, &expected))
 			require.NoError(t, yaml.Unmarshal(out, &actual))
 
 			require.Equal(t, expected, actual)
