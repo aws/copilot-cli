@@ -366,11 +366,12 @@ func (d *workloadDeployer) uploadContainerImages(out *UploadArtifactsOutput) err
 		return nil
 	}
 	out.ImageDigests = make(map[string]ContainerImageIdentifier, len(buildArgsPerContainer))
-	if err := loginToDockerClient(d.repository); err != nil {
-		return err
+	dockerCmdClient := dockerengine.New(exec.NewCmd())
+	if err := d.repository.Login(dockerCmdClient); err != nil {
+		return fmt.Errorf("login to docker: %w", err)
 	}
 	for name, buildArgs := range buildArgsPerContainer {
-		digest, err := d.repository.BuildAndPush(dockerengine.New(exec.NewCmd()), buildArgs)
+		digest, err := d.repository.BuildAndPush(dockerCmdClient, buildArgs)
 		if err != nil {
 			return fmt.Errorf("build and push image: %w", err)
 		}
@@ -379,15 +380,6 @@ func (d *workloadDeployer) uploadContainerImages(out *UploadArtifactsOutput) err
 			CustomTag:         d.image.CustomTag,
 			GitShortCommitTag: d.image.GitShortCommitTag,
 		}
-	}
-	return nil
-}
-
-// loginToDockerClient logs in to the Docker client using the provided RepositoryService.
-// Returns an error if any error occurs during the login process.
-func loginToDockerClient(rs repositoryService) error {
-	if err := rs.Login(dockerengine.New(exec.NewCmd())); err != nil {
-		return fmt.Errorf("login to docker: %w", err)
 	}
 	return nil
 }

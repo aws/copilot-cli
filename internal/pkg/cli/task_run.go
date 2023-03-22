@@ -960,10 +960,11 @@ func (o *runTaskOpts) buildAndPushImage() error {
 	if o.dockerfileContextPath != "" {
 		ctx = o.dockerfileContextPath
 	}
-	if err := o.repository.Login(dockerengine.New(exec.NewCmd())); err != nil {
+	dockerCmdClient := dockerengine.New(exec.NewCmd())
+	if err := o.repository.Login(dockerCmdClient); err != nil {
 		return err
 	}
-	if _, err := o.repository.BuildAndPush(dockerengine.New(exec.NewCmd()), &dockerengine.BuildArguments{
+	if _, err := o.repository.BuildAndPush(dockerCmdClient, &dockerengine.BuildArguments{
 		Dockerfile: o.dockerfilePath,
 		Context:    ctx,
 		Tags:       append([]string{imageTagLatest}, additionalTags...),
