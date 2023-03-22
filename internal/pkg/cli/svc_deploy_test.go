@@ -240,7 +240,7 @@ func TestSvcDeployOpts_Execute(t *testing.T) {
 				m.mockDeployer.EXPECT().GenerateCloudFormationTemplate(gomock.Any()).Return(&clideploy.GenerateCloudFormationTemplateOutput{}, nil)
 				m.mockDeployer.EXPECT().DeployDiff(gomock.Any()).Return("", errors.New("some error"))
 			},
-			wantedError: errors.New("generate diff: some error"),
+			wantedError: errors.New("some error"),
 		},
 		"write 'no changes' if there is no diff": {
 			inShowDiff: true,
