@@ -149,6 +149,87 @@ func TestCDK_Override(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, "sample cloudformation template\n", string(out))
 	})
+	t.Run("should return the transformed document with CDK metadata stripped and description updated", func(t *testing.T) {
+		buf := new(strings.Builder)
+		cdk := WithCDK("", CDKOpts{
+			ExecWriter: buf,
+			FS:         afero.NewMemMapFs(),
+			LookPathFn: func(file string) (string, error) {
+				return "/bin/npm", nil
+			},
+			CommandFn: func(name string, args ...string) *exec.Cmd {
+				return exec.Command("echo", `
+Description: CloudFormation template that represents a load balanced web service on Amazon ECS.
+AWSTemplateFormatVersion: "2010-09-09"
+Metadata:
+  Manifest: |
+    name: admin
+    type: Load Balanced Web Service
+Parameters:
+  AppName:
+    Type: String
+  BootstrapVersion:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /cdk-bootstrap/hnb659fds/version
+    Description: Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]
+Conditions:
+  HasAddons:
+    Fn::Not:
+      - Fn::Equals:
+          - Ref: AddonsTemplateURL
+          - ""
+Resources:
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+Outputs:
+  DiscoveryServiceARN:
+    Description: ARN of the Discovery Service.
+Rules:
+  CheckBootstrapVersion:
+    Assertions:
+      - Assert:
+          Fn::Not:
+            - Fn::Contains:
+                - - "1"
+                  - "2"
+                  - "3"
+                  - "4"
+                  - "5"
+                - Ref: BootstrapVersion
+        AssertDescription: CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI.
+`)
+			},
+		})
+
+		// WHEN
+		out, err := cdk.Override(nil)
+
+		// THEN
+		require.NoError(t, err)
+
+		require.Equal(t, `AWSTemplateFormatVersion: "2010-09-09"
+Description: CloudFormation template that represents a load balanced web service on Amazon ECS using AWS Copilot and CDK.
+Metadata:
+  Manifest: |
+    name: admin
+    type: Load Balanced Web Service
+Parameters:
+  AppName:
+    Type: String
+Conditions:
+  HasAddons:
+    Fn::Not:
+      - Fn::Equals:
+          - Ref: AddonsTemplateURL
+          - ""
+Resources:
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+Outputs:
+  DiscoveryServiceARN:
+    Description: ARN of the Discovery Service.
+`, string(out))
+	})
 }
 
 func TestScaffoldWithCDK(t *testing.T) {
