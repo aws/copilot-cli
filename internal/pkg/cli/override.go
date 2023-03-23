@@ -104,7 +104,7 @@ func (o *overrideOpts) Execute() error {
 		}
 		log.Successf("Created a new CDK application at %q to override resources\n", displayPath(dir))
 	case yamlPatch:
-		if err := override.ScaffoldWithYAMLPatch(o.fs, dir); err != nil {
+		if err := override.ScaffoldWithPatch(o.fs, dir); err != nil {
 			return fmt.Errorf("scaffold CFN YAML patches under %q: %v", dir, err)
 		}
 		log.Successf("Created a YAML patch file under %q to override resources\n", displayPath(dir))

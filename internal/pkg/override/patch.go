@@ -15,7 +15,7 @@ import (
 
 const jsonPointerSeparator = "/"
 
-func ScaffoldWithYAMLPatch(fs afero.Fs, dir string) error {
+func ScaffoldWithPatch(fs afero.Fs, dir string) error {
 	// If the directory does not exist, [afero.IsEmpty] returns false and an error.
 	// Therefore, we only want to check if a directory is empty only if it also exists.
 	exists, _ := afero.Exists(fs, dir)

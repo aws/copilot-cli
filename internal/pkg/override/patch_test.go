@@ -4,6 +4,8 @@
 package override
 
 import (
+	"fmt"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -12,7 +14,33 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func TestPatch(t *testing.T) {
+func TestScaffoldWithPatch(t *testing.T) {
+	t.Run("scaffolds files in an empty directory", func(t *testing.T) {
+		fs := afero.NewMemMapFs()
+		dir := filepath.Join("copilot", "frontend", "overrides")
+
+		err := ScaffoldWithPatch(fs, dir)
+		require.NoError(t, err)
+
+		ok, _ := afero.Exists(fs, filepath.Join(dir, "README.md"))
+		require.True(t, ok, "README.md should exist")
+
+		ok, _ = afero.Exists(fs, filepath.Join(dir, "cfn.patches.yml"))
+		require.True(t, ok, "cfn.patches.yml should exist")
+	})
+	t.Run("should return an error if the directory is not empty", func(t *testing.T) {
+		fs := afero.NewMemMapFs()
+		dir := filepath.Join("copilot", "frontend", "overrides")
+
+		_ = fs.MkdirAll(dir, 0755)
+		_ = afero.WriteFile(fs, filepath.Join(dir, "random.txt"), []byte("content"), 0644)
+
+		err := ScaffoldWithPatch(fs, dir)
+		require.EqualError(t, err, fmt.Sprintf("directory %q is not empty", dir))
+	})
+}
+
+func TestPatch_Override(t *testing.T) {
 	tests := map[string]struct {
 		yaml        string
 		overrides   string
@@ -367,7 +395,7 @@ key: asdf
 op: add
 path: /
 value: new`,
-			expectedErr: `file at "/cfn.patches.yaml" does not conform to the YAML patch document schema: yaml: unmarshal errors:
+			expectedErr: `file at "/cfn.patches.yml" does not conform to the YAML patch document schema: yaml: unmarshal errors:
   line 1: cannot unmarshal !!map into []override.yamlPatch`,
 		},
 		"error on unsupported operation": {
@@ -497,12 +525,12 @@ a:
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			fs := afero.NewMemMapFs()
-			file, err := fs.Create("/cfn.patches.yaml")
+			file, err := fs.Create("/cfn.patches.yml")
 			require.NoError(t, err)
 			_, err = file.WriteString(strings.TrimSpace(tc.overrides))
 			require.NoError(t, err)
 
-			p := WithPatch("/cfn.patches.yaml", PatchOpts{
+			p := WithPatch("/", PatchOpts{
 				FS: fs,
 			})
 
