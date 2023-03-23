@@ -345,7 +345,7 @@ Dog: (pleased) "ikr"`, t),
 	}
 }
 
-func TestFrom_Parse_CFN(t *testing.T) {
+func TestFrom_ParseWithCFNIgnorer(t *testing.T) {
 	testCases := map[string]struct {
 		curr        string
 		old         string
