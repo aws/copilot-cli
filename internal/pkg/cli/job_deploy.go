@@ -4,6 +4,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -210,7 +211,10 @@ func (o *deployJobOpts) Execute() error {
 			return fmt.Errorf("generate the template for job %q against environment %q: %w", o.name, o.envName, err)
 		}
 		if err := diff(deployer, output.Template, o.diffWriter); err != nil {
-			return err
+			var errNonEmptyDiff errNonEmptyDiff
+			if !errors.Is(err, &errNonEmptyDiff) {
+				return err
+			}
 		}
 		contd, err := o.prompt.Confirm(continueDeploymentPrompt, "")
 		if err != nil {
