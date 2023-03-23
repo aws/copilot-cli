@@ -602,16 +602,16 @@ func diff(differ templateDiffer, tmpl string, writer io.Writer) error {
 	if err != nil {
 		return err
 	}
-	var nonDiff bool
+	var noDiff bool
 	if out == "" {
-		nonDiff = true
+		noDiff = true
 		out = "No changes.\n"
 	}
 	_, err = writer.Write([]byte(out))
 	if err != nil {
 		return err
 	}
-	if nonDiff {
+	if noDiff {
 		return nil
 	}
 	return &errNonEmptyDiff{}
