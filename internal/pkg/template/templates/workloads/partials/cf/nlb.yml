@@ -13,7 +13,7 @@ PublicNetworkLoadBalancer:
 {{- range $i, $listener := .NLB.Listener }}
 NLBListener{{- if ne $i 0 }}{{$i}}{{end}}:
   Metadata:
-    'aws:copilot:description': 'A {{$listener.Protocol}} listener for port {{$listener.Port}} for forwarding traffic to your tasks'
+    'aws:copilot:description': 'A {{$listener.Protocol}} listener on port `{{$listener.Port}}` for forwarding traffic to your tasks'
   Type: AWS::ElasticLoadBalancingV2::Listener
   Properties:
     DefaultActions:
@@ -30,7 +30,7 @@ NLBListener{{- if ne $i 0 }}{{$i}}{{end}}:
 
 NLBTargetGroup{{- if ne $i 0 }}{{$i}}{{end}}:
   Metadata:
-    'aws:copilot:description': 'A target group to connect the network load balancer to your service with port {{$listener.TargetPort}}'
+    'aws:copilot:description': 'A target group to connect the network load balancer to your service on port {{$listener.TargetPort}}'
   Type: AWS::ElasticLoadBalancingV2::TargetGroup
   Properties:
     {{- if $listener.HealthCheck.HealthyThreshold }}

@@ -693,7 +693,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
           Port: !Ref TargetPort
   TargetGroup:
     Metadata:
-      'aws:copilot:description': 'A target group to connect the load balancer to your service with port 8080'
+      'aws:copilot:description': 'A target group to connect the load balancer to your service on port 8080'
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
       HealthCheckPath: / # Default is '/'.
@@ -764,7 +764,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
   
   HTTPListenerRuleWithDomain:
     Metadata:
-      'aws:copilot:description': 'An HTTP listener rule for path / that redirects HTTP to HTTPS'
+      'aws:copilot:description': 'An HTTP listener rule for path `/` that redirects HTTP to HTTPS'
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
     Properties:
       Actions:
@@ -788,7 +788,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
       Priority: !GetAtt HTTPRuleWithDomainPriorityAction.Priority
   HTTPSListenerRule:
     Metadata:
-      'aws:copilot:description': 'An HTTPS listener rule for path / for forwarding HTTPS traffic to your tasks'
+      'aws:copilot:description': 'An HTTPS listener rule for path `/` for forwarding HTTPS traffic to your tasks'
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
     Properties:
       Actions:

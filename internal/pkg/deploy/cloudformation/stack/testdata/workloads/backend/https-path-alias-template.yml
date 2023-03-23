@@ -219,7 +219,7 @@ Resources:
         Fn::ImportValue: !Sub '${AppName}-${EnvName}-ServiceDiscoveryNamespaceID'
   TargetGroup:
     Metadata:
-      'aws:copilot:description': "A target group to connect the load balancer to your service with port 80"
+      'aws:copilot:description': "A target group to connect the load balancer to your service on port 80"
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
       HealthCheckPath: / # Default is '/'.
@@ -321,7 +321,7 @@ Resources:
 
   HTTPListenerRuleWithDomain:
     Metadata:
-      'aws:copilot:description': 'An HTTP listener rule for path https-path-alias-path that redirects HTTP to HTTPS'
+      'aws:copilot:description': 'An HTTP listener rule for path `https-path-alias-path` that redirects HTTP to HTTPS'
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
     Properties:
       Actions:
@@ -346,7 +346,7 @@ Resources:
       Priority: !GetAtt HTTPRuleWithDomainPriorityAction.Priority # Same priority as HTTPS Listener
   HTTPSListenerRule:
     Metadata:
-      'aws:copilot:description': 'An HTTPS listener rule for path https-path-alias-path for forwarding HTTPS traffic to your tasks'
+      'aws:copilot:description': 'An HTTPS listener rule for path `https-path-alias-path` for forwarding HTTPS traffic to your tasks'
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
     Properties:
       Actions:
