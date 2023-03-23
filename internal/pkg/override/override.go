@@ -65,6 +65,11 @@ func (i Info) IsYAMLPatch() bool {
 // If path is a YAML patch document, then IsYAMLPatch evaluates to true.
 // If path is a directory that contains a cdk.json file, then IsCDK evaluates to true.
 func Lookup(path string, fs afero.Fs) (Info, error) {
+	_, err := fs.Stat(path)
+	if err != nil {
+		return Info{}, &ErrNotExist{parent: err}
+	}
+
 	files, err := afero.ReadDir(fs, path)
 	switch {
 	case err != nil:
