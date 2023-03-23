@@ -5,15 +5,15 @@ package diff
 
 import "gopkg.in/yaml.v3"
 
-type Overrider interface {
-	Match(from, to *yaml.Node, key string) bool
-	Parse(from, to *yaml.Node, key string) (diffNode, error)
+// overrider overrides the parsing behavior between two yaml nodes under certain keys.
+type overrider interface {
+	match(from, to *yaml.Node, key string) bool
+	parse(from, to *yaml.Node, key string) (diffNode, error)
 }
 
-// CFNOverrider returns an Overrider that handles special behaviors when parsing the diff tree of two CFN documents written in YAML.
-func CFNOverrider() Overrider {
-	// return &noneOverrider{}
-	return &ignorer{
+// CFNIgnorer returns an ignorer that ignores the diff of some parts of two CFN documents written in YAML.
+func CFNIgnorer() *Ignorer {
+	return &Ignorer{
 		curr: &ignoreSegment{
 			key: "Metadata",
 			next: &ignoreSegment{
@@ -28,12 +28,13 @@ type ignoreSegment struct {
 	next *ignoreSegment
 }
 
-type ignorer struct {
+// Ignorer ignores the diff between two yaml nodes under specified key paths.
+type Ignorer struct {
 	curr *ignoreSegment
 }
 
-// Match returns true if the difference between the from and to at the key should be ignored.
-func (m *ignorer) Match(_, _ *yaml.Node, key string) bool {
+// match returns true if the difference between the from and to at the key should be ignored.
+func (m *Ignorer) match(_, _ *yaml.Node, key string) bool {
 	if key != m.curr.key {
 		return false
 	}
@@ -44,19 +45,19 @@ func (m *ignorer) Match(_, _ *yaml.Node, key string) bool {
 	return false
 }
 
-// Parse is a no-op for an ignorer.
-func (m *ignorer) Parse(_, _ *yaml.Node, _ string) (diffNode, error) {
+// Parse is a no-op for an Ignorer.
+func (m *Ignorer) parse(_, _ *yaml.Node, _ string) (diffNode, error) {
 	return nil, nil
 }
 
 type noneOverrider struct{}
 
 // Match always returns false for a noneOverrider.
-func (_ *noneOverrider) Match(_, _ *yaml.Node, _ string) bool {
+func (_ *noneOverrider) match(_, _ *yaml.Node, _ string) bool {
 	return false
 }
 
 // Parse is a no-op for a noneOverrider.
-func (m *noneOverrider) Parse(_, _ *yaml.Node, _ string) (diffNode, error) {
+func (m *noneOverrider) parse(_, _ *yaml.Node, _ string) (diffNode, error) {
 	return nil, nil
 }
