@@ -167,7 +167,7 @@ func (cdk *CDK) cleanUp(in []byte) ([]byte, error) {
 	encoder := yaml.NewEncoder(out)
 	encoder.SetIndent(2)
 	if err := encoder.Encode(body); err != nil {
-		return nil, fmt.Errorf("marshal cleaned up CDK transformed template: %v", err)
+		return nil, fmt.Errorf("marshal cleaned up CDK transformed template: %w", err)
 	}
 	return out.Bytes(), nil
 }
