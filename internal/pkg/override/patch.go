@@ -61,7 +61,7 @@ func (p *Patch) Override(body []byte) ([]byte, error) {
 		return nil, fmt.Errorf("invalid template: %w", err)
 	}
 
-	for _, patch := range patches {
+	for i, patch := range patches {
 		var err error
 		switch patch.Operation {
 		case "add":
@@ -74,7 +74,7 @@ func (p *Patch) Override(body []byte) ([]byte, error) {
 			return nil, fmt.Errorf("unsupported operation %q: supported operations are %q, %q, and %q.", patch.Operation, "add", "remove", "replace")
 		}
 		if err != nil {
-			return nil, fmt.Errorf("unable to apply %q patch: %w", patch.Operation, err)
+			return nil, fmt.Errorf("unable to apply the %q patch at index %d: %w", patch.Operation, i, err)
 		}
 	}
 
