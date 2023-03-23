@@ -4,6 +4,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -213,7 +214,15 @@ func (o *packageSvcOpts) Execute() error {
 		return err
 	}
 	if o.showDiff {
-		return diff(gen, stack.template, o.diffWriter)
+		if err := diff(gen, stack.template, o.diffWriter); err != nil {
+			var errNonEmptyDiff errNonEmptyDiff
+			if errors.Is(err, &errNonEmptyDiff) {
+				return err
+			}
+			return &errDiffNotAvailable{
+				parentErr: err,
+			}
+		}
 	}
 	if err := o.writeAndClose(o.templateWriter, stack.template); err != nil {
 		return err
@@ -434,6 +443,24 @@ func (o *packageSvcOpts) writeAndClose(wc io.WriteCloser, dat string) error {
 // RecommendActions is a no-op.
 func (o *packageSvcOpts) RecommendActions() error {
 	return nil
+}
+
+type errDiffNotAvailable struct {
+	parentErr error
+}
+
+// Unwrap returns the parent error that is wrapped inside errDiffNotAvailable.
+func (e *errDiffNotAvailable) Unwrap() error {
+	return e.parentErr
+}
+
+func (e *errDiffNotAvailable) Error() string {
+	return e.parentErr.Error()
+}
+
+// ExitCode returns 2 when a diff is unavailable due to a parent error.
+func (e *errDiffNotAvailable) ExitCode() int {
+	return 2
 }
 
 func contains(s string, items []string) bool {

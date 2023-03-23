@@ -435,6 +435,7 @@ func TestPackageEnvOpts_Execute(t *testing.T) {
 				}
 			},
 			wantedDiff: "mock diff",
+			wantedErr:  &errNonEmptyDiff{},
 		},
 		"should write files to output directories without addons": {
 			mockedCmd: func(ctrl *gomock.Controller) *packageEnvOpts {
