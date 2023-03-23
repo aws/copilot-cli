@@ -194,8 +194,8 @@ func (o *packageEnvOpts) Execute() error {
 	}
 	if o.showDiff {
 		if err := diff(packager, res.Template, o.diffWriter); err != nil {
-			var errNonEmptyDiff errNonEmptyDiff
-			if errors.Is(err, &errNonEmptyDiff) {
+			var errNonEmptyDiff *errNonEmptyDiff
+			if errors.As(err, &errNonEmptyDiff) {
 				return err
 			}
 			return &errDiffNotAvailable{

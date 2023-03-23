@@ -255,8 +255,8 @@ func (o *deploySvcOpts) Execute() error {
 			return fmt.Errorf("generate the template for workload %q against environment %q: %w", o.name, o.envName, err)
 		}
 		if err := diff(deployer, output.Template, o.diffWriter); err != nil {
-			var errNonEmptyDiff errNonEmptyDiff
-			if !errors.Is(err, &errNonEmptyDiff) {
+			var errNonEmptyDiff *errNonEmptyDiff
+			if !errors.As(err, &errNonEmptyDiff) {
 				return err
 			}
 		}

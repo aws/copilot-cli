@@ -215,8 +215,8 @@ func (o *packageSvcOpts) Execute() error {
 	}
 	if o.showDiff {
 		if err := diff(gen, stack.template, o.diffWriter); err != nil {
-			var errNonEmptyDiff errNonEmptyDiff
-			if errors.Is(err, &errNonEmptyDiff) {
+			var errNonEmptyDiff *errNonEmptyDiff
+			if !errors.As(err, &errNonEmptyDiff) {
 				return err
 			}
 			return &errDiffNotAvailable{
