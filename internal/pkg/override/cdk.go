@@ -154,7 +154,7 @@ func (cdk *CDK) cleanUp(in []byte) ([]byte, error) {
 	}
 	var body template
 	if err := yaml.Unmarshal(in, &body); err != nil {
-		return nil, fmt.Errorf("unmarsal CDK transformed YAML template: %v", err)
+		return nil, fmt.Errorf("unmarsal CDK transformed YAML template: %w", err)
 	}
 
 	// Augment the description with Copilot and the CDK metrics.
