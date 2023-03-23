@@ -86,8 +86,7 @@ type extension string
 func (ext extension) isYAML() bool { return ext == ".yml" || ext == ".yaml" }
 
 func lookupYAMLPatch(path string, fs afero.Fs) (Info, error) {
-	fpath := filepath.Join(path, "cfn.patches.yml")
-	patches, err := unmarshalPatches(fpath, fs)
+	patches, err := unmarshalPatches(path, fs)
 	switch {
 	case err != nil:
 		return Info{}, err

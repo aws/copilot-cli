@@ -4,7 +4,7 @@
 
 # Add a service connect alias
 - op: add
-  path: /Resources/Service/Properties/ServiceConnectConfiguration/Services/0/ClientAlias/-
+  path: /Resources/Service/Properties/ServiceConnectConfiguration/Services/0/ClientAliases/-
   value:
     Port: !Ref TargetPort
     DnsName: yamlpatchiscool
