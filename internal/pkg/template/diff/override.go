@@ -41,7 +41,7 @@ func (m *ignorer) parse(_, _ *yaml.Node, _ string) (diffNode, error) {
 type noopOverrider struct{}
 
 // Match always returns false for a noopOverrider.
-func (_ *noopOverrider) match(_, _ *yaml.Node, _ string) bool {
+func (*noopOverrider) match(_, _ *yaml.Node, _ string) bool {
 	return false
 }
 
