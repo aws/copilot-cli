@@ -144,6 +144,7 @@ type runTaskOpts struct {
 	runTaskVars
 	isDockerfileSet bool
 	nFlag           int
+	uri             string
 
 	// Interfaces to interact with dependencies.
 	fs      afero.Fs
@@ -163,6 +164,7 @@ type runTaskOpts struct {
 	provider          sessionProvider
 	sess              *session.Session
 	targetEnvironment *config.Environment
+	dockerCmdClient   dockerengine.CmdClient
 
 	// Configurer functions.
 	configureRuntimeOpts func() error
@@ -221,8 +223,14 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 	}
 
 	opts.configureRepository = func() error {
+		opts.dockerCmdClient = dockerengine.New(exec.NewCmd())
 		repoName := fmt.Sprintf(deploy.FmtTaskECRRepoName, opts.groupName)
 		opts.repository = repository.New(ecr.New(opts.sess), repoName)
+		uri, err := opts.repository.Login(opts.dockerCmdClient)
+		if err != nil {
+			return err
+		}
+		opts.uri = uri
 		return nil
 	}
 
@@ -960,11 +968,8 @@ func (o *runTaskOpts) buildAndPushImage() error {
 	if o.dockerfileContextPath != "" {
 		ctx = o.dockerfileContextPath
 	}
-	dockerCmdClient := dockerengine.New(exec.NewCmd())
-	if err := o.repository.Login(dockerCmdClient); err != nil {
-		return err
-	}
-	if _, err := o.repository.BuildAndPush(dockerCmdClient, &dockerengine.BuildArguments{
+	if _, err := o.repository.BuildAndPush(o.dockerCmdClient, &dockerengine.BuildArguments{
+		URI:        o.uri,
 		Dockerfile: o.dockerfilePath,
 		Context:    ctx,
 		Tags:       append([]string{imageTagLatest}, additionalTags...),

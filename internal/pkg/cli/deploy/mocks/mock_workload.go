@@ -91,11 +91,12 @@ func (mr *MockrepositoryServiceMockRecorder) BuildAndPush(docker, args interface
 }
 
 // Login mocks base method.
-func (m *MockrepositoryService) Login(docker repository.ContainerLoginBuildPusher) error {
+func (m *MockrepositoryService) Login(docker repository.ContainerLoginBuildPusher) (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Login", docker)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // Login indicates an expected call of Login.

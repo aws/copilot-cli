@@ -174,7 +174,7 @@ type repositoryURIGetter interface {
 }
 
 type dockerLogin interface {
-	Login(docker repository.ContainerLoginBuildPusher) error
+	Login(docker repository.ContainerLoginBuildPusher) (string, error)
 }
 
 type repositoryService interface {

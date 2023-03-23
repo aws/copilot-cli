@@ -125,6 +125,7 @@ func Test_Login(t *testing.T) {
 	testCases := map[string]struct {
 		inMockDocker func(m *mocks.MockContainerLoginBuildPusher)
 		mockRegistry func(m *mocks.MockRegistry)
+		wantedURI    string
 		wantedError  error
 	}{
 		"failed to get auth": {
@@ -155,6 +156,7 @@ func Test_Login(t *testing.T) {
 				m.EXPECT().IsEcrCredentialHelperEnabled("mockRepoURI").Return(false)
 				m.EXPECT().Login("mockRepoURI", "my-name", "my-pwd").Return(nil)
 			},
+			wantedURI: mockRepoURI,
 		},
 	}
 	for name, tc := range testCases {
@@ -176,11 +178,12 @@ func Test_Login(t *testing.T) {
 				uri:      mockRepoURI,
 			}
 
-			got := repo.Login(mockDocker)
+			got, gotErr := repo.Login(mockDocker)
 			if tc.wantedError != nil {
-				require.EqualError(t, tc.wantedError, got.Error())
+				require.EqualError(t, tc.wantedError, gotErr.Error())
 			} else {
 				require.NoError(t, tc.wantedError, got)
+				require.Equal(t, tc.wantedURI, got)
 			}
 		})
 	}
