@@ -250,7 +250,7 @@ const (
 	yesFlagDescription          = "Skips confirmation prompt."
 	resourceTagsFlagDescription = `Optional. Labels with a key and value separated by commas.
 Allows you to categorize resources.`
-	diffFlagDescription = "Show the diff of the to-be-deployed CFN template against the deployed one."
+	diffFlagDescription = "Compares the generated CloudFormation template to the deployed stack."
 
 	// Deployment.
 	deployTestFlagDescription = `Deploy your service or job to a "test" environment.`

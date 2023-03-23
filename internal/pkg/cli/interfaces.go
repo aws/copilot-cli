@@ -692,4 +692,5 @@ type envPackager interface {
 	Validate(*manifest.Environment) error
 	UploadArtifacts() (*clideploy.UploadEnvArtifactsOutput, error)
 	AddonsTemplate() (string, error)
+	templateDiffer
 }
