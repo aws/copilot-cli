@@ -157,40 +157,26 @@ func (o *deployEnvOpts) Execute() error {
 	if err != nil {
 		return fmt.Errorf("upload artifacts for environment %s: %w", o.name, err)
 	}
+	deployInput := &deploy.DeployEnvironmentInput{
+		RootUserARN:         caller.RootUserARN,
+		AddonsURL:           artifacts.AddonsURL,
+		CustomResourcesURLs: artifacts.CustomResourceURLs,
+		Manifest:            mft,
+		RawManifest:         rawMft,
+		PermissionsBoundary: o.targetApp.PermissionsBoundary,
+		ForceNewUpdate:      o.forceNewUpdate,
+		DisableRollback:     o.disableRollback,
+	}
 	if o.showDiff {
-		output, err := deployer.GenerateCloudFormationTemplate(&deploy.DeployEnvironmentInput{
-			RootUserARN:         caller.RootUserARN,
-			AddonsURL:           artifacts.AddonsURL,
-			CustomResourcesURLs: artifacts.CustomResourceURLs,
-			Manifest:            mft,
-			RawManifest:         rawMft,
-			PermissionsBoundary: o.targetApp.PermissionsBoundary,
-			ForceNewUpdate:      o.forceNewUpdate,
-		})
+		contd, err := o.showDiffAndConfirmDeployment(deployer, deployInput)
 		if err != nil {
-			return fmt.Errorf("generate the template for environment %q: %w", o.name, err)
-		}
-		if err := diff(deployer, output.Template, os.Stdout); err != nil {
-			return fmt.Errorf("generate diff for environment %q: %w", o.name, err)
-		}
-		contd, err := o.prompt.Confirm(continueDeploymentPrompt, "")
-		if err != nil {
-			return fmt.Errorf("ask whether to continue with the deployment: %w", err)
+			return err
 		}
 		if !contd {
 			return nil
 		}
 	}
-	if err := deployer.DeployEnvironment(&deploy.DeployEnvironmentInput{
-		RootUserARN:         caller.RootUserARN,
-		AddonsURL:           artifacts.AddonsURL,
-		CustomResourcesURLs: artifacts.CustomResourceURLs,
-		Manifest:            mft,
-		ForceNewUpdate:      o.forceNewUpdate,
-		RawManifest:         rawMft,
-		PermissionsBoundary: o.targetApp.PermissionsBoundary,
-		DisableRollback:     o.disableRollback,
-	}); err != nil {
+	if err := deployer.DeployEnvironment(deployInput); err != nil {
 		var errEmptyChangeSet *awscfn.ErrChangeSetEmpty
 		if errors.As(err, &errEmptyChangeSet) {
 			log.Errorf(`Your update does not introduce immediate resource changes. 
@@ -228,6 +214,21 @@ func environmentManifest(envName string, rawMft []byte, transformer interpolator
 		return nil, fmt.Errorf("validate environment manifest for %q: %w", envName, err)
 	}
 	return mft, nil
+}
+
+func (o *deployEnvOpts) showDiffAndConfirmDeployment(deployer envDeployer, input *deploy.DeployEnvironmentInput) (bool, error) {
+	output, err := deployer.GenerateCloudFormationTemplate(input)
+	if err != nil {
+		return false, fmt.Errorf("generate the template for environment %q: %w", o.name, err)
+	}
+	if err := diff(deployer, output.Template, os.Stdout); err != nil {
+		return false, fmt.Errorf("generate diff for environment %q: %w", o.name, err)
+	}
+	contd, err := o.prompt.Confirm(continueDeploymentPrompt, "")
+	if err != nil {
+		return false, fmt.Errorf("ask whether to continue with the deployment: %w", err)
+	}
+	return contd, nil
 }
 
 func (o *deployEnvOpts) validateOrAskEnvName() error {
