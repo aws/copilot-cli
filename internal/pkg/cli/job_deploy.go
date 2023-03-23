@@ -211,8 +211,8 @@ func (o *deployJobOpts) Execute() error {
 			return fmt.Errorf("generate the template for job %q against environment %q: %w", o.name, o.envName, err)
 		}
 		if err := diff(deployer, output.Template, o.diffWriter); err != nil {
-			var errNonEmptyDiff *errNonEmptyDiff
-			if !errors.As(err, &errNonEmptyDiff) {
+			var errHasDiff *errHasDiff
+			if !errors.As(err, &errHasDiff) {
 				return err
 			}
 		}

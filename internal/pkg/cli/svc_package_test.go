@@ -232,7 +232,7 @@ count: 1`
 				m.generator.EXPECT().DeployDiff(gomock.Eq("mystack")).Return("mock diff", nil)
 			},
 			wantedDiff: "mock diff",
-			wantedErr:  &errNonEmptyDiff{},
+			wantedErr:  &errHasDiff{},
 		},
 		"writes service template without addons": {
 			inVars: packageSvcVars{

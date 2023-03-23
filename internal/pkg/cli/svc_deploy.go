@@ -255,8 +255,8 @@ func (o *deploySvcOpts) Execute() error {
 			return fmt.Errorf("generate the template for workload %q against environment %q: %w", o.name, o.envName, err)
 		}
 		if err := diff(deployer, output.Template, o.diffWriter); err != nil {
-			var errNonEmptyDiff *errNonEmptyDiff
-			if !errors.As(err, &errNonEmptyDiff) {
+			var errHasDiff *errHasDiff
+			if !errors.As(err, &errHasDiff) {
 				return err
 			}
 		}
@@ -586,14 +586,14 @@ func (e *errFeatureIncompatibleWithEnvironment) RecommendActions() string {
 
 }
 
-type errNonEmptyDiff struct{}
+type errHasDiff struct{}
 
-func (e *errNonEmptyDiff) Error() string {
+func (e *errHasDiff) Error() string {
 	return "diff detected "
 }
 
 // ExitCode returns 1 for a non-empty diff.
-func (e *errNonEmptyDiff) ExitCode() int {
+func (e *errHasDiff) ExitCode() int {
 	return 1
 }
 
@@ -602,19 +602,15 @@ func diff(differ templateDiffer, tmpl string, writer io.Writer) error {
 	if err != nil {
 		return err
 	}
-	var noDiff bool
+	errHasDiff := &errHasDiff{}
 	if out == "" {
-		noDiff = true
+		errHasDiff = nil
 		out = "No changes.\n"
 	}
-	_, err = writer.Write([]byte(out))
-	if err != nil {
+	if _, err := writer.Write([]byte(out)); err != nil {
 		return err
 	}
-	if noDiff {
-		return nil
-	}
-	return &errNonEmptyDiff{}
+	return errHasDiff
 }
 
 // buildSvcDeployCmd builds the `svc deploy` subcommand.
