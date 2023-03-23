@@ -5,6 +5,8 @@ package cli
 
 import (
 	"fmt"
+	"io"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -42,6 +44,7 @@ type deployWkldVars struct {
 	resourceTags    map[string]string
 	forceNewUpdate  bool // NOTE: this variable is not applicable for a job workload currently.
 	disableRollback bool
+	showDiff        bool
 
 	// To facilitate unit tests.
 	clientConfigured bool
@@ -58,6 +61,7 @@ type deploySvcOpts struct {
 	sessProvider         *sessions.Provider
 	newSvcDeployer       func() (workloadDeployer, error)
 	envFeaturesDescriber versionCompatibilityChecker
+	diffWriter           io.Writer
 
 	spinner        progress
 	sel            wsSelector
@@ -72,6 +76,7 @@ type deploySvcOpts struct {
 	appliedDynamicMft manifest.DynamicWorkload
 	rootUserARN       string
 	deployRecs        clideploy.ActionRecommender
+	noDeploy          bool
 }
 
 func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
@@ -101,6 +106,7 @@ func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
 		newInterpolator: newManifestInterpolator,
 		cmd:             exec.NewCmd(),
 		sessProvider:    sessProvider,
+		diffWriter:      os.Stdout,
 	}
 	opts.newSvcDeployer = func() (workloadDeployer, error) {
 		// NOTE: Defined as a struct member to facilitate unit testing.
@@ -233,6 +239,32 @@ func (o *deploySvcOpts) Execute() error {
 	if err != nil {
 		return err
 	}
+	if o.showDiff {
+		output, err := deployer.GenerateCloudFormationTemplate(&clideploy.GenerateCloudFormationTemplateInput{
+			StackRuntimeConfiguration: clideploy.StackRuntimeConfiguration{
+				RootUserARN:        o.rootUserARN,
+				Tags:               targetApp.Tags,
+				EnvFileARNs:        uploadOut.EnvFileARNs,
+				ImageDigests:       uploadOut.ImageDigests,
+				AddonsURL:          uploadOut.AddonsURL,
+				CustomResourceURLs: uploadOut.CustomResourceURLs,
+			},
+		})
+		if err != nil {
+			return fmt.Errorf("generate the template for workload %q against environment %q: %w", o.name, o.envName, err)
+		}
+		if err := diff(deployer, output.Template, o.diffWriter); err != nil {
+			return err
+		}
+		contd, err := o.prompt.Confirm(continueDeploymentPrompt, "")
+		if err != nil {
+			return fmt.Errorf("ask whether to continue with the deployment: %w", err)
+		}
+		if !contd {
+			o.noDeploy = true
+			return nil
+		}
+	}
 	deployRecs, err := deployer.DeployWorkload(&clideploy.DeployWorkloadInput{
 		StackRuntimeConfiguration: clideploy.StackRuntimeConfiguration{
 			ImageDigests:       uploadOut.ImageDigests,
@@ -268,6 +300,9 @@ After fixing the deployment, you can:
 
 // RecommendActions returns follow-up actions the user can take after successfully executing the command.
 func (o *deploySvcOpts) RecommendActions() error {
+	if o.noDeploy {
+		return nil
+	}
 	var recommendations []string
 	uriRecs, err := o.uriRecommendedActions()
 	if err != nil {
@@ -547,6 +582,18 @@ func (e *errFeatureIncompatibleWithEnvironment) RecommendActions() string {
 
 }
 
+func diff(differ templateDiffer, tmpl string, writer io.Writer) error {
+	out, err := differ.DeployDiff(tmpl)
+	if err != nil {
+		return err
+	}
+	if out == "" {
+		out = "No changes.\n"
+	}
+	_, err = writer.Write([]byte(out))
+	return err
+}
+
 // buildSvcDeployCmd builds the `svc deploy` subcommand.
 func buildSvcDeployCmd() *cobra.Command {
 	vars := deployWkldVars{}
@@ -574,6 +621,6 @@ func buildSvcDeployCmd() *cobra.Command {
 	cmd.Flags().StringToStringVar(&vars.resourceTags, resourceTagsFlag, nil, resourceTagsFlagDescription)
 	cmd.Flags().BoolVar(&vars.forceNewUpdate, forceFlag, false, forceFlagDescription)
 	cmd.Flags().BoolVar(&vars.disableRollback, noRollbackFlag, false, noRollbackFlagDescription)
-
+	cmd.Flags().BoolVar(&vars.showDiff, diffFlag, false, diffFlagDescription)
 	return cmd
 }
