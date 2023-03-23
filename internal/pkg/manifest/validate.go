@@ -265,12 +265,12 @@ func (b BackendService) validate() error {
 	if err = validateTargetContainer(validateTargetContainerOpts{
 		mainContainerName: aws.StringValue(b.Name),
 		mainContainerPort: b.ImageConfig.Port,
-		targetContainer:   b.RoutingRule.Main.TargetContainer,
+		targetContainer:   b.HTTP.Main.TargetContainer,
 		sidecarConfig:     b.Sidecars,
 	}); err != nil {
 		return fmt.Errorf(`validate load balancer target for "http": %w`, err)
 	}
-	for idx, rule := range b.RoutingRule.AdditionalRoutingRules {
+	for idx, rule := range b.HTTP.AdditionalRoutingRules {
 		if err = validateTargetContainer(validateTargetContainerOpts{
 			mainContainerName: aws.StringValue(b.Name),
 			mainContainerPort: b.ImageConfig.Port,
@@ -292,7 +292,7 @@ func (b BackendService) validate() error {
 		mainContainerName: aws.StringValue(b.Name),
 		mainContainerPort: b.ImageConfig.Port,
 		sidecarConfig:     b.Sidecars,
-		alb:               &b.RoutingRule,
+		alb:               &b.HTTP,
 	}); err != nil {
 		return fmt.Errorf("validate unique exposed ports: %w", err)
 	}
@@ -308,10 +308,10 @@ func (b BackendServiceConfig) validate() error {
 	if err = b.ImageOverride.validate(); err != nil {
 		return err
 	}
-	if err = b.RoutingRule.validate(); err != nil {
+	if err = b.HTTP.validate(); err != nil {
 		return fmt.Errorf(`validate "http": %w`, err)
 	}
-	if b.RoutingRule.IsEmpty() && (!b.Count.AdvancedCount.Requests.IsEmpty() || !b.Count.AdvancedCount.ResponseTime.IsEmpty()) {
+	if b.HTTP.IsEmpty() && (!b.Count.AdvancedCount.Requests.IsEmpty() || !b.Count.AdvancedCount.ResponseTime.IsEmpty()) {
 		return &errFieldMustBeSpecified{
 			missingField:      "http",
 			conditionalFields: []string{"count.requests", "count.response_time"},
@@ -332,7 +332,7 @@ func (b BackendServiceConfig) validate() error {
 		return fmt.Errorf(`validate "network": %w`, err)
 	}
 	if b.Network.Connect.Alias != nil {
-		if b.RoutingRule.Main.TargetContainer == nil && b.ImageConfig.Port == nil {
+		if b.HTTP.Main.TargetContainer == nil && b.ImageConfig.Port == nil {
 			return fmt.Errorf(`cannot set "network.connect.alias" when no ports are exposed`)
 		}
 	}

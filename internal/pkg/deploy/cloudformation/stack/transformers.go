@@ -519,7 +519,7 @@ func (s *LoadBalancedWebService) convertALBListener() (*template.ALBListener, er
 }
 
 func (s *BackendService) convertALBListener() (*template.ALBListener, error) {
-	rrConfig := s.manifest.RoutingRule
+	rrConfig := s.manifest.HTTP
 	if rrConfig.IsEmpty() {
 		return nil, nil
 	}

@@ -610,7 +610,7 @@ func TestBackendService_validate(t *testing.T) {
 			config: BackendService{
 				BackendServiceConfig: BackendServiceConfig{
 					ImageConfig: testImageConfig,
-					RoutingRule: HTTP{
+					HTTP: HTTP{
 						Main: RoutingRule{
 							ProtocolVersion: aws.String("GRPC"),
 						},
@@ -656,7 +656,7 @@ func TestBackendService_validate(t *testing.T) {
 			config: BackendService{
 				BackendServiceConfig: BackendServiceConfig{
 					ImageConfig: testImageConfig,
-					RoutingRule: HTTP{
+					HTTP: HTTP{
 						Main: RoutingRule{
 							TargetContainer: aws.String("api"),
 							Path:            aws.String("/"),
