@@ -219,29 +219,13 @@ Mary:
 	}
 }
 
-func Test_Integration_Parse_Write_WithOverride(t *testing.T) {
+func Test_Integration_Parse_Write_WithCFNIgnorer(t *testing.T) {
 	testCases := map[string]struct {
 		curr      string
 		old       string
 		overrider overrider
 		wanted    string
 	}{
-		"no override": {
-			old: `Description: CloudFormation environment template for infrastructure shared among Copilot workloads.
-Metadata:
-  Version: v1.26.0
-  Manifest: I don't see any difference.`,
-			curr: `Description: CloudFormation environment template for infrastructure shared among Copilot workloads.
-Metadata:
-  Version: v1.27.0
-  Manifest: There is definitely a difference.`,
-			overrider: &noneOverrider{},
-			wanted: `
-~ Metadata:
-    ~ Manifest: I don't see any difference. -> There is definitely a difference.
-    ~ Version: v1.26.0 -> v1.27.0
-`,
-		},
 		"ignore metadata manifest": {
 			old: `Description: CloudFormation environment template for infrastructure shared among Copilot workloads.
 Metadata:
@@ -251,7 +235,6 @@ Metadata:
 Metadata:
   Version: v1.27.0
   Manifest: There is definitely a difference.`,
-			overrider: CFNIgnorer(),
 			wanted: `
 ~ Metadata:
     ~ Version: v1.26.0 -> v1.27.0
@@ -264,12 +247,11 @@ Metadata:
 			curr: `Description: CloudFormation environment template for infrastructure shared among Copilot workloads.
 Metadata:
   Manifest: There is definitely a difference.`,
-			overrider: CFNIgnorer(),
 		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotTree, err := From(tc.old).parseRoot([]byte(tc.curr), tc.overrider)
+			gotTree, err := From(tc.old).ParseWithCFNIgnorer([]byte(tc.curr))
 			require.NoError(t, err)
 			buf := strings.Builder{}
 			err = gotTree.Write(&buf)

@@ -86,8 +86,16 @@ type seqItemNode struct {
 // From is the YAML document that another YAML document is compared against.
 type From []byte
 
-// ParseWithIgnorer constructs a diff tree that represent the differences of a YAML document against the From document, ignoring certain paths.
-func (from From) ParseWithIgnorer(to []byte, ignorer *Ignorer) (Tree, error) {
+// ParseWithCFNIgnorer constructs a diff tree that represent the differences of a YAML document against the From document, ignoring certain CFN paths.
+func (from From) ParseWithCFNIgnorer(to []byte) (Tree, error) {
+	ignorer := &ignorer{
+		curr: &ignoreSegment{
+			key: "Metadata",
+			next: &ignoreSegment{
+				key: "Manifest",
+			},
+		},
+	}
 	return from.parseRoot(to, ignorer)
 }
 
