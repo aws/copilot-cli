@@ -24,6 +24,10 @@ func TestPackageJobOpts_Validate(t *testing.T) {
 		inEnvName string
 		inJobName string
 
+		inShowDiff     bool
+		inOutputDir    string
+		inUploadAssets bool
+
 		setupMocks func()
 
 		wantedErrorS string
@@ -90,6 +94,10 @@ func TestPackageJobOpts_Validate(t *testing.T) {
 					name:    tc.inJobName,
 					envName: tc.inEnvName,
 					appName: tc.inAppName,
+
+					showDiff:     tc.inShowDiff,
+					outputDir:    tc.inOutputDir,
+					uploadAssets: tc.inUploadAssets,
 				},
 				ws:    mockWorkspace,
 				store: mockStore,

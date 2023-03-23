@@ -9,7 +9,7 @@ name: exampleapppipeline
 version: 1
 
 build:
-  image: aws/codebuild/amazonlinux2-x86_64-standard:3.0
+  image: aws/codebuild/amazonlinux2-x86_64-standard:4.0
   additional_policy:
     PolicyDocument:
       Version: '2012-10-17'
