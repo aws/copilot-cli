@@ -86,10 +86,6 @@ func Lookup(path string, fs afero.Fs) (Info, error) {
 	return lookupCDK(path, fs)
 }
 
-type extension string
-
-func (ext extension) isYAML() bool { return ext == ".yml" || ext == ".yaml" }
-
 func lookupYAMLPatch(path string, fs afero.Fs) (Info, error) {
 	patches, err := unmarshalPatches(path, fs)
 	switch {
