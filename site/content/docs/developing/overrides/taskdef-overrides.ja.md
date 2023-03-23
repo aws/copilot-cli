@@ -3,7 +3,7 @@
 !!! 注意
     :warning: タスク定義のオーバーライドは高度なユースケースです。タスク定義のフィールドをオーバーライドすると、タスクが起動できなくなる可能性があります。注意してお使いください!
 
-Copilot は、[Manifest](../manifest/overview.ja.md)で指定された構成を用いて CloudFormation テンプレートを生成します。ただし、Manifest では設定できないフィールドがあります。例えば、ワークロードにあるコンテナの [`Ulimits`](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-properties-ecs-taskdefinition-containerdefinitions.html#cfn-ecs-taskdefinition-containerdefinition-ulimits) の設定を変更したいと思うかもしれませんが、Manifest では公開されていません。
+Copilot は、[Manifest](../../manifest/overview.ja.md)で指定された構成を用いて CloudFormation テンプレートを生成します。ただし、Manifest では設定できないフィールドがあります。例えば、ワークロードにあるコンテナの [`Ulimits`](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-properties-ecs-taskdefinition-containerdefinitions.html#cfn-ecs-taskdefinition-containerdefinition-ulimits) の設定を変更したいと思うかもしれませんが、Manifest では公開されていません。
 
 `taskdef_overrides` ルールを指定することで、[ECS のタスク定義](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ecs-taskdefinition.html) に追加設定することができます。このルールは、Copilot が Manifest から生成する CloudFormation テンプレートに適用されます。
 
