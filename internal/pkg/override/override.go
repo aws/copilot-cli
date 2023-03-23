@@ -11,8 +11,6 @@ import (
 
 	"github.com/aws/copilot-cli/internal/pkg/template"
 
-	"gopkg.in/yaml.v3"
-
 	"github.com/spf13/afero"
 )
 
@@ -89,20 +87,11 @@ func (ext extension) isYAML() bool { return ext == ".yml" || ext == ".yaml" }
 
 func lookupYAMLPatch(path string, fs afero.Fs) (Info, error) {
 	fpath := filepath.Join(path, "cfn.patches.yml")
-	content, err := afero.ReadFile(fs, fpath)
-	if err != nil {
-		return Info{}, fmt.Errorf("read file at %q: %w", fpath, err)
-	}
-
-	type yamlPatch struct {
-		Op   string `yaml:"op"`
-		Path string `yaml:"path"`
-	}
-	var doc []yamlPatch
-	if err := yaml.Unmarshal(content, &doc); err != nil {
-		return Info{}, fmt.Errorf("file at %q does not conform to the YAML patch document schema: %w", path, err)
-	}
-	if len(doc) == 0 {
+	patches, err := unmarshalPatches(fpath, fs)
+	switch {
+	case err != nil:
+		return Info{}, err
+	case len(patches) == 0:
 		return Info{}, fmt.Errorf("YAML patch document at %q does not contain any operations", path)
 	}
 	return yamlPatchInfo(path), nil

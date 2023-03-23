@@ -40,6 +40,7 @@ type packageSvcVars struct {
 	tag          string
 	outputDir    string
 	uploadAssets bool
+	showDiff     bool
 
 	// To facilitate unit tests.
 	clientConfigured bool
@@ -55,6 +56,7 @@ type packageSvcOpts struct {
 	templateWriter       io.WriteCloser
 	paramsWriter         io.WriteCloser
 	addonsWriter         io.WriteCloser
+	diffWriter           io.Writer
 	runner               execRunner
 	sessProvider         *sessions.Provider
 	sel                  wsSelector
@@ -98,6 +100,7 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 		templateWriter:    os.Stdout,
 		paramsWriter:      discardFile{},
 		addonsWriter:      discardFile{},
+		diffWriter:        os.Stdout,
 		newInterpolator:   newManifestInterpolator,
 		sessProvider:      sessProvider,
 		newStackGenerator: newWorkloadStackGenerator,
@@ -208,6 +211,9 @@ func (o *packageSvcOpts) Execute() error {
 	stack, err := o.getWorkloadStack(gen)
 	if err != nil {
 		return err
+	}
+	if o.showDiff {
+		return diff(gen, stack.template, o.diffWriter)
 	}
 	if err := o.writeAndClose(o.templateWriter, stack.template); err != nil {
 		return err
@@ -470,5 +476,9 @@ func buildSvcPackageCmd() *cobra.Command {
 	cmd.Flags().StringVar(&vars.tag, imageTagFlag, "", imageTagFlagDescription)
 	cmd.Flags().StringVar(&vars.outputDir, stackOutputDirFlag, "", stackOutputDirFlagDescription)
 	cmd.Flags().BoolVar(&vars.uploadAssets, uploadAssetsFlag, false, uploadAssetsFlagDescription)
+	cmd.Flags().BoolVar(&vars.showDiff, diffFlag, false, diffFlagDescription)
+
+	cmd.MarkFlagsMutuallyExclusive(diffFlag, stackOutputDirFlag)
+	cmd.MarkFlagsMutuallyExclusive(diffFlag, uploadAssetsFlag)
 	return cmd
 }
