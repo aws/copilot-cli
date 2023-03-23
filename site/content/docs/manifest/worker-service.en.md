@@ -221,6 +221,7 @@ Optional. Specify SQS queue configuration for the topic. If specified as `true`,
 Optional. Specify SQS FIFO queue configuration for the topic. If specified as `true`, the FIFO queue will be created with the default FIFO configuration. 
 Specify this field as a map for customization of certain attributes for this topic-specific queue.
 
+{% include 'image.en.md' %}
 
 {% include 'image-config.en.md' %}
 
