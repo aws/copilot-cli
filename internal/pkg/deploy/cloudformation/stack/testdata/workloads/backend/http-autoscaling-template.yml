@@ -441,7 +441,7 @@ Resources:
           TargetGroupArn: !Ref TargetGroup
   TargetGroup:
     Metadata:
-      "aws:copilot:description": "A target group to connect the load balancer to your service"
+      "aws:copilot:description": "A target group to connect the load balancer to your service with port 8080"
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
       HealthCheckPath: / # Default is '/'.
@@ -518,7 +518,7 @@ Resources:
       ListenerArn: !GetAtt EnvControllerAction.InternalHTTPListenerArn
   HTTPListenerRule:
     Metadata:
-      "aws:copilot:description": "A HTTP listener rule for forwarding HTTP traffic"
+      "aws:copilot:description": "A HTTP listener rule for path http-autoscaling-path for forwarding HTTP traffic"
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
     Properties:
       Actions:
