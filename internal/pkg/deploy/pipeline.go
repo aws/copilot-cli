@@ -8,12 +8,13 @@ package deploy
 import (
 	"errors"
 	"fmt"
-	"gopkg.in/yaml.v3"
 	"path"
 	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
+
+	"gopkg.in/yaml.v3"
 
 	"github.com/aws/copilot-cli/internal/pkg/graph"
 
@@ -32,7 +33,7 @@ const (
 	fmtErrMissingProperty    = "missing `%s` in properties"
 	fmtErrPropertyNotAString = "property `%s` is not a string"
 
-	defaultPipelineBuildImage      = "aws/codebuild/amazonlinux2-x86_64-standard:3.0"
+	defaultPipelineBuildImage      = "aws/codebuild/amazonlinux2-x86_64-standard:4.0"
 	defaultPipelineEnvironmentType = "LINUX_CONTAINER"
 
 	DefaultPipelineArtifactsDir = "infrastructure"
