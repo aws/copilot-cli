@@ -2,7 +2,10 @@
 
 !!! Attention
 
-    :warning: Task Definition overrides is an advanced use case. Overriding a field might cause the task not able to launch. Please use with caution!
+    :warning: Task definition overrides is deprecated.  
+    
+    We recommend using [YAML patch](./yamlpatch.md) overrides instead as it allows you to edit the entire CloudFormation template and
+    supports the `remove` operation.
 
 Copilot generates CloudFormation templates using configuration specified in the [manifest](../../manifest/overview.en.md). However, there are fields that are not configurable in the manifest. For example, You might want to configure the [`Ulimits`](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ecs-taskdefinition-containerdefinitions.html#cfn-ecs-taskdefinition-containerdefinition-ulimits) for your workload container, but it is not exposed in our manifest.
 
@@ -34,7 +37,8 @@ Each rule is applied sequentially to the CloudFormation template. The resulting 
 - To append a new member to a `list` field such as `Ulimits` you can use the special character `-`: `Ulimits[-]`.
 
 !!! Attention
-The following fields in the task definition are not allowed to be modified.
+
+    The following fields in the task definition are not allowed to be modified.
 
     * [Family](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ecs-taskdefinition.html#cfn-ecs-taskdefinition-family)
     * [ContainerDefinitions[<index>].Name](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ecs-taskdefinition-containerdefinitions.html#cfn-ecs-taskdefinition-containerdefinition-name)

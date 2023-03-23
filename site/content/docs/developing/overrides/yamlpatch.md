@@ -45,7 +45,7 @@ the CLI supports three operations: `add`, `remove`, and `replace`. Here is a sam
   path: /Resources/TaskDefinition/Properties/ContainerDefinitions/1/Essential
   value: false
 - op: add
-  path: /Resources/Service/Properties/ServiceConnectConfiguration/Services/0/ClientAlias/-
+  path: /Resources/Service/Properties/ServiceConnectConfiguration/Services/0/ClientAliases/-
   value:
     Port: !Ref TargetPort
     DnsName: yamlpatchiscool
