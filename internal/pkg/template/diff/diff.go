@@ -101,7 +101,7 @@ func (from From) ParseWithCFNIgnorer(to []byte) (Tree, error) {
 
 // Parse constructs a diff tree that represent the differences of a YAML document against the From document.
 func (from From) Parse(to []byte) (Tree, error) {
-	return from.parseRoot(to, &noneOverrider{})
+	return from.parseRoot(to, &noopOverrider{})
 }
 
 func (from From) parseRoot(to []byte, overrider overrider) (Tree, error) {

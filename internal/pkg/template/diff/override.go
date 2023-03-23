@@ -38,14 +38,14 @@ func (m *ignorer) parse(_, _ *yaml.Node, _ string) (diffNode, error) {
 	return nil, nil
 }
 
-type noneOverrider struct{}
+type noopOverrider struct{}
 
-// Match always returns false for a noneOverrider.
-func (_ *noneOverrider) match(_, _ *yaml.Node, _ string) bool {
+// Match always returns false for a noopOverrider.
+func (_ *noopOverrider) match(_, _ *yaml.Node, _ string) bool {
 	return false
 }
 
-// Parse is a no-op for a noneOverrider.
-func (m *noneOverrider) parse(_, _ *yaml.Node, _ string) (diffNode, error) {
+// Parse is a no-op for a noopOverrider.
+func (m *noopOverrider) parse(_, _ *yaml.Node, _ string) (diffNode, error) {
 	return nil, nil
 }
