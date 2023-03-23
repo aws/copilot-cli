@@ -40,14 +40,6 @@ func WithPatch(filePath string, opts PatchOpts) *Patch {
 	}
 }
 
-type yamlPatch struct {
-	Operation string `yaml:"op"`
-
-	// Path is in JSON Pointer syntax: https://www.rfc-editor.org/rfc/rfc6901
-	Path  string    `yaml:"path"`
-	Value yaml.Node `yaml:"value"`
-}
-
 // Override returns the overriden CloudFormation template body
 // after applying YAML patches to it.
 func (p *Patch) Override(body []byte) ([]byte, error) {
@@ -97,6 +89,14 @@ func unmarshalPatches(path string, fs afero.Fs) ([]yamlPatch, error) {
 	}
 
 	return patches, nil
+}
+
+type yamlPatch struct {
+	Operation string `yaml:"op"`
+
+	// Path is in JSON Pointer syntax: https://www.rfc-editor.org/rfc/rfc6901
+	Path  string    `yaml:"path"`
+	Value yaml.Node `yaml:"value"`
 }
 
 func (p *yamlPatch) applyAdd(root *yaml.Node) error {
@@ -251,7 +251,7 @@ func getNode(node *yaml.Node, remaining, traversed pointer) (*yaml.Node, error) 
 	switch node.Kind {
 	case yaml.DocumentNode:
 		if len(node.Content) == 0 {
-			return nil, nil // weird, but ok ¯\_(ツ)_/¯
+			return nil, fmt.Errorf("invalid yaml document node with no content") // shouldn't ever happen
 		}
 
 		return getNode(node.Content[0], remaining[1:], append(traversed, remaining[0]))
