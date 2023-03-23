@@ -199,7 +199,7 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 						OperatingSystem: "LINUX",
 						Architecture:    "X86_64",
 					}, nil),
-					m.ecsDescriber.EXPECT().RollbackAlarmNames().Return([]string{}, nil),
+					m.ecsDescriber.EXPECT().RollbackAlarmNames().Return(nil, nil),
 					m.ecsDescriber.EXPECT().EnvVars().Return(nil, mockErr),
 				)
 			},
@@ -226,7 +226,7 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 						OperatingSystem: "LINUX",
 						Architecture:    "X86_64",
 					}, nil),
-					m.ecsDescriber.EXPECT().RollbackAlarmNames().Return([]string{}, nil),
+					m.ecsDescriber.EXPECT().RollbackAlarmNames().Return(nil, nil),
 					m.ecsDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
 						{
 							Name:      "COPILOT_ENVIRONMENT_NAME",
@@ -238,6 +238,57 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 				)
 			},
 			wantedError: fmt.Errorf("retrieve secrets: some error"),
+		},
+		"should not fetch descriptions if no ROLLBACK alarms present": {
+			setupMocks: func(m backendSvcDescriberMocks) {
+				testParams := map[string]string{
+					cfnstack.WorkloadTargetPortParamKey: "5000",
+					cfnstack.WorkloadTaskCountParamKey:  "1",
+					cfnstack.WorkloadTaskCPUParamKey:    "256",
+					cfnstack.WorkloadTaskMemoryParamKey: "512",
+				}
+				gomock.InOrder(
+					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
+					m.ecsDescriber.EXPECT().StackResources().Return(nil, nil),
+					m.ecsDescriber.EXPECT().Params().Return(testParams, nil),
+					m.ecsDescriber.EXPECT().ServiceConnectDNSNames().Return(nil, nil),
+					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
+					m.ecsDescriber.EXPECT().Params().Return(testParams, nil),
+					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
+					m.ecsDescriber.EXPECT().ServiceConnectDNSNames().Return(nil, nil),
+					m.ecsDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
+						OperatingSystem: "LINUX",
+						Architecture:    "X86_64",
+					}, nil),
+					m.ecsDescriber.EXPECT().RollbackAlarmNames().Return([]string{}, nil),
+				m.ecsDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{}, nil),
+					m.ecsDescriber.EXPECT().Secrets().Return([]*ecs.ContainerSecret{}, nil))
+			},
+			wantedBackendSvc: &backendSvcDesc{
+				ecsSvcDesc: ecsSvcDesc{
+					Service: testSvc,
+					Type:    "Backend Service",
+					App:     testApp,
+					Configurations: []*ECSServiceConfig{
+						{
+							ServiceConfig: &ServiceConfig{
+								CPU:         "256",
+								Environment: "test",
+								Memory:      "512",
+								Platform:    "LINUX/X86_64",
+								Port:        "5000",
+							},
+							Tasks: "1",
+						},
+					},
+					ServiceDiscovery: serviceDiscoveries{
+						"jobs.test.phonetool.local:5000": []string{"test"},
+					},
+					ServiceConnect: serviceConnects{},
+					Resources: map[string][]*stack.Resource{},
+					environments: []string{"test"},
+				},
+			},
 		},
 		"success": {
 			shouldOutputResources: true,
@@ -273,7 +324,7 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 						OperatingSystem: "LINUX",
 						Architecture:    "X86_64",
 					}, nil),
-					m.ecsDescriber.EXPECT().RollbackAlarmNames().Return([]string{}, nil),
+					m.ecsDescriber.EXPECT().RollbackAlarmNames().Return(nil, nil),
 					m.ecsDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
 						{
 							Name:      "COPILOT_ENVIRONMENT_NAME",
@@ -516,7 +567,7 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 						OperatingSystem: "LINUX",
 						Architecture:    "X86_64",
 					}, nil),
-					m.ecsDescriber.EXPECT().RollbackAlarmNames().Return([]string{}, nil),
+					m.ecsDescriber.EXPECT().RollbackAlarmNames().Return(nil, nil),
 					m.ecsDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
 						{
 							Name:      "COPILOT_ENVIRONMENT_NAME",

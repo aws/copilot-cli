@@ -126,7 +126,7 @@ func TestWorkerServiceDescriber_Describe(t *testing.T) {
 						OperatingSystem: "LINUX",
 						Architecture:    "X86_64",
 					}, nil),
-					m.ecsDescriber.EXPECT().RollbackAlarmNames().Return([]string{}, nil),
+					m.ecsDescriber.EXPECT().RollbackAlarmNames().Return(nil, nil),
 					m.ecsDescriber.EXPECT().EnvVars().Return(nil, mockErr),
 				)
 			},
@@ -146,7 +146,7 @@ func TestWorkerServiceDescriber_Describe(t *testing.T) {
 						OperatingSystem: "LINUX",
 						Architecture:    "X86_64",
 					}, nil),
-					m.ecsDescriber.EXPECT().RollbackAlarmNames().Return([]string{}, nil),
+					m.ecsDescriber.EXPECT().RollbackAlarmNames().Return(nil, nil),
 					m.ecsDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
 						{
 							Name:      "COPILOT_ENVIRONMENT_NAME",
@@ -158,6 +158,45 @@ func TestWorkerServiceDescriber_Describe(t *testing.T) {
 				)
 			},
 			wantedError: fmt.Errorf("retrieve secrets: some error"),
+		},
+		"should not fetch descriptions if no ROLLBACK alarms present": {
+			setupMocks: func(m workerSvcDescriberMocks) {
+				gomock.InOrder(
+					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
+
+					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
+						cfnstack.WorkloadTaskCountParamKey:  "1",
+						cfnstack.WorkloadTaskCPUParamKey:    "256",
+						cfnstack.WorkloadTaskMemoryParamKey: "512",
+					}, nil),
+					m.ecsDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
+						OperatingSystem: "LINUX",
+						Architecture:    "X86_64",
+					}, nil),
+					m.ecsDescriber.EXPECT().RollbackAlarmNames().Return([]string{}, nil),
+					m.ecsDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{}, nil),
+					m.ecsDescriber.EXPECT().Secrets().Return([]*ecs.ContainerSecret{}, nil),
+				)
+			},
+			wantedWorkerSvc: &workerSvcDesc{
+				Service: testSvc,
+				Type:    "Worker Service",
+				App:     testApp,
+				Configurations: []*ECSServiceConfig{
+					{
+						ServiceConfig: &ServiceConfig{
+							CPU:         "256",
+							Environment: "test",
+							Memory:      "512",
+							Platform:    "LINUX/X86_64",
+							Port:        "-",
+						},
+						Tasks: "1",
+					},
+				},
+				Resources: map[string][]*stack.Resource{},
+				environments: []string{"test"},
+			},
 		},
 		"success": {
 			shouldOutputResources: true,
@@ -234,7 +273,7 @@ func TestWorkerServiceDescriber_Describe(t *testing.T) {
 						OperatingSystem: "LINUX",
 						Architecture:    "X86_64",
 					}, nil),
-					m.ecsDescriber.EXPECT().RollbackAlarmNames().Return([]string{}, nil),
+					m.ecsDescriber.EXPECT().RollbackAlarmNames().Return(nil, nil),
 					m.ecsDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
 						{
 							Name:      "COPILOT_ENVIRONMENT_NAME",

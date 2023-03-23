@@ -139,7 +139,7 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 						},
 					}, nil),
 					m.ecsDescriber.EXPECT().Params().Return(mockParams, nil),
-					m.ecsDescriber.EXPECT().RollbackAlarmNames().Return([]string{}, nil),
+					m.ecsDescriber.EXPECT().RollbackAlarmNames().Return(nil, nil),
 					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("", errors.New("some error")),
 				)
 			},
@@ -271,7 +271,7 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 						},
 					}, nil),
 					m.ecsDescriber.EXPECT().Params().Return(mockParams, nil),
-					m.ecsDescriber.EXPECT().RollbackAlarmNames().Return([]string{}, nil),
+					m.ecsDescriber.EXPECT().RollbackAlarmNames().Return(nil, nil),
 					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
 					m.ecsDescriber.EXPECT().ServiceConnectDNSNames().Return(nil, mockErr),
 				)
@@ -303,7 +303,7 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 						},
 					}, nil),
 					m.ecsDescriber.EXPECT().Params().Return(mockParams, nil),
-					m.ecsDescriber.EXPECT().RollbackAlarmNames().Return([]string{}, nil),
+					m.ecsDescriber.EXPECT().RollbackAlarmNames().Return(nil, nil),
 					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
 					m.ecsDescriber.EXPECT().ServiceConnectDNSNames().Return(nil, nil),
 					m.ecsDescriber.EXPECT().Secrets().Return(nil, mockErr),
@@ -337,7 +337,7 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 						},
 					}, nil),
 					m.ecsDescriber.EXPECT().Params().Return(mockParams, nil),
-					m.ecsDescriber.EXPECT().RollbackAlarmNames().Return([]string{}, nil),
+					m.ecsDescriber.EXPECT().RollbackAlarmNames().Return(nil, nil),
 					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
 					m.ecsDescriber.EXPECT().ServiceConnectDNSNames().Return(nil, nil),
 					m.ecsDescriber.EXPECT().Secrets().Return([]*ecs.ContainerSecret{
@@ -356,6 +356,65 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 				)
 			},
 			wantedError: fmt.Errorf("retrieve service resources: some error"),
+		},
+		"should not try to fetch descriptions if no ROLLBACK alarms present":{
+			setupMocks: func(m lbWebSvcDescriberMocks) {
+				gomock.InOrder(
+					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
+					m.ecsDescriber.EXPECT().StackResources().Return([]*stack.Resource{
+						{
+							LogicalID: svcStackResourceALBTargetGroupLogicalID,
+						},
+					}, nil),
+					m.ecsDescriber.EXPECT().Params().Return(mockParams, nil),
+					m.envDescriber.EXPECT().Outputs().Return(map[string]string{
+						envOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
+						envOutputPublicALBAccessible:       testALBAccessible,
+					}, nil),
+					m.ecsDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
+						OperatingSystem: "LINUX",
+						Architecture:    "X86_64",
+					}, nil),
+					m.ecsDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{}, nil),
+					m.ecsDescriber.EXPECT().Params().Return(mockParams, nil),
+					m.ecsDescriber.EXPECT().RollbackAlarmNames().Return([]string{}, nil),
+					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
+					m.ecsDescriber.EXPECT().ServiceConnectDNSNames().Return([]string{testSvc}, nil),
+					m.ecsDescriber.EXPECT().Secrets().Return([]*ecs.ContainerSecret{}, nil))
+			},
+			wantedWebSvc: &webSvcDesc{
+				ecsSvcDesc: ecsSvcDesc{
+					Service: testSvc,
+					Type:    "Load Balanced Web Service",
+					App:     testApp,
+					Configurations: []*ECSServiceConfig{
+						{
+							ServiceConfig: &ServiceConfig{
+								CPU:         "256",
+								Environment: "test",
+								Memory:      "512",
+								Platform:    "LINUX/X86_64",
+								Port:        "80",
+							},
+							Tasks: "1",
+						},
+					},
+					Routes: []*WebServiceRoute{
+						{
+							Environment: "test",
+							URL:         "http://abc.us-west-1.elb.amazonaws.com/*",
+						},
+					},
+					ServiceDiscovery: serviceDiscoveries{
+						"jobs.test.phonetool.local:80":   []string{"test"},
+					},
+					ServiceConnect: serviceConnects{
+						testSvc: []string{"test"},
+					},
+					Resources: map[string][]*stack.Resource{},
+					environments: []string{"test"},
+				},
+			},
 		},
 		"success for ALB service": {
 			shouldOutputResources: true,
