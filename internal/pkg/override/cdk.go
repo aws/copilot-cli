@@ -136,7 +136,7 @@ func (cdk *CDK) transform(body []byte) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// cleanUp is removes YAML additions that get injected by the CDK that are unnecessary,
+// cleanUp removes YAML additions that get injected by the CDK that are unnecessary,
 // and transforms the Description string of the CloudFormation template to highlight the template is now overridden with the CDK.
 func (cdk *CDK) cleanUp(in []byte) ([]byte, error) {
 	// See [template anatomy]: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-anatomy.html
