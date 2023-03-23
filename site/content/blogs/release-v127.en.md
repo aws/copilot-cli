@@ -38,13 +38,13 @@ or multiple listeners on different ports and protocols for [network load balance
 
 ## Extend Copilot-generated AWS CloudFormation templates
 
+#### Preview AWS CloudFormation template changes
+
 ## Enable multiple listeners and routing rules for Load Balancers
 
 ### Add multiple host-based or path-based routing rules to your Application Load Balancers
 
 ### Add multiple port and protocol listeners to your Network Load Balancers
-
-## Preview AWS CloudFormation template changes
 
 ## Sidecar improvements
 
