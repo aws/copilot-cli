@@ -104,8 +104,8 @@ func (p *yamlPatch) applyAdd(root *yaml.Node) error {
 		return fmt.Errorf("value required")
 	}
 
-	pointer := p.Pointer()
-	parent, err := getNode(root, pointer.Parent(), nil)
+	pointer := p.pointer()
+	parent, err := findNodeWithPointer(root, pointer.parent(), nil)
 	if err != nil {
 		return err
 	}
@@ -114,7 +114,7 @@ func (p *yamlPatch) applyAdd(root *yaml.Node) error {
 	case yaml.DocumentNode:
 		return parent.Encode(p.Value)
 	case yaml.MappingNode:
-		i, err := findInMap(parent, pointer.FinalKey(), pointer.Parent())
+		i, err := findInMap(parent, pointer.finalKey(), pointer.parent())
 		if err == nil {
 			// if the key is in this map, they are trying to replace it
 			return parent.Content[i+1].Encode(p.Value)
@@ -124,17 +124,17 @@ func (p *yamlPatch) applyAdd(root *yaml.Node) error {
 		parent.Content = append(parent.Content, &yaml.Node{
 			Kind:  yaml.ScalarNode,
 			Tag:   "!!str",
-			Value: pointer.FinalKey(),
+			Value: pointer.finalKey(),
 		})
 		parent.Content = append(parent.Content, &p.Value)
 	case yaml.SequenceNode:
-		if pointer.FinalKey() == "-" {
+		if pointer.finalKey() == "-" {
 			// add to end of sequence
 			parent.Content = append(parent.Content, &p.Value)
 			return nil
 		}
 
-		idx, err := idxOrError(pointer.FinalKey(), len(parent.Content), pointer.Parent())
+		idx, err := idxOrError(pointer.finalKey(), len(parent.Content), pointer.parent())
 		if err != nil {
 			return err
 		}
@@ -143,7 +143,7 @@ func (p *yamlPatch) applyAdd(root *yaml.Node) error {
 		parent.Content = append(parent.Content[:idx], append([]*yaml.Node{&p.Value}, parent.Content[idx:]...)...)
 	default:
 		return &errInvalidNodeKind{
-			pointer: pointer.Parent(),
+			pointer: pointer.parent(),
 			kind:    parent.Kind,
 		}
 	}
@@ -152,8 +152,8 @@ func (p *yamlPatch) applyAdd(root *yaml.Node) error {
 }
 
 func (p *yamlPatch) applyRemove(root *yaml.Node) error {
-	pointer := p.Pointer()
-	parent, err := getNode(root, pointer.Parent(), nil)
+	pointer := p.pointer()
+	parent, err := findNodeWithPointer(root, pointer.parent(), nil)
 	if err != nil {
 		return err
 	}
@@ -164,14 +164,14 @@ func (p *yamlPatch) applyRemove(root *yaml.Node) error {
 		p.Value = yaml.Node{}
 		return parent.Encode(p.Value)
 	case yaml.MappingNode:
-		i, err := findInMap(parent, pointer.FinalKey(), pointer.Parent())
+		i, err := findInMap(parent, pointer.finalKey(), pointer.parent())
 		if err != nil {
 			return err
 		}
 
 		parent.Content = append(parent.Content[:i], parent.Content[i+2:]...)
 	case yaml.SequenceNode:
-		idx, err := idxOrError(pointer.FinalKey(), len(parent.Content)-1, pointer.Parent())
+		idx, err := idxOrError(pointer.finalKey(), len(parent.Content)-1, pointer.parent())
 		if err != nil {
 			return err
 		}
@@ -179,7 +179,7 @@ func (p *yamlPatch) applyRemove(root *yaml.Node) error {
 		parent.Content = append(parent.Content[:idx], parent.Content[idx+1:]...)
 	default:
 		return &errInvalidNodeKind{
-			pointer: pointer.Parent(),
+			pointer: pointer.parent(),
 			kind:    parent.Kind,
 		}
 	}
@@ -192,8 +192,8 @@ func (p *yamlPatch) applyReplace(root *yaml.Node) error {
 		return fmt.Errorf("value required")
 	}
 
-	pointer := p.Pointer()
-	node, err := getNode(root, pointer, nil)
+	pointer := p.pointer()
+	node, err := findNodeWithPointer(root, pointer, nil)
 	if err != nil {
 		return err
 	}
@@ -203,22 +203,22 @@ func (p *yamlPatch) applyReplace(root *yaml.Node) error {
 
 type pointer []string
 
-// Parent returns a pointer to the parent of p.
-func (p pointer) Parent() pointer {
+// parent returns a pointer to the parent of p.
+func (p pointer) parent() pointer {
 	if len(p) == 0 {
 		return nil
 	}
 	return p[:len(p)-1]
 }
 
-func (p pointer) FinalKey() string {
+func (p pointer) finalKey() string {
 	if len(p) == 0 {
 		return ""
 	}
 	return p[len(p)-1]
 }
 
-func (y yamlPatch) Pointer() pointer {
+func (y yamlPatch) pointer() pointer {
 	split := strings.Split(y.Path, "/")
 	for i := range split {
 		// apply replacements as described https://www.rfc-editor.org/rfc/rfc6901#section-4
@@ -243,7 +243,7 @@ func findInMap(node *yaml.Node, key string, traversed pointer) (int, error) {
 	return 0, fmt.Errorf("key %q: %q not found in map", strings.Join(traversed, jsonPointerSeparator), key)
 }
 
-func getNode(node *yaml.Node, remaining, traversed pointer) (*yaml.Node, error) {
+func findNodeWithPointer(node *yaml.Node, remaining, traversed pointer) (*yaml.Node, error) {
 	if len(remaining) == 0 {
 		return node, nil
 	}
@@ -254,21 +254,21 @@ func getNode(node *yaml.Node, remaining, traversed pointer) (*yaml.Node, error) 
 			return nil, fmt.Errorf("invalid yaml document node with no content") // shouldn't ever happen
 		}
 
-		return getNode(node.Content[0], remaining[1:], append(traversed, remaining[0]))
+		return findNodeWithPointer(node.Content[0], remaining[1:], append(traversed, remaining[0]))
 	case yaml.MappingNode:
 		i, err := findInMap(node, remaining[0], traversed)
 		if err != nil {
 			return nil, err
 		}
 
-		return getNode(node.Content[i+1], remaining[1:], append(traversed, remaining[0]))
+		return findNodeWithPointer(node.Content[i+1], remaining[1:], append(traversed, remaining[0]))
 	case yaml.SequenceNode:
 		idx, err := idxOrError(remaining[0], len(node.Content)-1, traversed)
 		if err != nil {
 			return nil, err
 		}
 
-		return getNode(node.Content[idx], remaining[1:], append(traversed, remaining[0]))
+		return findNodeWithPointer(node.Content[idx], remaining[1:], append(traversed, remaining[0]))
 	default:
 		return nil, &errInvalidNodeKind{
 			pointer: traversed,
