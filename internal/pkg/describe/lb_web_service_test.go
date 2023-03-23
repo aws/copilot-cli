@@ -139,7 +139,7 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 						},
 					}, nil),
 					m.ecsDescriber.EXPECT().Params().Return(mockParams, nil),
-					m.ecsDescriber.EXPECT().RollbackAlarmNames().Return(nil, nil),
+					m.ecsDescriber.EXPECT().RollbackAlarmNames().Return([]string{}, nil),
 					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("", errors.New("some error")),
 				)
 			},
@@ -271,7 +271,7 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 						},
 					}, nil),
 					m.ecsDescriber.EXPECT().Params().Return(mockParams, nil),
-					m.ecsDescriber.EXPECT().RollbackAlarmNames().Return(nil, nil),
+					m.ecsDescriber.EXPECT().RollbackAlarmNames().Return([]string{}, nil),
 					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
 					m.ecsDescriber.EXPECT().ServiceConnectDNSNames().Return(nil, mockErr),
 				)
@@ -303,7 +303,7 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 						},
 					}, nil),
 					m.ecsDescriber.EXPECT().Params().Return(mockParams, nil),
-					m.ecsDescriber.EXPECT().RollbackAlarmNames().Return(nil, nil),
+					m.ecsDescriber.EXPECT().RollbackAlarmNames().Return([]string{}, nil),
 					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
 					m.ecsDescriber.EXPECT().ServiceConnectDNSNames().Return(nil, nil),
 					m.ecsDescriber.EXPECT().Secrets().Return(nil, mockErr),
@@ -337,7 +337,7 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 						},
 					}, nil),
 					m.ecsDescriber.EXPECT().Params().Return(mockParams, nil),
-					m.ecsDescriber.EXPECT().RollbackAlarmNames().Return(nil, nil),
+					m.ecsDescriber.EXPECT().RollbackAlarmNames().Return([]string{}, nil),
 					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
 					m.ecsDescriber.EXPECT().ServiceConnectDNSNames().Return(nil, nil),
 					m.ecsDescriber.EXPECT().Secrets().Return([]*ecs.ContainerSecret{

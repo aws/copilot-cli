@@ -126,7 +126,7 @@ func TestWorkerServiceDescriber_Describe(t *testing.T) {
 						OperatingSystem: "LINUX",
 						Architecture:    "X86_64",
 					}, nil),
-					m.ecsDescriber.EXPECT().RollbackAlarmNames().Return(nil, nil),
+					m.ecsDescriber.EXPECT().RollbackAlarmNames().Return([]string{}, nil),
 					m.ecsDescriber.EXPECT().EnvVars().Return(nil, mockErr),
 				)
 			},
@@ -146,7 +146,7 @@ func TestWorkerServiceDescriber_Describe(t *testing.T) {
 						OperatingSystem: "LINUX",
 						Architecture:    "X86_64",
 					}, nil),
-					m.ecsDescriber.EXPECT().RollbackAlarmNames().Return(nil, nil),
+					m.ecsDescriber.EXPECT().RollbackAlarmNames().Return([]string{}, nil),
 					m.ecsDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
 						{
 							Name:      "COPILOT_ENVIRONMENT_NAME",
@@ -234,7 +234,7 @@ func TestWorkerServiceDescriber_Describe(t *testing.T) {
 						OperatingSystem: "LINUX",
 						Architecture:    "X86_64",
 					}, nil),
-					m.ecsDescriber.EXPECT().RollbackAlarmNames().Return(nil, nil),
+					m.ecsDescriber.EXPECT().RollbackAlarmNames().Return([]string{}, nil),
 					m.ecsDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
 						{
 							Name:      "COPILOT_ENVIRONMENT_NAME",
