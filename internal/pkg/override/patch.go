@@ -24,7 +24,7 @@ func ScaffoldWithPatch(fs afero.Fs, dir string) error {
 		return fmt.Errorf("directory %q is not empty", dir)
 	}
 
-	return templates.WalkOverridesYAMLPatchDir(writeFilesToDir(dir, fs))
+	return templates.WalkOverridesPatchDir(writeFilesToDir(dir, fs))
 }
 
 // Patch applies overrides configured as JSON Patches,

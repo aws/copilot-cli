@@ -133,6 +133,6 @@ func (t *Template) WalkOverridesCDKDir(resources []CFNResource, fn WalkDirFunc) 
 	))
 }
 
-func (t *Template) WalkOverridesYAMLPatchDir(fn WalkDirFunc) error {
-	return t.walkDir(yamlPatchTemplatesPath, yamlPatchTemplatesPath, struct{}{}, fn, WithFuncs(map[string]interface{}{}))
+func (t *Template) WalkOverridesPatchDir(fn WalkDirFunc) error {
+	return t.walkDir(yamlPatchTemplatesPath, yamlPatchTemplatesPath, struct{}{}, fn)
 }
