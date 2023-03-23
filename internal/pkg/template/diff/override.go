@@ -46,6 +46,6 @@ func (_ *noopOverrider) match(_, _ *yaml.Node, _ string) bool {
 }
 
 // Parse is a no-op for a noopOverrider.
-func (m *noopOverrider) parse(_, _ *yaml.Node, _ string) (diffNode, error) {
+func (*noopOverrider) parse(_, _ *yaml.Node, _ string) (diffNode, error) {
 	return nil, nil
 }
