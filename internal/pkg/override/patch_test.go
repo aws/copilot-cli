@@ -399,7 +399,7 @@ a:
 - op: add
   path: /a/b/3
   value: val`,
-			expectedErr: `unable to apply "add" patch: key "/a/b": invalid index 3 for sequence of length 2`,
+			expectedErr: `unable to apply "add" patch: key "/a/b": index 3 out of bounds for sequence of length 2`,
 		},
 		"error invalid index sequence following path": {
 			yaml: `
@@ -425,7 +425,7 @@ a:
   value: val`,
 			expectedErr: `unable to apply "add" patch: key "/a/b": expected index in sequence, got "-"`,
 		},
-		"error targeting scalar while following path": {
+		"error targeting scalar while following path add": {
 			yaml: `
 a:
   b:
@@ -436,6 +436,29 @@ a:
   path: /a/b/1/e
   value: val`,
 			expectedErr: `unable to apply "add" patch: key "/a/b/1": invalid node type scalar`,
+		},
+		"error targeting scalar while following path remove": {
+			yaml: `
+a:
+  b:
+    - c
+    - d`,
+			overrides: `
+- op: remove
+  path: /a/b/1/e`,
+			expectedErr: `unable to apply "remove" patch: key "/a/b/1": invalid node type scalar`,
+		},
+		"error targeting scalar while following path replace": {
+			yaml: `
+a:
+  b:
+    - c
+    - d`,
+			overrides: `
+- op: replace
+  path: /a/b/1/e
+  value: val`,
+			expectedErr: `unable to apply "replace" patch: key "/a/b/1": invalid node type scalar`,
 		},
 		"error add with no value": {
 			overrides: `
@@ -448,6 +471,15 @@ a:
 - op: replace
   path: /a/b/c`,
 			expectedErr: `unable to apply "replace" patch: value required`,
+		},
+		"error remove nonexistant value from map": {
+			yaml: `
+a:
+  b: value`,
+			overrides: `
+- op: remove
+  path: /a/c`,
+			expectedErr: `unable to apply "remove" patch: key "/a": "c" not found in map`,
 		},
 	}
 

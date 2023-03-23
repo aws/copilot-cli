@@ -4,7 +4,6 @@
 package override
 
 import (
-	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -105,87 +104,87 @@ func (p *yamlPatch) applyAdd(root *yaml.Node) error {
 		return fmt.Errorf("value required")
 	}
 
-	return followJSONPointer(root, p.Path, func(node *yaml.Node, pointer []string) error {
-		if len(pointer) != 1 {
+	pointer := p.Pointer()
+	parent, err := getNode(root, pointer.Parent(), nil)
+	if err != nil {
+		return err
+	}
+
+	switch parent.Kind {
+	case yaml.DocumentNode:
+		return parent.Encode(p.Value)
+	case yaml.MappingNode:
+		i, err := findInMap(parent, pointer.FinalKey(), pointer.Parent())
+		if err == nil {
+			// if the key is in this map, they are trying to replace it
+			return parent.Content[i+1].Encode(p.Value)
+		}
+
+		// if the key isn't in this map, then we need to create it for them
+		parent.Content = append(parent.Content, &yaml.Node{
+			Kind:  yaml.ScalarNode,
+			Tag:   "!!str",
+			Value: pointer.FinalKey(),
+		})
+		parent.Content = append(parent.Content, &p.Value)
+	case yaml.SequenceNode:
+		if pointer.FinalKey() == "-" {
+			// add to end of sequence
+			parent.Content = append(parent.Content, &p.Value)
 			return nil
 		}
 
-		switch node.Kind {
-		case yaml.DocumentNode:
-			return p.encodeAndStop(node)
-		case yaml.MappingNode:
-			// if the key is in this map, they are trying to replace it
-			for i := 0; i < len(node.Content); i += 2 {
-				if node.Content[i].Value == pointer[0] {
-					return p.encodeAndStop(node.Content[i+1])
-				}
-			}
-
-			// if the key isn't in this map, then we need to create it for them
-			node.Content = append(node.Content, &yaml.Node{
-				Kind:  yaml.ScalarNode,
-				Tag:   "!!str",
-				Value: pointer[0],
-			})
-			node.Content = append(node.Content, &p.Value)
-			return errStopFollowingPointer
-		case yaml.SequenceNode:
-			if pointer[0] == "-" {
-				// add to end of sequence
-				node.Content = append(node.Content, &p.Value)
-				return errStopFollowingPointer
-			}
-
-			idx, err := strconv.Atoi(pointer[0])
-			switch {
-			case err != nil:
-				return fmt.Errorf("expected index in sequence, got %q", pointer[0])
-			case idx < 0 || idx > len(node.Content):
-				return fmt.Errorf("invalid index %d for sequence of length %d", idx, len(node.Content))
-			}
-
-			// add node at idx
-			node.Content = append(node.Content[:idx], append([]*yaml.Node{&p.Value}, node.Content[idx:]...)...)
-			return errStopFollowingPointer
+		idx, err := idxOrError(pointer.FinalKey(), len(parent.Content), pointer.Parent())
+		if err != nil {
+			return err
 		}
 
-		return nil
-	})
+		// add node at idx
+		parent.Content = append(parent.Content[:idx], append([]*yaml.Node{&p.Value}, parent.Content[idx:]...)...)
+	default:
+		return &errInvalidNodeKind{
+			pointer: pointer.Parent(),
+			kind:    parent.Kind,
+		}
+	}
+
+	return nil
 }
 
 func (p *yamlPatch) applyRemove(root *yaml.Node) error {
-	return followJSONPointer(root, p.Path, func(node *yaml.Node, pointer []string) error {
-		if len(pointer) != 1 {
-			return nil
+	pointer := p.Pointer()
+	parent, err := getNode(root, pointer.Parent(), nil)
+	if err != nil {
+		return err
+	}
+
+	switch parent.Kind {
+	case yaml.DocumentNode:
+		// make sure we are encoding zero into node
+		p.Value = yaml.Node{}
+		return parent.Encode(p.Value)
+	case yaml.MappingNode:
+		i, err := findInMap(parent, pointer.FinalKey(), pointer.Parent())
+		if err != nil {
+			return err
 		}
 
-		switch node.Kind {
-		case yaml.DocumentNode:
-			// make sure we are encoding zero into node
-			p.Value = yaml.Node{}
-			return p.encodeAndStop(node)
-		case yaml.MappingNode:
-			for i := 0; i < len(node.Content); i += 2 {
-				if node.Content[i].Value == pointer[0] {
-					node.Content = append(node.Content[:i], node.Content[i+2:]...)
-					return errStopFollowingPointer
-				}
-			}
-		case yaml.SequenceNode:
-			idx, err := strconv.Atoi(pointer[0])
-			switch {
-			case err != nil:
-				return fmt.Errorf("expected index in sequence, got %q", pointer[0])
-			case idx < 0 || idx > len(node.Content)-1:
-				return fmt.Errorf("invalid index %d for sequence of length %d", idx, len(node.Content))
-			}
-
-			node.Content = append(node.Content[:idx], node.Content[idx+1:]...)
-			return errStopFollowingPointer
+		parent.Content = append(parent.Content[:i], parent.Content[i+2:]...)
+	case yaml.SequenceNode:
+		idx, err := idxOrError(pointer.FinalKey(), len(parent.Content)-1, pointer.Parent())
+		if err != nil {
+			return err
 		}
 
-		return nil
-	})
+		parent.Content = append(parent.Content[:idx], parent.Content[idx+1:]...)
+	default:
+		return &errInvalidNodeKind{
+			pointer: pointer.Parent(),
+			kind:    parent.Kind,
+		}
+	}
+
+	return nil
 }
 
 func (p *yamlPatch) applyReplace(root *yaml.Node) error {
@@ -193,74 +192,110 @@ func (p *yamlPatch) applyReplace(root *yaml.Node) error {
 		return fmt.Errorf("value required")
 	}
 
-	return followJSONPointer(root, p.Path, func(node *yaml.Node, pointer []string) error {
-		if len(pointer) > 0 {
-			return nil
-		}
-		return p.encodeAndStop(node)
-	})
-}
-
-func (p *yamlPatch) encodeAndStop(node *yaml.Node) error {
-	if err := node.Encode(p.Value); err != nil {
+	pointer := p.Pointer()
+	node, err := getNode(root, pointer, nil)
+	if err != nil {
 		return err
 	}
-	return errStopFollowingPointer
+
+	return node.Encode(p.Value)
 }
 
-var errStopFollowingPointer = errors.New("stop following pointer")
+type pointer []string
 
-type visitNodeFunc func(node *yaml.Node, remaining []string) error
+// Parent returns a pointer to the parent of p.
+func (p pointer) Parent() pointer {
+	if len(p) == 0 {
+		return nil
+	}
+	return p[:len(p)-1]
+}
 
-func followJSONPointer(root *yaml.Node, pointer string, visit visitNodeFunc) error {
-	split := strings.Split(pointer, "/")
+func (p pointer) FinalKey() string {
+	if len(p) == 0 {
+		return ""
+	}
+	return p[len(p)-1]
+}
+
+func (y yamlPatch) Pointer() pointer {
+	split := strings.Split(y.Path, "/")
 	for i := range split {
 		// apply replacements as described https://www.rfc-editor.org/rfc/rfc6901#section-4
 		split[i] = strings.ReplaceAll(split[i], "~1", "/")
 		split[i] = strings.ReplaceAll(split[i], "~0", "~")
 	}
 
-	return followJSONPointerHelper(root, nil, split, visit)
+	return split
 }
 
-func followJSONPointerHelper(node *yaml.Node, traversed, remaining []string, visit visitNodeFunc) error {
-	if err := visit(node, remaining); err != nil {
-		if errors.Is(err, errStopFollowingPointer) {
-			return nil
+// findInMap returns the index of the _key_ node in a mapping node's Content.
+// The index of the _value_ node is the returned index+1.
+//
+// If key is not in the map, an error is returned.
+func findInMap(node *yaml.Node, key string, traversed pointer) (int, error) {
+	for i := 0; i < len(node.Content); i += 2 {
+		if node.Content[i].Value == key {
+			return i, nil
 		}
-		return fmt.Errorf("key %q: %w", strings.Join(traversed, jsonPointerSeparator), err)
-	} else if len(remaining) == 0 {
-		return nil
+	}
+
+	return 0, fmt.Errorf("key %q: %q not found in map", strings.Join(traversed, jsonPointerSeparator), key)
+}
+
+func getNode(node *yaml.Node, remaining, traversed pointer) (*yaml.Node, error) {
+	if len(remaining) == 0 {
+		return node, nil
 	}
 
 	switch node.Kind {
 	case yaml.DocumentNode:
 		if len(node.Content) == 0 {
-			return nil // weird, but ok ¯\_(ツ)_/¯
+			return nil, nil // weird, but ok ¯\_(ツ)_/¯
 		}
 
-		return followJSONPointerHelper(node.Content[0], append(traversed, remaining[0]), remaining[1:], visit)
+		return getNode(node.Content[0], remaining[1:], append(traversed, remaining[0]))
 	case yaml.MappingNode:
-		for i := 0; i < len(node.Content); i += 2 {
-			if node.Content[i].Value == remaining[0] {
-				return followJSONPointerHelper(node.Content[i+1], append(traversed, remaining[0]), remaining[1:], visit)
-			}
+		i, err := findInMap(node, remaining[0], traversed)
+		if err != nil {
+			return nil, err
 		}
 
-		return fmt.Errorf("key %q: %q not found in map", strings.Join(traversed, jsonPointerSeparator), remaining[0])
+		return getNode(node.Content[i+1], remaining[1:], append(traversed, remaining[0]))
 	case yaml.SequenceNode:
-		idx, err := strconv.Atoi(remaining[0])
-		switch {
-		case err != nil:
-			return fmt.Errorf("key %q: expected index in sequence, got %q", strings.Join(traversed, jsonPointerSeparator), remaining[0])
-		case idx < 0 || idx > len(node.Content)-1:
-			return fmt.Errorf("key %q: index %d out of bounds for sequence of length %d", strings.Join(traversed, jsonPointerSeparator), idx, len(node.Content))
+		idx, err := idxOrError(remaining[0], len(node.Content)-1, traversed)
+		if err != nil {
+			return nil, err
 		}
 
-		return followJSONPointerHelper(node.Content[idx], append(traversed, remaining[0]), remaining[1:], visit)
+		return getNode(node.Content[idx], remaining[1:], append(traversed, remaining[0]))
 	default:
-		return fmt.Errorf("key %q: invalid node type %s", strings.Join(traversed, jsonPointerSeparator), nodeKindStringer(node.Kind))
+		return nil, &errInvalidNodeKind{
+			pointer: traversed,
+			kind:    node.Kind,
+		}
 	}
+}
+
+func idxOrError(key string, maxIdx int, traversed pointer) (int, error) {
+	idx, err := strconv.Atoi(key)
+	switch {
+	case err != nil:
+		return 0, fmt.Errorf("key %q: expected index in sequence, got %q", strings.Join(traversed, jsonPointerSeparator), key)
+	case idx < 0 || idx > maxIdx:
+		return 0, fmt.Errorf("key %q: index %d out of bounds for sequence of length %d", strings.Join(traversed, jsonPointerSeparator), idx, maxIdx)
+	}
+
+	return idx, nil
+}
+
+type errInvalidNodeKind struct {
+	pointer pointer
+	kind    yaml.Kind
+}
+
+func (e *errInvalidNodeKind) Error() string {
+	return fmt.Sprintf("key %q: invalid node type %s", strings.Join(e.pointer, jsonPointerSeparator), nodeKindStringer(e.kind))
 }
 
 type nodeKindStringer yaml.Kind
