@@ -334,7 +334,7 @@ Dog: (pleased) "ikr"`, t),
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			got, err := From(tc.old).Parse([]byte(tc.curr), &noneOverrider{})
+			got, err := From(tc.old).Parse([]byte(tc.curr))
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
@@ -392,7 +392,7 @@ Metadata:
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			got, err := From(tc.old).Parse([]byte(tc.curr), CFNOverrider())
+			got, err := From(tc.old).ParseWithIgnorer([]byte(tc.curr), CFNIgnorer())
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {

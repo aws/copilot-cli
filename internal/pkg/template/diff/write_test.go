@@ -207,7 +207,7 @@ Mary:
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotTree, err := From(tc.old).Parse([]byte(tc.curr), &noneOverrider{})
+			gotTree, err := From(tc.old).Parse([]byte(tc.curr))
 			require.NoError(t, err)
 
 			buf := strings.Builder{}
@@ -223,7 +223,7 @@ func Test_Integration_Parse_Write_WithOverride(t *testing.T) {
 	testCases := map[string]struct {
 		curr      string
 		old       string
-		overrider Overrider
+		overrider overrider
 		wanted    string
 	}{
 		"no override": {
@@ -251,7 +251,7 @@ Metadata:
 Metadata:
   Version: v1.27.0
   Manifest: There is definitely a difference.`,
-			overrider: CFNOverrider(),
+			overrider: CFNIgnorer(),
 			wanted: `
 ~ Metadata:
     ~ Version: v1.26.0 -> v1.27.0
@@ -264,12 +264,12 @@ Metadata:
 			curr: `Description: CloudFormation environment template for infrastructure shared among Copilot workloads.
 Metadata:
   Manifest: There is definitely a difference.`,
-			overrider: CFNOverrider(),
+			overrider: CFNIgnorer(),
 		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotTree, err := From(tc.old).Parse([]byte(tc.curr), tc.overrider)
+			gotTree, err := From(tc.old).parseRoot([]byte(tc.curr), tc.overrider)
 			require.NoError(t, err)
 			buf := strings.Builder{}
 			err = gotTree.Write(&buf)
