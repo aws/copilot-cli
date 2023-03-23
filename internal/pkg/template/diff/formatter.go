@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"gopkg.in/yaml.v3"
 )
 
@@ -32,7 +33,7 @@ func (f *seqItemFormatter) formatMod(node diffNode) string {
 }
 
 func (f *seqItemFormatter) formatPath(_ diffNode) string {
-	return ""
+	return color.Faint.Sprint("(changed item)")
 }
 
 type keyedFormatter struct {
