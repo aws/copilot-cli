@@ -4,6 +4,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -582,16 +583,53 @@ func (e *errFeatureIncompatibleWithEnvironment) RecommendActions() string {
 
 }
 
+type errNonEmptyDiff struct{}
+
+func (e *errNonEmptyDiff) Error() string {
+	return "Diff detected "
+}
+
+// ExitCode returns 1 for a non-empty diff.
+func (e *errNonEmptyDiff) ExitCode() int {
+	return 1
+}
+
+type errDiffNotAvailable struct {
+	parentErr error
+}
+
+// Unwrap returns the parent error that is wrapped inside errDiffNotAvailable.
+func (e *errDiffNotAvailable) Unwrap() error {
+	return e.parentErr
+}
+
+func (e *errDiffNotAvailable) Error() string {
+	return e.parentErr.Error()
+}
+
+// ExitCode returns 2 when a diff is unavailable due to a parent error.
+func (e *errDiffNotAvailable) ExitCode() int {
+	return 2
+}
+
 func diff(differ templateDiffer, tmpl string, writer io.Writer) error {
 	out, err := differ.DeployDiff(tmpl)
 	if err != nil {
 		return err
 	}
+	var nonDiff bool
 	if out == "" {
+		nonDiff = true
 		out = "No changes.\n"
 	}
 	_, err = writer.Write([]byte(out))
-	return err
+	if err != nil {
+		return err
+	}
+	if nonDiff {
+		return nil
+	}
+	return &errNonEmptyDiff{}
 }
 
 // buildSvcDeployCmd builds the `svc deploy` subcommand.
