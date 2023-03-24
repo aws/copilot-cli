@@ -355,7 +355,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
       Type: network
   NLBListener:
     Metadata:
-      'aws:copilot:description': 'A TLS listener on port `443` for forwarding traffic to your tasks'
+      'aws:copilot:description': 'A TLS listener on port `443` that forwards traffic to your tasks'
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
       DefaultActions:
@@ -369,7 +369,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
       SslPolicy: ELBSecurityPolicy-TLS13-1-2-2021-06
   NLBListener1:
     Metadata:
-      'aws:copilot:description': 'A TCP listener on port `8081` for forwarding traffic to your tasks'
+      'aws:copilot:description': 'A TCP listener on port `8081` that forwards traffic to your tasks'
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
       DefaultActions:

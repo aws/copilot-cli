@@ -463,7 +463,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
       Priority: !GetAtt HTTPRuleWithDomainPriorityAction.Priority
   HTTPSListenerRule:
     Metadata:
-      'aws:copilot:description': 'An HTTPS listener rule for path `/` for forwarding HTTPS traffic to your tasks'
+      'aws:copilot:description': 'An HTTPS listener rule for path `/` that forwards HTTPS traffic to your tasks'
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
     Properties:
       Actions:
@@ -496,7 +496,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
       Type: network
   NLBListener:
     Metadata:
-      'aws:copilot:description': 'A TCP listener on port `81` for forwarding traffic to your tasks'
+      'aws:copilot:description': 'A TCP listener on port `81` that forwards traffic to your tasks'
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
       DefaultActions:
@@ -507,7 +507,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
       Protocol: TCP
   NLBListener1:
     Metadata:
-      'aws:copilot:description': 'A TCP listener on port `8082` for forwarding traffic to your tasks'
+      'aws:copilot:description': 'A TCP listener on port `8082` that forwards traffic to your tasks'
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
       DefaultActions:

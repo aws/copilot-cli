@@ -788,7 +788,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
       Priority: !GetAtt HTTPRuleWithDomainPriorityAction.Priority
   HTTPSListenerRule:
     Metadata:
-      'aws:copilot:description': 'An HTTPS listener rule for path `/` for forwarding HTTPS traffic to your tasks'
+      'aws:copilot:description': 'An HTTPS listener rule for path `/` that forwards HTTPS traffic to your tasks'
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
     Properties:
       Actions:

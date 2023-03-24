@@ -405,7 +405,7 @@ Resources:
       ListenerArn: !GetAtt EnvControllerAction.InternalHTTPListenerArn
   HTTPListenerRule:
     Metadata:
-      "aws:copilot:description": "A HTTP listener rule for path `http-full-config-path` for forwarding HTTP traffic"
+      "aws:copilot:description": "An HTTP listener rule for path `http-full-config-path` that forwards HTTP traffic to your tasks"
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
     Properties:
       Actions:

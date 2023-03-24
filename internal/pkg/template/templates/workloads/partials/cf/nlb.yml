@@ -13,7 +13,7 @@ PublicNetworkLoadBalancer:
 {{- range $i, $listener := .NLB.Listener }}
 NLBListener{{- if ne $i 0 }}{{$i}}{{end}}:
   Metadata:
-    'aws:copilot:description': 'A {{$listener.Protocol}} listener on port `{{$listener.Port}}` for forwarding traffic to your tasks'
+    'aws:copilot:description': 'A {{$listener.Protocol}} listener on port `{{$listener.Port}}` that forwards traffic to your tasks'
   Type: AWS::ElasticLoadBalancingV2::Listener
   Properties:
     DefaultActions:
