@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -133,8 +134,9 @@ func TestPackageEnvOpts_Execute(t *testing.T) {
 	testCases := map[string]struct {
 		mockedCmd func(controller *gomock.Controller) *packageEnvOpts
 
-		wantedFS  func(t *testing.T, fs afero.Fs)
-		wantedErr error
+		wantedDiff string
+		wantedFS   func(t *testing.T, fs afero.Fs)
+		wantedErr  error
 	}{
 		"should return a wrapped error when reading env manifest fails": {
 			mockedCmd: func(ctrl *gomock.Controller) *packageEnvOpts {
@@ -284,6 +286,38 @@ func TestPackageEnvOpts_Execute(t *testing.T) {
 			},
 			wantedErr: errors.New(`generate CloudFormation template from environment "test" manifest: some error`),
 		},
+		"should return an error if fail to get the diff": {
+			mockedCmd: func(ctrl *gomock.Controller) *packageEnvOpts {
+				ws := mocks.NewMockwsEnvironmentReader(ctrl)
+				ws.EXPECT().ReadEnvironmentManifest(gomock.Any()).Return([]byte("name: test\ntype: Environment\n"), nil)
+				interop := mocks.NewMockinterpolator(ctrl)
+				interop.EXPECT().Interpolate(gomock.Any()).Return("name: test\ntype: Environment\n", nil)
+				caller := mocks.NewMockidentityService(ctrl)
+				caller.EXPECT().Get().Return(identity.Caller{}, nil)
+				deployer := mocks.NewMockenvPackager(ctrl)
+				deployer.EXPECT().Validate(gomock.Any()).Return(nil)
+				deployer.EXPECT().GenerateCloudFormationTemplate(gomock.Any()).Return(&deploy.GenerateCloudFormationTemplateOutput{}, nil)
+				deployer.EXPECT().DeployDiff(gomock.Any()).Return("", errors.New("some error"))
+				return &packageEnvOpts{
+					packageEnvVars: packageEnvVars{
+						envName:  "test",
+						showDiff: true,
+					},
+					ws:     ws,
+					caller: caller,
+					newInterpolator: func(_, _ string) interpolator {
+						return interop
+					},
+					newEnvPackager: func() (envPackager, error) {
+						return deployer, nil
+					},
+					envCfg:     &config.Environment{Name: "test"},
+					appCfg:     &config.Application{},
+					diffWriter: &strings.Builder{},
+				}
+			},
+			wantedErr: errors.New("some error"),
+		},
 		"should return a wrapped error when retrieving addons CloudFormation template fails": {
 			mockedCmd: func(ctrl *gomock.Controller) *packageEnvOpts {
 				ws := mocks.NewMockwsEnvironmentReader(ctrl)
@@ -369,6 +403,38 @@ func TestPackageEnvOpts_Execute(t *testing.T) {
 				}
 			},
 			wantedFS: func(_ *testing.T, _ afero.Fs) {},
+		},
+		"should write the diff": {
+			mockedCmd: func(ctrl *gomock.Controller) *packageEnvOpts {
+				ws := mocks.NewMockwsEnvironmentReader(ctrl)
+				ws.EXPECT().ReadEnvironmentManifest(gomock.Any()).Return([]byte("name: test\ntype: Environment\n"), nil)
+				interop := mocks.NewMockinterpolator(ctrl)
+				interop.EXPECT().Interpolate(gomock.Any()).Return("name: test\ntype: Environment\n", nil)
+				caller := mocks.NewMockidentityService(ctrl)
+				caller.EXPECT().Get().Return(identity.Caller{}, nil)
+				deployer := mocks.NewMockenvPackager(ctrl)
+				deployer.EXPECT().Validate(gomock.Any()).Return(nil)
+				deployer.EXPECT().GenerateCloudFormationTemplate(gomock.Any()).Return(&deploy.GenerateCloudFormationTemplateOutput{}, nil)
+				deployer.EXPECT().DeployDiff(gomock.Any()).Return("mock diff", nil)
+				return &packageEnvOpts{
+					packageEnvVars: packageEnvVars{
+						envName:  "test",
+						showDiff: true,
+					},
+					ws:     ws,
+					caller: caller,
+					newInterpolator: func(_, _ string) interpolator {
+						return interop
+					},
+					newEnvPackager: func() (envPackager, error) {
+						return deployer, nil
+					},
+					envCfg:     &config.Environment{Name: "test"},
+					appCfg:     &config.Application{},
+					diffWriter: &strings.Builder{},
+				}
+			},
+			wantedDiff: "mock diff",
 		},
 		"should write files to output directories without addons": {
 			mockedCmd: func(ctrl *gomock.Controller) *packageEnvOpts {
@@ -522,9 +588,16 @@ func TestPackageEnvOpts_Execute(t *testing.T) {
 			// THEN
 			if tc.wantedErr == nil {
 				require.NoError(t, actual)
-				tc.wantedFS(t, cmd.fs)
 			} else {
 				require.EqualError(t, actual, tc.wantedErr.Error())
+			}
+
+			if tc.wantedFS != nil {
+				tc.wantedFS(t, cmd.fs)
+			}
+
+			if tc.wantedDiff != "" {
+				require.Equal(t, tc.wantedDiff, cmd.diffWriter.(*strings.Builder).String())
 			}
 		})
 	}

@@ -1,4 +1,4 @@
 # Dependencies to render the Copilot website needed by mkdocs.
 mkdocs-macros-plugin==0.7.0
 mkdocs-static-i18n==0.44
-mkdocs-redirects==1.0.4
+mkdocs-redirects==1.2.0
