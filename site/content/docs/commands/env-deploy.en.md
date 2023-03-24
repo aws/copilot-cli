@@ -35,3 +35,7 @@ $ copilot env deploy --name test --diff
 
 Continue with the deployment? (y/N)
 ```
+
+!!!info "`copilot env package --diff`"
+    Alternatively, if you just wish to take a peek at the diff without potentially making a deployment,
+    you can run `copilot env package --diff`, which will print the diff and exit.

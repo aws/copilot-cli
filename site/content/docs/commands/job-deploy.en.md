@@ -63,3 +63,7 @@ $ copilot job deploy --diff
 
 Continue with the deployment? (y/N)
 ```
+
+!!!info "`copilot job package --diff`"
+    Alternatively, if you just wish to take a peek at the diff without potentially making a deployment,
+    you can run `copilot job package --diff`, which will print the diff and exit.
