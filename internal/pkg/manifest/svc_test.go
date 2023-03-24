@@ -114,7 +114,7 @@ environments:
 								Credentials: aws.String("some arn"),
 							}, Port: aws.Uint16(80)},
 						},
-						RoutingRule: HTTPOrBool{
+						HTTPOrBool: HTTPOrBool{
 							HTTP: HTTP{
 								Main: RoutingRule{
 									Alias: Alias{

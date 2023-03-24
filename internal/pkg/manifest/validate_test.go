@@ -52,7 +52,7 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 			lbConfig: LoadBalancedWebService{
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					ImageConfig: testImageConfig,
-					RoutingRule: HTTPOrBool{
+					HTTPOrBool: HTTPOrBool{
 						HTTP: HTTP{
 							Main: RoutingRule{
 								TargetContainer: aws.String("mockTargetContainer"),
@@ -75,7 +75,7 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 							},
 						},
 					},
-					RoutingRule: HTTPOrBool{
+					HTTPOrBool: HTTPOrBool{
 						HTTP: HTTP{
 							Main: RoutingRule{
 								Path: stringP("/"),
@@ -97,7 +97,7 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 							},
 						},
 					},
-					RoutingRule: HTTPOrBool{
+					HTTPOrBool: HTTPOrBool{
 						HTTP: HTTP{
 							Main: RoutingRule{
 								Path: stringP("/"),
@@ -117,7 +117,7 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 							{},
 						},
 					},
-					RoutingRule: HTTPOrBool{
+					HTTPOrBool: HTTPOrBool{
 						HTTP: HTTP{
 							Main: RoutingRule{
 								Path: stringP("/"),
@@ -137,7 +137,7 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 							Path: "Family",
 						},
 					},
-					RoutingRule: HTTPOrBool{
+					HTTPOrBool: HTTPOrBool{
 						HTTP: HTTP{
 							Main: RoutingRule{
 								Path: stringP("/"),
@@ -152,7 +152,7 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 			lbConfig: LoadBalancedWebService{
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					ImageConfig: testImageConfig,
-					RoutingRule: HTTPOrBool{
+					HTTPOrBool: HTTPOrBool{
 						HTTP: HTTP{
 							Main: RoutingRule{
 								Path: stringP("/"),
@@ -168,7 +168,7 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 				Workload: Workload{Name: aws.String("mockName")},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					ImageConfig: testImageConfig,
-					RoutingRule: HTTPOrBool{
+					HTTPOrBool: HTTPOrBool{
 						HTTP: HTTP{
 							Main: RoutingRule{
 								Path:            stringP("/"),
@@ -185,7 +185,7 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 				Workload: Workload{Name: aws.String("mockName")},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					ImageConfig: testImageConfig,
-					RoutingRule: HTTPOrBool{
+					HTTPOrBool: HTTPOrBool{
 						HTTP: HTTP{
 							Main: RoutingRule{
 								Path:            stringP("/"),
@@ -208,7 +208,7 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 				Workload: Workload{Name: aws.String("mockName")},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					ImageConfig: testImageConfig,
-					RoutingRule: HTTPOrBool{
+					HTTPOrBool: HTTPOrBool{
 						HTTP: HTTP{
 							Main: RoutingRule{
 								Path:            stringP("/"),
@@ -247,7 +247,7 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 							Essential: aws.Bool(false),
 						},
 					},
-					RoutingRule: HTTPOrBool{
+					HTTPOrBool: HTTPOrBool{
 						HTTP: HTTP{
 							Main: RoutingRule{
 								Path: stringP("/"),
@@ -277,7 +277,7 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 						},
 						},
 					},
-					RoutingRule: HTTPOrBool{
+					HTTPOrBool: HTTPOrBool{
 						HTTP: HTTP{
 							Main: RoutingRule{
 								Path: stringP("/"),
@@ -304,7 +304,7 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 							},
 						},
 					},
-					RoutingRule: HTTPOrBool{
+					HTTPOrBool: HTTPOrBool{
 						HTTP: HTTP{
 							Main: RoutingRule{
 								Path: stringP("/"),
@@ -322,7 +322,7 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					ImageConfig: testImageConfig,
-					RoutingRule: HTTPOrBool{
+					HTTPOrBool: HTTPOrBool{
 						Enabled: aws.Bool(false),
 					},
 				},
@@ -344,7 +344,7 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 							},
 						},
 					},
-					RoutingRule: HTTPOrBool{
+					HTTPOrBool: HTTPOrBool{
 						Enabled: aws.Bool(false),
 					},
 					NLBConfig: NetworkLoadBalancerConfiguration{
@@ -371,7 +371,7 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 							},
 						},
 					},
-					RoutingRule: HTTPOrBool{
+					HTTPOrBool: HTTPOrBool{
 						Enabled: aws.Bool(false),
 					},
 					NLBConfig: NetworkLoadBalancerConfiguration{
@@ -390,7 +390,7 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					ImageConfig: testImageConfig,
-					RoutingRule: HTTPOrBool{
+					HTTPOrBool: HTTPOrBool{
 						HTTP: HTTP{
 							Main: RoutingRule{
 								Path: stringP("/"),

@@ -85,7 +85,7 @@ func NewLoadBalancedWebService(conf LoadBalancedWebServiceConfig,
 		httpsEnabled = true
 		dnsDelegationEnabled = false
 	}
-	if conf.Manifest.RoutingRule.Disabled() {
+	if conf.Manifest.HTTPOrBool.Disabled() {
 		httpsEnabled = false
 	}
 	s := &LoadBalancedWebService{
@@ -172,8 +172,8 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		return "", err
 	}
 	var deregistrationDelay *int64 = aws.Int64(60)
-	if s.manifest.RoutingRule.Main.DeregistrationDelay != nil {
-		deregistrationDelay = aws.Int64(int64(s.manifest.RoutingRule.Main.DeregistrationDelay.Seconds()))
+	if s.manifest.HTTPOrBool.Main.DeregistrationDelay != nil {
+		deregistrationDelay = aws.Int64(int64(s.manifest.HTTPOrBool.Main.DeregistrationDelay.Seconds()))
 	}
 	nlbConfig, err := s.convertNetworkLoadBalancer()
 	if err != nil {
@@ -188,7 +188,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		scConfig = convertServiceConnect(s.manifest.Network.Connect)
 	}
 
-	targetContainer, targetContainerPort, err := s.manifest.RoutingRule.Main.Target(exposedPorts)
+	targetContainer, targetContainerPort, err := s.manifest.HTTPOrBool.Main.Target(exposedPorts)
 	if err != nil {
 		return "", err
 	}
@@ -231,13 +231,13 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		Storage:                 convertStorageOpts(s.manifest.Name, s.manifest.Storage),
 
 		// ALB configs.
-		ALBEnabled:          !s.manifest.RoutingRule.Disabled(),
+		ALBEnabled:          !s.manifest.HTTPOrBool.Disabled(),
 		DeregistrationDelay: deregistrationDelay,
 		HTTPTargetContainer: template.HTTPTargetContainer{
 			Port: targetContainerPort,
 			Name: targetContainer,
 		},
-		HTTPHealthCheck: convertHTTPHealthCheck(&s.manifest.RoutingRule.Main.HealthCheck),
+		HTTPHealthCheck: convertHTTPHealthCheck(&s.manifest.HTTPOrBool.Main.HealthCheck),
 		ALBListener:     albListenerConfig,
 
 		// NLB configs.
@@ -280,7 +280,7 @@ func (s *LoadBalancedWebService) Parameters() ([]*cloudformation.Parameter, erro
 	if err != nil {
 		return nil, fmt.Errorf("parse exposed ports in service manifest %s: %w", s.name, err)
 	}
-	targetContainer, targetPort, err := s.manifest.RoutingRule.Main.Target(exposedPorts)
+	targetContainer, targetPort, err := s.manifest.HTTPOrBool.Main.Target(exposedPorts)
 	if err != nil {
 		return nil, err
 	}
@@ -303,11 +303,11 @@ func (s *LoadBalancedWebService) Parameters() ([]*cloudformation.Parameter, erro
 		},
 	}...)
 
-	if !s.manifest.RoutingRule.Disabled() {
+	if !s.manifest.HTTPOrBool.Disabled() {
 		wkldParams = append(wkldParams, []*cloudformation.Parameter{
 			{
 				ParameterKey:   aws.String(WorkloadRulePathParamKey),
-				ParameterValue: s.manifest.RoutingRule.Main.Path,
+				ParameterValue: s.manifest.HTTPOrBool.Main.Path,
 			},
 			{
 				ParameterKey:   aws.String(WorkloadHTTPSParamKey),

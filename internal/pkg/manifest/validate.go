@@ -82,12 +82,12 @@ func (l LoadBalancedWebService) validate() error {
 	if err = validateTargetContainer(validateTargetContainerOpts{
 		mainContainerName: aws.StringValue(l.Name),
 		mainContainerPort: l.ImageConfig.Port,
-		targetContainer:   l.RoutingRule.Main.TargetContainer,
+		targetContainer:   l.HTTPOrBool.Main.TargetContainer,
 		sidecarConfig:     l.Sidecars,
 	}); err != nil {
 		return fmt.Errorf(`validate load balancer target for "http": %w`, err)
 	}
-	for idx, rule := range l.RoutingRule.AdditionalRoutingRules {
+	for idx, rule := range l.HTTPOrBool.AdditionalRoutingRules {
 		if err = validateTargetContainer(validateTargetContainerOpts{
 			mainContainerName: aws.StringValue(l.Name),
 			mainContainerPort: l.ImageConfig.Port,
@@ -127,7 +127,7 @@ func (l LoadBalancedWebService) validate() error {
 		mainContainerName: aws.StringValue(l.Name),
 		mainContainerPort: l.ImageConfig.Port,
 		sidecarConfig:     l.Sidecars,
-		alb:               &l.RoutingRule.HTTP,
+		alb:               &l.HTTPOrBool.HTTP,
 		nlb:               &l.NLBConfig,
 	}); err != nil {
 		return fmt.Errorf("validate unique exposed ports: %w", err)
@@ -186,12 +186,12 @@ func (w WorkerAlarmArgs) validate() error {
 // validate returns nil if LoadBalancedWebServiceConfig is configured correctly.
 func (l LoadBalancedWebServiceConfig) validate() error {
 	var err error
-	if l.RoutingRule.Disabled() && l.NLBConfig.IsEmpty() {
+	if l.HTTPOrBool.Disabled() && l.NLBConfig.IsEmpty() {
 		return &errAtLeastOneFieldMustBeSpecified{
 			missingFields: []string{"http", "nlb"},
 		}
 	}
-	if l.RoutingRule.Disabled() && (!l.Count.AdvancedCount.Requests.IsEmpty() || !l.Count.AdvancedCount.ResponseTime.IsEmpty()) {
+	if l.HTTPOrBool.Disabled() && (!l.Count.AdvancedCount.Requests.IsEmpty() || !l.Count.AdvancedCount.ResponseTime.IsEmpty()) {
 		return errors.New(`scaling based on "nlb" requests or response time is not supported`)
 	}
 	if err = l.ImageConfig.validate(); err != nil {
@@ -200,7 +200,7 @@ func (l LoadBalancedWebServiceConfig) validate() error {
 	if err = l.ImageOverride.validate(); err != nil {
 		return err
 	}
-	if err = l.RoutingRule.validate(); err != nil {
+	if err = l.HTTPOrBool.validate(); err != nil {
 		return fmt.Errorf(`validate "http": %w`, err)
 	}
 	if err = l.TaskConfig.validate(); err != nil {
