@@ -15,7 +15,7 @@ type formatter interface {
 	formatYAML(*yaml.Node) ([]byte, error)
 	formatMod(node diffNode) string
 	formatPath(node diffNode) string
-	childIndent(curr int) int
+	nextIndent(curr int) int
 }
 
 type seqItemFormatter struct{}
@@ -37,7 +37,7 @@ func (f *seqItemFormatter) formatPath(_ diffNode) string {
 	return color.Faint.Sprint("- (changed item)")
 }
 
-func (f *seqItemFormatter) childIndent(curr int) int {
+func (f *seqItemFormatter) nextIndent(curr int) int {
 	/* A seq item diff should look like:
 	   - (item)
 	     ~ Field1: a
@@ -75,7 +75,7 @@ func (f *keyedFormatter) formatPath(node diffNode) string {
 	return node.key() + ":"
 }
 
-func (f *keyedFormatter) childIndent(curr int) int {
+func (f *keyedFormatter) nextIndent(curr int) int {
 	return curr + indentInc
 }
 
@@ -93,7 +93,7 @@ func (f *documentFormatter) formatPath(_ diffNode) string {
 	return ""
 }
 
-func (f *documentFormatter) childIndent(curr int) int {
+func (f *documentFormatter) nextIndent(curr int) int {
 	return curr + indentInc
 }
 
