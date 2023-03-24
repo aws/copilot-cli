@@ -37,7 +37,7 @@ $ ls ./infrastructure
   report-generator-test.stack.yml      report-generator-test.params.yml
 ```
 
-Use `--diff` to  print the diff and exit.
+Use `--diff` to print the diff and exit.
 ```console
 $ copilot job deploy --diff
 ~ Resources:

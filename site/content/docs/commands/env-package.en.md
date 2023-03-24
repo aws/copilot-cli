@@ -30,7 +30,7 @@ $ ls ./infrastructure
 test.env.yml      test.env.params.json
 ```
 
-Use `--diff` to  print the diff and exit.
+Use `--diff` to print the diff and exit.
 ```console
 $ copilot env deploy --diff
 ~ Resources:

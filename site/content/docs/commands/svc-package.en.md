@@ -31,7 +31,7 @@ frontend.stack.yml      frontend-test.config.yml
 ```
 
 
-Use `--diff` to  print the diff and exit.
+Use `--diff` to print the diff and exit.
 ```console
 $ copilot svc deploy --diff
 ~ Resources:
