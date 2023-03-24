@@ -4,7 +4,7 @@
 
     :warning: Task definition overrides is deprecated.  
     
-    We recommend using [YAML patch](./yamlpatch.md) overrides instead as it allows you to edit the entire CloudFormation template and
+    We recommend using [YAML patch](./yamlpatch.md) overrides instead, as it allows you to edit the entire CloudFormation template and
     supports the `remove` operation.
 
 Copilot generates CloudFormation templates using configuration specified in the [manifest](../../manifest/overview.en.md). However, there are fields that are not configurable in the manifest. For example, You might want to configure the [`Ulimits`](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ecs-taskdefinition-containerdefinitions.html#cfn-ecs-taskdefinition-containerdefinition-ulimits) for your workload container, but it is not exposed in our manifest.

@@ -28,7 +28,7 @@ The command will generate a new CDK application under the `copilot/[name]/overri
 ```
 
 You can get started by editing the `stack.ts` file. For example, if you decided to override the ECS service properties
-when running `copilot svc override`, the following `stack.ts` file will be generated for you to modify:
+with `copilot svc override`, the following `stack.ts` file will be generated for you to modify:
 
 ```typescript
 import * as cdk from 'aws-cdk-lib';
@@ -58,15 +58,15 @@ export class TransformedStack extends cdk.Stack {
 
 As can be seen in the above `stack.ts` file, Copilot will use the [clouformation_include module](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.cloudformation_include-readme.html) 
 provided by the CDK to help author transformations. This library is the CDK’s [recommendation](https://docs.aws.amazon.com/cdk/v2/guide/use_cfn_template.html) from their 
-"Import or migrate an existing AWS CloudFormation template" guide. It enables accessing the resources hidden by the Copilot manifest as 
-[L1 constructs](https://docs.aws.amazon.com/cdk/v2/guide/constructs.html) and ensures the CDK retains the resources on synthesis.  
+"Import or migrate an existing AWS CloudFormation template" guide. It enables accessing the resources not surfaced by the Copilot manifest as 
+[L1 constructs](https://docs.aws.amazon.com/cdk/v2/guide/constructs.html) and ensures that the CDK retains the resources on synthesis.  
 The `CfnInclude` object is initialized from the hidden `.build/in.yaml` CloudFormation template. 
-This is how Copilot and the CDK communicates. 
-Copilot writes the manifest generated CloudFormation template under the `.build/` directory, 
+This is how Copilot and the CDK communicate. 
+Copilot writes the manifest-generated CloudFormation template under the `.build/` directory, 
 which then gets parsed by the `cloudformation_include` library into a CDK construct.
 
-Every time you run `copilot [noun] package` or `copilot [noun] deploy`, Copilot first will generate the CloudFormation template 
-from the manifest file and then pass it down to your CDK application to override properties.
+Every time you run `copilot [noun] package` or `copilot [noun] deploy`, Copilot will first generate the CloudFormation template 
+from the manifest file, and then pass it down to your CDK application to override properties.
 
 We highly recommend using the `--diff` flag with the `package` or `deploy` command to first visualize your CDK changes before a deployment.
 
@@ -75,11 +75,11 @@ We highly recommend using the `--diff` flag with the `package` or `deploy` comma
 The following example modifies the [`nlb`](../../manifest/lb-web-service.en.md#nlb) resource of a Load Balanced Web Service to
 assign Elastic IP addresses to the Network Load Balancer.
 
-In this example, you can view how:
+In this example, you can view how to:
 
-- A resource property can be deleted.
-- New resources can be created.
-- Modify the property of an existing resource.
+- Delete a resource property.
+- Create new resources.
+- Modify a property of an existing resource.
 
 ??? note "View sample `stack.ts`"
 
@@ -131,7 +131,7 @@ In this example, you can view how:
     }
     ```
 
-The following example showcases how you can add a property only for a particular environment, such as a production environment:
+The following example showcases how you can add a property for only a particular environment, such as a production environment:
 
 ??? note "View sample `stack.ts`"
 

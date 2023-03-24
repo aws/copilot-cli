@@ -49,9 +49,9 @@ Evaluation continues until all patches are successfully applied or an error is e
 The `path` field of a patch conforms to the [RFC6901: JSON Pointer](https://www.rfc-editor.org/rfc/rfc6901) syntax. 
 
 - Each `path` value is separated by the `/` character and evaluation stops once the target CloudFormation property is reached.
-- If the target path is an array, the reference token must either be:
+- If the target path is an array, the reference token must be either:
     - characters comprised of digits starting at 0.
-    - exactly the single character `-` when the operation is `add` to append to the array.
+    - exactly the single character `-` when the operation is `add`, to append to the array.
 
 ## Additional Examples
 
