@@ -11,7 +11,12 @@ $ copilot env deploy
 
 ```
   -a, --app string    Name of the application.
+      --diff          Compares the generated CloudFormation template to the deployed stack.
       --force         Optional. Force update the environment stack template.
   -h, --help          help for deploy
   -n, --name string   Name of the environment.
+      --no-rollback   Optional. Disable automatic stack
+                      rollback in case of deployment failure.
+                      We do not recommend using this flag for a
+                      production environment.
 ```
