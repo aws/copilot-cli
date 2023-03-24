@@ -176,3 +176,5 @@ stages:
     -
       name: prod
 ```
+!!! info
+    AWS's own Nathan Peck provides a great example of a Copilot pipeline, paying special attention to `test_commands`: https://aws.amazon.com/blogs/containers/automatically-deploying-your-container-application-with-aws-copilot/

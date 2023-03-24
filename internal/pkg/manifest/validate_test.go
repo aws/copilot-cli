@@ -52,8 +52,8 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 			lbConfig: LoadBalancedWebService{
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					ImageConfig: testImageConfig,
-					RoutingRule: RoutingRuleConfigOrBool{
-						RoutingRuleConfiguration: RoutingRuleConfiguration{
+					HTTPOrBool: HTTPOrBool{
+						HTTP: HTTP{
 							Main: RoutingRule{
 								TargetContainer: aws.String("mockTargetContainer"),
 							},
@@ -75,8 +75,8 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 							},
 						},
 					},
-					RoutingRule: RoutingRuleConfigOrBool{
-						RoutingRuleConfiguration: RoutingRuleConfiguration{
+					HTTPOrBool: HTTPOrBool{
+						HTTP: HTTP{
 							Main: RoutingRule{
 								Path: stringP("/"),
 							},
@@ -97,8 +97,8 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 							},
 						},
 					},
-					RoutingRule: RoutingRuleConfigOrBool{
-						RoutingRuleConfiguration: RoutingRuleConfiguration{
+					HTTPOrBool: HTTPOrBool{
+						HTTP: HTTP{
 							Main: RoutingRule{
 								Path: stringP("/"),
 							},
@@ -117,8 +117,8 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 							{},
 						},
 					},
-					RoutingRule: RoutingRuleConfigOrBool{
-						RoutingRuleConfiguration: RoutingRuleConfiguration{
+					HTTPOrBool: HTTPOrBool{
+						HTTP: HTTP{
 							Main: RoutingRule{
 								Path: stringP("/"),
 							},
@@ -137,8 +137,8 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 							Path: "Family",
 						},
 					},
-					RoutingRule: RoutingRuleConfigOrBool{
-						RoutingRuleConfiguration: RoutingRuleConfiguration{
+					HTTPOrBool: HTTPOrBool{
+						HTTP: HTTP{
 							Main: RoutingRule{
 								Path: stringP("/"),
 							},
@@ -152,8 +152,8 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 			lbConfig: LoadBalancedWebService{
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					ImageConfig: testImageConfig,
-					RoutingRule: RoutingRuleConfigOrBool{
-						RoutingRuleConfiguration: RoutingRuleConfiguration{
+					HTTPOrBool: HTTPOrBool{
+						HTTP: HTTP{
 							Main: RoutingRule{
 								Path: stringP("/"),
 							},
@@ -168,8 +168,8 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 				Workload: Workload{Name: aws.String("mockName")},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					ImageConfig: testImageConfig,
-					RoutingRule: RoutingRuleConfigOrBool{
-						RoutingRuleConfiguration: RoutingRuleConfiguration{
+					HTTPOrBool: HTTPOrBool{
+						HTTP: HTTP{
 							Main: RoutingRule{
 								Path:            stringP("/"),
 								TargetContainer: aws.String("foo"),
@@ -185,8 +185,8 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 				Workload: Workload{Name: aws.String("mockName")},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					ImageConfig: testImageConfig,
-					RoutingRule: RoutingRuleConfigOrBool{
-						RoutingRuleConfiguration: RoutingRuleConfiguration{
+					HTTPOrBool: HTTPOrBool{
+						HTTP: HTTP{
 							Main: RoutingRule{
 								Path:            stringP("/"),
 								TargetContainer: aws.String("mockName"),
@@ -208,8 +208,8 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 				Workload: Workload{Name: aws.String("mockName")},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					ImageConfig: testImageConfig,
-					RoutingRule: RoutingRuleConfigOrBool{
-						RoutingRuleConfiguration: RoutingRuleConfiguration{
+					HTTPOrBool: HTTPOrBool{
+						HTTP: HTTP{
 							Main: RoutingRule{
 								Path:            stringP("/"),
 								TargetContainer: aws.String("mockName"),
@@ -247,8 +247,8 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 							Essential: aws.Bool(false),
 						},
 					},
-					RoutingRule: RoutingRuleConfigOrBool{
-						RoutingRuleConfiguration: RoutingRuleConfiguration{
+					HTTPOrBool: HTTPOrBool{
+						HTTP: HTTP{
 							Main: RoutingRule{
 								Path: stringP("/"),
 							},
@@ -277,8 +277,8 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 						},
 						},
 					},
-					RoutingRule: RoutingRuleConfigOrBool{
-						RoutingRuleConfiguration: RoutingRuleConfiguration{
+					HTTPOrBool: HTTPOrBool{
+						HTTP: HTTP{
 							Main: RoutingRule{
 								Path: stringP("/"),
 							},
@@ -304,8 +304,8 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 							},
 						},
 					},
-					RoutingRule: RoutingRuleConfigOrBool{
-						RoutingRuleConfiguration: RoutingRuleConfiguration{
+					HTTPOrBool: HTTPOrBool{
+						HTTP: HTTP{
 							Main: RoutingRule{
 								Path: stringP("/"),
 							},
@@ -322,7 +322,7 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					ImageConfig: testImageConfig,
-					RoutingRule: RoutingRuleConfigOrBool{
+					HTTPOrBool: HTTPOrBool{
 						Enabled: aws.Bool(false),
 					},
 				},
@@ -344,7 +344,7 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 							},
 						},
 					},
-					RoutingRule: RoutingRuleConfigOrBool{
+					HTTPOrBool: HTTPOrBool{
 						Enabled: aws.Bool(false),
 					},
 					NLBConfig: NetworkLoadBalancerConfiguration{
@@ -371,7 +371,7 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 							},
 						},
 					},
-					RoutingRule: RoutingRuleConfigOrBool{
+					HTTPOrBool: HTTPOrBool{
 						Enabled: aws.Bool(false),
 					},
 					NLBConfig: NetworkLoadBalancerConfiguration{
@@ -390,8 +390,8 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					ImageConfig: testImageConfig,
-					RoutingRule: RoutingRuleConfigOrBool{
-						RoutingRuleConfiguration: RoutingRuleConfiguration{
+					HTTPOrBool: HTTPOrBool{
+						HTTP: HTTP{
 							Main: RoutingRule{
 								Path: stringP("/"),
 							},
@@ -610,7 +610,7 @@ func TestBackendService_validate(t *testing.T) {
 			config: BackendService{
 				BackendServiceConfig: BackendServiceConfig{
 					ImageConfig: testImageConfig,
-					RoutingRule: RoutingRuleConfiguration{
+					HTTP: HTTP{
 						Main: RoutingRule{
 							ProtocolVersion: aws.String("GRPC"),
 						},
@@ -656,7 +656,7 @@ func TestBackendService_validate(t *testing.T) {
 			config: BackendService{
 				BackendServiceConfig: BackendServiceConfig{
 					ImageConfig: testImageConfig,
-					RoutingRule: RoutingRuleConfiguration{
+					HTTP: HTTP{
 						Main: RoutingRule{
 							TargetContainer: aws.String("api"),
 							Path:            aws.String("/"),
@@ -1532,15 +1532,15 @@ func TestRoutingRule_validate(t *testing.T) {
 	}
 }
 
-func TestRoutingRuleConfiguration_validate(t *testing.T) {
+func TestHTTP_validate(t *testing.T) {
 	testCases := map[string]struct {
-		RoutingRuleConfiguration RoutingRuleConfiguration
-		wantedErrorMsgPrefix     string
-		wantedError              error
+		HTTP                 HTTP
+		wantedErrorMsgPrefix string
+		wantedError          error
 	}{
 		"return if routing rule configuration is nil": {},
 		"error if both target_container and targetContainer are specified": {
-			RoutingRuleConfiguration: RoutingRuleConfiguration{
+			HTTP: HTTP{
 				Main: RoutingRule{
 					Path:            stringP("/"),
 					TargetContainer: aws.String("mockContainer"),
@@ -1550,7 +1550,7 @@ func TestRoutingRuleConfiguration_validate(t *testing.T) {
 			wantedError: fmt.Errorf(`must specify one, not both, of "target_container" and "targetContainer"`),
 		},
 		"error if the main routing rule is invalid": {
-			RoutingRuleConfiguration: RoutingRuleConfiguration{
+			HTTP: HTTP{
 				Main: RoutingRule{
 					TargetContainer: aws.String("mockContainer"),
 				},
@@ -1558,7 +1558,7 @@ func TestRoutingRuleConfiguration_validate(t *testing.T) {
 			wantedError: fmt.Errorf(`"path" must be specified`),
 		},
 		"error if the additional routing rule is invalid": {
-			RoutingRuleConfiguration: RoutingRuleConfiguration{
+			HTTP: HTTP{
 				Main: RoutingRule{
 					Path:            stringP("/"),
 					TargetContainer: aws.String("mockContainer"),
@@ -1574,7 +1574,7 @@ func TestRoutingRuleConfiguration_validate(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotErr := tc.RoutingRuleConfiguration.validate()
+			gotErr := tc.HTTP.validate()
 
 			if tc.wantedError != nil {
 				require.EqualError(t, gotErr, tc.wantedError.Error())
@@ -3802,7 +3802,7 @@ func TestValidateExposedPorts(t *testing.T) {
 						Port: aws.String("80"),
 					},
 				},
-				alb: &RoutingRuleConfiguration{
+				alb: &HTTP{
 					Main: RoutingRule{
 						TargetPort: aws.Uint16(80),
 					},
@@ -3822,7 +3822,7 @@ func TestValidateExposedPorts(t *testing.T) {
 						Port: aws.String("80"),
 					},
 				},
-				alb: &RoutingRuleConfiguration{
+				alb: &HTTP{
 					Main: RoutingRule{
 						TargetContainer: aws.String("nginx"),
 						TargetPort:      aws.Uint16(8080),
@@ -3852,7 +3852,7 @@ func TestValidateExposedPorts(t *testing.T) {
 						Port: aws.String("80"),
 					},
 				},
-				alb: &RoutingRuleConfiguration{
+				alb: &HTTP{
 					Main: RoutingRule{
 						TargetPort:      aws.Uint16(8080),
 						TargetContainer: aws.String("mockMainContainer"),
@@ -3870,7 +3870,7 @@ func TestValidateExposedPorts(t *testing.T) {
 						Port: aws.String("80"),
 					},
 				},
-				alb: &RoutingRuleConfiguration{
+				alb: &HTTP{
 					Main: RoutingRule{
 						TargetPort:      aws.Uint16(80),
 						TargetContainer: aws.String("foo"),
@@ -3888,7 +3888,7 @@ func TestValidateExposedPorts(t *testing.T) {
 						Port: aws.String("80"),
 					},
 				},
-				alb: &RoutingRuleConfiguration{
+				alb: &HTTP{
 					Main: RoutingRule{
 						TargetPort: aws.Uint16(8081),
 					},
@@ -3905,7 +3905,7 @@ func TestValidateExposedPorts(t *testing.T) {
 						Port: aws.String("80"),
 					},
 				},
-				alb: &RoutingRuleConfiguration{
+				alb: &HTTP{
 					Main: RoutingRule{
 						TargetPort: aws.Uint16(8081),
 					},
@@ -3933,7 +3933,7 @@ func TestValidateExposedPorts(t *testing.T) {
 						Port: aws.String("80"),
 					},
 				},
-				alb: &RoutingRuleConfiguration{
+				alb: &HTTP{
 					Main: RoutingRule{
 						TargetPort: aws.Uint16(5001),
 					},
@@ -3958,7 +3958,7 @@ func TestValidateExposedPorts(t *testing.T) {
 						Port: aws.String("80"),
 					},
 				},
-				alb: &RoutingRuleConfiguration{
+				alb: &HTTP{
 					Main: RoutingRule{
 						TargetPort:      aws.Uint16(5001),
 						TargetContainer: aws.String("foo"),
@@ -3985,7 +3985,7 @@ func TestValidateExposedPorts(t *testing.T) {
 						Port: aws.String("80"),
 					},
 				},
-				alb: &RoutingRuleConfiguration{
+				alb: &HTTP{
 					Main: RoutingRule{
 						TargetPort:      aws.Uint16(5001),
 						TargetContainer: aws.String("foo"),
@@ -4013,7 +4013,7 @@ func TestValidateExposedPorts(t *testing.T) {
 						Port: aws.String("80"),
 					},
 				},
-				alb: &RoutingRuleConfiguration{
+				alb: &HTTP{
 					Main: RoutingRule{
 						TargetPort:      aws.Uint16(5001),
 						TargetContainer: aws.String("foo"),
@@ -4047,7 +4047,7 @@ func TestValidateExposedPorts(t *testing.T) {
 						Port: aws.String("80"),
 					},
 				},
-				alb: &RoutingRuleConfiguration{
+				alb: &HTTP{
 					Main: RoutingRule{
 						TargetPort:      aws.Uint16(5001),
 						TargetContainer: aws.String("foo"),

@@ -27,11 +27,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const continueDeploymentPrompt = "Continue with the deployment?"
+
 type deployEnvVars struct {
 	appName         string
 	name            string
 	forceNewUpdate  bool
 	disableRollback bool
+	showDiff        bool
 }
 
 type deployEnvOpts struct {
@@ -42,7 +45,8 @@ type deployEnvOpts struct {
 	sessionProvider *sessions.Provider
 
 	// Dependencies to ask.
-	sel wsEnvironmentSelector
+	sel    wsEnvironmentSelector
+	prompt prompter
 
 	// Dependencies to execute.
 	fs              afero.Fs
@@ -68,12 +72,14 @@ func newEnvDeployOpts(vars deployEnvVars) (*deployEnvOpts, error) {
 	if err != nil {
 		return nil, err
 	}
+	prompter := prompt.New()
 	opts := &deployEnvOpts{
 		deployEnvVars: vars,
 
 		store:           store,
 		sessionProvider: sessProvider,
-		sel:             selector.NewLocalEnvironmentSelector(prompt.New(), store, ws),
+		sel:             selector.NewLocalEnvironmentSelector(prompter, store, ws),
+		prompt:          prompter,
 
 		fs:              fs,
 		ws:              ws,
@@ -151,16 +157,26 @@ func (o *deployEnvOpts) Execute() error {
 	if err != nil {
 		return fmt.Errorf("upload artifacts for environment %s: %w", o.name, err)
 	}
-	if err := deployer.DeployEnvironment(&deploy.DeployEnvironmentInput{
+	deployInput := &deploy.DeployEnvironmentInput{
 		RootUserARN:         caller.RootUserARN,
 		AddonsURL:           artifacts.AddonsURL,
 		CustomResourcesURLs: artifacts.CustomResourceURLs,
 		Manifest:            mft,
-		ForceNewUpdate:      o.forceNewUpdate,
 		RawManifest:         rawMft,
 		PermissionsBoundary: o.targetApp.PermissionsBoundary,
+		ForceNewUpdate:      o.forceNewUpdate,
 		DisableRollback:     o.disableRollback,
-	}); err != nil {
+	}
+	if o.showDiff {
+		contd, err := o.showDiffAndConfirmDeployment(deployer, deployInput)
+		if err != nil {
+			return err
+		}
+		if !contd {
+			return nil
+		}
+	}
+	if err := deployer.DeployEnvironment(deployInput); err != nil {
 		var errEmptyChangeSet *awscfn.ErrChangeSetEmpty
 		if errors.As(err, &errEmptyChangeSet) {
 			log.Errorf(`Your update does not introduce immediate resource changes. 
@@ -198,6 +214,24 @@ func environmentManifest(envName string, rawMft []byte, transformer interpolator
 		return nil, fmt.Errorf("validate environment manifest for %q: %w", envName, err)
 	}
 	return mft, nil
+}
+
+func (o *deployEnvOpts) showDiffAndConfirmDeployment(deployer envDeployer, input *deploy.DeployEnvironmentInput) (bool, error) {
+	output, err := deployer.GenerateCloudFormationTemplate(input)
+	if err != nil {
+		return false, fmt.Errorf("generate the template for environment %q: %w", o.name, err)
+	}
+	if err := diff(deployer, output.Template, os.Stdout); err != nil {
+		var errHasDiff *errHasDiff
+		if !errors.As(err, &errHasDiff) {
+			return false, fmt.Errorf("generate diff for environment %q: %w", o.name, err)
+		}
+	}
+	contd, err := o.prompt.Confirm(continueDeploymentPrompt, "")
+	if err != nil {
+		return false, fmt.Errorf("ask whether to continue with the deployment: %w", err)
+	}
+	return contd, nil
 }
 
 func (o *deployEnvOpts) validateOrAskEnvName() error {
@@ -295,5 +329,6 @@ Deploy an environment named "test".
 	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, "", envFlagDescription)
 	cmd.Flags().BoolVar(&vars.forceNewUpdate, forceFlag, false, forceEnvDeployFlagDescription)
 	cmd.Flags().BoolVar(&vars.disableRollback, noRollbackFlag, false, noRollbackFlagDescription)
+	cmd.Flags().BoolVar(&vars.showDiff, diffFlag, false, diffFlagDescription)
 	return cmd
 }

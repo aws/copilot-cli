@@ -485,7 +485,7 @@ func convertEnvSecurityGroupCfg(mft *manifest.Environment) (*template.SecurityGr
 }
 
 func (s *LoadBalancedWebService) convertALBListener() (*template.ALBListener, error) {
-	rrConfig := s.manifest.RoutingRule
+	rrConfig := s.manifest.HTTPOrBool
 	if rrConfig.Disabled() || rrConfig.IsEmpty() {
 		return nil, nil
 	}
@@ -519,7 +519,7 @@ func (s *LoadBalancedWebService) convertALBListener() (*template.ALBListener, er
 }
 
 func (s *BackendService) convertALBListener() (*template.ALBListener, error) {
-	rrConfig := s.manifest.RoutingRule
+	rrConfig := s.manifest.HTTP
 	if rrConfig.IsEmpty() {
 		return nil, nil
 	}

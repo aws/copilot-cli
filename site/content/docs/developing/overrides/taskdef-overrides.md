@@ -1,9 +1,13 @@
 # Task Definition Overrides
 
 !!! Attention
-    :warning: Task Definition overrides is an advanced use case. Overriding a field might cause the task not able to launch. Please use with caution!
 
-Copilot generates CloudFormation templates using configuration specified in the [manifest](../manifest/overview.en.md). However, there are fields that are not configurable in the manifest. For example, You might want to configure the [`Ulimits`](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ecs-taskdefinition-containerdefinitions.html#cfn-ecs-taskdefinition-containerdefinition-ulimits) for your workload container, but it is not exposed in our manifest.
+    :warning: Task definition overrides is deprecated.  
+    
+    We recommend using [YAML patch](./yamlpatch.md) overrides instead, as it allows you to edit the entire CloudFormation template and
+    supports the `remove` operation.
+
+Copilot generates CloudFormation templates using configuration specified in the [manifest](../../manifest/overview.en.md). However, there are fields that are not configurable in the manifest. For example, You might want to configure the [`Ulimits`](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ecs-taskdefinition-containerdefinitions.html#cfn-ecs-taskdefinition-containerdefinition-ulimits) for your workload container, but it is not exposed in our manifest.
 
 You can configure additional [ECS Task Definition settings](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ecs-taskdefinition.html) by specifying `taskdef_overrides` rules, which will be applied to the CloudFormation template that Copilot generates out of the manifest.
 
@@ -33,6 +37,7 @@ Each rule is applied sequentially to the CloudFormation template. The resulting 
 - To append a new member to a `list` field such as `Ulimits` you can use the special character `-`: `Ulimits[-]`.
 
 !!! Attention
+
     The following fields in the task definition are not allowed to be modified.
 
     * [Family](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ecs-taskdefinition.html#cfn-ecs-taskdefinition-family)
