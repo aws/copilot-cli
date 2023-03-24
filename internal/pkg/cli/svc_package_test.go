@@ -5,6 +5,7 @@ package cli
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"testing"
 
@@ -16,10 +17,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 )
-
-func TestPackageSvcOpts_Validate(t *testing.T) {
-	// NOTE: no optional flag needs to be validated for this command.
-}
 
 type svcPackageAskMock struct {
 	store *mocks.Mockstore
@@ -185,8 +182,57 @@ count: 1`
 		wantedStack  string
 		wantedParams string
 		wantedAddons string
+		wantedDiff   string
 		wantedErr    error
 	}{
+		"fail to get the diff": {
+			inVars: packageSvcVars{
+				name:             "api",
+				clientConfigured: true,
+				showDiff:         true,
+			},
+			setupMocks: func(m *svcPackageExecuteMock) {
+				m.ws.EXPECT().ReadWorkloadManifest("api").Return([]byte(lbwsMft), nil)
+				m.interpolator.EXPECT().Interpolate(lbwsMft).Return(lbwsMft, nil)
+				m.mft = &mockWorkloadMft{
+					mockRequiredEnvironmentFeatures: func() []string {
+						return []string{}
+					},
+				}
+				m.envFeaturesDescriber.EXPECT().Version().Return("v1.mock", nil)
+				m.envFeaturesDescriber.EXPECT().AvailableFeatures().Return([]string{}, nil)
+				m.generator.EXPECT().GenerateCloudFormationTemplate(gomock.Any()).Return(&deploy.GenerateCloudFormationTemplateOutput{
+					Template:   "mystack",
+					Parameters: "myparams",
+				}, nil)
+				m.generator.EXPECT().DeployDiff(gomock.Eq("mystack")).Return("", errors.New("some error"))
+			},
+			wantedErr: errors.New("some error"),
+		},
+		"writes the diff": {
+			inVars: packageSvcVars{
+				name:             "api",
+				clientConfigured: true,
+				showDiff:         true,
+			},
+			setupMocks: func(m *svcPackageExecuteMock) {
+				m.ws.EXPECT().ReadWorkloadManifest("api").Return([]byte(lbwsMft), nil)
+				m.interpolator.EXPECT().Interpolate(lbwsMft).Return(lbwsMft, nil)
+				m.mft = &mockWorkloadMft{
+					mockRequiredEnvironmentFeatures: func() []string {
+						return []string{}
+					},
+				}
+				m.envFeaturesDescriber.EXPECT().Version().Return("v1.mock", nil)
+				m.envFeaturesDescriber.EXPECT().AvailableFeatures().Return([]string{}, nil)
+				m.generator.EXPECT().GenerateCloudFormationTemplate(gomock.Any()).Return(&deploy.GenerateCloudFormationTemplateOutput{
+					Template:   "mystack",
+					Parameters: "myparams",
+				}, nil)
+				m.generator.EXPECT().DeployDiff(gomock.Eq("mystack")).Return("mock diff", nil)
+			},
+			wantedDiff: "mock diff",
+		},
 		"writes service template without addons": {
 			inVars: packageSvcVars{
 				appName:          "ecs-kudos",
@@ -274,6 +320,7 @@ count: 1`
 			stackBuf := new(bytes.Buffer)
 			paramsBuf := new(bytes.Buffer)
 			addonsBuf := new(bytes.Buffer)
+			diffBuff := new(bytes.Buffer)
 
 			m := &svcPackageExecuteMock{
 				ws:                   mocks.NewMockwsWlDirReader(ctrl),
@@ -288,6 +335,8 @@ count: 1`
 				templateWriter: mockWriteCloser{w: stackBuf},
 				paramsWriter:   mockWriteCloser{w: paramsBuf},
 				addonsWriter:   mockWriteCloser{w: addonsBuf},
+				diffWriter:     mockWriteCloser{w: diffBuff},
+
 				unmarshal: func(b []byte) (manifest.DynamicWorkload, error) {
 					return m.mft, nil
 				},
@@ -309,10 +358,15 @@ count: 1`
 			err := opts.Execute()
 
 			// THEN
-			require.Equal(t, tc.wantedErr, err)
-			require.Equal(t, tc.wantedStack, stackBuf.String())
-			require.Equal(t, tc.wantedParams, paramsBuf.String())
-			require.Equal(t, tc.wantedAddons, addonsBuf.String())
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.NoError(t, err)
+			}
+			require.Equal(t, stackBuf.String(), tc.wantedStack)
+			require.Equal(t, paramsBuf.String(), tc.wantedParams)
+			require.Equal(t, addonsBuf.String(), tc.wantedAddons)
+			require.Equal(t, diffBuff.String(), tc.wantedDiff)
 		})
 	}
 }

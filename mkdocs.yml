@@ -55,6 +55,8 @@ nav:
       - Content Delivery: docs/developing/content-delivery.en.md
       - Custom Environment Resources: docs/developing/custom-environment-resources.en.md
       - Domain: docs/developing/domain.en.md
+      - Extend Copilot with Overrides:
+          - Task Definition Overrides: docs/developing/overrides/taskdef-overrides.md
       - Internal Load Balancers: docs/developing/internal-albs.en.md
       - Manifest Environment Variables: docs/developing/manifest-env-var.en.md
       - Observability: docs/developing/observability.en.md
@@ -63,7 +65,6 @@ nav:
       - Service-to-Service Communication: docs/developing/svc-to-svc-communication.en.md
       - Sidecars: docs/developing/sidecars.en.md
       - Storage: docs/developing/storage.en.md
-      - Task Definition Overrides: docs/developing/taskdef-overrides.en.md
     - Commands:
       - Getting Started:
         - docs: docs/commands/docs.en.md
@@ -160,6 +161,7 @@ nav:
         - task run: docs/commands/task-run.en.md
         - version: docs/commands/version.en.md
   - Blogs:
+      - Release v1.27: blogs/release-v127.en.md
       - AWS App Runner WAF: blogs/apprunner-waf.en.md
       - Release v1.26: blogs/release-v126.en.md
       - Release v1.25: blogs/release-v125.en.md
@@ -211,11 +213,10 @@ plugins:
         redirect_maps:
             'docs/installing.md': 'docs/getting-started/install.en.md'
             'docs/getting-started.md': 'docs/getting-started/first-app-tutorial.en.md'
-            'docs/commands/pipeline-update.en.md': 'docs/commands/pipeline-deploy.en.md'
-            'docs/commands/pipeline-update.ja.md': 'docs/commands/pipeline-deploy.ja.md'
-            'docs/developing/additional-aws-resources.en.md': 'docs/developing/addons/workload.en.md'
-            'docs/developing/additional-aws-resources.ja.md': 'docs/developing/addons/workload.ja.md'
-            'docs/developing/service-discovery.en.md': 'docs/developing/svc-to-svc-communication.en.md'
+            'docs/commands/pipeline-update.md': 'docs/commands/pipeline-deploy.en.md'
+            'docs/developing/additional-aws-resources.md': 'docs/developing/addons/workload.en.md'
+            'docs/developing/service-discovery.md': 'docs/developing/svc-to-svc-communication.en.md'
+            'docs/developing/taskdef-overrides.md': 'docs/developing/overrides/taskdef-overrides.md'
     - i18n:
         default_language: en
         languages:

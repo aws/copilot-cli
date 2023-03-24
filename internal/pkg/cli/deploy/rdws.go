@@ -176,7 +176,7 @@ func (d *rdwsDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*rdwsS
 	}
 	return &rdwsStackConfigurationOutput{
 		svcStackConfigurationOutput: svcStackConfigurationOutput{
-			conf: conf,
+			conf: cloudformation.WrapWithTemplateOverrider(conf, d.overrider),
 			svcUpdater: d.newSvcUpdater(func(s *session.Session) serviceForceUpdater {
 				return apprunner.New(s)
 			}),
