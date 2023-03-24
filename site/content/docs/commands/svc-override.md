@@ -22,7 +22,7 @@ To learn more check out the guides for overriding with [YAML Patches](../develop
       --cdk-language string   Optional. The Cloud Development Kit language. (default "typescript")
   -e, --env string            Optional. Name of the environment to use when retrieving resources in a template.
                               Defaults to a random environment.
-  -h, --help                  help for override
+  -h, --help                  Help for override
   -n, --name string           Name of the service.
       --skip-resources        Optional. Skip asking for which resources to override and generate empty IaC extension files.
       --tool string           Infrastructure as Code tool to override a template.

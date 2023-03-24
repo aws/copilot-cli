@@ -19,7 +19,7 @@ To learn more check out the guides for overriding with [YAML Patches](../develop
 ```console
   -a, --app string            Name of the application.
       --cdk-language string   Optional. The Cloud Development Kit language. (default "typescript")
-  -h, --help                  help for override
+  -h, --help                  Help for override
   -n, --name string           Optional. Name of the environment to use when retrieving resources in a template.
                               Defaults to a random environment.
       --skip-resources        Optional. Skip asking for which resources to override and generate empty IaC extension files.
