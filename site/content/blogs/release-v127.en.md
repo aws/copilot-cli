@@ -21,7 +21,7 @@ with the AWS Cloud Development Kit (CDK) or YAML Patch overrides. [See detailed 
 - **Enable multiple listeners and listener rules**: You can define multiple host-based or path listener rules for [application load balancers](../docs/manifest/lb-web-service.en.md#http)
 or multiple listeners on different ports and protocols for [network load balancers](../docs/manifest/lb-web-service.en.md#nlb).  
   [See detailed section](#enable-multiple-listeners-and-routing-rules-for-load-balancers).
-- **Preview CloudFormation template changes**: You can now run `copilot [noun] package` or `copilot [noun] deploy` commmands with the `--diff` flag to show differences
+- **Preview CloudFormation template changes**: You can now run `copilot [noun] package` or `copilot [noun] deploy` commands with the `--diff` flag to show differences
   between the last deployed CloudFormation template and local changes. [See detailed section](#preview-aws-cloudformation-template-changes).
 - **Build and push container images for sidecars**: Add support for `image.build` to build and push sidecar containers from local Dockerfiles. [See detailed section](#build-and-push-container-images-for-sidecar-containers).
 - **Environment file support for sidecars**: Add support for `env_file` to push a local `.env` file for sidecar containers. [See detailed section](#upload-local-environment-files-for-sidecar-containers).
@@ -38,13 +38,60 @@ or multiple listeners on different ports and protocols for [network load balance
 
 ## Extend Copilot-generated AWS CloudFormation templates
 
+#### Preview AWS CloudFormation template changes
+
+##### `copilot [noun] package --diff`
+
+You can now run `copilot [noun] package --diff` to see the diff between your local changes and the latest deployed template. 
+The program will exit after it prints the diff. 
+
+!!! info "The exit codes when using `copilot [noun] package --diff`"
+    0 = no diffs found  
+    1 = diffs found  
+    2 = error producing diffs
+
+
+```console
+$ copilot env deploy --diff
+~ Resources:
+    ~ Cluster:
+        ~ Properties:
+            ~ ClusterSettings:
+                ~ - (changed item)
+                  ~ Value: enabled -> disabled
+```
+
+If the diff looks good to you, you can run `copilot [noun] package` again to write the template file and parameter file
+to your designated directory.
+
+
+##### `copilot [noun] deploy --diff`
+
+Similar to `copilot [noun] package --diff`, you can run `copilot [noun] deploy --diff` to see the same diff. 
+However, instead of exiting after it print the diff, Copilot will follow up with a question: `Continue with the deployment? [y/N]`.
+
+```console
+$ copilot job deploy --diff
+~ Resources:
+    ~ TaskDefinition:
+        ~ Properties:
+            ~ ContainerDefinitions:
+                ~ - (changed item)
+                  ~ Environment:
+                      (4 unchanged items)
+                      + - Name: LOG_LEVEL
+                      +   Value: "info"
+
+Continue with the deployment? (y/N)
+```
+
+If the diff looks good to you, enter "y" to deploy. Otherwise, enter "N" to make adjustments as needed!
+
 ## Enable multiple listeners and routing rules for Load Balancers
 
 ### Add multiple host-based or path-based routing rules to your Application Load Balancers
 
 ### Add multiple port and protocol listeners to your Network Load Balancers
-
-## Preview AWS CloudFormation template changes
 
 ## Sidecar improvements
 
