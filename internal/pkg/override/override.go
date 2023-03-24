@@ -60,9 +60,9 @@ func (i Info) IsYAMLPatch() bool {
 	return i.mode == yamlPatchOverrider
 }
 
-// Lookup returns information indicating if the overrider is a CDK application or YAML Patch document.
-// If path does not exist or is an empty directory, then return an ErrNotExist.
-// If path is a YAML patch document, then IsYAMLPatch evaluates to true.
+// Lookup returns information indicating if the overrider is a CDK application or YAML Patches.
+// If path does not exist, then return an ErrNotExist.
+// If path is a directory that contains cfn.patches.yml, then IsYAMLPatch evaluates to true.
 // If path is a directory that contains a cdk.json file, then IsCDK evaluates to true.
 func Lookup(path string, fs afero.Fs) (Info, error) {
 	_, err := fs.Stat(path)

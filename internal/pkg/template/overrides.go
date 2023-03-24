@@ -133,6 +133,7 @@ func (t *Template) WalkOverridesCDKDir(resources []CFNResource, fn WalkDirFunc) 
 	))
 }
 
+// WalkOverridesPatchDir walks through the overrides/yamlpatch templates and calls fn for each parsed template file.
 func (t *Template) WalkOverridesPatchDir(fn WalkDirFunc) error {
 	return t.walkDir(yamlPatchTemplatesPath, yamlPatchTemplatesPath, struct{}{}, fn)
 }

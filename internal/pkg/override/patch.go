@@ -15,6 +15,8 @@ import (
 
 const jsonPointerSeparator = "/"
 
+// ScaffoldWithCDK sets up YAML patches in dir/ to apply to the
+// Copilot generated CloudFormation template.
 func ScaffoldWithPatch(fs afero.Fs, dir string) error {
 	// If the directory does not exist, [afero.IsEmpty] returns false and an error.
 	// Therefore, we only want to check if a directory is empty only if it also exists.
