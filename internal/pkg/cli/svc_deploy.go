@@ -589,7 +589,7 @@ func (e *errFeatureIncompatibleWithEnvironment) RecommendActions() string {
 type errHasDiff struct{}
 
 func (e *errHasDiff) Error() string {
-	return "diff detected "
+	return "diff detected"
 }
 
 // ExitCode returns 1 for a non-empty diff.
