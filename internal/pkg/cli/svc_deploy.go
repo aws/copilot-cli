@@ -602,15 +602,16 @@ func diff(differ templateDiffer, tmpl string, writer io.Writer) error {
 	if err != nil {
 		return err
 	}
-	errHasDiff := &errHasDiff{}
-	if out == "" {
-		errHasDiff = nil
-		out = "No changes.\n"
+	if out != "" {
+		if _, err := writer.Write([]byte(out)); err != nil {
+			return err
+		}
+		return &errHasDiff{}
 	}
-	if _, err := writer.Write([]byte(out)); err != nil {
+	if _, err := writer.Write([]byte("No changes.\n")); err != nil {
 		return err
 	}
-	return errHasDiff
+	return nil
 }
 
 // buildSvcDeployCmd builds the `svc deploy` subcommand.
