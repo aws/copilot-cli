@@ -29,3 +29,19 @@ $ copilot env package -n test --output-dir ./infrastructure --upload-assets
 $ ls ./infrastructure
 test.env.yml      test.env.params.json
 ```
+
+Use `--diff` to  print the diff and exit.
+```console
+$ copilot env deploy --diff
+~ Resources:
+    ~ Cluster:
+        ~ Properties:
+            ~ ClusterSettings:
+                ~ - (changed item)
+                  ~ Value: enabled -> disabled
+```
+
+!!! info "The exit codes when using `copilot [noun] package --diff`"
+    0 = no diffs found  
+    1 = diffs found  
+    2 = error producing diff
