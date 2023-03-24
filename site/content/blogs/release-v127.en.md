@@ -48,7 +48,8 @@ or multiple listeners on different ports and protocols for [network load balance
 
 ## Sidecar improvements
 
-You can now build and push container images for sidecar containers just like your main container. Additionally, you can now specify the path to a local environment file for sidecar containers.
+You can now build and push container images for sidecar containers just like you can for your main container.
+Additionally, you can now specify the paths to local environment files for sidecar containers.
 
 ### Build and push container images for sidecar containers
 
