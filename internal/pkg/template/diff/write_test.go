@@ -283,7 +283,64 @@ Metadata:
     ~ Version: v1.26.0 -> v1.27.0
 `,
 		},
-		"produces diff": {},
+		"produces diff": {
+			old: `
+Conditions:
+  IsDefaultRootPath: !Equals [!Ref RulePath, "/"]
+Resources:
+  HTTPRuleWithDomainPriorityAction:
+    Properties:
+      RulePath: !Ref RulePath
+  Service:
+    Properties:
+      ServiceRegistries:
+        - Port: !Ref ContainerPort
+  TargetGroup:
+    Properties:
+      Port: !Ref ContainerPort
+`,
+			curr: `
+Conditions:
+  IsGovCloud: !Equals [!Ref "AWS::Partition", "aws-us-gov"]
+Resources:
+  HTTPRuleWithDomainPriorityAction:
+    Properties:
+      RulePath: ["/"]
+  Service:
+    Properties:
+      ServiceConnectConfiguration: !If
+        - IsGovCloud
+        - !Ref AWS::NoValue
+        - Enabled: False
+      ServiceRegistries:
+        - Port: !Ref TargetPort
+  TargetGroup:
+    Properties:
+      Port: 80
+`,
+			wanted: `
+~ Conditions:
+    - IsDefaultRootPath: !Equals [!Ref RulePath, "/"]
+    + IsGovCloud: !Equals [!Ref "AWS::Partition", "aws-us-gov"]
+~ Resources:
+    ~ HTTPRuleWithDomainPriorityAction:
+        ~ Properties:
+            - RulePath: !Ref RulePath
+            + RulePath: ["/"]
+    ~ Service:
+        ~ Properties:
+            + ServiceConnectConfiguration: !If
+            +     - IsGovCloud
+            +     - !Ref AWS::NoValue
+            +     - Enabled: False
+            ~ ServiceRegistries:
+                ~ - (changed item)
+                  ~ Port: !Ref ContainerPort -> !Ref TargetPort
+    ~ TargetGroup:
+        ~ Properties:
+            ~ Port: !Ref ContainerPort -> 80
+`,
+		},
 		"no diff": {
 			old: `Description: CloudFormation environment template for infrastructure shared among Copilot workloads.
 Metadata:
