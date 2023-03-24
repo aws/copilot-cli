@@ -54,4 +54,4 @@ $ copilot job deploy --diff
 !!! info "The exit codes when using `copilot [noun] package --diff`"
     0 = no diffs found  
     1 = diffs found  
-    2 = error producing diff
+    2 = error producing diffs
