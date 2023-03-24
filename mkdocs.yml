@@ -56,6 +56,8 @@ nav:
       - Custom Environment Resources: docs/developing/custom-environment-resources.en.md
       - Domain: docs/developing/domain.en.md
       - Extend Copilot with Overrides:
+          - YAML Patch Overrides: docs/developing/overrides/yamlpatch.md
+          - CDK Overrides: docs/developing/overrides/cdk.md
           - Task Definition Overrides: docs/developing/overrides/taskdef-overrides.md
       - Internal Load Balancers: docs/developing/internal-albs.en.md
       - Manifest Environment Variables: docs/developing/manifest-env-var.en.md
