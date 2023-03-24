@@ -19,17 +19,18 @@ The steps involved in service deploy are:
 
 ```
   -a, --app string                     Name of the application.
+      --diff                           Compares the generated CloudFormation template to the deployed stack.
   -e, --env string                     Name of the environment.
       --force                          Optional. Force a new service deployment using the existing image.
   -h, --help                           help for deploy
   -n, --name string                    Name of the service.
-      --resource-tags stringToString   Optional. Labels with a key and value separated by commas.
-                                       Allows you to categorize resources. (default [])
-      --no-rollback bool               Optional. Disable automatic stack
+      --no-rollback                    Optional. Disable automatic stack
                                        rollback in case of deployment failure.
                                        We do not recommend using this flag for a
                                        production environment.
-      --tag string                     Optional. The service's image tag.
+      --resource-tags stringToString   Optional. Labels with a key and value separated by commas.
+                                       Allows you to categorize resources. (default [])
+      --tag string                     Optional. The container image tag.
 ```
 
 !!!info
