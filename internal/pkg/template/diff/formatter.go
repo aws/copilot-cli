@@ -42,7 +42,7 @@ func (f *seqItemFormatter) nextIndent(curr int) int {
 	   - (item)
 	     ~ Field1: a
 	     + Field2: b
-	   Where "~ Filed1: a" and "+ Field2: b" are its children. The indentation should increase by len("- "), which is 2.
+	   Where "~ Field1: a" and "+ Field2: b" are its children. The indentation should increase by len("- "), which is 2.
 	*/
 	return curr + 2
 }
