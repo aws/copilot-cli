@@ -12,20 +12,20 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// RoutingRuleConfigOrBool holds advanced configuration for routing rule or a boolean switch.
-type RoutingRuleConfigOrBool struct {
+// HTTPOrBool holds advanced configuration for routing rule or a boolean switch.
+type HTTPOrBool struct {
 	HTTP
 	Enabled *bool
 }
 
 // Disabled returns true if the routing rule configuration is explicitly disabled.
-func (r *RoutingRuleConfigOrBool) Disabled() bool {
+func (r *HTTPOrBool) Disabled() bool {
 	return r.Enabled != nil && !aws.BoolValue(r.Enabled)
 }
 
 // UnmarshalYAML implements the yaml(v3) interface. It allows https routing rule to be specified as a
 // bool or a struct alternately.
-func (r *RoutingRuleConfigOrBool) UnmarshalYAML(value *yaml.Node) error {
+func (r *HTTPOrBool) UnmarshalYAML(value *yaml.Node) error {
 	if err := value.Decode(&r.HTTP); err != nil {
 		switch err.(type) {
 		case *yaml.TypeError:

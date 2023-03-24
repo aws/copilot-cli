@@ -32,25 +32,15 @@ type ExposedPortsIndex struct {
 	ContainerForPort  map[uint16]string        // holds port to container mapping
 }
 
-func (idx ExposedPortsIndex) findDefaultContainerPort() string {
-	return idx.definedContainerPort(idx.WorkloadName)
+func (idx ExposedPortsIndex) mainContainerPort() string {
+	return idx.containerPortDefinedBy(idx.WorkloadName)
 }
 
-// definedContainerPort returns the explicitly defined container port, if there is no port exposed for the container then returns the empty string "".
-func (idx ExposedPortsIndex) definedContainerPort(container string) string {
+// containerPortDefinedBy returns the explicitly defined container port, if there is no port exposed for the container then returns the empty string "".
+func (idx ExposedPortsIndex) containerPortDefinedBy(container string) string {
 	for _, portConfig := range idx.PortsForContainer[container] {
 		if portConfig.isDefinedByContainer {
 			return strconv.Itoa(int(portConfig.Port))
-			/* NOTE: When the `target_port` is empty, the intended target port should be the port that is explicitly exposed by the container. Consider the following example
-			```
-			http:
-			  target_container: nginx
-			sidecars:
-			  nginx:
-			    port: 81 # Explicitly exposed by the nginx container.
-			```
-			In this example, the target port for the ALB listener rule should be 81
-			*/
 		}
 	}
 	return ""
@@ -579,7 +569,7 @@ func sortExposedPorts(exposedPorts []ExposedPort) []ExposedPort {
 func (rr *RoutingRule) Target(exposedPorts ExposedPortsIndex) (targetContainer string, targetPort string, err error) {
 	// Route load balancer traffic to main container by default.
 	targetContainer = exposedPorts.WorkloadName
-	targetPort = exposedPorts.findDefaultContainerPort()
+	targetPort = exposedPorts.mainContainerPort()
 
 	rrTargetContainer := rr.TargetContainer
 	rrTargetPort := rr.TargetPort
@@ -590,7 +580,17 @@ func (rr *RoutingRule) Target(exposedPorts ExposedPortsIndex) (targetContainer s
 	if rrTargetPort == nil { // when target_port is nil
 		if aws.StringValue(rrTargetContainer) != exposedPorts.WorkloadName {
 			targetContainer = aws.StringValue(rrTargetContainer)
-			targetPort = exposedPorts.definedContainerPort(aws.StringValue(rrTargetContainer))
+			targetPort = exposedPorts.containerPortDefinedBy(aws.StringValue(rrTargetContainer))
+			/* NOTE: When the `target_port` is empty, the intended target port should be the port that is explicitly exposed by the container. Consider the following example
+			```
+			http:
+			  target_container: nginx
+			sidecars:
+			  nginx:
+			    port: 81 # Explicitly exposed by the nginx container.
+			```
+			In this example, the target port for the ALB listener rule should be 81
+			*/
 		}
 		return
 	}

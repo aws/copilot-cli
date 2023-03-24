@@ -47,7 +47,7 @@ type LoadBalancedWebService struct {
 type LoadBalancedWebServiceConfig struct {
 	ImageConfig      ImageWithPortAndHealthcheck `yaml:"image,flow"`
 	ImageOverride    `yaml:",inline"`
-	RoutingRule      RoutingRuleConfigOrBool `yaml:"http,flow"`
+	RoutingRule      HTTPOrBool `yaml:"http,flow"`
 	TaskConfig       `yaml:",inline"`
 	Logging          `yaml:"logging,flow"`
 	Sidecars         map[string]*SidecarConfig        `yaml:"sidecars"` // NOTE: keep the pointers because `mergo` doesn't automatically deep merge map's value unless it's a pointer type.
@@ -107,7 +107,7 @@ func NewLoadBalancedWebService(props *LoadBalancedWebServiceProps) *LoadBalanced
 // newDefaultHTTPLoadBalancedWebService returns an empty LoadBalancedWebService with only the default values set, including default HTTP configurations.
 func newDefaultHTTPLoadBalancedWebService() *LoadBalancedWebService {
 	lbws := newDefaultLoadBalancedWebService()
-	lbws.RoutingRule = RoutingRuleConfigOrBool{
+	lbws.RoutingRule = HTTPOrBool{
 		HTTP: HTTP{
 			Main: RoutingRule{
 				HealthCheck: HealthCheckArgsOrString{

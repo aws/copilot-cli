@@ -789,8 +789,8 @@ func (r HTTP) validate() error {
 	return nil
 }
 
-// validate returns nil if RoutingRuleConfigOrBool is configured correctly.
-func (r RoutingRuleConfigOrBool) validate() error {
+// validate returns nil if HTTPOrBool is configured correctly.
+func (r HTTPOrBool) validate() error {
 	if r.Disabled() {
 		return nil
 	}

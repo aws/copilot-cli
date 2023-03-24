@@ -152,7 +152,7 @@ func TestApplyEnv_Int64(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			initial := LoadBalancedWebServiceConfig{
-				RoutingRule: RoutingRuleConfigOrBool{
+				RoutingRule: HTTPOrBool{
 					HTTP: HTTP{
 						Main: RoutingRule{
 							HealthCheck: HealthCheckArgsOrString{
@@ -165,7 +165,7 @@ func TestApplyEnv_Int64(t *testing.T) {
 				},
 			}
 			override := LoadBalancedWebServiceConfig{
-				RoutingRule: RoutingRuleConfigOrBool{
+				RoutingRule: HTTPOrBool{
 					HTTP: HTTP{
 						Main: RoutingRule{
 							HealthCheck: HealthCheckArgsOrString{
@@ -178,7 +178,7 @@ func TestApplyEnv_Int64(t *testing.T) {
 				},
 			}
 			expected := LoadBalancedWebServiceConfig{
-				RoutingRule: RoutingRuleConfigOrBool{
+				RoutingRule: HTTPOrBool{
 					HTTP: HTTP{
 						Main: RoutingRule{
 							HealthCheck: HealthCheckArgsOrString{

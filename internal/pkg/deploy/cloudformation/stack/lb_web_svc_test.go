@@ -835,7 +835,7 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 		},
 		"do not render http params when disabled": {
 			setupManifest: func(service *manifest.LoadBalancedWebService) {
-				service.RoutingRule = manifest.RoutingRuleConfigOrBool{
+				service.RoutingRule = manifest.HTTPOrBool{
 					Enabled: aws.Bool(false),
 				}
 			},
