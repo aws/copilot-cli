@@ -6,7 +6,7 @@ $ copilot env override
 ## What does it do?
 Scaffold Infrastructure as Code (IaC) extension files for environments.
 The generated files allow you to extend and override the Copilot-generated AWS CloudFormation template.
-You can edit the files to change existing resource properties, delete
+You can edit the files to change existing resource properties, and delete
 or add new resources to an environment's template.
 
 ### Learn more
