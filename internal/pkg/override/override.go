@@ -87,12 +87,9 @@ func Lookup(path string, fs afero.Fs) (Info, error) {
 }
 
 func lookupYAMLPatch(path string, fs afero.Fs) (Info, error) {
-	patches, err := unmarshalPatches(path, fs)
-	switch {
-	case err != nil:
-		return Info{}, err
-	case len(patches) == 0:
-		return Info{}, fmt.Errorf("YAML patch document at %q does not contain any operations", path)
+	ok, _ := afero.Exists(fs, filepath.Join(path, yamlPatchFile))
+	if !ok {
+		return Info{}, fmt.Errorf(`%s does not exist under %q`, yamlPatchFile, path)
 	}
 	return yamlPatchInfo(path), nil
 }

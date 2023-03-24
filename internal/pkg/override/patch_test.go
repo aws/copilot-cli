@@ -520,6 +520,13 @@ a:
   path: /a/c`,
 			expectedErr: `unable to apply the "remove" patch at index 1: key "/a": "c" not found in map`,
 		},
+		"error with no patches": {
+			yaml: `
+a:
+  b: value`,
+			overrides:   ``,
+			expectedErr: `no YAML patches configured`,
+		},
 	}
 
 	for name, tc := range tests {
