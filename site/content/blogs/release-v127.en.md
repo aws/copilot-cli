@@ -88,8 +88,8 @@ sidecars:
   nginx:
     image: 123457839156.dkr.ecr.us-west-2.amazonaws.com/demo/front:nginx-latest
 ```
-Or you can provide the image URI using the location field.
 
+Or you can provide the image URI using the location field.
 ```yaml
 sidecars:
   nginx:
