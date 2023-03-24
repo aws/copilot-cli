@@ -23,12 +23,11 @@ the CLI supports three operations: `add`, `remove`, and `replace`. Here is a sam
 
 ```yaml
 - op: add
-  path: /
+  path: /Mappings
   value:
-    Mappings:
-      ContainerSettings:
-        test: { Cpu: 256, Mem: 512 }
-        prod: { Cpu: 1024, Mem: 1024}
+    ContainerSettings:
+      test: { Cpu: 256, Mem: 512 }
+      prod: { Cpu: 1024, Mem: 1024}
 - op: remove
   path: /Resources/TaskRole
 - op: replace
@@ -59,18 +58,17 @@ To add a new property to an existing resource:
 
 ```yaml 
 - op: add
-  path: /Resources/LogGroup/Properties
+  path: /Resources/LogGroup/Properties/Tags
   value:
-    Tags:
-      - Key: keyname
-        Value: value1
+    - Key: keyname
+      Value: value1
 ```
 
 To add a new property in a specific index of an array:
 
 ```yaml
 - op: add
-  path: /Resources/TaskDefinition/Properties/ContainerDefinitions/1/EnvironmentFiles/0
+  path: /Resources/TaskDefinition/Properties/ContainerDefinitions/0/EnvironmentFiles/0
   value: arn:aws:s3:::bucket_name/key_name
 ```
 
@@ -78,7 +76,7 @@ To add a new element at the end of an array:
 
 ```yaml
 - op: add
-  path: /Resources/TaskRole/Policies/-
+  path: /Resources/TaskRole/Properties/Policies/-
   value:
     PolicyDocument:
       PolicyName: DynamoDBReader
@@ -102,7 +100,7 @@ To delete an element from an array, you must reference the exact index:
 
 ```yaml
 - op: remove
-  path: /Resources/ExecutionRole/Properties/Policies/0/Statement/1/Action/0
+  path: /Resources/ExecutionRole/Properties/Policies/0/PolicyDocument/Statement/1/Action/0
 ```
 
 To delete an entire resource:

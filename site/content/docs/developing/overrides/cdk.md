@@ -7,7 +7,7 @@
 Both options are a "break the glass" mechanism to access and configure functionality that is not surfaced by Copilot [manifests](../../manifest/overview.en.md).
 
 We recommend using the AWS Cloud Development Kit (CDK) overrides over [YAML patches](./yamlpatch.md) if you'd like to leverage
-the expressive power of a programming language. The CDK allows you to add safe and powerful modifications to your CloudFormation template.
+the expressive power of a programming language. The CDK allows you to make safe and powerful modifications to your CloudFormation template.
 
 ## How to get started
 
@@ -57,9 +57,9 @@ export class TransformedStack extends cdk.Stack {
 ## How does it work?
 
 As can be seen in the above `stack.ts` file, Copilot will use the [clouformation_include module](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.cloudformation_include-readme.html) 
-provided by the CDK to help author transformations. This library is the CDK’s [recommendation](https://docs.aws.amazon.com/cdk/v2/guide/use_cfn_template.html) from their 
-"Import or migrate an existing AWS CloudFormation template" guide. It enables accessing the resources not surfaced by the Copilot manifest as 
-[L1 constructs](https://docs.aws.amazon.com/cdk/v2/guide/constructs.html) and ensures that the CDK retains the resources on synthesis.  
+provided by the CDK to help author transformations. This library is the CDK’s recommendation from their 
+["Import or migrate an existing AWS CloudFormation template"](https://docs.aws.amazon.com/cdk/v2/guide/use_cfn_template.html) guide. It enables accessing the resources not surfaced by the Copilot manifest as 
+[L1 constructs](https://docs.aws.amazon.com/cdk/v2/guide/constructs.html).  
 The `CfnInclude` object is initialized from the hidden `.build/in.yaml` CloudFormation template. 
 This is how Copilot and the CDK communicate. 
 Copilot writes the manifest-generated CloudFormation template under the `.build/` directory, 
