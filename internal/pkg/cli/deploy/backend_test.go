@@ -99,7 +99,7 @@ func TestBackendSvcDeployer_stackConfiguration(t *testing.T) {
 			},
 			Manifest: &manifest.BackendService{
 				BackendServiceConfig: manifest.BackendServiceConfig{
-					RoutingRule: manifest.RoutingRuleConfiguration{
+					HTTP: manifest.HTTP{
 						Main: manifest.RoutingRule{
 							Alias: manifest.Alias{
 								AdvancedAliases: []manifest.AdvancedAlias{
@@ -130,7 +130,7 @@ func TestBackendSvcDeployer_stackConfiguration(t *testing.T) {
 			},
 			Manifest: &manifest.BackendService{
 				BackendServiceConfig: manifest.BackendServiceConfig{
-					RoutingRule: manifest.RoutingRuleConfiguration{
+					HTTP: manifest.HTTP{
 						Main: manifest.RoutingRule{
 							Alias: manifest.Alias{
 								AdvancedAliases: []manifest.AdvancedAlias{
@@ -162,7 +162,7 @@ func TestBackendSvcDeployer_stackConfiguration(t *testing.T) {
 			},
 			Manifest: &manifest.BackendService{
 				BackendServiceConfig: manifest.BackendServiceConfig{
-					RoutingRule: manifest.RoutingRuleConfiguration{
+					HTTP: manifest.HTTP{
 						Main: manifest.RoutingRule{
 							Alias: manifest.Alias{
 								AdvancedAliases: []manifest.AdvancedAlias{
@@ -203,7 +203,7 @@ func TestBackendSvcDeployer_stackConfiguration(t *testing.T) {
 			},
 			Manifest: &manifest.BackendService{
 				BackendServiceConfig: manifest.BackendServiceConfig{
-					RoutingRule: manifest.RoutingRuleConfiguration{
+					HTTP: manifest.HTTP{
 						Main: manifest.RoutingRule{
 							Path: aws.String("/"),
 						},
@@ -230,7 +230,7 @@ func TestBackendSvcDeployer_stackConfiguration(t *testing.T) {
 			},
 			Manifest: &manifest.BackendService{
 				BackendServiceConfig: manifest.BackendServiceConfig{
-					RoutingRule: manifest.RoutingRuleConfiguration{
+					HTTP: manifest.HTTP{
 						Main: manifest.RoutingRule{
 							Path: aws.String("/"),
 							Alias: manifest.Alias{
