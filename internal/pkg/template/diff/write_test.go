@@ -283,6 +283,7 @@ Metadata:
     ~ Version: v1.26.0 -> v1.27.0
 `,
 		},
+		"produces diff": {},
 		"no diff": {
 			old: `Description: CloudFormation environment template for infrastructure shared among Copilot workloads.
 Metadata:
