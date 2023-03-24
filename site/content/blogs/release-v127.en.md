@@ -53,7 +53,7 @@ You can now build and push container images for sidecar containers just like you
 ### Build and push container images for sidecar containers
 
 Copilot now allows users to build sidecar container images natively from a Dockerfile and push them to ECR.
-In order to take advantage of this feature, users can modify their workload manifests in several ways. 
+In order to take advantage of this feature, users can modify their workload manifests in several ways.
 
 The first option is to simply specify the path to the Dockerfile as a string.
 
