@@ -11,6 +11,7 @@ $ copilot job package
 
 ```
   -a, --app string          Name of the application.
+      --diff                Compares the generated CloudFormation template to the deployed stack.
   -e, --env string          Name of the environment.
   -h, --help                help for package
   -n, --name string         Name of the job.
