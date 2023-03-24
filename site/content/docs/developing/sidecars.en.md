@@ -47,7 +47,8 @@ count: 1
 sidecars:
   nginx:
     port: 80
-    image: 1234567890.dkr.ecr.us-west-2.amazonaws.com/reverse-proxy:revision_1
+    image:
+      build: src/reverseproxy/Dockerfile
     variables:
       NGINX_PORT: 80
 ```
@@ -72,21 +73,6 @@ sidecars:
     mount_points:
       - source_volume: myEFSVolume
         path: '/etc/mount1'
-```
-
-Below is an example of specifying docker build arguments for a sidecar container.
-
-```yaml
-sidecars:
-  nginx:
-    image:
-      build:
-        dockerfile: path/to/dockerfile
-        context: context/dir
-        target: build-stage
-        cache_from:
-          - image: tag
-        args: value
 ```
 
 Below is an example of running the [AWS Distro for OpenTelemetry](https://aws-otel.github.io/) sidecar with a custom configuration. The example

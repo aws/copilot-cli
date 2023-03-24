@@ -48,12 +48,12 @@ or multiple listeners on different ports and protocols for [network load balance
 
 ## Sidecar improvements
 
-With the following improvements to sidecar containers, you now have more flexibility and control on building and pushing images for sidecar containers alongside their main containers, allowing them to manage dependencies and resources more efficiently. Additionally, you can now specify the path to a file containing the environment variables to pass to the sidecar containers, to provide a more customized approach to configuring the containers.
+You can now build and push container images for sidecar containers just like your main container. Additionally, you can now specify the path to a local environment file for sidecar containers.
 
 ### Build and push container images for sidecar containers
 
-Copilot now allows users to build sidecar container images natively from Dockerfiles and push them to ECR.
-In order to take advantage of this feature, users can modify their workload manifests in several ways.
+Copilot now allows users to build sidecar container images natively from a Dockerfile and push them to ECR.
+In order to take advantage of this feature, users can modify their workload manifests in several ways. 
 
 The first option is to simply specify the path to the Dockerfile as a string.
 

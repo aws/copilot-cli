@@ -70,7 +70,7 @@ on:
 
 <div class="separator"></div>
 
-{% include 'image.en.md' %}
+{% include 'image.md' %}
 
 {% include 'image-config.en.md' %}
 
