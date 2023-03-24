@@ -112,7 +112,7 @@ func (d *WorkerServiceDescriber) Describe() (HumanJSONStringer, error) {
 		if err != nil {
 			return nil, fmt.Errorf("retrieve rollback alarm names: %w", err)
 		}
-		if alarmNames != nil {
+		if len(alarmNames) != 0 {
 			cwAlarmDescr, err := d.initCWDescriber(env)
 			if err != nil {
 				return nil, err

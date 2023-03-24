@@ -34,6 +34,7 @@ type packageJobVars struct {
 	tag          string
 	outputDir    string
 	uploadAssets bool
+	showDiff     bool
 }
 
 type packageJobOpts struct {
@@ -201,5 +202,9 @@ func buildJobPackageCmd() *cobra.Command {
 	cmd.Flags().StringVar(&vars.tag, imageTagFlag, "", imageTagFlagDescription)
 	cmd.Flags().StringVar(&vars.outputDir, stackOutputDirFlag, "", stackOutputDirFlagDescription)
 	cmd.Flags().BoolVar(&vars.uploadAssets, uploadAssetsFlag, false, uploadAssetsFlagDescription)
+	cmd.Flags().BoolVar(&vars.showDiff, diffFlag, false, diffFlagDescription)
+
+	cmd.MarkFlagsMutuallyExclusive(diffFlag, stackOutputDirFlag)
+	cmd.MarkFlagsMutuallyExclusive(diffFlag, uploadAssetsFlag)
 	return cmd
 }
