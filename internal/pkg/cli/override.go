@@ -20,7 +20,7 @@ import (
 const (
 	// IaC options for overrides.
 	cdkIaCTool = "cdk"
-	yamlPatch  = "CloudFormation YAML patches"
+	yamlPatch  = "yamlpatch"
 
 	// IaC toolkit configuration.
 	typescriptCDKLang = "typescript"
@@ -155,7 +155,11 @@ func (o *overrideOpts) askIaCTool() error {
 	help := `The AWS Cloud Development Kit (CDK) lets you override templates using
 the expressive power of programming languages.
 This option is recommended for users that need to override several resources.
-To learn more about the CDK: https://docs.aws.amazon.com/cdk/v2/guide/home.html`
+To learn more about the CDK: https://aws.github.io/copilot-cli/docs/developing/overrides/cdk/
+
+CloudFormation YAML patches is recommended for users that need to override
+a handful resources or do not want to depend on any other tool.
+To learn more about CFN yaml patches: https://aws.github.io/copilot-cli/docs/developing/overrides/yamlpatch/`
 	tool, err := o.prompt.SelectOne(msg, help, validIaCTools, prompt.WithFinalMessage("IaC tool:"))
 	if err != nil {
 		return fmt.Errorf("select IaC tool: %v", err)

@@ -13,7 +13,10 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-const jsonPointerSeparator = "/"
+const (
+	jsonPointerSeparator = "/"
+	yamlPatchFile        = "cfn.patches.yml"
+)
 
 // ScaffoldWithCDK sets up YAML patches in dir/ to apply to the
 // Copilot generated CloudFormation template.
@@ -94,7 +97,7 @@ func (p *Patch) Override(body []byte) ([]byte, error) {
 }
 
 func unmarshalPatches(path string, fs afero.Fs) ([]yamlPatch, error) {
-	path = filepath.Join(path, "cfn.patches.yml")
+	path = filepath.Join(path, yamlPatchFile)
 	content, err := afero.ReadFile(fs, path)
 	if err != nil {
 		return nil, fmt.Errorf("read file at %q: %w", path, err)

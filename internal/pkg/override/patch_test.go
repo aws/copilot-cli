@@ -25,7 +25,7 @@ func TestScaffoldWithPatch(t *testing.T) {
 		ok, _ := afero.Exists(fs, filepath.Join(dir, "README.md"))
 		require.True(t, ok, "README.md should exist")
 
-		ok, _ = afero.Exists(fs, filepath.Join(dir, "cfn.patches.yml"))
+		ok, _ = afero.Exists(fs, filepath.Join(dir, yamlPatchFile))
 		require.True(t, ok, "cfn.patches.yml should exist")
 	})
 	t.Run("should return an error if the directory is not empty", func(t *testing.T) {
@@ -525,7 +525,7 @@ a:
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			fs := afero.NewMemMapFs()
-			file, err := fs.Create("/cfn.patches.yml")
+			file, err := fs.Create("/" + yamlPatchFile)
 			require.NoError(t, err)
 			_, err = file.WriteString(strings.TrimSpace(tc.overrides))
 			require.NoError(t, err)
