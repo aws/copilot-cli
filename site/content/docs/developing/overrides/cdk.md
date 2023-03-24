@@ -56,7 +56,7 @@ export class TransformedStack extends cdk.Stack {
 
 ## How does it work?
 
-As can be seen in the above `stack.ts` file, Copilot will use the [clouformation_include module](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.cloudformation_include-readme.html) 
+As can be seen in the above `stack.ts` file, Copilot will use the [cloudformation_include module](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.cloudformation_include-readme.html) 
 provided by the CDK to help author transformations. This library is the CDK’s recommendation from their 
 ["Import or migrate an existing AWS CloudFormation template"](https://docs.aws.amazon.com/cdk/v2/guide/use_cfn_template.html) guide. It enables accessing the resources not surfaced by the Copilot manifest as 
 [L1 constructs](https://docs.aws.amazon.com/cdk/v2/guide/constructs.html).  
