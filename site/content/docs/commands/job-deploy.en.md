@@ -19,10 +19,11 @@ The steps involved in `job deploy` are:
 
 ```
   -a, --app string                     Name of the application.
+      --diff                           Compares the generated CloudFormation template to the deployed stack.
   -e, --env string                     Name of the environment.
   -h, --help                           help for deploy
   -n, --name string                    Name of the job.
-      --no-rollback bool               Optional. Disable automatic stack
+      --no-rollback                    Optional. Disable automatic stack
                                        rollback in case of deployment failure.
                                        We do not recommend using this flag for a
                                        production environment.
