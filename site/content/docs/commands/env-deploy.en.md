@@ -20,3 +20,18 @@ $ copilot env deploy
                       We do not recommend using this flag for a
                       production environment.
 ```
+
+## Examples
+Use `--diff` to see what will be changed before making a deployment.
+
+```console
+$ copilot env deploy --name test --diff
+~ Resources:
+    ~ Cluster:
+        ~ Properties:
+            ~ ClusterSettings:
+                ~ - (changed item)
+                  ~ Value: enabled -> disabled
+
+Continue with the deployment? (y/N)
+```
