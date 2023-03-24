@@ -98,3 +98,34 @@ If the diff looks good to you, enter "y" to deploy. Otherwise, enter "N" to make
 ### Build and push container images for sidecar containers
 
 ### Upload local environment files for sidecar containers
+You can now specify an environment file to upload to any sidecar container in your task.
+Previously, you could only specify an environment file for your main task container: 
+
+```yaml
+# in copilot/{service name}/manifest.yml
+env_file: log.env
+```
+
+Now, you can do the same in a sidecar definition:
+```yaml
+sidecars:
+  nginx:
+    image: nginx:latest
+    env_file: ./nginx.env
+    port: 8080
+```
+
+It also works with the managed `logging` sidecar:
+
+```yaml
+logging:
+  retention: 1
+  destination:
+    Name: cloudwatch
+    region: us-west-2
+    log_group_name: /copilot/logs/
+    log_stream_prefix: copilot/
+  env_file: ./logging.env
+```
+
+If you specify the same file more than once in different sidecars, Copilot will only upload the file to S3 once.
