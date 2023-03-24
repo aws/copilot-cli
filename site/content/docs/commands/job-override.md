@@ -6,7 +6,7 @@ $ copilot job override
 ## What does it do?
 Scaffold Infrastructure as Code (IaC) extension files for a job.
 The generated files allow you to extend and override the Copilot-generated AWS CloudFormation template.
-You can edit the files to change existing resource properties, delete
+You can edit the files to change existing resource properties, and delete
 or add new resources to the job's template.
 
 ### Learn more
