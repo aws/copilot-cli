@@ -1,0 +1,15 @@
+# Delete the task role resource
+# - op: remove
+#   path: /Resources/TaskRole
+
+# Add a service connect alias
+# - op: add
+#   path: /Resources/Service/Properties/ServiceConnectConfiguration/Services/0/ClientAliases/-
+#   value:
+#     Port: !Ref TargetPort
+#     DnsName: yamlpatchiscool
+
+# Replace the task role in the task definition
+# - op: replace
+#   path: /Resources/TaskDefinition/Properties/TaskRoleArn
+#   value: arn:aws:iam::123456789012:role/MyTaskRole

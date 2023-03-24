@@ -222,7 +222,10 @@ func (o *deployEnvOpts) showDiffAndConfirmDeployment(deployer envDeployer, input
 		return false, fmt.Errorf("generate the template for environment %q: %w", o.name, err)
 	}
 	if err := diff(deployer, output.Template, os.Stdout); err != nil {
-		return false, fmt.Errorf("generate diff for environment %q: %w", o.name, err)
+		var errHasDiff *errHasDiff
+		if !errors.As(err, &errHasDiff) {
+			return false, fmt.Errorf("generate diff for environment %q: %w", o.name, err)
+		}
 	}
 	contd, err := o.prompt.Confirm(continueDeploymentPrompt, "")
 	if err != nil {

@@ -135,6 +135,9 @@ func (cw *CloudWatch) AlarmStatuses(opts ...DescribeAlarmOpts) ([]AlarmStatus, e
 
 // AlarmDescriptions returns the config of alarms filtered by name.
 func (cw *CloudWatch) AlarmDescriptions(alarmNames []string) ([]*AlarmDescription, error) {
+	if len(alarmNames) == 0 {
+		return nil, nil
+	}
 	var alarmDescriptions []*AlarmDescription
 	in := &cloudwatch.DescribeAlarmsInput{
 		AlarmNames: aws.StringSlice(alarmNames),
