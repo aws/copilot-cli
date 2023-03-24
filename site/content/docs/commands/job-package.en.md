@@ -36,3 +36,22 @@ $ copilot job package -n report-generator -e test --output-dir ./infrastructure
 $ ls ./infrastructure
   report-generator-test.stack.yml      report-generator-test.params.yml
 ```
+
+Use `--diff` to  print the diff and exit.
+```console
+$ copilot job deploy --diff
+~ Resources:
+    ~ TaskDefinition:
+        ~ Properties:
+            ~ ContainerDefinitions:
+                ~ - (changed item)
+                  ~ Environment:
+                      (4 unchanged items)
+                      + - Name: LOG_LEVEL
+                      +   Value: "info"
+```
+
+!!! info "The exit codes when using `copilot [noun] package --diff`"
+    0 = no diffs found  
+    1 = diffs found  
+    2 = error producing diff
