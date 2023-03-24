@@ -82,12 +82,12 @@ func (l LoadBalancedWebService) validate() error {
 	if err = validateTargetContainer(validateTargetContainerOpts{
 		mainContainerName: aws.StringValue(l.Name),
 		mainContainerPort: l.ImageConfig.Port,
-		targetContainer:   l.RoutingRule.Main.TargetContainer,
+		targetContainer:   l.HTTPOrBool.Main.TargetContainer,
 		sidecarConfig:     l.Sidecars,
 	}); err != nil {
 		return fmt.Errorf(`validate load balancer target for "http": %w`, err)
 	}
-	for idx, rule := range l.RoutingRule.AdditionalRoutingRules {
+	for idx, rule := range l.HTTPOrBool.AdditionalRoutingRules {
 		if err = validateTargetContainer(validateTargetContainerOpts{
 			mainContainerName: aws.StringValue(l.Name),
 			mainContainerPort: l.ImageConfig.Port,
@@ -127,7 +127,7 @@ func (l LoadBalancedWebService) validate() error {
 		mainContainerName: aws.StringValue(l.Name),
 		mainContainerPort: l.ImageConfig.Port,
 		sidecarConfig:     l.Sidecars,
-		alb:               &l.RoutingRule.RoutingRuleConfiguration,
+		alb:               &l.HTTPOrBool.HTTP,
 		nlb:               &l.NLBConfig,
 	}); err != nil {
 		return fmt.Errorf("validate unique exposed ports: %w", err)
@@ -186,12 +186,12 @@ func (w WorkerAlarmArgs) validate() error {
 // validate returns nil if LoadBalancedWebServiceConfig is configured correctly.
 func (l LoadBalancedWebServiceConfig) validate() error {
 	var err error
-	if l.RoutingRule.Disabled() && l.NLBConfig.IsEmpty() {
+	if l.HTTPOrBool.Disabled() && l.NLBConfig.IsEmpty() {
 		return &errAtLeastOneFieldMustBeSpecified{
 			missingFields: []string{"http", "nlb"},
 		}
 	}
-	if l.RoutingRule.Disabled() && (!l.Count.AdvancedCount.Requests.IsEmpty() || !l.Count.AdvancedCount.ResponseTime.IsEmpty()) {
+	if l.HTTPOrBool.Disabled() && (!l.Count.AdvancedCount.Requests.IsEmpty() || !l.Count.AdvancedCount.ResponseTime.IsEmpty()) {
 		return errors.New(`scaling based on "nlb" requests or response time is not supported`)
 	}
 	if err = l.ImageConfig.validate(); err != nil {
@@ -200,7 +200,7 @@ func (l LoadBalancedWebServiceConfig) validate() error {
 	if err = l.ImageOverride.validate(); err != nil {
 		return err
 	}
-	if err = l.RoutingRule.validate(); err != nil {
+	if err = l.HTTPOrBool.validate(); err != nil {
 		return fmt.Errorf(`validate "http": %w`, err)
 	}
 	if err = l.TaskConfig.validate(); err != nil {
@@ -265,12 +265,12 @@ func (b BackendService) validate() error {
 	if err = validateTargetContainer(validateTargetContainerOpts{
 		mainContainerName: aws.StringValue(b.Name),
 		mainContainerPort: b.ImageConfig.Port,
-		targetContainer:   b.RoutingRule.Main.TargetContainer,
+		targetContainer:   b.HTTP.Main.TargetContainer,
 		sidecarConfig:     b.Sidecars,
 	}); err != nil {
 		return fmt.Errorf(`validate load balancer target for "http": %w`, err)
 	}
-	for idx, rule := range b.RoutingRule.AdditionalRoutingRules {
+	for idx, rule := range b.HTTP.AdditionalRoutingRules {
 		if err = validateTargetContainer(validateTargetContainerOpts{
 			mainContainerName: aws.StringValue(b.Name),
 			mainContainerPort: b.ImageConfig.Port,
@@ -292,7 +292,7 @@ func (b BackendService) validate() error {
 		mainContainerName: aws.StringValue(b.Name),
 		mainContainerPort: b.ImageConfig.Port,
 		sidecarConfig:     b.Sidecars,
-		alb:               &b.RoutingRule,
+		alb:               &b.HTTP,
 	}); err != nil {
 		return fmt.Errorf("validate unique exposed ports: %w", err)
 	}
@@ -308,10 +308,10 @@ func (b BackendServiceConfig) validate() error {
 	if err = b.ImageOverride.validate(); err != nil {
 		return err
 	}
-	if err = b.RoutingRule.validate(); err != nil {
+	if err = b.HTTP.validate(); err != nil {
 		return fmt.Errorf(`validate "http": %w`, err)
 	}
-	if b.RoutingRule.IsEmpty() && (!b.Count.AdvancedCount.Requests.IsEmpty() || !b.Count.AdvancedCount.ResponseTime.IsEmpty()) {
+	if b.HTTP.IsEmpty() && (!b.Count.AdvancedCount.Requests.IsEmpty() || !b.Count.AdvancedCount.ResponseTime.IsEmpty()) {
 		return &errFieldMustBeSpecified{
 			missingField:      "http",
 			conditionalFields: []string{"count.requests", "count.response_time"},
@@ -332,7 +332,7 @@ func (b BackendServiceConfig) validate() error {
 		return fmt.Errorf(`validate "network": %w`, err)
 	}
 	if b.Network.Connect.Alias != nil {
-		if b.RoutingRule.Main.TargetContainer == nil && b.ImageConfig.Port == nil {
+		if b.HTTP.Main.TargetContainer == nil && b.ImageConfig.Port == nil {
 			return fmt.Errorf(`cannot set "network.connect.alias" when no ports are exposed`)
 		}
 	}
@@ -765,8 +765,8 @@ func (CommandOverride) validate() error {
 	return nil
 }
 
-// validate returns nil if RoutingRuleConfiguration is configured correctly.
-func (r RoutingRuleConfiguration) validate() error {
+// validate returns nil if HTTP is configured correctly.
+func (r HTTP) validate() error {
 	if r.IsEmpty() {
 		return nil
 	}
@@ -789,16 +789,16 @@ func (r RoutingRuleConfiguration) validate() error {
 	return nil
 }
 
-// validate returns nil if RoutingRuleConfigOrBool is configured correctly.
-func (r RoutingRuleConfigOrBool) validate() error {
+// validate returns nil if HTTPOrBool is configured correctly.
+func (r HTTPOrBool) validate() error {
 	if r.Disabled() {
 		return nil
 	}
 
-	return r.RoutingRuleConfiguration.validate()
+	return r.HTTP.validate()
 }
 
-// validate returns nil if RoutingRuleConfiguration is configured correctly.
+// validate returns nil if HTTP is configured correctly.
 func (r RoutingRule) validate() error {
 	if r.Path == nil {
 		return &errFieldMustBeSpecified{
@@ -1819,7 +1819,7 @@ func (s Secret) validate() error {
 type validateExposedPortsOpts struct {
 	mainContainerName string
 	mainContainerPort *uint16
-	alb               *RoutingRuleConfiguration
+	alb               *HTTP
 	nlb               *NetworkLoadBalancerConfiguration
 	sidecarConfig     map[string]*SidecarConfig
 }

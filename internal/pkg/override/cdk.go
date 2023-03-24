@@ -10,6 +10,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
+
+	"gopkg.in/yaml.v3"
 
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/spf13/afero"
@@ -133,9 +136,40 @@ func (cdk *CDK) transform(body []byte) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func (cdk *CDK) cleanUp(body []byte) ([]byte, error) {
-	// TODO(efekarakus): Implement me.
-	return body, nil
+// cleanUp removes YAML additions that get injected by the CDK that are unnecessary,
+// and transforms the Description string of the CloudFormation template to highlight the template is now overridden with the CDK.
+func (cdk *CDK) cleanUp(in []byte) ([]byte, error) {
+	// See [template anatomy]: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-anatomy.html
+	// We ignore Rules on purpose as it's only used by the CDK.
+	type template struct {
+		AWSTemplateFormatVersion string               `yaml:"AWSTemplateFormatVersion,omitempty"`
+		Description              string               `yaml:"Description,omitempty"`
+		Metadata                 yaml.Node            `yaml:"Metadata,omitempty"`
+		Parameters               map[string]yaml.Node `yaml:"Parameters,omitempty"`
+		Mappings                 yaml.Node            `yaml:"Mappings,omitempty"`
+		Conditions               yaml.Node            `yaml:"Conditions,omitempty"`
+		Transform                yaml.Node            `yaml:"Transform,omitempty"`
+		Resources                yaml.Node            `yaml:"Resources,omitempty"`
+		Outputs                  yaml.Node            `yaml:"Outputs,omitempty"`
+	}
+	var body template
+	if err := yaml.Unmarshal(in, &body); err != nil {
+		return nil, fmt.Errorf("unmarsal CDK transformed YAML template: %w", err)
+	}
+
+	// Augment the description with Copilot and the CDK metrics.
+	body.Description = fmt.Sprintf("%s using AWS Copilot and CDK.", strings.TrimSuffix(body.Description, "."))
+
+	// Get rid of CDK parameters.
+	delete(body.Parameters, "BootstrapVersion")
+
+	out := new(bytes.Buffer)
+	encoder := yaml.NewEncoder(out)
+	encoder.SetIndent(2)
+	if err := encoder.Encode(body); err != nil {
+		return nil, fmt.Errorf("marshal cleaned up CDK transformed template: %w", err)
+	}
+	return out.Bytes(), nil
 }
 
 // ScaffoldWithCDK bootstraps a CDK application under dir/ to override the seed CloudFormation resources.
@@ -149,7 +183,11 @@ func ScaffoldWithCDK(fs afero.Fs, dir string, seeds []template.CFNResource) erro
 		return fmt.Errorf("directory %q is not empty", dir)
 	}
 
-	return templates.WalkOverridesCDKDir(seeds, func(name string, content *template.Content) error {
+	return templates.WalkOverridesCDKDir(seeds, writeFilesToDir(dir, fs))
+}
+
+func writeFilesToDir(dir string, fs afero.Fs) template.WalkDirFunc {
+	return func(name string, content *template.Content) error {
 		path := filepath.Join(dir, name)
 		if err := fs.MkdirAll(filepath.Dir(path), 0755); err != nil {
 			return fmt.Errorf("make directories along %q: %w", filepath.Dir(path), err)
@@ -158,5 +196,5 @@ func ScaffoldWithCDK(fs afero.Fs, dir string, seeds []template.CFNResource) erro
 			return fmt.Errorf("write file at %q: %w", path, err)
 		}
 		return nil
-	})
+	}
 }

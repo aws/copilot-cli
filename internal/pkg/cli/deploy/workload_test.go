@@ -36,7 +36,7 @@ import (
 )
 
 type deployMocks struct {
-	mockImageBuilderPusher     *mocks.MockimageBuilderPusher
+	mockRepositoryService      *mocks.MockrepositoryService
 	mockEndpointGetter         *mocks.MockendpointGetter
 	mockSpinner                *mocks.Mockspinner
 	mockPublicCIDRBlocksGetter *mocks.MockpublicCIDRBlocksGetter
@@ -201,7 +201,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				},
 			},
 			mock: func(t *testing.T, m *deployMocks) {
-				m.mockImageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
+				m.mockRepositoryService.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
 					Dockerfile: "mockDockerfile",
 					Context:    "mockContext",
 					Platform:   "mockContainerPlatform",
@@ -224,7 +224,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				},
 			},
 			mock: func(t *testing.T, m *deployMocks) {
-				m.mockImageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
+				m.mockRepositoryService.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
 					Dockerfile: "mockDockerfile",
 					Context:    "mockContext",
 					Platform:   "mockContainerPlatform",
@@ -254,7 +254,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				},
 			},
 			mock: func(t *testing.T, m *deployMocks) {
-				m.mockImageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
+				m.mockRepositoryService.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
 					Dockerfile: "mockDockerfile",
 					Context:    "mockContext",
 					Platform:   "mockContainerPlatform",
@@ -286,7 +286,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			},
 			inMockGitTag: "gitTag",
 			mock: func(t *testing.T, m *deployMocks) {
-				m.mockImageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
+				m.mockRepositoryService.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
 					Dockerfile: "sidecarMockDockerfile",
 					Context:    "sidecarMockContext",
 					Platform:   "mockContainerPlatform",
@@ -296,7 +296,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 						"com.aws.copilot.image.container.name": "nginx",
 					},
 				}).Return("sidecarMockDigest1", nil)
-				m.mockImageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
+				m.mockRepositoryService.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
 					Dockerfile: "web/Dockerfile",
 					Context:    "Users/bowie",
 					Platform:   "mockContainerPlatform",
@@ -586,10 +586,10 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			defer ctrl.Finish()
 
 			m := &deployMocks{
-				mockUploader:           mocks.NewMockuploader(ctrl),
-				mockAddons:             mocks.NewMockstackBuilder(ctrl),
-				mockImageBuilderPusher: mocks.NewMockimageBuilderPusher(ctrl),
-				mockFileReader:         mocks.NewMockfileReader(ctrl),
+				mockUploader:          mocks.NewMockuploader(ctrl),
+				mockAddons:            mocks.NewMockstackBuilder(ctrl),
+				mockRepositoryService: mocks.NewMockrepositoryService(ctrl),
+				mockFileReader:        mocks.NewMockfileReader(ctrl),
 			}
 			tc.mock(t, m)
 
@@ -621,12 +621,12 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 					customEnvFiles:  tc.customEnvFiles,
 					dockerBuildArgs: tc.inDockerBuildArgs,
 				},
-				fs:                 m.mockFileReader,
-				s3Client:           m.mockUploader,
-				imageBuilderPusher: m.mockImageBuilderPusher,
-				templateFS:         fakeTemplateFS(),
-				overrider:          new(override.Noop),
-				customResources:    crFn,
+				fs:              m.mockFileReader,
+				s3Client:        m.mockUploader,
+				repository:      m.mockRepositoryService,
+				templateFS:      fakeTemplateFS(),
+				overrider:       new(override.Noop),
+				customResources: crFn,
 			}
 			if m.mockAddons != nil {
 				wkldDeployer.addons = m.mockAddons
@@ -1376,8 +1376,8 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 								Port: aws.Uint16(80),
 							},
 						},
-						RoutingRule: manifest.RoutingRuleConfigOrBool{
-							RoutingRuleConfiguration: manifest.RoutingRuleConfiguration{
+						HTTPOrBool: manifest.HTTPOrBool{
+							HTTP: manifest.HTTP{
 								Main: manifest.RoutingRule{
 									Path:            aws.String("/"),
 									Alias:           tc.inAliases,

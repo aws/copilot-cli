@@ -40,19 +40,6 @@ func TestLookup(t *testing.T) {
 		// THEN
 		require.ErrorContains(t, err, fmt.Sprintf(`directory at %q is empty`, root))
 	})
-	t.Run("should return an error when the path contains a single file that is not a YAML patch file", func(t *testing.T) {
-		// GIVEN
-		fs := afero.NewMemMapFs()
-		root := filepath.Join("copilot", "frontend", "overrides")
-		_ = fs.MkdirAll(root, 0755)
-		_ = afero.WriteFile(fs, filepath.Join(root, "cdk.json"), []byte(""), 0755)
-
-		// WHEN
-		_, err := Lookup(root, fs)
-
-		// THEN
-		require.ErrorContains(t, err, "look up YAML patch document when directory contains a single file")
-	})
 	t.Run("should return an error when the path is a directory with multiple files but no cdk.json", func(t *testing.T) {
 		// GIVEN
 		fs := afero.NewMemMapFs()
@@ -66,7 +53,6 @@ func TestLookup(t *testing.T) {
 		_, err := Lookup(root, fs)
 
 		// THEN
-		require.ErrorContains(t, err, `look up CDK project for directories with multiple files`)
 		require.ErrorContains(t, err, `"cdk.json" does not exist`)
 	})
 	t.Run("should detect a CDK application if a cdk.json file exists within a directory with multiple files", func(t *testing.T) {
@@ -85,7 +71,7 @@ func TestLookup(t *testing.T) {
 		require.True(t, info.IsCDK())
 		require.False(t, info.IsYAMLPatch())
 	})
-	t.Run("should return an error when the path is a file without a YAML extension", func(t *testing.T) {
+	t.Run("should return an error when the path is a file", func(t *testing.T) {
 		// GIVEN
 		fs := afero.NewMemMapFs()
 		root := filepath.Join("copilot", "frontend", "overrides")
@@ -96,45 +82,16 @@ func TestLookup(t *testing.T) {
 		_, err := Lookup(filepath.Join(root, "abc.js"), fs)
 
 		// THEN
-		wantedMsg := fmt.Sprintf(`YAML patch documents require a ".yml" or ".yaml" extension: %q has a ".js" extension`, filepath.Join(root, "abc.js"))
-		require.EqualError(t, err, wantedMsg)
-	})
-	t.Run("should return an error when the path is an empty file", func(t *testing.T) {
-		// GIVEN
-		fs := afero.NewMemMapFs()
-		root := filepath.Join("copilot", "frontend", "overrides")
-		_ = fs.MkdirAll(root, 0755)
-		_ = afero.WriteFile(fs, filepath.Join(root, "cfn.patch.yml"), nil, 0755)
-
-		// WHEN
-		_, err := Lookup(filepath.Join(root, "cfn.patch.yml"), fs)
-
-		// THEN
-		wantedMsg := fmt.Sprintf(`YAML patch document at %q does not contain any operations`, filepath.Join(root, "cfn.patch.yml"))
-		require.EqualError(t, err, wantedMsg)
+		// wantedMsg := fmt.Sprintf(`YAML patch documents require a ".yml" or ".yaml" extension: %q has a ".js" extension`, filepath.Join(root, "abc.js"))
+		require.ErrorContains(t, err, "read directory")
+		require.ErrorContains(t, err, "not a dir")
 	})
 	t.Run("should detect a YAML patch document on well-formed file paths", func(t *testing.T) {
 		// GIVEN
 		fs := afero.NewMemMapFs()
 		root := filepath.Join("copilot", "frontend", "overrides")
 		_ = fs.MkdirAll(root, 0755)
-		_ = afero.WriteFile(fs, filepath.Join(root, "cfn.patch.yml"), []byte("- {op: 5, path: '/Resources'}"), 0755)
-
-		// WHEN
-		info, err := Lookup(filepath.Join(root, "cfn.patch.yml"), fs)
-
-		// THEN
-		require.NoError(t, err)
-		require.True(t, info.IsYAMLPatch())
-		require.False(t, info.IsCDK())
-		require.Equal(t, filepath.Join(root, "cfn.patch.yml"), info.Path())
-	})
-	t.Run("should detect a YAML patch document for directories with a single YAML file", func(t *testing.T) {
-		// GIVEN
-		fs := afero.NewMemMapFs()
-		root := filepath.Join("copilot", "frontend", "overrides")
-		_ = fs.MkdirAll(root, 0755)
-		_ = afero.WriteFile(fs, filepath.Join(root, "cfn.patch.yml"), []byte("- {op: 5, path: '/Resources'}"), 0755)
+		_ = afero.WriteFile(fs, filepath.Join(root, yamlPatchFile), []byte("- {op: 5, path: '/Resources'}"), 0755)
 
 		// WHEN
 		info, err := Lookup(root, fs)
@@ -143,6 +100,22 @@ func TestLookup(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, info.IsYAMLPatch())
 		require.False(t, info.IsCDK())
-		require.Equal(t, filepath.Join(root, "cfn.patch.yml"), info.Path())
+		require.Equal(t, root, info.Path())
+	})
+	t.Run("should detect a YAML patch document for directories with a single YAML file", func(t *testing.T) {
+		// GIVEN
+		fs := afero.NewMemMapFs()
+		root := filepath.Join("copilot", "frontend", "overrides")
+		_ = fs.MkdirAll(root, 0755)
+		_ = afero.WriteFile(fs, filepath.Join(root, yamlPatchFile), []byte("- {op: 5, path: '/Resources'}"), 0755)
+
+		// WHEN
+		info, err := Lookup(root, fs)
+
+		// THEN
+		require.NoError(t, err)
+		require.True(t, info.IsYAMLPatch())
+		require.False(t, info.IsCDK())
+		require.Equal(t, root, info.Path())
 	})
 }
