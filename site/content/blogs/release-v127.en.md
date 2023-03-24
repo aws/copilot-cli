@@ -41,7 +41,7 @@ or multiple listeners on different ports and protocols for [network load balance
 ## Enable multiple listeners and listener rules for Load Balancers
 You can now expose multiple ports through your Load Balancers.
 ### Add multiple host-based or path-based listener rules to your Application Load Balancer
-To expose multiple ports through Application Load Balancer, we will configure additional listener rules through a new `http` field called [`additional_rules`](../docs/manifest/lb-web-service.en.md#http-additional-rules). 
+To expose multiple ports through the Application Load Balancer, we will configure additional listener rules through a new `http` field called [`additional_rules`](../docs/manifest/lb-web-service.en.md#http-additional-rules). 
 It is as easy as configuring your `http` field. Let's learn through an example. 
 
 Say we want to expand the basic manifest such that it opens up port 8081 on the main service container, and 8082 on the sidecar container, in addition to the existing `image.port` 8080.
@@ -76,7 +76,7 @@ and Copilot was able to intelligently route traffic from the '/superAdmin' to th
 
 It is also possible to configure the container port that handles the requests to “/” via our new field under `http` called [`target_port`](../docs/manifest/lb-web-service.en.md#http-target-port)
 ### Add multiple port and protocol listeners to your Network Load Balancers
-To expose multiple ports through Network Load Balancer, we will configure additional listener through a new `nlb` field called [`additional_listeners`](../docs/manifest/lb-web-service.en.md#nlb-additional-listeners).
+To expose multiple ports through the Network Load Balancer, we will configure additional listeners through a new `nlb` field called [`additional_listeners`](../docs/manifest/lb-web-service.en.md#nlb-additional-listeners).
 It is as easy as configuring your `nlb` field. Let's learn through an example.
 
 ```yaml
