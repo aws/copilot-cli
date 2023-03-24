@@ -141,6 +141,31 @@ List of all available properties for a `'Backend Service'` manifest. To learn ab
               efs:
                 id: fs-1234567
         ```
+        === "Multiple Ports Exposed"
+
+        ```yaml
+        name: 'backend'
+        type: 'Backend Service'
+
+        image:
+          build: './frontend/Dockerfile'
+          port: 8080
+
+        http:
+          path: '/'
+          target_port: 8083 // exposed port 8083 of the main container i.e. backend on the path "/" 
+          additional_rules:
+            - target_port: 8081 // exposed port 8081 of the main container i.e. backend on the path "customerdb"
+              path: 'customerdb'
+            - target_port: 8082 // exposed port 8082 of the sidecar container i.e. envoy on the path "admin"
+              target_container: envoy
+              path: 'admin'
+
+        sidecars:
+          envoy:
+            port: 80
+            image: aws_account_id.dkr.ecr.us-west-2.amazonaws.com/envoy-proxy-with-selfsigned-certs:v1
+        ```
 
 <a id="name" href="#name" class="field">`name`</a> <span class="type">String</span>
 The name of your service.
@@ -206,6 +231,8 @@ http:
 <span class="parent-field">http.</span><a id="http-version" href="#http-version" class="field">`version`</a> <span class="type">String</span>  
 The HTTP(S) protocol version. Must be one of `'grpc'`, `'http1'`, or `'http2'`. If omitted, then `'http1'` is assumed.
 If using gRPC, please note that a domain must be associated with your application.
+
+{% include 'http-additionalrules.en.md' %}
 
 {% include 'image-config-with-port.en.md' %}  
 If the port is set to `443` and an internal load balancer is enabled with `http`, then the protocol is set to `HTTPS` so that the load balancer establishes
