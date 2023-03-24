@@ -598,11 +598,9 @@ func (e *errHasDiff) ExitCode() int {
 }
 
 func diff(differ templateDiffer, tmpl string, writer io.Writer) error {
-	out, err := differ.DeployDiff(tmpl)
-	if err != nil {
+	if out, err := differ.DeployDiff(tmpl); err != nil {
 		return err
-	}
-	if out != "" {
+	} else if out != "" {
 		if _, err := writer.Write([]byte(out)); err != nil {
 			return err
 		}
