@@ -38,6 +38,56 @@ or multiple listeners on different ports and protocols for [network load balance
 
 ## Extend Copilot-generated AWS CloudFormation templates
 
+#### Preview AWS CloudFormation template changes
+
+##### `copilot [noun] package --diff`
+
+You can now run `copilot [noun] package --diff` to see the diff between your local changes and the latest deployed template. 
+The program will exit after it prints the diff. 
+
+!!! info "The exit codes when using `copilot [noun] package --diff`"
+    0 = no diffs found  
+    1 = diffs found  
+    2 = error producing diffs
+
+
+```console
+$ copilot env deploy --diff
+~ Resources:
+    ~ Cluster:
+        ~ Properties:
+            ~ ClusterSettings:
+                ~ - (changed item)
+                  ~ Value: enabled -> disabled
+```
+
+If the diff looks good to you, you can run `copilot [noun] package` again to write the template file and parameter file
+to your designated directory.
+
+
+##### `copilot [noun] deploy --diff`
+
+Similar to `copilot [noun] package --diff`, you can run `copilot [noun] deploy --diff` to see the same diff. 
+However, instead of exiting after it print the diff, Copilot will follow up with a question: `Continue with the deployment? [y/N]`.
+
+```console
+$ copilot job deploy --diff
+~ Resources:
+    ~ TaskDefinition:
+        ~ Properties:
+            ~ ContainerDefinitions:
+                ~ - (changed item)
+                  ~ Environment:
+                      (4 unchanged items)
+                      + - Name: LOG_LEVEL
+                      +   Value: "info"
+
+Continue with the deployment? (y/N)
+```
+
+If the diff looks good to you, enter "y" to deploy. Otherwise, enter "N" to make adjustments as needed!
+
+
 ## Enable multiple listeners and listener rules for Load Balancers
 You can now expose multiple ports through your Load Balancers.
 ### Add multiple host-based or path-based listener rules to your Application Load Balancer
@@ -75,6 +125,7 @@ With this manifest, requests to “/” will still be routed to the main contain
 and Copilot was able to intelligently route traffic from the '/superAdmin' to the sidecar container named nginx.
 
 It is also possible to configure the container port that handles the requests to “/” via our new field under `http` called [`target_port`](../docs/manifest/lb-web-service.en.md#http-target-port)
+
 ### Add multiple port and protocol listeners to your Network Load Balancers
 To expose multiple ports through the Network Load Balancer, we will configure additional listeners through a new `nlb` field called [`additional_listeners`](../docs/manifest/lb-web-service.en.md#nlb-additional-listeners).
 It is as easy as configuring your `nlb` field. Let's learn through an example.
@@ -105,10 +156,39 @@ Requests to another NLB port 8081 will be routed to the port 8081 of the main se
 We need to notice here that the default value of the target_port will be the same as that of the corresponding NLB port. 
 The requests to NLB port 8082 will be routed to port 8085 of the sidecar container named nginx.
 
-## Preview AWS CloudFormation template changes
-
 ## Sidecar improvements
 
 ### Build and push container images for sidecar containers
 
 ### Upload local environment files for sidecar containers
+You can now specify an environment file to upload to any sidecar container in your task.
+Previously, you could only specify an environment file for your main task container: 
+
+```yaml
+# in copilot/{service name}/manifest.yml
+env_file: log.env
+```
+
+Now, you can do the same in a sidecar definition:
+```yaml
+sidecars:
+  nginx:
+    image: nginx:latest
+    env_file: ./nginx.env
+    port: 8080
+```
+
+It also works with the managed `logging` sidecar:
+
+```yaml
+logging:
+  retention: 1
+  destination:
+    Name: cloudwatch
+    region: us-west-2
+    log_group_name: /copilot/logs/
+    log_stream_prefix: copilot/
+  env_file: ./logging.env
+```
+
+If you specify the same file more than once in different sidecars, Copilot will only upload the file to S3 once.
