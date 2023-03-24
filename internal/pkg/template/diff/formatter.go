@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"gopkg.in/yaml.v3"
 )
 
@@ -14,6 +15,7 @@ type formatter interface {
 	formatYAML(*yaml.Node) ([]byte, error)
 	formatMod(node diffNode) string
 	formatPath(node diffNode) string
+	nextIndent(curr int) int
 }
 
 type seqItemFormatter struct{}
@@ -32,7 +34,17 @@ func (f *seqItemFormatter) formatMod(node diffNode) string {
 }
 
 func (f *seqItemFormatter) formatPath(_ diffNode) string {
-	return ""
+	return color.Faint.Sprint("- (changed item)")
+}
+
+func (f *seqItemFormatter) nextIndent(curr int) int {
+	/* A seq item diff should look like:
+	   - (item)
+	     ~ Field1: a
+	     + Field2: b
+	   Where "~ Field1: a" and "+ Field2: b" are its children. The indentation should increase by len("- "), which is 2.
+	*/
+	return curr + 2
 }
 
 type keyedFormatter struct {
@@ -63,6 +75,10 @@ func (f *keyedFormatter) formatPath(node diffNode) string {
 	return node.key() + ":"
 }
 
+func (f *keyedFormatter) nextIndent(curr int) int {
+	return curr + indentInc
+}
+
 type documentFormatter struct{}
 
 func (f *documentFormatter) formatYAML(node *yaml.Node) ([]byte, error) {
@@ -75,6 +91,10 @@ func (f *documentFormatter) formatMod(_ diffNode) string {
 
 func (f *documentFormatter) formatPath(_ diffNode) string {
 	return ""
+}
+
+func (f *documentFormatter) nextIndent(curr int) int {
+	return curr + indentInc
 }
 
 func prefixByFn(prefix string) func(line string) string {
