@@ -37,3 +37,21 @@ The steps involved in service deploy are:
     The `--no-rollback` flag is **not** recommended while deploying to a production environment as it may introduce service downtime. 
     If the deployment fails when automatic stack rollback is disabled, you may be required to manually start the stack 
     rollback of the stack via the AWS console or AWS CLI before the next deployment. 
+
+## Examples
+Use `--diff` to see what will be changed before making a deployment.
+
+```console
+$ copilot svc deploy --diff
+~ Resources:
+    ~ TaskDefinition:
+        ~ Properties:
+            ~ ContainerDefinitions:
+                ~ - (changed item)
+                  ~ Environment:
+                      (4 unchanged items)
+                      + - Name: LOG_LEVEL
+                      +   Value: "info"
+
+Continue with the deployment? (y/N)
+```
