@@ -100,6 +100,49 @@ Mary:
     (1 unchanged item)
 `,
 		},
+		"list with a map value changed": {
+			old: `
+StrawberryPopularitySurvey:
+  - Name: Dog
+    LikeStrawberry: ver much
+  - Name: Bear
+    LikeStrawberry: meh
+    Reason(s):
+       - Not sweet enough
+       - Juicy though
+       - IsHoney:
+           IsIt: no
+  - Name: Cat
+    LikeStrawberry: ew`,
+			curr: `
+StrawberryPopularitySurvey:
+  - Name: Dog
+    LikeStrawberry: ver much
+  - Name: Bear
+    LikeStrawberry: ok
+    ChangeOfMind: yeah
+    Reason(s):
+      - Not sweet enough but acceptable now
+      - Juicy though
+      - IsHoney:
+          IsIt: no, but it's fine
+  - Name: Cat
+    LikeStrawberry: ew`,
+			wanted: `
+~ StrawberryPopularitySurvey:
+    (1 unchanged item)
+    ~ - (changed item)
+      + ChangeOfMind: yeah
+      ~ LikeStrawberry: meh -> ok
+      ~ Reason(s):
+          ~ - Not sweet enough -> Not sweet enough but acceptable now
+          (1 unchanged item)
+          ~ - (changed item)
+            ~ IsHoney:
+                ~ IsIt: no -> no, but it's fine
+    (1 unchanged item)
+`,
+		},
 		"change a map to scalar": {
 			curr: `
 Mary:
