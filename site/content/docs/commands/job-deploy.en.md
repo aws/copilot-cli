@@ -47,3 +47,19 @@ Deploys a job with additional resource tags.
 ```console
 $ copilot job deploy --resource-tags source/revision=bb133e7,deployment/initiator=manual`
 ```
+
+Use `--diff` to see what will be changed before making a deployment.
+```console
+$ copilot job deploy --diff
+~ Resources:
+    ~ TaskDefinition:
+        ~ Properties:
+            ~ ContainerDefinitions:
+                ~ - (changed item)
+                  ~ Environment:
+                      (4 unchanged items)
+                      + - Name: LOG_LEVEL
+                      +   Value: "info"
+
+Continue with the deployment? (y/N)
+```
