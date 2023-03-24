@@ -5,6 +5,7 @@ package cli
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -142,12 +143,15 @@ type deployEnvExecuteMocks struct {
 	deployer     *mocks.MockenvDeployer
 	identity     *mocks.MockidentityService
 	interpolator *mocks.Mockinterpolator
+	prompter     *mocks.Mockprompter
 }
 
 func TestDeployEnvOpts_Execute(t *testing.T) {
 	testCases := map[string]struct {
+		inShowDiff        bool
 		unmarshalManifest func(in []byte) (*manifest.Environment, error)
 		setUpMocks        func(m *deployEnvExecuteMocks)
+		wantedDiff        string
 		wantedErr         error
 	}{
 		"fail to read manifest": {
@@ -200,6 +204,115 @@ func TestDeployEnvOpts_Execute(t *testing.T) {
 				m.deployer.EXPECT().UploadArtifacts().Return(nil, errors.New("some error"))
 			},
 			wantedErr: errors.New("upload artifacts for environment mockEnv: some error"),
+		},
+		"fail to generate the template to show diff": {
+			inShowDiff: true,
+			setUpMocks: func(m *deployEnvExecuteMocks) {
+				m.ws.EXPECT().ReadEnvironmentManifest(gomock.Any()).Return([]byte("name: mockEnv\ntype: Environment\n"), nil)
+				m.interpolator.EXPECT().Interpolate(gomock.Any()).Return("name: mockEnv\ntype: Environment\n", nil)
+				m.identity.EXPECT().Get().Return(identity.Caller{
+					RootUserARN: "mockRootUserARN",
+				}, nil)
+				m.deployer.EXPECT().Validate(gomock.Any()).Return(nil)
+				m.deployer.EXPECT().UploadArtifacts().Return(&deploy.UploadEnvArtifactsOutput{}, nil)
+				m.deployer.EXPECT().GenerateCloudFormationTemplate(gomock.Any()).Return(nil, errors.New("some error"))
+			},
+			wantedErr: fmt.Errorf(`generate the template for environment "mockEnv": some error`),
+		},
+		"failed to generate the diff": {
+			inShowDiff: true,
+			setUpMocks: func(m *deployEnvExecuteMocks) {
+				m.ws.EXPECT().ReadEnvironmentManifest(gomock.Any()).Return([]byte("name: mockEnv\ntype: Environment\n"), nil)
+				m.interpolator.EXPECT().Interpolate(gomock.Any()).Return("name: mockEnv\ntype: Environment\n", nil)
+				m.identity.EXPECT().Get().Return(identity.Caller{
+					RootUserARN: "mockRootUserARN",
+				}, nil)
+				m.deployer.EXPECT().Validate(gomock.Any()).Return(nil)
+				m.deployer.EXPECT().UploadArtifacts().Return(&deploy.UploadEnvArtifactsOutput{}, nil)
+				m.deployer.EXPECT().GenerateCloudFormationTemplate(gomock.Any()).Return(&deploy.GenerateCloudFormationTemplateOutput{}, nil)
+				m.deployer.EXPECT().DeployDiff(gomock.Any()).Return("", errors.New("some error"))
+			},
+			wantedErr: errors.New(`generate diff for environment "mockEnv": some error`),
+		},
+		"write 'no changes' if there is no diff": {
+			inShowDiff: true,
+			setUpMocks: func(m *deployEnvExecuteMocks) {
+				m.ws.EXPECT().ReadEnvironmentManifest(gomock.Any()).Return([]byte("name: mockEnv\ntype: Environment\n"), nil)
+				m.interpolator.EXPECT().Interpolate(gomock.Any()).Return("name: mockEnv\ntype: Environment\n", nil)
+				m.identity.EXPECT().Get().Return(identity.Caller{
+					RootUserARN: "mockRootUserARN",
+				}, nil)
+				m.deployer.EXPECT().Validate(gomock.Any()).Return(nil)
+				m.deployer.EXPECT().UploadArtifacts().Return(&deploy.UploadEnvArtifactsOutput{}, nil)
+				m.deployer.EXPECT().GenerateCloudFormationTemplate(gomock.Any()).Return(&deploy.GenerateCloudFormationTemplateOutput{}, nil)
+				m.deployer.EXPECT().DeployDiff(gomock.Any()).Return("", nil)
+				m.prompter.EXPECT().Confirm(gomock.Eq(continueDeploymentPrompt), gomock.Any(), gomock.Any()).Return(false, nil)
+			},
+			wantedDiff: "No changes.\n",
+		},
+		"write the correct diff": {
+			inShowDiff: true,
+			setUpMocks: func(m *deployEnvExecuteMocks) {
+				m.ws.EXPECT().ReadEnvironmentManifest(gomock.Any()).Return([]byte("name: mockEnv\ntype: Environment\n"), nil)
+				m.interpolator.EXPECT().Interpolate(gomock.Any()).Return("name: mockEnv\ntype: Environment\n", nil)
+				m.identity.EXPECT().Get().Return(identity.Caller{
+					RootUserARN: "mockRootUserARN",
+				}, nil)
+				m.deployer.EXPECT().Validate(gomock.Any()).Return(nil)
+				m.deployer.EXPECT().UploadArtifacts().Return(&deploy.UploadEnvArtifactsOutput{}, nil)
+				m.deployer.EXPECT().GenerateCloudFormationTemplate(gomock.Any()).Return(&deploy.GenerateCloudFormationTemplateOutput{}, nil)
+				m.deployer.EXPECT().DeployDiff(gomock.Any()).Return("", nil)
+				m.prompter.EXPECT().Confirm(gomock.Eq(continueDeploymentPrompt), gomock.Any(), gomock.Any()).Return(false, nil)
+			},
+			wantedDiff: "mock diff",
+		},
+		"error if fail to ask whether to continue the deployment": {
+			inShowDiff: true,
+			setUpMocks: func(m *deployEnvExecuteMocks) {
+				m.ws.EXPECT().ReadEnvironmentManifest(gomock.Any()).Return([]byte("name: mockEnv\ntype: Environment\n"), nil)
+				m.interpolator.EXPECT().Interpolate(gomock.Any()).Return("name: mockEnv\ntype: Environment\n", nil)
+				m.identity.EXPECT().Get().Return(identity.Caller{
+					RootUserARN: "mockRootUserARN",
+				}, nil)
+				m.deployer.EXPECT().Validate(gomock.Any()).Return(nil)
+				m.deployer.EXPECT().UploadArtifacts().Return(&deploy.UploadEnvArtifactsOutput{}, nil)
+				m.deployer.EXPECT().GenerateCloudFormationTemplate(gomock.Any()).Return(&deploy.GenerateCloudFormationTemplateOutput{}, nil)
+				m.deployer.EXPECT().DeployDiff(gomock.Any()).Return("", nil)
+				m.prompter.EXPECT().Confirm(gomock.Eq(continueDeploymentPrompt), gomock.Any(), gomock.Any()).Return(false, errors.New("some error"))
+			},
+			wantedErr: errors.New("ask whether to continue with the deployment: some error"),
+		},
+		"do not deploy if asked to": {
+			inShowDiff: true,
+			setUpMocks: func(m *deployEnvExecuteMocks) {
+				m.ws.EXPECT().ReadEnvironmentManifest(gomock.Any()).Return([]byte("name: mockEnv\ntype: Environment\n"), nil)
+				m.interpolator.EXPECT().Interpolate(gomock.Any()).Return("name: mockEnv\ntype: Environment\n", nil)
+				m.identity.EXPECT().Get().Return(identity.Caller{
+					RootUserARN: "mockRootUserARN",
+				}, nil)
+				m.deployer.EXPECT().Validate(gomock.Any()).Return(nil)
+				m.deployer.EXPECT().UploadArtifacts().Return(&deploy.UploadEnvArtifactsOutput{}, nil)
+				m.deployer.EXPECT().GenerateCloudFormationTemplate(gomock.Any()).Return(&deploy.GenerateCloudFormationTemplateOutput{}, nil)
+				m.deployer.EXPECT().DeployDiff(gomock.Any()).Return("", nil)
+				m.prompter.EXPECT().Confirm(gomock.Eq(continueDeploymentPrompt), gomock.Any(), gomock.Any()).Return(false, nil)
+				m.deployer.EXPECT().DeployEnvironment(gomock.Any()).Times(0)
+			},
+		},
+		"deploy if asked to": {
+			inShowDiff: true,
+			setUpMocks: func(m *deployEnvExecuteMocks) {
+				m.ws.EXPECT().ReadEnvironmentManifest(gomock.Any()).Return([]byte("name: mockEnv\ntype: Environment\n"), nil)
+				m.interpolator.EXPECT().Interpolate(gomock.Any()).Return("name: mockEnv\ntype: Environment\n", nil)
+				m.identity.EXPECT().Get().Return(identity.Caller{
+					RootUserARN: "mockRootUserARN",
+				}, nil)
+				m.deployer.EXPECT().Validate(gomock.Any()).Return(nil)
+				m.deployer.EXPECT().UploadArtifacts().Return(&deploy.UploadEnvArtifactsOutput{}, nil)
+				m.deployer.EXPECT().GenerateCloudFormationTemplate(gomock.Any()).Return(&deploy.GenerateCloudFormationTemplateOutput{}, nil)
+				m.deployer.EXPECT().DeployDiff(gomock.Any()).Return("", nil)
+				m.prompter.EXPECT().Confirm(gomock.Eq(continueDeploymentPrompt), gomock.Any(), gomock.Any()).Return(true, nil)
+				m.deployer.EXPECT().DeployEnvironment(gomock.Any()).Times(1)
+			},
 		},
 		"fail to deploy the environment": {
 			setUpMocks: func(m *deployEnvExecuteMocks) {
@@ -256,11 +369,13 @@ func TestDeployEnvOpts_Execute(t *testing.T) {
 				deployer:     mocks.NewMockenvDeployer(ctrl),
 				identity:     mocks.NewMockidentityService(ctrl),
 				interpolator: mocks.NewMockinterpolator(ctrl),
+				prompter:     mocks.NewMockprompter(ctrl),
 			}
 			tc.setUpMocks(m)
 			opts := deployEnvOpts{
 				deployEnvVars: deployEnvVars{
-					name: "mockEnv",
+					name:     "mockEnv",
+					showDiff: tc.inShowDiff,
 				},
 				ws:       m.ws,
 				identity: m.identity,
@@ -270,6 +385,7 @@ func TestDeployEnvOpts_Execute(t *testing.T) {
 				newInterpolator: func(s string, s2 string) interpolator {
 					return m.interpolator
 				},
+				prompt: m.prompter,
 				targetApp: &config.Application{
 					Name:   "mockApp",
 					Domain: "mockDomain",

@@ -11,13 +11,11 @@ import (
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/config"
-
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
-
-	"github.com/aws/copilot-cli/internal/pkg/deploy"
-	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 )
 
 // TestBB_Pipeline_Template ensures that the CloudFormation template generated for a pipeline matches our pre-defined template.

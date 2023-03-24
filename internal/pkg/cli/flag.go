@@ -39,6 +39,7 @@ const (
 	stackOutputDirFlag    = "output-dir"
 	uploadAssetsFlag      = "upload-assets"
 	deployFlag            = "deploy"
+	diffFlag              = "diff"
 
 	// Flags for operational commands.
 	limitFlag                   = "limit"
@@ -249,6 +250,7 @@ const (
 	yesFlagDescription          = "Skips confirmation prompt."
 	resourceTagsFlagDescription = `Optional. Labels with a key and value separated by commas.
 Allows you to categorize resources.`
+	diffFlagDescription = "Compares the generated CloudFormation template to the deployed stack."
 
 	// Deployment.
 	deployTestFlagDescription = `Deploy your service or job to a "test" environment.`

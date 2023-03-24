@@ -41,6 +41,7 @@ type packageEnvVars struct {
 	outputDir      string
 	uploadAssets   bool
 	forceNewUpdate bool
+	showDiff       bool
 }
 
 type discardFile struct{}
@@ -65,6 +66,7 @@ type packageEnvOpts struct {
 	tplWriter    io.WriteCloser
 	paramsWriter io.WriteCloser
 	addonsWriter io.WriteCloser
+	diffWriter   io.Writer
 
 	newInterpolator func(appName, envName string) interpolator
 	newEnvPackager  func() (envPackager, error)
@@ -99,6 +101,7 @@ func newPackageEnvOpts(vars packageEnvVars) (*packageEnvOpts, error) {
 		tplWriter:    os.Stdout,
 		paramsWriter: discardFile{},
 		addonsWriter: discardFile{},
+		diffWriter:   os.Stdout,
 
 		newInterpolator: func(appName, envName string) interpolator {
 			return manifest.NewInterpolator(appName, envName)
@@ -187,6 +190,9 @@ func (o *packageEnvOpts) Execute() error {
 	})
 	if err != nil {
 		return fmt.Errorf("generate CloudFormation template from environment %q manifest: %v", o.envName, err)
+	}
+	if o.showDiff {
+		return diff(packager, res.Template, o.diffWriter)
 	}
 	addonsTemplate, err := packager.AddonsTemplate()
 	if err != nil {
@@ -326,5 +332,9 @@ func buildEnvPkgCmd() *cobra.Command {
 	cmd.Flags().StringVar(&vars.outputDir, stackOutputDirFlag, "", stackOutputDirFlagDescription)
 	cmd.Flags().BoolVar(&vars.uploadAssets, uploadAssetsFlag, false, uploadAssetsFlagDescription)
 	cmd.Flags().BoolVar(&vars.forceNewUpdate, forceFlag, false, forceEnvDeployFlagDescription)
+	cmd.Flags().BoolVar(&vars.showDiff, diffFlag, false, diffFlagDescription)
+
+	cmd.MarkFlagsMutuallyExclusive(diffFlag, stackOutputDirFlag)
+	cmd.MarkFlagsMutuallyExclusive(diffFlag, uploadAssetsFlag)
 	return cmd
 }

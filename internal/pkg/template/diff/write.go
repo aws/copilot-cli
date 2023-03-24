@@ -30,6 +30,9 @@ func (s *treeWriter) write() error {
 	if s.tree.root == nil {
 		return nil // Return without writing anything.
 	}
+	if len(s.tree.root.children()) == 0 {
+		return s.writeLeaf(s.tree.root, 0, &documentFormatter{})
+	}
 	for _, child := range s.tree.root.children() {
 		if err := s.writeTree(child, 0); err != nil {
 			return err
@@ -59,7 +62,7 @@ func (s *treeWriter) writeTree(node diffNode, indent int) error {
 		return err
 	}
 	for _, child := range node.children() {
-		err := s.writeTree(child, indent+indentInc)
+		err := s.writeTree(child, formatter.nextIndent(indent))
 		if err != nil {
 			return err
 		}
