@@ -90,39 +90,40 @@ If the diff looks good to you, enter "y" to deploy. Otherwise, enter "N" to make
 
 ## Enable multiple listeners and listener rules for Load Balancers
 You can now expose multiple ports through your Load Balancers.
+
 ### Add multiple host-based or path-based listener rules to your Application Load Balancer
-To expose multiple ports through the Application Load Balancer, we will configure additional listener rules through a new `http` field called [`additional_rules`](../docs/manifest/lb-web-service.en.md#http-additional-rules). 
+To expose multiple ports through the Application Load Balancer, we will configure additional listener rules through a new field [`http.additional_rules`](../docs/manifest/lb-web-service.en.md#http-additional-rules). 
 It is as easy as configuring your `http` field. Let's learn through an example. 
 
 Say we want to expand the basic manifest such that it opens up port 8081 on the main service container, and 8082 on the sidecar container, in addition to the existing `image.port` 8080.
 ```yaml
-# Example 1
 name: 'frontend'
 type: 'Load Balanced Web Service'
  
 image:
-  build: './frontend/Dockerfile'
+  build: Dockerfile
   port: 8080
   
 http:
   path: '/'
-  additional_rules:             # The new field "additional_rules",
-    - target_port: 8081        # Optional. Defaults to the `image.port`.
-      path: 'customerdb'
-    - target_port: 8082
+  additional_rules:            # The new field "additional_rules",
+    - path: 'customerdb'  
+      target_port: 8081        # Optional. Defaults to the `image.port`.
+    - path: 'admin'  
+      target_port: 8082
       target_container: nginx   # Optional. Defaults to the main container. 
-      path: 'admin'
-    - target_port: 80
-      path: 'superAdmin'
+    - path: 'superAdmin'   
+      target_port: 80
+      
 
 sidecars:
   nginx:
     port: 80
     image: public.ecr.aws/nginx:latest
 ```
-With this manifest, requests to “/” will still be routed to the main container’s port 8080. Requests to "/customerdb" will be route to the main container’s 8081, 
-, "/admin" to “nginx”‘s port 8082 and "/superAdmin" to "nginx"'s port 80. We should note that the third listener rule just defined 'target_port: 80' 
-and Copilot was able to intelligently route traffic from the '/superAdmin' to the sidecar container named nginx.
+With this manifest, requests to “/” will be routed to the main container on port 8080. Requests to "/customerdb" will be routed to the main container on port 8081, 
+, "/admin" to nginx on port 8082 and "/superAdmin" to nginx on port 80. Note that the third listener rule just defined 'target_port: 80' 
+and Copilot was able to intelligently route traffic from the '/superAdmin' to the nginx sidecar container.
 
 It is also possible to configure the container port that handles the requests to “/” via our new field under `http` called [`target_port`](../docs/manifest/lb-web-service.en.md#http-target-port)
 
@@ -151,8 +152,8 @@ sidecars:
     port: 80
     image: public.ecr.aws/nginx:latest
 ```
-With this manifest, requests to NLB port 8080/tcp will now be routed to the main container’s port 8080. 
-Requests to another NLB port 8081 will be routed to the port 8081 of the main service container. 
+With this manifest, requests to NLB port 8080 will be routed to the main container’s port 8080. 
+Requests to the NLB on port 8081 will be routed to the port 8081 of the main container. 
 We need to notice here that the default value of the target_port will be the same as that of the corresponding NLB port. 
 The requests to NLB port 8082 will be routed to port 8085 of the sidecar container named nginx.
 
