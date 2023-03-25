@@ -229,7 +229,7 @@ List of all available properties for a `'Load Balanced Web Service'` manifest. T
             placement: 'private'
         ```
 
-    === "Multiple Ports Exposed"
+    === "Expose Multiple Ports"
 
         ```yaml
         name: 'frontend'
@@ -240,22 +240,22 @@ List of all available properties for a `'Load Balanced Web Service'` manifest. T
           port: 8080
 
         nlb:
-          port: 8080/tcp // exposed port 8080 of the main container i.e. frontend on the nlb port "8080/tcp"
-          additional_rules:
-            - port: 8084/tcp // exposed port 8084 of the main container i.e. frontend on the nlb port "8084/tcp
-            - port: 8085/tcp  // exposed port 3000 of the sidecar container i.e. envoy on the nlb port "8085/tcp
-              target_port: 3000 # optional. if the target_port is not same as that of corresponding nlb port
-              target_container: envoy # if not specified, default is set to the main container
+          port: 8080/tcp              # Traffic on port 8080/tcp is forwarded to the main container, on port 8080.
+          additional_rules:  
+            - port: 8084/tcp          # Traffic on port 8084/tcp is forwarded to the main container, on port 8084.
+            - port: 8085/tcp          # Traffic on port 8085/tcp is forwarded to the sidecar "envoy", on port 3000.
+              target_port: 3000         
+              target_container: envoy   
 
         http:
           path: '/'
-          target_port: 8083 // exposed port 8083 of the main container i.e. frontend on the path "/" 
-          additional_rules:
-            - target_port: 8081 // exposed port 8081 of the main container i.e. frontend on the path "customerdb"
-              path: 'customerdb'
-            - target_port: 8082 // exposed port 8082 of the sidecar container i.e. envoy on the path "admin"
-              target_container: envoy
-              path: 'admin'
+          target_port: 8083           # Traffic on "/" is forwarded to the main container, on port 8083. 
+          additional_rules: 
+            - path: 'customerdb'
+              target_port: 8081       # Traffic on "/customerdb" is forwarded to the main container, on port 8083.  
+            - path: 'admin'
+              target_port: 8082       # Traffic on "/admin" is forwarded to the sidecar "envoy", on port 8082.
+              target_container: envoy    
 
         sidecars:
           envoy:
