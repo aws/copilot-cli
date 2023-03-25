@@ -152,7 +152,7 @@ You can get started with adding, removing, or replacing properties by editing th
 
 To learn more about extending with YAML patches, checkout the [guide](../docs/developing/overrides/yamlpatch.md).
 
-### Preview AWS CloudFormation template changes
+## Preview AWS CloudFormation template changes
 
 ##### `copilot [noun] package --diff`
 
@@ -160,9 +160,10 @@ You can now run `copilot [noun] package --diff` to see the diff between your loc
 The program will exit after it prints the diff.
 
 !!! info "The exit codes when using `copilot [noun] package --diff`"
-0 = no diffs found  
-1 = diffs found  
-2 = error producing diffs
+
+    0 = no diffs found  
+    1 = diffs found  
+    2 = error producing diffs
 
 
 ```console
