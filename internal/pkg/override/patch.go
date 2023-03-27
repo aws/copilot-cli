@@ -118,7 +118,7 @@ func unmarshalPatches(path string, fs afero.Fs) ([]yamlPatch, error) {
 // addYAMLPatchDescription updates the Description field of a CloudFormation
 // to indicate it has been overriden with YAML patches for us to keep track of usage metrics.
 func addYAMLPatchDescription(body *yaml.Node) {
-	if body.Kind != yaml.DocumentNode {
+	if body.Kind != yaml.DocumentNode || len(body.Content) == 0 {
 		return
 	}
 	body = body.Content[0] // Move inside the document.
