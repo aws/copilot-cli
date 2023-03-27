@@ -295,7 +295,7 @@ TLS connections with the Fargate tasks using certificates that you install on th
 
 <span class="parent-field">http.</span><a id="http-target-port" href="#http-target-port" class="field">`target_port`</a> <span class="type">String</span>  
 Optional. The container port that receives traffic. By default, this will be `image.port` if the target container is the main container, 
-or `sidecars.<name>.port` if the `target_container` is a sidecar.
+or `sidecars.<name>.port` if the target container is a sidecar.
 
 <span class="parent-field">http.</span><a id="http-stickiness" href="#http-stickiness" class="field">`stickiness`</a> <span class="type">Boolean</span>  
 Indicates whether sticky sessions are enabled.
