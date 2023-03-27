@@ -32,6 +32,20 @@ type ExposedPortsIndex struct {
 	ContainerForPort  map[uint16]string        // holds port to container mapping
 }
 
+func (idx ExposedPortsIndex) mainContainerPort() string {
+	return idx.containerPortDefinedBy(idx.WorkloadName)
+}
+
+// containerPortDefinedBy returns the explicitly defined container port, if there is no port exposed for the container then returns the empty string "".
+func (idx ExposedPortsIndex) containerPortDefinedBy(container string) string {
+	for _, portConfig := range idx.PortsForContainer[container] {
+		if portConfig.isDefinedByContainer {
+			return strconv.Itoa(int(portConfig.Port))
+		}
+	}
+	return ""
+}
+
 // IsEmpty returns whether Range is empty.
 func (r *Range) IsEmpty() bool {
 	return r.Value == nil && r.RangeConfig.IsEmpty()
@@ -555,11 +569,7 @@ func sortExposedPorts(exposedPorts []ExposedPort) []ExposedPort {
 func (rr *RoutingRule) Target(exposedPorts ExposedPortsIndex) (targetContainer string, targetPort string, err error) {
 	// Route load balancer traffic to main container by default.
 	targetContainer = exposedPorts.WorkloadName
-	for _, portConfig := range exposedPorts.PortsForContainer[targetContainer] {
-		if portConfig.isDefinedByContainer {
-			targetPort = strconv.Itoa(int(portConfig.Port))
-		}
-	}
+	targetPort = exposedPorts.mainContainerPort()
 
 	rrTargetContainer := rr.TargetContainer
 	rrTargetPort := rr.TargetPort
@@ -570,21 +580,17 @@ func (rr *RoutingRule) Target(exposedPorts ExposedPortsIndex) (targetContainer s
 	if rrTargetPort == nil { // when target_port is nil
 		if aws.StringValue(rrTargetContainer) != exposedPorts.WorkloadName {
 			targetContainer = aws.StringValue(rrTargetContainer)
-			for _, portConfig := range exposedPorts.PortsForContainer[targetContainer] {
-				if portConfig.isDefinedByContainer {
-					targetPort = strconv.Itoa(int(portConfig.Port))
-					/* NOTE: When the `target_port` is empty, the intended target port should be the port that is explicitly exposed by the container. Consider the following example
-					```
-					http:
-					  target_container: nginx
-					sidecars:
-					  nginx:
-					    port: 81 # Explicitly exposed by the nginx container.
-					```
-					In this example, the target port for the ALB listener rule should be 81
-					*/
-				}
-			}
+			targetPort = exposedPorts.containerPortDefinedBy(aws.StringValue(rrTargetContainer))
+			/* NOTE: When the `target_port` is empty, the intended target port should be the port that is explicitly exposed by the container. Consider the following example
+			```
+			http:
+			  target_container: nginx
+			sidecars:
+			  nginx:
+			    port: 81 # Explicitly exposed by the nginx container.
+			```
+			In this example, the target port for the ALB listener rule should be 81
+			*/
 		}
 		return
 	}

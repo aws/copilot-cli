@@ -47,7 +47,8 @@ count: 1
 sidecars:
   nginx:
     port: 80
-    image: 1234567890.dkr.ecr.us-west-2.amazonaws.com/reverse-proxy:revision_1
+    image:
+      build: src/reverseproxy/Dockerfile
     variables:
       NGINX_PORT: 80
 ```

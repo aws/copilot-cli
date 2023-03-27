@@ -183,7 +183,11 @@ func ScaffoldWithCDK(fs afero.Fs, dir string, seeds []template.CFNResource) erro
 		return fmt.Errorf("directory %q is not empty", dir)
 	}
 
-	return templates.WalkOverridesCDKDir(seeds, func(name string, content *template.Content) error {
+	return templates.WalkOverridesCDKDir(seeds, writeFilesToDir(dir, fs))
+}
+
+func writeFilesToDir(dir string, fs afero.Fs) template.WalkDirFunc {
+	return func(name string, content *template.Content) error {
 		path := filepath.Join(dir, name)
 		if err := fs.MkdirAll(filepath.Dir(path), 0755); err != nil {
 			return fmt.Errorf("make directories along %q: %w", filepath.Dir(path), err)
@@ -192,5 +196,5 @@ func ScaffoldWithCDK(fs afero.Fs, dir string, seeds []template.CFNResource) erro
 			return fmt.Errorf("write file at %q: %w", path, err)
 		}
 		return nil
-	})
+	}
 }

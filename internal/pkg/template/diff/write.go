@@ -62,7 +62,7 @@ func (s *treeWriter) writeTree(node diffNode, indent int) error {
 		return err
 	}
 	for _, child := range node.children() {
-		err := s.writeTree(child, indent+indentInc)
+		err := s.writeTree(child, formatter.nextIndent(indent))
 		if err != nil {
 			return err
 		}
@@ -88,8 +88,12 @@ func (s *treeWriter) writeMod(node diffNode, indent int, formatter formatter) er
 		}
 		return s.writeInsert(node, indent, formatter)
 	}
-	content := processMultiline(formatter.formatMod(node), prefixByFn(prefixMod), indentByFn(indent))
-	_, err := s.writer.Write([]byte(color.Yellow.Sprint(content + "\n")))
+	content, err := formatter.formatMod(node)
+	if err != nil {
+		return err
+	}
+	content = processMultiline(content, prefixByFn(prefixMod), indentByFn(indent))
+	_, err = s.writer.Write([]byte(color.Yellow.Sprint(content + "\n")))
 	return err
 }
 

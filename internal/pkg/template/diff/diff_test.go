@@ -228,22 +228,6 @@ func TestFrom_Parse(t *testing.T) {
 				}
 			},
 		},
-		"list with a map value changed": { // TODO(lou1415926): handle list of maps modification
-			old: `StrawberryPopularitySurvey:
-- Name: Dog
-  LikeStrawberry: ver much
-- Name: Bear
-  LikeStrawberry: meh
-- Name: Cat
-  LikeStrawberry: ew`,
-			curr: `StrawberryPopularitySurvey:
-- Name: Dog
-  LikeStrawberry: ver much
-- Name: Bear
-  LikeStrawberry: ok
-- Name: Cat
-  LikeStrawberry: ew`,
-		},
 		"change a map to scalar": {
 			curr: `Mary:
   Dialogue: "Said bear: 'I know I'm supposed to keep an eye on you"`,
@@ -353,8 +337,65 @@ Dog: (pleased) "ikr"`, t),
 			got, err := From(tc.old).Parse([]byte(tc.curr))
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+				require.True(t, equalTree(got, Tree{tc.wanted()}, t), "should get the expected tree")
 			}
-			if tc.wanted != nil {
+		})
+	}
+}
+
+func TestFrom_ParseWithCFNIgnorer(t *testing.T) {
+	testCases := map[string]struct {
+		curr        string
+		old         string
+		wanted      func() diffNode
+		wantedError error
+	}{
+		"diff in metadata manifest is ignored": {
+			old: `Description: CloudFormation environment template for infrastructure shared among Copilot workloads.
+Metadata:
+  Version: v1.26.0
+  Manifest: I don't see any difference.`,
+			curr: `Description: CloudFormation environment template for infrastructure shared among Copilot workloads.
+Metadata:
+  Version: v1.27.0
+  Manifest: There is definitely a difference.`,
+			wanted: func() diffNode {
+				/* sentinel -> Metadata -> Version*/
+				leaf := &node{
+					keyValue: "Version",
+					oldV:     yamlScalarNode("v1.26.0"),
+					newV:     yamlScalarNode("v1.27.0"),
+				}
+				return &node{
+					childNodes: []diffNode{
+						&node{
+							keyValue:   "Metadata",
+							childNodes: []diffNode{leaf},
+						},
+					},
+				}
+			},
+		},
+		"no diff": {
+			old: `Description: CloudFormation environment template for infrastructure shared among Copilot workloads.
+Metadata:
+  Manifest: I don't see any difference.`,
+			curr: `Description: CloudFormation environment template for infrastructure shared among Copilot workloads.
+Metadata:
+  Manifest: There is definitely a difference.`,
+			wanted: func() diffNode {
+				return nil
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got, err := From(tc.old).ParseWithCFNIgnorer([]byte(tc.curr))
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
 				require.NoError(t, err)
 				require.True(t, equalTree(got, Tree{tc.wanted()}, t), "should get the expected tree")
 			}
