@@ -480,10 +480,7 @@ func (o *initSvcOpts) askStaticSite() error {
 		var includes []string
 		var recursive bool
 		if isDir {
-			recursive, err = o.askRecursive(source)
-			if err != nil {
-				return err
-			}
+			recursive = true
 		}
 		// --exclude and --include work only if --recursive is also specified https://stackoverflow.com/questions/43370710/s3-cli-includes-not-working
 		if recursive {
@@ -499,8 +496,7 @@ func (o *initSvcOpts) askStaticSite() error {
 		msg := fmt.Sprintf(`
 %s
 Source: %s
-Destination: %s
-Recursive: %v`, color.Emphasize("Upload Summary:"), source, destination, recursive)
+Destination: %s`, color.Emphasize("Upload Summary:"), source, destination)
 		if recursive {
 			msg = msg + fmt.Sprintf(
 				`
@@ -579,7 +575,7 @@ func (o *initSvcOpts) validateIngressType() error {
 	if strings.EqualFold(o.ingressType, "internet") || strings.EqualFold(o.ingressType, "environment") {
 		return nil
 	}
-	return fmt.Errorf("invalid ingress type %q: must be one of %s.", o.ingressType, english.OxfordWordSeries(rdwsIngressOptions, "or"))
+	return fmt.Errorf("invalid ingress type %q: must be one of %s", o.ingressType, english.OxfordWordSeries(rdwsIngressOptions, "or"))
 }
 
 func (o *initSvcOpts) askImage() error {
@@ -639,17 +635,6 @@ func (o *initSvcOpts) askDestination(source string, isDir bool) (string, error) 
 		return "", fmt.Errorf("get destination: %w", err)
 	}
 	return dest, nil
-}
-
-func (o *initSvcOpts) askRecursive(source string) (bool, error) {
-	recursive, err := o.prompt.Confirm(
-		fmt.Sprintf(fmtStaticSiteInitRecursivePrompt, source),
-		fmt.Sprintf(fmtStaticSiteInitRecursiveHelpPrompt, source),
-		prompt.WithFinalMessage("Recursive:"))
-	if err != nil {
-		return false, fmt.Errorf("specify recursion: %w", err)
-	}
-	return recursive, nil
 }
 
 func (o *initSvcOpts) askExcludes(source string) ([]string, error) {
