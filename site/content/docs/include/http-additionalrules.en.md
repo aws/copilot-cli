@@ -14,7 +14,7 @@
     TLS connections with the Fargate tasks using certificates that you install on the target container.
     
     <span class="parent-field">http.additional_rules.</span><a id="http-additional-rules-target-port" href="#http-additional-rules-target-port" class="field">`target_port`</a> <span class="type">String</span>  
-    The container port that receives traffic. Specify this field if the container port is different from `iamge.port` for the main container or `sidecar.port` for the sidecar containers.
+    The container port that receives traffic. Specify this field if the container port is different from `image.port` for the main container or `sidecar.port` for the sidecar containers.
     
     <span class="parent-field">http.additional_rules.</span><a id="http-additional-rules-stickiness" href="#http-additional-rules-stickiness" class="field">`stickiness`</a> <span class="type">Boolean</span>  
     Indicates whether sticky sessions are enabled.
