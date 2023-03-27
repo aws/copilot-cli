@@ -455,7 +455,6 @@ type ALBListener struct {
 }
 
 // Aliases return all the unique aliases specified across all the routing rules in ALB.
-// Currently, we only have primary routing rule, but we will be getting additional routing rule soon.
 func (cfg *ALBListener) Aliases() []string {
 	var uniqueAliases []string
 	seen := make(map[string]struct{})

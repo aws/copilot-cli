@@ -68,8 +68,7 @@ func (noopActionRecommender) RecommendedActions() []string {
 	return nil
 }
 
-type repositoryService interface {
-	Login(docker repository.ContainerLoginBuildPusher) (string, error)
+type imageBuilderPusher interface {
 	BuildAndPush(docker repository.ContainerLoginBuildPusher, args *dockerengine.BuildArguments) (string, error)
 }
 
@@ -151,21 +150,20 @@ type workloadDeployer struct {
 	mft           interface{}
 	rawMft        []byte
 	workspacePath string
-	uri           string
 
 	// Dependencies.
-	fs               fileReader
-	s3Client         uploader
-	addons           stackBuilder
-	repository       repositoryService
-	deployer         serviceDeployer
-	tmplGetter       deployedTemplateGetter
-	endpointGetter   endpointGetter
-	spinner          spinner
-	templateFS       template.Reader
-	envVersionGetter versionGetter
-	overrider        Overrider
-	customResources  customResourcesFunc
+	fs                 fileReader
+	s3Client           uploader
+	addons             stackBuilder
+	imageBuilderPusher imageBuilderPusher
+	deployer           serviceDeployer
+	tmplGetter         deployedTemplateGetter
+	endpointGetter     endpointGetter
+	spinner            spinner
+	templateFS         template.Reader
+	envVersionGetter   versionGetter
+	overrider          Overrider
+	customResources    customResourcesFunc
 
 	// Cached variables.
 	defaultSess              *session.Session
@@ -173,7 +171,6 @@ type workloadDeployer struct {
 	envSess                  *session.Session
 	store                    *config.Store
 	envConfig                *manifest.Environment
-	dockerCmdClient          dockerengine.CmdClient
 }
 
 // WorkloadDeployerInput is the input to for workloadDeployer constructor.
@@ -233,13 +230,8 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 	}
 
 	repoName := fmt.Sprintf("%s/%s", in.App.Name, in.Name)
-	repository := repository.NewWithURI(
+	imageBuilderPusher := repository.NewWithURI(
 		ecr.New(defaultSessEnvRegion), repoName, resources.RepositoryURLs[in.Name])
-	dockerCmdClient := dockerengine.New(exec.NewCmd())
-	uri, err := repository.Login(dockerCmdClient)
-	if err != nil {
-		return nil, fmt.Errorf("login to docker: %w", err)
-	}
 	store := config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
 	envDescriber, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
 		App:         in.App.Name,
@@ -261,31 +253,30 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 
 	cfn := cloudformation.New(envSession, cloudformation.WithProgressTracker(os.Stderr))
 	return &workloadDeployer{
-		name:                     in.Name,
-		app:                      in.App,
-		env:                      in.Env,
-		image:                    in.Image,
-		resources:                resources,
-		workspacePath:            ws.Path(),
-		fs:                       &afero.Afero{Fs: afero.NewOsFs()},
-		s3Client:                 s3.New(envSession),
-		addons:                   addons,
-		repository:               repository,
-		deployer:                 cfn,
-		tmplGetter:               cfn,
-		endpointGetter:           envDescriber,
-		spinner:                  termprogress.NewSpinner(log.DiagnosticWriter),
-		templateFS:               template.New(),
-		envVersionGetter:         in.EnvVersionGetter,
-		overrider:                in.Overrider,
-		customResources:          in.customResources,
+		name:               in.Name,
+		app:                in.App,
+		env:                in.Env,
+		image:              in.Image,
+		resources:          resources,
+		workspacePath:      ws.Path(),
+		fs:                 &afero.Afero{Fs: afero.NewOsFs()},
+		s3Client:           s3.New(envSession),
+		addons:             addons,
+		imageBuilderPusher: imageBuilderPusher,
+		deployer:           cfn,
+		tmplGetter:         cfn,
+		endpointGetter:     envDescriber,
+		spinner:            termprogress.NewSpinner(log.DiagnosticWriter),
+		templateFS:         template.New(),
+		envVersionGetter:   in.EnvVersionGetter,
+		overrider:          in.Overrider,
+		customResources:    in.customResources,
+
 		defaultSess:              defaultSession,
 		defaultSessWithEnvRegion: defaultSessEnvRegion,
 		envSess:                  envSession,
 		store:                    store,
 		envConfig:                envConfig,
-		dockerCmdClient:          dockerCmdClient,
-		uri:                      uri,
 
 		mft:    in.Mft,
 		rawMft: in.RawMft,
@@ -367,7 +358,7 @@ func (img ContainerImageIdentifier) Tag() string {
 
 func (d *workloadDeployer) uploadContainerImages(out *UploadArtifactsOutput) error {
 	// If it is built from local Dockerfile, build and push to the ECR repo.
-	buildArgsPerContainer, err := buildArgsPerContainer(d.name, d.workspacePath, d.uri, d.image, d.mft)
+	buildArgsPerContainer, err := buildArgsPerContainer(d.name, d.workspacePath, d.image, d.mft)
 	if err != nil {
 		return err
 	}
@@ -376,7 +367,7 @@ func (d *workloadDeployer) uploadContainerImages(out *UploadArtifactsOutput) err
 	}
 	out.ImageDigests = make(map[string]ContainerImageIdentifier, len(buildArgsPerContainer))
 	for name, buildArgs := range buildArgsPerContainer {
-		digest, err := d.repository.BuildAndPush(d.dockerCmdClient, buildArgs)
+		digest, err := d.imageBuilderPusher.BuildAndPush(dockerengine.New(exec.NewCmd()), buildArgs)
 		if err != nil {
 			return fmt.Errorf("build and push image: %w", err)
 		}
@@ -389,7 +380,7 @@ func (d *workloadDeployer) uploadContainerImages(out *UploadArtifactsOutput) err
 	return nil
 }
 
-func buildArgsPerContainer(name, workspacePath, uri string, img ContainerImageIdentifier, unmarshaledManifest interface{}) (map[string]*dockerengine.BuildArguments, error) {
+func buildArgsPerContainer(name, workspacePath string, img ContainerImageIdentifier, unmarshaledManifest interface{}) (map[string]*dockerengine.BuildArguments, error) {
 	type dfArgs interface {
 		BuildArgs(rootDirectory string) (map[string]*manifest.DockerBuildArgs, error)
 		ContainerPlatform() string
@@ -421,7 +412,6 @@ func buildArgsPerContainer(name, workspacePath, uri string, img ContainerImageId
 		}
 		labels[labelForContainerName] = container
 		dArgs[container] = &dockerengine.BuildArguments{
-			URI:        uri,
 			Dockerfile: aws.StringValue(buildArgs.Dockerfile),
 			Context:    aws.StringValue(buildArgs.Context),
 			Args:       buildArgs.Args,

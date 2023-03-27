@@ -354,6 +354,8 @@ Resources: # If a bucket URL is specified, that means the template exists.
           - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PublicSubnets'
       Type: network
   NLBListener:
+    Metadata:
+      'aws:copilot:description': 'A TLS listener on port `443` that forwards traffic to your tasks'
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
       DefaultActions:
@@ -366,6 +368,8 @@ Resources: # If a bucket URL is specified, that means the template exists.
         - CertificateArn: !Ref NLBCertValidatorAction
       SslPolicy: ELBSecurityPolicy-TLS13-1-2-2021-06
   NLBListener1:
+    Metadata:
+      'aws:copilot:description': 'A TCP listener on port `8081` that forwards traffic to your tasks'
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
       DefaultActions:
@@ -376,7 +380,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
       Protocol: TCP
   NLBTargetGroup:
     Metadata:
-      'aws:copilot:description': 'A target group to connect the network load balancer to your service'
+      'aws:copilot:description': 'A target group to connect the network load balancer to your service on port 443'
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
       HealthCheckPort: 80
@@ -390,7 +394,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
         Fn::ImportValue: !Sub "${AppName}-${EnvName}-VpcId"
   NLBTargetGroup1:
     Metadata:
-      'aws:copilot:description': 'A target group to connect the network load balancer to your service'
+      'aws:copilot:description': 'A target group to connect the network load balancer to your service on port 8081'
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
       Port: 8081

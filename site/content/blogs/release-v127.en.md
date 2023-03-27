@@ -20,7 +20,7 @@ Copilot v1.27 is a big release with several new features and improvements:
 with the AWS Cloud Development Kit (CDK) or YAML Patch overrides. [See detailed section](#extend-copilot-generated-aws-cloudformation-templates).
 - **Enable multiple listeners and listener rules**: You can define multiple host-based or path listener rules for [application load balancers](../docs/manifest/lb-web-service.en.md#http)
 or multiple listeners on different ports and protocols for [network load balancers](../docs/manifest/lb-web-service.en.md#nlb).  
-  [See detailed section](#enable-multiple-listeners-and-routing-rules-for-load-balancers).
+  [See detailed section](#enable-multiple-listeners-and-listener-rules-for-load-balancers).
 - **Preview CloudFormation template changes**: You can now run `copilot [noun] package` or `copilot [noun] deploy` commands with the `--diff` flag to show differences
   between the last deployed CloudFormation template and local changes. [See detailed section](#preview-aws-cloudformation-template-changes).
 - **Build and push container images for sidecars**: Add support for `image.build` to build and push sidecar containers from local Dockerfiles. [See detailed section](#build-and-push-container-images-for-sidecar-containers).
@@ -204,15 +204,126 @@ Continue with the deployment? (y/N)
 
 If the diff looks good to you, enter "y" to deploy. Otherwise, enter "N" to make adjustments as needed!
 
-## Enable multiple listeners and routing rules for Load Balancers
 
-### Add multiple host-based or path-based routing rules to your Application Load Balancers
+## Enable multiple listeners and listener rules for Load Balancers
+You can now configure additional listener rules for Application Load Balancer as well as additional listeners for 
+Network Load Balancer.
+
+### Add multiple host-based or path-based listener rules to your Application Load Balancer
+You can configure additional listener rules for ALB with the new field [`http.additional_rules`](../docs/manifest/lb-web-service.en.md#http-additional-rules). 
+Let's learn through an example. 
+
+If you want your service to handle traffic to paths `customerdb`, `admin` and `superadmin` with different container ports.
+```yaml
+name: 'frontend'
+type: 'Load Balanced Web Service'
+ 
+image:
+  build: Dockerfile
+  port: 8080
+  
+http:
+  path: '/'
+  additional_rules:            # The new field "additional_rules".
+    - path: 'customerdb'  
+      target_port: 8081        # Optional. Defaults to the `image.port`.
+    - path: 'admin'
+      target_container: nginx   # Optional. Defaults to the main container. 
+      target_port: 8082
+    - path: 'superAdmin'   
+      target_port: 80
+
+sidecars:
+  nginx:
+    port: 80
+    image: public.ecr.aws/nginx:latest
+```
+With this manifest, requests to “/” will be routed to the main container on port 8080. Requests to "/customerdb" will be routed to the main container on port 8081, 
+, "/admin" to nginx on port 8082 and "/superAdmin" to nginx on port 80. Note that the third listener rule just defined 'target_port: 80' 
+and Copilot was able to intelligently route traffic from the '/superAdmin' to the nginx sidecar container.
+
+It is also possible to configure the container port that handles the requests to “/” via the new field [`http.target_port`](../docs/manifest/lb-web-service.en.md#http-target-port)
 
 ### Add multiple port and protocol listeners to your Network Load Balancers
+You can configure additional listeners for NLB with the new field [`nlb.additional_listeners`](../docs/manifest/lb-web-service.en.md#nlb-additional-listeners).
+Let's learn through an example.
+
+```yaml
+name: 'frontend'
+type: 'Load Balanced Web Service'
+
+image:
+  build: Dockerfile
+
+http: false
+nlb:
+  port: 8080/tcp
+  additional_listeners:
+    - port: 8081/tcp
+    - port: 8082/tcp
+      target_port: 8085               # Optional. Default is set 8082.
+      target_container: nginx         # Optional. Default is set to the main container.
+
+sidecars:
+  nginx:
+    port: 80
+    image: public.ecr.aws/nginx:latest
+```
+With this manifest, requests to NLB port 8080 will be routed to the main container’s port 8080. 
+Requests to the NLB on port 8081 will be routed to the port 8081 of the main container. 
+We need to notice here that the default value of the target_port will be the same as that of the corresponding NLB port. 
+The requests to NLB port 8082 will be routed to port 8085 of the sidecar container named nginx.
 
 ## Sidecar improvements
 
+You can now build and push container images for sidecar containers just like you can for your main container.
+Additionally, you can now specify the paths to local environment files for sidecar containers.
+
 ### Build and push container images for sidecar containers
+
+Copilot now allows users to build sidecar container images natively from Dockerfiles and push them to ECR.
+In order to take advantage of this feature, users can modify their workload manifests in several ways.
+
+The first option is to simply specify the path to the Dockerfile as a string.
+
+```yaml
+sidecars:
+  nginx:
+    image:
+      build: path/to/dockerfile
+```
+
+Alternatively, you can specify `build` as a map, which allows for more advanced customization. 
+This includes specifying the Dockerfile path, context directory, target build stage, cache from images, and build arguments.
+
+```yaml
+sidecars:
+  nginx:
+    image:
+      build:
+        dockerfile: path/to/dockerfile
+        context: context/dir
+        target: build-stage
+        cache_from:
+          - image: tag
+        args: value
+```
+
+Another option is to specify an existing image URI instead of building from a Dockerfile.
+
+```yaml
+sidecars:
+  nginx:
+    image: 123457839156.dkr.ecr.us-west-2.amazonaws.com/demo/front:nginx-latest
+```
+
+Or you can provide the image URI using the location field.
+```yaml
+sidecars:
+  nginx:
+    image:
+      location:  123457839156.dkr.ecr.us-west-2.amazonaws.com/demo/front:nginx-latest
+```
 
 ### Upload local environment files for sidecar containers
 You can now specify an environment file to upload to any sidecar container in your task.
