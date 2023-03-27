@@ -60,7 +60,7 @@ under the `copilot/[name]/override` directory:
 └── tsconfig.json
 ```
 
-You can get started with adding, removing, or replacing properties by editing the `stack.ts` file.
+You can get started with adding, removing, or replacing properties by editing the `stack.ts` file or following the instructions in the `README.md`.
 
 ??? note "View sample `stack.ts`"
 
@@ -112,12 +112,13 @@ You can get started with adding, removing, or replacing properties by editing th
     }
     ```
 
+Once you run `copilot [noun] deploy` or your continuous delivery pipeline is triggered, Copilot will deploy the overriden template.  
 To learn more about extending with the CDK, checkout the [guide](../docs/developing/overrides/cdk.md).
 
 ### YAML Patch Overrides
 
 You can use YAML Patch overrides for a more lightweight experience when 1) you do not want to have a dependency
-on any other tooling and framework, or 2) you have to write only a handful modifications. 
+on any other tooling and framework, or 2) you have to write only a handful of modifications. 
 After running the `copilot [noun] override` command, Copilot will generate a sample `cfn.patches.yml` file
 under the `copilot/[name]/override` directory:
 
@@ -150,6 +151,7 @@ You can get started with adding, removing, or replacing properties by editing th
         DnsName: yamlpatchiscool
     ```
 
+Once you run `copilot [noun] deploy` or your continuous delivery pipeline is triggered, Copilot will deploy the overriden template.  
 To learn more about extending with YAML patches, check out the [guide](../docs/developing/overrides/yamlpatch.md).
 
 ## Preview AWS CloudFormation template changes
@@ -163,7 +165,7 @@ The program will exit after it prints the diff.
 
     0 = no diffs found  
     1 = diffs found  
-    2 = error producing diffs
+    2 = error-producing diffs
 
 
 ```console
@@ -183,7 +185,7 @@ to your designated directory.
 ##### `copilot [noun] deploy --diff`
 
 Similar to `copilot [noun] package --diff`, you can run `copilot [noun] deploy --diff` to see the same diff.
-However, instead of exiting after it print the diff, Copilot will follow up with a question: `Continue with the deployment? [y/N]`.
+However, instead of exiting after printing the diff, Copilot will follow up with the question: `Continue with the deployment? [y/N]`.
 
 ```console
 $ copilot job deploy --diff
