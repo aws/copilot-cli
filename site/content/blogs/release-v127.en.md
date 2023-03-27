@@ -96,7 +96,7 @@ Network Load Balancer.
 You can configure additional listener rules for ALB with the new field [`http.additional_rules`](../docs/manifest/lb-web-service.en.md#http-additional-rules). 
 Let's learn through an example. 
 
-Say we want to expand the basic manifest such that it handles more traffic on port 8081 of the main service container, and 8082 on the sidecar container, in addition to the existing `image.port` 8080.
+If you want your service to handle traffic to paths `customerdb`, `admin` and `superadmin` with different container ports.
 ```yaml
 name: 'frontend'
 type: 'Load Balanced Web Service'
