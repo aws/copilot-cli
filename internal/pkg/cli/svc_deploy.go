@@ -4,6 +4,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -254,7 +255,10 @@ func (o *deploySvcOpts) Execute() error {
 			return fmt.Errorf("generate the template for workload %q against environment %q: %w", o.name, o.envName, err)
 		}
 		if err := diff(deployer, output.Template, o.diffWriter); err != nil {
-			return err
+			var errHasDiff *errHasDiff
+			if !errors.As(err, &errHasDiff) {
+				return err
+			}
 		}
 		contd, err := o.prompt.Confirm(continueDeploymentPrompt, "")
 		if err != nil {
@@ -582,16 +586,30 @@ func (e *errFeatureIncompatibleWithEnvironment) RecommendActions() string {
 
 }
 
+type errHasDiff struct{}
+
+func (e *errHasDiff) Error() string {
+	return "diff detected"
+}
+
+// ExitCode returns 1 for a non-empty diff.
+func (e *errHasDiff) ExitCode() int {
+	return 1
+}
+
 func diff(differ templateDiffer, tmpl string, writer io.Writer) error {
-	out, err := differ.DeployDiff(tmpl)
-	if err != nil {
+	if out, err := differ.DeployDiff(tmpl); err != nil {
+		return err
+	} else if out != "" {
+		if _, err := writer.Write([]byte(out)); err != nil {
+			return err
+		}
+		return &errHasDiff{}
+	}
+	if _, err := writer.Write([]byte("No changes.\n")); err != nil {
 		return err
 	}
-	if out == "" {
-		out = "No changes.\n"
-	}
-	_, err = writer.Write([]byte(out))
-	return err
+	return nil
 }
 
 // buildSvcDeployCmd builds the `svc deploy` subcommand.

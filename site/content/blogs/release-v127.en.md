@@ -159,7 +159,54 @@ The requests to NLB port 8082 will be routed to port 8085 of the sidecar contain
 
 ## Sidecar improvements
 
+You can now build and push container images for sidecar containers just like you can for your main container.
+Additionally, you can now specify the paths to local environment files for sidecar containers.
+
 ### Build and push container images for sidecar containers
+
+Copilot now allows users to build sidecar container images natively from Dockerfiles and push them to ECR.
+In order to take advantage of this feature, users can modify their workload manifests in several ways.
+
+The first option is to simply specify the path to the Dockerfile as a string.
+
+```yaml
+sidecars:
+  nginx:
+    image:
+      build: path/to/dockerfile
+```
+
+Alternatively, you can specify `build` as a map, which allows for more advanced customization. 
+This includes specifying the Dockerfile path, context directory, target build stage, cache from images, and build arguments.
+
+```yaml
+sidecars:
+  nginx:
+    image:
+      build:
+        dockerfile: path/to/dockerfile
+        context: context/dir
+        target: build-stage
+        cache_from:
+          - image: tag
+        args: value
+```
+
+Another option is to specify an existing image URI instead of building from a Dockerfile.
+
+```yaml
+sidecars:
+  nginx:
+    image: 123457839156.dkr.ecr.us-west-2.amazonaws.com/demo/front:nginx-latest
+```
+
+Or you can provide the image URI using the location field.
+```yaml
+sidecars:
+  nginx:
+    image:
+      location:  123457839156.dkr.ecr.us-west-2.amazonaws.com/demo/front:nginx-latest
+```
 
 ### Upload local environment files for sidecar containers
 You can now specify an environment file to upload to any sidecar container in your task.

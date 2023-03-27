@@ -37,7 +37,7 @@ var defaultTransformers = []mergo.Transformers{
 	efsConfigOrBoolTransformer{},
 	efsVolumeConfigurationTransformer{},
 	sqsQueueOrBoolTransformer{},
-	routingRuleConfigOrBoolTransformer{},
+	HTTPOrBoolTransformer{},
 	secretTransformer{},
 	environmentCDNConfigTransformer{},
 }
@@ -513,22 +513,22 @@ func (q sqsQueueOrBoolTransformer) Transformer(typ reflect.Type) func(dst, src r
 	}
 }
 
-type routingRuleConfigOrBoolTransformer struct{}
+type HTTPOrBoolTransformer struct{}
 
-// Transformer returns custom merge logic for RoutingRuleConfigOrBool's fields.
-func (t routingRuleConfigOrBoolTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
-	if typ != reflect.TypeOf(RoutingRuleConfigOrBool{}) {
+// Transformer returns custom merge logic for HTTPOrBool's fields.
+func (t HTTPOrBoolTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
+	if typ != reflect.TypeOf(HTTPOrBool{}) {
 		return nil
 	}
 	return func(dst, src reflect.Value) error {
-		dstStruct, srcStruct := dst.Interface().(RoutingRuleConfigOrBool), src.Interface().(RoutingRuleConfigOrBool)
+		dstStruct, srcStruct := dst.Interface().(HTTPOrBool), src.Interface().(HTTPOrBool)
 
-		if !srcStruct.RoutingRuleConfiguration.IsEmpty() {
+		if !srcStruct.HTTP.IsEmpty() {
 			dstStruct.Enabled = nil
 		}
 
 		if srcStruct.Enabled != nil {
-			dstStruct.RoutingRuleConfiguration = RoutingRuleConfiguration{}
+			dstStruct.HTTP = HTTP{}
 		}
 
 		if dst.CanSet() { // For extra safety to prevent panicking.
