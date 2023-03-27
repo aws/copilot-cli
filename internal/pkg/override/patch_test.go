@@ -527,6 +527,20 @@ a:
 			overrides:   ``,
 			expectedErr: `no YAML patches configured`,
 		},
+		"updates the Description field of a CloudFormation template with YAML patch metrics": {
+			yaml: `
+Description: "CloudFormation template that represents a backend service on Amazon ECS."
+Resources:
+  key: value`,
+			overrides: `
+- op: replace
+  path: /Resources/key
+  value: other`,
+			expected: `
+Description: "CloudFormation template that represents a backend service on Amazon ECS using AWS Copilot with YAML patches."
+Resources:
+  key: other`,
+		},
 	}
 
 	for name, tc := range tests {

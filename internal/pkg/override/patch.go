@@ -18,7 +18,7 @@ const (
 	yamlPatchFile        = "cfn.patches.yml"
 )
 
-// ScaffoldWithCDK sets up YAML patches in dir/ to apply to the
+// ScaffoldWithPatch sets up YAML patches in dir/ to apply to the
 // Copilot generated CloudFormation template.
 func ScaffoldWithPatch(fs afero.Fs, dir string) error {
 	// If the directory does not exist, [afero.IsEmpty] returns false and an error.
@@ -92,6 +92,7 @@ func (p *Patch) Override(body []byte) ([]byte, error) {
 		}
 	}
 
+	addYAMLPatchDescription(&root)
 	out, err := yaml.Marshal(&root)
 	if err != nil {
 		return nil, fmt.Errorf("unable to return modified document to []byte: %w", err)
@@ -112,6 +113,23 @@ func unmarshalPatches(path string, fs afero.Fs) ([]yamlPatch, error) {
 	}
 
 	return patches, nil
+}
+
+// addYAMLPatchDescription updates the Description field of a CloudFormation
+// to indicate it has been overriden with YAML patches for us to keep track of usage metrics.
+func addYAMLPatchDescription(body *yaml.Node) {
+	if body.Kind != yaml.DocumentNode || len(body.Content) == 0 {
+		return
+	}
+	body = body.Content[0] // Move inside the document.
+	for i := 0; i < len(body.Content); i += 2 {
+		if body.Content[i].Value != "Description" {
+			continue
+		}
+		body.Content[i+1].Value = fmt.Sprintf("%s using AWS Copilot with YAML patches.",
+			strings.TrimSuffix(body.Content[i+1].Value, "."))
+		break
+	}
 }
 
 type yamlPatch struct {
