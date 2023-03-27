@@ -11,28 +11,28 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func TestRoutingRuleConfigOrBool_Disabled(t *testing.T) {
+func TestHTTPOrBool_Disabled(t *testing.T) {
 	testCases := map[string]struct {
-		in     RoutingRuleConfigOrBool
+		in     HTTPOrBool
 		wanted bool
 	}{
 		"disabled": {
-			in: RoutingRuleConfigOrBool{
+			in: HTTPOrBool{
 				Enabled: aws.Bool(false),
 			},
 			wanted: true,
 		},
 		"enabled implicitly": {
-			in: RoutingRuleConfigOrBool{},
+			in: HTTPOrBool{},
 		},
 		"enabled explicitly": {
-			in: RoutingRuleConfigOrBool{
+			in: HTTPOrBool{
 				Enabled: aws.Bool(true),
 			},
 		},
 		"enabled explicitly by advanced configuration": {
-			in: RoutingRuleConfigOrBool{
-				RoutingRuleConfiguration: RoutingRuleConfiguration{
+			in: HTTPOrBool{
+				HTTP: HTTP{
 					Main: RoutingRule{
 						Path: aws.String("mockPath"),
 					},
@@ -144,7 +144,7 @@ func TestAlias_UnmarshalYAML(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			r := RoutingRuleConfiguration{
+			r := HTTP{
 				Main: RoutingRule{
 					Alias: Alias{
 						StringSliceOrString: StringSliceOrString{

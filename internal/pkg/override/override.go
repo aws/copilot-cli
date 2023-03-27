@@ -60,57 +60,36 @@ func (i Info) IsYAMLPatch() bool {
 	return i.mode == yamlPatchOverrider
 }
 
-// Lookup returns information indicating if the overrider is a CDK application or YAML Patch document.
-// If path does not exist or is an empty directory, then return an ErrNotExist.
-// If path is a YAML patch document, then IsYAMLPatch evaluates to true.
+// Lookup returns information indicating if the overrider is a CDK application or YAML Patches.
+// If path does not exist, then return an ErrNotExist.
+// If path is a directory that contains cfn.patches.yml, then IsYAMLPatch evaluates to true.
 // If path is a directory that contains a cdk.json file, then IsCDK evaluates to true.
 func Lookup(path string, fs afero.Fs) (Info, error) {
-	stat, err := fs.Stat(path)
+	_, err := fs.Stat(path)
 	if err != nil {
 		return Info{}, &ErrNotExist{parent: err}
 	}
 
-	if !stat.IsDir() {
-		return lookupYAMLPatch(path, fs)
-	}
-
 	files, err := afero.ReadDir(fs, path)
-	if err != nil {
-		return Info{}, fmt.Errorf("read directory %q: %w", path, err)
-	}
-	var info Info
-	switch n := len(files); n {
-	case 0:
-		return Info{}, fmt.Errorf(`directory at %q is empty`, path)
-	case 1:
-		info, err = lookupYAMLPatch(filepath.Join(path, files[0].Name()), fs)
-		if err != nil {
-			return Info{}, fmt.Errorf("look up YAML patch document when directory contains a single file: %w", err)
-		}
-	default:
-		info, err = lookupCDK(path, fs)
-		if err != nil {
-			return Info{}, fmt.Errorf("look up CDK project for directories with multiple files: %w", err)
-		}
-	}
-	return info, nil
-}
-
-type extension string
-
-func (ext extension) isYAML() bool { return ext == ".yml" || ext == ".yaml" }
-
-func lookupYAMLPatch(path string, fs afero.Fs) (Info, error) {
-	if ext := extension(filepath.Ext(path)); !ext.isYAML() {
-		return Info{}, fmt.Errorf(`YAML patch documents require a ".yml" or ".yaml" extension: %q has a %q extension`, path, ext)
-	}
-
-	patches, err := unmarshalPatches(path, fs)
 	switch {
 	case err != nil:
-		return Info{}, err
-	case len(patches) == 0:
-		return Info{}, fmt.Errorf("YAML patch document at %q does not contain any operations", path)
+		return Info{}, fmt.Errorf("read directory %q: %w", path, err)
+	case len(files) == 0:
+		return Info{}, fmt.Errorf(`directory at %q is empty`, path)
+	}
+
+	info, err := lookupYAMLPatch(path, fs)
+	if err == nil { // return yaml info if no error
+		return info, nil
+	}
+
+	return lookupCDK(path, fs)
+}
+
+func lookupYAMLPatch(path string, fs afero.Fs) (Info, error) {
+	ok, _ := afero.Exists(fs, filepath.Join(path, yamlPatchFile))
+	if !ok {
+		return Info{}, fmt.Errorf(`%s does not exist under %q`, yamlPatchFile, path)
 	}
 	return yamlPatchInfo(path), nil
 }

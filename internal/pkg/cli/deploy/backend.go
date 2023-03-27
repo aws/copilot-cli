@@ -123,13 +123,13 @@ func (d *backendSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (
 }
 
 func (d *backendSvcDeployer) validateALBRuntime() error {
-	if d.backendMft.RoutingRule.IsEmpty() {
+	if d.backendMft.HTTP.IsEmpty() {
 		return nil
 	}
-	if err := d.validateRuntimeRoutingRule(d.backendMft.RoutingRule.Main); err != nil {
+	if err := d.validateRuntimeRoutingRule(d.backendMft.HTTP.Main); err != nil {
 		return fmt.Errorf(`validate ALB runtime configuration for "http": %w`, err)
 	}
-	for idx, rule := range d.backendMft.RoutingRule.AdditionalRoutingRules {
+	for idx, rule := range d.backendMft.HTTP.AdditionalRoutingRules {
 		if err := d.validateRuntimeRoutingRule(rule); err != nil {
 			return fmt.Errorf(`validate ALB runtime configuration for "http.additional_rules[%d]": %w`, idx, err)
 		}

@@ -29,3 +29,23 @@ $ copilot svc package -n frontend -e test --output-dir ./infrastructure
 $ ls ./infrastructure
 frontend.stack.yml      frontend-test.config.yml
 ```
+
+
+Use `--diff` to print the diff and exit.
+```console
+$ copilot svc deploy --diff
+~ Resources:
+    ~ TaskDefinition:
+        ~ Properties:
+            ~ ContainerDefinitions:
+                ~ - (changed item)
+                  ~ Environment:
+                      (4 unchanged items)
+                      + - Name: LOG_LEVEL
+                      +   Value: "info"
+```
+
+!!! info "The exit codes when using `copilot [noun] package --diff`"
+    0 = no diffs found  
+    1 = diffs found  
+    2 = error producing diffs

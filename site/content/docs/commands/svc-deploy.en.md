@@ -19,20 +19,43 @@ The steps involved in service deploy are:
 
 ```
   -a, --app string                     Name of the application.
+      --diff                           Compares the generated CloudFormation template to the deployed stack.
   -e, --env string                     Name of the environment.
       --force                          Optional. Force a new service deployment using the existing image.
   -h, --help                           help for deploy
   -n, --name string                    Name of the service.
-      --resource-tags stringToString   Optional. Labels with a key and value separated by commas.
-                                       Allows you to categorize resources. (default [])
-      --no-rollback bool               Optional. Disable automatic stack
+      --no-rollback                    Optional. Disable automatic stack
                                        rollback in case of deployment failure.
                                        We do not recommend using this flag for a
                                        production environment.
-      --tag string                     Optional. The service's image tag.
+      --resource-tags stringToString   Optional. Labels with a key and value separated by commas.
+                                       Allows you to categorize resources. (default [])
+      --tag string                     Optional. The container image tag.
 ```
 
 !!!info
     The `--no-rollback` flag is **not** recommended while deploying to a production environment as it may introduce service downtime. 
     If the deployment fails when automatic stack rollback is disabled, you may be required to manually start the stack 
     rollback of the stack via the AWS console or AWS CLI before the next deployment. 
+
+## Examples
+Use `--diff` to see what will be changed before making a deployment.
+
+```console
+$ copilot svc deploy --diff
+~ Resources:
+    ~ TaskDefinition:
+        ~ Properties:
+            ~ ContainerDefinitions:
+                ~ - (changed item)
+                  ~ Environment:
+                      (4 unchanged items)
+                      + - Name: LOG_LEVEL
+                      +   Value: "info"
+
+Continue with the deployment? (y/N)
+```
+
+!!!info "`copilot svc package --diff`"
+    Alternatively, if you just wish to take a peek at the diff without potentially making a deployment,
+    you can run `copilot svc package --diff`, which will print the diff and exit.

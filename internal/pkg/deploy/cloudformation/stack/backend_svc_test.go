@@ -384,7 +384,7 @@ Outputs:
 			DeploymentControllerConfig: manifest.DeploymentControllerConfig{
 				Rolling: aws.String("recreate"),
 			}}
-		mft.RoutingRule = manifest.RoutingRuleConfiguration{
+		mft.HTTP = manifest.HTTP{
 			Main: manifest.RoutingRule{
 				Path: aws.String("/albPath"),
 				HealthCheck: manifest.HealthCheckArgsOrString{

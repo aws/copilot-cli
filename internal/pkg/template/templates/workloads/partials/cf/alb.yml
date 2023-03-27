@@ -1,7 +1,7 @@
 {{- range $i, $rule := .ALBListener.Rules}}
 TargetGroup{{ if ne $i 0 }}{{ $i }}{{ end }}:
   Metadata:
-    'aws:copilot:description': "A target group to connect the load balancer to your service"
+    'aws:copilot:description': "A target group to connect the load balancer to your service on port {{$rule.TargetPort}}"
   Type: AWS::ElasticLoadBalancingV2::TargetGroup
   Properties:
     HealthCheckPath: {{$rule.HTTPHealthCheck.HealthCheckPath}} # Default is '/'.

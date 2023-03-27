@@ -56,6 +56,8 @@ nav:
       - Custom Environment Resources: docs/developing/custom-environment-resources.en.md
       - Domain: docs/developing/domain.en.md
       - Extend Copilot with Overrides:
+          - YAML Patch Overrides: docs/developing/overrides/yamlpatch.md
+          - CDK Overrides: docs/developing/overrides/cdk.md
           - Task Definition Overrides: docs/developing/overrides/taskdef-overrides.md
       - Internal Load Balancers: docs/developing/internal-albs.en.md
       - Manifest Environment Variables: docs/developing/manifest-env-var.en.md
@@ -74,12 +76,15 @@ nav:
         - app upgrade: docs/commands/app-upgrade.en.md
         - app delete: docs/commands/app-delete.en.md
         - env init: docs/commands/env-init.en.md
+        - env override: docs/commands/env-override.md
         - env package: docs/commands/env-package.en.md
         - env delete: docs/commands/env-delete.en.md
         - job init: docs/commands/job-init.en.md
+        - job override: docs/commands/job-override.md
         - job package: docs/commands/job-package.en.md
         - job delete: docs/commands/job-delete.en.md
         - svc init: docs/commands/svc-init.en.md
+        - svc override: docs/commands/svc-override.md
         - svc package: docs/commands/svc-package.en.md
         - svc delete: docs/commands/svc-delete.en.md
       - Release:
@@ -127,6 +132,7 @@ nav:
         - env deploy: docs/commands/env-deploy.en.md
         - env init: docs/commands/env-init.en.md
         - env ls: docs/commands/env-ls.en.md
+        - env override: docs/commands/env-override.md
         - env package: docs/commands/env-package.en.md
         - env show: docs/commands/env-show.en.md
         - init: docs/commands/init.en.md
@@ -135,6 +141,7 @@ nav:
         - job init: docs/commands/job-init.en.md
         - job logs: docs/commands/job-logs.en.md
         - job ls: docs/commands/job-ls.en.md
+        - job override: docs/commands/job-override.md
         - job package: docs/commands/job-package.en.md
         - job run: docs/commands/job-run.en.md
         - pipeline delete: docs/commands/pipeline-delete.en.md
@@ -151,6 +158,7 @@ nav:
         - svc init: docs/commands/svc-init.en.md
         - svc logs: docs/commands/svc-logs.en.md
         - svc ls: docs/commands/svc-ls.en.md
+        - svc override: docs/commands/svc-override.md
         - svc package: docs/commands/svc-package.en.md
         - svc show: docs/commands/svc-show.en.md
         - svc status: docs/commands/svc-status.en.md
