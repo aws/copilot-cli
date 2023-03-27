@@ -294,7 +294,8 @@ If the target container's port is set to `443`, then the protocol is set to `HTT
 TLS connections with the Fargate tasks using certificates that you install on the target container.
 
 <span class="parent-field">http.</span><a id="http-target-port" href="#http-target-port" class="field">`target_port`</a> <span class="type">String</span>  
-The container port that receives traffic. Specify this field if the container port is different from `iamge.port` for the main container or `sidecar.port` for the sidecar containers.
+Optional. The container port that receives traffic. By default, this will be `image.port` if the target container is the main container, 
+or `sidecars.<name>.port` if the `target_container` is a sidecar.
 
 <span class="parent-field">http.</span><a id="http-stickiness" href="#http-stickiness" class="field">`stickiness`</a> <span class="type">Boolean</span>  
 Indicates whether sticky sessions are enabled.
@@ -339,7 +340,7 @@ The HTTP(S) protocol version. Must be one of `'grpc'`, `'http1'`, or `'http2'`. 
 If using gRPC, please note that a domain must be associated with your application.
 
 <span class="parent-field">http.</span><a id="http-additional-rules" href="#http-additional-rules" class="field">`additional_rules`</a> <span class="type">Array of Maps</span>  
-The additional listener rules allows you to configure multiple ALB listener rules.
+Configure multiple ALB listener rules.
 
 {% include 'http-additionalrules.en.md' %}
 

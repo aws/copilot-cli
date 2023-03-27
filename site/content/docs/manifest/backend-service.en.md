@@ -234,7 +234,7 @@ The HTTP(S) protocol version. Must be one of `'grpc'`, `'http1'`, or `'http2'`. 
 If using gRPC, please note that a domain must be associated with your application.
 
 <span class="parent-field">http.</span><a id="http-additional-rules" href="#http-additional-rules" class="field">`additional_rules`</a> <span class="type">Array of Maps</span>  
-The additional listener rules allows you to configure multiple ALB listener rules.
+Configure multiple ALB listener rules.
 
 {% include 'http-additionalrules.en.md' %}
 

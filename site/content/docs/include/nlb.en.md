@@ -79,6 +79,6 @@ nlb:
   alias: ["example.com", "v1.example.com"]
 ```
 <span class="parent-field">nlb.</span><a id="nlb-additional-listeners" href="#nlb-additional-listeners" class="field">`additional_listeners`</a> <span class="type">Array of Maps</span>  
-The additional listeners allows you to configure multiple NLB listeners.
+Configure multiple NLB listeners.
 
 {% include 'nlb-additionallisteners.en.md' %}
