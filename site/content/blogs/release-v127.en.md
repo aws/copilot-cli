@@ -150,7 +150,7 @@ You can get started with adding, removing, or replacing properties by editing th
         DnsName: yamlpatchiscool
     ```
 
-To learn more about extending with YAML patches, checkout the [guide](../docs/developing/overrides/yamlpatch.md).
+To learn more about extending with YAML patches, check out the [guide](../docs/developing/overrides/yamlpatch.md).
 
 ## Preview AWS CloudFormation template changes
 
