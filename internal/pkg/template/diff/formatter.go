@@ -13,7 +13,7 @@ import (
 
 type formatter interface {
 	formatYAML(*yaml.Node) ([]byte, error)
-	formatMod(node diffNode) string
+	formatMod(node diffNode) (string, error)
 	formatPath(node diffNode) string
 	nextIndent(curr int) int
 }
@@ -29,15 +29,19 @@ func (f *seqItemFormatter) formatYAML(node *yaml.Node) ([]byte, error) {
 	return yaml.Marshal(wrapped)
 }
 
-func (f *seqItemFormatter) formatMod(node diffNode) string {
-	oldValue, newValue := node.oldYAML().Value, node.newYAML().Value
-	if v, err := yaml.Marshal(node.oldYAML()); err == nil { // NOTE: Marshal handles YAML tags such as `!Ref` and `!Sub`.
+func (f *seqItemFormatter) formatMod(node diffNode) (string, error) {
+	var oldValue, newValue string
+	if v, err := yaml.Marshal(node.oldYAML()); err != nil { // NOTE: Marshal handles YAML tags such as `!Ref` and `!Sub`.
+		return "", err
+	} else {
 		oldValue = strings.TrimSuffix(string(v), "\n")
 	}
-	if v, err := yaml.Marshal(node.newYAML()); err == nil {
+	if v, err := yaml.Marshal(node.newYAML()); err != nil {
+		return "", err
+	} else {
 		newValue = strings.TrimSuffix(string(v), "\n")
 	}
-	return fmt.Sprintf("- %s -> %s", oldValue, newValue)
+	return fmt.Sprintf("- %s -> %s", oldValue, newValue), nil
 }
 
 func (f *seqItemFormatter) formatPath(_ diffNode) string {
@@ -74,15 +78,19 @@ func (f *keyedFormatter) formatYAML(node *yaml.Node) ([]byte, error) {
 	return yaml.Marshal(wrapped)
 }
 
-func (f *keyedFormatter) formatMod(node diffNode) string {
-	oldValue, newValue := node.oldYAML().Value, node.newYAML().Value
-	if v, err := yaml.Marshal(node.oldYAML()); err == nil { // NOTE: Marshal handles YAML tags such as `!Ref` and `!Sub`.
+func (f *keyedFormatter) formatMod(node diffNode) (string, error) {
+	var oldValue, newValue string
+	if v, err := yaml.Marshal(node.oldYAML()); err != nil { // NOTE: Marshal handles YAML tags such as `!Ref` and `!Sub`.
+		return "", err
+	} else {
 		oldValue = strings.TrimSuffix(string(v), "\n")
 	}
-	if v, err := yaml.Marshal(node.newYAML()); err == nil {
+	if v, err := yaml.Marshal(node.newYAML()); err != nil {
+		return "", err
+	} else {
 		newValue = strings.TrimSuffix(string(v), "\n")
 	}
-	return fmt.Sprintf("%s: %s -> %s", node.key(), oldValue, newValue)
+	return fmt.Sprintf("%s: %s -> %s", node.key(), oldValue, newValue), nil
 }
 
 func (f *keyedFormatter) formatPath(node diffNode) string {
@@ -99,8 +107,8 @@ func (f *documentFormatter) formatYAML(node *yaml.Node) ([]byte, error) {
 	return yaml.Marshal(node)
 }
 
-func (f *documentFormatter) formatMod(_ diffNode) string {
-	return ""
+func (f *documentFormatter) formatMod(_ diffNode) (string, error) {
+	return "", nil
 }
 
 func (f *documentFormatter) formatPath(_ diffNode) string {
