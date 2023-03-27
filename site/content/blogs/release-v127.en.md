@@ -116,7 +116,7 @@ To learn more about extending with the CDK, checkout the [guide](../docs/develop
 
 ### YAML Patch Overrides
 
-You can use YAML Patch overrides for a more lightweight experience when you do not want to have a dependency
+You can use YAML Patch overrides for a more lightweight experience when 1) you do not want to have a dependency
 on any other tooling and framework, or 2) you have to write only a handful modifications. 
 After running the `copilot [noun] override` command, Copilot will generate a sample `cfn.patches.yml` file
 under the `copilot/[name]/override` directory:
