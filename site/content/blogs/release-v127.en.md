@@ -127,7 +127,7 @@ under the `copilot/[name]/override` directory:
 └── README.md
 ```
 
-You can get started with adding, removing, or replacing properties by editing the `cfn.patchs.yaml` file.
+You can get started with adding, removing, or replacing properties by editing the `cfn.patches.yaml` file.
 
 ??? note "View sample `cfn.patches.yml`"
 
