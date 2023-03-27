@@ -142,6 +142,32 @@ List of all available properties for a `'Backend Service'` manifest. To learn ab
                 id: fs-1234567
         ```
 
+    === "Expose Multiple Ports"
+
+        ```yaml
+        name: 'backend'
+        type: 'Backend Service'
+    
+        image:
+          build: './backend/Dockerfile'
+          port: 8080
+    
+        http:
+          path: '/'
+          target_port: 8083           # Traffic on "/" is forwarded to the main container, on port 8083. 
+          additional_rules:
+            - path: 'customerdb'
+              target_port: 8081       # Traffic on "/customerdb" is forwarded to the main container, on port 8081.
+            - path: 'admin' 
+              target_port: 8082       # Traffic on "/admin" is forwarded to the sidecar "envoy", on port 8082.
+              target_container: envoy
+    
+        sidecars:
+          envoy:
+            port: 80
+            image: aws_account_id.dkr.ecr.us-west-2.amazonaws.com/envoy-proxy-with-selfsigned-certs:v1
+        ```    
+
 <a id="name" href="#name" class="field">`name`</a> <span class="type">String</span>
 The name of your service.
 
@@ -206,6 +232,11 @@ http:
 <span class="parent-field">http.</span><a id="http-version" href="#http-version" class="field">`version`</a> <span class="type">String</span>  
 The HTTP(S) protocol version. Must be one of `'grpc'`, `'http1'`, or `'http2'`. If omitted, then `'http1'` is assumed.
 If using gRPC, please note that a domain must be associated with your application.
+
+<span class="parent-field">http.</span><a id="http-additional-rules" href="#http-additional-rules" class="field">`additional_rules`</a> <span class="type">Array of Maps</span>  
+Configure multiple ALB listener rules.
+
+{% include 'http-additionalrules.en.md' %}
 
 {% include 'image-config-with-port.en.md' %}  
 If the port is set to `443` and an internal load balancer is enabled with `http`, then the protocol is set to `HTTPS` so that the load balancer establishes
