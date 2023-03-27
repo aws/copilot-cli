@@ -1615,44 +1615,6 @@ func (mr *MockrepositoryURIGetterMockRecorder) URI() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "URI", reflect.TypeOf((*MockrepositoryURIGetter)(nil).URI))
 }
 
-// MockdockerLogin is a mock of dockerLogin interface.
-type MockdockerLogin struct {
-	ctrl     *gomock.Controller
-	recorder *MockdockerLoginMockRecorder
-}
-
-// MockdockerLoginMockRecorder is the mock recorder for MockdockerLogin.
-type MockdockerLoginMockRecorder struct {
-	mock *MockdockerLogin
-}
-
-// NewMockdockerLogin creates a new mock instance.
-func NewMockdockerLogin(ctrl *gomock.Controller) *MockdockerLogin {
-	mock := &MockdockerLogin{ctrl: ctrl}
-	mock.recorder = &MockdockerLoginMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockdockerLogin) EXPECT() *MockdockerLoginMockRecorder {
-	return m.recorder
-}
-
-// Login mocks base method.
-func (m *MockdockerLogin) Login(docker repository.ContainerLoginBuildPusher) (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Login", docker)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Login indicates an expected call of Login.
-func (mr *MockdockerLoginMockRecorder) Login(docker interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Login", reflect.TypeOf((*MockdockerLogin)(nil).Login), docker)
-}
-
 // MockrepositoryService is a mock of repositoryService interface.
 type MockrepositoryService struct {
 	ctrl     *gomock.Controller
@@ -1689,21 +1651,6 @@ func (m *MockrepositoryService) BuildAndPush(docker repository.ContainerLoginBui
 func (mr *MockrepositoryServiceMockRecorder) BuildAndPush(docker, args interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BuildAndPush", reflect.TypeOf((*MockrepositoryService)(nil).BuildAndPush), docker, args)
-}
-
-// Login mocks base method.
-func (m *MockrepositoryService) Login(docker repository.ContainerLoginBuildPusher) (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Login", docker)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Login indicates an expected call of Login.
-func (mr *MockrepositoryServiceMockRecorder) Login(docker interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Login", reflect.TypeOf((*MockrepositoryService)(nil).Login), docker)
 }
 
 // URI mocks base method.
