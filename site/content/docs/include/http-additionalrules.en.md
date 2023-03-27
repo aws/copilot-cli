@@ -23,7 +23,7 @@
     CIDR IP addresses permitted to access your service.
     ```yaml
     http:
-      additionl_rules:
+      additional_rules:
         - allowed_source_ips: ["192.0.2.0/24", "198.51.100.10/32"]
     ```
     
