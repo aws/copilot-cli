@@ -93,10 +93,10 @@ You can now configure additional listener rules for Application Load Balancer as
 Network Load Balancer.
 
 ### Add multiple host-based or path-based listener rules to your Application Load Balancer
-We can configure additional listener rules for ALB via new field [`http.additional_rules`](../docs/manifest/lb-web-service.en.md#http-additional-rules). 
-It is as easy as configuring your `http` field. Let's learn through an example. 
+You can configure additional listener rules for ALB with the new field [`http.additional_rules`](../docs/manifest/lb-web-service.en.md#http-additional-rules). 
+Let's learn through an example. 
 
-Say we want to expand the basic manifest such that it opens up port 8081 on the main service container, and 8082 on the sidecar container, in addition to the existing `image.port` 8080.
+Say we want to expand the basic manifest such that it handles more traffic on port 8081 of the main service container, and 8082 on the sidecar container, in addition to the existing `image.port` 8080.
 ```yaml
 name: 'frontend'
 type: 'Load Balanced Web Service'
@@ -107,15 +107,14 @@ image:
   
 http:
   path: '/'
-  additional_rules:            # The new field "additional_rules",
+  additional_rules:            # The new field "additional_rules".
     - path: 'customerdb'  
       target_port: 8081        # Optional. Defaults to the `image.port`.
-    - path: 'admin'  
-      target_port: 8082
+    - path: 'admin'
       target_container: nginx   # Optional. Defaults to the main container. 
+      target_port: 8082
     - path: 'superAdmin'   
       target_port: 80
-      
 
 sidecars:
   nginx:
@@ -126,11 +125,11 @@ With this manifest, requests to “/” will be routed to the main container on 
 , "/admin" to nginx on port 8082 and "/superAdmin" to nginx on port 80. Note that the third listener rule just defined 'target_port: 80' 
 and Copilot was able to intelligently route traffic from the '/superAdmin' to the nginx sidecar container.
 
-It is also possible to configure the container port that handles the requests to “/” via our new field under `http` called [`target_port`](../docs/manifest/lb-web-service.en.md#http-target-port)
+It is also possible to configure the container port that handles the requests to “/” via the new field [`http.target_port`](../docs/manifest/lb-web-service.en.md#http-target-port)
 
 ### Add multiple port and protocol listeners to your Network Load Balancers
-We can configure additional listeners for NLB via new field [`nlb.additional_listeners`](../docs/manifest/lb-web-service.en.md#nlb-additional-listeners).
-It is as easy as configuring your `nlb` field. Let's learn through an example.
+You can configure additional listeners for NLB with the new field [`nlb.additional_listeners`](../docs/manifest/lb-web-service.en.md#nlb-additional-listeners).
+Let's learn through an example.
 
 ```yaml
 name: 'frontend'
@@ -145,8 +144,8 @@ nlb:
   additional_listeners:
     - port: 8081/tcp
     - port: 8082/tcp
-      target_port: 8085               # Optional. Default is set to nlb port of the specific listener 
-      target_container: nginx         # Optional. Default is set to the main container
+      target_port: 8085               # Optional. Default is set 8082.
+      target_container: nginx         # Optional. Default is set to the main container.
 
 sidecars:
   nginx:
