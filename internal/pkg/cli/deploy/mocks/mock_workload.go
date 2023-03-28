@@ -76,10 +76,14 @@ func (m *MockrepositoryService) EXPECT() *MockrepositoryServiceMockRecorder {
 
 // BuildAndPush mocks base method.
 <<<<<<< HEAD
+<<<<<<< HEAD
 func (m *MockrepositoryService) BuildAndPush(args *dockerengine.BuildArguments) (string, error) {
 =======
 func (m *MockrepositoryService) BuildAndPush(docker repository.ContainerLoginBuildPusher, args *dockerengine.BuildArguments) (string, error) {
 >>>>>>> 25baff92 (perform login only once per repo)
+=======
+func (m *MockrepositoryService) BuildAndPush(args *dockerengine.BuildArguments) (string, error) {
+>>>>>>> 918aa4d8 (addr danny fb: move docckerCmdClient to repository struct)
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "BuildAndPush", args)
 	ret0, _ := ret[0].(string)
@@ -94,11 +98,21 @@ func (mr *MockrepositoryServiceMockRecorder) BuildAndPush(args interface{}) *gom
 }
 
 // Login mocks base method.
+<<<<<<< HEAD
 func (m *MockrepositoryService) Login() error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Login")
 	ret0, _ := ret[0].(error)
 	return ret0
+=======
+func (m *MockrepositoryService) Login() (string, string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Login")
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(string)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+>>>>>>> 918aa4d8 (addr danny fb: move docckerCmdClient to repository struct)
 }
 
 // Login indicates an expected call of Login.
