@@ -37,7 +37,7 @@ var defaultTransformers = []mergo.Transformers{
 	efsConfigOrBoolTransformer{},
 	efsVolumeConfigurationTransformer{},
 	sqsQueueOrBoolTransformer{},
-	HTTPOrBoolTransformer{},
+	httpOrBoolTransformer{},
 	secretTransformer{},
 	environmentCDNConfigTransformer{},
 }
@@ -513,10 +513,10 @@ func (q sqsQueueOrBoolTransformer) Transformer(typ reflect.Type) func(dst, src r
 	}
 }
 
-type HTTPOrBoolTransformer struct{}
+type httpOrBoolTransformer struct{}
 
 // Transformer returns custom merge logic for HTTPOrBool's fields.
-func (t HTTPOrBoolTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
+func (t httpOrBoolTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
 	if typ != reflect.TypeOf(HTTPOrBool{}) {
 		return nil
 	}
