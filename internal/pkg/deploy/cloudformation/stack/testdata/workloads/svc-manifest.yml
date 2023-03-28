@@ -68,6 +68,10 @@ environments:
         path: /
         grace_period: 30s
       deregistration_delay: 30s
+      additional_rules:
+        - path: "admin"
+          alias: "example.com"
+          target_port: 4001
   prod:
     count:
       range:
@@ -112,6 +116,15 @@ environments:
       path: '/'
       alias: example.com
       target_container: nginx
+      additional_rules:
+        - path: "admin"
+          target_container: nginx
+          target_port: 8081
+          alias: example.com
+        - path: "superadmin"
+          target_port: 4000
+          alias: example.com
+
     network:
       connect:
         alias: api

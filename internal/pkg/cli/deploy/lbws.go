@@ -114,7 +114,7 @@ func (lbWebSvcDeployer) IsServiceAvailableInRegion(region string) (bool, error) 
 
 // UploadArtifacts uploads the deployment artifacts such as the container image, custom resources, addons and env files.
 func (d *lbWebSvcDeployer) UploadArtifacts() (*UploadArtifactsOutput, error) {
-	return d.uploadArtifacts()
+	return d.uploadArtifacts(d.uploadContainerImages, d.uploadArtifactsToS3, d.uploadCustomResources)
 }
 
 // GenerateCloudFormationTemplate generates a CloudFormation template and parameters for a workload.
@@ -188,13 +188,27 @@ func (d *lbWebSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*s
 }
 
 func (d *lbWebSvcDeployer) validateALBRuntime() error {
+
+	if err := d.validateRuntimeRoutingRule(d.lbMft.HTTPOrBool.Main); err != nil {
+		return fmt.Errorf(`validate ALB runtime configuration for "http": %w`, err)
+	}
+
+	for idx, rule := range d.lbMft.HTTPOrBool.AdditionalRoutingRules {
+		if err := d.validateRuntimeRoutingRule(rule); err != nil {
+			return fmt.Errorf(`validate ALB runtime configuration for "http.additional_rule[%d]": %w`, idx, err)
+		}
+	}
+	return nil
+}
+
+func (d *lbWebSvcDeployer) validateRuntimeRoutingRule(rule manifest.RoutingRule) error {
 	hasALBCerts := len(d.envConfig.HTTPConfig.Public.Certificates) != 0
 	hasCDNCerts := d.envConfig.CDNConfig.Config.Certificate != nil
 	hasImportedCerts := hasALBCerts || hasCDNCerts
-	if d.lbMft.RoutingRule.RedirectToHTTPS != nil && d.app.Domain == "" && !hasImportedCerts {
+	if rule.RedirectToHTTPS != nil && d.app.Domain == "" && !hasImportedCerts {
 		return fmt.Errorf("cannot configure http to https redirect without having a domain associated with the app %q or importing any certificates in env %q", d.app.Name, d.env.Name)
 	}
-	if d.lbMft.RoutingRule.Alias.IsEmpty() {
+	if rule.Alias.IsEmpty() {
 		if hasImportedCerts {
 			return &errSvcWithNoALBAliasDeployingToEnvWithImportedCerts{
 				name:    d.name,
@@ -203,7 +217,7 @@ func (d *lbWebSvcDeployer) validateALBRuntime() error {
 		}
 		return nil
 	}
-	importedHostedZones := d.lbMft.RoutingRule.Alias.HostedZones()
+	importedHostedZones := rule.Alias.HostedZones()
 	if len(importedHostedZones) != 0 {
 		if !hasImportedCerts {
 			return fmt.Errorf("cannot specify alias hosted zones %v when no certificates are imported in environment %q", importedHostedZones, d.env.Name)
@@ -215,7 +229,7 @@ func (d *lbWebSvcDeployer) validateALBRuntime() error {
 		}
 	}
 	if hasImportedCerts {
-		aliases, err := d.lbMft.RoutingRule.Alias.ToStringSlice()
+		aliases, err := rule.Alias.ToStringSlice()
 		if err != nil {
 			return fmt.Errorf("convert aliases to string slice: %w", err)
 		}
@@ -239,10 +253,13 @@ func (d *lbWebSvcDeployer) validateALBRuntime() error {
 			logAppVersionOutdatedError(aws.StringValue(d.lbMft.Name))
 			return err
 		}
-		return validateLBWSAlias(d.lbMft.RoutingRule.Alias, d.app, d.env.Name)
+		if err := validateLBWSAlias(rule.Alias, d.app, d.env.Name); err != nil {
+			return fmt.Errorf(`validate 'alias': %w`, err)
+		}
+		return nil
 	}
 	log.Errorf(ecsALBAliasUsedWithoutDomainFriendlyText)
-	return fmt.Errorf("cannot specify http.alias when application is not associated with a domain and env %s doesn't import one or more certificates", d.env.Name)
+	return fmt.Errorf(`cannot specify "alias" when application is not associated with a domain and env %s doesn't import one or more certificates`, d.env.Name)
 }
 
 func (d *lbWebSvcDeployer) validateNLBRuntime() error {
@@ -262,7 +279,10 @@ func (d *lbWebSvcDeployer) validateNLBRuntime() error {
 		logAppVersionOutdatedError(aws.StringValue(d.lbMft.Name))
 		return err
 	}
-	return validateLBWSAlias(d.lbMft.NLBConfig.Aliases, d.app, d.env.Name)
+	if err := validateLBWSAlias(d.lbMft.NLBConfig.Aliases, d.app, d.env.Name); err != nil {
+		return fmt.Errorf(`validate 'nlb.alias': %w`, err)
+	}
+	return nil
 }
 
 func validateLBWSAlias(aliases manifest.Alias, app *config.Application, envName string) error {
@@ -271,7 +291,7 @@ func validateLBWSAlias(aliases manifest.Alias, app *config.Application, envName 
 	}
 	aliasList, err := aliases.ToStringSlice()
 	if err != nil {
-		return fmt.Errorf(`convert 'http.alias' to string slice: %w`, err)
+		return err
 	}
 	for _, alias := range aliasList {
 		// Alias should be within either env, app, or root hosted zone.

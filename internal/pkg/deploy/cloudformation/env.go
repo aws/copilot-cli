@@ -97,12 +97,6 @@ func (cf CloudFormation) GetEnvironment(appName, envName string) (*config.Enviro
 	return conf.ToEnvMetadata(descr.SDK())
 }
 
-// EnvironmentTemplate returns the environment stack's template.
-func (cf CloudFormation) EnvironmentTemplate(appName, envName string) (string, error) {
-	stackName := stack.NameForEnv(appName, envName)
-	return cf.cfnClient.TemplateBody(stackName)
-}
-
 // ForceUpdateOutputID returns the environment stack's last force update ID.
 func (cf CloudFormation) ForceUpdateOutputID(app, env string) (string, error) {
 	stackDescr, err := cf.cachedStack(stack.NameForEnv(app, env))

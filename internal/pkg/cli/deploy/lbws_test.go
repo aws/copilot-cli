@@ -106,9 +106,11 @@ func mockLoadBalancedWebServiceDeployer(opts ...func(deployer *lbWebSvcDeployer)
 						Port: aws.Uint16(80),
 					},
 				},
-				RoutingRule: manifest.RoutingRuleConfigOrBool{
-					RoutingRuleConfiguration: manifest.RoutingRuleConfiguration{
-						Path: aws.String("/"),
+				HTTPOrBool: manifest.HTTPOrBool{
+					HTTP: manifest.HTTP{
+						Main: manifest.RoutingRule{
+							Path: aws.String("/"),
+						},
 					},
 				},
 			},

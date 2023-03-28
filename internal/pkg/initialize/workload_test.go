@@ -246,6 +246,7 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 		inSvcName        string
 		inDockerfilePath string
 		inAppName        string
+		inAppDomain      string
 		mockstore        func(m *mocks.MockStore)
 
 		wantedErr  error
@@ -280,7 +281,7 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 
 			wantedPath: "/",
 		},
-		"creates manifest with / as the path when it's the only LBWebApp": {
+		"creates manifest with / as the path when it's the only LBWebService": {
 			inAppName:        "app",
 			inSvcName:        "frontend",
 			inSvcPort:        80,
@@ -297,7 +298,7 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 
 			wantedPath: "/",
 		},
-		"creates manifest with {app name} as the path if there's another LBWebApp": {
+		"creates manifest with {service name} as the path if there's another LBWebService": {
 			inAppName:        "app",
 			inSvcName:        "frontend",
 			inSvcPort:        80,
@@ -306,13 +307,31 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 			mockstore: func(m *mocks.MockStore) {
 				m.EXPECT().ListServices("app").Return([]*config.Workload{
 					{
-						Name: "another-app",
+						Name: "admin",
 						Type: manifestinfo.LoadBalancedWebServiceType,
 					},
 				}, nil)
 			},
 
 			wantedPath: "frontend",
+		},
+		"creates manifest with root path if the application is initialized with a domain": {
+			inAppName:        "app",
+			inSvcName:        "frontend",
+			inSvcPort:        80,
+			inDockerfilePath: "/Dockerfile",
+			inAppDomain:      "example.com",
+
+			mockstore: func(m *mocks.MockStore) {
+				m.EXPECT().ListServices("app").Return([]*config.Workload{
+					{
+						Name: "admin",
+						Type: manifestinfo.LoadBalancedWebServiceType,
+					},
+				}, nil)
+			},
+
+			wantedPath: "/",
 		},
 	}
 
@@ -333,7 +352,8 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 					App:            tc.inAppName,
 					DockerfilePath: tc.inDockerfilePath,
 				},
-				Port: tc.inSvcPort,
+				Port:      tc.inSvcPort,
+				appDomain: &tc.inAppDomain,
 			}
 
 			initter := &WorkloadInitializer{
@@ -349,7 +369,7 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 				require.Equal(t, tc.inSvcName, aws.StringValue(manifest.Workload.Name))
 				require.Equal(t, tc.inSvcPort, aws.Uint16Value(manifest.ImageConfig.Port))
 				require.Contains(t, tc.inDockerfilePath, aws.StringValue(manifest.ImageConfig.Image.Build.BuildArgs.Dockerfile))
-				require.Equal(t, tc.wantedPath, aws.StringValue(manifest.RoutingRule.Path))
+				require.Equal(t, tc.wantedPath, aws.StringValue(manifest.HTTPOrBool.Main.Path))
 			} else {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			}

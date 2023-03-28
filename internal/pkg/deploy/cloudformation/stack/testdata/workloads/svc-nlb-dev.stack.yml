@@ -107,6 +107,8 @@ Resources: # If a bucket URL is specified, that means the template exists.
               Name: target
             - ContainerPort: 81
               Protocol: tcp
+            - ContainerPort: 8085
+              Protocol: tcp
   ExecutionRole:
     Metadata:
       'aws:copilot:description': 'An IAM Role for the Fargate agent to make AWS API calls on your behalf'
@@ -292,6 +294,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
       - HTTPListenerRuleWithDomain
       - HTTPSListenerRule
       - NLBListener
+      - NLBListener1
     Properties:
       PlatformVersion: LATEST
       Cluster:
@@ -335,12 +338,15 @@ Resources: # If a bucket URL is specified, that means the template exists.
         - ContainerName: fe
           ContainerPort: 81
           TargetGroupArn: !Ref NLBTargetGroup
+        - ContainerName: fe
+          ContainerPort: 8085
+          TargetGroupArn: !Ref NLBTargetGroup1
       ServiceRegistries:
         - RegistryArn: !GetAtt DiscoveryService.Arn
           Port: !Ref TargetPort
   TargetGroup:
     Metadata:
-      'aws:copilot:description': 'A target group to connect the load balancer to your service'
+      'aws:copilot:description': 'A target group to connect the load balancer to your service on port 80'
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
       HealthCheckPath: / # Default is '/'.
@@ -429,7 +435,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
   
   HTTPListenerRuleWithDomain:
     Metadata:
-      'aws:copilot:description': 'An HTTP listener rule that redirects HTTP to HTTPS'
+      'aws:copilot:description': 'An HTTP listener rule for path `/` that redirects HTTP to HTTPS'
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
     Properties:
       Actions:
@@ -457,7 +463,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
       Priority: !GetAtt HTTPRuleWithDomainPriorityAction.Priority
   HTTPSListenerRule:
     Metadata:
-      'aws:copilot:description': 'An HTTPS listener rule for forwarding HTTPS traffic to your tasks'
+      'aws:copilot:description': 'An HTTPS listener rule for path `/` that forwards HTTPS traffic to your tasks'
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
     Properties:
       Actions:
@@ -489,6 +495,8 @@ Resources: # If a bucket URL is specified, that means the template exists.
           - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PublicSubnets'
       Type: network
   NLBListener:
+    Metadata:
+      'aws:copilot:description': 'A TCP listener on port `81` that forwards traffic to your tasks'
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
       DefaultActions:
@@ -497,12 +505,36 @@ Resources: # If a bucket URL is specified, that means the template exists.
       LoadBalancerArn: !Ref PublicNetworkLoadBalancer
       Port: 81
       Protocol: TCP
+  NLBListener1:
+    Metadata:
+      'aws:copilot:description': 'A TCP listener on port `8082` that forwards traffic to your tasks'
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - TargetGroupArn: !Ref NLBTargetGroup1
+          Type: forward
+      LoadBalancerArn: !Ref PublicNetworkLoadBalancer
+      Port: 8082
+      Protocol: TCP
   NLBTargetGroup:
     Metadata:
-      'aws:copilot:description': 'A target group to connect the network load balancer to your service'
+      'aws:copilot:description': 'A target group to connect the network load balancer to your service on port 81'
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
       Port: 81
+      Protocol: TCP
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: 60 # ECS Default is 300; Copilot default is 60.
+      TargetType: ip
+      VpcId:
+        Fn::ImportValue: !Sub "${AppName}-${EnvName}-VpcId"
+  NLBTargetGroup1:
+    Metadata:
+      'aws:copilot:description': 'A target group to connect the network load balancer to your service on port 8085'
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Port: 8085
       Protocol: TCP
       TargetGroupAttributes:
         - Key: deregistration_delay.timeout_seconds
@@ -522,11 +554,21 @@ Resources: # If a bucket URL is specified, that means the template exists.
           FromPort: 81
           IpProtocol: TCP
           ToPort: 81
+        - CidrIp: 10.0.0.0/24
+          Description: Ingress to allow access from Network Load Balancer subnet
+          FromPort: 8085
+          IpProtocol: TCP
+          ToPort: 8085
         - CidrIp: 10.1.0.0/24
           Description: Ingress to allow access from Network Load Balancer subnet
           FromPort: 81
           IpProtocol: TCP
           ToPort: 81
+        - CidrIp: 10.1.0.0/24
+          Description: Ingress to allow access from Network Load Balancer subnet
+          FromPort: 8085
+          IpProtocol: TCP
+          ToPort: 8085
       Tags:
         - Key: Name
           Value: !Sub 'copilot-${AppName}-${EnvName}-${WorkloadName}-nlb'

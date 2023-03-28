@@ -211,8 +211,10 @@ func TestBackendService_RequiredEnvironmentFeatures(t *testing.T) {
 		},
 		"internal alb feature required": {
 			mft: func(svc *BackendService) {
-				svc.RoutingRule = RoutingRuleConfiguration{
-					Path: aws.String("/mock_path"),
+				svc.HTTP = HTTP{
+					Main: RoutingRule{
+						Path: aws.String("/mock_path"),
+					},
 				}
 			},
 			wanted: []string{template.InternalALBFeatureName},
@@ -1009,8 +1011,10 @@ func TestBackendService_ExposedPorts(t *testing.T) {
 				},
 				BackendServiceConfig: BackendServiceConfig{
 					ImageConfig: ImageWithHealthcheckAndOptionalPort{},
-					RoutingRule: RoutingRuleConfiguration{
-						TargetPort: aws.Uint16(81),
+					HTTP: HTTP{
+						Main: RoutingRule{
+							TargetPort: aws.Uint16(81),
+						},
 					},
 					Sidecars: map[string]*SidecarConfig{
 						"xray": {
@@ -1033,9 +1037,10 @@ func TestBackendService_ExposedPorts(t *testing.T) {
 				},
 				"xray": {
 					{
-						Port:          2000,
-						ContainerName: "xray",
-						Protocol:      "tcp",
+						Port:                 2000,
+						ContainerName:        "xray",
+						Protocol:             "tcp",
+						isDefinedByContainer: true,
 					},
 				},
 			},
@@ -1051,9 +1056,10 @@ func TestBackendService_ExposedPorts(t *testing.T) {
 							Port: aws.Uint16(80),
 						},
 					},
-					RoutingRule: RoutingRuleConfiguration{
-						//TargetContainer: aws.String("xray"),
-						TargetPort: aws.Uint16(81),
+					HTTP: HTTP{
+						Main: RoutingRule{
+							TargetPort: aws.Uint16(81),
+						},
 					},
 					Sidecars: map[string]*SidecarConfig{
 						"xray": {
@@ -1069,9 +1075,10 @@ func TestBackendService_ExposedPorts(t *testing.T) {
 			wantedExposedPorts: map[string][]ExposedPort{
 				"frontend": {
 					{
-						Port:          80,
-						ContainerName: "frontend",
-						Protocol:      "tcp",
+						Port:                 80,
+						ContainerName:        "frontend",
+						Protocol:             "tcp",
+						isDefinedByContainer: true,
 					},
 					{
 						Port:          81,
@@ -1081,9 +1088,10 @@ func TestBackendService_ExposedPorts(t *testing.T) {
 				},
 				"xray": {
 					{
-						Port:          2000,
-						ContainerName: "xray",
-						Protocol:      "tcp",
+						Port:                 2000,
+						ContainerName:        "xray",
+						Protocol:             "tcp",
+						isDefinedByContainer: true,
 					},
 				},
 			},
@@ -1099,9 +1107,11 @@ func TestBackendService_ExposedPorts(t *testing.T) {
 							Port: aws.Uint16(80),
 						},
 					},
-					RoutingRule: RoutingRuleConfiguration{
-						TargetContainer: aws.String("frontend"),
-						TargetPort:      aws.Uint16(81),
+					HTTP: HTTP{
+						Main: RoutingRule{
+							TargetContainer: aws.String("frontend"),
+							TargetPort:      aws.Uint16(81),
+						},
 					},
 					Sidecars: map[string]*SidecarConfig{
 						"xray": {
@@ -1117,9 +1127,10 @@ func TestBackendService_ExposedPorts(t *testing.T) {
 			wantedExposedPorts: map[string][]ExposedPort{
 				"frontend": {
 					{
-						Port:          80,
-						ContainerName: "frontend",
-						Protocol:      "tcp",
+						Port:                 80,
+						ContainerName:        "frontend",
+						Protocol:             "tcp",
+						isDefinedByContainer: true,
 					},
 					{
 						Port:          81,
@@ -1129,9 +1140,10 @@ func TestBackendService_ExposedPorts(t *testing.T) {
 				},
 				"xray": {
 					{
-						Port:          2000,
-						ContainerName: "xray",
-						Protocol:      "tcp",
+						Port:                 2000,
+						ContainerName:        "xray",
+						Protocol:             "tcp",
+						isDefinedByContainer: true,
 					},
 				},
 			},
@@ -1147,9 +1159,11 @@ func TestBackendService_ExposedPorts(t *testing.T) {
 							Port: aws.Uint16(80),
 						},
 					},
-					RoutingRule: RoutingRuleConfiguration{
-						TargetContainer: aws.String("xray"),
-						TargetPort:      aws.Uint16(81),
+					HTTP: HTTP{
+						Main: RoutingRule{
+							TargetContainer: aws.String("xray"),
+							TargetPort:      aws.Uint16(81),
+						},
 					},
 					Sidecars: map[string]*SidecarConfig{
 						"xray": {
@@ -1167,9 +1181,10 @@ func TestBackendService_ExposedPorts(t *testing.T) {
 			wantedExposedPorts: map[string][]ExposedPort{
 				"frontend": {
 					{
-						Port:          80,
-						ContainerName: "frontend",
-						Protocol:      "tcp",
+						Port:                 80,
+						ContainerName:        "frontend",
+						Protocol:             "tcp",
+						isDefinedByContainer: true,
 					},
 				},
 				"xray": {

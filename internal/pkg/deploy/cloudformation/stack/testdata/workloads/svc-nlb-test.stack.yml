@@ -100,6 +100,8 @@ Resources: # If a bucket URL is specified, that means the template exists.
               Protocol: tcp
             - ContainerPort: 443
               Protocol: tcp
+            - ContainerPort: 8081
+              Protocol: tcp
   ExecutionRole:
     Metadata:
       'aws:copilot:description': 'An IAM Role for the Fargate agent to make AWS API calls on your behalf'
@@ -283,6 +285,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Type: AWS::ECS::Service
     DependsOn:
       - NLBListener
+      - NLBListener1
     Properties:
       PlatformVersion: LATEST
       Cluster:
@@ -333,6 +336,9 @@ Resources: # If a bucket URL is specified, that means the template exists.
         - ContainerName: fe
           ContainerPort: 443
           TargetGroupArn: !Ref NLBTargetGroup
+        - ContainerName: fe
+          ContainerPort: 8081
+          TargetGroupArn: !Ref NLBTargetGroup1
       ServiceRegistries:
         - RegistryArn: !GetAtt DiscoveryService.Arn
           Port: !Ref TargetPort
@@ -348,6 +354,8 @@ Resources: # If a bucket URL is specified, that means the template exists.
           - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PublicSubnets'
       Type: network
   NLBListener:
+    Metadata:
+      'aws:copilot:description': 'A TLS listener on port `443` that forwards traffic to your tasks'
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
       DefaultActions:
@@ -359,13 +367,37 @@ Resources: # If a bucket URL is specified, that means the template exists.
       Certificates:
         - CertificateArn: !Ref NLBCertValidatorAction
       SslPolicy: ELBSecurityPolicy-TLS13-1-2-2021-06
+  NLBListener1:
+    Metadata:
+      'aws:copilot:description': 'A TCP listener on port `8081` that forwards traffic to your tasks'
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - TargetGroupArn: !Ref NLBTargetGroup1
+          Type: forward
+      LoadBalancerArn: !Ref PublicNetworkLoadBalancer
+      Port: 8081
+      Protocol: TCP
   NLBTargetGroup:
     Metadata:
-      'aws:copilot:description': 'A target group to connect the network load balancer to your service'
+      'aws:copilot:description': 'A target group to connect the network load balancer to your service on port 443'
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
       HealthCheckPort: 80
       Port: 443
+      Protocol: TCP
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: 60 # ECS Default is 300; Copilot default is 60.
+      TargetType: ip
+      VpcId:
+        Fn::ImportValue: !Sub "${AppName}-${EnvName}-VpcId"
+  NLBTargetGroup1:
+    Metadata:
+      'aws:copilot:description': 'A target group to connect the network load balancer to your service on port 8081'
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Port: 8081
       Protocol: TCP
       TargetGroupAttributes:
         - Key: deregistration_delay.timeout_seconds
@@ -390,6 +422,11 @@ Resources: # If a bucket URL is specified, that means the template exists.
           FromPort: 80
           ToPort: 80
           IpProtocol: TCP
+        - CidrIp: 10.0.0.0/24
+          Description: Ingress to allow access from Network Load Balancer subnet
+          FromPort: 8081
+          IpProtocol: TCP
+          ToPort: 8081
         - CidrIp: 10.1.0.0/24
           Description: Ingress to allow access from Network Load Balancer subnet
           FromPort: 443
@@ -399,6 +436,11 @@ Resources: # If a bucket URL is specified, that means the template exists.
           Description: Ingress to allow access from Network Load Balancer subnet for health check
           FromPort: 80
           ToPort: 80
+          IpProtocol: TCP
+        - CidrIp: 10.1.0.0/24
+          Description: Ingress to allow access from Network Load Balancer subnet
+          FromPort: 8081
+          ToPort: 8081
           IpProtocol: TCP
       Tags:
         - Key: Name

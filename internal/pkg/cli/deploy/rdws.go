@@ -79,7 +79,7 @@ func (rdwsDeployer) IsServiceAvailableInRegion(region string) (bool, error) {
 
 // UploadArtifacts uploads the deployment artifacts such as the container image, custom resources, addons and env files.
 func (d *rdwsDeployer) UploadArtifacts() (*UploadArtifactsOutput, error) {
-	return d.uploadArtifacts()
+	return d.uploadArtifacts(d.uploadContainerImages, d.uploadArtifactsToS3, d.uploadCustomResources)
 }
 
 type rdwsDeployOutput struct {
@@ -176,7 +176,7 @@ func (d *rdwsDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*rdwsS
 	}
 	return &rdwsStackConfigurationOutput{
 		svcStackConfigurationOutput: svcStackConfigurationOutput{
-			conf: conf,
+			conf: cloudformation.WrapWithTemplateOverrider(conf, d.overrider),
 			svcUpdater: d.newSvcUpdater(func(s *session.Session) serviceForceUpdater {
 				return apprunner.New(s)
 			}),

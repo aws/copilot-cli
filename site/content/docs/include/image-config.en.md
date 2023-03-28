@@ -1,8 +1,3 @@
-<div class="separator"></div>
-
-<a id="image" href="#image" class="field">`image`</a> <span class="type">Map</span>  
-The image section contains parameters relating to the Docker build configuration and exposed port.
-
 <span class="parent-field">image.</span><a id="image-build" href="#image-build" class="field">`build`</a> <span class="type">String or Map</span>  
 Build a container from a Dockerfile with optional arguments. Mutually exclusive with [`image.location`](#image-location).
 

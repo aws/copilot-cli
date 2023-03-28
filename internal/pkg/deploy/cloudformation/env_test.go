@@ -16,38 +16,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestCloudFormation_EnvironmentTemplate(t *testing.T) {
-	testCases := map[string]struct {
-		inAppName string
-		inEnvName string
-		inClient  func(ctrl *gomock.Controller) *mocks.MockcfnClient
-	}{
-		"calls TemplateBody": {
-			inAppName: "phonetool",
-			inEnvName: "test",
-			inClient: func(ctrl *gomock.Controller) *mocks.MockcfnClient {
-				m := mocks.NewMockcfnClient(ctrl)
-				m.EXPECT().TemplateBody("phonetool-test").Return("", nil)
-				return m
-			},
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-			cf := &CloudFormation{
-				cfnClient: tc.inClient(ctrl),
-			}
-
-			// WHEN
-			cf.EnvironmentTemplate(tc.inAppName, tc.inEnvName)
-		})
-	}
-}
-
 func TestCloudFormation_DeployedEnvironmentParameters(t *testing.T) {
 	testCases := map[string]struct {
 		inAppName string

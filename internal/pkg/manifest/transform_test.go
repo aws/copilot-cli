@@ -1178,37 +1178,43 @@ func TestSQSQueueOrBoolTransformer_Transformer(t *testing.T) {
 	}
 }
 
-func TestRoutingRuleConfigOrBoolTransformer_Transformer(t *testing.T) {
+func TestHTTPOrBoolTransformer_Transformer(t *testing.T) {
 	testCases := map[string]struct {
-		original func(r *RoutingRuleConfigOrBool)
-		override func(r *RoutingRuleConfigOrBool)
-		wanted   func(r *RoutingRuleConfigOrBool)
+		original func(r *HTTPOrBool)
+		override func(r *HTTPOrBool)
+		wanted   func(r *HTTPOrBool)
 	}{
 		"bool set to empty if config is not nil": {
-			original: func(r *RoutingRuleConfigOrBool) {
+			original: func(r *HTTPOrBool) {
 				r.Enabled = aws.Bool(true)
 			},
-			override: func(r *RoutingRuleConfigOrBool) {
-				r.RoutingRuleConfiguration = RoutingRuleConfiguration{
-					Path: aws.String("mockPath"),
+			override: func(r *HTTPOrBool) {
+				r.HTTP = HTTP{
+					Main: RoutingRule{
+						Path: aws.String("mockPath"),
+					},
 				}
 			},
-			wanted: func(r *RoutingRuleConfigOrBool) {
-				r.RoutingRuleConfiguration = RoutingRuleConfiguration{
-					Path: aws.String("mockPath"),
+			wanted: func(r *HTTPOrBool) {
+				r.HTTP = HTTP{
+					Main: RoutingRule{
+						Path: aws.String("mockPath"),
+					},
 				}
 			},
 		},
 		"config set to empty if bool is not nil": {
-			original: func(r *RoutingRuleConfigOrBool) {
-				r.RoutingRuleConfiguration = RoutingRuleConfiguration{
-					Path: aws.String("mockPath"),
+			original: func(r *HTTPOrBool) {
+				r.HTTP = HTTP{
+					Main: RoutingRule{
+						Path: aws.String("mockPath"),
+					},
 				}
 			},
-			override: func(r *RoutingRuleConfigOrBool) {
+			override: func(r *HTTPOrBool) {
 				r.Enabled = aws.Bool(false)
 			},
-			wanted: func(r *RoutingRuleConfigOrBool) {
+			wanted: func(r *HTTPOrBool) {
 				r.Enabled = aws.Bool(false)
 			},
 		},
@@ -1216,7 +1222,7 @@ func TestRoutingRuleConfigOrBoolTransformer_Transformer(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			var dst, override, wanted RoutingRuleConfigOrBool
+			var dst, override, wanted HTTPOrBool
 
 			tc.original(&dst)
 			tc.override(&override)
@@ -1227,7 +1233,7 @@ func TestRoutingRuleConfigOrBoolTransformer_Transformer(t *testing.T) {
 			require.NoError(t, err)
 
 			// Use custom transformer.
-			err = mergo.Merge(&dst, override, mergo.WithOverride, mergo.WithTransformers(routingRuleConfigOrBoolTransformer{}))
+			err = mergo.Merge(&dst, override, mergo.WithOverride, mergo.WithTransformers(HTTPOrBoolTransformer{}))
 			require.NoError(t, err)
 
 			require.NoError(t, err)

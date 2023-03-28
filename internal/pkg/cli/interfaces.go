@@ -358,7 +358,7 @@ type environmentDeployer interface {
 	CreateAndRenderEnvironment(conf cloudformation.StackConfiguration, bucketARN string) error
 	DeleteEnvironment(appName, envName, cfnExecRoleARN string) error
 	GetEnvironment(appName, envName string) (*config.Environment, error)
-	EnvironmentTemplate(appName, envName string) (string, error)
+	Template(stackName string) (string, error)
 	UpdateEnvironmentTemplate(appName, envName, templateBody, cfnExecRoleARN string) error
 }
 
@@ -659,8 +659,15 @@ type interpolator interface {
 
 type workloadDeployer interface {
 	UploadArtifacts() (*clideploy.UploadArtifactsOutput, error)
+	GenerateCloudFormationTemplate(in *clideploy.GenerateCloudFormationTemplateInput) (
+		*clideploy.GenerateCloudFormationTemplateOutput, error)
 	DeployWorkload(in *clideploy.DeployWorkloadInput) (clideploy.ActionRecommender, error)
 	IsServiceAvailableInRegion(region string) (bool, error)
+	templateDiffer
+}
+
+type templateDiffer interface {
+	DeployDiff(inTmpl string) (string, error)
 }
 
 type workloadStackGenerator interface {
@@ -668,6 +675,7 @@ type workloadStackGenerator interface {
 	GenerateCloudFormationTemplate(in *clideploy.GenerateCloudFormationTemplateInput) (
 		*clideploy.GenerateCloudFormationTemplateOutput, error)
 	AddonsTemplate() (string, error)
+	templateDiffer
 }
 
 type runner interface {
@@ -678,6 +686,9 @@ type envDeployer interface {
 	DeployEnvironment(in *clideploy.DeployEnvironmentInput) error
 	Validate(*manifest.Environment) error
 	UploadArtifacts() (*clideploy.UploadEnvArtifactsOutput, error)
+	GenerateCloudFormationTemplate(in *clideploy.DeployEnvironmentInput) (
+		*clideploy.GenerateCloudFormationTemplateOutput, error)
+	templateDiffer
 }
 
 type envPackager interface {
@@ -685,4 +696,5 @@ type envPackager interface {
 	Validate(*manifest.Environment) error
 	UploadArtifacts() (*clideploy.UploadEnvArtifactsOutput, error)
 	AddonsTemplate() (string, error)
+	templateDiffer
 }

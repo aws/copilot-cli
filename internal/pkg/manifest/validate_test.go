@@ -52,9 +52,11 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 			lbConfig: LoadBalancedWebService{
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					ImageConfig: testImageConfig,
-					RoutingRule: RoutingRuleConfigOrBool{
-						RoutingRuleConfiguration: RoutingRuleConfiguration{
-							TargetContainer:          aws.String("mockTargetContainer"),
+					HTTPOrBool: HTTPOrBool{
+						HTTP: HTTP{
+							Main: RoutingRule{
+								TargetContainer: aws.String("mockTargetContainer"),
+							},
 							TargetContainerCamelCase: aws.String("mockTargetContainer"),
 						},
 					},
@@ -73,9 +75,11 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 							},
 						},
 					},
-					RoutingRule: RoutingRuleConfigOrBool{
-						RoutingRuleConfiguration: RoutingRuleConfiguration{
-							Path: stringP("/"),
+					HTTPOrBool: HTTPOrBool{
+						HTTP: HTTP{
+							Main: RoutingRule{
+								Path: stringP("/"),
+							},
 						},
 					},
 				},
@@ -93,9 +97,11 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 							},
 						},
 					},
-					RoutingRule: RoutingRuleConfigOrBool{
-						RoutingRuleConfiguration: RoutingRuleConfiguration{
-							Path: stringP("/"),
+					HTTPOrBool: HTTPOrBool{
+						HTTP: HTTP{
+							Main: RoutingRule{
+								Path: stringP("/"),
+							},
 						},
 					},
 				},
@@ -111,9 +117,11 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 							{},
 						},
 					},
-					RoutingRule: RoutingRuleConfigOrBool{
-						RoutingRuleConfiguration: RoutingRuleConfiguration{
-							Path: stringP("/"),
+					HTTPOrBool: HTTPOrBool{
+						HTTP: HTTP{
+							Main: RoutingRule{
+								Path: stringP("/"),
+							},
 						},
 					},
 				},
@@ -129,9 +137,11 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 							Path: "Family",
 						},
 					},
-					RoutingRule: RoutingRuleConfigOrBool{
-						RoutingRuleConfiguration: RoutingRuleConfiguration{
-							Path: stringP("/"),
+					HTTPOrBool: HTTPOrBool{
+						HTTP: HTTP{
+							Main: RoutingRule{
+								Path: stringP("/"),
+							},
 						},
 					},
 				},
@@ -142,9 +152,11 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 			lbConfig: LoadBalancedWebService{
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					ImageConfig: testImageConfig,
-					RoutingRule: RoutingRuleConfigOrBool{
-						RoutingRuleConfiguration: RoutingRuleConfiguration{
-							Path: stringP("/"),
+					HTTPOrBool: HTTPOrBool{
+						HTTP: HTTP{
+							Main: RoutingRule{
+								Path: stringP("/"),
+							},
 						},
 					},
 				},
@@ -156,34 +168,69 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 				Workload: Workload{Name: aws.String("mockName")},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					ImageConfig: testImageConfig,
-					RoutingRule: RoutingRuleConfigOrBool{
-						RoutingRuleConfiguration: RoutingRuleConfiguration{
-							Path:            stringP("/"),
-							TargetContainer: aws.String("foo"),
+					HTTPOrBool: HTTPOrBool{
+						HTTP: HTTP{
+							Main: RoutingRule{
+								Path:            stringP("/"),
+								TargetContainer: aws.String("foo"),
+							},
 						},
 					},
 				},
 			},
-			wantedErrorMsgPrefix: `validate HTTP load balancer target: `,
+			wantedErrorMsgPrefix: `validate load balancer target for "http":`,
 		},
 		"error if fail to validate network load balancer target": {
 			lbConfig: LoadBalancedWebService{
 				Workload: Workload{Name: aws.String("mockName")},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					ImageConfig: testImageConfig,
-					RoutingRule: RoutingRuleConfigOrBool{
-						RoutingRuleConfiguration: RoutingRuleConfiguration{
-							Path:            stringP("/"),
-							TargetContainer: aws.String("mockName"),
+					HTTPOrBool: HTTPOrBool{
+						HTTP: HTTP{
+							Main: RoutingRule{
+								Path:            stringP("/"),
+								TargetContainer: aws.String("mockName"),
+							},
 						},
 					},
 					NLBConfig: NetworkLoadBalancerConfiguration{
-						Port:            aws.String("443"),
-						TargetContainer: aws.String("foo"),
+						Listener: NetworkLoadBalancerListener{
+							Port:            aws.String("443"),
+							TargetContainer: aws.String("foo"),
+						},
 					},
 				},
 			},
-			wantedErrorMsgPrefix: `validate network load balancer target: `,
+			wantedErrorMsgPrefix: `validate target for "nlb": `,
+		},
+		"error if fail to validate network load balancer target for additional listener": {
+			lbConfig: LoadBalancedWebService{
+				Workload: Workload{Name: aws.String("mockName")},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: testImageConfig,
+					HTTPOrBool: HTTPOrBool{
+						HTTP: HTTP{
+							Main: RoutingRule{
+								Path:            stringP("/"),
+								TargetContainer: aws.String("mockName"),
+							},
+						},
+					},
+					NLBConfig: NetworkLoadBalancerConfiguration{
+						Listener: NetworkLoadBalancerListener{
+							Port:            aws.String("443"),
+							TargetContainer: aws.String("mockName"),
+						},
+						AdditionalListeners: []NetworkLoadBalancerListener{
+							{
+								Port:            aws.String("444"),
+								TargetContainer: aws.String("foo"),
+							},
+						},
+					},
+				},
+			},
+			wantedErrorMsgPrefix: `validate target for "nlb.additional_listeners[0]": `,
 		},
 		"error if fail to validate dependencies": {
 			lbConfig: LoadBalancedWebService{
@@ -200,9 +247,11 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 							Essential: aws.Bool(false),
 						},
 					},
-					RoutingRule: RoutingRuleConfigOrBool{
-						RoutingRuleConfiguration: RoutingRuleConfiguration{
-							Path: stringP("/"),
+					HTTPOrBool: HTTPOrBool{
+						HTTP: HTTP{
+							Main: RoutingRule{
+								Path: stringP("/"),
+							},
 						},
 					},
 				},
@@ -228,9 +277,11 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 						},
 						},
 					},
-					RoutingRule: RoutingRuleConfigOrBool{
-						RoutingRuleConfiguration: RoutingRuleConfiguration{
-							Path: stringP("/"),
+					HTTPOrBool: HTTPOrBool{
+						HTTP: HTTP{
+							Main: RoutingRule{
+								Path: stringP("/"),
+							},
 						},
 					},
 				},
@@ -253,9 +304,11 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 							},
 						},
 					},
-					RoutingRule: RoutingRuleConfigOrBool{
-						RoutingRuleConfiguration: RoutingRuleConfiguration{
-							Path: stringP("/"),
+					HTTPOrBool: HTTPOrBool{
+						HTTP: HTTP{
+							Main: RoutingRule{
+								Path: stringP("/"),
+							},
 						},
 					},
 				},
@@ -269,7 +322,7 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					ImageConfig: testImageConfig,
-					RoutingRule: RoutingRuleConfigOrBool{
+					HTTPOrBool: HTTPOrBool{
 						Enabled: aws.Bool(false),
 					},
 				},
@@ -291,11 +344,13 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 							},
 						},
 					},
-					RoutingRule: RoutingRuleConfigOrBool{
+					HTTPOrBool: HTTPOrBool{
 						Enabled: aws.Bool(false),
 					},
 					NLBConfig: NetworkLoadBalancerConfiguration{
-						Port: aws.String("80"),
+						Listener: NetworkLoadBalancerListener{
+							Port: aws.String("80"),
+						},
 					},
 				},
 			},
@@ -316,11 +371,13 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 							},
 						},
 					},
-					RoutingRule: RoutingRuleConfigOrBool{
+					HTTPOrBool: HTTPOrBool{
 						Enabled: aws.Bool(false),
 					},
 					NLBConfig: NetworkLoadBalancerConfiguration{
-						Port: aws.String("80"),
+						Listener: NetworkLoadBalancerListener{
+							Port: aws.String("80"),
+						},
 					},
 				},
 			},
@@ -333,9 +390,11 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					ImageConfig: testImageConfig,
-					RoutingRule: RoutingRuleConfigOrBool{
-						RoutingRuleConfiguration: RoutingRuleConfiguration{
-							Path: stringP("/"),
+					HTTPOrBool: HTTPOrBool{
+						HTTP: HTTP{
+							Main: RoutingRule{
+								Path: stringP("/"),
+							},
 						},
 					},
 					DeployConfig: DeploymentConfig{
@@ -551,8 +610,10 @@ func TestBackendService_validate(t *testing.T) {
 			config: BackendService{
 				BackendServiceConfig: BackendServiceConfig{
 					ImageConfig: testImageConfig,
-					RoutingRule: RoutingRuleConfiguration{
-						ProtocolVersion: aws.String("GRPC"),
+					HTTP: HTTP{
+						Main: RoutingRule{
+							ProtocolVersion: aws.String("GRPC"),
+						},
 					},
 				},
 			},
@@ -595,16 +656,18 @@ func TestBackendService_validate(t *testing.T) {
 			config: BackendService{
 				BackendServiceConfig: BackendServiceConfig{
 					ImageConfig: testImageConfig,
-					RoutingRule: RoutingRuleConfiguration{
-						TargetContainer: aws.String("api"),
-						Path:            aws.String("/"),
+					HTTP: HTTP{
+						Main: RoutingRule{
+							TargetContainer: aws.String("api"),
+							Path:            aws.String("/"),
+						},
 					},
 				},
 				Workload: Workload{
 					Name: aws.String("api"),
 				},
 			},
-			wantedError: fmt.Errorf(`validate HTTP load balancer target: target container "api" doesn't expose a port`),
+			wantedError: fmt.Errorf(`validate load balancer target for "http": target container "api" doesn't expose a port`),
 		},
 		"error if service connect is enabled without any port exposed": {
 			config: BackendService{
@@ -1395,20 +1458,14 @@ func TestDependsOn_validate(t *testing.T) {
 
 func TestRoutingRule_validate(t *testing.T) {
 	testCases := map[string]struct {
-		RoutingRule RoutingRuleConfiguration
+		RoutingRule RoutingRule
 
 		wantedErrorMsgPrefix string
 		wantedError          error
 	}{
-		"error if both target_container and targetContainer are specified": {
-			RoutingRule: RoutingRuleConfiguration{
-				TargetContainer:          aws.String("mockContainer"),
-				TargetContainerCamelCase: aws.String("mockContainer"),
-			},
-			wantedError: fmt.Errorf(`must specify one, not both, of "target_container" and "targetContainer"`),
-		},
 		"error if one of allowed_source_ips is not valid": {
-			RoutingRule: RoutingRuleConfiguration{
+			RoutingRule: RoutingRule{
+				Path: stringP("/"),
 				AllowedSourceIps: []IPNet{
 					IPNet("10.1.0.0/24"),
 					IPNet("badIP"),
@@ -1418,32 +1475,33 @@ func TestRoutingRule_validate(t *testing.T) {
 			wantedErrorMsgPrefix: `validate "allowed_source_ips[1]": `,
 		},
 		"error if protocol version is not valid": {
-			RoutingRule: RoutingRuleConfiguration{
+			RoutingRule: RoutingRule{
+				Path:            stringP("/"),
 				ProtocolVersion: aws.String("quic"),
 			},
 			wantedErrorMsgPrefix: `"version" field value 'quic' must be one of GRPC, HTTP1 or HTTP2`,
 		},
 		"error if path is missing": {
-			RoutingRule: RoutingRuleConfiguration{
+			RoutingRule: RoutingRule{
 				ProtocolVersion: aws.String("GRPC"),
 			},
 			wantedErrorMsgPrefix: `"path" must be specified`,
 		},
 		"should not error if protocol version is not uppercase": {
-			RoutingRule: RoutingRuleConfiguration{
+			RoutingRule: RoutingRule{
 				Path:            stringP("/"),
 				ProtocolVersion: aws.String("gRPC"),
 			},
 		},
 		"error if hosted zone set without alias": {
-			RoutingRule: RoutingRuleConfiguration{
+			RoutingRule: RoutingRule{
 				Path:       stringP("/"),
 				HostedZone: aws.String("ABCD1234"),
 			},
 			wantedErrorMsgPrefix: `"alias" must be specified if "hosted_zone" is specified`,
 		},
 		"error if one of alias is not valid": {
-			RoutingRule: RoutingRuleConfiguration{
+			RoutingRule: RoutingRule{
 				Path: stringP("/"),
 				Alias: Alias{
 					AdvancedAliases: []AdvancedAlias{
@@ -1474,6 +1532,64 @@ func TestRoutingRule_validate(t *testing.T) {
 	}
 }
 
+func TestHTTP_validate(t *testing.T) {
+	testCases := map[string]struct {
+		HTTP                 HTTP
+		wantedErrorMsgPrefix string
+		wantedError          error
+	}{
+		"return if routing rule configuration is nil": {},
+		"error if both target_container and targetContainer are specified": {
+			HTTP: HTTP{
+				Main: RoutingRule{
+					Path:            stringP("/"),
+					TargetContainer: aws.String("mockContainer"),
+				},
+				TargetContainerCamelCase: aws.String("mockContainer"),
+			},
+			wantedError: fmt.Errorf(`must specify one, not both, of "target_container" and "targetContainer"`),
+		},
+		"error if the main routing rule is invalid": {
+			HTTP: HTTP{
+				Main: RoutingRule{
+					TargetContainer: aws.String("mockContainer"),
+				},
+			},
+			wantedError: fmt.Errorf(`"path" must be specified`),
+		},
+		"error if the additional routing rule is invalid": {
+			HTTP: HTTP{
+				Main: RoutingRule{
+					Path:            stringP("/"),
+					TargetContainer: aws.String("mockContainer"),
+				},
+				AdditionalRoutingRules: []RoutingRule{
+					{
+						TargetContainer: aws.String("mockContainer"),
+					},
+				},
+			},
+			wantedError: fmt.Errorf(`validate "additional_rules[0]": "path" must be specified`),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			gotErr := tc.HTTP.validate()
+
+			if tc.wantedError != nil {
+				require.EqualError(t, gotErr, tc.wantedError.Error())
+				return
+			}
+			if tc.wantedErrorMsgPrefix != "" {
+				require.Error(t, gotErr)
+				require.Contains(t, gotErr.Error(), tc.wantedErrorMsgPrefix)
+				return
+			}
+			require.NoError(t, gotErr)
+		})
+	}
+}
+
 func TestNetworkLoadBalancerConfiguration_validate(t *testing.T) {
 	testCases := map[string]struct {
 		nlb NetworkLoadBalancerConfiguration
@@ -1486,55 +1602,198 @@ func TestNetworkLoadBalancerConfiguration_validate(t *testing.T) {
 		},
 		"error if port unspecified": {
 			nlb: NetworkLoadBalancerConfiguration{
-				TargetContainer: aws.String("main"),
+				Listener: NetworkLoadBalancerListener{
+					TargetContainer: aws.String("main"),
+				},
 			},
-			wantedErrorMsgPrefix: `validate "nlb": `,
-			wantedError:          fmt.Errorf(`"port" must be specified`),
+			wantedError: fmt.Errorf(`"port" must be specified`),
+		},
+		"error if port unspecified in additional listeners": {
+			nlb: NetworkLoadBalancerConfiguration{
+				Listener: NetworkLoadBalancerListener{
+					Port:            aws.String("80/tcp"),
+					TargetContainer: aws.String("main"),
+				},
+				AdditionalListeners: []NetworkLoadBalancerListener{
+					{
+						TargetContainer: aws.String("main"),
+					},
+				},
+			},
+			wantedError: fmt.Errorf(`validate "additional_listeners[0]": "port" must be specified`),
 		},
 		"error parsing port": {
 			nlb: NetworkLoadBalancerConfiguration{
-				Port: aws.String("sabotage/this/string"),
+				Listener: NetworkLoadBalancerListener{
+					Port: aws.String("sabotage/this/string"),
+				},
 			},
 			wantedErrorMsgPrefix: `validate "nlb": `,
 			wantedError:          fmt.Errorf(`validate "port": cannot parse port mapping from sabotage/this/string`),
 		},
+		"error parsing port for additional listeners": {
+			nlb: NetworkLoadBalancerConfiguration{
+				Listener: NetworkLoadBalancerListener{
+					Port: aws.String("80/tcp"),
+				},
+				AdditionalListeners: []NetworkLoadBalancerListener{
+					{
+						Port: aws.String("81/tcp"),
+					},
+					{
+						Port: aws.String("sabotage/this/string"),
+					},
+				},
+			},
+			wantedErrorMsgPrefix: `validate "nlb": `,
+			wantedError:          fmt.Errorf(`validate "additional_listeners[1]": validate "port": cannot parse port mapping from sabotage/this/string`),
+		},
 		"success if port is specified without protocol": {
 			nlb: NetworkLoadBalancerConfiguration{
-				Port: aws.String("443"),
+				Listener: NetworkLoadBalancerListener{
+					Port: aws.String("443"),
+				},
+			},
+		},
+		"success if port is specified without protocol in additional listeners": {
+			nlb: NetworkLoadBalancerConfiguration{
+				Listener: NetworkLoadBalancerListener{
+					Port: aws.String("443/tcp"),
+				},
+				AdditionalListeners: []NetworkLoadBalancerListener{
+					{
+						Port: aws.String("443"),
+					},
+				},
 			},
 		},
 		"fail if protocol is not recognized": {
 			nlb: NetworkLoadBalancerConfiguration{
-				Port: aws.String("443/tps"),
+				Listener: NetworkLoadBalancerListener{
+					Port: aws.String("443/tps"),
+				},
 			},
 			wantedErrorMsgPrefix: `validate "nlb": `,
 			wantedError:          fmt.Errorf(`validate "port": invalid protocol tps; valid protocols include TCP and TLS`),
 		},
+		"fail if protocol is not recognized in additional listeners": {
+			nlb: NetworkLoadBalancerConfiguration{
+				Listener: NetworkLoadBalancerListener{
+					Port: aws.String("443/tcp"),
+				},
+				AdditionalListeners: []NetworkLoadBalancerListener{
+					{
+						Port: aws.String("443/tps"),
+					},
+				},
+			},
+			wantedErrorMsgPrefix: `validate "nlb": `,
+			wantedError:          fmt.Errorf(`validate "additional_listeners[0]": validate "port": invalid protocol tps; valid protocols include TCP and TLS`),
+		},
 		"success if tcp": {
 			nlb: NetworkLoadBalancerConfiguration{
-				Port: aws.String("443/tcp"),
+				Listener: NetworkLoadBalancerListener{
+					Port: aws.String("443/tcp"),
+				},
 			},
 		},
 		"error if udp": {
 			nlb: NetworkLoadBalancerConfiguration{
-				Port: aws.String("161/udp"),
+				Listener: NetworkLoadBalancerListener{
+					Port: aws.String("161/udp"),
+				},
 			},
 			wantedError: fmt.Errorf(`validate "port": invalid protocol udp; valid protocols include TCP and TLS`),
 		},
+		"error if udp in additional listeners": {
+			nlb: NetworkLoadBalancerConfiguration{
+				Listener: NetworkLoadBalancerListener{
+					Port: aws.String("161/tcp"),
+				},
+				AdditionalListeners: []NetworkLoadBalancerListener{
+					{
+						Port: aws.String("161/udp"),
+					},
+				},
+			},
+			wantedError: fmt.Errorf(`validate "additional_listeners[0]": validate "port": invalid protocol udp; valid protocols include TCP and TLS`),
+		},
+		"error if additional listeners are defined before main listener": {
+			nlb: NetworkLoadBalancerConfiguration{
+				AdditionalListeners: []NetworkLoadBalancerListener{
+					{
+						Port: aws.String("161/udp"),
+					},
+				},
+			},
+			wantedError: fmt.Errorf(`"port" must be specified`),
+		},
 		"success if tls": {
 			nlb: NetworkLoadBalancerConfiguration{
-				Port: aws.String("443/tls"),
+				Listener: NetworkLoadBalancerListener{
+					Port: aws.String("443/tls"),
+				},
+			},
+		},
+		"success if tls in additional listeners": {
+			nlb: NetworkLoadBalancerConfiguration{
+				Listener: NetworkLoadBalancerListener{
+					Port: aws.String("443/tcp"),
+				},
+				AdditionalListeners: []NetworkLoadBalancerListener{
+					{
+						Port: aws.String("443/tls"),
+					},
+				},
 			},
 		},
 		"error if tcp_udp": {
 			nlb: NetworkLoadBalancerConfiguration{
-				Port: aws.String("443/TCP_udp"),
+				Listener: NetworkLoadBalancerListener{
+					Port: aws.String("443/TCP_udp"),
+				},
 			},
 			wantedError: fmt.Errorf(`validate "port": invalid protocol TCP_udp; valid protocols include TCP and TLS`),
 		},
+		"error if tcp_udp in additional listeners": {
+			nlb: NetworkLoadBalancerConfiguration{
+				Listener: NetworkLoadBalancerListener{
+					Port: aws.String("443/tcp"),
+				},
+				AdditionalListeners: []NetworkLoadBalancerListener{
+					{
+						Port: aws.String("443/TCP_udp"),
+					},
+				},
+			},
+			wantedError: fmt.Errorf(`validate "additional_listeners[0]": validate "port": invalid protocol TCP_udp; valid protocols include TCP and TLS`),
+		},
 		"error if hosted zone is set": {
 			nlb: NetworkLoadBalancerConfiguration{
-				Port: aws.String("443/tcp"),
+				Listener: NetworkLoadBalancerListener{
+					Port: aws.String("443/tcp"),
+				},
+				Aliases: Alias{
+					AdvancedAliases: []AdvancedAlias{
+						{
+							Alias:      aws.String("mockAlias"),
+							HostedZone: aws.String("mockHostedZone"),
+						},
+					},
+				},
+			},
+			wantedError: fmt.Errorf(`"hosted_zone" is not supported for Network Load Balancer`),
+		},
+		"error if hosted zone is set in additional listeners": {
+			nlb: NetworkLoadBalancerConfiguration{
+				Listener: NetworkLoadBalancerListener{
+					Port: aws.String("443/tcp"),
+				},
+				AdditionalListeners: []NetworkLoadBalancerListener{
+					{
+						Port: aws.String("80/tcp"),
+					},
+				},
 				Aliases: Alias{
 					AdvancedAliases: []AdvancedAlias{
 						{
@@ -3543,8 +3802,10 @@ func TestValidateExposedPorts(t *testing.T) {
 						Port: aws.String("80"),
 					},
 				},
-				alb: &RoutingRuleConfiguration{
-					TargetPort: aws.Uint16(80),
+				alb: &HTTP{
+					Main: RoutingRule{
+						TargetPort: aws.Uint16(80),
+					},
 				},
 			},
 			wanted: nil,
@@ -3561,9 +3822,11 @@ func TestValidateExposedPorts(t *testing.T) {
 						Port: aws.String("80"),
 					},
 				},
-				alb: &RoutingRuleConfiguration{
-					TargetContainer: aws.String("nginx"),
-					TargetPort:      aws.Uint16(8080),
+				alb: &HTTP{
+					Main: RoutingRule{
+						TargetContainer: aws.String("nginx"),
+						TargetPort:      aws.Uint16(8080),
+					},
 				},
 			},
 			wanted: fmt.Errorf(`containers "nginx" and "foo" are exposing the same port 8080`),
@@ -3589,9 +3852,11 @@ func TestValidateExposedPorts(t *testing.T) {
 						Port: aws.String("80"),
 					},
 				},
-				alb: &RoutingRuleConfiguration{
-					TargetPort:      aws.Uint16(8080),
-					TargetContainer: aws.String("mockMainContainer"),
+				alb: &HTTP{
+					Main: RoutingRule{
+						TargetPort:      aws.Uint16(8080),
+						TargetContainer: aws.String("mockMainContainer"),
+					},
 				},
 			},
 			wanted: nil,
@@ -3605,9 +3870,11 @@ func TestValidateExposedPorts(t *testing.T) {
 						Port: aws.String("80"),
 					},
 				},
-				alb: &RoutingRuleConfiguration{
-					TargetPort:      aws.Uint16(80),
-					TargetContainer: aws.String("foo"),
+				alb: &HTTP{
+					Main: RoutingRule{
+						TargetPort:      aws.Uint16(80),
+						TargetContainer: aws.String("foo"),
+					},
 				},
 			},
 			wanted: nil,
@@ -3621,8 +3888,35 @@ func TestValidateExposedPorts(t *testing.T) {
 						Port: aws.String("80"),
 					},
 				},
-				alb: &RoutingRuleConfiguration{
-					TargetPort: aws.Uint16(8081),
+				alb: &HTTP{
+					Main: RoutingRule{
+						TargetPort: aws.Uint16(8081),
+					},
+				},
+			},
+			wanted: nil,
+		},
+		"doesn't error out when multiple ports are open through additional_rules": {
+			in: validateExposedPortsOpts{
+				mainContainerName: "mockMainContainer",
+				mainContainerPort: aws.Uint16(8080),
+				sidecarConfig: map[string]*SidecarConfig{
+					"foo": {
+						Port: aws.String("80"),
+					},
+				},
+				alb: &HTTP{
+					Main: RoutingRule{
+						TargetPort: aws.Uint16(8081),
+					},
+					AdditionalRoutingRules: []RoutingRule{
+						{
+							TargetPort: aws.Uint16(8082),
+						},
+						{
+							TargetPort: aws.Uint16(8083),
+						},
+					},
 				},
 			},
 			wanted: nil,
@@ -3639,12 +3933,16 @@ func TestValidateExposedPorts(t *testing.T) {
 						Port: aws.String("80"),
 					},
 				},
-				alb: &RoutingRuleConfiguration{
-					TargetPort: aws.Uint16(5001),
+				alb: &HTTP{
+					Main: RoutingRule{
+						TargetPort: aws.Uint16(5001),
+					},
 				},
 				nlb: &NetworkLoadBalancerConfiguration{
-					Port:       aws.String("5001/tcp"),
-					TargetPort: aws.Int(5001),
+					Listener: NetworkLoadBalancerListener{
+						Port:       aws.String("5001/tcp"),
+						TargetPort: aws.Int(5001),
+					},
 				},
 			},
 		},
@@ -3660,14 +3958,18 @@ func TestValidateExposedPorts(t *testing.T) {
 						Port: aws.String("80"),
 					},
 				},
-				alb: &RoutingRuleConfiguration{
-					TargetPort:      aws.Uint16(5001),
-					TargetContainer: aws.String("foo"),
+				alb: &HTTP{
+					Main: RoutingRule{
+						TargetPort:      aws.Uint16(5001),
+						TargetContainer: aws.String("foo"),
+					},
 				},
 				nlb: &NetworkLoadBalancerConfiguration{
-					Port:            aws.String("5001/tcp"),
-					TargetPort:      aws.Int(5001),
-					TargetContainer: aws.String("foo"),
+					Listener: NetworkLoadBalancerListener{
+						Port:            aws.String("5001/tcp"),
+						TargetPort:      aws.Int(5001),
+						TargetContainer: aws.String("foo"),
+					},
 				},
 			},
 		},
@@ -3683,17 +3985,90 @@ func TestValidateExposedPorts(t *testing.T) {
 						Port: aws.String("80"),
 					},
 				},
-				alb: &RoutingRuleConfiguration{
-					TargetPort:      aws.Uint16(5001),
-					TargetContainer: aws.String("foo"),
+				alb: &HTTP{
+					Main: RoutingRule{
+						TargetPort:      aws.Uint16(5001),
+						TargetContainer: aws.String("foo"),
+					},
 				},
 				nlb: &NetworkLoadBalancerConfiguration{
-					Port:            aws.String("5001/tcp"),
-					TargetPort:      aws.Int(5001),
-					TargetContainer: aws.String("nginx"),
+					Listener: NetworkLoadBalancerListener{
+						Port:            aws.String("5001/tcp"),
+						TargetPort:      aws.Int(5001),
+						TargetContainer: aws.String("nginx"),
+					},
 				},
 			},
-			wanted: fmt.Errorf(`containers "nginx" and "foo" are exposing the same port 5001`),
+			wanted: fmt.Errorf(`validate "nlb": containers "nginx" and "foo" are exposing the same port 5001`),
+		},
+		"should not return an error if nlb is trying to expose multiple ports": {
+			in: validateExposedPortsOpts{
+				mainContainerName: "mockMainContainer",
+				mainContainerPort: aws.Uint16(5000),
+				sidecarConfig: map[string]*SidecarConfig{
+					"foo": {
+						Port: aws.String("8080"),
+					},
+					"nginx": {
+						Port: aws.String("80"),
+					},
+				},
+				alb: &HTTP{
+					Main: RoutingRule{
+						TargetPort:      aws.Uint16(5001),
+						TargetContainer: aws.String("foo"),
+					},
+				},
+				nlb: &NetworkLoadBalancerConfiguration{
+					Listener: NetworkLoadBalancerListener{
+						Port:            aws.String("5001/tcp"),
+						TargetPort:      aws.Int(5001),
+						TargetContainer: aws.String("foo"),
+					},
+					AdditionalListeners: []NetworkLoadBalancerListener{
+						{
+							Port:            aws.String("5002/tcp"),
+							TargetPort:      aws.Int(5002),
+							TargetContainer: aws.String("foo"),
+						},
+					},
+				},
+			},
+		},
+		"should return an error if nlb is trying to expose same port as from different containers using additional listeners": {
+			in: validateExposedPortsOpts{
+				mainContainerName: "mockMainContainer",
+				mainContainerPort: aws.Uint16(5000),
+				sidecarConfig: map[string]*SidecarConfig{
+					"foo": {
+						Port: aws.String("8080"),
+					},
+					"nginx": {
+						Port: aws.String("80"),
+					},
+				},
+				alb: &HTTP{
+					Main: RoutingRule{
+						TargetPort:      aws.Uint16(5001),
+						TargetContainer: aws.String("foo"),
+					},
+				},
+				nlb: &NetworkLoadBalancerConfiguration{
+					Listener: NetworkLoadBalancerListener{
+						Port:            aws.String("5001/tcp"),
+						TargetPort:      aws.Int(5001),
+						TargetContainer: aws.String("foo"),
+					},
+					AdditionalListeners: []NetworkLoadBalancerListener{
+						{
+							Port:            aws.String("5002/tcp"),
+							TargetPort:      aws.Int(5001),
+							TargetContainer: aws.String("nginx"),
+						},
+					},
+				},
+			},
+			wanted: fmt.Errorf(`validate "nlb.additional_listeners[0]": containers "nginx" and "foo" are exposing the same port 5001`),
 		},
 	}
 	for name, tc := range testCases {

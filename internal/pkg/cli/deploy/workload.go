@@ -33,6 +33,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/repository"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/template/artifactpath"
+	"github.com/aws/copilot-cli/internal/pkg/template/diff"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
@@ -94,6 +95,10 @@ type serviceDeployer interface {
 	DeployService(conf cloudformation.StackConfiguration, bucketName string, opts ...awscloudformation.StackOption) error
 }
 
+type deployedTemplateGetter interface {
+	Template(stackName string) (string, error)
+}
+
 type spinner interface {
 	Start(label string)
 	Stop(label string)
@@ -152,6 +157,7 @@ type workloadDeployer struct {
 	addons             stackBuilder
 	imageBuilderPusher imageBuilderPusher
 	deployer           serviceDeployer
+	tmplGetter         deployedTemplateGetter
 	endpointGetter     endpointGetter
 	spinner            spinner
 	templateFS         template.Reader
@@ -245,6 +251,7 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 		return nil, fmt.Errorf("unmarshal the manifest used to deploy environment %s: %w", in.Env.Name, err)
 	}
 
+	cfn := cloudformation.New(envSession, cloudformation.WithProgressTracker(os.Stderr))
 	return &workloadDeployer{
 		name:               in.Name,
 		app:                in.App,
@@ -256,7 +263,8 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 		s3Client:           s3.New(envSession),
 		addons:             addons,
 		imageBuilderPusher: imageBuilderPusher,
-		deployer:           cloudformation.New(envSession, cloudformation.WithProgressTracker(os.Stderr)),
+		deployer:           cfn,
+		tmplGetter:         cfn,
 		endpointGetter:     envDescriber,
 		spinner:            termprogress.NewSpinner(log.DiagnosticWriter),
 		templateFS:         template.New(),
@@ -275,13 +283,29 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 	}, nil
 }
 
+// DeployDiff returns the stringified diff of the template against the deployed template of the workload.
+func (d *workloadDeployer) DeployDiff(template string) (string, error) {
+	tmpl, err := d.tmplGetter.Template(stack.NameForWorkload(d.app.Name, d.env.Name, d.name))
+	if err != nil {
+		return "", fmt.Errorf("retrieve the deployed template for %q: %w", d.name, err)
+	}
+	diffTree, err := diff.From(tmpl).ParseWithCFNIgnorer([]byte(template))
+	if err != nil {
+		return "", fmt.Errorf("parse the diff against the deployed %q in environment %q: %w", d.name, d.env.Name, err)
+	}
+	buf := strings.Builder{}
+	if err := diffTree.Write(&buf); err != nil {
+		return "", err
+	}
+	return buf.String(), nil
+}
+
 // AddonsTemplate returns this workload's addon template.
-func (w *workloadDeployer) AddonsTemplate() (string, error) {
-	if w.addons == nil {
+func (d *workloadDeployer) AddonsTemplate() (string, error) {
+	if d.addons == nil {
 		return "", nil
 	}
-
-	return w.addons.Template()
+	return d.addons.Template()
 }
 
 func (d *workloadDeployer) generateCloudFormationTemplate(conf stackSerializer) (
@@ -332,28 +356,28 @@ func (img ContainerImageIdentifier) Tag() string {
 	return img.GitShortCommitTag
 }
 
-func (d *workloadDeployer) uploadContainerImages(imgBuilderPusher imageBuilderPusher) (map[string]ContainerImageIdentifier, error) {
+func (d *workloadDeployer) uploadContainerImages(out *UploadArtifactsOutput) error {
 	// If it is built from local Dockerfile, build and push to the ECR repo.
 	buildArgsPerContainer, err := buildArgsPerContainer(d.name, d.workspacePath, d.image, d.mft)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if len(buildArgsPerContainer) == 0 {
-		return nil, nil
+		return nil
 	}
-	images := make(map[string]ContainerImageIdentifier, len(buildArgsPerContainer))
+	out.ImageDigests = make(map[string]ContainerImageIdentifier, len(buildArgsPerContainer))
 	for name, buildArgs := range buildArgsPerContainer {
-		digest, err := imgBuilderPusher.BuildAndPush(dockerengine.New(exec.NewCmd()), buildArgs)
+		digest, err := d.imageBuilderPusher.BuildAndPush(dockerengine.New(exec.NewCmd()), buildArgs)
 		if err != nil {
-			return nil, fmt.Errorf("build and push image: %w", err)
+			return fmt.Errorf("build and push image: %w", err)
 		}
-		images[name] = ContainerImageIdentifier{
+		out.ImageDigests[name] = ContainerImageIdentifier{
 			Digest:            digest,
 			CustomTag:         d.image.CustomTag,
 			GitShortCommitTag: d.image.GitShortCommitTag,
 		}
 	}
-	return images, nil
+	return nil
 }
 
 func buildArgsPerContainer(name, workspacePath string, img ContainerImageIdentifier, unmarshaledManifest interface{}) (map[string]*dockerengine.BuildArguments, error) {
@@ -363,7 +387,7 @@ func buildArgsPerContainer(name, workspacePath string, img ContainerImageIdentif
 	}
 	mf, ok := unmarshaledManifest.(dfArgs)
 	if !ok {
-		return nil, fmt.Errorf("%s does not have required methods BuildArgs() and ContainerPlatform()", name)
+		return nil, fmt.Errorf("%T does not have required methods BuildArgs() and ContainerPlatform()", name)
 	}
 	argsPerContainer, err := mf.BuildArgs(workspacePath)
 	if err != nil {
@@ -401,32 +425,20 @@ func buildArgsPerContainer(name, workspacePath string, img ContainerImageIdentif
 	return dArgs, nil
 }
 
-type uploadArtifactsToS3Input struct {
-	fs       fileReader
-	uploader uploader
-}
-
-type uploadArtifactsToS3Output struct {
-	envFileARNs map[string]string // map[container name]ARN
-	addonsURL   string
-}
-
-func (d *workloadDeployer) uploadArtifactsToS3(in *uploadArtifactsToS3Input) (uploadArtifactsToS3Output, error) {
-	envFileARNs, err := d.pushEnvFilesToS3Bucket(&pushEnvFilesToS3BucketInput{
-		fs:       in.fs,
-		uploader: in.uploader,
+func (d *workloadDeployer) uploadArtifactsToS3(out *UploadArtifactsOutput) error {
+	var err error
+	out.EnvFileARNs, err = d.pushEnvFilesToS3Bucket(&pushEnvFilesToS3BucketInput{
+		fs:       d.fs,
+		uploader: d.s3Client,
 	})
 	if err != nil {
-		return uploadArtifactsToS3Output{}, err
+		return err
 	}
-	addonsURL, err := d.pushAddonsTemplateToS3Bucket()
+	out.AddonsURL, err = d.pushAddonsTemplateToS3Bucket()
 	if err != nil {
-		return uploadArtifactsToS3Output{}, err
+		return err
 	}
-	return uploadArtifactsToS3Output{
-		envFileARNs: envFileARNs,
-		addonsURL:   addonsURL,
-	}, nil
+	return nil
 }
 
 type customResourcesFunc func(fs template.Reader) ([]*customresource.CustomResource, error)
@@ -439,36 +451,36 @@ type UploadArtifactsOutput struct {
 	CustomResourceURLs map[string]string
 }
 
-func (d *workloadDeployer) uploadArtifacts() (*UploadArtifactsOutput, error) {
-	imageDigests, err := d.uploadContainerImages(d.imageBuilderPusher)
-	if err != nil {
-		return nil, err
-	}
-	s3Artifacts, err := d.uploadArtifactsToS3(&uploadArtifactsToS3Input{
-		fs:       d.fs,
-		uploader: d.s3Client,
-	})
-	if err != nil {
-		return nil, err
-	}
+// uploadArtifactFunc uploads an artifact and updates out
+// with any relevant information to be returned by uploadArtifacts.
+type uploadArtifactFunc func(out *UploadArtifactsOutput) error
 
-	out := &UploadArtifactsOutput{
-		ImageDigests: imageDigests,
-		EnvFileARNs:  s3Artifacts.envFileARNs,
-		AddonsURL:    s3Artifacts.addonsURL,
+// uploadArtifacts runs each of the uploadArtifact functions sequentially and returns
+// the output built by each of those functions. It short-circuts and returns
+// the error if one of steps returns an error.
+func (d *workloadDeployer) uploadArtifacts(steps ...uploadArtifactFunc) (*UploadArtifactsOutput, error) {
+	out := &UploadArtifactsOutput{}
+	for _, step := range steps {
+		if err := step(out); err != nil {
+			return nil, err
+		}
 	}
+	return out, nil
+}
+
+func (d *workloadDeployer) uploadCustomResources(out *UploadArtifactsOutput) error {
 	crs, err := d.customResources(d.templateFS)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	urls, err := customresource.Upload(func(key string, contents io.Reader) (string, error) {
 		return d.s3Client.Upload(d.resources.S3Bucket, key, contents)
 	}, crs)
 	if err != nil {
-		return nil, fmt.Errorf("upload custom resources for %q: %w", d.name, err)
+		return fmt.Errorf("upload custom resources for %q: %w", d.name, err)
 	}
 	out.CustomResourceURLs = urls
-	return out, nil
+	return nil
 }
 
 type pushEnvFilesToS3BucketInput struct {

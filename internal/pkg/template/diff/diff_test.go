@@ -5,6 +5,7 @@ package diff
 
 import (
 	"errors"
+	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -15,7 +16,7 @@ func TestFrom_Parse(t *testing.T) {
 	testCases := map[string]struct {
 		curr        string
 		old         string
-		wanted      func() *Node
+		wanted      func() diffNode
 		wantedError error
 	}{
 		"add a map": {
@@ -27,19 +28,17 @@ func TestFrom_Parse(t *testing.T) {
 			old: `Mary:
   Height:
     cm: 168`,
-			wanted: func() *Node {
+			wanted: func() diffNode {
 				/* sentinel -> Mary -> Weight: {new: "kg:52", old: nil} */
-				leaf := &Node{
-					key:      "Weight",
-					newValue: yamlNode("kg: 52", t),
+				leaf := &node{
+					keyValue: "Weight",
+					newV:     yamlNode("kg: 52", t),
 				}
-				return &Node{
-					children: map[string]*Node{
-						"Mary": {
-							key: "Mary",
-							children: map[string]*Node{
-								"Weight": leaf,
-							},
+				return &node{
+					childNodes: []diffNode{
+						&node{
+							keyValue:   "Mary",
+							childNodes: []diffNode{leaf},
 						},
 					},
 				}
@@ -54,26 +53,22 @@ func TestFrom_Parse(t *testing.T) {
     cm: 168
   Weight:
     kg: 52`,
-			wanted: func() *Node {
+			wanted: func() diffNode {
 				/* sentinel -> Mary -> Weight: {new: nil, old: "kg:52"} */
-				leaf := &Node{
-					key:      "Weight",
-					oldValue: yamlNode("kg: 52", t),
+				leaf := &node{
+					keyValue: "Weight",
+					oldV:     yamlNode("kg: 52", t),
 				}
-				return &Node{
-					children: map[string]*Node{
-						"Mary": {
-							key: "Mary",
-							children: map[string]*Node{
-								"Weight": leaf,
-							},
+				return &node{
+					childNodes: []diffNode{
+						&node{
+							keyValue:   "Mary",
+							childNodes: []diffNode{leaf},
 						},
 					},
 				}
 			},
 		},
-		"add an item to a list":    {},
-		"remove an item to a list": {},
 		"change keyed values": {
 			curr: `Mary:
   Height:
@@ -85,40 +80,38 @@ func TestFrom_Parse(t *testing.T) {
     cm: 190
   CanFight: yes
   FavoriteWord: muscle`,
-			wanted: func() *Node {
+			wanted: func() diffNode {
 				/* sentinel
 				   -> Mary
 					   -> Height --> cm: {new: 168, old: 190}
 					   -> CanFight: {new: no, old: yes}
 					   -> FavoriteWord: {new: peace, old: muscle}
 				*/
-				leafCM := &Node{
-					key:      "cm",
-					newValue: yamlScalarNode("168"),
-					oldValue: yamlScalarNode("190"),
+				leafCM := &node{
+					keyValue: "cm",
+					newV:     yamlScalarNode("168"),
+					oldV:     yamlScalarNode("190"),
 				}
-				leafCanFight := &Node{
-					key:      "CanFight",
-					newValue: yamlScalarNode("no"),
-					oldValue: yamlScalarNode("yes"),
+				leafCanFight := &node{
+					keyValue: "CanFight",
+					newV:     yamlScalarNode("no"),
+					oldV:     yamlScalarNode("yes"),
 				}
-				leafFavWord := &Node{
-					key:      "FavoriteWord",
-					newValue: yamlScalarNode("peace"),
-					oldValue: yamlScalarNode("muscle"),
+				leafFavWord := &node{
+					keyValue: "FavoriteWord",
+					newV:     yamlScalarNode("peace"),
+					oldV:     yamlScalarNode("muscle"),
 				}
-				return &Node{
-					children: map[string]*Node{
-						"Mary": {
-							key: "Mary",
-							children: map[string]*Node{
-								"CanFight":     leafCanFight,
-								"FavoriteWord": leafFavWord,
-								"Height": {
-									key: "Height",
-									children: map[string]*Node{
-										"cm": leafCM,
-									},
+				return &node{
+					childNodes: []diffNode{
+						&node{
+							keyValue: "Mary",
+							childNodes: []diffNode{
+								leafCanFight,
+								leafFavWord,
+								&node{
+									keyValue:   "Height",
+									childNodes: []diffNode{leafCM},
 								},
 							},
 						},
@@ -126,27 +119,133 @@ func TestFrom_Parse(t *testing.T) {
 				}
 			},
 		},
-		"change a list item value": {},
+		"list does not change": {
+			old:  `Alphabet: [a,b,c,d]`,
+			curr: `Alphabet: [a,b,c,d]`,
+			wanted: func() diffNode {
+				return nil
+			},
+		},
+		"list reordered": {
+			old:  `SizeRank: [bear,dog,cat,mouse]`,
+			curr: `SizeRank: [bear,cat,dog,mouse]`,
+			wanted: func() diffNode {
+				/* sentinel
+				   -> SizeRank
+				          -> 1 unchanged item (bear)
+					   -> {old: dog, new: nil} // Deletion.
+				          -> 1 unchanged item (cat)
+					   -> {old: nil, new: dog} // Insertion.
+				          -> 1 unchanged item (mouse)
+				*/
+				leaf1 := &seqItemNode{
+					node{oldV: yamlScalarNode("dog")},
+				}
+				leaf2 := &seqItemNode{
+					node{newV: yamlScalarNode("dog")},
+				}
+				unchangedBear, unchangedCat, unchangedMouse := &unchangedNode{count: 1}, &unchangedNode{count: 1}, &unchangedNode{count: 1}
+				return &node{
+					childNodes: []diffNode{
+						&node{
+							keyValue:   "SizeRank",
+							childNodes: []diffNode{unchangedBear, leaf1, unchangedCat, leaf2, unchangedMouse},
+						},
+					},
+				}
+			},
+		},
+		"list with insertion": {
+			old:  `DanceCompetition: [dog,bear,cat]`,
+			curr: `DanceCompetition: [dog,bear,mouse,cat]`,
+			wanted: func() diffNode {
+				/* sentinel
+				   -> DanceCompetition
+				          -> 2 unchanged items (dog, bear)
+					   -> {old: nil, new: mouse} // Insertion.
+				          -> 1 unchanged item (cat)
+				*/
+				leaf := &seqItemNode{
+					node{newV: yamlScalarNode("mouse")},
+				}
+				unchangedDogBear, unchangedCat := &unchangedNode{count: 2}, &unchangedNode{count: 1}
+				return &node{
+					childNodes: []diffNode{
+						&node{
+							keyValue:   "DanceCompetition",
+							childNodes: []diffNode{unchangedDogBear, leaf, unchangedCat},
+						},
+					},
+				}
+			},
+		},
+		"list with deletion": {
+			old:  `PotatoChipCommittee: [dog,bear,cat,mouse]`,
+			curr: `PotatoChipCommittee: [dog,bear,mouse]`,
+			wanted: func() diffNode {
+				/* sentinel
+				   -> PotatoChipCommittee
+					   -> 2 unchanged items (dog, bear)
+					   -> {old: cat, new: nil} // Deletion.
+					   -> 1 unchanged item (mouse)
+				*/
+				leaf := &seqItemNode{
+					node{oldV: yamlScalarNode("cat")},
+				}
+				unchangedDobBear, unchangedMouse := &unchangedNode{count: 2}, &unchangedNode{count: 1}
+				return &node{
+					childNodes: []diffNode{
+						&node{
+							keyValue:   "PotatoChipCommittee",
+							childNodes: []diffNode{unchangedDobBear, leaf, unchangedMouse},
+						},
+					},
+				}
+			},
+		},
+		"list with a scalar value changed": {
+			old:  `DogsFavoriteShape: [triangle,circle,rectangle]`,
+			curr: `DogsFavoriteShape: [triangle,ellipse,rectangle]`,
+			wanted: func() diffNode {
+				/* sentinel
+				   -> DogsFavoriteShape
+					   -> {old: circle, new: ellipse} // Modification.
+				*/
+				leaf := &seqItemNode{
+					node{
+						oldV: yamlScalarNode("circle"),
+						newV: yamlScalarNode("ellipse"),
+					},
+				}
+				unchangedTri, unchangedRec := &unchangedNode{1}, &unchangedNode{1}
+				return &node{
+					childNodes: []diffNode{
+						&node{
+							keyValue:   "DogsFavoriteShape",
+							childNodes: []diffNode{unchangedTri, leaf, unchangedRec},
+						},
+					},
+				}
+			},
+		},
 		"change a map to scalar": {
 			curr: `Mary:
   Dialogue: "Said bear: 'I know I'm supposed to keep an eye on you"`,
 			old: `Mary:
   Dialogue:
     Bear: "I know I'm supposed to keep an eye on you"`,
-			wanted: func() *Node {
+			wanted: func() diffNode {
 				/* sentinel -> Mary -> Dialogue --> {new: map, old: scalar} */
-				leafDialogue := &Node{
-					key:      "Dialogue",
-					newValue: yamlScalarNode("Said bear: 'I know I'm supposed to keep an eye on you", withStyle(yaml.DoubleQuotedStyle)),
-					oldValue: yamlNode("Bear: \"I know I'm supposed to keep an eye on you\"", t),
+				leafDialogue := &node{
+					keyValue: "Dialogue",
+					newV:     yamlScalarNode("Said bear: 'I know I'm supposed to keep an eye on you", withStyle(yaml.DoubleQuotedStyle)),
+					oldV:     yamlNode("Bear: \"I know I'm supposed to keep an eye on you\"", t),
 				}
-				return &Node{
-					children: map[string]*Node{
-						"Mary": {
-							key: "Mary",
-							children: map[string]*Node{
-								"Dialogue": leafDialogue,
-							},
+				return &node{
+					childNodes: []diffNode{
+						&node{
+							keyValue:   "Mary",
+							childNodes: []diffNode{leafDialogue},
 						},
 					},
 				}
@@ -161,23 +260,21 @@ func TestFrom_Parse(t *testing.T) {
       Tone: disappointed
     - Dog: "ikr"
       Tone: pleased`,
-			wanted: func() *Node {
+			wanted: func() diffNode {
 				/* sentinel -> Mary -> Dialogue --> {new: list, old: scalar} */
-				leafDialogue := &Node{
-					key:      "Dialogue",
-					newValue: yamlScalarNode("Said bear: 'I know I'm supposed to keep an eye on you; Said Dog: 'ikr'", withStyle(yaml.DoubleQuotedStyle)),
-					oldValue: yamlNode(`- Bear: "I know I'm supposed to keep an eye on you"
+				leafDialogue := &node{
+					keyValue: "Dialogue",
+					newV:     yamlScalarNode("Said bear: 'I know I'm supposed to keep an eye on you; Said Dog: 'ikr'", withStyle(yaml.DoubleQuotedStyle)),
+					oldV: yamlNode(`- Bear: "I know I'm supposed to keep an eye on you"
   Tone: disappointed
 - Dog: "ikr"
   Tone: pleased`, t),
 				}
-				return &Node{
-					children: map[string]*Node{
-						"Mary": {
-							key: "Mary",
-							children: map[string]*Node{
-								"Dialogue": leafDialogue,
-							},
+				return &node{
+					childNodes: []diffNode{
+						&node{
+							keyValue:   "Mary",
+							childNodes: []diffNode{leafDialogue},
 						},
 					},
 				}
@@ -194,24 +291,22 @@ func TestFrom_Parse(t *testing.T) {
   Dialogue:
     Bear: (disappointed) "I know I'm supposed to keep an eye on you"
     Dog: (pleased) "ikr"`,
-			wanted: func() *Node {
+			wanted: func() diffNode {
 				/* sentinel -> Mary -> Dialogue --> {new: list, old: map} */
-				leafDialogue := &Node{
-					key: "Dialogue",
-					newValue: yamlNode(`- Bear: "I know I'm supposed to keep an eye on you"
+				leafDialogue := &node{
+					keyValue: "Dialogue",
+					newV: yamlNode(`- Bear: "I know I'm supposed to keep an eye on you"
   Tone: disappointed
 - Dog: "ikr"
   Tone: pleased`, t),
-					oldValue: yamlNode(`Bear: (disappointed) "I know I'm supposed to keep an eye on you"
+					oldV: yamlNode(`Bear: (disappointed) "I know I'm supposed to keep an eye on you"
 Dog: (pleased) "ikr"`, t),
 				}
-				return &Node{
-					children: map[string]*Node{
-						"Mary": {
-							key: "Mary",
-							children: map[string]*Node{
-								"Dialogue": leafDialogue,
-							},
+				return &node{
+					childNodes: []diffNode{
+						&node{
+							keyValue:   "Mary",
+							childNodes: []diffNode{leafDialogue},
 						},
 					},
 				}
@@ -228,7 +323,7 @@ Dog: (pleased) "ikr"`, t),
     cm: 190
   CanFight: yes
   FavoriteWord: muscle`,
-			wanted: func() *Node {
+			wanted: func() diffNode {
 				return nil
 			},
 		},
@@ -242,10 +337,67 @@ Dog: (pleased) "ikr"`, t),
 			got, err := From(tc.old).Parse([]byte(tc.curr))
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())
-			}
-			if tc.wanted != nil {
+			} else {
 				require.NoError(t, err)
-				require.True(t, equalTree(got, tc.wanted(), t), "should get the expected tree")
+				require.True(t, equalTree(got, Tree{tc.wanted()}, t), "should get the expected tree")
+			}
+		})
+	}
+}
+
+func TestFrom_ParseWithCFNIgnorer(t *testing.T) {
+	testCases := map[string]struct {
+		curr        string
+		old         string
+		wanted      func() diffNode
+		wantedError error
+	}{
+		"diff in metadata manifest is ignored": {
+			old: `Description: CloudFormation environment template for infrastructure shared among Copilot workloads.
+Metadata:
+  Version: v1.26.0
+  Manifest: I don't see any difference.`,
+			curr: `Description: CloudFormation environment template for infrastructure shared among Copilot workloads.
+Metadata:
+  Version: v1.27.0
+  Manifest: There is definitely a difference.`,
+			wanted: func() diffNode {
+				/* sentinel -> Metadata -> Version*/
+				leaf := &node{
+					keyValue: "Version",
+					oldV:     yamlScalarNode("v1.26.0"),
+					newV:     yamlScalarNode("v1.27.0"),
+				}
+				return &node{
+					childNodes: []diffNode{
+						&node{
+							keyValue:   "Metadata",
+							childNodes: []diffNode{leaf},
+						},
+					},
+				}
+			},
+		},
+		"no diff": {
+			old: `Description: CloudFormation environment template for infrastructure shared among Copilot workloads.
+Metadata:
+  Manifest: I don't see any difference.`,
+			curr: `Description: CloudFormation environment template for infrastructure shared among Copilot workloads.
+Metadata:
+  Manifest: There is definitely a difference.`,
+			wanted: func() diffNode {
+				return nil
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got, err := From(tc.old).ParseWithCFNIgnorer([]byte(tc.curr))
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+				require.True(t, equalTree(got, Tree{tc.wanted()}, t), "should get the expected tree")
 			}
 		})
 	}
@@ -277,32 +429,42 @@ func yamlScalarNode(value string, opts ...nodeModifier) *yaml.Node {
 	return node
 }
 
-func equalLeaves(a, b *Node, t *testing.T) bool {
-	aNew, err := yaml.Marshal(a.newValue)
-	require.NoError(t, err)
-	bNew, err := yaml.Marshal(b.newValue)
-	require.NoError(t, err)
-	aOld, err := yaml.Marshal(a.oldValue)
-	require.NoError(t, err)
-	bOld, err := yaml.Marshal(b.oldValue)
-	require.NoError(t, err)
-	return string(aNew) == string(bNew) && string(aOld) == string(bOld)
+func equalTree(a, b Tree, t *testing.T) bool {
+	if a.root == nil || b.root == nil {
+		return a.root == nil && b.root == nil
+	}
+	return equalSubTree(a.root, b.root, t)
 }
 
-func equalTree(a, b *Node, t *testing.T) bool {
+func equalSubTree(a, b diffNode, t *testing.T) bool {
 	if a == nil || b == nil {
 		return a == nil && b == nil
 	}
-	if a.key != b.key || len(a.children) != len(b.children) {
+	if a.key() != b.key() || len(a.children()) != len(b.children()) || reflect.TypeOf(a) != reflect.TypeOf(b) {
 		return false
 	}
-	if len(a.children) == 0 {
+	if len(a.children()) == 0 {
 		return equalLeaves(a, b, t)
 	}
-	for k := range a.children {
-		if equal := equalTree(a.children[k], b.children[k], t); !equal {
+	for idx := range a.children() {
+		if equal := equalSubTree(a.children()[idx], b.children()[idx], t); !equal {
 			return false
 		}
 	}
 	return true
+}
+
+func equalLeaves(a, b diffNode, t *testing.T) bool {
+	if _, ok := a.(*unchangedNode); ok {
+		return a.(*unchangedNode).unchangedCount() == b.(*unchangedNode).unchangedCount()
+	}
+	aNew, err := yaml.Marshal(a.newYAML())
+	require.NoError(t, err)
+	bNew, err := yaml.Marshal(b.newYAML())
+	require.NoError(t, err)
+	aOld, err := yaml.Marshal(a.oldYAML())
+	require.NoError(t, err)
+	bOld, err := yaml.Marshal(b.oldYAML())
+	require.NoError(t, err)
+	return string(aNew) == string(bNew) && string(aOld) == string(bOld)
 }

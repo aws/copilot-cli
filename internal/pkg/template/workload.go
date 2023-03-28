@@ -408,7 +408,6 @@ type NetworkLoadBalancerListener struct {
 
 	SSLPolicy *string // The SSL policy applied when using TLS protocol.
 
-	Aliases     []string
 	Stickiness  *bool
 	HealthCheck NLBHealthCheck
 }
@@ -428,23 +427,7 @@ type NetworkLoadBalancer struct {
 	Listener            []NetworkLoadBalancerListener
 	MainContainerPort   string
 	CertificateRequired bool
-}
-
-// Aliases return all the unique aliases specified across all the routing rules in NLB.
-// Currently, we only have primary routing rule, but we will be getting additional routing rule soon.
-func (cfg *NetworkLoadBalancer) Aliases() []string {
-	var uniqueAliases []string
-	seen := make(map[string]struct{})
-	exists := struct{}{}
-	for _, listener := range cfg.Listener {
-		for _, entry := range listener.Aliases {
-			if _, ok := seen[entry]; !ok {
-				uniqueAliases = append(uniqueAliases, entry)
-				seen[entry] = exists
-			}
-		}
-	}
-	return uniqueAliases
+	Aliases             []string
 }
 
 // ALBListenerRule holds configuration that's needed for an Application Load Balancer listener rule.
@@ -460,19 +443,18 @@ type ALBListenerRule struct {
 	Stickiness       string
 	HTTPHealthCheck  HTTPHealthCheckOpts
 	HTTPVersion      string
+	RedirectToHTTPS  bool // Only relevant if HTTPSListener is true.
 }
 
 // ALBListener holds configuration that's needed for an Application Load Balancer Listener.
 type ALBListener struct {
 	Rules             []ALBListenerRule
 	HostedZoneAliases AliasesForHostedZone
-	RedirectToHTTPS   bool // Only relevant if HTTPSListener is true.
 	IsHTTPS           bool // True if the listener listening on port 443.
 	MainContainerPort string
 }
 
 // Aliases return all the unique aliases specified across all the routing rules in ALB.
-// Currently, we only have primary routing rule, but we will be getting additional routing rule soon.
 func (cfg *ALBListener) Aliases() []string {
 	var uniqueAliases []string
 	seen := make(map[string]struct{})

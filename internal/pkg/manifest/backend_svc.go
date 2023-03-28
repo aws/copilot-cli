@@ -27,7 +27,7 @@ type BackendService struct {
 type BackendServiceConfig struct {
 	ImageConfig      ImageWithHealthcheckAndOptionalPort `yaml:"image,flow"`
 	ImageOverride    `yaml:",inline"`
-	RoutingRule      RoutingRuleConfiguration `yaml:"http,flow"`
+	HTTP             HTTP `yaml:"http,flow"`
 	TaskConfig       `yaml:",inline"`
 	Logging          Logging                   `yaml:"logging,flow"`
 	Sidecars         map[string]*SidecarConfig `yaml:"sidecars"` // NOTE: keep the pointers because `mergo` doesn't automatically deep merge map's value unless it's a pointer type.
@@ -91,7 +91,7 @@ func (s *BackendService) MarshalBinary() ([]byte, error) {
 
 func (s *BackendService) requiredEnvironmentFeatures() []string {
 	var features []string
-	if !s.RoutingRule.IsEmpty() {
+	if !s.HTTP.IsEmpty() {
 		features = append(features, template.InternalALBFeatureName)
 	}
 	features = append(features, s.Network.requiredEnvFeatures()...)
@@ -208,9 +208,12 @@ func (b *BackendService) ExposedPorts() (ExposedPortsIndex, error) {
 		}
 		exposedPorts = append(exposedPorts, out...)
 	}
-	exposedPorts = append(exposedPorts, b.RoutingRule.exposedPorts(exposedPorts, workloadName)...)
+	for _, rule := range b.HTTP.RoutingRules() {
+		exposedPorts = append(exposedPorts, rule.exposedPorts(exposedPorts, workloadName)...)
+	}
 	portsForContainer, containerForPort := prepareParsedExposedPortsMap(sortExposedPorts(exposedPorts))
 	return ExposedPortsIndex{
+		WorkloadName:      workloadName,
 		PortsForContainer: portsForContainer,
 		ContainerForPort:  containerForPort,
 	}, nil

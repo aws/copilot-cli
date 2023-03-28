@@ -12,21 +12,21 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// RoutingRuleConfigOrBool holds advanced configuration for routing rule or a boolean switch.
-type RoutingRuleConfigOrBool struct {
-	RoutingRuleConfiguration
+// HTTPOrBool holds advanced configuration for routing rule or a boolean switch.
+type HTTPOrBool struct {
+	HTTP
 	Enabled *bool
 }
 
 // Disabled returns true if the routing rule configuration is explicitly disabled.
-func (r *RoutingRuleConfigOrBool) Disabled() bool {
+func (r *HTTPOrBool) Disabled() bool {
 	return r.Enabled != nil && !aws.BoolValue(r.Enabled)
 }
 
 // UnmarshalYAML implements the yaml(v3) interface. It allows https routing rule to be specified as a
 // bool or a struct alternately.
-func (r *RoutingRuleConfigOrBool) UnmarshalYAML(value *yaml.Node) error {
-	if err := value.Decode(&r.RoutingRuleConfiguration); err != nil {
+func (r *HTTPOrBool) UnmarshalYAML(value *yaml.Node) error {
+	if err := value.Decode(&r.HTTP); err != nil {
 		switch err.(type) {
 		case *yaml.TypeError:
 			break
@@ -35,9 +35,15 @@ func (r *RoutingRuleConfigOrBool) UnmarshalYAML(value *yaml.Node) error {
 		}
 	}
 
-	if !r.RoutingRuleConfiguration.IsEmpty() {
-		// Unmarshalled successfully to r.RoutingRuleConfiguration, unset r.Enabled, and return.
+	if !r.HTTP.IsEmpty() {
+		// Unmarshalled successfully to r.HTTP, unset r.Enabled, and return.
 		r.Enabled = nil
+		// this assignment lets us treat the main listener rule and additional listener rules equally
+		// because we eliminate the need for TargetContainerCamelCase by assigning its value to TargetContainer.
+		if r.TargetContainerCamelCase != nil && r.Main.TargetContainer == nil {
+			r.Main.TargetContainer = r.TargetContainerCamelCase
+			r.TargetContainerCamelCase = nil
+		}
 		return nil
 	}
 
@@ -47,8 +53,28 @@ func (r *RoutingRuleConfigOrBool) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
-// RoutingRuleConfiguration holds the path to route requests to the service.
-type RoutingRuleConfiguration struct {
+// HTTP holds options for application load balancer.
+type HTTP struct {
+	Main                     RoutingRule   `yaml:",inline"`
+	TargetContainerCamelCase *string       `yaml:"targetContainer"` // Deprecated. Maintained for backwards compatibility, use [RoutingRule.TargetContainer] instead.
+	AdditionalRoutingRules   []RoutingRule `yaml:"additional_rules"`
+}
+
+// RoutingRules returns main as well as additional routing rules as a list of RoutingRule.
+func (cfg HTTP) RoutingRules() []RoutingRule {
+	if cfg.Main.IsEmpty() {
+		return nil
+	}
+	return append([]RoutingRule{cfg.Main}, cfg.AdditionalRoutingRules...)
+}
+
+// IsEmpty returns true if HTTP has empty configuration.
+func (r *HTTP) IsEmpty() bool {
+	return r.Main.IsEmpty() && r.TargetContainerCamelCase == nil && len(r.AdditionalRoutingRules) == 0
+}
+
+// RoutingRule holds listener rule configuration for ALB.
+type RoutingRule struct {
 	Path                *string                 `yaml:"path"`
 	ProtocolVersion     *string                 `yaml:"version"`
 	HealthCheck         HealthCheckArgsOrString `yaml:"healthcheck"`
@@ -56,28 +82,18 @@ type RoutingRuleConfiguration struct {
 	Alias               Alias                   `yaml:"alias"`
 	DeregistrationDelay *time.Duration          `yaml:"deregistration_delay"`
 	// TargetContainer is the container load balancer routes traffic to.
-	TargetContainer          *string `yaml:"target_container"`
-	TargetPort               *uint16 `yaml:"target_port"`
-	TargetContainerCamelCase *string `yaml:"targetContainer"` // "targetContainerCamelCase" for backwards compatibility
-	AllowedSourceIps         []IPNet `yaml:"allowed_source_ips"`
-	HostedZone               *string `yaml:"hosted_zone"`
+	TargetContainer  *string `yaml:"target_container"`
+	TargetPort       *uint16 `yaml:"target_port"`
+	AllowedSourceIps []IPNet `yaml:"allowed_source_ips"`
+	HostedZone       *string `yaml:"hosted_zone"`
 	// RedirectToHTTPS configures a HTTP->HTTPS redirect. If nil, default to true.
 	RedirectToHTTPS *bool `yaml:"redirect_to_https"`
 }
 
-// GetTargetContainer returns the correct target container value, if set.
-// Use this function instead of getting r.TargetContainer or r.TargetContainerCamelCase directly.
-func (r *RoutingRuleConfiguration) GetTargetContainer() *string {
-	if r.TargetContainer != nil {
-		return r.TargetContainer
-	}
-	return r.TargetContainerCamelCase
-}
-
-// IsEmpty returns true if RoutingRuleConfiguration has empty configuration.
-func (r *RoutingRuleConfiguration) IsEmpty() bool {
+// IsEmpty returns true if RoutingRule has empty configuration.
+func (r *RoutingRule) IsEmpty() bool {
 	return r.Path == nil && r.ProtocolVersion == nil && r.HealthCheck.IsZero() && r.Stickiness == nil && r.Alias.IsEmpty() &&
-		r.DeregistrationDelay == nil && r.TargetContainer == nil && r.TargetContainerCamelCase == nil && r.AllowedSourceIps == nil &&
+		r.DeregistrationDelay == nil && r.TargetContainer == nil && r.TargetPort == nil && r.AllowedSourceIps == nil &&
 		r.HostedZone == nil && r.RedirectToHTTPS == nil
 }
 

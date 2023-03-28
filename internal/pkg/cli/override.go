@@ -20,6 +20,7 @@ import (
 const (
 	// IaC options for overrides.
 	cdkIaCTool = "cdk"
+	yamlPatch  = "yamlpatch"
 
 	// IaC toolkit configuration.
 	typescriptCDKLang = "typescript"
@@ -27,6 +28,7 @@ const (
 
 var validIaCTools = []string{
 	cdkIaCTool,
+	yamlPatch,
 }
 
 var validCDKLangs = []string{
@@ -70,6 +72,7 @@ type overrideOpts struct {
 	cfgStore   store
 	prompt     prompter
 	cfnPrompt  cfnSelector
+	spinner    progress
 	dir        func() string
 	packageCmd func(w stringWriteCloser) (executor, error)
 }
@@ -100,6 +103,11 @@ func (o *overrideOpts) Execute() error {
 			return fmt.Errorf("scaffold CDK application under %q: %v", dir, err)
 		}
 		log.Successf("Created a new CDK application at %q to override resources\n", displayPath(dir))
+	case yamlPatch:
+		if err := override.ScaffoldWithPatch(o.fs, dir); err != nil {
+			return fmt.Errorf("scaffold CFN YAML patches under %q: %v", dir, err)
+		}
+		log.Successf("Created a YAML patch file under %q to override resources\n", displayPath(dir))
 	}
 	return nil
 }
@@ -147,7 +155,11 @@ func (o *overrideOpts) askIaCTool() error {
 	help := `The AWS Cloud Development Kit (CDK) lets you override templates using
 the expressive power of programming languages.
 This option is recommended for users that need to override several resources.
-To learn more about the CDK: https://docs.aws.amazon.com/cdk/v2/guide/home.html`
+To learn more about the CDK: https://aws.github.io/copilot-cli/docs/developing/overrides/cdk/
+
+CloudFormation YAML patches is recommended for users that need to override
+a handful resources or do not want to depend on any other tool.
+To learn more about CFN yaml patches: https://aws.github.io/copilot-cli/docs/developing/overrides/yamlpatch/`
 	tool, err := o.prompt.SelectOne(msg, help, validIaCTools, prompt.WithFinalMessage("IaC tool:"))
 	if err != nil {
 		return fmt.Errorf("select IaC tool: %v", err)
@@ -168,20 +180,24 @@ func (o *overrideOpts) validateIaCTool() error {
 }
 
 func (o *overrideOpts) askResourcesToOverride() error {
-	if o.skipResources {
+	if o.skipResources || o.iacTool == yamlPatch {
 		return nil
 	}
 
+	o.spinner.Start("Generating CloudFormation template for resource selection")
 	buf := &closableStringBuilder{
 		Builder: new(strings.Builder),
 	}
 	pkgCmd, err := o.packageCmd(buf)
 	if err != nil {
+		o.spinner.Stop("")
 		return err
 	}
 	if err := pkgCmd.Execute(); err != nil {
+		o.spinner.Stop("")
 		return fmt.Errorf("generate CloudFormation template for %q: %v", o.name, err)
 	}
+	o.spinner.Stop("")
 	msg := fmt.Sprintf("Which resources in %q would you like to override?", o.name)
 	resources, err := o.cfnPrompt.Resources(msg, "Resources:", "", buf.String())
 	if err != nil {

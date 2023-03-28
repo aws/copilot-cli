@@ -47,7 +47,7 @@ type LoadBalancedWebService struct {
 type LoadBalancedWebServiceConfig struct {
 	ImageConfig      ImageWithPortAndHealthcheck `yaml:"image,flow"`
 	ImageOverride    `yaml:",inline"`
-	RoutingRule      RoutingRuleConfigOrBool `yaml:"http,flow"`
+	HTTPOrBool       HTTPOrBool `yaml:"http,flow"`
 	TaskConfig       `yaml:",inline"`
 	Logging          `yaml:"logging,flow"`
 	Sidecars         map[string]*SidecarConfig        `yaml:"sidecars"` // NOTE: keep the pointers because `mergo` doesn't automatically deep merge map's value unless it's a pointer type.
@@ -86,9 +86,9 @@ func NewLoadBalancedWebService(props *LoadBalancedWebServiceProps) *LoadBalanced
 		svc.LoadBalancedWebServiceConfig.TaskConfig.Memory = aws.Int(MinWindowsTaskMemory)
 	}
 	if props.HTTPVersion != "" {
-		svc.RoutingRule.ProtocolVersion = &props.HTTPVersion
+		svc.HTTPOrBool.Main.ProtocolVersion = &props.HTTPVersion
 	}
-	svc.RoutingRule.Path = aws.String(props.Path)
+	svc.HTTPOrBool.Main.Path = aws.String(props.Path)
 	svc.parser = template.New()
 	for _, envName := range props.PrivateOnlyEnvironments {
 		svc.Environments[envName] = &LoadBalancedWebServiceConfig{
@@ -107,10 +107,12 @@ func NewLoadBalancedWebService(props *LoadBalancedWebServiceProps) *LoadBalanced
 // newDefaultHTTPLoadBalancedWebService returns an empty LoadBalancedWebService with only the default values set, including default HTTP configurations.
 func newDefaultHTTPLoadBalancedWebService() *LoadBalancedWebService {
 	lbws := newDefaultLoadBalancedWebService()
-	lbws.RoutingRule = RoutingRuleConfigOrBool{
-		RoutingRuleConfiguration: RoutingRuleConfiguration{
-			HealthCheck: HealthCheckArgsOrString{
-				Union: BasicToUnion[string, HTTPHealthCheckArgs](DefaultHealthCheckPath),
+	lbws.HTTPOrBool = HTTPOrBool{
+		HTTP: HTTP{
+			Main: RoutingRule{
+				HealthCheck: HealthCheckArgsOrString{
+					Union: BasicToUnion[string, HTTPHealthCheckArgs](DefaultHealthCheckPath),
+				},
 			},
 		},
 	}
@@ -162,7 +164,7 @@ func (s *LoadBalancedWebService) MarshalBinary() ([]byte, error) {
 
 func (s *LoadBalancedWebService) requiredEnvironmentFeatures() []string {
 	var features []string
-	if !s.RoutingRule.Disabled() {
+	if !s.HTTPOrBool.Disabled() {
 		features = append(features, template.ALBFeatureName)
 	}
 	features = append(features, s.Network.requiredEnvFeatures()...)
@@ -230,27 +232,41 @@ func (s LoadBalancedWebService) applyEnv(envName string) (workloadManifest, erro
 	return &s, nil
 }
 
-// NetworkLoadBalancerConfiguration holds options for a network load balancer
+// NetworkLoadBalancerConfiguration holds options for a network load balancer.
 type NetworkLoadBalancerConfiguration struct {
+	Listener            NetworkLoadBalancerListener   `yaml:",inline"`
+	Aliases             Alias                         `yaml:"alias"`
+	AdditionalListeners []NetworkLoadBalancerListener `yaml:"additional_listeners"`
+}
+
+// NetworkLoadBalancerListener holds listener configuration for NLB.
+type NetworkLoadBalancerListener struct {
 	Port            *string            `yaml:"port"`
 	HealthCheck     NLBHealthCheckArgs `yaml:"healthcheck"`
 	TargetContainer *string            `yaml:"target_container"`
 	TargetPort      *int               `yaml:"target_port"`
 	SSLPolicy       *string            `yaml:"ssl_policy"`
 	Stickiness      *bool              `yaml:"stickiness"`
-	Aliases         Alias              `yaml:"alias"`
 }
 
+// IsEmpty returns true if NetworkLoadBalancerConfiguration is empty.
 func (c *NetworkLoadBalancerConfiguration) IsEmpty() bool {
+	return c.Aliases.IsEmpty() && c.Listener.IsEmpty() && len(c.AdditionalListeners) == 0
+}
+
+// IsEmpty returns true if NetworkLoadBalancerListener is empty.
+func (c *NetworkLoadBalancerListener) IsEmpty() bool {
 	return c.Port == nil && c.HealthCheck.isEmpty() && c.TargetContainer == nil && c.TargetPort == nil &&
-		c.SSLPolicy == nil && c.Stickiness == nil && c.Aliases.IsEmpty()
+		c.SSLPolicy == nil && c.Stickiness == nil
 }
 
 // ExposedPorts returns all the ports that are container ports available to receive traffic.
 func (lbws *LoadBalancedWebService) ExposedPorts() (ExposedPortsIndex, error) {
 	var exposedPorts []ExposedPort
 	workloadName := aws.StringValue(lbws.Name)
+	// port from image.port.
 	exposedPorts = append(exposedPorts, lbws.ImageConfig.exposedPorts(workloadName)...)
+	// port from sidecar[x].image.port.
 	for name, sidecar := range lbws.Sidecars {
 		out, err := sidecar.exposedPorts(name)
 		if err != nil {
@@ -258,15 +274,31 @@ func (lbws *LoadBalancedWebService) ExposedPorts() (ExposedPortsIndex, error) {
 		}
 		exposedPorts = append(exposedPorts, out...)
 	}
-	exposedPorts = append(exposedPorts, lbws.RoutingRule.exposedPorts(exposedPorts, workloadName)...)
-	out, err := lbws.NLBConfig.exposedPorts(exposedPorts, workloadName)
-	if err != nil {
-		return ExposedPortsIndex{}, err
+	// port from http.target_port and http.additional_rules[x].target_port
+	for _, rule := range lbws.HTTPOrBool.RoutingRules() {
+		exposedPorts = append(exposedPorts, rule.exposedPorts(exposedPorts, workloadName)...)
 	}
-	exposedPorts = append(exposedPorts, out...)
+
+	// port from nlb.target_port and nlb.additional_listeners[x].target_port
+	for _, listener := range lbws.NLBConfig.NLBListeners() {
+		out, err := listener.exposedPorts(exposedPorts, workloadName)
+		if err != nil {
+			return ExposedPortsIndex{}, err
+		}
+		exposedPorts = append(exposedPorts, out...)
+	}
 	portsForContainer, containerForPort := prepareParsedExposedPortsMap(sortExposedPorts(exposedPorts))
 	return ExposedPortsIndex{
+		WorkloadName:      workloadName,
 		PortsForContainer: portsForContainer,
 		ContainerForPort:  containerForPort,
 	}, nil
+}
+
+// NLBListeners returns main as well as additional listeners as a list of NetworkLoadBalancerListener.
+func (cfg NetworkLoadBalancerConfiguration) NLBListeners() []NetworkLoadBalancerListener {
+	if cfg.IsEmpty() {
+		return nil
+	}
+	return append([]NetworkLoadBalancerListener{cfg.Listener}, cfg.AdditionalListeners...)
 }

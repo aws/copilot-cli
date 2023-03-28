@@ -68,7 +68,7 @@ func NewBackendService(conf BackendServiceConfig) (*BackendService, error) {
 		},
 		manifest:   conf.Manifest,
 		parser:     fs,
-		albEnabled: !conf.Manifest.RoutingRule.IsEmpty(),
+		albEnabled: !conf.Manifest.HTTP.IsEmpty(),
 	}
 
 	if len(conf.EnvManifest.HTTPConfig.Private.Certificates) != 0 {
@@ -128,14 +128,14 @@ func (s *BackendService) Template() (string, error) {
 		return "", err
 	}
 	var deregistrationDelay *int64 = aws.Int64(60)
-	if s.manifest.RoutingRule.DeregistrationDelay != nil {
-		deregistrationDelay = aws.Int64(int64(s.manifest.RoutingRule.DeregistrationDelay.Seconds()))
+	if s.manifest.HTTP.Main.DeregistrationDelay != nil {
+		deregistrationDelay = aws.Int64(int64(s.manifest.HTTP.Main.DeregistrationDelay.Seconds()))
 	}
 	var scConfig *template.ServiceConnect
 	if s.manifest.Network.Connect.Enabled() {
 		scConfig = convertServiceConnect(s.manifest.Network.Connect)
 	}
-	targetContainer, targetContainerPort, err := s.manifest.HTTPLoadBalancerTarget()
+	targetContainer, targetContainerPort, err := s.manifest.HTTP.Main.Target(exposedPorts)
 	if err != nil {
 		return "", err
 	}
@@ -187,7 +187,7 @@ func (s *BackendService) Template() (string, error) {
 			Port: targetContainerPort,
 			Name: targetContainer,
 		},
-		HTTPHealthCheck: convertHTTPHealthCheck(&s.manifest.RoutingRule.HealthCheck),
+		HTTPHealthCheck: convertHTTPHealthCheck(&s.manifest.HTTP.Main.HealthCheck),
 		ALBListener:     albListenerConfig,
 
 		// Custom Resource Config.
@@ -221,9 +221,16 @@ func (s *BackendService) Parameters() ([]*cloudformation.Parameter, error) {
 	if err != nil {
 		return nil, err
 	}
-	targetContainer, targetPort, err := s.manifest.HTTPLoadBalancerTarget()
+	exposedPorts, err := s.manifest.ExposedPorts()
+	if err != nil {
+		return nil, fmt.Errorf("parse exposed ports in service manifest %s: %w", s.name, err)
+	}
+	targetContainer, targetPort, err := s.manifest.HTTP.Main.Target(exposedPorts)
 	if err != nil {
 		return nil, err
+	}
+	if targetPort == "" {
+		targetPort = s.manifest.MainContainerPort()
 	}
 	params = append(params, []*cloudformation.Parameter{
 		{
@@ -240,11 +247,11 @@ func (s *BackendService) Parameters() ([]*cloudformation.Parameter, error) {
 		},
 	}...)
 
-	if !s.manifest.RoutingRule.IsEmpty() {
+	if !s.manifest.HTTP.IsEmpty() {
 		params = append(params, []*cloudformation.Parameter{
 			{
 				ParameterKey:   aws.String(WorkloadRulePathParamKey),
-				ParameterValue: s.manifest.RoutingRule.Path,
+				ParameterValue: s.manifest.HTTP.Main.Path,
 			},
 			{
 				ParameterKey:   aws.String(WorkloadHTTPSParamKey),

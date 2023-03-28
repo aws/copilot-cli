@@ -3768,21 +3768,6 @@ func (mr *MockenvironmentDeployerMockRecorder) DeleteEnvironment(appName, envNam
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteEnvironment", reflect.TypeOf((*MockenvironmentDeployer)(nil).DeleteEnvironment), appName, envName, cfnExecRoleARN)
 }
 
-// EnvironmentTemplate mocks base method.
-func (m *MockenvironmentDeployer) EnvironmentTemplate(appName, envName string) (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EnvironmentTemplate", appName, envName)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// EnvironmentTemplate indicates an expected call of EnvironmentTemplate.
-func (mr *MockenvironmentDeployerMockRecorder) EnvironmentTemplate(appName, envName interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnvironmentTemplate", reflect.TypeOf((*MockenvironmentDeployer)(nil).EnvironmentTemplate), appName, envName)
-}
-
 // GetEnvironment mocks base method.
 func (m *MockenvironmentDeployer) GetEnvironment(appName, envName string) (*config.Environment, error) {
 	m.ctrl.T.Helper()
@@ -3796,6 +3781,21 @@ func (m *MockenvironmentDeployer) GetEnvironment(appName, envName string) (*conf
 func (mr *MockenvironmentDeployerMockRecorder) GetEnvironment(appName, envName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEnvironment", reflect.TypeOf((*MockenvironmentDeployer)(nil).GetEnvironment), appName, envName)
+}
+
+// Template mocks base method.
+func (m *MockenvironmentDeployer) Template(stackName string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Template", stackName)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Template indicates an expected call of Template.
+func (mr *MockenvironmentDeployerMockRecorder) Template(stackName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Template", reflect.TypeOf((*MockenvironmentDeployer)(nil).Template), stackName)
 }
 
 // UpdateEnvironmentTemplate mocks base method.
@@ -4620,21 +4620,6 @@ func (mr *MockdeployerMockRecorder) DeployApp(in interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployApp", reflect.TypeOf((*Mockdeployer)(nil).DeployApp), in)
 }
 
-// EnvironmentTemplate mocks base method.
-func (m *Mockdeployer) EnvironmentTemplate(appName, envName string) (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EnvironmentTemplate", appName, envName)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// EnvironmentTemplate indicates an expected call of EnvironmentTemplate.
-func (mr *MockdeployerMockRecorder) EnvironmentTemplate(appName, envName interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnvironmentTemplate", reflect.TypeOf((*Mockdeployer)(nil).EnvironmentTemplate), appName, envName)
-}
-
 // GetAppResourcesByRegion mocks base method.
 func (m *Mockdeployer) GetAppResourcesByRegion(app *config.Application, region string) (*stack.AppRegionalResources, error) {
 	m.ctrl.T.Helper()
@@ -4708,6 +4693,21 @@ func (m *Mockdeployer) PipelineExists(env *deploy0.CreatePipelineInput) (bool, e
 func (mr *MockdeployerMockRecorder) PipelineExists(env interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PipelineExists", reflect.TypeOf((*Mockdeployer)(nil).PipelineExists), env)
+}
+
+// Template mocks base method.
+func (m *Mockdeployer) Template(stackName string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Template", stackName)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Template indicates an expected call of Template.
+func (mr *MockdeployerMockRecorder) Template(stackName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Template", reflect.TypeOf((*Mockdeployer)(nil).Template), stackName)
 }
 
 // UpdateEnvironmentTemplate mocks base method.
@@ -7151,6 +7151,21 @@ func (m *MockworkloadDeployer) EXPECT() *MockworkloadDeployerMockRecorder {
 	return m.recorder
 }
 
+// DeployDiff mocks base method.
+func (m *MockworkloadDeployer) DeployDiff(inTmpl string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeployDiff", inTmpl)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeployDiff indicates an expected call of DeployDiff.
+func (mr *MockworkloadDeployerMockRecorder) DeployDiff(inTmpl interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployDiff", reflect.TypeOf((*MockworkloadDeployer)(nil).DeployDiff), inTmpl)
+}
+
 // DeployWorkload mocks base method.
 func (m *MockworkloadDeployer) DeployWorkload(in *deploy.DeployWorkloadInput) (deploy.ActionRecommender, error) {
 	m.ctrl.T.Helper()
@@ -7164,6 +7179,21 @@ func (m *MockworkloadDeployer) DeployWorkload(in *deploy.DeployWorkloadInput) (d
 func (mr *MockworkloadDeployerMockRecorder) DeployWorkload(in interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployWorkload", reflect.TypeOf((*MockworkloadDeployer)(nil).DeployWorkload), in)
+}
+
+// GenerateCloudFormationTemplate mocks base method.
+func (m *MockworkloadDeployer) GenerateCloudFormationTemplate(in *deploy.GenerateCloudFormationTemplateInput) (*deploy.GenerateCloudFormationTemplateOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GenerateCloudFormationTemplate", in)
+	ret0, _ := ret[0].(*deploy.GenerateCloudFormationTemplateOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GenerateCloudFormationTemplate indicates an expected call of GenerateCloudFormationTemplate.
+func (mr *MockworkloadDeployerMockRecorder) GenerateCloudFormationTemplate(in interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenerateCloudFormationTemplate", reflect.TypeOf((*MockworkloadDeployer)(nil).GenerateCloudFormationTemplate), in)
 }
 
 // IsServiceAvailableInRegion mocks base method.
@@ -7194,6 +7224,44 @@ func (m *MockworkloadDeployer) UploadArtifacts() (*deploy.UploadArtifactsOutput,
 func (mr *MockworkloadDeployerMockRecorder) UploadArtifacts() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadArtifacts", reflect.TypeOf((*MockworkloadDeployer)(nil).UploadArtifacts))
+}
+
+// MocktemplateDiffer is a mock of templateDiffer interface.
+type MocktemplateDiffer struct {
+	ctrl     *gomock.Controller
+	recorder *MocktemplateDifferMockRecorder
+}
+
+// MocktemplateDifferMockRecorder is the mock recorder for MocktemplateDiffer.
+type MocktemplateDifferMockRecorder struct {
+	mock *MocktemplateDiffer
+}
+
+// NewMocktemplateDiffer creates a new mock instance.
+func NewMocktemplateDiffer(ctrl *gomock.Controller) *MocktemplateDiffer {
+	mock := &MocktemplateDiffer{ctrl: ctrl}
+	mock.recorder = &MocktemplateDifferMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MocktemplateDiffer) EXPECT() *MocktemplateDifferMockRecorder {
+	return m.recorder
+}
+
+// DeployDiff mocks base method.
+func (m *MocktemplateDiffer) DeployDiff(inTmpl string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeployDiff", inTmpl)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeployDiff indicates an expected call of DeployDiff.
+func (mr *MocktemplateDifferMockRecorder) DeployDiff(inTmpl interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployDiff", reflect.TypeOf((*MocktemplateDiffer)(nil).DeployDiff), inTmpl)
 }
 
 // MockworkloadStackGenerator is a mock of workloadStackGenerator interface.
@@ -7232,6 +7300,21 @@ func (m *MockworkloadStackGenerator) AddonsTemplate() (string, error) {
 func (mr *MockworkloadStackGeneratorMockRecorder) AddonsTemplate() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddonsTemplate", reflect.TypeOf((*MockworkloadStackGenerator)(nil).AddonsTemplate))
+}
+
+// DeployDiff mocks base method.
+func (m *MockworkloadStackGenerator) DeployDiff(inTmpl string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeployDiff", inTmpl)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeployDiff indicates an expected call of DeployDiff.
+func (mr *MockworkloadStackGeneratorMockRecorder) DeployDiff(inTmpl interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployDiff", reflect.TypeOf((*MockworkloadStackGenerator)(nil).DeployDiff), inTmpl)
 }
 
 // GenerateCloudFormationTemplate mocks base method.
@@ -7324,6 +7407,21 @@ func (m *MockenvDeployer) EXPECT() *MockenvDeployerMockRecorder {
 	return m.recorder
 }
 
+// DeployDiff mocks base method.
+func (m *MockenvDeployer) DeployDiff(inTmpl string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeployDiff", inTmpl)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeployDiff indicates an expected call of DeployDiff.
+func (mr *MockenvDeployerMockRecorder) DeployDiff(inTmpl interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployDiff", reflect.TypeOf((*MockenvDeployer)(nil).DeployDiff), inTmpl)
+}
+
 // DeployEnvironment mocks base method.
 func (m *MockenvDeployer) DeployEnvironment(in *deploy.DeployEnvironmentInput) error {
 	m.ctrl.T.Helper()
@@ -7336,6 +7434,21 @@ func (m *MockenvDeployer) DeployEnvironment(in *deploy.DeployEnvironmentInput) e
 func (mr *MockenvDeployerMockRecorder) DeployEnvironment(in interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployEnvironment", reflect.TypeOf((*MockenvDeployer)(nil).DeployEnvironment), in)
+}
+
+// GenerateCloudFormationTemplate mocks base method.
+func (m *MockenvDeployer) GenerateCloudFormationTemplate(in *deploy.DeployEnvironmentInput) (*deploy.GenerateCloudFormationTemplateOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GenerateCloudFormationTemplate", in)
+	ret0, _ := ret[0].(*deploy.GenerateCloudFormationTemplateOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GenerateCloudFormationTemplate indicates an expected call of GenerateCloudFormationTemplate.
+func (mr *MockenvDeployerMockRecorder) GenerateCloudFormationTemplate(in interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenerateCloudFormationTemplate", reflect.TypeOf((*MockenvDeployer)(nil).GenerateCloudFormationTemplate), in)
 }
 
 // UploadArtifacts mocks base method.
@@ -7403,6 +7516,21 @@ func (m *MockenvPackager) AddonsTemplate() (string, error) {
 func (mr *MockenvPackagerMockRecorder) AddonsTemplate() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddonsTemplate", reflect.TypeOf((*MockenvPackager)(nil).AddonsTemplate))
+}
+
+// DeployDiff mocks base method.
+func (m *MockenvPackager) DeployDiff(inTmpl string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeployDiff", inTmpl)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeployDiff indicates an expected call of DeployDiff.
+func (mr *MockenvPackagerMockRecorder) DeployDiff(inTmpl interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployDiff", reflect.TypeOf((*MockenvPackager)(nil).DeployDiff), inTmpl)
 }
 
 // GenerateCloudFormationTemplate mocks base method.

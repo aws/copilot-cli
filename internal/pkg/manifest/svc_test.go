@@ -114,21 +114,23 @@ environments:
 								Credentials: aws.String("some arn"),
 							}, Port: aws.Uint16(80)},
 						},
-						RoutingRule: RoutingRuleConfigOrBool{
-							RoutingRuleConfiguration: RoutingRuleConfiguration{
-								Alias: Alias{
-									AdvancedAliases: []AdvancedAlias{},
-									StringSliceOrString: StringSliceOrString{
-										StringSlice: []string{
-											"foobar.com",
-											"v1.foobar.com",
+						HTTPOrBool: HTTPOrBool{
+							HTTP: HTTP{
+								Main: RoutingRule{
+									Alias: Alias{
+										AdvancedAliases: []AdvancedAlias{},
+										StringSliceOrString: StringSliceOrString{
+											StringSlice: []string{
+												"foobar.com",
+												"v1.foobar.com",
+											},
 										},
 									},
+									Path:             aws.String("svc"),
+									TargetContainer:  aws.String("frontend"),
+									HealthCheck:      HealthCheckArgsOrString{},
+									AllowedSourceIps: []IPNet{IPNet("10.1.0.0/24"), IPNet("10.1.1.0/24")},
 								},
-								Path:             aws.String("svc"),
-								TargetContainer:  aws.String("frontend"),
-								HealthCheck:      HealthCheckArgsOrString{},
-								AllowedSourceIps: []IPNet{IPNet("10.1.0.0/24"), IPNet("10.1.1.0/24")},
 							},
 						},
 						TaskConfig: TaskConfig{
@@ -934,8 +936,8 @@ func TestParsePortMapping(t *testing.T) {
 func TestLoadBalancedWebService_NetworkLoadBalancerTarget(t *testing.T) {
 	testCases := map[string]struct {
 		in                    LoadBalancedWebService
-		wantedTargetContainer string
-		wantedTargetPort      string
+		wantedTargetContainer []string
+		wantedTargetPort      []string
 		wantedErr             error
 	}{
 		"should return primary container name/nlb port as targetContainer/targetPort in case targetContainer and targetPort is not given ": {
@@ -947,12 +949,19 @@ func TestLoadBalancedWebService_NetworkLoadBalancerTarget(t *testing.T) {
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					ImageConfig: ImageWithPortAndHealthcheck{},
 					NLBConfig: NetworkLoadBalancerConfiguration{
-						Port: aws.String("80/tcp"),
+						Listener: NetworkLoadBalancerListener{
+							Port: aws.String("80/tcp"),
+						},
+						AdditionalListeners: []NetworkLoadBalancerListener{
+							{
+								Port: aws.String("81/tcp"),
+							},
+						},
 					},
 				},
 			},
-			wantedTargetContainer: "foo",
-			wantedTargetPort:      "80",
+			wantedTargetContainer: []string{"foo", "foo"},
+			wantedTargetPort:      []string{"80", "81"},
 		},
 		"should return targetContainer and targetPort as is if they are given ": {
 			in: LoadBalancedWebService{
@@ -963,19 +972,31 @@ func TestLoadBalancedWebService_NetworkLoadBalancerTarget(t *testing.T) {
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					ImageConfig: ImageWithPortAndHealthcheck{},
 					NLBConfig: NetworkLoadBalancerConfiguration{
-						Port:            aws.String("80/tcp"),
-						TargetPort:      aws.Int(81),
-						TargetContainer: aws.String("bar"),
+						Listener: NetworkLoadBalancerListener{
+							Port:            aws.String("80/tcp"),
+							TargetPort:      aws.Int(81),
+							TargetContainer: aws.String("bar"),
+						},
+						AdditionalListeners: []NetworkLoadBalancerListener{
+							{
+								Port:            aws.String("82/tcp"),
+								TargetPort:      aws.Int(83),
+								TargetContainer: aws.String("nginx"),
+							},
+						},
 					},
 					Sidecars: map[string]*SidecarConfig{
 						"bar": {
 							Port: aws.String("8080"),
 						},
+						"nginx": {
+							Port: aws.String("8081"),
+						},
 					},
 				},
 			},
-			wantedTargetContainer: "bar",
-			wantedTargetPort:      "81",
+			wantedTargetContainer: []string{"bar", "nginx"},
+			wantedTargetPort:      []string{"81", "83"},
 		},
 		"should return error if targetPort is of incorrect type": {
 			in: LoadBalancedWebService{
@@ -986,7 +1007,9 @@ func TestLoadBalancedWebService_NetworkLoadBalancerTarget(t *testing.T) {
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					ImageConfig: ImageWithPortAndHealthcheck{},
 					NLBConfig: NetworkLoadBalancerConfiguration{
-						Port: aws.String("80/80/80"),
+						Listener: NetworkLoadBalancerListener{
+							Port: aws.String("80/80/80"),
+						},
 					},
 				},
 			},
@@ -996,12 +1019,15 @@ func TestLoadBalancedWebService_NetworkLoadBalancerTarget(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			targetContainer, targetPort, err := tc.in.NetworkLoadBalancerTarget()
-			if tc.wantedErr != nil {
-				require.EqualError(t, err, tc.wantedErr.Error())
-			} else {
-				require.Equal(t, tc.wantedTargetContainer, targetContainer)
-				require.Equal(t, tc.wantedTargetPort, targetPort)
+			exposedPorts, _ := tc.in.ExposedPorts()
+			for idx, listener := range tc.in.NLBConfig.NLBListeners() {
+				targetContainer, targetPort, err := listener.Target(exposedPorts)
+				if tc.wantedErr != nil {
+					require.EqualError(t, err, tc.wantedErr.Error())
+				} else {
+					require.Equal(t, tc.wantedTargetContainer[idx], targetContainer)
+					require.Equal(t, tc.wantedTargetPort[idx], targetPort)
+				}
 			}
 		})
 	}
