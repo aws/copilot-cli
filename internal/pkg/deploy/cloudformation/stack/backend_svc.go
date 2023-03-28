@@ -209,6 +209,7 @@ func (s *BackendService) Template() (string, error) {
 		return "", fmt.Errorf("parse backend service template: %w", err)
 	}
 	overriddenTpl, err := s.taskDefOverrideFunc(convertTaskDefOverrideRules(s.manifest.TaskDefOverrides), content.Bytes())
+	fmt.Println("shall I introduce some bugs here?????")
 	if err != nil {
 		return "", fmt.Errorf("apply task definition overrides: %w", err)
 	}
