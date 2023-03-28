@@ -149,7 +149,7 @@ For better security, log in with a limited-privilege personal access token. Lear
 			},
 			inMockDocker: func(m *mocks.MockContainerLoginBuildPusher) {
 				m.EXPECT().IsEcrCredentialHelperEnabled("mockRepoURI").Return(false)
-				m.EXPECT().Login("mockRepoURI", "my-name", "my-pwd").Return("Login failed", errors.New("error logging in"))
+				m.EXPECT().Login("mockRepoURI", "my-name", "my-pwd").Return("login attempt to https://registry-1.docker.io/v2/ failed", errors.New("error logging in"))
 			},
 			wantedError:    fmt.Errorf("login to repo %s: error logging in", mockRepoURI),
 			wantedLoginOut: mockLoginOut,
