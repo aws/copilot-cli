@@ -16,20 +16,12 @@ import (
 // URIAccessType represents how a URI can be accessed.
 type URIAccessType int
 
+// Supported URI Access Types.
 const (
-	// URIAccessTypeNone means a URI is not accessible.
 	URIAccessTypeNone URIAccessType = iota
-
-	// URIAccessTypeInternet means a URI is accesible via the public internet.
 	URIAccessTypeInternet
-
-	// URIAccessTypeInternal means a URI is accesible within a VPC.
 	URIAccessTypeInternal
-
-	// URIAccessTypeServiceDiscovery means a URI is accesible within a VPC using Service Discovery.
 	URIAccessTypeServiceDiscovery
-
-	// URIAccessTypeServiceConnect means a URI is accesible within a Serice Connect namespace.
 	URIAccessTypeServiceConnect
 )
 
