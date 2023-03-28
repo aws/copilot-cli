@@ -787,7 +787,7 @@ type: Request-Driven Web Service`), nil)
 			},
 			wantedErr: fmt.Errorf("confirm another exclude filter: mock error"),
 		},
-		"error if include filters not set successfully": {
+		"error if reinclude filters not set successfully": {
 			inSvcType: manifestinfo.StaticSiteType,
 			inSvcName: wantedSvcName,
 			mockFileSystem: func(mockFS afero.Fs) {
@@ -802,7 +802,7 @@ type: Request-Driven Web Service`), nil)
 				m.mockPrompt.EXPECT().Confirm(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, nil)
 				m.mockPrompt.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("", mockError)
 			},
-			wantedErr: fmt.Errorf("get include filter: mock error"),
+			wantedErr: fmt.Errorf("get reinclude filter: mock error"),
 		},
 		"error if fail to confirm repeat for include": {
 			inSvcType: manifestinfo.StaticSiteType,
@@ -861,7 +861,7 @@ type: Request-Driven Web Service`), nil)
 			},
 			wantedErr: fmt.Errorf("confirm another asset: mock error"),
 		},
-		"successfully prompt for and return multiple assets (with recursion, multiple exclude and include filters) to upload; include one rejected option": {
+		"successfully prompt for and return multiple assets (with recursion, multiple exclude and reinclude filters) to upload; including one rejected option": {
 			inSvcType: manifestinfo.StaticSiteType,
 			inSvcName: wantedSvcName,
 			mockFileSystem: func(mockFS afero.Fs) {
