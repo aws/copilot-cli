@@ -96,12 +96,10 @@ These messages can be consumed by the Worker Service.`
 	staticSiteInitDirOrFileHelpPrompt     = "Directory or file to use for building your static site."
 	fmtStaticSiteInitDirOrFilePathPrompt  = "What is the path to the " + color.Emphasize("directory or file") + " for %s?"
 	staticSiteInitDirOrFilePathHelpPrompt = "Path to directory or file to use for building your static site."
-	fmtStaticSiteInitRecursivePrompt      = "Would you like to recursively upload all files in directory '%s'?"
-	fmtStaticSiteInitRecursiveHelpPrompt  = "Upload all files in and downstream from directory '%s'"
 	fmtStaticSiteInitExcludePrompt        = "Which files under '%s' would you like to " + color.Emphasize("exclude") + "?"
 	staticSiteInitExcludeHelpPrompt       = "Parameters for pattern-matching; includes '*', '?', '[sequence]', and '[!sequence]'"
-	fmtStaticSiteInitIncludePrompt        = "Which files under '%s' would you like to " + color.Emphasize("re-include") + "?"
-	staticSiteInitIncludeHelpPrompt       = "Parameters for pattern-matching; includes '*', '?', '[sequence]', and '[!sequence]'"
+	fmtStaticSiteInitReincludePrompt        = "Which files under '%s' would you like to " + color.Emphasize("reinclude") + "?"
+	staticSiteInitReincludeHelpPrompt       = "Parameters for pattern-matching; includes '*', '?', '[sequence]', and '[!sequence]'"
 	fmtStaticSiteInitDestinationPrompt    = "What is the destination where '%s' should be uploaded?"
 	staticSiteInitDestinationHelpPrompt   = "Optional. Destination in S3; default for directories is '/'."
 	staticSiteConfirmSummaryPrompt        = "Does this upload config look right to you?"
@@ -110,6 +108,7 @@ These messages can be consumed by the Worker Service.`
 	fmtSelectAgainPrompt     = "Would you like to %s another %s?"
 	fmtSelectAgainHelpPrompt = "You may %s multiple %s. Type 'Y' to %s another."
 	defaultGetInputNone      = "[None]"
+	defaultGetInputDone      = "[Done]"
 )
 
 const (
@@ -135,7 +134,7 @@ type staticAsset struct {
 	destination   string
 	recursive     bool
 	excludeFilter string
-	includeFilter string
+	reincludeFilter string
 }
 
 type initWkldVars struct {
@@ -477,20 +476,22 @@ func (o *initSvcOpts) askStaticSite() error {
 			return err
 		}
 		var excludes []string
-		var includes []string
+		var reincludes []string
 		var recursive bool
 		if isDir {
 			recursive = true
 		}
-		// --exclude and --include work only if --recursive is also specified https://stackoverflow.com/questions/43370710/s3-cli-includes-not-working
+		// --exclude and --reinclude work only if --recursive is also specified https://stackoverflow.com/questions/43370710/s3-cli-includes-not-working
 		if recursive {
 			excludes, err = o.askExcludes(source)
 			if err != nil {
 				return err
 			}
-			includes, err = o.askIncludes(source)
-			if err != nil {
-				return err
+			if len(excludes) != 0 {
+				reincludes, err = o.askReincludes(source)
+				if err != nil {
+					return err
+				}
 			}
 		}
 		msg := fmt.Sprintf(`
@@ -501,7 +502,7 @@ Destination: %s`, color.Emphasize("Upload Summary:"), source, destination)
 			msg = msg + fmt.Sprintf(
 				`
 Exclude: %v
-Include: %v`, strings.Join(excludes, ", "), strings.Join(includes, ", "))
+Include: %v`, strings.Join(excludes, ", "), strings.Join(reincludes, ", "))
 		}
 		log.Infoln(msg)
 		add, err := o.prompt.Confirm(
@@ -518,7 +519,7 @@ Include: %v`, strings.Join(excludes, ", "), strings.Join(includes, ", "))
 				Destination: destination,
 				Recursive:   recursive,
 				Exclude:     o.stringSliceToStringSliceOrString(excludes),
-				Reinclude:   o.stringSliceToStringSliceOrString(includes),
+				Reinclude:   o.stringSliceToStringSliceOrString(reincludes),
 			})
 		}
 
@@ -639,6 +640,7 @@ func (o *initSvcOpts) askDestination(source string, isDir bool) (string, error) 
 
 func (o *initSvcOpts) askExcludes(source string) ([]string, error) {
 	again := true
+	defaultInput := defaultGetInputNone
 	var excludes []string
 	for again {
 		exclude, err := o.prompt.Get(
@@ -647,20 +649,16 @@ func (o *initSvcOpts) askExcludes(source string) ([]string, error) {
 			func(val interface{}) error {
 				return nil
 			},
-			prompt.WithFinalMessage("Exclude:"), prompt.WithDefaultInput(defaultGetInputNone))
+			prompt.WithFinalMessage("Exclude:"), prompt.WithDefaultInput(defaultInput))
 		if err != nil {
 			return nil, fmt.Errorf("get exclude filter: %w", err)
 		}
-		excludes = append(excludes, exclude)
-		if exclude != defaultGetInputNone {
-			again, err = o.prompt.Confirm(
-				fmt.Sprintf(fmtSelectAgainPrompt, "enter", "exclude filter"),
-				fmt.Sprintf(fmtSelectAgainHelpPrompt, "enter", "filters", "type"),
-				prompt.WithFinalMessage("Another:"),
-			)
-			if err != nil {
-				return nil, fmt.Errorf("confirm another exclude filter: %w", err)
-			}
+		if exclude != defaultGetInputNone && exclude != defaultGetInputDone {
+			excludes = append(excludes, exclude)
+		}
+		if exclude != defaultGetInputNone && exclude != defaultGetInputDone {
+			again = true
+			defaultInput = defaultGetInputDone
 		} else {
 			again = false
 		}
@@ -668,35 +666,32 @@ func (o *initSvcOpts) askExcludes(source string) ([]string, error) {
 	return excludes, nil
 }
 
-func (o *initSvcOpts) askIncludes(source string) ([]string, error) {
+func (o *initSvcOpts) askReincludes(source string) ([]string, error) {
 	again := true
-	var includes []string
+	defaultInput := defaultGetInputNone
+	var reincludes []string
 	for again {
-		include, err := o.prompt.Get(
-			fmt.Sprintf(fmtStaticSiteInitIncludePrompt, source),
-			staticSiteInitIncludeHelpPrompt,
+		reinclude, err := o.prompt.Get(
+			fmt.Sprintf(fmtStaticSiteInitReincludePrompt, source),
+			staticSiteInitReincludeHelpPrompt,
 			func(val interface{}) error {
 				return nil
 			},
-			prompt.WithFinalMessage("Include:"), prompt.WithDefaultInput(defaultGetInputNone))
+			prompt.WithFinalMessage("Reinclude:"), prompt.WithDefaultInput(defaultInput))
 		if err != nil {
-			return nil, fmt.Errorf("get include filter: %w", err)
+			return nil, fmt.Errorf("get reinclude filter: %w", err)
 		}
-		includes = append(includes, include)
-		if include != defaultGetInputNone {
-			again, err = o.prompt.Confirm(
-				fmt.Sprintf(fmtSelectAgainPrompt, "enter", "include filter"),
-				fmt.Sprintf(fmtSelectAgainHelpPrompt, "enter", "filters", "type"),
-				prompt.WithFinalMessage("Another:"),
-			)
-			if err != nil {
-				return nil, fmt.Errorf("confirm another include filter: %w", err)
-			}
+		if reinclude != defaultGetInputNone && reinclude != defaultGetInputDone {
+			reincludes = append(reincludes, reinclude)
+		}
+		if reinclude != defaultGetInputNone && reinclude != defaultGetInputDone {
+			again = true
+			defaultInput = defaultGetInputDone
 		} else {
 			again = false
 		}
 	}
-	return includes, nil
+	return reincludes, nil
 }
 
 func (o *initSvcOpts) stringSliceToStringSliceOrString(strings []string) manifest.StringSliceOrString {
