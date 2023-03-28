@@ -31,6 +31,7 @@ const (
 	taskOSParamKey             = "OS"
 	taskArchParamKey           = "Arch"
 
+	// TaskOutputS3Bucket is the CFN stack output logical ID for a task's S3 bucket.
 	TaskOutputS3Bucket = "S3Bucket"
 
 	taskLogRetentionInDays = "1"

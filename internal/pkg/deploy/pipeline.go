@@ -36,6 +36,7 @@ const (
 	defaultPipelineBuildImage      = "aws/codebuild/amazonlinux2-x86_64-standard:4.0"
 	defaultPipelineEnvironmentType = "LINUX_CONTAINER"
 
+	// DefaultPipelineArtifactsDir is the default folder to output Copilot-generated templates.
 	DefaultPipelineArtifactsDir = "infrastructure"
 )
 

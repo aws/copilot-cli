@@ -62,6 +62,7 @@ func (cf CloudFormation) DeployApp(in *deploy.CreateAppInput) error {
 		stackset.WithTags(toMap(appConfig.Tags())))
 }
 
+// UpgradeApplication upgrades the application stack to the latest version.
 func (cf CloudFormation) UpgradeApplication(in *deploy.CreateAppInput) error {
 	appConfig := stack.NewAppStackConfig(in)
 	appStack, err := cf.cfnClient.Describe(appConfig.StackName())
