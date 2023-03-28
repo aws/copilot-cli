@@ -47,7 +47,7 @@ type LoadBalancedWebService struct {
 type LoadBalancedWebServiceConfig struct {
 	ImageConfig      ImageWithPortAndHealthcheck `yaml:"image,flow"`
 	ImageOverride    `yaml:",inline"`
-	RoutingRule      RoutingRuleConfigOrBool `yaml:"http,flow"`
+	HTTPOrBool       HTTPOrBool `yaml:"http,flow"`
 	TaskConfig       `yaml:",inline"`
 	Logging          `yaml:"logging,flow"`
 	Sidecars         map[string]*SidecarConfig        `yaml:"sidecars"` // NOTE: keep the pointers because `mergo` doesn't automatically deep merge map's value unless it's a pointer type.
@@ -86,9 +86,9 @@ func NewLoadBalancedWebService(props *LoadBalancedWebServiceProps) *LoadBalanced
 		svc.LoadBalancedWebServiceConfig.TaskConfig.Memory = aws.Int(MinWindowsTaskMemory)
 	}
 	if props.HTTPVersion != "" {
-		svc.RoutingRule.Main.ProtocolVersion = &props.HTTPVersion
+		svc.HTTPOrBool.Main.ProtocolVersion = &props.HTTPVersion
 	}
-	svc.RoutingRule.Main.Path = aws.String(props.Path)
+	svc.HTTPOrBool.Main.Path = aws.String(props.Path)
 	svc.parser = template.New()
 	for _, envName := range props.PrivateOnlyEnvironments {
 		svc.Environments[envName] = &LoadBalancedWebServiceConfig{
@@ -107,8 +107,8 @@ func NewLoadBalancedWebService(props *LoadBalancedWebServiceProps) *LoadBalanced
 // newDefaultHTTPLoadBalancedWebService returns an empty LoadBalancedWebService with only the default values set, including default HTTP configurations.
 func newDefaultHTTPLoadBalancedWebService() *LoadBalancedWebService {
 	lbws := newDefaultLoadBalancedWebService()
-	lbws.RoutingRule = RoutingRuleConfigOrBool{
-		RoutingRuleConfiguration: RoutingRuleConfiguration{
+	lbws.HTTPOrBool = HTTPOrBool{
+		HTTP: HTTP{
 			Main: RoutingRule{
 				HealthCheck: HealthCheckArgsOrString{
 					Union: BasicToUnion[string, HTTPHealthCheckArgs](DefaultHealthCheckPath),
@@ -164,7 +164,7 @@ func (s *LoadBalancedWebService) MarshalBinary() ([]byte, error) {
 
 func (s *LoadBalancedWebService) requiredEnvironmentFeatures() []string {
 	var features []string
-	if !s.RoutingRule.Disabled() {
+	if !s.HTTPOrBool.Disabled() {
 		features = append(features, template.ALBFeatureName)
 	}
 	features = append(features, s.Network.requiredEnvFeatures()...)
@@ -275,7 +275,7 @@ func (lbws *LoadBalancedWebService) ExposedPorts() (ExposedPortsIndex, error) {
 		exposedPorts = append(exposedPorts, out...)
 	}
 	// port from http.target_port and http.additional_rules[x].target_port
-	for _, rule := range lbws.RoutingRule.RoutingRules() {
+	for _, rule := range lbws.HTTPOrBool.RoutingRules() {
 		exposedPorts = append(exposedPorts, rule.exposedPorts(exposedPorts, workloadName)...)
 	}
 

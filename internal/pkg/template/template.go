@@ -18,7 +18,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/template/artifactpath"
 )
 
-//go:embed templates
+//go:embed templates templates/overrides/cdk/.gitignore
 var templateFS embed.FS
 
 // File names under "templates/".

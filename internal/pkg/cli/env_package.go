@@ -4,6 +4,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -192,7 +193,15 @@ func (o *packageEnvOpts) Execute() error {
 		return fmt.Errorf("generate CloudFormation template from environment %q manifest: %v", o.envName, err)
 	}
 	if o.showDiff {
-		return diff(packager, res.Template, o.diffWriter)
+		if err := diff(packager, res.Template, o.diffWriter); err != nil {
+			var errHasDiff *errHasDiff
+			if errors.As(err, &errHasDiff) {
+				return err
+			}
+			return &errDiffNotAvailable{
+				parentErr: err,
+			}
+		}
 	}
 	addonsTemplate, err := packager.AddonsTemplate()
 	if err != nil {

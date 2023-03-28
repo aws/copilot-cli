@@ -14,6 +14,8 @@ const (
 	cdkVersion              = "2.56.0"
 	cdkConstructsMinVersion = "10.0.0"
 	cdkTemplatesPath        = "overrides/cdk"
+
+	yamlPatchTemplatesPath = "overrides/yamlpatch"
 )
 
 var (
@@ -129,4 +131,9 @@ func (t *Template) WalkOverridesCDKDir(resources []CFNResource, fn WalkDirFunc) 
 			},
 		},
 	))
+}
+
+// WalkOverridesPatchDir walks through the overrides/yamlpatch templates and calls fn for each parsed template file.
+func (t *Template) WalkOverridesPatchDir(fn WalkDirFunc) error {
+	return t.walkDir(yamlPatchTemplatesPath, yamlPatchTemplatesPath, struct{}{}, fn)
 }

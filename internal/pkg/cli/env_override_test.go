@@ -217,12 +217,12 @@ func TestOverrideEnv_Ask(t *testing.T) {
 			},
 			"return an error if IaC tool flag value is invalid": {
 				iacTool: "terraform",
-				wanted:  errors.New(`"terraform" is not a valid IaC tool: must be one of: "cdk"`),
+				wanted:  errors.New(`"terraform" is not a valid IaC tool: must be one of: "cdk", "yamlpatch"`),
 			},
 			"should ask for IaC tool name if flag is not provided": {
 				initMocks: func(ctrl *gomock.Controller, cmd *overrideEnvOpts) {
 					mockPrompt := mocks.NewMockprompter(ctrl)
-					mockPrompt.EXPECT().SelectOne(gomock.Any(), gomock.Any(), []string{"cdk"}, gomock.Any())
+					mockPrompt.EXPECT().SelectOne(gomock.Any(), gomock.Any(), []string{"cdk", "yamlpatch"}, gomock.Any())
 					cmd.prompt = mockPrompt
 				},
 			},

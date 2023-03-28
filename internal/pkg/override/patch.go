@@ -5,6 +5,7 @@ package override
 
 import (
 	"fmt"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -12,7 +13,24 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-const jsonPointerSeparator = "/"
+const (
+	jsonPointerSeparator = "/"
+	yamlPatchFile        = "cfn.patches.yml"
+)
+
+// ScaffoldWithPatch sets up YAML patches in dir/ to apply to the
+// Copilot generated CloudFormation template.
+func ScaffoldWithPatch(fs afero.Fs, dir string) error {
+	// If the directory does not exist, [afero.IsEmpty] returns false and an error.
+	// Therefore, we only want to check if a directory is empty only if it also exists.
+	exists, _ := afero.Exists(fs, dir)
+	isEmpty, _ := afero.IsEmpty(fs, dir)
+	if exists && !isEmpty {
+		return fmt.Errorf("directory %q is not empty", dir)
+	}
+
+	return templates.WalkOverridesPatchDir(writeFilesToDir(dir, fs))
+}
 
 // Patch applies overrides configured as JSON Patches,
 // as defined in https://www.rfc-editor.org/rfc/rfc6902.
@@ -44,8 +62,11 @@ func WithPatch(filePath string, opts PatchOpts) *Patch {
 // after applying YAML patches to it.
 func (p *Patch) Override(body []byte) ([]byte, error) {
 	patches, err := unmarshalPatches(p.filePath, p.fs)
-	if err != nil {
+	switch {
+	case err != nil:
 		return nil, err
+	case len(patches) == 0:
+		return nil, fmt.Errorf("no YAML patches configured")
 	}
 
 	var root yaml.Node
@@ -53,7 +74,8 @@ func (p *Patch) Override(body []byte) ([]byte, error) {
 		return nil, fmt.Errorf("invalid template: %w", err)
 	}
 
-	for i, patch := range patches {
+	for i := range patches {
+		patch := patches[i] // needed because operations use pointer to patch.Value
 		var err error
 		switch patch.Operation {
 		case "add":
@@ -70,6 +92,7 @@ func (p *Patch) Override(body []byte) ([]byte, error) {
 		}
 	}
 
+	addYAMLPatchDescription(&root)
 	out, err := yaml.Marshal(&root)
 	if err != nil {
 		return nil, fmt.Errorf("unable to return modified document to []byte: %w", err)
@@ -78,6 +101,7 @@ func (p *Patch) Override(body []byte) ([]byte, error) {
 }
 
 func unmarshalPatches(path string, fs afero.Fs) ([]yamlPatch, error) {
+	path = filepath.Join(path, yamlPatchFile)
 	content, err := afero.ReadFile(fs, path)
 	if err != nil {
 		return nil, fmt.Errorf("read file at %q: %w", path, err)
@@ -89,6 +113,23 @@ func unmarshalPatches(path string, fs afero.Fs) ([]yamlPatch, error) {
 	}
 
 	return patches, nil
+}
+
+// addYAMLPatchDescription updates the Description field of a CloudFormation
+// to indicate it has been overriden with YAML patches for us to keep track of usage metrics.
+func addYAMLPatchDescription(body *yaml.Node) {
+	if body.Kind != yaml.DocumentNode || len(body.Content) == 0 {
+		return
+	}
+	body = body.Content[0] // Move inside the document.
+	for i := 0; i < len(body.Content); i += 2 {
+		if body.Content[i].Value != "Description" {
+			continue
+		}
+		body.Content[i+1].Value = fmt.Sprintf("%s using AWS Copilot with YAML patches.",
+			strings.TrimSuffix(body.Content[i+1].Value, "."))
+		break
+	}
 }
 
 type yamlPatch struct {

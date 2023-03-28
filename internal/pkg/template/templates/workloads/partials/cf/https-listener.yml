@@ -75,9 +75,9 @@ HTTPRuleWithDomainPriorityAction:
 HTTPListenerRuleWithDomain{{ if ne $i 0 }}{{ $i }}{{ end }}:
   Metadata:
     {{- if $rule.RedirectToHTTPS}}
-    'aws:copilot:description': 'An HTTP listener rule that redirects HTTP to HTTPS'
+    'aws:copilot:description': 'An HTTP listener rule for path `{{$rule.Path}}` that redirects HTTP to HTTPS'
     {{- else}}
-    'aws:copilot:description': 'An HTTP listener rule for forwarding HTTP traffic to your tasks'
+    'aws:copilot:description': 'An HTTP listener rule for path `{{$rule.Path}}` that forwards HTTP traffic to your tasks'
     {{- end}}
   Type: AWS::ElasticLoadBalancingV2::ListenerRule
   Properties:
@@ -136,7 +136,7 @@ HTTPListenerRuleWithDomain{{ if ne $i 0 }}{{ $i }}{{ end }}:
 
 HTTPSListenerRule{{ if ne $i 0 }}{{ $i }}{{ end }}:
   Metadata:
-    'aws:copilot:description': 'An HTTPS listener rule for forwarding HTTPS traffic to your tasks'
+    'aws:copilot:description': 'An HTTPS listener rule for path `{{$rule.Path}}` that forwards HTTPS traffic to your tasks'
   Type: AWS::ElasticLoadBalancingV2::ListenerRule
   Properties:
     Actions:
