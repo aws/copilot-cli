@@ -149,17 +149,20 @@ func (c CmdClient) Build(in *BuildArguments) error {
 	return nil
 }
 
-// Login will run a `docker login` command against the Service repository URI with the input uri and auth data.
-func (c CmdClient) Login(uri, username, password string) error {
+// Login runs a `docker login` command against the specified Docker registry using the input credentials.
+// The function returns the standard output and standard error message from the `docker login` command as a string.
+// If the login process fails, an error is returned from the `docker login` command.
+func (c CmdClient) Login(uri, username, password string) (string, error) {
+	buf := new(strings.Builder)
 	err := c.runner.Run("docker",
 		[]string{"login", "-u", username, "--password-stdin", uri},
-		exec.Stdin(strings.NewReader(password)))
+		exec.Stdin(strings.NewReader(password)), exec.Stdout(buf), exec.Stderr(buf))
 
 	if err != nil {
-		return fmt.Errorf("authenticate to ECR: %w", err)
+		return buf.String(), fmt.Errorf("authenticate to ECR: %w", err)
 	}
 
-	return nil
+	return buf.String(), nil
 }
 
 // Push pushes the images with the specified tags and ecr repository URI, and returns the image digest on success.

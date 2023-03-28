@@ -172,9 +172,13 @@ type imageBuilderPusher interface {
 type repositoryURIGetter interface {
 	URI() (string, error)
 }
+type dockerLogin interface {
+	Login(docker repository.ContainerLoginBuildPusher) (string, string, error)
+}
 
 type repositoryService interface {
 	repositoryURIGetter
+	dockerLogin
 	imageBuilderPusher
 }
 
