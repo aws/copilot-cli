@@ -34,6 +34,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/override"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/template/artifactpath"
+	"github.com/aws/copilot-cli/internal/pkg/template/diff"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/spf13/afero"
@@ -94,6 +95,7 @@ type envDeployer struct {
 	// Dependencies to deploy an environment.
 	appCFN                   appResourcesGetter
 	envDeployer              environmentDeployer
+	tmplGetter               deployedTemplateGetter
 	patcher                  patcher
 	newStack                 func(input *cfnstack.EnvConfig, forceUpdateID string, prevParams []*awscfn.Parameter) (deploycfn.StackConfiguration, error)
 	envDescriber             envDescriber
@@ -157,6 +159,7 @@ func NewEnvDeployer(in *NewEnvDeployerInput) (*envDeployer, error) {
 
 		appCFN:      deploycfn.New(defaultSession, deploycfn.WithProgressTracker(os.Stderr)),
 		envDeployer: cfnClient,
+		tmplGetter:  cfnClient,
 		patcher: &patch.EnvironmentPatcher{
 			Prog:            termprogress.NewSpinner(log.DiagnosticWriter),
 			TemplatePatcher: cfnClient,
@@ -218,6 +221,23 @@ func (d *envDeployer) UploadArtifacts() (*UploadEnvArtifactsOutput, error) {
 		AddonsURL:          addonsURL,
 		CustomResourceURLs: customResourceURLs,
 	}, nil
+}
+
+// DeployDiff returns the stringified diff of the template against the deployed template of the environment.
+func (d *envDeployer) DeployDiff(template string) (string, error) {
+	tmpl, err := d.tmplGetter.Template(cfnstack.NameForEnv(d.app.Name, d.env.Name))
+	if err != nil {
+		return "", fmt.Errorf("retrieve the deployed template for %q: %w", d.env.Name, err)
+	}
+	diffTree, err := diff.From(tmpl).ParseWithCFNIgnorer([]byte(template))
+	if err != nil {
+		return "", fmt.Errorf("parse the diff against the deployed env stack %q: %w", d.env.Name, err)
+	}
+	buf := strings.Builder{}
+	if err := diffTree.Write(&buf); err != nil {
+		return "", err
+	}
+	return buf.String(), nil
 }
 
 // AddonsTemplate returns the environment addons template.

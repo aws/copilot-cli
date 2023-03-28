@@ -17,6 +17,10 @@ http:
     grace_period: 45s
   target_container: http-full-config
   target_port: 8081
+  additional_rules:
+    - path: "admin"
+      target_port: 8080
+
 network:
   connect: false
 

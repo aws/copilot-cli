@@ -70,6 +70,8 @@ on:
 
 <div class="separator"></div>
 
+{% include 'image.md' %}
+
 {% include 'image-config.en.md' %}
 
 <div class="separator"></div>  

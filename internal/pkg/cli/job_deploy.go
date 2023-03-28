@@ -4,7 +4,10 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
+	"io"
+	"os"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -42,7 +45,9 @@ type deployJobOpts struct {
 	newJobDeployer       func() (workloadDeployer, error)
 	envFeaturesDescriber versionCompatibilityChecker
 	sel                  wsSelector
+	prompt               prompter
 	gitShortCommit       string
+	diffWriter           io.Writer
 
 	// cached variables
 	targetApp         *config.Application
@@ -71,9 +76,11 @@ func newJobDeployOpts(vars deployWkldVars) (*deployJobOpts, error) {
 		ws:              ws,
 		unmarshal:       manifest.UnmarshalWorkload,
 		sel:             selector.NewLocalWorkloadSelector(prompter, store, ws),
+		prompt:          prompter,
 		sessProvider:    sessProvider,
 		newInterpolator: newManifestInterpolator,
 		cmd:             exec.NewCmd(),
+		diffWriter:      os.Stdout,
 	}
 	opts.newJobDeployer = func() (workloadDeployer, error) {
 		// NOTE: Defined as a struct member to facilitate unit testing.
@@ -188,6 +195,34 @@ func (o *deployJobOpts) Execute() error {
 	uploadOut, err := deployer.UploadArtifacts()
 	if err != nil {
 		return fmt.Errorf("upload deploy resources for job %s: %w", o.name, err)
+	}
+	if o.showDiff {
+		output, err := deployer.GenerateCloudFormationTemplate(&deploy.GenerateCloudFormationTemplateInput{
+			StackRuntimeConfiguration: deploy.StackRuntimeConfiguration{
+				RootUserARN:        o.rootUserARN,
+				Tags:               o.targetApp.Tags,
+				EnvFileARNs:        uploadOut.EnvFileARNs,
+				ImageDigests:       uploadOut.ImageDigests,
+				AddonsURL:          uploadOut.AddonsURL,
+				CustomResourceURLs: uploadOut.CustomResourceURLs,
+			},
+		})
+		if err != nil {
+			return fmt.Errorf("generate the template for job %q against environment %q: %w", o.name, o.envName, err)
+		}
+		if err := diff(deployer, output.Template, o.diffWriter); err != nil {
+			var errHasDiff *errHasDiff
+			if !errors.As(err, &errHasDiff) {
+				return err
+			}
+		}
+		contd, err := o.prompt.Confirm(continueDeploymentPrompt, "")
+		if err != nil {
+			return fmt.Errorf("ask whether to continue with the deployment: %w", err)
+		}
+		if !contd {
+			return nil
+		}
 	}
 	if _, err = deployer.DeployWorkload(&deploy.DeployWorkloadInput{
 		StackRuntimeConfiguration: deploy.StackRuntimeConfiguration{
@@ -337,6 +372,6 @@ func buildJobDeployCmd() *cobra.Command {
 	cmd.Flags().StringVar(&vars.imageTag, imageTagFlag, "", imageTagFlagDescription)
 	cmd.Flags().StringToStringVar(&vars.resourceTags, resourceTagsFlag, nil, resourceTagsFlagDescription)
 	cmd.Flags().BoolVar(&vars.disableRollback, noRollbackFlag, false, noRollbackFlagDescription)
-
+	cmd.Flags().BoolVar(&vars.showDiff, diffFlag, false, diffFlagDescription)
 	return cmd
 }

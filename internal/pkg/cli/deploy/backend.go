@@ -123,23 +123,38 @@ func (d *backendSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (
 }
 
 func (d *backendSvcDeployer) validateALBRuntime() error {
-	if d.backendMft.RoutingRule.IsEmpty() {
+	if d.backendMft.HTTP.IsEmpty() {
+		return nil
+	}
+	if err := d.validateRuntimeRoutingRule(d.backendMft.HTTP.Main); err != nil {
+		return fmt.Errorf(`validate ALB runtime configuration for "http": %w`, err)
+	}
+	for idx, rule := range d.backendMft.HTTP.AdditionalRoutingRules {
+		if err := d.validateRuntimeRoutingRule(rule); err != nil {
+			return fmt.Errorf(`validate ALB runtime configuration for "http.additional_rules[%d]": %w`, idx, err)
+		}
+	}
+	return nil
+}
+
+func (d *backendSvcDeployer) validateRuntimeRoutingRule(rule manifest.RoutingRule) error {
+	if rule.IsEmpty() {
 		return nil
 	}
 	hasImportedCerts := len(d.envConfig.HTTPConfig.Private.Certificates) != 0
 	switch {
-	case d.backendMft.RoutingRule.Main.Alias.IsEmpty() && hasImportedCerts:
+	case rule.Alias.IsEmpty() && hasImportedCerts:
 		return &errSvcWithNoALBAliasDeployingToEnvWithImportedCerts{
 			name:    d.name,
 			envName: d.env.Name,
 		}
-	case d.backendMft.RoutingRule.Main.Alias.IsEmpty():
+	case rule.Alias.IsEmpty():
 		return nil
 	case !hasImportedCerts:
 		return fmt.Errorf(`cannot specify "alias" in an environment without imported certs`)
 	}
 
-	aliases, err := d.backendMft.RoutingRule.Main.Alias.ToStringSlice()
+	aliases, err := rule.Alias.ToStringSlice()
 	if err != nil {
 		return fmt.Errorf("convert aliases to string slice: %w", err)
 	}
