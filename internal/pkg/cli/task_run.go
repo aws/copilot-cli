@@ -13,7 +13,6 @@ import (
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
-	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/template/artifactpath"
 	"golang.org/x/mod/semver"
 
@@ -165,7 +164,6 @@ type runTaskOpts struct {
 	provider          sessionProvider
 	sess              *session.Session
 	targetEnvironment *config.Environment
-	dockerCmdClient   dockerengine.CmdClient
 
 	// Configurer functions.
 	configureRuntimeOpts func() error
@@ -224,10 +222,9 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 	}
 
 	opts.configureRepository = func() error {
-		opts.dockerCmdClient = dockerengine.New(exec.NewCmd())
 		repoName := fmt.Sprintf(deploy.FmtTaskECRRepoName, opts.groupName)
 		opts.repository = repository.New(ecr.New(opts.sess), repoName)
-		uri, loginOut, err := opts.repository.Login(opts.dockerCmdClient)
+		uri, loginOut, err := opts.repository.Login()
 		if err != nil {
 			return fmt.Errorf("login to docker %s: %w", loginOut, err)
 		}
@@ -971,7 +968,7 @@ func (o *runTaskOpts) buildAndPushImage() error {
 		ctx = o.dockerfileContextPath
 	}
 	fmt.Print(o.dockerLoginOut)
-	if _, err := o.repository.BuildAndPush(o.dockerCmdClient, &dockerengine.BuildArguments{
+	if _, err := o.repository.BuildAndPush(&dockerengine.BuildArguments{
 		URI:        o.uri,
 		Dockerfile: o.dockerfilePath,
 		Context:    ctx,

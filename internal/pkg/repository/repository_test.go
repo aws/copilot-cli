@@ -100,12 +100,13 @@ func TestRepository_BuildAndPush(t *testing.T) {
 			}
 
 			repo := &Repository{
-				name:     inRepoName,
-				registry: mockRepoGetter,
-				uri:      tc.inURI,
+				name:            inRepoName,
+				registry:        mockRepoGetter,
+				uri:             tc.inURI,
+				dockerCmdClient: mockDocker,
 			}
 
-			digest, err := repo.BuildAndPush(mockDocker, &dockerengine.BuildArguments{
+			digest, err := repo.BuildAndPush(&dockerengine.BuildArguments{
 				Dockerfile: inDockerfilePath,
 				Context:    filepath.Dir(inDockerfilePath),
 				Tags:       []string{mockTag1, mockTag2, mockTag3},
@@ -187,11 +188,12 @@ For better security, log in with a limited-privilege personal access token. Lear
 			}
 
 			repo := &Repository{
-				registry: mockRepoGetter,
-				uri:      mockRepoURI,
+				registry:        mockRepoGetter,
+				uri:             mockRepoURI,
+				dockerCmdClient: mockDocker,
 			}
 
-			gotURI, gotLoginOut, gotErr := repo.Login(mockDocker)
+			gotURI, gotLoginOut, gotErr := repo.Login()
 
 			if tc.wantedError != nil {
 				require.EqualError(t, tc.wantedError, gotErr.Error())

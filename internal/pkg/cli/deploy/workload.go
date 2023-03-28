@@ -28,7 +28,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
-	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/repository"
 	"github.com/aws/copilot-cli/internal/pkg/template"
@@ -69,8 +68,8 @@ func (noopActionRecommender) RecommendedActions() []string {
 }
 
 type repositoryService interface {
-	Login(docker repository.ContainerLoginBuildPusher) (string, string, error)
-	BuildAndPush(docker repository.ContainerLoginBuildPusher, args *dockerengine.BuildArguments) (string, error)
+	Login() (string, string, error)
+	BuildAndPush(args *dockerengine.BuildArguments) (string, error)
 }
 
 type templater interface {
@@ -174,7 +173,6 @@ type workloadDeployer struct {
 	envSess                  *session.Session
 	store                    *config.Store
 	envConfig                *manifest.Environment
-	dockerCmdClient          dockerengine.CmdClient
 }
 
 // WorkloadDeployerInput is the input to for workloadDeployer constructor.
@@ -236,8 +234,7 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 	repoName := fmt.Sprintf("%s/%s", in.App.Name, in.Name)
 	repository := repository.NewWithURI(
 		ecr.New(defaultSessEnvRegion), repoName, resources.RepositoryURLs[in.Name])
-	dockerCmdClient := dockerengine.New(exec.NewCmd())
-	uri, loginOut, err := repository.Login(dockerCmdClient)
+	uri, loginOut, err := repository.Login()
 	if err != nil {
 		return nil, fmt.Errorf("login to docker %s: %w", loginOut, err)
 	}
@@ -285,7 +282,6 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 		envSess:                  envSession,
 		store:                    store,
 		envConfig:                envConfig,
-		dockerCmdClient:          dockerCmdClient,
 		uri:                      uri,
 		dockerLoginOut:           loginOut,
 
@@ -379,7 +375,7 @@ func (d *workloadDeployer) uploadContainerImages(out *UploadArtifactsOutput) err
 	out.ImageDigests = make(map[string]ContainerImageIdentifier, len(buildArgsPerContainer))
 	fmt.Print(d.dockerLoginOut)
 	for name, buildArgs := range buildArgsPerContainer {
-		digest, err := d.repository.BuildAndPush(d.dockerCmdClient, buildArgs)
+		digest, err := d.repository.BuildAndPush(buildArgs)
 		if err != nil {
 			return fmt.Errorf("build and push image: %w", err)
 		}

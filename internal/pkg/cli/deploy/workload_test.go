@@ -201,7 +201,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				},
 			},
 			mock: func(t *testing.T, m *deployMocks) {
-				m.mockRepositoryService.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
+				m.mockRepositoryService.EXPECT().BuildAndPush(&dockerengine.BuildArguments{
 					Dockerfile: "mockDockerfile",
 					Context:    "mockContext",
 					Platform:   "mockContainerPlatform",
@@ -224,7 +224,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				},
 			},
 			mock: func(t *testing.T, m *deployMocks) {
-				m.mockRepositoryService.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
+				m.mockRepositoryService.EXPECT().BuildAndPush(&dockerengine.BuildArguments{
 					Dockerfile: "mockDockerfile",
 					Context:    "mockContext",
 					Platform:   "mockContainerPlatform",
@@ -254,7 +254,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				},
 			},
 			mock: func(t *testing.T, m *deployMocks) {
-				m.mockRepositoryService.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
+				m.mockRepositoryService.EXPECT().BuildAndPush(&dockerengine.BuildArguments{
 					Dockerfile: "mockDockerfile",
 					Context:    "mockContext",
 					Platform:   "mockContainerPlatform",
@@ -286,7 +286,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			},
 			inMockGitTag: "gitTag",
 			mock: func(t *testing.T, m *deployMocks) {
-				m.mockRepositoryService.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
+				m.mockRepositoryService.EXPECT().BuildAndPush(&dockerengine.BuildArguments{
 					Dockerfile: "sidecarMockDockerfile",
 					Context:    "sidecarMockContext",
 					Platform:   "mockContainerPlatform",
@@ -296,7 +296,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 						"com.aws.copilot.image.container.name": "nginx",
 					},
 				}).Return("sidecarMockDigest1", nil)
-				m.mockRepositoryService.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
+				m.mockRepositoryService.EXPECT().BuildAndPush(&dockerengine.BuildArguments{
 					Dockerfile: "web/Dockerfile",
 					Context:    "Users/bowie",
 					Platform:   "mockContainerPlatform",

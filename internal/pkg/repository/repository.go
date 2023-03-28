@@ -7,6 +7,8 @@ package repository
 import (
 	"fmt"
 
+	"github.com/aws/copilot-cli/internal/pkg/exec"
+
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 )
 
@@ -26,30 +28,33 @@ type Registry interface {
 
 // Repository builds and pushes images to a repository.
 type Repository struct {
-	name     string
-	registry Registry
-	uri      string
+	name            string
+	registry        Registry
+	uri             string
+	dockerCmdClient ContainerLoginBuildPusher
 }
 
 // New instantiates a new Repository.
 func New(registry Registry, name string) *Repository {
 	return &Repository{
-		name:     name,
-		registry: registry,
+		name:            name,
+		registry:        registry,
+		dockerCmdClient: dockerengine.New(exec.NewCmd()),
 	}
 }
 
 // NewWithURI instantiates a new Repository with uri being set.
 func NewWithURI(registry Registry, name, uri string) *Repository {
 	return &Repository{
-		name:     name,
-		registry: registry,
-		uri:      uri,
+		name:            name,
+		registry:        registry,
+		uri:             uri,
+		dockerCmdClient: dockerengine.New(exec.NewCmd()),
 	}
 }
 
 // BuildAndPush builds the image from Dockerfile and pushes it to the repository with tags.
-func (r *Repository) BuildAndPush(docker ContainerLoginBuildPusher, args *dockerengine.BuildArguments) (digest string, err error) {
+func (r *Repository) BuildAndPush(args *dockerengine.BuildArguments) (digest string, err error) {
 	if args.URI == "" {
 		uri, err := r.URI()
 		if err != nil {
@@ -57,11 +62,11 @@ func (r *Repository) BuildAndPush(docker ContainerLoginBuildPusher, args *docker
 		}
 		args.URI = uri
 	}
-	if err := docker.Build(args); err != nil {
+	if err := r.dockerCmdClient.Build(args); err != nil {
 		return "", fmt.Errorf("build Dockerfile at %s: %w", args.Dockerfile, err)
 	}
 
-	digest, err = docker.Push(args.URI, args.Tags...)
+	digest, err = r.dockerCmdClient.Push(args.URI, args.Tags...)
 	if err != nil {
 		return "", fmt.Errorf("push to repo %s: %w", r.name, err)
 	}
@@ -84,13 +89,13 @@ func (r *Repository) URI() (string, error) {
 // but only if the `credStore` attribute value is not set to `ecr-login`.
 // If the `credStore` value is `ecr-login`, no login is performed and return URI.
 // Returns a URI, output of the `docker login` command and an error, if any occurs during the login process.
-func (r *Repository) Login(docker ContainerLoginBuildPusher) (string, string, error) {
+func (r *Repository) Login() (string, string, error) {
 	uri, err := r.URI()
 	if err != nil {
 		return "", "", fmt.Errorf("retrieve URI for repository: %w", err)
 	}
 
-	if docker.IsEcrCredentialHelperEnabled(uri) {
+	if r.dockerCmdClient.IsEcrCredentialHelperEnabled(uri) {
 		return uri, "", nil
 	}
 
@@ -99,7 +104,7 @@ func (r *Repository) Login(docker ContainerLoginBuildPusher) (string, string, er
 		return "", "", fmt.Errorf("get auth: %w", err)
 	}
 
-	loginOut, err := docker.Login(uri, username, password)
+	loginOut, err := r.dockerCmdClient.Login(uri, username, password)
 	if err != nil {
 		return "", loginOut, fmt.Errorf("login to repo %s: %w", uri, err)
 	}

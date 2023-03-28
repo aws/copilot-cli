@@ -11,7 +11,6 @@ import (
 	cloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	cloudformation0 "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	dockerengine "github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
-	repository "github.com/aws/copilot-cli/internal/pkg/repository"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -76,24 +75,24 @@ func (m *MockrepositoryService) EXPECT() *MockrepositoryServiceMockRecorder {
 }
 
 // BuildAndPush mocks base method.
-func (m *MockrepositoryService) BuildAndPush(docker repository.ContainerLoginBuildPusher, args *dockerengine.BuildArguments) (string, error) {
+func (m *MockrepositoryService) BuildAndPush(args *dockerengine.BuildArguments) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "BuildAndPush", docker, args)
+	ret := m.ctrl.Call(m, "BuildAndPush", args)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // BuildAndPush indicates an expected call of BuildAndPush.
-func (mr *MockrepositoryServiceMockRecorder) BuildAndPush(docker, args interface{}) *gomock.Call {
+func (mr *MockrepositoryServiceMockRecorder) BuildAndPush(args interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BuildAndPush", reflect.TypeOf((*MockrepositoryService)(nil).BuildAndPush), docker, args)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BuildAndPush", reflect.TypeOf((*MockrepositoryService)(nil).BuildAndPush), args)
 }
 
 // Login mocks base method.
-func (m *MockrepositoryService) Login(docker repository.ContainerLoginBuildPusher) (string, string, error) {
+func (m *MockrepositoryService) Login() (string, string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Login", docker)
+	ret := m.ctrl.Call(m, "Login")
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(string)
 	ret2, _ := ret[2].(error)
@@ -101,9 +100,9 @@ func (m *MockrepositoryService) Login(docker repository.ContainerLoginBuildPushe
 }
 
 // Login indicates an expected call of Login.
-func (mr *MockrepositoryServiceMockRecorder) Login(docker interface{}) *gomock.Call {
+func (mr *MockrepositoryServiceMockRecorder) Login() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Login", reflect.TypeOf((*MockrepositoryService)(nil).Login), docker)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Login", reflect.TypeOf((*MockrepositoryService)(nil).Login))
 }
 
 // Mocktemplater is a mock of templater interface.
