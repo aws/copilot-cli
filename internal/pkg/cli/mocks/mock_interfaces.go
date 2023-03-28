@@ -1703,6 +1703,22 @@ func (mr *MockrepositoryServiceMockRecorder) Login() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Login", reflect.TypeOf((*MockrepositoryService)(nil).Login))
 }
 
+// Login mocks base method.
+func (m *MockrepositoryService) Login(docker repository.ContainerLoginBuildPusher) (string, string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Login", docker)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(string)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// Login indicates an expected call of Login.
+func (mr *MockrepositoryServiceMockRecorder) Login(docker interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Login", reflect.TypeOf((*MockrepositoryService)(nil).Login), docker)
+}
+
 // URI mocks base method.
 func (m *MockrepositoryService) URI() (string, error) {
 	m.ctrl.T.Helper()

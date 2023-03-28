@@ -75,7 +75,11 @@ func (m *MockrepositoryService) EXPECT() *MockrepositoryServiceMockRecorder {
 }
 
 // BuildAndPush mocks base method.
+<<<<<<< HEAD
 func (m *MockrepositoryService) BuildAndPush(args *dockerengine.BuildArguments) (string, error) {
+=======
+func (m *MockrepositoryService) BuildAndPush(docker repository.ContainerLoginBuildPusher, args *dockerengine.BuildArguments) (string, error) {
+>>>>>>> 25baff92 (perform login only once per repo)
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "BuildAndPush", args)
 	ret0, _ := ret[0].(string)

@@ -63,11 +63,12 @@ func (mr *MockContainerLoginBuildPusherMockRecorder) IsEcrCredentialHelperEnable
 }
 
 // Login mocks base method.
-func (m *MockContainerLoginBuildPusher) Login(uri, username, password string) error {
+func (m *MockContainerLoginBuildPusher) Login(uri, username, password string) (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Login", uri, username, password)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // Login indicates an expected call of Login.

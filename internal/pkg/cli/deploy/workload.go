@@ -28,6 +28,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
+	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/repository"
 	"github.com/aws/copilot-cli/internal/pkg/template"
@@ -142,14 +143,16 @@ type GenerateCloudFormationTemplateOutput struct {
 }
 
 type workloadDeployer struct {
-	name          string
-	app           *config.Application
-	env           *config.Environment
-	image         ContainerImageIdentifier
-	resources     *stack.AppRegionalResources
-	mft           interface{}
-	rawMft        []byte
-	workspacePath string
+	name           string
+	app            *config.Application
+	env            *config.Environment
+	image          ContainerImageIdentifier
+	resources      *stack.AppRegionalResources
+	mft            interface{}
+	rawMft         []byte
+	workspacePath  string
+	uri            string
+	dockerLoginOut string
 
 	// Dependencies.
 	fs               fileReader
@@ -171,6 +174,7 @@ type workloadDeployer struct {
 	envSess                  *session.Session
 	store                    *config.Store
 	envConfig                *manifest.Environment
+	dockerCmdClient          dockerengine.CmdClient
 }
 
 // WorkloadDeployerInput is the input to for workloadDeployer constructor.
@@ -232,6 +236,11 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 	repoName := fmt.Sprintf("%s/%s", in.App.Name, in.Name)
 	repository := repository.NewWithURI(
 		ecr.New(defaultSessEnvRegion), repoName, resources.RepositoryURLs[in.Name])
+	dockerCmdClient := dockerengine.New(exec.NewCmd())
+	uri, loginOut, err := repository.Login(dockerCmdClient)
+	if err != nil {
+		return nil, fmt.Errorf("login to docker: %w", err)
+	}
 	store := config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
 	envDescriber, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
 		App:         in.App.Name,
@@ -276,6 +285,9 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 		envSess:                  envSession,
 		store:                    store,
 		envConfig:                envConfig,
+		dockerCmdClient:          dockerCmdClient,
+		uri:                      uri,
+		dockerLoginOut:           loginOut,
 
 		mft:    in.Mft,
 		rawMft: in.RawMft,
@@ -357,7 +369,7 @@ func (img ContainerImageIdentifier) Tag() string {
 
 func (d *workloadDeployer) uploadContainerImages(out *UploadArtifactsOutput) error {
 	// If it is built from local Dockerfile, build and push to the ECR repo.
-	buildArgsPerContainer, err := buildArgsPerContainer(d.name, d.workspacePath, d.image, d.mft)
+	buildArgsPerContainer, err := buildArgsPerContainer(d.name, d.workspacePath, d.uri, d.image, d.mft)
 	if err != nil {
 		return err
 	}
@@ -383,7 +395,7 @@ func (d *workloadDeployer) uploadContainerImages(out *UploadArtifactsOutput) err
 	return nil
 }
 
-func buildArgsPerContainer(name, workspacePath string, img ContainerImageIdentifier, unmarshaledManifest interface{}) (map[string]*dockerengine.BuildArguments, error) {
+func buildArgsPerContainer(name, workspacePath, uri string, img ContainerImageIdentifier, unmarshaledManifest interface{}) (map[string]*dockerengine.BuildArguments, error) {
 	type dfArgs interface {
 		BuildArgs(rootDirectory string) (map[string]*manifest.DockerBuildArgs, error)
 		ContainerPlatform() string
@@ -415,6 +427,7 @@ func buildArgsPerContainer(name, workspacePath string, img ContainerImageIdentif
 		}
 		labels[labelForContainerName] = container
 		dArgs[container] = &dockerengine.BuildArguments{
+			URI:        uri,
 			Dockerfile: aws.StringValue(buildArgs.Dockerfile),
 			Context:    aws.StringValue(buildArgs.Context),
 			Args:       buildArgs.Args,

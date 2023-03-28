@@ -27,6 +27,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/initialize"
 	"github.com/aws/copilot-cli/internal/pkg/logging"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/repository"
 	"github.com/aws/copilot-cli/internal/pkg/task"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
@@ -169,6 +170,9 @@ type imageBuilderPusher interface {
 }
 type repositoryURIGetter interface {
 	URI() (string, error)
+}
+type dockerLogin interface {
+	Login(docker repository.ContainerLoginBuildPusher) (string, string, error)
 }
 
 type repositoryLogin interface {
