@@ -83,7 +83,6 @@ func (s *SecretsManager) DeleteSecret(secretName string) error {
 	return nil
 }
 
-// DescribeSecretOutput is the output returned by DescribeSecret.
 type DescribeSecretOutput struct {
 	Name        *string
 	CreatedDate *time.Time
