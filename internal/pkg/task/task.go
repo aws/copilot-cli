@@ -33,7 +33,7 @@ type DefaultClusterGetter interface {
 	DefaultCluster() (string, error)
 }
 
-type EnvironmentDescriber interface {
+type environmentDescriber interface {
 	Describe() (*describe.EnvDescription, error)
 }
 

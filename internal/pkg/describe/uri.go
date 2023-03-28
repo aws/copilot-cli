@@ -13,13 +13,23 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 )
 
+// URIAccessType represents how a URI can be accessed.
 type URIAccessType int
 
 const (
+	// URIAccessTypeNone means a URI is not accessible.
 	URIAccessTypeNone URIAccessType = iota
+
+	// URIAccessTypeInternet means a URI is accesible via the public internet.
 	URIAccessTypeInternet
+
+	// URIAccessTypeInternal means a URI is accesible within a VPC.
 	URIAccessTypeInternal
+
+	// URIAccessTypeServiceDiscovery means a URI is accesible within a VPC using Service Discovery.
 	URIAccessTypeServiceDiscovery
+
+	// URIAccessTypeServiceConnect means a URI is accesible within a Serice Connect namespace.
 	URIAccessTypeServiceConnect
 )
 
@@ -27,6 +37,7 @@ var (
 	fmtSvcDiscoveryEndpointWithPort = "%s.%s:%s" // Format string of the form {svc}.{endpoint}:{port}
 )
 
+// URI represents a uri and how it can be accessed.
 type URI struct {
 	URI        string
 	AccessType URIAccessType
