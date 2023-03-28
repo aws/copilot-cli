@@ -31,7 +31,7 @@ const (
 	repositoryTypeECR       = "ECR"
 	repositoryTypeECRPublic = "ECR_PUBLIC"
 
-	// EndpointsID is the ID to look up the app runner service endpoint.
+	// EndpointsID is the ID to look up the App Runner service endpoint.
 	EndpointsID = apprunner.EndpointsID
 )
 
