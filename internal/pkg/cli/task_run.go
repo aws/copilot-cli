@@ -237,7 +237,7 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 		opts.repository = repository.New(ecr.New(opts.sess), repoName)
 		uri, loginOut, err := opts.repository.Login(opts.dockerCmdClient)
 		if err != nil {
-			return err
+			return fmt.Errorf("login to docker %s: %w", loginOut, err)
 		}
 		opts.uri = uri
 		opts.dockerLoginOut = loginOut

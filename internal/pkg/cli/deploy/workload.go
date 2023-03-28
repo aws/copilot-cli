@@ -239,7 +239,7 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 	dockerCmdClient := dockerengine.New(exec.NewCmd())
 	uri, loginOut, err := repository.Login(dockerCmdClient)
 	if err != nil {
-		return nil, fmt.Errorf("login to docker: %w", err)
+		return nil, fmt.Errorf("login to docker %s: %w", loginOut, err)
 	}
 	store := config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
 	envDescriber, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
@@ -381,6 +381,7 @@ func (d *workloadDeployer) uploadContainerImages(out *UploadArtifactsOutput) err
 		return fmt.Errorf("login to image repository: %w", err)
 	}
 	out.ImageDigests = make(map[string]ContainerImageIdentifier, len(buildArgsPerContainer))
+	fmt.Print(d.dockerLoginOut)
 	for name, buildArgs := range buildArgsPerContainer {
 		digest, err := d.repository.BuildAndPush(buildArgs)
 		if err != nil {
