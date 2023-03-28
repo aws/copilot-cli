@@ -25,7 +25,7 @@ func (e *ErrExitCode) Error() string {
 	return fmt.Sprintf("container %s in task %s exited with status code %d", e.containerName, e.taskId, e.exitCode)
 }
 
-// ExitCode returns the os exit code configured for this error.
+// ExitCode returns the OS exit code configured for this error.
 func (e *ErrExitCode) ExitCode() int {
 	return e.exitCode
 }
