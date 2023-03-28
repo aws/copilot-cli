@@ -30,7 +30,8 @@ const (
 	// App Runner ImageRepositoryTypes
 	repositoryTypeECR       = "ECR"
 	repositoryTypeECRPublic = "ECR_PUBLIC"
-	// App Runner EndpointsID
+
+	// EndpointsID is the ID to look up the app runner service endpoint.
 	EndpointsID = apprunner.EndpointsID
 )
 
