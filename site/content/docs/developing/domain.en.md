@@ -79,7 +79,7 @@ Under the hood, Copilot
 
 ### Use domain in your existing validated certificates
 If you'd like more granular control over the generated ACM certificate, or if the [default `alias` options](#customized-domain-alias) aren't flexible enough,
-you can import to your environments validated ACM certificates that include the alias.
+you can import validated ACM certificates that include the alias to your environment.
 In the [environment manifest](../manifest/environment.en.md), specify `http.[public/private].certificates`:
 
 ```yaml
