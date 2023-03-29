@@ -100,10 +100,10 @@ func TestRepository_BuildAndPush(t *testing.T) {
 			}
 
 			repo := &Repository{
-				name:            inRepoName,
-				registry:        mockRepoGetter,
-				uri:             tc.inURI,
-				dockerCmdClient: mockDocker,
+				name:     inRepoName,
+				registry: mockRepoGetter,
+				uri:      tc.inURI,
+				docker:   mockDocker,
 			}
 
 			digest, err := repo.BuildAndPush(&dockerengine.BuildArguments{
@@ -175,9 +175,9 @@ func Test_Login(t *testing.T) {
 			}
 
 			repo := &Repository{
-				registry:        mockRepoGetter,
-				uri:             mockRepoURI,
-				dockerCmdClient: mockDocker,
+				registry: mockRepoGetter,
+				uri:      mockRepoURI,
+				docker:   mockDocker,
 			}
 
 			got, gotErr := repo.Login()

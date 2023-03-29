@@ -28,28 +28,28 @@ type Registry interface {
 
 // Repository builds and pushes images to a repository.
 type Repository struct {
-	name            string
-	registry        Registry
-	uri             string
-	dockerCmdClient ContainerLoginBuildPusher
+	name     string
+	registry Registry
+	uri      string
+	docker   ContainerLoginBuildPusher
 }
 
 // New instantiates a new Repository.
 func New(registry Registry, name string) *Repository {
 	return &Repository{
-		name:            name,
-		registry:        registry,
-		dockerCmdClient: dockerengine.New(exec.NewCmd()),
+		name:     name,
+		registry: registry,
+		docker:   dockerengine.New(exec.NewCmd()),
 	}
 }
 
 // NewWithURI instantiates a new Repository with uri being set.
 func NewWithURI(registry Registry, name, uri string) *Repository {
 	return &Repository{
-		name:            name,
-		registry:        registry,
-		uri:             uri,
-		dockerCmdClient: dockerengine.New(exec.NewCmd()),
+		name:     name,
+		registry: registry,
+		uri:      uri,
+		docker:   dockerengine.New(exec.NewCmd()),
 	}
 }
 
@@ -62,11 +62,11 @@ func (r *Repository) BuildAndPush(args *dockerengine.BuildArguments) (digest str
 		}
 		args.URI = uri
 	}
-	if err := r.dockerCmdClient.Build(args); err != nil {
+	if err := r.docker.Build(args); err != nil {
 		return "", fmt.Errorf("build Dockerfile at %s: %w", args.Dockerfile, err)
 	}
 
-	digest, err = r.dockerCmdClient.Push(args.URI, args.Tags...)
+	digest, err = r.docker.Push(args.URI, args.Tags...)
 	if err != nil {
 		return "", fmt.Errorf("push to repo %s: %w", r.name, err)
 	}
@@ -94,13 +94,13 @@ func (r *Repository) Login() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("retrieve URI for repository: %w", err)
 	}
-	if !r.dockerCmdClient.IsEcrCredentialHelperEnabled(uri) {
+	if !r.docker.IsEcrCredentialHelperEnabled(uri) {
 		username, password, err := r.registry.Auth()
 		if err != nil {
 			return "", fmt.Errorf("get auth: %w", err)
 		}
 
-		if err := r.dockerCmdClient.Login(uri, username, password); err != nil {
+		if err := r.docker.Login(uri, username, password); err != nil {
 			return "", fmt.Errorf("login to repo %s: %w", uri, err)
 		}
 	}
