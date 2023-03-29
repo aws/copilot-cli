@@ -227,10 +227,6 @@ func TestDockerCommand_Build(t *testing.T) {
 }
 
 func TestDockerCommand_Login(t *testing.T) {
-	const mockLoginOut = `Login Succeeded
-Logging in with your password grants your terminal complete access to your account. 
-For better security, log in with a limited-privilege personal access token. Learn more at https://docs.docker.com/go/access-tokens/
-`
 	mockError := errors.New("mockError")
 
 	mockURI := "mockURI"
@@ -240,41 +236,25 @@ For better security, log in with a limited-privilege personal access token. Lear
 	var mockCmd *MockCmd
 
 	tests := map[string]struct {
-		setupMocks     func(controller *gomock.Controller)
-		wantedLoginOut string
-		wantedErr      error
+		setupMocks func(controller *gomock.Controller)
+
+		want error
 	}{
 		"wrap error returned from Run()": {
 			setupMocks: func(controller *gomock.Controller) {
 				mockCmd = NewMockCmd(controller)
 
-				mockCmd.EXPECT().Run("docker", []string{"login", "-u", mockUsername, "--password-stdin", mockURI}, gomock.Any()).Do(func(_ string, _ []string, opts ...exec.CmdOption) {
-					cmd := &osexec.Cmd{}
-					for _, opt := range opts {
-						opt(cmd)
-					}
-					_, _ = cmd.Stdout.Write([]byte(`error response from daemon: login attempt to https://registry-1.docker.io/v2/ failed with status: 401 Unauthorized`))
-				}).Return(mockError)
+				mockCmd.EXPECT().Run("docker", []string{"login", "-u", mockUsername, "--password-stdin", mockURI}, gomock.Any()).Return(mockError)
 			},
-			wantedLoginOut: "error response from daemon: login attempt to https://registry-1.docker.io/v2/ failed with status: 401 Unauthorized",
-			wantedErr:      fmt.Errorf("authenticate to ECR: %w", mockError),
+			want: fmt.Errorf("authenticate to ECR: %w", mockError),
 		},
 		"happy path": {
 			setupMocks: func(controller *gomock.Controller) {
 				mockCmd = NewMockCmd(controller)
-				mockCmd.EXPECT().Run("docker", []string{"login", "-u", mockUsername, "--password-stdin", mockURI}, gomock.Any()).Do(func(_ string, _ []string, opts ...exec.CmdOption) {
-					cmd := &osexec.Cmd{}
-					for _, opt := range opts {
-						opt(cmd)
-					}
-					_, _ = cmd.Stdout.Write([]byte(`Login Succeeded
-Logging in with your password grants your terminal complete access to your account. 
-For better security, log in with a limited-privilege personal access token. Learn more at https://docs.docker.com/go/access-tokens/
-`))
-				}).Return(nil)
+
+				mockCmd.EXPECT().Run("docker", []string{"login", "-u", mockUsername, "--password-stdin", mockURI}, gomock.Any()).Return(nil)
 			},
-			wantedErr:      nil,
-			wantedLoginOut: mockLoginOut,
+			want: nil,
 		},
 	}
 
@@ -286,9 +266,9 @@ For better security, log in with a limited-privilege personal access token. Lear
 				runner: mockCmd,
 			}
 
-			gotLoginOutput, gotErr := s.Login(mockURI, mockUsername, mockPassword)
-			require.Equal(t, test.wantedLoginOut, gotLoginOutput)
-			require.Equal(t, test.wantedErr, gotErr)
+			got := s.Login(mockURI, mockUsername, mockPassword)
+
+			require.Equal(t, test.want, got)
 		})
 	}
 }

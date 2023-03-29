@@ -90,13 +90,12 @@ func (mr *MockrepositoryServiceMockRecorder) BuildAndPush(args interface{}) *gom
 }
 
 // Login mocks base method.
-func (m *MockrepositoryService) Login() (string, string, error) {
+func (m *MockrepositoryService) Login() (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Login")
 	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(string)
-	ret2, _ := ret[2].(error)
-	return ret0, ret1, ret2
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // Login indicates an expected call of Login.

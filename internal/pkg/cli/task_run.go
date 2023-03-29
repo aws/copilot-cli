@@ -143,8 +143,6 @@ type runTaskOpts struct {
 	runTaskVars
 	isDockerfileSet bool
 	nFlag           int
-	uri             string
-	dockerLoginOut  string
 
 	// Interfaces to interact with dependencies.
 	fs      afero.Fs
@@ -224,12 +222,6 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 	opts.configureRepository = func() error {
 		repoName := fmt.Sprintf(deploy.FmtTaskECRRepoName, opts.groupName)
 		opts.repository = repository.New(ecr.New(opts.sess), repoName)
-		uri, loginOut, err := opts.repository.Login()
-		if err != nil {
-			return fmt.Errorf("login to docker %s: %w", loginOut, err)
-		}
-		opts.uri = uri
-		opts.dockerLoginOut = loginOut
 		return nil
 	}
 
@@ -727,7 +719,12 @@ func (o *runTaskOpts) Execute() error {
 
 	// NOTE: if image is not provided, then we build the image and push to ECR repo
 	if o.image == "" {
-		if err := o.buildAndPushImage(); err != nil {
+		uri, err := o.repository.Login()
+		if err != nil {
+			return fmt.Errorf("login to docker: %w", err)
+		}
+
+		if err := o.buildAndPushImage(uri); err != nil {
 			return err
 		}
 
@@ -735,10 +732,7 @@ func (o *runTaskOpts) Execute() error {
 		if o.imageTag != "" {
 			tag = o.imageTag
 		}
-		uri, err := o.repository.URI()
-		if err != nil {
-			return fmt.Errorf("get ECR repository URI: %w", err)
-		}
+
 		o.image = fmt.Sprintf(fmtImageURI, uri, tag)
 		shouldUpdate = true
 	}
@@ -957,7 +951,7 @@ func (o *runTaskOpts) showPublicIPs(tasks []*task.Task) {
 
 }
 
-func (o *runTaskOpts) buildAndPushImage() error {
+func (o *runTaskOpts) buildAndPushImage(uri string) error {
 	var additionalTags []string
 	if o.imageTag != "" {
 		additionalTags = append(additionalTags, o.imageTag)
@@ -967,9 +961,9 @@ func (o *runTaskOpts) buildAndPushImage() error {
 	if o.dockerfileContextPath != "" {
 		ctx = o.dockerfileContextPath
 	}
-	fmt.Print(o.dockerLoginOut)
+
 	if _, err := o.repository.BuildAndPush(&dockerengine.BuildArguments{
-		URI:        o.uri,
+		URI:        uri,
 		Dockerfile: o.dockerfilePath,
 		Context:    ctx,
 		Tags:       append([]string{imageTagLatest}, additionalTags...),

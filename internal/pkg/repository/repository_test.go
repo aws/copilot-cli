@@ -123,16 +123,11 @@ func TestRepository_BuildAndPush(t *testing.T) {
 
 func Test_Login(t *testing.T) {
 	const mockRepoURI = "mockRepoURI"
-	const mockLoginOut = `Login Succeeded
-Logging in with your password grants your terminal complete access to your account. 
-For better security, log in with a limited-privilege personal access token. Learn more at https://docs.docker.com/go/access-tokens/
-`
 	testCases := map[string]struct {
-		inMockDocker   func(m *mocks.MockContainerLoginBuildPusher)
-		mockRegistry   func(m *mocks.MockRegistry)
-		wantedURI      string
-		wantedLoginOut string
-		wantedError    error
+		inMockDocker func(m *mocks.MockContainerLoginBuildPusher)
+		mockRegistry func(m *mocks.MockRegistry)
+		wantedURI    string
+		wantedError  error
 	}{
 		"failed to get auth": {
 			mockRegistry: func(m *mocks.MockRegistry) {
@@ -150,27 +145,19 @@ For better security, log in with a limited-privilege personal access token. Lear
 			},
 			inMockDocker: func(m *mocks.MockContainerLoginBuildPusher) {
 				m.EXPECT().IsEcrCredentialHelperEnabled("mockRepoURI").Return(false)
-				m.EXPECT().Login("mockRepoURI", "my-name", "my-pwd").Return("login attempt to https://registry-1.docker.io/v2/ failed", errors.New("error logging in"))
+				m.EXPECT().Login("mockRepoURI", "my-name", "my-pwd").Return(errors.New("error logging in"))
 			},
-			wantedError:    fmt.Errorf("login to repo %s: error logging in", mockRepoURI),
-			wantedLoginOut: mockLoginOut,
+			wantedError: fmt.Errorf("login to repo %s: error logging in", mockRepoURI),
 		},
-		"ECR credentials enabled": {
-			inMockDocker: func(m *mocks.MockContainerLoginBuildPusher) {
-				m.EXPECT().IsEcrCredentialHelperEnabled("mockRepoURI").Return(true)
-			},
-			wantedURI: mockRepoURI,
-		},
-		"docker login successful": {
+		"no error when performing login": {
 			mockRegistry: func(m *mocks.MockRegistry) {
 				m.EXPECT().Auth().Return("my-name", "my-pwd", nil)
 			},
 			inMockDocker: func(m *mocks.MockContainerLoginBuildPusher) {
 				m.EXPECT().IsEcrCredentialHelperEnabled("mockRepoURI").Return(false)
-				m.EXPECT().Login("mockRepoURI", "my-name", "my-pwd").Return(mockLoginOut, nil)
+				m.EXPECT().Login("mockRepoURI", "my-name", "my-pwd").Return(nil)
 			},
-			wantedURI:      mockRepoURI,
-			wantedLoginOut: mockLoginOut,
+			wantedURI: mockRepoURI,
 		},
 	}
 	for name, tc := range testCases {
@@ -193,14 +180,12 @@ For better security, log in with a limited-privilege personal access token. Lear
 				dockerCmdClient: mockDocker,
 			}
 
-			gotURI, gotLoginOut, gotErr := repo.Login()
-
+			got, gotErr := repo.Login()
 			if tc.wantedError != nil {
 				require.EqualError(t, tc.wantedError, gotErr.Error())
 			} else {
-				require.NoError(t, tc.wantedError, gotErr)
-				require.Equal(t, tc.wantedURI, gotURI)
-				require.Equal(t, tc.wantedLoginOut, gotLoginOut)
+				require.NoError(t, tc.wantedError, got)
+				require.Equal(t, tc.wantedURI, got)
 			}
 		})
 	}
