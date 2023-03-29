@@ -26,6 +26,7 @@ var s3Manager *s3manager.Uploader
 var staticPath string
 
 const domainName = "copilot-e2e-tests.ecs.aws.dev"
+var timeNow = time.Now().Unix()
 
 func TestCloudFront(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -41,6 +42,8 @@ var _ = BeforeSuite(func() {
 	err = os.Setenv("BUCKETNAME", bucketName)
 	Expect(err).NotTo(HaveOccurred())
 	err = os.Setenv("DOMAINNAME", domainName)
+	Expect(err).NotTo(HaveOccurred())
+	err = os.Setenv("TIMENOW", timeNow)
 	Expect(err).NotTo(HaveOccurred())
 	staticPath = "static/index.html"
 	sess, err := session.NewSessionWithOptions(session.Options{
