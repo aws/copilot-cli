@@ -4,7 +4,7 @@
 In Copilot, there are two ways to use custom domains for your Load Balanced Web Service:
 
 1. Use `--domain` when creating an application to associate a Route 53 domain in the same account.
-2. Use `--import-cert-arns` to bring your validated ACM certificates when creating an environment.
+2. Use the [`http.[public/private].certificates`](../manifest/environment.en.md#http-public-certificates) field in environment manifest to import your validated ACM certificates into the environment.
 
 !!!attention
     Today, a Route 53 domain name can only be associated when running `copilot app init`.  
@@ -78,12 +78,9 @@ Under the hood, Copilot
 <iframe width="560" height="315" src="https://www.youtube.com/embed/Oyr-n59mVjI" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 
 ### Use domain in your existing validated certificates
-If you'd like more granular control over the generated ACM certificate, or if the [default `alias` options](#customized-domain-alias) aren't flexible enough, you can specify the `--import-cert-arns` flag when creating the environment to import validated ACM certificates that include the alias. For example:
-
-```console
-$ copilot env init --import-cert-arns arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789012
-```
-Alternatively, you can always add the certificate later by modifying the [environment manifest](../manifest/environment.en.md):
+If you'd like more granular control over the generated ACM certificate, or if the [default `alias` options](#customized-domain-alias) aren't flexible enough,
+you can import to your environments validated ACM certificates that include the alias.
+In the [environment manifest](../manifest/environment.en.md), specify `http.[public/private].certificates`:
 
 ```yaml
 type: Environment
