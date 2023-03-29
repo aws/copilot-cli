@@ -43,7 +43,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	err = os.Setenv("DOMAINNAME", domainName)
 	Expect(err).NotTo(HaveOccurred())
-	err = os.Setenv("TIMENOW", timeNow)
+	err = os.Setenv("TIMENOW", string(timeNow))
 	Expect(err).NotTo(HaveOccurred())
 	staticPath = "static/index.html"
 	sess, err := session.NewSessionWithOptions(session.Options{
