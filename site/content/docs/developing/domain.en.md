@@ -4,7 +4,7 @@
 In Copilot, there are two ways to use custom domains for your Load Balanced Web Service:
 
 1. Use `--domain` when creating an application to associate a Route 53 domain in the same account.
-2. Use the [`http.[public/private].certificates`](../manifest/environment.en.md#http-public-certificates) field in environment manifest to import your validated ACM certificates into the environment.
+2. Use the [`http.[public/private].certificates`](../manifest/environment.en.md#http-public-certificates) field in an environment manifest to import your validated ACM certificates into the environment.
 
 !!!attention
     Today, a Route 53 domain name can only be associated when running `copilot app init`.  
