@@ -142,16 +142,14 @@ type GenerateCloudFormationTemplateOutput struct {
 }
 
 type workloadDeployer struct {
-	name           string
-	app            *config.Application
-	env            *config.Environment
-	image          ContainerImageIdentifier
-	resources      *stack.AppRegionalResources
-	mft            interface{}
-	rawMft         []byte
-	workspacePath  string
-	uri            string
-	dockerLoginOut string
+	name          string
+	app           *config.Application
+	env           *config.Environment
+	image         ContainerImageIdentifier
+	resources     *stack.AppRegionalResources
+	mft           interface{}
+	rawMft        []byte
+	workspacePath string
 
 	// Dependencies.
 	fs               fileReader
@@ -359,7 +357,7 @@ func (img ContainerImageIdentifier) Tag() string {
 
 func (d *workloadDeployer) uploadContainerImages(out *UploadArtifactsOutput) error {
 	// If it is built from local Dockerfile, build and push to the ECR repo.
-	buildArgsPerContainer, err := buildArgsPerContainer(d.name, d.workspacePath, d.uri, d.image, d.mft)
+	buildArgsPerContainer, err := buildArgsPerContainer(d.name, d.workspacePath, d.image, d.mft)
 	if err != nil {
 		return err
 	}
@@ -386,7 +384,7 @@ func (d *workloadDeployer) uploadContainerImages(out *UploadArtifactsOutput) err
 	return nil
 }
 
-func buildArgsPerContainer(name, workspacePath, uri string, img ContainerImageIdentifier, unmarshaledManifest interface{}) (map[string]*dockerengine.BuildArguments, error) {
+func buildArgsPerContainer(name, workspacePath string, img ContainerImageIdentifier, unmarshaledManifest interface{}) (map[string]*dockerengine.BuildArguments, error) {
 	type dfArgs interface {
 		BuildArgs(rootDirectory string) (map[string]*manifest.DockerBuildArgs, error)
 		ContainerPlatform() string
@@ -418,7 +416,6 @@ func buildArgsPerContainer(name, workspacePath, uri string, img ContainerImageId
 		}
 		labels[labelForContainerName] = container
 		dArgs[container] = &dockerengine.BuildArguments{
-			URI:        uri,
 			Dockerfile: aws.StringValue(buildArgs.Dockerfile),
 			Context:    aws.StringValue(buildArgs.Context),
 			Args:       buildArgs.Args,
