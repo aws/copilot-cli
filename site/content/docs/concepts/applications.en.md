@@ -11,7 +11,7 @@ Your application configuration (which services and environments belong to it) is
 ## Creating an App
 
 !!! Attention
-    If you have an existing directory named `copilot/` in your local directory that was not created by AWS Copilot, please rename it, as AWS Copilot will interact with what it assumes is a directory it created.
+If you have an existing directory named `copilot/` in your local directory that was not created by AWS Copilot, please ,make an empty directory also named `copilot` closer to your working directory.
 
 To set up an application, you can just run `copilot init`. You'll be asked if you want to set up an app or choose an existing app.
 
