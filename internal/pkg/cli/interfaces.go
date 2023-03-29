@@ -171,7 +171,7 @@ type repositoryURIGetter interface {
 	URI() (string, error)
 }
 type dockerLogin interface {
-	Login() (string, string, error)
+	Login() (string, error)
 }
 
 type repositoryLogin interface {

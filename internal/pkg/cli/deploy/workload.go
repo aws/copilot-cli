@@ -234,10 +234,6 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 	repoName := fmt.Sprintf("%s/%s", in.App.Name, in.Name)
 	repository := repository.NewWithURI(
 		ecr.New(defaultSessEnvRegion), repoName, resources.RepositoryURLs[in.Name])
-	uri, loginOut, err := repository.Login()
-	if err != nil {
-		return nil, fmt.Errorf("login to docker %s: %w", loginOut, err)
-	}
 	store := config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
 	envDescriber, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
 		App:         in.App.Name,
@@ -282,8 +278,6 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 		envSess:                  envSession,
 		store:                    store,
 		envConfig:                envConfig,
-		uri:                      uri,
-		dockerLoginOut:           loginOut,
 
 		mft:    in.Mft,
 		rawMft: in.RawMft,
@@ -372,13 +366,19 @@ func (d *workloadDeployer) uploadContainerImages(out *UploadArtifactsOutput) err
 	if len(buildArgsPerContainer) == 0 {
 		return nil
 	}
+<<<<<<< HEAD
 	err = d.repository.Login()
 	if err != nil {
 		return fmt.Errorf("login to image repository: %w", err)
+=======
+	uri, err := d.repository.Login()
+	if err != nil {
+		return fmt.Errorf("login to docker: %w", err)
+>>>>>>> cafd5b3f (remove Login() from workload constructor and perform in uploadcontainerImages())
 	}
 	out.ImageDigests = make(map[string]ContainerImageIdentifier, len(buildArgsPerContainer))
-	fmt.Print(d.dockerLoginOut)
 	for name, buildArgs := range buildArgsPerContainer {
+		buildArgs.URI = uri
 		digest, err := d.repository.BuildAndPush(buildArgs)
 		if err != nil {
 			return fmt.Errorf("build and push image: %w", err)

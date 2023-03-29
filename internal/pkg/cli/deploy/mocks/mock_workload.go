@@ -99,6 +99,7 @@ func (mr *MockrepositoryServiceMockRecorder) BuildAndPush(args interface{}) *gom
 
 // Login mocks base method.
 <<<<<<< HEAD
+<<<<<<< HEAD
 func (m *MockrepositoryService) Login() error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Login")
@@ -113,6 +114,14 @@ func (m *MockrepositoryService) Login() (string, string, error) {
 	ret2, _ := ret[2].(error)
 	return ret0, ret1, ret2
 >>>>>>> 918aa4d8 (addr danny fb: move docckerCmdClient to repository struct)
+=======
+func (m *MockrepositoryService) Login() (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Login")
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+>>>>>>> cafd5b3f (remove Login() from workload constructor and perform in uploadcontainerImages())
 }
 
 // Login indicates an expected call of Login.

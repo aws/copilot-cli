@@ -15,7 +15,7 @@ import (
 // ContainerLoginBuildPusher provides support for logging in to repositories, building images and pushing images to repositories.
 type ContainerLoginBuildPusher interface {
 	Build(args *dockerengine.BuildArguments) error
-	Login(uri, username, password string) (string, error)
+	Login(uri, username, password string) error
 	Push(uri string, tags ...string) (digest string, err error)
 	IsEcrCredentialHelperEnabled(uri string) bool
 }
