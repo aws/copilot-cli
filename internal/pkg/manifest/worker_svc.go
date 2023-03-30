@@ -130,12 +130,12 @@ func (f *FIFOAdvanceConfigOrBool) IsEmpty() bool {
 	return f.Enable == nil && f.Advanced.IsEmpty()
 }
 
-// IsEmpty returns true if the FifoAdvanceConfigOrBool struct has all nil values.
+// IsEnabled returns true if the FifoAdvanceConfigOrBool struct has all nil values.
 func (f *FIFOAdvanceConfigOrBool) IsEnabled() bool {
 	return aws.BoolValue(f.Enable) || !f.Advanced.IsEmpty()
 }
 
-// FifoAdvanceConfig represents the advanced fifo queue config.
+// FIFOAdvanceConfig represents the advanced fifo queue config.
 type FIFOAdvanceConfig struct {
 	ContentBasedDeduplication *bool   `yaml:"content_based_deduplication"`
 	DeduplicationScope        *string `yaml:"deduplication_scope"`

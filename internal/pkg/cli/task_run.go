@@ -7,15 +7,13 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
+	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
+	"github.com/aws/copilot-cli/internal/pkg/template/artifactpath"
+	"golang.org/x/mod/semver"
 	"os"
 	"path/filepath"
 	"strings"
-
-	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
-	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
-	"github.com/aws/copilot-cli/internal/pkg/exec"
-	"github.com/aws/copilot-cli/internal/pkg/template/artifactpath"
-	"golang.org/x/mod/semver"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
@@ -44,6 +42,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
+	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/repository"
 	"github.com/aws/copilot-cli/internal/pkg/task"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
@@ -144,7 +143,6 @@ type runTaskOpts struct {
 	runTaskVars
 	isDockerfileSet bool
 	nFlag           int
-	uri             string
 
 	// Interfaces to interact with dependencies.
 	fs      afero.Fs
@@ -164,7 +162,6 @@ type runTaskOpts struct {
 	provider          sessionProvider
 	sess              *session.Session
 	targetEnvironment *config.Environment
-	dockerCmdClient   dockerengine.CmdClient
 
 	// Configurer functions.
 	configureRuntimeOpts func() error
@@ -223,14 +220,8 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 	}
 
 	opts.configureRepository = func() error {
-		opts.dockerCmdClient = dockerengine.New(exec.NewCmd())
 		repoName := fmt.Sprintf(deploy.FmtTaskECRRepoName, opts.groupName)
 		opts.repository = repository.New(ecr.New(opts.sess), repoName)
-		uri, err := opts.repository.Login(opts.dockerCmdClient)
-		if err != nil {
-			return err
-		}
-		opts.uri = uri
 		return nil
 	}
 
@@ -530,7 +521,7 @@ func (o *runTaskOpts) validateEnvCompatibilityForGenerateJobCmd(app, env string)
 	if err != nil {
 		return fmt.Errorf("retrieve version of environment stack %q in application %q: %v", env, app, err)
 	}
-	// The '--generate-cmd' flag was introduced in env v1.4.0. In env v1.8.0, EnvManagerRole took over, but
+	// The '--generate-cmd' flag was introduced in env v1.4.0. In env v1.8.0, EnvManagerRole took over, but 
 	//"states:DescribeStateMachine" permissions weren't added until 1.12.2.
 	if semver.Compare(version, "v1.12.2") < 0 {
 		return &errFeatureIncompatibleWithEnvironment{
@@ -968,8 +959,7 @@ func (o *runTaskOpts) buildAndPushImage() error {
 	if o.dockerfileContextPath != "" {
 		ctx = o.dockerfileContextPath
 	}
-	if _, err := o.repository.BuildAndPush(o.dockerCmdClient, &dockerengine.BuildArguments{
-		URI:        o.uri,
+	if _, err := o.repository.BuildAndPush(dockerengine.New(exec.NewCmd()), &dockerengine.BuildArguments{
 		Dockerfile: o.dockerfilePath,
 		Context:    ctx,
 		Tags:       append([]string{imageTagLatest}, additionalTags...),

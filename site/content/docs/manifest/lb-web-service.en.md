@@ -229,6 +229,40 @@ List of all available properties for a `'Load Balanced Web Service'` manifest. T
             placement: 'private'
         ```
 
+    === "Expose Multiple Ports"
+
+        ```yaml
+        name: 'frontend'
+        type: 'Load Balanced Web Service'
+
+        image:
+          build: './frontend/Dockerfile'
+          port: 8080
+
+        nlb:
+          port: 8080/tcp              # Traffic on port 8080/tcp is forwarded to the main container, on port 8080.
+          additional_rules:  
+            - port: 8084/tcp          # Traffic on port 8084/tcp is forwarded to the main container, on port 8084.
+            - port: 8085/tcp          # Traffic on port 8085/tcp is forwarded to the sidecar "envoy", on port 3000.
+              target_port: 3000         
+              target_container: envoy   
+
+        http:
+          path: '/'
+          target_port: 8083           # Traffic on "/" is forwarded to the main container, on port 8083. 
+          additional_rules: 
+            - path: 'customerdb'
+              target_port: 8081       # Traffic on "/customerdb" is forwarded to the main container, on port 8083.  
+            - path: 'admin'
+              target_port: 8082       # Traffic on "/admin" is forwarded to the sidecar "envoy", on port 8082.
+              target_container: envoy    
+
+        sidecars:
+          envoy:
+            port: 80
+            image: aws_account_id.dkr.ecr.us-west-2.amazonaws.com/envoy-proxy-with-selfsigned-certs:v1
+        ```
+
 
 <a id="name" href="#name" class="field">`name`</a> <span class="type">String</span>  
 The name of your service.
@@ -247,7 +281,7 @@ To disable the Application Load Balancer, specify `http: false`. Note that for a
 at least one of Application Load Balancer or Network Load Balancer must be enabled.
 
 <span class="parent-field">http.</span><a id="http-path" href="#http-path" class="field">`path`</a> <span class="type">String</span>  
-Requests to this path will be forwarded to your service. Each Load Balanced Web Service should listen on a unique path.
+Requests to this path will be forwarded to your service. Each listener rule should listen on a unique path.
 
 {% include 'http-healthcheck.en.md' %}
 
@@ -258,6 +292,10 @@ The amount of time to wait for targets to drain connections during deregistratio
 A sidecar container that requests are routed to instead of the main service container.  
 If the target container's port is set to `443`, then the protocol is set to `HTTPS` so that the load balancer establishes 
 TLS connections with the Fargate tasks using certificates that you install on the target container.
+
+<span class="parent-field">http.</span><a id="http-target-port" href="#http-target-port" class="field">`target_port`</a> <span class="type">String</span>  
+Optional. The container port that receives traffic. By default, this will be `image.port` if the target container is the main container, 
+or `sidecars.<name>.port` if the target container is a sidecar.
 
 <span class="parent-field">http.</span><a id="http-stickiness" href="#http-stickiness" class="field">`stickiness`</a> <span class="type">Boolean</span>  
 Indicates whether sticky sessions are enabled.
@@ -300,6 +338,11 @@ Automatically redirect the Application Load Balancer from HTTP to HTTPS. By defa
 <span class="parent-field">http.</span><a id="http-version" href="#http-version" class="field">`version`</a> <span class="type">String</span>  
 The HTTP(S) protocol version. Must be one of `'grpc'`, `'http1'`, or `'http2'`. If omitted, then `'http1'` is assumed.
 If using gRPC, please note that a domain must be associated with your application.
+
+<span class="parent-field">http.</span><a id="http-additional-rules" href="#http-additional-rules" class="field">`additional_rules`</a> <span class="type">Array of Maps</span>  
+Configure multiple ALB listener rules.
+
+{% include 'http-additionalrules.en.md' %}
 
 {% include 'nlb.en.md' %}
 

@@ -108,6 +108,8 @@ Resources: # If a bucket URL is specified, that means the template exists.
             - ContainerPort: 4000
               Protocol: tcp
               Name: target
+            - ContainerPort: 4001
+              Protocol: tcp
       Volumes:
         - Name: persistence
   ExecutionRole:
@@ -304,6 +306,8 @@ Resources: # If a bucket URL is specified, that means the template exists.
     DependsOn:
       - HTTPListenerRuleWithDomain
       - HTTPSListenerRule
+      - HTTPListenerRuleWithDomain1
+      - HTTPSListenerRule1
     Properties:
       PlatformVersion: LATEST
       Cluster:
@@ -343,6 +347,9 @@ Resources: # If a bucket URL is specified, that means the template exists.
         - ContainerName: fe
           ContainerPort: 4000
           TargetGroupArn: !Ref TargetGroup
+        - ContainerName: fe
+          ContainerPort: 4001
+          TargetGroupArn: !Ref TargetGroup1
       ServiceRegistries:
         - RegistryArn: !GetAtt DiscoveryService.Arn
           Port: !Ref TargetPort
@@ -353,6 +360,22 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Properties:
       HealthCheckPath: / # Default is '/'.
       Port: 4000
+      Protocol: HTTP
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: 30 # ECS Default is 300; Copilot default is 60.
+        - Key: stickiness.enabled
+          Value: false
+      TargetType: ip
+      VpcId:
+        Fn::ImportValue: !Sub "${AppName}-${EnvName}-VpcId"
+  TargetGroup1:
+    Metadata:
+      'aws:copilot:description': 'A target group to connect the load balancer to your service on port 4001'
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckPath: / # Default is '/'.
+      Port: 4001
       Protocol: HTTP
       TargetGroupAttributes:
         - Key: deregistration_delay.timeout_seconds
@@ -418,7 +441,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Type: Custom::RulePriorityFunction
     Properties:
       ServiceToken: !GetAtt RulePriorityFunction.Arn
-      RulePath: ["/"]
+      RulePath: ["/", "admin"]
       ListenerArn: !GetAtt EnvControllerAction.HTTPSListenerArn
   
   HTTPRuleWithDomainPriorityAction:
@@ -427,7 +450,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Type: Custom::RulePriorityFunction
     Properties:
       ServiceToken: !GetAtt RulePriorityFunction.Arn
-      RulePath: ["/"]
+      RulePath: ["/", "admin"]
       ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn    
   
   HTTPListenerRuleWithDomain:
@@ -454,6 +477,31 @@ Resources: # If a bucket URL is specified, that means the template exists.
               - "/*"
       ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
       Priority: !GetAtt HTTPRuleWithDomainPriorityAction.Priority
+  HTTPListenerRuleWithDomain1:
+    Metadata:
+      'aws:copilot:description': 'An HTTP listener rule for path `admin` that redirects HTTP to HTTPS'
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      Actions:
+        - Type: redirect
+          RedirectConfig:
+            Protocol: HTTPS
+            Port: 443
+            Host: "#{host}"
+            Path: "/#{path}"
+            Query: "#{query}"
+            StatusCode: HTTP_301
+      Conditions:
+        - Field: 'host-header'
+          HostHeaderConfig:
+            Values: [ "example.com" ]
+        - Field: 'path-pattern'
+          PathPatternConfig:
+            Values:
+              - "/admin"
+              - "/admin/*"
+      ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
+      Priority: !GetAtt HTTPRuleWithDomainPriorityAction.Priority1
   HTTPSListenerRule:
     Metadata:
       'aws:copilot:description': 'An HTTPS listener rule for path `/` that forwards HTTPS traffic to your tasks'
@@ -472,6 +520,25 @@ Resources: # If a bucket URL is specified, that means the template exists.
               - "/*"
       ListenerArn: !GetAtt EnvControllerAction.HTTPSListenerArn
       Priority: !GetAtt HTTPSRulePriorityAction.Priority
+  HTTPSListenerRule1:
+    Metadata:
+      'aws:copilot:description': 'An HTTPS listener rule for path `admin` that forwards HTTPS traffic to your tasks'
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      Actions:
+        - TargetGroupArn: !Ref TargetGroup1
+          Type: forward
+      Conditions:
+        - Field: 'host-header'
+          HostHeaderConfig:
+            Values: [ "example.com" ]
+        - Field: 'path-pattern'
+          PathPatternConfig:
+            Values:
+              - "/admin"
+              - "/admin/*"
+      ListenerArn: !GetAtt EnvControllerAction.HTTPSListenerArn
+      Priority: !GetAtt HTTPSRulePriorityAction.Priority1
   AddonsStack:
     Metadata:
       'aws:copilot:description': 'An Addons CloudFormation Stack for your additional AWS resources'

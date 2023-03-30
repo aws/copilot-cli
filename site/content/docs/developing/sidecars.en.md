@@ -212,5 +212,3 @@ Outputs:
 !!!info
     Since the FireLens log driver can route your main container's logs to various destinations, the [`svc logs`](../commands/svc-logs.en.md) command can track them only when they are sent to the log group we create for your Copilot service in CloudWatch.
 
-!!!info
-    ** We're going to make this easier and more powerful!** Currently, we only support using remote images for sidecars, which means users need to build and push their local sidecar images. But we are planning to support using local images or Dockerfiles. Additionally, FireLens will be able to route logs for the other sidecars (not just the main container).

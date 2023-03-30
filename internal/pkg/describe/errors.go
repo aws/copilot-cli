@@ -11,6 +11,8 @@ import (
 	"github.com/dustin/go-humanize/english"
 )
 
+// ErrManifestNotFoundInTemplate is returned when a deployed CFN template
+// is missing manifest data.
 type ErrManifestNotFoundInTemplate struct {
 	app  string
 	env  string
