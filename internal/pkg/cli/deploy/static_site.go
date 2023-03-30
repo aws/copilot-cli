@@ -25,7 +25,7 @@ type staticSiteDeployer struct {
 	staticSiteMft *manifest.StaticSite
 	bucketName    string
 	fs            afero.Fs
-	uploadFn      func(fs afero.Fs, source, destination string, opts *asset.UploadOpts) ([]string, error)
+	uploadFn      func(fs afero.Fs, source, destination string, opts *asset.UploadOpts) ([]asset.CachedAsset, error)
 }
 
 // NewStaticSiteDeployer is the constructor for staticSiteDeployer.
@@ -87,8 +87,12 @@ func (d *staticSiteDeployer) DeployWorkload(in *DeployWorkloadInput) (ActionReco
 
 // UploadArtifacts uploads static assets to the app stackset bucket.
 func (d *staticSiteDeployer) UploadArtifacts() (*UploadArtifactsOutput, error) {
+	return d.uploadArtifacts(d.uploadStaticFiles, d.uploadArtifactsToS3, d.uploadCustomResources)
+}
+
+func (d *staticSiteDeployer) uploadStaticFiles(out *UploadArtifactsOutput) error {
 	for _, f := range d.staticSiteMft.FileUploads {
-		if _, err := d.uploadFn(d.fs, filepath.Join(f.Context, f.Source), f.Destination,
+		assets, err := d.uploadFn(d.fs, filepath.Join(f.Context, f.Source), f.Destination,
 			&asset.UploadOpts{
 				Reincludes: f.Reinclude.ToStringSlice(),
 				Excludes:   f.Exclude.ToStringSlice(),
@@ -96,11 +100,14 @@ func (d *staticSiteDeployer) UploadArtifacts() (*UploadArtifactsOutput, error) {
 				UploadFn: func(key string, contents io.Reader) (string, error) {
 					return d.s3Client.Upload(d.bucketName, key, contents)
 				},
-			}); err != nil {
-			return nil, err
+			})
+		if err != nil {
+			return err
 		}
+		out.CachedAssets = append(out.CachedAssets, assets...)
 	}
-	return d.uploadArtifacts(d.uploadArtifactsToS3, d.uploadCustomResources)
+	fmt.Printf("out.CachedAssets: %+v\n", out.CachedAssets)
+	return nil
 }
 
 func (d *staticSiteDeployer) stackConfiguration(in *StackRuntimeConfiguration) (cloudformation.StackConfiguration, error) {

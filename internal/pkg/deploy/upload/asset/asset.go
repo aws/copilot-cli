@@ -5,6 +5,9 @@
 package asset
 
 import (
+	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"io/fs"
@@ -24,10 +27,22 @@ type UploadOpts struct {
 	Recursive  bool       // Whether to walk recursively.
 }
 
+type Asset struct {
+	LocalPath  string
+	RemotePath string
+	Data       io.Reader
+}
+
+// CachedAsset represents an S3 object uploaded to a temporary bucket that needs
+// to be moved from a cached location to the destination bucket/key.
+type CachedAsset struct {
+	Asset          Asset
+	DestinationKey string
+}
+
 // Upload uploads static assets to Cloud Storage and returns uploaded file URLs.
-func Upload(fs afero.Fs, source, destination string, opts *UploadOpts) ([]string, error) {
+func Upload(fs afero.Fs, source, destination string, opts *UploadOpts) ([]CachedAsset, error) {
 	matcher := buildCompositeMatchers(buildReincludeMatchers(opts.Reincludes), buildExcludeMatchers(opts.Excludes))
-	var urls []string
 	info, err := fs.Stat(source)
 	if err != nil {
 		return nil, fmt.Errorf("get stat for file %q: %w", source, err)
@@ -45,15 +60,26 @@ func Upload(fs afero.Fs, source, destination string, opts *UploadOpts) ([]string
 	} else if destination == "" { // only applies to files, not folders
 		destination = source
 	}
+
+	var assets []CachedAsset
 	for _, path := range paths {
-		if err := afero.Walk(fs, path, walkFn(source, destination, opts.Recursive, fs, opts.UploadFn, &urls, matcher)); err != nil {
+		if err := afero.Walk(fs, path, walkFn(source, destination, opts.Recursive, fs, opts.UploadFn, &assets, matcher)); err != nil {
 			return nil, fmt.Errorf("walk the file tree rooted at %q: %w", source, err)
 		}
 	}
-	return urls, nil
+
+	for _, asset := range assets {
+		_, err := opts.UploadFn(asset.Asset.RemotePath, asset.Asset.Data)
+		if err != nil {
+			return nil, fmt.Errorf("upload file %q to destination %q: %w", asset.Asset.LocalPath, asset.Asset.RemotePath, err)
+		}
+		fmt.Printf("Successfully uploaded %q to %q\n", asset.Asset.LocalPath, asset.Asset.RemotePath)
+	}
+
+	return assets, nil
 }
 
-func walkFn(source, dest string, recursive bool, reader afero.Fs, upload UploadFunc, urlsPtr *[]string, matcher filepathMatcher) filepath.WalkFunc {
+func walkFn(source, dest string, recursive bool, reader afero.Fs, upload UploadFunc, assets *[]CachedAsset, matcher filepathMatcher) filepath.WalkFunc {
 	return func(path string, info fs.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -71,21 +97,34 @@ func walkFn(source, dest string, recursive bool, reader afero.Fs, upload UploadF
 		if !ok {
 			return nil
 		}
+
+		hash := sha256.New()
+		buf := &bytes.Buffer{}
 		file, err := reader.Open(path)
 		if err != nil {
 			return fmt.Errorf("open file on path %q: %w", path, err)
 		}
 		defer file.Close()
+
+		_, err = io.Copy(io.MultiWriter(buf, hash), file)
+		if err != nil {
+			return fmt.Errorf("copy: %w", err)
+		}
+
 		fileRel, err := filepath.Rel(source, path)
 		if err != nil {
 			return fmt.Errorf("get relative path for %q against %q: %w", path, source, err)
 		}
-		key := filepath.Join(dest, fileRel)
-		url, err := upload(key, file)
-		if err != nil {
-			return fmt.Errorf("upload file %q to destination %q: %w", path, key, err)
-		}
-		*urlsPtr = append(*urlsPtr, url)
+
+		*assets = append(*assets, CachedAsset{
+			Asset: Asset{
+				LocalPath:  fileRel,
+				Data:       buf,
+				RemotePath: "static-site-cache/todo-svc-name/" + hex.EncodeToString(hash.Sum(nil)),
+			},
+			DestinationKey: filepath.Join(dest, fileRel),
+		})
+
 		return nil
 	}
 }
