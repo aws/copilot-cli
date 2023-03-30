@@ -19,7 +19,7 @@ func TestCmd_Run(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 		cmd := &Cmd{
-			command: func(name string, args []string, opts ...CmdOption) cmdRunner {
+			command: func(ctx context.Context, name string, args []string, opts ...CmdOption) cmdRunner {
 				require.Equal(t, "ls", name)
 				m := NewMockcmdRunner(ctrl)
 				m.EXPECT().Run().Return(nil)
@@ -41,7 +41,7 @@ func TestCmd_RunWithContext(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 		cmd := &Cmd{
-			commandContext: func(ctx context.Context, name string, args []string, opts ...CmdOption) cmdRunner {
+			command: func(ctx context.Context, name string, args []string, opts ...CmdOption) cmdRunner {
 				require.Equal(t, "ls", name)
 				m := NewMockcmdRunner(ctrl)
 				m.EXPECT().Run().Return(nil)
