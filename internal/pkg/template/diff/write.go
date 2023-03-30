@@ -50,15 +50,14 @@ func (s *treeWriter) writeTree(node diffNode, indent int) error {
 		_, err := s.writer.Write([]byte(color.Faint.Sprint(content + "\n")))
 		return err
 	case *seqItemNode:
-		formatter = &seqItemFormatter{}
+		formatter = &seqItemFormatter{indent}
 	default:
-		formatter = &keyedFormatter{node.key()}
+		formatter = &keyedFormatter{node.key(), indent}
 	}
 	if len(node.children()) == 0 {
 		return s.writeLeaf(node, indent, formatter)
 	}
-	content := process(formatter.formatPath(node), prefixByFn(prefixMod), indentByFn(indent))
-	if _, err := s.writer.Write([]byte(content + "\n")); err != nil {
+	if _, err := s.writer.Write([]byte(formatter.formatPath(node))); err != nil {
 		return err
 	}
 	for _, child := range node.children() {

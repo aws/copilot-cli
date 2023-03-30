@@ -18,7 +18,9 @@ type formatter interface {
 	nextIndent(curr int) int
 }
 
-type seqItemFormatter struct{}
+type seqItemFormatter struct {
+	indent int
+}
 
 func (f *seqItemFormatter) formatYAML(node *yaml.Node) ([]byte, error) {
 	wrapped := &yaml.Node{
@@ -45,7 +47,8 @@ func (f *seqItemFormatter) formatMod(node diffNode) (string, error) {
 }
 
 func (f *seqItemFormatter) formatPath(_ diffNode) string {
-	return color.Faint.Sprint("- (changed item)")
+	content := process(color.Faint.Sprint("- (changed item)"), prefixByFn(prefixMod), indentByFn(f.indent))
+	return content + "\n"
 }
 
 func (f *seqItemFormatter) nextIndent(curr int) int {
@@ -59,7 +62,8 @@ func (f *seqItemFormatter) nextIndent(curr int) int {
 }
 
 type keyedFormatter struct {
-	key string
+	key    string
+	indent int
 }
 
 func (f *keyedFormatter) formatYAML(node *yaml.Node) ([]byte, error) {
@@ -94,7 +98,8 @@ func (f *keyedFormatter) formatMod(node diffNode) (string, error) {
 }
 
 func (f *keyedFormatter) formatPath(node diffNode) string {
-	return node.key() + ":"
+	content := process(node.key()+":", prefixByFn(prefixMod), indentByFn(f.indent))
+	return content + "\n"
 }
 
 func (f *keyedFormatter) nextIndent(curr int) int {
