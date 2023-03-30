@@ -171,13 +171,13 @@ type repositoryURIGetter interface {
 	URI() (string, error)
 }
 
-type dockerLogin interface {
+type repositoryLogin interface {
 	Login() error
 }
 
 type repositoryService interface {
 	repositoryURIGetter
-	dockerLogin
+	repositoryLogin
 	imageBuilderPusher
 }
 

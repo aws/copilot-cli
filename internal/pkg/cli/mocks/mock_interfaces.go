@@ -1614,31 +1614,31 @@ func (mr *MockrepositoryURIGetterMockRecorder) URI() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "URI", reflect.TypeOf((*MockrepositoryURIGetter)(nil).URI))
 }
 
-// MockdockerLogin is a mock of dockerLogin interface.
-type MockdockerLogin struct {
+// MockrepositoryLogin is a mock of repositoryLogin interface.
+type MockrepositoryLogin struct {
 	ctrl     *gomock.Controller
-	recorder *MockdockerLoginMockRecorder
+	recorder *MockrepositoryLoginMockRecorder
 }
 
-// MockdockerLoginMockRecorder is the mock recorder for MockdockerLogin.
-type MockdockerLoginMockRecorder struct {
-	mock *MockdockerLogin
+// MockrepositoryLoginMockRecorder is the mock recorder for MockrepositoryLogin.
+type MockrepositoryLoginMockRecorder struct {
+	mock *MockrepositoryLogin
 }
 
-// NewMockdockerLogin creates a new mock instance.
-func NewMockdockerLogin(ctrl *gomock.Controller) *MockdockerLogin {
-	mock := &MockdockerLogin{ctrl: ctrl}
-	mock.recorder = &MockdockerLoginMockRecorder{mock}
+// NewMockrepositoryLogin creates a new mock instance.
+func NewMockrepositoryLogin(ctrl *gomock.Controller) *MockrepositoryLogin {
+	mock := &MockrepositoryLogin{ctrl: ctrl}
+	mock.recorder = &MockrepositoryLoginMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockdockerLogin) EXPECT() *MockdockerLoginMockRecorder {
+func (m *MockrepositoryLogin) EXPECT() *MockrepositoryLoginMockRecorder {
 	return m.recorder
 }
 
 // Login mocks base method.
-func (m *MockdockerLogin) Login() error {
+func (m *MockrepositoryLogin) Login() error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Login")
 	ret0, _ := ret[0].(error)
@@ -1646,9 +1646,9 @@ func (m *MockdockerLogin) Login() error {
 }
 
 // Login indicates an expected call of Login.
-func (mr *MockdockerLoginMockRecorder) Login() *gomock.Call {
+func (mr *MockrepositoryLoginMockRecorder) Login() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Login", reflect.TypeOf((*MockdockerLogin)(nil).Login))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Login", reflect.TypeOf((*MockrepositoryLogin)(nil).Login))
 }
 
 // MockrepositoryService is a mock of repositoryService interface.

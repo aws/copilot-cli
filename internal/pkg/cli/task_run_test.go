@@ -843,7 +843,6 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 					Command:    []string{},
 					EntryPoint: []string{},
 				}).Return(nil)
-				m.repository.EXPECT().URI().Return(mockRepoURI, nil)
 				m.repository.EXPECT().Login().Return(errors.New("some error"))
 				mockHasDefaultCluster(m)
 			},
