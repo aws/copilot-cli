@@ -155,7 +155,6 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 		mockName            = "mockWkld"
 		mockEnvName         = "test"
 		mockAppName         = "press"
-		mockURI             = "mockRepoURI"
 		mockWorkspacePath   = "."
 		mockEnvFile         = "foo.env"
 		mockS3Bucket        = "mockBucket"
@@ -204,7 +203,6 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			mock: func(t *testing.T, m *deployMocks) {
 				m.mockRepositoryService.EXPECT().Login().Return(nil)
 				m.mockRepositoryService.EXPECT().BuildAndPush(&dockerengine.BuildArguments{
-					URI:        mockURI,
 					Dockerfile: "mockDockerfile",
 					Context:    "mockContext",
 					Platform:   "mockContainerPlatform",
@@ -229,7 +227,6 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			mock: func(t *testing.T, m *deployMocks) {
 				m.mockRepositoryService.EXPECT().Login().Return(nil)
 				m.mockRepositoryService.EXPECT().BuildAndPush(&dockerengine.BuildArguments{
-					URI:        mockURI,
 					Dockerfile: "mockDockerfile",
 					Context:    "mockContext",
 					Platform:   "mockContainerPlatform",
@@ -261,7 +258,6 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			mock: func(t *testing.T, m *deployMocks) {
 				m.mockRepositoryService.EXPECT().Login().Return(nil)
 				m.mockRepositoryService.EXPECT().BuildAndPush(&dockerengine.BuildArguments{
-					URI:        mockURI,
 					Dockerfile: "mockDockerfile",
 					Context:    "mockContext",
 					Platform:   "mockContainerPlatform",
@@ -295,7 +291,6 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			mock: func(t *testing.T, m *deployMocks) {
 				m.mockRepositoryService.EXPECT().Login().Return(nil)
 				m.mockRepositoryService.EXPECT().BuildAndPush(&dockerengine.BuildArguments{
-					URI:        mockURI,
 					Dockerfile: "sidecarMockDockerfile",
 					Context:    "sidecarMockContext",
 					Platform:   "mockContainerPlatform",
@@ -306,7 +301,6 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 					},
 				}, gomock.Any()).Return("sidecarMockDigest1", nil)
 				m.mockRepositoryService.EXPECT().BuildAndPush(&dockerengine.BuildArguments{
-					URI:        mockURI,
 					Dockerfile: "web/Dockerfile",
 					Context:    "Users/bowie",
 					Platform:   "mockContainerPlatform",

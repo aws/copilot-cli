@@ -772,7 +772,6 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 		tag         = "tag"
 	)
 	defaultBuildArguments := dockerengine.BuildArguments{
-		URI:     mockRepoURI,
 		Context: filepath.Dir(defaultDockerfilePath),
 		Tags:    []string{imageTagLatest},
 	}
@@ -917,7 +916,6 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 				m.repository.EXPECT().Login().Return(nil)
 				m.repository.EXPECT().BuildAndPush(gomock.Eq(
 					&dockerengine.BuildArguments{
-						URI:     mockRepoURI,
 						Context: filepath.Dir(defaultDockerfilePath),
 						Tags:    []string{imageTagLatest, tag},
 					}),
@@ -937,7 +935,6 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 				m.repository.EXPECT().Login().Return(nil)
 				m.repository.EXPECT().BuildAndPush(gomock.Eq(
 					&dockerengine.BuildArguments{
-						URI:     mockRepoURI,
 						Context: "../../other",
 						Tags:    []string{imageTagLatest},
 					}),
