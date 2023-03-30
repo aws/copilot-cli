@@ -1,10 +1,10 @@
 ---
 title: 'AWS Copilot v1.27: Extend Copilot templates, additional routing rule supports, preview differences, and sidecar improvements!'
 twitter_title: 'AWS Copilot v1.27'
-image: ''
-image_alt: ''
-image_width: '1051'
-image_height: '747'
+image: 'https://user-images.githubusercontent.com/879348/227655119-e42c6b8b-ff0e-4abe-ad90-89b44813fbd5.png'
+image_alt: 'CDK overrides and diff'
+image_width: '2056'
+image_height: '1096'
 ---
 
 # AWS Copilot v1.27: Extend Copilot templates, additional routing rule supports, preview differences, and sidecar improvements!
@@ -38,17 +38,134 @@ or multiple listeners on different ports and protocols for [network load balance
 
 ## Extend Copilot-generated AWS CloudFormation templates
 
-#### Preview AWS CloudFormation template changes
+AWS Copilot enables builders to quickly get started with containerized applications through the `copilot init` command and following prompts.
+Developers can then grow their applications by editing and deploying [manifest](../docs/manifest/overview.en.md) infrastructure-as-code files.
+And now with v1.27, developers can extend any Copilot-generated CloudFormation template with the `copilot [noun] override` command, enabling them to fully customize their infrastructure.
+
+### AWS Cloud Development Kit (CDK) Overrides
+
+You can use the CDK to extend your CloudFormation templates when you need the expressive power and safety of a
+programming language. After running the `copilot [noun] override` command, Copilot will generate a CDK application
+under the `copilot/[name]/override` directory:
+
+```console
+.
+├── bin/
+│   └── override.ts
+├── .gitignore
+├── cdk.json
+├── package.json
+├── README.md
+├── stack.ts
+└── tsconfig.json
+```
+
+You can get started with adding, removing, or replacing properties by editing the `stack.ts` file or following the instructions in the `README.md`.
+
+??? note "View sample `stack.ts`"
+
+    ```typescript
+    import * as cdk from 'aws-cdk-lib';
+    import * as path from 'path';
+    import { aws_elasticloadbalancingv2 as elbv2 } from 'aws-cdk-lib';
+    import { aws_ec2 as ec2 } from 'aws-cdk-lib';
+    
+    interface TransformedStackProps extends cdk.StackProps {
+        readonly appName: string;
+        readonly envName: string;
+    }
+    
+    export class TransformedStack extends cdk.Stack {
+        public readonly template: cdk.cloudformation_include.CfnInclude;
+        public readonly appName: string;
+        public readonly envName: string;
+    
+        constructor (scope: cdk.App, id: string, props: TransformedStackProps) {
+            super(scope, id, props);
+            this.template = new cdk.cloudformation_include.CfnInclude(this, 'Template', {
+                templateFile: path.join('.build', 'in.yml'),
+            });
+            this.appName = props.appName;
+            this.envName = props.envName;
+            this.transformPublicNetworkLoadBalancer();
+        }
+    
+        /**
+         * transformPublicNetworkLoadBalancer removes the "Subnets" properties from the NLB,
+         * and adds a SubnetMappings with predefined elastic IP addresses.
+         */
+        transformPublicNetworkLoadBalancer() {
+            const elasticIPs = [new ec2.CfnEIP(this, 'ElasticIP1'), new ec2.CfnEIP(this, 'ElasticIP2')];
+            const publicSubnets = cdk.Fn.importValue(`${this.appName}-${this.envName}-PublicSubnets`);
+    
+            // Apply the override.
+            const nlb = this.template.getResource("PublicNetworkLoadBalancer") as elbv2.CfnLoadBalancer;
+            nlb.addDeletionOverride('Properties.Subnets');
+            nlb.subnetMappings = [{
+                allocationId: elasticIPs[0].attrAllocationId,
+                subnetId: cdk.Fn.select(0, cdk.Fn.split(",", publicSubnets)),
+            }, {
+                allocationId: elasticIPs[1].attrAllocationId,
+                subnetId: cdk.Fn.select(1, cdk.Fn.split(",", publicSubnets)),
+            }]
+        }
+    }
+    ```
+
+Once you run `copilot [noun] deploy` or your continuous delivery pipeline is triggered, Copilot will deploy the overriden template.  
+To learn more about extending with the CDK, checkout the [guide](../docs/developing/overrides/cdk.md).
+
+### YAML Patch Overrides
+
+You can use YAML Patch overrides for a more lightweight experience when 1) you do not want to have a dependency
+on any other tooling and framework, or 2) you have to write only a handful of modifications. 
+After running the `copilot [noun] override` command, Copilot will generate a sample `cfn.patches.yml` file
+under the `copilot/[name]/override` directory:
+
+```console
+.
+├── cfn.patches.yml
+└── README.md
+```
+
+You can get started with adding, removing, or replacing properties by editing the `cfn.patches.yaml` file.
+
+??? note "View sample `cfn.patches.yml`"
+
+    ```yaml
+    - op: add
+      path: /Mappings
+      value:
+        ContainerSettings:
+          test: { Cpu: 256, Mem: 512 }
+          prod: { Cpu: 1024, Mem: 1024}
+    - op: remove
+      path: /Resources/TaskRole
+    - op: replace
+      path: /Resources/TaskDefinition/Properties/ContainerDefinitions/1/Essential
+      value: false
+    - op: add
+      path: /Resources/Service/Properties/ServiceConnectConfiguration/Services/0/ClientAliases/-
+      value:
+        Port: !Ref TargetPort
+        DnsName: yamlpatchiscool
+    ```
+
+Once you run `copilot [noun] deploy` or your continuous delivery pipeline is triggered, Copilot will deploy the overriden template.  
+To learn more about extending with YAML patches, check out the [guide](../docs/developing/overrides/yamlpatch.md).
+
+## Preview AWS CloudFormation template changes
 
 ##### `copilot [noun] package --diff`
 
-You can now run `copilot [noun] package --diff` to see the diff between your local changes and the latest deployed template. 
-The program will exit after it prints the diff. 
+You can now run `copilot [noun] package --diff` to see the diff between your local changes and the latest deployed template.
+The program will exit after it prints the diff.
 
 !!! info "The exit codes when using `copilot [noun] package --diff`"
+
     0 = no diffs found  
     1 = diffs found  
-    2 = error producing diffs
+    2 = error-producing diffs
 
 
 ```console
@@ -67,8 +184,8 @@ to your designated directory.
 
 ##### `copilot [noun] deploy --diff`
 
-Similar to `copilot [noun] package --diff`, you can run `copilot [noun] deploy --diff` to see the same diff. 
-However, instead of exiting after it print the diff, Copilot will follow up with a question: `Continue with the deployment? [y/N]`.
+Similar to `copilot [noun] package --diff`, you can run `copilot [noun] deploy --diff` to see the same diff.
+However, instead of exiting after printing the diff, Copilot will follow up with the question: `Continue with the deployment? [y/N]`.
 
 ```console
 $ copilot job deploy --diff

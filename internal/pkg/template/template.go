@@ -18,7 +18,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/template/artifactpath"
 )
 
-//go:embed templates
+//go:embed templates templates/overrides/cdk/.gitignore
 var templateFS embed.FS
 
 // File names under "templates/".
@@ -34,6 +34,7 @@ const (
 	scriptDirName                  = "scripts"
 )
 
+// AddonsStackLogicalID is the logical ID for the addon stack resource in the main template.
 const AddonsStackLogicalID = "AddonsStack"
 
 // Groups of files that belong to the same stack.

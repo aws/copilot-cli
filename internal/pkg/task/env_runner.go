@@ -48,7 +48,7 @@ type EnvRunner struct {
 	VPCGetter            VPCGetter
 	ClusterGetter        ClusterGetter
 	Starter              Runner
-	EnvironmentDescriber EnvironmentDescriber
+	EnvironmentDescriber environmentDescriber
 
 	// Figures non-zero exit code of the task
 	NonZeroExitCodeGetter NonZeroExitCodeGetter

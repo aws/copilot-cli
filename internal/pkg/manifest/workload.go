@@ -33,8 +33,8 @@ const (
 	sqsDeduplicationScopeQueue              = "queue"
 )
 
+// AWS VPC subnet placement options.
 const (
-	// AWS VPC subnet placement options.
 	PublicSubnetPlacement  = PlacementString("public")
 	PrivateSubnetPlacement = PlacementString("private")
 )

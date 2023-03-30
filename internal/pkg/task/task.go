@@ -33,7 +33,7 @@ type DefaultClusterGetter interface {
 	DefaultCluster() (string, error)
 }
 
-type EnvironmentDescriber interface {
+type environmentDescriber interface {
 	Describe() (*describe.EnvDescription, error)
 }
 
@@ -70,7 +70,9 @@ const (
 )
 
 var (
-	ValidWindowsOSs   = []string{osWindowsServer2019Core, osWindowsServer2019Full, osWindowsServer2022Core, osWindowsServer2022Full}
+	validWindowsOSs = []string{osWindowsServer2019Core, osWindowsServer2019Full, osWindowsServer2022Core, osWindowsServer2022Full}
+
+	// ValidCFNPlatforms are valid docker platforms for running ECS tasks.
 	ValidCFNPlatforms = []string{
 		dockerengine.PlatformString(osWindowsServer2019Core, archX86),
 		dockerengine.PlatformString(osWindowsServer2019Full, archX86),
@@ -84,7 +86,7 @@ var (
 
 // IsValidWindowsOS determines if the OS value is an accepted CFN Windows value.
 func IsValidWindowsOS(os string) bool {
-	for _, validWindowsOS := range ValidWindowsOSs {
+	for _, validWindowsOS := range validWindowsOSs {
 		if os == validWindowsOS {
 			return true
 		}

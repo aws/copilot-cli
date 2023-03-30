@@ -4,14 +4,14 @@
     "AppName": "my-app",
     "ContainerImage": "alpine",
     "EnvFileARN": "",
+    "EnvFileARNFornginx": "",
     "EnvName": "test",
     "LogRetention": "30",
     "Schedule": "cron(0 12 ? * MON *)",
     "TaskCPU": "256",
     "TaskCount": "1",
     "TaskMemory": "512",
-    "WorkloadName": "job",
-    "nginxEnvFileARN": ""
+    "WorkloadName": "job"
   },
   "Tags": {
     "copilot-application": "my-app",

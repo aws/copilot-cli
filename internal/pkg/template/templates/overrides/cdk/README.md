@@ -21,3 +21,8 @@ By writing `transform()` methods in stack, you can access and modify properties 
 The CDK and Copilot communicate when running `copilot [noun] package`:
 1. Copilot copies the template generated from your `manifest.yml` under `.build/in.yml`.
 2. Copilot then runs `cdk synth` from your `overrides/` directory and uses its output to deploy to CloudFormation.
+
+## Additional Guides
+
+To learn more about Copilot CDK overrides and view examples, check out [the documentation](https://aws.github.io/copilot-cli/docs/developing/overrides/cdk/).  
+To learn how to edit L1 CDK constructs, check out [the CDK documentation](https://docs.aws.amazon.com/cdk/v2/guide/cfn_layer.html).
