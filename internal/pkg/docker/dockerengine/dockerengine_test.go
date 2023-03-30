@@ -9,6 +9,7 @@ import (
 	"fmt"
 	osexec "os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/exec"
@@ -62,7 +63,7 @@ func TestDockerCommand_Build(t *testing.T) {
 				mockCmd.EXPECT().Run("docker", []string{"build",
 					"-t", mockURI + ":" + mockTag1,
 					filepath.FromSlash("mockPath/to"),
-					"-f", "mockPath/to/mockDockerfile"}).Return(mockError)
+					"-f", "mockPath/to/mockDockerfile"}, gomock.Any(), gomock.Any()).Return(mockError)
 			},
 			wantedError: fmt.Errorf("building image: %w", mockError),
 		},
@@ -75,7 +76,7 @@ func TestDockerCommand_Build(t *testing.T) {
 
 				mockCmd.EXPECT().Run("docker", []string{"build",
 					"-t", "mockURI:tag1", filepath.FromSlash("mockPath/to"),
-					"-f", "mockPath/to/mockDockerfile"}).Return(nil)
+					"-f", "mockPath/to/mockDockerfile"}, gomock.Any(), gomock.Any()).Return(nil)
 			},
 		},
 		"should display quiet progress updates when in a CI environment": {
@@ -91,7 +92,7 @@ func TestDockerCommand_Build(t *testing.T) {
 				mockCmd.EXPECT().Run("docker", []string{"build",
 					"-t", fmt.Sprintf("%s:%s", mockURI, mockTag1),
 					"--progress", "plain",
-					filepath.FromSlash("mockPath/to"), "-f", "mockPath/to/mockDockerfile"}).
+					filepath.FromSlash("mockPath/to"), "-f", "mockPath/to/mockDockerfile"}, gomock.Any(), gomock.Any()).
 					Return(nil)
 			},
 		},
@@ -104,7 +105,7 @@ func TestDockerCommand_Build(t *testing.T) {
 				mockCmd.EXPECT().Run("docker", []string{"build",
 					"-t", fmt.Sprintf("%s:%s", mockURI, mockTag1),
 					"mockPath",
-					"-f", "mockPath/to/mockDockerfile"}).Return(nil)
+					"-f", "mockPath/to/mockDockerfile"}, gomock.Any(), gomock.Any()).Return(nil)
 			},
 		},
 		"behaves the same if context is DF dir": {
@@ -117,7 +118,7 @@ func TestDockerCommand_Build(t *testing.T) {
 				mockCmd.EXPECT().Run("docker", []string{"build",
 					"-t", mockURI + ":" + mockTag1,
 					"mockPath/to",
-					"-f", "mockPath/to/mockDockerfile"}).Return(nil)
+					"-f", "mockPath/to/mockDockerfile"}, gomock.Any(), gomock.Any()).Return(nil)
 			},
 		},
 
@@ -131,7 +132,7 @@ func TestDockerCommand_Build(t *testing.T) {
 					"-t", mockURI + ":" + mockTag2,
 					"-t", mockURI + ":" + mockTag3,
 					filepath.FromSlash("mockPath/to"),
-					"-f", "mockPath/to/mockDockerfile"}).Return(nil)
+					"-f", "mockPath/to/mockDockerfile"}, gomock.Any(), gomock.Any()).Return(nil)
 			},
 		},
 		"success with build args": {
@@ -150,7 +151,7 @@ func TestDockerCommand_Build(t *testing.T) {
 					"--build-arg", "abc=def",
 					"--build-arg", "key=value",
 					filepath.FromSlash("mockPath/to"),
-					"-f", "mockPath/to/mockDockerfile"}).Return(nil)
+					"-f", "mockPath/to/mockDockerfile"}, gomock.Any(), gomock.Any()).Return(nil)
 			},
 		},
 
@@ -170,7 +171,7 @@ func TestDockerCommand_Build(t *testing.T) {
 					"--label", "com.aws.copilot.image.container.name=mockWkld",
 					"--label", "com.aws.copilot.image.version=v1.26.0",
 					filepath.FromSlash("mockPath/to"),
-					"-f", "mockPath/to/mockDockerfile"}).Return(nil)
+					"-f", "mockPath/to/mockDockerfile"}, gomock.Any(), gomock.Any()).Return(nil)
 			},
 		},
 
@@ -187,7 +188,7 @@ func TestDockerCommand_Build(t *testing.T) {
 					"--cache-from", "foo/bar/baz:1.2.3",
 					"--target", "foobar",
 					filepath.FromSlash("mockPath/to"),
-					"-f", "mockPath/to/mockDockerfile"}).Return(nil)
+					"-f", "mockPath/to/mockDockerfile"}, gomock.Any(), gomock.Any()).Return(nil)
 			},
 		},
 	}
@@ -215,7 +216,8 @@ func TestDockerCommand_Build(t *testing.T) {
 				Tags:       tc.tags,
 				Labels:     tc.labels,
 			}
-			got := s.Build(&buildInput)
+			buf := new(strings.Builder)
+			got := s.Build(&buildInput, buf)
 
 			if tc.wantedError != nil {
 				require.EqualError(t, tc.wantedError, got.Error())
@@ -282,8 +284,8 @@ func TestDockerCommand_Push(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 		m := NewMockCmd(ctrl)
-		m.EXPECT().Run("docker", []string{"push", "aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app:latest"}).Return(nil)
-		m.EXPECT().Run("docker", []string{"push", "aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app:g123bfc"}).Return(nil)
+		m.EXPECT().Run("docker", []string{"push", "aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app:latest"}, gomock.Any(), gomock.Any()).Return(nil)
+		m.EXPECT().Run("docker", []string{"push", "aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app:g123bfc"}, gomock.Any(), gomock.Any()).Return(nil)
 		m.EXPECT().Run("docker", []string{"inspect", "--format", "'{{json (index .RepoDigests 0)}}'", "aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app:latest"}, gomock.Any()).
 			Do(func(_ string, _ []string, opt exec.CmdOption) {
 				cmd := &osexec.Cmd{}
@@ -296,7 +298,8 @@ func TestDockerCommand_Push(t *testing.T) {
 			runner:    m,
 			lookupEnv: emptyLookupEnv,
 		}
-		digest, err := cmd.Push("aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app", "latest", "g123bfc")
+		buf := new(strings.Builder)
+		digest, err := cmd.Push("aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app", buf, "latest", "g123bfc")
 
 		// THEN
 		require.NoError(t, err)
@@ -307,7 +310,7 @@ func TestDockerCommand_Push(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 		m := NewMockCmd(ctrl)
-		m.EXPECT().Run("docker", []string{"push", "aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app:latest", "--quiet"}).Return(nil)
+		m.EXPECT().Run("docker", []string{"push", "aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app:latest", "--quiet"}, gomock.Any(), gomock.Any()).Return(nil)
 		m.EXPECT().Run("docker", []string{"inspect", "--format", "'{{json (index .RepoDigests 0)}}'", "aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app:latest"}, gomock.Any()).
 			Do(func(_ string, _ []string, opt exec.CmdOption) {
 				cmd := &osexec.Cmd{}
@@ -325,7 +328,8 @@ func TestDockerCommand_Push(t *testing.T) {
 				return "", false
 			},
 		}
-		digest, err := cmd.Push("aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app", "latest")
+		buf := new(strings.Builder)
+		digest, err := cmd.Push("aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app", buf, "latest")
 
 		// THEN
 		require.NoError(t, err)
@@ -336,14 +340,15 @@ func TestDockerCommand_Push(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 		m := NewMockCmd(ctrl)
-		m.EXPECT().Run(gomock.Any(), gomock.Any()).Return(errors.New("some error"))
+		m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("some error"))
 
 		// WHEN
 		cmd := CmdClient{
 			runner:    m,
 			lookupEnv: emptyLookupEnv,
 		}
-		_, err := cmd.Push("uri", "latest")
+		buf := new(strings.Builder)
+		_, err := cmd.Push("uri", buf, "latest")
 
 		// THEN
 		require.EqualError(t, err, "docker push uri:latest: some error")
@@ -353,7 +358,7 @@ func TestDockerCommand_Push(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 		m := NewMockCmd(ctrl)
-		m.EXPECT().Run("docker", []string{"push", "uri:latest"}).Return(nil)
+		m.EXPECT().Run("docker", []string{"push", "uri:latest"}, gomock.Any(), gomock.Any()).Return(nil)
 		m.EXPECT().Run("docker", []string{"inspect", "--format", "'{{json (index .RepoDigests 0)}}'", "uri:latest"}, gomock.Any()).Return(errors.New("some error"))
 
 		// WHEN
@@ -361,7 +366,8 @@ func TestDockerCommand_Push(t *testing.T) {
 			runner:    m,
 			lookupEnv: emptyLookupEnv,
 		}
-		_, err := cmd.Push("uri", "latest")
+		buf := new(strings.Builder)
+		_, err := cmd.Push("uri", buf, "latest")
 
 		// THEN
 		require.EqualError(t, err, "inspect image digest for uri: some error")
@@ -371,8 +377,8 @@ func TestDockerCommand_Push(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 		m := NewMockCmd(ctrl)
-		m.EXPECT().Run("docker", []string{"push", "aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app:latest"}).Return(nil)
-		m.EXPECT().Run("docker", []string{"push", "aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app:g123bfc"}).Return(nil)
+		m.EXPECT().Run("docker", []string{"push", "aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app:latest"}, gomock.Any(), gomock.Any()).Return(nil)
+		m.EXPECT().Run("docker", []string{"push", "aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app:g123bfc"}, gomock.Any(), gomock.Any()).Return(nil)
 		m.EXPECT().Run("docker", []string{"inspect", "--format", "'{{json (index .RepoDigests 0)}}'", "aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app:latest"}, gomock.Any()).
 			Do(func(_ string, _ []string, opt exec.CmdOption) {
 				cmd := &osexec.Cmd{}
@@ -385,7 +391,8 @@ func TestDockerCommand_Push(t *testing.T) {
 			runner:    m,
 			lookupEnv: emptyLookupEnv,
 		}
-		_, err := cmd.Push("aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app", "latest", "g123bfc")
+		buf := new(strings.Builder)
+		_, err := cmd.Push("aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app", buf, "latest", "g123bfc")
 
 		// THEN
 		require.EqualError(t, err, "parse the digest from the repo digest ''")
