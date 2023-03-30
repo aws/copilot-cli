@@ -36,11 +36,11 @@ Parameters:
     Description: 'URL of the environment file for the logging sidecar.'
     Type: String
     Default: ""
-  nginxEnvFileARN:
+  EnvFileARNFornginx:
     Description: 'URL of the environment file for the nginx sidecar.'
     Type: String
     Default: ""
-  operationEnvFileARN:
+  EnvFileARNForoperation:
     Description: 'URL of the environment file for the operation sidecar.'
     Type: String
     Default: ""
@@ -59,8 +59,8 @@ Conditions:
   HasAddons: !Not [!Equals [!Ref AddonsTemplateURL, ""]]
   HasEnvFile: !Not [!Equals [!Ref EnvFileARN, ""]]
   HasLoggingEnvFile: !Not [!Equals [!Ref LoggingEnvFileARN, ""]]
-  HasnginxEnvFile: !Not [!Equals [!Ref nginxEnvFileARN, ""]]
-  HasoperationEnvFile: !Not [!Equals [!Ref operationEnvFileARN, ""]]
+  HasEnvFileFornginx: !Not [!Equals [!Ref EnvFileARNFornginx, ""]]
+  HasEnvFileForoperation: !Not [!Equals [!Ref EnvFileARNForoperation, ""]]
 Resources: # If a bucket URL is specified, that means the template exists.
   LogGroup:
     Metadata:
@@ -226,9 +226,9 @@ Resources: # If a bucket URL is specified, that means the template exists.
               Value: "80"
           EnvironmentFiles:
             - !If
-              - HasnginxEnvFile
+              - HasEnvFileFornginx
               - Type: "s3"
-                Value: !Ref nginxEnvFileARN
+                Value: !Ref EnvFileARNFornginx
               - !Ref "AWS::NoValue"
           LogConfiguration:
             LogDriver: awslogs
@@ -256,9 +256,9 @@ Resources: # If a bucket URL is specified, that means the template exists.
               Value: !GetAtt EnvControllerAction.PublicLoadBalancerDNSName
           EnvironmentFiles:
             - !If
-              - HasoperationEnvFile
+              - HasEnvFileForoperation
               - Type: "s3"
-                Value: !Ref operationEnvFileARN
+                Value: !Ref EnvFileARNForoperation
               - !Ref "AWS::NoValue"
           LogConfiguration:
             LogDriver: awslogs
@@ -353,8 +353,8 @@ Resources: # If a bucket URL is specified, that means the template exists.
                         - !Select [0, !Split ['/', !Select [5, !Split [':', !Ref LoggingEnvFileARN]]]]
           - !Ref AWS::NoValue
         - !If
-          - HasnginxEnvFile
-          - PolicyName: !Join ['', [!Ref AppName, '-', !Ref EnvName, '-', !Ref WorkloadName, GetnginxEnvFilePolicy]]
+          - HasEnvFileFornginx
+          - PolicyName: !Join ['', [!Ref AppName, '-', !Ref EnvName, '-', !Ref WorkloadName, GetEnvFilePolicyFornginx]]
             PolicyDocument:
               Version: '2012-10-17'
               Statement:
@@ -362,7 +362,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
                   Action:
                     - 's3:GetObject'
                   Resource:
-                    - !Ref nginxEnvFileARN
+                    - !Ref EnvFileARNFornginx
                 - Effect: 'Allow'
                   Action:
                     - 's3:GetBucketLocation'
@@ -372,11 +372,11 @@ Resources: # If a bucket URL is specified, that means the template exists.
                       - - 'arn:'
                         - !Ref AWS::Partition
                         - ':s3:::'
-                        - !Select [0, !Split ['/', !Select [5, !Split [':', !Ref nginxEnvFileARN]]]]
+                        - !Select [0, !Split ['/', !Select [5, !Split [':', !Ref EnvFileARNFornginx]]]]
           - !Ref AWS::NoValue
         - !If
-          - HasoperationEnvFile
-          - PolicyName: !Join ['', [!Ref AppName, '-', !Ref EnvName, '-', !Ref WorkloadName, GetoperationEnvFilePolicy]]
+          - HasEnvFileForoperation
+          - PolicyName: !Join ['', [!Ref AppName, '-', !Ref EnvName, '-', !Ref WorkloadName, GetEnvFilePolicyForoperation]]
             PolicyDocument:
               Version: '2012-10-17'
               Statement:
@@ -384,7 +384,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
                   Action:
                     - 's3:GetObject'
                   Resource:
-                    - !Ref operationEnvFileARN
+                    - !Ref EnvFileARNForoperation
                 - Effect: 'Allow'
                   Action:
                     - 's3:GetBucketLocation'
@@ -394,7 +394,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
                       - - 'arn:'
                         - !Ref AWS::Partition
                         - ':s3:::'
-                        - !Select [0, !Split ['/', !Select [5, !Split [':', !Ref operationEnvFileARN]]]]
+                        - !Select [0, !Split ['/', !Select [5, !Split [':', !Ref EnvFileARNForoperation]]]]
           - !Ref AWS::NoValue
       ManagedPolicyArns:
         - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy'
