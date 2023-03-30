@@ -165,7 +165,7 @@ type secretDeleter interface {
 }
 
 type imageBuilderPusher interface {
-	BuildAndPush(args *dockerengine.BuildArguments) (string, error)
+	BuildAndPush(args *dockerengine.BuildArguments, w io.Writer) (string, error)
 }
 type repositoryURIGetter interface {
 	URI() (string, error)

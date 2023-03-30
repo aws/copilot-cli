@@ -979,7 +979,7 @@ func (o *runTaskOpts) buildAndPushImage(uri string) error {
 		Dockerfile: o.dockerfilePath,
 		Context:    ctx,
 		Tags:       append([]string{imageTagLatest}, additionalTags...),
-	}); err != nil {
+	}, os.Stderr); err != nil {
 		return fmt.Errorf("build and push image: %w", err)
 	}
 	return nil

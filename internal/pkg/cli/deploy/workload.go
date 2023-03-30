@@ -5,6 +5,7 @@ package deploy
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -43,6 +44,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/version"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/spf13/afero"
+	"golang.org/x/sync/errgroup"
 	"golang.org/x/term"
 )
 
@@ -421,28 +423,72 @@ func (d *workloadDeployer) uploadContainerImages(out *UploadArtifactsOutput) err
 	if len(buildArgsPerContainer) == 0 {
 		return nil
 	}
-<<<<<<< HEAD
 	err = d.repository.Login()
 	if err != nil {
 		return fmt.Errorf("login to image repository: %w", err)
-=======
-	uri, err := d.repository.Login()
-	if err != nil {
-		return fmt.Errorf("login to docker: %w", err)
->>>>>>> cafd5b3f (remove Login() from workload constructor and perform in uploadcontainerImages())
 	}
 	out.ImageDigests = make(map[string]ContainerImageIdentifier, len(buildArgsPerContainer))
+
+	// create an array of output buffers, one for each container.
+	buffers := make([]*buildPushOutputBuffer, len(buildArgsPerContainer))
+
+	// create a context and an error group.
+	ctx := context.Background()
+	g, _ := errgroup.WithContext(ctx)
+
+	// counter for indexing the output buffers.
+	count := 0
+
+	// mutex for synchronizing access to the output map.
+	var mux sync.Mutex
 	for name, buildArgs := range buildArgsPerContainer {
 		buildArgs.URI = uri
-		digest, err := d.repository.BuildAndPush(buildArgs)
-		if err != nil {
-			return fmt.Errorf("build and push image: %w", err)
+		// create a copy of loop variables to avoid data race.
+		name := name
+		buildArgs := buildArgs
+
+		// create a pipe for streaming the build and push output.
+		pr, pw := io.Pipe()
+
+		buffer := &buildPushOutputBuffer{
+			ContainerName: name,
 		}
-		out.ImageDigests[name] = ContainerImageIdentifier{
-			Digest:            digest,
-			CustomTag:         d.image.CustomTag,
-			GitShortCommitTag: d.image.GitShortCommitTag,
-		}
+		buffers[count] = buffer
+		count++
+
+		// create a new cursor and hide it.
+		curs := cursor.New()
+		curs.Hide()
+		defer curs.Show()
+
+		g.Go(func() error {
+			defer pw.Close()
+			digest, err := d.repository.BuildAndPush(buildArgs, pw)
+			if err != nil {
+				return fmt.Errorf("build and push image: %w", err)
+			}
+			mux.Lock()
+			defer mux.Unlock()
+			out.ImageDigests[name] = ContainerImageIdentifier{
+				Digest:            digest,
+				CustomTag:         d.image.CustomTag,
+				GitShortCommitTag: d.image.GitShortCommitTag,
+			}
+			return nil
+		})
+
+		g.Go(func() error {
+			return copyOutputToBuffer(pr, buffer)
+		})
+	}
+
+	g.Go(func() error {
+		return printOutputFromBuffers(buffers)
+	})
+
+	// wait for all goroutines to complete and return any errors.
+	if err := g.Wait(); err != nil {
+		return err
 	}
 	return nil
 }

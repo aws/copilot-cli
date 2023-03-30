@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	osexec "os/exec"
 	"path/filepath"
@@ -15,7 +16,6 @@ import (
 	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/exec"
-	"github.com/aws/copilot-cli/internal/pkg/term/log"
 )
 
 // Cmd is the interface implemented by external commands.
@@ -75,7 +75,7 @@ type dockerConfig struct {
 }
 
 // Build will run a `docker build` command for the given ecr repo URI and build arguments.
-func (c CmdClient) Build(in *BuildArguments) error {
+func (c CmdClient) Build(in *BuildArguments, w io.Writer) error {
 
 	// Tags must not be empty to build an docker image.
 	if len(in.Tags) == 0 {
@@ -140,9 +140,10 @@ func (c CmdClient) Build(in *BuildArguments) error {
 	args = append(args, dfDir, "-f", in.Dockerfile)
 	// If host platform is not linux/amd64, show the user how the container image is being built; if the build fails (if their docker server doesn't have multi-platform-- and therefore `--platform` capability, for instance) they may see why.
 	if in.Platform != "" {
-		log.Infof("Building your container image: docker %s\n", strings.Join(args, " "))
+		buildLabel := fmt.Sprintf("Building and pushing your container image: docker %s\n", strings.Join(args, " "))
+		io.WriteString(w, buildLabel)
 	}
-	if err := c.runner.Run("docker", args); err != nil {
+	if err := c.runner.Run("docker", args, exec.Stdout(w), exec.Stderr(w)); err != nil {
 		return fmt.Errorf("building image: %w", err)
 	}
 
@@ -163,7 +164,7 @@ func (c CmdClient) Login(uri, username, password string) error {
 }
 
 // Push pushes the images with the specified tags and ecr repository URI, and returns the image digest on success.
-func (c CmdClient) Push(uri string, tags ...string) (digest string, err error) {
+func (c CmdClient) Push(uri string, w io.Writer, tags ...string) (digest string, err error) {
 	images := []string{}
 	for _, tag := range tags {
 		images = append(images, imageName(uri, tag))
@@ -174,7 +175,7 @@ func (c CmdClient) Push(uri string, tags ...string) (digest string, err error) {
 	}
 
 	for _, img := range images {
-		if err := c.runner.Run("docker", append([]string{"push", img}, args...)); err != nil {
+		if err := c.runner.Run("docker", append([]string{"push", img}, args...), exec.Stdout(w), exec.Stderr(w)); err != nil {
 			return "", fmt.Errorf("docker push %s: %w", img, err)
 		}
 	}
