@@ -591,7 +591,7 @@ func printOutputFromBuffers(buffers []*buildPushOutputBuffer) error {
 
 		// sleep for a short time and erase the previous output.
 		time.Sleep(pollInterval)
-		// erase 5 lines from buffer and 2 lines of label.
+		// erase all the written lines to the terminal.
 		cursor.EraseLinesAbove(os.Stderr, writtenLines)
 	}
 	return nil
