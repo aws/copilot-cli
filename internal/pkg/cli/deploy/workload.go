@@ -68,7 +68,7 @@ func (noopActionRecommender) RecommendedActions() []string {
 }
 
 type repositoryService interface {
-	Login() (string, error)
+	Login() error
 	BuildAndPush(args *dockerengine.BuildArguments) (string, error)
 }
 
@@ -364,13 +364,12 @@ func (d *workloadDeployer) uploadContainerImages(out *UploadArtifactsOutput) err
 	if len(buildArgsPerContainer) == 0 {
 		return nil
 	}
-	uri, err := d.repository.Login()
+	err = d.repository.Login()
 	if err != nil {
 		return fmt.Errorf("login to image repository: %w", err)
 	}
 	out.ImageDigests = make(map[string]ContainerImageIdentifier, len(buildArgsPerContainer))
 	for name, buildArgs := range buildArgsPerContainer {
-		buildArgs.URI = uri
 		digest, err := d.repository.BuildAndPush(buildArgs)
 		if err != nil {
 			return fmt.Errorf("build and push image: %w", err)

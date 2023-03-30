@@ -82,27 +82,28 @@ func (r *Repository) URI() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("get repository URI: %w", err)
 	}
+	r.uri = uri
 	return uri, nil
 }
 
 // Login authenticates with a ECR registry by performing a Docker login,
 // but only if the `credStore` attribute value is not set to `ecr-login`.
 // If the `credStore` value is `ecr-login`, no login is performed.
-// Returns a URI or an error, if any occurs during the login process.
-func (r *Repository) Login() (string, error) {
+// Returns an error, if any occurs during the login process.
+func (r *Repository) Login() error {
 	uri, err := r.URI()
 	if err != nil {
-		return "", fmt.Errorf("retrieve URI for repository: %w", err)
+		return fmt.Errorf("retrieve URI for repository: %w", err)
 	}
 	if !r.docker.IsEcrCredentialHelperEnabled(uri) {
 		username, password, err := r.registry.Auth()
 		if err != nil {
-			return "", fmt.Errorf("get auth: %w", err)
+			return fmt.Errorf("get auth: %w", err)
 		}
 
 		if err := r.docker.Login(uri, username, password); err != nil {
-			return "", fmt.Errorf("docker login %s: %w", uri, err)
+			return fmt.Errorf("docker login %s: %w", uri, err)
 		}
 	}
-	return uri, nil
+	return nil
 }

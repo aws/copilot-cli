@@ -719,12 +719,16 @@ func (o *runTaskOpts) Execute() error {
 
 	// NOTE: if image is not provided, then we build the image and push to ECR repo
 	if o.image == "" {
-		uri, err := o.repository.Login()
+		uri, err := o.repository.URI()
+		if err != nil {
+			return fmt.Errorf("get ECR repository URI: %w", err)
+		}
+		err = o.repository.Login()
 		if err != nil {
 			return fmt.Errorf("login to docker: %w", err)
 		}
 
-		if err := o.buildAndPushImage(uri); err != nil {
+		if err := o.buildAndPushImage(); err != nil {
 			return err
 		}
 
@@ -951,7 +955,7 @@ func (o *runTaskOpts) showPublicIPs(tasks []*task.Task) {
 
 }
 
-func (o *runTaskOpts) buildAndPushImage(uri string) error {
+func (o *runTaskOpts) buildAndPushImage() error {
 	var additionalTags []string
 	if o.imageTag != "" {
 		additionalTags = append(additionalTags, o.imageTag)
@@ -963,7 +967,6 @@ func (o *runTaskOpts) buildAndPushImage(uri string) error {
 	}
 
 	if _, err := o.repository.BuildAndPush(&dockerengine.BuildArguments{
-		URI:        uri,
 		Dockerfile: o.dockerfilePath,
 		Context:    ctx,
 		Tags:       append([]string{imageTagLatest}, additionalTags...),
