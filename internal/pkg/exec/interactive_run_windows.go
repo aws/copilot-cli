@@ -14,6 +14,6 @@ func (c *Cmd) InteractiveRun(name string, args []string) error {
 	// See https://golang.org/pkg/os/signal/#hdr-Windows
 	signal.Notify(sig, os.Interrupt)
 	defer signal.Reset(os.Interrupt)
-	cmd := c.command(name, args, Stdout(os.Stdout), Stdin(os.Stdin), Stderr(os.Stderr))
+	cmd := c.command(context.Background(), name, args, Stdout(os.Stdout), Stdin(os.Stdin), Stderr(os.Stderr))
 	return cmd.Run()
 }
