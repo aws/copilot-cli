@@ -101,7 +101,7 @@ func (r *Repository) Login() (string, error) {
 		}
 
 		if err := r.docker.Login(uri, username, password); err != nil {
-			return "", fmt.Errorf("login to repo %s: %w", uri, err)
+			return "", fmt.Errorf("docker login %s: %w", uri, err)
 		}
 	}
 	return uri, nil
