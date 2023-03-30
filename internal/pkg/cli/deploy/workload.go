@@ -11,6 +11,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -54,6 +56,12 @@ const (
 	labelForBuilder       = "com.aws.copilot.image.builder"
 	labelForVersion       = "com.aws.copilot.image.version"
 	labelForContainerName = "com.aws.copilot.image.container.name"
+)
+
+const (
+	// pollInterval is the time Interval to wait between checking whether the output buffers are done.
+	pollInterval = 60 * time.Millisecond
+	maxLogLines  = 5
 )
 
 // ActionRecommender contains methods that output action recommendation.
@@ -353,6 +361,52 @@ func (img ContainerImageIdentifier) Tag() string {
 		return img.CustomTag
 	}
 	return img.GitShortCommitTag
+}
+
+// buildPushOutputBuffer contains the output configuration for docker build and push.
+type buildPushOutputBuffer struct {
+	ContainerName string // ContainerName is the name of the container.
+
+	bufMu sync.Mutex // bufMu is a mutex to protect access to the buffer.
+
+	buf bytes.Buffer // buf is the buffer containing the output of build and push.
+
+	doneMu sync.Mutex // doneMu is a mutex to protect access to the done field.
+
+	done bool // done is a flag indicating whether the build and push is completed.
+}
+
+// Write appends the given bytes to the buffer.
+func (b *buildPushOutputBuffer) Write(p []byte) (n int, err error) {
+	b.bufMu.Lock()
+	defer b.bufMu.Unlock()
+	return b.buf.Write(p)
+}
+
+// logs returns the label (i.e., the first line of the buffer) and the last five lines of the buffer.
+func (b *buildPushOutputBuffer) logs() (string, [maxLogLines]string) {
+	b.bufMu.Lock()
+	defer b.bufMu.Unlock()
+
+	// Split the buffer bytes into lines
+	lines := strings.Split(strings.TrimSpace(b.buf.String()), "\n")
+
+	// Determine the start and end index to extract last 5 lines
+	start := 1
+	if len(lines) > maxLogLines {
+		start = len(lines) - maxLogLines
+	}
+	end := len(lines)
+
+	// Extract the last 5 lines and store them in a fixed-size array
+	var logLines [maxLogLines]string
+	idx := 0
+	for start < end {
+		logLines[idx] = strings.TrimSpace(lines[start])
+		start++
+		idx++
+	}
+	return lines[0], logLines
 }
 
 func (d *workloadDeployer) uploadContainerImages(out *UploadArtifactsOutput) error {
