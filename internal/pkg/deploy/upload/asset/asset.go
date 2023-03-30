@@ -6,6 +6,7 @@ package asset
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
@@ -14,72 +15,67 @@ import (
 	"path/filepath"
 
 	"github.com/spf13/afero"
+	"golang.org/x/sync/errgroup"
 )
 
 // UploadFunc is the function signature to upload contents to a destination.
 type UploadFunc func(dest string, contents io.Reader) (url string, err error)
 
-// UploadOpts contains optional configuration for uploading assets.
-type UploadOpts struct {
-	Reincludes []string   // Relative path under source to reinclude files that are excluded in the upload.
-	Excludes   []string   // Relative path under source to exclude in the upload.
-	UploadFn   UploadFunc // Custom implementation on how to upload the contents under a file. Defaults to S3UploadFn.
-	Recursive  bool       // Whether to walk recursively.
+type Uploader struct {
+	FS     afero.Fs
+	Upload UploadFunc
 }
 
-type Asset struct {
-	LocalPath  string
-	RemotePath string
-	Data       io.Reader
+// UploadOpts contains optional configuration for uploading assets.
+type UploadOpts struct {
+	Reincludes []string // Relative path under source to reinclude files that are excluded in the upload.
+	Excludes   []string // Relative path under source to exclude in the upload.
+	Recursive  bool     // Whether to walk recursively.
 }
 
 // CachedAsset represents an S3 object uploaded to a temporary bucket that needs
 // to be moved from a cached location to the destination bucket/key.
 type CachedAsset struct {
-	Asset          Asset
+	LocalPath      string
+	RemotePath     string
+	Data           io.Reader
 	DestinationKey string
 }
 
-// Upload uploads static assets to Cloud Storage and returns uploaded file URLs.
-func Upload(fs afero.Fs, source, destination string, opts *UploadOpts) ([]CachedAsset, error) {
+// UploadToCache ...
+func (u *Uploader) UploadToCache(sourcePath, destPath string, opts *UploadOpts) ([]CachedAsset, error) {
 	matcher := buildCompositeMatchers(buildReincludeMatchers(opts.Reincludes), buildExcludeMatchers(opts.Excludes))
-	info, err := fs.Stat(source)
+	info, err := u.FS.Stat(sourcePath)
 	if err != nil {
-		return nil, fmt.Errorf("get stat for file %q: %w", source, err)
+		return nil, fmt.Errorf("stat %q: %w", sourcePath, err)
 	}
-	paths := []string{source}
+
+	paths := []string{sourcePath}
 	if info.IsDir() {
-		files, err := afero.ReadDir(fs, source)
+		files, err := afero.ReadDir(u.FS, sourcePath)
 		if err != nil {
-			return nil, fmt.Errorf("read directory %q: %w", source, err)
+			return nil, fmt.Errorf("read directory %q: %w", sourcePath, err)
 		}
+
 		paths = make([]string, len(files))
 		for i, f := range files {
-			paths[i] = filepath.Join(source, f.Name())
+			paths[i] = filepath.Join(sourcePath, f.Name())
 		}
-	} else if destination == "" { // only applies to files, not folders
-		destination = source
 	}
 
 	var assets []CachedAsset
 	for _, path := range paths {
-		if err := afero.Walk(fs, path, walkFn(source, destination, opts.Recursive, fs, opts.UploadFn, &assets, matcher)); err != nil {
-			return nil, fmt.Errorf("walk the file tree rooted at %q: %w", source, err)
+		if err := afero.Walk(u.FS, path, u.walkFn(sourcePath, destPath, opts.Recursive, matcher, &assets)); err != nil {
+			return nil, fmt.Errorf("walk the file tree rooted at %q: %w", path, err)
 		}
 	}
 
-	for _, asset := range assets {
-		_, err := opts.UploadFn(asset.Asset.RemotePath, asset.Asset.Data)
-		if err != nil {
-			return nil, fmt.Errorf("upload file %q to destination %q: %w", asset.Asset.LocalPath, asset.Asset.RemotePath, err)
-		}
-		fmt.Printf("Successfully uploaded %q to %q\n", asset.Asset.LocalPath, asset.Asset.RemotePath)
-	}
+	// upload assets
 
 	return assets, nil
 }
 
-func walkFn(source, dest string, recursive bool, reader afero.Fs, upload UploadFunc, assets *[]CachedAsset, matcher filepathMatcher) filepath.WalkFunc {
+func (u *Uploader) walkFn(sourcePath, destPath string, recursive bool, matcher filepathMatcher, assets *[]CachedAsset) filepath.WalkFunc {
 	return func(path string, info fs.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -100,33 +96,55 @@ func walkFn(source, dest string, recursive bool, reader afero.Fs, upload UploadF
 
 		hash := sha256.New()
 		buf := &bytes.Buffer{}
-		file, err := reader.Open(path)
+		file, err := u.FS.Open(path)
 		if err != nil {
-			return fmt.Errorf("open file on path %q: %w", path, err)
+			return fmt.Errorf("open %q: %w", path, err)
 		}
 		defer file.Close()
 
 		_, err = io.Copy(io.MultiWriter(buf, hash), file)
 		if err != nil {
-			return fmt.Errorf("copy: %w", err)
+			return fmt.Errorf("copy %q: %w", path, err)
 		}
 
-		fileRel, err := filepath.Rel(source, path)
-		if err != nil {
-			return fmt.Errorf("get relative path for %q against %q: %w", path, source, err)
+		asset := CachedAsset{
+			LocalPath:      path,
+			Data:           buf,
+			RemotePath:     "static-site-cache/todo-svc-name/" + hex.EncodeToString(hash.Sum(nil)),
+			DestinationKey: destPath,
 		}
 
-		*assets = append(*assets, CachedAsset{
-			Asset: Asset{
-				LocalPath:  fileRel,
-				Data:       buf,
-				RemotePath: "static-site-cache/todo-svc-name/" + hex.EncodeToString(hash.Sum(nil)),
-			},
-			DestinationKey: filepath.Join(dest, fileRel),
-		})
+		if sourcePath == path && destPath == "" {
+			asset.DestinationKey = sourcePath
+		} else if sourcePath != path {
+			fileRel, err := filepath.Rel(sourcePath, path)
+			if err != nil {
+				return fmt.Errorf("get relative path for %q against %q: %w", path, sourcePath, err)
+			}
 
+			asset.DestinationKey = filepath.Join(destPath, fileRel)
+		}
+
+		*assets = append(*assets, asset)
 		return nil
 	}
+}
+
+func (u *Uploader) uploadAssets(assets []CachedAsset) error {
+	g, _ := errgroup.WithContext(context.Background())
+
+	for i := range assets {
+		asset := assets[i]
+		g.Go(func() error {
+			_, err := u.Upload(asset.RemotePath, asset.Data)
+			if err != nil {
+				return fmt.Errorf("upload %q: %w", asset.LocalPath, err)
+			}
+			return nil
+		})
+	}
+
+	return g.Wait()
 }
 
 type filepathMatcher interface {

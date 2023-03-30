@@ -20,12 +20,15 @@ import (
 	"github.com/spf13/afero"
 )
 
+type cacheUploader interface {
+	UploadToCache(source, dest string, opts *asset.UploadOpts) ([]asset.CachedAsset, error)
+}
+
 type staticSiteDeployer struct {
 	*svcDeployer
 	staticSiteMft *manifest.StaticSite
-	bucketName    string
 	fs            afero.Fs
-	uploadFn      func(fs afero.Fs, source, destination string, opts *asset.UploadOpts) ([]asset.CachedAsset, error)
+	uploader      cacheUploader
 }
 
 // NewStaticSiteDeployer is the constructor for staticSiteDeployer.
@@ -39,12 +42,17 @@ func NewStaticSiteDeployer(in *WorkloadDeployerInput) (*staticSiteDeployer, erro
 	if !ok {
 		return nil, fmt.Errorf("manifest is not of type %s", manifestinfo.StaticSiteType)
 	}
+	fs := afero.NewOsFs()
 	return &staticSiteDeployer{
 		svcDeployer:   svcDeployer,
 		staticSiteMft: mft,
-		fs:            afero.NewOsFs(),
-		bucketName:    svcDeployer.resources.S3Bucket,
-		uploadFn:      asset.Upload,
+		fs:            fs,
+		uploader: &asset.Uploader{
+			FS: fs,
+			Upload: func(key string, contents io.Reader) (string, error) {
+				return svcDeployer.s3Client.Upload(svcDeployer.resources.S3Bucket, key, contents)
+			},
+		},
 	}, nil
 }
 
@@ -92,18 +100,15 @@ func (d *staticSiteDeployer) UploadArtifacts() (*UploadArtifactsOutput, error) {
 
 func (d *staticSiteDeployer) uploadStaticFiles(out *UploadArtifactsOutput) error {
 	for _, f := range d.staticSiteMft.FileUploads {
-		assets, err := d.uploadFn(d.fs, filepath.Join(f.Context, f.Source), f.Destination,
-			&asset.UploadOpts{
-				Reincludes: f.Reinclude.ToStringSlice(),
-				Excludes:   f.Exclude.ToStringSlice(),
-				Recursive:  f.Recursive,
-				UploadFn: func(key string, contents io.Reader) (string, error) {
-					return d.s3Client.Upload(d.bucketName, key, contents)
-				},
-			})
+		assets, err := d.uploader.UploadToCache(filepath.Join(f.Context, f.Source), f.Destination, &asset.UploadOpts{
+			Reincludes: f.Reinclude.ToStringSlice(),
+			Excludes:   f.Exclude.ToStringSlice(),
+			Recursive:  f.Recursive,
+		})
 		if err != nil {
 			return err
 		}
+
 		out.CachedAssets = append(out.CachedAssets, assets...)
 	}
 	fmt.Printf("out.CachedAssets: %+v\n", out.CachedAssets)
