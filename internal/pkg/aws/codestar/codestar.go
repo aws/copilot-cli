@@ -19,12 +19,12 @@ type api interface {
 	ListConnections(input *codestarconnections.ListConnectionsInput) (*codestarconnections.ListConnectionsOutput, error)
 }
 
-// Connection represents a client to make requests to AWS CodeStarConnections.
+// CodeStar represents a client to make requests to AWS CodeStarConnections.
 type CodeStar struct {
 	client api
 }
 
-// New creates a new CloudFormation client.
+// New creates a new CodeStar client.
 func New(s *session.Session) *CodeStar {
 	return &CodeStar{
 		codestarconnections.New(s),

@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	// ID to look up S3 service endpoints.
+	// EndpointsID is the ID to look up the S3 service endpoint.
 	EndpointsID = s3.EndpointsID
 
 	// Error codes.

@@ -1,7 +1,21 @@
 issues:
+  include:
+    - EXC0012 # comment on exported fields
+    - EXC0014 # comment in correct format on exported fields
   exclude-rules:
     - path: _test\.go
       linters:
         - errcheck
     - path: internal/pkg/exec/(.+)\.go
       text: 'is unused'
+
+linters:
+  enable:
+    - revive
+
+linters-settings:
+  revive:
+    rules:
+      - name: exported
+        arguments:
+          - disableStutteringCheck

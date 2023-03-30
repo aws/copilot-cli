@@ -60,7 +60,7 @@ func (s *EC2Select) VPC(msg, help string) (string, error) {
 	return extractedVPC.ID, nil
 }
 
-// SubnetInputs holds the arguments for the subnet selector.
+// SubnetsInput holds the arguments for the subnet selector.
 type SubnetsInput struct {
 	Msg   string
 	Help  string

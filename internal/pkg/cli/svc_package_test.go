@@ -176,8 +176,7 @@ count: 1`
 	testCases := map[string]struct {
 		inVars packageSvcVars
 
-		mockDependencies func(*gomock.Controller, *packageSvcOpts)
-		setupMocks       func(m *svcPackageExecuteMock)
+		setupMocks func(m *svcPackageExecuteMock)
 
 		wantedStack  string
 		wantedParams string
@@ -207,7 +206,7 @@ count: 1`
 				}, nil)
 				m.generator.EXPECT().DeployDiff(gomock.Eq("mystack")).Return("", errors.New("some error"))
 			},
-			wantedErr: errors.New("some error"),
+			wantedErr: &errDiffNotAvailable{parentErr: errors.New("some error")},
 		},
 		"writes the diff": {
 			inVars: packageSvcVars{
@@ -353,14 +352,13 @@ count: 1`
 				targetApp:            &config.Application{},
 				targetEnv:            &config.Environment{},
 			}
-			// tc.mockDependencies(ctrl, opts)
 
 			// WHEN
 			err := opts.Execute()
 
 			// THEN
 			if tc.wantedErr != nil {
-				require.EqualError(t, err, tc.wantedErr.Error())
+				require.Equal(t, err, tc.wantedErr)
 			} else {
 				require.NoError(t, err)
 			}
