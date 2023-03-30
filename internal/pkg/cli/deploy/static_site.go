@@ -130,6 +130,7 @@ func (d *staticSiteDeployer) stackConfiguration(in *StackRuntimeConfiguration) (
 		RuntimeConfig:      *rc,
 		RootUserARN:        in.RootUserARN,
 		Addons:             d.addons,
+		CachedAssets:       in.CachedAssets,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("create stack configuration: %w", err)

@@ -44,12 +44,12 @@ type CachedAsset struct {
 }
 
 // UploadToCache ...
-func (u *Uploader) UploadToCache(sourcePath, destPath string, opts *UploadOpts) ([]CachedAsset, error) {
+func (u *Uploader) UploadToCache(source, dest string, opts *UploadOpts) ([]CachedAsset, error) {
 	matcher := buildCompositeMatchers(buildReincludeMatchers(opts.Reincludes), buildExcludeMatchers(opts.Excludes))
 
 	var assets []CachedAsset
-	if err := afero.Walk(u.FS, sourcePath, u.walkFn(sourcePath, destPath, opts.Recursive, matcher, &assets)); err != nil {
-		return nil, fmt.Errorf("walk the file tree rooted at %q: %w", sourcePath, err)
+	if err := afero.Walk(u.FS, source, u.walkFn(source, dest, opts.Recursive, matcher, &assets)); err != nil {
+		return nil, fmt.Errorf("walk the file tree rooted at %q: %w", source, err)
 	}
 
 	if err := u.uploadAssets(assets); err != nil {
