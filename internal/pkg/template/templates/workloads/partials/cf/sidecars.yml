@@ -80,9 +80,9 @@
 {{include "envvars-container" . | indent 2}}
   EnvironmentFiles:
     - !If
-      - Has{{$sidecar.Name}}EnvFile
+      - HasEnvFileFor{{ logicalIDSafe $sidecar.Name}}
       - Type: "s3"
-        Value: !Ref {{$sidecar.Name}}EnvFileARN
+        Value: !Ref EnvFileARNFor{{ logicalIDSafe $sidecar.Name}}
       - !Ref "AWS::NoValue"
 {{- if $sidecar.Secrets}}
   Secrets:

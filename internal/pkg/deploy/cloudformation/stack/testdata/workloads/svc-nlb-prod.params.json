@@ -6,6 +6,8 @@
     "ContainerPort": "80",
     "DNSDelegated": "true",
     "EnvFileARN": "",
+    "EnvFileARNFornginx": "",
+    "EnvFileARNFortls": "",
     "EnvName": "prod",
     "LogRetention": "30",
     "NLBAliases": "nlb.example.com",
@@ -15,9 +17,7 @@
     "TaskCPU": "256",
     "TaskCount": "5",
     "TaskMemory": "512",
-    "WorkloadName": "fe",
-    "nginxEnvFileARN": "",
-    "tlsEnvFileARN": ""
+    "WorkloadName": "fe"
   },
   "Tags": {
     "copilot-application": "my-app",
