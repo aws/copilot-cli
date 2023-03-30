@@ -366,7 +366,7 @@ func (d *workloadDeployer) uploadContainerImages(out *UploadArtifactsOutput) err
 	}
 	uri, err := d.repository.Login()
 	if err != nil {
-		return fmt.Errorf("login to docker: %w", err)
+		return fmt.Errorf("login to image repository: %w", err)
 	}
 	out.ImageDigests = make(map[string]ContainerImageIdentifier, len(buildArgsPerContainer))
 	for name, buildArgs := range buildArgsPerContainer {
