@@ -861,7 +861,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 				}).Return(nil)
 				m.repository.EXPECT().URI().Return(mockRepoURI, nil)
 				m.repository.EXPECT().Login().Return(nil)
-				m.repository.EXPECT().BuildAndPush(gomock.Any())
+				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Any())
 				m.deployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
 					Name:       inGroupName,
 					Image:      "uri/repo:latest",
@@ -961,7 +961,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 				}).Times(1).Return(nil)
 				m.repository.EXPECT().URI().Return(mockRepoURI, nil)
 				m.repository.EXPECT().Login().Return(nil)
-				m.repository.EXPECT().BuildAndPush(gomock.Eq(&defaultBuildArguments))
+				m.repository.EXPECT().BuildAndPush(gomock.Eq(&defaultBuildArguments), gomock.Any())
 				m.deployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
 					Name:       inGroupName,
 					Image:      "uri/repo:latest",

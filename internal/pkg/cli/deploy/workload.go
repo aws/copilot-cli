@@ -82,7 +82,7 @@ func (noopActionRecommender) RecommendedActions() []string {
 
 type repositoryService interface {
 	Login() error
-	BuildAndPush(args *dockerengine.BuildArguments) (string, error)
+	BuildAndPush(args *dockerengine.BuildArguments, w io.Writer) (string, error)
 }
 
 type templater interface {
@@ -442,7 +442,6 @@ func (d *workloadDeployer) uploadContainerImages(out *UploadArtifactsOutput) err
 	// mutex for synchronizing access to the output map.
 	var mux sync.Mutex
 	for name, buildArgs := range buildArgsPerContainer {
-		buildArgs.URI = uri
 		// create a copy of loop variables to avoid data race.
 		name := name
 		buildArgs := buildArgs

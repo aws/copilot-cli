@@ -180,20 +180,11 @@ func Test_Login(t *testing.T) {
 				docker:   mockDocker,
 			}
 
-<<<<<<< HEAD
 			gotErr := repo.Login()
 			if tc.wantedError != nil {
 				require.EqualError(t, tc.wantedError, gotErr.Error())
 			} else {
 				require.NoError(t, tc.wantedError)
-=======
-			got, gotErr := repo.Login()
-			if tc.wantedError != nil {
-				require.EqualError(t, tc.wantedError, gotErr.Error())
-			} else {
-				require.NoError(t, tc.wantedError, got)
-				require.Equal(t, tc.wantedURI, got)
->>>>>>> cafd5b3f (remove Login() from workload constructor and perform in uploadcontainerImages())
 			}
 		})
 	}

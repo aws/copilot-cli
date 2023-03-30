@@ -16,11 +16,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/template/artifactpath"
 	"golang.org/x/mod/semver"
 
-	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
-	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
-	"github.com/aws/copilot-cli/internal/pkg/template/artifactpath"
-	"golang.org/x/mod/semver"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
@@ -960,7 +955,7 @@ func (o *runTaskOpts) showPublicIPs(tasks []*task.Task) {
 
 }
 
-func (o *runTaskOpts) buildAndPushImage(uri string) error {
+func (o *runTaskOpts) buildAndPushImage() error {
 	var additionalTags []string
 	if o.imageTag != "" {
 		additionalTags = append(additionalTags, o.imageTag)
@@ -972,10 +967,6 @@ func (o *runTaskOpts) buildAndPushImage(uri string) error {
 	}
 
 	if _, err := o.repository.BuildAndPush(&dockerengine.BuildArguments{
-<<<<<<< HEAD
-=======
-		URI:        uri,
->>>>>>> cafd5b3f (remove Login() from workload constructor and perform in uploadcontainerImages())
 		Dockerfile: o.dockerfilePath,
 		Context:    ctx,
 		Tags:       append([]string{imageTagLatest}, additionalTags...),
