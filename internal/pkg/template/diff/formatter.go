@@ -15,7 +15,7 @@ type formatter interface {
 	formatYAML(*yaml.Node) ([]byte, error)
 	formatMod(node diffNode) (string, error)
 	formatPath(node diffNode) string
-	nextIndent(curr int) int
+	nextIndent() int
 }
 
 type seqItemFormatter struct {
@@ -44,14 +44,14 @@ func (f *seqItemFormatter) formatPath(_ diffNode) string {
 	return content + "\n"
 }
 
-func (f *seqItemFormatter) nextIndent(curr int) int {
+func (f *seqItemFormatter) nextIndent() int {
 	/* A seq item diff should look like:
 	   - (item)
 	     ~ Field1: a
 	     + Field2: b
 	   Where "~ Field1: a" and "+ Field2: b" are its children. The indentation should increase by len("- "), which is 2.
 	*/
-	return curr + 2
+	return f.indent + 2
 }
 
 type keyedFormatter struct {
@@ -88,8 +88,8 @@ func (f *keyedFormatter) formatPath(node diffNode) string {
 	return content + "\n"
 }
 
-func (f *keyedFormatter) nextIndent(curr int) int {
-	return curr + indentInc
+func (f *keyedFormatter) nextIndent() int {
+	return f.indent + indentInc
 }
 
 type documentFormatter struct{}
@@ -106,8 +106,8 @@ func (f *documentFormatter) formatPath(_ diffNode) string {
 	return ""
 }
 
-func (f *documentFormatter) nextIndent(curr int) int {
-	return curr + indentInc
+func (f *documentFormatter) nextIndent() int {
+	return 0
 }
 
 func parseModValues(node diffNode) (string, string, error) {

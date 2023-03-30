@@ -61,7 +61,7 @@ func (s *treeWriter) writeTree(node diffNode, indent int) error {
 		return err
 	}
 	for _, child := range node.children() {
-		err := s.writeTree(child, formatter.nextIndent(indent))
+		err := s.writeTree(child, formatter.nextIndent())
 		if err != nil {
 			return err
 		}
