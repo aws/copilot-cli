@@ -27,7 +27,7 @@ $ cd example
 Now this is where the fun starts! We have our service code and our Dockerfile and we want to get it deployed to AWS. Let’s have AWS Copilot help us do just that!
 
 !!! Attention
-    If you have an existing directory named `copilot/` in your local directory that was not created by AWS Copilot, please ,make an empty directory also named `copilot` closer to your working directory.
+    If you have an existing `copilot/` directory that you created for other purposes, you may find Copilot creating files in that directory. If this happens, you can make an empty directory also named `copilot/` closer to your working directory. Copilot will use this empty directory instead.
 
 From within your code directory run:
 
