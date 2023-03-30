@@ -39,7 +39,7 @@ Parameters:
     Default: ""
 {{- end}}
 {{- range $sidecar := .Sidecars }}
-  {{$sidecar.Name}}EnvFileARN:
+  EnvFileARNFor{{ logicalIDSafe $sidecar.Name}}:
     Type: String
     Description: 'URL of the environment file for the {{$sidecar.Name}} sidecar.'
     Default: ""
@@ -70,8 +70,8 @@ Conditions:
     !Not [!Equals [!Ref LoggingEnvFileARN, ""]]
 {{- end}}
 {{- range $sidecar := .Sidecars }}
-  Has{{$sidecar.Name}}EnvFile:
-    !Not [!Equals [!Ref {{$sidecar.Name}}EnvFileARN, ""]]
+  HasEnvFileFor{{ logicalIDSafe $sidecar.Name}}:
+    !Not [!Equals [!Ref EnvFileARNFor{{ logicalIDSafe $sidecar.Name}}, ""]]
 {{- end }}
   ExposePort:
     !Not [!Equals [!Ref TargetPort, -1]]

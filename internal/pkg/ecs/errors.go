@@ -5,6 +5,7 @@ package ecs
 
 import "fmt"
 
+// ErrMultipleContainersInTaskDef is returned when multiple containers are configured in a task definition.
 type ErrMultipleContainersInTaskDef struct {
 	taskDefIdentifier string
 }
@@ -24,6 +25,7 @@ func (e *ErrExitCode) Error() string {
 	return fmt.Sprintf("container %s in task %s exited with status code %d", e.containerName, e.taskId, e.exitCode)
 }
 
+// ExitCode returns the OS exit code configured for this error.
 func (e *ErrExitCode) ExitCode() int {
 	return e.exitCode
 }

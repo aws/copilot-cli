@@ -579,6 +579,7 @@ func (ws *Workspace) Path() string {
 	return filepath.Dir(ws.copilotDirAbs)
 }
 
+// Rel returns the relative path to path from the workspace copilot directory.
 func (ws *Workspace) Rel(path string) (string, error) {
 	fullPath, err := filepath.Abs(path)
 	if err != nil {

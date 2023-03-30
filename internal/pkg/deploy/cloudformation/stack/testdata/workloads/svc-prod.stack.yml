@@ -36,11 +36,11 @@ Parameters:
     Description: 'URL of the environment file for the logging sidecar.'
     Type: String
     Default: ""
-  nginxEnvFileARN:
+  EnvFileARNFornginx:
     Description: 'URL of the environment file for the nginx sidecar.'
     Type: String
     Default: ""
-  operationEnvFileARN:
+  EnvFileARNForoperation:
     Description: 'URL of the environment file for the operation sidecar.'
     Type: String
     Default: ""
@@ -59,8 +59,8 @@ Conditions:
   HasAddons: !Not [!Equals [!Ref AddonsTemplateURL, ""]]
   HasEnvFile: !Not [!Equals [!Ref EnvFileARN, ""]]
   HasLoggingEnvFile: !Not [!Equals [!Ref LoggingEnvFileARN, ""]]
-  HasnginxEnvFile: !Not [!Equals [!Ref nginxEnvFileARN, ""]]
-  HasoperationEnvFile: !Not [!Equals [!Ref operationEnvFileARN, ""]]
+  HasEnvFileFornginx: !Not [!Equals [!Ref EnvFileARNFornginx, ""]]
+  HasEnvFileForoperation: !Not [!Equals [!Ref EnvFileARNForoperation, ""]]
 Resources: # If a bucket URL is specified, that means the template exists.
   LogGroup:
     Metadata:
@@ -190,6 +190,8 @@ Resources: # If a bucket URL is specified, that means the template exists.
             - ContainerPort: 8080
               Protocol: tcp
               Name: target
+            - ContainerPort: 8081
+              Protocol: tcp
           HealthCheck:
             Command: ["CMD-SHELL", "curl -f http://localhost:8080 || exit 1"]
             Interval: 10
@@ -224,9 +226,9 @@ Resources: # If a bucket URL is specified, that means the template exists.
               Value: "80"
           EnvironmentFiles:
             - !If
-              - HasnginxEnvFile
+              - HasEnvFileFornginx
               - Type: "s3"
-                Value: !Ref nginxEnvFileARN
+                Value: !Ref EnvFileARNFornginx
               - !Ref "AWS::NoValue"
           LogConfiguration:
             LogDriver: awslogs
@@ -254,9 +256,9 @@ Resources: # If a bucket URL is specified, that means the template exists.
               Value: !GetAtt EnvControllerAction.PublicLoadBalancerDNSName
           EnvironmentFiles:
             - !If
-              - HasoperationEnvFile
+              - HasEnvFileForoperation
               - Type: "s3"
-                Value: !Ref operationEnvFileARN
+                Value: !Ref EnvFileARNForoperation
               - !Ref "AWS::NoValue"
           LogConfiguration:
             LogDriver: awslogs
@@ -351,8 +353,8 @@ Resources: # If a bucket URL is specified, that means the template exists.
                         - !Select [0, !Split ['/', !Select [5, !Split [':', !Ref LoggingEnvFileARN]]]]
           - !Ref AWS::NoValue
         - !If
-          - HasnginxEnvFile
-          - PolicyName: !Join ['', [!Ref AppName, '-', !Ref EnvName, '-', !Ref WorkloadName, GetnginxEnvFilePolicy]]
+          - HasEnvFileFornginx
+          - PolicyName: !Join ['', [!Ref AppName, '-', !Ref EnvName, '-', !Ref WorkloadName, GetEnvFilePolicyFornginx]]
             PolicyDocument:
               Version: '2012-10-17'
               Statement:
@@ -360,7 +362,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
                   Action:
                     - 's3:GetObject'
                   Resource:
-                    - !Ref nginxEnvFileARN
+                    - !Ref EnvFileARNFornginx
                 - Effect: 'Allow'
                   Action:
                     - 's3:GetBucketLocation'
@@ -370,11 +372,11 @@ Resources: # If a bucket URL is specified, that means the template exists.
                       - - 'arn:'
                         - !Ref AWS::Partition
                         - ':s3:::'
-                        - !Select [0, !Split ['/', !Select [5, !Split [':', !Ref nginxEnvFileARN]]]]
+                        - !Select [0, !Split ['/', !Select [5, !Split [':', !Ref EnvFileARNFornginx]]]]
           - !Ref AWS::NoValue
         - !If
-          - HasoperationEnvFile
-          - PolicyName: !Join ['', [!Ref AppName, '-', !Ref EnvName, '-', !Ref WorkloadName, GetoperationEnvFilePolicy]]
+          - HasEnvFileForoperation
+          - PolicyName: !Join ['', [!Ref AppName, '-', !Ref EnvName, '-', !Ref WorkloadName, GetEnvFilePolicyForoperation]]
             PolicyDocument:
               Version: '2012-10-17'
               Statement:
@@ -382,7 +384,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
                   Action:
                     - 's3:GetObject'
                   Resource:
-                    - !Ref operationEnvFileARN
+                    - !Ref EnvFileARNForoperation
                 - Effect: 'Allow'
                   Action:
                     - 's3:GetBucketLocation'
@@ -392,7 +394,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
                       - - 'arn:'
                         - !Ref AWS::Partition
                         - ':s3:::'
-                        - !Select [0, !Split ['/', !Select [5, !Split [':', !Ref operationEnvFileARN]]]]
+                        - !Select [0, !Split ['/', !Select [5, !Split [':', !Ref EnvFileARNForoperation]]]]
           - !Ref AWS::NoValue
       ManagedPolicyArns:
         - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy'
@@ -634,6 +636,10 @@ Resources: # If a bucket URL is specified, that means the template exists.
     DependsOn:
       - HTTPListenerRuleWithDomain
       - HTTPSListenerRule
+      - HTTPListenerRuleWithDomain1
+      - HTTPSListenerRule1
+      - HTTPListenerRuleWithDomain2
+      - HTTPSListenerRule2
     Properties:
       PlatformVersion: LATEST
       Cluster:
@@ -688,6 +694,12 @@ Resources: # If a bucket URL is specified, that means the template exists.
         - ContainerName: nginx
           ContainerPort: 8080
           TargetGroupArn: !Ref TargetGroup
+        - ContainerName: nginx
+          ContainerPort: 8081
+          TargetGroupArn: !Ref TargetGroup1
+        - ContainerName: fe
+          ContainerPort: 4000
+          TargetGroupArn: !Ref TargetGroup2
       ServiceRegistries:
         - RegistryArn: !GetAtt DiscoveryService.Arn
           Port: !Ref TargetPort
@@ -698,6 +710,38 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Properties:
       HealthCheckPath: / # Default is '/'.
       Port: 8080
+      Protocol: HTTP
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: 60 # ECS Default is 300; Copilot default is 60.
+        - Key: stickiness.enabled
+          Value: false
+      TargetType: ip
+      VpcId:
+        Fn::ImportValue: !Sub "${AppName}-${EnvName}-VpcId"
+  TargetGroup1:
+    Metadata:
+      'aws:copilot:description': 'A target group to connect the load balancer to your service on port 8081'
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckPath: / # Default is '/'.
+      Port: 8081
+      Protocol: HTTP
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: 60 # ECS Default is 300; Copilot default is 60.
+        - Key: stickiness.enabled
+          Value: false
+      TargetType: ip
+      VpcId:
+        Fn::ImportValue: !Sub "${AppName}-${EnvName}-VpcId"
+  TargetGroup2:
+    Metadata:
+      'aws:copilot:description': 'A target group to connect the load balancer to your service on port 4000'
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckPath: / # Default is '/'.
+      Port: 4000
       Protocol: HTTP
       TargetGroupAttributes:
         - Key: deregistration_delay.timeout_seconds
@@ -750,7 +794,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Type: Custom::RulePriorityFunction
     Properties:
       ServiceToken: !GetAtt RulePriorityFunction.Arn
-      RulePath: ["/"]
+      RulePath: ["/", "admin","superadmin"]
       ListenerArn: !GetAtt EnvControllerAction.HTTPSListenerArn
   
   HTTPRuleWithDomainPriorityAction:
@@ -759,7 +803,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Type: Custom::RulePriorityFunction
     Properties:
       ServiceToken: !GetAtt RulePriorityFunction.Arn
-      RulePath: ["/"]
+      RulePath: ["/", "admin", "superadmin"]
       ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
   
   HTTPListenerRuleWithDomain:
@@ -786,6 +830,56 @@ Resources: # If a bucket URL is specified, that means the template exists.
               - "/*"
       ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
       Priority: !GetAtt HTTPRuleWithDomainPriorityAction.Priority
+  HTTPListenerRuleWithDomain1:
+    Metadata:
+      'aws:copilot:description': 'An HTTP listener rule for path `admin` that redirects HTTP to HTTPS'
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      Actions:
+        - Type: redirect
+          RedirectConfig:
+            Protocol: HTTPS
+            Port: 443
+            Host: "#{host}"
+            Path: "/#{path}"
+            Query: "#{query}"
+            StatusCode: HTTP_301
+      Conditions:
+        - Field: 'host-header'
+          HostHeaderConfig:
+            Values: [ "example.com" ]
+        - Field: 'path-pattern'
+          PathPatternConfig:
+            Values:
+              - "/admin"
+              - "/admin/*"
+      ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
+      Priority: !GetAtt HTTPRuleWithDomainPriorityAction.Priority1
+  HTTPListenerRuleWithDomain2:
+    Metadata:
+      'aws:copilot:description': 'An HTTP listener rule for path `superadmin` that redirects HTTP to HTTPS'
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      Actions:
+        - Type: redirect
+          RedirectConfig:
+            Protocol: HTTPS
+            Port: 443
+            Host: "#{host}"
+            Path: "/#{path}"
+            Query: "#{query}"
+            StatusCode: HTTP_301
+      Conditions:
+        - Field: 'host-header'
+          HostHeaderConfig:
+            Values: [ "example.com" ]
+        - Field: 'path-pattern'
+          PathPatternConfig:
+            Values:
+              - "/superadmin"
+              - "/superadmin/*"
+      ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
+      Priority: !GetAtt HTTPRuleWithDomainPriorityAction.Priority2
   HTTPSListenerRule:
     Metadata:
       'aws:copilot:description': 'An HTTPS listener rule for path `/` that forwards HTTPS traffic to your tasks'
@@ -804,6 +898,44 @@ Resources: # If a bucket URL is specified, that means the template exists.
               - "/*"
       ListenerArn: !GetAtt EnvControllerAction.HTTPSListenerArn
       Priority: !GetAtt HTTPSRulePriorityAction.Priority
+  HTTPSListenerRule1:
+    Metadata:
+      'aws:copilot:description': 'An HTTPS listener rule for path `admin` that forwards HTTPS traffic to your tasks'
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      Actions:
+        - TargetGroupArn: !Ref TargetGroup1
+          Type: forward
+      Conditions:
+        - Field: 'host-header'
+          HostHeaderConfig:
+            Values: [ "example.com" ]
+        - Field: 'path-pattern'
+          PathPatternConfig:
+            Values:
+              - "/admin"
+              - "/admin/*"
+      ListenerArn: !GetAtt EnvControllerAction.HTTPSListenerArn
+      Priority: !GetAtt HTTPSRulePriorityAction.Priority1
+  HTTPSListenerRule2:
+    Metadata:
+      'aws:copilot:description': 'An HTTPS listener rule for path `superadmin` that forwards HTTPS traffic to your tasks'
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      Actions:
+        - TargetGroupArn: !Ref TargetGroup2
+          Type: forward
+      Conditions:
+        - Field: 'host-header'
+          HostHeaderConfig:
+            Values: [ "example.com" ]
+        - Field: 'path-pattern'
+          PathPatternConfig:
+            Values:
+              - "/superadmin"
+              - "/superadmin/*"
+      ListenerArn: !GetAtt EnvControllerAction.HTTPSListenerArn
+      Priority: !GetAtt HTTPSRulePriorityAction.Priority2
   AddonsStack:
     Metadata:
       'aws:copilot:description': 'An Addons CloudFormation Stack for your additional AWS resources'

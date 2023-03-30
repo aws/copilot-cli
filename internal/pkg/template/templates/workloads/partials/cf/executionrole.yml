@@ -92,8 +92,8 @@ ExecutionRole:
       {{- end }}
       {{- range $sidecar := .Sidecars}}
       - !If
-        - Has{{$sidecar.Name}}EnvFile
-        - PolicyName: !Join ['', [!Ref AppName, '-', !Ref EnvName, '-', !Ref WorkloadName, Get{{$sidecar.Name}}EnvFilePolicy]]
+        - HasEnvFileFor{{ logicalIDSafe $sidecar.Name}}
+        - PolicyName: !Join ['', [!Ref AppName, '-', !Ref EnvName, '-', !Ref WorkloadName, GetEnvFilePolicyFor{{ logicalIDSafe $sidecar.Name}}]]
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
@@ -101,7 +101,7 @@ ExecutionRole:
                 Action:
                   - 's3:GetObject'
                 Resource:
-                  - !Ref {{$sidecar.Name}}EnvFileARN
+                  - !Ref EnvFileARNFor{{ logicalIDSafe $sidecar.Name}}
               - Effect: 'Allow'
                 Action:
                   - 's3:GetBucketLocation'
@@ -111,7 +111,7 @@ ExecutionRole:
                     - - 'arn:'
                       - !Ref AWS::Partition
                       - ':s3:::'
-                      - !Select [0, !Split ['/', !Select [5, !Split [':', !Ref {{$sidecar.Name}}EnvFileARN]]]]
+                      - !Select [0, !Split ['/', !Select [5, !Split [':', !Ref EnvFileARNFor{{ logicalIDSafe $sidecar.Name}}]]]]
         - !Ref AWS::NoValue
       {{- end }}
     ManagedPolicyArns:

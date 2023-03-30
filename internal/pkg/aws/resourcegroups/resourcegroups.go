@@ -14,6 +14,7 @@ import (
 )
 
 const (
+	// ResourceTypeStateMachine is the resource type for the state machine of a job.
 	ResourceTypeStateMachine = "states:stateMachine"
 )
 

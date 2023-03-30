@@ -52,6 +52,7 @@ func (s *Store) CreateApplication(application *Application) error {
 	return nil
 }
 
+// UpdateApplication updates the data in SSM about an application.
 func (s *Store) UpdateApplication(application *Application) error {
 	applicationPath := fmt.Sprintf(fmtApplicationPath, application.Name)
 	application.Version = schemaVersion

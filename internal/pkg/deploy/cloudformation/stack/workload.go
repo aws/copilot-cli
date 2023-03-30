@@ -39,7 +39,7 @@ const (
 	WorkloadEnvFileARNParamKey        = "EnvFileARN"
 	WorkloadLoggingEnvFileARNParamKey = "LoggingEnvFileARN"
 
-	FmtSidecarEnvFileARNParamKey = "%sEnvFileARN"
+	FmtSidecarEnvFileARNParamKey = "EnvFileARNFor%s"
 )
 
 // Parameter logical IDs for workloads on ECS with a Load Balancer.
@@ -385,7 +385,7 @@ func (w *ecsWkld) envFileParams() []*cloudformation.Parameter {
 	}
 	for containerName := range w.sidecars {
 		params = append(params, &cloudformation.Parameter{
-			ParameterKey:   aws.String(fmt.Sprintf(FmtSidecarEnvFileARNParamKey, containerName)),
+			ParameterKey:   aws.String(fmt.Sprintf(FmtSidecarEnvFileARNParamKey, template.StripNonAlphaNumFunc(containerName))),
 			ParameterValue: aws.String(w.rc.EnvFileARNs[containerName]),
 		})
 	}
