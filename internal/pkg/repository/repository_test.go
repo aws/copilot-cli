@@ -147,7 +147,7 @@ func Test_Login(t *testing.T) {
 				m.EXPECT().IsEcrCredentialHelperEnabled("mockRepoURI").Return(false)
 				m.EXPECT().Login("mockRepoURI", "my-name", "my-pwd").Return(errors.New("error logging in"))
 			},
-			wantedError: fmt.Errorf("login to repo %s: error logging in", mockRepoURI),
+			wantedError: fmt.Errorf("docker login %s: error logging in", mockRepoURI),
 		},
 		"no error when performing login": {
 			mockRegistry: func(m *mocks.MockRegistry) {
