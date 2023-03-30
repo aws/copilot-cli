@@ -22,8 +22,9 @@ import (
 type UploadFunc func(dest string, contents io.Reader) (url string, err error)
 
 type Uploader struct {
-	FS     afero.Fs
-	Upload UploadFunc
+	FS           afero.Fs
+	Upload       UploadFunc
+	WorkloadName string
 }
 
 // UploadOpts contains optional configuration for uploading assets.
@@ -36,41 +37,24 @@ type UploadOpts struct {
 // CachedAsset represents an S3 object uploaded to a temporary bucket that needs
 // to be moved from a cached location to the destination bucket/key.
 type CachedAsset struct {
-	LocalPath      string
-	RemotePath     string
-	Data           io.Reader
-	DestinationKey string
+	LocalPath       string
+	RemotePath      string
+	Data            io.Reader
+	DestinationPath string
 }
 
 // UploadToCache ...
 func (u *Uploader) UploadToCache(sourcePath, destPath string, opts *UploadOpts) ([]CachedAsset, error) {
 	matcher := buildCompositeMatchers(buildReincludeMatchers(opts.Reincludes), buildExcludeMatchers(opts.Excludes))
-	info, err := u.FS.Stat(sourcePath)
-	if err != nil {
-		return nil, fmt.Errorf("stat %q: %w", sourcePath, err)
-	}
-
-	paths := []string{sourcePath}
-	if info.IsDir() {
-		files, err := afero.ReadDir(u.FS, sourcePath)
-		if err != nil {
-			return nil, fmt.Errorf("read directory %q: %w", sourcePath, err)
-		}
-
-		paths = make([]string, len(files))
-		for i, f := range files {
-			paths[i] = filepath.Join(sourcePath, f.Name())
-		}
-	}
 
 	var assets []CachedAsset
-	for _, path := range paths {
-		if err := afero.Walk(u.FS, path, u.walkFn(sourcePath, destPath, opts.Recursive, matcher, &assets)); err != nil {
-			return nil, fmt.Errorf("walk the file tree rooted at %q: %w", path, err)
-		}
+	if err := afero.Walk(u.FS, sourcePath, u.walkFn(sourcePath, destPath, opts.Recursive, matcher, &assets)); err != nil {
+		return nil, fmt.Errorf("walk the file tree rooted at %q: %w", sourcePath, err)
 	}
 
-	// upload assets
+	if err := u.uploadAssets(assets); err != nil {
+		return nil, err
+	}
 
 	return assets, nil
 }
@@ -81,7 +65,7 @@ func (u *Uploader) walkFn(sourcePath, destPath string, recursive bool, matcher f
 			return err
 		}
 		if info.IsDir() {
-			if !recursive {
+			if !recursive && path != sourcePath {
 				return fs.SkipDir
 			}
 			return nil
@@ -108,21 +92,21 @@ func (u *Uploader) walkFn(sourcePath, destPath string, recursive bool, matcher f
 		}
 
 		asset := CachedAsset{
-			LocalPath:      path,
-			Data:           buf,
-			RemotePath:     "static-site-cache/todo-svc-name/" + hex.EncodeToString(hash.Sum(nil)),
-			DestinationKey: destPath,
+			LocalPath:       path,
+			Data:            buf,
+			RemotePath:      fmt.Sprintf("static-site-cache/%s/%s", u.WorkloadName, hex.EncodeToString(hash.Sum(nil))),
+			DestinationPath: destPath,
 		}
 
 		if sourcePath == path && destPath == "" {
-			asset.DestinationKey = sourcePath
+			asset.DestinationPath = info.Name()
 		} else if sourcePath != path {
-			fileRel, err := filepath.Rel(sourcePath, path)
+			rel, err := filepath.Rel(sourcePath, path)
 			if err != nil {
 				return fmt.Errorf("get relative path for %q against %q: %w", path, sourcePath, err)
 			}
 
-			asset.DestinationKey = filepath.Join(destPath, fileRel)
+			asset.DestinationPath = filepath.Join(destPath, rel)
 		}
 
 		*assets = append(*assets, asset)

@@ -48,7 +48,8 @@ func NewStaticSiteDeployer(in *WorkloadDeployerInput) (*staticSiteDeployer, erro
 		staticSiteMft: mft,
 		fs:            fs,
 		uploader: &asset.Uploader{
-			FS: fs,
+			FS:           fs,
+			WorkloadName: svcDeployer.name,
 			Upload: func(key string, contents io.Reader) (string, error) {
 				return svcDeployer.s3Client.Upload(svcDeployer.resources.S3Bucket, key, contents)
 			},
