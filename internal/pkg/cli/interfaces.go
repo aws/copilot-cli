@@ -170,9 +170,6 @@ type imageBuilderPusher interface {
 type repositoryURIGetter interface {
 	URI() (string, error)
 }
-type dockerLogin interface {
-	Login() (string, error)
-}
 
 type repositoryLogin interface {
 	Login() error
