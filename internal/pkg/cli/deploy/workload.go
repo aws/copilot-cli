@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -36,11 +37,13 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/template/artifactpath"
 	"github.com/aws/copilot-cli/internal/pkg/template/diff"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
+	"github.com/aws/copilot-cli/internal/pkg/term/cursor"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/aws/copilot-cli/internal/pkg/version"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/spf13/afero"
+	"golang.org/x/term"
 )
 
 const (
@@ -487,6 +490,90 @@ func buildArgsPerContainer(name, workspacePath string, img ContainerImageIdentif
 		}
 	}
 	return dArgs, nil
+}
+
+// copyOutputToBuffer copies the build and push output from the given io.Reader to the buildPushOutputBuffer buffer.
+// return an error if copying fails or if the reader returns an unexpected error.
+func copyOutputToBuffer(pr io.Reader, buffer *buildPushOutputBuffer) error {
+	defer func() {
+		buffer.doneMu.Lock()
+		buffer.done = true
+		buffer.doneMu.Unlock()
+	}()
+
+	// copy the build and push output to the output buffer
+	_, err := io.Copy(buffer, pr)
+	if err == io.EOF {
+		return nil
+	} else if err != nil {
+		return fmt.Errorf("copying build and push output for container %s: %w", buffer.ContainerName, err)
+	}
+	return nil
+}
+
+// printOutputFromBuffers prints the build and push output from the list of buildPushOutputBuffer buffers to stderr.
+// It polls each buffer until all build and push calls are completed,
+// and erases the previous output after sleeping for a short duration.
+func printOutputFromBuffers(buffers []*buildPushOutputBuffer) error {
+	for {
+		writtenLines := 0
+		// check whether all build and push calls are completed.
+		allDone := true
+		for _, buf := range buffers {
+			buf.doneMu.Lock()
+			if !buf.done {
+				allDone = false
+			}
+			buf.doneMu.Unlock()
+			label, logs := buf.logs()
+			outputLogs := removeEmptyStrings(logs)
+			if len(outputLogs) > 0 {
+				fmt.Fprintln(os.Stderr, label)
+				for _, logLine := range outputLogs {
+					fmt.Fprintln(os.Stderr, "\t", logLine)
+				}
+				labelLength, err := dockerBuildLabelLength(label)
+				if err != nil {
+					return fmt.Errorf("get terminal size %w", err)
+				}
+				writtenLines = writtenLines + labelLength + len(outputLogs)
+			}
+		}
+		if allDone {
+			break
+		}
+
+		// sleep for a short time and erase the previous output.
+		time.Sleep(pollInterval)
+		// erase 5 lines from buffer and 2 lines of label.
+		cursor.EraseLinesAbove(os.Stderr, writtenLines)
+	}
+	return nil
+}
+
+// removeEmptyStrings removes empty strings from an array of strings
+// and returns a new array containing only non-empty strings.
+func removeEmptyStrings(arrWithEmptyStrings [maxLogLines]string) []string {
+	var nonEmptyStrings []string
+	for _, s := range arrWithEmptyStrings {
+		if s != "" {
+			nonEmptyStrings = append(nonEmptyStrings, s)
+		}
+	}
+	return nonEmptyStrings
+}
+
+// dockerBuildLabelLength calculates the number of lines required to display a given string
+// based on the current terminal width. The function takes a string parameter "label"
+// and returns the number of lines required to display it as an integer.
+// If there is an error getting the terminal size, the function returns an error.
+func dockerBuildLabelLength(label string) (int, error) {
+	width, _, err := term.GetSize(int(os.Stderr.Fd()))
+	if err != nil {
+		return 0, err
+	}
+	numLines := math.Ceil(float64(len(label)) / float64(width))
+	return int(numLines), nil
 }
 
 func (d *workloadDeployer) uploadArtifactsToS3(out *UploadArtifactsOutput) error {
