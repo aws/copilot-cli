@@ -1233,7 +1233,7 @@ func TestHTTPOrBoolTransformer_Transformer(t *testing.T) {
 			require.NoError(t, err)
 
 			// Use custom transformer.
-			err = mergo.Merge(&dst, override, mergo.WithOverride, mergo.WithTransformers(HTTPOrBoolTransformer{}))
+			err = mergo.Merge(&dst, override, mergo.WithOverride, mergo.WithTransformers(httpOrBoolTransformer{}))
 			require.NoError(t, err)
 
 			require.NoError(t, err)

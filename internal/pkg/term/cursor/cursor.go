@@ -53,7 +53,7 @@ func New() *Cursor {
 	}
 }
 
-// New creates a new cursor that writes to the given out writer.
+// NewWithWriter creates a new cursor that writes to out.
 func NewWithWriter(out io.Writer) *Cursor {
 	return &Cursor{
 		c: &terminal.Cursor{

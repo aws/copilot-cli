@@ -318,6 +318,7 @@ type ServiceConfig struct {
 	Platform    string `json:"platform,omitempty"`
 }
 
+// ECSServiceConfig contains info about how an ECS-based service is configured.
 type ECSServiceConfig struct {
 	*ServiceConfig
 

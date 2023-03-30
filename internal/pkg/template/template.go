@@ -34,6 +34,7 @@ const (
 	scriptDirName                  = "scripts"
 )
 
+// AddonsStackLogicalID is the logical ID for the addon stack resource in the main template.
 const AddonsStackLogicalID = "AddonsStack"
 
 // Groups of files that belong to the same stack.

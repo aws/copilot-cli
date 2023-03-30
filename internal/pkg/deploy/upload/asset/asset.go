@@ -16,6 +16,7 @@ import (
 // UploadFunc is the function signature to upload contents to a destination.
 type UploadFunc func(dest string, contents io.Reader) (url string, err error)
 
+// UploadOpts contains optional configuration for uploading assets.
 type UploadOpts struct {
 	Reincludes []string   // Relative path under source to reinclude files that are excluded in the upload.
 	Excludes   []string   // Relative path under source to exclude in the upload.

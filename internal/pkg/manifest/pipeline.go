@@ -12,14 +12,15 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// Valid source providers for Copilot Pipelines.
 const (
 	GithubProviderName     = "GitHub"
 	GithubV1ProviderName   = "GitHubV1"
 	CodeCommitProviderName = "CodeCommit"
 	BitbucketProviderName  = "Bitbucket"
-
-	pipelineManifestPath = "cicd/pipeline.yml"
 )
+
+const pipelineManifestPath = "cicd/pipeline.yml"
 
 // PipelineProviders is the list of all available source integrations.
 var PipelineProviders = []string{
