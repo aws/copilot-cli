@@ -32,16 +32,9 @@ func (f *seqItemFormatter) formatYAML(node *yaml.Node) ([]byte, error) {
 }
 
 func (f *seqItemFormatter) formatMod(node diffNode) (string, error) {
-	var oldValue, newValue string
-	if v, err := yaml.Marshal(node.oldYAML()); err != nil { // NOTE: Marshal handles YAML tags such as `!Ref` and `!Sub`.
+	oldValue, newValue, err := parseModValues(node)
+	if err != nil {
 		return "", err
-	} else {
-		oldValue = strings.TrimSuffix(string(v), "\n")
-	}
-	if v, err := yaml.Marshal(node.newYAML()); err != nil {
-		return "", err
-	} else {
-		newValue = strings.TrimSuffix(string(v), "\n")
 	}
 	return fmt.Sprintf("- %s -> %s", oldValue, newValue), nil
 }
@@ -83,16 +76,9 @@ func (f *keyedFormatter) formatYAML(node *yaml.Node) ([]byte, error) {
 }
 
 func (f *keyedFormatter) formatMod(node diffNode) (string, error) {
-	var oldValue, newValue string
-	if v, err := yaml.Marshal(node.oldYAML()); err != nil { // NOTE: Marshal handles YAML tags such as `!Ref` and `!Sub`.
+	oldValue, newValue, err := parseModValues(node)
+	if err != nil {
 		return "", err
-	} else {
-		oldValue = strings.TrimSuffix(string(v), "\n")
-	}
-	if v, err := yaml.Marshal(node.newYAML()); err != nil {
-		return "", err
-	} else {
-		newValue = strings.TrimSuffix(string(v), "\n")
 	}
 	return fmt.Sprintf("%s: %s -> %s", node.key(), oldValue, newValue), nil
 }
@@ -122,6 +108,21 @@ func (f *documentFormatter) formatPath(_ diffNode) string {
 
 func (f *documentFormatter) nextIndent(curr int) int {
 	return curr + indentInc
+}
+
+func parseModValues(node diffNode) (string, string, error) {
+	var oldValue, newValue string
+	if v, err := yaml.Marshal(node.oldYAML()); err != nil { // NOTE: Marshal handles YAML tags such as `!Ref` and `!Sub`.
+		return "", "", err
+	} else {
+		oldValue = strings.TrimSuffix(string(v), "\n")
+	}
+	if v, err := yaml.Marshal(node.newYAML()); err != nil {
+		return "", "", err
+	} else {
+		newValue = strings.TrimSuffix(string(v), "\n")
+	}
+	return oldValue, newValue, nil
 }
 
 func prefixByFn(prefix string) func(line string) string {
