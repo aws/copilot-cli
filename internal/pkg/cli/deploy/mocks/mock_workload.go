@@ -5,6 +5,7 @@
 package mocks
 
 import (
+	io "io"
 	reflect "reflect"
 
 	addon "github.com/aws/copilot-cli/internal/pkg/addon"
@@ -77,6 +78,7 @@ func (m *MockrepositoryService) EXPECT() *MockrepositoryServiceMockRecorder {
 // BuildAndPush mocks base method.
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 func (m *MockrepositoryService) BuildAndPush(args *dockerengine.BuildArguments) (string, error) {
 =======
 func (m *MockrepositoryService) BuildAndPush(docker repository.ContainerLoginBuildPusher, args *dockerengine.BuildArguments) (string, error) {
@@ -84,17 +86,20 @@ func (m *MockrepositoryService) BuildAndPush(docker repository.ContainerLoginBui
 =======
 func (m *MockrepositoryService) BuildAndPush(args *dockerengine.BuildArguments) (string, error) {
 >>>>>>> 918aa4d8 (addr danny fb: move docckerCmdClient to repository struct)
+=======
+func (m *MockrepositoryService) BuildAndPush(args *dockerengine.BuildArguments, w io.Writer) (string, error) {
+>>>>>>> b97d674e (modify workload and taskrun testcases)
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "BuildAndPush", args)
+	ret := m.ctrl.Call(m, "BuildAndPush", args, w)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // BuildAndPush indicates an expected call of BuildAndPush.
-func (mr *MockrepositoryServiceMockRecorder) BuildAndPush(args interface{}) *gomock.Call {
+func (mr *MockrepositoryServiceMockRecorder) BuildAndPush(args, w interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BuildAndPush", reflect.TypeOf((*MockrepositoryService)(nil).BuildAndPush), args)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BuildAndPush", reflect.TypeOf((*MockrepositoryService)(nil).BuildAndPush), args, w)
 }
 
 // Login mocks base method.
