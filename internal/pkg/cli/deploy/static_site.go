@@ -5,7 +5,6 @@ package deploy
 
 import (
 	"fmt"
-	"io"
 	"path/filepath"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
@@ -21,7 +20,7 @@ import (
 )
 
 type cacheUploader interface {
-	UploadToCache(source, dest string, opts *asset.UploadOpts) ([]asset.CachedAsset, error)
+	UploadToCache(source, dest string, opts *asset.UploadOpts) ([]asset.Cached, error)
 }
 
 type staticSiteDeployer struct {
@@ -48,11 +47,10 @@ func NewStaticSiteDeployer(in *WorkloadDeployerInput) (*staticSiteDeployer, erro
 		staticSiteMft: mft,
 		fs:            fs,
 		uploader: &asset.Uploader{
-			FS:           fs,
-			WorkloadName: svcDeployer.name,
-			Upload: func(key string, contents io.Reader) (string, error) {
-				return svcDeployer.s3Client.Upload(svcDeployer.resources.S3Bucket, key, contents)
-			},
+			FS:              fs,
+			CacheBucket:     svcDeployer.resources.S3Bucket,
+			CachePathPrefix: fmt.Sprintf("static-site-cache/%s", svcDeployer.name),
+			Upload:          svcDeployer.s3Client.Upload,
 		},
 	}, nil
 }

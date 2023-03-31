@@ -18,13 +18,12 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-// UploadFunc is the function signature to upload contents to a destination.
-type UploadFunc func(dest string, contents io.Reader) (url string, err error)
-
+// Uploader ...
 type Uploader struct {
-	FS           afero.Fs
-	Upload       UploadFunc
-	WorkloadName string
+	FS              afero.Fs
+	Upload          func(bucket, key string, contents io.Reader) (string, error)
+	CachePathPrefix string
+	CacheBucket     string
 }
 
 // UploadOpts contains optional configuration for uploading assets.
@@ -34,20 +33,22 @@ type UploadOpts struct {
 	Recursive  bool     // Whether to walk recursively.
 }
 
-// CachedAsset represents an S3 object uploaded to a temporary bucket that needs
+// Cached represents an S3 object uploaded to a cache bucket that needs
 // to be moved from a cached location to the destination bucket/key.
-type CachedAsset struct {
-	LocalPath       string
-	RemotePath      string
-	Data            io.Reader
+type Cached struct {
+	LocalPath string
+	Data      io.Reader
+
+	CachePath       string
+	CacheBucket     string
 	DestinationPath string
 }
 
 // UploadToCache ...
-func (u *Uploader) UploadToCache(source, dest string, opts *UploadOpts) ([]CachedAsset, error) {
+func (u *Uploader) UploadToCache(source, dest string, opts *UploadOpts) ([]Cached, error) {
 	matcher := buildCompositeMatchers(buildReincludeMatchers(opts.Reincludes), buildExcludeMatchers(opts.Excludes))
 
-	var assets []CachedAsset
+	var assets []Cached
 	if err := afero.Walk(u.FS, source, u.walkFn(source, dest, opts.Recursive, matcher, &assets)); err != nil {
 		return nil, fmt.Errorf("walk the file tree rooted at %q: %w", source, err)
 	}
@@ -59,7 +60,7 @@ func (u *Uploader) UploadToCache(source, dest string, opts *UploadOpts) ([]Cache
 	return assets, nil
 }
 
-func (u *Uploader) walkFn(sourcePath, destPath string, recursive bool, matcher filepathMatcher, assets *[]CachedAsset) filepath.WalkFunc {
+func (u *Uploader) walkFn(sourcePath, destPath string, recursive bool, matcher filepathMatcher, assets *[]Cached) filepath.WalkFunc {
 	return func(path string, info fs.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -91,10 +92,11 @@ func (u *Uploader) walkFn(sourcePath, destPath string, recursive bool, matcher f
 			return fmt.Errorf("copy %q: %w", path, err)
 		}
 
-		asset := CachedAsset{
+		asset := Cached{
 			LocalPath:       path,
 			Data:            buf,
-			RemotePath:      fmt.Sprintf("static-site-cache/%s/%s", u.WorkloadName, hex.EncodeToString(hash.Sum(nil))),
+			CachePath:       filepath.Join(u.CachePathPrefix, hex.EncodeToString(hash.Sum(nil))),
+			CacheBucket:     u.CacheBucket,
 			DestinationPath: destPath,
 		}
 
@@ -114,13 +116,13 @@ func (u *Uploader) walkFn(sourcePath, destPath string, recursive bool, matcher f
 	}
 }
 
-func (u *Uploader) uploadAssets(assets []CachedAsset) error {
+func (u *Uploader) uploadAssets(assets []Cached) error {
 	g, _ := errgroup.WithContext(context.Background())
 
 	for i := range assets {
 		asset := assets[i]
 		g.Go(func() error {
-			_, err := u.Upload(asset.RemotePath, asset.Data)
+			_, err := u.Upload(asset.CacheBucket, asset.CachePath, asset.Data)
 			if err != nil {
 				return fmt.Errorf("upload %q: %w", asset.LocalPath, err)
 			}

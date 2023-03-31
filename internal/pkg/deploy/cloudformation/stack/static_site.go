@@ -25,7 +25,7 @@ type StaticSite struct {
 
 	parser       staticSiteReadParser
 	localCRs     []uploadable // Custom resources that have not been uploaded yet.
-	cachedAssets []asset.CachedAsset
+	cachedAssets []asset.Cached
 }
 
 // StaticSiteConfig contains fields to configure StaticSite.
@@ -38,7 +38,7 @@ type StaticSiteConfig struct {
 	RootUserARN        string
 	ArtifactBucketName string
 	Addons             NestedStackConfigurer
-	CachedAssets       []asset.CachedAsset
+	CachedAssets       []asset.Cached
 }
 
 // NewStaticSite creates a new CFN stack from a manifest file, given the options.

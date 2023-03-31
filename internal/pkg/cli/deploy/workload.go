@@ -117,7 +117,7 @@ type StackRuntimeConfiguration struct {
 	RootUserARN        string
 	Tags               map[string]string
 	CustomResourceURLs map[string]string
-	CachedAssets       []asset.CachedAsset
+	CachedAssets       []asset.Cached
 }
 
 // DeployWorkloadInput is the input of DeployWorkload.
@@ -451,7 +451,7 @@ type UploadArtifactsOutput struct {
 	EnvFileARNs        map[string]string                   // map[container name]envFileARN
 	AddonsURL          string
 	CustomResourceURLs map[string]string
-	CachedAssets       []asset.CachedAsset
+	CachedAssets       []asset.Cached
 }
 
 // uploadArtifactFunc uploads an artifact and updates out
