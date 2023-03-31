@@ -4,9 +4,13 @@
 package asset
 
 import (
+	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
+	"path/filepath"
 	"testing"
 
 	"github.com/spf13/afero"
@@ -14,25 +18,33 @@ import (
 )
 
 type fakeS3 struct {
-	objects map[string]string
-	err     error
+	err error
 }
 
-func (f *fakeS3) UploadFunc() func(string, io.Reader) (string, error) {
-	return func(key string, dat io.Reader) (url string, err error) {
-		if f.err != nil {
-			return "", f.err
-		}
-		url, ok := f.objects[key]
-		if !ok {
-			return "", fmt.Errorf("key %q does not exist in fakeS3", key)
-		}
-		return url, nil
+func (f *fakeS3) Upload(bucket, key string, data io.Reader) (string, error) {
+	return "", f.err
+}
+
+func Test_UploadToCache(t *testing.T) {
+	const mockContent1 = "mockContent1"
+	const mockContent2 = "mockContent2"
+	const mockContent3 = "mockContent3"
+	cachePath := func(content string) string {
+		hash := sha256.New()
+		hash.Write([]byte(content))
+		return filepath.Join("mockPrefix", hex.EncodeToString(hash.Sum(nil)))
 	}
-}
 
-func Test_Upload(t *testing.T) {
-	const mockContent = "mockContent"
+	cached := func(localPath, destPath string, content string) Cached {
+		return Cached{
+			LocalPath:       localPath,
+			Data:            bytes.NewBuffer([]byte(content)),
+			CacheBucket:     "mockBucket",
+			CachePath:       cachePath(content),
+			DestinationPath: destPath,
+		}
+	}
+
 	testCases := map[string]struct {
 		inSource       string
 		inDest         string
@@ -42,50 +54,43 @@ func Test_Upload(t *testing.T) {
 		inMockS3       fakeS3
 		mockFileSystem func(fs afero.Fs)
 
-		expectedURLs  []string
+		expected      []Cached
 		expectedError error
 	}{
 		"error if failed to upload": {
 			inSource:    "test",
 			inRecursive: true,
 			mockFileSystem: func(fs afero.Fs) {
-				afero.WriteFile(fs, "test/copilot/.workspace", []byte(mockContent), 0644)
-				afero.WriteFile(fs, "copilot/prod/manifest.yaml", []byte(mockContent), 0644)
+				afero.WriteFile(fs, "test/copilot/.workspace", []byte(mockContent1), 0644)
+				afero.WriteFile(fs, "copilot/prod/manifest.yaml", []byte(mockContent2), 0644)
 			},
 			inMockS3: fakeS3{
-				err: errors.New("some error"),
+				err: errors.New("mock error"),
 			},
-			expectedError: fmt.Errorf(`walk the file tree rooted at "test": upload file "test/copilot/.workspace" to destination "copilot/.workspace": some error`),
+			expectedError: fmt.Errorf(`upload "test/copilot/.workspace": mock error`),
 		},
 		"success without include and exclude": {
 			inSource:    "test",
 			inRecursive: true,
 			mockFileSystem: func(fs afero.Fs) {
-				afero.WriteFile(fs, "test/copilot/.workspace", []byte(mockContent), 0644)
-				afero.WriteFile(fs, "copilot/prod/manifest.yaml", []byte(mockContent), 0644)
+				afero.WriteFile(fs, "test/copilot/.workspace", []byte(mockContent1), 0644)
+				afero.WriteFile(fs, "copilot/prod/manifest.yaml", []byte(mockContent2), 0644)
 			},
-			inMockS3: fakeS3{
-				objects: map[string]string{
-					"copilot/.workspace": "url",
-				},
+			expected: []Cached{
+				cached("test/copilot/.workspace", "copilot/.workspace", mockContent1),
 			},
-			expectedURLs: []string{"url"},
 		},
 		"success without recursive": {
 			inSource: "test",
 			mockFileSystem: func(fs afero.Fs) {
-				afero.WriteFile(fs, "test/copilot/.workspace", []byte(mockContent), 0644)
-				afero.WriteFile(fs, "test/manifest.yaml", []byte(mockContent), 0644)
-				afero.WriteFile(fs, "test/foo", []byte(mockContent), 0644)
+				afero.WriteFile(fs, "test/copilot/.workspace", []byte(mockContent1), 0644)
+				afero.WriteFile(fs, "test/manifest.yaml", []byte(mockContent2), 0644)
+				afero.WriteFile(fs, "test/foo", []byte(mockContent3), 0644)
 			},
-			inMockS3: fakeS3{
-				objects: map[string]string{
-					"copilot/.workspace": "url1",
-					"manifest.yaml":      "url2",
-					"foo":                "url3",
-				},
+			expected: []Cached{
+				cached("test/foo", "foo", mockContent3),
+				cached("test/manifest.yaml", "manifest.yaml", mockContent2),
 			},
-			expectedURLs: []string{"url2", "url3"},
 		},
 		"success with include only": {
 			inSource:     "test",
@@ -93,47 +98,38 @@ func Test_Upload(t *testing.T) {
 			inRecursive:  true,
 			inReincludes: []string{"copilot/prod/manifest.yaml"},
 			mockFileSystem: func(fs afero.Fs) {
-				afero.WriteFile(fs, "test/copilot/.workspace", []byte(mockContent), 0644)
-				afero.WriteFile(fs, "copilot/prod/manifest.yaml", []byte(mockContent), 0644)
+				afero.WriteFile(fs, "test/copilot/.workspace", []byte(mockContent1), 0644)
+				afero.WriteFile(fs, "copilot/prod/manifest.yaml", []byte(mockContent2), 0644)
 			},
-			inMockS3: fakeS3{
-				objects: map[string]string{
-					"ws/copilot/.workspace": "url",
-				},
+			expected: []Cached{
+				cached("test/copilot/.workspace", "ws/copilot/.workspace", mockContent1),
 			},
-			expectedURLs: []string{"url"},
 		},
 		"success with exclude only": {
 			inExcludes:  []string{"copilot/prod/*.yaml"},
 			inRecursive: true,
 			mockFileSystem: func(fs afero.Fs) {
-				afero.WriteFile(fs, "test/copilot/.workspace", []byte(mockContent), 0644)
-				afero.WriteFile(fs, "copilot/prod/manifest.yaml", []byte(mockContent), 0644)
+				afero.WriteFile(fs, "test/copilot/.workspace", []byte(mockContent1), 0644)
+				afero.WriteFile(fs, "copilot/prod/manifest.yaml", []byte(mockContent2), 0644)
 			},
-			inMockS3: fakeS3{
-				objects: map[string]string{
-					"test/copilot/.workspace": "url",
-				},
+			expected: []Cached{
+				cached("test/copilot/.workspace", "test/copilot/.workspace", mockContent1),
 			},
-			expectedURLs: []string{"url"},
 		},
 		"success with both include and exclude": {
 			inDest:       "files",
 			inExcludes:   []string{"copilot/prod/*.yaml"},
 			inReincludes: []string{"copilot/prod/manifest.yaml"},
 			inRecursive:  true,
-			inMockS3: fakeS3{
-				objects: map[string]string{
-					"files/test/copilot/.workspace":    "url1",
-					"files/copilot/prod/manifest.yaml": "url2",
-				},
-			},
 			mockFileSystem: func(fs afero.Fs) {
-				afero.WriteFile(fs, "test/copilot/.workspace", []byte(mockContent), 0644)
-				afero.WriteFile(fs, "copilot/prod/manifest.yaml", []byte(mockContent), 0644)
-				afero.WriteFile(fs, "copilot/prod/foo.yaml", []byte(mockContent), 0644)
+				afero.WriteFile(fs, "test/copilot/.workspace", []byte(mockContent1), 0644)
+				afero.WriteFile(fs, "copilot/prod/manifest.yaml", []byte(mockContent2), 0644)
+				afero.WriteFile(fs, "copilot/prod/foo.yaml", []byte(mockContent3), 0644)
 			},
-			expectedURLs: []string{"url1", "url2"},
+			expected: []Cached{
+				cached("copilot/prod/manifest.yaml", "files/copilot/prod/manifest.yaml", mockContent2),
+				cached("test/copilot/.workspace", "files/test/copilot/.workspace", mockContent1),
+			},
 		},
 	}
 	for name, tc := range testCases {
@@ -143,16 +139,23 @@ func Test_Upload(t *testing.T) {
 			// Set it up
 			tc.mockFileSystem(fs)
 
-			files, err := Upload(&afero.Afero{Fs: fs}, tc.inSource, tc.inDest, &UploadOpts{
+			u := Uploader{
+				FS:              fs,
+				Upload:          tc.inMockS3.Upload,
+				CachePathPrefix: "mockPrefix",
+				CacheBucket:     "mockBucket",
+			}
+
+			files, err := u.UploadToCache(tc.inSource, tc.inDest, &UploadOpts{
 				Excludes:   tc.inExcludes,
 				Reincludes: tc.inReincludes,
 				Recursive:  tc.inRecursive,
-				UploadFn:   tc.inMockS3.UploadFunc(),
 			})
 			if tc.expectedError == nil {
 				require.NoError(t, err)
-				require.ElementsMatch(t, tc.expectedURLs, files)
+				require.Equal(t, tc.expected, files)
 			} else {
+				require.Error(t, err)
 				require.Equal(t, tc.expectedError.Error(), err.Error())
 			}
 		})
