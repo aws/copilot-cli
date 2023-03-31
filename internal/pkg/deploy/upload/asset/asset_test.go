@@ -38,7 +38,7 @@ func Test_UploadToCache(t *testing.T) {
 	cached := func(localPath, destPath string, content string) Cached {
 		return Cached{
 			LocalPath:       localPath,
-			Data:            bytes.NewBuffer([]byte(content)),
+			Content:         bytes.NewBuffer([]byte(content)),
 			CacheBucket:     "mockBucket",
 			CachePath:       cachePath(content),
 			DestinationPath: destPath,

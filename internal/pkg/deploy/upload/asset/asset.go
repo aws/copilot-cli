@@ -18,12 +18,19 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-// Uploader ...
+// Uploader uploads local asset files.
 type Uploader struct {
-	FS              afero.Fs
-	Upload          func(bucket, key string, contents io.Reader) (string, error)
+	// FS is the file system to use.
+	FS afero.Fs
+
+	// Upload is the function called when uploading a file.
+	Upload func(bucket, key string, contents io.Reader) (string, error)
+
+	// CachePathPrefix is the path to prefix any hashed files when uploading to the cache.
 	CachePathPrefix string
-	CacheBucket     string
+
+	// CacheBucket is the bucket passed to Upload when uploading to the cache.
+	CacheBucket string
 }
 
 // UploadOpts contains optional configuration for uploading assets.
@@ -36,15 +43,24 @@ type UploadOpts struct {
 // Cached represents an S3 object uploaded to a cache bucket that needs
 // to be moved from a cached location to the destination bucket/key.
 type Cached struct {
+	// LocalPath is the local path to the asset.
 	LocalPath string
-	Data      io.Reader
 
-	CachePath       string
-	CacheBucket     string
+	// Content is the content of the file at LocalPath.
+	Content io.Reader
+
+	// CachePath is the uploaded location of the asset in the CacheBucket.
+	CachePath string
+
+	// CacheBucket is the bucket the file was uploaded to.
+	CacheBucket string
+
+	// DestinationPath is desired path of the file after it's copied from CacheBucket.
 	DestinationPath string
 }
 
-// UploadToCache ...
+// UploadToCache uploads the file(s) at source to u's CacheBucket.
+// Returns a list of cached assets successfully uploaded to the cache and an error, if any.
 func (u *Uploader) UploadToCache(source, dest string, opts *UploadOpts) ([]Cached, error) {
 	matcher := buildCompositeMatchers(buildReincludeMatchers(opts.Reincludes), buildExcludeMatchers(opts.Excludes))
 
@@ -94,7 +110,7 @@ func (u *Uploader) walkFn(sourcePath, destPath string, recursive bool, matcher f
 
 		asset := Cached{
 			LocalPath:       path,
-			Data:            buf,
+			Content:         buf,
 			CachePath:       filepath.Join(u.CachePathPrefix, hex.EncodeToString(hash.Sum(nil))),
 			CacheBucket:     u.CacheBucket,
 			DestinationPath: destPath,
@@ -122,7 +138,7 @@ func (u *Uploader) uploadAssets(assets []Cached) error {
 	for i := range assets {
 		asset := assets[i]
 		g.Go(func() error {
-			_, err := u.Upload(asset.CacheBucket, asset.CachePath, asset.Data)
+			_, err := u.Upload(asset.CacheBucket, asset.CachePath, asset.Content)
 			if err != nil {
 				return fmt.Errorf("upload %q: %w", asset.LocalPath, err)
 			}
