@@ -9,11 +9,12 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/copilot-cli/internal/pkg/cli/deploy/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/asset"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
-	"github.com/spf13/afero"
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -21,34 +22,56 @@ func TestStaticSiteDeployer_UploadArtifacts(t *testing.T) {
 	const mockS3Bucket = "mockBucket"
 
 	tests := map[string]struct {
-		mockUploadFn func(fs afero.Fs, source, destination string, opts *asset.UploadOpts) ([]string, error)
+		mock func(m *mocks.MockcacheUploader)
 
-		wantErr error
+		expected *UploadArtifactsOutput
+		wantErr  error
 	}{
 		"error if failed to upload": {
-			mockUploadFn: func(fs afero.Fs, source, destination string, opts *asset.UploadOpts) ([]string, error) {
-				return nil, errors.New("some error")
+			mock: func(m *mocks.MockcacheUploader) {
+				m.EXPECT().UploadToCache("frontend/assets", "static", &asset.UploadOpts{
+					Recursive: true,
+					Excludes:  []string{"*.manifest"},
+				}).Return(nil, errors.New("some error"))
 			},
 			wantErr: fmt.Errorf("some error"),
 		},
 		"success": {
-			mockUploadFn: func(fs afero.Fs, source, destination string, opts *asset.UploadOpts) ([]string, error) {
-				if source != "frontend/assets" {
-					return nil, fmt.Errorf("unexpected full source path")
-				}
-				if opts.Reincludes != nil {
-					return nil, fmt.Errorf("unexpected reinclude")
-				}
-				if len(opts.Excludes) != 1 || opts.Excludes[0] != "*.manifest" {
-					return nil, fmt.Errorf("unexpected exclude")
-				}
-				return nil, nil
+			mock: func(m *mocks.MockcacheUploader) {
+				m.EXPECT().UploadToCache("frontend/assets", "static", &asset.UploadOpts{
+					Recursive: true,
+					Excludes:  []string{"*.manifest"},
+				}).Return([]asset.Cached{
+					{
+						LocalPath:       "frontend/assets/index.html",
+						CachePath:       "/asdf",
+						DestinationPath: "/index.html",
+					},
+				}, nil)
+			},
+			expected: &UploadArtifactsOutput{
+				CustomResourceURLs: map[string]string{},
+				CachedAssets: []asset.Cached{
+					{
+						LocalPath:       "frontend/assets/index.html",
+						CachePath:       "/asdf",
+						DestinationPath: "/index.html",
+					},
+				},
 			},
 		},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			m := mocks.NewMockcacheUploader(ctrl)
+			if tc.mock != nil {
+				tc.mock(m)
+			}
+
 			deployer := &staticSiteDeployer{
 				svcDeployer: &svcDeployer{
 					workloadDeployer: &workloadDeployer{
@@ -73,15 +96,16 @@ func TestStaticSiteDeployer_UploadArtifacts(t *testing.T) {
 						},
 					},
 				},
-				bucketName: mockS3Bucket,
-				uploadFn:   tc.mockUploadFn,
+				uploader: m,
+				// bucketName: mockS3Bucket,
 			}
-			_, gotErr := deployer.UploadArtifacts()
 
+			actual, err := deployer.UploadArtifacts()
 			if tc.wantErr != nil {
-				require.EqualError(t, gotErr, tc.wantErr.Error())
+				require.EqualError(t, err, tc.wantErr.Error())
 			} else {
-				require.NoError(t, gotErr)
+				require.NoError(t, err)
+				require.Equal(t, tc.expected, actual)
 			}
 		})
 	}

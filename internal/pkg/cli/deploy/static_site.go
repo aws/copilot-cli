@@ -110,7 +110,6 @@ func (d *staticSiteDeployer) uploadStaticFiles(out *UploadArtifactsOutput) error
 
 		out.CachedAssets = append(out.CachedAssets, assets...)
 	}
-	fmt.Printf("out.CachedAssets: %+v\n", out.CachedAssets)
 	return nil
 }
 
