@@ -19,8 +19,6 @@ import (
 )
 
 func TestStaticSiteDeployer_UploadArtifacts(t *testing.T) {
-	const mockS3Bucket = "mockBucket"
-
 	tests := map[string]struct {
 		mock func(m *mocks.MockcacheUploader)
 
