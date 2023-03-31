@@ -131,6 +131,15 @@ func Test_UploadToCache(t *testing.T) {
 				cached("test/copilot/.workspace", "files/test/copilot/.workspace", mockContent1),
 			},
 		},
+		"success with file as source": {
+			inSource: "test/copilot/.workspace",
+			mockFileSystem: func(fs afero.Fs) {
+				afero.WriteFile(fs, "test/copilot/.workspace", []byte(mockContent1), 0644)
+			},
+			expected: []Cached{
+				cached("test/copilot/.workspace", ".workspace", mockContent1),
+			},
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
