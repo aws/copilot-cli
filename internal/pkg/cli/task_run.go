@@ -7,13 +7,14 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+
 	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/template/artifactpath"
 	"golang.org/x/mod/semver"
-	"os"
-	"path/filepath"
-	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
@@ -42,7 +43,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
-	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/repository"
 	"github.com/aws/copilot-cli/internal/pkg/task"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
@@ -521,7 +521,7 @@ func (o *runTaskOpts) validateEnvCompatibilityForGenerateJobCmd(app, env string)
 	if err != nil {
 		return fmt.Errorf("retrieve version of environment stack %q in application %q: %v", env, app, err)
 	}
-	// The '--generate-cmd' flag was introduced in env v1.4.0. In env v1.8.0, EnvManagerRole took over, but 
+	// The '--generate-cmd' flag was introduced in env v1.4.0. In env v1.8.0, EnvManagerRole took over, but
 	//"states:DescribeStateMachine" permissions weren't added until 1.12.2.
 	if semver.Compare(version, "v1.12.2") < 0 {
 		return &errFeatureIncompatibleWithEnvironment{
@@ -719,6 +719,11 @@ func (o *runTaskOpts) Execute() error {
 
 	// NOTE: if image is not provided, then we build the image and push to ECR repo
 	if o.image == "" {
+		err := o.repository.Login()
+		if err != nil {
+			return fmt.Errorf("login to docker: %w", err)
+		}
+
 		if err := o.buildAndPushImage(); err != nil {
 			return err
 		}
@@ -731,6 +736,7 @@ func (o *runTaskOpts) Execute() error {
 		if err != nil {
 			return fmt.Errorf("get ECR repository URI: %w", err)
 		}
+
 		o.image = fmt.Sprintf(fmtImageURI, uri, tag)
 		shouldUpdate = true
 	}
@@ -959,7 +965,8 @@ func (o *runTaskOpts) buildAndPushImage() error {
 	if o.dockerfileContextPath != "" {
 		ctx = o.dockerfileContextPath
 	}
-	if _, err := o.repository.BuildAndPush(dockerengine.New(exec.NewCmd()), &dockerengine.BuildArguments{
+
+	if _, err := o.repository.BuildAndPush(&dockerengine.BuildArguments{
 		Dockerfile: o.dockerfilePath,
 		Context:    ctx,
 		Tags:       append([]string{imageTagLatest}, additionalTags...),

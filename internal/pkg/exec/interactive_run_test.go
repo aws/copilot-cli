@@ -4,6 +4,7 @@
 package exec
 
 import (
+	"context"
 	"os"
 	"os/exec"
 	"testing"
@@ -18,7 +19,7 @@ func TestCmd_InteractiveRun(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 		cmd := &Cmd{
-			command: func(name string, args []string, opts ...CmdOption) cmdRunner {
+			command: func(ctx context.Context, name string, args []string, opts ...CmdOption) cmdRunner {
 				// Ensure that the options applied match what we expect.
 				cmd := &exec.Cmd{}
 				for _, opt := range opts {
