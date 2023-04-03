@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.2
-	github.com/aws/aws-sdk-go v1.44.224
+	github.com/aws/aws-sdk-go v1.44.234
 	github.com/briandowns/spinner v1.23.0
 	github.com/dustin/go-humanize v1.0.1
 	github.com/fatih/color v1.15.0
