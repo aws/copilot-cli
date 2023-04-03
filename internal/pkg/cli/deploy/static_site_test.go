@@ -32,7 +32,7 @@ func TestStaticSiteDeployer_UploadArtifacts(t *testing.T) {
 					Excludes:  []string{"*.manifest"},
 				}).Return(nil, errors.New("some error"))
 			},
-			wantErr: fmt.Errorf("some error"),
+			wantErr: fmt.Errorf("upload #1/1: some error"),
 		},
 		"success": {
 			mock: func(m *mocks.MockcacheUploader) {

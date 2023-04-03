@@ -98,14 +98,14 @@ func (d *staticSiteDeployer) UploadArtifacts() (*UploadArtifactsOutput, error) {
 }
 
 func (d *staticSiteDeployer) uploadStaticFiles(out *UploadArtifactsOutput) error {
-	for _, f := range d.staticSiteMft.FileUploads {
+	for i, f := range d.staticSiteMft.FileUploads {
 		assets, err := d.uploader.UploadToCache(filepath.Join(f.Context, f.Source), f.Destination, &asset.UploadOpts{
 			Reincludes: f.Reinclude.ToStringSlice(),
 			Excludes:   f.Exclude.ToStringSlice(),
 			Recursive:  f.Recursive,
 		})
 		if err != nil {
-			return err
+			return fmt.Errorf("upload #%d/%d: %w", i+1, len(d.staticSiteMft.FileUploads), err)
 		}
 
 		out.CachedAssets = append(out.CachedAssets, assets...)
