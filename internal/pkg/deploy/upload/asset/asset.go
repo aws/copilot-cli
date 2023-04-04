@@ -108,26 +108,24 @@ func (u *Uploader) walkFn(sourcePath, destPath string, recursive bool, matcher f
 			return fmt.Errorf("copy %q: %w", path, err)
 		}
 
-		asset := Cached{
+		// rel is "." when sourcePath == path
+		rel, err := filepath.Rel(sourcePath, path)
+		if err != nil {
+			return fmt.Errorf("get relative path for %q against %q: %w", path, sourcePath, err)
+		}
+
+		dest := filepath.Join(destPath, rel)
+		if dest == "." { // happens when sourcePath is a file and destPath is unset
+			dest = info.Name()
+		}
+
+		*assets = append(*assets, Cached{
 			LocalPath:       path,
 			Content:         buf,
 			CachePath:       filepath.Join(u.CachePathPrefix, hex.EncodeToString(hash.Sum(nil))),
 			CacheBucket:     u.CacheBucket,
-			DestinationPath: destPath,
-		}
-
-		if sourcePath == path && destPath == "" {
-			asset.DestinationPath = info.Name()
-		} else if sourcePath != path {
-			rel, err := filepath.Rel(sourcePath, path)
-			if err != nil {
-				return fmt.Errorf("get relative path for %q against %q: %w", path, sourcePath, err)
-			}
-
-			asset.DestinationPath = filepath.Join(destPath, rel)
-		}
-
-		*assets = append(*assets, asset)
+			DestinationPath: dest,
+		})
 		return nil
 	}
 }
