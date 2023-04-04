@@ -9,74 +9,74 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/fs"
 	"path/filepath"
 
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/spf13/afero"
 	"golang.org/x/sync/errgroup"
 )
 
-// Uploader uploads local asset files.
-type Uploader struct {
+// CacheUploader uploads local asset files.
+type CacheUploader struct {
 	// FS is the file system to use.
 	FS afero.Fs
 
 	// Upload is the function called when uploading a file.
-	Upload func(bucket, key string, contents io.Reader) (string, error)
+	Upload func(path string, contents io.Reader) (string, error)
 
-	// CachePathPrefix is the path to prefix any hashed files when uploading to the cache.
-	CachePathPrefix string
+	// PathPrefix is the path to prefix any hashed files when uploading to the cache.
+	PathPrefix string
 
-	// CacheBucket is the bucket passed to Upload when uploading to the cache.
-	CacheBucket string
+	// AssetMappingPath is the path the upload the asset mapping file to.
+	AssetMappingPath string
 }
 
-// UploadOpts contains optional configuration for uploading assets.
-type UploadOpts struct {
-	Reincludes []string // Relative path under source to reinclude files that are excluded in the upload.
-	Excludes   []string // Relative path under source to exclude in the upload.
-	Recursive  bool     // Whether to walk recursively.
+type cached struct {
+	localPath string
+	content   io.Reader
+
+	Path            string `json:"path"`
+	DestinationPath string `json:"dest_path"`
 }
 
-// Cached represents an S3 object uploaded to a cache bucket that needs
-// to be moved from a cached location to the destination bucket/key.
-type Cached struct {
-	// LocalPath is the local path to the asset.
-	LocalPath string
+// UploadFiles hashes each of the files specified in files and uploads
+// them to the path "{CachePathPrefix}/{hash}". After, it uploads a JSON file
+// to CacheMovePath that specifies the uploaded location of every file and it's
+// intended destination path.
+func (u *CacheUploader) UploadFiles(files []manifest.FileUpload) (string, error) {
+	var assets []cached
+	for _, f := range files {
+		matcher := buildCompositeMatchers(buildReincludeMatchers(f.Reinclude.ToStringSlice()), buildExcludeMatchers(f.Exclude.ToStringSlice()))
+		source := filepath.Join(f.Context, f.Source)
 
-	// Content is the content of the file at LocalPath.
-	Content io.Reader
-
-	// CachePath is the uploaded location of the asset in the CacheBucket.
-	CachePath string
-
-	// CacheBucket is the bucket the file was uploaded to.
-	CacheBucket string
-
-	// DestinationPath is desired path of the file after it's copied from CacheBucket.
-	DestinationPath string
-}
-
-// UploadToCache uploads the file(s) at source to u's CacheBucket.
-// Returns a list of cached assets successfully uploaded to the cache and an error, if any.
-func (u *Uploader) UploadToCache(source, dest string, opts *UploadOpts) ([]Cached, error) {
-	matcher := buildCompositeMatchers(buildReincludeMatchers(opts.Reincludes), buildExcludeMatchers(opts.Excludes))
-
-	var assets []Cached
-	if err := afero.Walk(u.FS, source, u.walkFn(source, dest, opts.Recursive, matcher, &assets)); err != nil {
-		return nil, fmt.Errorf("walk the file tree rooted at %q: %w", source, err)
+		if err := afero.Walk(u.FS, source, u.walkFn(source, f.Destination, f.Recursive, matcher, &assets)); err != nil {
+			return "", fmt.Errorf("walk the file tree rooted at %q: %w", source, err)
+		}
 	}
 
 	if err := u.uploadAssets(assets); err != nil {
-		return nil, err
+		return "", err
 	}
 
-	return assets, nil
+	mappingFile := &bytes.Buffer{}
+	if err := json.NewEncoder(mappingFile).Encode(assets); err != nil {
+		return "", fmt.Errorf("unable to encode move json")
+	}
+
+	// upload move file
+	url, err := u.Upload(u.AssetMappingPath, mappingFile)
+	if err != nil {
+		return "", fmt.Errorf("unable to upload cache move: %w", err)
+	}
+
+	return url, nil
 }
 
-func (u *Uploader) walkFn(sourcePath, destPath string, recursive bool, matcher filepathMatcher, assets *[]Cached) filepath.WalkFunc {
+func (u *CacheUploader) walkFn(sourcePath, destPath string, recursive bool, matcher filepathMatcher, assets *[]cached) filepath.WalkFunc {
 	return func(path string, info fs.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -119,107 +119,29 @@ func (u *Uploader) walkFn(sourcePath, destPath string, recursive bool, matcher f
 			dest = info.Name()
 		}
 
-		*assets = append(*assets, Cached{
-			LocalPath:       path,
-			Content:         buf,
-			CachePath:       filepath.Join(u.CachePathPrefix, hex.EncodeToString(hash.Sum(nil))),
-			CacheBucket:     u.CacheBucket,
+		*assets = append(*assets, cached{
+			localPath:       path,
+			content:         buf,
+			Path:            filepath.Join(u.PathPrefix, hex.EncodeToString(hash.Sum(nil))),
 			DestinationPath: dest,
 		})
 		return nil
 	}
 }
 
-func (u *Uploader) uploadAssets(assets []Cached) error {
+func (u *CacheUploader) uploadAssets(assets []cached) error {
 	g, _ := errgroup.WithContext(context.Background())
 
 	for i := range assets {
 		asset := assets[i]
 		g.Go(func() error {
-			_, err := u.Upload(asset.CacheBucket, asset.CachePath, asset.Content)
+			_, err := u.Upload(asset.Path, asset.content)
 			if err != nil {
-				return fmt.Errorf("upload %q: %w", asset.LocalPath, err)
+				return fmt.Errorf("upload %q: %w", asset.localPath, err)
 			}
 			return nil
 		})
 	}
 
 	return g.Wait()
-}
-
-type filepathMatcher interface {
-	match(path string) (bool, error)
-}
-
-type reincludeMatcher string
-
-func buildReincludeMatchers(reincludes []string) []filepathMatcher {
-	var matchers []filepathMatcher
-	for _, reinclude := range reincludes {
-		matchers = append(matchers, reincludeMatcher(reinclude))
-	}
-	return matchers
-}
-
-func (m reincludeMatcher) match(path string) (bool, error) {
-	return match(string(m), path)
-}
-
-type excludeMatcher string
-
-func buildExcludeMatchers(excludes []string) []filepathMatcher {
-	var matchers []filepathMatcher
-	for _, exclude := range excludes {
-		matchers = append(matchers, excludeMatcher(exclude))
-	}
-	return matchers
-}
-
-func (m excludeMatcher) match(path string) (bool, error) {
-	return match(string(m), path)
-}
-
-// compositeMatcher is a composite matcher consisting of reinclude matchers and exclude matchers.
-// Note that exclude matchers will be applied before reinclude matchers.
-type compositeMatcher struct {
-	reincludeMatchers []filepathMatcher
-	excludeMatchers   []filepathMatcher
-}
-
-func buildCompositeMatchers(reincludeMatchers, excludeMatchers []filepathMatcher) compositeMatcher {
-	return compositeMatcher{
-		reincludeMatchers: reincludeMatchers,
-		excludeMatchers:   excludeMatchers,
-	}
-}
-
-func (m compositeMatcher) match(path string) (bool, error) {
-	shouldInclude := true
-	for _, matcher := range m.excludeMatchers {
-		isMatch, err := matcher.match(path)
-		if err != nil {
-			return false, err
-		}
-		if isMatch {
-			shouldInclude = false
-		}
-	}
-	for _, matcher := range m.reincludeMatchers {
-		isMatch, err := matcher.match(path)
-		if err != nil {
-			return false, err
-		}
-		if isMatch {
-			shouldInclude = true
-		}
-	}
-	return shouldInclude, nil
-}
-
-func match(pattern, path string) (bool, error) {
-	isMatch, err := filepath.Match(pattern, path)
-	if err != nil {
-		return false, fmt.Errorf("match file path %s against pattern %s: %w", path, pattern, err)
-	}
-	return isMatch, nil
 }

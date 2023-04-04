@@ -5,7 +5,8 @@ package deploy
 
 import (
 	"fmt"
-	"path/filepath"
+	"io"
+	"time"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
@@ -20,7 +21,7 @@ import (
 )
 
 type cacheUploader interface {
-	UploadToCache(source, dest string, opts *asset.UploadOpts) ([]asset.Cached, error)
+	UploadFiles(files []manifest.FileUpload) (string, error)
 }
 
 type staticSiteDeployer struct {
@@ -46,11 +47,13 @@ func NewStaticSiteDeployer(in *WorkloadDeployerInput) (*staticSiteDeployer, erro
 		svcDeployer:   svcDeployer,
 		staticSiteMft: mft,
 		fs:            fs,
-		uploader: &asset.Uploader{
-			FS:              fs,
-			CacheBucket:     svcDeployer.resources.S3Bucket,
-			CachePathPrefix: fmt.Sprintf("static-site-cache/%s", svcDeployer.name),
-			Upload:          svcDeployer.s3Client.Upload,
+		uploader: &asset.CacheUploader{
+			FS:               fs,
+			PathPrefix:       fmt.Sprintf("static-site-cache/%s", svcDeployer.name),
+			AssetMappingPath: fmt.Sprintf("static-site-cache/%s/mapping/%s.json", svcDeployer.name, time.Now().Format(time.RFC3339)),
+			Upload: func(path string, data io.Reader) (string, error) {
+				return svcDeployer.s3Client.Upload(svcDeployer.resources.S3Bucket, path, data)
+			},
 		},
 	}, nil
 }
@@ -98,18 +101,12 @@ func (d *staticSiteDeployer) UploadArtifacts() (*UploadArtifactsOutput, error) {
 }
 
 func (d *staticSiteDeployer) uploadStaticFiles(out *UploadArtifactsOutput) error {
-	for i, f := range d.staticSiteMft.FileUploads {
-		assets, err := d.uploader.UploadToCache(filepath.Join(f.Context, f.Source), f.Destination, &asset.UploadOpts{
-			Reincludes: f.Reinclude.ToStringSlice(),
-			Excludes:   f.Exclude.ToStringSlice(),
-			Recursive:  f.Recursive,
-		})
-		if err != nil {
-			return fmt.Errorf("upload #%d/%d: %w", i+1, len(d.staticSiteMft.FileUploads), err)
-		}
-
-		out.CachedAssets = append(out.CachedAssets, assets...)
+	url, err := d.uploader.UploadFiles(d.staticSiteMft.FileUploads)
+	if err != nil {
+		return err
 	}
+
+	out.StaticSiteAssetMappingURL = url
 	return nil
 }
 
@@ -127,7 +124,7 @@ func (d *staticSiteDeployer) stackConfiguration(in *StackRuntimeConfiguration) (
 		RuntimeConfig:      *rc,
 		RootUserARN:        in.RootUserARN,
 		Addons:             d.addons,
-		CachedAssets:       in.CachedAssets,
+		AssetMappingURL:    in.StaticSiteAssetMappingURL,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("create stack configuration: %w", err)

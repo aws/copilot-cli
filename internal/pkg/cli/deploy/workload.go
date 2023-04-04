@@ -25,7 +25,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
-	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/asset"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
@@ -111,13 +110,13 @@ type fileReader interface {
 
 // StackRuntimeConfiguration contains runtime configuration for a workload CloudFormation stack.
 type StackRuntimeConfiguration struct {
-	ImageDigests       map[string]ContainerImageIdentifier // Container name to image.
-	EnvFileARNs        map[string]string
-	AddonsURL          string
-	RootUserARN        string
-	Tags               map[string]string
-	CustomResourceURLs map[string]string
-	CachedAssets       []asset.Cached
+	ImageDigests              map[string]ContainerImageIdentifier // Container name to image.
+	EnvFileARNs               map[string]string
+	AddonsURL                 string
+	RootUserARN               string
+	Tags                      map[string]string
+	CustomResourceURLs        map[string]string
+	StaticSiteAssetMappingURL string
 }
 
 // DeployWorkloadInput is the input of DeployWorkload.
@@ -450,11 +449,11 @@ type customResourcesFunc func(fs template.Reader) ([]*customresource.CustomResou
 
 // UploadArtifactsOutput is the output of UploadArtifacts.
 type UploadArtifactsOutput struct {
-	ImageDigests       map[string]ContainerImageIdentifier // Container name to image.
-	EnvFileARNs        map[string]string                   // map[container name]envFileARN
-	AddonsURL          string
-	CustomResourceURLs map[string]string
-	CachedAssets       []asset.Cached
+	ImageDigests              map[string]ContainerImageIdentifier // Container name to image.
+	EnvFileARNs               map[string]string                   // map[container name]envFileARN
+	AddonsURL                 string
+	CustomResourceURLs        map[string]string
+	StaticSiteAssetMappingURL string
 }
 
 // uploadArtifactFunc uploads an artifact and updates out

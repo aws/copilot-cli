@@ -10,7 +10,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
-	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/asset"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
@@ -23,9 +22,9 @@ type StaticSite struct {
 	manifest *manifest.StaticSite
 	appInfo  deploy.AppInformation
 
-	parser       staticSiteReadParser
-	localCRs     []uploadable // Custom resources that have not been uploaded yet.
-	cachedAssets []asset.Cached
+	parser          staticSiteReadParser
+	localCRs        []uploadable // Custom resources that have not been uploaded yet.
+	assetMappingURL string
 }
 
 // StaticSiteConfig contains fields to configure StaticSite.
@@ -38,7 +37,7 @@ type StaticSiteConfig struct {
 	RootUserARN        string
 	ArtifactBucketName string
 	Addons             NestedStackConfigurer
-	CachedAssets       []asset.Cached
+	AssetMappingURL    string
 }
 
 // NewStaticSite creates a new CFN stack from a manifest file, given the options.
@@ -61,9 +60,9 @@ func NewStaticSite(conf *StaticSiteConfig) (*StaticSite, error) {
 		},
 		manifest: conf.Manifest,
 
-		parser:       fs,
-		localCRs:     uploadableCRs(crs).convert(),
-		cachedAssets: conf.CachedAssets,
+		parser:          fs,
+		localCRs:        uploadableCRs(crs).convert(),
+		assetMappingURL: conf.AssetMappingURL,
 	}, nil
 }
 
