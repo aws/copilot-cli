@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"hash/crc32"
+	"math"
 	"sort"
 	"strconv"
 	"strings"
@@ -550,6 +551,14 @@ func (s *BackendService) convertALBListener() (*template.ALBListener, error) {
 	}, nil
 }
 
+func (s *BackendService) convertGracePeriod() *int64 {
+	var gracePeriod *int64 = aws.Int64(60)
+	if s.manifest.HTTP.GracePeriod != nil {
+		gracePeriod = aws.Int64(int64(s.manifest.HTTP.GracePeriod.Seconds()))
+	}
+	return gracePeriod
+}
+
 type loadBalancerTargeter interface {
 	MainContainerPort() string
 	ExposedPorts() (manifest.ExposedPortsIndex, error)
@@ -667,6 +676,18 @@ func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (networkLoadBalanc
 		config.appDNSDelegationRole = dnsDelegationRole
 	}
 	return config, nil
+}
+
+func (s *LoadBalancedWebService) convertGracePeriod() *int64 {
+	var gracePeriod *int64 = aws.Int64(60)
+	if s.manifest.HTTPOrBool.GracePeriod != nil && s.manifest.NLBConfig.GracePeriod != nil { // if grace period is mentioned in both ALB and NLB then we prefer the one with max value.
+		gracePeriod = aws.Int64(int64(math.Max(s.manifest.HTTPOrBool.GracePeriod.Seconds(), s.manifest.NLBConfig.GracePeriod.Seconds())))
+	} else if s.manifest.HTTPOrBool.GracePeriod != nil {
+		gracePeriod = aws.Int64(int64(s.manifest.HTTPOrBool.GracePeriod.Seconds()))
+	} else if s.manifest.NLBConfig.GracePeriod != nil {
+		gracePeriod = aws.Int64(int64(s.manifest.NLBConfig.GracePeriod.Seconds()))
+	}
+	return gracePeriod
 }
 
 func convertExecuteCommand(e *manifest.ExecuteCommand) *template.ExecuteCommandOpts {

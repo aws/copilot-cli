@@ -236,6 +236,7 @@ func (s LoadBalancedWebService) applyEnv(envName string) (workloadManifest, erro
 type NetworkLoadBalancerConfiguration struct {
 	Listener            NetworkLoadBalancerListener   `yaml:",inline"`
 	Aliases             Alias                         `yaml:"alias"`
+	GracePeriod         *time.Duration                `yaml:"grace_period"`
 	AdditionalListeners []NetworkLoadBalancerListener `yaml:"additional_listeners"`
 }
 

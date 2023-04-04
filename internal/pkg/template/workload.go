@@ -784,7 +784,7 @@ type WorkloadOpts struct {
 	WorkloadType            string
 	HealthCheck             *ContainerHealthCheck
 	HTTPTargetContainer     HTTPTargetContainer
-	HTTPHealthCheck         HTTPHealthCheckOpts
+	GracePeriod             *int64
 	DeregistrationDelay     *int64
 	NLB                     *NetworkLoadBalancer
 	ALBListener             *ALBListener
