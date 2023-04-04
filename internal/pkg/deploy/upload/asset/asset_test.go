@@ -70,6 +70,7 @@ func Test_UploadToCache(t *testing.T) {
 			expectedError: fmt.Errorf(`upload "test/copilot/.workspace": mock error`),
 		},
 		"success without include and exclude": {
+			// source=directory, dest unset
 			inSource:    "test",
 			inRecursive: true,
 			mockFileSystem: func(fs afero.Fs) {
@@ -81,6 +82,7 @@ func Test_UploadToCache(t *testing.T) {
 			},
 		},
 		"success without recursive": {
+			// source=directory, dest unset
 			inSource: "test",
 			mockFileSystem: func(fs afero.Fs) {
 				afero.WriteFile(fs, "test/copilot/.workspace", []byte(mockContent1), 0644)
@@ -93,6 +95,7 @@ func Test_UploadToCache(t *testing.T) {
 			},
 		},
 		"success with include only": {
+			// source=directory, dest set
 			inSource:     "test",
 			inDest:       "ws",
 			inRecursive:  true,
@@ -106,6 +109,7 @@ func Test_UploadToCache(t *testing.T) {
 			},
 		},
 		"success with exclude only": {
+			// source=directory, dest unset
 			inExcludes:  []string{"copilot/prod/*.yaml"},
 			inRecursive: true,
 			mockFileSystem: func(fs afero.Fs) {
@@ -117,6 +121,7 @@ func Test_UploadToCache(t *testing.T) {
 			},
 		},
 		"success with both include and exclude": {
+			// source=directory, dest set
 			inDest:       "files",
 			inExcludes:   []string{"copilot/prod/*.yaml"},
 			inReincludes: []string{"copilot/prod/manifest.yaml"},
@@ -132,12 +137,24 @@ func Test_UploadToCache(t *testing.T) {
 			},
 		},
 		"success with file as source": {
+			// source=file, dest unset
 			inSource: "test/copilot/.workspace",
 			mockFileSystem: func(fs afero.Fs) {
 				afero.WriteFile(fs, "test/copilot/.workspace", []byte(mockContent1), 0644)
 			},
 			expected: []Cached{
 				cached("test/copilot/.workspace", ".workspace", mockContent1),
+			},
+		},
+		"success with file as source and destination set": {
+			// source=file, dest set
+			inSource: "test/copilot/.workspace",
+			inDest:   "/is/a/file",
+			mockFileSystem: func(fs afero.Fs) {
+				afero.WriteFile(fs, "test/copilot/.workspace", []byte(mockContent1), 0644)
+			},
+			expected: []Cached{
+				cached("test/copilot/.workspace", "/is/a/file", mockContent1),
 			},
 		},
 	}
