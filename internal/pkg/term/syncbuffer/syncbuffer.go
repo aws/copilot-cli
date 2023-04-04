@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 // Package syncbuffer provides a synchronized buffer to store and access logs from multiple goroutines.
 package syncbuffer
 
@@ -15,6 +18,11 @@ import (
 
 // maxLogLines is the maximum number of lines to display in the terminal.
 const maxLogLines = 5
+
+// fileWriter is the interface to write to a file.
+type fileWriter interface {
+	io.Writer
+}
 
 // SyncBuffer is a synchronized buffer used to store the output of build and push operations.
 type SyncBuffer struct {
@@ -55,11 +63,6 @@ func (b *SyncBuffer) IsDone() bool {
 // MarkDone closes the Done channel, indicating that the build and push is completed.
 func (b *SyncBuffer) MarkDone() {
 	close(b.Done)
-}
-
-// fileWriter is the interface to write to a file.
-type fileWriter interface {
-	io.Writer
 }
 
 // TermPrinter is a printer to display logs in the terminal.

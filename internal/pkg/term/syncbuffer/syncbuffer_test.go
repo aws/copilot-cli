@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package syncbuffer
 
 import (
@@ -92,6 +95,8 @@ func TestSyncBuffer_strings(t *testing.T) {
 
 			// WHEN
 			actual := sb.strings()
+
+			// THEN
 			require.Equal(t, tc.wanted, actual)
 		})
 	}
@@ -158,7 +163,6 @@ line 8
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
-
 			buf := &SyncBuffer{
 				Buf:  bytes.Buffer{},
 				Done: make(chan struct{}),
@@ -169,8 +173,8 @@ line 8
 				Buf:  buf,
 				Term: termOut,
 			}
-			// WHEN
 
+			// WHEN
 			printer.Print()
 
 			// THEN
@@ -210,7 +214,6 @@ line 8
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
-
 			buf := &SyncBuffer{
 				Buf:  bytes.Buffer{},
 				Done: make(chan struct{}),
@@ -222,7 +225,6 @@ line 8
 				Term: termOut,
 			}
 			// WHEN
-
 			printer.PrintAll()
 
 			// THEN
