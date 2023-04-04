@@ -440,7 +440,7 @@ func (d *workloadDeployer) uploadContainerImages(out *UploadArtifactsOutput) err
 		})
 	} else {
 		g.Go(func() error {
-			return printOutputFromBuffers(termPrinters)
+			return printAndEraseFromBuffers(termPrinters)
 		})
 	}
 
@@ -520,10 +520,10 @@ func copyOutputToBuffer(pr io.Reader, buffer *syncbuffer.TermPrinter, name strin
 	return nil
 }
 
-// printOutputFromBuffers prints the build and push output from the list of buildPushOutputBuffer buffers to stderr.
+// printAndEraseFromBuffers prints the build and push output from the list of buildPushOutputBuffer buffers to stderr.
 // It polls each buffer until all build and push calls are completed,
 // and erases the previous output after sleeping for a short duration.
-func printOutputFromBuffers(termPrinters []*syncbuffer.TermPrinter) error {
+func printAndEraseFromBuffers(termPrinters []*syncbuffer.TermPrinter) error {
 	for {
 		totalWrittenLines := 0
 		// check whether all build and push calls are completed.
