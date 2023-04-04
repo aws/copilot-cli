@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -41,11 +40,11 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/cursor"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
+	"github.com/aws/copilot-cli/internal/pkg/term/syncbuffer"
 	"github.com/aws/copilot-cli/internal/pkg/version"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/spf13/afero"
 	"golang.org/x/sync/errgroup"
-	"golang.org/x/term"
 )
 
 const (
@@ -64,9 +63,9 @@ const (
 )
 
 const (
-	// pollInterval is the time Interval to wait between checking whether the output buffers are done.
-	pollInterval = 60 * time.Millisecond
-	maxLogLines  = 5
+	// pollIntervalForBuildPush is the time Interval to wait between checking whether the output buffers are done.
+	pollIntervalForBuildPush = 60 * time.Millisecond
+	maxLogLines              = 5
 )
 
 // ActionRecommender contains methods that output action recommendation.
@@ -368,52 +367,6 @@ func (img ContainerImageIdentifier) Tag() string {
 	return img.GitShortCommitTag
 }
 
-// buildPushOutputBuffer contains the output configuration for docker build and push.
-type buildPushOutputBuffer struct {
-	ContainerName string // ContainerName is the name of the container.
-
-	bufMu sync.Mutex // bufMu is a mutex to protect access to the buffer.
-
-	buf bytes.Buffer // buf is the buffer containing the output of build and push.
-
-	doneMu sync.Mutex // doneMu is a mutex to protect access to the done field.
-
-	done bool // done is a flag indicating whether the build and push is completed.
-}
-
-// Write appends the given bytes to the buffer.
-func (b *buildPushOutputBuffer) Write(p []byte) (n int, err error) {
-	b.bufMu.Lock()
-	defer b.bufMu.Unlock()
-	return b.buf.Write(p)
-}
-
-// logs returns the label (i.e., the first line of the buffer) and the last five lines of the buffer.
-func (b *buildPushOutputBuffer) logs() (string, [maxLogLines]string) {
-	b.bufMu.Lock()
-	defer b.bufMu.Unlock()
-
-	// Split the buffer bytes into lines
-	lines := strings.Split(strings.TrimSpace(b.buf.String()), "\n")
-
-	// Determine the start and end index to extract last 5 lines
-	start := 1
-	if len(lines) > maxLogLines {
-		start = len(lines) - maxLogLines
-	}
-	end := len(lines)
-
-	// Extract the last 5 lines and store them in a fixed-size array
-	var logLines [maxLogLines]string
-	idx := 0
-	for start < end {
-		logLines[idx] = strings.TrimSpace(lines[start])
-		start++
-		idx++
-	}
-	return lines[0], logLines
-}
-
 func (d *workloadDeployer) uploadContainerImages(out *UploadArtifactsOutput) error {
 	// If it is built from local Dockerfile, build and push to the ECR repo.
 	buildArgsPerContainer, err := buildArgsPerContainer(d.name, d.workspacePath, d.image, d.mft)
@@ -427,10 +380,13 @@ func (d *workloadDeployer) uploadContainerImages(out *UploadArtifactsOutput) err
 	if err != nil {
 		return fmt.Errorf("login to image repository: %w", err)
 	}
+
+	// mutex for synchronizing access to the output map.
+	var mu sync.Mutex
 	out.ImageDigests = make(map[string]ContainerImageIdentifier, len(buildArgsPerContainer))
 
-	// create an array of output buffers, one for each container.
-	buffers := make([]*buildPushOutputBuffer, len(buildArgsPerContainer))
+	// create an array of printers, one for each container.
+	termPrinters := make([]*syncbuffer.TermPrinter, len(buildArgsPerContainer))
 
 	// create a context and an error group.
 	ctx := context.Background()
@@ -439,8 +395,11 @@ func (d *workloadDeployer) uploadContainerImages(out *UploadArtifactsOutput) err
 	// counter for indexing the output buffers.
 	count := 0
 
-	// mutex for synchronizing access to the output map.
-	var mux sync.Mutex
+	// create a new cursor and hide it.
+	cursor := cursor.New()
+	cursor.Hide()
+	defer cursor.Show()
+
 	for name, buildArgs := range buildArgsPerContainer {
 		// create a copy of loop variables to avoid data race.
 		name := name
@@ -449,16 +408,9 @@ func (d *workloadDeployer) uploadContainerImages(out *UploadArtifactsOutput) err
 		// create a pipe for streaming the build and push output.
 		pr, pw := io.Pipe()
 
-		buffer := &buildPushOutputBuffer{
-			ContainerName: name,
-		}
-		buffers[count] = buffer
+		termPrinter := syncbuffer.NewTermPrinter(log.DiagnosticWriter)
+		termPrinters[count] = termPrinter
 		count++
-
-		// create a new cursor and hide it.
-		curs := cursor.New()
-		curs.Hide()
-		defer curs.Show()
 
 		g.Go(func() error {
 			defer pw.Close()
@@ -466,8 +418,8 @@ func (d *workloadDeployer) uploadContainerImages(out *UploadArtifactsOutput) err
 			if err != nil {
 				return fmt.Errorf("build and push image: %w", err)
 			}
-			mux.Lock()
-			defer mux.Unlock()
+			mu.Lock()
+			defer mu.Unlock()
 			out.ImageDigests[name] = ContainerImageIdentifier{
 				Digest:            digest,
 				CustomTag:         d.image.CustomTag,
@@ -477,13 +429,20 @@ func (d *workloadDeployer) uploadContainerImages(out *UploadArtifactsOutput) err
 		})
 
 		g.Go(func() error {
-			return copyOutputToBuffer(pr, buffer)
+			return copyOutputToBuffer(pr, termPrinter, name)
 		})
 	}
 
-	g.Go(func() error {
-		return printOutputFromBuffers(buffers)
-	})
+	// check if CI is true or not.
+	if isCIEnvironment() {
+		g.Go(func() error {
+			return printAllFromBuffers(termPrinters)
+		})
+	} else {
+		g.Go(func() error {
+			return printOutputFromBuffers(termPrinters)
+		})
+	}
 
 	// wait for all goroutines to complete and return any errors.
 	if err := g.Wait(); err != nil {
@@ -537,21 +496,26 @@ func buildArgsPerContainer(name, workspacePath string, img ContainerImageIdentif
 	return dArgs, nil
 }
 
+// isCIEnvironment checks if the current environment is a continuous integration (CI) system.
+// Returns true by looking for the "CI" environment variable  if it's set to "true", otherwise false.
+func isCIEnvironment() bool {
+	if ci, _ := os.LookupEnv("CI"); ci == "true" {
+		return true
+	}
+	return false
+}
+
 // copyOutputToBuffer copies the build and push output from the given io.Reader to the buildPushOutputBuffer buffer.
 // return an error if copying fails or if the reader returns an unexpected error.
-func copyOutputToBuffer(pr io.Reader, buffer *buildPushOutputBuffer) error {
+func copyOutputToBuffer(pr io.Reader, buffer *syncbuffer.TermPrinter, name string) error {
 	defer func() {
-		buffer.doneMu.Lock()
-		buffer.done = true
-		buffer.doneMu.Unlock()
+		buffer.Buf.MarkDone()
 	}()
 
 	// copy the build and push output to the output buffer
-	_, err := io.Copy(buffer, pr)
-	if err == io.EOF {
-		return nil
-	} else if err != nil {
-		return fmt.Errorf("copying build and push output for container %s: %w", buffer.ContainerName, err)
+	_, err := io.Copy(buffer.Buf, pr)
+	if err != nil && !errors.Is(err, io.EOF) {
+		return fmt.Errorf("copying build and push output for container %s: %w", name, err)
 	}
 	return nil
 }
@@ -559,66 +523,46 @@ func copyOutputToBuffer(pr io.Reader, buffer *buildPushOutputBuffer) error {
 // printOutputFromBuffers prints the build and push output from the list of buildPushOutputBuffer buffers to stderr.
 // It polls each buffer until all build and push calls are completed,
 // and erases the previous output after sleeping for a short duration.
-func printOutputFromBuffers(buffers []*buildPushOutputBuffer) error {
+func printOutputFromBuffers(termPrinters []*syncbuffer.TermPrinter) error {
 	for {
-		writtenLines := 0
+		totalWrittenLines := 0
 		// check whether all build and push calls are completed.
 		allDone := true
-		for _, buf := range buffers {
-			buf.doneMu.Lock()
-			if !buf.done {
+		for _, printer := range termPrinters {
+			if !printer.Buf.IsDone() {
 				allDone = false
 			}
-			buf.doneMu.Unlock()
-			label, logs := buf.logs()
-			outputLogs := removeEmptyStrings(logs)
-			if len(outputLogs) > 0 {
-				fmt.Fprintln(os.Stderr, label)
-				for _, logLine := range outputLogs {
-					fmt.Fprintln(os.Stderr, "\t", logLine)
-				}
-				labelLength, err := dockerBuildLabelLength(label)
-				if err != nil {
-					return fmt.Errorf("get terminal size %w", err)
-				}
-				writtenLines = writtenLines + labelLength + len(outputLogs)
+			if err := printer.Print(); err != nil {
+				return fmt.Errorf("printing output from the buffers: %w", err)
 			}
+			totalWrittenLines = totalWrittenLines + printer.PrevWrittenLines
 		}
 		if allDone {
 			break
 		}
-
 		// sleep for a short time and erase the previous output.
-		time.Sleep(pollInterval)
+		time.Sleep(pollIntervalForBuildPush)
 		// erase all the written lines to the terminal.
-		cursor.EraseLinesAbove(os.Stderr, writtenLines)
+		cursor.EraseLinesAbove(os.Stderr, totalWrittenLines)
 	}
 	return nil
 }
 
-// removeEmptyStrings removes empty strings from an array of strings
-// and returns a new array containing only non-empty strings.
-func removeEmptyStrings(arrWithEmptyStrings [maxLogLines]string) []string {
-	var nonEmptyStrings []string
-	for _, s := range arrWithEmptyStrings {
-		if s != "" {
-			nonEmptyStrings = append(nonEmptyStrings, s)
+// PrintAllFromBuffers prints all contents from given TermPrinter buffers once they have finished writing.
+func printAllFromBuffers(printers []*syncbuffer.TermPrinter) error {
+	count := 0
+	for {
+		for _, printer := range printers {
+			if printer.Buf.IsDone() {
+				printer.PrintAll()
+				count++
+			}
+		}
+		if count >= len(printers) {
+			break
 		}
 	}
-	return nonEmptyStrings
-}
-
-// dockerBuildLabelLength calculates the number of lines required to display a given string
-// based on the current terminal width. The function takes a string parameter "label"
-// and returns the number of lines required to display it as an integer.
-// If there is an error getting the terminal size, the function returns an error.
-func dockerBuildLabelLength(label string) (int, error) {
-	width, _, err := term.GetSize(int(os.Stderr.Fd()))
-	if err != nil {
-		return 0, err
-	}
-	numLines := math.Ceil(float64(len(label)) / float64(width))
-	return int(numLines), nil
+	return nil
 }
 
 func (d *workloadDeployer) uploadArtifactsToS3(out *UploadArtifactsOutput) error {
