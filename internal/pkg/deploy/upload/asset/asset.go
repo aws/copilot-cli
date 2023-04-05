@@ -14,6 +14,7 @@ import (
 	"io"
 	"io/fs"
 	"path/filepath"
+	"sort"
 
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/spf13/afero"
@@ -26,7 +27,7 @@ type CacheUploader struct {
 	FS afero.Fs
 
 	// Upload is the function called when uploading a file.
-	Upload func(path string, contents io.Reader) (string, error)
+	Upload func(path string, contents io.Reader) error
 
 	// PathPrefix is the path to prefix any hashed files when uploading to the cache.
 	PathPrefix string
@@ -40,40 +41,46 @@ type cached struct {
 	content   io.Reader
 
 	Path            string `json:"path"`
-	DestinationPath string `json:"dest_path"`
+	DestinationPath string `json:"destPath"`
 }
 
 // UploadFiles hashes each of the files specified in files and uploads
 // them to the path "{CachePathPrefix}/{hash}". After, it uploads a JSON file
 // to CacheMovePath that specifies the uploaded location of every file and it's
 // intended destination path.
-func (u *CacheUploader) UploadFiles(files []manifest.FileUpload) (string, error) {
+func (u *CacheUploader) UploadFiles(files []manifest.FileUpload) error {
 	var assets []cached
 	for _, f := range files {
 		matcher := buildCompositeMatchers(buildReincludeMatchers(f.Reinclude.ToStringSlice()), buildExcludeMatchers(f.Exclude.ToStringSlice()))
 		source := filepath.Join(f.Context, f.Source)
 
 		if err := afero.Walk(u.FS, source, u.walkFn(source, f.Destination, f.Recursive, matcher, &assets)); err != nil {
-			return "", fmt.Errorf("walk the file tree rooted at %q: %w", source, err)
+			return fmt.Errorf("walk the file tree rooted at %q: %w", source, err)
 		}
 	}
 
 	if err := u.uploadAssets(assets); err != nil {
-		return "", err
+		return err
 	}
 
-	mappingFile := &bytes.Buffer{}
-	if err := json.NewEncoder(mappingFile).Encode(assets); err != nil {
-		return "", fmt.Errorf("unable to encode move json")
+	// stable output
+	sort.Slice(assets, func(i, j int) bool {
+		if assets[i].Path != assets[j].Path {
+			return assets[i].Path < assets[j].Path
+		}
+		return assets[i].DestinationPath < assets[j].DestinationPath
+	})
+
+	mappingFile, err := json.Marshal(assets)
+	if err != nil {
+		return fmt.Errorf("unable to encode move json")
 	}
 
 	// upload move file
-	url, err := u.Upload(u.AssetMappingPath, mappingFile)
-	if err != nil {
-		return "", fmt.Errorf("unable to upload cache move: %w", err)
+	if err := u.Upload(u.AssetMappingPath, bytes.NewBuffer(mappingFile)); err != nil {
+		return fmt.Errorf("unable to upload cache move: %w", err)
 	}
-
-	return url, nil
+	return nil
 }
 
 func (u *CacheUploader) walkFn(sourcePath, destPath string, recursive bool, matcher filepathMatcher, assets *[]cached) filepath.WalkFunc {
@@ -135,8 +142,7 @@ func (u *CacheUploader) uploadAssets(assets []cached) error {
 	for i := range assets {
 		asset := assets[i]
 		g.Go(func() error {
-			_, err := u.Upload(asset.Path, asset.content)
-			if err != nil {
+			if err := u.Upload(asset.Path, asset.content); err != nil {
 				return fmt.Errorf("upload %q: %w", asset.localPath, err)
 			}
 			return nil

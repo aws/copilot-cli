@@ -4,157 +4,257 @@
 package asset
 
 import (
-	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"path/filepath"
+	"sync"
 	"testing"
 
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
 )
 
 type fakeS3 struct {
-	err error
+	mu   sync.Mutex
+	data map[string]string
+	err  error
 }
 
-func (f *fakeS3) Upload(bucket, key string, data io.Reader) (string, error) {
-	return "", f.err
+func (f *fakeS3) Upload(path string, data io.Reader) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.err != nil {
+		return f.err
+	}
+
+	b, err := ioutil.ReadAll(data)
+	if err != nil {
+		return err
+	}
+
+	if f.data == nil {
+		f.data = make(map[string]string)
+	}
+	f.data[path] = string(b)
+	return nil
 }
 
-func Test_UploadToCache(t *testing.T) {
-	const mockContent1 = "mockContent1"
-	const mockContent2 = "mockContent2"
-	const mockContent3 = "mockContent3"
+func Test_UploadFiles(t *testing.T) {
+	const mockMappingPath, mockPrefix = "mockMappingPath", "mockPrefix"
+	const mockContent1, mockContent2, mockContent3 = "mockContent1", "mockContent2", "mockContent3"
+
 	cachePath := func(content string) string {
 		hash := sha256.New()
 		hash.Write([]byte(content))
-		return filepath.Join("mockPrefix", hex.EncodeToString(hash.Sum(nil)))
+		return filepath.Join(mockPrefix, hex.EncodeToString(hash.Sum(nil)))
 	}
 
-	cached := func(localPath, destPath string, content string) Cached {
-		return Cached{
-			LocalPath:       localPath,
-			Content:         bytes.NewBuffer([]byte(content)),
-			CacheBucket:     "mockBucket",
-			CachePath:       cachePath(content),
-			DestinationPath: destPath,
-		}
+	mappingFile := func(assets []cached) string {
+		b, err := json.Marshal(assets)
+		require.NoError(t, err)
+		return string(b)
 	}
 
 	testCases := map[string]struct {
-		inSource       string
-		inDest         string
-		inReincludes   []string
-		inExcludes     []string
-		inRecursive    bool
-		inMockS3       fakeS3
+		files          []manifest.FileUpload
+		mockS3Error    error
 		mockFileSystem func(fs afero.Fs)
 
-		expected      []Cached
+		expected      map[string]string
 		expectedError error
 	}{
 		"error if failed to upload": {
-			inSource:    "test",
-			inRecursive: true,
+			files: []manifest.FileUpload{
+				{
+					Source:    "test",
+					Recursive: true,
+				},
+			},
 			mockFileSystem: func(fs afero.Fs) {
 				afero.WriteFile(fs, "test/copilot/.workspace", []byte(mockContent1), 0644)
 				afero.WriteFile(fs, "copilot/prod/manifest.yaml", []byte(mockContent2), 0644)
 			},
-			inMockS3: fakeS3{
-				err: errors.New("mock error"),
-			},
+			mockS3Error:   errors.New("mock error"),
 			expectedError: fmt.Errorf(`upload "test/copilot/.workspace": mock error`),
 		},
 		"success without include and exclude": {
 			// source=directory, dest unset
-			inSource:    "test",
-			inRecursive: true,
+			files: []manifest.FileUpload{
+				{
+					Source:    "test",
+					Recursive: true,
+				},
+			},
 			mockFileSystem: func(fs afero.Fs) {
 				afero.WriteFile(fs, "test/copilot/.workspace", []byte(mockContent1), 0644)
 				afero.WriteFile(fs, "copilot/prod/manifest.yaml", []byte(mockContent2), 0644)
 			},
-			expected: []Cached{
-				cached("test/copilot/.workspace", "copilot/.workspace", mockContent1),
+			expected: map[string]string{
+				cachePath(mockContent1): mockContent1,
+				mockMappingPath: mappingFile([]cached{
+					{
+						Path:            cachePath(mockContent1),
+						DestinationPath: "copilot/.workspace",
+					},
+				}),
 			},
 		},
 		"success without recursive": {
 			// source=directory, dest unset
-			inSource: "test",
+			files: []manifest.FileUpload{
+				{
+					Source: "test",
+				},
+			},
 			mockFileSystem: func(fs afero.Fs) {
 				afero.WriteFile(fs, "test/copilot/.workspace", []byte(mockContent1), 0644)
 				afero.WriteFile(fs, "test/manifest.yaml", []byte(mockContent2), 0644)
 				afero.WriteFile(fs, "test/foo", []byte(mockContent3), 0644)
 			},
-			expected: []Cached{
-				cached("test/foo", "foo", mockContent3),
-				cached("test/manifest.yaml", "manifest.yaml", mockContent2),
+			expected: map[string]string{
+				cachePath(mockContent2): mockContent2,
+				cachePath(mockContent3): mockContent3,
+				mockMappingPath: mappingFile([]cached{
+					{
+						Path:            cachePath(mockContent3),
+						DestinationPath: "foo",
+					},
+					{
+						Path:            cachePath(mockContent2),
+						DestinationPath: "manifest.yaml",
+					},
+				}),
 			},
 		},
 		"success with include only": {
 			// source=directory, dest set
-			inSource:     "test",
-			inDest:       "ws",
-			inRecursive:  true,
-			inReincludes: []string{"copilot/prod/manifest.yaml"},
+			files: []manifest.FileUpload{
+				{
+					Source:      "test",
+					Destination: "ws",
+					Recursive:   true,
+					Reinclude: manifest.StringSliceOrString{
+						StringSlice: []string{"copilot/prod/manifest.yaml"},
+					},
+				},
+			},
 			mockFileSystem: func(fs afero.Fs) {
 				afero.WriteFile(fs, "test/copilot/.workspace", []byte(mockContent1), 0644)
 				afero.WriteFile(fs, "copilot/prod/manifest.yaml", []byte(mockContent2), 0644)
 			},
-			expected: []Cached{
-				cached("test/copilot/.workspace", "ws/copilot/.workspace", mockContent1),
+			expected: map[string]string{
+				cachePath(mockContent1): mockContent1,
+				mockMappingPath: mappingFile([]cached{
+					{
+						Path:            cachePath(mockContent1),
+						DestinationPath: "ws/copilot/.workspace",
+					},
+				}),
 			},
 		},
 		"success with exclude only": {
 			// source=directory, dest unset
-			inExcludes:  []string{"copilot/prod/*.yaml"},
-			inRecursive: true,
+			files: []manifest.FileUpload{
+				{
+					Recursive: true,
+					Exclude: manifest.StringSliceOrString{
+						StringSlice: []string{"copilot/prod/*.yaml"},
+					},
+				},
+			},
 			mockFileSystem: func(fs afero.Fs) {
 				afero.WriteFile(fs, "test/copilot/.workspace", []byte(mockContent1), 0644)
 				afero.WriteFile(fs, "copilot/prod/manifest.yaml", []byte(mockContent2), 0644)
 			},
-			expected: []Cached{
-				cached("test/copilot/.workspace", "test/copilot/.workspace", mockContent1),
+			expected: map[string]string{
+				cachePath(mockContent1): mockContent1,
+				mockMappingPath: mappingFile([]cached{
+					{
+						Path:            cachePath(mockContent1),
+						DestinationPath: "test/copilot/.workspace",
+					},
+				}),
 			},
 		},
 		"success with both include and exclude": {
 			// source=directory, dest set
-			inDest:       "files",
-			inExcludes:   []string{"copilot/prod/*.yaml"},
-			inReincludes: []string{"copilot/prod/manifest.yaml"},
-			inRecursive:  true,
+			files: []manifest.FileUpload{
+				{
+					Destination: "files",
+					Recursive:   true,
+					Exclude: manifest.StringSliceOrString{
+						StringSlice: []string{"copilot/prod/*.yaml"},
+					},
+					Reinclude: manifest.StringSliceOrString{
+						StringSlice: []string{"copilot/prod/manifest.yaml"},
+					},
+				},
+			},
 			mockFileSystem: func(fs afero.Fs) {
 				afero.WriteFile(fs, "test/copilot/.workspace", []byte(mockContent1), 0644)
 				afero.WriteFile(fs, "copilot/prod/manifest.yaml", []byte(mockContent2), 0644)
 				afero.WriteFile(fs, "copilot/prod/foo.yaml", []byte(mockContent3), 0644)
 			},
-			expected: []Cached{
-				cached("copilot/prod/manifest.yaml", "files/copilot/prod/manifest.yaml", mockContent2),
-				cached("test/copilot/.workspace", "files/test/copilot/.workspace", mockContent1),
+			expected: map[string]string{
+				cachePath(mockContent1): mockContent1,
+				cachePath(mockContent2): mockContent2,
+				mockMappingPath: mappingFile([]cached{
+					{
+						Path:            cachePath(mockContent2),
+						DestinationPath: "files/copilot/prod/manifest.yaml",
+					},
+					{
+						Path:            cachePath(mockContent1),
+						DestinationPath: "files/test/copilot/.workspace",
+					},
+				}),
 			},
 		},
 		"success with file as source": {
 			// source=file, dest unset
-			inSource: "test/copilot/.workspace",
+			files: []manifest.FileUpload{
+				{
+					Source: "test/copilot/.workspace",
+				},
+			},
 			mockFileSystem: func(fs afero.Fs) {
 				afero.WriteFile(fs, "test/copilot/.workspace", []byte(mockContent1), 0644)
 			},
-			expected: []Cached{
-				cached("test/copilot/.workspace", ".workspace", mockContent1),
+			expected: map[string]string{
+				cachePath(mockContent1): mockContent1,
+				mockMappingPath: mappingFile([]cached{
+					{
+						Path:            cachePath(mockContent1),
+						DestinationPath: ".workspace",
+					},
+				}),
 			},
 		},
 		"success with file as source and destination set": {
 			// source=file, dest set
-			inSource: "test/copilot/.workspace",
-			inDest:   "/is/a/file",
+			files: []manifest.FileUpload{
+				{
+					Source:      "test/copilot/.workspace",
+					Destination: "/is/a/file",
+				},
+			},
 			mockFileSystem: func(fs afero.Fs) {
 				afero.WriteFile(fs, "test/copilot/.workspace", []byte(mockContent1), 0644)
 			},
-			expected: []Cached{
-				cached("test/copilot/.workspace", "/is/a/file", mockContent1),
+			expected: map[string]string{
+				cachePath(mockContent1): mockContent1,
+				mockMappingPath: mappingFile([]cached{
+					{
+						Path:            cachePath(mockContent1),
+						DestinationPath: "/is/a/file",
+					},
+				}),
 			},
 		},
 	}
@@ -165,25 +265,26 @@ func Test_UploadToCache(t *testing.T) {
 			// Set it up
 			tc.mockFileSystem(fs)
 
-			u := Uploader{
-				FS:              fs,
-				Upload:          tc.inMockS3.Upload,
-				CachePathPrefix: "mockPrefix",
-				CacheBucket:     "mockBucket",
+			mockS3 := &fakeS3{
+				err: tc.mockS3Error,
 			}
 
-			files, err := u.UploadToCache(tc.inSource, tc.inDest, &UploadOpts{
-				Excludes:   tc.inExcludes,
-				Reincludes: tc.inReincludes,
-				Recursive:  tc.inRecursive,
-			})
-			if tc.expectedError == nil {
-				require.NoError(t, err)
-				require.Equal(t, tc.expected, files)
-			} else {
+			u := CacheUploader{
+				FS:               fs,
+				Upload:           mockS3.Upload,
+				PathPrefix:       mockPrefix,
+				AssetMappingPath: mockMappingPath,
+			}
+
+			err := u.UploadFiles(tc.files)
+			if tc.expectedError != nil {
 				require.Error(t, err)
 				require.Equal(t, tc.expectedError.Error(), err.Error())
+				return
 			}
+
+			require.NoError(t, err)
+			require.Equal(t, tc.expected, mockS3.data)
 		})
 	}
 }
