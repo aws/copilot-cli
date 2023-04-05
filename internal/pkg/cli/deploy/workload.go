@@ -517,15 +517,15 @@ func isCIEnvironment() bool {
 	return false
 }
 
-// copyOutputToBuffer copies the build and push output from the given io.Reader to the buildPushOutputBuffer buffer.
+// copyOutputToBuffer copies the build and push output from the given io.Reader to the TermPrinter buffer.
 // return an error if copying fails or if the reader returns an unexpected error.
-func copyOutputToBuffer(pr io.Reader, buffer *syncbuffer.TermPrinter, name string) error {
+func copyOutputToBuffer(pr io.Reader, printer *syncbuffer.TermPrinter, name string) error {
 	defer func() {
-		buffer.Buf.MarkDone()
+		printer.Buf.MarkDone()
 	}()
 
 	// copy the build and push output to the output buffer
-	_, err := io.Copy(buffer.Buf, pr)
+	_, err := io.Copy(printer.Buf, pr)
 	if err != nil && !errors.Is(err, io.EOF) {
 		return fmt.Errorf("copying build and push output for container %s: %w", name, err)
 	}
