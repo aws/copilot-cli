@@ -40,14 +40,14 @@ type asset struct {
 	localPath string
 	content   io.Reader
 
-	Path            string `json:"path"`
-	DestinationPath string `json:"destPath"`
+	ArtifactBucketPath string `json:"path"`
+	ServiceBucketPath  string `json:"destPath"`
 }
 
 // UploadFiles hashes each of the files specified in files and uploads
-// them to the path "{CachePathPrefix}/{hash}". After, it uploads a JSON file
-// to CacheMovePath that specifies the uploaded location of every file and it's
-// intended destination path.
+// them to the path "{PathPrefix}/{hash}". After, it uploads a JSON file
+// to AssetMappingPath that specifies the location of every file in the artifact bucket and it's
+// intended destination path in the service bucket.
 func (u *ArtifactBucketUploader) UploadFiles(files []manifest.FileUpload) error {
 	var assets []asset
 	for _, f := range files {
@@ -113,10 +113,10 @@ func (u *ArtifactBucketUploader) walkFn(sourcePath, destPath string, recursive b
 		}
 
 		*assets = append(*assets, asset{
-			localPath:       path,
-			content:         buf,
-			Path:            filepath.Join(u.PathPrefix, hex.EncodeToString(hash.Sum(nil))),
-			DestinationPath: dest,
+			localPath:          path,
+			content:            buf,
+			ArtifactBucketPath: filepath.Join(u.PathPrefix, hex.EncodeToString(hash.Sum(nil))),
+			ServiceBucketPath:  dest,
 		})
 		return nil
 	}
@@ -128,7 +128,7 @@ func (u *ArtifactBucketUploader) uploadAssets(assets []asset) error {
 	for i := range assets {
 		asset := assets[i]
 		g.Go(func() error {
-			if err := u.Upload(asset.Path, asset.content); err != nil {
+			if err := u.Upload(asset.ArtifactBucketPath, asset.content); err != nil {
 				return fmt.Errorf("upload %q: %w", asset.localPath, err)
 			}
 			return nil
@@ -141,10 +141,10 @@ func (u *ArtifactBucketUploader) uploadAssets(assets []asset) error {
 func (u *ArtifactBucketUploader) uploadAssetMappingFile(assets []asset) error {
 	// stable output
 	sort.Slice(assets, func(i, j int) bool {
-		if assets[i].Path != assets[j].Path {
-			return assets[i].Path < assets[j].Path
+		if assets[i].ArtifactBucketPath != assets[j].ArtifactBucketPath {
+			return assets[i].ArtifactBucketPath < assets[j].ArtifactBucketPath
 		}
-		return assets[i].DestinationPath < assets[j].DestinationPath
+		return assets[i].ServiceBucketPath < assets[j].ServiceBucketPath
 	})
 
 	data, err := json.Marshal(assets)

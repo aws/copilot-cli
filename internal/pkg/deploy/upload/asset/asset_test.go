@@ -98,8 +98,8 @@ func Test_UploadFiles(t *testing.T) {
 				cachePath(mockContent1): mockContent1,
 				mockMappingPath: mappingFile([]asset{
 					{
-						Path:            cachePath(mockContent1),
-						DestinationPath: "copilot/.workspace",
+						ArtifactBucketPath: cachePath(mockContent1),
+						ServiceBucketPath:  "copilot/.workspace",
 					},
 				}),
 			},
@@ -121,12 +121,12 @@ func Test_UploadFiles(t *testing.T) {
 				cachePath(mockContent3): mockContent3,
 				mockMappingPath: mappingFile([]asset{
 					{
-						Path:            cachePath(mockContent3),
-						DestinationPath: "foo",
+						ArtifactBucketPath: cachePath(mockContent3),
+						ServiceBucketPath:  "foo",
 					},
 					{
-						Path:            cachePath(mockContent2),
-						DestinationPath: "manifest.yaml",
+						ArtifactBucketPath: cachePath(mockContent2),
+						ServiceBucketPath:  "manifest.yaml",
 					},
 				}),
 			},
@@ -151,8 +151,8 @@ func Test_UploadFiles(t *testing.T) {
 				cachePath(mockContent1): mockContent1,
 				mockMappingPath: mappingFile([]asset{
 					{
-						Path:            cachePath(mockContent1),
-						DestinationPath: "ws/copilot/.workspace",
+						ArtifactBucketPath: cachePath(mockContent1),
+						ServiceBucketPath:  "ws/copilot/.workspace",
 					},
 				}),
 			},
@@ -175,8 +175,8 @@ func Test_UploadFiles(t *testing.T) {
 				cachePath(mockContent1): mockContent1,
 				mockMappingPath: mappingFile([]asset{
 					{
-						Path:            cachePath(mockContent1),
-						DestinationPath: "test/copilot/.workspace",
+						ArtifactBucketPath: cachePath(mockContent1),
+						ServiceBucketPath:  "test/copilot/.workspace",
 					},
 				}),
 			},
@@ -205,12 +205,12 @@ func Test_UploadFiles(t *testing.T) {
 				cachePath(mockContent2): mockContent2,
 				mockMappingPath: mappingFile([]asset{
 					{
-						Path:            cachePath(mockContent2),
-						DestinationPath: "files/copilot/prod/manifest.yaml",
+						ArtifactBucketPath: cachePath(mockContent2),
+						ServiceBucketPath:  "files/copilot/prod/manifest.yaml",
 					},
 					{
-						Path:            cachePath(mockContent1),
-						DestinationPath: "files/test/copilot/.workspace",
+						ArtifactBucketPath: cachePath(mockContent1),
+						ServiceBucketPath:  "files/test/copilot/.workspace",
 					},
 				}),
 			},
@@ -229,8 +229,8 @@ func Test_UploadFiles(t *testing.T) {
 				cachePath(mockContent1): mockContent1,
 				mockMappingPath: mappingFile([]asset{
 					{
-						Path:            cachePath(mockContent1),
-						DestinationPath: ".workspace",
+						ArtifactBucketPath: cachePath(mockContent1),
+						ServiceBucketPath:  ".workspace",
 					},
 				}),
 			},
@@ -250,8 +250,8 @@ func Test_UploadFiles(t *testing.T) {
 				cachePath(mockContent1): mockContent1,
 				mockMappingPath: mappingFile([]asset{
 					{
-						Path:            cachePath(mockContent1),
-						DestinationPath: "/is/a/file",
+						ArtifactBucketPath: cachePath(mockContent1),
+						ServiceBucketPath:  "/is/a/file",
 					},
 				}),
 			},
