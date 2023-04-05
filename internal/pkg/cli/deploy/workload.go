@@ -548,7 +548,7 @@ func printAndErase(t terminalPrinter, termPrinters []*syncbuffer.TermPrinter) er
 			// calculate the terminal width everytime just before printing to the terminal.
 			width, err := t.TerminalWidth()
 			if err != nil {
-				return err
+				return fmt.Errorf("get terminal width: %w", err)
 			}
 			printer.TermWidth = width
 
