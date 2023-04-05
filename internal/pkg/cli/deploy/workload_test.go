@@ -49,7 +49,7 @@ type deployMocks struct {
 	mockEnvVersionGetter       *mocks.MockversionGetter
 	mockFileReader             *mocks.MockfileReader
 	mockValidator              *mocks.MockaliasCertValidator
-	mockTerminalPrinter        *mocks.MockterminalPrinter
+	mockterminalWidthGetter    *mocks.MockterminalWidthGetter
 }
 
 type mockTemplateFS struct {
@@ -213,7 +213,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 						"com.aws.copilot.image.container.name": "mockWkld",
 					},
 				}, gomock.Any()).Return("", mockError)
-				m.mockTerminalPrinter.EXPECT().TerminalWidth().Return(80, nil).AnyTimes()
+				m.mockterminalWidthGetter.EXPECT().TerminalWidth().Return(80, nil).AnyTimes()
 			},
 			wantErr: fmt.Errorf("build and push image: some error"),
 		},
@@ -228,7 +228,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			},
 			mock: func(t *testing.T, m *deployMocks) {
 				m.mockRepositoryService.EXPECT().Login().Return(nil)
-				m.mockTerminalPrinter.EXPECT().TerminalWidth().Return(80, nil).AnyTimes()
+				m.mockterminalWidthGetter.EXPECT().TerminalWidth().Return(80, nil).AnyTimes()
 				m.mockRepositoryService.EXPECT().BuildAndPush(&dockerengine.BuildArguments{
 					Dockerfile: "mockDockerfile",
 					Context:    "mockContext",
@@ -270,7 +270,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 						"com.aws.copilot.image.container.name": "mockWkld",
 					},
 				}, gomock.Any()).Return("mockDigest", nil)
-				m.mockTerminalPrinter.EXPECT().TerminalWidth().Return(80, nil).AnyTimes()
+				m.mockterminalWidthGetter.EXPECT().TerminalWidth().Return(80, nil).AnyTimes()
 				m.mockAddons = nil
 			},
 			wantImages: map[string]ContainerImageIdentifier{
@@ -304,7 +304,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 						"com.aws.copilot.image.container.name": "nginx",
 					},
 				}, gomock.Any()).Return("sidecarMockDigest1", nil)
-				m.mockTerminalPrinter.EXPECT().TerminalWidth().Return(80, nil).AnyTimes()
+				m.mockterminalWidthGetter.EXPECT().TerminalWidth().Return(80, nil).AnyTimes()
 				m.mockRepositoryService.EXPECT().BuildAndPush(&dockerengine.BuildArguments{
 					Dockerfile: "web/Dockerfile",
 					Context:    "Users/bowie",
@@ -595,11 +595,11 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			defer ctrl.Finish()
 
 			m := &deployMocks{
-				mockUploader:          mocks.NewMockuploader(ctrl),
-				mockAddons:            mocks.NewMockstackBuilder(ctrl),
-				mockRepositoryService: mocks.NewMockrepositoryService(ctrl),
-				mockFileReader:        mocks.NewMockfileReader(ctrl),
-				mockTerminalPrinter:   mocks.NewMockterminalPrinter(ctrl),
+				mockUploader:            mocks.NewMockuploader(ctrl),
+				mockAddons:              mocks.NewMockstackBuilder(ctrl),
+				mockRepositoryService:   mocks.NewMockrepositoryService(ctrl),
+				mockFileReader:          mocks.NewMockfileReader(ctrl),
+				mockterminalWidthGetter: mocks.NewMockterminalWidthGetter(ctrl),
 			}
 			tc.mock(t, m)
 
@@ -631,13 +631,13 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 					customEnvFiles:  tc.customEnvFiles,
 					dockerBuildArgs: tc.inDockerBuildArgs,
 				},
-				fs:              m.mockFileReader,
-				s3Client:        m.mockUploader,
-				repository:      m.mockRepositoryService,
-				templateFS:      fakeTemplateFS(),
-				overrider:       new(override.Noop),
-				customResources: crFn,
-				terminalPrinter: m.mockTerminalPrinter,
+				fs:                  m.mockFileReader,
+				s3Client:            m.mockUploader,
+				repository:          m.mockRepositoryService,
+				templateFS:          fakeTemplateFS(),
+				overrider:           new(override.Noop),
+				customResources:     crFn,
+				terminalWidthGetter: m.mockterminalWidthGetter,
 			}
 			if m.mockAddons != nil {
 				wkldDeployer.addons = m.mockAddons

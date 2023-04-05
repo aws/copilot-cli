@@ -120,7 +120,7 @@ type fileReader interface {
 	ReadFile(string) ([]byte, error)
 }
 
-type terminalPrinter interface {
+type terminalWidthGetter interface {
 	TerminalWidth() (int, error)
 }
 
@@ -168,19 +168,19 @@ type workloadDeployer struct {
 	workspacePath string
 
 	// Dependencies.
-	fs               fileReader
-	s3Client         uploader
-	addons           stackBuilder
-	repository       repositoryService
-	deployer         serviceDeployer
-	tmplGetter       deployedTemplateGetter
-	endpointGetter   endpointGetter
-	spinner          spinner
-	templateFS       template.Reader
-	envVersionGetter versionGetter
-	overrider        Overrider
-	customResources  customResourcesFunc
-	terminalPrinter  terminalPrinter
+	fs                  fileReader
+	s3Client            uploader
+	addons              stackBuilder
+	repository          repositoryService
+	deployer            serviceDeployer
+	tmplGetter          deployedTemplateGetter
+	endpointGetter      endpointGetter
+	spinner             spinner
+	templateFS          template.Reader
+	envVersionGetter    versionGetter
+	overrider           Overrider
+	customResources     customResourcesFunc
+	terminalWidthGetter terminalWidthGetter
 
 	// Cached variables.
 	defaultSess              *session.Session
@@ -269,7 +269,7 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 	}
 
 	cfn := cloudformation.New(envSession, cloudformation.WithProgressTracker(os.Stderr))
-	terminalPrinter := syncbuffer.NewTermPrinter(log.DiagnosticWriter)
+	terminalWidthGetter := syncbuffer.NewTermPrinter(log.DiagnosticWriter)
 	if err != nil {
 		return nil, err
 	}
@@ -297,7 +297,7 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 		envSess:                  envSession,
 		store:                    store,
 		envConfig:                envConfig,
-		terminalPrinter:          terminalPrinter,
+		terminalWidthGetter:      terminalWidthGetter,
 		mft:                      in.Mft,
 		rawMft:                   in.RawMft,
 	}, nil
@@ -452,7 +452,7 @@ func (d *workloadDeployer) uploadContainerImages(out *UploadArtifactsOutput) err
 		})
 	} else {
 		g.Go(func() error {
-			return printAndErase(d.terminalPrinter, termPrinters)
+			return printAndErase(d.terminalWidthGetter, termPrinters)
 		})
 	}
 
@@ -535,7 +535,7 @@ func copyOutputToBuffer(pr io.Reader, buffer *syncbuffer.TermPrinter, name strin
 // printAndErase prints the build and push output from the list of buildPushOutputBuffer buffers.
 // It polls each buffer until all build and push calls are completed,
 // and erases the previous output after sleeping for a short duration.
-func printAndErase(t terminalPrinter, termPrinters []*syncbuffer.TermPrinter) error {
+func printAndErase(t terminalWidthGetter, termPrinters []*syncbuffer.TermPrinter) error {
 	for {
 		totalWrittenLines := 0
 		// check whether all build and push calls are completed.
