@@ -20,7 +20,8 @@ const (
 
 // DeleteWorkloadInput holds the fields required to delete a workload.
 type DeleteWorkloadInput struct {
-	Name    string // Name of the workload that needs to be deleted.
-	EnvName string // Name of the environment the service is deployed in.
-	AppName string // Name of the application the service belongs to.
+	Name             string
+	EnvName          string
+	AppName          string
+	ExecutionRoleARN string
 }
