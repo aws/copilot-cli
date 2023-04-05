@@ -26,8 +26,8 @@ type fileWriter interface {
 
 // SyncBuffer is a synchronized buffer used to store the output of build and push operations.
 type SyncBuffer struct {
-	BufMu sync.Mutex   // bufMu is a mutex to protect access to the buffer.
-	Buf   bytes.Buffer // buf is the buffer containing the output of build and push.
+	BufMu sync.Mutex   // BufMu is a mutex to protect access to the buffer.
+	Buf   bytes.Buffer // Buf is the buffer containing the output of build and push.
 
 	Done chan struct{} // done is a channel indicating whether the build and push is completed.
 }
@@ -50,7 +50,7 @@ func (b *SyncBuffer) strings() []string {
 	return lines
 }
 
-// IsDone returns true if the Done channel has been closed, indicating that the build and push is completed.
+// IsDone returns true if the Done channel has been closed.
 func (b *SyncBuffer) IsDone() bool {
 	select {
 	case <-b.Done:
@@ -60,7 +60,7 @@ func (b *SyncBuffer) IsDone() bool {
 	}
 }
 
-// MarkDone closes the Done channel, indicating that the build and push is completed.
+// MarkDone closes the Done channel.
 func (b *SyncBuffer) MarkDone() {
 	close(b.Done)
 }
@@ -70,6 +70,7 @@ type TermPrinter struct {
 	Term             fileWriter
 	Buf              *SyncBuffer
 	PrevWrittenLines int
+	TermWidth        int
 }
 
 // NewTermPrinter returns a new instance of TermPrinter that writes logs to the given file writer and reads logs from a new synchronized buffer.
@@ -82,8 +83,8 @@ func NewTermPrinter(fw fileWriter) *TermPrinter {
 	}
 }
 
-// Print prints the last five lines of logs to the terminal.
-func (t *TermPrinter) Print() error {
+// PrintLastFiveLines prints the label and the last five lines of logs to the termPrinter fileWriter.
+func (t *TermPrinter) PrintLastFiveLines() error {
 	logs := t.Buf.strings()
 	outputLogs := t.lastFiveLogLines(logs)
 	if len(outputLogs) > 0 {
@@ -91,10 +92,7 @@ func (t *TermPrinter) Print() error {
 		for _, logLine := range outputLogs {
 			fmt.Fprintln(t.Term, logLine)
 		}
-		writtenLines, err := t.numLines(append(outputLogs[:], logs[0]))
-		if err != nil {
-			return fmt.Errorf("get terminal size: %w", err)
-		}
+		writtenLines := t.numLines(append(outputLogs[:], logs[0]))
 		t.PrevWrittenLines = writtenLines
 	}
 	return nil
@@ -122,27 +120,28 @@ func (t *TermPrinter) lastFiveLogLines(logs []string) [maxLogLines]string {
 
 // numLines calculates the actual number of lines needed to print the given string slice based on the terminal width
 // It returns the sum of these line counts or an error occurs while getting the terminal size.
-func (t *TermPrinter) numLines(lines []string) (int, error) {
-	// Get the terminal width
-	width, _, err := term.GetSize(int(os.Stderr.Fd()))
-	if err != nil {
-		return 0, err
-	}
-
-	// Calculate the number of lines needed to print the given lines.
+func (t *TermPrinter) numLines(lines []string) int {
 	var numLines float64
 	for _, line := range lines {
 		// Empty line should be considered as a new line
 		if line == "" {
 			numLines = numLines + 1
 		}
-		numLines += math.Ceil(float64(len(line)) / float64(width))
+		numLines += math.Ceil(float64(len(line)) / float64(t.TermWidth))
 	}
-
-	return int(numLines), nil
+	return int(numLines)
 }
 
-// PrintAll writes the entire contents of the buffer to the file writer if the build and push operation is completed.
+// TerminalWidth returns the width of the terminal or an error if failed to get the width of terminal.
+func (t *TermPrinter) TerminalWidth() (int, error) {
+	width, _, err := term.GetSize(int(os.Stderr.Fd()))
+	if err != nil {
+		return 0, err
+	}
+	return width, nil
+}
+
+// PrintAll writes the entire contents of the buffer to the file writer.
 func (t *TermPrinter) PrintAll() {
 	outputLogs := t.Buf.strings()
 	for _, logLine := range outputLogs {

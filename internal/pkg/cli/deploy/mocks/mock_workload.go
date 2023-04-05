@@ -465,6 +465,44 @@ func (mr *MockfileReaderMockRecorder) ReadFile(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadFile", reflect.TypeOf((*MockfileReader)(nil).ReadFile), arg0)
 }
 
+// MockterminalPrinter is a mock of terminalPrinter interface.
+type MockterminalPrinter struct {
+	ctrl     *gomock.Controller
+	recorder *MockterminalPrinterMockRecorder
+}
+
+// MockterminalPrinterMockRecorder is the mock recorder for MockterminalPrinter.
+type MockterminalPrinterMockRecorder struct {
+	mock *MockterminalPrinter
+}
+
+// NewMockterminalPrinter creates a new mock instance.
+func NewMockterminalPrinter(ctrl *gomock.Controller) *MockterminalPrinter {
+	mock := &MockterminalPrinter{ctrl: ctrl}
+	mock.recorder = &MockterminalPrinterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockterminalPrinter) EXPECT() *MockterminalPrinterMockRecorder {
+	return m.recorder
+}
+
+// TerminalWidth mocks base method.
+func (m *MockterminalPrinter) TerminalWidth() (int, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "TerminalWidth")
+	ret0, _ := ret[0].(int)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// TerminalWidth indicates an expected call of TerminalWidth.
+func (mr *MockterminalPrinterMockRecorder) TerminalWidth() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TerminalWidth", reflect.TypeOf((*MockterminalPrinter)(nil).TerminalWidth))
+}
+
 // MocktimeoutError is a mock of timeoutError interface.
 type MocktimeoutError struct {
 	ctrl     *gomock.Controller

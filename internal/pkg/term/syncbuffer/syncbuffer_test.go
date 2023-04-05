@@ -134,7 +134,7 @@ func TestTermPrinter_lastFiveLogLines(t *testing.T) {
 	}
 }
 
-func TestTermPrinter_Print(t *testing.T) {
+func TestTermPrinter_PrintLastFiveLines(t *testing.T) {
 	testCases := map[string]struct {
 		logs   []string
 		wanted string
@@ -164,8 +164,7 @@ line 8
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
 			buf := &SyncBuffer{
-				Buf:  bytes.Buffer{},
-				Done: make(chan struct{}),
+				Buf: bytes.Buffer{},
 			}
 			buf.Buf.Write([]byte(strings.Join(tc.logs, "\n")))
 			termOut := &bytes.Buffer{}
@@ -175,7 +174,7 @@ line 8
 			}
 
 			// WHEN
-			printer.Print()
+			printer.PrintLastFiveLines()
 
 			// THEN
 			require.Equal(t, tc.wanted, termOut.String())
@@ -215,8 +214,7 @@ line 8
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
 			buf := &SyncBuffer{
-				Buf:  bytes.Buffer{},
-				Done: make(chan struct{}),
+				Buf: bytes.Buffer{},
 			}
 			buf.Buf.Write([]byte(strings.Join(tc.logs, "\n")))
 			termOut := &bytes.Buffer{}

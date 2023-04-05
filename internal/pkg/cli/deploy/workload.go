@@ -120,6 +120,10 @@ type fileReader interface {
 	ReadFile(string) ([]byte, error)
 }
 
+type terminalPrinter interface {
+	TerminalWidth() (int, error)
+}
+
 // StackRuntimeConfiguration contains runtime configuration for a workload CloudFormation stack.
 type StackRuntimeConfiguration struct {
 	ImageDigests       map[string]ContainerImageIdentifier // Container name to image.
@@ -176,6 +180,7 @@ type workloadDeployer struct {
 	envVersionGetter versionGetter
 	overrider        Overrider
 	customResources  customResourcesFunc
+	terminalPrinter  terminalPrinter
 
 	// Cached variables.
 	defaultSess              *session.Session
@@ -264,6 +269,10 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 	}
 
 	cfn := cloudformation.New(envSession, cloudformation.WithProgressTracker(os.Stderr))
+	terminalPrinter := syncbuffer.NewTermPrinter(log.DiagnosticWriter)
+	if err != nil {
+		return nil, err
+	}
 	return &workloadDeployer{
 		name:                     in.Name,
 		app:                      in.App,
@@ -288,9 +297,9 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 		envSess:                  envSession,
 		store:                    store,
 		envConfig:                envConfig,
-
-		mft:    in.Mft,
-		rawMft: in.RawMft,
+		terminalPrinter:          terminalPrinter,
+		mft:                      in.Mft,
+		rawMft:                   in.RawMft,
 	}, nil
 }
 
@@ -409,6 +418,9 @@ func (d *workloadDeployer) uploadContainerImages(out *UploadArtifactsOutput) err
 		pr, pw := io.Pipe()
 
 		termPrinter := syncbuffer.NewTermPrinter(log.DiagnosticWriter)
+		if err != nil {
+			return err
+		}
 		termPrinters[count] = termPrinter
 		count++
 
@@ -436,11 +448,11 @@ func (d *workloadDeployer) uploadContainerImages(out *UploadArtifactsOutput) err
 	// check if CI is true or not.
 	if isCIEnvironment() {
 		g.Go(func() error {
-			return printAllFromBuffers(termPrinters)
+			return printAll(termPrinters)
 		})
 	} else {
 		g.Go(func() error {
-			return printAndEraseFromBuffers(termPrinters)
+			return printAndErase(d.terminalPrinter, termPrinters)
 		})
 	}
 
@@ -520,10 +532,10 @@ func copyOutputToBuffer(pr io.Reader, buffer *syncbuffer.TermPrinter, name strin
 	return nil
 }
 
-// printAndEraseFromBuffers prints the build and push output from the list of buildPushOutputBuffer buffers to stderr.
+// printAndErase prints the build and push output from the list of buildPushOutputBuffer buffers.
 // It polls each buffer until all build and push calls are completed,
 // and erases the previous output after sleeping for a short duration.
-func printAndEraseFromBuffers(termPrinters []*syncbuffer.TermPrinter) error {
+func printAndErase(t terminalPrinter, termPrinters []*syncbuffer.TermPrinter) error {
 	for {
 		totalWrittenLines := 0
 		// check whether all build and push calls are completed.
@@ -532,7 +544,15 @@ func printAndEraseFromBuffers(termPrinters []*syncbuffer.TermPrinter) error {
 			if !printer.Buf.IsDone() {
 				allDone = false
 			}
-			if err := printer.Print(); err != nil {
+
+			// calculate the terminal width everytime just before printing to the terminal.
+			width, err := t.TerminalWidth()
+			if err != nil {
+				return err
+			}
+			printer.TermWidth = width
+
+			if err := printer.PrintLastFiveLines(); err != nil {
 				return fmt.Errorf("printing output from the buffers: %w", err)
 			}
 			totalWrittenLines = totalWrittenLines + printer.PrevWrittenLines
@@ -548,8 +568,8 @@ func printAndEraseFromBuffers(termPrinters []*syncbuffer.TermPrinter) error {
 	return nil
 }
 
-// PrintAllFromBuffers prints all contents from given TermPrinter buffers once they have finished writing.
-func printAllFromBuffers(printers []*syncbuffer.TermPrinter) error {
+// PrintAllprints all contents from given TermPrinter buffers once they have finished writing.
+func printAll(printers []*syncbuffer.TermPrinter) error {
 	count := 0
 	for {
 		for _, printer := range printers {
