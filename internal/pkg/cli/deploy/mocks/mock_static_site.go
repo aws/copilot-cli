@@ -7,44 +7,43 @@ package mocks
 import (
 	reflect "reflect"
 
-	asset "github.com/aws/copilot-cli/internal/pkg/deploy/upload/asset"
+	manifest "github.com/aws/copilot-cli/internal/pkg/manifest"
 	gomock "github.com/golang/mock/gomock"
 )
 
-// MockcacheUploader is a mock of cacheUploader interface.
-type MockcacheUploader struct {
+// MockfileUploader is a mock of fileUploader interface.
+type MockfileUploader struct {
 	ctrl     *gomock.Controller
-	recorder *MockcacheUploaderMockRecorder
+	recorder *MockfileUploaderMockRecorder
 }
 
-// MockcacheUploaderMockRecorder is the mock recorder for MockcacheUploader.
-type MockcacheUploaderMockRecorder struct {
-	mock *MockcacheUploader
+// MockfileUploaderMockRecorder is the mock recorder for MockfileUploader.
+type MockfileUploaderMockRecorder struct {
+	mock *MockfileUploader
 }
 
-// NewMockcacheUploader creates a new mock instance.
-func NewMockcacheUploader(ctrl *gomock.Controller) *MockcacheUploader {
-	mock := &MockcacheUploader{ctrl: ctrl}
-	mock.recorder = &MockcacheUploaderMockRecorder{mock}
+// NewMockfileUploader creates a new mock instance.
+func NewMockfileUploader(ctrl *gomock.Controller) *MockfileUploader {
+	mock := &MockfileUploader{ctrl: ctrl}
+	mock.recorder = &MockfileUploaderMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockcacheUploader) EXPECT() *MockcacheUploaderMockRecorder {
+func (m *MockfileUploader) EXPECT() *MockfileUploaderMockRecorder {
 	return m.recorder
 }
 
-// UploadToCache mocks base method.
-func (m *MockcacheUploader) UploadToCache(source, dest string, opts *asset.UploadOpts) ([]asset.Cached, error) {
+// UploadFiles mocks base method.
+func (m *MockfileUploader) UploadFiles(files []manifest.FileUpload) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UploadToCache", source, dest, opts)
-	ret0, _ := ret[0].([]asset.Cached)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret := m.ctrl.Call(m, "UploadFiles", files)
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
-// UploadToCache indicates an expected call of UploadToCache.
-func (mr *MockcacheUploaderMockRecorder) UploadToCache(source, dest, opts interface{}) *gomock.Call {
+// UploadFiles indicates an expected call of UploadFiles.
+func (mr *MockfileUploaderMockRecorder) UploadFiles(files interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadToCache", reflect.TypeOf((*MockcacheUploader)(nil).UploadToCache), source, dest, opts)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadFiles", reflect.TypeOf((*MockfileUploader)(nil).UploadFiles), files)
 }

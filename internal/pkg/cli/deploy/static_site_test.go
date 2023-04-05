@@ -10,7 +10,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/cli/deploy/mocks"
-	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/asset"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
@@ -20,42 +20,34 @@ import (
 
 func TestStaticSiteDeployer_UploadArtifacts(t *testing.T) {
 	tests := map[string]struct {
-		mock func(m *mocks.MockcacheUploader)
+		mock func(m *mocks.MockfileUploader)
 
 		expected *UploadArtifactsOutput
 		wantErr  error
 	}{
 		"error if failed to upload": {
-			mock: func(m *mocks.MockcacheUploader) {
-				m.EXPECT().UploadToCache("frontend/assets", "static", &asset.UploadOpts{
-					Recursive: true,
-					Excludes:  []string{"*.manifest"},
-				}).Return(nil, errors.New("some error"))
+			mock: func(m *mocks.MockfileUploader) {
+				m.EXPECT().UploadFiles(gomock.Any()).Return(errors.New("some error"))
 			},
-			wantErr: fmt.Errorf("upload #1/1: some error"),
+			wantErr: fmt.Errorf("upload static files: some error"),
 		},
 		"success": {
-			mock: func(m *mocks.MockcacheUploader) {
-				m.EXPECT().UploadToCache("frontend/assets", "static", &asset.UploadOpts{
-					Recursive: true,
-					Excludes:  []string{"*.manifest"},
-				}).Return([]asset.Cached{
+			mock: func(m *mocks.MockfileUploader) {
+				m.EXPECT().UploadFiles([]manifest.FileUpload{
 					{
-						LocalPath:       "frontend/assets/index.html",
-						CachePath:       "/asdf",
-						DestinationPath: "/index.html",
+						Source:      "assets",
+						Context:     "frontend",
+						Destination: "static",
+						Recursive:   true,
+						Exclude: manifest.StringSliceOrString{
+							String: aws.String("*.manifest"),
+						},
 					},
-				}, nil)
+				})
 			},
 			expected: &UploadArtifactsOutput{
-				CustomResourceURLs: map[string]string{},
-				CachedAssets: []asset.Cached{
-					{
-						LocalPath:       "frontend/assets/index.html",
-						CachePath:       "/asdf",
-						DestinationPath: "/index.html",
-					},
-				},
+				CustomResourceURLs:             map[string]string{},
+				StaticSiteAssetMappingLocation: "s3://mockArtifactBucket/mockAssetMappingPath",
 			},
 		},
 	}
@@ -65,7 +57,7 @@ func TestStaticSiteDeployer_UploadArtifacts(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			m := mocks.NewMockcacheUploader(ctrl)
+			m := mocks.NewMockfileUploader(ctrl)
 			if tc.mock != nil {
 				tc.mock(m)
 			}
@@ -77,6 +69,9 @@ func TestStaticSiteDeployer_UploadArtifacts(t *testing.T) {
 							return nil, nil
 						},
 						mft: &mockWorkloadMft{},
+						resources: &stack.AppRegionalResources{
+							S3Bucket: "mockArtifactBucket",
+						},
 					},
 				},
 				staticSiteMft: &manifest.StaticSite{
@@ -94,8 +89,8 @@ func TestStaticSiteDeployer_UploadArtifacts(t *testing.T) {
 						},
 					},
 				},
-				uploader: m,
-				// bucketName: mockS3Bucket,
+				uploader:         m,
+				assetMappingPath: "mockAssetMappingPath",
 			}
 
 			actual, err := deployer.UploadArtifacts()

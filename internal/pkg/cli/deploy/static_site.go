@@ -20,15 +20,16 @@ import (
 	"github.com/spf13/afero"
 )
 
-type cacheUploader interface {
-	UploadFiles(files []manifest.FileUpload) (string, error)
+type fileUploader interface {
+	UploadFiles(files []manifest.FileUpload) error
 }
 
 type staticSiteDeployer struct {
 	*svcDeployer
-	staticSiteMft *manifest.StaticSite
-	fs            afero.Fs
-	uploader      cacheUploader
+	staticSiteMft    *manifest.StaticSite
+	fs               afero.Fs
+	uploader         fileUploader
+	assetMappingPath string
 }
 
 // NewStaticSiteDeployer is the constructor for staticSiteDeployer.
@@ -43,16 +44,19 @@ func NewStaticSiteDeployer(in *WorkloadDeployerInput) (*staticSiteDeployer, erro
 		return nil, fmt.Errorf("manifest is not of type %s", manifestinfo.StaticSiteType)
 	}
 	fs := afero.NewOsFs()
+	assetMappingPath := fmt.Sprintf("static-site-cache/%s/mapping/%s.json", svcDeployer.name, time.Now().Format(time.RFC3339))
 	return &staticSiteDeployer{
-		svcDeployer:   svcDeployer,
-		staticSiteMft: mft,
-		fs:            fs,
-		uploader: &asset.CacheUploader{
+		svcDeployer:      svcDeployer,
+		staticSiteMft:    mft,
+		fs:               fs,
+		assetMappingPath: assetMappingPath,
+		uploader: &asset.ArtifactBucketUploader{
 			FS:               fs,
 			PathPrefix:       fmt.Sprintf("static-site-cache/%s", svcDeployer.name),
-			AssetMappingPath: fmt.Sprintf("static-site-cache/%s/mapping/%s.json", svcDeployer.name, time.Now().Format(time.RFC3339)),
-			Upload: func(path string, data io.Reader) (string, error) {
-				return svcDeployer.s3Client.Upload(svcDeployer.resources.S3Bucket, path, data)
+			AssetMappingPath: assetMappingPath,
+			Upload: func(path string, data io.Reader) error {
+				_, err := svcDeployer.s3Client.Upload(svcDeployer.resources.S3Bucket, path, data)
+				return err
 			},
 		},
 	}, nil
@@ -101,12 +105,11 @@ func (d *staticSiteDeployer) UploadArtifacts() (*UploadArtifactsOutput, error) {
 }
 
 func (d *staticSiteDeployer) uploadStaticFiles(out *UploadArtifactsOutput) error {
-	url, err := d.uploader.UploadFiles(d.staticSiteMft.FileUploads)
-	if err != nil {
-		return err
+	if err := d.uploader.UploadFiles(d.staticSiteMft.FileUploads); err != nil {
+		return fmt.Errorf("upload static files: %w", err)
 	}
 
-	out.StaticSiteAssetMappingURL = url
+	out.StaticSiteAssetMappingLocation = s3.Location(d.resources.S3Bucket, d.assetMappingPath)
 	return nil
 }
 

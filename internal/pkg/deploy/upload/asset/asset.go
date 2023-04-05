@@ -21,22 +21,22 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-// CacheUploader uploads local asset files.
-type CacheUploader struct {
+// ArtifactBucketUploader uploads local asset files.
+type ArtifactBucketUploader struct {
 	// FS is the file system to use.
 	FS afero.Fs
 
 	// Upload is the function called when uploading a file.
 	Upload func(path string, contents io.Reader) error
 
-	// PathPrefix is the path to prefix any hashed files when uploading to the cache.
+	// PathPrefix is the path to prefix any hashed files when uploading to the artifact bucket.
 	PathPrefix string
 
 	// AssetMappingPath is the path the upload the asset mapping file to.
 	AssetMappingPath string
 }
 
-type cached struct {
+type asset struct {
 	localPath string
 	content   io.Reader
 
@@ -48,42 +48,28 @@ type cached struct {
 // them to the path "{CachePathPrefix}/{hash}". After, it uploads a JSON file
 // to CacheMovePath that specifies the uploaded location of every file and it's
 // intended destination path.
-func (u *CacheUploader) UploadFiles(files []manifest.FileUpload) error {
-	var assets []cached
+func (u *ArtifactBucketUploader) UploadFiles(files []manifest.FileUpload) error {
+	var assets []asset
 	for _, f := range files {
 		matcher := buildCompositeMatchers(buildReincludeMatchers(f.Reinclude.ToStringSlice()), buildExcludeMatchers(f.Exclude.ToStringSlice()))
 		source := filepath.Join(f.Context, f.Source)
 
 		if err := afero.Walk(u.FS, source, u.walkFn(source, f.Destination, f.Recursive, matcher, &assets)); err != nil {
-			return fmt.Errorf("walk the file tree rooted at %q: %w", source, err)
+			return fmt.Errorf("walk the file tree rooted at %q: %s", source, err)
 		}
 	}
 
 	if err := u.uploadAssets(assets); err != nil {
-		return err
+		return fmt.Errorf("upload assets: %s", err)
 	}
 
-	// stable output
-	sort.Slice(assets, func(i, j int) bool {
-		if assets[i].Path != assets[j].Path {
-			return assets[i].Path < assets[j].Path
-		}
-		return assets[i].DestinationPath < assets[j].DestinationPath
-	})
-
-	mappingFile, err := json.Marshal(assets)
-	if err != nil {
-		return fmt.Errorf("unable to encode move json")
-	}
-
-	// upload move file
-	if err := u.Upload(u.AssetMappingPath, bytes.NewBuffer(mappingFile)); err != nil {
-		return fmt.Errorf("unable to upload cache move: %w", err)
+	if err := u.uploadAssetMappingFile(assets); err != nil {
+		return fmt.Errorf("upload asset mapping file: %s", err)
 	}
 	return nil
 }
 
-func (u *CacheUploader) walkFn(sourcePath, destPath string, recursive bool, matcher filepathMatcher, assets *[]cached) filepath.WalkFunc {
+func (u *ArtifactBucketUploader) walkFn(sourcePath, destPath string, recursive bool, matcher filepathMatcher, assets *[]asset) filepath.WalkFunc {
 	return func(path string, info fs.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -126,7 +112,7 @@ func (u *CacheUploader) walkFn(sourcePath, destPath string, recursive bool, matc
 			dest = info.Name()
 		}
 
-		*assets = append(*assets, cached{
+		*assets = append(*assets, asset{
 			localPath:       path,
 			content:         buf,
 			Path:            filepath.Join(u.PathPrefix, hex.EncodeToString(hash.Sum(nil))),
@@ -136,7 +122,7 @@ func (u *CacheUploader) walkFn(sourcePath, destPath string, recursive bool, matc
 	}
 }
 
-func (u *CacheUploader) uploadAssets(assets []cached) error {
+func (u *ArtifactBucketUploader) uploadAssets(assets []asset) error {
 	g, _ := errgroup.WithContext(context.Background())
 
 	for i := range assets {
@@ -150,4 +136,24 @@ func (u *CacheUploader) uploadAssets(assets []cached) error {
 	}
 
 	return g.Wait()
+}
+
+func (u *ArtifactBucketUploader) uploadAssetMappingFile(assets []asset) error {
+	// stable output
+	sort.Slice(assets, func(i, j int) bool {
+		if assets[i].Path != assets[j].Path {
+			return assets[i].Path < assets[j].Path
+		}
+		return assets[i].DestinationPath < assets[j].DestinationPath
+	})
+
+	data, err := json.Marshal(assets)
+	if err != nil {
+		return fmt.Errorf("encode uploaded assets: %w", err)
+	}
+
+	if err := u.Upload(u.AssetMappingPath, bytes.NewBuffer(data)); err != nil {
+		return fmt.Errorf("upload to %q: %w", u.AssetMappingPath, err)
+	}
+	return nil
 }

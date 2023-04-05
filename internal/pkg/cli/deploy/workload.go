@@ -449,11 +449,11 @@ type customResourcesFunc func(fs template.Reader) ([]*customresource.CustomResou
 
 // UploadArtifactsOutput is the output of UploadArtifacts.
 type UploadArtifactsOutput struct {
-	ImageDigests              map[string]ContainerImageIdentifier // Container name to image.
-	EnvFileARNs               map[string]string                   // map[container name]envFileARN
-	AddonsURL                 string
-	CustomResourceURLs        map[string]string
-	StaticSiteAssetMappingURL string
+	ImageDigests                   map[string]ContainerImageIdentifier // Container name to image.
+	EnvFileARNs                    map[string]string                   // map[container name]envFileARN
+	AddonsURL                      string
+	CustomResourceURLs             map[string]string
+	StaticSiteAssetMappingLocation string
 }
 
 // uploadArtifactFunc uploads an artifact and updates out

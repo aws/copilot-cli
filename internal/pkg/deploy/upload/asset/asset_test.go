@@ -55,7 +55,7 @@ func Test_UploadFiles(t *testing.T) {
 		return filepath.Join(mockPrefix, hex.EncodeToString(hash.Sum(nil)))
 	}
 
-	mappingFile := func(assets []cached) string {
+	mappingFile := func(assets []asset) string {
 		b, err := json.Marshal(assets)
 		require.NoError(t, err)
 		return string(b)
@@ -97,7 +97,7 @@ func Test_UploadFiles(t *testing.T) {
 			},
 			expected: map[string]string{
 				cachePath(mockContent1): mockContent1,
-				mockMappingPath: mappingFile([]cached{
+				mockMappingPath: mappingFile([]asset{
 					{
 						Path:            cachePath(mockContent1),
 						DestinationPath: "copilot/.workspace",
@@ -120,7 +120,7 @@ func Test_UploadFiles(t *testing.T) {
 			expected: map[string]string{
 				cachePath(mockContent2): mockContent2,
 				cachePath(mockContent3): mockContent3,
-				mockMappingPath: mappingFile([]cached{
+				mockMappingPath: mappingFile([]asset{
 					{
 						Path:            cachePath(mockContent3),
 						DestinationPath: "foo",
@@ -150,7 +150,7 @@ func Test_UploadFiles(t *testing.T) {
 			},
 			expected: map[string]string{
 				cachePath(mockContent1): mockContent1,
-				mockMappingPath: mappingFile([]cached{
+				mockMappingPath: mappingFile([]asset{
 					{
 						Path:            cachePath(mockContent1),
 						DestinationPath: "ws/copilot/.workspace",
@@ -174,7 +174,7 @@ func Test_UploadFiles(t *testing.T) {
 			},
 			expected: map[string]string{
 				cachePath(mockContent1): mockContent1,
-				mockMappingPath: mappingFile([]cached{
+				mockMappingPath: mappingFile([]asset{
 					{
 						Path:            cachePath(mockContent1),
 						DestinationPath: "test/copilot/.workspace",
@@ -204,7 +204,7 @@ func Test_UploadFiles(t *testing.T) {
 			expected: map[string]string{
 				cachePath(mockContent1): mockContent1,
 				cachePath(mockContent2): mockContent2,
-				mockMappingPath: mappingFile([]cached{
+				mockMappingPath: mappingFile([]asset{
 					{
 						Path:            cachePath(mockContent2),
 						DestinationPath: "files/copilot/prod/manifest.yaml",
@@ -228,7 +228,7 @@ func Test_UploadFiles(t *testing.T) {
 			},
 			expected: map[string]string{
 				cachePath(mockContent1): mockContent1,
-				mockMappingPath: mappingFile([]cached{
+				mockMappingPath: mappingFile([]asset{
 					{
 						Path:            cachePath(mockContent1),
 						DestinationPath: ".workspace",
@@ -249,7 +249,7 @@ func Test_UploadFiles(t *testing.T) {
 			},
 			expected: map[string]string{
 				cachePath(mockContent1): mockContent1,
-				mockMappingPath: mappingFile([]cached{
+				mockMappingPath: mappingFile([]asset{
 					{
 						Path:            cachePath(mockContent1),
 						DestinationPath: "/is/a/file",
@@ -269,7 +269,7 @@ func Test_UploadFiles(t *testing.T) {
 				err: tc.mockS3Error,
 			}
 
-			u := CacheUploader{
+			u := ArtifactBucketUploader{
 				FS:               fs,
 				Upload:           mockS3.Upload,
 				PathPrefix:       mockPrefix,

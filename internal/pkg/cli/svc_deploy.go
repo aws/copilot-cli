@@ -249,7 +249,7 @@ func (o *deploySvcOpts) Execute() error {
 				ImageDigests:              uploadOut.ImageDigests,
 				AddonsURL:                 uploadOut.AddonsURL,
 				CustomResourceURLs:        uploadOut.CustomResourceURLs,
-				StaticSiteAssetMappingURL: uploadOut.StaticSiteAssetMappingURL,
+				StaticSiteAssetMappingURL: uploadOut.StaticSiteAssetMappingLocation,
 			},
 		})
 		if err != nil {
