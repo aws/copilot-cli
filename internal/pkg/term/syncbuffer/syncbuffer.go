@@ -118,8 +118,7 @@ func (t *TermPrinter) lastFiveLogLines(logs []string) [maxLogLines]string {
 	return logLines
 }
 
-// numLines calculates the actual number of lines needed to print the given string slice based on the terminal width
-// It returns the sum of these line counts or an error occurs while getting the terminal size.
+// numLines calculates and returns the actual number of lines needed to print the given string slice based on the terminal width.
 func (t *TermPrinter) numLines(lines []string) int {
 	var numLines float64
 	for _, line := range lines {
