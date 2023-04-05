@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"path/filepath"
 	"sync"
 	"testing"
@@ -33,7 +32,7 @@ func (f *fakeS3) Upload(path string, data io.Reader) error {
 		return f.err
 	}
 
-	b, err := ioutil.ReadAll(data)
+	b, err := io.ReadAll(data)
 	if err != nil {
 		return err
 	}
