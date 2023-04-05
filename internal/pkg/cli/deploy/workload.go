@@ -552,9 +552,8 @@ func printAndErase(t terminalWidthGetter, termPrinters []*syncbuffer.TermPrinter
 			}
 			printer.TermWidth = width
 
-			if err := printer.PrintLastFiveLines(); err != nil {
-				return fmt.Errorf("printing output from the buffers: %w", err)
-			}
+			// print label and last five logs.
+			printer.PrintLastFiveLines()
 			totalWrittenLines = totalWrittenLines + printer.PrevWrittenLines
 		}
 		if allDone {

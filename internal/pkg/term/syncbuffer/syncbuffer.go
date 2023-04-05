@@ -84,7 +84,7 @@ func NewTermPrinter(fw fileWriter) *TermPrinter {
 }
 
 // PrintLastFiveLines prints the label and the last five lines of logs to the termPrinter fileWriter.
-func (t *TermPrinter) PrintLastFiveLines() error {
+func (t *TermPrinter) PrintLastFiveLines() {
 	logs := t.Buf.strings()
 	outputLogs := t.lastFiveLogLines(logs)
 	if len(outputLogs) > 0 {
@@ -95,7 +95,6 @@ func (t *TermPrinter) PrintLastFiveLines() error {
 		writtenLines := t.numLines(append(outputLogs[:], logs[0]))
 		t.PrevWrittenLines = writtenLines
 	}
-	return nil
 }
 
 // lastFiveLogLines returns the last five lines of the given logs, or all the logs if there are less than five lines.
