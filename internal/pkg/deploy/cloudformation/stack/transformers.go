@@ -583,17 +583,26 @@ func (conv routingRuleConfigConverter) convert() (*template.ALBListenerRule, err
 	}
 
 	config := &template.ALBListenerRule{
-		Path:             aws.StringValue(conv.rule.Path),
-		TargetContainer:  targetContainer,
-		TargetPort:       targetPort,
-		Aliases:          aliases,
-		HTTPHealthCheck:  convertHTTPHealthCheck(&conv.rule.HealthCheck),
-		AllowedSourceIps: convertAllowedSourceIPs(conv.rule.AllowedSourceIps),
-		Stickiness:       strconv.FormatBool(aws.BoolValue(conv.rule.Stickiness)),
-		HTTPVersion:      aws.StringValue(convertHTTPVersion(conv.rule.ProtocolVersion)),
-		RedirectToHTTPS:  conv.redirectToHTTPS,
+		Path:                aws.StringValue(conv.rule.Path),
+		TargetContainer:     targetContainer,
+		TargetPort:          targetPort,
+		Aliases:             aliases,
+		HTTPHealthCheck:     convertHTTPHealthCheck(&conv.rule.HealthCheck),
+		AllowedSourceIps:    convertAllowedSourceIPs(conv.rule.AllowedSourceIps),
+		Stickiness:          strconv.FormatBool(aws.BoolValue(conv.rule.Stickiness)),
+		HTTPVersion:         aws.StringValue(convertHTTPVersion(conv.rule.ProtocolVersion)),
+		RedirectToHTTPS:     conv.redirectToHTTPS,
+		DeregistrationDelay: convertDeregistrationDelay(conv.rule.DeregistrationDelay),
 	}
 	return config, nil
+}
+
+func convertDeregistrationDelay(dd *time.Duration) *int64 {
+	var deregistrationDelay *int64 = aws.Int64(60)
+	if dd != nil {
+		deregistrationDelay = aws.Int64(int64(dd.Seconds()))
+	}
+	return deregistrationDelay
 }
 
 type nlbListeners []template.NetworkLoadBalancerListener
@@ -636,13 +645,14 @@ func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (networkLoadBalanc
 		}
 
 		listeners[idx] = template.NetworkLoadBalancerListener{
-			Port:            aws.StringValue(port),
-			Protocol:        strings.ToUpper(aws.StringValue(protocol)),
-			TargetContainer: targetContainer,
-			TargetPort:      targetPort,
-			SSLPolicy:       listener.SSLPolicy,
-			HealthCheck:     convertNLBHealthCheck(&listener.HealthCheck),
-			Stickiness:      listener.Stickiness,
+			Port:                aws.StringValue(port),
+			Protocol:            strings.ToUpper(aws.StringValue(protocol)),
+			TargetContainer:     targetContainer,
+			TargetPort:          targetPort,
+			SSLPolicy:           listener.SSLPolicy,
+			HealthCheck:         convertNLBHealthCheck(&listener.HealthCheck),
+			Stickiness:          listener.Stickiness,
+			DeregistrationDelay: convertDeregistrationDelay(listener.DeregistrationDelay),
 		}
 	}
 

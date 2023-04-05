@@ -241,12 +241,13 @@ type NetworkLoadBalancerConfiguration struct {
 
 // NetworkLoadBalancerListener holds listener configuration for NLB.
 type NetworkLoadBalancerListener struct {
-	Port            *string            `yaml:"port"`
-	HealthCheck     NLBHealthCheckArgs `yaml:"healthcheck"`
-	TargetContainer *string            `yaml:"target_container"`
-	TargetPort      *int               `yaml:"target_port"`
-	SSLPolicy       *string            `yaml:"ssl_policy"`
-	Stickiness      *bool              `yaml:"stickiness"`
+	Port                *string            `yaml:"port"`
+	HealthCheck         NLBHealthCheckArgs `yaml:"healthcheck"`
+	TargetContainer     *string            `yaml:"target_container"`
+	TargetPort          *int               `yaml:"target_port"`
+	SSLPolicy           *string            `yaml:"ssl_policy"`
+	Stickiness          *bool              `yaml:"stickiness"`
+	DeregistrationDelay *time.Duration     `yaml:"deregistration_delay"`
 }
 
 // IsEmpty returns true if NetworkLoadBalancerConfiguration is empty.
@@ -257,7 +258,7 @@ func (c *NetworkLoadBalancerConfiguration) IsEmpty() bool {
 // IsEmpty returns true if NetworkLoadBalancerListener is empty.
 func (c *NetworkLoadBalancerListener) IsEmpty() bool {
 	return c.Port == nil && c.HealthCheck.isEmpty() && c.TargetContainer == nil && c.TargetPort == nil &&
-		c.SSLPolicy == nil && c.Stickiness == nil
+		c.SSLPolicy == nil && c.Stickiness == nil && c.DeregistrationDelay == nil
 }
 
 // ExposedPorts returns all the ports that are container ports available to receive traffic.
