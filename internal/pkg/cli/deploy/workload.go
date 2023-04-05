@@ -418,9 +418,6 @@ func (d *workloadDeployer) uploadContainerImages(out *UploadArtifactsOutput) err
 		pr, pw := io.Pipe()
 
 		termPrinter := syncbuffer.NewTermPrinter(log.DiagnosticWriter)
-		if err != nil {
-			return err
-		}
 		termPrinters[count] = termPrinter
 		count++
 
