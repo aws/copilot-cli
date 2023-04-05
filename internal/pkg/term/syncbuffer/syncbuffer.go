@@ -24,12 +24,12 @@ type fileWriter interface {
 	io.Writer
 }
 
-// SyncBuffer is a synchronized buffer used to store the output of build and push operations.
+// SyncBuffer is a synchronized buffer that can be used to store output data and coordinate between multiple goroutines.
 type SyncBuffer struct {
-	BufMu sync.Mutex   // BufMu is a mutex to protect access to the buffer.
-	Buf   bytes.Buffer // Buf is the buffer containing the output of build and push.
+	BufMu sync.Mutex   // BufMu is a mutex that can be used to protect access to the buffer.
+	Buf   bytes.Buffer // Buf is the buffer that stores the data.
 
-	Done chan struct{} // done is a channel indicating whether the build and push is completed.
+	Done chan struct{} // Done is a channel that can be used to signal when the operations are complete.
 }
 
 // Write appends the given bytes to the buffer.
@@ -39,7 +39,8 @@ func (b *SyncBuffer) Write(p []byte) (n int, err error) {
 	return b.Buf.Write(p)
 }
 
-// Strings returns the label (i.e., the first line of the buffer) and the last five lines of the buffer.
+// Strings returns an empty slice if the buffer is empty.
+// Otherwise, it returns a slice of all the lines stored in the buffer.
 func (b *SyncBuffer) strings() []string {
 	b.BufMu.Lock()
 	defer b.BufMu.Unlock()
@@ -50,7 +51,7 @@ func (b *SyncBuffer) strings() []string {
 	return lines
 }
 
-// IsDone returns true if the Done channel has been closed.
+// IsDone returns true if the Done channel has been closed, otherwise return false.
 func (b *SyncBuffer) IsDone() bool {
 	select {
 	case <-b.Done:
