@@ -270,9 +270,7 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 
 	cfn := cloudformation.New(envSession, cloudformation.WithProgressTracker(os.Stderr))
 	terminalWidthGetter := syncbuffer.NewTermPrinter(log.DiagnosticWriter)
-	if err != nil {
-		return nil, err
-	}
+
 	return &workloadDeployer{
 		name:                     in.Name,
 		app:                      in.App,
