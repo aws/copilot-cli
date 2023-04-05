@@ -532,7 +532,7 @@ func copyOutputToBuffer(pr io.Reader, buffer *syncbuffer.TermPrinter, name strin
 	return nil
 }
 
-// printAndErase prints the build and push output from the list of buildPushOutputBuffer buffers.
+// printAndErase prints the build and push output from the list of TermPrinter buffers.
 // It polls each buffer until all build and push calls are completed,
 // and erases the previous output after sleeping for a short duration.
 func printAndErase(t terminalWidthGetter, termPrinters []*syncbuffer.TermPrinter) error {
@@ -568,7 +568,7 @@ func printAndErase(t terminalWidthGetter, termPrinters []*syncbuffer.TermPrinter
 	return nil
 }
 
-// PrintAllprints all contents from given TermPrinter buffers once they have finished writing.
+// PrintAll prints all contents from given TermPrinter buffers once they have finished writing.
 func printAll(printers []*syncbuffer.TermPrinter) error {
 	count := 0
 	for {
