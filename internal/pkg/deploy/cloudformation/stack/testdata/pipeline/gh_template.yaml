@@ -241,7 +241,7 @@ Resources:
           phases:
             install:
                 runtime-versions:
-                  docker: 18
+                  docker: 20
             build:
               commands:
                 - echo "test"
