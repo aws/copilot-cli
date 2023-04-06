@@ -75,6 +75,8 @@ func (u *ArtifactBucketUploader) walkFn(sourcePath, destPath string, recursive b
 			return err
 		}
 		if info.IsDir() {
+			// if path == sourcePath, then path is the directory they want uploaded.
+			// if path != sourcePath, then path is a _subdirectory_ of the directory they want uploaded.
 			if !recursive && path != sourcePath {
 				return fs.SkipDir
 			}
