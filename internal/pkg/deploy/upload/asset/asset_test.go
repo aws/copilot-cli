@@ -80,7 +80,7 @@ func Test_UploadFiles(t *testing.T) {
 				afero.WriteFile(fs, "copilot/prod/manifest.yaml", []byte(mockContent2), 0644)
 			},
 			mockS3Error:   errors.New("mock error"),
-			expectedError: fmt.Errorf(`upload "test/copilot/.workspace": mock error`),
+			expectedError: fmt.Errorf(`upload assets: upload "test/copilot/.workspace": mock error`),
 		},
 		"success without include and exclude": {
 			// source=directory, dest unset
