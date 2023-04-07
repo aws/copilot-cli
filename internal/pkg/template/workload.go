@@ -419,6 +419,7 @@ type NLBHealthCheck struct {
 	UnhealthyThreshold *int64
 	Timeout            *int64
 	Interval           *int64
+	GracePeriod        *int64
 }
 
 // NetworkLoadBalancer holds configuration that's needed for a Network Load Balancer.

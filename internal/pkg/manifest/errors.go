@@ -98,6 +98,21 @@ func (e *errFieldMutualExclusive) Error() string {
 	return fmt.Sprintf(`must specify one, not both, of "%s" and "%s"`, e.firstField, e.secondField)
 }
 
+type errGracePeriodAlreadyExist struct {
+	firstField  string
+	secondField string
+}
+
+func (e *errGracePeriodAlreadyExist) Error() string {
+	return fmt.Sprintf(`must specify grace_period once, but found in "%s" and "%s"`, e.firstField, e.secondField)
+}
+
+// RecommendActions returns recommended actions to be taken after the error.
+func (e *errGracePeriodAlreadyExist) RecommendActions() string {
+	return fmt.Sprintf(`It looks like you have specified grace_period under both %s and %s. 
+ECS allows "HealthCheckGracePeriodSeconds" as a service level setting. It is the period of time, in seconds, that the Amazon ECS service scheduler ignores unhealthy Elastic Load Balancing target health checks after a task has first started.`, e.firstField, e.secondField)
+}
+
 type errSpecifiedBothIngressFields struct {
 	firstField  string
 	secondField string

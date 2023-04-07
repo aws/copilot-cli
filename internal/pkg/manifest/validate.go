@@ -193,6 +193,9 @@ func (l LoadBalancedWebServiceConfig) validate() error {
 			missingFields: []string{"http", "nlb"},
 		}
 	}
+	if err = l.validateGracePeriod(); err != nil {
+		return fmt.Errorf(`validate "grace_period": %w`, err)
+	}
 	if l.HTTPOrBool.Disabled() && (!l.Count.AdvancedCount.Requests.IsEmpty() || !l.Count.AdvancedCount.ResponseTime.IsEmpty()) {
 		return errors.New(`scaling based on "nlb" requests or response time is not supported`)
 	}
@@ -798,6 +801,63 @@ func (r HTTPOrBool) validate() error {
 	}
 
 	return r.HTTP.validate()
+}
+
+func (l LoadBalancedWebServiceConfig) validateGracePeriod() error {
+	gracePeriodForALB, err := l.validateGracePeriodForALB(true)
+	if err != nil {
+		return err
+	}
+	gracePeriodForNLB, err := l.validateGracePeriodForALB(false)
+	if err != nil {
+		return err
+	}
+	if gracePeriodForALB && gracePeriodForNLB {
+		return &errGracePeriodAlreadyExist{
+			firstField:  "http.healthcheck.grace_period",
+			secondField: "nlb.healthcheck.grace_period",
+		}
+	}
+
+	return nil
+}
+
+// validateGracePeriodForALB validates if ALB or NLB has duplicate grace period mentioned in their additional listeners rules or listeners respectively.
+func (l LoadBalancedWebServiceConfig) validateGracePeriodForALB(alb bool) (bool, error) {
+	var exist bool
+	if alb {
+		if l.HTTPOrBool.Main.HealthCheck.Advanced.GracePeriod != nil {
+			exist = true
+		}
+		for idx, rule := range l.HTTPOrBool.AdditionalRoutingRules {
+			if rule.HealthCheck.Advanced.GracePeriod != nil {
+				if exist {
+					return false, &errGracePeriodAlreadyExist{
+						firstField:  "http.healthcheck.grace_period",
+						secondField: fmt.Sprintf("http.additional_rules[%d].healthcheck.grace_period", idx),
+					}
+				}
+				exist = true
+			}
+		}
+		return exist, nil
+	}
+
+	if l.NLBConfig.Listener.HealthCheck.GracePeriod != nil {
+		exist = true
+	}
+	for idx, listener := range l.NLBConfig.AdditionalListeners {
+		if listener.HealthCheck.GracePeriod != nil {
+			if exist {
+				return false, &errGracePeriodAlreadyExist{
+					firstField:  "nlb.healthcheck.grace_period",
+					secondField: fmt.Sprintf("nlb.additional_listeners[%d].healthcheck.grace_period", idx),
+				}
+			}
+			exist = true
+		}
+	}
+	return exist, nil
 }
 
 // validate returns nil if HTTP is configured correctly.

@@ -355,7 +355,7 @@ type HTTPHealthCheckArgs struct {
 	UnhealthyThreshold *int64         `yaml:"unhealthy_threshold"`
 	Timeout            *time.Duration `yaml:"timeout"`
 	Interval           *time.Duration `yaml:"interval"`
-	GracePeriod        *time.Duration `yaml:"grace_period"` // Maintained for backwards compatibility, use [HTTP.GracePeriod] instead.
+	GracePeriod        *time.Duration `yaml:"grace_period"`
 }
 
 // HealthCheckArgsOrString is a custom type which supports unmarshaling yaml which
@@ -381,6 +381,7 @@ type NLBHealthCheckArgs struct {
 	UnhealthyThreshold *int64         `yaml:"unhealthy_threshold"`
 	Timeout            *time.Duration `yaml:"timeout"`
 	Interval           *time.Duration `yaml:"interval"`
+	GracePeriod        *time.Duration `yaml:"grace_period"`
 }
 
 func (h *NLBHealthCheckArgs) isEmpty() bool {

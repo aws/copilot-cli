@@ -38,6 +38,12 @@ func (r *HTTPOrBool) UnmarshalYAML(value *yaml.Node) error {
 	if !r.HTTP.IsEmpty() {
 		// Unmarshalled successfully to r.HTTP, unset r.Enabled, and return.
 		r.Enabled = nil
+		// this assignment lets us treat the main listener rule and additional listener rules equally
+		// because we eliminate the need for TargetContainerCamelCase by assigning its value to TargetContainer.
+		if r.TargetContainerCamelCase != nil && r.Main.TargetContainer == nil {
+			r.Main.TargetContainer = r.TargetContainerCamelCase
+			r.TargetContainerCamelCase = nil
+		}
 		return nil
 	}
 
@@ -49,32 +55,9 @@ func (r *HTTPOrBool) UnmarshalYAML(value *yaml.Node) error {
 
 // HTTP holds options for application load balancer.
 type HTTP struct {
-	Main                     RoutingRule    `yaml:",inline"`
-	TargetContainerCamelCase *string        `yaml:"targetContainer"` // Deprecated. Maintained for backwards compatibility, use [RoutingRule.TargetContainer] instead.
-	GracePeriod              *time.Duration `yaml:"grace_period"`
-	AdditionalRoutingRules   []RoutingRule  `yaml:"additional_rules"`
-}
-
-// UnmarshalYAML implements the yaml(v3) interface.
-func (r *HTTP) UnmarshalYAML(value *yaml.Node) error {
-	type http HTTP
-	if err := value.Decode((*http)(r)); err != nil {
-		return err
-	}
-	if !r.IsEmpty() {
-		// this assignment lets us treat the main listener rule and additional listener rules equally
-		// because we eliminate the need for TargetContainerCamelCase by assigning its value to TargetContainer.
-		if r.TargetContainerCamelCase != nil && r.Main.TargetContainer == nil {
-			r.Main.TargetContainer = r.TargetContainerCamelCase
-			r.TargetContainerCamelCase = nil
-		}
-		// GracePeriod is service level parameter and, it should be under http.
-		if r.GracePeriod == nil && r.Main.HealthCheck.Advanced.GracePeriod != nil {
-			r.GracePeriod = r.Main.HealthCheck.Advanced.GracePeriod
-			r.Main.HealthCheck.Advanced.GracePeriod = nil
-		}
-	}
-	return nil
+	Main                     RoutingRule   `yaml:",inline"`
+	TargetContainerCamelCase *string       `yaml:"targetContainer"` // Deprecated. Maintained for backwards compatibility, use [RoutingRule.TargetContainer] instead.
+	AdditionalRoutingRules   []RoutingRule `yaml:"additional_rules"`
 }
 
 // RoutingRules returns main as well as additional routing rules as a list of RoutingRule.
@@ -87,7 +70,7 @@ func (cfg HTTP) RoutingRules() []RoutingRule {
 
 // IsEmpty returns true if HTTP has empty configuration.
 func (r *HTTP) IsEmpty() bool {
-	return r.Main.IsEmpty() && r.TargetContainerCamelCase == nil && len(r.AdditionalRoutingRules) == 0 && r.GracePeriod == nil
+	return r.Main.IsEmpty() && r.TargetContainerCamelCase == nil && len(r.AdditionalRoutingRules) == 0
 }
 
 // RoutingRule holds listener rule configuration for ALB.

@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"hash/crc32"
-	"math"
 	"sort"
 	"strconv"
 	"strings"
@@ -399,6 +398,7 @@ func convertNLBHealthCheck(nlbHC *manifest.NLBHealthCheckArgs) template.NLBHealt
 	hc := template.NLBHealthCheck{
 		HealthyThreshold:   nlbHC.HealthyThreshold,
 		UnhealthyThreshold: nlbHC.UnhealthyThreshold,
+		GracePeriod:        aws.Int64(int64(manifest.DefaultHealthCheckGracePeriod)),
 	}
 	if nlbHC.Port != nil {
 		hc.Port = strconv.Itoa(aws.IntValue(nlbHC.Port))
@@ -408,6 +408,9 @@ func convertNLBHealthCheck(nlbHC *manifest.NLBHealthCheckArgs) template.NLBHealt
 	}
 	if nlbHC.Interval != nil {
 		hc.Interval = aws.Int64(int64(nlbHC.Interval.Seconds()))
+	}
+	if nlbHC.GracePeriod != nil {
+		hc.GracePeriod = aws.Int64(int64(nlbHC.GracePeriod.Seconds()))
 	}
 	return hc
 }
@@ -553,8 +556,8 @@ func (s *BackendService) convertALBListener() (*template.ALBListener, error) {
 
 func (s *BackendService) convertGracePeriod() *int64 {
 	var gracePeriod *int64 = aws.Int64(60)
-	if s.manifest.HTTP.GracePeriod != nil {
-		gracePeriod = aws.Int64(int64(s.manifest.HTTP.GracePeriod.Seconds()))
+	if s.manifest.HTTP.Main.HealthCheck.Advanced.GracePeriod != nil {
+		gracePeriod = aws.Int64(int64(s.manifest.HTTP.Main.HealthCheck.Advanced.GracePeriod.Seconds()))
 	}
 	return gracePeriod
 }
@@ -680,12 +683,10 @@ func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (networkLoadBalanc
 
 func (s *LoadBalancedWebService) convertGracePeriod() *int64 {
 	var gracePeriod *int64 = aws.Int64(60)
-	if s.manifest.HTTPOrBool.GracePeriod != nil && s.manifest.NLBConfig.GracePeriod != nil { // if grace period is mentioned in both ALB and NLB then we prefer the one with max value.
-		gracePeriod = aws.Int64(int64(math.Max(s.manifest.HTTPOrBool.GracePeriod.Seconds(), s.manifest.NLBConfig.GracePeriod.Seconds())))
-	} else if s.manifest.HTTPOrBool.GracePeriod != nil {
-		gracePeriod = aws.Int64(int64(s.manifest.HTTPOrBool.GracePeriod.Seconds()))
-	} else if s.manifest.NLBConfig.GracePeriod != nil {
-		gracePeriod = aws.Int64(int64(s.manifest.NLBConfig.GracePeriod.Seconds()))
+	if s.manifest.HTTPOrBool.Main.HealthCheck.Advanced.GracePeriod != nil {
+		gracePeriod = aws.Int64(int64(s.manifest.HTTPOrBool.Main.HealthCheck.Advanced.GracePeriod.Seconds()))
+	} else if s.manifest.NLBConfig.Listener.HealthCheck.GracePeriod != nil {
+		gracePeriod = aws.Int64(int64(s.manifest.NLBConfig.Listener.HealthCheck.GracePeriod.Seconds()))
 	}
 	return gracePeriod
 }
