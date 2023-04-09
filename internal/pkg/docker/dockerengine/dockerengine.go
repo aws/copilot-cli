@@ -76,10 +76,23 @@ type dockerConfig struct {
 
 // Build will run a `docker build` command for the given ecr repo URI and build arguments.
 func (c CmdClient) Build(in *BuildArguments) error {
+	args, err := c.buildArgs(in)
+	if err != nil {
+		return err
+	}
+	log.Infof(DockerBuildLabel(in.Platform, args))
+	if err := c.runner.Run("docker", args); err != nil {
+		return fmt.Errorf("building image: %w", err)
+	}
+	return nil
+}
 
+// buildArgs returns command line arguments to be passed to the Docker build command based on the provided BuildArguments.
+// Returns an error if no tags are provided for building an image.
+func (c CmdClient) buildArgs(in *BuildArguments) ([]string, error) {
 	// Tags must not be empty to build an docker image.
 	if len(in.Tags) == 0 {
-		return &errEmptyImageTags{
+		return nil, &errEmptyImageTags{
 			uri: in.URI,
 		}
 	}
@@ -138,15 +151,7 @@ func (c CmdClient) Build(in *BuildArguments) error {
 	}
 
 	args = append(args, dfDir, "-f", in.Dockerfile)
-	// If host platform is not linux/amd64, show the user how the container image is being built; if the build fails (if their docker server doesn't have multi-platform-- and therefore `--platform` capability, for instance) they may see why.
-	if in.Platform != "" {
-		log.Infof("Building your container image: docker %s\n", strings.Join(args, " "))
-	}
-	if err := c.runner.Run("docker", args); err != nil {
-		return fmt.Errorf("building image: %w", err)
-	}
-
-	return nil
+	return args, nil
 }
 
 // Login will run a `docker login` command against the Service repository URI with the input uri and auth data.
@@ -311,6 +316,16 @@ func userHomeDirectory() string {
 	}
 
 	return home
+}
+
+// DockerBuildLabel returns the docker build label as a string if platform is not empty.
+func DockerBuildLabel(platform string, args []string) string {
+	// If host platform is not linux/amd64, show the user how the container image is being built; if the build fails (if their docker server doesn't have multi-platform-- and therefore `--platform` capability, for instance) they may see why.
+	var buildLabel string
+	if platform != "" {
+		buildLabel = fmt.Sprintf("Building your container image: docker %s\n", strings.Join(args, " "))
+	}
+	return buildLabel
 }
 
 type errEmptyImageTags struct {
