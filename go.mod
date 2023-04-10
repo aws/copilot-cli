@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.2
-	github.com/aws/aws-sdk-go v1.44.234
+	github.com/aws/aws-sdk-go v1.44.239
 	github.com/briandowns/spinner v1.23.0
 	github.com/dustin/go-humanize v1.0.1
 	github.com/fatih/color v1.15.0
@@ -19,13 +19,13 @@ require (
 	github.com/onsi/gomega v1.27.6
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/spf13/afero v1.9.5
-	github.com/spf13/cobra v1.6.1
+	github.com/spf13/cobra v1.7.0
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.8.2
 	github.com/xlab/treeprint v1.2.0
-	golang.org/x/mod v0.9.0
+	golang.org/x/mod v0.10.0
 	golang.org/x/sync v0.1.0
-	golang.org/x/text v0.8.0
+	golang.org/x/text v0.9.0
 	gopkg.in/ini.v1 v1.67.0
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -45,7 +45,7 @@ require (
 	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/google/pprof v0.0.0-20210407192527-94a9f03dee38 // indirect
 	github.com/hinshun/vt10x v0.0.0-20180809195222-d55458df857c // indirect
-	github.com/inconshreveable/mousetrap v1.0.1 // indirect
+	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
