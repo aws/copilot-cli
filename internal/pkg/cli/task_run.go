@@ -13,6 +13,7 @@ import (
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
+	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/template/artifactpath"
 	"golang.org/x/mod/semver"
 
@@ -152,12 +153,13 @@ type runTaskOpts struct {
 	prompt  prompter
 
 	// Fields below are configured at runtime.
-	deployer             taskDeployer
-	repository           repositoryService
-	runner               taskRunner
-	eventsWriter         eventsWriter
-	defaultClusterGetter defaultClusterGetter
-	publicIPGetter       publicIPGetter
+	deployer                 taskDeployer
+	repository               repositoryService
+	runner                   taskRunner
+	eventsWriter             eventsWriter
+	defaultClusterGetter     defaultClusterGetter
+	publicIPGetter           publicIPGetter
+	dockerBuildArgsGenerator dockerBuildArgsGenerator
 
 	provider          sessionProvider
 	sess              *session.Session
@@ -224,6 +226,8 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 		opts.repository = repository.New(ecr.New(opts.sess), repoName)
 		return nil
 	}
+
+	opts.dockerBuildArgsGenerator = dockerengine.New(exec.NewCmd())
 
 	opts.configureEventsWriter = func(tasks []*task.Task) {
 		opts.eventsWriter = logging.NewTaskClient(opts.sess, opts.groupName, tasks)
@@ -724,10 +728,6 @@ func (o *runTaskOpts) Execute() error {
 			return fmt.Errorf("login to docker: %w", err)
 		}
 
-		if err := o.buildAndPushImage(); err != nil {
-			return err
-		}
-
 		tag := imageTagLatest
 		if o.imageTag != "" {
 			tag = o.imageTag
@@ -738,6 +738,11 @@ func (o *runTaskOpts) Execute() error {
 		}
 
 		o.image = fmt.Sprintf(fmtImageURI, uri, tag)
+
+		if err := o.buildAndPushImage(uri); err != nil {
+			return err
+		}
+
 		shouldUpdate = true
 	}
 
@@ -955,7 +960,7 @@ func (o *runTaskOpts) showPublicIPs(tasks []*task.Task) {
 
 }
 
-func (o *runTaskOpts) buildAndPushImage() error {
+func (o *runTaskOpts) buildAndPushImage(uri string) error {
 	var additionalTags []string
 	if o.imageTag != "" {
 		additionalTags = append(additionalTags, o.imageTag)
@@ -965,12 +970,18 @@ func (o *runTaskOpts) buildAndPushImage() error {
 	if o.dockerfileContextPath != "" {
 		ctx = o.dockerfileContextPath
 	}
-
-	if _, err := o.repository.BuildAndPush(&dockerengine.BuildArguments{
+	buildArgs := &dockerengine.BuildArguments{
+		URI:        uri,
 		Dockerfile: o.dockerfilePath,
 		Context:    ctx,
 		Tags:       append([]string{imageTagLatest}, additionalTags...),
-	}); err != nil {
+	}
+	buildArgsList, err := o.dockerBuildArgsGenerator.GenerateDockerBuildArgs(buildArgs)
+	if err != nil {
+		return fmt.Errorf("getting BuildArgsSlice: %w", err)
+	}
+	log.Infoln(dockerengine.DockerBuildLabel(buildArgs.Platform, buildArgsList))
+	if _, err := o.repository.BuildAndPush(buildArgs); err != nil {
 		return fmt.Errorf("build and push image: %w", err)
 	}
 	return nil

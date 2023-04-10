@@ -744,19 +744,24 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 }
 
 type runTaskMocks struct {
-	deployer             *mocks.MocktaskDeployer
-	repository           *mocks.MockrepositoryService
-	runner               *mocks.MocktaskRunner
-	store                *mocks.Mockstore
-	eventsWriter         *mocks.MockeventsWriter
-	defaultClusterGetter *mocks.MockdefaultClusterGetter
-	publicIPGetter       *mocks.MockpublicIPGetter
-	provider             *mocks.MocksessionProvider
-	uploader             *mocks.Mockuploader
+	deployer                 *mocks.MocktaskDeployer
+	repository               *mocks.MockrepositoryService
+	runner                   *mocks.MocktaskRunner
+	store                    *mocks.Mockstore
+	eventsWriter             *mocks.MockeventsWriter
+	defaultClusterGetter     *mocks.MockdefaultClusterGetter
+	publicIPGetter           *mocks.MockpublicIPGetter
+	provider                 *mocks.MocksessionProvider
+	uploader                 *mocks.Mockuploader
+	dockerBuildArgsGenerator *mocks.MockdockerBuildArgsGenerator
 }
 
 func mockHasDefaultCluster(m runTaskMocks) {
 	m.defaultClusterGetter.EXPECT().HasDefaultCluster().Return(true, nil).AnyTimes()
+}
+
+func mockdockerBuildArgsGenerator(m runTaskMocks) {
+	m.dockerBuildArgsGenerator.EXPECT().GenerateDockerBuildArgs(gomock.Any())
 }
 
 func mockRepositoryAnytime(m runTaskMocks) {
@@ -772,6 +777,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 		tag         = "tag"
 	)
 	defaultBuildArguments := dockerengine.BuildArguments{
+		URI:     mockRepoURI,
 		Context: filepath.Dir(defaultDockerfilePath),
 		Tags:    []string{imageTagLatest},
 	}
@@ -800,6 +806,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).AnyTimes()
 				m.defaultClusterGetter.EXPECT().HasDefaultCluster().Return(true, nil)
 				m.deployer.EXPECT().DeployTask(gomock.Any()).Return(nil).AnyTimes()
+				mockdockerBuildArgsGenerator(m)
 				mockRepositoryAnytime(m)
 				m.runner.EXPECT().Run().AnyTimes()
 			},
@@ -816,6 +823,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 				m.provider.EXPECT().FromRole(gomock.Any(), gomock.Any())
 				m.deployer.EXPECT().DeployTask(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 				mockRepositoryAnytime(m)
+				mockdockerBuildArgsGenerator(m)
 				m.runner.EXPECT().Run().AnyTimes()
 			},
 		},
@@ -860,6 +868,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 				}).Return(nil)
 				m.repository.EXPECT().URI().Return(mockRepoURI, nil)
 				m.repository.EXPECT().Login().Return(nil)
+				mockdockerBuildArgsGenerator(m)
 				m.repository.EXPECT().BuildAndPush(gomock.Any())
 				m.deployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
 					Name:       inGroupName,
@@ -876,6 +885,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 				m.provider.EXPECT().Default().Return(&session.Session{}, nil)
 				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).AnyTimes()
 				m.deployer.EXPECT().DeployTask(gomock.Any()).Return(nil).Times(2)
+				mockdockerBuildArgsGenerator(m)
 				mockRepositoryAnytime(m)
 				m.runner.EXPECT().Run().Return(nil, errors.New("error running"))
 				mockHasDefaultCluster(m)
@@ -891,6 +901,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 					}, nil)
 				m.provider.EXPECT().FromRole(gomock.Any(), gomock.Any())
 				m.deployer.EXPECT().DeployTask(gomock.Any(), gomock.Len(1)).AnyTimes() // NOTE: matching length because gomock is unable to match function arguments.
+				mockdockerBuildArgsGenerator(m)
 				mockRepositoryAnytime(m)
 				m.runner.EXPECT().Run().AnyTimes()
 				m.defaultClusterGetter.EXPECT().HasDefaultCluster().Times(0)
@@ -901,6 +912,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 				m.provider.EXPECT().Default().Return(&session.Session{}, nil)
 				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Times(0)
 				m.deployer.EXPECT().DeployTask(gomock.Any(), gomock.Len(0)).AnyTimes() // NOTE: matching length because gomock is unable to match function arguments.
+				mockdockerBuildArgsGenerator(m)
 				mockRepositoryAnytime(m)
 				m.runner.EXPECT().Run().AnyTimes()
 				mockHasDefaultCluster(m)
@@ -914,12 +926,13 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 				m.deployer.EXPECT().DeployTask(gomock.Any()).AnyTimes()
 				m.repository.EXPECT().URI().Return(mockRepoURI, nil)
 				m.repository.EXPECT().Login().Return(nil)
-				m.repository.EXPECT().BuildAndPush(gomock.Eq(
-					&dockerengine.BuildArguments{
-						Context: filepath.Dir(defaultDockerfilePath),
-						Tags:    []string{imageTagLatest, tag},
-					}),
-				)
+				mockBuildArgs := &dockerengine.BuildArguments{
+					URI:     mockRepoURI,
+					Context: filepath.Dir(defaultDockerfilePath),
+					Tags:    []string{imageTagLatest, tag},
+				}
+				m.dockerBuildArgsGenerator.EXPECT().GenerateDockerBuildArgs(mockBuildArgs)
+				m.repository.EXPECT().BuildAndPush(mockBuildArgs)
 				m.runner.EXPECT().Run().AnyTimes()
 				mockHasDefaultCluster(m)
 			},
@@ -932,12 +945,14 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 				m.deployer.EXPECT().DeployTask(gomock.Any()).AnyTimes()
 				m.repository.EXPECT().URI().Return(mockRepoURI, nil)
 				m.repository.EXPECT().Login().Return(nil)
-				m.repository.EXPECT().BuildAndPush(gomock.Eq(
-					&dockerengine.BuildArguments{
-						Context: "../../other",
-						Tags:    []string{imageTagLatest},
-					}),
-				)
+
+				mockBuildArgs := &dockerengine.BuildArguments{
+					URI:     mockRepoURI,
+					Context: "../../other",
+					Tags:    []string{imageTagLatest},
+				}
+				m.dockerBuildArgsGenerator.EXPECT().GenerateDockerBuildArgs(mockBuildArgs)
+				m.repository.EXPECT().BuildAndPush(mockBuildArgs)
 				m.runner.EXPECT().Run().AnyTimes()
 				mockHasDefaultCluster(m)
 			},
@@ -956,6 +971,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 				}).Times(1).Return(nil)
 				m.repository.EXPECT().URI().Return(mockRepoURI, nil)
 				m.repository.EXPECT().Login().Return(nil)
+				m.dockerBuildArgsGenerator.EXPECT().GenerateDockerBuildArgs(&defaultBuildArguments)
 				m.repository.EXPECT().BuildAndPush(gomock.Eq(&defaultBuildArguments))
 				m.deployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
 					Name:       inGroupName,
@@ -986,6 +1002,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 				m.publicIPGetter.EXPECT().PublicIP("eni-1").Return("1.2.3", nil)
 				mockHasDefaultCluster(m)
 				mockRepositoryAnytime(m)
+				mockdockerBuildArgsGenerator(m)
 			},
 		},
 		"fail to get public ips": {
@@ -1001,6 +1018,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 				m.publicIPGetter.EXPECT().PublicIP("eni-1").Return("", errors.New("some error"))
 				mockHasDefaultCluster(m)
 				mockRepositoryAnytime(m)
+				mockdockerBuildArgsGenerator(m)
 			},
 			// wantedError is nil because we will just not show the IP address if we can't instead of erroring out.
 		},
@@ -1156,15 +1174,16 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 			}
 
 			mocks := runTaskMocks{
-				deployer:             mocks.NewMocktaskDeployer(ctrl),
-				repository:           mocks.NewMockrepositoryService(ctrl),
-				runner:               mocks.NewMocktaskRunner(ctrl),
-				store:                mocks.NewMockstore(ctrl),
-				eventsWriter:         mocks.NewMockeventsWriter(ctrl),
-				defaultClusterGetter: mocks.NewMockdefaultClusterGetter(ctrl),
-				publicIPGetter:       mocks.NewMockpublicIPGetter(ctrl),
-				provider:             mocks.NewMocksessionProvider(ctrl),
-				uploader:             mocks.NewMockuploader(ctrl),
+				deployer:                 mocks.NewMocktaskDeployer(ctrl),
+				repository:               mocks.NewMockrepositoryService(ctrl),
+				runner:                   mocks.NewMocktaskRunner(ctrl),
+				store:                    mocks.NewMockstore(ctrl),
+				eventsWriter:             mocks.NewMockeventsWriter(ctrl),
+				defaultClusterGetter:     mocks.NewMockdefaultClusterGetter(ctrl),
+				publicIPGetter:           mocks.NewMockpublicIPGetter(ctrl),
+				provider:                 mocks.NewMocksessionProvider(ctrl),
+				uploader:                 mocks.NewMockuploader(ctrl),
+				dockerBuildArgsGenerator: mocks.NewMockdockerBuildArgsGenerator(ctrl),
 			}
 			tc.setupMocks(mocks)
 
@@ -1189,6 +1208,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 				provider: mocks.provider,
 				fs:       fs.Fs,
 			}
+			opts.dockerBuildArgsGenerator = mocks.dockerBuildArgsGenerator
 			opts.configureRuntimeOpts = func() error {
 				opts.runner = mocks.runner
 				opts.deployer = mocks.deployer

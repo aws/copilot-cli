@@ -181,6 +181,9 @@ type repositoryService interface {
 	imageBuilderPusher
 }
 
+type dockerBuildArgsGenerator interface {
+	GenerateDockerBuildArgs(in *dockerengine.BuildArguments) ([]string, error)
+}
 type logEventsWriter interface {
 	WriteLogEvents(opts logging.WriteLogEventsOpts) error
 }

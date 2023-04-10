@@ -15,7 +15,6 @@ import (
 	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/exec"
-	"github.com/aws/copilot-cli/internal/pkg/term/log"
 )
 
 // Cmd is the interface implemented by external commands.
@@ -76,20 +75,19 @@ type dockerConfig struct {
 
 // Build will run a `docker build` command for the given ecr repo URI and build arguments.
 func (c CmdClient) Build(in *BuildArguments) error {
-	args, err := c.buildArgs(in)
+	args, err := c.GenerateDockerBuildArgs(in)
 	if err != nil {
-		return err
+		return fmt.Errorf("generate docker build args: %w", err)
 	}
-	log.Infof(DockerBuildLabel(in.Platform, args))
 	if err := c.runner.Run("docker", args); err != nil {
 		return fmt.Errorf("building image: %w", err)
 	}
 	return nil
 }
 
-// buildArgs returns command line arguments to be passed to the Docker build command based on the provided BuildArguments.
+// GenerateDockerBuildArgs returns command line arguments to be passed to the Docker build command based on the provided BuildArguments.
 // Returns an error if no tags are provided for building an image.
-func (c CmdClient) buildArgs(in *BuildArguments) ([]string, error) {
+func (c CmdClient) GenerateDockerBuildArgs(in *BuildArguments) ([]string, error) {
 	// Tags must not be empty to build an docker image.
 	if len(in.Tags) == 0 {
 		return nil, &errEmptyImageTags{

@@ -52,7 +52,7 @@ func TestDockerCommand_Build(t *testing.T) {
 			setupMocks: func(controller *gomock.Controller) {
 				mockCmd = NewMockCmd(controller)
 			},
-			wantedError: fmt.Errorf("tags to reference an image should not be empty for building and pushing into the ECR repository %s", mockURI),
+			wantedError: fmt.Errorf("generate docker build args: tags to reference an image should not be empty for building and pushing into the ECR repository %s", mockURI),
 		},
 		"should error if the docker build command fails": {
 			path:    mockPath,
