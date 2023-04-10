@@ -978,9 +978,9 @@ func (o *runTaskOpts) buildAndPushImage(uri string) error {
 	}
 	buildArgsList, err := o.dockerBuildArgsGenerator.GenerateDockerBuildArgs(buildArgs)
 	if err != nil {
-		return fmt.Errorf("getting BuildArgsSlice: %w", err)
+		return fmt.Errorf("get docker build args : %w", err)
 	}
-	log.Infoln(dockerengine.DockerBuildLabel(buildArgs.Platform, buildArgsList))
+	log.Infof(dockerengine.DockerBuildLabel(buildArgs.Platform, buildArgsList))
 	if _, err := o.repository.BuildAndPush(buildArgs); err != nil {
 		return fmt.Errorf("build and push image: %w", err)
 	}
