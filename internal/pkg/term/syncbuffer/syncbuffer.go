@@ -33,27 +33,6 @@ func NewSyncBuffer() *SyncBuffer {
 	}
 }
 
-// LabeledSyncBuffer is a struct that combines a SyncBuffer with a string label.
-type LabeledSyncBuffer struct {
-	label   string
-	syncBuf *SyncBuffer
-}
-
-// New creates and returns a new LabeledSyncBuffer without label.
-func New(syncBuf *SyncBuffer) *LabeledSyncBuffer {
-	return &LabeledSyncBuffer{
-		syncBuf: syncBuf,
-	}
-}
-
-// NewLabeledSyncBufferWithLabel creates and returns a new LabeledSyncBuffer with the given label and SyncBuffer.
-func NewWithLabel(label string, syncBuf *SyncBuffer) *LabeledSyncBuffer {
-	return &LabeledSyncBuffer{
-		label:   label,
-		syncBuf: syncBuf,
-	}
-}
-
 // Write appends the given bytes to the buffer.
 func (b *SyncBuffer) Write(p []byte) (n int, err error) {
 	b.bufMu.Lock()
@@ -88,9 +67,40 @@ func (b *SyncBuffer) MarkDone() {
 	close(b.done)
 }
 
-// CopyToBuffer copies the contents of the given fileReader into the SyncBuffer's buffer.
-// It returns an error if the copy operation fails or encounters a non-EOF error.
+// CopyToBuffer reads from a fileReader and writes the data to the buffer.
 func (b *SyncBuffer) CopyToBuffer(r fileReader) error {
+	return copyFileToBuffer(b, r)
+}
+
+// LabeledSyncBuffer is a struct that combines a SyncBuffer with a string label.
+type LabeledSyncBuffer struct {
+	label   string
+	syncBuf *SyncBuffer
+}
+
+// New creates and returns a new LabeledSyncBuffer without label.
+func New(syncBuf *SyncBuffer) *LabeledSyncBuffer {
+	return &LabeledSyncBuffer{
+		syncBuf: syncBuf,
+	}
+}
+
+// NewLabeledSyncBufferWithLabel creates and returns a new LabeledSyncBuffer with the given label and SyncBuffer.
+func NewWithLabel(label string, syncBuf *SyncBuffer) *LabeledSyncBuffer {
+	return &LabeledSyncBuffer{
+		label:   label,
+		syncBuf: syncBuf,
+	}
+}
+
+// CopyToLabeledBuffer reads from a fileReader and writes the data to the buffer of LabeledSyncBuffer.
+func (b *LabeledSyncBuffer) CopyToLabeledBuffer(r fileReader) error {
+	return b.syncBuf.CopyToBuffer(r)
+}
+
+// copyFileToBuffer copies the contents of the given fileReader into the buffer.
+// It returns an error if the copy operation fails or encounters a non-EOF error.
+func copyFileToBuffer(b *SyncBuffer, r fileReader) error {
 	defer func() {
 		b.MarkDone()
 	}()
