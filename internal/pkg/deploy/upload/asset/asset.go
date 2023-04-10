@@ -46,7 +46,7 @@ type asset struct {
 
 // UploadFiles hashes each of the files specified in files and uploads
 // them to the path "{PathPrefix}/{hash}". After, it uploads a JSON file
-// to AssetMappingPath that specifies the location of every file in the artifact bucket and it's
+// to AssetMappingPath that specifies the location of every file in the artifact bucket and its
 // intended destination path in the service bucket.
 func (u *ArtifactBucketUploader) UploadFiles(files []manifest.FileUpload) error {
 	var assets []asset
