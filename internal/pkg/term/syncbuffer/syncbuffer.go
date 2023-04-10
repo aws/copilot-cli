@@ -39,8 +39,15 @@ type LabeledSyncBuffer struct {
 	syncBuf *SyncBuffer
 }
 
-// NewLabeledSyncBuffer creates and returns a new LabeledSyncBuffer with the given label and SyncBuffer.
-func NewLabeledSyncBuffer(label string, syncBuf *SyncBuffer) *LabeledSyncBuffer {
+// New creates and returns a new LabeledSyncBuffer without label.
+func New(syncBuf *SyncBuffer) *LabeledSyncBuffer {
+	return &LabeledSyncBuffer{
+		syncBuf: syncBuf,
+	}
+}
+
+// NewLabeledSyncBufferWithLabel creates and returns a new LabeledSyncBuffer with the given label and SyncBuffer.
+func NewWithLabel(label string, syncBuf *SyncBuffer) *LabeledSyncBuffer {
 	return &LabeledSyncBuffer{
 		label:   label,
 		syncBuf: syncBuf,
