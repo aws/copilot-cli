@@ -63,7 +63,7 @@ func WithNumLines(n int) LabeledTermPrinterOption {
 	}
 }
 
-// Withpadding sets the padding of LabeledTermPrinter.
+// WithPadding sets the padding of LabeledTermPrinter.
 func WithPadding(n int) LabeledTermPrinterOption {
 	return func(ltp *LabeledTermPrinter) {
 		ltp.padding = n

@@ -13,7 +13,7 @@ import (
 	"sync"
 )
 
-// The fileReader interface that can read data from a file.
+// fileReader interface that can read data from a file.
 // It extends the io.Reader interface, which provides a method for reading bytes into a buffer.
 type fileReader interface {
 	io.Reader
@@ -85,7 +85,7 @@ func New(syncBuf *SyncBuffer) *LabeledSyncBuffer {
 	}
 }
 
-// NewLabeledSyncBufferWithLabel creates and returns a new LabeledSyncBuffer with the given label and SyncBuffer.
+// NewWithLabel creates and returns a new LabeledSyncBuffer with the given label and SyncBuffer.
 func NewWithLabel(label string, syncBuf *SyncBuffer) *LabeledSyncBuffer {
 	return &LabeledSyncBuffer{
 		label:   label,
