@@ -622,6 +622,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 					GitShortCommitTag: tc.inMockGitTag,
 				},
 				workspacePath: mockWorkspacePath,
+				uri:           mockURI,
 				mft: &mockWorkloadMft{
 					workloadName:    mockName,
 					fileName:        tc.inEnvFile,

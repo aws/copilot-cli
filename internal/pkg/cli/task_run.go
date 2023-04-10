@@ -153,12 +153,13 @@ type runTaskOpts struct {
 	prompt  prompter
 
 	// Fields below are configured at runtime.
-	deployer             taskDeployer
-	repository           repositoryService
-	runner               taskRunner
-	eventsWriter         eventsWriter
-	defaultClusterGetter defaultClusterGetter
-	publicIPGetter       publicIPGetter
+	deployer                 taskDeployer
+	repository               repositoryService
+	runner                   taskRunner
+	eventsWriter             eventsWriter
+	defaultClusterGetter     defaultClusterGetter
+	publicIPGetter           publicIPGetter
+	dockerBuildArgsGenerator dockerBuildArgsGenerator
 
 	provider          sessionProvider
 	sess              *session.Session
@@ -225,6 +226,8 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 		opts.repository = repository.New(ecr.New(opts.sess), repoName)
 		return nil
 	}
+
+	opts.dockerBuildArgsGenerator = dockerengine.New(exec.NewCmd())
 
 	opts.configureEventsWriter = func(tasks []*task.Task) {
 		opts.eventsWriter = logging.NewTaskClient(opts.sess, opts.groupName, tasks)
