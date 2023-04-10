@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 // Package syncbuffer provides a goroutine safe bytes.Buffer as well printing functionality to the terminal.
 package syncbuffer
 
