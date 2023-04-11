@@ -138,7 +138,7 @@ func (ltp *LabeledTermPrinter) lastNLines(logs []string) []string {
 	logLines := make([]string, ltp.numLines)
 	idx := 0
 	for start < end {
-		logLines[idx] = strings.TrimSpace(logs[start])
+		logLines[idx] = logs[start]
 		start++
 		idx++
 	}
