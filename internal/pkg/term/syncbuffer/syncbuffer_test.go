@@ -86,7 +86,7 @@ func (r *mockReader) Read(p []byte) (int, error) {
 	return n, io.EOF
 }
 
-func TestSyncBuffer_CopyToBuffer(t *testing.T) {
+func TestCopy(t *testing.T) {
 	testCases := map[string]struct {
 		reader       io.Reader
 		wantedOutput string
@@ -130,11 +130,8 @@ func TestSyncBuffer_WithLabel(t *testing.T) {
 		wanted *LabeledSyncBuffer
 	}{
 		"if the label is provided": {
-			label: "title",
-			wanted: &LabeledSyncBuffer{
-				label:   "title",
-				syncBuf: mockSyncBuf,
-			},
+			label:  "title",
+			wanted: mockSyncBuf.WithLabel("title"),
 		},
 	}
 	for name, tc := range testCases {

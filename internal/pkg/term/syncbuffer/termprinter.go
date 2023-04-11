@@ -74,7 +74,7 @@ func WithPadding(n int) LabeledTermPrinterOption {
 // IsDone returns true if all the buffers are done else returns false.
 func (ltp *LabeledTermPrinter) IsDone() bool {
 	for _, buf := range ltp.buffers {
-		if !buf.syncBuf.IsDone() {
+		if !buf.IsDone() {
 			return false
 		}
 	}
@@ -94,7 +94,7 @@ func (ltp *LabeledTermPrinter) Print() {
 	}
 	ltp.prevWrittenLines = 0
 	for _, buf := range ltp.buffers {
-		logs := buf.syncBuf.lines()
+		logs := buf.lines()
 		if len(logs) == 0 {
 			continue
 		}
@@ -108,19 +108,12 @@ func (ltp *LabeledTermPrinter) Print() {
 // If one of the buffer gets done then print entire content of the buffer.
 // Until all the buffers are written to file writer.
 func (ltp *LabeledTermPrinter) printAll() {
-	doneCount := 0
-	for {
-		for idx, buf := range ltp.buffers {
-			if !buf.syncBuf.IsDone() {
-				continue
-			}
-			outputLogs := ltp.buffers[idx].syncBuf.lines()
-			ltp.writeLines(buf.label, outputLogs)
-			doneCount++
+	for idx, buf := range ltp.buffers {
+		if !buf.IsDone() {
+			continue
 		}
-		if doneCount >= len(ltp.buffers) {
-			break
-		}
+		outputLogs := ltp.buffers[idx].lines()
+		ltp.writeLines(buf.label, outputLogs)
 	}
 }
 

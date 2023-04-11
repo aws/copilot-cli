@@ -21,88 +21,69 @@ func (m mockFileWriter) Fd() uintptr {
 
 func TestLabeledTermPrinter_Print(t *testing.T) {
 	testCases := map[string]struct {
-		inLabeledTermPrinter LabeledTermPrinter
-		wanted               string
+		inNumLines int
+		inPadding  int
+		wanted     string
 	}{
 		"display label with given numLines": {
-			inLabeledTermPrinter: LabeledTermPrinter{
-				buffers: []*LabeledSyncBuffer{
-					{
-						label: "Building your container image 1",
-						syncBuf: &SyncBuffer{
-							buf: *bytes.NewBufferString(`line1 from image1
-line2 from image1
-line3 from image1
-line4 from image1
-line5 from image1
-line6 from image1
-line7 from image1`),
-							done: make(chan struct{}),
-						},
-					},
-					{
-						label: "Building your container image 2",
-						syncBuf: &SyncBuffer{
-							buf: *bytes.NewBufferString(`line1 from image2
-line2 from image2
-line3 from image2
-line4 from image2
-line5 from image2
-line6 from image2
-line7 from image2`),
-							done: make(chan struct{}),
-						},
-					},
-				},
-				numLines: 2,
-				padding:  5,
-			},
+			inNumLines: 2,
+			inPadding:  5,
 			wanted: `Building your container image 1
-     line6 from image1
-     line7 from image1
+     line3 from image1
+     line4 from image1
 Building your container image 2
-     line6 from image2
-     line7 from image2
+     line3 from image2
+     line4 from image2
 `,
 		},
-		"display all logs if numLines is set to -1": {
-			inLabeledTermPrinter: LabeledTermPrinter{
-				buffers: []*LabeledSyncBuffer{
-					{
-						label: "Building your container image 1",
-						syncBuf: &SyncBuffer{
-							buf:  *bytes.NewBufferString(`line1 from image1`),
-							done: make(chan struct{}),
-						},
-					},
-					{
-						label: "Building your container image 2",
-						syncBuf: &SyncBuffer{
-							buf:  *bytes.NewBufferString(`line1 from image2`),
-							done: make(chan struct{}),
-						},
-					},
-				},
-				numLines: -1,
-				padding:  5,
-			},
+
+		"display ": {
+			inNumLines: -1,
+			inPadding:  5,
 			wanted: `Building your container image 1
      line1 from image1
+     line2 from image1
+     line3 from image1
+     line4 from image1
 Building your container image 2
      line1 from image2
+     line2 from image2
+     line3 from image2
+     line4 from image2
 `,
 		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
+			mockBuffer1 := []byte(`line1 from image1
+line2 from image1
+line3 from image1
+line4 from image1`)
+			mockSyncBuf1 := New()
+			mockSyncBuf1.Write(mockBuffer1)
+			buf2 := []byte(`line1 from image2
+line2 from image2
+line3 from image2
+line4 from image2`)
+			mockSyncBuf2 := New()
+			mockSyncBuf2.Write(buf2)
+			var mockLabeledSyncbufs []*LabeledSyncBuffer
+			mockLabeledSyncbufs = append(mockLabeledSyncbufs, mockSyncBuf1.WithLabel("Building your container image 1"),
+				mockSyncBuf2.WithLabel("Building your container image 2"))
+
 			termOut := &bytes.Buffer{}
-			ltp := tc.inLabeledTermPrinter
-			ltp.term = mockFileWriter{termOut}
+
+			ltp := LabeledTermPrinter{
+				term:     mockFileWriter{termOut},
+				buffers:  mockLabeledSyncbufs,
+				numLines: tc.inNumLines,
+				padding:  tc.inPadding,
+			}
 
 			// WHEN
 			for _, buf := range ltp.buffers {
-				buf.syncBuf.MarkDone()
+				buf.MarkDone()
 			}
 			ltp.Print()
 
@@ -114,27 +95,27 @@ Building your container image 2
 
 func TestLabeledTermPrinter_IsDone(t *testing.T) {
 	testCases := map[string]struct {
-		inLabeledTermPrinter LabeledTermPrinter
-		wanted               bool
+		mockSyncBuf1 *SyncBuffer
+		mockSyncBuf2 *SyncBuffer
+		wanted       bool
 	}{
 		"return false if all buffers are not done": {
-			inLabeledTermPrinter: LabeledTermPrinter{
-				buffers: []*LabeledSyncBuffer{
-					{
-						syncBuf: New(),
-					},
-					{
-						syncBuf: New(),
-					},
-				},
-			},
+			mockSyncBuf1: New(),
+			mockSyncBuf2: New(),
+			wanted:       false,
 		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
-			ltp := tc.inLabeledTermPrinter
-			ltp.buffers[0].syncBuf.MarkDone()
+			var mockLabeledSyncBufs []*LabeledSyncBuffer
+			mockLabeledSyncBufs = append(mockLabeledSyncBufs, tc.mockSyncBuf1.WithLabel("title 1"),
+				tc.mockSyncBuf2.WithLabel("title 2"))
+			ltp := LabeledTermPrinter{
+				term:    mockFileWriter{},
+				buffers: mockLabeledSyncBufs,
+			}
+			mockLabeledSyncBufs[0].MarkDone()
 
 			// WHEN
 			got := ltp.IsDone()

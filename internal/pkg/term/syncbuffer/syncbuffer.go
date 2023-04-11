@@ -51,15 +51,15 @@ func (b *SyncBuffer) MarkDone() {
 
 // LabeledSyncBuffer is a struct that combines a SyncBuffer with a string label.
 type LabeledSyncBuffer struct {
-	label   string
-	syncBuf *SyncBuffer
+	label string
+	*SyncBuffer
 }
 
 // WithLabel creates and returns a new LabeledSyncBuffer with the given label and SyncBuffer.
 func (buf *SyncBuffer) WithLabel(label string) *LabeledSyncBuffer {
 	return &LabeledSyncBuffer{
-		label:   label,
-		syncBuf: buf,
+		label:      label,
+		SyncBuffer: buf,
 	}
 }
 
