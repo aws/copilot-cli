@@ -153,13 +153,12 @@ type runTaskOpts struct {
 	prompt  prompter
 
 	// Fields below are configured at runtime.
-	deployer                 taskDeployer
-	repository               repositoryService
-	runner                   taskRunner
-	eventsWriter             eventsWriter
-	defaultClusterGetter     defaultClusterGetter
-	publicIPGetter           publicIPGetter
-	dockerBuildArgsGenerator dockerBuildArgsGenerator
+	deployer             taskDeployer
+	repository           repositoryService
+	runner               taskRunner
+	eventsWriter         eventsWriter
+	defaultClusterGetter defaultClusterGetter
+	publicIPGetter       publicIPGetter
 
 	provider          sessionProvider
 	sess              *session.Session
@@ -226,8 +225,6 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 		opts.repository = repository.New(ecr.New(opts.sess), repoName)
 		return nil
 	}
-
-	opts.dockerBuildArgsGenerator = dockerengine.New(exec.NewCmd())
 
 	opts.configureEventsWriter = func(tasks []*task.Task) {
 		opts.eventsWriter = logging.NewTaskClient(opts.sess, opts.groupName, tasks)
@@ -976,9 +973,9 @@ func (o *runTaskOpts) buildAndPushImage(uri string) error {
 		Context:    ctx,
 		Tags:       append([]string{imageTagLatest}, additionalTags...),
 	}
-	buildArgsList, err := o.dockerBuildArgsGenerator.GenerateDockerBuildArgs(buildArgs)
+	buildArgsList, err := buildArgs.GenerateDockerBuildArgs(dockerengine.New(exec.NewCmd()))
 	if err != nil {
-		return fmt.Errorf("get docker build args : %w", err)
+		return fmt.Errorf("generate docker build args : %w", err)
 	}
 	log.Infof(dockerengine.DockerBuildLabel(buildArgs.Platform, buildArgsList))
 	if _, err := o.repository.BuildAndPush(buildArgs); err != nil {

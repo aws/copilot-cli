@@ -615,7 +615,7 @@ func TestIsEcrCredentialHelperEnabled(t *testing.T) {
 	}
 }
 
-func TestDockerBuildLabel(t *testing.T) {
+func Test_DockerBuildLabel(t *testing.T) {
 	testCases := map[string]struct {
 		inBuildArgs []string
 		inPlatform  string

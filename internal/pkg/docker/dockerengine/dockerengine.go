@@ -68,26 +68,9 @@ type BuildArguments struct {
 	Labels     map[string]string // Required. Set metadata for an image.
 }
 
-type dockerConfig struct {
-	CredsStore  string            `json:"credsStore,omitempty"`
-	CredHelpers map[string]string `json:"credHelpers,omitempty"`
-}
-
-// Build will run a `docker build` command for the given ecr repo URI and build arguments.
-func (c CmdClient) Build(in *BuildArguments) error {
-	args, err := c.GenerateDockerBuildArgs(in)
-	if err != nil {
-		return fmt.Errorf("generate docker build args: %w", err)
-	}
-	if err := c.runner.Run("docker", args); err != nil {
-		return fmt.Errorf("building image: %w", err)
-	}
-	return nil
-}
-
 // GenerateDockerBuildArgs returns command line arguments to be passed to the Docker build command based on the provided BuildArguments.
 // Returns an error if no tags are provided for building an image.
-func (c CmdClient) GenerateDockerBuildArgs(in *BuildArguments) ([]string, error) {
+func (in *BuildArguments) GenerateDockerBuildArgs(c CmdClient) ([]string, error) {
 	// Tags must not be empty to build an docker image.
 	if len(in.Tags) == 0 {
 		return nil, &errEmptyImageTags{
@@ -95,7 +78,8 @@ func (c CmdClient) GenerateDockerBuildArgs(in *BuildArguments) ([]string, error)
 		}
 	}
 	dfDir := in.Context
-	if dfDir == "" { // Context wasn't specified use the Dockerfile's directory as context.
+	// Context wasn't specified use the Dockerfile's directory as context.
+	if dfDir == "" {
 		dfDir = filepath.Dir(in.Dockerfile)
 	}
 
@@ -150,6 +134,23 @@ func (c CmdClient) GenerateDockerBuildArgs(in *BuildArguments) ([]string, error)
 
 	args = append(args, dfDir, "-f", in.Dockerfile)
 	return args, nil
+}
+
+type dockerConfig struct {
+	CredsStore  string            `json:"credsStore,omitempty"`
+	CredHelpers map[string]string `json:"credHelpers,omitempty"`
+}
+
+// Build will run a `docker build` command for the given ecr repo URI and build arguments.
+func (c CmdClient) Build(in *BuildArguments) error {
+	args, err := in.GenerateDockerBuildArgs(c)
+	if err != nil {
+		return fmt.Errorf("generate docker build args: %w", err)
+	}
+	if err := c.runner.Run("docker", args); err != nil {
+		return fmt.Errorf("building image: %w", err)
+	}
+	return nil
 }
 
 // Login will run a `docker login` command against the Service repository URI with the input uri and auth data.
@@ -288,6 +289,16 @@ func PlatformString(os, arch string) string {
 	return fmt.Sprintf("%s/%s", os, arch)
 }
 
+// DockerBuildLabel returns the docker build label as a string if platform is not empty.
+func DockerBuildLabel(platform string, args []string) string {
+	// If host platform is not linux/amd64, show the user how the container image is being built; if the build fails (if their docker server doesn't have multi-platform-- and therefore `--platform` capability, for instance) they may see why.
+	var buildLabel string
+	if platform != "" {
+		buildLabel = fmt.Sprintf("Building your container image: docker %s\n", strings.Join(args, " "))
+	}
+	return buildLabel
+}
+
 func parseCredFromDockerConfig(config []byte) (*dockerConfig, error) {
 	/*
 			Sample docker config file
@@ -314,16 +325,6 @@ func userHomeDirectory() string {
 	}
 
 	return home
-}
-
-// DockerBuildLabel returns the docker build label as a string if platform is not empty.
-func DockerBuildLabel(platform string, args []string) string {
-	// If host platform is not linux/amd64, show the user how the container image is being built; if the build fails (if their docker server doesn't have multi-platform-- and therefore `--platform` capability, for instance) they may see why.
-	var buildLabel string
-	if platform != "" {
-		buildLabel = fmt.Sprintf("Building your container image: docker %s\n", strings.Join(args, " "))
-	}
-	return buildLabel
 }
 
 type errEmptyImageTags struct {
