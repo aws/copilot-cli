@@ -140,6 +140,14 @@ func (u *ArtifactBucketUploader) uploadAssets(assets []asset) error {
 	return g.Wait()
 }
 
+// uploadAssetMappingFile uploads a JSON file to u.AssetMappingPath containing
+// the current location of each file in the artifact bucket and the desired location
+// of the file in the destination bucket. It has the format:
+//
+//	{
+//	  "path": "local-assets/12345asdf",
+//	  "destPath": "index.html"
+//	}
 func (u *ArtifactBucketUploader) uploadAssetMappingFile(assets []asset) error {
 	// stable output
 	sort.Slice(assets, func(i, j int) bool {

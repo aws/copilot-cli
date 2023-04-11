@@ -43,15 +43,14 @@ func NewStaticSiteDeployer(in *WorkloadDeployerInput) (*staticSiteDeployer, erro
 	if !ok {
 		return nil, fmt.Errorf("manifest is not of type %s", manifestinfo.StaticSiteType)
 	}
-	fs := afero.NewOsFs()
-	assetMappingPath := fmt.Sprintf("local-assets/workloads/%s/mapping/%s.json", svcDeployer.name, time.Now().Format(time.RFC3339))
+	assetMappingPath := fmt.Sprintf("local-assets/environment/%s/workloads/%s/mapping/%s.json", svcDeployer.env.Name, svcDeployer.name, time.Now().Format(time.RFC3339))
 	return &staticSiteDeployer{
 		svcDeployer:      svcDeployer,
 		staticSiteMft:    mft,
-		fs:               fs,
+		fs:               svcDeployer.fs,
 		assetMappingPath: assetMappingPath,
 		uploader: &asset.ArtifactBucketUploader{
-			FS:               fs,
+			FS:               svcDeployer.fs,
 			PathPrefix:       "local-assets",
 			AssetMappingPath: assetMappingPath,
 			Upload: func(path string, data io.Reader) error {
