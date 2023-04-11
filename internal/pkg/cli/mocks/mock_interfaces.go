@@ -1718,44 +1718,6 @@ func (mr *MockrepositoryServiceMockRecorder) URI() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "URI", reflect.TypeOf((*MockrepositoryService)(nil).URI))
 }
 
-// MockdockerBuildArgsGenerator is a mock of dockerBuildArgsGenerator interface.
-type MockdockerBuildArgsGenerator struct {
-	ctrl     *gomock.Controller
-	recorder *MockdockerBuildArgsGeneratorMockRecorder
-}
-
-// MockdockerBuildArgsGeneratorMockRecorder is the mock recorder for MockdockerBuildArgsGenerator.
-type MockdockerBuildArgsGeneratorMockRecorder struct {
-	mock *MockdockerBuildArgsGenerator
-}
-
-// NewMockdockerBuildArgsGenerator creates a new mock instance.
-func NewMockdockerBuildArgsGenerator(ctrl *gomock.Controller) *MockdockerBuildArgsGenerator {
-	mock := &MockdockerBuildArgsGenerator{ctrl: ctrl}
-	mock.recorder = &MockdockerBuildArgsGeneratorMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockdockerBuildArgsGenerator) EXPECT() *MockdockerBuildArgsGeneratorMockRecorder {
-	return m.recorder
-}
-
-// GenerateDockerBuildArgs mocks base method.
-func (m *MockdockerBuildArgsGenerator) GenerateDockerBuildArgs(in *dockerengine.BuildArguments) ([]string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GenerateDockerBuildArgs", in)
-	ret0, _ := ret[0].([]string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GenerateDockerBuildArgs indicates an expected call of GenerateDockerBuildArgs.
-func (mr *MockdockerBuildArgsGeneratorMockRecorder) GenerateDockerBuildArgs(in interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenerateDockerBuildArgs", reflect.TypeOf((*MockdockerBuildArgsGenerator)(nil).GenerateDockerBuildArgs), in)
-}
-
 // MocklogEventsWriter is a mock of logEventsWriter interface.
 type MocklogEventsWriter struct {
 	ctrl     *gomock.Controller
