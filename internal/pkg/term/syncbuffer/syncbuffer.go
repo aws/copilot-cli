@@ -13,12 +13,6 @@ import (
 	"sync"
 )
 
-// fileReader interface that can read data from a file.
-// It extends the io.Reader interface, which provides a method for reading bytes into a buffer.
-type fileReader interface {
-	io.Reader
-}
-
 // SyncBuffer is a synchronized buffer that can be used to store output data and coordinate between multiple goroutines.
 type SyncBuffer struct {
 	bufMu sync.Mutex    // bufMu is a mutex that can be used to protect access to the buffer.
@@ -26,8 +20,8 @@ type SyncBuffer struct {
 	done  chan struct{} // done is a channel that can be used to signal when the operations are complete.
 }
 
-// NewSyncBuffer creates and returns a new SyncBuffer object with an initialized 'done' channel.
-func NewSyncBuffer() *SyncBuffer {
+// New creates and returns a new SyncBuffer object with an initialized 'done' channel.
+func New() *SyncBuffer {
 	return &SyncBuffer{
 		done: make(chan struct{}),
 	}
@@ -38,18 +32,6 @@ func (b *SyncBuffer) Write(p []byte) (n int, err error) {
 	b.bufMu.Lock()
 	defer b.bufMu.Unlock()
 	return b.buf.Write(p)
-}
-
-// strings returns an empty slice if the buffer is empty.
-// Otherwise, it returns a slice of all the lines stored in the buffer.
-func (b *SyncBuffer) strings() []string {
-	b.bufMu.Lock()
-	defer b.bufMu.Unlock()
-	lines := b.buf.String()
-	if len(lines) == 0 {
-		return nil
-	}
-	return strings.Split(strings.TrimSpace(lines), "\n")
 }
 
 // IsDone returns true if the Done channel has been closed, otherwise return false.
@@ -67,46 +49,51 @@ func (b *SyncBuffer) MarkDone() {
 	close(b.done)
 }
 
-// CopyToBuffer reads from a fileReader and writes the data to the buffer.
-func (b *SyncBuffer) CopyToBuffer(r fileReader) error {
-	return copyFileToBuffer(b, r)
-}
-
 // LabeledSyncBuffer is a struct that combines a SyncBuffer with a string label.
 type LabeledSyncBuffer struct {
 	label   string
 	syncBuf *SyncBuffer
 }
 
-// New creates and returns a new LabeledSyncBuffer without label.
-func New(syncBuf *SyncBuffer) *LabeledSyncBuffer {
-	return &LabeledSyncBuffer{
-		syncBuf: syncBuf,
-	}
-}
-
-// NewWithLabel creates and returns a new LabeledSyncBuffer with the given label and SyncBuffer.
-func NewWithLabel(label string, syncBuf *SyncBuffer) *LabeledSyncBuffer {
+// WithLabel creates and returns a new LabeledSyncBuffer with the given label and SyncBuffer.
+func (buf *SyncBuffer) WithLabel(label string) *LabeledSyncBuffer {
 	return &LabeledSyncBuffer{
 		label:   label,
-		syncBuf: syncBuf,
+		syncBuf: buf,
 	}
 }
 
-// CopyToLabeledBuffer reads from a fileReader and writes the data to the buffer of LabeledSyncBuffer.
-func (b *LabeledSyncBuffer) CopyToLabeledBuffer(r fileReader) error {
-	return b.syncBuf.CopyToBuffer(r)
-}
-
-// copyFileToBuffer copies the contents of the given fileReader into the buffer.
-// It returns an error if the copy operation fails or encounters a non-EOF error.
-func copyFileToBuffer(b *SyncBuffer, r fileReader) error {
+// Copy reads all the content of an io.Reader into a SyncBuffer and returns it.
+func Copy(r io.Reader) (*SyncBuffer, error) {
+	syncBuf := New()
 	defer func() {
-		b.MarkDone()
+		syncBuf.MarkDone()
 	}()
-	_, err := io.Copy(&b.buf, r)
+	_, err := io.Copy(&syncBuf.buf, r)
 	if err != nil && !errors.Is(err, io.EOF) {
-		return fmt.Errorf("failed to copy to buffer: %w", err)
+		return nil, fmt.Errorf("failed to copy to buffer: %w", err)
 	}
-	return nil
+	return syncBuf, nil
+}
+
+// lines returns an empty slice if the buffer is empty.
+// Otherwise, it returns a slice of all the lines stored in the buffer.
+func (b *SyncBuffer) lines() []string {
+	b.bufMu.Lock()
+	defer b.bufMu.Unlock()
+	lines := b.buf.String()
+	if len(lines) == 0 {
+		return nil
+	}
+	return splitLinesAndTrimSpaces(lines)
+}
+
+// splitLinesAndTrimSpaces splits the input string into lines
+// and trims the leading and trailing spaces and returns slice of strings.
+func splitLinesAndTrimSpaces(input string) []string {
+	lines := strings.Split(input, "\n")
+	for i, line := range lines {
+		lines[i] = strings.TrimSpace(line)
+	}
+	return lines
 }

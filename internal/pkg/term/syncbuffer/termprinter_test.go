@@ -5,41 +5,18 @@ package syncbuffer
 
 import (
 	"bytes"
+	"io"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
 
-func TestLabeledTermPrinter_lastNLines(t *testing.T) {
-	testCases := map[string]struct {
-		logs     []string
-		wanted   []string
-		numLines int
-	}{
-		"more than five lines": {
-			logs:   []string{"line1", "line2", "line3", "line4", "line5", "line6", "line7"},
-			wanted: []string{"line3", "line4", "line5", "line6", "line7"},
-		},
-		"less than five lines": {
-			logs:   []string{"line1", "line2"},
-			wanted: []string{"line1", "line2", "", "", ""},
-		},
-	}
+type mockFileWriter struct {
+	io.Writer
+}
 
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			tp := &LabeledTermPrinter{
-				numLines: 5,
-			}
-
-			// WHEN
-			actual := tp.lastNLines(tc.logs)
-
-			// THEN
-			require.Equal(t, tc.wanted, actual)
-		})
-	}
+func (m mockFileWriter) Fd() uintptr {
+	return 0
 }
 
 func TestLabeledTermPrinter_Print(t *testing.T) {
@@ -81,11 +58,11 @@ line7 from image2`),
 				padding:  5,
 			},
 			wanted: `Building your container image 1
-      line6 from image1
-      line7 from image1
+     line6 from image1
+     line7 from image1
 Building your container image 2
-      line6 from image2
-      line7 from image2
+     line6 from image2
+     line7 from image2
 `,
 		},
 		"display all logs if numLines is set to -1": {
@@ -110,9 +87,9 @@ Building your container image 2
 				padding:  5,
 			},
 			wanted: `Building your container image 1
-      line1 from image1
+     line1 from image1
 Building your container image 2
-      line1 from image2
+     line1 from image2
 `,
 		},
 	}
@@ -121,7 +98,7 @@ Building your container image 2
 			// GIVEN
 			termOut := &bytes.Buffer{}
 			ltp := tc.inLabeledTermPrinter
-			ltp.term = termOut
+			ltp.term = mockFileWriter{termOut}
 
 			// WHEN
 			for _, buf := range ltp.buffers {
@@ -135,62 +112,35 @@ Building your container image 2
 	}
 }
 
-func TestLabeledTermPrinter_PrintAll(t *testing.T) {
+func TestLabeledTermPrinter_IsDone(t *testing.T) {
 	testCases := map[string]struct {
 		inLabeledTermPrinter LabeledTermPrinter
-		wanted               string
+		wanted               bool
 	}{
-		"display label with given numLines": {
+		"return false if all buffers are not done": {
 			inLabeledTermPrinter: LabeledTermPrinter{
 				buffers: []*LabeledSyncBuffer{
 					{
-						label: "Building your container image 1",
-						syncBuf: &SyncBuffer{
-							buf: *bytes.NewBufferString(`line1 from image1
-line2 from image1
-line3 from image1`),
-							done: make(chan struct{}),
-						},
+						syncBuf: New(),
 					},
 					{
-						label: "Building your container image 2",
-						syncBuf: &SyncBuffer{
-							buf: *bytes.NewBufferString(`line1 from image2
-line2 from image2
-line3 from image2`),
-							done: make(chan struct{}),
-						},
+						syncBuf: New(),
 					},
 				},
-				numLines: 1,
-				padding:  5,
 			},
-			wanted: `Building your container image 1
-      line1 from image1
-      line2 from image1
-      line3 from image1
-Building your container image 2
-      line1 from image2
-      line2 from image2
-      line3 from image2
-`,
 		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
-			termOut := &bytes.Buffer{}
 			ltp := tc.inLabeledTermPrinter
-			ltp.term = termOut
+			ltp.buffers[0].syncBuf.MarkDone()
 
 			// WHEN
-			for _, buf := range ltp.buffers {
-				buf.syncBuf.MarkDone()
-			}
-			ltp.PrintAll()
+			got := ltp.IsDone()
 
-			// THEN
-			require.Equal(t, tc.wanted, termOut.String())
+			//THEN
+			require.Equal(t, tc.wanted, got)
 		})
 	}
 }

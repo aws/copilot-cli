@@ -8,20 +8,21 @@ import (
 	"fmt"
 	"io"
 	"math"
-	"os"
 	"strings"
-	"time"
 
 	"github.com/aws/copilot-cli/internal/pkg/term/cursor"
 	"golang.org/x/term"
 )
 
-// pollIntervalForSyncBuffer is the time Interval to wait between checking whether the output buffers are done.
-const pollIntervalForSyncBuffer = 60 * time.Millisecond
+// printAllLinesInBuf represents to print the entire contents in the buffer.
+const (
+	printAllLinesInBuf = -1
+)
 
 // FileWriter is the interface to write to a file.
 type FileWriter interface {
 	io.Writer
+	Fd() uintptr
 }
 
 // LabeledTermPrinter is a printer to display label and logs to the terminal.
@@ -39,7 +40,7 @@ type LabeledTermPrinterOption func(ltp *LabeledTermPrinter)
 
 // NewLabeledTermPrinter returns a LabeledTermPrinter that can print to the terminal filewriter from buffers.
 func NewLabeledTermPrinter(fw FileWriter, bufs []*LabeledSyncBuffer, opts ...LabeledTermPrinterOption) (*LabeledTermPrinter, error) {
-	width, err := terminalWidth()
+	width, err := terminalWidth(fw)
 	if err != nil {
 		return nil, fmt.Errorf("get terminal width: %w", err)
 	}
@@ -48,7 +49,7 @@ func NewLabeledTermPrinter(fw FileWriter, bufs []*LabeledSyncBuffer, opts ...Lab
 		term:      fw,
 		buffers:   bufs,
 		termWidth: width,
-		numLines:  -1, // By default set numlines to -1 to print all from buffers.
+		numLines:  printAllLinesInBuf, // By default set numlines to -1 to print all from buffers.
 	}
 	for _, opt := range opts {
 		opt(ltp)
@@ -70,8 +71,8 @@ func WithPadding(n int) LabeledTermPrinterOption {
 	}
 }
 
-// isDone returns true if all the buffers are done else returns false.
-func (ltp *LabeledTermPrinter) isDone() bool {
+// IsDone returns true if all the buffers are done else returns false.
+func (ltp *LabeledTermPrinter) IsDone() bool {
 	for _, buf := range ltp.buffers {
 		if !buf.syncBuf.IsDone() {
 			return false
@@ -80,31 +81,46 @@ func (ltp *LabeledTermPrinter) isDone() bool {
 	return true
 }
 
-// Print prints the label and the last N lines of logs from each buffer to the termPrinter fileWriter.
+// Print prints the label and the last N lines of logs from each buffer
+// to the LabeledTermPrinter fileWriter and erases the previous output.
 // If numLines is -1 then print all the values from buffers.
-// It polls each buffer until all the buffers are marked done,
-// and erases the previous output after sleeping for a short duration.
 func (ltp *LabeledTermPrinter) Print() {
-	if ltp.numLines == -1 {
-		ltp.PrintAll()
+	if ltp.numLines == printAllLinesInBuf {
+		ltp.printAll()
 		return
 	}
+	ltp.prevWrittenLines = 0
+	for _, buf := range ltp.buffers {
+		logs := buf.syncBuf.lines()
+		if len(logs) == 0 {
+			continue
+		}
+		outputLogs := ltp.lastNLines(logs)
+		ltp.writeLines(buf.label, outputLogs)
+		ltp.prevWrittenLines += ltp.calculateLinesCount(append(outputLogs, buf.label))
+	}
+	if ltp.prevWrittenLines > 0 {
+		cursor.EraseLinesAbove(ltp.term, ltp.prevWrittenLines)
+	}
+}
+
+// printAll writes the entire contents of all the buffers to the file writer.
+// If one of the buffer gets done then print entire content of the buffer.
+// Until all the buffers are written to file writer.
+func (ltp *LabeledTermPrinter) printAll() {
+	doneCount := 0
 	for {
-		ltp.prevWrittenLines = 0
-		for _, buf := range ltp.buffers {
-			logs := buf.syncBuf.strings()
-			if len(logs) == 0 {
+		for idx, buf := range ltp.buffers {
+			if !buf.syncBuf.IsDone() {
 				continue
 			}
-			outputLogs := ltp.lastNLines(logs)
+			outputLogs := ltp.buffers[idx].syncBuf.lines()
 			ltp.writeLines(buf.label, outputLogs)
-			ltp.prevWrittenLines += ltp.calculateLinesCount(append(outputLogs, buf.label))
+			doneCount++
 		}
-		if ltp.isDone() {
+		if doneCount >= len(ltp.buffers) {
 			break
 		}
-		time.Sleep(pollIntervalForSyncBuffer)
-		cursor.EraseLinesAbove(os.Stderr, ltp.prevWrittenLines)
 	}
 }
 
@@ -131,13 +147,9 @@ func (ltp *LabeledTermPrinter) lastNLines(logs []string) []string {
 
 // writeLines writes a label and output logs to the terminal associated with the TermPrinter.
 func (ltp *LabeledTermPrinter) writeLines(label string, outputLogs []string) {
-	padding := ""
-	if ltp.padding != 0 {
-		padding = strings.Repeat(" ", ltp.padding)
-	}
 	fmt.Fprintln(ltp.term, label)
 	for _, logLine := range outputLogs {
-		fmt.Fprintln(ltp.term, padding, logLine)
+		fmt.Fprintf(ltp.term, "%s%s\n", strings.Repeat(" ", ltp.padding), logLine)
 	}
 }
 
@@ -154,29 +166,9 @@ func (ltp *LabeledTermPrinter) calculateLinesCount(lines []string) int {
 	return int(numLines)
 }
 
-// PrintAll writes the entire contents of all the buffers to the file writer.
-// If one of the buffer gets done then print entire content of the buffer.
-// Until all the buffers are written to file writer.
-func (ltp *LabeledTermPrinter) PrintAll() {
-	doneCount := 0
-	for {
-		for idx, buf := range ltp.buffers {
-			if !buf.syncBuf.IsDone() {
-				continue
-			}
-			outputLogs := ltp.buffers[idx].syncBuf.strings()
-			ltp.writeLines(buf.label, outputLogs)
-			doneCount++
-		}
-		if doneCount >= len(ltp.buffers) {
-			break
-		}
-	}
-}
-
 // terminalWidth returns the width of the terminal or an error if failed to get the width of terminal.
-func terminalWidth() (int, error) {
-	width, _, err := term.GetSize(int(os.Stderr.Fd()))
+func terminalWidth(fw FileWriter) (int, error) {
+	width, _, err := term.GetSize(int(fw.Fd()))
 	if err != nil {
 		return 0, err
 	}

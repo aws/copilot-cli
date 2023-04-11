@@ -4,7 +4,6 @@
 package syncbuffer
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -31,7 +30,7 @@ func TestSyncBuffer_Write(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
-			sb := &SyncBuffer{}
+			sb := New()
 
 			// WHEN
 			sb.Write(tc.input)
@@ -48,11 +47,11 @@ func TestSyncBuffer_IsDone(t *testing.T) {
 		wantedDone bool
 	}{
 		"Buffer is done": {
-			buffer:     &SyncBuffer{done: make(chan struct{}), buf: bytes.Buffer{}},
+			buffer:     New(),
 			wantedDone: true,
 		},
 		"Buffer is not done": {
-			buffer: &SyncBuffer{done: make(chan struct{}), buf: bytes.Buffer{}},
+			buffer: New(),
 		},
 	}
 
@@ -73,46 +72,12 @@ func TestSyncBuffer_IsDone(t *testing.T) {
 	}
 }
 
-func TestSyncBuffer_strings(t *testing.T) {
-	testCases := map[string]struct {
-		input  []byte
-		wanted []string
-	}{
-		"single line in buffer": {
-			input:  []byte("hello"),
-			wanted: []string{"hello"},
-		},
-		"multiple lines in buffer": {
-			input:  []byte("hello\nworld\n"),
-			wanted: []string{"hello", "world"},
-		},
-		"empty buffer": {
-			input: []byte(""),
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-
-			// GIVEN
-			sb := &SyncBuffer{}
-			sb.Write(tc.input)
-
-			// WHEN
-			actual := sb.strings()
-
-			// THEN
-			require.Equal(t, tc.wanted, actual)
-		})
-	}
-}
-
-type mockFileReader struct {
+type mockReader struct {
 	data []byte
 	err  error
 }
 
-func (r *mockFileReader) Read(p []byte) (int, error) {
+func (r *mockReader) Read(p []byte) (int, error) {
 	if len(r.data) == 0 {
 		return 0, r.err
 	}
@@ -123,23 +88,22 @@ func (r *mockFileReader) Read(p []byte) (int, error) {
 
 func TestSyncBuffer_CopyToBuffer(t *testing.T) {
 	testCases := map[string]struct {
-		reader       fileReader
+		reader       io.Reader
 		wantedOutput string
 		wantedError  error
 	}{
 		"copy data from file reader to buffer": {
-			reader: &mockFileReader{
+			reader: &mockReader{
 				data: []byte("Building your container image"),
 			},
 			wantedOutput: "Building your container image",
 		},
 		"return an error when failed to copy data to buffer": {
-			reader:       &mockFileReader{err: fmt.Errorf("some error")},
-			wantedOutput: "",
-			wantedError:  fmt.Errorf("failed to copy to buffer: some error"),
+			reader:      &mockReader{err: fmt.Errorf("some error")},
+			wantedError: fmt.Errorf("failed to copy to buffer: some error"),
 		},
 		"return an EOF error": {
-			reader: &mockFileReader{
+			reader: &mockReader{
 				data: []byte("Building your container image"),
 				err:  errors.New("EOF"),
 			},
@@ -149,19 +113,38 @@ func TestSyncBuffer_CopyToBuffer(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			sb := &SyncBuffer{
-				done: make(chan struct{}),
-			}
-
-			// WHEN
-			gotErr := sb.CopyToBuffer(tc.reader)
-
-			// THEN
+			syncBuf, gotErr := Copy(tc.reader)
 			if tc.wantedError != nil {
 				require.EqualError(t, tc.wantedError, gotErr.Error())
+			} else {
+				require.Equal(t, tc.wantedOutput, syncBuf.buf.String())
 			}
-			require.Equal(t, tc.wantedOutput, sb.buf.String())
+		})
+	}
+}
+
+func TestSyncBuffer_WithLabel(t *testing.T) {
+	mockSyncBuf := New()
+	testCases := map[string]struct {
+		label  string
+		wanted *LabeledSyncBuffer
+	}{
+		"if the label is provided": {
+			label: "title",
+			wanted: &LabeledSyncBuffer{
+				label:   "title",
+				syncBuf: mockSyncBuf,
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+
+			// THEN
+			labeledSyncBuf := mockSyncBuf.WithLabel(tc.label)
+
+			// THEN
+			require.Equal(t, tc.wanted, labeledSyncBuf)
 		})
 	}
 }
