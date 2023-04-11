@@ -101,7 +101,7 @@ These messages can be consumed by the Worker Service.`
 	staticSiteInitExcludeHelpPrompt       = "Parameters for pattern-matching; includes '*', '?', '[sequence]', and '[!sequence]'"
 	fmtStaticSiteInitReincludePrompt        = "Which files under '%s' would you like to " + color.Emphasize("reinclude") + "?"
 	staticSiteInitReincludeHelpPrompt       = "Parameters for pattern-matching; includes '*', '?', '[sequence]', and '[!sequence]'"
-	fmtStaticSiteInitDestinationPrompt    = "What is the S3 prefix where '%s' should be uploaded?"
+	fmtStaticSiteInitDestinationPrompt    = "What is the destination where '%s' should be uploaded?"
 	staticSiteInitDestinationHelpPrompt   = "Optional. Destination in S3; default for directories is '/'."
 	staticSiteConfirmSummaryPrompt        = "Does this upload config look right to you?"
 	staticSiteConfirmSummaryHelpPrompt    = "Confirm whether this asset should be uploaded."
@@ -607,23 +607,16 @@ func (o *initSvcOpts) askImage() error {
 
 func (o *initSvcOpts) askSource() (string, error) {
 	source, err := o.dirFileSel.DirOrFile(
-		fmt.Sprintf(fmtStaticSiteInitDirOrFilePrompt, color.HighlightUserInput(o.name)), staticSiteInitDirOrFileHelp)
+		fmt.Sprintf(fmtStaticSiteInitDirOrFilePrompt, color.HighlightUserInput(o.name)), 
+		fmt.Sprintf(fmtStaticSiteInitDirOrFilePathPrompt, color.HighlightUserInput(o.name)),
+		staticSiteInitDirOrFileHelpPrompt,
+		staticSiteInitDirOrFilePathHelpPrompt,
+		func(v interface{}) error{
+			return validatePath(afero.NewOsFs(), v)
+})
 	if err != nil {
 		return "", fmt.Errorf("select local directory or file: %w", err)
 	}
-
-	//source, err := o.prompt.Get(
-	//	fmt.Sprintf(fmtStaticSiteInitDirOrFilePrompt, color.HighlightUserInput(o.name)), 
-	//		staticSiteInitDirOrFileHelp, 
-	//		func(val interface{}) error {
-	//		return nil
-	//	}, 
-	//	prompt.WithFinalMessage("Source:"), prompt.WithSuggestInput())
-	//if err != nil {
-	//	return "", fmt.Errorf("get destination: %w", err)
-	//}
-	
-
 	return source, nil
 }
 
