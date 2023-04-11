@@ -89,6 +89,9 @@ func (ltp *LabeledTermPrinter) Print() {
 		ltp.printAll()
 		return
 	}
+	if ltp.prevWrittenLines > 0 {
+		cursor.EraseLinesAbove(ltp.term, ltp.prevWrittenLines)
+	}
 	ltp.prevWrittenLines = 0
 	for _, buf := range ltp.buffers {
 		logs := buf.syncBuf.lines()
@@ -98,9 +101,6 @@ func (ltp *LabeledTermPrinter) Print() {
 		outputLogs := ltp.lastNLines(logs)
 		ltp.writeLines(buf.label, outputLogs)
 		ltp.prevWrittenLines += ltp.calculateLinesCount(append(outputLogs, buf.label))
-	}
-	if ltp.prevWrittenLines > 0 {
-		cursor.EraseLinesAbove(ltp.term, ltp.prevWrittenLines)
 	}
 }
 
