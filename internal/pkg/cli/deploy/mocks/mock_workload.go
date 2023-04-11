@@ -426,44 +426,6 @@ func (mr *MockspinnerMockRecorder) Stop(label interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*Mockspinner)(nil).Stop), label)
 }
 
-// MockfileReader is a mock of fileReader interface.
-type MockfileReader struct {
-	ctrl     *gomock.Controller
-	recorder *MockfileReaderMockRecorder
-}
-
-// MockfileReaderMockRecorder is the mock recorder for MockfileReader.
-type MockfileReaderMockRecorder struct {
-	mock *MockfileReader
-}
-
-// NewMockfileReader creates a new mock instance.
-func NewMockfileReader(ctrl *gomock.Controller) *MockfileReader {
-	mock := &MockfileReader{ctrl: ctrl}
-	mock.recorder = &MockfileReaderMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockfileReader) EXPECT() *MockfileReaderMockRecorder {
-	return m.recorder
-}
-
-// ReadFile mocks base method.
-func (m *MockfileReader) ReadFile(arg0 string) ([]byte, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReadFile", arg0)
-	ret0, _ := ret[0].([]byte)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ReadFile indicates an expected call of ReadFile.
-func (mr *MockfileReaderMockRecorder) ReadFile(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadFile", reflect.TypeOf((*MockfileReader)(nil).ReadFile), arg0)
-}
-
 // MocktimeoutError is a mock of timeoutError interface.
 type MocktimeoutError struct {
 	ctrl     *gomock.Controller
