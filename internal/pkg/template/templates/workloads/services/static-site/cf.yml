@@ -25,7 +25,198 @@ Conditions:
   HasAddons:
     !Not [!Equals [!Ref AddonsTemplateURL, ""]]
 
+# TODO: add permission boundary to all IAM roles
 Resources:
-  NullResource:
-    Type: AWS::CloudFormation::WaitConditionHandle
+  CopyFromCacheBucketFunctionRole:
+    Metadata:
+      'aws:copilot:description': 'An IAM Role'
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  CopyFromCacheBucketFunction:
+    Metadata:
+      'aws:copilot:description': 'A lambda function'
+    Type: "AWS::Lambda::Function"
+    Properties:
+      Handler: "index.handler"
+      Role: !GetAtt CopyFromCacheBucketFunctionRole.Arn
+      Runtime: nodejs16.x
+      Timeout: 60
+      Code:
+        ZipFile: |
+          exports.handler = (event, context, callback) => {
+            console.log("copy from cache bucket event:", event)
+            callback(null, "Hello World!");
+          }; 
+
+  TriggerStateMachineFunctionRole:
+    Metadata:
+      'aws:copilot:description': 'An IAM Role for the lambda that triggers the file copying state machine.'
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: TriggerStateMachine
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action: 'states:StartSyncExecution'
+                Resource: !GetAtt CopyFromCacheBucketStepFunction.Arn
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  TriggerStateMachineFunction:
+    Metadata:
+      'aws:copilot:description': 'A lambda that triggers the file copying state machine.'
+    Type: "AWS::Lambda::Function"
+    Properties:
+      Handler: "index.handler"
+      Role: !GetAtt TriggerStateMachineFunctionRole.Arn
+      Runtime: nodejs16.x
+      Timeout: 60
+      Code:
+        ZipFile: |
+          var response = require('cfn-response');
+          var aws = require('aws-sdk');
+
+          exports.handler = (event, context) => {
+            console.log("trigger state machine funtion: event", event)
+
+            const sf = new aws.StepFunctions();
+            const params = {
+              stateMachineArn: event.ResourceProperties.StateMachineARN,
+              input: JSON.stringify({
+                FromBucket: event.ResourceProperties.FromBucket,
+                AssetMappingFilePath: event.ResourceProperties.AssetMappingFilePath,
+                ToBucket: event.ResourceProperties.ToBucket,
+              })
+            };
+            sf.startSyncExecution(params, (err, data) => {
+              if (err) {
+                console.log("error executing step function", err)
+                response.send(event, context, response.FAILED, {"error": err.message}, event.PhysicalResourceId)
+                return;
+              }
+
+              console.log("finished step function execution:", data)
+              response.send(event, context, response.SUCCESS, {}, event.PhysicalResourceId)
+            });
+          }; 
+
+  TriggerStateMachineAction:
+    Metadata:
+      'aws:copilot:description': 'A custom resource to trigger the file copying state machine'
+    Type: Custom::TriggerStateMachine
+    DependsOn: CopyFromCacheBucketStepFunction
+    Properties:
+      ServiceToken: !GetAtt TriggerStateMachineFunction.Arn
+      StateMachineARN: !GetAtt CopyFromCacheBucketStepFunction.Arn
+      FromBucket: {{ .AssetMappingFileBucket }}
+      AssetMappingFilePath: {{ .AssetMappingFilePath }} # hash all of the files so that the state machine is triggered ONLY when all of the files have changed
+      ToBucket: toBucketTODO
+
+  CopyFromCacheBucketStepFunctionRole:
+    Metadata:
+      'aws:copilot:description': 'An IAM Role'
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - states.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: InvokeLambda
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action: 'lambda:InvokeFunction'
+                Resource: !GetAtt CopyFromCacheBucketFunction.Arn
+        - PolicyName: S3Access
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action: 's3:GetObject'
+                Resource: 'arn:aws:s3:::{{ .AssetMappingFileBucket }}/{{ .AssetMappingFilePath }}'
+        - PolicyName: LoggingTODORemoveMe
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action:
+                  - 'logs:CreateLogDelivery'
+                  - 'logs:CreateLogStream'
+                  - 'logs:GetLogDelivery'
+                  - 'logs:UpdateLogDelivery'
+                  - 'logs:DeleteLogDelivery'
+                  - 'logs:ListLogDeliveries'
+                  - 'logs:PutLogEvents'
+                  - 'logs:PutResourcePolicy'
+                  - 'logs:DescribeResourcePolicies'
+                  - 'logs:DescribeLogGroups'
+                Resource: '*'
+
+  CopyFromCacheBucketStepFunction:
+    Type: AWS::StepFunctions::StateMachine
+    Properties:
+      RoleArn: !GetAtt CopyFromCacheBucketStepFunctionRole.Arn
+      StateMachineType: EXPRESS
+      LoggingConfiguration:
+        Level: ALL
+        IncludeExecutionData: true
+        Destinations:
+          - CloudWatchLogsLogGroup:
+              LogGroupArn: 'arn:aws:logs:us-west-2:447368768304:log-group:/ecs/deleteme:*'
+      Definition:
+        Comment: "A test state machine"
+        StartAt: GetMappingFile
+        States:
+          GetMappingFile: # TODO: error handling?
+            Type: Task
+            Parameters:
+              Bucket.$: $.FromBucket
+              Key.$: $.AssetMappingFilePath
+            Resource:  'arn:aws:states:::aws-sdk:s3:getObject'
+            ResultSelector:
+              files.$: States.StringToJson($.Body)
+            ResultPath: $.GetMappingFile
+            Next: CopyFiles
+          CopyFiles:
+            Type: Map
+            End: true
+            ItemsPath: $.GetMappingFile.files
+            ItemSelector:
+              mapping.$: $$.Map.Item.Value
+              destBucket.$: $.ToBucket
+            ItemProcessor:
+              ProcessorConfig:
+                Mode: INLINE
+              StartAt: CopyFile
+              States:
+                CopyFile:
+                  Type: Task
+                  End: true
+                  Resource: !GetAtt CopyFromCacheBucketFunction.Arn
+
   # TODO(dnrnd): create s3 bucket & lambda resources
