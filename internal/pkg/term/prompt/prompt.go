@@ -8,6 +8,7 @@ package prompt
 import (
 	"errors"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -256,6 +257,19 @@ func WithDefaultInput(s string) PromptConfig {
 	return func(p *prompt) {
 		if get, ok := p.prompter.(*survey.Input); ok {
 			get.Default = s
+		}
+	}
+}
+
+// WithSuggestInput sets a completion suggestion for an input prompt.
+func WithSuggestInput() PromptConfig {
+	return func(p *prompt) {
+		if get, ok := p.prompter.(*survey.Input); ok {
+			get.Suggest = func (toComplete string) []string {
+				files, _ := filepath.Glob(toComplete + "*")
+				get.Default = toComplete
+				return files
+			}
 		}
 	}
 }

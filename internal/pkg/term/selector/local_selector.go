@@ -5,6 +5,7 @@ package selector
 
 import (
 	"fmt"
+	"github.com/AlecAivazis/survey/v2"
 	"os"
 	"path/filepath"
 	"sort"
@@ -146,33 +147,68 @@ func NewLocalFileSelector(prompt Prompter, fs afero.Fs) (*localFileSelector, err
 }
 
 // DirOrFile asks the user to select from a list of directories and files in the current directory or two levels down.
-func (s *localFileSelector) DirOrFile(selPrompt, notFoundPrompt, selHelp, notFoundHelp string, pathValidator prompt.ValidatorFunc) (string, error) {
-	dirsAndFiles, err := s.listDirsAndFiles()
-	if err != nil {
-		return "", err
+func (s *localFileSelector) DirOrFile(selPrompt, helpPrompt string) (string, error) {
+	//dirsAndFiles, err := s.listDirsAndFiles()
+	//if err != nil {
+	//	return "", err
+	//}
+	file := ""
+	//q := []*survey.Question{
+	//	{
+	//		Name: "file",
+	//		Prompt: &survey.Input{
+	//			Message: selPrompt,
+	//			Help:    helpPrompt,
+	//			Suggest: func(toComplete string) []string {
+	//				files, _ := filepath.Glob(toComplete + "*")
+	//				return files
+	//			},
+	//		},
+	//	},
+	//}
+	prompt := &survey.Input{
+		Message: selPrompt,
+		Help: helpPrompt,
+		Suggest: func (toComplete string) []string {
+			files, _ := filepath.Glob(toComplete + "*")
+			return files
+		},
 	}
-	dirsAndFiles = append(dirsAndFiles, []string{dirOrFileUseCustomPrompt}...)
-	selection, err := s.prompt.SelectOne(
-		selPrompt,
-		selHelp,
-		dirsAndFiles,
-		prompt.WithFinalMessage(staticAssetsFinalMsg),
-	)
-	if err != nil {
-		return "", fmt.Errorf("select directories and/or files: %w", err)
-	}
-	if selection != dirOrFileUseCustomPrompt {
-		return selection, nil
-	}
-	selection, err = s.prompt.Get(
-		notFoundPrompt,
-		notFoundHelp,
-		pathValidator,
-		prompt.WithFinalMessage(staticAssetsFinalMsg))
-	if err != nil {
-		return "", fmt.Errorf("get custom directory or path: %w", err)
-	}
-	return selection, nil
+ err := survey.AskOne(prompt, &file)
+ if err != nil {
+	return "", fmt.Errorf("ask for dir/file: %w", err)
+ }
+ //survey.Ask(q, &file)
+	//dirsAndFiles = append(dirsAndFiles, []string{dirOrFileUseCustomPrompt}...)
+	//selection, err := s.prompt.SelectOne(
+	//	selPrompt,
+	//	selHelp,
+	//	dirsAndFiles,
+	//	prompt.WithFinalMessage(staticAssetsFinalMsg),
+	//)
+	//if err != nil {
+	//	return "", fmt.Errorf("select directories and/or files: %w", err)
+	//}
+	//if selection != dirOrFileUseCustomPrompt {
+	//	return selection, nil
+	//}
+	//selection, err := s.prompt.Get(
+	//	notFoundPrompt,
+	//	notFoundHelp,
+	//	pathValidator,
+	//	prompt.WithFinalMessage(staticAssetsFinalMsg))
+	//if err != nil {
+	//	return "", fmt.Errorf("get custom directory or path: %w", err)
+	//}
+//	selection, err := s.prompt.Get(
+//		selPrompt,
+//		helpPrompt,
+//		pathValidator,
+//		prompt.WithFinalMessage(staticAssetsFinalMsg))
+//	if err != nil {
+//		return "", fmt.Errorf("get custom directory or path: %w", err)
+//	}
+	return file, nil
 }
 
 // Dockerfile asks the user to select from a list of Dockerfiles in the current
@@ -251,49 +287,49 @@ func (s *localFileSelector) listDockerfiles() ([]string, error) {
 
 // ListDirsAndFiles returns the list of directories and files within the current
 // working directory and two subdirectory levels below.
-func (s *localFileSelector) listDirsAndFiles() ([]string, error) {
-	wdDirsAndFiles, err := s.fs.ReadDir(s.workingDirAbs)
-	if err != nil {
-		return nil, fmt.Errorf("read directory: %w", err)
-	}
-	var filesAndDirs []string
-	for _, firstLevel := range wdDirsAndFiles {
-		name := firstLevel.Name()
-		if strings.HasPrefix(name, ".") || name == "copilot" {
-			continue
-		}
-		filesAndDirs = append(filesAndDirs, filepath.Dir(name)+"/"+name)
-		if firstLevel.IsDir() {
-			subFiles, err := s.fs.ReadDir(name)
-			if err != nil {
-				// swallow errors for unreadable directories
-				continue
-			}
-			for _, secondLevel := range subFiles {
-				name := secondLevel.Name()
-				if strings.HasPrefix(name, ".") {
-					continue
-				}
-				filesAndDirs = append(filesAndDirs, filepath.Dir(name)+"/"+firstLevel.Name()+"/"+name)
-				if secondLevel.IsDir() {
-					subSubFiles, err := s.fs.ReadDir(firstLevel.Name() + "/" + name)
-					if err != nil {
-						// swallow errors for unreadable directories
-						continue
-					}
-					for _, thirdLevel := range subSubFiles {
-						name := thirdLevel.Name()
-						if strings.HasPrefix(name, ".") {
-							continue
-						}
-						filesAndDirs = append(filesAndDirs, filepath.Dir(name)+"/"+firstLevel.Name()+"/"+secondLevel.Name()+"/"+name)
-					}
-				}
-			}
-		}
-	}
-	return filesAndDirs, nil
-}
+//func (s *localFileSelector) listDirsAndFiles() ([]string, error) {
+//	wdDirsAndFiles, err := s.fs.ReadDir(s.workingDirAbs)
+//	if err != nil {
+//		return nil, fmt.Errorf("read directory: %w", err)
+//	}
+//	var filesAndDirs []string
+//	for _, firstLevel := range wdDirsAndFiles {
+//		name := firstLevel.Name()
+//		if strings.HasPrefix(name, ".") || name == "copilot" {
+//			continue
+//		}
+//		filesAndDirs = append(filesAndDirs, filepath.Dir(name)+"/"+name)
+//		if firstLevel.IsDir() {
+//			subFiles, err := s.fs.ReadDir(name)
+//			if err != nil {
+//				// swallow errors for unreadable directories
+//				continue
+//			}
+//			for _, secondLevel := range subFiles {
+//				name := secondLevel.Name()
+//				if strings.HasPrefix(name, ".") {
+//					continue
+//				}
+//				filesAndDirs = append(filesAndDirs, filepath.Dir(name)+"/"+firstLevel.Name()+"/"+name)
+//				if secondLevel.IsDir() {
+//					subSubFiles, err := s.fs.ReadDir(firstLevel.Name() + "/" + name)
+//					if err != nil {
+//						// swallow errors for unreadable directories
+//						continue
+//					}
+//					for _, thirdLevel := range subSubFiles {
+//						name := thirdLevel.Name()
+//						if strings.HasPrefix(name, ".") {
+//							continue
+//						}
+//						filesAndDirs = append(filesAndDirs, filepath.Dir(name)+"/"+firstLevel.Name()+"/"+secondLevel.Name()+"/"+name)
+//					}
+//				}
+//			}
+//		}
+//	}
+//	return filesAndDirs, nil
+//}
 
 func presetScheduleToDefinitionString(input string) string {
 	return fmt.Sprintf("@%s", strings.ToLower(input))
