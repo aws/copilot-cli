@@ -83,8 +83,9 @@ func (ltp *LabeledTermPrinter) IsDone() bool {
 // If numLines is -1 then print all the values from buffers.
 func (ltp *LabeledTermPrinter) Print() error {
 	if ltp.numLines == printAllLinesInBuf {
-		ltp.printAll()
-		return nil
+		if err := ltp.printAll(); err != nil {
+			return err
+		}
 	}
 	if ltp.prevWrittenLines > 0 {
 		cursor.EraseLinesAbove(ltp.term, ltp.prevWrittenLines)
@@ -114,8 +115,7 @@ func (ltp *LabeledTermPrinter) printAll() error {
 			continue
 		}
 		outputLogs := ltp.buffers[idx].lines()
-		_, err := ltp.writeLines(buf.label, outputLogs)
-		if err != nil {
+		if _, err := ltp.writeLines(buf.label, outputLogs); err != nil {
 			return fmt.Errorf("get terminal width: %w", err)
 		}
 	}
