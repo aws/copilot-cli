@@ -43,7 +43,7 @@ func TestSyncBuffer_Write(t *testing.T) {
 
 func TestSyncBuffer_IsDone(t *testing.T) {
 	testCases := map[string]struct {
-		buffer     *SyncBuffer
+		buffer     *syncBuffer
 		wantedDone bool
 	}{
 		"Buffer is done": {

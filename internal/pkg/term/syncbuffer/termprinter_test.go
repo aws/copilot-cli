@@ -95,8 +95,8 @@ line4 from image2`)
 
 func TestLabeledTermPrinter_IsDone(t *testing.T) {
 	testCases := map[string]struct {
-		mockSyncBuf1 *SyncBuffer
-		mockSyncBuf2 *SyncBuffer
+		mockSyncBuf1 *syncBuffer
+		mockSyncBuf2 *syncBuffer
 		wanted       bool
 	}{
 		"return false if all buffers are not done": {

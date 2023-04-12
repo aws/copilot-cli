@@ -71,7 +71,7 @@ func WithPadding(n int) LabeledTermPrinterOption {
 	}
 }
 
-// IsDone returns true if all the buffers are done else returns false.
+// IsDone returns true if all the buffers are done.
 func (ltp *LabeledTermPrinter) IsDone() bool {
 	for _, buf := range ltp.buffers {
 		if !buf.IsDone() {

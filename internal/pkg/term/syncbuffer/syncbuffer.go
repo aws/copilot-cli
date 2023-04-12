@@ -13,29 +13,29 @@ import (
 	"sync"
 )
 
-// SyncBuffer is a synchronized buffer that can be used to store output data and coordinate between multiple goroutines.
-type SyncBuffer struct {
-	bufMu sync.Mutex    // bufMu is a mutex that can be used to protect access to the buffer.
+// syncBuffer is a synchronized buffer that can be used to store output data and coordinate between multiple goroutines.
+type syncBuffer struct {
+	bufMu sync.Mutex    // bufMu is a mutex protects buf.
 	buf   bytes.Buffer  // buf is the buffer that stores the data.
-	done  chan struct{} // done is a channel that can be used to signal when the operations are complete.
+	done  chan struct{} // is closed after MarkDone() is called.
 }
 
-// New creates and returns a new SyncBuffer object with an initialized 'done' channel.
-func New() *SyncBuffer {
-	return &SyncBuffer{
+// New creates and returns a new syncBuffer object with an initialized 'done' channel.
+func New() *syncBuffer {
+	return &syncBuffer{
 		done: make(chan struct{}),
 	}
 }
 
 // Write appends the given bytes to the buffer.
-func (b *SyncBuffer) Write(p []byte) (n int, err error) {
+func (b *syncBuffer) Write(p []byte) (n int, err error) {
 	b.bufMu.Lock()
 	defer b.bufMu.Unlock()
 	return b.buf.Write(p)
 }
 
 // IsDone returns true if the Done channel has been closed, otherwise return false.
-func (b *SyncBuffer) IsDone() bool {
+func (b *syncBuffer) IsDone() bool {
 	select {
 	case <-b.done:
 		return true
@@ -45,30 +45,28 @@ func (b *SyncBuffer) IsDone() bool {
 }
 
 // MarkDone closes the Done channel.
-func (b *SyncBuffer) MarkDone() {
+func (b *syncBuffer) MarkDone() {
 	close(b.done)
 }
 
 // LabeledSyncBuffer is a struct that combines a SyncBuffer with a string label.
 type LabeledSyncBuffer struct {
 	label string
-	*SyncBuffer
+	*syncBuffer
 }
 
 // WithLabel creates and returns a new LabeledSyncBuffer with the given label and SyncBuffer.
-func (buf *SyncBuffer) WithLabel(label string) *LabeledSyncBuffer {
+func (buf *syncBuffer) WithLabel(label string) *LabeledSyncBuffer {
 	return &LabeledSyncBuffer{
 		label:      label,
-		SyncBuffer: buf,
+		syncBuffer: buf,
 	}
 }
 
 // Copy reads all the content of an io.Reader into a SyncBuffer and returns it.
-func Copy(r io.Reader) (*SyncBuffer, error) {
+func Copy(r io.Reader) (*syncBuffer, error) {
 	syncBuf := New()
-	defer func() {
-		syncBuf.MarkDone()
-	}()
+	defer syncBuf.MarkDone()
 	_, err := io.Copy(&syncBuf.buf, r)
 	if err != nil && !errors.Is(err, io.EOF) {
 		return nil, fmt.Errorf("failed to copy to buffer: %w", err)
@@ -78,7 +76,7 @@ func Copy(r io.Reader) (*SyncBuffer, error) {
 
 // lines returns an empty slice if the buffer is empty.
 // Otherwise, it returns a slice of all the lines stored in the buffer.
-func (b *SyncBuffer) lines() []string {
+func (b *syncBuffer) lines() []string {
 	b.bufMu.Lock()
 	defer b.bufMu.Unlock()
 	lines := b.buf.String()
