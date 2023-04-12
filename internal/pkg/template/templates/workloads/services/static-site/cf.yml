@@ -22,29 +22,47 @@ Parameters:
     Default: ""
 
 Conditions:
-  HasAddons:
-    !Not [!Equals [!Ref AddonsTemplateURL, ""]]
+  HasAddons: !Not [!Equals [!Ref AddonsTemplateURL, ""]]
 
 # TODO: add permission boundary to all IAM roles
 Resources:
   CopyFromCacheBucketFunctionRole:
     Metadata:
-      'aws:copilot:description': 'An IAM Role'
+      "aws:copilot:description": "An IAM Role"
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
-        Version: '2012-10-17'
+        Version: "2012-10-17"
         Statement:
           - Effect: Allow
             Principal:
               Service: lambda.amazonaws.com
             Action: sts:AssumeRole
+      Policies:
+        - PolicyName: CopyFromS3
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:GetObjectTagging
+                Resource: "arn:aws:s3:::{{ .AssetMappingFileBucket }}/{{ .AssetMappingFilePath }}"
+        - PolicyName: CopyToS3
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:PutObjectTagging
+                Resource: !Sub "arn:aws:s3:::${Bucket}" # TODO: need /* on these?
       ManagedPolicyArns:
         - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
 
   CopyFromCacheBucketFunction:
     Metadata:
-      'aws:copilot:description': 'A lambda function'
+      "aws:copilot:description": "A lambda function"
     Type: "AWS::Lambda::Function"
     Properties:
       Handler: "index.handler"
@@ -53,18 +71,37 @@ Resources:
       Timeout: 60
       Code:
         ZipFile: |
+          var aws = require('aws-sdk');
+
           exports.handler = (event, context, callback) => {
+            const s3 = new aws.S3();
             console.log("copy from cache bucket event:", event)
-            callback(null, "Hello World!");
-          }; 
+            const params = {
+              CopySource: event.srcBucket + "/" + event.mapping.path,
+              Bucket: event.destBucket,
+              Key: event.mapping.destPath
+            };
+            console.log("copy object params", params)
+
+            s3.copyObject(params, (err, data) => {
+              if (err) {
+                console.log("error copying object", err)
+                callback(err);
+                return;
+              }
+
+              console.log("copied object: ", data)
+              callback(null, "Success");
+            });
+          };
 
   TriggerStateMachineFunctionRole:
     Metadata:
-      'aws:copilot:description': 'An IAM Role for the lambda that triggers the file copying state machine.'
+      "aws:copilot:description": "An IAM Role for the lambda that triggers the file copying state machine."
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
-        Version: '2012-10-17'
+        Version: "2012-10-17"
         Statement:
           - Effect: Allow
             Principal:
@@ -73,17 +110,17 @@ Resources:
       Policies:
         - PolicyName: TriggerStateMachine
           PolicyDocument:
-            Version: '2012-10-17'
+            Version: "2012-10-17"
             Statement:
-              - Effect: 'Allow'
-                Action: 'states:StartSyncExecution'
-                Resource: !GetAtt CopyFromCacheBucketStepFunction.Arn
+              - Effect: "Allow"
+                Action: "states:StartSyncExecution"
+                Resource: !GetAtt CopyFromCacheBucketStateMachine.Arn
       ManagedPolicyArns:
         - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
 
   TriggerStateMachineFunction:
     Metadata:
-      'aws:copilot:description': 'A lambda that triggers the file copying state machine.'
+      "aws:copilot:description": "A lambda that triggers the file copying state machine."
     Type: "AWS::Lambda::Function"
     Properties:
       Handler: "index.handler"
@@ -117,27 +154,27 @@ Resources:
               console.log("finished step function execution:", data)
               response.send(event, context, response.SUCCESS, {}, event.PhysicalResourceId)
             });
-          }; 
+          };
 
   TriggerStateMachineAction:
     Metadata:
-      'aws:copilot:description': 'A custom resource to trigger the file copying state machine'
+      "aws:copilot:description": "A custom resource to trigger the file copying state machine"
     Type: Custom::TriggerStateMachine
-    DependsOn: CopyFromCacheBucketStepFunction
+    DependsOn: CopyFromCacheBucketStateMachine
     Properties:
       ServiceToken: !GetAtt TriggerStateMachineFunction.Arn
-      StateMachineARN: !GetAtt CopyFromCacheBucketStepFunction.Arn
+      StateMachineARN: !GetAtt CopyFromCacheBucketStateMachine.Arn
       FromBucket: {{ .AssetMappingFileBucket }}
       AssetMappingFilePath: {{ .AssetMappingFilePath }} # hash all of the files so that the state machine is triggered ONLY when all of the files have changed
-      ToBucket: toBucketTODO
+      ToBucket: !Ref Bucket
 
-  CopyFromCacheBucketStepFunctionRole:
+  CopyFromCacheBucketStateMachineRole:
     Metadata:
-      'aws:copilot:description': 'An IAM Role'
+      "aws:copilot:description": "An IAM Role"
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
-        Version: '2012-10-17'
+        Version: "2012-10-17"
         Statement:
           - Effect: Allow
             Principal:
@@ -147,47 +184,47 @@ Resources:
       Policies:
         - PolicyName: InvokeLambda
           PolicyDocument:
-            Version: '2012-10-17'
+            Version: "2012-10-17"
             Statement:
-              - Effect: 'Allow'
-                Action: 'lambda:InvokeFunction'
+              - Effect: "Allow"
+                Action: "lambda:InvokeFunction"
                 Resource: !GetAtt CopyFromCacheBucketFunction.Arn
         - PolicyName: S3Access
           PolicyDocument:
-            Version: '2012-10-17'
+            Version: "2012-10-17"
             Statement:
-              - Effect: 'Allow'
-                Action: 's3:GetObject'
-                Resource: 'arn:aws:s3:::{{ .AssetMappingFileBucket }}/{{ .AssetMappingFilePath }}'
+              - Effect: "Allow"
+                Action: "s3:GetObject"
+                Resource: "arn:aws:s3:::{{ .AssetMappingFileBucket }}/{{ .AssetMappingFilePath }}"
         - PolicyName: LoggingTODORemoveMe
           PolicyDocument:
-            Version: '2012-10-17'
+            Version: "2012-10-17"
             Statement:
-              - Effect: 'Allow'
+              - Effect: "Allow"
                 Action:
-                  - 'logs:CreateLogDelivery'
-                  - 'logs:CreateLogStream'
-                  - 'logs:GetLogDelivery'
-                  - 'logs:UpdateLogDelivery'
-                  - 'logs:DeleteLogDelivery'
-                  - 'logs:ListLogDeliveries'
-                  - 'logs:PutLogEvents'
-                  - 'logs:PutResourcePolicy'
-                  - 'logs:DescribeResourcePolicies'
-                  - 'logs:DescribeLogGroups'
-                Resource: '*'
+                  - "logs:CreateLogDelivery"
+                  - "logs:CreateLogStream"
+                  - "logs:GetLogDelivery"
+                  - "logs:UpdateLogDelivery"
+                  - "logs:DeleteLogDelivery"
+                  - "logs:ListLogDeliveries"
+                  - "logs:PutLogEvents"
+                  - "logs:PutResourcePolicy"
+                  - "logs:DescribeResourcePolicies"
+                  - "logs:DescribeLogGroups"
+                Resource: "*"
 
-  CopyFromCacheBucketStepFunction:
+  CopyFromCacheBucketStateMachine:
     Type: AWS::StepFunctions::StateMachine
     Properties:
-      RoleArn: !GetAtt CopyFromCacheBucketStepFunctionRole.Arn
+      RoleArn: !GetAtt CopyFromCacheBucketStateMachineRole.Arn
       StateMachineType: EXPRESS
       LoggingConfiguration:
         Level: ALL
         IncludeExecutionData: true
         Destinations:
           - CloudWatchLogsLogGroup:
-              LogGroupArn: 'arn:aws:logs:us-west-2:447368768304:log-group:/ecs/deleteme:*'
+              LogGroupArn: "arn:aws:logs:us-west-2:447368768304:log-group:/ecs/deleteme:*"
       Definition:
         Comment: "A test state machine"
         StartAt: GetMappingFile
@@ -197,7 +234,7 @@ Resources:
             Parameters:
               Bucket.$: $.FromBucket
               Key.$: $.AssetMappingFilePath
-            Resource:  'arn:aws:states:::aws-sdk:s3:getObject'
+            Resource: "arn:aws:states:::aws-sdk:s3:getObject"
             ResultSelector:
               files.$: States.StringToJson($.Body)
             ResultPath: $.GetMappingFile
@@ -209,6 +246,7 @@ Resources:
             ItemSelector:
               mapping.$: $$.Map.Item.Value
               destBucket.$: $.ToBucket
+              srcBucket.$: $.FromBucket
             ItemProcessor:
               ProcessorConfig:
                 Mode: INLINE
@@ -218,5 +256,41 @@ Resources:
                   Type: Task
                   End: true
                   Resource: !GetAtt CopyFromCacheBucketFunction.Arn
+  
+  Bucket:
+    Metadata:
+      "aws:copilot:description": "An S3 Bucket to store the static site's assets in"
+    Type: AWS::S3::Bucket
+    Properties:
+      AccessControl: Private
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+        - ServerSideEncryptionByDefault:
+            SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
 
-  # TODO(dnrnd): create s3 bucket & lambda resources
+  BucketPolicy:
+    Metadata:
+      "aws:copilot:description": "A bucket policy to deny unencrypted access to the bucket and its contents"
+    Type: AWS::S3::BucketPolicy
+    DeletionPolicy: Retain
+    Properties:
+      Bucket: !Ref Bucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: ForceHTTPS
+            Effect: Deny
+            Principal: '*'
+            Action: 's3:*'
+            Resource: 
+              - !Sub "${Bucket.Arn}"
+              - !Sub "${Bucket.Arn}/*"
+            Condition: 
+              Bool:
+                "aws:SecureTransport": false
