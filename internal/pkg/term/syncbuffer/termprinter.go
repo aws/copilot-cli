@@ -97,7 +97,7 @@ func (ltp *LabeledTermPrinter) Print() error {
 		}
 		outputLogs := ltp.lastNLines(logs)
 		ltp.writeLines(buf.label, outputLogs)
-		writtenLines, err := ltp.calculateLinesCount(append(outputLogs, buf.label))
+		writtenLines, err := ltp.calculateLinesCount(buf.label, outputLogs)
 		if err != nil {
 			return fmt.Errorf("get terminal width: %w", err)
 		}
@@ -150,18 +150,18 @@ func (ltp *LabeledTermPrinter) writeLines(label string, outputLogs []string) {
 
 // calculateLinesCount returns the number of lines needed to print the given string slice based on the terminal width
 // or an error when failed to fetch terminal width.
-func (ltp *LabeledTermPrinter) calculateLinesCount(lines []string) (int, error) {
+func (ltp *LabeledTermPrinter) calculateLinesCount(label string, lines []string) (int, error) {
 	width, err := ltp.terminalWidth(ltp.term)
 	if err != nil {
 		return 0, fmt.Errorf("get terminal width: %w", err)
 	}
-	var numLines float64
+	numLines := float64(len(label))
 	for _, line := range lines {
 		// Empty line should be considered as a new line
 		if line == "" {
 			numLines += 1
 		}
-		numLines += math.Ceil(float64(len(line)) / float64(width))
+		numLines += math.Ceil(float64(len(line)) + float64(ltp.padding)/float64(width))
 	}
 	return int(numLines), nil
 }
