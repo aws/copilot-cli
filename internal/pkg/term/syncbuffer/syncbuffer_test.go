@@ -100,7 +100,7 @@ func TestCopy(t *testing.T) {
 		},
 		"return an error when failed to copy data to buffer": {
 			reader:      &mockReader{err: fmt.Errorf("some error")},
-			wantedError: fmt.Errorf("failed to copy to buffer: some error"),
+			wantedError: fmt.Errorf("some error"),
 		},
 		"return an EOF error": {
 			reader: &mockReader{
