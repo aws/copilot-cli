@@ -108,14 +108,18 @@ func (ltp *LabeledTermPrinter) Print() error {
 // printAll writes the entire contents of all the buffers to the file writer.
 // If one of the buffer gets done then print entire content of the buffer.
 // Until all the buffers are written to file writer.
-func (ltp *LabeledTermPrinter) printAll() {
+func (ltp *LabeledTermPrinter) printAll() error {
 	for idx, buf := range ltp.buffers {
 		if !buf.IsDone() {
 			continue
 		}
 		outputLogs := ltp.buffers[idx].lines()
-		ltp.writeLines(buf.label, outputLogs)
+		_, err := ltp.writeLines(buf.label, outputLogs)
+		if err != nil {
+			return fmt.Errorf("get terminal width: %w", err)
+		}
 	}
+	return nil
 }
 
 // lastNLines returns the last N lines of the given logs where N is the value of tp.numLines.
