@@ -113,8 +113,8 @@ func TestCopy(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			syncBuf := New()
-			gotErr := Copy(syncBuf, tc.reader)
+			buf := New()
+			gotErr := buf.Copy(tc.reader)
 			if tc.wantedError != nil {
 				require.EqualError(t, tc.wantedError, gotErr.Error())
 			}

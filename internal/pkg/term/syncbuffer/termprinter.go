@@ -96,8 +96,7 @@ func (ltp *LabeledTermPrinter) Print() error {
 			continue
 		}
 		outputLogs := ltp.lastNLines(logs)
-		ltp.writeLines(buf.label, outputLogs)
-		writtenLines, err := ltp.calculateLinesCount(buf.label, outputLogs)
+		writtenLines, err := ltp.writeLines(buf.label, outputLogs)
 		if err != nil {
 			return fmt.Errorf("get terminal width: %w", err)
 		}
@@ -141,27 +140,25 @@ func (ltp *LabeledTermPrinter) lastNLines(logs []string) []string {
 }
 
 // writeLines writes a label and output logs to the terminal associated with the TermPrinter.
-func (ltp *LabeledTermPrinter) writeLines(label string, outputLogs []string) {
-	fmt.Fprintln(ltp.term, label)
-	for _, logLine := range outputLogs {
-		fmt.Fprintf(ltp.term, "%s%s\n", strings.Repeat(" ", ltp.padding), logLine)
-	}
-}
-
-// calculateLinesCount returns the number of lines needed to print the given string slice based on the terminal width
+// Returns the number of lines needed to erase based on terminal width,
 // or an error when failed to fetch terminal width.
-func (ltp *LabeledTermPrinter) calculateLinesCount(label string, lines []string) (int, error) {
+func (ltp *LabeledTermPrinter) writeLines(label string, lines []string) (int, error) {
 	width, err := ltp.terminalWidth(ltp.term)
 	if err != nil {
 		return 0, fmt.Errorf("get terminal width: %w", err)
 	}
-	numLines := float64(len(label))
-	for _, line := range lines {
-		// Empty line should be considered as a new line
-		if line == "" {
-			numLines += 1
+	var numLines float64
+	writeLine := func(line string) {
+		fmt.Fprintln(ltp.term, line)
+		if len(line) == 0 {
+			numLines++
+			return
 		}
-		numLines += math.Ceil(float64(len(line)) + float64(ltp.padding)/float64(width))
+		numLines += math.Ceil(float64(len(line)) / float64(width))
+	}
+	writeLine(label)
+	for _, line := range lines {
+		writeLine(fmt.Sprintf("%s%s", strings.Repeat(" ", ltp.padding), line))
 	}
 	return int(numLines), nil
 }
