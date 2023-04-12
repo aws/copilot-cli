@@ -64,14 +64,13 @@ func (buf *syncBuffer) WithLabel(label string) *LabeledSyncBuffer {
 }
 
 // Copy reads all the content of an io.Reader into a SyncBuffer and returns it.
-func Copy(r io.Reader) (*syncBuffer, error) {
-	syncBuf := New()
+func Copy(syncBuf *syncBuffer, r io.Reader) error {
 	defer syncBuf.MarkDone()
 	_, err := io.Copy(&syncBuf.buf, r)
 	if err != nil && !errors.Is(err, io.EOF) {
-		return nil, fmt.Errorf("failed to copy to buffer: %w", err)
+		return fmt.Errorf("failed to copy to buffer: %w", err)
 	}
-	return syncBuf, nil
+	return nil
 }
 
 // lines returns an empty slice if the buffer is empty.
