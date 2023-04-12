@@ -32,7 +32,9 @@ type LabeledTermPrinter struct {
 	numLines         int                  // number of lines that has to be written from each buffer.
 	padding          int                  // Leading spaces before rendering to terminal.
 	prevWrittenLines int                  // number of lines written from all the buffers.
-	termWidth        int                  // width of terminal.
+
+	// override in unit tests.
+	terminalWidth func(fw FileWriter) (int, error)
 }
 
 // LabeledTermPrinterOption is a type alias to configure LabeledTermPrinter.
@@ -40,16 +42,12 @@ type LabeledTermPrinterOption func(ltp *LabeledTermPrinter)
 
 // NewLabeledTermPrinter returns a LabeledTermPrinter that can print to the terminal filewriter from buffers.
 func NewLabeledTermPrinter(fw FileWriter, bufs []*LabeledSyncBuffer, opts ...LabeledTermPrinterOption) (*LabeledTermPrinter, error) {
-	width, err := terminalWidth(fw)
-	if err != nil {
-		return nil, fmt.Errorf("get terminal width: %w", err)
-	}
 
 	ltp := &LabeledTermPrinter{
-		term:      fw,
-		buffers:   bufs,
-		termWidth: width,
-		numLines:  printAllLinesInBuf, // By default set numlines to -1 to print all from buffers.
+		term:          fw,
+		buffers:       bufs,
+		numLines:      printAllLinesInBuf, // By default set numlines to -1 to print all from buffers.
+		terminalWidth: terminalWidth,
 	}
 	for _, opt := range opts {
 		opt(ltp)
@@ -84,10 +82,10 @@ func (ltp *LabeledTermPrinter) IsDone() bool {
 // Print prints the label and the last N lines of logs from each buffer
 // to the LabeledTermPrinter fileWriter and erases the previous output.
 // If numLines is -1 then print all the values from buffers.
-func (ltp *LabeledTermPrinter) Print() {
+func (ltp *LabeledTermPrinter) Print() error {
 	if ltp.numLines == printAllLinesInBuf {
 		ltp.printAll()
-		return
+		return nil
 	}
 	if ltp.prevWrittenLines > 0 {
 		cursor.EraseLinesAbove(ltp.term, ltp.prevWrittenLines)
@@ -100,8 +98,13 @@ func (ltp *LabeledTermPrinter) Print() {
 		}
 		outputLogs := ltp.lastNLines(logs)
 		ltp.writeLines(buf.label, outputLogs)
-		ltp.prevWrittenLines += ltp.calculateLinesCount(append(outputLogs, buf.label))
+		writtenLines, err := ltp.calculateLinesCount(append(outputLogs, buf.label))
+		if err != nil {
+			return fmt.Errorf("get terminal width: %w", err)
+		}
+		ltp.prevWrittenLines += writtenLines
 	}
+	return nil
 }
 
 // printAll writes the entire contents of all the buffers to the file writer.
@@ -146,17 +149,22 @@ func (ltp *LabeledTermPrinter) writeLines(label string, outputLogs []string) {
 	}
 }
 
-// calculateLinesCount returns the number of lines needed to print the given string slice based on the terminal width.
-func (ltp *LabeledTermPrinter) calculateLinesCount(lines []string) int {
+// calculateLinesCount returns the number of lines needed to print the given string slice based on the terminal width
+// or an error when failed to fetch terminal width.
+func (ltp *LabeledTermPrinter) calculateLinesCount(lines []string) (int, error) {
+	width, err := ltp.terminalWidth(ltp.term)
+	if err != nil {
+		return 0, fmt.Errorf("get terminal width: %w", err)
+	}
 	var numLines float64
 	for _, line := range lines {
 		// Empty line should be considered as a new line
 		if line == "" {
 			numLines += 1
 		}
-		numLines += math.Ceil(float64(len(line)) / float64(ltp.termWidth))
+		numLines += math.Ceil(float64(len(line)) / float64(width))
 	}
-	return int(numLines)
+	return int(numLines), nil
 }
 
 // terminalWidth returns the width of the terminal or an error if failed to get the width of terminal.
