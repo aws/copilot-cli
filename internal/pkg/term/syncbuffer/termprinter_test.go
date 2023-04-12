@@ -37,7 +37,7 @@ Building your container image 2
 `,
 		},
 
-		"display ": {
+		"display all the lines if numLines set to -1": {
 			inNumLines: -1,
 			inPadding:  5,
 			wanted: `Building your container image 1
