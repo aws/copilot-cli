@@ -41,8 +41,7 @@ type LabeledTermPrinter struct {
 type LabeledTermPrinterOption func(ltp *LabeledTermPrinter)
 
 // NewLabeledTermPrinter returns a LabeledTermPrinter that can print to the terminal filewriter from buffers.
-func NewLabeledTermPrinter(fw FileWriter, bufs []*LabeledSyncBuffer, opts ...LabeledTermPrinterOption) (*LabeledTermPrinter, error) {
-
+func NewLabeledTermPrinter(fw FileWriter, bufs []*LabeledSyncBuffer, opts ...LabeledTermPrinterOption) *LabeledTermPrinter {
 	ltp := &LabeledTermPrinter{
 		term:          fw,
 		buffers:       bufs,
@@ -52,7 +51,7 @@ func NewLabeledTermPrinter(fw FileWriter, bufs []*LabeledSyncBuffer, opts ...Lab
 	for _, opt := range opts {
 		opt(ltp)
 	}
-	return ltp, nil
+	return ltp
 }
 
 // WithNumLines sets the numlines of LabeledTermPrinter.
