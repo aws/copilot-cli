@@ -86,6 +86,7 @@ func (ltp *LabeledTermPrinter) Print() error {
 		if err := ltp.printAll(); err != nil {
 			return err
 		}
+		return nil
 	}
 	if ltp.prevWrittenLines > 0 {
 		cursor.EraseLinesAbove(ltp.term, ltp.prevWrittenLines)
