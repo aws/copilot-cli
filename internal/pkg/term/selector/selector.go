@@ -77,7 +77,8 @@ const (
 	dockerfileFinalMsg   = "Dockerfile:"
 	topicFinalMsg        = "Topic subscriptions:"
 	pipelineFinalMsg     = "Pipeline:"
-	staticAssetsFinalMsg = "Source:"
+	staticAssetsFinalMsg = "Source(s):"
+	customPathFinalMsg   = "Custom Path to Source:"
 )
 
 var scheduleTypes = []string{

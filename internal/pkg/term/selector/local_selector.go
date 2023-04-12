@@ -146,33 +146,39 @@ func NewLocalFileSelector(prompt Prompter, fs afero.Fs) (*localFileSelector, err
 }
 
 // DirOrFile asks the user to select from a list of directories and files in the current directory or two levels down.
-func (s *localFileSelector) DirOrFile(selPrompt, notFoundPrompt, selHelp, notFoundHelp string, pathValidator prompt.ValidatorFunc) (string, error) {
+func (s *localFileSelector) DirOrFile(selPrompt, selHelp, otherPathPrompt, otherPathHelp string, pathValidator prompt.ValidatorFunc) ([]string, error) {
 	dirsAndFiles, err := s.listDirsAndFiles()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	dirsAndFiles = append(dirsAndFiles, []string{dirOrFileUseCustomPrompt}...)
-	selection, err := s.prompt.SelectOne(
+	var selections []string
+	selections, err = s.prompt.MultiSelect(
 		selPrompt,
 		selHelp,
 		dirsAndFiles,
+		func(v interface{}) error{
+			return nil
+		},
 		prompt.WithFinalMessage(staticAssetsFinalMsg),
 	)
 	if err != nil {
-		return "", fmt.Errorf("select directories and/or files: %w", err)
+		return nil, fmt.Errorf("select directories and/or files: %w", err)
 	}
-	if selection != dirOrFileUseCustomPrompt {
-		return selection, nil
+	for i, selection := range selections {
+		if selection == dirOrFileUseCustomPrompt {
+			customPath, err := s.prompt.Get(
+				otherPathPrompt,
+				otherPathHelp,
+				pathValidator,
+				prompt.WithFinalMessage(customPathFinalMsg))
+			if err != nil {
+				return nil, fmt.Errorf("get custom directory or path: %w", err)
+			}
+			selections[i] = customPath
+		}
 	}
-	selection, err = s.prompt.Get(
-		notFoundPrompt,
-		notFoundHelp,
-		pathValidator,
-		prompt.WithFinalMessage(staticAssetsFinalMsg))
-	if err != nil {
-		return "", fmt.Errorf("get custom directory or path: %w", err)
-	}
-	return selection, nil
+	return selections, nil
 }
 
 // Dockerfile asks the user to select from a list of Dockerfiles in the current

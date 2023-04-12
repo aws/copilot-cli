@@ -8,6 +8,7 @@ package prompt
 import (
 	"errors"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -283,11 +284,42 @@ func WithDefaultSelections(options []string) PromptConfig {
 	}
 }
 
+// WithDynamicDefaultSelections TKTKTKT
+//func WithDynamicDefaultSelections(parentAndChildMap map[string]string, selection string) PromptConfig {
+//	return func(p *prompt) {
+//		if _, ok := parentAndChildMap[selection]; ok {
+//			
+//}
+//}
+//}
+
+//// WithFilterActive sets KeepFilter to true so users can see checked selections.
+//func WithFilterActive() PromptConfig {
+//	return func(p *prompt) {
+//		if get, ok := p.prompter.(*survey.Select); ok {
+//			get.
+//		}
+//	}
+//}
+
 // WithTrueDefault sets the default for a confirm prompt to true.
 func WithTrueDefault() PromptConfig {
 	return func(p *prompt) {
 		if confirm, ok := p.prompter.(*survey.Confirm); ok {
 			confirm.Default = true
+		}
+	}
+}
+
+// WithSuggestInput sets a completion suggestion for an input prompt.
+func WithSuggestInput() PromptConfig {
+	return func(p *prompt) {
+		if get, ok := p.prompter.(*survey.Input); ok {
+			get.Suggest = func (toComplete string) []string {
+				files, _ := filepath.Glob(toComplete + "*")
+				get.Default = toComplete
+				return files
+			}
 		}
 	}
 }

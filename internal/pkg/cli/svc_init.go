@@ -92,10 +92,9 @@ These messages can be consumed by the Worker Service.`
 
 	wkldInitImagePrompt = fmt.Sprintf("What's the %s ([registry/]repository[:tag|@digest]) of the image to use?", color.Emphasize("location"))
 
-	fmtStaticSiteInitDirOrFilePrompt      = "Which " + color.Emphasize("directory or file") + " would you like to upload for %s?"
-	staticSiteInitDirOrFileHelp = "You will have the chance to select more later. Use the 'Tab' and up and down arrow keys for suggestions, or start typing and hit tab to autocomplete."
-	staticSiteInitDirOrFileHelpPrompt     = "Directory or file to use for building your static site."
-	fmtStaticSiteInitDirOrFilePathPrompt  = "What is the path to the " + color.Emphasize("directory or file") + " for %s?"
+	fmtStaticSiteInitDirOrFilePrompt      = "Which " + color.Emphasize("(recursive) directories or files") + " would you like to upload for %s?\nIt is unnecessary to select files or subdirectories within selected directories."
+	staticSiteInitDirOrFileHelpPrompt     = "(Recursive) directories or files to use for building your static site."
+	fmtStaticSiteInitDirOrFilePathPrompt  = "What is the custom path to the " + color.Emphasize("directory or file") + " for %s?"
 	staticSiteInitDirOrFilePathHelpPrompt = "Path to directory or file to use for building your static site."
 	fmtStaticSiteInitExcludePrompt        = "Which files under '%s' would you like to " + color.Emphasize("exclude") + "?"
 	staticSiteInitExcludeHelpPrompt       = "Parameters for pattern-matching; includes '*', '?', '[sequence]', and '[!sequence]'"
@@ -103,13 +102,6 @@ These messages can be consumed by the Worker Service.`
 	staticSiteInitReincludeHelpPrompt       = "Parameters for pattern-matching; includes '*', '?', '[sequence]', and '[!sequence]'"
 	fmtStaticSiteInitDestinationPrompt    = "What is the destination where '%s' should be uploaded?"
 	staticSiteInitDestinationHelpPrompt   = "Optional. Destination in S3; default for directories is '/'."
-	staticSiteConfirmSummaryPrompt        = "Does this upload config look right to you?"
-	staticSiteConfirmSummaryHelpPrompt    = "Confirm whether this asset should be uploaded."
-
-	fmtSelectAgainPrompt     = "Would you like to %s another %s?"
-	fmtSelectAgainHelpPrompt = "You may %s multiple %s. Type 'Y' to %s another."
-	defaultGetInputNone      = "[None]"
-	defaultGetInputDone      = "[Done]"
 )
 
 const (
@@ -128,14 +120,6 @@ var serviceTypeHints = map[string]string{
 	manifestinfo.BackendServiceType:          "ECS on Fargate",
 	manifestinfo.WorkerServiceType:           "Events to SQS to ECS on Fargate",
 	manifestinfo.StaticSiteType:              "Internet to CDN to S3 bucket",
-}
-
-type staticAsset struct {
-	dirOrFilePath string
-	destination   string
-	recursive     bool
-	excludeFilter string
-	reincludeFilter string
 }
 
 type initWkldVars struct {
@@ -461,79 +445,24 @@ If you'd prefer a new default manifest, please manually delete the existing one.
 }
 
 func (o *initSvcOpts) askStaticSite() error {
-	again := true
 	var assets []manifest.FileUpload
-	for again {
-		source, err := o.askSource()
+		sources, err := o.askSource()
 		if err != nil {
 			return err
 		}
-		isDir, err := isDir(o.fs, source)
-		if err != nil {
-			return err
-		}
-		destination, err := o.askDestination(source, isDir)
-		if err != nil {
-			return err
-		}
-		var excludes []string
-		var reincludes []string
-		var recursive bool
-		if isDir {
-			recursive = true
-		}
-		// --exclude and --reinclude work only if --recursive is also specified https://stackoverflow.com/questions/43370710/s3-cli-includes-not-working
-		if recursive {
-			excludes, err = o.askExcludes(source)
-			if err != nil {
-				return err
+		for _, source := range sources {
+			var recursive bool
+			isDir, _ := isDir(o.fs, source)
+			if isDir {
+				recursive = true
 			}
-			if len(excludes) != 0 {
-				reincludes, err = o.askReincludes(source)
-				if err != nil {
-					return err
-				}
-			}
-		}
-		msg := fmt.Sprintf(`
-%s
-Source: %s
-Destination: %s`, color.Emphasize("Upload Summary:"), source, destination)
-		if recursive {
-			msg = msg + fmt.Sprintf(
-				`
-Exclude: %v
-Include: %v`, strings.Join(excludes, ", "), strings.Join(reincludes, ", "))
-		}
-		log.Infoln(msg)
-		add, err := o.prompt.Confirm(
-			staticSiteConfirmSummaryPrompt,
-			staticSiteConfirmSummaryHelpPrompt,
-			prompt.WithFinalMessage("Add:"),
-		)
-		if err != nil {
-			return fmt.Errorf("confirm upload summary: %w", err)
-		}
-		if add {
 			assets = append(assets, manifest.FileUpload{
-				Source:      source,
-				Destination: destination,
-				Recursive:   recursive,
-				Exclude:     o.stringSliceToStringSliceOrString(excludes),
-				Reinclude:   o.stringSliceToStringSliceOrString(reincludes),
+				Source: source,
+				Recursive: recursive,
 			})
 		}
-
-		again, err = o.prompt.Confirm(
-			fmt.Sprintf(fmtSelectAgainPrompt, "select", "static asset"),
-			fmt.Sprintf(fmtSelectAgainHelpPrompt, "select", "assets", "specify"),
-			prompt.WithFinalMessage("Another:"),
-		)
-		if err != nil {
-			return fmt.Errorf("confirm another asset: %w", err)
-		}
-	}
 	o.staticAssets = assets
+	fmt.Println("assigned static assets", o.staticAssets)
 	return nil
 }
 
@@ -605,93 +534,20 @@ func (o *initSvcOpts) askImage() error {
 	return nil
 }
 
-func (o *initSvcOpts) askSource() (string, error) {
-	source, err := o.dirFileSel.DirOrFile(
-		fmt.Sprintf(fmtStaticSiteInitDirOrFilePrompt, color.HighlightUserInput(o.name)), 
-		fmt.Sprintf(fmtStaticSiteInitDirOrFilePathPrompt, color.HighlightUserInput(o.name)),
+func (o *initSvcOpts) askSource() ([]string, error) {
+	sources, err := o.dirFileSel.DirOrFile(
+		fmt.Sprintf(fmtStaticSiteInitDirOrFilePrompt, color.HighlightUserInput(o.name)),
 		staticSiteInitDirOrFileHelpPrompt,
+		fmt.Sprintf(fmtStaticSiteInitDirOrFilePathPrompt, color.HighlightUserInput(o.name)),
 		staticSiteInitDirOrFilePathHelpPrompt,
 		func(v interface{}) error{
 			return validatePath(afero.NewOsFs(), v)
-})
-	if err != nil {
-		return "", fmt.Errorf("select local directory or file: %w", err)
-	}
-	return source, nil
-}
-
-func (o *initSvcOpts) askDestination(source string, isDir bool) (string, error) {
-	defaultInput := defaultGetInputNone
-	if isDir {
-		defaultInput = "/"
-	}
-	dest, err := o.prompt.Get(
-		fmt.Sprintf(fmtStaticSiteInitDestinationPrompt, source),
-		staticSiteInitDestinationHelpPrompt,
-		func(val interface{}) error {
-			return nil
 		},
-		prompt.WithFinalMessage("Destination:"), prompt.WithDefaultInput(defaultInput))
+			)
 	if err != nil {
-		return "", fmt.Errorf("get destination: %w", err)
+		return nil, fmt.Errorf("select local directory or file: %w", err)
 	}
-	return dest, nil
-}
-
-func (o *initSvcOpts) askExcludes(source string) ([]string, error) {
-	again := true
-	defaultInput := defaultGetInputNone
-	var excludes []string
-	for again {
-		exclude, err := o.prompt.Get(
-			fmt.Sprintf(fmtStaticSiteInitExcludePrompt, source),
-			staticSiteInitExcludeHelpPrompt,
-			func(val interface{}) error {
-				return nil
-			},
-			prompt.WithFinalMessage("Exclude:"), prompt.WithDefaultInput(defaultInput))
-		if err != nil {
-			return nil, fmt.Errorf("get exclude filter: %w", err)
-		}
-		if exclude != defaultGetInputNone && exclude != defaultGetInputDone {
-			excludes = append(excludes, exclude)
-		}
-		if exclude != defaultGetInputNone && exclude != defaultGetInputDone {
-			again = true
-			defaultInput = defaultGetInputDone
-		} else {
-			again = false
-		}
-	}
-	return excludes, nil
-}
-
-func (o *initSvcOpts) askReincludes(source string) ([]string, error) {
-	again := true
-	defaultInput := defaultGetInputNone
-	var reincludes []string
-	for again {
-		reinclude, err := o.prompt.Get(
-			fmt.Sprintf(fmtStaticSiteInitReincludePrompt, source),
-			staticSiteInitReincludeHelpPrompt,
-			func(val interface{}) error {
-				return nil
-			},
-			prompt.WithFinalMessage("Reinclude:"), prompt.WithDefaultInput(defaultInput))
-		if err != nil {
-			return nil, fmt.Errorf("get reinclude filter: %w", err)
-		}
-		if reinclude != defaultGetInputNone && reinclude != defaultGetInputDone {
-			reincludes = append(reincludes, reinclude)
-		}
-		if reinclude != defaultGetInputNone && reinclude != defaultGetInputDone {
-			again = true
-			defaultInput = defaultGetInputDone
-		} else {
-			again = false
-		}
-	}
-	return reincludes, nil
+	return sources, nil
 }
 
 func (o *initSvcOpts) stringSliceToStringSliceOrString(strings []string) manifest.StringSliceOrString {

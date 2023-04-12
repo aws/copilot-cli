@@ -530,7 +530,7 @@ type wsSelector interface {
 }
 
 type dirOrFileSelector interface {
-	DirOrFile(selPrompt, notFoundPrompt, selHelp, notFoundHelp string, pathValidator prompt.ValidatorFunc) (string, error)
+	DirOrFile(selPrompt, selHelp, notFoundPrompt, notFoundHelp string, pathValidator prompt.ValidatorFunc) ([]string, error)
 }
 
 type scheduleSelector interface {
