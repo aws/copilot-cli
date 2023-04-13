@@ -392,8 +392,8 @@ func (d *workloadDeployer) uploadContainerImages(out *UploadArtifactsOutput) err
 	out.ImageDigests = make(map[string]ContainerImageIdentifier, len(buildArgsPerContainer))
 
 	// counter for indexing the labeled output buffers.
-	count := 0
-	// An array of buffers, one for each container image build and push ouput.
+	bufferIdx := 0
+	// An array of buffers, one for each container image build and push output.
 	labeledBuffers := make([]*syncbuffer.LabeledSyncBuffer, len(buildArgsPerContainer))
 
 	// create a context and an error group.
@@ -416,18 +416,18 @@ func (d *workloadDeployer) uploadContainerImages(out *UploadArtifactsOutput) err
 		// generate build args slice for docker build label.
 		buildArgsList, err := buildArgs.GenerateDockerBuildArgs(dockerengine.New(exec.NewCmd()))
 		if err != nil {
-			return fmt.Errorf("generate docker build args: %w", err)
+			return fmt.Errorf("generate docker build args of image %s: %w", name, err)
 		}
 		buf := syncbuffer.New()
-		labeledBuffer := buf.WithLabel(fmt.Sprintf("Building your container image: docker %s", strings.Join(buildArgsList, " ")))
-		labeledBuffers[count] = labeledBuffer
-		count++
+		labeledBuffer := buf.WithLabel(fmt.Sprintf("Building your container image %s: docker %s", name, strings.Join(buildArgsList, " ")))
+		labeledBuffers[bufferIdx] = labeledBuffer
+		bufferIdx++
 
 		g.Go(func() error {
 			defer pw.Close()
 			digest, err := d.repository.BuildAndPush(ctx, buildArgs, pw)
 			if err != nil {
-				return fmt.Errorf("build and push image: %w", err)
+				return fmt.Errorf("build and push image %s: %w", name, err)
 			}
 			mu.Lock()
 			out.ImageDigests[name] = ContainerImageIdentifier{
