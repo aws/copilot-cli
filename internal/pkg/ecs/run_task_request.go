@@ -167,7 +167,7 @@ func RunTaskRequestFromJob(client JobDescriber, app, env, job string) (*RunTaskR
 	}, nil
 }
 
-// String stringifies a RunTaskRequest.
+// CLIString stringifies a RunTaskRequest.
 func (r RunTaskRequest) CLIString() (string, error) {
 	output := []string{"copilot task run"}
 	if r.executionRole != "" {

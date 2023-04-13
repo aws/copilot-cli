@@ -23,7 +23,8 @@ const (
 	waitServiceStablePollingInterval = 15 * time.Second
 	waitServiceStableMaxTry          = 80
 	stableServiceDeploymentNum       = 1
-	// ECS EndpointsID
+
+	// EndpointsID is the ID to look up the ECS service endpoint.
 	EndpointsID = ecs.EndpointsID
 )
 

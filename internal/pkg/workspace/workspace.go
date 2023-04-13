@@ -579,6 +579,7 @@ func (ws *Workspace) Path() string {
 	return filepath.Dir(ws.copilotDirAbs)
 }
 
+// Rel returns the relative path to path from the workspace copilot directory.
 func (ws *Workspace) Rel(path string) (string, error) {
 	fullPath, err := filepath.Abs(path)
 	if err != nil {
@@ -593,8 +594,7 @@ func (ws *Workspace) copilotDirPath() (string, error) {
 	//
 	// Note: This code checks for *any* directory named "copilot", but this might not work
 	// correctly if we're in some subdirectory of the app that the user might have happened
-	// to name "copilot". It's not clear if there's a good way to avoid that problem, though it
-	// doesn't seem to be a terribly likely issue.
+	// to name "copilot". Our docs warn users and suggest creating another "copilot" dir closer to the wd.
 	if filepath.Base(ws.workingDirAbs) == CopilotDirName {
 		return ws.workingDirAbs, nil
 	}

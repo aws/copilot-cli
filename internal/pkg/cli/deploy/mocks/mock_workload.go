@@ -11,7 +11,6 @@ import (
 	cloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	cloudformation0 "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	dockerengine "github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
-	repository "github.com/aws/copilot-cli/internal/pkg/repository"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -52,42 +51,56 @@ func (mr *MockActionRecommenderMockRecorder) RecommendedActions() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecommendedActions", reflect.TypeOf((*MockActionRecommender)(nil).RecommendedActions))
 }
 
-// MockimageBuilderPusher is a mock of imageBuilderPusher interface.
-type MockimageBuilderPusher struct {
+// MockrepositoryService is a mock of repositoryService interface.
+type MockrepositoryService struct {
 	ctrl     *gomock.Controller
-	recorder *MockimageBuilderPusherMockRecorder
+	recorder *MockrepositoryServiceMockRecorder
 }
 
-// MockimageBuilderPusherMockRecorder is the mock recorder for MockimageBuilderPusher.
-type MockimageBuilderPusherMockRecorder struct {
-	mock *MockimageBuilderPusher
+// MockrepositoryServiceMockRecorder is the mock recorder for MockrepositoryService.
+type MockrepositoryServiceMockRecorder struct {
+	mock *MockrepositoryService
 }
 
-// NewMockimageBuilderPusher creates a new mock instance.
-func NewMockimageBuilderPusher(ctrl *gomock.Controller) *MockimageBuilderPusher {
-	mock := &MockimageBuilderPusher{ctrl: ctrl}
-	mock.recorder = &MockimageBuilderPusherMockRecorder{mock}
+// NewMockrepositoryService creates a new mock instance.
+func NewMockrepositoryService(ctrl *gomock.Controller) *MockrepositoryService {
+	mock := &MockrepositoryService{ctrl: ctrl}
+	mock.recorder = &MockrepositoryServiceMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockimageBuilderPusher) EXPECT() *MockimageBuilderPusherMockRecorder {
+func (m *MockrepositoryService) EXPECT() *MockrepositoryServiceMockRecorder {
 	return m.recorder
 }
 
 // BuildAndPush mocks base method.
-func (m *MockimageBuilderPusher) BuildAndPush(docker repository.ContainerLoginBuildPusher, args *dockerengine.BuildArguments) (string, error) {
+func (m *MockrepositoryService) BuildAndPush(args *dockerengine.BuildArguments) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "BuildAndPush", docker, args)
+	ret := m.ctrl.Call(m, "BuildAndPush", args)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // BuildAndPush indicates an expected call of BuildAndPush.
-func (mr *MockimageBuilderPusherMockRecorder) BuildAndPush(docker, args interface{}) *gomock.Call {
+func (mr *MockrepositoryServiceMockRecorder) BuildAndPush(args interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BuildAndPush", reflect.TypeOf((*MockimageBuilderPusher)(nil).BuildAndPush), docker, args)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BuildAndPush", reflect.TypeOf((*MockrepositoryService)(nil).BuildAndPush), args)
+}
+
+// Login mocks base method.
+func (m *MockrepositoryService) Login() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Login")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Login indicates an expected call of Login.
+func (mr *MockrepositoryServiceMockRecorder) Login() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Login", reflect.TypeOf((*MockrepositoryService)(nil).Login))
 }
 
 // Mocktemplater is a mock of templater interface.
@@ -411,44 +424,6 @@ func (m *Mockspinner) Stop(label string) {
 func (mr *MockspinnerMockRecorder) Stop(label interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*Mockspinner)(nil).Stop), label)
-}
-
-// MockfileReader is a mock of fileReader interface.
-type MockfileReader struct {
-	ctrl     *gomock.Controller
-	recorder *MockfileReaderMockRecorder
-}
-
-// MockfileReaderMockRecorder is the mock recorder for MockfileReader.
-type MockfileReaderMockRecorder struct {
-	mock *MockfileReader
-}
-
-// NewMockfileReader creates a new mock instance.
-func NewMockfileReader(ctrl *gomock.Controller) *MockfileReader {
-	mock := &MockfileReader{ctrl: ctrl}
-	mock.recorder = &MockfileReaderMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockfileReader) EXPECT() *MockfileReaderMockRecorder {
-	return m.recorder
-}
-
-// ReadFile mocks base method.
-func (m *MockfileReader) ReadFile(arg0 string) ([]byte, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReadFile", arg0)
-	ret0, _ := ret[0].([]byte)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ReadFile indicates an expected call of ReadFile.
-func (mr *MockfileReaderMockRecorder) ReadFile(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadFile", reflect.TypeOf((*MockfileReader)(nil).ReadFile), arg0)
 }
 
 // MocktimeoutError is a mock of timeoutError interface.

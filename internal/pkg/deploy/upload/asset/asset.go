@@ -5,60 +5,79 @@
 package asset
 
 import (
+	"bytes"
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/fs"
 	"path/filepath"
+	"sort"
 
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/spf13/afero"
+	"golang.org/x/sync/errgroup"
 )
 
-// UploadFunc is the function signature to upload contents to a destination.
-type UploadFunc func(dest string, contents io.Reader) (url string, err error)
+// ArtifactBucketUploader uploads local asset files.
+type ArtifactBucketUploader struct {
+	// FS is the file system to use.
+	FS afero.Fs
 
-type UploadOpts struct {
-	Reincludes []string   // Relative path under source to reinclude files that are excluded in the upload.
-	Excludes   []string   // Relative path under source to exclude in the upload.
-	UploadFn   UploadFunc // Custom implementation on how to upload the contents under a file. Defaults to S3UploadFn.
-	Recursive  bool       // Whether to walk recursively.
+	// Upload is the function called when uploading a file.
+	Upload func(path string, contents io.Reader) error
+
+	// PathPrefix is the path to prefix any hashed files when uploading to the artifact bucket.
+	PathPrefix string
+
+	// AssetMappingPath is the path the upload the asset mapping file to.
+	AssetMappingPath string
 }
 
-// Upload uploads static assets to Cloud Storage and returns uploaded file URLs.
-func Upload(fs afero.Fs, source, destination string, opts *UploadOpts) ([]string, error) {
-	matcher := buildCompositeMatchers(buildReincludeMatchers(opts.Reincludes), buildExcludeMatchers(opts.Excludes))
-	var urls []string
-	info, err := fs.Stat(source)
-	if err != nil {
-		return nil, fmt.Errorf("get stat for file %q: %w", source, err)
-	}
-	paths := []string{source}
-	if info.IsDir() {
-		files, err := afero.ReadDir(fs, source)
-		if err != nil {
-			return nil, fmt.Errorf("read directory %q: %w", source, err)
-		}
-		paths = make([]string, len(files))
-		for i, f := range files {
-			paths[i] = filepath.Join(source, f.Name())
-		}
-	} else if destination == "" { // only applies to files, not folders
-		destination = source
-	}
-	for _, path := range paths {
-		if err := afero.Walk(fs, path, walkFn(source, destination, opts.Recursive, fs, opts.UploadFn, &urls, matcher)); err != nil {
-			return nil, fmt.Errorf("walk the file tree rooted at %q: %w", source, err)
-		}
-	}
-	return urls, nil
+type asset struct {
+	localPath string
+	content   io.Reader
+
+	ArtifactBucketPath string `json:"path"`
+	ServiceBucketPath  string `json:"destPath"`
 }
 
-func walkFn(source, dest string, recursive bool, reader afero.Fs, upload UploadFunc, urlsPtr *[]string, matcher filepathMatcher) filepath.WalkFunc {
+// UploadFiles hashes each of the files specified in files and uploads
+// them to the path "{PathPrefix}/{hash}". After, it uploads a JSON file
+// to AssetMappingPath that specifies the location of every file in the artifact bucket and its
+// intended destination path in the service bucket.
+func (u *ArtifactBucketUploader) UploadFiles(files []manifest.FileUpload) error {
+	var assets []asset
+	for _, f := range files {
+		matcher := buildCompositeMatchers(buildReincludeMatchers(f.Reinclude.ToStringSlice()), buildExcludeMatchers(f.Exclude.ToStringSlice()))
+		source := filepath.Join(f.Context, f.Source)
+
+		if err := afero.Walk(u.FS, source, u.walkFn(source, f.Destination, f.Recursive, matcher, &assets)); err != nil {
+			return fmt.Errorf("walk the file tree rooted at %q: %s", source, err)
+		}
+	}
+
+	if err := u.uploadAssets(assets); err != nil {
+		return fmt.Errorf("upload assets: %s", err)
+	}
+
+	if err := u.uploadAssetMappingFile(assets); err != nil {
+		return fmt.Errorf("upload asset mapping file: %s", err)
+	}
+	return nil
+}
+
+func (u *ArtifactBucketUploader) walkFn(sourcePath, destPath string, recursive bool, matcher filepathMatcher, assets *[]asset) filepath.WalkFunc {
 	return func(path string, info fs.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 		if info.IsDir() {
-			if !recursive {
+			// if path == sourcePath, then path is the directory they want uploaded.
+			// if path != sourcePath, then path is a _subdirectory_ of the directory they want uploaded.
+			if !recursive && path != sourcePath {
 				return fs.SkipDir
 			}
 			return nil
@@ -70,98 +89,81 @@ func walkFn(source, dest string, recursive bool, reader afero.Fs, upload UploadF
 		if !ok {
 			return nil
 		}
-		file, err := reader.Open(path)
+
+		hash := sha256.New()
+		buf := &bytes.Buffer{}
+		file, err := u.FS.Open(path)
 		if err != nil {
-			return fmt.Errorf("open file on path %q: %w", path, err)
+			return fmt.Errorf("open %q: %w", path, err)
 		}
 		defer file.Close()
-		fileRel, err := filepath.Rel(source, path)
+
+		_, err = io.Copy(io.MultiWriter(buf, hash), file)
 		if err != nil {
-			return fmt.Errorf("get relative path for %q against %q: %w", path, source, err)
+			return fmt.Errorf("copy %q: %w", path, err)
 		}
-		key := filepath.Join(dest, fileRel)
-		url, err := upload(key, file)
+
+		// rel is "." when sourcePath == path
+		rel, err := filepath.Rel(sourcePath, path)
 		if err != nil {
-			return fmt.Errorf("upload file %q to destination %q: %w", path, key, err)
+			return fmt.Errorf("get relative path for %q against %q: %w", path, sourcePath, err)
 		}
-		*urlsPtr = append(*urlsPtr, url)
+
+		dest := filepath.Join(destPath, rel)
+		if dest == "." { // happens when sourcePath is a file and destPath is unset
+			dest = info.Name()
+		}
+
+		*assets = append(*assets, asset{
+			localPath:          path,
+			content:            buf,
+			ArtifactBucketPath: filepath.Join(u.PathPrefix, hex.EncodeToString(hash.Sum(nil))),
+			ServiceBucketPath:  dest,
+		})
 		return nil
 	}
 }
 
-type filepathMatcher interface {
-	match(path string) (bool, error)
-}
+func (u *ArtifactBucketUploader) uploadAssets(assets []asset) error {
+	g, _ := errgroup.WithContext(context.Background())
 
-type reincludeMatcher string
-
-func buildReincludeMatchers(reincludes []string) []filepathMatcher {
-	var matchers []filepathMatcher
-	for _, reinclude := range reincludes {
-		matchers = append(matchers, reincludeMatcher(reinclude))
+	for i := range assets {
+		asset := assets[i]
+		g.Go(func() error {
+			if err := u.Upload(asset.ArtifactBucketPath, asset.content); err != nil {
+				return fmt.Errorf("upload %q: %w", asset.localPath, err)
+			}
+			return nil
+		})
 	}
-	return matchers
+
+	return g.Wait()
 }
 
-func (m reincludeMatcher) match(path string) (bool, error) {
-	return match(string(m), path)
-}
-
-type excludeMatcher string
-
-func buildExcludeMatchers(excludes []string) []filepathMatcher {
-	var matchers []filepathMatcher
-	for _, exclude := range excludes {
-		matchers = append(matchers, excludeMatcher(exclude))
-	}
-	return matchers
-}
-
-func (m excludeMatcher) match(path string) (bool, error) {
-	return match(string(m), path)
-}
-
-// compositeMatcher is a composite matcher consisting of reinclude matchers and exclude matchers.
-// Note that exclude matchers will be applied before reinclude matchers.
-type compositeMatcher struct {
-	reincludeMatchers []filepathMatcher
-	excludeMatchers   []filepathMatcher
-}
-
-func buildCompositeMatchers(reincludeMatchers, excludeMatchers []filepathMatcher) compositeMatcher {
-	return compositeMatcher{
-		reincludeMatchers: reincludeMatchers,
-		excludeMatchers:   excludeMatchers,
-	}
-}
-
-func (m compositeMatcher) match(path string) (bool, error) {
-	shouldInclude := true
-	for _, matcher := range m.excludeMatchers {
-		isMatch, err := matcher.match(path)
-		if err != nil {
-			return false, err
+// uploadAssetMappingFile uploads a JSON file to u.AssetMappingPath containing
+// the current location of each file in the artifact bucket and the desired location
+// of the file in the destination bucket. It has the format:
+//
+//	{
+//	  "path": "local-assets/12345asdf",
+//	  "destPath": "index.html"
+//	}
+func (u *ArtifactBucketUploader) uploadAssetMappingFile(assets []asset) error {
+	// stable output
+	sort.Slice(assets, func(i, j int) bool {
+		if assets[i].ArtifactBucketPath != assets[j].ArtifactBucketPath {
+			return assets[i].ArtifactBucketPath < assets[j].ArtifactBucketPath
 		}
-		if isMatch {
-			shouldInclude = false
-		}
-	}
-	for _, matcher := range m.reincludeMatchers {
-		isMatch, err := matcher.match(path)
-		if err != nil {
-			return false, err
-		}
-		if isMatch {
-			shouldInclude = true
-		}
-	}
-	return shouldInclude, nil
-}
+		return assets[i].ServiceBucketPath < assets[j].ServiceBucketPath
+	})
 
-func match(pattern, path string) (bool, error) {
-	isMatch, err := filepath.Match(pattern, path)
+	data, err := json.Marshal(assets)
 	if err != nil {
-		return false, fmt.Errorf("match file path %s against pattern %s: %w", path, pattern, err)
+		return fmt.Errorf("encode uploaded assets: %w", err)
 	}
-	return isMatch, nil
+
+	if err := u.Upload(u.AssetMappingPath, bytes.NewBuffer(data)); err != nil {
+		return fmt.Errorf("upload to %q: %w", u.AssetMappingPath, err)
+	}
+	return nil
 }

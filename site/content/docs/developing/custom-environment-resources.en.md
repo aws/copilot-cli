@@ -17,7 +17,7 @@ Which credentials would you like to use to create name? [profile default]
   > No, I'd like to import existing resources (VPC, subnets).
 ```
 
-You may use the import feature to bring a VPC with only two public subnets and no private subnets (such as a default VPC), or to bring a VPC with only two private subnets and no public subnets for your workloads that are not internet-facing. (For more details on the resources you'll need for isolated networks, go [here](https://github.com/aws/copilot-cli/discussions/2378).)
+You may use the import feature to bring a VPC with two public and two private subnets, only two public subnets and no private subnets (such as a default VPC), or only two private subnets and no public subnets for your workloads that are not internet-facing. (For more details on the resources you'll need for isolated networks, go [here](https://github.com/aws/copilot-cli/discussions/2378).)
 
 ## Modifying Copilot's default resources 
 When you select the default configuration, Copilot follows [AWS best practices](https://aws.amazon.com/blogs/containers/amazon-ecs-availability-best-practices/) and creates a VPC with two public and two private subnets, with one of each type in one of two Availability Zones. 

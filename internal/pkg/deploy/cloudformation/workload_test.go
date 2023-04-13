@@ -155,7 +155,7 @@ func TestCloudFormation_DeleteWorkload(t *testing.T) {
 				m.EXPECT().Describe(gomock.Any()).Return(&cloudformation.StackDescription{
 					StackId: aws.String("stack/webhook/1111"),
 				}, nil)
-				m.EXPECT().DeleteAndWait(gomock.Any()).Return(errors.New("some error"))
+				m.EXPECT().DeleteAndWaitWithRoleARN(gomock.Any(), gomock.Any()).Return(errors.New("some error"))
 				m.EXPECT().DescribeStackEvents(gomock.Any()).Return(&sdkcloudformation.DescribeStackEventsOutput{}, nil).AnyTimes()
 				return m
 			},
@@ -168,7 +168,7 @@ func TestCloudFormation_DeleteWorkload(t *testing.T) {
 				m.EXPECT().Describe(gomock.Any()).Return(&cloudformation.StackDescription{
 					StackId: aws.String("stack/webhook/1111"),
 				}, nil)
-				m.EXPECT().DeleteAndWait(gomock.Any()).Return(nil)
+				m.EXPECT().DeleteAndWaitWithRoleARN(gomock.Any(), gomock.Any()).Return(nil)
 				m.EXPECT().DescribeStackEvents(gomock.Any()).Return(nil, errors.New("some error"))
 				return m
 			},
@@ -181,7 +181,7 @@ func TestCloudFormation_DeleteWorkload(t *testing.T) {
 				m.EXPECT().Describe(gomock.Any()).Return(&cloudformation.StackDescription{
 					StackId: aws.String("stack/webhook/1111"),
 				}, nil)
-				m.EXPECT().DeleteAndWait(gomock.Any()).Return(&cloudformation.ErrStackNotFound{})
+				m.EXPECT().DeleteAndWaitWithRoleARN(gomock.Any(), gomock.Any()).Return(&cloudformation.ErrStackNotFound{})
 				m.EXPECT().DescribeStackEvents(gomock.Any()).Return(&sdkcloudformation.DescribeStackEventsOutput{}, nil).AnyTimes()
 				return m
 			},

@@ -34,8 +34,10 @@ const (
 )
 
 const (
-	// Protocols.
+	// TCP is the tcp protocol for NLB.
 	TCP = "TCP"
+
+	// TLS is the tls protocol for NLB.
 	TLS = "TLS"
 	udp = "UDP"
 
@@ -55,7 +57,7 @@ var (
 	dependsOnValidStatuses                   = []string{dependsOnStart, dependsOnComplete, dependsOnSuccess, dependsOnHealthy}
 	nlbValidProtocols                        = []string{TCP, TLS}
 	validContainerProtocols                  = []string{TCP, udp}
-	TracingValidVendors                      = []string{awsXRAY}
+	tracingValidVendors                      = []string{awsXRAY}
 	ecsRollingUpdateStrategies               = []string{ECSDefaultRollingUpdateStrategy, ECSRecreateRollingUpdateStrategy}
 
 	httpProtocolVersions = []string{"GRPC", "HTTP1", "HTTP2"}
@@ -1588,15 +1590,15 @@ func (o Observability) validate() error {
 	if o.isEmpty() {
 		return nil
 	}
-	for _, validVendor := range TracingValidVendors {
+	for _, validVendor := range tracingValidVendors {
 		if strings.EqualFold(aws.StringValue(o.Tracing), validVendor) {
 			return nil
 		}
 	}
 	return fmt.Errorf("invalid tracing vendor %s: %s %s",
 		aws.StringValue(o.Tracing),
-		english.PluralWord(len(TracingValidVendors), "the valid vendor is", "valid vendors are"),
-		english.WordSeries(TracingValidVendors, "and"))
+		english.PluralWord(len(tracingValidVendors), "the valid vendor is", "valid vendors are"),
+		english.WordSeries(tracingValidVendors, "and"))
 }
 
 // validate returns nil if JobTriggerConfig is configured correctly.

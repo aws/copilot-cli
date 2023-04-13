@@ -27,7 +27,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/initialize"
 	"github.com/aws/copilot-cli/internal/pkg/logging"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
-	"github.com/aws/copilot-cli/internal/pkg/repository"
 	"github.com/aws/copilot-cli/internal/pkg/task"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
@@ -166,15 +165,19 @@ type secretDeleter interface {
 }
 
 type imageBuilderPusher interface {
-	BuildAndPush(docker repository.ContainerLoginBuildPusher, args *dockerengine.BuildArguments) (string, error)
+	BuildAndPush(args *dockerengine.BuildArguments) (string, error)
 }
-
 type repositoryURIGetter interface {
 	URI() (string, error)
 }
 
+type repositoryLogin interface {
+	Login() error
+}
+
 type repositoryService interface {
 	repositoryURIGetter
+	repositoryLogin
 	imageBuilderPusher
 }
 

@@ -440,7 +440,7 @@ func (s *TaskSelector) RunningTask(msg, help string, opts ...TaskOpts) (*awsecs.
 	return taskStrMap[task], nil
 }
 
-// GetDeployedServiceOpts sets up optional parameters for GetDeployedServiceOpts function.
+// GetDeployedWorkloadOpts sets up optional parameters for GetDeployedWorkloadOpts function.
 type GetDeployedWorkloadOpts func(*DeploySelector)
 
 // DeployedWorkloadFilter determines if a service or job should be included in the results.

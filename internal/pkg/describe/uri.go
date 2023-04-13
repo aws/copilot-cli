@@ -13,8 +13,10 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 )
 
+// URIAccessType represents how a URI can be accessed.
 type URIAccessType int
 
+// Supported URI Access Types.
 const (
 	URIAccessTypeNone URIAccessType = iota
 	URIAccessTypeInternet
@@ -27,6 +29,7 @@ var (
 	fmtSvcDiscoveryEndpointWithPort = "%s.%s:%s" // Format string of the form {svc}.{endpoint}:{port}
 )
 
+// URI represents a uri and how it can be accessed.
 type URI struct {
 	URI        string
 	AccessType URIAccessType

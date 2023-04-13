@@ -22,8 +22,9 @@ type StaticSite struct {
 	manifest *manifest.StaticSite
 	appInfo  deploy.AppInformation
 
-	parser   staticSiteReadParser
-	localCRs []uploadable // Custom resources that have not been uploaded yet.
+	parser          staticSiteReadParser
+	localCRs        []uploadable // Custom resources that have not been uploaded yet.
+	assetMappingURL string
 }
 
 // StaticSiteConfig contains fields to configure StaticSite.
@@ -36,6 +37,7 @@ type StaticSiteConfig struct {
 	RootUserARN        string
 	ArtifactBucketName string
 	Addons             NestedStackConfigurer
+	AssetMappingURL    string
 }
 
 // NewStaticSite creates a new CFN stack from a manifest file, given the options.
@@ -58,8 +60,9 @@ func NewStaticSite(conf *StaticSiteConfig) (*StaticSite, error) {
 		},
 		manifest: conf.Manifest,
 
-		parser:   fs,
-		localCRs: uploadableCRs(crs).convert(),
+		parser:          fs,
+		localCRs:        uploadableCRs(crs).convert(),
+		assetMappingURL: conf.AssetMappingURL,
 	}, nil
 }
 
