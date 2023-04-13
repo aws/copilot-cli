@@ -92,16 +92,10 @@ These messages can be consumed by the Worker Service.`
 
 	wkldInitImagePrompt = fmt.Sprintf("What's the %s ([registry/]repository[:tag|@digest]) of the image to use?", color.Emphasize("location"))
 
-	fmtStaticSiteInitDirOrFilePrompt      = "Which " + color.Emphasize("(recursive) directories or files") + " would you like to upload for %s?\nIt is unnecessary to select files or subdirectories within selected directories."
-	staticSiteInitDirOrFileHelpPrompt     = "(Recursive) directories or files to use for building your static site."
+	fmtStaticSiteInitDirOrFilePrompt      = "Which " + color.Emphasize("files or (recursive) directories") + " would you like to upload for %s?\nIt is unnecessary to select files or subdirectories within selected directories."
+	staticSiteInitDirOrFileHelpPrompt     = "Files or (recursive) directories to use for building your static site."
 	fmtStaticSiteInitDirOrFilePathPrompt  = "What is the custom path to the " + color.Emphasize("directory or file") + " for %s?"
 	staticSiteInitDirOrFilePathHelpPrompt = "Path to directory or file to use for building your static site."
-	fmtStaticSiteInitExcludePrompt        = "Which files under '%s' would you like to " + color.Emphasize("exclude") + "?"
-	staticSiteInitExcludeHelpPrompt       = "Parameters for pattern-matching; includes '*', '?', '[sequence]', and '[!sequence]'"
-	fmtStaticSiteInitReincludePrompt        = "Which files under '%s' would you like to " + color.Emphasize("reinclude") + "?"
-	staticSiteInitReincludeHelpPrompt       = "Parameters for pattern-matching; includes '*', '?', '[sequence]', and '[!sequence]'"
-	fmtStaticSiteInitDestinationPrompt    = "What is the destination where '%s' should be uploaded?"
-	staticSiteInitDestinationHelpPrompt   = "Optional. Destination in S3; default for directories is '/'."
 )
 
 const (
@@ -452,7 +446,10 @@ func (o *initSvcOpts) askStaticSite() error {
 		}
 		for _, source := range sources {
 			var recursive bool
-			isDir, _ := isDir(o.fs, source)
+			isDir, err := isDir(o.fs, source)
+			if err != nil {
+				return err
+			}
 			if isDir {
 				recursive = true
 			}
@@ -462,7 +459,6 @@ func (o *initSvcOpts) askStaticSite() error {
 			})
 		}
 	o.staticAssets = assets
-	fmt.Println("assigned static assets", o.staticAssets)
 	return nil
 }
 
@@ -535,7 +531,7 @@ func (o *initSvcOpts) askImage() error {
 }
 
 func (o *initSvcOpts) askSource() ([]string, error) {
-	sources, err := o.dirFileSel.DirOrFile(
+	sources, err := o.dirFileSel.StaticSources(
 		fmt.Sprintf(fmtStaticSiteInitDirOrFilePrompt, color.HighlightUserInput(o.name)),
 		staticSiteInitDirOrFileHelpPrompt,
 		fmt.Sprintf(fmtStaticSiteInitDirOrFilePathPrompt, color.HighlightUserInput(o.name)),

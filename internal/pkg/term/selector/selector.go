@@ -60,8 +60,9 @@ For example: 0 17 ? * MON-FRI (5 pm on weekdays)
 	humanReadableCronConfirmPrompt = "Would you like to use this schedule?"
 	humanReadableCronConfirmHelp   = `Confirm whether the schedule looks right to you.
 (Y)es will continue execution. (N)o will allow you to input a different schedule.`
-
-	dirOrFileUseCustomPrompt = "Enter custom path to your static site dir/file"
+	staticSourceUseCustomPrompt = "Enter custom path to your static site dir/file"
+	staticSourceAnotherCustomPathPrompt = "Would you like to type in another path?"
+	staticSourceAnotherCustomPathHelp = "You may add multiple custom paths. Enter 'y' to type another."
 )
 
 // Final messages displayed after prompting.
@@ -79,6 +80,7 @@ const (
 	pipelineFinalMsg     = "Pipeline:"
 	staticAssetsFinalMsg = "Source(s):"
 	customPathFinalMsg   = "Custom Path to Source:"
+	anotherFinalMsg      = "Another:"
 )
 
 var scheduleTypes = []string{

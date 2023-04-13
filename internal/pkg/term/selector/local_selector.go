@@ -145,13 +145,14 @@ func NewLocalFileSelector(prompt Prompter, fs afero.Fs) (*localFileSelector, err
 	}, nil
 }
 
-// DirOrFile asks the user to select from a list of directories and files in the current directory or two levels down.
-func (s *localFileSelector) DirOrFile(selPrompt, selHelp, otherPathPrompt, otherPathHelp string, pathValidator prompt.ValidatorFunc) ([]string, error) {
+// StaticSources asks the user to select from a list of directories and files in the current directory or two levels down.
+func (s *localFileSelector) StaticSources(selPrompt, selHelp, anotherPathPrompt, anotherPathHelp string, pathValidator prompt.ValidatorFunc) ([]string, error) {
 	dirsAndFiles, err := s.listDirsAndFiles()
 	if err != nil {
 		return nil, err
 	}
-	dirsAndFiles = append(dirsAndFiles, []string{dirOrFileUseCustomPrompt}...)
+	log.Warningln("No directories or files were found in the current working directory. Enter a relative path with the 'custom path' option, or run this command from higher up in your local file directory.")
+	dirsAndFiles = append(dirsAndFiles, []string{staticSourceUseCustomPrompt}...)
 	var selections []string
 	selections, err = s.prompt.MultiSelect(
 		selPrompt,
@@ -166,16 +167,32 @@ func (s *localFileSelector) DirOrFile(selPrompt, selHelp, otherPathPrompt, other
 		return nil, fmt.Errorf("select directories and/or files: %w", err)
 	}
 	for i, selection := range selections {
-		if selection == dirOrFileUseCustomPrompt {
-			customPath, err := s.prompt.Get(
-				otherPathPrompt,
-				otherPathHelp,
-				pathValidator,
-				prompt.WithFinalMessage(customPathFinalMsg))
-			if err != nil {
-				return nil, fmt.Errorf("get custom directory or path: %w", err)
+		anotherCustomPath := true
+		if selection == staticSourceUseCustomPrompt {
+			for anotherCustomPath {
+				customPath, err := s.prompt.Get(
+					anotherPathPrompt,
+					anotherPathHelp,
+					pathValidator,
+					prompt.WithFinalMessage(customPathFinalMsg))
+				if err != nil {
+					return nil, fmt.Errorf("get custom directory or file path: %w", err)
+				}
+				if selection == staticSourceUseCustomPrompt {
+					selections[i] = customPath
+					selection = customPath
+				} else {
+					selections = append(selections, customPath)
+				}
+				anotherCustomPath, err = s.prompt.Confirm(
+					staticSourceAnotherCustomPathPrompt,
+					staticSourceAnotherCustomPathHelp,
+					prompt.WithFinalMessage(anotherFinalMsg),
+				)
+				if err != nil {
+					return nil, fmt.Errorf("confirm another custom path: %w", err)
+				}
 			}
-			selections[i] = customPath
 		}
 	}
 	return selections, nil
