@@ -6,7 +6,6 @@ package cli
 import (
 	"errors"
 	"fmt"
-	//"os"
 	"path/filepath"
 	"testing"
 
@@ -31,7 +30,7 @@ type initSvcMocks struct {
 	mockPrompt       *mocks.Mockprompter
 	mockSel          *mocks.MockdockerfileSelector
 	mocktopicSel     *mocks.MocktopicSelector
-	mockDirFileSel   *mocks.MockdirOrFileSelector
+	mockDirFileSel   *mocks.MockdirFileSelector
 	mockDockerfile   *mocks.MockdockerfileParser
 	mockDockerEngine *mocks.MockdockerEngine
 	mockMftReader    *mocks.MockmanifestReader
@@ -130,7 +129,7 @@ func TestSvcInitOpts_Validate(t *testing.T) {
 			setupMocks: func(m initSvcMocks) {
 				m.mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{}, nil)
 			},
-			mockFileSystem: func(mockFS afero.Fs) { 
+			mockFileSystem: func(mockFS afero.Fs) {
 				mockFS.MkdirAll("hello", 0755)
 				afero.WriteFile(mockFS, "hello/Dockerfile", []byte("FROM nginx"), 0644)
 			},
@@ -208,8 +207,8 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 		wantedDockerfilePath = "frontend/Dockerfile"
 		wantedSvcPort        = 80
 		wantedImage          = "mockImage"
-		mockFile			 = "my/mock/file.css"
-		mockDir 			 = "my/mock/dir"
+		mockFile             = "my/mock/file.css"
+		mockDir              = "my/mock/dir"
 	)
 	mockTopic, _ := deploy.NewTopic("arn:aws:sns:us-west-2:123456789012:mockApp-mockEnv-mockWkld-orders", "mockApp", "mockEnv", "mockWkld")
 	mockError := errors.New("mock error")
@@ -226,7 +225,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 
 		setupMocks func(mocks initSvcMocks)
 
-		wantedErr error
+		wantedErr    error
 		wantedAssets []manifest.FileUpload
 	}{
 		"invalid service type": {
@@ -375,7 +374,7 @@ type: Request-Driven Web Service`), nil)
 					},
 					{
 						Value: manifestinfo.StaticSiteType,
-						Hint: "Internet to CDN to S3 bucket",
+						Hint:  "Internet to CDN to S3 bucket",
 					},
 				}), gomock.Any()).
 					Return(wantedSvcType, nil)
@@ -734,15 +733,15 @@ type: Request-Driven Web Service`), nil)
 				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
 				m.mockDirFileSel.EXPECT().StaticSources(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]string{mockFile, mockDir}, nil)
 			},
-			
+
 			wantedAssets: []manifest.FileUpload{
 				{
-					Source:      mockFile,
-					Recursive:   false,
+					Source:    mockFile,
+					Recursive: false,
 				},
 				{
-					Source:      mockDir,
-					Recursive:   true,
+					Source:    mockDir,
+					Recursive: true,
 				},
 			},
 		},
@@ -758,7 +757,7 @@ type: Request-Driven Web Service`), nil)
 			mockDockerfile := mocks.NewMockdockerfileParser(ctrl)
 			mockSel := mocks.NewMockdockerfileSelector(ctrl)
 			mockTopicSel := mocks.NewMocktopicSelector(ctrl)
-			mockDirOrFileSel := mocks.NewMockdirOrFileSelector(ctrl)
+			mockDirFileSel := mocks.NewMockdirFileSelector(ctrl)
 			mockDockerEngine := mocks.NewMockdockerEngine(ctrl)
 			mockManifestReader := mocks.NewMockmanifestReader(ctrl)
 			mockStore := mocks.NewMockstore(ctrl)
@@ -767,7 +766,7 @@ type: Request-Driven Web Service`), nil)
 				mockDockerfile:   mockDockerfile,
 				mockSel:          mockSel,
 				mocktopicSel:     mockTopicSel,
-				mockDirFileSel:   mockDirOrFileSel,
+				mockDirFileSel:   mockDirFileSel,
 				mockDockerEngine: mockDockerEngine,
 				mockMftReader:    mockManifestReader,
 				mockStore:        mockStore,
@@ -800,7 +799,7 @@ type: Request-Driven Web Service`), nil)
 				mftReader:    mockManifestReader,
 				sel:          mockSel,
 				topicSel:     mockTopicSel,
-				dirFileSel:   mockDirOrFileSel,
+				dirFileSel:   mockDirFileSel,
 				dockerEngine: mockDockerEngine,
 			}
 			if tc.mockFileSystem != nil {

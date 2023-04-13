@@ -158,7 +158,7 @@ func (s *localFileSelector) StaticSources(selPrompt, selHelp, anotherPathPrompt,
 		selPrompt,
 		selHelp,
 		dirsAndFiles,
-		func(v interface{}) error{
+		func(v interface{}) error {
 			return nil
 		},
 		prompt.WithFinalMessage(staticAssetsFinalMsg),
@@ -230,7 +230,7 @@ func (s *localFileSelector) Dockerfile(selPrompt, notFoundPrompt, selHelp, notFo
 	return sel, nil
 }
 
-// ListDockerfiles returns the list of Dockerfiles within the current
+// listDockerfiles returns the list of Dockerfiles within the current
 // working directory and a subdirectory level below. If an error occurs while
 // reading directories, or no Dockerfiles found returns the error.
 func (s *localFileSelector) listDockerfiles() ([]string, error) {
@@ -272,7 +272,7 @@ func (s *localFileSelector) listDockerfiles() ([]string, error) {
 	return dockerfiles, nil
 }
 
-// ListDirsAndFiles returns the list of directories and files within the current
+// listDirsAndFiles returns the list of directories and files within the current
 // working directory and two subdirectory levels below.
 func (s *localFileSelector) listDirsAndFiles() ([]string, error) {
 	wdDirsAndFiles, err := s.fs.ReadDir(s.workingDirAbs)

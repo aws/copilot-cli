@@ -503,7 +503,7 @@ func TestLocalFileSelector_listDirsAndFiles(t *testing.T) {
 	testCases := map[string]struct {
 		mockFileSystem func(mockFS afero.Fs)
 		wantedErr      error
-		dirsAndFiles    []string
+		dirsAndFiles   []string
 	}{
 		"drill down two levels": {
 			mockFileSystem: func(mockFS afero.Fs) {
@@ -523,12 +523,12 @@ func TestLocalFileSelector_listDirsAndFiles(t *testing.T) {
 				_ = afero.WriteFile(mockFS, "lobby/basement/file", []byte("more cool stuff"), 0644)
 				_ = afero.WriteFile(mockFS, "lobby/basement/subBasement/file", []byte("unreachable cool stuff"), 0644)
 			},
-			wantedErr:   nil,
+			wantedErr:    nil,
 			dirsAndFiles: []string{"./lobby", "./lobby/basement", "./lobby/basement/file", "./lobby/basement/subBasement"},
 		},
 		"no dirs or files found": {
 			mockFileSystem: func(mockFS afero.Fs) {},
-			dirsAndFiles :    nil,
+			dirsAndFiles:   nil,
 		},
 	}
 

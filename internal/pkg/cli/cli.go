@@ -188,8 +188,3 @@ func isDir(fs afero.Fs, path string) (bool, error) {
 	}
 	return info.IsDir(), nil
 }
-
-type validateStorageTypeOpts struct {
-	ws           manifestReader
-	workloadName string
-}

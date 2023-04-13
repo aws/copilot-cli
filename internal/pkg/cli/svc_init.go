@@ -92,10 +92,10 @@ These messages can be consumed by the Worker Service.`
 
 	wkldInitImagePrompt = fmt.Sprintf("What's the %s ([registry/]repository[:tag|@digest]) of the image to use?", color.Emphasize("location"))
 
-	fmtStaticSiteInitDirOrFilePrompt      = "Which " + color.Emphasize("files or (recursive) directories") + " would you like to upload for %s?\nIt is unnecessary to select files or subdirectories within selected directories."
-	staticSiteInitDirOrFileHelpPrompt     = "Files or (recursive) directories to use for building your static site."
-	fmtStaticSiteInitDirOrFilePathPrompt  = "What is the custom path to the " + color.Emphasize("directory or file") + " for %s?"
-	staticSiteInitDirOrFilePathHelpPrompt = "Path to directory or file to use for building your static site."
+	fmtStaticSiteInitDirFilePrompt      = "Which " + color.Emphasize("files or (recursive) directories") + " would you like to upload for %s?\nIt is unnecessary to select files or subdirectories within selected directories."
+	staticSiteInitDirFileHelpPrompt     = "Files or (recursive) directories to use for building your static site."
+	fmtStaticSiteInitDirFilePathPrompt  = "What is the custom path to the " + color.Emphasize("directory or file") + " for %s?"
+	staticSiteInitDirFilePathHelpPrompt = "Path to directory or file to use for building your static site."
 )
 
 const (
@@ -121,10 +121,9 @@ type initWkldVars struct {
 	wkldType       string
 	name           string
 	dockerfilePath string
-	// TODO(jwh): allow passing in asset info via flags
-	image         string
-	subscriptions []string
-	noSubscribe   bool
+	image          string
+	subscriptions  []string
+	noSubscribe    bool
 }
 
 type initSvcVars struct {
@@ -144,7 +143,7 @@ type initSvcOpts struct {
 	store        store
 	dockerEngine dockerEngine
 	sel          dockerfileSelector
-	dirFileSel   dirOrFileSelector
+	dirFileSel   dirFileSelector
 	topicSel     topicSelector
 	mftReader    manifestReader
 
@@ -152,7 +151,7 @@ type initSvcOpts struct {
 	manifestPath string
 	platform     *manifest.PlatformString
 	topics       []manifest.TopicSubscription
-	staticAssets []manifest.FileUpload 
+	staticAssets []manifest.FileUpload
 
 	// For workspace validation.
 	wsAppName         string
@@ -440,24 +439,24 @@ If you'd prefer a new default manifest, please manually delete the existing one.
 
 func (o *initSvcOpts) askStaticSite() error {
 	var assets []manifest.FileUpload
-		sources, err := o.askSource()
+	sources, err := o.askSource()
+	if err != nil {
+		return err
+	}
+	for _, source := range sources {
+		var recursive bool
+		isDir, err := isDir(o.fs, source)
 		if err != nil {
 			return err
 		}
-		for _, source := range sources {
-			var recursive bool
-			isDir, err := isDir(o.fs, source)
-			if err != nil {
-				return err
-			}
-			if isDir {
-				recursive = true
-			}
-			assets = append(assets, manifest.FileUpload{
-				Source: source,
-				Recursive: recursive,
-			})
+		if isDir {
+			recursive = true
 		}
+		assets = append(assets, manifest.FileUpload{
+			Source:    source,
+			Recursive: recursive,
+		})
+	}
 	o.staticAssets = assets
 	return nil
 }
@@ -532,29 +531,18 @@ func (o *initSvcOpts) askImage() error {
 
 func (o *initSvcOpts) askSource() ([]string, error) {
 	sources, err := o.dirFileSel.StaticSources(
-		fmt.Sprintf(fmtStaticSiteInitDirOrFilePrompt, color.HighlightUserInput(o.name)),
-		staticSiteInitDirOrFileHelpPrompt,
-		fmt.Sprintf(fmtStaticSiteInitDirOrFilePathPrompt, color.HighlightUserInput(o.name)),
-		staticSiteInitDirOrFilePathHelpPrompt,
-		func(v interface{}) error{
+		fmt.Sprintf(fmtStaticSiteInitDirFilePrompt, color.HighlightUserInput(o.name)),
+		staticSiteInitDirFileHelpPrompt,
+		fmt.Sprintf(fmtStaticSiteInitDirFilePathPrompt, color.HighlightUserInput(o.name)),
+		staticSiteInitDirFilePathHelpPrompt,
+		func(v interface{}) error {
 			return validatePath(afero.NewOsFs(), v)
 		},
-			)
+	)
 	if err != nil {
 		return nil, fmt.Errorf("select local directory or file: %w", err)
 	}
 	return sources, nil
-}
-
-func (o *initSvcOpts) stringSliceToStringSliceOrString(strings []string) manifest.StringSliceOrString {
-	switch len(strings) {
-	case 0:
-		return manifest.StringSliceOrString{}
-	case 1:
-		return manifest.StringSliceOrString{String: aws.String(strings[0])}
-	default:
-		return manifest.StringSliceOrString{StringSlice: strings}
-	}
 }
 
 func (o *initSvcOpts) manifestAlreadyExists() (bool, error) {
