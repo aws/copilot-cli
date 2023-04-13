@@ -24,13 +24,15 @@ Parameters:
 Conditions:
   HasAddons: !Not [!Equals [!Ref AddonsTemplateURL, ""]]
 
-# TODO: add permission boundary to all IAM roles
 Resources:
-  CopyFromCacheBucketFunctionRole:
+  CopyAssetsFunctionRole:
     Metadata:
       aws:copilot:description: An IAM Role
     Type: AWS::IAM::Role
     Properties:
+      {{- if .PermissionsBoundary}}
+      PermissionsBoundary: !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/{{.PermissionsBoundary}}
+      {{- end}}
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -60,13 +62,13 @@ Resources:
       ManagedPolicyArns:
         - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
 
-  CopyFromCacheBucketFunction:
+  CopyAssetsFunction:
     Metadata:
       aws:copilot:description: A lambda function
     Type: AWS::Lambda::Function
     Properties:
       Handler: index.handler
-      Role: !GetAtt CopyFromCacheBucketFunctionRole.Arn
+      Role: !GetAtt CopyAssetsFunctionRole.Arn
       Runtime: nodejs16.x
       Timeout: 60
       Code:
@@ -95,11 +97,14 @@ Resources:
             });
           };
 
-  TriggerStateMachineFunctionRole:
+  TriggerCopyStateMachineFunctionRole:
     Metadata:
       aws:copilot:description: An IAM Role for the lambda that triggers the file copying state machine.
     Type: AWS::IAM::Role
     Properties:
+      {{- if .PermissionsBoundary}}
+      PermissionsBoundary: !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/{{.PermissionsBoundary}}
+      {{- end}}
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -114,17 +119,17 @@ Resources:
             Statement:
               - Effect: Allow
                 Action: states:StartSyncExecution
-                Resource: !GetAtt CopyFromCacheBucketStateMachine.Arn
+                Resource: !GetAtt CopyAssetsStateMachine.Arn
       ManagedPolicyArns:
         - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
 
-  TriggerStateMachineFunction:
+  TriggerCopyStateMachineFunction:
     Metadata:
       aws:copilot:description: A lambda that triggers the file copying state machine.
     Type: AWS::Lambda::Function
     Properties:
       Handler: index.handler
-      Role: !GetAtt TriggerStateMachineFunctionRole.Arn
+      Role: !GetAtt TriggerCopyStateMachineFunctionRole.Arn
       Runtime: nodejs16.x
       Timeout: 60
       Code:
@@ -160,19 +165,22 @@ Resources:
     Metadata:
       aws:copilot:description: A custom resource to trigger the file copying state machine
     Type: Custom::TriggerStateMachine
-    DependsOn: CopyFromCacheBucketStateMachine
+    DependsOn: CopyAssetsStateMachine
     Properties:
-      ServiceToken: !GetAtt TriggerStateMachineFunction.Arn
-      StateMachineARN: !GetAtt CopyFromCacheBucketStateMachine.Arn
+      ServiceToken: !GetAtt TriggerCopyStateMachineFunction.Arn
+      StateMachineARN: !GetAtt CopyAssetsStateMachine.Arn
       FromBucket: {{ .AssetMappingFileBucket }}
       AssetMappingFilePath: {{ .AssetMappingFilePath }} # hash all of the files so that the state machine is triggered ONLY when all of the files have changed
       ToBucket: !Ref Bucket
 
-  CopyFromCacheBucketStateMachineRole:
+  CopyAssetsStateMachineRole:
     Metadata:
       aws:copilot:description: An IAM Role
     Type: AWS::IAM::Role
     Properties:
+      {{- if .PermissionsBoundary}}
+      PermissionsBoundary: !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/{{.PermissionsBoundary}}
+      {{- end}}
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -188,7 +196,7 @@ Resources:
             Statement:
               - Effect: Allow
                 Action: lambda:InvokeFunction
-                Resource: !GetAtt CopyFromCacheBucketFunction.Arn
+                Resource: !GetAtt CopyAssetsFunction.Arn
         - PolicyName: S3Access
           PolicyDocument:
             Version: 2012-10-17
@@ -212,12 +220,12 @@ Resources:
                   - logs:PutResourcePolicy
                   - logs:DescribeResourcePolicies
                   - logs:DescribeLogGroups
-                Resource: *
+                Resource: "*"
 
-  CopyFromCacheBucketStateMachine:
+  CopyAssetsStateMachine:
     Type: AWS::StepFunctions::StateMachine
     Properties:
-      RoleArn: !GetAtt CopyFromCacheBucketStateMachineRole.Arn
+      RoleArn: !GetAtt CopyAssetsStateMachineRole.Arn
       StateMachineType: EXPRESS
       LoggingConfiguration:
         Level: ALL
@@ -255,7 +263,7 @@ Resources:
                 CopyFile:
                   Type: Task
                   End: true
-                  Resource: !GetAtt CopyFromCacheBucketFunction.Arn
+                  Resource: !GetAtt CopyAssetsFunction.Arn
   
   Bucket:
     Metadata:
@@ -286,7 +294,7 @@ Resources:
         Statement:
           - Sid: ForceHTTPS
             Effect: Deny
-            Principal: *
+            Principal: "*"
             Action: s3:*
             Resource:
               - !Sub ${Bucket.Arn}
