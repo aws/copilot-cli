@@ -265,7 +265,7 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 		resources:                resources,
 		workspacePath:            ws.Path(),
 		uri:                      uri,
-		fs:                       &afero.Afero{Fs: afero.NewOsFs()},
+		fs:                       afero.NewOsFs(),
 		s3Client:                 s3.New(envSession),
 		addons:                   addons,
 		repository:               repository,
