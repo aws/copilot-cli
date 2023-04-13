@@ -25,111 +25,51 @@ Conditions:
   HasAddons: !Not [!Equals [!Ref AddonsTemplateURL, ""]]
 
 Resources:
-  CopyAssetsFunctionRole:
+  Bucket:
     Metadata:
-      aws:copilot:description: An IAM Role
-    Type: AWS::IAM::Role
+      aws:copilot:description: An S3 Bucket to store the static site's assets in
+    Type: AWS::S3::Bucket
     Properties:
-      {{- if .PermissionsBoundary}}
-      PermissionsBoundary: !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/{{.PermissionsBoundary}}
-      {{- end}}
-      AssumeRolePolicyDocument:
+      AccessControl: Private
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+        - ServerSideEncryptionByDefault:
+            SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+
+  BucketPolicy:
+    Metadata:
+      aws:copilot:description: A bucket policy to deny unencrypted access to the bucket and its contents
+    Type: AWS::S3::BucketPolicy
+    DeletionPolicy: Retain
+    Properties:
+      Bucket: !Ref Bucket
+      PolicyDocument:
         Version: 2012-10-17
         Statement:
-          - Effect: Allow
-            Principal:
-              Service: lambda.amazonaws.com
-            Action: sts:AssumeRole
-      Policies:
-        - PolicyName: CopyFromS3
-          PolicyDocument:
-            Version: 2012-10-17
-            Statement:
-              - Effect: Allow
-                Action:
-                  - s3:GetObject
-                  - s3:GetObjectTagging
-                Resource: arn:aws:s3:::{{ .AssetMappingFileBucket }}/*
-        - PolicyName: CopyToS3
-          PolicyDocument:
-            Version: 2012-10-17
-            Statement:
-              - Effect: Allow
-                Action:
-                  - s3:PutObject
-                  - s3:PutObjectTagging
-                Resource: !Sub arn:aws:s3:::${Bucket}/*
-      ManagedPolicyArns:
-        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+          - Sid: ForceHTTPS
+            Effect: Deny
+            Principal: "*"
+            Action: s3:*
+            Resource:
+              - !Sub ${Bucket.Arn}
+              - !Sub ${Bucket.Arn}/*
+            Condition: 
+              Bool:
+                aws:SecureTransport: false
 
-  CopyAssetsFunction:
-    Metadata:
-      aws:copilot:description: A lambda function
-    Type: AWS::Lambda::Function
-    Properties:
-      Handler: index.handler
-      Role: !GetAtt CopyAssetsFunctionRole.Arn
-      Runtime: nodejs16.x
-      Timeout: 60
-      Code:
-        ZipFile: |
-          var aws = require("aws-sdk");
-
-          exports.handler = (event, context, callback) => {
-            const s3 = new aws.S3();
-            console.log("copy from cache bucket event:", event)
-            const params = {
-              CopySource: event.srcBucket + "/" + event.mapping.path,
-              Bucket: event.destBucket,
-              Key: event.mapping.destPath
-            };
-            console.log("copy object params", params)
-
-            s3.copyObject(params, (err, data) => {
-              if (err) {
-                console.log("error copying object", err)
-                callback(err);
-                return;
-              }
-
-              console.log("copied object: ", data)
-              callback(null, "Success");
-            });
-          };
-
-  TriggerCopyStateMachineFunctionRole:
-    Metadata:
-      aws:copilot:description: An IAM Role for the lambda that triggers the file copying state machine.
-    Type: AWS::IAM::Role
-    Properties:
-      {{- if .PermissionsBoundary}}
-      PermissionsBoundary: !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/{{.PermissionsBoundary}}
-      {{- end}}
-      AssumeRolePolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: lambda.amazonaws.com
-            Action: sts:AssumeRole
-      Policies:
-        - PolicyName: TriggerStateMachine
-          PolicyDocument:
-            Version: 2012-10-17
-            Statement:
-              - Effect: Allow
-                Action: states:StartSyncExecution
-                Resource: !GetAtt CopyAssetsStateMachine.Arn
-      ManagedPolicyArns:
-        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-
-  TriggerCopyStateMachineFunction:
+  TriggerStateMachineFunction:
     Metadata:
       aws:copilot:description: A lambda that triggers the file copying state machine.
     Type: AWS::Lambda::Function
     Properties:
       Handler: index.handler
-      Role: !GetAtt TriggerCopyStateMachineFunctionRole.Arn
+      Role: !GetAtt TriggerStateMachineFunctionRole.Arn
       Runtime: nodejs16.x
       Timeout: 60
       Code:
@@ -161,17 +101,86 @@ Resources:
             });
           };
 
+  TriggerStateMachineFunctionRole:
+    Metadata:
+      aws:copilot:description: An IAM Role for the lambda that triggers the file copying state machine.
+    Type: AWS::IAM::Role
+    Properties:
+      {{- if .PermissionsBoundary}}
+      PermissionsBoundary: !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/{{.PermissionsBoundary}}
+      {{- end}}
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: TriggerStateMachine
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action: states:StartSyncExecution
+                Resource: !GetAtt CopyAssetsStateMachine.Arn
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
   TriggerStateMachineAction:
     Metadata:
       aws:copilot:description: A custom resource to trigger the file copying state machine
     Type: Custom::TriggerStateMachine
     DependsOn: CopyAssetsStateMachine
     Properties:
-      ServiceToken: !GetAtt TriggerCopyStateMachineFunction.Arn
+      ServiceToken: !GetAtt TriggerStateMachineFunction.Arn
       StateMachineARN: !GetAtt CopyAssetsStateMachine.Arn
       SourceBucket: {{ .AssetMappingFileBucket }}
       AssetMappingFilePath: {{ .AssetMappingFilePath }}
       DestinationBucket: !Ref Bucket
+
+  CopyAssetsStateMachine:
+    Type: AWS::StepFunctions::StateMachine
+    Properties:
+      RoleArn: !GetAtt CopyAssetsStateMachineRole.Arn
+      StateMachineType: EXPRESS
+      LoggingConfiguration:
+        Level: ALL
+        IncludeExecutionData: true
+        Destinations:
+          - CloudWatchLogsLogGroup:
+              LogGroupArn: arn:aws:logs:us-west-2:447368768304:log-group:/ecs/deleteme:*
+      Definition:
+        Comment: A test state machine
+        StartAt: GetMappingFile
+        States:
+          GetMappingFile: # TODO: error handling?
+            Type: Task
+            Parameters:
+              Bucket.$: $.SourceBucket
+              Key.$: $.AssetMappingFilePath
+            Resource: arn:aws:states:::aws-sdk:s3:getObject
+            ResultSelector:
+              files.$: States.StringToJson($.Body)
+            ResultPath: $.GetMappingFile
+            Next: CopyFiles
+          CopyFiles:
+            Type: Map
+            End: true
+            ItemsPath: $.GetMappingFile.files
+            ItemSelector:
+              mapping.$: $$.Map.Item.Value
+              destBucket.$: $.DestinationBucket
+              srcBucket.$: $.SourceBucket
+            ItemProcessor:
+              ProcessorConfig:
+                Mode: INLINE
+              StartAt: CopyFile
+              States:
+                CopyFile:
+                  Type: Task
+                  End: true
+                  Resource: !GetAtt CopyAssetsFunction.Arn
 
   CopyAssetsStateMachineRole:
     Metadata:
@@ -222,83 +231,76 @@ Resources:
                   - logs:DescribeLogGroups
                 Resource: "*"
 
-  CopyAssetsStateMachine:
-    Type: AWS::StepFunctions::StateMachine
-    Properties:
-      RoleArn: !GetAtt CopyAssetsStateMachineRole.Arn
-      StateMachineType: EXPRESS
-      LoggingConfiguration:
-        Level: ALL
-        IncludeExecutionData: true
-        Destinations:
-          - CloudWatchLogsLogGroup:
-              LogGroupArn: arn:aws:logs:us-west-2:447368768304:log-group:/ecs/deleteme:*
-      Definition:
-        Comment: A test state machine
-        StartAt: GetMappingFile
-        States:
-          GetMappingFile: # TODO: error handling?
-            Type: Task
-            Parameters:
-              Bucket.$: $.SourceBucket
-              Key.$: $.AssetMappingFilePath
-            Resource: arn:aws:states:::aws-sdk:s3:getObject
-            ResultSelector:
-              files.$: States.StringToJson($.Body)
-            ResultPath: $.GetMappingFile
-            Next: CopyFiles
-          CopyFiles:
-            Type: Map
-            End: true
-            ItemsPath: $.GetMappingFile.files
-            ItemSelector:
-              mapping.$: $$.Map.Item.Value
-              destBucket.$: $.DestinationBucket
-              srcBucket.$: $.SourceBucket
-            ItemProcessor:
-              ProcessorConfig:
-                Mode: INLINE
-              StartAt: CopyFile
-              States:
-                CopyFile:
-                  Type: Task
-                  End: true
-                  Resource: !GetAtt CopyAssetsFunction.Arn
-  
-  Bucket:
+  CopyAssetsFunction:
     Metadata:
-      aws:copilot:description: An S3 Bucket to store the static site's assets in
-    Type: AWS::S3::Bucket
+      aws:copilot:description: A lambda function
+    Type: AWS::Lambda::Function
     Properties:
-      AccessControl: Private
-      BucketEncryption:
-        ServerSideEncryptionConfiguration:
-        - ServerSideEncryptionByDefault:
-            SSEAlgorithm: AES256
-      PublicAccessBlockConfiguration:
-        BlockPublicAcls: true
-        BlockPublicPolicy: true
-      OwnershipControls:
-        Rules:
-          - ObjectOwnership: BucketOwnerEnforced
+      Handler: index.handler
+      Role: !GetAtt CopyAssetsFunctionRole.Arn
+      Runtime: nodejs16.x
+      Timeout: 60
+      Code:
+        ZipFile: |
+          var aws = require("aws-sdk");
 
-  BucketPolicy:
+          exports.handler = (event, context, callback) => {
+            const s3 = new aws.S3();
+            console.log("copy from cache bucket event:", event)
+            const params = {
+              CopySource: event.srcBucket + "/" + event.mapping.path,
+              Bucket: event.destBucket,
+              Key: event.mapping.destPath
+            };
+            console.log("copy object params", params)
+
+            s3.copyObject(params, (err, data) => {
+              if (err) {
+                console.log("error copying object", err)
+                callback(err);
+                return;
+              }
+
+              console.log("copied object: ", data)
+              callback(null, "Success");
+            });
+          };
+
+  CopyAssetsFunctionRole:
     Metadata:
-      aws:copilot:description: A bucket policy to deny unencrypted access to the bucket and its contents
-    Type: AWS::S3::BucketPolicy
-    DeletionPolicy: Retain
+      aws:copilot:description: An IAM Role
+    Type: AWS::IAM::Role
     Properties:
-      Bucket: !Ref Bucket
-      PolicyDocument:
+      {{- if .PermissionsBoundary}}
+      PermissionsBoundary: !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/{{.PermissionsBoundary}}
+      {{- end}}
+      AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
-          - Sid: ForceHTTPS
-            Effect: Deny
-            Principal: "*"
-            Action: s3:*
-            Resource:
-              - !Sub ${Bucket.Arn}
-              - !Sub ${Bucket.Arn}/*
-            Condition: 
-              Bool:
-                aws:SecureTransport: false
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: CopyFromS3
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:GetObjectTagging
+                Resource: arn:aws:s3:::{{ .AssetMappingFileBucket }}/*
+        - PolicyName: CopyToS3
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:PutObjectTagging
+                Resource: !Sub arn:aws:s3:::${Bucket}/*
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  
