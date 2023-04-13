@@ -202,7 +202,6 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 					Context:    aws.String("mockContext"),
 				},
 			},
-			// mockTerminalWidthFunc: ,
 			mock: func(t *testing.T, m *deployMocks) {
 				m.mockRepositoryService.EXPECT().Login().Return(mockURI, nil)
 				m.mockRepositoryService.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
