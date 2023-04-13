@@ -91,12 +91,18 @@ Resources:
             };
             sf.startSyncExecution(params, (err, data) => {
               if (err) {
-                console.log("error executing step function", err)
+                console.log("error starting step function", err)
                 response.send(event, context, response.FAILED, {"error": err.message}, event.PhysicalResourceId)
                 return;
               }
 
               console.log("finished step function execution:", data)
+
+              if (data.status === "FAILED") {
+                response.send(event, context, response.FAILED, {"error": data.cause}, event.PhysicalResourceId)
+                return;
+              }
+
               response.send(event, context, response.SUCCESS, {}, event.PhysicalResourceId)
             });
           };
@@ -144,17 +150,11 @@ Resources:
     Properties:
       RoleArn: !GetAtt CopyAssetsStateMachineRole.Arn
       StateMachineType: EXPRESS
-      LoggingConfiguration:
-        Level: ALL
-        IncludeExecutionData: true
-        Destinations:
-          - CloudWatchLogsLogGroup:
-              LogGroupArn: arn:aws:logs:us-west-2:447368768304:log-group:/ecs/deleteme:*
       Definition:
         Comment: A test state machine
         StartAt: GetMappingFile
         States:
-          GetMappingFile: # TODO: error handling?
+          GetMappingFile:
             Type: Task
             Parameters:
               Bucket.$: $.SourceBucket
@@ -213,23 +213,6 @@ Resources:
               - Effect: Allow
                 Action: s3:GetObject
                 Resource: arn:aws:s3:::{{ .AssetMappingFileBucket }}/{{ .AssetMappingFilePath }}
-        - PolicyName: LoggingTODORemoveMe
-          PolicyDocument:
-            Version: 2012-10-17
-            Statement:
-              - Effect: Allow
-                Action:
-                  - logs:CreateLogDelivery
-                  - logs:CreateLogStream
-                  - logs:GetLogDelivery
-                  - logs:UpdateLogDelivery
-                  - logs:DeleteLogDelivery
-                  - logs:ListLogDeliveries
-                  - logs:PutLogEvents
-                  - logs:PutResourcePolicy
-                  - logs:DescribeResourcePolicies
-                  - logs:DescribeLogGroups
-                Resource: "*"
 
   CopyAssetsFunction:
     Metadata:
@@ -302,5 +285,3 @@ Resources:
                 Resource: !Sub arn:aws:s3:::${Bucket}/*
       ManagedPolicyArns:
         - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-
-  
