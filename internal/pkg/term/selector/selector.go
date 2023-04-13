@@ -61,7 +61,7 @@ For example: 0 17 ? * MON-FRI (5 pm on weekdays)
 	humanReadableCronConfirmHelp   = `Confirm whether the schedule looks right to you.
 (Y)es will continue execution. (N)o will allow you to input a different schedule.`
 	staticSourceUseCustomPrompt         = "Enter custom path to your static site dir/file"
-	staticSourceAnotherCustomPathPrompt = "Would you like to type in another path?"
+	staticSourceAnotherCustomPathPrompt = "Would you like to enter another path?"
 	staticSourceAnotherCustomPathHelp   = "You may add multiple custom paths. Enter 'y' to type another."
 )
 

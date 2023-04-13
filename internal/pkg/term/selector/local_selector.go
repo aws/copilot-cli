@@ -145,7 +145,7 @@ func NewLocalFileSelector(prompt Prompter, fs afero.Fs) (*localFileSelector, err
 	}, nil
 }
 
-// StaticSources asks the user to select from a list of directories and files in the current directory or two levels down.
+// StaticSources asks the user to select from a list of directories and files in the current directory and two levels down.
 func (s *localFileSelector) StaticSources(selPrompt, selHelp, anotherPathPrompt, anotherPathHelp string, pathValidator prompt.ValidatorFunc) ([]string, error) {
 	dirsAndFiles, err := s.listDirsAndFiles()
 	if err != nil {
@@ -179,10 +179,10 @@ func (s *localFileSelector) StaticSources(selPrompt, selHelp, anotherPathPrompt,
 					return nil, fmt.Errorf("get custom directory or file path: %w", err)
 				}
 				if selection == staticSourceUseCustomPrompt {
-					selections[i] = customPath
+					selections[i] = customPath // The first custom path replaces the prompt string.
 					selection = customPath
 				} else {
-					selections = append(selections, customPath)
+					selections = append(selections, customPath) // Subsequent custom paths are appended.
 				}
 				anotherCustomPath, err = s.prompt.Confirm(
 					staticSourceAnotherCustomPathPrompt,
