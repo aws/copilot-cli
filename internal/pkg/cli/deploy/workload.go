@@ -419,7 +419,7 @@ func (d *workloadDeployer) uploadContainerImages(out *UploadArtifactsOutput) err
 			return fmt.Errorf("generate docker build args: %w", err)
 		}
 		buf := syncbuffer.New()
-		labeledBuffer := buf.WithLabel(fmt.Sprintf("Building your container image: docker %s\n", strings.Join(buildArgsList, " ")))
+		labeledBuffer := buf.WithLabel(fmt.Sprintf("Building your container image: docker %s", strings.Join(buildArgsList, " ")))
 		labeledBuffers[count] = labeledBuffer
 		count++
 
