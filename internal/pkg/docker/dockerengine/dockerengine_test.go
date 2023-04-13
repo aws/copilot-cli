@@ -9,7 +9,6 @@ import (
 	"fmt"
 	osexec "os/exec"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/exec"
@@ -611,36 +610,6 @@ func TestIsEcrCredentialHelperEnabled(t *testing.T) {
 			tc.postExec(fs)
 
 			require.Equal(t, tc.isEcrRepo, credStore)
-		})
-	}
-}
-
-func Test_DockerBuildLabel(t *testing.T) {
-	testCases := map[string]struct {
-		inBuildArgs []string
-		inPlatform  string
-		wanted      string
-	}{
-		"if platform is not empty": {
-			inBuildArgs: []string{"build", "-t", "mockURI:tag1",
-				filepath.FromSlash("mockPath/to"), "-f", "mockPath/to/mockDockerfile",
-			},
-			inPlatform: "windows/x86_64",
-			wanted: fmt.Sprintf("Building your container image: docker %s\n",
-				strings.Join([]string{"build", "-t", "mockURI:tag1",
-					filepath.FromSlash("mockPath/to"), "-f", "mockPath/to/mockDockerfile"}, " ")),
-		},
-		"if platform is empty": {
-			inBuildArgs: []string{"build", "-t", "mockURI:tag1",
-				filepath.FromSlash("mockPath/to"), "-f", "mockPath/to/mockDockerfile",
-			},
-		},
-	}
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			got := DockerBuildLabel(tc.inPlatform, tc.inBuildArgs)
-			require.Equal(t, tc.wanted, got)
-
 		})
 	}
 }

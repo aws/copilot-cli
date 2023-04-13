@@ -289,16 +289,6 @@ func PlatformString(os, arch string) string {
 	return fmt.Sprintf("%s/%s", os, arch)
 }
 
-// DockerBuildLabel returns the docker build label as a string if platform is not empty.
-func DockerBuildLabel(platform string, args []string) string {
-	// If host platform is not linux/amd64, show the user how the container image is being built; if the build fails (if their docker server doesn't have multi-platform-- and therefore `--platform` capability, for instance) they may see why.
-	var buildLabel string
-	if platform != "" {
-		buildLabel = fmt.Sprintf("Building your container image: docker %s\n", strings.Join(args, " "))
-	}
-	return buildLabel
-}
-
 func parseCredFromDockerConfig(config []byte) (*dockerConfig, error) {
 	/*
 			Sample docker config file

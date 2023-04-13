@@ -380,7 +380,7 @@ func (d *workloadDeployer) uploadContainerImages(out *UploadArtifactsOutput) err
 		if err != nil {
 			return fmt.Errorf("generate docker build args: %w", err)
 		}
-		log.Infof(dockerengine.DockerBuildLabel(buildArgs.Platform, buildArgsList))
+		log.Infof(fmt.Sprintf("Building your container image: docker %s\n", strings.Join(buildArgsList, " ")))
 		digest, err := d.repository.BuildAndPush(buildArgs)
 		if err != nil {
 			return fmt.Errorf("build and push image: %w", err)
