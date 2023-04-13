@@ -8,7 +8,6 @@ package prompt
 import (
 	"errors"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"

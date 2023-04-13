@@ -151,7 +151,9 @@ func (s *localFileSelector) StaticSources(selPrompt, selHelp, anotherPathPrompt,
 	if err != nil {
 		return nil, err
 	}
-	log.Warningln("No directories or files were found in the current working directory. Enter a relative path with the 'custom path' option, or run this command from higher up in your local file directory.")
+	if len(dirsAndFiles) == 0 {
+		log.Warningln("No directories or files were found in the current working directory. Enter a relative path with the 'custom path' option, or run this command from higher up in your local file directory.")
+	}
 	dirsAndFiles = append(dirsAndFiles, []string{staticSourceUseCustomPrompt}...)
 	var selections []string
 	selections, err = s.prompt.MultiSelect(
