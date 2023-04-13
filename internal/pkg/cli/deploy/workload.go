@@ -104,18 +104,15 @@ type spinner interface {
 	Stop(label string)
 }
 
-type fileReader interface {
-	ReadFile(string) ([]byte, error)
-}
-
 // StackRuntimeConfiguration contains runtime configuration for a workload CloudFormation stack.
 type StackRuntimeConfiguration struct {
-	ImageDigests       map[string]ContainerImageIdentifier // Container name to image.
-	EnvFileARNs        map[string]string
-	AddonsURL          string
-	RootUserARN        string
-	Tags               map[string]string
-	CustomResourceURLs map[string]string
+	ImageDigests              map[string]ContainerImageIdentifier // Container name to image.
+	EnvFileARNs               map[string]string
+	AddonsURL                 string
+	RootUserARN               string
+	Tags                      map[string]string
+	CustomResourceURLs        map[string]string
+	StaticSiteAssetMappingURL string
 }
 
 // DeployWorkloadInput is the input of DeployWorkload.
@@ -152,7 +149,7 @@ type workloadDeployer struct {
 	workspacePath string
 
 	// Dependencies.
-	fs               fileReader
+	fs               afero.Fs
 	s3Client         uploader
 	addons           stackBuilder
 	repository       repositoryService
@@ -259,7 +256,7 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 		image:                    in.Image,
 		resources:                resources,
 		workspacePath:            ws.Path(),
-		fs:                       &afero.Afero{Fs: afero.NewOsFs()},
+		fs:                       afero.NewOsFs(),
 		s3Client:                 s3.New(envSession),
 		addons:                   addons,
 		repository:               repository,
@@ -448,10 +445,11 @@ type customResourcesFunc func(fs template.Reader) ([]*customresource.CustomResou
 
 // UploadArtifactsOutput is the output of UploadArtifacts.
 type UploadArtifactsOutput struct {
-	ImageDigests       map[string]ContainerImageIdentifier // Container name to image.
-	EnvFileARNs        map[string]string                   // map[container name]envFileARN
-	AddonsURL          string
-	CustomResourceURLs map[string]string
+	ImageDigests                   map[string]ContainerImageIdentifier // Container name to image.
+	EnvFileARNs                    map[string]string                   // map[container name]envFileARN
+	AddonsURL                      string
+	CustomResourceURLs             map[string]string
+	StaticSiteAssetMappingLocation string
 }
 
 // uploadArtifactFunc uploads an artifact and updates out
@@ -487,7 +485,7 @@ func (d *workloadDeployer) uploadCustomResources(out *UploadArtifactsOutput) err
 }
 
 type pushEnvFilesToS3BucketInput struct {
-	fs       fileReader
+	fs       afero.Fs
 	uploader uploader
 }
 
@@ -523,7 +521,7 @@ func (d *workloadDeployer) pushEnvFilesToS3Bucket(in *pushEnvFilesToS3BucketInpu
 	envFileARNs := make(map[string]string)
 
 	for path, containers := range uniqueEnvFiles {
-		content, err := in.fs.ReadFile(filepath.Join(d.workspacePath, path))
+		content, err := afero.ReadFile(in.fs, filepath.Join(d.workspacePath, path))
 		if err != nil {
 			return nil, fmt.Errorf("read env file %s: %w", path, err)
 		}
