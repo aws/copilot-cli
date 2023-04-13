@@ -216,7 +216,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 					},
 				}, gomock.Any()).Return("", mockError)
 			},
-			wantErr: fmt.Errorf("build and push image: some error"),
+			wantErr: fmt.Errorf("build and push image mockWkld: some error"),
 		},
 		"build and push image with usertag successfully": {
 			inMockUserTag: "v1.0",
