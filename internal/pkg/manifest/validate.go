@@ -804,16 +804,16 @@ func (r HTTPOrBool) validate() error {
 }
 
 func (l LoadBalancedWebServiceConfig) validateGracePeriod() error {
-	gracePeriodForALB, err := l.validateGracePeriodForALB(true)
+	gracePeriodForALB, err := l.validateGracePeriodForALB()
 	if err != nil {
 		return err
 	}
-	gracePeriodForNLB, err := l.validateGracePeriodForALB(false)
+	gracePeriodForNLB, err := l.validateGracePeriodForNLB()
 	if err != nil {
 		return err
 	}
 	if gracePeriodForALB && gracePeriodForNLB {
-		return &errGracePeriodAlreadyExist{
+		return &errGracePeriodSpecifiedMoreThanOnce{
 			firstField:  "http.healthcheck.grace_period",
 			secondField: "nlb.healthcheck.grace_period",
 		}
@@ -822,39 +822,35 @@ func (l LoadBalancedWebServiceConfig) validateGracePeriod() error {
 	return nil
 }
 
-// validateGracePeriodForALB validates if ALB or NLB has duplicate grace period mentioned in their additional listeners rules or listeners respectively.
-func (l LoadBalancedWebServiceConfig) validateGracePeriodForALB(alb bool) (bool, error) {
+// validateGracePeriodForALB validates if ALB has grace period mentioned in their additional listeners rules.
+func (l LoadBalancedWebServiceConfig) validateGracePeriodForALB() (bool, error) {
 	var exist bool
-	if alb {
-		if l.HTTPOrBool.Main.HealthCheck.Advanced.GracePeriod != nil {
-			exist = true
-		}
-		for idx, rule := range l.HTTPOrBool.AdditionalRoutingRules {
-			if rule.HealthCheck.Advanced.GracePeriod != nil {
-				if exist {
-					return false, &errGracePeriodAlreadyExist{
-						firstField:  "http.healthcheck.grace_period",
-						secondField: fmt.Sprintf("http.additional_rules[%d].healthcheck.grace_period", idx),
-					}
-				}
-				exist = true
+	if l.HTTPOrBool.Main.HealthCheck.Advanced.GracePeriod != nil {
+		exist = true
+	}
+	for idx, rule := range l.HTTPOrBool.AdditionalRoutingRules {
+		if rule.HealthCheck.Advanced.GracePeriod != nil {
+			return exist, &errGracePeriodSpecifiedMoreThanOnce{
+				firstField: fmt.Sprintf("http.additional_rules[%d].healthcheck.grace_period", idx),
+				index:      idx,
 			}
 		}
-		return exist, nil
 	}
+	return exist, nil
+}
 
+// validateGracePeriodForNLB validates if NLB has grace period mentioned in their additional listeners.
+func (l LoadBalancedWebServiceConfig) validateGracePeriodForNLB() (bool, error) {
+	var exist bool
 	if l.NLBConfig.Listener.HealthCheck.GracePeriod != nil {
 		exist = true
 	}
 	for idx, listener := range l.NLBConfig.AdditionalListeners {
 		if listener.HealthCheck.GracePeriod != nil {
-			if exist {
-				return false, &errGracePeriodAlreadyExist{
-					firstField:  "nlb.healthcheck.grace_period",
-					secondField: fmt.Sprintf("nlb.additional_listeners[%d].healthcheck.grace_period", idx),
-				}
+			return exist, &errGracePeriodSpecifiedMoreThanOnce{
+				firstField: fmt.Sprintf("nlb.additional_listeners[%d].healthcheck.grace_period", idx),
+				index:      idx,
 			}
-			exist = true
 		}
 	}
 	return exist, nil

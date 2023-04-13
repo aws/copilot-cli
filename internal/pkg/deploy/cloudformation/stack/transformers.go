@@ -682,7 +682,7 @@ func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (networkLoadBalanc
 }
 
 func (s *LoadBalancedWebService) convertGracePeriod() *int64 {
-	var gracePeriod *int64 = aws.Int64(60)
+	var gracePeriod *int64 = aws.Int64(int64(manifest.DefaultHealthCheckGracePeriod))
 	if s.manifest.HTTPOrBool.Main.HealthCheck.Advanced.GracePeriod != nil {
 		gracePeriod = aws.Int64(int64(s.manifest.HTTPOrBool.Main.HealthCheck.Advanced.GracePeriod.Seconds()))
 	} else if s.manifest.NLBConfig.Listener.HealthCheck.GracePeriod != nil {

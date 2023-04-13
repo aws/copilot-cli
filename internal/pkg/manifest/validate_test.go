@@ -48,7 +48,7 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 			},
 			wantedErrorMsgPrefix: `validate "image": `,
 		},
-		"error if fail to validate grace_period when specified in main as well as additional listener rules": {
+		"error if fail to validate grace_period when specified in the additional listener rules of ALB": {
 			lbConfig: LoadBalancedWebService{
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					ImageConfig: testImageConfig,
@@ -63,7 +63,6 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 										UnhealthyThreshold: aws.Int64(6),
 										Interval:           durationp(78 * time.Second),
 										Timeout:            durationp(9 * time.Second),
-										GracePeriod:        durationp(9 * time.Second),
 									}),
 								},
 							},
@@ -86,7 +85,30 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 					},
 				},
 			},
-			wantedErrorMsgPrefix: `validate "grace_period": must specify grace_period once, but found in "http.healthcheck.grace_period" and "http.additional_rules[0].healthcheck.grace_period"`,
+			wantedErrorMsgPrefix: `validate "grace_period": cannot define "grace_period" in "http.additional_rules[0].healthcheck.grace_period"`,
+		},
+		"error if fail to validate grace_period when specified the additional listener of NLB": {
+			lbConfig: LoadBalancedWebService{
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: testImageConfig,
+					HTTPOrBool: HTTPOrBool{
+						Enabled: aws.Bool(false),
+					},
+					NLBConfig: NetworkLoadBalancerConfiguration{
+						Listener: NetworkLoadBalancerListener{
+							Port:        stringP("80"),
+							HealthCheck: NLBHealthCheckArgs{GracePeriod: durationp(9 * time.Second)},
+						},
+						AdditionalListeners: []NetworkLoadBalancerListener{
+							{
+								Port:        stringP("80"),
+								HealthCheck: NLBHealthCheckArgs{GracePeriod: durationp(9 * time.Second)},
+							},
+						},
+					},
+				},
+			},
+			wantedErrorMsgPrefix: `validate "grace_period": cannot define "grace_period" in "nlb.additional_listeners[0].healthcheck.grace_period"`,
 		},
 		"error if fail to validate grace_period when specified in ALB and NLB at the same time": {
 			lbConfig: LoadBalancedWebService{
