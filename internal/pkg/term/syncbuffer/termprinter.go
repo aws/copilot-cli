@@ -94,13 +94,10 @@ func (ltp *LabeledTermPrinter) Print() error {
 	ltp.prevWrittenLines = 0
 	for _, buf := range ltp.buffers {
 		logs := buf.lines()
-		if len(logs) == 0 {
-			continue
-		}
 		outputLogs := ltp.lastNLines(logs)
 		writtenLines, err := ltp.writeLines(buf.label, outputLogs)
 		if err != nil {
-			return fmt.Errorf("get terminal width: %w", err)
+			return fmt.Errorf("write logs: %w", err)
 		}
 		ltp.prevWrittenLines += writtenLines
 	}
@@ -117,7 +114,7 @@ func (ltp *LabeledTermPrinter) printAll() error {
 		}
 		outputLogs := ltp.buffers[idx].lines()
 		if _, err := ltp.writeLines(buf.label, outputLogs); err != nil {
-			return fmt.Errorf("get terminal width: %w", err)
+			return fmt.Errorf("write logs: %w", err)
 		}
 	}
 	return nil
