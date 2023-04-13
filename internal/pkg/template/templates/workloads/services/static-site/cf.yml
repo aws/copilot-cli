@@ -144,9 +144,9 @@ Resources:
             const params = {
               stateMachineArn: event.ResourceProperties.StateMachineARN,
               input: JSON.stringify({
-                FromBucket: event.ResourceProperties.FromBucket,
+                SourceBucket: event.ResourceProperties.SourceBucket,
                 AssetMappingFilePath: event.ResourceProperties.AssetMappingFilePath,
-                ToBucket: event.ResourceProperties.ToBucket,
+                DestinationBucket: event.ResourceProperties.DestinationBucket,
               })
             };
             sf.startSyncExecution(params, (err, data) => {
@@ -169,9 +169,9 @@ Resources:
     Properties:
       ServiceToken: !GetAtt TriggerCopyStateMachineFunction.Arn
       StateMachineARN: !GetAtt CopyAssetsStateMachine.Arn
-      FromBucket: {{ .AssetMappingFileBucket }}
-      AssetMappingFilePath: {{ .AssetMappingFilePath }} # hash all of the files so that the state machine is triggered ONLY when all of the files have changed
-      ToBucket: !Ref Bucket
+      SourceBucket: {{ .AssetMappingFileBucket }}
+      AssetMappingFilePath: {{ .AssetMappingFilePath }}
+      DestinationBucket: !Ref Bucket
 
   CopyAssetsStateMachineRole:
     Metadata:
@@ -240,7 +240,7 @@ Resources:
           GetMappingFile: # TODO: error handling?
             Type: Task
             Parameters:
-              Bucket.$: $.FromBucket
+              Bucket.$: $.SourceBucket
               Key.$: $.AssetMappingFilePath
             Resource: arn:aws:states:::aws-sdk:s3:getObject
             ResultSelector:
@@ -253,8 +253,8 @@ Resources:
             ItemsPath: $.GetMappingFile.files
             ItemSelector:
               mapping.$: $$.Map.Item.Value
-              destBucket.$: $.ToBucket
-              srcBucket.$: $.FromBucket
+              destBucket.$: $.DestinationBucket
+              srcBucket.$: $.SourceBucket
             ItemProcessor:
               ProcessorConfig:
                 Mode: INLINE
