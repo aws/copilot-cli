@@ -14,6 +14,7 @@ import (
 	"time"
 
 	cloudformation0 "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
+	"github.com/spf13/afero"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -47,7 +48,7 @@ type deployMocks struct {
 	mockUploader               *mocks.Mockuploader
 	mockAppVersionGetter       *mocks.MockversionGetter
 	mockEnvVersionGetter       *mocks.MockversionGetter
-	mockFileReader             *mocks.MockfileReader
+	mockFileSystem             afero.Fs
 	mockValidator              *mocks.MockaliasCertValidator
 }
 
@@ -246,7 +247,6 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				},
 			},
 		},
-
 		"build and push image with gitshortcommit successfully": {
 			inMockGitTag: "gitTag",
 			inDockerBuildArgs: map[string]*manifest.DockerBuildArgs{
@@ -463,17 +463,14 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 		},
 		"error if fail to read env file": {
 			inEnvFile: mockEnvFile,
-			mock: func(t *testing.T, m *deployMocks) {
-				m.mockFileReader.EXPECT().ReadFile(filepath.Join(mockWorkspacePath, mockEnvFile)).
-					Return(nil, mockError)
-			},
-			wantErr: fmt.Errorf("read env file foo.env: some error"),
+			mock:      func(t *testing.T, m *deployMocks) {},
+			wantErr:   fmt.Errorf("read env file foo.env: open foo.env: file does not exist"),
 		},
 		"successfully share one env file between containers": {
 			customEnvFiles: map[string]string{"nginx": mockEnvFile, mockName: mockEnvFile},
 			inRegion:       "us-west-2",
 			mock: func(t *testing.T, m *deployMocks) {
-				m.mockFileReader.EXPECT().ReadFile(filepath.Join(mockWorkspacePath, mockEnvFile)).Return([]byte{}, nil)
+				m.mockFileSystem.Create(filepath.Join(mockWorkspacePath, mockEnvFile))
 				m.mockUploader.EXPECT().Upload(mockS3Bucket, mockEnvFilePath(mockEnvFile), gomock.Any()).Return(mockEnvFileS3URL, nil)
 				m.mockAddons.EXPECT().Package(gomock.Any()).Return(nil)
 				m.mockAddons.EXPECT().Template().Return("", nil)
@@ -486,9 +483,9 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			customEnvFiles: map[string]string{"nginx": mockEnvFile, mockName: "bar.env"},
 			inRegion:       "us-west-2",
 			mock: func(t *testing.T, m *deployMocks) {
-				m.mockFileReader.EXPECT().ReadFile(filepath.Join(mockWorkspacePath, mockEnvFile)).Return([]byte{}, nil)
+				m.mockFileSystem.Create(filepath.Join(mockWorkspacePath, mockEnvFile))
 				m.mockUploader.EXPECT().Upload(mockS3Bucket, mockEnvFilePath(mockEnvFile), gomock.Any()).Return(mockEnvFileS3URL, nil)
-				m.mockFileReader.EXPECT().ReadFile(filepath.Join(mockWorkspacePath, "bar.env")).Return([]byte{}, nil)
+				m.mockFileSystem.Create(filepath.Join(mockWorkspacePath, "bar.env"))
 				m.mockUploader.EXPECT().Upload(mockS3Bucket, mockEnvFilePath("bar.env"), gomock.Any()).Return(mockEnvFileS3URL2, nil)
 				m.mockAddons.EXPECT().Package(gomock.Any()).Return(nil)
 				m.mockAddons.EXPECT().Template().Return("", nil)
@@ -511,7 +508,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 		"error if fail to put env file to s3 bucket": {
 			inEnvFile: mockEnvFile,
 			mock: func(t *testing.T, m *deployMocks) {
-				m.mockFileReader.EXPECT().ReadFile(filepath.Join(mockWorkspacePath, mockEnvFile)).Return([]byte{}, nil)
+				m.mockFileSystem.Create(filepath.Join(mockWorkspacePath, mockEnvFile))
 				m.mockUploader.EXPECT().Upload(mockS3Bucket, mockEnvFilePath(mockEnvFile), gomock.Any()).
 					Return("", mockError)
 			},
@@ -520,7 +517,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 		"error if fail to parse s3 url": {
 			inEnvFile: mockEnvFile,
 			mock: func(t *testing.T, m *deployMocks) {
-				m.mockFileReader.EXPECT().ReadFile(filepath.Join(mockWorkspacePath, mockEnvFile)).Return([]byte{}, nil)
+				m.mockFileSystem.Create(filepath.Join(mockWorkspacePath, mockEnvFile))
 				m.mockUploader.EXPECT().Upload(mockS3Bucket, mockEnvFilePath(mockEnvFile), gomock.Any()).
 					Return(mockBadEnvFileS3URL, nil)
 
@@ -531,7 +528,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			inEnvFile: mockEnvFile,
 			inRegion:  "sun-south-0",
 			mock: func(t *testing.T, m *deployMocks) {
-				m.mockFileReader.EXPECT().ReadFile(filepath.Join(mockWorkspacePath, mockEnvFile)).Return([]byte{}, nil)
+				m.mockFileSystem.Create(filepath.Join(mockWorkspacePath, mockEnvFile))
 				m.mockUploader.EXPECT().Upload(mockS3Bucket, mockEnvFilePath(mockEnvFile), gomock.Any()).
 					Return(mockEnvFileS3URL, nil)
 			},
@@ -541,7 +538,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			inEnvFile: mockEnvFile,
 			inRegion:  "us-west-2",
 			mock: func(t *testing.T, m *deployMocks) {
-				m.mockFileReader.EXPECT().ReadFile(filepath.Join(mockWorkspacePath, mockEnvFile)).Return([]byte{}, nil)
+				m.mockFileSystem.Create(filepath.Join(mockWorkspacePath, mockEnvFile))
 				m.mockUploader.EXPECT().Upload(mockS3Bucket, mockEnvFilePath(mockEnvFile), gomock.Any()).
 					Return(mockEnvFileS3URL, nil)
 				m.mockAddons.EXPECT().Package(gomock.Any()).Return(nil)
@@ -593,7 +590,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				mockUploader:          mocks.NewMockuploader(ctrl),
 				mockAddons:            mocks.NewMockstackBuilder(ctrl),
 				mockRepositoryService: mocks.NewMockrepositoryService(ctrl),
-				mockFileReader:        mocks.NewMockfileReader(ctrl),
+				mockFileSystem:        afero.NewMemMapFs(),
 			}
 			tc.mock(t, m)
 
@@ -625,7 +622,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 					customEnvFiles:  tc.customEnvFiles,
 					dockerBuildArgs: tc.inDockerBuildArgs,
 				},
-				fs:              m.mockFileReader,
+				fs:              m.mockFileSystem,
 				s3Client:        m.mockUploader,
 				repository:      m.mockRepositoryService,
 				templateFS:      fakeTemplateFS(),
