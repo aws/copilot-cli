@@ -116,13 +116,13 @@ func (e *errGracePeriodSpecifiedMoreThanOnce) Error() string {
 // RecommendActions returns recommended actions to be taken after the error.
 func (e *errGracePeriodSpecifiedMoreThanOnce) RecommendActions() string {
 	if strings.Contains(e.firstField, "additional_rules") {
-		return fmt.Sprintf(`It looks like you have specified grace_period under http.additional_rules . 
+		return `It looks like you have specified grace_period under http.additional_rules . 
 ECS allows "HealthCheckGracePeriodSeconds" as a service level setting and should be specified in the main listener rule only. 
-It is the period of time, in seconds, that the Amazon ECS service scheduler ignores unhealthy Elastic Load Balancing target health checks after a task has first started.`)
+It is the period of time, in seconds, that the Amazon ECS service scheduler ignores unhealthy Elastic Load Balancing target health checks after a task has first started.`
 	} else if strings.Contains(e.firstField, "additional_listeners") {
-		return fmt.Sprintf(`It looks like you have specified grace_period under nlb.additional_listeners . 
+		return `It looks like you have specified grace_period under nlb.additional_listeners . 
 ECS allows "HealthCheckGracePeriodSeconds" as a service level setting and should be specified in the main listener only. 
-It is the period of time, in seconds, that the Amazon ECS service scheduler ignores unhealthy Elastic Load Balancing target health checks after a task has first started.`)
+It is the period of time, in seconds, that the Amazon ECS service scheduler ignores unhealthy Elastic Load Balancing target health checks after a task has first started.`
 	}
 	return fmt.Sprintf(`It looks like you have specified grace_period under both %s and %s. 
 ECS allows "HealthCheckGracePeriodSeconds" as a service level setting and should be specified only once either in http or nlb configuration. 
