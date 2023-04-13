@@ -32,7 +32,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
-	"github.com/aws/copilot-cli/internal/pkg/term/syncbuffer"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -185,10 +184,9 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 		inMockGitTag      string
 		inDockerBuildArgs map[string]*manifest.DockerBuildArgs
 
-		mock                  func(t *testing.T, m *deployMocks)
-		mockServiceDeployer   func(deployer *workloadDeployer) artifactsUploader
-		customResourcesFunc   customResourcesFunc
-		mockTerminalWidthFunc func(fw syncbuffer.FileWriter) (int, error)
+		mock                func(t *testing.T, m *deployMocks)
+		mockServiceDeployer func(deployer *workloadDeployer) artifactsUploader
+		customResourcesFunc customResourcesFunc
 
 		wantAddonsURL     string
 		wantEnvFileARNs   map[string]string
@@ -609,10 +607,6 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 					return nil, nil
 				}
 			}
-			// mockTerminalWidth := func(fw syncbuffer.FileWriter) (int, error) {
-			// 	return 80, nil
-			// }
-
 			wkldDeployer := &workloadDeployer{
 				name: mockName,
 				env: &config.Environment{

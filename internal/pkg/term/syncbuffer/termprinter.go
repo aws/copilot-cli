@@ -25,6 +25,10 @@ type FileWriter interface {
 	Fd() uintptr
 }
 
+type Terminal interface {
+	terminalWidth(w FileWriter) (int, error)
+}
+
 // LabeledTermPrinter is a printer to display label and logs to the terminal.
 type LabeledTermPrinter struct {
 	term             FileWriter           // term writes logs to the terminal FileWriter.
