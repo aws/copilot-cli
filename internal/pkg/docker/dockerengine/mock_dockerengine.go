@@ -5,6 +5,7 @@
 package dockerengine
 
 import (
+	context "context"
 	reflect "reflect"
 
 	exec "github.com/aws/copilot-cli/internal/pkg/exec"
@@ -51,4 +52,23 @@ func (mr *MockCmdMockRecorder) Run(name, args interface{}, options ...interface{
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{name, args}, options...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockCmd)(nil).Run), varargs...)
+}
+
+// RunWithContext mocks base method.
+func (m *MockCmd) RunWithContext(ctx context.Context, name string, args []string, opts ...exec.CmdOption) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, name, args}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "RunWithContext", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RunWithContext indicates an expected call of RunWithContext.
+func (mr *MockCmdMockRecorder) RunWithContext(ctx, name, args interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, name, args}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RunWithContext", reflect.TypeOf((*MockCmd)(nil).RunWithContext), varargs...)
 }

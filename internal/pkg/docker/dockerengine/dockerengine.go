@@ -6,8 +6,10 @@ package dockerengine
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	osexec "os/exec"
 	"path/filepath"
@@ -20,6 +22,7 @@ import (
 // Cmd is the interface implemented by external commands.
 type Cmd interface {
 	Run(name string, args []string, options ...exec.CmdOption) error
+	RunWithContext(ctx context.Context, name string, args []string, opts ...exec.CmdOption) error
 }
 
 // Operating systems and architectures supported by docker.
@@ -142,12 +145,12 @@ type dockerConfig struct {
 }
 
 // Build will run a `docker build` command for the given ecr repo URI and build arguments.
-func (c DockerCmdClient) Build(in *BuildArguments) error {
+func (c DockerCmdClient) Build(ctx context.Context, in *BuildArguments, w io.Writer) error {
 	args, err := in.GenerateDockerBuildArgs(c)
 	if err != nil {
 		return fmt.Errorf("generate docker build args: %w", err)
 	}
-	if err := c.runner.Run("docker", args); err != nil {
+	if err := c.runner.RunWithContext(ctx, "docker", args, exec.Stdout(w), exec.Stderr(w)); err != nil {
 		return fmt.Errorf("building image: %w", err)
 	}
 	return nil
@@ -167,7 +170,7 @@ func (c DockerCmdClient) Login(uri, username, password string) error {
 }
 
 // Push pushes the images with the specified tags and ecr repository URI, and returns the image digest on success.
-func (c DockerCmdClient) Push(uri string, tags ...string) (digest string, err error) {
+func (c DockerCmdClient) Push(ctx context.Context, uri string, w io.Writer, tags ...string) (digest string, err error) {
 	images := []string{}
 	for _, tag := range tags {
 		images = append(images, imageName(uri, tag))
@@ -178,7 +181,7 @@ func (c DockerCmdClient) Push(uri string, tags ...string) (digest string, err er
 	}
 
 	for _, img := range images {
-		if err := c.runner.Run("docker", append([]string{"push", img}, args...)); err != nil {
+		if err := c.runner.RunWithContext(ctx, "docker", append([]string{"push", img}, args...), exec.Stdout(w), exec.Stderr(w)); err != nil {
 			return "", fmt.Errorf("docker push %s: %w", img, err)
 		}
 	}
@@ -187,7 +190,7 @@ func (c DockerCmdClient) Push(uri string, tags ...string) (digest string, err er
 	// Pick the first tag and get the image's digest.
 	// For Main container we call  docker inspect --format '{{json (index .RepoDigests 0)}}' uri:latest
 	// For Sidecar container images we call docker inspect --format '{{json (index .RepoDigests 0)}}' uri:<sidecarname>-latest
-	if err := c.runner.Run("docker", []string{"inspect", "--format", "'{{json (index .RepoDigests 0)}}'", imageName(uri, tags[0])}, exec.Stdout(buf)); err != nil {
+	if err := c.runner.RunWithContext(ctx, "docker", []string{"inspect", "--format", "'{{json (index .RepoDigests 0)}}'", imageName(uri, tags[0])}, exec.Stdout(buf)); err != nil {
 		return "", fmt.Errorf("inspect image digest for %s: %w", uri, err)
 	}
 	repoDigest := strings.Trim(strings.TrimSpace(buf.String()), `"'`) // remove new lines and quotes from output
@@ -287,16 +290,6 @@ func (c DockerCmdClient) IsEcrCredentialHelperEnabled(uri string) bool {
 // PlatformString returns a specified of the format <os>/<arch>.
 func PlatformString(os, arch string) string {
 	return fmt.Sprintf("%s/%s", os, arch)
-}
-
-// DockerBuildLabel returns the docker build label as a string if platform is not empty.
-func DockerBuildLabel(platform string, args []string) string {
-	// If host platform is not linux/amd64, show the user how the container image is being built; if the build fails (if their docker server doesn't have multi-platform-- and therefore `--platform` capability, for instance) they may see why.
-	var buildLabel string
-	if platform != "" {
-		buildLabel = fmt.Sprintf("Building your container image: docker %s\n", strings.Join(args, " "))
-	}
-	return buildLabel
 }
 
 func parseCredFromDockerConfig(config []byte) (*dockerConfig, error) {

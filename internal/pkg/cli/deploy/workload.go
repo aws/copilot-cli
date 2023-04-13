@@ -5,12 +5,15 @@ package deploy
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -35,11 +38,14 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/template/artifactpath"
 	"github.com/aws/copilot-cli/internal/pkg/template/diff"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
+	"github.com/aws/copilot-cli/internal/pkg/term/cursor"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
+	"github.com/aws/copilot-cli/internal/pkg/term/syncbuffer"
 	"github.com/aws/copilot-cli/internal/pkg/version"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/spf13/afero"
+	"golang.org/x/sync/errgroup"
 )
 
 const (
@@ -56,6 +62,14 @@ const (
 	labelForVersion       = "com.aws.copilot.image.version"
 	labelForContainerName = "com.aws.copilot.image.container.name"
 )
+const (
+	paddingForBuildAndPush      = 5
+	pollIntervalForBuildAndPush = 60 * time.Millisecond
+)
+
+var (
+	numLinesForBuildAndPush = 5
+)
 
 // ActionRecommender contains methods that output action recommendation.
 type ActionRecommender interface {
@@ -70,7 +84,7 @@ func (noopActionRecommender) RecommendedActions() []string {
 
 type repositoryService interface {
 	Login() (string, error)
-	BuildAndPush(args *dockerengine.BuildArguments) (string, error)
+	BuildAndPush(ctx context.Context, args *dockerengine.BuildArguments, w io.Writer) (string, error)
 }
 
 type templater interface {
@@ -264,7 +278,7 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 		resources:                resources,
 		workspacePath:            ws.Path(),
 		uri:                      uri,
-		fs:                       &afero.Afero{Fs: afero.NewOsFs()},
+		fs:                       afero.NewOsFs(),
 		s3Client:                 s3.New(envSession),
 		addons:                   addons,
 		repository:               repository,
@@ -373,24 +387,86 @@ func (d *workloadDeployer) uploadContainerImages(out *UploadArtifactsOutput) err
 	if err != nil {
 		return fmt.Errorf("login to image repository: %w", err)
 	}
+
+	var mu sync.Mutex
 	out.ImageDigests = make(map[string]ContainerImageIdentifier, len(buildArgsPerContainer))
+
+	// counter for indexing the labeled output buffers.
+	count := 0
+	// An array of buffers, one for each container image build and push ouput.
+	labeledBuffers := make([]*syncbuffer.LabeledSyncBuffer, len(buildArgsPerContainer))
+
+	// create a context and an error group.
+	g, ctx := errgroup.WithContext(context.Background())
+
+	// create a new cursor and hide it.
+	cursor := cursor.New()
+	cursor.Hide()
+
 	for name, buildArgs := range buildArgsPerContainer {
+		// create a copy of loop variables to avoid data race.
+		name := name
+		buildArgs := buildArgs
+
+		// create a pipe for streaming the build and push output.
+		pr, pw := io.Pipe()
+
 		buildArgs.URI = uri
+
+		// generate build args slice for docker build label.
 		buildArgsList, err := buildArgs.GenerateDockerBuildArgs(dockerengine.New(exec.NewCmd()))
 		if err != nil {
 			return fmt.Errorf("generate docker build args: %w", err)
 		}
-		// TODO(adi) handle this log in syncBuffer's Print function
-		log.Infof("Building your container image: docker %s\n", strings.Join(buildArgsList, " "))
-		digest, err := d.repository.BuildAndPush(buildArgs)
-		if err != nil {
-			return fmt.Errorf("build and push image: %w", err)
+		buf := syncbuffer.New()
+		labeledBuffer := buf.WithLabel(fmt.Sprintf("Building your container image: docker %s\n", strings.Join(buildArgsList, " ")))
+		labeledBuffers[count] = labeledBuffer
+		count++
+
+		g.Go(func() error {
+			defer pw.Close()
+			digest, err := d.repository.BuildAndPush(ctx, buildArgs, pw)
+			if err != nil {
+				return fmt.Errorf("build and push image: %w", err)
+			}
+			mu.Lock()
+			out.ImageDigests[name] = ContainerImageIdentifier{
+				Digest:            digest,
+				CustomTag:         d.image.CustomTag,
+				GitShortCommitTag: d.image.GitShortCommitTag,
+			}
+			mu.Unlock()
+			return nil
+		})
+		g.Go(func() error {
+			if err := buf.Copy(pr); err != nil {
+				return fmt.Errorf("copying build and push output for container %s: %w", name, err)
+			}
+			return nil
+		})
+	}
+	if isCIEnvironment() {
+		numLinesForBuildAndPush = -1
+	}
+	// create a LabeledTermPrinter for rendering build and push output.
+	ltp := syncbuffer.NewLabeledTermPrinter(os.Stderr, labeledBuffers, syncbuffer.WithNumLines(numLinesForBuildAndPush), syncbuffer.WithPadding(paddingForBuildAndPush))
+
+	g.Go(func() error {
+		for {
+			if ltp.IsDone() {
+				break
+			}
+			if err := ltp.Print(); err != nil {
+				return fmt.Errorf("printing logs of docker build and push: %w", err)
+			}
+			time.Sleep(pollIntervalForBuildAndPush)
 		}
-		out.ImageDigests[name] = ContainerImageIdentifier{
-			Digest:            digest,
-			CustomTag:         d.image.CustomTag,
-			GitShortCommitTag: d.image.GitShortCommitTag,
-		}
+		return nil
+	})
+
+	// wait for all goroutines to complete and return any errors.
+	if err := g.Wait(); err != nil {
+		return err
 	}
 	return nil
 }
@@ -439,6 +515,15 @@ func buildArgsPerContainer(name, workspacePath, uri string, img ContainerImageId
 		}
 	}
 	return dArgs, nil
+}
+
+// isCIEnvironment checks if the current environment is a continuous integration (CI) system.
+// Returns true by looking for the "CI" environment variable  if it's set to "true", otherwise false.
+func isCIEnvironment() bool {
+	if ci, _ := os.LookupEnv("CI"); ci == "true" {
+		return true
+	}
+	return false
 }
 
 func (d *workloadDeployer) uploadArtifactsToS3(out *UploadArtifactsOutput) error {
