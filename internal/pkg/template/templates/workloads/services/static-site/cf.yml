@@ -27,7 +27,7 @@ Conditions:
 Resources:
   Bucket:
     Metadata:
-      aws:copilot:description: An S3 Bucket to store the static site's assets in
+      aws:copilot:description: An S3 Bucket to store the static site's assets
     Type: AWS::S3::Bucket
     Properties:
       AccessControl: Private
@@ -65,7 +65,7 @@ Resources:
 
   TriggerStateMachineFunction:
     Metadata:
-      aws:copilot:description: A lambda that triggers the file copying state machine.
+      aws:copilot:description: A lambda that triggers the file copying state machine
     Type: AWS::Lambda::Function
     Properties:
       Handler: index.handler
@@ -184,7 +184,7 @@ Resources:
 
   CopyAssetsStateMachineRole:
     Metadata:
-      aws:copilot:description: An IAM Role
+      aws:copilot:description: An IAM Role for the state machine that triggers the copy lambda
     Type: AWS::IAM::Role
     Properties:
       {{- if .PermissionsBoundary}}
@@ -216,7 +216,7 @@ Resources:
 
   CopyAssetsFunction:
     Metadata:
-      aws:copilot:description: A lambda function
+      aws:copilot:description: A lambda function to copy assets into the static site bucket
     Type: AWS::Lambda::Function
     Properties:
       Handler: index.handler
@@ -251,7 +251,7 @@ Resources:
 
   CopyAssetsFunctionRole:
     Metadata:
-      aws:copilot:description: An IAM Role
+      aws:copilot:description: An IAM Role for the lambda that copies assets into the static site bucket
     Type: AWS::IAM::Role
     Properties:
       {{- if .PermissionsBoundary}}
