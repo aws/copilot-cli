@@ -37,8 +37,8 @@ const (
 	credStoreECRLogin = "ecr-login" // set on `credStore` attribute in docker configuration file
 )
 
-// CmdClient represents the docker client to interact with the server via external commands.
-type CmdClient struct {
+// DockerCmdClient represents the docker client to interact with the server via external commands.
+type DockerCmdClient struct {
 	runner Cmd
 	// Override in unit tests.
 	buf       *bytes.Buffer
@@ -47,8 +47,8 @@ type CmdClient struct {
 }
 
 // New returns CmdClient to make requests against the Docker daemon via external commands.
-func New(cmd Cmd) CmdClient {
-	return CmdClient{
+func New(cmd Cmd) DockerCmdClient {
+	return DockerCmdClient{
 		runner:    cmd,
 		homePath:  userHomeDirectory(),
 		lookupEnv: os.LookupEnv,
@@ -70,7 +70,7 @@ type BuildArguments struct {
 
 // GenerateDockerBuildArgs returns command line arguments to be passed to the Docker build command based on the provided BuildArguments.
 // Returns an error if no tags are provided for building an image.
-func (in *BuildArguments) GenerateDockerBuildArgs(c CmdClient) ([]string, error) {
+func (in *BuildArguments) GenerateDockerBuildArgs(c DockerCmdClient) ([]string, error) {
 	// Tags must not be empty to build an docker image.
 	if len(in.Tags) == 0 {
 		return nil, &errEmptyImageTags{
@@ -142,7 +142,7 @@ type dockerConfig struct {
 }
 
 // Build will run a `docker build` command for the given ecr repo URI and build arguments.
-func (c CmdClient) Build(in *BuildArguments) error {
+func (c DockerCmdClient) Build(in *BuildArguments) error {
 	args, err := in.GenerateDockerBuildArgs(c)
 	if err != nil {
 		return fmt.Errorf("generate docker build args: %w", err)
@@ -154,7 +154,7 @@ func (c CmdClient) Build(in *BuildArguments) error {
 }
 
 // Login will run a `docker login` command against the Service repository URI with the input uri and auth data.
-func (c CmdClient) Login(uri, username, password string) error {
+func (c DockerCmdClient) Login(uri, username, password string) error {
 	err := c.runner.Run("docker",
 		[]string{"login", "-u", username, "--password-stdin", uri},
 		exec.Stdin(strings.NewReader(password)))
@@ -167,7 +167,7 @@ func (c CmdClient) Login(uri, username, password string) error {
 }
 
 // Push pushes the images with the specified tags and ecr repository URI, and returns the image digest on success.
-func (c CmdClient) Push(uri string, tags ...string) (digest string, err error) {
+func (c DockerCmdClient) Push(uri string, tags ...string) (digest string, err error) {
 	images := []string{}
 	for _, tag := range tags {
 		images = append(images, imageName(uri, tag))
@@ -199,7 +199,7 @@ func (c CmdClient) Push(uri string, tags ...string) (digest string, err error) {
 }
 
 // CheckDockerEngineRunning will run `docker info` command to check if the docker engine is running.
-func (c CmdClient) CheckDockerEngineRunning() error {
+func (c DockerCmdClient) CheckDockerEngineRunning() error {
 	if _, err := osexec.LookPath("docker"); err != nil {
 		return ErrDockerCommandNotFound
 	}
@@ -227,7 +227,7 @@ func (c CmdClient) CheckDockerEngineRunning() error {
 }
 
 // GetPlatform will run the `docker version` command to get the OS/Arch.
-func (c CmdClient) GetPlatform() (os, arch string, err error) {
+func (c DockerCmdClient) GetPlatform() (os, arch string, err error) {
 	if _, err := osexec.LookPath("docker"); err != nil {
 		return "", "", ErrDockerCommandNotFound
 	}
@@ -255,7 +255,7 @@ func imageName(uri, tag string) string {
 }
 
 // IsEcrCredentialHelperEnabled return true if ecr-login is enabled either globally or registry level
-func (c CmdClient) IsEcrCredentialHelperEnabled(uri string) bool {
+func (c DockerCmdClient) IsEcrCredentialHelperEnabled(uri string) bool {
 	// Make sure the program is able to obtain the home directory
 	splits := strings.Split(uri, "/")
 	if c.homePath == "" || len(splits) == 0 {

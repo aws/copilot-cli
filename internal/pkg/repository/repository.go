@@ -56,7 +56,7 @@ func NewWithURI(registry Registry, name, uri string) *Repository {
 // BuildAndPush builds the image from Dockerfile and pushes it to the repository with tags.
 func (r *Repository) BuildAndPush(args *dockerengine.BuildArguments) (digest string, err error) {
 	if args.URI == "" {
-		uri, err := r.URI()
+		uri, err := r.repositoryURI()
 		if err != nil {
 			return "", err
 		}
@@ -73,8 +73,8 @@ func (r *Repository) BuildAndPush(args *dockerengine.BuildArguments) (digest str
 	return digest, nil
 }
 
-// URI returns the uri of the repository.
-func (r *Repository) URI() (string, error) {
+// repositoryURI() returns the uri of the repository.
+func (r *Repository) repositoryURI() (string, error) {
 	if r.uri != "" {
 		return r.uri, nil
 	}
@@ -91,7 +91,7 @@ func (r *Repository) URI() (string, error) {
 // If the `credStore` value is `ecr-login`, no login is performed.
 // Returns uri of the repository or an error, if any occurs during the login process.
 func (r *Repository) Login() (string, error) {
-	uri, err := r.URI()
+	uri, err := r.repositoryURI()
 	if err != nil {
 		return "", fmt.Errorf("retrieve URI for repository: %w", err)
 	}
