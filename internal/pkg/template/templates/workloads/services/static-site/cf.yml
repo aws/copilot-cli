@@ -65,7 +65,7 @@ Resources:
 
   TriggerStateMachineFunction:
     Metadata:
-      aws:copilot:description: A lambda that triggers the file copying state machine
+      aws:copilot:description: A lambda that triggers the file-copying state machine
     Type: AWS::Lambda::Function
     Properties:
       Handler: index.handler
@@ -109,7 +109,7 @@ Resources:
 
   TriggerStateMachineFunctionRole:
     Metadata:
-      aws:copilot:description: An IAM Role for the lambda that triggers the file copying state machine.
+      aws:copilot:description: An IAM Role for the lambda that triggers the file-copying state machine.
     Type: AWS::IAM::Role
     Properties:
       {{- if .PermissionsBoundary}}
@@ -135,7 +135,7 @@ Resources:
 
   TriggerStateMachineAction:
     Metadata:
-      aws:copilot:description: A custom resource to trigger the file copying state machine
+      aws:copilot:description: A custom resource to trigger the file-copying state machine
     Type: Custom::TriggerStateMachine
     DependsOn: CopyAssetsStateMachine
     Properties:
