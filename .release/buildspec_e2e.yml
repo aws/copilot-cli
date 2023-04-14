@@ -47,6 +47,8 @@ batch:
         variables:
           TEST_SUITE: multi-env-app
           APP_REGION: us-east-2
+          TESTENV_REGION: us-west-1
+          PRODENV_REGION: us-east-1
     - identifier: multi_svc_app
       env:
         privileged-mode: true
@@ -92,6 +94,7 @@ batch:
         variables:
           TEST_SUITE: app-with-domain
           APP_REGION: us-west-2
+          PRODENV_REGION: us-east-1
     - identifier: import_certs
       env:
         privileged-mode: true
