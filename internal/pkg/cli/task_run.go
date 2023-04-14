@@ -720,7 +720,7 @@ func (o *runTaskOpts) Execute() error {
 
 	// NOTE: if image is not provided, then we build the image and push to ECR repo
 	if o.image == "" {
-		err := o.repository.Login()
+		uri, err := o.repository.Login()
 		if err != nil {
 			return fmt.Errorf("login to docker: %w", err)
 		}
@@ -729,11 +729,6 @@ func (o *runTaskOpts) Execute() error {
 		if o.imageTag != "" {
 			tag = o.imageTag
 		}
-		uri, err := o.repository.URI()
-		if err != nil {
-			return fmt.Errorf("get ECR repository URI: %w", err)
-		}
-
 		o.image = fmt.Sprintf(fmtImageURI, uri, tag)
 
 		if err := o.buildAndPushImage(uri); err != nil {

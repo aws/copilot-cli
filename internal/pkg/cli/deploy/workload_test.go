@@ -203,7 +203,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				},
 			},
 			mock: func(t *testing.T, m *deployMocks) {
-				m.mockRepositoryService.EXPECT().Login().Return(nil)
+				m.mockRepositoryService.EXPECT().Login().Return(mockURI, nil)
 				m.mockRepositoryService.EXPECT().BuildAndPush(&dockerengine.BuildArguments{
 					URI:        mockURI,
 					Dockerfile: "mockDockerfile",
@@ -228,7 +228,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				},
 			},
 			mock: func(t *testing.T, m *deployMocks) {
-				m.mockRepositoryService.EXPECT().Login().Return(nil)
+				m.mockRepositoryService.EXPECT().Login().Return(mockURI, nil)
 				m.mockRepositoryService.EXPECT().BuildAndPush(&dockerengine.BuildArguments{
 					URI:        mockURI,
 					Dockerfile: "mockDockerfile",
@@ -259,7 +259,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				},
 			},
 			mock: func(t *testing.T, m *deployMocks) {
-				m.mockRepositoryService.EXPECT().Login().Return(nil)
+				m.mockRepositoryService.EXPECT().Login().Return(mockURI, nil)
 				m.mockRepositoryService.EXPECT().BuildAndPush(&dockerengine.BuildArguments{
 					URI:        mockURI,
 					Dockerfile: "mockDockerfile",
@@ -293,7 +293,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			},
 			inMockGitTag: "gitTag",
 			mock: func(t *testing.T, m *deployMocks) {
-				m.mockRepositoryService.EXPECT().Login().Return(nil)
+				m.mockRepositoryService.EXPECT().Login().Return(mockURI, nil)
 				m.mockRepositoryService.EXPECT().BuildAndPush(&dockerengine.BuildArguments{
 					URI:        mockURI,
 					Dockerfile: "sidecarMockDockerfile",
@@ -622,7 +622,6 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 					GitShortCommitTag: tc.inMockGitTag,
 				},
 				workspacePath: mockWorkspacePath,
-				uri:           mockURI,
 				mft: &mockWorkloadMft{
 					workloadName:    mockName,
 					fileName:        tc.inEnvFile,
