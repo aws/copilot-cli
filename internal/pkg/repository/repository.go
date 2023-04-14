@@ -89,7 +89,7 @@ func (r *Repository) URI() (string, error) {
 // Login authenticates with a ECR registry by performing a Docker login,
 // but only if the `credStore` attribute value is not set to `ecr-login`.
 // If the `credStore` value is `ecr-login`, no login is performed.
-// Returns an error, if any occurs during the login process.
+// Returns uri of the repository or an error, if any occurs during the login process.
 func (r *Repository) Login() (string, error) {
 	uri, err := r.URI()
 	if err != nil {
