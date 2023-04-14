@@ -272,7 +272,6 @@ Resources:
               - Effect: Allow
                 Action:
                   - s3:GetObject
-                  - s3:GetObjectTagging
                 Resource: arn:aws:s3:::{{ .AssetMappingFileBucket }}/*
         - PolicyName: CopyToS3
           PolicyDocument:
@@ -281,7 +280,6 @@ Resources:
               - Effect: Allow
                 Action:
                   - s3:PutObject
-                  - s3:PutObjectTagging
                 Resource: !Sub arn:aws:s3:::${Bucket}/*
       ManagedPolicyArns:
         - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
