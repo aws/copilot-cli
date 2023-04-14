@@ -7,7 +7,6 @@ package mocks
 import (
 	reflect "reflect"
 
-	syncbuffer "github.com/aws/copilot-cli/internal/pkg/term/syncbuffer"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -61,42 +60,4 @@ func (m *MockFileWriter) Write(p []byte) (int, error) {
 func (mr *MockFileWriterMockRecorder) Write(p interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Write", reflect.TypeOf((*MockFileWriter)(nil).Write), p)
-}
-
-// MockTerminal is a mock of Terminal interface.
-type MockTerminal struct {
-	ctrl     *gomock.Controller
-	recorder *MockTerminalMockRecorder
-}
-
-// MockTerminalMockRecorder is the mock recorder for MockTerminal.
-type MockTerminalMockRecorder struct {
-	mock *MockTerminal
-}
-
-// NewMockTerminal creates a new mock instance.
-func NewMockTerminal(ctrl *gomock.Controller) *MockTerminal {
-	mock := &MockTerminal{ctrl: ctrl}
-	mock.recorder = &MockTerminalMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockTerminal) EXPECT() *MockTerminalMockRecorder {
-	return m.recorder
-}
-
-// terminalWidth mocks base method.
-func (m *MockTerminal) terminalWidth(w syncbuffer.FileWriter) (int, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "terminalWidth", w)
-	ret0, _ := ret[0].(int)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// terminalWidth indicates an expected call of terminalWidth.
-func (mr *MockTerminalMockRecorder) terminalWidth(w interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "terminalWidth", reflect.TypeOf((*MockTerminal)(nil).terminalWidth), w)
 }
