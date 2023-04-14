@@ -177,17 +177,15 @@ phases:
       - export GOPATH=/go
       - rm -rf cf-custom-resources/node_modules
       - mkdir -p /tmp/.aws
-      - TEST_RGN=$TESTENV_REGION
+      - printf "[default]\nregion = $APP_REGION\n" > /tmp/.aws/config
       - |
-        if [ -z "$TEST_RGN" ]; then
-           TEST_RGN=us-west-1
+        if [ ! -z "$TESTENV_REGION" ]; then
+          printf "[profile e2etestenv]\nregion=$TESTENV_REGION\n" >> /tmp/.aws/config
         fi
-      - PROD_RGN=$PRODENV_REGION
       - |
-        if [ -z "$PROD_RGN" ]; then
-           PROD_RGN=us-east-1
+        if [ ! -z "$PRODENV_REGION" ]; then
+           printf "[profile e2eprodenv]\nregion=$PRODENV_REGION\n" >> /tmp/.aws/config
         fi
-      - printf "[default]\nregion = $APP_REGION\n[profile e2etestenv]\nregion=$TEST_RGN\n[profile e2eprodenv]\nregion=$PROD_RGN\n" > /tmp/.aws/config
       - printf "[default]\naws_access_key_id=$E2E_USER_1_ACCESS_KEY\naws_secret_access_key=$E2E_USER_1_SECRET_KEY\n\n[e2etestenv]\naws_access_key_id=$E2E_USER_2_ACCESS_KEY\naws_secret_access_key=$E2E_USER_2_SECRET_KEY\n\n[e2eprodenv]\naws_access_key_id=$E2E_USER_3_ACCESS_KEY\naws_secret_access_key=$E2E_USER_3_SECRET_KEY\n" > /tmp/.aws/credentials
       - sed -i -e '$s/$/ --noColor/' e2e/e2e.sh
       - make build-e2e
