@@ -151,7 +151,7 @@ Resources:
       RoleArn: !GetAtt CopyAssetsStateMachineRole.Arn
       StateMachineType: EXPRESS
       Definition:
-        Comment: A test state machine
+        Comment: A state machine that triggers a file-copying lambda for each uploaded asset
         StartAt: GetMappingFile
         States:
           GetMappingFile:
