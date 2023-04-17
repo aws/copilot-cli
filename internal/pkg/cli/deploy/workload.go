@@ -63,8 +63,8 @@ const (
 	labelForContainerName = "com.aws.copilot.image.container.name"
 )
 const (
-	paddingForBuildAndPush      = 5
-	pollIntervalForBuildAndPush = 60 * time.Millisecond
+	paddingInSpacesForBuildAndPush = 5
+	pollIntervalForBuildAndPush    = 60 * time.Millisecond
 )
 
 var (
@@ -393,18 +393,11 @@ func (d *workloadDeployer) uploadContainerImages(out *UploadArtifactsOutput) err
 		return fmt.Errorf("login to image repository: %w", err)
 	}
 
-	var mu sync.Mutex
+	var digestsMu sync.Mutex
 	out.ImageDigests = make(map[string]ContainerImageIdentifier, len(buildArgsPerContainer))
-
-	// counter for indexing the labeled output buffers.
 	bufferIdx := 0
-	// An array of buffers, one for each container image build and push output.
 	labeledBuffers := make([]*syncbuffer.LabeledSyncBuffer, len(buildArgsPerContainer))
-
-	// create a context and an error group.
 	g, ctx := errgroup.WithContext(context.Background())
-
-	// create a new cursor and hide it.
 	cursor := cursor.New()
 	cursor.Hide()
 
@@ -413,12 +406,7 @@ func (d *workloadDeployer) uploadContainerImages(out *UploadArtifactsOutput) err
 		name := name
 		buildArgs := buildArgs
 
-		// create a pipe for streaming the build and push output.
-		pr, pw := io.Pipe()
-
 		buildArgs.URI = uri
-
-		// generate build args slice for docker build label.
 		buildArgsList, err := buildArgs.GenerateDockerBuildArgs(dockerengine.New(exec.NewCmd()))
 		if err != nil {
 			return fmt.Errorf("generate docker build args of image %s: %w", name, err)
@@ -427,38 +415,40 @@ func (d *workloadDeployer) uploadContainerImages(out *UploadArtifactsOutput) err
 		labeledBuffer := buf.WithLabel(fmt.Sprintf("Building your container image %s: docker %s", name, strings.Join(buildArgsList, " ")))
 		labeledBuffers[bufferIdx] = labeledBuffer
 		bufferIdx++
-
+		pr, pw := io.Pipe()
 		g.Go(func() error {
 			defer pw.Close()
 			digest, err := d.repository.BuildAndPush(ctx, buildArgs, pw)
 			if err != nil {
 				return fmt.Errorf("build and push image %s: %w", name, err)
 			}
-			mu.Lock()
+			digestsMu.Lock()
 			out.ImageDigests[name] = ContainerImageIdentifier{
 				Digest:            digest,
 				CustomTag:         d.image.CustomTag,
 				GitShortCommitTag: d.image.GitShortCommitTag,
 			}
-			mu.Unlock()
+			digestsMu.Unlock()
 			return nil
 		})
 		g.Go(func() error {
 			if err := buf.Copy(pr); err != nil {
-				return fmt.Errorf("copying build and push output for container %s: %w", name, err)
+				return fmt.Errorf("copying build and push output for container image %s: %w", name, err)
 			}
 			return nil
 		})
 	}
-	if isCIEnvironment() {
-		numLinesForBuildAndPush = -1
+	opts := []syncbuffer.LabeledTermPrinterOption{syncbuffer.WithPadding(paddingInSpacesForBuildAndPush)}
+	if !isCIEnvironment() {
+		opts = append(opts, syncbuffer.WithNumLines(numLinesForBuildAndPush))
 	}
-	// create a LabeledTermPrinter for rendering build and push output.
-	ltp := d.labeledTermPrinter(os.Stderr, labeledBuffers, syncbuffer.WithNumLines(numLinesForBuildAndPush), syncbuffer.WithPadding(paddingForBuildAndPush))
-
+	ltp := d.labeledTermPrinter(os.Stderr, labeledBuffers, opts...)
 	g.Go(func() error {
 		for {
 			if ltp.IsDone() {
+				if err := ltp.Print(); err != nil {
+					return fmt.Errorf("printing logs of docker build and push: %w", err)
+				}
 				break
 			}
 			if err := ltp.Print(); err != nil {
@@ -468,8 +458,6 @@ func (d *workloadDeployer) uploadContainerImages(out *UploadArtifactsOutput) err
 		}
 		return nil
 	})
-
-	// wait for all goroutines to complete and return any errors.
 	if err := g.Wait(); err != nil {
 		return err
 	}
@@ -524,10 +512,8 @@ func buildArgsPerContainer(name, workspacePath string, img ContainerImageIdentif
 // isCIEnvironment checks if the current environment is a continuous integration (CI) system.
 // Returns true by looking for the "CI" environment variable  if it's set to "true", otherwise false.
 func isCIEnvironment() bool {
-	if ci, _ := os.LookupEnv("CI"); ci == "true" {
-		return true
-	}
-	return false
+	ci, _ := os.LookupEnv("CI")
+	return ci == "true"
 }
 
 func (d *workloadDeployer) uploadArtifactsToS3(out *UploadArtifactsOutput) error {
