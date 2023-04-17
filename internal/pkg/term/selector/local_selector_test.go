@@ -404,7 +404,7 @@ func TestLocalFileSelector_StaticSources(t *testing.T) {
 				mockPromptText,
 				mockHelpText,
 				mockHelpText,
-				func(v interface{}) error { return nil },
+				nil,
 			)
 
 			// THEN

@@ -160,9 +160,7 @@ func (s *localFileSelector) StaticSources(selPrompt, selHelp, anotherPathPrompt,
 		selPrompt,
 		selHelp,
 		dirsAndFiles,
-		func(v interface{}) error {
-			return nil
-		},
+		nil,
 		prompt.WithFinalMessage(staticAssetsFinalMsg),
 	)
 	if err != nil {
