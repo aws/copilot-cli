@@ -74,18 +74,18 @@ func (s *treeWriter) writeLeaf(node diffNode, indent int, formatter formatter) e
 	case node.oldYAML() != nil && node.newYAML() != nil:
 		return s.writeMod(node, indent, formatter)
 	case node.oldYAML() != nil:
-		return s.writeDel(node, indent, formatter)
+		return s.writeDel(node, formatter)
 	default:
-		return s.writeInsert(node, indent, formatter)
+		return s.writeInsert(node, formatter)
 	}
 }
 
 func (s *treeWriter) writeMod(node diffNode, indent int, formatter formatter) error {
 	if node.oldYAML().Kind != node.newYAML().Kind {
-		if err := s.writeDel(node, indent, formatter); err != nil {
+		if err := s.writeDel(node, formatter); err != nil {
 			return err
 		}
-		return s.writeInsert(node, indent, formatter)
+		return s.writeInsert(node, formatter)
 	}
 	content, err := formatter.formatMod(node)
 	if err != nil {
@@ -96,22 +96,14 @@ func (s *treeWriter) writeMod(node diffNode, indent int, formatter formatter) er
 	return err
 }
 
-func (s *treeWriter) writeDel(node diffNode, indent int, formatter formatter) error {
-	raw, err := formatter.formatYAML(node.oldYAML())
-	if err != nil {
-		return err
-	}
-	content := processMultiline(string(raw), prefixByFn(prefixDel), indentByFn(indent))
+func (s *treeWriter) writeDel(node diffNode, formatter formatter) error {
+	content, err := formatter.formatDel(node)
 	_, err = s.writer.Write([]byte(color.Red.Sprint(content + "\n")))
 	return err
 }
 
-func (s *treeWriter) writeInsert(node diffNode, indent int, formatter formatter) error {
-	raw, err := formatter.formatYAML(node.newYAML())
-	if err != nil {
-		return err
-	}
-	content := processMultiline(string(raw), prefixByFn(prefixAdd), indentByFn(indent))
+func (s *treeWriter) writeInsert(node diffNode, formatter formatter) error {
+	content, err := formatter.formatInsert(node)
 	_, err = s.writer.Write([]byte(color.Green.Sprint(content + "\n")))
 	return err
 }

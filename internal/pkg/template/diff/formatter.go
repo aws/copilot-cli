@@ -12,7 +12,8 @@ import (
 )
 
 type formatter interface {
-	formatYAML(*yaml.Node) ([]byte, error)
+	formatInsert(node diffNode) (string, error)
+	formatDel(node diffNode) (string, error)
 	formatMod(node diffNode) (string, error)
 	formatPath(node diffNode) string
 	nextIndent() int
@@ -22,13 +23,28 @@ type seqItemFormatter struct {
 	indent int
 }
 
-func (f *seqItemFormatter) formatYAML(node *yaml.Node) ([]byte, error) {
-	wrapped := &yaml.Node{
+func (f *seqItemFormatter) formatDel(node diffNode) (string, error) {
+	raw, err := yaml.Marshal(&yaml.Node{
 		Kind:    yaml.SequenceNode,
 		Tag:     "!!seq",
-		Content: []*yaml.Node{node},
+		Content: []*yaml.Node{node.oldYAML()},
+	})
+	if err != nil {
+		return "", err
 	}
-	return yaml.Marshal(wrapped)
+	return processMultiline(string(raw), prefixByFn(prefixDel), indentByFn(f.indent)), nil
+}
+
+func (f *seqItemFormatter) formatInsert(node diffNode) (string, error) {
+	raw, err := yaml.Marshal(&yaml.Node{
+		Kind:    yaml.SequenceNode,
+		Tag:     "!!seq",
+		Content: []*yaml.Node{node.newYAML()},
+	})
+	if err != nil {
+		return "", err
+	}
+	return processMultiline(string(raw), prefixByFn(prefixAdd), indentByFn(f.indent)), nil
 }
 
 func (f *seqItemFormatter) formatMod(node diffNode) (string, error) {
@@ -59,8 +75,8 @@ type keyedFormatter struct {
 	indent int
 }
 
-func (f *keyedFormatter) formatYAML(node *yaml.Node) ([]byte, error) {
-	wrapped := &yaml.Node{
+func (f *keyedFormatter) formatDel(node diffNode) (string, error) {
+	raw, err := yaml.Marshal(&yaml.Node{
 		Kind: yaml.MappingNode,
 		Tag:  "!!map",
 		Content: []*yaml.Node{
@@ -69,10 +85,32 @@ func (f *keyedFormatter) formatYAML(node *yaml.Node) ([]byte, error) {
 				Tag:   "!!str",
 				Value: f.key,
 			},
-			node,
+			node.oldYAML(),
 		},
+	})
+	if err != nil {
+		return "", err
 	}
-	return yaml.Marshal(wrapped)
+	return processMultiline(string(raw), prefixByFn(prefixDel), indentByFn(f.indent)), nil
+}
+
+func (f *keyedFormatter) formatInsert(node diffNode) (string, error) {
+	raw, err := yaml.Marshal(&yaml.Node{
+		Kind: yaml.MappingNode,
+		Tag:  "!!map",
+		Content: []*yaml.Node{
+			{
+				Kind:  yaml.ScalarNode,
+				Tag:   "!!str",
+				Value: f.key,
+			},
+			node.newYAML(),
+		},
+	})
+	if err != nil {
+		return "", err
+	}
+	return processMultiline(string(raw), prefixByFn(prefixAdd), indentByFn(f.indent)), nil
 }
 
 func (f *keyedFormatter) formatMod(node diffNode) (string, error) {
@@ -94,12 +132,24 @@ func (f *keyedFormatter) nextIndent() int {
 
 type documentFormatter struct{}
 
-func (f *documentFormatter) formatYAML(node *yaml.Node) ([]byte, error) {
-	return yaml.Marshal(node)
-}
-
 func (f *documentFormatter) formatMod(_ diffNode) (string, error) {
 	return "", nil
+}
+
+func (f *documentFormatter) formatDel(node diffNode) (string, error) {
+	raw, err := yaml.Marshal(node.oldYAML())
+	if err != nil {
+		return "", err
+	}
+	return processMultiline(string(raw), prefixByFn(prefixDel), indentByFn(0)), nil
+}
+
+func (f *documentFormatter) formatInsert(node diffNode) (string, error) {
+	raw, err := yaml.Marshal(node.newYAML())
+	if err != nil {
+		return "", err
+	}
+	return processMultiline(string(raw), prefixByFn(prefixAdd), indentByFn(0)), nil
 }
 
 func (f *documentFormatter) formatPath(_ diffNode) string {
