@@ -148,7 +148,7 @@ Resources:
       ServiceRole: !GetAtt BuildProjectRole.Arn
       Artifacts:
         Type: CODEPIPELINE
-      {{- if eq .Build.EnvironmentType "LINUX_CONTAINER"}}
+      {{- if or (eq .Build.EnvironmentType "LINUX_CONTAINER") (eq .Build.EnvironmentType "ARM_CONTAINER")}}
       Cache:
         Modes:
           - LOCAL_DOCKER_LAYER_CACHE
