@@ -139,7 +139,7 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 					},
 				},
 			},
-			wantedErrorMsgPrefix: `validate "grace_period": must specify grace_period once, but found in "http.healthcheck.grace_period" and "nlb.healthcheck.grace_period"`,
+			wantedErrorMsgPrefix: `validate "grace_period": must specify one, not both, of "http.healthcheck.grace_period" and "nlb.healthcheck.grace_period"`,
 		},
 		"error if fail to validate http": {
 			lbConfig: LoadBalancedWebService{

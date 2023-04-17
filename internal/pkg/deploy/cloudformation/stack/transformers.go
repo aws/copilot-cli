@@ -555,7 +555,7 @@ func (s *BackendService) convertALBListener() (*template.ALBListener, error) {
 }
 
 func (s *BackendService) convertGracePeriod() *int64 {
-	var gracePeriod *int64 = aws.Int64(60)
+	var gracePeriod *int64 = aws.Int64(int64(manifest.DefaultHealthCheckGracePeriod))
 	if s.manifest.HTTP.Main.HealthCheck.Advanced.GracePeriod != nil {
 		gracePeriod = aws.Int64(int64(s.manifest.HTTP.Main.HealthCheck.Advanced.GracePeriod.Seconds()))
 	}
