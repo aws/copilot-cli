@@ -444,7 +444,6 @@ func (o *initSvcOpts) askStaticSite() error {
 		return err
 	}
 	for _, source := range sources {
-		var recursive bool
 		isDir, err := isDir(o.fs, source)
 		if err != nil {
 			return err
