@@ -92,7 +92,7 @@ These messages can be consumed by the Worker Service.`
 
 	wkldInitImagePrompt = fmt.Sprintf("What's the %s ([registry/]repository[:tag|@digest]) of the image to use?", color.Emphasize("location"))
 
-	fmtStaticSiteInitDirFilePrompt      = "Which " + color.Emphasize("files or (recursive) directories") + " would you like to upload for %s?\nIt is unnecessary to select files or subdirectories within selected directories."
+	fmtStaticSiteInitDirFilePrompt      = "Which " + color.Emphasize("files or directories") + " would you like to upload for %s?\nDirectories are recursively uploaded."
 	staticSiteInitDirFileHelpPrompt     = "Files or (recursive) directories to use for building your static site."
 	fmtStaticSiteInitDirFilePathPrompt  = "What is the custom path to the " + color.Emphasize("directory or file") + " for %s?"
 	staticSiteInitDirFilePathHelpPrompt = "Path to directory or file to use for building your static site."
