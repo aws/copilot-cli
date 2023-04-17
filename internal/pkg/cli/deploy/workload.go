@@ -445,14 +445,11 @@ func (d *workloadDeployer) uploadContainerImages(out *UploadArtifactsOutput) err
 	ltp := d.labeledTermPrinter(os.Stderr, labeledBuffers, opts...)
 	g.Go(func() error {
 		for {
-			if ltp.IsDone() {
-				if err := ltp.Print(); err != nil {
-					return fmt.Errorf("printing logs of docker build and push: %w", err)
-				}
-				break
-			}
 			if err := ltp.Print(); err != nil {
 				return fmt.Errorf("printing logs of docker build and push: %w", err)
+			}
+			if ltp.IsDone() {
+				break
 			}
 			time.Sleep(pollIntervalForBuildAndPush)
 		}
