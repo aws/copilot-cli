@@ -31,7 +31,7 @@ func (s *treeWriter) write() error {
 		return nil // Return without writing anything.
 	}
 	if len(s.tree.root.children()) == 0 {
-		return s.writeLeaf(s.tree.root, 0, &documentFormatter{})
+		return s.writeLeaf(s.tree.root, &documentFormatter{})
 	}
 	for _, child := range s.tree.root.children() {
 		if err := s.writeTree(child, 0); err != nil {
@@ -55,7 +55,7 @@ func (s *treeWriter) writeTree(node diffNode, indent int) error {
 		formatter = &keyedFormatter{node.key(), indent}
 	}
 	if len(node.children()) == 0 {
-		return s.writeLeaf(node, indent, formatter)
+		return s.writeLeaf(node, formatter)
 	}
 	if _, err := s.writer.Write([]byte(formatter.formatPath(node))); err != nil {
 		return err
@@ -69,10 +69,10 @@ func (s *treeWriter) writeTree(node diffNode, indent int) error {
 	return nil
 }
 
-func (s *treeWriter) writeLeaf(node diffNode, indent int, formatter formatter) error {
+func (s *treeWriter) writeLeaf(node diffNode, formatter formatter) error {
 	switch {
 	case node.oldYAML() != nil && node.newYAML() != nil:
-		return s.writeMod(node, indent, formatter)
+		return s.writeMod(node, formatter)
 	case node.oldYAML() != nil:
 		return s.writeDel(node, formatter)
 	default:
@@ -80,7 +80,7 @@ func (s *treeWriter) writeLeaf(node diffNode, indent int, formatter formatter) e
 	}
 }
 
-func (s *treeWriter) writeMod(node diffNode, indent int, formatter formatter) error {
+func (s *treeWriter) writeMod(node diffNode, formatter formatter) error {
 	if node.oldYAML().Kind != node.newYAML().Kind {
 		if err := s.writeDel(node, formatter); err != nil {
 			return err
@@ -91,7 +91,6 @@ func (s *treeWriter) writeMod(node diffNode, indent int, formatter formatter) er
 	if err != nil {
 		return err
 	}
-	content = processMultiline(content, prefixByFn(prefixMod), indentByFn(indent))
 	_, err = s.writer.Write([]byte(color.Yellow.Sprint(content + "\n")))
 	return err
 }

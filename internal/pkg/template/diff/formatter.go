@@ -52,7 +52,9 @@ func (f *seqItemFormatter) formatMod(node diffNode) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("- %s -> %s", oldValue, newValue), nil
+	content := fmt.Sprintf("- %s -> %s", oldValue, newValue)
+	content = processMultiline(content, prefixByFn(prefixMod), indentByFn(f.indent))
+	return content, nil
 }
 
 func (f *seqItemFormatter) formatPath(_ diffNode) string {
@@ -118,7 +120,9 @@ func (f *keyedFormatter) formatMod(node diffNode) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("%s: %s -> %s", node.key(), oldValue, newValue), nil
+	content := fmt.Sprintf("%s: %s -> %s", node.key(), oldValue, newValue)
+	content = processMultiline(content, prefixByFn(prefixMod), indentByFn(f.indent))
+	return content, nil
 }
 
 func (f *keyedFormatter) formatPath(node diffNode) string {
