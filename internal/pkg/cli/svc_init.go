@@ -449,12 +449,9 @@ func (o *initSvcOpts) askStaticSite() error {
 		if err != nil {
 			return err
 		}
-		if isDir {
-			recursive = true
-		}
 		assets = append(assets, manifest.FileUpload{
 			Source:    source,
-			Recursive: recursive,
+			Recursive: isDir,
 		})
 	}
 	o.staticAssets = assets
