@@ -444,6 +444,57 @@ func (mr *MockspinnerMockRecorder) Stop(label interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*Mockspinner)(nil).Stop), label)
 }
 
+// MocklabeledTermPrinter is a mock of labeledTermPrinter interface.
+type MocklabeledTermPrinter struct {
+	ctrl     *gomock.Controller
+	recorder *MocklabeledTermPrinterMockRecorder
+}
+
+// MocklabeledTermPrinterMockRecorder is the mock recorder for MocklabeledTermPrinter.
+type MocklabeledTermPrinterMockRecorder struct {
+	mock *MocklabeledTermPrinter
+}
+
+// NewMocklabeledTermPrinter creates a new mock instance.
+func NewMocklabeledTermPrinter(ctrl *gomock.Controller) *MocklabeledTermPrinter {
+	mock := &MocklabeledTermPrinter{ctrl: ctrl}
+	mock.recorder = &MocklabeledTermPrinterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MocklabeledTermPrinter) EXPECT() *MocklabeledTermPrinterMockRecorder {
+	return m.recorder
+}
+
+// IsDone mocks base method.
+func (m *MocklabeledTermPrinter) IsDone() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsDone")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// IsDone indicates an expected call of IsDone.
+func (mr *MocklabeledTermPrinterMockRecorder) IsDone() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsDone", reflect.TypeOf((*MocklabeledTermPrinter)(nil).IsDone))
+}
+
+// Print mocks base method.
+func (m *MocklabeledTermPrinter) Print() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Print")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Print indicates an expected call of Print.
+func (mr *MocklabeledTermPrinterMockRecorder) Print() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Print", reflect.TypeOf((*MocklabeledTermPrinter)(nil).Print))
+}
+
 // MocktimeoutError is a mock of timeoutError interface.
 type MocktimeoutError struct {
 	ctrl     *gomock.Controller

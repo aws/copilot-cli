@@ -119,6 +119,11 @@ type spinner interface {
 	Stop(label string)
 }
 
+type labeledTermPrinter interface {
+	IsDone() bool
+	Print() error
+}
+
 // StackRuntimeConfiguration contains runtime configuration for a workload CloudFormation stack.
 type StackRuntimeConfiguration struct {
 	ImageDigests              map[string]ContainerImageIdentifier // Container name to image.
@@ -153,6 +158,8 @@ type GenerateCloudFormationTemplateOutput struct {
 	Parameters string
 }
 
+type labeledTermPrinterFunc func(fw syncbuffer.FileWriter, bufs []*syncbuffer.LabeledSyncBuffer, opts ...syncbuffer.LabeledTermPrinterOption) labeledTermPrinter
+
 type workloadDeployer struct {
 	name          string
 	app           *config.Application
@@ -165,18 +172,19 @@ type workloadDeployer struct {
 	uri           string
 
 	// Dependencies.
-	fs               afero.Fs
-	s3Client         uploader
-	addons           stackBuilder
-	repository       repositoryService
-	deployer         serviceDeployer
-	tmplGetter       deployedTemplateGetter
-	endpointGetter   endpointGetter
-	spinner          spinner
-	templateFS       template.Reader
-	envVersionGetter versionGetter
-	overrider        Overrider
-	customResources  customResourcesFunc
+	fs                 afero.Fs
+	s3Client           uploader
+	addons             stackBuilder
+	repository         repositoryService
+	deployer           serviceDeployer
+	tmplGetter         deployedTemplateGetter
+	endpointGetter     endpointGetter
+	spinner            spinner
+	templateFS         template.Reader
+	envVersionGetter   versionGetter
+	overrider          Overrider
+	customResources    customResourcesFunc
+	labeledTermPrinter labeledTermPrinterFunc
 
 	// Cached variables.
 	defaultSess              *session.Session
@@ -295,6 +303,9 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 		envSess:                  envSession,
 		store:                    store,
 		envConfig:                envConfig,
+		labeledTermPrinter: func(fw syncbuffer.FileWriter, bufs []*syncbuffer.LabeledSyncBuffer, opts ...syncbuffer.LabeledTermPrinterOption) labeledTermPrinter {
+			return syncbuffer.NewLabeledTermPrinter(fw, bufs, opts...)
+		},
 
 		mft:    in.Mft,
 		rawMft: in.RawMft,
@@ -449,7 +460,7 @@ func (d *workloadDeployer) uploadContainerImages(out *UploadArtifactsOutput) err
 		numLinesForBuildAndPush = -1
 	}
 	// create a LabeledTermPrinter for rendering build and push output.
-	ltp := syncbuffer.NewLabeledTermPrinter(os.Stderr, labeledBuffers, syncbuffer.WithNumLines(numLinesForBuildAndPush), syncbuffer.WithPadding(paddingForBuildAndPush))
+	ltp := d.labeledTermPrinter(os.Stderr, labeledBuffers, syncbuffer.WithNumLines(numLinesForBuildAndPush), syncbuffer.WithPadding(paddingForBuildAndPush))
 
 	g.Go(func() error {
 		for {

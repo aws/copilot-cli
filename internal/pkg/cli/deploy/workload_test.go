@@ -32,6 +32,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
+	"github.com/aws/copilot-cli/internal/pkg/term/syncbuffer"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -50,6 +51,7 @@ type deployMocks struct {
 	mockEnvVersionGetter       *mocks.MockversionGetter
 	mockFileSystem             afero.Fs
 	mockValidator              *mocks.MockaliasCertValidator
+	mockLabeledTermPrinter     *mocks.MocklabeledTermPrinter
 }
 
 type mockTemplateFS struct {
@@ -215,6 +217,8 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 						"com.aws.copilot.image.container.name": "mockWkld",
 					},
 				}, gomock.Any()).Return("", mockError)
+				m.mockLabeledTermPrinter.EXPECT().IsDone().Return(true).AnyTimes()
+				m.mockLabeledTermPrinter.EXPECT().Print().Return(nil).AnyTimes()
 			},
 			wantErr: fmt.Errorf("build and push image mockWkld: some error"),
 		},
@@ -240,6 +244,8 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 						"com.aws.copilot.image.container.name": "mockWkld",
 					},
 				}, gomock.Any()).Return("mockDigest", nil)
+				m.mockLabeledTermPrinter.EXPECT().IsDone().Return(true).AnyTimes()
+				m.mockLabeledTermPrinter.EXPECT().Print().Return(nil).AnyTimes()
 				m.mockAddons = nil
 			},
 			wantImages: map[string]ContainerImageIdentifier{
@@ -271,6 +277,8 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 						"com.aws.copilot.image.container.name": "mockWkld",
 					},
 				}, gomock.Any()).Return("mockDigest", nil)
+				m.mockLabeledTermPrinter.EXPECT().IsDone().Return(true).AnyTimes()
+				m.mockLabeledTermPrinter.EXPECT().Print().Return(nil).AnyTimes()
 				m.mockAddons = nil
 			},
 			wantImages: map[string]ContainerImageIdentifier{
@@ -316,6 +324,8 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 						"com.aws.copilot.image.container.name": "logging",
 					},
 				}, gomock.Any()).Return("sidecarMockDigest2", nil)
+				m.mockLabeledTermPrinter.EXPECT().IsDone().Return(true).AnyTimes()
+				m.mockLabeledTermPrinter.EXPECT().Print().Return(nil).AnyTimes()
 				m.mockAddons = nil
 			},
 			wantImages: map[string]ContainerImageIdentifier{
@@ -593,10 +603,11 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			defer ctrl.Finish()
 
 			m := &deployMocks{
-				mockUploader:          mocks.NewMockuploader(ctrl),
-				mockAddons:            mocks.NewMockstackBuilder(ctrl),
-				mockRepositoryService: mocks.NewMockrepositoryService(ctrl),
-				mockFileSystem:        afero.NewMemMapFs(),
+				mockUploader:           mocks.NewMockuploader(ctrl),
+				mockAddons:             mocks.NewMockstackBuilder(ctrl),
+				mockRepositoryService:  mocks.NewMockrepositoryService(ctrl),
+				mockFileSystem:         afero.NewMemMapFs(),
+				mockLabeledTermPrinter: mocks.NewMocklabeledTermPrinter(ctrl),
 			}
 			tc.mock(t, m)
 
@@ -634,6 +645,9 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				templateFS:      fakeTemplateFS(),
 				overrider:       new(override.Noop),
 				customResources: crFn,
+				labeledTermPrinter: func(fw syncbuffer.FileWriter, bufs []*syncbuffer.LabeledSyncBuffer, opts ...syncbuffer.LabeledTermPrinterOption) labeledTermPrinter {
+					return m.mockLabeledTermPrinter
+				},
 			}
 			if m.mockAddons != nil {
 				wkldDeployer.addons = m.mockAddons
