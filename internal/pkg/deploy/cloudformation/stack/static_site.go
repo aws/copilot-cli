@@ -8,6 +8,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
@@ -81,6 +82,11 @@ func (s *StaticSite) Template() (string, error) {
 		return "", err
 	}
 
+	bucket, path, err := s3.ParseURL(s.assetMappingURL)
+	if err != nil {
+		return "", err
+	}
+
 	content, err := s.parser.ParseStaticSite(template.WorkloadOpts{
 		// Workload parameters.
 		AppName:            s.app,
@@ -97,6 +103,9 @@ func (s *StaticSite) Template() (string, error) {
 
 		// Custom Resource Config.
 		CustomResources: crs,
+
+		AssetMappingFileBucket: bucket,
+		AssetMappingFilePath:   path,
 	})
 	if err != nil {
 		return "", err

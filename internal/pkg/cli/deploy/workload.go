@@ -28,6 +28,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
+	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/repository"
 	"github.com/aws/copilot-cli/internal/pkg/template"
@@ -68,7 +69,7 @@ func (noopActionRecommender) RecommendedActions() []string {
 }
 
 type repositoryService interface {
-	Login() error
+	Login() (string, error)
 	BuildAndPush(args *dockerengine.BuildArguments) (string, error)
 }
 
@@ -249,6 +250,7 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 	}
 
 	cfn := cloudformation.New(envSession, cloudformation.WithProgressTracker(os.Stderr))
+
 	return &workloadDeployer{
 		name:                     in.Name,
 		app:                      in.App,
@@ -361,12 +363,19 @@ func (d *workloadDeployer) uploadContainerImages(out *UploadArtifactsOutput) err
 	if len(buildArgsPerContainer) == 0 {
 		return nil
 	}
-	err = d.repository.Login()
+	uri, err := d.repository.Login()
 	if err != nil {
 		return fmt.Errorf("login to image repository: %w", err)
 	}
 	out.ImageDigests = make(map[string]ContainerImageIdentifier, len(buildArgsPerContainer))
 	for name, buildArgs := range buildArgsPerContainer {
+		buildArgs.URI = uri
+		buildArgsList, err := buildArgs.GenerateDockerBuildArgs(dockerengine.New(exec.NewCmd()))
+		if err != nil {
+			return fmt.Errorf("generate docker build args: %w", err)
+		}
+		// TODO(adi) handle this log in syncBuffer's Print function
+		log.Infof("Building your container image: docker %s\n", strings.Join(buildArgsList, " "))
 		digest, err := d.repository.BuildAndPush(buildArgs)
 		if err != nil {
 			return fmt.Errorf("build and push image: %w", err)
