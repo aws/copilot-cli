@@ -180,11 +180,12 @@ func Test_Login(t *testing.T) {
 				docker:   mockDocker,
 			}
 
-			gotErr := repo.Login()
+			gotURI, gotErr := repo.Login()
 			if tc.wantedError != nil {
 				require.EqualError(t, tc.wantedError, gotErr.Error())
 			} else {
-				require.NoError(t, tc.wantedError)
+				require.NoError(t, gotErr)
+				require.Equal(t, tc.wantedURI, gotURI)
 			}
 		})
 	}

@@ -51,7 +51,7 @@ func TestDockerCommand_Build(t *testing.T) {
 			setupMocks: func(controller *gomock.Controller) {
 				mockCmd = NewMockCmd(controller)
 			},
-			wantedError: fmt.Errorf("tags to reference an image should not be empty for building and pushing into the ECR repository %s", mockURI),
+			wantedError: fmt.Errorf("generate docker build args: tags to reference an image should not be empty for building and pushing into the ECR repository %s", mockURI),
 		},
 		"should error if the docker build command fails": {
 			path:    mockPath,
@@ -196,7 +196,7 @@ func TestDockerCommand_Build(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			controller := gomock.NewController(t)
 			tc.setupMocks(controller)
-			s := CmdClient{
+			s := DockerCmdClient{
 				runner: mockCmd,
 				lookupEnv: func(key string) (string, bool) {
 					if val, ok := tc.envVars[key]; ok {
@@ -262,7 +262,7 @@ func TestDockerCommand_Login(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			controller := gomock.NewController(t)
 			test.setupMocks(controller)
-			s := CmdClient{
+			s := DockerCmdClient{
 				runner: mockCmd,
 			}
 
@@ -292,7 +292,7 @@ func TestDockerCommand_Push(t *testing.T) {
 			}).Return(nil)
 
 		// WHEN
-		cmd := CmdClient{
+		cmd := DockerCmdClient{
 			runner:    m,
 			lookupEnv: emptyLookupEnv,
 		}
@@ -316,7 +316,7 @@ func TestDockerCommand_Push(t *testing.T) {
 			}).Return(nil)
 
 		// WHEN
-		cmd := CmdClient{
+		cmd := DockerCmdClient{
 			runner: m,
 			lookupEnv: func(key string) (string, bool) {
 				if key == "CI" {
@@ -339,7 +339,7 @@ func TestDockerCommand_Push(t *testing.T) {
 		m.EXPECT().Run(gomock.Any(), gomock.Any()).Return(errors.New("some error"))
 
 		// WHEN
-		cmd := CmdClient{
+		cmd := DockerCmdClient{
 			runner:    m,
 			lookupEnv: emptyLookupEnv,
 		}
@@ -357,7 +357,7 @@ func TestDockerCommand_Push(t *testing.T) {
 		m.EXPECT().Run("docker", []string{"inspect", "--format", "'{{json (index .RepoDigests 0)}}'", "uri:latest"}, gomock.Any()).Return(errors.New("some error"))
 
 		// WHEN
-		cmd := CmdClient{
+		cmd := DockerCmdClient{
 			runner:    m,
 			lookupEnv: emptyLookupEnv,
 		}
@@ -381,7 +381,7 @@ func TestDockerCommand_Push(t *testing.T) {
 			}).Return(nil)
 
 		// WHEN
-		cmd := CmdClient{
+		cmd := DockerCmdClient{
 			runner:    m,
 			lookupEnv: emptyLookupEnv,
 		}
@@ -442,7 +442,7 @@ func TestDockerCommand_CheckDockerEngineRunning(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			controller := gomock.NewController(t)
 			tc.setupMocks(controller)
-			s := CmdClient{
+			s := DockerCmdClient{
 				runner: mockCmd,
 			}
 
@@ -483,7 +483,7 @@ func TestDockerCommand_GetPlatform(t *testing.T) {
 					Do(func(_ string, _ []string, opt exec.CmdOption) {
 						cmd := &osexec.Cmd{}
 						opt(cmd)
-						_, _ = cmd.Stdout.Write([]byte("{\"Platform\":{\"Name\":\"Docker CmdClient - Community\"},\"Components\":[{\"Name\":\"CmdClient\",\"Version\":\"20.10.6\",\"Details\":{\"ApiVersion\":\"1.41\",\"Arch\":\"amd64\",\"BuildTime\":\"Fri Apr  9 22:44:56 2021\",\"Experimental\":\"false\",\"GitCommit\":\"8728dd2\",\"GoVersion\":\"go1.13.15\",\"KernelVersion\":\"5.10.25-linuxkit\",\"MinAPIVersion\":\"1.12\",\"Os\":\"linux\"}},{\"Name\":\"containerd\",\"Version\":\"1.4.4\",\"Details\":{\"GitCommit\":\"05f951a3781f4f2c1911b05e61c16e\"}},{\"Name\":\"runc\",\"Version\":\"1.0.0-rc93\",\"Details\":{\"GitCommit\":\"12644e614e25b05da6fd00cfe1903fdec\"}},{\"Name\":\"docker-init\",\"Version\":\"0.19.0\",\"Details\":{\"GitCommit\":\"de40ad0\"}}],\"Version\":\"20.10.6\",\"ApiVersion\":\"1.41\",\"MinAPIVersion\":\"1.12\",\"GitCommit\":\"8728dd2\",\"GoVersion\":\"go1.13.15\",\"Os\":\"linux\",\"Arch\":\"amd64\",\"KernelVersion\":\"5.10.25-linuxkit\",\"BuildTime\":\"2021-04-09T22:44:56.000000000+00:00\"}\n"))
+						_, _ = cmd.Stdout.Write([]byte("{\"Platform\":{\"Name\":\"Docker DockerCmdClient - Community\"},\"Components\":[{\"Name\":\"DockerCmdClient\",\"Version\":\"20.10.6\",\"Details\":{\"ApiVersion\":\"1.41\",\"Arch\":\"amd64\",\"BuildTime\":\"Fri Apr  9 22:44:56 2021\",\"Experimental\":\"false\",\"GitCommit\":\"8728dd2\",\"GoVersion\":\"go1.13.15\",\"KernelVersion\":\"5.10.25-linuxkit\",\"MinAPIVersion\":\"1.12\",\"Os\":\"linux\"}},{\"Name\":\"containerd\",\"Version\":\"1.4.4\",\"Details\":{\"GitCommit\":\"05f951a3781f4f2c1911b05e61c16e\"}},{\"Name\":\"runc\",\"Version\":\"1.0.0-rc93\",\"Details\":{\"GitCommit\":\"12644e614e25b05da6fd00cfe1903fdec\"}},{\"Name\":\"docker-init\",\"Version\":\"0.19.0\",\"Details\":{\"GitCommit\":\"de40ad0\"}}],\"Version\":\"20.10.6\",\"ApiVersion\":\"1.41\",\"MinAPIVersion\":\"1.12\",\"GitCommit\":\"8728dd2\",\"GoVersion\":\"go1.13.15\",\"Os\":\"linux\",\"Arch\":\"amd64\",\"KernelVersion\":\"5.10.25-linuxkit\",\"BuildTime\":\"2021-04-09T22:44:56.000000000+00:00\"}\n"))
 					}).Return(nil)
 			},
 			wantedOS:   "linux",
@@ -497,7 +497,7 @@ func TestDockerCommand_GetPlatform(t *testing.T) {
 					Do(func(_ string, _ []string, opt exec.CmdOption) {
 						cmd := &osexec.Cmd{}
 						opt(cmd)
-						_, _ = cmd.Stdout.Write([]byte("{\"Platform\":{\"Name\":\"Docker CmdClient - Community\"},\"Components\":[{\"Name\":\"CmdClient\",\"Version\":\"20.10.6\",\"Details\":{\"ApiVersion\":\"1.41\",\"Arch\":\"amd64\",\"BuildTime\":\"Fri Apr  9 22:44:56 2021\",\"Experimental\":\"false\",\"GitCommit\":\"8728dd2\",\"GoVersion\":\"go1.13.15\",\"KernelVersion\":\"5.10.25-linuxkit\",\"MinAPIVersion\":\"1.12\",\"Os\":\"linux\"}},{\"Name\":\"containerd\",\"Version\":\"1.4.4\",\"Details\":{\"GitCommit\":\"05f951a3781f4f2c1911b05e61c16e\"}},{\"Name\":\"runc\",\"Version\":\"1.0.0-rc93\",\"Details\":{\"GitCommit\":\"12644e614e25b05da6fd00cfe1903fdec\"}},{\"Name\":\"docker-init\",\"Version\":\"0.19.0\",\"Details\":{\"GitCommit\":\"de40ad0\"}}],\"Version\":\"20.10.6\",\"ApiVersion\":\"1.41\",\"MinAPIVersion\":\"1.12\",\"GitCommit\":\"8728dd2\",\"GoVersion\":\"go1.13.15\",\"Os\":\"windows\",\"Arch\":\"amd64\",\"KernelVersion\":\"5.10.25-linuxkit\",\"BuildTime\":\"2021-04-09T22:44:56.000000000+00:00\"}\n"))
+						_, _ = cmd.Stdout.Write([]byte("{\"Platform\":{\"Name\":\"Docker DockerCmdClient - Community\"},\"Components\":[{\"Name\":\"DockerCmdClient\",\"Version\":\"20.10.6\",\"Details\":{\"ApiVersion\":\"1.41\",\"Arch\":\"amd64\",\"BuildTime\":\"Fri Apr  9 22:44:56 2021\",\"Experimental\":\"false\",\"GitCommit\":\"8728dd2\",\"GoVersion\":\"go1.13.15\",\"KernelVersion\":\"5.10.25-linuxkit\",\"MinAPIVersion\":\"1.12\",\"Os\":\"linux\"}},{\"Name\":\"containerd\",\"Version\":\"1.4.4\",\"Details\":{\"GitCommit\":\"05f951a3781f4f2c1911b05e61c16e\"}},{\"Name\":\"runc\",\"Version\":\"1.0.0-rc93\",\"Details\":{\"GitCommit\":\"12644e614e25b05da6fd00cfe1903fdec\"}},{\"Name\":\"docker-init\",\"Version\":\"0.19.0\",\"Details\":{\"GitCommit\":\"de40ad0\"}}],\"Version\":\"20.10.6\",\"ApiVersion\":\"1.41\",\"MinAPIVersion\":\"1.12\",\"GitCommit\":\"8728dd2\",\"GoVersion\":\"go1.13.15\",\"Os\":\"windows\",\"Arch\":\"amd64\",\"KernelVersion\":\"5.10.25-linuxkit\",\"BuildTime\":\"2021-04-09T22:44:56.000000000+00:00\"}\n"))
 					}).Return(nil)
 			},
 			wantedOS:   "windows",
@@ -510,7 +510,7 @@ func TestDockerCommand_GetPlatform(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			controller := gomock.NewController(t)
 			tc.setupMocks(controller)
-			s := CmdClient{
+			s := DockerCmdClient{
 				runner: mockCmd,
 			}
 
@@ -600,7 +600,7 @@ func TestIsEcrCredentialHelperEnabled(t *testing.T) {
 			controller := gomock.NewController(t)
 			tc.setupMocks(controller)
 			tc.mockFileSystem(fs)
-			s := CmdClient{
+			s := DockerCmdClient{
 				runner:   mockCmd,
 				buf:      tc.inBuffer,
 				homePath: "test/copilot",
