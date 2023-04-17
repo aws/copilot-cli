@@ -5944,18 +5944,18 @@ func (m *MockstaticSourceSelector) EXPECT() *MockstaticSourceSelectorMockRecorde
 }
 
 // StaticSources mocks base method.
-func (m *MockstaticSourceSelector) StaticSources(selPrompt, selHelp, notFoundPrompt, notFoundHelp string, pathValidator prompt.ValidatorFunc) ([]string, error) {
+func (m *MockstaticSourceSelector) StaticSources(selPrompt, selHelp, anotherPathPrompt, anotherPathHelp string, pathValidator prompt.ValidatorFunc) ([]string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "StaticSources", selPrompt, selHelp, notFoundPrompt, notFoundHelp, pathValidator)
+	ret := m.ctrl.Call(m, "StaticSources", selPrompt, selHelp, anotherPathPrompt, anotherPathHelp, pathValidator)
 	ret0, _ := ret[0].([]string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // StaticSources indicates an expected call of StaticSources.
-func (mr *MockstaticSourceSelectorMockRecorder) StaticSources(selPrompt, selHelp, notFoundPrompt, notFoundHelp, pathValidator interface{}) *gomock.Call {
+func (mr *MockstaticSourceSelectorMockRecorder) StaticSources(selPrompt, selHelp, anotherPathPrompt, anotherPathHelp, pathValidator interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StaticSources", reflect.TypeOf((*MockstaticSourceSelector)(nil).StaticSources), selPrompt, selHelp, notFoundPrompt, notFoundHelp, pathValidator)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StaticSources", reflect.TypeOf((*MockstaticSourceSelector)(nil).StaticSources), selPrompt, selHelp, anotherPathPrompt, anotherPathHelp, pathValidator)
 }
 
 // MockscheduleSelector is a mock of scheduleSelector interface.

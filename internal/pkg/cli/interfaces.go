@@ -533,7 +533,7 @@ type wsSelector interface {
 }
 
 type staticSourceSelector interface {
-	StaticSources(selPrompt, selHelp, notFoundPrompt, notFoundHelp string, pathValidator prompt.ValidatorFunc) ([]string, error)
+	StaticSources(selPrompt, selHelp, anotherPathPrompt, anotherPathHelp string, pathValidator prompt.ValidatorFunc) ([]string, error)
 }
 
 type scheduleSelector interface {
