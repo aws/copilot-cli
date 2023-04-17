@@ -444,13 +444,13 @@ func (o *initSvcOpts) askStaticSite() error {
 		return err
 	}
 	for _, source := range sources {
-		isDir, err := isDir(o.fs, source)
+		info, err := o.fs.Stat(source)
 		if err != nil {
-			return err
+			return fmt.Errorf("get Fileinfo describing %s: %w", source, err)
 		}
 		assets = append(assets, manifest.FileUpload{
 			Source:    source,
-			Recursive: isDir,
+			Recursive: info.IsDir(),
 		})
 	}
 	o.staticAssets = assets
