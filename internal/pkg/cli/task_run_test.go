@@ -860,7 +860,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 					Command:    []string{},
 					EntryPoint: []string{},
 				}).Return(nil)
-				m.repository.EXPECT().Login().Return(nil)
+				m.repository.EXPECT().Login().Return(mockRepoURI, nil)
 				m.repository.EXPECT().BuildAndPush(ctx, gomock.Any(), gomock.Any())
 				m.deployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
 					Name:       inGroupName,

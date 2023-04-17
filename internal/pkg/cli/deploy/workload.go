@@ -169,7 +169,6 @@ type workloadDeployer struct {
 	mft           interface{}
 	rawMft        []byte
 	workspacePath string
-	uri           string
 
 	// Dependencies.
 	fs                 afero.Fs
@@ -253,10 +252,6 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 	repoName := fmt.Sprintf("%s/%s", in.App.Name, in.Name)
 	repository := repository.NewWithURI(
 		ecr.New(defaultSessEnvRegion), repoName, resources.RepositoryURLs[in.Name])
-	uri, err := repository.URI()
-	if err != nil {
-		return nil, fmt.Errorf("get ECR repository URI: %w", err)
-	}
 	store := config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
 	envDescriber, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
 		App:         in.App.Name,
@@ -285,7 +280,6 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 		image:                    in.Image,
 		resources:                resources,
 		workspacePath:            ws.Path(),
-		uri:                      uri,
 		fs:                       afero.NewOsFs(),
 		s3Client:                 s3.New(envSession),
 		addons:                   addons,
@@ -387,7 +381,7 @@ func (img ContainerImageIdentifier) Tag() string {
 
 func (d *workloadDeployer) uploadContainerImages(out *UploadArtifactsOutput) error {
 	// If it is built from local Dockerfile, build and push to the ECR repo.
-	buildArgsPerContainer, err := buildArgsPerContainer(d.name, d.workspacePath, d.uri, d.image, d.mft)
+	buildArgsPerContainer, err := buildArgsPerContainer(d.name, d.workspacePath, d.image, d.mft)
 	if err != nil {
 		return err
 	}
@@ -482,7 +476,7 @@ func (d *workloadDeployer) uploadContainerImages(out *UploadArtifactsOutput) err
 	return nil
 }
 
-func buildArgsPerContainer(name, workspacePath, uri string, img ContainerImageIdentifier, unmarshaledManifest interface{}) (map[string]*dockerengine.BuildArguments, error) {
+func buildArgsPerContainer(name, workspacePath string, img ContainerImageIdentifier, unmarshaledManifest interface{}) (map[string]*dockerengine.BuildArguments, error) {
 	type dfArgs interface {
 		BuildArgs(rootDirectory string) (map[string]*manifest.DockerBuildArgs, error)
 		ContainerPlatform() string
@@ -514,7 +508,6 @@ func buildArgsPerContainer(name, workspacePath, uri string, img ContainerImageId
 		}
 		labels[labelForContainerName] = container
 		dArgs[container] = &dockerengine.BuildArguments{
-			URI:        uri,
 			Dockerfile: aws.StringValue(buildArgs.Dockerfile),
 			Context:    aws.StringValue(buildArgs.Context),
 			Args:       buildArgs.Args,
