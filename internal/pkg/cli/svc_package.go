@@ -216,7 +216,7 @@ func (o *packageSvcOpts) Execute() error {
 	if o.showDiff {
 		if err := diff(gen, stack.template, o.diffWriter); err != nil {
 			var errHasDiff *errHasDiff
-			if !errors.As(err, &errHasDiff) {
+			if errors.As(err, &errHasDiff) {
 				return err
 			}
 			return &errDiffNotAvailable{
@@ -356,12 +356,13 @@ func (o *packageSvcOpts) getWorkloadStack(generator workloadStackGenerator) (*cf
 	}
 	output, err := generator.GenerateCloudFormationTemplate(&clideploy.GenerateCloudFormationTemplateInput{
 		StackRuntimeConfiguration: clideploy.StackRuntimeConfiguration{
-			RootUserARN:        o.rootUserARN,
-			Tags:               targetApp.Tags,
-			EnvFileARNs:        uploadOut.EnvFileARNs,
-			ImageDigests:       uploadOut.ImageDigests,
-			AddonsURL:          uploadOut.AddonsURL,
-			CustomResourceURLs: uploadOut.CustomResourceURLs,
+			RootUserARN:               o.rootUserARN,
+			Tags:                      targetApp.Tags,
+			EnvFileARNs:               uploadOut.EnvFileARNs,
+			ImageDigests:              uploadOut.ImageDigests,
+			AddonsURL:                 uploadOut.AddonsURL,
+			CustomResourceURLs:        uploadOut.CustomResourceURLs,
+			StaticSiteAssetMappingURL: uploadOut.StaticSiteAssetMappingLocation,
 		},
 	})
 	if err != nil {

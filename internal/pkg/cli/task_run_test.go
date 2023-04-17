@@ -11,16 +11,14 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
-
 	"github.com/aws/aws-sdk-go/aws/session"
 
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
-
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
 	ecsMocks "github.com/aws/copilot-cli/internal/pkg/ecs/mocks"
 
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
-	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/task"
 
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -762,8 +760,8 @@ func mockHasDefaultCluster(m runTaskMocks) {
 }
 
 func mockRepositoryAnytime(m runTaskMocks) {
-	m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Any()).AnyTimes()
-	m.repository.EXPECT().URI().AnyTimes()
+	m.repository.EXPECT().Login().AnyTimes()
+	m.repository.EXPECT().BuildAndPush(gomock.Any()).AnyTimes()
 }
 
 func TestTaskRunOpts_Execute(t *testing.T) {
@@ -773,6 +771,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 		tag         = "tag"
 	)
 	defaultBuildArguments := dockerengine.BuildArguments{
+		URI:     mockRepoURI,
 		Context: filepath.Dir(defaultDockerfilePath),
 		Tags:    []string{imageTagLatest},
 	}
@@ -834,7 +833,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 			},
 			wantedError: errors.New("provision resources for task my-task: error deploying"),
 		},
-		"error getting repo URI": {
+		"error performing docker login": {
 			setupMocks: func(m runTaskMocks) {
 				m.provider.EXPECT().Default().Return(&session.Session{}, nil)
 				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).AnyTimes()
@@ -844,11 +843,10 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 					Command:    []string{},
 					EntryPoint: []string{},
 				}).Return(nil)
-				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Eq(&defaultBuildArguments))
-				m.repository.EXPECT().URI().Return(mockRepoURI, errors.New("some error"))
+				m.repository.EXPECT().Login().Return(mockRepoURI, errors.New("some error"))
 				mockHasDefaultCluster(m)
 			},
-			wantedError: errors.New("get ECR repository URI: some error"),
+			wantedError: errors.New("login to docker: some error"),
 		},
 		"error updating resources": {
 			setupMocks: func(m runTaskMocks) {
@@ -860,8 +858,8 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 					Command:    []string{},
 					EntryPoint: []string{},
 				}).Return(nil)
-				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Eq(&defaultBuildArguments))
-				m.repository.EXPECT().URI().Return(mockRepoURI, nil)
+				m.repository.EXPECT().Login().Return(mockRepoURI, nil)
+				m.repository.EXPECT().BuildAndPush(gomock.Any())
 				m.deployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
 					Name:       inGroupName,
 					Image:      "uri/repo:latest",
@@ -913,13 +911,14 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 				m.provider.EXPECT().Default().Return(&session.Session{}, nil)
 				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).AnyTimes()
 				m.deployer.EXPECT().DeployTask(gomock.Any()).AnyTimes()
-				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Eq(
+				m.repository.EXPECT().Login().Return(mockRepoURI, nil)
+				m.repository.EXPECT().BuildAndPush(gomock.Eq(
 					&dockerengine.BuildArguments{
+						URI:     mockRepoURI,
 						Context: filepath.Dir(defaultDockerfilePath),
 						Tags:    []string{imageTagLatest, tag},
 					}),
 				)
-				m.repository.EXPECT().URI().AnyTimes()
 				m.runner.EXPECT().Run().AnyTimes()
 				mockHasDefaultCluster(m)
 			},
@@ -930,13 +929,14 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 				m.provider.EXPECT().Default().Return(&session.Session{}, nil)
 				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).AnyTimes()
 				m.deployer.EXPECT().DeployTask(gomock.Any()).AnyTimes()
-				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Eq(
+				m.repository.EXPECT().Login().Return(mockRepoURI, nil)
+				m.repository.EXPECT().BuildAndPush(gomock.Eq(
 					&dockerengine.BuildArguments{
+						URI:     mockRepoURI,
 						Context: "../../other",
 						Tags:    []string{imageTagLatest},
 					}),
 				)
-				m.repository.EXPECT().URI().AnyTimes()
 				m.runner.EXPECT().Run().AnyTimes()
 				mockHasDefaultCluster(m)
 			},
@@ -953,8 +953,8 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 					Command:    []string{"/bin/sh", "-c", "curl $ECS_CONTAINER_METADATA_URI_V4"},
 					EntryPoint: []string{"exec", "some command"},
 				}).Times(1).Return(nil)
-				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Eq(&defaultBuildArguments))
-				m.repository.EXPECT().URI().Return(mockRepoURI, nil)
+				m.repository.EXPECT().Login().Return(mockRepoURI, nil)
+				m.repository.EXPECT().BuildAndPush(gomock.Eq(&defaultBuildArguments))
 				m.deployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
 					Name:       inGroupName,
 					Image:      "uri/repo:latest",

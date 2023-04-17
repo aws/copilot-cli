@@ -155,6 +155,33 @@ func TestStaticSite_Template(t *testing.T) {
 		require.EqualError(t, err, "parse addons parameters for frontend: some error")
 	})
 
+	t.Run("returns a wrapped error when asset mapping url is invalid", func(t *testing.T) {
+		// GIVEN
+		addons := mockAddons{
+			tpl: `
+  Resources:
+    AdditionalResourcesPolicy:
+      Type: AWS::IAM::ManagedPolicy
+  Outputs:
+    AdditionalResourcesPolicyArn:
+      Value: hello`,
+		}
+		static, err := NewStaticSite(&StaticSiteConfig{
+			App:             &config.Application{},
+			EnvManifest:     &manifest.Environment{},
+			Manifest:        &manifest.StaticSite{},
+			Addons:          addons,
+			AssetMappingURL: "notAnS3URL",
+		})
+		require.NoError(t, err)
+
+		// WHEN
+		_, err = static.Template()
+
+		// THEN
+		require.EqualError(t, err, "cannot parse S3 URL notAnS3URL into bucket name and key")
+	})
+
 	t.Run("returns the error when parsing the service template fails", func(t *testing.T) {
 		// GIVEN
 		ctrl := gomock.NewController(t)
@@ -171,10 +198,11 @@ func TestStaticSite_Template(t *testing.T) {
       Value: hello`,
 		}
 		static, err := NewStaticSite(&StaticSiteConfig{
-			App:         &config.Application{},
-			EnvManifest: &manifest.Environment{},
-			Manifest:    &manifest.StaticSite{},
-			Addons:      addons,
+			App:             &config.Application{},
+			EnvManifest:     &manifest.Environment{},
+			Manifest:        &manifest.StaticSite{},
+			Addons:          addons,
+			AssetMappingURL: "s3://bucket/path/to/file",
 		})
 		static.parser = parser
 		require.NoError(t, err)

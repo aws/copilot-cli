@@ -254,9 +254,10 @@ func (o *deleteSvcOpts) deleteStacks(envs []*config.Environment) error {
 
 		cfClient := o.getSvcCFN(sess)
 		if err := cfClient.DeleteWorkload(deploy.DeleteWorkloadInput{
-			Name:    o.name,
-			EnvName: env.Name,
-			AppName: o.appName,
+			Name:             o.name,
+			EnvName:          env.Name,
+			AppName:          o.appName,
+			ExecutionRoleARN: env.ExecutionRoleARN,
 		}); err != nil {
 			return fmt.Errorf("delete service: %w", err)
 		}

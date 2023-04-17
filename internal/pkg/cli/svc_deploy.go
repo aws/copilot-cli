@@ -243,12 +243,13 @@ func (o *deploySvcOpts) Execute() error {
 	if o.showDiff {
 		output, err := deployer.GenerateCloudFormationTemplate(&clideploy.GenerateCloudFormationTemplateInput{
 			StackRuntimeConfiguration: clideploy.StackRuntimeConfiguration{
-				RootUserARN:        o.rootUserARN,
-				Tags:               targetApp.Tags,
-				EnvFileARNs:        uploadOut.EnvFileARNs,
-				ImageDigests:       uploadOut.ImageDigests,
-				AddonsURL:          uploadOut.AddonsURL,
-				CustomResourceURLs: uploadOut.CustomResourceURLs,
+				RootUserARN:               o.rootUserARN,
+				Tags:                      targetApp.Tags,
+				EnvFileARNs:               uploadOut.EnvFileARNs,
+				ImageDigests:              uploadOut.ImageDigests,
+				AddonsURL:                 uploadOut.AddonsURL,
+				CustomResourceURLs:        uploadOut.CustomResourceURLs,
+				StaticSiteAssetMappingURL: uploadOut.StaticSiteAssetMappingLocation,
 			},
 		})
 		if err != nil {
@@ -271,12 +272,13 @@ func (o *deploySvcOpts) Execute() error {
 	}
 	deployRecs, err := deployer.DeployWorkload(&clideploy.DeployWorkloadInput{
 		StackRuntimeConfiguration: clideploy.StackRuntimeConfiguration{
-			ImageDigests:       uploadOut.ImageDigests,
-			EnvFileARNs:        uploadOut.EnvFileARNs,
-			AddonsURL:          uploadOut.AddonsURL,
-			RootUserARN:        o.rootUserARN,
-			Tags:               tags.Merge(targetApp.Tags, o.resourceTags),
-			CustomResourceURLs: uploadOut.CustomResourceURLs,
+			ImageDigests:              uploadOut.ImageDigests,
+			EnvFileARNs:               uploadOut.EnvFileARNs,
+			AddonsURL:                 uploadOut.AddonsURL,
+			RootUserARN:               o.rootUserARN,
+			Tags:                      tags.Merge(targetApp.Tags, o.resourceTags),
+			CustomResourceURLs:        uploadOut.CustomResourceURLs,
+			StaticSiteAssetMappingURL: uploadOut.StaticSiteAssetMappingLocation,
 		},
 		Options: clideploy.Options{
 			ForceNewUpdate:  o.forceNewUpdate,
@@ -589,7 +591,7 @@ func (e *errFeatureIncompatibleWithEnvironment) RecommendActions() string {
 type errHasDiff struct{}
 
 func (e *errHasDiff) Error() string {
-	return "diff detected"
+	return ""
 }
 
 // ExitCode returns 1 for a non-empty diff.

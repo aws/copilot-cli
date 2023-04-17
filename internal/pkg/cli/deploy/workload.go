@@ -68,8 +68,9 @@ func (noopActionRecommender) RecommendedActions() []string {
 	return nil
 }
 
-type imageBuilderPusher interface {
-	BuildAndPush(docker repository.ContainerLoginBuildPusher, args *dockerengine.BuildArguments) (string, error)
+type repositoryService interface {
+	Login() (string, error)
+	BuildAndPush(args *dockerengine.BuildArguments) (string, error)
 }
 
 type templater interface {
@@ -104,18 +105,15 @@ type spinner interface {
 	Stop(label string)
 }
 
-type fileReader interface {
-	ReadFile(string) ([]byte, error)
-}
-
 // StackRuntimeConfiguration contains runtime configuration for a workload CloudFormation stack.
 type StackRuntimeConfiguration struct {
-	ImageDigests       map[string]ContainerImageIdentifier // Container name to image.
-	EnvFileARNs        map[string]string
-	AddonsURL          string
-	RootUserARN        string
-	Tags               map[string]string
-	CustomResourceURLs map[string]string
+	ImageDigests              map[string]ContainerImageIdentifier // Container name to image.
+	EnvFileARNs               map[string]string
+	AddonsURL                 string
+	RootUserARN               string
+	Tags                      map[string]string
+	CustomResourceURLs        map[string]string
+	StaticSiteAssetMappingURL string
 }
 
 // DeployWorkloadInput is the input of DeployWorkload.
@@ -152,18 +150,18 @@ type workloadDeployer struct {
 	workspacePath string
 
 	// Dependencies.
-	fs                 fileReader
-	s3Client           uploader
-	addons             stackBuilder
-	imageBuilderPusher imageBuilderPusher
-	deployer           serviceDeployer
-	tmplGetter         deployedTemplateGetter
-	endpointGetter     endpointGetter
-	spinner            spinner
-	templateFS         template.Reader
-	envVersionGetter   versionGetter
-	overrider          Overrider
-	customResources    customResourcesFunc
+	fs               afero.Fs
+	s3Client         uploader
+	addons           stackBuilder
+	repository       repositoryService
+	deployer         serviceDeployer
+	tmplGetter       deployedTemplateGetter
+	endpointGetter   endpointGetter
+	spinner          spinner
+	templateFS       template.Reader
+	envVersionGetter versionGetter
+	overrider        Overrider
+	customResources  customResourcesFunc
 
 	// Cached variables.
 	defaultSess              *session.Session
@@ -230,7 +228,7 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 	}
 
 	repoName := fmt.Sprintf("%s/%s", in.App.Name, in.Name)
-	imageBuilderPusher := repository.NewWithURI(
+	repository := repository.NewWithURI(
 		ecr.New(defaultSessEnvRegion), repoName, resources.RepositoryURLs[in.Name])
 	store := config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
 	envDescriber, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
@@ -252,26 +250,26 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 	}
 
 	cfn := cloudformation.New(envSession, cloudformation.WithProgressTracker(os.Stderr))
-	return &workloadDeployer{
-		name:               in.Name,
-		app:                in.App,
-		env:                in.Env,
-		image:              in.Image,
-		resources:          resources,
-		workspacePath:      ws.Path(),
-		fs:                 &afero.Afero{Fs: afero.NewOsFs()},
-		s3Client:           s3.New(envSession),
-		addons:             addons,
-		imageBuilderPusher: imageBuilderPusher,
-		deployer:           cfn,
-		tmplGetter:         cfn,
-		endpointGetter:     envDescriber,
-		spinner:            termprogress.NewSpinner(log.DiagnosticWriter),
-		templateFS:         template.New(),
-		envVersionGetter:   in.EnvVersionGetter,
-		overrider:          in.Overrider,
-		customResources:    in.customResources,
 
+	return &workloadDeployer{
+		name:                     in.Name,
+		app:                      in.App,
+		env:                      in.Env,
+		image:                    in.Image,
+		resources:                resources,
+		workspacePath:            ws.Path(),
+		fs:                       afero.NewOsFs(),
+		s3Client:                 s3.New(envSession),
+		addons:                   addons,
+		repository:               repository,
+		deployer:                 cfn,
+		tmplGetter:               cfn,
+		endpointGetter:           envDescriber,
+		spinner:                  termprogress.NewSpinner(log.DiagnosticWriter),
+		templateFS:               template.New(),
+		envVersionGetter:         in.EnvVersionGetter,
+		overrider:                in.Overrider,
+		customResources:          in.customResources,
 		defaultSess:              defaultSession,
 		defaultSessWithEnvRegion: defaultSessEnvRegion,
 		envSess:                  envSession,
@@ -365,9 +363,20 @@ func (d *workloadDeployer) uploadContainerImages(out *UploadArtifactsOutput) err
 	if len(buildArgsPerContainer) == 0 {
 		return nil
 	}
+	uri, err := d.repository.Login()
+	if err != nil {
+		return fmt.Errorf("login to image repository: %w", err)
+	}
 	out.ImageDigests = make(map[string]ContainerImageIdentifier, len(buildArgsPerContainer))
 	for name, buildArgs := range buildArgsPerContainer {
-		digest, err := d.imageBuilderPusher.BuildAndPush(dockerengine.New(exec.NewCmd()), buildArgs)
+		buildArgs.URI = uri
+		buildArgsList, err := buildArgs.GenerateDockerBuildArgs(dockerengine.New(exec.NewCmd()))
+		if err != nil {
+			return fmt.Errorf("generate docker build args: %w", err)
+		}
+		// TODO(adi) handle this log in syncBuffer's Print function
+		log.Infof("Building your container image: docker %s\n", strings.Join(buildArgsList, " "))
+		digest, err := d.repository.BuildAndPush(buildArgs)
 		if err != nil {
 			return fmt.Errorf("build and push image: %w", err)
 		}
@@ -445,10 +454,11 @@ type customResourcesFunc func(fs template.Reader) ([]*customresource.CustomResou
 
 // UploadArtifactsOutput is the output of UploadArtifacts.
 type UploadArtifactsOutput struct {
-	ImageDigests       map[string]ContainerImageIdentifier // Container name to image.
-	EnvFileARNs        map[string]string                   // map[container name]envFileARN
-	AddonsURL          string
-	CustomResourceURLs map[string]string
+	ImageDigests                   map[string]ContainerImageIdentifier // Container name to image.
+	EnvFileARNs                    map[string]string                   // map[container name]envFileARN
+	AddonsURL                      string
+	CustomResourceURLs             map[string]string
+	StaticSiteAssetMappingLocation string
 }
 
 // uploadArtifactFunc uploads an artifact and updates out
@@ -484,7 +494,7 @@ func (d *workloadDeployer) uploadCustomResources(out *UploadArtifactsOutput) err
 }
 
 type pushEnvFilesToS3BucketInput struct {
-	fs       fileReader
+	fs       afero.Fs
 	uploader uploader
 }
 
@@ -520,7 +530,7 @@ func (d *workloadDeployer) pushEnvFilesToS3Bucket(in *pushEnvFilesToS3BucketInpu
 	envFileARNs := make(map[string]string)
 
 	for path, containers := range uniqueEnvFiles {
-		content, err := in.fs.ReadFile(filepath.Join(d.workspacePath, path))
+		content, err := afero.ReadFile(in.fs, filepath.Join(d.workspacePath, path))
 		if err != nil {
 			return nil, fmt.Errorf("read env file %s: %w", path, err)
 		}
