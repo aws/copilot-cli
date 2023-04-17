@@ -30,7 +30,7 @@ type initSvcMocks struct {
 	mockPrompt       *mocks.Mockprompter
 	mockSel          *mocks.MockdockerfileSelector
 	mocktopicSel     *mocks.MocktopicSelector
-	mockDirFileSel   *mocks.MockdirFileSelector
+	mockSourceSel   *mocks.MockstaticSourceSelector
 	mockDockerfile   *mocks.MockdockerfileParser
 	mockDockerEngine *mocks.MockdockerEngine
 	mockMftReader    *mocks.MockmanifestReader
@@ -116,7 +116,10 @@ func TestSvcInitOpts_Validate(t *testing.T) {
 				m.mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{}, nil)
 			},
 			mockFileSystem: func(mockFS afero.Fs) {
-				mockFS.MkdirAll("hello", 0755)
+				err := mockFS.MkdirAll("hello", 0755)
+				if err != nil {
+					return 
+				}
 				afero.WriteFile(mockFS, "hello/Dockerfile", []byte("FROM nginx"), 0644)
 			},
 			wantedErr: errors.New(`invalid ingress type "invalid": must be one of Environment or Internet`),
@@ -707,7 +710,7 @@ type: Request-Driven Web Service`), nil)
 			setupMocks: func(m initSvcMocks) {
 				m.mockStore.EXPECT().GetService(mockAppName, wantedSvcName).Return(nil, &config.ErrNoSuchService{})
 				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
-				m.mockDirFileSel.EXPECT().StaticSources(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, mockError)
+				m.mockSourceSel.EXPECT().StaticSources(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, mockError)
 			},
 			wantedErr: fmt.Errorf("select local directory or file: mock error"),
 		},
@@ -717,7 +720,7 @@ type: Request-Driven Web Service`), nil)
 			setupMocks: func(m initSvcMocks) {
 				m.mockStore.EXPECT().GetService(mockAppName, wantedSvcName).Return(nil, &config.ErrNoSuchService{})
 				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
-				m.mockDirFileSel.EXPECT().StaticSources(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]string{mockFile}, nil)
+				m.mockSourceSel.EXPECT().StaticSources(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]string{mockFile}, nil)
 			},
 			wantedErr: fmt.Errorf("get Fileinfo describing my/mock/file.css: open my/mock/file.css: file does not exist"),
 		},
@@ -731,7 +734,7 @@ type: Request-Driven Web Service`), nil)
 			setupMocks: func(m initSvcMocks) {
 				m.mockStore.EXPECT().GetService(mockAppName, wantedSvcName).Return(nil, &config.ErrNoSuchService{})
 				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
-				m.mockDirFileSel.EXPECT().StaticSources(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]string{mockFile, mockDir}, nil)
+				m.mockSourceSel.EXPECT().StaticSources(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]string{mockFile, mockDir}, nil)
 			},
 
 			wantedAssets: []manifest.FileUpload{
@@ -757,7 +760,7 @@ type: Request-Driven Web Service`), nil)
 			mockDockerfile := mocks.NewMockdockerfileParser(ctrl)
 			mockSel := mocks.NewMockdockerfileSelector(ctrl)
 			mockTopicSel := mocks.NewMocktopicSelector(ctrl)
-			mockDirFileSel := mocks.NewMockdirFileSelector(ctrl)
+			mockSourceSel := mocks.NewMockstaticSourceSelector(ctrl)
 			mockDockerEngine := mocks.NewMockdockerEngine(ctrl)
 			mockManifestReader := mocks.NewMockmanifestReader(ctrl)
 			mockStore := mocks.NewMockstore(ctrl)
@@ -765,8 +768,8 @@ type: Request-Driven Web Service`), nil)
 				mockPrompt:       mockPrompt,
 				mockDockerfile:   mockDockerfile,
 				mockSel:          mockSel,
-				mocktopicSel:     mockTopicSel,
-				mockDirFileSel:   mockDirFileSel,
+				mocktopicSel:     mockTopicSel, 
+				mockSourceSel:   mockSourceSel,
 				mockDockerEngine: mockDockerEngine,
 				mockMftReader:    mockManifestReader,
 				mockStore:        mockStore,
@@ -799,7 +802,7 @@ type: Request-Driven Web Service`), nil)
 				mftReader:    mockManifestReader,
 				sel:          mockSel,
 				topicSel:     mockTopicSel,
-				sourceSel:    mockDirFileSel,
+				sourceSel:    mockSourceSel,
 				dockerEngine: mockDockerEngine,
 			}
 			if tc.mockFileSystem != nil {
