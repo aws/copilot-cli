@@ -799,7 +799,7 @@ type: Request-Driven Web Service`), nil)
 				mftReader:    mockManifestReader,
 				sel:          mockSel,
 				topicSel:     mockTopicSel,
-				dirFileSel:   mockDirFileSel,
+				sourceSel:    mockDirFileSel,
 				dockerEngine: mockDockerEngine,
 			}
 			if tc.mockFileSystem != nil {

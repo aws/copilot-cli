@@ -532,7 +532,7 @@ type wsSelector interface {
 	Workload(msg, help string) (string, error)
 }
 
-type dirFileSelector interface {
+type staticSourceSelector interface {
 	StaticSources(selPrompt, selHelp, notFoundPrompt, notFoundHelp string, pathValidator prompt.ValidatorFunc) ([]string, error)
 }
 

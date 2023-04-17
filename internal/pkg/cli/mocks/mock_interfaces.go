@@ -5920,31 +5920,31 @@ func (mr *MockwsSelectorMockRecorder) Workload(msg, help interface{}) *gomock.Ca
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Workload", reflect.TypeOf((*MockwsSelector)(nil).Workload), msg, help)
 }
 
-// MockdirFileSelector is a mock of dirFileSelector interface.
-type MockdirFileSelector struct {
+// MockstaticSourceSelector is a mock of staticSourceSelector interface.
+type MockstaticSourceSelector struct {
 	ctrl     *gomock.Controller
-	recorder *MockdirFileSelectorMockRecorder
+	recorder *MockstaticSourceSelectorMockRecorder
 }
 
-// MockdirFileSelectorMockRecorder is the mock recorder for MockdirFileSelector.
-type MockdirFileSelectorMockRecorder struct {
-	mock *MockdirFileSelector
+// MockstaticSourceSelectorMockRecorder is the mock recorder for MockstaticSourceSelector.
+type MockstaticSourceSelectorMockRecorder struct {
+	mock *MockstaticSourceSelector
 }
 
-// NewMockdirFileSelector creates a new mock instance.
-func NewMockdirFileSelector(ctrl *gomock.Controller) *MockdirFileSelector {
-	mock := &MockdirFileSelector{ctrl: ctrl}
-	mock.recorder = &MockdirFileSelectorMockRecorder{mock}
+// NewMockstaticSourceSelector creates a new mock instance.
+func NewMockstaticSourceSelector(ctrl *gomock.Controller) *MockstaticSourceSelector {
+	mock := &MockstaticSourceSelector{ctrl: ctrl}
+	mock.recorder = &MockstaticSourceSelectorMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockdirFileSelector) EXPECT() *MockdirFileSelectorMockRecorder {
+func (m *MockstaticSourceSelector) EXPECT() *MockstaticSourceSelectorMockRecorder {
 	return m.recorder
 }
 
 // StaticSources mocks base method.
-func (m *MockdirFileSelector) StaticSources(selPrompt, selHelp, notFoundPrompt, notFoundHelp string, pathValidator prompt.ValidatorFunc) ([]string, error) {
+func (m *MockstaticSourceSelector) StaticSources(selPrompt, selHelp, notFoundPrompt, notFoundHelp string, pathValidator prompt.ValidatorFunc) ([]string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "StaticSources", selPrompt, selHelp, notFoundPrompt, notFoundHelp, pathValidator)
 	ret0, _ := ret[0].([]string)
@@ -5953,9 +5953,9 @@ func (m *MockdirFileSelector) StaticSources(selPrompt, selHelp, notFoundPrompt, 
 }
 
 // StaticSources indicates an expected call of StaticSources.
-func (mr *MockdirFileSelectorMockRecorder) StaticSources(selPrompt, selHelp, notFoundPrompt, notFoundHelp, pathValidator interface{}) *gomock.Call {
+func (mr *MockstaticSourceSelectorMockRecorder) StaticSources(selPrompt, selHelp, notFoundPrompt, notFoundHelp, pathValidator interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StaticSources", reflect.TypeOf((*MockdirFileSelector)(nil).StaticSources), selPrompt, selHelp, notFoundPrompt, notFoundHelp, pathValidator)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StaticSources", reflect.TypeOf((*MockstaticSourceSelector)(nil).StaticSources), selPrompt, selHelp, notFoundPrompt, notFoundHelp, pathValidator)
 }
 
 // MockscheduleSelector is a mock of scheduleSelector interface.

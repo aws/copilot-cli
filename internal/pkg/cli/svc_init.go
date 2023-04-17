@@ -143,7 +143,7 @@ type initSvcOpts struct {
 	store        store
 	dockerEngine dockerEngine
 	sel          dockerfileSelector
-	dirFileSel   dirFileSelector
+	sourceSel    staticSourceSelector
 	topicSel     topicSelector
 	mftReader    manifestReader
 
@@ -205,7 +205,7 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 		prompt:       prompter,
 		sel:          sel,
 		topicSel:     snsSel,
-		dirFileSel:   sel,
+		sourceSel:    sel,
 		mftReader:    ws,
 		dockerEngine: dockerengine.New(exec.NewCmd()),
 		wsAppName:    tryReadingAppName(),
@@ -526,7 +526,7 @@ func (o *initSvcOpts) askImage() error {
 }
 
 func (o *initSvcOpts) askSource() ([]string, error) {
-	sources, err := o.dirFileSel.StaticSources(
+	sources, err := o.sourceSel.StaticSources(
 		fmt.Sprintf(fmtStaticSiteInitDirFilePrompt, color.HighlightUserInput(o.name)),
 		staticSiteInitDirFileHelpPrompt,
 		fmt.Sprintf(fmtStaticSiteInitDirFilePathPrompt, color.HighlightUserInput(o.name)),
