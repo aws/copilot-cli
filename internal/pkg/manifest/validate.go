@@ -823,12 +823,12 @@ func (l LoadBalancedWebServiceConfig) validateGracePeriod() error {
 }
 
 // validateGracePeriodForALB validates if ALB has grace period mentioned in their additional listeners rules.
-func (l LoadBalancedWebServiceConfig) validateGracePeriodForALB() (bool, error) {
+func (cfg *LoadBalancedWebServiceConfig) validateGracePeriodForALB() (bool, error) {
 	var exist bool
-	if l.HTTPOrBool.Main.HealthCheck.Advanced.GracePeriod != nil {
+	if cfg.HTTPOrBool.Main.HealthCheck.Advanced.GracePeriod != nil {
 		exist = true
 	}
-	for idx, rule := range l.HTTPOrBool.AdditionalRoutingRules {
+	for idx, rule := range cfg.HTTPOrBool.AdditionalRoutingRules {
 		if rule.HealthCheck.Advanced.GracePeriod != nil {
 			return exist, &errGracePeriodSpecifiedInAdditionalField{
 				field: fmt.Sprintf("http.additional_rules[%d].healthcheck.grace_period", idx),
@@ -840,12 +840,12 @@ func (l LoadBalancedWebServiceConfig) validateGracePeriodForALB() (bool, error) 
 }
 
 // validateGracePeriodForNLB validates if NLB has grace period mentioned in their additional listeners.
-func (l LoadBalancedWebServiceConfig) validateGracePeriodForNLB() (bool, error) {
+func (cfg *LoadBalancedWebServiceConfig) validateGracePeriodForNLB() (bool, error) {
 	var exist bool
-	if l.NLBConfig.Listener.HealthCheck.GracePeriod != nil {
+	if cfg.NLBConfig.Listener.HealthCheck.GracePeriod != nil {
 		exist = true
 	}
-	for idx, listener := range l.NLBConfig.AdditionalListeners {
+	for idx, listener := range cfg.NLBConfig.AdditionalListeners {
 		if listener.HealthCheck.GracePeriod != nil {
 			return exist, &errGracePeriodSpecifiedInAdditionalField{
 				field: fmt.Sprintf("nlb.additional_listeners[%d].healthcheck.grace_period", idx),
