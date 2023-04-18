@@ -14,7 +14,6 @@ CloudformationExecutionRole:
         Principal:
           Service:
           - 'cloudformation.amazonaws.com'
-          - 'lambda.amazonaws.com'
         Action: sts:AssumeRole
   {{- if .PermissionsBoundary}}
     PermissionsBoundary: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/{{.PermissionsBoundary}}'
