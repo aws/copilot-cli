@@ -92,6 +92,9 @@ line4 from image2`)
 				buf.MarkDone()
 			}
 			ltp.Print()
+
+			// checking multiple calls to Print will result in
+			// printing a buffer only once when it enters printAll.
 			if tc.printAll {
 				for i := 0; i < 3; i++ {
 					ltp.Print()
