@@ -415,12 +415,12 @@ func (d *workloadDeployer) uploadContainerImages(out *UploadArtifactsOutput) err
 				return fmt.Errorf("build and push the image %q: %w", name, err)
 			}
 			digestsMu.Lock()
+			defer digestsMu.Unlock()
 			out.ImageDigests[name] = ContainerImageIdentifier{
 				Digest:            digest,
 				CustomTag:         d.image.CustomTag,
 				GitShortCommitTag: d.image.GitShortCommitTag,
 			}
-			digestsMu.Unlock()
 			return nil
 		})
 		g.Go(func() error {
