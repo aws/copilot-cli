@@ -391,12 +391,10 @@ func (d *workloadDeployer) uploadContainerImages(out *UploadArtifactsOutput) err
 
 	var digestsMu sync.Mutex
 	out.ImageDigests = make(map[string]ContainerImageIdentifier, len(buildArgsPerContainer))
-	bufferIdx := 0
-	labeledBuffers := make([]*syncbuffer.LabeledSyncBuffer, len(buildArgsPerContainer))
+	var labeledBuffers []*syncbuffer.LabeledSyncBuffer
 	g, ctx := errgroup.WithContext(context.Background())
 	cursor := cursor.New()
 	cursor.Hide()
-
 	for name, buildArgs := range buildArgsPerContainer {
 		// create a copy of loop variables to avoid data race.
 		name := name
@@ -405,18 +403,16 @@ func (d *workloadDeployer) uploadContainerImages(out *UploadArtifactsOutput) err
 		buildArgs.URI = uri
 		buildArgsList, err := buildArgs.GenerateDockerBuildArgs(dockerengine.New(exec.NewCmd()))
 		if err != nil {
-			return fmt.Errorf("generate docker build args for %q's image: %w", name, err)
+			return fmt.Errorf("generate docker build args for %q: %w", name, err)
 		}
 		buf := syncbuffer.New()
-		labeledBuffer := buf.WithLabel(fmt.Sprintf("Building your container image %s: docker %s", name, strings.Join(buildArgsList, " ")))
-		labeledBuffers[bufferIdx] = labeledBuffer
-		bufferIdx++
+		labeledBuffers = append(labeledBuffers, buf.WithLabel(fmt.Sprintf("Building your container image %q: docker %s", name, strings.Join(buildArgsList, " "))))
 		pr, pw := io.Pipe()
 		g.Go(func() error {
 			defer pw.Close()
 			digest, err := d.repository.BuildAndPush(ctx, buildArgs, pw)
 			if err != nil {
-				return fmt.Errorf("build and push the image for %q container: %w", name, err)
+				return fmt.Errorf("build and push the image %q: %w", name, err)
 			}
 			digestsMu.Lock()
 			out.ImageDigests[name] = ContainerImageIdentifier{
@@ -429,27 +425,26 @@ func (d *workloadDeployer) uploadContainerImages(out *UploadArtifactsOutput) err
 		})
 		g.Go(func() error {
 			if err := buf.Copy(pr); err != nil {
-				return fmt.Errorf("copying build and push output for %q container: %w", name, err)
+				return fmt.Errorf("copy build and push output for %q: %w", name, err)
 			}
 			return nil
 		})
 	}
 	opts := []syncbuffer.LabeledTermPrinterOption{syncbuffer.WithPadding(paddingInSpacesForBuildAndPush)}
-	if !isCIEnvironment() {
+	if os.Getenv("CI") != "true" {
 		opts = append(opts, syncbuffer.WithNumLines(defaultNumLinesForBuildAndPush))
 	}
 	ltp := d.labeledTermPrinter(os.Stderr, labeledBuffers, opts...)
 	g.Go(func() error {
 		for {
 			if err := ltp.Print(); err != nil {
-				return fmt.Errorf("printing logs of docker build and push: %w", err)
+				return fmt.Errorf("print logs: %w", err)
 			}
 			if ltp.IsDone() {
-				break
+				return nil
 			}
 			time.Sleep(pollIntervalForBuildAndPush)
 		}
-		return nil
 	})
 	if err := g.Wait(); err != nil {
 		return err
@@ -500,13 +495,6 @@ func buildArgsPerContainer(name, workspacePath string, img ContainerImageIdentif
 		}
 	}
 	return dArgs, nil
-}
-
-// isCIEnvironment checks if the current environment is a continuous integration (CI) system.
-// Returns true by looking for the "CI" environment variable  if it's set to "true", otherwise false.
-func isCIEnvironment() bool {
-	ci, _ := os.LookupEnv("CI")
-	return ci == "true"
 }
 
 func (d *workloadDeployer) uploadArtifactsToS3(out *UploadArtifactsOutput) error {

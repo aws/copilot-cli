@@ -220,7 +220,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				m.mockLabeledTermPrinter.EXPECT().IsDone().Return(true).AnyTimes()
 				m.mockLabeledTermPrinter.EXPECT().Print().Return(nil).AnyTimes()
 			},
-			wantErr: fmt.Errorf("build and push the image for \"mockWkld\" container: some error"),
+			wantErr: fmt.Errorf("build and push the image \"mockWkld\": some error"),
 		},
 		"build and push image with usertag successfully": {
 			inMockUserTag: "v1.0",
