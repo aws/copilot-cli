@@ -97,12 +97,18 @@ func (s *treeWriter) writeMod(node diffNode, formatter formatter) error {
 
 func (s *treeWriter) writeDel(node diffNode, formatter formatter) error {
 	content, err := formatter.formatDel(node)
+	if err != nil {
+		return err
+	}
 	_, err = s.writer.Write([]byte(color.Red.Sprint(content + "\n")))
 	return err
 }
 
 func (s *treeWriter) writeInsert(node diffNode, formatter formatter) error {
 	content, err := formatter.formatInsert(node)
+	if err != nil {
+		return err
+	}
 	_, err = s.writer.Write([]byte(color.Green.Sprint(content + "\n")))
 	return err
 }
