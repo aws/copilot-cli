@@ -429,7 +429,7 @@ func (d *workloadDeployer) uploadContainerImages(out *UploadArtifactsOutput) err
 		})
 		g.Go(func() error {
 			if err := buf.Copy(pr); err != nil {
-				return fmt.Errorf("copying build and push output for container image %s: %w", name, err)
+				return fmt.Errorf("copying build and push output for %q container: %w", name, err)
 			}
 			return nil
 		})
