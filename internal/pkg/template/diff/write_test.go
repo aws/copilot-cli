@@ -110,7 +110,7 @@ Mary:
     (1 unchanged item)
 `,
 		},
-		"list with nested lists change": {
+		"change a list with nested lists": {
 			old: `
 StrawberryPopularitySurvey:
   - Name: Dog
@@ -150,6 +150,42 @@ StrawberryPopularitySurvey:
           ~ - (changed item)
             ~ IsHoney:
                 ~ IsIt: no -> no, but it's fine
+    (1 unchanged item)
+`,
+		},
+		"change a list with nested maps": {
+			old: `
+StrawberryPopularitySurvey:
+  - Name: Dog
+    LikeStrawberry: ver much
+  - Name: Bear
+    LikeStrawberry:
+      Flavor: meh
+      Texture:
+        UnderRoomTemperature: acceptable
+        Frozen: too hard
+  - Name: Cat
+    LikeStrawberry: ew`,
+			curr: `
+StrawberryPopularitySurvey:
+  - Name: Dog
+    LikeStrawberry: ver much
+  - Name: Bear
+    LikeStrawberry:
+      Flavor: meh
+      Texture:
+        UnderRoomTemperature: noice
+        Frozen: too hard
+    ChangeOfMind: yeah
+  - Name: Cat
+    LikeStrawberry: ew`,
+			wanted: `
+~ StrawberryPopularitySurvey:
+    (1 unchanged item)
+    ~ - (changed item)
+      + ChangeOfMind: yeah
+      ~ LikeStrawberry/Texture:
+          ~ UnderRoomTemperature: acceptable -> noice
     (1 unchanged item)
 `,
 		},
