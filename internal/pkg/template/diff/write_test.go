@@ -55,15 +55,25 @@ Mary:
 			curr: `
 Mary:
   Height:
-    cm: 168`,
+    cm:
+      truly:
+        really: 168
+    inch:
+      really: 5.2`,
 			old: `
 Mary:
   Height:
-    cm: 190`,
+    cm:
+      truly:
+        really: 190
+    inch:
+      really: 6`,
 			wanted: `
-~ Mary:
-    ~ Height:
-        ~ cm: 190 -> 168
+~ Mary/Height:
+    ~ cm/truly:
+        ~ really: 190 -> 168
+    ~ inch:
+        ~ really: 6 -> 5.2
 `,
 		},
 		"list does not change": {
@@ -100,7 +110,7 @@ Mary:
     (1 unchanged item)
 `,
 		},
-		"list with a map value changed": {
+		"list with nested lists change": {
 			old: `
 StrawberryPopularitySurvey:
   - Name: Dog
@@ -323,22 +333,19 @@ Resources:
     - IsDefaultRootPath: !Equals [!Ref RulePath, "/"]
     + IsGovCloud: !Equals [!Ref "AWS::Partition", "aws-us-gov"]
 ~ Resources:
-    ~ HTTPRuleWithDomainPriorityAction:
-        ~ Properties:
-            - RulePath: !Ref RulePath
-            + RulePath: ["/"]
-    ~ Service:
-        ~ Properties:
-            + ServiceConnectConfiguration: !If
-            +     - IsGovCloud
-            +     - !Ref AWS::NoValue
-            +     - Enabled: False
-            ~ ServiceRegistries:
-                ~ - (changed item)
-                  ~ Port: !Ref ContainerPort -> !Ref TargetPort
-    ~ TargetGroup:
-        ~ Properties:
-            ~ Port: !Ref ContainerPort -> 80
+    ~ HTTPRuleWithDomainPriorityAction/Properties:
+        - RulePath: !Ref RulePath
+        + RulePath: ["/"]
+    ~ Service/Properties:
+        + ServiceConnectConfiguration: !If
+        +     - IsGovCloud
+        +     - !Ref AWS::NoValue
+        +     - Enabled: False
+        ~ ServiceRegistries:
+            ~ - (changed item)
+              ~ Port: !Ref ContainerPort -> !Ref TargetPort
+    ~ TargetGroup/Properties:
+        ~ Port: !Ref ContainerPort -> 80
 `,
 		},
 		"no diff": {

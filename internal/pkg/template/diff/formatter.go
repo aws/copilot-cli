@@ -15,7 +15,7 @@ type formatter interface {
 	formatInsert(node diffNode) (string, error)
 	formatDel(node diffNode) (string, error)
 	formatMod(node diffNode) (string, error)
-	formatPath(node diffNode) string
+	formatPath(node diffNode) (string, diffNode)
 	nextIndent() int
 }
 
@@ -56,9 +56,9 @@ func (f *seqItemFormatter) formatMod(node diffNode) (string, error) {
 	return processMultiline(content, prefixByFn(prefixMod), indentByFn(f.indent)), nil
 }
 
-func (f *seqItemFormatter) formatPath(_ diffNode) string {
+func (f *seqItemFormatter) formatPath(node diffNode) (string, diffNode) {
 	content := process(color.Faint.Sprint("- (changed item)"), prefixByFn(prefixMod), indentByFn(f.indent))
-	return content + "\n"
+	return content + "\n", node
 }
 
 func (f *seqItemFormatter) nextIndent() int {
@@ -123,9 +123,26 @@ func (f *keyedFormatter) formatMod(node diffNode) (string, error) {
 	return processMultiline(content, prefixByFn(prefixMod), indentByFn(f.indent)), nil
 }
 
-func (f *keyedFormatter) formatPath(node diffNode) string {
-	content := process(node.key()+":", prefixByFn(prefixMod), indentByFn(f.indent))
-	return content + "\n"
+// formatPath stringifies a diff path such that all keys with exactly one child are aggregated into one line.
+// For example, `HTTPRuleWithDomainPriorityAction/Properties`.
+// It returns the stringified path, as well as the node to which the last key on the path belongs.
+func (f *keyedFormatter) formatPath(keyNode diffNode) (string, diffNode) {
+	content := keyNode.key()
+	for {
+		if len(keyNode.children()) != 1 {
+			break
+		}
+		peek := keyNode.children()[0]
+		if len(peek.children()) == 0 {
+			break
+		}
+		if _, ok := peek.(*node); !ok {
+			break
+		}
+		keyNode = peek
+		content = content + "/" + keyNode.key()
+	}
+	return process(content+":"+"\n", prefixByFn(prefixMod), indentByFn(f.indent)), keyNode
 }
 
 func (f *keyedFormatter) nextIndent() int {
@@ -154,8 +171,8 @@ func (f *documentFormatter) formatInsert(node diffNode) (string, error) {
 	return processMultiline(string(raw), prefixByFn(prefixAdd), indentByFn(0)), nil
 }
 
-func (f *documentFormatter) formatPath(_ diffNode) string {
-	return ""
+func (f *documentFormatter) formatPath(node diffNode) (string, diffNode) {
+	return "", node
 }
 
 func (f *documentFormatter) nextIndent() int {

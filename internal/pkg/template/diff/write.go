@@ -52,14 +52,16 @@ func (s *treeWriter) writeTree(node diffNode, indent int) error {
 	case *seqItemNode:
 		formatter = &seqItemFormatter{indent}
 	default:
-		formatter = &keyedFormatter{node.key(), indent}
+		formatter = &keyedFormatter{key: node.key(), indent: indent}
 	}
 	if len(node.children()) == 0 {
 		return s.writeLeaf(node, formatter)
 	}
-	if _, err := s.writer.Write([]byte(formatter.formatPath(node))); err != nil {
+	path, currNode := formatter.formatPath(node)
+	if _, err := s.writer.Write([]byte(path)); err != nil {
 		return err
 	}
+	node = currNode
 	for _, child := range node.children() {
 		err := s.writeTree(child, formatter.nextIndent())
 		if err != nil {
