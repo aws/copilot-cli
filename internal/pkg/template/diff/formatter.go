@@ -123,8 +123,8 @@ func (f *keyedFormatter) formatMod(node diffNode) (string, error) {
 	return processMultiline(content, prefixByFn(prefixMod), indentByFn(f.indent)), nil
 }
 
-// formatPath stringifies a diff path such that all keys with exactly one child are aggregated into one line.
-// For example, `HTTPRuleWithDomainPriorityAction/Properties`.
+// joinPath collapses all key names under keyNode into one line as long as there is only modification under the key.
+// For example, if only the `DesiredCount` of an ECS service is changed, then the returned path becomes `/Resources/Service/Properties/DesiredCount`. If multiple entries of an ECS service is changed, then the returned path is: `/Resources/Service/Properties`.
 // It returns the stringified path, as well as the node to which the last key on the path belongs.
 func (f *keyedFormatter) formatPath(keyNode diffNode) (string, diffNode) {
 	content := keyNode.key()
