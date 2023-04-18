@@ -65,10 +65,7 @@ const (
 const (
 	paddingInSpacesForBuildAndPush = 5
 	pollIntervalForBuildAndPush    = 60 * time.Millisecond
-)
-
-var (
-	numLinesForBuildAndPush = 5
+	defaultNumLinesForBuildAndPush = 5
 )
 
 // ActionRecommender contains methods that output action recommendation.
@@ -158,8 +155,6 @@ type GenerateCloudFormationTemplateOutput struct {
 	Parameters string
 }
 
-type labeledTermPrinterFunc func(fw syncbuffer.FileWriter, bufs []*syncbuffer.LabeledSyncBuffer, opts ...syncbuffer.LabeledTermPrinterOption) labeledTermPrinter
-
 type workloadDeployer struct {
 	name          string
 	app           *config.Application
@@ -183,7 +178,7 @@ type workloadDeployer struct {
 	envVersionGetter   versionGetter
 	overrider          Overrider
 	customResources    customResourcesFunc
-	labeledTermPrinter labeledTermPrinterFunc
+	labeledTermPrinter func(fw syncbuffer.FileWriter, bufs []*syncbuffer.LabeledSyncBuffer, opts ...syncbuffer.LabeledTermPrinterOption) labeledTermPrinter
 
 	// Cached variables.
 	defaultSess              *session.Session
@@ -273,6 +268,9 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 
 	cfn := cloudformation.New(envSession, cloudformation.WithProgressTracker(os.Stderr))
 
+	labeledTermPrinter := func(fw syncbuffer.FileWriter, bufs []*syncbuffer.LabeledSyncBuffer, opts ...syncbuffer.LabeledTermPrinterOption) labeledTermPrinter {
+		return syncbuffer.NewLabeledTermPrinter(fw, bufs, opts...)
+	}
 	return &workloadDeployer{
 		name:                     in.Name,
 		app:                      in.App,
@@ -297,9 +295,7 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 		envSess:                  envSession,
 		store:                    store,
 		envConfig:                envConfig,
-		labeledTermPrinter: func(fw syncbuffer.FileWriter, bufs []*syncbuffer.LabeledSyncBuffer, opts ...syncbuffer.LabeledTermPrinterOption) labeledTermPrinter {
-			return syncbuffer.NewLabeledTermPrinter(fw, bufs, opts...)
-		},
+		labeledTermPrinter:       labeledTermPrinter,
 
 		mft:    in.Mft,
 		rawMft: in.RawMft,
@@ -409,7 +405,7 @@ func (d *workloadDeployer) uploadContainerImages(out *UploadArtifactsOutput) err
 		buildArgs.URI = uri
 		buildArgsList, err := buildArgs.GenerateDockerBuildArgs(dockerengine.New(exec.NewCmd()))
 		if err != nil {
-			return fmt.Errorf("generate docker build args of image %s: %w", name, err)
+			return fmt.Errorf("generate docker build args for %q's image: %w", name, err)
 		}
 		buf := syncbuffer.New()
 		labeledBuffer := buf.WithLabel(fmt.Sprintf("Building your container image %s: docker %s", name, strings.Join(buildArgsList, " ")))
@@ -420,7 +416,7 @@ func (d *workloadDeployer) uploadContainerImages(out *UploadArtifactsOutput) err
 			defer pw.Close()
 			digest, err := d.repository.BuildAndPush(ctx, buildArgs, pw)
 			if err != nil {
-				return fmt.Errorf("build and push image %s: %w", name, err)
+				return fmt.Errorf("build and push the image for %q container: %w", name, err)
 			}
 			digestsMu.Lock()
 			out.ImageDigests[name] = ContainerImageIdentifier{
@@ -440,7 +436,7 @@ func (d *workloadDeployer) uploadContainerImages(out *UploadArtifactsOutput) err
 	}
 	opts := []syncbuffer.LabeledTermPrinterOption{syncbuffer.WithPadding(paddingInSpacesForBuildAndPush)}
 	if !isCIEnvironment() {
-		opts = append(opts, syncbuffer.WithNumLines(numLinesForBuildAndPush))
+		opts = append(opts, syncbuffer.WithNumLines(defaultNumLinesForBuildAndPush))
 	}
 	ltp := d.labeledTermPrinter(os.Stderr, labeledBuffers, opts...)
 	g.Go(func() error {

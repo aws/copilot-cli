@@ -116,6 +116,8 @@ func (ltp *LabeledTermPrinter) printAll() error {
 		if _, err := ltp.writeLines(buf.label, outputLogs); err != nil {
 			return fmt.Errorf("write logs: %w", err)
 		}
+		ltp.buffers = append(ltp.buffers[:idx], ltp.buffers[idx+1:]...)
+		idx--
 	}
 	return nil
 }

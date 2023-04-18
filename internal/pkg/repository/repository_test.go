@@ -56,6 +56,7 @@ func TestRepository_BuildAndPush(t *testing.T) {
 			},
 			inMockDocker: func(m *mocks.MockContainerLoginBuildPusher) {
 				m.EXPECT().Build(ctx, &defaultDockerArguments, gomock.Any()).Return(errors.New("error building image"))
+				m.EXPECT().Push(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
 			wantedError: fmt.Errorf("build Dockerfile at %s: error building image", inDockerfilePath),
 		},
