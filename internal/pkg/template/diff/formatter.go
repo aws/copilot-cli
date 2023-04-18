@@ -48,7 +48,7 @@ func (f *seqItemFormatter) formatInsert(node diffNode) (string, error) {
 }
 
 func (f *seqItemFormatter) formatMod(node diffNode) (string, error) {
-	oldValue, newValue, err := parseModValues(node)
+	oldValue, newValue, err := marshalValues(node)
 	if err != nil {
 		return "", err
 	}
@@ -115,7 +115,7 @@ func (f *keyedFormatter) formatInsert(node diffNode) (string, error) {
 }
 
 func (f *keyedFormatter) formatMod(node diffNode) (string, error) {
-	oldValue, newValue, err := parseModValues(node)
+	oldValue, newValue, err := marshalValues(node)
 	if err != nil {
 		return "", err
 	}
@@ -162,7 +162,7 @@ func (f *documentFormatter) nextIndent() int {
 	return 0
 }
 
-func parseModValues(node diffNode) (string, string, error) {
+func marshalValues(node diffNode) (string, string, error) {
 	var oldValue, newValue string
 	if v, err := yaml.Marshal(node.oldYAML()); err != nil { // NOTE: Marshal handles YAML tags such as `!Ref` and `!Sub`.
 		return "", "", err
