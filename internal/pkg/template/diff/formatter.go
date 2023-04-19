@@ -71,7 +71,6 @@ func (f *seqItemFormatter) nextIndent() int {
 }
 
 type keyedFormatter struct {
-	key    string
 	indent int
 }
 
@@ -83,7 +82,7 @@ func (f *keyedFormatter) formatDel(node diffNode) (string, error) {
 			{
 				Kind:  yaml.ScalarNode,
 				Tag:   "!!str",
-				Value: f.key,
+				Value: node.key(),
 			},
 			node.oldYAML(),
 		},
@@ -102,7 +101,7 @@ func (f *keyedFormatter) formatInsert(node diffNode) (string, error) {
 			{
 				Kind:  yaml.ScalarNode,
 				Tag:   "!!str",
-				Value: f.key,
+				Value: node.key(),
 			},
 			node.newYAML(),
 		},

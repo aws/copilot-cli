@@ -52,7 +52,7 @@ func (s *treeWriter) writeTree(node diffNode, indent int) error {
 	case *seqItemNode:
 		formatter = &seqItemFormatter{indent}
 	default:
-		formatter = &keyedFormatter{key: node.key(), indent: indent}
+		formatter = &keyedFormatter{indent}
 	}
 	if len(node.children()) == 0 {
 		return s.writeLeaf(node, formatter)
