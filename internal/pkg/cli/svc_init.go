@@ -336,13 +336,13 @@ func (o *initSvcOpts) Execute() error {
 	if err != nil {
 		return err
 	}
-	portList := make([]uint16, len(o.ports))
+	ports := make([]uint16, len(o.ports))
 	for idx, port := range o.ports {
 		parsedPort, err := strconv.Atoi(port)
 		if err != nil {
 			return err
 		}
-		portList[idx] = uint16(parsedPort)
+		ports[idx] = uint16(parsedPort)
 	}
 	manifestPath, err := o.init.Service(&initialize.ServiceProps{
 		WorkloadProps: initialize.WorkloadProps{
@@ -357,7 +357,7 @@ func (o *initSvcOpts) Execute() error {
 			Topics:                  o.topics,
 			PrivateOnlyEnvironments: envs,
 		},
-		Ports:       portList,
+		Ports:       ports,
 		HealthCheck: hc,
 		Private:     strings.EqualFold(o.ingressType, ingressTypeEnvironment),
 	})
@@ -645,11 +645,7 @@ func (o *initSvcOpts) askSvcPort() (err error) {
 	if err != nil {
 		return fmt.Errorf("get port: %w", err)
 	}
-
-	if err != nil {
-		return fmt.Errorf("parse port string: %w", err)
-	}
-	portList := strings.Split(selectedPorts, ",") // make a list out of customer given input of space separated multiple ports
+	portList := strings.Split(selectedPorts, ",")
 	o.ports = make([]string, len(portList))
 	copy(o.ports, portList)
 	return nil

@@ -70,7 +70,6 @@ type LoadBalancedWebServiceProps struct {
 	Path  string
 	Ports []uint16
 
-	//HTTPVersion string               // Optional http protocol version such as gRPC, HTTP2.
 	HealthCheck ContainerHealthCheck // Optional healthcheck configuration.
 	Platform    PlatformArgsOrString // Optional platform configuration.
 }

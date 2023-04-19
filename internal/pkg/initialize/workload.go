@@ -223,7 +223,7 @@ func (w *WorkloadInitializer) initService(props *ServiceProps) (string, error) {
 
 	helpText := "Your manifest contains configurations like your container size and port."
 	if len(props.Ports) > 0 {
-		helpText = fmt.Sprintf("Your manifest contains configurations like your container size and port (:%s).", strings.Trim(strings.Replace(fmt.Sprint(props.Ports), " ", " ", -1), "[]"))
+		helpText = fmt.Sprintf("Your manifest contains configurations like your container size and port (:%s).", strings.Trim(strings.Replace(fmt.Sprint(props.Ports), " ", ",", -1), "[]"))
 	}
 	log.Infoln(color.Help(helpText))
 	log.Infoln()
