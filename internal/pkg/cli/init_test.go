@@ -19,7 +19,7 @@ import (
 
 func TestInitOpts_Run(t *testing.T) {
 	mockSchedule := "@hourly"
-	var mockPort uint16 = 80
+	mockPort := []string{"80"}
 	var mockAppName = "demo"
 	testCases := map[string]struct {
 		inShouldDeploy          bool
@@ -233,7 +233,7 @@ func TestInitOpts_Run(t *testing.T) {
 				appName:           &mockAppName,
 				initWkldVars:      &initWkldVars{},
 				schedule:          &mockSchedule,
-				port:              &mockPort,
+				ports:             &mockPort,
 				setupWorkloadInit: func(*initOpts, string) error { return nil },
 				useExistingWorkspaceForCMDs: func(opts *initOpts) error {
 					return nil

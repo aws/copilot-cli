@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -23,10 +23,6 @@ import (
 const (
 	jobWlType = "job"
 	svcWlType = "service"
-)
-
-const (
-	commonGRPCPort = uint16(50051)
 )
 
 var fmtErrUnrecognizedWlType = "unrecognized workload type %s"
@@ -84,7 +80,7 @@ type JobProps struct {
 // ServiceProps contains the information needed to represent a Service (port, HealthCheck, and workload common props).
 type ServiceProps struct {
 	WorkloadProps
-	Port        uint16
+	Ports       []uint16
 	HealthCheck manifest.ContainerHealthCheck
 	Private     bool
 	appDomain   *string
@@ -226,8 +222,8 @@ func (w *WorkloadInitializer) initService(props *ServiceProps) (string, error) {
 	log.Successf(manifestMsgFmt, svcWlType, color.HighlightUserInput(props.Name), color.HighlightResource(path))
 
 	helpText := "Your manifest contains configurations like your container size and port."
-	if props.Port != 0 {
-		helpText = fmt.Sprintf("Your manifest contains configurations like your container size and port (:%d).", props.Port)
+	if len(props.Ports) > 0 {
+		helpText = fmt.Sprintf("Your manifest contains configurations like your container size and port (:%s).", strings.Trim(strings.Replace(fmt.Sprint(props.Ports), " ", " ", -1), "[]"))
 	}
 	log.Infoln(color.Help(helpText))
 	log.Infoln()
@@ -308,12 +304,12 @@ func (w *WorkloadInitializer) newServiceManifest(i *ServiceProps) (encoding.Bina
 }
 
 func (w *WorkloadInitializer) newLoadBalancedWebServiceManifest(inProps *ServiceProps) (*manifest.LoadBalancedWebService, error) {
-	var httpVersion string
-	if inProps.Port == commonGRPCPort {
+	/*var httpVersion string
+	if inProps.Ports[0] == commonGRPCPort { // we set protocol to gRPC if the port is 50051 which we will continue to do for main listener rule hence inProps.Ports[0].
 		log.Infof("Detected port %s, setting HTTP protocol version to %s in the manifest.\n",
-			color.HighlightUserInput(strconv.Itoa(int(inProps.Port))), color.HighlightCode(manifest.GRPCProtocol))
+			color.HighlightUserInput(strconv.Itoa(int(inProps.Ports[0]))), color.HighlightCode(manifest.GRPCProtocol))
 		httpVersion = manifest.GRPCProtocol
-	}
+	}*/
 	outProps := &manifest.LoadBalancedWebServiceProps{
 		WorkloadProps: &manifest.WorkloadProps{
 			Name:                    inProps.Name,
@@ -321,9 +317,9 @@ func (w *WorkloadInitializer) newLoadBalancedWebServiceManifest(inProps *Service
 			Image:                   inProps.Image,
 			PrivateOnlyEnvironments: inProps.PrivateOnlyEnvironments,
 		},
-		Path:        "/",
-		Port:        inProps.Port,
-		HTTPVersion: httpVersion,
+		Path:  "/",
+		Ports: inProps.Ports,
+		//HTTPVersion: httpVersion,
 		HealthCheck: inProps.HealthCheck,
 		Platform:    inProps.Platform,
 	}
@@ -351,7 +347,7 @@ func (w *WorkloadInitializer) newRequestDrivenWebServiceManifest(i *ServiceProps
 			Dockerfile: i.DockerfilePath,
 			Image:      i.Image,
 		},
-		Port:     i.Port,
+		Port:     i.Ports[0],
 		Platform: i.Platform,
 		Private:  i.Private,
 	}
@@ -366,7 +362,7 @@ func newBackendServiceManifest(i *ServiceProps) (*manifest.BackendService, error
 			Image:                   i.Image,
 			PrivateOnlyEnvironments: i.PrivateOnlyEnvironments,
 		},
-		Port:        i.Port,
+		Port:        i.Ports[0],
 		HealthCheck: i.HealthCheck,
 		Platform:    i.Platform,
 	}), nil

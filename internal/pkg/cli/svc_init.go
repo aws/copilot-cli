@@ -79,8 +79,9 @@ Deployed resources (such as your ECR repository, logs) will contain this %[1]s's
 	wkldInitDockerfilePathHelpPrompt = "Path to Dockerfile to use for building your container image."
 
 	svcInitSvcPortPrompt     = "Which %s do you want customer traffic sent to?"
-	svcInitSvcPortHelpPrompt = `The port will be used by the load balancer to route incoming traffic to this service.
-You should set this to the port which your Dockerfile uses to communicate with the internet.`
+	svcInitSvcPortHelpPrompt = `The port(s) will be used by the load balancer to route incoming traffic to this service.
+You should set this to the port(s) which your Dockerfile uses to communicate with the internet.
+You can also specify multiple container ports in Load Balanced Web Service in a similar pattern to Dockerfile (ports separated by a space), i.e., 3000 3001	`
 
 	svcInitPublisherPrompt     = "Which topics do you want to subscribe to?"
 	svcInitPublisherHelpPrompt = `A publisher is an existing SNS Topic to which a service publishes messages. 
@@ -124,7 +125,7 @@ type initWkldVars struct {
 type initSvcVars struct {
 	initWkldVars
 
-	port        uint16
+	ports       []string
 	ingressType string
 }
 
@@ -240,9 +241,11 @@ func (o *initSvcOpts) Validate() error {
 			return err
 		}
 	}
-	if o.port != 0 {
-		if err := validateSvcPort(o.port); err != nil {
-			return err
+	if len(o.ports) > 0 {
+		for _, port := range o.ports {
+			if err := validateSvcPort(port); err != nil {
+				return err
+			}
 		}
 	}
 	if o.image != "" && o.wkldType == manifestinfo.RequestDrivenWebServiceType {
@@ -333,6 +336,14 @@ func (o *initSvcOpts) Execute() error {
 	if err != nil {
 		return err
 	}
+	portList := make([]uint16, len(o.ports))
+	for idx, port := range o.ports {
+		parsedPort, err := strconv.Atoi(port)
+		if err != nil {
+			return err
+		}
+		portList[idx] = uint16(parsedPort)
+	}
 	manifestPath, err := o.init.Service(&initialize.ServiceProps{
 		WorkloadProps: initialize.WorkloadProps{
 			App:            o.appName,
@@ -346,7 +357,7 @@ func (o *initSvcOpts) Execute() error {
 			Topics:                  o.topics,
 			PrivateOnlyEnvironments: envs,
 		},
-		Port:        o.port,
+		Ports:       portList,
 		HealthCheck: hc,
 		Private:     strings.EqualFold(o.ingressType, ingressTypeEnvironment),
 	})
@@ -573,7 +584,7 @@ func (o *initSvcOpts) askDockerfile() error {
 
 func (o *initSvcOpts) askSvcPort() (err error) {
 	// If the port flag was set, use that and don't ask.
-	if o.port != 0 {
+	if len(o.ports) > 0 {
 		return nil
 	}
 
@@ -593,7 +604,8 @@ func (o *initSvcOpts) askSvcPort() (err error) {
 		case 0:
 			// There were no ports detected, keep the default port prompt.
 		case 1:
-			o.port = ports[0].Port
+			o.ports = make([]string, 1)
+			o.ports[0] = strconv.Itoa(int(ports[0].Port))
 			return nil
 		default:
 			defaultPort = strconv.Itoa(int(ports[0].Port))
@@ -604,23 +616,45 @@ func (o *initSvcOpts) askSvcPort() (err error) {
 		return nil
 	}
 
-	port, err := o.prompt.Get(
-		fmt.Sprintf(svcInitSvcPortPrompt, color.Emphasize("port")),
+	if o.wkldType == manifestinfo.RequestDrivenWebServiceType {
+		selectedPorts, err := o.prompt.Get(
+			fmt.Sprintf(svcInitSvcPortPrompt, color.Emphasize("port")),
+			svcInitSvcPortHelpPrompt,
+			validateSvcPort,
+			prompt.WithDefaultInput(defaultPort),
+			prompt.WithFinalMessage("Port:"),
+		)
+		if err != nil {
+			return fmt.Errorf("get port: %w", err)
+		}
+		if len(strings.Split(selectedPorts, " ")) > 1 {
+			return fmt.Errorf("App Runner Service doesn't expose multiple ports")
+		}
+		o.ports = make([]string, 1)
+		o.ports[0] = selectedPorts
+		return nil
+	}
+
+	selectedPorts, err := o.prompt.Get(
+		fmt.Sprintf(svcInitSvcPortPrompt, color.Emphasize("port(s)")),
 		svcInitSvcPortHelpPrompt,
 		validateSvcPort,
 		prompt.WithDefaultInput(defaultPort),
-		prompt.WithFinalMessage("Port:"),
+		prompt.WithFinalMessage("Port(s):"),
 	)
 	if err != nil {
 		return fmt.Errorf("get port: %w", err)
 	}
 
-	portUint, err := strconv.ParseUint(port, 10, 16)
+	//portUint, err := strconv.ParseUint(ports, 10, 16)
 	if err != nil {
 		return fmt.Errorf("parse port string: %w", err)
 	}
-
-	o.port = uint16(portUint)
+	portList := strings.Split(selectedPorts, " ") // make a list out of customer given input of space separated multiple ports
+	o.ports = make([]string, len(portList))
+	for idx, port := range portList {
+		o.ports[idx] = port
+	}
 
 	return nil
 }
@@ -800,7 +834,7 @@ This command is also run as part of "copilot init".`,
 	cmd.Flags().StringVarP(&vars.wkldType, svcTypeFlag, typeFlagShort, "", svcTypeFlagDescription)
 	cmd.Flags().StringVarP(&vars.dockerfilePath, dockerFileFlag, dockerFileFlagShort, "", dockerFileFlagDescription)
 	cmd.Flags().StringVarP(&vars.image, imageFlag, imageFlagShort, "", imageFlagDescription)
-	cmd.Flags().Uint16Var(&vars.port, svcPortFlag, 0, svcPortFlagDescription)
+	cmd.Flags().StringArrayVar(&vars.ports, svcPortFlag, []string{}, svcPortFlagDescription)
 	cmd.Flags().StringArrayVar(&vars.subscriptions, subscribeTopicsFlag, []string{}, subscribeTopicsFlagDescription)
 	cmd.Flags().BoolVar(&vars.noSubscribe, noSubscriptionFlag, false, noSubscriptionFlagDescription)
 	cmd.Flags().StringVar(&vars.ingressType, ingressTypeFlag, "", ingressTypeFlagDescription)

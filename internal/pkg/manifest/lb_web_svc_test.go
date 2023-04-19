@@ -28,8 +28,8 @@ func TestNewHTTPLoadBalancedWebService(t *testing.T) {
 					Name:       "frontend",
 					Dockerfile: "./Dockerfile",
 				},
-				Path: "/",
-				Port: 80,
+				Path:  "/",
+				Ports: []uint16{80},
 			},
 
 			wanted: &LoadBalancedWebService{
@@ -95,10 +95,9 @@ func TestNewHTTPLoadBalancedWebService(t *testing.T) {
 						"metrics",
 					},
 				},
-				Path: "/",
-				Port: 80,
+				Path:  "/",
+				Ports: []uint16{80},
 
-				HTTPVersion: "gRPC",
 				HealthCheck: ContainerHealthCheck{
 					Command: []string{"CMD", "curl -f http://localhost:8080 || exit 1"},
 				},
@@ -131,8 +130,7 @@ func TestNewHTTPLoadBalancedWebService(t *testing.T) {
 					HTTPOrBool: HTTPOrBool{
 						HTTP: HTTP{
 							Main: RoutingRule{
-								Path:            stringP("/"),
-								ProtocolVersion: aws.String("gRPC"),
+								Path: stringP("/"),
 								HealthCheck: HealthCheckArgsOrString{
 									Union: BasicToUnion[string, HTTPHealthCheckArgs]("/"),
 								},

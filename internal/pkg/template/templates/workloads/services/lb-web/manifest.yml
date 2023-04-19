@@ -16,6 +16,18 @@ http:
   path: '{{.HTTPOrBool.Main.Path}}'
   # You can specify a custom health check path. The default is "/".
   # healthcheck: '{{.HTTPOrBool.Main.HealthCheck.Basic}}'
+  {{- if gt (len .HTTPOrBool.AdditionalRoutingRules) 0}}
+  # You can specify additional rules to route customer traffic to different container ports.
+  additional_rules:
+    {{- range $i, $rule := .HTTPOrBool.AdditionalRoutingRules }}
+    - path: '{{$rule.Path}}'
+      target_port: {{$rule.TargetPort}}
+      {{- if $rule.ProtocolVersion }}
+      version: {{$rule.ProtocolVersion}}
+      {{- end }}
+      # healthcheck: '{{$rule.HealthCheck.Basic}}'
+    {{- end }}
+  {{- end }}
 
 # Configuration for your containers and service.
 image:

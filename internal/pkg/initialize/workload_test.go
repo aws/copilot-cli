@@ -242,7 +242,7 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 
 func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 	testCases := map[string]struct {
-		inSvcPort        uint16
+		inSvcPort        []uint16
 		inSvcName        string
 		inDockerfilePath string
 		inAppName        string
@@ -255,7 +255,7 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 		"creates manifest with / as the path when there are no other apps": {
 			inAppName:        "app",
 			inSvcName:        "frontend",
-			inSvcPort:        80,
+			inSvcPort:        []uint16{80},
 			inDockerfilePath: "/Dockerfile",
 
 			mockstore: func(m *mocks.MockStore) {
@@ -267,7 +267,7 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 		"creates manifest with / as the path when it's the only app": {
 			inAppName:        "app",
 			inSvcName:        "frontend",
-			inSvcPort:        80,
+			inSvcPort:        []uint16{80},
 			inDockerfilePath: "/Dockerfile",
 
 			mockstore: func(m *mocks.MockStore) {
@@ -284,7 +284,7 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 		"creates manifest with / as the path when it's the only LBWebService": {
 			inAppName:        "app",
 			inSvcName:        "frontend",
-			inSvcPort:        80,
+			inSvcPort:        []uint16{80},
 			inDockerfilePath: "/Dockerfile",
 
 			mockstore: func(m *mocks.MockStore) {
@@ -301,7 +301,7 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 		"creates manifest with {service name} as the path if there's another LBWebService": {
 			inAppName:        "app",
 			inSvcName:        "frontend",
-			inSvcPort:        80,
+			inSvcPort:        []uint16{80},
 			inDockerfilePath: "/Dockerfile",
 
 			mockstore: func(m *mocks.MockStore) {
@@ -318,7 +318,7 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 		"creates manifest with root path if the application is initialized with a domain": {
 			inAppName:        "app",
 			inSvcName:        "frontend",
-			inSvcPort:        80,
+			inSvcPort:        []uint16{80},
 			inDockerfilePath: "/Dockerfile",
 			inAppDomain:      "example.com",
 
@@ -352,7 +352,7 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 					App:            tc.inAppName,
 					DockerfilePath: tc.inDockerfilePath,
 				},
-				Port:      tc.inSvcPort,
+				Ports:     tc.inSvcPort,
 				appDomain: &tc.inAppDomain,
 			}
 
@@ -367,7 +367,7 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 			if tc.wantedErr == nil {
 				require.NoError(t, err)
 				require.Equal(t, tc.inSvcName, aws.StringValue(manifest.Workload.Name))
-				require.Equal(t, tc.inSvcPort, aws.Uint16Value(manifest.ImageConfig.Port))
+				require.Equal(t, tc.inSvcPort[0], aws.Uint16Value(manifest.ImageConfig.Port))
 				require.Contains(t, tc.inDockerfilePath, aws.StringValue(manifest.ImageConfig.Image.Build.BuildArgs.Dockerfile))
 				require.Equal(t, tc.wantedPath, aws.StringValue(manifest.HTTPOrBool.Main.Path))
 			} else {
@@ -379,7 +379,7 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 
 func TestAppInitOpts_createRequestDrivenWebServiceManifest(t *testing.T) {
 	testCases := map[string]struct {
-		inSvcPort        uint16
+		inSvcPort        []uint16
 		inSvcName        string
 		inDockerfilePath string
 		inImage          string
@@ -390,13 +390,13 @@ func TestAppInitOpts_createRequestDrivenWebServiceManifest(t *testing.T) {
 		"creates manifest with dockerfile path": {
 			inAppName:        "app",
 			inSvcName:        "frontend",
-			inSvcPort:        80,
+			inSvcPort:        []uint16{80},
 			inDockerfilePath: "/Dockerfile",
 		},
 		"creates manifest with container image": {
 			inAppName: "app",
 			inSvcName: "frontend",
-			inSvcPort: 80,
+			inSvcPort: []uint16{80},
 			inImage:   "111111111111.dkr.ecr.us-east-1.amazonaws.com/app/frontend",
 		},
 	}
@@ -411,7 +411,7 @@ func TestAppInitOpts_createRequestDrivenWebServiceManifest(t *testing.T) {
 					DockerfilePath: tc.inDockerfilePath,
 					Image:          tc.inImage,
 				},
-				Port: tc.inSvcPort,
+				Ports: tc.inSvcPort,
 			}
 
 			initter := &WorkloadInitializer{}
@@ -421,7 +421,7 @@ func TestAppInitOpts_createRequestDrivenWebServiceManifest(t *testing.T) {
 
 			// THEN
 			require.Equal(t, tc.inSvcName, *manifest.Name)
-			require.Equal(t, tc.inSvcPort, *manifest.ImageConfig.Port)
+			require.Equal(t, tc.inSvcPort[0], *manifest.ImageConfig.Port)
 			if tc.inImage != "" {
 				require.Equal(t, tc.inImage, *manifest.ImageConfig.Image.Location)
 			}
@@ -441,7 +441,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 	)
 
 	testCases := map[string]struct {
-		inSvcPort        uint16
+		inSvcPort        []uint16
 		inSvcType        string
 		inSvcName        string
 		inDockerfilePath string
@@ -461,7 +461,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 			inAppName:        "app",
 			inSvcName:        "frontend",
 			inDockerfilePath: "frontend/Dockerfile",
-			inSvcPort:        80,
+			inSvcPort:        []uint16{80},
 
 			mockWriter: func(m *mocks.MockWorkspace) {
 				// workspace root: "/frontend"
@@ -497,7 +497,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 			inSvcType:        manifestinfo.LoadBalancedWebServiceType,
 			inAppName:        "app",
 			inSvcName:        "frontend",
-			inSvcPort:        80,
+			inSvcPort:        []uint16{80},
 			inDockerfilePath: "frontend/Dockerfile",
 
 			mockWriter: func(m *mocks.MockWorkspace) {
@@ -514,7 +514,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 			inAppName:        "app",
 			inSvcName:        "frontend",
 			inDockerfilePath: "frontend/Dockerfile",
-			inSvcPort:        80,
+			inSvcPort:        []uint16{80},
 
 			mockWriter: func(m *mocks.MockWorkspace) {
 				// workspace root: "/frontend"
@@ -534,7 +534,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 			inSvcType:        manifestinfo.LoadBalancedWebServiceType,
 			inAppName:        "app",
 			inSvcName:        "frontend",
-			inSvcPort:        80,
+			inSvcPort:        []uint16{80},
 			inDockerfilePath: "frontend/Dockerfile",
 
 			mockWriter: func(m *mocks.MockWorkspace) {
@@ -581,7 +581,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 			inAppName: "app",
 			inSvcName: "backend",
 			inImage:   "mockImage",
-			inSvcPort: 80,
+			inSvcPort: []uint16{80},
 
 			mockWriter: func(m *mocks.MockWorkspace) {
 				// workspace root: "/backend"
@@ -621,7 +621,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 			inAppName:        "app",
 			inSvcName:        "backend",
 			inDockerfilePath: "backend/Dockerfile",
-			inSvcPort:        80,
+			inSvcPort:        []uint16{80},
 
 			mockWriter: func(m *mocks.MockWorkspace) {
 				// workspace root: "/backend"
@@ -662,7 +662,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 			inAppName:        "app",
 			inSvcName:        "backend",
 			inDockerfilePath: "backend/Dockerfile",
-			inSvcPort:        80,
+			inSvcPort:        []uint16{80},
 			inHealthCheck: manifest.ContainerHealthCheck{
 				Interval:    &testInterval,
 				Retries:     &testRetries,
@@ -714,7 +714,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 			inAppName:        "app",
 			inSvcName:        "worker",
 			inDockerfilePath: "worker/Dockerfile",
-			inSvcPort:        80,
+			inSvcPort:        []uint16{80},
 			inTopics: []manifest.TopicSubscription{
 				{
 					Name:    aws.String("theTopic"),
@@ -761,7 +761,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 			inAppName:        "app",
 			inSvcName:        "worker",
 			inDockerfilePath: "worker/Dockerfile",
-			inSvcPort:        80,
+			inSvcPort:        []uint16{80},
 			inTopics: []manifest.TopicSubscription{
 				{
 					Name:    aws.String("theTopic.fifo"),
@@ -844,7 +844,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 					Image:          tc.inImage,
 					Topics:         tc.inTopics,
 				},
-				Port:        tc.inSvcPort,
+				Ports:       tc.inSvcPort,
 				HealthCheck: tc.inHealthCheck,
 			})
 

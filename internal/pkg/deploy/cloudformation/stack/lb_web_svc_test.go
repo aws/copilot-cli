@@ -195,8 +195,8 @@ Outputs:
 				Name:       "frontend",
 				Dockerfile: "frontend/Dockerfile",
 			},
-			Path: "frontend",
-			Port: 80,
+			Path:  "frontend",
+			Ports: []uint16{80},
 		})
 		mft.ImageConfig.HealthCheck = manifest.ContainerHealthCheck{
 			Retries: aws.Int(5),
@@ -365,8 +365,8 @@ Outputs:
 				Name:       "frontend",
 				Dockerfile: "frontend/Dockerfile",
 			},
-			Path: "frontend",
-			Port: 80,
+			Path:  "frontend",
+			Ports: []uint16{80},
 		})
 
 		var actual template.WorkloadOpts
@@ -444,8 +444,8 @@ Outputs:
 				Name:       "frontend",
 				Dockerfile: "frontend/Dockerfile",
 			},
-			Path: "frontend",
-			Port: 80,
+			Path:  "frontend",
+			Ports: []uint16{80},
 		})
 		mft.HTTPOrBool.Main.TargetContainer = aws.String("envoy")
 		mft.Sidecars = map[string]*manifest.SidecarConfig{
@@ -495,8 +495,8 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 			Name:       "frontend",
 			Dockerfile: "frontend/Dockerfile",
 		},
-		Path: "frontend",
-		Port: 80,
+		Path:  "frontend",
+		Ports: []uint16{80},
 	}
 	expectedParams := []*cloudformation.Parameter{
 		{
@@ -920,8 +920,8 @@ func TestLoadBalancedWebService_SerializedParameters(t *testing.T) {
 			Name:       "frontend",
 			Dockerfile: "frontend/Dockerfile",
 		},
-		Path: "frontend",
-		Port: 80,
+		Path:  "frontend",
+		Ports: []uint16{80},
 	})
 
 	c := &LoadBalancedWebService{
@@ -984,8 +984,8 @@ func TestLoadBalancedWebService_Tags(t *testing.T) {
 			Name:       "frontend",
 			Dockerfile: "frontend/Dockerfile",
 		},
-		Path: "frontend",
-		Port: 80,
+		Path:  "frontend",
+		Ports: []uint16{80},
 	})
 	conf := &LoadBalancedWebService{
 		ecsWkld: &ecsWkld{
