@@ -286,7 +286,7 @@ func (s *localFileSelector) listDirsAndFiles(workingDir string) ([]string, error
 func (s *localFileSelector) getDirAndFileNames(dir string, depth *int, existingNames *[]string) (allNames []string, err error) {
 	wdDirsAndFiles, err := s.fs.ReadDir(dir)
 	if err != nil {
-		return nil, fmt.Errorf("read directory: %w", err) // or swallow errs?
+		return nil, fmt.Errorf("read directory: %w", err)
 	}
 	if *depth == 0 {
 		dir = s.workingDirAbs
@@ -296,15 +296,14 @@ func (s *localFileSelector) getDirAndFileNames(dir string, depth *int, existingN
 		if strings.HasPrefix(name, ".") || name == "copilot" {
 			continue
 		}
-		//absoluteName, err := filepath.Abs(name)
-		//if err != nil {
-		//	return nil, fmt.Errorf("get absolute path: %w", err)
-		//}
 		relPathName := dir + "/" + name
 		*existingNames = append(*existingNames, relPathName)
 		if *depth < 3 && file.IsDir() {
 			*depth += 1
-			s.getDirAndFileNames(relPathName, depth, existingNames)
+			_, err := s.getDirAndFileNames(relPathName, depth, existingNames)
+			if err != nil {
+				return nil, fmt.Errorf("get dir and file names: %w", err)
+			}
 		}
 	}
 	return *existingNames, nil
