@@ -304,12 +304,6 @@ func (w *WorkloadInitializer) newServiceManifest(i *ServiceProps) (encoding.Bina
 }
 
 func (w *WorkloadInitializer) newLoadBalancedWebServiceManifest(inProps *ServiceProps) (*manifest.LoadBalancedWebService, error) {
-	/*var httpVersion string
-	if inProps.Ports[0] == commonGRPCPort { // we set protocol to gRPC if the port is 50051 which we will continue to do for main listener rule hence inProps.Ports[0].
-		log.Infof("Detected port %s, setting HTTP protocol version to %s in the manifest.\n",
-			color.HighlightUserInput(strconv.Itoa(int(inProps.Ports[0]))), color.HighlightCode(manifest.GRPCProtocol))
-		httpVersion = manifest.GRPCProtocol
-	}*/
 	outProps := &manifest.LoadBalancedWebServiceProps{
 		WorkloadProps: &manifest.WorkloadProps{
 			Name:                    inProps.Name,
@@ -317,9 +311,8 @@ func (w *WorkloadInitializer) newLoadBalancedWebServiceManifest(inProps *Service
 			Image:                   inProps.Image,
 			PrivateOnlyEnvironments: inProps.PrivateOnlyEnvironments,
 		},
-		Path:  "/",
-		Ports: inProps.Ports,
-		//HTTPVersion: httpVersion,
+		Path:        "/",
+		Ports:       inProps.Ports,
 		HealthCheck: inProps.HealthCheck,
 		Platform:    inProps.Platform,
 	}
@@ -362,7 +355,7 @@ func newBackendServiceManifest(i *ServiceProps) (*manifest.BackendService, error
 			Image:                   i.Image,
 			PrivateOnlyEnvironments: i.PrivateOnlyEnvironments,
 		},
-		Port:        i.Ports[0],
+		Ports:       i.Ports,
 		HealthCheck: i.HealthCheck,
 		Platform:    i.Platform,
 	}), nil

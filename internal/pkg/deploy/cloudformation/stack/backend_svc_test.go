@@ -91,7 +91,7 @@ func TestBackendService_Template(t *testing.T) {
 				Name:       "api",
 				Dockerfile: testDockerfile,
 			},
-			Port: 8080,
+			Ports: []uint16{8080},
 		})
 		mft.Sidecars = map[string]*manifest.SidecarConfig{
 			"xray": {
@@ -120,7 +120,7 @@ func TestBackendService_Template(t *testing.T) {
 				Name:       "api",
 				Dockerfile: testDockerfile,
 			},
-			Port: 8080,
+			Ports: []uint16{8080},
 		})
 		mft.Sidecars = map[string]*manifest.SidecarConfig{
 			"xray": {
@@ -154,7 +154,7 @@ func TestBackendService_Template(t *testing.T) {
 				Name:       "api",
 				Dockerfile: testDockerfile,
 			},
-			Port: 8080,
+			Ports: []uint16{8080},
 		})
 		badRange := manifest.IntRangeBand("badRange")
 		mft.Count.AdvancedCount = manifest.AdvancedCount{
@@ -190,7 +190,7 @@ func TestBackendService_Template(t *testing.T) {
 				Name:       "api",
 				Dockerfile: testDockerfile,
 			},
-			Port: 8080,
+			Ports: []uint16{8080},
 		})
 		svc, err := NewBackendService(BackendServiceConfig{
 			App:         &config.Application{},
@@ -218,7 +218,7 @@ func TestBackendService_Template(t *testing.T) {
 				Name:       "api",
 				Dockerfile: testDockerfile,
 			},
-			Port: 8080,
+			Ports: []uint16{8080},
 			HealthCheck: manifest.ContainerHealthCheck{
 				Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
 				Interval:    &testInterval,
@@ -362,7 +362,7 @@ Outputs:
 				Name:       "api",
 				Dockerfile: testDockerfile,
 			},
-			Port: 8080,
+			Ports: []uint16{8080},
 			HealthCheck: manifest.ContainerHealthCheck{
 				Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
 				Interval:    &testInterval,
@@ -600,7 +600,7 @@ func TestBackendService_Parameters(t *testing.T) {
 			Name:       testServiceName,
 			Dockerfile: testDockerfile,
 		},
-		Port: 8080,
+		Ports: []uint16{8080},
 		HealthCheck: manifest.ContainerHealthCheck{
 			Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
 			Interval:    &testInterval,

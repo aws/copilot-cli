@@ -83,33 +83,27 @@ func NewLoadBalancedWebService(props *LoadBalancedWebServiceProps) *LoadBalanced
 	svc.Name = stringP(props.Name)
 	svc.LoadBalancedWebServiceConfig.ImageConfig.Image.Location = stringP(props.Image)
 	svc.LoadBalancedWebServiceConfig.ImageConfig.Image.Build.BuildArgs.Dockerfile = stringP(props.Dockerfile)
-	svc.LoadBalancedWebServiceConfig.ImageConfig.Port = aws.Uint16(0)
-	if len(props.Ports) > 0 {
-		svc.LoadBalancedWebServiceConfig.ImageConfig.Port = aws.Uint16(props.Ports[0])
-		if props.Ports[0] == commonGRPCPort {
-			log.Infof("Detected port %s, setting HTTP protocol version to %s in the manifest.\n",
-				color.HighlightUserInput(strconv.Itoa(int(props.Ports[0]))), color.HighlightCode(GRPCProtocol))
-			svc.HTTPOrBool.Main.ProtocolVersion = aws.String(GRPCProtocol)
-		}
-	}
 	svc.LoadBalancedWebServiceConfig.ImageConfig.HealthCheck = props.HealthCheck
 	svc.LoadBalancedWebServiceConfig.Platform = props.Platform
 	if isWindowsPlatform(props.Platform) {
 		svc.LoadBalancedWebServiceConfig.TaskConfig.CPU = aws.Int(MinWindowsTaskCPU)
 		svc.LoadBalancedWebServiceConfig.TaskConfig.Memory = aws.Int(MinWindowsTaskMemory)
 	}
-	/*if props.HTTPVersion != "" {
-		svc.HTTPOrBool.Main.ProtocolVersion = &props.HTTPVersion
-	}*/
-	if len(props.Ports) > 1 {
+	if len(props.Ports) == 1 {
+		svc.LoadBalancedWebServiceConfig.ImageConfig.Port = aws.Uint16(props.Ports[0])
+		if props.Ports[0] == commonGRPCPort {
+			log.Infof("Detected port %s, setting HTTP protocol version to %s in the manifest.\n",
+				color.HighlightUserInput(strconv.Itoa(int(props.Ports[0]))), color.HighlightCode(GRPCProtocol))
+			svc.HTTPOrBool.Main.ProtocolVersion = aws.String(GRPCProtocol)
+		}
+	} else if len(props.Ports) > 1 {
 		svc.LoadBalancedWebServiceConfig.HTTPOrBool.AdditionalRoutingRules = make([]RoutingRule, len(props.Ports)-1)
 		assumedPath := DefaultHealthCheckAdminPath
-
 		for idx, port := range props.Ports {
-			if idx != 0 {
+			if idx > 0 {
 				if props.Ports[idx] == commonGRPCPort {
 					log.Infof("Detected port %s, setting HTTP protocol version to %s in the manifest.\n",
-						color.HighlightUserInput(strconv.Itoa(int(props.Ports[0]))), color.HighlightCode(GRPCProtocol))
+						color.HighlightUserInput(strconv.Itoa(int(props.Ports[idx]))), color.HighlightCode(GRPCProtocol))
 					svc.HTTPOrBool.AdditionalRoutingRules[idx-1].ProtocolVersion = aws.String(GRPCProtocol)
 				}
 				svc.LoadBalancedWebServiceConfig.HTTPOrBool.AdditionalRoutingRules[idx-1].TargetPort = aws.Uint16(port)

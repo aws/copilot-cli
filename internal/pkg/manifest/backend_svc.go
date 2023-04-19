@@ -41,7 +41,7 @@ type BackendServiceConfig struct {
 // BackendServiceProps represents the configuration needed to create a backend service.
 type BackendServiceProps struct {
 	WorkloadProps
-	Port        uint16
+	Ports       []uint16
 	HealthCheck ContainerHealthCheck // Optional healthcheck configuration.
 	Platform    PlatformArgsOrString // Optional platform configuration.
 }
@@ -54,7 +54,9 @@ func NewBackendService(props BackendServiceProps) *BackendService {
 	svc.Name = stringP(props.Name)
 	svc.BackendServiceConfig.ImageConfig.Image.Location = stringP(props.Image)
 	svc.BackendServiceConfig.ImageConfig.Image.Build.BuildArgs.Dockerfile = stringP(props.Dockerfile)
-	svc.BackendServiceConfig.ImageConfig.Port = uint16P(props.Port)
+	if len(props.Ports) > 0 {
+		svc.BackendServiceConfig.ImageConfig.Port = uint16P(props.Ports[0])
+	}
 	svc.BackendServiceConfig.ImageConfig.HealthCheck = props.HealthCheck
 	svc.BackendServiceConfig.Platform = props.Platform
 	if isWindowsPlatform(props.Platform) {

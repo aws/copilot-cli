@@ -89,7 +89,7 @@ func TestNewBackendSvc(t *testing.T) {
 				HealthCheck: ContainerHealthCheck{
 					Command: []string{"CMD", "curl -f http://localhost:8080 || exit 1"},
 				},
-				Port: 8080,
+				Ports: []uint16{8080},
 			},
 			wantedManifest: &BackendService{
 				Workload: Workload{

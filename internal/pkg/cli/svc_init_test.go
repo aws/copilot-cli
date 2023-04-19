@@ -615,7 +615,6 @@ type: Request-Driven Web Service`), nil)
 			inSvcType:        wantedSvcType,
 			inSvcName:        wantedSvcName,
 			inDockerfilePath: wantedDockerfilePath,
-			//inSvcPorts:       []string{"0"}, //invalid port, default case
 
 			setupMocks: func(m initSvcMocks) {
 				m.mockStore.EXPECT().GetService(mockAppName, wantedSvcName).Return(nil, &config.ErrNoSuchService{})
@@ -630,7 +629,6 @@ type: Request-Driven Web Service`), nil)
 			inSvcType:        wantedSvcType,
 			inSvcName:        wantedSvcName,
 			inDockerfilePath: wantedDockerfilePath,
-			//inSvcPorts:       []string{"0"}, //invalid port, default case
 
 			setupMocks: func(m initSvcMocks) {
 				m.mockStore.EXPECT().GetService(mockAppName, wantedSvcName).Return(nil, &config.ErrNoSuchService{})
@@ -645,7 +643,6 @@ type: Request-Driven Web Service`), nil)
 			inSvcType:        wantedSvcType,
 			inSvcName:        wantedSvcName,
 			inDockerfilePath: wantedDockerfilePath,
-			//inSvcPorts:       []string{"0"}, //invalid port, default case
 
 			setupMocks: func(m initSvcMocks) {
 				m.mockStore.EXPECT().GetService(mockAppName, wantedSvcName).Return(nil, &config.ErrNoSuchService{})
