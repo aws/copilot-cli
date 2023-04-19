@@ -374,7 +374,7 @@ func (o *initOpts) logWorkloadTypeAck() {
 		return
 	}
 	if len(*o.ports) > 0 {
-		log.Infof("Ok great, we'll set up a %s named %s in application %s listening on port(s) %s.\n", color.HighlightUserInput(o.initWkldVars.wkldType), color.HighlightUserInput(o.initWkldVars.name), color.HighlightUserInput(o.initWkldVars.appName), color.HighlightUserInput(fmt.Sprintf("%s", strings.Join(*o.ports, " "))))
+		log.Infof("Ok great, we'll set up a %s named %s in application %s listening on port(s) %s.\n", color.HighlightUserInput(o.initWkldVars.wkldType), color.HighlightUserInput(o.initWkldVars.name), color.HighlightUserInput(o.initWkldVars.appName), color.HighlightUserInput(strings.Join(*o.ports, ", ")))
 	} else {
 		log.Infof("Ok great, we'll set up a %s named %s in application %s.\n", color.HighlightUserInput(o.initWkldVars.wkldType), color.HighlightUserInput(o.initWkldVars.name), color.HighlightUserInput(o.initWkldVars.appName))
 	}

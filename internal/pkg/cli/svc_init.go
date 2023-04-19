@@ -338,7 +338,6 @@ func (o *initSvcOpts) Execute() error {
 	}
 	portList := make([]uint16, len(o.ports))
 	for idx, port := range o.ports {
-		fmt.Println("printing port qwe: ", port)
 		parsedPort, err := strconv.Atoi(port)
 		if err != nil {
 			return err
@@ -652,10 +651,7 @@ func (o *initSvcOpts) askSvcPort() (err error) {
 	}
 	portList := strings.Split(selectedPorts, ",") // make a list out of customer given input of space separated multiple ports
 	o.ports = make([]string, len(portList))
-	for idx, port := range portList {
-		o.ports[idx] = port
-	}
-
+	copy(o.ports, portList)
 	return nil
 }
 
