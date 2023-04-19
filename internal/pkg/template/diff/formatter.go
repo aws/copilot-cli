@@ -15,7 +15,7 @@ type formatter interface {
 	formatInsert(node diffNode) (string, error)
 	formatDel(node diffNode) (string, error)
 	formatMod(node diffNode) (string, error)
-	formatPath(node diffNode) (string, diffNode)
+	formatPath(node diffNode) string
 	nextIndent() int
 }
 
@@ -56,9 +56,8 @@ func (f *seqItemFormatter) formatMod(node diffNode) (string, error) {
 	return processMultiline(content, prefixByFn(prefixMod), indentByFn(f.indent)), nil
 }
 
-func (f *seqItemFormatter) formatPath(node diffNode) (string, diffNode) {
-	content := process(color.Faint.Sprint("- (changed item)"), prefixByFn(prefixMod), indentByFn(f.indent))
-	return content + "\n", node
+func (f *seqItemFormatter) formatPath(node diffNode) string {
+	return process(color.Faint.Sprint("- (changed item)"), prefixByFn(prefixMod), indentByFn(f.indent)) + "\n"
 }
 
 func (f *seqItemFormatter) nextIndent() int {
@@ -123,28 +122,8 @@ func (f *keyedFormatter) formatMod(node diffNode) (string, error) {
 	return processMultiline(content, prefixByFn(prefixMod), indentByFn(f.indent)), nil
 }
 
-// joinPath collapses all key names under a keyNode into one line as long as there is only modification under the key.
-// For example, if only the `DesiredCount` of an ECS service is changed, then the returned path becomes 
-// `/Resources/Service/Properties/DesiredCount`.  If multiple entries of an ECS service is changed, then the returned 
-// path is `/Resources/Service/Properties`.
-// It returns the stringified path, as well as the node to which the last key on the path belongs.
-func (f *keyedFormatter) formatPath(node diffNode) (string, diffNode) {
-	content := node.key()
-	for {
-		if len(node.children()) != 1 {
-			break
-		}
-		peek := node.children()[0]
-		if len(peek.children()) == 0 {
-			break
-		}
-		if _, ok := peek.(*keyNode); !ok {
-			break
-		}
-		node = peek
-		content = content + "/" + node.key()
-	}
-	return process(content+":"+"\n", prefixByFn(prefixMod), indentByFn(f.indent)), node
+func (f *keyedFormatter) formatPath(node diffNode) string {
+	return process(node.key()+":"+"\n", prefixByFn(prefixMod), indentByFn(f.indent))
 }
 
 func (f *keyedFormatter) nextIndent() int {
@@ -173,8 +152,8 @@ func (f *documentFormatter) formatInsert(node diffNode) (string, error) {
 	return processMultiline(string(raw), prefixByFn(prefixAdd), indentByFn(0)), nil
 }
 
-func (f *documentFormatter) formatPath(node diffNode) (string, diffNode) {
-	return "", node
+func (f *documentFormatter) formatPath(node diffNode) string {
+	return ""
 }
 
 func (f *documentFormatter) nextIndent() int {
