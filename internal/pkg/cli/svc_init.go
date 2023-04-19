@@ -338,6 +338,7 @@ func (o *initSvcOpts) Execute() error {
 	}
 	portList := make([]uint16, len(o.ports))
 	for idx, port := range o.ports {
+		fmt.Println("printing port qwe: ", port)
 		parsedPort, err := strconv.Atoi(port)
 		if err != nil {
 			return err
@@ -646,11 +647,10 @@ func (o *initSvcOpts) askSvcPort() (err error) {
 		return fmt.Errorf("get port: %w", err)
 	}
 
-	//portUint, err := strconv.ParseUint(ports, 10, 16)
 	if err != nil {
 		return fmt.Errorf("parse port string: %w", err)
 	}
-	portList := strings.Split(selectedPorts, " ") // make a list out of customer given input of space separated multiple ports
+	portList := strings.Split(selectedPorts, ",") // make a list out of customer given input of space separated multiple ports
 	o.ports = make([]string, len(portList))
 	for idx, port := range portList {
 		o.ports[idx] = port
@@ -834,7 +834,7 @@ This command is also run as part of "copilot init".`,
 	cmd.Flags().StringVarP(&vars.wkldType, svcTypeFlag, typeFlagShort, "", svcTypeFlagDescription)
 	cmd.Flags().StringVarP(&vars.dockerfilePath, dockerFileFlag, dockerFileFlagShort, "", dockerFileFlagDescription)
 	cmd.Flags().StringVarP(&vars.image, imageFlag, imageFlagShort, "", imageFlagDescription)
-	cmd.Flags().StringArrayVar(&vars.ports, svcPortFlag, []string{}, svcPortFlagDescription)
+	cmd.Flags().StringSliceVar(&vars.ports, svcPortFlag, nil, svcPortFlagDescription)
 	cmd.Flags().StringArrayVar(&vars.subscriptions, subscribeTopicsFlag, []string{}, subscribeTopicsFlagDescription)
 	cmd.Flags().BoolVar(&vars.noSubscribe, noSubscriptionFlag, false, noSubscriptionFlagDescription)
 	cmd.Flags().StringVar(&vars.ingressType, ingressTypeFlag, "", ingressTypeFlagDescription)

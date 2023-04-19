@@ -573,7 +573,7 @@ func bytePortValidation(val []byte) error {
 }
 
 func stringPortValidation(val string) error {
-	portList := strings.Split(val, " ")
+	portList := strings.Split(val, ",")
 	for _, port := range portList {
 		port64, err := strconv.ParseUint(port, 10, 64)
 		if err != nil {

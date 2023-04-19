@@ -89,14 +89,15 @@ func NewLoadBalancedWebService(props *LoadBalancedWebServiceProps) *LoadBalanced
 		svc.LoadBalancedWebServiceConfig.TaskConfig.CPU = aws.Int(MinWindowsTaskCPU)
 		svc.LoadBalancedWebServiceConfig.TaskConfig.Memory = aws.Int(MinWindowsTaskMemory)
 	}
-	if len(props.Ports) == 1 {
+	if len(props.Ports) > 0 {
 		svc.LoadBalancedWebServiceConfig.ImageConfig.Port = aws.Uint16(props.Ports[0])
 		if props.Ports[0] == commonGRPCPort {
 			log.Infof("Detected port %s, setting HTTP protocol version to %s in the manifest.\n",
 				color.HighlightUserInput(strconv.Itoa(int(props.Ports[0]))), color.HighlightCode(GRPCProtocol))
 			svc.HTTPOrBool.Main.ProtocolVersion = aws.String(GRPCProtocol)
 		}
-	} else if len(props.Ports) > 1 {
+	}
+	if len(props.Ports) > 1 {
 		svc.LoadBalancedWebServiceConfig.HTTPOrBool.AdditionalRoutingRules = make([]RoutingRule, len(props.Ports)-1)
 		assumedPath := DefaultHealthCheckAdminPath
 		for idx, port := range props.Ports {
