@@ -151,7 +151,7 @@ func (f *documentFormatter) formatInsert(node diffNode) (string, error) {
 	return processMultiline(string(raw), prefixByFn(prefixAdd), indentByFn(0)), nil
 }
 
-func (f *documentFormatter) formatPath(node diffNode) string {
+func (f *documentFormatter) formatPath(_ diffNode) string {
 	return ""
 }
 
