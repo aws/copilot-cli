@@ -168,9 +168,8 @@ func (s *localFileSelector) StaticSources(selPrompt, selHelp, anotherPathPrompt,
 		return nil, fmt.Errorf("select directories and/or files: %w", err)
 	}
 	for i, selection := range selections {
-		anotherCustomPath := true
 		if selection == staticSourceUseCustomPrompt {
-			for anotherCustomPath {
+			for {
 				customPath, err := s.prompt.Get(
 					anotherPathPrompt,
 					anotherPathHelp,
@@ -185,13 +184,16 @@ func (s *localFileSelector) StaticSources(selPrompt, selHelp, anotherPathPrompt,
 				} else {
 					selections = append(selections, customPath) // Subsequent custom paths are appended.
 				}
-				anotherCustomPath, err = s.prompt.Confirm(
+				anotherCustomPath, err := s.prompt.Confirm(
 					staticSourceAnotherCustomPathPrompt,
 					staticSourceAnotherCustomPathHelp,
 					prompt.WithFinalMessage(anotherFinalMsg),
 				)
 				if err != nil {
 					return nil, fmt.Errorf("confirm another custom path: %w", err)
+				}
+				if !anotherCustomPath {
+					break
 				}
 			}
 		}
