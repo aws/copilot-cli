@@ -73,8 +73,8 @@ line4 from image2`)
 			var mockLabeledSyncbufs []*LabeledSyncBuffer
 			mockLabeledSyncbufs = append(mockLabeledSyncbufs, mockSyncBuf1.WithLabel("Building your container image 1"),
 				mockSyncBuf2.WithLabel("Building your container image 2"))
-			mockTerminalWidth := func(fw FileWriter) (int, error) {
-				return 80, nil
+			mockTerminalWidth := func(fw FileWriter) int {
+				return 80
 			}
 
 			termOut := &bytes.Buffer{}

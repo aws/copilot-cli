@@ -19,6 +19,10 @@ const (
 	printAllLinesInBuf = -1
 )
 
+const (
+	defaultTerminalWidth = 80
+)
+
 // FileWriter is the interface to write to a file.
 type FileWriter interface {
 	io.Writer
@@ -34,7 +38,7 @@ type LabeledTermPrinter struct {
 	prevWrittenLines int                  // number of lines written from all the buffers.
 
 	// override in unit tests.
-	terminalWidth func(fw FileWriter) (int, error)
+	terminalWidth func(fw FileWriter) int
 }
 
 // LabeledTermPrinterOption is a type alias to configure LabeledTermPrinter.
@@ -81,12 +85,10 @@ func (ltp *LabeledTermPrinter) IsDone() bool {
 // Print prints the label and the last N lines of logs from each buffer
 // to the LabeledTermPrinter fileWriter and erases the previous output.
 // If numLines is -1 then print all the values from buffers.
-func (ltp *LabeledTermPrinter) Print() error {
+func (ltp *LabeledTermPrinter) Print() {
 	if ltp.numLines == printAllLinesInBuf {
-		if err := ltp.printAll(); err != nil {
-			return err
-		}
-		return nil
+		ltp.printAll()
+		return
 	}
 	if ltp.prevWrittenLines > 0 {
 		cursor.EraseLinesAbove(ltp.term, ltp.prevWrittenLines)
@@ -95,31 +97,23 @@ func (ltp *LabeledTermPrinter) Print() error {
 	for _, buf := range ltp.buffers {
 		logs := buf.lines()
 		outputLogs := ltp.lastNLines(logs)
-		writtenLines, err := ltp.writeLines(buf.label, outputLogs)
-		if err != nil {
-			return fmt.Errorf("write logs: %w", err)
-		}
-		ltp.prevWrittenLines += writtenLines
+		ltp.prevWrittenLines += ltp.writeLines(buf.label, outputLogs)
 	}
-	return nil
 }
 
 // printAll writes the entire contents of all the buffers to the file writer.
 // If one of the buffer gets done then print entire content of the buffer.
 // Until all the buffers are written to file writer.
-func (ltp *LabeledTermPrinter) printAll() error {
+func (ltp *LabeledTermPrinter) printAll() {
 	for idx := 0; idx < len(ltp.buffers); idx++ {
 		if !ltp.buffers[idx].IsDone() {
 			continue
 		}
 		outputLogs := ltp.buffers[idx].lines()
-		if _, err := ltp.writeLines(ltp.buffers[idx].label, outputLogs); err != nil {
-			return fmt.Errorf("write logs: %w", err)
-		}
+		ltp.writeLines(ltp.buffers[idx].label, outputLogs)
 		ltp.buffers = append(ltp.buffers[:idx], ltp.buffers[idx+1:]...)
 		idx--
 	}
-	return nil
 }
 
 // lastNLines returns the last N lines of the given logs where N is the value of tp.numLines.
@@ -144,13 +138,8 @@ func (ltp *LabeledTermPrinter) lastNLines(logs []string) []string {
 }
 
 // writeLines writes a label and output logs to the terminal associated with the TermPrinter.
-// Returns the number of lines needed to erase based on terminal width,
-// or an error when failed to fetch terminal width.
-func (ltp *LabeledTermPrinter) writeLines(label string, lines []string) (int, error) {
-	width, err := ltp.terminalWidth(ltp.term)
-	if err != nil {
-		return 0, fmt.Errorf("get terminal width: %w", err)
-	}
+// Returns the number of lines needed to erase based on terminal width.
+func (ltp *LabeledTermPrinter) writeLines(label string, lines []string) int {
 	var numLines float64
 	writeLine := func(line string) {
 		fmt.Fprintln(ltp.term, line)
@@ -158,20 +147,23 @@ func (ltp *LabeledTermPrinter) writeLines(label string, lines []string) (int, er
 			numLines++
 			return
 		}
-		numLines += math.Ceil(float64(len(line)) / float64(width))
+		numLines += math.Ceil(float64(len(line)) / float64(ltp.terminalWidth(ltp.term)))
 	}
 	writeLine(label)
 	for _, line := range lines {
 		writeLine(fmt.Sprintf("%s%s", strings.Repeat(" ", ltp.padding), line))
 	}
-	return int(numLines), nil
+	return int(numLines)
 }
 
 // terminalWidth returns the width of the terminal or an error if failed to get the width of terminal.
-func terminalWidth(fw FileWriter) (int, error) {
-	width, _, err := term.GetSize(int(fw.Fd()))
-	if err != nil {
-		return 0, err
+// If the file writer is not associated with a terminal, it returns a default value of 80.
+func terminalWidth(fw FileWriter) int {
+	terminalWidth := defaultTerminalWidth
+	if term.IsTerminal(int(fw.Fd())) {
+		if width, _, err := term.GetSize(int(fw.Fd())); err == nil {
+			terminalWidth = width
+		}
 	}
-	return width, nil
+	return terminalWidth
 }
