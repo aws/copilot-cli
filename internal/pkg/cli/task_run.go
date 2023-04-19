@@ -5,7 +5,6 @@ package cli
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -974,7 +973,7 @@ func (o *runTaskOpts) buildAndPushImage(uri string) error {
 		return fmt.Errorf("generate docker build args: %w", err)
 	}
 	log.Infof("Building your container image: docker %s\n", strings.Join(buildArgsList, " "))
-	if _, err := o.repository.BuildAndPush(context.Background(), buildArgs, log.DiagnosticWriter); err != nil {
+	if _, err := o.repository.BuildAndPush(buildArgs); err != nil {
 		return fmt.Errorf("build and push image: %w", err)
 	}
 	return nil

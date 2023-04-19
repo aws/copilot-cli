@@ -23,7 +23,6 @@ func TestLabeledTermPrinter_Print(t *testing.T) {
 	testCases := map[string]struct {
 		inNumLines int
 		inPadding  int
-		printAll   bool
 		wanted     string
 	}{
 		"display label with given numLines": {
@@ -41,7 +40,6 @@ Building your container image 2
 		"display all the lines if numLines set to -1": {
 			inNumLines: -1,
 			inPadding:  5,
-			printAll:   true,
 			wanted: `Building your container image 1
      line1 from image1
      line2 from image1
@@ -92,14 +90,6 @@ line4 from image2`)
 				buf.MarkDone()
 			}
 			ltp.Print()
-
-			// checking multiple calls to Print will result in
-			// printing a buffer only once when it enters printAll.
-			if tc.printAll {
-				for i := 0; i < 3; i++ {
-					ltp.Print()
-				}
-			}
 
 			// THEN
 			require.Equal(t, tc.wanted, termOut.String())

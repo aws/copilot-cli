@@ -65,7 +65,7 @@ func (buf *SyncBuffer) WithLabel(label string) *LabeledSyncBuffer {
 // Copy reads all the content of an io.Reader into a SyncBuffer and an error if copy is failed.
 func (buf *SyncBuffer) Copy(r io.Reader) error {
 	defer buf.MarkDone()
-	_, err := io.Copy(buf, r)
+	_, err := io.Copy(&buf.buf, r)
 	if err != nil && !errors.Is(err, io.EOF) {
 		return err
 	}

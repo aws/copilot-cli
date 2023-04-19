@@ -108,16 +108,14 @@ func (ltp *LabeledTermPrinter) Print() error {
 // If one of the buffer gets done then print entire content of the buffer.
 // Until all the buffers are written to file writer.
 func (ltp *LabeledTermPrinter) printAll() error {
-	for idx := 0; idx < len(ltp.buffers); idx++ {
-		if !ltp.buffers[idx].IsDone() {
+	for idx, buf := range ltp.buffers {
+		if !buf.IsDone() {
 			continue
 		}
 		outputLogs := ltp.buffers[idx].lines()
-		if _, err := ltp.writeLines(ltp.buffers[idx].label, outputLogs); err != nil {
+		if _, err := ltp.writeLines(buf.label, outputLogs); err != nil {
 			return fmt.Errorf("write logs: %w", err)
 		}
-		ltp.buffers = append(ltp.buffers[:idx], ltp.buffers[idx+1:]...)
-		idx--
 	}
 	return nil
 }

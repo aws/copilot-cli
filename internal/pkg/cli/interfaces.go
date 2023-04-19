@@ -4,7 +4,6 @@
 package cli
 
 import (
-	"context"
 	"encoding"
 	"io"
 
@@ -166,7 +165,7 @@ type secretDeleter interface {
 }
 
 type imageBuilderPusher interface {
-	BuildAndPush(ctx context.Context, args *dockerengine.BuildArguments, w io.Writer) (string, error)
+	BuildAndPush(args *dockerengine.BuildArguments) (string, error)
 }
 
 type repositoryLogin interface {
