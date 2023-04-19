@@ -98,39 +98,39 @@ func (e *errFieldMutualExclusive) Error() string {
 	return fmt.Sprintf(`must specify one, not both, of "%s" and "%s"`, e.firstField, e.secondField)
 }
 
-// RecommendActions returns recommended actions to be taken after the error.
-func (e *errFieldMutualExclusive) RecommendActions() string {
-	if strings.Contains(e.firstField, "http.healthcheck.grace_period") && strings.Contains(e.secondField, "nlb.healthcheck.grace_period") {
-		return fmt.Sprintf(`It looks like you have specified grace_period under both %s and %s. 
-ECS allows "HealthCheckGracePeriodSeconds" as a service level setting and should be specified only once either in http or nlb configuration. 
-It is the period of time, in seconds, that the Amazon ECS service scheduler ignores unhealthy Elastic Load Balancing target health checks after a task has first started.`, e.firstField, e.secondField)
-	}
-	return ""
+type errGracePeriodSpecifiedInAdditionalRule struct {
+	index int
 }
-
-type errGracePeriodSpecifiedInAdditionalField struct {
-	field string
+type errGracePeriodSpecifiedInAdditionalListener struct {
 	index int
 }
 
-func (e *errGracePeriodSpecifiedInAdditionalField) Error() string {
-	if strings.Contains(e.field, "additional_rules") {
-		return fmt.Sprintf(`cannot define "grace_period" in "http.additional_rules[%d].healthcheck.grace_period"`, e.index)
-	}
+type errGracePeriodsInBothALBAndNLB struct {
+	errFieldMutualExclusive
+}
+
+func (e *errGracePeriodsInBothALBAndNLB) RecommendedActions() string {
+	return fmt.Sprintf(`It looks like you have specified grace_period under both %s and %s. 
+ECS allows "HealthCheckGracePeriodSeconds" as a service level setting and should be specified only once either in http or nlb configuration.`, e.firstField, e.secondField)
+}
+
+func (e *errGracePeriodSpecifiedInAdditionalRule) Error() string {
+	return fmt.Sprintf(`cannot define "grace_period" in "http.additional_rules[%d].healthcheck.grace_period"`, e.index)
+}
+
+func (e *errGracePeriodSpecifiedInAdditionalListener) Error() string {
 	return fmt.Sprintf(`cannot define "grace_period" in "nlb.additional_listeners[%d].healthcheck.grace_period"`, e.index)
 }
 
 // RecommendActions returns recommended actions to be taken after the error.
-func (e *errGracePeriodSpecifiedInAdditionalField) RecommendActions() string {
+func (e *errGracePeriodSpecifiedInAdditionalRule) RecommendActions() string {
+	return fmt.Sprintf(`Instead of under "http.additional_rules[%d].healthcheck", specify "grace_period" under the top-level "http.healthcheck".`, e.index)
 
-	if strings.Contains(e.field, "additional_rules") {
-		return fmt.Sprintf(`It looks like you have specified "grace_period" under "http.additional_rules[%d].healthcheck". Specify "grace_period" under "http.healthcheck".
-ECS allows "HealthCheckGracePeriodSeconds" as a service level setting and should be specified in the main listener rule only. 
-It is the period of time, in seconds, that the Amazon ECS service scheduler ignores unhealthy Elastic Load Balancing target health checks after a task has first started.`, e.index)
-	}
-	return fmt.Sprintf(`It looks like you have specified "grace_period" under "nlb.additional_listeners[%d].healthcheck". Specify "grace_period" under "nlb.healthcheck".
-ECS allows "HealthCheckGracePeriodSeconds" as a service level setting and should be specified in the main listener only. 
-It is the period of time, in seconds, that the Amazon ECS service scheduler ignores unhealthy Elastic Load Balancing target health checks after a task has first started.`, e.index)
+}
+
+// RecommendActions returns recommended actions to be taken after the error.
+func (e *errGracePeriodSpecifiedInAdditionalListener) RecommendActions() string {
+	return fmt.Sprintf(`Instead of under "nlb.additional_listeners[%d].healthcheck", specify "grace_period" under the top-level "nlb.healthcheck".`, e.index)
 
 }
 

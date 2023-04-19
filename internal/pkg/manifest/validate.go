@@ -813,9 +813,11 @@ func (l LoadBalancedWebServiceConfig) validateGracePeriod() error {
 		return err
 	}
 	if gracePeriodForALB && gracePeriodForNLB {
-		return &errFieldMutualExclusive{
-			firstField:  "http.healthcheck.grace_period",
-			secondField: "nlb.healthcheck.grace_period",
+		return &errGracePeriodsInBothALBAndNLB{
+			errFieldMutualExclusive: errFieldMutualExclusive{
+				firstField:  "http.healthcheck.grace_period",
+				secondField: "nlb.healthcheck.grace_period",
+			},
 		}
 	}
 
@@ -830,8 +832,7 @@ func (cfg *LoadBalancedWebServiceConfig) validateGracePeriodForALB() (bool, erro
 	}
 	for idx, rule := range cfg.HTTPOrBool.AdditionalRoutingRules {
 		if rule.HealthCheck.Advanced.GracePeriod != nil {
-			return exist, &errGracePeriodSpecifiedInAdditionalField{
-				field: fmt.Sprintf("http.additional_rules[%d].healthcheck.grace_period", idx),
+			return exist, &errGracePeriodSpecifiedInAdditionalRule{
 				index: idx,
 			}
 		}
@@ -847,8 +848,7 @@ func (cfg *LoadBalancedWebServiceConfig) validateGracePeriodForNLB() (bool, erro
 	}
 	for idx, listener := range cfg.NLBConfig.AdditionalListeners {
 		if listener.HealthCheck.GracePeriod != nil {
-			return exist, &errGracePeriodSpecifiedInAdditionalField{
-				field: fmt.Sprintf("nlb.additional_listeners[%d].healthcheck.grace_period", idx),
+			return exist, &errGracePeriodSpecifiedInAdditionalListener{
 				index: idx,
 			}
 		}
