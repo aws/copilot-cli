@@ -36,9 +36,6 @@ type LabeledTermPrinter struct {
 	numLines         int                  // number of lines that has to be written from each buffer.
 	padding          int                  // Leading spaces before rendering to terminal.
 	prevWrittenLines int                  // number of lines written from all the buffers.
-
-	// override in unit tests.
-	terminalWidth func(fw FileWriter) int
 }
 
 // LabeledTermPrinterOption is a type alias to configure LabeledTermPrinter.
@@ -47,10 +44,9 @@ type LabeledTermPrinterOption func(ltp *LabeledTermPrinter)
 // NewLabeledTermPrinter returns a LabeledTermPrinter that can print to the terminal filewriter from buffers.
 func NewLabeledTermPrinter(fw FileWriter, bufs []*LabeledSyncBuffer, opts ...LabeledTermPrinterOption) *LabeledTermPrinter {
 	ltp := &LabeledTermPrinter{
-		term:          fw,
-		buffers:       bufs,
-		numLines:      printAllLinesInBuf, // By default set numlines to -1 to print all from buffers.
-		terminalWidth: terminalWidth,
+		term:     fw,
+		buffers:  bufs,
+		numLines: printAllLinesInBuf, // By default set numlines to -1 to print all from buffers.
 	}
 	for _, opt := range opts {
 		opt(ltp)
@@ -147,7 +143,7 @@ func (ltp *LabeledTermPrinter) writeLines(label string, lines []string) int {
 			numLines++
 			return
 		}
-		numLines += math.Ceil(float64(len(line)) / float64(ltp.terminalWidth(ltp.term)))
+		numLines += math.Ceil(float64(len(line)) / float64(terminalWidth(ltp.term)))
 	}
 	writeLine(label)
 	for _, line := range lines {
