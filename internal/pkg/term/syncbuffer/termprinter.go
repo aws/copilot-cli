@@ -156,8 +156,8 @@ func (ltp *LabeledTermPrinter) writeLines(label string, lines []string) int {
 	return int(numLines)
 }
 
-// terminalWidth returns the width of the terminal or an error if failed to get the width of terminal.
-// If the file writer is not associated with a terminal, it returns a default value of 80.
+// terminalWidth returns the width of the terminal associated with the given FileWriter.
+// If the FileWriter is not associated with a terminal, it returns a default terminal width.
 func terminalWidth(fw FileWriter) int {
 	terminalWidth := defaultTerminalWidth
 	if term.IsTerminal(int(fw.Fd())) {
