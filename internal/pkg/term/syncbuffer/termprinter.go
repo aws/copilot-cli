@@ -157,6 +157,7 @@ func (ltp *LabeledTermPrinter) writeLines(label string, lines []string) int {
 func terminalWidth(fw FileWriter) int {
 	terminalWidth := defaultTerminalWidth
 	if term.IsTerminal(int(fw.Fd())) {
+		// Swallow the error as we do not want propogate the error up to call stack.
 		if width, _, err := term.GetSize(int(fw.Fd())); err == nil {
 			terminalWidth = width
 		}
