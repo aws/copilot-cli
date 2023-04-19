@@ -627,7 +627,7 @@ func (o *initSvcOpts) askSvcPort() (err error) {
 		if err != nil {
 			return fmt.Errorf("get port: %w", err)
 		}
-		if len(strings.Split(selectedPorts, " ")) > 1 {
+		if len(strings.Split(selectedPorts, ",")) > 1 {
 			return fmt.Errorf("App Runner Service doesn't expose multiple ports")
 		}
 		o.ports = make([]string, 1)
