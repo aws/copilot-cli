@@ -5,6 +5,7 @@ package selector
 
 import (
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws"
 	"os"
 	"path/filepath"
 	"sort"
@@ -147,7 +148,7 @@ func NewLocalFileSelector(prompt Prompter, fs afero.Fs) (*localFileSelector, err
 
 // StaticSources asks the user to select from a list of directories and files in the current directory and two levels down.
 func (s *localFileSelector) StaticSources(selPrompt, selHelp, anotherPathPrompt, anotherPathHelp string, pathValidator prompt.ValidatorFunc) ([]string, error) {
-	dirsAndFiles, err := s.listDirsAndFiles()
+	dirsAndFiles, err := s.listDirsAndFiles(s.workingDirAbs)
 	if err != nil {
 		return nil, err
 	}
@@ -274,48 +275,39 @@ func (s *localFileSelector) listDockerfiles() ([]string, error) {
 
 // listDirsAndFiles returns the list of directories and files within the current
 // working directory and two subdirectory levels below.
-func (s *localFileSelector) listDirsAndFiles() ([]string, error) {
-	wdDirsAndFiles, err := s.fs.ReadDir(s.workingDirAbs)
+func (s *localFileSelector) listDirsAndFiles(workingDir string) ([]string, error) {
+	names, err := s.getDirAndFileNames(workingDir, aws.Int(0), &[]string{})
 	if err != nil {
-		return nil, fmt.Errorf("read directory: %w", err)
+		return nil, err
+	} 
+	return names, nil
+}
+
+func (s *localFileSelector) getDirAndFileNames(dir string, depth *int, existingNames *[]string) (allNames []string, err error) {
+	wdDirsAndFiles, err := s.fs.ReadDir(dir)
+	if err != nil {
+		return nil, fmt.Errorf("read directory: %w", err) // or swallow errs?
 	}
-	var filesAndDirs []string
-	for _, firstLevel := range wdDirsAndFiles {
-		name := firstLevel.Name()
+	if *depth == 0 {
+		dir = s.workingDirAbs
+	}
+	for _, file := range wdDirsAndFiles {
+		name := file.Name()
 		if strings.HasPrefix(name, ".") || name == "copilot" {
 			continue
 		}
-		filesAndDirs = append(filesAndDirs, filepath.Dir(name)+"/"+name)
-		if firstLevel.IsDir() {
-			subFiles, err := s.fs.ReadDir(name)
-			if err != nil {
-				// swallow errors for unreadable directories
-				continue
-			}
-			for _, secondLevel := range subFiles {
-				name := secondLevel.Name()
-				if strings.HasPrefix(name, ".") {
-					continue
-				}
-				filesAndDirs = append(filesAndDirs, filepath.Dir(name)+"/"+firstLevel.Name()+"/"+name)
-				if secondLevel.IsDir() {
-					subSubFiles, err := s.fs.ReadDir(firstLevel.Name() + "/" + name)
-					if err != nil {
-						// swallow errors for unreadable directories
-						continue
-					}
-					for _, thirdLevel := range subSubFiles {
-						name := thirdLevel.Name()
-						if strings.HasPrefix(name, ".") {
-							continue
-						}
-						filesAndDirs = append(filesAndDirs, filepath.Dir(name)+"/"+firstLevel.Name()+"/"+secondLevel.Name()+"/"+name)
-					}
-				}
-			}
+		//absoluteName, err := filepath.Abs(name)
+		//if err != nil {
+		//	return nil, fmt.Errorf("get absolute path: %w", err)
+		//}
+		relPathName := dir + "/" + name
+		*existingNames = append(*existingNames, relPathName)
+		if *depth < 3 && file.IsDir() {
+			*depth += 1
+			s.getDirAndFileNames(relPathName, depth, existingNames)
 		}
 	}
-	return filesAndDirs, nil
+	return *existingNames, nil
 }
 
 func presetScheduleToDefinitionString(input string) string {

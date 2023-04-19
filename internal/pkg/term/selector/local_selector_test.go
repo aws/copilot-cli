@@ -393,6 +393,7 @@ func TestLocalFileSelector_StaticSources(t *testing.T) {
 			sel := localFileSelector{
 				prompt: p,
 				fs:     fs,
+				workingDirAbs: ".",
 			}
 
 			mockPromptText := "prompt"
@@ -505,30 +506,31 @@ func TestLocalFileSelector_listDirsAndFiles(t *testing.T) {
 		wantedErr      error
 		dirsAndFiles   []string
 	}{
-		"drill down two levels": {
+		"drill down two (and only two) levels": {
 			mockFileSystem: func(mockFS afero.Fs) {
-				_ = mockFS.MkdirAll("lobby/basement/subBasement/subSubBasement", 0755)
+				_ = mockFS.MkdirAll("lobby/basement/subBasement/subSubBasement/subSubSubBasement", 0755)
 
 				_ = afero.WriteFile(mockFS, "lobby/file", []byte("cool stuff"), 0644)
 				_ = afero.WriteFile(mockFS, "lobby/basement/file", []byte("more cool stuff"), 0644)
 				_ = afero.WriteFile(mockFS, "lobby/basement/subBasement/file", []byte("unreachable cool stuff"), 0644)
 			},
-			dirsAndFiles: []string{"./lobby", "./lobby/basement", "./lobby/basement/file", "./lobby/basement/subBasement", "./lobby/file"},
+			dirsAndFiles: []string{"./lobby", "./lobby/basement", "./lobby/basement/file", "./lobby/basement/subBasement", "./lobby/basement/subBasement/file", "./lobby/basement/subBasement/subSubBasement", "./lobby/file"},
 		},
-		"exclude hidden files": {
+		"exclude hidden files and copilot dir": {
 			mockFileSystem: func(mockFS afero.Fs) {
 				_ = mockFS.MkdirAll("lobby/basement/subBasement/subSubBasement", 0755)
+				_ = mockFS.Mkdir("copilot", 0755)
 
 				_ = afero.WriteFile(mockFS, "lobby/.file", []byte("cool stuff"), 0644)
 				_ = afero.WriteFile(mockFS, "lobby/basement/file", []byte("more cool stuff"), 0644)
 				_ = afero.WriteFile(mockFS, "lobby/basement/subBasement/file", []byte("unreachable cool stuff"), 0644)
 			},
 			wantedErr:    nil,
-			dirsAndFiles: []string{"./lobby", "./lobby/basement", "./lobby/basement/file", "./lobby/basement/subBasement"},
+			dirsAndFiles: []string{"./lobby", "./lobby/basement", "./lobby/basement/file", "./lobby/basement/subBasement", "./lobby/basement/subBasement/file", "./lobby/basement/subBasement/subSubBasement"},
 		},
 		"no dirs or files found": {
 			mockFileSystem: func(mockFS afero.Fs) {},
-			dirsAndFiles:   nil,
+			dirsAndFiles:   []string{},
 		},
 	}
 
@@ -541,9 +543,10 @@ func TestLocalFileSelector_listDirsAndFiles(t *testing.T) {
 				fs: &afero.Afero{
 					Fs: fs,
 				},
+				workingDirAbs: ".",
 			}
 
-			got, err := s.listDirsAndFiles()
+			got, err := s.listDirsAndFiles("")
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			} else {

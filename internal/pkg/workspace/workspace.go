@@ -104,7 +104,7 @@ func Use(fs afero.Fs) (*Workspace, error) {
 }
 
 // Create creates a new Workspace in the current working directory for appName with summary if it doesn't already exist.
-func Create(appName string, fs afero.Fs) (*Workspace, error) {
+func Create(appName string, fs afero.Fs) (*Workspace, error) { 
 	workingDirAbs, err := getWd()
 	if err != nil {
 		return nil, fmt.Errorf("get working directory: %w", err)
