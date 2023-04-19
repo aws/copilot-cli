@@ -100,43 +100,45 @@ const writeCustomDomainRecord = async function (
   aliasTypes,
   action
 ) {
+  const actions = [];
   for (const alias of aliases) {
     const aliasType = await getAliasType(aliasTypes, alias);
     switch (aliasType) {
       case aliasTypes.EnvDomainZone:
-        await writeARecord(
+        actions.push(writeARecord(
           envRoute53,
           alias,
           accessDNS,
           accessHostedZone,
           aliasType.domain,
           action
-        );
+        ));
         break;
       case aliasTypes.AppDomainZone:
-        await writeARecord(
+        actions.push(writeARecord(
           appRoute53,
           alias,
           accessDNS,
           accessHostedZone,
           aliasType.domain,
           action
-        );
+        ));
         break;
       case aliasTypes.RootDomainZone:
-        await writeARecord(
+        actions.push(writeARecord(
           appRoute53,
           alias,
           accessDNS,
           accessHostedZone,
           aliasType.domain,
           action
-        );
+        ));
         break;
       // We'll skip if it is the other alias type since it will be in another account's route53.
       default:
     }
   }
+  await Promise.all(actions);
 };
 
 const writeARecord = async function (

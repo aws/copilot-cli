@@ -8,6 +8,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
@@ -22,8 +23,9 @@ type StaticSite struct {
 	manifest *manifest.StaticSite
 	appInfo  deploy.AppInformation
 
-	parser   staticSiteReadParser
-	localCRs []uploadable // Custom resources that have not been uploaded yet.
+	parser          staticSiteReadParser
+	localCRs        []uploadable // Custom resources that have not been uploaded yet.
+	assetMappingURL string
 }
 
 // StaticSiteConfig contains fields to configure StaticSite.
@@ -36,6 +38,7 @@ type StaticSiteConfig struct {
 	RootUserARN        string
 	ArtifactBucketName string
 	Addons             NestedStackConfigurer
+	AssetMappingURL    string
 }
 
 // NewStaticSite creates a new CFN stack from a manifest file, given the options.
@@ -58,8 +61,9 @@ func NewStaticSite(conf *StaticSiteConfig) (*StaticSite, error) {
 		},
 		manifest: conf.Manifest,
 
-		parser:   fs,
-		localCRs: uploadableCRs(crs).convert(),
+		parser:          fs,
+		localCRs:        uploadableCRs(crs).convert(),
+		assetMappingURL: conf.AssetMappingURL,
 	}, nil
 }
 
@@ -74,6 +78,11 @@ func (s *StaticSite) Template() (string, error) {
 		return "", err
 	}
 	addonsOutputs, err := s.addonsOutputs()
+	if err != nil {
+		return "", err
+	}
+
+	bucket, path, err := s3.ParseURL(s.assetMappingURL)
 	if err != nil {
 		return "", err
 	}
@@ -94,6 +103,9 @@ func (s *StaticSite) Template() (string, error) {
 
 		// Custom Resource Config.
 		CustomResources: crs,
+
+		AssetMappingFileBucket: bucket,
+		AssetMappingFilePath:   path,
 	})
 	if err != nil {
 		return "", err

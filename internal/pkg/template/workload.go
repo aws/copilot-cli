@@ -815,6 +815,9 @@ type WorkloadOpts struct {
 
 	// Additional options for worker service templates.
 	Subscribe *SubscribeOpts
+
+	AssetMappingFileBucket string
+	AssetMappingFilePath   string
 }
 
 // HealthCheckProtocol returns the protocol for the Load Balancer health check,

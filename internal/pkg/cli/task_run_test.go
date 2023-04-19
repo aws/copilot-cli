@@ -5,6 +5,7 @@ package cli
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"path/filepath"
@@ -760,9 +761,8 @@ func mockHasDefaultCluster(m runTaskMocks) {
 }
 
 func mockRepositoryAnytime(m runTaskMocks) {
-	m.repository.EXPECT().URI().AnyTimes()
 	m.repository.EXPECT().Login().AnyTimes()
-	m.repository.EXPECT().BuildAndPush(gomock.Any()).AnyTimes()
+	m.repository.EXPECT().BuildAndPush(context.Background(), gomock.Any(), gomock.Any()).AnyTimes()
 }
 
 func TestTaskRunOpts_Execute(t *testing.T) {
@@ -771,7 +771,9 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 		mockRepoURI = "uri/repo"
 		tag         = "tag"
 	)
+	ctx := context.Background()
 	defaultBuildArguments := dockerengine.BuildArguments{
+		URI:     mockRepoURI,
 		Context: filepath.Dir(defaultDockerfilePath),
 		Tags:    []string{imageTagLatest},
 	}
@@ -843,7 +845,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 					Command:    []string{},
 					EntryPoint: []string{},
 				}).Return(nil)
-				m.repository.EXPECT().Login().Return(errors.New("some error"))
+				m.repository.EXPECT().Login().Return(mockRepoURI, errors.New("some error"))
 				mockHasDefaultCluster(m)
 			},
 			wantedError: errors.New("login to docker: some error"),
@@ -858,9 +860,8 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 					Command:    []string{},
 					EntryPoint: []string{},
 				}).Return(nil)
-				m.repository.EXPECT().URI().Return(mockRepoURI, nil)
-				m.repository.EXPECT().Login().Return(nil)
-				m.repository.EXPECT().BuildAndPush(gomock.Any())
+				m.repository.EXPECT().Login().Return(mockRepoURI, nil)
+				m.repository.EXPECT().BuildAndPush(ctx, gomock.Any(), gomock.Any())
 				m.deployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
 					Name:       inGroupName,
 					Image:      "uri/repo:latest",
@@ -912,13 +913,13 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 				m.provider.EXPECT().Default().Return(&session.Session{}, nil)
 				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).AnyTimes()
 				m.deployer.EXPECT().DeployTask(gomock.Any()).AnyTimes()
-				m.repository.EXPECT().URI().Return(mockRepoURI, nil)
-				m.repository.EXPECT().Login().Return(nil)
-				m.repository.EXPECT().BuildAndPush(gomock.Eq(
+				m.repository.EXPECT().Login().Return(mockRepoURI, nil)
+				m.repository.EXPECT().BuildAndPush(ctx, gomock.Eq(
 					&dockerengine.BuildArguments{
+						URI:     mockRepoURI,
 						Context: filepath.Dir(defaultDockerfilePath),
 						Tags:    []string{imageTagLatest, tag},
-					}),
+					}), gomock.Any(),
 				)
 				m.runner.EXPECT().Run().AnyTimes()
 				mockHasDefaultCluster(m)
@@ -930,13 +931,13 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 				m.provider.EXPECT().Default().Return(&session.Session{}, nil)
 				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).AnyTimes()
 				m.deployer.EXPECT().DeployTask(gomock.Any()).AnyTimes()
-				m.repository.EXPECT().URI().Return(mockRepoURI, nil)
-				m.repository.EXPECT().Login().Return(nil)
-				m.repository.EXPECT().BuildAndPush(gomock.Eq(
+				m.repository.EXPECT().Login().Return(mockRepoURI, nil)
+				m.repository.EXPECT().BuildAndPush(ctx, gomock.Eq(
 					&dockerengine.BuildArguments{
+						URI:     mockRepoURI,
 						Context: "../../other",
 						Tags:    []string{imageTagLatest},
-					}),
+					}), gomock.Any(),
 				)
 				m.runner.EXPECT().Run().AnyTimes()
 				mockHasDefaultCluster(m)
@@ -954,9 +955,8 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 					Command:    []string{"/bin/sh", "-c", "curl $ECS_CONTAINER_METADATA_URI_V4"},
 					EntryPoint: []string{"exec", "some command"},
 				}).Times(1).Return(nil)
-				m.repository.EXPECT().URI().Return(mockRepoURI, nil)
-				m.repository.EXPECT().Login().Return(nil)
-				m.repository.EXPECT().BuildAndPush(gomock.Eq(&defaultBuildArguments))
+				m.repository.EXPECT().Login().Return(mockRepoURI, nil)
+				m.repository.EXPECT().BuildAndPush(ctx, gomock.Eq(&defaultBuildArguments), gomock.Any())
 				m.deployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
 					Name:       inGroupName,
 					Image:      "uri/repo:latest",
