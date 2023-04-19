@@ -21,6 +21,7 @@ const (
 const (
 	DefaultHealthCheckPath        = "/"
 	DefaultHealthCheckGracePeriod = 60
+	DefaultDeregistrationDelay    = 60
 )
 
 const (

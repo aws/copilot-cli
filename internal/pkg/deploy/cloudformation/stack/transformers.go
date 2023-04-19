@@ -597,12 +597,11 @@ func (conv routingRuleConfigConverter) convert() (*template.ALBListenerRule, err
 	return config, nil
 }
 
-func convertDeregistrationDelay(dd *time.Duration) *int64 {
-	var deregistrationDelay *int64 = aws.Int64(60)
-	if dd != nil {
-		deregistrationDelay = aws.Int64(int64(dd.Seconds()))
+func convertDeregistrationDelay(delay *time.Duration) *int64 {
+	if delay == nil {
+		return aws.Int64(int64(manifest.DefaultDeregistrationDelay))
 	}
-	return deregistrationDelay
+	return aws.Int64(int64(delay.Seconds()))
 }
 
 type nlbListeners []template.NetworkLoadBalancerListener
