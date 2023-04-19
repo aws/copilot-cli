@@ -5,6 +5,8 @@
 package mocks
 
 import (
+	context "context"
+	io "io"
 	reflect "reflect"
 
 	dockerengine "github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
@@ -35,17 +37,17 @@ func (m *MockContainerLoginBuildPusher) EXPECT() *MockContainerLoginBuildPusherM
 }
 
 // Build mocks base method.
-func (m *MockContainerLoginBuildPusher) Build(args *dockerengine.BuildArguments) error {
+func (m *MockContainerLoginBuildPusher) Build(ctx context.Context, args *dockerengine.BuildArguments, w io.Writer) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Build", args)
+	ret := m.ctrl.Call(m, "Build", ctx, args, w)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Build indicates an expected call of Build.
-func (mr *MockContainerLoginBuildPusherMockRecorder) Build(args interface{}) *gomock.Call {
+func (mr *MockContainerLoginBuildPusherMockRecorder) Build(ctx, args, w interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Build", reflect.TypeOf((*MockContainerLoginBuildPusher)(nil).Build), args)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Build", reflect.TypeOf((*MockContainerLoginBuildPusher)(nil).Build), ctx, args, w)
 }
 
 // IsEcrCredentialHelperEnabled mocks base method.
@@ -77,9 +79,9 @@ func (mr *MockContainerLoginBuildPusherMockRecorder) Login(uri, username, passwo
 }
 
 // Push mocks base method.
-func (m *MockContainerLoginBuildPusher) Push(uri string, tags ...string) (string, error) {
+func (m *MockContainerLoginBuildPusher) Push(ctx context.Context, uri string, w io.Writer, tags ...string) (string, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{uri}
+	varargs := []interface{}{ctx, uri, w}
 	for _, a := range tags {
 		varargs = append(varargs, a)
 	}
@@ -90,9 +92,9 @@ func (m *MockContainerLoginBuildPusher) Push(uri string, tags ...string) (string
 }
 
 // Push indicates an expected call of Push.
-func (mr *MockContainerLoginBuildPusherMockRecorder) Push(uri interface{}, tags ...interface{}) *gomock.Call {
+func (mr *MockContainerLoginBuildPusherMockRecorder) Push(ctx, uri, w interface{}, tags ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{uri}, tags...)
+	varargs := append([]interface{}{ctx, uri, w}, tags...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Push", reflect.TypeOf((*MockContainerLoginBuildPusher)(nil).Push), varargs...)
 }
 

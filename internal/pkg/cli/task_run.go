@@ -5,6 +5,7 @@ package cli
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
+	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/template/artifactpath"
 	"golang.org/x/mod/semver"
 
@@ -719,25 +721,21 @@ func (o *runTaskOpts) Execute() error {
 
 	// NOTE: if image is not provided, then we build the image and push to ECR repo
 	if o.image == "" {
-		err := o.repository.Login()
+		uri, err := o.repository.Login()
 		if err != nil {
 			return fmt.Errorf("login to docker: %w", err)
-		}
-
-		if err := o.buildAndPushImage(); err != nil {
-			return err
 		}
 
 		tag := imageTagLatest
 		if o.imageTag != "" {
 			tag = o.imageTag
 		}
-		uri, err := o.repository.URI()
-		if err != nil {
-			return fmt.Errorf("get ECR repository URI: %w", err)
+		o.image = fmt.Sprintf(fmtImageURI, uri, tag)
+
+		if err := o.buildAndPushImage(uri); err != nil {
+			return err
 		}
 
-		o.image = fmt.Sprintf(fmtImageURI, uri, tag)
 		shouldUpdate = true
 	}
 
@@ -955,7 +953,7 @@ func (o *runTaskOpts) showPublicIPs(tasks []*task.Task) {
 
 }
 
-func (o *runTaskOpts) buildAndPushImage() error {
+func (o *runTaskOpts) buildAndPushImage(uri string) error {
 	var additionalTags []string
 	if o.imageTag != "" {
 		additionalTags = append(additionalTags, o.imageTag)
@@ -965,12 +963,18 @@ func (o *runTaskOpts) buildAndPushImage() error {
 	if o.dockerfileContextPath != "" {
 		ctx = o.dockerfileContextPath
 	}
-
-	if _, err := o.repository.BuildAndPush(&dockerengine.BuildArguments{
+	buildArgs := &dockerengine.BuildArguments{
+		URI:        uri,
 		Dockerfile: o.dockerfilePath,
 		Context:    ctx,
 		Tags:       append([]string{imageTagLatest}, additionalTags...),
-	}); err != nil {
+	}
+	buildArgsList, err := buildArgs.GenerateDockerBuildArgs(dockerengine.New(exec.NewCmd()))
+	if err != nil {
+		return fmt.Errorf("generate docker build args: %w", err)
+	}
+	log.Infof("Building your container image: docker %s\n", strings.Join(buildArgsList, " "))
+	if _, err := o.repository.BuildAndPush(context.Background(), buildArgs, log.DiagnosticWriter); err != nil {
 		return fmt.Errorf("build and push image: %w", err)
 	}
 	return nil
