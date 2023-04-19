@@ -38,7 +38,7 @@ TargetGroup{{ if ne $i 0 }}{{ $i }}{{ end }}:
     {{- end}}
     TargetGroupAttributes:
       - Key: deregistration_delay.timeout_seconds
-        Value: {{$.DeregistrationDelay}} # ECS Default is 300; Copilot default is 60.
+        Value: {{$rule.DeregistrationDelay}} # ECS Default is 300; Copilot default is 60.
       - Key: stickiness.enabled
         Value: {{$rule.Stickiness}}
     TargetType: ip
