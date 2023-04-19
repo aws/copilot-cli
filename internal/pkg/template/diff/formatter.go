@@ -126,23 +126,23 @@ func (f *keyedFormatter) formatMod(node diffNode) (string, error) {
 // formatPath stringifies a diff path such that all keys with exactly one child are aggregated into one line.
 // For example, `HTTPRuleWithDomainPriorityAction/Properties`.
 // It returns the stringified path, as well as the node to which the last key on the path belongs.
-func (f *keyedFormatter) formatPath(keyNode diffNode) (string, diffNode) {
-	content := keyNode.key()
+func (f *keyedFormatter) formatPath(node diffNode) (string, diffNode) {
+	content := node.key()
 	for {
-		if len(keyNode.children()) != 1 {
+		if len(node.children()) != 1 {
 			break
 		}
-		peek := keyNode.children()[0]
+		peek := node.children()[0]
 		if len(peek.children()) == 0 {
 			break
 		}
-		if _, ok := peek.(*node); !ok {
+		if _, ok := peek.(*keyNode); !ok {
 			break
 		}
-		keyNode = peek
-		content = content + "/" + keyNode.key()
+		node = peek
+		content = content + "/" + node.key()
 	}
-	return process(content+":"+"\n", prefixByFn(prefixMod), indentByFn(f.indent)), keyNode
+	return process(content+":"+"\n", prefixByFn(prefixMod), indentByFn(f.indent)), node
 }
 
 func (f *keyedFormatter) nextIndent() int {
