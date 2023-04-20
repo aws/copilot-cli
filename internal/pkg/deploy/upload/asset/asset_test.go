@@ -10,7 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"path/filepath"
+	"path"
 	"sync"
 	"testing"
 
@@ -21,7 +21,7 @@ import (
 
 type fakeS3 struct {
 	mu   sync.Mutex
-	data map[string]string
+	data map[string][]byte
 	err  error
 }
 
@@ -38,26 +38,28 @@ func (f *fakeS3) Upload(path string, data io.Reader) error {
 	}
 
 	if f.data == nil {
-		f.data = make(map[string]string)
+		f.data = make(map[string][]byte)
 	}
-	f.data[path] = string(b)
+	f.data[path] = b
 	return nil
 }
 
 func Test_UploadFiles(t *testing.T) {
-	const mockMappingPath, mockPrefix = "mockMappingPath", "mockPrefix"
+	const mockMappingDir, mockPrefix = "mockMappingDir", "mockPrefix"
 	const mockContent1, mockContent2, mockContent3 = "mockContent1", "mockContent2", "mockContent3"
 
-	cachePath := func(content string) string {
+	hash := func(content string) string {
 		hash := sha256.New()
 		hash.Write([]byte(content))
-		return filepath.Join(mockPrefix, hex.EncodeToString(hash.Sum(nil)))
+		return hex.EncodeToString(hash.Sum(nil))
 	}
 
-	mappingFile := func(assets []asset) string {
-		b, err := json.Marshal(assets)
-		require.NoError(t, err)
-		return string(b)
+	newAsset := func(dstPath string, content string) asset {
+		return asset{
+			ArtifactBucketPath: path.Join(mockPrefix, hash(content)),
+			content:            []byte(content),
+			ServiceBucketPath:  dstPath,
+		}
 	}
 
 	testCases := map[string]struct {
@@ -65,7 +67,7 @@ func Test_UploadFiles(t *testing.T) {
 		mockS3Error    error
 		mockFileSystem func(fs afero.Fs)
 
-		expected      map[string]string
+		expected      []asset
 		expectedError error
 	}{
 		"error if failed to upload": {
@@ -94,14 +96,8 @@ func Test_UploadFiles(t *testing.T) {
 				afero.WriteFile(fs, "test/copilot/.workspace", []byte(mockContent1), 0644)
 				afero.WriteFile(fs, "copilot/prod/manifest.yaml", []byte(mockContent2), 0644)
 			},
-			expected: map[string]string{
-				cachePath(mockContent1): mockContent1,
-				mockMappingPath: mappingFile([]asset{
-					{
-						ArtifactBucketPath: cachePath(mockContent1),
-						ServiceBucketPath:  "copilot/.workspace",
-					},
-				}),
+			expected: []asset{
+				newAsset("copilot/.workspace", mockContent1),
 			},
 		},
 		"success without recursive": {
@@ -116,19 +112,9 @@ func Test_UploadFiles(t *testing.T) {
 				afero.WriteFile(fs, "test/manifest.yaml", []byte(mockContent2), 0644)
 				afero.WriteFile(fs, "test/foo", []byte(mockContent3), 0644)
 			},
-			expected: map[string]string{
-				cachePath(mockContent2): mockContent2,
-				cachePath(mockContent3): mockContent3,
-				mockMappingPath: mappingFile([]asset{
-					{
-						ArtifactBucketPath: cachePath(mockContent3),
-						ServiceBucketPath:  "foo",
-					},
-					{
-						ArtifactBucketPath: cachePath(mockContent2),
-						ServiceBucketPath:  "manifest.yaml",
-					},
-				}),
+			expected: []asset{
+				newAsset("foo", mockContent3),
+				newAsset("manifest.yaml", mockContent2),
 			},
 		},
 		"success with include only": {
@@ -147,14 +133,8 @@ func Test_UploadFiles(t *testing.T) {
 				afero.WriteFile(fs, "test/copilot/.workspace", []byte(mockContent1), 0644)
 				afero.WriteFile(fs, "copilot/prod/manifest.yaml", []byte(mockContent2), 0644)
 			},
-			expected: map[string]string{
-				cachePath(mockContent1): mockContent1,
-				mockMappingPath: mappingFile([]asset{
-					{
-						ArtifactBucketPath: cachePath(mockContent1),
-						ServiceBucketPath:  "ws/copilot/.workspace",
-					},
-				}),
+			expected: []asset{
+				newAsset("ws/copilot/.workspace", mockContent1),
 			},
 		},
 		"success with exclude only": {
@@ -171,14 +151,8 @@ func Test_UploadFiles(t *testing.T) {
 				afero.WriteFile(fs, "test/copilot/.workspace", []byte(mockContent1), 0644)
 				afero.WriteFile(fs, "copilot/prod/manifest.yaml", []byte(mockContent2), 0644)
 			},
-			expected: map[string]string{
-				cachePath(mockContent1): mockContent1,
-				mockMappingPath: mappingFile([]asset{
-					{
-						ArtifactBucketPath: cachePath(mockContent1),
-						ServiceBucketPath:  "test/copilot/.workspace",
-					},
-				}),
+			expected: []asset{
+				newAsset("test/copilot/.workspace", mockContent1),
 			},
 		},
 		"success with both include and exclude": {
@@ -200,19 +174,9 @@ func Test_UploadFiles(t *testing.T) {
 				afero.WriteFile(fs, "copilot/prod/manifest.yaml", []byte(mockContent2), 0644)
 				afero.WriteFile(fs, "copilot/prod/foo.yaml", []byte(mockContent3), 0644)
 			},
-			expected: map[string]string{
-				cachePath(mockContent1): mockContent1,
-				cachePath(mockContent2): mockContent2,
-				mockMappingPath: mappingFile([]asset{
-					{
-						ArtifactBucketPath: cachePath(mockContent2),
-						ServiceBucketPath:  "files/copilot/prod/manifest.yaml",
-					},
-					{
-						ArtifactBucketPath: cachePath(mockContent1),
-						ServiceBucketPath:  "files/test/copilot/.workspace",
-					},
-				}),
+			expected: []asset{
+				newAsset("files/copilot/prod/manifest.yaml", mockContent2),
+				newAsset("files/test/copilot/.workspace", mockContent1),
 			},
 		},
 		"success with file as source": {
@@ -225,14 +189,8 @@ func Test_UploadFiles(t *testing.T) {
 			mockFileSystem: func(fs afero.Fs) {
 				afero.WriteFile(fs, "test/copilot/.workspace", []byte(mockContent1), 0644)
 			},
-			expected: map[string]string{
-				cachePath(mockContent1): mockContent1,
-				mockMappingPath: mappingFile([]asset{
-					{
-						ArtifactBucketPath: cachePath(mockContent1),
-						ServiceBucketPath:  ".workspace",
-					},
-				}),
+			expected: []asset{
+				newAsset(".workspace", mockContent1),
 			},
 		},
 		"success with file as source and destination set": {
@@ -246,14 +204,8 @@ func Test_UploadFiles(t *testing.T) {
 			mockFileSystem: func(fs afero.Fs) {
 				afero.WriteFile(fs, "test/copilot/.workspace", []byte(mockContent1), 0644)
 			},
-			expected: map[string]string{
-				cachePath(mockContent1): mockContent1,
-				mockMappingPath: mappingFile([]asset{
-					{
-						ArtifactBucketPath: cachePath(mockContent1),
-						ServiceBucketPath:  "/is/a/file",
-					},
-				}),
+			expected: []asset{
+				newAsset("/is/a/file", mockContent1),
 			},
 		},
 	}
@@ -269,10 +221,10 @@ func Test_UploadFiles(t *testing.T) {
 			}
 
 			u := ArtifactBucketUploader{
-				FS:               fs,
-				Upload:           mockS3.Upload,
-				PathPrefix:       mockPrefix,
-				AssetMappingPath: mockMappingPath,
+				FS:              fs,
+				Upload:          mockS3.Upload,
+				PathPrefix:      mockPrefix,
+				AssetMappingDir: mockMappingDir,
 			}
 
 			err := u.UploadFiles(tc.files)
@@ -282,8 +234,21 @@ func Test_UploadFiles(t *testing.T) {
 				return
 			}
 
+			expected := make(map[string][]byte)
+			hash := sha256.New()
+			for _, asset := range tc.expected {
+				if _, ok := expected[asset.ArtifactBucketPath]; !ok {
+					hash.Write(asset.content)
+					expected[asset.ArtifactBucketPath] = asset.content
+				}
+			}
+
+			b, err := json.Marshal(tc.expected)
 			require.NoError(t, err)
-			require.Equal(t, tc.expected, mockS3.data)
+			expected[path.Join(mockMappingDir, hex.EncodeToString(hash.Sum(nil)))] = b
+
+			require.NoError(t, err)
+			require.Equal(t, expected, mockS3.data)
 		})
 	}
 }

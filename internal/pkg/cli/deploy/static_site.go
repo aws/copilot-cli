@@ -6,7 +6,6 @@ package deploy
 import (
 	"fmt"
 	"io"
-	"time"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
@@ -43,16 +42,16 @@ func NewStaticSiteDeployer(in *WorkloadDeployerInput) (*staticSiteDeployer, erro
 	if !ok {
 		return nil, fmt.Errorf("manifest is not of type %s", manifestinfo.StaticSiteType)
 	}
-	assetMappingPath := fmt.Sprintf("local-assets/environment/%s/workloads/%s/mapping/%s.json", svcDeployer.env.Name, svcDeployer.name, time.Now().Format(time.RFC3339))
+	assetMappingDir := fmt.Sprintf("local-assets/environments/%s/workloads/%s/mapping", svcDeployer.env.Name, svcDeployer.name)
 	return &staticSiteDeployer{
 		svcDeployer:      svcDeployer,
 		staticSiteMft:    mft,
 		fs:               svcDeployer.fs,
-		assetMappingPath: assetMappingPath,
+		assetMappingPath: assetMappingDir,
 		uploader: &asset.ArtifactBucketUploader{
-			FS:               svcDeployer.fs,
-			PathPrefix:       "local-assets",
-			AssetMappingPath: assetMappingPath,
+			FS:              svcDeployer.fs,
+			PathPrefix:      "local-assets",
+			AssetMappingDir: assetMappingDir,
 			Upload: func(path string, data io.Reader) error {
 				_, err := svcDeployer.s3Client.Upload(svcDeployer.resources.S3Bucket, path, data)
 				return err

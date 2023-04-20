@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"path"
 	"path/filepath"
 	"sort"
 
@@ -32,13 +33,13 @@ type ArtifactBucketUploader struct {
 	// PathPrefix is the path to prefix any hashed files when uploading to the artifact bucket.
 	PathPrefix string
 
-	// AssetMappingPath is the path the upload the asset mapping file to.
-	AssetMappingPath string
+	// AssetMappingDir is the path the upload the asset mapping file to.
+	AssetMappingDir string
 }
 
 type asset struct {
 	localPath string
-	content   io.Reader
+	content   []byte
 
 	ArtifactBucketPath string `json:"path"`
 	ServiceBucketPath  string `json:"destPath"`
@@ -70,19 +71,19 @@ func (u *ArtifactBucketUploader) UploadFiles(files []manifest.FileUpload) error 
 }
 
 func (u *ArtifactBucketUploader) walkFn(sourcePath, destPath string, recursive bool, matcher filepathMatcher, assets *[]asset) filepath.WalkFunc {
-	return func(path string, info fs.FileInfo, err error) error {
+	return func(fpath string, info fs.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 		if info.IsDir() {
 			// if path == sourcePath, then path is the directory they want uploaded.
 			// if path != sourcePath, then path is a _subdirectory_ of the directory they want uploaded.
-			if !recursive && path != sourcePath {
+			if !recursive && fpath != sourcePath {
 				return fs.SkipDir
 			}
 			return nil
 		}
-		ok, err := matcher.match(path)
+		ok, err := matcher.match(fpath)
 		if err != nil {
 			return err
 		}
@@ -92,21 +93,21 @@ func (u *ArtifactBucketUploader) walkFn(sourcePath, destPath string, recursive b
 
 		hash := sha256.New()
 		buf := &bytes.Buffer{}
-		file, err := u.FS.Open(path)
+		file, err := u.FS.Open(fpath)
 		if err != nil {
-			return fmt.Errorf("open %q: %w", path, err)
+			return fmt.Errorf("open %q: %w", fpath, err)
 		}
 		defer file.Close()
 
 		_, err = io.Copy(io.MultiWriter(buf, hash), file)
 		if err != nil {
-			return fmt.Errorf("copy %q: %w", path, err)
+			return fmt.Errorf("copy %q: %w", fpath, err)
 		}
 
 		// rel is "." when sourcePath == path
-		rel, err := filepath.Rel(sourcePath, path)
+		rel, err := filepath.Rel(sourcePath, fpath)
 		if err != nil {
-			return fmt.Errorf("get relative path for %q against %q: %w", path, sourcePath, err)
+			return fmt.Errorf("get relative path for %q against %q: %w", fpath, sourcePath, err)
 		}
 
 		dest := filepath.Join(destPath, rel)
@@ -115,10 +116,10 @@ func (u *ArtifactBucketUploader) walkFn(sourcePath, destPath string, recursive b
 		}
 
 		*assets = append(*assets, asset{
-			localPath:          path,
-			content:            buf,
-			ArtifactBucketPath: filepath.Join(u.PathPrefix, hex.EncodeToString(hash.Sum(nil))),
-			ServiceBucketPath:  dest,
+			localPath:          fpath,
+			content:            buf.Bytes(),
+			ArtifactBucketPath: path.Join(u.PathPrefix, hex.EncodeToString(hash.Sum(nil))),
+			ServiceBucketPath:  filepath.ToSlash(dest),
 		})
 		return nil
 	}
@@ -130,7 +131,7 @@ func (u *ArtifactBucketUploader) uploadAssets(assets []asset) error {
 	for i := range assets {
 		asset := assets[i]
 		g.Go(func() error {
-			if err := u.Upload(asset.ArtifactBucketPath, asset.content); err != nil {
+			if err := u.Upload(asset.ArtifactBucketPath, bytes.NewBuffer(asset.content)); err != nil {
 				return fmt.Errorf("upload %q: %w", asset.localPath, err)
 			}
 			return nil
@@ -149,7 +150,6 @@ func (u *ArtifactBucketUploader) uploadAssets(assets []asset) error {
 //	  "destPath": "index.html"
 //	}
 func (u *ArtifactBucketUploader) uploadAssetMappingFile(assets []asset) error {
-	// stable output
 	sort.Slice(assets, func(i, j int) bool {
 		if assets[i].ArtifactBucketPath != assets[j].ArtifactBucketPath {
 			return assets[i].ArtifactBucketPath < assets[j].ArtifactBucketPath
@@ -157,13 +157,22 @@ func (u *ArtifactBucketUploader) uploadAssetMappingFile(assets []asset) error {
 		return assets[i].ServiceBucketPath < assets[j].ServiceBucketPath
 	})
 
+	// hash using the sorted list so order-only changes in assets (caused by
+	// manifest or walkFn reordering) doesn't result in a mapping name change.
+	hash := sha256.New()
+	for _, asset := range assets {
+		// hash.Write is documented to never return an error
+		hash.Write(asset.content)
+	}
+
 	data, err := json.Marshal(assets)
 	if err != nil {
 		return fmt.Errorf("encode uploaded assets: %w", err)
 	}
 
-	if err := u.Upload(u.AssetMappingPath, bytes.NewBuffer(data)); err != nil {
-		return fmt.Errorf("upload to %q: %w", u.AssetMappingPath, err)
+	path := path.Join(u.AssetMappingDir, hex.EncodeToString(hash.Sum(nil)))
+	if err := u.Upload(path, bytes.NewBuffer(data)); err != nil {
+		return fmt.Errorf("upload to %q: %w", u.AssetMappingDir, err)
 	}
 	return nil
 }
