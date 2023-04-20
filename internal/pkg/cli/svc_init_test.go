@@ -116,10 +116,7 @@ func TestSvcInitOpts_Validate(t *testing.T) {
 				m.mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{}, nil)
 			},
 			mockFileSystem: func(mockFS afero.Fs) {
-				err := mockFS.MkdirAll("hello", 0755)
-				if err != nil {
-					return 
-				}
+				mockFS.MkdirAll("hello", 0755)
 				afero.WriteFile(mockFS, "hello/Dockerfile", []byte("FROM nginx"), 0644)
 			},
 			wantedErr: errors.New(`invalid ingress type "invalid": must be one of Environment or Internet`),
