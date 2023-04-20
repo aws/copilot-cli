@@ -18,11 +18,11 @@ exports.handler = async function (event, context) {
       case "Update":
         const sf = new aws.StepFunctions();
         const params = {
-          stateMachineArn: event.ResourceProperties?.StateMachineARN,
+          stateMachineArn: event.ResourceProperties.StateMachineARN,
           input: JSON.stringify({
-            SourceBucket: event.ResourceProperties?.SourceBucket,
-            AssetMappingFilePath: event.ResourceProperties?.AssetMappingFilePath,
-            DestinationBucket: event.ResourceProperties?.DestinationBucket,
+            SourceBucket: event.ResourceProperties.SourceBucket,
+            AssetMappingFilePath: event.ResourceProperties.AssetMappingFilePath,
+            DestinationBucket: event.ResourceProperties.DestinationBucket,
           })
         };
 
