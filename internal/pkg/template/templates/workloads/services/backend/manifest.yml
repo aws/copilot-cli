@@ -47,9 +47,6 @@ http:
     {{- range $i, $rule := .HTTP.AdditionalRoutingRules }}
     - path: '{{$rule.Path}}'
       target_port: {{$rule.TargetPort}}
-      {{- if $rule.ProtocolVersion }}
-      version: {{$rule.ProtocolVersion}}
-      {{- end }}
       # healthcheck: '{{$rule.HealthCheck.Basic}}'
     {{- end }}
 {{- end }}

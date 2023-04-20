@@ -42,7 +42,7 @@ type BackendServiceConfig struct {
 type BackendServiceProps struct {
 	WorkloadProps
 	Ports       []uint16
-	Path        string               //Optional path if multiple ports are exposed.
+	Path        string               // Optional path if multiple ports are exposed.
 	HealthCheck ContainerHealthCheck // Optional healthcheck configuration.
 	Platform    PlatformArgsOrString // Optional platform configuration.
 }
