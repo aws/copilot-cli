@@ -446,7 +446,7 @@ func (o *initSvcOpts) askStaticSite() error {
 	for _, source := range sources {
 		info, err := o.fs.Stat(source)
 		if err != nil {
-			return fmt.Errorf("get Fileinfo describing %s: %w", source, err)
+			return fmt.Errorf("get info for %q: %w", source, err)
 		}
 		assets = append(assets, manifest.FileUpload{
 			Source:    source,
