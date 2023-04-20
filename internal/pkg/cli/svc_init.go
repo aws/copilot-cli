@@ -242,6 +242,11 @@ func (o *initSvcOpts) Validate() error {
 		}
 	}
 	if len(o.ports) > 0 {
+		if o.wkldType != "" {
+			if err := o.validateMultiplePorts(); err != nil {
+				return err
+			}
+		}
 		for _, port := range o.ports {
 			if err := validateSvcPort(port); err != nil {
 				return err
@@ -585,7 +590,7 @@ func (o *initSvcOpts) askDockerfile() error {
 func (o *initSvcOpts) askSvcPort() (err error) {
 	// If the port flag was set, use that and don't ask.
 	if len(o.ports) > 0 {
-		return nil
+		return o.validateMultiplePorts()
 	}
 
 	var ports []dockerfile.Port
@@ -648,6 +653,13 @@ func (o *initSvcOpts) askSvcPort() (err error) {
 	portList := strings.Split(selectedPorts, ",")
 	o.ports = make([]string, len(portList))
 	copy(o.ports, portList)
+	return nil
+}
+
+func (o *initSvcOpts) validateMultiplePorts() error {
+	if (o.wkldType != manifestinfo.LoadBalancedWebServiceType && o.wkldType != manifestinfo.BackendServiceType) && len(o.ports) > 1 {
+		return fmt.Errorf("%s doesn't expose multiple ports", o.wkldType)
+	}
 	return nil
 }
 
