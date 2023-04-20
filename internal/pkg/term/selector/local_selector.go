@@ -147,7 +147,7 @@ func NewLocalFileSelector(prompt Prompter, fs afero.Fs) (*localFileSelector, err
 
 // StaticSources asks the user to select from a list of directories and files in the current directory and two levels down.
 func (s *localFileSelector) StaticSources(selPrompt, selHelp, anotherPathPrompt, anotherPathHelp string, pathValidator prompt.ValidatorFunc) ([]string, error) {
-	dirsAndFiles, err := s.listDirsAndFiles(s.workingDirAbs)
+	dirsAndFiles, err := s.listDirsAndFiles()
 	if err != nil {
 		return nil, err
 	}
@@ -276,8 +276,8 @@ func (s *localFileSelector) listDockerfiles() ([]string, error) {
 
 // listDirsAndFiles returns the list of directories and files within the current
 // working directory and two subdirectory levels below.
-func (s *localFileSelector) listDirsAndFiles(workingDir string) ([]string, error) {
-	names, err := s.getDirAndFileNames(workingDir, 0)
+func (s *localFileSelector) listDirsAndFiles() ([]string, error) {
+	names, err := s.getDirAndFileNames(s.workingDirAbs, 0)
 	if err != nil {
 		return nil, err
 	} 
