@@ -5,7 +5,6 @@ package selector
 
 import (
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws"
 	"os"
 	"path/filepath"
 	"sort"
@@ -278,38 +277,37 @@ func (s *localFileSelector) listDockerfiles() ([]string, error) {
 // listDirsAndFiles returns the list of directories and files within the current
 // working directory and two subdirectory levels below.
 func (s *localFileSelector) listDirsAndFiles(workingDir string) ([]string, error) {
-	names, err := s.getDirAndFileNames(workingDir, aws.Int(0), &[]string{})
+	names, err := s.getDirAndFileNames(workingDir, 0)
 	if err != nil {
 		return nil, err
 	} 
 	return names, nil
 }
 
-func (s *localFileSelector) getDirAndFileNames(dir string, depth *int, existingNames *[]string) (allNames []string, err error) {
+func (s *localFileSelector) getDirAndFileNames(dir string, depth int) ([]string, error) {
 	wdDirsAndFiles, err := s.fs.ReadDir(dir)
 	if err != nil {
 		return nil, fmt.Errorf("read directory: %w", err)
 	}
-	if *depth == 0 {
-		dir = s.workingDirAbs
-	}
+	var names []string
 	for _, file := range wdDirsAndFiles {
 		name := file.Name()
 		if strings.HasPrefix(name, ".") || name == "copilot" {
 			continue
 		}
 		relPathName := dir + "/" + name
-		*existingNames = append(*existingNames, relPathName)
-		if *depth < 3 && file.IsDir() {
-			*depth += 1
-			_, err := s.getDirAndFileNames(relPathName, depth, existingNames)
+		names = append(names, relPathName)
+		if depth < 3 && file.IsDir() {
+			subNames, err := s.getDirAndFileNames(relPathName, depth+1)
 			if err != nil {
 				return nil, fmt.Errorf("get dir and file names: %w", err)
 			}
+			names = append(names, subNames...)
 		}
 	}
-	return *existingNames, nil
+	return names, nil
 }
+
 
 func presetScheduleToDefinitionString(input string) string {
 	return fmt.Sprintf("@%s", strings.ToLower(input))
