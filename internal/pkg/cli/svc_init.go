@@ -532,7 +532,7 @@ func (o *initSvcOpts) askSource() ([]string, error) {
 		fmt.Sprintf(fmtStaticSiteInitDirFilePathPrompt, color.HighlightUserInput(o.name)),
 		staticSiteInitDirFilePathHelpPrompt,
 		func(v interface{}) error {
-			return validatePath(o.fs), v)
+			return validatePath(o.fs, v)
 		},
 	)
 	if err != nil {
