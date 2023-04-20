@@ -7,7 +7,7 @@ describe("copy assets", () => {
   const aws = require("aws-sdk-mock");
   const lambdaTester = require("lambda-tester").noVersionCheck();
   const sinon = require("sinon");
-  const copyAssets = require("../lib/copy-assets");
+  const handler = require("../lib/copy-assets");
 
   afterEach(() => {
     aws.restore();
@@ -17,7 +17,7 @@ describe("copy assets", () => {
     const fake = sinon.fake.resolves({});
     aws.mock("S3", "copyObject", fake);
 
-    return lambdaTester(copyAssets.handler)
+    return lambdaTester(handler.handler)
       .event({
         srcBucket: "mockSrcBucket",
         destBucket: "mockDestBucket",
@@ -39,7 +39,7 @@ describe("copy assets", () => {
     const fake = sinon.fake.rejects("some error");
     aws.mock("S3", "copyObject", fake);
 
-    return lambdaTester(copyAssets.handler)
+    return lambdaTester(handler.handler)
       .event({
         srcBucket: "mockSrcBucket",
         destBucket: "mockDestBucket",

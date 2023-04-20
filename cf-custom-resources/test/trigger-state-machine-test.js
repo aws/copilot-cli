@@ -8,7 +8,7 @@ describe("trigger state machine", () => {
   const lambdaTester = require("lambda-tester").noVersionCheck();
   const nock = require("nock");
   const sinon = require("sinon");
-  const triggerStateMachine = require("../lib/trigger-state-machine");
+  const handler = require("../lib/trigger-state-machine");
 
   const responseURL = "https://cloudwatch-response-mock.example.com/";
   const logGroup = "/aws/lambda/testLambda";
@@ -23,6 +23,10 @@ describe("trigger state machine", () => {
   };
 
   const origConsole = console;
+
+  handler.withDeadlineExpired(() => {
+    return new Promise((resolve, reject) => { });
+  });
 
   afterEach(() => {
     aws.restore();
@@ -42,7 +46,7 @@ describe("trigger state machine", () => {
         );
       })
       .reply(200);
-    return lambdaTester(triggerStateMachine.handler)
+    return lambdaTester(handler.handler)
       .context({
         logGroupName: logGroup,
         logStreamName: logStream,
@@ -65,7 +69,7 @@ describe("trigger state machine", () => {
         return body.Status === "SUCCESS";
       })
       .reply(200);
-    return lambdaTester(triggerStateMachine.handler)
+    return lambdaTester(handler.handler)
       .context({
         logGroupName: logGroup,
         logStreamName: logStream,
@@ -92,7 +96,7 @@ describe("trigger state machine", () => {
     const fake = sinon.fake.resolves({ status: "SUCCEEDED" });
     aws.mock("StepFunctions", "startSyncExecution", fake);
 
-    return lambdaTester(triggerStateMachine.handler)
+    return lambdaTester(handler.handler)
       .context({
         logGroupName: logGroup,
         logStreamName: logStream,
@@ -131,7 +135,7 @@ describe("trigger state machine", () => {
     const fake = sinon.fake.resolves({ status: "FAILED", cause: "some error" });
     aws.mock("StepFunctions", "startSyncExecution", fake);
 
-    return lambdaTester(triggerStateMachine.handler)
+    return lambdaTester(handler.handler)
       .context({
         logGroupName: logGroup,
         logStreamName: logStream,
@@ -170,7 +174,7 @@ describe("trigger state machine", () => {
     const fake = sinon.fake.rejects("some error");
     aws.mock("StepFunctions", "startSyncExecution", fake);
 
-    return lambdaTester(triggerStateMachine.handler)
+    return lambdaTester(handler.handler)
       .context({
         logGroupName: logGroup,
         logStreamName: logStream,

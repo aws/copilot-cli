@@ -55,7 +55,7 @@ exports.handler = async function (event, context) {
   }
 };
 
-const deadlineExpired = function () {
+let deadlineExpired = () => {
   return new Promise((resolve, reject) => {
     setTimeout(
       reject,
@@ -123,4 +123,11 @@ const report = function (
       })
       .end(responseBody, "utf8");
   });
+};
+
+/**
+ * @private
+ */
+exports.withDeadlineExpired = fn => {
+  deadlineExpired = fn;
 };
