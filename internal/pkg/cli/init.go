@@ -7,14 +7,13 @@ package cli
 import (
 	"errors"
 	"fmt"
-	"os"
-	"strings"
-
 	awscfn "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/iam"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
 	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
+	"github.com/dustin/go-humanize/english"
+	"os"
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
@@ -374,7 +373,8 @@ func (o *initOpts) logWorkloadTypeAck() {
 		return
 	}
 	if len(*o.ports) > 0 {
-		log.Infof("Ok great, we'll set up a %s named %s in application %s listening on port(s) %s.\n", color.HighlightUserInput(o.initWkldVars.wkldType), color.HighlightUserInput(o.initWkldVars.name), color.HighlightUserInput(o.initWkldVars.appName), color.HighlightUserInput(strings.Join(*o.ports, ", ")))
+		log.Infof("Ok great, we'll set up a %s named %s in application %s listening on %s %s.\n", color.HighlightUserInput(o.initWkldVars.wkldType), color.HighlightUserInput(o.initWkldVars.name), color.HighlightUserInput(o.initWkldVars.appName),
+			english.PluralWord(len(*o.ports), "port", "ports"), color.HighlightUserInput(english.OxfordWordSeries(*o.ports, "and")))
 	} else {
 		log.Infof("Ok great, we'll set up a %s named %s in application %s.\n", color.HighlightUserInput(o.initWkldVars.wkldType), color.HighlightUserInput(o.initWkldVars.name), color.HighlightUserInput(o.initWkldVars.appName))
 	}

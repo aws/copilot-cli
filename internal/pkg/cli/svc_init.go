@@ -81,7 +81,7 @@ Deployed resources (such as your ECR repository, logs) will contain this %[1]s's
 	svcInitSvcPortPrompt     = "Which %s do you want customer traffic sent to?"
 	svcInitSvcPortHelpPrompt = `The port(s) will be used by the load balancer to route incoming traffic to this service.
 You should set this to the port(s) which your Dockerfile uses to communicate with the internet.
-You can also specify multiple container ports in Load Balanced Web Service in a similar pattern to Dockerfile (ports separated by a space), i.e., 3000 3001	`
+You can specify multiple container ports for Load Balanced Web Services and Backend Services e.g. 3000,3001`
 
 	svcInitPublisherPrompt     = "Which topics do you want to subscribe to?"
 	svcInitPublisherHelpPrompt = `A publisher is an existing SNS Topic to which a service publishes messages. 

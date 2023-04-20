@@ -96,7 +96,7 @@ func TestNewHTTPLoadBalancedWebService(t *testing.T) {
 					},
 				},
 				Path:  "/",
-				Ports: []uint16{80},
+				Ports: []uint16{80, 81},
 
 				HealthCheck: ContainerHealthCheck{
 					Command: []string{"CMD", "curl -f http://localhost:8080 || exit 1"},
@@ -133,6 +133,15 @@ func TestNewHTTPLoadBalancedWebService(t *testing.T) {
 								Path: stringP("/"),
 								HealthCheck: HealthCheckArgsOrString{
 									Union: BasicToUnion[string, HTTPHealthCheckArgs]("/"),
+								},
+							},
+							AdditionalRoutingRules: []RoutingRule{
+								{
+									Path: stringP("admin"),
+									HealthCheck: HealthCheckArgsOrString{
+										Union: BasicToUnion[string, HTTPHealthCheckArgs]("/admin"),
+									},
+									TargetPort: aws.Uint16(81),
 								},
 							},
 						},

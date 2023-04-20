@@ -7,6 +7,7 @@ package initialize
 import (
 	"encoding"
 	"fmt"
+	"github.com/dustin/go-humanize/english"
 	"os"
 	"path/filepath"
 	"strings"
@@ -223,7 +224,7 @@ func (w *WorkloadInitializer) initService(props *ServiceProps) (string, error) {
 
 	helpText := "Your manifest contains configurations like your container size and port."
 	if len(props.Ports) > 0 {
-		helpText = fmt.Sprintf("Your manifest contains configurations like your container size and port (:%s).", strings.Trim(strings.Replace(fmt.Sprint(props.Ports), " ", ",", -1), "[]"))
+		helpText = fmt.Sprintf("Your manifest contains configurations like your container size and %s (:%s).", english.PluralWord(len(props.Ports), "port", "ports"), strings.Trim(strings.Replace(fmt.Sprint(props.Ports), " ", ",", -1), "[]"))
 	}
 	log.Infoln(color.Help(helpText))
 	log.Infoln()
@@ -293,7 +294,7 @@ func (w *WorkloadInitializer) newServiceManifest(i *ServiceProps) (encoding.Bina
 	case manifestinfo.RequestDrivenWebServiceType:
 		return w.newRequestDrivenWebServiceManifest(i), nil
 	case manifestinfo.BackendServiceType:
-		return newBackendServiceManifest(i)
+		return w.newBackendServiceManifest(i)
 	case manifestinfo.WorkerServiceType:
 		return newWorkerServiceManifest(i)
 	case manifestinfo.StaticSiteType:
@@ -347,8 +348,8 @@ func (w *WorkloadInitializer) newRequestDrivenWebServiceManifest(i *ServiceProps
 	return manifest.NewRequestDrivenWebService(props)
 }
 
-func newBackendServiceManifest(i *ServiceProps) (*manifest.BackendService, error) {
-	return manifest.NewBackendService(manifest.BackendServiceProps{
+func (w *WorkloadInitializer) newBackendServiceManifest(i *ServiceProps) (*manifest.BackendService, error) {
+	outProps := manifest.BackendServiceProps{
 		WorkloadProps: manifest.WorkloadProps{
 			Name:                    i.Name,
 			Dockerfile:              i.DockerfilePath,
@@ -358,7 +359,27 @@ func newBackendServiceManifest(i *ServiceProps) (*manifest.BackendService, error
 		Ports:       i.Ports,
 		HealthCheck: i.HealthCheck,
 		Platform:    i.Platform,
-	}), nil
+	}
+
+	// we set http fields if multiple ports have been exposed.
+	if len(i.Ports) > 1 {
+		outProps.Path = "/"
+		existingSvcs, err := w.Store.ListServices(i.App)
+		if err != nil {
+			return nil, err
+		}
+		// We default to "/" for the first service or if the application is initialized with a domain, but if there's another
+		// Backend Service, we use the svc name as the default, instead.
+		if aws.StringValue(i.appDomain) == "" {
+			for _, existingSvc := range existingSvcs {
+				if existingSvc.Type == manifestinfo.BackendServiceType && existingSvc.Name != i.Name {
+					outProps.Path = i.Name
+					break
+				}
+			}
+		}
+	}
+	return manifest.NewBackendService(outProps), nil
 }
 
 func newWorkerServiceManifest(i *ServiceProps) (*manifest.WorkerService, error) {

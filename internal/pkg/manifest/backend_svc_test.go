@@ -130,6 +130,74 @@ func TestNewBackendSvc(t *testing.T) {
 				},
 			},
 		},
+		"with custom healthcheck command and multiple ports": {
+			inProps: BackendServiceProps{
+				WorkloadProps: WorkloadProps{
+					Name:  "subscribers",
+					Image: "mockImage",
+				},
+				HealthCheck: ContainerHealthCheck{
+					Command: []string{"CMD", "curl -f http://localhost:8080 || exit 1"},
+				},
+				Ports: []uint16{8080, 8081},
+				Path:  "/",
+			},
+			wantedManifest: &BackendService{
+				Workload: Workload{
+					Name: aws.String("subscribers"),
+					Type: aws.String(manifestinfo.BackendServiceType),
+				},
+				BackendServiceConfig: BackendServiceConfig{
+					ImageConfig: ImageWithHealthcheckAndOptionalPort{
+						ImageWithOptionalPort: ImageWithOptionalPort{
+							Image: Image{
+								ImageLocationOrBuild: ImageLocationOrBuild{
+									Location: aws.String("mockImage"),
+								},
+							},
+							Port: aws.Uint16(8080),
+						},
+						HealthCheck: ContainerHealthCheck{
+							Command: []string{"CMD", "curl -f http://localhost:8080 || exit 1"},
+						},
+					},
+					HTTP: HTTP{
+						Main: RoutingRule{
+							Path: stringP("/"),
+							HealthCheck: HealthCheckArgsOrString{
+								Union: BasicToUnion[string, HTTPHealthCheckArgs]("/"),
+							},
+						},
+						AdditionalRoutingRules: []RoutingRule{
+							{
+								Path: stringP("admin"),
+								HealthCheck: HealthCheckArgsOrString{
+									Union: BasicToUnion[string, HTTPHealthCheckArgs]("/admin"),
+								},
+								TargetPort: aws.Uint16(8081),
+							},
+						},
+					},
+					TaskConfig: TaskConfig{
+						CPU:    aws.Int(256),
+						Memory: aws.Int(512),
+						Count: Count{
+							Value: aws.Int(1),
+						},
+						ExecuteCommand: ExecuteCommand{
+							Enable: aws.Bool(false),
+						},
+					},
+					Network: NetworkConfig{
+						VPC: vpcConfig{
+							Placement: PlacementArgOrString{
+								PlacementString: placementStringP(PublicSubnetPlacement),
+							},
+						},
+					},
+				},
+			},
+		},
 		"with windows platform": {
 			inProps: BackendServiceProps{
 				WorkloadProps: WorkloadProps{
