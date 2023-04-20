@@ -719,7 +719,7 @@ type: Request-Driven Web Service`), nil)
 				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
 				m.mockSourceSel.EXPECT().StaticSources(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]string{mockFile}, nil)
 			},
-			wantedErr: fmt.Errorf("get Fileinfo describing my/mock/file.css: open my/mock/file.css: file does not exist"),
+			wantedErr: fmt.Errorf(`get info for "my/mock/file.css": open my/mock/file.css: file does not exist`),
 		},
 		"successfully ask for static site sources and label dirs as recursive": {
 			inSvcType: manifestinfo.StaticSiteType,
