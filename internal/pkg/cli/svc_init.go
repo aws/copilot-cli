@@ -94,7 +94,7 @@ These messages can be consumed by the Worker Service.`
 
 	fmtStaticSiteInitDirFilePrompt      = "Which " + color.Emphasize("directories or files") + " would you like to upload for %s?"
 	staticSiteInitDirFileHelpPrompt     = "Directories or files to use for building your static site."
-	fmtStaticSiteInitDirFilePathPrompt  = "What is the custom path to the " + color.Emphasize("directory or file") + " for %s?"
+	fmtStaticSiteInitDirFilePathPrompt  = "What is the path to the " + color.Emphasize("directory or file") + " for %s?"
 	staticSiteInitDirFilePathHelpPrompt = "Path to directory or file to use for building your static site."
 )
 
