@@ -127,6 +127,8 @@ const report = function (
 
 /**
  * @private
+ * withDeadlineExpired overrides the default deadlineExpired function.
+ * Used for testing.
  */
 exports.withDeadlineExpired = fn => {
   deadlineExpired = fn;
