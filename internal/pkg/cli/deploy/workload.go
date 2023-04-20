@@ -5,12 +5,15 @@ package deploy
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -28,17 +31,21 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
+	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/repository"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/template/artifactpath"
 	"github.com/aws/copilot-cli/internal/pkg/template/diff"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
+	"github.com/aws/copilot-cli/internal/pkg/term/cursor"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
+	"github.com/aws/copilot-cli/internal/pkg/term/syncbuffer"
 	"github.com/aws/copilot-cli/internal/pkg/version"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/spf13/afero"
+	"golang.org/x/sync/errgroup"
 )
 
 const (
@@ -55,6 +62,11 @@ const (
 	labelForVersion       = "com.aws.copilot.image.version"
 	labelForContainerName = "com.aws.copilot.image.container.name"
 )
+const (
+	paddingInSpacesForBuildAndPush = 5
+	pollIntervalForBuildAndPush    = 60 * time.Millisecond
+	defaultNumLinesForBuildAndPush = 5
+)
 
 // ActionRecommender contains methods that output action recommendation.
 type ActionRecommender interface {
@@ -68,8 +80,8 @@ func (noopActionRecommender) RecommendedActions() []string {
 }
 
 type repositoryService interface {
-	Login() error
-	BuildAndPush(args *dockerengine.BuildArguments) (string, error)
+	Login() (string, error)
+	BuildAndPush(ctx context.Context, args *dockerengine.BuildArguments, w io.Writer) (string, error)
 }
 
 type templater interface {
@@ -104,18 +116,20 @@ type spinner interface {
 	Stop(label string)
 }
 
-type fileReader interface {
-	ReadFile(string) ([]byte, error)
+type labeledTermPrinter interface {
+	IsDone() bool
+	Print()
 }
 
 // StackRuntimeConfiguration contains runtime configuration for a workload CloudFormation stack.
 type StackRuntimeConfiguration struct {
-	ImageDigests       map[string]ContainerImageIdentifier // Container name to image.
-	EnvFileARNs        map[string]string
-	AddonsURL          string
-	RootUserARN        string
-	Tags               map[string]string
-	CustomResourceURLs map[string]string
+	ImageDigests              map[string]ContainerImageIdentifier // Container name to image.
+	EnvFileARNs               map[string]string
+	AddonsURL                 string
+	RootUserARN               string
+	Tags                      map[string]string
+	CustomResourceURLs        map[string]string
+	StaticSiteAssetMappingURL string
 }
 
 // DeployWorkloadInput is the input of DeployWorkload.
@@ -152,18 +166,19 @@ type workloadDeployer struct {
 	workspacePath string
 
 	// Dependencies.
-	fs               fileReader
-	s3Client         uploader
-	addons           stackBuilder
-	repository       repositoryService
-	deployer         serviceDeployer
-	tmplGetter       deployedTemplateGetter
-	endpointGetter   endpointGetter
-	spinner          spinner
-	templateFS       template.Reader
-	envVersionGetter versionGetter
-	overrider        Overrider
-	customResources  customResourcesFunc
+	fs                 afero.Fs
+	s3Client           uploader
+	addons             stackBuilder
+	repository         repositoryService
+	deployer           serviceDeployer
+	tmplGetter         deployedTemplateGetter
+	endpointGetter     endpointGetter
+	spinner            spinner
+	templateFS         template.Reader
+	envVersionGetter   versionGetter
+	overrider          Overrider
+	customResources    customResourcesFunc
+	labeledTermPrinter func(fw syncbuffer.FileWriter, bufs []*syncbuffer.LabeledSyncBuffer, opts ...syncbuffer.LabeledTermPrinterOption) labeledTermPrinter
 
 	// Cached variables.
 	defaultSess              *session.Session
@@ -252,6 +267,10 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 	}
 
 	cfn := cloudformation.New(envSession, cloudformation.WithProgressTracker(os.Stderr))
+
+	labeledTermPrinter := func(fw syncbuffer.FileWriter, bufs []*syncbuffer.LabeledSyncBuffer, opts ...syncbuffer.LabeledTermPrinterOption) labeledTermPrinter {
+		return syncbuffer.NewLabeledTermPrinter(fw, bufs, opts...)
+	}
 	return &workloadDeployer{
 		name:                     in.Name,
 		app:                      in.App,
@@ -259,7 +278,7 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 		image:                    in.Image,
 		resources:                resources,
 		workspacePath:            ws.Path(),
-		fs:                       &afero.Afero{Fs: afero.NewOsFs()},
+		fs:                       afero.NewOsFs(),
 		s3Client:                 s3.New(envSession),
 		addons:                   addons,
 		repository:               repository,
@@ -276,6 +295,7 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 		envSess:                  envSession,
 		store:                    store,
 		envConfig:                envConfig,
+		labeledTermPrinter:       labeledTermPrinter,
 
 		mft:    in.Mft,
 		rawMft: in.RawMft,
@@ -364,21 +384,72 @@ func (d *workloadDeployer) uploadContainerImages(out *UploadArtifactsOutput) err
 	if len(buildArgsPerContainer) == 0 {
 		return nil
 	}
-	err = d.repository.Login()
+	uri, err := d.repository.Login()
 	if err != nil {
 		return fmt.Errorf("login to image repository: %w", err)
 	}
+
+	var digestsMu sync.Mutex
 	out.ImageDigests = make(map[string]ContainerImageIdentifier, len(buildArgsPerContainer))
+	var labeledBuffers []*syncbuffer.LabeledSyncBuffer
+	g, ctx := errgroup.WithContext(context.Background())
+	cursor := cursor.New()
+	cursor.Hide()
 	for name, buildArgs := range buildArgsPerContainer {
-		digest, err := d.repository.BuildAndPush(buildArgs)
+		// create a copy of loop variables to avoid data race.
+		name := name
+		buildArgs := buildArgs
+
+		buildArgs.URI = uri
+		buildArgsList, err := buildArgs.GenerateDockerBuildArgs(dockerengine.New(exec.NewCmd()))
 		if err != nil {
-			return fmt.Errorf("build and push image: %w", err)
+			return fmt.Errorf("generate docker build args for %q: %w", name, err)
 		}
-		out.ImageDigests[name] = ContainerImageIdentifier{
-			Digest:            digest,
-			CustomTag:         d.image.CustomTag,
-			GitShortCommitTag: d.image.GitShortCommitTag,
+		buf := syncbuffer.New()
+		labeledBuffers = append(labeledBuffers, buf.WithLabel(fmt.Sprintf("Building your container image %q: docker %s", name, strings.Join(buildArgsList, " "))))
+		pr, pw := io.Pipe()
+		g.Go(func() error {
+			defer pw.Close()
+			digest, err := d.repository.BuildAndPush(ctx, buildArgs, pw)
+			if err != nil {
+				return fmt.Errorf("build and push the image %q: %w", name, err)
+			}
+			digestsMu.Lock()
+			defer digestsMu.Unlock()
+			out.ImageDigests[name] = ContainerImageIdentifier{
+				Digest:            digest,
+				CustomTag:         d.image.CustomTag,
+				GitShortCommitTag: d.image.GitShortCommitTag,
+			}
+			return nil
+		})
+		g.Go(func() error {
+			if err := buf.Copy(pr); err != nil {
+				return fmt.Errorf("copy build and push output for %q: %w", name, err)
+			}
+			return nil
+		})
+	}
+	opts := []syncbuffer.LabeledTermPrinterOption{syncbuffer.WithPadding(paddingInSpacesForBuildAndPush)}
+	if os.Getenv("CI") != "true" {
+		opts = append(opts, syncbuffer.WithNumLines(defaultNumLinesForBuildAndPush))
+	}
+	ltp := d.labeledTermPrinter(os.Stderr, labeledBuffers, opts...)
+	g.Go(func() error {
+		for {
+			ltp.Print()
+			if ltp.IsDone() {
+				return nil
+			}
+			select {
+			case <-ctx.Done():
+				return nil
+			case <-time.After(pollIntervalForBuildAndPush):
+			}
 		}
+	})
+	if err := g.Wait(); err != nil {
+		return err
 	}
 	return nil
 }
@@ -448,10 +519,11 @@ type customResourcesFunc func(fs template.Reader) ([]*customresource.CustomResou
 
 // UploadArtifactsOutput is the output of UploadArtifacts.
 type UploadArtifactsOutput struct {
-	ImageDigests       map[string]ContainerImageIdentifier // Container name to image.
-	EnvFileARNs        map[string]string                   // map[container name]envFileARN
-	AddonsURL          string
-	CustomResourceURLs map[string]string
+	ImageDigests                   map[string]ContainerImageIdentifier // Container name to image.
+	EnvFileARNs                    map[string]string                   // map[container name]envFileARN
+	AddonsURL                      string
+	CustomResourceURLs             map[string]string
+	StaticSiteAssetMappingLocation string
 }
 
 // uploadArtifactFunc uploads an artifact and updates out
@@ -487,7 +559,7 @@ func (d *workloadDeployer) uploadCustomResources(out *UploadArtifactsOutput) err
 }
 
 type pushEnvFilesToS3BucketInput struct {
-	fs       fileReader
+	fs       afero.Fs
 	uploader uploader
 }
 
@@ -523,7 +595,7 @@ func (d *workloadDeployer) pushEnvFilesToS3Bucket(in *pushEnvFilesToS3BucketInpu
 	envFileARNs := make(map[string]string)
 
 	for path, containers := range uniqueEnvFiles {
-		content, err := in.fs.ReadFile(filepath.Join(d.workspacePath, path))
+		content, err := afero.ReadFile(in.fs, filepath.Join(d.workspacePath, path))
 		if err != nil {
 			return nil, fmt.Errorf("read env file %s: %w", path, err)
 		}

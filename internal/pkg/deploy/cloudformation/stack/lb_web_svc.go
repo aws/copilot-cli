@@ -171,10 +171,6 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	var deregistrationDelay *int64 = aws.Int64(60)
-	if s.manifest.HTTPOrBool.Main.DeregistrationDelay != nil {
-		deregistrationDelay = aws.Int64(int64(s.manifest.HTTPOrBool.Main.DeregistrationDelay.Seconds()))
-	}
 	nlbConfig, err := s.convertNetworkLoadBalancer()
 	if err != nil {
 		return "", err
@@ -231,8 +227,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		Storage:                 convertStorageOpts(s.manifest.Name, s.manifest.Storage),
 
 		// ALB configs.
-		ALBEnabled:          !s.manifest.HTTPOrBool.Disabled(),
-		DeregistrationDelay: deregistrationDelay,
+		ALBEnabled: !s.manifest.HTTPOrBool.Disabled(),
 		HTTPTargetContainer: template.HTTPTargetContainer{
 			Port: targetContainerPort,
 			Name: targetContainer,

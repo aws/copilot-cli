@@ -23,7 +23,7 @@
   },
   "license": "Apache-2.0",
   "dependencies": {
-    "aws-sdk": "^2.934.0"
+    "aws-sdk": "^2.1354.0"
   },
   "devDependencies": {
     "ansi-regex": ">=5.0.1",

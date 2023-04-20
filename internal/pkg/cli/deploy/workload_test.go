@@ -14,6 +14,7 @@ import (
 	"time"
 
 	cloudformation0 "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
+	"github.com/spf13/afero"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -31,6 +32,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
+	"github.com/aws/copilot-cli/internal/pkg/term/syncbuffer"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -47,8 +49,9 @@ type deployMocks struct {
 	mockUploader               *mocks.Mockuploader
 	mockAppVersionGetter       *mocks.MockversionGetter
 	mockEnvVersionGetter       *mocks.MockversionGetter
-	mockFileReader             *mocks.MockfileReader
+	mockFileSystem             afero.Fs
 	mockValidator              *mocks.MockaliasCertValidator
+	mockLabeledTermPrinter     *mocks.MocklabeledTermPrinter
 }
 
 type mockTemplateFS struct {
@@ -155,6 +158,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 		mockName            = "mockWkld"
 		mockEnvName         = "test"
 		mockAppName         = "press"
+		mockURI             = "mockRepoURI"
 		mockWorkspacePath   = "."
 		mockEnvFile         = "foo.env"
 		mockS3Bucket        = "mockBucket"
@@ -201,8 +205,9 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				},
 			},
 			mock: func(t *testing.T, m *deployMocks) {
-				m.mockRepositoryService.EXPECT().Login().Return(nil)
-				m.mockRepositoryService.EXPECT().BuildAndPush(&dockerengine.BuildArguments{
+				m.mockRepositoryService.EXPECT().Login().Return(mockURI, nil)
+				m.mockRepositoryService.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
+					URI:        mockURI,
 					Dockerfile: "mockDockerfile",
 					Context:    "mockContext",
 					Platform:   "mockContainerPlatform",
@@ -211,9 +216,11 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 						"com.aws.copilot.image.builder":        "copilot-cli",
 						"com.aws.copilot.image.container.name": "mockWkld",
 					},
-				}).Return("", mockError)
+				}, gomock.Any()).Return("", mockError)
+				m.mockLabeledTermPrinter.EXPECT().IsDone().Return(true).AnyTimes()
+				m.mockLabeledTermPrinter.EXPECT().Print().AnyTimes()
 			},
-			wantErr: fmt.Errorf("build and push image: some error"),
+			wantErr: fmt.Errorf("build and push the image \"mockWkld\": some error"),
 		},
 		"build and push image with usertag successfully": {
 			inMockUserTag: "v1.0",
@@ -225,8 +232,9 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				},
 			},
 			mock: func(t *testing.T, m *deployMocks) {
-				m.mockRepositoryService.EXPECT().Login().Return(nil)
-				m.mockRepositoryService.EXPECT().BuildAndPush(&dockerengine.BuildArguments{
+				m.mockRepositoryService.EXPECT().Login().Return(mockURI, nil)
+				m.mockRepositoryService.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
+					URI:        mockURI,
 					Dockerfile: "mockDockerfile",
 					Context:    "mockContext",
 					Platform:   "mockContainerPlatform",
@@ -235,7 +243,9 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 						"com.aws.copilot.image.builder":        "copilot-cli",
 						"com.aws.copilot.image.container.name": "mockWkld",
 					},
-				}).Return("mockDigest", nil)
+				}, gomock.Any()).Return("mockDigest", nil)
+				m.mockLabeledTermPrinter.EXPECT().IsDone().Return(true).AnyTimes()
+				m.mockLabeledTermPrinter.EXPECT().Print().AnyTimes()
 				m.mockAddons = nil
 			},
 			wantImages: map[string]ContainerImageIdentifier{
@@ -246,7 +256,6 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				},
 			},
 		},
-
 		"build and push image with gitshortcommit successfully": {
 			inMockGitTag: "gitTag",
 			inDockerBuildArgs: map[string]*manifest.DockerBuildArgs{
@@ -256,8 +265,9 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				},
 			},
 			mock: func(t *testing.T, m *deployMocks) {
-				m.mockRepositoryService.EXPECT().Login().Return(nil)
-				m.mockRepositoryService.EXPECT().BuildAndPush(&dockerengine.BuildArguments{
+				m.mockRepositoryService.EXPECT().Login().Return(mockURI, nil)
+				m.mockRepositoryService.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
+					URI:        mockURI,
 					Dockerfile: "mockDockerfile",
 					Context:    "mockContext",
 					Platform:   "mockContainerPlatform",
@@ -266,7 +276,9 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 						"com.aws.copilot.image.builder":        "copilot-cli",
 						"com.aws.copilot.image.container.name": "mockWkld",
 					},
-				}).Return("mockDigest", nil)
+				}, gomock.Any()).Return("mockDigest", nil)
+				m.mockLabeledTermPrinter.EXPECT().IsDone().Return(true).AnyTimes()
+				m.mockLabeledTermPrinter.EXPECT().Print().AnyTimes()
 				m.mockAddons = nil
 			},
 			wantImages: map[string]ContainerImageIdentifier{
@@ -289,8 +301,9 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			},
 			inMockGitTag: "gitTag",
 			mock: func(t *testing.T, m *deployMocks) {
-				m.mockRepositoryService.EXPECT().Login().Return(nil)
-				m.mockRepositoryService.EXPECT().BuildAndPush(&dockerengine.BuildArguments{
+				m.mockRepositoryService.EXPECT().Login().Return(mockURI, nil)
+				m.mockRepositoryService.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
+					URI:        mockURI,
 					Dockerfile: "sidecarMockDockerfile",
 					Context:    "sidecarMockContext",
 					Platform:   "mockContainerPlatform",
@@ -299,8 +312,9 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 						"com.aws.copilot.image.builder":        "copilot-cli",
 						"com.aws.copilot.image.container.name": "nginx",
 					},
-				}).Return("sidecarMockDigest1", nil)
-				m.mockRepositoryService.EXPECT().BuildAndPush(&dockerengine.BuildArguments{
+				}, gomock.Any()).Return("sidecarMockDigest1", nil)
+				m.mockRepositoryService.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
+					URI:        mockURI,
 					Dockerfile: "web/Dockerfile",
 					Context:    "Users/bowie",
 					Platform:   "mockContainerPlatform",
@@ -309,7 +323,9 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 						"com.aws.copilot.image.builder":        "copilot-cli",
 						"com.aws.copilot.image.container.name": "logging",
 					},
-				}).Return("sidecarMockDigest2", nil)
+				}, gomock.Any()).Return("sidecarMockDigest2", nil)
+				m.mockLabeledTermPrinter.EXPECT().IsDone().Return(true).AnyTimes()
+				m.mockLabeledTermPrinter.EXPECT().Print().AnyTimes()
 				m.mockAddons = nil
 			},
 			wantImages: map[string]ContainerImageIdentifier{
@@ -463,17 +479,14 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 		},
 		"error if fail to read env file": {
 			inEnvFile: mockEnvFile,
-			mock: func(t *testing.T, m *deployMocks) {
-				m.mockFileReader.EXPECT().ReadFile(filepath.Join(mockWorkspacePath, mockEnvFile)).
-					Return(nil, mockError)
-			},
-			wantErr: fmt.Errorf("read env file foo.env: some error"),
+			mock:      func(t *testing.T, m *deployMocks) {},
+			wantErr:   fmt.Errorf("read env file foo.env: open foo.env: file does not exist"),
 		},
 		"successfully share one env file between containers": {
 			customEnvFiles: map[string]string{"nginx": mockEnvFile, mockName: mockEnvFile},
 			inRegion:       "us-west-2",
 			mock: func(t *testing.T, m *deployMocks) {
-				m.mockFileReader.EXPECT().ReadFile(filepath.Join(mockWorkspacePath, mockEnvFile)).Return([]byte{}, nil)
+				m.mockFileSystem.Create(filepath.Join(mockWorkspacePath, mockEnvFile))
 				m.mockUploader.EXPECT().Upload(mockS3Bucket, mockEnvFilePath(mockEnvFile), gomock.Any()).Return(mockEnvFileS3URL, nil)
 				m.mockAddons.EXPECT().Package(gomock.Any()).Return(nil)
 				m.mockAddons.EXPECT().Template().Return("", nil)
@@ -486,9 +499,9 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			customEnvFiles: map[string]string{"nginx": mockEnvFile, mockName: "bar.env"},
 			inRegion:       "us-west-2",
 			mock: func(t *testing.T, m *deployMocks) {
-				m.mockFileReader.EXPECT().ReadFile(filepath.Join(mockWorkspacePath, mockEnvFile)).Return([]byte{}, nil)
+				m.mockFileSystem.Create(filepath.Join(mockWorkspacePath, mockEnvFile))
 				m.mockUploader.EXPECT().Upload(mockS3Bucket, mockEnvFilePath(mockEnvFile), gomock.Any()).Return(mockEnvFileS3URL, nil)
-				m.mockFileReader.EXPECT().ReadFile(filepath.Join(mockWorkspacePath, "bar.env")).Return([]byte{}, nil)
+				m.mockFileSystem.Create(filepath.Join(mockWorkspacePath, "bar.env"))
 				m.mockUploader.EXPECT().Upload(mockS3Bucket, mockEnvFilePath("bar.env"), gomock.Any()).Return(mockEnvFileS3URL2, nil)
 				m.mockAddons.EXPECT().Package(gomock.Any()).Return(nil)
 				m.mockAddons.EXPECT().Template().Return("", nil)
@@ -511,7 +524,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 		"error if fail to put env file to s3 bucket": {
 			inEnvFile: mockEnvFile,
 			mock: func(t *testing.T, m *deployMocks) {
-				m.mockFileReader.EXPECT().ReadFile(filepath.Join(mockWorkspacePath, mockEnvFile)).Return([]byte{}, nil)
+				m.mockFileSystem.Create(filepath.Join(mockWorkspacePath, mockEnvFile))
 				m.mockUploader.EXPECT().Upload(mockS3Bucket, mockEnvFilePath(mockEnvFile), gomock.Any()).
 					Return("", mockError)
 			},
@@ -520,7 +533,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 		"error if fail to parse s3 url": {
 			inEnvFile: mockEnvFile,
 			mock: func(t *testing.T, m *deployMocks) {
-				m.mockFileReader.EXPECT().ReadFile(filepath.Join(mockWorkspacePath, mockEnvFile)).Return([]byte{}, nil)
+				m.mockFileSystem.Create(filepath.Join(mockWorkspacePath, mockEnvFile))
 				m.mockUploader.EXPECT().Upload(mockS3Bucket, mockEnvFilePath(mockEnvFile), gomock.Any()).
 					Return(mockBadEnvFileS3URL, nil)
 
@@ -531,7 +544,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			inEnvFile: mockEnvFile,
 			inRegion:  "sun-south-0",
 			mock: func(t *testing.T, m *deployMocks) {
-				m.mockFileReader.EXPECT().ReadFile(filepath.Join(mockWorkspacePath, mockEnvFile)).Return([]byte{}, nil)
+				m.mockFileSystem.Create(filepath.Join(mockWorkspacePath, mockEnvFile))
 				m.mockUploader.EXPECT().Upload(mockS3Bucket, mockEnvFilePath(mockEnvFile), gomock.Any()).
 					Return(mockEnvFileS3URL, nil)
 			},
@@ -541,7 +554,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			inEnvFile: mockEnvFile,
 			inRegion:  "us-west-2",
 			mock: func(t *testing.T, m *deployMocks) {
-				m.mockFileReader.EXPECT().ReadFile(filepath.Join(mockWorkspacePath, mockEnvFile)).Return([]byte{}, nil)
+				m.mockFileSystem.Create(filepath.Join(mockWorkspacePath, mockEnvFile))
 				m.mockUploader.EXPECT().Upload(mockS3Bucket, mockEnvFilePath(mockEnvFile), gomock.Any()).
 					Return(mockEnvFileS3URL, nil)
 				m.mockAddons.EXPECT().Package(gomock.Any()).Return(nil)
@@ -590,10 +603,11 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			defer ctrl.Finish()
 
 			m := &deployMocks{
-				mockUploader:          mocks.NewMockuploader(ctrl),
-				mockAddons:            mocks.NewMockstackBuilder(ctrl),
-				mockRepositoryService: mocks.NewMockrepositoryService(ctrl),
-				mockFileReader:        mocks.NewMockfileReader(ctrl),
+				mockUploader:           mocks.NewMockuploader(ctrl),
+				mockAddons:             mocks.NewMockstackBuilder(ctrl),
+				mockRepositoryService:  mocks.NewMockrepositoryService(ctrl),
+				mockFileSystem:         afero.NewMemMapFs(),
+				mockLabeledTermPrinter: mocks.NewMocklabeledTermPrinter(ctrl),
 			}
 			tc.mock(t, m)
 
@@ -603,7 +617,6 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 					return nil, nil
 				}
 			}
-
 			wkldDeployer := &workloadDeployer{
 				name: mockName,
 				env: &config.Environment{
@@ -625,12 +638,15 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 					customEnvFiles:  tc.customEnvFiles,
 					dockerBuildArgs: tc.inDockerBuildArgs,
 				},
-				fs:              m.mockFileReader,
+				fs:              m.mockFileSystem,
 				s3Client:        m.mockUploader,
 				repository:      m.mockRepositoryService,
 				templateFS:      fakeTemplateFS(),
 				overrider:       new(override.Noop),
 				customResources: crFn,
+				labeledTermPrinter: func(fw syncbuffer.FileWriter, bufs []*syncbuffer.LabeledSyncBuffer, opts ...syncbuffer.LabeledTermPrinterOption) labeledTermPrinter {
+					return m.mockLabeledTermPrinter
+				},
 			}
 			if m.mockAddons != nil {
 				wkldDeployer.addons = m.mockAddons
