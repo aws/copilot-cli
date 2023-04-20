@@ -3,20 +3,14 @@
 
 "use strict";
 
-const aws = require("aws-sdk-mock");
-const lambdaTester = require("lambda-tester").noVersionCheck();
-const sinon = require("sinon");
-const copyAssets = require("../lib/copy-assets");
-
 describe("copy assets", () => {
-  const origConsole = console;
+  const aws = require("aws-sdk-mock");
+  const lambdaTester = require("lambda-tester").noVersionCheck();
+  const sinon = require("sinon");
+  const copyAssets = require("../lib/copy-assets");
 
   afterEach(() => {
     aws.restore();
-  });
-
-  afterAll(() => {
-    console = origConsole;
   });
 
   test("happy path", () => {
