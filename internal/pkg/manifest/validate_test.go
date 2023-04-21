@@ -85,7 +85,7 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 					},
 				},
 			},
-			wantedErrorMsgPrefix: `validate "grace_period": cannot define "grace_period" in "http.additional_rules[0].healthcheck.grace_period"`,
+			wantedErrorMsgPrefix: `validate "grace_period": "grace_period" specified for "http.additional_rules[0]"`,
 		},
 		"error if fail to validate grace_period when specified the additional listener of NLB": {
 			lbConfig: LoadBalancedWebService{
@@ -108,7 +108,7 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 					},
 				},
 			},
-			wantedErrorMsgPrefix: `validate "grace_period": cannot define "grace_period" in "nlb.additional_listeners[0].healthcheck.grace_period"`,
+			wantedErrorMsgPrefix: `validate "grace_period": "grace_period" specified for "nlb.additional_listeners[0]"`,
 		},
 		"error if fail to validate grace_period when specified in ALB and NLB at the same time": {
 			lbConfig: LoadBalancedWebService{

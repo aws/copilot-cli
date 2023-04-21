@@ -98,39 +98,39 @@ func (e *errFieldMutualExclusive) Error() string {
 	return fmt.Sprintf(`must specify one, not both, of "%s" and "%s"`, e.firstField, e.secondField)
 }
 
-type errGracePeriodSpecifiedInAdditionalRule struct {
-	index int
-}
-type errGracePeriodSpecifiedInAdditionalListener struct {
-	index int
-}
-
 type errGracePeriodsInBothALBAndNLB struct {
 	errFieldMutualExclusive
 }
 
 func (e *errGracePeriodsInBothALBAndNLB) RecommendedActions() string {
-	return fmt.Sprintf(`It looks like you have specified grace_period under both %s and %s. 
-ECS allows "HealthCheckGracePeriodSeconds" as a service level setting and should be specified only once either in http or nlb configuration.`, e.firstField, e.secondField)
+	return `"grace_period" is a configuration shared by "http" and "nlb". Specify it only once under either "http" or "nlb".`
 }
 
-func (e *errGracePeriodSpecifiedInAdditionalRule) Error() string {
-	return fmt.Sprintf(`cannot define "grace_period" in "http.additional_rules[%d].healthcheck.grace_period"`, e.index)
+type errGracePeriodSpecifiedInAdditionalListener struct {
+	index int
 }
 
 func (e *errGracePeriodSpecifiedInAdditionalListener) Error() string {
-	return fmt.Sprintf(`cannot define "grace_period" in "nlb.additional_listeners[%d].healthcheck.grace_period"`, e.index)
-}
-
-// RecommendActions returns recommended actions to be taken after the error.
-func (e *errGracePeriodSpecifiedInAdditionalRule) RecommendActions() string {
-	return fmt.Sprintf(`Instead of under "http.additional_rules[%d].healthcheck", specify "grace_period" under the top-level "http.healthcheck".`, e.index)
-
+	return fmt.Sprintf(`"grace_period" specified for "nlb.additional_listeners[%d]"`, e.index)
 }
 
 // RecommendActions returns recommended actions to be taken after the error.
 func (e *errGracePeriodSpecifiedInAdditionalListener) RecommendActions() string {
 	return fmt.Sprintf(`Instead of under "nlb.additional_listeners[%d].healthcheck", specify "grace_period" under the top-level "nlb.healthcheck".`, e.index)
+
+}
+
+type errGracePeriodSpecifiedInAdditionalRule struct {
+	index int
+}
+
+func (e *errGracePeriodSpecifiedInAdditionalRule) Error() string {
+	return fmt.Sprintf(`"grace_period" specified for "http.additional_rules[%d]"`, e.index)
+}
+
+// RecommendActions returns recommended actions to be taken after the error.
+func (e *errGracePeriodSpecifiedInAdditionalRule) RecommendActions() string {
+	return fmt.Sprintf(`Instead of under "http.additional_rules[%d].healthcheck", specify "grace_period" under the top-level "http.healthcheck".`, e.index)
 
 }
 
