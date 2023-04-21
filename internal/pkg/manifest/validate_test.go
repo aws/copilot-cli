@@ -85,7 +85,7 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 					},
 				},
 			},
-			wantedErrorMsgPrefix: `validate "grace_period": "grace_period" specified for "http.additional_rules[0]"`,
+			wantedError: fmt.Errorf(`validate "grace_period": %w`, &errGracePeriodSpecifiedInAdditionalRule{0}),
 		},
 		"error if fail to validate grace_period when specified the additional listener of NLB": {
 			lbConfig: LoadBalancedWebService{
@@ -108,7 +108,7 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 					},
 				},
 			},
-			wantedErrorMsgPrefix: `validate "grace_period": "grace_period" specified for "nlb.additional_listeners[0]"`,
+			wantedError: fmt.Errorf(`validate "grace_period": %w`, &errGracePeriodSpecifiedInAdditionalListener{0}),
 		},
 		"error if fail to validate grace_period when specified in ALB and NLB at the same time": {
 			lbConfig: LoadBalancedWebService{
@@ -139,7 +139,7 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 					},
 				},
 			},
-			wantedErrorMsgPrefix: `validate "grace_period": must specify one, not both, of "http.healthcheck.grace_period" and "nlb.healthcheck.grace_period"`,
+			wantedError: fmt.Errorf(`validate "grace_period": %w`, &errGracePeriodsInBothALBAndNLB{errFieldMutualExclusive{firstField: "http.healthcheck.grace_period", secondField: "nlb.healthcheck.grace_period"}}),
 		},
 		"error if fail to validate http": {
 			lbConfig: LoadBalancedWebService{
