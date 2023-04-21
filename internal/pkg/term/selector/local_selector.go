@@ -5,6 +5,7 @@ package selector
 
 import (
 	"fmt"
+	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"os"
 	"path/filepath"
 	"sort"
@@ -128,18 +129,20 @@ func (s *staticSelector) askCron(scheduleValidator prompt.ValidatorFunc) (string
 // localFileSelector selects from a local file system where a workspace does not necessarily exist.
 type localFileSelector struct {
 	prompt        Prompter
+	ws            *workspace.Workspace
 	fs            *afero.Afero
 	workingDirAbs string
 }
 
 // NewLocalFileSelector constructs a localFileSelector.
-func NewLocalFileSelector(prompt Prompter, fs afero.Fs) (*localFileSelector, error) {
+func NewLocalFileSelector(prompt Prompter, fs afero.Fs, ws *workspace.Workspace) (*localFileSelector, error) {
 	workingDirAbs, err := os.Getwd()
 	if err != nil {
 		return nil, fmt.Errorf("get working directory: %w", err)
 	}
 	return &localFileSelector{
 		prompt:        prompt,
+		ws:            ws,
 		fs:            &afero.Afero{Fs: fs},
 		workingDirAbs: workingDirAbs,
 	}, nil
@@ -277,7 +280,7 @@ func (s *localFileSelector) listDockerfiles() ([]string, error) {
 // listDirsAndFiles returns the list of directories and files within the current
 // working directory and two subdirectory levels below.
 func (s *localFileSelector) listDirsAndFiles() ([]string, error) {
-	names, err := s.getDirAndFileNames(s.workingDirAbs, 0)
+	names, err := s.getDirAndFileNames(s.ws.ProjectRoot(), 0)
 	if err != nil {
 		return nil, err
 	} 
@@ -296,7 +299,11 @@ func (s *localFileSelector) getDirAndFileNames(dir string, depth int) ([]string,
 			continue
 		}
 		relPathName := dir + "/" + name
-		names = append(names, relPathName)
+		wsRelPathName, err := s.ws.Rel(relPathName)
+		if err != nil {
+			return nil, fmt.Errorf("get path relative to workspace: %w", err)
+		}
+		names = append(names, wsRelPathName)
 		if depth < 3 && file.IsDir() {
 			subNames, err := s.getDirAndFileNames(relPathName, depth+1)
 			if err != nil {

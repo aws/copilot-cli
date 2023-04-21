@@ -193,7 +193,7 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 		Prog:     termprogress.NewSpinner(log.DiagnosticWriter),
 		Deployer: cloudformation.New(sess, cloudformation.WithProgressTracker(os.Stderr)),
 	}
-	sel, err := selector.NewLocalFileSelector(prompter, fs)
+	sel, err := selector.NewLocalFileSelector(prompter, fs, ws)
 	if err != nil {
 		return nil, err
 	}

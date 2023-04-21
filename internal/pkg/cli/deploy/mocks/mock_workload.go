@@ -106,21 +106,6 @@ func (mr *MockrepositoryServiceMockRecorder) Login() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Login", reflect.TypeOf((*MockrepositoryService)(nil).Login))
 }
 
-// URI mocks base method.
-func (m *MockrepositoryService) URI() (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "URI")
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// URI indicates an expected call of URI.
-func (mr *MockrepositoryServiceMockRecorder) URI() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "URI", reflect.TypeOf((*MockrepositoryService)(nil).URI))
-}
-
 // Mocktemplater is a mock of templater interface.
 type Mocktemplater struct {
 	ctrl     *gomock.Controller
