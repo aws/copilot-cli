@@ -20,15 +20,14 @@ import (
 )
 
 type fileUploader interface {
-	UploadFiles(files []manifest.FileUpload) error
+	UploadFiles(files []manifest.FileUpload) (string, error)
 }
 
 type staticSiteDeployer struct {
 	*svcDeployer
-	staticSiteMft    *manifest.StaticSite
-	fs               afero.Fs
-	uploader         fileUploader
-	assetMappingPath string
+	staticSiteMft *manifest.StaticSite
+	fs            afero.Fs
+	uploader      fileUploader
 }
 
 // NewStaticSiteDeployer is the constructor for staticSiteDeployer.
@@ -42,16 +41,14 @@ func NewStaticSiteDeployer(in *WorkloadDeployerInput) (*staticSiteDeployer, erro
 	if !ok {
 		return nil, fmt.Errorf("manifest is not of type %s", manifestinfo.StaticSiteType)
 	}
-	assetMappingDir := fmt.Sprintf("local-assets/environments/%s/workloads/%s/mapping", svcDeployer.env.Name, svcDeployer.name)
 	return &staticSiteDeployer{
-		svcDeployer:      svcDeployer,
-		staticSiteMft:    mft,
-		fs:               svcDeployer.fs,
-		assetMappingPath: assetMappingDir,
+		svcDeployer:   svcDeployer,
+		staticSiteMft: mft,
+		fs:            svcDeployer.fs,
 		uploader: &asset.ArtifactBucketUploader{
 			FS:              svcDeployer.fs,
-			PathPrefix:      "local-assets",
-			AssetMappingDir: assetMappingDir,
+			AssetDir:        "local-assets",
+			AssetMappingDir: fmt.Sprintf("local-assets/environments/%s/workloads/%s/mapping", svcDeployer.env.Name, svcDeployer.name),
 			Upload: func(path string, data io.Reader) error {
 				_, err := svcDeployer.s3Client.Upload(svcDeployer.resources.S3Bucket, path, data)
 				return err
@@ -103,11 +100,12 @@ func (d *staticSiteDeployer) UploadArtifacts() (*UploadArtifactsOutput, error) {
 }
 
 func (d *staticSiteDeployer) uploadStaticFiles(out *UploadArtifactsOutput) error {
-	if err := d.uploader.UploadFiles(d.staticSiteMft.FileUploads); err != nil {
+	path, err := d.uploader.UploadFiles(d.staticSiteMft.FileUploads)
+	if err != nil {
 		return fmt.Errorf("upload static files: %w", err)
 	}
 
-	out.StaticSiteAssetMappingLocation = s3.Location(d.resources.S3Bucket, d.assetMappingPath)
+	out.StaticSiteAssetMappingLocation = s3.Location(d.resources.S3Bucket, path)
 	return nil
 }
 

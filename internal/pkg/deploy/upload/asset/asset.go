@@ -30,10 +30,10 @@ type ArtifactBucketUploader struct {
 	// Upload is the function called when uploading a file.
 	Upload func(path string, contents io.Reader) error
 
-	// PathPrefix is the path to prefix any hashed files when uploading to the artifact bucket.
-	PathPrefix string
+	// AssetDir is the directory to upload the hashed files to.
+	AssetDir string
 
-	// AssetMappingDir is the path the upload the asset mapping file to.
+	// AssetMappingDir is the directory to upload the asset mapping file to.
 	AssetMappingDir string
 }
 
@@ -47,27 +47,29 @@ type asset struct {
 
 // UploadFiles hashes each of the files specified in files and uploads
 // them to the path "{PathPrefix}/{hash}". After, it uploads a JSON file
-// to AssetMappingPath that specifies the location of every file in the artifact bucket and its
-// intended destination path in the service bucket.
-func (u *ArtifactBucketUploader) UploadFiles(files []manifest.FileUpload) error {
+// to AssetDir that maps the location of every file in the artifact bucket to its
+// intended destination path in the service bucket. The path to the mapping file
+// is returned along with an error, if any.
+func (u *ArtifactBucketUploader) UploadFiles(files []manifest.FileUpload) (string, error) {
 	var assets []asset
 	for _, f := range files {
 		matcher := buildCompositeMatchers(buildReincludeMatchers(f.Reinclude.ToStringSlice()), buildExcludeMatchers(f.Exclude.ToStringSlice()))
 		source := filepath.Join(f.Context, f.Source)
 
 		if err := afero.Walk(u.FS, source, u.walkFn(source, f.Destination, f.Recursive, matcher, &assets)); err != nil {
-			return fmt.Errorf("walk the file tree rooted at %q: %s", source, err)
+			return "", fmt.Errorf("walk the file tree rooted at %q: %s", source, err)
 		}
 	}
 
 	if err := u.uploadAssets(assets); err != nil {
-		return fmt.Errorf("upload assets: %s", err)
+		return "", fmt.Errorf("upload assets: %s", err)
 	}
 
-	if err := u.uploadAssetMappingFile(assets); err != nil {
-		return fmt.Errorf("upload asset mapping file: %s", err)
+	path, err := u.uploadAssetMappingFile(assets)
+	if err != nil {
+		return "", fmt.Errorf("upload asset mapping file: %s", err)
 	}
-	return nil
+	return path, nil
 }
 
 func (u *ArtifactBucketUploader) walkFn(sourcePath, destPath string, recursive bool, matcher filepathMatcher, assets *[]asset) filepath.WalkFunc {
@@ -118,7 +120,7 @@ func (u *ArtifactBucketUploader) walkFn(sourcePath, destPath string, recursive b
 		*assets = append(*assets, asset{
 			localPath:          fpath,
 			content:            buf.Bytes(),
-			ArtifactBucketPath: path.Join(u.PathPrefix, hex.EncodeToString(hash.Sum(nil))),
+			ArtifactBucketPath: path.Join(u.AssetDir, hex.EncodeToString(hash.Sum(nil))),
 			ServiceBucketPath:  filepath.ToSlash(dest),
 		})
 		return nil
@@ -141,15 +143,17 @@ func (u *ArtifactBucketUploader) uploadAssets(assets []asset) error {
 	return g.Wait()
 }
 
-// uploadAssetMappingFile uploads a JSON file to u.AssetMappingPath containing
+// uploadAssetMappingFile uploads a JSON file to u.AssetMappingDir containing
 // the current location of each file in the artifact bucket and the desired location
 // of the file in the destination bucket. It has the format:
 //
-//	{
+//	[{
 //	  "path": "local-assets/12345asdf",
 //	  "destPath": "index.html"
-//	}
-func (u *ArtifactBucketUploader) uploadAssetMappingFile(assets []asset) error {
+//	}]
+//
+// The uploaded path of the file is returned along with an error, if any.
+func (u *ArtifactBucketUploader) uploadAssetMappingFile(assets []asset) (string, error) {
 	sort.Slice(assets, func(i, j int) bool {
 		if assets[i].ArtifactBucketPath != assets[j].ArtifactBucketPath {
 			return assets[i].ArtifactBucketPath < assets[j].ArtifactBucketPath
@@ -167,12 +171,12 @@ func (u *ArtifactBucketUploader) uploadAssetMappingFile(assets []asset) error {
 
 	data, err := json.Marshal(assets)
 	if err != nil {
-		return fmt.Errorf("encode uploaded assets: %w", err)
+		return "", fmt.Errorf("encode uploaded assets: %w", err)
 	}
 
 	path := path.Join(u.AssetMappingDir, hex.EncodeToString(hash.Sum(nil)))
 	if err := u.Upload(path, bytes.NewBuffer(data)); err != nil {
-		return fmt.Errorf("upload to %q: %w", u.AssetMappingDir, err)
+		return "", fmt.Errorf("upload to %q: %w", u.AssetMappingDir, err)
 	}
-	return nil
+	return path, nil
 }

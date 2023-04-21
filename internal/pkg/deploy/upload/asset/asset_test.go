@@ -223,16 +223,17 @@ func Test_UploadFiles(t *testing.T) {
 			u := ArtifactBucketUploader{
 				FS:              fs,
 				Upload:          mockS3.Upload,
-				PathPrefix:      mockPrefix,
+				AssetDir:        mockPrefix,
 				AssetMappingDir: mockMappingDir,
 			}
 
-			err := u.UploadFiles(tc.files)
+			mappingFilePath, err := u.UploadFiles(tc.files)
 			if tc.expectedError != nil {
 				require.Error(t, err)
 				require.Equal(t, tc.expectedError.Error(), err.Error())
 				return
 			}
+			require.NoError(t, err)
 
 			expected := make(map[string][]byte)
 			hash := sha256.New()
@@ -243,11 +244,13 @@ func Test_UploadFiles(t *testing.T) {
 				}
 			}
 
+			expectedMappingFilePath := path.Join(mockMappingDir, hex.EncodeToString(hash.Sum(nil)))
+			require.Equal(t, expectedMappingFilePath, mappingFilePath)
+
 			b, err := json.Marshal(tc.expected)
 			require.NoError(t, err)
-			expected[path.Join(mockMappingDir, hex.EncodeToString(hash.Sum(nil)))] = b
 
-			require.NoError(t, err)
+			expected[expectedMappingFilePath] = b
 			require.Equal(t, expected, mockS3.data)
 		})
 	}
