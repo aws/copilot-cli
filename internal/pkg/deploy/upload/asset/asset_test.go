@@ -221,10 +221,10 @@ func Test_UploadFiles(t *testing.T) {
 			}
 
 			u := ArtifactBucketUploader{
-				FS:              fs,
-				Upload:          mockS3.Upload,
-				AssetDir:        mockPrefix,
-				AssetMappingDir: mockMappingDir,
+				FS:                  fs,
+				Upload:              mockS3.Upload,
+				AssetDir:            mockPrefix,
+				AssetMappingFileDir: mockMappingDir,
 			}
 
 			mappingFilePath, err := u.UploadFiles(tc.files)

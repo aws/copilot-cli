@@ -33,8 +33,8 @@ type ArtifactBucketUploader struct {
 	// AssetDir is the directory to upload the hashed files to.
 	AssetDir string
 
-	// AssetMappingDir is the directory to upload the asset mapping file to.
-	AssetMappingDir string
+	// AssetMappingFileDir is the directory to upload the asset mapping file to.
+	AssetMappingFileDir string
 }
 
 type asset struct {
@@ -174,9 +174,9 @@ func (u *ArtifactBucketUploader) uploadAssetMappingFile(assets []asset) (string,
 		return "", fmt.Errorf("encode uploaded assets: %w", err)
 	}
 
-	path := path.Join(u.AssetMappingDir, hex.EncodeToString(hash.Sum(nil)))
+	path := path.Join(u.AssetMappingFileDir, hex.EncodeToString(hash.Sum(nil)))
 	if err := u.Upload(path, bytes.NewBuffer(data)); err != nil {
-		return "", fmt.Errorf("upload to %q: %w", u.AssetMappingDir, err)
+		return "", fmt.Errorf("upload to %q: %w", u.AssetMappingFileDir, err)
 	}
 	return path, nil
 }
