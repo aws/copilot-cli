@@ -40,20 +40,20 @@ func (m *ignorer) parse(_, _ *yaml.Node, _ string, _ overrider) (diffNode, error
 	return nil, nil
 }
 
-// intrinsicFuncOverrider handles comparison between full/short form of an intrinsic function.
-type intrinsicFuncOverrider struct{}
+// intrinsicFuncFullShortFormConverter handles comparison between full/short form of an intrinsic function.
+type intrinsicFuncFullShortFormConverter struct{}
 
 // match returns true if from and to node represent the same intrinsic function written in different (full/short) form.
 // Example1: "!Ref abc" and "Ref: abc" will return true.
 // Example2: "!Ref abc" and "!Ref abc" will return false because they are written in the same form (i.e. short).
 // Example3: "!Ref abc" and "Fn::GetAtt: abc" will return false because they are different intrinsic functions.
 // For more on intrinsic functions and full/short forms, read https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/intrinsic-function-reference-ToJsonString.html.
-func (_ *intrinsicFuncOverrider) match(from, to *yaml.Node, _ string, _ overrider) bool {
+func (_ *intrinsicFuncFullShortFormConverter) match(from, to *yaml.Node, _ string, _ overrider) bool {
 	if from == nil || to == nil {
 		return false
 	}
 	if from.Kind == to.Kind || from.Kind != yaml.MappingNode && to.Kind != yaml.MappingNode {
-		// A full/short form conversion always involve exactly one mapping node.
+		// A full/short form conversion always involve at least one mapping node.
 		return false
 	}
 	var fullFormNode, shortFormNode *yaml.Node
@@ -70,7 +70,7 @@ func (_ *intrinsicFuncOverrider) match(from, to *yaml.Node, _ string, _ override
 	return eqIntrinsicFunc(fullFormNode.Content[0].Value, shortFormNode.Tag)
 }
 
-func (_ *intrinsicFuncOverrider) parse(from, to *yaml.Node, key string, overrider overrider) (diffNode, error) {
+func (_ *intrinsicFuncFullShortFormConverter) parse(from, to *yaml.Node, key string, overrider overrider) (diffNode, error) {
 	if from.Kind == yaml.MappingNode {
 		return parse(from.Content[1], to, key, overrider)
 	}
@@ -93,7 +93,6 @@ func (*noopOverrider) parse(_, _ *yaml.Node, _ string, _ overrider) (diffNode, e
 // but happen to match the "Fn::" and "!" format.
 var intrinsicFuncFull2Short = map[string]string{
 	"Ref":             "!Ref",
-	"Condition":       "!Condition",
 	"Fn::Base64":      "!Base64",
 	"Fn::Cidr":        "!Cidr",
 	"Fn::FindInMap":   "!FindInMap",
