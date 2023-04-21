@@ -16,42 +16,11 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
+	"github.com/spf13/afero"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
-
-func TestDeleteAppOpts_Validate(t *testing.T) {
-	const mockAppName = "phonetool"
-	tests := map[string]struct {
-		name string
-
-		want error
-	}{
-		"should return error if not in a workspace": {
-			name: "",
-			want: errNoAppInWorkspace,
-		},
-		"should return nil if app name is set": {
-			name: mockAppName,
-			want: nil,
-		},
-	}
-
-	for name, test := range tests {
-		t.Run(name, func(t *testing.T) {
-			opts := deleteAppOpts{
-				deleteAppVars: deleteAppVars{
-					name: test.name,
-				},
-			}
-
-			got := opts.Validate()
-
-			require.Equal(t, test.want, got)
-		})
-	}
-}
 
 func TestDeleteAppOpts_Ask(t *testing.T) {
 	const mockAppName = "phonetool"
@@ -314,9 +283,11 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 				deleteAppVars: deleteAppVars{
 					name: mockAppName,
 				},
-				spinner:                mockSpinner,
-				store:                  mockStore,
-				ws:                     mockWorkspace,
+				spinner: mockSpinner,
+				store:   mockStore,
+				ws: func(fs afero.Fs) (wsFileDeleter, error) {
+					return mockWorkspace, nil
+				},
 				pipelineLister:         mockPipelineLister,
 				sessProvider:           mockSession,
 				cfn:                    mockDeployer,

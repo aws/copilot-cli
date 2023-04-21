@@ -13,7 +13,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	rg "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
-	"github.com/spf13/afero"
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
@@ -25,6 +24,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 
+	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
 
@@ -56,7 +56,6 @@ type deleteAppOpts struct {
 	spinner progress
 
 	store                  store
-	ws                     wsFileDeleter
 	sessProvider           sessionProvider
 	cfn                    deployer
 	prompt                 prompter
@@ -67,13 +66,10 @@ type deleteAppOpts struct {
 	envDeleteExecutor      func(envName string) (executeAsker, error)
 	taskDeleteExecutor     func(envName, taskName string) (executor, error)
 	pipelineDeleteExecutor func(pipelineName string) (executor, error)
+	ws                     func(fs afero.Fs) (wsFileDeleter, error)
 }
 
 func newDeleteAppOpts(vars deleteAppVars) (*deleteAppOpts, error) {
-	ws, err := workspace.Use(afero.NewOsFs())
-	if err != nil {
-		return nil, err
-	}
 	provider := sessions.ImmutableProvider(sessions.UserAgentExtras("app delete"))
 	defaultSession, err := provider.Default()
 	if err != nil {
@@ -84,7 +80,6 @@ func newDeleteAppOpts(vars deleteAppVars) (*deleteAppOpts, error) {
 		deleteAppVars: vars,
 		spinner:       termprogress.NewSpinner(log.DiagnosticWriter),
 		store:         config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region)),
-		ws:            ws,
 		sessProvider:  provider,
 		cfn:           cloudformation.New(defaultSession, cloudformation.WithProgressTracker(os.Stderr)),
 		prompt:        prompt.New(),
@@ -149,14 +144,14 @@ func newDeleteAppOpts(vars deleteAppVars) (*deleteAppOpts, error) {
 			}
 			return opts, nil
 		},
+		ws: func(fs afero.Fs) (wsFileDeleter, error) {
+			return workspace.Use(fs)
+		},
 	}, nil
 }
 
-// Validate returns an error if the user's input is invalid.
+// Validate is a no-op for this command.
 func (o *deleteAppOpts) Validate() error {
-	if o.name == "" {
-		return errNoAppInWorkspace
-	}
 	return nil
 }
 
@@ -356,8 +351,12 @@ func (o *deleteAppOpts) deleteAppConfigs() error {
 }
 
 func (o *deleteAppOpts) deleteWs() error {
+	ws, err := o.ws(afero.NewOsFs())
+	if err != nil {
+		return err
+	}
 	o.spinner.Start(fmt.Sprintf(fmtDeleteAppWsStartMsg, workspace.SummaryFileName))
-	if err := o.ws.DeleteWorkspaceFile(); err != nil {
+	if err := ws.DeleteWorkspaceFile(); err != nil {
 		o.spinner.Stop(log.Serrorf("Error deleting %s file.\n", workspace.SummaryFileName))
 		return fmt.Errorf("delete %s file: %w", workspace.SummaryFileName, err)
 	}
