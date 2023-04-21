@@ -66,7 +66,7 @@ describe("trigger state machine", () => {
   test("delete event is a no-op", () => {
     const request = nock(responseURL)
       .put("/", (body) => {
-        return body.Status === "SUCCESS";
+        return body.Status === "SUCCESS" && body.PhysicalResourceId === "randomID";
       })
       .reply(200);
     return lambdaTester(handler.handler)
@@ -80,6 +80,7 @@ describe("trigger state machine", () => {
         RequestId: testRequestId,
         ResourceProperties: {},
         LogicalResourceId: "mockID",
+        PhysicalResourceId: "randomID",
       })
       .expectResolve(() => {
         expect(request.isDone()).toBe(true);
@@ -89,7 +90,8 @@ describe("trigger state machine", () => {
   test("happy path", () => {
     const request = nock(responseURL)
       .put("/", (body) => {
-        return body.Status === "SUCCESS";
+        return body.Status === "SUCCESS" &&
+          body.PhysicalResourceId === "mockID"; // reuses logical ID if no physical ID
       })
       .reply(200);
 
@@ -109,7 +111,7 @@ describe("trigger state machine", () => {
           ...syncExecProps,
           StateMachineARN: stateMachineARN,
         },
-        LogicalResourceId: "mockID",
+        LogicalResourceId: "mockID"
       })
       .expectResolve(() => {
         expect(request.isDone()).toBe(true);
@@ -127,7 +129,8 @@ describe("trigger state machine", () => {
         return (
           body.Status === "FAILED" &&
           body.Reason ===
-          "State machine failed: some error (Log: /aws/lambda/testLambda/2021/06/28/[$LATEST]9b93a7dca7344adeb193d15c092dbbfd)"
+          "State machine failed: some error (Log: /aws/lambda/testLambda/2021/06/28/[$LATEST]9b93a7dca7344adeb193d15c092dbbfd)" &&
+          body.PhysicalResourceId === "physicalID"
         );
       })
       .reply(200);
@@ -149,6 +152,7 @@ describe("trigger state machine", () => {
           StateMachineARN: stateMachineARN,
         },
         LogicalResourceId: "mockID",
+        PhysicalResourceId: "physicalID"
       })
       .expectResolve(() => {
         expect(request.isDone()).toBe(true);
@@ -166,7 +170,8 @@ describe("trigger state machine", () => {
         return (
           body.Status === "FAILED" &&
           body.Reason ===
-          "some error (Log: /aws/lambda/testLambda/2021/06/28/[$LATEST]9b93a7dca7344adeb193d15c092dbbfd)"
+          "some error (Log: /aws/lambda/testLambda/2021/06/28/[$LATEST]9b93a7dca7344adeb193d15c092dbbfd)" &&
+          body.PhysicalResourceId === "mockID"
         );
       })
       .reply(200);

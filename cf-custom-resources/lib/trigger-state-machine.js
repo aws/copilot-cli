@@ -59,8 +59,8 @@ let deadlineExpired = () => {
   return new Promise((resolve, reject) => {
     setTimeout(
       reject,
-      9 * 60 * 1000 + 30 * 1000 /* 9.5 minutes */,
-      new Error("Lambda took longer than 9.5 minutes")
+      14 * 60 * 1000 /* 14 minutes */,
+      new Error("Lambda took longer than 14 minutes")
     );
   });
 };
