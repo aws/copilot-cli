@@ -653,9 +653,10 @@ Resources: # If a bucket URL is specified, that means the template exists.
         MinimumHealthyPercent: 100
         MaximumPercent: 200
         Alarms:
-          AlarmNames: []
-          Enable: false
+          Enable: true
           Rollback: true
+          AlarmNames:
+            - my-app-prod-fe-CopilotRollbackCPUAlarm
       PropagateTags: SERVICE
       CapacityProviderStrategy:
         - CapacityProvider: FARGATE_SPOT
@@ -948,6 +949,28 @@ Resources: # If a bucket URL is specified, that means the template exists.
         Env: !Ref EnvName
         Name: !Ref WorkloadName
       TemplateURL: !Ref AddonsTemplateURL
+  CPURollbackAlarm:
+    Metadata:
+      'aws:copilot:description': "A CloudWatch alarm associated with CPU utilization for deployment rollbacks"
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: "Roll back ECS service if CPU utilization is greater than or equal to 70% twice in 3 minutes."
+      AlarmName: my-app-prod-fe-CopilotRollbackCPUAlarm
+      Namespace: 'AWS/ECS'
+      Dimensions:
+        - Name: ClusterName
+          Value:
+            Fn::ImportValue: !Sub '${AppName}-${EnvName}-ClusterId'
+        - Name: ServiceName
+          Value: !Select [ 2, !Split [ "/", !Ref Service ] ]
+      MetricName: 'CPUUtilization'
+      ComparisonOperator: 'GreaterThanOrEqualToThreshold'
+      DatapointsToAlarm: 2
+      EvaluationPeriods: 3
+      Period: 60
+      Statistic: 'Average'
+      Threshold: 70
+      Unit: 'Percent'
   givesdogsSNSTopic:
     Metadata:
       'aws:copilot:description': 'A SNS topic to broadcast givesdogs events'
