@@ -150,31 +150,31 @@ func (mr *MockDefaultClusterGetterMockRecorder) DefaultCluster() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DefaultCluster", reflect.TypeOf((*MockDefaultClusterGetter)(nil).DefaultCluster))
 }
 
-// MockenvironmentDescriber is a mock of environmentDescriber interface.
-type MockenvironmentDescriber struct {
+// MockEnvironmentDescriber is a mock of EnvironmentDescriber interface.
+type MockEnvironmentDescriber struct {
 	ctrl     *gomock.Controller
-	recorder *MockenvironmentDescriberMockRecorder
+	recorder *MockEnvironmentDescriberMockRecorder
 }
 
-// MockenvironmentDescriberMockRecorder is the mock recorder for MockenvironmentDescriber.
-type MockenvironmentDescriberMockRecorder struct {
-	mock *MockenvironmentDescriber
+// MockEnvironmentDescriberMockRecorder is the mock recorder for MockEnvironmentDescriber.
+type MockEnvironmentDescriberMockRecorder struct {
+	mock *MockEnvironmentDescriber
 }
 
-// NewMockenvironmentDescriber creates a new mock instance.
-func NewMockenvironmentDescriber(ctrl *gomock.Controller) *MockenvironmentDescriber {
-	mock := &MockenvironmentDescriber{ctrl: ctrl}
-	mock.recorder = &MockenvironmentDescriberMockRecorder{mock}
+// NewMockEnvironmentDescriber creates a new mock instance.
+func NewMockEnvironmentDescriber(ctrl *gomock.Controller) *MockEnvironmentDescriber {
+	mock := &MockEnvironmentDescriber{ctrl: ctrl}
+	mock.recorder = &MockEnvironmentDescriberMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockenvironmentDescriber) EXPECT() *MockenvironmentDescriberMockRecorder {
+func (m *MockEnvironmentDescriber) EXPECT() *MockEnvironmentDescriberMockRecorder {
 	return m.recorder
 }
 
 // Describe mocks base method.
-func (m *MockenvironmentDescriber) Describe() (*describe.EnvDescription, error) {
+func (m *MockEnvironmentDescriber) Describe() (*describe.EnvDescription, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Describe")
 	ret0, _ := ret[0].(*describe.EnvDescription)
@@ -183,9 +183,9 @@ func (m *MockenvironmentDescriber) Describe() (*describe.EnvDescription, error) 
 }
 
 // Describe indicates an expected call of Describe.
-func (mr *MockenvironmentDescriberMockRecorder) Describe() *gomock.Call {
+func (mr *MockEnvironmentDescriberMockRecorder) Describe() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Describe", reflect.TypeOf((*MockenvironmentDescriber)(nil).Describe))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Describe", reflect.TypeOf((*MockEnvironmentDescriber)(nil).Describe))
 }
 
 // MockNonZeroExitCodeGetter is a mock of NonZeroExitCodeGetter interface.
