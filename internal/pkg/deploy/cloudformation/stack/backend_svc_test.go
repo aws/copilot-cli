@@ -315,7 +315,6 @@ Outputs:
 				HealthCheckPath: manifest.DefaultHealthCheckPath,
 				GracePeriod:     manifest.DefaultHealthCheckGracePeriod,
 			},
-			DeregistrationDelay: aws.Int64(60), // defaults to 60
 			CustomResources: map[string]template.S3ObjectLocation{
 				"EnvControllerFunction": {
 					Bucket: "my-bucket",
@@ -526,7 +525,6 @@ Outputs:
 				Interval:           aws.Int64(61),
 				GracePeriod:        60,
 			},
-			DeregistrationDelay: aws.Int64(59),
 			CustomResources: map[string]template.S3ObjectLocation{
 				"EnvControllerFunction": {
 					Bucket: "my-bucket",
@@ -573,6 +571,7 @@ Outputs:
 							Interval:           aws.Int64(61),
 							Timeout:            aws.Int64(62),
 						},
+						DeregistrationDelay: aws.Int64(int64(59)),
 						AllowedSourceIps: []string{
 							"10.0.1.0/24",
 						},
