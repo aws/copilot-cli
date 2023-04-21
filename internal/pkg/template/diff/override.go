@@ -9,8 +9,8 @@ import (
 
 // overrider overrides the parsing behavior between two yaml nodes under certain keys.
 type overrider interface {
-	match(from, to *yaml.Node, key string) bool
-	parse(from, to *yaml.Node, key string) (diffNode, error)
+	match(from, to *yaml.Node, key string, overrider overrider) bool
+	parse(from, to *yaml.Node, key string, overrider overrider) (diffNode, error)
 }
 
 type ignoreSegment struct {
@@ -24,7 +24,7 @@ type ignorer struct {
 }
 
 // match returns true if the difference between the from and to at the key should be ignored.
-func (m *ignorer) match(_, _ *yaml.Node, key string) bool {
+func (m *ignorer) match(_, _ *yaml.Node, key string, _ overrider) bool {
 	if key != m.curr.key {
 		return false
 	}
@@ -36,7 +36,7 @@ func (m *ignorer) match(_, _ *yaml.Node, key string) bool {
 }
 
 // Parse is a no-op for an ignorer.
-func (m *ignorer) parse(_, _ *yaml.Node, _ string) (diffNode, error) {
+func (m *ignorer) parse(_, _ *yaml.Node, _ string, _ overrider) (diffNode, error) {
 	return nil, nil
 }
 
@@ -48,7 +48,7 @@ type intrinsicFuncOverrider struct{}
 // Example2: "!Ref abc" and "!Ref abc" will return false because they are written in the same form (i.e. short).
 // Example3: "!Ref abc" and "Fn::GetAtt: abc" will return false because they are different intrinsic functions.
 // For more on intrinsic functions and full/short forms, read https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/intrinsic-function-reference-ToJsonString.html.
-func (overrider *intrinsicFuncOverrider) match(from, to *yaml.Node, key string) bool {
+func (_ *intrinsicFuncOverrider) match(from, to *yaml.Node, _ string, _ overrider) bool {
 	if from == nil || to == nil {
 		return false
 	}
@@ -70,7 +70,7 @@ func (overrider *intrinsicFuncOverrider) match(from, to *yaml.Node, key string) 
 	return eqIntrinsicFunc(fullFormNode.Content[0].Value, shortFormNode.Tag)
 }
 
-func (overrider *intrinsicFuncOverrider) parse(from, to *yaml.Node, key string) (diffNode, error) {
+func (_ *intrinsicFuncOverrider) parse(from, to *yaml.Node, key string, overrider overrider) (diffNode, error) {
 	if from.Kind == yaml.MappingNode {
 		return parse(from.Content[1], to, key, overrider)
 	}
@@ -80,12 +80,12 @@ func (overrider *intrinsicFuncOverrider) parse(from, to *yaml.Node, key string) 
 type noopOverrider struct{}
 
 // Match always returns false for a noopOverrider.
-func (*noopOverrider) match(_, _ *yaml.Node, _ string) bool {
+func (*noopOverrider) match(_, _ *yaml.Node, _ string, _ overrider) bool {
 	return false
 }
 
 // Parse is a no-op for a noopOverrider.
-func (*noopOverrider) parse(_, _ *yaml.Node, _ string) (diffNode, error) {
+func (*noopOverrider) parse(_, _ *yaml.Node, _ string, _ overrider) (diffNode, error) {
 	return nil, nil
 }
 

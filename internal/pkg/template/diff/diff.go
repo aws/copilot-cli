@@ -137,8 +137,8 @@ func (from From) parseRoot(to []byte, overrider overrider) (Tree, error) {
 }
 
 func parse(from, to *yaml.Node, key string, overrider overrider) (diffNode, error) {
-	if overrider.match(from, to, key) {
-		return overrider.parse(from, to, key)
+	if overrider.match(from, to, key, overrider) {
+		return overrider.parse(from, to, key, overrider)
 	}
 	// Handle base cases.
 	if to == nil || from == nil || to.Kind != from.Kind {
