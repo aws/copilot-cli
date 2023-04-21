@@ -576,7 +576,9 @@ func (cf CloudFormation) errOnFailedStack(stackName string) error {
 	}
 	status := aws.StringValue(stack.StackStatus)
 	if cloudformation.StackStatus(status).IsFailure() {
-		return fmt.Errorf("stack %s did not complete successfully and exited with status %s", stackName, status)
+		return fmt.Errorf("stack %s did not complete successfully and exited with status %s.\n"+
+			"You can retry building your service by updating the manifest (if needed) and running "+
+			"copilot svc deploy again.", stackName, status)
 	}
 	return nil
 }
