@@ -118,7 +118,7 @@ Name:
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			got, err := From(tc.old).parseRoot([]byte(tc.curr), &intrinsicFuncFullShortFormConverter{})
+			got, err := From(tc.old).Parse([]byte(tc.curr), &intrinsicFuncFullShortFormConverter{})
 			require.NoError(t, err)
 			if tc.wanted != nil {
 				require.True(t, equalTree(got, Tree{tc.wanted()}, t), "should get the expected tree")

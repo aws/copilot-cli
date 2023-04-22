@@ -345,7 +345,7 @@ Dog: (pleased) "ikr"`, t),
 	}
 }
 
-func TestFrom_ParseWithCFNIgnorer(t *testing.T) {
+func TestFrom_ParseWithCFNOverriders(t *testing.T) {
 	testCases := map[string]struct {
 		curr        string
 		old         string
@@ -389,10 +389,32 @@ Metadata:
 				return nil
 			},
 		},
+		"intrinsic func": {
+			curr: `Value: !Sub 'blah'
+Properties:
+  GroupDescription: !Join ['', [!Ref AppName, '-', !Ref EnvironmentName, EnvironmentSecurityGroup]]
+Hey:
+`,
+			old: `Value:
+  Fn::Sub: 'blah'
+Properties:
+  GroupDescription:
+     Fn::Join:
+        - ""
+        - - Ref: AppName
+          - "-"
+          - Ref: EnvironmentName
+          - EnvironmentSecurityGroup
+Hey:
+`,
+			wanted: func() diffNode {
+				return nil
+			},
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			got, err := From(tc.old).ParseWithCFNIgnorer([]byte(tc.curr))
+			got, err := From(tc.old).Parse([]byte(tc.curr), CFNOverriders()...)
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {

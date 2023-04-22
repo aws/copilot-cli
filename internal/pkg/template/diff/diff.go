@@ -86,8 +86,10 @@ type seqItemNode struct {
 // From is the YAML document that another YAML document is compared against.
 type From []byte
 
-// ParseWithCFNIgnorer constructs a diff tree that represent the differences of a YAML document against the From document, ignoring certain CFN paths.
-func (from From) ParseWithCFNIgnorer(to []byte) (Tree, error) {
+// CFNOverriders returns a list of overriders used for parsing CFN template diffs, including:
+// 1. An ignorer that ignores diffs under "Metadata.Manifest".
+// 2. An overrider that is able to compare intrinsic functions with full/short form correctly.
+func CFNOverriders() []overrider {
 	ignorer := &ignorer{
 		curr: &ignoreSegment{
 			key: "Metadata",
@@ -96,15 +98,12 @@ func (from From) ParseWithCFNIgnorer(to []byte) (Tree, error) {
 			},
 		},
 	}
-	return from.parseRoot(to, ignorer)
+	intrinsic := &intrinsicFuncFullShortFormConverter{}
+	return []overrider{ignorer, intrinsic}
 }
 
 // Parse constructs a diff tree that represent the differences of a YAML document against the From document.
-func (from From) Parse(to []byte) (Tree, error) {
-	return from.parseRoot(to, &noopOverrider{})
-}
-
-func (from From) parseRoot(to []byte, overrider overrider) (Tree, error) {
+func (from From) Parse(to []byte, overriders ...overrider) (Tree, error) {
 	var toNode, fromNode yaml.Node
 	if err := yaml.Unmarshal(to, &toNode); err != nil {
 		return Tree{}, fmt.Errorf("unmarshal current template: %w", err)
@@ -119,11 +118,11 @@ func (from From) parseRoot(to []byte, overrider overrider) (Tree, error) {
 	case fromNode.Kind == 0 && toNode.Kind == 0:
 		return Tree{}, nil
 	case fromNode.Kind == 0:
-		root, err = parse(nil, &toNode, "", overrider)
+		root, err = parse(nil, &toNode, "", overriders...)
 	case toNode.Kind == 0:
-		root, err = parse(&fromNode, nil, "", overrider)
+		root, err = parse(&fromNode, nil, "", overriders...)
 	default:
-		root, err = parse(&fromNode, &toNode, "", overrider)
+		root, err = parse(&fromNode, &toNode, "", overriders...)
 	}
 	if err != nil {
 		return Tree{}, err
