@@ -378,25 +378,27 @@ Metadata:
 				}
 			},
 		},
-		"no diff": {
-			old: `Description: CloudFormation environment template for infrastructure shared among Copilot workloads.
-Metadata:
-  Manifest: I don't see any difference.`,
-			curr: `Description: CloudFormation environment template for infrastructure shared among Copilot workloads.
-Metadata:
-  Manifest: There is definitely a difference.`,
-			wanted: func() diffNode {
-				return nil
-			},
-		},
-		"intrinsic func": {
+		"no diff between full/short form intrinsic func": {
 			curr: `Value: !Sub 'blah'
+AvailabilityZone: !Select [0, !GetAZs '']
+SecurityGroups:
+  - !GetAtt InternalLoadBalancerSecurityGroup.GroupId
+StringsEquals:
+  iam:ResourceTag/copilot-application: !Sub '${AppName}'
 Properties:
   GroupDescription: !Join ['', [!Ref AppName, '-', !Ref EnvironmentName, EnvironmentSecurityGroup]]
-Hey:
 `,
 			old: `Value:
   Fn::Sub: 'blah'
+AvailabilityZone:
+  Fn::Select:
+    - 0
+    - Fn::GetAZs: ""
+SecurityGroups:
+  - Fn::GetAtt: InternalLoadBalancerSecurityGroup.GroupId
+StringsEquals:
+  iam:ResourceTag/copilot-application:
+    Fn::Sub: ${AppName}
 Properties:
   GroupDescription:
      Fn::Join:
@@ -405,8 +407,18 @@ Properties:
           - "-"
           - Ref: EnvironmentName
           - EnvironmentSecurityGroup
-Hey:
 `,
+			wanted: func() diffNode {
+				return nil
+			},
+		},
+		"no diff": {
+			old: `Description: CloudFormation environment template for infrastructure shared among Copilot workloads.
+Metadata:
+  Manifest: I don't see any difference.`,
+			curr: `Description: CloudFormation environment template for infrastructure shared among Copilot workloads.
+Metadata:
+  Manifest: There is definitely a difference.`,
 			wanted: func() diffNode {
 				return nil
 			},
