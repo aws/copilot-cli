@@ -55,7 +55,7 @@ var _ = Describe("App With Domain", func() {
 		wgDone := make(chan bool)
 		It("env init should succeed for adding test and prod environments", func() {
 			var wg sync.WaitGroup
-			wg.Add(1)
+			wg.Add(2)
 			go func() {
 				defer wg.Done()
 				for {
