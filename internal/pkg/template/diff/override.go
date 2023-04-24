@@ -63,7 +63,7 @@ func (_ *intrinsicFuncFullShortFormConverter) match(from, to *yaml.Node, _ strin
 		fullFormNode, shortFormNode = to, from
 	}
 	if len(fullFormNode.Content) != 2 {
-		// The full form mapping node always contain only one child node.
+		// The full form mapping node always contain only one child node, whose key is the func name in full form.
 		// Read https://www.efekarakus.com/2020/05/30/deep-dive-go-yaml-cfn.html.
 		return false
 	}
