@@ -74,7 +74,7 @@ func (_ *intrinsicFuncFullShortFormConverter) parse(from, to *yaml.Node, key str
 	if from.Kind == yaml.MappingNode {
 		return parse(from.Content[1], to, key, overrider)
 	}
-	return parse(to.Content[1], from, key, overrider)
+	return parse(from, to.Content[1], key, overrider)
 }
 
 type noopOverrider struct{}
