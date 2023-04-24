@@ -4,6 +4,8 @@
 package app_with_domain_test
 
 import (
+	"fmt"
+	"io"
 	"net/http"
 	"strings"
 	"sync"
@@ -150,7 +152,7 @@ var _ = Describe("App With Domain", func() {
 				Name:       "hello",
 				SvcType:    "Load Balanced Web Service",
 				Dockerfile: "./src/Dockerfile",
-				SvcPort:    "80",
+				SvcPort:    "3000",
 			})
 			Expect(svcInitErr).NotTo(HaveOccurred())
 		})
@@ -160,7 +162,7 @@ var _ = Describe("App With Domain", func() {
 				Name:       "frontend",
 				SvcType:    "Load Balanced Web Service",
 				Dockerfile: "./src/Dockerfile",
-				SvcPort:    "80",
+				SvcPort:    "3000",
 			})
 			Expect(svcInitErr).NotTo(HaveOccurred())
 		})
@@ -288,6 +290,7 @@ var _ = Describe("App With Domain", func() {
 			var resp *http.Response
 			var fetchErr error
 			urls := strings.Split(route.URL, " or ")
+			expectedResponseBody := "This is Copilot express app for admin"
 			for _, url := range urls {
 				Eventually(func() (int, error) {
 					resp, fetchErr = http.Get(url)
@@ -297,6 +300,20 @@ var _ = Describe("App With Domain", func() {
 				Eventually(func() (int, error) {
 					resp, fetchErr = http.Get(strings.Replace(url, "https", "http", 1))
 					return resp.StatusCode, fetchErr
+				}, "60s", "1s").Should(Equal(200))
+				Eventually(func() (int, error) {
+					resp, fetchErr = http.Get(fmt.Sprintf("%s/admin", strings.Replace(url, "https", "http", 1)))
+					return resp.StatusCode, fetchErr
+					body, err := io.ReadAll(resp.Body)
+					if err != nil {
+						return 0, err
+					}
+					fmt.Printf("response: %s\n", string(body))
+					// The LBWS sets its state to "consumed" when the worker service processes a message
+					if string(body) != expectedResponseBody {
+						return 0, fmt.Errorf("the message content is '%s', but expected '%s'", string(body), expectedResponseBody)
+					}
+					return 0, nil
 				}, "60s", "1s").Should(Equal(200))
 			}
 		})
