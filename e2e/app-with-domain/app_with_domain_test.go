@@ -55,7 +55,7 @@ var _ = Describe("App With Domain", func() {
 		wgDone := make(chan bool)
 		It("env init should succeed for adding test and prod environments", func() {
 			var wg sync.WaitGroup
-			wg.Add(2)
+			wg.Add(1)
 			go func() {
 				defer wg.Done()
 				for {
@@ -303,7 +303,6 @@ var _ = Describe("App With Domain", func() {
 				}, "60s", "1s").Should(Equal(200))
 				Eventually(func() (int, error) {
 					resp, fetchErr = http.Get(fmt.Sprintf("%s/admin", strings.Replace(url, "https", "http", 1)))
-					return resp.StatusCode, fetchErr
 					body, err := io.ReadAll(resp.Body)
 					if err != nil {
 						return 0, err
@@ -313,7 +312,7 @@ var _ = Describe("App With Domain", func() {
 					if string(body) != expectedResponseBody {
 						return 0, fmt.Errorf("the message content is '%s', but expected '%s'", string(body), expectedResponseBody)
 					}
-					return 0, nil
+					return resp.StatusCode, fetchErr
 				}, "60s", "1s").Should(Equal(200))
 			}
 		})
