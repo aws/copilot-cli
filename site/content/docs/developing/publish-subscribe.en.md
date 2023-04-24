@@ -70,8 +70,7 @@ subscribe:
 
 Copilot will create a subscription between this worker service's queue and the `ordersTopic` topic from the `api` service. It will also inject the queue URI into the service container under the environment variable `COPILOT_QUEUE_URI`.
 
-The URI of this queue will be injected into the container as an environment variable, `COPILOT_QUEUE_URI`. If you specify
-one or more topic-specific queues, you can access those queue URIs via the `COPILOT_TOPIC_QUEUE_URIS` variable. 
+ If you specify one or more topic-specific queues, you can access those queue URIs via the `COPILOT_TOPIC_QUEUE_URIS` variable. 
 This variable is a JSON map from a unique identifier for the topic-specific queue to its URI. 
 
 For example, a worker service with a topic-specific queue for the `orders` topic from the `merchant` service and a FIFO 
