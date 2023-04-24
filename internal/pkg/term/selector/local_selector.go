@@ -170,33 +170,34 @@ func (s *localFileSelector) StaticSources(selPrompt, selHelp, anotherPathPrompt,
 		return nil, fmt.Errorf("select directories and/or files: %w", err)
 	}
 	for i, selection := range selections {
-		if selection == staticSourceUseCustomPrompt {
-			for {
-				customPath, err := s.prompt.Get(
-					anotherPathPrompt,
-					anotherPathHelp,
-					pathValidator,
-					prompt.WithFinalMessage(customPathFinalMsg))
-				if err != nil {
-					return nil, fmt.Errorf("get custom directory or file path: %w", err)
-				}
-				if selection == staticSourceUseCustomPrompt {
-					selections[i] = customPath // The first custom path replaces the prompt string.
-					selection = customPath
-				} else {
-					selections = append(selections, customPath) // Subsequent custom paths are appended.
-				}
-				anotherCustomPath, err := s.prompt.Confirm(
-					staticSourceAnotherCustomPathPrompt,
-					staticSourceAnotherCustomPathHelp,
-					prompt.WithFinalMessage(anotherFinalMsg),
-				)
-				if err != nil {
-					return nil, fmt.Errorf("confirm another custom path: %w", err)
-				}
-				if !anotherCustomPath {
-					break
-				}
+		if selection != staticSourceUseCustomPrompt {
+			continue
+		}
+		for {
+			customPath, err := s.prompt.Get(
+				anotherPathPrompt,
+				anotherPathHelp,
+				pathValidator,
+				prompt.WithFinalMessage(customPathFinalMsg))
+			if err != nil {
+				return nil, fmt.Errorf("get custom directory or file path: %w", err)
+			}
+			if selection == staticSourceUseCustomPrompt {
+				selections[i] = customPath // The first custom path replaces the prompt string.
+				selection = customPath
+			} else {
+				selections = append(selections, customPath) // Subsequent custom paths are appended.
+			}
+			anotherCustomPath, err := s.prompt.Confirm(
+				staticSourceAnotherCustomPathPrompt,
+				staticSourceAnotherCustomPathHelp,
+				prompt.WithFinalMessage(anotherFinalMsg),
+			)
+			if err != nil {
+				return nil, fmt.Errorf("confirm another custom path: %w", err)
+			}
+			if !anotherCustomPath {
+				break
 			}
 		}
 	}
@@ -283,7 +284,7 @@ func (s *localFileSelector) listDirsAndFiles() ([]string, error) {
 	names, err := s.getDirAndFileNames(s.ws.ProjectRoot(), 0)
 	if err != nil {
 		return nil, err
-	} 
+	}
 	return names, nil
 }
 
@@ -314,7 +315,6 @@ func (s *localFileSelector) getDirAndFileNames(dir string, depth int) ([]string,
 	}
 	return names, nil
 }
-
 
 func presetScheduleToDefinitionString(input string) string {
 	return fmt.Sprintf("@%s", strings.ToLower(input))

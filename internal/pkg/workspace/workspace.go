@@ -105,7 +105,7 @@ func Use(fs afero.Fs) (*Workspace, error) {
 }
 
 // Create creates a new Workspace in the current working directory for appName with summary if it doesn't already exist.
-func Create(appName string, fs afero.Fs) (*Workspace, error) { 
+func Create(appName string, fs afero.Fs) (*Workspace, error) {
 	workingDirAbs, err := getWd()
 	if err != nil {
 		return nil, fmt.Errorf("get working directory: %w", err)
@@ -159,7 +159,7 @@ func Create(appName string, fs afero.Fs) (*Workspace, error) {
 }
 
 // ProjectRoot returns a path to the presumed root of the project, the directory that contains the copilot dir and .workspace file.
-func (ws *Workspace) ProjectRoot() (string) {
+func (ws *Workspace) ProjectRoot() string {
 	return strings.TrimSuffix(ws.CopilotDirAbs, "/copilot")
 }
 
