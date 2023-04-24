@@ -97,10 +97,6 @@ type initOpts struct {
 
 func newInitOpts(vars initVars) (*initOpts, error) {
 	fs := afero.NewOsFs()
-	ws, err := workspace.Use(fs)
-	if err != nil {
-		return nil, err
-	}
 	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("init"))
 	defaultSess, err := sessProvider.Default()
 	if err != nil {
@@ -201,6 +197,10 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 	cmd := exec.NewCmd()
 
 	useExistingWorkspaceClient := func(o *initOpts) error {
+		ws, err := workspace.Use(fs)
+		if err != nil {
+			return err
+		}
 		sel := selector.NewLocalWorkloadSelector(prompt, configStore, ws)
 		initEnvCmd.manifestWriter = ws
 		deployEnvCmd.ws = ws
@@ -240,6 +240,10 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 				name:           vars.svcName,
 				dockerfilePath: vars.dockerfilePath,
 				image:          vars.image,
+			}
+			ws, err := workspace.Use(fs)
+			if err != nil {
+				return err
 			}
 			sel, err := selector.NewLocalFileSelector(prompt, fs, ws)
 			if err != nil {
