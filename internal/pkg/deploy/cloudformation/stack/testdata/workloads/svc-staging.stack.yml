@@ -379,7 +379,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
       Protocol: HTTP
       TargetGroupAttributes:
         - Key: deregistration_delay.timeout_seconds
-          Value: 30 # ECS Default is 300; Copilot default is 60.
+          Value: 60 # ECS Default is 300; Copilot default is 60.
         - Key: stickiness.enabled
           Value: false
       TargetType: ip

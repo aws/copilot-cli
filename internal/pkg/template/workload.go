@@ -408,8 +408,9 @@ type NetworkLoadBalancerListener struct {
 
 	SSLPolicy *string // The SSL policy applied when using TLS protocol.
 
-	Stickiness  *bool
-	HealthCheck NLBHealthCheck
+	Stickiness          *bool
+	HealthCheck         NLBHealthCheck
+	DeregistrationDelay *int64
 }
 
 // NLBHealthCheck holds configuration for Network Load Balancer health check.
@@ -438,12 +439,13 @@ type ALBListenerRule struct {
 	TargetContainer string
 	TargetPort      string
 
-	Aliases          []string
-	AllowedSourceIps []string
-	Stickiness       string
-	HTTPHealthCheck  HTTPHealthCheckOpts
-	HTTPVersion      string
-	RedirectToHTTPS  bool // Only relevant if HTTPSListener is true.
+	Aliases             []string
+	AllowedSourceIps    []string
+	Stickiness          string
+	HTTPHealthCheck     HTTPHealthCheckOpts
+	HTTPVersion         string
+	RedirectToHTTPS     bool // Only relevant if HTTPSListener is true.
+	DeregistrationDelay *int64
 }
 
 // ALBListener holds configuration that's needed for an Application Load Balancer Listener.
@@ -785,7 +787,6 @@ type WorkloadOpts struct {
 	HealthCheck             *ContainerHealthCheck
 	HTTPTargetContainer     HTTPTargetContainer
 	HTTPHealthCheck         HTTPHealthCheckOpts
-	DeregistrationDelay     *int64
 	NLB                     *NetworkLoadBalancer
 	ALBListener             *ALBListener
 	DeploymentConfiguration DeploymentConfigurationOpts

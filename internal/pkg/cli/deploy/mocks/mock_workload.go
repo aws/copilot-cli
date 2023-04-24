@@ -467,11 +467,9 @@ func (mr *MocklabeledTermPrinterMockRecorder) IsDone() *gomock.Call {
 }
 
 // Print mocks base method.
-func (m *MocklabeledTermPrinter) Print() error {
+func (m *MocklabeledTermPrinter) Print() {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Print")
-	ret0, _ := ret[0].(error)
-	return ret0
+	m.ctrl.Call(m, "Print")
 }
 
 // Print indicates an expected call of Print.

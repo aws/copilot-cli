@@ -52,7 +52,7 @@ NLBTargetGroup{{- if ne $i 0 }}{{$i}}{{end}}:
     Protocol: {{- if eq $listener.Protocol "TLS"}} TCP {{- else}} {{ $listener.Protocol }} {{- end}}
     TargetGroupAttributes:
       - Key: deregistration_delay.timeout_seconds
-        Value: {{$.DeregistrationDelay}}  # ECS Default is 300; Copilot default is 60.
+        Value: {{$listener.DeregistrationDelay}}  # ECS Default is 300; Copilot default is 60.
 {{- if ne $listener.Protocol "TLS"}}
 {{- if $listener.Stickiness }} {{/*Sticky sessions are not supported with TLS listeners and TLS target groups.*/}}
       - Key: stickiness.enabled
