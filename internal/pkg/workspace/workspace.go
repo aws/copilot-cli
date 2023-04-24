@@ -29,7 +29,6 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-	"strings"
 	"sync"
 
 	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
@@ -160,7 +159,7 @@ func Create(appName string, fs afero.Fs) (*Workspace, error) {
 
 // ProjectRoot returns a path to the presumed root of the project, the directory that contains the copilot dir and .workspace file.
 func (ws *Workspace) ProjectRoot() string {
-	return strings.TrimSuffix(ws.CopilotDirAbs, "/copilot")
+	return filepath.Dir(ws.CopilotDirAbs)
 }
 
 // Summary returns a summary of the workspace. The method assumes that the workspace exists and the path is known.
