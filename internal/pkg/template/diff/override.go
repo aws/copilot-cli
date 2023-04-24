@@ -77,18 +77,6 @@ func (_ *intrinsicFuncFullShortFormConverter) parse(from, to *yaml.Node, key str
 	return parse(from, to.Content[1], key, overrider)
 }
 
-type noopOverrider struct{}
-
-// Match always returns false for a noopOverrider.
-func (*noopOverrider) match(_, _ *yaml.Node, _ string, _ overrider) bool {
-	return false
-}
-
-// Parse is a no-op for a noopOverrider.
-func (*noopOverrider) parse(_, _ *yaml.Node, _ string, _ overrider) (diffNode, error) {
-	return nil, nil
-}
-
 // Explicitly maintain a map so that we don't accidentally match nodes that are not actually intrinsic function
 // but happen to match the "Fn::" and "!" format.
 var intrinsicFuncFull2Short = map[string]string{
