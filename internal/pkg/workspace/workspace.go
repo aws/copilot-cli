@@ -66,7 +66,7 @@ type Summary struct {
 // Workspace typically represents a Git repository where the user has its infrastructure-as-code files as well as source files.
 type Workspace struct {
 	workingDirAbs string
-	CopilotDirAbs string
+	CopilotDirAbs string // TODO: make private by adding mocks for selector unit testing.
 
 	// These fields should be accessed via the Summary method and not directly.
 	summary       *Summary
