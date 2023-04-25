@@ -19,6 +19,8 @@ import (
 	"github.com/spf13/afero"
 )
 
+const artifactBucketAssetsDir = "local-assets"
+
 type fileUploader interface {
 	UploadFiles(files []manifest.FileUpload) (string, error)
 }
@@ -47,8 +49,8 @@ func NewStaticSiteDeployer(in *WorkloadDeployerInput) (*staticSiteDeployer, erro
 		fs:            svcDeployer.fs,
 		uploader: &asset.ArtifactBucketUploader{
 			FS:                  svcDeployer.fs,
-			AssetDir:            "local-assets",
-			AssetMappingFileDir: fmt.Sprintf("local-assets/environments/%s/workloads/%s/mapping", svcDeployer.env.Name, svcDeployer.name),
+			AssetDir:            artifactBucketAssetsDir,
+			AssetMappingFileDir: fmt.Sprintf("%s/environments/%s/workloads/%s/mapping", artifactBucketAssetsDir, svcDeployer.env.Name, svcDeployer.name),
 			Upload: func(path string, data io.Reader) error {
 				_, err := svcDeployer.s3Client.Upload(svcDeployer.resources.S3Bucket, path, data)
 				return err

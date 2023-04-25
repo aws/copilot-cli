@@ -179,11 +179,11 @@ func (u *ArtifactBucketUploader) uploadAssetMappingFile(assets []asset) (string,
 	// mapping changes result in a new hash
 	hash.Write(data)
 
-	path := path.Join(u.AssetMappingFileDir, hex.EncodeToString(hash.Sum(nil)))
-	if err := u.Upload(path, bytes.NewBuffer(data)); err != nil {
+	uploadedPath := path.Join(u.AssetMappingFileDir, hex.EncodeToString(hash.Sum(nil)))
+	if err := u.Upload(uploadedPath, bytes.NewBuffer(data)); err != nil {
 		return "", fmt.Errorf("upload to %q: %w", u.AssetMappingFileDir, err)
 	}
-	return path, nil
+	return uploadedPath, nil
 }
 
 // dedupe returns a copy of assets with duplicate entries removed.
