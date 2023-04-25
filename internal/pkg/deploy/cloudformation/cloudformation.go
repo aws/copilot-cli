@@ -27,6 +27,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/stream"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/progress"
+	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"golang.org/x/sync/errgroup"
 )
 
