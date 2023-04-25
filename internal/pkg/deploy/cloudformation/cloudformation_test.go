@@ -248,7 +248,7 @@ func testDeployWorkload_StreamUntilStackCreationFails(t *testing.T, stackName st
 	// THEN
 	require.EqualError(t, err, fmt.Sprintf("stack %s did not complete successfully and exited with status CREATE_FAILED.\n"+
 			"You may fix the error by updating the service code or the manifest configuration." +
-			"You can then retry deploying your service by running `copilot svc deploy`", stackName))
+			"You can then retry deploying your service by running `copilot svc deploy`.", stackName))
 }
 
 func testDeployWorkload_RenderNewlyCreatedStackWithECSService(t *testing.T, stackName string, when func(cf CloudFormation) error) {
@@ -677,7 +677,7 @@ func testDeployTask_StreamUntilStackCreationFails(t *testing.T, stackName string
 	// THEN
 	require.EqualError(t, err, fmt.Sprintf("stack %s did not complete successfully and exited with status CREATE_FAILED.\n"+
 			"You may fix the error by updating the service code or the manifest configuration." +
-			"You can then retry deploying your service by running `copilot svc deploy`", stackName))
+			"You can then retry deploying your service by running `copilot svc deploy`.", stackName))
 }
 
 func testDeployTask_RenderNewlyCreatedStackWithAddons(t *testing.T, stackName string, when func(cf CloudFormation) error) {
