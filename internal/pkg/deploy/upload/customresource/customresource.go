@@ -36,6 +36,8 @@ const (
 	dnsDelegationFnName       = "DNSDelegationFunction"
 	certReplicatorFnName      = "CertificateReplicatorFunction"
 	uniqueJsonValuesFnName    = "UniqueJSONValuesFunction"
+	triggerStateMachineFnName = "TriggerStateMachineFunction"
+	copyAssetsFnName          = "CopyAssetsFunction"
 )
 
 // Function source file locations.
@@ -52,6 +54,8 @@ var (
 	nlbCertValidatorFilePath         = path.Join(customResourcesDir, "nlb-cert-validator.js")
 	nlbCustomDomainFilePath          = path.Join(customResourcesDir, "nlb-custom-domain.js")
 	uniqueJSONValuesFilePath         = path.Join(customResourcesDir, "unique-json-values.js")
+	triggerStateMachineFilePath      = path.Join(customResourcesDir, "trigger-state-machine.js")
+	copyAssetsFilePath               = path.Join(customResourcesDir, "copy-assets.js")
 )
 
 // CustomResource represents a CloudFormation custom resource backed by a Lambda function.
@@ -142,7 +146,10 @@ func Backend(fs template.Reader) ([]*CustomResource, error) {
 
 // StaticSite returns the custom resources for a static site service.
 func StaticSite(fs template.Reader) ([]*CustomResource, error) {
-	return buildCustomResources(fs, map[string]string{})
+	return buildCustomResources(fs, map[string]string{
+		triggerStateMachineFnName: triggerStateMachineFilePath,
+		copyAssetsFnName:          copyAssetsFilePath,
+	})
 }
 
 // ScheduledJob returns the custom resources for a scheduled job.
