@@ -23,6 +23,7 @@ func TestLabeledTermPrinter_Print(t *testing.T) {
 	testCases := map[string]struct {
 		inNumLines int
 		inPadding  int
+		printAll   bool
 		wanted     string
 	}{
 		"display label with given numLines": {
@@ -40,6 +41,7 @@ Building your container image 2
 		"display all the lines if numLines set to -1": {
 			inNumLines: -1,
 			inPadding:  5,
+			printAll:   true,
 			wanted: `Building your container image 1
      line1 from image1
      line2 from image1
@@ -71,18 +73,14 @@ line4 from image2`)
 			var mockLabeledSyncbufs []*LabeledSyncBuffer
 			mockLabeledSyncbufs = append(mockLabeledSyncbufs, mockSyncBuf1.WithLabel("Building your container image 1"),
 				mockSyncBuf2.WithLabel("Building your container image 2"))
-			mockTerminalWidth := func(fw FileWriter) (int, error) {
-				return 80, nil
-			}
 
 			termOut := &bytes.Buffer{}
 
 			ltp := LabeledTermPrinter{
-				term:          mockFileWriter{termOut},
-				buffers:       mockLabeledSyncbufs,
-				numLines:      tc.inNumLines,
-				padding:       tc.inPadding,
-				terminalWidth: mockTerminalWidth,
+				term:     mockFileWriter{termOut},
+				buffers:  mockLabeledSyncbufs,
+				numLines: tc.inNumLines,
+				padding:  tc.inPadding,
 			}
 
 			// WHEN
@@ -90,6 +88,14 @@ line4 from image2`)
 				buf.MarkDone()
 			}
 			ltp.Print()
+
+			// checking multiple calls to Print will result in
+			// printing a buffer only once when it enters printAll.
+			if tc.printAll {
+				for i := 0; i < 3; i++ {
+					ltp.Print()
+				}
+			}
 
 			// THEN
 			require.Equal(t, tc.wanted, termOut.String())

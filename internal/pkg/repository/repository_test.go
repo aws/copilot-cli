@@ -4,9 +4,11 @@
 package repository
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
@@ -22,6 +24,7 @@ func TestRepository_BuildAndPush(t *testing.T) {
 
 	mockTag1, mockTag2, mockTag3 := "tag1", "tag2", "tag3"
 	mockRepoURI := "mockRepoURI"
+	ctx := context.Background()
 
 	defaultDockerArguments := dockerengine.BuildArguments{
 		URI:        mockRepoURI,
@@ -52,7 +55,7 @@ func TestRepository_BuildAndPush(t *testing.T) {
 				m.EXPECT().Auth().Return("", "", nil).AnyTimes()
 			},
 			inMockDocker: func(m *mocks.MockContainerLoginBuildPusher) {
-				m.EXPECT().Build(&defaultDockerArguments).Return(errors.New("error building image"))
+				m.EXPECT().Build(ctx, &defaultDockerArguments, gomock.Any()).Return(errors.New("error building image"))
 				m.EXPECT().Push(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
 			wantedError: fmt.Errorf("build Dockerfile at %s: error building image", inDockerfilePath),
@@ -60,16 +63,16 @@ func TestRepository_BuildAndPush(t *testing.T) {
 		"failed to push": {
 			inURI: defaultDockerArguments.URI,
 			inMockDocker: func(m *mocks.MockContainerLoginBuildPusher) {
-				m.EXPECT().Build(&defaultDockerArguments).Times(1)
-				m.EXPECT().Push(mockRepoURI, mockTag1, mockTag2, mockTag3).Return("", errors.New("error pushing image"))
+				m.EXPECT().Build(ctx, &defaultDockerArguments, gomock.Any()).Times(1)
+				m.EXPECT().Push(ctx, mockRepoURI, gomock.Any(), mockTag1, mockTag2, mockTag3).Return("", errors.New("error pushing image"))
 			},
 			wantedError: errors.New("push to repo my-repo: error pushing image"),
 		},
 		"push with ecr-login": {
 			inURI: defaultDockerArguments.URI,
 			inMockDocker: func(m *mocks.MockContainerLoginBuildPusher) {
-				m.EXPECT().Build(&defaultDockerArguments).Return(nil).Times(1)
-				m.EXPECT().Push(mockRepoURI, mockTag1, mockTag2, mockTag3).Return("sha256:f1d4ae3f7261a72e98c6ebefe9985cf10a0ea5bd762585a43e0700ed99863807", nil)
+				m.EXPECT().Build(ctx, &defaultDockerArguments, gomock.Any()).Return(nil).Times(1)
+				m.EXPECT().Push(ctx, mockRepoURI, gomock.Any(), mockTag1, mockTag2, mockTag3).Return("sha256:f1d4ae3f7261a72e98c6ebefe9985cf10a0ea5bd762585a43e0700ed99863807", nil)
 			},
 			wantedDigest: "sha256:f1d4ae3f7261a72e98c6ebefe9985cf10a0ea5bd762585a43e0700ed99863807",
 		},
@@ -78,8 +81,8 @@ func TestRepository_BuildAndPush(t *testing.T) {
 				m.EXPECT().RepositoryURI(inRepoName).Return(defaultDockerArguments.URI, nil)
 			},
 			inMockDocker: func(m *mocks.MockContainerLoginBuildPusher) {
-				m.EXPECT().Build(&defaultDockerArguments).Return(nil).Times(1)
-				m.EXPECT().Push(mockRepoURI, mockTag1, mockTag2, mockTag3).Return("sha256:f1d4ae3f7261a72e98c6ebefe9985cf10a0ea5bd762585a43e0700ed99863807", nil)
+				m.EXPECT().Build(ctx, &defaultDockerArguments, gomock.Any()).Return(nil).Times(1)
+				m.EXPECT().Push(ctx, mockRepoURI, gomock.Any(), mockTag1, mockTag2, mockTag3).Return("sha256:f1d4ae3f7261a72e98c6ebefe9985cf10a0ea5bd762585a43e0700ed99863807", nil)
 			},
 			wantedDigest: "sha256:f1d4ae3f7261a72e98c6ebefe9985cf10a0ea5bd762585a43e0700ed99863807",
 		},
@@ -105,12 +108,12 @@ func TestRepository_BuildAndPush(t *testing.T) {
 				uri:      tc.inURI,
 				docker:   mockDocker,
 			}
-
-			digest, err := repo.BuildAndPush(&dockerengine.BuildArguments{
+			buf := new(strings.Builder)
+			digest, err := repo.BuildAndPush(ctx, &dockerengine.BuildArguments{
 				Dockerfile: inDockerfilePath,
 				Context:    filepath.Dir(inDockerfilePath),
 				Tags:       []string{mockTag1, mockTag2, mockTag3},
-			})
+			}, buf)
 			if tc.wantedError != nil {
 				require.EqualError(t, tc.wantedError, err.Error())
 			} else {
