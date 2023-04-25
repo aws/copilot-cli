@@ -284,11 +284,7 @@ func (s *localFileSelector) listDockerfiles() ([]string, error) {
 // listDirsAndFiles returns the list of directories and files within the current
 // working directory and two subdirectory levels below.
 func (s *localFileSelector) listDirsAndFiles() ([]string, error) {
-	names, err := s.getDirAndFileNames(s.ws.ProjectRoot(), 3)
-	if err != nil {
-		return nil, err
-	}
-	return names, nil
+	return  s.getDirAndFileNames(s.ws.ProjectRoot(), 3)
 }
 
 // getDirAndFileNames recursively fetches directory and file names to the depth indicated. Hidden files and the copilot dir are excluded.
