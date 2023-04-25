@@ -19,8 +19,8 @@ Thanks to every one of you who shows love and support for AWS Copilot.
 Copilot v1.28 brings several new features and improvements:
 
 - **Static Site service type**: You can now deploy and host static websites with AWS S3. [See detailed section](#Static-Site-service-type).
-- **Config multiple container ports through --port flag**:`Copilot init` and `Copilot svc init` now allows you to configure multiple ports for Load Balanced Service and Backend Service. [See detailed section](#config-multiple-container-ports-through---port-flag).
-- **Parallel Container Images Build**: You can now build main container and sidecar container images in parallel. With parallel build, you can reduce the overall time it takes build and push container images to AWS ECR.
+- **Config Multiple Container Ports through `--port` flag**:`Copilot init` and `Copilot svc init` now allows you to configure multiple ports for Load Balanced Service and Backend Service. [See detailed section](#Config-Multiple-Container-Ports-through---port-flag).
+- **Container Images Parallel Build**: You can now build main container and sidecar container images in parallel. With parallel build, you can reduce the overall time it takes build and push container images to AWS ECR.
 
 ???+ note "What’s AWS Copilot?"
 
@@ -38,7 +38,7 @@ Copilot v1.28 brings several new features and improvements:
 
 ### Integrate With CloudFront
 
-## Config multiple container ports through --port flag
+## Config Multiple Container Ports through `--port` flag
 
 ## What’s next?
 
