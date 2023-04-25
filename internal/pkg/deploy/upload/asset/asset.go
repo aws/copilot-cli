@@ -46,7 +46,7 @@ type asset struct {
 }
 
 // UploadFiles hashes each of the files specified in files and uploads
-// them to the path "{PathPrefix}/{hash}". After, it uploads a JSON file
+// them to the path "{AssetDir}/{hash}". After, it uploads a JSON file
 // to AssetDir that maps the location of every file in the artifact bucket to its
 // intended destination path in the service bucket. The path to the mapping file
 // is returned along with an error, if any.
@@ -154,6 +154,7 @@ func (u *ArtifactBucketUploader) uploadAssets(assets []asset) error {
 //
 // The uploaded path of the file is returned along with an error, if any.
 func (u *ArtifactBucketUploader) uploadAssetMappingFile(assets []asset) (string, error) {
+	assets = dedupe(assets)
 	sort.Slice(assets, func(i, j int) bool {
 		if assets[i].ArtifactBucketPath != assets[j].ArtifactBucketPath {
 			return assets[i].ArtifactBucketPath < assets[j].ArtifactBucketPath
@@ -174,9 +175,31 @@ func (u *ArtifactBucketUploader) uploadAssetMappingFile(assets []asset) (string,
 		return "", fmt.Errorf("encode uploaded assets: %w", err)
 	}
 
+	// include mapping file in hash so any src->dst
+	// mapping changes result in a new hash
+	hash.Write(data)
+
 	path := path.Join(u.AssetMappingFileDir, hex.EncodeToString(hash.Sum(nil)))
 	if err := u.Upload(path, bytes.NewBuffer(data)); err != nil {
 		return "", fmt.Errorf("upload to %q: %w", u.AssetMappingFileDir, err)
 	}
 	return path, nil
+}
+
+// dedupe returns a copy of assets with duplicate entries removed.
+func dedupe(assets []asset) []asset {
+	type key struct{ a, b string }
+	has := make(map[key]bool)
+	out := make([]asset, 0, len(assets))
+
+	for i := range assets {
+		key := key{assets[i].ArtifactBucketPath, assets[i].ServiceBucketPath}
+		if has[key] {
+			continue
+		}
+		has[key] = true
+		out = append(out, assets[i])
+	}
+
+	return out
 }
