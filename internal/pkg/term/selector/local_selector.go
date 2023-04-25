@@ -284,13 +284,14 @@ func (s *localFileSelector) listDockerfiles() ([]string, error) {
 // listDirsAndFiles returns the list of directories and files within the current
 // working directory and two subdirectory levels below.
 func (s *localFileSelector) listDirsAndFiles() ([]string, error) {
-	names, err := s.getDirAndFileNames(s.ws.ProjectRoot(), 0)
+	names, err := s.getDirAndFileNames(s.ws.ProjectRoot(), 3)
 	if err != nil {
 		return nil, err
 	}
 	return names, nil
 }
 
+// getDirAndFileNames recursively fetches directory and file names to the depth indicated. Hidden files and the copilot dir are excluded.
 func (s *localFileSelector) getDirAndFileNames(dir string, depth int) ([]string, error) {
 	wdDirsAndFiles, err := s.fs.ReadDir(dir)
 	if err != nil {
@@ -308,8 +309,8 @@ func (s *localFileSelector) getDirAndFileNames(dir string, depth int) ([]string,
 			return nil, fmt.Errorf("get path relative to workspace: %w", err)
 		}
 		names = append(names, wsRelPathName)
-		if depth < 3 && file.IsDir() {
-			subNames, err := s.getDirAndFileNames(relPathName, depth+1)
+		if depth > 0 && file.IsDir() {
+			subNames, err := s.getDirAndFileNames(relPathName, depth-1)
 			if err != nil {
 				return nil, fmt.Errorf("get dir and file names: %w", err)
 			}
