@@ -208,6 +208,43 @@ func Test_UploadFiles(t *testing.T) {
 				newAsset("/is/a/file", mockContent1),
 			},
 		},
+		"duplicate file mappings dedupe'd": {
+			files: []manifest.FileUpload{
+				{
+					Source:      "dir/file.txt",
+					Destination: "dir/file.txt",
+				},
+				{
+					Source:      "dir",
+					Destination: "dir",
+				},
+			},
+			mockFileSystem: func(fs afero.Fs) {
+				afero.WriteFile(fs, "dir/file.txt", []byte(mockContent1), 0644)
+			},
+			expected: []asset{
+				newAsset("dir/file.txt", mockContent1),
+			},
+		},
+		"duplicate content to separate destinations sorted": {
+			files: []manifest.FileUpload{
+				{
+					Source:      "dir/file.txt",
+					Destination: "dir/file.txt",
+				},
+				{
+					Source: "dir",
+				},
+			},
+			mockFileSystem: func(fs afero.Fs) {
+				afero.WriteFile(fs, "dir/file.txt", []byte(mockContent1), 0644)
+			},
+			expected: []asset{
+				// dir/file.txt sorts before file.txt
+				newAsset("dir/file.txt", mockContent1),
+				newAsset("file.txt", mockContent1),
+			},
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
@@ -238,17 +275,16 @@ func Test_UploadFiles(t *testing.T) {
 			expected := make(map[string][]byte)
 			hash := sha256.New()
 			for _, asset := range tc.expected {
-				if _, ok := expected[asset.ArtifactBucketPath]; !ok {
-					hash.Write(asset.content)
-					expected[asset.ArtifactBucketPath] = asset.content
-				}
+				hash.Write(asset.content)
+				expected[asset.ArtifactBucketPath] = asset.content
 			}
-
-			expectedMappingFilePath := path.Join(mockMappingDir, hex.EncodeToString(hash.Sum(nil)))
-			require.Equal(t, expectedMappingFilePath, mappingFilePath)
 
 			b, err := json.Marshal(tc.expected)
 			require.NoError(t, err)
+			hash.Write(b)
+
+			expectedMappingFilePath := path.Join(mockMappingDir, hex.EncodeToString(hash.Sum(nil)))
+			require.Equal(t, expectedMappingFilePath, mappingFilePath)
 
 			expected[expectedMappingFilePath] = b
 			require.Equal(t, expected, mockS3.data)
