@@ -193,6 +193,9 @@ func (l LoadBalancedWebServiceConfig) validate() error {
 			missingFields: []string{"http", "nlb"},
 		}
 	}
+	if err = l.validateGracePeriod(); err != nil {
+		return fmt.Errorf(`validate "grace_period": %w`, err)
+	}
 	if l.HTTPOrBool.Disabled() && (!l.Count.AdvancedCount.Requests.IsEmpty() || !l.Count.AdvancedCount.ResponseTime.IsEmpty()) {
 		return errors.New(`scaling based on "nlb" requests or response time is not supported`)
 	}
@@ -798,6 +801,59 @@ func (r HTTPOrBool) validate() error {
 	}
 
 	return r.HTTP.validate()
+}
+
+func (l LoadBalancedWebServiceConfig) validateGracePeriod() error {
+	gracePeriodForALB, err := l.validateGracePeriodForALB()
+	if err != nil {
+		return err
+	}
+	gracePeriodForNLB, err := l.validateGracePeriodForNLB()
+	if err != nil {
+		return err
+	}
+	if gracePeriodForALB && gracePeriodForNLB {
+		return &errGracePeriodsInBothALBAndNLB{
+			errFieldMutualExclusive: errFieldMutualExclusive{
+				firstField:  "http.healthcheck.grace_period",
+				secondField: "nlb.healthcheck.grace_period",
+			},
+		}
+	}
+
+	return nil
+}
+
+// validateGracePeriodForALB validates if ALB has grace period mentioned in their additional listeners rules.
+func (cfg *LoadBalancedWebServiceConfig) validateGracePeriodForALB() (bool, error) {
+	var exist bool
+	if cfg.HTTPOrBool.Main.HealthCheck.Advanced.GracePeriod != nil {
+		exist = true
+	}
+	for idx, rule := range cfg.HTTPOrBool.AdditionalRoutingRules {
+		if rule.HealthCheck.Advanced.GracePeriod != nil {
+			return exist, &errGracePeriodSpecifiedInAdditionalRule{
+				index: idx,
+			}
+		}
+	}
+	return exist, nil
+}
+
+// validateGracePeriodForNLB validates if NLB has grace period mentioned in their additional listeners.
+func (cfg *LoadBalancedWebServiceConfig) validateGracePeriodForNLB() (bool, error) {
+	var exist bool
+	if cfg.NLBConfig.Listener.HealthCheck.GracePeriod != nil {
+		exist = true
+	}
+	for idx, listener := range cfg.NLBConfig.AdditionalListeners {
+		if listener.HealthCheck.GracePeriod != nil {
+			return exist, &errGracePeriodSpecifiedInAdditionalListener{
+				index: idx,
+			}
+		}
+	}
+	return exist, nil
 }
 
 // validate returns nil if HTTP is configured correctly.
