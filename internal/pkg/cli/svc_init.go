@@ -145,6 +145,7 @@ type initSvcOpts struct {
 	manifestPath string
 	platform     *manifest.PlatformString
 	topics       []manifest.TopicSubscription
+	staticAssets []manifest.FileUpload
 
 	// For workspace validation.
 	wsAppName         string
@@ -333,7 +334,18 @@ func (o *initSvcOpts) Execute() error {
 	if err != nil {
 		return err
 	}
-	manifestPath, err := o.init.Service(&initialize.ServiceProps{
+	var manifestPath string
+	if o.wkldType == manifestinfo.StaticSiteType {
+		manifestPath, err = o.init.Service(&initialize.ServiceProps{
+			WorkloadProps: initialize.WorkloadProps{
+				App:  o.appName,
+				Name: o.name,
+				Type: o.wkldType,
+			},
+			FileUploads: o.staticAssets,
+		})
+	}
+	manifestPath, err = o.init.Service(&initialize.ServiceProps{
 		WorkloadProps: initialize.WorkloadProps{
 			App:            o.appName,
 			Name:           o.name,
