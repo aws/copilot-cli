@@ -56,9 +56,8 @@ func (f *seqItemFormatter) formatMod(node diffNode) (string, error) {
 	return processMultiline(content, prefixByFn(prefixMod), indentByFn(f.indent)), nil
 }
 
-func (f *seqItemFormatter) formatPath(_ diffNode) string {
-	content := process(color.Faint.Sprint("- (changed item)"), prefixByFn(prefixMod), indentByFn(f.indent))
-	return content + "\n"
+func (f *seqItemFormatter) formatPath(node diffNode) string {
+	return process(color.Faint.Sprint("- (changed item)"), prefixByFn(prefixMod), indentByFn(f.indent)) + "\n"
 }
 
 func (f *seqItemFormatter) nextIndent() int {
@@ -72,7 +71,6 @@ func (f *seqItemFormatter) nextIndent() int {
 }
 
 type keyedFormatter struct {
-	key    string
 	indent int
 }
 
@@ -84,7 +82,7 @@ func (f *keyedFormatter) formatDel(node diffNode) (string, error) {
 			{
 				Kind:  yaml.ScalarNode,
 				Tag:   "!!str",
-				Value: f.key,
+				Value: node.key(),
 			},
 			node.oldYAML(),
 		},
@@ -103,7 +101,7 @@ func (f *keyedFormatter) formatInsert(node diffNode) (string, error) {
 			{
 				Kind:  yaml.ScalarNode,
 				Tag:   "!!str",
-				Value: f.key,
+				Value: node.key(),
 			},
 			node.newYAML(),
 		},
@@ -124,8 +122,7 @@ func (f *keyedFormatter) formatMod(node diffNode) (string, error) {
 }
 
 func (f *keyedFormatter) formatPath(node diffNode) string {
-	content := process(node.key()+":", prefixByFn(prefixMod), indentByFn(f.indent))
-	return content + "\n"
+	return process(node.key()+":"+"\n", prefixByFn(prefixMod), indentByFn(f.indent))
 }
 
 func (f *keyedFormatter) nextIndent() int {
