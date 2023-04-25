@@ -119,6 +119,7 @@ type initWkldVars struct {
 	image          string
 	subscriptions  []string
 	noSubscribe    bool
+	sourcePaths    []string
 }
 
 type initSvcVars struct {
@@ -251,6 +252,16 @@ func (o *initSvcOpts) Validate() error {
 			return err
 		}
 	}
+	if len(o.sourcePaths) != 0 {
+		if err := validateStaticSiteSources(o.sourcePaths); err != nil {
+			return err
+		}
+		assets, err := o.convertStringsToAssets(o.sourcePaths)
+		if err != nil {
+			return fmt.Errorf("convert source strings to objects: %w", err)
+		}
+		o.staticAssets = assets
+	}
 	if err := validateSubscribe(o.noSubscribe, o.subscriptions); err != nil {
 		return err
 	}
@@ -382,7 +393,9 @@ func (o *initSvcOpts) RecommendActions() error {
 
 func (o *initSvcOpts) askSvcDetails() error {
 	if o.wkldType == manifestinfo.StaticSiteType {
-		return o.askStaticSite()
+		if len(o.staticAssets) == 0 {
+			return o.askStaticSite()
+		}
 	}
 	err := o.askDockerfile()
 	if err != nil {
@@ -732,6 +745,21 @@ func validateWorkspaceApp(wsApp, inputApp string, store store) error {
 	return nil
 }
 
+func (o initSvcOpts) convertStringsToAssets (sources []string) ([]manifest.FileUpload, error) {
+	assets := make([]manifest.FileUpload, len(sources))
+	for i, source := range sources {
+		info, err := o.fs.Stat(source)
+		if err != nil {
+			return nil, fmt.Errorf("get Fileinfo describing %s: %w", source, err)
+		}
+		assets[i] = manifest.FileUpload{
+			Source:    source,
+			Recursive: info.IsDir(),
+		}
+	}
+	return assets, nil
+}
+
 // parseSerializedSubscription parses the service and topic name out of keys specified in the form "service:topicName"
 func parseSerializedSubscription(input string) (manifest.TopicSubscription, error) {
 	attrs := regexpMatchSubscription.FindStringSubmatch(input)
@@ -816,6 +844,7 @@ This command is also run as part of "copilot init".`,
 	cmd.Flags().StringArrayVar(&vars.subscriptions, subscribeTopicsFlag, []string{}, subscribeTopicsFlagDescription)
 	cmd.Flags().BoolVar(&vars.noSubscribe, noSubscriptionFlag, false, noSubscriptionFlagDescription)
 	cmd.Flags().StringVar(&vars.ingressType, ingressTypeFlag, "", ingressTypeFlagDescription)
+	cmd.Flags().StringArrayVar(&vars.sourcePaths, sourcesFlag, nil, sourcesFlagDescription)
 
 	return cmd
 }
