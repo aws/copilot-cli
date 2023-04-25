@@ -303,14 +303,16 @@ var _ = Describe("App With Domain", func() {
 				}, "60s", "1s").Should(Equal(200))
 				Eventually(func() (int, error) {
 					resp, fetchErr = http.Get(fmt.Sprintf("%s/admin", strings.Replace(url, "https", "http", 1)))
+					if fetchErr != nil {
+						return 0, fetchErr
+					}
+					defer resp.Body.Close()
 					body, err := io.ReadAll(resp.Body)
 					if err != nil {
 						return 0, err
 					}
-					fmt.Printf("response: %s\n", string(body))
-					// The LBWS sets its state to "consumed" when the worker service processes a message
 					if string(body) != expectedResponseBody {
-						return 0, fmt.Errorf("the message content is '%s', but expected '%s'", string(body), expectedResponseBody)
+						return 0, fmt.Errorf("the message content is '%q', but expected '%q'", string(body), expectedResponseBody)
 					}
 					return resp.StatusCode, fetchErr
 				}, "60s", "1s").Should(Equal(200))
