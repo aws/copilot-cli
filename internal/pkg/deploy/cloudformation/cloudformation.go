@@ -579,7 +579,7 @@ func (cf CloudFormation) errOnFailedStack(stackName string) error {
 	if cloudformation.StackStatus(status).IsFailure() {
 		return fmt.Errorf("stack %s did not complete successfully and exited with status %s.\n"+
 			"You may fix the error by updating the service code or the manifest configuration." +
-			"You can then retry deploying your service by running %s.", color.HighlightCode("copilot svc deploy"), stackName, status)
+			"You can then retry deploying your service by running %s.", stackName, status, color.HighlightCode("copilot svc deploy"))
 	}
 	return nil
 }
