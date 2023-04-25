@@ -308,7 +308,7 @@ func (s *localFileSelector) getDirAndFileNames(dir string, depth int) ([]string,
 		if depth > 0 && file.IsDir() {
 			subNames, err := s.getDirAndFileNames(relPathName, depth-1)
 			if err != nil {
-				return nil, fmt.Errorf("get dir and file names: %w", err)
+				return nil, err
 			}
 			names = append(names, subNames...)
 		}
