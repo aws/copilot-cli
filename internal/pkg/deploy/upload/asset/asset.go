@@ -39,7 +39,7 @@ type ArtifactBucketUploader struct {
 
 type asset struct {
 	localPath string
-	content   []byte
+	content   io.Reader
 
 	ArtifactBucketPath string `json:"path"`
 	ServiceBucketPath  string `json:"destPath"`
@@ -119,7 +119,7 @@ func (u *ArtifactBucketUploader) walkFn(sourcePath, destPath string, recursive b
 
 		*assets = append(*assets, asset{
 			localPath:          fpath,
-			content:            buf.Bytes(),
+			content:            buf,
 			ArtifactBucketPath: path.Join(u.AssetDir, hex.EncodeToString(hash.Sum(nil))),
 			ServiceBucketPath:  filepath.ToSlash(dest),
 		})
@@ -133,7 +133,7 @@ func (u *ArtifactBucketUploader) uploadAssets(assets []asset) error {
 	for i := range assets {
 		asset := assets[i]
 		g.Go(func() error {
-			if err := u.Upload(asset.ArtifactBucketPath, bytes.NewBuffer(asset.content)); err != nil {
+			if err := u.Upload(asset.ArtifactBucketPath, asset.content); err != nil {
 				return fmt.Errorf("upload %q: %w", asset.localPath, err)
 			}
 			return nil
@@ -143,8 +143,8 @@ func (u *ArtifactBucketUploader) uploadAssets(assets []asset) error {
 	return g.Wait()
 }
 
-// uploadAssetMappingFile uploads a JSON file to u.AssetMappingDir containing
-// the current location of each file in the artifact bucket and the desired location
+// uploadAssetMappingFile uploads a JSON file containing the current
+// location of each file in the artifact bucket and the desired location
 // of the file in the destination bucket. It has the format:
 //
 //	[{
@@ -152,7 +152,9 @@ func (u *ArtifactBucketUploader) uploadAssets(assets []asset) error {
 //	  "destPath": "index.html"
 //	}]
 //
-// The uploaded path of the file is returned along with an error, if any.
+// The path returned is u.AssetMappingDir/a hash of the mapping file's content.
+// This makes it so the file path is constant as long as the
+// content and destination of the uploaded assets do not change.
 func (u *ArtifactBucketUploader) uploadAssetMappingFile(assets []asset) (string, error) {
 	assets = dedupe(assets)
 	sort.Slice(assets, func(i, j int) bool {
@@ -162,22 +164,13 @@ func (u *ArtifactBucketUploader) uploadAssetMappingFile(assets []asset) (string,
 		return assets[i].ServiceBucketPath < assets[j].ServiceBucketPath
 	})
 
-	// hash using the sorted list so order-only changes in assets (caused by
-	// manifest or walkFn reordering) doesn't result in a mapping name change.
-	hash := sha256.New()
-	for _, asset := range assets {
-		// hash.Write is documented to never return an error
-		hash.Write(asset.content)
-	}
-
 	data, err := json.Marshal(assets)
 	if err != nil {
 		return "", fmt.Errorf("encode uploaded assets: %w", err)
 	}
 
-	// include mapping file in hash so any src->dst
-	// mapping changes result in a new hash
-	hash.Write(data)
+	hash := sha256.New()
+	hash.Write(data) // hash.Write is documented to never return an error
 
 	uploadedPath := path.Join(u.AssetMappingFileDir, hex.EncodeToString(hash.Sum(nil)))
 	if err := u.Upload(uploadedPath, bytes.NewBuffer(data)); err != nil {

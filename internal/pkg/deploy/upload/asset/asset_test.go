@@ -4,6 +4,7 @@
 package asset
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -57,7 +58,7 @@ func Test_UploadFiles(t *testing.T) {
 	newAsset := func(dstPath string, content string) asset {
 		return asset{
 			ArtifactBucketPath: path.Join(mockPrefix, hash(content)),
-			content:            []byte(content),
+			content:            bytes.NewBufferString(content),
 			ServiceBucketPath:  dstPath,
 		}
 	}
@@ -248,6 +249,22 @@ func Test_UploadFiles(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
+			// build the expected s3 bucket
+			expected := make(map[string][]byte)
+			for _, asset := range tc.expected {
+				expected[asset.ArtifactBucketPath] = asset.content.(*bytes.Buffer).Bytes()
+			}
+
+			// add in the mapping file
+			b, err := json.Marshal(tc.expected)
+			require.NoError(t, err)
+
+			hash := sha256.New()
+			hash.Write(b)
+
+			expectedMappingFilePath := path.Join(mockMappingDir, hex.EncodeToString(hash.Sum(nil)))
+			expected[expectedMappingFilePath] = b
+
 			// Create an empty FileSystem
 			fs := afero.NewMemMapFs()
 			// Set it up
@@ -270,23 +287,9 @@ func Test_UploadFiles(t *testing.T) {
 				require.Equal(t, tc.expectedError.Error(), err.Error())
 				return
 			}
+
 			require.NoError(t, err)
-
-			expected := make(map[string][]byte)
-			hash := sha256.New()
-			for _, asset := range tc.expected {
-				hash.Write(asset.content)
-				expected[asset.ArtifactBucketPath] = asset.content
-			}
-
-			b, err := json.Marshal(tc.expected)
-			require.NoError(t, err)
-			hash.Write(b)
-
-			expectedMappingFilePath := path.Join(mockMappingDir, hex.EncodeToString(hash.Sum(nil)))
 			require.Equal(t, expectedMappingFilePath, mappingFilePath)
-
-			expected[expectedMappingFilePath] = b
 			require.Equal(t, expected, mockS3.data)
 		})
 	}
