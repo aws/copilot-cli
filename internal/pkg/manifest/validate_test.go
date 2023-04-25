@@ -48,6 +48,99 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 			},
 			wantedErrorMsgPrefix: `validate "image": `,
 		},
+		"error if fail to validate grace_period when specified in the additional listener rules of ALB": {
+			lbConfig: LoadBalancedWebService{
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: testImageConfig,
+					HTTPOrBool: HTTPOrBool{
+						HTTP: HTTP{
+							Main: RoutingRule{
+								Path: stringP("/"),
+								HealthCheck: HealthCheckArgsOrString{
+									Union: AdvancedToUnion[string](HTTPHealthCheckArgs{
+										Path:               aws.String("/testing"),
+										HealthyThreshold:   aws.Int64(5),
+										UnhealthyThreshold: aws.Int64(6),
+										Interval:           durationp(78 * time.Second),
+										Timeout:            durationp(9 * time.Second),
+									}),
+								},
+							},
+							AdditionalRoutingRules: []RoutingRule{
+								{
+									Path: stringP("/"),
+									HealthCheck: HealthCheckArgsOrString{
+										Union: AdvancedToUnion[string](HTTPHealthCheckArgs{
+											Path:               aws.String("/testing"),
+											HealthyThreshold:   aws.Int64(5),
+											UnhealthyThreshold: aws.Int64(6),
+											Interval:           durationp(78 * time.Second),
+											Timeout:            durationp(9 * time.Second),
+											GracePeriod:        durationp(9 * time.Second),
+										}),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			wantedError: fmt.Errorf(`validate "grace_period": %w`, &errGracePeriodSpecifiedInAdditionalRule{0}),
+		},
+		"error if fail to validate grace_period when specified the additional listener of NLB": {
+			lbConfig: LoadBalancedWebService{
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: testImageConfig,
+					HTTPOrBool: HTTPOrBool{
+						Enabled: aws.Bool(false),
+					},
+					NLBConfig: NetworkLoadBalancerConfiguration{
+						Listener: NetworkLoadBalancerListener{
+							Port:        stringP("80"),
+							HealthCheck: NLBHealthCheckArgs{GracePeriod: durationp(9 * time.Second)},
+						},
+						AdditionalListeners: []NetworkLoadBalancerListener{
+							{
+								Port:        stringP("80"),
+								HealthCheck: NLBHealthCheckArgs{GracePeriod: durationp(9 * time.Second)},
+							},
+						},
+					},
+				},
+			},
+			wantedError: fmt.Errorf(`validate "grace_period": %w`, &errGracePeriodSpecifiedInAdditionalListener{0}),
+		},
+		"error if fail to validate grace_period when specified in ALB and NLB at the same time": {
+			lbConfig: LoadBalancedWebService{
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: testImageConfig,
+					HTTPOrBool: HTTPOrBool{
+						HTTP: HTTP{
+							Main: RoutingRule{
+								Path: stringP("/"),
+								HealthCheck: HealthCheckArgsOrString{
+									Union: AdvancedToUnion[string](HTTPHealthCheckArgs{
+										Path:               aws.String("/testing"),
+										HealthyThreshold:   aws.Int64(5),
+										UnhealthyThreshold: aws.Int64(6),
+										Interval:           durationp(78 * time.Second),
+										Timeout:            durationp(9 * time.Second),
+										GracePeriod:        durationp(9 * time.Second),
+									}),
+								},
+							},
+						},
+					},
+					NLBConfig: NetworkLoadBalancerConfiguration{
+						Listener: NetworkLoadBalancerListener{
+							Port:        stringP("80"),
+							HealthCheck: NLBHealthCheckArgs{GracePeriod: durationp(9 * time.Second)},
+						},
+					},
+				},
+			},
+			wantedError: fmt.Errorf(`validate "grace_period": %w`, &errGracePeriodsInBothALBAndNLB{errFieldMutualExclusive{firstField: "http.healthcheck.grace_period", secondField: "nlb.healthcheck.grace_period"}}),
+		},
 		"error if fail to validate http": {
 			lbConfig: LoadBalancedWebService{
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
