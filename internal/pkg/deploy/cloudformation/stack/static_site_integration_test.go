@@ -73,7 +73,7 @@ func TestStaticSiteService_TemplateAndParamsGeneration(t *testing.T) {
 				RuntimeConfig: stack.RuntimeConfig{
 					EnvVersion: "v1.42.0",
 				},
-				AssetMappingURL: "https://stackset-bucket.s3-us-west-2.amazonaws.com/mappingfile",
+				AssetMappingURL: "s3://stackset-bucket/mappingfile",
 			})
 			require.NoError(t, err)
 			// validate generated template
