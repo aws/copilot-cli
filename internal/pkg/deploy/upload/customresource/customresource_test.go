@@ -254,21 +254,17 @@ func TestStaticSite(t *testing.T) {
 	// GIVEN
 	fakeFS := &fakeTemplateReader{
 		files: map[string]*template.Content{
-			"custom-resources/desired-count-delegation.js": {
-				Buffer: bytes.NewBufferString("custom domain app runner"),
+			"custom-resources/trigger-state-machine.js": {
+				Buffer: bytes.NewBufferString("trigger state machine"),
 			},
-			"custom-resources/alb-rule-priority-generator.js": {
-				Buffer: bytes.NewBufferString("rule priority"),
-			},
-			"custom-resources/env-controller.js": {
-				Buffer: bytes.NewBufferString("env controller"),
+			"custom-resources/copy-assets.js": {
+				Buffer: bytes.NewBufferString("copy assets"),
 			},
 		},
 	}
 	fakePaths := map[string]string{
-		"DynamicDesiredCountFunction": "manual/scripts/custom-resources/dynamicdesiredcountfunction/2611784f21e91e499306dac066aae5fd8f2ba664b38073bdd3198d2e041c076e.zip",
-		"EnvControllerFunction":       "manual/scripts/custom-resources/envcontrollerfunction/72297cacaeab3a267e371c17ea3f0235905b0da51410eb31c10f7c66ba944044.zip",
-		"RulePriorityFunction":        "manual/scripts/custom-resources/rulepriorityfunction/1385d258950a50faf4b5cd7deeecbc4bcc79a0d41d631e3977cffa0332e6f0c6.zip",
+		"TriggerStateMachineFunction": "manual/scripts/custom-resources/triggerstatemachinefunction/edfa40b595a5a4a6d24bfb7ad6e173560a29b7d720651ccc9c87eda76b93c7dd.zip",
+		"CopyAssetsFunction":          "manual/scripts/custom-resources/copyassetsfunction/b9fc2f284cfb699b7c63efaac618d7678372792aa020141fa91053092977976d.zip",
 	}
 
 	// WHEN
@@ -276,14 +272,14 @@ func TestStaticSite(t *testing.T) {
 
 	// THEN
 	require.NoError(t, err)
-	require.Equal(t, fakeFS.matchCount, 0, "expected path calls do not match")
+	require.Equal(t, fakeFS.matchCount, 2, "expected path calls do not match")
 
 	actualFnNames := make([]string, len(crs))
 	for i, cr := range crs {
 		actualFnNames[i] = cr.Name()
 	}
 	require.ElementsMatch(t,
-		[]string{},
+		[]string{"TriggerStateMachineFunction", "CopyAssetsFunction"},
 		actualFnNames, "function names must match")
 
 	// ensure the zip files contain an index.js file.
