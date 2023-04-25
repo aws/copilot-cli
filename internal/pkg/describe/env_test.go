@@ -672,6 +672,18 @@ func TestEnvDescriber_ValidateCFServiceDomainAliases(t *testing.T) {
 				}, nil)
 			},
 		},
+		"no load balanced services with empty value for the ALBWorkloads parameter": {
+			setupMock: func(m *envDescriberMocks) {
+				mockParams := map[string]string{
+					"AppName":         mockAppName,
+					"EnvironmentName": mockEnvName,
+					"ALBWorkloads":    "",
+				}
+				m.stackDescriber.EXPECT().Describe().Return(stack.StackDescription{
+					Parameters: mockParams,
+				}, nil)
+			},
+		},
 		"missing aliases parameter in env stack": {
 			setupMock: func(m *envDescriberMocks) {
 				mockParams := map[string]string{

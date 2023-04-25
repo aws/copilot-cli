@@ -325,7 +325,7 @@ func (d *EnvDescriber) ValidateCFServiceDomainAliases() error {
 	}
 
 	servicesString, ok := stackDescr.Parameters[cfnstack.EnvParamALBWorkloadsKey]
-	if !ok {
+	if !ok || servicesString == "" {
 		return nil
 	}
 	services := strings.Split(servicesString, ",")
