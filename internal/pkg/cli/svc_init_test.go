@@ -120,6 +120,12 @@ func TestSvcInitOpts_Validate(t *testing.T) {
 			},
 			wantedErr: errors.New(`invalid ingress type "invalid": must be one of Environment or Internet.`),
 		},
+		"source flag without Static Site type": {
+			
+		},
+		"source flag with invalid sources": {
+			
+		},
 		"valid flags": {
 			inSvcName:        "frontend",
 			inSvcType:        "Load Balanced Web Service",
@@ -146,6 +152,9 @@ func TestSvcInitOpts_Validate(t *testing.T) {
 				mockFS.MkdirAll("hello", 0755)
 				afero.WriteFile(mockFS, "hello/Dockerfile", []byte("FROM nginx"), 0644)
 			},
+		},
+		"valid static site flag": {
+			
 		},
 	}
 
