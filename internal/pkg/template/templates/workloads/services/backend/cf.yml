@@ -124,8 +124,8 @@ Resources:
       {{- "\n"}}{{ include "service-base-properties" . | indent 6 }}
       ServiceRegistries: !If [ExposePort, [{RegistryArn: !GetAtt DiscoveryService.Arn, Port: !Ref TargetPort}], !Ref "AWS::NoValue"]
       {{- if .ALBListener}}
-      {{- if .HTTPHealthCheck.GracePeriod }}
-      HealthCheckGracePeriodSeconds: {{.HTTPHealthCheck.GracePeriod}}
+      {{- if .GracePeriod }}
+      HealthCheckGracePeriodSeconds: {{.GracePeriod}}
       {{- end }}
       LoadBalancers:
         {{- range $i, $rule := .ALBListener.Rules}}

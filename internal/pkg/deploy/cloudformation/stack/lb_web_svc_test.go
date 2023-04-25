@@ -262,14 +262,10 @@ Outputs:
 		// THEN
 		require.NoError(t, err)
 		require.Equal(t, template.WorkloadOpts{
-			AppName:      "phonetool",
-			EnvName:      "test",
-			WorkloadName: "frontend",
-			WorkloadType: manifestinfo.LoadBalancedWebServiceType,
-			HTTPHealthCheck: template.HTTPHealthCheckOpts{
-				HealthCheckPath: "/",
-				GracePeriod:     60,
-			},
+			AppName:             "phonetool",
+			EnvName:             "test",
+			WorkloadName:        "frontend",
+			WorkloadType:        manifestinfo.LoadBalancedWebServiceType,
 			HTTPTargetContainer: template.HTTPTargetContainer{
 				Name: "frontend",
 				Port: "80",
@@ -344,7 +340,8 @@ Outputs:
 					},
 				},
 			},
-			ALBEnabled: true,
+			GracePeriod: aws.Int64(int64(60)),
+			ALBEnabled:  true,
 			PortMappings: []*template.PortMapping{
 				{
 					Protocol:      "tcp",
