@@ -157,7 +157,7 @@ func (s *localFileSelector) StaticSources(selPrompt, selHelp, anotherPathPrompt,
 	if len(dirsAndFiles) == 0 {
 		log.Warningln("No directories or files were found in your workspace. Enter a relative path with the 'custom path' option if you'd like to use a hidden file.")
 	}
-	dirsAndFiles = append(dirsAndFiles, []string{staticSourceUseCustomPrompt}...)
+	dirsAndFiles = append(dirsAndFiles, staticSourceUseCustomPrompt)
 	var results []string
 	var askCustom bool
 	var selections []string
