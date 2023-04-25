@@ -65,7 +65,8 @@ Resources:
       Handler: index.handler
       Role: !GetAtt TriggerStateMachineFunctionRole.Arn
       Runtime: nodejs16.x
-      Timeout: 60
+      Timeout: 900
+      MemorySize: 512
 
   TriggerStateMachineFunctionRole:
     Metadata:
@@ -177,6 +178,7 @@ Resources:
       Role: !GetAtt CopyAssetsFunctionRole.Arn
       Runtime: nodejs16.x
       Timeout: 60
+      MemorySize: 512
 
   CopyAssetsFunctionRole:
     Metadata:
