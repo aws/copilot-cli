@@ -182,8 +182,8 @@ func (s *BackendService) Template() (string, error) {
 			Port: targetContainerPort,
 			Name: targetContainer,
 		},
-		HTTPHealthCheck: convertHTTPHealthCheck(&s.manifest.HTTP.Main.HealthCheck),
-		ALBListener:     albListenerConfig,
+		GracePeriod: s.convertGracePeriod(),
+		ALBListener: albListenerConfig,
 
 		// Custom Resource Config.
 		CustomResources: crs,
