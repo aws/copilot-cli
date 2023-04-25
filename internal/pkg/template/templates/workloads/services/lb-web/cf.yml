@@ -133,8 +133,8 @@ Resources:
     Properties:
 {{include "service-base-properties" . | indent 6}}
       # This may need to be adjusted if the container takes a while to start up
-      {{- if .HTTPHealthCheck.GracePeriod }}
-      HealthCheckGracePeriodSeconds: {{.HTTPHealthCheck.GracePeriod}}
+      {{- if .GracePeriod }}
+      HealthCheckGracePeriodSeconds: {{.GracePeriod}}
       {{- end }}
       LoadBalancers:
   {{- if .ALBListener}}
