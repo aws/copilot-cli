@@ -321,9 +321,6 @@ Resources:
   DynamicDesiredCountFunction:
     Type: AWS::Lambda::Function
     Properties:
-      Code:
-        S3Bucket:
-        S3Key:
       Handler: "index.handler"
       Timeout: 600
       MemorySize: 512
@@ -418,9 +415,6 @@ Resources:
       'aws:copilot:description': "A Lambda function to emit BacklogPerTask metrics to CloudWatch"
     Type: AWS::Lambda::Function
     Properties:
-      Code:
-        S3Bucket:
-        S3Key:
       Handler: "index.handler"
       Timeout: 600
       MemorySize: 512
@@ -1153,9 +1147,6 @@ Resources:
   EnvControllerFunction:
     Type: AWS::Lambda::Function
     Properties:
-      Code:
-        S3Bucket:
-        S3Key:
       Handler: "index.handler"
       Timeout: 900
       MemorySize: 512

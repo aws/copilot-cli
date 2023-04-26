@@ -3,12 +3,6 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: CloudFormation template that represents a static site backed by S3.
 
-{{- if .SerializedManifest }}
-Metadata:
-  Manifest: |
-{{indent 4 .SerializedManifest}}
-{{- end }}
-
 Parameters:
   AppName:
     Type: String
@@ -73,20 +67,12 @@ Resources:
       Runtime: nodejs16.x
       Timeout: 900
       MemorySize: 512
-      {{- with $cr := index .CustomResources "TriggerStateMachineFunction" }}
-      Code:
-        S3Bucket: {{$cr.Bucket}}
-        S3Key: {{$cr.Key}}
-      {{- end }}
 
   TriggerStateMachineFunctionRole:
     Metadata:
       aws:copilot:description: An IAM Role for the lambda that triggers the file-copying state machine.
     Type: AWS::IAM::Role
     Properties:
-      {{- if .PermissionsBoundary}}
-      PermissionsBoundary: !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/{{.PermissionsBoundary}}
-      {{- end}}
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -113,8 +99,8 @@ Resources:
     Properties:
       ServiceToken: !GetAtt TriggerStateMachineFunction.Arn
       StateMachineARN: !GetAtt CopyAssetsStateMachine.Arn
-      SourceBucket: {{ .AssetMappingFileBucket }}
-      AssetMappingFilePath: {{ .AssetMappingFilePath }}
+      SourceBucket: stackset-bucket
+      AssetMappingFilePath: mappingfile
       DestinationBucket: !Ref Bucket
 
   CopyAssetsStateMachine:
@@ -159,9 +145,6 @@ Resources:
       aws:copilot:description: An IAM Role for the state machine that triggers the copy lambda
     Type: AWS::IAM::Role
     Properties:
-      {{- if .PermissionsBoundary}}
-      PermissionsBoundary: !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/{{.PermissionsBoundary}}
-      {{- end}}
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -184,7 +167,7 @@ Resources:
             Statement:
               - Effect: Allow
                 Action: s3:GetObject
-                Resource: arn:aws:s3:::{{ .AssetMappingFileBucket }}/{{ .AssetMappingFilePath }}
+                Resource: arn:aws:s3:::stackset-bucket/mappingfile
 
   CopyAssetsFunction:
     Metadata:
@@ -196,20 +179,12 @@ Resources:
       Runtime: nodejs16.x
       Timeout: 60
       MemorySize: 512
-      {{- with $cr := index .CustomResources "CopyAssetsFunction" }}
-      Code:
-        S3Bucket: {{$cr.Bucket}}
-        S3Key: {{$cr.Key}}
-      {{- end }}
 
   CopyAssetsFunctionRole:
     Metadata:
       aws:copilot:description: An IAM Role for the lambda that copies assets into the static site bucket
     Type: AWS::IAM::Role
     Properties:
-      {{- if .PermissionsBoundary}}
-      PermissionsBoundary: !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/{{.PermissionsBoundary}}
-      {{- end}}
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -225,7 +200,7 @@ Resources:
               - Effect: Allow
                 Action:
                   - s3:GetObject
-                Resource: arn:aws:s3:::{{ .AssetMappingFileBucket }}/*
+                Resource: arn:aws:s3:::stackset-bucket/*
         - PolicyName: CopyToS3
           PolicyDocument:
             Version: 2012-10-17

@@ -18,7 +18,6 @@
             unhealthy_threshold: 2
             interval: 15s
             timeout: 10s
-            grace_period: 60s
     ```
     
     <span class="parent-field">http.additional_rules.healthcheck.</span><a id="http-additional-rules-healthcheck-path" href="#http-additional-rules-healthcheck-path" class="field">`path`</a> <span class="type">String</span>  
@@ -42,6 +41,3 @@
     
     <span class="parent-field">http.additional_rules.healthcheck.</span><a id="http-additional-rules-healthcheck-timeout" href="#http-additional-rules-healthcheck-timeout" class="field">`timeout`</a> <span class="type">Duration</span>  
     The amount of time, in seconds, during which no response from a target means a failed health check. The default is 5s. Range 5s-300s.
-    
-    <span class="parent-field">http.additional_rules.healthcheck.</span><a id="http-additional-rules-healthcheck-grace-period" href="#http-additional-rules-healthcheck-grace-period" class="field">`grace_period`</a> <span class="type">Duration</span>  
-    The amount of time to ignore failing target group healthchecks on container start. The default is 60s. This can be useful to fix deployment issues for containers which take a while to become healthy and begin listening for incoming connections, or to speed up deployment of containers guaranteed to start quickly.

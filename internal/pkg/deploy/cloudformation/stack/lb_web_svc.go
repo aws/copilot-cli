@@ -232,8 +232,8 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 			Port: targetContainerPort,
 			Name: targetContainer,
 		},
-		HTTPHealthCheck: convertHTTPHealthCheck(&s.manifest.HTTPOrBool.Main.HealthCheck),
-		ALBListener:     albListenerConfig,
+		GracePeriod: s.convertGracePeriod(),
+		ALBListener: albListenerConfig,
 
 		// NLB configs.
 		AppDNSName:           nlbConfig.appDNSName,

@@ -30,8 +30,8 @@ type diffNode interface {
 	children() []diffNode
 }
 
-// node is a concrete implementation of a diffNode.
-type node struct {
+// keyNode is a concrete implementation of a diffNode.
+type keyNode struct {
 	keyValue   string
 	childNodes []diffNode // A list of non-empty pointers to the children nodes.
 
@@ -39,19 +39,19 @@ type node struct {
 	newV *yaml.Node // Only populated for a leaf node (i.e. that has no child node).
 }
 
-func (n *node) key() string {
+func (n *keyNode) key() string {
 	return n.keyValue
 }
 
-func (n *node) newYAML() *yaml.Node {
+func (n *keyNode) newYAML() *yaml.Node {
 	return n.newV
 }
 
-func (n *node) oldYAML() *yaml.Node {
+func (n *keyNode) oldYAML() *yaml.Node {
 	return n.oldV
 }
 
-func (n *node) children() []diffNode {
+func (n *keyNode) children() []diffNode {
 	return n.childNodes
 }
 
@@ -80,7 +80,7 @@ func (n *unchangedNode) unchangedCount() int {
 }
 
 type seqItemNode struct {
-	node
+	keyNode
 }
 
 // From is the YAML document that another YAML document is compared against.
@@ -142,7 +142,7 @@ func parse(from, to *yaml.Node, key string, overrider overrider) (diffNode, erro
 	}
 	// Handle base cases.
 	if to == nil || from == nil || to.Kind != from.Kind {
-		return &node{
+		return &keyNode{
 			keyValue: key,
 			newV:     to,
 			oldV:     from,
@@ -152,7 +152,7 @@ func parse(from, to *yaml.Node, key string, overrider overrider) (diffNode, erro
 		if to.Value == from.Value {
 			return nil, nil
 		}
-		return &node{
+		return &keyNode{
 			keyValue: key,
 			newV:     to,
 			oldV:     from,
@@ -177,7 +177,7 @@ func parse(from, to *yaml.Node, key string, overrider overrider) (diffNode, erro
 	if len(children) == 0 {
 		return nil, nil
 	}
-	return &node{
+	return &keyNode{
 		keyValue:   key,
 		childNodes: children,
 	}, nil
@@ -231,7 +231,7 @@ func parseSequence(fromNode, toNode *yaml.Node, overrider overrider) ([]diffNode
 				return nil, diff.err
 			}
 			children = append(children, &seqItemNode{
-				node{
+				keyNode{
 					keyValue:   diff.node.key(),
 					childNodes: diff.node.children(),
 					oldV:       diff.node.oldYAML(),
@@ -241,14 +241,14 @@ func parseSequence(fromNode, toNode *yaml.Node, overrider overrider) ([]diffNode
 		case actionDel:
 			item := inspector.fromItem()
 			children = append(children, &seqItemNode{
-				node{
+				keyNode{
 					oldV: &item,
 				},
 			})
 		case actionInsert:
 			item := inspector.toItem()
 			children = append(children, &seqItemNode{
-				node{
+				keyNode{
 					newV: &item,
 				},
 			})
