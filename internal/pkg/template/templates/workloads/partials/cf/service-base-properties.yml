@@ -40,6 +40,7 @@ DeploymentConfiguration:
     - !Ref AWS::NoValue
     - Enable: false
       AlarmNames: []
+      Rollback: true
   {{- end }}
 PropagateTags: SERVICE
 {{- if .ExecuteCommand }}
