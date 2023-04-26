@@ -16,8 +16,8 @@ DeploymentConfiguration:
     Rollback: true
   MinimumHealthyPercent: {{ .DeploymentConfiguration.MinHealthyPercent }}
   MaximumPercent: {{ .DeploymentConfiguration.MaxPercent }}
-  {{- if .DeploymentConfiguration.Rollback.HasRollbackAlarms }}
   Alarms:
+  {{- if .DeploymentConfiguration.Rollback.HasRollbackAlarms }}
     {{- if .DeploymentConfiguration.Rollback.AlarmNames }}
     AlarmNames: {{ fmtSlice (quoteSlice .DeploymentConfiguration.Rollback.AlarmNames) }}
     {{- else if .DeploymentConfiguration.Rollback.HasCustomAlarms }}
@@ -34,6 +34,11 @@ DeploymentConfiguration:
     {{- end }}
     Enable: true
     Rollback: true
+  {{- else }}
+    !If
+    - IsGovCloud
+    - !Ref AWS::NoValue
+    - Enable: false
   {{- end }}
 PropagateTags: SERVICE
 {{- if .ExecuteCommand }}
