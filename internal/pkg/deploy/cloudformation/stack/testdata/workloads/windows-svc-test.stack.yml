@@ -294,9 +294,11 @@ Resources: # If a bucket URL is specified, that means the template exists.
         MinimumHealthyPercent: 100
         MaximumPercent: 200
         Alarms:
-          AlarmNames: []
-          Enable: false
-          Rollback: true
+          !If
+          - IsGovCloud
+          - !Ref AWS::NoValue
+          - Enable: false
+            AlarmNames: []
       PropagateTags: SERVICE
       ServiceConnectConfiguration: !If
         - IsGovCloud

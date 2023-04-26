@@ -33,11 +33,14 @@ DeploymentConfiguration:
       {{- end }}
     {{- end }}
     Enable: true
-  {{- else }}
-    AlarmNames: []
-    Enable: false
-  {{- end}}
     Rollback: true
+  {{- else }}
+    !If
+    - IsGovCloud
+    - !Ref AWS::NoValue
+    - Enable: false
+      AlarmNames: []
+  {{- end }}
 PropagateTags: SERVICE
 {{- if .ExecuteCommand }}
 EnableExecuteCommand: true
