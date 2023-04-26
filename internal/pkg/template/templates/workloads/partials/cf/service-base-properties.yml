@@ -39,6 +39,7 @@ DeploymentConfiguration:
     - IsGovCloud
     - !Ref AWS::NoValue
     - Enable: false
+      AlarmNames: []
   {{- end }}
 PropagateTags: SERVICE
 {{- if .ExecuteCommand }}

@@ -408,6 +408,7 @@ Resources:
           - IsGovCloud
           - !Ref AWS::NoValue
           - Enable: false
+            AlarmNames: []
       PropagateTags: SERVICE
       EnableExecuteCommand: true
       LaunchType: FARGATE

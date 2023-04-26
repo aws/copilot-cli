@@ -301,6 +301,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
           - IsGovCloud
           - !Ref AWS::NoValue
           - Enable: false
+            AlarmNames: []
       PropagateTags: SERVICE
       ServiceConnectConfiguration: !If
         - IsGovCloud
