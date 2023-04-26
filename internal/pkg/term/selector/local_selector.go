@@ -299,7 +299,7 @@ func (s *localFileSelector) getDirAndFileNames(dir string, depth int) ([]string,
 		if strings.HasPrefix(name, ".") || name == "copilot" {
 			continue
 		}
-		relPathName := dir + "/" + name
+		relPathName := filepath.Join(dir, name)
 		wsRelPathName, err := s.ws.Rel(relPathName)
 		if err != nil {
 			return nil, fmt.Errorf("get path relative to workspacefor %q: %w",relPathName, err)
