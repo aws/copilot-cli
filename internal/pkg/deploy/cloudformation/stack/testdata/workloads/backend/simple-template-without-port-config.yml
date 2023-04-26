@@ -272,6 +272,11 @@ Resources:
           Rollback: true
         MinimumHealthyPercent: 100
         MaximumPercent: 200
+        Alarms:
+          !If
+          - IsGovCloud
+          - !Ref AWS::NoValue
+          - Enable: false
       PropagateTags: SERVICE
       EnableExecuteCommand: true
       LaunchType: FARGATE
