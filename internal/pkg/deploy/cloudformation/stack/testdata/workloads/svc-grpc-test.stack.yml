@@ -426,6 +426,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
           - !Ref AWS::NoValue
           - Enable: false
             AlarmNames: []
+            Rollback: true
       PropagateTags: SERVICE
       LaunchType: FARGATE
       ServiceConnectConfiguration: !If
