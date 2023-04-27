@@ -48,10 +48,10 @@ func TestEnvRunner_Run(t *testing.T) {
 	mockStarterNotRun := func(m *mocks.MockRunner) {
 		m.EXPECT().RunTask(gomock.Any()).Times(0)
 	}
-	mockEnvironmentDescriberAny := func(m *mocks.MockEnvironmentDescriber) {
+	mockEnvironmentDescriberAny := func(m *mocks.MockenvironmentDescriber) {
 		m.EXPECT().Describe().AnyTimes()
 	}
-	mockEnvironmentDescriberValid := func(m *mocks.MockEnvironmentDescriber) {
+	mockEnvironmentDescriberValid := func(m *mocks.MockenvironmentDescriber) {
 		m.EXPECT().Describe().Return(&describe.EnvDescription{
 			EnvironmentVPC: describe.EnvironmentVPC{
 				ID:               "vpc-012abcd345",
@@ -89,7 +89,7 @@ func TestEnvRunner_Run(t *testing.T) {
 		MockVPCGetter            func(m *mocks.MockVPCGetter)
 		MockClusterGetter        func(m *mocks.MockClusterGetter)
 		mockStarter              func(m *mocks.MockRunner)
-		mockEnvironmentDescriber func(m *mocks.MockEnvironmentDescriber)
+		mockEnvironmentDescriber func(m *mocks.MockenvironmentDescriber)
 
 		wantedError error
 		wantedTasks []*Task
@@ -109,7 +109,7 @@ func TestEnvRunner_Run(t *testing.T) {
 				m.EXPECT().SecurityGroups(gomock.Any()).AnyTimes()
 			},
 			mockStarter: mockStarterNotRun,
-			mockEnvironmentDescriber: func(m *mocks.MockEnvironmentDescriber) {
+			mockEnvironmentDescriber: func(m *mocks.MockenvironmentDescriber) {
 				m.EXPECT().Describe().Return(nil, errors.New("error getting env description"))
 			},
 			wantedError: fmt.Errorf(fmtErrDescribeEnvironment, inEnv, errors.New("error getting env description")),
@@ -120,7 +120,7 @@ func TestEnvRunner_Run(t *testing.T) {
 				m.EXPECT().SecurityGroups(gomock.Any()).AnyTimes()
 			},
 			mockStarter: mockStarterNotRun,
-			mockEnvironmentDescriber: func(m *mocks.MockEnvironmentDescriber) {
+			mockEnvironmentDescriber: func(m *mocks.MockenvironmentDescriber) {
 				m.EXPECT().Describe().Return(&describe.EnvDescription{
 					EnvironmentVPC: describe.EnvironmentVPC{
 						ID:               "vpc-012abcd345",
@@ -402,7 +402,7 @@ func TestEnvRunner_Run(t *testing.T) {
 			MockVPCGetter := mocks.NewMockVPCGetter(ctrl)
 			MockClusterGetter := mocks.NewMockClusterGetter(ctrl)
 			mockStarter := mocks.NewMockRunner(ctrl)
-			mockEnvironmentDescriber := mocks.NewMockEnvironmentDescriber(ctrl)
+			mockEnvironmentDescriber := mocks.NewMockenvironmentDescriber(ctrl)
 
 			tc.MockVPCGetter(MockVPCGetter)
 			tc.MockClusterGetter(MockClusterGetter)
