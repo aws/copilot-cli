@@ -236,9 +236,6 @@ Resources:
   RulePriorityFunction:
     Type: AWS::Lambda::Function
     Properties:
-      Code:
-        S3Bucket:
-        S3Key:
       Handler: "index.nextAvailableRulePriorityHandler"
       Timeout: 600
       MemorySize: 512
@@ -384,9 +381,12 @@ Resources:
         MinimumHealthyPercent: 100
         MaximumPercent: 200
         Alarms:
-          AlarmNames: []
-          Enable: false
-          Rollback: true
+          !If
+          - IsGovCloud
+          - !Ref AWS::NoValue
+          - Enable: false
+            AlarmNames: []
+            Rollback: true
       PropagateTags: SERVICE
       EnableExecuteCommand: true
       LaunchType: FARGATE
@@ -435,9 +435,6 @@ Resources:
   EnvControllerFunction:
     Type: AWS::Lambda::Function
     Properties:
-      Code:
-        S3Bucket:
-        S3Key:
       Handler: "index.handler"
       Timeout: 900
       MemorySize: 512
