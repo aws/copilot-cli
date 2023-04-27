@@ -52,10 +52,13 @@ func (s *treeWriter) writeTree(node diffNode, indent int) error {
 	case *seqItemNode:
 		formatter = &seqItemFormatter{indent}
 	default:
-		formatter = &keyedFormatter{node.key(), indent}
+		formatter = &keyedFormatter{indent}
 	}
 	if len(node.children()) == 0 {
 		return s.writeLeaf(node, formatter)
+	}
+	if kn, ok := node.(*keyNode); ok { // Collapse all key nodes with exactly one diff.
+		node = joinNodes(kn)
 	}
 	if _, err := s.writer.Write([]byte(formatter.formatPath(node))); err != nil {
 		return err
@@ -111,4 +114,30 @@ func (s *treeWriter) writeInsert(node diffNode, formatter formatter) error {
 	}
 	_, err = s.writer.Write([]byte(color.Green.Sprint(content + "\n")))
 	return err
+}
+
+// joinNodes collapses all keyNode on a Tree path into one keyNode, as long as there is only modification under the key.
+// For example, if only the `DesiredCount` of an ECS service is changed, then the returned path becomes
+// `/Resources/Service/Properties`. If multiple entries of an ECS service is changed, then the returned
+// path is `/Resources/Service`.
+func joinNodes(curr *keyNode) *keyNode {
+	key := curr.key()
+	for {
+		if len(curr.children()) != 1 {
+			break
+		}
+		peek := curr.children()[0]
+		if len(peek.children()) == 0 {
+			break
+		}
+		if _, ok := peek.(*keyNode); !ok {
+			break
+		}
+		key = key + "/" + peek.key()
+		curr = peek.(*keyNode)
+	}
+	return &keyNode{
+		keyValue:   key,
+		childNodes: curr.children(),
+	}
 }

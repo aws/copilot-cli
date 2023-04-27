@@ -229,6 +229,7 @@ gen-mocks: tools
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/cli/deploy/patch/mocks/mock_env.go -source=./internal/pkg/cli/deploy/patch/env.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/initialize/mocks/mock_workload.go -source=./internal/pkg/initialize/workload.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/ecs/mocks/mock_ecs.go -source=./internal/pkg/ecs/ecs.go
+	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/s3/mocks/mock_s3.go -source=./internal/pkg/s3/s3.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/apprunner/mocks/mock_apprunner.go -source=./internal/pkg/apprunner/apprunner.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/ecs/mocks/mock_run_task_request.go -source=./internal/pkg/ecs/run_task_request.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/runner/jobrunner/mocks/mock.go -source=./internal/pkg/runner/jobrunner/jobrunner.go
