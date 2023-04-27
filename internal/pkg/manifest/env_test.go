@@ -4,9 +4,11 @@
 package manifest
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"gopkg.in/yaml.v3"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/template"
@@ -1173,4 +1175,47 @@ func TestEnvironmentConfig_ELBAccessLogs(t *testing.T) {
 			require.Equal(t, tc.wantedConfigs, elbAccessLogs)
 		})
 	}
+}
+
+func TestStaticSiteOrLocation_UnmarshalYAML(t *testing.T) {
+	testCases := map[string]struct {
+		inContent []byte
+
+		wantedStruct StaticSiteOrLocation
+		wantedError  error
+	}{
+		"location specified in URL": {
+			inContent: []byte("location: example.s3.us-west-2.amazonaws.com"),
+			wantedStruct: StaticSiteOrLocation{
+				URL: "example.s3.us-west-2.amazonaws.com",
+			},
+		},
+		"location specified in Static Site": {
+			inContent: []byte("location: foobar"),
+			wantedStruct: StaticSiteOrLocation{
+				StaticSite: "foobar",
+			},
+		},
+		"error if unmarshalable": {
+			inContent: []byte(`location:
+  foo:
+    bar`),
+			wantedError: fmt.Errorf("yaml: unmarshal errors:\n  line 2: cannot unmarshal !!map into string"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			e := CDNStaticConfig{}
+			err := yaml.Unmarshal(tc.inContent, &e)
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedStruct.StaticSite, e.Location.StaticSite)
+				require.Equal(t, tc.wantedStruct.URL, e.Location.URL)
+			}
+		})
+	}
+
 }

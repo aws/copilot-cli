@@ -6,9 +6,11 @@ package manifest
 import (
 	"errors"
 	"fmt"
+	"regexp"
 	"sort"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudfront"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"gopkg.in/yaml.v3"
@@ -273,14 +275,43 @@ func (cfg *EnvironmentCDNConfig) UnmarshalYAML(value *yaml.Node) error {
 
 // CDNStaticConfig represents the static config for CDN.
 type CDNStaticConfig struct {
-	Location string `yaml:"location,omitempty"`
-	Alias    string `yaml:"alias,omitempty"`
-	Path     string `yaml:"path,omitempty"`
+	Location StaticSiteOrLocation `yaml:"location,omitempty"`
+	Alias    string               `yaml:"alias,omitempty"`
+	Path     string               `yaml:"path,omitempty"`
+}
+
+// StaticSiteOrLocation is a custom type which supports unmarshaling yaml which
+// can either be of Static Site service name or a S3 bucket URL.
+type StaticSiteOrLocation struct {
+	StaticSite string
+	URL        string
+}
+
+func (s *StaticSiteOrLocation) isEmpty() bool {
+	return s.URL == "" && s.StaticSite == ""
+}
+
+// UnmarshalYAML overrides the default YAML unmarshaling logic for the StaticSiteOrLocation
+// struct, allowing it to perform more complex unmarshaling behavior.
+// This method implements the yaml.Unmarshaler (v3) interface.
+func (s *StaticSiteOrLocation) UnmarshalYAML(value *yaml.Node) error {
+	if err := value.Decode(&s.URL); err != nil {
+		return err
+	}
+	reg := regexp.MustCompile(cloudfront.S3BucketOriginDomainFormat)
+	if reg.MatchString(s.URL) {
+		return nil
+	}
+	if err := value.Decode(&s.StaticSite); err != nil {
+		return err
+	}
+	s.URL = ""
+	return nil
 }
 
 // IsEmpty returns true if CDNStaticConfig is not configured.
 func (cfg CDNStaticConfig) IsEmpty() bool {
-	return cfg.Location == "" && cfg.Alias == "" && cfg.Path == ""
+	return cfg.Location.isEmpty() && cfg.Alias == "" && cfg.Path == ""
 }
 
 // IsEmpty returns true if environmentVPCConfig is not configured.

@@ -416,7 +416,7 @@ func (cfg CDNStaticConfig) validate() error {
 			missingField: "alias",
 		}
 	}
-	if cfg.Location == "" {
+	if cfg.Location.isEmpty() {
 		return &errFieldMustBeSpecified{
 			missingField: "location",
 		}
@@ -426,6 +426,10 @@ func (cfg CDNStaticConfig) validate() error {
 			missingField: "path",
 		}
 	}
+	return nil
+}
+
+func (StaticSiteOrLocation) validate() error {
 	return nil
 }
 
