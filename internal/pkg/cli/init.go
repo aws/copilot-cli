@@ -241,13 +241,9 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 				dockerfilePath: vars.dockerfilePath,
 				image:          vars.image,
 			}
-			ws, err := workspace.Use(fs)
+			dfSel, err := selector.NewDockerfileSelector(prompt, fs)
 			if err != nil {
-				return err
-			}
-			sel, err := selector.NewLocalFileSelector(prompt, fs, ws)
-			if err != nil {
-				return err
+				return fmt.Errorf("initiate dockerfile selector: %w", err)
 			}
 			switch t := wkldType; {
 			case manifestinfo.IsTypeAJob(t):
@@ -263,7 +259,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 
 					fs:                fs,
 					store:             configStore,
-					dockerfileSel:     sel,
+					dockerfileSel:     dfSel,
 					scheduleSelector:  selector.NewStaticSelector(prompt),
 					prompt:            prompt,
 					dockerEngine:      dockerengine.New(cmd),
@@ -286,6 +282,66 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 				o.initWlCmd = &opts
 				o.schedule = &opts.schedule // Surfaced via pointer for logging
 				o.initWkldVars = &opts.initWkldVars
+			case t == manifestinfo.StaticSiteType:
+				ws, err := workspace.Use(fs)
+				if err != nil {
+					var (
+						errWorkspaceNotFound *workspace.ErrWorkspaceNotFound
+					)
+					if !errors.As(err, &errWorkspaceNotFound) {
+						return err
+					}
+					sourceFiles, err := selector.AskCustomPaths(o.prompt, staticSiteInitDirFilePathPrompt,
+						staticSiteInitDirFilePathHelpPrompt, func(v interface{}) error {
+							return validatePath(fs, v)
+						})
+					if err != nil {
+						return fmt.Errorf("ask for paths to source files: %w", err)
+					}
+					wkldVars.sourcePaths = sourceFiles
+				}
+				sel, err := selector.NewLocalFileSelector(prompt, fs, ws)
+				if err != nil {
+					return err
+				}
+				svcVars := initSvcVars{
+					initWkldVars: wkldVars,
+					port:         vars.port,
+					ingressType:  ingressTypeInternet,
+				}
+				opts := initSvcOpts{
+					initSvcVars: svcVars,
+
+					fs:                fs,
+					sel:               dfSel,
+					sourceSel:         sel,
+					store:             configStore,
+					topicSel:          snsSel,
+					prompt:            prompt,
+					dockerEngine:      dockerengine.New(cmd),
+					wsPendingCreation: true,
+				}
+				opts.dockerfile = func(path string) dockerfileParser {
+					if opts.df != nil {
+						return opts.df
+					}
+					opts.df = dockerfile.New(opts.fs, opts.dockerfilePath)
+					return opts.df
+				}
+				opts.initEnvDescriber = func(appName string, envName string) (envDescriber, error) {
+					envDescriber, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
+						App:         appName,
+						Env:         envName,
+						ConfigStore: opts.store,
+					})
+					if err != nil {
+						return nil, fmt.Errorf("initiate env describer: %w", err)
+					}
+					return envDescriber, nil
+				}
+				o.initWlCmd = &opts
+				o.port = &opts.port // Surfaced via pointer for logging.
+				o.initWkldVars = &opts.initWkldVars
 			case manifestinfo.IsTypeAService(t):
 				svcVars := initSvcVars{
 					initWkldVars: wkldVars,
@@ -296,7 +352,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 					initSvcVars: svcVars,
 
 					fs:                fs,
-					sel:               sel,
+					sel:               dfSel,
 					store:             configStore,
 					topicSel:          snsSel,
 					prompt:            prompt,

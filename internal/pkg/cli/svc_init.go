@@ -95,6 +95,7 @@ These messages can be consumed by the Worker Service.`
 	fmtStaticSiteInitDirFilePrompt      = "Which " + color.Emphasize("directories or files") + " would you like to upload for %s?"
 	staticSiteInitDirFileHelpPrompt     = "Directories or files to use for building your static site."
 	fmtStaticSiteInitDirFilePathPrompt  = "What is the path to the " + color.Emphasize("directory or file") + " for %s?"
+	staticSiteInitDirFilePathPrompt     = "What is the path to your source directory or file?"
 	staticSiteInitDirFilePathHelpPrompt = "Path to directory or file to use for building your static site."
 )
 
@@ -124,6 +125,7 @@ type initWkldVars struct {
 	image          string
 	subscriptions  []string
 	noSubscribe    bool
+	sourcePaths    []string
 }
 
 type initSvcVars struct {
@@ -193,19 +195,24 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 		Prog:     termprogress.NewSpinner(log.DiagnosticWriter),
 		Deployer: cloudformation.New(sess, cloudformation.WithProgressTracker(os.Stderr)),
 	}
-	sel, err := selector.NewLocalFileSelector(prompter, fs, ws)
+	dfSel, err := selector.NewDockerfileSelector(prompter, fs)
 	if err != nil {
 		return nil, err
 	}
+	sourceSel, err := selector.NewLocalFileSelector(prompter, fs, ws)
+	if err != nil {
+		return nil, fmt.Errorf("init a new local file selector: %w", err)
+	}
+
 	opts := &initSvcOpts{
 		initSvcVars:  vars,
 		store:        store,
 		fs:           fs,
 		init:         initSvc,
 		prompt:       prompter,
-		sel:          sel,
+		sel:          dfSel,
 		topicSel:     snsSel,
-		sourceSel:    sel,
+		sourceSel:    sourceSel,
 		mftReader:    ws,
 		dockerEngine: dockerengine.New(exec.NewCmd()),
 		wsAppName:    tryReadingAppName(),

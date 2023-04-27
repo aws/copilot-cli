@@ -107,7 +107,7 @@ func newInitJobOpts(vars initJobVars) (*initJobOpts, error) {
 	}
 
 	prompter := prompt.New()
-	dockerfileSel, err := selector.NewLocalFileSelector(prompter, fs, ws)
+	dockerfileSel, err := selector.NewDockerfileSelector(prompter, fs)
 	if err != nil {
 		return nil, err
 	}
