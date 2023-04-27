@@ -56,7 +56,7 @@ func TestClient_Service(t *testing.T) {
 						Return([]*resourcegroups.Resource{}, nil),
 				)
 			},
-			wantedError: fmt.Errorf("no S3 bucket found for mockSvc in environment mockEnv"),
+			wantedError: fmt.Errorf("no S3 bucket found with tags mockSvc, mockEnv, mockSvc"),
 		},
 		"error if got more than 1 bucket": {
 			setupMocks: func(m clientMocks) {
@@ -78,7 +78,7 @@ func TestClient_Service(t *testing.T) {
 						}, nil),
 				)
 			},
-			wantedError: fmt.Errorf("parse ARN for mockSvc: invalid S3 ARN: arn: invalid prefix"),
+			wantedError: fmt.Errorf("parse ARN badARN: invalid S3 ARN: arn: invalid prefix"),
 		},
 		"success": {
 			setupMocks: func(m clientMocks) {
