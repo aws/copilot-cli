@@ -319,6 +319,7 @@ func (s *localFileSelector) getDirAndFileNames(dir string, depth int) ([]string,
 	return names, nil
 }
 
+// AskCustomPaths prompts for user input of filepaths, which are then validated.
 func AskCustomPaths(prompter Prompter, customPathPrompt, customPathHelp string, pathValidator prompt.ValidatorFunc) ([]string, error) {
 	var paths []string
 	for {
