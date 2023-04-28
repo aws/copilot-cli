@@ -4,10 +4,10 @@ Parameters:
     Description: Your application's name.
   Env:
     Type: String
-    Description: The environment name your service, job, or workflow is being deployed to.
+    Description: The environment name your request-driven web service is being deployed to.
   Name:
     Type: String
-    Description: The name of the service, job, or workflow being deployed.
+    Description: Your workload's name.
   ServiceSecurityGroupId:
     Type: String
     Description: The security group associated with the VPC connector.
