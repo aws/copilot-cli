@@ -84,6 +84,7 @@ func (s *S3) EmptyBucket(bucket string) error {
 		return nil
 	}
 
+	// TODO max 1000?
 	listParams := &s3.ListObjectVersionsInput{
 		Bucket: aws.String(bucket),
 	}
@@ -111,15 +112,19 @@ func (s *S3) EmptyBucket(bucket string) error {
 		if len(objectsToDelete) == 0 {
 			return nil
 		}
-		_, err = s.s3Client.DeleteObjects(&s3.DeleteObjectsInput{
+		delResp, err := s.s3Client.DeleteObjects(&s3.DeleteObjectsInput{
 			Bucket: aws.String(bucket),
 			Delete: &s3.Delete{
 				Objects: objectsToDelete,
 			},
 		})
-		if err != nil {
+		switch {
+		case err != nil:
 			return fmt.Errorf("delete objects from bucket %s: %w", bucket, err)
+		case len(delResp.Errors) > 0:
+			return fmt.Errorf("%d/%d objects failed to delete. first failure on key %q: %s", len(delResp.Errors), len(objectsToDelete), aws.StringValue(delResp.Errors[0].Key), aws.StringValue(delResp.Errors[0].Message))
 		}
+		// make sure all deletions were successful
 		if !aws.BoolValue(listResp.IsTruncated) {
 			return nil
 		}
