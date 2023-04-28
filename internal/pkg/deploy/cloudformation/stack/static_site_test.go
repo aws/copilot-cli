@@ -246,7 +246,7 @@ func TestStaticSite_Parameters(t *testing.T) {
 			testManifest := manifest.NewStaticSite("frontend")
 
 			// GIVEN
-			conf, _ := NewStaticSite(&StaticSiteConfig{
+			conf, err := NewStaticSite(&StaticSiteConfig{
 				App: &config.Application{
 					Name: testAppName,
 				},
@@ -260,6 +260,7 @@ func TestStaticSite_Parameters(t *testing.T) {
 				},
 				Manifest: testManifest,
 			})
+			require.NoError(t, err)
 
 			// WHEN
 			params, err := conf.Parameters()
