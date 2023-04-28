@@ -305,7 +305,7 @@ func (s *localFileSelector) getDirAndFileNames(dir string, depth int) ([]string,
 		relPathName := filepath.Join(dir, name)
 		wsRelPathName, err := s.ws.Rel(relPathName)
 		if err != nil {
-			return nil, fmt.Errorf("get path relative to workspacefor %q: %w", relPathName, err)
+			return nil, fmt.Errorf("get path relative to workspace for %q: %w", relPathName, err)
 		}
 		names = append(names, wsRelPathName)
 		if depth > 0 && file.IsDir() {
