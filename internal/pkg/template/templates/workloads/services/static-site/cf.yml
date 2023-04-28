@@ -71,41 +71,13 @@ Resources:
       Handler: index.handler
       Role: !GetAtt TriggerStateMachineFunctionRole.Arn
       Runtime: nodejs16.x
-      Timeout: 60
+      Timeout: 900
+      MemorySize: 512
+      {{- with $cr := index .CustomResources "TriggerStateMachineFunction" }}
       Code:
-        ZipFile: |
-          var response = require("cfn-response");
-          var aws = require("aws-sdk");
-
-          exports.handler = (event, context) => {
-            console.log("trigger state machine funtion: event", event)
-
-            const sf = new aws.StepFunctions();
-            const params = {
-              stateMachineArn: event.ResourceProperties.StateMachineARN,
-              input: JSON.stringify({
-                SourceBucket: event.ResourceProperties.SourceBucket,
-                AssetMappingFilePath: event.ResourceProperties.AssetMappingFilePath,
-                DestinationBucket: event.ResourceProperties.DestinationBucket,
-              })
-            };
-            sf.startSyncExecution(params, (err, data) => {
-              if (err) {
-                console.log("error starting step function", err)
-                response.send(event, context, response.FAILED, {"error": err.message}, event.PhysicalResourceId)
-                return;
-              }
-
-              console.log("finished step function execution:", data)
-
-              if (data.status === "FAILED") {
-                response.send(event, context, response.FAILED, {"error": data.cause}, event.PhysicalResourceId)
-                return;
-              }
-
-              response.send(event, context, response.SUCCESS, {}, event.PhysicalResourceId)
-            });
-          };
+        S3Bucket: {{$cr.Bucket}}
+        S3Key: {{$cr.Key}}
+      {{- end }}
 
   TriggerStateMachineFunctionRole:
     Metadata:
@@ -223,31 +195,12 @@ Resources:
       Role: !GetAtt CopyAssetsFunctionRole.Arn
       Runtime: nodejs16.x
       Timeout: 60
+      MemorySize: 512
+      {{- with $cr := index .CustomResources "CopyAssetsFunction" }}
       Code:
-        ZipFile: |
-          var aws = require("aws-sdk");
-
-          exports.handler = (event, context, callback) => {
-            const s3 = new aws.S3();
-            console.log("copy from cache bucket event:", event)
-            const params = {
-              CopySource: event.srcBucket + "/" + event.mapping.path,
-              Bucket: event.destBucket,
-              Key: event.mapping.destPath
-            };
-            console.log("copy object params", params)
-
-            s3.copyObject(params, (err, data) => {
-              if (err) {
-                console.log("error copying object", err)
-                callback(err);
-                return;
-              }
-
-              console.log("copied object: ", data)
-              callback(null, "Success");
-            });
-          };
+        S3Bucket: {{$cr.Bucket}}
+        S3Key: {{$cr.Key}}
+      {{- end }}
 
   CopyAssetsFunctionRole:
     Metadata:

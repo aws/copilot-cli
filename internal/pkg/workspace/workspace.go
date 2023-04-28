@@ -67,7 +67,7 @@ type Summary struct {
 // Workspace typically represents a Git repository where the user has its infrastructure-as-code files as well as source files.
 type Workspace struct {
 	workingDirAbs string
-	CopilotDirAbs string
+	CopilotDirAbs string // TODO: make private by adding mocks for selector unit testing.
 
 	// These fields should be accessed via the Summary method and not directly.
 	summary       *Summary
@@ -105,7 +105,7 @@ func Use(fs afero.Fs) (*Workspace, error) {
 }
 
 // Create creates a new Workspace in the current working directory for appName with summary if it doesn't already exist.
-func Create(appName string, fs afero.Fs) (*Workspace, error) { 
+func Create(appName string, fs afero.Fs) (*Workspace, error) {
 	workingDirAbs, err := getWd()
 	if err != nil {
 		return nil, fmt.Errorf("get working directory: %w", err)
@@ -159,8 +159,8 @@ func Create(appName string, fs afero.Fs) (*Workspace, error) {
 }
 
 // ProjectRoot returns a path to the presumed root of the project, the directory that contains the copilot dir and .workspace file.
-func (ws *Workspace) ProjectRoot() (string) {
-	return strings.TrimSuffix(ws.CopilotDirAbs, "/copilot")
+func (ws *Workspace) ProjectRoot() string {
+	return filepath.Dir(ws.CopilotDirAbs)
 }
 
 // Summary returns a summary of the workspace. The method assumes that the workspace exists and the path is known.

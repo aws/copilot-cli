@@ -193,19 +193,24 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 		Prog:     termprogress.NewSpinner(log.DiagnosticWriter),
 		Deployer: cloudformation.New(sess, cloudformation.WithProgressTracker(os.Stderr)),
 	}
-	sel, err := selector.NewLocalFileSelector(prompter, fs, ws)
+	dfSel, err := selector.NewDockerfileSelector(prompter, fs)
 	if err != nil {
 		return nil, err
 	}
+	sourceSel, err := selector.NewLocalFileSelector(prompter, fs, ws)
+	if err != nil {
+		return nil, fmt.Errorf("init a new local file selector: %w", err)
+	}
+
 	opts := &initSvcOpts{
 		initSvcVars:  vars,
 		store:        store,
 		fs:           fs,
 		init:         initSvc,
 		prompt:       prompter,
-		sel:          sel,
+		sel:          dfSel,
 		topicSel:     snsSel,
-		sourceSel:    sel,
+		sourceSel:    sourceSel,
 		mftReader:    ws,
 		dockerEngine: dockerengine.New(exec.NewCmd()),
 		wsAppName:    tryReadingAppName(),
@@ -438,11 +443,23 @@ If you'd prefer a new default manifest, please manually delete the existing one.
 }
 
 func (o *initSvcOpts) askStaticSite() error {
-	var assets []manifest.FileUpload
-	sources, err := o.askSource()
-	if err != nil {
-		return err
+	var sources []string
+	var err error
+	if o.wsPendingCreation {
+		sources, err = selector.AskCustomPaths(o.prompt, fmt.Sprintf(fmtStaticSiteInitDirFilePathPrompt, color.HighlightUserInput(o.name)), staticSiteInitDirFilePathHelpPrompt,
+			func(v interface{}) error {
+				return validatePath(o.fs, v)
+			})
+		if err != nil {
+			return err
+		}
+	} else {
+		sources, err = o.askSource()
+		if err != nil {
+			return err
+		}
 	}
+	var assets []manifest.FileUpload
 	for _, source := range sources {
 		info, err := o.fs.Stat(source)
 		if err != nil {

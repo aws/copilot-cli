@@ -241,9 +241,9 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 				dockerfilePath: vars.dockerfilePath,
 				image:          vars.image,
 			}
-			sel, err := selector.NewLocalFileSelector(prompt, fs, ws)
+			dfSel, err := selector.NewDockerfileSelector(prompt, fs)
 			if err != nil {
-				return err
+				return fmt.Errorf("initiate dockerfile selector: %w", err)
 			}
 			switch t := wkldType; {
 			case manifestinfo.IsTypeAJob(t):
@@ -259,7 +259,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 
 					fs:                fs,
 					store:             configStore,
-					dockerfileSel:     sel,
+					dockerfileSel:     dfSel,
 					scheduleSelector:  selector.NewStaticSelector(prompt),
 					prompt:            prompt,
 					dockerEngine:      dockerengine.New(cmd),
@@ -292,7 +292,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 					initSvcVars: svcVars,
 
 					fs:                fs,
-					sel:               sel,
+					sel:               dfSel,
 					store:             configStore,
 					topicSel:          snsSel,
 					prompt:            prompt,

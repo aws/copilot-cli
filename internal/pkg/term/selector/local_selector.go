@@ -134,7 +134,7 @@ type localFileSelector struct {
 	workingDirAbs string
 }
 
-// NewLocalFileSelector constructs a localFileSelector.
+// NewLocalFileSelector constructs a LocalFileSelector.
 func NewLocalFileSelector(prompt Prompter, fs afero.Fs, ws *workspace.Workspace) (*localFileSelector, error) {
 	workingDirAbs, err := os.Getwd()
 	if err != nil {
@@ -143,6 +143,68 @@ func NewLocalFileSelector(prompt Prompter, fs afero.Fs, ws *workspace.Workspace)
 	return &localFileSelector{
 		prompt:        prompt,
 		ws:            ws,
+		fs:            &afero.Afero{Fs: fs},
+		workingDirAbs: workingDirAbs,
+	}, nil
+}
+
+// StaticSources asks the user to select from a list of directories and files in the current directory and two levels down.
+func (s *localFileSelector) StaticSources(selPrompt, selHelp, customPathPrompt, customPathHelp string, pathValidator prompt.ValidatorFunc) ([]string, error) {
+	dirsAndFiles, err := s.listDirsAndFiles()
+	if err != nil {
+		return nil, err
+	}
+	if len(dirsAndFiles) == 0 {
+		log.Warningln("No directories or files were found in your workspace. Enter a relative path with the 'custom path' option if you'd like to use a hidden file.")
+	}
+	dirsAndFiles = append(dirsAndFiles, staticSourceUseCustomPrompt)
+	var results []string
+	var askCustom bool
+	var selections []string
+	selections, err = s.prompt.MultiSelect(
+		selPrompt,
+		selHelp,
+		dirsAndFiles,
+		nil,
+		prompt.WithFinalMessage(staticAssetsFinalMsg),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("select directories and/or files: %w", err)
+	}
+	for _, selection := range selections {
+		if selection == staticSourceUseCustomPrompt {
+			askCustom = true
+			continue
+		}
+		results = append(results, selection)
+	}
+
+	if !askCustom {
+		return results, nil
+	}
+	customPaths, err := AskCustomPaths(s.prompt, customPathPrompt, customPathHelp, pathValidator)
+	if err != nil {
+		return nil, err
+	}
+	results = append(results, customPaths...)
+	return results, nil
+}
+
+// dockerfileSelector selects from a local file system where a workspace does not necessarily exist.
+type dockerfileSelector struct {
+	prompt        Prompter
+	fs            *afero.Afero
+	workingDirAbs string
+}
+
+// NewDockerfileSelector constructs a DockerfileSelector.
+func NewDockerfileSelector(prompt Prompter, fs afero.Fs) (*dockerfileSelector, error) {
+	workingDirAbs, err := os.Getwd()
+	if err != nil {
+		return nil, fmt.Errorf("get working directory: %w", err)
+	}
+	return &dockerfileSelector{
+		prompt:        prompt,
 		fs:            &afero.Afero{Fs: fs},
 		workingDirAbs: workingDirAbs,
 	}, nil
@@ -205,7 +267,7 @@ func (s *localFileSelector) StaticSources(selPrompt, selHelp, anotherPathPrompt,
 
 // Dockerfile asks the user to select from a list of Dockerfiles in the current
 // directory or one level down. If no dockerfiles are found, it asks for a custom path.
-func (s *localFileSelector) Dockerfile(selPrompt, notFoundPrompt, selHelp, notFoundHelp string, pathValidator prompt.ValidatorFunc) (string, error) {
+func (s *dockerfileSelector) Dockerfile(selPrompt, notFoundPrompt, selHelp, notFoundHelp string, pathValidator prompt.ValidatorFunc) (string, error) {
 	dockerfiles, err := s.listDockerfiles()
 	if err != nil {
 		return "", err
@@ -238,7 +300,7 @@ func (s *localFileSelector) Dockerfile(selPrompt, notFoundPrompt, selHelp, notFo
 // listDockerfiles returns the list of Dockerfiles within the current
 // working directory and a subdirectory level below. If an error occurs while
 // reading directories, or no Dockerfiles found returns the error.
-func (s *localFileSelector) listDockerfiles() ([]string, error) {
+func (s *dockerfileSelector) listDockerfiles() ([]string, error) {
 	wdFiles, err := s.fs.ReadDir(s.workingDirAbs)
 	if err != nil {
 		return nil, fmt.Errorf("read directory: %w", err)
@@ -280,13 +342,10 @@ func (s *localFileSelector) listDockerfiles() ([]string, error) {
 // listDirsAndFiles returns the list of directories and files within the current
 // working directory and two subdirectory levels below.
 func (s *localFileSelector) listDirsAndFiles() ([]string, error) {
-	names, err := s.getDirAndFileNames(s.ws.ProjectRoot(), 0)
-	if err != nil {
-		return nil, err
-	} 
-	return names, nil
+	return s.getDirAndFileNames(s.ws.ProjectRoot(), 3)
 }
 
+// getDirAndFileNames recursively fetches directory and file names to the depth indicated. Hidden files and the copilot dir are excluded.
 func (s *localFileSelector) getDirAndFileNames(dir string, depth int) ([]string, error) {
 	wdDirsAndFiles, err := s.fs.ReadDir(dir)
 	if err != nil {
@@ -298,16 +357,16 @@ func (s *localFileSelector) getDirAndFileNames(dir string, depth int) ([]string,
 		if strings.HasPrefix(name, ".") || name == "copilot" {
 			continue
 		}
-		relPathName := dir + "/" + name
+		relPathName := filepath.Join(dir, name)
 		wsRelPathName, err := s.ws.Rel(relPathName)
 		if err != nil {
-			return nil, fmt.Errorf("get path relative to workspace: %w", err)
+			return nil, fmt.Errorf("get path relative to workspace for %q: %w", relPathName, err)
 		}
 		names = append(names, wsRelPathName)
-		if depth < 3 && file.IsDir() {
-			subNames, err := s.getDirAndFileNames(relPathName, depth+1)
+		if depth > 0 && file.IsDir() {
+			subNames, err := s.getDirAndFileNames(relPathName, depth-1)
 			if err != nil {
-				return nil, fmt.Errorf("get dir and file names: %w", err)
+				return nil, err
 			}
 			names = append(names, subNames...)
 		}
@@ -315,6 +374,33 @@ func (s *localFileSelector) getDirAndFileNames(dir string, depth int) ([]string,
 	return names, nil
 }
 
+// AskCustomPaths prompts for user input of filepaths, which are then validated.
+func AskCustomPaths(prompter Prompter, customPathPrompt, customPathHelp string, pathValidator prompt.ValidatorFunc) ([]string, error) {
+	var paths []string
+	for {
+		customPath, err := prompter.Get(
+			customPathPrompt,
+			customPathHelp,
+			pathValidator,
+			prompt.WithFinalMessage(customPathFinalMsg))
+		if err != nil {
+			return nil, fmt.Errorf("get custom directory or file path: %w", err)
+		}
+		paths = append(paths, customPath)
+		another, err := prompter.Confirm(
+			staticSourceAnotherCustomPathPrompt,
+			staticSourceAnotherCustomPathHelp,
+			prompt.WithFinalMessage(anotherFinalMsg),
+		)
+		if err != nil {
+			return nil, fmt.Errorf("confirm another custom path: %w", err)
+		}
+		if !another {
+			break
+		}
+	}
+	return paths, nil
+}
 
 func presetScheduleToDefinitionString(input string) string {
 	return fmt.Sprintf("@%s", strings.ToLower(input))

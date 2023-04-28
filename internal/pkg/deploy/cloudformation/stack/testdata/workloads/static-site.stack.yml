@@ -1,0 +1,213 @@
+# Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT-0
+AWSTemplateFormatVersion: 2010-09-09
+Description: CloudFormation template that represents a static site backed by S3.
+
+Parameters:
+  AppName:
+    Type: String
+  EnvName:
+    Type: String
+  WorkloadName:
+    Type: String
+  AddonsTemplateURL:
+    Description: URL of the addons nested stack template within the S3 bucket.
+    Type: String
+    Default: ""
+
+Conditions:
+  HasAddons: !Not [!Equals [!Ref AddonsTemplateURL, ""]]
+
+Resources:
+  Bucket:
+    Metadata:
+      aws:copilot:description: An S3 Bucket to store the static site's assets
+    Type: AWS::S3::Bucket
+    Properties:
+      AccessControl: Private
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+        - ServerSideEncryptionByDefault:
+            SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+
+  BucketPolicy:
+    Metadata:
+      aws:copilot:description: A bucket policy to deny unencrypted access to the bucket and its contents
+    Type: AWS::S3::BucketPolicy
+    DeletionPolicy: Retain
+    Properties:
+      Bucket: !Ref Bucket
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: ForceHTTPS
+            Effect: Deny
+            Principal: "*"
+            Action: s3:*
+            Resource:
+              - !Sub ${Bucket.Arn}
+              - !Sub ${Bucket.Arn}/*
+            Condition: 
+              Bool:
+                aws:SecureTransport: false
+
+  TriggerStateMachineFunction:
+    Metadata:
+      aws:copilot:description: A lambda that triggers the file-copying state machine
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.handler
+      Role: !GetAtt TriggerStateMachineFunctionRole.Arn
+      Runtime: nodejs16.x
+      Timeout: 900
+      MemorySize: 512
+
+  TriggerStateMachineFunctionRole:
+    Metadata:
+      aws:copilot:description: An IAM Role for the lambda that triggers the file-copying state machine.
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: TriggerStateMachine
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action: states:StartSyncExecution
+                Resource: !GetAtt CopyAssetsStateMachine.Arn
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  TriggerStateMachineAction:
+    Metadata:
+      aws:copilot:description: A custom resource to trigger the file-copying state machine
+    Type: Custom::TriggerStateMachine
+    DependsOn: CopyAssetsStateMachine
+    Properties:
+      ServiceToken: !GetAtt TriggerStateMachineFunction.Arn
+      StateMachineARN: !GetAtt CopyAssetsStateMachine.Arn
+      SourceBucket: stackset-bucket
+      AssetMappingFilePath: mappingfile
+      DestinationBucket: !Ref Bucket
+
+  CopyAssetsStateMachine:
+    Type: AWS::StepFunctions::StateMachine
+    Properties:
+      RoleArn: !GetAtt CopyAssetsStateMachineRole.Arn
+      StateMachineType: EXPRESS
+      Definition:
+        Comment: A state machine that triggers a file-copying lambda for each uploaded asset
+        StartAt: GetMappingFile
+        States:
+          GetMappingFile:
+            Type: Task
+            Parameters:
+              Bucket.$: $.SourceBucket
+              Key.$: $.AssetMappingFilePath
+            Resource: arn:aws:states:::aws-sdk:s3:getObject
+            ResultSelector:
+              files.$: States.StringToJson($.Body)
+            ResultPath: $.GetMappingFile
+            Next: CopyFiles
+          CopyFiles:
+            Type: Map
+            End: true
+            ItemsPath: $.GetMappingFile.files
+            ItemSelector:
+              mapping.$: $$.Map.Item.Value
+              destBucket.$: $.DestinationBucket
+              srcBucket.$: $.SourceBucket
+            ItemProcessor:
+              ProcessorConfig:
+                Mode: INLINE
+              StartAt: CopyFile
+              States:
+                CopyFile:
+                  Type: Task
+                  End: true
+                  Resource: !GetAtt CopyAssetsFunction.Arn
+
+  CopyAssetsStateMachineRole:
+    Metadata:
+      aws:copilot:description: An IAM Role for the state machine that triggers the copy lambda
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - states.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: InvokeLambda
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action: lambda:InvokeFunction
+                Resource: !GetAtt CopyAssetsFunction.Arn
+        - PolicyName: S3Access
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action: s3:GetObject
+                Resource: arn:aws:s3:::stackset-bucket/mappingfile
+
+  CopyAssetsFunction:
+    Metadata:
+      aws:copilot:description: A lambda function to copy assets into the static site bucket
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.handler
+      Role: !GetAtt CopyAssetsFunctionRole.Arn
+      Runtime: nodejs16.x
+      Timeout: 60
+      MemorySize: 512
+
+  CopyAssetsFunctionRole:
+    Metadata:
+      aws:copilot:description: An IAM Role for the lambda that copies assets into the static site bucket
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: CopyFromS3
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                Resource: arn:aws:s3:::stackset-bucket/*
+        - PolicyName: CopyToS3
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                Resource: !Sub arn:aws:s3:::${Bucket}/*
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole

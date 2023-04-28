@@ -73,6 +73,9 @@ environments:
           alias: "example.com"
           target_port: 4001
   prod:
+    deployment:
+      rollback_alarms:
+        cpu_utilization: 70
     count:
       range:
         min: 3
