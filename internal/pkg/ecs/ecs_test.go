@@ -49,7 +49,7 @@ func TestClient_ClusterARN(t *testing.T) {
 						Return(nil, testError),
 				)
 			},
-			wantedError: fmt.Errorf("get cluster resources for environment mockEnv: some error"),
+			wantedError: fmt.Errorf(`get ECS cluster with tags "copilot-application"="mockApp","copilot-environment"="mockEnv": some error`),
 		},
 		"errors if no cluster found": {
 			setupMocks: func(m clientMocks) {
@@ -58,7 +58,7 @@ func TestClient_ClusterARN(t *testing.T) {
 						Return([]*resourcegroups.Resource{}, nil),
 				)
 			},
-			wantedError: fmt.Errorf("no cluster found in environment mockEnv"),
+			wantedError: fmt.Errorf(`no ECS cluster found with tags "copilot-application"="mockApp","copilot-environment"="mockEnv"`),
 		},
 		"errors if more than one cluster found": {
 			setupMocks: func(m clientMocks) {
@@ -69,7 +69,7 @@ func TestClient_ClusterARN(t *testing.T) {
 						}, nil),
 				)
 			},
-			wantedError: fmt.Errorf("more than one cluster is found in environment mockEnv"),
+			wantedError: fmt.Errorf(`more than one ECS cluster are found with tags "copilot-application"="mockApp","copilot-environment"="mockEnv"`),
 		},
 		"success": {
 			setupMocks: func(m clientMocks) {
@@ -141,7 +141,7 @@ func TestClient_serviceARN(t *testing.T) {
 						Return(nil, testError),
 				)
 			},
-			wantedError: fmt.Errorf("get ECS service with tags (mockApp, mockEnv, mockSvc): some error"),
+			wantedError: fmt.Errorf(`get ECS service with tags "copilot-application"="mockApp","copilot-environment"="mockEnv","copilot-service"="mockSvc": some error`),
 		},
 		"errors if no service found": {
 			setupMocks: func(m clientMocks) {
@@ -150,7 +150,7 @@ func TestClient_serviceARN(t *testing.T) {
 						Return([]*resourcegroups.Resource{}, nil),
 				)
 			},
-			wantedError: fmt.Errorf("no ECS service found for mockSvc in environment mockEnv"),
+			wantedError: fmt.Errorf(`no ECS service found with tags "copilot-application"="mockApp","copilot-environment"="mockEnv","copilot-service"="mockSvc"`),
 		},
 		"errors if more than one service found": {
 			setupMocks: func(m clientMocks) {
@@ -161,7 +161,7 @@ func TestClient_serviceARN(t *testing.T) {
 						}, nil),
 				)
 			},
-			wantedError: fmt.Errorf("more than one ECS service with the name mockSvc found in environment mockEnv"),
+			wantedError: fmt.Errorf(`more than one ECS service with tags "copilot-application"="mockApp","copilot-environment"="mockEnv","copilot-service"="mockSvc"`),
 		},
 		"success": {
 			setupMocks: func(m clientMocks) {
@@ -810,7 +810,7 @@ func TestClient_StopWorkloadTasks(t *testing.T) {
 					"copilot-environment": "pdx",
 				}).Return(nil, errors.New("some error"))
 			},
-			wantErr: errors.New("get cluster resources for environment pdx: some error"),
+			wantErr: errors.New(`get ECS cluster with tags "copilot-application"="phonetool","copilot-environment"="pdx": some error`),
 		},
 		"failure stopping tasks": {
 			inApp:  "phonetool",
@@ -929,7 +929,7 @@ func TestClient_StopOneOffTasks(t *testing.T) {
 					"copilot-environment": "pdx",
 				}).Return(nil, errors.New("some error"))
 			},
-			wantErr: errors.New("get cluster resources for environment pdx: some error"),
+			wantErr: errors.New(`get ECS cluster with tags "copilot-application"="phonetool","copilot-environment"="pdx": some error`),
 		},
 		"failure stopping tasks": {
 			inApp:  "phonetool",
@@ -1207,7 +1207,7 @@ func Test_NetworkConfiguration(t *testing.T) {
 						Return(nil, errors.New("some error")),
 				)
 			},
-			wantedError: fmt.Errorf("get cluster resources for environment test: some error"),
+			wantedError: fmt.Errorf(`get ECS cluster with tags "copilot-application"="phonetool","copilot-environment"="test": some error`),
 		},
 		"errors if no cluster found": {
 			setupMocks: func(m clientMocks) {
@@ -1216,7 +1216,7 @@ func Test_NetworkConfiguration(t *testing.T) {
 						Return([]*resourcegroups.Resource{}, nil),
 				)
 			},
-			wantedError: fmt.Errorf("no cluster found in environment test"),
+			wantedError: fmt.Errorf(`no ECS cluster found with tags "copilot-application"="phonetool","copilot-environment"="test"`),
 		},
 		"errors if more than one cluster found": {
 			setupMocks: func(m clientMocks) {
@@ -1227,7 +1227,7 @@ func Test_NetworkConfiguration(t *testing.T) {
 						}, nil),
 				)
 			},
-			wantedError: fmt.Errorf("more than one cluster is found in environment test"),
+			wantedError: fmt.Errorf(`more than one ECS cluster are found with tags "copilot-application"="phonetool","copilot-environment"="test"`),
 		},
 		"successfully retrieve network configuration": {
 			setupMocks: func(m clientMocks) {
@@ -1365,7 +1365,7 @@ func Test_NetworkConfigurationForJob(t *testing.T) {
 					deploy.ServiceTagKey: testJob,
 				}).Return(nil, errors.New("some error"))
 			},
-			wantedError: errors.New("get state machine resource by tags for job testJob: some error"),
+			wantedError: errors.New(`get state machine resource with tags "copilot-application"="testApp","copilot-environment"="testEnv","copilot-service"="testJob": some error`),
 		},
 		"state machine resource not found": {
 			setupMocks: func(m clientMocks) {

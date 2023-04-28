@@ -6,6 +6,8 @@ package s3
 
 import (
 	"fmt"
+	"sort"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
@@ -35,23 +37,37 @@ func New(sess *session.Session) *Client {
 
 // BucketName returns the bucket name given the Copilot app, env, and Static Site service name.
 func (c Client) BucketName(app, env, svc string) (string, error) {
-	buckets, err := c.rgGetter.GetResourcesByTags(bucketType, map[string]string{
+	tags := tags(map[string]string{
 		deploy.AppTagKey:     app,
 		deploy.EnvTagKey:     env,
 		deploy.ServiceTagKey: svc,
 	})
+	buckets, err := c.rgGetter.GetResourcesByTags(bucketType, tags)
 	if err != nil {
-		return "", fmt.Errorf("get S3 bucket with tags (%s, %s, %s): %w", app, env, svc, err)
+		return "", fmt.Errorf("get S3 bucket with tags %s: %w", tags.String(), err)
 	}
 	if len(buckets) == 0 {
-		return "", fmt.Errorf("no S3 bucket found with tags %s, %s, %s", svc, env, svc)
+		return "", fmt.Errorf("no S3 bucket found with tags %s", tags.String())
 	}
 	if len(buckets) > 1 {
-		return "", fmt.Errorf("more than one S3 bucket with the name %s found in environment %s", svc, env)
+		return "", fmt.Errorf("more than one S3 bucket with tags %s", tags.String())
 	}
 	bucketName, _, err := s3.ParseARN(buckets[0].ARN)
 	if err != nil {
 		return "", fmt.Errorf("parse ARN %s: %w", buckets[0].ARN, err)
 	}
 	return bucketName, nil
+}
+
+type tags map[string]string
+
+func (tags tags) String() string {
+	serialized := make([]string, len(tags))
+	var i = 0
+	for k, v := range tags {
+		serialized[i] = fmt.Sprintf("%q=%q", k, v)
+		i += 1
+	}
+	sort.SliceStable(serialized, func(i, j int) bool { return serialized[i] < serialized[j] })
+	return strings.Join(serialized, ",")
 }
