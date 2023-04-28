@@ -349,11 +349,10 @@ func (o *initSvcOpts) Execute() error {
 	if o.wkldType == manifestinfo.StaticSiteType {
 		manifestPath, err = o.init.Service(&initialize.ServiceProps{
 			WorkloadProps: initialize.WorkloadProps{
-				App:  o.appName,
-				Name: o.name,
-				Type: o.wkldType,
+				App:            o.appName,
+				Name:           o.name,
+				Type:           o.wkldType,
 			},
-			FileUploads: o.staticAssets,
 		})
 	}
 	manifestPath, err = o.init.Service(&initialize.ServiceProps{
