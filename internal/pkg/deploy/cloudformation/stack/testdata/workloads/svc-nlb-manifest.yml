@@ -33,11 +33,13 @@ environments:
   dev:
     http:
       path: '/'
+      deregistration_delay: 30s
     nlb:
       port: 81/tcp
       additional_listeners:
         - port: 8082/tcp
           target_port: 8085
+          deregistration_delay: 59s
     count:
       spot: 5
   prod:

@@ -218,7 +218,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 					},
 				}, gomock.Any()).Return("", mockError)
 				m.mockLabeledTermPrinter.EXPECT().IsDone().Return(true).AnyTimes()
-				m.mockLabeledTermPrinter.EXPECT().Print().Return(nil).AnyTimes()
+				m.mockLabeledTermPrinter.EXPECT().Print().AnyTimes()
 			},
 			wantErr: fmt.Errorf("build and push the image \"mockWkld\": some error"),
 		},
@@ -245,7 +245,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 					},
 				}, gomock.Any()).Return("mockDigest", nil)
 				m.mockLabeledTermPrinter.EXPECT().IsDone().Return(true).AnyTimes()
-				m.mockLabeledTermPrinter.EXPECT().Print().Return(nil).AnyTimes()
+				m.mockLabeledTermPrinter.EXPECT().Print().AnyTimes()
 				m.mockAddons = nil
 			},
 			wantImages: map[string]ContainerImageIdentifier{
@@ -278,7 +278,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 					},
 				}, gomock.Any()).Return("mockDigest", nil)
 				m.mockLabeledTermPrinter.EXPECT().IsDone().Return(true).AnyTimes()
-				m.mockLabeledTermPrinter.EXPECT().Print().Return(nil).AnyTimes()
+				m.mockLabeledTermPrinter.EXPECT().Print().AnyTimes()
 				m.mockAddons = nil
 			},
 			wantImages: map[string]ContainerImageIdentifier{
@@ -325,7 +325,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 					},
 				}, gomock.Any()).Return("sidecarMockDigest2", nil)
 				m.mockLabeledTermPrinter.EXPECT().IsDone().Return(true).AnyTimes()
-				m.mockLabeledTermPrinter.EXPECT().Print().Return(nil).AnyTimes()
+				m.mockLabeledTermPrinter.EXPECT().Print().AnyTimes()
 				m.mockAddons = nil
 			},
 			wantImages: map[string]ContainerImageIdentifier{
