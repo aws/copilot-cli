@@ -126,26 +126,6 @@ func (s *staticSelector) askCron(scheduleValidator prompt.ValidatorFunc) (string
 	return customSchedule, nil
 }
 
-// dockerfileSelector selects from a local file system where a workspace does not necessarily exist.
-type dockerfileSelector struct {
-	prompt        Prompter
-	fs            *afero.Afero
-	workingDirAbs string
-}
-
-// NewDockerfileSelector constructs a DockerfileSelector.
-func NewDockerfileSelector(prompt Prompter, fs afero.Fs) (*dockerfileSelector, error) {
-	workingDirAbs, err := os.Getwd()
-	if err != nil {
-		return nil, fmt.Errorf("get working directory: %w", err)
-	}
-	return &dockerfileSelector{
-		prompt:        prompt,
-		fs:            &afero.Afero{Fs: fs},
-		workingDirAbs: workingDirAbs,
-	}, nil
-}
-
 // localFileSelector selects from a local file system where a workspace does not necessarily exist.
 type localFileSelector struct {
 	prompt        Prompter
@@ -208,6 +188,26 @@ func (s *localFileSelector) StaticSources(selPrompt, selHelp, customPathPrompt, 
 	}
 	results = append(results, customPaths...)
 	return results, nil
+}
+
+// dockerfileSelector selects from a local file system where a workspace does not necessarily exist.
+type dockerfileSelector struct {
+	prompt        Prompter
+	fs            *afero.Afero
+	workingDirAbs string
+}
+
+// NewDockerfileSelector constructs a DockerfileSelector.
+func NewDockerfileSelector(prompt Prompter, fs afero.Fs) (*dockerfileSelector, error) {
+	workingDirAbs, err := os.Getwd()
+	if err != nil {
+		return nil, fmt.Errorf("get working directory: %w", err)
+	}
+	return &dockerfileSelector{
+		prompt:        prompt,
+		fs:            &afero.Afero{Fs: fs},
+		workingDirAbs: workingDirAbs,
+	}, nil
 }
 
 // Dockerfile asks the user to select from a list of Dockerfiles in the current
