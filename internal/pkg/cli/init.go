@@ -285,9 +285,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 			case t == manifestinfo.StaticSiteType:
 				ws, err := workspace.Use(fs)
 				if err != nil {
-					var (
-						errWorkspaceNotFound *workspace.ErrWorkspaceNotFound
-					)
+					var errWorkspaceNotFound *workspace.ErrWorkspaceNotFound
 					if !errors.As(err, &errWorkspaceNotFound) {
 						return err
 					}
