@@ -30,7 +30,7 @@ type initSvcMocks struct {
 	mockPrompt       *mocks.Mockprompter
 	mockSel          *mocks.MockdockerfileSelector
 	mocktopicSel     *mocks.MocktopicSelector
-	mockSourceSel   *mocks.MockstaticSourceSelector
+	mockSourceSel    *mocks.MockstaticSourceSelector
 	mockDockerfile   *mocks.MockdockerfileParser
 	mockDockerEngine *mocks.MockdockerEngine
 	mockMftReader    *mocks.MockmanifestReader
@@ -213,15 +213,16 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 	mockTopic, _ := deploy.NewTopic("arn:aws:sns:us-west-2:123456789012:mockApp-mockEnv-mockWkld-orders", "mockApp", "mockEnv", "mockWkld")
 	mockError := errors.New("mock error")
 	testCases := map[string]struct {
-		inSvcType        string
-		inSvcName        string
-		inDockerfilePath string
-		inImage          string
-		inSvcPort        uint16
-		inSubscribeTags  []string
-		inNoSubscribe    bool
-		inIngressType    string
-		mockFileSystem   func(mockFS afero.Fs)
+		inSvcType           string
+		inSvcName           string
+		inDockerfilePath    string
+		inImage             string
+		inSvcPort           uint16
+		inSubscribeTags     []string
+		inNoSubscribe       bool
+		inIngressType       string
+		inWsPendingCreation bool
+		mockFileSystem      func(mockFS afero.Fs)
 
 		setupMocks func(mocks initSvcMocks)
 
@@ -745,6 +746,27 @@ type: Request-Driven Web Service`), nil)
 				},
 			},
 		},
+		"ask for static site source paths rather than providing selector if workspace hasn't been created (`copilot init` workflow)": {
+			inSvcType:           manifestinfo.StaticSiteType,
+			inSvcName:           wantedSvcName,
+			inWsPendingCreation: true,
+			mockFileSystem: func(mockFS afero.Fs) {
+				_ = mockFS.MkdirAll(mockDir, 0755)
+				_ = afero.WriteFile(mockFS, mockFile, []byte("file guts"), 0644)
+			},
+			setupMocks: func(m initSvcMocks) {
+				m.mockStore.EXPECT().GetService(mockAppName, wantedSvcName).Return(nil, &config.ErrNoSuchService{})
+				m.mockPrompt.EXPECT().Get(gomock.Eq("What is the path to the directory or file for frontend?"), gomock.Eq("Path to directory or file to use for building your static site."), gomock.Any(), gomock.Any()).Return(mockFile, nil)
+				m.mockPrompt.EXPECT().Confirm(gomock.Eq("Would you like to enter another path?"), gomock.Eq("You may add multiple custom paths. Enter 'y' to type another."), gomock.Any()).Return(false, nil)
+			},
+
+			wantedAssets: []manifest.FileUpload{
+				{
+					Source:    mockFile,
+					Recursive: false,
+				},
+			},
+		},
 	}
 
 	for name, tc := range testCases {
@@ -765,8 +787,8 @@ type: Request-Driven Web Service`), nil)
 				mockPrompt:       mockPrompt,
 				mockDockerfile:   mockDockerfile,
 				mockSel:          mockSel,
-				mocktopicSel:     mockTopicSel, 
-				mockSourceSel:   mockSourceSel,
+				mocktopicSel:     mockTopicSel,
+				mockSourceSel:    mockSourceSel,
 				mockDockerEngine: mockDockerEngine,
 				mockMftReader:    mockManifestReader,
 				mockStore:        mockStore,
@@ -794,13 +816,14 @@ type: Request-Driven Web Service`), nil)
 				dockerfile: func(s string) dockerfileParser {
 					return mockDockerfile
 				},
-				df:           mockDockerfile,
-				prompt:       mockPrompt,
-				mftReader:    mockManifestReader,
-				sel:          mockSel,
-				topicSel:     mockTopicSel,
-				sourceSel:    mockSourceSel,
-				dockerEngine: mockDockerEngine,
+				df:                mockDockerfile,
+				prompt:            mockPrompt,
+				mftReader:         mockManifestReader,
+				sel:               mockSel,
+				topicSel:          mockTopicSel,
+				sourceSel:         mockSourceSel,
+				dockerEngine:      mockDockerEngine,
+				wsPendingCreation: tc.inWsPendingCreation,
 			}
 			if tc.mockFileSystem != nil {
 				tc.mockFileSystem(opts.fs)

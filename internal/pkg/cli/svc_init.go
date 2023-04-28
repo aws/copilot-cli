@@ -95,7 +95,6 @@ These messages can be consumed by the Worker Service.`
 	fmtStaticSiteInitDirFilePrompt      = "Which " + color.Emphasize("directories or files") + " would you like to upload for %s?"
 	staticSiteInitDirFileHelpPrompt     = "Directories or files to use for building your static site."
 	fmtStaticSiteInitDirFilePathPrompt  = "What is the path to the " + color.Emphasize("directory or file") + " for %s?"
-	staticSiteInitDirFilePathPrompt     = "What is the path to your source directory or file?"
 	staticSiteInitDirFilePathHelpPrompt = "Path to directory or file to use for building your static site."
 )
 
@@ -445,11 +444,23 @@ If you'd prefer a new default manifest, please manually delete the existing one.
 }
 
 func (o *initSvcOpts) askStaticSite() error {
-	var assets []manifest.FileUpload
-	sources, err := o.askSource()
-	if err != nil {
-		return err
+	var sources []string
+	var err error
+	if o.wsPendingCreation {
+		sources, err = selector.AskCustomPaths(o.prompt, fmt.Sprintf(fmtStaticSiteInitDirFilePathPrompt, color.HighlightUserInput(o.name)), staticSiteInitDirFilePathHelpPrompt,
+			func(v interface{}) error {
+				return validatePath(o.fs, v)
+			})
+		if err != nil {
+			return err
+		}
+	} else {
+		sources, err = o.askSource()
+		if err != nil {
+			return err
+		}
 	}
+	var assets []manifest.FileUpload
 	for _, source := range sources {
 		info, err := o.fs.Stat(source)
 		if err != nil {
