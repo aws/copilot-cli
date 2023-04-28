@@ -4,7 +4,7 @@ Parameters:
     Description: Your application's name.
   Env:
     Type: String
-    Description: The environment name your service, job, or workflow is being deployed to.
+    Description: The name of the environment being deployed.
   # Customize your Aurora Serverless cluster by setting the default value of the following parameters.
   {{logicalIDSafe .ClusterName}}DBName:
     Type: String

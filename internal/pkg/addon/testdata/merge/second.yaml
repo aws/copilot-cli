@@ -16,7 +16,7 @@ Parameters:
     # Different indentation and order should not matter.
     Name:
       Type: String
-      Description: The name of the service, job, or workflow being deployed.
+      Description: Your workload's name.
     App: # Line comment is ignored.
         Type: String
         Description: Your application's name.

@@ -1,5 +1,5 @@
 Parameters:
     Name:
       Type: String
-      Description: The name of the service, job, or workflow being deployed.
+      Description: Your workload's name.
       Default: api # "Default" doesn't exist in first.yaml, therefore it should error.
