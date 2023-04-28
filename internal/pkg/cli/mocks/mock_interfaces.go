@@ -5870,6 +5870,44 @@ func (mr *MockwsSelectorMockRecorder) Workload(msg, help interface{}) *gomock.Ca
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Workload", reflect.TypeOf((*MockwsSelector)(nil).Workload), msg, help)
 }
 
+// MockstaticSourceSelector is a mock of staticSourceSelector interface.
+type MockstaticSourceSelector struct {
+	ctrl     *gomock.Controller
+	recorder *MockstaticSourceSelectorMockRecorder
+}
+
+// MockstaticSourceSelectorMockRecorder is the mock recorder for MockstaticSourceSelector.
+type MockstaticSourceSelectorMockRecorder struct {
+	mock *MockstaticSourceSelector
+}
+
+// NewMockstaticSourceSelector creates a new mock instance.
+func NewMockstaticSourceSelector(ctrl *gomock.Controller) *MockstaticSourceSelector {
+	mock := &MockstaticSourceSelector{ctrl: ctrl}
+	mock.recorder = &MockstaticSourceSelectorMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockstaticSourceSelector) EXPECT() *MockstaticSourceSelectorMockRecorder {
+	return m.recorder
+}
+
+// StaticSources mocks base method.
+func (m *MockstaticSourceSelector) StaticSources(selPrompt, selHelp, anotherPathPrompt, anotherPathHelp string, pathValidator prompt.ValidatorFunc) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StaticSources", selPrompt, selHelp, anotherPathPrompt, anotherPathHelp, pathValidator)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// StaticSources indicates an expected call of StaticSources.
+func (mr *MockstaticSourceSelectorMockRecorder) StaticSources(selPrompt, selHelp, anotherPathPrompt, anotherPathHelp, pathValidator interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StaticSources", reflect.TypeOf((*MockstaticSourceSelector)(nil).StaticSources), selPrompt, selHelp, anotherPathPrompt, anotherPathHelp, pathValidator)
+}
+
 // MockscheduleSelector is a mock of scheduleSelector interface.
 type MockscheduleSelector struct {
 	ctrl     *gomock.Controller

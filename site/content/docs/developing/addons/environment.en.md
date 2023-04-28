@@ -213,7 +213,7 @@ function with that value's export name to import it from an environment addon.
         Description: The environment name your service, job, or workflow is being deployed to.
       Name:
         Type: String
-        Description: The name of the service, job, or workflow being deployed.
+        Description: Your workload's name.
     Resources:
       MyTableAccessPolicy:
         Type: AWS::IAM::ManagedPolicy
