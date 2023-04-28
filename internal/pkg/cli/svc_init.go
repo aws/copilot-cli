@@ -124,7 +124,6 @@ type initWkldVars struct {
 	image          string
 	subscriptions  []string
 	noSubscribe    bool
-	sourcePaths    []string
 }
 
 type initSvcVars struct {
