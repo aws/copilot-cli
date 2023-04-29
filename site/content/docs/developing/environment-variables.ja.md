@@ -58,18 +58,39 @@ environments:
 
 さらに、環境変数をまとめて追加したい場合、 [env file](https://docs.aws.amazon.com/ja_jp/AmazonECS/latest/developerguide/taskdef-envfiles.html#taskdef-envfiles-considerations) に環境変数を追加します。そして、ファイルパス (Workspace の root からのファイルパス) を [Manifest](../manifest/overview.ja.md) の `env_file` フィールドに記述します。
 
+メインコンテナのワークスペースのルートや、任意のサイドカーコンテナ定義、`logging` フィールド下に、env file を指定して、Firelens サイドカーコンテナに env file を設定できます。
+
 ```yaml
 # in copilot/{service name}/manifest.yml
 env_file: log.env
 ```
 
-And in `log.env` we could have
+`log.env` では、次の様に記述します。
 ```
 #This is a comment and will be ignored
 LOG_LEVEL=debug
 LOG_INFO=all
 ```
+サイドカー定義においては、次の様に記述します:
+```yaml
+sidecars:
+  nginx:
+    image: nginx:latest
+    env_file: ./nginx.env
+    port: 8080
+```
 
+ロギングコンテナにおいては、次の様に記述します:
+```yaml
+logging:
+  retention: 1
+  destination:
+    Name: cloudwatch
+    region: us-west-2
+    log_group_name: /copilot/logs/
+    log_stream_prefix: copilot/
+  env_file: ./logging.env
+```
 ## DynamoDB テーブルやS3 バケット、RDS データベースなどの名前を確認する方法
 
 Copilot CLI を使って、DynamoDB テーブルや S3 バケット、データベースなどの追加の AWS リソースをプロビジョニングする場合、出力の値は環境変数として、Application に渡されます。より詳しい情報は、[AWS リソースを追加する](./addons/workload.ja.md)を確認してください。

@@ -3,7 +3,8 @@
 <a id="nlb" href="#nlb" class="field">`nlb`</a> <span class="type">Map</span>  
 nlb セクションは Service を Network Load Balancer と統合するためのパラメーターを含みます。
 
-Network Load Balancerは、`nlb` フィールドを指定した場合のみ有効になります。Load-Balanced Web Service では、Application Load Balancer と Network Load Balancer のいずれかが有効になっている必要があることに注意してください。
+Network Load Balancerは、`nlb` フィールドを指定した場合のみ有効になります。
+Load-Balanced Web Service では、Application Load Balancer と Network Load Balancer のいずれかが有効になっている必要があることに注意してください。
 
 <span class="parent-field">nlb.</span><a id="nlb-port" href="#nlb-port" class="field">`port`</a> <span class="type">String</span>  
 必須項目。Network Load Balancer がリッスンするポートとプロトコルを指定します。
@@ -80,3 +81,7 @@ nlb:
 nlb:
   alias: ["example.com", "v1.example.com"]
 ```
+<span class="parent-field">nlb.</span><a id="nlb-additional-listeners" href="#nlb-additional-listeners" class="field">`additional_listeners`</a> <span class="type">Array of Maps</span>  
+複数の NLB リスナーを設定します。
+
+{% include 'nlb-additionallisteners.ja.md' %}

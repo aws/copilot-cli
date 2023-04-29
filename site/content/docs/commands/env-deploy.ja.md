@@ -20,3 +20,22 @@ $ copilot env deploy
                       We do not recommend using this flag for a
                       production environment.
 ```
+
+## 実行例
+デプロイメントを実行する前に、変更される内容を確認するために、`--diff` を使用します。
+
+```console
+$ copilot env deploy --name test --diff
+~ Resources:
+    ~ Cluster:
+        ~ Properties:
+            ~ ClusterSettings:
+                ~ - (changed item)
+                  ~ Value: enabled -> disabled
+
+Continue with the deployment? (y/N)
+```
+
+!!!info "`copilot env package --diff`"
+    デプロイメントを実行する必要がなく、差分だけを確認したい場合があります。
+    `copilot env package --diff` は差分を表示してコマンドが終了します。

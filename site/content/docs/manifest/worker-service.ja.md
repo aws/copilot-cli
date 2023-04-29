@@ -221,6 +221,8 @@ filter_policy:
 任意項目。トピックの SQS FIFO キューに対する設定です。`true` を指定した場合、 FIFO キューがデフォルトの FIFO 設定で作成されます。
 トピックに対応したキューに対する特定の属性についてカスタマイズする場合は、このフィールドを Map で指定します。
 
+{% include 'image.ja.md' %}
+
 {% include 'image-config.ja.md' %}
 
 {% include 'task-size.ja.md' %}
