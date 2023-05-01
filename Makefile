@@ -111,10 +111,10 @@ run-integ-test:
 	go test -race -count=1 -timeout 120m -tags=integration ${PACKAGES}
 
 .PHONY: local-test
-local-test: package-custom-resources custom-resource-tests run-local-integ-test package-custom-resources-clean
+local-test: package-custom-resources custom-resource-tests run-local-test package-custom-resources-clean
 
 .PHONY: run-local-test
-run-local-integ-test:
+run-local-test:
 	go test -race -count=1 -timeout=60m -tags=localintegration -coverprofile=${COVERAGE} ${PACKAGES}
 
 .PHONY: e2e
