@@ -302,10 +302,7 @@ func (s *StaticSiteOrImportedBucket) UnmarshalYAML(value *yaml.Node) error {
 	if reg.MatchString(s.ImportedBucket) {
 		return nil
 	}
-	if err := value.Decode(&s.StaticSite); err != nil {
-		return err
-	}
-	s.ImportedBucket = ""
+	s.StaticSite, s.ImportedBucket = s.ImportedBucket, ""
 	return nil
 }
 

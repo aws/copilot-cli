@@ -410,7 +410,7 @@ func (d *envDeployer) buildStackInput(in *DeployEnvironmentInput) (*cfnstack.Env
 	if err != nil {
 		return nil, err
 	}
-	if err = d.renderStaticSite(in.Manifest); err != nil {
+	if err := d.renderStaticSite(in.Manifest); err != nil {
 		return nil, err
 	}
 	return &cfnstack.EnvConfig{
