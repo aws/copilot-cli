@@ -54,7 +54,7 @@ Below are the different commands which can be run in the root of the project dir
 
 * Run `make` (This creates a standalone executable in the `bin/local` directory).
 * Run `make run-unit-test` to run only Go unit tests.
-* Run `make test` to run Go and Node.js unit tests. You'll need Node.js and npm for these tests to run.
+* Run `make local-test` to run Go, Node.js unit tests and local integration test. You'll need Node.js and npm for these tests to run.
 * Run `make integ-test` to run integration tests against your Default AWS profile. **Warning** - this will create AWS resources in your `default` profile.
 * Run `make e2e` to run end to end tests (tests that run commands locally). **Warning** - this will create AWS resources in your account. You'll need Docker running for these tests to run.
 

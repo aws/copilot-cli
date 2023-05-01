@@ -111,7 +111,7 @@ run-integ-test:
 	go test -race -count=1 -timeout 120m -tags=integration ${PACKAGES}
 
 .PHONY: local-test
-local-test: package-custom-resources custom-resource-tests run-local-integ-test run-unit-test package-custom-resources-clean
+local-test: package-custom-resources custom-resource-tests run-local-integ-test package-custom-resources-clean
 
 .PHONY: run-local-test
 run-local-integ-test:
