@@ -94,7 +94,7 @@ func TestCDK_Override(t *testing.T) {
 				return "/bin/npm", nil
 			},
 			CommandFn: func(name string, args ...string) *exec.Cmd {
-				if name == filepath.Join("node_modules", "aws-cdk", "bin", "cdk") {
+				if name == filepath.Join("node_modules", ".bin", "cdk") {
 					return exec.Command("exit", "42")
 				}
 				return exec.Command("echo", "success")
@@ -108,7 +108,7 @@ func TestCDK_Override(t *testing.T) {
 		require.ErrorContains(t, err, `run "exit 42"`)
 	})
 	t.Run("should invoke npm install and cdk synth", func(t *testing.T) {
-		binPath := filepath.Join("node_modules", "aws-cdk", "bin", "cdk")
+		binPath := filepath.Join("node_modules", ".bin", "cdk")
 		buf := new(strings.Builder)
 		cdk := WithCDK("", CDKOpts{
 			ExecWriter: buf,
