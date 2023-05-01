@@ -96,7 +96,7 @@ CloudFrontDistribution:
             {{- end}}
       {{- if .CDNConfig.Static}}
         - Id: !Sub 'copilot-${AppName}-${EnvironmentName}-s3'
-          DomainName: {{.CDNConfig.Static.Location}}
+          DomainName: {{.CDNConfig.Static.ImportedBucket}}
           OriginAccessControlId: !Ref CloudFrontOriginAccessControl
           # Workaround for using Origin Access Control as Origin Access Identity is still 
           # required when the origin is an S3 bucket.
