@@ -188,7 +188,7 @@ Parameters:
     Description: The environment name your service, job, or workflow is being deployed to.
   Name:
     Type: String
-    Description: The name of the service, job, or workflow being deployed.
+    Description: Your workload's name.
 
 Resources:
   # Create your resource here, such as an AWS::DynamoDB::Table:

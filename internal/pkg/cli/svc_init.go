@@ -91,6 +91,11 @@ These messages can be consumed by the Worker Service.`
 "Internet" will configure your service as public.`
 
 	wkldInitImagePrompt = fmt.Sprintf("What's the %s ([registry/]repository[:tag|@digest]) of the image to use?", color.Emphasize("location"))
+
+	fmtStaticSiteInitDirFilePrompt      = "Which " + color.Emphasize("directories or files") + " would you like to upload for %s?"
+	staticSiteInitDirFileHelpPrompt     = "Directories or files to use for building your static site."
+	fmtStaticSiteInitDirFilePathPrompt  = "What is the path to the " + color.Emphasize("directory or file") + " for %s?"
+	staticSiteInitDirFilePathHelpPrompt = "Path to directory or file to use for building your static site."
 )
 
 const (
@@ -139,6 +144,7 @@ type initSvcOpts struct {
 	store        store
 	dockerEngine dockerEngine
 	sel          dockerfileSelector
+	sourceSel    staticSourceSelector
 	topicSel     topicSelector
 	mftReader    manifestReader
 
@@ -188,18 +194,24 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 		Prog:     termprogress.NewSpinner(log.DiagnosticWriter),
 		Deployer: cloudformation.New(sess, cloudformation.WithProgressTracker(os.Stderr)),
 	}
-	sel, err := selector.NewLocalFileSelector(prompter, fs)
+	dfSel, err := selector.NewDockerfileSelector(prompter, fs)
 	if err != nil {
 		return nil, err
 	}
+	sourceSel, err := selector.NewLocalFileSelector(prompter, fs, ws)
+	if err != nil {
+		return nil, fmt.Errorf("init a new local file selector: %w", err)
+	}
+
 	opts := &initSvcOpts{
 		initSvcVars:  vars,
 		store:        store,
 		fs:           fs,
 		init:         initSvc,
 		prompt:       prompter,
-		sel:          sel,
+		sel:          dfSel,
 		topicSel:     snsSel,
+		sourceSel:    sourceSel,
 		mftReader:    ws,
 		dockerEngine: dockerengine.New(exec.NewCmd()),
 		wsAppName:    tryReadingAppName(),
@@ -454,7 +466,34 @@ If you'd prefer a new default manifest, please manually delete the existing one.
 }
 
 func (o *initSvcOpts) askStaticSite() error {
-	// TODO: add file selection for generating svc manifest.
+	var sources []string
+	var err error
+	if o.wsPendingCreation {
+		sources, err = selector.AskCustomPaths(o.prompt, fmt.Sprintf(fmtStaticSiteInitDirFilePathPrompt, color.HighlightUserInput(o.name)), staticSiteInitDirFilePathHelpPrompt,
+			func(v interface{}) error {
+				return validatePath(o.fs, v)
+			})
+		if err != nil {
+			return err
+		}
+	} else {
+		sources, err = o.askSource()
+		if err != nil {
+			return err
+		}
+	}
+	var assets []manifest.FileUpload
+	for _, source := range sources {
+		info, err := o.fs.Stat(source)
+		if err != nil {
+			return fmt.Errorf("get info for %q: %w", source, err)
+		}
+		assets = append(assets, manifest.FileUpload{
+			Source:    source,
+			Recursive: info.IsDir(),
+		})
+	}
+	o.staticAssets = assets
 	return nil
 }
 
@@ -498,7 +537,7 @@ func (o *initSvcOpts) validateIngressType() error {
 	if strings.EqualFold(o.ingressType, "internet") || strings.EqualFold(o.ingressType, "environment") {
 		return nil
 	}
-	return fmt.Errorf("invalid ingress type %q: must be one of %s.", o.ingressType, english.OxfordWordSeries(rdwsIngressOptions, "or"))
+	return fmt.Errorf("invalid ingress type %q: must be one of %s", o.ingressType, english.OxfordWordSeries(rdwsIngressOptions, "or"))
 }
 
 func (o *initSvcOpts) askImage() error {
@@ -524,6 +563,22 @@ func (o *initSvcOpts) askImage() error {
 	}
 	o.image = image
 	return nil
+}
+
+func (o *initSvcOpts) askSource() ([]string, error) {
+	sources, err := o.sourceSel.StaticSources(
+		fmt.Sprintf(fmtStaticSiteInitDirFilePrompt, color.HighlightUserInput(o.name)),
+		staticSiteInitDirFileHelpPrompt,
+		fmt.Sprintf(fmtStaticSiteInitDirFilePathPrompt, color.HighlightUserInput(o.name)),
+		staticSiteInitDirFilePathHelpPrompt,
+		func(v interface{}) error {
+			return validatePath(o.fs, v)
+		},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("select local directory or file: %w", err)
+	}
+	return sources, nil
 }
 
 func (o *initSvcOpts) manifestAlreadyExists() (bool, error) {
