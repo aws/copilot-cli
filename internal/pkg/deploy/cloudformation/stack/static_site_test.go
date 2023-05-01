@@ -216,6 +216,10 @@ func TestStaticSite_Template(t *testing.T) {
 }
 
 func TestStaticSite_Parameters(t *testing.T) {
+	t.Cleanup(func() {
+		fs = realEmbedFS
+	})
+	fs = templatetest.Stub{}
 	testCases := map[string]struct {
 		expectedParams []*cloudformation.Parameter
 		expectedErr    error
