@@ -1,7 +1,10 @@
 package delete
 
 import (
+	"errors"
 	"fmt"
+
+	"github.com/aws/copilot-cli/internal/pkg/s3"
 )
 
 type bucketResourceGetter interface {
@@ -12,7 +15,6 @@ type bucketEmptier interface {
 	EmptyBucket(string) error
 }
 
-// StaticSiteDeleter
 type StaticSiteDeleter struct {
 	BucketResourceGetter bucketResourceGetter
 	BucketEmptier        bucketEmptier
@@ -21,13 +23,12 @@ type StaticSiteDeleter struct {
 func (s *StaticSiteDeleter) CleanResources(app, env, wkld string) error {
 	bucket, err := s.BucketResourceGetter.BucketName(app, env, wkld)
 	if err != nil {
-		return err // TODO remove ? or check error
-		return nil // allow deletion to go forward
-	}
-
-	if bucket == "" {
-		// svc init'd but not deployed?
-		return nil
+		var notFound *s3.ErrNotFound
+		if errors.As(err, &notFound) {
+			// bucket doesn't exist, no need to clean up
+			return nil
+		}
+		return fmt.Errorf("get bucket name: %w", err)
 	}
 
 	if err := s.BucketEmptier.EmptyBucket(bucket); err != nil {

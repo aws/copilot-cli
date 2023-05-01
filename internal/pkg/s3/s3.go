@@ -44,7 +44,11 @@ func (c Client) BucketName(app, env, svc string) (string, error) {
 		return "", fmt.Errorf("get S3 bucket with tags (%s, %s, %s): %w", app, env, svc, err)
 	}
 	if len(buckets) == 0 {
-		return "", fmt.Errorf("no S3 bucket found with tags %s, %s, %s", svc, env, svc)
+		return "", &ErrNotFound{
+			app: app,
+			env: env,
+			svc: svc,
+		}
 	}
 	if len(buckets) > 1 {
 		return "", fmt.Errorf("more than one S3 bucket with the name %s found in environment %s", svc, env)
@@ -54,4 +58,14 @@ func (c Client) BucketName(app, env, svc string) (string, error) {
 		return "", fmt.Errorf("parse ARN %s: %w", buckets[0].ARN, err)
 	}
 	return bucketName, nil
+}
+
+// ErrNotFound is returned when no bucket is found
+// matching the given tags.
+type ErrNotFound struct {
+	app, env, svc string
+}
+
+func (e *ErrNotFound) Error() string {
+	return fmt.Sprintf("no S3 bucket found with tags %s, %s, %s", e.app, e.env, e.svc)
 }
