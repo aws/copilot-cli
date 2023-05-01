@@ -6,6 +6,8 @@ package selector
 import (
 	"errors"
 	"fmt"
+	"github.com/aws/copilot-cli/internal/pkg/workspace"
+	"os"
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
@@ -239,7 +241,7 @@ func TestLocalFileSelector_Dockerfile(t *testing.T) {
 			tc.mockFileSystem(fs)
 			tc.mockPrompt(p)
 
-			sel := localFileSelector{
+			sel := dockerfileSelector{
 				prompt: p,
 				fs:     fs,
 			}
@@ -261,6 +263,165 @@ func TestLocalFileSelector_Dockerfile(t *testing.T) {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			} else {
 				require.Equal(t, tc.wantedDockerfile, dockerfile)
+			}
+		})
+	}
+}
+
+func TestLocalFileSelector_StaticSources(t *testing.T) {
+	wd, _ := os.Getwd()
+	mockFS := func(mockFS afero.Fs) {
+		_ = mockFS.MkdirAll(wd+"this/path/to/projectRoot/copilot", 0755)
+		_ = mockFS.MkdirAll(wd+"this/path/to/projectRoot/frontend", 0755)
+		_ = mockFS.MkdirAll(wd+"this/path/to/projectRoot/backend", 0755)
+		_ = mockFS.MkdirAll(wd+"this/path/to/projectRoot/friend", 0755)
+		_ = mockFS.MkdirAll(wd+"this/path/to/projectRoot/trend", 0755)
+
+		_ = afero.WriteFile(mockFS, wd+"this/path/to/projectRoot/myFile", []byte("cool stuff"), 0644)
+		_ = afero.WriteFile(mockFS, wd+"this/path/to/projectRoot/frontend/feFile", []byte("css and stuff"), 0644)
+		_ = afero.WriteFile(mockFS, wd+"this/path/to/projectRoot/backend/beFile", []byte("content stuff"), 0644)
+	}
+	testCases := map[string]struct {
+		mockPrompt     func(*mocks.MockPrompter)
+		mockFileSystem func(fs afero.Fs)
+
+		wantedErr        error
+		wantedDirOrFiles []string
+	}{
+		"successfully choose existing files, dirs, and multiple write-in paths": {
+			mockFileSystem: mockFS,
+			mockPrompt: func(m *mocks.MockPrompter) {
+				m.EXPECT().MultiSelect(
+					gomock.Any(), gomock.Any(),
+					gomock.Eq([]string{
+						"backend",
+						"backend/beFile",
+						"friend",
+						"frontend",
+						"frontend/feFile",
+						"myFile",
+						"trend",
+						staticSourceUseCustomPrompt,
+					}),
+					gomock.Any(), gomock.Any(),
+				).Return([]string{"myFile", "frontend", "backend/beFile", staticSourceUseCustomPrompt}, nil)
+				m.EXPECT().Get(
+					gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("friend", nil)
+				m.EXPECT().Confirm(
+					gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
+				m.EXPECT().Get(
+					gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("trend", nil)
+				m.EXPECT().Confirm(
+					gomock.Any(), gomock.Any(), gomock.Any()).Return(false, nil)
+			},
+			wantedDirOrFiles: []string{"myFile", "frontend", "backend/beFile", "friend", "trend"},
+		},
+		"error with multiselect": {
+			mockFileSystem: mockFS,
+			mockPrompt: func(m *mocks.MockPrompter) {
+				m.EXPECT().MultiSelect(
+					gomock.Any(), gomock.Any(),
+					gomock.Eq([]string{
+						"backend",
+						"backend/beFile",
+						"friend",
+						"frontend",
+						"frontend/feFile",
+						"myFile",
+						"trend",
+						staticSourceUseCustomPrompt,
+					}),
+					gomock.Any(), gomock.Any(),
+				).Return(nil, errors.New("some error"))
+			},
+			wantedErr: errors.New("select directories and/or files: some error"),
+		},
+		"error entering custom path": {
+			mockFileSystem: mockFS,
+			mockPrompt: func(m *mocks.MockPrompter) {
+				m.EXPECT().MultiSelect(
+					gomock.Any(), gomock.Any(),
+					gomock.Eq([]string{
+						"backend",
+						"backend/beFile",
+						"friend",
+						"frontend",
+						"frontend/feFile",
+						"myFile",
+						"trend",
+						staticSourceUseCustomPrompt,
+					}),
+					gomock.Any(), gomock.Any(),
+				).Return([]string{staticSourceUseCustomPrompt}, nil)
+				m.EXPECT().Get(
+					gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("", errors.New("some error"))
+			},
+			wantedErr: fmt.Errorf("get custom directory or file path: some error"),
+		},
+		"error confirming whether not to prompt for another custom path": {
+			mockFileSystem: mockFS,
+			mockPrompt: func(m *mocks.MockPrompter) {
+				m.EXPECT().MultiSelect(
+					gomock.Any(), gomock.Any(),
+					gomock.Eq([]string{
+						"backend",
+						"backend/beFile",
+						"friend",
+						"frontend",
+						"frontend/feFile",
+						"myFile",
+						"trend",
+						staticSourceUseCustomPrompt,
+					}),
+					gomock.Any(), gomock.Any(),
+				).Return([]string{staticSourceUseCustomPrompt}, nil)
+				m.EXPECT().Get(
+					gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("friend", nil)
+				m.EXPECT().Confirm(
+					gomock.Any(), gomock.Any(), gomock.Any()).Return(false, errors.New("some error"))
+			},
+			wantedErr: fmt.Errorf("confirm another custom path: some error"),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			cwd, _ := os.Getwd()
+			p := mocks.NewMockPrompter(ctrl)
+			w := &workspace.Workspace{
+				CopilotDirAbs: cwd + "this/path/to/projectRoot/copilot",
+			}
+			fs := &afero.Afero{Fs: afero.NewMemMapFs()}
+			tc.mockFileSystem(fs)
+			tc.mockPrompt(p)
+
+			sel := localFileSelector{
+				prompt:        p,
+				ws:            w,
+				fs:            fs,
+				workingDirAbs: "this/path/to/projectRoot",
+			}
+
+			mockPromptText := "prompt"
+			mockHelpText := "help"
+
+			// WHEN
+			sourceFiles, err := sel.StaticSources(
+				mockPromptText,
+				mockPromptText,
+				mockHelpText,
+				mockHelpText,
+				nil,
+			)
+
+			// THEN
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.Equal(t, tc.wantedDirOrFiles, sourceFiles)
 			}
 		})
 	}
@@ -330,7 +491,7 @@ func TestLocalFileSelector_listDockerfiles(t *testing.T) {
 			// GIVEN
 			fs := &afero.Afero{Fs: afero.NewMemMapFs()}
 			tc.mockFileSystem(fs)
-			s := &localFileSelector{
+			s := &dockerfileSelector{
 				workingDirAbs: tc.workingDirAbs,
 				fs: &afero.Afero{
 					Fs: fs,
@@ -343,6 +504,72 @@ func TestLocalFileSelector_listDockerfiles(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 				require.Equal(t, tc.dockerfiles, got)
+			}
+		})
+	}
+}
+
+func TestLocalFileSelector_listDirsAndFiles(t *testing.T) {
+	wd, _ := os.Getwd()
+	testCases := map[string]struct {
+		mockFileSystem func(mockFS afero.Fs)
+		wantedErr      error
+		dirsAndFiles   []string
+	}{
+		"drill down two (and only two) levels": {
+			mockFileSystem: func(mockFS afero.Fs) {
+				_ = mockFS.MkdirAll(wd+"/projectRoot/lobby/copilot", 0755)
+				_ = mockFS.MkdirAll(wd+"/projectRoot/lobby/basement/subBasement/subSubBasement/subSubSubBasement", 0755)
+
+				_ = afero.WriteFile(mockFS, wd+"/projectRoot/lobby/file", []byte("cool stuff"), 0644)
+				_ = afero.WriteFile(mockFS, wd+"/projectRoot/lobby/basement/file", []byte("more cool stuff"), 0644)
+				_ = afero.WriteFile(mockFS, wd+"/projectRoot/lobby/basement/subBasement/file", []byte("unreachable cool stuff"), 0644)
+			},
+			dirsAndFiles: []string{"lobby", "lobby/basement", "lobby/basement/file", "lobby/basement/subBasement", "lobby/basement/subBasement/file", "lobby/basement/subBasement/subSubBasement", "lobby/file"},
+		},
+		"exclude hidden files and copilot dir": {
+			mockFileSystem: func(mockFS afero.Fs) {
+				_ = mockFS.MkdirAll(wd+"/projectRoot/lobby/basement/subBasement/subSubBasement", 0755)
+				_ = mockFS.Mkdir(wd+"/projectRoot/lobby/copilot", 0755)
+
+				_ = afero.WriteFile(mockFS, wd+"/projectRoot/lobby/.file", []byte("cool stuff"), 0644)
+				_ = afero.WriteFile(mockFS, wd+"/projectRoot/lobby/basement/file", []byte("more cool stuff"), 0644)
+				_ = afero.WriteFile(mockFS, wd+"/projectRoot/lobby/basement/subBasement/file", []byte("unreachable cool stuff"), 0644)
+			},
+			wantedErr:    nil,
+			dirsAndFiles: []string{"lobby", "lobby/basement", "lobby/basement/file", "lobby/basement/subBasement", "lobby/basement/subBasement/file", "lobby/basement/subBasement/subSubBasement"},
+		},
+		"no dirs or files found": {
+			mockFileSystem: func(mockFS afero.Fs) {
+				_ = mockFS.Mkdir(wd+"/projectRoot/copilot", 0755)
+			},
+			dirsAndFiles: nil,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			fs := &afero.Afero{Fs: afero.NewMemMapFs()}
+			cwd, _ := os.Getwd()
+			w := &workspace.Workspace{
+				CopilotDirAbs: cwd + "/projectRoot/copilot",
+			}
+			tc.mockFileSystem(fs)
+			s := &localFileSelector{
+				fs: &afero.Afero{
+					Fs: fs,
+				},
+				ws:            w,
+				workingDirAbs: "",
+			}
+
+			got, err := s.listDirsAndFiles()
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.dirsAndFiles, got)
 			}
 		})
 	}

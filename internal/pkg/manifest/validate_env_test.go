@@ -870,7 +870,7 @@ func TestCDNConfiguration_validate(t *testing.T) {
 					},
 				},
 			},
-			wantedErrorMsgPrefix: `validate "static"`,
+			wantedErrorMsgPrefix: `validate "static_assets"`,
 		},
 		"success with cert and terminate tls": {
 			in: EnvironmentCDNConfig{

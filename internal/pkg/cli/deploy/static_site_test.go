@@ -27,7 +27,7 @@ func TestStaticSiteDeployer_UploadArtifacts(t *testing.T) {
 	}{
 		"error if failed to upload": {
 			mock: func(m *mocks.MockfileUploader) {
-				m.EXPECT().UploadFiles(gomock.Any()).Return(errors.New("some error"))
+				m.EXPECT().UploadFiles(gomock.Any()).Return("", errors.New("some error"))
 			},
 			wantErr: fmt.Errorf("upload static files: some error"),
 		},
@@ -43,11 +43,11 @@ func TestStaticSiteDeployer_UploadArtifacts(t *testing.T) {
 							String: aws.String("*.manifest"),
 						},
 					},
-				})
+				}).Return("asdf", nil)
 			},
 			expected: &UploadArtifactsOutput{
 				CustomResourceURLs:             map[string]string{},
-				StaticSiteAssetMappingLocation: "s3://mockArtifactBucket/mockAssetMappingPath",
+				StaticSiteAssetMappingLocation: "s3://mockArtifactBucket/asdf",
 			},
 		},
 	}
@@ -89,8 +89,7 @@ func TestStaticSiteDeployer_UploadArtifacts(t *testing.T) {
 						},
 					},
 				},
-				uploader:         m,
-				assetMappingPath: "mockAssetMappingPath",
+				uploader: m,
 			}
 
 			actual, err := deployer.UploadArtifacts()
