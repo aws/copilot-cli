@@ -381,24 +381,11 @@ func TestEnvDeployer_GenerateCloudFormationTemplate(t *testing.T) {
 		mockEnvName   = "mockEnv"
 	)
 	mockError := errors.New("some error")
-	mockEnvMftWithStaticSite := manifest.Environment{
-		EnvironmentConfig: manifest.EnvironmentConfig{
-			CDNConfig: manifest.EnvironmentCDNConfig{
-				Config: manifest.AdvancedCDNConfig{
-					Static: manifest.CDNStaticConfig{
-						Location: manifest.StaticSiteOrImportedBucket{
-							StaticSite: "mockStatic",
-						},
-					},
-				},
-			},
-		},
-	}
 	mockApp := &config.Application{
 		Name: mockAppName,
 	}
 	testCases := map[string]struct {
-		inManifest *manifest.Environment
+		inManifest manifest.Environment
 		setUpMocks func(m *envDeployerMocks, ctrl *gomock.Controller)
 
 		wantedTemplate string
@@ -491,7 +478,7 @@ func TestEnvDeployer_GenerateCloudFormationTemplate(t *testing.T) {
 			wantedError: errors.New("render addons template: some error"),
 		},
 		"return an error if failed to get bucket name": {
-			inManifest: &mockEnvMftWithStaticSite,
+			inManifest: newMockEnvMftWithStaticSite(),
 			setUpMocks: func(m *envDeployerMocks, _ *gomock.Controller) {
 				m.appCFN.EXPECT().GetAppResourcesByRegion(mockApp, mockEnvRegion).Return(&cfnstack.AppRegionalResources{
 					S3Bucket: "mockS3Bucket",
@@ -505,7 +492,7 @@ func TestEnvDeployer_GenerateCloudFormationTemplate(t *testing.T) {
 			wantedError: fmt.Errorf("get bucket name for mockStatic in env mockEnv: some error"),
 		},
 		"successfully return environment template without addons": {
-			inManifest: &mockEnvMftWithStaticSite,
+			inManifest: newMockEnvMftWithStaticSite(),
 			setUpMocks: func(m *envDeployerMocks, _ *gomock.Controller) {
 				m.appCFN.EXPECT().GetAppResourcesByRegion(mockApp, mockEnvRegion).Return(&cfnstack.AppRegionalResources{
 					S3Bucket: "mockS3Bucket",
@@ -570,7 +557,7 @@ func TestEnvDeployer_GenerateCloudFormationTemplate(t *testing.T) {
 				parseAddons:      m.parseAddons,
 			}
 			actual, err := d.GenerateCloudFormationTemplate(&DeployEnvironmentInput{
-				Manifest: tc.inManifest,
+				Manifest: &tc.inManifest,
 			})
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())
@@ -1080,5 +1067,21 @@ If you'd like to use these services without a CDN, ensure each service's A recor
 				require.Equal(t, tc.expectedStdErr, buf.String())
 			}
 		})
+	}
+}
+
+func newMockEnvMftWithStaticSite() manifest.Environment {
+	return manifest.Environment{
+		EnvironmentConfig: manifest.EnvironmentConfig{
+			CDNConfig: manifest.EnvironmentCDNConfig{
+				Config: manifest.AdvancedCDNConfig{
+					Static: manifest.CDNStaticConfig{
+						Location: manifest.StaticSiteOrImportedBucket{
+							StaticSite: "mockStatic",
+						},
+					},
+				},
+			},
+		},
 	}
 }
