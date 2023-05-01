@@ -5,6 +5,7 @@
 package mocks
 
 import (
+	context "context"
 	encoding "encoding"
 	io "io"
 	reflect "reflect"
@@ -1562,56 +1563,18 @@ func (m *MockimageBuilderPusher) EXPECT() *MockimageBuilderPusherMockRecorder {
 }
 
 // BuildAndPush mocks base method.
-func (m *MockimageBuilderPusher) BuildAndPush(args *dockerengine.BuildArguments) (string, error) {
+func (m *MockimageBuilderPusher) BuildAndPush(ctx context.Context, args *dockerengine.BuildArguments, w io.Writer) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "BuildAndPush", args)
+	ret := m.ctrl.Call(m, "BuildAndPush", ctx, args, w)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // BuildAndPush indicates an expected call of BuildAndPush.
-func (mr *MockimageBuilderPusherMockRecorder) BuildAndPush(args interface{}) *gomock.Call {
+func (mr *MockimageBuilderPusherMockRecorder) BuildAndPush(ctx, args, w interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BuildAndPush", reflect.TypeOf((*MockimageBuilderPusher)(nil).BuildAndPush), args)
-}
-
-// MockrepositoryURIGetter is a mock of repositoryURIGetter interface.
-type MockrepositoryURIGetter struct {
-	ctrl     *gomock.Controller
-	recorder *MockrepositoryURIGetterMockRecorder
-}
-
-// MockrepositoryURIGetterMockRecorder is the mock recorder for MockrepositoryURIGetter.
-type MockrepositoryURIGetterMockRecorder struct {
-	mock *MockrepositoryURIGetter
-}
-
-// NewMockrepositoryURIGetter creates a new mock instance.
-func NewMockrepositoryURIGetter(ctrl *gomock.Controller) *MockrepositoryURIGetter {
-	mock := &MockrepositoryURIGetter{ctrl: ctrl}
-	mock.recorder = &MockrepositoryURIGetterMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockrepositoryURIGetter) EXPECT() *MockrepositoryURIGetterMockRecorder {
-	return m.recorder
-}
-
-// URI mocks base method.
-func (m *MockrepositoryURIGetter) URI() (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "URI")
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// URI indicates an expected call of URI.
-func (mr *MockrepositoryURIGetterMockRecorder) URI() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "URI", reflect.TypeOf((*MockrepositoryURIGetter)(nil).URI))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BuildAndPush", reflect.TypeOf((*MockimageBuilderPusher)(nil).BuildAndPush), ctx, args, w)
 }
 
 // MockrepositoryLogin is a mock of repositoryLogin interface.
@@ -1638,11 +1601,12 @@ func (m *MockrepositoryLogin) EXPECT() *MockrepositoryLoginMockRecorder {
 }
 
 // Login mocks base method.
-func (m *MockrepositoryLogin) Login() error {
+func (m *MockrepositoryLogin) Login() (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Login")
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // Login indicates an expected call of Login.
@@ -1675,47 +1639,33 @@ func (m *MockrepositoryService) EXPECT() *MockrepositoryServiceMockRecorder {
 }
 
 // BuildAndPush mocks base method.
-func (m *MockrepositoryService) BuildAndPush(args *dockerengine.BuildArguments) (string, error) {
+func (m *MockrepositoryService) BuildAndPush(ctx context.Context, args *dockerengine.BuildArguments, w io.Writer) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "BuildAndPush", args)
+	ret := m.ctrl.Call(m, "BuildAndPush", ctx, args, w)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // BuildAndPush indicates an expected call of BuildAndPush.
-func (mr *MockrepositoryServiceMockRecorder) BuildAndPush(args interface{}) *gomock.Call {
+func (mr *MockrepositoryServiceMockRecorder) BuildAndPush(ctx, args, w interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BuildAndPush", reflect.TypeOf((*MockrepositoryService)(nil).BuildAndPush), args)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BuildAndPush", reflect.TypeOf((*MockrepositoryService)(nil).BuildAndPush), ctx, args, w)
 }
 
 // Login mocks base method.
-func (m *MockrepositoryService) Login() error {
+func (m *MockrepositoryService) Login() (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Login")
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // Login indicates an expected call of Login.
 func (mr *MockrepositoryServiceMockRecorder) Login() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Login", reflect.TypeOf((*MockrepositoryService)(nil).Login))
-}
-
-// URI mocks base method.
-func (m *MockrepositoryService) URI() (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "URI")
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// URI indicates an expected call of URI.
-func (mr *MockrepositoryServiceMockRecorder) URI() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "URI", reflect.TypeOf((*MockrepositoryService)(nil).URI))
 }
 
 // MocklogEventsWriter is a mock of logEventsWriter interface.
@@ -5918,6 +5868,44 @@ func (m *MockwsSelector) Workload(msg, help string) (string, error) {
 func (mr *MockwsSelectorMockRecorder) Workload(msg, help interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Workload", reflect.TypeOf((*MockwsSelector)(nil).Workload), msg, help)
+}
+
+// MockstaticSourceSelector is a mock of staticSourceSelector interface.
+type MockstaticSourceSelector struct {
+	ctrl     *gomock.Controller
+	recorder *MockstaticSourceSelectorMockRecorder
+}
+
+// MockstaticSourceSelectorMockRecorder is the mock recorder for MockstaticSourceSelector.
+type MockstaticSourceSelectorMockRecorder struct {
+	mock *MockstaticSourceSelector
+}
+
+// NewMockstaticSourceSelector creates a new mock instance.
+func NewMockstaticSourceSelector(ctrl *gomock.Controller) *MockstaticSourceSelector {
+	mock := &MockstaticSourceSelector{ctrl: ctrl}
+	mock.recorder = &MockstaticSourceSelectorMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockstaticSourceSelector) EXPECT() *MockstaticSourceSelectorMockRecorder {
+	return m.recorder
+}
+
+// StaticSources mocks base method.
+func (m *MockstaticSourceSelector) StaticSources(selPrompt, selHelp, anotherPathPrompt, anotherPathHelp string, pathValidator prompt.ValidatorFunc) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StaticSources", selPrompt, selHelp, anotherPathPrompt, anotherPathHelp, pathValidator)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// StaticSources indicates an expected call of StaticSources.
+func (mr *MockstaticSourceSelectorMockRecorder) StaticSources(selPrompt, selHelp, anotherPathPrompt, anotherPathHelp, pathValidator interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StaticSources", reflect.TypeOf((*MockstaticSourceSelector)(nil).StaticSources), selPrompt, selHelp, anotherPathPrompt, anotherPathHelp, pathValidator)
 }
 
 // MockscheduleSelector is a mock of scheduleSelector interface.

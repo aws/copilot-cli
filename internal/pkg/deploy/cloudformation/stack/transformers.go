@@ -398,6 +398,7 @@ func convertNLBHealthCheck(nlbHC *manifest.NLBHealthCheckArgs) template.NLBHealt
 	hc := template.NLBHealthCheck{
 		HealthyThreshold:   nlbHC.HealthyThreshold,
 		UnhealthyThreshold: nlbHC.UnhealthyThreshold,
+		GracePeriod:        aws.Int64(int64(manifest.DefaultHealthCheckGracePeriod)),
 	}
 	if nlbHC.Port != nil {
 		hc.Port = strconv.Itoa(aws.IntValue(nlbHC.Port))
@@ -407,6 +408,9 @@ func convertNLBHealthCheck(nlbHC *manifest.NLBHealthCheckArgs) template.NLBHealt
 	}
 	if nlbHC.Interval != nil {
 		hc.Interval = aws.Int64(int64(nlbHC.Interval.Seconds()))
+	}
+	if nlbHC.GracePeriod != nil {
+		hc.GracePeriod = aws.Int64(int64(nlbHC.GracePeriod.Seconds()))
 	}
 	return hc
 }
@@ -550,6 +554,13 @@ func (s *BackendService) convertALBListener() (*template.ALBListener, error) {
 	}, nil
 }
 
+func (s *BackendService) convertGracePeriod() *int64 {
+	if s.manifest.HTTP.Main.HealthCheck.Advanced.GracePeriod != nil {
+		return aws.Int64(int64(s.manifest.HTTP.Main.HealthCheck.Advanced.GracePeriod.Seconds()))
+	}
+	return aws.Int64(int64(manifest.DefaultHealthCheckGracePeriod))
+}
+
 type loadBalancerTargeter interface {
 	MainContainerPort() string
 	ExposedPorts() (manifest.ExposedPortsIndex, error)
@@ -583,17 +594,25 @@ func (conv routingRuleConfigConverter) convert() (*template.ALBListenerRule, err
 	}
 
 	config := &template.ALBListenerRule{
-		Path:             aws.StringValue(conv.rule.Path),
-		TargetContainer:  targetContainer,
-		TargetPort:       targetPort,
-		Aliases:          aliases,
-		HTTPHealthCheck:  convertHTTPHealthCheck(&conv.rule.HealthCheck),
-		AllowedSourceIps: convertAllowedSourceIPs(conv.rule.AllowedSourceIps),
-		Stickiness:       strconv.FormatBool(aws.BoolValue(conv.rule.Stickiness)),
-		HTTPVersion:      aws.StringValue(convertHTTPVersion(conv.rule.ProtocolVersion)),
-		RedirectToHTTPS:  conv.redirectToHTTPS,
+		Path:                aws.StringValue(conv.rule.Path),
+		TargetContainer:     targetContainer,
+		TargetPort:          targetPort,
+		Aliases:             aliases,
+		HTTPHealthCheck:     convertHTTPHealthCheck(&conv.rule.HealthCheck),
+		AllowedSourceIps:    convertAllowedSourceIPs(conv.rule.AllowedSourceIps),
+		Stickiness:          strconv.FormatBool(aws.BoolValue(conv.rule.Stickiness)),
+		HTTPVersion:         aws.StringValue(convertHTTPVersion(conv.rule.ProtocolVersion)),
+		RedirectToHTTPS:     conv.redirectToHTTPS,
+		DeregistrationDelay: convertDeregistrationDelay(conv.rule.DeregistrationDelay),
 	}
 	return config, nil
+}
+
+func convertDeregistrationDelay(delay *time.Duration) *int64 {
+	if delay == nil {
+		return aws.Int64(int64(manifest.DefaultDeregistrationDelay))
+	}
+	return aws.Int64(int64(delay.Seconds()))
 }
 
 type nlbListeners []template.NetworkLoadBalancerListener
@@ -636,13 +655,14 @@ func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (networkLoadBalanc
 		}
 
 		listeners[idx] = template.NetworkLoadBalancerListener{
-			Port:            aws.StringValue(port),
-			Protocol:        strings.ToUpper(aws.StringValue(protocol)),
-			TargetContainer: targetContainer,
-			TargetPort:      targetPort,
-			SSLPolicy:       listener.SSLPolicy,
-			HealthCheck:     convertNLBHealthCheck(&listener.HealthCheck),
-			Stickiness:      listener.Stickiness,
+			Port:                aws.StringValue(port),
+			Protocol:            strings.ToUpper(aws.StringValue(protocol)),
+			TargetContainer:     targetContainer,
+			TargetPort:          targetPort,
+			SSLPolicy:           listener.SSLPolicy,
+			HealthCheck:         convertNLBHealthCheck(&listener.HealthCheck),
+			Stickiness:          listener.Stickiness,
+			DeregistrationDelay: convertDeregistrationDelay(listener.DeregistrationDelay),
 		}
 	}
 
@@ -667,6 +687,16 @@ func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (networkLoadBalanc
 		config.appDNSDelegationRole = dnsDelegationRole
 	}
 	return config, nil
+}
+
+func (s *LoadBalancedWebService) convertGracePeriod() *int64 {
+	if s.manifest.HTTPOrBool.Main.HealthCheck.Advanced.GracePeriod != nil {
+		return aws.Int64(int64(s.manifest.HTTPOrBool.Main.HealthCheck.Advanced.GracePeriod.Seconds()))
+	}
+	if s.manifest.NLBConfig.Listener.HealthCheck.GracePeriod != nil {
+		return aws.Int64(int64(s.manifest.NLBConfig.Listener.HealthCheck.GracePeriod.Seconds()))
+	}
+	return aws.Int64(int64(manifest.DefaultHealthCheckGracePeriod))
 }
 
 func convertExecuteCommand(e *manifest.ExecuteCommand) *template.ExecuteCommandOpts {

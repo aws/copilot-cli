@@ -80,7 +80,6 @@ Resources:
           Principal:
             Service:
             - 'cloudformation.amazonaws.com'
-            - 'lambda.amazonaws.com'
           Action: sts:AssumeRole
       Path: /
       Policies:
@@ -921,9 +920,6 @@ Resources:
     Type: AWS::Lambda::Function
     Condition: DelegateDNS
     Properties:
-      Code:
-        S3Bucket: mockbucket
-        S3Key: dns-cert-validator
       Handler: "index.certificateRequestHandler"
       Timeout: 900
       MemorySize: 512
@@ -934,9 +930,6 @@ Resources:
     Condition: ManagedAliases
     Type: AWS::Lambda::Function
     Properties:
-      Code:
-        S3Bucket: mockbucket
-        S3Key: custom-domain
       Handler: "index.handler"
       Timeout: 600
       MemorySize: 512
@@ -947,9 +940,6 @@ Resources:
     Type: AWS::Lambda::Function
     Condition: DelegateDNS
     Properties:
-      Code:
-        S3Bucket: mockbucket
-        S3Key: dns-delegation
       Handler: "index.domainDelegationHandler"
       Timeout: 600
       MemorySize: 512

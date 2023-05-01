@@ -27,6 +27,8 @@ var staticPath string
 
 const domainName = "copilot-e2e-tests.ecs.aws.dev"
 
+var timeNow = time.Now().Unix()
+
 func TestCloudFront(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "CloudFront Suite")
@@ -36,11 +38,13 @@ var _ = BeforeSuite(func() {
 	copilotCLI, err := client.NewCLI()
 	Expect(err).NotTo(HaveOccurred())
 	cli = copilotCLI
-	appName = fmt.Sprintf("e2e-cloudfront-%d", time.Now().Unix())
+	appName = fmt.Sprintf("e2e-cloudfront-%d", timeNow)
 	bucketName = appName
 	err = os.Setenv("BUCKETNAME", bucketName)
 	Expect(err).NotTo(HaveOccurred())
 	err = os.Setenv("DOMAINNAME", domainName)
+	Expect(err).NotTo(HaveOccurred())
+	err = os.Setenv("TIMENOW", fmt.Sprint(timeNow))
 	Expect(err).NotTo(HaveOccurred())
 	staticPath = "static/index.html"
 	sess, err := session.NewSessionWithOptions(session.Options{

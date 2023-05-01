@@ -307,9 +307,6 @@ Resources:
     Type: AWS::Lambda::Function
     Condition: CreateALB
     Properties:
-      Code:
-        S3Bucket: mockbucket
-        S3Key: unique-json-values
       Handler: "index.handler"
       Timeout: 600
       MemorySize: 512
@@ -727,7 +724,6 @@ Resources:
             Principal:
               Service:
                 - 'cloudformation.amazonaws.com'
-                - 'lambda.amazonaws.com'
             Action: sts:AssumeRole
       Path: /
       Policies:

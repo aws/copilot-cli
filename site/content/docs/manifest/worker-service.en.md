@@ -107,6 +107,8 @@ The architecture type for your service. [Worker Services](../concepts/services.e
 <a id="subscribe" href="#subscribe" class="field">`subscribe`</a> <span class="type">Map</span>  
 The `subscribe` section allows worker services to create subscriptions to the SNS topics exposed by other Copilot services in the same application and environment. Each topic can define its own SQS queue, but by default all topics are subscribed to the worker service's default queue.
 
+The URI of the default queue will be injected into the container as an environment variable, `COPILOT_QUEUE_URI`. 
+
 ```yaml
 subscribe:
   topics:
@@ -216,6 +218,19 @@ For additional information on how to write filter policies, see the [SNS documen
 
 <span class="parent-field">subscribe.topics.topic.</span><a id="topic-queue" href="#topic-queue" class="field">`queue`</a> <span class="type">Boolean or Map</span>  
 Optional. Specify SQS queue configuration for the topic. If specified as `true`, the queue will be created  with default configuration. Specify this field as a map for customization of certain attributes for this topic-specific queue.
+If you specify one or more topic-specific queues, you can access those queue URIs via the `COPILOT_TOPIC_QUEUE_URIS` variable.
+This variable is a JSON map from a unique identifier for the topic-specific queue to its URI.
+
+For example, a worker service with a topic-specific queue for the `orders` topic from the `merchant` service and a FIFO
+topic `transactions` from the `merchant` service will have the following JSON structure.
+
+```json
+// COPILOT_TOPIC_QUEUE_URIS
+{
+  "merchantOrdersEventsQueue": "https://sqs.eu-central-1.amazonaws.com/...",
+  "merchantTransactionsfifoEventsQueue": "https://sqs.eu-central-1.amazonaws.com/..."
+}
+```
 
 <span class="parent-field">subscribe.topics.topic.queue.</span><a id="subscribe-topics-topic-queue-fifo" href="#subscribe-topics-topic-queue-fifo" class="field">`fifo`</a> <span class="type">Boolean or Map</span>   
 Optional. Specify SQS FIFO queue configuration for the topic. If specified as `true`, the FIFO queue will be created with the default FIFO configuration. 

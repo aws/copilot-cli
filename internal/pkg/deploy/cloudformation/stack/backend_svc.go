@@ -127,10 +127,6 @@ func (s *BackendService) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	var deregistrationDelay *int64 = aws.Int64(60)
-	if s.manifest.HTTP.Main.DeregistrationDelay != nil {
-		deregistrationDelay = aws.Int64(int64(s.manifest.HTTP.Main.DeregistrationDelay.Seconds()))
-	}
 	var scConfig *template.ServiceConnect
 	if s.manifest.Network.Connect.Enabled() {
 		scConfig = convertServiceConnect(s.manifest.Network.Connect)
@@ -181,14 +177,13 @@ func (s *BackendService) Template() (string, error) {
 		Storage:                 convertStorageOpts(s.manifest.Name, s.manifest.Storage),
 
 		// ALB configs.
-		ALBEnabled:          s.albEnabled,
-		DeregistrationDelay: deregistrationDelay,
+		ALBEnabled: s.albEnabled,
 		HTTPTargetContainer: template.HTTPTargetContainer{
 			Port: targetContainerPort,
 			Name: targetContainer,
 		},
-		HTTPHealthCheck: convertHTTPHealthCheck(&s.manifest.HTTP.Main.HealthCheck),
-		ALBListener:     albListenerConfig,
+		GracePeriod: s.convertGracePeriod(),
+		ALBListener: albListenerConfig,
 
 		// Custom Resource Config.
 		CustomResources: crs,

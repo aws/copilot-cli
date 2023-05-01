@@ -12,111 +12,166 @@ import (
 )
 
 type formatter interface {
-	formatYAML(*yaml.Node) ([]byte, error)
+	formatInsert(node diffNode) (string, error)
+	formatDel(node diffNode) (string, error)
 	formatMod(node diffNode) (string, error)
 	formatPath(node diffNode) string
-	nextIndent(curr int) int
+	nextIndent() int
 }
 
-type seqItemFormatter struct{}
+type seqItemFormatter struct {
+	indent int
+}
 
-func (f *seqItemFormatter) formatYAML(node *yaml.Node) ([]byte, error) {
-	wrapped := &yaml.Node{
+func (f *seqItemFormatter) formatDel(node diffNode) (string, error) {
+	raw, err := yaml.Marshal(&yaml.Node{
 		Kind:    yaml.SequenceNode,
 		Tag:     "!!seq",
-		Content: []*yaml.Node{node},
+		Content: []*yaml.Node{node.oldYAML()},
+	})
+	if err != nil {
+		return "", err
 	}
-	return yaml.Marshal(wrapped)
+	return processMultiline(string(raw), prefixByFn(prefixDel), indentByFn(f.indent)), nil
+}
+
+func (f *seqItemFormatter) formatInsert(node diffNode) (string, error) {
+	raw, err := yaml.Marshal(&yaml.Node{
+		Kind:    yaml.SequenceNode,
+		Tag:     "!!seq",
+		Content: []*yaml.Node{node.newYAML()},
+	})
+	if err != nil {
+		return "", err
+	}
+	return processMultiline(string(raw), prefixByFn(prefixAdd), indentByFn(f.indent)), nil
 }
 
 func (f *seqItemFormatter) formatMod(node diffNode) (string, error) {
-	var oldValue, newValue string
-	if v, err := yaml.Marshal(node.oldYAML()); err != nil { // NOTE: Marshal handles YAML tags such as `!Ref` and `!Sub`.
+	oldValue, newValue, err := marshalValues(node)
+	if err != nil {
 		return "", err
-	} else {
-		oldValue = strings.TrimSuffix(string(v), "\n")
 	}
-	if v, err := yaml.Marshal(node.newYAML()); err != nil {
-		return "", err
-	} else {
-		newValue = strings.TrimSuffix(string(v), "\n")
-	}
-	return fmt.Sprintf("- %s -> %s", oldValue, newValue), nil
+	content := fmt.Sprintf("- %s -> %s", oldValue, newValue)
+	return processMultiline(content, prefixByFn(prefixMod), indentByFn(f.indent)), nil
 }
 
-func (f *seqItemFormatter) formatPath(_ diffNode) string {
-	return color.Faint.Sprint("- (changed item)")
+func (f *seqItemFormatter) formatPath(node diffNode) string {
+	return process(color.Faint.Sprint("- (changed item)"), prefixByFn(prefixMod), indentByFn(f.indent)) + "\n"
 }
 
-func (f *seqItemFormatter) nextIndent(curr int) int {
+func (f *seqItemFormatter) nextIndent() int {
 	/* A seq item diff should look like:
 	   - (item)
 	     ~ Field1: a
 	     + Field2: b
 	   Where "~ Field1: a" and "+ Field2: b" are its children. The indentation should increase by len("- "), which is 2.
 	*/
-	return curr + 2
+	return f.indent + 2
 }
 
 type keyedFormatter struct {
-	key string
+	indent int
 }
 
-func (f *keyedFormatter) formatYAML(node *yaml.Node) ([]byte, error) {
-	wrapped := &yaml.Node{
+func (f *keyedFormatter) formatDel(node diffNode) (string, error) {
+	raw, err := yaml.Marshal(&yaml.Node{
 		Kind: yaml.MappingNode,
 		Tag:  "!!map",
 		Content: []*yaml.Node{
 			{
 				Kind:  yaml.ScalarNode,
 				Tag:   "!!str",
-				Value: f.key,
+				Value: node.key(),
 			},
-			node,
+			node.oldYAML(),
 		},
+	})
+	if err != nil {
+		return "", err
 	}
-	return yaml.Marshal(wrapped)
+	return processMultiline(string(raw), prefixByFn(prefixDel), indentByFn(f.indent)), nil
+}
+
+func (f *keyedFormatter) formatInsert(node diffNode) (string, error) {
+	raw, err := yaml.Marshal(&yaml.Node{
+		Kind: yaml.MappingNode,
+		Tag:  "!!map",
+		Content: []*yaml.Node{
+			{
+				Kind:  yaml.ScalarNode,
+				Tag:   "!!str",
+				Value: node.key(),
+			},
+			node.newYAML(),
+		},
+	})
+	if err != nil {
+		return "", err
+	}
+	return processMultiline(string(raw), prefixByFn(prefixAdd), indentByFn(f.indent)), nil
 }
 
 func (f *keyedFormatter) formatMod(node diffNode) (string, error) {
-	var oldValue, newValue string
-	if v, err := yaml.Marshal(node.oldYAML()); err != nil { // NOTE: Marshal handles YAML tags such as `!Ref` and `!Sub`.
+	oldValue, newValue, err := marshalValues(node)
+	if err != nil {
 		return "", err
-	} else {
-		oldValue = strings.TrimSuffix(string(v), "\n")
 	}
-	if v, err := yaml.Marshal(node.newYAML()); err != nil {
-		return "", err
-	} else {
-		newValue = strings.TrimSuffix(string(v), "\n")
-	}
-	return fmt.Sprintf("%s: %s -> %s", node.key(), oldValue, newValue), nil
+	content := fmt.Sprintf("%s: %s -> %s", node.key(), oldValue, newValue)
+	return processMultiline(content, prefixByFn(prefixMod), indentByFn(f.indent)), nil
 }
 
 func (f *keyedFormatter) formatPath(node diffNode) string {
-	return node.key() + ":"
+	return process(node.key()+":"+"\n", prefixByFn(prefixMod), indentByFn(f.indent))
 }
 
-func (f *keyedFormatter) nextIndent(curr int) int {
-	return curr + indentInc
+func (f *keyedFormatter) nextIndent() int {
+	return f.indent + indentInc
 }
 
 type documentFormatter struct{}
 
-func (f *documentFormatter) formatYAML(node *yaml.Node) ([]byte, error) {
-	return yaml.Marshal(node)
-}
-
 func (f *documentFormatter) formatMod(_ diffNode) (string, error) {
 	return "", nil
+}
+
+func (f *documentFormatter) formatDel(node diffNode) (string, error) {
+	raw, err := yaml.Marshal(node.oldYAML())
+	if err != nil {
+		return "", err
+	}
+	return processMultiline(string(raw), prefixByFn(prefixDel), indentByFn(0)), nil
+}
+
+func (f *documentFormatter) formatInsert(node diffNode) (string, error) {
+	raw, err := yaml.Marshal(node.newYAML())
+	if err != nil {
+		return "", err
+	}
+	return processMultiline(string(raw), prefixByFn(prefixAdd), indentByFn(0)), nil
 }
 
 func (f *documentFormatter) formatPath(_ diffNode) string {
 	return ""
 }
 
-func (f *documentFormatter) nextIndent(curr int) int {
-	return curr + indentInc
+func (f *documentFormatter) nextIndent() int {
+	return 0
+}
+
+func marshalValues(node diffNode) (string, string, error) {
+	var oldValue, newValue string
+	if v, err := yaml.Marshal(node.oldYAML()); err != nil { // NOTE: Marshal handles YAML tags such as `!Ref` and `!Sub`.
+		return "", "", err
+	} else {
+		oldValue = strings.TrimSuffix(string(v), "\n")
+	}
+	if v, err := yaml.Marshal(node.newYAML()); err != nil {
+		return "", "", err
+	} else {
+		newValue = strings.TrimSuffix(string(v), "\n")
+	}
+	return oldValue, newValue, nil
 }
 
 func prefixByFn(prefix string) func(line string) string {

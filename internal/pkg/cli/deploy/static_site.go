@@ -6,7 +6,6 @@ package deploy
 import (
 	"fmt"
 	"io"
-	"path/filepath"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
@@ -20,12 +19,17 @@ import (
 	"github.com/spf13/afero"
 )
 
+const artifactBucketAssetsDir = "local-assets"
+
+type fileUploader interface {
+	UploadFiles(files []manifest.FileUpload) (string, error)
+}
+
 type staticSiteDeployer struct {
 	*svcDeployer
 	staticSiteMft *manifest.StaticSite
-	bucketName    string
 	fs            afero.Fs
-	uploadFn      func(fs afero.Fs, source, destination string, opts *asset.UploadOpts) ([]string, error)
+	uploader      fileUploader
 }
 
 // NewStaticSiteDeployer is the constructor for staticSiteDeployer.
@@ -42,9 +46,16 @@ func NewStaticSiteDeployer(in *WorkloadDeployerInput) (*staticSiteDeployer, erro
 	return &staticSiteDeployer{
 		svcDeployer:   svcDeployer,
 		staticSiteMft: mft,
-		fs:            afero.NewOsFs(),
-		bucketName:    svcDeployer.resources.S3Bucket,
-		uploadFn:      asset.Upload,
+		fs:            svcDeployer.fs,
+		uploader: &asset.ArtifactBucketUploader{
+			FS:                  svcDeployer.fs,
+			AssetDir:            artifactBucketAssetsDir,
+			AssetMappingFileDir: fmt.Sprintf("%s/environments/%s/workloads/%s/mapping", artifactBucketAssetsDir, svcDeployer.env.Name, svcDeployer.name),
+			Upload: func(path string, data io.Reader) error {
+				_, err := svcDeployer.s3Client.Upload(svcDeployer.resources.S3Bucket, path, data)
+				return err
+			},
+		},
 	}, nil
 }
 
@@ -87,20 +98,17 @@ func (d *staticSiteDeployer) DeployWorkload(in *DeployWorkloadInput) (ActionReco
 
 // UploadArtifacts uploads static assets to the app stackset bucket.
 func (d *staticSiteDeployer) UploadArtifacts() (*UploadArtifactsOutput, error) {
-	for _, f := range d.staticSiteMft.FileUploads {
-		if _, err := d.uploadFn(d.fs, filepath.Join(f.Context, f.Source), f.Destination,
-			&asset.UploadOpts{
-				Reincludes: f.Reinclude.ToStringSlice(),
-				Excludes:   f.Exclude.ToStringSlice(),
-				Recursive:  f.Recursive,
-				UploadFn: func(key string, contents io.Reader) (string, error) {
-					return d.s3Client.Upload(d.bucketName, key, contents)
-				},
-			}); err != nil {
-			return nil, err
-		}
+	return d.uploadArtifacts(d.uploadStaticFiles, d.uploadArtifactsToS3, d.uploadCustomResources)
+}
+
+func (d *staticSiteDeployer) uploadStaticFiles(out *UploadArtifactsOutput) error {
+	path, err := d.uploader.UploadFiles(d.staticSiteMft.FileUploads)
+	if err != nil {
+		return fmt.Errorf("upload static files: %w", err)
 	}
-	return d.uploadArtifacts(d.uploadArtifactsToS3, d.uploadCustomResources)
+
+	out.StaticSiteAssetMappingLocation = s3.Location(d.resources.S3Bucket, path)
+	return nil
 }
 
 func (d *staticSiteDeployer) stackConfiguration(in *StackRuntimeConfiguration) (cloudformation.StackConfiguration, error) {
@@ -117,6 +125,7 @@ func (d *staticSiteDeployer) stackConfiguration(in *StackRuntimeConfiguration) (
 		RuntimeConfig:      *rc,
 		RootUserARN:        in.RootUserARN,
 		Addons:             d.addons,
+		AssetMappingURL:    in.StaticSiteAssetMappingURL,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("create stack configuration: %w", err)

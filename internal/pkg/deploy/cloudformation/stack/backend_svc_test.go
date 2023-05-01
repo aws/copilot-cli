@@ -311,11 +311,7 @@ Outputs:
 				Port: "8080",
 				Name: "api",
 			},
-			HTTPHealthCheck: template.HTTPHealthCheckOpts{
-				HealthCheckPath: manifest.DefaultHealthCheckPath,
-				GracePeriod:     manifest.DefaultHealthCheckGracePeriod,
-			},
-			DeregistrationDelay: aws.Int64(60), // defaults to 60
+			GracePeriod:         aws.Int64(manifest.DefaultHealthCheckGracePeriod),
 			CustomResources: map[string]template.S3ObjectLocation{
 				"EnvControllerFunction": {
 					Bucket: "my-bucket",
@@ -516,17 +512,6 @@ Outputs:
 				Name: "envoy",
 				Port: "443",
 			},
-			HTTPHealthCheck: template.HTTPHealthCheckOpts{
-				HealthCheckPath:    "/healthz",
-				Port:               "4200",
-				SuccessCodes:       "418",
-				HealthyThreshold:   aws.Int64(64),
-				UnhealthyThreshold: aws.Int64(63),
-				Timeout:            aws.Int64(62),
-				Interval:           aws.Int64(61),
-				GracePeriod:        60,
-			},
-			DeregistrationDelay: aws.Int64(59),
 			CustomResources: map[string]template.S3ObjectLocation{
 				"EnvControllerFunction": {
 					Bucket: "my-bucket",
@@ -555,8 +540,9 @@ Outputs:
 				MinHealthyPercent: 0,
 				MaxPercent:        100,
 			},
-			EntryPoint: []string{"enter", "from"},
-			Command:    []string{"here"},
+			EntryPoint:  []string{"enter", "from"},
+			Command:     []string{"here"},
+			GracePeriod: aws.Int64(60),
 			ALBListener: &template.ALBListener{
 				Rules: []template.ALBListenerRule{
 					{
@@ -573,6 +559,7 @@ Outputs:
 							Interval:           aws.Int64(61),
 							Timeout:            aws.Int64(62),
 						},
+						DeregistrationDelay: aws.Int64(int64(59)),
 						AllowedSourceIps: []string{
 							"10.0.1.0/24",
 						},

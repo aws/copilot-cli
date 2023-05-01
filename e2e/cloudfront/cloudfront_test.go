@@ -176,7 +176,7 @@ var _ = Describe("CloudFront", func() {
 			Expect(len(svc.Routes)).To(Equal(1))
 			route := svc.Routes[0]
 			wantedURLs := map[string]string{
-				"test": fmt.Sprintf("https://cloudfront.%s", domainName),
+				"test": fmt.Sprintf("https://e2e-cloudfront-%d.%s", timeNow, domainName),
 			}
 			// Validate route has the expected HTTPS endpoint.
 			Expect(route.URL).To(Equal(wantedURLs[route.Environment]))
