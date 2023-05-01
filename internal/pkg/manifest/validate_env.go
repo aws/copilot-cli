@@ -429,7 +429,7 @@ func (cfg CDNStaticConfig) validate() error {
 	return nil
 }
 
-func (StaticSiteOrLocation) validate() error {
+func (StaticSiteOrImportedBucket) validate() error {
 	return nil
 }
 

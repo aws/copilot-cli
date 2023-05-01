@@ -386,7 +386,7 @@ func TestEnvDeployer_GenerateCloudFormationTemplate(t *testing.T) {
 			CDNConfig: manifest.EnvironmentCDNConfig{
 				Config: manifest.AdvancedCDNConfig{
 					Static: manifest.CDNStaticConfig{
-						Location: manifest.StaticSiteOrLocation{
+						Location: manifest.StaticSiteOrImportedBucket{
 							StaticSite: "mockStatic",
 						},
 					},

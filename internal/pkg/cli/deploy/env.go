@@ -444,7 +444,7 @@ func (d *envDeployer) renderStaticSite(mft *manifest.Environment) error {
 	if err != nil {
 		return fmt.Errorf("get bucket name for %s in env %s: %w", staticSite, d.env.Name, err)
 	}
-	mft.CDNConfig.Config.Static.Location.URL = awss3.URL(d.env.Region, bucketName, "")
+	mft.CDNConfig.Config.Static.Location.StaticSite = awss3.URL(d.env.Region, bucketName, "")
 	return nil
 }
 

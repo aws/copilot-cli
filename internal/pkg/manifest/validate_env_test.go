@@ -919,17 +919,15 @@ func TestCDNStaticConfig_validate(t *testing.T) {
 		},
 		"invalid if path is not specified": {
 			in: CDNStaticConfig{
-				Alias: "example.com",
-				Location: StaticSiteOrLocation{
-					URL: "s3url",
-				},
+				Alias:    "example.com",
+				Location: StaticSiteOrImportedBucket{ImportedBucket: "s3url"},
 			},
 			wantedError: fmt.Errorf(`"path" must be specified`),
 		},
 		"success": {
 			in: CDNStaticConfig{
 				Alias:    "example.com",
-				Location: StaticSiteOrLocation{StaticSite: "static"},
+				Location: StaticSiteOrImportedBucket{StaticSite: "static"},
 				Path:     "something",
 			},
 		},

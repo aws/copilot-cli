@@ -1181,18 +1181,18 @@ func TestStaticSiteOrLocation_UnmarshalYAML(t *testing.T) {
 	testCases := map[string]struct {
 		inContent []byte
 
-		wantedStruct StaticSiteOrLocation
+		wantedStruct StaticSiteOrImportedBucket
 		wantedError  error
 	}{
 		"location specified in URL": {
 			inContent: []byte("location: example.s3.us-west-2.amazonaws.com"),
-			wantedStruct: StaticSiteOrLocation{
-				URL: "example.s3.us-west-2.amazonaws.com",
+			wantedStruct: StaticSiteOrImportedBucket{
+				ImportedBucket: "example.s3.us-west-2.amazonaws.com",
 			},
 		},
 		"location specified in Static Site": {
 			inContent: []byte("location: foobar"),
-			wantedStruct: StaticSiteOrLocation{
+			wantedStruct: StaticSiteOrImportedBucket{
 				StaticSite: "foobar",
 			},
 		},
@@ -1213,7 +1213,7 @@ func TestStaticSiteOrLocation_UnmarshalYAML(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 				require.Equal(t, tc.wantedStruct.StaticSite, e.Location.StaticSite)
-				require.Equal(t, tc.wantedStruct.URL, e.Location.URL)
+				require.Equal(t, tc.wantedStruct.ImportedBucket, e.Location.ImportedBucket)
 			}
 		})
 	}
