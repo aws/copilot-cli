@@ -278,6 +278,7 @@ Resources:
           - !Ref AWS::NoValue
           - Enable: false
             AlarmNames: []
+            Rollback: true
       PropagateTags: SERVICE
       EnableExecuteCommand: true
       LaunchType: FARGATE

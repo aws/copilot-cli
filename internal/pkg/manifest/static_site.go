@@ -35,8 +35,8 @@ type FileUpload struct {
 	Destination string              `yaml:"destination"`
 	Context     string              `yaml:"context"`
 	Recursive   bool                `yaml:"recursive"`
-	Reinclude   StringSliceOrString `yaml:"reinclude"`
 	Exclude     StringSliceOrString `yaml:"exclude"`
+	Reinclude   StringSliceOrString `yaml:"reinclude"`
 }
 
 // NewStaticSite creates a new static site service.
