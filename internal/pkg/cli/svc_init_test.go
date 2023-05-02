@@ -767,7 +767,7 @@ type: Request-Driven Web Service`), nil)
 			},
 			wantedErr: fmt.Errorf("select local directory or file: mock error"),
 		},
-		"error if fileinfo not found": {
+		"error if fileinfo not found when converting to asset object": {
 			inSvcType: manifestinfo.StaticSiteType,
 			inSvcName: wantedSvcName,
 			setupMocks: func(m initSvcMocks) {
@@ -775,7 +775,7 @@ type: Request-Driven Web Service`), nil)
 				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
 				m.mockSourceSel.EXPECT().StaticSources(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]string{mockFile}, nil)
 			},
-			wantedErr: fmt.Errorf(`get info for "my/mock/file.css": open my/mock/file.css: file does not exist`),
+			wantedErr: fmt.Errorf("convert source paths to asset objects: open my/mock/file.css: file does not exist"),
 		},
 		"successfully ask for static site sources and convert to asset objects with dirs marked recursive": {
 			inSvcType: manifestinfo.StaticSiteType,

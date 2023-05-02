@@ -798,7 +798,7 @@ func (o initSvcOpts) convertStringsToAssets(sources []string) ([]manifest.FileUp
 	for i, source := range sources {
 		info, err := o.fs.Stat(source)
 		if err != nil {
-			return nil, fmt.Errorf("get Fileinfo describing %s: %w", source, err)
+			return nil, err
 		}
 		assets[i] = manifest.FileUpload{
 			Source:    source,
