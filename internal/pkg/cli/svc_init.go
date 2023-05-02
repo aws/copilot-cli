@@ -485,18 +485,9 @@ func (o *initSvcOpts) askStaticSite() error {
 			return err
 		}
 	}
-	var assets []manifest.FileUpload
-	for _, source := range sources {
-		info, err := o.fs.Stat(source)
-		if err != nil {
-			return fmt.Errorf("get info for %q: %w", source, err)
-		}
-		assets = append(assets, manifest.FileUpload{
-			Source:    source,
-			Recursive: info.IsDir(),
-		})
+	if o.staticAssets, err = o.convertStringsToAssets(sources); err != nil {
+		return fmt.Errorf("convert source paths to asset objects: %w", err)
 	}
-	o.staticAssets = assets
 	return nil
 }
 

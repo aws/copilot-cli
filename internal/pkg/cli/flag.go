@@ -182,7 +182,7 @@ Cannot be specified with --%s or --%s.`, dockerFileFlag, dockerFileContextFlag)
 Cannot be specified with --%s.`, imageFlag)
 	dockerFileContextFlagDescription = fmt.Sprintf(`Path to the Docker build context.
 Cannot be specified with --%s.`, imageFlag)
-	sourcesFlagDescription = fmt.Sprintf(`List of paths to source files or (recursive) directories for a Static Site.
+	sourcesFlagDescription = fmt.Sprintf(`List of paths to source directories or files for a Static Site.
 Must be specified with '--%s "Static Site"'.`, svcTypeFlag)
 	storageTypeFlagDescription = fmt.Sprintf(`Type of storage to add. Must be one of:
 %s.`, strings.Join(applyAll(storageTypes, strconv.Quote), ", "))

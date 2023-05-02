@@ -777,7 +777,7 @@ type: Request-Driven Web Service`), nil)
 			},
 			wantedErr: fmt.Errorf(`get info for "my/mock/file.css": open my/mock/file.css: file does not exist`),
 		},
-		"successfully ask for static site sources and label dirs as recursive": {
+		"successfully ask for static site sources and convert to asset objects with dirs marked recursive": {
 			inSvcType: manifestinfo.StaticSiteType,
 			inSvcName: wantedSvcName,
 			mockFileSystem: func(mockFS afero.Fs) {
