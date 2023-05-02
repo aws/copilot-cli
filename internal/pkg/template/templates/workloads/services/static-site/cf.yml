@@ -33,8 +33,8 @@ Resources:
       AccessControl: Private
       BucketEncryption:
         ServerSideEncryptionConfiguration:
-        - ServerSideEncryptionByDefault:
-            SSEAlgorithm: AES256
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
         BlockPublicPolicy: true
@@ -59,7 +59,7 @@ Resources:
             Resource:
               - !Sub ${Bucket.Arn}
               - !Sub ${Bucket.Arn}/*
-            Condition: 
+            Condition:
               Bool:
                 aws:SecureTransport: false
 
