@@ -44,9 +44,9 @@ func (m *ignorer) parse(_, _ *yaml.Node, _ string, _ overrider) (diffNode, error
 type intrinsicFuncFullShortFormConverter struct{}
 
 // match returns true if from and to node represent the same intrinsic function written in different (full/short) form.
-// Example1: "!Ref abc" and "Ref: abc" will return true.
-// Example2: "!Ref abc" and "!Ref abc" will return false because they are written in the same form (i.e. short).
-// Example3: "!Ref abc" and "Fn::GetAtt: abc" will return false because they are different intrinsic functions.
+// Example1: "!Ref" and "Ref:" will return true.
+// Example2: "!Ref" and "!Ref" will return false because they are written in the same form (i.e. short).
+// Example3: "!Ref" and "Fn::GetAtt:" will return false because they are different intrinsic functions.
 // For more on intrinsic functions and full/short forms, read https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/intrinsic-function-reference-ToJsonString.html.
 func (_ *intrinsicFuncFullShortFormConverter) match(from, to *yaml.Node, _ string, _ overrider) bool {
 	if from == nil || to == nil {
