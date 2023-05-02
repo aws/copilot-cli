@@ -266,7 +266,7 @@ func (o *initSvcOpts) Validate() error {
 	}
 	if len(o.sourcePaths) != 0 {
 		if o.wkldType != manifestinfo.StaticSiteType {
-			return fmt.Errorf("'--%s' must be specified with '--%s %s'", sourcesFlag, typeFlag, manifestinfo.StaticSiteType)
+			return fmt.Errorf("'--%s' must be specified with '--%s %q'", sourcesFlag, typeFlag, manifestinfo.StaticSiteType)
 		}
 		if err := validateStaticSiteSources(o.fs, o.sourcePaths); err != nil {
 			return err
@@ -360,9 +360,8 @@ func (o *initSvcOpts) Execute() error {
 	if err != nil {
 		return err
 	}
-	var manifestPath string
 	if o.wkldType == manifestinfo.StaticSiteType {
-		manifestPath, err = o.init.Service(&initialize.ServiceProps{
+		o.manifestPath, err = o.init.Service(&initialize.ServiceProps{
 			WorkloadProps: initialize.WorkloadProps{
 				App:  o.appName,
 				Name: o.name,
@@ -372,10 +371,9 @@ func (o *initSvcOpts) Execute() error {
 		if err != nil {
 			return err
 		}
-		o.manifestPath = manifestPath
 		return nil
 	}
-	manifestPath, err = o.init.Service(&initialize.ServiceProps{
+	o.manifestPath, err = o.init.Service(&initialize.ServiceProps{
 		WorkloadProps: initialize.WorkloadProps{
 			App:            o.appName,
 			Name:           o.name,
@@ -395,7 +393,6 @@ func (o *initSvcOpts) Execute() error {
 	if err != nil {
 		return err
 	}
-	o.manifestPath = manifestPath
 	return nil
 }
 
