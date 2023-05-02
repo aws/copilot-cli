@@ -202,6 +202,9 @@ func parseSequence(fromNode, toNode *yaml.Node, overriders ...overrider) ([]diff
 	}
 	cachedDiff := make(map[string]cachedEntry)
 	lcsIndices := longestCommonSubsequence(fromSeq, toSeq, func(idxFrom, idxTo int) bool {
+		if diff, ok := cachedDiff[cacheKey(idxFrom, idxTo)]; ok {
+			return diff.err == nil && diff.node == nil
+		}
 		diff, err := parse(&(fromSeq[idxFrom]), &(toSeq[idxTo]), "", overriders...)
 		if diff != nil { // NOTE: cache the diff only if a modification could have happened at this position.
 			cachedDiff[cacheKey(idxFrom, idxTo)] = cachedEntry{
