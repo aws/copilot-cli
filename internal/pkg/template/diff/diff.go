@@ -203,6 +203,10 @@ func parseSequence(fromNode, toNode *yaml.Node, overriders ...overrider) ([]diff
 	}
 	cachedDiff := make(map[string]cachedEntry)
 	lcsIndices := longestCommonSubsequence(fromSeq, toSeq, func(idxFrom, idxTo int) bool {
+		// Note: This function passed as `eq` should be a pure function. Therefore, its output is the same
+		// given the same `idxFrom` and `idxTo`. Hence, it is not necessary to parse the nodes again.
+		// In `lcs.go`, `eq` can be called twice on the same indices: once when computing LCS length, and
+		// once when back-tracing to construct the LCS.
 		if diff, ok := cachedDiff[cacheKey(idxFrom, idxTo)]; ok {
 			return diff.err == nil && diff.node == nil
 		}
