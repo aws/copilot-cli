@@ -394,9 +394,7 @@ func (o *initSvcOpts) RecommendActions() error {
 
 func (o *initSvcOpts) askSvcDetails() error {
 	if o.wkldType == manifestinfo.StaticSiteType {
-		if len(o.staticAssets) == 0 {
-			return o.askStaticSite()
-		}
+		return o.askStaticSite()
 	}
 	err := o.askDockerfile()
 	if err != nil {
@@ -456,6 +454,9 @@ If you'd prefer a new default manifest, please manually delete the existing one.
 }
 
 func (o *initSvcOpts) askStaticSite() error {
+	if len(o.staticAssets) != 0 {
+		return nil
+	}
 	var sources []string
 	var err error
 	if o.wsPendingCreation {
