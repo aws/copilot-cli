@@ -234,7 +234,11 @@ func (d *envDeployer) UploadArtifacts() (*UploadEnvArtifactsOutput, error) {
 func (d *envDeployer) DeployDiff(template string) (string, error) {
 	tmpl, err := d.tmplGetter.Template(cfnstack.NameForEnv(d.app.Name, d.env.Name))
 	if err != nil {
-		return "", fmt.Errorf("retrieve the deployed template for %q: %w", d.env.Name, err)
+		var errNotFound *awscloudformation.ErrStackNotFound
+		if !errors.As(err, &errNotFound) {
+			return "", fmt.Errorf("retrieve the deployed template for %q: %w", d.env.Name, err)
+		}
+		tmpl = ""
 	}
 	diffTree, err := diff.From(tmpl).ParseWithCFNIgnorer([]byte(template))
 	if err != nil {
