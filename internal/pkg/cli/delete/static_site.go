@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package delete
 
 import (
@@ -15,11 +18,14 @@ type bucketEmptier interface {
 	EmptyBucket(string) error
 }
 
+// StaticSiteDeleter is used to clean up resources created for a static site.
 type StaticSiteDeleter struct {
 	BucketResourceGetter bucketResourceGetter
 	BucketEmptier        bucketEmptier
 }
 
+// CleanResources looks for the S3 bucket for the service. If no bucket is found,
+// it returns no error. If a bucket is found, it is emptied.
 func (s *StaticSiteDeleter) CleanResources(app, env, wkld string) error {
 	bucket, err := s.BucketResourceGetter.BucketName(app, env, wkld)
 	if err != nil {
