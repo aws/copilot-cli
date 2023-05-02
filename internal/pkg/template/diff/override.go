@@ -52,7 +52,7 @@ func (_ *intrinsicFuncFullShortFormConverter) match(from, to *yaml.Node, _ strin
 	if from == nil || to == nil {
 		return false
 	}
-	if from.Kind == to.Kind || from.Kind != yaml.MappingNode && to.Kind != yaml.MappingNode {
+	if (from.Kind == to.Kind) || (from.Kind != yaml.MappingNode && to.Kind != yaml.MappingNode) {
 		// A full/short form conversion always involve at least one mapping node.
 		return false
 	}
