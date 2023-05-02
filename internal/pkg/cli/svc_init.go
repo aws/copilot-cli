@@ -616,12 +616,8 @@ func (o *initSvcOpts) askSvcPort() (err error) {
 			defaultPort = strconv.Itoa(int(ports[0].Port))
 		}
 	}
-	// Skip asking if it is a backend or worker service.
-	if o.wkldType == manifestinfo.BackendServiceType || o.wkldType == manifestinfo.WorkerServiceType {
-		return nil
-	}
-
-	if o.wkldType == manifestinfo.RequestDrivenWebServiceType {
+	switch o.wkldType {
+	case manifestinfo.RequestDrivenWebServiceType:
 		selectedPorts, err := o.prompt.Get(
 			fmt.Sprintf(svcInitSvcPortPrompt, color.Emphasize("port")),
 			svcInitSvcPortHelpPrompt,
@@ -633,32 +629,37 @@ func (o *initSvcOpts) askSvcPort() (err error) {
 			return fmt.Errorf("get port: %w", err)
 		}
 		if len(strings.Split(selectedPorts, ",")) > 1 {
-			return fmt.Errorf("App Runner Service doesn't expose multiple ports")
+			return fmt.Errorf("Request Driven Web Services cannot expose multiple ports")
 		}
 		o.ports = make([]string, 1)
 		o.ports[0] = selectedPorts
 		return nil
+	case manifestinfo.BackendServiceType:
+		// Skip asking if it is a backend or worker service.
+		fallthrough
+	case manifestinfo.WorkerServiceType:
+		return nil
+	default:
+		// Load Balanced Web Service
+		selectedPorts, err := o.prompt.Get(
+			fmt.Sprintf(svcInitSvcPortPrompt, color.Emphasize("port(s)")),
+			svcInitSvcPortHelpPrompt,
+			validateSvcPort,
+			prompt.WithDefaultInput(defaultPort),
+			prompt.WithFinalMessage("Port(s):"),
+		)
+		if err != nil {
+			return fmt.Errorf("get port: %w", err)
+		}
+		portList := strings.Split(selectedPorts, ",")
+		o.ports = portList
+		return nil
 	}
-
-	selectedPorts, err := o.prompt.Get(
-		fmt.Sprintf(svcInitSvcPortPrompt, color.Emphasize("port(s)")),
-		svcInitSvcPortHelpPrompt,
-		validateSvcPort,
-		prompt.WithDefaultInput(defaultPort),
-		prompt.WithFinalMessage("Port(s):"),
-	)
-	if err != nil {
-		return fmt.Errorf("get port: %w", err)
-	}
-	portList := strings.Split(selectedPorts, ",")
-	o.ports = make([]string, len(portList))
-	copy(o.ports, portList)
-	return nil
 }
 
 func (o *initSvcOpts) validateMultiplePorts() error {
 	if (o.wkldType != manifestinfo.LoadBalancedWebServiceType && o.wkldType != manifestinfo.BackendServiceType) && len(o.ports) > 1 {
-		return fmt.Errorf("%s doesn't expose multiple ports", o.wkldType)
+		return fmt.Errorf("%s cannot expose multiple ports", o.wkldType)
 	}
 	return nil
 }
