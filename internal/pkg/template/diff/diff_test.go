@@ -426,7 +426,7 @@ Metadata:
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			got, err := From(tc.old).Parse([]byte(tc.curr), CFNOverriders()...)
+			got, err := From(tc.old).ParseWithCFNOverriders([]byte(tc.curr))
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {

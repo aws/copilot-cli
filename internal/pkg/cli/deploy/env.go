@@ -236,7 +236,7 @@ func (d *envDeployer) DeployDiff(template string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("retrieve the deployed template for %q: %w", d.env.Name, err)
 	}
-	diffTree, err := diff.From(tmpl).Parse([]byte(template), diff.CFNOverriders()...)
+	diffTree, err := diff.From(tmpl).ParseWithCFNOverriders([]byte(template))
 	if err != nil {
 		return "", fmt.Errorf("parse the diff against the deployed env stack %q: %w", d.env.Name, err)
 	}

@@ -308,7 +308,7 @@ func (d *workloadDeployer) DeployDiff(template string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("retrieve the deployed template for %q: %w", d.name, err)
 	}
-	diffTree, err := diff.From(tmpl).Parse([]byte(template), diff.CFNOverriders()...)
+	diffTree, err := diff.From(tmpl).ParseWithCFNOverriders([]byte(template))
 	if err != nil {
 		return "", fmt.Errorf("parse the diff against the deployed %q in environment %q: %w", d.name, d.env.Name, err)
 	}

@@ -86,20 +86,21 @@ type seqItemNode struct {
 // From is the YAML document that another YAML document is compared against.
 type From []byte
 
-// CFNOverriders returns a list of overriders used for parsing CFN template diffs, including:
+// ParseWithCFNOverriders constructs a diff tree that represent the differences of a YAML document against the From document with 
+// overriders designed for CFN documents, including:
 // 1. An ignorer that ignores diffs under "Metadata.Manifest".
 // 2. An overrider that is able to compare intrinsic functions with full/short form correctly.
-func CFNOverriders() []overrider {
-	ignorer := &ignorer{
-		curr: &ignoreSegment{
-			key: "Metadata",
-			next: &ignoreSegment{
-				key: "Manifest",
+func (from From) ParseWithCFNOverriders(to []byte) (Tree, error) {
+	return from.Parse(to,
+		&ignorer{
+			curr: &ignoreSegment{
+				key: "Metadata",
+				next: &ignoreSegment{
+					key: "Manifest",
+				},
 			},
 		},
-	}
-	intrinsic := &intrinsicFuncFullShortFormConverter{}
-	return []overrider{ignorer, intrinsic}
+		&intrinsicFuncFullShortFormConverter{})
 }
 
 // Parse constructs a diff tree that represent the differences of a YAML document against the From document.
