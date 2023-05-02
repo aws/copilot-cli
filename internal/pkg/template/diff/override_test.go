@@ -27,13 +27,13 @@ hummingbird:
   Ref: pineapple1`,
 			curr: `hummingbird: !Ref pineapple2`,
 			wanted: func() diffNode {
-				leaf := &node{
+				leaf := &keyNode{
 					keyValue: "Ref",
 					oldV:     yamlScalarNode("pineapple1"),
 					newV:     yamlScalarNode("pineapple2"),
 				}
-				return &node{
-					childNodes: []diffNode{&node{
+				return &keyNode{
+					childNodes: []diffNode{&keyNode{
 						keyValue:   "hummingbird",
 						childNodes: []diffNode{leaf},
 					}},
@@ -50,13 +50,13 @@ hummingbird:
   Fn::Base64: 1`,
 			curr: `Basement: !Base64 2`,
 			wanted: func() diffNode {
-				leaf := &node{
+				leaf := &keyNode{
 					keyValue: "Fn::Base64",
 					oldV:     yamlScalarNode("1"),
 					newV:     yamlScalarNode("2"),
 				}
-				return &node{
-					childNodes: []diffNode{&node{
+				return &keyNode{
+					childNodes: []diffNode{&keyNode{
 						keyValue:   "Basement",
 						childNodes: []diffNode{leaf},
 					}},
@@ -80,22 +80,22 @@ hummingbird:
     - 5`,
 			wanted: func() diffNode {
 				changedCIDR := &seqItemNode{
-					node: node{
+					keyNode: keyNode{
 						oldV: yamlScalarNode("192.168.0.0/16", withStyle(yaml.DoubleQuotedStyle)),
 						newV: yamlScalarNode("192.168.0.0/24"),
 					},
 				}
 				unchanged := &unchangedNode{count: 1}
 				changedNum := &seqItemNode{
-					node: node{
+					keyNode: keyNode{
 						oldV: yamlScalarNode("4"),
 						newV: yamlScalarNode("5"),
 					},
 				}
-				return &node{
-					childNodes: []diffNode{&node{
+				return &keyNode{
+					childNodes: []diffNode{&keyNode{
 						keyValue: "cedar",
-						childNodes: []diffNode{&node{
+						childNodes: []diffNode{&keyNode{
 							keyValue:   "Fn::Cidr",
 							childNodes: []diffNode{changedCIDR, unchanged, changedNum},
 						}},
@@ -130,20 +130,20 @@ ImageId: !FindInMap
  - HVM64`,
 			wanted: func() diffNode {
 				changedMapName := &seqItemNode{
-					node: node{
+					keyNode: keyNode{
 						oldV: yamlScalarNode("RegionMap"),
 						newV: yamlScalarNode("Chizu"),
 					},
 				}
 				unchanged := &unchangedNode{count: 2}
-				leaf := &node{
+				leaf := &keyNode{
 					keyValue: "ImageId",
-					childNodes: []diffNode{&node{
+					childNodes: []diffNode{&keyNode{
 						keyValue:   "Fn::FindInMap",
 						childNodes: []diffNode{changedMapName, unchanged},
 					}},
 				}
-				return &node{
+				return &keyNode{
 					childNodes: []diffNode{leaf},
 				}
 			},
@@ -169,9 +169,9 @@ ImageId: !FindInMap
 			wanted: func() diffNode {
 				unchanged := &unchangedNode{count: 1}
 				changedAZName := &seqItemNode{
-					node{
+					keyNode{
 						childNodes: []diffNode{
-							&node{
+							&keyNode{
 								keyValue: "Fn::GetAZs",
 								oldV:     yamlScalarNode("amazon", withStyle(yaml.DoubleQuotedStyle)),
 								newV:     yamlScalarNode("arizona", withStyle(yaml.SingleQuotedStyle)),
@@ -179,14 +179,14 @@ ImageId: !FindInMap
 						},
 					},
 				}
-				leaf := &node{
+				leaf := &keyNode{
 					keyValue: "AvailabilityZone",
-					childNodes: []diffNode{&node{
+					childNodes: []diffNode{&keyNode{
 						keyValue:   "Fn::Select",
 						childNodes: []diffNode{unchanged, changedAZName},
 					}},
 				}
-				return &node{
+				return &keyNode{
 					childNodes: []diffNode{leaf},
 				}
 			},
@@ -205,14 +205,14 @@ TestImportValue:
 			curr: `
 TestImportValue: !ImportValue pineapple2`,
 			wanted: func() diffNode {
-				leaf := &node{
+				leaf := &keyNode{
 					keyValue: "Fn::ImportValue",
 					oldV:     yamlScalarNode("pineapple1"),
 					newV:     yamlScalarNode("pineapple2"),
 				}
-				return &node{
+				return &keyNode{
 					childNodes: []diffNode{
-						&node{
+						&keyNode{
 							keyValue:   "TestImportValue",
 							childNodes: []diffNode{leaf},
 						},
@@ -247,23 +247,23 @@ TestJoin:
       - !Ref AWS::AccountId`,
 			wanted: func() diffNode {
 				leaf := &seqItemNode{
-					node{
+					keyNode{
 						oldV: yamlScalarNode(":s3:::elasticbeanstalk-*-pineapple1", withStyle(yaml.SingleQuotedStyle)),
 						newV: yamlScalarNode(":s3:::elasticbeanstalk-*-pineapple2", withStyle(yaml.SingleQuotedStyle)),
 					},
 				}
 				joinElementsNode := &seqItemNode{
-					node{
+					keyNode{
 						childNodes: []diffNode{&unchangedNode{count: 2}, leaf, &unchangedNode{count: 1}},
 					},
 				}
-				joinNode := &node{
+				joinNode := &keyNode{
 					keyValue:   "Fn::Join",
 					childNodes: []diffNode{&unchangedNode{count: 1}, joinElementsNode},
 				}
-				return &node{
+				return &keyNode{
 					childNodes: []diffNode{
-						&node{
+						&keyNode{
 							keyValue: "TestJoin",
 							childNodes: []diffNode{
 								joinNode,
@@ -288,17 +288,17 @@ TestJoin:
     - !Ref DbSubnetIpBlocks`,
 			wanted: func() diffNode {
 				leaf := &seqItemNode{
-					node{
+					keyNode{
 						oldV: yamlScalarNode("1"),
 						newV: yamlScalarNode("2"),
 					},
 				}
-				return &node{
+				return &keyNode{
 					childNodes: []diffNode{
-						&node{
+						&keyNode{
 							keyValue: "TestSelect",
 							childNodes: []diffNode{
-								&node{
+								&keyNode{
 									keyValue:   "Fn::Select",
 									childNodes: []diffNode{leaf, &unchangedNode{1}},
 								},
@@ -321,17 +321,17 @@ TestSplit:
   Fn::Split: [ "|" , "a||c|pineapple2" ]`,
 			wanted: func() diffNode {
 				leaf := &seqItemNode{
-					node{
+					keyNode{
 						oldV: yamlScalarNode("a||c|pineapple1", withStyle(yaml.DoubleQuotedStyle)),
 						newV: yamlScalarNode("a||c|pineapple2", withStyle(yaml.DoubleQuotedStyle)),
 					},
 				}
-				return &node{
+				return &keyNode{
 					childNodes: []diffNode{
-						&node{
+						&keyNode{
 							keyValue: "TestSplit",
 							childNodes: []diffNode{
-								&node{
+								&keyNode{
 									keyValue:   "Fn::Split",
 									childNodes: []diffNode{&unchangedNode{count: 1}, leaf},
 								},
@@ -364,17 +364,17 @@ TestSub:
     - Domain: !Ref RootDomainName`,
 			wanted: func() diffNode {
 				leaf := &seqItemNode{
-					node{
+					keyNode{
 						oldV: yamlScalarNode("www.${Domain}.pineapple1", withStyle(yaml.SingleQuotedStyle)),
 						newV: yamlScalarNode("www.${Domain}.pineapple2", withStyle(yaml.SingleQuotedStyle)),
 					},
 				}
-				return &node{
+				return &keyNode{
 					childNodes: []diffNode{
-						&node{
+						&keyNode{
 							keyValue: "TestSub",
 							childNodes: []diffNode{
-								&node{
+								&keyNode{
 									keyValue:   "Fn::Sub",
 									childNodes: []diffNode{leaf, &unchangedNode{1}},
 								},

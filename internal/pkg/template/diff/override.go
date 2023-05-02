@@ -86,7 +86,7 @@ func (_ *intrinsicFuncFullShortFormConverter) parse(from, to *yaml.Node, key str
 	if diff == nil {
 		return nil, nil
 	}
-	return &node{
+	return &keyNode{
 		keyValue:   key,
 		childNodes: []diffNode{diff},
 	}, nil
