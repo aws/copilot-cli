@@ -369,6 +369,11 @@ func (o *initSvcOpts) Execute() error {
 				Type: o.wkldType,
 			},
 		})
+		if err != nil {
+			return err
+		}
+		o.manifestPath = manifestPath
+		return nil
 	}
 	manifestPath, err = o.init.Service(&initialize.ServiceProps{
 		WorkloadProps: initialize.WorkloadProps{
