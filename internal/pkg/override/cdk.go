@@ -126,7 +126,7 @@ func (cdk *CDK) transform(body []byte) ([]byte, error) {
 
 	// We assume that a node_modules/ dir is present with the CDK downloaded after running "npm install".
 	// This way clients don't need to install the CDK toolkit separately.
-	cmd := cdk.exec.Command(filepath.Join("node_modules", "aws-cdk", "bin", "cdk"), "synth", "--no-version-reporting")
+	cmd := cdk.exec.Command(filepath.Join("node_modules", ".bin", "cdk"), "synth", "--no-version-reporting")
 	buf := new(bytes.Buffer)
 	cmd.Stdout = buf
 	cmd.Stderr = cdk.execWriter
