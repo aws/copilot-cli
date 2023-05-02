@@ -870,7 +870,7 @@ func TestCDNConfiguration_validate(t *testing.T) {
 					},
 				},
 			},
-			wantedErrorMsgPrefix: `validate "static"`,
+			wantedErrorMsgPrefix: `validate "static_assets"`,
 		},
 		"success with cert and terminate tls": {
 			in: EnvironmentCDNConfig{
@@ -920,14 +920,14 @@ func TestCDNStaticConfig_validate(t *testing.T) {
 		"invalid if path is not specified": {
 			in: CDNStaticConfig{
 				Alias:    "example.com",
-				Location: "s3url",
+				Location: StaticSiteOrImportedBucket{ImportedBucket: "s3url"},
 			},
 			wantedError: fmt.Errorf(`"path" must be specified`),
 		},
 		"success": {
 			in: CDNStaticConfig{
 				Alias:    "example.com",
-				Location: "static",
+				Location: StaticSiteOrImportedBucket{StaticSite: "static"},
 				Path:     "something",
 			},
 		},

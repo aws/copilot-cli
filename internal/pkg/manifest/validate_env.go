@@ -401,7 +401,7 @@ func (cfg AdvancedCDNConfig) validate() error {
 		}
 	}
 	if err := cfg.Static.validate(); err != nil {
-		return fmt.Errorf(`validate "static": %w`, err)
+		return fmt.Errorf(`validate "static_assets": %w`, err)
 	}
 	return nil
 }
@@ -416,7 +416,7 @@ func (cfg CDNStaticConfig) validate() error {
 			missingField: "alias",
 		}
 	}
-	if cfg.Location == "" {
+	if cfg.Location.isEmpty() {
 		return &errFieldMustBeSpecified{
 			missingField: "location",
 		}
@@ -426,6 +426,10 @@ func (cfg CDNStaticConfig) validate() error {
 			missingField: "path",
 		}
 	}
+	return nil
+}
+
+func (StaticSiteOrImportedBucket) validate() error {
 	return nil
 }
 
