@@ -265,7 +265,10 @@ func (o *initSvcOpts) Validate() error {
 		}
 	}
 	if len(o.sourcePaths) != 0 {
-		if err := validateStaticSiteSources(o.sourcePaths); err != nil {
+		if o.wkldType != manifestinfo.StaticSiteType {
+			return fmt.Errorf("'--%s' must be specified with '--%s %s'", sourcesFlag, typeFlag, manifestinfo.StaticSiteType)
+		}
+		if err := validateStaticSiteSources(o.fs, o.sourcePaths); err != nil {
 			return err
 		}
 		assets, err := o.convertStringsToAssets(o.sourcePaths)
@@ -361,9 +364,9 @@ func (o *initSvcOpts) Execute() error {
 	if o.wkldType == manifestinfo.StaticSiteType {
 		manifestPath, err = o.init.Service(&initialize.ServiceProps{
 			WorkloadProps: initialize.WorkloadProps{
-				App:            o.appName,
-				Name:           o.name,
-				Type:           o.wkldType,
+				App:  o.appName,
+				Name: o.name,
+				Type: o.wkldType,
 			},
 		})
 	}
@@ -799,7 +802,7 @@ func validateWorkspaceApp(wsApp, inputApp string, store store) error {
 	return nil
 }
 
-func (o initSvcOpts) convertStringsToAssets (sources []string) ([]manifest.FileUpload, error) {
+func (o initSvcOpts) convertStringsToAssets(sources []string) ([]manifest.FileUpload, error) {
 	assets := make([]manifest.FileUpload, len(sources))
 	for i, source := range sources {
 		info, err := o.fs.Stat(source)

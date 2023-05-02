@@ -286,11 +286,11 @@ func validateAppRunnerImage(img interface{}) error {
 	return nil
 }
 
-func validateStaticSiteSources(paths []string) error {
+func validateStaticSiteSources(fs afero.Fs, paths []string) error {
 	for _, path := range paths {
-		err := validatePath(afero.NewOsFs(), path)
+		err := validatePath(fs, path)
 		if err != nil {
-			return err
+			return fmt.Errorf("validate path %q: %w", path, err)
 		}
 	}
 	return nil
