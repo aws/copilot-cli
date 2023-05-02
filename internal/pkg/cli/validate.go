@@ -286,16 +286,6 @@ func validateAppRunnerImage(img interface{}) error {
 	return nil
 }
 
-func validateStaticSiteSources(fs afero.Fs, paths []string) error {
-	for _, path := range paths {
-		err := validatePath(fs, path)
-		if err != nil {
-			return fmt.Errorf("validate path %q: %w", path, err)
-		}
-	}
-	return nil
-}
-
 func validateTimeout(timeout interface{}) error {
 	t, ok := timeout.(string)
 	if !ok {
