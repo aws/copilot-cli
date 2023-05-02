@@ -5,7 +5,7 @@ AWSTemplateFormatVersion: '2010-09-09'{{$accounts := .Accounts}}{{$app := .App}}
 # to support the CodePipeline for a workspace
 Description: Cross-regional resources to support the CodePipeline for a workspace
 Metadata:
-  TemplateVersion: 'v1.1.0'
+  TemplateVersion: 'v1.2.0'
   Version: {{.Version}}
   Services:{{if not $services}} []{{else}}{{range $service := $services}}
   - {{$service}}{{end}}{{end}}
@@ -92,6 +92,15 @@ Resources:
       OwnershipControls:
         Rules:
           - ObjectOwnership: BucketOwnerEnforced
+      LifecycleConfiguration:
+        Rules:
+          - Id: ExpireLocalAssets
+            Status: Enabled
+            Prefix: local-assets
+            ExpirationInDays: 30
+            NoncurrentVersionExpirationInDays: 1
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 1
 
 {{range $service := $services}}
   ECRRepo{{logicalIDSafe $service}}:

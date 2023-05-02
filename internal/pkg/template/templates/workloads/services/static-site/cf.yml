@@ -232,8 +232,11 @@ Resources:
             Statement:
               - Effect: Allow
                 Action:
+                  - s3:ListBucket
                   - s3:PutObject
-                Resource: !Sub arn:aws:s3:::${Bucket}/*
+                Resource:
+                  - !Sub arn:aws:s3:::${Bucket}
+                  - !Sub arn:aws:s3:::${Bucket}/*
       ManagedPolicyArns:
         - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
   
