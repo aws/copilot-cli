@@ -39,18 +39,11 @@ type FileUpload struct {
 	Reinclude   StringSliceOrString `yaml:"reinclude"`
 }
 
-// StaticSiteProps represents the configuration needed to create a static site service.
-type StaticSiteProps struct {
-	Name string 
-	StaticSiteConfig
-}
-
 // NewStaticSite creates a new static site service.
-func NewStaticSite(props StaticSiteProps) *StaticSite {
+func NewStaticSite(name string) *StaticSite {
 	svc := newDefaultStaticSite()
 	// Apply overrides.
-	svc.Name = stringP(props.Name)
-	svc.FileUploads = props.StaticSiteConfig.FileUploads
+	svc.Name = stringP(name)
 	svc.parser = template.New()
 	return svc
 }

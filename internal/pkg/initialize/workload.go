@@ -88,7 +88,6 @@ type ServiceProps struct {
 	HealthCheck manifest.ContainerHealthCheck
 	Private     bool
 	appDomain   *string
-	FileUploads []manifest.FileUpload
 }
 
 // WorkloadInitializer holds the clients necessary to initialize either a
@@ -302,7 +301,7 @@ func (w *WorkloadInitializer) newServiceManifest(i *ServiceProps) (encoding.Bina
 	case manifestinfo.WorkerServiceType:
 		return newWorkerServiceManifest(i)
 	case manifestinfo.StaticSiteType:
-		return newStaticSiteServiceManifest(i)
+		return manifest.NewStaticSite(i.Name), nil
 	default:
 		return nil, fmt.Errorf("service type %s doesn't have a manifest", i.Type)
 	}
@@ -385,15 +384,6 @@ func newWorkerServiceManifest(i *ServiceProps) (*manifest.WorkerService, error) 
 		Platform:    i.Platform,
 		Topics:      i.Topics,
 		Queue:       i.Queue,
-	}), nil
-}
-
-func newStaticSiteServiceManifest(i *ServiceProps) (*manifest.StaticSite, error) {
-	return manifest.NewStaticSite(manifest.StaticSiteProps{
-		Name:            i.Name,
-		StaticSiteConfig: manifest.StaticSiteConfig{
-			FileUploads: i.FileUploads,
-		},
 	}), nil
 }
 
