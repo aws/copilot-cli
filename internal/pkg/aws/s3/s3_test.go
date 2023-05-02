@@ -310,7 +310,7 @@ func TestS3_EmptyBucket(t *testing.T) {
 					},
 				}, nil)
 			},
-			wantErr: fmt.Errorf(`1/10 objects failed to delete. first failure on key "mock/key": some error`),
+			wantErr: fmt.Errorf(`1/10 objects failed to delete. First failed on key "mock/key": some error`),
 		},
 	}
 

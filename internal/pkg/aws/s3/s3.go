@@ -123,7 +123,7 @@ func (s *S3) EmptyBucket(bucket string) error {
 		case err != nil:
 			return fmt.Errorf("delete objects from bucket %s: %w", bucket, err)
 		case len(delResp.Errors) > 0:
-			return fmt.Errorf("%d/%d objects failed to delete. first failure on key %q: %s", len(delResp.Errors), len(objectsToDelete), aws.StringValue(delResp.Errors[0].Key), aws.StringValue(delResp.Errors[0].Message))
+			return fmt.Errorf("%d/%d objects failed to delete. First failed on key %q: %s", len(delResp.Errors), len(objectsToDelete), aws.StringValue(delResp.Errors[0].Key), aws.StringValue(delResp.Errors[0].Message))
 		}
 		if !aws.BoolValue(listResp.IsTruncated) {
 			return nil
