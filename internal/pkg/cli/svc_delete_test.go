@@ -11,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -310,6 +311,7 @@ type deleteSvcMocks struct {
 	spinner        *mocks.Mockprogress
 	svcCFN         *mocks.MockwlDeleter
 	ecr            *mocks.MockimageRemover
+	wkldDeleter    *mocks.MockwkldDeleter
 }
 
 func TestDeleteSvcOpts_Execute(t *testing.T) {
@@ -344,10 +346,15 @@ func TestDeleteSvcOpts_Execute(t *testing.T) {
 			inSvcName: mockSvcName,
 			setupMocks: func(mocks deleteSvcMocks) {
 				gomock.InOrder(
+					mocks.store.EXPECT().GetWorkload(mockAppName, mockSvcName).Return(&config.Workload{
+						Type: manifestinfo.LoadBalancedWebServiceType,
+					}, nil),
+
 					// appEnvironments
 					mocks.store.EXPECT().ListEnvironments(gomock.Eq(mockAppName)).Times(1).Return(mockEnvs, nil),
 
 					mocks.sessProvider.EXPECT().FromRole(gomock.Any(), gomock.Any()).Return(&session.Session{}, nil),
+					mocks.wkldDeleter.EXPECT().CleanResources(mockAppName, mockEnvName, mockSvcName).Return(nil),
 					// deleteStacks
 					mocks.svcCFN.EXPECT().DeleteWorkload(gomock.Any()).Return(nil),
 
@@ -368,17 +375,22 @@ func TestDeleteSvcOpts_Execute(t *testing.T) {
 		},
 		// A service can be deployed to multiple
 		// environments - and deleting it in one
-		// should not delete it form the entire app.
+		// should not delete it from the entire app.
 		"happy path with environment passed in as flag": {
 			inAppName: mockAppName,
 			inSvcName: mockSvcName,
 			inEnvName: mockEnvName,
 			setupMocks: func(mocks deleteSvcMocks) {
 				gomock.InOrder(
+					mocks.store.EXPECT().GetWorkload(mockAppName, mockSvcName).Return(&config.Workload{
+						Type: manifestinfo.LoadBalancedWebServiceType,
+					}, nil),
+
 					// appEnvironments
 					mocks.store.EXPECT().GetEnvironment(mockAppName, mockEnvName).Times(1).Return(mockEnv, nil),
 
 					mocks.sessProvider.EXPECT().FromRole(gomock.Any(), gomock.Any()).Return(&session.Session{}, nil),
+					mocks.wkldDeleter.EXPECT().CleanResources(mockAppName, mockEnvName, mockSvcName).Return(nil),
 					// deleteStacks
 					mocks.svcCFN.EXPECT().DeleteWorkload(gomock.Any()).Return(nil),
 
@@ -394,16 +406,47 @@ func TestDeleteSvcOpts_Execute(t *testing.T) {
 			},
 			wantedError: nil,
 		},
+		"error getting workload": {
+			inAppName: mockAppName,
+			inSvcName: mockSvcName,
+			setupMocks: func(mocks deleteSvcMocks) {
+				gomock.InOrder(
+					mocks.store.EXPECT().GetWorkload(mockAppName, mockSvcName).Return(nil, errors.New("some error")),
+				)
+			},
+			wantedError: errors.New("get workload: some error"),
+		},
+		"error cleaning workload": {
+			inAppName: mockAppName,
+			inSvcName: mockSvcName,
+			inEnvName: mockEnvName,
+			setupMocks: func(mocks deleteSvcMocks) {
+				gomock.InOrder(
+					mocks.store.EXPECT().GetWorkload(mockAppName, mockSvcName).Return(&config.Workload{
+						Type: manifestinfo.LoadBalancedWebServiceType,
+					}, nil),
+					mocks.store.EXPECT().GetEnvironment(mockAppName, mockEnvName).Times(1).Return(mockEnv, nil),
+					mocks.sessProvider.EXPECT().FromRole(gomock.Any(), gomock.Any()).Return(&session.Session{}, nil),
+					mocks.wkldDeleter.EXPECT().CleanResources(mockAppName, mockEnvName, mockSvcName).Return(errors.New("some error")),
+				)
+			},
+			wantedError: errors.New("clean resources: some error"),
+		},
 		"errors when deleting stack": {
 			inAppName: mockAppName,
 			inSvcName: mockSvcName,
 			inEnvName: mockEnvName,
 			setupMocks: func(mocks deleteSvcMocks) {
 				gomock.InOrder(
+					mocks.store.EXPECT().GetWorkload(mockAppName, mockSvcName).Return(&config.Workload{
+						Type: manifestinfo.LoadBalancedWebServiceType,
+					}, nil),
+
 					// appEnvironments
 					mocks.store.EXPECT().GetEnvironment(mockAppName, mockEnvName).Times(1).Return(mockEnv, nil),
 
 					mocks.sessProvider.EXPECT().FromRole(gomock.Any(), gomock.Any()).Return(&session.Session{}, nil),
+					mocks.wkldDeleter.EXPECT().CleanResources(mockAppName, mockEnvName, mockSvcName).Return(nil),
 					// deleteStacks
 					mocks.svcCFN.EXPECT().DeleteWorkload(gomock.Any()).Return(testError),
 				)
@@ -417,29 +460,15 @@ func TestDeleteSvcOpts_Execute(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			// GIVEN
-			mockstore := mocks.NewMockstore(ctrl)
-			mockSecretsManager := mocks.NewMocksecretsManager(ctrl)
-			mockSession := mocks.NewMocksessionProvider(ctrl)
-			mockAppCFN := mocks.NewMocksvcRemoverFromApp(ctrl)
-			mockSvcCFN := mocks.NewMockwlDeleter(ctrl)
-			mockSpinner := mocks.NewMockprogress(ctrl)
-			mockImageRemover := mocks.NewMockimageRemover(ctrl)
-			mockGetSvcCFN := func(_ *session.Session) wlDeleter {
-				return mockSvcCFN
-			}
-
-			mockGetImageRemover := func(_ *session.Session) imageRemover {
-				return mockImageRemover
-			}
 			mocks := deleteSvcMocks{
-				store:          mockstore,
-				secretsmanager: mockSecretsManager,
-				sessProvider:   mockSession,
-				appCFN:         mockAppCFN,
-				spinner:        mockSpinner,
-				svcCFN:         mockSvcCFN,
-				ecr:            mockImageRemover,
+				store:          mocks.NewMockstore(ctrl),
+				secretsmanager: mocks.NewMocksecretsManager(ctrl),
+				sessProvider:   mocks.NewMocksessionProvider(ctrl),
+				appCFN:         mocks.NewMocksvcRemoverFromApp(ctrl),
+				spinner:        mocks.NewMockprogress(ctrl),
+				svcCFN:         mocks.NewMockwlDeleter(ctrl),
+				ecr:            mocks.NewMockimageRemover(ctrl),
+				wkldDeleter:    mocks.NewMockwkldDeleter(ctrl),
 			}
 
 			test.setupMocks(mocks)
@@ -450,12 +479,19 @@ func TestDeleteSvcOpts_Execute(t *testing.T) {
 					name:    test.inSvcName,
 					envName: test.inEnvName,
 				},
-				store:     mockstore,
-				sess:      mockSession,
-				spinner:   mockSpinner,
-				appCFN:    mockAppCFN,
-				getSvcCFN: mockGetSvcCFN,
-				getECR:    mockGetImageRemover,
+				store:   mocks.store,
+				sess:    mocks.sessProvider,
+				spinner: mocks.spinner,
+				appCFN:  mocks.appCFN,
+				getSvcCFN: func(_ *session.Session) wlDeleter {
+					return mocks.svcCFN
+				},
+				getECR: func(_ *session.Session) imageRemover {
+					return mocks.ecr
+				},
+				newSvcDeleter: func(_ *session.Session, typ string) wkldDeleter {
+					return mocks.wkldDeleter
+				},
 			}
 
 			// WHEN
