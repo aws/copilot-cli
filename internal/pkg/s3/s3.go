@@ -6,6 +6,8 @@ package s3
 
 import (
 	"fmt"
+	"sort"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
@@ -35,23 +37,20 @@ func New(sess *session.Session) *Client {
 
 // BucketName returns the bucket name given the Copilot app, env, and Static Site service name.
 func (c Client) BucketName(app, env, svc string) (string, error) {
-	buckets, err := c.rgGetter.GetResourcesByTags(bucketType, map[string]string{
+	tags := tags(map[string]string{
 		deploy.AppTagKey:     app,
 		deploy.EnvTagKey:     env,
 		deploy.ServiceTagKey: svc,
 	})
+	buckets, err := c.rgGetter.GetResourcesByTags(bucketType, tags)
 	if err != nil {
-		return "", fmt.Errorf("get S3 bucket with tags (%s, %s, %s): %w", app, env, svc, err)
+		return "", fmt.Errorf("get S3 bucket with tags %s: %w", tags.String(), err)
 	}
 	if len(buckets) == 0 {
-		return "", &ErrNotFound{
-			app: app,
-			env: env,
-			svc: svc,
-		}
+		return "", &ErrNotFound{tags}
 	}
 	if len(buckets) > 1 {
-		return "", fmt.Errorf("more than one S3 bucket with the name %s found in environment %s", svc, env)
+		return "", fmt.Errorf("more than one S3 bucket with tags %s", tags.String())
 	}
 	bucketName, _, err := s3.ParseARN(buckets[0].ARN)
 	if err != nil {
@@ -60,12 +59,25 @@ func (c Client) BucketName(app, env, svc string) (string, error) {
 	return bucketName, nil
 }
 
+type tags map[string]string
+
+func (tags tags) String() string {
+	serialized := make([]string, len(tags))
+	var i = 0
+	for k, v := range tags {
+		serialized[i] = fmt.Sprintf("%q=%q", k, v)
+		i += 1
+	}
+	sort.SliceStable(serialized, func(i, j int) bool { return serialized[i] < serialized[j] })
+	return strings.Join(serialized, ",")
+}
+
 // ErrNotFound is returned when no bucket is found
 // matching the given tags.
 type ErrNotFound struct {
-	app, env, svc string
+	tags tags
 }
 
 func (e *ErrNotFound) Error() string {
-	return fmt.Sprintf("no S3 bucket found with tags %s, %s, %s", e.app, e.env, e.svc)
+	return fmt.Sprintf("no S3 bucket found with tags %s", e.tags.String())
 }
