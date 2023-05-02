@@ -131,7 +131,7 @@ func TestSvcInitOpts_Validate(t *testing.T) {
 			setupMocks: func(m initSvcMocks) {
 				m.mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{}, nil)
 			},
-			wantedErr: errors.New(`'--sources' must be specified with '--type "Static Site'"`),
+			wantedErr: errors.New(`'--sources' must be specified with '--type "Static Site"'`),
 		},
 		"error if sources flag used with invalid sources": {
 			inSvcName: "frontend",
@@ -147,7 +147,7 @@ func TestSvcInitOpts_Validate(t *testing.T) {
 			setupMocks: func(m initSvcMocks) {
 				m.mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{}, nil)
 			},
-			wantedErr: errors.New(`validate path "non-existent path": value must be a valid path`),
+			wantedErr: errors.New("convert source strings to objects: open non-existent path: file does not exist"),
 		},
 		"valid flags": {
 			inSvcName:        "frontend",

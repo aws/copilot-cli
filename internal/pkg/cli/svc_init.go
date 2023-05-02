@@ -268,9 +268,7 @@ func (o *initSvcOpts) Validate() error {
 		if o.wkldType != manifestinfo.StaticSiteType {
 			return fmt.Errorf("'--%s' must be specified with '--%s %q'", sourcesFlag, typeFlag, manifestinfo.StaticSiteType)
 		}
-		if err := validateStaticSiteSources(o.fs, o.sourcePaths); err != nil {
-			return err
-		}
+		// Path validation against fs happens during conversion.
 		assets, err := o.convertStringsToAssets(o.sourcePaths)
 		if err != nil {
 			return fmt.Errorf("convert source strings to objects: %w", err)
@@ -359,19 +357,6 @@ func (o *initSvcOpts) Execute() error {
 	envs, err := envsWithPrivateSubnetsOnly(o.store, o.initEnvDescriber, o.appName)
 	if err != nil {
 		return err
-	}
-	if o.wkldType == manifestinfo.StaticSiteType {
-		o.manifestPath, err = o.init.Service(&initialize.ServiceProps{
-			WorkloadProps: initialize.WorkloadProps{
-				App:  o.appName,
-				Name: o.name,
-				Type: o.wkldType,
-			},
-		})
-		if err != nil {
-			return err
-		}
-		return nil
 	}
 	o.manifestPath, err = o.init.Service(&initialize.ServiceProps{
 		WorkloadProps: initialize.WorkloadProps{
