@@ -634,12 +634,7 @@ func (o *initSvcOpts) askSvcPort() (err error) {
 		o.ports = make([]string, 1)
 		o.ports[0] = selectedPorts
 		return nil
-	case manifestinfo.BackendServiceType:
-		// Skip asking if it is a backend or worker service.
-		fallthrough
-	case manifestinfo.WorkerServiceType:
-		return nil
-	default:
+	case manifestinfo.LoadBalancedWebServiceType:
 		// Load Balanced Web Service
 		selectedPorts, err := o.prompt.Get(
 			fmt.Sprintf(svcInitSvcPortPrompt, color.Emphasize("port(s)")),
@@ -654,6 +649,13 @@ func (o *initSvcOpts) askSvcPort() (err error) {
 		portList := strings.Split(selectedPorts, ",")
 		o.ports = portList
 		return nil
+	case manifestinfo.BackendServiceType:
+		// Skip asking if it is a backend or worker service.
+		fallthrough
+	case manifestinfo.WorkerServiceType:
+		return nil
+	default:
+		return fmt.Errorf("unrecognized service type %s", o.wkldType)
 	}
 }
 
