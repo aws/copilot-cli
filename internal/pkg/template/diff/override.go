@@ -67,14 +67,42 @@ func (_ *intrinsicFuncFullShortFormConverter) match(from, to *yaml.Node, _ strin
 		// Read https://www.efekarakus.com/2020/05/30/deep-dive-go-yaml-cfn.html.
 		return false
 	}
-	return eqIntrinsicFunc(fullFormNode.Content[0].Value, shortFormNode.Tag)
+	return eqIntrinsicFunc(intrinsicFuncFullFormName(fullFormNode), shortFormNode.Tag)
 }
 
 func (_ *intrinsicFuncFullShortFormConverter) parse(from, to *yaml.Node, key string, overrider overrider) (diffNode, error) {
+	var diff diffNode
+	var err error
 	if from.Kind == yaml.MappingNode {
-		return parse(from.Content[1], to, key, overrider)
+		// The full form mapping node always contain only one child node. The second element in `Content` is the 
+		// value of the child node. Read https://www.efekarakus.com/2020/05/30/deep-dive-go-yaml-cfn.html.
+		diff, err = parse(from.Content[1], stripTag(to), intrinsicFuncFullFormName(from), overrider)
+	} else {
+		diff, err = parse(stripTag(from), to.Content[1], intrinsicFuncFullFormName(to), overrider)
 	}
-	return parse(from, to.Content[1], key, overrider)
+	if err != nil {
+		return nil, err
+	}
+	if diff == nil {
+		return nil, nil
+	}
+	return &node{
+		keyValue:   key,
+		childNodes: []diffNode{diff},
+	}, nil
+}
+
+func stripTag(node *yaml.Node) *yaml.Node {
+	return &yaml.Node{
+		Kind:    node.Kind,
+		Style:   node.Style,
+		Content: node.Content,
+		Value:   node.Value,
+	}
+}
+
+func intrinsicFuncFullFormName(fullFormNode *yaml.Node) string {
+	return fullFormNode.Content[0].Value
 }
 
 // Explicitly maintain a map so that we don't accidentally match nodes that are not actually intrinsic function
