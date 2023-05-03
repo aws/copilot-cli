@@ -16,19 +16,9 @@ files:
 {{- else}}
 files:
 {{- range $file := .FileUploads}}
-  - source: {{$.Source}}
-    destination: {{$.Destination}}
-    {{- if $.Context}}
-    context: {{$.Context}}
-    {{- end}}
-    {{- if $.Recursive}}
-    recursive: {{$.Recursive}}
-    {{- end}}
-    {{- if $.Reinclude.StringSlice}}
-    reinclude: {{$.Reinclude.StringSlice}}
-    {{- end}}
-    {{- if $.Exclude.StringSlice}}
-    exclude: {{$.Exclude.StringSlice}}
+  - source: {{$file.Source}}
+    {{- if $file.Recursive}}
+    recursive: {{$file.Recursive}}
     {{- end}}
 {{- end}}
 {{- end}}
@@ -37,5 +27,10 @@ files:
 # environments:
 #   test:
 #     files:
-#       - source: ./blob
-#         destination: blob
+#       - source: './blob'
+#         destination: 'blob'
+#         recursive: true
+#         exclude: '*'
+#         reinclude:
+#           - '*.txt'
+#           - '*.png'

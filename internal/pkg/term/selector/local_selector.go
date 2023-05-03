@@ -210,61 +210,6 @@ func NewDockerfileSelector(prompt Prompter, fs afero.Fs) (*dockerfileSelector, e
 	}, nil
 }
 
-// StaticSources asks the user to select from a list of directories and files in the current directory and two levels down.
-func (s *localFileSelector) StaticSources(selPrompt, selHelp, anotherPathPrompt, anotherPathHelp string, pathValidator prompt.ValidatorFunc) ([]string, error) {
-	dirsAndFiles, err := s.listDirsAndFiles()
-	if err != nil {
-		return nil, err
-	}
-	if len(dirsAndFiles) == 0 {
-		log.Warningln("No directories or files were found in your workspace. Enter a relative path with the 'custom path' option if you'd like to use a hidden file.")
-	}
-	dirsAndFiles = append(dirsAndFiles, []string{staticSourceUseCustomPrompt}...)
-	var selections []string
-	selections, err = s.prompt.MultiSelect(
-		selPrompt,
-		selHelp,
-		dirsAndFiles,
-		nil,
-		prompt.WithFinalMessage(staticAssetsFinalMsg),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("select directories and/or files: %w", err)
-	}
-	for i, selection := range selections {
-		if selection == staticSourceUseCustomPrompt {
-			for {
-				customPath, err := s.prompt.Get(
-					anotherPathPrompt,
-					anotherPathHelp,
-					pathValidator,
-					prompt.WithFinalMessage(customPathFinalMsg))
-				if err != nil {
-					return nil, fmt.Errorf("get custom directory or file path: %w", err)
-				}
-				if selection == staticSourceUseCustomPrompt {
-					selections[i] = customPath // The first custom path replaces the prompt string.
-					selection = customPath
-				} else {
-					selections = append(selections, customPath) // Subsequent custom paths are appended.
-				}
-				anotherCustomPath, err := s.prompt.Confirm(
-					staticSourceAnotherCustomPathPrompt,
-					staticSourceAnotherCustomPathHelp,
-					prompt.WithFinalMessage(anotherFinalMsg),
-				)
-				if err != nil {
-					return nil, fmt.Errorf("confirm another custom path: %w", err)
-				}
-				if !anotherCustomPath {
-					break
-				}
-			}
-		}
-	}
-	return selections, nil
-}
-
 // Dockerfile asks the user to select from a list of Dockerfiles in the current
 // directory or one level down. If no dockerfiles are found, it asks for a custom path.
 func (s *dockerfileSelector) Dockerfile(selPrompt, notFoundPrompt, selHelp, notFoundHelp string, pathValidator prompt.ValidatorFunc) (string, error) {

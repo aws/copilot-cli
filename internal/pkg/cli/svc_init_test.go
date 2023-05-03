@@ -883,9 +883,6 @@ type: Request-Driven Web Service`), nil)
 			if tc.mockFileSystem != nil {
 				tc.mockFileSystem(opts.fs)
 			}
-			if tc.mockFileSystem != nil {
-				tc.mockFileSystem(opts.fs)
-			}
 
 			// WHEN
 			err := opts.Ask()

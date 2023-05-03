@@ -29,7 +29,6 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-	"strings"
 	"sync"
 
 	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
