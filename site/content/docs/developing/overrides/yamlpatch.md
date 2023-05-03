@@ -4,21 +4,21 @@
 
 ## When should I use YAML Patch over CDK overrides?
 
-Both options are a "break the glass" mechanism to access and configure functionality that is not surfaced by Copilot [manifests](../../manifest/overview.en.md).  
+Both options are a "break the glass" mechanism to access and configure functionality that is not surfaced by Copilot [manifests](../../manifest/overview.en.md).
 
 We recommend using YAML patch over the [AWS Cloud Development Kit (CDK) overrides](./cdk.md) if 1) you do not want to have a dependency
-on any other tooling and framework (such as [Node.js](https://nodejs.org) and the [CDK](https://docs.aws.amazon.com/cdk/v2/guide/home.html)), 
-or 2) you have to write only a handful modifications. 
+on any other tooling and framework (such as [Node.js](https://nodejs.org) and the [CDK](https://docs.aws.amazon.com/cdk/v2/guide/home.html)),
+or 2) you have to write only a handful modifications.
 
 ## How to get started
 
 You can extend your CloudFormation template with YAML patches by running the `copilot [noun] override` command.
 For example, you can run `copilot svc override` to update the template of a Load Balanced Web Service.
-The command will generate a sample `cfn.patches.yml` file under the `copilot/[name]/override` directory. 
+The command will generate a sample `cfn.patches.yml` file under the `copilot/[name]/override` directory.
 
 ## How does it work?
 
-The syntax of `cfn.patches.yml` conforms to [RFC6902: JSON Patch](https://www.rfc-editor.org/rfc/rfc6902). Currently, 
+The syntax of `cfn.patches.yml` conforms to [RFC6902: JSON Patch](https://www.rfc-editor.org/rfc/rfc6902). Currently,
 the CLI supports three operations: `add`, `remove`, and `replace`. Here is a sample `cfn.patches.yml` file:
 
 ```yaml
@@ -40,12 +40,12 @@ the CLI supports three operations: `add`, `remove`, and `replace`. Here is a sam
     DnsName: yamlpatchiscool
 ```
 
-Each patch is applied sequentially to the CloudFormation template. The resulting template becomes the target of the next patch. 
+Each patch is applied sequentially to the CloudFormation template. The resulting template becomes the target of the next patch.
 Evaluation continues until all patches are successfully applied or an error is encountered.
 
 ### Path evaluation
 
-The `path` field of a patch conforms to the [RFC6901: JSON Pointer](https://www.rfc-editor.org/rfc/rfc6901) syntax. 
+The `path` field of a patch conforms to the [RFC6901: JSON Pointer](https://www.rfc-editor.org/rfc/rfc6901) syntax.
 
 - Each `path` value is separated by the `/` character and evaluation stops once the target CloudFormation property is reached.
 - If the target path is an array, the reference token must be either:
@@ -56,7 +56,7 @@ The `path` field of a patch conforms to the [RFC6901: JSON Pointer](https://www.
 
 To add a new property to an existing resource:
 
-```yaml 
+```yaml
 - op: add
   path: /Resources/LogGroup/Properties/Tags
   value:
@@ -78,12 +78,12 @@ To add a new element at the end of an array:
 - op: add
   path: /Resources/TaskRole/Properties/Policies/-
   value:
+    PolicyName: DynamoDBReader
     PolicyDocument:
-      PolicyName: DynamoDBReader
       Version: "2012-10-17"
       Statement:
         - Effect: Allow
-          Action: 
+          Action:
             - dynamodb:Get*
           Resource: '*'
 ```

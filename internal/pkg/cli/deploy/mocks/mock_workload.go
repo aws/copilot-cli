@@ -5,6 +5,8 @@
 package mocks
 
 import (
+	context "context"
+	io "io"
 	reflect "reflect"
 
 	addon "github.com/aws/copilot-cli/internal/pkg/addon"
@@ -75,18 +77,18 @@ func (m *MockrepositoryService) EXPECT() *MockrepositoryServiceMockRecorder {
 }
 
 // BuildAndPush mocks base method.
-func (m *MockrepositoryService) BuildAndPush(args *dockerengine.BuildArguments) (string, error) {
+func (m *MockrepositoryService) BuildAndPush(ctx context.Context, args *dockerengine.BuildArguments, w io.Writer) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "BuildAndPush", args)
+	ret := m.ctrl.Call(m, "BuildAndPush", ctx, args, w)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // BuildAndPush indicates an expected call of BuildAndPush.
-func (mr *MockrepositoryServiceMockRecorder) BuildAndPush(args interface{}) *gomock.Call {
+func (mr *MockrepositoryServiceMockRecorder) BuildAndPush(ctx, args, w interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BuildAndPush", reflect.TypeOf((*MockrepositoryService)(nil).BuildAndPush), args)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BuildAndPush", reflect.TypeOf((*MockrepositoryService)(nil).BuildAndPush), ctx, args, w)
 }
 
 // Login mocks base method.
@@ -425,6 +427,55 @@ func (m *Mockspinner) Stop(label string) {
 func (mr *MockspinnerMockRecorder) Stop(label interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*Mockspinner)(nil).Stop), label)
+}
+
+// MocklabeledTermPrinter is a mock of labeledTermPrinter interface.
+type MocklabeledTermPrinter struct {
+	ctrl     *gomock.Controller
+	recorder *MocklabeledTermPrinterMockRecorder
+}
+
+// MocklabeledTermPrinterMockRecorder is the mock recorder for MocklabeledTermPrinter.
+type MocklabeledTermPrinterMockRecorder struct {
+	mock *MocklabeledTermPrinter
+}
+
+// NewMocklabeledTermPrinter creates a new mock instance.
+func NewMocklabeledTermPrinter(ctrl *gomock.Controller) *MocklabeledTermPrinter {
+	mock := &MocklabeledTermPrinter{ctrl: ctrl}
+	mock.recorder = &MocklabeledTermPrinterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MocklabeledTermPrinter) EXPECT() *MocklabeledTermPrinterMockRecorder {
+	return m.recorder
+}
+
+// IsDone mocks base method.
+func (m *MocklabeledTermPrinter) IsDone() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsDone")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// IsDone indicates an expected call of IsDone.
+func (mr *MocklabeledTermPrinterMockRecorder) IsDone() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsDone", reflect.TypeOf((*MocklabeledTermPrinter)(nil).IsDone))
+}
+
+// Print mocks base method.
+func (m *MocklabeledTermPrinter) Print() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "Print")
+}
+
+// Print indicates an expected call of Print.
+func (mr *MocklabeledTermPrinterMockRecorder) Print() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Print", reflect.TypeOf((*MocklabeledTermPrinter)(nil).Print))
 }
 
 // MocktimeoutError is a mock of timeoutError interface.

@@ -169,6 +169,10 @@ func TestInitOpts_Run(t *testing.T) {
 						Hint:  "Events to SQS to ECS on Fargate",
 					},
 					{
+						Value: manifestinfo.StaticSiteType,
+						Hint: "Internet to CDN to S3 bucket",
+					},
+					{
 						Value: manifestinfo.ScheduledJobType,
 						Hint:  "Scheduled event to State Machine to Fargate",
 					},

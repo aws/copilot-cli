@@ -7,6 +7,7 @@ package ecs
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -389,22 +390,23 @@ func filterCopilotTasks(tasks []*ecs.Task, taskID string) []*ecs.Task {
 }
 
 func (c Client) clusterARN(app, env string) (string, error) {
-	clusters, err := c.rgGetter.GetResourcesByTags(clusterResourceType, map[string]string{
+	tags := tags(map[string]string{
 		deploy.AppTagKey: app,
 		deploy.EnvTagKey: env,
 	})
+	clusters, err := c.rgGetter.GetResourcesByTags(clusterResourceType, tags)
 
 	if err != nil {
-		return "", fmt.Errorf("get cluster resources for environment %s: %w", env, err)
+		return "", fmt.Errorf("get ECS cluster with tags %s: %w", tags.String(), err)
 	}
 
 	if len(clusters) == 0 {
-		return "", fmt.Errorf("no cluster found in environment %s", env)
+		return "", fmt.Errorf("no ECS cluster found with tags %s", tags.String())
 	}
 
 	// NOTE: only one cluster is associated with an application and an environment.
 	if len(clusters) > 1 {
-		return "", fmt.Errorf("more than one cluster is found in environment %s", env)
+		return "", fmt.Errorf("more than one ECS cluster are found with tags %s", tags.String())
 	}
 	return clusters[0].ARN, nil
 }
@@ -426,32 +428,47 @@ func (c Client) fetchAndParseServiceARN(app, env, svc string) (cluster, service 
 }
 
 func (c Client) serviceARN(app, env, svc string) (*ecs.ServiceArn, error) {
-	services, err := c.rgGetter.GetResourcesByTags(serviceResourceType, map[string]string{
+	tags := tags(map[string]string{
 		deploy.AppTagKey:     app,
 		deploy.EnvTagKey:     env,
 		deploy.ServiceTagKey: svc,
 	})
+	services, err := c.rgGetter.GetResourcesByTags(serviceResourceType, tags)
 	if err != nil {
-		return nil, fmt.Errorf("get ECS service with tags (%s, %s, %s): %w", app, env, svc, err)
+		return nil, fmt.Errorf("get ECS service with tags %s: %w", tags.String(), err)
 	}
 	if len(services) == 0 {
-		return nil, fmt.Errorf("no ECS service found for %s in environment %s", svc, env)
+		return nil, fmt.Errorf("no ECS service found with tags %s", tags.String())
 	}
 	if len(services) > 1 {
-		return nil, fmt.Errorf("more than one ECS service with the name %s found in environment %s", svc, env)
+		return nil, fmt.Errorf("more than one ECS service with tags %s", tags.String())
 	}
 	serviceArn := ecs.ServiceArn(services[0].ARN)
 	return &serviceArn, nil
 }
 
+type tags map[string]string
+
+func (tags tags) String() string {
+	serialized := make([]string, len(tags))
+	var i = 0
+	for k, v := range tags {
+		serialized[i] = fmt.Sprintf("%q=%q", k, v)
+		i += 1
+	}
+	sort.SliceStable(serialized, func(i, j int) bool { return serialized[i] < serialized[j] })
+	return strings.Join(serialized, ",")
+}
+
 func (c Client) stateMachineARN(app, env, job string) (string, error) {
-	resources, err := c.rgGetter.GetResourcesByTags(resourcegroups.ResourceTypeStateMachine, map[string]string{
+	tags := tags(map[string]string{
 		deploy.AppTagKey:     app,
 		deploy.EnvTagKey:     env,
 		deploy.ServiceTagKey: job,
 	})
+	resources, err := c.rgGetter.GetResourcesByTags(resourcegroups.ResourceTypeStateMachine, tags)
 	if err != nil {
-		return "", fmt.Errorf("get state machine resource by tags for job %s: %w", job, err)
+		return "", fmt.Errorf("get state machine resource with tags %s: %w", tags.String(), err)
 	}
 
 	var stateMachineARN string

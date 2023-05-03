@@ -4,6 +4,7 @@
 package cli
 
 import (
+	"context"
 	"encoding"
 	"io"
 
@@ -165,7 +166,7 @@ type secretDeleter interface {
 }
 
 type imageBuilderPusher interface {
-	BuildAndPush(args *dockerengine.BuildArguments) (string, error)
+	BuildAndPush(ctx context.Context, args *dockerengine.BuildArguments, w io.Writer) (string, error)
 }
 
 type repositoryLogin interface {
@@ -526,6 +527,10 @@ type wsSelector interface {
 	Service(prompt, help string) (string, error)
 	Job(prompt, help string) (string, error)
 	Workload(msg, help string) (string, error)
+}
+
+type staticSourceSelector interface {
+	StaticSources(selPrompt, selHelp, anotherPathPrompt, anotherPathHelp string, pathValidator prompt.ValidatorFunc) ([]string, error)
 }
 
 type scheduleSelector interface {
