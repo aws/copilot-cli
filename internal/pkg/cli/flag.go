@@ -40,6 +40,7 @@ const (
 	uploadAssetsFlag      = "upload-assets"
 	deployFlag            = "deploy"
 	diffFlag              = "diff"
+	sourcesFlag           = "sources"
 
 	// Flags for operational commands.
 	limitFlag                   = "limit"
@@ -181,6 +182,8 @@ Cannot be specified with --%s or --%s.`, dockerFileFlag, dockerFileContextFlag)
 Cannot be specified with --%s.`, imageFlag)
 	dockerFileContextFlagDescription = fmt.Sprintf(`Path to the Docker build context.
 Cannot be specified with --%s.`, imageFlag)
+	sourcesFlagDescription = fmt.Sprintf(`List of relative paths to source directories or files.
+Must be specified with '--%s "Static Site"'.`, svcTypeFlag)
 	storageTypeFlagDescription = fmt.Sprintf(`Type of storage to add. Must be one of:
 %s.`, strings.Join(applyAll(storageTypes, strconv.Quote), ", "))
 	storageLifecycleFlagDescription = fmt.Sprintf(`Whether the storage should be created and deleted
