@@ -315,7 +315,7 @@ func TestDeployEnvOpts_Execute(t *testing.T) {
 				m.deployer.EXPECT().DeployEnvironment(gomock.Any()).Times(1)
 			},
 		},
-		"skip prompt and deploy immediately after after diff": {
+		"skip prompt and deploy immediately after diff": {
 			inShowDiff:       true,
 			inSkipDiffPrompt: true,
 			setUpMocks: func(m *deployEnvExecuteMocks) {

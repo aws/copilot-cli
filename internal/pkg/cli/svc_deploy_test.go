@@ -348,7 +348,7 @@ func TestSvcDeployOpts_Execute(t *testing.T) {
 				m.mockDeployer.EXPECT().DeployWorkload(gomock.Any()).Times(1)
 			},
 		},
-		"skip prompt and deploy immediately after after diff": {
+		"skip prompt and deploy immediately after diff": {
 			inShowDiff:       true,
 			inSkipDiffPrompt: true,
 			mock: func(m *deployMocks) {
