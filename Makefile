@@ -168,7 +168,6 @@ gen-mocks: tools
 	${GOBIN}/mockgen -source=./internal/pkg/cli/progress.go -package=mocks -destination=./internal/pkg/cli/mocks/mock_progress.go
 	${GOBIN}/mockgen -source=./internal/pkg/cli/prompter.go -package=mocks -destination=./internal/pkg/cli/mocks/mock_prompter.go
 	${GOBIN}/mockgen -source=./internal/pkg/cli/interfaces.go -package=mocks -destination=./internal/pkg/cli/mocks/mock_interfaces.go
-	${GOBIN}/mockgen -source=./internal/pkg/cli/svc_delete.go -package=mocks -destination=./internal/pkg/cli/mocks/mock_svc_delete.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/term/selector/mocks/mock_selector.go -source=./internal/pkg/term/selector/selector.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/term/selector/mocks/mock_ec2.go -source=./internal/pkg/term/selector/ec2.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/term/selector/mocks/mock_creds.go -source=./internal/pkg/term/selector/creds.go
@@ -237,4 +236,3 @@ gen-mocks: tools
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/manifest/mocks/mock.go -source=./internal/pkg/manifest/loader.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/addon/mocks/mock_package.go -source=./internal/pkg/addon/package.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/addon/mocks/mock_addons.go -source=./internal/pkg/addon/addons.go
-	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/cli/clean/mocks/mock_static_site.go -source=./internal/pkg/cli/clean/static_site.go

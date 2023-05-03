@@ -11,7 +11,7 @@ import (
 )
 
 type bucketResourceGetter interface {
-	BucketName(app, env, svc string) (string, error)
+	BucketName(app, env, wkld string) (string, error)
 }
 
 type bucketEmptier interface {
