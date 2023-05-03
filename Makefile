@@ -237,4 +237,4 @@ gen-mocks: tools
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/manifest/mocks/mock.go -source=./internal/pkg/manifest/loader.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/addon/mocks/mock_package.go -source=./internal/pkg/addon/package.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/addon/mocks/mock_addons.go -source=./internal/pkg/addon/addons.go
-	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/cli/delete/mocks/mock_static_site.go -source=./internal/pkg/cli/delete/static_site.go
+	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/cli/clean/mocks/mock_static_site.go -source=./internal/pkg/cli/clean/static_site.go

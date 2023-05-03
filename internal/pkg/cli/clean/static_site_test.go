@@ -1,13 +1,13 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-package delete
+package clean
 
 import (
 	"errors"
 	"testing"
 
-	"github.com/aws/copilot-cli/internal/pkg/cli/delete/mocks"
+	"github.com/aws/copilot-cli/internal/pkg/cli/clean/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -54,12 +54,12 @@ func TestStaticSite_CleanResources(t *testing.T) {
 			}
 			tc.mocks(m)
 
-			deleter := &StaticSiteDeleter{
+			deleter := &StaticSite{
 				BucketResourceGetter: m.bucketResourceGetter,
 				BucketEmptier:        m.bucketEmptier,
 			}
 
-			err := deleter.CleanResources("app", "env", "wkld")
+			err := deleter.Clean("app", "env", "wkld")
 			if tc.expected != "" {
 				require.EqualError(t, err, tc.expected)
 				return

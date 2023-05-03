@@ -311,7 +311,7 @@ type deleteSvcMocks struct {
 	spinner        *mocks.Mockprogress
 	svcCFN         *mocks.MockwlDeleter
 	ecr            *mocks.MockimageRemover
-	wkldDeleter    *mocks.MockwkldDeleter
+	wkldCleaner    *mocks.MockwkldCleaner
 }
 
 func TestDeleteSvcOpts_Execute(t *testing.T) {
@@ -354,7 +354,7 @@ func TestDeleteSvcOpts_Execute(t *testing.T) {
 					mocks.store.EXPECT().ListEnvironments(gomock.Eq(mockAppName)).Times(1).Return(mockEnvs, nil),
 
 					mocks.sessProvider.EXPECT().FromRole(gomock.Any(), gomock.Any()).Return(&session.Session{}, nil),
-					mocks.wkldDeleter.EXPECT().CleanResources(mockAppName, mockEnvName, mockSvcName).Return(nil),
+					mocks.wkldCleaner.EXPECT().Clean(mockAppName, mockEnvName, mockSvcName).Return(nil),
 					// deleteStacks
 					mocks.svcCFN.EXPECT().DeleteWorkload(gomock.Any()).Return(nil),
 
@@ -390,7 +390,7 @@ func TestDeleteSvcOpts_Execute(t *testing.T) {
 					mocks.store.EXPECT().GetEnvironment(mockAppName, mockEnvName).Times(1).Return(mockEnv, nil),
 
 					mocks.sessProvider.EXPECT().FromRole(gomock.Any(), gomock.Any()).Return(&session.Session{}, nil),
-					mocks.wkldDeleter.EXPECT().CleanResources(mockAppName, mockEnvName, mockSvcName).Return(nil),
+					mocks.wkldCleaner.EXPECT().Clean(mockAppName, mockEnvName, mockSvcName).Return(nil),
 					// deleteStacks
 					mocks.svcCFN.EXPECT().DeleteWorkload(gomock.Any()).Return(nil),
 
@@ -427,7 +427,7 @@ func TestDeleteSvcOpts_Execute(t *testing.T) {
 					}, nil),
 					mocks.store.EXPECT().GetEnvironment(mockAppName, mockEnvName).Times(1).Return(mockEnv, nil),
 					mocks.sessProvider.EXPECT().FromRole(gomock.Any(), gomock.Any()).Return(&session.Session{}, nil),
-					mocks.wkldDeleter.EXPECT().CleanResources(mockAppName, mockEnvName, mockSvcName).Return(errors.New("some error")),
+					mocks.wkldCleaner.EXPECT().Clean(mockAppName, mockEnvName, mockSvcName).Return(errors.New("some error")),
 				)
 			},
 			wantedError: errors.New("clean resources: some error"),
@@ -446,7 +446,7 @@ func TestDeleteSvcOpts_Execute(t *testing.T) {
 					mocks.store.EXPECT().GetEnvironment(mockAppName, mockEnvName).Times(1).Return(mockEnv, nil),
 
 					mocks.sessProvider.EXPECT().FromRole(gomock.Any(), gomock.Any()).Return(&session.Session{}, nil),
-					mocks.wkldDeleter.EXPECT().CleanResources(mockAppName, mockEnvName, mockSvcName).Return(nil),
+					mocks.wkldCleaner.EXPECT().Clean(mockAppName, mockEnvName, mockSvcName).Return(nil),
 					// deleteStacks
 					mocks.svcCFN.EXPECT().DeleteWorkload(gomock.Any()).Return(testError),
 				)
@@ -468,7 +468,7 @@ func TestDeleteSvcOpts_Execute(t *testing.T) {
 				spinner:        mocks.NewMockprogress(ctrl),
 				svcCFN:         mocks.NewMockwlDeleter(ctrl),
 				ecr:            mocks.NewMockimageRemover(ctrl),
-				wkldDeleter:    mocks.NewMockwkldDeleter(ctrl),
+				wkldCleaner:    mocks.NewMockwkldCleaner(ctrl),
 			}
 
 			test.setupMocks(mocks)
@@ -489,8 +489,8 @@ func TestDeleteSvcOpts_Execute(t *testing.T) {
 				getECR: func(_ *session.Session) imageRemover {
 					return mocks.ecr
 				},
-				newSvcDeleter: func(_ *session.Session, _ string) wkldDeleter {
-					return mocks.wkldDeleter
+				newSvcCleaner: func(_ *session.Session, _ string) wkldCleaner {
+					return mocks.wkldCleaner
 				},
 			}
 
