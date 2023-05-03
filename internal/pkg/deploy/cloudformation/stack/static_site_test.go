@@ -280,6 +280,10 @@ func TestStaticSite_Parameters(t *testing.T) {
 }
 
 func TestStaticSite_SerializedParameters(t *testing.T) {
+	t.Cleanup(func() {
+		fs = realEmbedFS
+	})
+	fs = templatetest.Stub{}
 	c, _ := NewStaticSite(&StaticSiteConfig{
 		EnvManifest: &manifest.Environment{
 			Workload: manifest.Workload{
