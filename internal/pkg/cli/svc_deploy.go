@@ -46,6 +46,7 @@ type deployWkldVars struct {
 	forceNewUpdate  bool // NOTE: this variable is not applicable for a job workload currently.
 	disableRollback bool
 	showDiff        bool
+	skipDiffPrompt  bool
 
 	// To facilitate unit tests.
 	clientConfigured bool
@@ -261,7 +262,10 @@ func (o *deploySvcOpts) Execute() error {
 				return err
 			}
 		}
-		contd, err := o.prompt.Confirm(continueDeploymentPrompt, "")
+		contd, err := o.skipDiffPrompt, nil
+		if !o.skipDiffPrompt {
+			contd, err = o.prompt.Confirm(continueDeploymentPrompt, "")
+		}
 		if err != nil {
 			return fmt.Errorf("ask whether to continue with the deployment: %w", err)
 		}
@@ -642,5 +646,6 @@ func buildSvcDeployCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&vars.forceNewUpdate, forceFlag, false, forceFlagDescription)
 	cmd.Flags().BoolVar(&vars.disableRollback, noRollbackFlag, false, noRollbackFlagDescription)
 	cmd.Flags().BoolVar(&vars.showDiff, diffFlag, false, diffFlagDescription)
+	cmd.Flags().BoolVar(&vars.skipDiffPrompt, diffAutoApproveFlag, false, diffAutoApproveFlagDescription)
 	return cmd
 }

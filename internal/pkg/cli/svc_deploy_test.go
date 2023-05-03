@@ -143,10 +143,11 @@ func TestSvcDeployOpts_Execute(t *testing.T) {
 	)
 	mockError := errors.New("some error")
 	testCases := map[string]struct {
-		inShowDiff  bool
-		mock        func(m *deployMocks)
-		wantedDiff  string
-		wantedError error
+		inShowDiff       bool
+		inSkipDiffPrompt bool
+		mock             func(m *deployMocks)
+		wantedDiff       string
+		wantedError      error
 	}{
 		"error out if fail to read workload manifest": {
 			mock: func(m *deployMocks) {
@@ -347,6 +348,28 @@ func TestSvcDeployOpts_Execute(t *testing.T) {
 				m.mockDeployer.EXPECT().DeployWorkload(gomock.Any()).Times(1)
 			},
 		},
+		"skip prompt and deploy immediately after after diff": {
+			inShowDiff:       true,
+			inSkipDiffPrompt: true,
+			mock: func(m *deployMocks) {
+				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte(""), nil)
+				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
+				m.mockMft = &mockWorkloadMft{
+					mockRequiredEnvironmentFeatures: func() []string {
+						return []string{"mockFeature1"}
+					},
+				}
+				m.mockEnvFeaturesDescriber.EXPECT().Version().Return("v1.mock", nil)
+				m.mockEnvFeaturesDescriber.EXPECT().AvailableFeatures().Return([]string{"mockFeature1", "mockFeature2"}, nil)
+				m.mockDeployer.EXPECT().IsServiceAvailableInRegion("").Return(false, nil)
+				m.mockDeployer.EXPECT().UploadArtifacts().Return(&clideploy.UploadArtifactsOutput{}, nil)
+				m.mockDeployer.EXPECT().GenerateCloudFormationTemplate(gomock.Any()).Return(&clideploy.GenerateCloudFormationTemplateOutput{}, nil)
+				m.mockDeployer.EXPECT().DeployDiff(gomock.Any()).Return("mock diff", nil)
+				m.mockDiffWriter = &strings.Builder{}
+				m.mockPrompter.EXPECT().Confirm(gomock.Eq("Continue with the deployment?"), gomock.Any(), gomock.Any()).Times(0)
+				m.mockDeployer.EXPECT().DeployWorkload(gomock.Any()).Times(1)
+			},
+		},
 		"error if failed to deploy service": {
 			mock: func(m *deployMocks) {
 				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte(""), nil)
@@ -400,10 +423,11 @@ func TestSvcDeployOpts_Execute(t *testing.T) {
 
 			opts := deploySvcOpts{
 				deployWkldVars: deployWkldVars{
-					appName:  mockAppName,
-					name:     mockSvcName,
-					envName:  mockEnvName,
-					showDiff: tc.inShowDiff,
+					appName:        mockAppName,
+					name:           mockSvcName,
+					envName:        mockEnvName,
+					showDiff:       tc.inShowDiff,
+					skipDiffPrompt: tc.inSkipDiffPrompt,
 
 					clientConfigured: true,
 				},
