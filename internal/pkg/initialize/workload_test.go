@@ -414,10 +414,8 @@ func TestAppInitOpts_createRequestDrivenWebServiceManifest(t *testing.T) {
 				Ports: tc.inSvcPort,
 			}
 
-			initter := &WorkloadInitializer{}
-
 			// WHEN
-			manifest := initter.newRequestDrivenWebServiceManifest(&props)
+			manifest := newRequestDrivenWebServiceManifest(&props)
 
 			// THEN
 			require.Equal(t, tc.inSvcName, *manifest.Name)

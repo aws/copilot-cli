@@ -375,8 +375,12 @@ func (o *initSvcOpts) Execute() error {
 
 // RecommendActions returns follow-up actions the user can take after successfully executing the command.
 func (o *initSvcOpts) RecommendActions() error {
+	updateManifestAction := fmt.Sprintf("Update your manifest %s to change the defaults.", color.HighlightResource(o.manifestPath))
+	if (o.wkldType == manifestinfo.BackendServiceType) && (len(o.ports) > 1) {
+		updateManifestAction = fmt.Sprintf("Update your manifest %s to change the default paths for your internal load balancer.", color.HighlightResource(o.manifestPath))
+	}
 	logRecommendedActions([]string{
-		fmt.Sprintf("Update your manifest %s to change the defaults.", color.HighlightResource(o.manifestPath)),
+		updateManifestAction,
 		fmt.Sprintf("Run %s to deploy your service to a %s environment.",
 			color.HighlightCode(fmt.Sprintf("copilot svc deploy --name %s --env %s", o.name, defaultEnvironmentName)),
 			defaultEnvironmentName),

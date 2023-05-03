@@ -292,7 +292,7 @@ func (w *WorkloadInitializer) newServiceManifest(i *ServiceProps) (encoding.Bina
 	case manifestinfo.LoadBalancedWebServiceType:
 		return w.newLoadBalancedWebServiceManifest(i)
 	case manifestinfo.RequestDrivenWebServiceType:
-		return w.newRequestDrivenWebServiceManifest(i), nil
+		return newRequestDrivenWebServiceManifest(i), nil
 	case manifestinfo.BackendServiceType:
 		return w.newBackendServiceManifest(i)
 	case manifestinfo.WorkerServiceType:
@@ -334,7 +334,7 @@ func (w *WorkloadInitializer) newLoadBalancedWebServiceManifest(inProps *Service
 	return manifest.NewLoadBalancedWebService(outProps), nil
 }
 
-func (w *WorkloadInitializer) newRequestDrivenWebServiceManifest(i *ServiceProps) *manifest.RequestDrivenWebService {
+func newRequestDrivenWebServiceManifest(i *ServiceProps) *manifest.RequestDrivenWebService {
 	props := &manifest.RequestDrivenWebServiceProps{
 		WorkloadProps: &manifest.WorkloadProps{
 			Name:       i.Name,
