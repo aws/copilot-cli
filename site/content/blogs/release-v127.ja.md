@@ -24,7 +24,7 @@ AWS Cloud Development Kit (CDK) または YAML パッチオーバライドを使
 - **CloudFormation テンプレート変更のプレビュー**: `copilot [noun] package` または `copilot [noun] deploy` コマンドに `--diff` フラグを付けて実行すると、
 最後にデプロイされた CloudFormation テンプレートとローカルの変更における差分を表示できる様になりました。[詳細セクションはこちらをご覧ください](#preview-aws-cloudformation-template-changes)。
 - **サイドカーのコンテナイメージのビルドとプッシュ**: ローカルの Dockerfile からサイドカーコンテナをビルドしてプッシュするための `image.build` をサポートしました。[詳細セクションはこちらをご覧ください](#build-and-push-container-images-for-sidecar-containers)。
-- **サイドカーに対する Environmment ファイルのサポート**: サイドカーコンテナ用のローカルな `.env` ファイルをプッシュするための `env_file` をサポートしました。[詳細セクションはこちらをご覧ください](#upload-local-environment-files-for-sidecar-containers)。
+- **サイドカーに対する環境変数ファイルのサポート**: サイドカーコンテナ用のローカルな `.env` ファイルをプッシュするための `env_file` をサポートしました。[詳細セクションはこちらをご覧ください](#upload-local-environment-files-for-sidecar-containers)。
 
 ??? note "AWS Copilot とは？"
 
@@ -40,13 +40,13 @@ AWS Cloud Development Kit (CDK) または YAML パッチオーバライドを使
 
 AWS Copilot を利用すると、`copilot init`　コマンドとプロンプトに従うだけで、ビルダーはコンテナ化されたアプリケーションを素早く開始できます。
 その後、開発者は [Manifest](../docs/manifest/overview.ja.md) の infrastructure-as-code ファイルを編集し、デプロイすることで、アプリケーションを拡張できます。
-さらに v1.27 では、 Copilot が生成した Cloudformation テンプレートを `copilot [noun] override` コマンドで拡張できるようになり、インフラストラクチャーを完全にカスタマイズできる様になりました。
+さらに v1.27 では、 Copilot が生成した CloudFormation テンプレートを `copilot [noun] override` コマンドで拡張できるようになり、インフラストラクチャーを完全にカスタマイズできる様になりました。
 
 <a id="aws-cloud-development-kit-cdk-overrides"></a>
 ### AWS Cloud Development Kit (CDK) オーバライド
 
-プログラミング言語の表現力と安全性が必要な場合、 CDK を使用して Cloudformation テンプレートを拡張できます。
-`copilot [noun] override` コマンドの実行後、 Copilot が `copilot/[name]/override` ディレクトリー配下に CDK アプリケーションを作成します。
+プログラミング言語の表現力と安全性が必要な場合、 CDK を使用して CloudFormation テンプレートを拡張できます。
+`copilot [noun] override` コマンドの実行後、 Copilot が `copilot/[name]/override` ディレクトリ配下に CDK アプリケーションを作成します。
 
 
 ```console
@@ -243,12 +243,12 @@ sidecars:
 ```
 この Manifest では、“/” へのリクエストは、メインコンテナのポート 8080 へルーティングされます。"/customerdb" へのリクエストは、メインコンテナのポート 8081 にルーティングされます。
 "/admin" へのリクエストは、nginx のポート 8082 へ、"/superAdmin"へのリクエストは nginx のポート 80 にルーティングされます。なお、3 つ目のリスナールールは 'target_port: 80' と定義されています。
-つまり、Copilot は '/superAdmin' からのトラフィックをインテリジェンスに nginx サイドカーコンテナへルーティングします。
+つまり、Copilot は '/superAdmin' からのトラフィックを賢く nginx サイドカーコンテナへルーティングします。
 
 また、"/" へのリクエストを処理するコンテナポートを新しいフィールド[`http.target_port`](../docs/manifest/lb-web-service.ja.md#http-target-port)でも設定可能です。
 
 <a id="add-multiple-port-and-protocol-listeners-to-your-network-load-balancers"></a>
-### Neetwork Load Balancer に対する 複数のポートやプロコトルのリスナー追加
+### Network Load Balancer に対する 複数のポートやプロコトルのリスナー追加
 新しいフィールド [`nlb.additional_listeners`](../docs/manifest/lb-web-service.jp.md#nlb-additional-listeners)を利用して、NLB に対する追加のリスナーを設定できます。
 設定例を通じて確認しましょう。
 
@@ -282,7 +282,7 @@ NLB ポート 8082 へのリクエストは nginx というサイドカーコン
 ## サイドカーの改善
 
 メインコンテナと同じ様に、サイドカーコンテナに対してもコンテナイメージのビルドとプッシュができるようになりました。
-加えて、サイドカーに対するローカルの 環境変数ファイル のパスを指定できる様になっています。
+加えて、サイドカーに対するローカルの環境変数ファイルのパスを指定できる様になっています。
 <a id="build-and-push-container-images-for-sidecar-containers"></a>
 ### サイドカーコンテナに対する コンテナイメージのビルドとプッシュ
 
@@ -299,7 +299,7 @@ sidecars:
 ```
 
 また、 `build` フィールドを Map として指定すると、より高度なカスタマイズが行えます。
-これには、Dockerfile パスの指定やコンテキストディレクトリー、 ターゲットするビルドステージ、 イメージからのキャッシュ、ビルド引数が含まれます。
+これには、Dockerfile パスの指定やコンテキストディレクトリ、 ターゲットするビルドステージ、 イメージからのキャッシュ、ビルド引数が含まれます。
 
 ```yaml
 sidecars:
@@ -331,8 +331,8 @@ sidecars:
 ```
 <a id="upload-local-environment-files-for-sidecar-containers"></a>
 ### サイドカーコンテナ用のローカルの環境変数ファイルをアップロードする
-タスク内の任意のサイドカーにアップロードする 環境変数ファイルを指定できる様になりました。
-以前は、 Task のメインコンテナに対する 環境変数ファイルのみが指定できました。
+タスク内の任意のサイドカーにアップロードする環境変数ファイルを指定できる様になりました。
+以前は、 Task のメインコンテナに対する環境変数ファイルのみが指定できました。
 
 ```yaml
 # in copilot/{service name}/manifest.yml

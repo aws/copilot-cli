@@ -48,7 +48,7 @@ $ copilot job deploy --name report-gen --env test
 $ copilot job deploy --resource-tags source/revision=bb133e7,deployment/initiator=manual`
 ```
 
-`--diff` を使用して、デプロイメントを実行する前に、変更される内容を確認します。
+`--diff` を使用して、デプロイを実行する前に、変更される内容を確認します。
 ```console
 $ copilot job deploy --diff
 ~ Resources:
@@ -65,5 +65,5 @@ Continue with the deployment? (y/N)
 ```
 
 !!!info "`copilot job package --diff`"
-    デプロイメントを実行する必要がなく、差分だけを確認したい場合があります。
+    デプロイを実行する必要がなく、差分だけを確認したい場合があります。
     `copilot job package --diff` は差分を表示してコマンドが終了します。

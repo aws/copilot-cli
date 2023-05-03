@@ -4,7 +4,7 @@
 nlb セクションは Service を Network Load Balancer と統合するためのパラメーターを含みます。
 
 Network Load Balancerは、`nlb` フィールドを指定した場合のみ有効になります。
-Load-Balanced Web Service では、Application Load Balancer と Network Load Balancer のいずれかが有効になっている必要があることに注意してください。
+Load Balanced Web Service では、Application Load Balancer と Network Load Balancer のいずれかが有効になっている必要があることに注意してください。
 
 <span class="parent-field">nlb.</span><a id="nlb-port" href="#nlb-port" class="field">`port`</a> <span class="type">String</span>  
 必須項目。Network Load Balancer がリッスンするポートとプロトコルを指定します。

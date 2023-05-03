@@ -4,7 +4,7 @@
 
 **Siddharth Vohra**, ソフトウエア ディベロップメント エンジニア, AWS App Runner
 
-AWS Web Application Firewall (WAF) の Web アクセスコントロールリスト (web ACLs) を App Runner サービスに関連付けることができるようになりました。 - Copilot で！
+AWS Web Application Firewall (WAF) のウェブアクセスコントロールリスト (ウェブ ACL) を App Runner サービスに関連付けることができるようになりました。 - Copilot で！
 
 [AWS Web Application Firewall (WAF)](https://docs.aws.amazon.com/ja_jp/waf/latest/developerguide/waf-chapter.html) は、Web アプリケーションに転送される HTTP(S) リクエストの監視を支援し、
 コンテンツへのアクセスを制御します。
@@ -22,12 +22,12 @@ AWS　は [AWS App Runner がセキュリティ強化のためのウェブアプ
 
 
 ### 前提条件
-続行するには、独自の WAF Web アプリケーション制御リスト(ACL) を用意する必要があります。
+続行するには、独自の WAF ウェブアクセスコントロールリスト(ウェブ ACL) を用意する必要があります。
 まだ、ACL を作成していない場合、まずルールオプションでアプリケーション用の
-WAF ACL を作成する必要があります( 独自の Web ACL の作成については [こちら](https://docs.aws.amazon.com/waf/latest/developerguide/web-acl-creating.html)を確認してください )。
+WAF ACL を作成する必要があります(独自のウェブ ACL の作成については [こちら](https://docs.aws.amazon.com/waf/latest/developerguide/web-acl-creating.html)を確認してください)。
 
-Web ACL が準備できたら、その ARN をメモしておきます。
-WAF Web ACL を Request-Driven Web Service で利用するには、 次の手順に従います。
+ウェブ ACL が準備できたら、その ARN をメモしておきます。
+WAF ウェブ ACL を Request-Driven Web Service で利用するには、 次の手順に従います。
 
 ### 手順 1 (オプション): Request-Driven Web Service の作成
 Request-Driven Web Service がまだ無い場合、
@@ -62,7 +62,7 @@ Request-Driven Web Service があるワークスペースにいるとします�
       └── addons/
 ```
 
-### 手順 3: Addon を利用して、Request-Driven Web Service に Web ACL に関連づける 
+### 手順 3: Addon を利用して、Request-Driven Web Service に ウェブ ACL を関連づける 
 
 Addon フォルダに、 `waf.yml` と `addons.parameters.yml` という 2 つのファイルを新しく作成します。フォルダは次の様になっているでしょう。
 
@@ -116,9 +116,9 @@ Addon フォルダに、 `waf.yml` と `addons.parameters.yml` という 2 つ�
       ```
 
 
-### 手順 4: Web ACL ARN を `waf.yml` に入力する
+### 手順 4: ウェブ ACL ARN を `waf.yml` に入力する
 
-`waf.yml` を開き、`<paste your WAF Web ACL ARN here>` を Web ACL リソースの ARN で置き換えます。例えば、次の部分です。
+`waf.yml` を開き、`<paste your WAF Web ACL ARN here>` をウェブ ACL リソースの ARN で置き換えます。例えば、次の部分です。
 
 ```yaml
 Resources:
@@ -135,8 +135,8 @@ Resources:
  
 
 ### 手順 5: Service をデプロイする
-最後に、`copilot svc deploy` を実行します！　Request-Driven Web Service がデプロイされ、 WAF Web ACL に関連付けられているでしょう！
+最後に、`copilot svc deploy` を実行します！　Request-Driven Web Service がデプロイされ、 WAF ウェブ ACL に関連付けられているでしょう！
 
 ???+ note "考慮事項"
-    - Web ACL は複数の Services に関連付けられますが、1 つの Service には 1 つより多くの Web ACL を関連付けることができません。
-    - Copilot を利用した App Runner サービスが既にある場合、 手順 2-5 を実行するだけで、 WAF Web ACL を既存の Service に関連づけることができます。
+    - ウェブ ACL は複数の Services に関連付けられますが、1 つの Service には 1 つより多くのウェブ ACL を関連付けることができません。
+    - Copilot を利用した App Runner サービスが既にある場合、 手順 2-5 を実行するだけで、 WAF ウェブ ACL を既存の Service に関連づけることができます。

@@ -57,8 +57,8 @@ export class TransformedStack extends cdk.Stack {
 ## どの様な仕組みでしょうか？
 
 上記の `stack.ts` ファイルを見ればわかるとおり、Copilot は [cloudformation_include module](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.cloudformation_include-readme.html) を使用します。これは、CDK が提供している、変換を支援する為のライブラリです。
-このライブラリーは ["Import or migrate an existing AWS CloudFormation template"](https://docs.aws.amazon.com/cdk/v2/guide/use_cfn_template.html) ガイドで推奨されています。
-このラブラリーにより Copilot Manifest によって表示されないリソースに対して、 [L1 constructs](https://docs.aws.amazon.com/cdk/v2/guide/constructs.html) としてアクセスできる様になります。
+このライブラリは ["Import or migrate an existing AWS CloudFormation template"](https://docs.aws.amazon.com/cdk/v2/guide/use_cfn_template.html) ガイドで推奨されています。
+このライブラリにより Copilot Manifest によって表示されないリソースに対して、 [L1 constructs](https://docs.aws.amazon.com/cdk/v2/guide/constructs.html) としてアクセスできる様になります。
 `CfnInclude` オブジェクトは、隠された `.build/in.yaml` CloudFormation テンプレートから初期化されます。
 これが Copilot と CDK のコミュニケーション方法です。
 Copilot は `.build/` ディレクトリ配下に Manifest より生成された CloudFormation テンプレートを出力します。それを `cloudformation_include` ライブラリで解析し、CDK コンストラクトに変換します。

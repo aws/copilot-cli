@@ -39,7 +39,7 @@ Service デプロイの手順は以下の通りです。
 
 
 ## 実行例
-`--diff` を使用して、デプロイメントを実行する前に、変更される内容を確認します。
+`--diff` を使用して、デプロイを実行する前に、変更される内容を確認します。
 
 ```console
 $ copilot svc deploy --diff
@@ -57,5 +57,5 @@ Continue with the deployment? (y/N)
 ```
 
 !!!info "`copilot svc package --diff`"
-    デプロイメントを実行する必要がなく、差分だけを確認したい場合があります。
+    デプロイを実行する必要がなく、差分だけを確認したい場合があります。
     `copilot svc package --diff` は差分を表示してコマンドが終了します。

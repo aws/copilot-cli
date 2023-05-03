@@ -5,7 +5,7 @@
     使用可能なプロトコルには `tcp` と `tls` です。プロトコルが指定されていない場合、デフォルト値として `tcp` が使用されます。
     
     <span class="parent-field">nlb.additional_listeners.</span><a id="nlb-additional-listeners-healthcheck" href="#nlb-additional-listeners-healthcheck" class="field">`healthcheck`</a> <span class="type">Map</span>
-    Network Load Balancer の追加リスナーに対するヘルスチェック設定を指定する。  
+    Network Load Balancer の追加リスナーに対するヘルスチェック設定を指定します。
     ```yaml
     nlb:
       additional_listeners:
@@ -18,7 +18,7 @@
     ```
     
     <span class="parent-field">nlb.additional_listeners.healthcheck.</span><a id="nlb-additional-listeners-healthcheck-port" href="#nlb-additional-listeners-healthcheck-port" class="field">`port`</a> <span class="type">String</span>  
-    ヘルスチェックリクエストが送信されるポート。コンテナターゲットポートと異なるポートでヘルスチェックが実行される場合に指定する。
+    ヘルスチェックリクエストが送信されるポート。コンテナターゲットポートと異なるポートでヘルスチェックが実行される場合に指定します。
     
     <span class="parent-field">nlb.additional_listeners.healthcheck.</span><a id="nlb-additional-listeners-healthcheck-healthy-threshold" href="#nlb-additional-listeners-healthcheck-healthy-threshold" class="field">`healthy_threshold`</a> <span class="type">Integer</span>  
     unhealthy なターゲットを healthy とみなすために必要な、連続したヘルスチェックの成功回数を指定します。デフォルト値は 3 で、設定可能な範囲は、2-10 です。

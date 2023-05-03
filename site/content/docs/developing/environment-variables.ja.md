@@ -58,7 +58,7 @@ environments:
 
 さらに、環境変数をまとめて追加したい場合、 [env file](https://docs.aws.amazon.com/ja_jp/AmazonECS/latest/developerguide/taskdef-envfiles.html#taskdef-envfiles-considerations) に環境変数を追加します。そして、ファイルパス (Workspace の root からのファイルパス) を [Manifest](../manifest/overview.ja.md) の `env_file` フィールドに記述します。
 
-メインコンテナのワークスペースのルートや、任意のサイドカーコンテナ定義、`logging` フィールド下に、env file を指定して、Firelens サイドカーコンテナに env file を設定できます。
+メインコンテナのワークスペースのルートや、任意のサイドカーコンテナ定義、`logging` フィールド下に、env_file を指定して、FireLens サイドカーコンテナに環境変数ファイルを設定できます。
 
 ```yaml
 # in copilot/{service name}/manifest.yml

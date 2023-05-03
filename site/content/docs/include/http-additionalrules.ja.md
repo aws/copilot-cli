@@ -7,14 +7,14 @@
     {% include 'http-additionalrules-healthcheck.ja.md' %}
     
     <span class="parent-field">http.additional_rules.</span><a id="http-additional-rules-deregistration-delay" href="#http-additional-rules-deregistration-delay" class="field">`deregistration_delay`</a> <span class="type">Duration</span> 
-    登録解除時に、ターゲットがコネクションをドレイニングするのを待つ時間です。デフォルト値は 60 秒です。大きな値に設定すると、安全にコネクションをドレイニングするのに長い時間を使える様になりますが、新しいデプロイメントに必要な時間が増加します。設定可能な範囲は、0 秒 - 3600 秒です。
+    登録解除時に、ターゲットがコネクションをドレイニングするのを待つ時間です。デフォルト値は 60 秒です。大きな値に設定すると、安全にコネクションをドレイニングするのに長い時間を使える様になりますが、新しいデプロイに必要な時間が増加します。設定可能な範囲は、0 秒 - 3600 秒です。
     
     <span class="parent-field">http.additional_rules.</span><a id="http-additional-rules-target-container" href="#http-additional-rules-target-container" class="field">`target_container`</a> <span class="type">String</span>  
     メインのサービスコンテナの代わりにリクエストがルーティングされるサイドカーコンテナ。
     ターゲットコンテナのポートが 443 に設定されている場合、 ロードバランサーがターゲットコンテナにインストールされた証明書を使用して、Fargate タスクとの TLS 接続するために、プロトコルは `HTTPS` に設定されます。
     
     <span class="parent-field">http.additional_rules.</span><a id="http-additional-rules-target-port" href="#http-additional-rules-target-port" class="field">`target_port`</a> <span class="type">String</span>  
-    トラフィックを受信するコンテナポート。 メインコンテナの `image.port` やサイドカーコンテナの `sidecar.port` と異なるコンテナポートの場合、このフィールドを指定する。
+    トラフィックを受信するコンテナポート。 メインコンテナの `image.port` やサイドカーコンテナの `sidecar.port` と異なるコンテナポートの場合、このフィールドを指定します。
     
     <span class="parent-field">http.additional_rules.</span><a id="http-additional-rules-stickiness" href="#http-additional-rules-stickiness" class="field">`stickiness`</a> <span class="type">Boolean</span>  
     スティッキーセッションの有効化、あるいは無効化を指定します。
