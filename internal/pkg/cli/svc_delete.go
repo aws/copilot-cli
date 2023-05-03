@@ -68,7 +68,7 @@ type deleteSvcOpts struct {
 	appCFN        svcRemoverFromApp
 	getSvcCFN     func(sess *awssession.Session) wlDeleter
 	getECR        func(sess *awssession.Session) imageRemover
-	newSvcDeleter func(sess *awssession.Session, typ string) wkldDeleter
+	newSvcDeleter func(sess *awssession.Session, manifestType string) wkldDeleter
 }
 
 func newDeleteSvcOpts(vars deleteSvcVars) (*deleteSvcOpts, error) {
@@ -95,8 +95,8 @@ func newDeleteSvcOpts(vars deleteSvcVars) (*deleteSvcOpts, error) {
 		getECR: func(sess *awssession.Session) imageRemover {
 			return ecr.New(sess)
 		},
-		newSvcDeleter: func(sess *awssession.Session, typ string) wkldDeleter {
-			if typ == manifestinfo.StaticSiteType {
+		newSvcDeleter: func(sess *awssession.Session, manifestType string) wkldDeleter {
+			if manifestType == manifestinfo.StaticSiteType {
 				return &delete.StaticSiteDeleter{
 					BucketEmptier:        awss3.New(sess),
 					BucketResourceGetter: s3.New(sess),

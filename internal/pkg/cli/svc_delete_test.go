@@ -489,7 +489,7 @@ func TestDeleteSvcOpts_Execute(t *testing.T) {
 				getECR: func(_ *session.Session) imageRemover {
 					return mocks.ecr
 				},
-				newSvcDeleter: func(_ *session.Session, typ string) wkldDeleter {
+				newSvcDeleter: func(_ *session.Session, _ string) wkldDeleter {
 					return mocks.wkldDeleter
 				},
 			}
