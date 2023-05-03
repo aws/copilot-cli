@@ -74,7 +74,7 @@ func TestStaticSite_CleanResources(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			err := tc.cleaner.Clean("app", "env", "wkld")
+			err := tc.cleaner.Clean()
 			if tc.expected != "" {
 				require.EqualError(t, err, tc.expected)
 				return
