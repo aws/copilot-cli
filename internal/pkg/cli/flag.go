@@ -40,6 +40,8 @@ const (
 	uploadAssetsFlag      = "upload-assets"
 	deployFlag            = "deploy"
 	diffFlag              = "diff"
+	diffAutoApproveFlag   = "diff-yes"
+	sourcesFlag           = "sources"
 
 	// Flags for operational commands.
 	limitFlag                   = "limit"
@@ -181,6 +183,8 @@ Cannot be specified with --%s or --%s.`, dockerFileFlag, dockerFileContextFlag)
 Cannot be specified with --%s.`, imageFlag)
 	dockerFileContextFlagDescription = fmt.Sprintf(`Path to the Docker build context.
 Cannot be specified with --%s.`, imageFlag)
+	sourcesFlagDescription = fmt.Sprintf(`List of relative paths to source directories or files.
+Must be specified with '--%s "Static Site"'.`, svcTypeFlag)
 	storageTypeFlagDescription = fmt.Sprintf(`Type of storage to add. Must be one of:
 %s.`, strings.Join(applyAll(storageTypes, strconv.Quote), ", "))
 	storageLifecycleFlagDescription = fmt.Sprintf(`Whether the storage should be created and deleted
@@ -250,7 +254,8 @@ const (
 	yesFlagDescription          = "Skips confirmation prompt."
 	resourceTagsFlagDescription = `Optional. Labels with a key and value separated by commas.
 Allows you to categorize resources.`
-	diffFlagDescription = "Compares the generated CloudFormation template to the deployed stack."
+	diffFlagDescription            = "Compares the generated CloudFormation template to the deployed stack."
+	diffAutoApproveFlagDescription = "Skip interactive approval of diff before deploying."
 
 	// Deployment.
 	deployTestFlagDescription = `Deploy your service or job to a "test" environment.`
