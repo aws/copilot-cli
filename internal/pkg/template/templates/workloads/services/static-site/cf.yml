@@ -42,27 +42,6 @@ Resources:
         Rules:
           - ObjectOwnership: BucketOwnerEnforced
 
-  BucketPolicy:
-    Metadata:
-      aws:copilot:description: A bucket policy to deny unencrypted access to the bucket and its contents
-    Type: AWS::S3::BucketPolicy
-    DeletionPolicy: Retain
-    Properties:
-      Bucket: !Ref Bucket
-      PolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Sid: ForceHTTPS
-            Effect: Deny
-            Principal: "*"
-            Action: s3:*
-            Resource:
-              - !Sub ${Bucket.Arn}
-              - !Sub ${Bucket.Arn}/*
-            Condition: 
-              Bool:
-                aws:SecureTransport: false
-
   TriggerStateMachineFunction:
     Metadata:
       aws:copilot:description: A lambda that triggers the file-copying state machine

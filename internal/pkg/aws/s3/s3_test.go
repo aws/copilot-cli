@@ -322,6 +322,11 @@ func TestS3_ParseURL(t *testing.T) {
 			wantedBucketName: "stackset-myapp-infrastru-pipelinebuiltartifactbuc-1nk5t9zkymh8r",
 			wantedKey:        "scripts/dns-cert-validator/dd2278811c3",
 		},
+		"parses bucket URL": {
+			inURL:            "https://stackset-myapp-infrastru-pipelinebuiltartifactbuc-1nk5t9zkymh8r.s3-us-west-2.amazonaws.com",
+			wantedBucketName: "stackset-myapp-infrastru-pipelinebuiltartifactbuc-1nk5t9zkymh8r",
+			wantedKey:        "",
+		},
 		"parses object URL with dots": {
 			inURL:            "https://bucket.with.dots.in.name.s3.us-west-2.amazonaws.com/scripts/dns-cert-validator/dd2278811c3",
 			wantedBucketName: "bucket.with.dots.in.name",
@@ -341,7 +346,7 @@ func TestS3_ParseURL(t *testing.T) {
 			if gotErr != nil {
 				require.EqualError(t, gotErr, tc.wantError.Error())
 			} else {
-				require.Equal(t, gotErr, nil)
+				require.NoError(t, tc.wantError)
 				require.Equal(t, tc.wantedBucketName, gotBucketName)
 				require.Equal(t, tc.wantedKey, gotKey)
 			}
@@ -400,6 +405,12 @@ func TestURL(t *testing.T) {
 			key:    "puppy.jpg",
 
 			wanted: "https://mybucket.s3.us-west-2.amazonaws.com/puppy.jpg",
+		},
+		"Formats a virtual-hosted-style URL with no key": {
+			region: "us-west-2",
+			bucket: "mybucket",
+
+			wanted: "https://mybucket.s3.us-west-2.amazonaws.com",
 		},
 		"Formats the URL for a region in the aws-cn partition": {
 			region: "cn-north-1",

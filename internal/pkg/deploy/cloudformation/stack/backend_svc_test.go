@@ -41,28 +41,6 @@ func TestBackendService_Template(t *testing.T) {
 		fs = realEmbedFS
 	})
 	fs = templatetest.Stub{}
-
-	t.Run("returns a wrapped error when addons template parsing fails", func(t *testing.T) {
-		// GIVEN
-		svc, err := NewBackendService(BackendServiceConfig{
-			App:         &config.Application{},
-			EnvManifest: &manifest.Environment{},
-			Manifest: &manifest.BackendService{
-				Workload: manifest.Workload{
-					Name: aws.String("api"),
-				},
-			},
-			Addons: mockAddons{tplErr: errors.New("some error")},
-		})
-		require.NoError(t, err)
-
-		// WHEN
-		_, err = svc.Template()
-
-		// THEN
-		require.EqualError(t, err, "generate addons template for api: some error")
-	})
-
 	t.Run("returns a wrapped error when addons parameter parsing fails", func(t *testing.T) {
 		// GIVEN
 		svc, err := NewBackendService(BackendServiceConfig{
@@ -73,7 +51,8 @@ func TestBackendService_Template(t *testing.T) {
 					Name: aws.String("api"),
 				},
 			},
-			Addons: mockAddons{paramsErr: errors.New("some error")},
+			ArtifactBucketName: "mockBucket",
+			Addons:             mockAddons{paramsErr: errors.New("some error")},
 		})
 		require.NoError(t, err)
 
@@ -99,10 +78,11 @@ func TestBackendService_Template(t *testing.T) {
 			},
 		}
 		svc, err := NewBackendService(BackendServiceConfig{
-			App:         &config.Application{},
-			EnvManifest: &manifest.Environment{},
-			Manifest:    mft,
-			Addons:      mockAddons{},
+			App:                &config.Application{},
+			EnvManifest:        &manifest.Environment{},
+			Manifest:           mft,
+			ArtifactBucketName: "mockBucket",
+			Addons:             mockAddons{},
 		})
 		require.NoError(t, err)
 
@@ -133,10 +113,11 @@ func TestBackendService_Template(t *testing.T) {
 			},
 		}
 		svc, err := NewBackendService(BackendServiceConfig{
-			App:         &config.Application{},
-			EnvManifest: &manifest.Environment{},
-			Manifest:    mft,
-			Addons:      mockAddons{},
+			App:                &config.Application{},
+			EnvManifest:        &manifest.Environment{},
+			Manifest:           mft,
+			ArtifactBucketName: "mockBucket",
+			Addons:             mockAddons{},
 		})
 		require.NoError(t, err)
 
@@ -163,10 +144,11 @@ func TestBackendService_Template(t *testing.T) {
 			},
 		}
 		svc, err := NewBackendService(BackendServiceConfig{
-			App:         &config.Application{},
-			EnvManifest: &manifest.Environment{},
-			Manifest:    mft,
-			Addons:      mockAddons{},
+			App:                &config.Application{},
+			EnvManifest:        &manifest.Environment{},
+			Manifest:           mft,
+			ArtifactBucketName: "mockBucket",
+			Addons:             mockAddons{},
 		})
 		require.NoError(t, err)
 
@@ -193,10 +175,11 @@ func TestBackendService_Template(t *testing.T) {
 			Port: 8080,
 		})
 		svc, err := NewBackendService(BackendServiceConfig{
-			App:         &config.Application{},
-			EnvManifest: &manifest.Environment{},
-			Manifest:    mft,
-			Addons:      mockAddons{},
+			App:                &config.Application{},
+			EnvManifest:        &manifest.Environment{},
+			Manifest:           mft,
+			ArtifactBucketName: "mockBucket",
+			Addons:             mockAddons{},
 		})
 		svc.parser = parser
 		require.NoError(t, err)
@@ -272,7 +255,8 @@ Outputs:
 					Name: aws.String("test"),
 				},
 			},
-			Manifest: mft,
+			ArtifactBucketName: "mockBucket",
+			Manifest:           mft,
 			RuntimeConfig: RuntimeConfig{
 				PushedImages: map[string]ECRImage{
 					"test": {
@@ -311,7 +295,7 @@ Outputs:
 				Port: "8080",
 				Name: "api",
 			},
-			GracePeriod:         aws.Int64(manifest.DefaultHealthCheckGracePeriod),
+			GracePeriod: aws.Int64(manifest.DefaultHealthCheckGracePeriod),
 			CustomResources: map[string]template.S3ObjectLocation{
 				"EnvControllerFunction": {
 					Bucket: "my-bucket",
