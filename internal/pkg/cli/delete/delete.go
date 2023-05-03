@@ -7,6 +7,6 @@ package delete
 type NoOpDeleter struct{}
 
 // CleanResources returns nil.
-func (n *NoOpDeleter) CleanResources(app, env, wkld string) error {
+func (*NoOpDeleter) CleanResources(_, _, _ string) error {
 	return nil
 }
