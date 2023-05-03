@@ -14,7 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	awss3 "github.com/aws/copilot-cli/internal/pkg/aws/s3"
-	"github.com/aws/copilot-cli/internal/pkg/cli/delete"
+	"github.com/aws/copilot-cli/internal/pkg/cli/clean"
 	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/s3"
 
@@ -45,8 +45,8 @@ var (
 	errSvcDeleteCancelled = errors.New("svc delete cancelled - no changes made")
 )
 
-type wkldDeleter interface {
-	CleanResources(app, env, wkld string) error
+type cleaner interface {
+	Clean() error
 }
 
 type deleteSvcVars struct {
@@ -68,7 +68,7 @@ type deleteSvcOpts struct {
 	appCFN        svcRemoverFromApp
 	getSvcCFN     func(sess *awssession.Session) wlDeleter
 	getECR        func(sess *awssession.Session) imageRemover
-	newSvcDeleter func(sess *awssession.Session, typ string) wkldDeleter
+	newSvcCleaner func(sess *awssession.Session, manifestType string) cleaner
 }
 
 func newDeleteSvcOpts(vars deleteSvcVars) (*deleteSvcOpts, error) {
@@ -95,14 +95,11 @@ func newDeleteSvcOpts(vars deleteSvcVars) (*deleteSvcOpts, error) {
 		getECR: func(sess *awssession.Session) imageRemover {
 			return ecr.New(sess)
 		},
-		newSvcDeleter: func(sess *awssession.Session, typ string) wkldDeleter {
-			if typ == manifestinfo.StaticSiteType {
-				return &delete.StaticSiteDeleter{
-					BucketEmptier:        awss3.New(sess),
-					BucketResourceGetter: s3.New(sess),
-				}
+		newSvcCleaner: func(sess *awssession.Session, manifestType string) cleaner {
+			if manifestType == manifestinfo.StaticSiteType {
+				return clean.NewStaticSite(vars.appName, vars.envName, vars.name, s3.New(sess), awss3.New(sess))
 			}
-			return &delete.NoOpDeleter{}
+			return &clean.NoOp{}
 		},
 	}, nil
 }
@@ -275,7 +272,7 @@ func (o *deleteSvcOpts) deleteStacks(wkldType string, envs []*config.Environment
 			return err
 		}
 
-		if err := o.newSvcDeleter(sess, wkldType).CleanResources(o.appName, env.Name, o.name); err != nil {
+		if err := o.newSvcCleaner(sess, wkldType).Clean(); err != nil {
 			return fmt.Errorf("clean resources: %w", err)
 		}
 

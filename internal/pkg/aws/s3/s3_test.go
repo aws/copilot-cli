@@ -130,8 +130,7 @@ func TestS3_EmptyBucket(t *testing.T) {
 					Bucket: aws.String("mockBucket"),
 				}).Return(nil, nil)
 				m.EXPECT().ListObjectVersions(&s3.ListObjectVersionsInput{
-					Bucket:  aws.String("mockBucket"),
-					MaxKeys: aws.Int64(1000),
+					Bucket: aws.String("mockBucket"),
 				}).Return(&s3.ListObjectVersionsOutput{
 					IsTruncated: aws.Bool(false),
 					Versions:    batchObject2,
@@ -154,8 +153,7 @@ func TestS3_EmptyBucket(t *testing.T) {
 					Bucket: aws.String("mockBucket"),
 				}).Return(nil, nil)
 				m.EXPECT().ListObjectVersions(&s3.ListObjectVersionsInput{
-					Bucket:  aws.String("mockBucket"),
-					MaxKeys: aws.Int64(1000),
+					Bucket: aws.String("mockBucket"),
 				}).Return(&s3.ListObjectVersionsOutput{
 					IsTruncated: aws.Bool(true),
 					Versions:    batchObject1,
@@ -168,8 +166,7 @@ func TestS3_EmptyBucket(t *testing.T) {
 					},
 				}).Return(&s3.DeleteObjectsOutput{}, nil)
 				m.EXPECT().ListObjectVersions(&s3.ListObjectVersionsInput{
-					Bucket:  aws.String("mockBucket"),
-					MaxKeys: aws.Int64(1000),
+					Bucket: aws.String("mockBucket"),
 				}).Return(&s3.ListObjectVersionsOutput{
 					IsTruncated: aws.Bool(false),
 					Versions:    batchObject2,
@@ -192,8 +189,7 @@ func TestS3_EmptyBucket(t *testing.T) {
 					Bucket: aws.String("mockBucket"),
 				}).Return(nil, nil)
 				m.EXPECT().ListObjectVersions(&s3.ListObjectVersionsInput{
-					Bucket:  aws.String("mockBucket"),
-					MaxKeys: aws.Int64(1000),
+					Bucket: aws.String("mockBucket"),
 				}).Return(&s3.ListObjectVersionsOutput{
 					IsTruncated:   aws.Bool(false),
 					Versions:      batchObject2,
@@ -217,8 +213,7 @@ func TestS3_EmptyBucket(t *testing.T) {
 					Bucket: aws.String("mockBucket"),
 				}).Return(nil, nil)
 				m.EXPECT().ListObjectVersions(&s3.ListObjectVersionsInput{
-					Bucket:  aws.String("mockBucket"),
-					MaxKeys: aws.Int64(1000),
+					Bucket: aws.String("mockBucket"),
 				}).Return(nil, errors.New("some error"))
 			},
 
@@ -244,8 +239,7 @@ func TestS3_EmptyBucket(t *testing.T) {
 					Bucket: aws.String("mockBucket"),
 				}).Return(nil, nil)
 				m.EXPECT().ListObjectVersions(&s3.ListObjectVersionsInput{
-					Bucket:  aws.String("mockBucket"),
-					MaxKeys: aws.Int64(1000),
+					Bucket: aws.String("mockBucket"),
 				}).Return(&s3.ListObjectVersionsOutput{
 					IsTruncated: aws.Bool(false),
 					Versions:    batchObject2,
@@ -289,8 +283,7 @@ func TestS3_EmptyBucket(t *testing.T) {
 					Bucket: aws.String("mockBucket"),
 				}).Return(nil, nil)
 				m.EXPECT().ListObjectVersions(&s3.ListObjectVersionsInput{
-					Bucket:  aws.String("mockBucket"),
-					MaxKeys: aws.Int64(1000),
+					Bucket: aws.String("mockBucket"),
 				}).Return(&s3.ListObjectVersionsOutput{
 					IsTruncated: aws.Bool(false),
 					Versions:    batchObject2,
@@ -310,7 +303,8 @@ func TestS3_EmptyBucket(t *testing.T) {
 					},
 				}, nil)
 			},
-			wantErr: fmt.Errorf(`1/10 objects failed to delete. First failed on key "mock/key": some error`),
+			wantErr: fmt.Errorf(`1/10 objects failed to delete
+first failed on key "mock/key": some error`),
 		},
 	}
 
