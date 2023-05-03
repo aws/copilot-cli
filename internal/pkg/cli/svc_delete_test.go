@@ -338,7 +338,7 @@ func TestDeleteSvcOpts_Execute(t *testing.T) {
 		inSvcName string
 		opts      *deleteSvcOpts
 
-		wkldCleaner wkldCleaner
+		wkldCleaner cleaner
 		setupMocks  func(mocks deleteSvcMocks)
 
 		wantedError error
@@ -349,7 +349,7 @@ func TestDeleteSvcOpts_Execute(t *testing.T) {
 					appName: mockAppName,
 					name:    mockSvcName,
 				},
-				newSvcCleaner: func(*session.Session, string) wkldCleaner {
+				newSvcCleaner: func(*session.Session, string) cleaner {
 					return &cleantest.Succeeds{}
 				},
 			},
@@ -391,7 +391,7 @@ func TestDeleteSvcOpts_Execute(t *testing.T) {
 					envName: mockEnvName,
 					name:    mockSvcName,
 				},
-				newSvcCleaner: func(*session.Session, string) wkldCleaner {
+				newSvcCleaner: func(*session.Session, string) cleaner {
 					return &cleantest.Succeeds{}
 				},
 			},
@@ -441,7 +441,7 @@ func TestDeleteSvcOpts_Execute(t *testing.T) {
 					envName: mockEnvName,
 					name:    mockSvcName,
 				},
-				newSvcCleaner: func(*session.Session, string) wkldCleaner {
+				newSvcCleaner: func(*session.Session, string) cleaner {
 					return &cleantest.Fails{}
 				},
 			},
@@ -463,7 +463,7 @@ func TestDeleteSvcOpts_Execute(t *testing.T) {
 					envName: mockEnvName,
 					name:    mockSvcName,
 				},
-				newSvcCleaner: func(*session.Session, string) wkldCleaner {
+				newSvcCleaner: func(*session.Session, string) cleaner {
 					return &cleantest.Succeeds{}
 				},
 			},

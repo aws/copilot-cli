@@ -20,14 +20,26 @@ type bucketEmptier interface {
 
 // StaticSite is used to clean up resources created for a static site.
 type StaticSite struct {
-	BucketResourceGetter bucketResourceGetter
-	BucketEmptier        bucketEmptier
+	app, env, svc        string
+	bucketResourceGetter bucketResourceGetter
+	bucketEmptier        bucketEmptier
+}
+
+// NewStaticSite returns an initialized static site.
+func NewStaticSite(app, env, svc string, rg bucketResourceGetter, emptier bucketEmptier) *StaticSite {
+	return &StaticSite{
+		app:                  app,
+		env:                  env,
+		svc:                  svc,
+		bucketResourceGetter: rg,
+		bucketEmptier:        emptier,
+	}
 }
 
 // Clean looks for the S3 bucket for the service. If no bucket is found,
 // it returns no error. If a bucket is found, it is emptied.
-func (s *StaticSite) Clean(app, env, wkld string) error {
-	bucket, err := s.BucketResourceGetter.BucketName(app, env, wkld)
+func (s *StaticSite) Clean() error {
+	bucket, err := s.bucketResourceGetter.BucketName(s.app, s.env, s.svc)
 	if err != nil {
 		var notFound *s3.ErrNotFound
 		if errors.As(err, &notFound) {
@@ -37,7 +49,7 @@ func (s *StaticSite) Clean(app, env, wkld string) error {
 		return fmt.Errorf("get bucket name: %w", err)
 	}
 
-	if err := s.BucketEmptier.EmptyBucket(bucket); err != nil {
+	if err := s.bucketEmptier.EmptyBucket(bucket); err != nil {
 		return fmt.Errorf("empty bucket: %w", err)
 	}
 	return nil

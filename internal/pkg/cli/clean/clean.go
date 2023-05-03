@@ -10,6 +10,6 @@ package clean
 type NoOp struct{}
 
 // Clean returns nil.
-func (*NoOp) Clean(_, _, _ string) error {
+func (*NoOp) Clean() error {
 	return nil
 }

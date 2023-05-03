@@ -33,7 +33,7 @@ func TestStaticSite_CleanResources(t *testing.T) {
 	}{
 		"error getting bucket": {
 			cleaner: &StaticSite{
-				BucketResourceGetter: &bucketResourceGetterDouble{
+				bucketResourceGetter: &bucketResourceGetterDouble{
 					BucketNameFn: func(app, env, wkld string) (string, error) {
 						return "", errors.New("some error")
 					},
@@ -43,12 +43,12 @@ func TestStaticSite_CleanResources(t *testing.T) {
 		},
 		"error emptying bucket": {
 			cleaner: &StaticSite{
-				BucketResourceGetter: &bucketResourceGetterDouble{
+				bucketResourceGetter: &bucketResourceGetterDouble{
 					BucketNameFn: func(_, _, _ string) (string, error) {
 						return "bucket", nil
 					},
 				},
-				BucketEmptier: &bucketEmptierDouble{
+				bucketEmptier: &bucketEmptierDouble{
 					EmptyBucketFn: func(_ string) error {
 						return errors.New("some error")
 					},
@@ -58,12 +58,12 @@ func TestStaticSite_CleanResources(t *testing.T) {
 		},
 		"happy path": {
 			cleaner: &StaticSite{
-				BucketResourceGetter: &bucketResourceGetterDouble{
+				bucketResourceGetter: &bucketResourceGetterDouble{
 					BucketNameFn: func(_, _, _ string) (string, error) {
 						return "bucket", nil
 					},
 				},
-				BucketEmptier: &bucketEmptierDouble{
+				bucketEmptier: &bucketEmptierDouble{
 					EmptyBucketFn: func(_ string) error {
 						return nil
 					},

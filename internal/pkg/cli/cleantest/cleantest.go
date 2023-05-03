@@ -10,7 +10,7 @@ import "errors"
 type Succeeds struct{}
 
 // Clean succeeds.
-func (*Succeeds) Clean(_, _, _ string) error {
+func (*Succeeds) Clean() error {
 	return nil
 }
 
@@ -18,6 +18,6 @@ func (*Succeeds) Clean(_, _, _ string) error {
 type Fails struct{}
 
 // Clean fails.
-func (*Fails) Clean(_, _, _ string) error {
+func (*Fails) Clean() error {
 	return errors.New("an error")
 }
