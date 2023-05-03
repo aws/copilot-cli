@@ -306,7 +306,11 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 func (d *workloadDeployer) DeployDiff(template string) (string, error) {
 	tmpl, err := d.tmplGetter.Template(stack.NameForWorkload(d.app.Name, d.env.Name, d.name))
 	if err != nil {
-		return "", fmt.Errorf("retrieve the deployed template for %q: %w", d.name, err)
+		var errNotFound *awscloudformation.ErrStackNotFound
+		if !errors.As(err, &errNotFound) {
+			return "", fmt.Errorf("retrieve the deployed template for %q: %w", d.name, err)
+		}
+		tmpl = ""
 	}
 	diffTree, err := diff.From(tmpl).ParseWithCFNOverriders([]byte(template))
 	if err != nil {
