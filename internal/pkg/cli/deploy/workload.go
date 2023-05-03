@@ -312,7 +312,7 @@ func (d *workloadDeployer) DeployDiff(template string) (string, error) {
 		}
 		tmpl = ""
 	}
-	diffTree, err := diff.From(tmpl).ParseWithCFNIgnorer([]byte(template))
+	diffTree, err := diff.From(tmpl).ParseWithCFNOverriders([]byte(template))
 	if err != nil {
 		return "", fmt.Errorf("parse the diff against the deployed %q in environment %q: %w", d.name, d.env.Name, err)
 	}

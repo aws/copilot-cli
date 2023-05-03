@@ -345,7 +345,7 @@ Dog: (pleased) "ikr"`, t),
 	}
 }
 
-func TestFrom_ParseWithCFNIgnorer(t *testing.T) {
+func TestFrom_ParseWithCFNOverriders(t *testing.T) {
 	testCases := map[string]struct {
 		curr        string
 		old         string
@@ -378,6 +378,40 @@ Metadata:
 				}
 			},
 		},
+		"no diff between full/short form intrinsic func": {
+			curr: `Value: !Sub 'blah'
+AvailabilityZone: !Select [0, !GetAZs '']
+SecurityGroups:
+  - !GetAtt InternalLoadBalancerSecurityGroup.GroupId
+StringsEquals:
+  iam:ResourceTag/copilot-application: !Sub '${AppName}'
+Properties:
+  GroupDescription: !Join ['', [!Ref AppName, '-', !Ref EnvironmentName, EnvironmentSecurityGroup]]
+`,
+			old: `Value:
+  Fn::Sub: 'blah'
+AvailabilityZone:
+  Fn::Select:
+    - 0
+    - Fn::GetAZs: ""
+SecurityGroups:
+  - Fn::GetAtt: InternalLoadBalancerSecurityGroup.GroupId
+StringsEquals:
+  iam:ResourceTag/copilot-application:
+    Fn::Sub: ${AppName}
+Properties:
+  GroupDescription:
+     Fn::Join:
+        - ""
+        - - Ref: AppName
+          - "-"
+          - Ref: EnvironmentName
+          - EnvironmentSecurityGroup
+`,
+			wanted: func() diffNode {
+				return nil
+			},
+		},
 		"no diff": {
 			old: `Description: CloudFormation environment template for infrastructure shared among Copilot workloads.
 Metadata:
@@ -392,7 +426,7 @@ Metadata:
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			got, err := From(tc.old).ParseWithCFNIgnorer([]byte(tc.curr))
+			got, err := From(tc.old).ParseWithCFNOverriders([]byte(tc.curr))
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
