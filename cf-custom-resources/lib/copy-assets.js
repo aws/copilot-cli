@@ -12,7 +12,6 @@ exports.handler = async function (event, context, callback) {
 	const s3 = new aws.S3();
 
 	try {
-		// TODO make sure this returns an error that will get caught in access denied conditons
 		await s3.headObject({
 			Bucket: event.destBucket,
 			Key: event.mapping.destPath
