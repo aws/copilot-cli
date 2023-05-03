@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	cfnclient "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	cfnmocks "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/mocks"
 
@@ -286,6 +287,16 @@ func TestEnvDeployer_DeployDiff(t *testing.T) {
 					Return("peace: und Liebe", nil)
 			},
 			wanted: `~ peace: und Liebe -> and love
+`,
+		},
+		"get the correct diff when there is no deployed diff": {
+			inTemplate: `peace: and love`,
+			setUpMocks: func(m *deployDiffMocks) {
+				m.mockDeployedTmplGetter.EXPECT().
+					Template(gomock.Eq(cfnstack.NameForEnv("mockApp", "mockEnv"))).
+					Return("", &cfnclient.ErrStackNotFound{})
+			},
+			wanted: `+ peace: and love
 `,
 		},
 	}

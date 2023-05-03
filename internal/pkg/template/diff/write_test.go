@@ -395,7 +395,7 @@ Metadata:
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotTree, err := From(tc.old).ParseWithCFNIgnorer([]byte(tc.curr))
+			gotTree, err := From(tc.old).ParseWithCFNOverriders([]byte(tc.curr))
 			require.NoError(t, err)
 			buf := strings.Builder{}
 			err = gotTree.Write(&buf)
