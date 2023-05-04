@@ -580,7 +580,7 @@ func (e *errFailedService) RecommendActions() string {
 		"You can then retry deploying your service by running %s.", color.HighlightCode("copilot svc deploy"))
 }
 func (e *errFailedService) Error() string {
-	return fmt.Sprintf("stack %s did not complete successfully and exited with status %s.", e.stackName, e.status)
+	return fmt.Sprintf("stack %s did not complete successfully and exited with status %s", e.stackName, e.status)
 }
 
 func (cf CloudFormation) errOnFailedStack(stackName string) error {
