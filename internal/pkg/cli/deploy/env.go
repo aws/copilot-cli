@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
 	"sort"
 	"strings"
@@ -440,7 +441,8 @@ func (d *envDeployer) buildStackInput(in *DeployEnvironmentInput) (*cfnstack.Env
 }
 
 func (d *envDeployer) renderStaticSite(mft *manifest.Environment) error {
-	if mft == nil || mft.CDNConfig.Config.Static.Location.StaticSite == "" {
+	if mft == nil || mft.CDNConfig.Config.Static.Location.StaticBucket != "" ||
+		mft.CDNConfig.Config.Static.Location.StaticSite == "" {
 		return nil
 	}
 	staticSite := mft.CDNConfig.Config.Static.Location.StaticSite
@@ -448,7 +450,9 @@ func (d *envDeployer) renderStaticSite(mft *manifest.Environment) error {
 	if err != nil {
 		return fmt.Errorf("get bucket name for %s in env %s: %w", staticSite, d.env.Name, err)
 	}
-	mft.CDNConfig.Config.Static.Location.StaticSite = awss3.URL(d.env.Region, bucketName, "")
+	// s3.URL returns a valid URL.
+	url, _ := url.Parse(awss3.URL(d.env.Region, bucketName, ""))
+	mft.CDNConfig.Config.Static.Location.StaticBucket = url.Host
 	return nil
 }
 
