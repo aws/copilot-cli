@@ -251,7 +251,7 @@ func (d *lbWebSvcDeployer) validateRuntimeRoutingRule(rule manifest.RoutingRule)
 	if d.app.Domain != "" {
 		err := validateMinAppVersion(d.app.Name, aws.StringValue(d.lbMft.Name), d.appVersionGetter, deploy.AliasLeastAppTemplateVersion)
 		if err != nil {
-			return err
+			return fmt.Errorf("alias not supported: %w", err)
 		}
 		if err := validateLBWSAlias(rule.Alias, d.app, d.env.Name); err != nil {
 			return fmt.Errorf(`validate 'alias': %w`, err)
@@ -277,7 +277,7 @@ func (d *lbWebSvcDeployer) validateNLBRuntime() error {
 	}
 	err := validateMinAppVersion(d.app.Name, aws.StringValue(d.lbMft.Name), d.appVersionGetter, deploy.AliasLeastAppTemplateVersion)
 	if err != nil {
-		return err
+		return fmt.Errorf("alias not supported: %w", err)
 	}
 	if err := validateLBWSAlias(d.lbMft.NLBConfig.Aliases, d.app, d.env.Name); err != nil {
 		return fmt.Errorf(`validate 'nlb.alias': %w`, err)

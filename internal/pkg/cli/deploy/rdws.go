@@ -190,7 +190,7 @@ func validateRDSvcAliasAndAppVersion(svcName, alias, envName string, app *config
 		return nil
 	}
 	if err := validateMinAppVersion(app.Name, svcName, appVersionGetter, deploy.AliasLeastAppTemplateVersion); err != nil {
-		return err
+		return fmt.Errorf("alias not supported: %w", err)
 	}
 	// Alias should be within root hosted zone.
 	aliasInvalidLog := fmt.Sprintf(`%s of %s field should match the pattern <subdomain>.%s 
