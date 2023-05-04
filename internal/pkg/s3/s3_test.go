@@ -47,7 +47,7 @@ func TestClient_Service(t *testing.T) {
 						Return(nil, mockError),
 				)
 			},
-			wantedError: fmt.Errorf("get S3 bucket with tags (mockApp, mockEnv, mockSvc): some error"),
+			wantedError: fmt.Errorf(`get S3 bucket with tags "copilot-application"="mockApp","copilot-environment"="mockEnv","copilot-service"="mockSvc": some error`),
 		},
 		"error if got 0 bucket": {
 			setupMocks: func(m clientMocks) {
@@ -56,7 +56,7 @@ func TestClient_Service(t *testing.T) {
 						Return([]*resourcegroups.Resource{}, nil),
 				)
 			},
-			wantedError: fmt.Errorf("no S3 bucket found with tags mockSvc, mockEnv, mockSvc"),
+			wantedError: fmt.Errorf(`no S3 bucket found with tags "copilot-application"="mockApp","copilot-environment"="mockEnv","copilot-service"="mockSvc"`),
 		},
 		"error if got more than 1 bucket": {
 			setupMocks: func(m clientMocks) {
@@ -67,7 +67,7 @@ func TestClient_Service(t *testing.T) {
 						}, nil),
 				)
 			},
-			wantedError: fmt.Errorf("more than one S3 bucket with the name mockSvc found in environment mockEnv"),
+			wantedError: fmt.Errorf(`more than one S3 bucket with tags "copilot-application"="mockApp","copilot-environment"="mockEnv","copilot-service"="mockSvc"`),
 		},
 		"fail to parse ARN": {
 			setupMocks: func(m clientMocks) {

@@ -35,6 +35,7 @@ type deployEnvVars struct {
 	forceNewUpdate  bool
 	disableRollback bool
 	showDiff        bool
+	skipDiffPrompt  bool
 }
 
 type deployEnvOpts struct {
@@ -227,6 +228,9 @@ func (o *deployEnvOpts) showDiffAndConfirmDeployment(deployer envDeployer, input
 			return false, fmt.Errorf("generate diff for environment %q: %w", o.name, err)
 		}
 	}
+	if o.skipDiffPrompt {
+		return true, nil
+	}
 	contd, err := o.prompt.Confirm(continueDeploymentPrompt, "")
 	if err != nil {
 		return false, fmt.Errorf("ask whether to continue with the deployment: %w", err)
@@ -330,5 +334,6 @@ Deploy an environment named "test".
 	cmd.Flags().BoolVar(&vars.forceNewUpdate, forceFlag, false, forceEnvDeployFlagDescription)
 	cmd.Flags().BoolVar(&vars.disableRollback, noRollbackFlag, false, noRollbackFlagDescription)
 	cmd.Flags().BoolVar(&vars.showDiff, diffFlag, false, diffFlagDescription)
+	cmd.Flags().BoolVar(&vars.skipDiffPrompt, diffAutoApproveFlag, false, diffAutoApproveFlagDescription)
 	return cmd
 }

@@ -149,6 +149,7 @@ type deployEnvExecuteMocks struct {
 func TestDeployEnvOpts_Execute(t *testing.T) {
 	testCases := map[string]struct {
 		inShowDiff        bool
+		inSkipDiffPrompt  bool
 		unmarshalManifest func(in []byte) (*manifest.Environment, error)
 		setUpMocks        func(m *deployEnvExecuteMocks)
 		wantedDiff        string
@@ -314,6 +315,23 @@ func TestDeployEnvOpts_Execute(t *testing.T) {
 				m.deployer.EXPECT().DeployEnvironment(gomock.Any()).Times(1)
 			},
 		},
+		"skip prompt and deploy immediately after diff": {
+			inShowDiff:       true,
+			inSkipDiffPrompt: true,
+			setUpMocks: func(m *deployEnvExecuteMocks) {
+				m.ws.EXPECT().ReadEnvironmentManifest(gomock.Any()).Return([]byte("name: mockEnv\ntype: Environment\n"), nil)
+				m.interpolator.EXPECT().Interpolate(gomock.Any()).Return("name: mockEnv\ntype: Environment\n", nil)
+				m.identity.EXPECT().Get().Return(identity.Caller{
+					RootUserARN: "mockRootUserARN",
+				}, nil)
+				m.deployer.EXPECT().Validate(gomock.Any()).Return(nil)
+				m.deployer.EXPECT().UploadArtifacts().Return(&deploy.UploadEnvArtifactsOutput{}, nil)
+				m.deployer.EXPECT().GenerateCloudFormationTemplate(gomock.Any()).Return(&deploy.GenerateCloudFormationTemplateOutput{}, nil)
+				m.deployer.EXPECT().DeployDiff(gomock.Any()).Return("", nil)
+				m.prompter.EXPECT().Confirm(gomock.Eq(continueDeploymentPrompt), gomock.Any(), gomock.Any()).Times(0)
+				m.deployer.EXPECT().DeployEnvironment(gomock.Any()).Times(1)
+			},
+		},
 		"fail to deploy the environment": {
 			setUpMocks: func(m *deployEnvExecuteMocks) {
 				m.ws.EXPECT().ReadEnvironmentManifest(gomock.Any()).Return([]byte("name: mockEnv\ntype: Environment\n"), nil)
@@ -374,8 +392,9 @@ func TestDeployEnvOpts_Execute(t *testing.T) {
 			tc.setUpMocks(m)
 			opts := deployEnvOpts{
 				deployEnvVars: deployEnvVars{
-					name:     "mockEnv",
-					showDiff: tc.inShowDiff,
+					name:           "mockEnv",
+					showDiff:       tc.inShowDiff,
+					skipDiffPrompt: tc.inSkipDiffPrompt,
 				},
 				ws:       m.ws,
 				identity: m.identity,
