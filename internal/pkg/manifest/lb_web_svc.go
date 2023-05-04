@@ -75,13 +75,6 @@ type LoadBalancedWebServiceProps struct {
 	Platform    PlatformArgsOrString // Optional platform configuration.
 }
 
-func additionalPortPathTag(idx int) string {
-	if idx == 0 {
-		return ""
-	}
-	return strconv.Itoa(idx)
-}
-
 // NewLoadBalancedWebService creates a new public load balanced web service, receives all the requests from the load balancer,
 // has a single task with minimal CPU and memory thresholds, and sets the default health check path to "/".
 func NewLoadBalancedWebService(props *LoadBalancedWebServiceProps) *LoadBalancedWebService {
@@ -334,4 +327,11 @@ func (cfg NetworkLoadBalancerConfiguration) NLBListeners() []NetworkLoadBalancer
 		return nil
 	}
 	return append([]NetworkLoadBalancerListener{cfg.Listener}, cfg.AdditionalListeners...)
+}
+
+func additionalPortPathTag(idx int) string {
+	if idx == 0 {
+		return ""
+	}
+	return strconv.Itoa(idx)
 }
