@@ -100,6 +100,7 @@ func (from From) ParseWithCFNOverriders(to []byte) (Tree, error) {
 				},
 			},
 		},
+		&getAttConverter{},
 		&intrinsicFuncMapTagConverter{})
 }
 
