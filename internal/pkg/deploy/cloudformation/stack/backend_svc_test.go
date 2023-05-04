@@ -52,7 +52,8 @@ func TestBackendService_Template(t *testing.T) {
 					Name: aws.String("api"),
 				},
 			},
-			Addons: mockAddons{tplErr: errors.New("some error")},
+			ArtifactBucketName: "mockBucket",
+			Addons:             mockAddons{tplErr: errors.New("some error")},
 		})
 		require.NoError(t, err)
 
