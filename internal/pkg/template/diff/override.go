@@ -63,7 +63,7 @@ func (_ *intrinsicFuncMatcher) match(from, to *yaml.Node, _ string, _ overrider)
 	return funcName(fromFunc) == funcName(toFunc)
 }
 
-// intrinsicFuncMatcher matches intrinsic function nodes written in different form (full/short).
+// intrinsicFuncMatcher matches and parses two intrinsic function nodes written in different form (full/short).
 type intrinsicFuncMapTagConverter struct {
 	intrinsicFunc intrinsicFuncMatcher
 }
@@ -84,9 +84,9 @@ func (converter *intrinsicFuncMapTagConverter) match(from, to *yaml.Node, key st
 // parse compares two intrinsic function nodes written in different form (full vs. short).
 // When the inputs to the intrinsic functions have different data types, parse assumes that no type conversion is needed
 // for correct comparison.
-// E.g., given "!Func: [1,2]" and "Fn::Func: '1,2'", parse assumes that comparing [1,2] with "1,2" produces the desired result.
+// E.g. given "!Func: [1,2]" and "Fn::Func: '1,2'", parse assumes that comparing [1,2] with "1,2" produces the desired result.
 // Note that this does not hold for "GetAtt" function: "!GetAtt: [1,2]" and "Fn::GetAtt: 1.2" should be considered the same.
-func (converter *intrinsicFuncMapTagConverter) parse(from, to *yaml.Node, key string, overrider overrider) (diffNode, error) {
+func (*intrinsicFuncMapTagConverter) parse(from, to *yaml.Node, key string, overrider overrider) (diffNode, error) {
 	var diff diffNode
 	var err error
 	if from.Kind == yaml.MappingNode {
@@ -105,49 +105,64 @@ func (converter *intrinsicFuncMapTagConverter) parse(from, to *yaml.Node, key st
 	}, nil
 }
 
-// getAttConverter compares two YAML nodes that calls the intrinsic function "GetAtt", one using full form, and the other short form.
+// getAttConverter matches and parses two YAML nodes that calls the intrinsic function "GetAtt".
 // The input to "GetAtt" could be either a sequence or a scalar. All the followings are valid and should be considered equal.
 // Fn::GetAtt: LogicalID.Att.SubAtt, Fn::GetAtt: [LogicalID, Att.SubAtt], !GetAtt LogicalID.Att.SubAtt, !GetAtt [LogicalID, Att.SubAtt].
 type getAttConverter struct {
-	mapTag intrinsicFuncMapTagConverter
+	intrinsicFuncMapTagConverter
 }
 
+// match returns true if both from node and to node are calling the "GetAtt" intrinsic function.
+// "GetAtt" only accepts either sequence or scalar, therefore match returns false if either of from and to has invalid 
+// input node to "GetAtt".
+// Example1: "!GetAtt a.b" and "!GetAtt [a,b]" returns true.
+// Example2: "!GetAtt a.b" and "Fn::GetAtt a.b" returns true.
+// Example3: "!Ref" and "!GetAtt" returns false.
+// Example4: "Fn::GetAtt:a:b" and "!GetAtt [a,b]" returns false because the input type is wrong.
 func (converter *getAttConverter) match(from, to *yaml.Node, key string, overrider overrider) bool {
-	if !converter.mapTag.intrinsicFunc.match(from, to, key, overrider) {
+	if !converter.intrinsicFunc.match(from, to, key, overrider) {
 		return false
 	}
-	var fullFormNode, shortFormNode *yaml.Node
+	if funcName(intrinsicFuncName(from)) != "GetAtt" {
+		return false
+	}
+	fromValue, toValue := from, to
 	if from.Kind == yaml.MappingNode {
-		fullFormNode, shortFormNode = from, to
-	} else {
-		fullFormNode, shortFormNode = to, from
+		fromValue = from.Content[1]
 	}
-	if intrinsicFuncFullFormName(fullFormNode) != "Fn::GetAtt" {
-		return false
+	if to.Kind == yaml.MappingNode {
+		toValue = to.Content[1]
 	}
 	switch {
-	case fullFormNode.Content[1].Kind == yaml.ScalarNode && shortFormNode.Kind == yaml.ScalarNode:
+	case fromValue.Kind == yaml.ScalarNode && toValue.Kind == yaml.ScalarNode:
 		fallthrough
-	case fullFormNode.Content[1].Kind == yaml.SequenceNode && shortFormNode.Kind == yaml.SequenceNode:
+	case fromValue.Kind == yaml.SequenceNode && toValue.Kind == yaml.SequenceNode:
 		fallthrough
-	case fullFormNode.Content[1].Kind == yaml.SequenceNode && shortFormNode.Kind == yaml.ScalarNode || fullFormNode.Content[1].Kind == yaml.ScalarNode && shortFormNode.Kind == yaml.SequenceNode:
+	case fromValue.Kind == yaml.SequenceNode && toValue.Kind == yaml.ScalarNode:
+		fallthrough
+	case fromValue.Kind == yaml.ScalarNode && toValue.Kind == yaml.SequenceNode:
 		return true
 	default:
 		return false
 	}
 }
 
+// parse compares two nodes that call the "GetAtt" function. Both from and to can be written in either full or short form.
+// parse assumes that from and to are already matched by getAttConverter.
 func (converter *getAttConverter) parse(from, to *yaml.Node, key string, overrider overrider) (diffNode, error) {
+	// Extract the input node to GetAtt. 
 	fromValue, toValue := from, to
-	switch {
-	case from.Kind == yaml.MappingNode:
+	if from.Kind == yaml.MappingNode {
 		fromValue = from.Content[1]
-	case to.Kind == yaml.MappingNode:
+	}
+	if to.Kind == yaml.MappingNode {
 		toValue = to.Content[1]
 	}
+	// If the input node are of the same type (i.e. both seq or both scalar), parse them normally.
 	if fromValue.Kind == toValue.Kind {
-		return converter.mapTag.parse(from, to, key, overrider)
+		return converter.intrinsicFuncMapTagConverter.parse(from, to, key, overrider)
 	}
+	// Otherwise, first convert the scalar input to seq input, then parse.
 	var err error
 	switch {
 	case fromValue.Kind == yaml.ScalarNode:
