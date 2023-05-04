@@ -10,8 +10,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-var intrinsicFunGetAttFullFormName = "Fn::GetAtt"
-
 // overrider overrides the parsing behavior between two yaml nodes under certain keys.
 type overrider interface {
 	match(from, to *yaml.Node, key string, overrider overrider) bool
@@ -45,6 +43,26 @@ func (m *ignorer) parse(_, _ *yaml.Node, _ string, _ overrider) (diffNode, error
 	return nil, nil
 }
 
+// Check https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/intrinsic-function-reference.html for
+// a complete list of intrinsic functions. Some are not included here as they do not need an overrider.
+var intrinsicFunctions = map[string]struct {
+	fullName  string
+	shortName string
+}{
+	"Ref":         {"Ref", "!Ref"},
+	"Base64":      {"Fn::Base64", "!Base64"},
+	"Cidr":        {"Fn::Cidr", "!Cidr"},
+	"FindInMap":   {"Fn::FindInMap", "!FindInMap"},
+	"GetAtt":      {"Fn::GetAtt", "!GetAtt"},
+	"GetAZs":      {"Fn::GetAZs", "!GetAZs"},
+	"ImportValue": {"Fn::ImportValue", "!ImportValue"},
+	"Join":        {"Fn::Join", "!Join"},
+	"Select":      {"Fn::Select", "!Select"},
+	"Split":       {"Fn::Split", "!Split"},
+	"Sub":         {"Fn::Sub", "!Sub"},
+	"Transform":   {"Fn::Transform", "Transform"},
+}
+
 // intrinsicFuncMatcher matches intrinsic function nodes.
 type intrinsicFuncMatcher struct{}
 
@@ -52,15 +70,19 @@ type intrinsicFuncMatcher struct{}
 // Example1: "!Ref" and "Ref:" will return true.
 // Example2: "!Ref" and "!Ref" will return true.
 // Example3: "!Ref" and "Fn::GetAtt:" will return false because they are different intrinsic functions.
+// Example4: "!Magic" and "Fn::Magic" will return false because they are not intrinsic functions.
 func (_ *intrinsicFuncMatcher) match(from, to *yaml.Node, _ string, _ overrider) bool {
 	if from == nil || to == nil {
 		return false
 	}
 	fromFunc, toFunc := intrinsicFuncName(from), intrinsicFuncName(to)
-	if fromFunc == "" || toFunc == "" {
+	if _, ok := intrinsicFunctions[fromFunc]; !ok {
 		return false
 	}
-	return funcName(fromFunc) == funcName(toFunc)
+	if _, ok := intrinsicFunctions[toFunc]; !ok {
+		return false
+	}
+	return fromFunc == toFunc
 }
 
 // intrinsicFuncMatcher matches and parses two intrinsic function nodes written in different form (full/short).
@@ -85,16 +107,16 @@ func (converter *intrinsicFuncMapTagConverter) match(from, to *yaml.Node, key st
 // When the inputs to the intrinsic functions have different data types, parse assumes that no type conversion is needed
 // for correct comparison.
 // E.g. given "!Func: [1,2]" and "Fn::Func: '1,2'", parse assumes that comparing [1,2] with "1,2" produces the desired result.
-// Note that this does not hold for "GetAtt" function: "!GetAtt: [1,2]" and "Fn::GetAtt: 1.2" should be considered the same.
+// Note that this does not hold for "GetAtt" function: "!GetAtt: [1,2]" and "!GetAtt: 1.2" should be considered the same.
 func (*intrinsicFuncMapTagConverter) parse(from, to *yaml.Node, key string, overrider overrider) (diffNode, error) {
 	var diff diffNode
 	var err error
 	if from.Kind == yaml.MappingNode {
 		// The full form mapping node always contain only one child node. The second element in `Content` is the 
 		// value of the child node. Read https://www.efekarakus.com/2020/05/30/deep-dive-go-yaml-cfn.html.
-		diff, err = parse(from.Content[1], stripTag(to), intrinsicFuncFullFormName(from), overrider)
+		diff, err = parse(from.Content[1], stripTag(to), intrinsicFunctions[intrinsicFuncName(from)].fullName, overrider)
 	} else {
-		diff, err = parse(stripTag(from), to.Content[1], intrinsicFuncFullFormName(to), overrider)
+		diff, err = parse(stripTag(from), to.Content[1], intrinsicFunctions[intrinsicFuncName(to)].fullName, overrider)
 	}
 	if diff == nil {
 		return nil, err
@@ -123,7 +145,7 @@ func (converter *getAttConverter) match(from, to *yaml.Node, key string, overrid
 	if !converter.intrinsicFunc.match(from, to, key, overrider) {
 		return false
 	}
-	if funcName(intrinsicFuncName(from)) != "GetAtt" {
+	if intrinsicFuncName(from) != "GetAtt" {
 		return false
 	}
 	fromValue, toValue := from, to
@@ -150,7 +172,7 @@ func (converter *getAttConverter) match(from, to *yaml.Node, key string, overrid
 // parse compares two nodes that call the "GetAtt" function. Both from and to can be written in either full or short form.
 // parse assumes that from and to are already matched by getAttConverter.
 func (converter *getAttConverter) parse(from, to *yaml.Node, key string, overrider overrider) (diffNode, error) {
-	// Extract the input node to GetAtt. 
+	// Extract the input node to GetAtt.
 	fromValue, toValue := from, to
 	if from.Kind == yaml.MappingNode {
 		fromValue = from.Content[1]
@@ -173,7 +195,7 @@ func (converter *getAttConverter) parse(from, to *yaml.Node, key string, overrid
 	if err != nil {
 		return nil, err
 	}
-	diff, err := parse(fromValue, toValue, intrinsicFunGetAttFullFormName, overrider)
+	diff, err := parse(fromValue, toValue, intrinsicFunctions["GetAtt"].fullName, overrider)
 	if diff == nil {
 		return nil, err
 	}
@@ -185,14 +207,17 @@ func (converter *getAttConverter) parse(from, to *yaml.Node, key string, overrid
 
 func intrinsicFuncName(node *yaml.Node) string {
 	if node.Kind != yaml.MappingNode {
-		return node.Tag
+		return stripFuncPrefixes(node.Tag)
 	}
 	if len(node.Content) != 2 {
 		// The full form mapping node always contain only one child node, whose key is the func name in full form.
 		// Read https://www.efekarakus.com/2020/05/30/deep-dive-go-yaml-cfn.html.
 		return ""
 	}
-	return node.Content[0].Value
+	return stripFuncPrefixes(node.Content[0].Value)
+}
+func stripFuncPrefixes(name string) string {
+	return strings.TrimPrefix(strings.TrimPrefix(name, "Fn::"), "!")
 }
 
 func stripTag(node *yaml.Node) *yaml.Node {
@@ -202,10 +227,6 @@ func stripTag(node *yaml.Node) *yaml.Node {
 		Content: node.Content,
 		Value:   node.Value,
 	}
-}
-
-func intrinsicFuncFullFormName(fullFormNode *yaml.Node) string {
-	return fullFormNode.Content[0].Value
 }
 
 // Transform scalar node "LogicalID.Attr" to sequence node [LogicalID, Attr].
@@ -219,30 +240,4 @@ func getAttScalarToSeq(scalarNode *yaml.Node) (*yaml.Node, error) {
 		return nil, nil
 	}
 	return seqFromScalar.Content[0], nil
-}
-
-// Explicitly maintain a map so that we don't accidentally match nodes that are not actually intrinsic function
-// but happen to match the "Fn::" and "!" format.
-var intrinsicFuncFull2Short = map[string]string{
-	"Ref":             "!Ref",
-	"Fn::Base64":      "!Base64",
-	"Fn::Cidr":        "!Cidr",
-	"Fn::FindInMap":   "!FindInMap",
-	"Fn::GetAtt":      "!GetAtt",
-	"Fn::GetAZs":      "!GetAZs",
-	"Fn::ImportValue": "!ImportValue",
-	"Fn::Join":        "!Join",
-	"Fn::Select":      "!Select",
-	"Fn::Split":       "!Split",
-	"Fn::Sub":         "!Sub",
-	"Fn::Transform":   "Transform",
-}
-
-func eqIntrinsicFunc(fullFormName, shortFormName string) bool {
-	expectedShort, ok := intrinsicFuncFull2Short[fullFormName]
-	return ok && shortFormName == expectedShort
-}
-
-func funcName(name string) string {
-	return strings.TrimPrefix(strings.TrimPrefix(name, "Fn::"), "!")
 }
