@@ -10,7 +10,6 @@ type: {{.Type}}
 {{- if not .FileUploads}}
 files:
   - source: ./
-    destination: assets
     exclude:
       - copilot/
 {{- else}}
@@ -18,7 +17,6 @@ files:
 {{- range $file := .FileUploads}}
   - source: {{$file.Source}}
     {{- if $file.Recursive}}
-    destination: assets
     recursive: {{$file.Recursive}}
     {{- end}}
 {{- end}}
