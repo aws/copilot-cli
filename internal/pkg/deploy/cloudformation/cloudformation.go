@@ -25,9 +25,9 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/stream"
+	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/progress"
-	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -570,6 +570,18 @@ func (cf CloudFormation) deleteAndRenderStack(name, description string, deleteFn
 	return nil
 }
 
+type errFailedService struct {
+	err       string
+	stackName string
+}
+
+func (e *errFailedService) RecommendActions() error {
+	return fmt.Errorf("stack %s did not complete successfully and exited with status %s.\n"+
+		"You may fix the error by updating the service code or the manifest configuration.\n"+
+		"You can then retry deploying your service by running %s.", e.stackName, e.err,
+		color.HighlightCode("copilot svc deploy"))
+}
+
 func (cf CloudFormation) errOnFailedStack(stackName string) error {
 	stack, err := cf.cfnClient.Describe(stackName)
 	if err != nil {
@@ -577,9 +589,8 @@ func (cf CloudFormation) errOnFailedStack(stackName string) error {
 	}
 	status := aws.StringValue(stack.StackStatus)
 	if cloudformation.StackStatus(status).IsFailure() {
-		return fmt.Errorf("stack %s did not complete successfully and exited with status %s.\n"+
-			"You may fix the error by updating the service code or the manifest configuration.\n" +
-			"You can then retry deploying your service by running %s.", stackName, status, color.HighlightCode("copilot svc deploy"))
+		e := errFailedService{status, stackName}
+		return e.RecommendActions()
 	}
 	return nil
 }
