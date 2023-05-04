@@ -4,8 +4,13 @@
 package diff
 
 import (
+	"fmt"
+	"strings"
+
 	"gopkg.in/yaml.v3"
 )
+
+var intrinsicFunGetAttFullFormName = "Fn::GetAtt"
 
 // overrider overrides the parsing behavior between two yaml nodes under certain keys.
 type overrider interface {
@@ -92,6 +97,69 @@ func (_ *intrinsicFuncFullShortFormConverter) parse(from, to *yaml.Node, key str
 	}, nil
 }
 
+// getAttConverter compares two Yaml nodes that calls the intrinsic function "GetAtt", one using full form, and the other short form.
+// The input to "GetAtt" could be either a sequence or a scalar. All the followings are valid and should be considered equal.
+// Fn::GetAtt: LogicalID.Att.SubAtt, Fn::GetAtt: [LogicalID, Att.SubAtt], !GetAtt LogicalID.Att.SubAtt, !GetAtt [LogicalID, Att.SubAtt].
+type getAttConverter struct {
+	intrinsicFuncFullShortFormConverter
+}
+
+func (converter *getAttConverter) match(from, to *yaml.Node, key string, overrider overrider) bool {
+	if !converter.intrinsicFuncFullShortFormConverter.match(from, to, key, overrider) {
+		return false
+	}
+	var fullFormNode, shortFormNode *yaml.Node
+	if from.Kind == yaml.MappingNode {
+		fullFormNode, shortFormNode = from, to
+	} else {
+		fullFormNode, shortFormNode = to, from
+	}
+	if intrinsicFuncFullFormName(fullFormNode) != "Fn::GetAtt" {
+		return false
+	}
+	switch {
+	case fullFormNode.Content[1].Kind == yaml.ScalarNode && shortFormNode.Kind == yaml.ScalarNode:
+		fallthrough
+	case fullFormNode.Content[1].Kind == yaml.SequenceNode && shortFormNode.Kind == yaml.SequenceNode:
+		fallthrough
+	case fullFormNode.Content[1].Kind == yaml.SequenceNode && shortFormNode.Kind == yaml.ScalarNode || fullFormNode.Content[1].Kind == yaml.ScalarNode && shortFormNode.Kind == yaml.SequenceNode:
+		return true
+	default:
+		return false
+	}
+}
+
+func (converter *getAttConverter) parse(from, to *yaml.Node, key string, overrider overrider) (diffNode, error) {
+	fromValue, toValue := from, to
+	switch {
+	case from.Kind == yaml.MappingNode:
+		fromValue = from.Content[1]
+	case to.Kind == yaml.MappingNode:
+		toValue = to.Content[1]
+	}
+	if fromValue.Kind == toValue.Kind {
+		return converter.intrinsicFuncFullShortFormConverter.parse(from, to, key, overrider)
+	}
+	var err error
+	switch {
+	case fromValue.Kind == yaml.ScalarNode:
+		fromValue, err = getAttScalarToSeq(fromValue)
+	case toValue.Kind == yaml.ScalarNode:
+		toValue, err = getAttScalarToSeq(toValue)
+	}
+	if err != nil {
+		return nil, err
+	}
+	diff, err := parse(fromValue, toValue, intrinsicFunGetAttFullFormName, overrider)
+	if diff == nil {
+		return nil, err
+	}
+	return &keyNode{
+		keyValue:   key,
+		childNodes: []diffNode{diff},
+	}, nil
+}
+
 func stripTag(node *yaml.Node) *yaml.Node {
 	return &yaml.Node{
 		Kind:    node.Kind,
@@ -103,6 +171,19 @@ func stripTag(node *yaml.Node) *yaml.Node {
 
 func intrinsicFuncFullFormName(fullFormNode *yaml.Node) string {
 	return fullFormNode.Content[0].Value
+}
+
+// Transform scalar node "LogicalID.Attr" to sequence node [LogicalID, Attr].
+func getAttScalarToSeq(scalarNode *yaml.Node) (*yaml.Node, error) {
+	split := strings.SplitN(scalarNode.Value, ".", 2) // split has at least one element in it.
+	var seqFromScalar yaml.Node
+	if err := yaml.Unmarshal([]byte(fmt.Sprintf("[%s]", strings.Join(split, ","))), &seqFromScalar); err != nil {
+		return nil, err
+	}
+	if len(seqFromScalar.Content) == 0 {
+		return nil, nil
+	}
+	return seqFromScalar.Content[0], nil
 }
 
 // Explicitly maintain a map so that we don't accidentally match nodes that are not actually intrinsic function

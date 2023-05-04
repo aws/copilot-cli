@@ -148,13 +148,91 @@ ImageId: !FindInMap
 				}
 			},
 		},
-		// 	"no diff in Fn::GetAtt vs !GetAtt": { // TODO(lou1415926)
-		// 		old: `SourceSecurityGroupOwnerId:
-		// Fn::GetAtt:
-		//   - myELB
-		//   - SourceSecurityGroup.OwnerAlias`,
-		// 		curr: `SourceSecurityGroupOwnerId: !GetAtt myELB.SourceSecurityGroup.OwnerAlias`,
-		// 	},
+		"no diff in Fn::GetAtt vs !GetAtt when comparing list to scalar": {
+			old: `SourceSecurityGroupOwnerId:
+  Fn::GetAtt:
+    - myELB
+    - SourceSecurityGroup.OwnerAlias`,
+			curr: `SourceSecurityGroupOwnerId: !GetAtt myELB.SourceSecurityGroup.OwnerAlias`,
+		},
+		"diff in Fn::GetAtt vs !GetAtt when comparing list to scalar": {
+			old: `SourceSecurityGroupOwnerId: !GetAtt myELB.SourceSecurityGroup.OwnerAlias`,
+			curr: `SourceSecurityGroupOwnerId:
+  Fn::GetAtt:
+    - theirELB
+    - SourceSecurityGroup.OwnerAlias`,
+			wanted: func() diffNode {
+				changedLogicalID := &seqItemNode{
+					keyNode: keyNode{
+						oldV: yamlScalarNode("myELB"),
+						newV: yamlScalarNode("theirELB"),
+					},
+				}
+				unchanged := &unchangedNode{count: 1}
+				return &keyNode{
+					childNodes: []diffNode{&keyNode{
+						keyValue: "SourceSecurityGroupOwnerId",
+						childNodes: []diffNode{&keyNode{
+							keyValue:   "Fn::GetAtt",
+							childNodes: []diffNode{changedLogicalID, unchanged},
+						}},
+					}},
+				}
+			},
+		},
+		"no diff in Fn::GetAtt vs !GetAtt when comparing list to list": { // TODO(lou1415926)
+			old: `SourceSecurityGroupOwnerId: !GetAtt [myELB, SourceSecurityGroup]`,
+			curr: `SourceSecurityGroupOwnerId:
+  Fn::GetAtt:
+    - myELB
+    - SourceSecurityGroup`,
+		},
+		"diff in Fn::GetAtt vs !GetAtt when comparing list to list": {
+			old: `SourceSecurityGroupOwnerId: !GetAtt [myELB, SourceSecurityGroup.OwnerAlias]`,
+			curr: `SourceSecurityGroupOwnerId:
+  Fn::GetAtt:
+    - theirELB
+    - SourceSecurityGroup.OwnerAlias`,
+			wanted: func() diffNode {
+				changedLogicalID := &seqItemNode{
+					keyNode: keyNode{
+						oldV: yamlScalarNode("myELB"),
+						newV: yamlScalarNode("theirELB"),
+					},
+				}
+				unchanged := &unchangedNode{count: 1}
+				return &keyNode{
+					childNodes: []diffNode{&keyNode{
+						keyValue: "SourceSecurityGroupOwnerId",
+						childNodes: []diffNode{&keyNode{
+							keyValue:   "Fn::GetAtt",
+							childNodes: []diffNode{changedLogicalID, unchanged},
+						}},
+					}},
+				}
+			},
+		},
+		"no diff in Fn::GetAtt vs !GetAtt when comparing scalr to scalr": { // TODO(lou1415926)
+			old: `SourceSecurityGroupOwnerId:
+  Fn::GetAtt: myELB.SourceSecurityGroup`,
+			curr: `SourceSecurityGroupOwnerId: !GetAtt myELB.SourceSecurityGroup`,
+		},
+		"diff in Fn::GetAtt vs !GetAtt when comparing scalar to scalar": {
+			old: `SourceSecurityGroupOwnerId: !GetAtt myELB.SourceSecurityGroup.OwnerAlias`,
+			curr: `SourceSecurityGroupOwnerId:
+  Fn::GetAtt: theirELB.SourceSecurityGroup.OwnerAlias`,
+			wanted: func() diffNode {
+				return &keyNode{
+					childNodes: []diffNode{&keyNode{
+						keyValue: "SourceSecurityGroupOwnerId",
+						childNodes: []diffNode{&keyNode{
+							keyValue: "Fn::GetAtt",
+							oldV:     yamlScalarNode("myELB.SourceSecurityGroup.OwnerAlias"),
+							newV:     yamlScalarNode("theirELB.SourceSecurityGroup.OwnerAlias")}},
+					}},
+				}
+			},
+		},
 		"no diff in Fn::GetAZs vs !GetAZ": {
 			old: `AvailabilityZone: !GetAZs ""`,
 			curr: `AvailabilityZone:
@@ -400,7 +478,7 @@ TestSub:
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			got, err := From(tc.old).Parse([]byte(tc.curr), &intrinsicFuncFullShortFormConverter{})
+			got, err := From(tc.old).Parse([]byte(tc.curr), &getAttConverter{}, &intrinsicFuncFullShortFormConverter{})
 			require.NoError(t, err)
 			if tc.wanted != nil {
 				require.True(t, equalTree(got, Tree{tc.wanted()}, t), "should get the expected tree")
