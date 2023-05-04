@@ -6,8 +6,6 @@ package manifest
 import (
 	"errors"
 	"fmt"
-	"github.com/spf13/afero"
-	"io/fs"
 	"net"
 	"path/filepath"
 	"regexp"
@@ -54,7 +52,6 @@ var (
 	awsNameRegexp       = regexp.MustCompile(`^[a-z][a-z0-9\-]+$`) // Validates that an expression starts with a letter and only contains letters, numbers, and hyphens.
 	punctuationRegExp   = regexp.MustCompile(`[\.\-]{2,}`)         // Check for consecutive periods or dashes.
 	trailingPunctRegExp = regexp.MustCompile(`[\-\.]$`)            // Check for trailing dash or dot.
-	s3FilterRegExp      = regexp.MustCompile(`^[a-zA-Z0-9\[\]]*$`)
 
 	essentialContainerDependsOnValidStatuses = []string{dependsOnStart, dependsOnHealthy}
 	dependsOnValidStatuses                   = []string{dependsOnStart, dependsOnComplete, dependsOnSuccess, dependsOnHealthy}
@@ -591,16 +588,6 @@ func (s StaticSiteConfig) validate() error {
 }
 
 func (f FileUpload) validate() error {
-	if err := f.validateSource(f.Source); err != nil {
-		return err
-	} 
-	if err := f.validateDestination(f.Destination); err != nil {
-		return err
-	}
-	patterns := append(f.Exclude.ToStringSlice(), f.Reinclude.ToStringSlice()...)
-	if err := f.validatePatterns(patterns); err != nil {
-		return err
-	}
 	return nil
 }
 
@@ -2230,41 +2217,6 @@ func (i ImageLocationOrBuild) validate() error {
 			secondField: "location",
 			mustExist:   true,
 		}
-	}
-	return nil
-}
-
-// validateSource returns nil if Source is configured correctly.
-func (f FileUpload) validateSource (source string) error {
-	if source == "" {
-		return &errFieldMustBeSpecified{
-			missingField: "source",
-		}
-	}
-	fs := afero.NewOsFs()
-	_, err := fs.Stat(f.Source)
-	if err != nil {
-		return fmt.Errorf("source '%s' must be a valid path", f.Source)
-	}
-	return nil
-}
-
-// validateDestination returns nil if Destination is configured correctly.
-func (f FileUpload) validateDestination (destination string) error {
-	if destination == "" {
-		return nil
-	}
-	// TODO(jwh): fill in
-	return nil
-}
-
-// validatePatterns returns nil if Exclude and Reinclude are configured correctly.
-func (f FileUpload) validatePatterns (patterns []string) error {
-	if len(patterns) == 0 {
-		return nil
-	}
-	for pattern := range patterns {
-		
 	}
 	return nil
 }
