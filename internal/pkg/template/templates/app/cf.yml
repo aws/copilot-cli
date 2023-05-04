@@ -5,7 +5,7 @@ AWSTemplateFormatVersion: '2010-09-09'{{$accounts := .Accounts}}{{$app := .App}}
 # to support the CodePipeline for a workspace
 Description: Cross-regional resources to support the CodePipeline for a workspace
 Metadata:
-  TemplateVersion: 'v1.2.0'
+  TemplateVersion: '{{.TemplateVersion}}'
   Version: {{.Version}}
   Services:{{if not $services}} []{{else}}{{range $service := $services}}
   - {{$service}}{{end}}{{end}}
