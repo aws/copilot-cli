@@ -1502,6 +1502,16 @@ func TestWorkloadDeployer_DeployDiff(t *testing.T) {
 			wanted: `~ peace: und Liebe -> and love
 `,
 		},
+		"get the correct diff when there is no deployed diff": {
+			inTemplate: `peace: and love`,
+			setUpMocks: func(m *deployDiffMocks) {
+				m.mockDeployedTmplGetter.EXPECT().
+					Template(gomock.Eq(stack.NameForWorkload("mockApp", "mockEnv", "mockSvc"))).
+					Return("", &cloudformation.ErrStackNotFound{})
+			},
+			wanted: `+ peace: and love
+`,
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
