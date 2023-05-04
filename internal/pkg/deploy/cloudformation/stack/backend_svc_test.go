@@ -41,6 +41,28 @@ func TestBackendService_Template(t *testing.T) {
 		fs = realEmbedFS
 	})
 	fs = templatetest.Stub{}
+
+	t.Run("returns a wrapped error when addons template parsing fails", func(t *testing.T) {
+		// GIVEN
+		svc, err := NewBackendService(BackendServiceConfig{
+			App:         &config.Application{},
+			EnvManifest: &manifest.Environment{},
+			Manifest: &manifest.BackendService{
+				Workload: manifest.Workload{
+					Name: aws.String("api"),
+				},
+			},
+			Addons: mockAddons{tplErr: errors.New("some error")},
+		})
+		require.NoError(t, err)
+
+		// WHEN
+		_, err = svc.Template()
+
+		// THEN
+		require.EqualError(t, err, "generate addons template for api: some error")
+	})
+
 	t.Run("returns a wrapped error when addons parameter parsing fails", func(t *testing.T) {
 		// GIVEN
 		svc, err := NewBackendService(BackendServiceConfig{

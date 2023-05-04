@@ -136,7 +136,7 @@ func ParseURL(url string) (bucket string, key string, err error) {
 	if strings.HasPrefix(url, s3URIPrefix) {
 		return parseS3URI(url)
 	}
-	return parseHTTPURL(url)
+	return parseHTTPURI(url)
 }
 
 // ParseARN parses an S3 bucket or object ARN.
@@ -230,7 +230,7 @@ func parseS3URI(uri string) (bucket, key string, err error) {
 // For example: https://DOC-EXAMPLE-BUCKET1.s3.us-west-2.amazonaws.com/puppy.png
 //
 // [virtual-hosted-style access URL]: https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-bucket-intro.html#virtual-host-style-url-ex
-func parseHTTPURL(url string) (bucket, key string, err error) {
+func parseHTTPURI(url string) (bucket, key string, err error) {
 	parsedURL := strings.SplitN(strings.TrimPrefix(url, "https://"), "/", 2)
 
 	// go through the host backwards and find the first piece that

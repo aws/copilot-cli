@@ -484,7 +484,6 @@ Resources:
     Metadata:
       'aws:copilot:description': 'A bucket policy to grant CloudFront read access to the Static Site bucket "demo-test-bucket"'
     Type: AWS::S3::BucketPolicy
-    DeletionPolicy: Retain
     Condition: CreateALB
     Properties:
       Bucket: demo-test-bucket

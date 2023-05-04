@@ -159,13 +159,11 @@ CertificateReplicator:
 {{- end}}
 {{- end}}
 
-{{- if .CDNConfig.Static}}
-{{- if .CDNConfig.Static.StaticSiteBucket}}
+{{- and .CDNConfig.Static (.CDNConfig.Static.StaticSiteBucket)}}
 {{logicalIDSafe (bucketNameFromURL .CDNConfig.Static.StaticSiteBucket)}}BucketPolicyForCloudFront:
   Metadata:
     'aws:copilot:description': 'A bucket policy to grant CloudFront read access to the Static Site bucket "{{bucketNameFromURL .CDNConfig.Static.StaticSiteBucket}}"'
   Type: AWS::S3::BucketPolicy
-  DeletionPolicy: Retain
   Condition: CreateALB
   Properties:
     Bucket: {{bucketNameFromURL .CDNConfig.Static.StaticSiteBucket}}
@@ -185,5 +183,4 @@ CertificateReplicator:
               AWS:SourceArn: !Sub
                 - arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${cfDistributionID}
                 - cfDistributionID: !Ref CloudFrontDistribution
-{{- end}}
 {{- end}}
