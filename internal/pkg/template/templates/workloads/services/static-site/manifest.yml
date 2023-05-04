@@ -18,6 +18,7 @@ files:
 {{- range $file := .FileUploads}}
   - source: {{$file.Source}}
     {{- if $file.Recursive}}
+    destination: assets
     recursive: {{$file.Recursive}}
     {{- end}}
 {{- end}}
