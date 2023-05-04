@@ -32,6 +32,8 @@ const (
 	LatestAppTemplateVersion = "v1.2.0"
 	// AliasLeastAppTemplateVersion is the least version number available for HTTPS alias.
 	AliasLeastAppTemplateVersion = "v1.0.0"
+	// StaticSiteMinAppTemplateVersion is the minimum app version required to deploy a static site.
+	StaticSiteMinAppTemplateVersion = "v1.2.0"
 )
 
 // AppInformation holds information about the application that need to be propagated to the env stacks and workload stacks.

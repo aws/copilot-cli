@@ -189,8 +189,7 @@ func validateRDSvcAliasAndAppVersion(svcName, alias, envName string, app *config
 	if alias == "" {
 		return nil
 	}
-	if err := validateAppVersionForAlias(app.Name, appVersionGetter); err != nil {
-		logAppVersionOutdatedError(svcName)
+	if err := validateMinAppVersion(app.Name, svcName, appVersionGetter, deploy.AliasLeastAppTemplateVersion); err != nil {
 		return err
 	}
 	// Alias should be within root hosted zone.
