@@ -159,7 +159,7 @@ CertificateReplicator:
 {{- end}}
 {{- end}}
 
-{{- and .CDNConfig.Static (.CDNConfig.Static.StaticSiteBucket)}}
+{{- if and .CDNConfig.Static (.CDNConfig.Static.StaticSiteBucket)}}
 {{logicalIDSafe (bucketNameFromURL .CDNConfig.Static.StaticSiteBucket)}}BucketPolicyForCloudFront:
   Metadata:
     'aws:copilot:description': 'A bucket policy to grant CloudFront read access to the Static Site bucket "{{bucketNameFromURL .CDNConfig.Static.StaticSiteBucket}}"'
