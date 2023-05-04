@@ -75,6 +75,13 @@ type LoadBalancedWebServiceProps struct {
 	Platform    PlatformArgsOrString // Optional platform configuration.
 }
 
+func additionalPortPathTag(idx int) string {
+	if idx == 0 {
+		return ""
+	}
+	return strconv.Itoa(idx)
+}
+
 // NewLoadBalancedWebService creates a new public load balanced web service, receives all the requests from the load balancer,
 // has a single task with minimal CPU and memory thresholds, and sets the default health check path to "/".
 func NewLoadBalancedWebService(props *LoadBalancedWebServiceProps) *LoadBalancedWebService {
@@ -99,20 +106,17 @@ func NewLoadBalancedWebService(props *LoadBalancedWebServiceProps) *LoadBalanced
 	}
 	if len(props.Ports) > 1 {
 		svc.LoadBalancedWebServiceConfig.HTTPOrBool.AdditionalRoutingRules = make([]RoutingRule, len(props.Ports)-1)
-		assumedPath := DefaultHealthCheckAdminPath
-		for idx, port := range props.Ports {
-			if idx > 0 {
-				if props.Ports[idx] == commonGRPCPort {
-					log.Infof("Detected port %s, setting HTTP protocol version to %s in the manifest.\n",
-						color.HighlightUserInput(strconv.Itoa(int(props.Ports[idx]))), color.HighlightCode(GRPCProtocol))
-					svc.HTTPOrBool.AdditionalRoutingRules[idx-1].ProtocolVersion = aws.String(GRPCProtocol)
-				}
-				svc.LoadBalancedWebServiceConfig.HTTPOrBool.AdditionalRoutingRules[idx-1].TargetPort = aws.Uint16(port)
-				svc.LoadBalancedWebServiceConfig.HTTPOrBool.AdditionalRoutingRules[idx-1].Path = aws.String(assumedPath)
-				svc.LoadBalancedWebServiceConfig.HTTPOrBool.AdditionalRoutingRules[idx-1].HealthCheck = HealthCheckArgsOrString{
-					Union: BasicToUnion[string, HTTPHealthCheckArgs]("/" + assumedPath),
-				}
-				assumedPath = "super" + assumedPath
+		for idx, port := range props.Ports[1:] {
+			if props.Ports[idx] == commonGRPCPort {
+				log.Infof("Detected port %s, setting HTTP protocol version to %s in the manifest.\n",
+					color.HighlightUserInput(strconv.Itoa(int(props.Ports[idx]))), color.HighlightCode(GRPCProtocol))
+				svc.HTTPOrBool.AdditionalRoutingRules[idx].ProtocolVersion = aws.String(GRPCProtocol)
+			}
+			assumedPath := DefaultHealthCheckAdminPath + additionalPortPathTag(idx)
+			svc.LoadBalancedWebServiceConfig.HTTPOrBool.AdditionalRoutingRules[idx].TargetPort = aws.Uint16(port)
+			svc.LoadBalancedWebServiceConfig.HTTPOrBool.AdditionalRoutingRules[idx].Path = aws.String(assumedPath)
+			svc.LoadBalancedWebServiceConfig.HTTPOrBool.AdditionalRoutingRules[idx].HealthCheck = HealthCheckArgsOrString{
+				Union: BasicToUnion[string, HTTPHealthCheckArgs]("/" + assumedPath),
 			}
 		}
 	}
