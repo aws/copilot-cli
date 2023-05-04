@@ -28,11 +28,11 @@ func (b *bucketEmptierDouble) EmptyBucket(bucket string) error {
 
 func TestStaticSite_CleanResources(t *testing.T) {
 	tests := map[string]struct {
-		cleaner  *StaticSite
+		cleaner  *StaticSiteCleaner
 		expected string
 	}{
 		"error getting bucket": {
-			cleaner: &StaticSite{
+			cleaner: &StaticSiteCleaner{
 				bucketResourceGetter: &bucketResourceGetterDouble{
 					BucketNameFn: func(app, env, wkld string) (string, error) {
 						return "", errors.New("some error")
@@ -42,7 +42,7 @@ func TestStaticSite_CleanResources(t *testing.T) {
 			expected: "get bucket name: some error",
 		},
 		"error emptying bucket": {
-			cleaner: &StaticSite{
+			cleaner: &StaticSiteCleaner{
 				bucketResourceGetter: &bucketResourceGetterDouble{
 					BucketNameFn: func(_, _, _ string) (string, error) {
 						return "bucket", nil
@@ -57,7 +57,7 @@ func TestStaticSite_CleanResources(t *testing.T) {
 			expected: "empty bucket: some error",
 		},
 		"happy path": {
-			cleaner: &StaticSite{
+			cleaner: &StaticSiteCleaner{
 				bucketResourceGetter: &bucketResourceGetterDouble{
 					BucketNameFn: func(_, _, _ string) (string, error) {
 						return "bucket", nil

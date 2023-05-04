@@ -249,9 +249,9 @@ func (d *lbWebSvcDeployer) validateRuntimeRoutingRule(rule manifest.RoutingRule)
 		return nil
 	}
 	if d.app.Domain != "" {
-		if err := validateAppVersionForAlias(d.app.Name, d.appVersionGetter); err != nil {
-			logAppVersionOutdatedError(aws.StringValue(d.lbMft.Name))
-			return err
+		err := validateMinAppVersion(d.app.Name, aws.StringValue(d.lbMft.Name), d.appVersionGetter, deploy.AliasLeastAppTemplateVersion)
+		if err != nil {
+			return fmt.Errorf("alias not supported: %w", err)
 		}
 		if err := validateLBWSAlias(rule.Alias, d.app, d.env.Name); err != nil {
 			return fmt.Errorf(`validate 'alias': %w`, err)
@@ -275,9 +275,9 @@ func (d *lbWebSvcDeployer) validateNLBRuntime() error {
 		log.Errorf(ecsNLBAliasUsedWithoutDomainFriendlyText)
 		return fmt.Errorf("cannot specify nlb.alias when application is not associated with a domain")
 	}
-	if err := validateAppVersionForAlias(d.app.Name, d.appVersionGetter); err != nil {
-		logAppVersionOutdatedError(aws.StringValue(d.lbMft.Name))
-		return err
+	err := validateMinAppVersion(d.app.Name, aws.StringValue(d.lbMft.Name), d.appVersionGetter, deploy.AliasLeastAppTemplateVersion)
+	if err != nil {
+		return fmt.Errorf("alias not supported: %w", err)
 	}
 	if err := validateLBWSAlias(d.lbMft.NLBConfig.Aliases, d.app, d.env.Name); err != nil {
 		return fmt.Errorf(`validate 'nlb.alias': %w`, err)

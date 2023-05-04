@@ -10,12 +10,9 @@ const aws = require("aws-sdk");
  */
 exports.handler = async function (event, context, callback) {
 	const s3 = new aws.S3();
-
-	const params = {
+	await s3.copyObject({
 		CopySource: event.srcBucket + "/" + event.mapping.path,
 		Bucket: event.destBucket,
 		Key: event.mapping.destPath
-	};
-
-	await s3.copyObject(params).promise();
+	}).promise();
 };
