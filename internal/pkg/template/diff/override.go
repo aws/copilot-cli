@@ -108,6 +108,7 @@ func (converter *intrinsicFuncMapTagConverter) match(from, to *yaml.Node, key st
 // for correct comparison.
 // E.g. given "!Func: [1,2]" and "Fn::Func: '1,2'", parse assumes that comparing [1,2] with "1,2" produces the desired result.
 // Note that this does not hold for "GetAtt" function: "!GetAtt: [1,2]" and "!GetAtt: 1.2" should be considered the same.
+// parse assumes that from and to are matched by intrinsicFuncMapTagConverter.
 func (*intrinsicFuncMapTagConverter) parse(from, to *yaml.Node, key string, overrider overrider) (diffNode, error) {
 	var diff diffNode
 	var err error
@@ -128,6 +129,7 @@ func (*intrinsicFuncMapTagConverter) parse(from, to *yaml.Node, key string, over
 }
 
 // getAttConverter matches and parses two YAML nodes that calls the intrinsic function "GetAtt".
+// Unlike intrinsicFuncMapTagConverter, getAttConverter does not require "from" and "to" to be written in different form.
 // The input to "GetAtt" could be either a sequence or a scalar. All the followings are valid and should be considered equal.
 // Fn::GetAtt: LogicalID.Att.SubAtt, Fn::GetAtt: [LogicalID, Att.SubAtt], !GetAtt LogicalID.Att.SubAtt, !GetAtt [LogicalID, Att.SubAtt].
 type getAttConverter struct {
@@ -137,10 +139,10 @@ type getAttConverter struct {
 // match returns true if both from node and to node are calling the "GetAtt" intrinsic function.
 // "GetAtt" only accepts either sequence or scalar, therefore match returns false if either of from and to has invalid 
 // input node to "GetAtt".
-// Example1: "!GetAtt a.b" and "!GetAtt [a,b]" returns true.
-// Example2: "!GetAtt a.b" and "Fn::GetAtt a.b" returns true.
+// Example1: "!GetAtt" and "!GetAtt" returns true.
+// Example2: "!GetAtt" and "Fn::GetAtt" returns true.
 // Example3: "!Ref" and "!GetAtt" returns false.
-// Example4: "Fn::GetAtt:a:b" and "!GetAtt [a,b]" returns false because the input type is wrong.
+// Example4: "!GetAtt [a,b]" and "Fn::GetAtt:a:b" returns false because the input type is wrong.
 func (converter *getAttConverter) match(from, to *yaml.Node, key string, overrider overrider) bool {
 	if !converter.intrinsicFunc.match(from, to, key, overrider) {
 		return false
@@ -150,7 +152,7 @@ func (converter *getAttConverter) match(from, to *yaml.Node, key string, overrid
 	}
 	fromValue, toValue := from, to
 	if from.Kind == yaml.MappingNode {
-		fromValue = from.Content[1]
+		fromValue = from.Content[1] // A valid full-form intrinsic function always contain a child node.
 	}
 	if to.Kind == yaml.MappingNode {
 		toValue = to.Content[1]
@@ -175,7 +177,7 @@ func (converter *getAttConverter) parse(from, to *yaml.Node, key string, overrid
 	// Extract the input node to GetAtt.
 	fromValue, toValue := from, to
 	if from.Kind == yaml.MappingNode {
-		fromValue = from.Content[1]
+		fromValue = from.Content[1] // A valid full-form intrinsic function always contain a child node.
 	}
 	if to.Kind == yaml.MappingNode {
 		toValue = to.Content[1]
