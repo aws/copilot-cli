@@ -139,6 +139,7 @@ func TestS3_EmptyBucket(t *testing.T) {
 					Bucket: aws.String("mockBucket"),
 					Delete: &s3.Delete{
 						Objects: batchObjectID2,
+						Quiet:   aws.Bool(true),
 					},
 				}).Return(&s3.DeleteObjectsOutput{}, nil)
 			},
@@ -161,6 +162,7 @@ func TestS3_EmptyBucket(t *testing.T) {
 					Bucket: aws.String("mockBucket"),
 					Delete: &s3.Delete{
 						Objects: batchObjectID1,
+						Quiet:   aws.Bool(true),
 					},
 				}).Return(&s3.DeleteObjectsOutput{}, nil)
 				m.EXPECT().ListObjectVersions(&s3.ListObjectVersionsInput{
@@ -173,6 +175,7 @@ func TestS3_EmptyBucket(t *testing.T) {
 					Bucket: aws.String("mockBucket"),
 					Delete: &s3.Delete{
 						Objects: batchObjectID2,
+						Quiet:   aws.Bool(true),
 					},
 				}).Return(&s3.DeleteObjectsOutput{}, nil)
 			},
@@ -196,6 +199,7 @@ func TestS3_EmptyBucket(t *testing.T) {
 					Bucket: aws.String("mockBucket"),
 					Delete: &s3.Delete{
 						Objects: batchObjectID3,
+						Quiet:   aws.Bool(true),
 					},
 				}).Return(&s3.DeleteObjectsOutput{}, nil)
 			},
@@ -244,6 +248,7 @@ func TestS3_EmptyBucket(t *testing.T) {
 					Bucket: aws.String("mockBucket"),
 					Delete: &s3.Delete{
 						Objects: batchObjectID2,
+						Quiet:   aws.Bool(true),
 					},
 				}).Return(nil, errors.New("some error"))
 			},
@@ -271,6 +276,36 @@ func TestS3_EmptyBucket(t *testing.T) {
 			wantErr: fmt.Errorf("unable to determine the existance of bucket %s: %w", "mockBucket",
 				awserr.New("Unknown", "message", nil)),
 		},
+		"some objects failed to delete": {
+			inBucket: "mockBucket",
+			mockS3Client: func(m *mocks.Mocks3API) {
+				m.EXPECT().HeadBucket(&s3.HeadBucketInput{
+					Bucket: aws.String("mockBucket"),
+				}).Return(nil, nil)
+				m.EXPECT().ListObjectVersions(&s3.ListObjectVersionsInput{
+					Bucket: aws.String("mockBucket"),
+				}).Return(&s3.ListObjectVersionsOutput{
+					IsTruncated: aws.Bool(false),
+					Versions:    batchObject2,
+				}, nil)
+				m.EXPECT().DeleteObjects(&s3.DeleteObjectsInput{
+					Bucket: aws.String("mockBucket"),
+					Delete: &s3.Delete{
+						Objects: batchObjectID2,
+						Quiet:   aws.Bool(true),
+					},
+				}).Return(&s3.DeleteObjectsOutput{
+					Errors: []*s3.Error{
+						{
+							Key:     aws.String("mock/key"),
+							Message: aws.String("some error"),
+						},
+					},
+				}, nil)
+			},
+			wantErr: fmt.Errorf(`1/10 objects failed to delete
+first failed on key "mock/key": some error`),
+		},
 	}
 
 	for name, tc := range testCases {
@@ -287,10 +322,11 @@ func TestS3_EmptyBucket(t *testing.T) {
 			}
 
 			gotErr := service.EmptyBucket(tc.inBucket)
-
 			if tc.wantErr != nil {
 				require.EqualError(t, gotErr, tc.wantErr.Error())
+				return
 			}
+			require.NoError(t, gotErr)
 		})
 
 	}

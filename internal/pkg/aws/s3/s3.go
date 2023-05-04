@@ -5,6 +5,7 @@
 package s3
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -111,14 +112,21 @@ func (s *S3) EmptyBucket(bucket string) error {
 		if len(objectsToDelete) == 0 {
 			return nil
 		}
-		_, err = s.s3Client.DeleteObjects(&s3.DeleteObjectsInput{
+		delResp, err := s.s3Client.DeleteObjects(&s3.DeleteObjectsInput{
 			Bucket: aws.String(bucket),
 			Delete: &s3.Delete{
 				Objects: objectsToDelete,
+				Quiet:   aws.Bool(true), // we don't care about success values
 			},
 		})
-		if err != nil {
+		switch {
+		case err != nil:
 			return fmt.Errorf("delete objects from bucket %s: %w", bucket, err)
+		case len(delResp.Errors) > 0:
+			return errors.Join(
+				fmt.Errorf("%d/%d objects failed to delete", len(delResp.Errors), len(objectsToDelete)),
+				fmt.Errorf("first failed on key %q: %s", aws.StringValue(delResp.Errors[0].Key), aws.StringValue(delResp.Errors[0].Message)),
+			)
 		}
 		if !aws.BoolValue(listResp.IsTruncated) {
 			return nil
