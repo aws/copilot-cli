@@ -249,7 +249,6 @@ func TestStaticSite_Parameters(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			testManifest := manifest.NewStaticSite(manifest.StaticSiteProps{
 				Name:             "frontend",
-				StaticSiteConfig: manifest.StaticSiteConfig{},
 			})
 
 			// GIVEN
