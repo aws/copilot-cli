@@ -139,6 +139,7 @@ func TestS3_EmptyBucket(t *testing.T) {
 					Bucket: aws.String("mockBucket"),
 					Delete: &s3.Delete{
 						Objects: batchObjectID2,
+						Quiet:   aws.Bool(true),
 					},
 				}).Return(&s3.DeleteObjectsOutput{}, nil)
 			},
@@ -161,6 +162,7 @@ func TestS3_EmptyBucket(t *testing.T) {
 					Bucket: aws.String("mockBucket"),
 					Delete: &s3.Delete{
 						Objects: batchObjectID1,
+						Quiet:   aws.Bool(true),
 					},
 				}).Return(&s3.DeleteObjectsOutput{}, nil)
 				m.EXPECT().ListObjectVersions(&s3.ListObjectVersionsInput{
@@ -173,6 +175,7 @@ func TestS3_EmptyBucket(t *testing.T) {
 					Bucket: aws.String("mockBucket"),
 					Delete: &s3.Delete{
 						Objects: batchObjectID2,
+						Quiet:   aws.Bool(true),
 					},
 				}).Return(&s3.DeleteObjectsOutput{}, nil)
 			},
@@ -196,6 +199,7 @@ func TestS3_EmptyBucket(t *testing.T) {
 					Bucket: aws.String("mockBucket"),
 					Delete: &s3.Delete{
 						Objects: batchObjectID3,
+						Quiet:   aws.Bool(true),
 					},
 				}).Return(&s3.DeleteObjectsOutput{}, nil)
 			},
@@ -244,6 +248,7 @@ func TestS3_EmptyBucket(t *testing.T) {
 					Bucket: aws.String("mockBucket"),
 					Delete: &s3.Delete{
 						Objects: batchObjectID2,
+						Quiet:   aws.Bool(true),
 					},
 				}).Return(nil, errors.New("some error"))
 			},
@@ -271,6 +276,36 @@ func TestS3_EmptyBucket(t *testing.T) {
 			wantErr: fmt.Errorf("unable to determine the existance of bucket %s: %w", "mockBucket",
 				awserr.New("Unknown", "message", nil)),
 		},
+		"some objects failed to delete": {
+			inBucket: "mockBucket",
+			mockS3Client: func(m *mocks.Mocks3API) {
+				m.EXPECT().HeadBucket(&s3.HeadBucketInput{
+					Bucket: aws.String("mockBucket"),
+				}).Return(nil, nil)
+				m.EXPECT().ListObjectVersions(&s3.ListObjectVersionsInput{
+					Bucket: aws.String("mockBucket"),
+				}).Return(&s3.ListObjectVersionsOutput{
+					IsTruncated: aws.Bool(false),
+					Versions:    batchObject2,
+				}, nil)
+				m.EXPECT().DeleteObjects(&s3.DeleteObjectsInput{
+					Bucket: aws.String("mockBucket"),
+					Delete: &s3.Delete{
+						Objects: batchObjectID2,
+						Quiet:   aws.Bool(true),
+					},
+				}).Return(&s3.DeleteObjectsOutput{
+					Errors: []*s3.Error{
+						{
+							Key:     aws.String("mock/key"),
+							Message: aws.String("some error"),
+						},
+					},
+				}, nil)
+			},
+			wantErr: fmt.Errorf(`1/10 objects failed to delete
+first failed on key "mock/key": some error`),
+		},
 	}
 
 	for name, tc := range testCases {
@@ -287,10 +322,11 @@ func TestS3_EmptyBucket(t *testing.T) {
 			}
 
 			gotErr := service.EmptyBucket(tc.inBucket)
-
 			if tc.wantErr != nil {
 				require.EqualError(t, gotErr, tc.wantErr.Error())
+				return
 			}
+			require.NoError(t, gotErr)
 		})
 
 	}
@@ -322,6 +358,11 @@ func TestS3_ParseURL(t *testing.T) {
 			wantedBucketName: "stackset-myapp-infrastru-pipelinebuiltartifactbuc-1nk5t9zkymh8r",
 			wantedKey:        "scripts/dns-cert-validator/dd2278811c3",
 		},
+		"parses bucket URL": {
+			inURL:            "https://stackset-myapp-infrastru-pipelinebuiltartifactbuc-1nk5t9zkymh8r.s3-us-west-2.amazonaws.com",
+			wantedBucketName: "stackset-myapp-infrastru-pipelinebuiltartifactbuc-1nk5t9zkymh8r",
+			wantedKey:        "",
+		},
 		"parses object URL with dots": {
 			inURL:            "https://bucket.with.dots.in.name.s3.us-west-2.amazonaws.com/scripts/dns-cert-validator/dd2278811c3",
 			wantedBucketName: "bucket.with.dots.in.name",
@@ -341,7 +382,7 @@ func TestS3_ParseURL(t *testing.T) {
 			if gotErr != nil {
 				require.EqualError(t, gotErr, tc.wantError.Error())
 			} else {
-				require.Equal(t, gotErr, nil)
+				require.NoError(t, tc.wantError)
 				require.Equal(t, tc.wantedBucketName, gotBucketName)
 				require.Equal(t, tc.wantedKey, gotKey)
 			}
@@ -400,6 +441,12 @@ func TestURL(t *testing.T) {
 			key:    "puppy.jpg",
 
 			wanted: "https://mybucket.s3.us-west-2.amazonaws.com/puppy.jpg",
+		},
+		"Formats a virtual-hosted-style URL with no key": {
+			region: "us-west-2",
+			bucket: "mybucket",
+
+			wanted: "https://mybucket.s3.us-west-2.amazonaws.com",
 		},
 		"Formats the URL for a region in the aws-cn partition": {
 			region: "cn-north-1",

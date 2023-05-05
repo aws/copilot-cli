@@ -9,10 +9,12 @@ import (
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/asset"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
+	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/template"
@@ -27,9 +29,10 @@ type fileUploader interface {
 
 type staticSiteDeployer struct {
 	*svcDeployer
-	staticSiteMft *manifest.StaticSite
-	fs            afero.Fs
-	uploader      fileUploader
+	appVersionGetter versionGetter
+	staticSiteMft    *manifest.StaticSite
+	fs               afero.Fs
+	uploader         fileUploader
 }
 
 // NewStaticSiteDeployer is the constructor for staticSiteDeployer.
@@ -39,14 +42,19 @@ func NewStaticSiteDeployer(in *WorkloadDeployerInput) (*staticSiteDeployer, erro
 	if err != nil {
 		return nil, err
 	}
+	versionGetter, err := describe.NewAppDescriber(in.App.Name)
+	if err != nil {
+		return nil, fmt.Errorf("new app describer for application %s: %w", in.App.Name, err)
+	}
 	mft, ok := in.Mft.(*manifest.StaticSite)
 	if !ok {
 		return nil, fmt.Errorf("manifest is not of type %s", manifestinfo.StaticSiteType)
 	}
 	return &staticSiteDeployer{
-		svcDeployer:   svcDeployer,
-		staticSiteMft: mft,
-		fs:            svcDeployer.fs,
+		svcDeployer:      svcDeployer,
+		appVersionGetter: versionGetter,
+		staticSiteMft:    mft,
+		fs:               svcDeployer.fs,
 		uploader: &asset.ArtifactBucketUploader{
 			FS:                  svcDeployer.fs,
 			AssetDir:            artifactBucketAssetsDir,
@@ -115,6 +123,9 @@ func (d *staticSiteDeployer) stackConfiguration(in *StackRuntimeConfiguration) (
 	rc, err := d.runtimeConfig(in)
 	if err != nil {
 		return nil, err
+	}
+	if err := validateMinAppVersion(d.app.Name, d.name, d.appVersionGetter, deploy.StaticSiteMinAppTemplateVersion); err != nil {
+		return nil, fmt.Errorf("static sites not supported: %w", err)
 	}
 	conf, err := stack.NewStaticSite(&stack.StaticSiteConfig{
 		App:                d.app,

@@ -33,35 +33,14 @@ Resources:
       AccessControl: Private
       BucketEncryption:
         ServerSideEncryptionConfiguration:
-        - ServerSideEncryptionByDefault:
-            SSEAlgorithm: AES256
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
         BlockPublicPolicy: true
       OwnershipControls:
         Rules:
           - ObjectOwnership: BucketOwnerEnforced
-
-  BucketPolicy:
-    Metadata:
-      aws:copilot:description: A bucket policy to deny unencrypted access to the bucket and its contents
-    Type: AWS::S3::BucketPolicy
-    DeletionPolicy: Retain
-    Properties:
-      Bucket: !Ref Bucket
-      PolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Sid: ForceHTTPS
-            Effect: Deny
-            Principal: "*"
-            Action: s3:*
-            Resource:
-              - !Sub ${Bucket.Arn}
-              - !Sub ${Bucket.Arn}/*
-            Condition: 
-              Bool:
-                aws:SecureTransport: false
 
   TriggerStateMachineFunction:
     Metadata:
@@ -236,3 +215,24 @@ Resources:
                 Resource: !Sub arn:aws:s3:::${Bucket}/*
       ManagedPolicyArns:
         - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+  
+  EnvManagerS3Access:
+    Metadata:
+      aws:copilot:description: A policy that gives the Env Manager role access to this site's S3 Bucket
+    Type: AWS::IAM::Policy
+    Properties:
+      Roles:
+        - !Sub "${AppName}-${EnvName}-EnvManagerRole"
+      PolicyName: !Sub "${WorkloadName}-S3Access"
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - s3:ListBucket
+              - s3:ListBucketVersions
+              - s3:DeleteObject
+              - s3:DeleteObjectVersion
+            Resource:
+              - !Sub arn:aws:s3:::${Bucket}
+              - !Sub arn:aws:s3:::${Bucket}/*
