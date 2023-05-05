@@ -10,7 +10,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func TestIntrinsicFuncFullShortFormConverter(t *testing.T) {
+func TestIntrinsicFuncConverters(t *testing.T) {
 	testCases := map[string]struct {
 		curr   string
 		old    string
@@ -478,7 +478,7 @@ TestSub:
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			got, err := From(tc.old).Parse([]byte(tc.curr), &getAttConverter{}, &intrinsicFuncFullShortFormConverter{})
+			got, err := From(tc.old).Parse([]byte(tc.curr), &getAttConverter{}, &intrinsicFuncMapTagConverter{})
 			require.NoError(t, err)
 			if tc.wanted != nil {
 				require.True(t, equalTree(got, Tree{tc.wanted()}, t), "should get the expected tree")
