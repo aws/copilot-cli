@@ -285,6 +285,7 @@ type CDNStaticConfig struct {
 type StaticSiteOrImportedBucket struct {
 	StaticSite     string
 	ImportedBucket string
+	StaticBucket   string
 }
 
 func (s *StaticSiteOrImportedBucket) isEmpty() bool {

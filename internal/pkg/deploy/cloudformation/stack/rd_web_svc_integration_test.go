@@ -80,8 +80,9 @@ func TestRDWS_Template(t *testing.T) {
 			App: deploy.AppInformation{
 				Name: appName,
 			},
-			Env:      tc.envName,
-			Manifest: v,
+			Env:                tc.envName,
+			Manifest:           v,
+			ArtifactBucketName: "bucket",
 			RuntimeConfig: stack.RuntimeConfig{
 				AccountID:  "123456789123",
 				Region:     "us-west-2",

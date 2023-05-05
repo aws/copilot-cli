@@ -96,8 +96,9 @@ func TestBackendService_TemplateAndParamsGeneration(t *testing.T) {
 				App: &config.Application{
 					Name: appName,
 				},
-				EnvManifest: envConfig,
-				Manifest:    mft.(*manifest.BackendService),
+				EnvManifest:        envConfig,
+				ArtifactBucketName: "bucket",
+				Manifest:           mft.(*manifest.BackendService),
 				RuntimeConfig: stack.RuntimeConfig{
 					ServiceDiscoveryEndpoint: fmt.Sprintf("%s.%s.local", envName, appName),
 					EnvVersion:               "v1.42.0",
