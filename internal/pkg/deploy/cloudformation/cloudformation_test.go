@@ -239,6 +239,16 @@ func testDeployWorkload_StreamUntilStackCreationFails(t *testing.T, stackName st
 	m.EXPECT().Describe(stackName).Return(&cloudformation.StackDescription{
 		StackStatus: aws.String("CREATE_FAILED"),
 	}, nil)
+	m.EXPECT().ErrorEvents(stackName).Return(
+		[]cloudformation.StackEvent{
+			{
+				EventId:            aws.String("2"),
+				LogicalResourceId:  aws.String(stackName),
+				PhysicalResourceId: aws.String("AWS::AppRunner::Service"),
+				ResourceStatus:     aws.String("CREATE_FAILED"), // Send failure event for stack.
+				Timestamp:          aws.Time(time.Now()),
+			},
+		}, nil)
 	buf := new(strings.Builder)
 	client := CloudFormation{cfnClient: m, s3Client: mS3Client, console: mockFileWriter{Writer: buf}}
 
