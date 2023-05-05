@@ -374,6 +374,7 @@ func (o *initSvcOpts) Execute() error {
 		Port:        o.port,
 		HealthCheck: hc,
 		Private:     strings.EqualFold(o.ingressType, ingressTypeEnvironment),
+		FileUploads: o.staticAssets,
 	})
 	if err != nil {
 		return err
