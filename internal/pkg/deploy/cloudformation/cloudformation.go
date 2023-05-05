@@ -572,7 +572,7 @@ func (cf CloudFormation) deleteAndRenderStack(name, description string, deleteFn
 
 type errFailedService struct {
 	stackName string
-	service   string
+	resourceType   string
 	status    string
 }
 
