@@ -572,12 +572,16 @@ func (cf CloudFormation) deleteAndRenderStack(name, description string, deleteFn
 
 type errFailedService struct {
 	stackName string
+	service   string
 	status    string
 }
 
 func (e *errFailedService) RecommendActions() string {
-	return fmt.Sprintf("You may fix the error by updating the service code or the manifest configuration.\n"+
-		"You can then retry deploying your service by running %s.", color.HighlightCode("copilot svc deploy"))
+	if e.service == "AWS::AppRunner::Service" {
+		return fmt.Sprintf("You may fix the error by updating the service code or the manifest configuration.\n"+
+			"You can then retry deploying your service by running %s.", color.HighlightCode("copilot svc deploy"))
+	}
+	return ""
 }
 func (e *errFailedService) Error() string {
 	return fmt.Sprintf("stack %s did not complete successfully and exited with status %s", e.stackName, e.status)
@@ -590,9 +594,12 @@ func (cf CloudFormation) errOnFailedStack(stackName string) error {
 	}
 	status := aws.StringValue(stack.StackStatus)
 	if cloudformation.StackStatus(status).IsFailure() {
+		events, _ := cf.cfnClient.ErrorEvents(stackName)
+
 		return &errFailedService{
 			stackName: stackName,
-			status: status,
+			service:   aws.StringValue(events[0].ResourceType),
+			status:    status,
 		}
 	}
 	return nil
