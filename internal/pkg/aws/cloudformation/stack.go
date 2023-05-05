@@ -4,8 +4,6 @@
 package cloudformation
 
 import (
-	"fmt"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 )
@@ -100,11 +98,6 @@ func WithDisableRollback() StackOption {
 
 // StackEvent is an alias the SDK's StackEvent type.
 type StackEvent cloudformation.StackEvent
-
-func (e StackEvent) String() string {
-	return fmt.Sprintf("%s, %s, %s, %s, %s", aws.StringValue(e.LogicalResourceId), aws.StringValue(e.PhysicalResourceId),
-		aws.StringValue(e.ResourceType), aws.StringValue(e.ResourceStatus), aws.StringValue(e.ResourceStatusReason))
-}
 
 // StackDescription is an alias the SDK's Stack type.
 type StackDescription cloudformation.Stack
