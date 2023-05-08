@@ -54,10 +54,9 @@ func (u *ArtifactBucketUploader) UploadFiles(files []manifest.FileUpload) (strin
 	var assets []asset
 	for _, f := range files {
 		matcher := buildCompositeMatchers(buildReincludeMatchers(f.Reinclude.ToStringSlice()), buildExcludeMatchers(f.Exclude.ToStringSlice()))
-		source := filepath.Join(f.Context, f.Source)
 
-		if err := afero.Walk(u.FS, source, u.walkFn(source, f.Destination, f.Recursive, matcher, &assets)); err != nil {
-			return "", fmt.Errorf("walk the file tree rooted at %q: %s", source, err)
+		if err := afero.Walk(u.FS, f.Source, u.walkFn(f.Source, f.Destination, f.Recursive, matcher, &assets)); err != nil {
+			return "", fmt.Errorf("walk the file tree rooted at %q: %s", f.Source, err)
 		}
 	}
 

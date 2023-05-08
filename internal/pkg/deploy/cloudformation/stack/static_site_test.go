@@ -247,7 +247,9 @@ func TestStaticSite_Parameters(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			testManifest := manifest.NewStaticSite("frontend")
+			testManifest := manifest.NewStaticSite(manifest.StaticSiteProps{
+				Name:             "frontend",
+			})
 
 			// GIVEN
 			conf, err := NewStaticSite(&StaticSiteConfig{
