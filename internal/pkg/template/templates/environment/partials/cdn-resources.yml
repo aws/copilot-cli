@@ -99,9 +99,6 @@ CloudFrontDistribution:
         {{- if .CDNConfig.Static.ImportedBucket}}
           DomainName: {{.CDNConfig.Static.ImportedBucket}}
         {{- end}}
-        {{- if .CDNConfig.Static.StaticSiteBucket}}
-          DomainName: {{.CDNConfig.Static.StaticSiteBucket}}
-        {{- end}}
           OriginAccessControlId: !Ref CloudFrontOriginAccessControl
           # Workaround for using Origin Access Control as Origin Access Identity is still 
           # required when the origin is an S3 bucket.
@@ -157,30 +154,4 @@ CertificateReplicator:
     EnvRegion: !Ref AWS::Region
     CertificateArn: !Ref HTTPSCert
 {{- end}}
-{{- end}}
-
-{{- if and .CDNConfig.Static (.CDNConfig.Static.StaticSiteBucket)}}
-{{logicalIDSafe (bucketNameFromURL .CDNConfig.Static.StaticSiteBucket)}}BucketPolicyForCloudFront:
-  Metadata:
-    'aws:copilot:description': 'A bucket policy to grant CloudFront read access to the Static Site bucket "{{bucketNameFromURL .CDNConfig.Static.StaticSiteBucket}}"'
-  Type: AWS::S3::BucketPolicy
-  Condition: CreateALB
-  Properties:
-    Bucket: {{bucketNameFromURL .CDNConfig.Static.StaticSiteBucket}}
-    PolicyDocument:
-      Version: 2012-10-17
-      Statement:
-        - Sid: AllowCloudFrontServicePrincipalReadOnly
-          Effect: Allow
-          Principal:
-            Service: cloudfront.amazonaws.com
-          Action: s3:GetObject
-          Resource:
-            - !Sub arn:${AWS::Partition}:s3:::{{bucketNameFromURL .CDNConfig.Static.StaticSiteBucket}}
-            - !Sub arn:${AWS::Partition}:s3:::{{bucketNameFromURL .CDNConfig.Static.StaticSiteBucket}}/*
-          Condition: 
-            StringEquals:
-              AWS:SourceArn: !Sub
-                - arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${cfDistributionID}
-                - cfDistributionID: !Ref CloudFrontDistribution
 {{- end}}

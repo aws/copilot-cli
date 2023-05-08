@@ -170,7 +170,7 @@ func TestInitOpts_Run(t *testing.T) {
 					},
 					{
 						Value: manifestinfo.StaticSiteType,
-						Hint: "Internet to CDN to S3 bucket",
+						Hint:  "Internet to CDN to S3 bucket",
 					},
 					{
 						Value: manifestinfo.ScheduledJobType,
