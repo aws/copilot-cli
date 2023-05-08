@@ -142,7 +142,7 @@ type getAttConverter struct {
 // Example1: "!GetAtt" and "!GetAtt" returns true.
 // Example2: "!GetAtt" and "Fn::GetAtt" returns true.
 // Example3: "!Ref" and "!GetAtt" returns false.
-// Example4: "!GetAtt [a,b]" and "Fn::GetAtt:a:b" returns false because the input type is wrong.
+// Example4: "!GetAtt [a,b]" and "Fn::GetAtt: a:b" returns false because the input type is wrong.
 func (converter *getAttConverter) match(from, to *yaml.Node, key string, overrider overrider) bool {
 	if !converter.intrinsicFunc.match(from, to, key, overrider) {
 		return false
