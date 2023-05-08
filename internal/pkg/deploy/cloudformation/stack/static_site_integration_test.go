@@ -64,6 +64,18 @@ func TestStaticSiteService_TemplateAndParamsGeneration(t *testing.T) {
 					Name: &envName,
 				},
 			}
+
+			// Create in-memory mock file system.
+			wd, err := os.Getwd()
+			require.NoError(t, err)
+			fs := afero.NewMemMapFs()
+			_ = fs.MkdirAll(fmt.Sprintf("%s/foo", wd), 0755)
+			_ = afero.WriteFile(fs, fmt.Sprintf("%s/frontend/dist", wd), []byte("good stuff"), 0644)
+			require.NoError(t, err)
+
+			ws, err := workspace.Use(fs)
+			require.NoError(t, err)
+
 			serializer, err := stack.NewStaticSite(&stack.StaticSiteConfig{
 				App: &config.Application{
 					Name: appName,
