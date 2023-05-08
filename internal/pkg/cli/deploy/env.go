@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
 	"sort"
 	"strings"
@@ -234,9 +235,13 @@ func (d *envDeployer) UploadArtifacts() (*UploadEnvArtifactsOutput, error) {
 func (d *envDeployer) DeployDiff(template string) (string, error) {
 	tmpl, err := d.tmplGetter.Template(cfnstack.NameForEnv(d.app.Name, d.env.Name))
 	if err != nil {
-		return "", fmt.Errorf("retrieve the deployed template for %q: %w", d.env.Name, err)
+		var errNotFound *awscloudformation.ErrStackNotFound
+		if !errors.As(err, &errNotFound) {
+			return "", fmt.Errorf("retrieve the deployed template for %q: %w", d.env.Name, err)
+		}
+		tmpl = ""
 	}
-	diffTree, err := diff.From(tmpl).ParseWithCFNIgnorer([]byte(template))
+	diffTree, err := diff.From(tmpl).ParseWithCFNOverriders([]byte(template))
 	if err != nil {
 		return "", fmt.Errorf("parse the diff against the deployed env stack %q: %w", d.env.Name, err)
 	}
@@ -436,7 +441,8 @@ func (d *envDeployer) buildStackInput(in *DeployEnvironmentInput) (*cfnstack.Env
 }
 
 func (d *envDeployer) renderStaticSite(mft *manifest.Environment) error {
-	if mft == nil || mft.CDNConfig.Config.Static.Location.StaticSite == "" {
+	if mft == nil || mft.CDNConfig.Config.Static.Location.StaticBucket != "" ||
+		mft.CDNConfig.Config.Static.Location.StaticSite == "" {
 		return nil
 	}
 	staticSite := mft.CDNConfig.Config.Static.Location.StaticSite
@@ -444,7 +450,9 @@ func (d *envDeployer) renderStaticSite(mft *manifest.Environment) error {
 	if err != nil {
 		return fmt.Errorf("get bucket name for %s in env %s: %w", staticSite, d.env.Name, err)
 	}
-	mft.CDNConfig.Config.Static.Location.StaticSite = awss3.URL(d.env.Region, bucketName, "")
+	// s3.URL returns a valid URL.
+	url, _ := url.Parse(awss3.URL(d.env.Region, bucketName, ""))
+	mft.CDNConfig.Config.Static.Location.StaticBucket = url.Host
 	return nil
 }
 

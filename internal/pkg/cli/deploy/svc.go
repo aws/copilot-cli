@@ -14,7 +14,6 @@ import (
 	"golang.org/x/mod/semver"
 
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
-	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
@@ -98,20 +97,37 @@ type svcStackConfigurationOutput struct {
 	svcUpdater serviceForceUpdater
 }
 
-func validateAppVersionForAlias(appName string, appVersionGetter versionGetter) error {
-	appVersion, err := appVersionGetter.Version()
-	if err != nil {
-		return fmt.Errorf("get version for app %s: %w", appName, err)
-	}
-	diff := semver.Compare(appVersion, deploy.AliasLeastAppTemplateVersion)
-	if diff < 0 {
-		return fmt.Errorf(`alias is not compatible with application versions below %s`, deploy.AliasLeastAppTemplateVersion)
-	}
-	return nil
+type errAppOutOfDate struct {
+	svc           string
+	curVersion    string
+	neededVersion string
 }
 
-func logAppVersionOutdatedError(name string) {
-	log.Errorf(`Cannot deploy service %s because the application version is incompatible.
-To upgrade the application, please run %s first (see https://aws.github.io/copilot-cli/docs/credentials/#application-credentials).
-`, name, color.HighlightCode("copilot app upgrade"))
+func (e *errAppOutOfDate) Error() string {
+	return fmt.Sprintf("app version must be > %s", e.neededVersion)
+}
+
+func (e *errAppOutOfDate) RecommendActions() string {
+	return fmt.Sprintf(`Cannot deploy service %q because the current application version %q
+is incompatible. To upgrade the application, please run %s.
+(see https://aws.github.io/copilot-cli/docs/credentials/#application-credentials)
+`, e.svc, e.curVersion, color.HighlightCode("copilot app upgrade"))
+}
+
+func validateMinAppVersion(app, svc string, appVersionGetter versionGetter, minVersion string) error {
+	appVersion, err := appVersionGetter.Version()
+	if err != nil {
+		return fmt.Errorf("get version for app %q: %w", app, err)
+	}
+
+	diff := semver.Compare(appVersion, minVersion)
+	if diff < 0 {
+		return &errAppOutOfDate{
+			svc:           svc,
+			curVersion:    appVersion,
+			neededVersion: minVersion,
+		}
+	}
+
+	return nil
 }

@@ -284,7 +284,7 @@ func TestShowAppOpts_Execute(t *testing.T) {
 			wantedContent: `About
 
   Name                  my-app
-  Version               v0.0.0 (latest available: v1.1.0)
+  Version               v0.0.0 (latest available: v1.2.0)
   URI                   example.com
   Permissions Boundary  examplePermissionsBoundaryPolicy
 
@@ -352,7 +352,7 @@ Pipelines
 			wantedContent: `About
 
   Name                  my-app
-  Version               v1.1.0 
+  Version               v1.2.0 
   URI                   example.com
   Permissions Boundary  examplePermissionsBoundaryPolicy
 
@@ -419,7 +419,7 @@ Pipelines
 			wantedContent: `About
 
   Name                  my-app
-  Version               v1.1.0 
+  Version               v1.2.0 
   URI                   N/A
   Permissions Boundary  N/A
 
@@ -489,7 +489,7 @@ Pipelines
 			wantedContent: `About
 
   Name                  my-app
-  Version               v1.1.0 
+  Version               v1.2.0 
   URI                   example.com
   Permissions Boundary  examplePermissionsBoundaryPolicy
 
@@ -513,7 +513,8 @@ Pipelines
   ----
   my-pipeline-repo
 `,
-		}, "when multiple services/jobs are deployed": {
+		},
+		"when multiple services/jobs are deployed": {
 			setupMocks: func(m showAppMocks) {
 				m.storeSvc.EXPECT().GetApplication("my-app").Return(&config.Application{
 					Name:                "my-app",
@@ -580,7 +581,7 @@ Pipelines
 			wantedContent: `About
 
   Name                  my-app
-  Version               v1.1.0 
+  Version               v1.2.0 
   URI                   example.com
   Permissions Boundary  examplePermissionsBoundaryPolicy
 

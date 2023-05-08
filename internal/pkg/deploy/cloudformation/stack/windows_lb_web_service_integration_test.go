@@ -70,7 +70,8 @@ func TestWindowsLoadBalancedWebService_Template(t *testing.T) {
 				Name: &envName,
 			},
 		},
-		Manifest: v,
+		ArtifactBucketName: "bucket",
+		Manifest:           v,
 		RuntimeConfig: stack.RuntimeConfig{
 			AccountID:                "123456789123",
 			Region:                   "us-west-2",

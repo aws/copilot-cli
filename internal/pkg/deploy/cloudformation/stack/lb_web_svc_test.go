@@ -114,8 +114,9 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 	t.Run("returns a wrapped error when addons template parsing fails", func(t *testing.T) {
 		// GIVEN
 		lbws, err := NewLoadBalancedWebService(LoadBalancedWebServiceConfig{
-			App:         &config.Application{},
-			EnvManifest: &manifest.Environment{},
+			App:                &config.Application{},
+			EnvManifest:        &manifest.Environment{},
+			ArtifactBucketName: "mockBucket",
 			Manifest: &manifest.LoadBalancedWebService{
 				Workload: manifest.Workload{
 					Name: aws.String("frontend"),
@@ -135,8 +136,9 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 	t.Run("returns a wrapped error when addons parameter parsing fails", func(t *testing.T) {
 		// GIVEN
 		lbws, err := NewLoadBalancedWebService(LoadBalancedWebServiceConfig{
-			App:         &config.Application{},
-			EnvManifest: &manifest.Environment{},
+			App:                &config.Application{},
+			EnvManifest:        &manifest.Environment{},
+			ArtifactBucketName: "mockBucket",
 			Manifest: &manifest.LoadBalancedWebService{
 				Workload: manifest.Workload{
 					Name: aws.String("frontend"),
@@ -169,10 +171,11 @@ Outputs:
     Value: hello`,
 		}
 		lbws, err := NewLoadBalancedWebService(LoadBalancedWebServiceConfig{
-			App:         &config.Application{},
-			EnvManifest: &manifest.Environment{},
-			Manifest:    &manifest.LoadBalancedWebService{},
-			Addons:      addons,
+			App:                &config.Application{},
+			EnvManifest:        &manifest.Environment{},
+			ArtifactBucketName: "mockBucket",
+			Manifest:           &manifest.LoadBalancedWebService{},
+			Addons:             addons,
 		}, func(s *LoadBalancedWebService) {
 			s.parser = parser
 		})
@@ -410,8 +413,9 @@ Outputs:
 					Name: aws.String("test"),
 				},
 			},
-			Manifest: mft,
-			Addons:   addons,
+			ArtifactBucketName: "mockBucket",
+			Manifest:           mft,
+			Addons:             addons,
 		}, func(s *LoadBalancedWebService) {
 			s.parser = parser
 		})
@@ -467,8 +471,9 @@ Outputs:
 					Name: aws.String("test"),
 				},
 			},
-			Manifest: mft,
-			Addons:   mockAddons{},
+			ArtifactBucketName: "mockBucket",
+			Manifest:           mft,
+			Addons:             mockAddons{},
 		}, func(s *LoadBalancedWebService) {
 			s.parser = parser
 		})

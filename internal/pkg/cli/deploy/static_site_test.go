@@ -36,7 +36,6 @@ func TestStaticSiteDeployer_UploadArtifacts(t *testing.T) {
 				m.EXPECT().UploadFiles([]manifest.FileUpload{
 					{
 						Source:      "assets",
-						Context:     "frontend",
 						Destination: "static",
 						Recursive:   true,
 						Exclude: manifest.StringSliceOrString{
@@ -79,7 +78,6 @@ func TestStaticSiteDeployer_UploadArtifacts(t *testing.T) {
 						FileUploads: []manifest.FileUpload{
 							{
 								Source:      "assets",
-								Context:     "frontend",
 								Destination: "static",
 								Recursive:   true,
 								Exclude: manifest.StringSliceOrString{
