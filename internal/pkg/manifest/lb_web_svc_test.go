@@ -98,7 +98,6 @@ func TestNewHTTPLoadBalancedWebService(t *testing.T) {
 				Path: "/",
 				Port: 80,
 
-				HTTPVersion: "gRPC",
 				HealthCheck: ContainerHealthCheck{
 					Command: []string{"CMD", "curl -f http://localhost:8080 || exit 1"},
 				},
@@ -131,8 +130,7 @@ func TestNewHTTPLoadBalancedWebService(t *testing.T) {
 					HTTPOrBool: HTTPOrBool{
 						HTTP: HTTP{
 							Main: RoutingRule{
-								Path:            stringP("/"),
-								ProtocolVersion: aws.String("gRPC"),
+								Path: stringP("/"),
 								HealthCheck: HealthCheckArgsOrString{
 									Union: BasicToUnion[string, HTTPHealthCheckArgs]("/"),
 								},

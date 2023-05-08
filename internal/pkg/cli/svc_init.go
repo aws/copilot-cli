@@ -159,8 +159,9 @@ type initSvcOpts struct {
 	wsPendingCreation bool
 
 	// Cache variables
-	df             dockerfileParser
-	manifestExists bool
+	df                  dockerfileParser
+	manifestExists      bool
+	additionalFoundPort uint16 // For logging a personalized recommended action with multiple ports.
 
 	// Init a Dockerfile parser using fs and input path
 	dockerfile func(string) dockerfileParser
@@ -259,6 +260,7 @@ func (o *initSvcOpts) Validate() error {
 			return err
 		}
 	}
+
 	if o.image != "" && o.wkldType == manifestinfo.RequestDrivenWebServiceType {
 		if err := validateAppRunnerImage(o.image); err != nil {
 			return err
@@ -358,6 +360,7 @@ func (o *initSvcOpts) Execute() error {
 	if err != nil {
 		return err
 	}
+
 	o.manifestPath, err = o.init.Service(&initialize.ServiceProps{
 		WorkloadProps: initialize.WorkloadProps{
 			App:            o.appName,
@@ -384,12 +387,24 @@ func (o *initSvcOpts) Execute() error {
 
 // RecommendActions returns follow-up actions the user can take after successfully executing the command.
 func (o *initSvcOpts) RecommendActions() error {
-	logRecommendedActions([]string{
-		fmt.Sprintf("Update your manifest %s to change the defaults.", color.HighlightResource(o.manifestPath)),
-		fmt.Sprintf("Run %s to deploy your service to a %s environment.",
-			color.HighlightCode(fmt.Sprintf("copilot svc deploy --name %s --env %s", o.name, defaultEnvironmentName)),
-			defaultEnvironmentName),
-	})
+	actions := []string{fmt.Sprintf("Update your manifest %s to change the defaults.", color.HighlightResource(o.manifestPath))}
+
+	// If the Dockerfile exposes multiple ports, log a code block suggesting adding additional rules.
+	if o.additionalFoundPort != 0 {
+		multiplePortsAdditionalPathsAction := fmt.Sprintf(`It looks like your Dockerfile exposes multiple ports. 
+You can specify multiple paths where your service will receive traffic by setting http.additional_rules:
+%s`, color.HighlightCodeBlock(fmt.Sprintf(`http:
+  path: /
+  additional_rules:
+  - path: /admin
+    target_port: %d`, o.additionalFoundPort)))
+		actions = append(actions, multiplePortsAdditionalPathsAction)
+	}
+	actions = append(actions, fmt.Sprintf("Run %s to deploy your service to a %s environment.",
+		color.HighlightCode(fmt.Sprintf("copilot svc deploy --name %s --env %s", o.name, defaultEnvironmentName)),
+		defaultEnvironmentName))
+
+	logRecommendedActions(actions)
 	return nil
 }
 
@@ -661,13 +676,12 @@ func (o *initSvcOpts) askSvcPort() (err error) {
 			defaultPort = strconv.Itoa(int(ports[0].Port))
 		}
 	}
-	// Skip asking if it is a backend or worker service.
+
 	if o.wkldType == manifestinfo.BackendServiceType || o.wkldType == manifestinfo.WorkerServiceType {
 		return nil
 	}
-
 	port, err := o.prompt.Get(
-		fmt.Sprintf(svcInitSvcPortPrompt, color.Emphasize("port")),
+		fmt.Sprintf(svcInitSvcPortPrompt, color.Emphasize("port(s)")),
 		svcInitSvcPortHelpPrompt,
 		validateSvcPort,
 		prompt.WithDefaultInput(defaultPort),
@@ -676,13 +690,20 @@ func (o *initSvcOpts) askSvcPort() (err error) {
 	if err != nil {
 		return fmt.Errorf("get port: %w", err)
 	}
-
 	portUint, err := strconv.ParseUint(port, 10, 16)
 	if err != nil {
 		return fmt.Errorf("parse port string: %w", err)
 	}
-
 	o.port = uint16(portUint)
+
+	// Log a recommended action to update additional rules if multiple ports exposed.
+	for _, foundPort := range ports {
+		// Use the first exposed port in the Dockerfile that wasn't selected for traffic.
+		if foundPort.Port != o.port {
+			o.additionalFoundPort = foundPort.Port
+			break
+		}
+	}
 
 	return nil
 }
