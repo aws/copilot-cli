@@ -7,7 +7,7 @@ name: static
 type: Static Site
 
 files:
-    source: ./frontend/dist
+  - source: ./frontend/dist
     destination: /dist
   - source: ./foo 
     recursive: true
