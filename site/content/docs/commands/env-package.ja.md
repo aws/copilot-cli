@@ -29,3 +29,19 @@ $ copilot env package -n test --output-dir ./infrastructure --upload-assets
 $ ls ./infrastructure
 test.env.yml      test.env.params.json
 ```
+
+`--diff` を使用して、差分を出力し、終了します。
+```console
+$ copilot env deploy --diff
+~ Resources:
+    ~ Cluster:
+        ~ Properties:
+            ~ ClusterSettings:
+                ~ - (changed item)
+                  ~ Value: enabled -> disabled
+```
+
+!!! info "`copilot [noun] package --diff` を利用した場合の終了コード"
+    0 = no diffs found  
+    1 = diffs found  
+    2 = error producing diffs

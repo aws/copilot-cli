@@ -2,8 +2,10 @@
 <a id="port" href="#port" class="field">`port`</a> <span class="type">Integer</span>  
 コンテナの公開するポート番号。(任意項目)
 
-<a id="image" href="#image" class="field">`image`</a> <span class="type">String</span>  
+<a id="image" href="#image" class="field">`image`</a> <span class="type">String or Map</span> 
 サイドカーコンテナのイメージ URL。(必須項目)
+
+{% include 'image-config.ja.md' %}
 
 <a id="essential" href="#essential" class="field">`essential`</a> <span class="type">Bool</span>
 サイドカーコンテナが必須のコンテナかどうか。(任意項目。デフォルトでは true)
@@ -16,6 +18,10 @@
 
 <a id="secrets" href="#secrets" class="field">`secrets`</a> <span class="type">Map</span>  
 サイドカーコンテナで用いる秘密情報。(任意項目)
+
+<a id="envFile" href="#envFile" class="field">`env_file`</a> <span class="type">String</span>  
+サイドカーコンテナに設定する環境変数を含むファイルのワークスペースのルートからのパス。環境変数ファイルに関する詳細については、[環境変数ファイルの指定に関する考慮事項](https://docs.aws.amazon.com/ja_jp/AmazonECS/latest/developerguide/taskdef-envfiles.html#taskdef-envfiles-considerations)を確認してください。
+
 
 <a id="mount-points" href="#mount-points" class="field">`mount_points`</a> <span class="type">Array of Maps</span>  
 サービスレベルで指定する EFS ボリュームのマウントパス。(任意項目)

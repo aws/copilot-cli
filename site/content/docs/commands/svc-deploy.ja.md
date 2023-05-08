@@ -36,3 +36,26 @@ Service デプロイの手順は以下の通りです。
 !!!info
     `--no-rollback` フラグは production 環境へのデプロイには **推奨されません**。 サービスダウンタイムが発生する可能性があります。
     自動的なスタックロールバックが無効化されている状況でデプロイに失敗した場合、次のデプロイを行う前に、AWS Console や AWS CLI を利用して、手動でスタックを開始する必要がある場合があります。
+
+
+## 実行例
+`--diff` を使用して、デプロイを実行する前に、変更される内容を確認します。
+
+```console
+$ copilot svc deploy --diff
+~ Resources:
+    ~ TaskDefinition:
+        ~ Properties:
+            ~ ContainerDefinitions:
+                ~ - (changed item)
+                  ~ Environment:
+                      (4 unchanged items)
+                      + - Name: LOG_LEVEL
+                      +   Value: "info"
+
+Continue with the deployment? (y/N)
+```
+
+!!!info "`copilot svc package --diff`"
+    デプロイを実行する必要がなく、差分だけを確認したい場合があります。
+    `copilot svc package --diff` は差分を表示してコマンドが終了します。
