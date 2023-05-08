@@ -1,3 +1,5 @@
+{% include 'image.ja.md' %}
+
 {% include 'image-config.ja.md' %}
 
 <span class="parent-field">image.</span><a id="image-port" href="#image-port" class="field">`port`</a> <span class="type">Integer</span>  

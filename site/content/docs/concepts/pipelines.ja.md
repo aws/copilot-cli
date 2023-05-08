@@ -184,3 +184,6 @@ stages:
     -
       name: prod
 ```
+
+!!! info
+    AWS の Nathan Peck が素晴らしい例を提供しています。その例では `test_commands` に特に注目しています：https://aws.amazon.com/blogs/containers/automatically-deploying-your-container-application-with-aws-copilot/
