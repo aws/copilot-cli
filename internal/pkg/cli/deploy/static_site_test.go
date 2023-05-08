@@ -114,9 +114,7 @@ func TestStaticSiteDeployer_stackConfiguration(t *testing.T) {
 				svcDeployer: &svcDeployer{
 					workloadDeployer: &workloadDeployer{
 						endpointGetter: &endpointGetterDouble{
-							ServiceDiscoveryEndpointFn: func() (string, error) {
-								return "", errors.New("some error")
-							},
+							ServiceDiscoveryEndpointFn: ReturnsValues("", errors.New("some error")),
 						},
 					},
 				},
@@ -131,14 +129,10 @@ func TestStaticSiteDeployer_stackConfiguration(t *testing.T) {
 							Name: "mockEnv",
 						},
 						endpointGetter: &endpointGetterDouble{
-							ServiceDiscoveryEndpointFn: func() (string, error) {
-								return "", nil
-							},
+							ServiceDiscoveryEndpointFn: ReturnsValues("", error(nil)),
 						},
 						envVersionGetter: &versionGetterDouble{
-							VersionFn: func() (string, error) {
-								return "", errors.New("some error")
-							},
+							VersionFn: ReturnsValues("", errors.New("some error")),
 						},
 					},
 				},
@@ -154,21 +148,15 @@ func TestStaticSiteDeployer_stackConfiguration(t *testing.T) {
 						},
 						env: &config.Environment{},
 						endpointGetter: &endpointGetterDouble{
-							ServiceDiscoveryEndpointFn: func() (string, error) {
-								return "", nil
-							},
+							ServiceDiscoveryEndpointFn: ReturnsValues("", error(nil)),
 						},
 						envVersionGetter: &versionGetterDouble{
-							VersionFn: func() (string, error) {
-								return "", nil
-							},
+							VersionFn: ReturnsValues("", error(nil)),
 						},
 					},
 				},
 				appVersionGetter: &versionGetterDouble{
-					VersionFn: func() (string, error) {
-						return "", errors.New("some error")
-					},
+					VersionFn: ReturnsValues("", errors.New("some error")),
 				},
 				staticSiteMft: &manifest.StaticSite{},
 			},
@@ -181,21 +169,15 @@ func TestStaticSiteDeployer_stackConfiguration(t *testing.T) {
 						app: &config.Application{},
 						env: &config.Environment{},
 						endpointGetter: &endpointGetterDouble{
-							ServiceDiscoveryEndpointFn: func() (string, error) {
-								return "", nil
-							},
+							ServiceDiscoveryEndpointFn: ReturnsValues("", error(nil)),
 						},
 						envVersionGetter: &versionGetterDouble{
-							VersionFn: func() (string, error) {
-								return "", nil
-							},
+							VersionFn: ReturnsValues("", error(nil)),
 						},
 					},
 				},
 				appVersionGetter: &versionGetterDouble{
-					VersionFn: func() (string, error) {
-						return "v1.1.0", nil
-					},
+					VersionFn: ReturnsValues("v1.1.0", error(nil)),
 				},
 				staticSiteMft: &manifest.StaticSite{},
 			},
@@ -219,22 +201,16 @@ func TestStaticSiteDeployer_stackConfiguration(t *testing.T) {
 							},
 						},
 						endpointGetter: &endpointGetterDouble{
-							ServiceDiscoveryEndpointFn: func() (string, error) {
-								return "", nil
-							},
+							ServiceDiscoveryEndpointFn: ReturnsValues("", error(nil)),
 						},
 						envVersionGetter: &versionGetterDouble{
-							VersionFn: func() (string, error) {
-								return "", nil
-							},
+							VersionFn: ReturnsValues("", error(nil)),
 						},
 						resources: &stack.AppRegionalResources{},
 					},
 				},
 				appVersionGetter: &versionGetterDouble{
-					VersionFn: func() (string, error) {
-						return "v1.2.0", nil
-					},
+					VersionFn: ReturnsValues("v1.2.0", error(nil)),
 				},
 				staticSiteMft: &manifest.StaticSite{
 					StaticSiteConfig: manifest.StaticSiteConfig{
@@ -252,22 +228,16 @@ func TestStaticSiteDeployer_stackConfiguration(t *testing.T) {
 						env:       &config.Environment{},
 						envConfig: &manifest.Environment{},
 						endpointGetter: &endpointGetterDouble{
-							ServiceDiscoveryEndpointFn: func() (string, error) {
-								return "", nil
-							},
+							ServiceDiscoveryEndpointFn: ReturnsValues("", error(nil)),
 						},
 						envVersionGetter: &versionGetterDouble{
-							VersionFn: func() (string, error) {
-								return "", nil
-							},
+							VersionFn: ReturnsValues("", error(nil)),
 						},
 						resources: &stack.AppRegionalResources{},
 					},
 				},
 				appVersionGetter: &versionGetterDouble{
-					VersionFn: func() (string, error) {
-						return "v1.2.0", nil
-					},
+					VersionFn: ReturnsValues("v1.2.0", error(nil)),
 				},
 				staticSiteMft: &manifest.StaticSite{
 					StaticSiteConfig: manifest.StaticSiteConfig{
@@ -290,22 +260,16 @@ func TestStaticSiteDeployer_stackConfiguration(t *testing.T) {
 						},
 						envConfig: &manifest.Environment{},
 						endpointGetter: &endpointGetterDouble{
-							ServiceDiscoveryEndpointFn: func() (string, error) {
-								return "", nil
-							},
+							ServiceDiscoveryEndpointFn: ReturnsValues("", error(nil)),
 						},
 						envVersionGetter: &versionGetterDouble{
-							VersionFn: func() (string, error) {
-								return "", nil
-							},
+							VersionFn: ReturnsValues("", error(nil)),
 						},
 						resources: &stack.AppRegionalResources{},
 					},
 				},
 				appVersionGetter: &versionGetterDouble{
-					VersionFn: func() (string, error) {
-						return "v1.2.0", nil
-					},
+					VersionFn: ReturnsValues("v1.2.0", error(nil)),
 				},
 				staticSiteMft: &manifest.StaticSite{
 					StaticSiteConfig: manifest.StaticSiteConfig{
@@ -322,22 +286,16 @@ func TestStaticSiteDeployer_stackConfiguration(t *testing.T) {
 						app: &config.Application{},
 						env: &config.Environment{},
 						endpointGetter: &endpointGetterDouble{
-							ServiceDiscoveryEndpointFn: func() (string, error) {
-								return "", nil
-							},
+							ServiceDiscoveryEndpointFn: ReturnsValues("", error(nil)),
 						},
 						envVersionGetter: &versionGetterDouble{
-							VersionFn: func() (string, error) {
-								return "", nil
-							},
+							VersionFn: ReturnsValues("", error(nil)),
 						},
 						resources: &stack.AppRegionalResources{},
 					},
 				},
 				appVersionGetter: &versionGetterDouble{
-					VersionFn: func() (string, error) {
-						return "v1.2.0", nil
-					},
+					VersionFn: ReturnsValues("v1.2.0", error(nil)),
 				},
 				staticSiteMft: &manifest.StaticSite{},
 				newStack: func(*stack.StaticSiteConfig) (*stack.StaticSite, error) {
@@ -353,22 +311,16 @@ func TestStaticSiteDeployer_stackConfiguration(t *testing.T) {
 						app: &config.Application{},
 						env: &config.Environment{},
 						endpointGetter: &endpointGetterDouble{
-							ServiceDiscoveryEndpointFn: func() (string, error) {
-								return "", nil
-							},
+							ServiceDiscoveryEndpointFn: ReturnsValues("", error(nil)),
 						},
 						envVersionGetter: &versionGetterDouble{
-							VersionFn: func() (string, error) {
-								return "", nil
-							},
+							VersionFn: ReturnsValues("", error(nil)),
 						},
 						resources: &stack.AppRegionalResources{},
 					},
 				},
 				appVersionGetter: &versionGetterDouble{
-					VersionFn: func() (string, error) {
-						return "v1.2.0", nil
-					},
+					VersionFn: ReturnsValues("v1.2.0", error(nil)),
 				},
 				staticSiteMft: &manifest.StaticSite{},
 				newStack: func(*stack.StaticSiteConfig) (*stack.StaticSite, error) {
@@ -389,22 +341,16 @@ func TestStaticSiteDeployer_stackConfiguration(t *testing.T) {
 						},
 						envConfig: &manifest.Environment{},
 						endpointGetter: &endpointGetterDouble{
-							ServiceDiscoveryEndpointFn: func() (string, error) {
-								return "", nil
-							},
+							ServiceDiscoveryEndpointFn: ReturnsValues("", error(nil)),
 						},
 						envVersionGetter: &versionGetterDouble{
-							VersionFn: func() (string, error) {
-								return "", nil
-							},
+							VersionFn: ReturnsValues("", error(nil)),
 						},
 						resources: &stack.AppRegionalResources{},
 					},
 				},
 				appVersionGetter: &versionGetterDouble{
-					VersionFn: func() (string, error) {
-						return "v1.2.0", nil
-					},
+					VersionFn: ReturnsValues("v1.2.0", error(nil)),
 				},
 				staticSiteMft: &manifest.StaticSite{
 					StaticSiteConfig: manifest.StaticSiteConfig{
@@ -430,7 +376,8 @@ func TestStaticSiteDeployer_stackConfiguration(t *testing.T) {
 	}
 }
 
-func ThingAndError[A any]() (A, error) {
-	var zero A
-	return zero, errors.New("some error")
+func ReturnsValues[A, B any](a A, b B) func() (A, B) {
+	return func() (A, B) {
+		return a, b
+	}
 }
