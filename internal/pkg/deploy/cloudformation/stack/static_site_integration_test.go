@@ -6,6 +6,7 @@
 package stack_test
 
 import (
+	"fmt"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -16,6 +17,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
+	"github.com/spf13/afero"
 	"gopkg.in/yaml.v3"
 )
 

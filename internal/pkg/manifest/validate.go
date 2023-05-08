@@ -589,15 +589,12 @@ func (s StaticSiteConfig) validate() error {
 }
 
 func (f FileUpload) validate() error {
-	if err := f.validateSource(f.Source); err != nil {
-		return err
-	}
-	return nil
+	return f.validateSource()
 }
 
 // validateSource returns nil if Source is configured correctly.
-func (f FileUpload) validateSource(source string) error {
-	if source == "" {
+func (f FileUpload) validateSource() error {
+	if f.Source == "" {
 		return &errFieldMustBeSpecified{
 			missingField: "source",
 		}
@@ -605,7 +602,7 @@ func (f FileUpload) validateSource(source string) error {
 	fs := afero.NewOsFs()
 	_, err := fs.Stat(f.Source)
 	if err != nil {
-		return fmt.Errorf("source '%s' must be a valid path", f.Source)
+		return fmt.Errorf("source '%s' must be a valid path: %w", f.Source, err)
 	}
 	return nil
 }
