@@ -80,7 +80,7 @@ Deployed resources (such as your ECR repository, logs) will contain this %[1]s's
 
 	svcInitSvcPortPrompt     = "Which %s do you want customer traffic sent to?"
 	svcInitSvcPortHelpPrompt = `The port will be used by the load balancer to route incoming traffic to this service.
-You should set this to the port which your Docker container uses to communicate with the internet.`
+You should set this to the port which your Dockerfile uses to communicate with the internet.`
 
 	svcInitPublisherPrompt     = "Which topics do you want to subscribe to?"
 	svcInitPublisherHelpPrompt = `A publisher is an existing SNS Topic to which a service publishes messages. 
@@ -393,11 +393,11 @@ func (o *initSvcOpts) RecommendActions() error {
 	if o.additionalFoundPort != 0 {
 		multiplePortsAdditionalPathsAction := fmt.Sprintf(`It looks like your Dockerfile exposes multiple ports. 
 You can specify multiple paths where your service will receive traffic by setting http.additional_rules:
-%s`, color.HighlightCodeBlock(`http:
+%s`, color.HighlightCodeBlock(fmt.Sprintf(`http:
   path: /
   additional_rules:
   - path: /admin
-    target_port: 3001`))
+    target_port: %d`, o.additionalFoundPort)))
 		actions = append(actions, multiplePortsAdditionalPathsAction)
 	}
 	actions = append(actions, fmt.Sprintf("Run %s to deploy your service to a %s environment.",
@@ -677,11 +677,6 @@ func (o *initSvcOpts) askSvcPort() (err error) {
 		}
 	}
 
-	if len(ports) > 1 {
-		// Log a recommended action to update additional rules if multiple ports exposed.
-		o.additionalFoundPort = ports[1].Port
-	}
-
 	if o.wkldType == manifestinfo.BackendServiceType || o.wkldType == manifestinfo.WorkerServiceType {
 		return nil
 	}
@@ -700,6 +695,15 @@ func (o *initSvcOpts) askSvcPort() (err error) {
 		return fmt.Errorf("parse port string: %w", err)
 	}
 	o.port = uint16(portUint)
+
+	// Log a recommended action to update additional rules if multiple ports exposed.
+	for _, foundPort := range ports {
+		// Use the first exposed port in the Dockerfile that wasn't selected for traffic.
+		if foundPort.Port != o.port {
+			o.additionalFoundPort = foundPort.Port
+			break
+		}
+	}
 
 	return nil
 }
