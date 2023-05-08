@@ -185,10 +185,9 @@ type CDNConfig struct {
 
 // CDNStaticAssetConfig represents static assets config for a Content Delivery Network.
 type CDNStaticAssetConfig struct {
-	Path             string
-	ImportedBucket   string
-	StaticSiteBucket string
-	Alias            string
+	Path           string
+	ImportedBucket string
+	Alias          string
 }
 
 // VPCConfig represents the VPC configuration.
