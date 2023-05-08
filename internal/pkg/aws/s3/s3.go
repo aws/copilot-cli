@@ -226,7 +226,6 @@ func defaultContentTypeFromExt(key string) *string {
 	if contentType == "" {
 		return nil
 	}
-	fmt.Println(contentType)
 	return aws.String(contentType)
 }
 
