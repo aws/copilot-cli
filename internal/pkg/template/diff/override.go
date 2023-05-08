@@ -157,18 +157,7 @@ func (converter *getAttConverter) match(from, to *yaml.Node, key string, overrid
 	if to.Kind == yaml.MappingNode {
 		toValue = to.Content[1]
 	}
-	switch {
-	case fromValue.Kind == yaml.ScalarNode && toValue.Kind == yaml.ScalarNode:
-		fallthrough
-	case fromValue.Kind == yaml.SequenceNode && toValue.Kind == yaml.SequenceNode:
-		fallthrough
-	case fromValue.Kind == yaml.SequenceNode && toValue.Kind == yaml.ScalarNode:
-		fallthrough
-	case fromValue.Kind == yaml.ScalarNode && toValue.Kind == yaml.SequenceNode:
-		return true
-	default:
-		return false
-	}
+	return (fromValue.Kind == yaml.ScalarNode || fromValue.Kind == yaml.SequenceNode) && (toValue.Kind == yaml.ScalarNode || toValue.Kind == yaml.SequenceNode)
 }
 
 // parse compares two nodes that call the "GetAtt" function. Both from and to can be written in either full or short form.
