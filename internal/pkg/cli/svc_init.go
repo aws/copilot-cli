@@ -79,9 +79,8 @@ Deployed resources (such as your ECR repository, logs) will contain this %[1]s's
 	wkldInitDockerfilePathHelpPrompt = "Path to Dockerfile to use for building your container image."
 
 	svcInitSvcPortPrompt     = "Which %s do you want customer traffic sent to?"
-	svcInitSvcPortHelpPrompt = `The port(s) will be used by the load balancer to route incoming traffic to this service.
-You should set this to the port(s) which your Dockerfile uses to communicate with the internet.
-You can specify multiple paths for a given Load Balanced Web Service or Backend Service by exposing multiple ports, e.g. 3000,3001`
+	svcInitSvcPortHelpPrompt = `The port will be used by the load balancer to route incoming traffic to this service.
+You should set this to the port which your Docker container uses to communicate with the internet.`
 
 	svcInitPublisherPrompt     = "Which topics do you want to subscribe to?"
 	svcInitPublisherHelpPrompt = `A publisher is an existing SNS Topic to which a service publishes messages. 
@@ -131,7 +130,7 @@ type initWkldVars struct {
 type initSvcVars struct {
 	initWkldVars
 
-	ports       []string
+	port        uint16
 	ingressType string
 }
 
@@ -160,8 +159,9 @@ type initSvcOpts struct {
 	wsPendingCreation bool
 
 	// Cache variables
-	df             dockerfileParser
-	manifestExists bool
+	df                  dockerfileParser
+	manifestExists      bool
+	additionalFoundPort uint16 // For logging a personalized recommended action with multiple ports.
 
 	// Init a Dockerfile parser using fs and input path
 	dockerfile func(string) dockerfileParser
@@ -255,18 +255,12 @@ func (o *initSvcOpts) Validate() error {
 			return err
 		}
 	}
-	if len(o.ports) > 0 {
-		if o.wkldType != "" {
-			if err := o.validateMultiplePorts(); err != nil {
-				return err
-			}
-		}
-		for _, port := range o.ports {
-			if err := validateSvcPort(port); err != nil {
-				return err
-			}
+	if o.port != 0 {
+		if err := validateSvcPort(o.port); err != nil {
+			return err
 		}
 	}
+
 	if o.image != "" && o.wkldType == manifestinfo.RequestDrivenWebServiceType {
 		if err := validateAppRunnerImage(o.image); err != nil {
 			return err
@@ -366,14 +360,7 @@ func (o *initSvcOpts) Execute() error {
 	if err != nil {
 		return err
 	}
-	ports := make([]uint16, len(o.ports))
-	for idx, port := range o.ports {
-		parsedPort, err := strconv.Atoi(port)
-		if err != nil {
-			return err
-		}
-		ports[idx] = uint16(parsedPort)
-	}
+
 	o.manifestPath, err = o.init.Service(&initialize.ServiceProps{
 		WorkloadProps: initialize.WorkloadProps{
 			App:            o.appName,
@@ -387,7 +374,7 @@ func (o *initSvcOpts) Execute() error {
 			Topics:                  o.topics,
 			PrivateOnlyEnvironments: envs,
 		},
-		Ports:       ports,
+		Port:        o.port,
 		HealthCheck: hc,
 		Private:     strings.EqualFold(o.ingressType, ingressTypeEnvironment),
 	})
@@ -399,16 +386,24 @@ func (o *initSvcOpts) Execute() error {
 
 // RecommendActions returns follow-up actions the user can take after successfully executing the command.
 func (o *initSvcOpts) RecommendActions() error {
-	updateManifestAction := fmt.Sprintf("Update your manifest %s to change the defaults.", color.HighlightResource(o.manifestPath))
-	if (o.wkldType == manifestinfo.BackendServiceType) && (len(o.ports) > 1) {
-		updateManifestAction = fmt.Sprintf("Update your manifest %s to change the default paths for your internal load balancer.", color.HighlightResource(o.manifestPath))
+	actions := []string{fmt.Sprintf("Update your manifest %s to change the defaults.", color.HighlightResource(o.manifestPath))}
+
+	// If the Dockerfile exposes multiple ports, log a code block suggesting adding additional rules.
+	if o.additionalFoundPort != 0 {
+		multiplePortsAdditionalPathsAction := fmt.Sprintf(`It looks like your Dockerfile exposes multiple ports. 
+You can specify multiple paths where your service will receive traffic by setting http.additional_rules:
+%s`, color.HighlightCodeBlock(`http:
+  path: /
+  additional_rules:
+  - path: /admin
+    target_port: 3001`))
+		actions = append(actions, multiplePortsAdditionalPathsAction)
 	}
-	logRecommendedActions([]string{
-		updateManifestAction,
-		fmt.Sprintf("Run %s to deploy your service to a %s environment.",
-			color.HighlightCode(fmt.Sprintf("copilot svc deploy --name %s --env %s", o.name, defaultEnvironmentName)),
-			defaultEnvironmentName),
-	})
+	actions = append(actions, fmt.Sprintf("Run %s to deploy your service to a %s environment.",
+		color.HighlightCode(fmt.Sprintf("copilot svc deploy --name %s --env %s", o.name, defaultEnvironmentName)),
+		defaultEnvironmentName))
+
+	logRecommendedActions(actions)
 	return nil
 }
 
@@ -654,8 +649,8 @@ func (o *initSvcOpts) askDockerfile() error {
 
 func (o *initSvcOpts) askSvcPort() (err error) {
 	// If the port flag was set, use that and don't ask.
-	if len(o.ports) > 0 {
-		return o.validateMultiplePorts()
+	if o.port != 0 {
+		return nil
 	}
 
 	var ports []dockerfile.Port
@@ -674,60 +669,37 @@ func (o *initSvcOpts) askSvcPort() (err error) {
 		case 0:
 			// There were no ports detected, keep the default port prompt.
 		case 1:
-			o.ports = make([]string, 1)
-			o.ports[0] = strconv.Itoa(int(ports[0].Port))
+			o.port = ports[0].Port
 			return nil
 		default:
 			defaultPort = strconv.Itoa(int(ports[0].Port))
 		}
 	}
-	switch o.wkldType {
-	case manifestinfo.RequestDrivenWebServiceType:
-		selectedPorts, err := o.prompt.Get(
-			fmt.Sprintf(svcInitSvcPortPrompt, color.Emphasize("port")),
-			svcInitSvcPortHelpPrompt,
-			validateSvcPort,
-			prompt.WithDefaultInput(defaultPort),
-			prompt.WithFinalMessage("Port:"),
-		)
-		if err != nil {
-			return fmt.Errorf("get port: %w", err)
-		}
-		if len(strings.Split(selectedPorts, ",")) > 1 {
-			return fmt.Errorf("Request Driven Web Services cannot expose multiple ports")
-		}
-		o.ports = make([]string, 1)
-		o.ports[0] = selectedPorts
-		return nil
-	case manifestinfo.LoadBalancedWebServiceType:
-		// Load Balanced Web Service
-		selectedPorts, err := o.prompt.Get(
-			fmt.Sprintf(svcInitSvcPortPrompt, color.Emphasize("port(s)")),
-			svcInitSvcPortHelpPrompt,
-			validateSvcPort,
-			prompt.WithDefaultInput(defaultPort),
-			prompt.WithFinalMessage("Port(s):"),
-		)
-		if err != nil {
-			return fmt.Errorf("get port: %w", err)
-		}
-		portList := strings.Split(selectedPorts, ",")
-		o.ports = portList
-		return nil
-	case manifestinfo.BackendServiceType:
-		// Skip asking if it is a backend or worker service.
-		fallthrough
-	case manifestinfo.WorkerServiceType:
-		return nil
-	default:
-		return fmt.Errorf("unrecognized service type %s", o.wkldType)
-	}
-}
 
-func (o *initSvcOpts) validateMultiplePorts() error {
-	if (o.wkldType != manifestinfo.LoadBalancedWebServiceType && o.wkldType != manifestinfo.BackendServiceType) && len(o.ports) > 1 {
-		return fmt.Errorf("%s cannot expose multiple ports", o.wkldType)
+	if len(ports) > 1 {
+		// Log a recommended action to update additional rules if multiple ports exposed.
+		o.additionalFoundPort = ports[1].Port
 	}
+
+	if o.wkldType == manifestinfo.BackendServiceType || o.wkldType == manifestinfo.WorkerServiceType {
+		return nil
+	}
+	port, err := o.prompt.Get(
+		fmt.Sprintf(svcInitSvcPortPrompt, color.Emphasize("port(s)")),
+		svcInitSvcPortHelpPrompt,
+		validateSvcPort,
+		prompt.WithDefaultInput(defaultPort),
+		prompt.WithFinalMessage("Port:"),
+	)
+	if err != nil {
+		return fmt.Errorf("get port: %w", err)
+	}
+	portUint, err := strconv.ParseUint(port, 10, 16)
+	if err != nil {
+		return fmt.Errorf("parse port string: %w", err)
+	}
+	o.port = uint16(portUint)
+
 	return nil
 }
 
@@ -921,7 +893,7 @@ This command is also run as part of "copilot init".`,
 	cmd.Flags().StringVarP(&vars.wkldType, svcTypeFlag, typeFlagShort, "", svcTypeFlagDescription)
 	cmd.Flags().StringVarP(&vars.dockerfilePath, dockerFileFlag, dockerFileFlagShort, "", dockerFileFlagDescription)
 	cmd.Flags().StringVarP(&vars.image, imageFlag, imageFlagShort, "", imageFlagDescription)
-	cmd.Flags().StringSliceVar(&vars.ports, svcPortFlag, nil, svcPortFlagDescription)
+	cmd.Flags().Uint16Var(&vars.port, svcPortFlag, 0, svcPortFlagDescription)
 	cmd.Flags().StringArrayVar(&vars.subscriptions, subscribeTopicsFlag, []string{}, subscribeTopicsFlagDescription)
 	cmd.Flags().BoolVar(&vars.noSubscribe, noSubscriptionFlag, false, noSubscriptionFlagDescription)
 	cmd.Flags().StringVar(&vars.ingressType, ingressTypeFlag, "", ingressTypeFlagDescription)

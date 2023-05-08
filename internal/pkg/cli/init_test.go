@@ -19,7 +19,7 @@ import (
 
 func TestInitOpts_Run(t *testing.T) {
 	mockSchedule := "@hourly"
-	mockPort := []string{"80"}
+	mockPort := uint16(80)
 	var mockAppName = "demo"
 	testCases := map[string]struct {
 		inShouldDeploy          bool
@@ -170,7 +170,7 @@ func TestInitOpts_Run(t *testing.T) {
 					},
 					{
 						Value: manifestinfo.StaticSiteType,
-						Hint: "Internet to CDN to S3 bucket",
+						Hint:  "Internet to CDN to S3 bucket",
 					},
 					{
 						Value: manifestinfo.ScheduledJobType,
@@ -237,7 +237,7 @@ func TestInitOpts_Run(t *testing.T) {
 				appName:           &mockAppName,
 				initWkldVars:      &initWkldVars{},
 				schedule:          &mockSchedule,
-				ports:             &mockPort,
+				port:              &mockPort,
 				setupWorkloadInit: func(*initOpts, string) error { return nil },
 				useExistingWorkspaceForCMDs: func(opts *initOpts) error {
 					return nil

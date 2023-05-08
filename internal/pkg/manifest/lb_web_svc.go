@@ -68,8 +68,8 @@ type LoadBalancedWebServiceConfig struct {
 // LoadBalancedWebServiceProps contains properties for creating a new load balanced fargate service manifest.
 type LoadBalancedWebServiceProps struct {
 	*WorkloadProps
-	Path  string
-	Ports []uint16
+	Path string
+	Port uint16
 
 	HealthCheck ContainerHealthCheck // Optional healthcheck configuration.
 	Platform    PlatformArgsOrString // Optional platform configuration.
@@ -83,35 +83,18 @@ func NewLoadBalancedWebService(props *LoadBalancedWebServiceProps) *LoadBalanced
 	svc.Name = stringP(props.Name)
 	svc.LoadBalancedWebServiceConfig.ImageConfig.Image.Location = stringP(props.Image)
 	svc.LoadBalancedWebServiceConfig.ImageConfig.Image.Build.BuildArgs.Dockerfile = stringP(props.Dockerfile)
+	svc.LoadBalancedWebServiceConfig.ImageConfig.Port = aws.Uint16(props.Port)
 	svc.LoadBalancedWebServiceConfig.ImageConfig.HealthCheck = props.HealthCheck
 	svc.LoadBalancedWebServiceConfig.Platform = props.Platform
 	if isWindowsPlatform(props.Platform) {
 		svc.LoadBalancedWebServiceConfig.TaskConfig.CPU = aws.Int(MinWindowsTaskCPU)
 		svc.LoadBalancedWebServiceConfig.TaskConfig.Memory = aws.Int(MinWindowsTaskMemory)
 	}
-	if len(props.Ports) > 0 {
-		svc.LoadBalancedWebServiceConfig.ImageConfig.Port = aws.Uint16(props.Ports[0])
-		if props.Ports[0] == commonGRPCPort {
-			log.Infof("Detected port %s, setting HTTP protocol version to %s in the manifest.\n",
-				color.HighlightUserInput(strconv.Itoa(int(props.Ports[0]))), color.HighlightCode(GRPCProtocol))
-			svc.HTTPOrBool.Main.ProtocolVersion = aws.String(GRPCProtocol)
-		}
-	}
-	if len(props.Ports) > 1 {
-		svc.LoadBalancedWebServiceConfig.HTTPOrBool.AdditionalRoutingRules = make([]RoutingRule, len(props.Ports)-1)
-		for idx, port := range props.Ports[1:] {
-			if props.Ports[idx] == commonGRPCPort {
-				log.Infof("Detected port %s, setting HTTP protocol version to %s in the manifest.\n",
-					color.HighlightUserInput(strconv.Itoa(int(props.Ports[idx]))), color.HighlightCode(GRPCProtocol))
-				svc.HTTPOrBool.AdditionalRoutingRules[idx].ProtocolVersion = aws.String(GRPCProtocol)
-			}
-			assumedPath := DefaultHealthCheckAdminPath + additionalPortPathTag(idx)
-			svc.LoadBalancedWebServiceConfig.HTTPOrBool.AdditionalRoutingRules[idx].TargetPort = aws.Uint16(port)
-			svc.LoadBalancedWebServiceConfig.HTTPOrBool.AdditionalRoutingRules[idx].Path = aws.String(assumedPath)
-			svc.LoadBalancedWebServiceConfig.HTTPOrBool.AdditionalRoutingRules[idx].HealthCheck = HealthCheckArgsOrString{
-				Union: BasicToUnion[string, HTTPHealthCheckArgs]("/" + assumedPath),
-			}
-		}
+
+	if props.Port == commonGRPCPort {
+		log.Infof("Detected port %s, setting HTTP protocol version to %s in the manifest.\n",
+			color.HighlightUserInput(strconv.Itoa(int(props.Port))), color.HighlightCode(GRPCProtocol))
+		svc.HTTPOrBool.Main.ProtocolVersion = aws.String(GRPCProtocol)
 	}
 	svc.HTTPOrBool.Main.Path = aws.String(props.Path)
 	svc.parser = template.New()
@@ -327,11 +310,4 @@ func (cfg NetworkLoadBalancerConfiguration) NLBListeners() []NetworkLoadBalancer
 		return nil
 	}
 	return append([]NetworkLoadBalancerListener{cfg.Listener}, cfg.AdditionalListeners...)
-}
-
-func additionalPortPathTag(idx int) string {
-	if idx == 0 {
-		return ""
-	}
-	return strconv.Itoa(idx)
 }

@@ -41,7 +41,7 @@ type BackendServiceConfig struct {
 // BackendServiceProps represents the configuration needed to create a backend service.
 type BackendServiceProps struct {
 	WorkloadProps
-	Ports       []uint16
+	Port        uint16
 	Path        string               // Optional path if multiple ports are exposed.
 	HealthCheck ContainerHealthCheck // Optional healthcheck configuration.
 	Platform    PlatformArgsOrString // Optional platform configuration.
@@ -55,28 +55,8 @@ func NewBackendService(props BackendServiceProps) *BackendService {
 	svc.Name = stringP(props.Name)
 	svc.BackendServiceConfig.ImageConfig.Image.Location = stringP(props.Image)
 	svc.BackendServiceConfig.ImageConfig.Image.Build.BuildArgs.Dockerfile = stringP(props.Dockerfile)
-	if len(props.Ports) > 0 {
-		svc.BackendServiceConfig.ImageConfig.Port = uint16P(props.Ports[0])
-	}
-	// we set http field in the manifest only when customer has given multiple ports via --port or a prompt.
-	if len(props.Ports) > 1 {
-		svc.BackendServiceConfig.HTTP.Main.Path = aws.String(props.Path)
-		svc.BackendServiceConfig.HTTP.Main.HealthCheck = HealthCheckArgsOrString{
-			Union: BasicToUnion[string, HTTPHealthCheckArgs](DefaultHealthCheckPath),
-		}
-		svc.BackendServiceConfig.HTTP.AdditionalRoutingRules = make([]RoutingRule, len(props.Ports)-1)
-		assumedPath := DefaultHealthCheckAdminPath
-		for idx, port := range props.Ports {
-			if idx > 0 {
-				svc.BackendServiceConfig.HTTP.AdditionalRoutingRules[idx-1].TargetPort = aws.Uint16(port)
-				svc.BackendServiceConfig.HTTP.AdditionalRoutingRules[idx-1].Path = aws.String(assumedPath)
-				svc.BackendServiceConfig.HTTP.AdditionalRoutingRules[idx-1].HealthCheck = HealthCheckArgsOrString{
-					Union: BasicToUnion[string, HTTPHealthCheckArgs]("/" + assumedPath),
-				}
-				assumedPath = "super" + assumedPath
-			}
-		}
-	}
+	svc.BackendServiceConfig.ImageConfig.Port = uint16P(props.Port)
+
 	svc.BackendServiceConfig.ImageConfig.HealthCheck = props.HealthCheck
 	svc.BackendServiceConfig.Platform = props.Platform
 	if isWindowsPlatform(props.Platform) {

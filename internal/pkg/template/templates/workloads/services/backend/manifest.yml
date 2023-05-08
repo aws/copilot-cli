@@ -34,23 +34,6 @@ image:
     start_period: {{.ImageConfig.HealthCheck.StartPeriod}}
 {{- end}}
 
-{{- if gt (len .HTTP.AdditionalRoutingRules) 0}}
-# Distribute traffic to your service.
-http:
-  # Requests to this path will be forwarded to your service.
-  # To match all requests you can use the "/" path.
-  path: '{{.HTTP.Main.Path}}'
-  # You can specify a custom health check path. The default is "/".
-  # healthcheck: '{{.HTTP.Main.HealthCheck.Basic}}'
-  # You can specify additional rules to route customer traffic to different container ports.
-  additional_rules:
-    {{- range $i, $rule := .HTTP.AdditionalRoutingRules }}
-    - path: '{{$rule.Path}}'
-      target_port: {{$rule.TargetPort}}
-      # healthcheck: '{{$rule.HealthCheck.Basic}}'
-    {{- end }}
-{{- end }}
-
 cpu: {{.CPU}}       # Number of CPU units for the task.
 memory: {{.Memory}}    # Amount of memory in MiB used by the task.
 {{- if .Platform.PlatformString}}

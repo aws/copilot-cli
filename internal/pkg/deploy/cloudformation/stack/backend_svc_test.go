@@ -91,7 +91,7 @@ func TestBackendService_Template(t *testing.T) {
 				Name:       "api",
 				Dockerfile: testDockerfile,
 			},
-			Ports: []uint16{8080},
+			Port: 8080,
 		})
 		mft.Sidecars = map[string]*manifest.SidecarConfig{
 			"xray": {
@@ -120,7 +120,7 @@ func TestBackendService_Template(t *testing.T) {
 				Name:       "api",
 				Dockerfile: testDockerfile,
 			},
-			Ports: []uint16{8080},
+			Port: 8080,
 		})
 		mft.Sidecars = map[string]*manifest.SidecarConfig{
 			"xray": {
@@ -154,7 +154,7 @@ func TestBackendService_Template(t *testing.T) {
 				Name:       "api",
 				Dockerfile: testDockerfile,
 			},
-			Ports: []uint16{8080},
+			Port: 8080,
 		})
 		badRange := manifest.IntRangeBand("badRange")
 		mft.Count.AdvancedCount = manifest.AdvancedCount{
@@ -190,7 +190,7 @@ func TestBackendService_Template(t *testing.T) {
 				Name:       "api",
 				Dockerfile: testDockerfile,
 			},
-			Ports: []uint16{8080},
+			Port: 8080,
 		})
 		svc, err := NewBackendService(BackendServiceConfig{
 			App:         &config.Application{},
@@ -218,7 +218,7 @@ func TestBackendService_Template(t *testing.T) {
 				Name:       "api",
 				Dockerfile: testDockerfile,
 			},
-			Ports: []uint16{8080},
+			Port: 8080,
 			HealthCheck: manifest.ContainerHealthCheck{
 				Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
 				Interval:    &testInterval,
@@ -311,7 +311,7 @@ Outputs:
 				Port: "8080",
 				Name: "api",
 			},
-			GracePeriod:         aws.Int64(manifest.DefaultHealthCheckGracePeriod),
+			GracePeriod: aws.Int64(manifest.DefaultHealthCheckGracePeriod),
 			CustomResources: map[string]template.S3ObjectLocation{
 				"EnvControllerFunction": {
 					Bucket: "my-bucket",
@@ -358,7 +358,7 @@ Outputs:
 				Name:       "api",
 				Dockerfile: testDockerfile,
 			},
-			Ports: []uint16{8080},
+			Port: 8080,
 			HealthCheck: manifest.ContainerHealthCheck{
 				Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
 				Interval:    &testInterval,
@@ -587,7 +587,7 @@ func TestBackendService_Parameters(t *testing.T) {
 			Name:       testServiceName,
 			Dockerfile: testDockerfile,
 		},
-		Ports: []uint16{8080},
+		Port: 8080,
 		HealthCheck: manifest.ContainerHealthCheck{
 			Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
 			Interval:    &testInterval,

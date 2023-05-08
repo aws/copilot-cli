@@ -7,11 +7,6 @@ package initialize
 import (
 	"encoding"
 	"fmt"
-	"github.com/dustin/go-humanize/english"
-	"os"
-	"path/filepath"
-	"strings"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -19,6 +14,8 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
+	"os"
+	"path/filepath"
 )
 
 const (
@@ -81,7 +78,7 @@ type JobProps struct {
 // ServiceProps contains the information needed to represent a Service (port, HealthCheck, and workload common props).
 type ServiceProps struct {
 	WorkloadProps
-	Ports       []uint16
+	Port        uint16
 	HealthCheck manifest.ContainerHealthCheck
 	Private     bool
 	appDomain   *string
@@ -223,9 +220,6 @@ func (w *WorkloadInitializer) initService(props *ServiceProps) (string, error) {
 	log.Successf(manifestMsgFmt, svcWlType, color.HighlightUserInput(props.Name), color.HighlightResource(path))
 
 	helpText := "Your manifest contains configurations like your container size and port."
-	if len(props.Ports) > 0 {
-		helpText = fmt.Sprintf("Your manifest contains configurations like your container size and %s (:%s).", english.PluralWord(len(props.Ports), "port", "ports"), strings.Trim(strings.Replace(fmt.Sprint(props.Ports), " ", ",", -1), "[]"))
-	}
 	log.Infoln(color.Help(helpText))
 	log.Infoln()
 
@@ -313,7 +307,7 @@ func (w *WorkloadInitializer) newLoadBalancedWebServiceManifest(inProps *Service
 			PrivateOnlyEnvironments: inProps.PrivateOnlyEnvironments,
 		},
 		Path:        "/",
-		Ports:       inProps.Ports,
+		Port:        inProps.Port,
 		HealthCheck: inProps.HealthCheck,
 		Platform:    inProps.Platform,
 	}
@@ -341,7 +335,7 @@ func newRequestDrivenWebServiceManifest(i *ServiceProps) *manifest.RequestDriven
 			Dockerfile: i.DockerfilePath,
 			Image:      i.Image,
 		},
-		Port:     i.Ports[0],
+		Port:     i.Port,
 		Platform: i.Platform,
 		Private:  i.Private,
 	}
@@ -356,29 +350,11 @@ func (w *WorkloadInitializer) newBackendServiceManifest(i *ServiceProps) (*manif
 			Image:                   i.Image,
 			PrivateOnlyEnvironments: i.PrivateOnlyEnvironments,
 		},
-		Ports:       i.Ports,
+		Port:        i.Port,
 		HealthCheck: i.HealthCheck,
 		Platform:    i.Platform,
 	}
 
-	// we set http fields if multiple ports have been exposed.
-	if len(i.Ports) > 1 {
-		outProps.Path = "/"
-		existingSvcs, err := w.Store.ListServices(i.App)
-		if err != nil {
-			return nil, err
-		}
-		// We default to "/" for the first service or if the application is initialized with a domain, but if there's another
-		// Backend Service, we use the svc name as the default, instead.
-		if aws.StringValue(i.appDomain) == "" {
-			for _, existingSvc := range existingSvcs {
-				if existingSvc.Type == manifestinfo.BackendServiceType && existingSvc.Name != i.Name {
-					outProps.Path = i.Name
-					break
-				}
-			}
-		}
-	}
 	return manifest.NewBackendService(outProps), nil
 }
 

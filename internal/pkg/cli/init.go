@@ -12,7 +12,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
 	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
-	"github.com/dustin/go-humanize/english"
 	"os"
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -59,7 +58,7 @@ type initVars struct {
 	imageTag       string
 
 	// Service specific flags
-	ports []string
+	port uint16
 
 	// Scheduled Job specific flags
 	schedule string
@@ -85,7 +84,7 @@ type initOpts struct {
 	// Since the sub-commands implement the actionCommand interface, without pointers to their internal fields
 	// we have to resort to type-casting the interface. These pointers simplify data access.
 	appName      *string
-	ports        *[]string
+	port         *uint16
 	schedule     *string
 	initWkldVars *initWkldVars
 
@@ -285,7 +284,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 			case manifestinfo.IsTypeAService(t):
 				svcVars := initSvcVars{
 					initWkldVars: wkldVars,
-					ports:        vars.ports,
+					port:         vars.port,
 					ingressType:  ingressTypeInternet,
 				}
 				opts := initSvcOpts{
@@ -318,7 +317,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 					return envDescriber, nil
 				}
 				o.initWlCmd = &opts
-				o.ports = &opts.ports // Surfaced via pointer for logging.
+				o.port = &opts.port // Surfaced via pointer for logging.
 				o.initWkldVars = &opts.initWkldVars
 			default:
 				return fmt.Errorf("unrecognized workload type")
@@ -372,12 +371,7 @@ func (o *initOpts) logWorkloadTypeAck() {
 			color.HighlightUserInput(o.initWkldVars.wkldType), color.HighlightUserInput(o.initWkldVars.name), color.HighlightUserInput(o.initWkldVars.appName), color.HighlightUserInput(*o.schedule))
 		return
 	}
-	if len(*o.ports) > 0 {
-		log.Infof("Ok great, we'll set up a %s named %s in application %s listening on %s %s.\n", color.HighlightUserInput(o.initWkldVars.wkldType), color.HighlightUserInput(o.initWkldVars.name), color.HighlightUserInput(o.initWkldVars.appName),
-			english.PluralWord(len(*o.ports), "port", "ports"), color.HighlightUserInput(english.OxfordWordSeries(*o.ports, "and")))
-	} else {
-		log.Infof("Ok great, we'll set up a %s named %s in application %s.\n", color.HighlightUserInput(o.initWkldVars.wkldType), color.HighlightUserInput(o.initWkldVars.name), color.HighlightUserInput(o.initWkldVars.appName))
-	}
+	log.Infof("Ok great, we'll set up a %s named %s in application %s.\n", color.HighlightUserInput(o.initWkldVars.wkldType), color.HighlightUserInput(o.initWkldVars.name), color.HighlightUserInput(o.initWkldVars.appName))
 }
 
 func (o *initOpts) deploy() error {
@@ -561,7 +555,7 @@ func BuildInitCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&vars.image, imageFlag, imageFlagShort, "", imageFlagDescription)
 	cmd.Flags().BoolVar(&vars.shouldDeploy, deployFlag, false, deployTestFlagDescription)
 	cmd.Flags().StringVar(&vars.imageTag, imageTagFlag, "", imageTagFlagDescription)
-	cmd.Flags().StringSliceVar(&vars.ports, svcPortFlag, nil, svcPortFlagDescription)
+	cmd.Flags().Uint16Var(&vars.port, svcPortFlag, 0, svcPortFlagDescription)
 	cmd.Flags().StringVar(&vars.schedule, scheduleFlag, "", scheduleFlagDescription)
 	cmd.Flags().StringVar(&vars.timeout, timeoutFlag, "", timeoutFlagDescription)
 	cmd.Flags().IntVar(&vars.retries, retriesFlag, 0, retriesFlagDescription)
