@@ -6,7 +6,6 @@
 package stack_test
 
 import (
-	"fmt"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -17,7 +16,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
-	"github.com/spf13/afero"
 	"gopkg.in/yaml.v3"
 )
 
@@ -48,6 +46,14 @@ func TestStaticSiteService_TemplateAndParamsGeneration(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
+			// Create in-memory mock file system.
+			wd, err := os.Getwd()
+			require.NoError(t, err)
+			fs := afero.NewMemMapFs()
+			_ = fs.MkdirAll(fmt.Sprintf("%s/foo", wd), 0755)
+			_ = afero.WriteFile(fs, fmt.Sprintf("%s/frontend/dist", wd), []byte("good stuff"), 0644)
+			require.NoError(t, err)
+			
 			// parse files
 			manifestBytes, err := os.ReadFile(tc.ManifestPath)
 			require.NoError(t, err)
@@ -66,14 +72,6 @@ func TestStaticSiteService_TemplateAndParamsGeneration(t *testing.T) {
 					Name: &envName,
 				},
 			}
-
-			// Create in-memory mock file system.
-			wd, err := os.Getwd()
-			require.NoError(t, err)
-			fs := afero.NewMemMapFs()
-			_ = fs.MkdirAll(fmt.Sprintf("%s/foo", wd), 0755)
-			_ = afero.WriteFile(fs, fmt.Sprintf("%s/frontend/dist", wd), []byte("good stuff"), 0644)
-			require.NoError(t, err)
 
 			serializer, err := stack.NewStaticSite(&stack.StaticSiteConfig{
 				App: &config.Application{
