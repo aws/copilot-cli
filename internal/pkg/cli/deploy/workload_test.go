@@ -37,6 +37,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type endpointGetterDouble struct {
+	ServiceDiscoveryEndpointFn func() (string, error)
+}
+
+func (d *endpointGetterDouble) ServiceDiscoveryEndpoint() (string, error) {
+	return d.ServiceDiscoveryEndpointFn()
+}
+
 type deployMocks struct {
 	mockRepositoryService      *mocks.MockrepositoryService
 	mockEndpointGetter         *mocks.MockendpointGetter

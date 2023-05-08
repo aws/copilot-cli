@@ -5,7 +5,6 @@ package deploy
 
 import (
 	"fmt"
-	"regexp"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -285,48 +284,15 @@ func (d *lbWebSvcDeployer) validateNLBRuntime() error {
 	return nil
 }
 
-func validateLBWSAlias(aliases manifest.Alias, app *config.Application, envName string) error {
-	if aliases.IsEmpty() {
+func validateLBWSAlias(alias manifest.Alias, app *config.Application, envName string) error {
+	if alias.IsEmpty() {
 		return nil
 	}
-	aliasList, err := aliases.ToStringSlice()
+
+	aliases, err := alias.ToStringSlice()
 	if err != nil {
 		return err
 	}
-	for _, alias := range aliasList {
-		// Alias should be within either env, app, or root hosted zone.
-		var regEnvHostedZone, regAppHostedZone, regRootHostedZone *regexp.Regexp
-		var err error
-		if regEnvHostedZone, err = regexp.Compile(fmt.Sprintf(`^([^\.]+\.)?%s.%s.%s`, envName, app.Name, app.Domain)); err != nil {
-			return err
-		}
-		if regAppHostedZone, err = regexp.Compile(fmt.Sprintf(`^([^\.]+\.)?%s.%s`, app.Name, app.Domain)); err != nil {
-			return err
-		}
-		if regRootHostedZone, err = regexp.Compile(fmt.Sprintf(`^([^\.]+\.)?%s`, app.Domain)); err != nil {
-			return err
-		}
-		var validAlias bool
-		for _, re := range []*regexp.Regexp{regEnvHostedZone, regAppHostedZone, regRootHostedZone} {
-			if re.MatchString(alias) {
-				validAlias = true
-				break
-			}
-		}
-		if validAlias {
-			continue
-		}
-		log.Errorf(`%s must match one of the following patterns:
-- %s.%s.%s,
-- <name>.%s.%s.%s,
-- %s.%s,
-- <name>.%s.%s,
-- %s,
-- <name>.%s
-`, color.HighlightCode("http.alias"), envName, app.Name, app.Domain, envName,
-			app.Name, app.Domain, app.Name, app.Domain, app.Name,
-			app.Domain, app.Domain, app.Domain)
-		return fmt.Errorf(`alias "%s" is not supported in hosted zones managed by Copilot`, alias)
-	}
-	return nil
+
+	return validateAliases(app, envName, aliases...)
 }

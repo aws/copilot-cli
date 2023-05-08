@@ -26,6 +26,7 @@ type StaticSite struct {
 
 // StaticSiteConfig holds the configuration for a static site service.
 type StaticSiteConfig struct {
+	Alias       string       `yaml:"alias"`
 	FileUploads []FileUpload `yaml:"files"`
 }
 
