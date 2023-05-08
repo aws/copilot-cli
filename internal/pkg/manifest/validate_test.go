@@ -4212,3 +4212,34 @@ func TestImageLocationOrBuild_validate(t *testing.T) {
 		})
 	}
 }
+
+func TestStaticSite_validate(t *testing.T) {
+	testCases := map[string]struct {
+		in          StaticSite
+		wantedError error
+	}{
+		"should return error if path is not valid": {
+			in: StaticSite{
+				StaticSiteConfig: StaticSiteConfig{
+					FileUploads: []FileUpload{
+						{
+							Source: "some/path",
+						},
+					},
+				},
+			},
+			wantedError: fmt.Errorf(`validate "files[0]": source 'some/path' must be a valid path`),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			err := tc.in.validate()
+
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}

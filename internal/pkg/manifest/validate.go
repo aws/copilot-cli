@@ -6,6 +6,7 @@ package manifest
 import (
 	"errors"
 	"fmt"
+	"github.com/spf13/afero"
 	"net"
 	"path/filepath"
 	"regexp"
@@ -588,6 +589,24 @@ func (s StaticSiteConfig) validate() error {
 }
 
 func (f FileUpload) validate() error {
+	if err := f.validateSource(f.Source); err != nil {
+		return err
+	}
+	return nil
+}
+
+// validateSource returns nil if Source is configured correctly.
+func (f FileUpload) validateSource(source string) error {
+	if source == "" {
+		return &errFieldMustBeSpecified{
+			missingField: "source",
+		}
+	}
+	fs := afero.NewOsFs()
+	_, err := fs.Stat(f.Source)
+	if err != nil {
+		return fmt.Errorf("source '%s' must be a valid path", f.Source)
+	}
 	return nil
 }
 
