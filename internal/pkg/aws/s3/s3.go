@@ -8,6 +8,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"mime"
+	"path/filepath"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -206,16 +208,26 @@ func (s *S3) isBucketExists(bucket string) (bool, error) {
 
 func (s *S3) upload(bucket, key string, buf io.Reader) (string, error) {
 	in := &s3manager.UploadInput{
-		Body:   buf,
-		Bucket: aws.String(bucket),
-		Key:    aws.String(key),
-		ACL:    aws.String(s3.ObjectCannedACLBucketOwnerFullControl),
+		Body:        buf,
+		Bucket:      aws.String(bucket),
+		Key:         aws.String(key),
+		ACL:         aws.String(s3.ObjectCannedACLBucketOwnerFullControl),
+		ContentType: defaultContentTypeFromExt(key),
 	}
 	resp, err := s.s3Manager.Upload(in)
 	if err != nil {
 		return "", fmt.Errorf("upload %s to bucket %s: %w", key, bucket, err)
 	}
 	return resp.Location, nil
+}
+
+func defaultContentTypeFromExt(key string) *string {
+	contentType := mime.TypeByExtension(filepath.Ext(key))
+	if contentType == "" {
+		return nil
+	}
+	fmt.Println(contentType)
+	return aws.String(contentType)
 }
 
 // parseS3URI parses the bucket name and object key from a [s3:// URI].
