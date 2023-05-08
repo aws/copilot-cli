@@ -1,6 +1,6 @@
 以下は `'Load Balanced Web Service'` Manifest で利用できるすべてのプロパティのリストです。[Copilot Service の概念](../concepts/services.ja.md)説明のページも合わせてご覧ください。
 
-???+ note "インターネット向け Service の サンプル Manifest"
+???+ note "インターネット向け Service のサンプル Manifest"
 
     === "Basic"
 
@@ -229,6 +229,40 @@
             placement: 'private'
         ```
 
+    === "Expose Multiple Ports"
+
+        ```yaml
+        name: 'frontend'
+        type: 'Load Balanced Web Service'
+
+        image:
+          build: './frontend/Dockerfile'
+          port: 8080
+
+        nlb:
+          port: 8080/tcp              # Traffic on port 8080/tcp is forwarded to the main container, on port 8080.
+          additional_rules:  
+            - port: 8084/tcp          # Traffic on port 8084/tcp is forwarded to the main container, on port 8084.
+            - port: 8085/tcp          # Traffic on port 8085/tcp is forwarded to the sidecar "envoy", on port 3000.
+              target_port: 3000         
+              target_container: envoy   
+
+        http:
+          path: '/'
+          target_port: 8083           # Traffic on "/" is forwarded to the main container, on port 8083. 
+          additional_rules: 
+            - path: 'customerdb'
+              target_port: 8081       # Traffic on "/customerdb" is forwarded to the main container, on port 8083.  
+            - path: 'admin'
+              target_port: 8082       # Traffic on "/admin" is forwarded to the sidecar "envoy", on port 8082.
+              target_container: envoy    
+
+        sidecars:
+          envoy:
+            port: 80
+            image: aws_account_id.dkr.ecr.us-west-2.amazonaws.com/envoy-proxy-with-selfsigned-certs:v1
+        ```
+
 
 <a id="name" href="#name" class="field">`name`</a> <span class="type">String</span>  
 Service の名前。
@@ -246,7 +280,7 @@ http セクションは Application Load Balancer と Service との連携に関
 Application Load Balancer を無効化する場合は、 `http: false` と指定します。 Load Balanced Web Service では、Application Load Balancer または、Network Load Balancer が少なくとも 1 つ有効となっていなければならない事に注意してください。 
 
 <span class="parent-field">http.</span><a id="http-path" href="#http-path" class="field">`path`</a> <span class="type">String</span>  
-このパスに到着したリクエストが、Service に転送されます。各 Load Balanced Web Service は一意のパスでリクエストを受け付ける必要があります。
+このパスに到着したリクエストが、Service に転送されます。各リスナールールは一意のパスでリクエストを受け付ける必要があります。
 
 {% include 'http-healthcheck.ja.md' %}
 
@@ -258,6 +292,10 @@ Application Load Balancer を無効化する場合は、 `http: false` と指定
 サイドカーコンテナを指定することで、Service のメインコンテナの代わりにサイドカーでロードバランサーからのリクエストを受け取れます。
 ターゲットコンテナのポートが `443` に設定されている場合、プロトコルは `HTTP` に設定され、ロードバランサーは
 Fargate タスクと TLS 接続します。ターゲットコンテナにインストールされた証明書が利用されます。
+
+<span class="parent-field">http.</span><a id="http-target-port" href="#http-target-port" class="field">`target_port`</a> <span class="type">String</span>  
+任意項目。トラフィックを受信するコンテナポート。デフォルトでは、ターゲットコンテナがメインコンテナの場合、`image.port` 、
+ターゲットコンテナがサイドカーの場合は、`sidecars.<name>.port` です。
 
 <span class="parent-field">http.</span><a id="http-stickiness" href="#http-stickiness" class="field">`stickiness`</a> <span class="type">Boolean</span>  
 スティッキーセッションの有効化、あるいは無効化を指定します。
@@ -300,6 +338,11 @@ Application Load Balancer で、HTTP から HTTPS へ自動的にリダイレク
 <span class="parent-field">http.</span><a id="http-version" href="#http-version" class="field">`version`</a> <span class="type">String</span>  
 HTTP(S) プロトコルのバージョン。 `'grpc'`、 `'http1'`、または `'http2'` を指定します。省略した場合は、`'http1'` が利用されます。 
 gRPC を利用する場合は、Application にドメインが関連付けられていなければなりません。
+
+<span class="parent-field">http.</span><a id="http-additional-rules" href="#http-additional-rules" class="field">`additional_rules`</a> <span class="type">Array of Maps</span>  
+複数の ALB リスナールール設定します。
+
+{% include 'http-additionalrules.en.md' %}
 
 {% include 'nlb.ja.md' %}
 

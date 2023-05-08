@@ -36,3 +36,23 @@ $ copilot job package -n report-generator -e test --output-dir ./infrastructure
 $ ls ./infrastructure
   report-generator-test.stack.yml      report-generator-test.params.yml
 ```
+
+
+`--diff` を使用して、差分を出力し、終了します。
+```console
+$ copilot job deploy --diff
+~ Resources:
+    ~ TaskDefinition:
+        ~ Properties:
+            ~ ContainerDefinitions:
+                ~ - (changed item)
+                  ~ Environment:
+                      (4 unchanged items)
+                      + - Name: LOG_LEVEL
+                      +   Value: "info"
+```
+
+!!! info "`copilot [noun] package --diff` を利用した場合の終了コード"
+    0 = no diffs found  
+    1 = diffs found  
+    2 = error producing diffs

@@ -72,6 +72,8 @@ on:
 
 <div class="separator"></div>
 
+{% include 'image.ja.md' %}
+
 {% include 'image-config.ja.md' %}
 
 <div class="separator"></div>
