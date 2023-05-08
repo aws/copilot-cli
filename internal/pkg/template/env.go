@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"strconv"
 	"text/template"
+
+	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 )
 
 const (
@@ -183,9 +185,10 @@ type CDNConfig struct {
 
 // CDNStaticAssetConfig represents static assets config for a Content Delivery Network.
 type CDNStaticAssetConfig struct {
-	Path     string
-	Location string
-	Alias    string
+	Path             string
+	ImportedBucket   string
+	StaticSiteBucket string
+	Alias            string
 }
 
 // VPCConfig represents the VPC configuration.
@@ -285,10 +288,12 @@ func (t *Template) ParseEnvBootstrap(data *EnvOpts, options ...ParseOption) (*Co
 func withEnvParsingFuncs() ParseOption {
 	return func(t *template.Template) *template.Template {
 		return t.Funcs(map[string]interface{}{
-			"inc":      IncFunc,
-			"fmtSlice": FmtSliceFunc,
-			"quote":    strconv.Quote,
-			"truncate": truncate,
+			"inc":               IncFunc,
+			"fmtSlice":          FmtSliceFunc,
+			"quote":             strconv.Quote,
+			"truncate":          truncate,
+			"bucketNameFromURL": bucketNameFromURL,
+			"logicalIDSafe":     StripNonAlphaNumFunc,
 		})
 	}
 }
@@ -298,4 +303,9 @@ func truncate(s string, maxLen int) string {
 		return s
 	}
 	return s[:maxLen]
+}
+
+func bucketNameFromURL(url string) string {
+	bucketName, _, _ := s3.ParseURL(url)
+	return bucketName
 }

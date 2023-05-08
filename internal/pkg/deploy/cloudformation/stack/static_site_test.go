@@ -216,6 +216,10 @@ func TestStaticSite_Template(t *testing.T) {
 }
 
 func TestStaticSite_Parameters(t *testing.T) {
+	t.Cleanup(func() {
+		fs = realEmbedFS
+	})
+	fs = templatetest.Stub{}
 	testCases := map[string]struct {
 		expectedParams []*cloudformation.Parameter
 		expectedErr    error
@@ -243,10 +247,12 @@ func TestStaticSite_Parameters(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			testManifest := manifest.NewStaticSite("frontend")
+			testManifest := manifest.NewStaticSite(manifest.StaticSiteProps{
+				Name:             "frontend",
+			})
 
 			// GIVEN
-			conf, _ := NewStaticSite(&StaticSiteConfig{
+			conf, err := NewStaticSite(&StaticSiteConfig{
 				App: &config.Application{
 					Name: testAppName,
 				},
@@ -260,6 +266,7 @@ func TestStaticSite_Parameters(t *testing.T) {
 				},
 				Manifest: testManifest,
 			})
+			require.NoError(t, err)
 
 			// WHEN
 			params, err := conf.Parameters()
@@ -275,6 +282,10 @@ func TestStaticSite_Parameters(t *testing.T) {
 }
 
 func TestStaticSite_SerializedParameters(t *testing.T) {
+	t.Cleanup(func() {
+		fs = realEmbedFS
+	})
+	fs = templatetest.Stub{}
 	c, _ := NewStaticSite(&StaticSiteConfig{
 		EnvManifest: &manifest.Environment{
 			Workload: manifest.Workload{

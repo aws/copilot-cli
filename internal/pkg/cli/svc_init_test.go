@@ -48,10 +48,12 @@ func TestSvcInitOpts_Validate(t *testing.T) {
 		inSubscribeTags  []string
 		inNoSubscribe    bool
 		inIngressType    string
+		inSources        []string
 
 		setupMocks     func(mocks initSvcMocks)
 		mockFileSystem func(mockFS afero.Fs)
 		wantedErr      error
+		wantedAssets   []manifest.FileUpload
 	}{
 		"fail if using different app name with the workspace": {
 			inAppName: "demo",
@@ -121,6 +123,32 @@ func TestSvcInitOpts_Validate(t *testing.T) {
 			},
 			wantedErr: errors.New(`invalid ingress type "invalid": must be one of Environment or Internet`),
 		},
+		"error if sources flag used without Static Site type": {
+			inSvcName: "frontend",
+			inSvcType: "Load Balanced Web Service",
+			inSources: []string{"goodbye", "hello/there"},
+
+			setupMocks: func(m initSvcMocks) {
+				m.mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{}, nil)
+			},
+			wantedErr: errors.New(`'--sources' must be specified with '--type "Static Site"'`),
+		},
+		"error if sources flag used with invalid sources": {
+			inSvcName: "frontend",
+			inSvcType: "Static Site",
+			inSources: []string{"non-existent path"},
+
+			mockFileSystem: func(mockFS afero.Fs) {
+				mockFS.MkdirAll("copilot", 0755)
+				mockFS.MkdirAll("hello", 0755)
+				mockFS.MkdirAll("goodbye", 0755)
+				afero.WriteFile(mockFS, "hello/there", []byte("howdy"), 0644)
+			},
+			setupMocks: func(m initSvcMocks) {
+				m.mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{}, nil)
+			},
+			wantedErr: errors.New("convert source strings to objects: open non-existent path: file does not exist"),
+		},
 		"valid flags": {
 			inSvcName:        "frontend",
 			inSvcType:        "Load Balanced Web Service",
@@ -148,6 +176,31 @@ func TestSvcInitOpts_Validate(t *testing.T) {
 				afero.WriteFile(mockFS, "hello/Dockerfile", []byte("FROM nginx"), 0644)
 			},
 		},
+		"valid static site flag": {
+			inSvcName: "frontend",
+			inSvcType: "Static Site",
+			inSources: []string{"goodbye", "hello/there"},
+
+			mockFileSystem: func(mockFS afero.Fs) {
+				mockFS.MkdirAll("copilot", 0755)
+				mockFS.MkdirAll("hello", 0755)
+				mockFS.MkdirAll("goodbye", 0755)
+				afero.WriteFile(mockFS, "hello/there", []byte("howdy"), 0644)
+			},
+			setupMocks: func(m initSvcMocks) {
+				m.mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{}, nil)
+			},
+			wantedAssets: []manifest.FileUpload{
+				{
+					Source:    "goodbye",
+					Recursive: true,
+				},
+				{
+					Source:    "hello/there",
+					Recursive: false,
+				},
+			},
+		},
 	}
 
 	for name, tc := range testCases {
@@ -172,6 +225,7 @@ func TestSvcInitOpts_Validate(t *testing.T) {
 						appName:        tc.inAppName,
 						subscriptions:  tc.inSubscribeTags,
 						noSubscribe:    tc.inNoSubscribe,
+						sourcePaths:    tc.inSources,
 					},
 					port:        tc.inSvcPort,
 					ingressType: tc.inIngressType,
@@ -192,6 +246,7 @@ func TestSvcInitOpts_Validate(t *testing.T) {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			} else {
 				require.NoError(t, err)
+				require.Equal(t, tc.wantedAssets, opts.staticAssets)
 			}
 		})
 	}
@@ -712,7 +767,7 @@ type: Request-Driven Web Service`), nil)
 			},
 			wantedErr: fmt.Errorf("select local directory or file: mock error"),
 		},
-		"error if fileinfo not found": {
+		"error if fileinfo not found when converting to asset object": {
 			inSvcType: manifestinfo.StaticSiteType,
 			inSvcName: wantedSvcName,
 			setupMocks: func(m initSvcMocks) {
@@ -720,9 +775,9 @@ type: Request-Driven Web Service`), nil)
 				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
 				m.mockSourceSel.EXPECT().StaticSources(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]string{mockFile}, nil)
 			},
-			wantedErr: fmt.Errorf(`get info for "my/mock/file.css": open my/mock/file.css: file does not exist`),
+			wantedErr: fmt.Errorf("convert source paths to asset objects: open my/mock/file.css: file does not exist"),
 		},
-		"successfully ask for static site sources and label dirs as recursive": {
+		"successfully ask for static site sources and convert to asset objects with dirs marked recursive": {
 			inSvcType: manifestinfo.StaticSiteType,
 			inSvcName: wantedSvcName,
 			mockFileSystem: func(mockFS afero.Fs) {

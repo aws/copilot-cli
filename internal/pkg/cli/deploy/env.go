@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
 	"sort"
 	"strings"
@@ -20,7 +21,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/elbv2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
-	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
+	awss3 "github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/cli/deploy/patch"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -32,6 +33,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/describe/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/override"
+	"github.com/aws/copilot-cli/internal/pkg/s3"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/template/artifactpath"
 	"github.com/aws/copilot-cli/internal/pkg/template/diff"
@@ -78,6 +80,10 @@ type stackDescriber interface {
 	Resources() ([]*stack.Resource, error)
 }
 
+type bucketNameGetter interface {
+	BucketName(app, env, svc string) (string, error)
+}
+
 type addons struct {
 	stack stackBuilder
 	err   error
@@ -91,6 +97,7 @@ type envDeployer struct {
 	templateFS       template.Reader
 	s3               uploader
 	prefixListGetter prefixListGetter
+	bucketNameGetter bucketNameGetter
 
 	// Dependencies to deploy an environment.
 	appCFN                   appResourcesGetter
@@ -154,8 +161,9 @@ func NewEnvDeployer(in *NewEnvDeployerInput) (*envDeployer, error) {
 		env: in.Env,
 
 		templateFS:       template.New(),
-		s3:               s3.New(envManagerSession),
+		s3:               awss3.New(envManagerSession),
 		prefixListGetter: ec2.New(envRegionSession),
+		bucketNameGetter: s3.New(envManagerSession),
 
 		appCFN:      deploycfn.New(defaultSession, deploycfn.WithProgressTracker(os.Stderr)),
 		envDeployer: cfnClient,
@@ -227,9 +235,13 @@ func (d *envDeployer) UploadArtifacts() (*UploadEnvArtifactsOutput, error) {
 func (d *envDeployer) DeployDiff(template string) (string, error) {
 	tmpl, err := d.tmplGetter.Template(cfnstack.NameForEnv(d.app.Name, d.env.Name))
 	if err != nil {
-		return "", fmt.Errorf("retrieve the deployed template for %q: %w", d.env.Name, err)
+		var errNotFound *awscloudformation.ErrStackNotFound
+		if !errors.As(err, &errNotFound) {
+			return "", fmt.Errorf("retrieve the deployed template for %q: %w", d.env.Name, err)
+		}
+		tmpl = ""
 	}
-	diffTree, err := diff.From(tmpl).ParseWithCFNIgnorer([]byte(template))
+	diffTree, err := diff.From(tmpl).ParseWithCFNOverriders([]byte(template))
 	if err != nil {
 		return "", fmt.Errorf("parse the diff against the deployed env stack %q: %w", d.env.Name, err)
 	}
@@ -403,6 +415,9 @@ func (d *envDeployer) buildStackInput(in *DeployEnvironmentInput) (*cfnstack.Env
 	if err != nil {
 		return nil, err
 	}
+	if err := d.renderStaticSite(in.Manifest); err != nil {
+		return nil, err
+	}
 	return &cfnstack.EnvConfig{
 		Name: d.env.Name,
 		App: deploy.AppInformation{
@@ -413,7 +428,7 @@ func (d *envDeployer) buildStackInput(in *DeployEnvironmentInput) (*cfnstack.Env
 		AdditionalTags:       d.app.Tags,
 		Addons:               addons,
 		CustomResourcesURLs:  in.CustomResourcesURLs,
-		ArtifactBucketARN:    s3.FormatARN(partition.ID(), resources.S3Bucket),
+		ArtifactBucketARN:    awss3.FormatARN(partition.ID(), resources.S3Bucket),
 		ArtifactBucketKeyARN: resources.KMSKeyARN,
 		CIDRPrefixListIDs:    cidrPrefixListIDs,
 		PublicALBSourceIPs:   d.publicALBSourceIPs(in),
@@ -423,6 +438,22 @@ func (d *envDeployer) buildStackInput(in *DeployEnvironmentInput) (*cfnstack.Env
 		PermissionsBoundary:  in.PermissionsBoundary,
 		Version:              deploy.LatestEnvTemplateVersion,
 	}, nil
+}
+
+func (d *envDeployer) renderStaticSite(mft *manifest.Environment) error {
+	if mft == nil || mft.CDNConfig.Config.Static.Location.StaticBucket != "" ||
+		mft.CDNConfig.Config.Static.Location.StaticSite == "" {
+		return nil
+	}
+	staticSite := mft.CDNConfig.Config.Static.Location.StaticSite
+	bucketName, err := d.bucketNameGetter.BucketName(d.app.Name, d.env.Name, staticSite)
+	if err != nil {
+		return fmt.Errorf("get bucket name for %s in env %s: %w", staticSite, d.env.Name, err)
+	}
+	// s3.URL returns a valid URL.
+	url, _ := url.Parse(awss3.URL(d.env.Region, bucketName, ""))
+	mft.CDNConfig.Config.Static.Location.StaticBucket = url.Host
+	return nil
 }
 
 func (d *envDeployer) buildAddonsInput(region, bucket, uploadURL string) (*cfnstack.Addons, error) {
@@ -445,7 +476,7 @@ func (d *envDeployer) buildAddonsInput(region, bucket, uploadURL string) (*cfnst
 		return nil, fmt.Errorf("render addons template: %w", err)
 	}
 	return &cfnstack.Addons{
-		S3ObjectURL: s3.URL(region, bucket, artifactpath.EnvironmentAddons([]byte(tpl))),
+		S3ObjectURL: awss3.URL(region, bucket, artifactpath.EnvironmentAddons([]byte(tpl))),
 		Stack:       parsedAddons,
 	}, nil
 }

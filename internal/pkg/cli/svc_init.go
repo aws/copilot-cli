@@ -124,6 +124,7 @@ type initWkldVars struct {
 	image          string
 	subscriptions  []string
 	noSubscribe    bool
+	sourcePaths    []string
 }
 
 type initSvcVars struct {
@@ -263,6 +264,17 @@ func (o *initSvcOpts) Validate() error {
 			return err
 		}
 	}
+	if len(o.sourcePaths) != 0 {
+		if o.wkldType != manifestinfo.StaticSiteType {
+			return fmt.Errorf("'--%s' must be specified with '--%s %q'", sourcesFlag, typeFlag, manifestinfo.StaticSiteType)
+		}
+		// Path validation against fs happens during conversion.
+		assets, err := o.convertStringsToAssets(o.sourcePaths)
+		if err != nil {
+			return fmt.Errorf("convert source strings to objects: %w", err)
+		}
+		o.staticAssets = assets
+	}
 	if err := validateSubscribe(o.noSubscribe, o.subscriptions); err != nil {
 		return err
 	}
@@ -346,7 +358,7 @@ func (o *initSvcOpts) Execute() error {
 	if err != nil {
 		return err
 	}
-	manifestPath, err := o.init.Service(&initialize.ServiceProps{
+	o.manifestPath, err = o.init.Service(&initialize.ServiceProps{
 		WorkloadProps: initialize.WorkloadProps{
 			App:            o.appName,
 			Name:           o.name,
@@ -362,11 +374,11 @@ func (o *initSvcOpts) Execute() error {
 		Port:        o.port,
 		HealthCheck: hc,
 		Private:     strings.EqualFold(o.ingressType, ingressTypeEnvironment),
+		FileUploads: o.staticAssets,
 	})
 	if err != nil {
 		return err
 	}
-	o.manifestPath = manifestPath
 	return nil
 }
 
@@ -443,6 +455,9 @@ If you'd prefer a new default manifest, please manually delete the existing one.
 }
 
 func (o *initSvcOpts) askStaticSite() error {
+	if len(o.staticAssets) != 0 {
+		return nil
+	}
 	var sources []string
 	var err error
 	if o.wsPendingCreation {
@@ -459,18 +474,9 @@ func (o *initSvcOpts) askStaticSite() error {
 			return err
 		}
 	}
-	var assets []manifest.FileUpload
-	for _, source := range sources {
-		info, err := o.fs.Stat(source)
-		if err != nil {
-			return fmt.Errorf("get info for %q: %w", source, err)
-		}
-		assets = append(assets, manifest.FileUpload{
-			Source:    source,
-			Recursive: info.IsDir(),
-		})
+	if o.staticAssets, err = o.convertStringsToAssets(sources); err != nil {
+		return fmt.Errorf("convert source paths to asset objects: %w", err)
 	}
-	o.staticAssets = assets
 	return nil
 }
 
@@ -776,6 +782,21 @@ func validateWorkspaceApp(wsApp, inputApp string, store store) error {
 	return nil
 }
 
+func (o initSvcOpts) convertStringsToAssets(sources []string) ([]manifest.FileUpload, error) {
+	assets := make([]manifest.FileUpload, len(sources))
+	for i, source := range sources {
+		info, err := o.fs.Stat(source)
+		if err != nil {
+			return nil, err
+		}
+		assets[i] = manifest.FileUpload{
+			Source:    source,
+			Recursive: info.IsDir(),
+		}
+	}
+	return assets, nil
+}
+
 // parseSerializedSubscription parses the service and topic name out of keys specified in the form "service:topicName"
 func parseSerializedSubscription(input string) (manifest.TopicSubscription, error) {
 	attrs := regexpMatchSubscription.FindStringSubmatch(input)
@@ -860,6 +881,7 @@ This command is also run as part of "copilot init".`,
 	cmd.Flags().StringArrayVar(&vars.subscriptions, subscribeTopicsFlag, []string{}, subscribeTopicsFlagDescription)
 	cmd.Flags().BoolVar(&vars.noSubscribe, noSubscriptionFlag, false, noSubscriptionFlagDescription)
 	cmd.Flags().StringVar(&vars.ingressType, ingressTypeFlag, "", ingressTypeFlagDescription)
+	cmd.Flags().StringArrayVar(&vars.sourcePaths, sourcesFlag, nil, sourcesFlagDescription)
 
 	return cmd
 }
