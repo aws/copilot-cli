@@ -11,8 +11,8 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-var intrinsicFuncFullFormRegex = regexp.MustCompile("^Fn::[A-Z][A-Za-z\\d]*|Ref$") // Match "Fn::XX" or Ref.
-var intrinsicFuncShortFormRegex = regexp.MustCompile("^![A-Z][A-Za-z\\d]*$")       // Match "!XX".
+var intrinsicFuncFullFormRegex = regexp.MustCompile(`^Fn::[A-Z][A-Za-z\d]*|Ref$`) // Match "Fn::XX" or Ref.
+var intrinsicFuncShortFormRegex = regexp.MustCompile(`^![A-Z][A-Za-z\d]*$`)       // Match "!XX".
 
 // overrider overrides the parsing behavior between two yaml nodes under certain keys.
 type overrider interface {
