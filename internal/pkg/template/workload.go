@@ -817,6 +817,7 @@ type WorkloadOpts struct {
 	// Additional options for worker service templates.
 	Subscribe *SubscribeOpts
 
+	// Additional options for static site template.
 	AssetMappingFileBucket string
 	AssetMappingFilePath   string
 }

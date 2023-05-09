@@ -31,10 +31,10 @@ func TestS3_Upload(t *testing.T) {
 			mockS3ManagerClient: func(m *mocks.Mocks3ManagerAPI) {
 				m.EXPECT().Upload(gomock.Any()).Do(func(in *s3manager.UploadInput, _ ...func(*s3manager.Uploader)) {
 					require.Equal(t, aws.StringValue(in.Bucket), "mockBucket")
-					require.Equal(t, aws.StringValue(in.Key), "mockFileName")
+					require.Equal(t, aws.StringValue(in.Key), "src/mockIndex.html")
 				}).Return(nil, errors.New("some error"))
 			},
-			wantError: fmt.Errorf("upload mockFileName to bucket mockBucket: some error"),
+			wantError: fmt.Errorf("upload src/mockIndex.html to bucket mockBucket: some error"),
 		},
 		"should upload to the s3 bucket": {
 			mockS3ManagerClient: func(m *mocks.Mocks3ManagerAPI) {
@@ -43,7 +43,8 @@ func TestS3_Upload(t *testing.T) {
 					require.NoError(t, err)
 					require.Equal(t, "bar", string(b))
 					require.Equal(t, "mockBucket", aws.StringValue(in.Bucket))
-					require.Equal(t, "mockFileName", aws.StringValue(in.Key))
+					require.Equal(t, "src/mockIndex.html", aws.StringValue(in.Key))
+					require.Equal(t, "text/html; charset=utf-8", aws.StringValue(in.ContentType))
 					require.Equal(t, s3.ObjectCannedACLBucketOwnerFullControl, aws.StringValue(in.ACL))
 				}).Return(&s3manager.UploadOutput{
 					Location: "mockURL",
@@ -66,7 +67,7 @@ func TestS3_Upload(t *testing.T) {
 				s3Manager: mockS3ManagerClient,
 			}
 
-			gotURL, gotErr := service.Upload("mockBucket", "mockFileName", bytes.NewBuffer([]byte("bar")))
+			gotURL, gotErr := service.Upload("mockBucket", "src/mockIndex.html", bytes.NewBuffer([]byte("bar")))
 
 			if gotErr != nil {
 				require.EqualError(t, gotErr, tc.wantError.Error())

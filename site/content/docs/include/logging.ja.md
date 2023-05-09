@@ -20,3 +20,6 @@ logging セクションには、ログ設定を含みます。このセクショ
 
 <span class="parent-field">logging.</span><a id="logging-configFilePath" href="#logging-configFilePath" class="field">`configFilePath`</a> <span class="type">Map</span>  
 任意項目。カスタムの Fluent Bit イメージ内の設定ファイルのフルパス。
+
+<span class="parent-field">logging.</span><a id="logging-envFile" href="#logging-envFile" class="field">`env_file`</a> <span class="type">String</span>  
+ロギングサイドカーコンテナに設定する環境変数を含むファイルのワークスペースのルートからのパス。環境変数ファイルに関する詳細については、[環境変数ファイルの指定に関する考慮事項](https://docs.aws.amazon.com/ja_jp/AmazonECS/latest/developerguide/taskdef-envfiles.html#taskdef-envfiles-considerations)を確認してください。

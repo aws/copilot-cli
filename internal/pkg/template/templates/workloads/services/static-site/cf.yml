@@ -42,6 +42,67 @@ Resources:
         Rules:
           - ObjectOwnership: BucketOwnerEnforced
 
+  BucketPolicyForCloudFront:
+    Metadata:
+      'aws:copilot:description': 'A bucket policy to grant CloudFront read access to the Static Site bucket'
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref Bucket
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowCloudFrontServicePrincipalReadOnly
+            Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: s3:GetObject
+            Resource:
+              - !Sub
+                - arn:${AWS::Partition}:s3:::${bucket}
+                - bucket: !Ref Bucket
+              - !Sub
+                - arn:${AWS::Partition}:s3:::${bucket}/*
+                - bucket: !Ref Bucket
+            Condition: 
+              StringEquals:
+                AWS:SourceArn: !Sub
+                  - arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${cfDistributionID}
+                  - cfDistributionID: !Ref CloudFrontDistribution
+
+  CloudFrontOriginAccessControl:
+    Metadata:
+      'aws:copilot:description': 'Access control to make the content in the S3 bucket only accessible through CloudFront'
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties: 
+      OriginAccessControlConfig: 
+          Description: Access control for static s3 origin
+          Name: !Sub 'copilot-${AppName}-${EnvName}-${WorkloadName}-origin-access-control'
+          OriginAccessControlOriginType: s3
+          SigningBehavior: always
+          SigningProtocol: sigv4
+
+  CloudFrontDistribution:
+    Metadata:
+      'aws:copilot:description': 'A CloudFront distribution for global content delivery'
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        DefaultCacheBehavior:
+          AllowedMethods: ["GET", "HEAD", "OPTIONS", "PUT", "PATCH", "POST", "DELETE"]
+          ViewerProtocolPolicy: allow-all
+          CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6 # See https://go.aws/3bJid3k
+          TargetOriginId: !Sub 'copilot-${AppName}-${EnvName}-${WorkloadName}'
+        Enabled: true
+        IPV6Enabled: true
+        Origins:
+          - Id: !Sub 'copilot-${AppName}-${EnvName}-${WorkloadName}'
+            DomainName: !GetAtt Bucket.RegionalDomainName
+            OriginAccessControlId: !Ref CloudFrontOriginAccessControl
+            # Workaround for using Origin Access Control as Origin Access Identity is still 
+            # required when the origin is an S3 bucket.
+            S3OriginConfig:
+              OriginAccessIdentity: '' 
+
   TriggerStateMachineFunction:
     Metadata:
       aws:copilot:description: A lambda that triggers the file-copying state machine
