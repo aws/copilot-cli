@@ -5,6 +5,8 @@ package deploy
 
 import (
 	"fmt"
+	"io"
+
 	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -17,7 +19,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/spf13/afero"
-	"io"
 )
 
 const artifactBucketAssetsDir = "local-assets"
