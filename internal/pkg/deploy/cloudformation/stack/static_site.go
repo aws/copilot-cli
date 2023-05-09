@@ -106,6 +106,7 @@ func (s *StaticSite) Template() (string, error) {
 
 		AssetMappingFileBucket: bucket,
 		AssetMappingFilePath:   path,
+		StaticSiteAlias:        s.manifest.Alias,
 	})
 	if err != nil {
 		return "", err
