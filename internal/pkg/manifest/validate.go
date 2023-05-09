@@ -6,7 +6,6 @@ package manifest
 import (
 	"errors"
 	"fmt"
-	"github.com/spf13/afero"
 	"net"
 	"path/filepath"
 	"regexp"
@@ -598,11 +597,6 @@ func (f FileUpload) validateSource() error {
 		return &errFieldMustBeSpecified{
 			missingField: "source",
 		}
-	}
-	fs := afero.NewOsFs()
-	_, err := fs.Stat(f.Source)
-	if err != nil {
-		return fmt.Errorf("source '%s' must be a valid path: %w", f.Source, err)
 	}
 	return nil
 }

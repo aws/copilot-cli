@@ -5,8 +5,6 @@ package deploy
 
 import (
 	"fmt"
-	"io"
-
 	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -19,6 +17,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/spf13/afero"
+	"io"
 )
 
 const artifactBucketAssetsDir = "local-assets"
@@ -127,6 +126,9 @@ func (d *staticSiteDeployer) stackConfiguration(in *StackRuntimeConfiguration) (
 	if err := validateMinAppVersion(d.app.Name, d.name, d.appVersionGetter, deploy.StaticSiteMinAppTemplateVersion); err != nil {
 		return nil, fmt.Errorf("static sites not supported: %w", err)
 	}
+	if err := d.validateSources(); err != nil {
+		return nil, err
+	}
 	conf, err := stack.NewStaticSite(&stack.StaticSiteConfig{
 		App:                d.app,
 		EnvManifest:        d.envConfig,
@@ -142,4 +144,14 @@ func (d *staticSiteDeployer) stackConfiguration(in *StackRuntimeConfiguration) (
 		return nil, fmt.Errorf("create stack configuration: %w", err)
 	}
 	return conf, nil
+}
+
+func (d *staticSiteDeployer) validateSources() error {
+	for _, upload := range d.staticSiteMft.FileUploads {
+		_, err := d.fs.Stat(upload.Source)
+		if err != nil {
+			return fmt.Errorf("source '%s' must be a valid path: %w", upload.Source, err)
+		}
+	}
+	return nil
 }
