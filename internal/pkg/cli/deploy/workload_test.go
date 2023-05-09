@@ -37,6 +37,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type endpointGetterDouble struct {
+	ServiceDiscoveryEndpointFn func() (string, error)
+}
+
+func (d *endpointGetterDouble) ServiceDiscoveryEndpoint() (string, error) {
+	return d.ServiceDiscoveryEndpointFn()
+}
+
 type deployMocks struct {
 	mockRepositoryService      *mocks.MockrepositoryService
 	mockEndpointGetter         *mocks.MockendpointGetter
@@ -997,7 +1005,7 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 				m.mockEnvVersionGetter.EXPECT().Version().Return("v1.42.0", nil)
 			},
-			wantErr: fmt.Errorf("validate ALB runtime configuration for \"http\": alias not supported: app version must be > %s", deploy.AliasLeastAppTemplateVersion),
+			wantErr: fmt.Errorf("validate ALB runtime configuration for \"http\": alias not supported: app version must be >= %s", deploy.AliasLeastAppTemplateVersion),
 		},
 		"fail to enable nlb alias because of incompatible app version": {
 			inNLB: manifest.NetworkLoadBalancerConfiguration{
@@ -1019,7 +1027,7 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 				m.mockEnvVersionGetter.EXPECT().Version().Return("v1.42.0", nil)
 			},
-			wantErr: fmt.Errorf("alias not supported: app version must be > %s", deploy.AliasLeastAppTemplateVersion),
+			wantErr: fmt.Errorf("alias not supported: app version must be >= %s", deploy.AliasLeastAppTemplateVersion),
 		},
 		"fail to enable https alias because of invalid alias": {
 			inAliases: manifest.Alias{AdvancedAliases: []manifest.AdvancedAlias{
