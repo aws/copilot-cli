@@ -93,7 +93,7 @@ func TestLBWS(t *testing.T) {
 			"custom-resources/alb-rule-priority-generator.js": {
 				Buffer: bytes.NewBufferString("rule priority"),
 			},
-			"custom-resources/nlb-custom-domain.js": {
+			"custom-resources/wkld-custom-domain.js": {
 				Buffer: bytes.NewBufferString("nlb custom domain"),
 			},
 			"custom-resources/nlb-cert-validator.js": {
@@ -260,11 +260,15 @@ func TestStaticSite(t *testing.T) {
 			"custom-resources/copy-assets.js": {
 				Buffer: bytes.NewBufferString("copy assets"),
 			},
+			"custom-resources/wkld-custom-domain.js": {
+				Buffer: bytes.NewBufferString("add A record for CloudFront"),
+			},
 		},
 	}
 	fakePaths := map[string]string{
 		"TriggerStateMachineFunction": "manual/scripts/custom-resources/triggerstatemachinefunction/edfa40b595a5a4a6d24bfb7ad6e173560a29b7d720651ccc9c87eda76b93c7dd.zip",
 		"CopyAssetsFunction":          "manual/scripts/custom-resources/copyassetsfunction/b9fc2f284cfb699b7c63efaac618d7678372792aa020141fa91053092977976d.zip",
+		"CustomDomainFunction":        "manual/scripts/custom-resources/customdomainfunction/c8c78ed9e73964c2facfa0bceb5ed6227172fd98057c53c137296fed81975672.zip",
 	}
 
 	// WHEN
@@ -272,14 +276,14 @@ func TestStaticSite(t *testing.T) {
 
 	// THEN
 	require.NoError(t, err)
-	require.Equal(t, fakeFS.matchCount, 2, "expected path calls do not match")
+	require.Equal(t, fakeFS.matchCount, 3, "expected path calls do not match")
 
 	actualFnNames := make([]string, len(crs))
 	for i, cr := range crs {
 		actualFnNames[i] = cr.Name()
 	}
 	require.ElementsMatch(t,
-		[]string{"TriggerStateMachineFunction", "CopyAssetsFunction"},
+		[]string{"TriggerStateMachineFunction", "CopyAssetsFunction", "CustomDomainFunction"},
 		actualFnNames, "function names must match")
 
 	// ensure the zip files contain an index.js file.

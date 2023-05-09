@@ -5,6 +5,7 @@ package stack
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
@@ -17,11 +18,17 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/template"
 )
 
+// Parameter logical IDs for a static site service.
+const (
+	StaticSiteDNSDelegatedParamKey = "DNSDelegated"
+)
+
 // StaticSite represents the configuration needed to create a CloudFormation stack from a static site service manifest.
 type StaticSite struct {
 	*wkld
-	manifest *manifest.StaticSite
-	appInfo  deploy.AppInformation
+	manifest             *manifest.StaticSite
+	dnsDelegationEnabled bool
+	appInfo              deploy.AppInformation
 
 	parser          staticSiteReadParser
 	localCRs        []uploadable // Custom resources that have not been uploaded yet.
@@ -47,6 +54,16 @@ func NewStaticSite(conf *StaticSiteConfig) (*StaticSite, error) {
 	if err != nil {
 		return nil, fmt.Errorf("static site custom resources: %w", err)
 	}
+	var dnsDelegationEnabled bool
+	var appInfo deploy.AppInformation
+	if conf.App.Domain != "" {
+		dnsDelegationEnabled = true
+		appInfo = deploy.AppInformation{
+			Name:                conf.App.Name,
+			Domain:              conf.App.Domain,
+			AccountPrincipalARN: conf.RootUserARN,
+		}
+	}
 	return &StaticSite{
 		wkld: &wkld{
 			name:               aws.StringValue(conf.Manifest.Name),
@@ -59,7 +76,9 @@ func NewStaticSite(conf *StaticSiteConfig) (*StaticSite, error) {
 			parser:             fs,
 			addons:             conf.Addons,
 		},
-		manifest: conf.Manifest,
+		manifest:             conf.Manifest,
+		dnsDelegationEnabled: dnsDelegationEnabled,
+		appInfo:              appInfo,
 
 		parser:          fs,
 		localCRs:        uploadableCRs(crs).convert(),
@@ -81,12 +100,11 @@ func (s *StaticSite) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-
 	bucket, path, err := s3.ParseURL(s.assetMappingURL)
 	if err != nil {
 		return "", err
 	}
-
+	dnsDelegationRole, dnsName := convertAppInformation(s.appInfo)
 	content, err := s.parser.ParseStaticSite(template.WorkloadOpts{
 		// Workload parameters.
 		AppName:            s.app,
@@ -104,6 +122,8 @@ func (s *StaticSite) Template() (string, error) {
 		// Custom Resource Config.
 		CustomResources: crs,
 
+		AppDNSName:             dnsName,
+		AppDNSDelegationRole:   dnsDelegationRole,
 		AssetMappingFileBucket: bucket,
 		AssetMappingFilePath:   path,
 		StaticSiteAlias:        s.manifest.Alias,
@@ -132,6 +152,10 @@ func (s *StaticSite) Parameters() ([]*cloudformation.Parameter, error) {
 		{
 			ParameterKey:   aws.String(WorkloadAddonsTemplateURLParamKey),
 			ParameterValue: aws.String(s.rc.AddonsTemplateURL),
+		},
+		{
+			ParameterKey:   aws.String(StaticSiteDNSDelegatedParamKey),
+			ParameterValue: aws.String(strconv.FormatBool(s.dnsDelegationEnabled)),
 		},
 	}, nil
 }
