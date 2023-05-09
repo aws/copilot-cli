@@ -180,7 +180,7 @@ ImageId: !FindInMap
 				}
 			},
 		},
-		"no diff in Fn::GetAtt vs !GetAtt when comparing list to list": { // TODO(lou1415926)
+		"no diff in Fn::GetAtt vs !GetAtt when comparing list to list": {
 			old: `SourceSecurityGroupOwnerId: !GetAtt [myELB, SourceSecurityGroup]`,
 			curr: `SourceSecurityGroupOwnerId:
   Fn::GetAtt:
@@ -212,7 +212,7 @@ ImageId: !FindInMap
 				}
 			},
 		},
-		"no diff in Fn::GetAtt vs !GetAtt when comparing scalr to scalr": { // TODO(lou1415926)
+		"no diff in Fn::GetAtt vs !GetAtt when comparing scalar to scalar": {
 			old: `SourceSecurityGroupOwnerId:
   Fn::GetAtt: myELB.SourceSecurityGroup`,
 			curr: `SourceSecurityGroupOwnerId: !GetAtt myELB.SourceSecurityGroup`,

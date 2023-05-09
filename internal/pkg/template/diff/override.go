@@ -156,7 +156,9 @@ func (converter *getAttConverter) match(from, to *yaml.Node, key string, overrid
 	}
 	fromValue, toValue := from, to
 	if from.Kind == yaml.MappingNode {
-		fromValue = from.Content[1] // A valid full-form intrinsic function always contain a child node.
+		// A valid full-form intrinsic function always contain a child node.
+		// This must be valid because it has passed `converter.intrinsicFunc.match`.
+		fromValue = from.Content[1]
 	}
 	if to.Kind == yaml.MappingNode {
 		toValue = to.Content[1]
