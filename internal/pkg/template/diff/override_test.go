@@ -475,6 +475,24 @@ TestSub:
 		//     Key: value`,
 		// 		},
 		// "no diff in Condition vs !Condition": // TODO(lou1415926)
+		"do not match unexpected keys": {
+			old: `
+Stuff:
+  Sub: not_an_intrinsic_function`,
+			curr: `
+Stuff: !Sub this_is_one`,
+			wanted: func() diffNode {
+				return &keyNode{
+					childNodes: []diffNode{
+						&keyNode{
+							keyValue: "Stuff",
+							oldV:     yamlNode("Sub: not_an_intrinsic_function", t),
+							newV:     yamlNode("!Sub this_is_one", t),
+						},
+					},
+				}
+			},
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
