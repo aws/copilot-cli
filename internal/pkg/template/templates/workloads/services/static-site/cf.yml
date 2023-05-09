@@ -3,6 +3,14 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: CloudFormation template that represents a static site backed by S3.
 
+{{- /*
+!¡!¡!¡!¡!¡!¡
+If you are adding resources to this template, make sure to add the resources to
+the TriggerStateMachineAction.DependsOn list. This will ensure that files
+are only copied to Bucket if all other resources are successfully created.
+!¡!¡!¡!¡!¡!¡
+*/ -}}
+
 {{- if .SerializedManifest }}
 Metadata:
   Manifest: |
@@ -149,7 +157,19 @@ Resources:
     Metadata:
       aws:copilot:description: A custom resource to trigger the file-copying state machine
     Type: Custom::TriggerStateMachine
-    DependsOn: CopyAssetsStateMachine
+    DependsOn: 
+      - CopyAssetsStateMachine {{- /* This is a real dependency */}}
+      - Bucket
+      - BucketPolicyForCloudFront
+      - CloudFrontOriginAccessControl
+      - CloudFrontDistribution
+      - TriggerStateMachineFunction
+      - TriggerStateMachineFunctionRole
+      - CopyAssetsStateMachine
+      - CopyAssetsStateMachineRole
+      - CopyAssetsFunction
+      - CopyAssetsFunctionRole
+      - EnvManagerS3Access
     Properties:
       ServiceToken: !GetAtt TriggerStateMachineFunction.Arn
       StateMachineARN: !GetAtt CopyAssetsStateMachine.Arn
