@@ -96,7 +96,8 @@ Resources:
     Properties:
       DistributionConfig:
         DefaultCacheBehavior:
-          AllowedMethods: ["GET", "HEAD", "OPTIONS", "PUT", "PATCH", "POST", "DELETE"]
+          Compress: true
+          AllowedMethods: ["GET", "HEAD"]
           ViewerProtocolPolicy: allow-all
           CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6 # See https://go.aws/3bJid3k
           TargetOriginId: !Sub 'copilot-${AppName}-${EnvName}-${WorkloadName}'
