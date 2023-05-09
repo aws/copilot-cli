@@ -45,6 +45,7 @@ func TestStaticSiteService_TemplateAndParamsGeneration(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
+			
 			// parse files
 			manifestBytes, err := os.ReadFile(tc.ManifestPath)
 			require.NoError(t, err)
