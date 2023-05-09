@@ -5,10 +5,14 @@ package diff
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"gopkg.in/yaml.v3"
 )
+
+var intrinsicFuncFullFormRegex = regexp.MustCompile("^Fn::[A-Z][A-Za-z\\d]*|Ref$") // Match "Fn::XX" or Ref.
+var intrinsicFuncShortFormRegex = regexp.MustCompile("^![A-Z][A-Za-z\\d]*$")       // Match "!XX".
 
 // overrider overrides the parsing behavior between two yaml nodes under certain keys.
 type overrider interface {
@@ -198,17 +202,14 @@ func (converter *getAttConverter) parse(from, to *yaml.Node, key string, overrid
 
 func intrinsicFuncName(node *yaml.Node) string {
 	if node.Kind != yaml.MappingNode {
-		return stripFuncPrefixes(node.Tag)
+		return strings.TrimPrefix(intrinsicFuncShortFormRegex.FindString(node.Tag), "!")
 	}
 	if len(node.Content) != 2 {
 		// The full form mapping node always contain only one child node, whose key is the func name in full form.
 		// Read https://www.efekarakus.com/2020/05/30/deep-dive-go-yaml-cfn.html.
 		return ""
 	}
-	return stripFuncPrefixes(node.Content[0].Value)
-}
-func stripFuncPrefixes(name string) string {
-	return strings.TrimPrefix(strings.TrimPrefix(name, "Fn::"), "!")
+	return strings.TrimPrefix(intrinsicFuncFullFormRegex.FindString(node.Content[0].Value), "Fn::")
 }
 
 func stripTag(node *yaml.Node) *yaml.Node {
