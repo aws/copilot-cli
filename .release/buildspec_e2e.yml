@@ -180,16 +180,27 @@ phases:
       - export GOPATH=/go
       - rm -rf cf-custom-resources/node_modules
       - mkdir -p /tmp/.aws
+      - account=$(aws secretsmanager get-secret-value --secret-id ${APP_ACCOUNT} | jq '.SecretString')
       - printf "[default]\nregion = $APP_REGION\n" > /tmp/.aws/config
+      - printf "[default]\n" >> /tmp/.aws/credentials
+      - printf "aws_access_key_id=$(echo $account | jq '.access_key')\n" >> /tmp/.aws/credentials
+      - printf "aws_secret_access_key=$(echo $account | jq '.secret_access_key')\n\n" >> /tmp/.aws/credentials
       - |
         if [ ! -z "$TESTENV_REGION" ]; then
+          account=$(aws secretsmanager get-secret-value --secret-id ${TEST_ACCOUNT} | jq '.SecretString')
           printf "[profile e2etestenv]\nregion=$TESTENV_REGION\n" >> /tmp/.aws/config
+          printf "[profile e2etestenv]\n" >> /tmp/.aws/credentials
+          printf "aws_access_key_id=$(echo $account | jq '.access_key')\n" >> /tmp/.aws/credentials
+          printf "aws_secret_access_key=$(echo $account | jq '.secret_access_key')\n\n" >> /tmp/.aws/credentials
         fi
       - |
         if [ ! -z "$PRODENV_REGION" ]; then
-           printf "[profile e2eprodenv]\nregion=$PRODENV_REGION\n" >> /tmp/.aws/config
+          account=$(aws secretsmanager get-secret-value --secret-id ${PROD_ACCOUNT} | jq '.SecretString')
+          printf "[profile e2eprodenv]\nregion=$PRODENV_REGION\n" >> /tmp/.aws/config
+          printf "[profile e2eprodenv]\n" >> /tmp/.aws/credentials
+          printf "aws_access_key_id=$(echo $account | jq '.access_key')\n" >> /tmp/.aws/credentials
+          printf "aws_secret_access_key=$(echo $account | jq '.secret_access_key')\n\n" >> /tmp/.aws/credentials
         fi
-      - printf "[default]\naws_access_key_id=$E2E_USER_1_ACCESS_KEY\naws_secret_access_key=$E2E_USER_1_SECRET_KEY\n\n[e2etestenv]\naws_access_key_id=$E2E_USER_2_ACCESS_KEY\naws_secret_access_key=$E2E_USER_2_SECRET_KEY\n\n[e2eprodenv]\naws_access_key_id=$E2E_USER_3_ACCESS_KEY\naws_secret_access_key=$E2E_USER_3_SECRET_KEY\n" > /tmp/.aws/credentials
       - sed -i -e '$s/$/ --noColor/' e2e/e2e.sh
       - make build-e2e
       - docker build -t copilot-cli/e2e . -f e2e/Dockerfile
