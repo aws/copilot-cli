@@ -5,6 +5,7 @@ List of all available properties for a `'Static Site Service'` manifest.
     ```yaml
     name: example
     type: Static Site
+    alias: 'example.com'
     files:
       - source: src/someDirectory
         recursive: true
@@ -30,6 +31,11 @@ The name of your service.
 
 <a id="type" href="#type" class="field">`type`</a> <span class="type">String</span>  
 The architecture type for your service. A [Static Site](../concepts/services.en.md#static-site) is an internet-facing service that is hosted by Amazon S3.
+
+<div class="separator"></div>
+
+<a id="alias" href="#alias" class="field">`alias`</a> <span class="type">String</span>  
+HTTPS domain alias of your service.
 
 <div class="separator"></div>
 
