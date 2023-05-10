@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"mime"
 	"path"
 	"sync"
 	"testing"
@@ -116,7 +117,7 @@ func Test_UploadFiles(t *testing.T) {
 			},
 			expected: []asset{
 				newAsset("foo", mockContent3, ""),
-				newAsset("manifest.yaml", mockContent2, ""),
+				newAsset("manifest.yaml", mockContent2, mime.TypeByExtension(".yaml")),
 			},
 		},
 		"success with include only": {
@@ -177,7 +178,7 @@ func Test_UploadFiles(t *testing.T) {
 				afero.WriteFile(fs, "copilot/prod/foo.yaml", []byte(mockContent3), 0644)
 			},
 			expected: []asset{
-				newAsset("files/copilot/prod/manifest.yaml", mockContent2, ""),
+				newAsset("files/copilot/prod/manifest.yaml", mockContent2, mime.TypeByExtension(".yaml")),
 				newAsset("files/test/copilot/.workspace", mockContent1, ""),
 			},
 		},
@@ -230,8 +231,8 @@ func Test_UploadFiles(t *testing.T) {
 				afero.WriteFile(fs, "dir/file.txt", []byte(mockContent1), 0644)
 			},
 			expected: []asset{
-				newAsset("dir/file.json", mockContent1, "application/json"),
-				newAsset("dir/file.txt", mockContent1, "text/plain; charset=utf-8"),
+				newAsset("dir/file.json", mockContent1, mime.TypeByExtension(".json")),
+				newAsset("dir/file.txt", mockContent1, mime.TypeByExtension(".txt")),
 			},
 		},
 		"duplicate content to separate destinations sorted": {
@@ -249,8 +250,8 @@ func Test_UploadFiles(t *testing.T) {
 			},
 			expected: []asset{
 				// dir/file.txt sorts before file.txt
-				newAsset("dir/file.txt", mockContent1, "text/plain; charset=utf-8"),
-				newAsset("file.txt", mockContent1, "text/plain; charset=utf-8"),
+				newAsset("dir/file.txt", mockContent1, mime.TypeByExtension(".txt")),
+				newAsset("file.txt", mockContent1, mime.TypeByExtension(".txt")),
 			},
 		},
 	}
