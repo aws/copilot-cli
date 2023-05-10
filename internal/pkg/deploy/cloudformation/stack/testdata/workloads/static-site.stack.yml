@@ -332,7 +332,7 @@ Resources:
               - Sid: AllowAssumeRole
                 Effect: Allow
                 Action: sts:AssumeRole
-                Resource: "*"
+                Resource: arn:aws:iam::123456789123:role/my-app-DNSDelegationRole
               - Sid: HostedZoneAccess
                 Effect: Allow
                 Action:

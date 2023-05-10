@@ -366,7 +366,7 @@ Resources:
               - Sid: AllowAssumeRole
                 Effect: Allow
                 Action: sts:AssumeRole
-                Resource: "*"
+                Resource: {{ .AppDNSDelegationRole }}
               - Sid: HostedZoneAccess
                 Effect: Allow
                 Action:
