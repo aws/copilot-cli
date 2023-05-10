@@ -9,6 +9,7 @@ import (
 	reflect "reflect"
 	time "time"
 
+	s3 "github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -36,18 +37,23 @@ func (m *Mockuploader) EXPECT() *MockuploaderMockRecorder {
 }
 
 // Upload mocks base method.
-func (m *Mockuploader) Upload(bucket, key string, data io.Reader) (string, error) {
+func (m *Mockuploader) Upload(bucket, key string, data io.Reader, overrider ...s3.UploadOverrider) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Upload", bucket, key, data)
+	varargs := []interface{}{bucket, key, data}
+	for _, a := range overrider {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Upload", varargs...)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Upload indicates an expected call of Upload.
-func (mr *MockuploaderMockRecorder) Upload(bucket, key, data interface{}) *gomock.Call {
+func (mr *MockuploaderMockRecorder) Upload(bucket, key, data interface{}, overrider ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Upload", reflect.TypeOf((*Mockuploader)(nil).Upload), bucket, key, data)
+	varargs := append([]interface{}{bucket, key, data}, overrider...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Upload", reflect.TypeOf((*Mockuploader)(nil).Upload), varargs...)
 }
 
 // MockversionGetter is a mock of versionGetter interface.

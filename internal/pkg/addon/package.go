@@ -22,31 +22,34 @@ import (
 )
 
 type uploader interface {
-	Upload(bucket, key string, data io.Reader) (string, error)
+	Upload(bucket, key string, data io.Reader, overriders ...s3.UploadOverrider) (string, error)
 }
 
 // packagePropertyConfig defines how to package a particular property in a cloudformation resource.
 // There are two ways replacements occur. Given a resource configuration like:
-//  MyResource:
-//    Type: AWS::Resource::Type
-//    Properties:
-//      <Property>: file/path
+//
+//	MyResource:
+//	  Type: AWS::Resource::Type
+//	  Properties:
+//	    <Property>: file/path
 //
 // Without BucketNameProperty and ObjectKeyProperty, `file/path` is directly replaced with
 // the S3 location the contents were uploaded to, resulting in this:
-//  MyResource:
-//    Type: AWS::Resource::Type
-//    Properties:
-//      <Property>: s3://bucket/hash
+//
+//	MyResource:
+//	  Type: AWS::Resource::Type
+//	  Properties:
+//	    <Property>: s3://bucket/hash
 //
 // If BucketNameProperty and ObjectKeyProperty are set, the value of <Property> is changed to a map
 // with BucketNameProperty and ObjectKeyProperty as the keys.
-//  MyResource:
-//    Type: AWS::Resource::Type
-//    Properties:
-//      <Property>:
-//        <BucketNameProperty>: bucket
-//        <ObjectKeyProperty>: hash
+//
+//	MyResource:
+//	  Type: AWS::Resource::Type
+//	  Properties:
+//	    <Property>:
+//	      <BucketNameProperty>: bucket
+//	      <ObjectKeyProperty>: hash
 type packagePropertyConfig struct {
 	// PropertyPath is the key in a cloudformation resource's 'Properties' map to be packaged.
 	// Nested properties are represented by multiple keys in the slice, so the field

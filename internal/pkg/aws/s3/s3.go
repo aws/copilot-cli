@@ -65,11 +65,39 @@ func New(s *session.Session) *S3 {
 	}
 }
 
+// UploadOverrider applies override when uploading objects to S3 bucket.
+type UploadOverrider func(*s3manager.UploadInput)
+
+// CustomContentType returns an UploadOverrider that overrides content type.
+func CustomContentType(contentType string) UploadOverrider {
+	return func(input *s3manager.UploadInput) {
+		if contentType != "" {
+			input.ContentType = aws.String(contentType)
+		}
+	}
+}
+
 // Upload uploads a file to an S3 bucket under the specified key.
 // Per s3's recommendation https://docs.aws.amazon.com/AmazonS3/latest/userguide/about-object-ownership.html:
 // The bucket owner, in addition to the object owner, is granted full control.
-func (s *S3) Upload(bucket, key string, data io.Reader) (string, error) {
-	return s.upload(bucket, key, data)
+func (s *S3) Upload(bucket, key string, data io.Reader, overriders ...UploadOverrider) (string, error) {
+	in := &s3manager.UploadInput{
+		Body:        data,
+		Bucket:      aws.String(bucket),
+		Key:         aws.String(key),
+		ACL:         aws.String(s3.ObjectCannedACLBucketOwnerFullControl),
+		ContentType: defaultContentTypeFromExt(key),
+	}
+	for _, opt := range overriders {
+		if opt != nil {
+			opt(in)
+		}
+	}
+	resp, err := s.s3Manager.Upload(in)
+	if err != nil {
+		return "", fmt.Errorf("upload %s to bucket %s: %w", key, bucket, err)
+	}
+	return resp.Location, nil
 }
 
 // EmptyBucket deletes all objects within the bucket.
@@ -204,21 +232,6 @@ func (s *S3) isBucketExists(bucket string) (bool, error) {
 	}
 
 	return true, nil
-}
-
-func (s *S3) upload(bucket, key string, buf io.Reader) (string, error) {
-	in := &s3manager.UploadInput{
-		Body:        buf,
-		Bucket:      aws.String(bucket),
-		Key:         aws.String(key),
-		ACL:         aws.String(s3.ObjectCannedACLBucketOwnerFullControl),
-		ContentType: defaultContentTypeFromExt(key),
-	}
-	resp, err := s.s3Manager.Upload(in)
-	if err != nil {
-		return "", fmt.Errorf("upload %s to bucket %s: %w", key, bucket, err)
-	}
-	return resp.Location, nil
 }
 
 func defaultContentTypeFromExt(key string) *string {

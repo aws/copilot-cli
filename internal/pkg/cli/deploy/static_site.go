@@ -60,7 +60,11 @@ func NewStaticSiteDeployer(in *WorkloadDeployerInput) (*staticSiteDeployer, erro
 			FS:                  svcDeployer.fs,
 			AssetDir:            artifactBucketAssetsDir,
 			AssetMappingFileDir: fmt.Sprintf("%s/environments/%s/workloads/%s/mapping", artifactBucketAssetsDir, svcDeployer.env.Name, svcDeployer.name),
-			Upload: func(path string, data io.Reader) error {
+			Upload: func(path string, data io.Reader, contentType ...string) error {
+				if len(contentType) != 0 {
+					_, err := svcDeployer.s3Client.Upload(svcDeployer.resources.S3Bucket, path, data, s3.CustomContentType(contentType[0]))
+					return err
+				}
 				_, err := svcDeployer.s3Client.Upload(svcDeployer.resources.S3Bucket, path, data)
 				return err
 			},

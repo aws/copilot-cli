@@ -13,6 +13,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
+	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/aws/secretsmanager"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ssm"
 	clideploy "github.com/aws/copilot-cli/internal/pkg/cli/deploy"
@@ -346,7 +347,7 @@ type wsWriter interface {
 }
 
 type uploader interface {
-	Upload(bucket, key string, data io.Reader) (string, error)
+	Upload(bucket, key string, data io.Reader, overriders ...s3.UploadOverrider) (string, error)
 }
 
 type bucketEmptier interface {

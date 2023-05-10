@@ -23,6 +23,7 @@ import (
 func TestS3_Upload(t *testing.T) {
 	testCases := map[string]struct {
 		mockS3ManagerClient func(m *mocks.Mocks3ManagerAPI)
+		inOverriders        []UploadOverrider
 
 		wantedURL string
 		wantError error
@@ -52,6 +53,25 @@ func TestS3_Upload(t *testing.T) {
 			},
 			wantedURL: "mockURL",
 		},
+		"allow overrider": {
+			inOverriders: []UploadOverrider{
+				CustomContentType("application/json"),
+			},
+			mockS3ManagerClient: func(m *mocks.Mocks3ManagerAPI) {
+				m.EXPECT().Upload(gomock.Any()).Do(func(in *s3manager.UploadInput, _ ...func(*s3manager.Uploader)) {
+					b, err := io.ReadAll(in.Body)
+					require.NoError(t, err)
+					require.Equal(t, "bar", string(b))
+					require.Equal(t, "mockBucket", aws.StringValue(in.Bucket))
+					require.Equal(t, "src/mockIndex.html", aws.StringValue(in.Key))
+					require.Equal(t, "application/json", aws.StringValue(in.ContentType))
+					require.Equal(t, s3.ObjectCannedACLBucketOwnerFullControl, aws.StringValue(in.ACL))
+				}).Return(&s3manager.UploadOutput{
+					Location: "mockURL",
+				}, nil)
+			},
+			wantedURL: "mockURL",
+		},
 	}
 
 	for name, tc := range testCases {
@@ -67,7 +87,7 @@ func TestS3_Upload(t *testing.T) {
 				s3Manager: mockS3ManagerClient,
 			}
 
-			gotURL, gotErr := service.Upload("mockBucket", "src/mockIndex.html", bytes.NewBuffer([]byte("bar")))
+			gotURL, gotErr := service.Upload("mockBucket", "src/mockIndex.html", bytes.NewBuffer([]byte("bar")), tc.inOverriders...)
 
 			if gotErr != nil {
 				require.EqualError(t, gotErr, tc.wantError.Error())

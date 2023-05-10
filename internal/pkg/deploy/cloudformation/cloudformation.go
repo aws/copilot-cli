@@ -129,7 +129,7 @@ type codePipelineClient interface {
 }
 
 type s3Client interface {
-	Upload(bucket, fileName string, data io.Reader) (string, error)
+	Upload(bucket, fileName string, data io.Reader, overriders ...s3.UploadOverrider) (string, error)
 }
 
 type stackSetClient interface {

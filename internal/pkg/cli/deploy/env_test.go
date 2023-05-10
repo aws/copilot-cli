@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	cfnclient "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	cfnmocks "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/mocks"
 
@@ -185,7 +186,7 @@ func TestEnvDeployer_UploadArtifacts(t *testing.T) {
 				m.patcher.EXPECT().EnsureManagerRoleIsAllowedToUpload("mockS3Bucket").Return(nil)
 				crs, err := customresource.Env(fakeTemplateFS())
 				require.NoError(t, err)
-				m.s3.EXPECT().Upload("mockS3Bucket", gomock.Any(), gomock.Any()).DoAndReturn(func(_, key string, _ io.Reader) (url string, err error) {
+				m.s3.EXPECT().Upload("mockS3Bucket", gomock.Any(), gomock.Any()).DoAndReturn(func(_, key string, _ io.Reader, _ ...s3.UploadOverrider) (url string, err error) {
 					for _, cr := range crs {
 						if strings.Contains(key, strings.ToLower(cr.Name())) {
 							return "", nil

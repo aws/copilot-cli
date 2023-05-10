@@ -15,6 +15,7 @@ import (
 	"golang.org/x/mod/semver"
 
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
@@ -22,7 +23,7 @@ import (
 )
 
 type uploader interface {
-	Upload(bucket, key string, data io.Reader) (string, error)
+	Upload(bucket, key string, data io.Reader, overrider ...s3.UploadOverrider) (string, error)
 }
 
 type versionGetter interface {

@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"mime"
 	"path"
 	"path/filepath"
 	"sort"
@@ -28,7 +29,7 @@ type ArtifactBucketUploader struct {
 	FS afero.Fs
 
 	// Upload is the function called when uploading a file.
-	Upload func(path string, contents io.Reader) error
+	Upload func(path string, contents io.Reader, contentType ...string) error
 
 	// AssetDir is the directory to upload the hashed files to.
 	AssetDir string
@@ -38,8 +39,9 @@ type ArtifactBucketUploader struct {
 }
 
 type asset struct {
-	localPath string
-	content   io.Reader
+	localPath   string
+	contentType string
+	content     io.Reader
 
 	ArtifactBucketPath string `json:"path"`
 	ServiceBucketPath  string `json:"destPath"`
@@ -119,6 +121,7 @@ func (u *ArtifactBucketUploader) walkFn(sourcePath, destPath string, recursive b
 		*assets = append(*assets, asset{
 			localPath:          fpath,
 			content:            buf,
+			contentType:        mime.TypeByExtension(filepath.Ext(fpath)),
 			ArtifactBucketPath: path.Join(u.AssetDir, hex.EncodeToString(hash.Sum(nil))),
 			ServiceBucketPath:  filepath.ToSlash(dest),
 		})
@@ -132,7 +135,7 @@ func (u *ArtifactBucketUploader) uploadAssets(assets []asset) error {
 	for i := range assets {
 		asset := assets[i]
 		g.Go(func() error {
-			if err := u.Upload(asset.ArtifactBucketPath, asset.content); err != nil {
+			if err := u.Upload(asset.ArtifactBucketPath, asset.content, asset.contentType); err != nil {
 				return fmt.Errorf("upload %q: %w", asset.localPath, err)
 			}
 			return nil

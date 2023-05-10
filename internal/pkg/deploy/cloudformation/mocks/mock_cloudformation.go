@@ -14,6 +14,7 @@ import (
 	stackset "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation/stackset"
 	cloudwatch "github.com/aws/copilot-cli/internal/pkg/aws/cloudwatch"
 	ecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
+	s3 "github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -645,18 +646,23 @@ func (m *Mocks3Client) EXPECT() *Mocks3ClientMockRecorder {
 }
 
 // Upload mocks base method.
-func (m *Mocks3Client) Upload(bucket, fileName string, data io.Reader) (string, error) {
+func (m *Mocks3Client) Upload(bucket, fileName string, data io.Reader, overriders ...s3.UploadOverrider) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Upload", bucket, fileName, data)
+	varargs := []interface{}{bucket, fileName, data}
+	for _, a := range overriders {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Upload", varargs...)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Upload indicates an expected call of Upload.
-func (mr *Mocks3ClientMockRecorder) Upload(bucket, fileName, data interface{}) *gomock.Call {
+func (mr *Mocks3ClientMockRecorder) Upload(bucket, fileName, data interface{}, overriders ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Upload", reflect.TypeOf((*Mocks3Client)(nil).Upload), bucket, fileName, data)
+	varargs := append([]interface{}{bucket, fileName, data}, overriders...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Upload", reflect.TypeOf((*Mocks3Client)(nil).Upload), varargs...)
 }
 
 // MockstackSetClient is a mock of stackSetClient interface.
