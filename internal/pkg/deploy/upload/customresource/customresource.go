@@ -51,7 +51,8 @@ var (
 	certReplicatorFilePath           = path.Join(customResourcesDir, "cert-replicator.js")
 	dnsDelegationFilePath            = path.Join(customResourcesDir, "dns-delegation.js")
 	envControllerFilePath            = path.Join(customResourcesDir, "env-controller.js")
-	nlbCertValidatorFilePath         = path.Join(customResourcesDir, "nlb-cert-validator.js")
+	nlbCertValidatorFilePath         = path.Join(customResourcesDir, "wkld-cert-validator.js")
+	staticSiteCertValidatorFilePath  = path.Join(customResourcesDir, "wkld-cert-validator.js")
 	nlbCustomDomainFilePath          = path.Join(customResourcesDir, "wkld-custom-domain.js")
 	staticSiteCustomDomainFilePath   = path.Join(customResourcesDir, "wkld-custom-domain.js")
 	uniqueJSONValuesFilePath         = path.Join(customResourcesDir, "unique-json-values.js")
@@ -151,6 +152,7 @@ func StaticSite(fs template.Reader) ([]*CustomResource, error) {
 		triggerStateMachineFnName: triggerStateMachineFilePath,
 		copyAssetsFnName:          copyAssetsFilePath,
 		customDomainFnName:        staticSiteCustomDomainFilePath,
+		certValidationFnName:      staticSiteCertValidatorFilePath,
 	})
 }
 

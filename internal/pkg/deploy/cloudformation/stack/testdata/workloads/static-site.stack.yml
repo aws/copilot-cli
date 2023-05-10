@@ -86,6 +86,7 @@ Resources:
     Type: AWS::CloudFront::Distribution
     Properties:
       DistributionConfig:
+        Aliases: ["example.com"]
         DefaultCacheBehavior:
           AllowedMethods: ["GET", "HEAD", "OPTIONS", "PUT", "PATCH", "POST", "DELETE"]
           ViewerProtocolPolicy: allow-all
@@ -101,6 +102,13 @@ Resources:
             # required when the origin is an S3 bucket.
             S3OriginConfig:
               OriginAccessIdentity: '' 
+        ViewerCertificate:
+          !If
+            - HasAssociatedDomain
+            - AcmCertificateArn: !Ref CertificateValidatorAction
+              MinimumProtocolVersion: TLSv1
+              SslSupportMethod:  sni-only
+            - !Ref AWS::NoValue
 
   TriggerStateMachineFunction:
     Metadata:
@@ -341,6 +349,100 @@ Resources:
                   - "route53:Describe*"
                   - "route53:ListResourceRecordSets"
                   - "route53:ListHostedZonesByName"
+                Resource: "*"
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  CertificateValidatorAction:
+    Metadata:
+      'aws:copilot:description': "Request and validate the certificate for your Static Site"
+    Type: Custom::CertificateValidationFunction
+    Condition: HasAssociatedDomain
+    Properties:
+      ServiceToken: !GetAtt CertificateValidationFunction.Arn
+      EnvHostedZoneId:
+        Fn::ImportValue:
+          !Sub "${AppName}-${EnvName}-HostedZone"
+      EnvName: !Ref EnvName
+      AppName: !Ref AppName
+      ServiceName: !Ref WorkloadName
+      RootDNSRole: arn:aws:iam::123456789123:role/my-app-DNSDelegationRole
+      DomainName:  example.com
+      IsCloudFrontCertificate: true
+      Aliases:  ["example.com"] 
+
+  CertificateValidationFunction:
+    Type: AWS::Lambda::Function
+    Condition: HasAssociatedDomain
+    Properties:
+      Handler: "index.handler"
+      Timeout: 900
+      MemorySize: 512
+      Role: !GetAtt 'CertificateValidatorRole.Arn'
+      Runtime: nodejs16.x
+
+  CertificateValidatorRole:
+    Metadata:
+      'aws:copilot:description': "An IAM role to request and validate a certificate for your service"
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          -
+            Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: "CertValidatorPolicy"
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: AllowAssumeRole
+                Effect: Allow
+                Action: sts:AssumeRole
+                Resource: "*"
+              - Sid: HostedZoneUpdateAndWait
+                Effect: Allow
+                Action: route53:ChangeResourceRecordSets
+                Resource: "*"
+              - Sid: HostedZoneRead
+                Effect: Allow
+                Action:
+                  - route53:ListResourceRecordSets
+                  - route53:GetChange
+                Resource: "*"
+              - Sid: ServiceCertificateDelete
+                Effect: Allow
+                Action: acm:DeleteCertificate
+                Resource: "*"
+                Condition:
+                  StringEquals:
+                    'aws:ResourceTag/copilot-application': !Sub '${AppName}'
+                    'aws:ResourceTag/copilot-environment': !Sub '${EnvName}'
+                    'aws:ResourceTag/copilot-service': !Sub '${WorkloadName}'
+              - Sid: TaggedResourcesRead
+                Effect: Allow
+                Action: tag:GetResources
+                Resource: "*"
+              - Sid: ServiceCertificateCreate
+                Effect: Allow
+                Action:
+                  - acm:RequestCertificate
+                  - acm:AddTagsToCertificate
+                Resource: "*"
+                Condition:
+                  StringEquals:
+                    'aws:ResourceTag/copilot-application': !Sub '${AppName}'
+                    'aws:ResourceTag/copilot-environment': !Sub '${EnvName}'
+                    'aws:ResourceTag/copilot-service': !Sub '${WorkloadName}'
+              - Sid: CertificateRead
+                Effect: Allow
+                Action: acm:DescribeCertificate
                 Resource: "*"
       ManagedPolicyArns:
         - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
