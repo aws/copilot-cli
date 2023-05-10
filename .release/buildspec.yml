@@ -1,8 +1,6 @@
 version: 0.2
 
 env:
-  variables:
-    LONG_COMMIT_ID: ""
   exported-variables:
     - LONG_COMMIT_ID
 
