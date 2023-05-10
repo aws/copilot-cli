@@ -10,7 +10,6 @@ let envHostedZoneID,
   appName,
   envName,
   serviceName,
-  certificateDomain,
   domainTypes,
   rootDNSRole,
   domainName;
@@ -130,7 +129,7 @@ function report(
     let responseBody = JSON.stringify({
       Status: responseStatus,
       Reason: reasonWithLogInfo,
-      PhysicalResourceId: physicalResourceId || context.logStreamName,
+      PhysicalResourceId: physicalResourceId,
       StackId: event.StackId,
       RequestId: event.RequestId,
       LogicalResourceId: event.LogicalResourceId,
@@ -180,7 +179,6 @@ exports.handler = async function (event, context) {
   serviceName = props.ServiceName;
   domainName = props.DomainName;
   rootDNSRole = props.RootDNSRole;
-  certificateDomain = `${serviceName}-nlb.${envName}.${appName}.${domainName}`;
   domainTypes = {
     EnvDomainZone: {
       regex: new RegExp(`^([^\.]+\.)?${envName}.${appName}.${domainName}`),
@@ -196,7 +194,9 @@ exports.handler = async function (event, context) {
     },
   };
 
-  const physicalResourceID = event.LogicalResourceId; // The PhysicalResourceID never changes because LogicalResourceId never changes.
+  // The PhysicalResourceID never changes because LogicalResourceId never changes.
+  // Therefore, a "Replacement" should never happen.
+  const physicalResourceID = event.LogicalResourceId;
   let handler = async function () {
     switch (event.RequestType) {
       case "Update":
@@ -428,11 +428,11 @@ async function deactivateAlias(
     );
     if (recordSetNotMatchedErrMessageRegex.test(e.message)) {
       // NOTE: The alias target, or record value is not exactly what we provided
-      // E.g. the alias target DNS name is another load balancer
+      // E.g. the alias target DNS name is another load balancer or cloudfront distribution
       // This service should not delete the A-record if it is not being pointed to.
       // However, this is an unexpected situation, we should log this information.
       console.log(
-        `Received error when trying to delete A-record for ${alias}: ${e.message}. Perhaps the alias record isn't pointing to the load balancer ${publicAccessDNS}.`
+        `Received error when trying to delete A-record for ${alias}: ${e.message}. Perhaps the alias record isn't pointing to ${publicAccessDNS}.`
       );
       return;
     }

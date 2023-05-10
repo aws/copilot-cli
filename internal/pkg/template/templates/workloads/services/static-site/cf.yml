@@ -306,7 +306,7 @@ Resources:
 {{- if .StaticSiteAlias}}
   CustomDomainAction:
     Metadata:
-      'aws:copilot:description': "Add A-records for your CloudFront alias"
+      'aws:copilot:description': "Add A-records for your Static Site alias"
     Type: Custom::CustomDomainFunction
     Condition: HasAssociatedDomain
     Properties:

@@ -94,7 +94,7 @@ func TestLBWS(t *testing.T) {
 				Buffer: bytes.NewBufferString("rule priority"),
 			},
 			"custom-resources/wkld-custom-domain.js": {
-				Buffer: bytes.NewBufferString("nlb custom domain"),
+				Buffer: bytes.NewBufferString("service-level custom domain"),
 			},
 			"custom-resources/nlb-cert-validator.js": {
 				Buffer: bytes.NewBufferString("nlb cert"),
@@ -105,7 +105,7 @@ func TestLBWS(t *testing.T) {
 		"DynamicDesiredCountFunction": "manual/scripts/custom-resources/dynamicdesiredcountfunction/2611784f21e91e499306dac066aae5fd8f2ba664b38073bdd3198d2e041c076e.zip",
 		"EnvControllerFunction":       "manual/scripts/custom-resources/envcontrollerfunction/72297cacaeab3a267e371c17ea3f0235905b0da51410eb31c10f7c66ba944044.zip",
 		"RulePriorityFunction":        "manual/scripts/custom-resources/rulepriorityfunction/1385d258950a50faf4b5cd7deeecbc4bcc79a0d41d631e3977cffa0332e6f0c6.zip",
-		"NLBCustomDomainFunction":     "manual/scripts/custom-resources/nlbcustomdomainfunction/8f7e392db9b10ae69816b92c0b1d501e0ceb630e029852ac8ea33a3c205f8e4c.zip",
+		"NLBCustomDomainFunction":     "manual/scripts/custom-resources/nlbcustomdomainfunction/ac1c96e7f0823f3167b4e74c8b286ffe8f9d43279dc232d9478837327e57905e.zip",
 		"NLBCertValidatorFunction":    "manual/scripts/custom-resources/nlbcertvalidatorfunction/3b9f56301b50779e09a3495a6d7eadc42b4401f265d4cfb359543c1ad3f21769.zip",
 	}
 
