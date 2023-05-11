@@ -53,8 +53,7 @@ var (
 	envControllerFilePath            = path.Join(customResourcesDir, "env-controller.js")
 	nlbCertValidatorFilePath         = path.Join(customResourcesDir, "wkld-cert-validator.js")
 	staticSiteCertValidatorFilePath  = path.Join(customResourcesDir, "wkld-cert-validator.js")
-	nlbCustomDomainFilePath          = path.Join(customResourcesDir, "wkld-custom-domain.js")
-	staticSiteCustomDomainFilePath   = path.Join(customResourcesDir, "wkld-custom-domain.js")
+	wkldCustomDomainFilePath         = path.Join(customResourcesDir, "wkld-custom-domain.js")
 	uniqueJSONValuesFilePath         = path.Join(customResourcesDir, "unique-json-values.js")
 	triggerStateMachineFilePath      = path.Join(customResourcesDir, "trigger-state-machine.js")
 	copyAssetsFilePath               = path.Join(customResourcesDir, "copy-assets.js")
@@ -123,7 +122,7 @@ func LBWS(fs template.Reader) ([]*CustomResource, error) {
 		dynamicDesiredCountFnName: desiredCountDelegationFilePath,
 		envControllerFnName:       envControllerFilePath,
 		rulePriorityFnName:        albRulePriorityGeneratorFilePath,
-		nlbCustomDomainFnName:     nlbCustomDomainFilePath,
+		nlbCustomDomainFnName:     wkldCustomDomainFilePath,
 		nlbCertValidatorFnName:    nlbCertValidatorFilePath,
 	})
 }
@@ -151,8 +150,8 @@ func StaticSite(fs template.Reader) ([]*CustomResource, error) {
 	return buildCustomResources(fs, map[string]string{
 		triggerStateMachineFnName: triggerStateMachineFilePath,
 		copyAssetsFnName:          copyAssetsFilePath,
-		customDomainFnName:        staticSiteCustomDomainFilePath,
 		certValidationFnName:      staticSiteCertValidatorFilePath,
+		customDomainFnName:        wkldCustomDomainFilePath,
 	})
 }
 

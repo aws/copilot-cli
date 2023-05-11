@@ -88,7 +88,8 @@ Resources:
       DistributionConfig:
         Aliases: ["example.com"]
         DefaultCacheBehavior:
-          AllowedMethods: ["GET", "HEAD", "OPTIONS", "PUT", "PATCH", "POST", "DELETE"]
+          Compress: true
+          AllowedMethods: ["GET", "HEAD"]
           ViewerProtocolPolicy: allow-all
           CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6 # See https://go.aws/3bJid3k
           TargetOriginId: !Sub 'copilot-${AppName}-${EnvName}-${WorkloadName}'
@@ -148,7 +149,19 @@ Resources:
     Metadata:
       aws:copilot:description: A custom resource to trigger the file-copying state machine
     Type: Custom::TriggerStateMachine
-    DependsOn: CopyAssetsStateMachine
+    DependsOn: 
+      - CopyAssetsStateMachine
+      - Bucket
+      - BucketPolicyForCloudFront
+      - CloudFrontOriginAccessControl
+      - CloudFrontDistribution
+      - TriggerStateMachineFunction
+      - TriggerStateMachineFunctionRole
+      - CopyAssetsStateMachine
+      - CopyAssetsStateMachineRole
+      - CopyAssetsFunction
+      - CopyAssetsFunctionRole
+      - EnvManagerS3Access
     Properties:
       ServiceToken: !GetAtt TriggerStateMachineFunction.Arn
       StateMachineARN: !GetAtt CopyAssetsStateMachine.Arn
@@ -340,7 +353,7 @@ Resources:
               - Sid: AllowAssumeRole
                 Effect: Allow
                 Action: sts:AssumeRole
-                Resource: "*"
+                Resource: arn:aws:iam::123456789123:role/my-app-DNSDelegationRole
               - Sid: HostedZoneAccess
                 Effect: Allow
                 Action:

@@ -249,7 +249,7 @@ sidecars:
 
 <a id="add-multiple-port-and-protocol-listeners-to-your-network-load-balancers"></a>
 ### Network Load Balancer に対する 複数のポートやプロコトルのリスナー追加
-新しいフィールド [`nlb.additional_listeners`](../docs/manifest/lb-web-service.jp.md#nlb-additional-listeners)を利用して、NLB に対する追加のリスナーを設定できます。
+新しいフィールド [`nlb.additional_listeners`](../docs/manifest/lb-web-service.ja.md#nlb-additional-listeners)を利用して、NLB に対する追加のリスナーを設定できます。
 設定例を通じて確認しましょう。
 
 ```yaml

@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"mime"
 	"path"
 	"sync"
 	"testing"
@@ -55,11 +56,12 @@ func Test_UploadFiles(t *testing.T) {
 		return hex.EncodeToString(hash.Sum(nil))
 	}
 
-	newAsset := func(dstPath string, content string) asset {
+	newAsset := func(dstPath string, content string, contentType string) asset {
 		return asset{
 			ArtifactBucketPath: path.Join(mockPrefix, hash(content)),
 			content:            bytes.NewBufferString(content),
 			ServiceBucketPath:  dstPath,
+			ContentType:        contentType,
 		}
 	}
 
@@ -98,7 +100,7 @@ func Test_UploadFiles(t *testing.T) {
 				afero.WriteFile(fs, "copilot/prod/manifest.yaml", []byte(mockContent2), 0644)
 			},
 			expected: []asset{
-				newAsset("copilot/.workspace", mockContent1),
+				newAsset("copilot/.workspace", mockContent1, ""),
 			},
 		},
 		"success without recursive": {
@@ -114,8 +116,8 @@ func Test_UploadFiles(t *testing.T) {
 				afero.WriteFile(fs, "test/foo", []byte(mockContent3), 0644)
 			},
 			expected: []asset{
-				newAsset("foo", mockContent3),
-				newAsset("manifest.yaml", mockContent2),
+				newAsset("foo", mockContent3, ""),
+				newAsset("manifest.yaml", mockContent2, mime.TypeByExtension(".yaml")),
 			},
 		},
 		"success with include only": {
@@ -135,7 +137,7 @@ func Test_UploadFiles(t *testing.T) {
 				afero.WriteFile(fs, "copilot/prod/manifest.yaml", []byte(mockContent2), 0644)
 			},
 			expected: []asset{
-				newAsset("ws/copilot/.workspace", mockContent1),
+				newAsset("ws/copilot/.workspace", mockContent1, ""),
 			},
 		},
 		"success with exclude only": {
@@ -153,7 +155,7 @@ func Test_UploadFiles(t *testing.T) {
 				afero.WriteFile(fs, "copilot/prod/manifest.yaml", []byte(mockContent2), 0644)
 			},
 			expected: []asset{
-				newAsset("test/copilot/.workspace", mockContent1),
+				newAsset("test/copilot/.workspace", mockContent1, ""),
 			},
 		},
 		"success with both include and exclude": {
@@ -176,8 +178,8 @@ func Test_UploadFiles(t *testing.T) {
 				afero.WriteFile(fs, "copilot/prod/foo.yaml", []byte(mockContent3), 0644)
 			},
 			expected: []asset{
-				newAsset("files/copilot/prod/manifest.yaml", mockContent2),
-				newAsset("files/test/copilot/.workspace", mockContent1),
+				newAsset("files/copilot/prod/manifest.yaml", mockContent2, mime.TypeByExtension(".yaml")),
+				newAsset("files/test/copilot/.workspace", mockContent1, ""),
 			},
 		},
 		"success with file as source": {
@@ -191,7 +193,7 @@ func Test_UploadFiles(t *testing.T) {
 				afero.WriteFile(fs, "test/copilot/.workspace", []byte(mockContent1), 0644)
 			},
 			expected: []asset{
-				newAsset(".workspace", mockContent1),
+				newAsset(".workspace", mockContent1, ""),
 			},
 		},
 		"success with file as source and destination set": {
@@ -206,11 +208,15 @@ func Test_UploadFiles(t *testing.T) {
 				afero.WriteFile(fs, "test/copilot/.workspace", []byte(mockContent1), 0644)
 			},
 			expected: []asset{
-				newAsset("/is/a/file", mockContent1),
+				newAsset("/is/a/file", mockContent1, ""),
 			},
 		},
 		"duplicate file mappings dedupe'd": {
 			files: []manifest.FileUpload{
+				{
+					Source:      "dir/file.json",
+					Destination: "dir/file.json",
+				},
 				{
 					Source:      "dir/file.txt",
 					Destination: "dir/file.txt",
@@ -221,10 +227,12 @@ func Test_UploadFiles(t *testing.T) {
 				},
 			},
 			mockFileSystem: func(fs afero.Fs) {
+				afero.WriteFile(fs, "dir/file.json", []byte(mockContent1), 0644)
 				afero.WriteFile(fs, "dir/file.txt", []byte(mockContent1), 0644)
 			},
 			expected: []asset{
-				newAsset("dir/file.txt", mockContent1),
+				newAsset("dir/file.json", mockContent1, mime.TypeByExtension(".json")),
+				newAsset("dir/file.txt", mockContent1, mime.TypeByExtension(".txt")),
 			},
 		},
 		"duplicate content to separate destinations sorted": {
@@ -242,8 +250,8 @@ func Test_UploadFiles(t *testing.T) {
 			},
 			expected: []asset{
 				// dir/file.txt sorts before file.txt
-				newAsset("dir/file.txt", mockContent1),
-				newAsset("file.txt", mockContent1),
+				newAsset("dir/file.txt", mockContent1, mime.TypeByExtension(".txt")),
+				newAsset("file.txt", mockContent1, mime.TypeByExtension(".txt")),
 			},
 		},
 	}
