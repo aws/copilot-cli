@@ -3,6 +3,14 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: CloudFormation template that represents a static site backed by S3.
 
+{{- /*
+!¡!¡!¡!¡!¡!¡
+If you are adding resources to this template, make sure to add the resources to
+the TriggerStateMachineAction.DependsOn list. This will ensure that files
+are only copied to Bucket if all other resources are successfully created.
+!¡!¡!¡!¡!¡!¡
+*/ -}}
+
 {{- if .SerializedManifest }}
 Metadata:
   Manifest: |
@@ -88,7 +96,8 @@ Resources:
     Properties:
       DistributionConfig:
         DefaultCacheBehavior:
-          AllowedMethods: ["GET", "HEAD", "OPTIONS", "PUT", "PATCH", "POST", "DELETE"]
+          Compress: true
+          AllowedMethods: ["GET", "HEAD"]
           ViewerProtocolPolicy: allow-all
           CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6 # See https://go.aws/3bJid3k
           TargetOriginId: !Sub 'copilot-${AppName}-${EnvName}-${WorkloadName}'
@@ -149,7 +158,19 @@ Resources:
     Metadata:
       aws:copilot:description: A custom resource to trigger the file-copying state machine
     Type: Custom::TriggerStateMachine
-    DependsOn: CopyAssetsStateMachine
+    DependsOn: 
+      - CopyAssetsStateMachine {{- /* This is a real dependency */}}
+      - Bucket
+      - BucketPolicyForCloudFront
+      - CloudFrontOriginAccessControl
+      - CloudFrontDistribution
+      - TriggerStateMachineFunction
+      - TriggerStateMachineFunctionRole
+      - CopyAssetsStateMachine
+      - CopyAssetsStateMachineRole
+      - CopyAssetsFunction
+      - CopyAssetsFunctionRole
+      - EnvManagerS3Access
     Properties:
       ServiceToken: !GetAtt TriggerStateMachineFunction.Arn
       StateMachineARN: !GetAtt CopyAssetsStateMachine.Arn
