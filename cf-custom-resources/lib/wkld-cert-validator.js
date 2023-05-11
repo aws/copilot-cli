@@ -162,6 +162,8 @@ function report(event, context, responseStatus, physicalResourceId, responseData
 exports.handler = async function (event, context) {
   // Destruct resource properties into local variables.
   const props = event.ResourceProperties;
+  // TODO: LoadBalancerDNS only exists when we use this for NLB (not for Static Site CloudFront). Eventually when we switch to use Golang,
+  // we'll make it dedicated to NLB or Static Site and reuse common logic.
   let { LoadBalancerDNS: loadBalancerDNS } = props;
   const aliases = new Set(props.Aliases);
 
@@ -307,6 +309,8 @@ async function validateAliases(aliases, loadBalancerDNS) {
           return;
         }
         let aliasTarget = recordSet[0].AliasTarget;
+        // If loadBalancerDNS is empty, it means we are using this lambda for dedicated CloudFront for Static Site.
+        // And in this scenario we can just error out if an A-record exists.
         if (aliasTarget && loadBalancerDNS && aliasTarget.DNSName.toLowerCase() === `${loadBalancerDNS.toLowerCase()}.`) {
           return; // The record is an alias record and is in use by myself, hence valid.
         }
@@ -678,6 +682,8 @@ async function inUseByOtherServices(loadBalancerDNS, domainName, route53Client) 
   if (!targetRecordExists(domainName, recordSet)) {
     return false; // If there is no record using this domain, it is not in use.
   }
+  // If there's no loadBalancerDNS, that means we are deleting validation records used by dedicated CloudFront. In that scenario,
+  // the validation record is uniquely used.
   const inUseByMySelf = loadBalancerDNS
     ? recordSet[0].AliasTarget && recordSet[0].AliasTarget.DNSName.toLowerCase() === `${loadBalancerDNS.toLowerCase()}.`
     : true;
