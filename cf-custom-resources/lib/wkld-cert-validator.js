@@ -10,15 +10,7 @@ const ATTEMPTS_CERTIFICATE_VALIDATED = 19;
 const ATTEMPTS_CERTIFICATE_NOT_IN_USE = 12;
 const DELAY_CERTIFICATE_VALIDATED_IN_S = 30;
 
-let envHostedZoneID,
-  appName,
-  envName,
-  serviceName,
-  certificateDomain,
-  domainTypes,
-  rootDNSRole,
-  domainName,
-  cloudFrontCert;
+let envHostedZoneID, appName, envName, serviceName, certificateDomain, domainTypes, rootDNSRole, domainName, cloudFrontCert;
 let defaultSleep = function (ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 };
@@ -124,14 +116,7 @@ let hostedZoneID = {
  * @param {string} [reason] reason for failure, if any, to convey to the user
  * @returns {Promise} Promise that is resolved on success, or rejected on connection error or HTTP error response
  */
-function report(
-  event,
-  context,
-  responseStatus,
-  physicalResourceId,
-  responseData,
-  reason
-) {
+function report(event, context, responseStatus, physicalResourceId, responseData, reason) {
   return new Promise((resolve, reject) => {
     const https = require("https");
     const { URL } = require("url");
@@ -188,9 +173,7 @@ exports.handler = async function (event, context) {
   domainName = props.DomainName;
   rootDNSRole = props.RootDNSRole;
   cloudFrontCert = props.IsCloudFrontCertificate;
-  certificateDomain = cloudFrontCert
-    ? `${serviceName}.${envName}.${appName}.${domainName}`
-    : `${serviceName}-nlb.${envName}.${appName}.${domainName}`;
+  certificateDomain = cloudFrontCert ? `${serviceName}.${envName}.${appName}.${domainName}` : `${serviceName}-nlb.${envName}.${appName}.${domainName}`;
   domainTypes = {
     EnvDomainZone: {
       regex: new RegExp(`^([^\.]+\.)?${envName}.${appName}.${domainName}`),
@@ -221,15 +204,10 @@ exports.handler = async function (event, context) {
         await validateAliases(aliases, loadBalancerDNS);
         const certificateARN = await requestCertificate({
           aliases: aliases,
-          idempotencyToken: CRYPTO.createHash("md5")
-            .update(`/${serviceName}/${aliasesSorted}`)
-            .digest("hex"),
+          idempotencyToken: CRYPTO.createHash("md5").update(`/${serviceName}/${aliasesSorted}`).digest("hex"),
         });
         physicalResourceID = certificateARN; // Update the physical resource ID if a new certificate is created.
-        const options = await waitForValidationOptionsToBeReady(
-          certificateARN,
-          aliases
-        );
+        const options = await waitForValidationOptionsToBeReady(certificateARN, aliases);
         await validate(certificateARN, options);
         break;
       case "Delete":
@@ -237,10 +215,7 @@ exports.handler = async function (event, context) {
           // This means no certificate has been created, nor any records. Exit without doing anything.
           break;
         }
-        let unusedOptions = await unusedValidationOptions(
-          physicalResourceID,
-          loadBalancerDNS
-        );
+        let unusedOptions = await unusedValidationOptions(physicalResourceID, loadBalancerDNS);
         await devalidate(unusedOptions);
         await deleteCertificate(physicalResourceID);
         break;
@@ -254,14 +229,7 @@ exports.handler = async function (event, context) {
     await report(event, context, "SUCCESS", physicalResourceID);
   } catch (err) {
     console.log(`Caught error for service ${serviceName}: ${err.message}`);
-    await report(
-      event,
-      context,
-      "FAILED",
-      physicalResourceID,
-      null,
-      err.message
-    );
+    await report(event, context, "FAILED", physicalResourceID, null, err.message);
   }
 };
 
@@ -297,9 +265,7 @@ async function deleteCertificate(certARN) {
   }
 
   if (attempt >= ATTEMPTS_CERTIFICATE_NOT_IN_USE) {
-    throw new Error(
-      `Certificate still in use after checking for ${ATTEMPTS_CERTIFICATE_NOT_IN_USE} attempts.`
-    );
+    throw new Error(`Certificate still in use after checking for ${ATTEMPTS_CERTIFICATE_NOT_IN_USE} attempts.`);
   }
 
   await clients
@@ -341,18 +307,11 @@ async function validateAliases(aliases, loadBalancerDNS) {
           return;
         }
         let aliasTarget = recordSet[0].AliasTarget;
-        if (
-          aliasTarget &&
-          loadBalancerDNS &&
-          aliasTarget.DNSName.toLowerCase() ===
-            `${loadBalancerDNS.toLowerCase()}.`
-        ) {
+        if (aliasTarget && loadBalancerDNS && aliasTarget.DNSName.toLowerCase() === `${loadBalancerDNS.toLowerCase()}.`) {
           return; // The record is an alias record and is in use by myself, hence valid.
         }
         if (aliasTarget) {
-          throw new Error(
-            `Alias ${alias} is already in use by ${aliasTarget.DNSName}. This could be another load balancer of a different service.`
-          );
+          throw new Error(`Alias ${alias} is already in use by ${aliasTarget.DNSName}. This could be another load balancer of a different service.`);
         }
         throw new Error(`Alias ${alias} is already in use`);
       });
@@ -414,11 +373,7 @@ async function waitForValidationOptionsToBeReady(certificateARN, aliases) {
       .promise();
     const options = Certificate.DomainValidationOptions || [];
     options.forEach((option) => {
-      if (
-        option.ResourceRecord &&
-        (aliases.has(option.DomainName) ||
-          option.DomainName.toLowerCase() === certificateDomain.toLowerCase())
-      ) {
+      if (option.ResourceRecord && (aliases.has(option.DomainName) || option.DomainName.toLowerCase() === certificateDomain.toLowerCase())) {
         readyCount++;
       }
     });
@@ -432,9 +387,7 @@ async function waitForValidationOptionsToBeReady(certificateARN, aliases) {
     const base = Math.pow(2, attempt);
     await sleep(random() * base * 50 + base * 150);
   }
-  throw new Error(
-    `resource validation records are not ready after ${attempt} tries`
-  );
+  throw new Error(`resource validation records are not ready after ${attempt} tries`);
 }
 
 /**
@@ -484,9 +437,7 @@ async function validateOption(option) {
     },
   ];
 
-  let { hostedZoneID, route53Client } = await domainResources(
-    option.DomainName
-  );
+  let { hostedZoneID, route53Client } = await domainResources(option.DomainName);
   let { ChangeInfo } = await route53Client
     .changeResourceRecordSets({
       ChangeBatch: {
@@ -519,16 +470,12 @@ async function validateOption(option) {
 async function unusedValidationOptions(ownedCertARN, loadBalancerDNS) {
   // Look for validation options that will be no longer needed by this service.
   const certificates = await serviceCertificates();
-  const { certOwned: certPendingDeletion, otherCerts: certInUse } =
-    categorizeCertificates(certificates, ownedCertARN);
+  const { certOwned: certPendingDeletion, otherCerts: certInUse } = categorizeCertificates(certificates, ownedCertARN);
   if (!certPendingDeletion) {
     // Cannot find the certificate that is pending deletion; perhaps it is deleted already. Exit peacefully.
     return new Set();
   }
-  let optionsPendingDeletion = await unusedOptionsByService(
-    certPendingDeletion,
-    certInUse
-  );
+  let optionsPendingDeletion = await unusedOptionsByService(certPendingDeletion, certInUse);
 
   // For each of the options pending deletion, validate if it is in use by other services. If it is, Copilot
   // will not delete it.
@@ -547,11 +494,7 @@ async function unusedValidationOptions(ownedCertARN, loadBalancerDNS) {
         throw err;
       }
     }
-    const promise = inUseByOtherServices(
-      loadBalancerDNS,
-      domainName,
-      route53Client
-    ).then((isUsed) => {
+    const promise = inUseByOtherServices(loadBalancerDNS, domainName, route53Client).then((isUsed) => {
       if (isUsed) {
         optionsPendingDeletion.delete(option);
       }
@@ -597,9 +540,7 @@ async function devalidateOption(option) {
     },
   ];
 
-  let { hostedZoneID, route53Client } = await domainResources(
-    option.DomainName
-  );
+  let { hostedZoneID, route53Client } = await domainResources(option.DomainName);
   let changeResourceRecordSetsInput = {
     ChangeBatch: {
       Comment: `Delete the validation record for ${option.DomainName}`,
@@ -609,19 +550,13 @@ async function devalidateOption(option) {
   };
   let changeInfo;
   try {
-    ({ ChangeInfo: changeInfo } = await route53Client
-      .changeResourceRecordSets(changeResourceRecordSetsInput)
-      .promise());
+    ({ ChangeInfo: changeInfo } = await route53Client.changeResourceRecordSets(changeResourceRecordSetsInput).promise());
   } catch (e) {
-    let recordSetNotFoundErrMessageRegex = new RegExp(
-      ".*Tried to delete resource record set.*but it was not found.*"
-    );
+    let recordSetNotFoundErrMessageRegex = new RegExp(".*Tried to delete resource record set.*but it was not found.*");
     if (recordSetNotFoundErrMessageRegex.test(e.message)) {
       return; // If we attempt to `DELETE` a record that doesn't exist, the job is already done, skip waiting.
     }
-    throw new Error(
-      `delete record ${option.ResourceRecord.Name}: ` + e.message
-    );
+    throw new Error(`delete record ${option.ResourceRecord.Name}: ` + e.message);
   }
 
   await route53Client
@@ -691,10 +626,7 @@ async function unusedOptionsByService(certPendingDeletion, certsInUse) {
   let optionsPendingDeletion = new Map();
   for (const option of certPendingDeletion["DomainValidationOptions"]) {
     if (option["ResourceRecord"]) {
-      optionsPendingDeletion.set(
-        JSON.stringify(option["ResourceRecord"]),
-        option
-      );
+      optionsPendingDeletion.set(JSON.stringify(option["ResourceRecord"]), option);
     }
   }
   for (const { DomainValidationOptions: validationOptions } of certsInUse) {
@@ -721,11 +653,7 @@ async function unusedOptionsByService(certPendingDeletion, certsInUse) {
  * AWS-SDK mocks cannot mock the API call if the client is initialized in a callback.
  * @returns {Promise<boolean>} True if it is considered in use; otherwise false.
  */
-async function inUseByOtherServices(
-  loadBalancerDNS,
-  domainName,
-  route53Client
-) {
+async function inUseByOtherServices(loadBalancerDNS, domainName, route53Client) {
   let hostedZoneID;
   try {
     ({ hostedZoneID } = await domainResources(domainName));
@@ -751,9 +679,7 @@ async function inUseByOtherServices(
     return false; // If there is no record using this domain, it is not in use.
   }
   const inUseByMySelf = loadBalancerDNS
-    ? recordSet[0].AliasTarget &&
-      recordSet[0].AliasTarget.DNSName.toLowerCase() ===
-        `${loadBalancerDNS.toLowerCase()}.`
+    ? recordSet[0].AliasTarget && recordSet[0].AliasTarget.DNSName.toLowerCase() === `${loadBalancerDNS.toLowerCase()}.`
     : true;
 
   return !inUseByMySelf;
@@ -800,9 +726,7 @@ async function hostedZoneIDByName(domain) {
     })
     .promise();
   if (!HostedZones || HostedZones.length === 0) {
-    throw new Error(
-      `Couldn't find any Hosted Zone with DNS name ${domainName}.`
-    );
+    throw new Error(`Couldn't find any Hosted Zone with DNS name ${domainName}.`);
   }
   return HostedZones[0].Id.split("/").pop();
 }
@@ -829,9 +753,7 @@ async function domainResources(alias) {
       hostedZoneID: await hostedZoneID.root(),
     };
   }
-  throw new UnrecognizedDomainTypeError(
-    `unrecognized domain type for ${alias}`
-  );
+  throw new UnrecognizedDomainTypeError(`unrecognized domain type for ${alias}`);
 }
 
 function setEqual(setA, setB) {
@@ -861,11 +783,7 @@ UnrecognizedDomainTypeError.prototype = Object.create(Error.prototype, {
 
 exports.deadlineExpired = function () {
   return new Promise(function (resolve, reject) {
-    setTimeout(
-      reject,
-      14 * 60 * 1000 + 30 * 1000 /* 14.5 minutes*/,
-      new Error(`Lambda took longer than 14.5 minutes to update custom domain`)
-    );
+    setTimeout(reject, 14 * 60 * 1000 + 30 * 1000 /* 14.5 minutes*/, new Error(`Lambda took longer than 14.5 minutes to update custom domain`));
   });
 };
 
