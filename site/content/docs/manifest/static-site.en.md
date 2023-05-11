@@ -59,7 +59,7 @@ Optional. Pattern-matched [filters](https://awscli.amazonaws.com/v2/documentatio
 `[!sequence]` (matches any character not in `sequence`)  
 
 <span class="parent-field">files.</span><a id="files-reinclude" href="#files-reinclude" class="field">`reinclude`</a> <span class="type">String</span>  
-Optional. Pattern-matched [filters](https://awscli.amazonaws.com/v2/documentation/api/latest/reference/s3/index.html#use-of-exclude-and-include-filters) to reinclude files that have been excluded from upload. Acceptable symbols are:  
+Optional. Pattern-matched [filters](https://awscli.amazonaws.com/v2/documentation/api/latest/reference/s3/index.html#use-of-exclude-and-include-filters) to reinclude files that have been excluded from upload via [`exclude`](#files-exclude). Acceptable symbols are:  
 `*` (matches everything)  
 `?` (matches any single character)  
 `[sequence]` (matches any character in `sequence`)  
