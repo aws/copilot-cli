@@ -8,20 +8,21 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	rg "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
+	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
-	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
+	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 
 	"github.com/spf13/afero"
@@ -29,6 +30,8 @@ import (
 )
 
 const (
+	appDeleteNamePrompt = "Which application would you like to delete?"
+
 	fmtDeleteAppConfirmPrompt = "Are you sure you want to delete application %s?"
 	deleteAppConfirmHelp      = "This will delete all resources in your application: including services, environments, and pipelines."
 
@@ -60,13 +63,14 @@ type deleteAppOpts struct {
 	cfn                    deployer
 	prompt                 prompter
 	pipelineLister         deployedPipelineLister
+	sel                    appSelector
 	s3                     func(session *session.Session) bucketEmptier
 	svcDeleteExecutor      func(svcName string) (executor, error)
 	jobDeleteExecutor      func(jobName string) (executor, error)
 	envDeleteExecutor      func(envName string) (executeAsker, error)
 	taskDeleteExecutor     func(envName, taskName string) (executor, error)
 	pipelineDeleteExecutor func(pipelineName string) (executor, error)
-	ws                     func(fs afero.Fs) (wsFileDeleter, error)
+	existingWorkSpace      func() (wsAppManagerDeleter, error)
 }
 
 func newDeleteAppOpts(vars deleteAppVars) (*deleteAppOpts, error) {
@@ -75,18 +79,20 @@ func newDeleteAppOpts(vars deleteAppVars) (*deleteAppOpts, error) {
 	if err != nil {
 		return nil, fmt.Errorf("default session: %w", err)
 	}
-
+	prompter := prompt.New()
+	store := config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
 	return &deleteAppOpts{
 		deleteAppVars: vars,
 		spinner:       termprogress.NewSpinner(log.DiagnosticWriter),
-		store:         config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region)),
+		store:         store,
 		sessProvider:  provider,
 		cfn:           cloudformation.New(defaultSession, cloudformation.WithProgressTracker(os.Stderr)),
-		prompt:        prompt.New(),
+		prompt:        prompter,
 		s3: func(session *session.Session) bucketEmptier {
 			return s3.New(session)
 		},
 		pipelineLister: deploy.NewPipelineStore(rg.New(defaultSession)),
+		sel:            selector.NewAppEnvSelector(prompter, store),
 		svcDeleteExecutor: func(svcName string) (executor, error) {
 			opts, err := newDeleteSvcOpts(deleteSvcVars{
 				skipConfirmation: true, // always skip sub-confirmations
@@ -144,8 +150,8 @@ func newDeleteAppOpts(vars deleteAppVars) (*deleteAppOpts, error) {
 			}
 			return opts, nil
 		},
-		ws: func(fs afero.Fs) (wsFileDeleter, error) {
-			return workspace.Use(fs)
+		existingWorkSpace: func() (wsAppManagerDeleter, error) {
+			return workspace.Use(afero.NewOsFs())
 		},
 	}, nil
 }
@@ -157,6 +163,15 @@ func (o *deleteAppOpts) Validate() error {
 
 // Ask prompts the user for any required flags that they didn't provide.
 func (o *deleteAppOpts) Ask() error {
+	if o.name != "" {
+		if _, err := o.store.GetApplication(o.name); err != nil {
+			return err
+		}
+	} else {
+		if err := o.askAppName(); err != nil {
+			return err
+		}
+	}
 	if o.skipConfirmation {
 		return nil
 	}
@@ -213,6 +228,15 @@ func (o *deleteAppOpts) Execute() error {
 		return err
 	}
 
+	return nil
+}
+
+func (o *deleteAppOpts) askAppName() error {
+	name, err := o.sel.Application(appDeleteNamePrompt, "")
+	if err != nil {
+		return fmt.Errorf("select application name: %w", err)
+	}
+	o.name = name
 	return nil
 }
 
@@ -351,16 +375,19 @@ func (o *deleteAppOpts) deleteAppConfigs() error {
 }
 
 func (o *deleteAppOpts) deleteWs() error {
-	ws, err := o.ws(afero.NewOsFs())
-	if err != nil {
-		return err
+	ws, err := o.existingWorkSpace()
+	if err == nil {
+		// When there's a local application summary.
+		summary, err := ws.Summary()
+		if err == nil && summary.Application == o.name {
+			o.spinner.Start(fmt.Sprintf(fmtDeleteAppWsStartMsg, workspace.SummaryFileName))
+			if err := ws.DeleteWorkspaceFile(); err != nil {
+				o.spinner.Stop(log.Serrorf("Error deleting %s file.\n", workspace.SummaryFileName))
+				return fmt.Errorf("delete %s file: %w", workspace.SummaryFileName, err)
+			}
+			o.spinner.Stop(log.Ssuccessf(fmt.Sprintf(fmtDeleteAppWsStopMsg, workspace.SummaryFileName)))
+		}
 	}
-	o.spinner.Start(fmt.Sprintf(fmtDeleteAppWsStartMsg, workspace.SummaryFileName))
-	if err := ws.DeleteWorkspaceFile(); err != nil {
-		o.spinner.Stop(log.Serrorf("Error deleting %s file.\n", workspace.SummaryFileName))
-		return fmt.Errorf("delete %s file: %w", workspace.SummaryFileName, err)
-	}
-	o.spinner.Stop(log.Ssuccessf(fmt.Sprintf(fmtDeleteAppWsStopMsg, workspace.SummaryFileName)))
 	return nil
 }
 
@@ -382,7 +409,7 @@ func buildAppDeleteCommand() *cobra.Command {
 		}),
 	}
 
-	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, tryReadingAppName(), appFlagDescription)
+	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, "", appFlagDescription)
 	cmd.Flags().BoolVar(&vars.skipConfirmation, yesFlag, false, yesFlagDescription)
 	return cmd
 }

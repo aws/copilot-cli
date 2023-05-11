@@ -1538,11 +1538,11 @@ func TestWorkspace_DeleteWorkspaceFile(t *testing.T) {
 		fs         func() afero.Fs
 	}{
 		".workspace should be deleted": {
-			copilotDir: "copilot",
+			copilotDir: "/path/to/copilot",
 			fs: func() afero.Fs {
 				fs := afero.NewMemMapFs()
-				fs.MkdirAll("/copilot", 0755)
-				fs.Create("/copilot/.workspace")
+				fs.MkdirAll("/path/to/copilot", 0755)
+				fs.Create("/path/to/copilot/.workspace")
 				return fs
 			},
 		},
@@ -1559,8 +1559,8 @@ func TestWorkspace_DeleteWorkspaceFile(t *testing.T) {
 					Fs: fs,
 				},
 			}
-			ws.fs.MkdirAll("copilot", 0755)
-			ws.fs.Create(tc.copilotDir + "/" + ".workspace")
+			ws.fs.MkdirAll(tc.copilotDir, 0755)
+			ws.fs.Create(filepath.Join(tc.copilotDir, ".workspace"))
 
 			// WHEN
 			err := ws.DeleteWorkspaceFile()
@@ -1569,7 +1569,7 @@ func TestWorkspace_DeleteWorkspaceFile(t *testing.T) {
 			require.NoError(t, err)
 
 			// There should be no more .workspace file under the copilot/ directory.
-			path := filepath.Join(tc.copilotDir, "/.workspace")
+			path := filepath.Join(tc.copilotDir, ".workspace")
 			_, existErr := fs.Stat(path)
 			expectedErr := &os.PathError{
 				Op:   "open",

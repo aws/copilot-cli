@@ -341,6 +341,11 @@ type wsAppManager interface {
 	Summary() (*workspace.Summary, error)
 }
 
+type wsAppManagerDeleter interface {
+	wsAppManager
+	wsFileDeleter
+}
+
 type wsWriter interface {
 	Write(content encoding.BinaryMarshaler, path string) (string, error)
 }
