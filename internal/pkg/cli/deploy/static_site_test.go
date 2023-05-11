@@ -212,7 +212,9 @@ func TestStaticSiteDeployer_stackConfiguration(t *testing.T) {
 				},
 				staticSiteMft: &manifest.StaticSite{
 					StaticSiteConfig: manifest.StaticSiteConfig{
-						Alias: "hi.com",
+						HTTP: manifest.StaticSiteHTTP{
+							Alias: "hi.com",
+						},
 					},
 				},
 			},
@@ -239,7 +241,9 @@ func TestStaticSiteDeployer_stackConfiguration(t *testing.T) {
 				},
 				staticSiteMft: &manifest.StaticSite{
 					StaticSiteConfig: manifest.StaticSiteConfig{
-						Alias: "hi.com",
+						HTTP: manifest.StaticSiteHTTP{
+							Alias: "hi.com",
+						},
 					},
 				},
 			},
@@ -271,7 +275,9 @@ func TestStaticSiteDeployer_stackConfiguration(t *testing.T) {
 				},
 				staticSiteMft: &manifest.StaticSite{
 					StaticSiteConfig: manifest.StaticSiteConfig{
-						Alias: "hi.com",
+						HTTP: manifest.StaticSiteHTTP{
+							Alias: "hi.com",
+						},
 					},
 				},
 			},
@@ -352,7 +358,9 @@ func TestStaticSiteDeployer_stackConfiguration(t *testing.T) {
 				},
 				staticSiteMft: &manifest.StaticSite{
 					StaticSiteConfig: manifest.StaticSiteConfig{
-						Alias: "hi.mockApp.example.com",
+						HTTP: manifest.StaticSiteHTTP{
+							Alias: "hi.mockApp.example.com",
+						},
 					},
 				},
 				newStack: func(*stack.StaticSiteConfig) (*stack.StaticSite, error) {
