@@ -12,7 +12,7 @@ AWS Web Application Firewall (WAF) のウェブアクセスコントロールリ
 例えば、 リクエストの発信元 IP アドレスやクエリ文字列の値などでアクセスを制御できます。
 
 AWS　は [AWS App Runner がセキュリティ強化のためのウェブアプリケーションファイアウォール (WAF) サポートを導入](https://aws.amazon.com/jp/about-aws/whats-new/2023/02/aws-app-runner-web-application-firewall-enhanced-security/)を発表しました。
-この発表は[Request-Driven Web Services](../docs/concepts/services.jp.md#request-driven-web-service) を AWS WAF で保護できるようになったことを意味します。
+この発表は[Request-Driven Web Services](../docs/concepts/services.ja.md#request-driven-web-service) を AWS WAF で保護できるようになったことを意味します。
 このブログポストでは、AWS Copilot を利用して、簡単に保護を有効にする方法を紹介します。
 
 
