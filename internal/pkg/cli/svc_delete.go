@@ -13,6 +13,10 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+	awss3 "github.com/aws/copilot-cli/internal/pkg/aws/s3"
+	"github.com/aws/copilot-cli/internal/pkg/cli/clean"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
+	"github.com/aws/copilot-cli/internal/pkg/s3"
 
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 
@@ -41,6 +45,10 @@ var (
 	errSvcDeleteCancelled = errors.New("svc delete cancelled - no changes made")
 )
 
+type cleaner interface {
+	Clean() error
+}
+
 type deleteSvcVars struct {
 	appName          string
 	skipConfirmation bool
@@ -52,14 +60,15 @@ type deleteSvcOpts struct {
 	deleteSvcVars
 
 	// Interfaces to dependencies.
-	store     store
-	sess      sessionProvider
-	spinner   progress
-	prompt    prompter
-	sel       configSelector
-	appCFN    svcRemoverFromApp
-	getSvcCFN func(session *awssession.Session) wlDeleter
-	getECR    func(session *awssession.Session) imageRemover
+	store         store
+	sess          sessionProvider
+	spinner       progress
+	prompt        prompter
+	sel           configSelector
+	appCFN        svcRemoverFromApp
+	getSvcCFN     func(sess *awssession.Session) wlDeleter
+	getECR        func(sess *awssession.Session) imageRemover
+	newSvcCleaner func(sess *awssession.Session, manifestType string) cleaner
 }
 
 func newDeleteSvcOpts(vars deleteSvcVars) (*deleteSvcOpts, error) {
@@ -80,11 +89,17 @@ func newDeleteSvcOpts(vars deleteSvcVars) (*deleteSvcOpts, error) {
 		sess:    sessProvider,
 		sel:     selector.NewConfigSelector(prompter, store),
 		appCFN:  cloudformation.New(defaultSession, cloudformation.WithProgressTracker(os.Stderr)),
-		getSvcCFN: func(session *awssession.Session) wlDeleter {
-			return cloudformation.New(session, cloudformation.WithProgressTracker(os.Stderr))
+		getSvcCFN: func(sess *awssession.Session) wlDeleter {
+			return cloudformation.New(sess, cloudformation.WithProgressTracker(os.Stderr))
 		},
-		getECR: func(session *awssession.Session) imageRemover {
-			return ecr.New(session)
+		getECR: func(sess *awssession.Session) imageRemover {
+			return ecr.New(sess)
+		},
+		newSvcCleaner: func(sess *awssession.Session, manifestType string) cleaner {
+			if manifestType == manifestinfo.StaticSiteType {
+				return clean.StaticSite(vars.appName, vars.envName, vars.name, s3.New(sess), awss3.New(sess))
+			}
+			return &clean.NoOp{}
 		},
 	}, nil
 }
@@ -155,12 +170,17 @@ func (o *deleteSvcOpts) Ask() error {
 // If the service is being removed from the application, Execute will
 // also delete the ECR repository and the SSM parameter.
 func (o *deleteSvcOpts) Execute() error {
+	wkld, err := o.store.GetWorkload(o.appName, o.name)
+	if err != nil {
+		return fmt.Errorf("get workload: %w", err)
+	}
+
 	envs, err := o.appEnvironments()
 	if err != nil {
 		return err
 	}
 
-	if err := o.deleteStacks(envs); err != nil {
+	if err := o.deleteStacks(wkld.Type, envs); err != nil {
 		return err
 	}
 
@@ -245,11 +265,15 @@ func (o *deleteSvcOpts) appEnvironments() ([]*config.Environment, error) {
 	return envs, nil
 }
 
-func (o *deleteSvcOpts) deleteStacks(envs []*config.Environment) error {
+func (o *deleteSvcOpts) deleteStacks(wkldType string, envs []*config.Environment) error {
 	for _, env := range envs {
 		sess, err := o.sess.FromRole(env.ManagerRoleARN, env.Region)
 		if err != nil {
 			return err
+		}
+
+		if err := o.newSvcCleaner(sess, wkldType).Clean(); err != nil {
+			return fmt.Errorf("clean resources: %w", err)
 		}
 
 		cfClient := o.getSvcCFN(sess)

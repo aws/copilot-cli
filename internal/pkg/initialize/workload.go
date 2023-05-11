@@ -7,10 +7,6 @@ package initialize
 import (
 	"encoding"
 	"fmt"
-	"os"
-	"path/filepath"
-	"strconv"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -18,15 +14,13 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
+	"os"
+	"path/filepath"
 )
 
 const (
 	jobWlType = "job"
 	svcWlType = "service"
-)
-
-const (
-	commonGRPCPort = uint16(50051)
 )
 
 var fmtErrUnrecognizedWlType = "unrecognized workload type %s"
@@ -88,6 +82,7 @@ type ServiceProps struct {
 	HealthCheck manifest.ContainerHealthCheck
 	Private     bool
 	appDomain   *string
+	FileUploads []manifest.FileUpload
 }
 
 // WorkloadInitializer holds the clients necessary to initialize either a
@@ -226,9 +221,6 @@ func (w *WorkloadInitializer) initService(props *ServiceProps) (string, error) {
 	log.Successf(manifestMsgFmt, svcWlType, color.HighlightUserInput(props.Name), color.HighlightResource(path))
 
 	helpText := "Your manifest contains configurations like your container size and port."
-	if props.Port != 0 {
-		helpText = fmt.Sprintf("Your manifest contains configurations like your container size and port (:%d).", props.Port)
-	}
 	log.Infoln(color.Help(helpText))
 	log.Infoln()
 
@@ -295,25 +287,19 @@ func (w *WorkloadInitializer) newServiceManifest(i *ServiceProps) (encoding.Bina
 	case manifestinfo.LoadBalancedWebServiceType:
 		return w.newLoadBalancedWebServiceManifest(i)
 	case manifestinfo.RequestDrivenWebServiceType:
-		return w.newRequestDrivenWebServiceManifest(i), nil
+		return newRequestDrivenWebServiceManifest(i), nil
 	case manifestinfo.BackendServiceType:
-		return newBackendServiceManifest(i)
+		return w.newBackendServiceManifest(i)
 	case manifestinfo.WorkerServiceType:
 		return newWorkerServiceManifest(i)
 	case manifestinfo.StaticSiteType:
-		return manifest.NewStaticSite(i.Name), nil
+		return newStaticSiteServiceManifest(i)
 	default:
 		return nil, fmt.Errorf("service type %s doesn't have a manifest", i.Type)
 	}
 }
 
 func (w *WorkloadInitializer) newLoadBalancedWebServiceManifest(inProps *ServiceProps) (*manifest.LoadBalancedWebService, error) {
-	var httpVersion string
-	if inProps.Port == commonGRPCPort {
-		log.Infof("Detected port %s, setting HTTP protocol version to %s in the manifest.\n",
-			color.HighlightUserInput(strconv.Itoa(int(inProps.Port))), color.HighlightCode(manifest.GRPCProtocol))
-		httpVersion = manifest.GRPCProtocol
-	}
 	outProps := &manifest.LoadBalancedWebServiceProps{
 		WorkloadProps: &manifest.WorkloadProps{
 			Name:                    inProps.Name,
@@ -323,7 +309,6 @@ func (w *WorkloadInitializer) newLoadBalancedWebServiceManifest(inProps *Service
 		},
 		Path:        "/",
 		Port:        inProps.Port,
-		HTTPVersion: httpVersion,
 		HealthCheck: inProps.HealthCheck,
 		Platform:    inProps.Platform,
 	}
@@ -344,7 +329,7 @@ func (w *WorkloadInitializer) newLoadBalancedWebServiceManifest(inProps *Service
 	return manifest.NewLoadBalancedWebService(outProps), nil
 }
 
-func (w *WorkloadInitializer) newRequestDrivenWebServiceManifest(i *ServiceProps) *manifest.RequestDrivenWebService {
+func newRequestDrivenWebServiceManifest(i *ServiceProps) *manifest.RequestDrivenWebService {
 	props := &manifest.RequestDrivenWebServiceProps{
 		WorkloadProps: &manifest.WorkloadProps{
 			Name:       i.Name,
@@ -358,8 +343,8 @@ func (w *WorkloadInitializer) newRequestDrivenWebServiceManifest(i *ServiceProps
 	return manifest.NewRequestDrivenWebService(props)
 }
 
-func newBackendServiceManifest(i *ServiceProps) (*manifest.BackendService, error) {
-	return manifest.NewBackendService(manifest.BackendServiceProps{
+func (w *WorkloadInitializer) newBackendServiceManifest(i *ServiceProps) (*manifest.BackendService, error) {
+	outProps := manifest.BackendServiceProps{
 		WorkloadProps: manifest.WorkloadProps{
 			Name:                    i.Name,
 			Dockerfile:              i.DockerfilePath,
@@ -369,7 +354,9 @@ func newBackendServiceManifest(i *ServiceProps) (*manifest.BackendService, error
 		Port:        i.Port,
 		HealthCheck: i.HealthCheck,
 		Platform:    i.Platform,
-	}), nil
+	}
+
+	return manifest.NewBackendService(outProps), nil
 }
 
 func newWorkerServiceManifest(i *ServiceProps) (*manifest.WorkerService, error) {
@@ -384,6 +371,15 @@ func newWorkerServiceManifest(i *ServiceProps) (*manifest.WorkerService, error) 
 		Platform:    i.Platform,
 		Topics:      i.Topics,
 		Queue:       i.Queue,
+	}), nil
+}
+
+func newStaticSiteServiceManifest(i *ServiceProps) (*manifest.StaticSite, error) {
+	return manifest.NewStaticSite(manifest.StaticSiteProps{
+		Name:            i.Name,
+		StaticSiteConfig: manifest.StaticSiteConfig{
+			FileUploads: i.FileUploads,
+		},
 	}), nil
 }
 

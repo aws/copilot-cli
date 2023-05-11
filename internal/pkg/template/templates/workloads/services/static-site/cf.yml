@@ -3,6 +3,14 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: CloudFormation template that represents a static site backed by S3.
 
+{{- /*
+!¡!¡!¡!¡!¡!¡
+If you are adding resources to this template, make sure to add the resources to
+the TriggerStateMachineAction.DependsOn list. This will ensure that files
+are only copied to Bucket if all other resources are successfully created.
+!¡!¡!¡!¡!¡!¡
+*/ -}}
+
 {{- if .SerializedManifest }}
 Metadata:
   Manifest: |
@@ -33,8 +41,8 @@ Resources:
       AccessControl: Private
       BucketEncryption:
         ServerSideEncryptionConfiguration:
-        - ServerSideEncryptionByDefault:
-            SSEAlgorithm: AES256
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
         BlockPublicPolicy: true
@@ -42,26 +50,67 @@ Resources:
         Rules:
           - ObjectOwnership: BucketOwnerEnforced
 
-  BucketPolicy:
+  BucketPolicyForCloudFront:
     Metadata:
-      aws:copilot:description: A bucket policy to deny unencrypted access to the bucket and its contents
+      'aws:copilot:description': 'A bucket policy to grant CloudFront read access to the Static Site bucket'
     Type: AWS::S3::BucketPolicy
-    DeletionPolicy: Retain
     Properties:
       Bucket: !Ref Bucket
       PolicyDocument:
         Version: 2012-10-17
         Statement:
-          - Sid: ForceHTTPS
-            Effect: Deny
-            Principal: "*"
-            Action: s3:*
+          - Sid: AllowCloudFrontServicePrincipalReadOnly
+            Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: s3:GetObject
             Resource:
-              - !Sub ${Bucket.Arn}
-              - !Sub ${Bucket.Arn}/*
+              - !Sub
+                - arn:${AWS::Partition}:s3:::${bucket}
+                - bucket: !Ref Bucket
+              - !Sub
+                - arn:${AWS::Partition}:s3:::${bucket}/*
+                - bucket: !Ref Bucket
             Condition: 
-              Bool:
-                aws:SecureTransport: false
+              StringEquals:
+                AWS:SourceArn: !Sub
+                  - arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${cfDistributionID}
+                  - cfDistributionID: !Ref CloudFrontDistribution
+
+  CloudFrontOriginAccessControl:
+    Metadata:
+      'aws:copilot:description': 'Access control to make the content in the S3 bucket only accessible through CloudFront'
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties: 
+      OriginAccessControlConfig: 
+          Description: Access control for static s3 origin
+          Name: !Sub 'copilot-${AppName}-${EnvName}-${WorkloadName}-origin-access-control'
+          OriginAccessControlOriginType: s3
+          SigningBehavior: always
+          SigningProtocol: sigv4
+
+  CloudFrontDistribution:
+    Metadata:
+      'aws:copilot:description': 'A CloudFront distribution for global content delivery'
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        DefaultCacheBehavior:
+          Compress: true
+          AllowedMethods: ["GET", "HEAD"]
+          ViewerProtocolPolicy: allow-all
+          CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6 # See https://go.aws/3bJid3k
+          TargetOriginId: !Sub 'copilot-${AppName}-${EnvName}-${WorkloadName}'
+        Enabled: true
+        IPV6Enabled: true
+        Origins:
+          - Id: !Sub 'copilot-${AppName}-${EnvName}-${WorkloadName}'
+            DomainName: !GetAtt Bucket.RegionalDomainName
+            OriginAccessControlId: !Ref CloudFrontOriginAccessControl
+            # Workaround for using Origin Access Control as Origin Access Identity is still 
+            # required when the origin is an S3 bucket.
+            S3OriginConfig:
+              OriginAccessIdentity: '' 
 
   TriggerStateMachineFunction:
     Metadata:
@@ -71,41 +120,13 @@ Resources:
       Handler: index.handler
       Role: !GetAtt TriggerStateMachineFunctionRole.Arn
       Runtime: nodejs16.x
-      Timeout: 60
+      Timeout: 900
+      MemorySize: 512
+      {{- with $cr := index .CustomResources "TriggerStateMachineFunction" }}
       Code:
-        ZipFile: |
-          var response = require("cfn-response");
-          var aws = require("aws-sdk");
-
-          exports.handler = (event, context) => {
-            console.log("trigger state machine funtion: event", event)
-
-            const sf = new aws.StepFunctions();
-            const params = {
-              stateMachineArn: event.ResourceProperties.StateMachineARN,
-              input: JSON.stringify({
-                SourceBucket: event.ResourceProperties.SourceBucket,
-                AssetMappingFilePath: event.ResourceProperties.AssetMappingFilePath,
-                DestinationBucket: event.ResourceProperties.DestinationBucket,
-              })
-            };
-            sf.startSyncExecution(params, (err, data) => {
-              if (err) {
-                console.log("error starting step function", err)
-                response.send(event, context, response.FAILED, {"error": err.message}, event.PhysicalResourceId)
-                return;
-              }
-
-              console.log("finished step function execution:", data)
-
-              if (data.status === "FAILED") {
-                response.send(event, context, response.FAILED, {"error": data.cause}, event.PhysicalResourceId)
-                return;
-              }
-
-              response.send(event, context, response.SUCCESS, {}, event.PhysicalResourceId)
-            });
-          };
+        S3Bucket: {{$cr.Bucket}}
+        S3Key: {{$cr.Key}}
+      {{- end }}
 
   TriggerStateMachineFunctionRole:
     Metadata:
@@ -137,7 +158,19 @@ Resources:
     Metadata:
       aws:copilot:description: A custom resource to trigger the file-copying state machine
     Type: Custom::TriggerStateMachine
-    DependsOn: CopyAssetsStateMachine
+    DependsOn: 
+      - CopyAssetsStateMachine {{- /* This is a real dependency */}}
+      - Bucket
+      - BucketPolicyForCloudFront
+      - CloudFrontOriginAccessControl
+      - CloudFrontDistribution
+      - TriggerStateMachineFunction
+      - TriggerStateMachineFunctionRole
+      - CopyAssetsStateMachine
+      - CopyAssetsStateMachineRole
+      - CopyAssetsFunction
+      - CopyAssetsFunctionRole
+      - EnvManagerS3Access
     Properties:
       ServiceToken: !GetAtt TriggerStateMachineFunction.Arn
       StateMachineARN: !GetAtt CopyAssetsStateMachine.Arn
@@ -223,31 +256,12 @@ Resources:
       Role: !GetAtt CopyAssetsFunctionRole.Arn
       Runtime: nodejs16.x
       Timeout: 60
+      MemorySize: 512
+      {{- with $cr := index .CustomResources "CopyAssetsFunction" }}
       Code:
-        ZipFile: |
-          var aws = require("aws-sdk");
-
-          exports.handler = (event, context, callback) => {
-            const s3 = new aws.S3();
-            console.log("copy from cache bucket event:", event)
-            const params = {
-              CopySource: event.srcBucket + "/" + event.mapping.path,
-              Bucket: event.destBucket,
-              Key: event.mapping.destPath
-            };
-            console.log("copy object params", params)
-
-            s3.copyObject(params, (err, data) => {
-              if (err) {
-                console.log("error copying object", err)
-                callback(err);
-                return;
-              }
-
-              console.log("copied object: ", data)
-              callback(null, "Success");
-            });
-          };
+        S3Bucket: {{$cr.Bucket}}
+        S3Key: {{$cr.Key}}
+      {{- end }}
 
   CopyAssetsFunctionRole:
     Metadata:
@@ -283,3 +297,24 @@ Resources:
                 Resource: !Sub arn:aws:s3:::${Bucket}/*
       ManagedPolicyArns:
         - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+  
+  EnvManagerS3Access:
+    Metadata:
+      aws:copilot:description: A policy that gives the Env Manager role access to this site's S3 Bucket
+    Type: AWS::IAM::Policy
+    Properties:
+      Roles:
+        - !Sub "${AppName}-${EnvName}-EnvManagerRole"
+      PolicyName: !Sub "${WorkloadName}-S3Access"
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - s3:ListBucket
+              - s3:ListBucketVersions
+              - s3:DeleteObject
+              - s3:DeleteObjectVersion
+            Resource:
+              - !Sub arn:aws:s3:::${Bucket}
+              - !Sub arn:aws:s3:::${Bucket}/*

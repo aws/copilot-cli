@@ -27,7 +27,7 @@ func TestEnvStack_Template(t *testing.T) {
 		input          *stack.EnvConfig
 		wantedFileName string
 	}{
-		"generate template with embedded manifest file with container insights and cloudfront and advanced access logs": {
+		"generate template with embedded manifest file with container insights and cloudfront imported bucket and advanced access logs": {
 			input: func() *stack.EnvConfig {
 				rawMft := `name: test
 type: Environment
@@ -71,14 +71,8 @@ observability:
 					PublicALBSourceIPs:   []string{"1.1.1.1", "2.2.2.2"},
 					ArtifactBucketARN:    "arn:aws:s3:::mockbucket",
 					ArtifactBucketKeyARN: "arn:aws:kms:us-west-2:000000000:key/1234abcd-12ab-34cd-56ef-1234567890ab",
-					CustomResourcesURLs: map[string]string{
-						"CertificateValidationFunction": "https://mockbucket.s3-us-west-2.amazonaws.com/dns-cert-validator",
-						"DNSDelegationFunction":         "https://mockbucket.s3-us-west-2.amazonaws.com/dns-delegation",
-						"CustomDomainFunction":          "https://mockbucket.s3-us-west-2.amazonaws.com/custom-domain",
-						"UniqueJSONValuesFunction":      "https://mockbucket.s3-us-west-2.amazonaws.com/unique-json-values",
-					},
-					Mft:    &mft,
-					RawMft: []byte(rawMft),
+					Mft:                  &mft,
+					RawMft:               []byte(rawMft),
 				}
 			}(),
 			wantedFileName: "template-with-cloudfront-observability.yml",
@@ -102,13 +96,8 @@ http:
 					Name:                 "test",
 					ArtifactBucketARN:    "arn:aws:s3:::mockbucket",
 					ArtifactBucketKeyARN: "arn:aws:kms:us-west-2:000000000:key/1234abcd-12ab-34cd-56ef-1234567890ab",
-					CustomResourcesURLs: map[string]string{
-						"CertificateValidationFunction": "https://mockbucket.s3-us-west-2.amazonaws.com/dns-cert-validator",
-						"DNSDelegationFunction":         "https://mockbucket.s3-us-west-2.amazonaws.com/dns-delegation",
-						"CustomDomainFunction":          "https://mockbucket.s3-us-west-2.amazonaws.com/custom-domain",
-					},
-					Mft:    &mft,
-					RawMft: []byte(rawMft),
+					Mft:                  &mft,
+					RawMft:               []byte(rawMft),
 				}
 			}(),
 			wantedFileName: "template-with-default-access-log-config.yml",
@@ -151,13 +140,8 @@ network:
 					Name:                 "test",
 					ArtifactBucketARN:    "arn:aws:s3:::mockbucket",
 					ArtifactBucketKeyARN: "arn:aws:kms:us-west-2:000000000:key/1234abcd-12ab-34cd-56ef-1234567890ab",
-					CustomResourcesURLs: map[string]string{
-						"CertificateValidationFunction": "https://mockbucket.s3-us-west-2.amazonaws.com/dns-cert-validator",
-						"DNSDelegationFunction":         "https://mockbucket.s3-us-west-2.amazonaws.com/dns-delegation",
-						"CustomDomainFunction":          "https://mockbucket.s3-us-west-2.amazonaws.com/custom-domain",
-					},
-					Mft:    &mft,
-					RawMft: []byte(rawMft),
+					Mft:                  &mft,
+					RawMft:               []byte(rawMft),
 				}
 			}(),
 
@@ -191,13 +175,8 @@ security_group:
 					Name:                 "test",
 					ArtifactBucketARN:    "arn:aws:s3:::mockbucket",
 					ArtifactBucketKeyARN: "arn:aws:kms:us-west-2:000000000:key/1234abcd-12ab-34cd-56ef-1234567890ab",
-					CustomResourcesURLs: map[string]string{
-						"CertificateValidationFunction": "https://mockbucket.s3-us-west-2.amazonaws.com/dns-cert-validator",
-						"DNSDelegationFunction":         "https://mockbucket.s3-us-west-2.amazonaws.com/dns-delegation",
-						"CustomDomainFunction":          "https://mockbucket.s3-us-west-2.amazonaws.com/custom-domain",
-					},
-					Mft:    &mft,
-					RawMft: []byte(rawMft),
+					Mft:                  &mft,
+					RawMft:               []byte(rawMft),
 				}
 			}(),
 
@@ -219,13 +198,8 @@ type: Environment`
 					Name:                 "test",
 					ArtifactBucketARN:    "arn:aws:s3:::mockbucket",
 					ArtifactBucketKeyARN: "arn:aws:kms:us-west-2:000000000:key/1234abcd-12ab-34cd-56ef-1234567890ab",
-					CustomResourcesURLs: map[string]string{
-						"CertificateValidationFunction": "https://mockbucket.s3-us-west-2.amazonaws.com/dns-cert-validator",
-						"DNSDelegationFunction":         "https://mockbucket.s3-us-west-2.amazonaws.com/dns-delegation",
-						"CustomDomainFunction":          "https://mockbucket.s3-us-west-2.amazonaws.com/custom-domain",
-					},
-					Mft:    &mft,
-					RawMft: []byte(rawMft),
+					Mft:                  &mft,
+					RawMft:               []byte(rawMft),
 				}
 			}(),
 			wantedFileName: "template-with-basic-manifest.yml",
@@ -250,13 +224,8 @@ network:
 					Name:                 "test",
 					ArtifactBucketARN:    "arn:aws:s3:::mockbucket",
 					ArtifactBucketKeyARN: "arn:aws:kms:us-west-2:000000000:key/1234abcd-12ab-34cd-56ef-1234567890ab",
-					CustomResourcesURLs: map[string]string{
-						"CertificateValidationFunction": "https://mockbucket.s3-us-west-2.amazonaws.com/dns-cert-validator",
-						"DNSDelegationFunction":         "https://mockbucket.s3-us-west-2.amazonaws.com/dns-delegation",
-						"CustomDomainFunction":          "https://mockbucket.s3-us-west-2.amazonaws.com/custom-domain",
-					},
-					Mft:    &mft,
-					RawMft: []byte(rawMft),
+					Mft:                  &mft,
+					RawMft:               []byte(rawMft),
 				}
 			}(),
 			wantedFileName: "template-with-defaultvpc-flowlogs.yml",
@@ -288,13 +257,8 @@ network:
 					Name:                 "test",
 					ArtifactBucketARN:    "arn:aws:s3:::mockbucket",
 					ArtifactBucketKeyARN: "arn:aws:kms:us-west-2:000000000:key/1234abcd-12ab-34cd-56ef-1234567890ab",
-					CustomResourcesURLs: map[string]string{
-						"CertificateValidationFunction": "https://mockbucket.s3-us-west-2.amazonaws.com/dns-cert-validator",
-						"DNSDelegationFunction":         "https://mockbucket.s3-us-west-2.amazonaws.com/dns-delegation",
-						"CustomDomainFunction":          "https://mockbucket.s3-us-west-2.amazonaws.com/custom-domain",
-					},
-					Mft:    &mft,
-					RawMft: []byte(rawMft),
+					Mft:                  &mft,
+					RawMft:               []byte(rawMft),
 				}
 			}(),
 			wantedFileName: "template-with-importedvpc-flowlogs.yml",
@@ -322,6 +286,7 @@ network:
 			wantedObj["Metadata"].(map[string]any)["Manifest"] = strings.TrimSpace(wantedObj["Metadata"].(map[string]any)["Manifest"].(string))
 
 			// THEN
+			resetCustomResourceLocations(actualObj)
 			compareStackTemplate(t, wantedObj, actualObj)
 		})
 	}
@@ -370,14 +335,8 @@ observability:
 					CIDRPrefixListIDs:    []string{"pl-mockid"},
 					ArtifactBucketARN:    "arn:aws:s3:::mockbucket",
 					ArtifactBucketKeyARN: "arn:aws:kms:us-west-2:000000000:key/1234abcd-12ab-34cd-56ef-1234567890ab",
-					CustomResourcesURLs: map[string]string{
-						"CertificateValidationFunction": "https://mockbucket.s3-us-west-2.amazonaws.com/dns-cert-validator",
-						"DNSDelegationFunction":         "https://mockbucket.s3-us-west-2.amazonaws.com/dns-delegation",
-						"CustomDomainFunction":          "https://mockbucket.s3-us-west-2.amazonaws.com/custom-domain",
-						"UniqueJSONValuesFunction":      "https://mockbucket.s3-us-west-2.amazonaws.com/unique-json-values",
-					},
-					Mft:    &mft,
-					RawMft: []byte(rawMft),
+					Mft:                  &mft,
+					RawMft:               []byte(rawMft),
 				}
 			}(),
 			newManifest: func() *stack.EnvConfig {
@@ -414,14 +373,8 @@ observability:
 					CIDRPrefixListIDs:    []string{"pl-mockid"},
 					ArtifactBucketARN:    "arn:aws:s3:::mockbucket",
 					ArtifactBucketKeyARN: "arn:aws:kms:us-west-2:000000000:key/1234abcd-12ab-34cd-56ef-1234567890ab",
-					CustomResourcesURLs: map[string]string{
-						"CertificateValidationFunction": "https://mockbucket.s3-us-west-2.amazonaws.com/dns-cert-validator",
-						"DNSDelegationFunction":         "https://mockbucket.s3-us-west-2.amazonaws.com/dns-delegation",
-						"CustomDomainFunction":          "https://mockbucket.s3-us-west-2.amazonaws.com/custom-domain",
-						"UniqueJSONValuesFunction":      "https://mockbucket.s3-us-west-2.amazonaws.com/unique-json-values",
-					},
-					Mft:    &mft,
-					RawMft: []byte(rawMft),
+					Mft:                  &mft,
+					RawMft:               []byte(rawMft),
 				}
 			}(),
 		},
@@ -447,6 +400,8 @@ observability:
 			delete(originalObj["Metadata"].(map[string]any), "Manifest")
 			delete(newObj["Metadata"].(map[string]any), "Manifest")
 
+			resetCustomResourceLocations(originalObj)
+			resetCustomResourceLocations(newObj)
 			compareStackTemplate(t, originalObj, newObj)
 		})
 	}
@@ -489,7 +444,7 @@ func resetCustomResourceLocations(template map[any]any) {
 		"EnvControllerFunction", "DynamicDesiredCountFunction", "BacklogPerTaskCalculatorFunction",
 		"RulePriorityFunction", "NLBCustomDomainFunction", "NLBCertValidatorFunction",
 		"CustomDomainFunction", "CertificateValidationFunction", "DNSDelegationFunction",
-		"CertificateReplicatorFunction", "UniqueJSONValuesFunction",
+		"CertificateReplicatorFunction", "UniqueJSONValuesFunction", "CopyAssetsFunction", "TriggerStateMachineFunction",
 	}
 	for _, fnName := range functions {
 		resource, ok := resources[fnName]
@@ -498,8 +453,6 @@ func resetCustomResourceLocations(template map[any]any) {
 		}
 		fn := resource.(map[string]any)
 		props := fn["Properties"].(map[string]any)
-		code := props["Code"].(map[string]any)
-		code["S3Bucket"] = nil
-		code["S3Key"] = nil
+		delete(props, "Code")
 	}
 }

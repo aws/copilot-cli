@@ -6,30 +6,34 @@ package deploy
 import (
 	"fmt"
 	"io"
-	"time"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/asset"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
+	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/spf13/afero"
 )
 
+const artifactBucketAssetsDir = "local-assets"
+
 type fileUploader interface {
-	UploadFiles(files []manifest.FileUpload) error
+	UploadFiles(files []manifest.FileUpload) (string, error)
 }
 
 type staticSiteDeployer struct {
 	*svcDeployer
+	appVersionGetter versionGetter
 	staticSiteMft    *manifest.StaticSite
 	fs               afero.Fs
 	uploader         fileUploader
-	assetMappingPath string
+	newStack         func(*stack.StaticSiteConfig) (*stack.StaticSite, error)
 }
 
 // NewStaticSiteDeployer is the constructor for staticSiteDeployer.
@@ -39,25 +43,29 @@ func NewStaticSiteDeployer(in *WorkloadDeployerInput) (*staticSiteDeployer, erro
 	if err != nil {
 		return nil, err
 	}
+	versionGetter, err := describe.NewAppDescriber(in.App.Name)
+	if err != nil {
+		return nil, fmt.Errorf("new app describer for application %s: %w", in.App.Name, err)
+	}
 	mft, ok := in.Mft.(*manifest.StaticSite)
 	if !ok {
 		return nil, fmt.Errorf("manifest is not of type %s", manifestinfo.StaticSiteType)
 	}
-	assetMappingPath := fmt.Sprintf("local-assets/environment/%s/workloads/%s/mapping/%s.json", svcDeployer.env.Name, svcDeployer.name, time.Now().Format(time.RFC3339))
 	return &staticSiteDeployer{
 		svcDeployer:      svcDeployer,
+		appVersionGetter: versionGetter,
 		staticSiteMft:    mft,
 		fs:               svcDeployer.fs,
-		assetMappingPath: assetMappingPath,
 		uploader: &asset.ArtifactBucketUploader{
-			FS:               svcDeployer.fs,
-			PathPrefix:       "local-assets",
-			AssetMappingPath: assetMappingPath,
+			FS:                  svcDeployer.fs,
+			AssetDir:            artifactBucketAssetsDir,
+			AssetMappingFileDir: fmt.Sprintf("%s/environments/%s/workloads/%s/mapping", artifactBucketAssetsDir, svcDeployer.env.Name, svcDeployer.name),
 			Upload: func(path string, data io.Reader) error {
 				_, err := svcDeployer.s3Client.Upload(svcDeployer.resources.S3Bucket, path, data)
 				return err
 			},
 		},
+		newStack: stack.NewStaticSite,
 	}, nil
 }
 
@@ -104,11 +112,12 @@ func (d *staticSiteDeployer) UploadArtifacts() (*UploadArtifactsOutput, error) {
 }
 
 func (d *staticSiteDeployer) uploadStaticFiles(out *UploadArtifactsOutput) error {
-	if err := d.uploader.UploadFiles(d.staticSiteMft.FileUploads); err != nil {
+	path, err := d.uploader.UploadFiles(d.staticSiteMft.FileUploads)
+	if err != nil {
 		return fmt.Errorf("upload static files: %w", err)
 	}
 
-	out.StaticSiteAssetMappingLocation = s3.Location(d.resources.S3Bucket, d.assetMappingPath)
+	out.StaticSiteAssetMappingLocation = s3.Location(d.resources.S3Bucket, path)
 	return nil
 }
 
@@ -117,7 +126,13 @@ func (d *staticSiteDeployer) stackConfiguration(in *StackRuntimeConfiguration) (
 	if err != nil {
 		return nil, err
 	}
-	conf, err := stack.NewStaticSite(&stack.StaticSiteConfig{
+	if err := d.validateAlias(); err != nil {
+		return nil, err
+	}
+	if err := validateMinAppVersion(d.app.Name, d.name, d.appVersionGetter, deploy.StaticSiteMinAppTemplateVersion); err != nil {
+		return nil, fmt.Errorf("static sites not supported: %w", err)
+	}
+	conf, err := d.newStack(&stack.StaticSiteConfig{
 		App:                d.app,
 		EnvManifest:        d.envConfig,
 		Manifest:           d.staticSiteMft,
@@ -132,4 +147,21 @@ func (d *staticSiteDeployer) stackConfiguration(in *StackRuntimeConfiguration) (
 		return nil, fmt.Errorf("create stack configuration: %w", err)
 	}
 	return conf, nil
+}
+
+func (d *staticSiteDeployer) validateAlias() error {
+	if d.staticSiteMft.Alias == "" {
+		return nil
+	}
+
+	hasImportedCerts := len(d.envConfig.HTTPConfig.Public.Certificates) != 0
+	if hasImportedCerts {
+		return fmt.Errorf("cannot specify alias when env %q imports one or more certificates", d.env.Name)
+	}
+
+	if d.app.Domain == "" {
+		return fmt.Errorf("cannot specify alias when application is not associated with a domain")
+	}
+
+	return validateAliases(d.app, d.env.Name, d.staticSiteMft.Alias)
 }

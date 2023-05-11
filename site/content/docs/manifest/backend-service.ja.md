@@ -142,6 +142,32 @@
                 id: fs-1234567
         ```
 
+    === "Expose Multiple Ports"
+
+        ```yaml
+        name: 'backend'
+        type: 'Backend Service'
+    
+        image:
+          build: './backend/Dockerfile'
+          port: 8080
+    
+        http:
+          path: '/'
+          target_port: 8083           # Traffic on "/" is forwarded to the main container, on port 8083. 
+          additional_rules:
+            - path: 'customerdb'
+              target_port: 8081       # Traffic on "/customerdb" is forwarded to the main container, on port 8081.
+            - path: 'admin' 
+              target_port: 8082       # Traffic on "/admin" is forwarded to the sidecar "envoy", on port 8082.
+              target_container: envoy
+    
+        sidecars:
+          envoy:
+            port: 80
+            image: aws_account_id.dkr.ecr.us-west-2.amazonaws.com/envoy-proxy-with-selfsigned-certs:v1
+        ```    
+
 <a id="name" href="#name" class="field">`name`</a> <span class="type">String</span>  
 Service 名。
 
@@ -206,6 +232,11 @@ http:
 <span class="parent-field">http.</span><a id="http-version" href="#http-version" class="field">`version`</a> <span class="type">String</span>  
 HTTP(S) プロトコルのバージョン。 `'grpc'`、 `'http1'`、または `'http2'` を指定します。省略した場合は、`'http1'` が利用されます。 
 gRPC を利用する場合は、Application にドメインが関連付けられていなければなりません。
+
+<span class="parent-field">http.</span><a id="http-additional-rules" href="#http-additional-rules" class="field">`additional_rules`</a> <span class="type">Array of Maps</span>
+複数の ALB リスナールール設定します。
+
+{% include 'http-additionalrules.ja.md' %}
 
 {% include 'image-config-with-port.ja.md' %}
 ポートを `443` に設定し、 内部ロードバランサーが `http` で有効化されている場合、プロトコルは `HTTPS` に設定され、ロードバランサーは Fargate タスクと TLS 接続します。ターゲットコンテナにインストールされた証明書が利用されます。

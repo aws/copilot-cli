@@ -3,7 +3,7 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: Configure the AWSCloudFormationStackSetAdministrationRole to enable use of AWS CloudFormation StackSets.
 Metadata:
-  TemplateVersion: 'v1.1.0'
+  TemplateVersion: '{{.TemplateVersion}}'
 Parameters:
   AdminRoleName:
     Type: String

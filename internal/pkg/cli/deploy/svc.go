@@ -8,13 +8,14 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"regexp"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	"golang.org/x/mod/semver"
 
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
-	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
@@ -98,20 +99,102 @@ type svcStackConfigurationOutput struct {
 	svcUpdater serviceForceUpdater
 }
 
-func validateAppVersionForAlias(appName string, appVersionGetter versionGetter) error {
+type errAppOutOfDate struct {
+	svc           string
+	curVersion    string
+	neededVersion string
+}
+
+func (e *errAppOutOfDate) Error() string {
+	return fmt.Sprintf("app version must be >= %s", e.neededVersion)
+}
+
+func (e *errAppOutOfDate) RecommendActions() string {
+	return fmt.Sprintf(`Cannot deploy service %q because the current application version %q
+is incompatible. To upgrade the application, please run %s.
+(see https://aws.github.io/copilot-cli/docs/credentials/#application-credentials)
+`, e.svc, e.curVersion, color.HighlightCode("copilot app upgrade"))
+}
+
+func validateMinAppVersion(app, svc string, appVersionGetter versionGetter, minVersion string) error {
 	appVersion, err := appVersionGetter.Version()
 	if err != nil {
-		return fmt.Errorf("get version for app %s: %w", appName, err)
+		return fmt.Errorf("get version for app %q: %w", app, err)
 	}
-	diff := semver.Compare(appVersion, deploy.AliasLeastAppTemplateVersion)
+
+	diff := semver.Compare(appVersion, minVersion)
 	if diff < 0 {
-		return fmt.Errorf(`alias is not compatible with application versions below %s`, deploy.AliasLeastAppTemplateVersion)
+		return &errAppOutOfDate{
+			svc:           svc,
+			curVersion:    appVersion,
+			neededVersion: minVersion,
+		}
 	}
+
 	return nil
 }
 
-func logAppVersionOutdatedError(name string) {
-	log.Errorf(`Cannot deploy service %s because the application version is incompatible.
-To upgrade the application, please run %s first (see https://aws.github.io/copilot-cli/docs/credentials/#application-credentials).
-`, name, color.HighlightCode("copilot app upgrade"))
+func validateAliases(app *config.Application, env string, aliases ...string) error {
+	// Alias should be within either env, app, or root hosted zone.
+	regRoot, err := regexp.Compile(fmt.Sprintf(`^([^\.]+\.)?%s`, app.Domain))
+	if err != nil {
+		return err
+	}
+	regApp, err := regexp.Compile(fmt.Sprintf(`^([^\.]+\.)?%s.%s`, app.Name, app.Domain))
+	if err != nil {
+		return err
+	}
+	regEnv, err := regexp.Compile(fmt.Sprintf(`^([^\.]+\.)?%s.%s.%s`, env, app.Name, app.Domain))
+	if err != nil {
+		return err
+	}
+
+	regexps := []*regexp.Regexp{regRoot, regApp, regEnv}
+	validate := func(alias string) error {
+		for _, reg := range regexps {
+			if reg.MatchString(alias) {
+				return nil
+			}
+		}
+
+		return &errInvalidAlias{
+			alias: alias,
+			app:   app,
+			env:   env,
+		}
+	}
+
+	for _, alias := range aliases {
+		if err := validate(alias); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+type errInvalidAlias struct {
+	alias string
+	app   *config.Application
+	env   string
+}
+
+func (e *errInvalidAlias) Error() string {
+	return fmt.Sprintf("alias %q is not supported in hosted zones managed by Copilot", e.alias)
+}
+
+func (e *errInvalidAlias) RecommmendActions() string {
+	return fmt.Sprintf(`Copilot-managed aliases must match one of the following patterns:
+- <name>.%s.%s.%s
+- %s.%s.%s
+- <name>.%s.%s
+- %s.%s
+- <name>.%s
+- %s
+`, e.env, e.app.Name, e.app.Domain,
+		e.env, e.app.Name, e.app.Domain,
+		e.app.Name, e.app.Domain,
+		e.app.Name, e.app.Domain,
+		e.app.Domain,
+		e.app.Domain)
 }

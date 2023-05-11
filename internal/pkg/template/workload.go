@@ -420,6 +420,7 @@ type NLBHealthCheck struct {
 	UnhealthyThreshold *int64
 	Timeout            *int64
 	Interval           *int64
+	GracePeriod        *int64
 }
 
 // NetworkLoadBalancer holds configuration that's needed for a Network Load Balancer.
@@ -773,7 +774,6 @@ type WorkloadOpts struct {
 	Network                  NetworkOpts
 	ExecuteCommand           *ExecuteCommandOpts
 	Platform                 RuntimePlatformOpts
-	DomainAlias              string
 	DockerLabels             map[string]string
 	DependsOn                map[string]string
 	Publish                  *PublishOpts
@@ -786,7 +786,7 @@ type WorkloadOpts struct {
 	WorkloadType            string
 	HealthCheck             *ContainerHealthCheck
 	HTTPTargetContainer     HTTPTargetContainer
-	HTTPHealthCheck         HTTPHealthCheckOpts
+	GracePeriod             *int64
 	NLB                     *NetworkLoadBalancer
 	ALBListener             *ALBListener
 	DeploymentConfiguration DeploymentConfigurationOpts
@@ -816,8 +816,10 @@ type WorkloadOpts struct {
 	// Additional options for worker service templates.
 	Subscribe *SubscribeOpts
 
+	// Additional options for static site template.
 	AssetMappingFileBucket string
 	AssetMappingFilePath   string
+	StaticSiteAlias        string
 }
 
 // HealthCheckProtocol returns the protocol for the Load Balancer health check,

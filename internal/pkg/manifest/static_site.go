@@ -26,6 +26,7 @@ type StaticSite struct {
 
 // StaticSiteConfig holds the configuration for a static site service.
 type StaticSiteConfig struct {
+	Alias       string       `yaml:"alias"`
 	FileUploads []FileUpload `yaml:"files"`
 }
 
@@ -33,17 +34,23 @@ type StaticSiteConfig struct {
 type FileUpload struct {
 	Source      string              `yaml:"source"`
 	Destination string              `yaml:"destination"`
-	Context     string              `yaml:"context"`
 	Recursive   bool                `yaml:"recursive"`
-	Reinclude   StringSliceOrString `yaml:"reinclude"`
 	Exclude     StringSliceOrString `yaml:"exclude"`
+	Reinclude   StringSliceOrString `yaml:"reinclude"`
 }
 
-// NewStaticSite creates a new static site service.
-func NewStaticSite(name string) *StaticSite {
+// StaticSiteProps represents the configuration needed to create a static site service.
+type StaticSiteProps struct {
+	Name string
+	StaticSiteConfig
+}
+
+// NewStaticSite creates a new static site service with props.
+func NewStaticSite(props StaticSiteProps) *StaticSite {
 	svc := newDefaultStaticSite()
 	// Apply overrides.
-	svc.Name = stringP(name)
+	svc.Name = stringP(props.Name)
+	svc.FileUploads = props.StaticSiteConfig.FileUploads
 	svc.parser = template.New()
 	return svc
 }

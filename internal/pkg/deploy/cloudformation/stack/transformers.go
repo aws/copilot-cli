@@ -398,6 +398,7 @@ func convertNLBHealthCheck(nlbHC *manifest.NLBHealthCheckArgs) template.NLBHealt
 	hc := template.NLBHealthCheck{
 		HealthyThreshold:   nlbHC.HealthyThreshold,
 		UnhealthyThreshold: nlbHC.UnhealthyThreshold,
+		GracePeriod:        aws.Int64(int64(manifest.DefaultHealthCheckGracePeriod)),
 	}
 	if nlbHC.Port != nil {
 		hc.Port = strconv.Itoa(aws.IntValue(nlbHC.Port))
@@ -407,6 +408,9 @@ func convertNLBHealthCheck(nlbHC *manifest.NLBHealthCheckArgs) template.NLBHealt
 	}
 	if nlbHC.Interval != nil {
 		hc.Interval = aws.Int64(int64(nlbHC.Interval.Seconds()))
+	}
+	if nlbHC.GracePeriod != nil {
+		hc.GracePeriod = aws.Int64(int64(nlbHC.GracePeriod.Seconds()))
 	}
 	return hc
 }
@@ -550,6 +554,13 @@ func (s *BackendService) convertALBListener() (*template.ALBListener, error) {
 	}, nil
 }
 
+func (s *BackendService) convertGracePeriod() *int64 {
+	if s.manifest.HTTP.Main.HealthCheck.Advanced.GracePeriod != nil {
+		return aws.Int64(int64(s.manifest.HTTP.Main.HealthCheck.Advanced.GracePeriod.Seconds()))
+	}
+	return aws.Int64(int64(manifest.DefaultHealthCheckGracePeriod))
+}
+
 type loadBalancerTargeter interface {
 	MainContainerPort() string
 	ExposedPorts() (manifest.ExposedPortsIndex, error)
@@ -676,6 +687,16 @@ func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (networkLoadBalanc
 		config.appDNSDelegationRole = dnsDelegationRole
 	}
 	return config, nil
+}
+
+func (s *LoadBalancedWebService) convertGracePeriod() *int64 {
+	if s.manifest.HTTPOrBool.Main.HealthCheck.Advanced.GracePeriod != nil {
+		return aws.Int64(int64(s.manifest.HTTPOrBool.Main.HealthCheck.Advanced.GracePeriod.Seconds()))
+	}
+	if s.manifest.NLBConfig.Listener.HealthCheck.GracePeriod != nil {
+		return aws.Int64(int64(s.manifest.NLBConfig.Listener.HealthCheck.GracePeriod.Seconds()))
+	}
+	return aws.Int64(int64(manifest.DefaultHealthCheckGracePeriod))
 }
 
 func convertExecuteCommand(e *manifest.ExecuteCommand) *template.ExecuteCommandOpts {

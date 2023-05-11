@@ -401,7 +401,7 @@ func (cfg AdvancedCDNConfig) validate() error {
 		}
 	}
 	if err := cfg.Static.validate(); err != nil {
-		return fmt.Errorf(`validate "static": %w`, err)
+		return fmt.Errorf(`validate "static_assets": %w`, err)
 	}
 	return nil
 }

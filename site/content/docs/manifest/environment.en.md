@@ -238,7 +238,7 @@ Additional HTTPS domain alias to use for static assets.
 DNS domain name of the S3 bucket (for example, `EXAMPLE-BUCKET.s3.us-west-2.amazonaws.com`).
 
 <span class="parent-field">cdn.static_assets.</span><a id="cdn-static-assets-path" href="#cdn-static-assets-path" class="field">`path`</a> <span class="type">String</span>  
-The path pattern (for example, `statics/*`) that specifies which requests should be forwarded to the S3 bucket.
+The path pattern (for example, `static/*`) that specifies which requests should be forwarded to the S3 bucket.
 
 <span class="parent-field">cdn.</span><a id="cdn-tls-termination" href="#cdn-tls-termination" class="field">`terminate_tls`</a> <span class="type">Boolean</span>  
 Enable TLS termination for CloudFront.

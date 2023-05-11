@@ -475,9 +475,9 @@ func (e *Env) cdnConfig() *template.CDNConfig {
 	}
 	if !mftConfig.Static.IsEmpty() {
 		config.Static = &template.CDNStaticAssetConfig{
-			Location: mftConfig.Static.Location,
-			Path:     mftConfig.Static.Path,
-			Alias:    mftConfig.Static.Alias,
+			ImportedBucket: mftConfig.Static.Location,
+			Path:           mftConfig.Static.Path,
+			Alias:          mftConfig.Static.Alias,
 		}
 	}
 	return config

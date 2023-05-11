@@ -573,12 +573,15 @@ func bytePortValidation(val []byte) error {
 }
 
 func stringPortValidation(val string) error {
-	port64, err := strconv.ParseUint(val, 10, 64)
-	if err != nil {
-		return errPortInvalid
-	}
-	if port64 < 1 || port64 > 65535 {
-		return errPortInvalid
+	portList := strings.Split(val, ",")
+	for _, port := range portList {
+		port64, err := strconv.ParseUint(port, 10, 64)
+		if err != nil {
+			return errPortInvalid
+		}
+		if port64 < 1 || port64 > 65535 {
+			return errPortInvalid
+		}
 	}
 	return nil
 }

@@ -30,13 +30,13 @@ func TestFrom_Parse(t *testing.T) {
     cm: 168`,
 			wanted: func() diffNode {
 				/* sentinel -> Mary -> Weight: {new: "kg:52", old: nil} */
-				leaf := &node{
+				leaf := &keyNode{
 					keyValue: "Weight",
 					newV:     yamlNode("kg: 52", t),
 				}
-				return &node{
+				return &keyNode{
 					childNodes: []diffNode{
-						&node{
+						&keyNode{
 							keyValue:   "Mary",
 							childNodes: []diffNode{leaf},
 						},
@@ -55,13 +55,13 @@ func TestFrom_Parse(t *testing.T) {
     kg: 52`,
 			wanted: func() diffNode {
 				/* sentinel -> Mary -> Weight: {new: nil, old: "kg:52"} */
-				leaf := &node{
+				leaf := &keyNode{
 					keyValue: "Weight",
 					oldV:     yamlNode("kg: 52", t),
 				}
-				return &node{
+				return &keyNode{
 					childNodes: []diffNode{
-						&node{
+						&keyNode{
 							keyValue:   "Mary",
 							childNodes: []diffNode{leaf},
 						},
@@ -87,29 +87,29 @@ func TestFrom_Parse(t *testing.T) {
 					   -> CanFight: {new: no, old: yes}
 					   -> FavoriteWord: {new: peace, old: muscle}
 				*/
-				leafCM := &node{
+				leafCM := &keyNode{
 					keyValue: "cm",
 					newV:     yamlScalarNode("168"),
 					oldV:     yamlScalarNode("190"),
 				}
-				leafCanFight := &node{
+				leafCanFight := &keyNode{
 					keyValue: "CanFight",
 					newV:     yamlScalarNode("no"),
 					oldV:     yamlScalarNode("yes"),
 				}
-				leafFavWord := &node{
+				leafFavWord := &keyNode{
 					keyValue: "FavoriteWord",
 					newV:     yamlScalarNode("peace"),
 					oldV:     yamlScalarNode("muscle"),
 				}
-				return &node{
+				return &keyNode{
 					childNodes: []diffNode{
-						&node{
+						&keyNode{
 							keyValue: "Mary",
 							childNodes: []diffNode{
 								leafCanFight,
 								leafFavWord,
-								&node{
+								&keyNode{
 									keyValue:   "Height",
 									childNodes: []diffNode{leafCM},
 								},
@@ -139,15 +139,15 @@ func TestFrom_Parse(t *testing.T) {
 				          -> 1 unchanged item (mouse)
 				*/
 				leaf1 := &seqItemNode{
-					node{oldV: yamlScalarNode("dog")},
+					keyNode{oldV: yamlScalarNode("dog")},
 				}
 				leaf2 := &seqItemNode{
-					node{newV: yamlScalarNode("dog")},
+					keyNode{newV: yamlScalarNode("dog")},
 				}
 				unchangedBear, unchangedCat, unchangedMouse := &unchangedNode{count: 1}, &unchangedNode{count: 1}, &unchangedNode{count: 1}
-				return &node{
+				return &keyNode{
 					childNodes: []diffNode{
-						&node{
+						&keyNode{
 							keyValue:   "SizeRank",
 							childNodes: []diffNode{unchangedBear, leaf1, unchangedCat, leaf2, unchangedMouse},
 						},
@@ -166,12 +166,12 @@ func TestFrom_Parse(t *testing.T) {
 				          -> 1 unchanged item (cat)
 				*/
 				leaf := &seqItemNode{
-					node{newV: yamlScalarNode("mouse")},
+					keyNode{newV: yamlScalarNode("mouse")},
 				}
 				unchangedDogBear, unchangedCat := &unchangedNode{count: 2}, &unchangedNode{count: 1}
-				return &node{
+				return &keyNode{
 					childNodes: []diffNode{
-						&node{
+						&keyNode{
 							keyValue:   "DanceCompetition",
 							childNodes: []diffNode{unchangedDogBear, leaf, unchangedCat},
 						},
@@ -190,12 +190,12 @@ func TestFrom_Parse(t *testing.T) {
 					   -> 1 unchanged item (mouse)
 				*/
 				leaf := &seqItemNode{
-					node{oldV: yamlScalarNode("cat")},
+					keyNode{oldV: yamlScalarNode("cat")},
 				}
 				unchangedDobBear, unchangedMouse := &unchangedNode{count: 2}, &unchangedNode{count: 1}
-				return &node{
+				return &keyNode{
 					childNodes: []diffNode{
-						&node{
+						&keyNode{
 							keyValue:   "PotatoChipCommittee",
 							childNodes: []diffNode{unchangedDobBear, leaf, unchangedMouse},
 						},
@@ -212,15 +212,15 @@ func TestFrom_Parse(t *testing.T) {
 					   -> {old: circle, new: ellipse} // Modification.
 				*/
 				leaf := &seqItemNode{
-					node{
+					keyNode{
 						oldV: yamlScalarNode("circle"),
 						newV: yamlScalarNode("ellipse"),
 					},
 				}
 				unchangedTri, unchangedRec := &unchangedNode{1}, &unchangedNode{1}
-				return &node{
+				return &keyNode{
 					childNodes: []diffNode{
-						&node{
+						&keyNode{
 							keyValue:   "DogsFavoriteShape",
 							childNodes: []diffNode{unchangedTri, leaf, unchangedRec},
 						},
@@ -236,14 +236,14 @@ func TestFrom_Parse(t *testing.T) {
     Bear: "I know I'm supposed to keep an eye on you"`,
 			wanted: func() diffNode {
 				/* sentinel -> Mary -> Dialogue --> {new: map, old: scalar} */
-				leafDialogue := &node{
+				leafDialogue := &keyNode{
 					keyValue: "Dialogue",
 					newV:     yamlScalarNode("Said bear: 'I know I'm supposed to keep an eye on you", withStyle(yaml.DoubleQuotedStyle)),
 					oldV:     yamlNode("Bear: \"I know I'm supposed to keep an eye on you\"", t),
 				}
-				return &node{
+				return &keyNode{
 					childNodes: []diffNode{
-						&node{
+						&keyNode{
 							keyValue:   "Mary",
 							childNodes: []diffNode{leafDialogue},
 						},
@@ -262,7 +262,7 @@ func TestFrom_Parse(t *testing.T) {
       Tone: pleased`,
 			wanted: func() diffNode {
 				/* sentinel -> Mary -> Dialogue --> {new: list, old: scalar} */
-				leafDialogue := &node{
+				leafDialogue := &keyNode{
 					keyValue: "Dialogue",
 					newV:     yamlScalarNode("Said bear: 'I know I'm supposed to keep an eye on you; Said Dog: 'ikr'", withStyle(yaml.DoubleQuotedStyle)),
 					oldV: yamlNode(`- Bear: "I know I'm supposed to keep an eye on you"
@@ -270,9 +270,9 @@ func TestFrom_Parse(t *testing.T) {
 - Dog: "ikr"
   Tone: pleased`, t),
 				}
-				return &node{
+				return &keyNode{
 					childNodes: []diffNode{
-						&node{
+						&keyNode{
 							keyValue:   "Mary",
 							childNodes: []diffNode{leafDialogue},
 						},
@@ -293,7 +293,7 @@ func TestFrom_Parse(t *testing.T) {
     Dog: (pleased) "ikr"`,
 			wanted: func() diffNode {
 				/* sentinel -> Mary -> Dialogue --> {new: list, old: map} */
-				leafDialogue := &node{
+				leafDialogue := &keyNode{
 					keyValue: "Dialogue",
 					newV: yamlNode(`- Bear: "I know I'm supposed to keep an eye on you"
   Tone: disappointed
@@ -302,9 +302,9 @@ func TestFrom_Parse(t *testing.T) {
 					oldV: yamlNode(`Bear: (disappointed) "I know I'm supposed to keep an eye on you"
 Dog: (pleased) "ikr"`, t),
 				}
-				return &node{
+				return &keyNode{
 					childNodes: []diffNode{
-						&node{
+						&keyNode{
 							keyValue:   "Mary",
 							childNodes: []diffNode{leafDialogue},
 						},
@@ -345,7 +345,7 @@ Dog: (pleased) "ikr"`, t),
 	}
 }
 
-func TestFrom_ParseWithCFNIgnorer(t *testing.T) {
+func TestFrom_ParseWithCFNOverriders(t *testing.T) {
 	testCases := map[string]struct {
 		curr        string
 		old         string
@@ -363,19 +363,53 @@ Metadata:
   Manifest: There is definitely a difference.`,
 			wanted: func() diffNode {
 				/* sentinel -> Metadata -> Version*/
-				leaf := &node{
+				leaf := &keyNode{
 					keyValue: "Version",
 					oldV:     yamlScalarNode("v1.26.0"),
 					newV:     yamlScalarNode("v1.27.0"),
 				}
-				return &node{
+				return &keyNode{
 					childNodes: []diffNode{
-						&node{
+						&keyNode{
 							keyValue:   "Metadata",
 							childNodes: []diffNode{leaf},
 						},
 					},
 				}
+			},
+		},
+		"no diff between full/short form intrinsic func": {
+			curr: `Value: !Sub 'blah'
+AvailabilityZone: !Select [0, !GetAZs '']
+SecurityGroups:
+  - !GetAtt InternalLoadBalancerSecurityGroup.GroupId
+StringsEquals:
+  iam:ResourceTag/copilot-application: !Sub '${AppName}'
+Properties:
+  GroupDescription: !Join ['', [!Ref AppName, '-', !Ref EnvironmentName, EnvironmentSecurityGroup]]
+`,
+			old: `Value:
+  Fn::Sub: 'blah'
+AvailabilityZone:
+  Fn::Select:
+    - 0
+    - Fn::GetAZs: ""
+SecurityGroups:
+  - Fn::GetAtt: InternalLoadBalancerSecurityGroup.GroupId
+StringsEquals:
+  iam:ResourceTag/copilot-application:
+    Fn::Sub: ${AppName}
+Properties:
+  GroupDescription:
+     Fn::Join:
+        - ""
+        - - Ref: AppName
+          - "-"
+          - Ref: EnvironmentName
+          - EnvironmentSecurityGroup
+`,
+			wanted: func() diffNode {
+				return nil
 			},
 		},
 		"no diff": {
@@ -392,7 +426,7 @@ Metadata:
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			got, err := From(tc.old).ParseWithCFNIgnorer([]byte(tc.curr))
+			got, err := From(tc.old).ParseWithCFNOverriders([]byte(tc.curr))
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {

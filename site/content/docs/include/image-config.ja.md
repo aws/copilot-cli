@@ -1,8 +1,3 @@
-<div class="separator"></div>
-
-<a id="image" href="#image" class="field">`image`</a> <span class="type">Map</span>  
-image セクションは、Docker ビルドに関する設定や公開するポートについてのパラメータを含みます。
-
 <span class="parent-field">image.</span><a id="image-build" href="#image-build" class="field">`build`</a> <span class="type">String or Map</span>  
 オプションの引数で指定した Dockerfile からコンテナをビルドします。後述の [`image.location`](#image-location) フィールドとは排他的な使用となります。
 

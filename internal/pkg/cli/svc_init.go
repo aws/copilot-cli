@@ -91,6 +91,11 @@ These messages can be consumed by the Worker Service.`
 "Internet" will configure your service as public.`
 
 	wkldInitImagePrompt = fmt.Sprintf("What's the %s ([registry/]repository[:tag|@digest]) of the image to use?", color.Emphasize("location"))
+
+	fmtStaticSiteInitDirFilePrompt      = "Which " + color.Emphasize("directories or files") + " would you like to upload for %s?"
+	staticSiteInitDirFileHelpPrompt     = "Directories or files to use for building your static site."
+	fmtStaticSiteInitDirFilePathPrompt  = "What is the path to the " + color.Emphasize("directory or file") + " for %s?"
+	staticSiteInitDirFilePathHelpPrompt = "Path to directory or file to use for building your static site."
 )
 
 const (
@@ -119,6 +124,7 @@ type initWkldVars struct {
 	image          string
 	subscriptions  []string
 	noSubscribe    bool
+	sourcePaths    []string
 }
 
 type initSvcVars struct {
@@ -138,6 +144,7 @@ type initSvcOpts struct {
 	store        store
 	dockerEngine dockerEngine
 	sel          dockerfileSelector
+	sourceSel    staticSourceSelector
 	topicSel     topicSelector
 	mftReader    manifestReader
 
@@ -145,14 +152,16 @@ type initSvcOpts struct {
 	manifestPath string
 	platform     *manifest.PlatformString
 	topics       []manifest.TopicSubscription
+	staticAssets []manifest.FileUpload
 
 	// For workspace validation.
 	wsAppName         string
 	wsPendingCreation bool
 
 	// Cache variables
-	df             dockerfileParser
-	manifestExists bool
+	df                  dockerfileParser
+	manifestExists      bool
+	additionalFoundPort uint16 // For logging a personalized recommended action with multiple ports.
 
 	// Init a Dockerfile parser using fs and input path
 	dockerfile func(string) dockerfileParser
@@ -186,18 +195,24 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 		Prog:     termprogress.NewSpinner(log.DiagnosticWriter),
 		Deployer: cloudformation.New(sess, cloudformation.WithProgressTracker(os.Stderr)),
 	}
-	sel, err := selector.NewLocalFileSelector(prompter, fs)
+	dfSel, err := selector.NewDockerfileSelector(prompter, fs)
 	if err != nil {
 		return nil, err
 	}
+	sourceSel, err := selector.NewLocalFileSelector(prompter, fs, ws)
+	if err != nil {
+		return nil, fmt.Errorf("init a new local file selector: %w", err)
+	}
+
 	opts := &initSvcOpts{
 		initSvcVars:  vars,
 		store:        store,
 		fs:           fs,
 		init:         initSvc,
 		prompt:       prompter,
-		sel:          sel,
+		sel:          dfSel,
 		topicSel:     snsSel,
+		sourceSel:    sourceSel,
 		mftReader:    ws,
 		dockerEngine: dockerengine.New(exec.NewCmd()),
 		wsAppName:    tryReadingAppName(),
@@ -245,10 +260,22 @@ func (o *initSvcOpts) Validate() error {
 			return err
 		}
 	}
+
 	if o.image != "" && o.wkldType == manifestinfo.RequestDrivenWebServiceType {
 		if err := validateAppRunnerImage(o.image); err != nil {
 			return err
 		}
+	}
+	if len(o.sourcePaths) != 0 {
+		if o.wkldType != manifestinfo.StaticSiteType {
+			return fmt.Errorf("'--%s' must be specified with '--%s %q'", sourcesFlag, typeFlag, manifestinfo.StaticSiteType)
+		}
+		// Path validation against fs happens during conversion.
+		assets, err := o.convertStringsToAssets(o.sourcePaths)
+		if err != nil {
+			return fmt.Errorf("convert source strings to objects: %w", err)
+		}
+		o.staticAssets = assets
 	}
 	if err := validateSubscribe(o.noSubscribe, o.subscriptions); err != nil {
 		return err
@@ -333,7 +360,8 @@ func (o *initSvcOpts) Execute() error {
 	if err != nil {
 		return err
 	}
-	manifestPath, err := o.init.Service(&initialize.ServiceProps{
+
+	o.manifestPath, err = o.init.Service(&initialize.ServiceProps{
 		WorkloadProps: initialize.WorkloadProps{
 			App:            o.appName,
 			Name:           o.name,
@@ -349,22 +377,34 @@ func (o *initSvcOpts) Execute() error {
 		Port:        o.port,
 		HealthCheck: hc,
 		Private:     strings.EqualFold(o.ingressType, ingressTypeEnvironment),
+		FileUploads: o.staticAssets,
 	})
 	if err != nil {
 		return err
 	}
-	o.manifestPath = manifestPath
 	return nil
 }
 
 // RecommendActions returns follow-up actions the user can take after successfully executing the command.
 func (o *initSvcOpts) RecommendActions() error {
-	logRecommendedActions([]string{
-		fmt.Sprintf("Update your manifest %s to change the defaults.", color.HighlightResource(o.manifestPath)),
-		fmt.Sprintf("Run %s to deploy your service to a %s environment.",
-			color.HighlightCode(fmt.Sprintf("copilot svc deploy --name %s --env %s", o.name, defaultEnvironmentName)),
-			defaultEnvironmentName),
-	})
+	actions := []string{fmt.Sprintf("Update your manifest %s to change the defaults.", color.HighlightResource(o.manifestPath))}
+
+	// If the Dockerfile exposes multiple ports, log a code block suggesting adding additional rules.
+	if o.additionalFoundPort != 0 {
+		multiplePortsAdditionalPathsAction := fmt.Sprintf(`It looks like your Dockerfile exposes multiple ports. 
+You can specify multiple paths where your service will receive traffic by setting http.additional_rules:
+%s`, color.HighlightCodeBlock(fmt.Sprintf(`http:
+  path: /
+  additional_rules:
+  - path: /admin
+    target_port: %d`, o.additionalFoundPort)))
+		actions = append(actions, multiplePortsAdditionalPathsAction)
+	}
+	actions = append(actions, fmt.Sprintf("Run %s to deploy your service to a %s environment.",
+		color.HighlightCode(fmt.Sprintf("copilot svc deploy --name %s --env %s", o.name, defaultEnvironmentName)),
+		defaultEnvironmentName))
+
+	logRecommendedActions(actions)
 	return nil
 }
 
@@ -430,7 +470,28 @@ If you'd prefer a new default manifest, please manually delete the existing one.
 }
 
 func (o *initSvcOpts) askStaticSite() error {
-	// TODO: add file selection for generating svc manifest.
+	if len(o.staticAssets) != 0 {
+		return nil
+	}
+	var sources []string
+	var err error
+	if o.wsPendingCreation {
+		sources, err = selector.AskCustomPaths(o.prompt, fmt.Sprintf(fmtStaticSiteInitDirFilePathPrompt, color.HighlightUserInput(o.name)), staticSiteInitDirFilePathHelpPrompt,
+			func(v interface{}) error {
+				return validatePath(o.fs, v)
+			})
+		if err != nil {
+			return err
+		}
+	} else {
+		sources, err = o.askSource()
+		if err != nil {
+			return err
+		}
+	}
+	if o.staticAssets, err = o.convertStringsToAssets(sources); err != nil {
+		return fmt.Errorf("convert source paths to asset objects: %w", err)
+	}
 	return nil
 }
 
@@ -474,7 +535,7 @@ func (o *initSvcOpts) validateIngressType() error {
 	if strings.EqualFold(o.ingressType, "internet") || strings.EqualFold(o.ingressType, "environment") {
 		return nil
 	}
-	return fmt.Errorf("invalid ingress type %q: must be one of %s.", o.ingressType, english.OxfordWordSeries(rdwsIngressOptions, "or"))
+	return fmt.Errorf("invalid ingress type %q: must be one of %s", o.ingressType, english.OxfordWordSeries(rdwsIngressOptions, "or"))
 }
 
 func (o *initSvcOpts) askImage() error {
@@ -500,6 +561,22 @@ func (o *initSvcOpts) askImage() error {
 	}
 	o.image = image
 	return nil
+}
+
+func (o *initSvcOpts) askSource() ([]string, error) {
+	sources, err := o.sourceSel.StaticSources(
+		fmt.Sprintf(fmtStaticSiteInitDirFilePrompt, color.HighlightUserInput(o.name)),
+		staticSiteInitDirFileHelpPrompt,
+		fmt.Sprintf(fmtStaticSiteInitDirFilePathPrompt, color.HighlightUserInput(o.name)),
+		staticSiteInitDirFilePathHelpPrompt,
+		func(v interface{}) error {
+			return validatePath(o.fs, v)
+		},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("select local directory or file: %w", err)
+	}
+	return sources, nil
 }
 
 func (o *initSvcOpts) manifestAlreadyExists() (bool, error) {
@@ -599,13 +676,12 @@ func (o *initSvcOpts) askSvcPort() (err error) {
 			defaultPort = strconv.Itoa(int(ports[0].Port))
 		}
 	}
-	// Skip asking if it is a backend or worker service.
+
 	if o.wkldType == manifestinfo.BackendServiceType || o.wkldType == manifestinfo.WorkerServiceType {
 		return nil
 	}
-
 	port, err := o.prompt.Get(
-		fmt.Sprintf(svcInitSvcPortPrompt, color.Emphasize("port")),
+		fmt.Sprintf(svcInitSvcPortPrompt, color.Emphasize("port(s)")),
 		svcInitSvcPortHelpPrompt,
 		validateSvcPort,
 		prompt.WithDefaultInput(defaultPort),
@@ -614,13 +690,20 @@ func (o *initSvcOpts) askSvcPort() (err error) {
 	if err != nil {
 		return fmt.Errorf("get port: %w", err)
 	}
-
 	portUint, err := strconv.ParseUint(port, 10, 16)
 	if err != nil {
 		return fmt.Errorf("parse port string: %w", err)
 	}
-
 	o.port = uint16(portUint)
+
+	// Log a recommended action to update additional rules if multiple ports exposed.
+	for _, foundPort := range ports {
+		// Use the first exposed port in the Dockerfile that wasn't selected for traffic.
+		if foundPort.Port != o.port {
+			o.additionalFoundPort = foundPort.Port
+			break
+		}
+	}
 
 	return nil
 }
@@ -720,6 +803,21 @@ func validateWorkspaceApp(wsApp, inputApp string, store store) error {
 	return nil
 }
 
+func (o initSvcOpts) convertStringsToAssets(sources []string) ([]manifest.FileUpload, error) {
+	assets := make([]manifest.FileUpload, len(sources))
+	for i, source := range sources {
+		info, err := o.fs.Stat(source)
+		if err != nil {
+			return nil, err
+		}
+		assets[i] = manifest.FileUpload{
+			Source:    source,
+			Recursive: info.IsDir(),
+		}
+	}
+	return assets, nil
+}
+
 // parseSerializedSubscription parses the service and topic name out of keys specified in the form "service:topicName"
 func parseSerializedSubscription(input string) (manifest.TopicSubscription, error) {
 	attrs := regexpMatchSubscription.FindStringSubmatch(input)
@@ -804,6 +902,7 @@ This command is also run as part of "copilot init".`,
 	cmd.Flags().StringArrayVar(&vars.subscriptions, subscribeTopicsFlag, []string{}, subscribeTopicsFlagDescription)
 	cmd.Flags().BoolVar(&vars.noSubscribe, noSubscriptionFlag, false, noSubscriptionFlagDescription)
 	cmd.Flags().StringVar(&vars.ingressType, ingressTypeFlag, "", ingressTypeFlagDescription)
+	cmd.Flags().StringArrayVar(&vars.sourcePaths, sourcesFlag, nil, sourcesFlagDescription)
 
 	return cmd
 }

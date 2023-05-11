@@ -15,8 +15,8 @@ phases:
       nodejs: 16
     commands:
       - 'cd $HOME/.goenv && git pull --ff-only && cd -'
-      - 'goenv install 1.18.4'
-      - 'goenv global 1.18.4'
+      - 'goenv install 1.20.1'
+      - 'goenv global 1.20.1'
       - 'go install github.com/onsi/ginkgo/v2/ginkgo@latest'
   pre_build:
     commands:

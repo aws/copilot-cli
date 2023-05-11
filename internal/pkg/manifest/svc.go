@@ -381,6 +381,7 @@ type NLBHealthCheckArgs struct {
 	UnhealthyThreshold *int64         `yaml:"unhealthy_threshold"`
 	Timeout            *time.Duration `yaml:"timeout"`
 	Interval           *time.Duration `yaml:"interval"`
+	GracePeriod        *time.Duration `yaml:"grace_period"`
 }
 
 func (h *NLBHealthCheckArgs) isEmpty() bool {
