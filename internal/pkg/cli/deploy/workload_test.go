@@ -60,6 +60,7 @@ type deployMocks struct {
 	mockFileSystem             afero.Fs
 	mockValidator              *mocks.MockaliasCertValidator
 	mockLabeledTermPrinter     *mocks.MocklabeledTermPrinter
+	mockdockerEngineRunChecker *mocks.MockdockerEngineRunChecker
 }
 
 type mockTemplateFS struct {
@@ -204,6 +205,21 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 		wantBuildRequired bool
 		wantErr           error
 	}{
+		"error if docker engine is not running": {
+			inMockUserTag: "v1.0",
+			inDockerBuildArgs: map[string]*manifest.DockerBuildArgs{
+				"mockWkld": {
+					Dockerfile: aws.String("mockDockerfile"),
+					Context:    aws.String("mockContext"),
+				},
+			},
+			mock: func(t *testing.T, m *deployMocks) {
+				m.mockdockerEngineRunChecker.EXPECT().CheckDockerEngineRunning().Return(errors.New(`docker daemon is not responsive:
+Cannot connect to the Docker daemon at unix:///Users/kolladit/.docker/run/docker.sock. Is the docker daemon running?`))
+			},
+			wantErr: fmt.Errorf(`check if docker engine is running: docker daemon is not responsive:
+Cannot connect to the Docker daemon at unix:///Users/kolladit/.docker/run/docker.sock. Is the docker daemon running?`),
+		},
 		"error if failed to build and push image": {
 			inMockUserTag: "v1.0",
 			inDockerBuildArgs: map[string]*manifest.DockerBuildArgs{
@@ -213,6 +229,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				},
 			},
 			mock: func(t *testing.T, m *deployMocks) {
+				m.mockdockerEngineRunChecker.EXPECT().CheckDockerEngineRunning().Return(nil)
 				m.mockRepositoryService.EXPECT().Login().Return(mockURI, nil)
 				m.mockRepositoryService.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
 					URI:        mockURI,
@@ -240,6 +257,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				},
 			},
 			mock: func(t *testing.T, m *deployMocks) {
+				m.mockdockerEngineRunChecker.EXPECT().CheckDockerEngineRunning().Return(nil)
 				m.mockRepositoryService.EXPECT().Login().Return(mockURI, nil)
 				m.mockRepositoryService.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
 					URI:        mockURI,
@@ -273,6 +291,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				},
 			},
 			mock: func(t *testing.T, m *deployMocks) {
+				m.mockdockerEngineRunChecker.EXPECT().CheckDockerEngineRunning().Return(nil)
 				m.mockRepositoryService.EXPECT().Login().Return(mockURI, nil)
 				m.mockRepositoryService.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
 					URI:        mockURI,
@@ -309,6 +328,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			},
 			inMockGitTag: "gitTag",
 			mock: func(t *testing.T, m *deployMocks) {
+				m.mockdockerEngineRunChecker.EXPECT().CheckDockerEngineRunning().Return(nil)
 				m.mockRepositoryService.EXPECT().Login().Return(mockURI, nil)
 				m.mockRepositoryService.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
 					URI:        mockURI,
@@ -611,11 +631,12 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			defer ctrl.Finish()
 
 			m := &deployMocks{
-				mockUploader:           mocks.NewMockuploader(ctrl),
-				mockAddons:             mocks.NewMockstackBuilder(ctrl),
-				mockRepositoryService:  mocks.NewMockrepositoryService(ctrl),
-				mockFileSystem:         afero.NewMemMapFs(),
-				mockLabeledTermPrinter: mocks.NewMocklabeledTermPrinter(ctrl),
+				mockUploader:               mocks.NewMockuploader(ctrl),
+				mockAddons:                 mocks.NewMockstackBuilder(ctrl),
+				mockRepositoryService:      mocks.NewMockrepositoryService(ctrl),
+				mockFileSystem:             afero.NewMemMapFs(),
+				mockLabeledTermPrinter:     mocks.NewMocklabeledTermPrinter(ctrl),
+				mockdockerEngineRunChecker: mocks.NewMockdockerEngineRunChecker(ctrl),
 			}
 			tc.mock(t, m)
 
@@ -648,6 +669,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				},
 				fs:              m.mockFileSystem,
 				s3Client:        m.mockUploader,
+				docker:          m.mockdockerEngineRunChecker,
 				repository:      m.mockRepositoryService,
 				templateFS:      fakeTemplateFS(),
 				overrider:       new(override.Noop),
