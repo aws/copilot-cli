@@ -5,14 +5,10 @@ package diff
 
 import (
 	"fmt"
-	"regexp"
 	"strings"
 
 	"gopkg.in/yaml.v3"
 )
-
-var intrinsicFuncFullFormRegex = regexp.MustCompile(`^Fn::[A-Z][A-Za-z\d]*|Ref$`) // Match "Fn::XX" or Ref.
-var intrinsicFuncShortFormRegex = regexp.MustCompile(`^![A-Z][A-Za-z\d]*$`)       // Match "!XX".
 
 // overrider overrides the parsing behavior between two yaml nodes under certain keys.
 type overrider interface {
@@ -49,23 +45,17 @@ func (m *ignorer) parse(_, _ *yaml.Node, _ string, _ overrider) (diffNode, error
 
 // Check https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/intrinsic-function-reference.html for
 // a complete list of intrinsic functions. Some are not included here as they do not need an overrider.
-var intrinsicFunctions = map[string]struct {
-	fullName  string
-	shortName string
-}{
-	"Ref":         {"Ref", "!Ref"},
-	"Base64":      {"Fn::Base64", "!Base64"},
-	"Cidr":        {"Fn::Cidr", "!Cidr"},
-	"FindInMap":   {"Fn::FindInMap", "!FindInMap"},
-	"GetAtt":      {"Fn::GetAtt", "!GetAtt"},
-	"GetAZs":      {"Fn::GetAZs", "!GetAZs"},
-	"ImportValue": {"Fn::ImportValue", "!ImportValue"},
-	"Join":        {"Fn::Join", "!Join"},
-	"Select":      {"Fn::Select", "!Select"},
-	"Split":       {"Fn::Split", "!Split"},
-	"Sub":         {"Fn::Sub", "!Sub"},
-	"Transform":   {"Fn::Transform", "Transform"},
-}
+var (
+	exists                     = struct{}{}
+	intrinsicFunctionFullNames = map[string]struct{}{"Ref": exists, "Fn::Base64": exists, "Fn::Cidr": exists,
+		"Fn::FindInMap": exists, "Fn::GetAtt": exists, "Fn::GetAZs": exists, "Fn::ImportValue": exists, "Fn::Join": exists,
+		"Fn::Select": exists, "Fn::Split": exists, "Fn::Sub": exists, "Fn::Transform": exists,
+	}
+	intrinsicFunctionShortNames = map[string]struct{}{"!Ref": exists, "!Base64": exists, "!Cidr": exists,
+		"!FindInMap": exists, "!GetAtt": exists, "!GetAZs": exists, "!ImportValue": exists, "!Join": exists,
+		"!Select": exists, "!Split": exists, "!Sub": exists, "Transform": exists,
+	}
+)
 
 // intrinsicFuncMatcher matches intrinsic function nodes.
 type intrinsicFuncMatcher struct{}
@@ -80,13 +70,7 @@ func (_ *intrinsicFuncMatcher) match(from, to *yaml.Node, _ string, _ overrider)
 		return false
 	}
 	fromFunc, toFunc := intrinsicFuncName(from), intrinsicFuncName(to)
-	if _, ok := intrinsicFunctions[fromFunc]; !ok {
-		return false
-	}
-	if _, ok := intrinsicFunctions[toFunc]; !ok {
-		return false
-	}
-	return fromFunc == toFunc
+	return fromFunc != "" && toFunc != "" && fromFunc == toFunc
 }
 
 // intrinsicFuncMatcher matches and parses two intrinsic function nodes written in different form (full/short).
@@ -119,9 +103,9 @@ func (*intrinsicFuncMapTagConverter) parse(from, to *yaml.Node, key string, over
 	if from.Kind == yaml.MappingNode {
 		// The full form mapping node always contain only one child node. The second element in `Content` is the 
 		// value of the child node. Read https://www.efekarakus.com/2020/05/30/deep-dive-go-yaml-cfn.html.
-		diff, err = parse(from.Content[1], stripTag(to), intrinsicFunctions[intrinsicFuncName(from)].fullName, overrider)
+		diff, err = parse(from.Content[1], stripTag(to), from.Content[0].Value, overrider)
 	} else {
-		diff, err = parse(stripTag(from), to.Content[1], intrinsicFunctions[intrinsicFuncName(to)].fullName, overrider)
+		diff, err = parse(stripTag(from), to.Content[1], to.Content[0].Value, overrider)
 	}
 	if diff == nil {
 		return nil, err
@@ -192,7 +176,7 @@ func (converter *getAttConverter) parse(from, to *yaml.Node, key string, overrid
 	if err != nil {
 		return nil, err
 	}
-	diff, err := parse(fromValue, toValue, intrinsicFunctions["GetAtt"].fullName, overrider)
+	diff, err := parse(fromValue, toValue, "Fn::GetAtt", overrider)
 	if diff == nil {
 		return nil, err
 	}
@@ -202,16 +186,24 @@ func (converter *getAttConverter) parse(from, to *yaml.Node, key string, overrid
 	}, nil
 }
 
+// intrinsicFuncName returns the name ofo the intrinsic function given a node.
+// If the node is not an intrinsic function node, it returns an empty string.
 func intrinsicFuncName(node *yaml.Node) string {
 	if node.Kind != yaml.MappingNode {
-		return strings.TrimPrefix(intrinsicFuncShortFormRegex.FindString(node.Tag), "!")
+		if _, ok := intrinsicFunctionShortNames[node.Tag]; !ok {
+			return ""
+		}
+		return strings.TrimPrefix(node.Tag, "!")
 	}
 	if len(node.Content) != 2 {
 		// The full form mapping node always contain only one child node, whose key is the func name in full form.
 		// Read https://www.efekarakus.com/2020/05/30/deep-dive-go-yaml-cfn.html.
 		return ""
 	}
-	return strings.TrimPrefix(intrinsicFuncFullFormRegex.FindString(node.Content[0].Value), "Fn::")
+	if _, ok := intrinsicFunctionFullNames[node.Content[0].Value]; !ok {
+		return ""
+	}
+	return strings.TrimPrefix(node.Content[0].Value, "Fn::")
 }
 
 func stripTag(node *yaml.Node) *yaml.Node {
