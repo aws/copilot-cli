@@ -6,13 +6,14 @@
 name: static
 type: Static Site
 
-alias: example.com
+http:
+  alias: example.com
 
 files:
   - context: ./frontend
     source: dist
     destination: /dist
-  - source: ./foo 
-    destination: /code 
+  - source: ./foo
+    destination: /code
     include: "*.jpg"
     exclude: "*"
