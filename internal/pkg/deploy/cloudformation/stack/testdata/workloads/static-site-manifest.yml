@@ -6,6 +6,8 @@
 name: static
 type: Static Site
 
+alias: example.com
+
 files:
   - context: ./frontend
     source: dist
