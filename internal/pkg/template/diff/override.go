@@ -47,13 +47,33 @@ func (m *ignorer) parse(_, _ *yaml.Node, _ string, _ overrider) (diffNode, error
 // a complete list of intrinsic functions. Some are not included here as they do not need an overrider.
 var (
 	exists                     = struct{}{}
-	intrinsicFunctionFullNames = map[string]struct{}{"Ref": exists, "Fn::Base64": exists, "Fn::Cidr": exists,
-		"Fn::FindInMap": exists, "Fn::GetAtt": exists, "Fn::GetAZs": exists, "Fn::ImportValue": exists, "Fn::Join": exists,
-		"Fn::Select": exists, "Fn::Split": exists, "Fn::Sub": exists, "Fn::Transform": exists,
+	intrinsicFunctionFullNames = map[string]struct{}{
+		"Ref":             exists,
+		"Fn::Base64":      exists,
+		"Fn::Cidr":        exists,
+		"Fn::FindInMap":   exists,
+		"Fn::GetAtt":      exists,
+		"Fn::GetAZs":      exists,
+		"Fn::ImportValue": exists,
+		"Fn::Join":        exists,
+		"Fn::Select":      exists,
+		"Fn::Split":       exists,
+		"Fn::Sub":         exists,
+		"Fn::Transform":   exists,
 	}
-	intrinsicFunctionShortNames = map[string]struct{}{"!Ref": exists, "!Base64": exists, "!Cidr": exists,
-		"!FindInMap": exists, "!GetAtt": exists, "!GetAZs": exists, "!ImportValue": exists, "!Join": exists,
-		"!Select": exists, "!Split": exists, "!Sub": exists, "Transform": exists,
+	intrinsicFunctionShortNames = map[string]struct{}{
+		"!Ref":         exists,
+		"!Base64":      exists,
+		"!Cidr":        exists,
+		"!FindInMap":   exists,
+		"!GetAtt":      exists,
+		"!GetAZs":      exists,
+		"!ImportValue": exists,
+		"!Join":        exists,
+		"!Select":      exists,
+		"!Split":       exists,
+		"!Sub":         exists,
+		"Transform":    exists,
 	}
 )
 
