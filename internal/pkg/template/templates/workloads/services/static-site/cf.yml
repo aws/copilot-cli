@@ -512,3 +512,15 @@ Resources:
       ManagedPolicyArns:
         - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
 {{- end}}
+
+Outputs:
+  CloudFrontDistributionDomainName:
+    Value: !GetAtt CloudFrontDistribution.DomainName
+    Export:
+      Name: !Sub ${AWS::StackName}-CloudFrontDistributionDomainName
+  {{- if .StaticSiteAlias}}
+  CloudFrontDistributionAlternativeDomainName:
+    Value: {{ quote .StaticSiteAlias }}
+    Export:
+      Name: !Sub ${AWS::StackName}-CloudFrontDistributionAlternativeDomainName
+  {{- end}}

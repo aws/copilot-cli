@@ -18,6 +18,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/tags"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/spf13/afero"
 
@@ -216,6 +217,9 @@ func (o *deploySvcOpts) Execute() error {
 	if err != nil {
 		return err
 	}
+	if o.forceNewUpdate && o.svcType == manifestinfo.StaticSiteType {
+		return fmt.Errorf("--%s is not supported for service type %q", forceFlag, manifestinfo.StaticSiteType)
+	}
 	o.appliedDynamicMft = mft
 	if err := validateWorkloadManifestCompatibilityWithEnv(o.ws, o.envFeaturesDescriber, mft, o.envName); err != nil {
 		return err
@@ -228,7 +232,6 @@ func (o *deploySvcOpts) Execute() error {
 	if err != nil {
 		return fmt.Errorf("check if %s is available in region %s: %w", o.svcType, o.targetEnv.Region, err)
 	}
-
 	if !serviceInRegion {
 		log.Warningf(`%s might not be available in region %s; proceed with caution.
 `, o.svcType, o.targetEnv.Region)
@@ -489,17 +492,6 @@ func validateWorkloadManifestCompatibilityWithEnv(ws wsEnvironmentsLister, env v
 }
 
 func (o *deploySvcOpts) uriRecommendedActions() ([]string, error) {
-	type reachable interface {
-		Port() (uint16, bool)
-	}
-	mft, ok := o.appliedDynamicMft.Manifest().(reachable)
-	if !ok {
-		return nil, nil
-	}
-	if _, ok := mft.Port(); !ok { // No exposed port.
-		return nil, nil
-	}
-
 	describer, err := describe.NewReachableService(o.appName, o.name, o.store)
 	if err != nil {
 		return nil, err

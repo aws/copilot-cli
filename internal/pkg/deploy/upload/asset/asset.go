@@ -183,7 +183,7 @@ func (u *ArtifactBucketUploader) uploadAssetMappingFile(assets []asset) (string,
 
 // dedupe returns a copy of assets with duplicate entries removed.
 func dedupe(assets []asset) []asset {
-	type key struct{ a, b, c string }
+	type key struct{ field1, field2, field3 string }
 	has := make(map[key]bool)
 	out := make([]asset, 0, len(assets))
 

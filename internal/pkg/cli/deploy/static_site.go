@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 
+	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -104,6 +105,19 @@ func (d *staticSiteDeployer) DeployWorkload(in *DeployWorkloadInput) (ActionReco
 		return nil, err
 	}
 	return noopActionRecommender{}, nil
+}
+
+func (d *staticSiteDeployer) deploy(deployOptions Options, stackConfigOutput svcStackConfigurationOutput) error {
+	opts := []awscloudformation.StackOption{
+		awscloudformation.WithRoleARN(d.env.ExecutionRoleARN),
+	}
+	if deployOptions.DisableRollback {
+		opts = append(opts, awscloudformation.WithDisableRollback())
+	}
+	if err := d.deployer.DeployService(stackConfigOutput.conf, d.resources.S3Bucket, opts...); err != nil {
+		return fmt.Errorf("deploy service: %w", err)
+	}
+	return nil
 }
 
 // UploadArtifacts uploads static assets to the app stackset bucket.

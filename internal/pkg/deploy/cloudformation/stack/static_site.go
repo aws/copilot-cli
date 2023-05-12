@@ -100,9 +100,12 @@ func (s *StaticSite) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	bucket, path, err := s3.ParseURL(s.assetMappingURL)
-	if err != nil {
-		return "", err
+	var bucket, path string
+	if s.assetMappingURL != "" {
+		bucket, path, err = s3.ParseURL(s.assetMappingURL)
+		if err != nil {
+			return "", err
+		}
 	}
 	dnsDelegationRole, dnsName := convertAppInformation(s.appInfo)
 	content, err := s.parser.ParseStaticSite(template.WorkloadOpts{
