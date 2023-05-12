@@ -216,7 +216,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			mock: func(t *testing.T, m *deployMocks) {
 				m.mockdockerEngineRunChecker.EXPECT().CheckDockerEngineRunning().Return(errors.New("some error"))
 			},
-			wantErr: fmt.Errorf("some error"),
+			wantErr: fmt.Errorf("check if docker engine is running: some error"),
 		},
 		"error if failed to build and push image": {
 			inMockUserTag: "v1.0",
