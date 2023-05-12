@@ -214,11 +214,9 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				},
 			},
 			mock: func(t *testing.T, m *deployMocks) {
-				m.mockdockerEngineRunChecker.EXPECT().CheckDockerEngineRunning().Return(errors.New(`docker daemon is not responsive:
-Cannot connect to the Docker daemon at unix:///Users/kolladit/.docker/run/docker.sock. Is the docker daemon running?`))
+				m.mockdockerEngineRunChecker.EXPECT().CheckDockerEngineRunning().Return(errors.New("some error"))
 			},
-			wantErr: fmt.Errorf(`check if docker engine is running: docker daemon is not responsive:
-Cannot connect to the Docker daemon at unix:///Users/kolladit/.docker/run/docker.sock. Is the docker daemon running?`),
+			wantErr: fmt.Errorf("some error"),
 		},
 		"error if failed to build and push image": {
 			inMockUserTag: "v1.0",
