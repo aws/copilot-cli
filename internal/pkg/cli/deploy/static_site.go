@@ -9,10 +9,12 @@ import (
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/asset"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
+	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/template"
@@ -27,9 +29,11 @@ type fileUploader interface {
 
 type staticSiteDeployer struct {
 	*svcDeployer
-	staticSiteMft *manifest.StaticSite
-	fs            afero.Fs
-	uploader      fileUploader
+	appVersionGetter versionGetter
+	staticSiteMft    *manifest.StaticSite
+	fs               afero.Fs
+	uploader         fileUploader
+	newStack         func(*stack.StaticSiteConfig) (*stack.StaticSite, error)
 }
 
 // NewStaticSiteDeployer is the constructor for staticSiteDeployer.
@@ -39,14 +43,19 @@ func NewStaticSiteDeployer(in *WorkloadDeployerInput) (*staticSiteDeployer, erro
 	if err != nil {
 		return nil, err
 	}
+	versionGetter, err := describe.NewAppDescriber(in.App.Name)
+	if err != nil {
+		return nil, fmt.Errorf("new app describer for application %s: %w", in.App.Name, err)
+	}
 	mft, ok := in.Mft.(*manifest.StaticSite)
 	if !ok {
 		return nil, fmt.Errorf("manifest is not of type %s", manifestinfo.StaticSiteType)
 	}
 	return &staticSiteDeployer{
-		svcDeployer:   svcDeployer,
-		staticSiteMft: mft,
-		fs:            svcDeployer.fs,
+		svcDeployer:      svcDeployer,
+		appVersionGetter: versionGetter,
+		staticSiteMft:    mft,
+		fs:               svcDeployer.fs,
 		uploader: &asset.ArtifactBucketUploader{
 			FS:                  svcDeployer.fs,
 			AssetDir:            artifactBucketAssetsDir,
@@ -56,6 +65,7 @@ func NewStaticSiteDeployer(in *WorkloadDeployerInput) (*staticSiteDeployer, erro
 				return err
 			},
 		},
+		newStack: stack.NewStaticSite,
 	}, nil
 }
 
@@ -116,7 +126,16 @@ func (d *staticSiteDeployer) stackConfiguration(in *StackRuntimeConfiguration) (
 	if err != nil {
 		return nil, err
 	}
-	conf, err := stack.NewStaticSite(&stack.StaticSiteConfig{
+	if err := d.validateAlias(); err != nil {
+		return nil, err
+	}
+	if err := validateMinAppVersion(d.app.Name, d.name, d.appVersionGetter, deploy.StaticSiteMinAppTemplateVersion); err != nil {
+		return nil, fmt.Errorf("static sites not supported: %w", err)
+	}
+	if err := d.validateSources(); err != nil {
+		return nil, err
+	}
+	conf, err := d.newStack(&stack.StaticSiteConfig{
 		App:                d.app,
 		EnvManifest:        d.envConfig,
 		Manifest:           d.staticSiteMft,
@@ -131,4 +150,31 @@ func (d *staticSiteDeployer) stackConfiguration(in *StackRuntimeConfiguration) (
 		return nil, fmt.Errorf("create stack configuration: %w", err)
 	}
 	return conf, nil
+}
+
+func (d *staticSiteDeployer) validateSources() error {
+	for _, upload := range d.staticSiteMft.FileUploads {
+		_, err := d.fs.Stat(upload.Source)
+		if err != nil {
+			return fmt.Errorf("source %q must be a valid path: %w", upload.Source, err)
+		}
+	}
+	return nil
+}
+
+func (d *staticSiteDeployer) validateAlias() error {
+	if d.staticSiteMft.HTTP.Alias == "" {
+		return nil
+	}
+
+	hasImportedCerts := len(d.envConfig.HTTPConfig.Public.Certificates) != 0
+	if hasImportedCerts {
+		return fmt.Errorf("cannot specify alias when env %q imports one or more certificates", d.env.Name)
+	}
+
+	if d.app.Domain == "" {
+		return fmt.Errorf("cannot specify alias when application is not associated with a domain")
+	}
+
+	return validateAliases(d.app, d.env.Name, d.staticSiteMft.HTTP.Alias)
 }

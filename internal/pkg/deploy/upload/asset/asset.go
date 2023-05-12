@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"mime"
 	"path"
 	"path/filepath"
 	"sort"
@@ -43,6 +44,7 @@ type asset struct {
 
 	ArtifactBucketPath string `json:"path"`
 	ServiceBucketPath  string `json:"destPath"`
+	ContentType        string `json:"contentType"`
 }
 
 // UploadFiles hashes each of the files specified in files and uploads
@@ -54,10 +56,9 @@ func (u *ArtifactBucketUploader) UploadFiles(files []manifest.FileUpload) (strin
 	var assets []asset
 	for _, f := range files {
 		matcher := buildCompositeMatchers(buildReincludeMatchers(f.Reinclude.ToStringSlice()), buildExcludeMatchers(f.Exclude.ToStringSlice()))
-		source := filepath.Join(f.Context, f.Source)
 
-		if err := afero.Walk(u.FS, source, u.walkFn(source, f.Destination, f.Recursive, matcher, &assets)); err != nil {
-			return "", fmt.Errorf("walk the file tree rooted at %q: %s", source, err)
+		if err := afero.Walk(u.FS, f.Source, u.walkFn(f.Source, f.Destination, f.Recursive, matcher, &assets)); err != nil {
+			return "", fmt.Errorf("walk the file tree rooted at %q: %s", f.Source, err)
 		}
 	}
 
@@ -122,6 +123,7 @@ func (u *ArtifactBucketUploader) walkFn(sourcePath, destPath string, recursive b
 			content:            buf,
 			ArtifactBucketPath: path.Join(u.AssetDir, hex.EncodeToString(hash.Sum(nil))),
 			ServiceBucketPath:  filepath.ToSlash(dest),
+			ContentType:        mime.TypeByExtension(filepath.Ext(fpath)),
 		})
 		return nil
 	}
@@ -181,12 +183,12 @@ func (u *ArtifactBucketUploader) uploadAssetMappingFile(assets []asset) (string,
 
 // dedupe returns a copy of assets with duplicate entries removed.
 func dedupe(assets []asset) []asset {
-	type key struct{ a, b string }
+	type key struct{ a, b, c string }
 	has := make(map[key]bool)
 	out := make([]asset, 0, len(assets))
 
 	for i := range assets {
-		key := key{assets[i].ArtifactBucketPath, assets[i].ServiceBucketPath}
+		key := key{assets[i].ArtifactBucketPath, assets[i].ServiceBucketPath, assets[i].ContentType}
 		if has[key] {
 			continue
 		}

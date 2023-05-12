@@ -4,6 +4,9 @@
 package manifest
 
 import (
+	"github.com/aws/copilot-cli/internal/pkg/term/color"
+	"github.com/aws/copilot-cli/internal/pkg/term/log"
+	"strconv"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -20,12 +23,14 @@ const (
 // Default values for HTTPHealthCheck for a load balanced web service.
 const (
 	DefaultHealthCheckPath        = "/"
+	DefaultHealthCheckAdminPath   = "admin"
 	DefaultHealthCheckGracePeriod = 60
 	DefaultDeregistrationDelay    = 60
 )
 
 const (
-	GRPCProtocol = "gRPC" // GRPCProtocol is the HTTP protocol version for gRPC.
+	GRPCProtocol   = "gRPC" // GRPCProtocol is the HTTP protocol version for gRPC.
+	commonGRPCPort = uint16(50051)
 )
 
 // durationp is a utility function used to convert a time.Duration to a pointer. Useful for YAML unmarshaling
@@ -66,7 +71,6 @@ type LoadBalancedWebServiceProps struct {
 	Path string
 	Port uint16
 
-	HTTPVersion string               // Optional http protocol version such as gRPC, HTTP2.
 	HealthCheck ContainerHealthCheck // Optional healthcheck configuration.
 	Platform    PlatformArgsOrString // Optional platform configuration.
 }
@@ -86,8 +90,11 @@ func NewLoadBalancedWebService(props *LoadBalancedWebServiceProps) *LoadBalanced
 		svc.LoadBalancedWebServiceConfig.TaskConfig.CPU = aws.Int(MinWindowsTaskCPU)
 		svc.LoadBalancedWebServiceConfig.TaskConfig.Memory = aws.Int(MinWindowsTaskMemory)
 	}
-	if props.HTTPVersion != "" {
-		svc.HTTPOrBool.Main.ProtocolVersion = &props.HTTPVersion
+
+	if props.Port == commonGRPCPort {
+		log.Infof("Detected port %s, setting HTTP protocol version to %s in the manifest.\n",
+			color.HighlightUserInput(strconv.Itoa(int(props.Port))), color.HighlightCode(GRPCProtocol))
+		svc.HTTPOrBool.Main.ProtocolVersion = aws.String(GRPCProtocol)
 	}
 	svc.HTTPOrBool.Main.Path = aws.String(props.Path)
 	svc.parser = template.New()

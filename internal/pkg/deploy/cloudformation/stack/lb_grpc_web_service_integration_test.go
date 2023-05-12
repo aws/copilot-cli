@@ -82,9 +82,10 @@ func TestGrpcLoadBalancedWebService_Template(t *testing.T) {
 		envConfig.HTTPConfig.Public.Certificates = []string{"mockCertARN"}
 		svcDiscoveryEndpointName := fmt.Sprintf("%s.%s.local", tc.envName, appName)
 		serializer, err := stack.NewLoadBalancedWebService(stack.LoadBalancedWebServiceConfig{
-			App:         &config.Application{Name: appName},
-			EnvManifest: envConfig,
-			Manifest:    v,
+			App:                &config.Application{Name: appName},
+			EnvManifest:        envConfig,
+			Manifest:           v,
+			ArtifactBucketName: "bucket",
 			RuntimeConfig: stack.RuntimeConfig{
 				ServiceDiscoveryEndpoint: svcDiscoveryEndpointName,
 				AccountID:                "123456789123",

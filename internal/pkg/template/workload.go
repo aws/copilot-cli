@@ -774,7 +774,6 @@ type WorkloadOpts struct {
 	Network                  NetworkOpts
 	ExecuteCommand           *ExecuteCommandOpts
 	Platform                 RuntimePlatformOpts
-	DomainAlias              string
 	DockerLabels             map[string]string
 	DependsOn                map[string]string
 	Publish                  *PublishOpts
@@ -817,8 +816,10 @@ type WorkloadOpts struct {
 	// Additional options for worker service templates.
 	Subscribe *SubscribeOpts
 
+	// Additional options for static site template.
 	AssetMappingFileBucket string
 	AssetMappingFilePath   string
+	StaticSiteAlias        string
 }
 
 // HealthCheckProtocol returns the protocol for the Load Balancer health check,

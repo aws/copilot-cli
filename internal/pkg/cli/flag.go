@@ -40,6 +40,7 @@ const (
 	uploadAssetsFlag      = "upload-assets"
 	deployFlag            = "deploy"
 	diffFlag              = "diff"
+	diffAutoApproveFlag   = "diff-yes"
 	sourcesFlag           = "sources"
 
 	// Flags for operational commands.
@@ -253,7 +254,8 @@ const (
 	yesFlagDescription          = "Skips confirmation prompt."
 	resourceTagsFlagDescription = `Optional. Labels with a key and value separated by commas.
 Allows you to categorize resources.`
-	diffFlagDescription = "Compares the generated CloudFormation template to the deployed stack."
+	diffFlagDescription            = "Compares the generated CloudFormation template to the deployed stack."
+	diffAutoApproveFlagDescription = "Skip interactive approval of diff before deploying."
 
 	// Deployment.
 	deployTestFlagDescription = `Deploy your service or job to a "test" environment.`

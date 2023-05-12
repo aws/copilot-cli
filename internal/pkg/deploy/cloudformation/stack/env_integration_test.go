@@ -27,7 +27,7 @@ func TestEnvStack_Template(t *testing.T) {
 		input          *stack.EnvConfig
 		wantedFileName string
 	}{
-		"generate template with embedded manifest file with container insights and cloudfront and advanced access logs": {
+		"generate template with embedded manifest file with container insights and cloudfront imported bucket and advanced access logs": {
 			input: func() *stack.EnvConfig {
 				rawMft := `name: test
 type: Environment

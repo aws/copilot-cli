@@ -1062,9 +1062,9 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 				m.store.EXPECT().GetApplication("my-app").Return(&config.Application{Name: "my-app"}, nil).Times(2)
 				m.deployer.EXPECT().GetTaskStack(inGroupName).Return(&info, nil)
 				key := "manual/env-files/magic.env/4963d64294508aa3fa103ccac5ad1537944c577d469608ddccad09b6f79b6406.env"
-				arn := "arn:aws:s3:::bigbucket/" + key
+				url := "https://bigbucket.s3-us-west-2.amazonaws.com/" + key
 				m.uploader.EXPECT().Upload("arn:aws:s3:::bigbucket", key,
-					bytes.NewReader([]byte("SOMETHING=VALUE"))).Return(arn, nil)
+					bytes.NewReader([]byte("SOMETHING=VALUE"))).Return(url, nil)
 				m.deployer.EXPECT().DeployTask(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 				mockRepositoryAnytime(m)
 				m.runner.EXPECT().Run().AnyTimes()

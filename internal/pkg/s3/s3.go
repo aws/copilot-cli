@@ -47,7 +47,7 @@ func (c Client) BucketName(app, env, svc string) (string, error) {
 		return "", fmt.Errorf("get S3 bucket with tags %s: %w", tags.String(), err)
 	}
 	if len(buckets) == 0 {
-		return "", fmt.Errorf("no S3 bucket found with tags %s", tags.String())
+		return "", &ErrNotFound{tags}
 	}
 	if len(buckets) > 1 {
 		return "", fmt.Errorf("more than one S3 bucket with tags %s", tags.String())
@@ -70,4 +70,14 @@ func (tags tags) String() string {
 	}
 	sort.SliceStable(serialized, func(i, j int) bool { return serialized[i] < serialized[j] })
 	return strings.Join(serialized, ",")
+}
+
+// ErrNotFound is returned when no bucket is found
+// matching the given tags.
+type ErrNotFound struct {
+	tags tags
+}
+
+func (e *ErrNotFound) Error() string {
+	return fmt.Sprintf("no S3 bucket found with tags %s", e.tags.String())
 }

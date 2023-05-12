@@ -6,11 +6,9 @@ package manifest
 import (
 	"errors"
 	"fmt"
-	"regexp"
 	"sort"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/copilot-cli/internal/pkg/aws/cloudfront"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"gopkg.in/yaml.v3"
@@ -275,40 +273,14 @@ func (cfg *EnvironmentCDNConfig) UnmarshalYAML(value *yaml.Node) error {
 
 // CDNStaticConfig represents the static config for CDN.
 type CDNStaticConfig struct {
-	Location StaticSiteOrImportedBucket `yaml:"location,omitempty"`
-	Alias    string                     `yaml:"alias,omitempty"`
-	Path     string                     `yaml:"path,omitempty"`
-}
-
-// StaticSiteOrImportedBucket is a custom type which supports unmarshaling yaml which
-// can either be of Static Site service name or an existing S3 bucket URL.
-type StaticSiteOrImportedBucket struct {
-	StaticSite     string
-	ImportedBucket string
-}
-
-func (s *StaticSiteOrImportedBucket) isEmpty() bool {
-	return s.ImportedBucket == "" && s.StaticSite == ""
-}
-
-// UnmarshalYAML overrides the default YAML unmarshaling logic for the StaticSiteOrLocation
-// struct, allowing it to perform more complex unmarshaling behavior.
-// This method implements the yaml.Unmarshaler (v3) interface.
-func (s *StaticSiteOrImportedBucket) UnmarshalYAML(value *yaml.Node) error {
-	if err := value.Decode(&s.ImportedBucket); err != nil {
-		return err
-	}
-	reg := regexp.MustCompile(cloudfront.S3BucketOriginDomainFormat)
-	if reg.MatchString(s.ImportedBucket) {
-		return nil
-	}
-	s.StaticSite, s.ImportedBucket = s.ImportedBucket, ""
-	return nil
+	Location string `yaml:"location,omitempty"`
+	Alias    string `yaml:"alias,omitempty"`
+	Path     string `yaml:"path,omitempty"`
 }
 
 // IsEmpty returns true if CDNStaticConfig is not configured.
 func (cfg CDNStaticConfig) IsEmpty() bool {
-	return cfg.Location.isEmpty() && cfg.Alias == "" && cfg.Path == ""
+	return cfg.Location == "" && cfg.Alias == "" && cfg.Path == ""
 }
 
 // IsEmpty returns true if environmentVPCConfig is not configured.
