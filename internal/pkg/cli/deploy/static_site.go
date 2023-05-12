@@ -156,7 +156,7 @@ func (d *staticSiteDeployer) validateSources() error {
 	for _, upload := range d.staticSiteMft.FileUploads {
 		_, err := d.fs.Stat(upload.Source)
 		if err != nil {
-			return fmt.Errorf("source '%s' must be a valid path: %w", upload.Source, err)
+			return fmt.Errorf("source %q must be a valid path: %w", upload.Source, err)
 		}
 	}
 	return nil
