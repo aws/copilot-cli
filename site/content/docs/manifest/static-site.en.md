@@ -43,7 +43,7 @@ HTTPS domain alias of your service.
 Parameters related to your static assets.
 
 <span class="parent-field">files.</span><a id="files-source" href="#files-source" class="field">`source`</a> <span class="type">String</span>  
-The path, relative to your project root, to the directory or file to upload to S3.
+The path, relative to your workspace root, to the directory or file to upload to S3.
 
 <span class="parent-field">files.</span><a id="files-recursive" href="#files-recursive" class="field">`recursive`</a> <span class="type">Boolean</span>  
 Whether or not the source directory should be uploaded recursively. Defaults to true for directories.
