@@ -10,6 +10,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/cli/deploy/mocks"
+	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -98,5 +99,291 @@ func TestStaticSiteDeployer_UploadArtifacts(t *testing.T) {
 				require.Equal(t, tc.expected, actual)
 			}
 		})
+	}
+}
+
+func TestStaticSiteDeployer_stackConfiguration(t *testing.T) {
+	tests := map[string]struct {
+		deployer *staticSiteDeployer
+		wantErr  string
+	}{
+		"error getting service discovery endpoint": {
+			deployer: &staticSiteDeployer{
+				svcDeployer: &svcDeployer{
+					workloadDeployer: &workloadDeployer{
+						endpointGetter: &endpointGetterDouble{
+							ServiceDiscoveryEndpointFn: ReturnsValues("", errors.New("some error")),
+						},
+					},
+				},
+			},
+			wantErr: "get service discovery endpoint: some error",
+		},
+		"error getting env version": {
+			deployer: &staticSiteDeployer{
+				svcDeployer: &svcDeployer{
+					workloadDeployer: &workloadDeployer{
+						env: &config.Environment{
+							Name: "mockEnv",
+						},
+						endpointGetter: &endpointGetterDouble{
+							ServiceDiscoveryEndpointFn: ReturnsValues("", error(nil)),
+						},
+						envVersionGetter: &versionGetterDouble{
+							VersionFn: ReturnsValues("", errors.New("some error")),
+						},
+					},
+				},
+			},
+			wantErr: `get version of environment "mockEnv": some error`,
+		},
+		"error getting app version": {
+			deployer: &staticSiteDeployer{
+				svcDeployer: &svcDeployer{
+					workloadDeployer: &workloadDeployer{
+						app: &config.Application{
+							Name: "mockApp",
+						},
+						env: &config.Environment{},
+						endpointGetter: &endpointGetterDouble{
+							ServiceDiscoveryEndpointFn: ReturnsValues("", error(nil)),
+						},
+						envVersionGetter: &versionGetterDouble{
+							VersionFn: ReturnsValues("", error(nil)),
+						},
+					},
+				},
+				appVersionGetter: &versionGetterDouble{
+					VersionFn: ReturnsValues("", errors.New("some error")),
+				},
+				staticSiteMft: &manifest.StaticSite{},
+			},
+			wantErr: `static sites not supported: get version for app "mockApp": some error`,
+		},
+		"error bc app version out of date": {
+			deployer: &staticSiteDeployer{
+				svcDeployer: &svcDeployer{
+					workloadDeployer: &workloadDeployer{
+						app: &config.Application{},
+						env: &config.Environment{},
+						endpointGetter: &endpointGetterDouble{
+							ServiceDiscoveryEndpointFn: ReturnsValues("", error(nil)),
+						},
+						envVersionGetter: &versionGetterDouble{
+							VersionFn: ReturnsValues("", error(nil)),
+						},
+					},
+				},
+				appVersionGetter: &versionGetterDouble{
+					VersionFn: ReturnsValues("v1.1.0", error(nil)),
+				},
+				staticSiteMft: &manifest.StaticSite{},
+			},
+			wantErr: `static sites not supported: app version must be >= v1.2.0`,
+		},
+		"error bc alias specified and env has imported certs": {
+			deployer: &staticSiteDeployer{
+				svcDeployer: &svcDeployer{
+					workloadDeployer: &workloadDeployer{
+						app: &config.Application{},
+						env: &config.Environment{
+							Name: "mockEnv",
+						},
+						envConfig: &manifest.Environment{
+							EnvironmentConfig: manifest.EnvironmentConfig{
+								HTTPConfig: manifest.EnvironmentHTTPConfig{
+									Public: manifest.PublicHTTPConfig{
+										Certificates: []string{"mockCert"},
+									},
+								},
+							},
+						},
+						endpointGetter: &endpointGetterDouble{
+							ServiceDiscoveryEndpointFn: ReturnsValues("", error(nil)),
+						},
+						envVersionGetter: &versionGetterDouble{
+							VersionFn: ReturnsValues("", error(nil)),
+						},
+						resources: &stack.AppRegionalResources{},
+					},
+				},
+				appVersionGetter: &versionGetterDouble{
+					VersionFn: ReturnsValues("v1.2.0", error(nil)),
+				},
+				staticSiteMft: &manifest.StaticSite{
+					StaticSiteConfig: manifest.StaticSiteConfig{
+						HTTP: manifest.StaticSiteHTTP{
+							Alias: "hi.com",
+						},
+					},
+				},
+			},
+			wantErr: `cannot specify alias when env "mockEnv" imports one or more certificates`,
+		},
+		"error bc alias specified no domain imported": {
+			deployer: &staticSiteDeployer{
+				svcDeployer: &svcDeployer{
+					workloadDeployer: &workloadDeployer{
+						app:       &config.Application{},
+						env:       &config.Environment{},
+						envConfig: &manifest.Environment{},
+						endpointGetter: &endpointGetterDouble{
+							ServiceDiscoveryEndpointFn: ReturnsValues("", error(nil)),
+						},
+						envVersionGetter: &versionGetterDouble{
+							VersionFn: ReturnsValues("", error(nil)),
+						},
+						resources: &stack.AppRegionalResources{},
+					},
+				},
+				appVersionGetter: &versionGetterDouble{
+					VersionFn: ReturnsValues("v1.2.0", error(nil)),
+				},
+				staticSiteMft: &manifest.StaticSite{
+					StaticSiteConfig: manifest.StaticSiteConfig{
+						HTTP: manifest.StaticSiteHTTP{
+							Alias: "hi.com",
+						},
+					},
+				},
+			},
+			wantErr: `cannot specify alias when application is not associated with a domain`,
+		},
+		"error bc invalid alias": {
+			deployer: &staticSiteDeployer{
+				svcDeployer: &svcDeployer{
+					workloadDeployer: &workloadDeployer{
+						app: &config.Application{
+							Name:   "mockApp",
+							Domain: "example.com",
+						},
+						env: &config.Environment{
+							Name: "mockEnv",
+						},
+						envConfig: &manifest.Environment{},
+						endpointGetter: &endpointGetterDouble{
+							ServiceDiscoveryEndpointFn: ReturnsValues("", error(nil)),
+						},
+						envVersionGetter: &versionGetterDouble{
+							VersionFn: ReturnsValues("", error(nil)),
+						},
+						resources: &stack.AppRegionalResources{},
+					},
+				},
+				appVersionGetter: &versionGetterDouble{
+					VersionFn: ReturnsValues("v1.2.0", error(nil)),
+				},
+				staticSiteMft: &manifest.StaticSite{
+					StaticSiteConfig: manifest.StaticSiteConfig{
+						HTTP: manifest.StaticSiteHTTP{
+							Alias: "hi.com",
+						},
+					},
+				},
+			},
+			wantErr: `alias "hi.com" is not supported in hosted zones managed by Copilot`,
+		},
+		"error creating stack": {
+			deployer: &staticSiteDeployer{
+				svcDeployer: &svcDeployer{
+					workloadDeployer: &workloadDeployer{
+						app: &config.Application{},
+						env: &config.Environment{},
+						endpointGetter: &endpointGetterDouble{
+							ServiceDiscoveryEndpointFn: ReturnsValues("", error(nil)),
+						},
+						envVersionGetter: &versionGetterDouble{
+							VersionFn: ReturnsValues("", error(nil)),
+						},
+						resources: &stack.AppRegionalResources{},
+					},
+				},
+				appVersionGetter: &versionGetterDouble{
+					VersionFn: ReturnsValues("v1.2.0", error(nil)),
+				},
+				staticSiteMft: &manifest.StaticSite{},
+				newStack: func(*stack.StaticSiteConfig) (*stack.StaticSite, error) {
+					return nil, errors.New("some error")
+				},
+			},
+			wantErr: `create stack configuration: some error`,
+		},
+		"success": {
+			deployer: &staticSiteDeployer{
+				svcDeployer: &svcDeployer{
+					workloadDeployer: &workloadDeployer{
+						app: &config.Application{},
+						env: &config.Environment{},
+						endpointGetter: &endpointGetterDouble{
+							ServiceDiscoveryEndpointFn: ReturnsValues("", error(nil)),
+						},
+						envVersionGetter: &versionGetterDouble{
+							VersionFn: ReturnsValues("", error(nil)),
+						},
+						resources: &stack.AppRegionalResources{},
+					},
+				},
+				appVersionGetter: &versionGetterDouble{
+					VersionFn: ReturnsValues("v1.2.0", error(nil)),
+				},
+				staticSiteMft: &manifest.StaticSite{},
+				newStack: func(*stack.StaticSiteConfig) (*stack.StaticSite, error) {
+					return nil, nil
+				},
+			},
+		},
+		"success with alias": {
+			deployer: &staticSiteDeployer{
+				svcDeployer: &svcDeployer{
+					workloadDeployer: &workloadDeployer{
+						app: &config.Application{
+							Name:   "mockApp",
+							Domain: "example.com",
+						},
+						env: &config.Environment{
+							Name: "mockEnv",
+						},
+						envConfig: &manifest.Environment{},
+						endpointGetter: &endpointGetterDouble{
+							ServiceDiscoveryEndpointFn: ReturnsValues("", error(nil)),
+						},
+						envVersionGetter: &versionGetterDouble{
+							VersionFn: ReturnsValues("", error(nil)),
+						},
+						resources: &stack.AppRegionalResources{},
+					},
+				},
+				appVersionGetter: &versionGetterDouble{
+					VersionFn: ReturnsValues("v1.2.0", error(nil)),
+				},
+				staticSiteMft: &manifest.StaticSite{
+					StaticSiteConfig: manifest.StaticSiteConfig{
+						HTTP: manifest.StaticSiteHTTP{
+							Alias: "hi.mockApp.example.com",
+						},
+					},
+				},
+				newStack: func(*stack.StaticSiteConfig) (*stack.StaticSite, error) {
+					return nil, nil
+				},
+			},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			_, gotErr := tc.deployer.stackConfiguration(&StackRuntimeConfiguration{})
+			if tc.wantErr != "" {
+				require.EqualError(t, gotErr, tc.wantErr)
+				return
+			}
+			require.NoError(t, gotErr)
+		})
+	}
+}
+
+func ReturnsValues[A, B any](a A, b B) func() (A, B) {
+	return func() (A, B) {
+		return a, b
 	}
 }

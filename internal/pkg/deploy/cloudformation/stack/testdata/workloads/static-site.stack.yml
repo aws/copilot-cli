@@ -14,9 +14,14 @@ Parameters:
     Description: URL of the addons nested stack template within the S3 bucket.
     Type: String
     Default: ""
+  DNSDelegated:
+    Type: String
+    AllowedValues: [true, false]
 
 Conditions:
   HasAddons: !Not [!Equals [!Ref AddonsTemplateURL, ""]]
+  HasAssociatedDomain:
+    !Equals [!Ref DNSDelegated, true]
 
 Resources:
   Bucket:
@@ -82,7 +87,8 @@ Resources:
     Properties:
       DistributionConfig:
         DefaultCacheBehavior:
-          AllowedMethods: ["GET", "HEAD", "OPTIONS", "PUT", "PATCH", "POST", "DELETE"]
+          Compress: true
+          AllowedMethods: ["GET", "HEAD"]
           ViewerProtocolPolicy: allow-all
           CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6 # See https://go.aws/3bJid3k
           TargetOriginId: !Sub 'copilot-${AppName}-${EnvName}-${WorkloadName}'
@@ -135,7 +141,19 @@ Resources:
     Metadata:
       aws:copilot:description: A custom resource to trigger the file-copying state machine
     Type: Custom::TriggerStateMachine
-    DependsOn: CopyAssetsStateMachine
+    DependsOn: 
+      - CopyAssetsStateMachine
+      - Bucket
+      - BucketPolicyForCloudFront
+      - CloudFrontOriginAccessControl
+      - CloudFrontDistribution
+      - TriggerStateMachineFunction
+      - TriggerStateMachineFunctionRole
+      - CopyAssetsStateMachine
+      - CopyAssetsStateMachineRole
+      - CopyAssetsFunction
+      - CopyAssetsFunctionRole
+      - EnvManagerS3Access
     Properties:
       ServiceToken: !GetAtt TriggerStateMachineFunction.Arn
       StateMachineARN: !GetAtt CopyAssetsStateMachine.Arn
@@ -272,3 +290,70 @@ Resources:
             Resource:
               - !Sub arn:aws:s3:::${Bucket}
               - !Sub arn:aws:s3:::${Bucket}/*
+
+  CustomDomainAction:
+    Metadata:
+      'aws:copilot:description': "Add A-records for your Static Site alias"
+    Type: Custom::CustomDomainFunction
+    Condition: HasAssociatedDomain
+    Properties:
+      ServiceToken: !GetAtt CustomDomainFunction.Arn
+      PublicAccessHostedZoneID: Z2FDTNDATAQYW2 # See https://go.aws/3cPhvlX
+      PublicAccessDNS: !GetAtt CloudFrontDistribution.DomainName
+      EnvHostedZoneId:
+        Fn::ImportValue:
+          !Sub "${AppName}-${EnvName}-HostedZone"
+      EnvName: !Ref EnvName
+      AppName: !Ref AppName
+      ServiceName: !Ref WorkloadName
+      RootDNSRole: arn:aws:iam::123456789123:role/my-app-DNSDelegationRole
+      DomainName: example.com
+      Aliases:  ["example.com"] 
+
+  CustomDomainFunction:
+    Type: AWS::Lambda::Function
+    Condition: HasAssociatedDomain
+    Properties:
+      Handler: "index.handler"
+      Timeout: 900
+      MemorySize: 512
+      Role: !GetAtt 'CustomDomainRole.Arn'
+      Runtime: nodejs16.x
+
+  CustomDomainRole:
+    Metadata:
+      'aws:copilot:description': "An IAM role to update the Route 53 hosted zone"
+    Type: AWS::IAM::Role
+    Condition: HasAssociatedDomain
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          -
+            Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: "CustomDomainPolicy"
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: AllowAssumeRole
+                Effect: Allow
+                Action: sts:AssumeRole
+                Resource: arn:aws:iam::123456789123:role/my-app-DNSDelegationRole
+              - Sid: HostedZoneAccess
+                Effect: Allow
+                Action:
+                  - "route53:ChangeResourceRecordSets"
+                  - "route53:Get*"
+                  - "route53:Describe*"
+                  - "route53:ListResourceRecordSets"
+                  - "route53:ListHostedZonesByName"
+                Resource: "*"
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole

@@ -33,6 +33,7 @@ type staticSiteDeployer struct {
 	staticSiteMft    *manifest.StaticSite
 	fs               afero.Fs
 	uploader         fileUploader
+	newStack         func(*stack.StaticSiteConfig) (*stack.StaticSite, error)
 }
 
 // NewStaticSiteDeployer is the constructor for staticSiteDeployer.
@@ -64,6 +65,7 @@ func NewStaticSiteDeployer(in *WorkloadDeployerInput) (*staticSiteDeployer, erro
 				return err
 			},
 		},
+		newStack: stack.NewStaticSite,
 	}, nil
 }
 
@@ -124,10 +126,13 @@ func (d *staticSiteDeployer) stackConfiguration(in *StackRuntimeConfiguration) (
 	if err != nil {
 		return nil, err
 	}
+	if err := d.validateAlias(); err != nil {
+		return nil, err
+	}
 	if err := validateMinAppVersion(d.app.Name, d.name, d.appVersionGetter, deploy.StaticSiteMinAppTemplateVersion); err != nil {
 		return nil, fmt.Errorf("static sites not supported: %w", err)
 	}
-	conf, err := stack.NewStaticSite(&stack.StaticSiteConfig{
+	conf, err := d.newStack(&stack.StaticSiteConfig{
 		App:                d.app,
 		EnvManifest:        d.envConfig,
 		Manifest:           d.staticSiteMft,
@@ -142,4 +147,21 @@ func (d *staticSiteDeployer) stackConfiguration(in *StackRuntimeConfiguration) (
 		return nil, fmt.Errorf("create stack configuration: %w", err)
 	}
 	return conf, nil
+}
+
+func (d *staticSiteDeployer) validateAlias() error {
+	if d.staticSiteMft.HTTP.Alias == "" {
+		return nil
+	}
+
+	hasImportedCerts := len(d.envConfig.HTTPConfig.Public.Certificates) != 0
+	if hasImportedCerts {
+		return fmt.Errorf("cannot specify alias when env %q imports one or more certificates", d.env.Name)
+	}
+
+	if d.app.Domain == "" {
+		return fmt.Errorf("cannot specify alias when application is not associated with a domain")
+	}
+
+	return validateAliases(d.app, d.env.Name, d.staticSiteMft.HTTP.Alias)
 }
