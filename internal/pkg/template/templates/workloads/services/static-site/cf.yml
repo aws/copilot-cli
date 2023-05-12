@@ -173,31 +173,34 @@ Resources:
       - TriggerStateMachineFunctionRole
       - CopyAssetsStateMachine
       - CopyAssetsStateMachineRole
-      - CopyAssetsFunction
-      - CopyAssetsFunctionRole
       - EnvManagerS3Access
     Properties:
       ServiceToken: !GetAtt TriggerStateMachineFunction.Arn
       StateMachineARN: !GetAtt CopyAssetsStateMachine.Arn
-      SourceBucket: {{ .AssetMappingFileBucket }}
-      AssetMappingFilePath: {{ .AssetMappingFilePath }}
-      DestinationBucket: !Ref Bucket
+      # TODO some note here like: include file path for diff detection
+      AssetMappingFilePath: {{.AssetMappingFilePath}}
 
   CopyAssetsStateMachine:
     Type: AWS::StepFunctions::StateMachine
     Properties:
       RoleArn: !GetAtt CopyAssetsStateMachineRole.Arn
       StateMachineType: EXPRESS
+      LoggingConfiguration:
+       Level: ALL
+       IncludeExecutionData: true
+       Destinations:
+         - CloudWatchLogsLogGroup:
+             LogGroupArn: 'arn:aws:logs:us-west-2:447368768304:log-group:/ecs/deleteme:*'
       Definition:
         Comment: A state machine that triggers a file-copying lambda for each uploaded asset
         StartAt: GetMappingFile
         States:
           GetMappingFile:
             Type: Task
-            Parameters:
-              Bucket.$: $.SourceBucket
-              Key.$: $.AssetMappingFilePath
             Resource: arn:aws:states:::aws-sdk:s3:getObject
+            Parameters:
+              Bucket: {{.AssetMappingFileBucket}}
+              Key: {{.AssetMappingFilePath}}
             ResultSelector:
               files.$: States.StringToJson($.Body)
             ResultPath: $.GetMappingFile
@@ -206,10 +209,6 @@ Resources:
             Type: Map
             End: true
             ItemsPath: $.GetMappingFile.files
-            ItemSelector:
-              mapping.$: $$.Map.Item.Value
-              destBucket.$: $.DestinationBucket
-              srcBucket.$: $.SourceBucket
             ItemProcessor:
               ProcessorConfig:
                 Mode: INLINE
@@ -218,7 +217,13 @@ Resources:
                 CopyFile:
                   Type: Task
                   End: true
-                  Resource: !GetAtt CopyAssetsFunction.Arn
+                  Resource: arn:aws:states:::aws-sdk:s3:copyObject
+                  Parameters:
+                    CopySource.$: States.Format('{{.AssetMappingFileBucket}}/{}', $.path)
+                    Bucket: !Ref Bucket
+                    Key.$: $.destPath
+                    ContentType.$: $.contentType
+                    MetadataDirective: "REPLACE"
 
   CopyAssetsStateMachineRole:
     Metadata:
@@ -237,62 +242,16 @@ Resources:
                 - states.amazonaws.com
             Action: sts:AssumeRole
       Policies:
-        - PolicyName: InvokeLambda
-          PolicyDocument:
-            Version: 2012-10-17
-            Statement:
-              - Effect: Allow
-                Action: lambda:InvokeFunction
-                Resource: !GetAtt CopyAssetsFunction.Arn
-        - PolicyName: S3Access
+        - PolicyName: ArtifactBucketAccess
           PolicyDocument:
             Version: 2012-10-17
             Statement:
               - Effect: Allow
                 Action: s3:GetObject
-                Resource: arn:aws:s3:::{{ .AssetMappingFileBucket }}/{{ .AssetMappingFilePath }}
-
-  CopyAssetsFunction:
-    Metadata:
-      aws:copilot:description: A lambda function to copy assets into the static site bucket
-    Type: AWS::Lambda::Function
-    Properties:
-      Handler: index.handler
-      Role: !GetAtt CopyAssetsFunctionRole.Arn
-      Runtime: nodejs16.x
-      Timeout: 60
-      MemorySize: 512
-      {{- with $cr := index .CustomResources "CopyAssetsFunction" }}
-      Code:
-        S3Bucket: {{$cr.Bucket}}
-        S3Key: {{$cr.Key}}
-      {{- end }}
-
-  CopyAssetsFunctionRole:
-    Metadata:
-      aws:copilot:description: An IAM Role for the lambda that copies assets into the static site bucket
-    Type: AWS::IAM::Role
-    Properties:
-      {{- if .PermissionsBoundary}}
-      PermissionsBoundary: !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/{{.PermissionsBoundary}}
-      {{- end}}
-      AssumeRolePolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: lambda.amazonaws.com
-            Action: sts:AssumeRole
-      Policies:
-        - PolicyName: CopyFromS3
-          PolicyDocument:
-            Version: 2012-10-17
-            Statement:
-              - Effect: Allow
-                Action:
-                  - s3:GetObject
-                Resource: arn:aws:s3:::{{ .AssetMappingFileBucket }}/*
-        - PolicyName: CopyToS3
+                Resource:
+                  - arn:aws:s3:::{{.AssetMappingFileBucket}}/{{.AssetMappingFilePath}}
+                  - arn:aws:s3:::{{.AssetMappingFileBucket}}/local-assets/*
+        - PolicyName: ServiceBucketAccess
           PolicyDocument:
             Version: 2012-10-17
             Statement:
@@ -300,8 +259,23 @@ Resources:
                 Action:
                   - s3:PutObject
                 Resource: !Sub arn:aws:s3:::${Bucket}/*
-      ManagedPolicyArns:
-        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - PolicyName: LoggingTODORemoveMe
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action:
+                  - 'logs:CreateLogDelivery'
+                  - 'logs:CreateLogStream'
+                  - 'logs:GetLogDelivery'
+                  - 'logs:UpdateLogDelivery'
+                  - 'logs:DeleteLogDelivery'
+                  - 'logs:ListLogDeliveries'
+                  - 'logs:PutLogEvents'
+                  - 'logs:PutResourcePolicy'
+                  - 'logs:DescribeResourcePolicies'
+                  - 'logs:DescribeLogGroups'
+                Resource: '*'
   
   EnvManagerS3Access:
     Metadata:
