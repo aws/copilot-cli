@@ -27,7 +27,10 @@ exports.handler = async function (event, context) {
         };
 
         const res = await sf.startSyncExecution(params).promise();
-        if (res.status === "FAILED") {
+
+        // Even if the execution starts and does not throw an error it does not mean the execution was successful.
+        // See https://docs.aws.amazon.com/step-functions/latest/apireference/API_StartSyncExecution.html#StepFunctions-StartSyncExecution-response-status
+        if (res.status !== "SUCCEEDED") {
           throw new Error(`State machine failed: ${res.cause}`);
         }
         break;
