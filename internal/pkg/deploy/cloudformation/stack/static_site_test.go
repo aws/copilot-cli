@@ -242,13 +242,17 @@ func TestStaticSite_Parameters(t *testing.T) {
 					ParameterKey:   aws.String(WorkloadAddonsTemplateURLParamKey),
 					ParameterValue: aws.String("mockURL"),
 				},
+				{
+					ParameterKey:   aws.String(StaticSiteDNSDelegatedParamKey),
+					ParameterValue: aws.String("false"),
+				},
 			},
 		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			testManifest := manifest.NewStaticSite(manifest.StaticSiteProps{
-				Name:             "frontend",
+				Name: "frontend",
 			})
 
 			// GIVEN
@@ -308,6 +312,7 @@ func TestStaticSite_SerializedParameters(t *testing.T) {
   "Parameters": {
     "AddonsTemplateURL": "",
     "AppName": "phonetool",
+    "DNSDelegated": "false",
     "EnvName": "test",
     "WorkloadName": "frontend"
   },

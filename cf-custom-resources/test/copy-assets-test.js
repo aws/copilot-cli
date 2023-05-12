@@ -24,13 +24,16 @@ describe("copy assets", () => {
         mapping: {
           path: "mockPath",
           destPath: "mockDestPath",
-        }
+          contentType: "",
+        },
       })
-      .expectResolve(result => {
+      .expectResolve((result) => {
         sinon.assert.calledWith(fake, {
           CopySource: "mockSrcBucket/mockPath",
           Bucket: "mockDestBucket",
-          Key: "mockDestPath"
+          Key: "mockDestPath",
+          ContentType: undefined,
+          MetadataDirective: "REPLACE",
         });
       });
   });
@@ -46,13 +49,16 @@ describe("copy assets", () => {
         mapping: {
           path: "mockPath",
           destPath: "mockDestPath",
-        }
+          contentType: "mockContentType",
+        },
       })
-      .expectReject(err => {
+      .expectReject((err) => {
         sinon.assert.calledWith(fake, {
           CopySource: "mockSrcBucket/mockPath",
           Bucket: "mockDestBucket",
-          Key: "mockDestPath"
+          Key: "mockDestPath",
+          ContentType: "mockContentType",
+          MetadataDirective: "REPLACE",
         });
         expect(err).toEqual(new Error("some error"));
       });
