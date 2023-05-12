@@ -619,8 +619,8 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Condition: HasAssociatedDomain
     Properties:
       ServiceToken: !GetAtt NLBCustomDomainFunction.Arn
-      LoadBalancerHostedZoneID: !GetAtt PublicNetworkLoadBalancer.CanonicalHostedZoneID
-      LoadBalancerDNS: !GetAtt PublicNetworkLoadBalancer.DNSName
+      PublicAccessHostedZoneID: !GetAtt PublicNetworkLoadBalancer.CanonicalHostedZoneID
+      PublicAccessDNS: !GetAtt PublicNetworkLoadBalancer.DNSName
       EnvHostedZoneId:
         Fn::ImportValue: !Sub "${AppName}-${EnvName}-HostedZone"
       EnvName: !Ref EnvName

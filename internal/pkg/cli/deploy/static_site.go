@@ -163,7 +163,7 @@ func (d *staticSiteDeployer) validateSources() error {
 }
 
 func (d *staticSiteDeployer) validateAlias() error {
-	if d.staticSiteMft.Alias == "" {
+	if d.staticSiteMft.HTTP.Alias == "" {
 		return nil
 	}
 
@@ -176,5 +176,5 @@ func (d *staticSiteDeployer) validateAlias() error {
 		return fmt.Errorf("cannot specify alias when application is not associated with a domain")
 	}
 
-	return validateAliases(d.app, d.env.Name, d.staticSiteMft.Alias)
+	return validateAliases(d.app, d.env.Name, d.staticSiteMft.HTTP.Alias)
 }
