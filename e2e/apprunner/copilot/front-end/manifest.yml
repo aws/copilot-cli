@@ -30,7 +30,7 @@ cpu: 1024
 memory: 2048
 # Number of tasks that should be running in your service.
 
-secrets:                      # Pass secrets from AWS Systems Manager (SSM) Parameter Store and Secrets Manager.
-  my-ssm-param: e2e-apprunner-ssm-param
+secrets:
+  my-ssm-param: e2e-apprunner-ssm-param-secret
   USER_CREDS: 
-    secretsmanager: 'e2e-apprunner-MyTestSecret'
+    secretsmanager: e2e-apprunner-secrets-manager-secret
