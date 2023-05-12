@@ -5,7 +5,10 @@ List of all available properties for a `'Static Site Service'` manifest.
     ```yaml
     name: example
     type: Static Site
-    alias: 'example.com'
+
+    http:
+      alias: 'example.com'
+
     files:
       - source: src/someDirectory
         recursive: true
@@ -34,7 +37,10 @@ The architecture type for your service. A [Static Site](../concepts/services.en.
 
 <div class="separator"></div>
 
-<a id="alias" href="#alias" class="field">`alias`</a> <span class="type">String</span>  
+<a id="http" href="#http" class="field">`http`</a> <span class="type">Map</span>  
+Configuration for incoming traffic to your site.
+
+<span class="parent-field">http.</span><a id="http-alias" href="#http-alias" class="field">`alias`</a> <span class="type">String</span>  
 HTTPS domain alias of your service.
 
 <div class="separator"></div>

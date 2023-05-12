@@ -55,7 +55,10 @@ A manifest will be populated and stored in the `copilot/[service name]` folder. 
 # Your service name will be used in naming your resources like S3 buckets, etc.
 name: example
 type: Static Site
-alias: 'example.com'
+
+http:
+  alias: 'example.com'
+
 files:
   - source: src/someDirectory
     recursive: true
