@@ -14,14 +14,9 @@ Parameters:
     Description: URL of the addons nested stack template within the S3 bucket.
     Type: String
     Default: ""
-  DNSDelegated:
-    Type: String
-    AllowedValues: [true, false]
 
 Conditions:
   HasAddons: !Not [!Equals [!Ref AddonsTemplateURL, ""]]
-  HasAssociatedDomain:
-    !Equals [!Ref DNSDelegated, true]
 
 Resources:
   Bucket:
@@ -104,12 +99,9 @@ Resources:
             S3OriginConfig:
               OriginAccessIdentity: '' 
         ViewerCertificate:
-          !If
-            - HasAssociatedDomain
-            - AcmCertificateArn: !Ref CertificateValidatorAction
-              MinimumProtocolVersion: TLSv1
-              SslSupportMethod:  sni-only
-            - !Ref AWS::NoValue
+          - AcmCertificateArn: !Ref CertificateValidatorAction
+            MinimumProtocolVersion: TLSv1
+            SslSupportMethod:  sni-only
 
   TriggerStateMachineFunction:
     Metadata:
@@ -303,7 +295,6 @@ Resources:
     Metadata:
       'aws:copilot:description': "Add A-records for your Static Site alias"
     Type: Custom::CustomDomainFunction
-    Condition: HasAssociatedDomain
     Properties:
       ServiceToken: !GetAtt CustomDomainFunction.Arn
       PublicAccessHostedZoneID: Z2FDTNDATAQYW2 # See https://go.aws/3cPhvlX
@@ -320,7 +311,6 @@ Resources:
 
   CustomDomainFunction:
     Type: AWS::Lambda::Function
-    Condition: HasAssociatedDomain
     Properties:
       Handler: "index.handler"
       Timeout: 900
@@ -332,7 +322,6 @@ Resources:
     Metadata:
       'aws:copilot:description': "An IAM role to update the Route 53 hosted zone"
     Type: AWS::IAM::Role
-    Condition: HasAssociatedDomain
     Properties:
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
@@ -370,7 +359,6 @@ Resources:
     Metadata:
       'aws:copilot:description': "Request and validate the certificate for your Static Site"
     Type: Custom::CertificateValidationFunction
-    Condition: HasAssociatedDomain
     Properties:
       ServiceToken: !GetAtt CertificateValidationFunction.Arn
       EnvHostedZoneId:
@@ -386,7 +374,6 @@ Resources:
 
   CertificateValidationFunction:
     Type: AWS::Lambda::Function
-    Condition: HasAssociatedDomain
     Properties:
       Handler: "index.handler"
       Timeout: 900
@@ -418,7 +405,7 @@ Resources:
               - Sid: AllowAssumeRole
                 Effect: Allow
                 Action: sts:AssumeRole
-                Resource: "*"
+                Resource: arn:aws:iam::123456789123:role/my-app-DNSDelegationRole
               - Sid: HostedZoneUpdateAndWait
                 Effect: Allow
                 Action: route53:ChangeResourceRecordSets
