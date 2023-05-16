@@ -16,7 +16,7 @@ Parameters:
   # Different indentation and order should not matter.
   Env:
     Type: String
-    Description: The name of the environment being deployed.
+    Description: The environment name your service, job, or workflow is being deployed to.
   App: # Line comment is ignored.
       Type: String
       Description: Your application's name.
