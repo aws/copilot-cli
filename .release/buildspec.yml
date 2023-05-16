@@ -1,5 +1,9 @@
 version: 0.2
 
+env:
+  exported-variables:
+    - LONG_COMMIT_ID
+
 phases:
   install:
     runtime-versions:
@@ -51,8 +55,8 @@ phases:
             cp $ARTIFACT_DIRECTORY/copilot-linux-arm64-$VERSION $ARTIFACT_DIRECTORY/copilot-linux-arm64
         fi
       - echo "Creating manifest file..."
-      - COMMIT_ID=`git rev-parse HEAD`
-      - MANIFESTFILE="$COMMIT_ID.manifest"
+      - LONG_COMMIT_ID=`git rev-parse HEAD`
+      - MANIFESTFILE="$LONG_COMMIT_ID.manifest"
       - echo $ARTIFACT_DIRECTORY/copilot-windows-$VERSION.exe >> $MANIFESTFILE
       - echo $ARTIFACT_DIRECTORY/copilot-darwin-$VERSION >> $MANIFESTFILE
       - echo $ARTIFACT_DIRECTORY/copilot-darwin-amd64-$VERSION >> $MANIFESTFILE
