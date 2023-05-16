@@ -350,14 +350,21 @@ func (o *deploySvcOpts) validateEnvName() error {
 
 func (o *deploySvcOpts) validateOrAskSvcName() error {
 	if o.name != "" {
-		return o.validateSvcName()
+		if err := o.validateSvcName(); err != nil {
+			return err
+		}
+	} else {
+		name, err := o.sel.Service("Select a service in your workspace", "")
+		if err != nil {
+			return fmt.Errorf("select service: %w", err)
+		}
+		o.name = name
 	}
-
-	name, err := o.sel.Service("Select a service in your workspace", "")
+	svc, err := o.store.GetService(o.appName, o.name)
 	if err != nil {
-		return fmt.Errorf("select service: %w", err)
+		return fmt.Errorf("get service %s configuration: %w", o.name, err)
 	}
-	o.name = name
+	o.svcType = svc.Type
 	return nil
 }
 
@@ -381,11 +388,6 @@ func (o *deploySvcOpts) configureClients() error {
 		return fmt.Errorf("get environment %s configuration: %w", o.envName, err)
 	}
 	o.targetEnv = env
-	svc, err := o.store.GetService(o.appName, o.name)
-	if err != nil {
-		return fmt.Errorf("get service %s configuration: %w", o.name, err)
-	}
-	o.svcType = svc.Type
 
 	// client to retrieve an application's resources created with CloudFormation.
 	defaultSess, err := o.sessProvider.Default()
