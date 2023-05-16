@@ -5,7 +5,6 @@ package stack
 
 import (
 	"fmt"
-	"strconv"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
@@ -16,11 +15,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/template"
-)
-
-// Parameter logical IDs for a static site service.
-const (
-	StaticSiteDNSDelegatedParamKey = "DNSDelegated"
 )
 
 // StaticSite represents the configuration needed to create a CloudFormation stack from a static site service manifest.
@@ -129,7 +123,7 @@ func (s *StaticSite) Template() (string, error) {
 		AppDNSDelegationRole:   dnsDelegationRole,
 		AssetMappingFileBucket: bucket,
 		AssetMappingFilePath:   path,
-		StaticSiteAlias:        s.manifest.Alias,
+		StaticSiteAlias:        s.manifest.HTTP.Alias,
 	})
 	if err != nil {
 		return "", err
@@ -155,10 +149,6 @@ func (s *StaticSite) Parameters() ([]*cloudformation.Parameter, error) {
 		{
 			ParameterKey:   aws.String(WorkloadAddonsTemplateURLParamKey),
 			ParameterValue: aws.String(s.rc.AddonsTemplateURL),
-		},
-		{
-			ParameterKey:   aws.String(StaticSiteDNSDelegatedParamKey),
-			ParameterValue: aws.String(strconv.FormatBool(s.dnsDelegationEnabled)),
 		},
 	}, nil
 }

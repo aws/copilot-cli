@@ -42,6 +42,9 @@ func (s *treeWriter) write() error {
 }
 
 func (s *treeWriter) writeTree(node diffNode, indent int) error {
+	if node == nil {
+		return nil
+	}
 	var formatter formatter
 	switch node := node.(type) {
 	case *unchangedNode:

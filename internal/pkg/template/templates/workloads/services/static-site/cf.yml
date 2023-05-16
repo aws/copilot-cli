@@ -28,14 +28,9 @@ Parameters:
     Description: URL of the addons nested stack template within the S3 bucket.
     Type: String
     Default: ""
-  DNSDelegated:
-    Type: String
-    AllowedValues: [true, false]
 
 Conditions:
   HasAddons: !Not [!Equals [!Ref AddonsTemplateURL, ""]]
-  HasAssociatedDomain:
-    !Equals [!Ref DNSDelegated, true]
 
 Resources:
   Bucket:
@@ -43,6 +38,8 @@ Resources:
       aws:copilot:description: An S3 Bucket to store the static site's assets
     Type: AWS::S3::Bucket
     Properties:
+      VersioningConfiguration:
+        Status: Enabled
       AccessControl: Private
       BucketEncryption:
         ServerSideEncryptionConfiguration:
@@ -119,13 +116,12 @@ Resources:
             # required when the origin is an S3 bucket.
             S3OriginConfig:
               OriginAccessIdentity: '' 
+        {{- if .StaticSiteAlias}}
         ViewerCertificate:
-          !If
-            - HasAssociatedDomain
-            - AcmCertificateArn: !Ref CertificateValidatorAction
-              MinimumProtocolVersion: TLSv1
-              SslSupportMethod:  sni-only
-            - !Ref AWS::NoValue
+          AcmCertificateArn: !Ref CertificateValidatorAction
+          MinimumProtocolVersion: TLSv1
+          SslSupportMethod:  sni-only
+        {{- end}}
 
   TriggerStateMachineFunction:
     Metadata:
@@ -339,7 +335,6 @@ Resources:
     Metadata:
       'aws:copilot:description': "Add A-records for your Static Site alias"
     Type: Custom::CustomDomainFunction
-    Condition: HasAssociatedDomain
     Properties:
       ServiceToken: !GetAtt CustomDomainFunction.Arn
       PublicAccessHostedZoneID: Z2FDTNDATAQYW2 # See https://go.aws/3cPhvlX
@@ -356,7 +351,6 @@ Resources:
 
   CustomDomainFunction:
     Type: AWS::Lambda::Function
-    Condition: HasAssociatedDomain
     Properties:
       {{- with $cr := index .CustomResources "CustomDomainFunction" }}
       Code:
@@ -373,7 +367,6 @@ Resources:
     Metadata:
       'aws:copilot:description': "An IAM role {{- if .PermissionsBoundary}} with permissions boundary {{.PermissionsBoundary}} {{- end}} to update the Route 53 hosted zone"
     Type: AWS::IAM::Role
-    Condition: HasAssociatedDomain
     Properties:
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
@@ -414,7 +407,6 @@ Resources:
     Metadata:
       'aws:copilot:description': "Request and validate the certificate for your Static Site"
     Type: Custom::CertificateValidationFunction
-    Condition: HasAssociatedDomain
     Properties:
       ServiceToken: !GetAtt CertificateValidationFunction.Arn
       EnvHostedZoneId:
@@ -430,7 +422,6 @@ Resources:
 
   CertificateValidationFunction:
     Type: AWS::Lambda::Function
-    Condition: HasAssociatedDomain
     Properties:
       {{- with $cr := index .CustomResources "CertificateValidationFunction" }}
       Code:
@@ -470,7 +461,7 @@ Resources:
               - Sid: AllowAssumeRole
                 Effect: Allow
                 Action: sts:AssumeRole
-                Resource: "*"
+                Resource: {{ .AppDNSDelegationRole }}
               - Sid: HostedZoneUpdateAndWait
                 Effect: Allow
                 Action: route53:ChangeResourceRecordSets

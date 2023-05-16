@@ -242,10 +242,6 @@ func TestStaticSite_Parameters(t *testing.T) {
 					ParameterKey:   aws.String(WorkloadAddonsTemplateURLParamKey),
 					ParameterValue: aws.String("mockURL"),
 				},
-				{
-					ParameterKey:   aws.String(StaticSiteDNSDelegatedParamKey),
-					ParameterValue: aws.String("false"),
-				},
 			},
 		},
 	}
@@ -312,7 +308,6 @@ func TestStaticSite_SerializedParameters(t *testing.T) {
   "Parameters": {
     "AddonsTemplateURL": "",
     "AppName": "phonetool",
-    "DNSDelegated": "false",
     "EnvName": "test",
     "WorkloadName": "frontend"
   },
