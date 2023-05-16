@@ -44,7 +44,7 @@ Resources:
       'aws:copilot:description': 'A security group for one or more workloads to access the Aurora Serverless v2 cluster {{logicalIDSafe .ClusterName}}'
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
-      GroupDescription: !Sub 'The Security Group to access Aurora Serverless v2 cluster {{logicalIDSafe .ClusterName}}.'
+      GroupDescription: 'The Security Group to access Aurora Serverless v2 cluster {{logicalIDSafe .ClusterName}}.'
       VpcId: !Ref VPCID
       Tags:
         - Key: Name
