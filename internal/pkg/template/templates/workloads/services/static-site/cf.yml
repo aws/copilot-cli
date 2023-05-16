@@ -43,6 +43,8 @@ Resources:
       aws:copilot:description: An S3 Bucket to store the static site's assets
     Type: AWS::S3::Bucket
     Properties:
+      VersioningConfiguration:
+        Status: Enabled
       AccessControl: Private
       BucketEncryption:
         ServerSideEncryptionConfiguration:
