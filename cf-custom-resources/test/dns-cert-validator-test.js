@@ -1077,6 +1077,114 @@ describe("DNS Validated Certificate Handler", () => {
       });
   });
 
+  test("Delete operation succeeds if the records are already gone", () => {
+    const describeCertificateFake = sinon.stub();
+    describeCertificateFake.onFirstCall().resolves({
+      Certificate: {
+        CertificateArn: testCertificateArn,
+        DomainValidationOptions: newCertValidateOptions,
+      },
+    });
+    describeCertificateFake.onSecondCall().resolves({
+      Certificate: {
+        CertificateArn: testOtherCertificateArn,
+        DomainValidationOptions: newCertValidatorOptionsWithoutV2,
+      },
+    });
+    AWS.mock("ACM", "describeCertificate", describeCertificateFake);
+
+    const deleteCertificateFake = sinon.fake.resolves({});
+    AWS.mock("ACM", "deleteCertificate", deleteCertificateFake);
+
+    const listCertificatesFake = sinon.stub();
+    listCertificatesFake.resolves({
+      CertificateSummaryList: [
+        {
+          DomainName: `${testEnvName}.${testAppName}.${testDomainName}`,
+          CertificateArn: testCertificateArn,
+        },
+        {
+          DomainName: `${testEnvName}.${testAppName}.${testDomainName}`,
+          CertificateArn: testOtherCertificateArn,
+        },
+      ],
+    });
+    AWS.mock("ACM", "listCertificates", listCertificatesFake);
+
+    const changeResourceRecordSetsFake = sinon.fake.rejects(new Error("Tried to delete resource record set [name='validate.unused.mockDomain.com', type='CNAME'] but it was not found"));
+    AWS.mock(
+        "Route53",
+        "changeResourceRecordSets",
+        changeResourceRecordSetsFake
+    );
+
+    const listHostedZonesByNameFake = sinon.fake.resolves({
+      HostedZones: [
+        {
+          Id: `/hostedzone/${testAppHostedZoneId}`,
+        },
+      ],
+    });
+    AWS.mock("Route53", "listHostedZonesByName", listHostedZonesByNameFake);
+
+    const request = nock(ResponseURL)
+        .put("/", (body) => {
+          return body.Status === "SUCCESS";
+        })
+        .reply(200);
+
+    return LambdaTester(handler.certificateRequestHandler)
+        .event({
+          RequestType: "Delete",
+          RequestId: testRequestId,
+          PhysicalResourceId: testCertificateArn,
+          ResourceProperties: {
+            AppName: testAppName,
+            EnvName: testEnvName,
+            DomainName: testDomainName,
+            EnvHostedZoneId: testHostedZoneId,
+            Region: "us-east-1",
+            RootDNSRole: testRootDNSRole,
+          },
+        })
+        .expectResolve(() => {
+          sinon.assert.calledWith(
+              describeCertificateFake,
+              sinon.match({
+                CertificateArn: testCertificateArn,
+              })
+          );
+          sinon.assert.calledWith(listCertificatesFake, sinon.match({}));
+          sinon.assert.calledWith(
+              describeCertificateFake,
+              sinon.match({
+                CertificateArn: testOtherCertificateArn,
+              })
+          );
+          sinon.assert.calledWith(
+              changeResourceRecordSetsFake,
+              sinon.match({
+                ChangeBatch: testDeleteRecordChangebatch3,
+                HostedZoneId: testAppHostedZoneId,
+              })
+          );
+          sinon.assert.calledWith(
+              listHostedZonesByNameFake,
+              sinon.match({
+                DNSName: `${testDomainName}`,
+                MaxItems: "1",
+              })
+          );
+          sinon.assert.calledWith(
+              deleteCertificateFake,
+              sinon.match({
+                CertificateArn: testCertificateArn,
+              })
+          );
+          expect(request.isDone()).toBe(true);
+        });
+  });
+
   test("Delete operation is idempotent", () => {
     const error = new Error();
     error.name = "ResourceNotFoundException";
