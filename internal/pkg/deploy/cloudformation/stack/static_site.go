@@ -120,7 +120,7 @@ func (s *StaticSite) Template() (string, error) {
 		AppDNSDelegationRole:   dnsDelegationRole,
 		AssetMappingFileBucket: bucket,
 		AssetMappingFilePath:   path,
-		StaticSiteAlias:        s.manifest.Alias,
+		StaticSiteAlias:        s.manifest.HTTP.Alias,
 	})
 	if err != nil {
 		return "", err

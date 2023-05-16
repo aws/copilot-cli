@@ -17,6 +17,8 @@ import (
 var cli *client.CLI
 var appName string
 
+const ssmName = "e2e-apprunner-ssm-param-secret"
+const secretName = "e2e-apprunner-secrets-manager-secret"
 const feSvcName = "front-end"
 const beSvcName = "back-end"
 const envName = "test"
@@ -37,9 +39,9 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(err).NotTo(HaveOccurred())
 	appName = fmt.Sprintf("e2e-apprunner-%d", time.Now().Unix())
-	err = command.Run("aws", []string{"ssm", "put-parameter", "--name", "e2e-apprunner-ssm-param", "--value", "abcd1234", "--type", "String", "--tags", "[{\"Key\":\"copilot-application\",\"Value\":\"" + appName + "\"},{\"Key\":\"copilot-environment\", \"Value\":\"" + envName + "\"}]"})
+	err = command.Run("aws", []string{"ssm", "put-parameter", "--name", ssmName, "--overwrite", "--value", "abcd1234", "--type", "String", "--tags", "[{\"Key\":\"copilot-application\",\"Value\":\"" + appName + "\"},{\"Key\":\"copilot-environment\", \"Value\":\"" + envName + "\"}]"})
 	Expect(err).NotTo(HaveOccurred())
-	err = command.Run("aws", []string{"secretsmanager", "create-secret", "--name", "e2e-apprunner-MyTestSecret", "--secret-string", "\"{\"user\":\"diegor\",\"password\":\"EXAMPLE-PASSWORD\"}\"", "--tags", "[{\"Key\":\"copilot-application\",\"Value\":\"" + appName + "\"},{\"Key\":\"copilot-environment\", \"Value\":\"" + envName + "\"}]"})
+	err = command.Run("aws", []string{"secretsmanager", "create-secret", "--name", secretName, "--force-overwrite-replica-secret", "--secret-string", "\"{\"user\":\"diegor\",\"password\":\"EXAMPLE-PASSWORD\"}\"", "--tags", "[{\"Key\":\"copilot-application\",\"Value\":\"" + appName + "\"},{\"Key\":\"copilot-environment\", \"Value\":\"" + envName + "\"}]"})
 	Expect(err).NotTo(HaveOccurred())
 })
 
