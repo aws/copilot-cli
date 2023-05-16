@@ -115,3 +115,6 @@ After getting the environment deployed using the env manifest, you need to updat
         }
     }
     ```
+
+## How do I use CloudFront to serve a static website?
+Use the [copilot init](../commands/init.en.md) or [copilot svc init](../commands/svc-init.en.md) command to create a Static Site [workload](../concepts/services.en.md). After you select files to upload, Copilot will provision a separate, dedicated CloudFront distribution, as well as an S3 bucket with your assets.

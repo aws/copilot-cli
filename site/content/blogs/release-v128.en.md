@@ -33,10 +33,52 @@ Copilot v1.28 brings several new features and improvements:
     See the section [Overview](../docs/concepts/overview.en.md) for a more detailed introduction to AWS Copilot.
 
 ## Static Site service type
+Copilot's newest workload type, Static Site, provisions and configures everything you need to create a static website hosted by Amazon S3 and fronted by an Amazon CloudFront distribution.  
+
+Let's say you want to launch a straightforward, read-only website. You don't need a backend or a database, you don't need to personalize the site based on the user or store any information. Make a static site! This workload type is relatively simple and quick to launch, and is highly performant. 
 
 ### Static Site Upload Experience
+After you have created your static assets (HTML file and any CSS and/or JavaScript, etc. files), begin your Static Site creation with the [`copilot init`](../docs/commands/init.en.md) command, or [`copilot svc init`](../docs/commands/svc-init.en.md) if you've already run `copilot app init` and `copilot env init`. You may use the `--sources` flag to pass in the path(s) (relative to your project root) to your static asset directories and/or files. Alternatively, you may select the directories/files when prompted.
 
-### Integrate With CloudFront
+A manifest will be populated and stored in the `copilot/[service name]` folder. There, you may adjust your asset specifications if you'd like. By default, all directories will be uploaded recursively. If that's not what you want, leverage the `exclude` and `reinclude` fields to add filters. The available pattern symbols:  
+
+`*`: Matches everything  
+`?`: Matches any single character  
+`[sequence]`: Matches any character in sequence  
+`[!sequence]`: Matches any character not in sequence  
+
+```yaml
+# The manifest for the "example" service.
+# Read the full specification for the "Static Site" type at:
+#  https://aws.github.io/copilot-cli/docs/manifest/static-site/
+
+# Your service name will be used in naming your resources like S3 buckets, etc.
+name: example
+type: Static Site
+
+http:
+  alias: 'example.com'
+
+files:
+  - source: src/someDirectory
+    recursive: true
+  - source: someFile.html
+
+# You can override any of the values defined above by environment.
+# environments:
+#   test:
+#     files:
+#       - source: './blob'
+#         recursive: true
+#         destination: 'assets'
+#         exclude: '*'
+#         reinclude:
+#           - '*.txt'
+#           - '*.png'
+```
+For more on `exclude` and `reinclude` filters, go [here](https://awscli.amazonaws.com/v2/documentation/api/latest/reference/s3/index.html#use-of-exclude-and-include-filters).
+
+The [`copilot deploy`](../docs/commands/deploy.en.md) or [`copilot svc deploy`](../docs/commands/svc-deploy.en.md) command will provision and launch your static website: creating an S3 bucket and uploading your chosen local files to that bucket, and generating a CloudFront distribution with the S3 bucket as the origin. Under the hood, your Static Site service will have a CloudFormation stack, just like other Copilot workloads.
 
 ## Config multiple container ports with the `--port` flag
 
