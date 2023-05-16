@@ -49,11 +49,11 @@ var _ = BeforeSuite(func() {
 })
 
 var _ = AfterSuite(func() {
-	_, err := cli.AppDelete()
-	Expect(err).NotTo(HaveOccurred())
-	err = command.Run("aws", []string{"ssm", "delete-parameter", "--name", "e2e-apprunner-ssm-param"})
-	Expect(err).NotTo(HaveOccurred())
-	err = command.Run("aws", []string{"secretsmanager", "delete-secret", "--secret-id", "e2e-apprunner-MyTestSecret", "--force-delete-without-recovery"})
-	Expect(err).NotTo(HaveOccurred())
+	_, appDeleteErr := cli.AppDelete()
+	ssmDeleteErr := command.Run("aws", []string{"ssm", "delete-parameter", "--name", "e2e-apprunner-ssm-param"})
+	secretsDeleteErr := command.Run("aws", []string{"secretsmanager", "delete-secret", "--secret-id", "e2e-apprunner-MyTestSecret", "--force-delete-without-recovery"})
 	_ = client.NewAWS().DeleteAllDBClusterSnapshots()
+	Expect(appDeleteErr).NotTo(HaveOccurred())
+	Expect(ssmDeleteErr).NotTo(HaveOccurred())
+	Expect(secretsDeleteErr).NotTo(HaveOccurred())
 })
