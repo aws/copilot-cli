@@ -81,7 +81,7 @@ For more on `exclude` and `reinclude` filters, go [here](https://awscli.amazonaw
 The [`copilot deploy`](../docs/commands/deploy.en.md) or [`copilot svc deploy`](../docs/commands/svc-deploy.en.md) command will provision and launch your static website: creating an S3 bucket and uploading your chosen local files to that bucket, and generating a CloudFront distribution with the S3 bucket as the origin. Under the hood, your Static Site service will have a CloudFormation stack, just like other Copilot workloads.
 
 !!! note
-    [S3 access log](https://docs.aws.amazon.com/AmazonS3/latest/userguide/ServerLogs.html) is not enabled by default for the Static Site S3 bucket, since object uploading is managed by Copilot.
+    [Server access logging](https://docs.aws.amazon.com/AmazonS3/latest/userguide/ServerLogs.html) for the Static Site S3 bucket is not enabled by default, because object uploading is managed by Copilot.
 
 ## Config multiple container ports with the `--port` flag
 
