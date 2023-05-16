@@ -23,8 +23,7 @@ const feSvcName = "front-end"
 const beSvcName = "back-end"
 const envName = "test"
 
-/*
-*
+/**
 The Init Suite runs through the copilot init workflow for a brand new
 application. It creates a single environment, deploys a service to it, and then
 tears it down.
