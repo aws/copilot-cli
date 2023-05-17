@@ -73,9 +73,11 @@ func TestStaticSiteService_TemplateAndParamsGeneration(t *testing.T) {
 				Manifest:    mft.(*manifest.StaticSite),
 				RuntimeConfig: stack.RuntimeConfig{
 					EnvVersion: "v1.42.0",
+					Region:     "us-west-2",
 				},
-				AssetMappingURL: "s3://stackset-bucket/mappingfile",
-				RootUserARN:     "arn:aws:iam::123456789123:root",
+				ArtifactBucketName: "bucket",
+				AssetMappingURL:    "s3://stackset-bucket/mappingfile",
+				RootUserARN:        "arn:aws:iam::123456789123:root",
 			})
 			require.NoError(t, err)
 			// validate generated template

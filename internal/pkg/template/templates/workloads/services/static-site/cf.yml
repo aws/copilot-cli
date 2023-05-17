@@ -110,6 +110,7 @@ Resources:
         {{- if .StaticSiteAlias}}
         Aliases: [{{.StaticSiteAlias}}]
         {{- end}}
+        DefaultRootObject: index.html
         DefaultCacheBehavior:
           Compress: true
           AllowedMethods: ["GET", "HEAD"]
@@ -128,9 +129,9 @@ Resources:
               OriginAccessIdentity: '' 
         {{- if .StaticSiteAlias}}
         ViewerCertificate:
-          - AcmCertificateArn: !Ref CertificateValidatorAction
-            MinimumProtocolVersion: TLSv1
-            SslSupportMethod:  sni-only
+          AcmCertificateArn: !Ref CertificateValidatorAction
+          MinimumProtocolVersion: TLSv1
+          SslSupportMethod:  sni-only
         {{- end}}
 
   TriggerStateMachineFunction:
@@ -513,3 +514,15 @@ Resources:
       ManagedPolicyArns:
         - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
 {{- end}}
+
+Outputs:
+  CloudFrontDistributionDomainName:
+    Value: !GetAtt CloudFrontDistribution.DomainName
+    Export:
+      Name: !Sub ${AWS::StackName}-CloudFrontDistributionDomainName
+  {{- if .StaticSiteAlias}}
+  CloudFrontDistributionAlternativeDomainName:
+    Value: {{ quote .StaticSiteAlias }}
+    Export:
+      Name: !Sub ${AWS::StackName}-CloudFrontDistributionAlternativeDomainName
+  {{- end}}

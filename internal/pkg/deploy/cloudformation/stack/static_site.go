@@ -25,7 +25,6 @@ type StaticSite struct {
 	appInfo              deploy.AppInformation
 
 	parser          staticSiteReadParser
-	localCRs        []uploadable // Custom resources that have not been uploaded yet.
 	assetMappingURL string
 }
 
@@ -43,40 +42,41 @@ type StaticSiteConfig struct {
 }
 
 // NewStaticSite creates a new CFN stack from a manifest file, given the options.
-func NewStaticSite(conf *StaticSiteConfig) (*StaticSite, error) {
+func NewStaticSite(cfg *StaticSiteConfig) (*StaticSite, error) {
 	crs, err := customresource.StaticSite(fs)
 	if err != nil {
 		return nil, fmt.Errorf("static site custom resources: %w", err)
 	}
+	cfg.RuntimeConfig.loadCustomResourceURLs(cfg.ArtifactBucketName, uploadableCRs(crs).convert())
+
 	var dnsDelegationEnabled bool
 	var appInfo deploy.AppInformation
-	if conf.App.Domain != "" {
+	if cfg.App.Domain != "" {
 		dnsDelegationEnabled = true
 		appInfo = deploy.AppInformation{
-			Name:                conf.App.Name,
-			Domain:              conf.App.Domain,
-			AccountPrincipalARN: conf.RootUserARN,
+			Name:                cfg.App.Name,
+			Domain:              cfg.App.Domain,
+			AccountPrincipalARN: cfg.RootUserARN,
 		}
 	}
 	return &StaticSite{
 		wkld: &wkld{
-			name:               aws.StringValue(conf.Manifest.Name),
-			env:                aws.StringValue(conf.EnvManifest.Name),
-			app:                conf.App.Name,
-			permBound:          conf.App.PermissionsBoundary,
-			artifactBucketName: conf.ArtifactBucketName,
-			rc:                 conf.RuntimeConfig,
-			rawManifest:        conf.RawManifest,
+			name:               aws.StringValue(cfg.Manifest.Name),
+			env:                aws.StringValue(cfg.EnvManifest.Name),
+			app:                cfg.App.Name,
+			permBound:          cfg.App.PermissionsBoundary,
+			artifactBucketName: cfg.ArtifactBucketName,
+			rc:                 cfg.RuntimeConfig,
+			rawManifest:        cfg.RawManifest,
 			parser:             fs,
-			addons:             conf.Addons,
+			addons:             cfg.Addons,
 		},
-		manifest:             conf.Manifest,
+		manifest:             cfg.Manifest,
 		dnsDelegationEnabled: dnsDelegationEnabled,
 		appInfo:              appInfo,
 
 		parser:          fs,
-		localCRs:        uploadableCRs(crs).convert(),
-		assetMappingURL: conf.AssetMappingURL,
+		assetMappingURL: cfg.AssetMappingURL,
 	}, nil
 }
 
@@ -94,9 +94,12 @@ func (s *StaticSite) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	bucket, path, err := s3.ParseURL(s.assetMappingURL)
-	if err != nil {
-		return "", err
+	var bucket, path string
+	if s.assetMappingURL != "" {
+		bucket, path, err = s3.ParseURL(s.assetMappingURL)
+		if err != nil {
+			return "", err
+		}
 	}
 	dnsDelegationRole, dnsName := convertAppInformation(s.appInfo)
 	content, err := s.parser.ParseStaticSite(template.WorkloadOpts{
