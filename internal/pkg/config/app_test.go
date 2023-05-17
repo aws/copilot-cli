@@ -243,6 +243,12 @@ func TestStore_GetApplication(t *testing.T) {
 }
 
 func TestStore_CreateApplication(t *testing.T) {
+	tagForApplicationParam := []*ssm.Tag{
+		{
+			Key:   aws.String("copilot-application"),
+			Value: aws.String("phonetool"),
+		},
+	}
 	testCases := map[string]struct {
 		inApplication *Application
 
@@ -254,7 +260,7 @@ func TestStore_CreateApplication(t *testing.T) {
 			mockPutParameter: func(t *testing.T, param *ssm.PutParameterInput) (*ssm.PutParameterOutput, error) {
 				require.Equal(t, fmt.Sprintf(fmtApplicationPath, "phonetool"), *param.Name)
 				require.Equal(t, fmt.Sprintf(`{"name":"phonetool","account":"1234","domain":"phonetool.com","domainHostedZoneID":"mockHostedZoneID","version":"%s","tags":{"owner":"boss"}}`, schemaVersion), *param.Value)
-
+				require.Equal(t, tagForApplicationParam, param.Tags)
 				return &ssm.PutParameterOutput{
 					Version: aws.Int64(1),
 				}, nil
@@ -264,6 +270,7 @@ func TestStore_CreateApplication(t *testing.T) {
 		"with existing application": {
 			inApplication: &Application{Name: "phonetool", AccountID: "1234"},
 			mockPutParameter: func(t *testing.T, param *ssm.PutParameterInput) (*ssm.PutParameterOutput, error) {
+				require.Equal(t, tagForApplicationParam, param.Tags)
 				return nil, awserr.New(ssm.ErrCodeParameterAlreadyExists, "Already exists", fmt.Errorf("Already Exists"))
 			},
 			wantedErr: nil,
@@ -271,6 +278,7 @@ func TestStore_CreateApplication(t *testing.T) {
 		"with SSM error": {
 			inApplication: &Application{Name: "phonetool", AccountID: "1234"},
 			mockPutParameter: func(t *testing.T, param *ssm.PutParameterInput) (*ssm.PutParameterOutput, error) {
+				require.Equal(t, tagForApplicationParam, param.Tags)
 				return nil, fmt.Errorf("broken")
 			},
 			wantedErr: fmt.Errorf("create application phonetool: broken"),
