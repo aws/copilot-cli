@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -51,6 +52,7 @@ func TestSvcDeployOpts_Ask(t *testing.T) {
 				m.store.EXPECT().GetApplication("phonetool")
 				m.store.EXPECT().GetEnvironment("phonetool", "prod-iad").Return(&config.Environment{Name: "prod-iad"}, nil)
 				m.ws.EXPECT().ListServices().Return([]string{"frontend"}, nil)
+				m.store.EXPECT().GetService("phonetool", "frontend").Return(&config.Workload{}, nil)
 				m.sel.EXPECT().Service(gomock.Any(), gomock.Any()).Times(0)
 				m.sel.EXPECT().Environment(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
@@ -70,6 +72,7 @@ func TestSvcDeployOpts_Ask(t *testing.T) {
 				m.sel.EXPECT().Service("Select a service in your workspace", "").Return("frontend", nil)
 				m.store.EXPECT().GetApplication(gomock.Any()).Times(1)
 				m.store.EXPECT().GetEnvironment("phonetool", "prod-iad").Return(&config.Environment{Name: "prod-iad"}, nil)
+				m.store.EXPECT().GetService("phonetool", "frontend").Return(&config.Workload{}, nil)
 			},
 			wantedSvcName: "frontend",
 			wantedEnvName: "prod-iad",
@@ -81,6 +84,7 @@ func TestSvcDeployOpts_Ask(t *testing.T) {
 				m.sel.EXPECT().Environment(gomock.Any(), gomock.Any(), "phonetool").Return("prod-iad", nil)
 				m.store.EXPECT().GetApplication("phonetool")
 				m.ws.EXPECT().ListServices().Return([]string{"frontend"}, nil)
+				m.store.EXPECT().GetService("phonetool", "frontend").Return(&config.Workload{}, nil)
 			},
 			wantedSvcName: "frontend",
 			wantedEnvName: "prod-iad",
@@ -145,6 +149,8 @@ func TestSvcDeployOpts_Execute(t *testing.T) {
 	testCases := map[string]struct {
 		inShowDiff       bool
 		inSkipDiffPrompt bool
+		inForceFlag      bool
+		inSvcType        string
 		mock             func(m *deployMocks)
 		wantedDiff       string
 		wantedError      error
@@ -173,6 +179,16 @@ func TestSvcDeployOpts_Execute(t *testing.T) {
 			},
 
 			wantedError: fmt.Errorf("get available features of the prod-iad environment stack: some error"),
+		},
+		"error out if force deploy for static site service": {
+			inForceFlag: true,
+			inSvcType:   manifestinfo.StaticSiteType,
+			mock: func(m *deployMocks) {
+				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte(""), nil)
+				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
+			},
+
+			wantedError: fmt.Errorf(`--force is not supported for service type "Static Site"`),
 		},
 		"error if some required features are not available in the environment": {
 			mock: func(m *deployMocks) {
@@ -428,9 +444,11 @@ func TestSvcDeployOpts_Execute(t *testing.T) {
 					envName:        mockEnvName,
 					showDiff:       tc.inShowDiff,
 					skipDiffPrompt: tc.inSkipDiffPrompt,
+					forceNewUpdate: tc.inForceFlag,
 
 					clientConfigured: true,
 				},
+				svcType: tc.inSvcType,
 				newSvcDeployer: func() (workloadDeployer, error) {
 					return m.mockDeployer, nil
 				},

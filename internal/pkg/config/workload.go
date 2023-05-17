@@ -55,6 +55,16 @@ func (s *Store) createWorkload(wkld *Workload) error {
 		Description: aws.String(fmt.Sprintf("Copilot %s %s", wkld.Type, wkld.Name)),
 		Type:        aws.String(ssm.ParameterTypeString),
 		Value:       aws.String(data),
+		Tags: []*ssm.Tag{
+			{
+				Key:   aws.String("copilot-application"),
+				Value: aws.String(wkld.App),
+			},
+			{
+				Key:   aws.String("copilot-service"),
+				Value: aws.String(wkld.Name),
+			},
+		},
 	})
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {

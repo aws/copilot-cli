@@ -94,6 +94,7 @@ Resources:
     Properties:
       DistributionConfig:
         Aliases: ["example.com"]
+        DefaultRootObject: index.html
         DefaultCacheBehavior:
           Compress: true
           AllowedMethods: ["GET", "HEAD"]
@@ -111,9 +112,9 @@ Resources:
             S3OriginConfig:
               OriginAccessIdentity: '' 
         ViewerCertificate:
-          - AcmCertificateArn: !Ref CertificateValidatorAction
-            MinimumProtocolVersion: TLSv1
-            SslSupportMethod:  sni-only
+          AcmCertificateArn: !Ref CertificateValidatorAction
+          MinimumProtocolVersion: TLSv1
+          SslSupportMethod:  sni-only
 
   TriggerStateMachineFunction:
     Metadata:
@@ -458,3 +459,13 @@ Resources:
                 Resource: "*"
       ManagedPolicyArns:
         - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+Outputs:
+  CloudFrontDistributionDomainName:
+    Value: !GetAtt CloudFrontDistribution.DomainName
+    Export:
+      Name: !Sub ${AWS::StackName}-CloudFrontDistributionDomainName
+  CloudFrontDistributionAlternativeDomainName:
+    Value: "example.com"
+    Export:
+      Name: !Sub ${AWS::StackName}-CloudFrontDistributionAlternativeDomainName
