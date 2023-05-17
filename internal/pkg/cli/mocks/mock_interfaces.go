@@ -3604,6 +3604,58 @@ func (mr *MockwsAppManagerMockRecorder) Summary() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Summary", reflect.TypeOf((*MockwsAppManager)(nil).Summary))
 }
 
+// MockwsAppManagerDeleter is a mock of wsAppManagerDeleter interface.
+type MockwsAppManagerDeleter struct {
+	ctrl     *gomock.Controller
+	recorder *MockwsAppManagerDeleterMockRecorder
+}
+
+// MockwsAppManagerDeleterMockRecorder is the mock recorder for MockwsAppManagerDeleter.
+type MockwsAppManagerDeleterMockRecorder struct {
+	mock *MockwsAppManagerDeleter
+}
+
+// NewMockwsAppManagerDeleter creates a new mock instance.
+func NewMockwsAppManagerDeleter(ctrl *gomock.Controller) *MockwsAppManagerDeleter {
+	mock := &MockwsAppManagerDeleter{ctrl: ctrl}
+	mock.recorder = &MockwsAppManagerDeleterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockwsAppManagerDeleter) EXPECT() *MockwsAppManagerDeleterMockRecorder {
+	return m.recorder
+}
+
+// DeleteWorkspaceFile mocks base method.
+func (m *MockwsAppManagerDeleter) DeleteWorkspaceFile() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteWorkspaceFile")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteWorkspaceFile indicates an expected call of DeleteWorkspaceFile.
+func (mr *MockwsAppManagerDeleterMockRecorder) DeleteWorkspaceFile() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteWorkspaceFile", reflect.TypeOf((*MockwsAppManagerDeleter)(nil).DeleteWorkspaceFile))
+}
+
+// Summary mocks base method.
+func (m *MockwsAppManagerDeleter) Summary() (*workspace.Summary, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Summary")
+	ret0, _ := ret[0].(*workspace.Summary)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Summary indicates an expected call of Summary.
+func (mr *MockwsAppManagerDeleterMockRecorder) Summary() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Summary", reflect.TypeOf((*MockwsAppManagerDeleter)(nil).Summary))
+}
+
 // MockwsWriter is a mock of wsWriter interface.
 type MockwsWriter struct {
 	ctrl     *gomock.Controller
