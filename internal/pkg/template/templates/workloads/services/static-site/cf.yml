@@ -209,12 +209,6 @@ Resources:
     Properties:
       RoleArn: !GetAtt CopyAssetsStateMachineRole.Arn
       StateMachineType: EXPRESS
-      LoggingConfiguration:
-       Level: ALL
-       IncludeExecutionData: true
-       Destinations:
-         - CloudWatchLogsLogGroup:
-             LogGroupArn: 'arn:aws:logs:us-west-2:447368768304:log-group:/ecs/deleteme:*'
       Definition:
         Comment: A state machine that triggers a file-copying lambda for each uploaded asset
         StartAt: GetMappingFile
@@ -304,23 +298,6 @@ Resources:
                 Action:
                   - s3:PutObject
                 Resource: !Sub arn:aws:s3:::${Bucket}/*
-        - PolicyName: LoggingTODORemoveMe
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: 'Allow'
-                Action:
-                  - 'logs:CreateLogDelivery'
-                  - 'logs:CreateLogStream'
-                  - 'logs:GetLogDelivery'
-                  - 'logs:UpdateLogDelivery'
-                  - 'logs:DeleteLogDelivery'
-                  - 'logs:ListLogDeliveries'
-                  - 'logs:PutLogEvents'
-                  - 'logs:PutResourcePolicy'
-                  - 'logs:DescribeResourcePolicies'
-                  - 'logs:DescribeLogGroups'
-                Resource: '*'
 
   EnvManagerS3Access:
     Metadata:
