@@ -43,40 +43,41 @@ type StaticSiteConfig struct {
 }
 
 // NewStaticSite creates a new CFN stack from a manifest file, given the options.
-func NewStaticSite(conf *StaticSiteConfig) (*StaticSite, error) {
+func NewStaticSite(cfg *StaticSiteConfig) (*StaticSite, error) {
 	crs, err := customresource.StaticSite(fs)
 	if err != nil {
 		return nil, fmt.Errorf("static site custom resources: %w", err)
 	}
+	cfg.RuntimeConfig.loadCustomResourceURLs(cfg.ArtifactBucketName, uploadableCRs(crs).convert())
+
 	var dnsDelegationEnabled bool
 	var appInfo deploy.AppInformation
-	if conf.App.Domain != "" {
+	if cfg.App.Domain != "" {
 		dnsDelegationEnabled = true
 		appInfo = deploy.AppInformation{
-			Name:                conf.App.Name,
-			Domain:              conf.App.Domain,
-			AccountPrincipalARN: conf.RootUserARN,
+			Name:                cfg.App.Name,
+			Domain:              cfg.App.Domain,
+			AccountPrincipalARN: cfg.RootUserARN,
 		}
 	}
 	return &StaticSite{
 		wkld: &wkld{
-			name:               aws.StringValue(conf.Manifest.Name),
-			env:                aws.StringValue(conf.EnvManifest.Name),
-			app:                conf.App.Name,
-			permBound:          conf.App.PermissionsBoundary,
-			artifactBucketName: conf.ArtifactBucketName,
-			rc:                 conf.RuntimeConfig,
-			rawManifest:        conf.RawManifest,
+			name:               aws.StringValue(cfg.Manifest.Name),
+			env:                aws.StringValue(cfg.EnvManifest.Name),
+			app:                cfg.App.Name,
+			permBound:          cfg.App.PermissionsBoundary,
+			artifactBucketName: cfg.ArtifactBucketName,
+			rc:                 cfg.RuntimeConfig,
+			rawManifest:        cfg.RawManifest,
 			parser:             fs,
-			addons:             conf.Addons,
+			addons:             cfg.Addons,
 		},
-		manifest:             conf.Manifest,
+		manifest:             cfg.Manifest,
 		dnsDelegationEnabled: dnsDelegationEnabled,
 		appInfo:              appInfo,
 
 		parser:          fs,
-		localCRs:        uploadableCRs(crs).convert(),
-		assetMappingURL: conf.AssetMappingURL,
+		assetMappingURL: cfg.AssetMappingURL,
 	}, nil
 }
 
