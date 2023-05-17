@@ -6,13 +6,7 @@ const ATTEMPTS_VALIDATION_OPTIONS_READY = 10;
 const ATTEMPTS_RECORD_SETS_CHANGE = 10;
 const DELAY_RECORD_SETS_CHANGE_IN_S = 30;
 
-let envHostedZoneID,
-  appName,
-  envName,
-  serviceName,
-  domainTypes,
-  rootDNSRole,
-  domainName;
+let envHostedZoneID, appName, envName, serviceName, domainTypes, rootDNSRole, domainName;
 let defaultSleep = function (ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 };
@@ -113,14 +107,7 @@ let hostedZoneID = {
  * @param {string} [reason] reason for failure, if any, to convey to the user
  * @returns {Promise} Promise that is resolved on success, or rejected on connection error or HTTP error response
  */
-function report(
-  event,
-  context,
-  responseStatus,
-  physicalResourceId,
-  responseData,
-  reason
-) {
+function report(event, context, responseStatus, physicalResourceId, responseData, reason) {
   return new Promise((resolve, reject) => {
     const https = require("https");
     const { URL } = require("url");
@@ -166,10 +153,7 @@ function report(
 exports.handler = async function (event, context) {
   // Destruct resource properties into local variables.
   const props = event.ResourceProperties;
-  let {
-    PublicAccessDNS: publicAccessDNS,
-    PublicAccessHostedZoneID: publicAccessHostedZoneID,
-  } = props;
+  let { PublicAccessDNS: publicAccessDNS, PublicAccessHostedZoneID: publicAccessHostedZoneID } = props;
   const aliases = new Set(props.Aliases);
 
   // Initialize global variables.
@@ -206,14 +190,8 @@ exports.handler = async function (event, context) {
         }
         await validateAliases(aliases, publicAccessDNS);
         await activate(aliases, publicAccessDNS, publicAccessHostedZoneID);
-        let unusedAliases = new Set(
-          [...oldAliases].filter((a) => !aliases.has(a))
-        );
-        await deactivate(
-          unusedAliases,
-          publicAccessDNS,
-          publicAccessHostedZoneID
-        );
+        let unusedAliases = new Set([...oldAliases].filter((a) => !aliases.has(a)));
+        await deactivate(unusedAliases, publicAccessDNS, publicAccessHostedZoneID);
         break;
       case "Create":
         await validateAliases(aliases, publicAccessDNS);
@@ -232,14 +210,7 @@ exports.handler = async function (event, context) {
     await report(event, context, "SUCCESS", physicalResourceID);
   } catch (err) {
     console.log(`Caught error for service ${serviceName}: ${err.message}`);
-    await report(
-      event,
-      context,
-      "FAILED",
-      physicalResourceID,
-      null,
-      err.message
-    );
+    await report(event, context, "FAILED", physicalResourceID, null, err.message);
   }
 };
 
@@ -271,17 +242,11 @@ async function validateAliases(aliases, publicAccessDNS) {
           return;
         }
         let aliasTarget = recordSet[0].AliasTarget;
-        if (
-          aliasTarget &&
-          aliasTarget.DNSName.toLowerCase() ===
-            `${publicAccessDNS.toLowerCase()}.`
-        ) {
+        if (aliasTarget && aliasTarget.DNSName.toLowerCase() === `${publicAccessDNS.toLowerCase()}.`) {
           return; // The record is an alias record and is in use by myself, hence valid.
         }
         if (aliasTarget) {
-          throw new Error(
-            `Alias ${alias} is already in use by ${aliasTarget.DNSName}. This could be another load balancer of a different service.`
-          );
+          throw new Error(`Alias ${alias} is already in use by ${aliasTarget.DNSName}. This could be another load balancer of a different service.`);
         }
         throw new Error(`Alias ${alias} is already in use`);
       });
@@ -300,9 +265,7 @@ async function validateAliases(aliases, publicAccessDNS) {
 async function activate(aliases, publicAccessDNS, publicAccessHostedZone) {
   let promises = [];
   for (let alias of aliases) {
-    promises.push(
-      activateAlias(alias, publicAccessDNS, publicAccessHostedZone)
-    );
+    promises.push(activateAlias(alias, publicAccessDNS, publicAccessHostedZone));
   }
   await Promise.all(promises);
 }
@@ -365,9 +328,7 @@ async function activateAlias(alias, publicAccessDNS, publicAccessHostedZone) {
 async function deactivate(aliases, publicAccessDNS, publicAccessHostedZoneID) {
   let promises = [];
   for (let alias of aliases) {
-    promises.push(
-      deactivateAlias(alias, publicAccessDNS, publicAccessHostedZoneID)
-    );
+    promises.push(deactivateAlias(alias, publicAccessDNS, publicAccessHostedZoneID));
   }
   await Promise.all(promises);
 }
@@ -380,11 +341,7 @@ async function deactivate(aliases, publicAccessDNS, publicAccessHostedZoneID) {
  * @param {String} publicAccessHostedZoneID
  * @returns {Promise<void>}
  */
-async function deactivateAlias(
-  alias,
-  publicAccessDNS,
-  publicAccessHostedZoneID
-) {
+async function deactivateAlias(alias, publicAccessDNS, publicAccessHostedZoneID) {
   // NOTE: It has been validated that if the alias is in use, it is in use by the service itself.
   // Therefore, an "UPSERT" will not overwrite a record that belongs to another service.
   let changes = [
@@ -412,28 +369,20 @@ async function deactivateAlias(
   };
   let changeInfo;
   try {
-    ({ ChangeInfo: changeInfo } = await route53Client
-      .changeResourceRecordSets(changeResourceRecordSetsInput)
-      .promise());
+    ({ ChangeInfo: changeInfo } = await route53Client.changeResourceRecordSets(changeResourceRecordSetsInput).promise());
   } catch (e) {
-    let recordSetNotFoundErrMessageRegex = new RegExp(
-      ".*Tried to delete resource record set.*but it was not found.*"
-    );
+    let recordSetNotFoundErrMessageRegex = new RegExp(".*Tried to delete resource record set.*but it was not found.*");
     if (recordSetNotFoundErrMessageRegex.test(e.message)) {
       return; // If we attempt to `DELETE` a record that doesn't exist, the job is already done, skip waiting.
     }
 
-    let recordSetNotMatchedErrMessageRegex = new RegExp(
-      ".*Tried to delete resource record set.*but the values provided do not match the current values.*"
-    );
+    let recordSetNotMatchedErrMessageRegex = new RegExp(".*Tried to delete resource record set.*but the values provided do not match the current values.*");
     if (recordSetNotMatchedErrMessageRegex.test(e.message)) {
       // NOTE: The alias target, or record value is not exactly what we provided
       // E.g. the alias target DNS name is another load balancer or cloudfront distribution
       // This service should not delete the A-record if it is not being pointed to.
       // However, this is an unexpected situation, we should log this information.
-      console.log(
-        `Received error when trying to delete A-record for ${alias}: ${e.message}. Perhaps the alias record isn't pointing to ${publicAccessDNS}.`
-      );
+      console.log(`Received error when trying to delete A-record for ${alias}: ${e.message}. Perhaps the alias record isn't pointing to ${publicAccessDNS}.`);
       return;
     }
     throw new Error(`delete record ${alias}: ` + e.message);
@@ -473,9 +422,7 @@ async function hostedZoneIDByName(domain) {
     })
     .promise();
   if (!HostedZones || HostedZones.length === 0) {
-    throw new Error(
-      `Couldn't find any Hosted Zone with DNS name ${domainName}.`
-    );
+    throw new Error(`Couldn't find any Hosted Zone with DNS name ${domainName}.`);
   }
   return HostedZones[0].Id.split("/").pop();
 }
@@ -502,9 +449,7 @@ async function domainResources(alias) {
       hostedZoneID: await hostedZoneID.root(),
     };
   }
-  throw new UnrecognizedDomainTypeError(
-    `unrecognized domain type for ${alias}`
-  );
+  throw new UnrecognizedDomainTypeError(`unrecognized domain type for ${alias}`);
 }
 
 function setEqual(setA, setB) {
@@ -534,11 +479,7 @@ UnrecognizedDomainTypeError.prototype = Object.create(Error.prototype, {
 
 exports.deadlineExpired = function () {
   return new Promise(function (resolve, reject) {
-    setTimeout(
-      reject,
-      14 * 60 * 1000 + 30 * 1000 /* 14.5 minutes*/,
-      new Error(`Lambda took longer than 14.5 minutes to update custom domain`)
-    );
+    setTimeout(reject, 14 * 60 * 1000 + 30 * 1000 /* 14.5 minutes*/, new Error(`Lambda took longer than 14.5 minutes to update custom domain`));
   });
 };
 
