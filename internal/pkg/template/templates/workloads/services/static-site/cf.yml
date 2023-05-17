@@ -110,6 +110,7 @@ Resources:
         {{- if .StaticSiteAlias}}
         Aliases: [{{.StaticSiteAlias}}]
         {{- end}}
+        DefaultRootObject: index.html
         DefaultCacheBehavior:
           Compress: true
           AllowedMethods: ["GET", "HEAD"]

@@ -94,6 +94,7 @@ Resources:
     Properties:
       DistributionConfig:
         Aliases: ["example.com"]
+        DefaultRootObject: index.html
         DefaultCacheBehavior:
           Compress: true
           AllowedMethods: ["GET", "HEAD"]
