@@ -52,6 +52,6 @@ var _ = BeforeSuite(func() {
 
 var _ = AfterSuite(func() {
 	_, err := cli.AppDelete()
-	Expect(err).NotTo(HaveOccurred())
 	_ = client.NewAWS().DeleteAllDBClusterSnapshots()
+	Expect(err).NotTo(HaveOccurred())
 })

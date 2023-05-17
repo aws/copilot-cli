@@ -60,6 +60,13 @@ var (
 		"Fn::Split":       exists,
 		"Fn::Sub":         exists,
 		"Fn::Transform":   exists,
+		// Condition functions.
+		"Condition":  exists,
+		"Fn::And":    exists,
+		"Fn::Equals": exists,
+		"Fn::If":     exists,
+		"Fn::Not":    exists,
+		"Fn::Or":     exists,
 	}
 	intrinsicFunctionShortNames = map[string]struct{}{
 		"!Ref":         exists,
@@ -74,6 +81,13 @@ var (
 		"!Split":       exists,
 		"!Sub":         exists,
 		"Transform":    exists,
+		// Condition functions.
+		"!Condition": exists,
+		"!And":       exists,
+		"!Equals":    exists,
+		"!If":        exists,
+		"!Not":       exists,
+		"!Or":        exists,
 	}
 )
 
