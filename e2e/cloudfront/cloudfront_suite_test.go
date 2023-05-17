@@ -56,17 +56,22 @@ var _ = BeforeSuite(func() {
 })
 
 var _ = AfterSuite(func() {
-	_, err := cli.AppDelete()
-	Expect(err).NotTo(HaveOccurred())
+	_, appDeleteErr := cli.AppDelete()
+	s3Err := cleanUpS3Resources()
+	Expect(appDeleteErr).NotTo(HaveOccurred())
+	Expect(s3Err).NotTo(HaveOccurred())
+})
 
-	// Empty and delete the S3 bucket.
-	_, err = s3Client.DeleteObject(&s3.DeleteObjectInput{
+func cleanUpS3Resources() error {
+	_, err := s3Client.DeleteObject(&s3.DeleteObjectInput{
 		Bucket: aws.String(bucketName),
 		Key:    aws.String(staticPath),
 	})
-	Expect(err).NotTo(HaveOccurred())
+	if err != nil {
+		return err
+	}
 	_, err = s3Client.DeleteBucket(&s3.DeleteBucketInput{
 		Bucket: aws.String(bucketName),
 	})
-	Expect(err).NotTo(HaveOccurred())
-})
+	return err
+}
