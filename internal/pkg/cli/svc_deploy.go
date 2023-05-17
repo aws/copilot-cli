@@ -496,6 +496,10 @@ func validateWorkloadManifestCompatibilityWithEnv(ws wsEnvironmentsLister, env v
 func (o *deploySvcOpts) uriRecommendedActions() ([]string, error) {
 	describer, err := describe.NewReachableService(o.appName, o.name, o.store)
 	if err != nil {
+		var errNotAccessible *describe.ErrNonAccessibleServiceType
+		if errors.As(err, &errNotAccessible) {
+			return nil, nil
+		}
 		return nil, err
 	}
 	uri, err := describer.URI(o.envName)
