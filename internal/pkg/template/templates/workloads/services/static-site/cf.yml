@@ -180,20 +180,27 @@ Resources:
       aws:copilot:description: A custom resource to trigger the file-copying state machine
     Type: Custom::TriggerStateMachine
     DependsOn: 
-      - CopyAssetsStateMachine {{- /* This is a real dependency */}}
       - Bucket
       - BucketPolicyForCloudFront
       - CloudFrontOriginAccessControl
       - CloudFrontDistribution
       - TriggerStateMachineFunction
       - TriggerStateMachineFunctionRole
-      - CopyAssetsStateMachine
+      - CopyAssetsStateMachine {{- /* This is a real dependency */}}
       - CopyAssetsStateMachineRole
       - EnvManagerS3Access
+      {{- if .StaticSiteAlias}}
+      - CustomDomainAction
+      - CustomDomainFunction
+      - CustomDomainRole 
+      - CertificateValidatorAction
+      - CertificateValidationFunction
+      - CertificateValidatorRole
+      {{- end}}
     Properties:
       ServiceToken: !GetAtt TriggerStateMachineFunction.Arn
       StateMachineARN: !GetAtt CopyAssetsStateMachine.Arn
-      # include file mapping path as an imput so the state
+      # include file mapping path as an input so the state
       # machine is only triggered if this file path changes.
       AssetMappingFilePath: {{.AssetMappingFilePath}}
 
