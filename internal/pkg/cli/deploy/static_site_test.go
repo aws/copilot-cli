@@ -16,6 +16,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/golang/mock/gomock"
+	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
 )
 
@@ -159,6 +160,38 @@ func TestStaticSiteDeployer_stackConfiguration(t *testing.T) {
 				staticSiteMft: &manifest.StaticSite{},
 			},
 			wantErr: `static sites not supported: get version for app "mockApp": some error`,
+		},
+		"error when sources are invalid paths": {
+			deployer: &staticSiteDeployer{
+				svcDeployer: &svcDeployer{
+					workloadDeployer: &workloadDeployer{
+						app: &config.Application{},
+						env: &config.Environment{},
+						endpointGetter: &endpointGetterDouble{
+							ServiceDiscoveryEndpointFn: ReturnsValues("", error(nil)),
+						},
+						envVersionGetter: &versionGetterDouble{
+							VersionFn: ReturnsValues("", error(nil)),
+						},
+						resources: &stack.AppRegionalResources{},
+					},
+				},
+				appVersionGetter: &versionGetterDouble{
+					VersionFn: ReturnsValues("v1.2.0", error(nil)),
+				},
+				staticSiteMft: &manifest.StaticSite{
+					StaticSiteConfig: manifest.StaticSiteConfig{
+						HTTP: manifest.StaticSiteHTTP{},
+						FileUploads: []manifest.FileUpload{
+							{
+								Source: "some/path",
+							},
+						},
+					},
+				},
+				fs: afero.NewOsFs(),
+			},
+			wantErr: `source "some/path" must be a valid path: stat some/path: no such file or directory`,
 		},
 		"error bc app version out of date": {
 			deployer: &staticSiteDeployer{

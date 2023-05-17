@@ -132,6 +132,9 @@ func (d *staticSiteDeployer) stackConfiguration(in *StackRuntimeConfiguration) (
 	if err := validateMinAppVersion(d.app.Name, d.name, d.appVersionGetter, deploy.StaticSiteMinAppTemplateVersion); err != nil {
 		return nil, fmt.Errorf("static sites not supported: %w", err)
 	}
+	if err := d.validateSources(); err != nil {
+		return nil, err
+	}
 	conf, err := d.newStack(&stack.StaticSiteConfig{
 		App:                d.app,
 		EnvManifest:        d.envConfig,
@@ -147,6 +150,16 @@ func (d *staticSiteDeployer) stackConfiguration(in *StackRuntimeConfiguration) (
 		return nil, fmt.Errorf("create stack configuration: %w", err)
 	}
 	return conf, nil
+}
+
+func (d *staticSiteDeployer) validateSources() error {
+	for _, upload := range d.staticSiteMft.FileUploads {
+		_, err := d.fs.Stat(upload.Source)
+		if err != nil {
+			return fmt.Errorf("source %q must be a valid path: %w", upload.Source, err)
+		}
+	}
+	return nil
 }
 
 func (d *staticSiteDeployer) validateAlias() error {

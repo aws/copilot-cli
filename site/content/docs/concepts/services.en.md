@@ -22,9 +22,10 @@ When you're setting up a service, Copilot will ask you about what kind of servic
 
 ### Internet-facing services
 
-If you want your service to serve internet traffic then you have two options:
+If you want your service to serve internet traffic then you have three options:
 
-* "Request-Driven Web Service" will provision an AWS App Runner Service to run your service. 
+* "Request-Driven Web Service" will provision an AWS App Runner Service to run your service.
+* "Static Site" will provision a dedicated CloudFront distribution and S3 bucket for your static website.
 * "Load Balanced Web Service" will provision an Application Load Balancer, a Network Load Balancer or both, along with 
   security groups, an ECS service on Fargate to run your service.
 
@@ -34,6 +35,10 @@ This option is more cost effective for HTTP services with sudden bursts in reque
 
 Unlike ECS, App Runner services are not connected by default to a VPC. In order to route egress traffic through a VPC, 
 you can configure the [`network`](../manifest/rd-web-service.en.md#network) field in the manifest.
+
+#### Static Site
+An Amazon CloudFront distribution-served, S3-hosted static website.
+Caching with the [CloudFront Content Delivery Network (CDN)](../developing/content-delivery.en.md) optimizes cost and speed. Copilot uploads your static assets into a new S3 bucket configured for static website hosting.
 
 #### Load Balanced Web Service
 An ECS Service running tasks on Fargate with an Application Load Balancer, a Network Load Balancer or both, as ingress. 
