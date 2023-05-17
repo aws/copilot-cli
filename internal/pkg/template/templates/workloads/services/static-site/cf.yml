@@ -193,7 +193,8 @@ Resources:
     Properties:
       ServiceToken: !GetAtt TriggerStateMachineFunction.Arn
       StateMachineARN: !GetAtt CopyAssetsStateMachine.Arn
-      # TODO some note here like: include file path for diff detection
+      # include file mapping path as an imput so the state
+      # machine is only triggered if this file path changes.
       AssetMappingFilePath: {{.AssetMappingFilePath}}
 
   CopyAssetsStateMachine:
@@ -239,6 +240,8 @@ Resources:
                     Bucket: !Ref Bucket
                     Key.$: $.destPath
                     ContentType.$: $.contentType
+                    # Required otherwise ContentType won't be applied.
+                    # See https://github.com/aws/aws-sdk-js/issues/1092 for more.
                     MetadataDirective: "REPLACE"
 
   CopyAssetsStateMachineRole:
