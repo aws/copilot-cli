@@ -53,7 +53,7 @@ var _ = BeforeSuite(func() {
 
 var _ = AfterSuite(func() {
 	_, err := copilot.AppDelete()
-	Expect(err).NotTo(HaveOccurred())
 	_ = aws.DeleteCodeCommitRepo(appName)
 	_ = aws.DeleteCodeCommitIAMUser(codeCommitIAMUser, codeCommitCreds.CredentialID)
+	Expect(err).NotTo(HaveOccurred())
 })

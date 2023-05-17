@@ -47,9 +47,9 @@ var _ = BeforeSuite(func() {
 })
 
 var _ = AfterSuite(func() {
-	_, err := cli.AppDelete()
-	Expect(err).NotTo(HaveOccurred())
+	_, appDeleteErr := cli.AppDelete()
 	// Delete VPC stack.
-	err = aws.DeleteStack(vpcStackName)
-	Expect(err).NotTo(HaveOccurred())
+	vpcDeleteErr := aws.DeleteStack(vpcStackName)
+	Expect(appDeleteErr).NotTo(HaveOccurred())
+	Expect(vpcDeleteErr).NotTo(HaveOccurred())
 })

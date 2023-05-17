@@ -244,6 +244,17 @@ func TestStore_CreateEnvironment(t *testing.T) {
 	testEnvironmentPath := fmt.Sprintf(fmtEnvParamPath, testEnvironment.App, testEnvironment.Name)
 	require.NoError(t, err, "Marshal environment should not fail")
 
+	tagsForEnvParam := []*ssm.Tag{
+		{
+			Key:   aws.String("copilot-application"),
+			Value: aws.String(testEnvironment.App),
+		},
+		{
+			Key:   aws.String("copilot-environment"),
+			Value: aws.String(testEnvironment.Name),
+		},
+	}
+
 	testCases := map[string]struct {
 		mockGetParameter func(t *testing.T, param *ssm.GetParameterInput) (*ssm.GetParameterOutput, error)
 		mockPutParameter func(t *testing.T, param *ssm.PutParameterInput) (*ssm.PutParameterOutput, error)
@@ -253,6 +264,7 @@ func TestStore_CreateEnvironment(t *testing.T) {
 			mockPutParameter: func(t *testing.T, param *ssm.PutParameterInput) (*ssm.PutParameterOutput, error) {
 				require.Equal(t, testEnvironmentPath, *param.Name)
 				require.Equal(t, testEnvironmentString, *param.Value)
+				require.Equal(t, tagsForEnvParam, param.Tags)
 				return &ssm.PutParameterOutput{
 					Version: aws.Int64(1),
 				}, nil
@@ -272,6 +284,7 @@ func TestStore_CreateEnvironment(t *testing.T) {
 		"with existing environment": {
 			mockPutParameter: func(t *testing.T, param *ssm.PutParameterInput) (*ssm.PutParameterOutput, error) {
 				require.Equal(t, testEnvironmentPath, *param.Name)
+				require.Equal(t, tagsForEnvParam, param.Tags)
 				return nil, awserr.New(ssm.ErrCodeParameterAlreadyExists, "Already exists", fmt.Errorf("Already Exists"))
 			},
 			mockGetParameter: func(t *testing.T, param *ssm.GetParameterInput) (*ssm.GetParameterOutput, error) {
@@ -287,6 +300,7 @@ func TestStore_CreateEnvironment(t *testing.T) {
 		},
 		"with SSM error": {
 			mockPutParameter: func(t *testing.T, param *ssm.PutParameterInput) (*ssm.PutParameterOutput, error) {
+				require.Equal(t, tagsForEnvParam, param.Tags)
 				return nil, fmt.Errorf("broken")
 			},
 			mockGetParameter: func(t *testing.T, param *ssm.GetParameterInput) (*ssm.GetParameterOutput, error) {

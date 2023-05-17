@@ -83,6 +83,16 @@ func (s *Store) CreateEnvironment(environment *Environment) error {
 		Description: aws.String(fmt.Sprintf("The %s deployment stage", environment.Name)),
 		Type:        aws.String(ssm.ParameterTypeString),
 		Value:       aws.String(data),
+		Tags: []*ssm.Tag{
+			{
+				Key:   aws.String("copilot-application"),
+				Value: aws.String(environment.App),
+			},
+			{
+				Key:   aws.String("copilot-environment"),
+				Value: aws.String(environment.Name),
+			},
+		},
 	})
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {
