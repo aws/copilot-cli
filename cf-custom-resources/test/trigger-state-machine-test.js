@@ -16,11 +16,6 @@ describe("trigger state machine", () => {
   const testRequestId = "f4ef1b10-c39a-44e3-99c0-fbf7e53c3943";
 
   const stateMachineARN = "arn::mock::statemachine";
-  const syncExecProps = {
-    SourceBucket: "mockSrcBucket",
-    AssetMappingFilePath: "path/to/file",
-    DestinationBucket: "mockDstBucket",
-  };
 
   const origConsole = console;
 
@@ -108,16 +103,14 @@ describe("trigger state machine", () => {
         RequestType: "Create",
         RequestId: testRequestId,
         ResourceProperties: {
-          ...syncExecProps,
           StateMachineARN: stateMachineARN,
         },
-        LogicalResourceId: "mockID"
+        LogicalResourceId: "mockID",
       })
       .expectResolve(() => {
         expect(request.isDone()).toBe(true);
         sinon.assert.calledWith(fake, {
           stateMachineArn: stateMachineARN,
-          input: JSON.stringify(syncExecProps)
         });
       });
   });
@@ -148,17 +141,15 @@ describe("trigger state machine", () => {
         RequestType: "Update",
         RequestId: testRequestId,
         ResourceProperties: {
-          ...syncExecProps,
           StateMachineARN: stateMachineARN,
         },
         LogicalResourceId: "mockID",
-        PhysicalResourceId: "physicalID"
+        PhysicalResourceId: "physicalID",
       })
       .expectResolve(() => {
         expect(request.isDone()).toBe(true);
         sinon.assert.calledWith(fake, {
           stateMachineArn: stateMachineARN,
-          input: JSON.stringify(syncExecProps)
         });
       });
   });
@@ -189,7 +180,6 @@ describe("trigger state machine", () => {
         RequestType: "Update",
         RequestId: testRequestId,
         ResourceProperties: {
-          ...syncExecProps,
           StateMachineARN: stateMachineARN,
         },
         LogicalResourceId: "mockID",
@@ -198,7 +188,6 @@ describe("trigger state machine", () => {
         expect(request.isDone()).toBe(true);
         sinon.assert.calledWith(fake, {
           stateMachineArn: stateMachineARN,
-          input: JSON.stringify(syncExecProps)
         });
       });
   });
