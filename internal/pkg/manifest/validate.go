@@ -588,6 +588,16 @@ func (s StaticSiteConfig) validate() error {
 }
 
 func (f FileUpload) validate() error {
+	return f.validateSource()
+}
+
+// validateSource returns nil if Source is configured correctly.
+func (f FileUpload) validateSource() error {
+	if f.Source == "" {
+		return &errFieldMustBeSpecified{
+			missingField: "source",
+		}
+	}
 	return nil
 }
 
