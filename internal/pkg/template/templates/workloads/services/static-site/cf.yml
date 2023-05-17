@@ -68,7 +68,7 @@ Resources:
             Resource:
               - !Sub ${Bucket.Arn}
               - !Sub ${Bucket.Arn}/*
-            Condition: 
+            Condition:
               Bool:
                 aws:SecureTransport: false
           - Sid: AllowCloudFrontServicePrincipalReadOnly
@@ -83,7 +83,7 @@ Resources:
               - !Sub
                 - arn:${AWS::Partition}:s3:::${bucket}/*
                 - bucket: !Ref Bucket
-            Condition: 
+            Condition:
               StringEquals:
                 AWS:SourceArn: !Sub
                   - arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${cfDistributionID}
@@ -93,8 +93,8 @@ Resources:
     Metadata:
       'aws:copilot:description': 'Access control to make the content in the S3 bucket only accessible through CloudFront'
     Type: AWS::CloudFront::OriginAccessControl
-    Properties: 
-      OriginAccessControlConfig: 
+    Properties:
+      OriginAccessControlConfig:
           Description: Access control for static s3 origin
           Name: !Sub 'copilot-${AppName}-${EnvName}-${WorkloadName}-origin-access-control'
           OriginAccessControlOriginType: s3
@@ -122,10 +122,10 @@ Resources:
           - Id: !Sub 'copilot-${AppName}-${EnvName}-${WorkloadName}'
             DomainName: !GetAtt Bucket.RegionalDomainName
             OriginAccessControlId: !Ref CloudFrontOriginAccessControl
-            # Workaround for using Origin Access Control as Origin Access Identity is still 
+            # Workaround for using Origin Access Control as Origin Access Identity is still
             # required when the origin is an S3 bucket.
             S3OriginConfig:
-              OriginAccessIdentity: '' 
+              OriginAccessIdentity: ''
         {{- if .StaticSiteAlias}}
         ViewerCertificate:
           - AcmCertificateArn: !Ref CertificateValidatorAction
@@ -179,7 +179,7 @@ Resources:
     Metadata:
       aws:copilot:description: A custom resource to trigger the file-copying state machine
     Type: Custom::TriggerStateMachine
-    DependsOn: 
+    DependsOn:
       - Bucket
       - BucketPolicyForCloudFront
       - CloudFrontOriginAccessControl
@@ -192,7 +192,7 @@ Resources:
       {{- if .StaticSiteAlias}}
       - CustomDomainAction
       - CustomDomainFunction
-      - CustomDomainRole 
+      - CustomDomainRole
       - CertificateValidatorAction
       - CertificateValidationFunction
       - CertificateValidatorRole
@@ -321,7 +321,7 @@ Resources:
                   - 'logs:DescribeResourcePolicies'
                   - 'logs:DescribeLogGroups'
                 Resource: '*'
-  
+
   EnvManagerS3Access:
     Metadata:
       aws:copilot:description: A policy that gives the Env Manager role access to this site's S3 Bucket
