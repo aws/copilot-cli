@@ -229,9 +229,28 @@ Resources:
             ItemProcessor:
               ProcessorConfig:
                 Mode: INLINE
-              StartAt: CopyFile
+              StartAt: ContentTypeChoice
               States:
+                ContentTypeChoice:
+                  Type: Choice
+                  Choices:
+                    - Or:
+                      - Variable: $.contentType
+                        IsPresent: false
+                      - Variable: $.contentType
+                        StringMatches: ""
+                      Next: CopyFile
+                  Default: CopyFileWithContentType
                 CopyFile:
+                  Type: Task
+                  End: true
+                  Resource: arn:aws:states:::aws-sdk:s3:copyObject
+                  Parameters:
+                    CopySource.$: States.Format('{{.AssetMappingFileBucket}}/{}', $.path)
+                    Bucket: !Ref Bucket
+                    Key.$: $.destPath
+                    MetadataDirective: "REPLACE"
+                CopyFileWithContentType:
                   Type: Task
                   End: true
                   Resource: arn:aws:states:::aws-sdk:s3:copyObject
