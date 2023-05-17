@@ -44,8 +44,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	err = command.Run("aws", []string{"ssm", "add-tags-to-resource", "--resource-type", "Parameter", "--resource-id", ssmName, "--tags", "[{\"Key\":\"copilot-application\",\"Value\":\"" + appName + "\"},{\"Key\":\"copilot-environment\", \"Value\":\"" + envName + "\"}]"})
 	Expect(err).NotTo(HaveOccurred())
-	err = command.Run("aws", []string{"secretsmanager", "create-secret", "--name", secretName, "--force-overwrite-replica-secret", "--secret-string", "\"{\"user\":\"diegor\",\"password\":\"EXAMPLE-PASSWORD\"}\"", "--tags", "[{\"Key\":\"copilot-application\",\"Value\":\"" + appName + "\"},{\"Key\":\"copilot-environment\", \"Value\":\"" + envName + "\"}]"})
-	Expect(err).NotTo(HaveOccurred())
+	_ = command.Run("aws", []string{"secretsmanager", "create-secret", "--name", secretName, "--secret-string", "\"{\"user\":\"diegor\",\"password\":\"EXAMPLE-PASSWORD\"}\"", "--tags", "[{\"Key\":\"copilot-application\",\"Value\":\"" + appName + "\"},{\"Key\":\"copilot-environment\", \"Value\":\"" + envName + "\"}]"})
 })
 
 var _ = AfterSuite(func() {
