@@ -70,7 +70,6 @@ func TestStaticSite_NewStaticSite(t *testing.T) {
 					rc: RuntimeConfig{
 						CustomResourcesURL: map[string]string{
 							"CertificateValidationFunction": "https://mockBucket.s3.us-west-2.amazonaws.com/manual/scripts/custom-resources/certificatevalidationfunction/8932747ba5dbff619d89b92d0033ef1d04f7dd1b055e073254907d4e38e3976d.zip",
-							"CopyAssetsFunction":            "https://mockBucket.s3.us-west-2.amazonaws.com/manual/scripts/custom-resources/copyassetsfunction/8932747ba5dbff619d89b92d0033ef1d04f7dd1b055e073254907d4e38e3976d.zip",
 							"CustomDomainFunction":          "https://mockBucket.s3.us-west-2.amazonaws.com/manual/scripts/custom-resources/customdomainfunction/8932747ba5dbff619d89b92d0033ef1d04f7dd1b055e073254907d4e38e3976d.zip",
 							"TriggerStateMachineFunction":   "https://mockBucket.s3.us-west-2.amazonaws.com/manual/scripts/custom-resources/triggerstatemachinefunction/8932747ba5dbff619d89b92d0033ef1d04f7dd1b055e073254907d4e38e3976d.zip",
 						},
