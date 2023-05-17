@@ -44,10 +44,10 @@ var _ = BeforeSuite(func() {
 })
 
 var _ = AfterSuite(func() {
-	_, err := cli.AppDelete()
-	Expect(err).NotTo(HaveOccurred())
-	err = command.Run("aws", []string{"ecr", "delete-repository", "--repository-name", sidecarRepoName, "--force"})
-	Expect(err).NotTo(HaveOccurred())
+	_, appDeleteErr := cli.AppDelete()
+	repoDeleteErr := command.Run("aws", []string{"ecr", "delete-repository", "--repository-name", sidecarRepoName, "--force"})
+	Expect(appDeleteErr).NotTo(HaveOccurred())
+	Expect(repoDeleteErr).NotTo(HaveOccurred())
 })
 
 // exponentialBackoffWithJitter backoff exponentially with jitter based on 200ms base
