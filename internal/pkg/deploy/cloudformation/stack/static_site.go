@@ -5,7 +5,6 @@ package stack
 
 import (
 	"fmt"
-	"strconv"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
@@ -18,11 +17,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/template"
 )
 
-// Parameter logical IDs for a static site service.
-const (
-	StaticSiteDNSDelegatedParamKey = "DNSDelegated"
-)
-
 // StaticSite represents the configuration needed to create a CloudFormation stack from a static site service manifest.
 type StaticSite struct {
 	*wkld
@@ -31,7 +25,6 @@ type StaticSite struct {
 	appInfo              deploy.AppInformation
 
 	parser          staticSiteReadParser
-	localCRs        []uploadable // Custom resources that have not been uploaded yet.
 	assetMappingURL string
 }
 
@@ -49,40 +42,41 @@ type StaticSiteConfig struct {
 }
 
 // NewStaticSite creates a new CFN stack from a manifest file, given the options.
-func NewStaticSite(conf *StaticSiteConfig) (*StaticSite, error) {
+func NewStaticSite(cfg *StaticSiteConfig) (*StaticSite, error) {
 	crs, err := customresource.StaticSite(fs)
 	if err != nil {
 		return nil, fmt.Errorf("static site custom resources: %w", err)
 	}
+	cfg.RuntimeConfig.loadCustomResourceURLs(cfg.ArtifactBucketName, uploadableCRs(crs).convert())
+
 	var dnsDelegationEnabled bool
 	var appInfo deploy.AppInformation
-	if conf.App.Domain != "" {
+	if cfg.App.Domain != "" {
 		dnsDelegationEnabled = true
 		appInfo = deploy.AppInformation{
-			Name:                conf.App.Name,
-			Domain:              conf.App.Domain,
-			AccountPrincipalARN: conf.RootUserARN,
+			Name:                cfg.App.Name,
+			Domain:              cfg.App.Domain,
+			AccountPrincipalARN: cfg.RootUserARN,
 		}
 	}
 	return &StaticSite{
 		wkld: &wkld{
-			name:               aws.StringValue(conf.Manifest.Name),
-			env:                aws.StringValue(conf.EnvManifest.Name),
-			app:                conf.App.Name,
-			permBound:          conf.App.PermissionsBoundary,
-			artifactBucketName: conf.ArtifactBucketName,
-			rc:                 conf.RuntimeConfig,
-			rawManifest:        conf.RawManifest,
+			name:               aws.StringValue(cfg.Manifest.Name),
+			env:                aws.StringValue(cfg.EnvManifest.Name),
+			app:                cfg.App.Name,
+			permBound:          cfg.App.PermissionsBoundary,
+			artifactBucketName: cfg.ArtifactBucketName,
+			rc:                 cfg.RuntimeConfig,
+			rawManifest:        cfg.RawManifest,
 			parser:             fs,
-			addons:             conf.Addons,
+			addons:             cfg.Addons,
 		},
-		manifest:             conf.Manifest,
+		manifest:             cfg.Manifest,
 		dnsDelegationEnabled: dnsDelegationEnabled,
 		appInfo:              appInfo,
 
 		parser:          fs,
-		localCRs:        uploadableCRs(crs).convert(),
-		assetMappingURL: conf.AssetMappingURL,
+		assetMappingURL: cfg.AssetMappingURL,
 	}, nil
 }
 
@@ -129,7 +123,7 @@ func (s *StaticSite) Template() (string, error) {
 		AppDNSDelegationRole:   dnsDelegationRole,
 		AssetMappingFileBucket: bucket,
 		AssetMappingFilePath:   path,
-		StaticSiteAlias:        s.manifest.Alias,
+		StaticSiteAlias:        s.manifest.HTTP.Alias,
 	})
 	if err != nil {
 		return "", err
@@ -155,10 +149,6 @@ func (s *StaticSite) Parameters() ([]*cloudformation.Parameter, error) {
 		{
 			ParameterKey:   aws.String(WorkloadAddonsTemplateURLParamKey),
 			ParameterValue: aws.String(s.rc.AddonsTemplateURL),
-		},
-		{
-			ParameterKey:   aws.String(StaticSiteDNSDelegatedParamKey),
-			ParameterValue: aws.String(strconv.FormatBool(s.dnsDelegationEnabled)),
 		},
 	}, nil
 }

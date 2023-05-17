@@ -2,7 +2,6 @@
   "Parameters": {
     "AddonsTemplateURL": "",
     "AppName": "my-app",
-    "DNSDelegated": "true",
     "EnvName": "my-env",
     "WorkloadName": "static"
   },

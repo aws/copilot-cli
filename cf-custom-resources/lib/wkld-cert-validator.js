@@ -10,7 +10,7 @@ const ATTEMPTS_CERTIFICATE_VALIDATED = 19;
 const ATTEMPTS_CERTIFICATE_NOT_IN_USE = 12;
 const DELAY_CERTIFICATE_VALIDATED_IN_S = 30;
 
-let envHostedZoneID, appName, envName, serviceName, certificateDomain, domainTypes, rootDNSRole, domainName, cloudFrontCert;
+let envHostedZoneID, appName, envName, serviceName, certificateDomain, domainTypes, rootDNSRole, domainName, isCloudFrontCert;
 let defaultSleep = function (ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 };
@@ -47,7 +47,7 @@ const acmContext = () => {
   return () => {
     if (!client) {
       client = new AWS.ACM({
-        region: cloudFrontCert ? "us-east-1" : undefined,
+        region: isCloudFrontCert ? "us-east-1" : undefined,
       });
     }
     return client;
@@ -59,7 +59,7 @@ const resourceGroupsTaggingAPIContext = () => {
   return () => {
     if (!client) {
       client = new AWS.ResourceGroupsTaggingAPI({
-        region: cloudFrontCert ? "us-east-1" : undefined,
+        region: isCloudFrontCert ? "us-east-1" : undefined,
       });
     }
     return client;
@@ -174,8 +174,8 @@ exports.handler = async function (event, context) {
   serviceName = props.ServiceName;
   domainName = props.DomainName;
   rootDNSRole = props.RootDNSRole;
-  cloudFrontCert = props.IsCloudFrontCertificate;
-  certificateDomain = cloudFrontCert ? `${serviceName}.${envName}.${appName}.${domainName}` : `${serviceName}-nlb.${envName}.${appName}.${domainName}`;
+  isCloudFrontCert = props.IsCloudFrontCertificate;
+  certificateDomain = isCloudFrontCert ? `${serviceName}.${envName}.${appName}.${domainName}` : `${serviceName}-nlb.${envName}.${appName}.${domainName}`;
   domainTypes = {
     EnvDomainZone: {
       regex: new RegExp(`^([^\.]+\.)?${envName}.${appName}.${domainName}`),
@@ -309,7 +309,8 @@ async function validateAliases(aliases, loadBalancerDNS) {
           return;
         }
         let aliasTarget = recordSet[0].AliasTarget;
-        // If loadBalancerDNS is empty, it means we are using this lambda for dedicated CloudFront for Static Site.
+        // If loadBalancerDNS is empty, it means we are using this lambda for dedicated CloudFront for Static Site. CloudFront can't perform the same validation,
+        // because passing the CF domain would introduce a circular dependency (the CF can't be created/updated before cert is validated).
         // And in this scenario we can just error out if an A-record exists.
         if (aliasTarget && loadBalancerDNS && aliasTarget.DNSName.toLowerCase() === `${loadBalancerDNS.toLowerCase()}.`) {
           return; // The record is an alias record and is in use by myself, hence valid.

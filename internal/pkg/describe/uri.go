@@ -61,7 +61,10 @@ func NewReachableService(app, svc string, store ConfigStoreSvc) (ReachableServic
 	case manifestinfo.StaticSiteType:
 		return NewStaticSiteDescriber(in)
 	default:
-		return nil, fmt.Errorf("service %s is of type %s which cannot be reached over the network", svc, cfg.Type)
+		return nil, &ErrNonAccessibleServiceType{
+			name:    svc,
+			svcType: cfg.Type,
+		}
 	}
 }
 

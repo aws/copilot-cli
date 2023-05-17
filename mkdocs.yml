@@ -43,6 +43,7 @@ nav:
       - Load Balanced Web Service: docs/manifest/lb-web-service.en.md
       - Request-Driven Web Service: docs/manifest/rd-web-service.en.md
       - Scheduled Job: docs/manifest/scheduled-job.en.md
+      - Static Site: docs/manifest/static-site.en.md
       - Worker Service: docs/manifest/worker-service.en.md
       - Environment: docs/manifest/environment.en.md
       - Pipeline: docs/manifest/pipeline.en.md
