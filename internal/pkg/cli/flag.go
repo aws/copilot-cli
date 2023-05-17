@@ -260,7 +260,7 @@ Allows you to categorize resources.`
 	// Deployment.
 	deployTestFlagDescription = `Deploy your service or job to a "test" environment.`
 	forceFlagDescription      = `Optional. Force a new service deployment using the existing image.
-Note that it is not available when service type is "Static Site".`
+Not available with the "Static Site" service type.`
 	noRollbackFlagDescription = `Optional. Disable automatic stack 
 rollback in case of deployment failure.
 We do not recommend using this flag for a
