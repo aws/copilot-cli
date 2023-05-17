@@ -163,14 +163,8 @@ func (o *deleteAppOpts) Validate() error {
 
 // Ask prompts the user for any required flags that they didn't provide.
 func (o *deleteAppOpts) Ask() error {
-	if o.name != "" {
-		if _, err := o.store.GetApplication(o.name); err != nil {
-			return err
-		}
-	} else {
-		if err := o.askAppName(); err != nil {
-			return err
-		}
+	if err := o.validateOrAskAppName(); err != nil {
+		return err
 	}
 	if o.skipConfirmation {
 		return nil
@@ -231,7 +225,11 @@ func (o *deleteAppOpts) Execute() error {
 	return nil
 }
 
-func (o *deleteAppOpts) askAppName() error {
+func (o *deleteAppOpts) validateOrAskAppName() error {
+	if o.name != "" {
+		_, err := o.store.GetApplication(o.name)
+		return err
+	}
 	name, err := o.sel.Application(appDeleteNamePrompt, "")
 	if err != nil {
 		return fmt.Errorf("select application name: %w", err)
@@ -376,18 +374,20 @@ func (o *deleteAppOpts) deleteAppConfigs() error {
 
 func (o *deleteAppOpts) deleteWs() error {
 	ws, err := o.existingWorkSpace()
-	if err == nil {
-		// When there's a local application summary.
-		summary, err := ws.Summary()
-		if err == nil && summary.Application == o.name {
-			o.spinner.Start(fmt.Sprintf(fmtDeleteAppWsStartMsg, workspace.SummaryFileName))
-			if err := ws.DeleteWorkspaceFile(); err != nil {
-				o.spinner.Stop(log.Serrorf("Error deleting %s file.\n", workspace.SummaryFileName))
-				return fmt.Errorf("delete %s file: %w", workspace.SummaryFileName, err)
-			}
-			o.spinner.Stop(log.Ssuccessf(fmt.Sprintf(fmtDeleteAppWsStopMsg, workspace.SummaryFileName)))
-		}
+	if err != nil {
+		return nil
 	}
+	// When there's a local application summary.
+	summary, err := ws.Summary()
+	if err != nil || summary.Application != o.name {
+		return nil
+	}
+	o.spinner.Start(fmt.Sprintf(fmtDeleteAppWsStartMsg, workspace.SummaryFileName))
+	if err := ws.DeleteWorkspaceFile(); err != nil {
+		o.spinner.Stop(log.Serrorf("Error deleting %s file.\n", workspace.SummaryFileName))
+		return fmt.Errorf("delete %s file: %w", workspace.SummaryFileName, err)
+	}
+	o.spinner.Stop(log.Ssuccessf(fmt.Sprintf(fmtDeleteAppWsStopMsg, workspace.SummaryFileName)))
 	return nil
 }
 
@@ -409,7 +409,7 @@ func buildAppDeleteCommand() *cobra.Command {
 		}),
 	}
 
-	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, "", appFlagDescription)
+	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, tryReadingAppName(), appFlagDescription)
 	cmd.Flags().BoolVar(&vars.skipConfirmation, yesFlag, false, yesFlagDescription)
 	return cmd
 }

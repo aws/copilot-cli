@@ -1559,8 +1559,6 @@ func TestWorkspace_DeleteWorkspaceFile(t *testing.T) {
 					Fs: fs,
 				},
 			}
-			ws.fs.MkdirAll(tc.copilotDir, 0755)
-			ws.fs.Create(filepath.Join(tc.copilotDir, ".workspace"))
 
 			// WHEN
 			err := ws.DeleteWorkspaceFile()
