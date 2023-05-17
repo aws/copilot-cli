@@ -276,7 +276,7 @@ func TestStaticSite(t *testing.T) {
 
 	// THEN
 	require.NoError(t, err)
-	require.Equal(t, fakeFS.matchCount, 4, "expected path calls do not match")
+	require.Equal(t, fakeFS.matchCount, 3, "expected path calls do not match")
 
 	actualFnNames := make([]string, len(crs))
 	for i, cr := range crs {
