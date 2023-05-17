@@ -475,7 +475,6 @@ TestSub:
 		//   Parameters:
 		//     Key: value`,
 		// 		},
-		// "no diff in Condition vs !Condition": // TODO(lou1415926)
 		"do not match unexpected keys": {
 			old: `
 Stuff:
@@ -493,6 +492,53 @@ Stuff: !Sub this_is_one`,
 					},
 				}
 			},
+		},
+		"no diff in Condition vs !Condition": {
+			old: `ALB:
+  - Condition: CreateALB`,
+			curr: `ALB:
+  - !Condition CreateALB`,
+		},
+		"no diff in Fn::And vs !And": {
+			old: `
+ALB:
+  Fn::And: [this, that]`,
+			curr: `
+ALB: !And
+  - this
+  - that`,
+		},
+		"no diff in Fn::Equals vs !Equals": {
+			old: `
+UseProdCondition:
+  Fn::Equals: [!Ref EnvironmentType, prod]`,
+			curr: `
+UseProdCondition:
+  !Equals [!Ref EnvironmentType, prod]`,
+		},
+		"no diff in Fn::If vs !If": {
+			old: `
+SecurityGroups:
+  - !If [CreateNewSecurityGroup, !Ref NewSecurityGroup, !Ref ExistingSecurityGroup]`,
+			curr: `
+SecurityGroups:
+  - Fn::If: [CreateNewSecurityGroup, !Ref NewSecurityGroup, !Ref ExistingSecurityGroup]`,
+		},
+		"no diff in Fn::Not vs !Not": {
+			old: `
+MyNotCondition:
+  !Not [!Equals [!Ref EnvironmentType, prod]]`,
+			curr: `
+MyNotCondition:
+  Fn::Not: [!Equals [!Ref EnvironmentType, prod]]`,
+		},
+		"no diff in Fn::Or vs !Or": {
+			old: `
+MyOrCondition:
+  Fn::Or: [!Equals [sg-mysggroup, !Ref ASecurityGroup], Condition: SomeOtherCondition]`,
+			curr: `
+MyOrCondition:
+  !Or [!Equals [sg-mysggroup, !Ref ASecurityGroup], Condition: SomeOtherCondition]`,
 		},
 	}
 	for name, tc := range testCases {
