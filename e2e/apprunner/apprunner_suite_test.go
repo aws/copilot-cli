@@ -17,11 +17,14 @@ import (
 var cli *client.CLI
 var appName string
 
+const ssmName = "e2e-apprunner-ssm-param-secret"
+const secretName = "e2e-apprunner-secrets-manager-secret"
 const feSvcName = "front-end"
 const beSvcName = "back-end"
 const envName = "test"
 
-/**
+/*
+*
 The Init Suite runs through the copilot init workflow for a brand new
 application. It creates a single environment, deploys a service to it, and then
 tears it down.
@@ -37,18 +40,19 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(err).NotTo(HaveOccurred())
 	appName = fmt.Sprintf("e2e-apprunner-%d", time.Now().Unix())
-	err = command.Run("aws", []string{"ssm", "put-parameter", "--name", "e2e-apprunner-ssm-param", "--value", "abcd1234", "--type", "String", "--tags", "[{\"Key\":\"copilot-application\",\"Value\":\"" + appName + "\"},{\"Key\":\"copilot-environment\", \"Value\":\"" + envName + "\"}]"})
+	err = command.Run("aws", []string{"ssm", "put-parameter", "--name", ssmName, "--overwrite", "--value", "abcd1234", "--type", "String"})
 	Expect(err).NotTo(HaveOccurred())
-	err = command.Run("aws", []string{"secretsmanager", "create-secret", "--name", "e2e-apprunner-MyTestSecret", "--secret-string", "\"{\"user\":\"diegor\",\"password\":\"EXAMPLE-PASSWORD\"}\"", "--tags", "[{\"Key\":\"copilot-application\",\"Value\":\"" + appName + "\"},{\"Key\":\"copilot-environment\", \"Value\":\"" + envName + "\"}]"})
+	err = command.Run("aws", []string{"ssm", "add-tags-to-resource", "--resource-type", "Parameter", "--resource-id", ssmName, "--tags", "[{\"Key\":\"copilot-application\",\"Value\":\"" + appName + "\"},{\"Key\":\"copilot-environment\", \"Value\":\"" + envName + "\"}]"})
 	Expect(err).NotTo(HaveOccurred())
+	_ = command.Run("aws", []string{"secretsmanager", "create-secret", "--name", secretName, "--secret-string", "\"{\"user\":\"diegor\",\"password\":\"EXAMPLE-PASSWORD\"}\"", "--tags", "[{\"Key\":\"copilot-application\",\"Value\":\"" + appName + "\"},{\"Key\":\"copilot-environment\", \"Value\":\"" + envName + "\"}]"})
 })
 
 var _ = AfterSuite(func() {
-	_, err := cli.AppDelete()
-	Expect(err).NotTo(HaveOccurred())
-	err = command.Run("aws", []string{"ssm", "delete-parameter", "--name", "e2e-apprunner-ssm-param"})
-	Expect(err).NotTo(HaveOccurred())
-	err = command.Run("aws", []string{"secretsmanager", "delete-secret", "--secret-id", "e2e-apprunner-MyTestSecret", "--force-delete-without-recovery"})
-	Expect(err).NotTo(HaveOccurred())
+	_, appDeleteErr := cli.AppDelete()
+	ssmDeleteErr := command.Run("aws", []string{"ssm", "delete-parameter", "--name", "e2e-apprunner-ssm-param"})
+	secretsDeleteErr := command.Run("aws", []string{"secretsmanager", "delete-secret", "--secret-id", "e2e-apprunner-MyTestSecret", "--force-delete-without-recovery"})
 	_ = client.NewAWS().DeleteAllDBClusterSnapshots()
+	Expect(appDeleteErr).NotTo(HaveOccurred())
+	Expect(ssmDeleteErr).NotTo(HaveOccurred())
+	Expect(secretsDeleteErr).NotTo(HaveOccurred())
 })

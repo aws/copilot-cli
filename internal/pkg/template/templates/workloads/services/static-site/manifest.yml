@@ -27,8 +27,8 @@ files:
 #   test:
 #     files:
 #       - source: './blob'
-#         destination: 'blob'
 #         recursive: true
+#         destination: 'assets'
 #         exclude: '*'
 #         reinclude:
 #           - '*.txt'

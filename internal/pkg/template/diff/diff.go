@@ -100,7 +100,8 @@ func (from From) ParseWithCFNOverriders(to []byte) (Tree, error) {
 				},
 			},
 		},
-		&intrinsicFuncFullShortFormConverter{})
+		&getAttConverter{},
+		&intrinsicFuncMapTagConverter{})
 }
 
 // Parse constructs a diff tree that represent the differences of a YAML document against the From document.

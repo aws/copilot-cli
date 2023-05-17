@@ -348,13 +348,21 @@ const deleteHostedZoneRecords = async function (
     uniqueValidateRecordNames.add(id);
     filteredRecordOption.push(option);
   }
-  await updateHostedZoneRecords(
-    "DELETE",
-    filteredRecordOption,
-    envRoute53,
-    appRoute53,
-    envHostedZoneId
-  );
+  try {
+    await updateHostedZoneRecords(
+        "DELETE",
+        filteredRecordOption,
+        envRoute53,
+        appRoute53,
+        envHostedZoneId
+    );
+  } catch (e) {
+    let recordSetNotFoundErrMessageRegex = new RegExp(".*Tried to delete resource record set.*but it was not found.*");
+    if (recordSetNotFoundErrMessageRegex.test(e.message)) {
+      return; // If we attempt to `DELETE` a record that doesn't exist, the job is already done, skip waiting.
+    }
+    throw new Error(`delete record ${option.ResourceRecord.Name}: ` + e.message);
+  }
 };
 
 const validateDomain = async function ({

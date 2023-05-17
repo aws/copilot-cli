@@ -24,6 +24,8 @@ Resources:
       aws:copilot:description: An S3 Bucket to store the static site's assets
     Type: AWS::S3::Bucket
     Properties:
+      VersioningConfiguration:
+        Status: Enabled
       AccessControl: Private
       BucketEncryption:
         ServerSideEncryptionConfiguration:
@@ -45,6 +47,16 @@ Resources:
       PolicyDocument:
         Version: 2012-10-17
         Statement:
+          - Sid: ForceHTTPS
+            Effect: Deny
+            Principal: "*"
+            Action: s3:*
+            Resource:
+              - !Sub ${Bucket.Arn}
+              - !Sub ${Bucket.Arn}/*
+            Condition: 
+              Bool:
+                aws:SecureTransport: false
           - Sid: AllowCloudFrontServicePrincipalReadOnly
             Effect: Allow
             Principal:
@@ -81,6 +93,8 @@ Resources:
     Type: AWS::CloudFront::Distribution
     Properties:
       DistributionConfig:
+        Aliases: ["example.com"]
+        DefaultRootObject: index.html
         DefaultCacheBehavior:
           Compress: true
           AllowedMethods: ["GET", "HEAD"]
@@ -97,6 +111,10 @@ Resources:
             # required when the origin is an S3 bucket.
             S3OriginConfig:
               OriginAccessIdentity: '' 
+        ViewerCertificate:
+          AcmCertificateArn: !Ref CertificateValidatorAction
+          MinimumProtocolVersion: TLSv1
+          SslSupportMethod:  sni-only
 
   TriggerStateMachineFunction:
     Metadata:
@@ -285,3 +303,169 @@ Resources:
             Resource:
               - !Sub arn:aws:s3:::${Bucket}
               - !Sub arn:aws:s3:::${Bucket}/*
+
+  CustomDomainAction:
+    Metadata:
+      'aws:copilot:description': "Add A-records for your Static Site alias"
+    Type: Custom::CustomDomainFunction
+    Properties:
+      ServiceToken: !GetAtt CustomDomainFunction.Arn
+      PublicAccessHostedZoneID: Z2FDTNDATAQYW2 # See https://go.aws/3cPhvlX
+      PublicAccessDNS: !GetAtt CloudFrontDistribution.DomainName
+      EnvHostedZoneId:
+        Fn::ImportValue:
+          !Sub "${AppName}-${EnvName}-HostedZone"
+      EnvName: !Ref EnvName
+      AppName: !Ref AppName
+      ServiceName: !Ref WorkloadName
+      RootDNSRole: arn:aws:iam::123456789123:role/my-app-DNSDelegationRole
+      DomainName: example.com
+      Aliases:  ["example.com"] 
+
+  CustomDomainFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: "index.handler"
+      Timeout: 900
+      MemorySize: 512
+      Role: !GetAtt 'CustomDomainRole.Arn'
+      Runtime: nodejs16.x
+
+  CustomDomainRole:
+    Metadata:
+      'aws:copilot:description': "An IAM role to update the Route 53 hosted zone"
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          -
+            Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: "CustomDomainPolicy"
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: AllowAssumeRole
+                Effect: Allow
+                Action: sts:AssumeRole
+                Resource: arn:aws:iam::123456789123:role/my-app-DNSDelegationRole
+              - Sid: HostedZoneAccess
+                Effect: Allow
+                Action:
+                  - "route53:ChangeResourceRecordSets"
+                  - "route53:Get*"
+                  - "route53:Describe*"
+                  - "route53:ListResourceRecordSets"
+                  - "route53:ListHostedZonesByName"
+                Resource: "*"
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  CertificateValidatorAction:
+    Metadata:
+      'aws:copilot:description': "Request and validate the certificate for your Static Site"
+    Type: Custom::CertificateValidationFunction
+    Properties:
+      ServiceToken: !GetAtt CertificateValidationFunction.Arn
+      EnvHostedZoneId:
+        Fn::ImportValue:
+          !Sub "${AppName}-${EnvName}-HostedZone"
+      EnvName: !Ref EnvName
+      AppName: !Ref AppName
+      ServiceName: !Ref WorkloadName
+      RootDNSRole: arn:aws:iam::123456789123:role/my-app-DNSDelegationRole
+      DomainName:  example.com
+      IsCloudFrontCertificate: true
+      Aliases:  ["example.com"] 
+
+  CertificateValidationFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: "index.handler"
+      Timeout: 900
+      MemorySize: 512
+      Role: !GetAtt 'CertificateValidatorRole.Arn'
+      Runtime: nodejs16.x
+
+  CertificateValidatorRole:
+    Metadata:
+      'aws:copilot:description': "An IAM role to request and validate a certificate for your service"
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          -
+            Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: "CertValidatorPolicy"
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: AllowAssumeRole
+                Effect: Allow
+                Action: sts:AssumeRole
+                Resource: arn:aws:iam::123456789123:role/my-app-DNSDelegationRole
+              - Sid: HostedZoneUpdateAndWait
+                Effect: Allow
+                Action: route53:ChangeResourceRecordSets
+                Resource: "*"
+              - Sid: HostedZoneRead
+                Effect: Allow
+                Action:
+                  - route53:ListResourceRecordSets
+                  - route53:GetChange
+                Resource: "*"
+              - Sid: ServiceCertificateDelete
+                Effect: Allow
+                Action: acm:DeleteCertificate
+                Resource: "*"
+                Condition:
+                  StringEquals:
+                    'aws:ResourceTag/copilot-application': !Sub '${AppName}'
+                    'aws:ResourceTag/copilot-environment': !Sub '${EnvName}'
+                    'aws:ResourceTag/copilot-service': !Sub '${WorkloadName}'
+              - Sid: TaggedResourcesRead
+                Effect: Allow
+                Action: tag:GetResources
+                Resource: "*"
+              - Sid: ServiceCertificateCreate
+                Effect: Allow
+                Action:
+                  - acm:RequestCertificate
+                  - acm:AddTagsToCertificate
+                Resource: "*"
+                Condition:
+                  StringEquals:
+                    'aws:ResourceTag/copilot-application': !Sub '${AppName}'
+                    'aws:ResourceTag/copilot-environment': !Sub '${EnvName}'
+                    'aws:ResourceTag/copilot-service': !Sub '${WorkloadName}'
+              - Sid: CertificateRead
+                Effect: Allow
+                Action: acm:DescribeCertificate
+                Resource: "*"
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+Outputs:
+  CloudFrontDistributionDomainName:
+    Value: !GetAtt CloudFrontDistribution.DomainName
+    Export:
+      Name: !Sub ${AWS::StackName}-CloudFrontDistributionDomainName
+  CloudFrontDistributionAlternativeDomainName:
+    Value: "example.com"
+    Export:
+      Name: !Sub ${AWS::StackName}-CloudFrontDistributionAlternativeDomainName
