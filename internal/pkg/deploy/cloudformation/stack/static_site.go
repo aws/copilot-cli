@@ -25,7 +25,6 @@ type StaticSite struct {
 	appInfo              deploy.AppInformation
 
 	parser          staticSiteReadParser
-	localCRs        []uploadable // Custom resources that have not been uploaded yet.
 	assetMappingURL string
 }
 
