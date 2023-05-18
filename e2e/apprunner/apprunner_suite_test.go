@@ -17,8 +17,9 @@ import (
 var cli *client.CLI
 var appName string
 
-const ssmName = "e2e-apprunner-ssm-param-secret"
-const secretName = "e2e-apprunner-secrets-manager-secret"
+var ssmName string
+var secretName string
+
 const feSvcName = "front-end"
 const beSvcName = "back-end"
 const envName = "test"
@@ -40,6 +41,8 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(err).NotTo(HaveOccurred())
 	appName = fmt.Sprintf("e2e-apprunner-%d", time.Now().Unix())
+	ssmName = fmt.Sprintf("%s-%s", appName, "ssm")
+	secretName = fmt.Sprintf("%s-%s", appName, "secretsmanager")
 	err = command.Run("aws", []string{"ssm", "put-parameter", "--name", ssmName, "--overwrite", "--value", "abcd1234", "--type", "String"})
 	Expect(err).NotTo(HaveOccurred())
 	err = command.Run("aws", []string{"ssm", "add-tags-to-resource", "--resource-type", "Parameter", "--resource-id", ssmName, "--tags", "[{\"Key\":\"copilot-application\",\"Value\":\"" + appName + "\"},{\"Key\":\"copilot-environment\", \"Value\":\"" + envName + "\"}]"})
@@ -49,8 +52,8 @@ var _ = BeforeSuite(func() {
 
 var _ = AfterSuite(func() {
 	_, appDeleteErr := cli.AppDelete()
-	ssmDeleteErr := command.Run("aws", []string{"ssm", "delete-parameter", "--name", "e2e-apprunner-ssm-param"})
-	secretsDeleteErr := command.Run("aws", []string{"secretsmanager", "delete-secret", "--secret-id", "e2e-apprunner-MyTestSecret", "--force-delete-without-recovery"})
+	ssmDeleteErr := command.Run("aws", []string{"ssm", "delete-parameter", "--name", ssmName})
+	secretsDeleteErr := command.Run("aws", []string{"secretsmanager", "delete-secret", "--secret-id", secretName, "--force-delete-without-recovery"})
 	_ = client.NewAWS().DeleteAllDBClusterSnapshots()
 	Expect(appDeleteErr).NotTo(HaveOccurred())
 	Expect(ssmDeleteErr).NotTo(HaveOccurred())
