@@ -54,7 +54,7 @@ Resources:
             Resource:
               - !Sub ${Bucket.Arn}
               - !Sub ${Bucket.Arn}/*
-            Condition: 
+            Condition:
               Bool:
                 aws:SecureTransport: false
           - Sid: AllowCloudFrontServicePrincipalReadOnly
@@ -69,7 +69,7 @@ Resources:
               - !Sub
                 - arn:${AWS::Partition}:s3:::${bucket}/*
                 - bucket: !Ref Bucket
-            Condition: 
+            Condition:
               StringEquals:
                 AWS:SourceArn: !Sub
                   - arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${cfDistributionID}
@@ -79,13 +79,13 @@ Resources:
     Metadata:
       'aws:copilot:description': 'Access control to make the content in the S3 bucket only accessible through CloudFront'
     Type: AWS::CloudFront::OriginAccessControl
-    Properties: 
-      OriginAccessControlConfig: 
-          Description: Access control for static s3 origin
-          Name: !Sub 'copilot-${AppName}-${EnvName}-${WorkloadName}-origin-access-control'
-          OriginAccessControlOriginType: s3
-          SigningBehavior: always
-          SigningProtocol: sigv4
+    Properties:
+      OriginAccessControlConfig:
+        Description: Access control for static s3 origin
+        Name: !Sub 'copilot-${AppName}-${EnvName}-${WorkloadName}-origin-access-control'
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
 
   CloudFrontDistribution:
     Metadata:
@@ -107,14 +107,14 @@ Resources:
           - Id: !Sub 'copilot-${AppName}-${EnvName}-${WorkloadName}'
             DomainName: !GetAtt Bucket.RegionalDomainName
             OriginAccessControlId: !Ref CloudFrontOriginAccessControl
-            # Workaround for using Origin Access Control as Origin Access Identity is still 
+            # Workaround for using Origin Access Control as Origin Access Identity is still
             # required when the origin is an S3 bucket.
             S3OriginConfig:
-              OriginAccessIdentity: '' 
+              OriginAccessIdentity: ''
         ViewerCertificate:
           AcmCertificateArn: !Ref CertificateValidatorAction
           MinimumProtocolVersion: TLSv1
-          SslSupportMethod:  sni-only
+          SslSupportMethod: sni-only
 
   TriggerStateMachineFunction:
     Metadata:
@@ -154,8 +154,7 @@ Resources:
     Metadata:
       aws:copilot:description: A custom resource to trigger the file-copying state machine
     Type: Custom::TriggerStateMachine
-    DependsOn: 
-      - CopyAssetsStateMachine
+    DependsOn:
       - Bucket
       - BucketPolicyForCloudFront
       - CloudFrontOriginAccessControl
@@ -164,15 +163,17 @@ Resources:
       - TriggerStateMachineFunctionRole
       - CopyAssetsStateMachine
       - CopyAssetsStateMachineRole
-      - CopyAssetsFunction
-      - CopyAssetsFunctionRole
       - EnvManagerS3Access
+      - CustomDomainAction
+      - CustomDomainFunction
+      - CustomDomainRole
+      - CertificateValidatorAction
+      - CertificateValidationFunction
+      - CertificateValidatorRole
     Properties:
       ServiceToken: !GetAtt TriggerStateMachineFunction.Arn
       StateMachineARN: !GetAtt CopyAssetsStateMachine.Arn
-      SourceBucket: stackset-bucket
       AssetMappingFilePath: mappingfile
-      DestinationBucket: !Ref Bucket
 
   CopyAssetsStateMachine:
     Type: AWS::StepFunctions::StateMachine
@@ -186,8 +187,8 @@ Resources:
           GetMappingFile:
             Type: Task
             Parameters:
-              Bucket.$: $.SourceBucket
-              Key.$: $.AssetMappingFilePath
+              Bucket: stackset-bucket
+              Key: mappingfile
             Resource: arn:aws:states:::aws-sdk:s3:getObject
             ResultSelector:
               files.$: States.StringToJson($.Body)
@@ -197,19 +198,42 @@ Resources:
             Type: Map
             End: true
             ItemsPath: $.GetMappingFile.files
-            ItemSelector:
-              mapping.$: $$.Map.Item.Value
-              destBucket.$: $.DestinationBucket
-              srcBucket.$: $.SourceBucket
             ItemProcessor:
               ProcessorConfig:
                 Mode: INLINE
-              StartAt: CopyFile
+              StartAt: ContentTypeChoice
               States:
+                ContentTypeChoice:
+                  Type: Choice
+                  Choices:
+                    - Or:
+                        - Variable: $.contentType
+                          IsPresent: false
+                        - Variable: $.contentType
+                          StringMatches: ''
+                      Next: CopyFile
+                  Default: CopyFileWithContentType
                 CopyFile:
                   Type: Task
                   End: true
-                  Resource: !GetAtt CopyAssetsFunction.Arn
+                  Resource: arn:aws:states:::aws-sdk:s3:copyObject
+                  Parameters:
+                    CopySource.$: States.Format('stackset-bucket/{}', $.path)
+                    Bucket: !Ref Bucket
+                    Key.$: $.destPath
+                    MetadataDirective: 'REPLACE'
+                CopyFileWithContentType:
+                  Type: Task
+                  End: true
+                  Resource: arn:aws:states:::aws-sdk:s3:copyObject
+                  Parameters:
+                    CopySource.$: States.Format('stackset-bucket/{}', $.path)
+                    Bucket: !Ref Bucket
+                    Key.$: $.destPath
+                    ContentType.$: $.contentType
+                    # Required otherwise ContentType won't be applied.
+                    # See https://github.com/aws/aws-sdk-js/issues/1092 for more.
+                    MetadataDirective: 'REPLACE'
 
   CopyAssetsStateMachineRole:
     Metadata:
@@ -225,54 +249,16 @@ Resources:
                 - states.amazonaws.com
             Action: sts:AssumeRole
       Policies:
-        - PolicyName: InvokeLambda
-          PolicyDocument:
-            Version: 2012-10-17
-            Statement:
-              - Effect: Allow
-                Action: lambda:InvokeFunction
-                Resource: !GetAtt CopyAssetsFunction.Arn
-        - PolicyName: S3Access
+        - PolicyName: ArtifactBucketAccess
           PolicyDocument:
             Version: 2012-10-17
             Statement:
               - Effect: Allow
                 Action: s3:GetObject
-                Resource: arn:aws:s3:::stackset-bucket/mappingfile
-
-  CopyAssetsFunction:
-    Metadata:
-      aws:copilot:description: A lambda function to copy assets into the static site bucket
-    Type: AWS::Lambda::Function
-    Properties:
-      Handler: index.handler
-      Role: !GetAtt CopyAssetsFunctionRole.Arn
-      Runtime: nodejs16.x
-      Timeout: 60
-      MemorySize: 512
-
-  CopyAssetsFunctionRole:
-    Metadata:
-      aws:copilot:description: An IAM Role for the lambda that copies assets into the static site bucket
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: lambda.amazonaws.com
-            Action: sts:AssumeRole
-      Policies:
-        - PolicyName: CopyFromS3
-          PolicyDocument:
-            Version: 2012-10-17
-            Statement:
-              - Effect: Allow
-                Action:
-                  - s3:GetObject
-                Resource: arn:aws:s3:::stackset-bucket/*
-        - PolicyName: CopyToS3
+                Resource:
+                  - arn:aws:s3:::stackset-bucket/mappingfile
+                  - arn:aws:s3:::stackset-bucket/local-assets/*
+        - PolicyName: ServiceBucketAccess
           PolicyDocument:
             Version: 2012-10-17
             Statement:
@@ -280,8 +266,6 @@ Resources:
                 Action:
                   - s3:PutObject
                 Resource: !Sub arn:aws:s3:::${Bucket}/*
-      ManagedPolicyArns:
-        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
 
   EnvManagerS3Access:
     Metadata:
@@ -320,7 +304,7 @@ Resources:
       ServiceName: !Ref WorkloadName
       RootDNSRole: arn:aws:iam::123456789123:role/my-app-DNSDelegationRole
       DomainName: example.com
-      Aliases:  ["example.com"] 
+      Aliases: ["example.com"]
 
   CustomDomainFunction:
     Type: AWS::Lambda::Function
@@ -339,8 +323,7 @@ Resources:
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
-          -
-            Effect: Allow
+          - Effect: Allow
             Principal:
               Service:
                 - lambda.amazonaws.com
@@ -381,9 +364,9 @@ Resources:
       AppName: !Ref AppName
       ServiceName: !Ref WorkloadName
       RootDNSRole: arn:aws:iam::123456789123:role/my-app-DNSDelegationRole
-      DomainName:  example.com
+      DomainName: example.com
       IsCloudFrontCertificate: true
-      Aliases:  ["example.com"] 
+      Aliases: ["example.com"]
 
   CertificateValidationFunction:
     Type: AWS::Lambda::Function
@@ -402,8 +385,7 @@ Resources:
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
-          -
-            Effect: Allow
+          - Effect: Allow
             Principal:
               Service:
                 - lambda.amazonaws.com

@@ -17,17 +17,13 @@ exports.handler = async function (event, context) {
       case "Create":
       case "Update":
         const sf = new aws.StepFunctions();
-        const params = {
+        const res = await sf.startSyncExecution({
           stateMachineArn: event.ResourceProperties.StateMachineARN,
-          input: JSON.stringify({
-            SourceBucket: event.ResourceProperties.SourceBucket,
-            AssetMappingFilePath: event.ResourceProperties.AssetMappingFilePath,
-            DestinationBucket: event.ResourceProperties.DestinationBucket,
-          })
-        };
+        }).promise();
 
-        const res = await sf.startSyncExecution(params).promise();
-        if (res.status === "FAILED") {
+        // Even if the execution starts and does not throw an error it does not mean the execution was successful.
+        // See https://docs.aws.amazon.com/step-functions/latest/apireference/API_StartSyncExecution.html#StepFunctions-StartSyncExecution-response-status
+        if (res.status !== "SUCCEEDED") {
           throw new Error(`State machine failed: ${res.cause}`);
         }
         break;
