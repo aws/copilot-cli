@@ -444,7 +444,7 @@ func resetCustomResourceLocations(template map[any]any) {
 		"EnvControllerFunction", "DynamicDesiredCountFunction", "BacklogPerTaskCalculatorFunction",
 		"RulePriorityFunction", "NLBCustomDomainFunction", "NLBCertValidatorFunction",
 		"CustomDomainFunction", "CertificateValidationFunction", "DNSDelegationFunction",
-		"CertificateReplicatorFunction", "UniqueJSONValuesFunction", "CopyAssetsFunction", "TriggerStateMachineFunction",
+		"CertificateReplicatorFunction", "UniqueJSONValuesFunction", "TriggerStateMachineFunction",
 	}
 	for _, fnName := range functions {
 		resource, ok := resources[fnName]

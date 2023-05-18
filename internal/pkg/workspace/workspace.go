@@ -450,7 +450,7 @@ func (ws *Workspace) WriteEnvironmentManifest(marshaler encoding.BinaryMarshaler
 // DeleteWorkspaceFile removes the .workspace file under copilot/ directory.
 // This will be called during app delete, we do not want to delete any other generated files.
 func (ws *Workspace) DeleteWorkspaceFile() error {
-	return ws.fs.Remove(filepath.Join(CopilotDirName, SummaryFileName))
+	return ws.fs.Remove(filepath.Join(ws.CopilotDirAbs, SummaryFileName))
 }
 
 // EnvAddonsAbsPath returns the absolute path for the addons/ directory of environments.

@@ -463,7 +463,16 @@ func TestStore_CreateService(t *testing.T) {
 	testServiceString, err := marshal(testService)
 	testServicePath := fmt.Sprintf(fmtWkldParamPath, testService.App, testService.Name)
 	require.NoError(t, err, "Marshal svc should not fail")
-
+	tagsForServiceParam := []*ssm.Tag{
+		{
+			Key:   aws.String("copilot-application"),
+			Value: aws.String(testApplication.Name),
+		},
+		{
+			Key:   aws.String("copilot-service"),
+			Value: aws.String(testService.Name),
+		},
+	}
 	testCases := map[string]struct {
 		mockGetParameter func(t *testing.T, param *ssm.GetParameterInput) (*ssm.GetParameterOutput, error)
 		mockPutParameter func(t *testing.T, param *ssm.PutParameterInput) (*ssm.PutParameterOutput, error)
@@ -473,6 +482,7 @@ func TestStore_CreateService(t *testing.T) {
 			mockPutParameter: func(t *testing.T, param *ssm.PutParameterInput) (*ssm.PutParameterOutput, error) {
 				require.Equal(t, testServicePath, *param.Name)
 				require.Equal(t, testServiceString, *param.Value)
+				require.Equal(t, tagsForServiceParam, param.Tags)
 				return &ssm.PutParameterOutput{
 					Version: aws.Int64(1),
 				}, nil
@@ -486,12 +496,11 @@ func TestStore_CreateService(t *testing.T) {
 					},
 				}, nil
 			},
-
-			wantedErr: nil,
 		},
 		"with existing svc": {
 			mockPutParameter: func(t *testing.T, param *ssm.PutParameterInput) (*ssm.PutParameterOutput, error) {
 				require.Equal(t, testServicePath, *param.Name)
+				require.Equal(t, tagsForServiceParam, param.Tags)
 				return nil, awserr.New(ssm.ErrCodeParameterAlreadyExists, "Already exists", fmt.Errorf("Already Exists"))
 			},
 			mockGetParameter: func(t *testing.T, param *ssm.GetParameterInput) (*ssm.GetParameterOutput, error) {
@@ -507,6 +516,7 @@ func TestStore_CreateService(t *testing.T) {
 		},
 		"with SSM error": {
 			mockPutParameter: func(t *testing.T, param *ssm.PutParameterInput) (*ssm.PutParameterOutput, error) {
+				require.Equal(t, tagsForServiceParam, param.Tags)
 				return nil, fmt.Errorf("broken")
 			},
 			mockGetParameter: func(t *testing.T, param *ssm.GetParameterInput) (*ssm.GetParameterOutput, error) {

@@ -68,7 +68,7 @@ Resources:
             Resource:
               - !Sub ${Bucket.Arn}
               - !Sub ${Bucket.Arn}/*
-            Condition: 
+            Condition:
               Bool:
                 aws:SecureTransport: false
           - Sid: AllowCloudFrontServicePrincipalReadOnly
@@ -83,7 +83,7 @@ Resources:
               - !Sub
                 - arn:${AWS::Partition}:s3:::${bucket}/*
                 - bucket: !Ref Bucket
-            Condition: 
+            Condition:
               StringEquals:
                 AWS:SourceArn: !Sub
                   - arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${cfDistributionID}
@@ -93,8 +93,8 @@ Resources:
     Metadata:
       'aws:copilot:description': 'Access control to make the content in the S3 bucket only accessible through CloudFront'
     Type: AWS::CloudFront::OriginAccessControl
-    Properties: 
-      OriginAccessControlConfig: 
+    Properties:
+      OriginAccessControlConfig:
           Description: Access control for static s3 origin
           Name: !Sub 'copilot-${AppName}-${EnvName}-${WorkloadName}-origin-access-control'
           OriginAccessControlOriginType: s3
@@ -110,6 +110,7 @@ Resources:
         {{- if .StaticSiteAlias}}
         Aliases: [{{.StaticSiteAlias}}]
         {{- end}}
+        DefaultRootObject: index.html
         DefaultCacheBehavior:
           Compress: true
           AllowedMethods: ["GET", "HEAD"]
@@ -122,10 +123,10 @@ Resources:
           - Id: !Sub 'copilot-${AppName}-${EnvName}-${WorkloadName}'
             DomainName: !GetAtt Bucket.RegionalDomainName
             OriginAccessControlId: !Ref CloudFrontOriginAccessControl
-            # Workaround for using Origin Access Control as Origin Access Identity is still 
+            # Workaround for using Origin Access Control as Origin Access Identity is still
             # required when the origin is an S3 bucket.
             S3OriginConfig:
-              OriginAccessIdentity: '' 
+              OriginAccessIdentity: ''
         {{- if .StaticSiteAlias}}
         ViewerCertificate:
           AcmCertificateArn: !Ref CertificateValidatorAction
@@ -179,25 +180,30 @@ Resources:
     Metadata:
       aws:copilot:description: A custom resource to trigger the file-copying state machine
     Type: Custom::TriggerStateMachine
-    DependsOn: 
-      - CopyAssetsStateMachine {{- /* This is a real dependency */}}
+    DependsOn:
       - Bucket
       - BucketPolicyForCloudFront
       - CloudFrontOriginAccessControl
       - CloudFrontDistribution
       - TriggerStateMachineFunction
       - TriggerStateMachineFunctionRole
-      - CopyAssetsStateMachine
+      - CopyAssetsStateMachine {{- /* This is a real dependency */}}
       - CopyAssetsStateMachineRole
-      - CopyAssetsFunction
-      - CopyAssetsFunctionRole
       - EnvManagerS3Access
+      {{- if .StaticSiteAlias}}
+      - CustomDomainAction
+      - CustomDomainFunction
+      - CustomDomainRole
+      - CertificateValidatorAction
+      - CertificateValidationFunction
+      - CertificateValidatorRole
+      {{- end}}
     Properties:
       ServiceToken: !GetAtt TriggerStateMachineFunction.Arn
       StateMachineARN: !GetAtt CopyAssetsStateMachine.Arn
-      SourceBucket: {{ .AssetMappingFileBucket }}
-      AssetMappingFilePath: {{ .AssetMappingFilePath }}
-      DestinationBucket: !Ref Bucket
+      # include file mapping path as an input so the state
+      # machine is only triggered if this file path changes.
+      AssetMappingFilePath: {{.AssetMappingFilePath}}
 
   CopyAssetsStateMachine:
     Type: AWS::StepFunctions::StateMachine
@@ -210,10 +216,10 @@ Resources:
         States:
           GetMappingFile:
             Type: Task
-            Parameters:
-              Bucket.$: $.SourceBucket
-              Key.$: $.AssetMappingFilePath
             Resource: arn:aws:states:::aws-sdk:s3:getObject
+            Parameters:
+              Bucket: {{.AssetMappingFileBucket}}
+              Key: {{.AssetMappingFilePath}}
             ResultSelector:
               files.$: States.StringToJson($.Body)
             ResultPath: $.GetMappingFile
@@ -222,19 +228,42 @@ Resources:
             Type: Map
             End: true
             ItemsPath: $.GetMappingFile.files
-            ItemSelector:
-              mapping.$: $$.Map.Item.Value
-              destBucket.$: $.DestinationBucket
-              srcBucket.$: $.SourceBucket
             ItemProcessor:
               ProcessorConfig:
                 Mode: INLINE
-              StartAt: CopyFile
+              StartAt: ContentTypeChoice
               States:
+                ContentTypeChoice:
+                  Type: Choice
+                  Choices:
+                    - Or:
+                      - Variable: $.contentType
+                        IsPresent: false
+                      - Variable: $.contentType
+                        StringMatches: ""
+                      Next: CopyFile
+                  Default: CopyFileWithContentType
                 CopyFile:
                   Type: Task
                   End: true
-                  Resource: !GetAtt CopyAssetsFunction.Arn
+                  Resource: arn:aws:states:::aws-sdk:s3:copyObject
+                  Parameters:
+                    CopySource.$: States.Format('{{.AssetMappingFileBucket}}/{}', $.path)
+                    Bucket: !Ref Bucket
+                    Key.$: $.destPath
+                    MetadataDirective: "REPLACE"
+                CopyFileWithContentType:
+                  Type: Task
+                  End: true
+                  Resource: arn:aws:states:::aws-sdk:s3:copyObject
+                  Parameters:
+                    CopySource.$: States.Format('{{.AssetMappingFileBucket}}/{}', $.path)
+                    Bucket: !Ref Bucket
+                    Key.$: $.destPath
+                    ContentType.$: $.contentType
+                    # Required otherwise ContentType won't be applied.
+                    # See https://github.com/aws/aws-sdk-js/issues/1092 for more.
+                    MetadataDirective: "REPLACE"
 
   CopyAssetsStateMachineRole:
     Metadata:
@@ -253,62 +282,16 @@ Resources:
                 - states.amazonaws.com
             Action: sts:AssumeRole
       Policies:
-        - PolicyName: InvokeLambda
-          PolicyDocument:
-            Version: 2012-10-17
-            Statement:
-              - Effect: Allow
-                Action: lambda:InvokeFunction
-                Resource: !GetAtt CopyAssetsFunction.Arn
-        - PolicyName: S3Access
+        - PolicyName: ArtifactBucketAccess
           PolicyDocument:
             Version: 2012-10-17
             Statement:
               - Effect: Allow
                 Action: s3:GetObject
-                Resource: arn:aws:s3:::{{ .AssetMappingFileBucket }}/{{ .AssetMappingFilePath }}
-
-  CopyAssetsFunction:
-    Metadata:
-      aws:copilot:description: A lambda function to copy assets into the static site bucket
-    Type: AWS::Lambda::Function
-    Properties:
-      Handler: index.handler
-      Role: !GetAtt CopyAssetsFunctionRole.Arn
-      Runtime: nodejs16.x
-      Timeout: 60
-      MemorySize: 512
-      {{- with $cr := index .CustomResources "CopyAssetsFunction" }}
-      Code:
-        S3Bucket: {{$cr.Bucket}}
-        S3Key: {{$cr.Key}}
-      {{- end }}
-
-  CopyAssetsFunctionRole:
-    Metadata:
-      aws:copilot:description: An IAM Role for the lambda that copies assets into the static site bucket
-    Type: AWS::IAM::Role
-    Properties:
-      {{- if .PermissionsBoundary}}
-      PermissionsBoundary: !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/{{.PermissionsBoundary}}
-      {{- end}}
-      AssumeRolePolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: lambda.amazonaws.com
-            Action: sts:AssumeRole
-      Policies:
-        - PolicyName: CopyFromS3
-          PolicyDocument:
-            Version: 2012-10-17
-            Statement:
-              - Effect: Allow
-                Action:
-                  - s3:GetObject
-                Resource: arn:aws:s3:::{{ .AssetMappingFileBucket }}/*
-        - PolicyName: CopyToS3
+                Resource:
+                  - arn:aws:s3:::{{.AssetMappingFileBucket}}/{{.AssetMappingFilePath}}
+                  - arn:aws:s3:::{{.AssetMappingFileBucket}}/local-assets/*
+        - PolicyName: ServiceBucketAccess
           PolicyDocument:
             Version: 2012-10-17
             Statement:
@@ -316,9 +299,7 @@ Resources:
                 Action:
                   - s3:PutObject
                 Resource: !Sub arn:aws:s3:::${Bucket}/*
-      ManagedPolicyArns:
-        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-  
+
   EnvManagerS3Access:
     Metadata:
       aws:copilot:description: A policy that gives the Env Manager role access to this site's S3 Bucket

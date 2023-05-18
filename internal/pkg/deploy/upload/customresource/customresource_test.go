@@ -257,9 +257,6 @@ func TestStaticSite(t *testing.T) {
 			"custom-resources/trigger-state-machine.js": {
 				Buffer: bytes.NewBufferString("trigger state machine"),
 			},
-			"custom-resources/copy-assets.js": {
-				Buffer: bytes.NewBufferString("copy assets"),
-			},
 			"custom-resources/wkld-custom-domain.js": {
 				Buffer: bytes.NewBufferString("service-level custom domain"),
 			},
@@ -270,7 +267,6 @@ func TestStaticSite(t *testing.T) {
 	}
 	fakePaths := map[string]string{
 		"TriggerStateMachineFunction":   "manual/scripts/custom-resources/triggerstatemachinefunction/edfa40b595a5a4a6d24bfb7ad6e173560a29b7d720651ccc9c87eda76b93c7dd.zip",
-		"CopyAssetsFunction":            "manual/scripts/custom-resources/copyassetsfunction/b9fc2f284cfb699b7c63efaac618d7678372792aa020141fa91053092977976d.zip",
 		"CustomDomainFunction":          "manual/scripts/custom-resources/customdomainfunction/ac1c96e7f0823f3167b4e74c8b286ffe8f9d43279dc232d9478837327e57905e.zip",
 		"CertificateValidationFunction": "manual/scripts/custom-resources/certificatevalidationfunction/41aeafc64f18f82c452432a214ae83d8c8de4aba2d5df6a752b7e9a2c86833f1.zip",
 	}
@@ -280,14 +276,14 @@ func TestStaticSite(t *testing.T) {
 
 	// THEN
 	require.NoError(t, err)
-	require.Equal(t, fakeFS.matchCount, 4, "expected path calls do not match")
+	require.Equal(t, fakeFS.matchCount, 3, "expected path calls do not match")
 
 	actualFnNames := make([]string, len(crs))
 	for i, cr := range crs {
 		actualFnNames[i] = cr.Name()
 	}
 	require.ElementsMatch(t,
-		[]string{"TriggerStateMachineFunction", "CopyAssetsFunction", "CustomDomainFunction", "CertificateValidationFunction"},
+		[]string{"TriggerStateMachineFunction", "CustomDomainFunction", "CertificateValidationFunction"},
 		actualFnNames, "function names must match")
 
 	// ensure the zip files contain an index.js file.
