@@ -7,7 +7,7 @@ $ copilot svc init
 
 `copilot svc init` creates a new [service](../concepts/services.en.md) to run your code for you. 
 
-After running this command, the CLI creates sub-directory with your app name in your local `copilot` directory where you'll find a [manifest file](../manifest/overview.en.md). Feel free to update your manifest file to change the default configs for your service. The CLI also sets up an ECR repository with a policy for all [environments](../concepts/environments.en.md) to be able to pull from it. Then, your service gets registered to AWS System Manager Parameter Store so that the CLI can keep track of it.
+After running this command, the CLI creates sub-directory with your service name in your local `copilot` directory where you'll find a [manifest file](../manifest/overview.en.md). Feel free to update your manifest file to change the default configs for your service. The CLI also sets up an ECR repository with a policy for all [environments](../concepts/environments.en.md) to be able to pull from it. Then, your service gets registered to AWS System Manager Parameter Store so that the CLI can keep track of it.
 
 After that, if you already have an environment set up, you can run `copilot deploy` to deploy your service in that environment.
 
