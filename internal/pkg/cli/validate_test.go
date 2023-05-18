@@ -37,7 +37,7 @@ var basicNameTestCases = map[string]testCase{
 	},
 	"string with invalid characters": {
 		input: "myProject!",
-		want:  errValueBadFormat,
+		want:  errBasicNameRegexNotMatched,
 	},
 	"empty string": {
 		input: "",
@@ -49,11 +49,11 @@ var basicNameTestCases = map[string]testCase{
 	},
 	"does not start with letter": {
 		input: "123chicken",
-		want:  errValueBadFormat,
+		want:  errBasicNameRegexNotMatched,
 	},
 	"contains upper-case letters": {
 		input: "badGoose",
-		want:  errValueBadFormat,
+		want:  errBasicNameRegexNotMatched,
 	},
 }
 
@@ -62,7 +62,7 @@ func TestValidateAppName(t *testing.T) {
 	testCases := map[string]testCase{
 		"contains emoji": {
 			input: "😀",
-			want:  errValueBadFormat,
+			want:  errBasicNameRegexNotMatched,
 		},
 	}
 
@@ -101,7 +101,7 @@ func TestValidateSvcName(t *testing.T) {
 		},
 		"string with invalid characters": {
 			val:    "mySvc!",
-			wanted: errValueBadFormat,
+			wanted: errBasicNameRegexNotMatched,
 		},
 		"longer than 40 characters for app runner services": {
 			val:     strings.Repeat("x", 41),
@@ -116,12 +116,12 @@ func TestValidateSvcName(t *testing.T) {
 		"does not start with letter": {
 			val:     "123chicken",
 			svcType: manifestinfo.BackendServiceType,
-			wanted:  errValueBadFormat,
+			wanted:  errBasicNameRegexNotMatched,
 		},
 		"contains upper-case letters": {
 			val:     "badGoose",
 			svcType: manifestinfo.LoadBalancedWebServiceType,
-			wanted:  errValueBadFormat,
+			wanted:  errBasicNameRegexNotMatched,
 		},
 		"is not a reserved name": {
 			val:     "pipelines",
@@ -169,7 +169,7 @@ func TestValidatePipelineName(t *testing.T) {
 		},
 		"string with invalid characters": {
 			val:    "myPipe!",
-			wanted: errValueBadFormat,
+			wanted: errBasicNameRegexNotMatched,
 		},
 		"longer than 128 characters": {
 			val:               strings.Repeat("s", 129),
@@ -182,15 +182,15 @@ func TestValidatePipelineName(t *testing.T) {
 		},
 		"does not start with letter": {
 			val:    "123chicken",
-			wanted: errValueBadFormat,
+			wanted: errBasicNameRegexNotMatched,
 		},
 		"starts with a dash": {
 			val:    "-beta",
-			wanted: errValueBadFormat,
+			wanted: errBasicNameRegexNotMatched,
 		},
 		"contains upper-case letters": {
 			val:    "badGoose",
-			wanted: errValueBadFormat,
+			wanted: errBasicNameRegexNotMatched,
 		},
 	}
 
@@ -892,7 +892,7 @@ func Test_validateSubscriptionKey(t *testing.T) {
 		},
 		"error when bad svc name": {
 			inSub:   "n#######:topic",
-			wantErr: fmt.Errorf("invalid topic subscription service name `n#######`: %w", errValueBadFormat),
+			wantErr: fmt.Errorf("invalid topic subscription service name `n#######`: %w", errBasicNameRegexNotMatched),
 		},
 	}
 	for name, tc := range testCases {
