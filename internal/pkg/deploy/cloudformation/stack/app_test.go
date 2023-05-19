@@ -150,7 +150,7 @@ func TestAppResourceTemplate(t *testing.T) {
 		"should render template after sorting": {
 			given: &AppResourcesConfig{
 				Accounts: []string{"4567", "1234"},
-				Services: []string{"app-2", "app-1"},
+				Services: []AppResourcesService{{Name: "svc-2"}, {Name: "svc-1"}},
 				Version:  1,
 				App:      "testapp",
 			},
@@ -163,7 +163,7 @@ func TestAppResourceTemplate(t *testing.T) {
 				}{
 					&AppResourcesConfig{
 						Accounts: []string{"1234", "4567"},
-						Services: []string{"app-1", "app-2"},
+						Services: []AppResourcesService{{Name: "svc-1"}, {Name: "svc-2"}},
 						Version:  1,
 						App:      "testapp",
 					},
@@ -404,6 +404,6 @@ Metadata:
 	require.Equal(t, AppResourcesConfig{
 		Accounts: []string{"0000000000"},
 		Version:  7,
-		Services: []string{"testsvc1", "testsvc2"},
+		Services: []AppResourcesService{{Name: "testsvc1"}, {Name: "testsvc2"}},
 	}, *config)
 }

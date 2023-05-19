@@ -70,7 +70,7 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 				m.EXPECT().AddJobToApp(&config.Application{
 					Name:      "app",
 					AccountID: "1234",
-				}, "resizer")
+				}, "resizer", true)
 			},
 		},
 		"using existing image": {
@@ -107,7 +107,7 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 				m.EXPECT().AddJobToApp(&config.Application{
 					Name:      "app",
 					AccountID: "1234",
-				}, "resizer")
+				}, "resizer", true)
 			},
 		},
 		"write manifest error": {
@@ -161,7 +161,7 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 				}, nil)
 			},
 			mockappDeployer: func(m *mocks.MockWorkloadAdder) {
-				m.EXPECT().AddJobToApp(gomock.Any(), gomock.Any()).Return(errors.New("some error"))
+				m.EXPECT().AddJobToApp(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("some error"))
 			},
 			wantedErr: errors.New("add job resizer to application app: some error"),
 		},
@@ -183,7 +183,7 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 				m.EXPECT().GetApplication(gomock.Any()).Return(&config.Application{}, nil)
 			},
 			mockappDeployer: func(m *mocks.MockWorkloadAdder) {
-				m.EXPECT().AddJobToApp(gomock.Any(), gomock.Any()).Return(nil)
+				m.EXPECT().AddJobToApp(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
 			wantedErr: fmt.Errorf("saving job resizer: oops"),
 		},
@@ -488,7 +488,40 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 				m.EXPECT().AddServiceToApp(&config.Application{
 					Name:      "app",
 					AccountID: "1234",
-				}, "frontend")
+				}, "frontend", true)
+			},
+		},
+		"writes Static Site manifest, and creates repositories successfully": {
+			inSvcType: manifestinfo.StaticSiteType,
+			inAppName: "app",
+			inSvcName: "static",
+
+			mockWriter: func(m *mocks.MockWorkspace) {
+				// workspace root: "/static"
+				gomock.InOrder(
+					m.EXPECT().Rel("/static/manifest.yml").Return("manifest.yml", nil))
+				m.EXPECT().WriteServiceManifest(gomock.Any(), "static").Return("/static/manifest.yml", nil)
+			},
+			mockstore: func(m *mocks.MockStore) {
+				m.EXPECT().CreateService(gomock.Any()).
+					Do(func(app *config.Workload) {
+						require.Equal(t, &config.Workload{
+							Name: "static",
+							App:  "app",
+							Type: manifestinfo.StaticSiteType,
+						}, app)
+					}).
+					Return(nil)
+				m.EXPECT().GetApplication("app").Return(&config.Application{
+					Name:      "app",
+					AccountID: "1234",
+				}, nil)
+			},
+			mockappDeployer: func(m *mocks.MockWorkloadAdder) {
+				m.EXPECT().AddServiceToApp(&config.Application{
+					Name:      "app",
+					AccountID: "1234",
+				}, "static", false)
 			},
 		},
 		"app error": {
@@ -548,7 +581,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 				}, nil)
 			},
 			mockappDeployer: func(m *mocks.MockWorkloadAdder) {
-				m.EXPECT().AddServiceToApp(gomock.Any(), gomock.Any()).Return(errors.New("some error"))
+				m.EXPECT().AddServiceToApp(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("some error"))
 			},
 			wantedErr: errors.New("add service frontend to application app: some error"),
 		},
@@ -570,7 +603,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 				m.EXPECT().GetApplication(gomock.Any()).Return(&config.Application{}, nil)
 			},
 			mockappDeployer: func(m *mocks.MockWorkloadAdder) {
-				m.EXPECT().AddServiceToApp(gomock.Any(), gomock.Any()).Return(nil)
+				m.EXPECT().AddServiceToApp(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
 			wantedErr: fmt.Errorf("saving service frontend: oops"),
 		},
@@ -611,7 +644,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 				m.EXPECT().AddServiceToApp(&config.Application{
 					Name:      "app",
 					AccountID: "1234",
-				}, "backend")
+				}, "backend", true)
 			},
 		},
 		"no healthcheck options": {
@@ -652,7 +685,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 				m.EXPECT().AddServiceToApp(&config.Application{
 					Name:      "app",
 					AccountID: "1234",
-				}, "backend")
+				}, "backend", true)
 			},
 		},
 		"default healthcheck options": {
@@ -704,7 +737,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 				m.EXPECT().AddServiceToApp(&config.Application{
 					Name:      "app",
 					AccountID: "1234",
-				}, "backend")
+				}, "backend", true)
 			},
 		},
 		"topic subscriptions enabled": {
@@ -751,7 +784,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 				m.EXPECT().AddServiceToApp(&config.Application{
 					Name:      "app",
 					AccountID: "1234",
-				}, "worker")
+				}, "worker", true)
 			},
 		},
 		"topic subscriptions enabled with default fifo queue": {
@@ -799,7 +832,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 				m.EXPECT().AddServiceToApp(&config.Application{
 					Name:      "app",
 					AccountID: "1234",
-				}, "worker")
+				}, "worker", true)
 			},
 		},
 	}

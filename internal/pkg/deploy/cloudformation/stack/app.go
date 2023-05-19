@@ -27,10 +27,23 @@ type DeployedAppMetadata struct {
 // AppResourcesConfig is a configuration for a deployed Application
 // StackSet.
 type AppResourcesConfig struct {
-	Accounts []string `yaml:"Accounts,flow"`
-	Services []string `yaml:"Services,flow"`
-	App      string   `yaml:"App"`
-	Version  int      `yaml:"Version"`
+	Accounts []string              `yaml:"Accounts,flow"`
+	Services []AppResourcesService `yaml:"Services,flow"`
+	App      string                `yaml:"App"`
+	Version  int                   `yaml:"Version"`
+}
+
+// AppResourcesService is a configuration for service for a deployed Application StackSet
+type AppResourcesService struct {
+	Name    string `yaml:"Name,flow"`
+	WithECR bool   `yaml:"WithECR,flow"`
+}
+
+// UnmarshalYAML overrides the default YAML unmarshaling logic for the Image
+// struct, allowing it to perform more complex unmarshaling behavior.
+// This method implements the yaml.Unmarshaler (v3) interface.
+func (s *AppResourcesService) UnmarshalYAML(value *yaml.Node) error {
+	return value.Decode(&s.Name)
 }
 
 // AppStackConfig is for providing all the values to set up an
@@ -114,7 +127,7 @@ func (c *AppStackConfig) Template() (string, error) {
 func (c *AppStackConfig) ResourceTemplate(config *AppResourcesConfig) (string, error) {
 	// Sort the account IDs and Services so that the template we generate is deterministic
 	sort.Strings(config.Accounts)
-	sort.Strings(config.Services)
+	sort.SliceStable(config.Services, func(i, j int) bool { return config.Services[i].Name < config.Services[j].Name })
 
 	content, err := c.parser.Parse(appResourcesTemplatePath, struct {
 		*AppResourcesConfig

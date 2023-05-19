@@ -8,7 +8,7 @@ Metadata:
   TemplateVersion: '{{.TemplateVersion}}'
   Version: {{.Version}}
   Services:{{if not $services}} []{{else}}{{range $service := $services}}
-  - {{$service}}{{end}}{{end}}
+  - {{$service.Name}}{{end}}{{end}}
   Accounts:{{if not $accounts}} []{{else}}{{range $account := $accounts}}
   - {{$account}}{{end}}{{end}}
 Resources:
@@ -103,16 +103,17 @@ Resources:
               DaysAfterInitiation: 1
 
 {{range $service := $services}}
-  ECRRepo{{logicalIDSafe $service}}:
+{{- if $service.WithECR}}
+  ECRRepo{{logicalIDSafe $service.Name}}:
     Metadata:
-      'aws:copilot:description': 'ECR container image repository for "{{$service}}"'
+      'aws:copilot:description': 'ECR container image repository for "{{$service.Name}}"'
     Type: AWS::ECR::Repository
     Properties:
-      RepositoryName: {{$app}}/{{$service}}
+      RepositoryName: {{$app}}/{{$service.Name}}
       Tags:
         -
           Key: {{$svcTag}}
-          Value: {{$service}}
+          Value: {{$service.Name}}
       RepositoryPolicyText:
         Version: '2012-10-17'
         Statement:
@@ -130,6 +131,7 @@ Resources:
           - ecr:InitiateLayerUpload
           - ecr:UploadLayerPart
           - ecr:CompleteLayerUpload
+{{- end}}
 {{end}}
 Outputs:
   KMSKeyARN:
@@ -141,10 +143,15 @@ Outputs:
     Description: "A bucket used for any Copilot artifacts that must be stored in S3 (pipelines, env files, etc)."
     Value: !Ref PipelineBuiltArtifactBucket
 {{- range $service := $services}} 
-  ECRRepo{{logicalIDSafe $service}}:
-    Description: ECR Repo used to store images of the {{$service}} service.
-    Value: !GetAtt ECRRepo{{logicalIDSafe $service}}.Arn
+{{- if $service.WithECR}}
+  ECRRepo{{logicalIDSafe $service.Name}}:
+    Description: ECR Repo used to store images of the {{$service.Name}} service.
+    Value: !GetAtt ECRRepo{{logicalIDSafe $service.Name}}.Arn
 {{- end}}
+{{- end}}
+  Workloads:
+    Value: "{{range $service := $services}}{{$service.Name}},{{end}}"
+    Description: Required output to force the stack to update if mutating workloads does not change create a changeset.
   TemplateVersion:
     Description: Required output to force the stackset to update if mutating version.
     Value: {{.TemplateVersion}}

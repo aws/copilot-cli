@@ -7,6 +7,9 @@ package initialize
 import (
 	"encoding"
 	"fmt"
+	"os"
+	"path/filepath"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -14,8 +17,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
-	"os"
-	"path/filepath"
 )
 
 const (
@@ -36,8 +37,8 @@ type Store interface {
 
 // WorkloadAdder contains the methods needed to add jobs and services to an existing application.
 type WorkloadAdder interface {
-	AddJobToApp(app *config.Application, jobName string) error
-	AddServiceToApp(app *config.Application, serviceName string) error
+	AddJobToApp(app *config.Application, jobName string, createECR bool) error
+	AddServiceToApp(app *config.Application, serviceName string, createECR bool) error
 }
 
 // Workspace contains the methods needed to manipulate a Copilot workspace.
@@ -104,12 +105,15 @@ func (w *WorkloadInitializer) Job(i *JobProps) (string, error) {
 	return w.initJob(i)
 }
 
-func (w *WorkloadInitializer) addWlToApp(app *config.Application, wlName string, wlType string) error {
+func (w *WorkloadInitializer) addWlToApp(app *config.Application, props WorkloadProps, wlType string) error {
 	switch wlType {
 	case svcWlType:
-		return w.Deployer.AddServiceToApp(app, wlName)
+		if props.Type == manifestinfo.StaticSiteType {
+			return w.Deployer.AddServiceToApp(app, props.Name, false)
+		}
+		return w.Deployer.AddServiceToApp(app, props.Name, true)
 	case jobWlType:
-		return w.Deployer.AddJobToApp(app, wlName)
+		return w.Deployer.AddJobToApp(app, props.Name, true)
 	default:
 		return fmt.Errorf(fmtErrUnrecognizedWlType, wlType)
 	}
@@ -245,7 +249,7 @@ func (w *WorkloadInitializer) addJobToAppAndSSM(app *config.Application, props W
 }
 
 func (w *WorkloadInitializer) addWlToAppAndSSM(app *config.Application, props WorkloadProps, wlType string) error {
-	if err := w.addWlToApp(app, props.Name, wlType); err != nil {
+	if err := w.addWlToApp(app, props, wlType); err != nil {
 		return fmt.Errorf("add %s %s to application %s: %w", wlType, props.Name, props.App, err)
 	}
 
@@ -376,7 +380,7 @@ func newWorkerServiceManifest(i *ServiceProps) (*manifest.WorkerService, error) 
 
 func newStaticSiteServiceManifest(i *ServiceProps) (*manifest.StaticSite, error) {
 	return manifest.NewStaticSite(manifest.StaticSiteProps{
-		Name:            i.Name,
+		Name: i.Name,
 		StaticSiteConfig: manifest.StaticSiteConfig{
 			FileUploads: i.FileUploads,
 		},

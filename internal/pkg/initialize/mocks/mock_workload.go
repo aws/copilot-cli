@@ -132,31 +132,31 @@ func (m *MockWorkloadAdder) EXPECT() *MockWorkloadAdderMockRecorder {
 }
 
 // AddJobToApp mocks base method.
-func (m *MockWorkloadAdder) AddJobToApp(app *config.Application, jobName string) error {
+func (m *MockWorkloadAdder) AddJobToApp(app *config.Application, jobName string, createECR bool) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddJobToApp", app, jobName)
+	ret := m.ctrl.Call(m, "AddJobToApp", app, jobName, createECR)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // AddJobToApp indicates an expected call of AddJobToApp.
-func (mr *MockWorkloadAdderMockRecorder) AddJobToApp(app, jobName interface{}) *gomock.Call {
+func (mr *MockWorkloadAdderMockRecorder) AddJobToApp(app, jobName, createECR interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddJobToApp", reflect.TypeOf((*MockWorkloadAdder)(nil).AddJobToApp), app, jobName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddJobToApp", reflect.TypeOf((*MockWorkloadAdder)(nil).AddJobToApp), app, jobName, createECR)
 }
 
 // AddServiceToApp mocks base method.
-func (m *MockWorkloadAdder) AddServiceToApp(app *config.Application, serviceName string) error {
+func (m *MockWorkloadAdder) AddServiceToApp(app *config.Application, serviceName string, createECR bool) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddServiceToApp", app, serviceName)
+	ret := m.ctrl.Call(m, "AddServiceToApp", app, serviceName, createECR)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // AddServiceToApp indicates an expected call of AddServiceToApp.
-func (mr *MockWorkloadAdderMockRecorder) AddServiceToApp(app, serviceName interface{}) *gomock.Call {
+func (mr *MockWorkloadAdderMockRecorder) AddServiceToApp(app, serviceName, createECR interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddServiceToApp", reflect.TypeOf((*MockWorkloadAdder)(nil).AddServiceToApp), app, serviceName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddServiceToApp", reflect.TypeOf((*MockWorkloadAdder)(nil).AddServiceToApp), app, serviceName, createECR)
 }
 
 // MockWorkspace is a mock of Workspace interface.
