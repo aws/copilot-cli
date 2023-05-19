@@ -188,6 +188,8 @@ batch:
           TEST_SUITE: cloudfront
           APP_REGION: eu-central-1
           APP_ACCOUNT: e2e/account/cloudfront
+          TEST_REGION: eu-central-1
+          TEST_ACCOUNT: e2e/account/cloudfront
 
 phases:
   install:
