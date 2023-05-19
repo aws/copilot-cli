@@ -6,6 +6,8 @@ package deploy
 import (
 	"fmt"
 	"io"
+	"os"
+	"path/filepath"
 
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
@@ -19,6 +21,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/template"
+	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/spf13/afero"
 )
 
@@ -126,7 +129,11 @@ func (d *staticSiteDeployer) UploadArtifacts() (*UploadArtifactsOutput, error) {
 }
 
 func (d *staticSiteDeployer) uploadStaticFiles(out *UploadArtifactsOutput) error {
-	path, err := d.uploader.UploadFiles(d.staticSiteMft.FileUploads)
+	fullPathSources, err := d.convertSources()
+	if err != nil {
+		return err
+	}
+	path, err := d.uploader.UploadFiles(fullPathSources)
 	if err != nil {
 		return fmt.Errorf("upload static files: %w", err)
 	}
@@ -146,9 +153,6 @@ func (d *staticSiteDeployer) stackConfiguration(in *StackRuntimeConfiguration) (
 	if err := validateMinAppVersion(d.app.Name, d.name, d.appVersionGetter, deploy.StaticSiteMinAppTemplateVersion); err != nil {
 		return nil, fmt.Errorf("static sites not supported: %w", err)
 	}
-	if err := d.validateSources(); err != nil {
-		return nil, err
-	}
 	conf, err := d.newStack(&stack.StaticSiteConfig{
 		App:                d.app,
 		EnvManifest:        d.envConfig,
@@ -166,14 +170,30 @@ func (d *staticSiteDeployer) stackConfiguration(in *StackRuntimeConfiguration) (
 	return conf, nil
 }
 
-func (d *staticSiteDeployer) validateSources() error {
-	for _, upload := range d.staticSiteMft.FileUploads {
-		_, err := d.fs.Stat(upload.Source)
+// convertSources transforms the source's path relative to the project root into the full path.
+func (d *staticSiteDeployer) convertSources() ([]manifest.FileUpload, error) {
+	var convertedFileUploads = make([]manifest.FileUpload, len(d.staticSiteMft.FileUploads))
+	var fileInfo os.FileInfo
+	for i, source := range d.staticSiteMft.FileUploads {
+		ws, err := workspace.Use(d.fs)
 		if err != nil {
-			return fmt.Errorf("source %q must be a valid path: %w", upload.Source, err)
+			return nil, err
 		}
+		projectRoot := ws.ProjectRoot()
+		fileInfo, err = d.fs.Stat(filepath.Join(projectRoot, source.Source))
+		if err != nil {
+			return nil, fmt.Errorf("source %q must be a valid path: %w", source.Source, err)
+		}
+		convertedFileUploads[i] = manifest.FileUpload{
+			Source:      filepath.Join(projectRoot, source.Source),
+			Destination: source.Destination,
+			Recursive:   fileInfo.IsDir(),
+			Exclude:     source.Exclude,
+			Reinclude:   source.Reinclude,
+		}
+
 	}
-	return nil
+	return convertedFileUploads, nil
 }
 
 func (d *staticSiteDeployer) validateAlias() error {

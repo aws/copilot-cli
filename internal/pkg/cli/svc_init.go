@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -805,10 +806,15 @@ func validateWorkspaceApp(wsApp, inputApp string, store store) error {
 
 func (o initSvcOpts) convertStringsToAssets(sources []string) ([]manifest.FileUpload, error) {
 	assets := make([]manifest.FileUpload, len(sources))
+	ws, err := workspace.Use(o.fs)
+	if err != nil {
+		return nil, err
+	}
+	projectRoot := ws.ProjectRoot()
 	for i, source := range sources {
-		info, err := o.fs.Stat(source)
+		info, err := o.fs.Stat(filepath.Join(projectRoot, source))
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("source %q must be a valid path: %w", source, err)
 		}
 		assets[i] = manifest.FileUpload{
 			Source:    source,
