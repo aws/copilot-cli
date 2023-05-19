@@ -95,12 +95,26 @@ Resources:
     Type: AWS::CloudFront::OriginAccessControl
     Properties:
       OriginAccessControlConfig:
-          Description: !Sub 'Access control for static s3 origin for ${AppName}-${EnvName}-${WorkloadName}'
-          # Truncate the name to allow at most 64 characters.
-          Name: {{trancateWithHashPadding (printf "%s-%s-%s" .AppName .EnvName .WorkloadName) 58 6}}
-          OriginAccessControlOriginType: s3
-          SigningBehavior: always
-          SigningProtocol: sigv4
+        Description: !Sub 'Access control for static s3 origin for ${AppName}-${EnvName}-${WorkloadName}'
+        # Truncate the name to allow at most 64 characters.
+        Name: {{trancateWithHashPadding (printf "%s-%s-%s" .AppName .EnvName .WorkloadName) 58 6}}
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  CloudFrontViewerRequestRewriteFunction:
+    Metadata:
+      'aws:copilot:description': 'CloudFront Function to rewrite viewer request to index.html'
+    Type: AWS::CloudFront::Function
+    Properties: 
+      AutoPublish: true
+      FunctionCode: |
+        function handler(event){var request=event.request;var uri=request.uri;if(uri.endsWith('/')){request.uri+='index.html'}else if(!uri.includes('.')){request.uri+='/index.html'}return request}
+      FunctionConfig: 
+        Comment: CloudFront Function to rewrite viewer request to index.html
+        Runtime: cloudfront-js-1.0
+      # Truncate the name to allow at most 64 characters.
+      Name: {{trancateWithHashPadding (printf "%s-%s-%s" .AppName .EnvName .WorkloadName) 58 6}}
 
   CloudFrontDistribution:
     Metadata:
@@ -111,10 +125,12 @@ Resources:
         {{- if .StaticSiteAlias}}
         Aliases: [{{.StaticSiteAlias}}]
         {{- end}}
-        DefaultRootObject: index.html
         DefaultCacheBehavior:
           Compress: true
           AllowedMethods: ["GET", "HEAD"]
+          FunctionAssociations:
+            - EventType: viewer-request
+              FunctionARN: !GetAtt CloudFrontViewerRequestRewriteFunction.FunctionARN
           ViewerProtocolPolicy: redirect-to-https
           CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6 # See https://go.aws/3bJid3k
           TargetOriginId: !Sub 'copilot-${AppName}-${EnvName}-${WorkloadName}'
