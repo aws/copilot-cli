@@ -305,7 +305,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 		"invalid service name": {
 			inSvcType: wantedSvcType,
 			inSvcName: "1234",
-			wantedErr: fmt.Errorf("service name 1234 is invalid: %s", errValueBadFormat),
+			wantedErr: fmt.Errorf("service name 1234 is invalid: %s", errBasicNameRegexNotMatched),
 		},
 		"prompt for service name": {
 			inSvcType:        wantedSvcType,
