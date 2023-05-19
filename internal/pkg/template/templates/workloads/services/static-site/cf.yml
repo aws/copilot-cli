@@ -96,7 +96,9 @@ Resources:
     Properties:
       OriginAccessControlConfig:
           Description: !Sub 'Access control for static s3 origin for ${AppName}-${EnvName}-${WorkloadName}'
-          Name: copilot-origin-access-control
+          # Truncate the name to allow at most 64 characters.
+          {{$stackName := printf "%s-%s-%s" .AppName .EnvName .WorkloadName}}
+          Name: {{printf "%.64s" $stackName}}
           OriginAccessControlOriginType: s3
           SigningBehavior: always
           SigningProtocol: sigv4

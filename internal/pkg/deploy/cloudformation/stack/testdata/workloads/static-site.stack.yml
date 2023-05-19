@@ -82,7 +82,7 @@ Resources:
     Properties:
       OriginAccessControlConfig:
         Description: !Sub 'Access control for static s3 origin for ${AppName}-${EnvName}-${WorkloadName}'
-        Name: copilot-origin-access-control
+        Name: my-app-my-env-static
         OriginAccessControlOriginType: s3
         SigningBehavior: always
         SigningProtocol: sigv4
