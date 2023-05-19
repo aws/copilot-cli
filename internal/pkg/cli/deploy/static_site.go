@@ -138,7 +138,7 @@ func (d *staticSiteDeployer) UploadArtifacts() (*UploadArtifactsOutput, error) {
 }
 
 func (d *staticSiteDeployer) uploadStaticFiles(out *UploadArtifactsOutput) error {
-	fullPathSources, err := d.convertSources()
+	fullPathSources, err := d.convertAndValidateSources()
 	if err != nil {
 		return err
 	}
@@ -179,20 +179,21 @@ func (d *staticSiteDeployer) stackConfiguration(in *StackRuntimeConfiguration) (
 	return conf, nil
 }
 
-// convertSources transforms the source's path relative to the project root into the full path.
-func (d *staticSiteDeployer) convertSources() ([]manifest.FileUpload, error) {
+// convertAndValidateSources transforms the source's path relative to the project root into the full path.
+// and validate that they exist.
+func (d *staticSiteDeployer) convertAndValidateSources() ([]manifest.FileUpload, error) {
 	var convertedFileUploads = make([]manifest.FileUpload, len(d.staticSiteMft.FileUploads))
 	for i, source := range d.staticSiteMft.FileUploads {
 		root := d.rootGetter.ProjectRoot()
 		fullPath := filepath.Join(root, source.Source)
-		fileInfo, err := d.fs.Stat(fullPath)
+		_, err := d.fs.Stat(fullPath)
 		if err != nil {
 			return nil, fmt.Errorf("source %q must be a valid path relative to the workspace root %q: %w", source.Source, root, err)
 		}
 		convertedFileUploads[i] = manifest.FileUpload{
 			Source:      fullPath,
 			Destination: source.Destination,
-			Recursive:   fileInfo.IsDir(),
+			Recursive:   source.Recursive,
 			Exclude:     source.Exclude,
 			Reinclude:   source.Reinclude,
 		}
