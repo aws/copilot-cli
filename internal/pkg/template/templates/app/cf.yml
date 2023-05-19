@@ -148,3 +148,6 @@ Outputs:
   TemplateVersion:
     Description: Required output to force the stackset to update if mutating version.
     Value: {{.TemplateVersion}}
+  StackSetOpId:
+    Description: Required output to forces the stackset to update on every operation
+    Value: {{.Version}}
