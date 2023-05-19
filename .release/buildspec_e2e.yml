@@ -128,6 +128,18 @@ batch:
           APP_ACCOUNT: e2e/account/import_certs
           TESTENV_REGION: us-west-2
           TESTENV_ACCOUNT: e2e/account/import_certs
+    - identifier: isolated
+      env:
+        privileged-mode: true
+        type: LINUX_CONTAINER
+        compute-type: BUILD_GENERAL1_LARGE
+        image: aws/codebuild/standard:6.0
+        variables:
+          TEST_SUITE: isolated
+          APP_REGION: us-west-2
+          APP_ACCOUNT: e2e/account/isolated
+          TESTENV_REGION: us-west-2
+          TESTENV_ACCOUNT: e2e/account/isolated
     - identifier: exec
       env:
         privileged-mode: true
