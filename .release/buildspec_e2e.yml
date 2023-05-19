@@ -136,6 +136,8 @@ batch:
           TEST_SUITE: exec
           APP_REGION: ap-northeast-1
           APP_ACCOUNT: e2e/account/exec
+          TESTENV_REGION: ap-northeast-1
+          TESTENV_ACCOUNT: e2e/account/exec
     - identifier: apprunner
       env:
         privileged-mode: true
