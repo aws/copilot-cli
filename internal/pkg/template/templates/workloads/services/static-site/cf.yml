@@ -102,6 +102,8 @@ Resources:
           SigningProtocol: sigv4
 
   CloudFrontViewerRequestRewriteFunction:
+    Metadata:
+      'aws:copilot:description': 'CloudFront Function to rewrite viewer request for static site'
     Type: AWS::CloudFront::Function
     Properties: 
       AutoPublish: true
