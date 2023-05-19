@@ -156,6 +156,7 @@ type initSvcOpts struct {
 	staticAssets []manifest.FileUpload
 
 	// For workspace validation.
+	wsRootGetter      wsRootGetter
 	wsAppName         string
 	wsPendingCreation bool
 
@@ -176,7 +177,6 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("svc init"))
 	sess, err := sessProvider.Default()
 	if err != nil {
@@ -215,6 +215,7 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 		topicSel:     snsSel,
 		sourceSel:    sourceSel,
 		mftReader:    ws,
+		wsRootGetter: ws,
 		dockerEngine: dockerengine.New(exec.NewCmd()),
 		wsAppName:    tryReadingAppName(),
 	}
@@ -806,15 +807,24 @@ func validateWorkspaceApp(wsApp, inputApp string, store store) error {
 
 func (o initSvcOpts) convertStringsToAssets(sources []string) ([]manifest.FileUpload, error) {
 	assets := make([]manifest.FileUpload, len(sources))
-	ws, err := workspace.Use(o.fs)
-	if err != nil {
-		return nil, err
+	if o.wsPendingCreation {
+		for i, source := range sources {
+			info, err := o.fs.Stat(source)
+			if err != nil {
+				return nil, fmt.Errorf("source %q must be a valid path: %w", source, err)
+			}
+			assets[i] = manifest.FileUpload{
+				Source:    source,
+				Recursive: info.IsDir(),
+			}
+		}
+		return assets, nil
 	}
-	projectRoot := ws.ProjectRoot()
+	projectRoot := o.wsRootGetter.ProjectRoot()
 	for i, source := range sources {
 		info, err := o.fs.Stat(filepath.Join(projectRoot, source))
 		if err != nil {
-			return nil, fmt.Errorf("source %q must be a valid path: %w", source, err)
+			return nil, fmt.Errorf("source %q must be a valid path relative to the workspace %q: %w", source, projectRoot, err)
 		}
 		assets[i] = manifest.FileUpload{
 			Source:    source,

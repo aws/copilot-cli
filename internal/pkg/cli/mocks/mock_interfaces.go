@@ -2200,6 +2200,43 @@ func (mr *MockwsFileDeleterMockRecorder) DeleteWorkspaceFile() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteWorkspaceFile", reflect.TypeOf((*MockwsFileDeleter)(nil).DeleteWorkspaceFile))
 }
 
+// MockwsRootGetter is a mock of wsRootGetter interface.
+type MockwsRootGetter struct {
+	ctrl     *gomock.Controller
+	recorder *MockwsRootGetterMockRecorder
+}
+
+// MockwsRootGetterMockRecorder is the mock recorder for MockwsRootGetter.
+type MockwsRootGetterMockRecorder struct {
+	mock *MockwsRootGetter
+}
+
+// NewMockwsRootGetter creates a new mock instance.
+func NewMockwsRootGetter(ctrl *gomock.Controller) *MockwsRootGetter {
+	mock := &MockwsRootGetter{ctrl: ctrl}
+	mock.recorder = &MockwsRootGetterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockwsRootGetter) EXPECT() *MockwsRootGetterMockRecorder {
+	return m.recorder
+}
+
+// ProjectRoot mocks base method.
+func (m *MockwsRootGetter) ProjectRoot() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ProjectRoot")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// ProjectRoot indicates an expected call of ProjectRoot.
+func (mr *MockwsRootGetterMockRecorder) ProjectRoot() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ProjectRoot", reflect.TypeOf((*MockwsRootGetter)(nil).ProjectRoot))
+}
+
 // MockmanifestReader is a mock of manifestReader interface.
 type MockmanifestReader struct {
 	ctrl     *gomock.Controller
