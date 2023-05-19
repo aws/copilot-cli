@@ -182,7 +182,7 @@ func (d *staticSiteDeployer) stackConfiguration(in *StackRuntimeConfiguration) (
 // convertAndValidateSources transforms the source's path relative to the project root into the full path.
 // and validate that they exist.
 func (d *staticSiteDeployer) convertAndValidateSources() ([]manifest.FileUpload, error) {
-	var convertedFileUploads = make([]manifest.FileUpload, len(d.staticSiteMft.FileUploads))
+	convertedFileUploads := make([]manifest.FileUpload, len(d.staticSiteMft.FileUploads))
 	for i, source := range d.staticSiteMft.FileUploads {
 		root := d.rootGetter.ProjectRoot()
 		fullPath := filepath.Join(root, source.Source)
