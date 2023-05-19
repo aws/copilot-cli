@@ -6,7 +6,6 @@ package deploy
 import (
 	"fmt"
 	"io"
-	"os"
 	"path/filepath"
 
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
@@ -31,12 +30,17 @@ type fileUploader interface {
 	UploadFiles(files []manifest.FileUpload) (string, error)
 }
 
+type rootGetter interface {
+	ProjectRoot() string
+}
+
 type staticSiteDeployer struct {
 	*svcDeployer
 	appVersionGetter versionGetter
 	staticSiteMft    *manifest.StaticSite
 	fs               afero.Fs
 	uploader         fileUploader
+	rootGetter       rootGetter
 	newStack         func(*stack.StaticSiteConfig) (*stack.StaticSite, error)
 }
 
@@ -55,6 +59,10 @@ func NewStaticSiteDeployer(in *WorkloadDeployerInput) (*staticSiteDeployer, erro
 	if !ok {
 		return nil, fmt.Errorf("manifest is not of type %s", manifestinfo.StaticSiteType)
 	}
+	ws, err := workspace.Use(svcDeployer.fs)
+	if err != nil {
+		return nil, err
+	}
 	return &staticSiteDeployer{
 		svcDeployer:      svcDeployer,
 		appVersionGetter: versionGetter,
@@ -69,7 +77,8 @@ func NewStaticSiteDeployer(in *WorkloadDeployerInput) (*staticSiteDeployer, erro
 				return err
 			},
 		},
-		newStack: stack.NewStaticSite,
+		rootGetter: ws,
+		newStack:   stack.NewStaticSite,
 	}, nil
 }
 
@@ -173,19 +182,15 @@ func (d *staticSiteDeployer) stackConfiguration(in *StackRuntimeConfiguration) (
 // convertSources transforms the source's path relative to the project root into the full path.
 func (d *staticSiteDeployer) convertSources() ([]manifest.FileUpload, error) {
 	var convertedFileUploads = make([]manifest.FileUpload, len(d.staticSiteMft.FileUploads))
-	var fileInfo os.FileInfo
 	for i, source := range d.staticSiteMft.FileUploads {
-		ws, err := workspace.Use(d.fs)
+		root := d.rootGetter.ProjectRoot()
+		fullPath := filepath.Join(root, source.Source)
+		fileInfo, err := d.fs.Stat(fullPath)
 		if err != nil {
-			return nil, err
-		}
-		projectRoot := ws.ProjectRoot()
-		fileInfo, err = d.fs.Stat(filepath.Join(projectRoot, source.Source))
-		if err != nil {
-			return nil, fmt.Errorf("source %q must be a valid path: %w", source.Source, err)
+			return nil, fmt.Errorf("source %q must be a valid path relative to the workspace root %q: %w", source.Source, root, err)
 		}
 		convertedFileUploads[i] = manifest.FileUpload{
-			Source:      filepath.Join(projectRoot, source.Source),
+			Source:      fullPath,
 			Destination: source.Destination,
 			Recursive:   fileInfo.IsDir(),
 			Exclude:     source.Exclude,

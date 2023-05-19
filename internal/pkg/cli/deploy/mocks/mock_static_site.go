@@ -48,3 +48,40 @@ func (mr *MockfileUploaderMockRecorder) UploadFiles(files interface{}) *gomock.C
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadFiles", reflect.TypeOf((*MockfileUploader)(nil).UploadFiles), files)
 }
+
+// MockrootGetter is a mock of rootGetter interface.
+type MockrootGetter struct {
+	ctrl     *gomock.Controller
+	recorder *MockrootGetterMockRecorder
+}
+
+// MockrootGetterMockRecorder is the mock recorder for MockrootGetter.
+type MockrootGetterMockRecorder struct {
+	mock *MockrootGetter
+}
+
+// NewMockrootGetter creates a new mock instance.
+func NewMockrootGetter(ctrl *gomock.Controller) *MockrootGetter {
+	mock := &MockrootGetter{ctrl: ctrl}
+	mock.recorder = &MockrootGetterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockrootGetter) EXPECT() *MockrootGetterMockRecorder {
+	return m.recorder
+}
+
+// ProjectRoot mocks base method.
+func (m *MockrootGetter) ProjectRoot() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ProjectRoot")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// ProjectRoot indicates an expected call of ProjectRoot.
+func (mr *MockrootGetterMockRecorder) ProjectRoot() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ProjectRoot", reflect.TypeOf((*MockrootGetter)(nil).ProjectRoot))
+}
