@@ -21,6 +21,8 @@ batch:
           TEST_SUITE: addons
           APP_REGION: us-west-2
           APP_ACCOUNT: e2e/account/addons
+          TEST_REGION: us-west-2
+          TEST_ACCOUNT: e2e/account/addons
     - identifier: customized_env
       env:
         privileged-mode: true
