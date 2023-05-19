@@ -503,3 +503,31 @@ func TestApplicationLoadBalancer_Aliases(t *testing.T) {
 		})
 	}
 }
+
+func Test_trancateWithHashPadding(t *testing.T) {
+	tests := map[string]struct {
+		inString  string
+		inMax     int
+		inPadding int
+		expected  string
+	}{
+		"less than max": {
+			inString:  "mockString",
+			inMax:     64,
+			inPadding: 0,
+			expected:  "mockString",
+		},
+		"truncate with hash padding": {
+			inString:  "longapp-longenv-longsvc",
+			inMax:     10,
+			inPadding: 6,
+			expected:  "longapp-lo7693be",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tc.expected, trancateWithHashPadding(tc.inString, tc.inMax, tc.inPadding))
+		})
+	}
+}
