@@ -97,8 +97,7 @@ Resources:
       OriginAccessControlConfig:
           Description: !Sub 'Access control for static s3 origin for ${AppName}-${EnvName}-${WorkloadName}'
           # Truncate the name to allow at most 64 characters.
-          {{$stackName := printf "%s-%s-%s" .AppName .EnvName .WorkloadName}}
-          Name: {{printf "%.64s" $stackName}}
+          Name: {{printf "%.64s" (printf "%s-%s-%s" .AppName .EnvName .WorkloadName)}}
           OriginAccessControlOriginType: s3
           SigningBehavior: always
           SigningProtocol: sigv4
