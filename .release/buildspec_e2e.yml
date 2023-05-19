@@ -33,6 +33,12 @@ batch:
           TEST_SUITE: customized-env
           APP_REGION: us-west-1
           APP_ACCOUNT: e2e/account/customized_env
+          TESTENV_REGION: us-west-1
+          TESTENV_ACCOUNT: e2e/account/customized_env
+          PRODENV_REGION: us-west-1
+          PRODENV_ACCOUNT: e2e/account/customized_env
+          SHAREDENV_REGION: us-west-1
+          SHAREDENV_ACCOUNT: e2e/account/customized_env
     - identifier: init
       env:
         privileged-mode: true
@@ -228,6 +234,14 @@ phases:
           printf "[e2eprodenv]\n" >> /tmp/.aws/credentials
           printf "aws_access_key_id=$(echo $account | jq '.access_key' -r)\n" >> /tmp/.aws/credentials
           printf "aws_secret_access_key=$(echo $account | jq '.secret_access_key' -r)\n\n" >> /tmp/.aws/credentials
+        fi
+      - |
+        if [ ! -z "$SHAREDENV_REGION" ]; then
+          account=$(aws secretsmanager get-secret-value --secret-id ${SHAREDENV_ACCOUNT} | jq '.SecretString')
+          printf "[profile shared]\nregion=$SHAREDENV_REGION\n" >> /tmp/.aws/config
+          printf "[profile shared]\n" >> /tmp/.aws/credentials
+          printf "aws_access_key_id=$(echo $account | jq '.access_key')\n" >> /tmp/.aws/credentials
+          printf "aws_secret_access_key=$(echo $account | jq '.secret_access_key')\n\n" >> /tmp/.aws/credentials
         fi
       - sed -i -e '$s/$/ --noColor/' e2e/e2e.sh
       - make build-e2e
