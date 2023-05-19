@@ -45,13 +45,14 @@ type appUpgradeVars struct {
 type appUpgradeOpts struct {
 	appUpgradeVars
 
-	store         store
-	prog          progress
-	versionGetter versionGetter
-	route53       domainHostedZoneGetter
-	sel           appSelector
-	identity      identityService
-	upgrader      appUpgrader
+	store    store
+	prog     progress
+	route53  domainHostedZoneGetter
+	sel      appSelector
+	identity identityService
+	upgrader appUpgrader
+
+	newVersionGetter func(string) (versionGetter, error)
 }
 
 func newAppUpgradeOpts(vars appUpgradeVars) (*appUpgradeOpts, error) {
@@ -60,10 +61,6 @@ func newAppUpgradeOpts(vars appUpgradeVars) (*appUpgradeOpts, error) {
 		return nil, err
 	}
 	store := config.NewSSMStore(identity.New(sess), ssm.New(sess), aws.StringValue(sess.Config.Region))
-	d, err := describe.NewAppDescriber(vars.name)
-	if err != nil {
-		return nil, fmt.Errorf("new app describer for application %s: %v", vars.name, err)
-	}
 	return &appUpgradeOpts{
 		appUpgradeVars: vars,
 		store:          store,
@@ -71,8 +68,14 @@ func newAppUpgradeOpts(vars appUpgradeVars) (*appUpgradeOpts, error) {
 		prog:           termprogress.NewSpinner(log.DiagnosticWriter),
 		route53:        route53.New(sess),
 		sel:            selector.NewAppEnvSelector(prompt.New(), store),
-		versionGetter:  d,
 		upgrader:       cloudformation.New(sess, cloudformation.WithProgressTracker(os.Stderr)),
+		newVersionGetter: func(s string) (versionGetter, error) {
+			d, err := describe.NewAppDescriber(s)
+			if err != nil {
+				return d, fmt.Errorf("new describer for application %q: %w", s, err)
+			}
+			return d, nil
+		},
 	}, nil
 }
 
@@ -98,7 +101,12 @@ func (o *appUpgradeOpts) Ask() error {
 // Execute updates the cloudformation stack as well as the stackset of an application to the latest version.
 // If any stack is busy updating, it spins and waits until the stack can be updated.
 func (o *appUpgradeOpts) Execute() error {
-	version, err := o.versionGetter.Version()
+	vg, err := o.newVersionGetter(o.name)
+	if err != nil {
+		return err
+	}
+
+	version, err := vg.Version()
 	if err != nil {
 		return fmt.Errorf("get template version of application %s: %v", o.name, err)
 	}
@@ -205,7 +213,7 @@ func buildAppUpgradeCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return opts.Execute()
+			return run(opts)
 		}),
 	}
 	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, tryReadingAppName(), appFlagDescription)
