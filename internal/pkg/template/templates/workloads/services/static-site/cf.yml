@@ -113,8 +113,8 @@ Resources:
       FunctionConfig: 
         Comment: CloudFront Function to rewrite viewer request to index.html
         Runtime: cloudfront-js-1.0
-        # Truncate the name to allow at most 64 characters.
-        Name: {{trancateWithHashPadding (printf "%s-%s-%s" .AppName .EnvName .WorkloadName) 58 6}}
+      # Truncate the name to allow at most 64 characters.
+      Name: {{trancateWithHashPadding (printf "%s-%s-%s" .AppName .EnvName .WorkloadName) 58 6}}
 
   CloudFrontDistribution:
     Metadata:
