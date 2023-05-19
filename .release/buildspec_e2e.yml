@@ -126,6 +126,8 @@ batch:
           TEST_SUITE: import-certs
           APP_REGION: us-west-2
           APP_ACCOUNT: e2e/account/import_certs
+          TESTENV_REGION: us-west-2
+          TESTENV_ACCOUNT: e2e/account/import_certs
     - identifier: exec
       env:
         privileged-mode: true
