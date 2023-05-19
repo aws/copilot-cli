@@ -22,9 +22,9 @@ import (
 
 func TestStaticSiteDeployer_UploadArtifacts(t *testing.T) {
 	type mockDeps struct {
-		uploader   *mocks.MockfileUploader
-		rootGetter *mocks.MockrootGetter
-		fs         func() afero.Fs
+		uploader     *mocks.MockfileUploader
+		fs           func() afero.Fs
+		cachedWSRoot string
 	}
 	tests := map[string]struct {
 		mock func(m *mockDeps)
@@ -34,7 +34,7 @@ func TestStaticSiteDeployer_UploadArtifacts(t *testing.T) {
 	}{
 		"error if failed to upload": {
 			mock: func(m *mockDeps) {
-				m.rootGetter.EXPECT().ProjectRoot().Return("mockRoot")
+				m.cachedWSRoot = "mockRoot"
 				m.fs = func() afero.Fs {
 					fs := afero.NewMemMapFs()
 					_ = fs.Mkdir("mockRoot/assets/", 0755)
@@ -46,7 +46,7 @@ func TestStaticSiteDeployer_UploadArtifacts(t *testing.T) {
 		},
 		"error if source path does not exist": {
 			mock: func(m *mockDeps) {
-				m.rootGetter.EXPECT().ProjectRoot().Return("mockRoot")
+				m.cachedWSRoot = "mockRoot"
 				m.fs = func() afero.Fs {
 					fs := afero.NewMemMapFs()
 					_ = fs.Mkdir("mockrOOt/assets/", 0755)
@@ -57,7 +57,7 @@ func TestStaticSiteDeployer_UploadArtifacts(t *testing.T) {
 		},
 		"success": {
 			mock: func(m *mockDeps) {
-				m.rootGetter.EXPECT().ProjectRoot().Return("mockRoot")
+				m.cachedWSRoot = "mockRoot"
 				m.fs = func() afero.Fs {
 					fs := afero.NewMemMapFs()
 					_ = fs.Mkdir("mockRoot/assets/", 0755)
@@ -87,8 +87,7 @@ func TestStaticSiteDeployer_UploadArtifacts(t *testing.T) {
 			defer ctrl.Finish()
 
 			m := &mockDeps{
-				uploader:   mocks.NewMockfileUploader(ctrl),
-				rootGetter: mocks.NewMockrootGetter(ctrl),
+				uploader: mocks.NewMockfileUploader(ctrl),
 			}
 			if tc.mock != nil {
 				tc.mock(m)
@@ -120,9 +119,9 @@ func TestStaticSiteDeployer_UploadArtifacts(t *testing.T) {
 						},
 					},
 				},
-				uploader:   m.uploader,
-				rootGetter: m.rootGetter,
-				fs:         m.fs(),
+				uploader: m.uploader,
+				fs:       m.fs(),
+				wsRoot:   m.cachedWSRoot,
 			}
 
 			actual, err := deployer.UploadArtifacts()
