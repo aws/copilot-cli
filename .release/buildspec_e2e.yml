@@ -106,6 +106,8 @@ batch:
           TEST_SUITE: app-with-domain
           APP_REGION: us-west-2
           APP_ACCOUNT: e2e/account/app_with_domains
+          TEST_REGION: us-west-2
+          TEST_ACCOUNT: e2e/account/app_with_domains
           PRODENV_REGION: us-east-1
           PRODENV_ACCOUNT: e2e/account/app_with_domains/prod
     - identifier: import_certs
