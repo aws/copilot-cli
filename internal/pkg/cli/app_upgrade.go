@@ -27,7 +27,7 @@ import (
 )
 
 const (
-	fmtAppUpgradeStart    = "Upgrading application %s from version %s to version %s."
+	fmtAppUpgradeStart    = "Upgrading application %s from version %s to version %s.\n"
 	fmtAppUpgradeFailed   = "Failed to upgrade application %s's template to version %s.\n"
 	fmtAppUpgradeComplete = "Upgraded application %s's template to version %s.\n"
 
@@ -117,13 +117,13 @@ func (o *appUpgradeOpts) Execute() error {
 	if err != nil {
 		return fmt.Errorf("get application %s: %w", o.name, err)
 	}
-	o.prog.Start(fmt.Sprintf(fmtAppUpgradeStart, color.HighlightUserInput(o.name), color.Emphasize(version), color.Emphasize(deploy.LatestAppTemplateVersion)))
+	log.Infof(fmtAppUpgradeStart, color.HighlightUserInput(o.name), color.Emphasize(deploy.LatestAppTemplateVersion), color.Emphasize(deploy.LatestAppTemplateVersion))
 	defer func() {
 		if err != nil {
-			o.prog.Stop(log.Serrorf(fmtAppUpgradeFailed, color.HighlightUserInput(o.name), color.Emphasize(deploy.LatestAppTemplateVersion)))
+			log.Errorf(fmtAppUpgradeFailed, color.HighlightUserInput(o.name), color.Emphasize(deploy.LatestAppTemplateVersion))
 			return
 		}
-		o.prog.Stop(log.Ssuccessf(fmtAppUpgradeComplete, color.HighlightUserInput(o.name), color.Emphasize(deploy.LatestAppTemplateVersion)))
+		log.Successf(fmtAppUpgradeComplete, color.HighlightUserInput(o.name), color.Emphasize(deploy.LatestAppTemplateVersion))
 	}()
 	err = o.upgradeApplication(app, version, deploy.LatestAppTemplateVersion)
 	if err != nil {
