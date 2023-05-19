@@ -81,8 +81,8 @@ Resources:
     Type: AWS::CloudFront::OriginAccessControl
     Properties:
       OriginAccessControlConfig:
-        Description: Access control for static s3 origin
-        Name: !Sub 'copilot-${AppName}-${EnvName}-${WorkloadName}-origin-access-control'
+        Description: !Sub 'Access control for static s3 origin for ${AppName}-${EnvName}-${WorkloadName}'
+        Name: my-app-my-env-static
         OriginAccessControlOriginType: s3
         SigningBehavior: always
         SigningProtocol: sigv4
@@ -110,10 +110,10 @@ Resources:
         DefaultCacheBehavior:
           Compress: true
           AllowedMethods: ["GET", "HEAD"]
-          ViewerProtocolPolicy: allow-all
           FunctionAssociations:
             - EventType: viewer-request
               FunctionARN: !GetAtt CloudFrontViewerRequestRewriteFunction.FunctionARN
+          ViewerProtocolPolicy: redirect-to-https
           CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6 # See https://go.aws/3bJid3k
           TargetOriginId: !Sub 'copilot-${AppName}-${EnvName}-${WorkloadName}'
         Enabled: true
