@@ -496,18 +496,34 @@ func (o *initSvcOpts) askStaticSite() error {
 	var sources []string
 	var err error
 	if o.wsPendingCreation {
-		sources, err = selector.AskCustomPaths(o.prompt, fmt.Sprintf(fmtStaticSiteInitDirFilePathPrompt, color.HighlightUserInput(o.name)), staticSiteInitDirFilePathHelpPrompt,
-			func(v interface{}) error {
-				return validatePath(o.fs, v)
-			})
-		if err != nil {
-			return err
-		}
+		sources, err = selector.AskCustomPaths(
+			o.prompt,
+			fmt.Sprintf(fmtStaticSiteInitDirFilePathPrompt, color.HighlightUserInput(o.name)),
+			staticSiteInitDirFilePathHelpPrompt,
+			validateNonEmpty, // When the workspace is absent, we skip the validation and leave it to `svc deploy`.
+		)
 	} else {
-		sources, err = o.askSource()
-		if err != nil {
-			return err
-		}
+		root := o.wsRootGetter.ProjectRoot()
+		sources, err = o.sourceSel.StaticSources(
+			fmt.Sprintf(fmtStaticSiteInitDirFilePrompt, color.HighlightUserInput(o.name)),
+			staticSiteInitDirFileHelpPrompt,
+			fmt.Sprintf(fmtStaticSiteInitDirFilePathPrompt, color.HighlightUserInput(o.name)),
+			staticSiteInitDirFilePathHelpPrompt,
+			func(val interface{}) error {
+				path, ok := val.(string)
+				if !ok {
+					return errValueNotAString
+				}
+				_, err := o.fs.Stat(filepath.Join(root, path))
+				if err != nil {
+					return fmt.Errorf("source %q must be a valid path relative to the workspace %q: %w", path, root, err)
+				}
+				return nil
+			},
+		)
+	}
+	if err != nil {
+		return err
 	}
 	if o.staticAssets, err = o.convertStringsToAssets(sources); err != nil {
 		return fmt.Errorf("convert source paths to asset objects: %w", err)
@@ -581,22 +597,6 @@ func (o *initSvcOpts) askImage() error {
 	}
 	o.image = image
 	return nil
-}
-
-func (o *initSvcOpts) askSource() ([]string, error) {
-	sources, err := o.sourceSel.StaticSources(
-		fmt.Sprintf(fmtStaticSiteInitDirFilePrompt, color.HighlightUserInput(o.name)),
-		staticSiteInitDirFileHelpPrompt,
-		fmt.Sprintf(fmtStaticSiteInitDirFilePathPrompt, color.HighlightUserInput(o.name)),
-		staticSiteInitDirFilePathHelpPrompt,
-		func(v interface{}) error {
-			return validatePath(o.fs, v)
-		},
-	)
-	if err != nil {
-		return nil, fmt.Errorf("select local directory or file: %w", err)
-	}
-	return sources, nil
 }
 
 func (o *initSvcOpts) manifestAlreadyExists() (bool, error) {

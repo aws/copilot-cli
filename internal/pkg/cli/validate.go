@@ -332,6 +332,17 @@ func validatePath(fs afero.Fs, val interface{}) error {
 	return nil
 }
 
+func validateNonEmpty(val interface{}) error {
+	path, ok := val.(string)
+	if !ok {
+		return errValueNotAString
+	}
+	if path == "" {
+		return errValueEmpty
+	}
+	return nil
+}
+
 type validateStorageTypeOpts struct {
 	ws           manifestReader
 	workloadName string
