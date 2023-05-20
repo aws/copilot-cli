@@ -807,28 +807,21 @@ func validateWorkspaceApp(wsApp, inputApp string, store store) error {
 
 func (o initSvcOpts) convertStringsToAssets(sources []string) ([]manifest.FileUpload, error) {
 	assets := make([]manifest.FileUpload, len(sources))
-	if o.wsPendingCreation {
-		for i, source := range sources {
-			info, err := o.fs.Stat(source)
-			if err != nil {
-				return nil, fmt.Errorf("source %q must be a valid path: %w", source, err)
-			}
-			assets[i] = manifest.FileUpload{
-				Source:    source,
-				Recursive: info.IsDir(),
-			}
-		}
-		return assets, nil
+	var root string
+	if !o.wsPendingCreation {
+		root = o.wsRootGetter.ProjectRoot()
 	}
-	projectRoot := o.wsRootGetter.ProjectRoot()
 	for i, source := range sources {
-		info, err := o.fs.Stat(filepath.Join(projectRoot, source))
-		if err != nil {
-			return nil, fmt.Errorf("source %q must be a valid path relative to the workspace %q: %w", source, projectRoot, err)
+		info, err := o.fs.Stat(filepath.Join(root, source))
+		var recursive bool
+		if err == nil && info.IsDir() {
+			// Swallow the error at this point, because the path would have been validated during Ask, or will
+			// be validated during deploy.
+			recursive = true
 		}
 		assets[i] = manifest.FileUpload{
 			Source:    source,
-			Recursive: info.IsDir(),
+			Recursive: recursive,
 		}
 	}
 	return assets, nil
