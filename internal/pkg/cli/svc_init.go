@@ -272,7 +272,9 @@ func (o *initSvcOpts) Validate() error {
 		if o.wkldType != manifestinfo.StaticSiteType {
 			return fmt.Errorf("'--%s' must be specified with '--%s %q'", sourcesFlag, typeFlag, manifestinfo.StaticSiteType)
 		}
-		// Path validation against fs happens during conversion.
+		if err := o.validateSourcePaths(o.sourcePaths); err != nil {
+			return err
+		}
 		assets, err := o.convertStringsToAssets(o.sourcePaths)
 		if err != nil {
 			return fmt.Errorf("convert source strings to objects: %w", err)
@@ -284,6 +286,22 @@ func (o *initSvcOpts) Validate() error {
 	}
 	if err := o.validateIngressType(); err != nil {
 		return err
+	}
+	return nil
+}
+
+func (o *initSvcOpts) validateSourcePaths(sources []string) error {
+	if o.wsPendingCreation {
+		// This can happen during `copilot init`, that we have to `Validate` before there is a workspace.
+		// In this case, we skip the validation for path, and let `svc deploy` handles the validation.
+		return nil
+	}
+	root := o.wsRootGetter.ProjectRoot()
+	for _, source := range sources {
+		_, err := o.fs.Stat(filepath.Join(root, source))
+		if err != nil {
+			return fmt.Errorf("source %q must be a valid path relative to the workspace %q: %w", source, root, err)
+		}
 	}
 	return nil
 }
@@ -815,7 +833,7 @@ func (o initSvcOpts) convertStringsToAssets(sources []string) ([]manifest.FileUp
 		info, err := o.fs.Stat(filepath.Join(root, source))
 		var recursive bool
 		if err == nil && info.IsDir() {
-			// Swallow the error at this point, because the path would have been validated during Ask, or will
+			// Swallow the error at this point, because the path would have been validated during Validate or Ask, or will
 			// be validated during deploy.
 			recursive = true
 		}

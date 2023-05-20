@@ -149,7 +149,7 @@ func TestSvcInitOpts_Validate(t *testing.T) {
 				m.mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{}, nil)
 				m.mockWSRootGetter.EXPECT().ProjectRoot().Return("mockRoot")
 			},
-			wantedErr: errors.New(`convert source strings to objects: source "non-existent path" must be a valid path relative to the workspace "mockRoot": open mockRoot/non-existent path: file does not exist`),
+			wantedErr: errors.New(`source "non-existent path" must be a valid path relative to the workspace "mockRoot": open mockRoot/non-existent path: file does not exist`),
 		},
 		"valid flags": {
 			inSvcName:        "frontend",
