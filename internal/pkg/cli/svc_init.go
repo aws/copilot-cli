@@ -164,6 +164,7 @@ type initSvcOpts struct {
 	df                  dockerfileParser
 	manifestExists      bool
 	additionalFoundPort uint16 // For logging a personalized recommended action with multiple ports.
+	wsRoot              string
 
 	// Init a Dockerfile parser using fs and input path
 	dockerfile func(string) dockerfileParser
@@ -218,6 +219,7 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 		wsRootGetter: ws,
 		dockerEngine: dockerengine.New(exec.NewCmd()),
 		wsAppName:    tryReadingAppName(),
+		wsRoot:       ws.ProjectRoot(),
 	}
 	opts.dockerfile = func(path string) dockerfileParser {
 		if opts.df != nil {
@@ -296,11 +298,10 @@ func (o *initSvcOpts) validateSourcePaths(sources []string) error {
 		// In this case, we skip the validation for path, and let `svc deploy` handles the validation.
 		return nil
 	}
-	root := o.wsRootGetter.ProjectRoot()
 	for _, source := range sources {
-		_, err := o.fs.Stat(filepath.Join(root, source))
+		_, err := o.fs.Stat(filepath.Join(o.wsRoot, source))
 		if err != nil {
-			return fmt.Errorf("source %q must be a valid path relative to the workspace %q: %w", source, root, err)
+			return fmt.Errorf("source %q must be a valid path relative to the workspace %q: %w", source, o.wsRoot, err)
 		}
 	}
 	return nil
@@ -503,7 +504,6 @@ func (o *initSvcOpts) askStaticSite() error {
 			validateNonEmpty, // When the workspace is absent, we skip the validation and leave it to `svc deploy`.
 		)
 	} else {
-		root := o.wsRootGetter.ProjectRoot()
 		sources, err = o.sourceSel.StaticSources(
 			fmt.Sprintf(fmtStaticSiteInitDirFilePrompt, color.HighlightUserInput(o.name)),
 			staticSiteInitDirFileHelpPrompt,
@@ -514,9 +514,9 @@ func (o *initSvcOpts) askStaticSite() error {
 				if !ok {
 					return errValueNotAString
 				}
-				_, err := o.fs.Stat(filepath.Join(root, path))
+				_, err := o.fs.Stat(filepath.Join(o.wsRoot, path))
 				if err != nil {
-					return fmt.Errorf("source %q must be a valid path relative to the workspace %q: %w", path, root, err)
+					return fmt.Errorf("source %q must be a valid path relative to the workspace %q: %w", path, o.wsRoot, err)
 				}
 				return nil
 			},
@@ -827,7 +827,7 @@ func (o initSvcOpts) convertStringsToAssets(sources []string) ([]manifest.FileUp
 	assets := make([]manifest.FileUpload, len(sources))
 	var root string
 	if !o.wsPendingCreation {
-		root = o.wsRootGetter.ProjectRoot()
+		root = o.wsRoot
 	}
 	for i, source := range sources {
 		info, err := o.fs.Stat(filepath.Join(root, source))
