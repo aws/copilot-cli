@@ -491,7 +491,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 				}, "frontend")
 			},
 		},
-		"writes Static Site manifest, and creates repositories successfully": {
+		"writes Static Site manifest": {
 			inSvcType: manifestinfo.StaticSiteType,
 			inAppName: "app",
 			inSvcName: "static",
