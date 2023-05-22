@@ -760,7 +760,16 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 				Union: manifest.BasicToUnion[string, manifest.HTTPHealthCheckArgs]("path"),
 			},
 			wantedOpts: template.HTTPHealthCheckOpts{
-				HealthCheckPath: "path",
+				HealthCheckPath: "/path",
+				GracePeriod:     60,
+			},
+		},
+		"path behaves correctly with leading /": {
+			input: manifest.HealthCheckArgsOrString{
+				Union: manifest.BasicToUnion[string, manifest.HTTPHealthCheckArgs]("/path"),
+			},
+			wantedOpts: template.HTTPHealthCheckOpts{
+				HealthCheckPath: "/path",
 				GracePeriod:     60,
 			},
 		},
