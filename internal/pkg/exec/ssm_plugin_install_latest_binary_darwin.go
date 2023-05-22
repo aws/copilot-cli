@@ -10,10 +10,6 @@ import (
 	"path/filepath"
 )
 
-const (
-	ssmPluginBinaryURL = "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/mac/sessionmanager-bundle.zip"
-)
-
 // InstallLatestBinary installs the latest ssm plugin.
 func (s SSMPluginCommand) InstallLatestBinary() error {
 	if s.tempDir == "" {
