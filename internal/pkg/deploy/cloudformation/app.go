@@ -76,7 +76,6 @@ func (cf CloudFormation) UpgradeApplication(in *deploy.CreateAppInput) error {
 		if !errors.As(err, &empty) {
 			return fmt.Errorf("upgrade stack %q: %w", appConfig.StackName(), err)
 		}
-		log.Infof("No changes for %s.\n", appConfig.StackName())
 	}
 	return cf.upgradeAppStackSet(appConfig)
 }
