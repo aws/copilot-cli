@@ -188,7 +188,6 @@ func Test_App_Infrastructure(t *testing.T) {
 		err = deployer.AddServiceToApp(
 			&app,
 			"mysvc",
-			true,
 		)
 
 		require.NoError(t, err)
@@ -197,7 +196,6 @@ func Test_App_Infrastructure(t *testing.T) {
 		err = deployer.AddServiceToApp(
 			&app,
 			"mysvc-frontend",
-			true,
 		)
 
 		require.NoError(t, err)

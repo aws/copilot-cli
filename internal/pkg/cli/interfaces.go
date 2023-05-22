@@ -395,8 +395,8 @@ type pipelineDeployer interface {
 
 type appDeployer interface {
 	DeployApp(in *deploy.CreateAppInput) error
-	AddServiceToApp(app *config.Application, svcName string, createECR bool) error
-	AddJobToApp(app *config.Application, jobName string, createECR bool) error
+	AddServiceToApp(app *config.Application, svcName string, opts ...cloudformation.AddWorkloadToAppOpt) error
+	AddJobToApp(app *config.Application, jobName string, opts ...cloudformation.AddWorkloadToAppOpt) error
 	AddEnvToApp(opts *cloudformation.AddEnvToAppOpts) error
 	DelegateDNSPermissions(app *config.Application, accountID string) error
 	DeleteApp(name string) error

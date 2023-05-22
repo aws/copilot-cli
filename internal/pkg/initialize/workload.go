@@ -12,6 +12,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
@@ -37,8 +38,8 @@ type Store interface {
 
 // WorkloadAdder contains the methods needed to add jobs and services to an existing application.
 type WorkloadAdder interface {
-	AddJobToApp(app *config.Application, jobName string, createECR bool) error
-	AddServiceToApp(app *config.Application, serviceName string, createECR bool) error
+	AddJobToApp(app *config.Application, jobName string, opts ...cloudformation.AddWorkloadToAppOpt) error
+	AddServiceToApp(app *config.Application, serviceName string, opts ...cloudformation.AddWorkloadToAppOpt) error
 }
 
 // Workspace contains the methods needed to manipulate a Copilot workspace.
@@ -109,11 +110,11 @@ func (w *WorkloadInitializer) addWlToApp(app *config.Application, props Workload
 	switch wlType {
 	case svcWlType:
 		if props.Type == manifestinfo.StaticSiteType {
-			return w.Deployer.AddServiceToApp(app, props.Name, false)
+			return w.Deployer.AddServiceToApp(app, props.Name, cloudformation.AddWorkloadToAppOptWithoutECR)
 		}
-		return w.Deployer.AddServiceToApp(app, props.Name, true)
+		return w.Deployer.AddServiceToApp(app, props.Name)
 	case jobWlType:
-		return w.Deployer.AddJobToApp(app, props.Name, true)
+		return w.Deployer.AddJobToApp(app, props.Name)
 	default:
 		return fmt.Errorf(fmtErrUnrecognizedWlType, wlType)
 	}

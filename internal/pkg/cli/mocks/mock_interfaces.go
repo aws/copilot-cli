@@ -4174,31 +4174,41 @@ func (mr *MockappDeployerMockRecorder) AddEnvToApp(opts interface{}) *gomock.Cal
 }
 
 // AddJobToApp mocks base method.
-func (m *MockappDeployer) AddJobToApp(app *config.Application, jobName string, createECR bool) error {
+func (m *MockappDeployer) AddJobToApp(app *config.Application, jobName string, opts ...cloudformation0.AddWorkloadToAppOpt) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddJobToApp", app, jobName, createECR)
+	varargs := []interface{}{app, jobName}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "AddJobToApp", varargs...)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // AddJobToApp indicates an expected call of AddJobToApp.
-func (mr *MockappDeployerMockRecorder) AddJobToApp(app, jobName, createECR interface{}) *gomock.Call {
+func (mr *MockappDeployerMockRecorder) AddJobToApp(app, jobName interface{}, opts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddJobToApp", reflect.TypeOf((*MockappDeployer)(nil).AddJobToApp), app, jobName, createECR)
+	varargs := append([]interface{}{app, jobName}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddJobToApp", reflect.TypeOf((*MockappDeployer)(nil).AddJobToApp), varargs...)
 }
 
 // AddServiceToApp mocks base method.
-func (m *MockappDeployer) AddServiceToApp(app *config.Application, svcName string, createECR bool) error {
+func (m *MockappDeployer) AddServiceToApp(app *config.Application, svcName string, opts ...cloudformation0.AddWorkloadToAppOpt) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddServiceToApp", app, svcName, createECR)
+	varargs := []interface{}{app, svcName}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "AddServiceToApp", varargs...)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // AddServiceToApp indicates an expected call of AddServiceToApp.
-func (mr *MockappDeployerMockRecorder) AddServiceToApp(app, svcName, createECR interface{}) *gomock.Call {
+func (mr *MockappDeployerMockRecorder) AddServiceToApp(app, svcName interface{}, opts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddServiceToApp", reflect.TypeOf((*MockappDeployer)(nil).AddServiceToApp), app, svcName, createECR)
+	varargs := append([]interface{}{app, svcName}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddServiceToApp", reflect.TypeOf((*MockappDeployer)(nil).AddServiceToApp), varargs...)
 }
 
 // DelegateDNSPermissions mocks base method.
@@ -4533,17 +4543,22 @@ func (mr *MockdeployerMockRecorder) AddEnvToApp(opts interface{}) *gomock.Call {
 }
 
 // AddJobToApp mocks base method.
-func (m *Mockdeployer) AddJobToApp(app *config.Application, jobName string, createECR bool) error {
+func (m *Mockdeployer) AddJobToApp(app *config.Application, jobName string, opts ...cloudformation0.AddWorkloadToAppOpt) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddJobToApp", app, jobName, createECR)
+	varargs := []interface{}{app, jobName}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "AddJobToApp", varargs...)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // AddJobToApp indicates an expected call of AddJobToApp.
-func (mr *MockdeployerMockRecorder) AddJobToApp(app, jobName, createECR interface{}) *gomock.Call {
+func (mr *MockdeployerMockRecorder) AddJobToApp(app, jobName interface{}, opts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddJobToApp", reflect.TypeOf((*Mockdeployer)(nil).AddJobToApp), app, jobName, createECR)
+	varargs := append([]interface{}{app, jobName}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddJobToApp", reflect.TypeOf((*Mockdeployer)(nil).AddJobToApp), varargs...)
 }
 
 // AddPipelineResourcesToApp mocks base method.
@@ -4561,17 +4576,22 @@ func (mr *MockdeployerMockRecorder) AddPipelineResourcesToApp(app, region interf
 }
 
 // AddServiceToApp mocks base method.
-func (m *Mockdeployer) AddServiceToApp(app *config.Application, svcName string, createECR bool) error {
+func (m *Mockdeployer) AddServiceToApp(app *config.Application, svcName string, opts ...cloudformation0.AddWorkloadToAppOpt) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddServiceToApp", app, svcName, createECR)
+	varargs := []interface{}{app, svcName}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "AddServiceToApp", varargs...)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // AddServiceToApp indicates an expected call of AddServiceToApp.
-func (mr *MockdeployerMockRecorder) AddServiceToApp(app, svcName, createECR interface{}) *gomock.Call {
+func (mr *MockdeployerMockRecorder) AddServiceToApp(app, svcName interface{}, opts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddServiceToApp", reflect.TypeOf((*Mockdeployer)(nil).AddServiceToApp), app, svcName, createECR)
+	varargs := append([]interface{}{app, svcName}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddServiceToApp", reflect.TypeOf((*Mockdeployer)(nil).AddServiceToApp), varargs...)
 }
 
 // CreateAndRenderEnvironment mocks base method.

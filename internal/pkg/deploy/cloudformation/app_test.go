@@ -543,7 +543,7 @@ func TestCloudFormation_AddServiceToApp(t *testing.T) {
 				},
 			}
 
-			got := cf.AddServiceToApp(tc.app, tc.svcName, true)
+			got := cf.AddServiceToApp(tc.app, tc.svcName)
 
 			if tc.want != nil {
 				require.EqualError(t, got, tc.want.Error())

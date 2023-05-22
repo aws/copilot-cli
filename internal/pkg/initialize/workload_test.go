@@ -70,7 +70,7 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 				m.EXPECT().AddJobToApp(&config.Application{
 					Name:      "app",
 					AccountID: "1234",
-				}, "resizer", true)
+				}, "resizer")
 			},
 		},
 		"using existing image": {
@@ -107,7 +107,7 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 				m.EXPECT().AddJobToApp(&config.Application{
 					Name:      "app",
 					AccountID: "1234",
-				}, "resizer", true)
+				}, "resizer")
 			},
 		},
 		"write manifest error": {
@@ -488,7 +488,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 				m.EXPECT().AddServiceToApp(&config.Application{
 					Name:      "app",
 					AccountID: "1234",
-				}, "frontend", true)
+				}, "frontend")
 			},
 		},
 		"writes Static Site manifest, and creates repositories successfully": {
@@ -521,7 +521,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 				m.EXPECT().AddServiceToApp(&config.Application{
 					Name:      "app",
 					AccountID: "1234",
-				}, "static", false)
+				}, "static", gomock.Any())
 			},
 		},
 		"app error": {
@@ -644,7 +644,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 				m.EXPECT().AddServiceToApp(&config.Application{
 					Name:      "app",
 					AccountID: "1234",
-				}, "backend", true)
+				}, "backend")
 			},
 		},
 		"no healthcheck options": {
@@ -685,7 +685,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 				m.EXPECT().AddServiceToApp(&config.Application{
 					Name:      "app",
 					AccountID: "1234",
-				}, "backend", true)
+				}, "backend")
 			},
 		},
 		"default healthcheck options": {
@@ -737,7 +737,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 				m.EXPECT().AddServiceToApp(&config.Application{
 					Name:      "app",
 					AccountID: "1234",
-				}, "backend", true)
+				}, "backend")
 			},
 		},
 		"topic subscriptions enabled": {
@@ -784,7 +784,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 				m.EXPECT().AddServiceToApp(&config.Application{
 					Name:      "app",
 					AccountID: "1234",
-				}, "worker", true)
+				}, "worker")
 			},
 		},
 		"topic subscriptions enabled with default fifo queue": {
@@ -832,7 +832,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 				m.EXPECT().AddServiceToApp(&config.Application{
 					Name:      "app",
 					AccountID: "1234",
-				}, "worker", true)
+				}, "worker")
 			},
 		},
 	}
