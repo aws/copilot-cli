@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package cloudformationtest
 
 import (
@@ -64,7 +67,7 @@ func (d *Double) UpdateAndWait(stack *cfn.Stack) error {
 
 // WaitForUpdate calls the stubbed function.
 func (d *Double) WaitForUpdate(ctx context.Context, stackName string) error {
-	return d.WaitForUpdate(ctx, stackName)
+	return d.WaitForUpdateFn(ctx, stackName)
 }
 
 // Delete calls the stubbed function.
@@ -114,7 +117,7 @@ func (d *Double) Outputs(stack *cfn.Stack) (map[string]string, error) {
 
 // Events calls the stubbed function.
 func (d *Double) Events(stackName string) ([]cfn.StackEvent, error) {
-	return d.Events(stackName)
+	return d.EventsFn(stackName)
 }
 
 // StackResources calls the stubbed function.
