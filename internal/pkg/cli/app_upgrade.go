@@ -19,7 +19,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
-	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/spf13/cobra"
@@ -46,7 +45,6 @@ type appUpgradeOpts struct {
 	appUpgradeVars
 
 	store    store
-	prog     progress
 	route53  domainHostedZoneGetter
 	sel      appSelector
 	identity identityService
@@ -65,7 +63,6 @@ func newAppUpgradeOpts(vars appUpgradeVars) (*appUpgradeOpts, error) {
 		appUpgradeVars: vars,
 		store:          store,
 		identity:       identity.New(sess),
-		prog:           termprogress.NewSpinner(log.DiagnosticWriter),
 		route53:        route53.New(sess),
 		sel:            selector.NewAppEnvSelector(prompt.New(), store),
 		upgrader:       cloudformation.New(sess, cloudformation.WithProgressTracker(os.Stderr)),
