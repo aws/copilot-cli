@@ -69,10 +69,10 @@ func newAppUpgradeOpts(vars appUpgradeVars) (*appUpgradeOpts, error) {
 		route53:        route53.New(sess),
 		sel:            selector.NewAppEnvSelector(prompt.New(), store),
 		upgrader:       cloudformation.New(sess, cloudformation.WithProgressTracker(os.Stderr)),
-		newVersionGetter: func(s string) (versionGetter, error) {
-			d, err := describe.NewAppDescriber(s)
+		newVersionGetter: func(appName string) (versionGetter, error) {
+			d, err := describe.NewAppDescriber(appName)
 			if err != nil {
-				return d, fmt.Errorf("new describer for application %q: %w", s, err)
+				return d, fmt.Errorf("new describer for application %q: %w", appName, err)
 			}
 			return d, nil
 		},
@@ -117,7 +117,7 @@ func (o *appUpgradeOpts) Execute() error {
 	if err != nil {
 		return fmt.Errorf("get application %s: %w", o.name, err)
 	}
-	log.Infof(fmtAppUpgradeStart, color.HighlightUserInput(o.name), color.Emphasize(deploy.LatestAppTemplateVersion), color.Emphasize(deploy.LatestAppTemplateVersion))
+	log.Infof(fmtAppUpgradeStart, color.HighlightUserInput(o.name), color.Emphasize(version), color.Emphasize(deploy.LatestAppTemplateVersion))
 	defer func() {
 		if err != nil {
 			log.Errorf(fmtAppUpgradeFailed, color.HighlightUserInput(o.name), color.Emphasize(deploy.LatestAppTemplateVersion))
