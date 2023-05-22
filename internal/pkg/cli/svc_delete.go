@@ -80,7 +80,7 @@ func newDeleteSvcOpts(vars deleteSvcVars) (*deleteSvcOpts, error) {
 
 	store := config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
 	prompter := prompt.New()
-	return &deleteSvcOpts{
+	opts := &deleteSvcOpts{
 		deleteSvcVars: vars,
 
 		store:   store,
@@ -95,13 +95,14 @@ func newDeleteSvcOpts(vars deleteSvcVars) (*deleteSvcOpts, error) {
 		getECR: func(sess *awssession.Session) imageRemover {
 			return ecr.New(sess)
 		},
-		newSvcCleaner: func(sess *awssession.Session, manifestType string) cleaner {
-			if manifestType == manifestinfo.StaticSiteType {
-				return clean.StaticSite(vars.appName, vars.envName, vars.name, s3.New(sess), awss3.New(sess))
-			}
-			return &clean.NoOp{}
-		},
-	}, nil
+	}
+	opts.newSvcCleaner = func(sess *awssession.Session, manifestType string) cleaner {
+		if manifestType == manifestinfo.StaticSiteType {
+			return clean.StaticSite(opts.appName, opts.envName, opts.name, s3.New(sess), awss3.New(sess))
+		}
+		return &clean.NoOp{}
+	}
+	return opts, nil
 }
 
 // Validate returns an error for any invalid optional flags.
