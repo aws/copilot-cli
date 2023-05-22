@@ -25,10 +25,13 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 )
 
+const basicNameRegex = `^[a-z][a-z0-9\-]+$`
+
+var errBasicNameRegexNotMatched = errors.New("value must have a length of at least 2, start with a letter, contain only lower-case letters, numbers, and hyphens, and have no consecutive or trailing hyphen")
+
 var (
 	errValueEmpty           = errors.New("value must not be empty")
 	errValueTooLong         = errors.New("value must not exceed 255 characters")
-	errValueBadFormat       = errors.New("value must start with a letter, contain only lower-case letters, numbers, and hyphens, and have no consecutive or trailing hyphen")
 	errValueNotAString      = errors.New("value must be a string")
 	errValueReserved        = errors.New("value is reserved")
 	errValueNotAStringSlice = errors.New("value must be a string slice")
@@ -482,7 +485,7 @@ func basicNameValidation(val interface{}) error {
 		return errValueTooLong
 	}
 	if !isCorrectFormat(s) {
-		return errValueBadFormat
+		return errBasicNameRegexNotMatched
 	}
 
 	return nil
@@ -528,7 +531,7 @@ func validateDuration(duration string, min time.Duration) error {
 }
 
 func isCorrectFormat(s string) bool {
-	valid, err := regexp.MatchString(`^[a-z][a-z0-9\-]+$`, s)
+	valid, err := regexp.MatchString(basicNameRegex, s)
 	if err != nil {
 		return false // bubble up error?
 	}

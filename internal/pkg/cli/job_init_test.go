@@ -199,7 +199,7 @@ func TestJobInitOpts_Ask(t *testing.T) {
 		"invalid job name": {
 			inJobType: wantedJobType,
 			inJobName: "1234",
-			wantedErr: fmt.Errorf("job name 1234 is invalid: %s", errValueBadFormat),
+			wantedErr: fmt.Errorf("job name 1234 is invalid: %s", errBasicNameRegexNotMatched),
 		},
 		"error if fail to get job name": {
 			inJobType:        wantedJobType,
