@@ -88,7 +88,7 @@ func TestInitAppOpts_Validate(t *testing.T) {
 			inAppName: "123chicken",
 			mock:      func(m *initAppMocks) {},
 
-			wantedError: errors.New("application name 123chicken is invalid: value must start with a letter, contain only lower-case letters, numbers, and hyphens, and have no consecutive or trailing hyphen"),
+			wantedError: fmt.Errorf("application name 123chicken is invalid: %w", errBasicNameRegexNotMatched),
 		},
 		"errors if application with different domain already exists": {
 			inAppName:    "metrics",

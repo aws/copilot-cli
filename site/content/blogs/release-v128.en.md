@@ -1,5 +1,5 @@
 ---
-title: 'AWS Copilot v1.28: Static Site service type and more!'
+title: 'AWS Copilot v1.28: Static Site service type is here!'
 twitter_title: 'AWS Copilot v1.28'
 image: ''
 image_alt: ''
@@ -7,19 +7,18 @@ image_width: '1051'
 image_height: '747'
 ---
 
-# AWS Copilot v1.28: Static Site service type and more!
+# AWS Copilot v1.28: Static Site service type is here!
 
-Posted On: May 09, 2023
+Posted On: May 23, 2023
 
 The AWS Copilot core team is announcing the Copilot v1.28 release.
 Special thanks to [@interu](https://github.com/interu), [@0xO0O0](https://github.com/0xO0O0), who contributed to this release.
-Our public [сommunity сhat](https://app.gitter.im/#/room/#aws_copilot-cli:gitter.im) is growing and has over 400 people online and over 2.8k stars on [GitHub](http://github.com/aws/copilot-cli/).
+Our public [сommunity сhat](https://app.gitter.im/#/room/#aws_copilot-cli:gitter.im) is growing and has over 400 people online and over 2.9k stars on [GitHub](http://github.com/aws/copilot-cli/).
 Thanks to every one of you who shows love and support for AWS Copilot.
 
 Copilot v1.28 brings several new features and improvements:
 
 - **Static Site service type**: You can now deploy and host static websites with AWS S3. [See detailed section](#Static-Site-service-type).
-- **Config Multiple Container Ports with the `--port` flag**:`Copilot init` and `Copilot svc init` now allows you to configure multiple ports for Load Balanced Service and Backend Service. [See detailed section](#Config-Multiple-Container-Ports-with-the---port-flag).
 - **Container Images Parallel Build**: You can now build main container and sidecar container images in parallel. With parallel build, you can reduce the overall time it takes build and push container images to AWS ECR.
 
 ???+ note "What’s AWS Copilot?"
@@ -82,8 +81,6 @@ The [`copilot deploy`](../docs/commands/deploy.en.md) or [`copilot svc deploy`](
 
 !!! note
     [Server access logging](https://docs.aws.amazon.com/AmazonS3/latest/userguide/ServerLogs.html) for the Static Site S3 bucket is not enabled by default, because object uploading is managed by Copilot.
-
-## Config multiple container ports with the `--port` flag
 
 ## What’s next?
 
