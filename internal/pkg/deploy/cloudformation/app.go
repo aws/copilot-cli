@@ -69,11 +69,12 @@ func (cf CloudFormation) UpgradeApplication(in *deploy.CreateAppInput) error {
 		return fmt.Errorf("get existing application infrastructure stack: %w", err)
 	}
 	in.DNSDelegationAccounts = stack.DNSDelegatedAccountsForStack(appStack.SDK())
+	in.AdditionalTags = toMap(appStack.Tags)
 	appConfig = stack.NewAppStackConfig(in)
 	if err := cf.upgradeAppStack(appConfig); err != nil {
 		var empty *cloudformation.ErrChangeSetEmpty
 		if !errors.As(err, &empty) {
-			return err
+			return fmt.Errorf("upgrade stack %q: %w", appConfig.StackName(), err)
 		}
 		log.Infof("No changes for %s.\n", appConfig.StackName())
 	}
@@ -121,13 +122,6 @@ func (cf CloudFormation) upgradeAppStack(conf *stack.AppStackConfig) error {
 		label := fmt.Sprintf("Proposing infrastructure changes for %s.", s.Name)
 		spinner.Start(label)
 		defer stopSpinner(spinner, err, label)
-
-		// get tags from existing stack
-		descr, err := cf.cfnClient.Describe(s.Name)
-		if err != nil {
-			return "", fmt.Errorf("describe stack %s: %w", s.Name, err)
-		}
-		s.Tags = descr.Tags
 
 		changeSetID, err = cf.cfnClient.Update(s)
 		if err != nil {

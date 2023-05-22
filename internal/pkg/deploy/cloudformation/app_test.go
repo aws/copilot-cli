@@ -14,6 +14,7 @@ import (
 	awscfn "github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/cloudformation/cloudformationiface"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation/cloudformationtest"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation/stackset"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -126,64 +127,114 @@ func TestCloudFormation_UpgradeApplication(t *testing.T) {
 	}{
 		"error if fail to get existing application infrastructure stack": {
 			mockDeployer: func(t *testing.T, ctrl *gomock.Controller) *CloudFormation {
-				m := mocks.NewMockcfnClient(ctrl)
-				m.EXPECT().Describe("phonetool-infrastructure-roles").Return(nil, errors.New("some error"))
-
 				return &CloudFormation{
-					cfnClient: m,
+					cfnClient: &cloudformationtest.Double{
+						DescribeFn: func(string) (*cloudformation.StackDescription, error) {
+							return nil, errors.New("some error")
+						},
+					},
 				}
 			},
 			wantedErr: fmt.Errorf("get existing application infrastructure stack: some error"),
 		},
-		"error if fail to describe app stack": {
-			mockDeployer: func(t *testing.T, ctrl *gomock.Controller) *CloudFormation {
-				m := mocks.NewMockcfnClient(ctrl)
-				m.EXPECT().Describe("phonetool-infrastructure-roles").Return(&cloudformation.StackDescription{}, nil)
-				m.EXPECT().Describe("phonetool-infrastructure-roles").Return(nil, errors.New("some error"))
-
-				return &CloudFormation{
-					cfnClient: m,
-				}
-			},
-			wantedErr: fmt.Errorf("describe stack phonetool-infrastructure-roles: some error"),
-		},
 		"error if fail to update app stack": {
 			mockDeployer: func(t *testing.T, ctrl *gomock.Controller) *CloudFormation {
-				m := mocks.NewMockcfnClient(ctrl)
-				m.EXPECT().Describe("phonetool-infrastructure-roles").Return(&cloudformation.StackDescription{}, nil).Times(2)
-				m.EXPECT().UpdateAndWait(gomock.Any()).Return(errors.New("some error"))
 				return &CloudFormation{
-					cfnClient: m,
+					cfnClient: &cloudformationtest.Double{
+						DescribeFn: func(string) (*cloudformation.StackDescription, error) {
+							return &cloudformation.StackDescription{}, nil
+						},
+						UpdateFn: func(*cloudformation.Stack) (string, error) {
+							return "", fmt.Errorf("some error")
+						},
+					},
 					renderStackSet: func(input renderStackSetInput) error {
 						return nil
 					},
 				}
 			},
-			wantedErr: fmt.Errorf("update and wait for stack phonetool-infrastructure-roles: some error"),
+			wantedErr: fmt.Errorf(`upgrade stack "phonetool-infrastructure-roles": some error`),
+		},
+		// TODO test tags manually
+		"error if fail to describe app change set": {
+			mockDeployer: func(t *testing.T, ctrl *gomock.Controller) *CloudFormation {
+				return &CloudFormation{
+					cfnClient: &cloudformationtest.Double{
+						DescribeFn: func(string) (*cloudformation.StackDescription, error) {
+							return &cloudformation.StackDescription{}, nil
+						},
+						UpdateFn: func(*cloudformation.Stack) (string, error) {
+							return "", nil
+						},
+						DescribeChangeSetFn: func(changeSetID, stackName string) (*cloudformation.ChangeSetDescription, error) {
+							return nil, errors.New("some error")
+						},
+					},
+				}
+			},
+			wantedErr: fmt.Errorf(`upgrade stack "phonetool-infrastructure-roles": some error`),
+		},
+		"error if fail to get app change set template": {
+			mockDeployer: func(t *testing.T, ctrl *gomock.Controller) *CloudFormation {
+				return &CloudFormation{
+					cfnClient: &cloudformationtest.Double{
+						DescribeFn: func(string) (*cloudformation.StackDescription, error) {
+							return &cloudformation.StackDescription{}, nil
+						},
+						UpdateFn: func(*cloudformation.Stack) (string, error) {
+							return "", nil
+						},
+						DescribeChangeSetFn: func(changeSetID, stackName string) (*cloudformation.ChangeSetDescription, error) {
+							return &cloudformation.ChangeSetDescription{}, nil
+						},
+						TemplateBodyFromChangeSetFn: func(changeSetID, stackName string) (string, error) {
+							return "", errors.New("some error")
+						},
+					},
+				}
+			},
+			wantedErr: fmt.Errorf(`upgrade stack "phonetool-infrastructure-roles": some error`),
 		},
 		"error if fail to wait until stack set last operation complete": {
 			mockDeployer: func(t *testing.T, ctrl *gomock.Controller) *CloudFormation {
-				mockCFNClient := mocks.NewMockcfnClient(ctrl)
-				mockCFNClient.EXPECT().Describe("phonetool-infrastructure-roles").Return(&cloudformation.StackDescription{}, nil).Times(2)
-				mockCFNClient.EXPECT().UpdateAndWait(gomock.Any()).Return(nil)
-
 				mockAppStackSet := mocks.NewMockstackSetClient(ctrl)
-				mockAppStackSet.EXPECT().WaitForStackSetLastOperationComplete("phonetool-infrastructure").
-					Return(errors.New("some error"))
+				mockAppStackSet.EXPECT().WaitForStackSetLastOperationComplete("phonetool-infrastructure").Return(errors.New("some error"))
 
 				return &CloudFormation{
-					cfnClient:   mockCFNClient,
+					console: mockFileWriter{Writer: &strings.Builder{}},
+					cfnClient: &cloudformationtest.Double{
+						DescribeFn: func(string) (*cloudformation.StackDescription, error) {
+							return &cloudformation.StackDescription{}, nil
+						},
+						UpdateFn: func(*cloudformation.Stack) (string, error) {
+							return "", nil
+						},
+						DescribeChangeSetFn: func(changeSetID, stackName string) (*cloudformation.ChangeSetDescription, error) {
+							return &cloudformation.ChangeSetDescription{}, nil
+						},
+						TemplateBodyFromChangeSetFn: func(changeSetID, stackName string) (string, error) {
+							return ``, nil
+						},
+						DescribeStackEventsFn: func(input *awscfn.DescribeStackEventsInput) (*awscfn.DescribeStackEventsOutput, error) {
+							// just finish the renderer on the first Describe call
+							return &awscfn.DescribeStackEventsOutput{
+								StackEvents: []*awscfn.StackEvent{
+									{
+										Timestamp:         aws.Time(time.Now().Add(1 * time.Hour)),
+										LogicalResourceId: aws.String("phonetool-infrastructure-roles"),
+										ResourceStatus:    aws.String(awscfn.StackStatusUpdateComplete),
+									},
+								},
+							}, nil
+						},
+					},
 					appStackSet: mockAppStackSet,
 				}
 			},
-			wantedErr: fmt.Errorf("wait for stack set phonetool-infrastructure last operation complete: some error"),
+			wantedErr: fmt.Errorf(`wait for stack set phonetool-infrastructure last operation complete: some error`),
 		},
 		"success": {
 			mockDeployer: func(t *testing.T, ctrl *gomock.Controller) *CloudFormation {
-				mockCFNClient := mocks.NewMockcfnClient(ctrl)
-				mockCFNClient.EXPECT().Describe("phonetool-infrastructure-roles").Return(&cloudformation.StackDescription{}, nil).Times(2)
-				mockCFNClient.EXPECT().UpdateAndWait(gomock.Any()).Return(nil)
-
 				mockAppStackSet := mocks.NewMockstackSetClient(ctrl)
 				mockAppStackSet.EXPECT().WaitForStackSetLastOperationComplete("phonetool-infrastructure").Return(nil)
 				mockAppStackSet.EXPECT().Describe("phonetool-infrastructure").Return(stackset.Description{}, nil)
@@ -191,7 +242,32 @@ func TestCloudFormation_UpgradeApplication(t *testing.T) {
 					Return("", nil)
 
 				return &CloudFormation{
-					cfnClient:   mockCFNClient,
+					console: mockFileWriter{Writer: &strings.Builder{}},
+					cfnClient: &cloudformationtest.Double{
+						DescribeFn: func(string) (*cloudformation.StackDescription, error) {
+							return &cloudformation.StackDescription{}, nil
+						},
+						UpdateFn: func(*cloudformation.Stack) (string, error) {
+							return "", nil
+						},
+						DescribeChangeSetFn: func(changeSetID, stackName string) (*cloudformation.ChangeSetDescription, error) {
+							return &cloudformation.ChangeSetDescription{}, nil
+						},
+						TemplateBodyFromChangeSetFn: func(changeSetID, stackName string) (string, error) {
+							return ``, nil
+						},
+						DescribeStackEventsFn: func(input *awscfn.DescribeStackEventsInput) (*awscfn.DescribeStackEventsOutput, error) {
+							return &awscfn.DescribeStackEventsOutput{
+								StackEvents: []*awscfn.StackEvent{
+									{
+										Timestamp:         aws.Time(time.Now().Add(1 * time.Hour)),
+										LogicalResourceId: aws.String("phonetool-infrastructure-roles"),
+										ResourceStatus:    aws.String(awscfn.StackStatusUpdateComplete),
+									},
+								},
+							}, nil
+						},
+					},
 					appStackSet: mockAppStackSet,
 					region:      "us-west-2",
 					renderStackSet: func(input renderStackSetInput) error {
@@ -203,14 +279,6 @@ func TestCloudFormation_UpgradeApplication(t *testing.T) {
 		},
 		"success with multiple tries and waitings": {
 			mockDeployer: func(t *testing.T, ctrl *gomock.Controller) *CloudFormation {
-				mockCFNClient := mocks.NewMockcfnClient(ctrl)
-				mockCFNClient.EXPECT().Describe("phonetool-infrastructure-roles").Return(&cloudformation.StackDescription{
-					StackStatus: aws.String(awscfn.StackStatusCreateInProgress),
-				}, nil).Times(2)
-				mockCFNClient.EXPECT().WaitForUpdate(gomock.Any(), "phonetool-infrastructure-roles").Return(nil)
-				mockCFNClient.EXPECT().Describe("phonetool-infrastructure-roles").Return(&cloudformation.StackDescription{}, nil)
-				mockCFNClient.EXPECT().UpdateAndWait(gomock.Any()).Return(nil)
-
 				mockAppStackSet := mocks.NewMockstackSetClient(ctrl)
 				mockAppStackSet.EXPECT().WaitForStackSetLastOperationComplete("phonetool-infrastructure").Return(nil)
 				mockAppStackSet.EXPECT().Describe("phonetool-infrastructure").Return(stackset.Description{}, nil)
@@ -222,7 +290,32 @@ func TestCloudFormation_UpgradeApplication(t *testing.T) {
 					Return("", nil)
 
 				return &CloudFormation{
-					cfnClient:   mockCFNClient,
+					console: mockFileWriter{Writer: &strings.Builder{}},
+					cfnClient: &cloudformationtest.Double{
+						DescribeFn: func(string) (*cloudformation.StackDescription, error) {
+							return &cloudformation.StackDescription{}, nil
+						},
+						UpdateFn: func(*cloudformation.Stack) (string, error) {
+							return "", nil
+						},
+						DescribeChangeSetFn: func(changeSetID, stackName string) (*cloudformation.ChangeSetDescription, error) {
+							return &cloudformation.ChangeSetDescription{}, nil
+						},
+						TemplateBodyFromChangeSetFn: func(changeSetID, stackName string) (string, error) {
+							return ``, nil
+						},
+						DescribeStackEventsFn: func(input *awscfn.DescribeStackEventsInput) (*awscfn.DescribeStackEventsOutput, error) {
+							return &awscfn.DescribeStackEventsOutput{
+								StackEvents: []*awscfn.StackEvent{
+									{
+										Timestamp:         aws.Time(time.Now().Add(1 * time.Hour)),
+										LogicalResourceId: aws.String("phonetool-infrastructure-roles"),
+										ResourceStatus:    aws.String(awscfn.StackStatusUpdateComplete),
+									},
+								},
+							}, nil
+						},
+					},
 					appStackSet: mockAppStackSet,
 					region:      "us-west-2",
 					renderStackSet: func(input renderStackSetInput) error {
