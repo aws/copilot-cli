@@ -189,8 +189,7 @@ func (d *staticSiteDeployer) validateSources() error {
 	return nil
 }
 
-// convertSources transforms the source's path relative to the project root into the full path.
-// and validate that they exist.
+// convertSources transforms the source's path relative to the project root into the absolute path.
 func (d *staticSiteDeployer) convertSources() ([]manifest.FileUpload, error) {
 	convertedFileUploads := make([]manifest.FileUpload, len(d.staticSiteMft.FileUploads))
 	for i, upload := range d.staticSiteMft.FileUploads {
