@@ -295,7 +295,7 @@ func (o *initSvcOpts) Validate() error {
 func (o *initSvcOpts) validateSourcePaths(sources []string) error {
 	if o.wsPendingCreation {
 		// This can happen during `copilot init`, that we have to `Validate` before there is a workspace.
-		// In this case, we skip the validation for path, and let `svc deploy` handles the validation.
+		// In this case, we skip the validation for path, and let `svc deploy` handle the validation.
 		return nil
 	}
 	for _, source := range sources {
