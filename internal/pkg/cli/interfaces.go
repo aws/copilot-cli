@@ -231,10 +231,6 @@ type wsFileDeleter interface {
 	DeleteWorkspaceFile() error
 }
 
-type wsRootGetter interface {
-	ProjectRoot() string
-}
-
 type manifestReader interface {
 	ReadWorkloadManifest(name string) (workspace.WorkloadManifest, error)
 }

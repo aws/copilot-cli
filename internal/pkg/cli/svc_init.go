@@ -156,7 +156,6 @@ type initSvcOpts struct {
 	staticAssets []manifest.FileUpload
 
 	// For workspace validation.
-	wsRootGetter      wsRootGetter
 	wsAppName         string
 	wsPendingCreation bool
 
@@ -216,7 +215,6 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 		topicSel:     snsSel,
 		sourceSel:    sourceSel,
 		mftReader:    ws,
-		wsRootGetter: ws,
 		dockerEngine: dockerengine.New(exec.NewCmd()),
 		wsAppName:    tryReadingAppName(),
 		wsRoot:       ws.ProjectRoot(),
