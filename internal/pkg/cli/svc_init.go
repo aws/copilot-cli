@@ -499,7 +499,7 @@ func (o *initSvcOpts) askStaticSite() error {
 			o.prompt,
 			fmt.Sprintf(fmtStaticSiteInitDirFilePathPrompt, color.HighlightUserInput(o.name)),
 			staticSiteInitDirFilePathHelpPrompt,
-			validateNonEmpty, // When the workspace is absent, we skip the validation and leave it to `svc deploy`.
+			validateNonEmptyString, // When the workspace is absent, we skip the validation and leave it to `svc deploy`.
 		)
 	} else {
 		sources, err = o.sourceSel.StaticSources(

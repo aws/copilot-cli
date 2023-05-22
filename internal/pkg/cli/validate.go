@@ -332,7 +332,7 @@ func validatePath(fs afero.Fs, val interface{}) error {
 	return nil
 }
 
-func validateNonEmpty(val interface{}) error {
+func validateNonEmptyString(val interface{}) error {
 	path, ok := val.(string)
 	if !ok {
 		return errValueNotAString
