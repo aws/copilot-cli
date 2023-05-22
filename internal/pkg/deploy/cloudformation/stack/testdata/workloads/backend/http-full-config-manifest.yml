@@ -2,7 +2,7 @@ name: http-full-config
 type: Backend Service
 
 http:
-  path: "http-full-config-path"
+  path: "/http-full-config-path"
   deregistration_delay: 5s
   stickiness: true
   allowed_source_ips: ["10.24.34.0/23"]
@@ -18,7 +18,7 @@ http:
   target_container: http-full-config
   target_port: 8081
   additional_rules:
-    - path: "admin"
+    - path: "/admin"
       target_port: 8080
 
 network:

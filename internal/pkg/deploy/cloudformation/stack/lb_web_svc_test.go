@@ -319,7 +319,7 @@ Outputs:
 			ALBListener: &template.ALBListener{
 				Rules: []template.ALBListenerRule{
 					{
-						Path:            "frontend",
+						Path:            "/frontend",
 						TargetContainer: "frontend",
 						TargetPort:      "80",
 						Aliases: []string{
