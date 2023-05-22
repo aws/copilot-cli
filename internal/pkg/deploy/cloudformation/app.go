@@ -104,19 +104,15 @@ func (cf CloudFormation) upgradeAppStackSet(config *stack.AppStackConfig) error 
 	}
 }
 
-func newRenderAppStackInput(cfnStack *cloudformation.Stack) *executeAndRenderChangeSetInput {
-	return &executeAndRenderChangeSetInput{
-		stackName:        cfnStack.Name,
-		stackDescription: fmt.Sprintf("Creating the infrastructure for the %s app.", cfnStack.Name),
-	}
-}
-
 func (cf CloudFormation) upgradeAppStack(conf *stack.AppStackConfig) error {
 	s, err := toStack(conf)
 	if err != nil {
 		return err
 	}
-	in := newRenderAppStackInput(s)
+	in := &executeAndRenderChangeSetInput{
+		stackName:        s.Name,
+		stackDescription: fmt.Sprintf("Creating the infrastructure for the %s app.", s.Name),
+	}
 	in.createChangeSet = func() (changeSetID string, err error) {
 		spinner := progress.NewSpinner(cf.console)
 		label := fmt.Sprintf("Proposing infrastructure changes for %s.", s.Name)
