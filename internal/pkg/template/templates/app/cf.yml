@@ -149,9 +149,6 @@ Outputs:
     Value: !GetAtt ECRRepo{{logicalIDSafe $service.Name}}.Arn
 {{- end}}
 {{- end}}
-  Workloads:
-    Value: "{{range $service := $services}}{{$service.Name}},{{end}}"
-    Description: Required output to force the stack to update if mutating workloads does not change create a changeset.
   TemplateVersion:
     Description: Required output to force the stackset to update if mutating version.
     Value: {{.TemplateVersion}}
