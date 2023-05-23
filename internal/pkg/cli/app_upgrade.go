@@ -19,7 +19,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
-	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/spf13/cobra"
@@ -27,7 +26,7 @@ import (
 )
 
 const (
-	fmtAppUpgradeStart    = "Upgrading application %s from version %s to version %s."
+	fmtAppUpgradeStart    = "Upgrading application %s from version %s to version %s.\n"
 	fmtAppUpgradeFailed   = "Failed to upgrade application %s's template to version %s.\n"
 	fmtAppUpgradeComplete = "Upgraded application %s's template to version %s.\n"
 
@@ -45,13 +44,13 @@ type appUpgradeVars struct {
 type appUpgradeOpts struct {
 	appUpgradeVars
 
-	store         store
-	prog          progress
-	versionGetter versionGetter
-	route53       domainHostedZoneGetter
-	sel           appSelector
-	identity      identityService
-	upgrader      appUpgrader
+	store    store
+	route53  domainHostedZoneGetter
+	sel      appSelector
+	identity identityService
+	upgrader appUpgrader
+
+	newVersionGetter func(string) (versionGetter, error)
 }
 
 func newAppUpgradeOpts(vars appUpgradeVars) (*appUpgradeOpts, error) {
@@ -60,19 +59,20 @@ func newAppUpgradeOpts(vars appUpgradeVars) (*appUpgradeOpts, error) {
 		return nil, err
 	}
 	store := config.NewSSMStore(identity.New(sess), ssm.New(sess), aws.StringValue(sess.Config.Region))
-	d, err := describe.NewAppDescriber(vars.name)
-	if err != nil {
-		return nil, fmt.Errorf("new app describer for application %s: %v", vars.name, err)
-	}
 	return &appUpgradeOpts{
 		appUpgradeVars: vars,
 		store:          store,
 		identity:       identity.New(sess),
-		prog:           termprogress.NewSpinner(log.DiagnosticWriter),
 		route53:        route53.New(sess),
 		sel:            selector.NewAppEnvSelector(prompt.New(), store),
-		versionGetter:  d,
 		upgrader:       cloudformation.New(sess, cloudformation.WithProgressTracker(os.Stderr)),
+		newVersionGetter: func(appName string) (versionGetter, error) {
+			d, err := describe.NewAppDescriber(appName)
+			if err != nil {
+				return d, fmt.Errorf("new describer for application %q: %w", appName, err)
+			}
+			return d, nil
+		},
 	}, nil
 }
 
@@ -98,7 +98,12 @@ func (o *appUpgradeOpts) Ask() error {
 // Execute updates the cloudformation stack as well as the stackset of an application to the latest version.
 // If any stack is busy updating, it spins and waits until the stack can be updated.
 func (o *appUpgradeOpts) Execute() error {
-	version, err := o.versionGetter.Version()
+	vg, err := o.newVersionGetter(o.name)
+	if err != nil {
+		return err
+	}
+
+	version, err := vg.Version()
 	if err != nil {
 		return fmt.Errorf("get template version of application %s: %v", o.name, err)
 	}
@@ -109,13 +114,13 @@ func (o *appUpgradeOpts) Execute() error {
 	if err != nil {
 		return fmt.Errorf("get application %s: %w", o.name, err)
 	}
-	o.prog.Start(fmt.Sprintf(fmtAppUpgradeStart, color.HighlightUserInput(o.name), color.Emphasize(version), color.Emphasize(deploy.LatestAppTemplateVersion)))
+	log.Infof(fmtAppUpgradeStart, color.HighlightUserInput(o.name), color.Emphasize(version), color.Emphasize(deploy.LatestAppTemplateVersion))
 	defer func() {
 		if err != nil {
-			o.prog.Stop(log.Serrorf(fmtAppUpgradeFailed, color.HighlightUserInput(o.name), color.Emphasize(deploy.LatestAppTemplateVersion)))
+			log.Errorf(fmtAppUpgradeFailed, color.HighlightUserInput(o.name), color.Emphasize(deploy.LatestAppTemplateVersion))
 			return
 		}
-		o.prog.Stop(log.Ssuccessf(fmtAppUpgradeComplete, color.HighlightUserInput(o.name), color.Emphasize(deploy.LatestAppTemplateVersion)))
+		log.Successf(fmtAppUpgradeComplete, color.HighlightUserInput(o.name), color.Emphasize(deploy.LatestAppTemplateVersion))
 	}()
 	err = o.upgradeApplication(app, version, deploy.LatestAppTemplateVersion)
 	if err != nil {
@@ -205,7 +210,7 @@ func buildAppUpgradeCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return opts.Execute()
+			return run(opts)
 		}),
 	}
 	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, tryReadingAppName(), appFlagDescription)
