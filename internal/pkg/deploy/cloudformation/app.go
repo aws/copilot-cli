@@ -16,7 +16,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/progress"
 
-	"github.com/aws/aws-sdk-go/aws"
 	sdkcloudformation "github.com/aws/aws-sdk-go/service/cloudformation"
 	sdkcloudformationiface "github.com/aws/aws-sdk-go/service/cloudformation/cloudformationiface"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
@@ -70,13 +69,13 @@ func (cf CloudFormation) UpgradeApplication(in *deploy.CreateAppInput) error {
 		return fmt.Errorf("get existing application infrastructure stack: %w", err)
 	}
 	in.DNSDelegationAccounts = stack.DNSDelegatedAccountsForStack(appStack.SDK())
+	in.AdditionalTags = toMap(appStack.Tags)
 	appConfig = stack.NewAppStackConfig(in)
-	s, err := toStack(appConfig)
-	if err != nil {
-		return err
-	}
-	if err := cf.upgradeAppStack(s); err != nil {
-		return err
+	if err := cf.upgradeAppStack(appConfig); err != nil {
+		var empty *cloudformation.ErrChangeSetEmpty
+		if !errors.As(err, &empty) {
+			return fmt.Errorf("upgrade stack %q: %w", appConfig.StackName(), err)
+		}
 	}
 	return cf.upgradeAppStackSet(appConfig)
 }
@@ -104,36 +103,29 @@ func (cf CloudFormation) upgradeAppStackSet(config *stack.AppStackConfig) error 
 	}
 }
 
-func (cf CloudFormation) upgradeAppStack(s *cloudformation.Stack) error {
-	for {
-		// Upgrade app stack.
-		descr, err := cf.cfnClient.Describe(s.Name)
-		if err != nil {
-			return fmt.Errorf("describe stack %s: %w", s.Name, err)
-		}
-		if cloudformation.StackStatus(aws.StringValue(descr.StackStatus)).InProgress() {
-			// There is already an update happening to the app stack.
-			// Best-effort try to wait for the existing update to be over before retrying.
-			_ = cf.cfnClient.WaitForUpdate(context.Background(), s.Name)
-			continue
-		}
-		// We only need the tags from the previously deployed stack.
-		s.Tags = descr.Tags
-
-		err = cf.cfnClient.UpdateAndWait(s)
-		if err == nil {
-			return nil
-		}
-		if retryable := isRetryableUpdateError(s.Name, err); retryable {
-			continue
-		}
-		// The changes are already applied, nothing to do. Exit successfully.
-		var emptyChangeSet *cloudformation.ErrChangeSetEmpty
-		if errors.As(err, &emptyChangeSet) {
-			return nil
-		}
-		return fmt.Errorf("update and wait for stack %s: %w", s.Name, err)
+func (cf CloudFormation) upgradeAppStack(conf *stack.AppStackConfig) error {
+	s, err := toStack(conf)
+	if err != nil {
+		return err
 	}
+	in := &executeAndRenderChangeSetInput{
+		stackName:        s.Name,
+		stackDescription: fmt.Sprintf("Creating the infrastructure for the %s app.", s.Name),
+	}
+	in.createChangeSet = func() (changeSetID string, err error) {
+		spinner := progress.NewSpinner(cf.console)
+		label := fmt.Sprintf("Proposing infrastructure changes for %s.", s.Name)
+		spinner.Start(label)
+		defer stopSpinner(spinner, err, label)
+
+		changeSetID, err = cf.cfnClient.Update(s)
+		if err != nil {
+			return "", err
+		}
+		return changeSetID, nil
+	}
+
+	return cf.executeAndRenderChangeSet(in)
 }
 
 // DelegateDNSPermissions grants the provided account ID the ability to write to this application's
