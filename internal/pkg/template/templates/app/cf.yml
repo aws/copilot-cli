@@ -123,14 +123,14 @@ Resources:
               AWS:
                 - !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:root{{range $accounts}}
                 - !Sub arn:${AWS::Partition}:iam::{{.}}:root{{end}}
-          Action:
-            - ecr:GetDownloadUrlForLayer
-            - ecr:BatchGetImage
-            - ecr:BatchCheckLayerAvailability
-            - ecr:PutImage
-            - ecr:InitiateLayerUpload
-            - ecr:UploadLayerPart
-            - ecr:CompleteLayerUpload
+            Action:
+              - ecr:GetDownloadUrlForLayer
+              - ecr:BatchGetImage
+              - ecr:BatchCheckLayerAvailability
+              - ecr:PutImage
+              - ecr:InitiateLayerUpload
+              - ecr:UploadLayerPart
+              - ecr:CompleteLayerUpload
 {{- end}}
 {{end}}
 Outputs:
