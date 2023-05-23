@@ -393,10 +393,10 @@ func (cf CloudFormation) AddEnvToApp(opts *AddEnvToAppOpts) error {
 	}
 
 	newDeploymentConfig := stack.AppResourcesConfig{
-		Version:  previouslyDeployedConfig.Version + 1,
-		Services: previouslyDeployedConfig.Services,
-		Accounts: accountList,
-		App:      appConfig.Name,
+		Version:   previouslyDeployedConfig.Version + 1,
+		Workloads: previouslyDeployedConfig.Workloads,
+		Accounts:  accountList,
+		App:       appConfig.Name,
 	}
 
 	if err := cf.deployAppConfig(appConfig, &newDeploymentConfig, shouldAddNewAccountID); err != nil {
