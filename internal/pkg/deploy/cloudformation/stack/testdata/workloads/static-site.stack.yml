@@ -144,7 +144,7 @@ Resources:
 
   TriggerStateMachineFunctionRole:
     Metadata:
-      aws:copilot:description: An IAM Role for the lambda starts the process of moving files to the S3 bucket
+      aws:copilot:description: An IAM Role for the lambda that starts the process of moving files to the S3 bucket
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -167,7 +167,7 @@ Resources:
 
   TriggerStateMachineAction:
     Metadata:
-      aws:copilot:description: A custom resource starts the process of moving files to the S3 bucket
+      aws:copilot:description: A custom resource that starts the process of moving files to the S3 bucket
     Type: Custom::TriggerStateMachine
     DependsOn:
       - Bucket
