@@ -124,8 +124,8 @@ HTTPListenerRuleWithDomain{{ if ne $i 0 }}{{ $i }}{{ end }}:
             {{- if eq $rule.Path "/"}}
             - /*
             {{- else }}
-            - /{{ $rule.Path }}
-            - /{{ $rule.Path }}/*
+            - {{ $rule.Path }}
+            - {{ $rule.Path }}/*
             {{- end }}
     {{- if eq $.WorkloadType "Backend Service"}}
     ListenerArn: !GetAtt EnvControllerAction.InternalHTTPListenerArn
@@ -171,8 +171,8 @@ HTTPSListenerRule{{ if ne $i 0 }}{{ $i }}{{ end }}:
           {{- if eq $rule.Path "/" }}
             - /*
           {{- else }}
-            - /{{ $rule.Path }}
-            - /{{ $rule.Path }}/*
+            - {{ $rule.Path }}
+            - {{ $rule.Path }}/*
           {{- end }}
     {{- if eq $.WorkloadType "Backend Service"}}
     ListenerArn: !GetAtt EnvControllerAction.InternalHTTPSListenerArn
