@@ -21,23 +21,51 @@ import (
 )
 
 func TestStaticSiteDeployer_UploadArtifacts(t *testing.T) {
+	type mockDeps struct {
+		uploader     *mocks.MockfileUploader
+		fs           func() afero.Fs
+		cachedWSRoot string
+	}
 	tests := map[string]struct {
-		mock func(m *mocks.MockfileUploader)
+		mock func(m *mockDeps)
 
 		expected *UploadArtifactsOutput
 		wantErr  error
 	}{
 		"error if failed to upload": {
-			mock: func(m *mocks.MockfileUploader) {
-				m.EXPECT().UploadFiles(gomock.Any()).Return("", errors.New("some error"))
+			mock: func(m *mockDeps) {
+				m.cachedWSRoot = "mockRoot"
+				m.fs = func() afero.Fs {
+					fs := afero.NewMemMapFs()
+					_ = fs.Mkdir("mockRoot/assets/", 0755)
+					return fs
+				}
+				m.uploader.EXPECT().UploadFiles(gomock.Any()).Return("", errors.New("some error"))
 			},
 			wantErr: fmt.Errorf("upload static files: some error"),
 		},
+		"error if source path does not exist": {
+			mock: func(m *mockDeps) {
+				m.cachedWSRoot = "mockRoot"
+				m.fs = func() afero.Fs {
+					fs := afero.NewMemMapFs()
+					_ = fs.Mkdir("mockrOOt/assets/", 0755)
+					return fs
+				}
+			},
+			wantErr: errors.New(`source "assets" must be a valid path relative to the workspace root "mockRoot": open mockRoot/assets: file does not exist`),
+		},
 		"success": {
-			mock: func(m *mocks.MockfileUploader) {
-				m.EXPECT().UploadFiles([]manifest.FileUpload{
+			mock: func(m *mockDeps) {
+				m.cachedWSRoot = "mockRoot"
+				m.fs = func() afero.Fs {
+					fs := afero.NewMemMapFs()
+					_ = fs.Mkdir("mockRoot/assets/", 0755)
+					return fs
+				}
+				m.uploader.EXPECT().UploadFiles([]manifest.FileUpload{
 					{
-						Source:      "assets",
+						Source:      "mockRoot/assets",
 						Destination: "static",
 						Recursive:   true,
 						Exclude: manifest.StringSliceOrString{
@@ -58,7 +86,9 @@ func TestStaticSiteDeployer_UploadArtifacts(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			m := mocks.NewMockfileUploader(ctrl)
+			m := &mockDeps{
+				uploader: mocks.NewMockfileUploader(ctrl),
+			}
 			if tc.mock != nil {
 				tc.mock(m)
 			}
@@ -89,7 +119,9 @@ func TestStaticSiteDeployer_UploadArtifacts(t *testing.T) {
 						},
 					},
 				},
-				uploader: m,
+				uploader: m.uploader,
+				fs:       m.fs(),
+				wsRoot:   m.cachedWSRoot,
 			}
 
 			actual, err := deployer.UploadArtifacts()
@@ -160,38 +192,6 @@ func TestStaticSiteDeployer_stackConfiguration(t *testing.T) {
 				staticSiteMft: &manifest.StaticSite{},
 			},
 			wantErr: `static sites not supported: get version for app "mockApp": some error`,
-		},
-		"error when sources are invalid paths": {
-			deployer: &staticSiteDeployer{
-				svcDeployer: &svcDeployer{
-					workloadDeployer: &workloadDeployer{
-						app: &config.Application{},
-						env: &config.Environment{},
-						endpointGetter: &endpointGetterDouble{
-							ServiceDiscoveryEndpointFn: ReturnsValues("", error(nil)),
-						},
-						envVersionGetter: &versionGetterDouble{
-							VersionFn: ReturnsValues("", error(nil)),
-						},
-						resources: &stack.AppRegionalResources{},
-					},
-				},
-				appVersionGetter: &versionGetterDouble{
-					VersionFn: ReturnsValues("v1.2.0", error(nil)),
-				},
-				staticSiteMft: &manifest.StaticSite{
-					StaticSiteConfig: manifest.StaticSiteConfig{
-						HTTP: manifest.StaticSiteHTTP{},
-						FileUploads: []manifest.FileUpload{
-							{
-								Source: "some/path",
-							},
-						},
-					},
-				},
-				fs: afero.NewOsFs(),
-			},
-			wantErr: `source "some/path" must be a valid path: stat some/path: no such file or directory`,
 		},
 		"error bc app version out of date": {
 			deployer: &staticSiteDeployer{
