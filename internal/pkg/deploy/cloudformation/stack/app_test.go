@@ -426,26 +426,42 @@ func TestAppResourcesService_UnmarshalYAML(t *testing.T) {
 	}{
 		"unmarshal legacy service config": {
 			in: []byte(`Services:
-- frontend
-- backend`),
+  - frontend
+  - backend
+TemplateVersion: 'v1.1.0'
+Version: 6
+App: demo
+Accounts:
+  - 1234567890`),
 			wanted: AppResourcesConfig{
 				Workloads: []AppResourcesWorkload{
 					{Name: "frontend", WithECR: true},
 					{Name: "backend", WithECR: true},
 				},
+				Accounts: []string{"1234567890"},
+				Version:  6,
+				App:      "demo",
 			},
 		},
 		"unmarshal new service config": {
 			in: []byte(`Workloads:
-- Name: frontend
-  WithECR: true
-- Name: backend
-  WithECR: false`),
+  - Name: frontend
+    WithECR: true
+  - Name: backend
+    WithECR: false
+TemplateVersion: 'v1.1.0'
+Version: 6
+App: demo
+Accounts:
+  - 1234567890`),
 			wanted: AppResourcesConfig{
 				Workloads: []AppResourcesWorkload{
 					{Name: "frontend", WithECR: true},
 					{Name: "backend", WithECR: false},
 				},
+				Accounts: []string{"1234567890"},
+				Version:  6,
+				App:      "demo",
 			},
 		},
 	}

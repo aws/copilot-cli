@@ -31,17 +31,17 @@ type AppResources struct {
 
 // AppResourcesConfig is a configuration for a deployed Application StackSet.
 type AppResourcesConfig struct {
-	Accounts  []string               `yaml:"Accounts,flow"`
-	Services  []string               `yaml:"Services,flow"` // Deprecated: Use Workloads instead of Services.
-	Workloads []AppResourcesWorkload `yaml:"Workloads,flow"`
+	Accounts  []string               `yaml:"Accounts"`
+	Services  []string               `yaml:"Services"` // Deprecated since v1.2.0: Use Workloads instead of Services.
+	Workloads []AppResourcesWorkload `yaml:"Workloads"`
 	App       string                 `yaml:"App"`
 	Version   int                    `yaml:"Version"`
 }
 
 // AppResourcesWorkload is a workload configuration for a deployed Application StackSet
 type AppResourcesWorkload struct {
-	Name    string `yaml:"Name,flow"`
-	WithECR bool   `yaml:"WithECR,flow"`
+	Name    string `yaml:"Name"`
+	WithECR bool   `yaml:"WithECR"`
 }
 
 // UnmarshalYAML overrides the default YAML unmarshaling logic for the Image
