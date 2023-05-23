@@ -21,62 +21,47 @@ import (
 // DeployedAppMetadata wraps the Metadata field of a deployed
 // application StackSet.
 type DeployedAppMetadata struct {
-	Metadata AppResourcesConfig `yaml:"Metadata"`
+	Metadata AppResources `yaml:"Metadata"`
 }
 
-// AppResourcesConfig is a configuration for a deployed Application
-// StackSet.
+// AppResources is a configuration for a deployed Application StackSet.
+type AppResources struct {
+	AppResourcesConfig `yaml:",inline"`
+}
+
+// AppResourcesConfig is a configuration for a deployed Application StackSet.
 type AppResourcesConfig struct {
-	Accounts []string              `yaml:"Accounts,flow"`
-	Services []AppResourcesService `yaml:"Services,flow"`
-	App      string                `yaml:"App"`
-	Version  int                   `yaml:"Version"`
+	Accounts  []string               `yaml:"Accounts,flow"`
+	Services  []string               `yaml:"Services,flow"`
+	Workloads []AppResourcesWorkload `yaml:"Workloads,flow"`
+	App       string                 `yaml:"App"`
+	Version   int                    `yaml:"Version"`
 }
 
-// AppResourcesService is a union type of either legacy or new
-// service configuration for a deployed Application StackSet
-type AppResourcesService struct {
-	Name   *LegacyAppResourcesServiceConfig `yaml:"Name,flow"`
-	Config AppResourcesServiceConfig
-}
-
-// LegacyAppResourcesServiceConfig is the legacy service configuration for a deployed Application StackSet
-type LegacyAppResourcesServiceConfig string
-
-// AppResourcesServiceConfig is a service configuration for a deployed Application StackSet
-type AppResourcesServiceConfig struct {
+// AppResourcesWorkload is a workload configuration for a deployed Application StackSet
+type AppResourcesWorkload struct {
 	Name    string `yaml:"Name,flow"`
 	WithECR bool   `yaml:"WithECR,flow"`
 }
 
-func (s *AppResourcesServiceConfig) isEmpty() bool {
+func (s *AppResourcesWorkload) isEmpty() bool {
 	return s.Name == "" && !s.WithECR
 }
 
 // UnmarshalYAML overrides the default YAML unmarshaling logic for the Image
 // struct, allowing it to perform more complex unmarshaling behavior.
 // This method implements the yaml.Unmarshaler (v3) interface.
-func (s *AppResourcesService) UnmarshalYAML(value *yaml.Node) error {
-	if err := value.Decode(&s.Config); err != nil {
-		switch err.(type) {
-		case *yaml.TypeError:
-			break
-		default:
-			return err
-		}
-	}
-	if !s.Config.isEmpty() {
-		return nil
-	}
-	if err := value.Decode(&s.Name); err != nil {
+func (s *AppResources) UnmarshalYAML(value *yaml.Node) error {
+	if err := value.Decode(&s.AppResourcesConfig); err != nil {
 		return err
 	}
-	// Switch to new app resource service configuration and unset legacy configuration.
-	s.Config = AppResourcesServiceConfig{
-		Name:    string(*s.Name),
-		WithECR: true,
+	for _, svc := range s.AppResourcesConfig.Services {
+		s.AppResourcesConfig.Workloads = append(s.AppResourcesConfig.Workloads, AppResourcesWorkload{
+			Name:    svc,
+			WithECR: true,
+		})
 	}
-	s.Name = nil
+	s.Services = nil
 	return nil
 }
 
@@ -122,7 +107,7 @@ var cfTemplateFunctions = map[string]interface{}{
 func AppConfigFrom(template *string) (*AppResourcesConfig, error) {
 	resourceConfig := DeployedAppMetadata{}
 	err := yaml.Unmarshal([]byte(*template), &resourceConfig)
-	return &resourceConfig.Metadata, err
+	return &resourceConfig.Metadata.AppResourcesConfig, err
 }
 
 // NewAppStackConfig sets up a struct which can provide values to CloudFormation for
@@ -161,11 +146,8 @@ func (c *AppStackConfig) Template() (string, error) {
 func (c *AppStackConfig) ResourceTemplate(config *AppResourcesConfig) (string, error) {
 	// Sort the account IDs and Services so that the template we generate is deterministic
 	sort.Strings(config.Accounts)
-	sort.SliceStable(config.Services, func(i, j int) bool {
-		if config.Services[i].Name != nil {
-			return *config.Services[i].Name < *config.Services[j].Name
-		}
-		return config.Services[i].Config.Name < config.Services[j].Config.Name
+	sort.SliceStable(config.Workloads, func(i, j int) bool {
+		return config.Workloads[i].Name < config.Workloads[j].Name
 	})
 
 	content, err := c.parser.Parse(appResourcesTemplatePath, struct {

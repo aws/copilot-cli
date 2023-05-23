@@ -221,11 +221,11 @@ func (cf CloudFormation) getResourcesForStackInstances(app *config.Application, 
 }
 
 // AddWorkloadToAppOpt allows passing optional parameters to AddServiceToApp.
-type AddWorkloadToAppOpt func(*stack.AppResourcesService)
+type AddWorkloadToAppOpt func(*stack.AppResourcesWorkload)
 
 // AddWorkloadToAppOptWithoutECR adds a workload to app without creating an ECR repo.
-func AddWorkloadToAppOptWithoutECR(s *stack.AppResourcesService) {
-	s.Config.WithECR = false
+func AddWorkloadToAppOptWithoutECR(s *stack.AppResourcesWorkload) {
+	s.WithECR = false
 }
 
 // AddServiceToApp attempts to add new service specific resources to the application resource stack.
@@ -263,23 +263,20 @@ func (cf CloudFormation) addWorkloadToApp(app *config.Application, wlName string
 	// We'll generate a new list of Accounts to add to our application
 	// infrastructure by appending the environment's account if it
 	// doesn't already exist.
-	var wlList []stack.AppResourcesService
+	var wlList []stack.AppResourcesWorkload
 	shouldAddNewWl := true
-	// For now, AppResourcesConfig.Services refers to workloads, including both services and jobs.
-	for _, wl := range previouslyDeployedConfig.Services {
+	for _, wl := range previouslyDeployedConfig.Workloads {
 		wlList = append(wlList, wl)
-		if wl.Config.Name == wlName {
+		if wl.Name == wlName {
 			shouldAddNewWl = false
 		}
 	}
 	if !shouldAddNewWl {
 		return nil
 	}
-	newAppResourcesService := &stack.AppResourcesService{
-		Config: stack.AppResourcesServiceConfig{
-			Name:    wlName,
-			WithECR: true,
-		},
+	newAppResourcesService := &stack.AppResourcesWorkload{
+		Name:    wlName,
+		WithECR: true,
 	}
 	for _, opt := range opts {
 		opt(newAppResourcesService)
@@ -287,10 +284,10 @@ func (cf CloudFormation) addWorkloadToApp(app *config.Application, wlName string
 	wlList = append(wlList, *newAppResourcesService)
 
 	newDeploymentConfig := stack.AppResourcesConfig{
-		Version:  previouslyDeployedConfig.Version + 1,
-		Services: wlList,
-		Accounts: previouslyDeployedConfig.Accounts,
-		App:      appConfig.Name,
+		Version:   previouslyDeployedConfig.Version + 1,
+		Workloads: wlList,
+		Accounts:  previouslyDeployedConfig.Accounts,
+		App:       appConfig.Name,
 	}
 	if err := cf.deployAppConfig(appConfig, &newDeploymentConfig, shouldAddNewWl); err != nil {
 		return err
@@ -329,11 +326,10 @@ func (cf CloudFormation) removeWorkloadFromApp(app *config.Application, wlName s
 
 	// We'll generate a new list of Accounts to remove the account associated
 	// with the input workload to be removed.
-	var wlList []stack.AppResourcesService
+	var wlList []stack.AppResourcesWorkload
 	shouldRemoveWl := false
-	// For now, AppResourcesConfig.Services refers to workloads, including both services and jobs.
-	for _, wl := range previouslyDeployedConfig.Services {
-		if wl.Config.Name == wlName {
+	for _, wl := range previouslyDeployedConfig.Workloads {
+		if wl.Name == wlName {
 			shouldRemoveWl = true
 			continue
 		}
@@ -345,10 +341,10 @@ func (cf CloudFormation) removeWorkloadFromApp(app *config.Application, wlName s
 	}
 
 	newDeploymentConfig := stack.AppResourcesConfig{
-		Version:  previouslyDeployedConfig.Version + 1,
-		Services: wlList,
-		Accounts: previouslyDeployedConfig.Accounts,
-		App:      appConfig.Name,
+		Version:   previouslyDeployedConfig.Version + 1,
+		Workloads: wlList,
+		Accounts:  previouslyDeployedConfig.Accounts,
+		App:       appConfig.Name,
 	}
 	if err := cf.deployAppConfig(appConfig, &newDeploymentConfig, shouldRemoveWl); err != nil {
 		return err

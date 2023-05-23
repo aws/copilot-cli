@@ -151,9 +151,9 @@ func TestAppResourceTemplate(t *testing.T) {
 		"should render template after sorting": {
 			given: &AppResourcesConfig{
 				Accounts: []string{"4567", "1234"},
-				Services: []AppResourcesService{
-					{Config: AppResourcesServiceConfig{Name: "svc-2"}},
-					{Config: AppResourcesServiceConfig{Name: "svc-1"}},
+				Workloads: []AppResourcesWorkload{
+					{Name: "svc-2"},
+					{Name: "svc-1"},
 				},
 				Version: 1,
 				App:     "testapp",
@@ -167,9 +167,9 @@ func TestAppResourceTemplate(t *testing.T) {
 				}{
 					&AppResourcesConfig{
 						Accounts: []string{"1234", "4567"},
-						Services: []AppResourcesService{
-							{Config: AppResourcesServiceConfig{Name: "svc-1"}},
-							{Config: AppResourcesServiceConfig{Name: "svc-2"}},
+						Workloads: []AppResourcesWorkload{
+							{Name: "svc-1"},
+							{Name: "svc-2"},
 						},
 						Version: 1,
 						App:     "testapp",
@@ -411,9 +411,9 @@ Metadata:
 	require.Equal(t, AppResourcesConfig{
 		Accounts: []string{"0000000000"},
 		Version:  7,
-		Services: []AppResourcesService{
-			{Config: AppResourcesServiceConfig{Name: "testsvc1", WithECR: true}},
-			{Config: AppResourcesServiceConfig{Name: "testsvc2", WithECR: true}},
+		Workloads: []AppResourcesWorkload{
+			{Name: "testsvc1", WithECR: true},
+			{Name: "testsvc2", WithECR: true},
 		},
 	}, *config)
 }
@@ -429,35 +429,35 @@ func TestAppResourcesService_UnmarshalYAML(t *testing.T) {
 - frontend
 - backend`),
 			wanted: AppResourcesConfig{
-				Services: []AppResourcesService{
-					{Config: AppResourcesServiceConfig{Name: "frontend", WithECR: true}},
-					{Config: AppResourcesServiceConfig{Name: "backend", WithECR: true}},
+				Workloads: []AppResourcesWorkload{
+					{Name: "frontend", WithECR: true},
+					{Name: "backend", WithECR: true},
 				},
 			},
 		},
 		"unmarshal new service config": {
-			in: []byte(`Services:
+			in: []byte(`Workloads:
 - Name: frontend
   WithECR: true
 - Name: backend
   WithECR: false`),
 			wanted: AppResourcesConfig{
-				Services: []AppResourcesService{
-					{Config: AppResourcesServiceConfig{Name: "frontend", WithECR: true}},
-					{Config: AppResourcesServiceConfig{Name: "backend", WithECR: false}},
+				Workloads: []AppResourcesWorkload{
+					{Name: "frontend", WithECR: true},
+					{Name: "backend", WithECR: false},
 				},
 			},
 		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			var s AppResourcesConfig
+			var s AppResources
 			err := yaml.Unmarshal(tc.in, &s)
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, tc.wanted, s)
+				require.Equal(t, tc.wanted, s.AppResourcesConfig)
 			}
 		})
 	}
