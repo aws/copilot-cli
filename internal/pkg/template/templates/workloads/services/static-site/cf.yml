@@ -153,7 +153,7 @@ Resources:
 
   TriggerStateMachineFunction:
     Metadata:
-      aws:copilot:description: A lambda that triggers the file-copying state machine
+      aws:copilot:description: A lambda that starts the process of moving files to the S3 bucket
     Type: AWS::Lambda::Function
     Properties:
       Handler: index.handler
@@ -169,7 +169,7 @@ Resources:
 
   TriggerStateMachineFunctionRole:
     Metadata:
-      aws:copilot:description: An IAM Role for the lambda that triggers the file-copying state machine.
+      aws:copilot:description: An IAM Role for the lambda that starts the process of moving files to the S3 bucket
     Type: AWS::IAM::Role
     Properties:
       {{- if .PermissionsBoundary}}
@@ -195,7 +195,7 @@ Resources:
 
   TriggerStateMachineAction:
     Metadata:
-      aws:copilot:description: A custom resource to trigger the file-copying state machine
+      aws:copilot:description: A custom resource that starts the process of moving files to the S3 bucket
     Type: Custom::TriggerStateMachine
     DependsOn:
       - Bucket
@@ -223,12 +223,14 @@ Resources:
       AssetMappingFilePath: {{.AssetMappingFilePath}}
 
   CopyAssetsStateMachine:
+    Metadata:
+      aws:copilot:description: A state machine that moves source files to the S3 bucket
     Type: AWS::StepFunctions::StateMachine
     Properties:
       RoleArn: !GetAtt CopyAssetsStateMachineRole.Arn
       StateMachineType: EXPRESS
       Definition:
-        Comment: A state machine that triggers a file-copying lambda for each uploaded asset
+        Comment: A state machine that moves source files to the S3 bucket
         StartAt: GetMappingFile
         States:
           GetMappingFile:
@@ -284,7 +286,7 @@ Resources:
 
   CopyAssetsStateMachineRole:
     Metadata:
-      aws:copilot:description: An IAM Role for the state machine that triggers the copy lambda
+      aws:copilot:description: An IAM Role for the state machine that moves source files to the S3 bucket
     Type: AWS::IAM::Role
     Properties:
       {{- if .PermissionsBoundary}}

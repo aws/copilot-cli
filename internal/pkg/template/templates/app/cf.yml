@@ -1,16 +1,17 @@
 # Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT-0
-AWSTemplateFormatVersion: '2010-09-09'{{$accounts := .Accounts}}{{$app := .App}}{{$services := .Services}}{{$svcTag := .ServiceTagKey}}
+AWSTemplateFormatVersion: '2010-09-09'{{$accounts := .Accounts}}{{$app := .App}}{{$workloads := .Workloads}}{{$svcTag := .ServiceTagKey}}
 # Cross-regional resources deployed via a stackset in the tools account
 # to support the CodePipeline for a workspace
 Description: Cross-regional resources to support the CodePipeline for a workspace
 Metadata:
   TemplateVersion: '{{.TemplateVersion}}'
   Version: {{.Version}}
-  Services:{{if not $services}} []{{else}}{{range $service := $services}}
-  - {{$service}}{{end}}{{end}}
+  Workloads:{{if not $workloads}} []{{else}}{{range $workload := $workloads}}
+    - Name: {{$workload.Name}}
+      WithECR: {{$workload.WithECR}}{{end}}{{end}}
   Accounts:{{if not $accounts}} []{{else}}{{range $account := $accounts}}
-  - {{$account}}{{end}}{{end}}
+    - {{$account}}{{end}}{{end}}
 Resources:
   KMSKey:
     Metadata:
@@ -102,34 +103,35 @@ Resources:
             AbortIncompleteMultipartUpload:
               DaysAfterInitiation: 1
 
-{{range $service := $services}}
-  ECRRepo{{logicalIDSafe $service}}:
+{{range $workload := $workloads}}
+{{- if $workload.WithECR}}
+  ECRRepo{{logicalIDSafe $workload.Name}}:
     Metadata:
-      'aws:copilot:description': 'ECR container image repository for "{{$service}}"'
+      'aws:copilot:description': 'ECR container image repository for "{{$workload.Name}}"'
     Type: AWS::ECR::Repository
     Properties:
-      RepositoryName: {{$app}}/{{$service}}
+      RepositoryName: {{$app}}/{{$workload.Name}}
       Tags:
-        -
-          Key: {{$svcTag}}
-          Value: {{$service}}
+        - Key: {{$svcTag}}
+          Value: {{$workload.Name}}
       RepositoryPolicyText:
         Version: '2012-10-17'
         Statement:
-        - Sid: AllowPushPull
-          Effect: Allow
-          Principal:
+          - Sid: AllowPushPull
+            Effect: Allow
+            Principal:
               AWS:
                 - !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:root{{range $accounts}}
                 - !Sub arn:${AWS::Partition}:iam::{{.}}:root{{end}}
-          Action:
-          - ecr:GetDownloadUrlForLayer
-          - ecr:BatchGetImage
-          - ecr:BatchCheckLayerAvailability
-          - ecr:PutImage
-          - ecr:InitiateLayerUpload
-          - ecr:UploadLayerPart
-          - ecr:CompleteLayerUpload
+            Action:
+              - ecr:GetDownloadUrlForLayer
+              - ecr:BatchGetImage
+              - ecr:BatchCheckLayerAvailability
+              - ecr:PutImage
+              - ecr:InitiateLayerUpload
+              - ecr:UploadLayerPart
+              - ecr:CompleteLayerUpload
+{{- end}}
 {{end}}
 Outputs:
   KMSKeyARN:
@@ -140,10 +142,12 @@ Outputs:
   PipelineBucket:
     Description: "A bucket used for any Copilot artifacts that must be stored in S3 (pipelines, env files, etc)."
     Value: !Ref PipelineBuiltArtifactBucket
-{{- range $service := $services}} 
-  ECRRepo{{logicalIDSafe $service}}:
-    Description: ECR Repo used to store images of the {{$service}} service.
-    Value: !GetAtt ECRRepo{{logicalIDSafe $service}}.Arn
+{{- range $workload := $workloads}} 
+{{- if $workload.WithECR}}
+  ECRRepo{{logicalIDSafe $workload.Name}}:
+    Description: ECR Repo used to store images of the {{$workload.Name}} workload.
+    Value: !GetAtt ECRRepo{{logicalIDSafe $workload.Name}}.Arn
+{{- end}}
 {{- end}}
   TemplateVersion:
     Description: Required output to force the stackset to update if mutating version.

@@ -16,6 +16,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/template/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 )
 
 const (
@@ -150,9 +151,12 @@ func TestAppResourceTemplate(t *testing.T) {
 		"should render template after sorting": {
 			given: &AppResourcesConfig{
 				Accounts: []string{"4567", "1234"},
-				Services: []string{"app-2", "app-1"},
-				Version:  1,
-				App:      "testapp",
+				Workloads: []AppResourcesWorkload{
+					{Name: "svc-2"},
+					{Name: "svc-1"},
+				},
+				Version: 1,
+				App:     "testapp",
 			},
 			mockDependencies: func(ctrl *gomock.Controller, c *AppStackConfig) {
 				m := mocks.NewMockReadParser(ctrl)
@@ -163,9 +167,12 @@ func TestAppResourceTemplate(t *testing.T) {
 				}{
 					&AppResourcesConfig{
 						Accounts: []string{"1234", "4567"},
-						Services: []string{"app-1", "app-2"},
-						Version:  1,
-						App:      "testapp",
+						Workloads: []AppResourcesWorkload{
+							{Name: "svc-1"},
+							{Name: "svc-2"},
+						},
+						Version: 1,
+						App:     "testapp",
 					},
 					deploy.ServiceTagKey,
 					"",
@@ -404,6 +411,70 @@ Metadata:
 	require.Equal(t, AppResourcesConfig{
 		Accounts: []string{"0000000000"},
 		Version:  7,
-		Services: []string{"testsvc1", "testsvc2"},
+		Workloads: []AppResourcesWorkload{
+			{Name: "testsvc1", WithECR: true},
+			{Name: "testsvc2", WithECR: true},
+		},
 	}, *config)
+}
+
+func TestAppResourcesService_UnmarshalYAML(t *testing.T) {
+	testCases := map[string]struct {
+		in          []byte
+		wanted      AppResourcesConfig
+		wantedError error
+	}{
+		"unmarshal legacy service config": {
+			in: []byte(`Services:
+  - frontend
+  - backend
+TemplateVersion: 'v1.1.0'
+Version: 6
+App: demo
+Accounts:
+  - 1234567890`),
+			wanted: AppResourcesConfig{
+				Workloads: []AppResourcesWorkload{
+					{Name: "frontend", WithECR: true},
+					{Name: "backend", WithECR: true},
+				},
+				Accounts: []string{"1234567890"},
+				Version:  6,
+				App:      "demo",
+			},
+		},
+		"unmarshal new service config": {
+			in: []byte(`Workloads:
+  - Name: frontend
+    WithECR: true
+  - Name: backend
+    WithECR: false
+TemplateVersion: 'v1.1.0'
+Version: 6
+App: demo
+Accounts:
+  - 1234567890`),
+			wanted: AppResourcesConfig{
+				Workloads: []AppResourcesWorkload{
+					{Name: "frontend", WithECR: true},
+					{Name: "backend", WithECR: false},
+				},
+				Accounts: []string{"1234567890"},
+				Version:  6,
+				App:      "demo",
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			var s AppResources
+			err := yaml.Unmarshal(tc.in, &s)
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wanted, s.AppResourcesConfig)
+			}
+		})
+	}
 }

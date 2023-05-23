@@ -10,6 +10,7 @@ import (
 	"io"
 	"math/rand"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -63,7 +64,7 @@ func Test_App_Infrastructure(t *testing.T) {
 		roleStackOutput, err := cfClient.DescribeStacks(&awsCF.DescribeStacksInput{
 			StackName: aws.String(appRoleStackName),
 		})
-
+		require.Error(t, err)
 		require.True(t, len(roleStackOutput.Stacks) == 0, "Stack %s should not exist.", appRoleStackName)
 
 		// Make sure we delete the stacks after the test is done
@@ -174,7 +175,7 @@ func Test_App_Infrastructure(t *testing.T) {
 		roleStackOutput, err := cfClient.DescribeStacks(&awsCF.DescribeStacksInput{
 			StackName: aws.String(appRoleStackName),
 		})
-
+		require.Error(t, err)
 		require.True(t, len(roleStackOutput.Stacks) == 0, "Stack %s should not exist.", appRoleStackName)
 
 		err = deployer.DeployApp(&deploy.CreateAppInput{
@@ -216,6 +217,7 @@ func Test_App_Infrastructure(t *testing.T) {
 				EnvRegion:    *sess.Config.Region,
 			},
 		)
+		require.NoError(t, err)
 
 		// Query using our GetRegionalAppResources function.
 		resources, err := deployer.GetRegionalAppResources(&app)
@@ -267,6 +269,12 @@ func Test_App_Infrastructure(t *testing.T) {
 				require.True(t,
 					strings.HasSuffix(*output.OutputValue, fmt.Sprintf("repository/%s/mysvc-frontend", app.Name)),
 					fmt.Sprintf("ECRRepomysvcDASHfrontend should be suffixed with repository/{app}/mysvc but was %s", *output.OutputValue))
+			},
+			"StackSetOpId": func(output *awsCF.Output) {
+				opID, err := strconv.Atoi(*output.OutputValue)
+				require.NoError(t, err)
+				require.GreaterOrEqual(t, opID, 1,
+					fmt.Sprintf("StackSetOpId should be > 1 but was %s", *output.OutputValue))
 			},
 		}
 		require.True(t, len(deployedStack.Outputs) == len(expectedResultsForKey),
@@ -356,6 +364,7 @@ func Test_App_Infrastructure(t *testing.T) {
 			EnvAccountID: callerInfo.Account,
 			EnvRegion:    *sess.Config.Region,
 		})
+		require.NoError(t, err)
 
 		stackInstances, err = cfClient.ListStackInstances(&awsCF.ListStackInstancesInput{
 			StackSetName: aws.String(appStackSetName),
@@ -406,6 +415,7 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 	output, err := cfClient.DescribeStacks(&awsCF.DescribeStacksInput{
 		StackName: aws.String(envStackName),
 	})
+	require.Error(t, err)
 	require.True(t, len(output.Stacks) == 0, "Stack %s should not exist.", envStackName)
 
 	// Create a temporary S3 bucket to store custom resource scripts.
