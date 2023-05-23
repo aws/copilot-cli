@@ -574,7 +574,7 @@ func TestCloudFormation_AddServiceToApp(t *testing.T) {
 					Do(func(_, template string, _ ...stackset.CreateOrUpdateOption) {
 						configToDeploy, err := stack.AppConfigFrom(&template)
 						require.NoError(t, err)
-						require.ElementsMatch(t, []stack.AppResourcesService{{Name: "TestSvc"}}, configToDeploy.Services)
+						require.ElementsMatch(t, []stack.AppResourcesService{{Config: stack.AppResourcesServiceConfig{Name: "TestSvc", WithECR: true}}}, configToDeploy.Services)
 						require.Empty(t, configToDeploy.Accounts, "there should be no new accounts to deploy")
 						require.Equal(t, 1, configToDeploy.Version)
 					})
@@ -597,7 +597,10 @@ func TestCloudFormation_AddServiceToApp(t *testing.T) {
 					Do(func(_, template string, _ ...stackset.CreateOrUpdateOption) {
 						configToDeploy, err := stack.AppConfigFrom(&template)
 						require.NoError(t, err)
-						require.ElementsMatch(t, []stack.AppResourcesService{{Name: "test"}, {Name: "firsttest"}}, configToDeploy.Services)
+						require.ElementsMatch(t, []stack.AppResourcesService{
+							{Config: stack.AppResourcesServiceConfig{Name: "test", WithECR: true}},
+							{Config: stack.AppResourcesServiceConfig{Name: "firsttest", WithECR: true}},
+						}, configToDeploy.Services)
 						require.Empty(t, configToDeploy.Accounts, "there should be no new accounts to deploy")
 						require.Equal(t, 2, configToDeploy.Version)
 
@@ -675,7 +678,7 @@ func TestCloudFormation_RemoveServiceFromApp(t *testing.T) {
 					Do(func(_, template string, opts ...stackset.CreateOrUpdateOption) {
 						configToDeploy, err := stack.AppConfigFrom(&template)
 						require.NoError(t, err)
-						require.ElementsMatch(t, []stack.AppResourcesService{{Name: "firsttest"}}, configToDeploy.Services)
+						require.ElementsMatch(t, []stack.AppResourcesService{{Config: stack.AppResourcesServiceConfig{Name: "firsttest", WithECR: true}}}, configToDeploy.Services)
 						require.Empty(t, configToDeploy.Accounts, "config account list should be empty")
 						require.Equal(t, 2, configToDeploy.Version)
 						require.Equal(t, 5, len(opts))

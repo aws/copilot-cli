@@ -33,17 +33,51 @@ type AppResourcesConfig struct {
 	Version  int                   `yaml:"Version"`
 }
 
-// AppResourcesService is a configuration for service for a deployed Application StackSet
+// AppResourcesService is a union type of either legacy or new
+// service configuration for a deployed Application StackSet
 type AppResourcesService struct {
+	Name   *LegacyAppResourcesServiceConfig `yaml:"Name,flow"`
+	Config AppResourcesServiceConfig
+}
+
+// LegacyAppResourcesServiceConfig is the legacy service configuration for a deployed Application StackSet
+type LegacyAppResourcesServiceConfig string
+
+// AppResourcesServiceConfig is a service configuration for a deployed Application StackSet
+type AppResourcesServiceConfig struct {
 	Name    string `yaml:"Name,flow"`
 	WithECR bool   `yaml:"WithECR,flow"`
+}
+
+func (s *AppResourcesServiceConfig) isEmpty() bool {
+	return s.Name == "" && !s.WithECR
 }
 
 // UnmarshalYAML overrides the default YAML unmarshaling logic for the Image
 // struct, allowing it to perform more complex unmarshaling behavior.
 // This method implements the yaml.Unmarshaler (v3) interface.
 func (s *AppResourcesService) UnmarshalYAML(value *yaml.Node) error {
-	return value.Decode(&s.Name)
+	if err := value.Decode(&s.Config); err != nil {
+		switch err.(type) {
+		case *yaml.TypeError:
+			break
+		default:
+			return err
+		}
+	}
+	if !s.Config.isEmpty() {
+		return nil
+	}
+	if err := value.Decode(&s.Name); err != nil {
+		return err
+	}
+	// Switch to new app resource service configuration and unset legacy configuration.
+	s.Config = AppResourcesServiceConfig{
+		Name:    string(*s.Name),
+		WithECR: true,
+	}
+	s.Name = nil
+	return nil
 }
 
 // AppStackConfig is for providing all the values to set up an
@@ -127,7 +161,12 @@ func (c *AppStackConfig) Template() (string, error) {
 func (c *AppStackConfig) ResourceTemplate(config *AppResourcesConfig) (string, error) {
 	// Sort the account IDs and Services so that the template we generate is deterministic
 	sort.Strings(config.Accounts)
-	sort.SliceStable(config.Services, func(i, j int) bool { return config.Services[i].Name < config.Services[j].Name })
+	sort.SliceStable(config.Services, func(i, j int) bool {
+		if config.Services[i].Name != nil {
+			return *config.Services[i].Name < *config.Services[j].Name
+		}
+		return config.Services[i].Config.Name < config.Services[j].Config.Name
+	})
 
 	content, err := c.parser.Parse(appResourcesTemplatePath, struct {
 		*AppResourcesConfig

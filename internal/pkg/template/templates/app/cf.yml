@@ -8,7 +8,8 @@ Metadata:
   TemplateVersion: '{{.TemplateVersion}}'
   Version: {{.Version}}
   Services:{{if not $services}} []{{else}}{{range $service := $services}}
-  - {{$service.Name}}{{end}}{{end}}
+  - Name: {{$service.Config.Name}}
+    WithECR: {{$service.Config.WithECR}}{{end}}{{end}}
   Accounts:{{if not $accounts}} []{{else}}{{range $account := $accounts}}
   - {{$account}}{{end}}{{end}}
 Resources:
@@ -103,17 +104,17 @@ Resources:
               DaysAfterInitiation: 1
 
 {{range $service := $services}}
-{{- if $service.WithECR}}
-  ECRRepo{{logicalIDSafe $service.Name}}:
+{{- if $service.Config.WithECR}}
+  ECRRepo{{logicalIDSafe $service.Config.Name}}:
     Metadata:
-      'aws:copilot:description': 'ECR container image repository for "{{$service.Name}}"'
+      'aws:copilot:description': 'ECR container image repository for "{{$service.Config.Name}}"'
     Type: AWS::ECR::Repository
     Properties:
-      RepositoryName: {{$app}}/{{$service.Name}}
+      RepositoryName: {{$app}}/{{$service.Config.Name}}
       Tags:
         -
           Key: {{$svcTag}}
-          Value: {{$service.Name}}
+          Value: {{$service.Config.Name}}
       RepositoryPolicyText:
         Version: '2012-10-17'
         Statement:
@@ -143,10 +144,10 @@ Outputs:
     Description: "A bucket used for any Copilot artifacts that must be stored in S3 (pipelines, env files, etc)."
     Value: !Ref PipelineBuiltArtifactBucket
 {{- range $service := $services}} 
-{{- if $service.WithECR}}
-  ECRRepo{{logicalIDSafe $service.Name}}:
-    Description: ECR Repo used to store images of the {{$service.Name}} service.
-    Value: !GetAtt ECRRepo{{logicalIDSafe $service.Name}}.Arn
+{{- if $service.Config.WithECR}}
+  ECRRepo{{logicalIDSafe $service.Config.Name}}:
+    Description: ECR Repo used to store images of the {{$service.Config.Name}} service.
+    Value: !GetAtt ECRRepo{{logicalIDSafe $service.Config.Name}}.Arn
 {{- end}}
 {{- end}}
   TemplateVersion:

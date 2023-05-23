@@ -224,7 +224,9 @@ func (cf CloudFormation) getResourcesForStackInstances(app *config.Application, 
 type AddWorkloadToAppOpt func(*stack.AppResourcesService)
 
 // AddWorkloadToAppOptWithoutECR adds a workload to app without creating an ECR repo.
-func AddWorkloadToAppOptWithoutECR(config *stack.AppResourcesService) { config.WithECR = false }
+func AddWorkloadToAppOptWithoutECR(s *stack.AppResourcesService) {
+	s.Config.WithECR = false
+}
 
 // AddServiceToApp attempts to add new service specific resources to the application resource stack.
 // Currently, this means that we'll set up an ECR repo with a policy for all envs to be able
@@ -266,7 +268,7 @@ func (cf CloudFormation) addWorkloadToApp(app *config.Application, wlName string
 	// For now, AppResourcesConfig.Services refers to workloads, including both services and jobs.
 	for _, wl := range previouslyDeployedConfig.Services {
 		wlList = append(wlList, wl)
-		if wl.Name == wlName {
+		if wl.Config.Name == wlName {
 			shouldAddNewWl = false
 		}
 	}
@@ -274,8 +276,10 @@ func (cf CloudFormation) addWorkloadToApp(app *config.Application, wlName string
 		return nil
 	}
 	newAppResourcesService := &stack.AppResourcesService{
-		Name:    wlName,
-		WithECR: true,
+		Config: stack.AppResourcesServiceConfig{
+			Name:    wlName,
+			WithECR: true,
+		},
 	}
 	for _, opt := range opts {
 		opt(newAppResourcesService)
@@ -329,7 +333,7 @@ func (cf CloudFormation) removeWorkloadFromApp(app *config.Application, wlName s
 	shouldRemoveWl := false
 	// For now, AppResourcesConfig.Services refers to workloads, including both services and jobs.
 	for _, wl := range previouslyDeployedConfig.Services {
-		if wl.Name == wlName {
+		if wl.Config.Name == wlName {
 			shouldRemoveWl = true
 			continue
 		}
