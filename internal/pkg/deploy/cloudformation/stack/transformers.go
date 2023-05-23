@@ -574,11 +574,16 @@ type routingRuleConfigConverter struct {
 }
 
 // convertPath attempts to standardize manifest paths on '/path' or '/' patterns.
-//   - If the path starts with a / (including "/"), return it unmodified.
+//   - If the path starts with a / (including '/'), return it unmodified.
 //   - Otherwise, prepend a leading '/' character.
 //
 // CFN health check and path patterns expect a leading '/', so we do that here instead of in the template.
+//
+// Empty strings, if they make it to this point, are converted to '/'.
 func convertPath(path string) string {
+	if path == "" {
+		return "/"
+	}
 	if path[0] == '/' {
 		return path
 	}

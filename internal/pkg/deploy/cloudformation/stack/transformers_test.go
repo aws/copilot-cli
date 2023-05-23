@@ -711,6 +711,36 @@ func Test_convertAutoscaling(t *testing.T) {
 	}
 }
 
+func Test_convertPath(t *testing.T) {
+	testCases := map[string]struct {
+		inPath string
+		wanted string
+	}{
+		"success with basic case": {
+			inPath: "/",
+			wanted: "/",
+		},
+		"adds leading / to naked path": {
+			inPath: "app",
+			wanted: "/app",
+		},
+		"leading / path unchanged": {
+			inPath: "/app",
+			wanted: "/app",
+		},
+		"empty path converted to /": {
+			inPath: "",
+			wanted: "/",
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got := convertPath(tc.inPath)
+			require.Equal(t, tc.wanted, got)
+		})
+	}
+}
+
 func Test_convertTaskDefOverrideRules(t *testing.T) {
 	testCases := map[string]struct {
 		inRule []manifest.OverrideRule
