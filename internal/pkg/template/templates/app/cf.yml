@@ -8,10 +8,10 @@ Metadata:
   TemplateVersion: '{{.TemplateVersion}}'
   Version: {{.Version}}
   Workloads:{{if not $workloads}} []{{else}}{{range $workload := $workloads}}
-  - Name: {{$workload.Name}}
-    WithECR: {{$workload.WithECR}}{{end}}{{end}}
+    - Name: {{$workload.Name}}
+      WithECR: {{$workload.WithECR}}{{end}}{{end}}
   Accounts:{{if not $accounts}} []{{else}}{{range $account := $accounts}}
-  - {{$account}}{{end}}{{end}}
+    - {{$account}}{{end}}{{end}}
 Resources:
   KMSKey:
     Metadata:
@@ -112,26 +112,25 @@ Resources:
     Properties:
       RepositoryName: {{$app}}/{{$workload.Name}}
       Tags:
-        -
-          Key: {{$svcTag}}
+        - Key: {{$svcTag}}
           Value: {{$workload.Name}}
       RepositoryPolicyText:
         Version: '2012-10-17'
         Statement:
-        - Sid: AllowPushPull
-          Effect: Allow
-          Principal:
+          - Sid: AllowPushPull
+            Effect: Allow
+            Principal:
               AWS:
                 - !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:root{{range $accounts}}
                 - !Sub arn:${AWS::Partition}:iam::{{.}}:root{{end}}
           Action:
-          - ecr:GetDownloadUrlForLayer
-          - ecr:BatchGetImage
-          - ecr:BatchCheckLayerAvailability
-          - ecr:PutImage
-          - ecr:InitiateLayerUpload
-          - ecr:UploadLayerPart
-          - ecr:CompleteLayerUpload
+            - ecr:GetDownloadUrlForLayer
+            - ecr:BatchGetImage
+            - ecr:BatchCheckLayerAvailability
+            - ecr:PutImage
+            - ecr:InitiateLayerUpload
+            - ecr:UploadLayerPart
+            - ecr:CompleteLayerUpload
 {{- end}}
 {{end}}
 Outputs:

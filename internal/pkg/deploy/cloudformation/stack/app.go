@@ -32,7 +32,7 @@ type AppResources struct {
 // AppResourcesConfig is a configuration for a deployed Application StackSet.
 type AppResourcesConfig struct {
 	Accounts  []string               `yaml:"Accounts,flow"`
-	Services  []string               `yaml:"Services,flow"`
+	Services  []string               `yaml:"Services,flow"` // Deprecated: Use Workloads instead of Services.
 	Workloads []AppResourcesWorkload `yaml:"Workloads,flow"`
 	App       string                 `yaml:"App"`
 	Version   int                    `yaml:"Version"`
@@ -42,10 +42,6 @@ type AppResourcesConfig struct {
 type AppResourcesWorkload struct {
 	Name    string `yaml:"Name,flow"`
 	WithECR bool   `yaml:"WithECR,flow"`
-}
-
-func (s *AppResourcesWorkload) isEmpty() bool {
-	return s.Name == "" && !s.WithECR
 }
 
 // UnmarshalYAML overrides the default YAML unmarshaling logic for the Image
