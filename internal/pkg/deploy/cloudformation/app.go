@@ -16,7 +16,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/progress"
 
-	"github.com/aws/aws-sdk-go/aws"
 	sdkcloudformation "github.com/aws/aws-sdk-go/service/cloudformation"
 	sdkcloudformationiface "github.com/aws/aws-sdk-go/service/cloudformation/cloudformationiface"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
@@ -70,13 +69,13 @@ func (cf CloudFormation) UpgradeApplication(in *deploy.CreateAppInput) error {
 		return fmt.Errorf("get existing application infrastructure stack: %w", err)
 	}
 	in.DNSDelegationAccounts = stack.DNSDelegatedAccountsForStack(appStack.SDK())
+	in.AdditionalTags = toMap(appStack.Tags)
 	appConfig = stack.NewAppStackConfig(in)
-	s, err := toStack(appConfig)
-	if err != nil {
-		return err
-	}
-	if err := cf.upgradeAppStack(s); err != nil {
-		return err
+	if err := cf.upgradeAppStack(appConfig); err != nil {
+		var empty *cloudformation.ErrChangeSetEmpty
+		if !errors.As(err, &empty) {
+			return fmt.Errorf("upgrade stack %q: %w", appConfig.StackName(), err)
+		}
 	}
 	return cf.upgradeAppStackSet(appConfig)
 }
@@ -104,36 +103,29 @@ func (cf CloudFormation) upgradeAppStackSet(config *stack.AppStackConfig) error 
 	}
 }
 
-func (cf CloudFormation) upgradeAppStack(s *cloudformation.Stack) error {
-	for {
-		// Upgrade app stack.
-		descr, err := cf.cfnClient.Describe(s.Name)
-		if err != nil {
-			return fmt.Errorf("describe stack %s: %w", s.Name, err)
-		}
-		if cloudformation.StackStatus(aws.StringValue(descr.StackStatus)).InProgress() {
-			// There is already an update happening to the app stack.
-			// Best-effort try to wait for the existing update to be over before retrying.
-			_ = cf.cfnClient.WaitForUpdate(context.Background(), s.Name)
-			continue
-		}
-		// We only need the tags from the previously deployed stack.
-		s.Tags = descr.Tags
-
-		err = cf.cfnClient.UpdateAndWait(s)
-		if err == nil {
-			return nil
-		}
-		if retryable := isRetryableUpdateError(s.Name, err); retryable {
-			continue
-		}
-		// The changes are already applied, nothing to do. Exit successfully.
-		var emptyChangeSet *cloudformation.ErrChangeSetEmpty
-		if errors.As(err, &emptyChangeSet) {
-			return nil
-		}
-		return fmt.Errorf("update and wait for stack %s: %w", s.Name, err)
+func (cf CloudFormation) upgradeAppStack(conf *stack.AppStackConfig) error {
+	s, err := toStack(conf)
+	if err != nil {
+		return err
 	}
+	in := &executeAndRenderChangeSetInput{
+		stackName:        s.Name,
+		stackDescription: fmt.Sprintf("Creating the infrastructure for the %s app.", s.Name),
+	}
+	in.createChangeSet = func() (changeSetID string, err error) {
+		spinner := progress.NewSpinner(cf.console)
+		label := fmt.Sprintf("Proposing infrastructure changes for %s.", s.Name)
+		spinner.Start(label)
+		defer stopSpinner(spinner, err, label)
+
+		changeSetID, err = cf.cfnClient.Update(s)
+		if err != nil {
+			return "", err
+		}
+		return changeSetID, nil
+	}
+
+	return cf.executeAndRenderChangeSet(in)
 }
 
 // DelegateDNSPermissions grants the provided account ID the ability to write to this application's
@@ -228,11 +220,17 @@ func (cf CloudFormation) getResourcesForStackInstances(app *config.Application, 
 	return regionalResources, nil
 }
 
+// AddWorkloadToAppOpt allows passing optional parameters to AddServiceToApp.
+type AddWorkloadToAppOpt func(*stack.AppResourcesService)
+
+// AddWorkloadToAppOptWithoutECR adds a workload to app without creating an ECR repo.
+func AddWorkloadToAppOptWithoutECR(config *stack.AppResourcesService) { config.WithECR = false }
+
 // AddServiceToApp attempts to add new service specific resources to the application resource stack.
 // Currently, this means that we'll set up an ECR repo with a policy for all envs to be able
 // to pull from it.
-func (cf CloudFormation) AddServiceToApp(app *config.Application, svcName string) error {
-	if err := cf.addWorkloadToApp(app, svcName); err != nil {
+func (cf CloudFormation) AddServiceToApp(app *config.Application, svcName string, opts ...AddWorkloadToAppOpt) error {
+	if err := cf.addWorkloadToApp(app, svcName, opts...); err != nil {
 		return fmt.Errorf("adding service %s resources to application %s: %w", svcName, app.Name, err)
 	}
 	return nil
@@ -241,14 +239,14 @@ func (cf CloudFormation) AddServiceToApp(app *config.Application, svcName string
 // AddJobToApp attempts to add new job-specific resources to the application resource stack.
 // Currently, this means that we'll set up an ECR repo with a policy for all envs to be able
 // to pull from it.
-func (cf CloudFormation) AddJobToApp(app *config.Application, jobName string) error {
-	if err := cf.addWorkloadToApp(app, jobName); err != nil {
+func (cf CloudFormation) AddJobToApp(app *config.Application, jobName string, opts ...AddWorkloadToAppOpt) error {
+	if err := cf.addWorkloadToApp(app, jobName, opts...); err != nil {
 		return fmt.Errorf("adding job %s resources to application %s: %w", jobName, app.Name, err)
 	}
 	return nil
 }
 
-func (cf CloudFormation) addWorkloadToApp(app *config.Application, wlName string) error {
+func (cf CloudFormation) addWorkloadToApp(app *config.Application, wlName string, opts ...AddWorkloadToAppOpt) error {
 	appConfig := stack.NewAppStackConfig(&deploy.CreateAppInput{
 		Name:           app.Name,
 		AccountID:      app.AccountID,
@@ -263,20 +261,26 @@ func (cf CloudFormation) addWorkloadToApp(app *config.Application, wlName string
 	// We'll generate a new list of Accounts to add to our application
 	// infrastructure by appending the environment's account if it
 	// doesn't already exist.
-	var wlList []string
+	var wlList []stack.AppResourcesService
 	shouldAddNewWl := true
 	// For now, AppResourcesConfig.Services refers to workloads, including both services and jobs.
 	for _, wl := range previouslyDeployedConfig.Services {
 		wlList = append(wlList, wl)
-		if wl == wlName {
+		if wl.Name == wlName {
 			shouldAddNewWl = false
 		}
 	}
 	if !shouldAddNewWl {
 		return nil
 	}
-
-	wlList = append(wlList, wlName)
+	newAppResourcesService := &stack.AppResourcesService{
+		Name:    wlName,
+		WithECR: true,
+	}
+	for _, opt := range opts {
+		opt(newAppResourcesService)
+	}
+	wlList = append(wlList, *newAppResourcesService)
 
 	newDeploymentConfig := stack.AppResourcesConfig{
 		Version:  previouslyDeployedConfig.Version + 1,
@@ -321,11 +325,11 @@ func (cf CloudFormation) removeWorkloadFromApp(app *config.Application, wlName s
 
 	// We'll generate a new list of Accounts to remove the account associated
 	// with the input workload to be removed.
-	var wlList []string
+	var wlList []stack.AppResourcesService
 	shouldRemoveWl := false
 	// For now, AppResourcesConfig.Services refers to workloads, including both services and jobs.
 	for _, wl := range previouslyDeployedConfig.Services {
-		if wl == wlName {
+		if wl.Name == wlName {
 			shouldRemoveWl = true
 			continue
 		}

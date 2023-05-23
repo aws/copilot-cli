@@ -341,6 +341,11 @@ type wsAppManager interface {
 	Summary() (*workspace.Summary, error)
 }
 
+type wsAppManagerDeleter interface {
+	wsAppManager
+	wsFileDeleter
+}
+
 type wsWriter interface {
 	Write(content encoding.BinaryMarshaler, path string) (string, error)
 }
@@ -390,8 +395,8 @@ type pipelineDeployer interface {
 
 type appDeployer interface {
 	DeployApp(in *deploy.CreateAppInput) error
-	AddServiceToApp(app *config.Application, svcName string) error
-	AddJobToApp(app *config.Application, jobName string) error
+	AddServiceToApp(app *config.Application, svcName string, opts ...cloudformation.AddWorkloadToAppOpt) error
+	AddJobToApp(app *config.Application, jobName string, opts ...cloudformation.AddWorkloadToAppOpt) error
 	AddEnvToApp(opts *cloudformation.AddEnvToAppOpts) error
 	DelegateDNSPermissions(app *config.Application, accountID string) error
 	DeleteApp(name string) error
