@@ -196,21 +196,20 @@ func (converter *getAttConverter) parse(from, to *yaml.Node, key string, overrid
 		toValue = to.Content[1]
 	}
 	// If the input node are of the same type (i.e. both seq or both scalar), parse them normally.
-	if fromValue.Kind == toValue.Kind {
-		return converter.intrinsicFuncMapTagConverter.parse(from, to, key, overrider)
-	}
 	// Otherwise, first convert the scalar input to seq input, then parse.
-	var err error
-	switch {
-	case fromValue.Kind == yaml.ScalarNode:
-		fromValue, err = getAttScalarToSeq(fromValue)
-	case toValue.Kind == yaml.ScalarNode:
-		toValue, err = getAttScalarToSeq(toValue)
+	if fromValue.Kind != toValue.Kind {
+		var err error
+		switch {
+		case fromValue.Kind == yaml.ScalarNode:
+			fromValue, err = getAttScalarToSeq(fromValue)
+		case toValue.Kind == yaml.ScalarNode:
+			toValue, err = getAttScalarToSeq(toValue)
+		}
+		if err != nil {
+			return nil, err
+		}
 	}
-	if err != nil {
-		return nil, err
-	}
-	diff, err := parse(fromValue, toValue, "Fn::GetAtt", overrider)
+	diff, err := parse(stripTag(fromValue), stripTag(toValue), "Fn::GetAtt", overrider)
 	if diff == nil {
 		return nil, err
 	}

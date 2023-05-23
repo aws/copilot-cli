@@ -234,6 +234,12 @@ ImageId: !FindInMap
 				}
 			},
 		},
+		"diff in Fn::GetAtt vs !GetAtt when comparing scalar to scalar both with tags": {
+			old: `      SecurityGroups:
+        - !GetAtt PublicHTTPLoadBalancerSecurityGroup.GroupId`,
+			curr: `      SecurityGroups:
+        - !GetAtt PublicHTTPLoadBalancerSecurityGroup.GroupId`,
+		},
 		"no diff in Fn::GetAZs vs !GetAZ": {
 			old: `AvailabilityZone: !GetAZs ""`,
 			curr: `AvailabilityZone:
