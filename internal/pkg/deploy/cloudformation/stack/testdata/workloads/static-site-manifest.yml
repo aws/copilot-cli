@@ -1,0 +1,19 @@
+# The manifest for the "static" service.
+# Read the full specification for the "Static Site" type at:
+#  https://aws.github.io/copilot-cli/docs/manifest/static-site/
+
+# Your service name will be used in naming your resources like S3 buckets, etc.
+name: static
+type: Static Site
+
+http:
+  alias: example.com
+
+files:
+  - source: ./frontend/dist
+    destination: /dist
+  - source: ./foo 
+    recursive: true
+    destination: /code 
+    exclude: "*"
+    reinclude: "*.jpg"

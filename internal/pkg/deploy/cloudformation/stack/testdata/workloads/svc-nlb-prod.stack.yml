@@ -337,9 +337,6 @@ Resources: # If a bucket URL is specified, that means the template exists.
   EnvControllerFunction:
     Type: AWS::Lambda::Function
     Properties:
-      Code:
-        S3Bucket:
-        S3Key:
       Handler: "index.handler"
       Timeout: 900
       MemorySize: 512
@@ -410,9 +407,12 @@ Resources: # If a bucket URL is specified, that means the template exists.
         MinimumHealthyPercent: 100
         MaximumPercent: 200
         Alarms:
-          AlarmNames: []
-          Enable: false
-          Rollback: true
+          !If
+          - IsGovCloud
+          - !Ref AWS::NoValue
+          - Enable: false
+            AlarmNames: []
+            Rollback: true
       PropagateTags: SERVICE
       LaunchType: FARGATE
       ServiceConnectConfiguration: !If
@@ -619,8 +619,8 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Condition: HasAssociatedDomain
     Properties:
       ServiceToken: !GetAtt NLBCustomDomainFunction.Arn
-      LoadBalancerHostedZoneID: !GetAtt PublicNetworkLoadBalancer.CanonicalHostedZoneID
-      LoadBalancerDNS: !GetAtt PublicNetworkLoadBalancer.DNSName
+      PublicAccessHostedZoneID: !GetAtt PublicNetworkLoadBalancer.CanonicalHostedZoneID
+      PublicAccessDNS: !GetAtt PublicNetworkLoadBalancer.DNSName
       EnvHostedZoneId:
         Fn::ImportValue: !Sub "${AppName}-${EnvName}-HostedZone"
       EnvName: !Ref EnvName
@@ -634,9 +634,6 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Type: AWS::Lambda::Function
     Condition: HasAssociatedDomain
     Properties:
-      Code:
-        S3Bucket:
-        S3Key:
       Handler: "index.handler"
       Timeout: 900
       MemorySize: 512
@@ -702,9 +699,6 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Type: AWS::Lambda::Function
     Condition: HasAssociatedDomain
     Properties:
-      Code:
-        S3Bucket:
-        S3Key:
       Handler: "index.handler"
       Timeout: 900
       MemorySize: 512

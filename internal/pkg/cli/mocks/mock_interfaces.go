@@ -3604,6 +3604,58 @@ func (mr *MockwsAppManagerMockRecorder) Summary() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Summary", reflect.TypeOf((*MockwsAppManager)(nil).Summary))
 }
 
+// MockwsAppManagerDeleter is a mock of wsAppManagerDeleter interface.
+type MockwsAppManagerDeleter struct {
+	ctrl     *gomock.Controller
+	recorder *MockwsAppManagerDeleterMockRecorder
+}
+
+// MockwsAppManagerDeleterMockRecorder is the mock recorder for MockwsAppManagerDeleter.
+type MockwsAppManagerDeleterMockRecorder struct {
+	mock *MockwsAppManagerDeleter
+}
+
+// NewMockwsAppManagerDeleter creates a new mock instance.
+func NewMockwsAppManagerDeleter(ctrl *gomock.Controller) *MockwsAppManagerDeleter {
+	mock := &MockwsAppManagerDeleter{ctrl: ctrl}
+	mock.recorder = &MockwsAppManagerDeleterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockwsAppManagerDeleter) EXPECT() *MockwsAppManagerDeleterMockRecorder {
+	return m.recorder
+}
+
+// DeleteWorkspaceFile mocks base method.
+func (m *MockwsAppManagerDeleter) DeleteWorkspaceFile() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteWorkspaceFile")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteWorkspaceFile indicates an expected call of DeleteWorkspaceFile.
+func (mr *MockwsAppManagerDeleterMockRecorder) DeleteWorkspaceFile() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteWorkspaceFile", reflect.TypeOf((*MockwsAppManagerDeleter)(nil).DeleteWorkspaceFile))
+}
+
+// Summary mocks base method.
+func (m *MockwsAppManagerDeleter) Summary() (*workspace.Summary, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Summary")
+	ret0, _ := ret[0].(*workspace.Summary)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Summary indicates an expected call of Summary.
+func (mr *MockwsAppManagerDeleterMockRecorder) Summary() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Summary", reflect.TypeOf((*MockwsAppManagerDeleter)(nil).Summary))
+}
+
 // MockwsWriter is a mock of wsWriter interface.
 type MockwsWriter struct {
 	ctrl     *gomock.Controller
@@ -4122,31 +4174,41 @@ func (mr *MockappDeployerMockRecorder) AddEnvToApp(opts interface{}) *gomock.Cal
 }
 
 // AddJobToApp mocks base method.
-func (m *MockappDeployer) AddJobToApp(app *config.Application, jobName string) error {
+func (m *MockappDeployer) AddJobToApp(app *config.Application, jobName string, opts ...cloudformation0.AddWorkloadToAppOpt) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddJobToApp", app, jobName)
+	varargs := []interface{}{app, jobName}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "AddJobToApp", varargs...)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // AddJobToApp indicates an expected call of AddJobToApp.
-func (mr *MockappDeployerMockRecorder) AddJobToApp(app, jobName interface{}) *gomock.Call {
+func (mr *MockappDeployerMockRecorder) AddJobToApp(app, jobName interface{}, opts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddJobToApp", reflect.TypeOf((*MockappDeployer)(nil).AddJobToApp), app, jobName)
+	varargs := append([]interface{}{app, jobName}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddJobToApp", reflect.TypeOf((*MockappDeployer)(nil).AddJobToApp), varargs...)
 }
 
 // AddServiceToApp mocks base method.
-func (m *MockappDeployer) AddServiceToApp(app *config.Application, svcName string) error {
+func (m *MockappDeployer) AddServiceToApp(app *config.Application, svcName string, opts ...cloudformation0.AddWorkloadToAppOpt) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddServiceToApp", app, svcName)
+	varargs := []interface{}{app, svcName}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "AddServiceToApp", varargs...)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // AddServiceToApp indicates an expected call of AddServiceToApp.
-func (mr *MockappDeployerMockRecorder) AddServiceToApp(app, svcName interface{}) *gomock.Call {
+func (mr *MockappDeployerMockRecorder) AddServiceToApp(app, svcName interface{}, opts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddServiceToApp", reflect.TypeOf((*MockappDeployer)(nil).AddServiceToApp), app, svcName)
+	varargs := append([]interface{}{app, svcName}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddServiceToApp", reflect.TypeOf((*MockappDeployer)(nil).AddServiceToApp), varargs...)
 }
 
 // DelegateDNSPermissions mocks base method.
@@ -4481,17 +4543,22 @@ func (mr *MockdeployerMockRecorder) AddEnvToApp(opts interface{}) *gomock.Call {
 }
 
 // AddJobToApp mocks base method.
-func (m *Mockdeployer) AddJobToApp(app *config.Application, jobName string) error {
+func (m *Mockdeployer) AddJobToApp(app *config.Application, jobName string, opts ...cloudformation0.AddWorkloadToAppOpt) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddJobToApp", app, jobName)
+	varargs := []interface{}{app, jobName}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "AddJobToApp", varargs...)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // AddJobToApp indicates an expected call of AddJobToApp.
-func (mr *MockdeployerMockRecorder) AddJobToApp(app, jobName interface{}) *gomock.Call {
+func (mr *MockdeployerMockRecorder) AddJobToApp(app, jobName interface{}, opts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddJobToApp", reflect.TypeOf((*Mockdeployer)(nil).AddJobToApp), app, jobName)
+	varargs := append([]interface{}{app, jobName}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddJobToApp", reflect.TypeOf((*Mockdeployer)(nil).AddJobToApp), varargs...)
 }
 
 // AddPipelineResourcesToApp mocks base method.
@@ -4509,17 +4576,22 @@ func (mr *MockdeployerMockRecorder) AddPipelineResourcesToApp(app, region interf
 }
 
 // AddServiceToApp mocks base method.
-func (m *Mockdeployer) AddServiceToApp(app *config.Application, svcName string) error {
+func (m *Mockdeployer) AddServiceToApp(app *config.Application, svcName string, opts ...cloudformation0.AddWorkloadToAppOpt) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddServiceToApp", app, svcName)
+	varargs := []interface{}{app, svcName}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "AddServiceToApp", varargs...)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // AddServiceToApp indicates an expected call of AddServiceToApp.
-func (mr *MockdeployerMockRecorder) AddServiceToApp(app, svcName interface{}) *gomock.Call {
+func (mr *MockdeployerMockRecorder) AddServiceToApp(app, svcName interface{}, opts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddServiceToApp", reflect.TypeOf((*Mockdeployer)(nil).AddServiceToApp), app, svcName)
+	varargs := append([]interface{}{app, svcName}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddServiceToApp", reflect.TypeOf((*Mockdeployer)(nil).AddServiceToApp), varargs...)
 }
 
 // CreateAndRenderEnvironment mocks base method.
@@ -5868,6 +5940,44 @@ func (m *MockwsSelector) Workload(msg, help string) (string, error) {
 func (mr *MockwsSelectorMockRecorder) Workload(msg, help interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Workload", reflect.TypeOf((*MockwsSelector)(nil).Workload), msg, help)
+}
+
+// MockstaticSourceSelector is a mock of staticSourceSelector interface.
+type MockstaticSourceSelector struct {
+	ctrl     *gomock.Controller
+	recorder *MockstaticSourceSelectorMockRecorder
+}
+
+// MockstaticSourceSelectorMockRecorder is the mock recorder for MockstaticSourceSelector.
+type MockstaticSourceSelectorMockRecorder struct {
+	mock *MockstaticSourceSelector
+}
+
+// NewMockstaticSourceSelector creates a new mock instance.
+func NewMockstaticSourceSelector(ctrl *gomock.Controller) *MockstaticSourceSelector {
+	mock := &MockstaticSourceSelector{ctrl: ctrl}
+	mock.recorder = &MockstaticSourceSelectorMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockstaticSourceSelector) EXPECT() *MockstaticSourceSelectorMockRecorder {
+	return m.recorder
+}
+
+// StaticSources mocks base method.
+func (m *MockstaticSourceSelector) StaticSources(selPrompt, selHelp, anotherPathPrompt, anotherPathHelp string, pathValidator prompt.ValidatorFunc) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StaticSources", selPrompt, selHelp, anotherPathPrompt, anotherPathHelp, pathValidator)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// StaticSources indicates an expected call of StaticSources.
+func (mr *MockstaticSourceSelectorMockRecorder) StaticSources(selPrompt, selHelp, anotherPathPrompt, anotherPathHelp, pathValidator interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StaticSources", reflect.TypeOf((*MockstaticSourceSelector)(nil).StaticSources), selPrompt, selHelp, anotherPathPrompt, anotherPathHelp, pathValidator)
 }
 
 // MockscheduleSelector is a mock of scheduleSelector interface.

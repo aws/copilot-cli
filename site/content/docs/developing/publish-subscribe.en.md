@@ -70,6 +70,20 @@ subscribe:
 
 Copilot will create a subscription between this worker service's queue and the `ordersTopic` topic from the `api` service. It will also inject the queue URI into the service container under the environment variable `COPILOT_QUEUE_URI`.
 
+ If you specify one or more topic-specific queues, you can access those queue URIs via the `COPILOT_TOPIC_QUEUE_URIS` variable. 
+This variable is a JSON map from a unique identifier for the topic-specific queue to its URI. 
+
+For example, a worker service with a topic-specific queue for the `orders` topic from the `merchant` service and a FIFO 
+topic `transactions` from the `merchant` service will have the following JSON structure.
+
+```json
+// COPILOT_TOPIC_QUEUE_URIS
+{
+  "merchantOrdersEventsQueue": "https://sqs.eu-central-1.amazonaws.com/...",
+  "merchantTransactionsfifoEventsQueue": "https://sqs.eu-central-1.amazonaws.com/..."
+}
+```
+
 ### Javascript Example
 
 The central business logic of a worker service's container involves pulling messages from the queue. To do this with the AWS SDK, you can use the SQS Clients for your language of choice. In Javascript, the logic for pulling, processing, and deleting messages from the queue would look like the following code snipped.

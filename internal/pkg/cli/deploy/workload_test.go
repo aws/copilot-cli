@@ -37,6 +37,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type endpointGetterDouble struct {
+	ServiceDiscoveryEndpointFn func() (string, error)
+}
+
+func (d *endpointGetterDouble) ServiceDiscoveryEndpoint() (string, error) {
+	return d.ServiceDiscoveryEndpointFn()
+}
+
 type deployMocks struct {
 	mockRepositoryService      *mocks.MockrepositoryService
 	mockEndpointGetter         *mocks.MockendpointGetter
@@ -52,6 +60,7 @@ type deployMocks struct {
 	mockFileSystem             afero.Fs
 	mockValidator              *mocks.MockaliasCertValidator
 	mockLabeledTermPrinter     *mocks.MocklabeledTermPrinter
+	mockdockerEngineRunChecker *mocks.MockdockerEngineRunChecker
 }
 
 type mockTemplateFS struct {
@@ -196,6 +205,19 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 		wantBuildRequired bool
 		wantErr           error
 	}{
+		"error if docker engine is not running": {
+			inMockUserTag: "v1.0",
+			inDockerBuildArgs: map[string]*manifest.DockerBuildArgs{
+				"mockWkld": {
+					Dockerfile: aws.String("mockDockerfile"),
+					Context:    aws.String("mockContext"),
+				},
+			},
+			mock: func(t *testing.T, m *deployMocks) {
+				m.mockdockerEngineRunChecker.EXPECT().CheckDockerEngineRunning().Return(errors.New("some error"))
+			},
+			wantErr: fmt.Errorf("check if docker engine is running: some error"),
+		},
 		"error if failed to build and push image": {
 			inMockUserTag: "v1.0",
 			inDockerBuildArgs: map[string]*manifest.DockerBuildArgs{
@@ -205,6 +227,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				},
 			},
 			mock: func(t *testing.T, m *deployMocks) {
+				m.mockdockerEngineRunChecker.EXPECT().CheckDockerEngineRunning().Return(nil)
 				m.mockRepositoryService.EXPECT().Login().Return(mockURI, nil)
 				m.mockRepositoryService.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
 					URI:        mockURI,
@@ -232,6 +255,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				},
 			},
 			mock: func(t *testing.T, m *deployMocks) {
+				m.mockdockerEngineRunChecker.EXPECT().CheckDockerEngineRunning().Return(nil)
 				m.mockRepositoryService.EXPECT().Login().Return(mockURI, nil)
 				m.mockRepositoryService.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
 					URI:        mockURI,
@@ -265,6 +289,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				},
 			},
 			mock: func(t *testing.T, m *deployMocks) {
+				m.mockdockerEngineRunChecker.EXPECT().CheckDockerEngineRunning().Return(nil)
 				m.mockRepositoryService.EXPECT().Login().Return(mockURI, nil)
 				m.mockRepositoryService.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
 					URI:        mockURI,
@@ -301,6 +326,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			},
 			inMockGitTag: "gitTag",
 			mock: func(t *testing.T, m *deployMocks) {
+				m.mockdockerEngineRunChecker.EXPECT().CheckDockerEngineRunning().Return(nil)
 				m.mockRepositoryService.EXPECT().Login().Return(mockURI, nil)
 				m.mockRepositoryService.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
 					URI:        mockURI,
@@ -603,11 +629,12 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			defer ctrl.Finish()
 
 			m := &deployMocks{
-				mockUploader:           mocks.NewMockuploader(ctrl),
-				mockAddons:             mocks.NewMockstackBuilder(ctrl),
-				mockRepositoryService:  mocks.NewMockrepositoryService(ctrl),
-				mockFileSystem:         afero.NewMemMapFs(),
-				mockLabeledTermPrinter: mocks.NewMocklabeledTermPrinter(ctrl),
+				mockUploader:               mocks.NewMockuploader(ctrl),
+				mockAddons:                 mocks.NewMockstackBuilder(ctrl),
+				mockRepositoryService:      mocks.NewMockrepositoryService(ctrl),
+				mockFileSystem:             afero.NewMemMapFs(),
+				mockLabeledTermPrinter:     mocks.NewMocklabeledTermPrinter(ctrl),
+				mockdockerEngineRunChecker: mocks.NewMockdockerEngineRunChecker(ctrl),
 			}
 			tc.mock(t, m)
 
@@ -640,6 +667,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				},
 				fs:              m.mockFileSystem,
 				s3Client:        m.mockUploader,
+				docker:          m.mockdockerEngineRunChecker,
 				repository:      m.mockRepositoryService,
 				templateFS:      fakeTemplateFS(),
 				overrider:       new(override.Noop),
@@ -980,24 +1008,7 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 				m.mockEnvVersionGetter.EXPECT().Version().Return("v1.42.0", nil)
 			},
-			wantErr: fmt.Errorf("validate ALB runtime configuration for \"http\": get version for app %s: %w", mockAppName, mockError),
-		},
-		"out of date app version": {
-			inAliases: manifest.Alias{AdvancedAliases: mockAlias},
-			inEnvironment: &config.Environment{
-				Name:   mockEnvName,
-				Region: "us-west-2",
-			},
-			inApp: &config.Application{
-				Name:   mockAppName,
-				Domain: "mockDomain",
-			},
-			mock: func(m *deployMocks) {
-				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-				m.mockEnvVersionGetter.EXPECT().Version().Return("v1.42.0", nil)
-				m.mockAppVersionGetter.EXPECT().Version().Return("v.0.99.0", nil)
-			},
-			wantErr: fmt.Errorf("validate ALB runtime configuration for \"http\": alias is not compatible with application versions below v1.0.0"),
+			wantErr: fmt.Errorf("validate ALB runtime configuration for \"http\": alias not supported: get version for app %q: %w", mockAppName, mockError),
 		},
 		"fail to enable https alias because of incompatible app version": {
 			inAliases: manifest.Alias{AdvancedAliases: mockAlias},
@@ -1014,7 +1025,7 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 				m.mockEnvVersionGetter.EXPECT().Version().Return("v1.42.0", nil)
 			},
-			wantErr: fmt.Errorf("validate ALB runtime configuration for \"http\": alias is not compatible with application versions below %s", deploy.AliasLeastAppTemplateVersion),
+			wantErr: fmt.Errorf("validate ALB runtime configuration for \"http\": alias not supported: app version must be >= %s", deploy.AliasLeastAppTemplateVersion),
 		},
 		"fail to enable nlb alias because of incompatible app version": {
 			inNLB: manifest.NetworkLoadBalancerConfiguration{
@@ -1036,7 +1047,7 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 				m.mockEnvVersionGetter.EXPECT().Version().Return("v1.42.0", nil)
 			},
-			wantErr: fmt.Errorf("alias is not compatible with application versions below %s", deploy.AliasLeastAppTemplateVersion),
+			wantErr: fmt.Errorf("alias not supported: app version must be >= %s", deploy.AliasLeastAppTemplateVersion),
 		},
 		"fail to enable https alias because of invalid alias": {
 			inAliases: manifest.Alias{AdvancedAliases: []manifest.AdvancedAlias{
@@ -1500,6 +1511,16 @@ func TestWorkloadDeployer_DeployDiff(t *testing.T) {
 					Return("peace: und Liebe", nil)
 			},
 			wanted: `~ peace: und Liebe -> and love
+`,
+		},
+		"get the correct diff when there is no deployed diff": {
+			inTemplate: `peace: and love`,
+			setUpMocks: func(m *deployDiffMocks) {
+				m.mockDeployedTmplGetter.EXPECT().
+					Template(gomock.Eq(stack.NameForWorkload("mockApp", "mockEnv", "mockSvc"))).
+					Return("", &cloudformation.ErrStackNotFound{})
+			},
+			wanted: `+ peace: and love
 `,
 		},
 	}

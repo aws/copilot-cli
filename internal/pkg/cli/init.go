@@ -7,13 +7,12 @@ package cli
 import (
 	"errors"
 	"fmt"
-	"os"
-
 	awscfn "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/iam"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
 	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
+	"os"
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
@@ -241,9 +240,9 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 				dockerfilePath: vars.dockerfilePath,
 				image:          vars.image,
 			}
-			sel, err := selector.NewLocalFileSelector(prompt, fs)
+			dfSel, err := selector.NewDockerfileSelector(prompt, fs)
 			if err != nil {
-				return err
+				return fmt.Errorf("initiate dockerfile selector: %w", err)
 			}
 			switch t := wkldType; {
 			case manifestinfo.IsTypeAJob(t):
@@ -259,7 +258,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 
 					fs:                fs,
 					store:             configStore,
-					dockerfileSel:     sel,
+					dockerfileSel:     dfSel,
 					scheduleSelector:  selector.NewStaticSelector(prompt),
 					prompt:            prompt,
 					dockerEngine:      dockerengine.New(cmd),
@@ -292,7 +291,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 					initSvcVars: svcVars,
 
 					fs:                fs,
-					sel:               sel,
+					sel:               dfSel,
 					store:             configStore,
 					topicSel:          snsSel,
 					prompt:            prompt,
@@ -372,11 +371,7 @@ func (o *initOpts) logWorkloadTypeAck() {
 			color.HighlightUserInput(o.initWkldVars.wkldType), color.HighlightUserInput(o.initWkldVars.name), color.HighlightUserInput(o.initWkldVars.appName), color.HighlightUserInput(*o.schedule))
 		return
 	}
-	if aws.Uint16Value(o.port) != 0 {
-		log.Infof("Ok great, we'll set up a %s named %s in application %s listening on port %s.\n", color.HighlightUserInput(o.initWkldVars.wkldType), color.HighlightUserInput(o.initWkldVars.name), color.HighlightUserInput(o.initWkldVars.appName), color.HighlightUserInput(fmt.Sprintf("%d", *o.port)))
-	} else {
-		log.Infof("Ok great, we'll set up a %s named %s in application %s.\n", color.HighlightUserInput(o.initWkldVars.wkldType), color.HighlightUserInput(o.initWkldVars.name), color.HighlightUserInput(o.initWkldVars.appName))
-	}
+	log.Infof("Ok great, we'll set up a %s named %s in application %s.\n", color.HighlightUserInput(o.initWkldVars.wkldType), color.HighlightUserInput(o.initWkldVars.name), color.HighlightUserInput(o.initWkldVars.appName))
 }
 
 func (o *initOpts) deploy() error {

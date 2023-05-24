@@ -18,6 +18,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/tags"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/spf13/afero"
 
@@ -46,6 +47,7 @@ type deployWkldVars struct {
 	forceNewUpdate  bool // NOTE: this variable is not applicable for a job workload currently.
 	disableRollback bool
 	showDiff        bool
+	skipDiffPrompt  bool
 
 	// To facilitate unit tests.
 	clientConfigured bool
@@ -215,6 +217,9 @@ func (o *deploySvcOpts) Execute() error {
 	if err != nil {
 		return err
 	}
+	if o.forceNewUpdate && o.svcType == manifestinfo.StaticSiteType {
+		return fmt.Errorf("--%s is not supported for service type %q", forceFlag, manifestinfo.StaticSiteType)
+	}
 	o.appliedDynamicMft = mft
 	if err := validateWorkloadManifestCompatibilityWithEnv(o.ws, o.envFeaturesDescriber, mft, o.envName); err != nil {
 		return err
@@ -227,7 +232,6 @@ func (o *deploySvcOpts) Execute() error {
 	if err != nil {
 		return fmt.Errorf("check if %s is available in region %s: %w", o.svcType, o.targetEnv.Region, err)
 	}
-
 	if !serviceInRegion {
 		log.Warningf(`%s might not be available in region %s; proceed with caution.
 `, o.svcType, o.targetEnv.Region)
@@ -261,7 +265,10 @@ func (o *deploySvcOpts) Execute() error {
 				return err
 			}
 		}
-		contd, err := o.prompt.Confirm(continueDeploymentPrompt, "")
+		contd, err := o.skipDiffPrompt, nil
+		if !o.skipDiffPrompt {
+			contd, err = o.prompt.Confirm(continueDeploymentPrompt, "")
+		}
 		if err != nil {
 			return fmt.Errorf("ask whether to continue with the deployment: %w", err)
 		}
@@ -343,14 +350,21 @@ func (o *deploySvcOpts) validateEnvName() error {
 
 func (o *deploySvcOpts) validateOrAskSvcName() error {
 	if o.name != "" {
-		return o.validateSvcName()
+		if err := o.validateSvcName(); err != nil {
+			return err
+		}
+	} else {
+		name, err := o.sel.Service("Select a service in your workspace", "")
+		if err != nil {
+			return fmt.Errorf("select service: %w", err)
+		}
+		o.name = name
 	}
-
-	name, err := o.sel.Service("Select a service in your workspace", "")
+	svc, err := o.store.GetService(o.appName, o.name)
 	if err != nil {
-		return fmt.Errorf("select service: %w", err)
+		return fmt.Errorf("get service %s configuration: %w", o.name, err)
 	}
-	o.name = name
+	o.svcType = svc.Type
 	return nil
 }
 
@@ -374,11 +388,6 @@ func (o *deploySvcOpts) configureClients() error {
 		return fmt.Errorf("get environment %s configuration: %w", o.envName, err)
 	}
 	o.targetEnv = env
-	svc, err := o.store.GetService(o.appName, o.name)
-	if err != nil {
-		return fmt.Errorf("get service %s configuration: %w", o.name, err)
-	}
-	o.svcType = svc.Type
 
 	// client to retrieve an application's resources created with CloudFormation.
 	defaultSess, err := o.sessProvider.Default()
@@ -485,19 +494,12 @@ func validateWorkloadManifestCompatibilityWithEnv(ws wsEnvironmentsLister, env v
 }
 
 func (o *deploySvcOpts) uriRecommendedActions() ([]string, error) {
-	type reachable interface {
-		Port() (uint16, bool)
-	}
-	mft, ok := o.appliedDynamicMft.Manifest().(reachable)
-	if !ok {
-		return nil, nil
-	}
-	if _, ok := mft.Port(); !ok { // No exposed port.
-		return nil, nil
-	}
-
 	describer, err := describe.NewReachableService(o.appName, o.name, o.store)
 	if err != nil {
+		var errNotAccessible *describe.ErrNonAccessibleServiceType
+		if errors.As(err, &errNotAccessible) {
+			return nil, nil
+		}
 		return nil, err
 	}
 	uri, err := describer.URI(o.envName)
@@ -516,7 +518,7 @@ func (o *deploySvcOpts) uriRecommendedActions() ([]string, error) {
 	}
 
 	return []string{
-		fmt.Sprintf("You can access your service at %s %s", color.HighlightResource(uri.URI), network),
+		fmt.Sprintf("You can access your service at %s %s", uri.URI, network),
 	}, nil
 }
 
@@ -642,5 +644,6 @@ func buildSvcDeployCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&vars.forceNewUpdate, forceFlag, false, forceFlagDescription)
 	cmd.Flags().BoolVar(&vars.disableRollback, noRollbackFlag, false, noRollbackFlagDescription)
 	cmd.Flags().BoolVar(&vars.showDiff, diffFlag, false, diffFlagDescription)
+	cmd.Flags().BoolVar(&vars.skipDiffPrompt, diffAutoApproveFlag, false, diffAutoApproveFlagDescription)
 	return cmd
 }

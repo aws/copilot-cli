@@ -93,11 +93,11 @@ func TestLBWS(t *testing.T) {
 			"custom-resources/alb-rule-priority-generator.js": {
 				Buffer: bytes.NewBufferString("rule priority"),
 			},
-			"custom-resources/nlb-custom-domain.js": {
-				Buffer: bytes.NewBufferString("nlb custom domain"),
+			"custom-resources/wkld-custom-domain.js": {
+				Buffer: bytes.NewBufferString("service-level custom domain"),
 			},
-			"custom-resources/nlb-cert-validator.js": {
-				Buffer: bytes.NewBufferString("nlb cert"),
+			"custom-resources/wkld-cert-validator.js": {
+				Buffer: bytes.NewBufferString("service-level cert"),
 			},
 		},
 	}
@@ -105,8 +105,8 @@ func TestLBWS(t *testing.T) {
 		"DynamicDesiredCountFunction": "manual/scripts/custom-resources/dynamicdesiredcountfunction/2611784f21e91e499306dac066aae5fd8f2ba664b38073bdd3198d2e041c076e.zip",
 		"EnvControllerFunction":       "manual/scripts/custom-resources/envcontrollerfunction/72297cacaeab3a267e371c17ea3f0235905b0da51410eb31c10f7c66ba944044.zip",
 		"RulePriorityFunction":        "manual/scripts/custom-resources/rulepriorityfunction/1385d258950a50faf4b5cd7deeecbc4bcc79a0d41d631e3977cffa0332e6f0c6.zip",
-		"NLBCustomDomainFunction":     "manual/scripts/custom-resources/nlbcustomdomainfunction/8f7e392db9b10ae69816b92c0b1d501e0ceb630e029852ac8ea33a3c205f8e4c.zip",
-		"NLBCertValidatorFunction":    "manual/scripts/custom-resources/nlbcertvalidatorfunction/3b9f56301b50779e09a3495a6d7eadc42b4401f265d4cfb359543c1ad3f21769.zip",
+		"NLBCustomDomainFunction":     "manual/scripts/custom-resources/nlbcustomdomainfunction/ac1c96e7f0823f3167b4e74c8b286ffe8f9d43279dc232d9478837327e57905e.zip",
+		"NLBCertValidatorFunction":    "manual/scripts/custom-resources/nlbcertvalidatorfunction/41aeafc64f18f82c452432a214ae83d8c8de4aba2d5df6a752b7e9a2c86833f1.zip",
 	}
 
 	// WHEN
@@ -254,21 +254,21 @@ func TestStaticSite(t *testing.T) {
 	// GIVEN
 	fakeFS := &fakeTemplateReader{
 		files: map[string]*template.Content{
-			"custom-resources/desired-count-delegation.js": {
-				Buffer: bytes.NewBufferString("custom domain app runner"),
+			"custom-resources/trigger-state-machine.js": {
+				Buffer: bytes.NewBufferString("trigger state machine"),
 			},
-			"custom-resources/alb-rule-priority-generator.js": {
-				Buffer: bytes.NewBufferString("rule priority"),
+			"custom-resources/wkld-custom-domain.js": {
+				Buffer: bytes.NewBufferString("service-level custom domain"),
 			},
-			"custom-resources/env-controller.js": {
-				Buffer: bytes.NewBufferString("env controller"),
+			"custom-resources/wkld-cert-validator.js": {
+				Buffer: bytes.NewBufferString("service-level cert"),
 			},
 		},
 	}
 	fakePaths := map[string]string{
-		"DynamicDesiredCountFunction": "manual/scripts/custom-resources/dynamicdesiredcountfunction/2611784f21e91e499306dac066aae5fd8f2ba664b38073bdd3198d2e041c076e.zip",
-		"EnvControllerFunction":       "manual/scripts/custom-resources/envcontrollerfunction/72297cacaeab3a267e371c17ea3f0235905b0da51410eb31c10f7c66ba944044.zip",
-		"RulePriorityFunction":        "manual/scripts/custom-resources/rulepriorityfunction/1385d258950a50faf4b5cd7deeecbc4bcc79a0d41d631e3977cffa0332e6f0c6.zip",
+		"TriggerStateMachineFunction":   "manual/scripts/custom-resources/triggerstatemachinefunction/edfa40b595a5a4a6d24bfb7ad6e173560a29b7d720651ccc9c87eda76b93c7dd.zip",
+		"CustomDomainFunction":          "manual/scripts/custom-resources/customdomainfunction/ac1c96e7f0823f3167b4e74c8b286ffe8f9d43279dc232d9478837327e57905e.zip",
+		"CertificateValidationFunction": "manual/scripts/custom-resources/certificatevalidationfunction/41aeafc64f18f82c452432a214ae83d8c8de4aba2d5df6a752b7e9a2c86833f1.zip",
 	}
 
 	// WHEN
@@ -276,14 +276,14 @@ func TestStaticSite(t *testing.T) {
 
 	// THEN
 	require.NoError(t, err)
-	require.Equal(t, fakeFS.matchCount, 0, "expected path calls do not match")
+	require.Equal(t, fakeFS.matchCount, 3, "expected path calls do not match")
 
 	actualFnNames := make([]string, len(crs))
 	for i, cr := range crs {
 		actualFnNames[i] = cr.Name()
 	}
 	require.ElementsMatch(t,
-		[]string{},
+		[]string{"TriggerStateMachineFunction", "CustomDomainFunction", "CertificateValidationFunction"},
 		actualFnNames, "function names must match")
 
 	// ensure the zip files contain an index.js file.

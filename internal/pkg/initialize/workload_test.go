@@ -161,7 +161,7 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 				}, nil)
 			},
 			mockappDeployer: func(m *mocks.MockWorkloadAdder) {
-				m.EXPECT().AddJobToApp(gomock.Any(), gomock.Any()).Return(errors.New("some error"))
+				m.EXPECT().AddJobToApp(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("some error"))
 			},
 			wantedErr: errors.New("add job resizer to application app: some error"),
 		},
@@ -183,7 +183,7 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 				m.EXPECT().GetApplication(gomock.Any()).Return(&config.Application{}, nil)
 			},
 			mockappDeployer: func(m *mocks.MockWorkloadAdder) {
-				m.EXPECT().AddJobToApp(gomock.Any(), gomock.Any()).Return(nil)
+				m.EXPECT().AddJobToApp(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
 			wantedErr: fmt.Errorf("saving job resizer: oops"),
 		},
@@ -414,10 +414,8 @@ func TestAppInitOpts_createRequestDrivenWebServiceManifest(t *testing.T) {
 				Port: tc.inSvcPort,
 			}
 
-			initter := &WorkloadInitializer{}
-
 			// WHEN
-			manifest := initter.newRequestDrivenWebServiceManifest(&props)
+			manifest := newRequestDrivenWebServiceManifest(&props)
 
 			// THEN
 			require.Equal(t, tc.inSvcName, *manifest.Name)
@@ -493,6 +491,39 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 				}, "frontend")
 			},
 		},
+		"writes Static Site manifest": {
+			inSvcType: manifestinfo.StaticSiteType,
+			inAppName: "app",
+			inSvcName: "static",
+
+			mockWriter: func(m *mocks.MockWorkspace) {
+				// workspace root: "/static"
+				gomock.InOrder(
+					m.EXPECT().Rel("/static/manifest.yml").Return("manifest.yml", nil))
+				m.EXPECT().WriteServiceManifest(gomock.Any(), "static").Return("/static/manifest.yml", nil)
+			},
+			mockstore: func(m *mocks.MockStore) {
+				m.EXPECT().CreateService(gomock.Any()).
+					Do(func(app *config.Workload) {
+						require.Equal(t, &config.Workload{
+							Name: "static",
+							App:  "app",
+							Type: manifestinfo.StaticSiteType,
+						}, app)
+					}).
+					Return(nil)
+				m.EXPECT().GetApplication("app").Return(&config.Application{
+					Name:      "app",
+					AccountID: "1234",
+				}, nil)
+			},
+			mockappDeployer: func(m *mocks.MockWorkloadAdder) {
+				m.EXPECT().AddServiceToApp(&config.Application{
+					Name:      "app",
+					AccountID: "1234",
+				}, "static", gomock.Any())
+			},
+		},
 		"app error": {
 			inSvcType:        manifestinfo.LoadBalancedWebServiceType,
 			inAppName:        "app",
@@ -550,7 +581,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 				}, nil)
 			},
 			mockappDeployer: func(m *mocks.MockWorkloadAdder) {
-				m.EXPECT().AddServiceToApp(gomock.Any(), gomock.Any()).Return(errors.New("some error"))
+				m.EXPECT().AddServiceToApp(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("some error"))
 			},
 			wantedErr: errors.New("add service frontend to application app: some error"),
 		},
@@ -572,7 +603,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 				m.EXPECT().GetApplication(gomock.Any()).Return(&config.Application{}, nil)
 			},
 			mockappDeployer: func(m *mocks.MockWorkloadAdder) {
-				m.EXPECT().AddServiceToApp(gomock.Any(), gomock.Any()).Return(nil)
+				m.EXPECT().AddServiceToApp(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
 			wantedErr: fmt.Errorf("saving service frontend: oops"),
 		},

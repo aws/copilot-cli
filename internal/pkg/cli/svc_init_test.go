@@ -30,10 +30,12 @@ type initSvcMocks struct {
 	mockPrompt       *mocks.Mockprompter
 	mockSel          *mocks.MockdockerfileSelector
 	mocktopicSel     *mocks.MocktopicSelector
+	mockSourceSel    *mocks.MockstaticSourceSelector
 	mockDockerfile   *mocks.MockdockerfileParser
 	mockDockerEngine *mocks.MockdockerEngine
 	mockMftReader    *mocks.MockmanifestReader
 	mockStore        *mocks.Mockstore
+	mockCachedWSRoot string
 }
 
 func TestSvcInitOpts_Validate(t *testing.T) {
@@ -47,10 +49,12 @@ func TestSvcInitOpts_Validate(t *testing.T) {
 		inSubscribeTags  []string
 		inNoSubscribe    bool
 		inIngressType    string
+		inSources        []string
 
-		setupMocks     func(mocks initSvcMocks)
+		setupMocks     func(mocks *initSvcMocks)
 		mockFileSystem func(mockFS afero.Fs)
 		wantedErr      error
+		wantedAssets   []manifest.FileUpload
 	}{
 		"fail if using different app name with the workspace": {
 			inAppName: "demo",
@@ -61,7 +65,7 @@ func TestSvcInitOpts_Validate(t *testing.T) {
 			inDockerfilePath: "mockDockerfile",
 			inImage:          "mockImage",
 
-			setupMocks: func(m initSvcMocks) {
+			setupMocks: func(m *initSvcMocks) {
 				m.mockStore.EXPECT().GetApplication("phonetool").Return(nil, errors.New("some error"))
 			},
 			wantedErr: fmt.Errorf("get application phonetool configuration: some error"),
@@ -71,7 +75,7 @@ func TestSvcInitOpts_Validate(t *testing.T) {
 			inDockerfilePath: "mockDockerfile",
 			inImage:          "mockImage",
 
-			setupMocks: func(m initSvcMocks) {
+			setupMocks: func(m *initSvcMocks) {
 				m.mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{}, nil)
 			},
 			wantedErr: fmt.Errorf("--dockerfile and --image cannot be specified together"),
@@ -81,7 +85,7 @@ func TestSvcInitOpts_Validate(t *testing.T) {
 			inImage:   "amazon/amazon-ecs-sample",
 			inSvcType: manifestinfo.RequestDrivenWebServiceType,
 
-			setupMocks: func(m initSvcMocks) {
+			setupMocks: func(m *initSvcMocks) {
 				m.mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{}, nil)
 			},
 			wantedErr: fmt.Errorf("image amazon/amazon-ecs-sample is not supported by App Runner: value must be an ECR or ECR Public image URI"),
@@ -90,7 +94,7 @@ func TestSvcInitOpts_Validate(t *testing.T) {
 			inAppName:        "phonetool",
 			inDockerfilePath: "./hello/Dockerfile",
 
-			setupMocks: func(m initSvcMocks) {
+			setupMocks: func(m *initSvcMocks) {
 				m.mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{}, nil)
 			},
 			wantedErr: fmt.Errorf("open %s: file does not exist", filepath.FromSlash("hello/Dockerfile")),
@@ -100,7 +104,7 @@ func TestSvcInitOpts_Validate(t *testing.T) {
 			inSvcName:       "service",
 			inSubscribeTags: []string{"name:svc"},
 			inNoSubscribe:   true,
-			setupMocks: func(m initSvcMocks) {
+			setupMocks: func(m *initSvcMocks) {
 				m.mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{}, nil)
 			},
 			wantedErr: errors.New("validate subscribe configuration: cannot specify both --no-subscribe and --subscribe-topics"),
@@ -111,21 +115,48 @@ func TestSvcInitOpts_Validate(t *testing.T) {
 			inDockerfilePath: "./hello/Dockerfile",
 			inIngressType:    "invalid",
 
-			setupMocks: func(m initSvcMocks) {
+			setupMocks: func(m *initSvcMocks) {
 				m.mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{}, nil)
 			},
 			mockFileSystem: func(mockFS afero.Fs) {
 				mockFS.MkdirAll("hello", 0755)
 				afero.WriteFile(mockFS, "hello/Dockerfile", []byte("FROM nginx"), 0644)
 			},
-			wantedErr: errors.New(`invalid ingress type "invalid": must be one of Environment or Internet.`),
+			wantedErr: errors.New(`invalid ingress type "invalid": must be one of Environment or Internet`),
+		},
+		"error if sources flag used without Static Site type": {
+			inSvcName: "frontend",
+			inSvcType: "Load Balanced Web Service",
+			inSources: []string{"goodbye", "hello/there"},
+
+			setupMocks: func(m *initSvcMocks) {
+				m.mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{}, nil)
+			},
+			wantedErr: errors.New(`'--sources' must be specified with '--type "Static Site"'`),
+		},
+		"error if sources flag used with invalid sources": {
+			inSvcName: "frontend",
+			inSvcType: "Static Site",
+			inSources: []string{"non-existent path"},
+
+			mockFileSystem: func(mockFS afero.Fs) {
+				mockFS.MkdirAll("copilot", 0755)
+				mockFS.MkdirAll("hello", 0755)
+				mockFS.MkdirAll("goodbye", 0755)
+				afero.WriteFile(mockFS, "hello/there", []byte("howdy"), 0644)
+			},
+			setupMocks: func(m *initSvcMocks) {
+				m.mockCachedWSRoot = "mockRoot"
+				m.mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{}, nil)
+			},
+			wantedErr: errors.New(`source "non-existent path" must be a valid path relative to the workspace "mockRoot": open mockRoot/non-existent path: file does not exist`),
 		},
 		"valid flags": {
 			inSvcName:        "frontend",
 			inSvcType:        "Load Balanced Web Service",
 			inDockerfilePath: "./hello/Dockerfile",
 
-			setupMocks: func(m initSvcMocks) {
+			setupMocks: func(m *initSvcMocks) {
 				m.mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{}, nil)
 			},
 			mockFileSystem: func(mockFS afero.Fs) {
@@ -139,12 +170,52 @@ func TestSvcInitOpts_Validate(t *testing.T) {
 			inDockerfilePath: "./hello/Dockerfile",
 			inIngressType:    "Internet",
 
-			setupMocks: func(m initSvcMocks) {
+			setupMocks: func(m *initSvcMocks) {
 				m.mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{}, nil)
 			},
 			mockFileSystem: func(mockFS afero.Fs) {
 				mockFS.MkdirAll("hello", 0755)
 				afero.WriteFile(mockFS, "hello/Dockerfile", []byte("FROM nginx"), 0644)
+			},
+		},
+		"valid lbws port flag": {
+			inSvcName:        "frontend",
+			inSvcType:        "Load Balanced Web Service",
+			inDockerfilePath: "./hello/Dockerfile",
+			inSvcPort:        3000,
+
+			setupMocks: func(m *initSvcMocks) {
+				m.mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{}, nil)
+			},
+			mockFileSystem: func(mockFS afero.Fs) {
+				mockFS.MkdirAll("hello", 0755)
+				afero.WriteFile(mockFS, "hello/Dockerfile", []byte("FROM nginx"), 0644)
+			},
+		},
+		"valid static site flag": {
+			inSvcName: "frontend",
+			inSvcType: "Static Site",
+			inSources: []string{"goodbye", "hello/there"},
+
+			mockFileSystem: func(mockFS afero.Fs) {
+				mockFS.MkdirAll("copilot", 0755)
+				mockFS.MkdirAll("groot/hello", 0755)
+				mockFS.MkdirAll("groot/goodbye", 0755)
+				afero.WriteFile(mockFS, "groot/hello/there", []byte("howdy"), 0644)
+			},
+			setupMocks: func(m *initSvcMocks) {
+				m.mockCachedWSRoot = "groot"
+				m.mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{}, nil)
+			},
+			wantedAssets: []manifest.FileUpload{
+				{
+					Source:    "goodbye",
+					Recursive: true,
+				},
+				{
+					Source:    "hello/there",
+					Recursive: false,
+				},
 			},
 		},
 	}
@@ -154,12 +225,11 @@ func TestSvcInitOpts_Validate(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockstore := mocks.NewMockstore(ctrl)
-			mocks := initSvcMocks{
-				mockStore: mockstore,
+			m := initSvcMocks{
+				mockStore: mocks.NewMockstore(ctrl),
 			}
 			if tc.setupMocks != nil {
-				tc.setupMocks(mocks)
+				tc.setupMocks(&m)
 			}
 			opts := initSvcOpts{
 				initSvcVars: initSvcVars{
@@ -171,13 +241,15 @@ func TestSvcInitOpts_Validate(t *testing.T) {
 						appName:        tc.inAppName,
 						subscriptions:  tc.inSubscribeTags,
 						noSubscribe:    tc.inNoSubscribe,
+						sourcePaths:    tc.inSources,
 					},
 					port:        tc.inSvcPort,
 					ingressType: tc.inIngressType,
 				},
-				store:     mockstore,
+				store:     m.mockStore,
 				fs:        &afero.Afero{Fs: afero.NewMemMapFs()},
 				wsAppName: "phonetool",
+				wsRoot:    m.mockCachedWSRoot,
 			}
 			if tc.mockFileSystem != nil {
 				tc.mockFileSystem(opts.fs)
@@ -191,6 +263,7 @@ func TestSvcInitOpts_Validate(t *testing.T) {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			} else {
 				require.NoError(t, err)
+				require.Equal(t, tc.wantedAssets, opts.staticAssets)
 			}
 		})
 	}
@@ -206,38 +279,44 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 		wantedDockerfilePath = "frontend/Dockerfile"
 		wantedSvcPort        = 80
 		wantedImage          = "mockImage"
+		mockProjectRoot      = "groot"
+		mockFile             = "my/mock/file.css"
+		mockDir              = "my/mock/dir"
 	)
 	mockTopic, _ := deploy.NewTopic("arn:aws:sns:us-west-2:123456789012:mockApp-mockEnv-mockWkld-orders", "mockApp", "mockEnv", "mockWkld")
 	mockError := errors.New("mock error")
 	testCases := map[string]struct {
-		inSvcType        string
-		inSvcName        string
-		inDockerfilePath string
-		inImage          string
-		inSvcPort        uint16
-		inSubscribeTags  []string
-		inNoSubscribe    bool
-		inIngressType    string
+		inSvcType           string
+		inSvcName           string
+		inDockerfilePath    string
+		inImage             string
+		inSvcPort           uint16
+		inSubscribeTags     []string
+		inNoSubscribe       bool
+		inIngressType       string
+		inWsPendingCreation bool
+		mockFileSystem      func(mockFS afero.Fs)
 
-		setupMocks func(mocks initSvcMocks)
+		setupMocks func(mocks *initSvcMocks)
 
-		wantedErr error
+		wantedErr    error
+		wantedAssets []manifest.FileUpload
 	}{
 		"invalid service type": {
 			inSvcType: "TestSvcType",
-			wantedErr: errors.New(`invalid service type TestSvcType: must be one of "Request-Driven Web Service", "Load Balanced Web Service", "Backend Service", "Worker Service"`),
+			wantedErr: errors.New(`invalid service type TestSvcType: must be one of "Request-Driven Web Service", "Load Balanced Web Service", "Backend Service", "Worker Service", "Static Site"`),
 		},
 		"invalid service name": {
 			inSvcType: wantedSvcType,
 			inSvcName: "1234",
-			wantedErr: fmt.Errorf("service name 1234 is invalid: %s", errValueBadFormat),
+			wantedErr: fmt.Errorf("service name 1234 is invalid: %s", errBasicNameRegexNotMatched),
 		},
 		"prompt for service name": {
 			inSvcType:        wantedSvcType,
 			inSvcPort:        wantedSvcPort,
 			inDockerfilePath: wantedDockerfilePath,
 
-			setupMocks: func(m initSvcMocks) {
+			setupMocks: func(m *initSvcMocks) {
 				m.mockPrompt.EXPECT().Get(gomock.Eq("What do you want to name this service?"), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(wantedSvcName, nil)
 				m.mockStore.EXPECT().GetService(mockAppName, wantedSvcName).Return(nil, &config.ErrNoSuchService{})
@@ -251,7 +330,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			inSvcPort:        wantedSvcPort,
 			inDockerfilePath: wantedDockerfilePath,
 
-			setupMocks: func(m initSvcMocks) {
+			setupMocks: func(m *initSvcMocks) {
 				m.mockPrompt.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return("", errors.New("some error"))
 			},
@@ -263,7 +342,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			inSvcPort:        wantedSvcPort,
 			inDockerfilePath: wantedDockerfilePath,
 
-			setupMocks: func(m initSvcMocks) {
+			setupMocks: func(m *initSvcMocks) {
 				m.mockPrompt.EXPECT().Get(gomock.Eq("What do you want to name this service?"), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(wantedSvcName, nil)
 				m.mockStore.EXPECT().GetService(mockAppName, wantedSvcName).Return(&config.Workload{}, nil)
@@ -276,7 +355,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			inSvcPort:        wantedSvcPort,
 			inDockerfilePath: wantedDockerfilePath,
 
-			setupMocks: func(m initSvcMocks) {
+			setupMocks: func(m *initSvcMocks) {
 				m.mockPrompt.EXPECT().Get(gomock.Eq("What do you want to name this service?"), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(wantedSvcName, nil)
 				m.mockStore.EXPECT().GetService(mockAppName, wantedSvcName).Return(nil, mockError)
@@ -287,7 +366,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			inSvcType: "Worker Service",
 			inSvcName: wantedSvcName,
 
-			setupMocks: func(m initSvcMocks) {
+			setupMocks: func(m *initSvcMocks) {
 				m.mockStore.EXPECT().GetService(mockAppName, wantedSvcName).Return(nil, &config.ErrNoSuchService{})
 				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte(`
 type: Backend Service`), nil)
@@ -298,7 +377,7 @@ type: Backend Service`), nil)
 			inSvcType: "Worker Service",
 			inSvcName: wantedSvcName,
 
-			setupMocks: func(m initSvcMocks) {
+			setupMocks: func(m *initSvcMocks) {
 				m.mockStore.EXPECT().GetService(mockAppName, wantedSvcName).Return(nil, &config.ErrNoSuchService{})
 				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte(`
 type: Worker Service`), nil)
@@ -308,14 +387,14 @@ type: Worker Service`), nil)
 			inSvcType: "Request-Driven Web Service",
 			inSvcName: badAppRunnerSvcName,
 
-			setupMocks: func(m initSvcMocks) {},
+			setupMocks: func(m *initSvcMocks) {},
 
 			wantedErr: fmt.Errorf("service name iamoverfortycharacterlongandaninvalidrdwsname is invalid: value must not exceed 40 characters"),
 		},
 		"skip asking questions if local manifest file exists by only name flag with minimal check": {
 			inSvcName: badAppRunnerSvcName,
 
-			setupMocks: func(m initSvcMocks) {
+			setupMocks: func(m *initSvcMocks) {
 				m.mockStore.EXPECT().GetService(mockAppName, badAppRunnerSvcName).Return(nil, &config.ErrNoSuchService{})
 				m.mockMftReader.EXPECT().ReadWorkloadManifest(badAppRunnerSvcName).Return([]byte(`
 type: Request-Driven Web Service`), nil)
@@ -325,7 +404,7 @@ type: Request-Driven Web Service`), nil)
 			inSvcType: "Worker Service",
 			inSvcName: wantedSvcName,
 
-			setupMocks: func(m initSvcMocks) {
+			setupMocks: func(m *initSvcMocks) {
 				m.mockStore.EXPECT().GetService(mockAppName, wantedSvcName).Return(nil, &config.ErrNoSuchService{})
 				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, mockError)
 			},
@@ -337,7 +416,7 @@ type: Request-Driven Web Service`), nil)
 			inSvcPort:        wantedSvcPort,
 			inDockerfilePath: wantedDockerfilePath,
 
-			setupMocks: func(m initSvcMocks) {
+			setupMocks: func(m *initSvcMocks) {
 				m.mockPrompt.EXPECT().SelectOption(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return("", errors.New("some error"))
 			},
@@ -349,7 +428,7 @@ type: Request-Driven Web Service`), nil)
 			inSvcPort:        wantedSvcPort,
 			inDockerfilePath: wantedDockerfilePath,
 
-			setupMocks: func(m initSvcMocks) {
+			setupMocks: func(m *initSvcMocks) {
 				m.mockPrompt.EXPECT().SelectOption(gomock.Eq(fmt.Sprintf(fmtSvcInitSvcTypePrompt, "service type")), gomock.Any(), gomock.Eq([]prompt.Option{
 					{
 						Value: manifestinfo.RequestDrivenWebServiceType,
@@ -367,6 +446,10 @@ type: Request-Driven Web Service`), nil)
 						Value: manifestinfo.WorkerServiceType,
 						Hint:  "Events to SQS to ECS on Fargate",
 					},
+					{
+						Value: manifestinfo.StaticSiteType,
+						Hint:  "Internet to CDN to S3 bucket",
+					},
 				}), gomock.Any()).
 					Return(wantedSvcType, nil)
 				m.mockStore.EXPECT().GetService(mockAppName, wantedSvcName).Return(nil, &config.ErrNoSuchService{}).Times(2)
@@ -378,7 +461,7 @@ type: Request-Driven Web Service`), nil)
 			inSvcType: "",
 			inSvcName: badAppRunnerSvcName,
 
-			setupMocks: func(m initSvcMocks) {
+			setupMocks: func(m *initSvcMocks) {
 				m.mockPrompt.EXPECT().SelectOption(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(appRunnerSvcType, nil)
 				m.mockStore.EXPECT().GetService(mockAppName, badAppRunnerSvcName).Return(nil, &config.ErrNoSuchService{})
@@ -392,7 +475,7 @@ type: Request-Driven Web Service`), nil)
 			inSvcPort:        wantedSvcPort,
 			inDockerfilePath: wantedDockerfilePath,
 
-			setupMocks: func(m initSvcMocks) {
+			setupMocks: func(m *initSvcMocks) {
 				m.mockStore.EXPECT().GetService(mockAppName, wantedSvcName).Return(nil, &config.ErrNoSuchService{})
 				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
 				m.mockPrompt.EXPECT().SelectOption(gomock.Eq(svcInitIngressTypePrompt), gomock.Any(), gomock.Eq([]prompt.Option{
@@ -411,7 +494,7 @@ type: Request-Driven Web Service`), nil)
 			inSvcPort:        wantedSvcPort,
 			inDockerfilePath: wantedDockerfilePath,
 
-			setupMocks: func(m initSvcMocks) {
+			setupMocks: func(m *initSvcMocks) {
 				m.mockStore.EXPECT().GetService(mockAppName, wantedSvcName).Return(nil, &config.ErrNoSuchService{})
 				m.mockPrompt.EXPECT().SelectOption(gomock.Eq(svcInitIngressTypePrompt), gomock.Any(), gomock.Eq([]prompt.Option{
 					{
@@ -431,7 +514,7 @@ type: Request-Driven Web Service`), nil)
 			inDockerfilePath: wantedDockerfilePath,
 			inIngressType:    ingressTypeInternet,
 
-			setupMocks: func(m initSvcMocks) {
+			setupMocks: func(m *initSvcMocks) {
 				m.mockStore.EXPECT().GetService(mockAppName, wantedSvcName).Return(nil, &config.ErrNoSuchService{})
 				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
 			},
@@ -443,7 +526,7 @@ type: Request-Driven Web Service`), nil)
 			inImage:          "mockImage",
 			inDockerfilePath: "",
 
-			setupMocks: func(m initSvcMocks) {
+			setupMocks: func(m *initSvcMocks) {
 				m.mockStore.EXPECT().GetService(mockAppName, wantedSvcName).Return(nil, &config.ErrNoSuchService{})
 				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
 			},
@@ -453,7 +536,7 @@ type: Request-Driven Web Service`), nil)
 			inSvcName: wantedSvcName,
 			inSvcPort: wantedSvcPort,
 
-			setupMocks: func(m initSvcMocks) {
+			setupMocks: func(m *initSvcMocks) {
 				m.mockStore.EXPECT().GetService(mockAppName, wantedSvcName).Return(nil, &config.ErrNoSuchService{})
 				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
 				m.mockDockerEngine.EXPECT().CheckDockerEngineRunning().Return(errors.New("some error"))
@@ -465,7 +548,7 @@ type: Request-Driven Web Service`), nil)
 			inSvcName: wantedSvcName,
 			inSvcPort: wantedSvcPort,
 
-			setupMocks: func(m initSvcMocks) {
+			setupMocks: func(m *initSvcMocks) {
 				m.mockStore.EXPECT().GetService(mockAppName, wantedSvcName).Return(nil, &config.ErrNoSuchService{})
 				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
 				m.mockPrompt.EXPECT().Get(wkldInitImagePrompt, wkldInitImagePromptHelp, gomock.Any(), gomock.Any()).
@@ -480,7 +563,7 @@ type: Request-Driven Web Service`), nil)
 			inSvcName: wantedSvcName,
 			inSvcPort: wantedSvcPort,
 
-			setupMocks: func(m initSvcMocks) {
+			setupMocks: func(m *initSvcMocks) {
 				m.mockStore.EXPECT().GetService(mockAppName, wantedSvcName).Return(nil, &config.ErrNoSuchService{})
 				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
 				m.mockPrompt.EXPECT().Get(wkldInitImagePrompt, wkldInitImagePromptHelp, gomock.Any(), gomock.Any()).
@@ -496,7 +579,7 @@ type: Request-Driven Web Service`), nil)
 			inSvcPort:        wantedSvcPort,
 			inDockerfilePath: "",
 
-			setupMocks: func(m initSvcMocks) {
+			setupMocks: func(m *initSvcMocks) {
 				m.mockStore.EXPECT().GetService(mockAppName, wantedSvcName).Return(nil, &config.ErrNoSuchService{})
 				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
 				m.mockPrompt.EXPECT().Get(wkldInitImagePrompt, wkldInitImagePromptHelp, gomock.Any(), gomock.Any()).
@@ -517,12 +600,12 @@ type: Request-Driven Web Service`), nil)
 			inSvcName:        wantedSvcName,
 			inDockerfilePath: "",
 
-			setupMocks: func(m initSvcMocks) {
+			setupMocks: func(m *initSvcMocks) {
 				m.mockStore.EXPECT().GetService(mockAppName, wantedSvcName).Return(nil, &config.ErrNoSuchService{})
 				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
 				m.mockPrompt.EXPECT().Get(wkldInitImagePrompt, wkldInitImagePromptHelp, gomock.Any(), gomock.Any()).
 					Return("mockImage", nil)
-				m.mockPrompt.EXPECT().Get(gomock.Eq(fmt.Sprintf(svcInitSvcPortPrompt, "port")), gomock.Any(), gomock.Any(), gomock.Any()).
+				m.mockPrompt.EXPECT().Get(gomock.Eq(fmt.Sprintf(svcInitSvcPortPrompt, "port(s)")), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(defaultSvcPortString, nil)
 				m.mockSel.EXPECT().Dockerfile(
 					gomock.Eq(fmt.Sprintf(fmtWkldInitDockerfilePrompt, wantedSvcName)),
@@ -540,7 +623,7 @@ type: Request-Driven Web Service`), nil)
 			inSvcPort:        wantedSvcPort,
 			inDockerfilePath: "",
 
-			setupMocks: func(m initSvcMocks) {
+			setupMocks: func(m *initSvcMocks) {
 				m.mockStore.EXPECT().GetService(mockAppName, wantedSvcName).Return(nil, &config.ErrNoSuchService{})
 				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
 				m.mockSel.EXPECT().Dockerfile(
@@ -560,7 +643,7 @@ type: Request-Driven Web Service`), nil)
 			inSvcPort:        wantedSvcPort,
 			inDockerfilePath: "",
 
-			setupMocks: func(m initSvcMocks) {
+			setupMocks: func(m *initSvcMocks) {
 				m.mockStore.EXPECT().GetService(mockAppName, wantedSvcName).Return(nil, &config.ErrNoSuchService{})
 				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
 				m.mockSel.EXPECT().Dockerfile(
@@ -575,7 +658,7 @@ type: Request-Driven Web Service`), nil)
 			inSvcName:        wantedSvcName,
 			inDockerfilePath: wantedDockerfilePath,
 
-			setupMocks: func(m initSvcMocks) {
+			setupMocks: func(m *initSvcMocks) {
 				m.mockStore.EXPECT().GetService(mockAppName, wantedSvcName).Return(nil, &config.ErrNoSuchService{})
 				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
 				m.mockDockerfile.EXPECT().GetExposedPorts().Return(nil, errors.New("no expose"))
@@ -586,12 +669,11 @@ type: Request-Driven Web Service`), nil)
 			inSvcType:        wantedSvcType,
 			inSvcName:        wantedSvcName,
 			inDockerfilePath: wantedDockerfilePath,
-			inSvcPort:        0, //invalid port, default case
 
-			setupMocks: func(m initSvcMocks) {
+			setupMocks: func(m *initSvcMocks) {
 				m.mockStore.EXPECT().GetService(mockAppName, wantedSvcName).Return(nil, &config.ErrNoSuchService{})
 				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
-				m.mockPrompt.EXPECT().Get(gomock.Eq(fmt.Sprintf(svcInitSvcPortPrompt, "port")), gomock.Any(), gomock.Any(), gomock.Any()).
+				m.mockPrompt.EXPECT().Get(gomock.Eq(fmt.Sprintf(svcInitSvcPortPrompt, "port(s)")), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(defaultSvcPortString, nil)
 				m.mockDockerfile.EXPECT().GetExposedPorts().Return(nil, errors.New("no expose"))
 			},
@@ -601,12 +683,11 @@ type: Request-Driven Web Service`), nil)
 			inSvcType:        wantedSvcType,
 			inSvcName:        wantedSvcName,
 			inDockerfilePath: wantedDockerfilePath,
-			inSvcPort:        0, //invalid port, default case
 
-			setupMocks: func(m initSvcMocks) {
+			setupMocks: func(m *initSvcMocks) {
 				m.mockStore.EXPECT().GetService(mockAppName, wantedSvcName).Return(nil, &config.ErrNoSuchService{})
 				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
-				m.mockPrompt.EXPECT().Get(gomock.Eq(fmt.Sprintf(svcInitSvcPortPrompt, "port")), gomock.Any(), gomock.Any(), gomock.Any()).
+				m.mockPrompt.EXPECT().Get(gomock.Eq(fmt.Sprintf(svcInitSvcPortPrompt, "port(s)")), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return("", errors.New("some error"))
 				m.mockDockerfile.EXPECT().GetExposedPorts().Return(nil, errors.New("expose error"))
 			},
@@ -616,12 +697,11 @@ type: Request-Driven Web Service`), nil)
 			inSvcType:        wantedSvcType,
 			inSvcName:        wantedSvcName,
 			inDockerfilePath: wantedDockerfilePath,
-			inSvcPort:        0, //invalid port, default case
 
-			setupMocks: func(m initSvcMocks) {
+			setupMocks: func(m *initSvcMocks) {
 				m.mockStore.EXPECT().GetService(mockAppName, wantedSvcName).Return(nil, &config.ErrNoSuchService{})
 				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
-				m.mockPrompt.EXPECT().Get(gomock.Eq(fmt.Sprintf(svcInitSvcPortPrompt, "port")), gomock.Any(), gomock.Any(), gomock.Any()).
+				m.mockPrompt.EXPECT().Get(gomock.Eq(fmt.Sprintf(svcInitSvcPortPrompt, "port(s)")), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return("100000", errors.New("some error"))
 				m.mockDockerfile.EXPECT().GetExposedPorts().Return(nil, errors.New("no expose"))
 			},
@@ -631,9 +711,8 @@ type: Request-Driven Web Service`), nil)
 			inSvcType:        wantedSvcType,
 			inSvcName:        wantedSvcName,
 			inDockerfilePath: wantedDockerfilePath,
-			inSvcPort:        0,
 
-			setupMocks: func(m initSvcMocks) {
+			setupMocks: func(m *initSvcMocks) {
 				m.mockStore.EXPECT().GetService(mockAppName, wantedSvcName).Return(nil, &config.ErrNoSuchService{})
 				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
 				m.mockDockerfile.EXPECT().GetExposedPorts().Return([]dockerfile.Port{{Port: 80, Protocol: "", RawString: "80"}}, nil)
@@ -645,7 +724,7 @@ type: Request-Driven Web Service`), nil)
 			inDockerfilePath: wantedDockerfilePath,
 			inSvcPort:        wantedSvcPort,
 
-			setupMocks: func(m initSvcMocks) {
+			setupMocks: func(m *initSvcMocks) {
 				m.mockStore.EXPECT().GetService(mockAppName, wantedSvcName).Return(nil, &config.ErrNoSuchService{})
 				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
 			},
@@ -657,7 +736,7 @@ type: Request-Driven Web Service`), nil)
 			inImage:       "mockImage",
 			inNoSubscribe: true,
 
-			setupMocks: func(m initSvcMocks) {
+			setupMocks: func(m *initSvcMocks) {
 				m.mockStore.EXPECT().GetService(mockAppName, wantedSvcName).Return(nil, &config.ErrNoSuchService{})
 				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
 			},
@@ -670,7 +749,7 @@ type: Request-Driven Web Service`), nil)
 			inNoSubscribe:   false,
 			inSubscribeTags: []string{"svc:name"},
 
-			setupMocks: func(m initSvcMocks) {
+			setupMocks: func(m *initSvcMocks) {
 				m.mockStore.EXPECT().GetService(mockAppName, wantedSvcName).Return(nil, &config.ErrNoSuchService{})
 				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
 			},
@@ -682,7 +761,7 @@ type: Request-Driven Web Service`), nil)
 			inImage:          "mockImage",
 			inDockerfilePath: "",
 
-			setupMocks: func(m initSvcMocks) {
+			setupMocks: func(m *initSvcMocks) {
 				m.mockStore.EXPECT().GetService(mockAppName, wantedSvcName).Return(nil, &config.ErrNoSuchService{})
 				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
 				m.mocktopicSel.EXPECT().Topics(
@@ -690,6 +769,61 @@ type: Request-Driven Web Service`), nil)
 					gomock.Eq(svcInitPublisherHelpPrompt),
 					gomock.Any(),
 				).Return([]deploy.Topic{*mockTopic}, nil)
+			},
+		},
+		"error if source for static site source not selected successfully": {
+			inSvcType: manifestinfo.StaticSiteType,
+			inSvcName: wantedSvcName,
+			setupMocks: func(m *initSvcMocks) {
+				m.mockStore.EXPECT().GetService(mockAppName, wantedSvcName).Return(nil, &config.ErrNoSuchService{})
+				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
+				m.mockSourceSel.EXPECT().StaticSources(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, mockError)
+			},
+			wantedErr: fmt.Errorf("mock error"),
+		},
+		"successfully ask for static site sources and convert to asset objects with dirs marked recursive": {
+			inSvcType: manifestinfo.StaticSiteType,
+			inSvcName: wantedSvcName,
+			mockFileSystem: func(mockFS afero.Fs) {
+				_ = mockFS.MkdirAll(filepath.Join(mockProjectRoot, mockDir), 0755)
+				_ = afero.WriteFile(mockFS, filepath.Join(mockProjectRoot, mockFile), []byte("file guts"), 0644)
+			},
+			setupMocks: func(m *initSvcMocks) {
+				m.mockStore.EXPECT().GetService(mockAppName, wantedSvcName).Return(nil, &config.ErrNoSuchService{})
+				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
+				m.mockSourceSel.EXPECT().StaticSources(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]string{mockFile, mockDir}, nil)
+				m.mockCachedWSRoot = mockProjectRoot
+			},
+			wantedAssets: []manifest.FileUpload{
+				{
+					Source:    mockFile,
+					Recursive: false,
+				},
+				{
+					Source:    mockDir,
+					Recursive: true,
+				},
+			},
+		},
+		"ask for static site source paths rather than providing selector if workspace hasn't been created (`copilot init` workflow)": {
+			inSvcType:           manifestinfo.StaticSiteType,
+			inSvcName:           wantedSvcName,
+			inWsPendingCreation: true,
+			mockFileSystem: func(mockFS afero.Fs) {
+				_ = mockFS.MkdirAll(mockDir, 0755)
+				_ = afero.WriteFile(mockFS, mockFile, []byte("file guts"), 0644)
+			},
+			setupMocks: func(m *initSvcMocks) {
+				m.mockStore.EXPECT().GetService(mockAppName, wantedSvcName).Return(nil, &config.ErrNoSuchService{})
+				m.mockPrompt.EXPECT().Get(gomock.Eq("What is the path to the directory or file for frontend?"), gomock.Eq("Path to directory or file to use for building your static site."), gomock.Any(), gomock.Any()).Return(mockFile, nil)
+				m.mockPrompt.EXPECT().Confirm(gomock.Eq("Would you like to enter another path?"), gomock.Eq("You may add multiple custom paths. Enter 'y' to type another."), gomock.Any()).Return(false, nil)
+			},
+
+			wantedAssets: []manifest.FileUpload{
+				{
+					Source:    mockFile,
+					Recursive: false,
+				},
 			},
 		},
 	}
@@ -700,24 +834,18 @@ type: Request-Driven Web Service`), nil)
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockPrompt := mocks.NewMockprompter(ctrl)
-			mockDockerfile := mocks.NewMockdockerfileParser(ctrl)
-			mockSel := mocks.NewMockdockerfileSelector(ctrl)
-			mockTopicSel := mocks.NewMocktopicSelector(ctrl)
-			mockDockerEngine := mocks.NewMockdockerEngine(ctrl)
-			mockManifestReader := mocks.NewMockmanifestReader(ctrl)
-			mockStore := mocks.NewMockstore(ctrl)
-			mocks := initSvcMocks{
-				mockPrompt:       mockPrompt,
-				mockDockerfile:   mockDockerfile,
-				mockSel:          mockSel,
-				mocktopicSel:     mockTopicSel,
-				mockDockerEngine: mockDockerEngine,
-				mockMftReader:    mockManifestReader,
-				mockStore:        mockStore,
+			m := initSvcMocks{
+				mockPrompt:       mocks.NewMockprompter(ctrl),
+				mockDockerfile:   mocks.NewMockdockerfileParser(ctrl),
+				mockSel:          mocks.NewMockdockerfileSelector(ctrl),
+				mocktopicSel:     mocks.NewMocktopicSelector(ctrl),
+				mockSourceSel:    mocks.NewMockstaticSourceSelector(ctrl),
+				mockDockerEngine: mocks.NewMockdockerEngine(ctrl),
+				mockMftReader:    mocks.NewMockmanifestReader(ctrl),
+				mockStore:        mocks.NewMockstore(ctrl),
 			}
 			if tc.setupMocks != nil {
-				tc.setupMocks(mocks)
+				tc.setupMocks(&m)
 			}
 
 			opts := &initSvcOpts{
@@ -734,17 +862,23 @@ type: Request-Driven Web Service`), nil)
 					port:        tc.inSvcPort,
 					ingressType: tc.inIngressType,
 				},
-				store: mockStore,
+				store: m.mockStore,
 				fs:    &afero.Afero{Fs: afero.NewMemMapFs()},
 				dockerfile: func(s string) dockerfileParser {
-					return mockDockerfile
+					return m.mockDockerfile
 				},
-				df:           mockDockerfile,
-				prompt:       mockPrompt,
-				mftReader:    mockManifestReader,
-				sel:          mockSel,
-				topicSel:     mockTopicSel,
-				dockerEngine: mockDockerEngine,
+				df:                m.mockDockerfile,
+				prompt:            m.mockPrompt,
+				mftReader:         m.mockMftReader,
+				sel:               m.mockSel,
+				topicSel:          m.mocktopicSel,
+				sourceSel:         m.mockSourceSel,
+				dockerEngine:      m.mockDockerEngine,
+				wsPendingCreation: tc.inWsPendingCreation,
+				wsRoot:            m.mockCachedWSRoot,
+			}
+			if tc.mockFileSystem != nil {
+				tc.mockFileSystem(opts.fs)
 			}
 
 			// WHEN
@@ -760,6 +894,9 @@ type: Request-Driven Web Service`), nil)
 				}
 				if opts.image != "" {
 					require.Equal(t, wantedImage, opts.image)
+				}
+				if opts.staticAssets != nil {
+					require.Equal(t, tc.wantedAssets, opts.staticAssets)
 				}
 			}
 		})

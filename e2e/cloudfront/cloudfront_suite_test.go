@@ -26,6 +26,7 @@ var s3Manager *s3manager.Uploader
 var staticPath string
 
 const domainName = "copilot-e2e-tests.ecs.aws.dev"
+
 var timeNow = time.Now().Unix()
 
 func TestCloudFront(t *testing.T) {
@@ -37,7 +38,7 @@ var _ = BeforeSuite(func() {
 	copilotCLI, err := client.NewCLI()
 	Expect(err).NotTo(HaveOccurred())
 	cli = copilotCLI
-	appName = fmt.Sprintf("e2e-cloudfront-%d", time.Now().Unix())
+	appName = fmt.Sprintf("e2e-cloudfront-%d", timeNow)
 	bucketName = appName
 	err = os.Setenv("BUCKETNAME", bucketName)
 	Expect(err).NotTo(HaveOccurred())
@@ -55,17 +56,22 @@ var _ = BeforeSuite(func() {
 })
 
 var _ = AfterSuite(func() {
-	_, err := cli.AppDelete()
-	Expect(err).NotTo(HaveOccurred())
+	_, appDeleteErr := cli.AppDelete()
+	s3Err := cleanUpS3Resources()
+	Expect(appDeleteErr).NotTo(HaveOccurred())
+	Expect(s3Err).NotTo(HaveOccurred())
+})
 
-	// Empty and delete the S3 bucket.
-	_, err = s3Client.DeleteObject(&s3.DeleteObjectInput{
+func cleanUpS3Resources() error {
+	_, err := s3Client.DeleteObject(&s3.DeleteObjectInput{
 		Bucket: aws.String(bucketName),
 		Key:    aws.String(staticPath),
 	})
-	Expect(err).NotTo(HaveOccurred())
+	if err != nil {
+		return err
+	}
 	_, err = s3Client.DeleteBucket(&s3.DeleteBucketInput{
 		Bucket: aws.String(bucketName),
 	})
-	Expect(err).NotTo(HaveOccurred())
-})
+	return err
+}

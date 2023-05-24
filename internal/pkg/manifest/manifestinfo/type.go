@@ -26,6 +26,7 @@ func ServiceTypes() []string {
 		LoadBalancedWebServiceType,
 		BackendServiceType,
 		WorkerServiceType,
+		StaticSiteType,
 	}
 }
 

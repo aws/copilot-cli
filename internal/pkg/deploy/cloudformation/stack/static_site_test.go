@@ -52,7 +52,9 @@ func TestStaticSite_NewStaticSite(t *testing.T) {
 			input: testInput{
 				mft: testStaticSiteManifest,
 				env: testEnvName,
-				rc:  RuntimeConfig{},
+				rc: RuntimeConfig{
+					Region: "us-west-2",
+				},
 				app: testAppName,
 				urls: map[string]string{
 					"custom-domain-app-runner": "mockURL1",
@@ -65,6 +67,14 @@ func TestStaticSite_NewStaticSite(t *testing.T) {
 					name: aws.StringValue(testStaticSiteManifest.Name),
 					env:  testEnvName,
 					app:  testAppName,
+					rc: RuntimeConfig{
+						CustomResourcesURL: map[string]string{
+							"CertificateValidationFunction": "https://mockBucket.s3.us-west-2.amazonaws.com/manual/scripts/custom-resources/certificatevalidationfunction/8932747ba5dbff619d89b92d0033ef1d04f7dd1b055e073254907d4e38e3976d.zip",
+							"CustomDomainFunction":          "https://mockBucket.s3.us-west-2.amazonaws.com/manual/scripts/custom-resources/customdomainfunction/8932747ba5dbff619d89b92d0033ef1d04f7dd1b055e073254907d4e38e3976d.zip",
+							"TriggerStateMachineFunction":   "https://mockBucket.s3.us-west-2.amazonaws.com/manual/scripts/custom-resources/triggerstatemachinefunction/8932747ba5dbff619d89b92d0033ef1d04f7dd1b055e073254907d4e38e3976d.zip",
+						},
+						Region: "us-west-2",
+					},
 				},
 				manifest: testStaticSiteManifest,
 				appInfo: deploy.AppInformation{
@@ -90,9 +100,10 @@ func TestStaticSite_NewStaticSite(t *testing.T) {
 				App: &config.Application{
 					Name: tc.input.app,
 				},
-				Manifest:      tc.input.mft,
-				RuntimeConfig: tc.input.rc,
-				Addons:        addons,
+				Manifest:           tc.input.mft,
+				RuntimeConfig:      tc.input.rc,
+				ArtifactBucketName: "mockBucket",
+				Addons:             addons,
 			})
 
 			require.Equal(t, tc.wantedError, err)
@@ -123,6 +134,10 @@ func TestStaticSite_Template(t *testing.T) {
 					Name: aws.String("frontend"),
 				},
 			},
+			ArtifactBucketName: "mockBucket",
+			RuntimeConfig: RuntimeConfig{
+				Region: "us-west-2",
+			},
 			Addons: mockAddons{tplErr: errors.New("some error")},
 		})
 		require.NoError(t, err)
@@ -143,6 +158,10 @@ func TestStaticSite_Template(t *testing.T) {
 				Workload: manifest.Workload{
 					Name: aws.String("frontend"),
 				},
+			},
+			ArtifactBucketName: "mockBucket",
+			RuntimeConfig: RuntimeConfig{
+				Region: "us-west-2",
 			},
 			Addons: mockAddons{paramsErr: errors.New("some error")},
 		})
@@ -167,10 +186,14 @@ func TestStaticSite_Template(t *testing.T) {
       Value: hello`,
 		}
 		static, err := NewStaticSite(&StaticSiteConfig{
-			App:             &config.Application{},
-			EnvManifest:     &manifest.Environment{},
-			Manifest:        &manifest.StaticSite{},
-			Addons:          addons,
+			App:                &config.Application{},
+			EnvManifest:        &manifest.Environment{},
+			Manifest:           &manifest.StaticSite{},
+			Addons:             addons,
+			ArtifactBucketName: "mockBucket",
+			RuntimeConfig: RuntimeConfig{
+				Region: "us-west-2",
+			},
 			AssetMappingURL: "notAnS3URL",
 		})
 		require.NoError(t, err)
@@ -198,10 +221,14 @@ func TestStaticSite_Template(t *testing.T) {
       Value: hello`,
 		}
 		static, err := NewStaticSite(&StaticSiteConfig{
-			App:             &config.Application{},
-			EnvManifest:     &manifest.Environment{},
-			Manifest:        &manifest.StaticSite{},
-			Addons:          addons,
+			App:                &config.Application{},
+			EnvManifest:        &manifest.Environment{},
+			Manifest:           &manifest.StaticSite{},
+			Addons:             addons,
+			ArtifactBucketName: "mockBucket",
+			RuntimeConfig: RuntimeConfig{
+				Region: "us-west-2",
+			},
 			AssetMappingURL: "s3://bucket/path/to/file",
 		})
 		static.parser = parser
@@ -216,6 +243,10 @@ func TestStaticSite_Template(t *testing.T) {
 }
 
 func TestStaticSite_Parameters(t *testing.T) {
+	t.Cleanup(func() {
+		fs = realEmbedFS
+	})
+	fs = templatetest.Stub{}
 	testCases := map[string]struct {
 		expectedParams []*cloudformation.Parameter
 		expectedErr    error
@@ -243,10 +274,12 @@ func TestStaticSite_Parameters(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			testManifest := manifest.NewStaticSite("frontend")
+			testManifest := manifest.NewStaticSite(manifest.StaticSiteProps{
+				Name: "frontend",
+			})
 
 			// GIVEN
-			conf, _ := NewStaticSite(&StaticSiteConfig{
+			conf, err := NewStaticSite(&StaticSiteConfig{
 				App: &config.Application{
 					Name: testAppName,
 				},
@@ -260,6 +293,7 @@ func TestStaticSite_Parameters(t *testing.T) {
 				},
 				Manifest: testManifest,
 			})
+			require.NoError(t, err)
 
 			// WHEN
 			params, err := conf.Parameters()
@@ -275,6 +309,10 @@ func TestStaticSite_Parameters(t *testing.T) {
 }
 
 func TestStaticSite_SerializedParameters(t *testing.T) {
+	t.Cleanup(func() {
+		fs = realEmbedFS
+	})
+	fs = templatetest.Stub{}
 	c, _ := NewStaticSite(&StaticSiteConfig{
 		EnvManifest: &manifest.Environment{
 			Workload: manifest.Workload{

@@ -5,6 +5,7 @@ package describe
 
 import (
 	"fmt"
+	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"strings"
 
 	"github.com/dustin/go-humanize/english"
@@ -58,8 +59,13 @@ func NewReachableService(app, svc string, store ConfigStoreSvc) (ReachableServic
 		return NewRDWebServiceDescriber(in)
 	case manifestinfo.BackendServiceType:
 		return NewBackendServiceDescriber(in)
+	case manifestinfo.StaticSiteType:
+		return NewStaticSiteDescriber(in)
 	default:
-		return nil, fmt.Errorf("service %s is of type %s which cannot be reached over the network", svc, cfg.Type)
+		return nil, &ErrNonAccessibleServiceType{
+			name:    svc,
+			svcType: cfg.Type,
+		}
 	}
 }
 
@@ -367,7 +373,7 @@ type nlbURI struct {
 func (u *LBWebServiceURI) String() string {
 	uris := u.access.strings()
 	for _, dnsName := range u.nlbURI.DNSNames {
-		uris = append(uris, fmt.Sprintf("%s:%s", dnsName, u.nlbURI.Port))
+		uris = append(uris, color.HighlightResource(fmt.Sprintf("%s:%s", dnsName, u.nlbURI.Port)))
 	}
 	return english.OxfordWordSeries(uris, "or")
 }
@@ -383,7 +389,7 @@ func (u *accessURI) strings() []string {
 		if u.Path != "/" {
 			path = fmt.Sprintf("/%s", u.Path)
 		}
-		uris = append(uris, protocol+dnsName+path)
+		uris = append(uris, color.HighlightResource(protocol+dnsName+path))
 	}
 	return uris
 }

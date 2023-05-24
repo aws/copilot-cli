@@ -12,7 +12,7 @@ Parameters:
     Description: Your application's name.
   Env:
     Type: String
-    Description: The environment name your service, job, or workflow is being deployed to.
+    Description: The name of the environment being deployed.
   IsProd:
     Type: String
     Default: "false"

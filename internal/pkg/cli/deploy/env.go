@@ -20,7 +20,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/elbv2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
-	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
+	awss3 "github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/cli/deploy/patch"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -154,7 +154,7 @@ func NewEnvDeployer(in *NewEnvDeployerInput) (*envDeployer, error) {
 		env: in.Env,
 
 		templateFS:       template.New(),
-		s3:               s3.New(envManagerSession),
+		s3:               awss3.New(envManagerSession),
 		prefixListGetter: ec2.New(envRegionSession),
 
 		appCFN:      deploycfn.New(defaultSession, deploycfn.WithProgressTracker(os.Stderr)),
@@ -227,9 +227,13 @@ func (d *envDeployer) UploadArtifacts() (*UploadEnvArtifactsOutput, error) {
 func (d *envDeployer) DeployDiff(template string) (string, error) {
 	tmpl, err := d.tmplGetter.Template(cfnstack.NameForEnv(d.app.Name, d.env.Name))
 	if err != nil {
-		return "", fmt.Errorf("retrieve the deployed template for %q: %w", d.env.Name, err)
+		var errNotFound *awscloudformation.ErrStackNotFound
+		if !errors.As(err, &errNotFound) {
+			return "", fmt.Errorf("retrieve the deployed template for %q: %w", d.env.Name, err)
+		}
+		tmpl = ""
 	}
-	diffTree, err := diff.From(tmpl).ParseWithCFNIgnorer([]byte(template))
+	diffTree, err := diff.From(tmpl).ParseWithCFNOverriders([]byte(template))
 	if err != nil {
 		return "", fmt.Errorf("parse the diff against the deployed env stack %q: %w", d.env.Name, err)
 	}
@@ -413,7 +417,7 @@ func (d *envDeployer) buildStackInput(in *DeployEnvironmentInput) (*cfnstack.Env
 		AdditionalTags:       d.app.Tags,
 		Addons:               addons,
 		CustomResourcesURLs:  in.CustomResourcesURLs,
-		ArtifactBucketARN:    s3.FormatARN(partition.ID(), resources.S3Bucket),
+		ArtifactBucketARN:    awss3.FormatARN(partition.ID(), resources.S3Bucket),
 		ArtifactBucketKeyARN: resources.KMSKeyARN,
 		CIDRPrefixListIDs:    cidrPrefixListIDs,
 		PublicALBSourceIPs:   d.publicALBSourceIPs(in),
@@ -445,7 +449,7 @@ func (d *envDeployer) buildAddonsInput(region, bucket, uploadURL string) (*cfnst
 		return nil, fmt.Errorf("render addons template: %w", err)
 	}
 	return &cfnstack.Addons{
-		S3ObjectURL: s3.URL(region, bucket, artifactpath.EnvironmentAddons([]byte(tpl))),
+		S3ObjectURL: awss3.URL(region, bucket, artifactpath.EnvironmentAddons([]byte(tpl))),
 		Stack:       parsedAddons,
 	}, nil
 }

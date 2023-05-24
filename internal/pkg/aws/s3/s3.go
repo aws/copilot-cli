@@ -5,8 +5,11 @@
 package s3
 
 import (
+	"errors"
 	"fmt"
 	"io"
+	"mime"
+	"path/filepath"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -111,14 +114,21 @@ func (s *S3) EmptyBucket(bucket string) error {
 		if len(objectsToDelete) == 0 {
 			return nil
 		}
-		_, err = s.s3Client.DeleteObjects(&s3.DeleteObjectsInput{
+		delResp, err := s.s3Client.DeleteObjects(&s3.DeleteObjectsInput{
 			Bucket: aws.String(bucket),
 			Delete: &s3.Delete{
 				Objects: objectsToDelete,
+				Quiet:   aws.Bool(true), // we don't care about success values
 			},
 		})
-		if err != nil {
+		switch {
+		case err != nil:
 			return fmt.Errorf("delete objects from bucket %s: %w", bucket, err)
+		case len(delResp.Errors) > 0:
+			return errors.Join(
+				fmt.Errorf("%d/%d objects failed to delete", len(delResp.Errors), len(objectsToDelete)),
+				fmt.Errorf("first failed on key %q: %s", aws.StringValue(delResp.Errors[0].Key), aws.StringValue(delResp.Errors[0].Message)),
+			)
 		}
 		if !aws.BoolValue(listResp.IsTruncated) {
 			return nil
@@ -128,15 +138,15 @@ func (s *S3) EmptyBucket(bucket string) error {
 	}
 }
 
-// ParseURL parses Object URLs or s3 URIs and returns the bucket name and the key.
-// For example, the object URL: "https://stackset-myapp-infrastru-pipelinebuiltartifactbuc-1nk5t9zkymh8r.s3-us-west-2.amazonaws.com/scripts/dns-cert-validator/dd2278811c3"
+// ParseURL parses URLs or s3 URIs and returns the bucket name and the optional key.
+// For example, the URL: "https://stackset-myapp-infrastru-pipelinebuiltartifactbuc-1nk5t9zkymh8r.s3-us-west-2.amazonaws.com/scripts/dns-cert-validator/dd2278811c3"
 // or alternatively, the s3 URI: "s3://stackset-myapp-infrastru-pipelinebuiltartifactbuc-1nk5t9zkymh8r/scripts/dns-cert-validator/dd2278811c3"
 // Returns "stackset-myapp-infrastru-pipelinebuiltartifactbuc-1nk5t9zkymh8r" and  "scripts/dns-cert-validator/dd2278811c3"
 func ParseURL(url string) (bucket string, key string, err error) {
 	if strings.HasPrefix(url, s3URIPrefix) {
 		return parseS3URI(url)
 	}
-	return parseObjectURL(url)
+	return parseHTTPURI(url)
 }
 
 // ParseARN parses an S3 bucket or object ARN.
@@ -163,8 +173,10 @@ func URL(region, bucket, key string) string {
 			break
 		}
 	}
-
-	return fmt.Sprintf("https://%s.s3.%s.amazonaws.%s/%s", bucket, region, tld, key)
+	if key != "" {
+		return fmt.Sprintf("https://%s.s3.%s.amazonaws.%s/%s", bucket, region, tld, key)
+	}
+	return fmt.Sprintf("https://%s.s3.%s.amazonaws.%s", bucket, region, tld)
 }
 
 // Location returns an S3 object location URI in the format "s3://bucket/key".
@@ -196,10 +208,11 @@ func (s *S3) isBucketExists(bucket string) (bool, error) {
 
 func (s *S3) upload(bucket, key string, buf io.Reader) (string, error) {
 	in := &s3manager.UploadInput{
-		Body:   buf,
-		Bucket: aws.String(bucket),
-		Key:    aws.String(key),
-		ACL:    aws.String(s3.ObjectCannedACLBucketOwnerFullControl),
+		Body:        buf,
+		Bucket:      aws.String(bucket),
+		Key:         aws.String(key),
+		ACL:         aws.String(s3.ObjectCannedACLBucketOwnerFullControl),
+		ContentType: defaultContentTypeFromExt(key),
 	}
 	resp, err := s.s3Manager.Upload(in)
 	if err != nil {
@@ -208,27 +221,36 @@ func (s *S3) upload(bucket, key string, buf io.Reader) (string, error) {
 	return resp.Location, nil
 }
 
+func defaultContentTypeFromExt(key string) *string {
+	contentType := mime.TypeByExtension(filepath.Ext(key))
+	if contentType == "" {
+		return nil
+	}
+	return aws.String(contentType)
+}
+
 // parseS3URI parses the bucket name and object key from a [s3:// URI].
 // For example: s3://mybucket/puppy.jpg
 //
 // [s3:// URI]: https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-bucket-intro.html#accessing-a-bucket-using-S3-format
 func parseS3URI(uri string) (bucket, key string, err error) {
 	parsed := strings.SplitN(strings.TrimPrefix(uri, s3URIPrefix), "/", 2)
-	if len(parsed) != 2 {
+	bucket = parsed[0]
+	if bucket == "" {
 		return "", "", fmt.Errorf("cannot parse S3 URI %s into bucket name and key", uri)
 	}
-	return parsed[0], parsed[1], nil
+	if len(parsed) == 2 {
+		key = parsed[1]
+	}
+	return
 }
 
-// parseObjectURL parses the bucket name and object key from a [virtual-hosted-style access URL].
+// parseHTTPURL parses the bucket name and optional key from a [virtual-hosted-style access URL].
 // For example: https://DOC-EXAMPLE-BUCKET1.s3.us-west-2.amazonaws.com/puppy.png
 //
 // [virtual-hosted-style access URL]: https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-bucket-intro.html#virtual-host-style-url-ex
-func parseObjectURL(url string) (bucket, key string, err error) {
+func parseHTTPURI(url string) (bucket, key string, err error) {
 	parsedURL := strings.SplitN(strings.TrimPrefix(url, "https://"), "/", 2)
-	if len(parsedURL) != 2 {
-		return "", "", fmt.Errorf("cannot parse S3 URL %s into bucket name and key", url)
-	}
 
 	// go through the host backwards and find the first piece that
 	// starts with 's3' - the rest of the host (to the left of 's3')
@@ -241,6 +263,12 @@ func parseObjectURL(url string) (bucket, key string, err error) {
 			break
 		}
 	}
-
-	return strings.Join(split[:bucketEndIdx], "."), parsedURL[1], nil
+	bucket = strings.Join(split[:bucketEndIdx], ".")
+	if bucket == "" {
+		return "", "", fmt.Errorf("cannot parse S3 URL %s into bucket name and key", url)
+	}
+	if len(parsedURL) == 2 {
+		key = parsedURL[1]
+	}
+	return
 }

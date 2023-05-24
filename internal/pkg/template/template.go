@@ -244,12 +244,12 @@ func (t *Template) parse(name, path string, options ...ParseOption) (*template.T
 type WalkDirFunc func(name string, content *Content) error
 
 func (t *Template) walkDir(basePath, curPath string, data any, fn WalkDirFunc, parseOpts ...ParseOption) error {
-	entries, err := t.fs.ReadDir(filepath.Join("templates", curPath))
+	entries, err := t.fs.ReadDir(path.Join("templates", curPath))
 	if err != nil {
 		return fmt.Errorf("read dir %q: %w", curPath, err)
 	}
 	for _, entry := range entries {
-		targetPath := filepath.Join(curPath, entry.Name())
+		targetPath := path.Join(curPath, entry.Name())
 		if entry.IsDir() {
 			if err := t.walkDir(basePath, targetPath, data, fn); err != nil {
 				return err

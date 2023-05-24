@@ -25,6 +25,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/stream"
+	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"golang.org/x/sync/errgroup"
@@ -569,6 +570,23 @@ func (cf CloudFormation) deleteAndRenderStack(name, description string, deleteFn
 	return nil
 }
 
+type errFailedService struct {
+	stackName    string
+	resourceType string
+	status       string
+}
+
+func (e *errFailedService) RecommendActions() string {
+	if e.resourceType == "AWS::AppRunner::Service" {
+		return fmt.Sprintf("You may fix the error by updating the service code or the manifest configuration.\n"+
+			"You can then retry deploying your service by running %s.", color.HighlightCode("copilot svc deploy"))
+	}
+	return ""
+}
+func (e *errFailedService) Error() string {
+	return fmt.Sprintf("stack %s did not complete successfully and exited with status %s", e.stackName, e.status)
+}
+
 func (cf CloudFormation) errOnFailedStack(stackName string) error {
 	stack, err := cf.cfnClient.Describe(stackName)
 	if err != nil {
@@ -576,7 +594,16 @@ func (cf CloudFormation) errOnFailedStack(stackName string) error {
 	}
 	status := aws.StringValue(stack.StackStatus)
 	if cloudformation.StackStatus(status).IsFailure() {
-		return fmt.Errorf("stack %s did not complete successfully and exited with status %s", stackName, status)
+		events, _ := cf.cfnClient.ErrorEvents(stackName)
+		var failedResourceType string
+		if len(events) > 0 {
+			failedResourceType = aws.StringValue(events[0].ResourceType)
+		}
+		return &errFailedService{
+			stackName:    stackName,
+			resourceType: failedResourceType,
+			status:       status,
+		}
 	}
 	return nil
 }
@@ -649,26 +676,4 @@ func stopSpinner(spinner *progress.Spinner, err error, label string) {
 		return
 	}
 	spinner.Stop(log.Serrorf("%s\n", label))
-}
-
-// isRetryableUpdateError returns true if the stack update error is retryable.
-func isRetryableUpdateError(name string, err error) bool {
-	var alreadyInProgErr *cloudformation.ErrStackUpdateInProgress
-	var obsoleteChangeSetErr *cloudformation.ErrChangeSetNotExecutable
-	switch updateErr := err; {
-	case errors.As(updateErr, &alreadyInProgErr):
-		// There is another update going on, retry the upgrade.
-		return true
-	case errors.As(updateErr, &obsoleteChangeSetErr):
-		// If there are two "upgrade" calls happening in parallel, it's possible that
-		// both invocations created a changeset to upgrade the stack.
-		// CloudFormation will ensure that one of them goes through, while the other returns
-		// an ErrChangeSetNotExecutable error.
-		//
-		// In that scenario, we should loop again, wait until the stack is updated,
-		// and exit due to changeset is empty.
-		return true
-	default:
-		return false
-	}
 }

@@ -77,41 +77,26 @@ func newShowSvcOpts(vars showSvcVars) (*showSvcOpts, error) {
 		if err != nil {
 			return err
 		}
+		config := describe.NewServiceConfig{
+			App:             opts.appName,
+			Svc:             opts.svcName,
+			ConfigStore:     ssmStore,
+			DeployStore:     deployStore,
+			EnableResources: opts.shouldOutputResources,
+		}
 		switch svc.Type {
 		case manifestinfo.LoadBalancedWebServiceType:
-			d, err = describe.NewLBWebServiceDescriber(describe.NewServiceConfig{
-				App:             opts.appName,
-				Svc:             opts.svcName,
-				ConfigStore:     ssmStore,
-				DeployStore:     deployStore,
-				EnableResources: opts.shouldOutputResources,
-			})
+			d, err = describe.NewLBWebServiceDescriber(config)
 		case manifestinfo.RequestDrivenWebServiceType:
-			d, err = describe.NewRDWebServiceDescriber(describe.NewServiceConfig{
-				App:             opts.appName,
-				Svc:             opts.svcName,
-				ConfigStore:     ssmStore,
-				DeployStore:     deployStore,
-				EnableResources: opts.shouldOutputResources,
-			})
+			d, err = describe.NewRDWebServiceDescriber(config)
 		case manifestinfo.BackendServiceType:
-			d, err = describe.NewBackendServiceDescriber(describe.NewServiceConfig{
-				App:             opts.appName,
-				Svc:             opts.svcName,
-				ConfigStore:     ssmStore,
-				DeployStore:     deployStore,
-				EnableResources: opts.shouldOutputResources,
-			})
+			d, err = describe.NewBackendServiceDescriber(config)
 		case manifestinfo.WorkerServiceType:
-			d, err = describe.NewWorkerServiceDescriber(describe.NewServiceConfig{
-				App:             opts.appName,
-				Svc:             opts.svcName,
-				ConfigStore:     ssmStore,
-				DeployStore:     deployStore,
-				EnableResources: opts.shouldOutputResources,
-			})
+			d, err = describe.NewWorkerServiceDescriber(config)
+		case manifestinfo.StaticSiteType:
+			d, err = describe.NewStaticSiteDescriber(config)
 		default:
-			return fmt.Errorf("invalid service type %s", svc.Type)
+			return fmt.Errorf(`service type %q is not supported for %s`, svc.Type, color.HighlightCode("svc show"))
 		}
 
 		if err != nil {

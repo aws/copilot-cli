@@ -9,12 +9,12 @@ image:
 
 http:
   path: '/'
-  alias: ["frontend.copilot-e2e-tests.ecs.aws.dev", "copilot-e2e-tests.ecs.aws.dev"]
+  # alias: ["frontend.copilot-e2e-tests.ecs.aws.dev", "copilot-e2e-tests.ecs.aws.dev"]
   additional_rules:
     - path: 'admin'
       target_port: 3002
       healthcheck: '/admin'
-      alias: ["frontend.copilot-e2e-tests.ecs.aws.dev", "copilot-e2e-tests.ecs.aws.dev"]
+      alias: ["frontend-app-domain.copilot-e2e-tests.ecs.aws.dev", "copilot-e2e-tests.ecs.aws.dev"]
 
 cpu: 256
 memory: 512

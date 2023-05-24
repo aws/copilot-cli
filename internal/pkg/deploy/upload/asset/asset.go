@@ -13,6 +13,8 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"mime"
+	"path"
 	"path/filepath"
 	"sort"
 
@@ -29,11 +31,11 @@ type ArtifactBucketUploader struct {
 	// Upload is the function called when uploading a file.
 	Upload func(path string, contents io.Reader) error
 
-	// PathPrefix is the path to prefix any hashed files when uploading to the artifact bucket.
-	PathPrefix string
+	// AssetDir is the directory to upload the hashed files to.
+	AssetDir string
 
-	// AssetMappingPath is the path the upload the asset mapping file to.
-	AssetMappingPath string
+	// AssetMappingFileDir is the directory to upload the asset mapping file to.
+	AssetMappingFileDir string
 }
 
 type asset struct {
@@ -42,47 +44,49 @@ type asset struct {
 
 	ArtifactBucketPath string `json:"path"`
 	ServiceBucketPath  string `json:"destPath"`
+	ContentType        string `json:"contentType"`
 }
 
 // UploadFiles hashes each of the files specified in files and uploads
-// them to the path "{PathPrefix}/{hash}". After, it uploads a JSON file
-// to AssetMappingPath that specifies the location of every file in the artifact bucket and its
-// intended destination path in the service bucket.
-func (u *ArtifactBucketUploader) UploadFiles(files []manifest.FileUpload) error {
+// them to the path "{AssetDir}/{hash}". After, it uploads a JSON file
+// to AssetDir that maps the location of every file in the artifact bucket to its
+// intended destination path in the service bucket. The path to the mapping file
+// is returned along with an error, if any.
+func (u *ArtifactBucketUploader) UploadFiles(files []manifest.FileUpload) (string, error) {
 	var assets []asset
 	for _, f := range files {
 		matcher := buildCompositeMatchers(buildReincludeMatchers(f.Reinclude.ToStringSlice()), buildExcludeMatchers(f.Exclude.ToStringSlice()))
-		source := filepath.Join(f.Context, f.Source)
 
-		if err := afero.Walk(u.FS, source, u.walkFn(source, f.Destination, f.Recursive, matcher, &assets)); err != nil {
-			return fmt.Errorf("walk the file tree rooted at %q: %s", source, err)
+		if err := afero.Walk(u.FS, f.Source, u.walkFn(f.Source, f.Destination, f.Recursive, matcher, &assets)); err != nil {
+			return "", fmt.Errorf("walk the file tree rooted at %q: %s", f.Source, err)
 		}
 	}
 
 	if err := u.uploadAssets(assets); err != nil {
-		return fmt.Errorf("upload assets: %s", err)
+		return "", fmt.Errorf("upload assets: %s", err)
 	}
 
-	if err := u.uploadAssetMappingFile(assets); err != nil {
-		return fmt.Errorf("upload asset mapping file: %s", err)
+	path, err := u.uploadAssetMappingFile(assets)
+	if err != nil {
+		return "", fmt.Errorf("upload asset mapping file: %s", err)
 	}
-	return nil
+	return path, nil
 }
 
 func (u *ArtifactBucketUploader) walkFn(sourcePath, destPath string, recursive bool, matcher filepathMatcher, assets *[]asset) filepath.WalkFunc {
-	return func(path string, info fs.FileInfo, err error) error {
+	return func(fpath string, info fs.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 		if info.IsDir() {
 			// if path == sourcePath, then path is the directory they want uploaded.
 			// if path != sourcePath, then path is a _subdirectory_ of the directory they want uploaded.
-			if !recursive && path != sourcePath {
+			if !recursive && fpath != sourcePath {
 				return fs.SkipDir
 			}
 			return nil
 		}
-		ok, err := matcher.match(path)
+		ok, err := matcher.match(fpath)
 		if err != nil {
 			return err
 		}
@@ -92,21 +96,21 @@ func (u *ArtifactBucketUploader) walkFn(sourcePath, destPath string, recursive b
 
 		hash := sha256.New()
 		buf := &bytes.Buffer{}
-		file, err := u.FS.Open(path)
+		file, err := u.FS.Open(fpath)
 		if err != nil {
-			return fmt.Errorf("open %q: %w", path, err)
+			return fmt.Errorf("open %q: %w", fpath, err)
 		}
 		defer file.Close()
 
 		_, err = io.Copy(io.MultiWriter(buf, hash), file)
 		if err != nil {
-			return fmt.Errorf("copy %q: %w", path, err)
+			return fmt.Errorf("copy %q: %w", fpath, err)
 		}
 
 		// rel is "." when sourcePath == path
-		rel, err := filepath.Rel(sourcePath, path)
+		rel, err := filepath.Rel(sourcePath, fpath)
 		if err != nil {
-			return fmt.Errorf("get relative path for %q against %q: %w", path, sourcePath, err)
+			return fmt.Errorf("get relative path for %q against %q: %w", fpath, sourcePath, err)
 		}
 
 		dest := filepath.Join(destPath, rel)
@@ -115,10 +119,11 @@ func (u *ArtifactBucketUploader) walkFn(sourcePath, destPath string, recursive b
 		}
 
 		*assets = append(*assets, asset{
-			localPath:          path,
+			localPath:          fpath,
 			content:            buf,
-			ArtifactBucketPath: filepath.Join(u.PathPrefix, hex.EncodeToString(hash.Sum(nil))),
-			ServiceBucketPath:  dest,
+			ArtifactBucketPath: path.Join(u.AssetDir, hex.EncodeToString(hash.Sum(nil))),
+			ServiceBucketPath:  filepath.ToSlash(dest),
+			ContentType:        mime.TypeByExtension(filepath.Ext(fpath)),
 		})
 		return nil
 	}
@@ -140,16 +145,21 @@ func (u *ArtifactBucketUploader) uploadAssets(assets []asset) error {
 	return g.Wait()
 }
 
-// uploadAssetMappingFile uploads a JSON file to u.AssetMappingPath containing
-// the current location of each file in the artifact bucket and the desired location
+// uploadAssetMappingFile uploads a JSON file containing the location
+// of each file in the artifact bucket and the desired location
 // of the file in the destination bucket. It has the format:
 //
-//	{
+//	[{
 //	  "path": "local-assets/12345asdf",
-//	  "destPath": "index.html"
-//	}
-func (u *ArtifactBucketUploader) uploadAssetMappingFile(assets []asset) error {
-	// stable output
+//	  "destPath": "index.html",
+//	  "contentType": "text/html"
+//	}]
+//
+// The path returned is u.AssetMappingDir/a hash of the mapping file's content.
+// This makes it so the file path is constant as long as the
+// content and destination of the uploaded assets do not change.
+func (u *ArtifactBucketUploader) uploadAssetMappingFile(assets []asset) (string, error) {
+	assets = dedupe(assets)
 	sort.Slice(assets, func(i, j int) bool {
 		if assets[i].ArtifactBucketPath != assets[j].ArtifactBucketPath {
 			return assets[i].ArtifactBucketPath < assets[j].ArtifactBucketPath
@@ -159,11 +169,33 @@ func (u *ArtifactBucketUploader) uploadAssetMappingFile(assets []asset) error {
 
 	data, err := json.Marshal(assets)
 	if err != nil {
-		return fmt.Errorf("encode uploaded assets: %w", err)
+		return "", fmt.Errorf("encode uploaded assets: %w", err)
 	}
 
-	if err := u.Upload(u.AssetMappingPath, bytes.NewBuffer(data)); err != nil {
-		return fmt.Errorf("upload to %q: %w", u.AssetMappingPath, err)
+	hash := sha256.New()
+	hash.Write(data) // hash.Write is documented to never return an error
+
+	uploadedPath := path.Join(u.AssetMappingFileDir, hex.EncodeToString(hash.Sum(nil)))
+	if err := u.Upload(uploadedPath, bytes.NewBuffer(data)); err != nil {
+		return "", fmt.Errorf("upload to %q: %w", u.AssetMappingFileDir, err)
 	}
-	return nil
+	return uploadedPath, nil
+}
+
+// dedupe returns a copy of assets with duplicate entries removed.
+func dedupe(assets []asset) []asset {
+	type key struct{ field1, field2, field3 string }
+	has := make(map[key]bool)
+	out := make([]asset, 0, len(assets))
+
+	for i := range assets {
+		key := key{assets[i].ArtifactBucketPath, assets[i].ServiceBucketPath, assets[i].ContentType}
+		if has[key] {
+			continue
+		}
+		has[key] = true
+		out = append(out, assets[i])
+	}
+
+	return out
 }

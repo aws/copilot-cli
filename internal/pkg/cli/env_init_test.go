@@ -101,7 +101,7 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 				m.wsAppName = "phonetool"
 				m.store.EXPECT().GetApplication("phonetool").Return(nil, nil)
 			},
-			wantedErrMsg: fmt.Sprintf("environment name 123env is invalid: %s", errValueBadFormat),
+			wantedErrMsg: fmt.Sprintf("environment name 123env is invalid: %s", errBasicNameRegexNotMatched),
 		},
 		"should error if environment already exists": {
 			inEnvName: "test-pdx",

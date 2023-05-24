@@ -40,6 +40,8 @@ const (
 	uploadAssetsFlag      = "upload-assets"
 	deployFlag            = "deploy"
 	diffFlag              = "diff"
+	diffAutoApproveFlag   = "diff-yes"
+	sourcesFlag           = "sources"
 
 	// Flags for operational commands.
 	limitFlag                   = "limit"
@@ -181,6 +183,8 @@ Cannot be specified with --%s or --%s.`, dockerFileFlag, dockerFileContextFlag)
 Cannot be specified with --%s.`, imageFlag)
 	dockerFileContextFlagDescription = fmt.Sprintf(`Path to the Docker build context.
 Cannot be specified with --%s.`, imageFlag)
+	sourcesFlagDescription = fmt.Sprintf(`List of relative paths to source directories or files.
+Must be specified with '--%s "Static Site"'.`, svcTypeFlag)
 	storageTypeFlagDescription = fmt.Sprintf(`Type of storage to add. Must be one of:
 %s.`, strings.Join(applyAll(storageTypes, strconv.Quote), ", "))
 	storageLifecycleFlagDescription = fmt.Sprintf(`Whether the storage should be created and deleted
@@ -236,7 +240,7 @@ Defaults to a random environment.`
 Supported providers are: %s.`, strings.Join(manifest.PipelineProviders, ", "))
 
 	ingressTypeFlagDescription = fmt.Sprintf(`Required for a Request-Driven Web Service. Allowed source of traffic to your service.
-Must be one of %s`, english.OxfordWordSeries(rdwsIngressOptions, "or"))
+Must be one of %s.`, english.OxfordWordSeries(rdwsIngressOptions, "or"))
 )
 
 const (
@@ -250,11 +254,13 @@ const (
 	yesFlagDescription          = "Skips confirmation prompt."
 	resourceTagsFlagDescription = `Optional. Labels with a key and value separated by commas.
 Allows you to categorize resources.`
-	diffFlagDescription = "Compares the generated CloudFormation template to the deployed stack."
+	diffFlagDescription            = "Compares the generated CloudFormation template to the deployed stack."
+	diffAutoApproveFlagDescription = "Skip interactive approval of diff before deploying."
 
 	// Deployment.
 	deployTestFlagDescription = `Deploy your service or job to a "test" environment.`
-	forceFlagDescription      = "Optional. Force a new service deployment using the existing image."
+	forceFlagDescription      = `Optional. Force a new service deployment using the existing image.
+Not available with the "Static Site" service type.`
 	noRollbackFlagDescription = `Optional. Disable automatic stack 
 rollback in case of deployment failure.
 We do not recommend using this flag for a
@@ -383,8 +389,8 @@ Cannot be specified with --default-config or any of the --override flags.`
 	deleteSecretFlagDescription    = "Deletes AWS Secrets Manager secret associated with a pipeline source repository."
 	svcPortFlagDescription         = "The port on which your service listens."
 	noSubscriptionFlagDescription  = "Optional. Turn off selection for adding subscriptions for worker services."
-	subscribeTopicsFlagDescription = `Optional. SNS Topics to subscribe to from other services in your application.
-Must be of format '<svcName>:<topicName>'`
+	subscribeTopicsFlagDescription = `Optional. SNS topics to subscribe to from other services in your application.
+Must be of format '<svcName>:<topicName>'.`
 	retriesFlagDescription = "Optional. The number of times to try restarting the job on a failure."
 	timeoutFlagDescription = `Optional. The total execution time for the task, including retries.
 Accepts valid Go duration strings. For example: "2h", "1h30m", "900s".`
