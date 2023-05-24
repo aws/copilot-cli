@@ -9,10 +9,10 @@ image_height: '747'
 
 # AWS Copilot v1.28: Static Site service type is here!
 
-Posted On: May 23, 2023
+Posted On: May 24, 2023
 
 The AWS Copilot core team is announcing the Copilot v1.28 release.
-Special thanks to [@interu](https://github.com/interu), [@0xO0O0](https://github.com/0xO0O0), who contributed to this release.
+Special thanks to [@interu](https://github.com/interu), [@0xO0O0](https://github.com/0xO0O0),[@andreas-bergstrom](https://github.com/andreas-bergstrom) who contributed to this release.
 Our public [сommunity сhat](https://app.gitter.im/#/room/#aws_copilot-cli:gitter.im) is growing and has over 400 people online and over 2.9k stars on [GitHub](http://github.com/aws/copilot-cli/).
 Thanks to every one of you who shows love and support for AWS Copilot.
 
