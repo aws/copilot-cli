@@ -278,7 +278,7 @@ var _ = Describe("App With Domain", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(len(svc.Routes)).To(Equal(1))
 			wantedURLs = map[string]string{
-				"test": "https://copilot-e2e-tests.ecs.aws.dev or https://frontend.copilot-e2e-tests.ecs.aws.dev",
+				"test": "https://copilot-e2e-tests.ecs.aws.dev or https://frontend-app-domain.copilot-e2e-tests.ecs.aws.dev",
 			}
 			// Validate route has the expected HTTPS endpoint.
 			route := svc.Routes[0]
