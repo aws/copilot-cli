@@ -1,4 +1,4 @@
-//go:build integration
+//go:build integration || localintegration
 
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
@@ -148,6 +148,7 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 				ALBListener: &template.ALBListener{
 					Rules: []template.ALBListenerRule{
 						{
+							Path:            "/",
 							TargetPort:      "8080",
 							TargetContainer: "main",
 							HTTPVersion:     "GRPC",
@@ -171,6 +172,7 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 				ALBListener: &template.ALBListener{
 					Rules: []template.ALBListenerRule{
 						{
+							Path:            "/",
 							TargetPort:      "8080",
 							TargetContainer: "main",
 							HTTPVersion:     "GRPC",
@@ -194,6 +196,7 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 				ALBListener: &template.ALBListener{
 					Rules: []template.ALBListenerRule{
 						{
+							Path:            "/",
 							TargetPort:      "8080",
 							TargetContainer: "main",
 							HTTPVersion:     "GRPC",
@@ -220,6 +223,7 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 				ALBListener: &template.ALBListener{
 					Rules: []template.ALBListenerRule{
 						{
+							Path:            "/",
 							TargetPort:      "8080",
 							TargetContainer: "main",
 							HTTPVersion:     "GRPC",
@@ -249,6 +253,7 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 				ALBListener: &template.ALBListener{
 					Rules: []template.ALBListenerRule{
 						{
+							Path:            "/",
 							TargetPort:      "8080",
 							TargetContainer: "main",
 							HTTPVersion:     "GRPC",
@@ -272,6 +277,7 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 				ALBListener: &template.ALBListener{
 					Rules: []template.ALBListenerRule{
 						{
+							Path:            "/",
 							TargetPort:      "8080",
 							TargetContainer: "main",
 							HTTPVersion:     "GRPC",
@@ -323,6 +329,7 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 				ALBListener: &template.ALBListener{
 					Rules: []template.ALBListenerRule{
 						{
+							Path:            "/",
 							TargetPort:      "8080",
 							TargetContainer: "main",
 							HTTPVersion:     "GRPC",
@@ -369,6 +376,7 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 				ALBListener: &template.ALBListener{
 					Rules: []template.ALBListenerRule{
 						{
+							Path:            "/",
 							TargetPort:      "8080",
 							TargetContainer: "main",
 							HTTPVersion:     "GRPC",
@@ -395,6 +403,7 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 				ALBListener: &template.ALBListener{
 					Rules: []template.ALBListenerRule{
 						{
+							Path:            "/",
 							TargetPort:      "8080",
 							TargetContainer: "main",
 							HTTPVersion:     "GRPC",
@@ -421,6 +430,7 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 				ALBListener: &template.ALBListener{
 					Rules: []template.ALBListenerRule{
 						{
+							Path:            "/",
 							TargetPort:      "8080",
 							TargetContainer: "main",
 							HTTPVersion:     "GRPC",
@@ -447,6 +457,7 @@ DiscoveryServiceArn:
 				ALBListener: &template.ALBListener{
 					Rules: []template.ALBListenerRule{
 						{
+							Path:            "/",
 							TargetPort:      "8080",
 							TargetContainer: "main",
 							HTTPVersion:     "GRPC",
