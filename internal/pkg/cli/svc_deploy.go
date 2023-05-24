@@ -518,7 +518,7 @@ func (o *deploySvcOpts) uriRecommendedActions() ([]string, error) {
 	}
 
 	return []string{
-		fmt.Sprintf("You can access your service at %s %s", color.HighlightResource(uri.URI), network),
+		fmt.Sprintf("You can access your service at %s %s", uri.URI, network),
 	}, nil
 }
 
