@@ -474,11 +474,11 @@ Resources:
     Type: Custom::RulePriorityFunction
     Properties:
       ServiceToken: !GetAtt RulePriorityFunction.Arn
-      RulePath: ["http-full-config-path", "admin"]
+      RulePath: ["/http-full-config-path", "/admin"]
       ListenerArn: !GetAtt EnvControllerAction.InternalHTTPListenerArn
   HTTPListenerRule:
     Metadata:
-      "aws:copilot:description": "An HTTP listener rule for path `http-full-config-path` that forwards HTTP traffic to your tasks"
+      "aws:copilot:description": "An HTTP listener rule for path `/http-full-config-path` that forwards HTTP traffic to your tasks"
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
     Properties:
       Actions:
@@ -506,7 +506,7 @@ Resources:
       Priority: !GetAtt HTTPRulePriorityAction.Priority
   HTTPListenerRule1:
     Metadata:
-      "aws:copilot:description": "An HTTP listener rule for path `admin` that forwards HTTP traffic to your tasks"
+      "aws:copilot:description": "An HTTP listener rule for path `/admin` that forwards HTTP traffic to your tasks"
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
     Properties:
       Actions:

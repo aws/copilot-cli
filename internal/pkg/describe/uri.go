@@ -5,6 +5,7 @@ package describe
 
 import (
 	"fmt"
+	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"strings"
 
 	"github.com/dustin/go-humanize/english"
@@ -372,7 +373,7 @@ type nlbURI struct {
 func (u *LBWebServiceURI) String() string {
 	uris := u.access.strings()
 	for _, dnsName := range u.nlbURI.DNSNames {
-		uris = append(uris, fmt.Sprintf("%s:%s", dnsName, u.nlbURI.Port))
+		uris = append(uris, color.HighlightResource(fmt.Sprintf("%s:%s", dnsName, u.nlbURI.Port)))
 	}
 	return english.OxfordWordSeries(uris, "or")
 }
@@ -388,7 +389,7 @@ func (u *accessURI) strings() []string {
 		if u.Path != "/" {
 			path = fmt.Sprintf("/%s", u.Path)
 		}
-		uris = append(uris, protocol+dnsName+path)
+		uris = append(uris, color.HighlightResource(protocol+dnsName+path))
 	}
 	return uris
 }
