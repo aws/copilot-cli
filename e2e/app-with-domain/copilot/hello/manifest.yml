@@ -9,7 +9,7 @@ image:
 
 http:
   path: '/'
-  alias: test.copilot-e2e-tests.ecs.aws.dev
+  alias: hello.copilot-e2e-tests.ecs.aws.dev
 
 cpu: 256
 memory: 512
