@@ -71,7 +71,7 @@ func (d *StaticSiteDescriber) URI(envName string) (URI, error) {
 	}
 	uris := []string{outputs[staticSiteOutputCFDomainName]}
 	if outputs[staticSiteOutputCFAltDomainName] != "" {
-		uris = append(uris, outputs[staticSiteOutputCFAltDomainName])
+		uris = append(uris, color.HighlightResource(outputs[staticSiteOutputCFAltDomainName]))
 	}
 	return URI{
 		URI:        english.OxfordWordSeries(uris, "or"),
