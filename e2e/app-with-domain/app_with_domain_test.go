@@ -9,10 +9,8 @@ import (
 	"sync"
 	"time"
 
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
-
 	"github.com/aws/copilot-cli/e2e/internal/client"
+	. "github.com/onsi/ginkgo/v2"
 )
 
 var _ = Describe("App With Domain", func() {
@@ -249,7 +247,7 @@ var _ = Describe("App With Domain", func() {
 			Expect(len(svc.Routes)).To(Equal(2))
 
 			wantedURLs := map[string]string{
-				"test": "https://test.copilot-e2e-tests.ecs.aws.dev",
+				"test": "https://hello.copilot-e2e-tests.ecs.aws.dev",
 				"prod": "https://prod.copilot-e2e-tests.ecs.aws.dev",
 			}
 			for _, route := range svc.Routes {
