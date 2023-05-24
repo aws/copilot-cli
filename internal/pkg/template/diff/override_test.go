@@ -234,7 +234,7 @@ ImageId: !FindInMap
 				}
 			},
 		},
-		"diff in Fn::GetAtt vs !GetAtt when comparing scalar to scalar both with tags": {
+		"no diff in Fn::GetAtt vs !GetAtt when comparing scalar to scalar both with tags": {
 			old: `      SecurityGroups:
         - !GetAtt PublicHTTPLoadBalancerSecurityGroup.GroupId`,
 			curr: `      SecurityGroups:
