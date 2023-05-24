@@ -1,0 +1,24 @@
+# The manifest for the "mystatic" service.
+# Read the full specification for the "Static Site Service" type at:
+#  https://aws.github.io/copilot-cli/docs/manifest/static-site/
+
+# Your service name will be used in naming your resources like S3 buckets, etc.
+name: static
+type: Static Site
+
+http:
+  alias: ${COPILOT_APPLICATION_NAME}.${DOMAINNAME}
+
+files:
+  - source: ./
+    recursive: true
+    exclude:
+      - copilot/
+      - "*.go"
+
+# You can override any of the values defined above by environment.
+# environments:
+#   test:
+#     files:
+#       - source: ./blob
+#         destination: blob

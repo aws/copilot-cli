@@ -162,6 +162,15 @@ batch:
         variables:
           TEST_SUITE: cloudfront
           APP_REGION: eu-central-1
+    - identifier: staticsite
+      env:
+        privileged-mode: true
+        type: LINUX_CONTAINER
+        compute-type: BUILD_GENERAL1_LARGE
+        image: aws/codebuild/standard:6.0
+        variables:
+          TEST_SUITE: staticsite
+          APP_REGION: eu-central-1
 
 phases:
   install:
