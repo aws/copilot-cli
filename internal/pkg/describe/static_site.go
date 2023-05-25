@@ -7,6 +7,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
+	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"strings"
 	"text/tabwriter"
 
@@ -30,16 +32,22 @@ type StaticSiteDescriber struct {
 	store                  DeployedEnvServicesLister
 	initWkldStackDescriber func(string) (workloadDescriber, error)
 	wkldDescribers         map[string]workloadDescriber
+	s3Client               bucketDescriber
 }
 
 // NewStaticSiteDescriber instantiates a static site service describer.
 func NewStaticSiteDescriber(opt NewServiceConfig) (*StaticSiteDescriber, error) {
+	defaultSess, err := sessions.ImmutableProvider().Default()
+	if err != nil {
+		return nil, fmt.Errorf("default session: %v", err)
+	}
 	describer := &StaticSiteDescriber{
 		app:             opt.App,
 		svc:             opt.Svc,
 		enableResources: opt.EnableResources,
 		store:           opt.DeployStore,
 		wkldDescribers:  make(map[string]workloadDescriber),
+		s3Client:        s3.New(defaultSess),
 	}
 	describer.initWkldStackDescriber = func(env string) (workloadDescriber, error) {
 		if describer, ok := describer.wkldDescribers[env]; ok {
@@ -97,6 +105,10 @@ func (d *StaticSiteDescriber) Describe() (HumanJSONStringer, error) {
 				URL:         uri.URI,
 			})
 		}
+	}
+	// TODO(jwh): get bucket name
+	if err := d.s3Client.GetBucketTree("bugbash-static-test-static-site-bucket-1qdzh62y4l3gj"); err != nil {
+		return nil, err
 	}
 	resources := make(map[string][]*stack.Resource)
 	if d.enableResources {

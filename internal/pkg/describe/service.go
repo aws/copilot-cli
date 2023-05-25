@@ -91,6 +91,10 @@ type cwAlarmDescriber interface {
 	AlarmDescriptions([]string) ([]*cloudwatch.AlarmDescription, error)
 }
 
+type bucketDescriber interface {
+	GetBucketTree(bucket string) error
+}
+
 type ecsSvcDesc struct {
 	Service           string                         `json:"service"`
 	Type              string                         `json:"type"`

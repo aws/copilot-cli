@@ -413,7 +413,7 @@ func TestClearRepository(t *testing.T) {
 			},
 			wantError: nil,
 		},
-		"returns error if fail to check repo existance": {
+		"returns error if fail to check repo existence": {
 			mockECRClient: func(m *mocks.Mockapi) {
 				m.EXPECT().DescribeImages(&ecr.DescribeImagesInput{
 					RepositoryName: aws.String(mockRepoName),
@@ -421,7 +421,7 @@ func TestClearRepository(t *testing.T) {
 			},
 			wantError: fmt.Errorf("ecr repo mockRepoName describe images: %w", mockAwsError),
 		},
-		"returns error if fail to check repo existance because of non-awserr error type": {
+		"returns error if fail to check repo existence because of non-awserr error type": {
 			mockECRClient: func(m *mocks.Mockapi) {
 				m.EXPECT().DescribeImages(&ecr.DescribeImagesInput{
 					RepositoryName: aws.String(mockRepoName),

@@ -7,6 +7,7 @@ package s3
 import (
 	"errors"
 	"fmt"
+	"github.com/xlab/treeprint"
 	"io"
 	"mime"
 	"path/filepath"
@@ -38,6 +39,7 @@ type s3ManagerAPI interface {
 
 type s3API interface {
 	ListObjectVersions(input *s3.ListObjectVersionsInput) (*s3.ListObjectVersionsOutput, error)
+	ListObjectsV2(input *s3.ListObjectsV2Input) (*s3.ListObjectsV2Output, error)
 	DeleteObjects(input *s3.DeleteObjectsInput) (*s3.DeleteObjectsOutput, error)
 	HeadBucket(input *s3.HeadBucketInput) (*s3.HeadBucketOutput, error)
 }
@@ -77,10 +79,10 @@ func (s *S3) EmptyBucket(bucket string) error {
 	var listResp *s3.ListObjectVersionsOutput
 	var err error
 
-	// Bucket is exists check to make sure the bucket exists before proceeding in emptying it
+	// isBucketExists checks to make sure the bucket exists before proceeding to empty it.
 	isExists, err := s.isBucketExists(bucket)
 	if err != nil {
-		return fmt.Errorf("unable to determine the existance of bucket %s: %w", bucket, err)
+		return fmt.Errorf("unable to determine the existence of bucket %s: %w", bucket, err)
 	}
 
 	if !isExists {
@@ -204,6 +206,83 @@ func (s *S3) isBucketExists(bucket string) (bool, error) {
 	}
 
 	return true, nil
+}
+
+// GetBucketTree retrieves the objects in an S3 bucket and creates an ASCII tree representing their folder structure.
+func (s *S3) GetBucketTree(bucket string) error {
+	listResp := &s3.ListObjectsV2Output{}
+	var err error
+
+	// isBucketExists check to make sure the bucket exists before proceeding.
+	isExists, err := s.isBucketExists(bucket)
+	if err != nil {
+		return fmt.Errorf("unable to determine the existence of bucket %s: %w", bucket, err)
+	}
+	if !isExists {
+		return nil
+	}
+	for {
+		listParams := &s3.ListObjectsV2Input{
+			Bucket:            aws.String(bucket),
+			Delimiter:         aws.String("/"),
+			ContinuationToken: listResp.NextContinuationToken,
+		}
+		listResp, err = s.s3Client.ListObjectsV2(listParams)
+		if err != nil {
+			return fmt.Errorf("list objects for bucket %s: %w", bucket, err)
+		}
+		if listResp.NextContinuationToken == nil {
+			break
+		}
+	}
+
+	tree := treeprint.New()
+	if err := s.addNodes(tree, listResp.CommonPrefixes, bucket); err != nil {
+		return err
+	}
+
+	for _, object := range listResp.Contents {
+		tree.AddNode(aws.StringValue(object.Key))
+	}
+	fmt.Println(tree.String())
+	return nil
+}
+
+func (s *S3) addNodes(tree treeprint.Tree, prefixes []*s3.CommonPrefix, bucket string) error {
+	if len(prefixes) == 0 {
+		return nil
+	}
+	for _, prefix := range prefixes {
+		branch := tree.AddBranch(s.extractFileName(aws.StringValue(prefix.Prefix)))
+		listParams := &s3.ListObjectsV2Input{
+			Bucket:    aws.String(bucket),
+			Delimiter: aws.String("/"),
+			// continuationtoken?
+			Prefix: prefix.Prefix,
+		}
+		listResp, err := s.s3Client.ListObjectsV2(listParams)
+		if err != nil {
+			return fmt.Errorf("list objects for bucket %s: %w", bucket, err)
+		}
+		for _, file := range listResp.Contents {
+			fileName := s.extractFileName(aws.StringValue(file.Key))
+			branch.AddNode(fileName)
+		}
+		if err := s.addNodes(branch, listResp.CommonPrefixes, bucket); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// extractFileName returns the names of individual files and the ends of S3 prefixes.
+func (s *S3) extractFileName(path string) string {
+	path, _ = strings.CutSuffix(path, `/`)
+	if strings.Contains(path, `/`) {
+		split := strings.Split(path, `/`)
+		return split[len(split)-1]
+	}
+	return path
 }
 
 func (s *S3) upload(bucket, key string, buf io.Reader) (string, error) {

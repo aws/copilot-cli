@@ -274,7 +274,7 @@ func TestS3_EmptyBucket(t *testing.T) {
 				}).Return(nil, awserr.New("Unknown", "message", nil))
 			},
 
-			wantErr: fmt.Errorf("unable to determine the existance of bucket %s: %w", "mockBucket",
+			wantErr: fmt.Errorf("unable to determine the existence of bucket %s: %w", "mockBucket",
 				awserr.New("Unknown", "message", nil)),
 		},
 		"some objects failed to delete": {
