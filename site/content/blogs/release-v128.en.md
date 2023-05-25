@@ -18,7 +18,7 @@ Thanks to every one of you who shows love and support for AWS Copilot.
 
 Copilot v1.28 brings several new features and improvements:
 
-- **Static Site service type**: You can now deploy and host static websites with AWS S3. [See detailed section](#Static-Site-service-type).
+- **Static Site service type**: You can now deploy and host static websites with AWS S3. [See detailed section](#static-site-service-type).
 - **Container Images Parallel Build**: You can now build main container and sidecar container images in parallel. With parallel build, you can reduce the overall time it takes build and push container images to AWS ECR.
 
 ???+ note "What’s AWS Copilot?"
