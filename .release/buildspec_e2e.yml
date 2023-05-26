@@ -4,7 +4,7 @@ env:
   secrets-manager:
     DOCKERHUB_USERNAME: prod/ecs-cicd-bot/dockerhub-account-info:username
     DOCKERHUB_TOKEN: prod/ecs-cicd-bot/dockerhub-token:dockerhub-token
-    IMPORTED_CERT_ARN: e2e/account/imported-cert:arn
+    IMPORTED_CERT_ARN: e2e/account/import-certs:cert_arn
 
 # We increased the number of VPCs limit to 15 from 5 in the e2e test's app account/region pair.
 # If the number of tests running in a region is larger than 15, this comment should be updated.
