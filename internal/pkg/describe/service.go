@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/xlab/treeprint"
 	"io"
 	"net/url"
 	"sort"
@@ -92,7 +93,7 @@ type cwAlarmDescriber interface {
 }
 
 type bucketDescriber interface {
-	GetBucketTree(bucket string) error
+	GetBucketTree(bucket string) (treeprint.Tree, error)
 }
 
 type bucketNameGetter interface {

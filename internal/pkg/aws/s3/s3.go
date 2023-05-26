@@ -209,17 +209,17 @@ func (s *S3) isBucketExists(bucket string) (bool, error) {
 }
 
 // GetBucketTree retrieves the objects in an S3 bucket and creates an ASCII tree representing their folder structure.
-func (s *S3) GetBucketTree(bucket string) error {
+func (s *S3) GetBucketTree(bucket string) (treeprint.Tree, error) {
 	listResp := &s3.ListObjectsV2Output{}
 	var err error
 
 	// isBucketExists check to make sure the bucket exists before proceeding.
 	isExists, err := s.isBucketExists(bucket)
 	if err != nil {
-		return fmt.Errorf("unable to determine the existence of bucket %s: %w", bucket, err)
+		return nil, fmt.Errorf("unable to determine the existence of bucket %s: %w", bucket, err)
 	}
 	if !isExists {
-		return nil
+		return nil, nil
 	}
 	for {
 		listParams := &s3.ListObjectsV2Input{
@@ -229,7 +229,7 @@ func (s *S3) GetBucketTree(bucket string) error {
 		}
 		listResp, err = s.s3Client.ListObjectsV2(listParams)
 		if err != nil {
-			return fmt.Errorf("list objects for bucket %s: %w", bucket, err)
+			return nil, fmt.Errorf("list objects for bucket %s: %w", bucket, err)
 		}
 		if listResp.NextContinuationToken == nil {
 			break
@@ -238,14 +238,13 @@ func (s *S3) GetBucketTree(bucket string) error {
 
 	tree := treeprint.New()
 	if err := s.addNodes(tree, listResp.CommonPrefixes, bucket); err != nil {
-		return err
+		return tree, err
 	}
 
 	for _, object := range listResp.Contents {
 		tree.AddNode(aws.StringValue(object.Key))
 	}
-	fmt.Println(tree.String())
-	return nil
+	return tree, nil
 }
 
 func (s *S3) addNodes(tree treeprint.Tree, prefixes []*s3.CommonPrefix, bucket string) error {

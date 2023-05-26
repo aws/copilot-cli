@@ -10,6 +10,7 @@ import (
 	awsS3 "github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	s3 "github.com/aws/copilot-cli/internal/pkg/s3"
+	"github.com/xlab/treeprint"
 	"strings"
 	"text/tabwriter"
 
@@ -97,6 +98,7 @@ func (d *StaticSiteDescriber) Describe() (HumanJSONStringer, error) {
 		return nil, fmt.Errorf("list deployed environments for service %q: %w", d.svc, err)
 	}
 	var routes []*WebServiceRoute
+	var objects []*S3ObjectTree
 	for _, env := range environments {
 		uri, err := d.URI(env)
 		if err != nil {
@@ -112,9 +114,14 @@ func (d *StaticSiteDescriber) Describe() (HumanJSONStringer, error) {
 		if err != nil {
 			return nil, fmt.Errorf("get bucket name for %q env: %w", env, err)
 		}
-		if err := d.awsS3Client.GetBucketTree(bucketName); err != nil {
+		tree, err := d.awsS3Client.GetBucketTree(bucketName)
+		if err != nil {
 			return nil, err
 		}
+		objects = append(objects, &S3ObjectTree{
+			Environment: env,
+			Tree:        tree,
+		})
 	}
 
 	resources := make(map[string][]*stack.Resource)
@@ -137,6 +144,7 @@ func (d *StaticSiteDescriber) Describe() (HumanJSONStringer, error) {
 		App:       d.app,
 		Routes:    routes,
 		Resources: resources,
+		Objects:   objects,
 
 		environments: environments,
 	}, nil
@@ -152,12 +160,19 @@ func (d *StaticSiteDescriber) Manifest(env string) ([]byte, error) {
 	return cfn.Manifest()
 }
 
+// S3ObjectTree contains serialized parameters for an S3 object tree.
+type S3ObjectTree struct {
+	Environment string
+	Tree        treeprint.Tree
+}
+
 // staticSiteDesc contains serialized parameters for a static site.
 type staticSiteDesc struct {
 	Service   string               `json:"service"`
 	Type      string               `json:"type"`
 	App       string               `json:"application"`
 	Routes    []*WebServiceRoute   `json:"routes"`
+	Objects   []*S3ObjectTree      `json:"objects"`
 	Resources deployedSvcResources `json:"resources,omitempty"`
 
 	environments []string `json:"-"`
@@ -189,6 +204,15 @@ func (w *staticSiteDesc) HumanString() string {
 		fmt.Fprintf(writer, "  %s\n", strings.Join(underline(headers), "\t"))
 		for _, route := range w.Routes {
 			fmt.Fprintf(writer, "  %s\t%s\n", route.Environment, route.URL)
+		}
+	}
+	if len(w.Objects) != 0 {
+		fmt.Fprint(writer, color.Bold.Sprint("\nS3 Bucket Objects\n"))
+		writer.Flush()
+		for _, object := range w.Objects {
+			fmt.Fprintf(writer, "\n  %s\t%s\n", "Environment", object.Environment)
+			fmt.Fprintf(writer, object.Tree.String())
+			writer.Flush()
 		}
 	}
 	if len(w.Resources) != 0 {
