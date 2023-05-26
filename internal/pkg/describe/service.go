@@ -95,6 +95,10 @@ type bucketDescriber interface {
 	GetBucketTree(bucket string) error
 }
 
+type bucketNameGetter interface {
+	BucketName(app, env, svc string) (string, error)
+}
+
 type ecsSvcDesc struct {
 	Service           string                         `json:"service"`
 	Type              string                         `json:"type"`
