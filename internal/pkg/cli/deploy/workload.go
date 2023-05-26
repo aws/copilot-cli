@@ -121,6 +121,10 @@ type labeledTermPrinter interface {
 	Print()
 }
 
+type dockerEngineRunChecker interface {
+	CheckDockerEngineRunning() error
+}
+
 // StackRuntimeConfiguration contains runtime configuration for a workload CloudFormation stack.
 type StackRuntimeConfiguration struct {
 	ImageDigests              map[string]ContainerImageIdentifier // Container name to image.
@@ -177,6 +181,7 @@ type workloadDeployer struct {
 	templateFS         template.Reader
 	envVersionGetter   versionGetter
 	overrider          Overrider
+	docker             dockerEngineRunChecker
 	customResources    customResourcesFunc
 	labeledTermPrinter func(fw syncbuffer.FileWriter, bufs []*syncbuffer.LabeledSyncBuffer, opts ...syncbuffer.LabeledTermPrinterOption) labeledTermPrinter
 
@@ -271,6 +276,7 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 	labeledTermPrinter := func(fw syncbuffer.FileWriter, bufs []*syncbuffer.LabeledSyncBuffer, opts ...syncbuffer.LabeledTermPrinterOption) labeledTermPrinter {
 		return syncbuffer.NewLabeledTermPrinter(fw, bufs, opts...)
 	}
+	docker := dockerengine.New(exec.NewCmd())
 	return &workloadDeployer{
 		name:                     in.Name,
 		app:                      in.App,
@@ -289,6 +295,7 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 		templateFS:               template.New(),
 		envVersionGetter:         in.EnvVersionGetter,
 		overrider:                in.Overrider,
+		docker:                   docker,
 		customResources:          in.customResources,
 		defaultSess:              defaultSession,
 		defaultSessWithEnvRegion: defaultSessEnvRegion,
@@ -387,6 +394,9 @@ func (d *workloadDeployer) uploadContainerImages(out *UploadArtifactsOutput) err
 	}
 	if len(buildArgsPerContainer) == 0 {
 		return nil
+	}
+	if err := d.docker.CheckDockerEngineRunning(); err != nil {
+		return fmt.Errorf("check if docker engine is running: %w", err)
 	}
 	uri, err := d.repository.Login()
 	if err != nil {

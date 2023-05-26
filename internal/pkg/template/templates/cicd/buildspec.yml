@@ -3,7 +3,6 @@ version: 0.2
 phases:
   install:
     runtime-versions:
-      docker: 20
       ruby: 3.1
       nodejs: 16
     commands:

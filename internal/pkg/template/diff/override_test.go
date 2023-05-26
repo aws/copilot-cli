@@ -4,13 +4,14 @@
 package diff
 
 import (
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 )
 
-func TestIntrinsicFuncFullShortFormConverter(t *testing.T) {
+func TestIntrinsicFuncConverters(t *testing.T) {
 	testCases := map[string]struct {
 		curr   string
 		old    string
@@ -148,13 +149,97 @@ ImageId: !FindInMap
 				}
 			},
 		},
-		// 	"no diff in Fn::GetAtt vs !GetAtt": { // TODO(lou1415926)
-		// 		old: `SourceSecurityGroupOwnerId:
-		// Fn::GetAtt:
-		//   - myELB
-		//   - SourceSecurityGroup.OwnerAlias`,
-		// 		curr: `SourceSecurityGroupOwnerId: !GetAtt myELB.SourceSecurityGroup.OwnerAlias`,
-		// 	},
+		"no diff in Fn::GetAtt vs !GetAtt when comparing list to scalar": {
+			old: `SourceSecurityGroupOwnerId:
+  Fn::GetAtt:
+    - myELB
+    - SourceSecurityGroup.OwnerAlias`,
+			curr: `SourceSecurityGroupOwnerId: !GetAtt myELB.SourceSecurityGroup.OwnerAlias`,
+		},
+		"diff in Fn::GetAtt vs !GetAtt when comparing list to scalar": {
+			old: `SourceSecurityGroupOwnerId: !GetAtt myELB.SourceSecurityGroup.OwnerAlias`,
+			curr: `SourceSecurityGroupOwnerId:
+  Fn::GetAtt:
+    - theirELB
+    - SourceSecurityGroup.OwnerAlias`,
+			wanted: func() diffNode {
+				changedLogicalID := &seqItemNode{
+					keyNode: keyNode{
+						oldV: yamlScalarNode("myELB"),
+						newV: yamlScalarNode("theirELB"),
+					},
+				}
+				unchanged := &unchangedNode{count: 1}
+				return &keyNode{
+					childNodes: []diffNode{&keyNode{
+						keyValue: "SourceSecurityGroupOwnerId",
+						childNodes: []diffNode{&keyNode{
+							keyValue:   "Fn::GetAtt",
+							childNodes: []diffNode{changedLogicalID, unchanged},
+						}},
+					}},
+				}
+			},
+		},
+		"no diff in Fn::GetAtt vs !GetAtt when comparing list to list": {
+			old: `SourceSecurityGroupOwnerId: !GetAtt [myELB, SourceSecurityGroup]`,
+			curr: `SourceSecurityGroupOwnerId:
+  Fn::GetAtt:
+    - myELB
+    - SourceSecurityGroup`,
+		},
+		"diff in Fn::GetAtt vs !GetAtt when comparing list to list": {
+			old: `SourceSecurityGroupOwnerId: !GetAtt [myELB, SourceSecurityGroup.OwnerAlias]`,
+			curr: `SourceSecurityGroupOwnerId:
+  Fn::GetAtt:
+    - theirELB
+    - SourceSecurityGroup.OwnerAlias`,
+			wanted: func() diffNode {
+				changedLogicalID := &seqItemNode{
+					keyNode: keyNode{
+						oldV: yamlScalarNode("myELB"),
+						newV: yamlScalarNode("theirELB"),
+					},
+				}
+				unchanged := &unchangedNode{count: 1}
+				return &keyNode{
+					childNodes: []diffNode{&keyNode{
+						keyValue: "SourceSecurityGroupOwnerId",
+						childNodes: []diffNode{&keyNode{
+							keyValue:   "Fn::GetAtt",
+							childNodes: []diffNode{changedLogicalID, unchanged},
+						}},
+					}},
+				}
+			},
+		},
+		"no diff in Fn::GetAtt vs !GetAtt when comparing scalar to scalar": {
+			old: `SourceSecurityGroupOwnerId:
+  Fn::GetAtt: myELB.SourceSecurityGroup`,
+			curr: `SourceSecurityGroupOwnerId: !GetAtt myELB.SourceSecurityGroup`,
+		},
+		"diff in Fn::GetAtt vs !GetAtt when comparing scalar to scalar": {
+			old: `SourceSecurityGroupOwnerId: !GetAtt myELB.SourceSecurityGroup.OwnerAlias`,
+			curr: `SourceSecurityGroupOwnerId:
+  Fn::GetAtt: theirELB.SourceSecurityGroup.OwnerAlias`,
+			wanted: func() diffNode {
+				return &keyNode{
+					childNodes: []diffNode{&keyNode{
+						keyValue: "SourceSecurityGroupOwnerId",
+						childNodes: []diffNode{&keyNode{
+							keyValue: "Fn::GetAtt",
+							oldV:     yamlScalarNode("myELB.SourceSecurityGroup.OwnerAlias"),
+							newV:     yamlScalarNode("theirELB.SourceSecurityGroup.OwnerAlias")}},
+					}},
+				}
+			},
+		},
+		"no diff in Fn::GetAtt vs !GetAtt when comparing scalar to scalar both with tags": {
+			old: `      SecurityGroups:
+        - !GetAtt PublicHTTPLoadBalancerSecurityGroup.GroupId`,
+			curr: `      SecurityGroups:
+        - !GetAtt PublicHTTPLoadBalancerSecurityGroup.GroupId`,
+		},
 		"no diff in Fn::GetAZs vs !GetAZ": {
 			old: `AvailabilityZone: !GetAZs ""`,
 			curr: `AvailabilityZone:
@@ -396,12 +481,77 @@ TestSub:
 		//   Parameters:
 		//     Key: value`,
 		// 		},
-		// "no diff in Condition vs !Condition": // TODO(lou1415926)
+		"do not match unexpected keys": {
+			old: `
+Stuff:
+  Sub: not_an_intrinsic_function`,
+			curr: `
+Stuff: !Sub this_is_one`,
+			wanted: func() diffNode {
+				return &keyNode{
+					childNodes: []diffNode{
+						&keyNode{
+							keyValue: "Stuff",
+							oldV:     yamlNode("Sub: not_an_intrinsic_function", t),
+							newV:     yamlNode("!Sub this_is_one", t),
+						},
+					},
+				}
+			},
+		},
+		"no diff in Condition vs !Condition": {
+			old: `ALB:
+  - Condition: CreateALB`,
+			curr: `ALB:
+  - !Condition CreateALB`,
+		},
+		"no diff in Fn::And vs !And": {
+			old: `
+ALB:
+  Fn::And: [this, that]`,
+			curr: `
+ALB: !And
+  - this
+  - that`,
+		},
+		"no diff in Fn::Equals vs !Equals": {
+			old: `
+UseProdCondition:
+  Fn::Equals: [!Ref EnvironmentType, prod]`,
+			curr: `
+UseProdCondition:
+  !Equals [!Ref EnvironmentType, prod]`,
+		},
+		"no diff in Fn::If vs !If": {
+			old: `
+SecurityGroups:
+  - !If [CreateNewSecurityGroup, !Ref NewSecurityGroup, !Ref ExistingSecurityGroup]`,
+			curr: `
+SecurityGroups:
+  - Fn::If: [CreateNewSecurityGroup, !Ref NewSecurityGroup, !Ref ExistingSecurityGroup]`,
+		},
+		"no diff in Fn::Not vs !Not": {
+			old: `
+MyNotCondition:
+  !Not [!Equals [!Ref EnvironmentType, prod]]`,
+			curr: `
+MyNotCondition:
+  Fn::Not: [!Equals [!Ref EnvironmentType, prod]]`,
+		},
+		"no diff in Fn::Or vs !Or": {
+			old: `
+MyOrCondition:
+  Fn::Or: [!Equals [sg-mysggroup, !Ref ASecurityGroup], Condition: SomeOtherCondition]`,
+			curr: `
+MyOrCondition:
+  !Or [!Equals [sg-mysggroup, !Ref ASecurityGroup], Condition: SomeOtherCondition]`,
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			got, err := From(tc.old).Parse([]byte(tc.curr), &intrinsicFuncFullShortFormConverter{})
+			got, err := From(tc.old).Parse([]byte(tc.curr), &getAttConverter{}, &intrinsicFuncMapTagConverter{})
 			require.NoError(t, err)
+			got.Write(os.Stdout)
 			if tc.wanted != nil {
 				require.True(t, equalTree(got, Tree{tc.wanted()}, t), "should get the expected tree")
 			} else {

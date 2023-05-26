@@ -6,7 +6,9 @@ package deploy
 import (
 	"fmt"
 	"io"
+	"path/filepath"
 
+	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -18,6 +20,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/template"
+	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/spf13/afero"
 )
 
@@ -33,6 +36,9 @@ type staticSiteDeployer struct {
 	staticSiteMft    *manifest.StaticSite
 	fs               afero.Fs
 	uploader         fileUploader
+	newStack         func(*stack.StaticSiteConfig) (*stack.StaticSite, error)
+	// cached.
+	wsRoot string
 }
 
 // NewStaticSiteDeployer is the constructor for staticSiteDeployer.
@@ -50,6 +56,10 @@ func NewStaticSiteDeployer(in *WorkloadDeployerInput) (*staticSiteDeployer, erro
 	if !ok {
 		return nil, fmt.Errorf("manifest is not of type %s", manifestinfo.StaticSiteType)
 	}
+	ws, err := workspace.Use(svcDeployer.fs)
+	if err != nil {
+		return nil, err
+	}
 	return &staticSiteDeployer{
 		svcDeployer:      svcDeployer,
 		appVersionGetter: versionGetter,
@@ -64,6 +74,8 @@ func NewStaticSiteDeployer(in *WorkloadDeployerInput) (*staticSiteDeployer, erro
 				return err
 			},
 		},
+		wsRoot:   ws.ProjectRoot(),
+		newStack: stack.NewStaticSite,
 	}, nil
 }
 
@@ -104,13 +116,33 @@ func (d *staticSiteDeployer) DeployWorkload(in *DeployWorkloadInput) (ActionReco
 	return noopActionRecommender{}, nil
 }
 
+func (d *staticSiteDeployer) deploy(deployOptions Options, stackConfigOutput svcStackConfigurationOutput) error {
+	opts := []awscloudformation.StackOption{
+		awscloudformation.WithRoleARN(d.env.ExecutionRoleARN),
+	}
+	if deployOptions.DisableRollback {
+		opts = append(opts, awscloudformation.WithDisableRollback())
+	}
+	if err := d.deployer.DeployService(stackConfigOutput.conf, d.resources.S3Bucket, opts...); err != nil {
+		return fmt.Errorf("deploy service: %w", err)
+	}
+	return nil
+}
+
 // UploadArtifacts uploads static assets to the app stackset bucket.
 func (d *staticSiteDeployer) UploadArtifacts() (*UploadArtifactsOutput, error) {
 	return d.uploadArtifacts(d.uploadStaticFiles, d.uploadArtifactsToS3, d.uploadCustomResources)
 }
 
 func (d *staticSiteDeployer) uploadStaticFiles(out *UploadArtifactsOutput) error {
-	path, err := d.uploader.UploadFiles(d.staticSiteMft.FileUploads)
+	if err := d.validateSources(); err != nil {
+		return err
+	}
+	fullPathSources, err := d.convertSources()
+	if err != nil {
+		return err
+	}
+	path, err := d.uploader.UploadFiles(fullPathSources)
 	if err != nil {
 		return fmt.Errorf("upload static files: %w", err)
 	}
@@ -124,10 +156,13 @@ func (d *staticSiteDeployer) stackConfiguration(in *StackRuntimeConfiguration) (
 	if err != nil {
 		return nil, err
 	}
+	if err := d.validateAlias(); err != nil {
+		return nil, err
+	}
 	if err := validateMinAppVersion(d.app.Name, d.name, d.appVersionGetter, deploy.StaticSiteMinAppTemplateVersion); err != nil {
 		return nil, fmt.Errorf("static sites not supported: %w", err)
 	}
-	conf, err := stack.NewStaticSite(&stack.StaticSiteConfig{
+	conf, err := d.newStack(&stack.StaticSiteConfig{
 		App:                d.app,
 		EnvManifest:        d.envConfig,
 		Manifest:           d.staticSiteMft,
@@ -142,4 +177,46 @@ func (d *staticSiteDeployer) stackConfiguration(in *StackRuntimeConfiguration) (
 		return nil, fmt.Errorf("create stack configuration: %w", err)
 	}
 	return conf, nil
+}
+
+func (d *staticSiteDeployer) validateSources() error {
+	for _, upload := range d.staticSiteMft.FileUploads {
+		_, err := d.fs.Stat(filepath.Join(d.wsRoot, upload.Source))
+		if err != nil {
+			return fmt.Errorf("source %q must be a valid path relative to the workspace root %q: %w", upload.Source, d.wsRoot, err)
+		}
+	}
+	return nil
+}
+
+// convertSources transforms the source's path relative to the project root into the absolute path.
+func (d *staticSiteDeployer) convertSources() ([]manifest.FileUpload, error) {
+	convertedFileUploads := make([]manifest.FileUpload, len(d.staticSiteMft.FileUploads))
+	for i, upload := range d.staticSiteMft.FileUploads {
+		convertedFileUploads[i] = manifest.FileUpload{
+			Source:      filepath.Join(d.wsRoot, upload.Source),
+			Destination: upload.Destination,
+			Recursive:   upload.Recursive,
+			Exclude:     upload.Exclude,
+			Reinclude:   upload.Reinclude,
+		}
+	}
+	return convertedFileUploads, nil
+}
+
+func (d *staticSiteDeployer) validateAlias() error {
+	if d.staticSiteMft.HTTP.Alias == "" {
+		return nil
+	}
+
+	hasImportedCerts := len(d.envConfig.HTTPConfig.Public.Certificates) != 0
+	if hasImportedCerts {
+		return fmt.Errorf("cannot specify alias when env %q imports one or more certificates", d.env.Name)
+	}
+
+	if d.app.Domain == "" {
+		return fmt.Errorf("cannot specify alias when application is not associated with a domain")
+	}
+
+	return validateAliases(d.app, d.env.Name, d.staticSiteMft.HTTP.Alias)
 }

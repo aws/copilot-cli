@@ -3,6 +3,14 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: CloudFormation template that represents a static site backed by S3.
 
+{{- /*
+!¡!¡!¡!¡!¡!¡
+If you are adding resources to this template, make sure to add the resources to
+the TriggerStateMachineAction.DependsOn list. This will ensure that files
+are only copied to Bucket if all other resources are successfully created.
+!¡!¡!¡!¡!¡!¡
+*/ -}}
+
 {{- if .SerializedManifest }}
 Metadata:
   Manifest: |
@@ -30,6 +38,8 @@ Resources:
       aws:copilot:description: An S3 Bucket to store the static site's assets
     Type: AWS::S3::Bucket
     Properties:
+      VersioningConfiguration:
+        Status: Enabled
       AccessControl: Private
       BucketEncryption:
         ServerSideEncryptionConfiguration:
@@ -51,6 +61,16 @@ Resources:
       PolicyDocument:
         Version: 2012-10-17
         Statement:
+          - Sid: ForceHTTPS
+            Effect: Deny
+            Principal: "*"
+            Action: s3:*
+            Resource:
+              - !Sub ${Bucket.Arn}
+              - !Sub ${Bucket.Arn}/*
+            Condition:
+              Bool:
+                aws:SecureTransport: false
           - Sid: AllowCloudFrontServicePrincipalReadOnly
             Effect: Allow
             Principal:
@@ -63,7 +83,7 @@ Resources:
               - !Sub
                 - arn:${AWS::Partition}:s3:::${bucket}/*
                 - bucket: !Ref Bucket
-            Condition: 
+            Condition:
               StringEquals:
                 AWS:SourceArn: !Sub
                   - arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${cfDistributionID}
@@ -73,13 +93,28 @@ Resources:
     Metadata:
       'aws:copilot:description': 'Access control to make the content in the S3 bucket only accessible through CloudFront'
     Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Description: !Sub 'Access control for static s3 origin for ${AppName}-${EnvName}-${WorkloadName}'
+        # Truncate the name to allow at most 64 characters.
+        Name: {{trancateWithHashPadding (printf "%s-%s-%s" .AppName .EnvName .WorkloadName) 58 6}}
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  CloudFrontViewerRequestRewriteFunction:
+    Metadata:
+      'aws:copilot:description': 'CloudFront Function to rewrite viewer request to index.html'
+    Type: AWS::CloudFront::Function
     Properties: 
-      OriginAccessControlConfig: 
-          Description: Access control for static s3 origin
-          Name: !Sub 'copilot-${AppName}-${EnvName}-${WorkloadName}-origin-access-control'
-          OriginAccessControlOriginType: s3
-          SigningBehavior: always
-          SigningProtocol: sigv4
+      AutoPublish: true
+      FunctionCode: |
+        function handler(event){var request=event.request;var uri=request.uri;if(uri.endsWith('/')){request.uri+='index.html'}else if(!uri.includes('.')){request.uri+='/index.html'}return request}
+      FunctionConfig: 
+        Comment: CloudFront Function to rewrite viewer request to index.html
+        Runtime: cloudfront-js-1.0
+      # Truncate the name to allow at most 64 characters.
+      Name: {{trancateWithHashPadding (printf "%s-%s-%s" .AppName .EnvName .WorkloadName) 58 6}}
 
   CloudFrontDistribution:
     Metadata:
@@ -87,9 +122,16 @@ Resources:
     Type: AWS::CloudFront::Distribution
     Properties:
       DistributionConfig:
+        {{- if .StaticSiteAlias}}
+        Aliases: [{{.StaticSiteAlias}}]
+        {{- end}}
         DefaultCacheBehavior:
-          AllowedMethods: ["GET", "HEAD", "OPTIONS", "PUT", "PATCH", "POST", "DELETE"]
-          ViewerProtocolPolicy: allow-all
+          Compress: true
+          AllowedMethods: ["GET", "HEAD"]
+          FunctionAssociations:
+            - EventType: viewer-request
+              FunctionARN: !GetAtt CloudFrontViewerRequestRewriteFunction.FunctionARN
+          ViewerProtocolPolicy: redirect-to-https
           CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6 # See https://go.aws/3bJid3k
           TargetOriginId: !Sub 'copilot-${AppName}-${EnvName}-${WorkloadName}'
         Enabled: true
@@ -98,14 +140,20 @@ Resources:
           - Id: !Sub 'copilot-${AppName}-${EnvName}-${WorkloadName}'
             DomainName: !GetAtt Bucket.RegionalDomainName
             OriginAccessControlId: !Ref CloudFrontOriginAccessControl
-            # Workaround for using Origin Access Control as Origin Access Identity is still 
+            # Workaround for using Origin Access Control as Origin Access Identity is still
             # required when the origin is an S3 bucket.
             S3OriginConfig:
-              OriginAccessIdentity: '' 
+              OriginAccessIdentity: ''
+        {{- if .StaticSiteAlias}}
+        ViewerCertificate:
+          AcmCertificateArn: !Ref CertificateValidatorAction
+          MinimumProtocolVersion: TLSv1
+          SslSupportMethod:  sni-only
+        {{- end}}
 
   TriggerStateMachineFunction:
     Metadata:
-      aws:copilot:description: A lambda that triggers the file-copying state machine
+      aws:copilot:description: A lambda that starts the process of moving files to the S3 bucket
     Type: AWS::Lambda::Function
     Properties:
       Handler: index.handler
@@ -121,7 +169,7 @@ Resources:
 
   TriggerStateMachineFunctionRole:
     Metadata:
-      aws:copilot:description: An IAM Role for the lambda that triggers the file-copying state machine.
+      aws:copilot:description: An IAM Role for the lambda that starts the process of moving files to the S3 bucket
     Type: AWS::IAM::Role
     Properties:
       {{- if .PermissionsBoundary}}
@@ -147,31 +195,50 @@ Resources:
 
   TriggerStateMachineAction:
     Metadata:
-      aws:copilot:description: A custom resource to trigger the file-copying state machine
+      aws:copilot:description: A custom resource that starts the process of moving files to the S3 bucket
     Type: Custom::TriggerStateMachine
-    DependsOn: CopyAssetsStateMachine
+    DependsOn:
+      - Bucket
+      - BucketPolicyForCloudFront
+      - CloudFrontOriginAccessControl
+      - CloudFrontDistribution
+      - TriggerStateMachineFunction
+      - TriggerStateMachineFunctionRole
+      - CopyAssetsStateMachine {{- /* This is a real dependency */}}
+      - CopyAssetsStateMachineRole
+      - EnvManagerS3Access
+      {{- if .StaticSiteAlias}}
+      - CustomDomainAction
+      - CustomDomainFunction
+      - CustomDomainRole
+      - CertificateValidatorAction
+      - CertificateValidationFunction
+      - CertificateValidatorRole
+      {{- end}}
     Properties:
       ServiceToken: !GetAtt TriggerStateMachineFunction.Arn
       StateMachineARN: !GetAtt CopyAssetsStateMachine.Arn
-      SourceBucket: {{ .AssetMappingFileBucket }}
-      AssetMappingFilePath: {{ .AssetMappingFilePath }}
-      DestinationBucket: !Ref Bucket
+      # include file mapping path as an input so the state
+      # machine is only triggered if this file path changes.
+      AssetMappingFilePath: {{.AssetMappingFilePath}}
 
   CopyAssetsStateMachine:
+    Metadata:
+      aws:copilot:description: A state machine that moves source files to the S3 bucket
     Type: AWS::StepFunctions::StateMachine
     Properties:
       RoleArn: !GetAtt CopyAssetsStateMachineRole.Arn
       StateMachineType: EXPRESS
       Definition:
-        Comment: A state machine that triggers a file-copying lambda for each uploaded asset
+        Comment: A state machine that moves source files to the S3 bucket
         StartAt: GetMappingFile
         States:
           GetMappingFile:
             Type: Task
-            Parameters:
-              Bucket.$: $.SourceBucket
-              Key.$: $.AssetMappingFilePath
             Resource: arn:aws:states:::aws-sdk:s3:getObject
+            Parameters:
+              Bucket: {{.AssetMappingFileBucket}}
+              Key: {{.AssetMappingFilePath}}
             ResultSelector:
               files.$: States.StringToJson($.Body)
             ResultPath: $.GetMappingFile
@@ -180,23 +247,46 @@ Resources:
             Type: Map
             End: true
             ItemsPath: $.GetMappingFile.files
-            ItemSelector:
-              mapping.$: $$.Map.Item.Value
-              destBucket.$: $.DestinationBucket
-              srcBucket.$: $.SourceBucket
             ItemProcessor:
               ProcessorConfig:
                 Mode: INLINE
-              StartAt: CopyFile
+              StartAt: ContentTypeChoice
               States:
+                ContentTypeChoice:
+                  Type: Choice
+                  Choices:
+                    - Or:
+                      - Variable: $.contentType
+                        IsPresent: false
+                      - Variable: $.contentType
+                        StringMatches: ""
+                      Next: CopyFile
+                  Default: CopyFileWithContentType
                 CopyFile:
                   Type: Task
                   End: true
-                  Resource: !GetAtt CopyAssetsFunction.Arn
+                  Resource: arn:aws:states:::aws-sdk:s3:copyObject
+                  Parameters:
+                    CopySource.$: States.Format('{{.AssetMappingFileBucket}}/{}', $.path)
+                    Bucket: !Ref Bucket
+                    Key.$: $.destPath
+                    MetadataDirective: "REPLACE"
+                CopyFileWithContentType:
+                  Type: Task
+                  End: true
+                  Resource: arn:aws:states:::aws-sdk:s3:copyObject
+                  Parameters:
+                    CopySource.$: States.Format('{{.AssetMappingFileBucket}}/{}', $.path)
+                    Bucket: !Ref Bucket
+                    Key.$: $.destPath
+                    ContentType.$: $.contentType
+                    # Required otherwise ContentType won't be applied.
+                    # See https://github.com/aws/aws-sdk-js/issues/1092 for more.
+                    MetadataDirective: "REPLACE"
 
   CopyAssetsStateMachineRole:
     Metadata:
-      aws:copilot:description: An IAM Role for the state machine that triggers the copy lambda
+      aws:copilot:description: An IAM Role for the state machine that moves source files to the S3 bucket
     Type: AWS::IAM::Role
     Properties:
       {{- if .PermissionsBoundary}}
@@ -211,62 +301,16 @@ Resources:
                 - states.amazonaws.com
             Action: sts:AssumeRole
       Policies:
-        - PolicyName: InvokeLambda
-          PolicyDocument:
-            Version: 2012-10-17
-            Statement:
-              - Effect: Allow
-                Action: lambda:InvokeFunction
-                Resource: !GetAtt CopyAssetsFunction.Arn
-        - PolicyName: S3Access
+        - PolicyName: ArtifactBucketAccess
           PolicyDocument:
             Version: 2012-10-17
             Statement:
               - Effect: Allow
                 Action: s3:GetObject
-                Resource: arn:aws:s3:::{{ .AssetMappingFileBucket }}/{{ .AssetMappingFilePath }}
-
-  CopyAssetsFunction:
-    Metadata:
-      aws:copilot:description: A lambda function to copy assets into the static site bucket
-    Type: AWS::Lambda::Function
-    Properties:
-      Handler: index.handler
-      Role: !GetAtt CopyAssetsFunctionRole.Arn
-      Runtime: nodejs16.x
-      Timeout: 60
-      MemorySize: 512
-      {{- with $cr := index .CustomResources "CopyAssetsFunction" }}
-      Code:
-        S3Bucket: {{$cr.Bucket}}
-        S3Key: {{$cr.Key}}
-      {{- end }}
-
-  CopyAssetsFunctionRole:
-    Metadata:
-      aws:copilot:description: An IAM Role for the lambda that copies assets into the static site bucket
-    Type: AWS::IAM::Role
-    Properties:
-      {{- if .PermissionsBoundary}}
-      PermissionsBoundary: !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/{{.PermissionsBoundary}}
-      {{- end}}
-      AssumeRolePolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: lambda.amazonaws.com
-            Action: sts:AssumeRole
-      Policies:
-        - PolicyName: CopyFromS3
-          PolicyDocument:
-            Version: 2012-10-17
-            Statement:
-              - Effect: Allow
-                Action:
-                  - s3:GetObject
-                Resource: arn:aws:s3:::{{ .AssetMappingFileBucket }}/*
-        - PolicyName: CopyToS3
+                Resource:
+                  - arn:aws:s3:::{{.AssetMappingFileBucket}}/{{.AssetMappingFilePath}}
+                  - arn:aws:s3:::{{.AssetMappingFileBucket}}/local-assets/*
+        - PolicyName: ServiceBucketAccess
           PolicyDocument:
             Version: 2012-10-17
             Statement:
@@ -274,9 +318,7 @@ Resources:
                 Action:
                   - s3:PutObject
                 Resource: !Sub arn:aws:s3:::${Bucket}/*
-      ManagedPolicyArns:
-        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-  
+
   EnvManagerS3Access:
     Metadata:
       aws:copilot:description: A policy that gives the Env Manager role access to this site's S3 Bucket
@@ -297,3 +339,189 @@ Resources:
             Resource:
               - !Sub arn:aws:s3:::${Bucket}
               - !Sub arn:aws:s3:::${Bucket}/*
+
+{{- if .StaticSiteAlias}}
+  CustomDomainAction:
+    Metadata:
+      'aws:copilot:description': "Add A-records for your Static Site alias"
+    Type: Custom::CustomDomainFunction
+    Properties:
+      ServiceToken: !GetAtt CustomDomainFunction.Arn
+      PublicAccessHostedZoneID: Z2FDTNDATAQYW2 # See https://go.aws/3cPhvlX
+      PublicAccessDNS: !GetAtt CloudFrontDistribution.DomainName
+      EnvHostedZoneId:
+        Fn::ImportValue:
+          !Sub "${AppName}-${EnvName}-HostedZone"
+      EnvName: !Ref EnvName
+      AppName: !Ref AppName
+      ServiceName: !Ref WorkloadName
+      RootDNSRole: {{ .AppDNSDelegationRole }}
+      DomainName:  {{ .AppDNSName }}
+      Aliases: {{ if .StaticSiteAlias }} [{{ quote .StaticSiteAlias }}] {{ else }} [] {{ end }}
+
+  CustomDomainFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      {{- with $cr := index .CustomResources "CustomDomainFunction" }}
+      Code:
+        S3Bucket: {{$cr.Bucket}}
+        S3Key: {{$cr.Key}}
+      {{- end }}
+      Handler: "index.handler"
+      Timeout: 900
+      MemorySize: 512
+      Role: !GetAtt 'CustomDomainRole.Arn'
+      Runtime: nodejs16.x
+
+  CustomDomainRole:
+    Metadata:
+      'aws:copilot:description': "An IAM role {{- if .PermissionsBoundary}} with permissions boundary {{.PermissionsBoundary}} {{- end}} to update the Route 53 hosted zone"
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          -
+            Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      {{- if .PermissionsBoundary}}
+      PermissionsBoundary: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/{{.PermissionsBoundary}}'
+      {{- end}}
+      Path: /
+      Policies:
+        - PolicyName: "CustomDomainPolicy"
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: AllowAssumeRole
+                Effect: Allow
+                Action: sts:AssumeRole
+                Resource: {{ .AppDNSDelegationRole }}
+              - Sid: HostedZoneAccess
+                Effect: Allow
+                Action:
+                  - "route53:ChangeResourceRecordSets"
+                  - "route53:Get*"
+                  - "route53:Describe*"
+                  - "route53:ListResourceRecordSets"
+                  - "route53:ListHostedZonesByName"
+                Resource: "*"
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  CertificateValidatorAction:
+    Metadata:
+      'aws:copilot:description': "Request and validate the certificate for your Static Site"
+    Type: Custom::CertificateValidationFunction
+    Properties:
+      ServiceToken: !GetAtt CertificateValidationFunction.Arn
+      EnvHostedZoneId:
+        Fn::ImportValue:
+          !Sub "${AppName}-${EnvName}-HostedZone"
+      EnvName: !Ref EnvName
+      AppName: !Ref AppName
+      ServiceName: !Ref WorkloadName
+      RootDNSRole: {{ .AppDNSDelegationRole }}
+      DomainName:  {{ .AppDNSName }}
+      IsCloudFrontCertificate: true
+      Aliases: {{ if .StaticSiteAlias }} [{{ quote .StaticSiteAlias }}] {{ else }} [] {{ end }}
+
+  CertificateValidationFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      {{- with $cr := index .CustomResources "CertificateValidationFunction" }}
+      Code:
+        S3Bucket: {{$cr.Bucket}}
+        S3Key: {{$cr.Key}}
+      {{- end }}
+      Handler: "index.handler"
+      Timeout: 900
+      MemorySize: 512
+      Role: !GetAtt 'CertificateValidatorRole.Arn'
+      Runtime: nodejs16.x
+
+  CertificateValidatorRole:
+    Metadata:
+      'aws:copilot:description': "An IAM role {{- if .PermissionsBoundary}} with permissions boundary {{.PermissionsBoundary}} {{- end}} to request and validate a certificate for your service"
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          -
+            Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      {{- if .PermissionsBoundary}}
+      PermissionsBoundary: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/{{.PermissionsBoundary}}'
+      {{- end}}
+      Path: /
+      Policies:
+        - PolicyName: "CertValidatorPolicy"
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: AllowAssumeRole
+                Effect: Allow
+                Action: sts:AssumeRole
+                Resource: {{ .AppDNSDelegationRole }}
+              - Sid: HostedZoneUpdateAndWait
+                Effect: Allow
+                Action: route53:ChangeResourceRecordSets
+                Resource: "*"
+              - Sid: HostedZoneRead
+                Effect: Allow
+                Action:
+                  - route53:ListResourceRecordSets
+                  - route53:GetChange
+                Resource: "*"
+              - Sid: ServiceCertificateDelete
+                Effect: Allow
+                Action: acm:DeleteCertificate
+                Resource: "*"
+                Condition:
+                  StringEquals:
+                    'aws:ResourceTag/copilot-application': !Sub '${AppName}'
+                    'aws:ResourceTag/copilot-environment': !Sub '${EnvName}'
+                    'aws:ResourceTag/copilot-service': !Sub '${WorkloadName}'
+              - Sid: TaggedResourcesRead
+                Effect: Allow
+                Action: tag:GetResources
+                Resource: "*"
+              - Sid: ServiceCertificateCreate
+                Effect: Allow
+                Action:
+                  - acm:RequestCertificate
+                  - acm:AddTagsToCertificate
+                Resource: "*"
+                Condition:
+                  StringEquals:
+                    'aws:ResourceTag/copilot-application': !Sub '${AppName}'
+                    'aws:ResourceTag/copilot-environment': !Sub '${EnvName}'
+                    'aws:ResourceTag/copilot-service': !Sub '${WorkloadName}'
+              - Sid: CertificateRead
+                Effect: Allow
+                Action: acm:DescribeCertificate
+                Resource: "*"
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+{{- end}}
+
+Outputs:
+  CloudFrontDistributionDomainName:
+    Value: !GetAtt CloudFrontDistribution.DomainName
+    Export:
+      Name: !Sub ${AWS::StackName}-CloudFrontDistributionDomainName
+  {{- if .StaticSiteAlias}}
+  CloudFrontDistributionAlternativeDomainName:
+    Value: {{ quote .StaticSiteAlias }}
+    Export:
+      Name: !Sub ${AWS::StackName}-CloudFrontDistributionAlternativeDomainName
+  {{- end}}

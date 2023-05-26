@@ -38,6 +38,12 @@ func (s *Store) CreateApplication(application *Application) error {
 		Description: aws.String("Copilot Application"),
 		Type:        aws.String(ssm.ParameterTypeString),
 		Value:       aws.String(data),
+		Tags: []*ssm.Tag{
+			{
+				Key:   aws.String("copilot-application"),
+				Value: aws.String(application.Name),
+			},
+		},
 	})
 
 	if err != nil {

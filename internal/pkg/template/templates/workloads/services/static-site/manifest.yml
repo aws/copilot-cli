@@ -1,6 +1,6 @@
 # The manifest for the "{{.Name}}" service.
 # Read the full specification for the "{{.Type}}" type at:
-#  https://aws.github.io/copilot-cli/docs/manifest/static-site/
+# https://aws.github.io/copilot-cli/docs/manifest/static-site/
 
 # Your service name will be used in naming your resources like S3 buckets, etc.
 name: {{.Name}}
@@ -27,8 +27,8 @@ files:
 #   test:
 #     files:
 #       - source: './blob'
-#         destination: 'blob'
 #         recursive: true
+#         destination: 'assets'
 #         exclude: '*'
 #         reinclude:
 #           - '*.txt'

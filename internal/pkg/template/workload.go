@@ -5,6 +5,7 @@ package template
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"fmt"
 	"strconv"
 	"text/template"
@@ -774,7 +775,6 @@ type WorkloadOpts struct {
 	Network                  NetworkOpts
 	ExecuteCommand           *ExecuteCommandOpts
 	Platform                 RuntimePlatformOpts
-	DomainAlias              string
 	DockerLabels             map[string]string
 	DependsOn                map[string]string
 	Publish                  *PublishOpts
@@ -820,6 +820,7 @@ type WorkloadOpts struct {
 	// Additional options for static site template.
 	AssetMappingFileBucket string
 	AssetMappingFilePath   string
+	StaticSiteAlias        string
 }
 
 // HealthCheckProtocol returns the protocol for the Load Balancer health check,
@@ -907,24 +908,35 @@ func (t *Template) parseWkld(name, wkldDirName string, data interface{}, options
 func withSvcParsingFuncs() ParseOption {
 	return func(t *template.Template) *template.Template {
 		return t.Funcs(map[string]interface{}{
-			"toSnakeCase":          ToSnakeCaseFunc,
-			"hasSecrets":           hasSecrets,
-			"fmtSlice":             FmtSliceFunc,
-			"quoteSlice":           QuoteSliceFunc,
-			"quote":                strconv.Quote,
-			"randomUUID":           randomUUIDFunc,
-			"jsonMountPoints":      generateMountPointJSON,
-			"jsonSNSTopics":        generateSNSJSON,
-			"jsonQueueURIs":        generateQueueURIJSON,
-			"envControllerParams":  envControllerParameters,
-			"logicalIDSafe":        StripNonAlphaNumFunc,
-			"wordSeries":           english.WordSeries,
-			"pluralWord":           english.PluralWord,
-			"contains":             contains,
-			"requiresVPCConnector": requiresVPCConnector,
-			"strconvUint16":        StrconvUint16,
+			"toSnakeCase":             ToSnakeCaseFunc,
+			"hasSecrets":              hasSecrets,
+			"fmtSlice":                FmtSliceFunc,
+			"quoteSlice":              QuoteSliceFunc,
+			"quote":                   strconv.Quote,
+			"randomUUID":              randomUUIDFunc,
+			"jsonMountPoints":         generateMountPointJSON,
+			"jsonSNSTopics":           generateSNSJSON,
+			"jsonQueueURIs":           generateQueueURIJSON,
+			"envControllerParams":     envControllerParameters,
+			"logicalIDSafe":           StripNonAlphaNumFunc,
+			"wordSeries":              english.WordSeries,
+			"pluralWord":              english.PluralWord,
+			"contains":                contains,
+			"requiresVPCConnector":    requiresVPCConnector,
+			"strconvUint16":           StrconvUint16,
+			"trancateWithHashPadding": trancateWithHashPadding,
 		})
 	}
+}
+
+func trancateWithHashPadding(s string, max, paddingLength int) string {
+	if len(s) <= max {
+		return s
+	}
+	h := sha256.New()
+	h.Write([]byte(s))
+	hash := fmt.Sprintf("%x", h.Sum(nil))
+	return s[:max] + hash[:paddingLength]
 }
 
 func hasSecrets(opts WorkloadOpts) bool {

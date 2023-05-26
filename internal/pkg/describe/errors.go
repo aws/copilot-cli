@@ -24,6 +24,17 @@ func (err *ErrManifestNotFoundInTemplate) Error() string {
 	return fmt.Sprintf("manifest metadata not found in template of stack %s-%s-%s", err.app, err.env, err.name)
 }
 
+// ErrNonAccessibleServiceType is returned when a service type cannot be reached over the network.
+type ErrNonAccessibleServiceType struct {
+	name    string
+	svcType string
+}
+
+// Error implements the error interface.
+func (err *ErrNonAccessibleServiceType) Error() string {
+	return fmt.Sprintf("service %s is of type %s which cannot be reached over the network", err.name, err.svcType)
+}
+
 type errLBWebSvcsOnCFWithoutAlias struct {
 	services   []string
 	aliasField string

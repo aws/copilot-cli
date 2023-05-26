@@ -478,6 +478,43 @@ func (mr *MocklabeledTermPrinterMockRecorder) Print() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Print", reflect.TypeOf((*MocklabeledTermPrinter)(nil).Print))
 }
 
+// MockdockerEngineRunChecker is a mock of dockerEngineRunChecker interface.
+type MockdockerEngineRunChecker struct {
+	ctrl     *gomock.Controller
+	recorder *MockdockerEngineRunCheckerMockRecorder
+}
+
+// MockdockerEngineRunCheckerMockRecorder is the mock recorder for MockdockerEngineRunChecker.
+type MockdockerEngineRunCheckerMockRecorder struct {
+	mock *MockdockerEngineRunChecker
+}
+
+// NewMockdockerEngineRunChecker creates a new mock instance.
+func NewMockdockerEngineRunChecker(ctrl *gomock.Controller) *MockdockerEngineRunChecker {
+	mock := &MockdockerEngineRunChecker{ctrl: ctrl}
+	mock.recorder = &MockdockerEngineRunCheckerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockdockerEngineRunChecker) EXPECT() *MockdockerEngineRunCheckerMockRecorder {
+	return m.recorder
+}
+
+// CheckDockerEngineRunning mocks base method.
+func (m *MockdockerEngineRunChecker) CheckDockerEngineRunning() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CheckDockerEngineRunning")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CheckDockerEngineRunning indicates an expected call of CheckDockerEngineRunning.
+func (mr *MockdockerEngineRunCheckerMockRecorder) CheckDockerEngineRunning() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckDockerEngineRunning", reflect.TypeOf((*MockdockerEngineRunChecker)(nil).CheckDockerEngineRunning))
+}
+
 // MocktimeoutError is a mock of timeoutError interface.
 type MocktimeoutError struct {
 	ctrl     *gomock.Controller

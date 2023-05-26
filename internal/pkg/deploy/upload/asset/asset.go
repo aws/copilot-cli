@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"mime"
 	"path"
 	"path/filepath"
 	"sort"
@@ -43,6 +44,7 @@ type asset struct {
 
 	ArtifactBucketPath string `json:"path"`
 	ServiceBucketPath  string `json:"destPath"`
+	ContentType        string `json:"contentType"`
 }
 
 // UploadFiles hashes each of the files specified in files and uploads
@@ -121,6 +123,7 @@ func (u *ArtifactBucketUploader) walkFn(sourcePath, destPath string, recursive b
 			content:            buf,
 			ArtifactBucketPath: path.Join(u.AssetDir, hex.EncodeToString(hash.Sum(nil))),
 			ServiceBucketPath:  filepath.ToSlash(dest),
+			ContentType:        mime.TypeByExtension(filepath.Ext(fpath)),
 		})
 		return nil
 	}
@@ -142,13 +145,14 @@ func (u *ArtifactBucketUploader) uploadAssets(assets []asset) error {
 	return g.Wait()
 }
 
-// uploadAssetMappingFile uploads a JSON file containing the current
-// location of each file in the artifact bucket and the desired location
+// uploadAssetMappingFile uploads a JSON file containing the location
+// of each file in the artifact bucket and the desired location
 // of the file in the destination bucket. It has the format:
 //
 //	[{
 //	  "path": "local-assets/12345asdf",
-//	  "destPath": "index.html"
+//	  "destPath": "index.html",
+//	  "contentType": "text/html"
 //	}]
 //
 // The path returned is u.AssetMappingDir/a hash of the mapping file's content.
@@ -180,12 +184,12 @@ func (u *ArtifactBucketUploader) uploadAssetMappingFile(assets []asset) (string,
 
 // dedupe returns a copy of assets with duplicate entries removed.
 func dedupe(assets []asset) []asset {
-	type key struct{ a, b string }
+	type key struct{ field1, field2, field3 string }
 	has := make(map[key]bool)
 	out := make([]asset, 0, len(assets))
 
 	for i := range assets {
-		key := key{assets[i].ArtifactBucketPath, assets[i].ServiceBucketPath}
+		key := key{assets[i].ArtifactBucketPath, assets[i].ServiceBucketPath, assets[i].ContentType}
 		if has[key] {
 			continue
 		}

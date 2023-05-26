@@ -240,7 +240,7 @@ Defaults to a random environment.`
 Supported providers are: %s.`, strings.Join(manifest.PipelineProviders, ", "))
 
 	ingressTypeFlagDescription = fmt.Sprintf(`Required for a Request-Driven Web Service. Allowed source of traffic to your service.
-Must be one of %s`, english.OxfordWordSeries(rdwsIngressOptions, "or"))
+Must be one of %s.`, english.OxfordWordSeries(rdwsIngressOptions, "or"))
 )
 
 const (
@@ -259,7 +259,8 @@ Allows you to categorize resources.`
 
 	// Deployment.
 	deployTestFlagDescription = `Deploy your service or job to a "test" environment.`
-	forceFlagDescription      = "Optional. Force a new service deployment using the existing image."
+	forceFlagDescription      = `Optional. Force a new service deployment using the existing image.
+Not available with the "Static Site" service type.`
 	noRollbackFlagDescription = `Optional. Disable automatic stack 
 rollback in case of deployment failure.
 We do not recommend using this flag for a
@@ -388,8 +389,8 @@ Cannot be specified with --default-config or any of the --override flags.`
 	deleteSecretFlagDescription    = "Deletes AWS Secrets Manager secret associated with a pipeline source repository."
 	svcPortFlagDescription         = "The port on which your service listens."
 	noSubscriptionFlagDescription  = "Optional. Turn off selection for adding subscriptions for worker services."
-	subscribeTopicsFlagDescription = `Optional. SNS Topics to subscribe to from other services in your application.
-Must be of format '<svcName>:<topicName>'`
+	subscribeTopicsFlagDescription = `Optional. SNS topics to subscribe to from other services in your application.
+Must be of format '<svcName>:<topicName>'.`
 	retriesFlagDescription = "Optional. The number of times to try restarting the job on a failure."
 	timeoutFlagDescription = `Optional. The total execution time for the task, including retries.
 Accepts valid Go duration strings. For example: "2h", "1h30m", "900s".`

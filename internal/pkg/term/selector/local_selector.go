@@ -148,7 +148,7 @@ func NewLocalFileSelector(prompt Prompter, fs afero.Fs, ws *workspace.Workspace)
 	}, nil
 }
 
-// StaticSources asks the user to select from a list of directories and files in the current directory and two levels down.
+// StaticSources asks the user to select from a list of directories and files.
 func (s *localFileSelector) StaticSources(selPrompt, selHelp, customPathPrompt, customPathHelp string, pathValidator prompt.ValidatorFunc) ([]string, error) {
 	dirsAndFiles, err := s.listDirsAndFiles()
 	if err != nil {
@@ -284,13 +284,14 @@ func (s *dockerfileSelector) listDockerfiles() ([]string, error) {
 	return dockerfiles, nil
 }
 
-// listDirsAndFiles returns the list of directories and files within the current
-// working directory and two subdirectory levels below.
+// listDirsAndFiles returns the list of directories and files within the presumed 
+// project root and two subdirectory levels below.
 func (s *localFileSelector) listDirsAndFiles() ([]string, error) {
 	return s.getDirAndFileNames(s.ws.ProjectRoot(), 3)
 }
 
-// getDirAndFileNames recursively fetches directory and file names to the depth indicated. Hidden files and the copilot dir are excluded.
+// getDirAndFileNames recursively fetches directory and file names to the depth indicated. 
+// Hidden files and the copilot dir are excluded.
 func (s *localFileSelector) getDirAndFileNames(dir string, depth int) ([]string, error) {
 	wdDirsAndFiles, err := s.fs.ReadDir(dir)
 	if err != nil {

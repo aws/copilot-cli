@@ -184,7 +184,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 				m.store.EXPECT().GetApplication("my-app").Return(mockApp, nil)
 			},
 
-			expectedError: fmt.Errorf("pipeline name 1234 is invalid: %w", errValueBadFormat),
+			expectedError: fmt.Errorf("pipeline name 1234 is invalid: %w", errBasicNameRegexNotMatched),
 		},
 		"returns an error if fail to get pipeline name": {
 			inWsAppName: mockAppName,

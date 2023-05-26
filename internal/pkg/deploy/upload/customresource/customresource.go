@@ -37,7 +37,6 @@ const (
 	certReplicatorFnName      = "CertificateReplicatorFunction"
 	uniqueJsonValuesFnName    = "UniqueJSONValuesFunction"
 	triggerStateMachineFnName = "TriggerStateMachineFunction"
-	copyAssetsFnName          = "CopyAssetsFunction"
 )
 
 // Function source file locations.
@@ -51,11 +50,10 @@ var (
 	certReplicatorFilePath           = path.Join(customResourcesDir, "cert-replicator.js")
 	dnsDelegationFilePath            = path.Join(customResourcesDir, "dns-delegation.js")
 	envControllerFilePath            = path.Join(customResourcesDir, "env-controller.js")
-	nlbCertValidatorFilePath         = path.Join(customResourcesDir, "nlb-cert-validator.js")
-	nlbCustomDomainFilePath          = path.Join(customResourcesDir, "nlb-custom-domain.js")
+	wkldCertValidatorFilePath        = path.Join(customResourcesDir, "wkld-cert-validator.js")
+	wkldCustomDomainFilePath         = path.Join(customResourcesDir, "wkld-custom-domain.js")
 	uniqueJSONValuesFilePath         = path.Join(customResourcesDir, "unique-json-values.js")
 	triggerStateMachineFilePath      = path.Join(customResourcesDir, "trigger-state-machine.js")
-	copyAssetsFilePath               = path.Join(customResourcesDir, "copy-assets.js")
 )
 
 // CustomResource represents a CloudFormation custom resource backed by a Lambda function.
@@ -121,8 +119,8 @@ func LBWS(fs template.Reader) ([]*CustomResource, error) {
 		dynamicDesiredCountFnName: desiredCountDelegationFilePath,
 		envControllerFnName:       envControllerFilePath,
 		rulePriorityFnName:        albRulePriorityGeneratorFilePath,
-		nlbCustomDomainFnName:     nlbCustomDomainFilePath,
-		nlbCertValidatorFnName:    nlbCertValidatorFilePath,
+		nlbCustomDomainFnName:     wkldCustomDomainFilePath,
+		nlbCertValidatorFnName:    wkldCertValidatorFilePath,
 	})
 }
 
@@ -148,7 +146,8 @@ func Backend(fs template.Reader) ([]*CustomResource, error) {
 func StaticSite(fs template.Reader) ([]*CustomResource, error) {
 	return buildCustomResources(fs, map[string]string{
 		triggerStateMachineFnName: triggerStateMachineFilePath,
-		copyAssetsFnName:          copyAssetsFilePath,
+		certValidationFnName:      wkldCertValidatorFilePath,
+		customDomainFnName:        wkldCustomDomainFilePath,
 	})
 }
 

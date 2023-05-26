@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -162,6 +163,7 @@ type initSvcOpts struct {
 	df                  dockerfileParser
 	manifestExists      bool
 	additionalFoundPort uint16 // For logging a personalized recommended action with multiple ports.
+	wsRoot              string
 
 	// Init a Dockerfile parser using fs and input path
 	dockerfile func(string) dockerfileParser
@@ -175,7 +177,6 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("svc init"))
 	sess, err := sessProvider.Default()
 	if err != nil {
@@ -216,6 +217,7 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 		mftReader:    ws,
 		dockerEngine: dockerengine.New(exec.NewCmd()),
 		wsAppName:    tryReadingAppName(),
+		wsRoot:       ws.ProjectRoot(),
 	}
 	opts.dockerfile = func(path string) dockerfileParser {
 		if opts.df != nil {
@@ -270,7 +272,9 @@ func (o *initSvcOpts) Validate() error {
 		if o.wkldType != manifestinfo.StaticSiteType {
 			return fmt.Errorf("'--%s' must be specified with '--%s %q'", sourcesFlag, typeFlag, manifestinfo.StaticSiteType)
 		}
-		// Path validation against fs happens during conversion.
+		if err := o.validateSourcePaths(o.sourcePaths); err != nil {
+			return err
+		}
 		assets, err := o.convertStringsToAssets(o.sourcePaths)
 		if err != nil {
 			return fmt.Errorf("convert source strings to objects: %w", err)
@@ -282,6 +286,21 @@ func (o *initSvcOpts) Validate() error {
 	}
 	if err := o.validateIngressType(); err != nil {
 		return err
+	}
+	return nil
+}
+
+func (o *initSvcOpts) validateSourcePaths(sources []string) error {
+	if o.wsPendingCreation {
+		// This can happen during `copilot init`, that we have to `Validate` before there is a workspace.
+		// In this case, we skip the validation for path, and let `svc deploy` handle the validation.
+		return nil
+	}
+	for _, source := range sources {
+		_, err := o.fs.Stat(filepath.Join(o.wsRoot, source))
+		if err != nil {
+			return fmt.Errorf("source %q must be a valid path relative to the workspace %q: %w", source, o.wsRoot, err)
+		}
 	}
 	return nil
 }
@@ -476,18 +495,33 @@ func (o *initSvcOpts) askStaticSite() error {
 	var sources []string
 	var err error
 	if o.wsPendingCreation {
-		sources, err = selector.AskCustomPaths(o.prompt, fmt.Sprintf(fmtStaticSiteInitDirFilePathPrompt, color.HighlightUserInput(o.name)), staticSiteInitDirFilePathHelpPrompt,
-			func(v interface{}) error {
-				return validatePath(o.fs, v)
-			})
-		if err != nil {
-			return err
-		}
+		sources, err = selector.AskCustomPaths(
+			o.prompt,
+			fmt.Sprintf(fmtStaticSiteInitDirFilePathPrompt, color.HighlightUserInput(o.name)),
+			staticSiteInitDirFilePathHelpPrompt,
+			validateNonEmptyString, // When the workspace is absent, we skip the validation and leave it to `svc deploy`.
+		)
 	} else {
-		sources, err = o.askSource()
-		if err != nil {
-			return err
-		}
+		sources, err = o.sourceSel.StaticSources(
+			fmt.Sprintf(fmtStaticSiteInitDirFilePrompt, color.HighlightUserInput(o.name)),
+			staticSiteInitDirFileHelpPrompt,
+			fmt.Sprintf(fmtStaticSiteInitDirFilePathPrompt, color.HighlightUserInput(o.name)),
+			staticSiteInitDirFilePathHelpPrompt,
+			func(val interface{}) error {
+				path, ok := val.(string)
+				if !ok {
+					return errValueNotAString
+				}
+				_, err := o.fs.Stat(filepath.Join(o.wsRoot, path))
+				if err != nil {
+					return fmt.Errorf("source %q must be a valid path relative to the workspace %q: %w", path, o.wsRoot, err)
+				}
+				return nil
+			},
+		)
+	}
+	if err != nil {
+		return err
 	}
 	if o.staticAssets, err = o.convertStringsToAssets(sources); err != nil {
 		return fmt.Errorf("convert source paths to asset objects: %w", err)
@@ -561,22 +595,6 @@ func (o *initSvcOpts) askImage() error {
 	}
 	o.image = image
 	return nil
-}
-
-func (o *initSvcOpts) askSource() ([]string, error) {
-	sources, err := o.sourceSel.StaticSources(
-		fmt.Sprintf(fmtStaticSiteInitDirFilePrompt, color.HighlightUserInput(o.name)),
-		staticSiteInitDirFileHelpPrompt,
-		fmt.Sprintf(fmtStaticSiteInitDirFilePathPrompt, color.HighlightUserInput(o.name)),
-		staticSiteInitDirFilePathHelpPrompt,
-		func(v interface{}) error {
-			return validatePath(o.fs, v)
-		},
-	)
-	if err != nil {
-		return nil, fmt.Errorf("select local directory or file: %w", err)
-	}
-	return sources, nil
 }
 
 func (o *initSvcOpts) manifestAlreadyExists() (bool, error) {
@@ -805,14 +823,21 @@ func validateWorkspaceApp(wsApp, inputApp string, store store) error {
 
 func (o initSvcOpts) convertStringsToAssets(sources []string) ([]manifest.FileUpload, error) {
 	assets := make([]manifest.FileUpload, len(sources))
+	var root string
+	if !o.wsPendingCreation {
+		root = o.wsRoot
+	}
 	for i, source := range sources {
-		info, err := o.fs.Stat(source)
-		if err != nil {
-			return nil, err
+		info, err := o.fs.Stat(filepath.Join(root, source))
+		var recursive bool
+		if err == nil && info.IsDir() {
+			// Swallow the error at this point, because the path would have been validated during Validate or Ask, or will
+			// be validated during deploy.
+			recursive = true
 		}
 		assets[i] = manifest.FileUpload{
 			Source:    source,
-			Recursive: info.IsDir(),
+			Recursive: recursive,
 		}
 	}
 	return assets, nil

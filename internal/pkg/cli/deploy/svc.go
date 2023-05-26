@@ -8,12 +8,14 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"regexp"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	"golang.org/x/mod/semver"
 
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
@@ -104,7 +106,7 @@ type errAppOutOfDate struct {
 }
 
 func (e *errAppOutOfDate) Error() string {
-	return fmt.Sprintf("app version must be > %s", e.neededVersion)
+	return fmt.Sprintf("app version must be >= %s", e.neededVersion)
 }
 
 func (e *errAppOutOfDate) RecommendActions() string {
@@ -130,4 +132,69 @@ func validateMinAppVersion(app, svc string, appVersionGetter versionGetter, minV
 	}
 
 	return nil
+}
+
+func validateAliases(app *config.Application, env string, aliases ...string) error {
+	// Alias should be within either env, app, or root hosted zone.
+	regRoot, err := regexp.Compile(fmt.Sprintf(`^([^\.]+\.)?%s`, app.Domain))
+	if err != nil {
+		return err
+	}
+	regApp, err := regexp.Compile(fmt.Sprintf(`^([^\.]+\.)?%s.%s`, app.Name, app.Domain))
+	if err != nil {
+		return err
+	}
+	regEnv, err := regexp.Compile(fmt.Sprintf(`^([^\.]+\.)?%s.%s.%s`, env, app.Name, app.Domain))
+	if err != nil {
+		return err
+	}
+
+	regexps := []*regexp.Regexp{regRoot, regApp, regEnv}
+	validate := func(alias string) error {
+		for _, reg := range regexps {
+			if reg.MatchString(alias) {
+				return nil
+			}
+		}
+
+		return &errInvalidAlias{
+			alias: alias,
+			app:   app,
+			env:   env,
+		}
+	}
+
+	for _, alias := range aliases {
+		if err := validate(alias); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+type errInvalidAlias struct {
+	alias string
+	app   *config.Application
+	env   string
+}
+
+func (e *errInvalidAlias) Error() string {
+	return fmt.Sprintf("alias %q is not supported in hosted zones managed by Copilot", e.alias)
+}
+
+func (e *errInvalidAlias) RecommmendActions() string {
+	return fmt.Sprintf(`Copilot-managed aliases must match one of the following patterns:
+- <name>.%s.%s.%s
+- %s.%s.%s
+- <name>.%s.%s
+- %s.%s
+- <name>.%s
+- %s
+`, e.env, e.app.Name, e.app.Domain,
+		e.env, e.app.Name, e.app.Domain,
+		e.app.Name, e.app.Domain,
+		e.app.Name, e.app.Domain,
+		e.app.Domain,
+		e.app.Domain)
 }
