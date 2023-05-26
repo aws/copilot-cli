@@ -202,14 +202,14 @@ phases:
       - export GOPATH=/go
       - rm -rf cf-custom-resources/node_modules
       - mkdir -p /tmp/.aws
-      - account=$(aws secretsmanager get-secret-value --secret-id ${APP_ACCOUNT} | jq '.SecretString')
+      - account=$(aws secretsmanager get-secret-value --secret-id ${APP_ACCOUNT} | jq '.SecretString' -r)
       - printf "[default]\nregion = $APP_REGION\n" > /tmp/.aws/config
       - printf "[default]\n" >> /tmp/.aws/credentials
       - printf "aws_access_key_id=$(echo $account | jq '.access_key')\n" >> /tmp/.aws/credentials
       - printf "aws_secret_access_key=$(echo $account | jq '.secret_access_key')\n\n" >> /tmp/.aws/credentials
       - |
         if [ ! -z "$TESTENV_REGION" ]; then
-          account=$(aws secretsmanager get-secret-value --secret-id ${TESTENV_ACCOUNT} | jq '.SecretString')
+          account=$(aws secretsmanager get-secret-value --secret-id ${TESTENV_ACCOUNT} | jq '.SecretString' -r)
           printf "[profile e2etestenv]\nregion=$TESTENV_REGION\n" >> /tmp/.aws/config
           printf "[profile e2etestenv]\n" >> /tmp/.aws/credentials
           printf "aws_access_key_id=$(echo $account | jq '.access_key')\n" >> /tmp/.aws/credentials
@@ -217,7 +217,7 @@ phases:
         fi
       - |
         if [ ! -z "$PRODENV_REGION" ]; then
-          account=$(aws secretsmanager get-secret-value --secret-id ${PRODENV_ACCOUNT} | jq '.SecretString')
+          account=$(aws secretsmanager get-secret-value --secret-id ${PRODENV_ACCOUNT} | jq '.SecretString' -r)
           printf "[profile e2eprodenv]\nregion=$PRODENV_REGION\n" >> /tmp/.aws/config
           printf "[profile e2eprodenv]\n" >> /tmp/.aws/credentials
           printf "aws_access_key_id=$(echo $account | jq '.access_key')\n" >> /tmp/.aws/credentials
