@@ -10,7 +10,7 @@ image:
 http:
   path: '/'
   redirect_to_https: false
-  alias: ["e2e-cloudfront-${TIMENOW}.${DOMAINNAME}"]
+  alias: ["frontend-${TIMENOW}.${DOMAINNAME}"]
 
 cpu: 256
 memory: 512

@@ -25,7 +25,7 @@ var s3Client *s3.S3
 var s3Manager *s3manager.Uploader
 var staticPath string
 
-const domainName = "copilot-e2e-tests.ecs.aws.dev"
+const domainName = "cloudfront.copilot-e2e-tests.ecs.aws.dev"
 
 var timeNow = time.Now().Unix()
 
