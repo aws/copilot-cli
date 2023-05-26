@@ -313,6 +313,51 @@ func (cf CloudFormation) RemoveJobFromApp(app *config.Application, jobName strin
 	return nil
 }
 
+// RemoveEnvFromAppOpts contains the parameters to call RemoveEnvFromApp.
+type RemoveEnvFromAppOpts struct {
+	App                 *config.Application
+	EnvName             string
+	EnvAccountID        string
+	EnvRegion           string
+	DeleteStackInstance bool // If this is the last environment in a region, we can delete it.
+}
+
+func (cf CloudFormation) RemoveEnvFromApp(opts *RemoveEnvFromAppOpts) error {
+	// This is a no-op if there are remaining environments in the region.
+	if !opts.DeleteStackInstance {
+		return nil
+	}
+
+	appConfig := stack.NewAppStackConfig(&deploy.CreateAppInput{
+		Name:           opts.App.Name,
+		AccountID:      opts.App.AccountID,
+		AdditionalTags: opts.App.Tags,
+		Version:        deploy.LatestAppTemplateVersion,
+	})
+	previouslyDeployedConfig, err := cf.getLastDeployedAppConfig(appConfig)
+	if err != nil {
+		return fmt.Errorf("get previous application %s config: %w", appConfig.Name, err)
+	}
+	var accountList []string
+	for _, account := range previouslyDeployedConfig.Accounts {
+		if account == opts.EnvAccountID {
+			continue
+		}
+		accountList = append(accountList, account)
+	}
+
+	newDeploymentConfig := stack.AppResourcesConfig{
+		Version:   previouslyDeployedConfig.Version + 1,
+		Workloads: previouslyDeployedConfig.Workloads,
+		Accounts:  accountList,
+		App:       appConfig.Name,
+	}
+	if err := cf.deployAppConfig(appConfig, &newDeploymentConfig, true); err != nil {
+		return err
+	}
+	return cf.deleteStackSetInstance(appConfig.StackSetName(), opts.EnvAccountID, opts.EnvRegion)
+}
+
 func (cf CloudFormation) removeWorkloadFromApp(app *config.Application, wlName string) error {
 	appConfig := stack.NewAppStackConfig(&deploy.CreateAppInput{
 		Name:           app.Name,
@@ -567,6 +612,17 @@ func (cf CloudFormation) deleteStackSetInstances(name string) error {
 		return err
 	}
 	return cf.appStackSet.WaitForOperation(name, opID)
+}
+
+func (cf CloudFormation) deleteStackSetInstance(name, account, region string) error {
+	opId, err := cf.appStackSet.DeleteInstance(name, account, region)
+	if err != nil {
+		if IsEmptyErr(err) {
+			return nil
+		}
+		return err
+	}
+	return cf.appStackSet.WaitForOperation(name, opId)
 }
 
 type renderStackSetInput struct {

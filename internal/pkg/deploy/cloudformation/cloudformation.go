@@ -141,6 +141,7 @@ type stackSetClient interface {
 	Describe(name string) (stackset.Description, error)
 	DescribeOperation(name, opID string) (stackset.Operation, error)
 	InstanceSummaries(name string, opts ...stackset.InstanceSummariesOption) ([]stackset.InstanceSummary, error)
+	DeleteInstance(name, account, region string) (string, error)
 	DeleteAllInstances(name string) (string, error)
 	Delete(name string) error
 	WaitForStackSetLastOperationComplete(name string) error
