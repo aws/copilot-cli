@@ -211,7 +211,7 @@ phases:
         if [ ! -z "$TESTENV_REGION" ]; then
           account=$(aws secretsmanager get-secret-value --secret-id ${TESTENV_ACCOUNT} | jq '.SecretString' -r)
           printf "[profile e2etestenv]\nregion=$TESTENV_REGION\n" >> /tmp/.aws/config
-          printf "[profile e2etestenv]\n" >> /tmp/.aws/credentials
+          printf "[e2etestenv]\n" >> /tmp/.aws/credentials
           printf "aws_access_key_id=$(echo $account | jq '.access_key')\n" >> /tmp/.aws/credentials
           printf "aws_secret_access_key=$(echo $account | jq '.secret_access_key')\n\n" >> /tmp/.aws/credentials
         fi
@@ -219,7 +219,7 @@ phases:
         if [ ! -z "$PRODENV_REGION" ]; then
           account=$(aws secretsmanager get-secret-value --secret-id ${PRODENV_ACCOUNT} | jq '.SecretString' -r)
           printf "[profile e2eprodenv]\nregion=$PRODENV_REGION\n" >> /tmp/.aws/config
-          printf "[profile e2eprodenv]\n" >> /tmp/.aws/credentials
+          printf "[e2eprodenv]\n" >> /tmp/.aws/credentials
           printf "aws_access_key_id=$(echo $account | jq '.access_key')\n" >> /tmp/.aws/credentials
           printf "aws_secret_access_key=$(echo $account | jq '.secret_access_key')\n\n" >> /tmp/.aws/credentials
         fi
