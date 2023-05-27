@@ -9,7 +9,7 @@ image:
 http:
   path: '/'
   alias: "frontend.import-certs.copilot-e2e-tests.ecs.aws.dev"
-  hosted_zone: "Z0512687YJJFTKMRQUQR"
+  hosted_zone: "Z05648843OTPZZQRML482"
 
 cpu: 256
 memory: 512
