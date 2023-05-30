@@ -21,8 +21,8 @@ batch:
           TEST_SUITE: addons
           APP_REGION: us-west-2
           APP_ACCOUNT: e2e/account/addons
-          TEST_REGION: us-west-2
-          TEST_ACCOUNT: e2e/account/addons
+          TESTENV_REGION: us-west-2
+          TESTENV_ACCOUNT: e2e/account/addons
     - identifier: customized_env
       env:
         privileged-mode: true
@@ -73,8 +73,8 @@ batch:
           TEST_SUITE: multi-svc-app
           APP_REGION: us-west-2
           APP_ACCOUNT: e2e/account/multi_svc_app
-          TEST_REGION: us-west-2
-          TEST_ACCOUNT: e2e/account/multi_svc_app
+          TESTENV_REGION: us-west-2
+          TESTENV_ACCOUNT: e2e/account/multi_svc_app
     - identifier: root
       env:
         privileged-mode: true
@@ -94,8 +94,8 @@ batch:
           TEST_SUITE: sidecars
           APP_REGION: us-east-1
           APP_ACCOUNT: e2e/account/sidecars
-          TEST_REGION: us-east-1
-          TEST_ACCOUNT: e2e/account/sidecars
+          TESTENV_REGION: us-east-1
+          TESTENV_ACCOUNT: e2e/account/sidecars
     - identifier: task
       env:
         privileged-mode: true
@@ -106,8 +106,8 @@ batch:
           TEST_SUITE: task
           APP_REGION: us-east-2
           APP_ACCOUNT: e2e/account/task
-          TEST_REGION: us-east-2
-          TEST_ACCOUNT: e2e/account/task
+          TESTENV_REGION: us-east-2
+          TESTENV_ACCOUNT: e2e/account/task
     - identifier: app_with_domain
       env:
         privileged-mode: true
@@ -118,8 +118,8 @@ batch:
           TEST_SUITE: app-with-domain
           APP_REGION: us-west-2
           APP_ACCOUNT: e2e/account/app_with_domains
-          TEST_REGION: us-west-2
-          TEST_ACCOUNT: e2e/account/app_with_domains
+          TESTENV_REGION: us-west-2
+          TESTENV_ACCOUNT: e2e/account/app_with_domains
           PRODENV_REGION: us-east-1
           PRODENV_ACCOUNT: e2e/account/app_with_domains/prod
     - identifier: import_certs
@@ -206,8 +206,8 @@ batch:
           TEST_SUITE: worker
           APP_REGION: eu-central-1
           APP_ACCOUNT: e2e/account/worker
-          TEST_REGION: eu-central-1
-          TEST_ACCOUNT: e2e/account/worker
+          TESTENV_REGION: eu-central-1
+          TESTENV_ACCOUNT: e2e/account/worker
     - identifier: cloudfront
       env:
         privileged-mode: true
@@ -218,8 +218,8 @@ batch:
           TEST_SUITE: cloudfront
           APP_REGION: eu-central-1
           APP_ACCOUNT: e2e/account/cloudfront
-          TEST_REGION: eu-central-1
-          TEST_ACCOUNT: e2e/account/cloudfront
+          TESTENV_REGION: eu-central-1
+          TESTENV_ACCOUNT: e2e/account/cloudfront
 
 phases:
   install:
