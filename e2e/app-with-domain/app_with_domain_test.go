@@ -16,7 +16,7 @@ import (
 )
 
 var _ = Describe("App With Domain", func() {
-	const domainName = "copilot-e2e-tests.ecs.aws.dev"
+	const domainName = "app-with-domain.copilot-e2e-tests.ecs.aws.dev"
 
 	Context("when creating a new app", Ordered, func() {
 		var appInitErr error
@@ -249,8 +249,8 @@ var _ = Describe("App With Domain", func() {
 			Expect(len(svc.Routes)).To(Equal(2))
 
 			wantedURLs := map[string]string{
-				"test": "https://hello-test-app-domain.copilot-e2e-tests.ecs.aws.dev",
-				"prod": "https://hello-prod-app-domain.copilot-e2e-tests.ecs.aws.dev",
+				"test": "https://test.app-with-domain.copilot-e2e-tests.ecs.aws.dev",
+				"prod": "https://prod.app-with-domain.copilot-e2e-tests.ecs.aws.dev",
 			}
 			for _, route := range svc.Routes {
 				// Validate route has the expected HTTPS endpoint.
@@ -278,7 +278,7 @@ var _ = Describe("App With Domain", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(len(svc.Routes)).To(Equal(1))
 			wantedURLs = map[string]string{
-				"test": "https://copilot-e2e-tests.ecs.aws.dev or https://frontend-app-domain.copilot-e2e-tests.ecs.aws.dev",
+				"test": "https://app-with-domain.copilot-e2e-tests.ecs.aws.dev or https://frontend.app-with-domain.copilot-e2e-tests.ecs.aws.dev",
 			}
 			// Validate route has the expected HTTPS endpoint.
 			route := svc.Routes[0]

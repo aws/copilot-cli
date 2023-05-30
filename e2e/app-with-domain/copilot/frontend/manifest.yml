@@ -9,7 +9,7 @@ image:
 
 http:
   path: '/'
-  alias: ["frontend-app-domain.copilot-e2e-tests.ecs.aws.dev", "copilot-e2e-tests.ecs.aws.dev"]
+  alias: ["frontend.app-with-domain.copilot-e2e-tests.ecs.aws.dev", "app-with-domain.copilot-e2e-tests.ecs.aws.dev"]
 
 cpu: 256
 memory: 512
