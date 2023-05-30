@@ -40,4 +40,4 @@ phases:
       - chmod +x ./copilot-linux-${FROM_VERSION}
       - export REGRESSION_TEST_FROM_PATH=../../copilot-linux-${FROM_VERSION}
       - export REGRESSION_TEST_TO_PATH=../../bin/local/copilot-linux-amd64
-      - cd regression/${TEST_SUITE} && ginkgo -v -r -noColor --timeout=1h30m
+      - cd regression/${TEST_SUITE} && ginkgo -v -r -noColor --timeout=1h30m --fail-fast
