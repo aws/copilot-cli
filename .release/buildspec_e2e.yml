@@ -206,6 +206,8 @@ batch:
           TEST_SUITE: worker
           APP_REGION: eu-central-1
           APP_ACCOUNT: e2e/account/worker
+          TEST_REGION: eu-central-1
+          TEST_ACCOUNT: e2e/account/worker
     - identifier: cloudfront
       env:
         privileged-mode: true
