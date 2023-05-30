@@ -38,7 +38,7 @@ var _ = BeforeSuite(func() {
 	copilotCLI, err := client.NewCLI()
 	Expect(err).NotTo(HaveOccurred())
 	cli = copilotCLI
-	appName = fmt.Sprintf("e2e-cloudfront-%d", timeNow)
+	appName = fmt.Sprint(timeNow)
 	bucketName = appName
 	err = os.Setenv("BUCKETNAME", bucketName)
 	Expect(err).NotTo(HaveOccurred())
