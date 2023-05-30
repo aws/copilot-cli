@@ -73,6 +73,8 @@ batch:
           TEST_SUITE: multi-svc-app
           APP_REGION: us-west-2
           APP_ACCOUNT: e2e/account/multi_svc_app
+          TEST_REGION: us-west-2
+          TEST_ACCOUNT: e2e/account/multi_svc_app
     - identifier: root
       env:
         privileged-mode: true
