@@ -106,6 +106,8 @@ batch:
           TEST_SUITE: task
           APP_REGION: us-east-2
           APP_ACCOUNT: e2e/account/task
+          TEST_REGION: us-east-2
+          TEST_ACCOUNT: e2e/account/task
     - identifier: app_with_domain
       env:
         privileged-mode: true
