@@ -94,6 +94,8 @@ batch:
           TEST_SUITE: sidecars
           APP_REGION: us-east-1
           APP_ACCOUNT: e2e/account/sidecars
+          TEST_REGION: us-east-1
+          TEST_ACCOUNT: e2e/account/sidecars
     - identifier: task
       env:
         privileged-mode: true
