@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-package staticsite_test
+package static_site_test
 
 import (
 	"fmt"
@@ -17,7 +17,7 @@ import (
 var cli *client.CLI
 var appName string
 
-const domainName = "copilot-e2e-tests.ecs.aws.dev"
+const domainName = "static-site.copilot-e2e-tests.ecs.aws.dev"
 
 var timeNow = time.Now().Unix()
 
@@ -30,12 +30,9 @@ var _ = BeforeSuite(func() {
 	copilotCLI, err := client.NewCLI()
 	Expect(err).NotTo(HaveOccurred())
 	cli = copilotCLI
-	appName = fmt.Sprintf("e2e-staticsite-%d", timeNow)
+	appName = fmt.Sprintf("t%d", timeNow)
 	err = os.Setenv("DOMAINNAME", domainName)
 	Expect(err).NotTo(HaveOccurred())
 })
 
-var _ = AfterSuite(func() {
-	_, err := cli.AppDelete()
-	Expect(err).NotTo(HaveOccurred())
-})
+var _ = AfterSuite(func() {})

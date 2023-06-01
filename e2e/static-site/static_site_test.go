@@ -1,10 +1,11 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-package staticsite_test
+package static_site_test
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 
@@ -76,7 +77,7 @@ var _ = Describe("Static Site", func() {
 		var svcInitErr error
 		BeforeAll(func() {
 			_, svcInitErr = cli.SvcInit(&client.SvcInitRequest{
-				Name:    "static",
+				Name:    "svc",
 				SvcType: "Static Site",
 			})
 		})
@@ -85,10 +86,10 @@ var _ = Describe("Static Site", func() {
 		})
 	})
 
-	Context("when deploying a Static Site", func() {
+	Context("when deploying a Static Site", Ordered, func() {
 		It("deployment should succeed", func() {
 			_, err := cli.SvcDeploy(&client.SvcDeployInput{
-				Name:    "static",
+				Name:    "svc",
 				EnvName: "test",
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -96,14 +97,14 @@ var _ = Describe("Static Site", func() {
 
 		It("svc show should contain the expected domain and the request should succeed", func() {
 			svc, err := cli.SvcShow(&client.SvcShowRequest{
-				Name:    "static",
+				Name:    "svc",
 				AppName: appName,
 			})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(len(svc.Routes)).To(Equal(1))
 			route := svc.Routes[0]
 			wantedURLs := map[string]string{
-				"test": fmt.Sprintf("https://%s.%s", appName, domainName),
+				"test": fmt.Sprintf("https://v1.%s", domainName),
 			}
 			// Validate route has the expected HTTPS endpoint.
 			Expect(route.URL).To(ContainSubstring(wantedURLs[route.Environment]))
@@ -111,20 +112,32 @@ var _ = Describe("Static Site", func() {
 			// Make sure the service response is OK.
 			var resp *http.Response
 			var fetchErr error
-			Eventually(func() (int, error) {
-				resp, fetchErr = http.Get(route.URL)
-				return resp.StatusCode, fetchErr
-			}, "60s", "1s").Should(Equal(200))
+			resp, fetchErr = http.Get(route.URL)
+			Expect(fetchErr).NotTo(HaveOccurred())
+			Expect(resp.StatusCode).To(Equal(200))
+			bodyBytes, err := io.ReadAll(resp.Body)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(bodyBytes)).To(Equal("hello"))
+
 			// HTTP should work.
-			Eventually(func() (int, error) {
-				resp, fetchErr = http.Get(strings.Replace(route.URL, "https", "http", 1))
-				return resp.StatusCode, fetchErr
-			}, "60s", "1s").Should(Equal(200))
+			resp, fetchErr = http.Get(strings.Replace(route.URL, "https", "http", 1))
+			Expect(fetchErr).NotTo(HaveOccurred())
+			Expect(resp.StatusCode).To(Equal(200))
+
 			// Make sure we route to index.html for sub-path.
-			Eventually(func() (int, error) {
-				resp, fetchErr = http.Get(fmt.Sprintf("%s/static", route.URL))
-				return resp.StatusCode, fetchErr
-			}, "60s", "1s").Should(Equal(200))
+			resp, fetchErr = http.Get(fmt.Sprintf("%s/static", route.URL))
+			Expect(fetchErr).NotTo(HaveOccurred())
+			Expect(resp.StatusCode).To(Equal(200))
+		})
+	})
+
+	Context("when deleting the app", Ordered, func() {
+		var appDeleteErr error
+		BeforeAll(func() {
+			_, appDeleteErr = cli.AppDelete()
+		})
+		It("app delete should succeed", func() {
+			Expect(appDeleteErr).NotTo(HaveOccurred())
 		})
 	})
 })

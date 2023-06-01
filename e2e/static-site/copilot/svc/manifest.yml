@@ -3,11 +3,11 @@
 #  https://aws.github.io/copilot-cli/docs/manifest/static-site/
 
 # Your service name will be used in naming your resources like S3 buckets, etc.
-name: static
+name: svc
 type: Static Site
 
 http:
-  alias: ${COPILOT_APPLICATION_NAME}.${DOMAINNAME}
+  alias: v1.${DOMAINNAME}
 
 files:
   - source: ./
