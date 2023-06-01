@@ -49,7 +49,7 @@ func TestStaticSiteDescriber_URI(t *testing.T) {
 				)
 			},
 			wantedURI: URI{
-				URI:        "dut843shvcmvn.cloudfront.net",
+				URI:        "https://dut843shvcmvn.cloudfront.net/",
 				AccessType: URIAccessTypeInternet,
 			},
 		},
@@ -63,7 +63,7 @@ func TestStaticSiteDescriber_URI(t *testing.T) {
 				)
 			},
 			wantedURI: URI{
-				URI:        "dut843shvcmvn.cloudfront.net or example.com",
+				URI:        "https://dut843shvcmvn.cloudfront.net/ or https://example.com/",
 				AccessType: URIAccessTypeInternet,
 			},
 		},
@@ -143,9 +143,9 @@ Routes
 
   Environment  URL
   -----------  ---
-  test         dut843shvcmvn.cloudfront.net
+  test         https://dut843shvcmvn.cloudfront.net/
 `,
-			wantedJSON: "{\"service\":\"static\",\"type\":\"Static Site\",\"application\":\"phonetool\",\"routes\":[{\"environment\":\"test\",\"url\":\"dut843shvcmvn.cloudfront.net\"}]}\n",
+			wantedJSON: "{\"service\":\"static\",\"type\":\"Static Site\",\"application\":\"phonetool\",\"routes\":[{\"environment\":\"test\",\"url\":\"https://dut843shvcmvn.cloudfront.net/\"}]}\n",
 		},
 		"return an error if failed to get stack resources": {
 			shouldOutputResources: true,
@@ -192,7 +192,7 @@ Routes
 
   Environment  URL
   -----------  ---
-  test         dut843shvcmvn.cloudfront.net
+  test         https://dut843shvcmvn.cloudfront.net/
 
 Resources
 
@@ -200,7 +200,7 @@ Resources
     AWS::S3::Bucket        demo-test-mystatic-bucket-h69vu7y72ga9
     AWS::S3::BucketPolicy  demo-test-mystatic-BucketPolicyForCloudFront-8AITX9Q7K13R
 `,
-			wantedJSON: "{\"service\":\"static\",\"type\":\"Static Site\",\"application\":\"phonetool\",\"routes\":[{\"environment\":\"test\",\"url\":\"dut843shvcmvn.cloudfront.net\"}],\"resources\":{\"test\":[{\"type\":\"AWS::S3::Bucket\",\"physicalID\":\"demo-test-mystatic-bucket-h69vu7y72ga9\",\"logicalID\":\"Bucket\"},{\"type\":\"AWS::S3::BucketPolicy\",\"physicalID\":\"demo-test-mystatic-BucketPolicyForCloudFront-8AITX9Q7K13R\",\"logicalID\":\"BucketPolicy\"}]}}\n",
+			wantedJSON: "{\"service\":\"static\",\"type\":\"Static Site\",\"application\":\"phonetool\",\"routes\":[{\"environment\":\"test\",\"url\":\"https://dut843shvcmvn.cloudfront.net/\"}],\"resources\":{\"test\":[{\"type\":\"AWS::S3::Bucket\",\"physicalID\":\"demo-test-mystatic-bucket-h69vu7y72ga9\",\"logicalID\":\"Bucket\"},{\"type\":\"AWS::S3::BucketPolicy\",\"physicalID\":\"demo-test-mystatic-BucketPolicyForCloudFront-8AITX9Q7K13R\",\"logicalID\":\"BucketPolicy\"}]}}\n",
 		},
 	}
 
