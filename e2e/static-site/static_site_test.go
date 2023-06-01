@@ -108,11 +108,12 @@ var _ = Describe("Static Site", func() {
 			}
 			// Validate route has the expected HTTPS endpoint.
 			Expect(route.URL).To(ContainSubstring(wantedURLs[route.Environment]))
+			url := wantedURLs[route.Environment]
 
 			// Make sure the service response is OK.
 			var resp *http.Response
 			var fetchErr error
-			resp, fetchErr = http.Get(route.URL)
+			resp, fetchErr = http.Get(url)
 			Expect(fetchErr).NotTo(HaveOccurred())
 			Expect(resp.StatusCode).To(Equal(200))
 			bodyBytes, err := io.ReadAll(resp.Body)
@@ -120,12 +121,12 @@ var _ = Describe("Static Site", func() {
 			Expect(string(bodyBytes)).To(Equal("hello"))
 
 			// HTTP should work.
-			resp, fetchErr = http.Get(strings.Replace(route.URL, "https", "http", 1))
+			resp, fetchErr = http.Get(strings.Replace(url, "https", "http", 1))
 			Expect(fetchErr).NotTo(HaveOccurred())
 			Expect(resp.StatusCode).To(Equal(200))
 
 			// Make sure we route to index.html for sub-path.
-			resp, fetchErr = http.Get(fmt.Sprintf("%s/static", route.URL))
+			resp, fetchErr = http.Get(fmt.Sprintf("%s/static", url))
 			Expect(fetchErr).NotTo(HaveOccurred())
 			Expect(resp.StatusCode).To(Equal(200))
 		})
