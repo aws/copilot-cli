@@ -25,7 +25,7 @@ var s3Client *s3.S3
 var s3Manager *s3manager.Uploader
 var staticPath string
 
-const domainName = "copilot-e2e-tests.ecs.aws.dev"
+const domainName = "cloudfront.copilot-e2e-tests.ecs.aws.dev"
 
 var timeNow = time.Now().Unix()
 
@@ -38,7 +38,7 @@ var _ = BeforeSuite(func() {
 	copilotCLI, err := client.NewCLI()
 	Expect(err).NotTo(HaveOccurred())
 	cli = copilotCLI
-	appName = fmt.Sprintf("e2e-cloudfront-%d", timeNow)
+	appName = fmt.Sprintf("t%d", timeNow)
 	bucketName = appName
 	err = os.Setenv("BUCKETNAME", bucketName)
 	Expect(err).NotTo(HaveOccurred())

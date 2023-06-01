@@ -33,7 +33,7 @@ var _ = BeforeSuite(func() {
 	copilotCLI, err := client.NewCLI()
 	cli = copilotCLI
 	Expect(err).NotTo(HaveOccurred())
-	appName = fmt.Sprintf("e2e-domain-%d", time.Now().Unix())
+	appName = fmt.Sprintf("t%d", time.Now().Unix())
 })
 
 var _ = AfterSuite(func() {
