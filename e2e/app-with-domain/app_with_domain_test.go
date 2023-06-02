@@ -288,19 +288,11 @@ var _ = Describe("App With Domain", func() {
 			var resp *http.Response
 			var fetchErr error
 			urls := strings.Split(route.URL, " or ")
-			expectedResponseBody := "This is Copilot express app for admin"
+			expectedRootResponseBody := "This is Copilot express app"
+			expectedAdminResponseBody := "This is Copilot express app for admin"
 			for _, url := range urls {
 				Eventually(func() (int, error) {
 					resp, fetchErr = http.Get(url)
-					return resp.StatusCode, fetchErr
-				}, "60s", "1s").Should(Equal(200))
-				// HTTP should route to HTTPS.
-				Eventually(func() (int, error) {
-					resp, fetchErr = http.Get(strings.Replace(url, "https", "http", 1))
-					return resp.StatusCode, fetchErr
-				}, "60s", "1s").Should(Equal(200))
-				Eventually(func() (int, error) {
-					resp, fetchErr = http.Get(fmt.Sprintf("%s/admin", strings.Replace(url, "https", "http", 1)))
 					if fetchErr != nil {
 						return 0, fetchErr
 					}
@@ -309,9 +301,34 @@ var _ = Describe("App With Domain", func() {
 					if err != nil {
 						return 0, err
 					}
-					if string(body) != expectedResponseBody {
-						return 0, fmt.Errorf("the message content is '%q', but expected '%q'", string(body), expectedResponseBody)
+					if string(body) != expectedRootResponseBody {
+						return 0, fmt.Errorf("the message content is '%q', but expected '%q'", string(body), expectedRootResponseBody)
 					}
+					return resp.StatusCode, fetchErr
+				}, "60s", "1s").Should(Equal(200))
+				// HTTP should route to HTTPS.
+				Eventually(func() (int, error) {
+					resp, fetchErr = http.Get(strings.Replace(url, "https", "http", 1))
+					return resp.StatusCode, fetchErr
+				}, "60s", "1s").Should(Equal(200))
+				Eventually(func() (int, error) {
+					resp, fetchErr = http.Get(fmt.Sprintf("%s/admin", url))
+					if fetchErr != nil {
+						return 0, fetchErr
+					}
+					defer resp.Body.Close()
+					body, err := io.ReadAll(resp.Body)
+					if err != nil {
+						return 0, err
+					}
+					if string(body) != expectedAdminResponseBody {
+						return 0, fmt.Errorf("the message content is '%q', but expected '%q'", string(body), expectedAdminResponseBody)
+					}
+					return resp.StatusCode, fetchErr
+				}, "60s", "1s").Should(Equal(200))
+				// HTTP should route to HTTPS.
+				Eventually(func() (int, error) {
+					resp, fetchErr = http.Get(strings.Replace(url, "https", "http", 1))
 					return resp.StatusCode, fetchErr
 				}, "60s", "1s").Should(Equal(200))
 			}
