@@ -18,7 +18,7 @@ import (
 
 const (
 	waitingInterval = 60 * time.Second
-	domainName      = "copilot-e2e-tests.ecs.aws.dev"
+	domainName      = "app-with-domain.copilot-e2e-tests.ecs.aws.dev"
 )
 
 var cli *client.CLI
@@ -35,9 +35,9 @@ var _ = BeforeSuite(func() {
 	copilotCLI, err := client.NewCLI()
 	cli = copilotCLI
 	Expect(err).NotTo(HaveOccurred())
-	appName = fmt.Sprintf("e2e-domain-%d", time.Now().Unix())
 	err = os.Setenv("DOMAINNAME", domainName)
 	Expect(err).NotTo(HaveOccurred())
+	appName = fmt.Sprintf("t%d", time.Now().Unix())
 })
 
 var _ = AfterSuite(func() {

@@ -249,8 +249,8 @@ var _ = Describe("App With Domain", func() {
 			Expect(len(svc.Routes)).To(Equal(2))
 
 			wantedURLs := map[string]string{
-				"test": fmt.Sprintf("https://hello-test-app-domain.%s", domainName),
-				"prod": fmt.Sprintf("https://hello-prod-app-domain.%s", domainName),
+				"test": fmt.Sprintf("https://test.%s", domainName),
+				"prod": fmt.Sprintf("https://prod.%s", domainName),
 			}
 			for _, route := range svc.Routes {
 				// Validate route has the expected HTTPS endpoint.
@@ -278,7 +278,7 @@ var _ = Describe("App With Domain", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(len(svc.Routes)).To(Equal(1))
 			wantedURLs = map[string]string{
-				"test": fmt.Sprintf("https://%s or https://frontend-app-domain.%s", domainName, domainName),
+				"test": fmt.Sprintf("https://%s or https://frontend.%s", domainName, domainName),
 			}
 			// Validate route has the expected HTTPS endpoint.
 			route := svc.Routes[0]

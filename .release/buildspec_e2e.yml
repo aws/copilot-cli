@@ -4,7 +4,7 @@ env:
   secrets-manager:
     DOCKERHUB_USERNAME: prod/ecs-cicd-bot/dockerhub-account-info:username
     DOCKERHUB_TOKEN: prod/ecs-cicd-bot/dockerhub-token:dockerhub-token
-    IMPORTED_CERT_ARN: e2e/account/imported-cert:arn
+    IMPORTED_CERT_ARN: e2e/account/import_certs:cert_arn
 
 # We increased the number of VPCs limit to 15 from 5 in the e2e test's app account/region pair.
 # If the number of tests running in a region is larger than 15, this comment should be updated.
@@ -20,6 +20,7 @@ batch:
         variables:
           TEST_SUITE: addons
           APP_REGION: us-west-2
+          APP_ACCOUNT: e2e/account/addons
     - identifier: customized_env
       env:
         privileged-mode: true
@@ -29,6 +30,7 @@ batch:
         variables:
           TEST_SUITE: customized-env
           APP_REGION: us-west-1
+          APP_ACCOUNT: e2e/account/customized_env
     - identifier: init
       env:
         privileged-mode: true
@@ -38,6 +40,7 @@ batch:
         variables:
           TEST_SUITE: init
           APP_REGION: us-east-1
+          APP_ACCOUNT: e2e/account/init
     - identifier: multi_env_app
       env:
         privileged-mode: true
@@ -47,8 +50,11 @@ batch:
         variables:
           TEST_SUITE: multi-env-app
           APP_REGION: us-east-2
+          APP_ACCOUNT: e2e/account/multi_env_app
           TESTENV_REGION: us-west-1
+          TESTENV_ACCOUNT: e2e/account/multi_env_app/test
           PRODENV_REGION: us-east-1
+          PRODENV_ACCOUNT: e2e/account/multi_env_app/prod
     - identifier: multi_svc_app
       env:
         privileged-mode: true
@@ -58,6 +64,7 @@ batch:
         variables:
           TEST_SUITE: multi-svc-app
           APP_REGION: us-west-2
+          APP_ACCOUNT: e2e/account/multi_svc_app
     - identifier: root
       env:
         privileged-mode: true
@@ -76,6 +83,7 @@ batch:
         variables:
           TEST_SUITE: sidecars
           APP_REGION: us-east-1
+          APP_ACCOUNT: e2e/account/sidecars
     - identifier: task
       env:
         privileged-mode: true
@@ -85,6 +93,7 @@ batch:
         variables:
           TEST_SUITE: task
           APP_REGION: us-east-2
+          APP_ACCOUNT: e2e/account/task
     - identifier: app_with_domain
       env:
         privileged-mode: true
@@ -94,7 +103,9 @@ batch:
         variables:
           TEST_SUITE: app-with-domain
           APP_REGION: us-west-2
+          APP_ACCOUNT: e2e/account/app_with_domains
           PRODENV_REGION: us-east-1
+          PRODENV_ACCOUNT: e2e/account/app_with_domains/prod
     - identifier: import_certs
       env:
         privileged-mode: true
@@ -104,6 +115,7 @@ batch:
         variables:
           TEST_SUITE: import-certs
           APP_REGION: us-west-2
+          APP_ACCOUNT: e2e/account/import_certs
     - identifier: exec
       env:
         privileged-mode: true
@@ -113,6 +125,7 @@ batch:
         variables:
           TEST_SUITE: exec
           APP_REGION: ap-northeast-1
+          APP_ACCOUNT: e2e/account/exec
     - identifier: apprunner
       env:
         privileged-mode: true
@@ -122,6 +135,7 @@ batch:
         variables:
           TEST_SUITE: apprunner
           APP_REGION: ap-northeast-1
+          APP_ACCOUNT: e2e/account/apprunner
     - identifier: pipeline
       env:
         privileged-mode: true
@@ -131,8 +145,11 @@ batch:
         variables:
           TEST_SUITE: pipeline
           APP_REGION: eu-west-1
+          APP_ACCOUNT: e2e/account/pipeline
           TESTENV_REGION: eu-west-1
+          TESTENV_ACCOUNT: e2e/account/pipeline/test
           PRODENV_REGION: eu-central-1
+          PRODENV_ACCOUNT: e2e/account/pipeline/prod
     - identifier: multi_pipeline
       env:
         privileged-mode: true
@@ -142,8 +159,11 @@ batch:
         variables:
           TEST_SUITE: multi-pipeline
           APP_REGION: ap-northeast-1
+          APP_ACCOUNT: e2e/account/multi_pipeline
           TESTENV_REGION: ap-northeast-1
+          TESTENV_ACCOUNT: e2e/account/multi_pipeline/test
           PRODENV_REGION: ap-southeast-1
+          PRODENV_ACCOUNT: e2e/account/multi_pipeline/prod
     - identifier: worker
       env:
         privileged-mode: true
@@ -153,6 +173,7 @@ batch:
         variables:
           TEST_SUITE: worker
           APP_REGION: eu-central-1
+          APP_ACCOUNT: e2e/account/worker
     - identifier: cloudfront
       env:
         privileged-mode: true
@@ -162,6 +183,7 @@ batch:
         variables:
           TEST_SUITE: cloudfront
           APP_REGION: eu-central-1
+          APP_ACCOUNT: e2e/account/cloudfront
 
 phases:
   install:
@@ -180,16 +202,27 @@ phases:
       - export GOPATH=/go
       - rm -rf cf-custom-resources/node_modules
       - mkdir -p /tmp/.aws
+      - account=$(aws secretsmanager get-secret-value --secret-id ${APP_ACCOUNT} | jq '.SecretString' -r)
       - printf "[default]\nregion = $APP_REGION\n" > /tmp/.aws/config
+      - printf "[default]\n" >> /tmp/.aws/credentials
+      - printf "aws_access_key_id=$(echo $account | jq '.access_key' -r)\n" >> /tmp/.aws/credentials
+      - printf "aws_secret_access_key=$(echo $account | jq '.secret_access_key' -r)\n\n" >> /tmp/.aws/credentials
       - |
         if [ ! -z "$TESTENV_REGION" ]; then
+          account=$(aws secretsmanager get-secret-value --secret-id ${TESTENV_ACCOUNT} | jq '.SecretString' -r)
           printf "[profile e2etestenv]\nregion=$TESTENV_REGION\n" >> /tmp/.aws/config
+          printf "[e2etestenv]\n" >> /tmp/.aws/credentials
+          printf "aws_access_key_id=$(echo $account | jq '.access_key' -r)\n" >> /tmp/.aws/credentials
+          printf "aws_secret_access_key=$(echo $account | jq '.secret_access_key' -r)\n\n" >> /tmp/.aws/credentials
         fi
       - |
         if [ ! -z "$PRODENV_REGION" ]; then
-           printf "[profile e2eprodenv]\nregion=$PRODENV_REGION\n" >> /tmp/.aws/config
+          account=$(aws secretsmanager get-secret-value --secret-id ${PRODENV_ACCOUNT} | jq '.SecretString' -r)
+          printf "[profile e2eprodenv]\nregion=$PRODENV_REGION\n" >> /tmp/.aws/config
+          printf "[e2eprodenv]\n" >> /tmp/.aws/credentials
+          printf "aws_access_key_id=$(echo $account | jq '.access_key' -r)\n" >> /tmp/.aws/credentials
+          printf "aws_secret_access_key=$(echo $account | jq '.secret_access_key' -r)\n\n" >> /tmp/.aws/credentials
         fi
-      - printf "[default]\naws_access_key_id=$E2E_USER_1_ACCESS_KEY\naws_secret_access_key=$E2E_USER_1_SECRET_KEY\n\n[e2etestenv]\naws_access_key_id=$E2E_USER_2_ACCESS_KEY\naws_secret_access_key=$E2E_USER_2_SECRET_KEY\n\n[e2eprodenv]\naws_access_key_id=$E2E_USER_3_ACCESS_KEY\naws_secret_access_key=$E2E_USER_3_SECRET_KEY\n" > /tmp/.aws/credentials
       - sed -i -e '$s/$/ --noColor/' e2e/e2e.sh
       - make build-e2e
       - docker build -t copilot-cli/e2e . -f e2e/Dockerfile

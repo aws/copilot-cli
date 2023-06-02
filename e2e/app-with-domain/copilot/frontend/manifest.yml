@@ -9,12 +9,12 @@ image:
 
 http:
   path: '/'
-  alias: ["frontend-app-domain.${DOMAINNAME}", "${DOMAINNAME}"]
+  alias: ["frontend.${DOMAINNAME}", "${DOMAINNAME}"]
   additional_rules:
     - path: 'admin'
       target_port: 3002
       healthcheck: '/admin'
-      alias: ["frontend-app-domain.${DOMAINNAME}", "${DOMAINNAME}"]
+      alias: ["frontend.${DOMAINNAME}", "${DOMAINNAME}"]
 
 cpu: 256
 memory: 512
