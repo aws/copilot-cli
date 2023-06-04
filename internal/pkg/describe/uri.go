@@ -5,8 +5,10 @@ package describe
 
 import (
 	"fmt"
-	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"strings"
+
+	"github.com/aws/copilot-cli/internal/pkg/term/color"
+	"github.com/aws/copilot-cli/internal/pkg/term/log"
 
 	"github.com/dustin/go-humanize/english"
 
@@ -191,6 +193,7 @@ func (d *BackendServiceDescriber) URI(envName string) (URI, error) {
 			if !privateURI.HTTPS && len(privateURI.DNSNames) > 1 {
 				privateURI = uriDescr.bestEffortRemoveALBDNSName(privateURI)
 			}
+			log.Infoln(english.OxfordWordSeries(privateURI.strings(), "or"))
 			return URI{
 				URI:        english.OxfordWordSeries(privateURI.strings(), "or"),
 				AccessType: URIAccessTypeInternal,
@@ -282,13 +285,12 @@ func (d *uriDescriber) uri() (accessURI, error) {
 		return accessURI{}, fmt.Errorf("get stack resources for service %s: %w", d.svc, err)
 	}
 
-	var ruleARN string
+	var ruleARNs []string
 	for _, resource := range svcResources {
 		if resource.Type == svcStackResourceListenerRuleResourceType &&
-			((httpsEnabled && resource.LogicalID == svcStackResourceHTTPSListenerRuleLogicalID) ||
-				(!httpsEnabled && resource.LogicalID == svcStackResourceHTTPListenerRuleLogicalID)) {
-			ruleARN = resource.PhysicalID
-			break
+			(httpsEnabled && strings.HasPrefix(resource.LogicalID, svcStackResourceHTTPSListenerRuleLogicalID)) ||
+			(!httpsEnabled && strings.HasPrefix(resource.LogicalID, svcStackResourceHTTPListenerRuleLogicalID)) {
+			ruleARNs = append(ruleARNs, resource.PhysicalID)
 		}
 	}
 
@@ -296,9 +298,9 @@ func (d *uriDescriber) uri() (accessURI, error) {
 	if err != nil {
 		return accessURI{}, nil
 	}
-	dnsNames, err := lbDescr.ListenerRuleHostHeaders(ruleARN)
+	dnsNames, err := lbDescr.ListenerRulesHostHeaders(ruleARNs)
 	if err != nil {
-		return accessURI{}, fmt.Errorf("get host headers for listener rule %s: %w", ruleARN, err)
+		return accessURI{}, fmt.Errorf("get host headers for listener rules %s: %w", strings.Join(ruleARNs, ","), err)
 	}
 	if len(dnsNames) == 0 {
 		return d.envDNSName(path)

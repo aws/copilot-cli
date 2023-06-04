@@ -323,8 +323,8 @@ Resources:
     Type: AWS::ECS::Service
     DependsOn:
       - EnvControllerAction
-      - HTTPListenerRule
-      - HTTPListenerRule1
+      - HTTPListenerRuleGroup0
+      - HTTPListenerRule1Group0
     Properties:
       PlatformVersion: LATEST
       Cluster:
@@ -475,8 +475,9 @@ Resources:
     Properties:
       ServiceToken: !GetAtt RulePriorityFunction.Arn
       RulePath: ["/http-full-config-path", "/admin"]
+      ConditionGroups: ["1","1"]
       ListenerArn: !GetAtt EnvControllerAction.InternalHTTPListenerArn
-  HTTPListenerRule:
+  HTTPListenerRuleGroup0:
     Metadata:
       "aws:copilot:description": "An HTTP listener rule for path `/http-full-config-path` that forwards HTTP traffic to your tasks"
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
@@ -503,8 +504,8 @@ Resources:
               - "/http-full-config-path"
               - "/http-full-config-path/*"
       ListenerArn: !GetAtt EnvControllerAction.InternalHTTPListenerArn
-      Priority: !GetAtt HTTPRulePriorityAction.Priority
-  HTTPListenerRule1:
+      Priority: !GetAtt HTTPRulePriorityAction.PriorityGroup0
+  HTTPListenerRule1Group0:
     Metadata:
       "aws:copilot:description": "An HTTP listener rule for path `/admin` that forwards HTTP traffic to your tasks"
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
@@ -527,7 +528,7 @@ Resources:
               - "/admin"
               - "/admin/*"
       ListenerArn: !GetAtt EnvControllerAction.InternalHTTPListenerArn
-      Priority: !GetAtt HTTPRulePriorityAction.Priority1
+      Priority: !GetAtt HTTPRulePriorityAction.Priority1Group0
   AddonsStack:
     Metadata:
       "aws:copilot:description": "An Addons CloudFormation Stack for your additional AWS resources"

@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/request"
@@ -39,34 +40,36 @@ func New(sess *session.Session) *ELBV2 {
 	}
 }
 
-// ListenerRuleHostHeaders returns all the host headers for a listener rule.
-func (e *ELBV2) ListenerRuleHostHeaders(ruleARN string) ([]string, error) {
+// ListenerRulesHostHeaders returns all the host headers for all listener rules.
+func (e *ELBV2) ListenerRulesHostHeaders(ruleARNs []string) ([]string, error) {
 	resp, err := e.client.DescribeRules(&elbv2.DescribeRulesInput{
-		RuleArns: aws.StringSlice([]string{ruleARN}),
+		RuleArns: aws.StringSlice(ruleARNs),
 	})
 	if err != nil {
-		return nil, fmt.Errorf("get listener rule for %s: %w", ruleARN, err)
+		return nil, fmt.Errorf("get listener rule for %s: %w", strings.Join(ruleARNs, ","), err)
 	}
 	if len(resp.Rules) == 0 {
-		return nil, fmt.Errorf("cannot find listener rule %s", ruleARN)
+		return nil, fmt.Errorf("cannot find listener rule %s", strings.Join(ruleARNs, ","))
 	}
-	rule := resp.Rules[0]
 	hostHeaderSet := make(map[string]bool)
-	for _, condition := range rule.Conditions {
-		if aws.StringValue(condition.Field) == "host-header" {
-			// Values is a legacy field that allowed specifying only a single host name.
-			// The alternative is to use HostHeaderConfig for multiple values.
-			// Only one of these fields should be set, but we collect from both to be safe.
-			for _, value := range condition.Values {
-				hostHeaderSet[aws.StringValue(value)] = true
-			}
-			if condition.HostHeaderConfig == nil {
+	for idx := range ruleARNs {
+		rule := resp.Rules[idx]
+		for _, condition := range rule.Conditions {
+			if aws.StringValue(condition.Field) == "host-header" {
+				// Values is a legacy field that allowed specifying only a single host name.
+				// The alternative is to use HostHeaderConfig for multiple values.
+				// Only one of these fields should be set, but we collect from both to be safe.
+				for _, value := range condition.Values {
+					hostHeaderSet[aws.StringValue(value)] = true
+				}
+				if condition.HostHeaderConfig == nil {
+					break
+				}
+				for _, value := range condition.HostHeaderConfig.Values {
+					hostHeaderSet[aws.StringValue(value)] = true
+				}
 				break
 			}
-			for _, value := range condition.HostHeaderConfig.Values {
-				hostHeaderSet[aws.StringValue(value)] = true
-			}
-			break
 		}
 	}
 	var hostHeaders []string

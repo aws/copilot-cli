@@ -112,11 +112,13 @@ Resources:
       - EnvControllerAction
       {{- if .ALBListener }}
       {{- range $i, $rule := .ALBListener.Rules }}
+      {{- range $j, $conditionGroup := $rule.GenerateConditionGroups $.WorkloadType $.ALBListener.IsHTTPS }}
       {{- if $.ALBListener.IsHTTPS}}
-      - HTTPListenerRuleWithDomain{{ if ne $i 0 }}{{ $i }}{{ end }}
-      - HTTPSListenerRule{{ if ne $i 0 }}{{ $i }}{{ end }}
+      - HTTPListenerRuleWithDomain{{ if ne $i 0 }}{{ $i }}{{ end }}Group{{ $j }}
+      - HTTPSListenerRule{{ if ne $i 0 }}{{ $i }}{{ end }}Group{{ $j }}
       {{- else }}
-      - HTTPListenerRule{{ if ne $i 0 }}{{ $i }}{{ end }}
+      - HTTPListenerRule{{ if ne $i 0 }}{{ $i }}{{ end }}Group{{ $j }}
+      {{- end}}
       {{- end}}
       {{- end }}
       {{- end }}

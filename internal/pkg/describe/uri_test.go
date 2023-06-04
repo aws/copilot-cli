@@ -94,12 +94,12 @@ func TestLBWebServiceDescriber_URI(t *testing.T) {
 							PhysicalID: "mockRuleARN",
 						},
 					}, nil),
-					m.lbDescriber.EXPECT().ListenerRuleHostHeaders("mockRuleARN").
+					m.lbDescriber.EXPECT().ListenerRulesHostHeaders([]string{"mockRuleARN"}).
 						Return(nil, mockErr),
 				)
 			},
 
-			wantedError: fmt.Errorf("get host headers for listener rule mockRuleARN: some error"),
+			wantedError: fmt.Errorf("get host headers for listener rules mockRuleARN: some error"),
 		},
 		"https web service": {
 			setupMocks: func(m lbWebSvcDescriberMocks) {
@@ -115,16 +115,21 @@ func TestLBWebServiceDescriber_URI(t *testing.T) {
 					}, nil),
 					m.ecsDescriber.EXPECT().StackResources().Return([]*describeStack.Resource{
 						{
-							LogicalID:  svcStackResourceHTTPSListenerRuleLogicalID,
+							LogicalID:  "HTTPSListenerRuleGroup0",
 							Type:       svcStackResourceListenerRuleResourceType,
-							PhysicalID: "mockRuleARN",
+							PhysicalID: "mockRuleARN1",
+						},
+						{
+							LogicalID:  "HTTPSListenerRuleGroup1",
+							Type:       svcStackResourceListenerRuleResourceType,
+							PhysicalID: "mockRuleARN2",
 						},
 					}, nil),
-					m.lbDescriber.EXPECT().ListenerRuleHostHeaders("mockRuleARN").
-						Return([]string{"jobs.test.phonetool.com", "phonetool.com"}, nil),
+					m.lbDescriber.EXPECT().ListenerRulesHostHeaders([]string{"mockRuleARN1", "mockRuleARN2"}).
+						Return([]string{"jobs.test.phonetool.com", "phonetool.com", "v1.phonetool.com"}, nil),
 				)
 			},
-			wantedURI: "https://jobs.test.phonetool.com or https://phonetool.com",
+			wantedURI: "https://jobs.test.phonetool.com, https://phonetool.com, or https://v1.phonetool.com",
 		},
 		"http web service": {
 			setupMocks: func(m lbWebSvcDescriberMocks) {
@@ -304,7 +309,7 @@ func TestLBWebServiceDescriber_URI(t *testing.T) {
 							PhysicalID: "mockRuleARN",
 						},
 					}, nil),
-					m.lbDescriber.EXPECT().ListenerRuleHostHeaders("mockRuleARN").
+					m.lbDescriber.EXPECT().ListenerRulesHostHeaders([]string{"mockRuleARN"}).
 						Return([]string{"example.com", "v1.example.com"}, nil),
 					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
 						stack.LBWebServiceNLBPortParamKey:      "443",
@@ -419,7 +424,7 @@ func TestBackendServiceDescriber_URI(t *testing.T) {
 						stack.WorkloadRulePathParamKey: "mySvc",
 					}, nil),
 					m.ecsDescriber.EXPECT().StackResources().Return(resources, nil),
-					m.lbDescriber.EXPECT().ListenerRuleHostHeaders("mockRuleARN").
+					m.lbDescriber.EXPECT().ListenerRulesHostHeaders([]string{"mockRuleARN"}).
 						Return([]string{"jobs.test.phonetool.internal", "1234.us-west-2.internal.aws.com"}, nil),
 					m.envDescriber.EXPECT().Outputs().Return(map[string]string{
 						envOutputInternalLoadBalancerDNSName: "1234.us-west-2.internal.aws.com",
@@ -442,16 +447,21 @@ func TestBackendServiceDescriber_URI(t *testing.T) {
 					}, nil),
 					m.ecsDescriber.EXPECT().StackResources().Return([]*describeStack.Resource{
 						{
-							LogicalID:  svcStackResourceHTTPSListenerRuleLogicalID,
+							LogicalID:  "HTTPSListenerRuleGroup0",
 							Type:       svcStackResourceListenerRuleResourceType,
-							PhysicalID: "mockRuleARN",
+							PhysicalID: "mockRuleARN1",
+						},
+						{
+							LogicalID:  "HTTPSListenerRuleGroup1",
+							Type:       svcStackResourceListenerRuleResourceType,
+							PhysicalID: "mockRuleARN2",
 						},
 					}, nil),
-					m.lbDescriber.EXPECT().ListenerRuleHostHeaders("mockRuleARN").
-						Return([]string{"jobs.test.phonetool.com", "phonetool.com"}, nil),
+					m.lbDescriber.EXPECT().ListenerRulesHostHeaders([]string{"mockRuleARN1", "mockRuleARN2"}).
+						Return([]string{"jobs.test.phonetool.com", "phonetool.com", "v1.phonetool.com"}, nil),
 				)
 			},
-			wantedURI: "https://jobs.test.phonetool.com or https://phonetool.com",
+			wantedURI: "https://jobs.test.phonetool.com, https://phonetool.com, or https://v1.phonetool.com",
 		},
 	}
 	for name, tc := range testCases {

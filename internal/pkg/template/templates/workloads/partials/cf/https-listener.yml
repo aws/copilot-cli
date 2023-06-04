@@ -52,6 +52,7 @@ HTTPSRulePriorityAction:
   Properties:
     ServiceToken: !GetAtt RulePriorityFunction.Arn
     RulePath: {{ fmtSlice (quoteSlice .ALBListener.RulePaths) }}
+    ConditionGroups: {{ fmtSlice (quoteSlice (.ALBListener.ConditionGroups  .WorkloadType .ALBListener.IsHTTPS )) }}
     {{- if eq $.WorkloadType "Backend Service" }}
     ListenerArn: !GetAtt EnvControllerAction.InternalHTTPSListenerArn
     {{- else}}
@@ -65,6 +66,7 @@ HTTPRuleWithDomainPriorityAction:
   Properties:
     ServiceToken: !GetAtt RulePriorityFunction.Arn
     RulePath: {{ fmtSlice (quoteSlice .ALBListener.RulePaths) }}
+    ConditionGroups: {{ fmtSlice (quoteSlice (.ALBListener.ConditionGroups  .WorkloadType .ALBListener.IsHTTPS )) }}
     {{- if eq $.WorkloadType "Backend Service"}}
     ListenerArn: !GetAtt EnvControllerAction.InternalHTTPListenerArn
     {{- else}}
@@ -72,7 +74,8 @@ HTTPRuleWithDomainPriorityAction:
     {{- end}}
 
 {{- range $i, $rule := .ALBListener.Rules}}
-HTTPListenerRuleWithDomain{{ if ne $i 0 }}{{ $i }}{{ end }}:
+{{- range $j, $conditionGroup := $rule.GenerateConditionGroups $.WorkloadType $.ALBListener.IsHTTPS }}
+HTTPListenerRuleWithDomain{{ if ne $i 0 }}{{ $i }}{{ end }}Group{{ $j }}:
   Metadata:
     {{- if $rule.RedirectToHTTPS}}
     'aws:copilot:description': 'An HTTP listener rule for path `{{$rule.Path}}` that redirects HTTP to HTTPS'
@@ -96,18 +99,18 @@ HTTPListenerRuleWithDomain{{ if ne $i 0 }}{{ $i }}{{ end }}:
         Type: forward
       {{- end}}
     Conditions:
-      {{- if $rule.AllowedSourceIps }}
+      {{- if $conditionGroup.AllowedSourceIps }}
       - Field: 'source-ip'
         SourceIpConfig:
           Values:
-            {{- range $sourceIP := $rule.AllowedSourceIps}}
+            {{- range $sourceIP := $conditionGroup.AllowedSourceIps}}
             - {{$sourceIP}}
             {{- end}}
       {{- end}}
-      {{- if $rule.Aliases }}
+      {{- if $conditionGroup.Aliases }}
       - Field: 'host-header'
         HostHeaderConfig:
-          Values: {{ fmtSlice (quoteSlice $rule.Aliases) }}
+          Values: {{ fmtSlice (quoteSlice $conditionGroup.Aliases) }}
       {{- else }}
       - Field: 'host-header'
         HostHeaderConfig:
@@ -132,9 +135,9 @@ HTTPListenerRuleWithDomain{{ if ne $i 0 }}{{ $i }}{{ end }}:
     {{- else}}
     ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
     {{- end}}
-    Priority: !GetAtt HTTPRuleWithDomainPriorityAction.Priority{{ if ne $i 0 }}{{ $i }}{{ end }}
+    Priority: !GetAtt HTTPRuleWithDomainPriorityAction.Priority{{ if ne $i 0 }}{{ $i }}{{ end }}Group{{ $j }}
 
-HTTPSListenerRule{{ if ne $i 0 }}{{ $i }}{{ end }}:
+HTTPSListenerRule{{ if ne $i 0 }}{{ $i }}{{ end }}Group{{ $j }}:
   Metadata:
     'aws:copilot:description': 'An HTTPS listener rule for path `{{$rule.Path}}` that forwards HTTPS traffic to your tasks'
   Type: AWS::ElasticLoadBalancingV2::ListenerRule
@@ -143,18 +146,18 @@ HTTPSListenerRule{{ if ne $i 0 }}{{ $i }}{{ end }}:
       - TargetGroupArn: !Ref TargetGroup{{ if ne $i 0 }}{{ $i }}{{ end }}
         Type: forward
     Conditions:
-      {{- if $rule.AllowedSourceIps}}
+      {{- if $conditionGroup.AllowedSourceIps}}
       - Field: 'source-ip'
         SourceIpConfig:
           Values:
-          {{- range $sourceIP := $rule.AllowedSourceIps}}
+          {{- range $sourceIP := $conditionGroup.AllowedSourceIps}}
             - {{$sourceIP}}
           {{- end}}
       {{- end}}
-      {{- if $rule.Aliases }}
+      {{- if $conditionGroup.Aliases }}
       - Field: 'host-header'
         HostHeaderConfig:
-          Values: {{ fmtSlice (quoteSlice $rule.Aliases) }}
+          Values: {{ fmtSlice (quoteSlice $conditionGroup.Aliases) }}
       {{- else }}
       - Field: 'host-header'
         HostHeaderConfig:
@@ -179,5 +182,6 @@ HTTPSListenerRule{{ if ne $i 0 }}{{ $i }}{{ end }}:
     {{- else}}
     ListenerArn: !GetAtt EnvControllerAction.HTTPSListenerArn
     {{- end}}
-    Priority: !GetAtt HTTPSRulePriorityAction.Priority{{ if ne $i 0 }}{{ $i }}{{ end }}
+    Priority: !GetAtt HTTPSRulePriorityAction.Priority{{ if ne $i 0 }}{{ $i }}{{ end }}Group{{ $j }}
+{{- end }}
 {{- end }}

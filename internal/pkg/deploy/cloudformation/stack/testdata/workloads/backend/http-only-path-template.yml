@@ -268,7 +268,7 @@ Resources:
     Type: AWS::ECS::Service
     DependsOn:
       - EnvControllerAction
-      - HTTPListenerRule
+      - HTTPListenerRuleGroup0
     Properties:
       PlatformVersion: LATEST
       Cluster:
@@ -393,8 +393,9 @@ Resources:
     Properties:
       ServiceToken: !GetAtt RulePriorityFunction.Arn
       RulePath: ["/http-only-path-path"]
+      ConditionGroups: ["1"]
       ListenerArn: !GetAtt EnvControllerAction.InternalHTTPListenerArn
-  HTTPListenerRule:
+  HTTPListenerRuleGroup0:
     Metadata:
       "aws:copilot:description": "An HTTP listener rule for path `/http-only-path-path` that forwards HTTP traffic to your tasks"
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
@@ -417,7 +418,7 @@ Resources:
               - "/http-only-path-path"
               - "/http-only-path-path/*"
       ListenerArn: !GetAtt EnvControllerAction.InternalHTTPListenerArn
-      Priority: !GetAtt HTTPRulePriorityAction.Priority
+      Priority: !GetAtt HTTPRulePriorityAction.PriorityGroup0
   AddonsStack:
     Metadata:
       "aws:copilot:description": "An Addons CloudFormation Stack for your additional AWS resources"
