@@ -496,7 +496,7 @@ func (cfg *ALBListener) ConditionGroups(wkldType string, isHTTPS bool) []string 
 	for _, rule := range cfg.Rules {
 		remaining := rule.calculateRemainingConditions(wkldType, isHTTPS)
 		if len(rule.Aliases)+len(rule.AllowedSourceIps) > remaining {
-			groupCount = append(groupCount, strconv.Itoa(int(math.Ceil(float64(len(rule.Aliases)+len(rule.AllowedSourceIps))/float64(remaining)))))
+			groupCount = append(groupCount, strconv.Itoa(rule.numSplitGroups(remaining)))
 		} else {
 			groupCount = append(groupCount, "1")
 		}
@@ -522,7 +522,7 @@ func (lr ALBListenerRule) GenerateConditionGroups(wkldType string, isHTTPS bool)
 			Aliases:          lr.Aliases,
 		})
 	}
-	numGroups := int(math.Ceil(float64(len(lr.AllowedSourceIps)+len(lr.Aliases)) / float64(remaining)))
+	numGroups := lr.numSplitGroups(remaining)
 	sourceIPIdx := 0
 	aliasIdx := 0
 	for i := 0; i < numGroups; i++ {
@@ -538,6 +538,10 @@ func (lr ALBListenerRule) GenerateConditionGroups(wkldType string, isHTTPS bool)
 		groups = append(groups, group)
 	}
 	return groups
+}
+
+func (lr ALBListenerRule) numSplitGroups(remaining int) int {
+	return int(math.Ceil(float64(len(lr.AllowedSourceIps)+len(lr.Aliases)) / float64(remaining)))
 }
 
 func (lr ALBListenerRule) calculateRemainingConditions(wkldType string, isHTTPS bool) int {
