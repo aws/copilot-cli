@@ -14,6 +14,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/golang/mock/gomock"
 	"github.com/spf13/afero"
@@ -137,8 +138,9 @@ func TestStaticSiteDeployer_UploadArtifacts(t *testing.T) {
 
 func TestStaticSiteDeployer_stackConfiguration(t *testing.T) {
 	tests := map[string]struct {
-		deployer *staticSiteDeployer
-		wantErr  string
+		deployer     *staticSiteDeployer
+		wantErr      string
+		wantTemplate string
 	}{
 		"error getting service discovery endpoint": {
 			deployer: &staticSiteDeployer{
@@ -401,16 +403,78 @@ func TestStaticSiteDeployer_stackConfiguration(t *testing.T) {
 				},
 			},
 		},
+		"success with overrider": {
+			deployer: &staticSiteDeployer{
+				svcDeployer: &svcDeployer{
+					workloadDeployer: &workloadDeployer{
+						app: &config.Application{
+							Name:   "mockApp",
+							Domain: "example.com",
+						},
+						env: &config.Environment{
+							Name: "mockEnv",
+						},
+						envConfig: &manifest.Environment{},
+						endpointGetter: &endpointGetterDouble{
+							ServiceDiscoveryEndpointFn: ReturnsValues("", error(nil)),
+						},
+						envVersionGetter: &versionGetterDouble{
+							VersionFn: ReturnsValues("", error(nil)),
+						},
+						resources: &stack.AppRegionalResources{},
+						overrider: &mockOverrider{},
+					},
+				},
+				appVersionGetter: &versionGetterDouble{
+					VersionFn: ReturnsValues("v1.2.0", error(nil)),
+				},
+				staticSiteMft: &manifest.StaticSite{
+					StaticSiteConfig: manifest.StaticSiteConfig{
+						HTTP: manifest.StaticSiteHTTP{
+							Alias: "hi.mockApp.example.com",
+						},
+					},
+				},
+				newStack: func(*stack.StaticSiteConfig) (*stack.StaticSite, error) {
+					return stack.NewStaticSite(&stack.StaticSiteConfig{
+						EnvManifest: &manifest.Environment{
+							Workload: manifest.Workload{
+								Name: aws.String("mockEnv"),
+							},
+						},
+						App: &config.Application{
+							Name: "mockApp",
+						},
+						Manifest: &manifest.StaticSite{
+							Workload: manifest.Workload{
+								Name: aws.String("static"),
+								Type: aws.String(manifestinfo.StaticSiteType),
+							},
+						},
+						RuntimeConfig: stack.RuntimeConfig{
+							Region: "us-west-2",
+						},
+						ArtifactBucketName: "mockBucket",
+					})
+				},
+			},
+			wantTemplate: "mockOverride",
+		},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			_, gotErr := tc.deployer.stackConfiguration(&StackRuntimeConfiguration{})
+			out, gotErr := tc.deployer.stackConfiguration(&StackRuntimeConfiguration{})
 			if tc.wantErr != "" {
 				require.EqualError(t, gotErr, tc.wantErr)
 				return
 			}
 			require.NoError(t, gotErr)
+			if tc.wantTemplate != "" {
+				s, err := out.Template()
+				require.NoError(t, err)
+				require.Equal(t, tc.wantTemplate, s)
+			}
 		})
 	}
 }
@@ -419,4 +483,10 @@ func ReturnsValues[A, B any](a A, b B) func() (A, B) {
 	return func() (A, B) {
 		return a, b
 	}
+}
+
+type mockOverrider struct{}
+
+func (o *mockOverrider) Override(body []byte) (out []byte, err error) {
+	return []byte("mockOverride"), nil
 }
