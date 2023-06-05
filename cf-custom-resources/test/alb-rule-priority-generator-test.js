@@ -535,8 +535,10 @@ describe("ALB Rule Priority Generator", () => {
         .put("/", (body) => {
           return body.Status === "SUCCESS" &&
               body.Data.PriorityGroup0 == 6 &&
-              body.Data.Priority2Group0 == 7 &&
-              body.Data.Priority1Group0 == 50000;
+              body.Data.PriorityGroup1== 7 &&
+              body.Data.Priority2Group0 == 8 &&
+              body.Data.Priority1Group0 == 50000 &&
+              body.Data.Priority1Group1 == 49999;
         })
         .reply(200);
 
@@ -547,7 +549,7 @@ describe("ALB Rule Priority Generator", () => {
           ResourceProperties: {
             ListenerArn: testALBListenerArn,
             RulePath: ["/api", "/", "admin"],
-            ConditionGroups: ["1","1","1"]
+            ConditionGroups: ["2","2","1"]
           },
         })
         .expectResolve(() => {
