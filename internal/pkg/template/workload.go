@@ -496,8 +496,9 @@ func (cfg *ALBListener) ConditionGroups(wkldType string, isHTTPS bool) []string 
 		remaining := rule.calculateRemainingConditions(wkldType, isHTTPS)
 		if len(rule.Aliases)+len(rule.AllowedSourceIps) > remaining {
 			groupCount = append(groupCount, strconv.Itoa(int(math.Ceil(float64(len(rule.Aliases)+len(rule.AllowedSourceIps))/float64(remaining)))))
+		} else {
+			groupCount = append(groupCount, "1")
 		}
-		groupCount = append(groupCount, "1")
 	}
 	return groupCount
 }
