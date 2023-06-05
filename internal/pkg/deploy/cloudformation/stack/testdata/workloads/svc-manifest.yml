@@ -130,7 +130,13 @@ environments:
         - path: "admin"
           target_container: nginx
           target_port: 8081
-          alias: example.com
+          alias:
+           - example.com
+           - v7.example.com
+           - v8.example.com
+           - v9.example.com
+           - v10.example.com
+           - v11.example.com
         - path: "superadmin"
           target_port: 4000
           alias: example.com
