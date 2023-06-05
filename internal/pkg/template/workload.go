@@ -490,6 +490,7 @@ func (cfg *ALBListener) RulePaths() []string {
 	return rulePaths
 }
 
+// ConditionGroups returns a slice of all the Splits on the Conditions across multiple listener rules.
 func (cfg *ALBListener) ConditionGroups(wkldType string, isHTTPS bool) []string {
 	var groupCount []string
 	for _, rule := range cfg.Rules {
@@ -503,11 +504,15 @@ func (cfg *ALBListener) ConditionGroups(wkldType string, isHTTPS bool) []string 
 	return groupCount
 }
 
+// conditionGroup represents groups of conditions per listener rule.
 type conditionGroup struct {
 	AllowedSourceIps []string
 	Aliases          []string
 }
 
+// GenerateConditionGroups will split allowed source ips and aliases into separate condition groups per listener rule.
+// This is needed because Listener rule has quota of 5 conditions per rule.
+// https://docs.aws.amazon.com/elasticloadbalancing/latest/application/load-balancer-limits.html
 func (lr ALBListenerRule) GenerateConditionGroups(wkldType string, isHTTPS bool) []conditionGroup {
 	var groups []conditionGroup
 	remaining := lr.calculateRemainingConditions(wkldType, isHTTPS)
