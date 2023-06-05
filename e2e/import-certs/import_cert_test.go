@@ -101,7 +101,7 @@ var _ = Describe("Import Certificates", func() {
 			Expect(len(svc.Routes)).To(Equal(1))
 
 			wantedURLs := map[string]string{
-				"test": "https://test.copilot-e2e-tests.ecs.aws.dev",
+				"test": "https://frontend.import-certs.copilot-e2e-tests.ecs.aws.dev",
 			}
 			for _, route := range svc.Routes {
 				// Validate route has the expected HTTPS endpoint.
