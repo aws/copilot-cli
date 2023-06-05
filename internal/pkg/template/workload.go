@@ -518,17 +518,17 @@ func (lr ALBListenerRule) GenerateConditionGroups(wkldType string, isHTTPS bool)
 		})
 	}
 	numGroups := int(math.Ceil(float64(len(lr.AllowedSourceIps)+len(lr.Aliases)) / float64(remaining)))
-	sourceIPIndex := 0
-	aliasIndex := 0
+	sourceIPIdx := 0
+	aliasIdx := 0
 	for i := 0; i < numGroups; i++ {
 		var group conditionGroup
-		for j := 0; j < remaining && sourceIPIndex < len(lr.AllowedSourceIps); j++ {
-			group.AllowedSourceIps = append(group.AllowedSourceIps, lr.AllowedSourceIps[sourceIPIndex])
-			sourceIPIndex++
+		for j := 0; j < remaining && sourceIPIdx < len(lr.AllowedSourceIps); j++ {
+			group.AllowedSourceIps = append(group.AllowedSourceIps, lr.AllowedSourceIps[sourceIPIdx])
+			sourceIPIdx++
 		}
-		for j := 0; j < remaining-len(group.AllowedSourceIps) && aliasIndex < len(lr.Aliases); j++ {
-			group.Aliases = append(group.Aliases, lr.Aliases[aliasIndex])
-			aliasIndex++
+		for j := 0; j < remaining-len(group.AllowedSourceIps) && aliasIdx < len(lr.Aliases); j++ {
+			group.Aliases = append(group.Aliases, lr.Aliases[aliasIdx])
+			aliasIdx++
 		}
 		groups = append(groups, group)
 	}
