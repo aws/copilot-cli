@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
-	"github.com/aws/copilot-cli/internal/pkg/term/log"
 
 	"github.com/dustin/go-humanize/english"
 
@@ -193,7 +192,6 @@ func (d *BackendServiceDescriber) URI(envName string) (URI, error) {
 			if !privateURI.HTTPS && len(privateURI.DNSNames) > 1 {
 				privateURI = uriDescr.bestEffortRemoveALBDNSName(privateURI)
 			}
-			log.Infoln(english.OxfordWordSeries(privateURI.strings(), "or"))
 			return URI{
 				URI:        english.OxfordWordSeries(privateURI.strings(), "or"),
 				AccessType: URIAccessTypeInternal,
