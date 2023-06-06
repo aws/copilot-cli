@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"fmt"
-	"math"
 	"strconv"
 	"text/template"
 
@@ -494,12 +493,7 @@ func (cfg *ALBListener) RulePaths() []string {
 func (cfg *ALBListener) ConditionGroups(wkldType string, isHTTPS bool) []string {
 	var groupCount []string
 	for _, rule := range cfg.Rules {
-		remaining := rule.calculateRemainingConditions(wkldType, isHTTPS)
-		if len(rule.Aliases)+len(rule.AllowedSourceIps) > remaining {
-			groupCount = append(groupCount, strconv.Itoa(rule.numSplitGroups(remaining)))
-		} else {
-			groupCount = append(groupCount, "1")
-		}
+		groupCount = append(groupCount, strconv.Itoa(len(rule.GenerateConditionGroups(wkldType, isHTTPS))))
 	}
 	return groupCount
 }
@@ -522,54 +516,85 @@ func (lr ALBListenerRule) GenerateConditionGroups(wkldType string, isHTTPS bool)
 			Aliases:          lr.Aliases,
 		})
 	}
-	numGroups := lr.numSplitGroups(remaining)
-	sourceIPIdx := 0
-	aliasIdx := 0
-	for i := 0; i < numGroups; i++ {
+	if isHTTPS && len(lr.AllowedSourceIps) != 0 {
+		return lr.generateConditionsWithSourceIPsAndAlias(remaining - 1)
+	}
+	if isHTTPS {
+		return lr.generateConditionsWithAliasOnly(remaining)
+	}
+	return lr.generateConditionWithSourceIPsOnly(remaining)
+}
+
+func (lr ALBListenerRule) calculateRemainingConditions(wkldType string, isHTTPS bool) int {
+	rcPerRule := totalConditionsPerRule
+	if isHTTPS {
+		return calculateConditionsHTTPS(lr.Path, rcPerRule, len(lr.Aliases))
+	}
+	return calculateConditionsHTTP(lr.Path, rcPerRule, wkldType)
+}
+
+func calculateConditionsHTTPS(path string, rcPerRule int, aliasCount int) int {
+	if aliasCount == 0 {
+		rcPerRule = rcPerRule - 1
+	}
+	if path != rootPath {
+		return rcPerRule - 2
+	}
+	return rcPerRule - 1
+}
+
+func calculateConditionsHTTP(path string, rcPerRule int, wkldType string) int {
+	if wkldType == backendWkld {
+		rcPerRule = rcPerRule - 2
+	}
+	if path != rootPath {
+		return rcPerRule - 2
+	}
+	return rcPerRule - 1
+}
+
+func (lr ALBListenerRule) generateConditionsWithSourceIPsAndAlias(remaining int) []conditionGroup {
+	var groups []conditionGroup
+	for i := 0; i < len(lr.AllowedSourceIps); i++ {
 		var group conditionGroup
-		for j := 0; j < remaining && sourceIPIdx < len(lr.AllowedSourceIps); j++ {
-			group.AllowedSourceIps = append(group.AllowedSourceIps, lr.AllowedSourceIps[sourceIPIdx])
-			sourceIPIdx++
-		}
-		for j := 0; j < remaining-len(group.AllowedSourceIps) && aliasIdx < len(lr.Aliases); j++ {
-			group.Aliases = append(group.Aliases, lr.Aliases[aliasIdx])
-			aliasIdx++
-		}
-		groups = append(groups, group)
+		group.AllowedSourceIps = []string{lr.AllowedSourceIps[i]}
+		groups = append(groups, lr.generateConditionsGroups(remaining, true, group)...)
 	}
 	return groups
 }
 
-func (lr ALBListenerRule) numSplitGroups(remaining int) int {
-	return int(math.Ceil(float64(len(lr.AllowedSourceIps)+len(lr.Aliases)) / float64(remaining)))
+func (lr ALBListenerRule) generateConditionsWithAliasOnly(remaining int) []conditionGroup {
+	var group conditionGroup
+	return lr.generateConditionsGroups(remaining, true, group)
 }
 
-func (lr ALBListenerRule) calculateRemainingConditions(wkldType string, isHTTPS bool) int {
-	lcPerRule := totalConditionsPerRule
-	if isHTTPS {
-		return calculateConditionsHTTPS(lr.Path, lcPerRule, len(lr.Aliases))
-	}
-	return calculateConditionsHTTP(lr.Path, lcPerRule, wkldType)
+func (lr ALBListenerRule) generateConditionWithSourceIPsOnly(remaining int) []conditionGroup {
+	var group conditionGroup
+	return lr.generateConditionsGroups(remaining, false, group)
 }
 
-func calculateConditionsHTTPS(path string, lcPerRule int, aliasCount int) int {
-	if aliasCount == 0 {
-		lcPerRule = lcPerRule - 1
+func (lr ALBListenerRule) generateConditionsGroups(remaining int, isAlias bool, group conditionGroup) []conditionGroup {
+	var groups []conditionGroup
+	var conditions []string
+	if isAlias {
+		conditions = lr.Aliases
+	} else {
+		conditions = lr.AllowedSourceIps
 	}
-	if path != rootPath {
-		return lcPerRule - 2
+	for i := 0; i < len(conditions); i += remaining {
+		end := i + remaining
+		if end > len(conditions) {
+			end = len(conditions)
+		}
+		if isAlias {
+			group.Aliases = conditions[i:end]
+			groups = append(groups, group)
+			continue
+		}
+		group.AllowedSourceIps = conditions[i:end]
+		groups = append(groups, group)
 	}
-	return lcPerRule - 1
-}
-
-func calculateConditionsHTTP(path string, lcPerRule int, wkldType string) int {
-	if wkldType == backendWkld {
-		lcPerRule = lcPerRule - 2
-	}
-	if path != rootPath {
-		return lcPerRule - 2
-	}
-	return lcPerRule - 1
+	return groups
 }
 
 // ServiceConnect holds configuration for ECS Service Connect.
