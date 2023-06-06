@@ -117,6 +117,7 @@ environments:
           secretsmanager: 'demo/testing/mysql'
     http:
       path: '/'
+      allowed_source_ips: ["192.0.2.0/24"]
       alias:
        - example.com
        - v1.example.com
@@ -124,7 +125,6 @@ environments:
        - v3.example.com
        - v4.example.com 
        - v5.example.com
-       - v6.example.com
       target_container: nginx
       additional_rules:
         - path: "admin"

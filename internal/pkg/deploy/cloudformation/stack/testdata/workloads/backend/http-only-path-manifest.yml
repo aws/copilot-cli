@@ -3,7 +3,7 @@ type: Backend Service
 
 http:
   path: "http-only-path-path"
-  # allowed_source_ips: ["192.0.2.0/24", "192.0.2.0/25","192.0.2.0/26","198.51.100.10/32"]
+  allowed_source_ips: ["192.0.2.0/24", "192.0.2.0/25"]
 
 image:
   # Docker build arguments. For additional overrides: https://aws.github.io/copilot-cli/docs/manifest/backend-service/#image-build
