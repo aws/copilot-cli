@@ -47,8 +47,7 @@ Our integration tests ensure that we can call these remote services and get the 
 **End to End tests** run the CLI in a container and test the actual commands - including spinning and tearing down remote resources (like ECS clusters and VPCs).
 These tests are the most comprehensive and run on both Windows and Linux build fleets.
 Feel free to run these tests - but they require two AWS accounts to run in, so be mindful that resources will be created and destroyed.
-You'll need three [named profiles](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-profiles.html): `default`, `e2etestenv` and `e2eprodenv`.
-Each e2e profile needs to be configured for a different AWS account and a different region than the other e2e profiles.
+You'll need three [named profiles](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-profiles.html): `default`, `test` and `prod`.
 
 Below are the different commands which can be run in the root of the project directory.
 
@@ -56,7 +55,7 @@ Below are the different commands which can be run in the root of the project dir
 * Run `make run-unit-test` to run only Go unit tests.
 * Run `make local-test` to run Go, Node.js unit tests and local integration tests. You'll need Node.js and npm for these tests to run.
 * Run `make integ-test` to run integration tests against your Default AWS profile. **Warning** - this will create AWS resources in your `default` profile.
-* Run `make e2e` to run end to end tests (tests that run commands locally). **Warning** - this will create AWS resources in your account. You'll need Docker running for these tests to run.
+* Run `make e2e` to run end-to-end tests (tests that run commands locally). **Warning** - this will create AWS resources in your account. You'll need Docker running for these tests to run.
 
 ### Generating mocks
 Often times, it's helpful to generate mocks to make unit-testing easier and more focused. We strongly encourage this and encourage you to generate mocks when appropriate! In order to generate mocks:
