@@ -10,7 +10,6 @@ import (
 	awsS3 "github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	s3 "github.com/aws/copilot-cli/internal/pkg/s3"
-	"github.com/xlab/treeprint"
 	"strings"
 	"text/tabwriter"
 
@@ -116,12 +115,14 @@ func (d *StaticSiteDescriber) Describe() (HumanJSONStringer, error) {
 		}
 		tree, err := d.awsS3Client.GetBucketTree(bucketName)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("get tree representation of bucket contents: %w", err)
 		}
-		objects = append(objects, &S3ObjectTree{
-			Environment: env,
-			Tree:        tree,
-		})
+		if tree != "" {
+			objects = append(objects, &S3ObjectTree{
+				Environment: env,
+				Tree:        tree,
+			})
+		}
 	}
 
 	resources := make(map[string][]*stack.Resource)
@@ -163,7 +164,7 @@ func (d *StaticSiteDescriber) Manifest(env string) ([]byte, error) {
 // S3ObjectTree contains serialized parameters for an S3 object tree.
 type S3ObjectTree struct {
 	Environment string
-	Tree        treeprint.Tree
+	Tree        string
 }
 
 // staticSiteDesc contains serialized parameters for a static site.
@@ -172,7 +173,7 @@ type staticSiteDesc struct {
 	Type      string               `json:"type"`
 	App       string               `json:"application"`
 	Routes    []*WebServiceRoute   `json:"routes"`
-	Objects   []*S3ObjectTree      `json:"objects"`
+	Objects   []*S3ObjectTree      `json:"objects,omitempty"`
 	Resources deployedSvcResources `json:"resources,omitempty"`
 
 	environments []string `json:"-"`
@@ -211,7 +212,7 @@ func (w *staticSiteDesc) HumanString() string {
 		writer.Flush()
 		for _, object := range w.Objects {
 			fmt.Fprintf(writer, "\n  %s\t%s\n", "Environment", object.Environment)
-			fmt.Fprintf(writer, object.Tree.String())
+			fmt.Fprintf(writer, object.Tree)
 			writer.Flush()
 		}
 	}

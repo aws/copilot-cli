@@ -123,6 +123,21 @@ func (mr *Mocks3APIMockRecorder) ListObjectVersions(input interface{}) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListObjectVersions", reflect.TypeOf((*Mocks3API)(nil).ListObjectVersions), input)
 }
 
+// ListObjectsV2 mocks base method.
+func (m *Mocks3API) ListObjectsV2(input *s3.ListObjectsV2Input) (*s3.ListObjectsV2Output, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListObjectsV2", input)
+	ret0, _ := ret[0].(*s3.ListObjectsV2Output)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListObjectsV2 indicates an expected call of ListObjectsV2.
+func (mr *Mocks3APIMockRecorder) ListObjectsV2(input interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListObjectsV2", reflect.TypeOf((*Mocks3API)(nil).ListObjectsV2), input)
+}
+
 // MockNamedBinary is a mock of NamedBinary interface.
 type MockNamedBinary struct {
 	ctrl     *gomock.Controller
