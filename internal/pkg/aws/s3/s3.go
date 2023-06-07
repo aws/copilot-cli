@@ -221,6 +221,7 @@ func (s *S3) GetBucketTree(bucket string) (string, error) {
 	if !exists {
 		return "", nil
 	}
+
 	for {
 		listParams := &s3.ListObjectsV2Input{
 			Bucket:            aws.String(bucket),
@@ -243,7 +244,7 @@ func (s *S3) GetBucketTree(bucket string) (string, error) {
 	}
 	// Recursively add folders and their children.
 	if err := s.addNodes(tree, listResp.CommonPrefixes, bucket); err != nil {
-		return tree.String(), err
+		return "", err
 	}
 	return tree.String(), nil
 }
@@ -255,7 +256,7 @@ func (s *S3) addNodes(tree treeprint.Tree, prefixes []*s3.CommonPrefix, bucket s
 	listResp := &s3.ListObjectsV2Output{}
 	var err error
 	for _, prefix := range prefixes {
-		branch := tree.AddBranch(s.extractFileName(aws.StringValue(prefix.Prefix)))
+		branch := tree.AddBranch(s.extractNameFromPath(aws.StringValue(prefix.Prefix)))
 		for {
 			listParams := &s3.ListObjectsV2Input{
 				Bucket:            aws.String(bucket),
@@ -272,7 +273,7 @@ func (s *S3) addNodes(tree treeprint.Tree, prefixes []*s3.CommonPrefix, bucket s
 			}
 		}
 		for _, file := range listResp.Contents {
-			fileName := s.extractFileName(aws.StringValue(file.Key))
+			fileName := s.extractNameFromPath(aws.StringValue(file.Key))
 			branch.AddNode(fileName)
 		}
 		if err := s.addNodes(branch, listResp.CommonPrefixes, bucket); err != nil {
@@ -282,9 +283,9 @@ func (s *S3) addNodes(tree treeprint.Tree, prefixes []*s3.CommonPrefix, bucket s
 	return nil
 }
 
-// extractFileName returns the last element of a path, whether the name of
-// an individual file or the end of an S3 prefix.
-func (s *S3) extractFileName(path string) string {
+// extractNameFromPath returns the last element of a path, whether the name of
+// an individual file or the end of an S3 prefix (folder name).
+func (s *S3) extractNameFromPath(path string) string {
 	path, _ = strings.CutSuffix(path, `/`)
 	if strings.Contains(path, `/`) {
 		split := strings.Split(path, `/`)
