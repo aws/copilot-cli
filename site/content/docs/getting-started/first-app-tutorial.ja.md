@@ -27,6 +27,9 @@ $ cd example
 
 さて、ここからがお楽しみの始まりです。サービスコードと Dockerfile を用意して、それらを AWS にデプロイしたいと思います。それでは、AWS Copilot に手伝ってもらいましょう。
 
+!!! Attention
+    既存に他の目的で作成した `copilot/` ディレクトリがある場合、Copilot がそのディレクトリにファイルを作成することがあります。このような場合は、作業ディレクトリ付近に `copilot/` という名前の空のディレクトリを作成することができます。Copilot はこの空のディレクトリを代わりに使用します。
+
 コードディレクトリ内で次のコマンドを実行します。
 
 ```bash
@@ -40,7 +43,7 @@ $ copilot init
 次にすることは、Copilot からのいくつかの質問に答えることです。Copilot はこれらの質問を基に、お客様のサービスに最適な AWS インフラストラクチャを選択します。質問はいくつかありますので、順を追って説明します。
 
 1. _“What would you like to name your application?” (Application の名前は？)_ - ここでの Application とは、Service の集合体のことを指します。この例では Application には 1 つの Service しかありませんが、マルチサービスの Application を作りたい場合は Copilot で簡単に実現できます。ここでは、この Application の名前を **example-app** としましょう。
-2. _“Which service type best represents your service's architecture?” (Service のアーキテクチャを最もよく表しているサービスタイプはどれですか？)_ - Copilot は、この Application の Service に何をさせたいかを尋ねています。プライベートなバックエンドサービスでしょうか? ここでは、Application を Web からアクセスできるようにしたいので、Enter キーを押して **Load Balanced Web Service** を選択してみましょう。
+2. _“Which service type best represents your service's architecture?” (Service のアーキテクチャを最もよく表している Service タイプはどれですか？)_ - Copilot は、この Application の Service に何をさせたいかを尋ねています。プライベートなバックエンドサービスでしょうか? ここでは、Application を Web からアクセスできるようにしたいので、Enter キーを押して **Load Balanced Web Service** を選択してみましょう。
 3. _“What do you want to name this Load Balanced Web Service?” (この Load Balanced Web Service の名前は？)_ - さて、Application 内の Service を何と呼びますか? お好きな名前を付けてください。しかし、ここではこの Service を **front-end** と名付けることをお勧めします。
 4. _“Which Dockerfile would you like to use for front-end?” (フロントエンドにどの Dockerfile を使用しますか？)_ - ここでは、デフォルトの Dockerfile を選択してください。これは Copilot がビルドしてデプロイする Service で使う Dockerfile です。
 

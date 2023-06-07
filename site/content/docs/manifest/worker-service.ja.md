@@ -109,6 +109,8 @@ Service のアーキテクチャタイプ。[Worker Service](../concepts/service
 <a id="subscribe" href="#subscribe" class="field">`subscribe`</a> <span class="type">Map</span>  
 `subscribe` セクションでは、Worker Service が、同じ Application や Environment にある他の Copilot Service が公開する SNS トピックへのサブスクリプションを作成できるようにします。各トピックは独自の SQS キューを定義できますが、デフォルトではすべてのトピックが Worker Service のデフォルトキューにサブスクライブされます。
 
+デフォルトキューの URI は、環境変数 `COPILOT_QUEUE_URI` としてコンテナにインジェクトされます。
+
 ```yaml
 subscribe:
   topics:
@@ -216,6 +218,17 @@ filter_policy:
 
 <span class="parent-field">subscribe.topics.topic.</span><a id="topic-queue" href="#topic-queue" class="field">`queue`</a> <span class="type">Boolean or Map</span>
 任意項目。トピックに対する SQS キューの設定です。`true` を指定した場合、キューはデフォルト設定で作成されます。トピックに対応したキューに関する特性の属性についてカスタマイズする場合は、このフィールドを Map で指定します。
+1 つ以上のトピック固有キューを指定した場合、`COPILOT_TOPIC_QUEUE_URIS` 変数を使ってそれらのキュー URI にアクセスできます。この変数は、トピック固有のキューの一意な識別子からその URI への JSON Map です。
+
+例えば、`merchant` Service からの `orders` トピックと `merchant` Service からの FIFO トピック `transactions` のトピック別キューを持つワーカーサービスは、以下のような JSON 構造を持つことになります。
+
+```json
+// COPILOT_TOPIC_QUEUE_URIS
+{
+  "merchantOrdersEventsQueue": "https://sqs.eu-central-1.amazonaws.com/...",
+  "merchantTransactionsfifoEventsQueue": "https://sqs.eu-central-1.amazonaws.com/..."
+}
+```
 
 <span class="parent-field">subscribe.topics.topic.queue.</span><a id="subscribe-topics-topic-queue-fifo" href="#subscribe-topics-topic-queue-fifo" class="field">`fifo`</a> <span class="type">Boolean or Map</span>
 任意項目。トピックの SQS FIFO キューに対する設定です。`true` を指定した場合、 FIFO キューがデフォルトの FIFO 設定で作成されます。
