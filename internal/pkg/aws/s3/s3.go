@@ -31,6 +31,9 @@ const (
 
 	// Object location prefixes.
 	s3URIPrefix = "s3://"
+
+	// Delimiter for ListObjectsV2Input.
+	slashDelimiter = "/"
 )
 
 type s3ManagerAPI interface {
@@ -79,7 +82,6 @@ func (s *S3) EmptyBucket(bucket string) error {
 	var listResp *s3.ListObjectVersionsOutput
 	var err error
 
-	// isBucket checks to make sure the bucket exists before proceeding to empty it.
 	isBucket, err := s.isBucket(bucket)
 	if err != nil {
 		return fmt.Errorf("unable to determine the existence of bucket %s: %w", bucket, err)
@@ -192,7 +194,6 @@ func FormatARN(partition, location string) string {
 	return fmt.Sprintf("arn:%s:s3:::%s", partition, location)
 }
 
-// isBucket checks whether the bucket exists before emptying the bucket
 func (s *S3) isBucket(bucket string) (bool, error) {
 	input := &s3.HeadBucketInput{
 		Bucket: aws.String(bucket),
@@ -210,10 +211,6 @@ func (s *S3) isBucket(bucket string) (bool, error) {
 
 // GetBucketTree retrieves the objects in an S3 bucket and creates an ASCII tree representing their folder structure.
 func (s *S3) GetBucketTree(bucket string) (string, error) {
-	listResp := &s3.ListObjectsV2Output{}
-	var err error
-
-	// isBucket check to make sure the bucket exists before proceeding.
 	exists, err := s.isBucket(bucket)
 	if err != nil {
 		return "", fmt.Errorf("unable to determine the existence of bucket %s: %w", bucket, err)
@@ -222,10 +219,11 @@ func (s *S3) GetBucketTree(bucket string) (string, error) {
 		return "", nil
 	}
 
+	listResp := &s3.ListObjectsV2Output{}
 	for {
 		listParams := &s3.ListObjectsV2Input{
 			Bucket:            aws.String(bucket),
-			Delimiter:         aws.String("/"),
+			Delimiter:         aws.String(slashDelimiter),
 			ContinuationToken: listResp.NextContinuationToken,
 		}
 		listResp, err = s.s3Client.ListObjectsV2(listParams)
@@ -256,11 +254,11 @@ func (s *S3) addNodes(tree treeprint.Tree, prefixes []*s3.CommonPrefix, bucket s
 	listResp := &s3.ListObjectsV2Output{}
 	var err error
 	for _, prefix := range prefixes {
-		branch := tree.AddBranch(s.extractNameFromPath(aws.StringValue(prefix.Prefix)))
+		branch := tree.AddBranch(filepath.Base(aws.StringValue(prefix.Prefix)))
 		for {
 			listParams := &s3.ListObjectsV2Input{
 				Bucket:            aws.String(bucket),
-				Delimiter:         aws.String("/"),
+				Delimiter:         aws.String(slashDelimiter),
 				ContinuationToken: listResp.ContinuationToken,
 				Prefix:            prefix.Prefix,
 			}
@@ -273,7 +271,7 @@ func (s *S3) addNodes(tree treeprint.Tree, prefixes []*s3.CommonPrefix, bucket s
 			}
 		}
 		for _, file := range listResp.Contents {
-			fileName := s.extractNameFromPath(aws.StringValue(file.Key))
+			fileName := filepath.Base(aws.StringValue(file.Key))
 			branch.AddNode(fileName)
 		}
 		if err := s.addNodes(branch, listResp.CommonPrefixes, bucket); err != nil {
@@ -281,17 +279,6 @@ func (s *S3) addNodes(tree treeprint.Tree, prefixes []*s3.CommonPrefix, bucket s
 		}
 	}
 	return nil
-}
-
-// extractNameFromPath returns the last element of a path, whether the name of
-// an individual file or the end of an S3 prefix (folder name).
-func (s *S3) extractNameFromPath(path string) string {
-	path, _ = strings.CutSuffix(path, `/`)
-	if strings.Contains(path, `/`) {
-		split := strings.Split(path, `/`)
-		return split[len(split)-1]
-	}
-	return path
 }
 
 func (s *S3) upload(bucket, key string, buf io.Reader) (string, error) {
