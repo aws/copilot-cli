@@ -219,6 +219,8 @@ func (s *S3) GetBucketTree(bucket string) (string, error) {
 		return "", nil
 	}
 
+	var contents []*s3.Object
+	var prefixes []*s3.CommonPrefix
 	listResp := &s3.ListObjectsV2Output{}
 	for {
 		listParams := &s3.ListObjectsV2Input{
@@ -230,6 +232,8 @@ func (s *S3) GetBucketTree(bucket string) (string, error) {
 		if err != nil {
 			return "", fmt.Errorf("list objects for bucket %s: %w", bucket, err)
 		}
+		contents = append(contents, listResp.Contents...)
+		prefixes = append(prefixes, listResp.CommonPrefixes...)
 		if listResp.NextContinuationToken == nil {
 			break
 		}
@@ -237,11 +241,11 @@ func (s *S3) GetBucketTree(bucket string) (string, error) {
 
 	tree := treeprint.New()
 	// Add top-level files.
-	for _, object := range listResp.Contents {
+	for _, object := range contents {
 		tree.AddNode(aws.StringValue(object.Key))
 	}
 	// Recursively add folders and their children.
-	if err := s.addNodes(tree, listResp.CommonPrefixes, bucket); err != nil {
+	if err := s.addNodes(tree, prefixes, bucket); err != nil {
 		return "", err
 	}
 	return tree.String(), nil
@@ -251,9 +255,12 @@ func (s *S3) addNodes(tree treeprint.Tree, prefixes []*s3.CommonPrefix, bucket s
 	if len(prefixes) == 0 {
 		return nil
 	}
+
 	listResp := &s3.ListObjectsV2Output{}
 	var err error
 	for _, prefix := range prefixes {
+		var respContents []*s3.Object
+		var respPrefixes []*s3.CommonPrefix
 		branch := tree.AddBranch(filepath.Base(aws.StringValue(prefix.Prefix)))
 		for {
 			listParams := &s3.ListObjectsV2Input{
@@ -266,15 +273,17 @@ func (s *S3) addNodes(tree treeprint.Tree, prefixes []*s3.CommonPrefix, bucket s
 			if err != nil {
 				return fmt.Errorf("list objects for bucket %s: %w", bucket, err)
 			}
+			respContents = append(respContents, listResp.Contents...)
+			respPrefixes = append(respPrefixes, listResp.CommonPrefixes...)
 			if listResp.NextContinuationToken == nil {
 				break
 			}
 		}
-		for _, file := range listResp.Contents {
+		for _, file := range respContents {
 			fileName := filepath.Base(aws.StringValue(file.Key))
 			branch.AddNode(fileName)
 		}
-		if err := s.addNodes(branch, listResp.CommonPrefixes, bucket); err != nil {
+		if err := s.addNodes(branch, respPrefixes, bucket); err != nil {
 			return err
 		}
 	}
