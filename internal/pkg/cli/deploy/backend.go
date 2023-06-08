@@ -164,7 +164,7 @@ func (d *backendSvcDeployer) validateRuntimeRoutingRule(rule manifest.RoutingRul
 	}
 
 	allowedSourceIPs := make([]string, len(rule.AllowedSourceIps))
-	for idx, IP := range allowedSourceIPs {
+	for idx, IP := range rule.AllowedSourceIps {
 		allowedSourceIPs[idx] = string(IP)
 	}
 	if err := validateConditionValuesPerRule(aliases, allowedSourceIPs); err != nil {

@@ -9,10 +9,10 @@ import (
 	"fmt"
 	"io"
 	"regexp"
-	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/dustin/go-humanize/english"
 	"golang.org/x/mod/semver"
 
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
@@ -216,13 +216,14 @@ type errMaxConditionValuesPerRule struct {
 }
 
 func (e *errMaxConditionValuesPerRule) Error() string {
-	return fmt.Sprintf("can not specify more than five condition values %q %q per Listener rule", strings.Join(e.aliases, ","), strings.Join(e.allowedSourceIps, ","))
+	return fmt.Sprintf("Listener Rule can not more than five Condition Values %s %s per Listener rule", english.WordSeries(e.aliases, "and"),
+		english.WordSeries(e.allowedSourceIps, "and"))
 }
 
 func (e *errMaxConditionValuesPerRule) RecommendedActions() string {
-	return fmt.Sprintf(`You can split the aliases in the manifest with "http.additional_rules" with same path and container port %s`,
-		color.Emphasize(`"http:
-path: "/"
+	return fmt.Sprintf(`You can split the aliases in the manifest with "http.additional_rules" with same path and container port %s`, color.Emphasize(`
+http:
+  path: "/"
   alias: ["example.com", "v1.example.com"]
   allowed_source_ips: ["192.0.2.0/24", "198.51.100.10/32"]
   additional_rules: 

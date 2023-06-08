@@ -719,6 +719,23 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 			Alias: aws.String("foobar.com"),
 		},
 	}
+	mockFiveAliases := []manifest.AdvancedAlias{
+		{
+			Alias: aws.String("example.com"),
+		},
+		{
+			Alias: aws.String("v1.example.com"),
+		},
+		{
+			Alias: aws.String("v2.example.com"),
+		},
+		{
+			Alias: aws.String("v3.example.com"),
+		},
+		{
+			Alias: aws.String("v4.example.com"),
+		},
+	}
 	mockAlias := []manifest.AdvancedAlias{
 		{
 			Alias: aws.String("mockAlias"),
@@ -910,6 +927,30 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 				m.mockValidator.EXPECT().ValidateCertAliases([]string{"example.com", "foobar.com"}, []string{mockCDNCertARN}).Return(mockError)
 			},
 			wantErr: fmt.Errorf("validate ALB runtime configuration for \"http\": validate aliases against the imported CDN certificate for env mockEnv: some error"),
+		},
+		"fail to validates condition values per listener rule": {
+			inRedirectToHTTPS: aws.Bool(false),
+			inAliases: manifest.Alias{
+				AdvancedAliases: mockFiveAliases,
+			},
+			inEnvironment: &config.Environment{
+				Name:   mockEnvName,
+				Region: "us-west-2",
+			},
+			inEnvironmentConfig: func() *manifest.Environment {
+				envConfig := &manifest.Environment{}
+				envConfig.HTTPConfig.Public.Certificates = mockCertARNs
+				return envConfig
+			},
+			inApp: &config.Application{
+				Name: mockAppName,
+			},
+			mock: func(m *deployMocks) {
+				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
+				m.mockEnvVersionGetter.EXPECT().Version().Return("v1.42.0", nil)
+				m.mockValidator.EXPECT().ValidateCertAliases([]string{"example.com", "v1.example.com", "v2.example.com", "v3.example.com", "v4.example.com"}, mockCertARNs).Return(nil)
+			},
+			wantErr: fmt.Errorf(`validate ALB runtime configuration for "http": validate condition values per listener rule:Listener Rule can not more than five Condition Values example.com, v1.example.com, v2.example.com, v3.example.com and v4.example.com  per Listener rule`),
 		},
 		"fail to get public CIDR blocks": {
 			inNLB: manifest.NetworkLoadBalancerConfiguration{
