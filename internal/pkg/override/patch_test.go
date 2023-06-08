@@ -390,6 +390,14 @@ key: asdf
 key: asdf
 "": new`,
 		},
+		"nothing happens with empty patch file": {
+			yaml: `
+a:
+  b: value`,
+			expected: `
+a:
+  b: value`,
+		},
 		"error on invalid patch file format": {
 			overrides: `
 op: add
@@ -519,13 +527,6 @@ a:
 - op: remove
   path: /a/c`,
 			expectedErr: `unable to apply the "remove" patch at index 1: key "/a": "c" not found in map`,
-		},
-		"error with no patches": {
-			yaml: `
-a:
-  b: value`,
-			overrides:   ``,
-			expectedErr: `no YAML patches configured`,
 		},
 		"updates the Description field of a CloudFormation template with YAML patch metrics": {
 			yaml: `

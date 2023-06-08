@@ -62,11 +62,8 @@ func WithPatch(filePath string, opts PatchOpts) *Patch {
 // after applying YAML patches to it.
 func (p *Patch) Override(body []byte) ([]byte, error) {
 	patches, err := unmarshalPatches(p.filePath, p.fs)
-	switch {
-	case err != nil:
+	if err != nil {
 		return nil, err
-	case len(patches) == 0:
-		return nil, fmt.Errorf("no YAML patches configured")
 	}
 
 	var root yaml.Node
