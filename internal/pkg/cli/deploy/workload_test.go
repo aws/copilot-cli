@@ -950,7 +950,7 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 				m.mockEnvVersionGetter.EXPECT().Version().Return("v1.42.0", nil)
 				m.mockValidator.EXPECT().ValidateCertAliases([]string{"example.com", "v1.example.com", "v2.example.com", "v3.example.com", "v4.example.com"}, mockCertARNs).Return(nil)
 			},
-			wantErr: fmt.Errorf(`validate ALB runtime configuration for "http": validate condition values per listener rule:Listener Rule can not more than five Condition Values example.com, v1.example.com, v2.example.com, v3.example.com and v4.example.com  per Listener rule`),
+			wantErr: fmt.Errorf(`validate ALB runtime configuration for "http": validate condition values per listener rule:Listener Rule can not more than five Condition Values example.com, v1.example.com, v2.example.com, v3.example.com and v4.example.com `),
 		},
 		"fail to get public CIDR blocks": {
 			inNLB: manifest.NetworkLoadBalancerConfiguration{
