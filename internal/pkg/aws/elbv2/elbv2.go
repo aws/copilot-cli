@@ -9,12 +9,12 @@ import (
 	"errors"
 	"fmt"
 	"sort"
-	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/elbv2"
+	"github.com/dustin/go-humanize/english"
 )
 
 const (
@@ -46,10 +46,10 @@ func (e *ELBV2) ListenerRulesHostHeaders(ruleARNs []string) ([]string, error) {
 		RuleArns: aws.StringSlice(ruleARNs),
 	})
 	if err != nil {
-		return nil, fmt.Errorf("get listener rule for %s: %w", strings.Join(ruleARNs, ","), err)
+		return nil, fmt.Errorf("get listener rule for %s: %w", english.WordSeries(ruleARNs, "and"), err)
 	}
 	if len(resp.Rules) == 0 {
-		return nil, fmt.Errorf("cannot find listener rule %s", strings.Join(ruleARNs, ","))
+		return nil, fmt.Errorf("cannot find listener rule %s", english.WordSeries(ruleARNs, "and"))
 	}
 	hostHeaderSet := make(map[string]bool)
 	for idx := range ruleARNs {
