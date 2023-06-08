@@ -82,12 +82,12 @@ func (s *S3) EmptyBucket(bucket string) error {
 	var listResp *s3.ListObjectVersionsOutput
 	var err error
 
-	isBucket, err := s.isBucket(bucket)
+	bucketExists, err := s.bucketExists(bucket)
 	if err != nil {
 		return fmt.Errorf("unable to determine the existence of bucket %s: %w", bucket, err)
 	}
 
-	if !isBucket {
+	if !bucketExists {
 		return nil
 	}
 
@@ -194,7 +194,7 @@ func FormatARN(partition, location string) string {
 	return fmt.Sprintf("arn:%s:s3:::%s", partition, location)
 }
 
-func (s *S3) isBucket(bucket string) (bool, error) {
+func (s *S3) bucketExists(bucket string) (bool, error) {
 	input := &s3.HeadBucketInput{
 		Bucket: aws.String(bucket),
 	}
@@ -211,7 +211,7 @@ func (s *S3) isBucket(bucket string) (bool, error) {
 
 // GetBucketTree retrieves the objects in an S3 bucket and creates an ASCII tree representing their folder structure.
 func (s *S3) GetBucketTree(bucket string) (string, error) {
-	exists, err := s.isBucket(bucket)
+	exists, err := s.bucketExists(bucket)
 	if err != nil {
 		return "", fmt.Errorf("unable to determine the existence of bucket %s: %w", bucket, err)
 	}
