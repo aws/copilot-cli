@@ -216,7 +216,7 @@ type errMaxConditionValuesPerRule struct {
 }
 
 func (e *errMaxConditionValuesPerRule) Error() string {
-	return fmt.Sprintf("Listener Rule can not more than five Condition Values %s %s per Listener rule", english.WordSeries(e.aliases, "and"),
+	return fmt.Sprintf("Listener Rule can not more than five Condition Values %s %s", english.WordSeries(e.aliases, "and"),
 		english.WordSeries(e.allowedSourceIps, "and"))
 }
 
