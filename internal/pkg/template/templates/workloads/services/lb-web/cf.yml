@@ -117,14 +117,12 @@ Resources:
     DependsOn:
     {{- if .ALBListener}}
     {{- range $i, $rule := .ALBListener.Rules }}
-    {{- range $j, $conditionGroup := $rule.GenerateConditionGroups $.WorkloadType $.ALBListener.IsHTTPS }}
       {{- if $.ALBListener.IsHTTPS }}
-      - HTTPListenerRuleWithDomain{{ if ne $i 0 }}{{ $i }}{{ end }}Group{{ $j }}
-      - HTTPSListenerRule{{ if ne $i 0 }}{{ $i }}{{ end }}Group{{ $j }}
+      - HTTPListenerRuleWithDomain{{ if ne $i 0 }}{{ $i }}{{ end }}
+      - HTTPSListenerRule{{ if ne $i 0 }}{{ $i }}{{ end }}
       {{- else}}
-      - HTTPListenerRule{{ if ne $i 0 }}{{ $i }}{{ end }}Group{{ $j }}
+      - HTTPListenerRule{{ if ne $i 0 }}{{ $i }}{{ end }}
       {{- end}}
-    {{- end}}
     {{- end}}
     {{- end }}
     {{- if .NLB}}

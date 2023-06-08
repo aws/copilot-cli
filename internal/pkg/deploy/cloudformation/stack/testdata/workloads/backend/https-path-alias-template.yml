@@ -305,7 +305,6 @@ Resources:
     Properties:
       ServiceToken: !GetAtt RulePriorityFunction.Arn
       RulePath: ["/https-path-alias-path"]
-      ConditionGroups: ["1"]
       ListenerArn: !GetAtt EnvControllerAction.InternalHTTPSListenerArn
   
   HTTPRuleWithDomainPriorityAction:
@@ -315,10 +314,9 @@ Resources:
     Properties:
       ServiceToken: !GetAtt RulePriorityFunction.Arn
       RulePath: ["/https-path-alias-path"]
-      ConditionGroups: ["1"]
       ListenerArn: !GetAtt EnvControllerAction.InternalHTTPListenerArn
 
-  HTTPListenerRuleWithDomainGroup0:
+  HTTPListenerRuleWithDomain:
     Metadata:
       'aws:copilot:description': 'An HTTP listener rule for path `/https-path-alias-path` that redirects HTTP to HTTPS'
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
@@ -342,8 +340,8 @@ Resources:
               - "/https-path-alias-path"
               - "/https-path-alias-path/*"
       ListenerArn: !GetAtt EnvControllerAction.InternalHTTPListenerArn
-      Priority: !GetAtt HTTPRuleWithDomainPriorityAction.PriorityGroup0 # Same priority as HTTPS Listener
-  HTTPSListenerRuleGroup0:
+      Priority: !GetAtt HTTPRuleWithDomainPriorityAction.Priority # Same priority as HTTPS Listener
+  HTTPSListenerRule:
     Metadata:
       'aws:copilot:description': 'An HTTPS listener rule for path `/https-path-alias-path` that forwards HTTPS traffic to your tasks'
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
@@ -361,15 +359,15 @@ Resources:
               - "/https-path-alias-path"
               - "/https-path-alias-path/*"
       ListenerArn: !GetAtt EnvControllerAction.InternalHTTPSListenerArn
-      Priority: !GetAtt HTTPSRulePriorityAction.PriorityGroup0
+      Priority: !GetAtt HTTPSRulePriorityAction.Priority
   Service:
     Metadata:
       'aws:copilot:description': 'An ECS service to run and maintain your tasks in the environment cluster'
     Type: AWS::ECS::Service
     DependsOn:
       - EnvControllerAction
-      - HTTPListenerRuleWithDomainGroup0
-      - HTTPSListenerRuleGroup0
+      - HTTPListenerRuleWithDomain
+      - HTTPSListenerRule
     Properties:
       PlatformVersion: LATEST
       Cluster:

@@ -103,7 +103,7 @@ describe("ALB Rule Priority Generator", () => {
       .put("/", (body) => {
         return (
           body.Status === "SUCCESS" &&
-          body.Data.PriorityGroup0 == 1 &&
+          body.Data.Priority == 1 &&
           body.PhysicalResourceId === "alb-rule-priority-mockID"
         );
       })
@@ -116,7 +116,6 @@ describe("ALB Rule Priority Generator", () => {
         ResourceProperties: {
           ListenerArn: testALBListenerArn,
           RulePath: ["/api"],
-          ConditionGroups: ["1"]
         },
         LogicalResourceId: "mockID",
       })
@@ -130,7 +129,7 @@ describe("ALB Rule Priority Generator", () => {
         expect(request.isDone()).toBe(true);
       });
   });
- 
+
   test("Update operation returns root rule priority 50000 when only the default rule is present", () => {
     const describeRulesFake = sinon.fake.resolves({
       Rules: [
@@ -156,7 +155,7 @@ describe("ALB Rule Priority Generator", () => {
       .put("/", (body) => {
         return (
           body.Status === "SUCCESS" &&
-          body.Data.PriorityGroup0 == 50000 &&
+          body.Data.Priority == 50000 &&
           body.PhysicalResourceId === "alb-rule-priority-mockID"
         );
       })
@@ -169,7 +168,6 @@ describe("ALB Rule Priority Generator", () => {
         ResourceProperties: {
           ListenerArn: testALBListenerArn,
           RulePath: ["/"],
-          ConditionGroups: ["1"]
         },
         LogicalResourceId: "mockID",
       })
@@ -207,7 +205,7 @@ describe("ALB Rule Priority Generator", () => {
     AWS.mock("ELBv2", "describeRules", describeRulesFake);
     const request = nock(ResponseURL)
       .put("/", (body) => {
-        return body.Status === "SUCCESS" && body.Data.PriorityGroup0 == 1;
+        return body.Status === "SUCCESS" && body.Data.Priority == 1;
       })
       .reply(200);
 
@@ -218,7 +216,6 @@ describe("ALB Rule Priority Generator", () => {
         ResourceProperties: {
           ListenerArn: testALBListenerArn,
           RulePath: ["/api"],
-          ConditionGroups: ["1"]
         },
       })
       .expectResolve(() => {
@@ -285,7 +282,7 @@ describe("ALB Rule Priority Generator", () => {
     AWS.mock("ELBv2", "describeRules", describeRulesFake);
     const request = nock(ResponseURL)
       .put("/", (body) => {
-        return body.Status === "SUCCESS" && body.Data.PriorityGroup0 == 6;
+        return body.Status === "SUCCESS" && body.Data.Priority == 6;
       })
       .reply(200);
 
@@ -296,7 +293,6 @@ describe("ALB Rule Priority Generator", () => {
         ResourceProperties: {
           ListenerArn: testALBListenerArn,
           RulePath: ["/api"],
-          ConditionGroups: ["1"]
         },
       })
       .expectResolve(() => {
@@ -361,7 +357,7 @@ describe("ALB Rule Priority Generator", () => {
     AWS.mock("ELBv2", "describeRules", describeRulesFake);
     const request = nock(ResponseURL)
       .put("/", (body) => {
-        return body.Status === "SUCCESS" && body.Data.PriorityGroup0 == 49998;
+        return body.Status === "SUCCESS" && body.Data.Priority == 49998;
       })
       .reply(200);
 
@@ -372,7 +368,6 @@ describe("ALB Rule Priority Generator", () => {
         ResourceProperties: {
           ListenerArn: testALBListenerArn,
           RulePath: ["/"],
-          ConditionGroups: ["1"]
         },
       })
       .expectResolve(() => {
@@ -447,7 +442,7 @@ describe("ALB Rule Priority Generator", () => {
     AWS.mock("ELBv2", "describeRules", describeRulesFake);
     const request = nock(ResponseURL)
       .put("/", (body) => {
-        return body.Status === "SUCCESS" && body.Data.PriorityGroup0 == 101;
+        return body.Status === "SUCCESS" && body.Data.Priority == 101;
       })
       .reply(200);
 
@@ -458,7 +453,6 @@ describe("ALB Rule Priority Generator", () => {
         ResourceProperties: {
           ListenerArn: testALBListenerArn,
           RulePath: ["/api"],
-          ConditionGroups: ["1"]
         },
       })
       .expectResolve(() => {
@@ -534,11 +528,9 @@ describe("ALB Rule Priority Generator", () => {
     const request = nock(ResponseURL)
         .put("/", (body) => {
           return body.Status === "SUCCESS" &&
-              body.Data.PriorityGroup0 == 6 &&
-              body.Data.PriorityGroup1== 7 &&
-              body.Data.Priority2Group0 == 8 &&
-              body.Data.Priority1Group0 == 50000 &&
-              body.Data.Priority1Group1 == 49999;
+              body.Data.Priority == 6 &&
+              body.Data.Priority2 == 7 &&
+              body.Data.Priority1 == 50000;
         })
         .reply(200);
 
@@ -549,7 +541,6 @@ describe("ALB Rule Priority Generator", () => {
           ResourceProperties: {
             ListenerArn: testALBListenerArn,
             RulePath: ["/api", "/", "admin"],
-            ConditionGroups: ["2","2","1"]
           },
         })
         .expectResolve(() => {

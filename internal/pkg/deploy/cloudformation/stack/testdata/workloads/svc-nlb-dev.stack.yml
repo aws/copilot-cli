@@ -288,8 +288,8 @@ Resources: # If a bucket URL is specified, that means the template exists.
       'aws:copilot:description': 'An ECS service to run and maintain your tasks in the environment cluster'
     Type: AWS::ECS::Service
     DependsOn:
-      - HTTPListenerRuleWithDomainGroup0
-      - HTTPSListenerRuleGroup0
+      - HTTPListenerRuleWithDomain
+      - HTTPSListenerRule
       - NLBListener
       - NLBListener1
     Properties:
@@ -419,7 +419,6 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Properties:
       ServiceToken: !GetAtt RulePriorityFunction.Arn
       RulePath: ["/"]
-      ConditionGroups: ["1"]
       ListenerArn: !GetAtt EnvControllerAction.HTTPSListenerArn
   
   HTTPRuleWithDomainPriorityAction:
@@ -429,10 +428,9 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Properties:
       ServiceToken: !GetAtt RulePriorityFunction.Arn
       RulePath: ["/"]
-      ConditionGroups: ["1"]
       ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
   
-  HTTPListenerRuleWithDomainGroup0:
+  HTTPListenerRuleWithDomain:
     Metadata:
       'aws:copilot:description': 'An HTTP listener rule for path `/` that redirects HTTP to HTTPS'
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
@@ -459,8 +457,8 @@ Resources: # If a bucket URL is specified, that means the template exists.
             Values:
               - "/*"
       ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
-      Priority: !GetAtt HTTPRuleWithDomainPriorityAction.PriorityGroup0
-  HTTPSListenerRuleGroup0:
+      Priority: !GetAtt HTTPRuleWithDomainPriorityAction.Priority
+  HTTPSListenerRule:
     Metadata:
       'aws:copilot:description': 'An HTTPS listener rule for path `/` that forwards HTTPS traffic to your tasks'
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
@@ -481,7 +479,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
             Values:
               - "/*"
       ListenerArn: !GetAtt EnvControllerAction.HTTPSListenerArn
-      Priority: !GetAtt HTTPSRulePriorityAction.PriorityGroup0
+      Priority: !GetAtt HTTPSRulePriorityAction.Priority
   PublicNetworkLoadBalancer:
     Metadata:
       'aws:copilot:description': 'A Network Load Balancer to distribute public traffic to your service'

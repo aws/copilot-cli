@@ -117,26 +117,13 @@ environments:
           secretsmanager: 'demo/testing/mysql'
     http:
       path: '/'
-      allowed_source_ips: ["192.0.2.0/24"]
-      alias:
-       - example.com
-       - v1.example.com
-       - v2.example.com
-       - v3.example.com
-       - v4.example.com 
-       - v5.example.com
+      alias: example.com
       target_container: nginx
       additional_rules:
         - path: "admin"
           target_container: nginx
           target_port: 8081
-          alias:
-           - example.com
-           - v7.example.com
-           - v8.example.com
-           - v9.example.com
-           - v10.example.com
-           - v11.example.com
+          alias: example.com
         - path: "superadmin"
           target_port: 4000
           alias: example.com
@@ -164,4 +151,3 @@ environments:
       operation:
         image: "alpine:latest"
         command: ["echo", "$COPILOT_APPLICATION_NAME"]
-      

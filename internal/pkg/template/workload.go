@@ -74,12 +74,6 @@ const (
 	NoExposedContainerPort = "-1"
 )
 
-const (
-	totalConditionsPerRule = 5
-	rootPath               = "/"
-	backendWkld            = "Backend Service"
-)
-
 var (
 	// Template names under "workloads/partials/cf/".
 	partialsWorkloadCFTemplateNames = []string{
@@ -487,114 +481,6 @@ func (cfg *ALBListener) RulePaths() []string {
 		rulePaths = append(rulePaths, rule.Path)
 	}
 	return rulePaths
-}
-
-// ConditionGroups returns a slice of all the Splits on the Conditions across multiple listener rules.
-func (cfg *ALBListener) ConditionGroups(wkldType string, isHTTPS bool) []string {
-	var groupCount []string
-	for _, rule := range cfg.Rules {
-		groupCount = append(groupCount, strconv.Itoa(len(rule.GenerateConditionGroups(wkldType, isHTTPS))))
-	}
-	return groupCount
-}
-
-// conditionGroup represents groups of conditions per listener rule.
-type conditionGroup struct {
-	AllowedSourceIps []string
-	Aliases          []string
-}
-
-// GenerateConditionGroups will split allowed source ips and aliases into separate condition groups per listener rule.
-// This is needed because Listener rule has quota of 5 conditions per rule.
-// https://docs.aws.amazon.com/elasticloadbalancing/latest/application/load-balancer-limits.html
-func (lr ALBListenerRule) GenerateConditionGroups(wkldType string, isHTTPS bool) []conditionGroup {
-	var groups []conditionGroup
-	remaining := lr.calculateRemainingConditions(wkldType, isHTTPS)
-	if len(lr.Aliases)+len(lr.AllowedSourceIps) <= remaining {
-		return append(groups, conditionGroup{
-			AllowedSourceIps: lr.AllowedSourceIps,
-			Aliases:          lr.Aliases,
-		})
-	}
-	if isHTTPS && len(lr.AllowedSourceIps) != 0 {
-		return lr.generateConditionsWithSourceIPsAndAlias(remaining - 1)
-	}
-	if isHTTPS {
-		return lr.generateConditionsWithAliasOnly(remaining)
-	}
-	return lr.generateConditionWithSourceIPsOnly(remaining)
-}
-
-func (lr ALBListenerRule) calculateRemainingConditions(wkldType string, isHTTPS bool) int {
-	rcPerRule := totalConditionsPerRule
-	if isHTTPS {
-		return calculateConditionsHTTPS(lr.Path, rcPerRule, len(lr.Aliases))
-	}
-	return calculateConditionsHTTP(lr.Path, rcPerRule, wkldType)
-}
-
-func calculateConditionsHTTPS(path string, rcPerRule int, aliasCount int) int {
-	if aliasCount == 0 {
-		rcPerRule = rcPerRule - 1
-	}
-	if path != rootPath {
-		return rcPerRule - 2
-	}
-	return rcPerRule - 1
-}
-
-func calculateConditionsHTTP(path string, rcPerRule int, wkldType string) int {
-	if wkldType == backendWkld {
-		rcPerRule = rcPerRule - 2
-	}
-	if path != rootPath {
-		return rcPerRule - 2
-	}
-	return rcPerRule - 1
-}
-
-func (lr ALBListenerRule) generateConditionsWithSourceIPsAndAlias(remaining int) []conditionGroup {
-	var groups []conditionGroup
-	for i := 0; i < len(lr.AllowedSourceIps); i++ {
-		var group conditionGroup
-		group.AllowedSourceIps = []string{lr.AllowedSourceIps[i]}
-		groups = append(groups, lr.generateConditionsGroups(remaining, true, group)...)
-	}
-	return groups
-}
-
-func (lr ALBListenerRule) generateConditionsWithAliasOnly(remaining int) []conditionGroup {
-	var group conditionGroup
-	return lr.generateConditionsGroups(remaining, true, group)
-}
-
-func (lr ALBListenerRule) generateConditionWithSourceIPsOnly(remaining int) []conditionGroup {
-	var group conditionGroup
-	return lr.generateConditionsGroups(remaining, false, group)
-}
-
-func (lr ALBListenerRule) generateConditionsGroups(remaining int, isAlias bool, group conditionGroup) []conditionGroup {
-	var groups []conditionGroup
-	var conditions []string
-	if isAlias {
-		conditions = lr.Aliases
-	} else {
-		conditions = lr.AllowedSourceIps
-	}
-	for i := 0; i < len(conditions); i += remaining {
-		end := i + remaining
-		if end > len(conditions) {
-			end = len(conditions)
-		}
-		if isAlias {
-			group.Aliases = conditions[i:end]
-			groups = append(groups, group)
-			continue
-		}
-		group.AllowedSourceIps = conditions[i:end]
-		groups = append(groups, group)
-	}
-	return groups
 }
 
 // ServiceConnect holds configuration for ECS Service Connect.

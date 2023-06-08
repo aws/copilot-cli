@@ -165,7 +165,6 @@ exports.nextAvailableRulePriorityHandler = async function (event, context) {
       case "Create":
       case "Update":
           for (let i=0; i < event.ResourceProperties.RulePath.length; i++){
-            for(let j=0;j< parseInt(event.ResourceProperties.ConditionGroups[i]);j++){
             if (event.ResourceProperties.RulePath[i] === "/") {
               if (nextRootRuleNumber == null){
                 nextRootRuleNumber = await calculateNextRootRulePriority(
@@ -173,9 +172,9 @@ exports.nextAvailableRulePriorityHandler = async function (event, context) {
                 );
               }
               if (i == 0) {
-                responseData["Priority"+"Group"+j]  = nextRootRuleNumber--;
+                responseData["Priority"]  = nextRootRuleNumber--;
               } else {
-                responseData["Priority"+i+"Group"+j]  = nextRootRuleNumber--;
+                responseData["Priority"+i]  = nextRootRuleNumber--;
               }
             } else {
               if (nextNonRootRuleNumber == null) {
@@ -184,12 +183,11 @@ exports.nextAvailableRulePriorityHandler = async function (event, context) {
                 );
               }
               if (i == 0) {
-                responseData["Priority"+"Group"+j] = nextNonRootRuleNumber++;
+                responseData["Priority"] = nextNonRootRuleNumber++;
               } else {
-                responseData["Priority"+i+"Group"+j] = nextNonRootRuleNumber++;
+                responseData["Priority"+i] = nextNonRootRuleNumber++;
               }
             }
-          }
           }
         break;
       // Do nothing on delete, since this isn't a "real" resource.
