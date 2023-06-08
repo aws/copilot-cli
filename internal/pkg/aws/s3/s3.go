@@ -213,7 +213,7 @@ func (s *S3) bucketExists(bucket string) (bool, error) {
 func (s *S3) GetBucketTree(bucket string) (string, error) {
 	exists, err := s.bucketExists(bucket)
 	if err != nil {
-		return "", fmt.Errorf("unable to determine the existence of bucket %s: %w", bucket, err)
+		return "", err
 	}
 	if !exists {
 		return "", nil

@@ -612,7 +612,7 @@ func TestS3_GetBucketTree(t *testing.T) {
 			setupMocks: func(m s3Mocks) {
 				m.s3API.EXPECT().HeadBucket(&s3.HeadBucketInput{Bucket: mockBucket}).Return(&s3.HeadBucketOutput{}, errors.New("some error"))
 			},
-			wantErr: errors.New("unable to determine the existence of bucket bucketName: some error"),
+			wantErr: errors.New("some error"),
 		},
 		"should wrap error if fail to list objects": {
 			setupMocks: func(m s3Mocks) {
