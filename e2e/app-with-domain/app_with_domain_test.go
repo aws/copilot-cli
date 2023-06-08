@@ -302,7 +302,7 @@ var _ = Describe("App With Domain", func() {
 						return 0, err
 					}
 					if string(body) != expectedRootResponseBody {
-						return 0, fmt.Errorf("the message content is '%q', but expected '%q'", string(body), expectedRootResponseBody)
+						return 0, fmt.Errorf("the message content is %q, but expected %q", string(body), expectedRootResponseBody)
 					}
 					return resp.StatusCode, fetchErr
 				}, "60s", "1s").Should(Equal(200))
@@ -322,7 +322,7 @@ var _ = Describe("App With Domain", func() {
 						return 0, err
 					}
 					if string(body) != expectedAdminResponseBody {
-						return 0, fmt.Errorf("the message content is '%q', but expected '%q'", string(body), expectedAdminResponseBody)
+						return 0, fmt.Errorf("the message content is %q, but expected %q", string(body), expectedAdminResponseBody)
 					}
 					return resp.StatusCode, fetchErr
 				}, "60s", "1s").Should(Equal(200))
