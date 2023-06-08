@@ -228,7 +228,7 @@ http:
   allowed_source_ips: ["192.0.2.0/24", "198.51.100.10/32"]
   additional_rules: 
     - alias: ["v2.example.com","v3.example.com"]
-	  allowed_source_ips: ["192.0.2.0/24", "198.51.100.10/32"]
-	  path: "/"
+      allowed_source_ips: ["192.0.2.0/24", "198.51.100.10/32"]
+      path: "/"
 `))
 }
