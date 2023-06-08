@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -197,4 +198,36 @@ func (e *errInvalidAlias) RecommmendActions() string {
 		e.app.Name, e.app.Domain,
 		e.app.Domain,
 		e.app.Domain)
+}
+
+func validateConditionValuesPerRule(aliases []string, allowedSourceIps []string) error {
+	if len(aliases)+len(allowedSourceIps) >= 5 {
+		return &errMaxConditionValuesPerRule{
+			aliases:          aliases,
+			allowedSourceIps: allowedSourceIps,
+		}
+	}
+	return nil
+}
+
+type errMaxConditionValuesPerRule struct {
+	aliases          []string
+	allowedSourceIps []string
+}
+
+func (e *errMaxConditionValuesPerRule) Error() string {
+	return fmt.Sprintf("can not specify more than five condition values %q %q per Listener rule", strings.Join(e.aliases, ","), strings.Join(e.allowedSourceIps, ","))
+}
+
+func (e *errMaxConditionValuesPerRule) RecommendedActions() string {
+	return fmt.Sprintf(`You can split the aliases in the manifest with "http.additional_rules" with same path and container port %s`,
+		color.Emphasize(`"http:
+path: "/"
+  alias: ["example.com", "v1.example.com"]
+  allowed_source_ips: ["192.0.2.0/24", "198.51.100.10/32"]
+  additional_rules: 
+    - alias: ["v2.example.com","v3.example.com"]
+	  allowed_source_ips: ["192.0.2.0/24", "198.51.100.10/32"]
+	  path: "/"
+`))
 }
