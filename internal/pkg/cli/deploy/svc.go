@@ -22,6 +22,10 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 )
 
+const (
+	maxConditionsPerRule = 5
+)
+
 type uploader interface {
 	Upload(bucket, key string, data io.Reader) (string, error)
 }
@@ -201,7 +205,7 @@ func (e *errInvalidAlias) RecommmendActions() string {
 }
 
 func validateConditionValuesPerRule(aliases []string, allowedSourceIps []string) error {
-	if len(aliases)+len(allowedSourceIps) >= 5 {
+	if len(aliases)+len(allowedSourceIps) >= maxConditionsPerRule {
 		return &errMaxConditionValuesPerRule{
 			aliases:          aliases,
 			allowedSourceIps: allowedSourceIps,
