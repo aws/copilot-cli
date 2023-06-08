@@ -497,6 +497,7 @@ func TestS3_GetBucketTree(t *testing.T) {
 	mockBucket := aws.String("bucketName")
 	delimiter := aws.String("/")
 	nonexistentError := awserr.New(errCodeNotFound, "msg", errors.New("some error"))
+	mockContinuationToken := "next"
 
 	firstResp := s3.ListObjectsV2Output{
 		CommonPrefixes: []*s3.CommonPrefix{
@@ -601,6 +602,47 @@ func TestS3_GetBucketTree(t *testing.T) {
 └── top
     └── middle
         └── bottom.html
+`,
+		},
+		"should handle multiple pages of objects": {
+			setupMocks: func(m s3Mocks) {
+				m.s3API.EXPECT().HeadBucket(&s3.HeadBucketInput{Bucket: mockBucket}).Return(&s3.HeadBucketOutput{}, nil)
+				m.s3API.EXPECT().ListObjectsV2(&s3.ListObjectsV2Input{
+					Bucket:            mockBucket,
+					ContinuationToken: nil,
+					Delimiter:         delimiter,
+					Prefix:            nil,
+				}).Return(
+					&s3.ListObjectsV2Output{
+						Contents: []*s3.Object{
+							{Key: aws.String("README.md")},
+						},
+						Delimiter:             delimiter,
+						KeyCount:              aws.Int64(14),
+						MaxKeys:               aws.Int64(1000),
+						Name:                  mockBucket,
+						NextContinuationToken: &mockContinuationToken,
+					}, nil)
+				m.s3API.EXPECT().ListObjectsV2(&s3.ListObjectsV2Input{
+					Bucket:            mockBucket,
+					ContinuationToken: &mockContinuationToken,
+					Delimiter:         delimiter,
+					Prefix:            nil,
+				}).Return(
+					&s3.ListObjectsV2Output{
+						Contents: []*s3.Object{
+							{Key: aws.String("READMETOO.md")},
+						},
+						Delimiter:             delimiter,
+						KeyCount:              aws.Int64(14),
+						MaxKeys:               aws.Int64(1000),
+						Name:                  mockBucket,
+						NextContinuationToken: nil,
+					}, nil)
+			},
+			wantTree: `.
+├── README.md
+└── READMETOO.md
 `,
 		},
 		"return nil if bucket doesn't exist": {
