@@ -104,6 +104,9 @@ func (d *StaticSiteDescriber) Describe() (HumanJSONStringer, error) {
 	var objects []*S3ObjectTree
 	for _, env := range environments {
 		bucketDescriber, bucketNameDescriber, err := d.initS3Client(env)
+		if err != nil {
+			return nil, err
+		}
 		uri, err := d.URI(env)
 		if err != nil {
 			return nil, fmt.Errorf("retrieve service URI: %w", err)
