@@ -33,24 +33,17 @@ type StaticSiteDescriber struct {
 	store                  DeployedEnvServicesLister
 	initWkldStackDescriber func(string) (workloadDescriber, error)
 	wkldDescribers         map[string]workloadDescriber
-	awsS3Client            bucketDescriber
-	s3Client               bucketNameGetter
+	initS3Client           func(string) (bucketDescriber, bucketNameGetter, error)
 }
 
 // NewStaticSiteDescriber instantiates a static site service describer.
 func NewStaticSiteDescriber(opt NewServiceConfig) (*StaticSiteDescriber, error) {
-	defaultSess, err := sessions.ImmutableProvider().Default()
-	if err != nil {
-		return nil, fmt.Errorf("default session: %v", err)
-	}
 	describer := &StaticSiteDescriber{
 		app:             opt.App,
 		svc:             opt.Svc,
 		enableResources: opt.EnableResources,
 		store:           opt.DeployStore,
 		wkldDescribers:  make(map[string]workloadDescriber),
-		awsS3Client:     awsS3.New(defaultSess),
-		s3Client:        s3.New(defaultSess),
 	}
 	describer.initWkldStackDescriber = func(env string) (workloadDescriber, error) {
 		if describer, ok := describer.wkldDescribers[env]; ok {
@@ -66,6 +59,17 @@ func NewStaticSiteDescriber(opt NewServiceConfig) (*StaticSiteDescriber, error) 
 		}
 		describer.wkldDescribers[env] = svcDescr
 		return svcDescr, nil
+	}
+	describer.initS3Client = func(env string) (bucketDescriber, bucketNameGetter, error) {
+		environment, err := opt.ConfigStore.GetEnvironment(opt.App, env)
+		if err != nil {
+			return nil, nil, fmt.Errorf("get environment %s: %w", env, err)
+		}
+		sess, err := sessions.ImmutableProvider().FromRole(environment.ManagerRoleARN, environment.Region)
+		if err != nil {
+			return nil, nil, err
+		}
+		return awsS3.New(sess), s3.New(sess), nil
 	}
 	return describer, nil
 }
@@ -99,6 +103,7 @@ func (d *StaticSiteDescriber) Describe() (HumanJSONStringer, error) {
 	var routes []*WebServiceRoute
 	var objects []*S3ObjectTree
 	for _, env := range environments {
+		bucketDescriber, bucketNameDescriber, err := d.initS3Client(env)
 		uri, err := d.URI(env)
 		if err != nil {
 			return nil, fmt.Errorf("retrieve service URI: %w", err)
@@ -109,11 +114,11 @@ func (d *StaticSiteDescriber) Describe() (HumanJSONStringer, error) {
 				URL:         uri.URI,
 			})
 		}
-		bucketName, err := d.s3Client.BucketName(d.app, env, d.svc)
+		bucketName, err := bucketNameDescriber.BucketName(d.app, env, d.svc)
 		if err != nil {
 			return nil, fmt.Errorf("get bucket name for %q env: %w", env, err)
 		}
-		tree, err := d.awsS3Client.GetBucketTree(bucketName)
+		tree, err := bucketDescriber.GetBucketTree(bucketName)
 		if err != nil {
 			return nil, fmt.Errorf("get tree representation of bucket contents: %w", err)
 		}
@@ -213,8 +218,8 @@ func (w *staticSiteDesc) HumanString() string {
 		for _, object := range w.Objects {
 			fmt.Fprintf(writer, "\n  %s\t%s\n", "Environment", object.Environment)
 			fmt.Fprintf(writer, object.Tree)
-			writer.Flush()
 		}
+		writer.Flush()
 	}
 	if len(w.Resources) != 0 {
 		fmt.Fprint(writer, color.Bold.Sprint("\nResources\n"))

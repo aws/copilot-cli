@@ -264,8 +264,7 @@ Resources
 				store:                  mocks.store,
 				initWkldStackDescriber: func(string) (workloadDescriber, error) { return mocks.wkldDescriber, nil },
 				wkldDescribers:         make(map[string]workloadDescriber),
-				awsS3Client:            mocks.awsS3Client,
-				s3Client:               mocks.s3Client,
+				initS3Client:           func(string) (bucketDescriber, bucketNameGetter, error) { return mocks.awsS3Client, mocks.s3Client, nil },
 			}
 
 			// WHEN
