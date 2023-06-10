@@ -2,8 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Package main contains the root command.
-
-// This is where the program starts
 package main
 
 import (

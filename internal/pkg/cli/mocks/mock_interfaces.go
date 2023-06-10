@@ -4077,6 +4077,21 @@ func (mr *MockpipelineDeployerMockRecorder) DeletePipeline(pipeline interface{})
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeletePipeline", reflect.TypeOf((*MockpipelineDeployer)(nil).DeletePipeline), pipeline)
 }
 
+// DeployDiff mocks base method.
+func (m *MockpipelineDeployer) DeployDiff(env *deploy0.CreatePipelineInput, template string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeployDiff", env, template)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeployDiff indicates an expected call of DeployDiff.
+func (mr *MockpipelineDeployerMockRecorder) DeployDiff(env, template interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployDiff", reflect.TypeOf((*MockpipelineDeployer)(nil).DeployDiff), env, template)
+}
+
 // GetAppResourcesByRegion mocks base method.
 func (m *MockpipelineDeployer) GetAppResourcesByRegion(app *config.Application, region string) (*stack.AppRegionalResources, error) {
 	m.ctrl.T.Helper()
@@ -4690,6 +4705,21 @@ func (m *Mockdeployer) DeployApp(in *deploy0.CreateAppInput) error {
 func (mr *MockdeployerMockRecorder) DeployApp(in interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployApp", reflect.TypeOf((*Mockdeployer)(nil).DeployApp), in)
+}
+
+// DeployDiff mocks base method.
+func (m *Mockdeployer) DeployDiff(env *deploy0.CreatePipelineInput, template string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeployDiff", env, template)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeployDiff indicates an expected call of DeployDiff.
+func (mr *MockdeployerMockRecorder) DeployDiff(env, template interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployDiff", reflect.TypeOf((*Mockdeployer)(nil).DeployDiff), env, template)
 }
 
 // GetAppResourcesByRegion mocks base method.

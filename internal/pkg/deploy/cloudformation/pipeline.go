@@ -15,8 +15,10 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
+	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
+	"github.com/aws/copilot-cli/internal/pkg/template/diff"
 )
 
 const (
@@ -130,4 +132,25 @@ func (cf CloudFormation) pushTemplateToS3Bucket(bucket string, config StackConfi
 		return "", fmt.Errorf("upload pipeline template to S3 bucket %s: %w", bucket, err)
 	}
 	return url, nil
+}
+
+// DeployDiff returns the stringified diff of the template against the deployed template of the pipeline.
+func (cf CloudFormation) DeployDiff(in *deploy.CreatePipelineInput, template string) (string, error) {
+	tmpl, err := cf.Template(stack.NameForPipeline(in.AppName, in.Name, in.IsLegacy))
+	if err != nil {
+		var errNotFound *awscloudformation.ErrStackNotFound
+		if !errors.As(err, &errNotFound) {
+			return "", fmt.Errorf("retrieve the deployed template for %q: %w", in.Name, err)
+		}
+		tmpl = ""
+	}
+	diffTree, err := diff.From(tmpl).ParseWithCFNOverriders([]byte(template))
+	if err != nil {
+		return "", fmt.Errorf("parse the diff against the deployed env stack %q: %w", in.Name, err)
+	}
+	buf := strings.Builder{}
+	if err := diffTree.Write(&buf); err != nil {
+		return "", err
+	}
+	return buf.String(), nil
 }

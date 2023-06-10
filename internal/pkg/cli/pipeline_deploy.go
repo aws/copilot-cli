@@ -24,6 +24,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	deploycfn "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
@@ -62,6 +63,7 @@ type deployPipelineVars struct {
 	appName          string
 	name             string
 	skipConfirmation bool
+	showDiff         bool
 }
 
 type deployPipelineOpts struct {
@@ -75,6 +77,7 @@ type deployPipelineOpts struct {
 	store                           store
 	ws                              wsPipelineReader
 	codestar                        codestar
+	writer                          io.Writer
 	newSvcListCmd                   func(io.Writer, string) cmd
 	newJobListCmd                   func(io.Writer, string) cmd
 	configureDeployedPipelineLister func() deployedPipelineLister
@@ -115,6 +118,7 @@ func newDeployPipelineOpts(vars deployPipelineVars) (*deployPipelineOpts, error)
 		store:              store,
 		prog:               termprogress.NewSpinner(log.DiagnosticWriter),
 		prompt:             prompter,
+		writer:             os.Stdout,
 		sel:                selector.NewWsPipelineSelector(prompter, ws),
 		codestar:           cs.New(defaultSession),
 		newSvcListCmd: func(w io.Writer, appName string) cmd {
@@ -257,11 +261,37 @@ func (o *deployPipelineOpts) Execute() error {
 		AdditionalTags:      o.app.Tags,
 		PermissionsBoundary: o.app.PermissionsBoundary,
 	}
-
-	if err := o.deployPipeline(deployPipelineInput); err != nil {
-		return err
+	if o.showDiff {
+		stackConfig := stack.NewPipelineStackConfig(deployPipelineInput)
+		tpl, err := stackConfig.Template()
+		if err != nil {
+			return fmt.Errorf("stack template local:%w", err)
+		}
+		if err := o.diff(deployPipelineInput, tpl); err != nil {
+			if err := o.deployPipeline(deployPipelineInput); err != nil {
+				return err
+			}
+		}
 	}
 
+	return nil
+}
+
+func (o *deployPipelineOpts) diff(in *deploy.CreatePipelineInput, tpl string) error {
+	if out, err := o.pipelineDeployer.DeployDiff(in, tpl); err != nil {
+		var errHasDiff *errHasDiff
+		if !errors.As(err, &errHasDiff) {
+			return err
+		}
+	} else if out != "" {
+		if _, err := o.writer.Write([]byte(out)); err != nil {
+			return err
+		}
+		return &errHasDiff{}
+	}
+	if _, err := o.writer.Write([]byte("No changes.\n")); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -493,5 +523,6 @@ func buildPipelineDeployCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, "", appFlagDescription)
 	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, "", pipelineFlagDescription)
 	cmd.Flags().BoolVar(&vars.skipConfirmation, yesFlag, false, yesFlagDescription)
+	cmd.Flags().BoolVar(&vars.showDiff, diffFlag, false, diffFlagDescription)
 	return cmd
 }
