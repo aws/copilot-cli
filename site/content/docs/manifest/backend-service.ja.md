@@ -155,7 +155,7 @@
         http:
           path: '/'
           target_port: 8083           # Traffic on "/" is forwarded to the main container, on port 8083. 
-          additional_rules:
+          additional_listeners:
             - path: 'customerdb'
               target_port: 8081       # Traffic on "/customerdb" is forwarded to the main container, on port 8081.
             - path: 'admin' 

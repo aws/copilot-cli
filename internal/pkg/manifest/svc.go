@@ -500,7 +500,7 @@ func (cfg NetworkLoadBalancerListener) exposedPorts(exposedPorts []ExposedPort, 
 	if cfg.IsEmpty() {
 		return nil, nil
 	}
-	nlbPort, _, err := ParsePortMapping(cfg.Port)
+	nlbPort, nlbProtocol, err := ParsePortMapping(cfg.Port)
 	if err != nil {
 		return nil, err
 	}
@@ -522,10 +522,11 @@ func (cfg NetworkLoadBalancerListener) exposedPorts(exposedPorts []ExposedPort, 
 	if cfg.TargetContainer != nil {
 		targetContainer = aws.StringValue(cfg.TargetContainer)
 	}
+	targetProtocol := strings.ToLower(aws.StringValue(nlbProtocol))
 	return []ExposedPort{
 		{
 			Port:          targetPort,
-			Protocol:      "tcp",
+			Protocol:      targetProtocol,
 			ContainerName: targetContainer,
 		},
 	}, nil
