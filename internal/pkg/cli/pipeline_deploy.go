@@ -268,6 +268,7 @@ func (o *deployPipelineOpts) Execute() error {
 			return fmt.Errorf("stack template local:%w", err)
 		}
 		if err := o.diff(deployPipelineInput, tpl); err != nil {
+
 			if err := o.deployPipeline(deployPipelineInput); err != nil {
 				return err
 			}
@@ -446,6 +447,13 @@ func (o *deployPipelineOpts) deployPipeline(in *deploy.CreatePipelineInput) erro
 		return fmt.Errorf("get bucket name: %w", err)
 	}
 	if !exist {
+		contd, err := o.prompt.Confirm(continueDeploymentPrompt, "")
+		if err != nil {
+			return fmt.Errorf("ask whether to continue with the deployment: %w", err)
+		}
+		if !contd {
+			return nil
+		}
 		o.prog.Start(fmt.Sprintf(fmtPipelineDeployStart, color.HighlightUserInput(o.pipeline.Name)))
 
 		// If the source requires CodeStar Connections, the user is prompted to update the connection status.
