@@ -236,11 +236,10 @@ cdn:
 静的アセットに使用する追加の HTTPS ドメインエイリアス。
 
 <span class="parent-field">cdn.static_assets.</span><a id="cdn-static-assets-location" href="#cdn-static-assets-location" class="field">`location`</a> <span class="type">String</span>  
-S3バケットのDNSドメイン名。(例: `EXAMPLE-BUCKET.s3.us-west-2.amazonaws.com`)
+S3 バケットの DNS ドメイン名。(例: `EXAMPLE-BUCKET.s3.us-west-2.amazonaws.com`)
 
 <span class="parent-field">cdn.static_assets.</span><a id="cdn-static-assets-path" href="#cdn-static-assets-path" class="field">`path`</a> <span class="type">String</span>  
-The path pattern (for example, `statics/*`) that specifies which requests should be forwarded to the S3 bucket.
-S3 バケットに転送するリクエストを指定するパスパターン。(例: `statics/*`)
+S3 バケットに転送するリクエストを指定するパスパターン。(例: `static/*`)
 
 <span class="parent-field">cdn.</span><a id="cdn-tls-termination" href="#cdn-tls-termination" class="field">`terminate_tls`</a> <span class="type">Boolean</span>
 CloudFront での TLS ターミネーションを有効化します。
