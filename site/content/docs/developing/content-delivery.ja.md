@@ -115,3 +115,6 @@ Environment Manifest で Environment をデプロイした後は、(プライベ
         }
     }
     ```
+
+## CloudFront を使用して静的な Web サイトを提供するには？
+[copilot init](../commands/init.ja.md) または [copilot svc init](../commands/svc-init.ja.md) コマンドを使用して、静的サイトワークロードを作成します。アップロードするファイルを選択すると、Copilot は個別の専用 CloudFront ディストリビューションと、アセットを含む S3 バケットをプロビジョニングします。
