@@ -17,7 +17,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/apprunner"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatch"
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
-	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/describe/stack"
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
@@ -128,10 +127,9 @@ type appRunnerServiceDescriber struct {
 
 // NewServiceConfig contains fields that initiates service describer struct.
 type NewServiceConfig struct {
-	App             string
-	Svc             string
-	ConfigStore     ConfigStoreSvc
-	SessionProvider *sessions.Provider
+	App         string
+	Svc         string
+	ConfigStore ConfigStoreSvc
 
 	EnableResources bool
 	DeployStore     DeployedEnvServicesLister
