@@ -208,4 +208,3 @@ Outputs:
 !!!info
     FireLens ログドライバーは主となるコンテナのログを様々な宛先へルーティングできる一方で、 [`svc logs`](../commands/svc-logs.ja.md) コマンドは CloudWatch Logs で Copilot Service のために作成したロググループに送信された場合のみログをトラックできます。
 
-
