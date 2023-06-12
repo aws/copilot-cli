@@ -205,7 +205,8 @@ func (e *errInvalidAlias) RecommmendActions() string {
 }
 
 func validateConditionValuesPerRule(aliases []string, allowedSourceIps []string) error {
-	if len(aliases)+len(allowedSourceIps) >= maxConditionsPerRule {
+	if (len(aliases) >= maxConditionsPerRule) || (len(allowedSourceIps) >= maxConditionsPerRule) ||
+		(len(aliases)+len(allowedSourceIps) >= maxConditionsPerRule) {
 		return &errMaxConditionValuesPerRule{
 			aliases:          aliases,
 			allowedSourceIps: allowedSourceIps,
