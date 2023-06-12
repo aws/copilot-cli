@@ -11,11 +11,13 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/spf13/afero"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
+	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	cs "github.com/aws/copilot-cli/internal/pkg/aws/codestar"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	rg "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
@@ -26,6 +28,7 @@ import (
 	deploycfn "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	templatediff "github.com/aws/copilot-cli/internal/pkg/template/diff"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
@@ -278,8 +281,30 @@ func (o *deployPipelineOpts) Execute() error {
 	return nil
 }
 
+func (o *deployPipelineOpts) PipelineDeployDiff(in *deploy.CreatePipelineInput, template string) (string, error) {
+	tmpl, err := o.pipelineDeployer.Template(stack.NameForPipeline(in.AppName, in.Name, in.IsLegacy))
+	if err != nil {
+		var errNotFound *awscloudformation.ErrStackNotFound
+		if !errors.As(err, &errNotFound) {
+			return "", fmt.Errorf("retrieve the deployed template for %q: %w", in.Name, err)
+		}
+		tmpl = ""
+	}
+	diffTree, err := templatediff.From(tmpl).ParseWithCFNOverriders([]byte(template))
+	if err != nil {
+		return "", fmt.Errorf("parse the diff against the deployed env stack %q: %w", in.Name, err)
+	}
+	buf := strings.Builder{}
+	if err := diffTree.Write(&buf); err != nil {
+		return "", err
+	}
+	return buf.String(), nil
+}
+
+// PipelineDeployDiff returns the stringified diff of the template against the deployed template of the pipeline.
 func (o *deployPipelineOpts) diff(in *deploy.CreatePipelineInput, tpl string) error {
-	if out, err := o.pipelineDeployer.DeployDiff(in, tpl); err != nil {
+
+	if out, err := o.PipelineDeployDiff(in, tpl); err != nil {
 		var errHasDiff *errHasDiff
 		if !errors.As(err, &errHasDiff) {
 			return err
@@ -288,12 +313,10 @@ func (o *deployPipelineOpts) diff(in *deploy.CreatePipelineInput, tpl string) er
 		if _, err := o.writer.Write([]byte(out)); err != nil {
 			return err
 		}
-		return &errHasDiff{}
-	}
-	if _, err := o.writer.Write([]byte("No changes.\n")); err != nil {
+	} else if _, err := o.writer.Write([]byte("No changes.\n")); err != nil {
 		return err
 	}
-	return nil
+	return &errHasDiff{}
 }
 
 func (o *deployPipelineOpts) isLegacy(inputName string) (bool, error) {
