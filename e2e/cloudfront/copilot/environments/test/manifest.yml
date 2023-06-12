@@ -14,5 +14,5 @@ cdn:
   terminate_tls: true
   static_assets:
     location: ${BUCKETNAME}.s3.eu-central-1.amazonaws.com
-    alias: static-${TIMENOW}.${DOMAINNAME}
+    alias: frontend-${TIMENOW}.${DOMAINNAME}
     path: static/*

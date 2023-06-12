@@ -108,9 +108,7 @@ func (d *staticSiteDeployer) DeployWorkload(in *DeployWorkloadInput) (ActionReco
 	if err != nil {
 		return nil, err
 	}
-	if err := d.deploy(in.Options, svcStackConfigurationOutput{
-		conf: cloudformation.WrapWithTemplateOverrider(conf, d.overrider),
-	}); err != nil {
+	if err := d.deploy(in.Options, svcStackConfigurationOutput{conf: conf}); err != nil {
 		return nil, err
 	}
 	return noopActionRecommender{}, nil
@@ -176,7 +174,7 @@ func (d *staticSiteDeployer) stackConfiguration(in *StackRuntimeConfiguration) (
 	if err != nil {
 		return nil, fmt.Errorf("create stack configuration: %w", err)
 	}
-	return conf, nil
+	return cloudformation.WrapWithTemplateOverrider(conf, d.overrider), nil
 }
 
 func (d *staticSiteDeployer) validateSources() error {
