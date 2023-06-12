@@ -4,7 +4,7 @@
 Copilot では、Load Balanced Web Service にカスタムドメインを使用する方法が 2 つあります。
 
 1. アプリケーション作成時に `--domain` を使用すると、同じアカウントで Route 53 ドメインを関連付けることができます。
-2. Environment 作成時に `--import-cert-arns` を使用して、検証済みの ACM 証明書を指定してください。
+2. Environment Manifest の [`http.[public/private].certificates`](../manifest/environment.ja.md#http-public-certificates) フィールドを使用して、検証済みの ACM 証明書を Environment にインポートします。
 
 !!!attention
     現時点では、 `copilot app init` を実行した時のみに Route 53　ドメインが関連づけられます。
@@ -80,14 +80,7 @@ nlb:
 [![AWS Copilot CLI v1.8.0 Release Highlights](https://img.youtube.com/vi/Oyr-n59mVjI/0.jpg)](https://www.youtube.com/embed/Oyr-n59mVjI)
 
 ### 既存の有効な証明書に含まれるドメインを使用する
-
-生成される ACM 証明書をより細かく制御したい場合や、[default `alias` options](#customized-domain-alias) が十分に柔軟でない場合は、Environment を作る際に `--import-cert-arns` フラグを指定して、別名を含む検証済みの ACM 証明書をインポートすることが可能です。例えば、以下のような感じです。
-
-```console
-$ copilot env init --import-cert-arns arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789012
-```
-
-また、[Environment Manifest](../manifest/environment.en.md)を修正することで、後からいつでも証明書を追加することができます。
+生成される ACM 証明書をより細かく制御したい場合や、[default `alias` options](#customized-domain-alias) が十分に柔軟でない場合は、エイリアスを含む有効な ACM 証明書を Environment にインポートすることができます。[Environment マニフェスト](../manifest/environment.ja.md)で `http.[public/private].certificates` を指定します。
 
 ```yaml
 type: Environment
