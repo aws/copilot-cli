@@ -95,6 +95,10 @@ type bucketDescriber interface {
 	GetBucketTree(bucket string) (string, error)
 }
 
+type bucketDataGetter interface {
+	GetBucketSizeAndCount(bucket string) (string, int, error)
+}
+
 type bucketNameGetter interface {
 	BucketName(app, env, svc string) (string, error)
 }

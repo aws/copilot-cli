@@ -5,6 +5,8 @@ package describe
 
 import (
 	"fmt"
+	awsS3 "github.com/aws/copilot-cli/internal/pkg/aws/s3"
+	"github.com/aws/copilot-cli/internal/pkg/s3"
 	"sort"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -71,6 +73,15 @@ type appRunnerStatusDescriber struct {
 	eventsGetter logGetter
 }
 
+type staticSiteStatusDescriber struct {
+	app string
+	env string
+	svc string
+
+	svcDescriber *StaticSiteDescriber
+	initS3Client func(string) (bucketDataGetter, bucketNameGetter, error)
+}
+
 // NewServiceStatusConfig contains fields that initiates ServiceStatus struct.
 type NewServiceStatusConfig struct {
 	App         string
@@ -103,7 +114,7 @@ func NewECSStatusDescriber(opt *NewServiceStatusConfig) (*ecsStatusDescriber, er
 
 // NewAppRunnerStatusDescriber instantiates a new appRunnerStatusDescriber struct.
 func NewAppRunnerStatusDescriber(opt *NewServiceStatusConfig) (*appRunnerStatusDescriber, error) {
-	ecsSvcDescriber, err := newAppRunnerServiceDescriber(NewServiceConfig{
+	appRunnerSvcDescriber, err := newAppRunnerServiceDescriber(NewServiceConfig{
 		App: opt.App,
 		Svc: opt.Svc,
 
@@ -117,12 +128,42 @@ func NewAppRunnerStatusDescriber(opt *NewServiceStatusConfig) (*appRunnerStatusD
 		app:          opt.App,
 		env:          opt.Env,
 		svc:          opt.Svc,
-		svcDescriber: ecsSvcDescriber,
-		eventsGetter: cloudwatchlogs.New(ecsSvcDescriber.sess),
+		svcDescriber: appRunnerSvcDescriber,
+		eventsGetter: cloudwatchlogs.New(appRunnerSvcDescriber.sess),
 	}, nil
 }
 
-// Describe returns status of an ECS service.
+// NewStaticSiteStatusDescriber instantiates a new staticSiteStatusDescriber struct.
+func NewStaticSiteStatusDescriber(opt *NewServiceStatusConfig) (*staticSiteStatusDescriber, error) {
+	staticSiteSvcDescriber, err := NewStaticSiteDescriber(NewServiceConfig{
+		App: opt.App,
+		Svc: opt.Svc,
+		//ConfigStore: opt.ConfigStore,
+	})
+	if err != nil {
+		return nil, err
+	}
+	describer := &staticSiteStatusDescriber{
+		app:          opt.App,
+		env:          opt.Env,
+		svc:          opt.Svc,
+		svcDescriber: staticSiteSvcDescriber,
+	}
+	describer.initS3Client = func(env string) (bucketDataGetter, bucketNameGetter, error) {
+		environment, err := opt.ConfigStore.GetEnvironment(opt.App, env)
+		if err != nil {
+			return nil, nil, fmt.Errorf("get environment %s: %w", env, err)
+		}
+		sess, err := sessions.ImmutableProvider().FromRole(environment.ManagerRoleARN, environment.Region)
+		if err != nil {
+			return nil, nil, err
+		}
+		return awsS3.New(sess), s3.New(sess), nil
+	}
+	return describer, nil
+}
+
+// Describe returns the status of an ECS service.
 func (s *ecsStatusDescriber) Describe() (HumanJSONStringer, error) {
 	svcDesc, err := s.svcDescriber.DescribeService(s.app, s.env, s.svc)
 	if err != nil {
@@ -211,6 +252,48 @@ func (s *ecsStatusDescriber) Describe() (HumanJSONStringer, error) {
 	}, nil
 }
 
+// Describe returns the status of an AppRunner service.
+func (a *appRunnerStatusDescriber) Describe() (HumanJSONStringer, error) {
+	svc, err := a.svcDescriber.Service()
+	if err != nil {
+		return nil, fmt.Errorf("get AppRunner service description for App Runner service %s in environment %s: %w", a.svc, a.env, err)
+	}
+	logGroupName := fmt.Sprintf(fmtAppRunnerSvcLogGroupName, svc.Name, svc.ID)
+	logEventsOpts := cloudwatchlogs.LogEventsOpts{
+		LogGroup: logGroupName,
+		Limit:    aws.Int64(defaultServiceLogsLimit),
+	}
+	logEventsOutput, err := a.eventsGetter.LogEvents(logEventsOpts)
+	if err != nil {
+		return nil, fmt.Errorf("get log events for log group %s: %w", logGroupName, err)
+	}
+	return &appRunnerServiceStatus{
+		Service:   *svc,
+		LogEvents: logEventsOutput.Events,
+	}, nil
+}
+
+// Describe returns the status of a Static Site service.
+func (d *staticSiteStatusDescriber) Describe() (HumanJSONStringer, error) {
+	bucketDataGetter, bucketNameGetter, err := d.initS3Client(d.env)
+	if err != nil {
+		return nil, err
+	}
+	bucketName, err := bucketNameGetter.BucketName(d.app, d.env, d.svc)
+	if err != nil {
+		return nil, fmt.Errorf("get bucket name for %s env: %w", d.svc, err)
+	}
+	size, count, err := bucketDataGetter.GetBucketSizeAndCount(bucketName)
+	if err != nil {
+		return nil, fmt.Errorf("get size and count data for %s S3 bucket's contents: %w", bucketName, err)
+	}
+	return &staticSiteServiceStatus{
+		BucketName: bucketName,
+		Size:       size,
+		Count:      count,
+	}, nil
+}
+
 func (s *ecsStatusDescriber) ecsServiceAutoscalingAlarms(cluster, service string) ([]cloudwatch.AlarmStatus, error) {
 	alarmNames, err := s.aasSvcGetter.ECSServiceAlarmNames(cluster, service)
 	if err != nil {
@@ -239,27 +322,6 @@ func (s *ecsStatusDescriber) ecsServiceRollbackAlarms(app, env, svc string) ([]c
 		alarms[i].Type = rollbackAlarmType
 	}
 	return alarms, nil
-}
-
-// Describe returns status of an AppRunner service.
-func (a *appRunnerStatusDescriber) Describe() (HumanJSONStringer, error) {
-	svc, err := a.svcDescriber.Service()
-	if err != nil {
-		return nil, fmt.Errorf("get AppRunner service description for App Runner service %s in environment %s: %w", a.svc, a.env, err)
-	}
-	logGroupName := fmt.Sprintf(fmtAppRunnerSvcLogGroupName, svc.Name, svc.ID)
-	logEventsOpts := cloudwatchlogs.LogEventsOpts{
-		LogGroup: logGroupName,
-		Limit:    aws.Int64(defaultServiceLogsLimit),
-	}
-	logEventsOutput, err := a.eventsGetter.LogEvents(logEventsOpts)
-	if err != nil {
-		return nil, fmt.Errorf("get log events for log group %s: %w", logGroupName, err)
-	}
-	return &appRunnerServiceStatus{
-		Service:   *svc,
-		LogEvents: logEventsOutput.Events,
-	}, nil
 }
 
 // targetHealthForTasks finds the corresponding task, if any, for each target health in a target group.

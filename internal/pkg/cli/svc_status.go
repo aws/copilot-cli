@@ -74,7 +74,18 @@ func newSvcStatusOpts(vars svcStatusVars) (*svcStatusOpts, error) {
 					ConfigStore: configStore,
 				})
 				if err != nil {
-					return fmt.Errorf("creating status describer for apprunner service %s in application %s: %w", o.svcName, o.appName, err)
+					return fmt.Errorf("create status describer for App Runner service %s in application %s: %w", o.svcName, o.appName, err)
+				}
+				o.statusDescriber = d
+			} else if wkld.Type == manifestinfo.StaticSiteType {
+				d, err := describe.NewStaticSiteStatusDescriber(&describe.NewServiceStatusConfig{
+					App:         o.appName,
+					Env:         o.envName,
+					Svc:         o.svcName,
+					ConfigStore: configStore,
+				})
+				if err != nil {
+					return fmt.Errorf("create status describer for Static Site service %s in application %s: %w", o.svcName, o.appName, err)
 				}
 				o.statusDescriber = d
 			} else {
@@ -85,7 +96,7 @@ func newSvcStatusOpts(vars svcStatusVars) (*svcStatusOpts, error) {
 					ConfigStore: configStore,
 				})
 				if err != nil {
-					return fmt.Errorf("creating status describer for service %s in application %s: %w", o.svcName, o.appName, err)
+					return fmt.Errorf("create status describer for service %s in application %s: %w", o.svcName, o.appName, err)
 				}
 				o.statusDescriber = d
 			}

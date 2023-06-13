@@ -7,6 +7,7 @@ package s3
 import (
 	"errors"
 	"fmt"
+	"github.com/dustin/go-humanize"
 	"github.com/xlab/treeprint"
 	"io"
 	"mime"
@@ -218,7 +219,6 @@ func (s *S3) GetBucketTree(bucket string) (string, error) {
 	if !exists {
 		return "", nil
 	}
-
 	var contents []*s3.Object
 	var prefixes []*s3.CommonPrefix
 	listResp := &s3.ListObjectsV2Output{}
@@ -249,6 +249,40 @@ func (s *S3) GetBucketTree(bucket string) (string, error) {
 		return "", err
 	}
 	return tree.String(), nil
+}
+
+// GetBucketSizeAndCount returns the total size and number of objects in an S3 bucket.
+func (s *S3) GetBucketSizeAndCount(bucket string) (string, int, error) {
+	exists, err := s.bucketExists(bucket)
+	if err != nil {
+		return "", 0, err
+	}
+	if !exists {
+		return "", 0, nil
+	}
+	var objects []*s3.Object
+	var size int64
+	var number int
+	listResp := &s3.ListObjectsV2Output{}
+	for {
+		listParams := &s3.ListObjectsV2Input{
+			Bucket:            aws.String(bucket),
+			ContinuationToken: listResp.NextContinuationToken,
+		}
+		listResp, err = s.s3Client.ListObjectsV2(listParams)
+		if err != nil {
+			return "", 0, fmt.Errorf("list objects for bucket %s: %w", bucket, err)
+		}
+		objects = append(objects, listResp.Contents...)
+		if listResp.NextContinuationToken == nil {
+			break
+		}
+	}
+	for _, object := range objects {
+		size = size + aws.Int64Value(object.Size)
+		number = number + 1
+	}
+	return humanize.Bytes(uint64(size)), number, nil
 }
 
 func (s *S3) addNodes(tree treeprint.Tree, prefixes []*s3.CommonPrefix, bucket string) error {
