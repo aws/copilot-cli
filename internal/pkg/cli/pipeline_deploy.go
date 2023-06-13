@@ -281,6 +281,7 @@ func (o *deployPipelineOpts) Execute() error {
 	return nil
 }
 
+// PipelineDeployDiff returns the stringified diff of the template against the deployed template of the pipeline.
 func (o *deployPipelineOpts) PipelineDeployDiff(in *deploy.CreatePipelineInput, template string) (string, error) {
 	tmpl, err := o.pipelineDeployer.Template(stack.NameForPipeline(in.AppName, in.Name, in.IsLegacy))
 	if err != nil {
@@ -301,7 +302,6 @@ func (o *deployPipelineOpts) PipelineDeployDiff(in *deploy.CreatePipelineInput, 
 	return buf.String(), nil
 }
 
-// PipelineDeployDiff returns the stringified diff of the template against the deployed template of the pipeline.
 func (o *deployPipelineOpts) diff(in *deploy.CreatePipelineInput, tpl string) error {
 
 	if out, err := o.PipelineDeployDiff(in, tpl); err != nil {
