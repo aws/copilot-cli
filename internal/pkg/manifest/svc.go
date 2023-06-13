@@ -516,7 +516,7 @@ func (cfg NetworkLoadBalancerListener) exposedPorts(exposedPorts []ExposedPort, 
 	targetProtocol := strings.ToLower(TCP)
 	if nlbProtocol != nil {
 		protocol := strings.ToLower(aws.StringValue(nlbProtocol))
-		// Use TCP for TLS listeners.
+		// Expose TCP port for TLS listeners.
 		if protocol != strings.ToLower(TLS) {
 			targetProtocol = protocol
 		}
