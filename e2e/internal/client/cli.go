@@ -252,7 +252,7 @@ func NewCLI() (*CLI, error) {
 	// your file system and docker image repo isn't polluted
 	// with test data and files. Since this is going to run
 	// from Docker, the binary will be located in the root bin.
-	cliPath := filepath.Join("/Users/penghaoh/Work/PRIVATE-amazon-ecs-archer/bin/local/copilot")
+	cliPath := filepath.Join("/", "bin", "copilot")
 	if os.Getenv("DRYRUN") == "true" {
 		cliPath = filepath.Join("..", "..", "bin", "local", "copilot")
 	}

@@ -1,4 +1,4 @@
-# The manifest for the "mystatic" service.
+# The manifest for the "svc" service.
 # Read the full specification for the "Static Site Service" type at:
 #  https://aws.github.io/copilot-cli/docs/manifest/static-site/
 

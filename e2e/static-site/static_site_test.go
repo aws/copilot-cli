@@ -52,7 +52,7 @@ var _ = Describe("Static Site", func() {
 			_, err = cli.EnvInit(&client.EnvInitRequest{
 				AppName: appName,
 				EnvName: "test",
-				Profile: "default",
+				Profile: "test",
 			})
 		})
 		It("env init should succeed", func() {
@@ -129,6 +129,9 @@ var _ = Describe("Static Site", func() {
 			resp, fetchErr = http.Get(fmt.Sprintf("%s/static", url))
 			Expect(fetchErr).NotTo(HaveOccurred())
 			Expect(resp.StatusCode).To(Equal(200))
+			bodyBytes, err = io.ReadAll(resp.Body)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(bodyBytes)).To(Equal("bye"))
 		})
 	})
 
