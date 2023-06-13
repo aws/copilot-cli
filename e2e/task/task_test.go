@@ -31,7 +31,7 @@ var _ = Describe("Task", func() {
 			_, err = cli.EnvInit(&client.EnvInitRequest{
 				AppName: appName,
 				EnvName: envName,
-				Profile: "default",
+				Profile: envName,
 			})
 		})
 

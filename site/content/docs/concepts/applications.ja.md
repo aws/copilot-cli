@@ -12,6 +12,9 @@ Application は、Service、Environment、Pipeline といった概念を取り�
 
 ## Application の作成
 
+!!! Attention
+    既存に他の目的で作成した `copilot/` ディレクトリがある場合、Copilot がそのディレクトリにファイルを作成することがあります。このような場合は、作業ディレクトリ付近に `copilot/` という名前の空のディレクトリを作成することができます。Copilot はこの空のディレクトリを代わりに使用します。
+
 Application のセットアップは、`copilot init` コマンドで行えます。コマンドを実行すると、新しい Application をセットアップするか、あるいは既存の Application を利用するかを質問されます。
 
 ```bash
