@@ -747,6 +747,45 @@ func (mr *MockbucketDescriberMockRecorder) GetBucketTree(bucket interface{}) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBucketTree", reflect.TypeOf((*MockbucketDescriber)(nil).GetBucketTree), bucket)
 }
 
+// MockbucketDataGetter is a mock of bucketDataGetter interface.
+type MockbucketDataGetter struct {
+	ctrl     *gomock.Controller
+	recorder *MockbucketDataGetterMockRecorder
+}
+
+// MockbucketDataGetterMockRecorder is the mock recorder for MockbucketDataGetter.
+type MockbucketDataGetterMockRecorder struct {
+	mock *MockbucketDataGetter
+}
+
+// NewMockbucketDataGetter creates a new mock instance.
+func NewMockbucketDataGetter(ctrl *gomock.Controller) *MockbucketDataGetter {
+	mock := &MockbucketDataGetter{ctrl: ctrl}
+	mock.recorder = &MockbucketDataGetterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockbucketDataGetter) EXPECT() *MockbucketDataGetterMockRecorder {
+	return m.recorder
+}
+
+// GetBucketSizeAndCount mocks base method.
+func (m *MockbucketDataGetter) GetBucketSizeAndCount(bucket string) (string, int, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetBucketSizeAndCount", bucket)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(int)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// GetBucketSizeAndCount indicates an expected call of GetBucketSizeAndCount.
+func (mr *MockbucketDataGetterMockRecorder) GetBucketSizeAndCount(bucket interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBucketSizeAndCount", reflect.TypeOf((*MockbucketDataGetter)(nil).GetBucketSizeAndCount), bucket)
+}
+
 // MockbucketNameGetter is a mock of bucketNameGetter interface.
 type MockbucketNameGetter struct {
 	ctrl     *gomock.Controller

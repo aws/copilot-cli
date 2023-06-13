@@ -78,7 +78,6 @@ type staticSiteStatusDescriber struct {
 	env string
 	svc string
 
-	svcDescriber *StaticSiteDescriber
 	initS3Client func(string) (bucketDataGetter, bucketNameGetter, error)
 }
 
@@ -135,19 +134,10 @@ func NewAppRunnerStatusDescriber(opt *NewServiceStatusConfig) (*appRunnerStatusD
 
 // NewStaticSiteStatusDescriber instantiates a new staticSiteStatusDescriber struct.
 func NewStaticSiteStatusDescriber(opt *NewServiceStatusConfig) (*staticSiteStatusDescriber, error) {
-	staticSiteSvcDescriber, err := NewStaticSiteDescriber(NewServiceConfig{
-		App: opt.App,
-		Svc: opt.Svc,
-		//ConfigStore: opt.ConfigStore,
-	})
-	if err != nil {
-		return nil, err
-	}
 	describer := &staticSiteStatusDescriber{
-		app:          opt.App,
-		env:          opt.Env,
-		svc:          opt.Svc,
-		svcDescriber: staticSiteSvcDescriber,
+		app: opt.App,
+		env: opt.Env,
+		svc: opt.Svc,
 	}
 	describer.initS3Client = func(env string) (bucketDataGetter, bucketNameGetter, error) {
 		environment, err := opt.ConfigStore.GetEnvironment(opt.App, env)
@@ -281,11 +271,11 @@ func (d *staticSiteStatusDescriber) Describe() (HumanJSONStringer, error) {
 	}
 	bucketName, err := bucketNameGetter.BucketName(d.app, d.env, d.svc)
 	if err != nil {
-		return nil, fmt.Errorf("get bucket name for %s env: %w", d.svc, err)
+		return nil, fmt.Errorf("get bucket name for %q Static Site service in %q environment: %w", d.svc, d.env, err)
 	}
 	size, count, err := bucketDataGetter.GetBucketSizeAndCount(bucketName)
 	if err != nil {
-		return nil, fmt.Errorf("get size and count data for %s S3 bucket's contents: %w", bucketName, err)
+		return nil, fmt.Errorf("get size and count data for %q S3 bucket: %w", bucketName, err)
 	}
 	return &staticSiteServiceStatus{
 		BucketName: bucketName,
