@@ -19,7 +19,7 @@
             timeout: 10s
     ```
     
-   <span class="parent-field">http.additional_rules.healthcheck.</span><a id="http-additional-rules-healthcheck-path" href="#http-additional-rules-healthcheck-path" class="field">`path`</a> <span class="type">String</span>  
+<span class="parent-field">http.additional_rules.healthcheck.</span><a id="http-additional-rules-healthcheck-path" href="#http-additional-rules-healthcheck-path" class="field">`path`</a> <span class="type">String</span>  
     ヘルスチェックリクエスト送信先。
     
 <span class="parent-field">http.additional_rules.healthcheck.</span><a id="http-additional-rules-healthcheck-port" href="#http-additional-rules-healthcheck-port" class="field">`port`</a> <span class="type">Integer</span>  
