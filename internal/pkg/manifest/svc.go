@@ -513,8 +513,16 @@ func (cfg NetworkLoadBalancerListener) exposedPorts(exposedPorts []ExposedPort, 
 	if cfg.TargetPort != nil {
 		targetPort = uint16(aws.IntValue(cfg.TargetPort))
 	}
+	targetProtocol := strings.ToLower(TCP)
+	if nlbProtocol != nil {
+		protocol := strings.ToLower(aws.StringValue(nlbProtocol))
+		// Use TCP for TLS listeners.
+		if protocol != strings.ToLower(TLS) {
+			targetProtocol = protocol
+		}
+	}
 	for _, exposedPort := range exposedPorts {
-		if targetPort == exposedPort.Port {
+		if targetPort == exposedPort.Port && targetProtocol == exposedPort.Protocol {
 			return nil, nil
 		}
 	}
@@ -522,7 +530,7 @@ func (cfg NetworkLoadBalancerListener) exposedPorts(exposedPorts []ExposedPort, 
 	if cfg.TargetContainer != nil {
 		targetContainer = aws.StringValue(cfg.TargetContainer)
 	}
-	targetProtocol := strings.ToLower(aws.StringValue(nlbProtocol))
+
 	return []ExposedPort{
 		{
 			Port:          targetPort,
