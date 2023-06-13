@@ -790,6 +790,21 @@ func TestS3_GetBucketSizeAndCount(t *testing.T) {
 			wantSize:  "444 B",
 			wantCount: 2,
 		},
+		"empty bucket": {
+			setupMocks: func(m s3Mocks) {
+				m.s3API.EXPECT().HeadBucket(&s3.HeadBucketInput{Bucket: mockBucket}).Return(&s3.HeadBucketOutput{}, nil)
+				m.s3API.EXPECT().ListObjectsV2(&s3.ListObjectsV2Input{
+					Bucket:            mockBucket,
+					ContinuationToken: nil,
+					Prefix:            nil,
+				}).Return(&s3.ListObjectsV2Output{
+					Contents: nil,
+					Name:     mockBucket,
+				}, nil)
+			},
+			wantSize:  "0 B",
+			wantCount: 0,
+		},
 		"return nil if bucket doesn't exist": {
 			setupMocks: func(m s3Mocks) {
 				m.s3API.EXPECT().HeadBucket(&s3.HeadBucketInput{Bucket: mockBucket}).Return(&s3.HeadBucketOutput{}, nonexistentError)
