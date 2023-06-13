@@ -75,7 +75,7 @@ var _ = Describe("CloudFront", func() {
 			_, err = cli.EnvInit(&client.EnvInitRequest{
 				AppName: appName,
 				EnvName: "test",
-				Profile: "default",
+				Profile: "test",
 			})
 		})
 		It("env init should succeed", func() {

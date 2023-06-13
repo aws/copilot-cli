@@ -86,21 +86,21 @@ var _ = Describe("Customized Env", func() {
 			_, testEnvInitErr = cli.EnvInit(&client.EnvInitRequest{
 				AppName:       appName,
 				EnvName:       "test",
-				Profile:       "default",
+				Profile:       "test",
 				VPCImport:     vpcImport,
 				CustomizedEnv: true,
 			})
 			_, prodEnvInitErr = cli.EnvInit(&client.EnvInitRequest{
 				AppName:       appName,
 				EnvName:       "prod",
-				Profile:       "default",
+				Profile:       "prod",
 				VPCConfig:     vpcConfig,
 				CustomizedEnv: true,
 			})
 			_, sharedEnvInitErr = cli.EnvInit(&client.EnvInitRequest{
 				AppName:       appName,
 				EnvName:       "shared",
-				Profile:       "default",
+				Profile:       "shared",
 				VPCImport:     vpcImport,
 				CustomizedEnv: true,
 			})
