@@ -56,7 +56,7 @@
 
 既存リソースに対して、新しいプロパティを追加する場合:
 
-```yaml 
+```yaml
 - op: add
   path: /Resources/LogGroup/Properties/Tags
   value:
@@ -78,12 +78,12 @@
 - op: add
   path: /Resources/TaskRole/Properties/Policies/-
   value:
+    PolicyName: DynamoDBReader
     PolicyDocument:
-      PolicyName: DynamoDBReader
       Version: "2012-10-17"
       Statement:
         - Effect: Allow
-          Action: 
+          Action:
             - dynamodb:Get*
           Resource: '*'
 ```

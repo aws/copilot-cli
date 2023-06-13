@@ -68,6 +68,18 @@ subscribe:
 
 Copilot は、この Worker Service のキューと、`api` サービスの `ordersTopic` トピックの間にサブスクリプションを作成します。また、キューの URI を、コンテナ内の環境変数 `COPILOT_QUEUE_URI` に注入します。
 
+1 つ以上のトピック固有キューを指定した場合、`COPILOT_TOPIC_QUEUE_URIS` 変数を使ってそれらのキュー URI にアクセスできます。この変数は、トピック固有のキューの一意な識別子からその URI への JSON Map です。
+
+例えば、`merchant` Service からの `orders` トピックと `merchant` Service からの FIFO トピック `transactions` のトピック別キューを持つワーカーサービスは、以下のような JSON 構造を持つことになります。
+
+```json
+// COPILOT_TOPIC_QUEUE_URIS
+{
+  "merchantOrdersEventsQueue": "https://sqs.eu-central-1.amazonaws.com/...",
+  "merchantTransactionsfifoEventsQueue": "https://sqs.eu-central-1.amazonaws.com/..."
+}
+```
+
 ### Javascript での例
 
 Worker Service 内のコンテナの中心となるビジネスロジックには、キューからメッセージをプルすることが含まれます。これを AWS SDK で行うには、選択した言語用の SQS クライアントを使用します。例えば Javascript でキューからメッセージをプルしたり、処理や削除をするためには、以下のようなコードスニペットになります。

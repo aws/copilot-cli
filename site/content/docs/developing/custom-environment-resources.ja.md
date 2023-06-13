@@ -17,9 +17,7 @@ Which credentials would you like to use to create name? [profile default]
   > No, I'd like to import existing resources (VPC, subnets).
 ```
 
-インポート機能を利用し、2 つのパブリックサブネットのみでプライベートサブネットが無い VPC ( default VPC のような ) や 2 つのプライベートサブネットのみでパブリックサブネットが無い、インターネットに面していないワークロード向けの VPC を取り込む事ができます。（分離されたネットワークについてより詳細に知りたい方は、[こちら](https://github.com/aws/copilot-cli/discussions/2378)をご覧ください。）
-
-
+インポート機能を使用し、インターネットに接続しないワークロード用に 2 つのパブリックサブネットと 2 つのプライベートサブネットを持つ VPC、2 つのパブリックサブネットのみでプライベートサブネットを持たない VPC (default VPC など)、または 2 つのプライベートサブネットのみでパブリックサブネットを持たない VPC を取り込む事ができます。(分離されたネットワークについてより詳細に知りたい方は、[こちら](https://github.com/aws/copilot-cli/discussions/2378)をご覧ください。)
 
 ## Copilot のデフォルトリソースの変更
 デフォルト設定を選択すると、 Copilot は [AWS のベストプラクティス](https://aws.amazon.com/blogs/containers/amazon-ecs-availability-best-practices/)に従って 2 つのアベイラビリティゾーンにまたがった VPC と 2 つのパブリックサブネットおよびプライベートサブネットを作成します。
