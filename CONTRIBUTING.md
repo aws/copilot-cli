@@ -47,7 +47,7 @@ Our integration tests ensure that we can call these remote services and get the 
 **End to End tests** run the CLI in a container and test the actual commands - including spinning and tearing down remote resources (like ECS clusters and VPCs).
 These tests are the most comprehensive and run on both Windows and Linux build fleets.
 Feel free to run these tests - but they require two AWS accounts to run in, so be mindful that resources will be created and destroyed.
-You'll need three [named profiles](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-profiles.html): `default`, `test` and `prod`.
+You'll need four [named profiles](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-profiles.html): `default`, `test`, `prod` and `shared`.
 
 Below are the different commands which can be run in the root of the project directory.
 
