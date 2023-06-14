@@ -704,3 +704,7 @@ type envPackager interface {
 	AddonsTemplate() (string, error)
 	templateDiffer
 }
+
+type pipelineStackConfig interface {
+	Template() (string, error)
+}

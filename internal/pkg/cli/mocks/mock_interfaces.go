@@ -7663,3 +7663,41 @@ func (mr *MockenvPackagerMockRecorder) Validate(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Validate", reflect.TypeOf((*MockenvPackager)(nil).Validate), arg0)
 }
+
+// MockpipelineStackConfig is a mock of pipelineStackConfig interface.
+type MockpipelineStackConfig struct {
+	ctrl     *gomock.Controller
+	recorder *MockpipelineStackConfigMockRecorder
+}
+
+// MockpipelineStackConfigMockRecorder is the mock recorder for MockpipelineStackConfig.
+type MockpipelineStackConfigMockRecorder struct {
+	mock *MockpipelineStackConfig
+}
+
+// NewMockpipelineStackConfig creates a new mock instance.
+func NewMockpipelineStackConfig(ctrl *gomock.Controller) *MockpipelineStackConfig {
+	mock := &MockpipelineStackConfig{ctrl: ctrl}
+	mock.recorder = &MockpipelineStackConfigMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockpipelineStackConfig) EXPECT() *MockpipelineStackConfigMockRecorder {
+	return m.recorder
+}
+
+// Template mocks base method.
+func (m *MockpipelineStackConfig) Template() (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Template")
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Template indicates an expected call of Template.
+func (mr *MockpipelineStackConfigMockRecorder) Template() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Template", reflect.TypeOf((*MockpipelineStackConfig)(nil).Template))
+}

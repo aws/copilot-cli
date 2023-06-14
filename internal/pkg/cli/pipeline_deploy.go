@@ -72,17 +72,19 @@ type deployPipelineVars struct {
 type deployPipelineOpts struct {
 	deployPipelineVars
 
-	pipelineDeployer                pipelineDeployer
-	sel                             wsPipelineSelector
-	prog                            progress
-	prompt                          prompter
-	region                          string
-	store                           store
-	ws                              wsPipelineReader
-	codestar                        codestar
-	writer                          io.Writer
-	newSvcListCmd                   func(io.Writer, string) cmd
-	newJobListCmd                   func(io.Writer, string) cmd
+	pipelineDeployer    pipelineDeployer
+	sel                 wsPipelineSelector
+	prog                progress
+	prompt              prompter
+	region              string
+	store               store
+	ws                  wsPipelineReader
+	codestar            codestar
+	writer              io.Writer
+	newSvcListCmd       func(io.Writer, string) cmd
+	newJobListCmd       func(io.Writer, string) cmd
+	pipelineStackConfig func(in *deploy.CreatePipelineInput) pipelineStackConfig
+
 	configureDeployedPipelineLister func() deployedPipelineLister
 
 	// cached variables
@@ -124,6 +126,9 @@ func newDeployPipelineOpts(vars deployPipelineVars) (*deployPipelineOpts, error)
 		writer:             os.Stdout,
 		sel:                selector.NewWsPipelineSelector(prompter, ws),
 		codestar:           cs.New(defaultSession),
+		pipelineStackConfig: func(in *deploy.CreatePipelineInput) pipelineStackConfig {
+			return stack.NewPipelineStackConfig(in)
+		},
 		newSvcListCmd: func(w io.Writer, appName string) cmd {
 			return &listSvcOpts{
 				listWkldVars: listWkldVars{
@@ -264,25 +269,36 @@ func (o *deployPipelineOpts) Execute() error {
 		AdditionalTags:      o.app.Tags,
 		PermissionsBoundary: o.app.PermissionsBoundary,
 	}
-	if o.showDiff {
-		stackConfig := stack.NewPipelineStackConfig(deployPipelineInput)
-		tpl, err := stackConfig.Template()
-		if err != nil {
-			return fmt.Errorf("stack template local:%w", err)
-		}
-		if err := o.diff(deployPipelineInput, tpl); err != nil {
 
-			if err := o.deployPipeline(deployPipelineInput); err != nil {
+	if o.showDiff {
+		tpl, err := o.pipelineStackConfig(deployPipelineInput).Template()
+		if err != nil {
+			return fmt.Errorf("stack template local: %w", err)
+		}
+		if err = o.diff(deployPipelineInput, tpl); err != nil {
+			var errHasDiff *errHasDiff
+			if !errors.As(err, &errHasDiff) {
 				return err
 			}
 		}
+		if !o.skipConfirmation {
+			contd, err := o.prompt.Confirm(continueDeploymentPrompt, "")
+			if err != nil {
+				return fmt.Errorf("ask whether to continue with the deployment: %w", err)
+			}
+			if !contd {
+				return nil
+			}
+		}
 	}
-
+	if err := o.deployPipeline(deployPipelineInput); err != nil {
+		return err
+	}
 	return nil
 }
 
 // PipelineDeployDiff returns the stringified diff of the template against the deployed template of the pipeline.
-func (o *deployPipelineOpts) PipelineDeployDiff(in *deploy.CreatePipelineInput, template string) (string, error) {
+func (o *deployPipelineOpts) pipelineDeployDiff(in *deploy.CreatePipelineInput, template string) (string, error) {
 	tmpl, err := o.pipelineDeployer.Template(stack.NameForPipeline(in.AppName, in.Name, in.IsLegacy))
 	if err != nil {
 		var errNotFound *awscloudformation.ErrStackNotFound
@@ -293,7 +309,7 @@ func (o *deployPipelineOpts) PipelineDeployDiff(in *deploy.CreatePipelineInput, 
 	}
 	diffTree, err := templatediff.From(tmpl).ParseWithCFNOverriders([]byte(template))
 	if err != nil {
-		return "", fmt.Errorf("parse the diff against the deployed env stack %q: %w", in.Name, err)
+		return "", fmt.Errorf("parse the diff against the deployed pipeline stack %q: %w", in.Name, err)
 	}
 	buf := strings.Builder{}
 	if err := diffTree.Write(&buf); err != nil {
@@ -304,7 +320,7 @@ func (o *deployPipelineOpts) PipelineDeployDiff(in *deploy.CreatePipelineInput, 
 
 func (o *deployPipelineOpts) diff(in *deploy.CreatePipelineInput, tpl string) error {
 
-	if out, err := o.PipelineDeployDiff(in, tpl); err != nil {
+	if out, err := o.pipelineDeployDiff(in, tpl); err != nil {
 		var errHasDiff *errHasDiff
 		if !errors.As(err, &errHasDiff) {
 			return err
@@ -470,13 +486,6 @@ func (o *deployPipelineOpts) deployPipeline(in *deploy.CreatePipelineInput) erro
 		return fmt.Errorf("get bucket name: %w", err)
 	}
 	if !exist {
-		contd, err := o.prompt.Confirm(continueDeploymentPrompt, "")
-		if err != nil {
-			return fmt.Errorf("ask whether to continue with the deployment: %w", err)
-		}
-		if !contd {
-			return nil
-		}
 		o.prog.Start(fmt.Sprintf(fmtPipelineDeployStart, color.HighlightUserInput(o.pipeline.Name)))
 
 		// If the source requires CodeStar Connections, the user is prompted to update the connection status.
@@ -507,13 +516,17 @@ func (o *deployPipelineOpts) deployPipeline(in *deploy.CreatePipelineInput) erro
 	}
 
 	// If the stack already exists - we update it
-	shouldUpdate, err := o.shouldUpdate()
-	if err != nil {
-		return err
+
+	if !o.showDiff {
+		shouldUpdate, err := o.shouldUpdate()
+		if err != nil {
+			return err
+		}
+		if !shouldUpdate {
+			return nil
+		}
 	}
-	if !shouldUpdate {
-		return nil
-	}
+
 	o.prog.Start(fmt.Sprintf(fmtPipelineDeployProposalStart, color.HighlightUserInput(o.pipeline.Name)))
 	if err := o.pipelineDeployer.UpdatePipeline(in, bucketName); err != nil {
 		o.prog.Stop(log.Serrorf(fmtPipelineDeployProposalFailed, color.HighlightUserInput(o.pipeline.Name)))

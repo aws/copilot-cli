@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
@@ -26,6 +27,8 @@ type deployPipelineMocks struct {
 	prompt                 *mocks.Mockprompter
 	prog                   *mocks.Mockprogress
 	deployer               *mocks.MockpipelineDeployer
+	pipelineStackConfig    *mocks.MockpipelineStackConfig
+	mockDiffWriter         *strings.Builder
 	ws                     *mocks.MockwsPipelineReader
 	actionCmd              *mocks.MockactionCommand
 	deployedPipelineLister *mocks.MockdeployedPipelineLister
@@ -232,6 +235,7 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 		inPipelineFile string
 		callMocks      func(m deployPipelineMocks)
 		expectedError  error
+		inShowDiff     bool
 	}{
 		"create and deploy pipeline": {
 			inApp:     &app,
@@ -718,6 +722,191 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 			},
 			expectedError: nil,
 		},
+		"error if failed to generate the template to show diff": {
+			inApp:      &app,
+			inAppName:  appName,
+			inRegion:   region,
+			inShowDiff: true,
+			callMocks: func(m deployPipelineMocks) {
+				gomock.InOrder(
+					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployResourcesStart, appName)).Times(1),
+					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
+					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
+					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestPath).Return(mockPipelineManifest, nil),
+					m.ws.EXPECT().Rel(pipelineManifestPath).Return(relativePath, nil),
+					m.actionCmd.EXPECT().Execute().Times(2),
+
+					// convertStages
+					m.store.EXPECT().GetEnvironment(appName, "chicken").Return(mockEnv, nil).Times(1),
+					m.store.EXPECT().GetEnvironment(appName, "wings").Return(mockEnv, nil).Times(1),
+
+					// getArtifactBuckets
+					m.deployer.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil),
+
+					// check if the pipeline has been deployed using a legacy naming.
+					m.deployedPipelineLister.EXPECT().ListDeployedPipelines(appName).Return([]deploy.Pipeline{}, nil),
+
+					m.pipelineStackConfig.EXPECT().Template().Return("", errors.New("some error")),
+				)
+
+			},
+			expectedError: fmt.Errorf("stack template local: some error"),
+		},
+		"failed to fetch the template of deployed stack": {
+			inApp:      &app,
+			inAppName:  appName,
+			inRegion:   region,
+			inShowDiff: true,
+			callMocks: func(m deployPipelineMocks) {
+				gomock.InOrder(
+					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployResourcesStart, appName)).Times(1),
+					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
+					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
+					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestPath).Return(mockPipelineManifest, nil),
+					m.ws.EXPECT().Rel(pipelineManifestPath).Return(relativePath, nil),
+					m.actionCmd.EXPECT().Execute().Times(2),
+
+					// convertStages
+					m.store.EXPECT().GetEnvironment(appName, "chicken").Return(mockEnv, nil).Times(1),
+					m.store.EXPECT().GetEnvironment(appName, "wings").Return(mockEnv, nil).Times(1),
+
+					// getArtifactBuckets
+					m.deployer.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil),
+
+					// check if the pipeline has been deployed using a legacy naming.
+					m.deployedPipelineLister.EXPECT().ListDeployedPipelines(appName).Return([]deploy.Pipeline{}, nil),
+
+					m.pipelineStackConfig.EXPECT().Template().Return("template one", nil),
+					m.deployer.EXPECT().Template(gomock.Any()).Return("", errors.New("some error")),
+				)
+
+			},
+			expectedError: fmt.Errorf("retrieve the deployed template for %q: some error", pipelineName),
+		},
+		"failed to get the continueDeploymentPrompt": {
+			inApp:      &app,
+			inAppName:  appName,
+			inRegion:   region,
+			inShowDiff: true,
+			callMocks: func(m deployPipelineMocks) {
+				m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployResourcesStart, appName)).Times(1)
+				m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil)
+				m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1)
+				m.ws.EXPECT().ReadPipelineManifest(pipelineManifestPath).Return(mockPipelineManifest, nil)
+				m.ws.EXPECT().Rel(pipelineManifestPath).Return(relativePath, nil)
+				m.actionCmd.EXPECT().Execute().Times(2)
+
+				// convertStages
+				m.store.EXPECT().GetEnvironment(appName, "chicken").Return(mockEnv, nil).Times(1)
+				m.store.EXPECT().GetEnvironment(appName, "wings").Return(mockEnv, nil).Times(1)
+
+				// getArtifactBuckets
+				m.deployer.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil)
+
+				// check if the pipeline has been deployed using a legacy naming.
+				m.deployedPipelineLister.EXPECT().ListDeployedPipelines(appName).Return([]deploy.Pipeline{}, nil)
+
+				m.pipelineStackConfig.EXPECT().Template().Return("name: mockEnv\ntype: Environment", nil)
+				m.deployer.EXPECT().Template(gomock.Any()).Return("name: mockEnv\ntype: Environment", nil)
+				m.mockDiffWriter = &strings.Builder{}
+				m.prompt.EXPECT().Confirm(continueDeploymentPrompt, "").Return(false, errors.New("some error"))
+
+			},
+			expectedError: fmt.Errorf("ask whether to continue with the deployment: some error"),
+		},
+		"Successfully show diff and create a new pipeline": {
+			inApp:      &app,
+			inAppName:  appName,
+			inRegion:   region,
+			inShowDiff: true,
+			callMocks: func(m deployPipelineMocks) {
+				m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployResourcesStart, appName)).Times(1)
+				m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil)
+				m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1)
+				m.ws.EXPECT().ReadPipelineManifest(pipelineManifestPath).Return(mockPipelineManifest, nil)
+				m.ws.EXPECT().Rel(pipelineManifestPath).Return(relativePath, nil)
+				m.actionCmd.EXPECT().Execute().Times(2)
+
+				// convertStages
+				m.store.EXPECT().GetEnvironment(appName, "chicken").Return(mockEnv, nil).Times(1)
+				m.store.EXPECT().GetEnvironment(appName, "wings").Return(mockEnv, nil).Times(1)
+
+				// getArtifactBuckets
+				m.deployer.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil)
+
+				// check if the pipeline has been deployed using a legacy naming.
+				m.deployedPipelineLister.EXPECT().ListDeployedPipelines(appName).Return([]deploy.Pipeline{}, nil)
+
+				m.deployer.EXPECT().PipelineExists(gomock.Any()).DoAndReturn(func(in *deploy.CreatePipelineInput) (bool, error) {
+					if in.IsLegacy {
+						return false, errors.New("should not be a legacy pipeline")
+					}
+					return false, nil
+				})
+
+				m.pipelineStackConfig.EXPECT().Template().Return("name: mockEnv\ntype: Environment", nil)
+				m.deployer.EXPECT().Template(gomock.Any()).Return("name: mockEnv\ntype: Environment", nil)
+				m.mockDiffWriter = &strings.Builder{}
+				m.prompt.EXPECT().Confirm(continueDeploymentPrompt, "").Return(true, nil)
+				m.deployer.EXPECT().GetAppResourcesByRegion(&app, region).Return(mockResource, nil)
+				m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployStart, pipelineName)).Times(1)
+				m.deployer.EXPECT().CreatePipeline(gomock.Any(), gomock.Any()).DoAndReturn(func(in *deploy.CreatePipelineInput, _ string) error {
+					if in.IsLegacy {
+						return errors.New("should not be a legacy pipeline")
+					}
+					return nil
+				})
+				m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployComplete, pipelineName)).Times(1)
+
+			},
+		},
+		"Successfully show diff and redeploy an existing pipeline": {
+			inApp:      &app,
+			inAppName:  appName,
+			inRegion:   region,
+			inShowDiff: true,
+			callMocks: func(m deployPipelineMocks) {
+				m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployResourcesStart, appName)).Times(1)
+				m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil)
+				m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1)
+				m.ws.EXPECT().ReadPipelineManifest(pipelineManifestPath).Return(mockPipelineManifest, nil)
+				m.ws.EXPECT().Rel(pipelineManifestPath).Return(relativePath, nil)
+				m.actionCmd.EXPECT().Execute().Times(2)
+
+				// convertStages
+				m.store.EXPECT().GetEnvironment(appName, "chicken").Return(mockEnv, nil).Times(1)
+				m.store.EXPECT().GetEnvironment(appName, "wings").Return(mockEnv, nil).Times(1)
+
+				// getArtifactBuckets
+				m.deployer.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil)
+
+				// check if the pipeline has been deployed using a legacy naming.
+				m.deployedPipelineLister.EXPECT().ListDeployedPipelines(appName).Return([]deploy.Pipeline{}, nil)
+
+				m.pipelineStackConfig.EXPECT().Template().Return("name: mockEnv\ntype: Environment", nil)
+				m.deployer.EXPECT().Template(gomock.Any()).Return("name: mockEnv\ntype: Environment", nil)
+				m.mockDiffWriter = &strings.Builder{}
+				m.prompt.EXPECT().Confirm(continueDeploymentPrompt, "").Return(true, nil)
+
+				m.deployer.EXPECT().PipelineExists(gomock.Any()).DoAndReturn(func(in *deploy.CreatePipelineInput) (bool, error) {
+					if in.IsLegacy {
+						return false, errors.New("should not be a legacy pipeline")
+					}
+					return true, nil
+				})
+
+				m.deployer.EXPECT().GetAppResourcesByRegion(&app, region).Return(mockResource, nil)
+				m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployProposalStart, pipelineName)).Times(1)
+				m.deployer.EXPECT().UpdatePipeline(gomock.Any(), gomock.Any()).DoAndReturn(func(in *deploy.CreatePipelineInput, _ string) error {
+					if in.IsLegacy {
+						return errors.New("should not be a legacy pipeline")
+					}
+					return nil
+				})
+				m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployProposalComplete, pipelineName)).Times(1)
+
+			},
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
@@ -731,6 +920,7 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 			mockProgress := mocks.NewMockprogress(ctrl)
 			mockPrompt := mocks.NewMockprompter(ctrl)
 			mockActionCmd := mocks.NewMockactionCommand(ctrl)
+			mockPipelineStackConfig := mocks.NewMockpipelineStackConfig(ctrl)
 
 			mocks := deployPipelineMocks{
 				store:                  mockStore,
@@ -739,23 +929,30 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 				deployer:               mockPipelineDeployer,
 				ws:                     mockWorkspace,
 				actionCmd:              mockActionCmd,
+				pipelineStackConfig:    mockPipelineStackConfig,
 				deployedPipelineLister: mocks.NewMockdeployedPipelineLister(ctrl),
+				mockDiffWriter:         &strings.Builder{},
 			}
 
 			tc.callMocks(mocks)
 
 			opts := &deployPipelineOpts{
 				deployPipelineVars: deployPipelineVars{
-					appName: tc.inAppName,
-					name:    tc.inPipelineName,
+					appName:  tc.inAppName,
+					name:     tc.inPipelineName,
+					showDiff: tc.inShowDiff,
 				},
 				pipelineDeployer: mockPipelineDeployer,
-				ws:               mockWorkspace,
-				app:              tc.inApp,
-				region:           tc.inRegion,
-				store:            mockStore,
-				prog:             mockProgress,
-				prompt:           mockPrompt,
+				pipelineStackConfig: func(in *deploy.CreatePipelineInput) pipelineStackConfig {
+					return mockPipelineStackConfig
+				},
+				ws:     mockWorkspace,
+				app:    tc.inApp,
+				region: tc.inRegion,
+				store:  mockStore,
+				prog:   mockProgress,
+				prompt: mockPrompt,
+				writer: &strings.Builder{},
 				newSvcListCmd: func(w io.Writer, app string) cmd {
 					return mockActionCmd
 				},
@@ -778,6 +975,7 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 
 			// THEN
 			if tc.expectedError != nil {
+				require.Error(t, err)
 				require.Equal(t, tc.expectedError.Error(), err.Error())
 			} else {
 				require.NoError(t, err)
