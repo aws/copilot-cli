@@ -21,10 +21,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 )
 
-const (
-	maxConditionsPerRule = 5
-)
-
 type uploader interface {
 	Upload(bucket, key string, data io.Reader) (string, error)
 }
