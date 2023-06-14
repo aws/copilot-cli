@@ -51,7 +51,8 @@ func (e *ELBV2) ListenerRulesHostHeaders(ruleARNs []string) ([]string, error) {
 	if len(resp.Rules) == 0 {
 		return nil, fmt.Errorf("cannot find listener rule %s", english.WordSeries(ruleARNs, "and"))
 	}
-	hostHeaderSet := make(map[string]bool)
+	exists := struct{}{}
+	hostHeaderSet := make(map[string]struct{})
 	for idx := range ruleARNs {
 		rule := resp.Rules[idx]
 		for _, condition := range rule.Conditions {
@@ -60,13 +61,13 @@ func (e *ELBV2) ListenerRulesHostHeaders(ruleARNs []string) ([]string, error) {
 				// The alternative is to use HostHeaderConfig for multiple values.
 				// Only one of these fields should be set, but we collect from both to be safe.
 				for _, value := range condition.Values {
-					hostHeaderSet[aws.StringValue(value)] = true
+					hostHeaderSet[aws.StringValue(value)] = exists
 				}
 				if condition.HostHeaderConfig == nil {
 					break
 				}
 				for _, value := range condition.HostHeaderConfig.Values {
-					hostHeaderSet[aws.StringValue(value)] = true
+					hostHeaderSet[aws.StringValue(value)] = exists
 				}
 				break
 			}

@@ -16,6 +16,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/graph"
 	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
+	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/dustin/go-humanize/english"
 )
 
@@ -43,6 +44,12 @@ const (
 
 	// Tracing vendors.
 	awsXRAY = "awsxray"
+)
+
+const (
+	// listener rule has a quota of five condition values per rule.
+	// please refer to https://docs.aws.amazon.com/elasticloadbalancing/latest/application/load-balancer-limits.html
+	maxConditionsPerRule = 5
 )
 
 var (
@@ -894,6 +901,17 @@ func (r RoutingRule) validate() error {
 			missingField:      "alias",
 			conditionalFields: []string{"hosted_zone"},
 		}
+	}
+	aliases, err := r.Alias.ToStringSlice()
+	if err != nil {
+		return fmt.Errorf("convert aliases to string slice: %w", err)
+	}
+	allowedSourceIps := make([]string, len(r.AllowedSourceIps))
+	for idx, ip := range r.AllowedSourceIps {
+		allowedSourceIps[idx] = string(ip)
+	}
+	if err := validateConditionValuesPerRule(aliases, allowedSourceIps); err != nil {
+		return fmt.Errorf("validate condition values per listener rule: %w", err)
 	}
 	return nil
 }
@@ -2229,4 +2247,53 @@ func (i ImageLocationOrBuild) validate() error {
 		}
 	}
 	return nil
+}
+
+func validateConditionValuesPerRule(aliases []string, allowedSourceIPs []string) error {
+	if (len(aliases) >= maxConditionsPerRule) || (len(allowedSourceIPs) >= maxConditionsPerRule) ||
+		(len(aliases)+len(allowedSourceIPs) >= maxConditionsPerRule) {
+		return &errMaxConditionValuesPerRule{
+			aliases:          aliases,
+			allowedSourceIps: allowedSourceIPs,
+		}
+	}
+	return nil
+}
+
+type errMaxConditionValuesPerRule struct {
+	aliases          []string
+	allowedSourceIps []string
+}
+
+func (e *errMaxConditionValuesPerRule) Error() string {
+	return fmt.Sprintf("listener rule has more than five conditions %s %s", english.WordSeries(e.aliases, "and"),
+		english.WordSeries(e.allowedSourceIps, "and"))
+}
+
+func (e *errMaxConditionValuesPerRule) RecommendActions() string {
+	return fmt.Sprintf(`You can split the aliases in the manifest with "http.additional_rules" with the same path and container port:
+%s`, color.HighlightCodeBlock(fmt.Sprintf(`http:
+  path: "/"
+  alias: ["%s", "%s"]
+  allowed_source_ips: ["192.0.2.0/24", "198.51.100.10/32"]
+  additional_rules: 
+%s`, e.aliases[0], e.aliases[1], fmtAdditionalRules(e.aliases))))
+}
+
+func fmtAdditionalRules(aliases []string) string {
+	var fmtAdditionalRules strings.Builder
+	for idx := 2; idx < len(aliases)-1; idx += 2 {
+		fmtAdditionalRules.WriteString(fmt.Sprintf(`
+    - alias: ["%s", "%s"]
+      allowed_source_ips: ["192.0.2.0/24", "198.51.100.10/32"]
+      path: "/"
+%s`, aliases[idx], aliases[idx+1], "\n"))
+	}
+	if len(aliases)%2 != 0 {
+		fmtAdditionalRules.WriteString(fmt.Sprintf(`
+    - alias: ["%s"]
+      allowed_source_ips: ["192.0.2.0/24", "198.51.100.10/32"]
+      path: "/"`, aliases[len(aliases)-1]))
+	}
+	return fmtAdditionalRules.String()
 }

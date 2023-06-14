@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/dustin/go-humanize/english"
 	"golang.org/x/mod/semver"
 
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
@@ -202,38 +201,4 @@ func (e *errInvalidAlias) RecommmendActions() string {
 		e.app.Name, e.app.Domain,
 		e.app.Domain,
 		e.app.Domain)
-}
-
-func validateConditionValuesPerRule(aliases []string, allowedSourceIps []string) error {
-	if (len(aliases) >= maxConditionsPerRule) || (len(allowedSourceIps) >= maxConditionsPerRule) ||
-		(len(aliases)+len(allowedSourceIps) >= maxConditionsPerRule) {
-		return &errMaxConditionValuesPerRule{
-			aliases:          aliases,
-			allowedSourceIps: allowedSourceIps,
-		}
-	}
-	return nil
-}
-
-type errMaxConditionValuesPerRule struct {
-	aliases          []string
-	allowedSourceIps []string
-}
-
-func (e *errMaxConditionValuesPerRule) Error() string {
-	return fmt.Sprintf("Listener Rule can not have more than five Condition Values %s %s", english.WordSeries(e.aliases, "and"),
-		english.WordSeries(e.allowedSourceIps, "and"))
-}
-
-func (e *errMaxConditionValuesPerRule) RecommendedActions() string {
-	return fmt.Sprintf(`You can split the aliases in the manifest with "http.additional_rules" with same path and container port %s`, color.Emphasize(`
-http:
-  path: "/"
-  alias: ["example.com", "v1.example.com"]
-  allowed_source_ips: ["192.0.2.0/24", "198.51.100.10/32"]
-  additional_rules: 
-    - alias: ["v2.example.com","v3.example.com"]
-      allowed_source_ips: ["192.0.2.0/24", "198.51.100.10/32"]
-      path: "/"
-`))
 }

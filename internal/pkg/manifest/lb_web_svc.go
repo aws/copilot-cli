@@ -4,10 +4,11 @@
 package manifest
 
 import (
-	"github.com/aws/copilot-cli/internal/pkg/term/color"
-	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"strconv"
 	"time"
+
+	"github.com/aws/copilot-cli/internal/pkg/term/color"
+	"github.com/aws/copilot-cli/internal/pkg/term/log"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/imdario/mergo"

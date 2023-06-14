@@ -162,13 +162,5 @@ func (d *backendSvcDeployer) validateRuntimeRoutingRule(rule manifest.RoutingRul
 	if err := d.aliasCertValidator.ValidateCertAliases(aliases, d.envConfig.HTTPConfig.Private.Certificates); err != nil {
 		return fmt.Errorf("validate aliases against the imported certificate for env %s: %w", d.env.Name, err)
 	}
-
-	allowedSourceIPs := make([]string, len(rule.AllowedSourceIps))
-	for idx, IP := range rule.AllowedSourceIps {
-		allowedSourceIPs[idx] = string(IP)
-	}
-	if err := validateConditionValuesPerRule(aliases, allowedSourceIPs); err != nil {
-		return fmt.Errorf("validate condition values per listener rule:%w", err)
-	}
 	return nil
 }

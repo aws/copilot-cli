@@ -245,13 +245,6 @@ func (d *lbWebSvcDeployer) validateRuntimeRoutingRule(rule manifest.RoutingRule)
 				return fmt.Errorf("validate aliases against the imported CDN certificate for env %s: %w", d.env.Name, err)
 			}
 		}
-		allowedSourceIPs := make([]string, len(rule.AllowedSourceIps))
-		for idx, IP := range rule.AllowedSourceIps {
-			allowedSourceIPs[idx] = string(IP)
-		}
-		if err := validateConditionValuesPerRule(aliases, allowedSourceIPs); err != nil {
-			return fmt.Errorf("validate condition values per listener rule:%w", err)
-		}
 		return nil
 	}
 	if d.app.Domain != "" {

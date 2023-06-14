@@ -148,12 +148,12 @@ func TestELBV2_ListenerRuleHostHeaders(t *testing.T) {
 	mockARN2 := "mockListenerRuleARN2"
 	testCases := map[string]struct {
 		setUpMock   func(m *mocks.Mockapi)
-		inmockARNs  []string
+		inARNs      []string
 		wanted      []string
 		wantedError error
 	}{
 		"fail to describe rules": {
-			inmockARNs: []string{mockARN1},
+			inARNs: []string{mockARN1},
 			setUpMock: func(m *mocks.Mockapi) {
 				m.EXPECT().DescribeRules(&elbv2.DescribeRulesInput{
 					RuleArns: aws.StringSlice([]string{mockARN1}),
@@ -162,7 +162,7 @@ func TestELBV2_ListenerRuleHostHeaders(t *testing.T) {
 			wantedError: fmt.Errorf("get listener rule for mockListenerRuleARN1: some error"),
 		},
 		"cannot find listener rule": {
-			inmockARNs: []string{mockARN1},
+			inARNs: []string{mockARN1},
 			setUpMock: func(m *mocks.Mockapi) {
 				m.EXPECT().DescribeRules(&elbv2.DescribeRulesInput{
 					RuleArns: aws.StringSlice([]string{mockARN1}),
@@ -171,7 +171,7 @@ func TestELBV2_ListenerRuleHostHeaders(t *testing.T) {
 			wantedError: fmt.Errorf("cannot find listener rule mockListenerRuleARN1"),
 		},
 		"success": {
-			inmockARNs: []string{mockARN1},
+			inARNs: []string{mockARN1},
 			setUpMock: func(m *mocks.Mockapi) {
 				m.EXPECT().DescribeRules(&elbv2.DescribeRulesInput{
 					RuleArns: aws.StringSlice([]string{mockARN1}),
@@ -198,7 +198,7 @@ func TestELBV2_ListenerRuleHostHeaders(t *testing.T) {
 			wanted: []string{"archer.com", "copilot.com"},
 		},
 		"succes in case of multiple rules": {
-			inmockARNs: []string{mockARN1, mockARN2},
+			inARNs: []string{mockARN1, mockARN2},
 			setUpMock: func(m *mocks.Mockapi) {
 				m.EXPECT().DescribeRules(&elbv2.DescribeRulesInput{
 					RuleArns: aws.StringSlice([]string{mockARN1, mockARN2}),
@@ -254,7 +254,7 @@ func TestELBV2_ListenerRuleHostHeaders(t *testing.T) {
 				client: mockAPI,
 			}
 
-			got, err := elbv2Client.ListenerRulesHostHeaders(tc.inmockARNs)
+			got, err := elbv2Client.ListenerRulesHostHeaders(tc.inARNs)
 
 			if tc.wantedError != nil {
 				require.EqualError(t, tc.wantedError, err.Error())
