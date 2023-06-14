@@ -71,28 +71,28 @@ var _ = Describe("Isolated", func() {
 			_, testEnvInitErr = cli.EnvInit(&client.EnvInitRequest{
 				AppName:       appName,
 				EnvName:       envName,
-				Profile:       "default",
+				Profile:       envName,
 				VPCImport:     vpcImport,
 				CustomizedEnv: true,
 			})
 		})
-		It("env init should succeed for 'private' env", func() {
+		It("env init should succeed for 'test' env", func() {
 			Expect(testEnvInitErr).NotTo(HaveOccurred())
 		})
 	})
 
 	Context("when deploying the environment", Ordered, func() {
-		var privateEnvDeployErr error
+		var testEnvDeployErr error
 		BeforeAll(func() {
-			_, privateEnvDeployErr = cli.EnvDeploy(&client.EnvDeployRequest{
+			_, testEnvDeployErr = cli.EnvDeploy(&client.EnvDeployRequest{
 				AppName: appName,
 				Name:    envName,
 			})
 		})
 		It("should succeed", func() {
-			Expect(privateEnvDeployErr).NotTo(HaveOccurred())
+			Expect(testEnvDeployErr).NotTo(HaveOccurred())
 		})
-		It("env ls should list private env", func() {
+		It("env ls should list test env", func() {
 			envListOutput, err := cli.EnvList(appName)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(len(envListOutput.Envs)).To(Equal(1))
@@ -125,17 +125,17 @@ var _ = Describe("Isolated", func() {
 		})
 	})
 
-	Context("when deploying a svc to 'private' env", Ordered, func() {
-		var privateEnvDeployErr error
+	Context("when deploying a svc to 'test' env", Ordered, func() {
+		var testEnvDeployErr error
 		BeforeAll(func() {
-			_, privateEnvDeployErr = cli.SvcDeploy(&client.SvcDeployInput{
+			_, testEnvDeployErr = cli.SvcDeploy(&client.SvcDeployInput{
 				Name:    svcName,
 				EnvName: envName,
 			})
 		})
 
 		It("svc deploy should succeed", func() {
-			Expect(privateEnvDeployErr).NotTo(HaveOccurred())
+			Expect(testEnvDeployErr).NotTo(HaveOccurred())
 		})
 	})
 

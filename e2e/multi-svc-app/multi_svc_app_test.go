@@ -54,7 +54,7 @@ var _ = Describe("Multiple Service App", func() {
 			_, testEnvInitErr = cli.EnvInit(&client.EnvInitRequest{
 				AppName: appName,
 				EnvName: "test",
-				Profile: "default",
+				Profile: "test",
 			})
 		})
 
