@@ -17,6 +17,8 @@ import (
 type staticSiteDescriberMocks struct {
 	wkldDescriber *mocks.MockworkloadDescriber
 	store         *mocks.MockDeployedEnvServicesLister
+	awsS3Client   *mocks.MockbucketDescriber
+	s3Client      *mocks.MockbucketNameGetter
 }
 
 func TestStaticSiteDescriber_URI(t *testing.T) {
@@ -107,6 +109,7 @@ func TestStaticSiteDescriber_Describe(t *testing.T) {
 		mockSvc = "static"
 	)
 	mockErr := errors.New("some error")
+	mockBucket := "bucketName"
 	testCases := map[string]struct {
 		shouldOutputResources bool
 
@@ -124,13 +127,15 @@ func TestStaticSiteDescriber_Describe(t *testing.T) {
 			},
 			wantedError: fmt.Errorf(`list deployed environments for service "static": some error`),
 		},
-		"success without resources flag": {
+		"success without resources flag or objects in bucket": {
 			setupMocks: func(m staticSiteDescriberMocks) {
 				gomock.InOrder(
 					m.store.EXPECT().ListEnvironmentsDeployedTo(mockApp, mockSvc).Return([]string{"test"}, nil),
 					m.wkldDescriber.EXPECT().Outputs().Return(map[string]string{
 						"CloudFrontDistributionDomainName": "dut843shvcmvn.cloudfront.net",
 					}, nil),
+					m.s3Client.EXPECT().BucketName(mockApp, mockEnv, mockSvc).Return(mockBucket, nil),
+					m.awsS3Client.EXPECT().GetBucketTree(mockBucket).Return("", nil),
 				)
 			},
 			wantedHuman: `About
@@ -155,12 +160,14 @@ Routes
 					m.wkldDescriber.EXPECT().Outputs().Return(map[string]string{
 						"CloudFrontDistributionDomainName": "dut843shvcmvn.cloudfront.net",
 					}, nil),
+					m.s3Client.EXPECT().BucketName(mockApp, mockEnv, mockSvc).Return(mockBucket, nil),
+					m.awsS3Client.EXPECT().GetBucketTree(mockBucket).Return("", nil),
 					m.wkldDescriber.EXPECT().StackResources().Return(nil, mockErr),
 				)
 			},
 			wantedError: fmt.Errorf("retrieve service resources: some error"),
 		},
-		"success with resources flag": {
+		"success with resources flag and objects in bucket": {
 			shouldOutputResources: true,
 			setupMocks: func(m staticSiteDescriberMocks) {
 				gomock.InOrder(
@@ -168,6 +175,21 @@ Routes
 					m.wkldDescriber.EXPECT().Outputs().Return(map[string]string{
 						"CloudFrontDistributionDomainName": "dut843shvcmvn.cloudfront.net",
 					}, nil),
+					m.s3Client.EXPECT().BucketName(mockApp, mockEnv, mockSvc).Return(mockBucket, nil),
+					m.awsS3Client.EXPECT().GetBucketTree(mockBucket).Return(`.
+├── README.md
+├── error.html
+├── index.html
+├── Images
+│   ├── firstImage.PNG
+│   └── secondImage.PNG
+├── css
+│   ├── Style.css
+│   └── bootstrap.min.css
+└── top
+    └── middle
+        └── bottom.html
+`, nil),
 					m.wkldDescriber.EXPECT().StackResources().Return([]*stack.Resource{
 						{
 							Type:       "AWS::S3::Bucket",
@@ -194,13 +216,30 @@ Routes
   -----------  ---
   test         dut843shvcmvn.cloudfront.net
 
+S3 Bucket Objects
+
+  Environment  test
+.
+├── README.md
+├── error.html
+├── index.html
+├── Images
+│   ├── firstImage.PNG
+│   └── secondImage.PNG
+├── css
+│   ├── Style.css
+│   └── bootstrap.min.css
+└── top
+    └── middle
+        └── bottom.html
+
 Resources
 
   test
     AWS::S3::Bucket        demo-test-mystatic-bucket-h69vu7y72ga9
     AWS::S3::BucketPolicy  demo-test-mystatic-BucketPolicyForCloudFront-8AITX9Q7K13R
 `,
-			wantedJSON: "{\"service\":\"static\",\"type\":\"Static Site\",\"application\":\"phonetool\",\"routes\":[{\"environment\":\"test\",\"url\":\"dut843shvcmvn.cloudfront.net\"}],\"resources\":{\"test\":[{\"type\":\"AWS::S3::Bucket\",\"physicalID\":\"demo-test-mystatic-bucket-h69vu7y72ga9\",\"logicalID\":\"Bucket\"},{\"type\":\"AWS::S3::BucketPolicy\",\"physicalID\":\"demo-test-mystatic-BucketPolicyForCloudFront-8AITX9Q7K13R\",\"logicalID\":\"BucketPolicy\"}]}}\n",
+			wantedJSON: "{\"service\":\"static\",\"type\":\"Static Site\",\"application\":\"phonetool\",\"routes\":[{\"environment\":\"test\",\"url\":\"dut843shvcmvn.cloudfront.net\"}],\"objects\":[{\"Environment\":\"test\",\"Tree\":\".\\n├── README.md\\n├── error.html\\n├── index.html\\n├── Images\\n│   ├── firstImage.PNG\\n│   └── secondImage.PNG\\n├── css\\n│   ├── Style.css\\n│   └── bootstrap.min.css\\n└── top\\n    └── middle\\n        └── bottom.html\\n\"}],\"resources\":{\"test\":[{\"type\":\"AWS::S3::Bucket\",\"physicalID\":\"demo-test-mystatic-bucket-h69vu7y72ga9\",\"logicalID\":\"Bucket\"},{\"type\":\"AWS::S3::BucketPolicy\",\"physicalID\":\"demo-test-mystatic-BucketPolicyForCloudFront-8AITX9Q7K13R\",\"logicalID\":\"BucketPolicy\"}]}}\n",
 		},
 	}
 
@@ -212,6 +251,8 @@ Resources
 			mocks := staticSiteDescriberMocks{
 				store:         mocks.NewMockDeployedEnvServicesLister(ctrl),
 				wkldDescriber: mocks.NewMockworkloadDescriber(ctrl),
+				awsS3Client:   mocks.NewMockbucketDescriber(ctrl),
+				s3Client:      mocks.NewMockbucketNameGetter(ctrl),
 			}
 
 			tc.setupMocks(mocks)
@@ -223,6 +264,7 @@ Resources
 				store:                  mocks.store,
 				initWkldStackDescriber: func(string) (workloadDescriber, error) { return mocks.wkldDescriber, nil },
 				wkldDescribers:         make(map[string]workloadDescriber),
+				initS3Client:           func(string) (bucketDescriber, bucketNameGetter, error) { return mocks.awsS3Client, mocks.s3Client, nil },
 			}
 
 			// WHEN

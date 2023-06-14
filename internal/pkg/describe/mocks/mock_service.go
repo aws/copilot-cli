@@ -708,3 +708,79 @@ func (mr *MockcwAlarmDescriberMockRecorder) AlarmDescriptions(arg0 interface{}) 
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AlarmDescriptions", reflect.TypeOf((*MockcwAlarmDescriber)(nil).AlarmDescriptions), arg0)
 }
+
+// MockbucketDescriber is a mock of bucketDescriber interface.
+type MockbucketDescriber struct {
+	ctrl     *gomock.Controller
+	recorder *MockbucketDescriberMockRecorder
+}
+
+// MockbucketDescriberMockRecorder is the mock recorder for MockbucketDescriber.
+type MockbucketDescriberMockRecorder struct {
+	mock *MockbucketDescriber
+}
+
+// NewMockbucketDescriber creates a new mock instance.
+func NewMockbucketDescriber(ctrl *gomock.Controller) *MockbucketDescriber {
+	mock := &MockbucketDescriber{ctrl: ctrl}
+	mock.recorder = &MockbucketDescriberMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockbucketDescriber) EXPECT() *MockbucketDescriberMockRecorder {
+	return m.recorder
+}
+
+// GetBucketTree mocks base method.
+func (m *MockbucketDescriber) GetBucketTree(bucket string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetBucketTree", bucket)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetBucketTree indicates an expected call of GetBucketTree.
+func (mr *MockbucketDescriberMockRecorder) GetBucketTree(bucket interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBucketTree", reflect.TypeOf((*MockbucketDescriber)(nil).GetBucketTree), bucket)
+}
+
+// MockbucketNameGetter is a mock of bucketNameGetter interface.
+type MockbucketNameGetter struct {
+	ctrl     *gomock.Controller
+	recorder *MockbucketNameGetterMockRecorder
+}
+
+// MockbucketNameGetterMockRecorder is the mock recorder for MockbucketNameGetter.
+type MockbucketNameGetterMockRecorder struct {
+	mock *MockbucketNameGetter
+}
+
+// NewMockbucketNameGetter creates a new mock instance.
+func NewMockbucketNameGetter(ctrl *gomock.Controller) *MockbucketNameGetter {
+	mock := &MockbucketNameGetter{ctrl: ctrl}
+	mock.recorder = &MockbucketNameGetterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockbucketNameGetter) EXPECT() *MockbucketNameGetterMockRecorder {
+	return m.recorder
+}
+
+// BucketName mocks base method.
+func (m *MockbucketNameGetter) BucketName(app, env, svc string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BucketName", app, env, svc)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// BucketName indicates an expected call of BucketName.
+func (mr *MockbucketNameGetterMockRecorder) BucketName(app, env, svc interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BucketName", reflect.TypeOf((*MockbucketNameGetter)(nil).BucketName), app, env, svc)
+}
