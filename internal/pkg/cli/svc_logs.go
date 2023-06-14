@@ -276,8 +276,12 @@ func (o *svcLogsOpts) validateAndAskSvcEnvName() error {
 	}
 
 	if o.name != "" {
-		if _, err := o.configStore.GetService(o.appName, o.name); err != nil {
+		svc, err := o.configStore.GetService(o.appName, o.name)
+		if err != nil {
 			return err
+		}
+		if svc.Type == manifestinfo.StaticSiteType {
+			return fmt.Errorf("`svc logs` unavailable for Static Site services")
 		}
 	}
 	// Note: we let prompter handle the case when there is only option for user to choose from.
@@ -288,6 +292,9 @@ func (o *svcLogsOpts) validateAndAskSvcEnvName() error {
 	}
 	if deployedService.SvcType == manifestinfo.RequestDrivenWebServiceType && len(o.taskIDs) != 0 {
 		return fmt.Errorf("cannot use `--tasks` for App Runner service logs")
+	}
+	if deployedService.SvcType == manifestinfo.StaticSiteType {
+		return fmt.Errorf("`svc logs` unavailable for Static Site services")
 	}
 	o.name = deployedService.Name
 	o.envName = deployedService.Env

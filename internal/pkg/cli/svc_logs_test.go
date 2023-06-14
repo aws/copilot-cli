@@ -199,6 +199,21 @@ func TestSvcLogs_Ask(t *testing.T) {
 			wantedEnv: inputEnv,
 			wantedSvc: inputSvc,
 		},
+		"return error if name of Static Site passed in": {
+			inputApp:     inputApp,
+			inputSvc:     inputSvc,
+			inputEnvName: inputEnv,
+			setupMocks: func(m wkldLogsMock) {
+				gomock.InOrder(
+					m.configStore.EXPECT().GetApplication("my-app").Return(&config.Application{Name: "my-app"}, nil),
+					m.configStore.EXPECT().GetEnvironment("my-app", "my-env").Return(&config.Environment{Name: "my-env"}, nil),
+					m.configStore.EXPECT().GetService("my-app", "my-svc").Return(
+						&config.Workload{
+							Type: manifestinfo.StaticSiteType,
+						}, nil))
+			},
+			wantedError: errors.New("`svc logs` unavailable for Static Site services"),
+		},
 		"prompt for app name": {
 			inputSvc:     inputSvc,
 			inputEnvName: inputEnv,
@@ -264,6 +279,19 @@ func TestSvcLogs_Ask(t *testing.T) {
 					}, nil)
 			},
 			wantedError: errors.New("cannot use `--tasks` for App Runner service logs"),
+		},
+		"return error if selected svc is of Static Site type": {
+			inputApp: inputApp,
+			setupMocks: func(m wkldLogsMock) {
+				m.configStore.EXPECT().GetApplication(gomock.Any()).AnyTimes()
+				m.configStore.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Times(0)
+				m.configStore.EXPECT().GetService(gomock.Any(), gomock.Any()).Times(0)
+				m.sel.EXPECT().DeployedService(svcLogNamePrompt, svcLogNameHelpPrompt, inputApp, gomock.Any(), gomock.Any()).
+					Return(&selector.DeployedService{
+						SvcType: manifestinfo.StaticSiteType,
+					}, nil)
+			},
+			wantedError: errors.New("`svc logs` unavailable for Static Site services"),
 		},
 	}
 
