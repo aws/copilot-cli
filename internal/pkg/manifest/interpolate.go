@@ -72,7 +72,21 @@ func (i *Interpolator) applyInterpolation(node *yaml.Node) error {
 		if err != nil {
 			return err
 		}
-		node.Value = interpolated
+		if strings.HasPrefix(interpolated, "[") && strings.HasSuffix(interpolated, "]") {
+			listValues := strings.Split(interpolated[1:len(interpolated)-1], ",")
+			seqNode := &yaml.Node{
+				Kind: yaml.SequenceNode,
+			}
+			for _, value := range listValues {
+				seqNode.Content = append(seqNode.Content, &yaml.Node{
+					Kind:  yaml.ScalarNode,
+					Value: strings.TrimSpace(value),
+				})
+			}
+			*node = *seqNode
+		} else {
+			node.Value = interpolated
+		}
 	default:
 		for _, content := range node.Content {
 			if err := i.applyInterpolation(content); err != nil {
