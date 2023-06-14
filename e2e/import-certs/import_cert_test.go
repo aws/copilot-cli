@@ -45,7 +45,7 @@ var _ = Describe("Import Certificates", func() {
 			_, err = cli.EnvInit(&client.EnvInitRequest{
 				AppName:           appName,
 				EnvName:           "test",
-				Profile:           "default",
+				Profile:           "test",
 				CertificateImport: importedCert,
 			})
 		})

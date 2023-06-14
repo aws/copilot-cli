@@ -60,7 +60,7 @@ var _ = Describe("App With Domain", func() {
 					content, err := cli.EnvInit(&client.EnvInitRequest{
 						AppName: appName,
 						EnvName: "test",
-						Profile: "default",
+						Profile: "test",
 					})
 					if err == nil {
 						break
@@ -77,7 +77,7 @@ var _ = Describe("App With Domain", func() {
 					content, err := cli.EnvInit(&client.EnvInitRequest{
 						AppName: appName,
 						EnvName: "prod",
-						Profile: prodEnvironmentProfile,
+						Profile: "prod",
 					})
 					if err == nil {
 						break
