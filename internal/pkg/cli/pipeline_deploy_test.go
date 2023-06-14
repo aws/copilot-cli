@@ -808,7 +808,9 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 
 				m.pipelineStackConfig.EXPECT().Template().Return("name: mockEnv\ntype: Environment", nil)
 				m.deployer.EXPECT().Template(gomock.Any()).Return("name: mockEnv\ntype: Environment", nil)
+
 				m.mockDiffWriter = &strings.Builder{}
+
 				m.prompt.EXPECT().Confirm(continueDeploymentPrompt, "").Return(false, errors.New("some error"))
 
 			},
@@ -846,8 +848,12 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 
 				m.pipelineStackConfig.EXPECT().Template().Return("name: mockEnv\ntype: Environment", nil)
 				m.deployer.EXPECT().Template(gomock.Any()).Return("name: mockEnv\ntype: Environment", nil)
+
 				m.mockDiffWriter = &strings.Builder{}
+
 				m.prompt.EXPECT().Confirm(continueDeploymentPrompt, "").Return(true, nil)
+
+				// deployPipeline
 				m.deployer.EXPECT().GetAppResourcesByRegion(&app, region).Return(mockResource, nil)
 				m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployStart, pipelineName)).Times(1)
 				m.deployer.EXPECT().CreatePipeline(gomock.Any(), gomock.Any()).DoAndReturn(func(in *deploy.CreatePipelineInput, _ string) error {
@@ -885,9 +891,12 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 
 				m.pipelineStackConfig.EXPECT().Template().Return("name: mockEnv\ntype: Environment", nil)
 				m.deployer.EXPECT().Template(gomock.Any()).Return("name: mockEnv\ntype: Environment", nil)
+
 				m.mockDiffWriter = &strings.Builder{}
+
 				m.prompt.EXPECT().Confirm(continueDeploymentPrompt, "").Return(true, nil)
 
+				// deployPipeline
 				m.deployer.EXPECT().PipelineExists(gomock.Any()).DoAndReturn(func(in *deploy.CreatePipelineInput) (bool, error) {
 					if in.IsLegacy {
 						return false, errors.New("should not be a legacy pipeline")
@@ -896,6 +905,7 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 				})
 
 				m.deployer.EXPECT().GetAppResourcesByRegion(&app, region).Return(mockResource, nil)
+
 				m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployProposalStart, pipelineName)).Times(1)
 				m.deployer.EXPECT().UpdatePipeline(gomock.Any(), gomock.Any()).DoAndReturn(func(in *deploy.CreatePipelineInput, _ string) error {
 					if in.IsLegacy {
