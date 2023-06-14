@@ -22,7 +22,7 @@ var vpcImport client.EnvInitRequestVPCImport
 var timeNow = time.Now().Unix()
 
 const svcName = "backend"
-const envName = "private"
+const envName = "test"
 
 /**
 The Isolated Suite creates an environment with an imported VPC with only

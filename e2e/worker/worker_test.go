@@ -42,7 +42,7 @@ var _ = Describe("Worker Service E2E Test", func() {
 			_, err := cli.EnvInit(&client.EnvInitRequest{
 				AppName: appName,
 				EnvName: envName,
-				Profile: "default",
+				Profile: envName,
 			})
 			Expect(err).NotTo(HaveOccurred())
 		})
