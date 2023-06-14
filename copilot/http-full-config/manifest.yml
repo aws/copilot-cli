@@ -1,0 +1,41 @@
+name: http-full-config
+type: Backend Service
+
+http:
+  path: "/http-full-config-path"
+  deregistration_delay: 5s
+  stickiness: true
+  allowed_source_ips: ["10.24.34.0/23"]
+  healthcheck:
+    path: "/healthz"
+    port: 7000
+    success_codes: "200,301"
+    healthy_threshold: 3
+    unhealthy_threshold: 2
+    interval: 15s
+    timeout: 10s
+    grace_period: 45s
+  target_container: http-full-config
+  target_port: 8081
+  additional_rules:
+    - path: "/admin"
+      target_port: 8080
+
+network:
+  connect: false
+
+image:
+  # Docker build arguments. For additional overrides: https://aws.github.io/copilot-cli/docs/manifest/backend-service/#image-build
+  build: ../../demo/web/Dockerfile
+  # Port exposed through your container to route traffic to it.
+  port: 8080
+
+cpu: 512 # Number of CPU units for the task.
+memory: 1024 # Amount of memory in MiB used by the task.
+count: 1 # Number of tasks that should be running in your service.
+exec: true # Enable running commands in your container.
+
+# sidecars:
+#   fluent-bit:
+#     port: 1234
+#     image: 1234567890.dkr.ecr.us-west-2.amazonaws.com/reverse-proxy:revision_1

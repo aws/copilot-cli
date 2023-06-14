@@ -72,7 +72,7 @@ network:
 				"CPU":                      "512",
 				"bar":                      "bar",
 				"ip":                       "10.24.34.0/23",
-				"SECURITY_GROUPS":          `[sg-1,sg-2,sg-3]`,
+				"SECURITY_GROUPS":          `["sg-1","sg-2","sg-3"]`,
 			},
 
 			wanted: `# The manifest for the ${name} service.
