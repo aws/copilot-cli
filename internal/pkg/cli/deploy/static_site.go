@@ -104,6 +104,7 @@ func (d *staticSiteDeployer) GenerateCloudFormationTemplate(in *GenerateCloudFor
 
 // DeployWorkload deploys a static site service using CloudFormation.
 func (d *staticSiteDeployer) DeployWorkload(in *DeployWorkloadInput) (ActionRecommender, error) {
+	// TODO(jwh): Create CloudFront cache invalidation.
 	conf, err := d.stackConfiguration(&in.StackRuntimeConfiguration)
 	if err != nil {
 		return nil, err
