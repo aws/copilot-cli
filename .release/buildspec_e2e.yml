@@ -220,6 +220,18 @@ batch:
           APP_ACCOUNT: e2e/account/cloudfront
           TESTENV_REGION: eu-central-1
           TESTENV_ACCOUNT: e2e/account/cloudfront
+    - identifier: static_site
+      env:
+        privileged-mode: true
+        type: LINUX_CONTAINER
+        compute-type: BUILD_GENERAL1_LARGE
+        image: aws/codebuild/standard:6.0
+        variables:
+          TEST_SUITE: static-site
+          APP_REGION: eu-central-1
+          APP_ACCOUNT: e2e/account/static_site
+          TESTENV_REGION: eu-central-1
+          TEST_ACCOUNT: e2e/account/static_site
 
 phases:
   install:
