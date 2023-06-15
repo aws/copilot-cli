@@ -5,6 +5,7 @@ package app_with_domain_test
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -17,11 +18,11 @@ import (
 
 const (
 	waitingInterval = 60 * time.Second
+	domainName      = "app-with-domain.copilot-e2e-tests.ecs.aws.dev"
 )
 
 var cli *client.CLI
 var appName string
-var prodEnvironmentProfile string
 
 func TestAppWithDomain(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -29,9 +30,10 @@ func TestAppWithDomain(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
-	prodEnvironmentProfile = "e2eprodenv"
 	copilotCLI, err := client.NewCLI()
 	cli = copilotCLI
+	Expect(err).NotTo(HaveOccurred())
+	err = os.Setenv("DOMAINNAME", domainName)
 	Expect(err).NotTo(HaveOccurred())
 	appName = fmt.Sprintf("t%d", time.Now().Unix())
 })

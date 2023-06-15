@@ -87,7 +87,7 @@ var _ = Describe("pipeline flow", func() {
 			_, err := copilot.EnvInit(&client.EnvInitRequest{
 				AppName: appName,
 				EnvName: "test",
-				Profile: "e2etestenv",
+				Profile: "test",
 			})
 			Expect(err).NotTo(HaveOccurred())
 		})
@@ -95,7 +95,7 @@ var _ = Describe("pipeline flow", func() {
 			_, err := copilot.EnvInit(&client.EnvInitRequest{
 				AppName: appName,
 				EnvName: "prod",
-				Profile: "e2eprodenv",
+				Profile: "prod",
 			})
 			Expect(err).NotTo(HaveOccurred())
 		})
