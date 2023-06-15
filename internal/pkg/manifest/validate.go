@@ -47,8 +47,8 @@ const (
 )
 
 const (
-	// listener rule has a quota of five condition values per rule.
-	// please refer to https://docs.aws.amazon.com/elasticloadbalancing/latest/application/load-balancer-limits.html
+	// Listener rules have a quota of five condition values per rule.
+	// Please refer to https://docs.aws.amazon.com/elasticloadbalancing/latest/application/load-balancer-limits.html.
 	maxConditionsPerRule = 5
 )
 
