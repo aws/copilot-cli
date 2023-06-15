@@ -211,6 +211,11 @@ func TestSvcLogs_Ask(t *testing.T) {
 						&config.Workload{
 							Type: manifestinfo.StaticSiteType,
 						}, nil))
+				m.sel.EXPECT().DeployedService(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&selector.DeployedService{
+					Env:     "my-env",
+					Name:    "my-svc",
+					SvcType: manifestinfo.StaticSiteType,
+				}, nil)
 			},
 			wantedError: errors.New("`svc logs` unavailable for Static Site services"),
 		},
