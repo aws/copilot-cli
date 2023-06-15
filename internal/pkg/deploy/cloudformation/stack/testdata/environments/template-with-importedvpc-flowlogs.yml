@@ -878,7 +878,7 @@ Resources:
       'aws:copilot:description': 'A resource policy to allow AWS services to create log streams for your workloads.'
     Type: AWS::Logs::ResourcePolicy
     Properties:
-      PolicyName: !Sub '${AppName}-${EnvName}-LogResourcePolicy'
+      PolicyName: !Sub '${AppName}-${EnvironmentName}-LogResourcePolicy'
       PolicyDocument:
         Fn::Sub: |
           {
@@ -895,7 +895,7 @@ Resources:
                   "logs:PutLogEvents"
                 ],
                 "Resource": [
-                  "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/copilot/${AppName}-${EnvName}-*:log-stream:*"
+                  "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/copilot/${AppName}-${EnvironmentName}-*:log-stream:*"
                 ],
                 "Condition": {
                   "StringEquals": {
