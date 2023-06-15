@@ -5,11 +5,11 @@ image:
   build: 
     dockerfile: src/Dockerfile
     context: src
-  port: 80
+  port: 3000
 
 http:
   path: '/'
-  alias: test.app-with-domain.copilot-e2e-tests.ecs.aws.dev
+  alias: test.${DOMAINNAME}
 
 cpu: 256
 memory: 512
@@ -18,4 +18,4 @@ count: 1
 environments:
   prod:
     http:
-      alias: prod.app-with-domain.copilot-e2e-tests.ecs.aws.dev
+      alias: prod.${DOMAINNAME}
