@@ -750,7 +750,7 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 				)
 
 			},
-			expectedError: fmt.Errorf("stack template local: some error"),
+			expectedError: fmt.Errorf("generate the new template for deploy diff: some error"),
 		},
 		"failed to fetch the template of deployed stack": {
 			inApp:      &app,
@@ -816,7 +816,7 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 			},
 			expectedError: fmt.Errorf("ask whether to continue with the deployment: some error"),
 		},
-		"Successfully show diff and create a new pipeline": {
+		"successfully show diff and create a new pipeline": {
 			inApp:      &app,
 			inAppName:  appName,
 			inRegion:   region,

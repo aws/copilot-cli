@@ -273,7 +273,7 @@ func (o *deployPipelineOpts) Execute() error {
 	if o.showDiff {
 		tpl, err := o.pipelineStackConfig(deployPipelineInput).Template()
 		if err != nil {
-			return fmt.Errorf("stack template local: %w", err)
+			return fmt.Errorf("generate the new template for deploy diff: %w", err)
 		}
 		if err = o.diff(deployPipelineInput, tpl); err != nil {
 			var errHasDiff *errHasDiff
@@ -319,7 +319,6 @@ func (o *deployPipelineOpts) pipelineDeployDiff(in *deploy.CreatePipelineInput, 
 }
 
 func (o *deployPipelineOpts) diff(in *deploy.CreatePipelineInput, tpl string) error {
-
 	if out, err := o.pipelineDeployDiff(in, tpl); err != nil {
 		var errHasDiff *errHasDiff
 		if !errors.As(err, &errHasDiff) {
@@ -516,7 +515,6 @@ func (o *deployPipelineOpts) deployPipeline(in *deploy.CreatePipelineInput) erro
 	}
 
 	// If the stack already exists - we update it
-
 	if !o.showDiff {
 		shouldUpdate, err := o.shouldUpdate()
 		if err != nil {
