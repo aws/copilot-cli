@@ -84,12 +84,15 @@ func (d *StaticSiteDescriber) URI(envName string) (URI, error) {
 	if err != nil {
 		return URI{}, fmt.Errorf("get stack output for service %q: %w", d.svc, err)
 	}
-	uris := []string{outputs[staticSiteOutputCFDomainName]}
+	uri := accessURI{
+		HTTPS:    true,
+		DNSNames: []string{outputs[staticSiteOutputCFDomainName]},
+	}
 	if outputs[staticSiteOutputCFAltDomainName] != "" {
-		uris = append(uris, color.HighlightResource(outputs[staticSiteOutputCFAltDomainName]))
+		uri.DNSNames = append(uri.DNSNames, outputs[staticSiteOutputCFAltDomainName])
 	}
 	return URI{
-		URI:        english.OxfordWordSeries(uris, "or"),
+		URI:        english.OxfordWordSeries(uri.strings(), "or"),
 		AccessType: URIAccessTypeInternet,
 	}, nil
 }
