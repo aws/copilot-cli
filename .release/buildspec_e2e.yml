@@ -21,6 +21,8 @@ batch:
           TEST_SUITE: addons
           APP_REGION: us-west-2
           APP_ACCOUNT: e2e/account/addons
+          TESTENV_REGION: us-west-2
+          TESTENV_ACCOUNT: e2e/account/addons
     - identifier: customized_env
       env:
         privileged-mode: true
@@ -31,6 +33,12 @@ batch:
           TEST_SUITE: customized-env
           APP_REGION: us-west-1
           APP_ACCOUNT: e2e/account/customized_env
+          TESTENV_REGION: us-west-1
+          TESTENV_ACCOUNT: e2e/account/customized_env
+          PRODENV_REGION: us-west-1
+          PRODENV_ACCOUNT: e2e/account/customized_env
+          SHAREDENV_REGION: us-west-1
+          SHAREDENV_ACCOUNT: e2e/account/customized_env
     - identifier: init
       env:
         privileged-mode: true
@@ -65,6 +73,8 @@ batch:
           TEST_SUITE: multi-svc-app
           APP_REGION: us-west-2
           APP_ACCOUNT: e2e/account/multi_svc_app
+          TESTENV_REGION: us-west-2
+          TESTENV_ACCOUNT: e2e/account/multi_svc_app
     - identifier: root
       env:
         privileged-mode: true
@@ -84,6 +94,8 @@ batch:
           TEST_SUITE: sidecars
           APP_REGION: us-east-1
           APP_ACCOUNT: e2e/account/sidecars
+          TESTENV_REGION: us-east-1
+          TESTENV_ACCOUNT: e2e/account/sidecars
     - identifier: task
       env:
         privileged-mode: true
@@ -94,6 +106,8 @@ batch:
           TEST_SUITE: task
           APP_REGION: us-east-2
           APP_ACCOUNT: e2e/account/task
+          TESTENV_REGION: us-east-2
+          TESTENV_ACCOUNT: e2e/account/task
     - identifier: app_with_domain
       env:
         privileged-mode: true
@@ -104,6 +118,8 @@ batch:
           TEST_SUITE: app-with-domain
           APP_REGION: us-west-2
           APP_ACCOUNT: e2e/account/app_with_domains
+          TESTENV_REGION: us-west-2
+          TESTENV_ACCOUNT: e2e/account/app_with_domains
           PRODENV_REGION: us-east-1
           PRODENV_ACCOUNT: e2e/account/app_with_domains/prod
     - identifier: import_certs
@@ -116,6 +132,20 @@ batch:
           TEST_SUITE: import-certs
           APP_REGION: us-west-2
           APP_ACCOUNT: e2e/account/import_certs
+          TESTENV_REGION: us-west-2
+          TESTENV_ACCOUNT: e2e/account/import_certs
+    - identifier: isolated
+      env:
+        privileged-mode: true
+        type: LINUX_CONTAINER
+        compute-type: BUILD_GENERAL1_LARGE
+        image: aws/codebuild/standard:6.0
+        variables:
+          TEST_SUITE: isolated
+          APP_REGION: us-west-2
+          APP_ACCOUNT: e2e/account/isolated
+          TESTENV_REGION: us-west-2
+          TESTENV_ACCOUNT: e2e/account/isolated
     - identifier: exec
       env:
         privileged-mode: true
@@ -126,6 +156,8 @@ batch:
           TEST_SUITE: exec
           APP_REGION: ap-northeast-1
           APP_ACCOUNT: e2e/account/exec
+          TESTENV_REGION: ap-northeast-1
+          TESTENV_ACCOUNT: e2e/account/exec
     - identifier: apprunner
       env:
         privileged-mode: true
@@ -174,6 +206,8 @@ batch:
           TEST_SUITE: worker
           APP_REGION: eu-central-1
           APP_ACCOUNT: e2e/account/worker
+          TESTENV_REGION: eu-central-1
+          TESTENV_ACCOUNT: e2e/account/worker
     - identifier: cloudfront
       env:
         privileged-mode: true
@@ -184,6 +218,20 @@ batch:
           TEST_SUITE: cloudfront
           APP_REGION: eu-central-1
           APP_ACCOUNT: e2e/account/cloudfront
+          TESTENV_REGION: eu-central-1
+          TESTENV_ACCOUNT: e2e/account/cloudfront
+    - identifier: static_site
+      env:
+        privileged-mode: true
+        type: LINUX_CONTAINER
+        compute-type: BUILD_GENERAL1_LARGE
+        image: aws/codebuild/standard:6.0
+        variables:
+          TEST_SUITE: static-site
+          APP_REGION: eu-central-1
+          APP_ACCOUNT: e2e/account/static_site
+          TESTENV_REGION: eu-central-1
+          TEST_ACCOUNT: e2e/account/static_site
 
 phases:
   install:
@@ -210,16 +258,24 @@ phases:
       - |
         if [ ! -z "$TESTENV_REGION" ]; then
           account=$(aws secretsmanager get-secret-value --secret-id ${TESTENV_ACCOUNT} | jq '.SecretString' -r)
-          printf "[profile e2etestenv]\nregion=$TESTENV_REGION\n" >> /tmp/.aws/config
-          printf "[e2etestenv]\n" >> /tmp/.aws/credentials
+          printf "[profile test]\nregion=$TESTENV_REGION\n" >> /tmp/.aws/config
+          printf "[test]\n" >> /tmp/.aws/credentials
           printf "aws_access_key_id=$(echo $account | jq '.access_key' -r)\n" >> /tmp/.aws/credentials
           printf "aws_secret_access_key=$(echo $account | jq '.secret_access_key' -r)\n\n" >> /tmp/.aws/credentials
         fi
       - |
         if [ ! -z "$PRODENV_REGION" ]; then
           account=$(aws secretsmanager get-secret-value --secret-id ${PRODENV_ACCOUNT} | jq '.SecretString' -r)
-          printf "[profile e2eprodenv]\nregion=$PRODENV_REGION\n" >> /tmp/.aws/config
-          printf "[e2eprodenv]\n" >> /tmp/.aws/credentials
+          printf "[profile prod]\nregion=$PRODENV_REGION\n" >> /tmp/.aws/config
+          printf "[prod]\n" >> /tmp/.aws/credentials
+          printf "aws_access_key_id=$(echo $account | jq '.access_key' -r)\n" >> /tmp/.aws/credentials
+          printf "aws_secret_access_key=$(echo $account | jq '.secret_access_key' -r)\n\n" >> /tmp/.aws/credentials
+        fi
+      - |
+        if [ ! -z "$SHAREDENV_REGION" ]; then
+          account=$(aws secretsmanager get-secret-value --secret-id ${SHAREDENV_ACCOUNT} | jq '.SecretString' -r)
+          printf "[profile shared]\nregion=$SHAREDENV_REGION\n" >> /tmp/.aws/config
+          printf "[shared]\n" >> /tmp/.aws/credentials
           printf "aws_access_key_id=$(echo $account | jq '.access_key' -r)\n" >> /tmp/.aws/credentials
           printf "aws_secret_access_key=$(echo $account | jq '.secret_access_key' -r)\n\n" >> /tmp/.aws/credentials
         fi

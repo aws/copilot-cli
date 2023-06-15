@@ -52,7 +52,7 @@ var _ = Describe("addons flow", func() {
 			_, testEnvInitErr = cli.EnvInit(&client.EnvInitRequest{
 				AppName: appName,
 				EnvName: "test",
-				Profile: "default",
+				Profile: "test",
 			})
 		})
 
