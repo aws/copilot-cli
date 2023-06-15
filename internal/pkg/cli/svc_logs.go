@@ -276,12 +276,8 @@ func (o *svcLogsOpts) validateAndAskSvcEnvName() error {
 	}
 
 	if o.name != "" {
-		svc, err := o.configStore.GetService(o.appName, o.name)
-		if err != nil {
+		if _, err := o.configStore.GetService(o.appName, o.name); err != nil {
 			return err
-		}
-		if svc.Type == manifestinfo.StaticSiteType {
-			return fmt.Errorf("`svc logs` unavailable for Static Site services")
 		}
 	}
 	// Note: we let prompter handle the case when there is only option for user to choose from.

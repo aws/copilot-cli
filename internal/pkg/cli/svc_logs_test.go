@@ -221,9 +221,7 @@ func TestSvcLogs_Ask(t *testing.T) {
 				m.sel.EXPECT().Application(svcAppNamePrompt, wkldAppNameHelpPrompt).Return("my-app", nil)
 				m.configStore.EXPECT().GetApplication(gomock.Any()).Times(0)
 				m.configStore.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).AnyTimes()
-				m.configStore.EXPECT().GetService(gomock.Any(), gomock.Any()).Return(&config.Workload{
-					Type: manifestinfo.BackendServiceType,
-				}, nil).AnyTimes()
+				m.configStore.EXPECT().GetService(gomock.Any(), gomock.Any()).AnyTimes()
 				m.sel.EXPECT().DeployedService(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&selector.DeployedService{
 					Env:     "my-env",
 					Name:    "my-svc",
