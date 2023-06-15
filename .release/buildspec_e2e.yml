@@ -231,7 +231,7 @@ batch:
           APP_REGION: eu-central-1
           APP_ACCOUNT: e2e/account/static_site
           TESTENV_REGION: eu-central-1
-          TEST_ACCOUNT: e2e/account/static_site
+          TESTENV_ACCOUNT: e2e/account/static_site
 
 phases:
   install:
