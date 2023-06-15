@@ -4,6 +4,8 @@
 package app_with_domain_test
 
 import (
+	"fmt"
+	"io"
 	"net/http"
 	"strings"
 	"sync"
@@ -16,8 +18,6 @@ import (
 )
 
 var _ = Describe("App With Domain", func() {
-	const domainName = "app-with-domain.copilot-e2e-tests.ecs.aws.dev"
-
 	Context("when creating a new app", Ordered, func() {
 		var appInitErr error
 
@@ -150,7 +150,7 @@ var _ = Describe("App With Domain", func() {
 				Name:       "hello",
 				SvcType:    "Load Balanced Web Service",
 				Dockerfile: "./src/Dockerfile",
-				SvcPort:    "80",
+				SvcPort:    "3000",
 			})
 			Expect(svcInitErr).NotTo(HaveOccurred())
 		})
@@ -160,7 +160,7 @@ var _ = Describe("App With Domain", func() {
 				Name:       "frontend",
 				SvcType:    "Load Balanced Web Service",
 				Dockerfile: "./src/Dockerfile",
-				SvcPort:    "80",
+				SvcPort:    "3000",
 			})
 			Expect(svcInitErr).NotTo(HaveOccurred())
 		})
@@ -249,8 +249,8 @@ var _ = Describe("App With Domain", func() {
 			Expect(len(svc.Routes)).To(Equal(2))
 
 			wantedURLs := map[string]string{
-				"test": "https://test.app-with-domain.copilot-e2e-tests.ecs.aws.dev",
-				"prod": "https://prod.app-with-domain.copilot-e2e-tests.ecs.aws.dev",
+				"test": fmt.Sprintf("https://test.%s", domainName),
+				"prod": fmt.Sprintf("https://prod.%s", domainName),
 			}
 			for _, route := range svc.Routes {
 				// Validate route has the expected HTTPS endpoint.
@@ -278,7 +278,7 @@ var _ = Describe("App With Domain", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(len(svc.Routes)).To(Equal(1))
 			wantedURLs = map[string]string{
-				"test": "https://app-with-domain.copilot-e2e-tests.ecs.aws.dev or https://frontend.app-with-domain.copilot-e2e-tests.ecs.aws.dev",
+				"test": fmt.Sprintf("https://%s or https://frontend.%s", domainName, domainName),
 			}
 			// Validate route has the expected HTTPS endpoint.
 			route := svc.Routes[0]
@@ -288,9 +288,42 @@ var _ = Describe("App With Domain", func() {
 			var resp *http.Response
 			var fetchErr error
 			urls := strings.Split(route.URL, " or ")
+			expectedRootResponseBody := "This is Copilot express app"
+			expectedAdminResponseBody := "This is Copilot express app for admin"
 			for _, url := range urls {
 				Eventually(func() (int, error) {
 					resp, fetchErr = http.Get(url)
+					if fetchErr != nil {
+						return 0, fetchErr
+					}
+					defer resp.Body.Close()
+					body, err := io.ReadAll(resp.Body)
+					if err != nil {
+						return 0, err
+					}
+					if string(body) != expectedRootResponseBody {
+						return 0, fmt.Errorf("the message content is %q, but expected %q", string(body), expectedRootResponseBody)
+					}
+					return resp.StatusCode, fetchErr
+				}, "60s", "1s").Should(Equal(200))
+				// HTTP should route to HTTPS.
+				Eventually(func() (int, error) {
+					resp, fetchErr = http.Get(strings.Replace(url, "https", "http", 1))
+					return resp.StatusCode, fetchErr
+				}, "60s", "1s").Should(Equal(200))
+				Eventually(func() (int, error) {
+					resp, fetchErr = http.Get(fmt.Sprintf("%s/admin", url))
+					if fetchErr != nil {
+						return 0, fetchErr
+					}
+					defer resp.Body.Close()
+					body, err := io.ReadAll(resp.Body)
+					if err != nil {
+						return 0, err
+					}
+					if string(body) != expectedAdminResponseBody {
+						return 0, fmt.Errorf("the message content is %q, but expected %q", string(body), expectedAdminResponseBody)
+					}
 					return resp.StatusCode, fetchErr
 				}, "60s", "1s").Should(Equal(200))
 				// HTTP should route to HTTPS.
