@@ -1,0 +1,22 @@
+name: http-autoscaling
+type: Backend Service
+
+http:
+  path: "http-autoscaling-path"
+
+image:
+  # Docker build arguments. For additional overrides: https://aws.github.io/copilot-cli/docs/manifest/backend-service/#image-build
+  build: Dockerfile
+  # Port exposed through your container to route traffic to it.
+  port: 8080
+
+network:
+  connect: false
+
+cpu: 512 # Number of CPU units for the task.
+memory: 1024 # Amount of memory in MiB used by the task.
+exec: true # Enable running commands in your container.
+
+count:
+  range: 1-3
+  requests: 256

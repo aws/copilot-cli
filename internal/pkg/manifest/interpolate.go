@@ -80,7 +80,7 @@ func (i *Interpolator) applyInterpolation(node *yaml.Node) error {
 			for _, value := range listValues {
 				seqNode.Content = append(seqNode.Content, &yaml.Node{
 					Kind:  yaml.ScalarNode,
-					Value: strings.TrimSpace(strings.Trim(value, `"`)),
+					Value: strings.TrimSpace(strings.TrimSuffix(strings.TrimPrefix(value, `"`), `"`)),
 				})
 			}
 			*node = *seqNode
