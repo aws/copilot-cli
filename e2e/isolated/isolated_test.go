@@ -215,6 +215,8 @@ var _ = Describe("Isolated", func() {
 			// Use custom SSM plugin as the public version is not compatible to Alpine Linux.
 			err := client.BashExec("chmod +x ./session-manager-plugin")
 			Expect(err).NotTo(HaveOccurred())
+			err = client.BashExec("mv ./session-manager-plugin /bin/session-manager-plugin")
+			Expect(err).NotTo(HaveOccurred())
 		})
 		It("is reachable", func() {
 			_, svcExecErr := cli.SvcExec(&client.SvcExecRequest{
