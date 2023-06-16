@@ -273,7 +273,7 @@ func (d *staticSiteStatusDescriber) Describe() (HumanJSONStringer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get bucket name for %q Static Site service in %q environment: %w", d.svc, d.env, err)
 	}
-	size, count, err := bucketDataGetter.GetBucketSizeAndCount(bucketName)
+	size, count, err := bucketDataGetter.BucketSizeAndCount(bucketName)
 	if err != nil {
 		return nil, fmt.Errorf("get size and count data for %q S3 bucket: %w", bucketName, err)
 	}

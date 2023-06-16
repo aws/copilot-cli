@@ -92,11 +92,11 @@ type cwAlarmDescriber interface {
 }
 
 type bucketDescriber interface {
-	GetBucketTree(bucket string) (string, error)
+	BucketTree(bucket string) (string, error)
 }
 
 type bucketDataGetter interface {
-	GetBucketSizeAndCount(bucket string) (string, int, error)
+	BucketSizeAndCount(bucket string) (string, int, error)
 }
 
 type bucketNameGetter interface {

@@ -489,7 +489,7 @@ func TestS3_FormatARN(t *testing.T) {
 	}
 }
 
-func TestS3_GetBucketTree(t *testing.T) {
+func TestS3_BucketTree(t *testing.T) {
 	type s3Mocks struct {
 		s3API        *mocks.Mocks3API
 		s3ManagerAPI *mocks.Mocks3ManagerAPI
@@ -689,7 +689,7 @@ func TestS3_GetBucketTree(t *testing.T) {
 			}
 			tc.setupMocks(s3mocks)
 
-			gotTree, gotErr := service.GetBucketTree(aws.StringValue(mockBucket))
+			gotTree, gotErr := service.BucketTree(aws.StringValue(mockBucket))
 			if tc.wantErr != nil {
 				require.EqualError(t, gotErr, tc.wantErr.Error())
 				return
@@ -701,7 +701,7 @@ func TestS3_GetBucketTree(t *testing.T) {
 	}
 }
 
-func TestS3_GetBucketSizeAndCount(t *testing.T) {
+func TestS3_BucketSizeAndCount(t *testing.T) {
 	type s3Mocks struct {
 		s3API        *mocks.Mocks3API
 		s3ManagerAPI *mocks.Mocks3ManagerAPI
@@ -742,6 +742,7 @@ func TestS3_GetBucketSizeAndCount(t *testing.T) {
 				m.s3API.EXPECT().HeadBucket(&s3.HeadBucketInput{Bucket: mockBucket}).Return(&s3.HeadBucketOutput{}, nil)
 				m.s3API.EXPECT().ListObjectsV2(&s3.ListObjectsV2Input{
 					Bucket:            mockBucket,
+					Delimiter:         aws.String(""),
 					ContinuationToken: nil,
 					Prefix:            nil,
 				}).Return(&resp, nil)
@@ -754,6 +755,7 @@ func TestS3_GetBucketSizeAndCount(t *testing.T) {
 				m.s3API.EXPECT().HeadBucket(&s3.HeadBucketInput{Bucket: mockBucket}).Return(&s3.HeadBucketOutput{}, nil)
 				m.s3API.EXPECT().ListObjectsV2(&s3.ListObjectsV2Input{
 					Bucket:            mockBucket,
+					Delimiter:         aws.String(""),
 					ContinuationToken: nil,
 					Prefix:            nil,
 				}).Return(
@@ -771,6 +773,7 @@ func TestS3_GetBucketSizeAndCount(t *testing.T) {
 					}, nil)
 				m.s3API.EXPECT().ListObjectsV2(&s3.ListObjectsV2Input{
 					Bucket:            mockBucket,
+					Delimiter:         aws.String(""),
 					ContinuationToken: &mockContinuationToken,
 					Prefix:            nil,
 				}).Return(
@@ -795,6 +798,7 @@ func TestS3_GetBucketSizeAndCount(t *testing.T) {
 				m.s3API.EXPECT().HeadBucket(&s3.HeadBucketInput{Bucket: mockBucket}).Return(&s3.HeadBucketOutput{}, nil)
 				m.s3API.EXPECT().ListObjectsV2(&s3.ListObjectsV2Input{
 					Bucket:            mockBucket,
+					Delimiter:         aws.String(""),
 					ContinuationToken: nil,
 					Prefix:            nil,
 				}).Return(&s3.ListObjectsV2Output{
@@ -821,8 +825,8 @@ func TestS3_GetBucketSizeAndCount(t *testing.T) {
 				m.s3API.EXPECT().HeadBucket(&s3.HeadBucketInput{Bucket: mockBucket}).Return(&s3.HeadBucketOutput{}, nil)
 				m.s3API.EXPECT().ListObjectsV2(&s3.ListObjectsV2Input{
 					Bucket:            mockBucket,
+					Delimiter:         aws.String(""),
 					ContinuationToken: nil,
-					Prefix:            nil,
 				}).Return(nil, errors.New("some error"))
 			},
 			wantErr: errors.New("list objects for bucket bucketName: some error"),
@@ -847,7 +851,7 @@ func TestS3_GetBucketSizeAndCount(t *testing.T) {
 			}
 			tc.setupMocks(s3mocks)
 
-			gotSize, gotCount, gotErr := service.GetBucketSizeAndCount(aws.StringValue(mockBucket))
+			gotSize, gotCount, gotErr := service.BucketSizeAndCount(aws.StringValue(mockBucket))
 			if tc.wantErr != nil {
 				require.EqualError(t, gotErr, tc.wantErr.Error())
 				return

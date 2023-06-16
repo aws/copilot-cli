@@ -732,19 +732,19 @@ func (m *MockbucketDescriber) EXPECT() *MockbucketDescriberMockRecorder {
 	return m.recorder
 }
 
-// GetBucketTree mocks base method.
-func (m *MockbucketDescriber) GetBucketTree(bucket string) (string, error) {
+// BucketTree mocks base method.
+func (m *MockbucketDescriber) BucketTree(bucket string) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetBucketTree", bucket)
+	ret := m.ctrl.Call(m, "BucketTree", bucket)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetBucketTree indicates an expected call of GetBucketTree.
-func (mr *MockbucketDescriberMockRecorder) GetBucketTree(bucket interface{}) *gomock.Call {
+// BucketTree indicates an expected call of BucketTree.
+func (mr *MockbucketDescriberMockRecorder) BucketTree(bucket interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBucketTree", reflect.TypeOf((*MockbucketDescriber)(nil).GetBucketTree), bucket)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BucketTree", reflect.TypeOf((*MockbucketDescriber)(nil).BucketTree), bucket)
 }
 
 // MockbucketDataGetter is a mock of bucketDataGetter interface.
@@ -770,20 +770,20 @@ func (m *MockbucketDataGetter) EXPECT() *MockbucketDataGetterMockRecorder {
 	return m.recorder
 }
 
-// GetBucketSizeAndCount mocks base method.
-func (m *MockbucketDataGetter) GetBucketSizeAndCount(bucket string) (string, int, error) {
+// BucketSizeAndCount mocks base method.
+func (m *MockbucketDataGetter) BucketSizeAndCount(bucket string) (string, int, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetBucketSizeAndCount", bucket)
+	ret := m.ctrl.Call(m, "BucketSizeAndCount", bucket)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(int)
 	ret2, _ := ret[2].(error)
 	return ret0, ret1, ret2
 }
 
-// GetBucketSizeAndCount indicates an expected call of GetBucketSizeAndCount.
-func (mr *MockbucketDataGetterMockRecorder) GetBucketSizeAndCount(bucket interface{}) *gomock.Call {
+// BucketSizeAndCount indicates an expected call of BucketSizeAndCount.
+func (mr *MockbucketDataGetterMockRecorder) BucketSizeAndCount(bucket interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBucketSizeAndCount", reflect.TypeOf((*MockbucketDataGetter)(nil).GetBucketSizeAndCount), bucket)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BucketSizeAndCount", reflect.TypeOf((*MockbucketDataGetter)(nil).BucketSizeAndCount), bucket)
 }
 
 // MockbucketNameGetter is a mock of bucketNameGetter interface.

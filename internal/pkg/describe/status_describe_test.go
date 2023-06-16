@@ -785,7 +785,7 @@ func TestStaticSiteStatusDescriber_Describe(t *testing.T) {
 		"success": {
 			setupMocks: func(m serviceStatusDescriberMocks) {
 				m.s3Client.EXPECT().BucketName(appName, envName, svcName).Return(mockBucket, nil)
-				m.bucketDataGetter.EXPECT().GetBucketSizeAndCount(mockBucket).Return("mockSize", 123, nil)
+				m.bucketDataGetter.EXPECT().BucketSizeAndCount(mockBucket).Return("mockSize", 123, nil)
 			},
 			wantedContent: &staticSiteServiceStatus{
 				BucketName: mockBucket,
@@ -802,7 +802,7 @@ func TestStaticSiteStatusDescriber_Describe(t *testing.T) {
 		"error getting bucket size and count": {
 			setupMocks: func(m serviceStatusDescriberMocks) {
 				m.s3Client.EXPECT().BucketName(appName, envName, svcName).Return(mockBucket, nil)
-				m.bucketDataGetter.EXPECT().GetBucketSizeAndCount(mockBucket).Return("", 0, mockError)
+				m.bucketDataGetter.EXPECT().BucketSizeAndCount(mockBucket).Return("", 0, mockError)
 			},
 			wantedError: fmt.Errorf(`get size and count data for "jimmyBuckets" S3 bucket: %w`, mockError),
 		},

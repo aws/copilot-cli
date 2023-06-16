@@ -195,50 +195,21 @@ func FormatARN(partition, location string) string {
 	return fmt.Sprintf("arn:%s:s3:::%s", partition, location)
 }
 
-func (s *S3) bucketExists(bucket string) (bool, error) {
-	input := &s3.HeadBucketInput{
-		Bucket: aws.String(bucket),
-	}
-	_, err := s.s3Client.HeadBucket(input)
-	if err != nil {
-		if aerr, ok := err.(awserr.Error); ok && aerr.Code() == errCodeNotFound {
-			return false, nil
-		}
-		return false, err
-	}
-
-	return true, nil
-}
-
-// GetBucketTree retrieves the objects in an S3 bucket and creates an ASCII tree representing their folder structure.
-func (s *S3) GetBucketTree(bucket string) (string, error) {
-	exists, err := s.bucketExists(bucket)
+// BucketTree creates an ASCII tree representing the folder structure of a bucket's objects.
+func (s *S3) BucketTree(bucket string) (string, error) {
+	outputs, err := s.listObjects(bucket, "/")
 	if err != nil {
 		return "", err
 	}
-	if !exists {
+	if outputs == nil {
 		return "", nil
 	}
 	var contents []*s3.Object
 	var prefixes []*s3.CommonPrefix
-	listResp := &s3.ListObjectsV2Output{}
-	for {
-		listParams := &s3.ListObjectsV2Input{
-			Bucket:            aws.String(bucket),
-			Delimiter:         aws.String(slashDelimiter),
-			ContinuationToken: listResp.NextContinuationToken,
-		}
-		listResp, err = s.s3Client.ListObjectsV2(listParams)
-		if err != nil {
-			return "", fmt.Errorf("list objects for bucket %s: %w", bucket, err)
-		}
-		contents = append(contents, listResp.Contents...)
-		prefixes = append(prefixes, listResp.CommonPrefixes...)
-		if listResp.NextContinuationToken == nil {
-			break
-		}
+	for _, output := range outputs {
+		contents = append(contents, output.Contents...)
+		prefixes = append(prefixes, output.CommonPrefixes...)
 	}
-
 	tree := treeprint.New()
 	// Add top-level files.
 	for _, object := range contents {
@@ -251,45 +222,72 @@ func (s *S3) GetBucketTree(bucket string) (string, error) {
 	return tree.String(), nil
 }
 
-// GetBucketSizeAndCount returns the total size and number of objects in an S3 bucket.
-func (s *S3) GetBucketSizeAndCount(bucket string) (string, int, error) {
-	exists, err := s.bucketExists(bucket)
+// BucketSizeAndCount returns the total size and number of objects in an S3 bucket.
+func (s *S3) BucketSizeAndCount(bucket string) (string, int, error) {
+	outputs, err := s.listObjects(bucket, "")
 	if err != nil {
 		return "", 0, err
 	}
-	if !exists {
+	if outputs == nil {
 		return "", 0, nil
 	}
-	var objects []*s3.Object
 	var size int64
 	var number int
+	for _, output := range outputs {
+		for _, object := range output.Contents {
+			size = size + aws.Int64Value(object.Size)
+			number = number + 1
+		}
+	}
+	return humanize.Bytes(uint64(size)), number, nil
+}
+
+func (s *S3) listObjects(bucket, delimiter string) ([]s3.ListObjectsV2Output, error) {
+	exists, err := s.bucketExists(bucket)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, nil
+	}
+	var outputs []s3.ListObjectsV2Output
 	listResp := &s3.ListObjectsV2Output{}
 	for {
 		listParams := &s3.ListObjectsV2Input{
 			Bucket:            aws.String(bucket),
+			Delimiter:         aws.String(delimiter),
 			ContinuationToken: listResp.NextContinuationToken,
 		}
 		listResp, err = s.s3Client.ListObjectsV2(listParams)
 		if err != nil {
-			return "", 0, fmt.Errorf("list objects for bucket %s: %w", bucket, err)
+			return nil, fmt.Errorf("list objects for bucket %s: %w", bucket, err)
 		}
-		objects = append(objects, listResp.Contents...)
+		outputs = append(outputs, *listResp)
 		if listResp.NextContinuationToken == nil {
 			break
 		}
 	}
-	for _, object := range objects {
-		size = size + aws.Int64Value(object.Size)
-		number = number + 1
+	return outputs, nil
+}
+
+func (s *S3) bucketExists(bucket string) (bool, error) {
+	input := &s3.HeadBucketInput{
+		Bucket: aws.String(bucket),
 	}
-	return humanize.Bytes(uint64(size)), number, nil
+	_, err := s.s3Client.HeadBucket(input)
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok && aerr.Code() == errCodeNotFound {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
 }
 
 func (s *S3) addNodes(tree treeprint.Tree, prefixes []*s3.CommonPrefix, bucket string) error {
 	if len(prefixes) == 0 {
 		return nil
 	}
-
 	listResp := &s3.ListObjectsV2Output{}
 	var err error
 	for _, prefix := range prefixes {
