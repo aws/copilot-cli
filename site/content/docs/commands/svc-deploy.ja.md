@@ -30,7 +30,7 @@ Service デプロイの手順は以下の通りです。
                                        production environment.
       --resource-tags stringToString   Optional. Labels with a key and value separated by commas.
                                        Allows you to categorize resources. (default [])
-      --tag string                     Optional. The container image tag.
+      --tag string                     Optional. The container image tag for image Copilot builds from the Dockerfile.
 ```
 
 !!!info
