@@ -115,12 +115,12 @@ func TestLBWebServiceDescriber_URI(t *testing.T) {
 					}, nil),
 					m.ecsDescriber.EXPECT().StackResources().Return([]*describeStack.Resource{
 						{
-							LogicalID:  "HTTPSListenerRuleGroup0",
+							LogicalID:  "HTTPSListenerRule",
 							Type:       svcStackResourceListenerRuleResourceType,
 							PhysicalID: "mockRuleARN1",
 						},
 						{
-							LogicalID:  "HTTPSListenerRuleGroup1",
+							LogicalID:  "HTTPSListenerRule1",
 							Type:       svcStackResourceListenerRuleResourceType,
 							PhysicalID: "mockRuleARN2",
 						},

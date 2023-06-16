@@ -53,8 +53,7 @@ func (e *ELBV2) ListenerRulesHostHeaders(ruleARNs []string) ([]string, error) {
 	}
 	exists := struct{}{}
 	hostHeaderSet := make(map[string]struct{})
-	for idx := range ruleARNs {
-		rule := resp.Rules[idx]
+	for _, rule := range resp.Rules {
 		for _, condition := range rule.Conditions {
 			if aws.StringValue(condition.Field) == "host-header" {
 				// Values is a legacy field that allowed specifying only a single host name.

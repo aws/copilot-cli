@@ -286,8 +286,8 @@ func (d *uriDescriber) uri() (accessURI, error) {
 	var ruleARNs []string
 	for _, resource := range svcResources {
 		if resource.Type == svcStackResourceListenerRuleResourceType &&
-			(httpsEnabled && strings.HasPrefix(resource.LogicalID, svcStackResourceHTTPSListenerRuleLogicalID)) ||
-			(!httpsEnabled && strings.HasPrefix(resource.LogicalID, svcStackResourceHTTPListenerRuleLogicalID)) {
+			((httpsEnabled && strings.HasPrefix(resource.LogicalID, svcStackResourceHTTPSListenerRuleLogicalID)) ||
+				(!httpsEnabled && strings.HasPrefix(resource.LogicalID, svcStackResourceHTTPListenerRuleLogicalID))) {
 			ruleARNs = append(ruleARNs, resource.PhysicalID)
 		}
 	}
