@@ -26,7 +26,7 @@
     ```
     
 <span class="parent-field">http.additional_rules.</span><a id="http-additional-rules-alias" href="#http-additional-rules-alias" class="field">`alias`</a> <span class="type">String or Array of Strings or Array of Maps</span>
-    Service の HTTPS ドメインエリアスです。
+    Service の HTTPS ドメインエイリアスです。
     ```yaml
     # String version.
     http:

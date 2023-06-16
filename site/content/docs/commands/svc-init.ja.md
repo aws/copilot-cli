@@ -7,7 +7,7 @@ $ copilot svc init
 
 `copilot svc init` は、コードを実行するために新しい [Service](../concepts/services.ja.md) を作成します。
 
-コマンドを実行すると、 CLI はローカルの `copilot` ディレクトリに Application 名のサブディレクトリを作成し、そこに [Manifest ファイル](../manifest/overview.ja.md)を作成します。自由に Manifest ファイルを更新し、Service のデフォルト設定を変更できます。また CLI は全ての [Environment](../concepts/environments.ja.md) からプル可能にするポリシーをもつ ECR リポジトリをセットアップします。
+コマンドを実行すると、 CLI はローカルの `copilot` ディレクトリに Service 名のサブディレクトリを作成し、そこに [Manifest ファイル](../manifest/overview.ja.md)を作成します。自由に Manifest ファイルを更新し、Service のデフォルト設定を変更できます。また CLI は全ての [Environment](../concepts/environments.ja.md) からプル可能にするポリシーをもつ ECR リポジトリをセットアップします。
 
 そして Service は CLI からトラックするため AWS System Manager Parameter Store に登録されます。
 
@@ -17,15 +17,23 @@ $ copilot svc init
 
 ```
 Flags
-  -a, --app string          Name of the application.
-  -d, --dockerfile string   Path to the Dockerfile.
-                            Mutually exclusive with -i, --image.
-  -i, --image string        The location of an existing Docker image.
-                            Mutually exclusive with -d, --dockerfile.
-  -n, --name string         Name of the service.
-      --port uint16         The port on which your service listens.
-  -t, --svc-type string     Type of service to create. Must be one of:
-                            "Request-Driven Web Service", "Load Balanced Web Service", "Backend Service", "Worker Service".
+  -a, --app string                     Name of the application.
+  -d, --dockerfile string              Path to the Dockerfile.
+                                       Cannot be specified with --image.
+  -h, --help                           help for init
+  -i, --image string                   The location of an existing Docker image.
+                                       Cannot be specified with --dockerfile or --build-context.
+      --ingress-type string            Required for a Request-Driven Web Service. Allowed source of traffic to your service.
+                                       Must be one of Environment or Internet.
+  -n, --name string                    Name of the service.
+      --no-subscribe                   Optional. Turn off selection for adding subscriptions for worker services.
+      --port uint16                    The port on which your service listens.
+      --sources stringArray            List of relative paths to source directories or files.
+                                       Must be specified with '--svc-type "Static Site"'.
+      --subscribe-topics stringArray   Optional. SNS topics to subscribe to from other services in your application.
+                                       Must be of format '<svcName>:<topicName>'.
+  -t, --svc-type string                Type of service to create. Must be one of:
+                                       "Request-Driven Web Service", "Load Balanced Web Service", "Backend Service", "Worker Service", "Static Site".
 ```
 
 "frontend" として Load Balanced Web Service を作成するには、次のように実行します。
