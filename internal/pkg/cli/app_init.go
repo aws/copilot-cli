@@ -7,11 +7,13 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/iam"
 	"github.com/spf13/afero"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/service/ssm"
 
 	"github.com/spf13/cobra"
@@ -101,6 +103,15 @@ func (o *initAppOpts) Validate() error {
 		}
 	}
 	if o.permissionsBoundary != "" {
+		// Best effort to get the permission boundary name if ARN
+		// (for example: arn:aws:iam::1234567890:policy/myPermissionsBoundaryPolicy).
+		if arn.IsARN(o.permissionsBoundary) {
+			parsed, err := arn.Parse(o.permissionsBoundary)
+			if err != nil {
+				return fmt.Errorf("parse permission boundary ARN: %w", err)
+			}
+			o.permissionsBoundary = strings.TrimPrefix(parsed.Resource, "policy/")
+		}
 		if err := o.validatePermBound(o.permissionsBoundary); err != nil {
 			return err
 		}
