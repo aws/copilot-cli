@@ -80,7 +80,7 @@ type deployPipelineOpts struct {
 	store               store
 	ws                  wsPipelineReader
 	codestar            codestar
-	writer              io.Writer
+	diffWriter          io.Writer
 	newSvcListCmd       func(io.Writer, string) cmd
 	newJobListCmd       func(io.Writer, string) cmd
 	pipelineStackConfig func(in *deploy.CreatePipelineInput) pipelineStackConfig
@@ -123,7 +123,7 @@ func newDeployPipelineOpts(vars deployPipelineVars) (*deployPipelineOpts, error)
 		store:              store,
 		prog:               termprogress.NewSpinner(log.DiagnosticWriter),
 		prompt:             prompter,
-		writer:             os.Stdout,
+		diffWriter:         os.Stdout,
 		sel:                selector.NewWsPipelineSelector(prompter, ws),
 		codestar:           cs.New(defaultSession),
 		pipelineStackConfig: func(in *deploy.CreatePipelineInput) pipelineStackConfig {
@@ -273,9 +273,9 @@ func (o *deployPipelineOpts) Execute() error {
 	if o.showDiff {
 		tpl, err := o.pipelineStackConfig(deployPipelineInput).Template()
 		if err != nil {
-			return fmt.Errorf("generate the new template for deploy diff: %w", err)
+			return fmt.Errorf("generate the new template for diff: %w", err)
 		}
-		if err = o.diff(deployPipelineInput, tpl); err != nil {
+		if err = diff(o, tpl, o.diffWriter); err != nil {
 			var errHasDiff *errHasDiff
 			if !errors.As(err, &errHasDiff) {
 				return err
@@ -297,41 +297,30 @@ func (o *deployPipelineOpts) Execute() error {
 	return nil
 }
 
-// PipelineDeployDiff returns the stringified diff of the template against the deployed template of the pipeline.
-func (o *deployPipelineOpts) pipelineDeployDiff(in *deploy.CreatePipelineInput, template string) (string, error) {
-	tmpl, err := o.pipelineDeployer.Template(stack.NameForPipeline(in.AppName, in.Name, in.IsLegacy))
+// DeployDiff returns the stringified diff of the template against the deployed template of the pipeline.
+func (o *deployPipelineOpts) DeployDiff(template string) (string, error) {
+	isLegacy, err := o.isLegacy(o.pipeline.Name)
+	if err != nil {
+		return "", err
+	}
+
+	tmpl, err := o.pipelineDeployer.Template(stack.NameForPipeline(o.app.Name, o.pipeline.Name, isLegacy))
 	if err != nil {
 		var errNotFound *awscloudformation.ErrStackNotFound
 		if !errors.As(err, &errNotFound) {
-			return "", fmt.Errorf("retrieve the deployed template for %q: %w", in.Name, err)
+			return "", fmt.Errorf("retrieve the deployed template for %q: %w", o.pipeline.Name, err)
 		}
 		tmpl = ""
 	}
 	diffTree, err := templatediff.From(tmpl).ParseWithCFNOverriders([]byte(template))
 	if err != nil {
-		return "", fmt.Errorf("parse the diff against the deployed pipeline stack %q: %w", in.Name, err)
+		return "", fmt.Errorf("parse the diff against the deployed pipeline stack %q: %w", o.pipeline.Name, err)
 	}
 	buf := strings.Builder{}
 	if err := diffTree.Write(&buf); err != nil {
 		return "", err
 	}
 	return buf.String(), nil
-}
-
-func (o *deployPipelineOpts) diff(in *deploy.CreatePipelineInput, tpl string) error {
-	if out, err := o.pipelineDeployDiff(in, tpl); err != nil {
-		var errHasDiff *errHasDiff
-		if !errors.As(err, &errHasDiff) {
-			return err
-		}
-	} else if out != "" {
-		if _, err := o.writer.Write([]byte(out)); err != nil {
-			return err
-		}
-	} else if _, err := o.writer.Write([]byte("No changes.\n")); err != nil {
-		return err
-	}
-	return &errHasDiff{}
 }
 
 func (o *deployPipelineOpts) isLegacy(inputName string) (bool, error) {

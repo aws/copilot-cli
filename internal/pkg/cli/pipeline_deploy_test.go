@@ -750,7 +750,7 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 				)
 
 			},
-			expectedError: fmt.Errorf("generate the new template for deploy diff: some error"),
+			expectedError: fmt.Errorf("generate the new template for diff: some error"),
 		},
 		"failed to fetch the template of deployed stack": {
 			inApp:      &app,
@@ -777,9 +777,9 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					m.deployedPipelineLister.EXPECT().ListDeployedPipelines(appName).Return([]deploy.Pipeline{}, nil),
 
 					m.pipelineStackConfig.EXPECT().Template().Return("template one", nil),
-					m.deployer.EXPECT().Template(gomock.Any()).Return("", errors.New("some error")),
-				)
+					m.deployedPipelineLister.EXPECT().ListDeployedPipelines(appName).Return([]deploy.Pipeline{}, nil),
 
+					m.deployer.EXPECT().Template(gomock.Any()).Return("", fmt.Errorf("some error")))
 			},
 			expectedError: fmt.Errorf("retrieve the deployed template for %q: some error", pipelineName),
 		},
@@ -807,6 +807,8 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 				m.deployedPipelineLister.EXPECT().ListDeployedPipelines(appName).Return([]deploy.Pipeline{}, nil)
 
 				m.pipelineStackConfig.EXPECT().Template().Return("name: mockEnv\ntype: Environment", nil)
+				m.deployedPipelineLister.EXPECT().ListDeployedPipelines(appName).Return([]deploy.Pipeline{}, nil)
+
 				m.deployer.EXPECT().Template(gomock.Any()).Return("name: mockEnv\ntype: Environment", nil)
 
 				m.mockDiffWriter = &strings.Builder{}
@@ -847,6 +849,8 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 				})
 
 				m.pipelineStackConfig.EXPECT().Template().Return("name: mockEnv\ntype: Environment", nil)
+
+				m.deployedPipelineLister.EXPECT().ListDeployedPipelines(appName).Return([]deploy.Pipeline{}, nil)
 				m.deployer.EXPECT().Template(gomock.Any()).Return("name: mockEnv\ntype: Environment", nil)
 
 				m.mockDiffWriter = &strings.Builder{}
@@ -890,6 +894,7 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 				m.deployedPipelineLister.EXPECT().ListDeployedPipelines(appName).Return([]deploy.Pipeline{}, nil)
 
 				m.pipelineStackConfig.EXPECT().Template().Return("name: mockEnv\ntype: Environment", nil)
+				m.deployedPipelineLister.EXPECT().ListDeployedPipelines(appName).Return([]deploy.Pipeline{}, nil)
 				m.deployer.EXPECT().Template(gomock.Any()).Return("name: mockEnv\ntype: Environment", nil)
 
 				m.mockDiffWriter = &strings.Builder{}
@@ -956,13 +961,13 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 				pipelineStackConfig: func(in *deploy.CreatePipelineInput) pipelineStackConfig {
 					return mockPipelineStackConfig
 				},
-				ws:     mockWorkspace,
-				app:    tc.inApp,
-				region: tc.inRegion,
-				store:  mockStore,
-				prog:   mockProgress,
-				prompt: mockPrompt,
-				writer: &strings.Builder{},
+				ws:         mockWorkspace,
+				app:        tc.inApp,
+				region:     tc.inRegion,
+				store:      mockStore,
+				prog:       mockProgress,
+				prompt:     mockPrompt,
+				diffWriter: &strings.Builder{},
 				newSvcListCmd: func(w io.Writer, app string) cmd {
 					return mockActionCmd
 				},
