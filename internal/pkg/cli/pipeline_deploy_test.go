@@ -783,7 +783,7 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 			},
 			expectedError: fmt.Errorf("retrieve the deployed template for %q: some error", pipelineName),
 		},
-		"failed to get the continueDeploymentPrompt": {
+		"failed prompt to accept diff": {
 			inApp:      &app,
 			inAppName:  appName,
 			inRegion:   region,
