@@ -1606,6 +1606,48 @@ func TestRoutingRule_validate(t *testing.T) {
 			},
 			wantedErrorMsgPrefix: `validate "alias":`,
 		},
+		"error if fail to valiadte condition values per listener rule": {
+			RoutingRule: RoutingRule{
+				Path: stringP("/"),
+				Alias: Alias{
+					StringSliceOrString: StringSliceOrString{
+						StringSlice: []string{
+							"example.com",
+							"v1.example.com",
+							"v2.example.com",
+							"v3.example.com",
+							"v4.example.com",
+						},
+					},
+				},
+			},
+			wantedError: fmt.Errorf(`validate condition values per listener rule: listener rule has more than five conditions example.com, v1.example.com, v2.example.com, v3.example.com and v4.example.com `),
+		},
+		"error if fail to validate condition values for advanced aliases": {
+			RoutingRule: RoutingRule{
+				Path: stringP("/"),
+				Alias: Alias{
+					AdvancedAliases: []AdvancedAlias{
+						{
+							Alias: aws.String("example.com"),
+						},
+						{
+							Alias: aws.String("v1.example.com"),
+						},
+						{
+							Alias: aws.String("v2.example.com"),
+						},
+						{
+							Alias: aws.String("v3.example.com"),
+						},
+						{
+							Alias: aws.String("v4.example.com"),
+						},
+					},
+				},
+			},
+			wantedError: fmt.Errorf(`validate condition values per listener rule: listener rule has more than five conditions example.com, v1.example.com, v2.example.com, v3.example.com and v4.example.com `),
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
