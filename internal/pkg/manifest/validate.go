@@ -2251,7 +2251,7 @@ func (r *RoutingRule) validateConditionValuesPerRule() error {
 	for idx, ip := range r.AllowedSourceIps {
 		allowedSourceIps[idx] = string(ip)
 	}
-	if len(aliases)+len(allowedSourceIps) > maxConditionsPerRule {
+	if len(aliases)+len(allowedSourceIps) >= maxConditionsPerRule {
 		return &errMaxConditionValuesPerRule{
 			path:             aws.StringValue(r.Path),
 			aliases:          aliases,
