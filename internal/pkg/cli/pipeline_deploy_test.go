@@ -811,8 +811,6 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 
 				m.deployer.EXPECT().Template(gomock.Any()).Return("name: mockEnv\ntype: Environment", nil)
 
-				m.mockDiffWriter = &strings.Builder{}
-
 				m.prompt.EXPECT().Confirm(continueDeploymentPrompt, "").Return(false, errors.New("some error"))
 
 			},
@@ -852,8 +850,6 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 
 				m.deployedPipelineLister.EXPECT().ListDeployedPipelines(appName).Return([]deploy.Pipeline{}, nil)
 				m.deployer.EXPECT().Template(gomock.Any()).Return("name: mockEnv\ntype: Environment", nil)
-
-				m.mockDiffWriter = &strings.Builder{}
 
 				m.prompt.EXPECT().Confirm(continueDeploymentPrompt, "").Return(true, nil)
 
@@ -896,8 +892,6 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 				m.pipelineStackConfig.EXPECT().Template().Return("name: mockEnv\ntype: Environment", nil)
 				m.deployedPipelineLister.EXPECT().ListDeployedPipelines(appName).Return([]deploy.Pipeline{}, nil)
 				m.deployer.EXPECT().Template(gomock.Any()).Return("name: mockEnv\ntype: Environment", nil)
-
-				m.mockDiffWriter = &strings.Builder{}
 
 				m.prompt.EXPECT().Confirm(continueDeploymentPrompt, "").Return(true, nil)
 
