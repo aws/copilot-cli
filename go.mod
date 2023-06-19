@@ -24,7 +24,7 @@ require (
 	github.com/stretchr/testify v1.8.4
 	github.com/xlab/treeprint v1.2.0
 	golang.org/x/mod v0.11.0
-	golang.org/x/sync v0.2.0
+	golang.org/x/sync v0.3.0
 	golang.org/x/term v0.9.0
 	golang.org/x/text v0.10.0
 	gopkg.in/ini.v1 v1.67.0
