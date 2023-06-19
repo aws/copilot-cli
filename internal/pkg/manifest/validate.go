@@ -2282,9 +2282,9 @@ func (e *errMaxConditionValuesPerRule) RecommendActions() string {
   additional_rules:`, e.path, fmtStringArray(cgList[0].aliases), fmtStringArray(cgList[0].allowedSourceIps)))
 	for i := 1; i < len(cgList); i++ {
 		fmtListenerRules.WriteString(fmt.Sprintf(`
-    path: %s
-    alias: %s
-    allowed_source_ips: %s`, e.path, fmtStringArray(cgList[i].aliases), fmtStringArray(cgList[i].allowedSourceIps)))
+    - path: %s
+      alias: %s
+      allowed_source_ips: %s`, e.path, fmtStringArray(cgList[i].aliases), fmtStringArray(cgList[i].allowedSourceIps)))
 	}
 	return fmt.Sprintf(`You can split the "alias" and "allowed_source_ips" field into separate rules, so that each rule contains up to 5 values: 
 %s`, color.HighlightCodeBlock(fmtListenerRules.String()))
