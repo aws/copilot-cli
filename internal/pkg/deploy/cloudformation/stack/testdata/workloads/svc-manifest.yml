@@ -151,4 +151,3 @@ environments:
       operation:
         image: "alpine:latest"
         command: ["echo", "$COPILOT_APPLICATION_NAME"]
-      

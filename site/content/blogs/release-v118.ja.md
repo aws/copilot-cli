@@ -199,7 +199,7 @@ observability:
   tracing: awsxray
 ```
 
-これらのサービスタイプでは、Copilot は [AWS Distro for OpenTelemetry Collector](https://github.com/aws-observability/aws-otel-collector) サイドカーコンテナをデプロイして、Service からトレースを収集し、X-Ray にエクスポートします。トレースを送信するために [Service をインストルメント化](../docs/developing/observability.ja.md#instrumenting-your-service) (訳注: 計装、 アプリケーションに計測のためのコードを追加すること) をした後、Application のデバッグとパフォーマンスの監視するために、Service を通してエンドツーエンドでリクエストの実行状況を確認できます。
+これらの Service タイプでは、Copilot は [AWS Distro for OpenTelemetry Collector](https://github.com/aws-observability/aws-otel-collector) サイドカーコンテナをデプロイして、Service からトレースを収集し、X-Ray にエクスポートします。トレースを送信するために [Service をインストルメント化](../docs/developing/observability.ja.md#instrumenting-your-service) (訳注: 計装、 アプリケーションに計測のためのコードを追加すること) をした後、Application のデバッグとパフォーマンスの監視するために、Service を通してエンドツーエンドでリクエストの実行状況を確認できます。
 
 ![X-Ray Service Map Example](https://user-images.githubusercontent.com/10566468/166986340-e3b7c0e2-c84d-4671-bf37-ba95bdb1d6b2.png)
 

@@ -15,7 +15,7 @@ Copilot CLI における全てのコマンドと同じ様に、必要なフラ�
 ```
       --domain string                  Optional. Your existing custom domain name.
   -h, --help                           help for init
-      --permissions-boundary           Optional. The name of an existing IAM policy with which to set a
+      --permissions-boundary           Optional. The name or ARN of an existing IAM policy with which to set a
                                        permissions boundary for all roles generated within the application.
       --resource-tags stringToString   Optional. Labels with a key and value separated by commas.
                                        Allows you to categorize resources. (default [])

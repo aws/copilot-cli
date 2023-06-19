@@ -162,6 +162,5 @@ func (d *backendSvcDeployer) validateRuntimeRoutingRule(rule manifest.RoutingRul
 	if err := d.aliasCertValidator.ValidateCertAliases(aliases, d.envConfig.HTTPConfig.Private.Certificates); err != nil {
 		return fmt.Errorf("validate aliases against the imported certificate for env %s: %w", d.env.Name, err)
 	}
-
 	return nil
 }

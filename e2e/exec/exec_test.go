@@ -55,7 +55,7 @@ var _ = Describe("exec flow", func() {
 			_, testEnvInitErr = cli.EnvInit(&client.EnvInitRequest{
 				AppName: appName,
 				EnvName: envName,
-				Profile: "default",
+				Profile: envName,
 			})
 		})
 

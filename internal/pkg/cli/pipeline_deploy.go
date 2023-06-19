@@ -11,11 +11,13 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/spf13/afero"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
+	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	cs "github.com/aws/copilot-cli/internal/pkg/aws/codestar"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	rg "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
@@ -24,7 +26,9 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	deploycfn "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	templatediff "github.com/aws/copilot-cli/internal/pkg/template/diff"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
@@ -62,21 +66,25 @@ type deployPipelineVars struct {
 	appName          string
 	name             string
 	skipConfirmation bool
+	showDiff         bool
 }
 
 type deployPipelineOpts struct {
 	deployPipelineVars
 
-	pipelineDeployer                pipelineDeployer
-	sel                             wsPipelineSelector
-	prog                            progress
-	prompt                          prompter
-	region                          string
-	store                           store
-	ws                              wsPipelineReader
-	codestar                        codestar
-	newSvcListCmd                   func(io.Writer, string) cmd
-	newJobListCmd                   func(io.Writer, string) cmd
+	pipelineDeployer    pipelineDeployer
+	sel                 wsPipelineSelector
+	prog                progress
+	prompt              prompter
+	region              string
+	store               store
+	ws                  wsPipelineReader
+	codestar            codestar
+	diffWriter          io.Writer
+	newSvcListCmd       func(io.Writer, string) cmd
+	newJobListCmd       func(io.Writer, string) cmd
+	pipelineStackConfig func(in *deploy.CreatePipelineInput) pipelineStackConfig
+
 	configureDeployedPipelineLister func() deployedPipelineLister
 
 	// cached variables
@@ -115,8 +123,12 @@ func newDeployPipelineOpts(vars deployPipelineVars) (*deployPipelineOpts, error)
 		store:              store,
 		prog:               termprogress.NewSpinner(log.DiagnosticWriter),
 		prompt:             prompter,
+		diffWriter:         os.Stdout,
 		sel:                selector.NewWsPipelineSelector(prompter, ws),
 		codestar:           cs.New(defaultSession),
+		pipelineStackConfig: func(in *deploy.CreatePipelineInput) pipelineStackConfig {
+			return stack.NewPipelineStackConfig(in)
+		},
 		newSvcListCmd: func(w io.Writer, appName string) cmd {
 			return &listSvcOpts{
 				listWkldVars: listWkldVars{
@@ -258,11 +270,57 @@ func (o *deployPipelineOpts) Execute() error {
 		PermissionsBoundary: o.app.PermissionsBoundary,
 	}
 
+	if o.showDiff {
+		tpl, err := o.pipelineStackConfig(deployPipelineInput).Template()
+		if err != nil {
+			return fmt.Errorf("generate the new template for diff: %w", err)
+		}
+		if err = diff(o, tpl, o.diffWriter); err != nil {
+			var errHasDiff *errHasDiff
+			if !errors.As(err, &errHasDiff) {
+				return err
+			}
+		}
+		if !o.skipConfirmation {
+			contd, err := o.prompt.Confirm(continueDeploymentPrompt, "")
+			if err != nil {
+				return fmt.Errorf("ask whether to continue with the deployment: %w", err)
+			}
+			if !contd {
+				return nil
+			}
+		}
+	}
 	if err := o.deployPipeline(deployPipelineInput); err != nil {
 		return err
 	}
-
 	return nil
+}
+
+// DeployDiff returns the stringified diff of the template against the deployed template of the pipeline.
+func (o *deployPipelineOpts) DeployDiff(template string) (string, error) {
+	isLegacy, err := o.isLegacy(o.pipeline.Name)
+	if err != nil {
+		return "", err
+	}
+
+	tmpl, err := o.pipelineDeployer.Template(stack.NameForPipeline(o.app.Name, o.pipeline.Name, isLegacy))
+	if err != nil {
+		var errNotFound *awscloudformation.ErrStackNotFound
+		if !errors.As(err, &errNotFound) {
+			return "", fmt.Errorf("retrieve the deployed template for %q: %w", o.pipeline.Name, err)
+		}
+		tmpl = ""
+	}
+	diffTree, err := templatediff.From(tmpl).ParseWithCFNOverriders([]byte(template))
+	if err != nil {
+		return "", fmt.Errorf("parse the diff against the deployed pipeline stack %q: %w", o.pipeline.Name, err)
+	}
+	buf := strings.Builder{}
+	if err := diffTree.Write(&buf); err != nil {
+		return "", err
+	}
+	return buf.String(), nil
 }
 
 func (o *deployPipelineOpts) isLegacy(inputName string) (bool, error) {
@@ -446,13 +504,16 @@ func (o *deployPipelineOpts) deployPipeline(in *deploy.CreatePipelineInput) erro
 	}
 
 	// If the stack already exists - we update it
-	shouldUpdate, err := o.shouldUpdate()
-	if err != nil {
-		return err
+	if !o.showDiff {
+		shouldUpdate, err := o.shouldUpdate()
+		if err != nil {
+			return err
+		}
+		if !shouldUpdate {
+			return nil
+		}
 	}
-	if !shouldUpdate {
-		return nil
-	}
+
 	o.prog.Start(fmt.Sprintf(fmtPipelineDeployProposalStart, color.HighlightUserInput(o.pipeline.Name)))
 	if err := o.pipelineDeployer.UpdatePipeline(in, bucketName); err != nil {
 		o.prog.Stop(log.Serrorf(fmtPipelineDeployProposalFailed, color.HighlightUserInput(o.pipeline.Name)))
@@ -493,5 +554,6 @@ func buildPipelineDeployCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, "", appFlagDescription)
 	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, "", pipelineFlagDescription)
 	cmd.Flags().BoolVar(&vars.skipConfirmation, yesFlag, false, yesFlagDescription)
+	cmd.Flags().BoolVar(&vars.showDiff, diffFlag, false, diffFlagDescription)
 	return cmd
 }

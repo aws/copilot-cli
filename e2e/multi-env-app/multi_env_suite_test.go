@@ -15,8 +15,6 @@ import (
 
 var cli *client.CLI
 var appName string
-var testEnvironmentProfile string
-var prodEnvironmentProfile string
 
 func TestMultiEnvProject(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -24,8 +22,6 @@ func TestMultiEnvProject(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
-	testEnvironmentProfile = "e2etestenv"
-	prodEnvironmentProfile = "e2eprodenv"
 	ecsCli, err := client.NewCLI()
 	cli = ecsCli
 	Expect(err).NotTo(HaveOccurred())
