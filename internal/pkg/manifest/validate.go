@@ -50,6 +50,7 @@ const (
 	// Listener rules have a quota of five condition values per rule.
 	// Please refer to https://docs.aws.amazon.com/elasticloadbalancing/latest/application/load-balancer-limits.html.
 	maxConditionsPerRule = 5
+	rootPath             = "/"
 )
 
 var (
@@ -902,15 +903,7 @@ func (r RoutingRule) validate() error {
 			conditionalFields: []string{"hosted_zone"},
 		}
 	}
-	aliases, err := r.Alias.ToStringSlice()
-	if err != nil {
-		return fmt.Errorf("convert aliases to string slice: %w", err)
-	}
-	allowedSourceIps := make([]string, len(r.AllowedSourceIps))
-	for idx, ip := range r.AllowedSourceIps {
-		allowedSourceIps[idx] = string(ip)
-	}
-	if err := validateConditionValuesPerRule(aliases, allowedSourceIps); err != nil {
+	if err := r.validateConditionValuesPerRule(); err != nil {
 		return fmt.Errorf("validate condition values per listener rule: %w", err)
 	}
 	return nil
@@ -2249,18 +2242,27 @@ func (i ImageLocationOrBuild) validate() error {
 	return nil
 }
 
-func validateConditionValuesPerRule(aliases []string, allowedSourceIPs []string) error {
-	if (len(aliases) >= maxConditionsPerRule) || (len(allowedSourceIPs) >= maxConditionsPerRule) ||
-		(len(aliases)+len(allowedSourceIPs) >= maxConditionsPerRule) {
+func (r *RoutingRule) validateConditionValuesPerRule() error {
+	aliases, err := r.Alias.ToStringSlice()
+	if err != nil {
+		return fmt.Errorf("convert aliases to string slice: %w", err)
+	}
+	allowedSourceIps := make([]string, len(r.AllowedSourceIps))
+	for idx, ip := range r.AllowedSourceIps {
+		allowedSourceIps[idx] = string(ip)
+	}
+	if len(aliases)+len(r.AllowedSourceIps) > maxConditionsPerRule {
 		return &errMaxConditionValuesPerRule{
+			path:             aws.StringValue(r.Path),
 			aliases:          aliases,
-			allowedSourceIps: allowedSourceIPs,
+			allowedSourceIps: allowedSourceIps,
 		}
 	}
 	return nil
 }
 
 type errMaxConditionValuesPerRule struct {
+	path             string
 	aliases          []string
 	allowedSourceIps []string
 }
@@ -2271,29 +2273,92 @@ func (e *errMaxConditionValuesPerRule) Error() string {
 }
 
 func (e *errMaxConditionValuesPerRule) RecommendActions() string {
-	return fmt.Sprintf(`You can split the aliases in the manifest with "http.additional_rules" with the same path and container port:
-%s`, color.HighlightCodeBlock(fmt.Sprintf(`http:
-  path: "/"
-  alias: ["%s", "%s"]
-  allowed_source_ips: ["192.0.2.0/24", "198.51.100.10/32"]
-  additional_rules: 
-%s`, e.aliases[0], e.aliases[1], fmtAdditionalRules(e.aliases))))
+	cgList := e.generateConditionGroups()
+	var fmtListenerRules strings.Builder
+	fmtListenerRules.WriteString(fmt.Sprintf(`http:
+  path: %s
+  alias: %s
+  allowed_source_ips: %s
+  additional_rules:`, e.path, fmtStringArray(cgList[0].aliases), fmtStringArray(cgList[0].allowedSourceIps)))
+	for i := 1; i < len(cgList); i++ {
+		fmtListenerRules.WriteString(fmt.Sprintf(`
+    path: %s
+    alias: %s
+    allowed_source_ips: %s`, e.path, fmtStringArray(cgList[i].aliases), fmtStringArray(cgList[i].allowedSourceIps)))
+	}
+	return fmt.Sprintf(`You can split the "alias" and "allowed_source_ips" field into separate rules, so that each rule contains up to 5 values: 
+%s`, color.HighlightCodeBlock(fmtListenerRules.String()))
 }
 
-func fmtAdditionalRules(aliases []string) string {
-	var fmtAdditionalRules strings.Builder
-	for idx := 2; idx < len(aliases)-1; idx += 2 {
-		fmtAdditionalRules.WriteString(fmt.Sprintf(`
-    - alias: ["%s", "%s"]
-      allowed_source_ips: ["192.0.2.0/24", "198.51.100.10/32"]
-      path: "/"
-%s`, aliases[idx], aliases[idx+1], "\n"))
+func fmtStringArray(arr []string) string {
+	return fmt.Sprintf("[%s]", strings.Join(arr, ","))
+}
+
+// conditionGroup represents groups of conditions per listener rule.
+type conditionGroup struct {
+	allowedSourceIps []string
+	aliases          []string
+}
+
+func (e *errMaxConditionValuesPerRule) generateConditionGroups() []conditionGroup {
+	remaining := calculateRemainingConditions(e.path)
+	if len(e.aliases) != 0 && len(e.allowedSourceIps) != 0 {
+		return e.generateConditionsWithSourceIPsAndAlias(remaining)
 	}
-	if len(aliases)%2 != 0 {
-		fmtAdditionalRules.WriteString(fmt.Sprintf(`
-    - alias: ["%s"]
-      allowed_source_ips: ["192.0.2.0/24", "198.51.100.10/32"]
-      path: "/"`, aliases[len(aliases)-1]))
+	if len(e.aliases) != 0 {
+		return e.generateConditionsWithAliasOnly(remaining)
 	}
-	return fmtAdditionalRules.String()
+	return e.generateConditionWithSourceIPsOnly(remaining)
+}
+
+func calculateRemainingConditions(path string) int {
+	rcPerRule := maxConditionsPerRule
+	if path != rootPath {
+		return rcPerRule - 2
+	}
+	return rcPerRule - 1
+}
+
+func (e *errMaxConditionValuesPerRule) generateConditionsWithSourceIPsAndAlias(remaining int) []conditionGroup {
+	var groups []conditionGroup
+	for i := 0; i < len(e.allowedSourceIps); i++ {
+		var group conditionGroup
+		group.allowedSourceIps = []string{e.allowedSourceIps[i]}
+		groups = append(groups, e.generateConditionsGroups(remaining-1, true, group)...)
+	}
+	return groups
+}
+
+func (e *errMaxConditionValuesPerRule) generateConditionsWithAliasOnly(remaining int) []conditionGroup {
+	var group conditionGroup
+	return e.generateConditionsGroups(remaining, true, group)
+}
+
+func (e *errMaxConditionValuesPerRule) generateConditionWithSourceIPsOnly(remaining int) []conditionGroup {
+	var group conditionGroup
+	return e.generateConditionsGroups(remaining, false, group)
+}
+
+func (e *errMaxConditionValuesPerRule) generateConditionsGroups(remaining int, isAlias bool, group conditionGroup) []conditionGroup {
+	var groups []conditionGroup
+	var conditions []string
+	if isAlias {
+		conditions = e.aliases
+	} else {
+		conditions = e.allowedSourceIps
+	}
+	for i := 0; i < len(conditions); i += remaining {
+		end := i + remaining
+		if end > len(conditions) {
+			end = len(conditions)
+		}
+		if isAlias {
+			group.aliases = conditions[i:end]
+			groups = append(groups, group)
+			continue
+		}
+		group.allowedSourceIps = conditions[i:end]
+		groups = append(groups, group)
+	}
+	return groups
 }
