@@ -30,7 +30,7 @@ Copilot CLI の全てのコマンドと同様に、必要なフラグを指定�
                             For example: "0 * * * *", "@daily", "@weekly", "@every 1h30m".
                             AWS Schedule Expressions of the form "rate(10 minutes)" or "cron(0 12 L * ? 2021)"
                             are also accepted.
-      --tag string          Optional. The container image tag for image Copilot builds from the Dockerfile.
+      --tag string          Optional. The tag for the container image Copilot builds from the Dockerfile.
       --timeout string      Optional. The total execution time for the task, including retries.
                             Accepts valid Go duration strings. For example: "2h", "1h30m", "900s".
   -t, --type string         Type of service to create. Must be one of:

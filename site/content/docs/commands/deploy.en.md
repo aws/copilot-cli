@@ -7,11 +7,12 @@ $ copilot deploy
 
 This command is used to run either [`copilot svc deploy`](../commands/svc-deploy.en.md) or [`copilot job deploy`](../commands/job-deploy.en.md) under the hood. The steps involved in `copilot deploy` are the same as those involved in `copilot svc deploy` and `copilot job deploy`:
 
-1. [Optional] Build your local Dockerfile into an image
-2. [Optional] Tag it with the value from `--tag` or the latest git sha (if you're in a git directory)
-3. [Optional] Push the image to ECR
-4. Package your manifest file and addons into CloudFormation
-5. Create / update your ECS task definition and job or service.
+1. When `image.build` exists in the manifest:
+    1. Build your local Dockerfile into an image
+    2. Tag it with the value from `--tag` or the latest git sha (if you're in a git directory)
+    3. Push the image to ECR
+2. Package your manifest file and addons into CloudFormation
+3. Create / update your ECS task definition and job or service.
 
 ## What are the flags?
 
@@ -27,7 +28,7 @@ This command is used to run either [`copilot svc deploy`](../commands/svc-deploy
                                        production environment.
       --resource-tags stringToString   Optional. Labels with a key and value separated by commas.
                                        Allows you to categorize resources. (default [])
-      --tag string                     Optional. The container image tag for image Copilot builds from the Dockerfile.
+      --tag string                     Optional. The tag for the container image Copilot builds from the Dockerfile.
 ```
 
 !!!info

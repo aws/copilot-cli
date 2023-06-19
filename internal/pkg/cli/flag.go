@@ -304,7 +304,7 @@ output the manifest file used for that deployment.`
 	containerFlagDescription   = "Optional. The specific container you want to exec in. By default the first essential container will be used."
 
 	// Build.
-	imageTagFlagDescription     = `Optional. The container image tag for image Copilot builds from the Dockerfile.`
+	imageTagFlagDescription     = `Optional. The tag for the container image Copilot builds from the Dockerfile.`
 	uploadAssetsFlagDescription = `Optional. Whether to upload assets (container images, Lambda functions, etc.).
 Uploaded asset locations are filled in the template configuration.`
 	stackOutputDirFlagDescription = "Optional. Writes the stack template and template configuration to a directory."

@@ -9,11 +9,12 @@ $ copilot job deploy
 
 The steps involved in `job deploy` are:
 
-1. [Optional] Build your local Dockerfile into an image
-2. [Optional] Tag it with the value from `--tag` or the latest git sha (if you're in a git directory)
-3. [Optional] Push the image to ECR
-4. Package your manifest file and addons into CloudFormation
-4. Create / update your ECS task definition and job
+1. When `image.build` exists in the manifest:
+    1. Build your local Dockerfile into an image
+    2. Tag it with the value from `--tag` or the latest git sha (if you're in a git directory)
+    3. Push the image to ECR
+2. Package your manifest file and addons into CloudFormation
+3. Create / update your ECS task definition and job
 
 ## What are the flags?
 
@@ -29,7 +30,7 @@ The steps involved in `job deploy` are:
                                        production environment.
       --resource-tags stringToString   Optional. Labels with a key and value separated by commas.
                                        Allows you to categorize resources. (default [])
-      --tag string                     Optional. The container image tag for image Copilot builds from the Dockerfile.
+      --tag string                     Optional. The tag for the container image Copilot builds from the Dockerfile.
 ```
 
 !!!info
