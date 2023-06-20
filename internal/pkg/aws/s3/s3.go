@@ -7,7 +7,6 @@ package s3
 import (
 	"errors"
 	"fmt"
-	"github.com/dustin/go-humanize"
 	"github.com/xlab/treeprint"
 	"io"
 	"mime"
@@ -222,18 +221,15 @@ func (s *S3) BucketTree(bucket string) (string, error) {
 // BucketSizeAndCount returns the total size and number of objects in an S3 bucket.
 func (s *S3) BucketSizeAndCount(bucket string) (string, int, error) {
 	outputs, err := s.listObjects(bucket, "")
-	if err != nil {
+	if err != nil || outputs == nil {
 		return "", 0, err
-	}
-	if outputs == nil {
-		return "", 0, nil
 	}
 	var size int64
 	var count int
 	for _, output := range outputs {
 		for _, object := range output.Contents {
-			size = size + aws.Int64Value(object.Size)
-			count = count + 1
+			size += aws.Int64Value(object.Size)
+			count++
 		}
 	}
 	return humanize.Bytes(uint64(size)), count, nil
@@ -241,11 +237,8 @@ func (s *S3) BucketSizeAndCount(bucket string) (string, int, error) {
 
 func (s *S3) listObjects(bucket, delimiter string) ([]s3.ListObjectsV2Output, error) {
 	exists, err := s.bucketExists(bucket)
-	if err != nil {
+	if err != nil || !exists {
 		return nil, err
-	}
-	if !exists {
-		return nil, nil
 	}
 	var outputs []s3.ListObjectsV2Output
 	listResp := &s3.ListObjectsV2Output{}
@@ -273,7 +266,8 @@ func (s *S3) bucketExists(bucket string) (bool, error) {
 	}
 	_, err := s.s3Client.HeadBucket(input)
 	if err != nil {
-		if aerr, ok := err.(awserr.Error); ok && aerr.Code() == errCodeNotFound {
+		var aerr *awserr.Error
+		if errors.As(err, &aerr) && aerr.Code() == errCodeNotFound {
 			return false, nil
 		}
 		return false, err
