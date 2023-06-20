@@ -28,7 +28,7 @@ This command is used to run either [`copilot svc deploy`](../commands/svc-deploy
                                        production environment.
       --resource-tags stringToString   Optional. Labels with a key and value separated by commas.
                                        Allows you to categorize resources. (default [])
-      --tag string                     Optional. The tag for the container image Copilot builds from the Dockerfile.
+      --tag string                     Optional. The tag for the container images Copilot builds from Dockerfiles.
 ```
 
 !!!info
