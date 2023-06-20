@@ -719,7 +719,7 @@ func TestAppRunnerStatusDescriber_Describe(t *testing.T) {
 				)
 			},
 
-			wantedError: fmt.Errorf("get AppRunner service description for App Runner service frontend in environment test: some error"),
+			wantedError: fmt.Errorf("get App Runner service description for App Runner service frontend in environment test: some error"),
 		},
 		"success": {
 			setupMocks: func(m serviceStatusDescriberMocks) {
