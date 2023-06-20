@@ -16,6 +16,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/graph"
 	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
+	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/dustin/go-humanize/english"
 )
 
@@ -43,6 +44,13 @@ const (
 
 	// Tracing vendors.
 	awsXRAY = "awsxray"
+)
+
+const (
+	// Listener rules have a quota of five condition values per rule.
+	// Please refer to https://docs.aws.amazon.com/elasticloadbalancing/latest/application/load-balancer-limits.html.
+	maxConditionsPerRule = 5
+	rootPath             = "/"
 )
 
 var (
@@ -894,6 +902,9 @@ func (r RoutingRule) validate() error {
 			missingField:      "alias",
 			conditionalFields: []string{"hosted_zone"},
 		}
+	}
+	if err := r.validateConditionValuesPerRule(); err != nil {
+		return fmt.Errorf("validate condition values per listener rule: %w", err)
 	}
 	return nil
 }
@@ -2229,4 +2240,125 @@ func (i ImageLocationOrBuild) validate() error {
 		}
 	}
 	return nil
+}
+
+func (r *RoutingRule) validateConditionValuesPerRule() error {
+	aliases, err := r.Alias.ToStringSlice()
+	if err != nil {
+		return fmt.Errorf("convert aliases to string slice: %w", err)
+	}
+	allowedSourceIps := make([]string, len(r.AllowedSourceIps))
+	for idx, ip := range r.AllowedSourceIps {
+		allowedSourceIps[idx] = string(ip)
+	}
+	if len(aliases)+len(allowedSourceIps) >= maxConditionsPerRule {
+		return &errMaxConditionValuesPerRule{
+			path:             aws.StringValue(r.Path),
+			aliases:          aliases,
+			allowedSourceIps: allowedSourceIps,
+		}
+	}
+	return nil
+}
+
+type errMaxConditionValuesPerRule struct {
+	path             string
+	aliases          []string
+	allowedSourceIps []string
+}
+
+func (e *errMaxConditionValuesPerRule) Error() string {
+	return fmt.Sprintf("listener rule has more than five conditions %s %s", english.WordSeries(e.aliases, "and"),
+		english.WordSeries(e.allowedSourceIps, "and"))
+}
+
+func (e *errMaxConditionValuesPerRule) RecommendActions() string {
+	cgList := e.generateConditionGroups()
+	var fmtListenerRules strings.Builder
+	fmtListenerRules.WriteString(fmt.Sprintf(`http:
+  path: %s
+  alias: %s
+  allowed_source_ips: %s
+  additional_rules:`, e.path, fmtStringArray(cgList[0].aliases), fmtStringArray(cgList[0].allowedSourceIps)))
+	for i := 1; i < len(cgList); i++ {
+		fmtListenerRules.WriteString(fmt.Sprintf(`
+    - path: %s
+      alias: %s
+      allowed_source_ips: %s`, e.path, fmtStringArray(cgList[i].aliases), fmtStringArray(cgList[i].allowedSourceIps)))
+	}
+	return fmt.Sprintf(`You can split the "alias" and "allowed_source_ips" field into separate rules, so that each rule contains up to 5 values: 
+%s`, color.HighlightCodeBlock(fmtListenerRules.String()))
+}
+
+func fmtStringArray(arr []string) string {
+	return fmt.Sprintf("[%s]", strings.Join(arr, ","))
+}
+
+// conditionGroup represents groups of conditions per listener rule.
+type conditionGroup struct {
+	allowedSourceIps []string
+	aliases          []string
+}
+
+func (e *errMaxConditionValuesPerRule) generateConditionGroups() []conditionGroup {
+	remaining := calculateRemainingConditions(e.path)
+	if len(e.aliases) != 0 && len(e.allowedSourceIps) != 0 {
+		return e.generateConditionsWithSourceIPsAndAlias(remaining)
+	}
+	if len(e.aliases) != 0 {
+		return e.generateConditionsWithAliasOnly(remaining)
+	}
+	return e.generateConditionWithSourceIPsOnly(remaining)
+}
+
+func calculateRemainingConditions(path string) int {
+	rcPerRule := maxConditionsPerRule
+	if path != rootPath {
+		return rcPerRule - 2
+	}
+	return rcPerRule - 1
+}
+
+func (e *errMaxConditionValuesPerRule) generateConditionsWithSourceIPsAndAlias(remaining int) []conditionGroup {
+	var groups []conditionGroup
+	for i := 0; i < len(e.allowedSourceIps); i++ {
+		var group conditionGroup
+		group.allowedSourceIps = []string{e.allowedSourceIps[i]}
+		groups = append(groups, e.generateConditionsGroups(remaining-1, true, group)...)
+	}
+	return groups
+}
+
+func (e *errMaxConditionValuesPerRule) generateConditionsWithAliasOnly(remaining int) []conditionGroup {
+	var group conditionGroup
+	return e.generateConditionsGroups(remaining, true, group)
+}
+
+func (e *errMaxConditionValuesPerRule) generateConditionWithSourceIPsOnly(remaining int) []conditionGroup {
+	var group conditionGroup
+	return e.generateConditionsGroups(remaining, false, group)
+}
+
+func (e *errMaxConditionValuesPerRule) generateConditionsGroups(remaining int, isAlias bool, group conditionGroup) []conditionGroup {
+	var groups []conditionGroup
+	var conditions []string
+	if isAlias {
+		conditions = e.aliases
+	} else {
+		conditions = e.allowedSourceIps
+	}
+	for i := 0; i < len(conditions); i += remaining {
+		end := i + remaining
+		if end > len(conditions) {
+			end = len(conditions)
+		}
+		if isAlias {
+			group.aliases = conditions[i:end]
+			groups = append(groups, group)
+			continue
+		}
+		group.allowedSourceIps = conditions[i:end]
+		groups = append(groups, group)
+	}
+	return groups
 }

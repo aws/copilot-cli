@@ -6,8 +6,9 @@ package describe
 import (
 	"errors"
 	"fmt"
-	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatch"
 	"testing"
+
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatch"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	cfnstack "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
@@ -261,7 +262,7 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 						Architecture:    "X86_64",
 					}, nil),
 					m.ecsDescriber.EXPECT().RollbackAlarmNames().Return([]string{}, nil),
-				m.ecsDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{}, nil),
+					m.ecsDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{}, nil),
 					m.ecsDescriber.EXPECT().Secrets().Return([]*ecs.ContainerSecret{}, nil))
 			},
 			wantedBackendSvc: &backendSvcDesc{
@@ -285,8 +286,8 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 						"jobs.test.phonetool.local:5000": []string{"test"},
 					},
 					ServiceConnect: serviceConnects{},
-					Resources: map[string][]*stack.Resource{},
-					environments: []string{"test"},
+					Resources:      map[string][]*stack.Resource{},
+					environments:   []string{"test"},
 				},
 			},
 		},
@@ -559,7 +560,7 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 					m.ecsDescriber.EXPECT().StackResources().Return(resources, nil),
 					m.ecsDescriber.EXPECT().Params().Return(params, nil),
 					m.ecsDescriber.EXPECT().StackResources().Return(resources, nil),
-					m.lbDescriber.EXPECT().ListenerRuleHostHeaders("listenerRuleARN").Return([]string{"jobs.test.phonetool.internal"}, nil),
+					m.lbDescriber.EXPECT().ListenerRulesHostHeaders([]string{"listenerRuleARN"}).Return([]string{"jobs.test.phonetool.internal"}, nil),
 					m.ecsDescriber.EXPECT().Params().Return(params, nil),
 					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
 					m.ecsDescriber.EXPECT().ServiceConnectDNSNames().Return([]string{"jobs"}, nil),
