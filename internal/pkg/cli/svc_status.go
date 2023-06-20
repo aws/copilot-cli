@@ -66,7 +66,8 @@ func newSvcStatusOpts(vars svcStatusVars) (*svcStatusOpts, error) {
 			if err != nil {
 				return fmt.Errorf("retrieve %s from application %s: %w", o.appName, o.svcName, err)
 			}
-			if wkld.Type == manifestinfo.RequestDrivenWebServiceType {
+			switch wkld.Type {
+			case manifestinfo.RequestDrivenWebServiceType:
 				d, err := describe.NewAppRunnerStatusDescriber(&describe.NewServiceStatusConfig{
 					App:         o.appName,
 					Env:         o.envName,
@@ -77,7 +78,7 @@ func newSvcStatusOpts(vars svcStatusVars) (*svcStatusOpts, error) {
 					return fmt.Errorf("create status describer for App Runner service %s in application %s: %w", o.svcName, o.appName, err)
 				}
 				o.statusDescriber = d
-			} else if wkld.Type == manifestinfo.StaticSiteType {
+			case manifestinfo.StaticSiteType:
 				d, err := describe.NewStaticSiteStatusDescriber(&describe.NewServiceStatusConfig{
 					App:         o.appName,
 					Env:         o.envName,
@@ -88,7 +89,7 @@ func newSvcStatusOpts(vars svcStatusVars) (*svcStatusOpts, error) {
 					return fmt.Errorf("create status describer for Static Site service %s in application %s: %w", o.svcName, o.appName, err)
 				}
 				o.statusDescriber = d
-			} else {
+			default:
 				d, err := describe.NewECSStatusDescriber(&describe.NewServiceStatusConfig{
 					App:         o.appName,
 					Env:         o.envName,

@@ -7,7 +7,6 @@ package s3
 import (
 	"errors"
 	"fmt"
-	"github.com/xlab/treeprint"
 	"io"
 	"mime"
 	"path/filepath"
@@ -20,6 +19,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	"github.com/dustin/go-humanize"
+	"github.com/xlab/treeprint"
 )
 
 const (
@@ -266,7 +267,7 @@ func (s *S3) bucketExists(bucket string) (bool, error) {
 	}
 	_, err := s.s3Client.HeadBucket(input)
 	if err != nil {
-		var aerr *awserr.Error
+		var aerr awserr.Error
 		if errors.As(err, &aerr) && aerr.Code() == errCodeNotFound {
 			return false, nil
 		}
