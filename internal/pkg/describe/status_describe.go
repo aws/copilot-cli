@@ -246,7 +246,7 @@ func (s *ecsStatusDescriber) Describe() (HumanJSONStringer, error) {
 func (a *appRunnerStatusDescriber) Describe() (HumanJSONStringer, error) {
 	svc, err := a.svcDescriber.Service()
 	if err != nil {
-		return nil, fmt.Errorf("get AppRunner service description for App Runner service %s in environment %s: %w", a.svc, a.env, err)
+		return nil, fmt.Errorf("get App Runner service description for App Runner service %s in environment %s: %w", a.svc, a.env, err)
 	}
 	logGroupName := fmt.Sprintf(fmtAppRunnerSvcLogGroupName, svc.Name, svc.ID)
 	logEventsOpts := cloudwatchlogs.LogEventsOpts{
