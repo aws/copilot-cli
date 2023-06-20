@@ -54,9 +54,9 @@ type AlarmStatus struct {
 // AlarmDescription contains CloudWatch alarm config.
 // Also available: MetricName, ComparisonOperator, DatapointsToAlarm, EvaluationPeriods, Threshold, Unit.
 type AlarmDescription struct {
-	Name               string  `json:"name"`
-	Description        string  `json:"description"`
-	Environment        string  `json:"environment"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Environment string `json:"environment"`
 }
 
 // New returns a CloudWatch struct configured against the input session.
@@ -181,8 +181,8 @@ func (cw *CloudWatch) metricAlarmsDescriptions(alarms []*cloudwatch.MetricAlarm)
 			continue
 		}
 		alarmDescriptionsList = append(alarmDescriptionsList, &AlarmDescription{
-			Name:               aws.StringValue(alarm.AlarmName),
-			Description:        aws.StringValue(alarm.AlarmDescription),
+			Name:        aws.StringValue(alarm.AlarmName),
+			Description: aws.StringValue(alarm.AlarmDescription),
 		})
 	}
 	return alarmDescriptionsList
