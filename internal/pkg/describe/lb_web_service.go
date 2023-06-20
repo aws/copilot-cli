@@ -47,7 +47,7 @@ type envDescriber interface {
 }
 
 type lbDescriber interface {
-	ListenerRuleHostHeaders(ruleARN string) ([]string, error)
+	ListenerRulesHostHeaders(ruleARNs []string) ([]string, error)
 }
 
 // LBWebServiceDescriber retrieves information about a load balanced web service.

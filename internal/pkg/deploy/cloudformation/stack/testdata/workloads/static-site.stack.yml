@@ -106,7 +106,7 @@ Resources:
     Type: AWS::CloudFront::Distribution
     Properties:
       DistributionConfig:
-        Aliases: ["example.com"]
+        Aliases: ["*.example.com"]
         DefaultCacheBehavior:
           Compress: true
           AllowedMethods: ["GET", "HEAD"]
@@ -321,7 +321,7 @@ Resources:
       ServiceName: !Ref WorkloadName
       RootDNSRole: arn:aws:iam::123456789123:role/my-app-DNSDelegationRole
       DomainName: example.com
-      Aliases: ["example.com"]
+      Aliases: ["*.example.com"]
 
   CustomDomainFunction:
     Type: AWS::Lambda::Function
@@ -383,7 +383,7 @@ Resources:
       RootDNSRole: arn:aws:iam::123456789123:role/my-app-DNSDelegationRole
       DomainName: example.com
       IsCloudFrontCertificate: true
-      Aliases: ["example.com"]
+      Aliases: ["*.example.com"]
 
   CertificateValidationFunction:
     Type: AWS::Lambda::Function
@@ -465,6 +465,6 @@ Outputs:
     Export:
       Name: !Sub ${AWS::StackName}-CloudFrontDistributionDomainName
   CloudFrontDistributionAlternativeDomainName:
-    Value: "example.com"
+    Value: "*.example.com"
     Export:
       Name: !Sub ${AWS::StackName}-CloudFrontDistributionAlternativeDomainName

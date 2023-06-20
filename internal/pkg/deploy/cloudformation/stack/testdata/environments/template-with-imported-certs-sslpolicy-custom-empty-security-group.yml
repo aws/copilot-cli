@@ -921,6 +921,41 @@ Resources:
       SubnetIds:
         - !Ref PrivateSubnet1
         - !Ref PrivateSubnet2
+  LogResourcePolicy:
+    Metadata:
+      'aws:copilot:description': 'A resource policy to allow AWS services to create log streams for your workloads.'
+    Type: AWS::Logs::ResourcePolicy
+    Properties:
+      PolicyName: !Sub '${AppName}-${EnvironmentName}-LogResourcePolicy'
+      PolicyDocument:
+        Fn::Sub: |
+          {
+            "Version": "2012-10-17",
+            "Statement": [
+              {
+                "Sid": "StateMachineToCloudWatchLogs",
+                "Effect": "Allow",
+                "Principal": {
+                  "Service": ["delivery.logs.amazonaws.com"]
+                },
+                "Action": [
+                  "logs:CreateLogStream",
+                  "logs:PutLogEvents"
+                ],
+                "Resource": [
+                  "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/copilot/${AppName}-${EnvironmentName}-*:log-stream:*"
+                ],
+                "Condition": {
+                  "StringEquals": {
+                    "aws:SourceAccount": "${AWS::AccountId}"
+                  },
+                  "ArnLike": {
+                    "aws:SourceArn": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:*"
+                  }
+                }
+              }
+            ]
+          }
 Outputs:
   VpcId:
     Value: !Ref VPC

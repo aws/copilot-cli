@@ -1,10 +1,11 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-package multi_env_app_test
+package static_site_test
 
 import (
 	"fmt"
+	"os"
 	"testing"
 	"time"
 
@@ -16,19 +17,22 @@ import (
 var cli *client.CLI
 var appName string
 
-func TestMultiEnvProject(t *testing.T) {
+const domainName = "static-site.copilot-e2e-tests.ecs.aws.dev"
+
+var timeNow = time.Now().Unix()
+
+func TestStaticSite(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Multiple Environments Suite")
+	RunSpecs(t, "Static Site Suite")
 }
 
 var _ = BeforeSuite(func() {
-	ecsCli, err := client.NewCLI()
-	cli = ecsCli
+	copilotCLI, err := client.NewCLI()
 	Expect(err).NotTo(HaveOccurred())
-	appName = fmt.Sprintf("e2e-multienv-%d", time.Now().Unix())
+	cli = copilotCLI
+	appName = fmt.Sprintf("t%d", timeNow)
+	err = os.Setenv("DOMAINNAME", domainName)
+	Expect(err).NotTo(HaveOccurred())
 })
 
-var _ = AfterSuite(func() {
-	_, err := cli.AppDelete()
-	Expect(err).NotTo(HaveOccurred())
-})
+var _ = AfterSuite(func() {})
