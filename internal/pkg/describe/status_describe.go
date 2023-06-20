@@ -265,15 +265,15 @@ func (a *appRunnerStatusDescriber) Describe() (HumanJSONStringer, error) {
 
 // Describe returns the status of a Static Site service.
 func (d *staticSiteStatusDescriber) Describe() (HumanJSONStringer, error) {
-	bucketDataGetter, bucketNameGetter, err := d.initS3Client(d.env)
+	dataGetter, nameGetter, err := d.initS3Client(d.env)
 	if err != nil {
 		return nil, err
 	}
-	bucketName, err := bucketNameGetter.BucketName(d.app, d.env, d.svc)
+	bucketName, err := nameGetter.BucketName(d.app, d.env, d.svc)
 	if err != nil {
 		return nil, fmt.Errorf("get bucket name for %q Static Site service in %q environment: %w", d.svc, d.env, err)
 	}
-	size, count, err := bucketDataGetter.BucketSizeAndCount(bucketName)
+	size, count, err := dataGetter.BucketSizeAndCount(bucketName)
 	if err != nil {
 		return nil, fmt.Errorf("get size and count data for %q S3 bucket: %w", bucketName, err)
 	}

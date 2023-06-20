@@ -198,10 +198,7 @@ func FormatARN(partition, location string) string {
 // BucketTree creates an ASCII tree representing the folder structure of a bucket's objects.
 func (s *S3) BucketTree(bucket string) (string, error) {
 	outputs, err := s.listObjects(bucket, "/")
-	if err != nil {
-		return "", err
-	}
-	if outputs == nil {
+	if err != nil || outputs == nil {
 		return "", nil
 	}
 	var contents []*s3.Object
@@ -232,14 +229,14 @@ func (s *S3) BucketSizeAndCount(bucket string) (string, int, error) {
 		return "", 0, nil
 	}
 	var size int64
-	var number int
+	var count int
 	for _, output := range outputs {
 		for _, object := range output.Contents {
 			size = size + aws.Int64Value(object.Size)
-			number = number + 1
+			count = count + 1
 		}
 	}
-	return humanize.Bytes(uint64(size)), number, nil
+	return humanize.Bytes(uint64(size)), count, nil
 }
 
 func (s *S3) listObjects(bucket, delimiter string) ([]s3.ListObjectsV2Output, error) {
