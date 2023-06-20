@@ -199,7 +199,7 @@ func FormatARN(partition, location string) string {
 func (s *S3) BucketTree(bucket string) (string, error) {
 	outputs, err := s.listObjects(bucket, "/")
 	if err != nil || outputs == nil {
-		return "", nil
+		return "", err
 	}
 	var contents []*s3.Object
 	var prefixes []*s3.CommonPrefix
