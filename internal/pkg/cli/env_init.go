@@ -260,7 +260,9 @@ func (o *initEnvOpts) Ask() error {
 
 // Execute deploys a new environment with CloudFormation and adds it to SSM.
 func (o *initEnvOpts) Execute() error {
-	o.initRuntimeClients()
+	if err := o.initRuntimeClients(); err != nil {
+		return err
+	}
 	appVersion, err := o.appVersionGetter.Version()
 	if err != nil {
 		return fmt.Errorf("get template version of application %s: %w", o.appName, err)
