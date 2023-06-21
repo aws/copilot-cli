@@ -289,6 +289,9 @@ func (o *svcLogsOpts) validateAndAskSvcEnvName() error {
 	if deployedService.SvcType == manifestinfo.RequestDrivenWebServiceType && len(o.taskIDs) != 0 {
 		return fmt.Errorf("cannot use `--tasks` for App Runner service logs")
 	}
+	if deployedService.SvcType == manifestinfo.StaticSiteType {
+		return fmt.Errorf("`svc logs` unavailable for Static Site services")
+	}
 	o.name = deployedService.Name
 	o.envName = deployedService.Env
 	o.targetSvcType = deployedService.SvcType

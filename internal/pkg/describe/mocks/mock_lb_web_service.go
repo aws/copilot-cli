@@ -101,17 +101,17 @@ func (m *MocklbDescriber) EXPECT() *MocklbDescriberMockRecorder {
 	return m.recorder
 }
 
-// ListenerRuleHostHeaders mocks base method.
-func (m *MocklbDescriber) ListenerRuleHostHeaders(ruleARN string) ([]string, error) {
+// ListenerRulesHostHeaders mocks base method.
+func (m *MocklbDescriber) ListenerRulesHostHeaders(ruleARNs []string) ([]string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListenerRuleHostHeaders", ruleARN)
+	ret := m.ctrl.Call(m, "ListenerRulesHostHeaders", ruleARNs)
 	ret0, _ := ret[0].([]string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ListenerRuleHostHeaders indicates an expected call of ListenerRuleHostHeaders.
-func (mr *MocklbDescriberMockRecorder) ListenerRuleHostHeaders(ruleARN interface{}) *gomock.Call {
+// ListenerRulesHostHeaders indicates an expected call of ListenerRulesHostHeaders.
+func (mr *MocklbDescriberMockRecorder) ListenerRulesHostHeaders(ruleARNs interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListenerRuleHostHeaders", reflect.TypeOf((*MocklbDescriber)(nil).ListenerRuleHostHeaders), ruleARN)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListenerRulesHostHeaders", reflect.TypeOf((*MocklbDescriber)(nil).ListenerRulesHostHeaders), ruleARNs)
 }

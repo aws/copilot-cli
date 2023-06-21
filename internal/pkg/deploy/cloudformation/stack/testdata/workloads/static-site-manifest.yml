@@ -7,7 +7,7 @@ name: static
 type: Static Site
 
 http:
-  alias: example.com
+  alias: '*.example.com'
 
 files:
   - source: ./frontend/dist

@@ -51,7 +51,7 @@ func TestStaticSiteDescriber_URI(t *testing.T) {
 				)
 			},
 			wantedURI: URI{
-				URI:        "dut843shvcmvn.cloudfront.net",
+				URI:        "https://dut843shvcmvn.cloudfront.net/",
 				AccessType: URIAccessTypeInternet,
 			},
 		},
@@ -65,7 +65,7 @@ func TestStaticSiteDescriber_URI(t *testing.T) {
 				)
 			},
 			wantedURI: URI{
-				URI:        "dut843shvcmvn.cloudfront.net or example.com",
+				URI:        "https://dut843shvcmvn.cloudfront.net/ or https://example.com/",
 				AccessType: URIAccessTypeInternet,
 			},
 		},
@@ -135,7 +135,7 @@ func TestStaticSiteDescriber_Describe(t *testing.T) {
 						"CloudFrontDistributionDomainName": "dut843shvcmvn.cloudfront.net",
 					}, nil),
 					m.s3Client.EXPECT().BucketName(mockApp, mockEnv, mockSvc).Return(mockBucket, nil),
-					m.awsS3Client.EXPECT().GetBucketTree(mockBucket).Return("", nil),
+					m.awsS3Client.EXPECT().BucketTree(mockBucket).Return("", nil),
 				)
 			},
 			wantedHuman: `About
@@ -148,9 +148,9 @@ Routes
 
   Environment  URL
   -----------  ---
-  test         dut843shvcmvn.cloudfront.net
+  test         https://dut843shvcmvn.cloudfront.net/
 `,
-			wantedJSON: "{\"service\":\"static\",\"type\":\"Static Site\",\"application\":\"phonetool\",\"routes\":[{\"environment\":\"test\",\"url\":\"dut843shvcmvn.cloudfront.net\"}]}\n",
+			wantedJSON: "{\"service\":\"static\",\"type\":\"Static Site\",\"application\":\"phonetool\",\"routes\":[{\"environment\":\"test\",\"url\":\"https://dut843shvcmvn.cloudfront.net/\"}]}\n",
 		},
 		"return an error if failed to get stack resources": {
 			shouldOutputResources: true,
@@ -161,7 +161,7 @@ Routes
 						"CloudFrontDistributionDomainName": "dut843shvcmvn.cloudfront.net",
 					}, nil),
 					m.s3Client.EXPECT().BucketName(mockApp, mockEnv, mockSvc).Return(mockBucket, nil),
-					m.awsS3Client.EXPECT().GetBucketTree(mockBucket).Return("", nil),
+					m.awsS3Client.EXPECT().BucketTree(mockBucket).Return("", nil),
 					m.wkldDescriber.EXPECT().StackResources().Return(nil, mockErr),
 				)
 			},
@@ -176,7 +176,7 @@ Routes
 						"CloudFrontDistributionDomainName": "dut843shvcmvn.cloudfront.net",
 					}, nil),
 					m.s3Client.EXPECT().BucketName(mockApp, mockEnv, mockSvc).Return(mockBucket, nil),
-					m.awsS3Client.EXPECT().GetBucketTree(mockBucket).Return(`.
+					m.awsS3Client.EXPECT().BucketTree(mockBucket).Return(`.
 ├── README.md
 ├── error.html
 ├── index.html
@@ -214,7 +214,7 @@ Routes
 
   Environment  URL
   -----------  ---
-  test         dut843shvcmvn.cloudfront.net
+  test         https://dut843shvcmvn.cloudfront.net/
 
 S3 Bucket Objects
 
@@ -239,7 +239,7 @@ Resources
     AWS::S3::Bucket        demo-test-mystatic-bucket-h69vu7y72ga9
     AWS::S3::BucketPolicy  demo-test-mystatic-BucketPolicyForCloudFront-8AITX9Q7K13R
 `,
-			wantedJSON: "{\"service\":\"static\",\"type\":\"Static Site\",\"application\":\"phonetool\",\"routes\":[{\"environment\":\"test\",\"url\":\"dut843shvcmvn.cloudfront.net\"}],\"objects\":[{\"Environment\":\"test\",\"Tree\":\".\\n├── README.md\\n├── error.html\\n├── index.html\\n├── Images\\n│   ├── firstImage.PNG\\n│   └── secondImage.PNG\\n├── css\\n│   ├── Style.css\\n│   └── bootstrap.min.css\\n└── top\\n    └── middle\\n        └── bottom.html\\n\"}],\"resources\":{\"test\":[{\"type\":\"AWS::S3::Bucket\",\"physicalID\":\"demo-test-mystatic-bucket-h69vu7y72ga9\",\"logicalID\":\"Bucket\"},{\"type\":\"AWS::S3::BucketPolicy\",\"physicalID\":\"demo-test-mystatic-BucketPolicyForCloudFront-8AITX9Q7K13R\",\"logicalID\":\"BucketPolicy\"}]}}\n",
+			wantedJSON: "{\"service\":\"static\",\"type\":\"Static Site\",\"application\":\"phonetool\",\"routes\":[{\"environment\":\"test\",\"url\":\"https://dut843shvcmvn.cloudfront.net/\"}],\"objects\":[{\"Environment\":\"test\",\"Tree\":\".\\n├── README.md\\n├── error.html\\n├── index.html\\n├── Images\\n│   ├── firstImage.PNG\\n│   └── secondImage.PNG\\n├── css\\n│   ├── Style.css\\n│   └── bootstrap.min.css\\n└── top\\n    └── middle\\n        └── bottom.html\\n\"}],\"resources\":{\"test\":[{\"type\":\"AWS::S3::Bucket\",\"physicalID\":\"demo-test-mystatic-bucket-h69vu7y72ga9\",\"logicalID\":\"Bucket\"},{\"type\":\"AWS::S3::BucketPolicy\",\"physicalID\":\"demo-test-mystatic-BucketPolicyForCloudFront-8AITX9Q7K13R\",\"logicalID\":\"BucketPolicy\"}]}}\n",
 		},
 	}
 
