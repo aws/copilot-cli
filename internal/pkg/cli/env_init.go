@@ -14,6 +14,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/profile"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/version"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/dustin/go-humanize/english"
 	"github.com/spf13/afero"
@@ -267,12 +268,10 @@ func (o *initEnvOpts) Execute() error {
 	if err != nil {
 		return fmt.Errorf("get template version of application %s: %w", o.appName, err)
 	}
-	if diff := semver.Compare(appVersion, deploy.LatestAppTemplateVersion); diff > 0 && !o.allowAppDowngrade {
-		return &errCannotDowngradeVersion{
-			componentName:         o.name,
-			componentType:         "application",
-			currentVersion:        appVersion,
-			latestTemplateVersion: deploy.LatestAppTemplateVersion,
+	if diff := semver.Compare(appVersion, version.LatestTemplateVersion()); diff > 0 && !o.allowAppDowngrade {
+		return &errCannotDowngradeAppVersion{
+			appName:    o.name,
+			appVersion: appVersion,
 		}
 	}
 	app, err := o.store.GetApplication(o.appName)

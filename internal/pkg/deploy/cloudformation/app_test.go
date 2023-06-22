@@ -20,6 +20,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
+	"github.com/aws/copilot-cli/internal/pkg/version"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
@@ -29,7 +30,7 @@ func TestCloudFormation_DeployApp(t *testing.T) {
 	mockApp := &deploy.CreateAppInput{
 		Name:      "testapp",
 		AccountID: "1234",
-		Version:   deploy.LatestAppTemplateVersion,
+		Version:   version.LatestTemplateVersion(),
 	}
 	testCases := map[string]struct {
 		mockStack    func(ctrl *gomock.Controller) cfnClient

@@ -13,10 +13,10 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
-	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	cfnstack "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/describe/stack"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
+	"github.com/aws/copilot-cli/internal/pkg/version"
 	"golang.org/x/mod/semver"
 	"gopkg.in/yaml.v3"
 )
@@ -51,8 +51,8 @@ func (a *App) HumanString() string {
 	writer.Flush()
 	fmt.Fprintf(writer, "  %s\t%s\n", "Name", a.Name)
 	availableVersion := ""
-	if deploy.LatestAppTemplateVersion != a.Version {
-		availableVersion = color.Yellow.Sprintf("(latest available: %s)", deploy.LatestAppTemplateVersion)
+	if version.LatestTemplateVersion() != a.Version {
+		availableVersion = color.Yellow.Sprintf("(latest available: %s)", version.LatestTemplateVersion())
 	}
 	if a.URI == "" {
 		a.URI = "N/A"
@@ -144,7 +144,7 @@ func (d *AppDescriber) Version() (string, error) {
 	}
 	appStackVersion := stackMetadata.TemplateVersion
 	if appStackVersion == "" {
-		appStackVersion = deploy.LegacyAppTemplateVersion
+		appStackVersion = version.LegacyAppTemplateVersion
 	}
 
 	appStackSetMetadata, err := d.stackSetDescriber.StackSetMetadata()
@@ -156,7 +156,7 @@ func (d *AppDescriber) Version() (string, error) {
 	}
 	appStackSetVersion := stackSetMetadata.TemplateVersion
 	if appStackSetVersion == "" {
-		appStackSetVersion = deploy.LegacyAppTemplateVersion
+		appStackSetVersion = version.LegacyAppTemplateVersion
 	}
 
 	minVersion := appStackVersion

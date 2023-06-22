@@ -959,11 +959,13 @@ type initEnvExecuteMocks struct {
 
 func TestInitEnvOpts_Execute(t *testing.T) {
 	const (
-		mockAppVersion = "v0.0.0"
+		mockAppVersion       = "v0.0.0"
+		mockFutureAppVersion = "v2.0.0"
 	)
 	mockError := errors.New("some error")
 	testCases := map[string]struct {
 		enableContainerInsights bool
+		allowDowngrade          bool
 		setupMocks              func(m *initEnvExecuteMocks)
 		wantedErrorS            string
 	}{
@@ -972,6 +974,12 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				m.appVersionGetter.EXPECT().Version().Return("", mockError)
 			},
 			wantedErrorS: "get template version of application phonetool: some error",
+		},
+		"returns error when cannot downgrade app version": {
+			setupMocks: func(m *initEnvExecuteMocks) {
+				m.appVersionGetter.EXPECT().Version().Return(mockFutureAppVersion, nil)
+			},
+			wantedErrorS: "cannot downgrade application \"test\" (currently in version v2.0.0) to version v1.29.0",
 		},
 		"returns app exists error": {
 			setupMocks: func(m *initEnvExecuteMocks) {
@@ -1088,8 +1096,9 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 		},
 		"success": {
 			enableContainerInsights: true,
+			allowDowngrade:          true,
 			setupMocks: func(m *initEnvExecuteMocks) {
-				m.appVersionGetter.EXPECT().Version().Return(mockAppVersion, nil)
+				m.appVersionGetter.EXPECT().Version().Return(mockFutureAppVersion, nil)
 				m.store.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
 				m.store.EXPECT().CreateEnvironment(&config.Environment{
 					App:       "phonetool",
@@ -1272,6 +1281,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 					telemetry: telemetryVars{
 						EnableContainerInsights: tc.enableContainerInsights,
 					},
+					allowAppDowngrade: tc.allowDowngrade,
 				},
 				store:            m.store,
 				envDeployer:      m.deployer,

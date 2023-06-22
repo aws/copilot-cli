@@ -7,7 +7,30 @@ import (
 	"fmt"
 
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
+	"github.com/aws/copilot-cli/internal/pkg/version"
 )
+
+type errCannotDowngradeAppVersion struct {
+	appName    string
+	appVersion string
+}
+
+func (e *errCannotDowngradeAppVersion) init() *errCannotDowngradeVersion {
+	return &errCannotDowngradeVersion{
+		componentName:         e.appName,
+		componentType:         "application",
+		currentVersion:        e.appVersion,
+		latestTemplateVersion: version.LatestTemplateVersion(),
+	}
+}
+
+func (e *errCannotDowngradeAppVersion) Error() string {
+	return e.init().Error()
+}
+
+func (e *errCannotDowngradeAppVersion) RecommendActions() string {
+	return e.init().RecommendActions()
+}
 
 type errCannotDowngradeVersion struct {
 	componentName         string

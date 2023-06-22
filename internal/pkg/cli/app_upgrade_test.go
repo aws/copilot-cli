@@ -12,6 +12,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/version"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -164,7 +165,7 @@ func TestAppUpgradeOpts_Execute(t *testing.T) {
 	versionGetterLegacy := func(string) (versionGetter, error) {
 		return &versionGetterDouble{
 			VersionFn: func() (string, error) {
-				return deploy.LegacyAppTemplateVersion, nil
+				return version.LegacyAppTemplateVersion, nil
 			},
 		}, nil
 	}
@@ -199,7 +200,7 @@ func TestAppUpgradeOpts_Execute(t *testing.T) {
 					newVersionGetter: func(string) (versionGetter, error) {
 						return &versionGetterDouble{
 							VersionFn: func() (string, error) {
-								return deploy.LatestAppTemplateVersion, nil
+								return version.LatestTemplateVersion(), nil
 							},
 						}, nil
 					},
@@ -288,7 +289,7 @@ func TestAppUpgradeOpts_Execute(t *testing.T) {
 					upgrader:         mockUpgrader,
 				}
 			},
-			wantedErr: fmt.Errorf("upgrade application phonetool from version v0.0.0 to version %s: some error", deploy.LatestAppTemplateVersion),
+			wantedErr: fmt.Errorf("upgrade application phonetool from version v0.0.0 to version %s: some error", version.LatestTemplateVersion()),
 		},
 		"success": {
 			given: func(ctrl *gomock.Controller) *appUpgradeOpts {
@@ -315,7 +316,7 @@ func TestAppUpgradeOpts_Execute(t *testing.T) {
 					AccountID:          "1234",
 					DomainName:         "hello.com",
 					DomainHostedZoneID: "2klfqok3",
-					Version:            deploy.LatestAppTemplateVersion,
+					Version:            version.LatestTemplateVersion(),
 				}).Return(nil)
 
 				return &appUpgradeOpts{
