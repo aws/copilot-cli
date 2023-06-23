@@ -63,7 +63,8 @@ Task Configuration Flags
       --platform-os string             Optional. Operating system of the task. Must be specified along with 'platform-arch'.
       --resource-tags stringToString   Optional. Labels with a key and value separated by commas.
                                        Allows you to categorize resources. (default [])
-      --secrets stringToString         Optional. Secrets to inject into the container. Specified by key=value separated by commas. (default [])
+      --secrets stringToString         Optional. Secrets to inject into the container. Specified by key=value separated by commas. (default []). 
+     For secrets stored in AWS Parameter Store you can either specify name or ARN. For the secrets stored in AWS Secrets Manager you need to specify ARN.
       --task-role string               Optional. The ARN of the role for the task to use.
 
 Utility Flags
@@ -116,4 +117,9 @@ $ copilot task run --platform-os WINDOWS_SERVER_2019_CORE --platform-arch X86_64
 Run a Windows 2022 task with the minimum cpu and memory values.
 ```console
 $ copilot task run --platform-os WINDOWS_SERVER_2022_CORE --platform-arch X86_64 --cpu 1024 --memory 2048
+```
+
+Run a task with secrets from AWS Secrets Manager injected into the container.
+```console
+$ copilot task run --secrets AuroraSecret=arn:aws:secretsmanager:us-east-1:535307839111:secret:AuroraSecret
 ```
