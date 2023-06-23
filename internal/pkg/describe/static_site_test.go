@@ -135,7 +135,7 @@ func TestStaticSiteDescriber_Describe(t *testing.T) {
 						"CloudFrontDistributionDomainName": "dut843shvcmvn.cloudfront.net",
 					}, nil),
 					m.s3Client.EXPECT().BucketName(mockApp, mockEnv, mockSvc).Return(mockBucket, nil),
-					m.awsS3Client.EXPECT().GetBucketTree(mockBucket).Return("", nil),
+					m.awsS3Client.EXPECT().BucketTree(mockBucket).Return("", nil),
 				)
 			},
 			wantedHuman: `About
@@ -161,7 +161,7 @@ Routes
 						"CloudFrontDistributionDomainName": "dut843shvcmvn.cloudfront.net",
 					}, nil),
 					m.s3Client.EXPECT().BucketName(mockApp, mockEnv, mockSvc).Return(mockBucket, nil),
-					m.awsS3Client.EXPECT().GetBucketTree(mockBucket).Return("", nil),
+					m.awsS3Client.EXPECT().BucketTree(mockBucket).Return("", nil),
 					m.wkldDescriber.EXPECT().StackResources().Return(nil, mockErr),
 				)
 			},
@@ -176,7 +176,7 @@ Routes
 						"CloudFrontDistributionDomainName": "dut843shvcmvn.cloudfront.net",
 					}, nil),
 					m.s3Client.EXPECT().BucketName(mockApp, mockEnv, mockSvc).Return(mockBucket, nil),
-					m.awsS3Client.EXPECT().GetBucketTree(mockBucket).Return(`.
+					m.awsS3Client.EXPECT().BucketTree(mockBucket).Return(`.
 ├── README.md
 ├── error.html
 ├── index.html
