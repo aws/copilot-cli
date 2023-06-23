@@ -64,7 +64,7 @@ Task Configuration Flags
       --resource-tags stringToString   Optional. Labels with a key and value separated by commas.
                                        Allows you to categorize resources. (default [])
       --secrets stringToString         Optional. Secrets to inject into the container. Specified by key=value separated by commas. (default []). 
-     For secrets stored in AWS Parameter Store you can either specify name or ARN. For the secrets stored in AWS Secrets Manager you need to specify ARN.
+                                       For secrets stored in AWS Parameter Store you can either specify name or ARN. For the secrets stored in AWS Secrets Manager you need to specify ARN.
       --task-role string               Optional. The ARN of the role for the task to use.
 
 Utility Flags
