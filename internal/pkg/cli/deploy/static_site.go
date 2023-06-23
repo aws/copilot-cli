@@ -157,7 +157,7 @@ func (d *staticSiteDeployer) stackConfiguration(in *StackRuntimeConfiguration) (
 	if err := d.validateAlias(); err != nil {
 		return nil, err
 	}
-	if err := validateMinAppVersion(d.app.Name, d.name, d.appVersionGetter, version.StaticSiteMinAppTemplateVersion); err != nil {
+	if err := validateMinAppVersion(d.app.Name, d.name, d.appVersionGetter, version.AppTemplateMinVersionStaticSite); err != nil {
 		return nil, fmt.Errorf("static sites not supported: %w", err)
 	}
 	conf, err := d.newStack(&stack.StaticSiteConfig{

@@ -960,6 +960,7 @@ type initEnvExecuteMocks struct {
 func TestInitEnvOpts_Execute(t *testing.T) {
 	const (
 		mockAppVersion       = "v0.0.0"
+		mockCurrVersion      = "v1.29.0"
 		mockFutureAppVersion = "v2.0.0"
 	)
 	mockError := errors.New("some error")
@@ -1295,6 +1296,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				appCFN:           m.appCFN,
 				appVersionGetter: m.appVersionGetter,
 				manifestWriter:   m.manifestWriter,
+				templateVersion:  mockCurrVersion,
 			}
 
 			// WHEN

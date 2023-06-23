@@ -13,7 +13,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
-	"github.com/aws/copilot-cli/internal/pkg/version"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -163,6 +162,7 @@ func TestShowAppOpts_Execute(t *testing.T) {
 		mockAppName            = "my-app"
 		mockPipelineName       = "my-pipeline-repo"
 		mockLegacyPipelineName = "bad-goose"
+		mockTemplateVersion    = "v1.29.0"
 	)
 	mockPipeline := deploy.Pipeline{
 		AppName:      mockAppName,
@@ -285,7 +285,7 @@ func TestShowAppOpts_Execute(t *testing.T) {
 			wantedContent: `About
 
   Name                  my-app
-  Version               v0.0.0 (latest available: v1.29.0)
+  Version               v0.0.0
   URI                   example.com
   Permissions Boundary  examplePermissionsBoundaryPolicy
 
@@ -347,13 +347,13 @@ Pipelines
 				m.deployStore.EXPECT().ListDeployedServices("my-app", "test").Return([]string{"my-svc"}, nil)
 				m.deployStore.EXPECT().ListDeployedServices("my-app", "prod").Return([]string{"my-svc"}, nil)
 				m.pipelineLister.EXPECT().ListDeployedPipelines(mockAppName).Return([]deploy.Pipeline{}, nil)
-				m.versionGetter.EXPECT().Version().Return(version.LatestTemplateVersion(), nil)
+				m.versionGetter.EXPECT().Version().Return(mockTemplateVersion, nil)
 			},
 
 			wantedContent: `About
 
   Name                  my-app
-  Version               v1.29.0 
+  Version               v1.29.0
   URI                   example.com
   Permissions Boundary  examplePermissionsBoundaryPolicy
 
@@ -413,14 +413,14 @@ Pipelines
 				m.deployStore.EXPECT().ListDeployedServices("my-app", "test").Return([]string{"my-svc"}, nil)
 				m.deployStore.EXPECT().ListDeployedServices("my-app", "prod").Return([]string{"my-svc"}, nil)
 				m.pipelineLister.EXPECT().ListDeployedPipelines(mockAppName).Return([]deploy.Pipeline{}, nil)
-				m.versionGetter.EXPECT().Version().Return(version.LatestTemplateVersion(), nil)
+				m.versionGetter.EXPECT().Version().Return(mockTemplateVersion, nil)
 
 			},
 
 			wantedContent: `About
 
   Name                  my-app
-  Version               v1.29.0 
+  Version               v1.29.0
   URI                   N/A
   Permissions Boundary  N/A
 
@@ -484,13 +484,13 @@ Pipelines
 					GetPipeline("pipeline-my-app-my-pipeline-repo").Return(&codepipeline.Pipeline{
 					Name: "my-pipeline-repo",
 				}, nil)
-				m.versionGetter.EXPECT().Version().Return(version.LatestTemplateVersion(), nil)
+				m.versionGetter.EXPECT().Version().Return(mockTemplateVersion, nil)
 			},
 
 			wantedContent: `About
 
   Name                  my-app
-  Version               v1.29.0 
+  Version               v1.29.0
   URI                   example.com
   Permissions Boundary  examplePermissionsBoundaryPolicy
 
@@ -576,13 +576,13 @@ Pipelines
 					GetPipeline("pipeline-my-app-my-pipeline-repo").Return(&codepipeline.Pipeline{
 					Name: "my-pipeline-repo",
 				}, nil)
-				m.versionGetter.EXPECT().Version().Return(version.LatestTemplateVersion(), nil)
+				m.versionGetter.EXPECT().Version().Return(mockTemplateVersion, nil)
 			},
 
 			wantedContent: `About
 
   Name                  my-app
-  Version               v1.29.0 
+  Version               v1.29.0
   URI                   example.com
   Permissions Boundary  examplePermissionsBoundaryPolicy
 

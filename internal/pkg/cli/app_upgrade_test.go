@@ -162,6 +162,7 @@ func TestAppUpgradeOpts_Ask(t *testing.T) {
 }
 
 func TestAppUpgradeOpts_Execute(t *testing.T) {
+	const mockTemplateVersion = "v1.29.0"
 	versionGetterLegacy := func(string) (versionGetter, error) {
 		return &versionGetterDouble{
 			VersionFn: func() (string, error) {
@@ -200,7 +201,7 @@ func TestAppUpgradeOpts_Execute(t *testing.T) {
 					newVersionGetter: func(string) (versionGetter, error) {
 						return &versionGetterDouble{
 							VersionFn: func() (string, error) {
-								return version.LatestTemplateVersion(), nil
+								return mockTemplateVersion, nil
 							},
 						}, nil
 					},
@@ -289,7 +290,7 @@ func TestAppUpgradeOpts_Execute(t *testing.T) {
 					upgrader:         mockUpgrader,
 				}
 			},
-			wantedErr: fmt.Errorf("upgrade application phonetool from version v0.0.0 to version %s: some error", version.LatestTemplateVersion()),
+			wantedErr: fmt.Errorf("upgrade application phonetool from version v0.0.0 to version %s: some error", mockTemplateVersion),
 		},
 		"success": {
 			given: func(ctrl *gomock.Controller) *appUpgradeOpts {
@@ -316,7 +317,7 @@ func TestAppUpgradeOpts_Execute(t *testing.T) {
 					AccountID:          "1234",
 					DomainName:         "hello.com",
 					DomainHostedZoneID: "2klfqok3",
-					Version:            version.LatestTemplateVersion(),
+					Version:            mockTemplateVersion,
 				}).Return(nil)
 
 				return &appUpgradeOpts{
@@ -338,6 +339,7 @@ func TestAppUpgradeOpts_Execute(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			opts := tc.given(ctrl)
+			opts.templateVersion = mockTemplateVersion
 
 			err := opts.Execute()
 

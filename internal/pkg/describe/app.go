@@ -50,17 +50,13 @@ func (a *App) HumanString() string {
 	fmt.Fprint(writer, color.Bold.Sprint("About\n\n"))
 	writer.Flush()
 	fmt.Fprintf(writer, "  %s\t%s\n", "Name", a.Name)
-	availableVersion := ""
-	if version.LatestTemplateVersion() != a.Version {
-		availableVersion = color.Yellow.Sprintf("(latest available: %s)", version.LatestTemplateVersion())
-	}
 	if a.URI == "" {
 		a.URI = "N/A"
 	}
 	if a.PermissionsBoundary == "" {
 		a.PermissionsBoundary = "N/A"
 	}
-	fmt.Fprintf(writer, "  %s\t%s %s\n", "Version", a.Version, availableVersion)
+	fmt.Fprintf(writer, "  %s\t%s\n", "Version", a.Version)
 	fmt.Fprintf(writer, "  %s\t%s\n", "URI", a.URI)
 	fmt.Fprintf(writer, "  %s\t%s\n", "Permissions Boundary", a.PermissionsBoundary)
 	fmt.Fprint(writer, color.Bold.Sprint("\nEnvironments\n\n"))

@@ -7,12 +7,12 @@ import (
 	"fmt"
 
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
-	"github.com/aws/copilot-cli/internal/pkg/version"
 )
 
 type errCannotDowngradeAppVersion struct {
-	appName    string
-	appVersion string
+	appName         string
+	appVersion      string
+	templateVersion string
 }
 
 func (e *errCannotDowngradeAppVersion) init() *errCannotDowngradeVersion {
@@ -20,7 +20,7 @@ func (e *errCannotDowngradeAppVersion) init() *errCannotDowngradeVersion {
 		componentName:         e.appName,
 		componentType:         "application",
 		currentVersion:        e.appVersion,
-		latestTemplateVersion: version.LatestTemplateVersion(),
+		latestTemplateVersion: e.templateVersion,
 	}
 }
 

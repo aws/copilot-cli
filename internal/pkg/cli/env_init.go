@@ -182,6 +182,9 @@ type initEnvOpts struct {
 	// Cached variables.
 	wsAppName        string
 	mftDisplayedPath string
+
+	// Overridden in tests.
+	templateVersion string
 }
 
 func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
@@ -219,7 +222,8 @@ func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
 		appCFN:         deploycfn.New(defaultSession, deploycfn.WithProgressTracker(os.Stderr)),
 		manifestWriter: ws,
 
-		wsAppName: tryReadingAppName(),
+		wsAppName:       tryReadingAppName(),
+		templateVersion: version.LatestTemplateVersion(),
 	}, nil
 }
 
@@ -268,14 +272,16 @@ func (o *initEnvOpts) Execute() error {
 	if err != nil {
 		return fmt.Errorf("get template version of application %s: %w", o.appName, err)
 	}
-	if diff := semver.Compare(appVersion, version.LatestTemplateVersion()); diff > 0 && !o.allowAppDowngrade {
+	if diff := semver.Compare(appVersion, o.templateVersion); diff > 0 && !o.allowAppDowngrade {
 		return &errCannotDowngradeAppVersion{
-			appName:    o.name,
-			appVersion: appVersion,
+			appName:         o.name,
+			appVersion:      appVersion,
+			templateVersion: o.templateVersion,
 		}
 	}
 	app, err := o.store.GetApplication(o.appName)
 	if err != nil {
+		// Ensure the app actually exists before we write the manifest.
 		return err
 	}
 	envCaller, err := o.envIdentity.Get()

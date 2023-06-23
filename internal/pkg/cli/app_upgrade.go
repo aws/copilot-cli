@@ -52,6 +52,8 @@ type appUpgradeOpts struct {
 	upgrader appUpgrader
 
 	newVersionGetter func(string) (versionGetter, error)
+
+	templateVersion string // Overridden in tests.
 }
 
 func newAppUpgradeOpts(vars appUpgradeVars) (*appUpgradeOpts, error) {
@@ -74,6 +76,7 @@ func newAppUpgradeOpts(vars appUpgradeVars) (*appUpgradeOpts, error) {
 			}
 			return d, nil
 		},
+		templateVersion: version.LatestTemplateVersion(),
 	}, nil
 }
 
@@ -108,22 +111,22 @@ func (o *appUpgradeOpts) Execute() error {
 	if err != nil {
 		return fmt.Errorf("get template version of application %s: %v", o.name, err)
 	}
-	if !shouldUpgradeApp(o.name, appVersion) {
+	if !o.shouldUpgradeApp(appVersion) {
 		return nil
 	}
 	app, err := o.store.GetApplication(o.name)
 	if err != nil {
 		return fmt.Errorf("get application %s: %w", o.name, err)
 	}
-	log.Infof(fmtAppUpgradeStart, color.HighlightUserInput(o.name), color.Emphasize(appVersion), color.Emphasize(version.LatestTemplateVersion()))
+	log.Infof(fmtAppUpgradeStart, color.HighlightUserInput(o.name), color.Emphasize(appVersion), color.Emphasize(o.templateVersion))
 	defer func() {
 		if err != nil {
-			log.Errorf(fmtAppUpgradeFailed, color.HighlightUserInput(o.name), color.Emphasize(version.LatestTemplateVersion()))
+			log.Errorf(fmtAppUpgradeFailed, color.HighlightUserInput(o.name), color.Emphasize(o.templateVersion))
 			return
 		}
-		log.Successf(fmtAppUpgradeComplete, color.HighlightUserInput(o.name), color.Emphasize(version.LatestTemplateVersion()))
+		log.Successf(fmtAppUpgradeComplete, color.HighlightUserInput(o.name), color.Emphasize(o.templateVersion))
 	}()
-	err = o.upgradeApplication(app, appVersion, version.LatestTemplateVersion())
+	err = o.upgradeApplication(app, appVersion, o.templateVersion)
 	if err != nil {
 		return err
 	}
@@ -142,20 +145,20 @@ func (o *appUpgradeOpts) askName() error {
 	return nil
 }
 
-func shouldUpgradeApp(appName string, appVersion string) bool {
-	diff := semver.Compare(appVersion, version.LatestTemplateVersion())
+func (o *appUpgradeOpts) shouldUpgradeApp(appVersion string) bool {
+	diff := semver.Compare(appVersion, o.templateVersion)
 	if diff < 0 {
 		// Newer version available.
 		return true
 	}
 
-	msg := fmt.Sprintf("Application %s is already on the latest version %s, skip upgrade.", appName, version.LatestTemplateVersion())
+	msg := fmt.Sprintf("Application %s is already on the latest version %s, skip upgrade.", o.name, o.templateVersion)
 	if diff > 0 {
 		// It's possible that a teammate used a different version of the CLI to upgrade the application
 		// to a newer version. And the current user is on an older version of the CLI.
 		// In this situation we notify them they should update the CLI.
 		msg = fmt.Sprintf(`Skip upgrading application %s to version %s since it's on version %s. 
-Are you using the latest version of AWS Copilot?`, appName, version.LatestTemplateVersion(), appVersion)
+Are you using the latest version of AWS Copilot?`, o.name, o.templateVersion, appVersion)
 	}
 	log.Debugln(msg)
 	return false
