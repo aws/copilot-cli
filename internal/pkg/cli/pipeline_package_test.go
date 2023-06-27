@@ -93,13 +93,17 @@ func TestPipelinePackageOpts_Execute(t *testing.T) {
 		inPipelineFile string
 		callMocks      func(m packagePipelineMocks)
 		expectedError  error
-		inShowDiff     bool
 	}{
 
+		"returns an error if ie fails to get the list of pipelines": {
+			callMocks: func(m packagePipelineMocks) {
+				gomock.InOrder(
+					m.ws.EXPECT().ListPipelines().Return(nil, errors.New("some error")),
+				)
+			},
+			expectedError: fmt.Errorf("list all pipelines in the workspace: some error"),
+		},
 		"returns an error if fail to read pipeline file": {
-			inApp:     &app,
-			inRegion:  region,
-			inAppName: appName,
 			callMocks: func(m packagePipelineMocks) {
 				gomock.InOrder(
 					m.ws.EXPECT().ListPipelines().Return([]workspace.PipelineManifest{pipeline}, nil),
@@ -109,9 +113,6 @@ func TestPipelinePackageOpts_Execute(t *testing.T) {
 			expectedError: fmt.Errorf("read pipeline manifest: some error"),
 		},
 		"returns an error if unable to unmarshal pipeline file": {
-			inApp:     &app,
-			inRegion:  region,
-			inAppName: appName,
 			callMocks: func(m packagePipelineMocks) {
 				gomock.InOrder(
 					m.ws.EXPECT().ListPipelines().Return([]workspace.PipelineManifest{pipeline}, nil),
@@ -121,9 +122,6 @@ func TestPipelinePackageOpts_Execute(t *testing.T) {
 			expectedError: fmt.Errorf("read pipeline manifest: some error"),
 		},
 		"returns an error if pipeline name fails validation": {
-			inApp:     &app,
-			inAppName: appName,
-			inRegion:  region,
 			callMocks: func(m packagePipelineMocks) {
 				mockBadPipelineManifest := &manifest.Pipeline{
 					Name:    "12345678101234567820123456783012345678401234567850123456786012345678701234567880123456789012345671001",
@@ -144,9 +142,6 @@ func TestPipelinePackageOpts_Execute(t *testing.T) {
 			expectedError: fmt.Errorf("validate pipeline manifest: pipeline name '12345678101234567820123456783012345678401234567850123456786012345678701234567880123456789012345671001' must be shorter than 100 characters"),
 		},
 		"returns an error if provider is not a supported type": {
-			inApp:     &app,
-			inAppName: appName,
-			inRegion:  region,
 			callMocks: func(m packagePipelineMocks) {
 				mockBadPipelineManifest := &manifest.Pipeline{
 					Name:    badPipelineName,
@@ -207,10 +202,9 @@ func TestPipelinePackageOpts_Execute(t *testing.T) {
 			expectedError: fmt.Errorf("get cross-regional resources: some error"),
 		},
 		"error if failed to generate the template": {
-			inApp:      &app,
-			inAppName:  appName,
-			inRegion:   region,
-			inShowDiff: true,
+			inApp:     &app,
+			inAppName: appName,
+			inRegion:  region,
 			callMocks: func(m packagePipelineMocks) {
 				gomock.InOrder(
 					m.ws.EXPECT().ListPipelines().Return([]workspace.PipelineManifest{pipeline}, nil),

@@ -44,7 +44,7 @@ type packagePipelineOpts struct {
 func (o *packagePipelineOpts) Execute() error {
 	pipelines, err := o.ws.ListPipelines()
 	if err != nil {
-		return err
+		return fmt.Errorf("list all pipelines in the workspace: %w", err)
 	}
 
 	pipeline_path := ""
