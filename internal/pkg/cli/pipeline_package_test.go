@@ -30,7 +30,7 @@ type packagePipelineMocks struct {
 	actionCmd           *mocks.MockactionCommand
 }
 
-func TestOverridePipelineOpts_Execute(t *testing.T) {
+func TestPipelinePackageOpts_Execute(t *testing.T) {
 	const (
 		appName              = "badgoose"
 		region               = "us-west-2"

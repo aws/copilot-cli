@@ -273,7 +273,7 @@ func (o *deployPipelineOpts) Execute() error {
 	if o.showDiff {
 		tpl, err := o.pipelineStackConfig(deployPipelineInput).Template()
 		if err != nil {
-			return fmt.Errorf("generate the new template for diff: %w", err)
+			return fmt.Errorf("generate stack template: %w", err)
 		}
 		if err = diff(o, tpl, o.diffWriter); err != nil {
 			var errHasDiff *errHasDiff

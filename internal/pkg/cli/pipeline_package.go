@@ -109,20 +109,17 @@ func newPackagePipelineOpts(vars packagePipelineVars) (*packagePipelineOpts, err
 		jobBuffer: &bytes.Buffer{},
 	}
 	opts.configureDeployedPipelineLister = func() deployedPipelineLister {
-		// Initialize the client only after the appName is asked.
 		return deploy.NewPipelineStore(rg.New(defaultSession))
 	}
 	return opts, nil
 }
 
 func (o *packagePipelineOpts) Execute() error {
-	// Read pipeline manifest.
 	pipelineMft, err := o.getPipelineMft()
 	if err != nil {
 		return err
 	}
 
-	// If the source has an existing connection, get the correlating ConnectionARN.
 	connection, ok := pipelineMft.Source.Properties["connection_name"]
 	if ok {
 		arn, err := o.codestar.GetConnectionARN((connection).(string))
@@ -151,7 +148,6 @@ func (o *packagePipelineOpts) Execute() error {
 		return err
 	}
 
-	//Convert environments to deployment stages.
 	stages, err := o.convertStages(pipelineMft.Stages)
 	if err != nil {
 		return fmt.Errorf("convert environments to deployment stage: %w", err)
@@ -163,7 +159,6 @@ func (o *packagePipelineOpts) Execute() error {
 	}
 	o.app = appConfig
 
-	// Get cross-regional resources.
 	artifactBuckets, err := o.getArtifactBuckets()
 	if err != nil {
 		return fmt.Errorf("get cross-regional resources: %w", err)
@@ -216,7 +211,6 @@ func (o *packagePipelineOpts) getPipelineMft() (*manifest.Pipeline, error) {
 		return o.pipelineMft, nil
 	}
 
-	fmt.Println("The pipeline path is ", pipeline_path)
 	pipelineMft, err := o.ws.ReadPipelineManifest(pipeline_path)
 	if err != nil {
 		return nil, fmt.Errorf("read pipeline manifest: %w", err)
