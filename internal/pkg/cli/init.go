@@ -7,12 +7,14 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"os"
+
 	awscfn "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/iam"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
 	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
-	"os"
+	"github.com/aws/copilot-cli/internal/pkg/version"
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
@@ -139,14 +141,14 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 			name:         defaultEnvironmentName,
 			isProduction: false,
 		},
-		store:       configStore,
-		appDeployer: deployer,
-		prog:        spin,
-		prompt:      prompt,
-		identity:    id,
-		appCFN:      cloudformation.New(defaultSess, cloudformation.WithProgressTracker(os.Stderr)),
-
-		sess: defaultSess,
+		store:           configStore,
+		appDeployer:     deployer,
+		prog:            spin,
+		prompt:          prompt,
+		identity:        id,
+		appCFN:          cloudformation.New(defaultSess, cloudformation.WithProgressTracker(os.Stderr)),
+		sess:            defaultSess,
+		templateVersion: version.LatestTemplateVersion(),
 	}
 	deployEnvCmd := &deployEnvOpts{
 		deployEnvVars: deployEnvVars{

@@ -12,10 +12,13 @@ import (
 	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/profile"
+	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/version"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/dustin/go-humanize/english"
 	"github.com/spf13/afero"
+	"golang.org/x/mod/semver"
 
 	"github.com/aws/aws-sdk-go/service/ssm"
 
@@ -134,11 +137,12 @@ func (v telemetryVars) toConfig() *config.Telemetry {
 }
 
 type initEnvVars struct {
-	appName       string
-	name          string // Name for the environment.
-	profile       string // The named profile to use for credential retrieval. Mutually exclusive with tempCreds.
-	isProduction  bool   // True means retain resources even after deletion.
-	defaultConfig bool   // True means using default environment configuration.
+	appName           string
+	name              string // Name for the environment.
+	profile           string // The named profile to use for credential retrieval. Mutually exclusive with tempCreds.
+	isProduction      bool   // True means retain resources even after deletion.
+	defaultConfig     bool   // True means using default environment configuration.
+	allowAppDowngrade bool
 
 	importVPC          importVPCVars // Existing VPC resources to use instead of creating new ones.
 	adjustVPC          adjustVPCVars // Configure parameters for VPC resources generated while initializing an environment.
@@ -155,28 +159,32 @@ type initEnvOpts struct {
 	initEnvVars
 
 	// Interfaces to interact with dependencies.
-	sessProvider   sessionProvider
-	store          store
-	envDeployer    deployer
-	appDeployer    deployer
-	identity       identityService
-	envIdentity    identityService
-	ec2Client      ec2Client
-	iam            roleManager
-	cfn            stackExistChecker
-	prog           progress
-	prompt         prompter
-	selVPC         ec2Selector
-	selCreds       func() (credsSelector, error)
-	selApp         appSelector
-	appCFN         appResourcesGetter
-	manifestWriter environmentManifestWriter
+	sessProvider     sessionProvider
+	store            store
+	envDeployer      deployer
+	appDeployer      deployer
+	identity         identityService
+	envIdentity      identityService
+	ec2Client        ec2Client
+	appVersionGetter versionGetter
+	iam              roleManager
+	cfn              stackExistChecker
+	prog             progress
+	prompt           prompter
+	selVPC           ec2Selector
+	selCreds         func() (credsSelector, error)
+	selApp           appSelector
+	appCFN           appResourcesGetter
+	manifestWriter   environmentManifestWriter
 
 	sess *session.Session // Session pointing to environment's AWS account and region.
 
 	// Cached variables.
 	wsAppName        string
 	mftDisplayedPath string
+
+	// Overridden in tests.
+	templateVersion string
 }
 
 func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
@@ -186,7 +194,6 @@ func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
 		return nil, err
 	}
 	store := config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
-
 	prompter := prompt.New()
 	ws, err := workspace.Use(afero.NewOsFs())
 	if err != nil {
@@ -215,7 +222,8 @@ func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
 		appCFN:         deploycfn.New(defaultSession, deploycfn.WithProgressTracker(os.Stderr)),
 		manifestWriter: ws,
 
-		wsAppName: tryReadingAppName(),
+		wsAppName:       tryReadingAppName(),
+		templateVersion: version.LatestTemplateVersion(),
 	}, nil
 }
 
@@ -257,10 +265,25 @@ func (o *initEnvOpts) Ask() error {
 
 // Execute deploys a new environment with CloudFormation and adds it to SSM.
 func (o *initEnvOpts) Execute() error {
-	o.initRuntimeClients()
+	if err := o.initRuntimeClients(); err != nil {
+		return err
+	}
+	if !o.allowAppDowngrade {
+		appVersion, err := o.appVersionGetter.Version()
+		if err != nil {
+			return fmt.Errorf("get template version of application %s: %w", o.appName, err)
+		}
+		if diff := semver.Compare(appVersion, o.templateVersion); diff > 0 {
+			return &errCannotDowngradeAppVersion{
+				appName:         o.name,
+				appVersion:      appVersion,
+				templateVersion: o.templateVersion,
+			}
+		}
+	}
 	app, err := o.store.GetApplication(o.appName)
 	if err != nil {
-		// Ensure the app actually exists before we do a deployment.
+		// Ensure the app actually exists before we write the manifest.
 		return err
 	}
 	envCaller, err := o.envIdentity.Get()
@@ -325,7 +348,7 @@ func (o *initEnvOpts) RecommendActions() error {
 	return nil
 }
 
-func (o *initEnvOpts) initRuntimeClients() {
+func (o *initEnvOpts) initRuntimeClients() error {
 	// Initialize environment clients if not set.
 	if o.envIdentity == nil {
 		o.envIdentity = identity.New(o.sess)
@@ -339,6 +362,14 @@ func (o *initEnvOpts) initRuntimeClients() {
 	if o.iam == nil {
 		o.iam = iam.New(o.sess)
 	}
+	if o.appVersionGetter == nil {
+		appDescriber, err := describe.NewAppDescriber(o.appName)
+		if err != nil {
+			return err
+		}
+		o.appVersionGetter = appDescriber
+	}
+	return nil
 }
 
 func (o *initEnvOpts) validateCustomizedResources() error {
@@ -899,6 +930,7 @@ func buildEnvInitCmd() *cobra.Command {
 	cmd.Flags().StringVar(&vars.tempCreds.SecretAccessKey, secretAccessKeyFlag, "", secretAccessKeyFlagDescription)
 	cmd.Flags().StringVar(&vars.tempCreds.SessionToken, sessionTokenFlag, "", sessionTokenFlagDescription)
 	cmd.Flags().StringVar(&vars.region, regionFlag, "", envRegionTokenFlagDescription)
+	cmd.Flags().BoolVar(&vars.allowAppDowngrade, allowDowngradeFlag, false, allowDowngradeFlagDescription)
 
 	cmd.Flags().BoolVar(&vars.isProduction, prodEnvFlag, false, prodEnvFlagDescription) // Deprecated. Use telemetry flags instead.
 	cmd.Flags().BoolVar(&vars.telemetry.EnableContainerInsights, enableContainerInsightsFlag, false, enableContainerInsightsFlagDescription)
@@ -925,6 +957,7 @@ func buildEnvInitCmd() *cobra.Command {
 	flags.AddFlag(cmd.Flags().Lookup(sessionTokenFlag))
 	flags.AddFlag(cmd.Flags().Lookup(regionFlag))
 	flags.AddFlag(cmd.Flags().Lookup(defaultConfigFlag))
+	flags.AddFlag(cmd.Flags().Lookup(allowDowngradeFlag))
 
 	resourcesImportFlags := pflag.NewFlagSet("Import Existing Resources", pflag.ContinueOnError)
 	resourcesImportFlags.AddFlag(cmd.Flags().Lookup(vpcIDFlag))

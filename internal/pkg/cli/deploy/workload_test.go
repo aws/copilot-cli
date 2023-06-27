@@ -14,6 +14,7 @@ import (
 	"time"
 
 	cloudformation0 "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/version"
 	"github.com/spf13/afero"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -1025,7 +1026,7 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 				m.mockEnvVersionGetter.EXPECT().Version().Return("v1.42.0", nil)
 			},
-			wantErr: fmt.Errorf("validate ALB runtime configuration for \"http\": alias not supported: app version must be >= %s", deploy.AliasLeastAppTemplateVersion),
+			wantErr: fmt.Errorf("validate ALB runtime configuration for \"http\": alias not supported: app version must be >= %s", version.AppTemplateMinAlias),
 		},
 		"fail to enable nlb alias because of incompatible app version": {
 			inNLB: manifest.NetworkLoadBalancerConfiguration{
@@ -1047,7 +1048,7 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 				m.mockEnvVersionGetter.EXPECT().Version().Return("v1.42.0", nil)
 			},
-			wantErr: fmt.Errorf("alias not supported: app version must be >= %s", deploy.AliasLeastAppTemplateVersion),
+			wantErr: fmt.Errorf("alias not supported: app version must be >= %s", version.AppTemplateMinAlias),
 		},
 		"fail to enable https alias because of invalid alias": {
 			inAliases: manifest.Alias{AdvancedAliases: []manifest.AdvancedAlias{

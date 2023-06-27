@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/aws/copilot-cli/internal/pkg/stream"
+	"github.com/aws/copilot-cli/internal/pkg/version"
 
 	"golang.org/x/sync/errgroup"
 
@@ -136,7 +137,7 @@ func (cf CloudFormation) DelegateDNSPermissions(app *config.Application, account
 		AccountID:          app.AccountID,
 		DomainName:         app.Domain,
 		DomainHostedZoneID: app.DomainHostedZoneID,
-		Version:            deploy.LatestAppTemplateVersion,
+		Version:            version.LatestTemplateVersion(),
 	}
 
 	appConfig := stack.NewAppStackConfig(&deployApp)
@@ -253,7 +254,7 @@ func (cf CloudFormation) addWorkloadToApp(app *config.Application, wlName string
 		Name:           app.Name,
 		AccountID:      app.AccountID,
 		AdditionalTags: app.Tags,
-		Version:        deploy.LatestAppTemplateVersion,
+		Version:        version.LatestTemplateVersion(),
 	})
 	previouslyDeployedConfig, err := cf.getLastDeployedAppConfig(appConfig)
 	if err != nil {
@@ -317,7 +318,7 @@ func (cf CloudFormation) removeWorkloadFromApp(app *config.Application, wlName s
 		Name:           app.Name,
 		AccountID:      app.AccountID,
 		AdditionalTags: app.Tags,
-		Version:        deploy.LatestAppTemplateVersion,
+		Version:        version.LatestTemplateVersion(),
 	})
 	previouslyDeployedConfig, err := cf.getLastDeployedAppConfig(appConfig)
 	if err != nil {
@@ -369,7 +370,7 @@ func (cf CloudFormation) AddEnvToApp(opts *AddEnvToAppOpts) error {
 		Name:           opts.App.Name,
 		AccountID:      opts.App.AccountID,
 		AdditionalTags: opts.App.Tags,
-		Version:        deploy.LatestAppTemplateVersion,
+		Version:        version.LatestTemplateVersion(),
 	})
 	previouslyDeployedConfig, err := cf.getLastDeployedAppConfig(appConfig)
 	if err != nil {
@@ -426,7 +427,7 @@ func (cf CloudFormation) AddPipelineResourcesToApp(
 	appConfig := stack.NewAppStackConfig(&deploy.CreateAppInput{
 		Name:      app.Name,
 		AccountID: app.AccountID,
-		Version:   deploy.LatestAppTemplateVersion,
+		Version:   version.LatestTemplateVersion(),
 	})
 
 	resourcesConfig, err := cf.getLastDeployedAppConfig(appConfig)
