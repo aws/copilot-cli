@@ -162,10 +162,17 @@ func TestPipelinePackageOpts_Execute(t *testing.T) {
 			},
 			expectedError: fmt.Errorf("read source from manifest: invalid repo source provider: NotGitHub"),
 		},
+		"returns an error while converting manifest path to relative path from workspace root": {
+			callMocks: func(m packagePipelineMocks) {
+				gomock.InOrder(
+					m.ws.EXPECT().ListPipelines().Return([]workspace.PipelineManifest{pipeline}, nil),
+					m.ws.EXPECT().ReadPipelineManifest("").Return(mockPipelineManifest, nil),
+					m.ws.EXPECT().Rel("").Return("", errors.New("some error")),
+				)
+			},
+			expectedError: fmt.Errorf("convert manifest path to relative path: some error"),
+		},
 		"returns an error if unable to convert environments to deployment stage": {
-			inApp:     &app,
-			inRegion:  region,
-			inAppName: appName,
 			callMocks: func(m packagePipelineMocks) {
 				gomock.InOrder(
 					m.ws.EXPECT().ListPipelines().Return([]workspace.PipelineManifest{pipeline}, nil),
@@ -175,6 +182,26 @@ func TestPipelinePackageOpts_Execute(t *testing.T) {
 				)
 			},
 			expectedError: fmt.Errorf("convert environments to deployment stage: get local services: some error"),
+		},
+		"returns an error if fails to fetch an application": {
+			inApp:     &app,
+			inRegion:  region,
+			inAppName: appName,
+			callMocks: func(m packagePipelineMocks) {
+				gomock.InOrder(
+					m.ws.EXPECT().ListPipelines().Return([]workspace.PipelineManifest{pipeline}, nil),
+					m.ws.EXPECT().ReadPipelineManifest("").Return(mockPipelineManifest, nil),
+					m.ws.EXPECT().Rel("").Return(relativePath, nil),
+					m.actionCmd.EXPECT().Execute().Times(2),
+
+					// convertStages
+					m.store.EXPECT().GetEnvironment(appName, "chicken").Return(mockEnv, nil).Times(1),
+					m.store.EXPECT().GetEnvironment(appName, "wings").Return(mockEnv, nil).Times(1),
+
+					m.store.EXPECT().GetApplication(appName).Return(nil, errors.New("some error")),
+				)
+			},
+			expectedError: fmt.Errorf("get application %v configuration: some error", appName),
 		},
 		"returns an error if fails to get cross-regional resources": {
 			inApp:     &app,

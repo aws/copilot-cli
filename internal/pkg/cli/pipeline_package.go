@@ -75,7 +75,7 @@ func (o *packagePipelineOpts) Execute() error {
 
 	relPath, err := o.ws.Rel(pipeline_path)
 	if err != nil {
-		return err
+		return fmt.Errorf("convert manifest path to relative path: %w", err)
 	}
 
 	stages, err := o.convertStages(pipelineMft.Stages)
