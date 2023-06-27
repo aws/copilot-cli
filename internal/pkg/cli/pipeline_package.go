@@ -115,7 +115,16 @@ func newPackagePipelineOpts(vars packagePipelineVars) (*packagePipelineOpts, err
 }
 
 func (o *packagePipelineOpts) Execute() error {
-	pipelineMft, err := o.getPipelineMft()
+	pipelines, err := o.ws.ListPipelines()
+
+	pipeline_path := ""
+	for _, pipeline := range pipelines {
+		if pipeline.Name == o.name {
+			pipeline_path = pipeline.Path
+			break
+		}
+	}
+	pipelineMft, err := o.getPipelineMft(pipeline_path)
 	if err != nil {
 		return err
 	}
@@ -134,15 +143,6 @@ func (o *packagePipelineOpts) Execute() error {
 		return fmt.Errorf("read source from manifest: %w", err)
 	}
 
-	pipelines, err := o.ws.ListPipelines()
-
-	pipeline_path := ""
-	for _, pipeline := range pipelines {
-		if pipeline.Name == o.name {
-			pipeline_path = pipeline.Path
-			break
-		}
-	}
 	relPath, err := o.ws.Rel(pipeline_path)
 	if err != nil {
 		return err
@@ -188,7 +188,7 @@ func (o *packagePipelineOpts) Execute() error {
 
 	tpl, err := o.pipelineStackConfig(deployPipelineInput).Template()
 	if err != nil {
-		return fmt.Errorf("%w", err)
+		return fmt.Errorf("generate stack template: %w", err)
 	}
 	if _, err := o.tmplWriter.Write([]byte(tpl)); err != nil {
 		return err
@@ -197,16 +197,7 @@ func (o *packagePipelineOpts) Execute() error {
 	return nil
 }
 
-func (o *packagePipelineOpts) getPipelineMft() (*manifest.Pipeline, error) {
-	pipelines, err := o.ws.ListPipelines()
-
-	pipeline_path := ""
-	for _, pipeline := range pipelines {
-		if pipeline.Name == o.name {
-			pipeline_path = pipeline.Path
-			break
-		}
-	}
+func (o *packagePipelineOpts) getPipelineMft(pipeline_path string) (*manifest.Pipeline, error) {
 	if o.pipelineMft != nil {
 		return o.pipelineMft, nil
 	}
