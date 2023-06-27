@@ -32,13 +32,12 @@ type packagePipelineMocks struct {
 
 func TestPipelinePackageOpts_Execute(t *testing.T) {
 	const (
-		appName              = "badgoose"
-		region               = "us-west-2"
-		accountID            = "123456789012"
-		pipelineName         = "pipepiper"
-		badPipelineName      = "pipeline-badgoose-honkpipes"
-		pipelineManifestPath = "someStuff/someMoreStuff/aws-copilot-sample-service/copilot/pipelines/pipepiper/manifest.yml"
-		relativePath         = "/copilot/pipelines/pipepiper/manifest.yml"
+		appName         = "badgoose"
+		region          = "us-west-2"
+		accountID       = "123456789012"
+		pipelineName    = "pipepiper"
+		badPipelineName = "pipeline-badgoose-honkpipes"
+		relativePath    = "/copilot/pipelines/pipepiper/manifest.yml"
 	)
 	pipeline := workspace.PipelineManifest{
 		Name: pipelineName,
