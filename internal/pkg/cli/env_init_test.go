@@ -980,7 +980,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			setupMocks: func(m *initEnvExecuteMocks) {
 				m.appVersionGetter.EXPECT().Version().Return(mockFutureAppVersion, nil)
 			},
-			wantedErrorS: "cannot downgrade application \"test\" (currently in version v2.0.0) to version v1.29.0",
+			wantedErrorS: "cannot downgrade application \"phonetool\" (currently in version v2.0.0) to version v1.29.0",
 		},
 		"returns app exists error": {
 			setupMocks: func(m *initEnvExecuteMocks) {
