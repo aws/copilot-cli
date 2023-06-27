@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package cli
 
 import (
@@ -5,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"strings"
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
@@ -24,7 +26,6 @@ type packagePipelineMocks struct {
 	prog                   *mocks.Mockprogress
 	deployer               *mocks.MockpipelineDeployer
 	pipelineStackConfig    *mocks.MockpipelineStackConfig
-	mockDiffWriter         *strings.Builder
 	ws                     *mocks.MockwsPipelineReader
 	actionCmd              *mocks.MockactionCommand
 	deployedPipelineLister *mocks.MockdeployedPipelineLister
