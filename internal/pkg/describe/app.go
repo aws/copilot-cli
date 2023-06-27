@@ -124,7 +124,7 @@ func NewAppDescriber(appName string) (*AppDescriber, error) {
 // Specifically it will get both app CFN stack template version and app StackSet template version,
 // and return the minimum as the current app version.
 //
-// If the Version field does not exist, then it's a legacy template and it returns an deploy.LegacyAppTemplateVersion and nil error.
+// If the Version field does not exist, then it's a legacy template and it returns an deploy.LegacyAppTemplate and nil error.
 func (d *AppDescriber) Version() (string, error) {
 	type metadata struct {
 		TemplateVersion string `yaml:"TemplateVersion"`
@@ -140,7 +140,7 @@ func (d *AppDescriber) Version() (string, error) {
 	}
 	appStackVersion := stackMetadata.TemplateVersion
 	if appStackVersion == "" {
-		appStackVersion = version.LegacyAppTemplateVersion
+		appStackVersion = version.LegacyAppTemplate
 	}
 
 	appStackSetMetadata, err := d.stackSetDescriber.StackSetMetadata()
@@ -152,7 +152,7 @@ func (d *AppDescriber) Version() (string, error) {
 	}
 	appStackSetVersion := stackSetMetadata.TemplateVersion
 	if appStackSetVersion == "" {
-		appStackSetVersion = version.LegacyAppTemplateVersion
+		appStackSetVersion = version.LegacyAppTemplate
 	}
 
 	minVersion := appStackVersion

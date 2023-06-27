@@ -260,7 +260,7 @@ Allows you to categorize resources.`
 
 	// Deployment.
 	deployTestFlagDescription     = `Deploy your service or job to a "test" environment.`
-	allowDowngradeFlagDescription = `Optional. Allow using a earlier version of Copilot to update Copilot components lastly
+	allowDowngradeFlagDescription = `Optional. Allow using a older version of Copilot to update Copilot components
 updated by a newer version of Copilot.`
 	forceFlagDescription = `Optional. Force a new service deployment using the existing image.
 Not available with the "Static Site" service type.`

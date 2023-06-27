@@ -166,7 +166,7 @@ func TestAppUpgradeOpts_Execute(t *testing.T) {
 	versionGetterLegacy := func(string) (versionGetter, error) {
 		return &versionGetterDouble{
 			VersionFn: func() (string, error) {
-				return version.LegacyAppTemplateVersion, nil
+				return version.LegacyAppTemplate, nil
 			},
 		}, nil
 	}

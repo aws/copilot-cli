@@ -5,12 +5,12 @@
 package version
 
 const (
-	// LegacyAppTemplateVersion is the version associated with the application template before we started versioning.
-	LegacyAppTemplateVersion = "v0.0.0"
-	// AppTemplateMinVersionAlias is the least version number available for HTTPS alias.
-	AppTemplateMinVersionAlias = "v1.0.0"
-	// AppTemplateMinVersionStaticSite is the minimum app version required to deploy a static site.
-	AppTemplateMinVersionStaticSite = "v1.2.0"
+	// LegacyAppTemplate is the version associated with the application template before we started versioning.
+	LegacyAppTemplate = "v0.0.0"
+	// AppTemplateMinAlias is the least version number available for HTTPS alias.
+	AppTemplateMinAlias = "v1.0.0"
+	// AppTemplateMinStaticSite is the minimum app version required to deploy a static site.
+	AppTemplateMinStaticSite = "v1.2.0"
 )
 
 // Version is this binary's version. Set with linker flags when building Copilot.

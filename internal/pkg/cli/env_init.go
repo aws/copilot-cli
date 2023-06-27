@@ -268,15 +268,17 @@ func (o *initEnvOpts) Execute() error {
 	if err := o.initRuntimeClients(); err != nil {
 		return err
 	}
-	appVersion, err := o.appVersionGetter.Version()
-	if err != nil {
-		return fmt.Errorf("get template version of application %s: %w", o.appName, err)
-	}
-	if diff := semver.Compare(appVersion, o.templateVersion); diff > 0 && !o.allowAppDowngrade {
-		return &errCannotDowngradeAppVersion{
-			appName:         o.name,
-			appVersion:      appVersion,
-			templateVersion: o.templateVersion,
+	if !o.allowAppDowngrade {
+		appVersion, err := o.appVersionGetter.Version()
+		if err != nil {
+			return fmt.Errorf("get template version of application %s: %w", o.appName, err)
+		}
+		if diff := semver.Compare(appVersion, o.templateVersion); diff > 0 {
+			return &errCannotDowngradeAppVersion{
+				appName:         o.name,
+				appVersion:      appVersion,
+				templateVersion: o.templateVersion,
+			}
 		}
 	}
 	app, err := o.store.GetApplication(o.appName)

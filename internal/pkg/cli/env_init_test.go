@@ -1099,7 +1099,6 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			enableContainerInsights: true,
 			allowDowngrade:          true,
 			setupMocks: func(m *initEnvExecuteMocks) {
-				m.appVersionGetter.EXPECT().Version().Return(mockFutureAppVersion, nil)
 				m.store.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
 				m.store.EXPECT().CreateEnvironment(&config.Environment{
 					App:       "phonetool",
