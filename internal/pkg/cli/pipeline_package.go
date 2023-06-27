@@ -47,14 +47,14 @@ func (o *packagePipelineOpts) Execute() error {
 		return fmt.Errorf("list all pipelines in the workspace: %w", err)
 	}
 
-	pipeline_path := ""
+	pipelinePath := ""
 	for _, pipeline := range pipelines {
 		if pipeline.Name == o.name {
-			pipeline_path = pipeline.Path
+			pipelinePath = pipeline.Path
 			break
 		}
 	}
-	pipelineMft, err := o.getPipelineMft(pipeline_path)
+	pipelineMft, err := o.getPipelineMft(pipelinePath)
 	if err != nil {
 		return err
 	}
@@ -73,7 +73,7 @@ func (o *packagePipelineOpts) Execute() error {
 		return fmt.Errorf("read source from manifest: %w", err)
 	}
 
-	relPath, err := o.ws.Rel(pipeline_path)
+	relPath, err := o.ws.Rel(pipelinePath)
 	if err != nil {
 		return fmt.Errorf("convert manifest path to relative path: %w", err)
 	}
@@ -127,12 +127,12 @@ func (o *packagePipelineOpts) Execute() error {
 	return nil
 }
 
-func (o *packagePipelineOpts) getPipelineMft(pipeline_path string) (*manifest.Pipeline, error) {
+func (o *packagePipelineOpts) getPipelineMft(pipelinePath string) (*manifest.Pipeline, error) {
 	if o.pipelineMft != nil {
 		return o.pipelineMft, nil
 	}
 
-	pipelineMft, err := o.ws.ReadPipelineManifest(pipeline_path)
+	pipelineMft, err := o.ws.ReadPipelineManifest(pipelinePath)
 	if err != nil {
 		return nil, fmt.Errorf("read pipeline manifest: %w", err)
 	}
