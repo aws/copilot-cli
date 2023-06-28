@@ -275,7 +275,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 							ConfigStore: configStore,
 						})
 						if err != nil {
-							return nil, fmt.Errorf("initiate env describer: %w", err)
+							return nil, err
 						}
 						return envDescriber, nil
 					},
@@ -318,7 +318,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 						ConfigStore: opts.store,
 					})
 					if err != nil {
-						return nil, fmt.Errorf("initiate env describer: %w", err)
+						return nil, err
 					}
 					return envDescriber, nil
 				}

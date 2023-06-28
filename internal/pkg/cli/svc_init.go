@@ -228,7 +228,7 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 				ConfigStore: store,
 			})
 			if err != nil {
-				return nil, fmt.Errorf("initiate env describer: %w", err)
+				return nil, err
 			}
 			return envDescriber, nil
 		},

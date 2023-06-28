@@ -135,7 +135,7 @@ func newInitJobOpts(vars initJobVars) (*initJobOpts, error) {
 				ConfigStore: store,
 			})
 			if err != nil {
-				return nil, fmt.Errorf("initiate env describer: %w", err)
+				return nil, err
 			}
 			return envDescriber, nil
 		},
