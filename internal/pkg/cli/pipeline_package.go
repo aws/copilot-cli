@@ -47,7 +47,7 @@ func (o *packagePipelineOpts) Execute() error {
 		return fmt.Errorf("list all pipelines in the workspace: %w", err)
 	}
 
-	pipelinePath := ""
+	var pipelinePath string
 	for _, pipeline := range pipelines {
 		if pipeline.Name == o.name {
 			pipelinePath = pipeline.Path
@@ -55,7 +55,7 @@ func (o *packagePipelineOpts) Execute() error {
 		}
 	}
 	if pipelinePath == "" {
-		return fmt.Errorf("pipeline '%s' not found", o.name)
+		return fmt.Errorf("pipeline %q not found", o.name)
 	}
 
 	pipelineMft, err := o.getPipelineMft(pipelinePath)
