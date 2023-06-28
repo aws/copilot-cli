@@ -275,7 +275,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 							ConfigStore: configStore,
 						})
 						if err != nil {
-							return nil, fmt.Errorf("initiate env describer: %w", err)
+							return nil, err
 						}
 						return envDescriber, nil
 					},
@@ -292,13 +292,17 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 				opts := initSvcOpts{
 					initSvcVars: svcVars,
 
-					fs:                fs,
-					sel:               dfSel,
-					store:             configStore,
-					topicSel:          snsSel,
-					prompt:            prompt,
+					fs:       fs,
+					sel:      dfSel,
+					store:    configStore,
+					topicSel: snsSel,
+					prompt:   prompt,
+					newAppVersionGetter: func(appName string) (versionGetter, error) {
+						return describe.NewAppDescriber(appName)
+					},
 					dockerEngine:      dockerengine.New(cmd),
 					wsPendingCreation: true,
+					templateVersion:   version.LatestTemplateVersion(),
 				}
 				opts.dockerfile = func(path string) dockerfileParser {
 					if opts.df != nil {
@@ -314,7 +318,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 						ConfigStore: opts.store,
 					})
 					if err != nil {
-						return nil, fmt.Errorf("initiate env describer: %w", err)
+						return nil, err
 					}
 					return envDescriber, nil
 				}

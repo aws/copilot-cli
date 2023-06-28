@@ -269,16 +269,8 @@ func (o *initEnvOpts) Execute() error {
 		return err
 	}
 	if !o.allowAppDowngrade {
-		appVersion, err := o.appVersionGetter.Version()
-		if err != nil {
-			return fmt.Errorf("get template version of application %s: %w", o.appName, err)
-		}
-		if diff := semver.Compare(appVersion, o.templateVersion); diff > 0 {
-			return &errCannotDowngradeAppVersion{
-				appName:         o.name,
-				appVersion:      appVersion,
-				templateVersion: o.templateVersion,
-			}
+		if err := validateAppVersion(o.appVersionGetter, o.appName, o.templateVersion); err != nil {
+			return err
 		}
 	}
 	app, err := o.store.GetApplication(o.appName)
@@ -888,6 +880,21 @@ func (o *initEnvOpts) writeManifest() (string, error) {
 	}
 	log.Successf(manifestMsgFmt, color.HighlightUserInput(props.Name), color.HighlightResource(manifestPath))
 	return manifestPath, nil
+}
+
+func validateAppVersion(vg versionGetter, name, templateVersion string) error {
+	appVersion, err := vg.Version()
+	if err != nil {
+		return fmt.Errorf("get template version of application %s: %w", name, err)
+	}
+	if diff := semver.Compare(appVersion, templateVersion); diff > 0 {
+		return &errCannotDowngradeAppVersion{
+			appName:         name,
+			appVersion:      appVersion,
+			templateVersion: templateVersion,
+		}
+	}
+	return nil
 }
 
 // buildEnvInitCmd builds the command for adding an environment.
