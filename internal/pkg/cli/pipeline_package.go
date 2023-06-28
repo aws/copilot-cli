@@ -54,6 +54,10 @@ func (o *packagePipelineOpts) Execute() error {
 			break
 		}
 	}
+	if pipelinePath == "" {
+		return fmt.Errorf("pipeline '%s' not found", o.name)
+	}
+
 	pipelineMft, err := o.getPipelineMft(pipelinePath)
 	if err != nil {
 		return err
