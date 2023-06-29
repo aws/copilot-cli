@@ -37,8 +37,8 @@ func NewOverrider(pathToOverridesDir, app, env string, fs afero.Fs, sess UserAge
 	case info.IsCDK():
 		sess.UserAgentExtras("override cdk")
 		opts := override.CDKOpts{
-			ExecWriter: log.DiagnosticWriter,
 			FS:         fs,
+			ExecWriter: log.DiagnosticWriter,
 			EnvVars: map[string]string{
 				"COPILOT_APPLICATION_NAME": app,
 			},
@@ -46,6 +46,7 @@ func NewOverrider(pathToOverridesDir, app, env string, fs afero.Fs, sess UserAge
 		if env != "" {
 			opts.EnvVars["COPILOT_ENVIRONMENT_NAME"] = env
 		}
+
 		return override.WithCDK(info.Path(), opts), nil
 	case info.IsYAMLPatch():
 		sess.UserAgentExtras("override yamlpatch")
