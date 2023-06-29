@@ -489,7 +489,7 @@ func TestS3_FormatARN(t *testing.T) {
 	}
 }
 
-func TestS3_GetBucketTree(t *testing.T) {
+func TestS3_BucketTree(t *testing.T) {
 	type s3Mocks struct {
 		s3API        *mocks.Mocks3API
 		s3ManagerAPI *mocks.Mocks3ManagerAPI
@@ -689,13 +689,176 @@ func TestS3_GetBucketTree(t *testing.T) {
 			}
 			tc.setupMocks(s3mocks)
 
-			gotTree, gotErr := service.GetBucketTree(aws.StringValue(mockBucket))
+			gotTree, gotErr := service.BucketTree(aws.StringValue(mockBucket))
 			if tc.wantErr != nil {
 				require.EqualError(t, gotErr, tc.wantErr.Error())
 				return
 			}
 			require.NoError(t, gotErr)
 			require.Equal(t, tc.wantTree, gotTree)
+		})
+
+	}
+}
+
+func TestS3_BucketSizeAndCount(t *testing.T) {
+	type s3Mocks struct {
+		s3API        *mocks.Mocks3API
+		s3ManagerAPI *mocks.Mocks3ManagerAPI
+	}
+	mockBucket := aws.String("bucketName")
+	nonexistentError := awserr.New(errCodeNotFound, "msg", errors.New("some error"))
+	mockContinuationToken := "next"
+
+	resp := s3.ListObjectsV2Output{
+		Contents: []*s3.Object{
+			{
+				Key:  aws.String("README.md"),
+				Size: aws.Int64(111111),
+			},
+			{
+				Key:  aws.String("error.html"),
+				Size: aws.Int64(222222),
+			},
+			{
+				Key:  aws.String("index.html"),
+				Size: aws.Int64(333333),
+			},
+		},
+		KeyCount: aws.Int64(14),
+		MaxKeys:  aws.Int64(1000),
+		Name:     mockBucket,
+	}
+
+	testCases := map[string]struct {
+		setupMocks func(mocks s3Mocks)
+
+		wantSize  string
+		wantCount int
+		wantErr   error
+	}{
+		"should return correct size and count": {
+			setupMocks: func(m s3Mocks) {
+				m.s3API.EXPECT().HeadBucket(&s3.HeadBucketInput{Bucket: mockBucket}).Return(&s3.HeadBucketOutput{}, nil)
+				m.s3API.EXPECT().ListObjectsV2(&s3.ListObjectsV2Input{
+					Bucket:            mockBucket,
+					Delimiter:         aws.String(""),
+					ContinuationToken: nil,
+					Prefix:            nil,
+				}).Return(&resp, nil)
+			},
+			wantSize:  "667 kB",
+			wantCount: 3,
+		},
+		"should handle multiple pages of objects": {
+			setupMocks: func(m s3Mocks) {
+				m.s3API.EXPECT().HeadBucket(&s3.HeadBucketInput{Bucket: mockBucket}).Return(&s3.HeadBucketOutput{}, nil)
+				m.s3API.EXPECT().ListObjectsV2(&s3.ListObjectsV2Input{
+					Bucket:            mockBucket,
+					Delimiter:         aws.String(""),
+					ContinuationToken: nil,
+					Prefix:            nil,
+				}).Return(
+					&s3.ListObjectsV2Output{
+						Contents: []*s3.Object{
+							{
+								Key:  aws.String("README.md"),
+								Size: aws.Int64(123),
+							},
+						},
+						KeyCount:              aws.Int64(14),
+						MaxKeys:               aws.Int64(1000),
+						Name:                  mockBucket,
+						NextContinuationToken: &mockContinuationToken,
+					}, nil)
+				m.s3API.EXPECT().ListObjectsV2(&s3.ListObjectsV2Input{
+					Bucket:            mockBucket,
+					Delimiter:         aws.String(""),
+					ContinuationToken: &mockContinuationToken,
+					Prefix:            nil,
+				}).Return(
+					&s3.ListObjectsV2Output{
+						Contents: []*s3.Object{
+							{
+								Key:  aws.String("READMETOO.md"),
+								Size: aws.Int64(321),
+							},
+						},
+						KeyCount:              aws.Int64(14),
+						MaxKeys:               aws.Int64(1000),
+						Name:                  mockBucket,
+						NextContinuationToken: nil,
+					}, nil)
+			},
+			wantSize:  "444 B",
+			wantCount: 2,
+		},
+		"empty bucket": {
+			setupMocks: func(m s3Mocks) {
+				m.s3API.EXPECT().HeadBucket(&s3.HeadBucketInput{Bucket: mockBucket}).Return(&s3.HeadBucketOutput{}, nil)
+				m.s3API.EXPECT().ListObjectsV2(&s3.ListObjectsV2Input{
+					Bucket:            mockBucket,
+					Delimiter:         aws.String(""),
+					ContinuationToken: nil,
+					Prefix:            nil,
+				}).Return(&s3.ListObjectsV2Output{
+					Contents: nil,
+					Name:     mockBucket,
+				}, nil)
+			},
+			wantSize:  "0 B",
+			wantCount: 0,
+		},
+		"return nil if bucket doesn't exist": {
+			setupMocks: func(m s3Mocks) {
+				m.s3API.EXPECT().HeadBucket(&s3.HeadBucketInput{Bucket: mockBucket}).Return(&s3.HeadBucketOutput{}, nonexistentError)
+			},
+		},
+		"return err if cannot determine if bucket exists": {
+			setupMocks: func(m s3Mocks) {
+				m.s3API.EXPECT().HeadBucket(&s3.HeadBucketInput{Bucket: mockBucket}).Return(&s3.HeadBucketOutput{}, errors.New("some error"))
+			},
+			wantErr: errors.New("some error"),
+		},
+		"should wrap error if fail to list objects": {
+			setupMocks: func(m s3Mocks) {
+				m.s3API.EXPECT().HeadBucket(&s3.HeadBucketInput{Bucket: mockBucket}).Return(&s3.HeadBucketOutput{}, nil)
+				m.s3API.EXPECT().ListObjectsV2(&s3.ListObjectsV2Input{
+					Bucket:            mockBucket,
+					Delimiter:         aws.String(""),
+					ContinuationToken: nil,
+				}).Return(nil, errors.New("some error"))
+			},
+			wantErr: errors.New("list objects for bucket bucketName: some error"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockS3Client := mocks.NewMocks3API(ctrl)
+			mockS3Manager := mocks.NewMocks3ManagerAPI(ctrl)
+
+			s3mocks := s3Mocks{
+				s3API:        mockS3Client,
+				s3ManagerAPI: mockS3Manager,
+			}
+			service := S3{
+				s3Client: mockS3Client,
+			}
+			tc.setupMocks(s3mocks)
+
+			gotSize, gotCount, gotErr := service.BucketSizeAndCount(aws.StringValue(mockBucket))
+			if tc.wantErr != nil {
+				require.EqualError(t, gotErr, tc.wantErr.Error())
+				return
+			}
+			require.NoError(t, gotErr)
+			require.Equal(t, tc.wantSize, gotSize)
+			require.Equal(t, tc.wantCount, gotCount)
 		})
 
 	}

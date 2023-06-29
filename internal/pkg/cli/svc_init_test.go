@@ -1357,11 +1357,12 @@ network:
 			opts := initSvcOpts{
 				initSvcVars: initSvcVars{
 					initWkldVars: initWkldVars{
-						appName:        tc.inAppName,
-						name:           tc.inSvcName,
-						wkldType:       tc.inSvcType,
-						dockerfilePath: tc.inDockerfilePath,
-						image:          tc.inImage,
+						appName:           tc.inAppName,
+						name:              tc.inSvcName,
+						wkldType:          tc.inSvcType,
+						dockerfilePath:    tc.inDockerfilePath,
+						image:             tc.inImage,
+						allowAppDowngrade: true,
 					},
 					port: tc.inSvcPort,
 				},

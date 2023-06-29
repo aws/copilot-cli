@@ -31,6 +31,8 @@ type serviceStatusDescriberMocks struct {
 	aas                   *mocks.MockautoscalingAlarmNamesGetter
 	logGetter             *mocks.MocklogGetter
 	targetHealthGetter    *mocks.MocktargetHealthGetter
+	s3Client              *mocks.MockbucketNameGetter
+	bucketDataGetter      *mocks.MockbucketDataGetter
 }
 
 func TestServiceStatus_Describe(t *testing.T) {
@@ -717,7 +719,7 @@ func TestAppRunnerStatusDescriber_Describe(t *testing.T) {
 				)
 			},
 
-			wantedError: fmt.Errorf("get AppRunner service description for App Runner service frontend in environment test: some error"),
+			wantedError: fmt.Errorf("get App Runner service description for App Runner service frontend in environment test: some error"),
 		},
 		"success": {
 			setupMocks: func(m serviceStatusDescriberMocks) {
@@ -755,6 +757,79 @@ func TestAppRunnerStatusDescriber_Describe(t *testing.T) {
 			}
 
 			statusDesc, err := svcStatus.Describe()
+
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedContent, statusDesc, "expected output content match")
+			}
+		})
+	}
+}
+
+func TestStaticSiteStatusDescriber_Describe(t *testing.T) {
+	appName := "testapp"
+	envName := "test"
+	svcName := "frontend"
+	mockBucket := "jimmyBuckets"
+	mockError := errors.New("some error")
+
+	testCases := map[string]struct {
+		setupMocks func(mocks serviceStatusDescriberMocks)
+		desc       *staticSiteServiceStatus
+
+		wantedError   error
+		wantedContent *staticSiteServiceStatus
+	}{
+		"success": {
+			setupMocks: func(m serviceStatusDescriberMocks) {
+				m.s3Client.EXPECT().BucketName(appName, envName, svcName).Return(mockBucket, nil)
+				m.bucketDataGetter.EXPECT().BucketSizeAndCount(mockBucket).Return("mockSize", 123, nil)
+			},
+			wantedContent: &staticSiteServiceStatus{
+				BucketName: mockBucket,
+				Size:       "mockSize",
+				Count:      123,
+			},
+		},
+		"error getting bucket name": {
+			setupMocks: func(m serviceStatusDescriberMocks) {
+				m.s3Client.EXPECT().BucketName(appName, envName, svcName).Return("", mockError)
+			},
+			wantedError: fmt.Errorf(`get bucket name for "frontend" Static Site service in "test" environment: %w`, mockError),
+		},
+		"error getting bucket size and count": {
+			setupMocks: func(m serviceStatusDescriberMocks) {
+				m.s3Client.EXPECT().BucketName(appName, envName, svcName).Return(mockBucket, nil)
+				m.bucketDataGetter.EXPECT().BucketSizeAndCount(mockBucket).Return("", 0, mockError)
+			},
+			wantedError: fmt.Errorf(`get size and count data for "jimmyBuckets" S3 bucket: %w`, mockError),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			//mockSvcDesc := mocks.NewMockstaticSiteDescriber(ctrl)
+			mocks := serviceStatusDescriberMocks{
+				s3Client:         mocks.NewMockbucketNameGetter(ctrl),
+				bucketDataGetter: mocks.NewMockbucketDataGetter(ctrl),
+			}
+			tc.setupMocks(mocks)
+
+			d := &staticSiteStatusDescriber{
+				app: appName,
+				env: envName,
+				svc: svcName,
+				initS3Client: func(string) (bucketDataGetter, bucketNameGetter, error) {
+					return mocks.bucketDataGetter, mocks.s3Client, nil
+				},
+			}
+
+			statusDesc, err := d.Describe()
 
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())

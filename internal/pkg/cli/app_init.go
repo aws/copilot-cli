@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/iam"
+	"github.com/aws/copilot-cli/internal/pkg/version"
 	"github.com/spf13/afero"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -235,7 +236,7 @@ func (o *initAppOpts) Execute() error {
 		DomainHostedZoneID:  hostedZoneID,
 		PermissionsBoundary: o.permissionsBoundary,
 		AdditionalTags:      o.resourceTags,
-		Version:             deploy.LatestAppTemplateVersion,
+		Version:             version.LatestTemplateVersion(),
 	})
 	if err != nil {
 		return err

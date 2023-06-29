@@ -13,6 +13,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
+	"github.com/aws/copilot-cli/internal/pkg/version"
 
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
 
@@ -80,10 +81,12 @@ type initJobOpts struct {
 	wsPendingCreation bool
 	wsAppName         string
 
-	// Init a Dockerfile parser using fs and input path
-	initParser func(string) dockerfileParser
-	// Init a new EnvDescriber using environment name and app name.
-	initEnvDescriber func(string, string) (envDescriber, error)
+	initParser          func(path string) dockerfileParser
+	initEnvDescriber    func(appName, envName string) (envDescriber, error)
+	newAppVersionGetter func(appName string) (versionGetter, error)
+
+	// Overridden in tests.
+	templateVersion string
 }
 
 func newInitJobOpts(vars initJobVars) (*initJobOpts, error) {
@@ -132,11 +135,15 @@ func newInitJobOpts(vars initJobVars) (*initJobOpts, error) {
 				ConfigStore: store,
 			})
 			if err != nil {
-				return nil, fmt.Errorf("initiate env describer: %w", err)
+				return nil, err
 			}
 			return envDescriber, nil
 		},
-		wsAppName: tryReadingAppName(),
+		newAppVersionGetter: func(appName string) (versionGetter, error) {
+			return describe.NewAppDescriber(appName)
+		},
+		wsAppName:       tryReadingAppName(),
+		templateVersion: version.LatestTemplateVersion(),
 	}, nil
 }
 
@@ -260,6 +267,15 @@ func envsWithPrivateSubnetsOnly(store store, initEnvDescriber func(string, strin
 
 // Execute writes the job's manifest file, creates an ECR repo, and stores the name in SSM.
 func (o *initJobOpts) Execute() error {
+	if !o.allowAppDowngrade {
+		appVersionGetter, err := o.newAppVersionGetter(o.appName)
+		if err != nil {
+			return err
+		}
+		if err := validateAppVersion(appVersionGetter, o.appName, o.templateVersion); err != nil {
+			return err
+		}
+	}
 	// Check for a valid healthcheck and add it to the opts.
 	var hc manifest.ContainerHealthCheck
 	var err error
@@ -472,6 +488,7 @@ func buildJobInitCmd() *cobra.Command {
 	cmd.Flags().StringVar(&vars.timeout, timeoutFlag, "", timeoutFlagDescription)
 	cmd.Flags().IntVar(&vars.retries, retriesFlag, 0, retriesFlagDescription)
 	cmd.Flags().StringVarP(&vars.image, imageFlag, imageFlagShort, "", imageFlagDescription)
+	cmd.Flags().BoolVar(&vars.allowAppDowngrade, allowDowngradeFlag, false, allowDowngradeFlagDescription)
 
 	cmd.Annotations = map[string]string{
 		"group": group.Develop,

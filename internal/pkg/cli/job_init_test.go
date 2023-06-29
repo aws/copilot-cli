@@ -820,10 +820,11 @@ network:
 			opts := initJobOpts{
 				initJobVars: initJobVars{
 					initWkldVars: initWkldVars{
-						appName:        tc.inApp,
-						name:           tc.inName,
-						wkldType:       tc.inType,
-						dockerfilePath: tc.inDf,
+						appName:           tc.inApp,
+						name:              tc.inName,
+						wkldType:          tc.inType,
+						dockerfilePath:    tc.inDf,
+						allowAppDowngrade: true,
 					},
 					schedule: tc.inSchedule,
 				},

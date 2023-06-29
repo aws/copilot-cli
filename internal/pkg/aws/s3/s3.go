@@ -7,7 +7,6 @@ package s3
 import (
 	"errors"
 	"fmt"
-	"github.com/xlab/treeprint"
 	"io"
 	"mime"
 	"path/filepath"
@@ -20,6 +19,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	"github.com/dustin/go-humanize"
+	"github.com/xlab/treeprint"
 )
 
 const (
@@ -194,51 +195,18 @@ func FormatARN(partition, location string) string {
 	return fmt.Sprintf("arn:%s:s3:::%s", partition, location)
 }
 
-func (s *S3) bucketExists(bucket string) (bool, error) {
-	input := &s3.HeadBucketInput{
-		Bucket: aws.String(bucket),
-	}
-	_, err := s.s3Client.HeadBucket(input)
-	if err != nil {
-		if aerr, ok := err.(awserr.Error); ok && aerr.Code() == errCodeNotFound {
-			return false, nil
-		}
-		return false, err
-	}
-
-	return true, nil
-}
-
-// GetBucketTree retrieves the objects in an S3 bucket and creates an ASCII tree representing their folder structure.
-func (s *S3) GetBucketTree(bucket string) (string, error) {
-	exists, err := s.bucketExists(bucket)
-	if err != nil {
+// BucketTree creates an ASCII tree representing the folder structure of a bucket's objects.
+func (s *S3) BucketTree(bucket string) (string, error) {
+	outputs, err := s.listObjects(bucket, "/")
+	if err != nil || outputs == nil {
 		return "", err
 	}
-	if !exists {
-		return "", nil
-	}
-
 	var contents []*s3.Object
 	var prefixes []*s3.CommonPrefix
-	listResp := &s3.ListObjectsV2Output{}
-	for {
-		listParams := &s3.ListObjectsV2Input{
-			Bucket:            aws.String(bucket),
-			Delimiter:         aws.String(slashDelimiter),
-			ContinuationToken: listResp.NextContinuationToken,
-		}
-		listResp, err = s.s3Client.ListObjectsV2(listParams)
-		if err != nil {
-			return "", fmt.Errorf("list objects for bucket %s: %w", bucket, err)
-		}
-		contents = append(contents, listResp.Contents...)
-		prefixes = append(prefixes, listResp.CommonPrefixes...)
-		if listResp.NextContinuationToken == nil {
-			break
-		}
+	for _, output := range outputs {
+		contents = append(contents, output.Contents...)
+		prefixes = append(prefixes, output.CommonPrefixes...)
 	}
-
 	tree := treeprint.New()
 	// Add top-level files.
 	for _, object := range contents {
@@ -251,11 +219,67 @@ func (s *S3) GetBucketTree(bucket string) (string, error) {
 	return tree.String(), nil
 }
 
+// BucketSizeAndCount returns the total size and number of objects in an S3 bucket.
+func (s *S3) BucketSizeAndCount(bucket string) (string, int, error) {
+	outputs, err := s.listObjects(bucket, "")
+	if err != nil || outputs == nil {
+		return "", 0, err
+	}
+	var size int64
+	var count int
+	for _, output := range outputs {
+		for _, object := range output.Contents {
+			size += aws.Int64Value(object.Size)
+			count++
+		}
+	}
+	return humanize.Bytes(uint64(size)), count, nil
+}
+
+func (s *S3) listObjects(bucket, delimiter string) ([]s3.ListObjectsV2Output, error) {
+	exists, err := s.bucketExists(bucket)
+	if err != nil || !exists {
+		return nil, err
+	}
+	var outputs []s3.ListObjectsV2Output
+	listResp := &s3.ListObjectsV2Output{}
+	for {
+		listParams := &s3.ListObjectsV2Input{
+			Bucket:            aws.String(bucket),
+			Delimiter:         aws.String(delimiter),
+			ContinuationToken: listResp.NextContinuationToken,
+		}
+		listResp, err = s.s3Client.ListObjectsV2(listParams)
+		if err != nil {
+			return nil, fmt.Errorf("list objects for bucket %s: %w", bucket, err)
+		}
+		outputs = append(outputs, *listResp)
+		if listResp.NextContinuationToken == nil {
+			break
+		}
+	}
+	return outputs, nil
+}
+
+func (s *S3) bucketExists(bucket string) (bool, error) {
+	input := &s3.HeadBucketInput{
+		Bucket: aws.String(bucket),
+	}
+	_, err := s.s3Client.HeadBucket(input)
+	if err != nil {
+		var aerr awserr.Error
+		if errors.As(err, &aerr) && aerr.Code() == errCodeNotFound {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
+}
+
 func (s *S3) addNodes(tree treeprint.Tree, prefixes []*s3.CommonPrefix, bucket string) error {
 	if len(prefixes) == 0 {
 		return nil
 	}
-
 	listResp := &s3.ListObjectsV2Output{}
 	var err error
 	for _, prefix := range prefixes {

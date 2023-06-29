@@ -16,21 +16,22 @@ import (
 // Long flag names.
 const (
 	// Common flags.
-	nameFlag         = "name"
-	appFlag          = "app"
-	envFlag          = "env"
-	workloadFlag     = "workload"
-	svcTypeFlag      = "svc-type"
-	jobTypeFlag      = "job-type"
-	typeFlag         = "type"
-	profileFlag      = "profile"
-	yesFlag          = "yes"
-	jsonFlag         = "json"
-	allFlag          = "all"
-	forceFlag        = "force"
-	noRollbackFlag   = "no-rollback"
-	manifestFlag     = "manifest"
-	resourceTagsFlag = "resource-tags"
+	nameFlag           = "name"
+	appFlag            = "app"
+	envFlag            = "env"
+	workloadFlag       = "workload"
+	svcTypeFlag        = "svc-type"
+	jobTypeFlag        = "job-type"
+	typeFlag           = "type"
+	profileFlag        = "profile"
+	yesFlag            = "yes"
+	jsonFlag           = "json"
+	allFlag            = "all"
+	forceFlag          = "force"
+	allowDowngradeFlag = "allow-downgrade"
+	noRollbackFlag     = "no-rollback"
+	manifestFlag       = "manifest"
+	resourceTagsFlag   = "resource-tags"
 
 	// Build flags.
 	dockerFileFlag        = "dockerfile"
@@ -258,8 +259,10 @@ Allows you to categorize resources.`
 	diffAutoApproveFlagDescription = "Skip interactive approval of diff before deploying."
 
 	// Deployment.
-	deployTestFlagDescription = `Deploy your service or job to a "test" environment.`
-	forceFlagDescription      = `Optional. Force a new service deployment using the existing image.
+	deployTestFlagDescription     = `Deploy your service or job to a "test" environment.`
+	allowDowngradeFlagDescription = `Optional. Allow using an older version of Copilot to update Copilot components
+updated by a newer version of Copilot.`
+	forceFlagDescription = `Optional. Force a new service deployment using the existing image.
 Not available with the "Static Site" service type.`
 	noRollbackFlagDescription = `Optional. Disable automatic stack 
 rollback in case of deployment failure.
@@ -304,7 +307,7 @@ output the manifest file used for that deployment.`
 	containerFlagDescription   = "Optional. The specific container you want to exec in. By default the first essential container will be used."
 
 	// Build.
-	imageTagFlagDescription     = `Optional. The container image tag.`
+	imageTagFlagDescription     = `Optional. The tag for the container images Copilot builds from Dockerfiles.`
 	uploadAssetsFlagDescription = `Optional. Whether to upload assets (container images, Lambda functions, etc.).
 Uploaded asset locations are filled in the template configuration.`
 	stackOutputDirFlagDescription = "Optional. Writes the stack template and template configuration to a directory."

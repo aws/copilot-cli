@@ -124,7 +124,7 @@ func (d *StaticSiteDescriber) Describe() (HumanJSONStringer, error) {
 		if err != nil {
 			return nil, fmt.Errorf("get bucket name for %q env: %w", env, err)
 		}
-		tree, err := bucketDescriber.GetBucketTree(bucketName)
+		tree, err := bucketDescriber.BucketTree(bucketName)
 		if err != nil {
 			return nil, fmt.Errorf("get tree representation of bucket contents: %w", err)
 		}
