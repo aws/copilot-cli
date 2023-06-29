@@ -29,7 +29,6 @@ import (
 	deploycfn "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
-	"github.com/aws/copilot-cli/internal/pkg/override"
 	templatediff "github.com/aws/copilot-cli/internal/pkg/template/diff"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
@@ -88,7 +87,6 @@ type deployPipelineOpts struct {
 	newSvcListCmd       func(io.Writer, string) cmd
 	newJobListCmd       func(io.Writer, string) cmd
 	pipelineStackConfig func(in *deploy.CreatePipelineInput) pipelineStackConfig
-	overrider           func(in *deploy.CreateAppInput)
 
 	configureDeployedPipelineLister func() deployedPipelineLister
 
@@ -277,16 +275,11 @@ func (o *deployPipelineOpts) Execute() error {
 		PermissionsBoundary: o.app.PermissionsBoundary,
 	}
 
-	ovrdr, err := clideploy.NewOverrider(o.ws.PipelineOverridesPath(o.pipeline.Name), o.appName, "", afero.NewOsFs(), o.sessProvider)
+	overrider, err := clideploy.NewOverrider(o.ws.PipelineOverridesPath(o.pipeline.Name), o.appName, "", afero.NewOsFs(), o.sessProvider)
 	if err != nil {
 		return err
 	}
-	overrider := ovrdr
-	if overrider == nil {
-		overrider = new(override.Noop)
-	}
-
-	stackConfig := deploycfn.WrapWithTemplateOverrider(o.pipelineStackConfig(deployPipelineInput), ovrdr)
+	stackConfig := deploycfn.WrapWithTemplateOverrider(o.pipelineStackConfig(deployPipelineInput), overrider)
 
 	if o.showDiff {
 		tpl, err := stackConfig.Template()

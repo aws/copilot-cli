@@ -23,7 +23,6 @@ import (
 	deploycfn "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
-	"github.com/aws/copilot-cli/internal/pkg/override"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
@@ -186,14 +185,9 @@ func (o *packagePipelineOpts) Execute() error {
 		return err
 	}
 
-	ovrdr, err := clideploy.NewOverrider(o.ws.PipelineOverridesPath(o.name), o.appName, "", afero.NewOsFs(), o.sessProvider)
+	overrider, err := clideploy.NewOverrider(o.ws.PipelineOverridesPath(o.name), o.appName, "", afero.NewOsFs(), o.sessProvider)
 	if err != nil {
 		return err
-	}
-
-	overrider := ovrdr
-	if overrider == nil {
-		overrider = new(override.Noop)
 	}
 
 	deployPipelineInput := &deploy.CreatePipelineInput{
@@ -208,7 +202,7 @@ func (o *packagePipelineOpts) Execute() error {
 		PermissionsBoundary: o.app.PermissionsBoundary,
 	}
 
-	stackConfig := deploycfn.WrapWithTemplateOverrider(o.pipelineStackConfig(deployPipelineInput), ovrdr)
+	stackConfig := deploycfn.WrapWithTemplateOverrider(o.pipelineStackConfig(deployPipelineInput), overrider)
 	tpl, err := stackConfig.Template()
 	if err != nil {
 		return fmt.Errorf("template generation: %w", err)
