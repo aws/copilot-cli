@@ -6,8 +6,9 @@ package describe
 import (
 	"errors"
 	"fmt"
-	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatch"
 	"testing"
+
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatch"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	cfnstack "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
@@ -357,7 +358,7 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 			},
 			wantedError: fmt.Errorf("retrieve service resources: some error"),
 		},
-		"should not try to fetch descriptions if no ROLLBACK alarms present":{
+		"should not try to fetch descriptions if no ROLLBACK alarms present": {
 			setupMocks: func(m lbWebSvcDescriberMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
@@ -406,12 +407,12 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 						},
 					},
 					ServiceDiscovery: serviceDiscoveries{
-						"jobs.test.phonetool.local:80":   []string{"test"},
+						"jobs.test.phonetool.local:80": []string{"test"},
 					},
 					ServiceConnect: serviceConnects{
 						testSvc: []string{"test"},
 					},
-					Resources: map[string][]*stack.Resource{},
+					Resources:    map[string][]*stack.Resource{},
 					environments: []string{"test"},
 				},
 			},

@@ -304,7 +304,7 @@ output the manifest file used for that deployment.`
 	containerFlagDescription   = "Optional. The specific container you want to exec in. By default the first essential container will be used."
 
 	// Build.
-	imageTagFlagDescription     = `Optional. The container image tag.`
+	imageTagFlagDescription     = `Optional. The tag for the container images Copilot builds from Dockerfiles.`
 	uploadAssetsFlagDescription = `Optional. Whether to upload assets (container images, Lambda functions, etc.).
 Uploaded asset locations are filled in the template configuration.`
 	stackOutputDirFlagDescription = "Optional. Writes the stack template and template configuration to a directory."
@@ -401,7 +401,7 @@ AWS Schedule Expressions of the form "rate(10 minutes)" or "cron(0 12 L * ? 2021
 are also accepted.`
 	upgradeAllEnvsDescription          = "Optional. Upgrade all environments."
 	secretOverwriteFlagDescription     = "Optional. Whether to overwrite an existing secret."
-	permissionsBoundaryFlagDescription = `Optional. The name of an existing IAM policy with which to set a
+	permissionsBoundaryFlagDescription = `Optional. The name or ARN of an existing IAM policy with which to set a
 permissions boundary for all roles generated within the application.`
 	prodEnvFlagDescription = "If the environment contains production services."
 )

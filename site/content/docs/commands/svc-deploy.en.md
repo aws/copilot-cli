@@ -9,11 +9,12 @@ $ copilot svc deploy
 
 The steps involved in service deploy are:
 
-1. Build your local Dockerfile into an image
-2. Tag it with the value from `--tag` or the latest git sha (if you're in a git directory)
-3. Push the image to ECR
-4. Package your manifest file and addons into CloudFormation
-4. Create / update your ECS task definition and service
+1. When `image.build` exists in the manifest:
+    1. Build your local Dockerfile into an image
+    2. Tag it with the value from `--tag` or the latest git sha (if you're in a git directory)
+    3. Push the image to ECR
+2. Package your manifest file and addons into CloudFormation
+3. Create / update your ECS task definition and service
 
 ## What are the flags?
 
@@ -30,7 +31,7 @@ The steps involved in service deploy are:
                                        production environment.
       --resource-tags stringToString   Optional. Labels with a key and value separated by commas.
                                        Allows you to categorize resources. (default [])
-      --tag string                     Optional. The container image tag.
+      --tag string                     Optional. The tag for the container images Copilot builds from Dockerfiles.
 ```
 
 !!!info

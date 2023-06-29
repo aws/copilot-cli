@@ -618,6 +618,38 @@ System Logs
 	}
 }
 
+func TestServiceStatusDesc_StaticSiteServiceString(t *testing.T) {
+	testCases := map[string]struct {
+		desc  *staticSiteServiceStatus
+		human string
+		json  string
+	}{
+		"success": {
+			desc: &staticSiteServiceStatus{
+				BucketName: "Jimmy Buckets",
+				Size:       "999 MB",
+				Count:      22,
+			},
+			human: `Bucket Summary
+
+  Bucket Name     Jimmy Buckets
+  Total Objects   22
+  Total Size      999 MB
+`,
+			json: `{"bucketName":"Jimmy Buckets","totalSize":"999 MB","totalObjects":22}` + "\n",
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			json, err := tc.desc.JSONString()
+			require.NoError(t, err)
+			require.Equal(t, tc.human, tc.desc.HumanString())
+			require.Equal(t, tc.json, json)
+		})
+	}
+}
+
 func TestECSTaskStatus_humanString(t *testing.T) {
 	// from the function changes (ex: from "1 month ago" to "2 months ago"). To make our tests stable,
 	oldHumanize := humanizeTime
