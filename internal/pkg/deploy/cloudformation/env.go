@@ -10,6 +10,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/copilot-cli/internal/pkg/template"
+	"github.com/aws/copilot-cli/internal/pkg/version"
 	"gopkg.in/yaml.v3"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -203,5 +204,5 @@ func (cf CloudFormation) isInitialDeployment(appName, envName string) (bool, err
 	if err := yaml.Unmarshal([]byte(raw), &metadata); err != nil {
 		return false, fmt.Errorf("unmarshal Metadata property to read Version: %w", err)
 	}
-	return metadata.Version == deploy.EnvTemplateVersionBootstrap, nil
+	return metadata.Version == version.EnvTemplateBootstrap, nil
 }

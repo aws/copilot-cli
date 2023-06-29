@@ -139,30 +139,46 @@ func TestDeployEnvOpts_Ask(t *testing.T) {
 }
 
 type deployEnvExecuteMocks struct {
-	ws           *mocks.MockwsEnvironmentReader
-	deployer     *mocks.MockenvDeployer
-	identity     *mocks.MockidentityService
-	interpolator *mocks.Mockinterpolator
-	prompter     *mocks.Mockprompter
+	ws               *mocks.MockwsEnvironmentReader
+	deployer         *mocks.MockenvDeployer
+	identity         *mocks.MockidentityService
+	interpolator     *mocks.Mockinterpolator
+	prompter         *mocks.Mockprompter
+	envVersionGetter *mocks.MockversionGetter
 }
 
 func TestDeployEnvOpts_Execute(t *testing.T) {
+	const (
+		mockEnvVersion       = "v0.0.0"
+		mockCurrVersion      = "v1.29.0"
+		mockFutureEnvVersion = "v2.0.0"
+	)
+	mockError := errors.New("some error")
 	testCases := map[string]struct {
 		inShowDiff        bool
 		inSkipDiffPrompt  bool
+		inAllowDowngrade  bool
 		unmarshalManifest func(in []byte) (*manifest.Environment, error)
 		setUpMocks        func(m *deployEnvExecuteMocks)
 		wantedDiff        string
 		wantedErr         error
 	}{
+		"fail to get env version": {
+			setUpMocks: func(m *deployEnvExecuteMocks) {
+				m.envVersionGetter.EXPECT().Version().Return("", mockError)
+			},
+			wantedErr: errors.New(`get template version of environment mockEnv: some error`),
+		},
 		"fail to read manifest": {
 			setUpMocks: func(m *deployEnvExecuteMocks) {
-				m.ws.EXPECT().ReadEnvironmentManifest(gomock.Any()).Return(nil, errors.New("some error"))
+				m.envVersionGetter.EXPECT().Version().Return(mockEnvVersion, nil)
+				m.ws.EXPECT().ReadEnvironmentManifest(gomock.Any()).Return(nil, mockError)
 			},
 			wantedErr: errors.New(`read manifest for environment "mockEnv": some error`),
 		},
 		"fail to interpolate manifest": {
 			setUpMocks: func(m *deployEnvExecuteMocks) {
+				m.envVersionGetter.EXPECT().Version().Return(mockEnvVersion, nil)
 				m.ws.EXPECT().ReadEnvironmentManifest(gomock.Any()).Return([]byte("name: mockEnv\ntype: Environment\n"), nil)
 				m.interpolator.EXPECT().Interpolate(gomock.Any()).Return("", errors.New("some error"))
 			},
@@ -170,6 +186,7 @@ func TestDeployEnvOpts_Execute(t *testing.T) {
 		},
 		"fail to unmarshal manifest": {
 			setUpMocks: func(m *deployEnvExecuteMocks) {
+				m.envVersionGetter.EXPECT().Version().Return(mockEnvVersion, nil)
 				m.ws.EXPECT().ReadEnvironmentManifest(gomock.Any()).Return([]byte("name: mockEnv\ntype: Environment\n"), nil)
 				m.interpolator.EXPECT().Interpolate(gomock.Any()).Return("failing manifest format", nil)
 			},
@@ -177,6 +194,7 @@ func TestDeployEnvOpts_Execute(t *testing.T) {
 		},
 		"fail to get caller identity": {
 			setUpMocks: func(m *deployEnvExecuteMocks) {
+				m.envVersionGetter.EXPECT().Version().Return(mockEnvVersion, nil)
 				m.ws.EXPECT().ReadEnvironmentManifest(gomock.Any()).Return([]byte("name: mockEnv\ntype: Environment\n"), nil)
 				m.interpolator.EXPECT().Interpolate(gomock.Any()).Return("name: mockEnv\ntype: Environment\n", nil)
 				m.identity.EXPECT().Get().Return(identity.Caller{}, errors.New("some error"))
@@ -185,6 +203,7 @@ func TestDeployEnvOpts_Execute(t *testing.T) {
 		},
 		"fail to verify env": {
 			setUpMocks: func(m *deployEnvExecuteMocks) {
+				m.envVersionGetter.EXPECT().Version().Return(mockEnvVersion, nil)
 				m.ws.EXPECT().ReadEnvironmentManifest(gomock.Any()).Return([]byte("name: mockEnv\ntype: Environment\ncdn: true\n"), nil)
 				m.interpolator.EXPECT().Interpolate(gomock.Any()).Return("name: mockEnv\ntype: Environment\ncdn: true\n", nil)
 				m.identity.EXPECT().Get().Return(identity.Caller{
@@ -196,6 +215,7 @@ func TestDeployEnvOpts_Execute(t *testing.T) {
 		},
 		"fail to upload artifacts": {
 			setUpMocks: func(m *deployEnvExecuteMocks) {
+				m.envVersionGetter.EXPECT().Version().Return(mockEnvVersion, nil)
 				m.ws.EXPECT().ReadEnvironmentManifest(gomock.Any()).Return([]byte("name: mockEnv\ntype: Environment\n"), nil)
 				m.interpolator.EXPECT().Interpolate(gomock.Any()).Return("name: mockEnv\ntype: Environment\n", nil)
 				m.identity.EXPECT().Get().Return(identity.Caller{
@@ -209,6 +229,7 @@ func TestDeployEnvOpts_Execute(t *testing.T) {
 		"fail to generate the template to show diff": {
 			inShowDiff: true,
 			setUpMocks: func(m *deployEnvExecuteMocks) {
+				m.envVersionGetter.EXPECT().Version().Return(mockEnvVersion, nil)
 				m.ws.EXPECT().ReadEnvironmentManifest(gomock.Any()).Return([]byte("name: mockEnv\ntype: Environment\n"), nil)
 				m.interpolator.EXPECT().Interpolate(gomock.Any()).Return("name: mockEnv\ntype: Environment\n", nil)
 				m.identity.EXPECT().Get().Return(identity.Caller{
@@ -223,6 +244,7 @@ func TestDeployEnvOpts_Execute(t *testing.T) {
 		"failed to generate the diff": {
 			inShowDiff: true,
 			setUpMocks: func(m *deployEnvExecuteMocks) {
+				m.envVersionGetter.EXPECT().Version().Return(mockEnvVersion, nil)
 				m.ws.EXPECT().ReadEnvironmentManifest(gomock.Any()).Return([]byte("name: mockEnv\ntype: Environment\n"), nil)
 				m.interpolator.EXPECT().Interpolate(gomock.Any()).Return("name: mockEnv\ntype: Environment\n", nil)
 				m.identity.EXPECT().Get().Return(identity.Caller{
@@ -238,6 +260,7 @@ func TestDeployEnvOpts_Execute(t *testing.T) {
 		"write 'no changes' if there is no diff": {
 			inShowDiff: true,
 			setUpMocks: func(m *deployEnvExecuteMocks) {
+				m.envVersionGetter.EXPECT().Version().Return(mockEnvVersion, nil)
 				m.ws.EXPECT().ReadEnvironmentManifest(gomock.Any()).Return([]byte("name: mockEnv\ntype: Environment\n"), nil)
 				m.interpolator.EXPECT().Interpolate(gomock.Any()).Return("name: mockEnv\ntype: Environment\n", nil)
 				m.identity.EXPECT().Get().Return(identity.Caller{
@@ -254,6 +277,7 @@ func TestDeployEnvOpts_Execute(t *testing.T) {
 		"write the correct diff": {
 			inShowDiff: true,
 			setUpMocks: func(m *deployEnvExecuteMocks) {
+				m.envVersionGetter.EXPECT().Version().Return(mockEnvVersion, nil)
 				m.ws.EXPECT().ReadEnvironmentManifest(gomock.Any()).Return([]byte("name: mockEnv\ntype: Environment\n"), nil)
 				m.interpolator.EXPECT().Interpolate(gomock.Any()).Return("name: mockEnv\ntype: Environment\n", nil)
 				m.identity.EXPECT().Get().Return(identity.Caller{
@@ -270,6 +294,7 @@ func TestDeployEnvOpts_Execute(t *testing.T) {
 		"error if fail to ask whether to continue the deployment": {
 			inShowDiff: true,
 			setUpMocks: func(m *deployEnvExecuteMocks) {
+				m.envVersionGetter.EXPECT().Version().Return(mockEnvVersion, nil)
 				m.ws.EXPECT().ReadEnvironmentManifest(gomock.Any()).Return([]byte("name: mockEnv\ntype: Environment\n"), nil)
 				m.interpolator.EXPECT().Interpolate(gomock.Any()).Return("name: mockEnv\ntype: Environment\n", nil)
 				m.identity.EXPECT().Get().Return(identity.Caller{
@@ -286,6 +311,7 @@ func TestDeployEnvOpts_Execute(t *testing.T) {
 		"do not deploy if asked to": {
 			inShowDiff: true,
 			setUpMocks: func(m *deployEnvExecuteMocks) {
+				m.envVersionGetter.EXPECT().Version().Return(mockEnvVersion, nil)
 				m.ws.EXPECT().ReadEnvironmentManifest(gomock.Any()).Return([]byte("name: mockEnv\ntype: Environment\n"), nil)
 				m.interpolator.EXPECT().Interpolate(gomock.Any()).Return("name: mockEnv\ntype: Environment\n", nil)
 				m.identity.EXPECT().Get().Return(identity.Caller{
@@ -302,6 +328,7 @@ func TestDeployEnvOpts_Execute(t *testing.T) {
 		"deploy if asked to": {
 			inShowDiff: true,
 			setUpMocks: func(m *deployEnvExecuteMocks) {
+				m.envVersionGetter.EXPECT().Version().Return(mockEnvVersion, nil)
 				m.ws.EXPECT().ReadEnvironmentManifest(gomock.Any()).Return([]byte("name: mockEnv\ntype: Environment\n"), nil)
 				m.interpolator.EXPECT().Interpolate(gomock.Any()).Return("name: mockEnv\ntype: Environment\n", nil)
 				m.identity.EXPECT().Get().Return(identity.Caller{
@@ -315,10 +342,12 @@ func TestDeployEnvOpts_Execute(t *testing.T) {
 				m.deployer.EXPECT().DeployEnvironment(gomock.Any()).Times(1)
 			},
 		},
-		"skip prompt and deploy immediately after diff": {
+		"skip prompt and deploy immediately after diff; also skip version check when downgrade is allowed": {
 			inShowDiff:       true,
 			inSkipDiffPrompt: true,
+			inAllowDowngrade: true,
 			setUpMocks: func(m *deployEnvExecuteMocks) {
+				m.envVersionGetter.EXPECT().Version().Times(0)
 				m.ws.EXPECT().ReadEnvironmentManifest(gomock.Any()).Return([]byte("name: mockEnv\ntype: Environment\n"), nil)
 				m.interpolator.EXPECT().Interpolate(gomock.Any()).Return("name: mockEnv\ntype: Environment\n", nil)
 				m.identity.EXPECT().Get().Return(identity.Caller{
@@ -334,6 +363,7 @@ func TestDeployEnvOpts_Execute(t *testing.T) {
 		},
 		"fail to deploy the environment": {
 			setUpMocks: func(m *deployEnvExecuteMocks) {
+				m.envVersionGetter.EXPECT().Version().Return(mockEnvVersion, nil)
 				m.ws.EXPECT().ReadEnvironmentManifest(gomock.Any()).Return([]byte("name: mockEnv\ntype: Environment\n"), nil)
 				m.interpolator.EXPECT().Interpolate(gomock.Any()).Return("name: mockEnv\ntype: Environment\n", nil)
 				m.identity.EXPECT().Get().Return(identity.Caller{
@@ -349,6 +379,7 @@ func TestDeployEnvOpts_Execute(t *testing.T) {
 		},
 		"success": {
 			setUpMocks: func(m *deployEnvExecuteMocks) {
+				m.envVersionGetter.EXPECT().Version().Return(mockEnvVersion, nil)
 				m.ws.EXPECT().ReadEnvironmentManifest("mockEnv").Return([]byte("name: mockEnv\ntype: Environment\n"), nil)
 				m.interpolator.EXPECT().Interpolate("name: mockEnv\ntype: Environment\n").Return("name: mockEnv\ntype: Environment\n", nil)
 				m.identity.EXPECT().Get().Return(identity.Caller{
@@ -383,24 +414,30 @@ func TestDeployEnvOpts_Execute(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			m := &deployEnvExecuteMocks{
-				ws:           mocks.NewMockwsEnvironmentReader(ctrl),
-				deployer:     mocks.NewMockenvDeployer(ctrl),
-				identity:     mocks.NewMockidentityService(ctrl),
-				interpolator: mocks.NewMockinterpolator(ctrl),
-				prompter:     mocks.NewMockprompter(ctrl),
+				ws:               mocks.NewMockwsEnvironmentReader(ctrl),
+				deployer:         mocks.NewMockenvDeployer(ctrl),
+				identity:         mocks.NewMockidentityService(ctrl),
+				interpolator:     mocks.NewMockinterpolator(ctrl),
+				prompter:         mocks.NewMockprompter(ctrl),
+				envVersionGetter: mocks.NewMockversionGetter(ctrl),
 			}
 			tc.setUpMocks(m)
 			opts := deployEnvOpts{
 				deployEnvVars: deployEnvVars{
-					name:           "mockEnv",
-					showDiff:       tc.inShowDiff,
-					skipDiffPrompt: tc.inSkipDiffPrompt,
+					name:              "mockEnv",
+					showDiff:          tc.inShowDiff,
+					skipDiffPrompt:    tc.inSkipDiffPrompt,
+					allowEnvDowngrade: tc.inAllowDowngrade,
 				},
 				ws:       m.ws,
 				identity: m.identity,
 				newEnvDeployer: func() (envDeployer, error) {
 					return m.deployer, nil
 				},
+				newEnvVersionGetter: func(appName, envName string) (versionGetter, error) {
+					return m.envVersionGetter, nil
+				},
+				templateVersion: mockCurrVersion,
 				newInterpolator: func(s string, s2 string) interpolator {
 					return m.interpolator
 				},

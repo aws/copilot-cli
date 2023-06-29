@@ -10,11 +10,11 @@ import (
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/config"
-	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	cfnstack "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/describe/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/describe/stack"
 	"github.com/aws/copilot-cli/internal/pkg/template"
+	"github.com/aws/copilot-cli/internal/pkg/version"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -352,7 +352,7 @@ func TestEnvDescriber_Version(t *testing.T) {
 		wantedVersion string
 		wantedErr     error
 	}{
-		"should return deploy.LegacyEnvTemplateVersion version if legacy template": {
+		"should return version.LegacyEnvTemplate version if legacy template": {
 			given: func(ctrl *gomock.Controller) *EnvDescriber {
 				m := mocks.NewMockstackDescriber(ctrl)
 				m.EXPECT().StackMetadata().Return("", nil)
@@ -362,7 +362,7 @@ func TestEnvDescriber_Version(t *testing.T) {
 					cfn: m,
 				}
 			},
-			wantedVersion: deploy.LegacyEnvTemplateVersion,
+			wantedVersion: version.LegacyEnvTemplate,
 		},
 		"should read the version from the Metadata field": {
 			given: func(ctrl *gomock.Controller) *EnvDescriber {

@@ -16,10 +16,10 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/tags"
-	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/template"
+	"github.com/aws/copilot-cli/internal/pkg/version"
 	"github.com/spf13/afero"
 
 	"github.com/spf13/cobra"
@@ -460,7 +460,7 @@ func validateWorkloadManifestCompatibilityWithEnv(ws wsEnvironmentsLister, env v
 	if err != nil {
 		return fmt.Errorf("get environment %q version: %w", envName, err)
 	}
-	if currVersion == deploy.EnvTemplateVersionBootstrap {
+	if currVersion == version.EnvTemplateBootstrap {
 		return fmt.Errorf(`cannot deploy a service to an undeployed environment. Please run "copilot env deploy --name %s" to deploy the environment first`, envName)
 	}
 	availableFeatures, err := env.AvailableFeatures()
