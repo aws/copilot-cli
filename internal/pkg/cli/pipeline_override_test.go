@@ -266,8 +266,8 @@ func TestOverridePipeline_Ask(t *testing.T) {
 					mockPrompt := mocks.NewMockcfnSelector(ctrl)
 					template := `
 	Resources:
-	  VPC:
-	    Type: AWS::EC2::VPC
+	  Pipeline:
+	    Type: AWS::CodePipeline::Pipeline
 	`
 					mockPrompt.EXPECT().Resources(gomock.Any(), gomock.Any(), gomock.Any(), template).Return(nil, nil)
 
@@ -330,8 +330,8 @@ func TestOverridePipeline_Execute(t *testing.T) {
 			"should succeed creating IaC files with resources": {
 				resources: []template.CFNResource{
 					{
-						Type:      "AWS::EC2::VPC",
-						LogicalID: "VPC",
+						Type:      "AWS::CodePipeline::Pipeline",
+						LogicalID: "MyPipeline",
 					},
 				},
 				initMocks: func(ctrl *gomock.Controller, cmd *overridePipelineOpts) {
