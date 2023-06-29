@@ -67,5 +67,4 @@ pull_request_rules:
     actions:
       request_reviews:
         users:
-          - toricls
           - hkford

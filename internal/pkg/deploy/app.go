@@ -25,17 +25,6 @@ type CreateAppInput struct {
 	Version               string            // The version of the application template to create the stack/stackset. If empty, creates the legacy stack/stackset.
 }
 
-const (
-	// LegacyAppTemplateVersion is the version associated with the application template before we started versioning.
-	LegacyAppTemplateVersion = "v0.0.0"
-	// LatestAppTemplateVersion is the latest version number available for application templates.
-	LatestAppTemplateVersion = "v1.2.0"
-	// AliasLeastAppTemplateVersion is the least version number available for HTTPS alias.
-	AliasLeastAppTemplateVersion = "v1.0.0"
-	// StaticSiteMinAppTemplateVersion is the minimum app version required to deploy a static site.
-	StaticSiteMinAppTemplateVersion = "v1.2.0"
-)
-
 // AppInformation holds information about the application that need to be propagated to the env stacks and workload stacks.
 type AppInformation struct {
 	AccountPrincipalARN string

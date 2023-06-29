@@ -48,10 +48,17 @@ type ecsServiceStatus struct {
 	TargetHealthDescriptions []taskTargetHealth       `json:"targetHealthDescriptions"`
 }
 
-// appRunnerServiceStatus contains the status for an AppRunner service.
+// appRunnerServiceStatus contains the status for an App Runner service.
 type appRunnerServiceStatus struct {
 	Service   apprunner.Service
 	LogEvents []*cloudwatchlogs.Event
+}
+
+// staticSiteServiceStatus contains the status for a Static Site service.
+type staticSiteServiceStatus struct {
+	BucketName string `json:"bucketName"`
+	Size       string `json:"totalSize"`
+	Count      int    `json:"totalObjects"`
 }
 
 type taskTargetHealth struct {
@@ -97,7 +104,16 @@ func (a *appRunnerServiceStatus) JSONString() (string, error) {
 	return fmt.Sprintf("%s\n", b), nil
 }
 
-// HumanString returns the stringified ecsServiceStatus struct with human readable format.
+// JSONString returns the stringified staticSiteServiceStatus struct with json format.
+func (s *staticSiteServiceStatus) JSONString() (string, error) {
+	b, err := json.Marshal(s)
+	if err != nil {
+		return "", fmt.Errorf("marshal services: %w", err)
+	}
+	return fmt.Sprintf("%s\n", b), nil
+}
+
+// HumanString returns the stringified ecsServiceStatus struct in human-readable format.
 func (s *ecsServiceStatus) HumanString() string {
 	var b bytes.Buffer
 	writer := tabwriter.NewWriter(&b, statusMinCellWidth, tabWidth, statusCellPaddingWidth, paddingChar, noAdditionalFormatting)
@@ -130,7 +146,7 @@ func (s *ecsServiceStatus) HumanString() string {
 	return b.String()
 }
 
-// HumanString returns the stringified appRunnerServiceStatus struct with human readable format.
+// HumanString returns the stringified appRunnerServiceStatus struct in human-readable format.
 func (a *appRunnerServiceStatus) HumanString() string {
 	var b bytes.Buffer
 	writer := tabwriter.NewWriter(&b, minCellWidth, tabWidth, statusCellPaddingWidth, paddingChar, noAdditionalFormatting)
@@ -155,6 +171,19 @@ func (a *appRunnerServiceStatus) HumanString() string {
 		timestamp := time.Unix(event.Timestamp/1000, 0).In(lo)
 		fmt.Fprintf(writer, "  %v\t%s\n", timestamp.Format(time.RFC3339), event.Message)
 	}
+	writer.Flush()
+	return b.String()
+}
+
+// HumanString returns the stringified staticSiteServiceStatus struct in human-readable format.
+func (s *staticSiteServiceStatus) HumanString() string {
+	var b bytes.Buffer
+	writer := tabwriter.NewWriter(&b, minCellWidth, tabWidth, statusCellPaddingWidth, paddingChar, noAdditionalFormatting)
+	fmt.Fprint(writer, color.Bold.Sprint("Bucket Summary\n\n"))
+	writer.Flush()
+	fmt.Fprintf(writer, "  Bucket Name     %s\n", s.BucketName)
+	fmt.Fprintf(writer, "  Total Objects   %s\n", strconv.Itoa(s.Count))
+	fmt.Fprintf(writer, "  Total Size      %s\n", s.Size)
 	writer.Flush()
 	return b.String()
 }

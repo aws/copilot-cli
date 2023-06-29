@@ -31,6 +31,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
+	"github.com/aws/copilot-cli/internal/pkg/version"
 	"github.com/stretchr/testify/require"
 )
 
@@ -85,7 +86,7 @@ func Test_App_Infrastructure(t *testing.T) {
 		err = deployer.DeployApp(&deploy.CreateAppInput{
 			Name:      app.Name,
 			AccountID: app.AccountID,
-			Version:   deploy.LatestAppTemplateVersion,
+			Version:   version.LatestTemplateVersion(),
 		})
 		require.NoError(t, err)
 
@@ -120,8 +121,8 @@ func Test_App_Infrastructure(t *testing.T) {
 					fmt.Sprintf("AdministrationRoleARN should be named {app}-adminrole but was %s", *output.OutputValue))
 			},
 			"TemplateVersion": func(output *awsCF.Output) {
-				require.Equal(t, *output.OutputValue, deploy.LatestAppTemplateVersion,
-					fmt.Sprintf("TemplateVersion should be %s but was %s", deploy.LatestAppTemplateVersion, *output.OutputValue))
+				require.Equal(t, *output.OutputValue, version.LatestTemplateVersion(),
+					fmt.Sprintf("TemplateVersion should be %s but was %s", version.LatestTemplateVersion(), *output.OutputValue))
 			},
 		}
 		require.True(t, len(deployedStack.Outputs) == len(expectedResultsForKey),
@@ -181,7 +182,7 @@ func Test_App_Infrastructure(t *testing.T) {
 		err = deployer.DeployApp(&deploy.CreateAppInput{
 			Name:      app.Name,
 			AccountID: app.AccountID,
-			Version:   deploy.LatestAppTemplateVersion,
+			Version:   version.LatestTemplateVersion(),
 		})
 		require.NoError(t, err)
 
@@ -256,8 +257,8 @@ func Test_App_Infrastructure(t *testing.T) {
 					"PipelineBucket should not be nil")
 			},
 			"TemplateVersion": func(output *awsCF.Output) {
-				require.Equal(t, *output.OutputValue, deploy.LatestAppTemplateVersion,
-					fmt.Sprintf("TemplateVersion should be %s but was %s", deploy.LatestAppTemplateVersion, *output.OutputValue))
+				require.Equal(t, *output.OutputValue, version.LatestTemplateVersion(),
+					fmt.Sprintf("TemplateVersion should be %s but was %s", version.LatestTemplateVersion(), *output.OutputValue))
 			},
 			"ECRRepomysvc": func(output *awsCF.Output) {
 				require.True(t,
@@ -338,7 +339,7 @@ func Test_App_Infrastructure(t *testing.T) {
 		err = deployer.DeployApp(&deploy.CreateAppInput{
 			Name:      app.Name,
 			AccountID: app.AccountID,
-			Version:   deploy.LatestAppTemplateVersion,
+			Version:   version.LatestTemplateVersion(),
 		})
 		require.NoError(t, err)
 

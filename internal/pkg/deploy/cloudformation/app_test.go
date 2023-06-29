@@ -29,7 +29,7 @@ func TestCloudFormation_DeployApp(t *testing.T) {
 	mockApp := &deploy.CreateAppInput{
 		Name:      "testapp",
 		AccountID: "1234",
-		Version:   deploy.LatestAppTemplateVersion,
+		Version:   "v1.29.0",
 	}
 	testCases := map[string]struct {
 		mockStack    func(ctrl *gomock.Controller) cfnClient

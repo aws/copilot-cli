@@ -259,7 +259,7 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 		ConfigStore: store,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("initiate env describer: %w", err)
+		return nil, err
 	}
 
 	mft, err := envDescriber.Manifest()

@@ -13,6 +13,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/version"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -170,12 +171,15 @@ func TestInitAppOpts_Validate(t *testing.T) {
 			},
 			wantedError: errors.New("get hosted zone ID for domain mockDomain.com: some error"),
 		},
-		"valid domain name": {
-			inDomainName: "mockDomain.com",
+		"valid": {
+			inPBPolicyName: "arn:aws:iam::1234567890:policy/myPermissionsBoundaryPolicy",
+			inDomainName:   "mockDomain.com",
 			mock: func(m *initAppMocks) {
 				m.mockProg.EXPECT().Start(`Validating ownership of "mockDomain.com"`)
 				m.mockProg.EXPECT().Stop("")
 				m.mockRoute53Svc.EXPECT().ValidateDomainOwnership("mockDomain.com").Return(nil)
+				m.mockPolicyLister.EXPECT().ListPolicyNames().Return(
+					[]string{"myPermissionsBoundaryPolicy"}, nil)
 				m.mockRoute53Svc.EXPECT().DomainHostedZoneID("mockDomain.com").Return("mockHostedZoneID", nil)
 			},
 		},
@@ -665,7 +669,7 @@ func TestInitAppOpts_Execute(t *testing.T) {
 					AdditionalTags: map[string]string{
 						"owner": "boss",
 					},
-					Version:             deploy.LatestAppTemplateVersion,
+					Version:             version.LatestTemplateVersion(),
 					PermissionsBoundary: "mockPolicy",
 				}).Return(nil)
 			},
