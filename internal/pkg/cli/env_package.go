@@ -163,7 +163,7 @@ func (o *packageEnvOpts) Ask() error {
 	if _, err := o.getAppCfg(); err != nil {
 		return err
 	}
-	return o.validateOrAskname()
+	return o.validateOrAskName()
 }
 
 // Execute prints the CloudFormation configuration for the environment.
@@ -274,7 +274,7 @@ func (o *packageEnvOpts) getEnvCfg() (*config.Environment, error) {
 	return o.envCfg, nil
 }
 
-func (o *packageEnvOpts) validateOrAskname() error {
+func (o *packageEnvOpts) validateOrAskName() error {
 	if o.name != "" {
 		if _, err := o.getEnvCfg(); err != nil {
 			log.Errorf("It seems like environment %s is not added in application %s yet. Have you run %s?\n",

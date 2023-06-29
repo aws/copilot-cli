@@ -14,6 +14,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/version"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -168,6 +169,12 @@ func TestDeployEnvOpts_Execute(t *testing.T) {
 				m.envVersionGetter.EXPECT().Version().Return("", mockError)
 			},
 			wantedErr: errors.New(`get template version of environment mockEnv: some error`),
+		},
+		"error for downgrading": {
+			setUpMocks: func(m *deployEnvExecuteMocks) {
+				m.envVersionGetter.EXPECT().Version().Return(mockFutureEnvVersion, nil)
+			},
+			wantedErr: errors.New(`cannot downgrade environment "mockEnv" (currently in version v2.0.0) to version v1.29.0`),
 		},
 		"fail to read manifest": {
 			setUpMocks: func(m *deployEnvExecuteMocks) {
@@ -379,7 +386,7 @@ func TestDeployEnvOpts_Execute(t *testing.T) {
 		},
 		"success": {
 			setUpMocks: func(m *deployEnvExecuteMocks) {
-				m.envVersionGetter.EXPECT().Version().Return(mockEnvVersion, nil)
+				m.envVersionGetter.EXPECT().Version().Return(version.EnvTemplateBootstrap, nil)
 				m.ws.EXPECT().ReadEnvironmentManifest("mockEnv").Return([]byte("name: mockEnv\ntype: Environment\n"), nil)
 				m.interpolator.EXPECT().Interpolate("name: mockEnv\ntype: Environment\n").Return("name: mockEnv\ntype: Environment\n", nil)
 				m.identity.EXPECT().Get().Return(identity.Caller{

@@ -154,6 +154,10 @@ func validateEnvVersion(vg versionGetter, name, templateVersion string) error {
 	if err != nil {
 		return fmt.Errorf("get template version of environment %s: %w", name, err)
 	}
+	if envVersion == version.EnvTemplateBootstrap {
+		// Allow update to bootstrap env stack anyway.
+		return nil
+	}
 	if diff := semver.Compare(envVersion, templateVersion); diff > 0 {
 		return &errCannotDowngradeEnvVersion{
 			envName:         name,
