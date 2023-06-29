@@ -388,9 +388,9 @@ type imageRemover interface {
 }
 
 type pipelineDeployer interface {
-	CreatePipeline(env *deploy.CreatePipelineInput, bucketName string, stCon deploycfn.StackConfiguration) error
-	UpdatePipeline(env *deploy.CreatePipelineInput, bucketName string, stCon deploycfn.StackConfiguration) error
-	PipelineExists(env *deploy.CreatePipelineInput, stCon deploycfn.StackConfiguration) (bool, error)
+	CreatePipeline(env *deploy.CreatePipelineInput, bucketName string, stackConfig deploycfn.StackConfiguration) error
+	UpdatePipeline(env *deploy.CreatePipelineInput, bucketName string, stackConfig deploycfn.StackConfiguration) error
+	PipelineExists(env *deploy.CreatePipelineInput, stackConfig deploycfn.StackConfiguration) (bool, error)
 	DeletePipeline(pipeline deploy.Pipeline) error
 	AddPipelineResourcesToApp(app *config.Application, region string) error
 	Template(stackName string) (string, error)
