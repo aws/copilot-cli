@@ -95,6 +95,7 @@ func (o *overrideWorkloadOpts) Ask() error {
 // Execute writes IaC override files to the local workspace.
 // This method assumes that the IaC tool chosen by the user is valid.
 func (o *overrideWorkloadOpts) Execute() error {
+	o.requiresEnv = true
 	o.overrideOpts.dir = func() string {
 		return o.ws.WorkloadOverridesPath(o.name)
 	}

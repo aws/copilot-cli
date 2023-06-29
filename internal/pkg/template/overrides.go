@@ -106,16 +106,18 @@ func (t CFNType) L1ConstructName() string {
 }
 
 // WalkOverridesCDKDir walks through the overrides/cdk templates and calls fn for each parsed template file.
-func (t *Template) WalkOverridesCDKDir(resources []CFNResource, fn WalkDirFunc) error {
+func (t *Template) WalkOverridesCDKDir(resources []CFNResource, fn WalkDirFunc, requiresEnv bool) error {
 	type metadata struct {
 		Version           string
 		ConstructsVersion string
 		Resources         cfnResources
+		IncludeEnv        bool
 	}
 	return t.walkDir(cdkTemplatesPath, cdkTemplatesPath, metadata{
 		Version:           cdkVersion,
 		ConstructsVersion: cdkConstructsMinVersion,
 		Resources:         resources,
+		IncludeEnv:        requiresEnv,
 	}, fn, WithFuncs(
 		map[string]interface{}{
 			// transform all the initial capital letters into lower letters.

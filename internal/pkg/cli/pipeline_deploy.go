@@ -22,12 +22,14 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	rg "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
+	clideploy "github.com/aws/copilot-cli/internal/pkg/cli/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/cli/list"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	deploycfn "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/override"
 	templatediff "github.com/aws/copilot-cli/internal/pkg/template/diff"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
@@ -81,9 +83,12 @@ type deployPipelineOpts struct {
 	ws                  wsPipelineReader
 	codestar            codestar
 	diffWriter          io.Writer
+	sessProvider        *sessions.Provider
+	Overrider           clideploy.Overrider
 	newSvcListCmd       func(io.Writer, string) cmd
 	newJobListCmd       func(io.Writer, string) cmd
 	pipelineStackConfig func(in *deploy.CreatePipelineInput) pipelineStackConfig
+	overrider           func(in *deploy.CreateAppInput)
 
 	configureDeployedPipelineLister func() deployedPipelineLister
 
@@ -98,7 +103,8 @@ type deployPipelineOpts struct {
 }
 
 func newDeployPipelineOpts(vars deployPipelineVars) (*deployPipelineOpts, error) {
-	defaultSession, err := sessions.ImmutableProvider(sessions.UserAgentExtras("pipeline deploy")).Default()
+	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("pipeline deploy"))
+	defaultSession, err := sessProvider.Default()
 	if err != nil {
 		return nil, fmt.Errorf("default session: %w", err)
 	}
@@ -124,6 +130,7 @@ func newDeployPipelineOpts(vars deployPipelineVars) (*deployPipelineOpts, error)
 		prog:               termprogress.NewSpinner(log.DiagnosticWriter),
 		prompt:             prompter,
 		diffWriter:         os.Stdout,
+		sessProvider:       sessProvider,
 		sel:                selector.NewWsPipelineSelector(prompter, ws),
 		codestar:           cs.New(defaultSession),
 		pipelineStackConfig: func(in *deploy.CreatePipelineInput) pipelineStackConfig {
@@ -270,8 +277,19 @@ func (o *deployPipelineOpts) Execute() error {
 		PermissionsBoundary: o.app.PermissionsBoundary,
 	}
 
+	ovrdr, err := clideploy.NewOverrider(o.ws.PipelineOverridesPath(o.pipeline.Name), o.appName, "", afero.NewOsFs(), o.sessProvider)
+	if err != nil {
+		return err
+	}
+	overrider := ovrdr
+	if overrider == nil {
+		overrider = new(override.Noop)
+	}
+
+	stackConfig := deploycfn.WrapWithTemplateOverrider(o.pipelineStackConfig(deployPipelineInput), ovrdr)
+
 	if o.showDiff {
-		tpl, err := o.pipelineStackConfig(deployPipelineInput).Template()
+		tpl, err := stackConfig.Template()
 		if err != nil {
 			return fmt.Errorf("generate the new template for diff: %w", err)
 		}
@@ -291,7 +309,7 @@ func (o *deployPipelineOpts) Execute() error {
 			}
 		}
 	}
-	if err := o.deployPipeline(deployPipelineInput); err != nil {
+	if err := o.deployPipeline(deployPipelineInput, stackConfig); err != nil {
 		return err
 	}
 	return nil
@@ -462,8 +480,8 @@ func (o *deployPipelineOpts) shouldUpdate() (bool, error) {
 	return shouldUpdate, nil
 }
 
-func (o *deployPipelineOpts) deployPipeline(in *deploy.CreatePipelineInput) error {
-	exist, err := o.pipelineDeployer.PipelineExists(in)
+func (o *deployPipelineOpts) deployPipeline(in *deploy.CreatePipelineInput, stackConfig deploycfn.StackConfiguration) error {
+	exist, err := o.pipelineDeployer.PipelineExists(in, stackConfig)
 	if err != nil {
 		return fmt.Errorf("check if pipeline exists: %w", err)
 	}
@@ -492,7 +510,7 @@ func (o *deployPipelineOpts) deployPipeline(in *deploy.CreatePipelineInput) erro
 			log.Infof("%s Go to %s to update the status of connection %s from PENDING to AVAILABLE.", color.Emphasize("ACTION REQUIRED!"), color.HighlightResource(connectionsURL), color.HighlightUserInput(connectionName))
 			log.Infoln()
 		}
-		if err := o.pipelineDeployer.CreatePipeline(in, bucketName); err != nil {
+		if err := o.pipelineDeployer.CreatePipeline(in, bucketName, stackConfig); err != nil {
 			var alreadyExists *cloudformation.ErrStackAlreadyExists
 			if !errors.As(err, &alreadyExists) {
 				o.prog.Stop(log.Serrorf(fmtPipelineDeployFailed, color.HighlightUserInput(o.pipeline.Name)))
@@ -515,7 +533,7 @@ func (o *deployPipelineOpts) deployPipeline(in *deploy.CreatePipelineInput) erro
 	}
 
 	o.prog.Start(fmt.Sprintf(fmtPipelineDeployProposalStart, color.HighlightUserInput(o.pipeline.Name)))
-	if err := o.pipelineDeployer.UpdatePipeline(in, bucketName); err != nil {
+	if err := o.pipelineDeployer.UpdatePipeline(in, bucketName, stackConfig); err != nil {
 		o.prog.Stop(log.Serrorf(fmtPipelineDeployProposalFailed, color.HighlightUserInput(o.pipeline.Name)))
 		return fmt.Errorf("update pipeline: %w", err)
 	}

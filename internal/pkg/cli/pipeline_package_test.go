@@ -235,11 +235,12 @@ func TestPipelinePackageOpts_Execute(t *testing.T) {
 
 					// check if the pipeline has been deployed using a legacy naming.
 					m.deployedPipelineLister.EXPECT().ListDeployedPipelines(appName).Return([]deploy.Pipeline{}, nil),
+					m.ws.EXPECT().PipelineOverridesPath(pipelineName).Return("path"),
 					m.pipelineStackConfig.EXPECT().Template().Return("", someError),
 				)
 
 			},
-			expectedError: fmt.Errorf("generate stack template: some error"),
+			expectedError: fmt.Errorf("template generation: generate stack template: some error"),
 		},
 	}
 	for name, tc := range testCases {

@@ -9,6 +9,7 @@ import (
 	"io"
 
 	"github.com/aws/aws-sdk-go/aws/session"
+	awssdk "github.com/aws/aws-sdk-go/service/cloudformation"
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
@@ -19,6 +20,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
+	deploycfn "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
@@ -328,7 +330,9 @@ type wsEnvironmentReader interface {
 
 type wsPipelineReader interface {
 	wsPipelineGetter
+	wsPipelineManifestReader
 	relPath
+	PipelineOverridesPath(string) string
 }
 
 type wsPipelineGetter interface {
@@ -384,9 +388,9 @@ type imageRemover interface {
 }
 
 type pipelineDeployer interface {
-	CreatePipeline(env *deploy.CreatePipelineInput, bucketName string) error
-	UpdatePipeline(env *deploy.CreatePipelineInput, bucketName string) error
-	PipelineExists(env *deploy.CreatePipelineInput) (bool, error)
+	CreatePipeline(env *deploy.CreatePipelineInput, bucketName string, stCon deploycfn.StackConfiguration) error
+	UpdatePipeline(env *deploy.CreatePipelineInput, bucketName string, stCon deploycfn.StackConfiguration) error
+	PipelineExists(env *deploy.CreatePipelineInput, stCon deploycfn.StackConfiguration) (bool, error)
 	DeletePipeline(pipeline deploy.Pipeline) error
 	AddPipelineResourcesToApp(app *config.Application, region string) error
 	Template(stackName string) (string, error)
@@ -707,4 +711,8 @@ type envPackager interface {
 
 type pipelineStackConfig interface {
 	Template() (string, error)
+	Parameters() ([]*awssdk.Parameter, error)
+	StackName() string
+	Tags() []*awssdk.Tag
+	SerializedParameters() (string, error)
 }
