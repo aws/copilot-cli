@@ -331,6 +331,7 @@ Resources:
                   - s3:PutObject
                 Resource: !Sub arn:aws:s3:::${Bucket}/*
         - PolicyName: CacheInvalidation
+        # https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/security_iam_id-based-policy-examples.html
           PolicyDocument:
             Version: 2012-10-17
             Statement:
