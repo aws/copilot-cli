@@ -17,25 +17,29 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/cli/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
+	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
+	"github.com/aws/copilot-cli/internal/pkg/version"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
+	"golang.org/x/mod/semver"
 )
 
 const continueDeploymentPrompt = "Continue with the deployment?"
 
 type deployEnvVars struct {
-	appName         string
-	name            string
-	forceNewUpdate  bool
-	disableRollback bool
-	showDiff        bool
-	skipDiffPrompt  bool
+	appName           string
+	name              string
+	forceNewUpdate    bool
+	disableRollback   bool
+	showDiff          bool
+	skipDiffPrompt    bool
+	allowEnvDowngrade bool
 }
 
 type deployEnvOpts struct {
@@ -50,15 +54,19 @@ type deployEnvOpts struct {
 	prompt prompter
 
 	// Dependencies to execute.
-	fs              afero.Fs
-	ws              wsEnvironmentReader
-	identity        identityService
-	newInterpolator func(app, env string) interpolator
-	newEnvDeployer  func() (envDeployer, error)
+	fs                  afero.Fs
+	ws                  wsEnvironmentReader
+	identity            identityService
+	newInterpolator     func(app, env string) interpolator
+	newEnvVersionGetter func(appName, envName string) (versionGetter, error)
+	newEnvDeployer      func() (envDeployer, error)
 
 	// Cached variables.
 	targetApp *config.Application
 	targetEnv *config.Environment
+
+	// Overridden in tests.
+	templateVersion string
 }
 
 func newEnvDeployOpts(vars deployEnvVars) (*deployEnvOpts, error) {
@@ -80,11 +88,19 @@ func newEnvDeployOpts(vars deployEnvVars) (*deployEnvOpts, error) {
 		store:           store,
 		sessionProvider: sessProvider,
 		sel:             selector.NewLocalEnvironmentSelector(prompter, store, ws),
-		prompt:          prompter,
+		newEnvVersionGetter: func(appName, envName string) (versionGetter, error) {
+			return describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
+				App:         appName,
+				Env:         envName,
+				ConfigStore: store,
+			})
+		},
+		prompt: prompter,
 
 		fs:              fs,
 		ws:              ws,
 		identity:        identity.New(defaultSess),
+		templateVersion: version.LatestTemplateVersion(),
 		newInterpolator: newManifestInterpolator,
 	}
 	opts.newEnvDeployer = func() (envDeployer, error) {
@@ -133,8 +149,36 @@ func (o *deployEnvOpts) Ask() error {
 	return o.validateOrAskEnvName()
 }
 
+func validateEnvVersion(vg versionGetter, name, templateVersion string) error {
+	envVersion, err := vg.Version()
+	if err != nil {
+		return fmt.Errorf("get template version of environment %s: %w", name, err)
+	}
+	if envVersion == version.EnvTemplateBootstrap {
+		// Allow update to bootstrap env stack anyway.
+		return nil
+	}
+	if diff := semver.Compare(envVersion, templateVersion); diff > 0 {
+		return &errCannotDowngradeEnvVersion{
+			envName:         name,
+			envVersion:      envVersion,
+			templateVersion: templateVersion,
+		}
+	}
+	return nil
+}
+
 // Execute deploys an environment given a manifest.
 func (o *deployEnvOpts) Execute() error {
+	if !o.allowEnvDowngrade {
+		envVersionGetter, err := o.newEnvVersionGetter(o.appName, o.name)
+		if err != nil {
+			return err
+		}
+		if err := validateEnvVersion(envVersionGetter, o.name, o.templateVersion); err != nil {
+			return err
+		}
+	}
 	rawMft, err := o.ws.ReadEnvironmentManifest(o.name)
 	if err != nil {
 		return fmt.Errorf("read manifest for environment %q: %w", o.name, err)
@@ -167,6 +211,7 @@ func (o *deployEnvOpts) Execute() error {
 		PermissionsBoundary: o.targetApp.PermissionsBoundary,
 		ForceNewUpdate:      o.forceNewUpdate,
 		DisableRollback:     o.disableRollback,
+		Version:             o.templateVersion,
 	}
 	if o.showDiff {
 		contd, err := o.showDiffAndConfirmDeployment(deployer, deployInput)
@@ -335,5 +380,6 @@ Deploy an environment named "test".
 	cmd.Flags().BoolVar(&vars.disableRollback, noRollbackFlag, false, noRollbackFlagDescription)
 	cmd.Flags().BoolVar(&vars.showDiff, diffFlag, false, diffFlagDescription)
 	cmd.Flags().BoolVar(&vars.skipDiffPrompt, diffAutoApproveFlag, false, diffAutoApproveFlagDescription)
+	cmd.Flags().BoolVar(&vars.allowEnvDowngrade, allowDowngradeFlag, false, allowDowngradeFlagDescription)
 	return cmd
 }

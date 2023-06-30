@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 
 	"github.com/aws/copilot-cli/internal/pkg/cli/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/describe"
+	"github.com/aws/copilot-cli/internal/pkg/version"
 	"github.com/spf13/afero"
 
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -37,12 +39,13 @@ const (
 )
 
 type packageEnvVars struct {
-	envName        string
-	appName        string
-	outputDir      string
-	uploadAssets   bool
-	forceNewUpdate bool
-	showDiff       bool
+	name              string
+	appName           string
+	outputDir         string
+	uploadAssets      bool
+	forceNewUpdate    bool
+	showDiff          bool
+	allowEnvDowngrade bool
 }
 
 type discardFile struct{}
@@ -69,12 +72,16 @@ type packageEnvOpts struct {
 	addonsWriter io.WriteCloser
 	diffWriter   io.Writer
 
-	newInterpolator func(appName, envName string) interpolator
-	newEnvPackager  func() (envPackager, error)
+	newInterpolator     func(appName, name string) interpolator
+	newEnvVersionGetter func(appName, name string) (versionGetter, error)
+	newEnvPackager      func() (envPackager, error)
 
 	// Cached variables.
 	appCfg *config.Application
 	envCfg *config.Environment
+
+	// Overridden in tests.
+	templateVersion string
 }
 
 func newPackageEnvOpts(vars packageEnvVars) (*packageEnvOpts, error) {
@@ -94,18 +101,26 @@ func newPackageEnvOpts(vars packageEnvVars) (*packageEnvOpts, error) {
 	opts := &packageEnvOpts{
 		packageEnvVars: vars,
 
-		cfgStore:     cfgStore,
-		ws:           ws,
-		sel:          selector.NewLocalEnvironmentSelector(prompt.New(), cfgStore, ws),
-		caller:       identity.New(defaultSess),
-		fs:           fs,
-		tplWriter:    os.Stdout,
-		paramsWriter: discardFile{},
-		addonsWriter: discardFile{},
-		diffWriter:   os.Stdout,
+		cfgStore:        cfgStore,
+		ws:              ws,
+		sel:             selector.NewLocalEnvironmentSelector(prompt.New(), cfgStore, ws),
+		caller:          identity.New(defaultSess),
+		fs:              fs,
+		tplWriter:       os.Stdout,
+		paramsWriter:    discardFile{},
+		addonsWriter:    discardFile{},
+		diffWriter:      os.Stdout,
+		templateVersion: version.LatestTemplateVersion(),
 
-		newInterpolator: func(appName, envName string) interpolator {
-			return manifest.NewInterpolator(appName, envName)
+		newEnvVersionGetter: func(appName, name string) (versionGetter, error) {
+			return describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
+				App:         appName,
+				Env:         name,
+				ConfigStore: cfgStore,
+			})
+		},
+		newInterpolator: func(appName, name string) interpolator {
+			return manifest.NewInterpolator(appName, name)
 		},
 	}
 	opts.newEnvPackager = func() (envPackager, error) {
@@ -148,16 +163,25 @@ func (o *packageEnvOpts) Ask() error {
 	if _, err := o.getAppCfg(); err != nil {
 		return err
 	}
-	return o.validateOrAskEnvName()
+	return o.validateOrAskName()
 }
 
 // Execute prints the CloudFormation configuration for the environment.
 func (o *packageEnvOpts) Execute() error {
-	rawMft, err := o.ws.ReadEnvironmentManifest(o.envName)
-	if err != nil {
-		return fmt.Errorf("read manifest for environment %q: %w", o.envName, err)
+	if !o.allowEnvDowngrade {
+		envVersionGetter, err := o.newEnvVersionGetter(o.appName, o.name)
+		if err != nil {
+			return err
+		}
+		if err := validateEnvVersion(envVersionGetter, o.name, o.templateVersion); err != nil {
+			return err
+		}
 	}
-	mft, err := environmentManifest(o.envName, rawMft, o.newInterpolator(o.appName, o.envName))
+	rawMft, err := o.ws.ReadEnvironmentManifest(o.name)
+	if err != nil {
+		return fmt.Errorf("read manifest for environment %q: %w", o.name, err)
+	}
+	mft, err := environmentManifest(o.name, rawMft, o.newInterpolator(o.appName, o.name))
 	if err != nil {
 		return err
 	}
@@ -176,7 +200,7 @@ func (o *packageEnvOpts) Execute() error {
 	if o.uploadAssets {
 		out, err := packager.UploadArtifacts()
 		if err != nil {
-			return fmt.Errorf("upload assets for environment %q: %v", o.envName, err)
+			return fmt.Errorf("upload assets for environment %q: %v", o.name, err)
 		}
 		uploadArtifactsOut = *out
 	}
@@ -188,9 +212,10 @@ func (o *packageEnvOpts) Execute() error {
 		RawManifest:         rawMft,
 		PermissionsBoundary: o.appCfg.PermissionsBoundary,
 		ForceNewUpdate:      o.forceNewUpdate,
+		Version:             o.templateVersion,
 	})
 	if err != nil {
-		return fmt.Errorf("generate CloudFormation template from environment %q manifest: %v", o.envName, err)
+		return fmt.Errorf("generate CloudFormation template from environment %q manifest: %v", o.name, err)
 	}
 	if o.showDiff {
 		if err := diff(packager, res.Template, o.diffWriter); err != nil {
@@ -241,19 +266,19 @@ func (o *packageEnvOpts) getEnvCfg() (*config.Environment, error) {
 	if o.envCfg != nil {
 		return o.envCfg, nil
 	}
-	cfg, err := o.cfgStore.GetEnvironment(o.appName, o.envName)
+	cfg, err := o.cfgStore.GetEnvironment(o.appName, o.name)
 	if err != nil {
-		return nil, fmt.Errorf("get environment %q in application %q: %w", o.envName, o.appName, err)
+		return nil, fmt.Errorf("get environment %q in application %q: %w", o.name, o.appName, err)
 	}
 	o.envCfg = cfg
 	return o.envCfg, nil
 }
 
-func (o *packageEnvOpts) validateOrAskEnvName() error {
-	if o.envName != "" {
+func (o *packageEnvOpts) validateOrAskName() error {
+	if o.name != "" {
 		if _, err := o.getEnvCfg(); err != nil {
 			log.Errorf("It seems like environment %s is not added in application %s yet. Have you run %s?\n",
-				o.envName, o.appName, color.HighlightCode("copilot env init"))
+				o.name, o.appName, color.HighlightCode("copilot env init"))
 			return err
 		}
 		return nil
@@ -263,7 +288,7 @@ func (o *packageEnvOpts) validateOrAskEnvName() error {
 	if err != nil {
 		return fmt.Errorf("select environment: %w", err)
 	}
-	o.envName = name
+	o.name = name
 	return nil
 }
 
@@ -275,12 +300,12 @@ func (o *packageEnvOpts) setWriters() error {
 		return fmt.Errorf("create directory %q: %w", o.outputDir, err)
 	}
 
-	path := filepath.Join(o.outputDir, fmt.Sprintf(envCFNTemplateNameFmt, o.envName))
+	path := filepath.Join(o.outputDir, fmt.Sprintf(envCFNTemplateNameFmt, o.name))
 	tplFile, err := o.fs.Create(path)
 	if err != nil {
 		return fmt.Errorf("create file at %q: %w", path, err)
 	}
-	path = filepath.Join(o.outputDir, fmt.Sprintf(envCFNTemplateConfigurationNameFmt, o.envName))
+	path = filepath.Join(o.outputDir, fmt.Sprintf(envCFNTemplateConfigurationNameFmt, o.name))
 	paramsFile, err := o.fs.Create(path)
 	if err != nil {
 		return fmt.Errorf("create file at %q: %w", path, err)
@@ -336,12 +361,13 @@ func buildEnvPkgCmd() *cobra.Command {
 			return run(opts)
 		}),
 	}
-	cmd.Flags().StringVarP(&vars.envName, nameFlag, nameFlagShort, "", envFlagDescription)
+	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, "", envFlagDescription)
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
 	cmd.Flags().StringVar(&vars.outputDir, stackOutputDirFlag, "", stackOutputDirFlagDescription)
 	cmd.Flags().BoolVar(&vars.uploadAssets, uploadAssetsFlag, false, uploadAssetsFlagDescription)
 	cmd.Flags().BoolVar(&vars.forceNewUpdate, forceFlag, false, forceEnvDeployFlagDescription)
 	cmd.Flags().BoolVar(&vars.showDiff, diffFlag, false, diffFlagDescription)
+	cmd.Flags().BoolVar(&vars.allowEnvDowngrade, allowDowngradeFlag, false, allowDowngradeFlagDescription)
 
 	cmd.MarkFlagsMutuallyExclusive(diffFlag, stackOutputDirFlag)
 	cmd.MarkFlagsMutuallyExclusive(diffFlag, uploadAssetsFlag)

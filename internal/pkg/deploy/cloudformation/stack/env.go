@@ -197,8 +197,7 @@ func (e *Env) Template() (string, error) {
 		Telemetry:            e.telemetryConfig(),
 		CDNConfig:            e.cdnConfig(),
 
-		Version:            e.in.Version,
-		LatestVersion:      deploy.LatestEnvTemplateVersion,
+		LatestVersion:      e.in.Version,
 		SerializedManifest: string(e.in.RawMft),
 		ForceUpdateID:      forceUpdateID,
 		DelegateDNS:        e.in.App.Domain != "",
