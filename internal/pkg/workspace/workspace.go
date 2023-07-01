@@ -493,7 +493,7 @@ func (ws *Workspace) WorkloadOverridesPath(name string) string {
 	return filepath.Join(ws.CopilotDirAbs, name, overridesDirName)
 }
 
-// PipelineOverridesPath returns the default path to the overrides/ directory for a given pipeline
+// PipelineOverridesPath returns the default path to the overrides/ directory for a given pipeline.
 func (ws *Workspace) PipelineOverridesPath(name string) string {
 	return filepath.Join(ws.CopilotDirAbs, pipelinesDirName, name, overridesDirName)
 }

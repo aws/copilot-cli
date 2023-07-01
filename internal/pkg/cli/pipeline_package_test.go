@@ -240,7 +240,7 @@ func TestPipelinePackageOpts_Execute(t *testing.T) {
 				)
 
 			},
-			expectedError: fmt.Errorf("template generation: generate stack template: some error"),
+			expectedError: fmt.Errorf("generate stack template: some error"),
 		},
 	}
 	for name, tc := range testCases {

@@ -83,7 +83,6 @@ type deployPipelineOpts struct {
 	codestar            codestar
 	diffWriter          io.Writer
 	sessProvider        *sessions.Provider
-	Overrider           clideploy.Overrider
 	newSvcListCmd       func(io.Writer, string) cmd
 	newJobListCmd       func(io.Writer, string) cmd
 	pipelineStackConfig func(in *deploy.CreatePipelineInput) pipelineStackConfig

@@ -205,7 +205,7 @@ func (o *packagePipelineOpts) Execute() error {
 	stackConfig := deploycfn.WrapWithTemplateOverrider(o.pipelineStackConfig(deployPipelineInput), overrider)
 	tpl, err := stackConfig.Template()
 	if err != nil {
-		return fmt.Errorf("template generation: %w", err)
+		return err
 	}
 	if _, err := o.tmplWriter.Write([]byte(tpl)); err != nil {
 		return err

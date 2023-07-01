@@ -111,13 +111,13 @@ func (t *Template) WalkOverridesCDKDir(resources []CFNResource, fn WalkDirFunc, 
 		Version           string
 		ConstructsVersion string
 		Resources         cfnResources
-		IncludeEnv        bool
+		RequiresEnv       bool
 	}
 	return t.walkDir(cdkTemplatesPath, cdkTemplatesPath, metadata{
 		Version:           cdkVersion,
 		ConstructsVersion: cdkConstructsMinVersion,
 		Resources:         resources,
-		IncludeEnv:        requiresEnv,
+		RequiresEnv:       requiresEnv,
 	}, fn, WithFuncs(
 		map[string]interface{}{
 			// transform all the initial capital letters into lower letters.

@@ -36,6 +36,8 @@ func NewOverrider(pathToOverridesDir, app, env string, fs afero.Fs, sess UserAge
 	switch {
 	case info.IsCDK():
 		sess.UserAgentExtras("override cdk")
+		// Write out-of-band info from sub-commands to stderr as users expect stdout to only
+		// contain the final override output.
 		opts := override.CDKOpts{
 			FS:         fs,
 			ExecWriter: log.DiagnosticWriter,

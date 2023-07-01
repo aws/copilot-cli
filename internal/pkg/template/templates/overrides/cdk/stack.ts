@@ -1,14 +1,13 @@
 import * as cdk from 'aws-cdk-lib';
 import * as path from 'path';
 
-
 {{- range $import := .Resources.Imports }}
 import { {{$import.ImportName}} as {{$import.ImportShortRename}} } from 'aws-cdk-lib';
 {{- end }}
 
 interface TransformedStackProps extends cdk.StackProps {
     readonly appName: string;
-{{- if .IncludeEnv }}
+{{- if .RequiresEnv }}
     readonly envName: string;
 {{- end }}
 }
@@ -16,7 +15,7 @@ interface TransformedStackProps extends cdk.StackProps {
 export class TransformedStack extends cdk.Stack {
     public readonly template: cdk.cloudformation_include.CfnInclude;
     public readonly appName: string;
-    {{- if .IncludeEnv }}
+    {{- if .RequiresEnv }}
     public readonly envName: string;
     {{- end }}
 
@@ -26,7 +25,7 @@ export class TransformedStack extends cdk.Stack {
             templateFile: path.join('.build', 'in.yml'),
         });
         this.appName = props.appName;
-        {{- if .IncludeEnv }}
+        {{- if .RequiresEnv }}
         this.envName = props.envName;
         {{- end }}
 
