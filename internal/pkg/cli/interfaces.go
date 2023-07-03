@@ -20,7 +20,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
-	deploycfn "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
@@ -388,9 +387,9 @@ type imageRemover interface {
 }
 
 type pipelineDeployer interface {
-	CreatePipeline(env *deploy.CreatePipelineInput, bucketName string, stackConfig deploycfn.StackConfiguration) error
-	UpdatePipeline(env *deploy.CreatePipelineInput, bucketName string, stackConfig deploycfn.StackConfiguration) error
-	PipelineExists(env *deploy.CreatePipelineInput, stackConfig deploycfn.StackConfiguration) (bool, error)
+	CreatePipeline(bucketName string, stackConfig cloudformation.StackConfiguration) error
+	UpdatePipeline(bucketName string, stackConfig cloudformation.StackConfiguration) error
+	PipelineExists(stackConfig cloudformation.StackConfiguration) (bool, error)
 	DeletePipeline(pipeline deploy.Pipeline) error
 	AddPipelineResourcesToApp(app *config.Application, region string) error
 	Template(stackName string) (string, error)

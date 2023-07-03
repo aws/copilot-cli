@@ -14,17 +14,12 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	sdkcloudformation "github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
-	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/mocks"
 )
 
 const defaultImage = "aws/codebuild/amazonlinux2-x86_64-standard:3.0"
 
 func TestCloudFormation_PipelineExists(t *testing.T) {
-	in := &deploy.CreatePipelineInput{
-		AppName: "kudos",
-		Name:    "cicd",
-	}
 	testCases := map[string]struct {
 		createMock      func(ctrl *gomock.Controller) cfnClient
 		stackConfigMock func(ctrl *gomock.Controller) StackConfiguration
@@ -82,7 +77,7 @@ func TestCloudFormation_PipelineExists(t *testing.T) {
 			}
 
 			// WHEN
-			exists, err := c.PipelineExists(in, tc.stackConfigMock(ctrl))
+			exists, err := c.PipelineExists(tc.stackConfigMock(ctrl))
 
 			// THEN
 			require.Equal(t, tc.wantedExists, exists)
@@ -92,20 +87,6 @@ func TestCloudFormation_PipelineExists(t *testing.T) {
 }
 
 func TestCloudFormation_CreatePipeline(t *testing.T) {
-	in := &deploy.CreatePipelineInput{
-		AppName: "kudos",
-		Name:    "cicd",
-		Source: &deploy.BitbucketSource{
-			RepositoryURL: "https://bitbucket.org/aws/somethingCool",
-			ProviderName:  "Bitbucket",
-			Branch:        "main",
-		},
-		Build: &deploy.Build{
-			Image: defaultImage,
-		},
-		Stages:          nil,
-		ArtifactBuckets: nil,
-	}
 	mockS3BucketName := "BitterBucket"
 	mockURL := "templateURL"
 
@@ -142,9 +123,9 @@ func TestCloudFormation_CreatePipeline(t *testing.T) {
 			stackConfigMock: func(ctrl *gomock.Controller) StackConfiguration {
 				m := mocks.NewMockStackConfiguration(ctrl)
 				m.EXPECT().Template().Return("mockTemplate", nil)
-				m.EXPECT().Parameters().Return([]*sdkcloudformation.Parameter{}, nil).AnyTimes()
-				m.EXPECT().Tags().Return([]*sdkcloudformation.Tag{}).AnyTimes()
-				m.EXPECT().StackName().Return("mockStackName").AnyTimes()
+				m.EXPECT().Parameters().Return([]*sdkcloudformation.Parameter{}, nil)
+				m.EXPECT().Tags().Return([]*sdkcloudformation.Tag{})
+				m.EXPECT().StackName().Return("mockStackName").Times(2)
 				return m
 			},
 			wantedErr: nil,
@@ -184,9 +165,9 @@ func TestCloudFormation_CreatePipeline(t *testing.T) {
 			stackConfigMock: func(ctrl *gomock.Controller) StackConfiguration {
 				m := mocks.NewMockStackConfiguration(ctrl)
 				m.EXPECT().Template().Return("mockTemplate", nil)
-				m.EXPECT().Parameters().Return([]*sdkcloudformation.Parameter{}, nil).AnyTimes()
-				m.EXPECT().Tags().Return([]*sdkcloudformation.Tag{}).AnyTimes()
-				m.EXPECT().StackName().Return("mockStackName").AnyTimes()
+				m.EXPECT().Parameters().Return([]*sdkcloudformation.Parameter{}, nil)
+				m.EXPECT().Tags().Return([]*sdkcloudformation.Tag{})
+				m.EXPECT().StackName().Return("mockStackName").Times(3)
 				return m
 			},
 			wantedErr: nil,
@@ -216,9 +197,9 @@ func TestCloudFormation_CreatePipeline(t *testing.T) {
 			stackConfigMock: func(ctrl *gomock.Controller) StackConfiguration {
 				m := mocks.NewMockStackConfiguration(ctrl)
 				m.EXPECT().Template().Return("mockTemplate", nil)
-				m.EXPECT().Parameters().Return([]*sdkcloudformation.Parameter{}, nil).AnyTimes()
-				m.EXPECT().Tags().Return([]*sdkcloudformation.Tag{}).AnyTimes()
-				m.EXPECT().StackName().Return("mockStackName").AnyTimes()
+				m.EXPECT().Parameters().Return([]*sdkcloudformation.Parameter{}, nil)
+				m.EXPECT().Tags().Return([]*sdkcloudformation.Tag{})
+				m.EXPECT().StackName().Return("mockStackName").Times(2)
 				return m
 			},
 			wantedErr: fmt.Errorf("some error"),
@@ -248,9 +229,7 @@ func TestCloudFormation_CreatePipeline(t *testing.T) {
 			stackConfigMock: func(ctrl *gomock.Controller) StackConfiguration {
 				m := mocks.NewMockStackConfiguration(ctrl)
 				m.EXPECT().Template().Return("mockTemplate", nil)
-				m.EXPECT().Parameters().Return([]*sdkcloudformation.Parameter{}, nil).AnyTimes()
-				m.EXPECT().Tags().Return([]*sdkcloudformation.Tag{}).AnyTimes()
-				m.EXPECT().StackName().Return("mockStackName").AnyTimes()
+				m.EXPECT().StackName().Return("mockStackName")
 				return m
 			},
 			wantedErr: fmt.Errorf("upload pipeline template to S3 bucket %s: some error", "BitterBucket"),
@@ -280,9 +259,9 @@ func TestCloudFormation_CreatePipeline(t *testing.T) {
 			stackConfigMock: func(ctrl *gomock.Controller) StackConfiguration {
 				m := mocks.NewMockStackConfiguration(ctrl)
 				m.EXPECT().Template().Return("mockTemplate", nil)
-				m.EXPECT().Parameters().Return([]*sdkcloudformation.Parameter{}, nil).AnyTimes()
-				m.EXPECT().Tags().Return([]*sdkcloudformation.Tag{}).AnyTimes()
-				m.EXPECT().StackName().Return("mockStackName").AnyTimes()
+				m.EXPECT().Parameters().Return([]*sdkcloudformation.Parameter{}, nil)
+				m.EXPECT().Tags().Return([]*sdkcloudformation.Tag{})
+				m.EXPECT().StackName().Return("mockStackName").Times(2)
 				return m
 			},
 			wantedErr: fmt.Errorf("some error"),
@@ -314,9 +293,9 @@ func TestCloudFormation_CreatePipeline(t *testing.T) {
 			stackConfigMock: func(ctrl *gomock.Controller) StackConfiguration {
 				m := mocks.NewMockStackConfiguration(ctrl)
 				m.EXPECT().Template().Return("mockTemplate", nil)
-				m.EXPECT().Parameters().Return([]*sdkcloudformation.Parameter{}, nil).AnyTimes()
-				m.EXPECT().Tags().Return([]*sdkcloudformation.Tag{}).AnyTimes()
-				m.EXPECT().StackName().Return("mockStackName").AnyTimes()
+				m.EXPECT().Parameters().Return([]*sdkcloudformation.Parameter{}, nil)
+				m.EXPECT().Tags().Return([]*sdkcloudformation.Tag{})
+				m.EXPECT().StackName().Return("mockStackName").Times(2)
 				return m
 			},
 			wantedErr: fmt.Errorf("some error"),
@@ -349,9 +328,9 @@ func TestCloudFormation_CreatePipeline(t *testing.T) {
 			stackConfigMock: func(ctrl *gomock.Controller) StackConfiguration {
 				m := mocks.NewMockStackConfiguration(ctrl)
 				m.EXPECT().Template().Return("mockTemplate", nil)
-				m.EXPECT().Parameters().Return([]*sdkcloudformation.Parameter{}, nil).AnyTimes()
-				m.EXPECT().Tags().Return([]*sdkcloudformation.Tag{}).AnyTimes()
-				m.EXPECT().StackName().Return("mockStackName").AnyTimes()
+				m.EXPECT().Parameters().Return([]*sdkcloudformation.Parameter{}, nil)
+				m.EXPECT().Tags().Return([]*sdkcloudformation.Tag{})
+				m.EXPECT().StackName().Return("mockStackName").Times(3)
 				return m
 			},
 			wantedErr: fmt.Errorf("some error"),
@@ -384,9 +363,9 @@ func TestCloudFormation_CreatePipeline(t *testing.T) {
 			stackConfigMock: func(ctrl *gomock.Controller) StackConfiguration {
 				m := mocks.NewMockStackConfiguration(ctrl)
 				m.EXPECT().Template().Return("mockTemplate", nil)
-				m.EXPECT().Parameters().Return([]*sdkcloudformation.Parameter{}, nil).AnyTimes()
-				m.EXPECT().Tags().Return([]*sdkcloudformation.Tag{}).AnyTimes()
-				m.EXPECT().StackName().Return("mockStackName").AnyTimes()
+				m.EXPECT().Parameters().Return([]*sdkcloudformation.Parameter{}, nil)
+				m.EXPECT().Tags().Return([]*sdkcloudformation.Tag{})
+				m.EXPECT().StackName().Return("mockStackName").Times(3)
 				return m
 			},
 			wantedErr: fmt.Errorf(`cannot find a resource in stack mockStackName with logical ID "Pipeline" of type "AWS::CodePipeline::Pipeline"`),
@@ -425,9 +404,9 @@ func TestCloudFormation_CreatePipeline(t *testing.T) {
 			stackConfigMock: func(ctrl *gomock.Controller) StackConfiguration {
 				m := mocks.NewMockStackConfiguration(ctrl)
 				m.EXPECT().Template().Return("mockTemplate", nil)
-				m.EXPECT().Parameters().Return([]*sdkcloudformation.Parameter{}, nil).AnyTimes()
-				m.EXPECT().Tags().Return([]*sdkcloudformation.Tag{}).AnyTimes()
-				m.EXPECT().StackName().Return("mockStackName").AnyTimes()
+				m.EXPECT().Parameters().Return([]*sdkcloudformation.Parameter{}, nil)
+				m.EXPECT().Tags().Return([]*sdkcloudformation.Tag{})
+				m.EXPECT().StackName().Return("mockStackName").Times(3)
 				return m
 			},
 			wantedErr: fmt.Errorf("some error"),
@@ -447,7 +426,7 @@ func TestCloudFormation_CreatePipeline(t *testing.T) {
 			}
 
 			// WHEN
-			err := c.CreatePipeline(in, mockS3BucketName, tc.stackConfigMock(ctrl))
+			err := c.CreatePipeline(mockS3BucketName, tc.stackConfigMock(ctrl))
 
 			// THEN
 			if tc.wantedErr != nil {
@@ -460,19 +439,6 @@ func TestCloudFormation_CreatePipeline(t *testing.T) {
 }
 
 func TestCloudFormation_UpdatePipeline(t *testing.T) {
-	in := &deploy.CreatePipelineInput{
-		AppName: "kudos",
-		Name:    "cicd",
-		Source: &deploy.GitHubSource{
-			RepositoryURL: "aws/somethingCool",
-			Branch:        "main",
-		},
-		Build: &deploy.Build{
-			Image: defaultImage,
-		},
-		Stages:          nil,
-		ArtifactBuckets: nil,
-	}
 	mockS3BucketName := "BitterBucket"
 	mockURL := "templateURL"
 	testCases := map[string]struct {
@@ -495,9 +461,9 @@ func TestCloudFormation_UpdatePipeline(t *testing.T) {
 			stackConfigMock: func(ctrl *gomock.Controller) StackConfiguration {
 				m := mocks.NewMockStackConfiguration(ctrl)
 				m.EXPECT().Template().Return("mockTemplate", nil)
-				m.EXPECT().Parameters().Return([]*sdkcloudformation.Parameter{}, nil).AnyTimes()
-				m.EXPECT().Tags().Return([]*sdkcloudformation.Tag{}).AnyTimes()
-				m.EXPECT().StackName().Return("mockStackName").AnyTimes()
+				m.EXPECT().Parameters().Return([]*sdkcloudformation.Parameter{}, nil)
+				m.EXPECT().Tags().Return([]*sdkcloudformation.Tag{})
+				m.EXPECT().StackName().Return("mockStackName").Times(2)
 				return m
 			},
 			wantedErr: nil,
@@ -516,9 +482,7 @@ func TestCloudFormation_UpdatePipeline(t *testing.T) {
 			stackConfigMock: func(ctrl *gomock.Controller) StackConfiguration {
 				m := mocks.NewMockStackConfiguration(ctrl)
 				m.EXPECT().Template().Return("mockTemplate", nil)
-				m.EXPECT().Parameters().Return([]*sdkcloudformation.Parameter{}, nil).AnyTimes()
-				m.EXPECT().Tags().Return([]*sdkcloudformation.Tag{}).AnyTimes()
-				m.EXPECT().StackName().Return("mockStackName").AnyTimes()
+				m.EXPECT().StackName().Return("mockStackName")
 				return m
 			},
 			wantedErr: fmt.Errorf("upload pipeline template to S3 bucket %s: some error", "BitterBucket"),
@@ -536,7 +500,7 @@ func TestCloudFormation_UpdatePipeline(t *testing.T) {
 			}
 
 			// WHEN
-			err := c.UpdatePipeline(in, mockS3BucketName, tc.stackConfigMock(ctrl))
+			err := c.UpdatePipeline(mockS3BucketName, tc.stackConfigMock(ctrl))
 
 			// THEN
 			if tc.wantedErr != nil {

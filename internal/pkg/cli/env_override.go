@@ -41,7 +41,7 @@ func newOverrideEnvOpts(vars overrideVars) (*overrideEnvOpts, error) {
 		return nil, fmt.Errorf("default session: %v", err)
 	}
 	cfgStore := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
-
+	vars.requiresEnv = true
 	prompt := prompt.New()
 	cmd := &overrideEnvOpts{
 		overrideOpts: &overrideOpts{
@@ -77,7 +77,6 @@ func (o *overrideEnvOpts) Ask() error {
 // Execute writes IaC override files to the local workspace.
 // This method assumes that the IaC tool chosen by the user is valid.
 func (o *overrideEnvOpts) Execute() error {
-	o.requiresEnv = true
 	o.overrideOpts.dir = func() string {
 		return o.ws.EnvOverridesPath()
 	}

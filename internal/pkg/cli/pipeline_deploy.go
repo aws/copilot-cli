@@ -473,7 +473,7 @@ func (o *deployPipelineOpts) shouldUpdate() (bool, error) {
 }
 
 func (o *deployPipelineOpts) deployPipeline(in *deploy.CreatePipelineInput, stackConfig deploycfn.StackConfiguration) error {
-	exist, err := o.pipelineDeployer.PipelineExists(in, stackConfig)
+	exist, err := o.pipelineDeployer.PipelineExists(stackConfig)
 	if err != nil {
 		return fmt.Errorf("check if pipeline exists: %w", err)
 	}
@@ -502,7 +502,7 @@ func (o *deployPipelineOpts) deployPipeline(in *deploy.CreatePipelineInput, stac
 			log.Infof("%s Go to %s to update the status of connection %s from PENDING to AVAILABLE.", color.Emphasize("ACTION REQUIRED!"), color.HighlightResource(connectionsURL), color.HighlightUserInput(connectionName))
 			log.Infoln()
 		}
-		if err := o.pipelineDeployer.CreatePipeline(in, bucketName, stackConfig); err != nil {
+		if err := o.pipelineDeployer.CreatePipeline(bucketName, stackConfig); err != nil {
 			var alreadyExists *cloudformation.ErrStackAlreadyExists
 			if !errors.As(err, &alreadyExists) {
 				o.prog.Stop(log.Serrorf(fmtPipelineDeployFailed, color.HighlightUserInput(o.pipeline.Name)))
@@ -525,7 +525,7 @@ func (o *deployPipelineOpts) deployPipeline(in *deploy.CreatePipelineInput, stac
 	}
 
 	o.prog.Start(fmt.Sprintf(fmtPipelineDeployProposalStart, color.HighlightUserInput(o.pipeline.Name)))
-	if err := o.pipelineDeployer.UpdatePipeline(in, bucketName, stackConfig); err != nil {
+	if err := o.pipelineDeployer.UpdatePipeline(bucketName, stackConfig); err != nil {
 		o.prog.Stop(log.Serrorf(fmtPipelineDeployProposalFailed, color.HighlightUserInput(o.pipeline.Name)))
 		return fmt.Errorf("update pipeline: %w", err)
 	}

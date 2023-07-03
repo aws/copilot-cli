@@ -57,7 +57,6 @@ func newOverridePipelineOpts(vars overrideVars) (*overridePipelineOpts, error) {
 		ws:       ws,
 		wsPrompt: selector.NewWsPipelineSelector(prompt, ws),
 	}
-	//cmd.validateOrAskName = cmd.validateOrAskPipelineName
 	cmd.overrideOpts.packageCmd = cmd.newPipelinePackageCmd
 	return cmd, nil
 }
@@ -82,17 +81,11 @@ func (o *overridePipelineOpts) Ask() error {
 
 // Execute writes IaC override files to the local workspace.
 func (o *overridePipelineOpts) Execute() error {
-	o.requiresEnv = false
 	o.overrideOpts.dir = func() string {
 		return o.ws.PipelineOverridesPath(o.name)
 	}
 	return o.overrideOpts.Execute()
 
-}
-
-// RecommendActions prints optional follow-up actions.
-func (o *overridePipelineOpts) RecommendActions() error {
-	return nil
 }
 
 func (o *overridePipelineOpts) validatePipelineName() error {
@@ -139,12 +132,12 @@ func buildPipelineOverrideCmd() *cobra.Command {
 	vars := overrideVars{}
 	cmd := &cobra.Command{
 		Use:   "override",
-		Short: "Override the AWS CloudFormation template of a service.",
+		Short: "Override the AWS CloudFormation template of a Pipeline.",
 		Long: `Scaffold Infrastructure as Code patch files. 
 Customize the patch files to change resource properties, delete 
-or add new resources to the service's AWS CloudFormation template.`,
+or add new resources to the Pipeline's AWS CloudFormation template.`,
 		Example: `
-  Create a new Cloud Development Kit application to override the "frontend" service template.
+  Create a new Cloud Development Kit application to override the "frontend" pipeline template.
   /code $ copilot pipeline override -n frontend -e test --toolkit cdk`,
 
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
