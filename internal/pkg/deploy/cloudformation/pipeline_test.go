@@ -17,8 +17,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/mocks"
 )
 
-const defaultImage = "aws/codebuild/amazonlinux2-x86_64-standard:3.0"
-
 func TestCloudFormation_PipelineExists(t *testing.T) {
 	testCases := map[string]struct {
 		createMock      func(ctrl *gomock.Controller) cfnClient
