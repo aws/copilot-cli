@@ -317,6 +317,11 @@ Resources:
                   - waf:GetWebACL
                   - waf:ListWebACLs
                 Resource: "*"
+                Condition:
+                  StringEquals:
+                    'aws:ResourceTag/copilot-application': !Sub '${AppName}'
+                    'aws:ResourceTag/copilot-environment': !Sub '${EnvName}'
+                    'aws:ResourceTag/copilot-service': !Sub '${WorkloadName}'
               - Effect: Allow
                 Action:
                   - s3:ListAllMyBuckets
