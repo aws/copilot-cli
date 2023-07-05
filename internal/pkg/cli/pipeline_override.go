@@ -41,15 +41,13 @@ func newOverridePipelineOpts(vars overrideVars) (*overridePipelineOpts, error) {
 		return nil, fmt.Errorf("default session: %v", err)
 	}
 
-	cfgStore := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
-
 	prompt := prompt.New()
 
 	cmd := &overridePipelineOpts{
 		overrideOpts: &overrideOpts{
 			overrideVars: vars,
 			fs:           fs,
-			cfgStore:     cfgStore,
+			cfgStore:     config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region)),
 			prompt:       prompt,
 			cfnPrompt:    selector.NewCFNSelector(prompt),
 			spinner:      termprogress.NewSpinner(log.DiagnosticWriter),
