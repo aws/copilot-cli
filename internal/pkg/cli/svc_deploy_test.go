@@ -137,26 +137,45 @@ type deployMocks struct {
 	mockMft                  *mockWorkloadMft
 	mockDiffWriter           *strings.Builder
 	mockPrompter             *mocks.Mockprompter
+	mockVersionGetter        *mocks.MockversionGetter
 }
 
 func TestSvcDeployOpts_Execute(t *testing.T) {
 	const (
-		mockAppName = "phonetool"
-		mockSvcName = "frontend"
-		mockEnvName = "prod-iad"
+		mockAppName      = "phonetool"
+		mockSvcName      = "frontend"
+		mockEnvName      = "prod-iad"
+		mockVersion      = "v1.29.0"
+		mockNewerVersion = "v1.30.0"
 	)
 	mockError := errors.New("some error")
 	testCases := map[string]struct {
 		inShowDiff       bool
 		inSkipDiffPrompt bool
 		inForceFlag      bool
+		inAllowDowngrade bool
 		inSvcType        string
 		mock             func(m *deployMocks)
 		wantedDiff       string
 		wantedError      error
 	}{
+		"error out if fail to get version": {
+			mock: func(m *deployMocks) {
+				m.mockVersionGetter.EXPECT().Version().Return("", mockError)
+			},
+
+			wantedError: fmt.Errorf("get template version of service frontend: some error"),
+		},
+		"error out if try to downgrade service version without flag": {
+			mock: func(m *deployMocks) {
+				m.mockVersionGetter.EXPECT().Version().Return(mockNewerVersion, nil)
+			},
+
+			wantedError: fmt.Errorf(`cannot downgrade service "frontend" (currently in version v1.30.0) to version v1.29.0`),
+		},
 		"error out if fail to read workload manifest": {
 			mock: func(m *deployMocks) {
+				m.mockVersionGetter.EXPECT().Version().Return(mockVersion, nil)
 				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockSvcName).Return(nil, mockError)
 			},
 
@@ -164,6 +183,7 @@ func TestSvcDeployOpts_Execute(t *testing.T) {
 		},
 		"error out if fail to interpolate workload manifest": {
 			mock: func(m *deployMocks) {
+				m.mockVersionGetter.EXPECT().Version().Return(mockVersion, nil)
 				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte(""), nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", mockError)
 			},
@@ -172,6 +192,7 @@ func TestSvcDeployOpts_Execute(t *testing.T) {
 		},
 		"error if fail to get a list of available features from the environment": {
 			mock: func(m *deployMocks) {
+				m.mockVersionGetter.EXPECT().Version().Return(mockVersion, nil)
 				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte(""), nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockEnvFeaturesDescriber.EXPECT().Version().Return("v1.mock", nil)
@@ -184,6 +205,7 @@ func TestSvcDeployOpts_Execute(t *testing.T) {
 			inForceFlag: true,
 			inSvcType:   manifestinfo.StaticSiteType,
 			mock: func(m *deployMocks) {
+				m.mockVersionGetter.EXPECT().Version().Return(mockVersion, nil)
 				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte(""), nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 			},
@@ -192,6 +214,7 @@ func TestSvcDeployOpts_Execute(t *testing.T) {
 		},
 		"error if some required features are not available in the environment": {
 			mock: func(m *deployMocks) {
+				m.mockVersionGetter.EXPECT().Version().Return(mockVersion, nil)
 				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte(""), nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockMft = &mockWorkloadMft{
@@ -207,6 +230,7 @@ func TestSvcDeployOpts_Execute(t *testing.T) {
 		},
 		"error if failed to upload artifacts": {
 			mock: func(m *deployMocks) {
+				m.mockVersionGetter.EXPECT().Version().Return(mockVersion, nil)
 				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte(""), nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockMft = &mockWorkloadMft{
@@ -225,6 +249,7 @@ func TestSvcDeployOpts_Execute(t *testing.T) {
 		"error if failed to generate the template to show diff": {
 			inShowDiff: true,
 			mock: func(m *deployMocks) {
+				m.mockVersionGetter.EXPECT().Version().Return(mockVersion, nil)
 				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte(""), nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockMft = &mockWorkloadMft{
@@ -243,6 +268,7 @@ func TestSvcDeployOpts_Execute(t *testing.T) {
 		"error if failed to generate the diff": {
 			inShowDiff: true,
 			mock: func(m *deployMocks) {
+				m.mockVersionGetter.EXPECT().Version().Return(mockVersion, nil)
 				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte(""), nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockMft = &mockWorkloadMft{
@@ -262,6 +288,7 @@ func TestSvcDeployOpts_Execute(t *testing.T) {
 		"write 'no changes' if there is no diff": {
 			inShowDiff: true,
 			mock: func(m *deployMocks) {
+				m.mockVersionGetter.EXPECT().Version().Return(mockVersion, nil)
 				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte(""), nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockMft = &mockWorkloadMft{
@@ -283,6 +310,7 @@ func TestSvcDeployOpts_Execute(t *testing.T) {
 		"write the correct diff": {
 			inShowDiff: true,
 			mock: func(m *deployMocks) {
+				m.mockVersionGetter.EXPECT().Version().Return(mockVersion, nil)
 				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte(""), nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockMft = &mockWorkloadMft{
@@ -304,6 +332,7 @@ func TestSvcDeployOpts_Execute(t *testing.T) {
 		"error if fail to ask whether to continue the deployment": {
 			inShowDiff: true,
 			mock: func(m *deployMocks) {
+				m.mockVersionGetter.EXPECT().Version().Return(mockVersion, nil)
 				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte(""), nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockMft = &mockWorkloadMft{
@@ -325,6 +354,7 @@ func TestSvcDeployOpts_Execute(t *testing.T) {
 		"do not deploy if asked to": {
 			inShowDiff: true,
 			mock: func(m *deployMocks) {
+				m.mockVersionGetter.EXPECT().Version().Return(mockVersion, nil)
 				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte(""), nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockMft = &mockWorkloadMft{
@@ -346,6 +376,7 @@ func TestSvcDeployOpts_Execute(t *testing.T) {
 		"deploy if asked to": {
 			inShowDiff: true,
 			mock: func(m *deployMocks) {
+				m.mockVersionGetter.EXPECT().Version().Return(mockVersion, nil)
 				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte(""), nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockMft = &mockWorkloadMft{
@@ -368,6 +399,7 @@ func TestSvcDeployOpts_Execute(t *testing.T) {
 			inShowDiff:       true,
 			inSkipDiffPrompt: true,
 			mock: func(m *deployMocks) {
+				m.mockVersionGetter.EXPECT().Version().Return(mockVersion, nil)
 				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte(""), nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockMft = &mockWorkloadMft{
@@ -388,6 +420,7 @@ func TestSvcDeployOpts_Execute(t *testing.T) {
 		},
 		"error if failed to deploy service": {
 			mock: func(m *deployMocks) {
+				m.mockVersionGetter.EXPECT().Version().Return(mockVersion, nil)
 				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte(""), nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockMft = &mockWorkloadMft{
@@ -404,8 +437,10 @@ func TestSvcDeployOpts_Execute(t *testing.T) {
 
 			wantedError: fmt.Errorf("deploy service frontend to environment prod-iad: some error"),
 		},
-		"success with no recommendations": {
+		"success with no recommendations and allow downgrade": {
+			inAllowDowngrade: true,
 			mock: func(m *deployMocks) {
+				m.mockVersionGetter.EXPECT().Version().Times(0)
 				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte(""), nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockMft = &mockWorkloadMft{
@@ -434,19 +469,20 @@ func TestSvcDeployOpts_Execute(t *testing.T) {
 				mockWsReader:             mocks.NewMockwsWlDirReader(ctrl),
 				mockEnvFeaturesDescriber: mocks.NewMockversionCompatibilityChecker(ctrl),
 				mockPrompter:             mocks.NewMockprompter(ctrl),
+				mockVersionGetter:        mocks.NewMockversionGetter(ctrl),
 			}
 			tc.mock(m)
 
 			opts := deploySvcOpts{
 				deployWkldVars: deployWkldVars{
-					appName:        mockAppName,
-					name:           mockSvcName,
-					envName:        mockEnvName,
-					showDiff:       tc.inShowDiff,
-					skipDiffPrompt: tc.inSkipDiffPrompt,
-					forceNewUpdate: tc.inForceFlag,
-
-					clientConfigured: true,
+					appName:            mockAppName,
+					name:               mockSvcName,
+					envName:            mockEnvName,
+					showDiff:           tc.inShowDiff,
+					skipDiffPrompt:     tc.inSkipDiffPrompt,
+					forceNewUpdate:     tc.inForceFlag,
+					allowWkldDowngrade: tc.inAllowDowngrade,
+					clientConfigured:   true,
 				},
 				svcType: tc.inSvcType,
 				newSvcDeployer: func() (workloadDeployer, error) {
@@ -462,9 +498,10 @@ func TestSvcDeployOpts_Execute(t *testing.T) {
 				envFeaturesDescriber: m.mockEnvFeaturesDescriber,
 				prompt:               m.mockPrompter,
 				diffWriter:           m.mockDiffWriter,
-
-				targetApp: &config.Application{},
-				targetEnv: &config.Environment{},
+				svcVersionGetter:     m.mockVersionGetter,
+				targetApp:            &config.Application{},
+				targetEnv:            &config.Environment{},
+				templateVersion:      mockVersion,
 			}
 
 			// WHEN

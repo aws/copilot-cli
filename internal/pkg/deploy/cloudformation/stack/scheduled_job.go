@@ -196,6 +196,7 @@ func (j *ScheduledJob) Template() (string, error) {
 		Publish:                  publishers,
 		Platform:                 convertPlatform(j.manifest.Platform),
 		EnvVersion:               j.rc.EnvVersion,
+		Version:                  j.rc.Version,
 
 		CustomResources:     crs,
 		PermissionsBoundary: j.permBound,

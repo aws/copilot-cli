@@ -2,7 +2,8 @@
 # SPDX-License-Identifier: MIT-0
 AWSTemplateFormatVersion: 2010-09-09
 Description: CloudFormation template that represents a static site backed by S3.
-
+Metadata:
+  Version: v1.29.0
 Parameters:
   AppName:
     Type: String

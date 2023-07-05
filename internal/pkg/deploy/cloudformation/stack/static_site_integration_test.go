@@ -7,6 +7,7 @@ package stack_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -73,6 +74,7 @@ func TestStaticSiteService_TemplateAndParamsGeneration(t *testing.T) {
 				Manifest:    mft.(*manifest.StaticSite),
 				RuntimeConfig: stack.RuntimeConfig{
 					EnvVersion: "v1.42.0",
+					Version:    "v1.29.0",
 					Region:     "us-west-2",
 				},
 				ArtifactBucketName: "bucket",
@@ -83,6 +85,7 @@ func TestStaticSiteService_TemplateAndParamsGeneration(t *testing.T) {
 			// validate generated template
 			tmpl, err := serializer.Template()
 			require.NoError(t, err)
+			fmt.Println(tmpl)
 			var actualTmpl map[any]any
 			require.NoError(t, yaml.Unmarshal([]byte(tmpl), &actualTmpl))
 			resetCustomResourceLocations(actualTmpl)

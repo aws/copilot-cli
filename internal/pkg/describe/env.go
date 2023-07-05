@@ -201,7 +201,6 @@ func (d *EnvDescriber) Version() (string, error) {
 	if err != nil {
 		return "", err
 	}
-
 	metadata := struct {
 		Version string `yaml:"Version"`
 	}{}

@@ -2,17 +2,16 @@
 # SPDX-License-Identifier: MIT-0
 AWSTemplateFormatVersion: 2010-09-09
 Description: CloudFormation template that represents a static site backed by S3.
-
-{{- /*
+{{/*
 !¡!¡!¡!¡!¡!¡
 If you are adding resources to this template, make sure to add the resources to
 the TriggerStateMachineAction.DependsOn list. This will ensure that files
 are only copied to Bucket if all other resources are successfully created.
 !¡!¡!¡!¡!¡!¡
-*/ -}}
-
-{{- if .SerializedManifest }}
+*/}}
 Metadata:
+  Version: {{ .Version }}
+{{- if .SerializedManifest }}
   Manifest: |
 {{indent 4 .SerializedManifest}}
 {{- end }}
