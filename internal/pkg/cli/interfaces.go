@@ -9,7 +9,6 @@ import (
 	"io"
 
 	"github.com/aws/aws-sdk-go/aws/session"
-	awssdk "github.com/aws/aws-sdk-go/service/cloudformation"
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
@@ -706,12 +705,4 @@ type envPackager interface {
 	UploadArtifacts() (*clideploy.UploadEnvArtifactsOutput, error)
 	AddonsTemplate() (string, error)
 	templateDiffer
-}
-
-type pipelineStackConfig interface {
-	Template() (string, error)
-	Parameters() ([]*awssdk.Parameter, error)
-	StackName() string
-	Tags() []*awssdk.Tag
-	SerializedParameters() (string, error)
 }

@@ -85,7 +85,7 @@ type deployPipelineOpts struct {
 	sessProvider        *sessions.Provider
 	newSvcListCmd       func(io.Writer, string) cmd
 	newJobListCmd       func(io.Writer, string) cmd
-	pipelineStackConfig func(in *deploy.CreatePipelineInput) pipelineStackConfig
+	pipelineStackConfig func(in *deploy.CreatePipelineInput) deploycfn.StackConfiguration
 
 	configureDeployedPipelineLister func() deployedPipelineLister
 
@@ -130,7 +130,7 @@ func newDeployPipelineOpts(vars deployPipelineVars) (*deployPipelineOpts, error)
 		sessProvider:       sessProvider,
 		sel:                selector.NewWsPipelineSelector(prompter, ws),
 		codestar:           cs.New(defaultSession),
-		pipelineStackConfig: func(in *deploy.CreatePipelineInput) pipelineStackConfig {
+		pipelineStackConfig: func(in *deploy.CreatePipelineInput) deploycfn.StackConfiguration {
 			return stack.NewPipelineStackConfig(in)
 		},
 		newSvcListCmd: func(w io.Writer, appName string) cmd {

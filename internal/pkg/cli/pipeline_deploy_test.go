@@ -265,14 +265,10 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					m.ws.EXPECT().PipelineOverridesPath(pipelineName).Return("path"),
 
 					// deployPipeline
-					m.deployer.EXPECT().PipelineExists(gomock.Any()).DoAndReturn(func(stackConfig deploycfn.StackConfiguration) (bool, error) {
-						return false, nil
-					}),
+					m.deployer.EXPECT().PipelineExists(gomock.Any()).Return(false, nil),
 					m.deployer.EXPECT().GetAppResourcesByRegion(&app, region).Return(mockResource, nil),
 					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployStart, pipelineName)).Times(1),
-					m.deployer.EXPECT().CreatePipeline(gomock.Any(), gomock.Any()).DoAndReturn(func(_ string, stackConfig deploycfn.StackConfiguration) error {
-						return nil
-					}),
+					m.deployer.EXPECT().CreatePipeline(gomock.Any(), gomock.Any()).Return(nil),
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployComplete, pipelineName)).Times(1),
 				)
 			},
@@ -304,15 +300,11 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					m.ws.EXPECT().PipelineOverridesPath(pipelineName).Return("path"),
 
 					// deployPipeline
-					m.deployer.EXPECT().PipelineExists(gomock.Any()).DoAndReturn(func(stackConfig deploycfn.StackConfiguration) (bool, error) {
-						return true, nil
-					}),
+					m.deployer.EXPECT().PipelineExists(gomock.Any()).Return(true, nil),
 					m.deployer.EXPECT().GetAppResourcesByRegion(&app, region).Return(mockResource, nil),
 					m.prompt.EXPECT().Confirm(fmt.Sprintf(fmtPipelineDeployExistPrompt, pipelineName), "").Return(true, nil),
 					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployProposalStart, pipelineName)).Times(1),
-					m.deployer.EXPECT().UpdatePipeline(gomock.Any(), gomock.Any()).DoAndReturn(func(_ string, stackConfig deploycfn.StackConfiguration) error {
-						return nil
-					}),
+					m.deployer.EXPECT().UpdatePipeline(gomock.Any(), gomock.Any()).Return(nil),
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployProposalComplete, pipelineName)).Times(1),
 				)
 			},
@@ -349,15 +341,11 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					m.ws.EXPECT().PipelineOverridesPath(pipelineName).Return("path"),
 
 					// deployPipeline
-					m.deployer.EXPECT().PipelineExists(gomock.Any()).DoAndReturn(func(stackConfig deploycfn.StackConfiguration) (bool, error) {
-						return true, nil
-					}),
+					m.deployer.EXPECT().PipelineExists(gomock.Any()).Return(true, nil),
 					m.deployer.EXPECT().GetAppResourcesByRegion(&app, region).Return(mockResource, nil),
 					m.prompt.EXPECT().Confirm(fmt.Sprintf(fmtPipelineDeployExistPrompt, pipelineName), "").Return(true, nil),
 					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployProposalStart, pipelineName)).Times(1),
-					m.deployer.EXPECT().UpdatePipeline(gomock.Any(), gomock.Any()).DoAndReturn(func(_ string, stackConfigCon deploycfn.StackConfiguration) error {
-						return nil
-					}),
+					m.deployer.EXPECT().UpdatePipeline(gomock.Any(), gomock.Any()).Return(nil),
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployProposalComplete, pipelineName)).Times(1),
 				)
 			},
@@ -847,9 +835,7 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 
 				m.ws.EXPECT().PipelineOverridesPath(pipelineName).Return("path")
 
-				m.deployer.EXPECT().PipelineExists(gomock.Any()).DoAndReturn(func(stackConfig deploycfn.StackConfiguration) (bool, error) {
-					return false, nil
-				})
+				m.deployer.EXPECT().PipelineExists(gomock.Any()).Return(false, nil)
 
 				m.pipelineStackConfig.EXPECT().Template().Return("name: mockEnv\ntype: Environment", nil)
 
@@ -861,9 +847,7 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 				// deployPipeline
 				m.deployer.EXPECT().GetAppResourcesByRegion(&app, region).Return(mockResource, nil)
 				m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployStart, pipelineName)).Times(1)
-				m.deployer.EXPECT().CreatePipeline(gomock.Any(), gomock.Any()).DoAndReturn(func(_ string, stackConfig deploycfn.StackConfiguration) error {
-					return nil
-				})
+				m.deployer.EXPECT().CreatePipeline(gomock.Any(), gomock.Any()).Return(nil)
 				m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployComplete, pipelineName)).Times(1)
 
 			},
@@ -900,16 +884,12 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 				m.prompt.EXPECT().Confirm(continueDeploymentPrompt, "").Return(true, nil)
 
 				// deployPipeline
-				m.deployer.EXPECT().PipelineExists(gomock.Any()).DoAndReturn(func(stackConfig deploycfn.StackConfiguration) (bool, error) {
-					return true, nil
-				})
+				m.deployer.EXPECT().PipelineExists(gomock.Any()).Return(true, nil)
 
 				m.deployer.EXPECT().GetAppResourcesByRegion(&app, region).Return(mockResource, nil)
 
 				m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployProposalStart, pipelineName)).Times(1)
-				m.deployer.EXPECT().UpdatePipeline(gomock.Any(), gomock.Any()).DoAndReturn(func(_ string, stackConfig deploycfn.StackConfiguration) error {
-					return nil
-				})
+				m.deployer.EXPECT().UpdatePipeline(gomock.Any(), gomock.Any()).Return(nil)
 				m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployProposalComplete, pipelineName)).Times(1)
 
 			},
@@ -950,7 +930,7 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					showDiff: tc.inShowDiff,
 				},
 				pipelineDeployer: mockPipelineDeployer,
-				pipelineStackConfig: func(in *deploy.CreatePipelineInput) pipelineStackConfig {
+				pipelineStackConfig: func(in *deploy.CreatePipelineInput) deploycfn.StackConfiguration {
 					return mockPipelineStackConfig
 				},
 				ws:         mockWorkspace,

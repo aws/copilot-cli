@@ -92,12 +92,12 @@ func (o *overridePipelineOpts) validatePipelineName() error {
 	if o.name == "" {
 		return nil
 	}
-	pipeline_list, err := o.ws.ListPipelines()
+	pipelines, err := o.ws.ListPipelines()
 	if err != nil {
 		return fmt.Errorf("list pipelines in the workspace: %v", err)
 	}
-	names := []string{}
-	for _, pipeline := range pipeline_list {
+	var names []string
+	for _, pipeline := range pipelines {
 		names = append(names, pipeline.Name)
 	}
 	if !contains(o.name, names) {

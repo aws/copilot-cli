@@ -42,7 +42,7 @@ type packagePipelineOpts struct {
 	ws                              wsPipelineReader
 	codestar                        codestar
 	store                           store
-	pipelineStackConfig             func(in *deploy.CreatePipelineInput) pipelineStackConfig
+	pipelineStackConfig             func(in *deploy.CreatePipelineInput) deploycfn.StackConfiguration
 	configureDeployedPipelineLister func() deployedPipelineLister
 	newSvcListCmd                   func(io.Writer, string) cmd
 	newJobListCmd                   func(io.Writer, string) cmd
@@ -74,7 +74,7 @@ func newPackagePipelineOpts(vars packagePipelineVars) (*packagePipelineOpts, err
 		ws:                  ws,
 		store:               store,
 		sessProvider:        sessProvider,
-		pipelineStackConfig: func(in *deploy.CreatePipelineInput) pipelineStackConfig {
+		pipelineStackConfig: func(in *deploy.CreatePipelineInput) deploycfn.StackConfiguration {
 			return stack.NewPipelineStackConfig(in)
 		},
 		newSvcListCmd: func(w io.Writer, appName string) cmd {
@@ -111,9 +111,9 @@ func newPackagePipelineOpts(vars packagePipelineVars) (*packagePipelineOpts, err
 		},
 		svcBuffer: &bytes.Buffer{},
 		jobBuffer: &bytes.Buffer{},
-	}
-	opts.configureDeployedPipelineLister = func() deployedPipelineLister {
-		return deploy.NewPipelineStore(rg.New(defaultSession))
+		configureDeployedPipelineLister: func() deployedPipelineLister {
+			return deploy.NewPipelineStore(rg.New(defaultSession))
+		},
 	}
 	return opts, nil
 }
