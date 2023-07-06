@@ -70,7 +70,8 @@ func (o *localRunOpts) Ask() error {
 }
 
 func (o *localRunOpts) Execute() error {
-	//code goes here
+	//TODO: Get build information from the manifest and task definition for services
+	//By username:varun359
 
 	return nil
 }
