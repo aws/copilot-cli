@@ -106,7 +106,6 @@ func (o *overridePipelineOpts) validatePipelineName() error {
 
 func (o *overridePipelineOpts) askPipelineName() error {
 	pipeline, err := o.wsPrompt.WsPipeline("Which pipeline's resources would you like to override?", "")
-	fmt.Printf("The pipeline which you want to override is %v", pipeline.Name)
 	if err != nil {
 		return fmt.Errorf("select pipeline name from workspace: %v", err)
 	}
@@ -135,8 +134,8 @@ func buildPipelineOverrideCmd() *cobra.Command {
 Customize the patch files to change resource properties, delete 
 or add new resources to the Pipeline's AWS CloudFormation template.`,
 		Example: `
-  Create a new Cloud Development Kit application to override the "frontend" pipeline template.
-  /code $ copilot pipeline override -n frontend -e test --toolkit cdk`,
+  Create a new Cloud Development Kit application to override the "myrepo-main" pipeline template.
+  /code $ copilot pipeline override -n myrepo-main --toolkit cdk`,
 
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newOverridePipelineOpts(vars)
