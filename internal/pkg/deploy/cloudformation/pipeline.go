@@ -28,8 +28,7 @@ const (
 )
 
 // PipelineExists checks if the pipeline with the provided config exists.
-func (cf CloudFormation) PipelineExists(in *deploy.CreatePipelineInput) (bool, error) {
-	stackConfig := stack.NewPipelineStackConfig(in)
+func (cf CloudFormation) PipelineExists(stackConfig StackConfiguration) (bool, error) {
 	_, err := cf.cfnClient.Describe(stackConfig.StackName())
 	if err != nil {
 		var stackNotFound *cloudformation.ErrStackNotFound
@@ -42,12 +41,11 @@ func (cf CloudFormation) PipelineExists(in *deploy.CreatePipelineInput) (bool, e
 }
 
 // CreatePipeline sets up a new CodePipeline for deploying services.
-func (cf CloudFormation) CreatePipeline(in *deploy.CreatePipelineInput, bucketName string) error {
-	templateURL, err := cf.pushTemplateToS3Bucket(bucketName, stack.NewPipelineStackConfig(in))
+func (cf CloudFormation) CreatePipeline(bucketName string, stackConfig StackConfiguration) error {
+	templateURL, err := cf.pushTemplateToS3Bucket(bucketName, stackConfig)
 	if err != nil {
 		return err
 	}
-	stackConfig := stack.NewPipelineStackConfig(in)
 	s, err := toStackFromS3(stackConfig, templateURL)
 	if err != nil {
 		return err
@@ -95,12 +93,12 @@ func (cf CloudFormation) pipelinePhysicalResourceID(stackName string) (string, e
 }
 
 // UpdatePipeline updates an existing CodePipeline for deploying services.
-func (cf CloudFormation) UpdatePipeline(in *deploy.CreatePipelineInput, bucketName string) error {
-	templateURL, err := cf.pushTemplateToS3Bucket(bucketName, stack.NewPipelineStackConfig(in))
+func (cf CloudFormation) UpdatePipeline(bucketName string, stackConfig StackConfiguration) error {
+	templateURL, err := cf.pushTemplateToS3Bucket(bucketName, stackConfig)
 	if err != nil {
 		return err
 	}
-	s, err := toStackFromS3(stack.NewPipelineStackConfig(in), templateURL)
+	s, err := toStackFromS3(stackConfig, templateURL)
 	if err != nil {
 		return err
 	}

@@ -60,6 +60,7 @@ type overrideVars struct {
 
 	// We prompt for resources if the user does not opt-in to skipping.
 	skipResources bool
+	requiresEnv   bool
 	resources     []template.CFNResource
 }
 
@@ -99,7 +100,7 @@ func (o *overrideOpts) Execute() error {
 	dir := o.dir()
 	switch o.iacTool {
 	case cdkIaCTool:
-		if err := override.ScaffoldWithCDK(o.fs, dir, o.resources); err != nil {
+		if err := override.ScaffoldWithCDK(o.fs, dir, o.resources, o.requiresEnv); err != nil {
 			return fmt.Errorf("scaffold CDK application under %q: %v", dir, err)
 		}
 		log.Successf("Created a new CDK application at %q to override resources\n", displayPath(dir))
