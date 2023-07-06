@@ -767,6 +767,21 @@ func (mr *MockenvironmentStoreMockRecorder) DeleteEnvironment(appName, environme
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteEnvironment", reflect.TypeOf((*MockenvironmentStore)(nil).DeleteEnvironment), appName, environmentName)
 }
 
+// GetApplication mocks base method.
+func (m *MockenvironmentStore) GetApplication(appName string) (*config.Application, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetApplication", appName)
+	ret0, _ := ret[0].(*config.Application)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetApplication indicates an expected call of GetApplication.
+func (mr *MockenvironmentStoreMockRecorder) GetApplication(appName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetApplication", reflect.TypeOf((*MockenvironmentStore)(nil).GetApplication), appName)
+}
+
 // GetEnvironment mocks base method.
 func (m *MockenvironmentStore) GetEnvironment(appName, environmentName string) (*config.Environment, error) {
 	m.ctrl.T.Helper()
@@ -4304,6 +4319,73 @@ func (m *MockappResourcesGetter) GetRegionalAppResources(app *config.Application
 func (mr *MockappResourcesGetterMockRecorder) GetRegionalAppResources(app interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRegionalAppResources", reflect.TypeOf((*MockappResourcesGetter)(nil).GetRegionalAppResources), app)
+}
+
+// MockenvDeleterFromApp is a mock of envDeleterFromApp interface.
+type MockenvDeleterFromApp struct {
+	ctrl     *gomock.Controller
+	recorder *MockenvDeleterFromAppMockRecorder
+}
+
+// MockenvDeleterFromAppMockRecorder is the mock recorder for MockenvDeleterFromApp.
+type MockenvDeleterFromAppMockRecorder struct {
+	mock *MockenvDeleterFromApp
+}
+
+// NewMockenvDeleterFromApp creates a new mock instance.
+func NewMockenvDeleterFromApp(ctrl *gomock.Controller) *MockenvDeleterFromApp {
+	mock := &MockenvDeleterFromApp{ctrl: ctrl}
+	mock.recorder = &MockenvDeleterFromAppMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockenvDeleterFromApp) EXPECT() *MockenvDeleterFromAppMockRecorder {
+	return m.recorder
+}
+
+// GetAppResourcesByRegion mocks base method.
+func (m *MockenvDeleterFromApp) GetAppResourcesByRegion(app *config.Application, region string) (*stack.AppRegionalResources, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAppResourcesByRegion", app, region)
+	ret0, _ := ret[0].(*stack.AppRegionalResources)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAppResourcesByRegion indicates an expected call of GetAppResourcesByRegion.
+func (mr *MockenvDeleterFromAppMockRecorder) GetAppResourcesByRegion(app, region interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAppResourcesByRegion", reflect.TypeOf((*MockenvDeleterFromApp)(nil).GetAppResourcesByRegion), app, region)
+}
+
+// GetRegionalAppResources mocks base method.
+func (m *MockenvDeleterFromApp) GetRegionalAppResources(app *config.Application) ([]*stack.AppRegionalResources, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetRegionalAppResources", app)
+	ret0, _ := ret[0].([]*stack.AppRegionalResources)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetRegionalAppResources indicates an expected call of GetRegionalAppResources.
+func (mr *MockenvDeleterFromAppMockRecorder) GetRegionalAppResources(app interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRegionalAppResources", reflect.TypeOf((*MockenvDeleterFromApp)(nil).GetRegionalAppResources), app)
+}
+
+// RemoveEnvFromApp mocks base method.
+func (m *MockenvDeleterFromApp) RemoveEnvFromApp(opts *cloudformation0.RemoveEnvFromAppOpts) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RemoveEnvFromApp", opts)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RemoveEnvFromApp indicates an expected call of RemoveEnvFromApp.
+func (mr *MockenvDeleterFromAppMockRecorder) RemoveEnvFromApp(opts interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveEnvFromApp", reflect.TypeOf((*MockenvDeleterFromApp)(nil).RemoveEnvFromApp), opts)
 }
 
 // MocktaskDeployer is a mock of taskDeployer interface.

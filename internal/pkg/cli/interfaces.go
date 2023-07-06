@@ -111,6 +111,7 @@ type environmentStore interface {
 	environmentGetter
 	environmentLister
 	environmentDeleter
+	applicationGetter
 }
 
 type environmentCreator interface {
@@ -405,6 +406,11 @@ type appDeployer interface {
 type appResourcesGetter interface {
 	GetAppResourcesByRegion(app *config.Application, region string) (*stack.AppRegionalResources, error)
 	GetRegionalAppResources(app *config.Application) ([]*stack.AppRegionalResources, error)
+}
+
+type envDeleterFromApp interface {
+	appResourcesGetter
+	RemoveEnvFromApp(opts *cloudformation.RemoveEnvFromAppOpts) error
 }
 
 type taskDeployer interface {
