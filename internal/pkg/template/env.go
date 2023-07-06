@@ -104,9 +104,9 @@ type Addons struct {
 
 // EnvOpts holds data that can be provided to enable features in an environment stack template.
 type EnvOpts struct {
-	AppName string // The application name. Needed to create default value for svc discovery endpoint for upgraded environments.
-	EnvName string
-	Version string // The template version to use for the environment. If empty uses the "legacy" template.
+	AppName       string // The application name. Needed to create default value for svc discovery endpoint for upgraded environments.
+	EnvName       string
+	LatestVersion string
 
 	// Custom Resources backed by Lambda functions.
 	CustomResources           map[string]S3ObjectLocation
@@ -127,7 +127,6 @@ type EnvOpts struct {
 	Telemetry         *Telemetry
 	CDNConfig         *CDNConfig
 
-	LatestVersion      string
 	SerializedManifest string // Serialized manifest used to render the environment template.
 	ForceUpdateID      string
 

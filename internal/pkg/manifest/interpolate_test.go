@@ -59,6 +59,9 @@ cpu: 256#${CPU}
 memory: 512    # ${Memory}
 variables:
   ${foo}: ${bar}
+network:
+  vpc:
+    security_groups: ${SECURITY_GROUPS}
 `,
 			inputEnvVar: map[string]string{
 				"0accountID":               "1234567890",
@@ -69,6 +72,7 @@ variables:
 				"CPU":                      "512",
 				"bar":                      "bar",
 				"ip":                       "10.24.34.0/23",
+				"SECURITY_GROUPS":          `["sg-1","sg-2","sg-3"]`,
 			},
 
 			wanted: `# The manifest for the ${name} service.
@@ -89,6 +93,12 @@ cpu: 256#512
 memory: 512 # ${Memory}
 variables:
   ${foo}: bar
+network:
+  vpc:
+    security_groups:
+      - sg-1
+      - sg-2
+      - sg-3
 `,
 		},
 	}

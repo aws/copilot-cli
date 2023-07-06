@@ -271,6 +271,7 @@ type DeployEnvironmentInput struct {
 	RawManifest         []byte
 	PermissionsBoundary string
 	DisableRollback     bool
+	Version             string
 }
 
 // GenerateCloudFormationTemplate returns the environment stack's template and parameter configuration.
@@ -425,7 +426,7 @@ func (d *envDeployer) buildStackInput(in *DeployEnvironmentInput) (*cfnstack.Env
 		ForceUpdate:          in.ForceNewUpdate,
 		RawMft:               in.RawManifest,
 		PermissionsBoundary:  in.PermissionsBoundary,
-		Version:              deploy.LatestEnvTemplateVersion,
+		Version:              in.Version,
 	}, nil
 }
 

@@ -99,7 +99,7 @@ func (o *overrideEnvOpts) validateName() error {
 
 func (o *overrideEnvOpts) newEnvPackageCmd(tplBuf stringWriteCloser) (executor, error) {
 	cmd, err := newPackageEnvOpts(packageEnvVars{
-		envName: o.name,
+		name:    o.name,
 		appName: o.appName,
 	})
 	if err != nil {
