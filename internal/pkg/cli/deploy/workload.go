@@ -159,6 +159,11 @@ type GenerateCloudFormationTemplateOutput struct {
 	Parameters string
 }
 
+// RepoName returns the name of a Copilot-managed ECR repository given an application and workload.
+func RepoName(app, workload string) string {
+	return fmt.Sprintf("%s/%s", app, workload)
+}
+
 type workloadDeployer struct {
 	name          string
 	app           *config.Application
@@ -249,7 +254,7 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 		addons = nil // so that we can check for no addons with nil comparison
 	}
 
-	repoName := fmt.Sprintf("%s/%s", in.App.Name, in.Name)
+	repoName := RepoName(in.App.Name, in.Name)
 	repository := repository.NewWithURI(
 		ecr.New(defaultSessEnvRegion), repoName, resources.RepositoryURLs[in.Name])
 	store := config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
