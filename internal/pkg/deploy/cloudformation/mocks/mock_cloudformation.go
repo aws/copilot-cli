@@ -759,6 +759,21 @@ func (mr *MockstackSetClientMockRecorder) DeleteAllInstances(name interface{}) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAllInstances", reflect.TypeOf((*MockstackSetClient)(nil).DeleteAllInstances), name)
 }
 
+// DeleteInstance mocks base method.
+func (m *MockstackSetClient) DeleteInstance(name, account, region string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteInstance", name, account, region)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeleteInstance indicates an expected call of DeleteInstance.
+func (mr *MockstackSetClientMockRecorder) DeleteInstance(name, account, region interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteInstance", reflect.TypeOf((*MockstackSetClient)(nil).DeleteInstance), name, account, region)
+}
+
 // Describe mocks base method.
 func (m *MockstackSetClient) Describe(name string) (stackset.Description, error) {
 	m.ctrl.T.Helper()
