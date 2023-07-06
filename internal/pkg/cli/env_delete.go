@@ -6,6 +6,9 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
+	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
+	clideploy "github.com/aws/copilot-cli/internal/pkg/cli/deploy"
 	"os"
 	"strings"
 
@@ -69,16 +72,21 @@ type deleteEnvOpts struct {
 	deleteEnvVars
 
 	// Interfaces for dependencies.
-	store    environmentStore
-	rg       resourceGetter
-	deployer environmentDeployer
-	iam      roleDeleter
-	prog     progress
-	prompt   prompter
-	sel      configSelector
+	store             environmentStore
+	rg                resourceGetter
+	deployer          environmentDeployer
+	envDeleterFromApp envDeleterFromApp
+	newBucketEmptier  func(region string) (bucketEmptier, error)
+	newImageRemover   func(region string) (imageRemover, error)
+
+	iam    roleDeleter
+	prog   progress
+	prompt prompter
+	sel    configSelector
 
 	// cached data to avoid fetching the same information multiple times.
 	envConfig *config.Environment
+	appConfig *config.Application
 
 	// initRuntimeClients is overridden in tests.
 	initRuntimeClients func(*deleteEnvOpts) error
@@ -113,6 +121,21 @@ func newDeleteEnvOpts(vars deleteEnvVars) (*deleteEnvOpts, error) {
 			o.rg = resourcegroupstaggingapi.New(sess)
 			o.iam = iam.New(sess)
 			o.deployer = cloudformation.New(sess, cloudformation.WithProgressTracker(os.Stderr))
+			o.envDeleterFromApp = cloudformation.New(defaultSess, cloudformation.WithProgressTracker(os.Stderr))
+			o.newBucketEmptier = func(region string) (bucketEmptier, error) {
+				sess, err := sessProvider.DefaultWithRegion(region)
+				if err != nil {
+					return nil, err
+				}
+				return s3.New(sess), nil
+			}
+			o.newImageRemover = func(region string) (imageRemover, error) {
+				sess, err := sessProvider.DefaultWithRegion(region)
+				if err != nil {
+					return nil, err
+				}
+				return ecr.New(sess), nil
+			}
 			return nil
 		},
 	}, nil
@@ -345,6 +368,90 @@ func (o *deleteEnvOpts) deleteStack() error {
 	return nil
 }
 
+func (o *deleteEnvOpts) cleanUpAppResources() error {
+	// Get list of environments and check if there are any other environments in this account OR region.
+	envs, err := o.store.ListEnvironments(o.appName)
+	if err != nil {
+		return err
+	}
+	currentEnv, err := o.getEnvConfig()
+	if err != nil {
+		return err
+	}
+	app, err := o.getAppConfig()
+	if err != nil {
+		return err
+	}
+
+	accountHasOtherEnvs, regionHasOtherEnvs := false, false
+	for _, env := range envs {
+		if env.Name != o.name {
+			if env.AccountID == currentEnv.AccountID {
+				accountHasOtherEnvs = true
+			}
+			if env.Region == currentEnv.Region {
+				regionHasOtherEnvs = true
+			}
+		}
+	}
+	if app.AccountID == currentEnv.AccountID {
+		accountHasOtherEnvs = true
+	}
+
+	if !regionHasOtherEnvs {
+		// Empty bucket and ECR repos if there are no other environments in this region.
+		// We need to do this before deleting the stackset instance to avoid CFN deletion failures.
+		if err := o.emptyS3BucketAndECRRepos(); err != nil {
+			return err
+		}
+	}
+
+	return o.envDeleterFromApp.RemoveEnvFromApp(&cloudformation.RemoveEnvFromAppOpts{
+		App:                  app,
+		EnvName:              o.name,
+		EnvAccountID:         currentEnv.AccountID,
+		EnvRegion:            currentEnv.Region,
+		DeleteStackInstance:  !regionHasOtherEnvs,  // Stack instance should be deleted if region has no other environments.
+		RemoveAccountFromApp: !accountHasOtherEnvs, // DNS delegation should be removed if account has no other environments.
+	})
+}
+
+func (o *deleteEnvOpts) emptyS3BucketAndECRRepos() error {
+	app, err := o.getAppConfig()
+	if err != nil {
+		return err
+	}
+	env, err := o.getEnvConfig()
+	if err != nil {
+		return err
+	}
+	var regionalResources *stack.AppRegionalResources
+	regionalResources, err = o.envDeleterFromApp.GetAppResourcesByRegion(app, env.Region)
+	if err != nil {
+		return fmt.Errorf("get regional resources stack in region %s for application %q: %w", env.Region, o.appName, err)
+	}
+
+	s3Client, err := o.newBucketEmptier(env.Region)
+	if err != nil {
+		return err
+	}
+	ecrClient, err := o.newImageRemover(env.Region)
+	if err != nil {
+		return err
+	}
+
+	if err := s3Client.EmptyBucket(regionalResources.S3Bucket); err != nil {
+		return fmt.Errorf("empty bucket %s: %w", regionalResources.S3Bucket, err)
+	}
+	for workload, _ := range regionalResources.RepositoryURLs {
+		name := clideploy.RepoName(o.appName, workload)
+		if err := ecrClient.ClearRepository(name); err != nil {
+			return fmt.Errorf("empty repository %s: %w", name, err)
+		}
+	}
+	return nil
+}
+
 // tryDeleteRoles attempts to delete the retained IAM roles part of an environment stack.
 // The operation is best-effort because of the ManagerRole. Since the iam client is created with a
 // session that assumes the ManagerRole, attempting to delete the same role can result in the following error:
@@ -381,6 +488,19 @@ func (o *deleteEnvOpts) getEnvConfig() (*config.Environment, error) {
 	}
 	o.envConfig = env
 	return env, nil
+}
+
+func (o *deleteEnvOpts) getAppConfig() (*config.Application, error) {
+	if o.appConfig != nil {
+		// Already fetched; return.
+		return o.appConfig, nil
+	}
+	app, err := o.store.GetApplication(o.appName)
+	if err != nil {
+		return nil, fmt.Errorf("get application %q configuration: %w", o.appName, err)
+	}
+	o.appConfig = app
+	return app, nil
 }
 
 // buildEnvDeleteCmd builds the command to delete environment(s).
