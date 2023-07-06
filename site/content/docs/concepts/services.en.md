@@ -37,8 +37,7 @@ Unlike ECS, App Runner services are not connected by default to a VPC. In order 
 you can configure the [`network`](../manifest/rd-web-service.en.md#network) field in the manifest.
 
 #### Static Site
-An Amazon CloudFront distribution-served, S3-hosted static website. Copilot uploads your static assets into a new S3 bucket configured for static website hosting.
-Caching with the [CloudFront Content Delivery Network (CDN)](../developing/content-delivery.en.md) optimizes cost and speed. With each redeployment, the previous cache is invalidated.
+An Amazon CloudFront distribution-served, S3-hosted static website. Copilot uploads your static assets into a new S3 bucket configured for static website hosting. Caching with the [CloudFront Content Delivery Network (CDN)](../developing/content-delivery.en.md) optimizes cost and speed. With each redeployment, the previous cache is invalidated.
 
 #### Load Balanced Web Service
 An ECS Service running tasks on Fargate with an Application Load Balancer, a Network Load Balancer or both, as ingress. 

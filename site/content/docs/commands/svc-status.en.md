@@ -4,7 +4,7 @@ $ copilot svc status
 ```
 
 ## What does it do?
-`copilot svc status` shows the health status of a deployed service. Depending on the service type, output may include service, task, and associated alarm statuses, logs, or S3 bucket data. 
+`copilot svc status` shows the health status of a deployed service. Depending on the service type, output may include service, task, and associated alarm statuses; logs; or S3 bucket data. 
 
 ## What are the flags?
 ```
