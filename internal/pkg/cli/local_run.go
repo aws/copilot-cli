@@ -30,7 +30,7 @@ type localRunOpts struct {
 }
 
 func newLocalRunOpts(vars localRunVars) (*localRunOpts, error) {
-	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("local Run"))
+	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("local run"))
 	defaultSess, err := sessProvider.Default()
 	if err != nil {
 		return nil, err
@@ -60,10 +60,10 @@ func (o *localRunOpts) Validate() error {
 }
 
 func (o *localRunOpts) Ask() error {
-	if err := o.askEnvName(); err != nil {
+	if err := o.askWorkloadName(); err != nil {
 		return err
 	}
-	if err := o.askWorkloadName(); err != nil {
+	if err := o.askEnvName(); err != nil {
 		return err
 	}
 	return nil
@@ -75,6 +75,7 @@ func (o *localRunOpts) Execute() error {
 
 	return nil
 }
+
 func (o *localRunOpts) askEnvName() error {
 	if o.envName != "" {
 		return nil
@@ -87,12 +88,13 @@ func (o *localRunOpts) askEnvName() error {
 	o.envName = name
 	return nil
 }
+
 func (o *localRunOpts) askWorkloadName() error {
 	if o.name != "" {
 		return nil
 	}
 
-	name, err := o.sel.Workload("Select a workload from your workspace", "")
+	name, err := o.sel.Workload("Select a workload from your workspace that you want to run locally", "")
 	if err != nil {
 		return fmt.Errorf("select Workload: %w", err)
 	}
@@ -118,6 +120,5 @@ func BuildLocalRunCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, "", workloadFlagDescription)
 	cmd.Flags().StringVarP(&vars.envName, envFlag, envFlagShort, "", envFlagDescription)
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
-
 	return cmd
 }

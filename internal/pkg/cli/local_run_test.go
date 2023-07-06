@@ -53,8 +53,8 @@ func TestLocalRunOpts_Ask(t *testing.T) {
 		"prompts for environment name and workload names": {
 			inputAppName: testAppName,
 			setupMocks: func(m *mocks.MockwsSelector) {
+				m.EXPECT().Workload("Select a workload from your workspace that you want to run locally", "").Return("testWkld", nil)
 				m.EXPECT().Environment("Select an environment", "", "testApp").Return("testEnv", nil)
-				m.EXPECT().Workload("Select a workload from your workspace", "").Return("testWkld", nil)
 			},
 
 			wantedWkldName: testWkldName,
@@ -65,8 +65,8 @@ func TestLocalRunOpts_Ask(t *testing.T) {
 			inputEnvName:  testEnvName,
 			inputWkldName: testWkldName,
 			setupMocks: func(m *mocks.MockwsSelector) {
-				m.EXPECT().Environment(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 				m.EXPECT().Workload(gomock.Any(), gomock.Any()).Times(0)
+				m.EXPECT().Environment(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
 
 			wantedWkldName: testWkldName,
