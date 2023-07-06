@@ -70,7 +70,7 @@ type deployPipelineVars struct {
 	showDiff         bool
 }
 
-type NewOverrideOpts struct {
+type newOverrideOpts struct {
 	path       string
 	appName    string
 	envName    string
@@ -283,7 +283,7 @@ func (o *deployPipelineOpts) Execute() error {
 		PermissionsBoundary: o.app.PermissionsBoundary,
 	}
 
-	overrideOpts := NewOverrideOpts{
+	overrideOpts := newOverrideOpts{
 		path:       o.ws.PipelineOverridesPath(o.pipeline.Name),
 		appName:    o.appName,
 		envName:    "",
