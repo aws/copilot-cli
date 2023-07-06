@@ -719,7 +719,7 @@ Rollback Alarms
   alarmName1  test         alarm description 1
   alarmName2  prod         alarm description 2
 
-Internal Service Endpoint
+Internal Service Endpoints
 
   Endpoint                              Environment  Type
   --------                              -----------  ----

@@ -309,7 +309,7 @@ func (w *webSvcDesc) HumanString() string {
 		fmt.Fprintf(writer, "  %s\t%s\n", route.Environment, route.URL)
 	}
 	if len(w.ServiceConnect) > 0 || len(w.ServiceDiscovery) > 0 {
-		fmt.Fprint(writer, color.Bold.Sprint("\nInternal Service Endpoint\n\n"))
+		fmt.Fprint(writer, color.Bold.Sprint("\nInternal Service Endpoints\n\n"))
 		writer.Flush()
 		endpoints := serviceEndpoints{
 			discoveries: w.ServiceDiscovery,

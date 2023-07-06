@@ -37,8 +37,8 @@ Unlike ECS, App Runner services are not connected by default to a VPC. In order 
 you can configure the [`network`](../manifest/rd-web-service.en.md#network) field in the manifest.
 
 #### Static Site
-An Amazon CloudFront distribution-served, S3-hosted static website.
-Caching with the [CloudFront Content Delivery Network (CDN)](../developing/content-delivery.en.md) optimizes cost and speed. Copilot uploads your static assets into a new S3 bucket configured for static website hosting.
+An Amazon CloudFront distribution-served, S3-hosted static website. Copilot uploads your static assets into a new S3 bucket configured for static website hosting.
+Caching with the [CloudFront Content Delivery Network (CDN)](../developing/content-delivery.en.md) optimizes cost and speed. With each redeployment, the previous cache is invalidated.
 
 #### Load Balanced Web Service
 An ECS Service running tasks on Fargate with an Application Load Balancer, a Network Load Balancer or both, as ingress. 
@@ -139,7 +139,7 @@ Now that we've got a service up and running, we can check on it using Copilot. B
 
 ### What's in your service?
 
-Running `copilot svc show` will show you a summary of your service. Here's an example of the output you might see for a load balanced web application. This output includes the configuration of your service for each environment, all the endpoints for your service, and the environment variables passed into your service. You can also provide an optional `--resources` flag to see all AWS resources associated with your service.
+Running `copilot svc show` will show you a summary of your service. Here's an example of the output you might see for a __Load Balanced Web Service__. This output includes the configuration of your service for each environment, any rollback alarms you have configured, all the endpoints for your service, and the environment variables and secrets passed into your service. You can also provide an optional `--resources` flag to see all AWS resources associated with your service.
 
 ```console
 $ copilot svc show
@@ -152,27 +152,47 @@ About
 Configurations
 
   Environment       Tasks               CPU (vCPU)          Memory (MiB)        Port
+  -----------       -----               ----------          ------------        ----
   test              1                   0.25                512                 80
 
+Rollback Alarms
+
+  Name                              Environment  Description
+  ----                              -----------  -----------
+  my-app-test-front-end-CopilotRol  test         Roll back ECS service if CPU utilizat
+  lbackCPUAlarm                                  ion is greater than or equal to 50% t
+                                                 wice in 3 minutes.
+       
 Routes
 
   Environment       URL
+  -----------       ---
   test              http://my-ap-Publi-1RV8QEBNTEQCW-1762184596.ca-central-1.elb.amazonaws.com
 
-Service Discovery
+Internal Service Endpoints
 
-  Environment       Namespace
-  test              front-end.test.my-app.local:8080
-
+  Endpoint                          Environment  Type
+  --------                          -----------  ----
+  front-end:80                      test         Service Connect     
+  front-end.test.my-app.local:8080  test         Service Discovery
+  
 Variables
 
-  Name                                Environment         Value
-  COPILOT_APPLICATION_NAME            test                my-app
-  COPILOT_ENVIRONMENT_NAME            test                test
-  COPILOT_LB_DNS                      test                my-ap-Publi-1RV8QEBNTEQCW-1762184596.ca-central-1.elb.amazonaws.com
-  COPILOT_SERVICE_DISCOVERY_ENDPOINT  test                test.my-app.local
-  COPILOT_SERVICE_NAME                test                front-end
+  Name                                Container  Environment  Value
+  ----                                ---------  -----------  -----
+  COPILOT_APPLICATION_NAME            front-end  test         my-app
+  COPILOT_ENVIRONMENT_NAME              "        test         test
+  COPILOT_LB_DNS                        "        test         my-ap-Publi-1RV8QEBNTEQCW-1762184596.ca-central-1.elb.amazonaws.com
+  COPILOT_SERVICE_DISCOVERY_ENDPOINT    "        test         test.my-app.local
+  COPILOT_SERVICE_NAME                  "        test         front-end
+  
+Secrets
+
+  Name                   Container  Environment  Value
+  ----                   ---------  -----------  -----
+  GITHUB_WEBHOOK_SECRET  front-end  test         parameter/GH_WEBHOOK_SECRET
 ```
+The output of `copilot svc show` varies depending on your service type. For example, the summary for a __Static Site__ includes a tree representation of your S3 bucket's contents.
 
 ### What's your service status?
 
@@ -181,25 +201,36 @@ Often it's handy to be able to check on the status of your service. Are all the 
 
 ```console
 $ copilot svc status
-Service Status
+Service: front-end
+Task Summary
 
-  ACTIVE 1 / 1 running tasks (0 pending)
+  Running   ██████████  1/1 desired tasks are running
+  Health    ██████████  1/1 passes HTTP health checks
+            ██████████  1/1 passes container health checks
 
-Last Deployment
+Tasks
 
-  Updated At        12 minutes ago
-  Task Definition   arn:aws:ecs:ca-central-1:693652174720:task-definition/my-app-test-front-end:1
-
-Task Status
-
-  ID                Image Digest        Last Status         Health Status       Started At          Stopped At
-  37236ed3          da3cfcdd            RUNNING             HEALTHY             12 minutes ago      -
+  ID        Status      Revision    Started At     Cont. Health  HTTP Health  
+  --        ------      --------    ----------     ------------  -----------
+  37236ed3  RUNNING     9           12 minutes ago HEALTHY       HEALTHY
 
 Alarms
 
-  Name              Health              Last Updated        Reason
-  CPU-Utilization   OK                  5 minutes ago       -
+  Name                            Type          Condition                       Last Updated    Health
+  ----                            ----          ---------                       ------------    ------
+  TargetTracking-service/my-app-  Auto Scaling  CPUUtilization > 70.00 for 3 d  5 minutes ago   OK
+  test-Cluster-0jTKWTNBKviF/my-a                atapoints within 3 minutes                      
+  pp-test-front-end-Service-r5h6
+  hMZVbWkz-AlarmHigh-f0f31c7b-74
+  61-415c-9dfd-81b983cbe0df                                                                                          
+                                                                                                
+  TargetTracking-service/my-app-  Auto Scaling  CPUUtilization < 63.00 for 15   5 minutes ago   ALARM
+  test-Cluster-0jTKWTNBKviF/my-a                datapoints within 15 minutes                    
+  pp-test-front-end-Service-r5h6
+  hMZVbWkz-AlarmLow-698f9f17-6c0
+  c-4db1-8f1d-e23de97f5459
 ```
+Just like with `copilot svc show`, the output of `copilot svc status` varies with service type. For instance, a __Request-Driven Web Service__'s output includes system logs, and a __Static Site__'s output includes the S3 bucket's object count and size. 
 
 ### Where are my service logs?
 
@@ -213,3 +244,5 @@ $ copilot svc logs
 37236ed 10.0.0.30 🚑 Health-check ok!
 37236ed 10.0.0.30 🚑 Health-check ok!
 ```
+!!! info  
+    Logs are not available for Static Site services.
