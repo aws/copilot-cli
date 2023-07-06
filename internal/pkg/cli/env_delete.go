@@ -192,9 +192,23 @@ func (o *deleteEnvOpts) Execute() error {
 		return err
 	}
 	o.prog.Stop(log.Ssuccessf(fmtRetainEnvRolesComplete, o.name))
+
 	if err := o.deleteStack(); err != nil {
+		o.prog.Stop(log.Serrorf("Failed to delete resources for the %q environment\n"))
 		return err
 	}
+
+	envInfo, err := o.getEnvConfig()
+	if err != nil {
+		return err
+	}
+	// Un-delegate DNS and optionally delete stackset instance.
+	o.prog.Start(fmt.Sprintf("Cleaning up app-level resources and permissions\n"))
+	if err := o.cleanUpAppResources(); err != nil {
+		o.prog.Stop(log.Serrorf("Failed to remove ECR Repos and S3 bucket from region %s\n", envInfo.Region))
+		return err
+	}
+	o.prog.Stop(log.Ssuccessf("Cleaned up app-level resources for the %q environment\n", o.name))
 
 	o.prog.Start(fmt.Sprintf(fmtDeleteEnvStart, o.name, o.appName))
 	if err := o.tryDeleteRoles(); err != nil {
