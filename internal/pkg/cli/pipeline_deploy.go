@@ -286,7 +286,6 @@ func (o *deployPipelineOpts) Execute() error {
 	overrideOpts := newOverrideOpts{
 		path:       o.ws.PipelineOverridesPath(o.pipeline.Name),
 		appName:    o.appName,
-		envName:    "",
 		fileSystem: afero.NewOsFs(),
 		sess:       o.sessProvider,
 	}
