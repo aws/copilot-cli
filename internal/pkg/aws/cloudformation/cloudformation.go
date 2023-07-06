@@ -366,6 +366,16 @@ func (c *CloudFormation) ListStacksWithTags(tags map[string]string) ([]StackDesc
 	return summaries, nil
 }
 
+func (c *CloudFormation) CancelUpdateStack(stackName string) error {
+	_, err := c.client.CancelUpdateStack(&cloudformation.CancelUpdateStackInput{
+		StackName: aws.String(stackName),
+	})
+	if err != nil {
+		return fmt.Errorf("cancel update stack: %w", err)
+	}
+	return nil
+}
+
 func (c *CloudFormation) create(stack *Stack) (string, error) {
 	cs, err := newCreateChangeSet(c.client, stack.Name)
 	if err != nil {

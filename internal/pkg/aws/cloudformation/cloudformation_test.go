@@ -1476,6 +1476,55 @@ func TestCloudFormation_ListStacksWithTags(t *testing.T) {
 	}
 }
 
+func TestCloudformation_CancelUpdateStack(t *testing.T) {
+	testCases := map[string]struct {
+		createMock func(ctrl *gomock.Controller) client
+
+		wantedErr error
+	}{
+		"return a wrapped error if fail to cancel stack update": {
+			createMock: func(ctrl *gomock.Controller) client {
+				m := mocks.NewMockclient(ctrl)
+				m.EXPECT().CancelUpdateStack(&cloudformation.CancelUpdateStackInput{
+					StackName: aws.String("phonetool-test-api"),
+				}).Return(nil, errors.New("some error"))
+				return m
+			},
+			wantedErr: fmt.Errorf("cancel update stack: some error"),
+		},
+		"success": {
+			createMock: func(ctrl *gomock.Controller) client {
+				m := mocks.NewMockclient(ctrl)
+				m.EXPECT().CancelUpdateStack(&cloudformation.CancelUpdateStackInput{
+					StackName: aws.String("phonetool-test-api"),
+				}).Return(&cloudformation.CancelUpdateStackOutput{}, nil)
+				return m
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			c := CloudFormation{
+				client: tc.createMock(ctrl),
+			}
+
+			// WHEN
+			err := c.CancelUpdateStack("phonetool-test-api")
+
+			// THEN
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
 func addCreateDeployCalls(m *mocks.Mockclient) {
 	addDeployCalls(m, cloudformation.ChangeSetTypeCreate)
 }
