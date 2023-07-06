@@ -70,6 +70,14 @@ type deployPipelineVars struct {
 	showDiff         bool
 }
 
+type NewOverrideOpts struct {
+	path       string
+	appName    string
+	envName    string
+	fileSystem afero.Fs
+	sess       *sessions.Provider
+}
+
 type deployPipelineOpts struct {
 	deployPipelineVars
 
@@ -262,6 +270,7 @@ func (o *deployPipelineOpts) Execute() error {
 	if err = build.Init(pipeline.Build, filepath.Dir(relPath)); err != nil {
 		return err
 	}
+
 	deployPipelineInput := &deploy.CreatePipelineInput{
 		AppName:             o.appName,
 		Name:                pipeline.Name,
@@ -274,7 +283,15 @@ func (o *deployPipelineOpts) Execute() error {
 		PermissionsBoundary: o.app.PermissionsBoundary,
 	}
 
-	overrider, err := clideploy.NewOverrider(o.ws.PipelineOverridesPath(o.pipeline.Name), o.appName, "", afero.NewOsFs(), o.sessProvider)
+	overrideOpts := NewOverrideOpts{
+		path:       o.ws.PipelineOverridesPath(o.pipeline.Name),
+		appName:    o.appName,
+		envName:    "",
+		fileSystem: afero.NewOsFs(),
+		sess:       o.sessProvider,
+	}
+
+	overrider, err := clideploy.NewOverrider(overrideOpts.path, overrideOpts.appName, overrideOpts.envName, overrideOpts.fileSystem, overrideOpts.sess)
 	if err != nil {
 		return err
 	}
