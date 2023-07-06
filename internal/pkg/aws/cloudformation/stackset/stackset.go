@@ -112,7 +112,7 @@ func (ss *StackSet) UpdateAndWait(name, template string, opts ...CreateOrUpdateO
 	return ss.WaitForOperation(name, id)
 }
 
-func (ss *StackSet) getStackSetUniqueAccountsAndRegions(name string) ([]InstanceSummary, error) {
+func (ss *StackSet) getInstanceSummaries(name string) ([]InstanceSummary, error) {
 	summaries, err := ss.InstanceSummaries(name)
 	if err != nil {
 		// If the stack set doesn't exist - just move on.
@@ -132,24 +132,11 @@ func (ss *StackSet) getStackSetUniqueAccountsAndRegions(name string) ([]Instance
 	return summaries, nil
 }
 
+// DeleteInstance deletes the stackset instance for the stackset with the given name in the given account
+// and region and returns the operation ID.
+// If there is no instance in the given account and region, this function will return an operation ID
+// but the API call will take no action.
 func (ss *StackSet) DeleteInstance(name, account, region string) (string, error) {
-	summaries, err := ss.getStackSetUniqueAccountsAndRegions(name)
-	if err != nil {
-		return "", err
-	}
-	accountAndRegionPresentInInstances := false
-	for _, summary := range summaries {
-		if summary.Region == region && summary.Account == account {
-			accountAndRegionPresentInInstances = true
-			break
-		}
-	}
-
-	// No-op for idempotency if the account and region is not found in the deployed instances.
-	if !accountAndRegionPresentInInstances {
-		return "", nil
-	}
-
 	out, err := ss.client.DeleteStackInstances(&cloudformation.DeleteStackInstancesInput{
 		StackSetName: aws.String(name),
 		Accounts:     aws.StringSlice([]string{account}),
@@ -168,7 +155,7 @@ func (ss *StackSet) DeleteInstance(name, account, region string) (string, error)
 // If the stack set does not have any instances, then return [ErrStackSetInstancesNotFound].
 // Both errors should satisfy [IsEmptyStackSetErr], otherwise it's an unexpected error.
 func (ss *StackSet) DeleteAllInstances(name string) (string, error) {
-	summaries, err := ss.getStackSetUniqueAccountsAndRegions(name)
+	summaries, err := ss.getInstanceSummaries(name)
 	if err != nil {
 		return "", err
 	}

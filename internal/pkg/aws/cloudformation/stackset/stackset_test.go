@@ -409,77 +409,21 @@ func TestStackSet_DeleteInstance(t *testing.T) {
 		wantedOpID   string
 		wantedError  error
 	}{
-		"return ErrStackSetNotFound if the stack set does not exist": {
-			mockClient: func(t *testing.T, ctrl *gomock.Controller) api {
-				m := mocks.NewMockapi(ctrl)
-				m.EXPECT().ListStackInstances(gomock.Any()).Return(nil, awserr.New(cloudformation.ErrCodeStackSetNotFoundException, "", nil))
-				return m
-			},
-			wantedError: &ErrStackSetNotFound{name: testName},
-		},
-		"returns ErrStackSetInstancesNotFound if there are no stack set instances": {
-			mockClient: func(t *testing.T, ctrl *gomock.Controller) api {
-				m := mocks.NewMockapi(ctrl)
-				m.EXPECT().ListStackInstances(gomock.Any()).Return(&cloudformation.ListStackInstancesOutput{
-					Summaries: []*cloudformation.StackInstanceSummary{},
-				}, nil)
-				return m
-			},
-			wantedError: &ErrStackSetInstancesNotFound{name: testName},
-		},
+
 		"returns if the account and region aren't found in the list of instances": {
 			mockClient: func(t *testing.T, ctrl *gomock.Controller) api {
 				m := mocks.NewMockapi(ctrl)
-				m.EXPECT().ListStackInstances(gomock.Any()).Return(&cloudformation.ListStackInstancesOutput{
-					Summaries: []*cloudformation.StackInstanceSummary{
-						{
-							Account: aws.String("1111"),
-							Region:  aws.String("us-east-1"),
-						},
-					},
-				}, nil)
+				m.EXPECT().DeleteStackInstances(gomock.Any()).Return(nil, fmt.Errorf("some error"))
 				return m
 			},
 			inputRegion:  "us-west-1",
 			inputAccount: "1111",
-			wantedOpID:   "",
+			wantedError:  errors.New("delete stack instances in region us-west-1 for account 1111 for stackset stackset: some error"),
 		},
-		"returns if the account and region are totally disjoint from list": {
-			mockClient: func(t *testing.T, ctrl *gomock.Controller) api {
-				m := mocks.NewMockapi(ctrl)
-				m.EXPECT().ListStackInstances(gomock.Any()).Return(&cloudformation.ListStackInstancesOutput{
-					Summaries: []*cloudformation.StackInstanceSummary{
-						{
-							Account: aws.String("1111"),
-							Region:  aws.String("us-east-1"),
-						},
-					},
-				}, nil)
-				return m
-			},
-			inputRegion:  "us-west-1",
-			inputAccount: "2222",
-			wantedOpID:   "",
-		},
+
 		"successfully deletes stack instance and returns the operation ID": {
 			mockClient: func(t *testing.T, ctrl *gomock.Controller) api {
 				m := mocks.NewMockapi(ctrl)
-				m.EXPECT().ListStackInstances(gomock.Any()).Return(&cloudformation.ListStackInstancesOutput{
-					Summaries: []*cloudformation.StackInstanceSummary{
-						{
-							Account: aws.String("1111"),
-							Region:  aws.String("us-east-1"),
-						},
-						{
-							Account: aws.String("2222"),
-							Region:  aws.String("us-east-1"),
-						},
-						{
-							Account: aws.String("1111"),
-							Region:  aws.String("us-west-2"),
-						},
-					},
-				}, nil)
 				m.EXPECT().DeleteStackInstances(gomock.Any()).
 					DoAndReturn(func(in *cloudformation.DeleteStackInstancesInput) (*cloudformation.DeleteStackInstancesOutput, error) {
 						require.Equal(t, testName, aws.StringValue(in.StackSetName))
