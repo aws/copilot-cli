@@ -55,6 +55,7 @@ func Test_App_Infrastructure(t *testing.T) {
 	deployer := cloudformation.New(sess, cloudformation.WithProgressTracker(os.Stderr))
 	cfClient := awsCF.New(sess)
 	require.NoError(t, err)
+	version.Version = "v1.28.0"
 
 	t.Run("Deploys Application Admin Roles to CloudFormation and Creates StackSet", func(t *testing.T) {
 		app := config.Application{Name: randStringBytes(10), AccountID: callerInfo.Account}
@@ -388,6 +389,7 @@ func Test_App_Infrastructure(t *testing.T) {
 // is failing to be spun up because you've reached some limits, try
 // switching your default region by running aws configure.
 func Test_Environment_Deployment_Integration(t *testing.T) {
+	version.Version = "v1.28.0"
 	sess, err := testSession(nil)
 	require.NoError(t, err)
 	deployer := cloudformation.New(sess, cloudformation.WithProgressTracker(os.Stderr))
@@ -408,7 +410,7 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 			Name:                appName,
 			AccountPrincipalARN: id.RootUserARN,
 		},
-		Version: deploy.LatestEnvTemplateVersion,
+		Version: version.LatestTemplateVersion(),
 	}
 	envStackName := fmt.Sprintf("%s-%s", environmentToDeploy.App.Name, environmentToDeploy.Name)
 

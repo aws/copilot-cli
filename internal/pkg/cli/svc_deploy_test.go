@@ -10,10 +10,10 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/template"
+	"github.com/aws/copilot-cli/internal/pkg/version"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 
@@ -504,7 +504,7 @@ func Test_isManifestCompatibleWithEnvironment(t *testing.T) {
 		},
 		"error if env is not deployed": {
 			setupMock: func(m *checkEnvironmentCompatibilityMocks) {
-				m.versionFeatureGetter.EXPECT().Version().Return(deploy.EnvTemplateVersionBootstrap, nil)
+				m.versionFeatureGetter.EXPECT().Version().Return(version.EnvTemplateBootstrap, nil)
 			},
 			wantedError: errors.New("cannot deploy a service to an undeployed environment. Please run \"copilot env deploy --name mockEnv\" to deploy the environment first"),
 		},

@@ -60,7 +60,7 @@ func TestPackageEnvOpts_Ask(t *testing.T) {
 		"should return a wrapped error if environment name doesn't exist in SSM": {
 			in: packageEnvVars{
 				appName: "phonetool",
-				envName: "test",
+				name:    "test",
 			},
 			mockedCmd: func(ctrl *gomock.Controller, vars packageEnvVars) *packageEnvOpts {
 				cfgStore := mocks.NewMockstore(ctrl)
@@ -144,7 +144,7 @@ func TestPackageEnvOpts_Execute(t *testing.T) {
 				ws.EXPECT().ReadEnvironmentManifest(gomock.Any()).Return(nil, errors.New("some error"))
 				return &packageEnvOpts{
 					packageEnvVars: packageEnvVars{
-						envName: "test",
+						name: "test",
 					},
 					ws: ws,
 					newInterpolator: func(_, _ string) interpolator {
@@ -164,7 +164,7 @@ func TestPackageEnvOpts_Execute(t *testing.T) {
 
 				return &packageEnvOpts{
 					packageEnvVars: packageEnvVars{
-						envName: "test",
+						name: "test",
 					},
 					ws: ws,
 					newInterpolator: func(_, _ string) interpolator {
@@ -186,7 +186,7 @@ func TestPackageEnvOpts_Execute(t *testing.T) {
 
 				return &packageEnvOpts{
 					packageEnvVars: packageEnvVars{
-						envName: "test",
+						name: "test",
 					},
 					ws:     ws,
 					caller: caller,
@@ -211,7 +211,7 @@ func TestPackageEnvOpts_Execute(t *testing.T) {
 
 				return &packageEnvOpts{
 					packageEnvVars: packageEnvVars{
-						envName: "test",
+						name: "test",
 					},
 					ws:     ws,
 					caller: caller,
@@ -240,7 +240,7 @@ func TestPackageEnvOpts_Execute(t *testing.T) {
 
 				return &packageEnvOpts{
 					packageEnvVars: packageEnvVars{
-						envName:      "test",
+						name:         "test",
 						uploadAssets: true,
 					},
 					ws:     ws,
@@ -270,7 +270,7 @@ func TestPackageEnvOpts_Execute(t *testing.T) {
 
 				return &packageEnvOpts{
 					packageEnvVars: packageEnvVars{
-						envName: "test",
+						name: "test",
 					},
 					ws:     ws,
 					caller: caller,
@@ -300,7 +300,7 @@ func TestPackageEnvOpts_Execute(t *testing.T) {
 				deployer.EXPECT().DeployDiff(gomock.Any()).Return("", errors.New("some error"))
 				return &packageEnvOpts{
 					packageEnvVars: packageEnvVars{
-						envName:  "test",
+						name:     "test",
 						showDiff: true,
 					},
 					ws:     ws,
@@ -335,7 +335,7 @@ func TestPackageEnvOpts_Execute(t *testing.T) {
 				packager.EXPECT().AddonsTemplate().Return("", errors.New("some error"))
 				return &packageEnvOpts{
 					packageEnvVars: packageEnvVars{
-						envName: "test",
+						name: "test",
 					},
 					ws:     ws,
 					caller: caller,
@@ -382,7 +382,7 @@ func TestPackageEnvOpts_Execute(t *testing.T) {
 				fs := afero.NewMemMapFs()
 				return &packageEnvOpts{
 					packageEnvVars: packageEnvVars{
-						envName:      "test",
+						name:         "test",
 						uploadAssets: true,
 					},
 					ws:           ws,
@@ -418,7 +418,7 @@ func TestPackageEnvOpts_Execute(t *testing.T) {
 				deployer.EXPECT().DeployDiff(gomock.Any()).Return("mock diff", nil)
 				return &packageEnvOpts{
 					packageEnvVars: packageEnvVars{
-						envName:  "test",
+						name:     "test",
 						showDiff: true,
 					},
 					ws:     ws,
@@ -469,7 +469,7 @@ func TestPackageEnvOpts_Execute(t *testing.T) {
 
 				return &packageEnvOpts{
 					packageEnvVars: packageEnvVars{
-						envName:   "test",
+						name:      "test",
 						outputDir: "infrastructure",
 					},
 					ws:     ws,
@@ -536,7 +536,7 @@ func TestPackageEnvOpts_Execute(t *testing.T) {
 
 				return &packageEnvOpts{
 					packageEnvVars: packageEnvVars{
-						envName:   "test",
+						name:      "test",
 						outputDir: "infrastructure",
 					},
 					ws:     ws,
@@ -582,6 +582,7 @@ func TestPackageEnvOpts_Execute(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			cmd := tc.mockedCmd(ctrl)
+			cmd.allowEnvDowngrade = true // downgrade logic is tested in env deploy
 
 			// WHEN
 			actual := cmd.Execute()

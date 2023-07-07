@@ -114,6 +114,10 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 	id := identity.New(defaultSess)
 	deployer := cloudformation.New(defaultSess, cloudformation.WithProgressTracker(os.Stderr))
 	iamClient := iam.New(defaultSess)
+	appVersionGetter, err := describe.NewAppDescriber(vars.appName)
+	if err != nil {
+		return nil, err
+	}
 	initAppCmd := &initAppOpts{
 		initAppVars: initAppVars{
 			name: vars.appName,
@@ -141,14 +145,15 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 			name:         defaultEnvironmentName,
 			isProduction: false,
 		},
-		store:           configStore,
-		appDeployer:     deployer,
-		prog:            spin,
-		prompt:          prompt,
-		identity:        id,
-		appCFN:          cloudformation.New(defaultSess, cloudformation.WithProgressTracker(os.Stderr)),
-		sess:            defaultSess,
-		templateVersion: version.LatestTemplateVersion(),
+		store:            configStore,
+		appDeployer:      deployer,
+		prog:             spin,
+		prompt:           prompt,
+		identity:         id,
+		appVersionGetter: appVersionGetter,
+		appCFN:           cloudformation.New(defaultSess, cloudformation.WithProgressTracker(os.Stderr)),
+		sess:             defaultSess,
+		templateVersion:  version.LatestTemplateVersion(),
 	}
 	deployEnvCmd := &deployEnvOpts{
 		deployEnvVars: deployEnvVars{
@@ -160,6 +165,14 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		identity:        id,
 		fs:              fs,
 		newInterpolator: newManifestInterpolator,
+		newEnvVersionGetter: func(appName, envName string) (versionGetter, error) {
+			return describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
+				App:         appName,
+				Env:         envName,
+				ConfigStore: configStore,
+			})
+		},
+		templateVersion: version.LatestTemplateVersion(),
 	}
 	deploySvcCmd := &deploySvcOpts{
 		deployWkldVars: deployWkldVars{
@@ -258,16 +271,20 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 				opts := initJobOpts{
 					initJobVars: jobVars,
 
-					fs:                fs,
-					store:             configStore,
-					dockerfileSel:     dfSel,
-					scheduleSelector:  selector.NewStaticSelector(prompt),
-					prompt:            prompt,
+					fs:               fs,
+					store:            configStore,
+					dockerfileSel:    dfSel,
+					scheduleSelector: selector.NewStaticSelector(prompt),
+					prompt:           prompt,
+					newAppVersionGetter: func(appName string) (versionGetter, error) {
+						return describe.NewAppDescriber(appName)
+					},
 					dockerEngine:      dockerengine.New(cmd),
 					wsPendingCreation: true,
 					initParser: func(s string) dockerfileParser {
 						return dockerfile.New(fs, s)
 					},
+					templateVersion: version.LatestTemplateVersion(),
 					initEnvDescriber: func(appName string, envName string) (envDescriber, error) {
 						envDescriber, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
 							App:         appName,

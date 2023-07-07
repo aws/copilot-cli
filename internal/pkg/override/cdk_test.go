@@ -224,7 +224,7 @@ func TestScaffoldWithCDK(t *testing.T) {
 				Type:      "AWS::ECS::Service",
 				LogicalID: "Service",
 			},
-		})
+		}, true)
 
 		// THEN
 		require.NoError(t, err)
@@ -249,7 +249,7 @@ func TestScaffoldWithCDK(t *testing.T) {
 		_ = afero.WriteFile(fs, filepath.Join(dir, "cdk.json"), []byte("content"), 0644)
 
 		// WHEN
-		err := ScaffoldWithCDK(fs, dir, nil)
+		err := ScaffoldWithCDK(fs, dir, nil, true)
 
 		// THEN
 		require.EqualError(t, err, fmt.Sprintf("directory %q is not empty", dir))
