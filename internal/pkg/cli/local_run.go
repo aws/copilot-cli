@@ -59,8 +59,7 @@ func (o *localRunOpts) Validate() error {
 	if o.appName == "" {
 		return errNoAppInWorkspace
 	}
-	_, err := o.store.GetApplication(o.appName)
-	if err != nil {
+	if _, err := o.store.GetApplication(o.appName); err != nil {
 		return fmt.Errorf("get application %s: %w", o.appName, err)
 	}
 	return nil
@@ -117,8 +116,12 @@ func (o *localRunOpts) validateOrAskWorkloadName() error {
 }
 
 func (o *localRunOpts) validateWkldName() error {
-	if _, err := o.store.GetWorkload(o.appName, o.wkldName); err != nil {
-		return fmt.Errorf("get workload name %s : %w", o.wkldName, err)
+	names, err := o.ws.ListWorkloads()
+	if err != nil {
+		return fmt.Errorf("list workloads in the workspace %s : %w", o.wkldName, err)
+	}
+	if !contains(o.wkldName, names) {
+		return fmt.Errorf("service %q does not exist in the workspace", o.wkldName)
 	}
 	return nil
 }
