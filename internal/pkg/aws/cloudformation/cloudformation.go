@@ -373,7 +373,7 @@ func (c *CloudFormation) CancelUpdateStack(stackName string) error {
 		StackName: aws.String(stackName),
 	})
 	if err != nil {
-		if !stackDoesNotExist(err) && !stackNotInUpdateProgress(err) {
+		if !stackDoesNotExist(err) && !cancelUpdateStackNotInUpdateProgress(err) {
 			return fmt.Errorf("cancel update stack: %w", err)
 		}
 	}

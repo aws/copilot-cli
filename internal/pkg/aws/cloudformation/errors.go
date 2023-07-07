@@ -81,8 +81,9 @@ func stackDoesNotExist(err error) bool {
 	return false
 }
 
-// stackNotInUpdateProgress returns true if error is cannot callCancelUpdateStack which is not in UPDATE_IN_PROGRESS state.
-func stackNotInUpdateProgress(err error) bool {
+// cancelUpdateStackNotInUpdateProgress returns true if the underlying error is CancelUpdateStack
+// cannot be called for a stack that is not in UPDATE_IN_PROGRESS state.
+func cancelUpdateStackNotInUpdateProgress(err error) bool {
 	if aerr, ok := err.(awserr.Error); ok {
 		switch aerr.Code() {
 		case "ValidationError":
