@@ -27,7 +27,8 @@ const (
 var (
 	mockStack = NewStack("id", "template")
 
-	errDoesNotExist = awserr.New("ValidationError", "does not exist", nil)
+	errDoesNotExist             = awserr.New("ValidationError", "does not exist", nil)
+	errStackNotInUpdateProgress = awserr.New("ValidationError", "CancelUpdateStack cannot be called from current stack status", nil)
 )
 
 func TestCloudFormation_Create(t *testing.T) {
@@ -1491,6 +1492,24 @@ func TestCloudformation_CancelUpdateStack(t *testing.T) {
 				return m
 			},
 			wantedErr: fmt.Errorf("cancel update stack: some error"),
+		},
+		"return nil if the stack is not found": {
+			createMock: func(ctrl *gomock.Controller) client {
+				m := mocks.NewMockclient(ctrl)
+				m.EXPECT().CancelUpdateStack(&cloudformation.CancelUpdateStackInput{
+					StackName: aws.String("phonetool-test-api"),
+				}).Return(nil, errDoesNotExist)
+				return m
+			},
+		},
+		"return nil if the stack is not in update progress state": {
+			createMock: func(ctrl *gomock.Controller) client {
+				m := mocks.NewMockclient(ctrl)
+				m.EXPECT().CancelUpdateStack(&cloudformation.CancelUpdateStackInput{
+					StackName: aws.String("phonetool-test-api"),
+				}).Return(nil, errStackNotInUpdateProgress)
+				return m
+			},
 		},
 		"success": {
 			createMock: func(ctrl *gomock.Controller) client {
