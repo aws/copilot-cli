@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/template"
@@ -149,6 +150,7 @@ func TestSvcDeployOpts_Execute(t *testing.T) {
 		mockNewerVersion = "v1.30.0"
 	)
 	mockError := errors.New("some error")
+	mockErrStackNotFound := cloudformation.ErrStackNotFound{}
 	testCases := map[string]struct {
 		inShowDiff       bool
 		inSkipDiffPrompt bool
@@ -441,6 +443,23 @@ func TestSvcDeployOpts_Execute(t *testing.T) {
 			inAllowDowngrade: true,
 			mock: func(m *deployMocks) {
 				m.mockVersionGetter.EXPECT().Version().Times(0)
+				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte(""), nil)
+				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
+				m.mockMft = &mockWorkloadMft{
+					mockRequiredEnvironmentFeatures: func() []string {
+						return []string{"mockFeature1"}
+					},
+				}
+				m.mockEnvFeaturesDescriber.EXPECT().Version().Return("v1.mock", nil)
+				m.mockEnvFeaturesDescriber.EXPECT().AvailableFeatures().Return([]string{"mockFeature1", "mockFeature2"}, nil)
+				m.mockDeployer.EXPECT().UploadArtifacts().Return(&clideploy.UploadArtifactsOutput{}, nil)
+				m.mockDeployer.EXPECT().DeployWorkload(gomock.Any()).Return(nil, nil)
+				m.mockDeployer.EXPECT().IsServiceAvailableInRegion("").Return(false, nil)
+			},
+		},
+		"success for new deployment": {
+			mock: func(m *deployMocks) {
+				m.mockVersionGetter.EXPECT().Version().Return("", &mockErrStackNotFound)
 				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte(""), nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockMft = &mockWorkloadMft{

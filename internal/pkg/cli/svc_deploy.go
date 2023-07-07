@@ -14,6 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/tags"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
@@ -521,6 +522,11 @@ func validateWorkloadManifestCompatibilityWithEnv(ws wsEnvironmentsLister, env v
 func validateSvcVersion(vg versionGetter, name, templateVersion string) error {
 	svcVersion, err := vg.Version()
 	if err != nil {
+		// If the stack doesn't exist, exit gracefully.
+		var errStackNotExist *cloudformation.ErrStackNotFound
+		if errors.As(err, &errStackNotExist) {
+			return nil
+		}
 		return fmt.Errorf("get template version of service %s: %w", name, err)
 	}
 	if diff := semver.Compare(svcVersion, templateVersion); diff > 0 {
