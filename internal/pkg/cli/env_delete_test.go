@@ -6,6 +6,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -299,7 +300,7 @@ Resources:
     DeletionPolicy: Retain`, nil)
 				deployer.EXPECT().DeleteEnvironment(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("some error"))
 
-				prog.EXPECT().Stop(gomock.Any())
+				prog.EXPECT().Stop(gomock.Any()).Times(2)
 
 				return &deleteEnvOpts{
 					deleteEnvVars: deleteEnvVars{
@@ -316,8 +317,93 @@ Resources:
 
 			wantedError: errors.New("delete environment test stack: some error"),
 		},
-		"deletes the stack, then attempts a best-effort deletion of the IAM roles, and finally cleans up SSM on success": {
+		"returns wrapped error when stackset can't be updated": {
 			given: func(t *testing.T, ctrl *gomock.Controller) *deleteEnvOpts {
+				app := &config.Application{
+					Name: "phonetool",
+				}
+				mockEnv := config.Environment{
+					App:              "phonetool",
+					Name:             "test",
+					Region:           "us-west-2",
+					ExecutionRoleARN: "execARN",
+					ManagerRoleARN:   "managerRoleARN",
+					AccountID:        "1234",
+				}
+				rg := mocks.NewMockresourceGetter(ctrl)
+				rg.EXPECT().GetResources(gomock.Any()).Return(&resourcegroupstaggingapi.GetResourcesOutput{
+					ResourceTagMappingList: []*resourcegroupstaggingapi.ResourceTagMapping{}}, nil)
+
+				prog := mocks.NewMockprogress(ctrl)
+				prog.EXPECT().Start(gomock.Any()).AnyTimes()
+
+				deployer := mocks.NewMockenvironmentDeployer(ctrl)
+				deployer.EXPECT().Template(stack.NameForEnv("phonetool", "test")).Return(`
+Resources:
+  CloudformationExecutionRole:
+    DeletionPolicy: Retain
+    Type: AWS::IAM::Role
+  EnvironmentManagerRole:
+    # An IAM Role to manage resources in your environment
+    DeletionPolicy: Retain
+    Type: AWS::IAM::Role
+`, nil)
+				deployer.EXPECT().DeleteEnvironment("phonetool", "test", "execARN").Return(nil)
+
+				store := mocks.NewMockenvironmentStore(ctrl)
+				store.EXPECT().ListEnvironments("phonetool").Return([]*config.Environment{
+					&mockEnv,
+					&config.Environment{
+						Name:      "prod",
+						Region:    "us-west-2",
+						AccountID: "5678",
+					},
+				}, nil)
+				store.EXPECT().GetEnvironment("phonetool", "test").Return(&mockEnv, nil)
+				store.EXPECT().GetApplication("phonetool").Return(app, nil)
+
+				envDeleter := mocks.NewMockenvDeleterFromApp(ctrl)
+				envDeleter.EXPECT().RemoveEnvFromApp(&cloudformation.RemoveEnvFromAppOpts{
+					App:                  app,
+					EnvName:              "test",
+					EnvAccountID:         "1234",
+					EnvRegion:            "us-west-2",
+					DeleteStackInstance:  false, // Stack instance should be deleted if region has no other environments.
+					RemoveAccountFromApp: true,  // DNS delegation should be removed if account has no other environments.
+				}).Return(errors.New("some error"))
+
+				prog.EXPECT().Stop(gomock.Any()).AnyTimes()
+
+				return &deleteEnvOpts{
+					deleteEnvVars: deleteEnvVars{
+						appName: "phonetool",
+						name:    "test",
+					},
+					rg:                 rg,
+					deployer:           deployer,
+					prog:               prog,
+					store:              store,
+					envDeleterFromApp:  envDeleter,
+					newImageRemover:    func(region string) (imageRemover, error) { return nil, nil },
+					newBucketEmptier:   func(region string) (bucketEmptier, error) { return nil, nil },
+					initRuntimeClients: noopInitRuntimeClients,
+				}
+			},
+			wantedError: errors.New("remove environment test from application phonetool: some error"),
+		},
+		"doesn't delete stackset when environment still exists in account and region": {
+			given: func(t *testing.T, ctrl *gomock.Controller) *deleteEnvOpts {
+				app := &config.Application{
+					Name: "phonetool",
+				}
+				mockEnv := config.Environment{
+					App:              "phonetool",
+					Name:             "test",
+					Region:           "us-west-2",
+					ExecutionRoleARN: "execARN",
+					ManagerRoleARN:   "managerRoleARN",
+					AccountID:        "1234",
+				}
 				rg := mocks.NewMockresourceGetter(ctrl)
 				rg.EXPECT().GetResources(gomock.Any()).Return(&resourcegroupstaggingapi.GetResourcesOutput{
 					ResourceTagMappingList: []*resourcegroupstaggingapi.ResourceTagMapping{}}, nil)
@@ -343,7 +429,40 @@ Resources:
 				iam.EXPECT().DeleteRole("managerRoleARN").Return(nil)
 
 				store := mocks.NewMockenvironmentStore(ctrl)
+				store.EXPECT().ListEnvironments("phonetool").Return([]*config.Environment{
+					&mockEnv,
+					&config.Environment{
+						Name:      "prod",
+						Region:    "eu-central-1",
+						AccountID: "1234",
+					},
+				}, nil)
+				store.EXPECT().GetEnvironment("phonetool", "test").Return(&mockEnv, nil)
+				store.EXPECT().GetApplication("phonetool").Return(app, nil)
 				store.EXPECT().DeleteEnvironment("phonetool", "test").Return(nil)
+
+				envDeleter := mocks.NewMockenvDeleterFromApp(ctrl)
+				envDeleter.EXPECT().GetAppResourcesByRegion(app, "us-west-2").Return(&stack.AppRegionalResources{
+					Region:   "us-west-2",
+					S3Bucket: "fakeBucket",
+					RepositoryURLs: map[string]string{
+						"wkld": "fakeRepo",
+					},
+				}, nil)
+				envDeleter.EXPECT().RemoveEnvFromApp(&cloudformation.RemoveEnvFromAppOpts{
+					App:                  &config.Application{Name: "phonetool"},
+					EnvName:              "test",
+					EnvAccountID:         "1234",
+					EnvRegion:            "us-west-2",
+					DeleteStackInstance:  true,  // Stack instance should be deleted if region has no other environments.
+					RemoveAccountFromApp: false, // DNS delegation should be removed if account has no other environments.
+				})
+
+				repoEmptier := mocks.NewMockimageRemover(ctrl)
+				repoEmptier.EXPECT().ClearRepository("phonetool/wkld")
+
+				pipelineBucketEmptier := mocks.NewMockbucketEmptier(ctrl)
+				pipelineBucketEmptier.EXPECT().EmptyBucket("fakeBucket")
 
 				prog.EXPECT().Stop(gomock.Any()).AnyTimes()
 
@@ -352,15 +471,100 @@ Resources:
 						appName: "phonetool",
 						name:    "test",
 					},
-					rg:       rg,
-					deployer: deployer,
-					prog:     prog,
-					iam:      iam,
-					store:    store,
-					envConfig: &config.Environment{
-						ExecutionRoleARN: "execARN",
-						ManagerRoleARN:   "managerRoleARN",
+					rg:                 rg,
+					deployer:           deployer,
+					prog:               prog,
+					iam:                iam,
+					store:              store,
+					envDeleterFromApp:  envDeleter,
+					newImageRemover:    func(region string) (imageRemover, error) { return repoEmptier, nil },
+					newBucketEmptier:   func(region string) (bucketEmptier, error) { return pipelineBucketEmptier, nil },
+					initRuntimeClients: noopInitRuntimeClients,
+				}
+			},
+		},
+		"deletes the stack, then attempts a best-effort deletion of the IAM roles, and finally cleans up SSM on success": {
+			given: func(t *testing.T, ctrl *gomock.Controller) *deleteEnvOpts {
+				app := &config.Application{
+					Name: "phonetool",
+				}
+				mockEnv := config.Environment{
+					App:              "phonetool",
+					Name:             "test",
+					Region:           "us-west-2",
+					ExecutionRoleARN: "execARN",
+					ManagerRoleARN:   "managerRoleARN",
+				}
+				rg := mocks.NewMockresourceGetter(ctrl)
+				rg.EXPECT().GetResources(gomock.Any()).Return(&resourcegroupstaggingapi.GetResourcesOutput{
+					ResourceTagMappingList: []*resourcegroupstaggingapi.ResourceTagMapping{}}, nil)
+
+				prog := mocks.NewMockprogress(ctrl)
+				prog.EXPECT().Start(gomock.Any()).AnyTimes()
+
+				deployer := mocks.NewMockenvironmentDeployer(ctrl)
+				deployer.EXPECT().Template(stack.NameForEnv("phonetool", "test")).Return(`
+Resources:
+  CloudformationExecutionRole:
+    DeletionPolicy: Retain
+    Type: AWS::IAM::Role
+  EnvironmentManagerRole:
+    # An IAM Role to manage resources in your environment
+    DeletionPolicy: Retain
+    Type: AWS::IAM::Role
+`, nil)
+				deployer.EXPECT().DeleteEnvironment("phonetool", "test", "execARN").Return(nil)
+
+				iam := mocks.NewMockroleDeleter(ctrl)
+				iam.EXPECT().DeleteRole("execARN").Return(nil)
+				iam.EXPECT().DeleteRole("managerRoleARN").Return(nil)
+
+				store := mocks.NewMockenvironmentStore(ctrl)
+				store.EXPECT().ListEnvironments("phonetool").Return([]*config.Environment{
+					&mockEnv,
+				}, nil)
+				store.EXPECT().GetEnvironment("phonetool", "test").Return(&mockEnv, nil)
+				store.EXPECT().GetApplication("phonetool").Return(app, nil)
+				store.EXPECT().DeleteEnvironment("phonetool", "test").Return(nil)
+
+				envDeleter := mocks.NewMockenvDeleterFromApp(ctrl)
+				envDeleter.EXPECT().GetAppResourcesByRegion(app, "us-west-2").Return(&stack.AppRegionalResources{
+					Region:   "us-west-2",
+					S3Bucket: "fakeBucket",
+					RepositoryURLs: map[string]string{
+						"wkld": "fakeRepo",
 					},
+				}, nil)
+				envDeleter.EXPECT().RemoveEnvFromApp(&cloudformation.RemoveEnvFromAppOpts{
+					App:                  &config.Application{Name: "phonetool"},
+					EnvName:              "test",
+					EnvAccountID:         "",
+					EnvRegion:            "us-west-2",
+					DeleteStackInstance:  true, // Stack instance should be deleted if region has no other environments.
+					RemoveAccountFromApp: true, // DNS delegation should be removed if account has no other environments.
+				})
+
+				repoEmptier := mocks.NewMockimageRemover(ctrl)
+				repoEmptier.EXPECT().ClearRepository("phonetool/wkld")
+
+				pipelineBucketEmptier := mocks.NewMockbucketEmptier(ctrl)
+				pipelineBucketEmptier.EXPECT().EmptyBucket("fakeBucket")
+
+				prog.EXPECT().Stop(gomock.Any()).AnyTimes()
+
+				return &deleteEnvOpts{
+					deleteEnvVars: deleteEnvVars{
+						appName: "phonetool",
+						name:    "test",
+					},
+					rg:                 rg,
+					deployer:           deployer,
+					prog:               prog,
+					iam:                iam,
+					store:              store,
+					envDeleterFromApp:  envDeleter,
+					newImageRemover:    func(region string) (imageRemover, error) { return repoEmptier, nil },
+					newBucketEmptier:   func(region string) (bucketEmptier, error) { return pipelineBucketEmptier, nil },
 					initRuntimeClients: noopInitRuntimeClients,
 				}
 			},
