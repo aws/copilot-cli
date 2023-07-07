@@ -15,6 +15,7 @@ import (
 type localRunAskMocks struct {
 	store *mocks.Mockstore
 	sel   *mocks.MockwsSelector
+	ws    *mocks.MockwsWlDirReader
 }
 
 func TestLocalRunOpts_Validate(t *testing.T) {
@@ -64,7 +65,7 @@ func TestLocalRunOpts_Ask(t *testing.T) {
 			inputEnvName:  testEnvName,
 			inputWkldName: testWkldName,
 			setupMocks: func(m *localRunAskMocks) {
-				m.store.EXPECT().GetWorkload("testApp", "testWkld").Return(&config.Workload{}, nil)
+				m.ws.EXPECT().ListWorkloads().Return([]string{"testWkld"}, nil)
 				m.sel.EXPECT().Workload(gomock.Any(), gomock.Any()).Times(0)
 				m.store.EXPECT().GetEnvironment("testApp", "testEnv").Return(&config.Environment{Name: "testEnv"}, nil)
 				m.sel.EXPECT().Environment(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
@@ -96,7 +97,7 @@ func TestLocalRunOpts_Ask(t *testing.T) {
 			inputAppName:  testAppName,
 			inputWkldName: testWkldName,
 			setupMocks: func(m *localRunAskMocks) {
-				m.store.EXPECT().GetWorkload("testApp", "testWkld").Return(&config.Workload{}, nil)
+				m.ws.EXPECT().ListWorkloads().Return([]string{"testWkld"}, nil)
 				m.sel.EXPECT().Environment("Select an environment", "", "testApp").Return("testEnv", nil)
 			},
 			wantedWkldName: testWkldName,
@@ -112,6 +113,7 @@ func TestLocalRunOpts_Ask(t *testing.T) {
 			m := &localRunAskMocks{
 				store: mocks.NewMockstore(ctrl),
 				sel:   mocks.NewMockwsSelector(ctrl),
+				ws:    mocks.NewMockwsWlDirReader(ctrl),
 			}
 			tc.setupMocks(m)
 			opts := localRunOpts{
@@ -122,6 +124,7 @@ func TestLocalRunOpts_Ask(t *testing.T) {
 				},
 				sel:   m.sel,
 				store: m.store,
+				ws:    m.ws,
 			}
 
 			// WHEN
