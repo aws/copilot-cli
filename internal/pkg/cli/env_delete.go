@@ -194,7 +194,7 @@ func (o *deleteEnvOpts) Execute() error {
 	o.prog.Stop(log.Ssuccessf(fmtRetainEnvRolesComplete, o.name))
 
 	if err := o.deleteStack(); err != nil {
-		o.prog.Stop(log.Serrorf("Failed to delete resources for the %q environment\n"))
+		o.prog.Stop(log.Serrorf("Failed to delete resources for the %q environment\n", o.name))
 		return err
 	}
 
@@ -408,26 +408,26 @@ func (o *deleteEnvOpts) cleanUpAppResources() error {
 			}
 		}
 	}
-	if app.AccountID == currentEnv.AccountID {
-		accountHasOtherEnvs = true
-	}
 
 	if !regionHasOtherEnvs {
 		// Empty bucket and ECR repos if there are no other environments in this region.
 		// We need to do this before deleting the stackset instance to avoid CFN deletion failures.
 		if err := o.emptyS3BucketAndECRRepos(); err != nil {
-			return err
+			return fmt.Errorf("empty S3 bucket and ECR repositories in region %s: %w", currentEnv.Region, err)
 		}
 	}
 
-	return o.envDeleterFromApp.RemoveEnvFromApp(&cloudformation.RemoveEnvFromAppOpts{
+	if err := o.envDeleterFromApp.RemoveEnvFromApp(&cloudformation.RemoveEnvFromAppOpts{
 		App:                  app,
 		EnvName:              o.name,
 		EnvAccountID:         currentEnv.AccountID,
 		EnvRegion:            currentEnv.Region,
 		DeleteStackInstance:  !regionHasOtherEnvs,  // Stack instance should be deleted if region has no other environments.
 		RemoveAccountFromApp: !accountHasOtherEnvs, // DNS delegation should be removed if account has no other environments.
-	})
+	}); err != nil {
+		return fmt.Errorf("remove environment %s from application %s: %w", currentEnv.Name, app.Name, err)
+	}
+	return nil
 }
 
 func (o *deleteEnvOpts) emptyS3BucketAndECRRepos() error {
