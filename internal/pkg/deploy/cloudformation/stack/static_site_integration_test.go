@@ -7,7 +7,6 @@ package stack_test
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -85,7 +84,6 @@ func TestStaticSiteService_TemplateAndParamsGeneration(t *testing.T) {
 			// validate generated template
 			tmpl, err := serializer.Template()
 			require.NoError(t, err)
-			fmt.Println(tmpl)
 			var actualTmpl map[any]any
 			require.NoError(t, yaml.Unmarshal([]byte(tmpl), &actualTmpl))
 			resetCustomResourceLocations(actualTmpl)
