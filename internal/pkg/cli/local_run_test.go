@@ -7,16 +7,22 @@ import (
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
+	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
 
+type localRunAskMocks struct {
+	store *mocks.Mockstore
+	sel   *mocks.MockwsSelector
+}
+
 func TestLocalRunOpts_Validate(t *testing.T) {
 	testCases := map[string]struct {
-		wantedErr error
+		wantedError error
 	}{
 		"no app in workspace": {
-			wantedErr: errNoAppInWorkspace,
+			wantedError: errNoAppInWorkspace,
 		},
 	}
 	for name, tc := range testCases {
@@ -28,8 +34,8 @@ func TestLocalRunOpts_Validate(t *testing.T) {
 			err := opts.Validate()
 
 			// THEN
-			if tc.wantedErr != nil {
-				require.EqualError(t, err, tc.wantedErr.Error())
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
 				require.NoError(t, err)
 			}
@@ -48,30 +54,51 @@ func TestLocalRunOpts_Ask(t *testing.T) {
 		inputEnvName  string
 		inputWkldName string
 
-		setupMocks     func(m *mocks.MockwsSelector)
+		setupMocks     func(m *localRunAskMocks)
 		wantedWkldName string
 		wantedEnvName  string
 		wantedError    error
 	}{
+		"validate if flags are provided": {
+			inputAppName:  testAppName,
+			inputEnvName:  testEnvName,
+			inputWkldName: testWkldName,
+			setupMocks: func(m *localRunAskMocks) {
+				m.store.EXPECT().GetWorkload("testApp", "testWkld").Return(&config.Workload{}, nil)
+				m.sel.EXPECT().Workload(gomock.Any(), gomock.Any()).Times(0)
+				m.store.EXPECT().GetEnvironment("testApp", "testEnv").Return(&config.Environment{Name: "testEnv"}, nil)
+				m.sel.EXPECT().Environment(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			},
+			wantedWkldName: testWkldName,
+			wantedEnvName:  testEnvName,
+		},
 		"prompts for environment name and workload names": {
 			inputAppName: testAppName,
-			setupMocks: func(m *mocks.MockwsSelector) {
-				m.EXPECT().Workload("Select a workload from your workspace that you want to run locally", "").Return("testWkld", nil)
-				m.EXPECT().Environment("Select an environment", "", "testApp").Return("testEnv", nil)
+			setupMocks: func(m *localRunAskMocks) {
+				m.sel.EXPECT().Workload("Select a workload from your workspace that you want to run locally", "").Return("testWkld", nil)
+				m.sel.EXPECT().Environment("Select an environment", "", "testApp").Return("testEnv", nil)
 			},
 
 			wantedWkldName: testWkldName,
 			wantedEnvName:  testEnvName,
 		},
-		"don't call selector if flags are provided": {
-			inputAppName:  testAppName,
-			inputEnvName:  testEnvName,
-			inputWkldName: testWkldName,
-			setupMocks: func(m *mocks.MockwsSelector) {
-				m.EXPECT().Workload(gomock.Any(), gomock.Any()).Times(0)
-				m.EXPECT().Environment(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+		"prompt for workload name": {
+			inputAppName: testAppName,
+			inputEnvName: testEnvName,
+			setupMocks: func(m *localRunAskMocks) {
+				m.sel.EXPECT().Workload("Select a workload from your workspace that you want to run locally", "").Return("testWkld", nil)
+				m.store.EXPECT().GetEnvironment("testApp", "testEnv").Return(&config.Environment{Name: "testEnv"}, nil)
 			},
-
+			wantedWkldName: testWkldName,
+			wantedEnvName:  testEnvName,
+		},
+		"prompt for environment name": {
+			inputAppName:  testAppName,
+			inputWkldName: testWkldName,
+			setupMocks: func(m *localRunAskMocks) {
+				m.store.EXPECT().GetWorkload("testApp", "testWkld").Return(&config.Workload{}, nil)
+				m.sel.EXPECT().Environment("Select an environment", "", "testApp").Return("testEnv", nil)
+			},
 			wantedWkldName: testWkldName,
 			wantedEnvName:  testEnvName,
 		},
@@ -82,16 +109,19 @@ func TestLocalRunOpts_Ask(t *testing.T) {
 			// GIVEN
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			mockSel := mocks.NewMockwsSelector(ctrl)
-
-			tc.setupMocks(mockSel)
+			m := &localRunAskMocks{
+				store: mocks.NewMockstore(ctrl),
+				sel:   mocks.NewMockwsSelector(ctrl),
+			}
+			tc.setupMocks(m)
 			opts := localRunOpts{
 				localRunVars: localRunVars{
-					appName: tc.inputAppName,
-					name:    tc.inputWkldName,
-					envName: tc.inputEnvName,
+					appName:  tc.inputAppName,
+					wkldName: tc.inputWkldName,
+					envName:  tc.inputEnvName,
 				},
-				sel: mockSel,
+				sel:   m.sel,
+				store: m.store,
 			}
 
 			// WHEN
@@ -100,7 +130,7 @@ func TestLocalRunOpts_Ask(t *testing.T) {
 			// THEN
 			if tc.wantedError == nil {
 				require.NoError(t, err)
-				require.Equal(t, tc.wantedWkldName, opts.name)
+				require.Equal(t, tc.wantedWkldName, opts.wkldName)
 				require.Equal(t, tc.wantedEnvName, opts.envName)
 			} else {
 				require.EqualError(t, err, tc.wantedError.Error())

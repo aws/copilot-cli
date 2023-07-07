@@ -19,9 +19,9 @@ import (
 )
 
 type localRunVars struct {
-	name    string
-	appName string
-	envName string
+	wkldName string
+	appName  string
+	envName  string
 }
 
 type localRunOpts struct {
@@ -59,14 +59,18 @@ func (o *localRunOpts) Validate() error {
 	if o.appName == "" {
 		return errNoAppInWorkspace
 	}
+	_, err := o.store.GetApplication(o.appName)
+	if err != nil {
+		return fmt.Errorf("get application %s: %w", o.appName, err)
+	}
 	return nil
 }
 
 func (o *localRunOpts) Ask() error {
-	if err := o.askWorkloadName(); err != nil {
+	if err := o.validateOrAskWorkloadName(); err != nil {
 		return err
 	}
-	if err := o.askEnvName(); err != nil {
+	if err := o.validateOrAskEnvName(); err != nil {
 		return err
 	}
 	return nil
@@ -79,9 +83,9 @@ func (o *localRunOpts) Execute() error {
 	return nil
 }
 
-func (o *localRunOpts) askEnvName() error {
+func (o *localRunOpts) validateOrAskEnvName() error {
 	if o.envName != "" {
-		return nil
+		return o.validateEnvName()
 	}
 
 	name, err := o.sel.Environment("Select an environment", "", o.appName)
@@ -92,16 +96,30 @@ func (o *localRunOpts) askEnvName() error {
 	return nil
 }
 
-func (o *localRunOpts) askWorkloadName() error {
-	if o.name != "" {
-		return nil
+func (o *localRunOpts) validateEnvName() error {
+	if _, err := o.store.GetEnvironment(o.appName, o.envName); err != nil {
+		return fmt.Errorf("get environment %s : %w", o.envName, err)
+	}
+	return nil
+}
+
+func (o *localRunOpts) validateOrAskWorkloadName() error {
+	if o.wkldName != "" {
+		return o.validateWkldName()
 	}
 
 	name, err := o.sel.Workload("Select a workload from your workspace that you want to run locally", "")
 	if err != nil {
 		return fmt.Errorf("select Workload: %w", err)
 	}
-	o.name = name
+	o.wkldName = name
+	return nil
+}
+
+func (o *localRunOpts) validateWkldName() error {
+	if _, err := o.store.GetWorkload(o.appName, o.wkldName); err != nil {
+		return fmt.Errorf("get workload name %s : %w", o.wkldName, err)
+	}
 	return nil
 }
 
@@ -111,7 +129,7 @@ func BuildLocalRunCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "local run",
 		Short: "Run the workload locally",
-		Long:  "Run the workload locally while replicating the ECS environment",
+		Long:  "Run the workload locally for debugging in a simulated AWS environment",
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newLocalRunOpts(vars)
 			if err != nil {
@@ -120,7 +138,7 @@ func BuildLocalRunCmd() *cobra.Command {
 			return run(opts)
 		}),
 	}
-	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, "", workloadFlagDescription)
+	cmd.Flags().StringVarP(&vars.wkldName, nameFlag, nameFlagShort, "", workloadFlagDescription)
 	cmd.Flags().StringVarP(&vars.envName, envFlag, envFlagShort, "", envFlagDescription)
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
 	return cmd
