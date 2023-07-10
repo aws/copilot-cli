@@ -773,11 +773,30 @@ func TestStackDescriber_Metadata(t *testing.T) {
 
 			wantedErr: errors.New("get template summary: some error"),
 		},
+		"should return ErrStackNotFound if stack does not exist": {
+			createMock: func(ctrl *gomock.Controller) client {
+				m := mocks.NewMockclient(ctrl)
+				m.EXPECT().GetTemplateSummary(gomock.Any()).Return(nil, errDoesNotExist)
+				return m
+			},
+
+			wantedErr: errors.New("stack named phonetoolStack cannot be found"),
+		},
+		"should return ErrStackNotFound if stackset does not exist": {
+			isStackSet: true,
+			createMock: func(ctrl *gomock.Controller) client {
+				m := mocks.NewMockclient(ctrl)
+				m.EXPECT().GetTemplateSummary(gomock.Any()).Return(nil, errDoesNotExist)
+				return m
+			},
+
+			wantedErr: errors.New("stack named phonetoolStackSet cannot be found"),
+		},
 		"should return Metadata property of template summary on success for stack": {
 			createMock: func(ctrl *gomock.Controller) client {
 				m := mocks.NewMockclient(ctrl)
 				m.EXPECT().GetTemplateSummary(&cloudformation.GetTemplateSummaryInput{
-					StackName: aws.String("phonetool"),
+					StackName: aws.String("phonetoolStack"),
 				}).Return(&cloudformation.GetTemplateSummaryOutput{
 					Metadata: aws.String("hello"),
 				}, nil)
@@ -791,7 +810,7 @@ func TestStackDescriber_Metadata(t *testing.T) {
 			createMock: func(ctrl *gomock.Controller) client {
 				m := mocks.NewMockclient(ctrl)
 				m.EXPECT().GetTemplateSummary(&cloudformation.GetTemplateSummaryInput{
-					StackSetName: aws.String("phonetool"),
+					StackSetName: aws.String("phonetoolStackSet"),
 				}).Return(&cloudformation.GetTemplateSummaryOutput{
 					Metadata: aws.String("hello"),
 				}, nil)
@@ -812,9 +831,9 @@ func TestStackDescriber_Metadata(t *testing.T) {
 			}
 
 			// WHEN
-			name := MetadataWithStackName("phonetool")
+			name := MetadataWithStackName("phonetoolStack")
 			if tc.isStackSet {
-				name = MetadataWithStackSetName("phonetool")
+				name = MetadataWithStackSetName("phonetoolStackSet")
 			}
 			actual, err := c.Metadata(name)
 

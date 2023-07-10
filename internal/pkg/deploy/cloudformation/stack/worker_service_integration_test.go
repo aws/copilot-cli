@@ -75,6 +75,7 @@ func TestWorkerService_Template(t *testing.T) {
 			AccountID:                "123456789123",
 			Region:                   "us-west-2",
 			EnvVersion:               "v1.42.0",
+			Version:                  "v1.29.0",
 		},
 	})
 

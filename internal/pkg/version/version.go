@@ -13,6 +13,8 @@ const (
 	AppTemplateMinStaticSite = "v1.2.0"
 	// LegacyEnvTemplate is the version associated with the environment template before we started versioning.
 	LegacyEnvTemplate = "v0.0.0"
+	// LegacyWorkloadTemplate is the version associated with the workload template before we started versioning.
+	LegacyWorkloadTemplate = "v0.0.0"
 	// EnvTemplateBootstrap is the version of an environment template that contains only bootstrap resources.
 	EnvTemplateBootstrap = "bootstrap"
 )

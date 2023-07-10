@@ -218,9 +218,16 @@ func MetadataWithStackSetName(name string) MetadataOpts {
 }
 
 // Metadata returns the Metadata property of the CloudFormation stack(set)'s template.
+// If the stack does not exist, returns ErrStackNotFound.
 func (c *CloudFormation) Metadata(opt MetadataOpts) (string, error) {
 	out, err := c.GetTemplateSummary(opt)
 	if err != nil {
+		if stackDoesNotExist(err) {
+			if aws.StringValue(opt.StackName) != "" {
+				return "", &ErrStackNotFound{name: aws.StringValue(opt.StackName)}
+			}
+			return "", &ErrStackNotFound{name: aws.StringValue(opt.StackSetName)}
+		}
 		return "", fmt.Errorf("get template summary: %w", err)
 	}
 	return aws.StringValue(out.Metadata), nil

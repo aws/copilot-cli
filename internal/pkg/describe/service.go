@@ -120,18 +120,19 @@ type ecsSvcDesc struct {
 }
 
 type ecsServiceDescriber struct {
-	*workloadStackDescriber
+	*WorkloadStackDescriber
 	ecsClient ecsClient
 }
 
 type appRunnerServiceDescriber struct {
-	*workloadStackDescriber
+	*WorkloadStackDescriber
 	apprunnerClient apprunnerClient
 }
 
 // NewServiceConfig contains fields that initiates service describer struct.
 type NewServiceConfig struct {
 	App         string
+	Env         string
 	Svc         string
 	ConfigStore ConfigStoreSvc
 
@@ -139,33 +140,35 @@ type NewServiceConfig struct {
 	DeployStore     DeployedEnvServicesLister
 }
 
-func newECSServiceDescriber(opt NewServiceConfig, env string) (*ecsServiceDescriber, error) {
-	stackDescriber, err := newWorkloadStackDescriber(workloadConfig{
-		app:         opt.App,
-		name:        opt.Svc,
-		configStore: opt.ConfigStore,
-	}, env)
+func newECSServiceDescriber(opt NewServiceConfig) (*ecsServiceDescriber, error) {
+	stackDescriber, err := NewWorkloadStackDescriber(NewWorkloadConfig{
+		App:         opt.App,
+		Env:         opt.Env,
+		Name:        opt.Svc,
+		ConfigStore: opt.ConfigStore,
+	})
 	if err != nil {
 		return nil, err
 	}
 	return &ecsServiceDescriber{
-		workloadStackDescriber: stackDescriber,
+		WorkloadStackDescriber: stackDescriber,
 		ecsClient:              ecs.New(stackDescriber.sess),
 	}, nil
 }
 
-func newAppRunnerServiceDescriber(opt NewServiceConfig, env string) (*appRunnerServiceDescriber, error) {
-	stackDescriber, err := newWorkloadStackDescriber(workloadConfig{
-		app:         opt.App,
-		name:        opt.Svc,
-		configStore: opt.ConfigStore,
-	}, env)
+func newAppRunnerServiceDescriber(opt NewServiceConfig) (*appRunnerServiceDescriber, error) {
+	stackDescriber, err := NewWorkloadStackDescriber(NewWorkloadConfig{
+		App:         opt.App,
+		Env:         opt.Env,
+		Name:        opt.Svc,
+		ConfigStore: opt.ConfigStore,
+	})
 	if err != nil {
 		return nil, err
 	}
 
 	return &appRunnerServiceDescriber{
-		workloadStackDescriber: stackDescriber,
+		WorkloadStackDescriber: stackDescriber,
 		apprunnerClient:        apprunner.New(stackDescriber.sess),
 	}, nil
 }

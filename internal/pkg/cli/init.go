@@ -188,6 +188,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		spinner:         spin,
 		cmd:             exec.NewCmd(),
 		sessProvider:    sessProvider,
+		templateVersion: version.LatestTemplateVersion(),
 	}
 	deploySvcCmd.newSvcDeployer = func() (workloadDeployer, error) {
 		return newSvcDeployer(deploySvcCmd)

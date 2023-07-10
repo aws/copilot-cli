@@ -134,6 +134,7 @@ type StackRuntimeConfiguration struct {
 	Tags                      map[string]string
 	CustomResourceURLs        map[string]string
 	StaticSiteAssetMappingURL string
+	Version                   string
 }
 
 // DeployWorkloadInput is the input of DeployWorkload.
@@ -696,6 +697,7 @@ func (d *workloadDeployer) runtimeConfig(in *StackRuntimeConfiguration) (*stack.
 			Region:                   d.env.Region,
 			CustomResourcesURL:       in.CustomResourceURLs,
 			EnvVersion:               envVersion,
+			Version:                  in.Version,
 		}, nil
 	}
 	images := make(map[string]stack.ECRImage, len(in.ImageDigests))
@@ -725,6 +727,7 @@ func (d *workloadDeployer) runtimeConfig(in *StackRuntimeConfiguration) (*stack.
 		Region:                   d.env.Region,
 		CustomResourcesURL:       in.CustomResourceURLs,
 		EnvVersion:               envVersion,
+		Version:                  in.Version,
 	}, nil
 }
 
