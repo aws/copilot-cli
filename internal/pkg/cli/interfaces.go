@@ -411,11 +411,6 @@ type appResourcesGetter interface {
 	GetRegionalAppResources(app *config.Application) ([]*stack.AppRegionalResources, error)
 }
 
-type envDeleterFromApp interface {
-	appResourcesGetter
-	RemoveEnvFromApp(opts *cloudformation.RemoveEnvFromAppOpts) error
-}
-
 type taskDeployer interface {
 	DeployTask(input *deploy.CreateTaskResourcesInput, opts ...awscloudformation.StackOption) error
 	GetTaskStack(taskName string) (*deploy.TaskStackInfo, error)
