@@ -203,7 +203,7 @@ func (o *deleteEnvOpts) Execute() error {
 		return err
 	}
 	// Un-delegate DNS and optionally delete stackset instance.
-	o.prog.Start(fmt.Sprintf("Cleaning up app-level resources and permissions\n"))
+	o.prog.Start("Cleaning up app-level resources and permissions\n")
 	if err := o.cleanUpAppResources(); err != nil {
 		o.prog.Stop(log.Serrorf("Failed to remove ECR Repos and S3 bucket from region %s\n", envInfo.Region))
 		return err
@@ -457,7 +457,7 @@ func (o *deleteEnvOpts) emptyS3BucketAndECRRepos() error {
 	if err := s3Client.EmptyBucket(regionalResources.S3Bucket); err != nil {
 		return fmt.Errorf("empty bucket %s: %w", regionalResources.S3Bucket, err)
 	}
-	for workload, _ := range regionalResources.RepositoryURLs {
+	for workload := range regionalResources.RepositoryURLs {
 		name := clideploy.RepoName(o.appName, workload)
 		if err := ecrClient.ClearRepository(name); err != nil {
 			return fmt.Errorf("empty repository %s: %w", name, err)
