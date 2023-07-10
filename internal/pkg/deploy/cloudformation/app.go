@@ -393,7 +393,7 @@ func (cf CloudFormation) RemoveEnvFromApp(opts *RemoveEnvFromAppOpts) error {
 		AccountID:          opts.App.AccountID,
 		DomainName:         opts.App.Domain,
 		DomainHostedZoneID: opts.App.DomainHostedZoneID,
-		Version:            deploy.LatestAppTemplateVersion,
+		Version:            opts.App.Version,
 	}
 
 	appConfig := stack.NewAppStackConfig(deployApp)
@@ -416,7 +416,7 @@ func (cf CloudFormation) removeWorkloadFromApp(app *config.Application, wlName s
 		Name:           app.Name,
 		AccountID:      app.AccountID,
 		AdditionalTags: app.Tags,
-		Version:        version.LatestTemplateVersion(),
+		Version:        app.Version,
 	})
 	previouslyDeployedConfig, err := cf.getLastDeployedAppConfig(appConfig)
 	if err != nil {
