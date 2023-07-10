@@ -9,26 +9,26 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 )
 
-type errCannotDowngradeSvcVersion struct {
-	svcName         string
-	svcVersion      string
+type errCannotDowngradeWkldVersion struct {
+	name            string
+	version         string
 	templateVersion string
 }
 
-func (e *errCannotDowngradeSvcVersion) init() *errCannotDowngradeVersion {
+func (e *errCannotDowngradeWkldVersion) init() *errCannotDowngradeVersion {
 	return &errCannotDowngradeVersion{
-		componentName:         e.svcName,
-		componentType:         "service",
-		currentVersion:        e.svcVersion,
+		componentName:         e.name,
+		componentType:         "workload",
+		currentVersion:        e.version,
 		latestTemplateVersion: e.templateVersion,
 	}
 }
 
-func (e *errCannotDowngradeSvcVersion) Error() string {
+func (e *errCannotDowngradeWkldVersion) Error() string {
 	return e.init().Error()
 }
 
-func (e *errCannotDowngradeSvcVersion) RecommendActions() string {
+func (e *errCannotDowngradeWkldVersion) RecommendActions() string {
 	return e.init().RecommendActions()
 }
 

@@ -18,6 +18,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/version"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 
@@ -35,13 +36,14 @@ const (
 )
 
 type packageSvcVars struct {
-	name         string
-	envName      string
-	appName      string
-	tag          string
-	outputDir    string
-	uploadAssets bool
-	showDiff     bool
+	name               string
+	envName            string
+	appName            string
+	tag                string
+	outputDir          string
+	uploadAssets       bool
+	showDiff           bool
+	allowWkldDowngrade bool
 
 	// To facilitate unit tests.
 	clientConfigured bool
@@ -59,6 +61,7 @@ type packageSvcOpts struct {
 	addonsWriter         io.WriteCloser
 	diffWriter           io.Writer
 	runner               execRunner
+	svcVersionGetter     versionGetter
 	sessProvider         *sessions.Provider
 	sel                  wsSelector
 	unmarshal            func([]byte) (manifest.DynamicWorkload, error)
@@ -73,6 +76,9 @@ type packageSvcOpts struct {
 	envSess           *session.Session
 	appliedDynamicMft manifest.DynamicWorkload
 	rootUserARN       string
+
+	// Overridden in tests.
+	templateVersion string
 }
 
 func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
@@ -102,6 +108,7 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 		paramsWriter:      discardFile{},
 		addonsWriter:      discardFile{},
 		diffWriter:        os.Stdout,
+		templateVersion:   version.LatestTemplateVersion(),
 		newInterpolator:   newManifestInterpolator,
 		sessProvider:      sessProvider,
 		newStackGenerator: newWorkloadStackGenerator,
@@ -193,6 +200,11 @@ func (o *packageSvcOpts) Ask() error {
 func (o *packageSvcOpts) Execute() error {
 	if !o.clientConfigured {
 		if err := o.configureClients(); err != nil {
+			return err
+		}
+	}
+	if !o.allowWkldDowngrade {
+		if err := validateWkldVersion(o.svcVersionGetter, o.name, o.templateVersion); err != nil {
 			return err
 		}
 	}
@@ -312,6 +324,17 @@ func (o *packageSvcOpts) configureClients() error {
 		return err
 	}
 	o.envFeaturesDescriber = envDescriber
+
+	wkldDescriber, err := describe.NewWorkloadStackDescriber(describe.NewWorkloadConfig{
+		App:         o.appName,
+		Env:         o.envName,
+		Name:        o.name,
+		ConfigStore: o.store,
+	})
+	if err != nil {
+		return err
+	}
+	o.svcVersionGetter = wkldDescriber
 	return nil
 }
 
@@ -361,6 +384,7 @@ func (o *packageSvcOpts) getWorkloadStack(generator workloadStackGenerator) (*cf
 			EnvFileARNs:               uploadOut.EnvFileARNs,
 			ImageDigests:              uploadOut.ImageDigests,
 			AddonsURL:                 uploadOut.AddonsURL,
+			Version:                   o.templateVersion,
 			CustomResourceURLs:        uploadOut.CustomResourceURLs,
 			StaticSiteAssetMappingURL: uploadOut.StaticSiteAssetMappingLocation,
 		},
@@ -505,6 +529,7 @@ func buildSvcPackageCmd() *cobra.Command {
 	cmd.Flags().StringVar(&vars.outputDir, stackOutputDirFlag, "", stackOutputDirFlagDescription)
 	cmd.Flags().BoolVar(&vars.uploadAssets, uploadAssetsFlag, false, uploadAssetsFlagDescription)
 	cmd.Flags().BoolVar(&vars.showDiff, diffFlag, false, diffFlagDescription)
+	cmd.Flags().BoolVar(&vars.allowWkldDowngrade, allowDowngradeFlag, false, allowDowngradeFlagDescription)
 
 	cmd.MarkFlagsMutuallyExclusive(diffFlag, stackOutputDirFlag)
 	cmd.MarkFlagsMutuallyExclusive(diffFlag, uploadAssetsFlag)

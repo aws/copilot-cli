@@ -13,6 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
+	"github.com/aws/copilot-cli/internal/pkg/version"
 	"github.com/spf13/afero"
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
@@ -41,6 +42,7 @@ type deployJobOpts struct {
 	unmarshal            func(in []byte) (manifest.DynamicWorkload, error)
 	newInterpolator      func(app, env string) interpolator
 	cmd                  execRunner
+	jobVersionGetter     versionGetter
 	sessProvider         *sessions.Provider
 	newJobDeployer       func() (workloadDeployer, error)
 	envFeaturesDescriber versionCompatibilityChecker
@@ -55,6 +57,9 @@ type deployJobOpts struct {
 	envSess           *session.Session
 	appliedDynamicMft manifest.DynamicWorkload
 	rootUserARN       string
+
+	// Overridden in tests.
+	templateVersion string
 }
 
 func newJobDeployOpts(vars deployWkldVars) (*deployJobOpts, error) {
@@ -80,6 +85,7 @@ func newJobDeployOpts(vars deployWkldVars) (*deployJobOpts, error) {
 		sessProvider:    sessProvider,
 		newInterpolator: newManifestInterpolator,
 		cmd:             exec.NewCmd(),
+		templateVersion: version.LatestTemplateVersion(),
 		diffWriter:      os.Stdout,
 	}
 	opts.newJobDeployer = func() (workloadDeployer, error) {
@@ -163,6 +169,11 @@ func (o *deployJobOpts) Execute() error {
 			return err
 		}
 	}
+	if !o.allowWkldDowngrade {
+		if err := validateWkldVersion(o.jobVersionGetter, o.name, o.templateVersion); err != nil {
+			return err
+		}
+	}
 	mft, err := workloadManifest(&workloadManifestInput{
 		name:         o.name,
 		appName:      o.appName,
@@ -204,6 +215,7 @@ func (o *deployJobOpts) Execute() error {
 				EnvFileARNs:        uploadOut.EnvFileARNs,
 				ImageDigests:       uploadOut.ImageDigests,
 				AddonsURL:          uploadOut.AddonsURL,
+				Version:            o.templateVersion,
 				CustomResourceURLs: uploadOut.CustomResourceURLs,
 			},
 		})
@@ -292,6 +304,17 @@ func (o *deployJobOpts) configureClients() error {
 		return err
 	}
 	o.envFeaturesDescriber = envDescriber
+
+	wkldDescriber, err := describe.NewWorkloadStackDescriber(describe.NewWorkloadConfig{
+		App:         o.appName,
+		Env:         o.envName,
+		Name:        o.name,
+		ConfigStore: o.store,
+	})
+	if err != nil {
+		return err
+	}
+	o.jobVersionGetter = wkldDescriber
 	return nil
 }
 

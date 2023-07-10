@@ -214,7 +214,7 @@ func (o *deploySvcOpts) Execute() error {
 		}
 	}
 	if !o.allowWkldDowngrade {
-		if err := validateSvcVersion(o.svcVersionGetter, o.name, o.templateVersion); err != nil {
+		if err := validateWkldVersion(o.svcVersionGetter, o.name, o.templateVersion); err != nil {
 			return err
 		}
 	}
@@ -519,7 +519,7 @@ func validateWorkloadManifestCompatibilityWithEnv(ws wsEnvironmentsLister, env v
 	return nil
 }
 
-func validateSvcVersion(vg versionGetter, name, templateVersion string) error {
+func validateWkldVersion(vg versionGetter, name, templateVersion string) error {
 	svcVersion, err := vg.Version()
 	if err != nil {
 		// If the stack doesn't exist, exit gracefully.
@@ -527,12 +527,12 @@ func validateSvcVersion(vg versionGetter, name, templateVersion string) error {
 		if errors.As(err, &errStackNotExist) {
 			return nil
 		}
-		return fmt.Errorf("get template version of service %s: %w", name, err)
+		return fmt.Errorf("get template version of workload %s: %w", name, err)
 	}
 	if diff := semver.Compare(svcVersion, templateVersion); diff > 0 {
-		return &errCannotDowngradeSvcVersion{
-			svcName:         name,
-			svcVersion:      svcVersion,
+		return &errCannotDowngradeWkldVersion{
+			name:            name,
+			version:         svcVersion,
 			templateVersion: templateVersion,
 		}
 	}
