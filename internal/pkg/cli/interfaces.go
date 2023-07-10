@@ -328,7 +328,9 @@ type wsEnvironmentReader interface {
 
 type wsPipelineReader interface {
 	wsPipelineGetter
+	wsPipelineManifestReader
 	relPath
+	PipelineOverridesPath(string) string
 }
 
 type wsPipelineGetter interface {
@@ -384,9 +386,9 @@ type imageRemover interface {
 }
 
 type pipelineDeployer interface {
-	CreatePipeline(env *deploy.CreatePipelineInput, bucketName string) error
-	UpdatePipeline(env *deploy.CreatePipelineInput, bucketName string) error
-	PipelineExists(env *deploy.CreatePipelineInput) (bool, error)
+	CreatePipeline(bucketName string, stackConfig cloudformation.StackConfiguration) error
+	UpdatePipeline(bucketName string, stackConfig cloudformation.StackConfiguration) error
+	PipelineExists(stackConfig cloudformation.StackConfiguration) (bool, error)
 	DeletePipeline(pipeline deploy.Pipeline) error
 	AddPipelineResourcesToApp(app *config.Application, region string) error
 	Template(stackName string) (string, error)
@@ -703,8 +705,4 @@ type envPackager interface {
 	UploadArtifacts() (*clideploy.UploadEnvArtifactsOutput, error)
 	AddonsTemplate() (string, error)
 	templateDiffer
-}
-
-type pipelineStackConfig interface {
-	Template() (string, error)
 }

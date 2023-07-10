@@ -48,7 +48,7 @@ func newOverrideWorkloadOpts(vars overrideWorkloadVars) (*overrideWorkloadOpts, 
 		return nil, fmt.Errorf("default session: %v", err)
 	}
 	cfgStore := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
-
+	vars.requiresEnv = true
 	prompt := prompt.New()
 	cmd := &overrideWorkloadOpts{
 		envName: vars.envName,

@@ -13,6 +13,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	deploycfn "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
@@ -235,6 +236,7 @@ func TestPipelinePackageOpts_Execute(t *testing.T) {
 
 					// check if the pipeline has been deployed using a legacy naming.
 					m.deployedPipelineLister.EXPECT().ListDeployedPipelines(appName).Return([]deploy.Pipeline{}, nil),
+					m.ws.EXPECT().PipelineOverridesPath(pipelineName).Return("path"),
 					m.pipelineStackConfig.EXPECT().Template().Return("", someError),
 				)
 
@@ -275,7 +277,7 @@ func TestPipelinePackageOpts_Execute(t *testing.T) {
 					name:    pipelineName,
 				},
 				pipelineDeployer: mockPipelineDeployer,
-				pipelineStackConfig: func(in *deploy.CreatePipelineInput) pipelineStackConfig {
+				pipelineStackConfig: func(in *deploy.CreatePipelineInput) deploycfn.StackConfiguration {
 					return mockPipelineStackConfig
 				},
 				ws:    mockWorkspace,

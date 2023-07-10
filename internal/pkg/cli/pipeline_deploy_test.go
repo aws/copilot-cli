@@ -14,6 +14,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	deploycfn "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
@@ -261,21 +262,13 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					// check if the pipeline has been deployed using a legacy naming.
 					m.deployedPipelineLister.EXPECT().ListDeployedPipelines(appName).Return([]deploy.Pipeline{}, nil),
 
+					m.ws.EXPECT().PipelineOverridesPath(pipelineName).Return("path"),
+
 					// deployPipeline
-					m.deployer.EXPECT().PipelineExists(gomock.Any()).DoAndReturn(func(in *deploy.CreatePipelineInput) (bool, error) {
-						if in.IsLegacy {
-							return false, errors.New("should not be a legacy pipeline")
-						}
-						return false, nil
-					}),
+					m.deployer.EXPECT().PipelineExists(gomock.Any()).Return(false, nil),
 					m.deployer.EXPECT().GetAppResourcesByRegion(&app, region).Return(mockResource, nil),
 					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployStart, pipelineName)).Times(1),
-					m.deployer.EXPECT().CreatePipeline(gomock.Any(), gomock.Any()).DoAndReturn(func(in *deploy.CreatePipelineInput, _ string) error {
-						if in.IsLegacy {
-							return errors.New("should not be a legacy pipeline")
-						}
-						return nil
-					}),
+					m.deployer.EXPECT().CreatePipeline(gomock.Any(), gomock.Any()).Return(nil),
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployComplete, pipelineName)).Times(1),
 				)
 			},
@@ -304,22 +297,14 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					// check if the pipeline has been deployed using a legacy naming.
 					m.deployedPipelineLister.EXPECT().ListDeployedPipelines(appName).Return([]deploy.Pipeline{}, nil),
 
+					m.ws.EXPECT().PipelineOverridesPath(pipelineName).Return("path"),
+
 					// deployPipeline
-					m.deployer.EXPECT().PipelineExists(gomock.Any()).DoAndReturn(func(in *deploy.CreatePipelineInput) (bool, error) {
-						if in.IsLegacy {
-							return false, errors.New("should not be a legacy pipeline")
-						}
-						return true, nil
-					}),
+					m.deployer.EXPECT().PipelineExists(gomock.Any()).Return(true, nil),
 					m.deployer.EXPECT().GetAppResourcesByRegion(&app, region).Return(mockResource, nil),
 					m.prompt.EXPECT().Confirm(fmt.Sprintf(fmtPipelineDeployExistPrompt, pipelineName), "").Return(true, nil),
 					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployProposalStart, pipelineName)).Times(1),
-					m.deployer.EXPECT().UpdatePipeline(gomock.Any(), gomock.Any()).DoAndReturn(func(in *deploy.CreatePipelineInput, _ string) error {
-						if in.IsLegacy {
-							return errors.New("should not be a legacy pipeline")
-						}
-						return nil
-					}),
+					m.deployer.EXPECT().UpdatePipeline(gomock.Any(), gomock.Any()).Return(nil),
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployProposalComplete, pipelineName)).Times(1),
 				)
 			},
@@ -353,22 +338,14 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 						},
 					}, nil),
 
+					m.ws.EXPECT().PipelineOverridesPath(pipelineName).Return("path"),
+
 					// deployPipeline
-					m.deployer.EXPECT().PipelineExists(gomock.Any()).DoAndReturn(func(in *deploy.CreatePipelineInput) (bool, error) {
-						if !in.IsLegacy {
-							return false, errors.New("should be a legacy pipeline")
-						}
-						return true, nil
-					}),
+					m.deployer.EXPECT().PipelineExists(gomock.Any()).Return(true, nil),
 					m.deployer.EXPECT().GetAppResourcesByRegion(&app, region).Return(mockResource, nil),
 					m.prompt.EXPECT().Confirm(fmt.Sprintf(fmtPipelineDeployExistPrompt, pipelineName), "").Return(true, nil),
 					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployProposalStart, pipelineName)).Times(1),
-					m.deployer.EXPECT().UpdatePipeline(gomock.Any(), gomock.Any()).DoAndReturn(func(in *deploy.CreatePipelineInput, _ string) error {
-						if !in.IsLegacy {
-							return errors.New("should be a legacy pipeline")
-						}
-						return nil
-					}),
+					m.deployer.EXPECT().UpdatePipeline(gomock.Any(), gomock.Any()).Return(nil),
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployProposalComplete, pipelineName)).Times(1),
 				)
 			},
@@ -396,6 +373,8 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 
 					// check if the pipeline has been deployed using a legacy naming.
 					m.deployedPipelineLister.EXPECT().ListDeployedPipelines(appName).Return([]deploy.Pipeline{}, nil),
+
+					m.ws.EXPECT().PipelineOverridesPath(pipelineName).Return("path"),
 
 					// deployPipeline
 					m.deployer.EXPECT().PipelineExists(gomock.Any()).Return(true, nil),
@@ -427,6 +406,8 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 
 					// check if the pipeline has been deployed using a legacy naming.
 					m.deployedPipelineLister.EXPECT().ListDeployedPipelines(appName).Return([]deploy.Pipeline{}, nil),
+
+					m.ws.EXPECT().PipelineOverridesPath(pipelineName).Return("path"),
 
 					// deployPipeline
 					m.deployer.EXPECT().PipelineExists(gomock.Any()).Return(true, nil),
@@ -590,6 +571,8 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					// check if the pipeline has been deployed using a legacy naming.
 					m.deployedPipelineLister.EXPECT().ListDeployedPipelines(appName).Return([]deploy.Pipeline{}, nil),
 
+					m.ws.EXPECT().PipelineOverridesPath(pipelineName).Return("path"),
+
 					// deployPipeline
 					m.deployer.EXPECT().PipelineExists(gomock.Any()).Return(false, errors.New("some error")),
 				)
@@ -618,6 +601,8 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 
 					// check if the pipeline has been deployed using a legacy naming.
 					m.deployedPipelineLister.EXPECT().ListDeployedPipelines(appName).Return([]deploy.Pipeline{}, nil),
+
+					m.ws.EXPECT().PipelineOverridesPath(pipelineName).Return("path"),
 
 					// deployPipeline
 					m.deployer.EXPECT().PipelineExists(gomock.Any()).Return(false, nil),
@@ -651,6 +636,8 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 
 					// check if the pipeline has been deployed using a legacy naming.
 					m.deployedPipelineLister.EXPECT().ListDeployedPipelines(appName).Return([]deploy.Pipeline{}, nil),
+
+					m.ws.EXPECT().PipelineOverridesPath(pipelineName).Return("path"),
 
 					// deployPipeline
 					m.deployer.EXPECT().PipelineExists(gomock.Any()).Return(true, nil),
@@ -711,6 +698,8 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					// check if the pipeline has been deployed using a legacy naming.
 					m.deployedPipelineLister.EXPECT().ListDeployedPipelines(appName).Return([]deploy.Pipeline{}, nil),
 
+					m.ws.EXPECT().PipelineOverridesPath(pipelineName).Return("path"),
+
 					// deployPipeline
 					m.deployer.EXPECT().PipelineExists(gomock.Any()).Return(true, nil),
 					m.deployer.EXPECT().GetAppResourcesByRegion(&app, region).Return(mockResource, nil),
@@ -746,11 +735,13 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					// check if the pipeline has been deployed using a legacy naming.
 					m.deployedPipelineLister.EXPECT().ListDeployedPipelines(appName).Return([]deploy.Pipeline{}, nil),
 
+					m.ws.EXPECT().PipelineOverridesPath(pipelineName).Return("path"),
+
 					m.pipelineStackConfig.EXPECT().Template().Return("", errors.New("some error")),
 				)
 
 			},
-			expectedError: fmt.Errorf("generate the new template for diff: some error"),
+			expectedError: fmt.Errorf("generate the new template for diff: generate stack template: some error"),
 		},
 		"failed to fetch the template of deployed stack": {
 			inApp:      &app,
@@ -776,6 +767,7 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					// check if the pipeline has been deployed using a legacy naming.
 					m.deployedPipelineLister.EXPECT().ListDeployedPipelines(appName).Return([]deploy.Pipeline{}, nil),
 
+					m.ws.EXPECT().PipelineOverridesPath(pipelineName).Return("path"),
 					m.pipelineStackConfig.EXPECT().Template().Return("template one", nil),
 					m.deployedPipelineLister.EXPECT().ListDeployedPipelines(appName).Return([]deploy.Pipeline{}, nil),
 
@@ -805,6 +797,8 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 
 				// check if the pipeline has been deployed using a legacy naming.
 				m.deployedPipelineLister.EXPECT().ListDeployedPipelines(appName).Return([]deploy.Pipeline{}, nil)
+
+				m.ws.EXPECT().PipelineOverridesPath(pipelineName).Return("path")
 
 				m.pipelineStackConfig.EXPECT().Template().Return("name: mockEnv\ntype: Environment", nil)
 				m.deployedPipelineLister.EXPECT().ListDeployedPipelines(appName).Return([]deploy.Pipeline{}, nil)
@@ -839,12 +833,9 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 				// check if the pipeline has been deployed using a legacy naming.
 				m.deployedPipelineLister.EXPECT().ListDeployedPipelines(appName).Return([]deploy.Pipeline{}, nil)
 
-				m.deployer.EXPECT().PipelineExists(gomock.Any()).DoAndReturn(func(in *deploy.CreatePipelineInput) (bool, error) {
-					if in.IsLegacy {
-						return false, errors.New("should not be a legacy pipeline")
-					}
-					return false, nil
-				})
+				m.ws.EXPECT().PipelineOverridesPath(pipelineName).Return("path")
+
+				m.deployer.EXPECT().PipelineExists(gomock.Any()).Return(false, nil)
 
 				m.pipelineStackConfig.EXPECT().Template().Return("name: mockEnv\ntype: Environment", nil)
 
@@ -856,12 +847,7 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 				// deployPipeline
 				m.deployer.EXPECT().GetAppResourcesByRegion(&app, region).Return(mockResource, nil)
 				m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployStart, pipelineName)).Times(1)
-				m.deployer.EXPECT().CreatePipeline(gomock.Any(), gomock.Any()).DoAndReturn(func(in *deploy.CreatePipelineInput, _ string) error {
-					if in.IsLegacy {
-						return errors.New("should not be a legacy pipeline")
-					}
-					return nil
-				})
+				m.deployer.EXPECT().CreatePipeline(gomock.Any(), gomock.Any()).Return(nil)
 				m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployComplete, pipelineName)).Times(1)
 
 			},
@@ -889,6 +875,8 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 				// check if the pipeline has been deployed using a legacy naming.
 				m.deployedPipelineLister.EXPECT().ListDeployedPipelines(appName).Return([]deploy.Pipeline{}, nil)
 
+				m.ws.EXPECT().PipelineOverridesPath(pipelineName).Return("path")
+
 				m.pipelineStackConfig.EXPECT().Template().Return("name: mockEnv\ntype: Environment", nil)
 				m.deployedPipelineLister.EXPECT().ListDeployedPipelines(appName).Return([]deploy.Pipeline{}, nil)
 				m.deployer.EXPECT().Template(gomock.Any()).Return("name: mockEnv\ntype: Environment", nil)
@@ -896,22 +884,12 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 				m.prompt.EXPECT().Confirm(continueDeploymentPrompt, "").Return(true, nil)
 
 				// deployPipeline
-				m.deployer.EXPECT().PipelineExists(gomock.Any()).DoAndReturn(func(in *deploy.CreatePipelineInput) (bool, error) {
-					if in.IsLegacy {
-						return false, errors.New("should not be a legacy pipeline")
-					}
-					return true, nil
-				})
+				m.deployer.EXPECT().PipelineExists(gomock.Any()).Return(true, nil)
 
 				m.deployer.EXPECT().GetAppResourcesByRegion(&app, region).Return(mockResource, nil)
 
 				m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployProposalStart, pipelineName)).Times(1)
-				m.deployer.EXPECT().UpdatePipeline(gomock.Any(), gomock.Any()).DoAndReturn(func(in *deploy.CreatePipelineInput, _ string) error {
-					if in.IsLegacy {
-						return errors.New("should not be a legacy pipeline")
-					}
-					return nil
-				})
+				m.deployer.EXPECT().UpdatePipeline(gomock.Any(), gomock.Any()).Return(nil)
 				m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployProposalComplete, pipelineName)).Times(1)
 
 			},
@@ -952,7 +930,7 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					showDiff: tc.inShowDiff,
 				},
 				pipelineDeployer: mockPipelineDeployer,
-				pipelineStackConfig: func(in *deploy.CreatePipelineInput) pipelineStackConfig {
+				pipelineStackConfig: func(in *deploy.CreatePipelineInput) deploycfn.StackConfiguration {
 					return mockPipelineStackConfig
 				},
 				ws:         mockWorkspace,

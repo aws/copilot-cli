@@ -36,16 +36,20 @@ func NewOverrider(pathToOverridesDir, app, env string, fs afero.Fs, sess UserAge
 	switch {
 	case info.IsCDK():
 		sess.UserAgentExtras("override cdk")
-		return override.WithCDK(info.Path(), override.CDKOpts{
-			// Write out-of-band info from sub-commands to stderr as users expect stdout to only
-			// contain the final override output.
-			ExecWriter: log.DiagnosticWriter,
+		// Write out-of-band info from sub-commands to stderr as users expect stdout to only
+		// contain the final override output.
+		opts := override.CDKOpts{
 			FS:         fs,
+			ExecWriter: log.DiagnosticWriter,
 			EnvVars: map[string]string{
 				"COPILOT_APPLICATION_NAME": app,
-				"COPILOT_ENVIRONMENT_NAME": env,
 			},
-		}), nil
+		}
+		if env != "" {
+			opts.EnvVars["COPILOT_ENVIRONMENT_NAME"] = env
+		}
+
+		return override.WithCDK(info.Path(), opts), nil
 	case info.IsYAMLPatch():
 		sess.UserAgentExtras("override yamlpatch")
 		return override.WithPatch(info.Path(), override.PatchOpts{

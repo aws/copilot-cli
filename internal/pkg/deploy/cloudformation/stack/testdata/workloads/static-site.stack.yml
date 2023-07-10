@@ -214,7 +214,7 @@ Resources:
             Next: CopyFiles
           CopyFiles:
             Type: Map
-            End: true
+            Next: InvalidateCache
             ItemsPath: $.GetMappingFile.files
             ItemProcessor:
               ProcessorConfig:
@@ -252,6 +252,18 @@ Resources:
                     # Required otherwise ContentType won't be applied.
                     # See https://github.com/aws/aws-sdk-js/issues/1092 for more.
                     MetadataDirective: 'REPLACE'
+          InvalidateCache:
+            Type: Task
+            End: true
+            Resource: arn:aws:states:::aws-sdk:cloudfront:createInvalidation
+            Parameters:
+              DistributionId: !Ref CloudFrontDistribution
+              InvalidationBatch:
+                CallerReference.$: States.UUID()
+                Paths:
+                  Quantity: 1
+                  Items:
+                    - "/*"
 
   CopyAssetsStateMachineRole:
     Metadata:
@@ -284,6 +296,37 @@ Resources:
                 Action:
                   - s3:PutObject
                 Resource: !Sub arn:aws:s3:::${Bucket}/*
+        - PolicyName: CacheInvalidation
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - acm:ListCertificates
+                  - cloudfront:GetDistribution
+                  - cloudfront:GetStreamingDistribution
+                  - cloudfront:GetDistributionConfig
+                  - cloudfront:ListDistributions
+                  - cloudfront:ListCloudFrontOriginAccessIdentities
+                  - cloudfront:CreateInvalidation
+                  - cloudfront:GetInvalidation
+                  - cloudfront:ListInvalidations
+                  - elasticloadbalancing:DescribeLoadBalancers
+                  - iam:ListServerCertificates
+                  - sns:ListSubscriptionsByTopic
+                  - sns:ListTopics
+                  - waf:GetWebACL
+                  - waf:ListWebACLs
+                Resource: "*"
+                Condition:
+                  StringEquals:
+                    'aws:ResourceTag/copilot-application': !Sub '${AppName}'
+                    'aws:ResourceTag/copilot-environment': !Sub '${EnvName}'
+                    'aws:ResourceTag/copilot-service': !Sub '${WorkloadName}'
+              - Effect: Allow
+                Action:
+                  - s3:ListAllMyBuckets
+                Resource: arn:aws:s3:::*
 
   EnvManagerS3Access:
     Metadata:

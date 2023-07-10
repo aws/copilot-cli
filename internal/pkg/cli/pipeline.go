@@ -20,6 +20,7 @@ Continuous delivery pipelines to release services.`,
 	}
 
 	cmd.AddCommand(buildPipelineInitCmd())
+	cmd.AddCommand(buildPipelineOverrideCmd())
 	cmd.AddCommand(buildPipelineDeployCmd())
 	cmd.AddCommand(buildPipelineDeleteCmd())
 	cmd.AddCommand(buildPipelineShowCmd())
