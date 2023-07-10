@@ -1204,3 +1204,312 @@ func TestCloudFormation_RenderStackSet(t *testing.T) {
 		})
 	}
 }
+
+func TestCloudFormation_RemoveEnvFromApp(t *testing.T) {
+
+	testCases := map[string]struct {
+		mock   func(t *testing.T, ctrl *gomock.Controller) CloudFormation
+		inOpts RemoveEnvFromAppOpts
+
+		wantedErr error
+	}{
+		"success": {
+			inOpts: RemoveEnvFromAppOpts{
+				App: &config.Application{
+					Name:      "phonetool",
+					AccountID: "1234",
+					Version:   "1",
+				},
+				EnvName:              "test",
+				EnvAccountID:         "1234",
+				EnvRegion:            "us-west-2",
+				DeleteStackInstance:  true,
+				RemoveAccountFromApp: true,
+			},
+			mock: func(t *testing.T, ctrl *gomock.Controller) CloudFormation {
+				cfn := mocks.NewMockcfnClient(ctrl)
+				appStackSet := mocks.NewMockstackSetClient(ctrl)
+				appStackSet.EXPECT().DeleteInstance("phonetool-infrastructure", "1234", "us-west-2").Return("123", nil)
+				appStackSet.EXPECT().WaitForOperation("phonetool-infrastructure", "123").Return(nil)
+				cfn.EXPECT().Describe(stack.NameForAppStack("phonetool")).Return(&cloudformation.StackDescription{
+					Parameters: []*awscfn.Parameter{
+						{
+							ParameterKey:   aws.String("AppDNSDelegatedAccounts"),
+							ParameterValue: aws.String("1234,5678"),
+						},
+					},
+				}, nil)
+				cfn.EXPECT().UpdateAndWait(gomock.Any())
+				appStackSet.EXPECT().Describe("phonetool-infrastructure").Return(stackset.Description{
+					ID:   "",
+					Name: "phonetool-infrastructure",
+					Template: `Metadata:
+  TemplateVersion: 'v1.2.0'
+  Version: 17
+  Workloads:
+    - Name: ar
+      WithECR: true
+  Accounts:
+    - 1234
+    - 5678`,
+				}, nil)
+				appStackSet.EXPECT().Update("phonetool-infrastructure", gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("123", nil)
+
+				return CloudFormation{
+					cfnClient: cfn,
+					region:    "us-east-1",
+
+					appStackSet: appStackSet,
+					dnsDelegatedAccountsForStack: func(in *awscfn.Stack) []string {
+						return []string{"1234", "5678"}
+					},
+					renderStackSet: func(in renderStackSetInput) error {
+						_, err := in.createOpFn()
+						return err
+					},
+				}
+			},
+		},
+		"skips stack redeployment if account does not exist in dns delegated accounts": {
+			inOpts: RemoveEnvFromAppOpts{
+				App: &config.Application{
+					Name:      "phonetool",
+					AccountID: "1234",
+					Version:   "1",
+				},
+				EnvName:              "test",
+				EnvAccountID:         "1234",
+				EnvRegion:            "us-west-2",
+				DeleteStackInstance:  true,
+				RemoveAccountFromApp: true,
+			},
+			mock: func(t *testing.T, ctrl *gomock.Controller) CloudFormation {
+				cfn := mocks.NewMockcfnClient(ctrl)
+				appStackSet := mocks.NewMockstackSetClient(ctrl)
+				appStackSet.EXPECT().DeleteInstance("phonetool-infrastructure", "1234", "us-west-2").Return("123", nil)
+				appStackSet.EXPECT().WaitForOperation("phonetool-infrastructure", "123").Return(nil)
+				cfn.EXPECT().Describe(stack.NameForAppStack("phonetool")).Return(&cloudformation.StackDescription{
+					Parameters: []*awscfn.Parameter{
+						{
+							ParameterKey:   aws.String("AppDNSDelegatedAccounts"),
+							ParameterValue: aws.String("5678"),
+						},
+					},
+				}, nil)
+
+				return CloudFormation{
+					cfnClient: cfn,
+					region:    "us-east-1",
+
+					appStackSet: appStackSet,
+					dnsDelegatedAccountsForStack: func(in *awscfn.Stack) []string {
+						return []string{"5678"}
+					},
+					renderStackSet: func(in renderStackSetInput) error {
+						_, err := in.createOpFn()
+						return err
+					},
+				}
+			},
+		},
+		"skips stack redeployment if 'RemoveAccountFromApp' is false": {
+			inOpts: RemoveEnvFromAppOpts{
+				App: &config.Application{
+					Name:      "phonetool",
+					AccountID: "1234",
+					Version:   "1",
+				},
+				EnvName:              "test",
+				EnvAccountID:         "1234",
+				EnvRegion:            "us-west-2",
+				DeleteStackInstance:  true,
+				RemoveAccountFromApp: false,
+			},
+			mock: func(t *testing.T, ctrl *gomock.Controller) CloudFormation {
+				cfn := mocks.NewMockcfnClient(ctrl)
+				appStackSet := mocks.NewMockstackSetClient(ctrl)
+				appStackSet.EXPECT().DeleteInstance("phonetool-infrastructure", "1234", "us-west-2").Return("123", nil)
+				appStackSet.EXPECT().WaitForOperation("phonetool-infrastructure", "123").Return(nil)
+
+				return CloudFormation{
+					cfnClient: cfn,
+					region:    "us-east-1",
+
+					appStackSet: appStackSet,
+					dnsDelegatedAccountsForStack: func(in *awscfn.Stack) []string {
+						return []string{"5678"}
+					},
+					renderStackSet: func(in renderStackSetInput) error {
+						_, err := in.createOpFn()
+						return err
+					},
+				}
+			},
+		},
+		"skips instance delete if 'DeleteStackInstance' is false": {
+			inOpts: RemoveEnvFromAppOpts{
+				App: &config.Application{
+					Name:      "phonetool",
+					AccountID: "1234",
+					Version:   "1",
+				},
+				EnvName:              "test",
+				EnvAccountID:         "1234",
+				EnvRegion:            "us-west-2",
+				DeleteStackInstance:  false,
+				RemoveAccountFromApp: true,
+			},
+			mock: func(t *testing.T, ctrl *gomock.Controller) CloudFormation {
+				cfn := mocks.NewMockcfnClient(ctrl)
+				appStackSet := mocks.NewMockstackSetClient(ctrl)
+				cfn.EXPECT().Describe(stack.NameForAppStack("phonetool")).Return(&cloudformation.StackDescription{
+					Parameters: []*awscfn.Parameter{
+						{
+							ParameterKey:   aws.String("AppDNSDelegatedAccounts"),
+							ParameterValue: aws.String("1234,5678"),
+						},
+					},
+				}, nil)
+				cfn.EXPECT().UpdateAndWait(gomock.Any())
+				appStackSet.EXPECT().Describe("phonetool-infrastructure").Return(stackset.Description{
+					ID:   "",
+					Name: "phonetool-infrastructure",
+					Template: `Metadata:
+  TemplateVersion: 'v1.2.0'
+  Version: 17
+  Workloads:
+    - Name: ar
+      WithECR: true
+  Accounts:
+    - 1234
+    - 5678`,
+				}, nil)
+				appStackSet.EXPECT().Update("phonetool-infrastructure", gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("123", nil)
+
+				return CloudFormation{
+					cfnClient: cfn,
+					region:    "us-east-1",
+
+					appStackSet: appStackSet,
+					dnsDelegatedAccountsForStack: func(in *awscfn.Stack) []string {
+						return []string{"1234", "5678"}
+					},
+					renderStackSet: func(in renderStackSetInput) error {
+						_, err := in.createOpFn()
+						return err
+					},
+				}
+			},
+		},
+		"error deleting instance": {
+			inOpts: RemoveEnvFromAppOpts{
+				App: &config.Application{
+					Name:      "phonetool",
+					AccountID: "1234",
+					Version:   "1",
+				},
+				EnvName:              "test",
+				EnvAccountID:         "1234",
+				EnvRegion:            "us-west-2",
+				DeleteStackInstance:  true,
+				RemoveAccountFromApp: true,
+			},
+			wantedErr: errors.New("some error"),
+			mock: func(t *testing.T, ctrl *gomock.Controller) CloudFormation {
+				cfn := mocks.NewMockcfnClient(ctrl)
+				appStackSet := mocks.NewMockstackSetClient(ctrl)
+				appStackSet.EXPECT().DeleteInstance("phonetool-infrastructure", "1234", "us-west-2").Return("", errors.New("some error"))
+
+				return CloudFormation{
+					cfnClient: cfn,
+					region:    "us-east-1",
+
+					appStackSet: appStackSet,
+					dnsDelegatedAccountsForStack: func(in *awscfn.Stack) []string {
+						return []string{"1234", "5678"}
+					},
+					renderStackSet: func(in renderStackSetInput) error {
+						_, err := in.createOpFn()
+						return err
+					},
+				}
+			},
+		},
+		"error updating stack": {
+			inOpts: RemoveEnvFromAppOpts{
+				App: &config.Application{
+					Name:      "phonetool",
+					AccountID: "1234",
+					Version:   "1",
+				},
+				EnvName:              "test",
+				EnvAccountID:         "1234",
+				EnvRegion:            "us-west-2",
+				DeleteStackInstance:  true,
+				RemoveAccountFromApp: true,
+			},
+			wantedErr: errors.New("some error"),
+			mock: func(t *testing.T, ctrl *gomock.Controller) CloudFormation {
+				cfn := mocks.NewMockcfnClient(ctrl)
+				appStackSet := mocks.NewMockstackSetClient(ctrl)
+				appStackSet.EXPECT().DeleteInstance("phonetool-infrastructure", "1234", "us-west-2").Return("123", nil)
+				appStackSet.EXPECT().WaitForOperation("phonetool-infrastructure", "123").Return(nil)
+				cfn.EXPECT().Describe(stack.NameForAppStack("phonetool")).Return(&cloudformation.StackDescription{
+					Parameters: []*awscfn.Parameter{
+						{
+							ParameterKey:   aws.String("AppDNSDelegatedAccounts"),
+							ParameterValue: aws.String("1234,5678"),
+						},
+					},
+				}, nil)
+				cfn.EXPECT().UpdateAndWait(gomock.Any())
+				appStackSet.EXPECT().Describe("phonetool-infrastructure").Return(stackset.Description{
+					ID:   "",
+					Name: "phonetool-infrastructure",
+					Template: `Metadata:
+  TemplateVersion: 'v1.2.0'
+  Version: 17
+  Workloads:
+    - Name: ar
+      WithECR: true
+  Accounts:
+    - 1234
+    - 5678`,
+				}, nil)
+				appStackSet.EXPECT().Update("phonetool-infrastructure", gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("", errors.New("some error"))
+
+				return CloudFormation{
+					cfnClient: cfn,
+					region:    "us-east-1",
+
+					appStackSet: appStackSet,
+					dnsDelegatedAccountsForStack: func(in *awscfn.Stack) []string {
+						return []string{"1234", "5678"}
+					},
+					renderStackSet: func(in renderStackSetInput) error {
+						_, err := in.createOpFn()
+						return err
+					},
+				}
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			client := tc.mock(t, ctrl)
+
+			// WHEN
+			err := client.RemoveEnvFromApp(&tc.inOpts)
+
+			// THEN
+			if tc.wantedErr != nil {
+				require.ErrorContains(t, err, tc.wantedErr.Error())
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
