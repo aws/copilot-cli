@@ -14,6 +14,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	deploycfn "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
+	deploymock "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
@@ -26,7 +27,7 @@ type packagePipelineMocks struct {
 	prompt                 *mocks.Mockprompter
 	prog                   *mocks.Mockprogress
 	deployer               *mocks.MockpipelineDeployer
-	pipelineStackConfig    *mocks.MockpipelineStackConfig
+	pipelineStackConfig    *deploymock.MockStackConfiguration
 	ws                     *mocks.MockwsPipelineReader
 	actionCmd              *mocks.MockactionCommand
 	deployedPipelineLister *mocks.MockdeployedPipelineLister
@@ -256,7 +257,7 @@ func TestPipelinePackageOpts_Execute(t *testing.T) {
 			mockProgress := mocks.NewMockprogress(ctrl)
 			mockPrompt := mocks.NewMockprompter(ctrl)
 			mockActionCmd := mocks.NewMockactionCommand(ctrl)
-			mockPipelineStackConfig := mocks.NewMockpipelineStackConfig(ctrl)
+			mockPipelineStackConfig := deploymock.NewMockStackConfiguration(ctrl)
 
 			mocks := packagePipelineMocks{
 				store:                  mockStore,
