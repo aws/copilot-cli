@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"io"
 	"os"
 	"strings"
@@ -187,7 +188,8 @@ type CloudFormation struct {
 	cachedDeployedStack *cloudformation.StackDescription
 
 	// Overridden in tests.
-	renderStackSet func(input renderStackSetInput) error
+	renderStackSet               func(input renderStackSetInput) error
+	dnsDelegatedAccountsForStack func(stack *sdkcloudformation.Stack) []string
 }
 
 // New returns a configured CloudFormation client.
@@ -212,6 +214,7 @@ func New(sess *session.Session, opts ...OptFn) CloudFormation {
 		opt(&client)
 	}
 	client.renderStackSet = client.renderStackSetImpl
+	client.dnsDelegatedAccountsForStack = stack.DNSDelegatedAccountsForStack
 	return client
 }
 
