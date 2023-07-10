@@ -128,16 +128,19 @@ func (cf CloudFormation) upgradeAppStack(conf *stack.AppStackConfig) error {
 	return cf.executeAndRenderChangeSet(in)
 }
 
-// removeDNSDelegation removes the provided account ID from the list of accounts that can write to the
-// application's DNS HostedZone.
-func (cf CloudFormation) removeDNSDelegation(deployApp *deploy.CreateAppInput, appStack *stack.AppStackConfig, accountID string) error {
+// removeDNSDelegationAndCrossAccountAccess removes the provided account ID from the list of accounts that can write to the
+// application's DNS HostedZone. It does this by creating the new list of DNS delegated accounts, updating the app
+// infrastructure roles stack, then redeploying all the stackset instances with the new list of accounts.
+// If the list of accounts already excludes the account to remove, we return early for idempotency.
+func (cf CloudFormation) removeDNSDelegationAndCrossAccountAccess(appStack *stack.AppStackConfig, accountID string) error {
+	// Get the most recently deployed list of delegated accounts.
 	appStackDesc, err := cf.cfnClient.Describe(appStack.StackName())
 	if err != nil {
-		return fmt.Errorf("getting existing application infrastructure stack: %w", err)
+		return fmt.Errorf("get existing application infrastructure stack: %w", err)
 	}
+	dnsDelegatedAccounts := cf.dnsDelegatedAccountsForStack(appStackDesc.SDK())
 
-	dnsDelegatedAccounts := stack.DNSDelegatedAccountsForStack(appStackDesc.SDK())
-
+	// Remove the desired account from this list.
 	var newAccountList []string
 	for _, account := range dnsDelegatedAccounts {
 		if account == accountID {
@@ -145,9 +148,23 @@ func (cf CloudFormation) removeDNSDelegation(deployApp *deploy.CreateAppInput, a
 		}
 		newAccountList = append(newAccountList, account)
 	}
-	deployApp.DNSDelegationAccounts = newAccountList
-
-	s, err := toStack(stack.NewAppStackConfig(deployApp))
+	// If the lists are equal length, the account has already been removed and we don't have to redeploy the stackset instances.
+	if len(newAccountList) == len(dnsDelegatedAccounts) {
+		return nil
+	}
+	// Create a new AppStackConfig using the new account list.
+	newCfg := stack.NewAppStackConfig(&deploy.CreateAppInput{
+		Name:                  appStack.Name,
+		AccountID:             appStack.AccountID,
+		DNSDelegationAccounts: newAccountList,
+		DomainName:            appStack.DomainName,
+		DomainHostedZoneID:    appStack.DomainHostedZoneID,
+		PermissionsBoundary:   appStack.PermissionsBoundary,
+		AdditionalTags:        appStack.AdditionalTags,
+		Version:               appStack.Version,
+	})
+	// Redeploy the infrastructure roles stack.
+	s, err := toStack(newCfg)
 	if err != nil {
 		return err
 	}
@@ -157,16 +174,15 @@ func (cf CloudFormation) removeDNSDelegation(deployApp *deploy.CreateAppInput, a
 		if errors.As(err, &errNoUpdates) {
 			return nil
 		}
-		return fmt.Errorf("updating application to remove DNS delegation from account %s: %w", accountID, err)
+		return fmt.Errorf("update application to remove DNS delegation from account %s: %w", accountID, err)
 	}
 	// Update stackset instances to remove account.
-	cfg := stack.NewAppStackConfig(deployApp)
-	previouslyDeployedConfig, err := cf.getLastDeployedAppConfig(cfg)
+	appResourcesConfig, err := cf.getLastDeployedAppConfig(appStack)
 	if err != nil {
 		return err
 	}
-	previouslyDeployedConfig.Accounts = cfg.DNSDelegationAccounts
-	if err := cf.deployAppConfig(cfg, previouslyDeployedConfig, true); err != nil {
+	appResourcesConfig.Accounts = newAccountList
+	if err := cf.deployAppConfig(newCfg, appResourcesConfig, true); err != nil {
 		return fmt.Errorf("update application regional resources to remove account %s: %w", accountID, err)
 	}
 	return nil
@@ -388,7 +404,7 @@ func (cf CloudFormation) RemoveEnvFromApp(opts *RemoveEnvFromAppOpts) error {
 	}
 
 	if opts.RemoveAccountFromApp {
-		return cf.removeDNSDelegation(deployApp, appConfig, opts.EnvAccountID)
+		return cf.removeDNSDelegationAndCrossAccountAccess(appConfig, opts.EnvAccountID)
 	}
 
 	return nil
