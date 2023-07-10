@@ -96,7 +96,7 @@ func TestECSServiceDescriber_EnvVars(t *testing.T) {
 			tc.setupMocks(mocks)
 
 			d := &ecsServiceDescriber{
-				workloadStackDescriber: &workloadStackDescriber{
+				WorkloadStackDescriber: &WorkloadStackDescriber{
 					app:  testApp,
 					name: testSvc,
 					env:  testEnv,
@@ -185,7 +185,7 @@ func TestECSServiceDescriber_RollbackAlarmNames(t *testing.T) {
 			tc.setupMocks(mocks)
 
 			d := &ecsServiceDescriber{
-				workloadStackDescriber: &workloadStackDescriber{
+				WorkloadStackDescriber: &WorkloadStackDescriber{
 					app:  testApp,
 					name: testSvc,
 					env:  testEnv,
@@ -263,7 +263,7 @@ func TestECSServiceDescriber_ServiceConnectDNSNames(t *testing.T) {
 			tc.setupMocks(mocks)
 
 			d := &ecsServiceDescriber{
-				workloadStackDescriber: &workloadStackDescriber{
+				WorkloadStackDescriber: &WorkloadStackDescriber{
 					app:  testApp,
 					name: testSvc,
 					env:  testEnv,
@@ -357,7 +357,7 @@ func TestECSServiceDescriber_Secrets(t *testing.T) {
 			tc.setupMocks(mocks)
 
 			d := &ecsServiceDescriber{
-				workloadStackDescriber: &workloadStackDescriber{
+				WorkloadStackDescriber: &WorkloadStackDescriber{
 					app:  testApp,
 					name: testSvc,
 					env:  testEnv,
@@ -440,7 +440,7 @@ func TestECSServiceDescriber_Platform(t *testing.T) {
 			tc.setupMocks(mocks)
 
 			d := &ecsServiceDescriber{
-				workloadStackDescriber: &workloadStackDescriber{
+				WorkloadStackDescriber: &WorkloadStackDescriber{
 					app:  testApp,
 					name: testSvc,
 					env:  testEnv,
@@ -565,7 +565,7 @@ func TestAppRunnerServiceDescriber_ServiceURL(t *testing.T) {
 			tc.setupMocks(m)
 
 			d := &appRunnerServiceDescriber{
-				workloadStackDescriber: &workloadStackDescriber{
+				WorkloadStackDescriber: &WorkloadStackDescriber{
 					cfn: m.stackDescriber,
 				},
 				apprunnerClient: m.apprunnerClient,
@@ -626,7 +626,7 @@ func TestAppRunnerServiceDescriber_IsPrivate(t *testing.T) {
 			tc.setupMocks(m)
 
 			d := &appRunnerServiceDescriber{
-				workloadStackDescriber: &workloadStackDescriber{
+				WorkloadStackDescriber: &WorkloadStackDescriber{
 					cfn: m.stackDescriber,
 				},
 			}

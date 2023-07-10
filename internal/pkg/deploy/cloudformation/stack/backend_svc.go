@@ -146,6 +146,7 @@ func (s *BackendService) Template() (string, error) {
 		AppName:            s.app,
 		EnvName:            s.env,
 		EnvVersion:         s.rc.EnvVersion,
+		Version:            s.rc.Version,
 		SerializedManifest: string(s.rawManifest),
 		WorkloadType:       manifestinfo.BackendServiceType,
 		WorkloadName:       s.name,
