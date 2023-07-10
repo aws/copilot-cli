@@ -369,10 +369,9 @@ func (c *CloudFormation) ListStacksWithTags(tags map[string]string) ([]StackDesc
 // CancelUpdateStack attempts to cancel the update for a CloudFormation stack specified by the stackName.
 // Returns an error if failed to cancel CloudFormation stack update.
 func (c *CloudFormation) CancelUpdateStack(stackName string) error {
-	_, err := c.client.CancelUpdateStack(&cloudformation.CancelUpdateStackInput{
+	if _, err := c.client.CancelUpdateStack(&cloudformation.CancelUpdateStackInput{
 		StackName: aws.String(stackName),
-	})
-	if err != nil {
+	}); err != nil {
 		if !stackDoesNotExist(err) && !cancelUpdateStackNotInUpdateProgress(err) {
 			return fmt.Errorf("cancel update stack: %w", err)
 		}
