@@ -77,6 +77,7 @@ func TestWindowsLoadBalancedWebService_Template(t *testing.T) {
 			Region:                   "us-west-2",
 			ServiceDiscoveryEndpoint: svcDiscoveryEndpointName,
 			EnvVersion:               "v1.42.0",
+			Version:                  "v1.29.0",
 		},
 	})
 
