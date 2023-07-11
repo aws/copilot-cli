@@ -99,7 +99,7 @@ func (o *localRunOpts) Ask() error {
 }
 
 func (o *localRunOpts) Execute() error {
-	//TODO(varun359): Get build information from the manifest and task definition for services
+	//TODO(varun359): Get build information from the manifest and task definition for workloads
 
 	return nil
 }
