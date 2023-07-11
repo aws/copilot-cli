@@ -14,7 +14,8 @@ func TestSignal(t *testing.T) {
 	testCases := map[string]struct {
 		inSignals []os.Signal
 	}{
-		"receive a single signal": {
+		"no signal received": {},
+		"recieve a single signal": {
 			inSignals: []os.Signal{syscall.SIGINT},
 		},
 
