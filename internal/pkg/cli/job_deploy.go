@@ -242,6 +242,7 @@ func (o *deployJobOpts) Execute() error {
 			EnvFileARNs:        uploadOut.EnvFileARNs,
 			AddonsURL:          uploadOut.AddonsURL,
 			RootUserARN:        o.rootUserARN,
+			Version:            o.templateVersion,
 			Tags:               tags.Merge(o.targetApp.Tags, o.resourceTags),
 			CustomResourceURLs: uploadOut.CustomResourceURLs,
 		},
