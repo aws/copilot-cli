@@ -27,7 +27,7 @@ jobs:
   push:
     steps:
       - name: Push to CloudWatch
-        uses: aws-actions/action-cloudwatch-metrics
+        uses: aws-actions/action-cloudwatch-metrics@TAG
         with:
           metric-dimensions:
             - Name: "github.ref"
