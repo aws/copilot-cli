@@ -34,12 +34,12 @@ func TestSignal(t *testing.T) {
 			signalCh := sig.NotifySignals()
 
 			// THEN
-			for _, expectedSignal := range tc.inSignals {
-				if err := syscall.Kill(syscall.Getpid(), expectedSignal.(syscall.Signal)); err != nil {
+			for _, wantedSignal := range tc.inSignals {
+				if err := syscall.Kill(syscall.Getpid(), wantedSignal.(syscall.Signal)); err != nil {
 					require.Error(t, err)
 				}
-				if sig := <-signalCh; sig != expectedSignal {
-					t.Errorf("wanted signal is %v, Got signal %v", expectedSignal, sig)
+				if expectedSignal := <-signalCh; wantedSignal != wantedSignal {
+					t.Errorf("wanted signal is %v, Got signal %v", wantedSignal, expectedSignal)
 				}
 			}
 			sig.StopCatchSignals()
