@@ -144,7 +144,7 @@ func (ss *StackSet) DeleteInstance(name, account, region string) (string, error)
 		RetainStacks: aws.Bool(false),
 	})
 	if err != nil {
-		return "", fmt.Errorf("delete stack instances in region %v for account %v for stackset %s: %w",
+		return "", fmt.Errorf("delete stack instance in region %v for account %v for stackset %s: %w",
 			region, account, name, err)
 	}
 	return aws.StringValue(out.OperationId), nil

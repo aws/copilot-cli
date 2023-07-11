@@ -418,7 +418,7 @@ func TestStackSet_DeleteInstance(t *testing.T) {
 			},
 			inputRegion:  "us-west-1",
 			inputAccount: "1111",
-			wantedError:  errors.New("delete stack instances in region us-west-1 for account 1111 for stackset stackset: some error"),
+			wantedError:  errors.New("delete stack instance in region us-west-1 for account 1111 for stackset stackset: some error"),
 		},
 
 		"successfully deletes stack instance and returns the operation ID": {
