@@ -206,14 +206,20 @@ func (o *localRunOpts) validateOrAskWorkloadName() error {
 	if len(workloads) == 1 {
 		log.Infof("Only one workload found in this environment, defaulting to: %s\n", color.HighlightUserInput(workloads[0]))
 		o.wkldName = workloads[0]
-		return nil
+	} else {
+		selectedWorloadName, err := o.prompt.SelectOne("Select a workload that you want to run locally", "", workloads, prompt.WithFinalMessage("workload name"))
+		if err != nil {
+			return fmt.Errorf("select Workload: %w", err)
+		}
+		o.wkldName = selectedWorloadName
 	}
-
-	selectedWorloadName, err := o.prompt.SelectOne("Select a workload that you want to run locally", "", workloads, prompt.WithFinalMessage("workload name"))
+	localWorkloads, err := o.ws.ListWorkloads()
 	if err != nil {
-		return fmt.Errorf("select Workload: %w", err)
+		return fmt.Errorf("list workloads in the workspace : %w", err)
 	}
-	o.wkldName = selectedWorloadName
+	if !contains(o.wkldName, localWorkloads) {
+		return fmt.Errorf("selected service %q does not exist in the workspace", o.wkldName)
+	}
 	return nil
 }
 

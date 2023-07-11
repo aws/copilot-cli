@@ -227,6 +227,7 @@ func TestLocalRunOpts_Ask(t *testing.T) {
 					Region:    region,
 					AccountID: accountID,
 				}}, nil)
+				m.ws.EXPECT().ListWorkloads().Return([]string{"testWkld"}, nil)
 				m.deployStore.EXPECT().ListDeployedServices(testAppName, testEnvName).Return([]string{"testWkld"}, nil)
 				m.deployStore.EXPECT().ListDeployedJobs(testAppName, testEnvName).Return([]string{}, nil)
 			},
@@ -254,6 +255,7 @@ func TestLocalRunOpts_Ask(t *testing.T) {
 				m.deployStore.EXPECT().ListDeployedServices(testAppName, testEnvName).Return([]string{"testWkld"}, nil)
 				m.deployStore.EXPECT().ListDeployedJobs(testAppName, testEnvName).Return([]string{"testJob"}, nil)
 				m.prompt.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("testWkld", nil)
+				m.ws.EXPECT().ListWorkloads().Return([]string{"testWkld"}, nil)
 			},
 			mockEnvChecker: func(ctrl *gomock.Controller) versionCompatibilityChecker {
 				m := mocks.NewMockversionCompatibilityChecker(ctrl)
@@ -270,6 +272,7 @@ func TestLocalRunOpts_Ask(t *testing.T) {
 				m.store.EXPECT().GetEnvironment("testApp", "testEnv").Return(mockEnv, nil)
 				m.deployStore.EXPECT().ListDeployedServices(testAppName, testEnvName).Return([]string{"testWkld"}, nil)
 				m.deployStore.EXPECT().ListDeployedJobs(testAppName, testEnvName).Return([]string{}, nil)
+				m.ws.EXPECT().ListWorkloads().Return([]string{"testWkld"}, nil)
 
 			},
 			mockEnvChecker: func(ctrl *gomock.Controller) versionCompatibilityChecker {
