@@ -1220,11 +1220,23 @@ func TestCloudFormation_RemoveEnvFromApp(t *testing.T) {
 					AccountID: "1234",
 					Version:   "1",
 				},
-				EnvName:              "test",
-				EnvAccountID:         "1234",
-				EnvRegion:            "us-west-2",
-				DeleteStackInstance:  true,
-				RemoveAccountFromApp: true,
+				EnvToDelete: &config.Environment{
+					Name:      "test",
+					AccountID: "1234",
+					Region:    "us-west-2",
+				},
+				Environments: []*config.Environment{
+					{
+						Name:      "test",
+						AccountID: "1234",
+						Region:    "us-west-2",
+					},
+					{
+						Name:      "prod",
+						AccountID: "5678",
+						Region:    "us-east-2",
+					},
+				},
 			},
 			mock: func(t *testing.T, ctrl *gomock.Controller) CloudFormation {
 				cfn := mocks.NewMockcfnClient(ctrl)
@@ -1270,48 +1282,6 @@ func TestCloudFormation_RemoveEnvFromApp(t *testing.T) {
 				}
 			},
 		},
-		"skips stack redeployment if account does not exist in dns delegated accounts": {
-			inOpts: RemoveEnvFromAppOpts{
-				App: &config.Application{
-					Name:      "phonetool",
-					AccountID: "1234",
-					Version:   "1",
-				},
-				EnvName:              "test",
-				EnvAccountID:         "1234",
-				EnvRegion:            "us-west-2",
-				DeleteStackInstance:  true,
-				RemoveAccountFromApp: true,
-			},
-			mock: func(t *testing.T, ctrl *gomock.Controller) CloudFormation {
-				cfn := mocks.NewMockcfnClient(ctrl)
-				appStackSet := mocks.NewMockstackSetClient(ctrl)
-				appStackSet.EXPECT().DeleteInstance("phonetool-infrastructure", "1234", "us-west-2").Return("123", nil)
-				appStackSet.EXPECT().WaitForOperation("phonetool-infrastructure", "123").Return(nil)
-				cfn.EXPECT().Describe(stack.NameForAppStack("phonetool")).Return(&cloudformation.StackDescription{
-					Parameters: []*awscfn.Parameter{
-						{
-							ParameterKey:   aws.String("AppDNSDelegatedAccounts"),
-							ParameterValue: aws.String("5678"),
-						},
-					},
-				}, nil)
-
-				return CloudFormation{
-					cfnClient: cfn,
-					region:    "us-east-1",
-
-					appStackSet: appStackSet,
-					dnsDelegatedAccountsForStack: func(in *awscfn.Stack) []string {
-						return []string{"5678"}
-					},
-					renderStackSet: func(in renderStackSetInput) error {
-						_, err := in.createOpFn()
-						return err
-					},
-				}
-			},
-		},
 		"skips stack redeployment if 'RemoveAccountFromApp' is false": {
 			inOpts: RemoveEnvFromAppOpts{
 				App: &config.Application{
@@ -1319,11 +1289,23 @@ func TestCloudFormation_RemoveEnvFromApp(t *testing.T) {
 					AccountID: "1234",
 					Version:   "1",
 				},
-				EnvName:              "test",
-				EnvAccountID:         "1234",
-				EnvRegion:            "us-west-2",
-				DeleteStackInstance:  true,
-				RemoveAccountFromApp: false,
+				EnvToDelete: &config.Environment{
+					Name:      "test",
+					AccountID: "1234",
+					Region:    "us-west-2",
+				},
+				Environments: []*config.Environment{
+					{
+						Name:      "test",
+						AccountID: "1234",
+						Region:    "us-west-2",
+					},
+					{
+						Name:      "prod",
+						AccountID: "1234",
+						Region:    "us-east-2",
+					},
+				},
 			},
 			mock: func(t *testing.T, ctrl *gomock.Controller) CloudFormation {
 				cfn := mocks.NewMockcfnClient(ctrl)
@@ -1353,11 +1335,23 @@ func TestCloudFormation_RemoveEnvFromApp(t *testing.T) {
 					AccountID: "1234",
 					Version:   "1",
 				},
-				EnvName:              "test",
-				EnvAccountID:         "1234",
-				EnvRegion:            "us-west-2",
-				DeleteStackInstance:  false,
-				RemoveAccountFromApp: true,
+				EnvToDelete: &config.Environment{
+					Name:      "test",
+					AccountID: "1234",
+					Region:    "us-west-2",
+				},
+				Environments: []*config.Environment{
+					{
+						Name:      "test",
+						AccountID: "1234",
+						Region:    "us-west-2",
+					},
+					{
+						Name:      "prod",
+						AccountID: "5678",
+						Region:    "us-west-2",
+					},
+				},
 			},
 			mock: func(t *testing.T, ctrl *gomock.Controller) CloudFormation {
 				cfn := mocks.NewMockcfnClient(ctrl)
@@ -1408,11 +1402,23 @@ func TestCloudFormation_RemoveEnvFromApp(t *testing.T) {
 					AccountID: "1234",
 					Version:   "1",
 				},
-				EnvName:              "test",
-				EnvAccountID:         "1234",
-				EnvRegion:            "us-west-2",
-				DeleteStackInstance:  true,
-				RemoveAccountFromApp: true,
+				EnvToDelete: &config.Environment{
+					Name:      "test",
+					AccountID: "1234",
+					Region:    "us-west-2",
+				},
+				Environments: []*config.Environment{
+					{
+						Name:      "test",
+						AccountID: "1234",
+						Region:    "us-west-2",
+					},
+					{
+						Name:      "prod",
+						AccountID: "5678",
+						Region:    "us-east-2",
+					},
+				},
 			},
 			wantedErr: errors.New("some error"),
 			mock: func(t *testing.T, ctrl *gomock.Controller) CloudFormation {
@@ -1442,11 +1448,23 @@ func TestCloudFormation_RemoveEnvFromApp(t *testing.T) {
 					AccountID: "1234",
 					Version:   "1",
 				},
-				EnvName:              "test",
-				EnvAccountID:         "1234",
-				EnvRegion:            "us-west-2",
-				DeleteStackInstance:  true,
-				RemoveAccountFromApp: true,
+				EnvToDelete: &config.Environment{
+					Name:      "test",
+					AccountID: "1234",
+					Region:    "us-west-2",
+				},
+				Environments: []*config.Environment{
+					{
+						Name:      "test",
+						AccountID: "1234",
+						Region:    "us-west-2",
+					},
+					{
+						Name:      "prod",
+						AccountID: "5678",
+						Region:    "us-east-2",
+					},
+				},
 			},
 			wantedErr: errors.New("some error"),
 			mock: func(t *testing.T, ctrl *gomock.Controller) CloudFormation {

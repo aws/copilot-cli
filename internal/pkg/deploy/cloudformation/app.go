@@ -375,19 +375,33 @@ func (cf CloudFormation) RemoveJobFromApp(app *config.Application, jobName strin
 
 // RemoveEnvFromAppOpts contains the parameters to call RemoveEnvFromApp.
 type RemoveEnvFromAppOpts struct {
-	App                  *config.Application
-	EnvName              string
-	EnvAccountID         string
-	EnvRegion            string
-	DeleteStackInstance  bool // If this is the last environment in a region, we can delete it.
-	RemoveAccountFromApp bool // If this is the last environment in an account, we need to redeploy the app stack.
+	App          *config.Application
+	EnvToDelete  *config.Environment
+	Environments []*config.Environment
 }
 
 // RemoveEnvFromApp optionally redeploys the app stack to remove the account and deletes the stackset
 // instance for that region. This method cannot check that deleting the stackset or removing the app
 // won't break copilot. Be careful.
 func (cf CloudFormation) RemoveEnvFromApp(opts *RemoveEnvFromAppOpts) error {
+
+	var accountHasOtherEnvs, regionHasOtherEnvs bool
+	for _, env := range opts.Environments {
+		if env.Name != opts.EnvToDelete.Name {
+			if env.AccountID == opts.EnvToDelete.AccountID {
+				accountHasOtherEnvs = true
+			}
+			if env.Region == opts.EnvToDelete.Region {
+				regionHasOtherEnvs = true
+			}
+		}
+	}
+
 	// This is a no-op if there are remaining environments in the region or account.
+	if regionHasOtherEnvs && accountHasOtherEnvs {
+		return nil
+	}
+
 	deployApp := &deploy.CreateAppInput{
 		Name:               opts.App.Name,
 		AccountID:          opts.App.AccountID,
@@ -395,17 +409,16 @@ func (cf CloudFormation) RemoveEnvFromApp(opts *RemoveEnvFromAppOpts) error {
 		DomainHostedZoneID: opts.App.DomainHostedZoneID,
 		Version:            opts.App.Version,
 	}
-
 	appConfig := stack.NewAppStackConfig(deployApp)
 
-	if opts.DeleteStackInstance {
-		if err := cf.deleteStackSetInstance(appConfig.StackSetName(), opts.EnvAccountID, opts.EnvRegion); err != nil {
+	if !regionHasOtherEnvs {
+		if err := cf.deleteStackSetInstance(appConfig.StackSetName(), opts.EnvToDelete.AccountID, opts.EnvToDelete.Region); err != nil {
 			return err
 		}
 	}
 
-	if opts.RemoveAccountFromApp {
-		return cf.removeDNSDelegationAndCrossAccountAccess(appConfig, opts.EnvAccountID)
+	if !accountHasOtherEnvs {
+		return cf.removeDNSDelegationAndCrossAccountAccess(appConfig, opts.EnvToDelete.AccountID)
 	}
 
 	return nil
