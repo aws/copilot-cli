@@ -397,12 +397,9 @@ func (o *deleteEnvOpts) cleanUpAppResources() error {
 		return err
 	}
 
-	accountHasOtherEnvs, regionHasOtherEnvs := false, false
+	var regionHasOtherEnvs bool
 	for _, env := range envs {
 		if env.Name != o.name {
-			if env.AccountID == currentEnv.AccountID {
-				accountHasOtherEnvs = true
-			}
 			if env.Region == currentEnv.Region {
 				regionHasOtherEnvs = true
 			}
@@ -418,12 +415,9 @@ func (o *deleteEnvOpts) cleanUpAppResources() error {
 	}
 
 	if err := o.envDeleterFromApp.RemoveEnvFromApp(&cloudformation.RemoveEnvFromAppOpts{
-		App:                  app,
-		EnvName:              o.name,
-		EnvAccountID:         currentEnv.AccountID,
-		EnvRegion:            currentEnv.Region,
-		DeleteStackInstance:  !regionHasOtherEnvs,  // Stack instance should be deleted if region has no other environments.
-		RemoveAccountFromApp: !accountHasOtherEnvs, // DNS delegation should be removed if account has no other environments.
+		App:          app,
+		EnvToDelete:  currentEnv,
+		Environments: envs,
 	}); err != nil {
 		return fmt.Errorf("remove environment %s from application %s: %w", currentEnv.Name, app.Name, err)
 	}
