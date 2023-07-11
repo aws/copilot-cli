@@ -102,6 +102,7 @@ func TestBackendService_TemplateAndParamsGeneration(t *testing.T) {
 				RuntimeConfig: stack.RuntimeConfig{
 					ServiceDiscoveryEndpoint: fmt.Sprintf("%s.%s.local", envName, appName),
 					EnvVersion:               "v1.42.0",
+					Version:                  "v1.29.0",
 				},
 			})
 			require.NoError(t, err)

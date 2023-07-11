@@ -9,6 +9,52 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 )
 
+type errCannotDowngradeWkldVersion struct {
+	name            string
+	version         string
+	templateVersion string
+}
+
+func (e *errCannotDowngradeWkldVersion) init() *errCannotDowngradeVersion {
+	return &errCannotDowngradeVersion{
+		componentName:         e.name,
+		componentType:         "workload",
+		currentVersion:        e.version,
+		latestTemplateVersion: e.templateVersion,
+	}
+}
+
+func (e *errCannotDowngradeWkldVersion) Error() string {
+	return e.init().Error()
+}
+
+func (e *errCannotDowngradeWkldVersion) RecommendActions() string {
+	return e.init().RecommendActions()
+}
+
+type errCannotDowngradeEnvVersion struct {
+	envName         string
+	envVersion      string
+	templateVersion string
+}
+
+func (e *errCannotDowngradeEnvVersion) init() *errCannotDowngradeVersion {
+	return &errCannotDowngradeVersion{
+		componentName:         e.envName,
+		componentType:         "environment",
+		currentVersion:        e.envVersion,
+		latestTemplateVersion: e.templateVersion,
+	}
+}
+
+func (e *errCannotDowngradeEnvVersion) Error() string {
+	return e.init().Error()
+}
+
+func (e *errCannotDowngradeEnvVersion) RecommendActions() string {
+	return e.init().RecommendActions()
+}
+
 type errCannotDowngradeAppVersion struct {
 	appName         string
 	appVersion      string

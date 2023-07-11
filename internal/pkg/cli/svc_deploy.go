@@ -14,13 +14,15 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/tags"
-	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/template"
+	"github.com/aws/copilot-cli/internal/pkg/version"
 	"github.com/spf13/afero"
+	"golang.org/x/mod/semver"
 
 	"github.com/spf13/cobra"
 
@@ -39,15 +41,16 @@ import (
 )
 
 type deployWkldVars struct {
-	appName         string
-	name            string
-	envName         string
-	imageTag        string
-	resourceTags    map[string]string
-	forceNewUpdate  bool // NOTE: this variable is not applicable for a job workload currently.
-	disableRollback bool
-	showDiff        bool
-	skipDiffPrompt  bool
+	appName            string
+	name               string
+	envName            string
+	imageTag           string
+	resourceTags       map[string]string
+	forceNewUpdate     bool // NOTE: this variable is not applicable for a job workload currently.
+	disableRollback    bool
+	showDiff           bool
+	skipDiffPrompt     bool
+	allowWkldDowngrade bool
 
 	// To facilitate unit tests.
 	clientConfigured bool
@@ -63,6 +66,7 @@ type deploySvcOpts struct {
 	cmd                  execRunner
 	sessProvider         *sessions.Provider
 	newSvcDeployer       func() (workloadDeployer, error)
+	svcVersionGetter     versionGetter
 	envFeaturesDescriber versionCompatibilityChecker
 	diffWriter           io.Writer
 
@@ -80,6 +84,9 @@ type deploySvcOpts struct {
 	rootUserARN       string
 	deployRecs        clideploy.ActionRecommender
 	noDeploy          bool
+
+	// Overridden in tests.
+	templateVersion string
 }
 
 func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
@@ -110,6 +117,7 @@ func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
 		cmd:             exec.NewCmd(),
 		sessProvider:    sessProvider,
 		diffWriter:      os.Stdout,
+		templateVersion: version.LatestTemplateVersion(),
 	}
 	opts.newSvcDeployer = func() (workloadDeployer, error) {
 		// NOTE: Defined as a struct member to facilitate unit testing.
@@ -205,6 +213,11 @@ func (o *deploySvcOpts) Execute() error {
 			return err
 		}
 	}
+	if !o.allowWkldDowngrade {
+		if err := validateWkldVersion(o.svcVersionGetter, o.name, o.templateVersion); err != nil {
+			return err
+		}
+	}
 	mft, err := workloadManifest(&workloadManifestInput{
 		name:         o.name,
 		appName:      o.appName,
@@ -254,6 +267,7 @@ func (o *deploySvcOpts) Execute() error {
 				AddonsURL:                 uploadOut.AddonsURL,
 				CustomResourceURLs:        uploadOut.CustomResourceURLs,
 				StaticSiteAssetMappingURL: uploadOut.StaticSiteAssetMappingLocation,
+				Version:                   o.templateVersion,
 			},
 		})
 		if err != nil {
@@ -286,6 +300,7 @@ func (o *deploySvcOpts) Execute() error {
 			Tags:                      tags.Merge(targetApp.Tags, o.resourceTags),
 			CustomResourceURLs:        uploadOut.CustomResourceURLs,
 			StaticSiteAssetMappingURL: uploadOut.StaticSiteAssetMappingLocation,
+			Version:                   o.templateVersion,
 		},
 		Options: clideploy.Options{
 			ForceNewUpdate:  o.forceNewUpdate,
@@ -416,6 +431,17 @@ func (o *deploySvcOpts) configureClients() error {
 		return err
 	}
 	o.envFeaturesDescriber = envDescriber
+
+	wkldDescriber, err := describe.NewWorkloadStackDescriber(describe.NewWorkloadConfig{
+		App:         o.appName,
+		Env:         o.envName,
+		Name:        o.name,
+		ConfigStore: o.store,
+	})
+	if err != nil {
+		return err
+	}
+	o.svcVersionGetter = wkldDescriber
 	return nil
 }
 
@@ -460,7 +486,7 @@ func validateWorkloadManifestCompatibilityWithEnv(ws wsEnvironmentsLister, env v
 	if err != nil {
 		return fmt.Errorf("get environment %q version: %w", envName, err)
 	}
-	if currVersion == deploy.EnvTemplateVersionBootstrap {
+	if currVersion == version.EnvTemplateBootstrap {
 		return fmt.Errorf(`cannot deploy a service to an undeployed environment. Please run "copilot env deploy --name %s" to deploy the environment first`, envName)
 	}
 	availableFeatures, err := env.AvailableFeatures()
@@ -488,6 +514,26 @@ func validateWorkloadManifestCompatibilityWithEnv(ws wsEnvironmentsLister, env v
 				envName:        envName,
 				curVersion:     currVersion,
 			}
+		}
+	}
+	return nil
+}
+
+func validateWkldVersion(vg versionGetter, name, templateVersion string) error {
+	svcVersion, err := vg.Version()
+	if err != nil {
+		// If the stack doesn't exist, exit gracefully.
+		var errStackNotExist *cloudformation.ErrStackNotFound
+		if errors.As(err, &errStackNotExist) {
+			return nil
+		}
+		return fmt.Errorf("get template version of workload %s: %w", name, err)
+	}
+	if diff := semver.Compare(svcVersion, templateVersion); diff > 0 {
+		return &errCannotDowngradeWkldVersion{
+			name:            name,
+			version:         svcVersion,
+			templateVersion: templateVersion,
 		}
 	}
 	return nil
@@ -645,5 +691,6 @@ func buildSvcDeployCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&vars.disableRollback, noRollbackFlag, false, noRollbackFlagDescription)
 	cmd.Flags().BoolVar(&vars.showDiff, diffFlag, false, diffFlagDescription)
 	cmd.Flags().BoolVar(&vars.skipDiffPrompt, diffAutoApproveFlag, false, diffAutoApproveFlagDescription)
+	cmd.Flags().BoolVar(&vars.allowWkldDowngrade, allowDowngradeFlag, false, allowDowngradeFlagDescription)
 	return cmd
 }

@@ -127,12 +127,12 @@ func (s *WorkerService) Template() (string, error) {
 		scConfig = convertServiceConnect(s.manifest.Network.Connect)
 	}
 	content, err := s.parser.ParseWorkerService(template.WorkloadOpts{
-		AppName:            s.app,
-		EnvName:            s.env,
-		WorkloadName:       s.name,
-		SerializedManifest: string(s.rawManifest),
-		EnvVersion:         s.rc.EnvVersion,
-
+		AppName:                  s.app,
+		EnvName:                  s.env,
+		WorkloadName:             s.name,
+		SerializedManifest:       string(s.rawManifest),
+		EnvVersion:               s.rc.EnvVersion,
+		Version:                  s.rc.Version,
 		Variables:                convertEnvVars(s.manifest.WorkerServiceConfig.Variables),
 		Secrets:                  convertSecrets(s.manifest.WorkerServiceConfig.Secrets),
 		NestedStack:              addonsOutputs,

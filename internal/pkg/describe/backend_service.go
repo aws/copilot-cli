@@ -72,9 +72,10 @@ func NewBackendServiceDescriber(opt NewServiceConfig) (*BackendServiceDescriber,
 		}
 		svcDescr, err := newECSServiceDescriber(NewServiceConfig{
 			App:         opt.App,
+			Env:         env,
 			Svc:         opt.Svc,
 			ConfigStore: opt.ConfigStore,
-		}, env)
+		})
 		if err != nil {
 			return nil, err
 		}
@@ -290,7 +291,7 @@ func (w *backendSvcDesc) HumanString() string {
 		}
 	}
 	if len(w.ServiceConnect) > 0 || len(w.ServiceDiscovery) > 0 {
-		fmt.Fprint(writer, color.Bold.Sprint("\nInternal Service Endpoint\n\n"))
+		fmt.Fprint(writer, color.Bold.Sprint("\nInternal Service Endpoints\n\n"))
 		writer.Flush()
 		endpoints := serviceEndpoints{
 			discoveries: w.ServiceDiscovery,

@@ -5,9 +5,10 @@ package describe
 
 import (
 	"fmt"
+	"sort"
+
 	awsS3 "github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/s3"
-	"sort"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/aws/aas"
@@ -114,11 +115,11 @@ func NewECSStatusDescriber(opt *NewServiceStatusConfig) (*ecsStatusDescriber, er
 // NewAppRunnerStatusDescriber instantiates a new appRunnerStatusDescriber struct.
 func NewAppRunnerStatusDescriber(opt *NewServiceStatusConfig) (*appRunnerStatusDescriber, error) {
 	appRunnerSvcDescriber, err := newAppRunnerServiceDescriber(NewServiceConfig{
-		App: opt.App,
-		Svc: opt.Svc,
-
+		App:         opt.App,
+		Env:         opt.Env,
+		Svc:         opt.Svc,
 		ConfigStore: opt.ConfigStore,
-	}, opt.Env)
+	})
 	if err != nil {
 		return nil, err
 	}

@@ -11,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
+	"github.com/aws/copilot-cli/internal/pkg/version"
 	"github.com/spf13/afero"
 
 	"github.com/aws/copilot-cli/internal/pkg/exec"
@@ -98,6 +99,7 @@ func newDeployOpts(vars deployWkldVars) (*deployOpts, error) {
 					prompt:          o.prompt,
 					cmd:             exec.NewCmd(),
 					sessProvider:    sessProvider,
+					templateVersion: version.LatestTemplateVersion(),
 				}
 				opts.newSvcDeployer = func() (workloadDeployer, error) {
 					return newSvcDeployer(opts)
