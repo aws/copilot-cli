@@ -12,14 +12,14 @@ import (
 
 func TestSignal(t *testing.T) {
 	testCases := map[string]struct {
-		expectedSignals []os.Signal
+		inSignals []os.Signal
 	}{
 		"receive a single signal": {
-			expectedSignals: []os.Signal{syscall.SIGINT},
+			inSignals: []os.Signal{syscall.SIGINT},
 		},
 
 		"recieve a couple of signals": {
-			expectedSignals: []os.Signal{syscall.SIGINT, syscall.SIGTERM},
+			inSignals: []os.Signal{syscall.SIGINT, syscall.SIGTERM},
 		},
 	}
 	for name, tc := range testCases {
@@ -27,13 +27,13 @@ func TestSignal(t *testing.T) {
 			// GIVEN
 			sig := &Signal{
 				signalCh: make(chan os.Signal),
-				sigs:     tc.expectedSignals,
+				sigs:     tc.inSignals,
 			}
 			// WHEN
 			signalCh := sig.NotifySignals()
 
 			// THEN
-			for _, expectedSignal := range tc.expectedSignals {
+			for _, expectedSignal := range tc.inSignals {
 				if err := syscall.Kill(syscall.Getpid(), expectedSignal.(syscall.Signal)); err != nil {
 					require.Error(t, err)
 				}
