@@ -6,19 +6,42 @@ import (
 	"os"
 	"syscall"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestSignal(t *testing.T) {
-	sig := &Signal{
-		signalCh: make(chan os.Signal),
-		sigs:     []os.Signal{syscall.SIGINT},
+	testCases := map[string]struct {
+		expectedSignals []os.Signal
+	}{
+		"receive a single signal": {
+			expectedSignals: []os.Signal{syscall.SIGINT},
+		},
+
+		"recieve a couple of signals": {
+			expectedSignals: []os.Signal{syscall.SIGINT, syscall.SIGTERM},
+		},
 	}
-	signalCh := sig.NotifySignals()
-	err := syscall.Kill(syscall.Getpid(), syscall.SIGINT)
-	if err == nil {
-		if sig := <-signalCh; sig != syscall.SIGINT {
-			t.Errorf("wanted signal is %v,Got signal %v", syscall.SIGINT, sig)
-		}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			sig := &Signal{
+				signalCh: make(chan os.Signal),
+				sigs:     tc.expectedSignals,
+			}
+			// WHEN
+			signalCh := sig.NotifySignals()
+
+			// THEN
+			for _, expectedSignal := range tc.expectedSignals {
+				if err := syscall.Kill(syscall.Getpid(), expectedSignal.(syscall.Signal)); err != nil {
+					require.Error(t, err)
+				}
+				if sig := <-signalCh; sig != expectedSignal {
+					t.Errorf("wanted signal is %v, Got signal %v", expectedSignal, sig)
+				}
+			}
+			sig.StopCatchSignals()
+		})
 	}
-	sig.StopCatchSignals()
 }
