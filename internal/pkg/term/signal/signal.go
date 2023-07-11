@@ -1,0 +1,34 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+package signal
+
+import (
+	"os"
+	"os/signal"
+)
+
+// Signal represents a signal handler for capturing and handling operating system signals.
+type Signal struct {
+	signalCh chan os.Signal
+	sigs     []os.Signal
+}
+
+// NewSignal creates a new Signal object with the specified signals.
+func NewSignal(signals ...os.Signal) Signal {
+	return Signal{
+		signalCh: make(chan os.Signal),
+		sigs:     signals,
+	}
+}
+
+// NotifySignals starts capturing the specified signals and returns a channel for receiving them.
+func (s *Signal) NotifySignals() <-chan os.Signal {
+	signal.Notify(s.signalCh, s.sigs...)
+	return s.signalCh
+}
+
+// StopCatchSignals stops capturing signals and closes the signalChannel.
+func (s *Signal) StopCatchSignals() {
+	signal.Stop(s.signalCh)
+	close(s.signalCh)
+}
