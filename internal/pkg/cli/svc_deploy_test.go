@@ -166,14 +166,14 @@ func TestSvcDeployOpts_Execute(t *testing.T) {
 				m.mockVersionGetter.EXPECT().Version().Return("", mockError)
 			},
 
-			wantedError: fmt.Errorf("get template version of service frontend: some error"),
+			wantedError: fmt.Errorf("get template version of workload frontend: some error"),
 		},
 		"error out if try to downgrade service version without flag": {
 			mock: func(m *deployMocks) {
 				m.mockVersionGetter.EXPECT().Version().Return(mockNewerVersion, nil)
 			},
 
-			wantedError: fmt.Errorf(`cannot downgrade service "frontend" (currently in version v1.30.0) to version v1.29.0`),
+			wantedError: fmt.Errorf(`cannot downgrade workload "frontend" (currently in version v1.30.0) to version v1.29.0`),
 		},
 		"error out if fail to read workload manifest": {
 			mock: func(m *deployMocks) {

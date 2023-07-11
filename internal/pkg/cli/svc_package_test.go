@@ -6,6 +6,7 @@ package cli
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"testing"
 
@@ -133,6 +134,7 @@ type svcPackageExecuteMock struct {
 	generator            *mocks.MockworkloadStackGenerator
 	interpolator         *mocks.Mockinterpolator
 	envFeaturesDescriber *mocks.MockversionCompatibilityChecker
+	mockVersionGetter    *mocks.MockversionGetter
 	mft                  *mockWorkloadMft
 }
 
@@ -184,11 +186,23 @@ count: 1`
 		wantedDiff   string
 		wantedErr    error
 	}{
-		"fail to get the diff": {
+		"error out if fail to get version": {
 			inVars: packageSvcVars{
 				name:             "api",
 				clientConfigured: true,
-				showDiff:         true,
+			},
+			setupMocks: func(m *svcPackageExecuteMock) {
+				m.mockVersionGetter.EXPECT().Version().Return("", errors.New("some error"))
+
+			},
+			wantedErr: fmt.Errorf("get template version of workload api: some error"),
+		},
+		"fail to get the diff": {
+			inVars: packageSvcVars{
+				name:               "api",
+				clientConfigured:   true,
+				showDiff:           true,
+				allowWkldDowngrade: true,
 			},
 			setupMocks: func(m *svcPackageExecuteMock) {
 				m.ws.EXPECT().ReadWorkloadManifest("api").Return([]byte(lbwsMft), nil)
@@ -210,9 +224,10 @@ count: 1`
 		},
 		"writes the diff": {
 			inVars: packageSvcVars{
-				name:             "api",
-				clientConfigured: true,
-				showDiff:         true,
+				name:               "api",
+				clientConfigured:   true,
+				showDiff:           true,
+				allowWkldDowngrade: true,
 			},
 			setupMocks: func(m *svcPackageExecuteMock) {
 				m.ws.EXPECT().ReadWorkloadManifest("api").Return([]byte(lbwsMft), nil)
@@ -235,12 +250,13 @@ count: 1`
 		},
 		"writes service template without addons": {
 			inVars: packageSvcVars{
-				appName:          "ecs-kudos",
-				name:             "api",
-				envName:          "test",
-				tag:              "1234",
-				clientConfigured: true,
-				uploadAssets:     true,
+				appName:            "ecs-kudos",
+				name:               "api",
+				envName:            "test",
+				tag:                "1234",
+				clientConfigured:   true,
+				uploadAssets:       true,
+				allowWkldDowngrade: true,
 			},
 			setupMocks: func(m *svcPackageExecuteMock) {
 				m.ws.EXPECT().ReadWorkloadManifest("api").Return([]byte(lbwsMft), nil)
@@ -279,11 +295,12 @@ count: 1`
 		},
 		"writes request-driven web service template with custom resource": {
 			inVars: packageSvcVars{
-				appName:          "ecs-kudos",
-				name:             "api",
-				envName:          "test",
-				tag:              "1234",
-				clientConfigured: true,
+				appName:            "ecs-kudos",
+				name:               "api",
+				envName:            "test",
+				tag:                "1234",
+				allowWkldDowngrade: true,
+				clientConfigured:   true,
 			},
 			setupMocks: func(m *svcPackageExecuteMock) {
 				m.ws.EXPECT().ReadWorkloadManifest("api").Return([]byte(rdwsMft), nil)
@@ -327,15 +344,17 @@ count: 1`
 				generator:            mocks.NewMockworkloadStackGenerator(ctrl),
 				interpolator:         mocks.NewMockinterpolator(ctrl),
 				envFeaturesDescriber: mocks.NewMockversionCompatibilityChecker(ctrl),
+				mockVersionGetter:    mocks.NewMockversionGetter(ctrl),
 			}
 			tc.setupMocks(m)
 			opts := &packageSvcOpts{
 				packageSvcVars: tc.inVars,
 
-				templateWriter: mockWriteCloser{w: stackBuf},
-				paramsWriter:   mockWriteCloser{w: paramsBuf},
-				addonsWriter:   mockWriteCloser{w: addonsBuf},
-				diffWriter:     mockWriteCloser{w: diffBuff},
+				templateWriter:   mockWriteCloser{w: stackBuf},
+				paramsWriter:     mockWriteCloser{w: paramsBuf},
+				addonsWriter:     mockWriteCloser{w: addonsBuf},
+				diffWriter:       mockWriteCloser{w: diffBuff},
+				svcVersionGetter: m.mockVersionGetter,
 
 				unmarshal: func(b []byte) (manifest.DynamicWorkload, error) {
 					return m.mft, nil
@@ -358,7 +377,7 @@ count: 1`
 
 			// THEN
 			if tc.wantedErr != nil {
-				require.Equal(t, err, tc.wantedErr)
+				require.EqualError(t, err, tc.wantedErr.Error())
 			} else {
 				require.NoError(t, err)
 			}

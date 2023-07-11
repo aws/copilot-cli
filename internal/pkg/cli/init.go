@@ -204,6 +204,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		unmarshal:       manifest.UnmarshalWorkload,
 		cmd:             exec.NewCmd(),
 		sessProvider:    sessProvider,
+		templateVersion: version.LatestTemplateVersion(),
 	}
 	deployJobCmd.newJobDeployer = func() (workloadDeployer, error) {
 		return newJobDeployer(deployJobCmd)
