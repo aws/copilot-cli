@@ -16,6 +16,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
+	"github.com/aws/copilot-cli/internal/pkg/version"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
@@ -165,7 +166,7 @@ func (o *localRunOpts) isEnvironmentDeployed(envName string) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("get environment %q version: %w", envName, err)
 	}
-	if currVersion == deploy.EnvTemplateVersionBootstrap {
+	if currVersion == version.EnvTemplateBootstrap {
 		return false, nil
 	}
 	return true, nil
