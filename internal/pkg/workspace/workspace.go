@@ -614,23 +614,17 @@ func (ws *Workspace) copilotDirPath() (string, error) {
 	//
 	// Keep on searching the parent directories for that copilot directory (though only
 	// up to a finite limit, to avoid infinite recursion!)
-	searchingDir := ws.workingDirAbs
-	for try := 0; try < maximumParentDirsToSearch; try++ {
-		currentDirectoryPath := filepath.Join(searchingDir, CopilotDirName)
-		inCurrentDirPath, err := ws.fs.DirExists(currentDirectoryPath)
-		if err != nil {
-			return "", err
-		}
-		if inCurrentDirPath {
-			return currentDirectoryPath, nil
-		}
-		searchingDir = filepath.Dir(searchingDir)
+	path, err := Find(ws.workingDirAbs, maximumParentDirsToSearch, ws.fs.DirExists, CopilotDirName)
+	if err == nil {
+		return path, nil
 	}
-	return "", &ErrWorkspaceNotFound{
-		CurrentDirectory:      ws.workingDirAbs,
-		ManifestDirectoryName: CopilotDirName,
-		NumberOfLevelsChecked: maximumParentDirsToSearch,
+	var targetNotFoundErr *ErrTargetNotFound
+	if errors.As(err, &targetNotFoundErr) {
+		return "", &ErrWorkspaceNotFound{
+			targetNotFoundErr,
+		}
 	}
+	return "", err
 }
 
 // write flushes the data to a file under the copilot directory joined by path elements.

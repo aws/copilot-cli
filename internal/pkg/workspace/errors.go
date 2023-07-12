@@ -48,16 +48,14 @@ func (e *ErrTargetNotFound) Error() string {
 
 // ErrWorkspaceNotFound means we couldn't locate a workspace root.
 type ErrWorkspaceNotFound struct {
-	CurrentDirectory      string
-	ManifestDirectoryName string
-	NumberOfLevelsChecked int
+	*ErrTargetNotFound
 }
 
 func (e *ErrWorkspaceNotFound) Error() string {
 	return fmt.Sprintf("couldn't find a directory called %s up to %d levels up from %s",
-		e.ManifestDirectoryName,
-		e.NumberOfLevelsChecked,
-		e.CurrentDirectory)
+		e.target,
+		e.numberOfLevelsChecked,
+		e.startDir)
 }
 
 // RecommendActions suggests steps clients can take to mitigate the copilot/ directory not found error.
