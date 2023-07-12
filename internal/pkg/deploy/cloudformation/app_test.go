@@ -726,7 +726,7 @@ func TestCloudFormation_GetRegionalAppResources(t *testing.T) {
 				KMSKeyARN:      "arn:aws:kms:us-west-2:01234567890:key/0000",
 				S3Bucket:       "tests3-bucket-us-west-2",
 				Region:         "us-east-9",
-				RepositoryURLs: map[string]string{},
+				RepositoryURLs: map[string]string{"phonetool-svc": "123.dkr.ecr.us-west-2.amazonaws.com/phonetool-svc"},
 			},
 			createRegionalMockClient: func(ctrl *gomock.Controller) cfnClient {
 				m := mocks.NewMockcfnClient(ctrl)
@@ -825,7 +825,7 @@ func TestCloudFormation_GetAppResourcesByRegion(t *testing.T) {
 				KMSKeyARN:      "arn:aws:kms:us-west-2:01234567890:key/0000",
 				S3Bucket:       "tests3-bucket-us-west-2",
 				Region:         "us-east-9",
-				RepositoryURLs: map[string]string{},
+				RepositoryURLs: map[string]string{"phonetool-svc": "123.dkr.ecr.us-west-2.amazonaws.com/phonetool-svc"},
 			},
 			region: "us-east-9",
 			createRegionalMockClient: func(ctrl *gomock.Controller) cfnClient {
@@ -989,8 +989,9 @@ func TestCloudFormation_DelegateDNSPermissions(t *testing.T) {
 
 func mockValidAppResourceStack() *cloudformation.StackDescription {
 	return mockAppResourceStack("stack", map[string]string{
-		"KMSKeyARN":      "arn:aws:kms:us-west-2:01234567890:key/0000",
-		"PipelineBucket": "tests3-bucket-us-west-2",
+		"KMSKeyARN":               "arn:aws:kms:us-west-2:01234567890:key/0000",
+		"PipelineBucket":          "tests3-bucket-us-west-2",
+		"ECRRepophonetoolDASHsvc": "arn:aws:ecr:us-west-2:123:repository/phonetool-svc",
 	})
 }
 
@@ -1241,6 +1242,19 @@ func TestCloudFormation_RemoveEnvFromApp(t *testing.T) {
 			mock: func(t *testing.T, ctrl *gomock.Controller) CloudFormation {
 				cfn := mocks.NewMockcfnClient(ctrl)
 				appStackSet := mocks.NewMockstackSetClient(ctrl)
+				s3 := mocks.NewMocks3Client(ctrl)
+				ecr := mocks.NewMockimageRemover(ctrl)
+				regionalCfn := mocks.NewMockcfnClient(ctrl)
+				// Empty ECR and S3
+				appStackSet.EXPECT().InstanceSummaries("phonetool-infrastructure", gomock.Any(), gomock.Any()).Return([]stackset.InstanceSummary{
+					{
+						Region:  "us-west-2",
+						StackID: "some-stack",
+					},
+				}, nil)
+				regionalCfn.EXPECT().Describe("some-stack").Return(mockValidAppResourceStack(), nil)
+				s3.EXPECT().EmptyBucket("tests3-bucket-us-west-2").Return(nil)
+				ecr.EXPECT().ClearRepository("phonetool-svc").Return(nil)
 				appStackSet.EXPECT().DeleteInstance("phonetool-infrastructure", "1234", "us-west-2").Return("123", nil)
 				appStackSet.EXPECT().WaitForOperation("phonetool-infrastructure", "123").Return(nil)
 				cfn.EXPECT().Describe(stack.NameForAppStack("phonetool")).Return(&cloudformation.StackDescription{
@@ -1279,6 +1293,11 @@ func TestCloudFormation_RemoveEnvFromApp(t *testing.T) {
 						_, err := in.createOpFn()
 						return err
 					},
+					s3Client: s3,
+					regionalECRClient: func(region string) imageRemover {
+						return ecr
+					},
+					regionalClient: func(region string) cfnClient { return regionalCfn },
 				}
 			},
 		},
@@ -1310,6 +1329,20 @@ func TestCloudFormation_RemoveEnvFromApp(t *testing.T) {
 			mock: func(t *testing.T, ctrl *gomock.Controller) CloudFormation {
 				cfn := mocks.NewMockcfnClient(ctrl)
 				appStackSet := mocks.NewMockstackSetClient(ctrl)
+				s3 := mocks.NewMocks3Client(ctrl)
+				ecr := mocks.NewMockimageRemover(ctrl)
+				regionalCfn := mocks.NewMockcfnClient(ctrl)
+				// Empty ECR and S3
+				appStackSet.EXPECT().InstanceSummaries("phonetool-infrastructure", gomock.Any(), gomock.Any()).Return([]stackset.InstanceSummary{
+					{
+						Region:  "us-west-2",
+						StackID: "some-stack",
+					},
+				}, nil)
+				regionalCfn.EXPECT().Describe("some-stack").Return(mockValidAppResourceStack(), nil)
+				s3.EXPECT().EmptyBucket("tests3-bucket-us-west-2").Return(nil)
+				ecr.EXPECT().ClearRepository("phonetool-svc").Return(nil)
+				// Delete stackset instance
 				appStackSet.EXPECT().DeleteInstance("phonetool-infrastructure", "1234", "us-west-2").Return("123", nil)
 				appStackSet.EXPECT().WaitForOperation("phonetool-infrastructure", "123").Return(nil)
 
@@ -1325,6 +1358,11 @@ func TestCloudFormation_RemoveEnvFromApp(t *testing.T) {
 						_, err := in.createOpFn()
 						return err
 					},
+					s3Client: s3,
+					regionalECRClient: func(region string) imageRemover {
+						return ecr
+					},
+					regionalClient: func(region string) cfnClient { return regionalCfn },
 				}
 			},
 		},
@@ -1424,6 +1462,20 @@ func TestCloudFormation_RemoveEnvFromApp(t *testing.T) {
 			mock: func(t *testing.T, ctrl *gomock.Controller) CloudFormation {
 				cfn := mocks.NewMockcfnClient(ctrl)
 				appStackSet := mocks.NewMockstackSetClient(ctrl)
+				s3 := mocks.NewMocks3Client(ctrl)
+				ecr := mocks.NewMockimageRemover(ctrl)
+				regionalCfn := mocks.NewMockcfnClient(ctrl)
+				// Empty ECR and S3
+				appStackSet.EXPECT().InstanceSummaries("phonetool-infrastructure", gomock.Any(), gomock.Any()).Return([]stackset.InstanceSummary{
+					{
+						Region:  "us-west-2",
+						StackID: "some-stack",
+					},
+				}, nil)
+				regionalCfn.EXPECT().Describe("some-stack").Return(mockValidAppResourceStack(), nil)
+				s3.EXPECT().EmptyBucket("tests3-bucket-us-west-2").Return(nil)
+				ecr.EXPECT().ClearRepository("phonetool-svc").Return(nil)
+				// Delete stackset instance
 				appStackSet.EXPECT().DeleteInstance("phonetool-infrastructure", "1234", "us-west-2").Return("", errors.New("some error"))
 
 				return CloudFormation{
@@ -1437,6 +1489,13 @@ func TestCloudFormation_RemoveEnvFromApp(t *testing.T) {
 					renderStackSet: func(in renderStackSetInput) error {
 						_, err := in.createOpFn()
 						return err
+					},
+					regionalClient: func(region string) cfnClient {
+						return regionalCfn
+					},
+					s3Client: s3,
+					regionalECRClient: func(region string) imageRemover {
+						return ecr
 					},
 				}
 			},
@@ -1470,6 +1529,19 @@ func TestCloudFormation_RemoveEnvFromApp(t *testing.T) {
 			mock: func(t *testing.T, ctrl *gomock.Controller) CloudFormation {
 				cfn := mocks.NewMockcfnClient(ctrl)
 				appStackSet := mocks.NewMockstackSetClient(ctrl)
+				s3 := mocks.NewMocks3Client(ctrl)
+				ecr := mocks.NewMockimageRemover(ctrl)
+				regionalCfn := mocks.NewMockcfnClient(ctrl)
+				// Empty ECR and S3
+				appStackSet.EXPECT().InstanceSummaries("phonetool-infrastructure", gomock.Any(), gomock.Any()).Return([]stackset.InstanceSummary{
+					{
+						Region:  "us-west-2",
+						StackID: "some-stack",
+					},
+				}, nil)
+				regionalCfn.EXPECT().Describe("some-stack").Return(mockValidAppResourceStack(), nil)
+				s3.EXPECT().EmptyBucket("tests3-bucket-us-west-2").Return(nil)
+				ecr.EXPECT().ClearRepository("phonetool-svc").Return(nil)
 				appStackSet.EXPECT().DeleteInstance("phonetool-infrastructure", "1234", "us-west-2").Return("123", nil)
 				appStackSet.EXPECT().WaitForOperation("phonetool-infrastructure", "123").Return(nil)
 				cfn.EXPECT().Describe(stack.NameForAppStack("phonetool")).Return(&cloudformation.StackDescription{
@@ -1507,6 +1579,13 @@ func TestCloudFormation_RemoveEnvFromApp(t *testing.T) {
 					renderStackSet: func(in renderStackSetInput) error {
 						_, err := in.createOpFn()
 						return err
+					},
+					regionalClient: func(region string) cfnClient {
+						return regionalCfn
+					},
+					s3Client: s3,
+					regionalECRClient: func(region string) imageRemover {
+						return ecr
 					},
 				}
 			},

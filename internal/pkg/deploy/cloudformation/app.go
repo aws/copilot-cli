@@ -380,11 +380,10 @@ type RemoveEnvFromAppOpts struct {
 	Environments []*config.Environment
 }
 
-// RemoveEnvFromApp optionally redeploys the app stack to remove the account and deletes the stackset
-// instance for that region. This method cannot check that deleting the stackset or removing the app
-// won't break copilot. Be careful.
+// RemoveEnvFromApp optionally redeploys the app stack to remove the account and, if necessary, empties
+// ECR repos and a regional S3 bucket before deleting the stackset instance for that region. This method
+// cannot check that deleting the stackset or removing the app won't break copilot. Be careful.
 func (cf CloudFormation) RemoveEnvFromApp(opts *RemoveEnvFromAppOpts) error {
-
 	var accountHasOtherEnvs, regionHasOtherEnvs bool
 	for _, env := range opts.Environments {
 		if env.Name != opts.EnvToDelete.Name {
@@ -412,6 +411,21 @@ func (cf CloudFormation) RemoveEnvFromApp(opts *RemoveEnvFromAppOpts) error {
 	appConfig := stack.NewAppStackConfig(deployApp)
 
 	if !regionHasOtherEnvs {
+		// empty s3 bucket and ECR repositories
+		resources, err := cf.GetAppResourcesByRegion(opts.App, opts.EnvToDelete.Region)
+		if err != nil {
+			return err
+		}
+		if err := cf.s3Client.EmptyBucket(resources.S3Bucket); err != nil {
+			return err
+		}
+		ecr := cf.regionalECRClient(opts.EnvToDelete.Region)
+		for repo := range resources.RepositoryURLs {
+			if err := ecr.ClearRepository(repo); err != nil {
+				return err
+			}
+		}
+
 		if err := cf.deleteStackSetInstance(appConfig.StackSetName(), opts.EnvToDelete.AccountID, opts.EnvToDelete.Region); err != nil {
 			return err
 		}

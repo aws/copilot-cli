@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"io"
 	"os"
@@ -131,6 +132,11 @@ type codePipelineClient interface {
 
 type s3Client interface {
 	Upload(bucket, fileName string, data io.Reader) (string, error)
+	EmptyBucket(bucket string) error
+}
+
+type imageRemover interface {
+	ClearRepository(repoName string) error
 }
 
 type stackSetClient interface {
@@ -173,16 +179,17 @@ func (f *discardFile) Fd() uintptr {
 
 // CloudFormation wraps the CloudFormationAPI interface
 type CloudFormation struct {
-	cfnClient      cfnClient
-	codeStarClient codeStarClient
-	cpClient       codePipelineClient
-	ecsClient      ecsClient
-	cwClient       cwClient
-	regionalClient func(region string) cfnClient
-	appStackSet    stackSetClient
-	s3Client       s3Client
-	region         string
-	console        progress.FileWriter
+	cfnClient         cfnClient
+	codeStarClient    codeStarClient
+	cpClient          codePipelineClient
+	ecsClient         ecsClient
+	cwClient          cwClient
+	regionalClient    func(region string) cfnClient
+	appStackSet       stackSetClient
+	s3Client          s3Client
+	regionalECRClient func(region string) imageRemover
+	region            string
+	console           progress.FileWriter
 
 	// cached variables.
 	cachedDeployedStack *cloudformation.StackDescription
@@ -202,6 +209,11 @@ func New(sess *session.Session, opts ...OptFn) CloudFormation {
 		cwClient:       cloudwatch.New(sess),
 		regionalClient: func(region string) cfnClient {
 			return cloudformation.New(sess.Copy(&aws.Config{
+				Region: aws.String(region),
+			}))
+		},
+		regionalECRClient: func(region string) imageRemover {
+			return ecr.New(sess.Copy(&aws.Config{
 				Region: aws.String(region),
 			}))
 		},
