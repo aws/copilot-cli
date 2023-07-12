@@ -58,13 +58,6 @@ func TestLocalRunOpts_Ask(t *testing.T) {
 		accountID    = "123456789012"
 	)
 
-	mockEnv := &config.Environment{
-		Name:             testEnvName,
-		App:              testAppName,
-		Region:           region,
-		ExecutionRoleARN: "ARN",
-		AccountID:        accountID,
-	}
 	testCases := map[string]struct {
 		inputAppName  string
 		inputEnvName  string
@@ -76,20 +69,12 @@ func TestLocalRunOpts_Ask(t *testing.T) {
 		wantedEnvName  string
 		wantedError    error
 	}{
-		"error while getting environemnt belonging to an application by name": {
-			inputAppName: testAppName,
-			inputEnvName: testEnvName,
-			setupMocks: func(m *localRunAskMocks) {
-				m.store.EXPECT().GetEnvironment("testApp", "testEnv").Return(nil, testError)
-			},
-			wantedError: fmt.Errorf("get environment %s: %w", testEnvName, testError),
-		},
 		"error while returning all environments belonging to a application": {
 			inputAppName: testAppName,
 			setupMocks: func(m *localRunAskMocks) {
 				m.store.EXPECT().ListEnvironments(testAppName).Return(nil, testError)
 			},
-			wantedError: fmt.Errorf("get environments for the app %s: %w", testAppName, testError),
+			wantedError: fmt.Errorf("get environments for app %s: %w", testAppName, testError),
 		},
 		"return error if no deployed environemnts found": {
 			inputAppName: testAppName,
@@ -147,7 +132,7 @@ func TestLocalRunOpts_Ask(t *testing.T) {
 			inputAppName: testAppName,
 			inputEnvName: testEnvName,
 			setupMocks: func(m *localRunAskMocks) {
-				m.store.EXPECT().GetEnvironment("testApp", "testEnv").Return(mockEnv, nil)
+				m.store.EXPECT().GetEnvironment("testApp", "testEnv").Return(&config.Environment{}, nil).Times(0)
 			},
 			mockEnvChecker: func(ctrl *gomock.Controller) versionCompatibilityChecker {
 				m := mocks.NewMockversionCompatibilityChecker(ctrl)
@@ -160,7 +145,6 @@ func TestLocalRunOpts_Ask(t *testing.T) {
 			inputAppName: testAppName,
 			inputEnvName: testEnvName,
 			setupMocks: func(m *localRunAskMocks) {
-				m.store.EXPECT().GetEnvironment("testApp", "testEnv").Return(mockEnv, nil)
 				m.deployStore.EXPECT().ListDeployedServices(testAppName, testEnvName).Return([]string{}, nil)
 				m.deployStore.EXPECT().ListDeployedJobs(testAppName, testEnvName).Return([]string{}, nil)
 			},
@@ -175,7 +159,6 @@ func TestLocalRunOpts_Ask(t *testing.T) {
 			inputAppName: testAppName,
 			inputEnvName: testEnvName,
 			setupMocks: func(m *localRunAskMocks) {
-				m.store.EXPECT().GetEnvironment("testApp", "testEnv").Return(mockEnv, nil)
 				m.deployStore.EXPECT().ListDeployedServices(testAppName, testEnvName).Return(nil, testError)
 			},
 			mockEnvChecker: func(ctrl *gomock.Controller) versionCompatibilityChecker {
@@ -189,7 +172,6 @@ func TestLocalRunOpts_Ask(t *testing.T) {
 			inputAppName: testAppName,
 			inputEnvName: testEnvName,
 			setupMocks: func(m *localRunAskMocks) {
-				m.store.EXPECT().GetEnvironment("testApp", "testEnv").Return(mockEnv, nil)
 				m.deployStore.EXPECT().ListDeployedServices(testAppName, testEnvName).Return([]string{"testWkld"}, nil)
 				m.deployStore.EXPECT().ListDeployedJobs(testAppName, testEnvName).Return(nil, testError)
 			},
@@ -205,7 +187,6 @@ func TestLocalRunOpts_Ask(t *testing.T) {
 			inputEnvName:  testEnvName,
 			inputWkldName: testWkldName,
 			setupMocks: func(m *localRunAskMocks) {
-				m.store.EXPECT().GetEnvironment("testApp", "testEnv").Return(mockEnv, nil)
 				m.ws.EXPECT().ListWorkloads().Return([]string{"testWkld"}, nil)
 				m.store.EXPECT().GetWorkload("testApp", "testWkld").Return(&config.Workload{
 					Name: "testWkld",
@@ -269,7 +250,6 @@ func TestLocalRunOpts_Ask(t *testing.T) {
 			inputAppName: testAppName,
 			inputEnvName: testEnvName,
 			setupMocks: func(m *localRunAskMocks) {
-				m.store.EXPECT().GetEnvironment("testApp", "testEnv").Return(mockEnv, nil)
 				m.deployStore.EXPECT().ListDeployedServices(testAppName, testEnvName).Return([]string{"testWkld"}, nil)
 				m.deployStore.EXPECT().ListDeployedJobs(testAppName, testEnvName).Return([]string{}, nil)
 				m.ws.EXPECT().ListWorkloads().Return([]string{"testWkld"}, nil)
@@ -346,7 +326,7 @@ func TestLocalRunOpts_Ask(t *testing.T) {
 				ws:          m.ws,
 				prompt:      m.prompt,
 				deployStore: m.deployStore,
-				envFeaturesDescriber: func(string) (versionCompatibilityChecker, error) {
+				envVersionChecker: func(string) (versionCompatibilityChecker, error) {
 					return tc.mockEnvChecker(ctrl), nil
 				},
 			}

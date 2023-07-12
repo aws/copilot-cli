@@ -31,11 +31,11 @@ type localRunVars struct {
 type localRunOpts struct {
 	localRunVars
 
-	store                store
-	ws                   wsWlDirReader
-	prompt               prompter
-	deployStore          deployedEnvironmentLister
-	envFeaturesDescriber func(string) (versionCompatibilityChecker, error)
+	store             store
+	ws                wsWlDirReader
+	prompt            prompter
+	deployStore       deployedEnvironmentLister
+	envVersionChecker func(string) (versionCompatibilityChecker, error)
 }
 
 func newLocalRunOpts(vars localRunVars) (*localRunOpts, error) {
@@ -56,16 +56,15 @@ func newLocalRunOpts(vars localRunVars) (*localRunOpts, error) {
 		return nil, err
 	}
 
-	prompter := prompt.New()
 	opts := &localRunOpts{
 		localRunVars: vars,
 
-		prompt:      prompter,
+		prompt:      prompt.New(),
 		store:       store,
 		ws:          ws,
 		deployStore: deployStore,
 	}
-	opts.envFeaturesDescriber = func(envName string) (versionCompatibilityChecker, error) {
+	opts.envVersionChecker = func(envName string) (versionCompatibilityChecker, error) {
 		envDescriber, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
 			App:         opts.appName,
 			Env:         envName,
@@ -109,17 +108,22 @@ func (o *localRunOpts) validateOrAskEnvName() error {
 	if o.envName != "" {
 		return o.validateEnvName()
 	}
-	envs, err := o.getDeployedEnvironments(o.appName)
-	if err != nil {
+	envs, err := o.getDeployedEnvironments()
+	switch {
+	case err != nil:
+	case len(envs) == 0:
+	case len(envs) == 1:
+	}
+	switch {
+	case err != nil:
 		return err
-	}
-	if len(envs) == 0 {
+	case len(envs) == 0:
 		return fmt.Errorf("no deployed environments found in the app %s", o.appName)
-	}
-	if len(envs) == 1 {
+	case len(envs) == 1:
 		log.Infof("Only one environment found, defaulting to: %s\n", color.HighlightUserInput(envs[0]))
 		o.envName = envs[0]
 		return nil
+
 	}
 	selectedEnvName, err := o.prompt.SelectOne("Select an environment in which you want to test", "", envs, prompt.WithFinalMessage("Environment:"))
 	if err != nil {
@@ -129,38 +133,33 @@ func (o *localRunOpts) validateOrAskEnvName() error {
 	return nil
 }
 
-func (o *localRunOpts) getDeployedEnvironments(appName string) ([]string, error) {
+func (o *localRunOpts) getDeployedEnvironments() ([]string, error) {
 	envConfig, err := o.store.ListEnvironments(o.appName)
 	if err != nil {
-		return nil, fmt.Errorf("get environments for the app %s: %w", appName, err)
-	}
-
-	var envs []string
-	for _, env := range envConfig {
-		envs = append(envs, env.Name)
+		return nil, fmt.Errorf("get environments for app %s: %w", o.appName, err)
 	}
 
 	var deployedEnvs []string
-	for _, env := range envs {
-		isDeployed, err := o.isEnvironmentDeployed(env)
+	for _, env := range envConfig {
+		isDeployed, err := o.isEnvironmentDeployed(env.Name)
 		if err != nil {
 			return nil, err
 		}
 		if isDeployed {
-			deployedEnvs = append(deployedEnvs, env)
+			deployedEnvs = append(deployedEnvs, env.Name)
 		}
 	}
+
 	return deployedEnvs, nil
 }
 
 func (o *localRunOpts) isEnvironmentDeployed(envName string) (bool, error) {
 	var checker versionCompatibilityChecker
 
-	envDescriber, err := o.envFeaturesDescriber(envName)
+	checker, err := o.envVersionChecker(envName)
 	if err != nil {
 		return false, err
 	}
-	checker = envDescriber
 
 	currVersion, err := checker.Version()
 	if err != nil {
@@ -172,9 +171,6 @@ func (o *localRunOpts) isEnvironmentDeployed(envName string) (bool, error) {
 	return true, nil
 }
 func (o *localRunOpts) validateEnvName() error {
-	if _, err := o.store.GetEnvironment(o.appName, o.envName); err != nil {
-		return fmt.Errorf("get environment %s: %w", o.envName, err)
-	}
 	isDeployed, err := o.isEnvironmentDeployed(o.envName)
 	if err != nil {
 		return err
