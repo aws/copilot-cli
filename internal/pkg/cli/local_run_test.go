@@ -81,7 +81,7 @@ func TestLocalRunOpts_Ask(t *testing.T) {
 			setupMocks: func(m *localRunAskMocks) {
 				m.store.EXPECT().ListEnvironments(testAppName).Return([]*config.Environment{}, nil)
 			},
-			wantedError: fmt.Errorf("no deployed environments found in the app %s", testAppName),
+			wantedError: fmt.Errorf("no environment in the app %q is deployed", testAppName),
 		},
 		"return error while selecting environment": {
 			inputAppName: testAppName,
@@ -153,7 +153,7 @@ func TestLocalRunOpts_Ask(t *testing.T) {
 				m.EXPECT().Version().Return("v1.12.1", nil)
 				return m
 			},
-			wantedError: fmt.Errorf("no workloads found in this environment %s", testEnvName),
+			wantedError: fmt.Errorf("no workload is deployed to this environment %s", testEnvName),
 		},
 		"return error while getting the services": {
 			inputAppName: testAppName,
@@ -166,7 +166,7 @@ func TestLocalRunOpts_Ask(t *testing.T) {
 				m.EXPECT().Version().Return("v1.12.1", nil)
 				return m
 			},
-			wantedError: fmt.Errorf("Get services: %w", testError),
+			wantedError: fmt.Errorf("get deployed services: %w", testError),
 		},
 		"return error while getting the jobs": {
 			inputAppName: testAppName,
@@ -180,7 +180,7 @@ func TestLocalRunOpts_Ask(t *testing.T) {
 				m.EXPECT().Version().Return("v1.12.1", nil)
 				return m
 			},
-			wantedError: fmt.Errorf("Get jobs: %w", testError),
+			wantedError: fmt.Errorf("get deployed jobs: %w", testError),
 		},
 		"validate if flags are provided": {
 			inputAppName:  testAppName,

@@ -111,14 +111,9 @@ func (o *localRunOpts) validateOrAskEnvName() error {
 	envs, err := o.getDeployedEnvironments()
 	switch {
 	case err != nil:
-	case len(envs) == 0:
-	case len(envs) == 1:
-	}
-	switch {
-	case err != nil:
 		return err
 	case len(envs) == 0:
-		return fmt.Errorf("no deployed environments found in the app %s", o.appName)
+		return fmt.Errorf("no environment in the app %q is deployed", o.appName)
 	case len(envs) == 1:
 		log.Infof("Only one environment found, defaulting to: %s\n", color.HighlightUserInput(envs[0]))
 		o.envName = envs[0]
@@ -187,17 +182,17 @@ func (o *localRunOpts) validateOrAskWorkloadName() error {
 	}
 	services, err := o.deployStore.ListDeployedServices(o.appName, o.envName)
 	if err != nil {
-		return fmt.Errorf("Get services: %w", err)
+		return fmt.Errorf("get deployed services: %w", err)
 	}
 
 	jobs, err := o.deployStore.ListDeployedJobs(o.appName, o.envName)
 	if err != nil {
-		return fmt.Errorf("Get jobs: %w", err)
+		return fmt.Errorf("get deployed jobs: %w", err)
 	}
 
 	workloads := append(services, jobs...)
 	if len(workloads) == 0 {
-		return fmt.Errorf("no workloads found in this environment %s", o.envName)
+		return fmt.Errorf("no workload is deployed to this environment %s", o.envName)
 	}
 	if len(workloads) == 1 {
 		log.Infof("Only one workload found in this environment, defaulting to: %s\n", color.HighlightUserInput(workloads[0]))
