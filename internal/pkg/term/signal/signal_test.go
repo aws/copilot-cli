@@ -38,9 +38,8 @@ func TestSignal(t *testing.T) {
 				if err := syscall.Kill(syscall.Getpid(), wantedSignal.(syscall.Signal)); err != nil {
 					require.Error(t, err)
 				}
-				if gotSignal := <-signalCh; gotSignal != wantedSignal {
-					t.Errorf("wanted signal is %v, Got signal %v", wantedSignal, gotSignal)
-				}
+				gotSignal := <-signalCh
+				require.Equal(t, wantedSignal, gotSignal)
 			}
 			sig.StopCatchSignals()
 		})
