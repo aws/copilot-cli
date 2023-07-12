@@ -754,6 +754,7 @@ type WorkloadOpts struct {
 	WorkloadName       string
 	SerializedManifest string // Raw manifest file used to deploy the workload.
 	EnvVersion         string
+	Version            string
 
 	// Configuration for the main container.
 	PortMappings []*PortMapping

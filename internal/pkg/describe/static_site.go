@@ -7,11 +7,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"strings"
+	"text/tabwriter"
+
 	awsS3 "github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	s3 "github.com/aws/copilot-cli/internal/pkg/s3"
-	"strings"
-	"text/tabwriter"
 
 	"github.com/aws/copilot-cli/internal/pkg/describe/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
@@ -49,11 +50,12 @@ func NewStaticSiteDescriber(opt NewServiceConfig) (*StaticSiteDescriber, error) 
 		if describer, ok := describer.wkldDescribers[env]; ok {
 			return describer, nil
 		}
-		svcDescr, err := newWorkloadStackDescriber(workloadConfig{
-			app:         opt.App,
-			name:        opt.Svc,
-			configStore: opt.ConfigStore,
-		}, env)
+		svcDescr, err := NewWorkloadStackDescriber(NewWorkloadConfig{
+			App:         opt.App,
+			Env:         env,
+			Name:        opt.Svc,
+			ConfigStore: opt.ConfigStore,
+		})
 		if err != nil {
 			return nil, err
 		}

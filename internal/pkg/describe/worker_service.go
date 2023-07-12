@@ -48,9 +48,10 @@ func NewWorkerServiceDescriber(opt NewServiceConfig) (*WorkerServiceDescriber, e
 		}
 		d, err := newECSServiceDescriber(NewServiceConfig{
 			App:         opt.App,
+			Env:         env,
 			Svc:         opt.Svc,
 			ConfigStore: opt.ConfigStore,
-		}, env)
+		})
 		if err != nil {
 			return nil, err
 		}
