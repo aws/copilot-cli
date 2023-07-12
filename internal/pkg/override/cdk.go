@@ -100,11 +100,11 @@ func (cdk *CDK) Override(body []byte) ([]byte, error) {
 }
 
 func (cdk *CDK) install() error {
-	if _, err := cdk.exec.LookPath("npm"); err != nil {
-		return &errNPMUnavailable{parent: err}
+	manager, err := cdk.packageManager()
+	if err != nil {
+		return err
 	}
-
-	cmd := cdk.exec.Command("npm", "install")
+	cmd := cdk.exec.Command(manager, "install")
 	cmd.Stdout = cdk.execWriter
 	cmd.Stderr = cdk.execWriter
 
@@ -170,6 +170,50 @@ func (cdk *CDK) cleanUp(in []byte) ([]byte, error) {
 		return nil, fmt.Errorf("marshal cleaned up CDK transformed template: %w", err)
 	}
 	return out.Bytes(), nil
+}
+
+type packageManager struct {
+	name     string
+	lockFile string
+}
+
+var packageManagers = []packageManager{
+	{
+		name:     "npm",
+		lockFile: "package-lock.json",
+	},
+	{
+		name:     "yarn",
+		lockFile: "yarn.lock",
+	},
+}
+
+func (cdk *CDK) installedPackageManager() ([]string, []error) {
+	var lookUpExecutableErrs []error
+	var installed []string
+	for _, candidate := range packageManagers {
+		if _, err := cdk.exec.LookPath(candidate.name); err == nil {
+			installed = append(installed, candidate.name)
+		} else {
+			lookUpExecutableErrs = append(lookUpExecutableErrs, &errorExecutableNotFound{
+				executable: candidate.name,
+				error:      err,
+			})
+		}
+	}
+	return installed, lookUpExecutableErrs
+}
+
+func (cdk *CDK) packageManager() (string, error) {
+	installed, errs := cdk.installedPackageManager()
+	if len(installed) == 0 {
+		return "", &errPackageManagerUnavailable{parentErrors: errs}
+	}
+	if len(installed) == 1 {
+		return installed[0], nil
+	}
+	return "npm", nil
+
 }
 
 // ScaffoldWithCDK bootstraps a CDK application under dir/ to override the seed CloudFormation resources.

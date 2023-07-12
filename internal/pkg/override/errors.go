@@ -5,19 +5,40 @@ package override
 
 import (
 	"fmt"
+	"sort"
+	"strings"
 )
 
-type errNPMUnavailable struct {
-	parent error
+type errorExecutableNotFound struct {
+	executable string
+	error      error
 }
 
-func (err *errNPMUnavailable) Error() string {
-	return fmt.Sprintf(`"npm" cannot be found: "npm" is required to override with the Cloud Development Kit: %v`, err.parent)
+func (e *errorExecutableNotFound) Error() string {
+	return fmt.Sprintf("look up %q: %s", e.executable, e.error.Error())
+}
+
+type errPackageManagerUnavailable struct {
+	parentErrors []error
+}
+
+func (err *errPackageManagerUnavailable) Error() string {
+	var parentErrStrings []string
+	for _, e := range err.parentErrors {
+		parentErrStrings = append(parentErrStrings, e.Error())
+	}
+	sort.Sort((sort.StringSlice)(parentErrStrings))
+	return fmt.Sprintf("cannot find a package manager to override with the Cloud Development Kit: %s",
+		strings.Join(parentErrStrings, "; "))
 }
 
 // RecommendActions implements the cli.actionRecommender interface.
-func (err *errNPMUnavailable) RecommendActions() string {
-	return fmt.Sprintf(`Please follow instructions at: %q to install "npm"`, "https://docs.npmjs.com/downloading-and-installing-node-js-and-npm")
+func (err *errPackageManagerUnavailable) RecommendActions() string {
+	return fmt.Sprintf(`Please follow the instructions to install either one of the package managers:
+%q: %q
+%q: %q`,
+		"npm", "https://docs.npmjs.com/downloading-and-installing-node-js-and-npm",
+		"yarn", "https://yarnpkg.com/getting-started/install")
 }
 
 // ErrNotExist occurs when the path of the file associated with an Overrider does not exist.
