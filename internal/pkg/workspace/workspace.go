@@ -721,3 +721,29 @@ func retrieveTypeFromManifest(in []byte) (string, error) {
 	}
 	return wl.Type, nil
 }
+
+type matchFn func(path string) (bool, error)
+
+// Find searches for the target file or directory at most `maxLevels` up from the starting directory.
+// If found, it returns the full path of the target file or directory.
+// If not found, it returns `ErrTargetNotFound`.
+// Otherwise, it returns any error as is.
+func Find(startDir string, maxLevels int, matchFn matchFn, target string) (string, error) {
+	searchingDir := startDir
+	for try := 0; try < maxLevels; try++ {
+		currentPath := filepath.Join(searchingDir, target)
+		match, err := matchFn(currentPath)
+		if err != nil {
+			return "", err
+		}
+		if match {
+			return currentPath, nil
+		}
+		searchingDir = filepath.Dir(searchingDir)
+	}
+	return "", &ErrTargetNotFound{
+		startDir:              startDir,
+		target:                target,
+		numberOfLevelsChecked: maxLevels,
+	}
+}

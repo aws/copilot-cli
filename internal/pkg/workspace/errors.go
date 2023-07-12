@@ -32,6 +32,20 @@ func (e *ErrFileNotExists) Error() string {
 	return fmt.Sprintf("file %s does not exists", e.FileName)
 }
 
+// ErrTargetNotFound means that we couldn't locate the target file or the target directory.
+type ErrTargetNotFound struct {
+	startDir              string
+	target                string
+	numberOfLevelsChecked int
+}
+
+func (e *ErrTargetNotFound) Error() string {
+	return fmt.Sprintf("couldn't find a file or directory called %s up to %d levels up from %s",
+		e.target,
+		e.numberOfLevelsChecked,
+		e.startDir)
+}
+
 // ErrWorkspaceNotFound means we couldn't locate a workspace root.
 type ErrWorkspaceNotFound struct {
 	CurrentDirectory      string
