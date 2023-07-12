@@ -184,7 +184,7 @@ func (cf CloudFormation) removeDNSDelegationAndCrossAccountAccess(appStack *stac
 	}
 	appResourcesConfig.Accounts = newAccountList
 	if err := cf.deployAppConfig(newCfg, appResourcesConfig, true); err != nil {
-		return fmt.Errorf("update application regional resources to remove account %s: %w", accountID, err)
+		return err
 	}
 	return nil
 }
@@ -401,14 +401,13 @@ func (cf CloudFormation) RemoveEnvFromApp(opts *RemoveEnvFromAppOpts) error {
 		return nil
 	}
 
-	deployApp := &deploy.CreateAppInput{
+	appConfig := stack.NewAppStackConfig(&deploy.CreateAppInput{
 		Name:               opts.App.Name,
 		AccountID:          opts.App.AccountID,
 		DomainName:         opts.App.Domain,
 		DomainHostedZoneID: opts.App.DomainHostedZoneID,
 		Version:            opts.App.Version,
-	}
-	appConfig := stack.NewAppStackConfig(deployApp)
+	})
 
 	if !regionHasOtherEnvs {
 		// empty s3 bucket and ECR repositories
