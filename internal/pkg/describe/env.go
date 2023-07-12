@@ -197,20 +197,7 @@ func (d *EnvDescriber) AvailableFeatures() ([]string, error) {
 //
 // If the Version field does not exist, then it's a legacy template and it returns an version.LegacyEnvTemplate and nil error.
 func (d *EnvDescriber) Version() (string, error) {
-	raw, err := d.cfn.StackMetadata()
-	if err != nil {
-		return "", err
-	}
-	metadata := struct {
-		Version string `yaml:"Version"`
-	}{}
-	if err := yaml.Unmarshal([]byte(raw), &metadata); err != nil {
-		return "", fmt.Errorf("unmarshal Metadata property to read Version: %w", err)
-	}
-	if metadata.Version == "" {
-		return version.LegacyEnvTemplate, nil
-	}
-	return metadata.Version, nil
+	return stackVersion(d.cfn, version.LegacyEnvTemplate)
 }
 
 // ServiceDiscoveryEndpoint returns the endpoint the environment was initialized with, if any. Otherwise,

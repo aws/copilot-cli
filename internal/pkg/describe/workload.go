@@ -63,7 +63,11 @@ func NewWorkloadStackDescriber(opt NewWorkloadConfig) (*WorkloadStackDescriber, 
 //
 // If the Version field does not exist, then it's a legacy template and it returns an version.LegacyWorkloadTemplate and nil error.
 func (d *WorkloadStackDescriber) Version() (string, error) {
-	raw, err := d.cfn.StackMetadata()
+	return stackVersion(d.cfn, version.LegacyWorkloadTemplate)
+}
+
+func stackVersion(descr stackDescriber, legacyVersion string) (string, error) {
+	raw, err := descr.StackMetadata()
 	if err != nil {
 		return "", err
 	}
@@ -74,7 +78,7 @@ func (d *WorkloadStackDescriber) Version() (string, error) {
 		return "", fmt.Errorf("unmarshal Metadata property to read Version: %w", err)
 	}
 	if metadata.Version == "" {
-		return version.LegacyWorkloadTemplate, nil
+		return legacyVersion, nil
 	}
 	return metadata.Version, nil
 }

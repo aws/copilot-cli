@@ -25,6 +25,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
+	"github.com/aws/copilot-cli/internal/pkg/version"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/spf13/afero"
 )
@@ -199,6 +200,7 @@ func (o *packagePipelineOpts) Execute() error {
 		Stages:              stages,
 		ArtifactBuckets:     artifactBuckets,
 		AdditionalTags:      o.app.Tags,
+		Version:             version.LatestTemplateVersion(),
 		PermissionsBoundary: o.app.PermissionsBoundary,
 	}
 
