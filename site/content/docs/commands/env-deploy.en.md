@@ -12,6 +12,7 @@ $ copilot env deploy
 ```
   -a, --app string    Name of the application.
       --diff          Compares the generated CloudFormation template to the deployed stack.
+      --diff-yes      Skip interactive approval of diff before deploying.
       --force         Optional. Force update the environment stack template.
   -h, --help          help for deploy
   -n, --name string   Name of the environment.
