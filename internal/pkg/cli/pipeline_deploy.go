@@ -227,14 +227,13 @@ func (o *deployPipelineOpts) Ask() error {
 func validatePipelineVersion(vg versionGetter, name, templateVersion string) error {
 	pipelineVersion, err := vg.Version()
 	if err != nil {
-		// If the stack doesn't exist, exit gracefully.
 		var errStackNotExist *cloudformation.ErrStackNotFound
 		if errors.As(err, &errStackNotExist) {
 			return nil
 		}
 		return fmt.Errorf("get template version of pipeline %s: %w", name, err)
 	}
-	if diff := semver.Compare(pipelineVersion, templateVersion); diff > 0 {
+	if semver.Compare(pipelineVersion, templateVersion) > 0 {
 		return &errCannotDowngradePipelineVersion{
 			name:            name,
 			version:         pipelineVersion,
