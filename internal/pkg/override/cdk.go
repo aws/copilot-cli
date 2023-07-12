@@ -5,6 +5,7 @@ package override
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -12,6 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"gopkg.in/yaml.v3"
 
 	"github.com/aws/copilot-cli/internal/pkg/template"
@@ -27,6 +29,7 @@ type CDK struct {
 	exec       struct {
 		LookPath func(file string) (string, error)
 		Command  func(name string, args ...string) *exec.Cmd
+		Find     func(startDir string, maxLevels int, matchFn workspace.MatchFn, target string) (string, error)
 	} // For testing os/exec calls.
 }
 
@@ -37,6 +40,7 @@ type CDKOpts struct {
 	EnvVars    map[string]string                           // Environment variables key value pairs to pass to the "cdk synth" command.
 	LookPathFn func(executable string) (string, error)     // Search for the executable under $PATH. Defaults to exec.LookPath.
 	CommandFn  func(name string, args ...string) *exec.Cmd // Create a new executable command. Defaults to exec.Command rooted at the overrides/ dir.
+	FindFn     func(startDir string, maxLevels int, matchFn workspace.MatchFn, target string) (string, error)
 }
 
 // WithCDK instantiates a new CDK Overrider with root being the path to the overrides/ directory.
@@ -70,7 +74,10 @@ func WithCDK(root string, opts CDKOpts) *CDK {
 	if opts.CommandFn != nil {
 		cmdFn = opts.CommandFn
 	}
-
+	findFn := workspace.Find
+	if opts.FindFn != nil {
+		findFn = opts.FindFn
+	}
 	return &CDK{
 		rootAbsPath: root,
 		execWriter:  writer,
@@ -78,9 +85,11 @@ func WithCDK(root string, opts CDKOpts) *CDK {
 		exec: struct {
 			LookPath func(file string) (string, error)
 			Command  func(name string, args ...string) *exec.Cmd
+			Find     func(startDir string, maxLevels int, matchFn workspace.MatchFn, target string) (string, error)
 		}{
 			LookPath: lookPathFn,
 			Command:  cmdFn,
+			Find:     findFn,
 		},
 	}
 }
@@ -204,6 +213,28 @@ func (cdk *CDK) installedPackageManager() ([]string, []error) {
 	return installed, lookUpExecutableErrs
 }
 
+var getwd = os.Getwd
+
+func (cdk *CDK) projectManager() (string, error) {
+	wd, err := getwd()
+	if err != nil {
+		return "", fmt.Errorf("get working directory: %w", err)
+	}
+	var errTargetNotFound *workspace.ErrTargetNotFound
+	for _, candidate := range packageManagers {
+		_, err = cdk.exec.Find(wd, 5, func(path string) (bool, error) {
+			return afero.Exists(cdk.fs, path)
+		}, candidate.lockFile)
+		if err == nil {
+			return candidate.name, nil
+		}
+		if !errors.As(err, &errTargetNotFound) {
+			return "", fmt.Errorf("find %q: %w", candidate.lockFile, err)
+		}
+	}
+	return "", nil
+}
+
 func (cdk *CDK) packageManager() (string, error) {
 	installed, errs := cdk.installedPackageManager()
 	if len(installed) == 0 {
@@ -212,7 +243,14 @@ func (cdk *CDK) packageManager() (string, error) {
 	if len(installed) == 1 {
 		return installed[0], nil
 	}
-	return "npm", nil
+	manager, err := cdk.projectManager()
+	if err != nil {
+		return "", err
+	}
+	if manager == "" {
+		manager = "npm"
+	}
+	return manager, nil
 
 }
 

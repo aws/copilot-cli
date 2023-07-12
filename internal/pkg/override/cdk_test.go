@@ -5,13 +5,16 @@ package override
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/template"
+	"github.com/aws/copilot-cli/internal/pkg/workspace"
 
 	"github.com/spf13/afero"
 
@@ -34,6 +37,24 @@ func TestCDK_Override(t *testing.T) {
 
 		// THEN
 		require.EqualError(t, err, `cannot find a package manager to override with the Cloud Development Kit: look up "npm": exec: "npm": executable file not found in $PATH; look up "yarn": exec: "yarn": executable file not found in $PATH`)
+	})
+	t.Run("on install: should return a wrapped error if unexpected error occurs while finding lock file", func(t *testing.T) {
+		// GIVEN
+		cdk := WithCDK("", CDKOpts{
+			FS: afero.NewMemMapFs(),
+			LookPathFn: func(file string) (string, error) {
+				return "/bin/npm", nil
+			},
+			FindFn: func(_ string, _ int, _ workspace.MatchFn, _ string) (string, error) {
+				return "", errors.New("some error")
+			},
+		})
+
+		// WHEN
+		_, err := cdk.Override(nil)
+
+		// THEN
+		require.ErrorContains(t, err, `find "package-lock.json": some error`)
 	})
 	t.Run("on install: should return a wrapped error if npm install fails", func(t *testing.T) {
 		// GIVEN
@@ -156,12 +177,18 @@ func TestCDK_Override(t *testing.T) {
 		require.Contains(t, buf.String(), "yarn install")
 		require.Contains(t, string(out), fmt.Sprintf("%s synth --no-version-reporting", binPath))
 	})
-	t.Run("should invoke npm install and cdk synth, if both package managers are installed", func(t *testing.T) {
-		binPath := filepath.Join("node_modules", ".bin", "cdk")
+	t.Run("should invoke npm install and cdk synth, if the project is managed by npm", func(t *testing.T) {
+		defer func() { getwd = os.Getwd }()
+		getwd = func() (dir string, err error) {
+			return "film/web/user", nil
+		}
 		buf := new(strings.Builder)
+		fs := afero.NewMemMapFs()
+		_ = fs.MkdirAll("film/web/user", 0755)
+		_, _ = fs.Create("film/package-lock.json")
 		cdk := WithCDK("", CDKOpts{
 			ExecWriter: buf,
-			FS:         afero.NewMemMapFs(),
+			FS:         fs,
 			LookPathFn: func(file string) (string, error) {
 				return fmt.Sprintf("/bin/%s", file), nil
 			},
@@ -176,7 +203,62 @@ func TestCDK_Override(t *testing.T) {
 		// THEN
 		require.NoError(t, err)
 		require.Contains(t, buf.String(), "npm install")
-		require.Contains(t, string(out), fmt.Sprintf("%s synth --no-version-reporting", binPath))
+		require.Contains(t, string(out), fmt.Sprintf("%s synth --no-version-reporting", filepath.Join("node_modules", ".bin", "cdk")))
+	})
+	t.Run("should invoke yarn install and cdk synth, if the project is managed by yarn", func(t *testing.T) {
+		defer func() { getwd = os.Getwd }()
+		getwd = func() (dir string, err error) {
+			return "film/web/user", nil
+		}
+		buf := new(strings.Builder)
+		fs := afero.NewMemMapFs()
+		_ = fs.MkdirAll("film/web/user", 0755)
+		_, _ = fs.Create("film/yarn.lock")
+		cdk := WithCDK("", CDKOpts{
+			ExecWriter: buf,
+			FS:         fs,
+			LookPathFn: func(file string) (string, error) {
+				return fmt.Sprintf("/bin/%s", file), nil
+			},
+			CommandFn: func(name string, args ...string) *exec.Cmd {
+				return exec.Command("echo", fmt.Sprintf("Description: %s", strings.Join(append([]string{name}, args...), " ")))
+			},
+		})
+
+		// WHEN
+		out, err := cdk.Override(nil)
+
+		// THEN
+		require.NoError(t, err)
+		require.Contains(t, buf.String(), "yarn install")
+		require.Contains(t, string(out), fmt.Sprintf("%s synth --no-version-reporting", filepath.Join("node_modules", ".bin", "cdk")))
+	})
+	t.Run("should invoke npm install and cdk synth, if the project manager is unknown", func(t *testing.T) {
+		defer func() { getwd = os.Getwd }()
+		getwd = func() (dir string, err error) {
+			return "film/web/user", nil
+		}
+		buf := new(strings.Builder)
+		fs := afero.NewMemMapFs()
+		_ = fs.MkdirAll("film/web/user", 0755)
+		cdk := WithCDK("", CDKOpts{
+			ExecWriter: buf,
+			FS:         fs,
+			LookPathFn: func(file string) (string, error) {
+				return fmt.Sprintf("/bin/%s", file), nil
+			},
+			CommandFn: func(name string, args ...string) *exec.Cmd {
+				return exec.Command("echo", fmt.Sprintf("Description: %s", strings.Join(append([]string{name}, args...), " ")))
+			},
+		})
+
+		// WHEN
+		out, err := cdk.Override(nil)
+
+		// THEN
+		require.NoError(t, err)
+		require.Contains(t, buf.String(), "npm install")
+		require.Contains(t, string(out), fmt.Sprintf("%s synth --no-version-reporting", filepath.Join("node_modules", ".bin", "cdk")))
 	})
 	t.Run("should return the transformed document with CDK metadata stripped and description updated", func(t *testing.T) {
 		buf := new(strings.Builder)
