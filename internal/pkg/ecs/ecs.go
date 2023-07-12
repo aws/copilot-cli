@@ -46,6 +46,7 @@ type ecsClient interface {
 	TaskDefinition(taskDefName string) (*ecs.TaskDefinition, error)
 	UpdateService(clusterName, serviceName string, opts ...ecs.UpdateServiceOpts) error
 	DescribeTasks(cluster string, taskARNs []string) ([]*ecs.Task, error)
+	ActiveClusters(arns ...string) ([]string, error)
 }
 
 type stepFunctionsClient interface {
@@ -394,21 +395,29 @@ func (c Client) clusterARN(app, env string) (string, error) {
 		deploy.AppTagKey: app,
 		deploy.EnvTagKey: env,
 	})
+
 	clusters, err := c.rgGetter.GetResourcesByTags(clusterResourceType, tags)
-
-	if err != nil {
+	switch {
+	case err != nil:
 		return "", fmt.Errorf("get ECS cluster with tags %s: %w", tags.String(), err)
-	}
-
-	if len(clusters) == 0 {
+	case len(clusters) == 0:
 		return "", fmt.Errorf("no ECS cluster found with tags %s", tags.String())
 	}
 
-	// NOTE: only one cluster is associated with an application and an environment.
-	if len(clusters) > 1 {
-		return "", fmt.Errorf("more than one ECS cluster are found with tags %s", tags.String())
+	arns := make([]string, len(clusters))
+	for i := range clusters {
+		arns[i] = clusters[i].ARN
 	}
-	return clusters[0].ARN, nil
+
+	active, err := c.ecsClient.ActiveClusters(arns...)
+	switch {
+	case err != nil:
+		return "", fmt.Errorf("check if clusters are active: %w", err)
+	case len(active) > 1:
+		return "", fmt.Errorf("more than one active ECS cluster are found with tags %s", tags.String())
+	}
+
+	return active[0], nil
 }
 
 func (c Client) fetchAndParseServiceARN(app, env, svc string) (cluster, service string, err error) {

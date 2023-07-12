@@ -319,6 +319,29 @@ func (e *ECS) HasDefaultCluster() (bool, error) {
 	return true, nil
 }
 
+// ActiveClusters returns the subset of arns that have an ACTIVE status.
+func (e *ECS) ActiveClusters(arns ...string) ([]string, error) {
+	resp, err := e.client.DescribeClusters(&ecs.DescribeClustersInput{
+		Clusters: aws.StringSlice(arns),
+	})
+	switch {
+	case err != nil:
+		return nil, fmt.Errorf("describe clusters: %w", err)
+	case len(resp.Failures) > 0:
+		return nil, fmt.Errorf("describe clusters: %s", resp.Failures[0].GoString())
+	}
+
+	var active []string
+	for _, cluster := range resp.Clusters {
+		if aws.StringValue(cluster.Status) == clusterStatusActive {
+			active = append(active, aws.StringValue(cluster.ClusterArn))
+		}
+	}
+
+	return active, nil
+
+}
+
 // RunTask runs a number of tasks with the task definition and network configurations in a cluster, and returns after
 // the task(s) is running or fails to run, along with task ARNs if possible.
 func (e *ECS) RunTask(input RunTaskInput) ([]*Task, error) {

@@ -73,6 +73,25 @@ func (m *MockecsClient) EXPECT() *MockecsClientMockRecorder {
 	return m.recorder
 }
 
+// ActiveClusters mocks base method.
+func (m *MockecsClient) ActiveClusters(arns ...string) ([]string, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{}
+	for _, a := range arns {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ActiveClusters", varargs...)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ActiveClusters indicates an expected call of ActiveClusters.
+func (mr *MockecsClientMockRecorder) ActiveClusters(arns ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ActiveClusters", reflect.TypeOf((*MockecsClient)(nil).ActiveClusters), arns...)
+}
+
 // DefaultCluster mocks base method.
 func (m *MockecsClient) DefaultCluster() (string, error) {
 	m.ctrl.T.Helper()
