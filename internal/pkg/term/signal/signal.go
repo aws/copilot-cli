@@ -15,8 +15,8 @@ type Signal struct {
 	sigs     []os.Signal
 }
 
-// NewSignal creates a new Signal object with the specified signals.
-func NewSignal(signals ...os.Signal) *Signal {
+// New creates and returns new Signal object with the specified signals.
+func New(signals ...os.Signal) *Signal {
 	return &Signal{
 		signalCh: make(chan os.Signal),
 		sigs:     signals,
