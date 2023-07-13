@@ -19,7 +19,7 @@ Thanks to every one of you who shows love and support for AWS Copilot.
 
 Copilot v1.29 brings big enhancements to help you develop more flexibly and efficiently:
 
-- **Pipeline overrides**: In [v1.27.0](https://aws.github.io/copilot-cli/blogs/release-v127/#extend-copilot-generated-aws-cloudformation-templates), we introduced CDK and yaml patch overrides for workload and environment CloudFormation templates. Now you can enjoy the same extensibility for Copilot pipeline templates! [See detailed section](#pipeline-overrides).
+- **Pipeline overrides**: In [v1.27.0](https://aws.github.io/copilot-cli/blogs/release-v127/#extend-copilot-generated-aws-cloudformation-templates), we introduced CDK and YAML patch overrides for workload and environment CloudFormation templates. Now you can enjoy the same extensibility for Copilot pipeline templates! [See detailed section](#pipeline-overrides).
 - **Static Site enhancements**: We've improved our [latest workload type](https://aws.github.io/copilot-cli/blogs/release-v128/#static-site-service-type) with CloudFront cache invalidation and Static Site-tailored operational commands. [See detailed section](#static-site-enhancements).
 
 ???+ note "What’s AWS Copilot?"
