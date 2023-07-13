@@ -5,8 +5,6 @@ package override
 
 import (
 	"fmt"
-	"sort"
-	"strings"
 )
 
 type errorExecutableNotFound struct {
@@ -19,17 +17,11 @@ func (e *errorExecutableNotFound) Error() string {
 }
 
 type errPackageManagerUnavailable struct {
-	parentErrors []error
+	parentError error
 }
 
 func (err *errPackageManagerUnavailable) Error() string {
-	var parentErrStrings []string
-	for _, e := range err.parentErrors {
-		parentErrStrings = append(parentErrStrings, e.Error())
-	}
-	sort.Sort((sort.StringSlice)(parentErrStrings))
-	return fmt.Sprintf("cannot find a package manager to override with the Cloud Development Kit: %s",
-		strings.Join(parentErrStrings, "; "))
+	return fmt.Sprintf("cannot find a package manager to override with the Cloud Development Kit:\n%s", err.parentError.Error())
 }
 
 // RecommendActions implements the cli.actionRecommender interface.

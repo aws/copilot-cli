@@ -36,7 +36,9 @@ func TestCDK_Override(t *testing.T) {
 		_, err := cdk.Override(nil)
 
 		// THEN
-		require.EqualError(t, err, `cannot find a package manager to override with the Cloud Development Kit: look up "npm": exec: "npm": executable file not found in $PATH; look up "yarn": exec: "yarn": executable file not found in $PATH`)
+		require.EqualError(t, err, `cannot find a package manager to override with the Cloud Development Kit:
+look up "npm": exec: "npm": executable file not found in $PATH
+look up "yarn": exec: "yarn": executable file not found in $PATH`)
 	})
 	t.Run("on install: should return a wrapped error if unexpected error occurs while finding lock file", func(t *testing.T) {
 		// GIVEN

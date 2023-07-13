@@ -198,7 +198,7 @@ var packageManagers = []packageManager{ // Alphabetically sorted based on name.
 	},
 }
 
-func (cdk *CDK) installedPackageManager() ([]string, []error) {
+func (cdk *CDK) installedPackageManager() ([]string, error) {
 	var lookUpExecutableErrs []error
 	var installed []string
 	for _, candidate := range packageManagers {
@@ -211,7 +211,7 @@ func (cdk *CDK) installedPackageManager() ([]string, []error) {
 			})
 		}
 	}
-	return installed, lookUpExecutableErrs
+	return installed, errors.Join(lookUpExecutableErrs...)
 }
 
 var getwd = os.Getwd
@@ -250,9 +250,9 @@ func (cdk *CDK) closestProjectManager() (string, error) {
 }
 
 func (cdk *CDK) packageManager() (string, error) {
-	installed, errs := cdk.installedPackageManager()
+	installed, err := cdk.installedPackageManager()
 	if len(installed) == 0 {
-		return "", &errPackageManagerUnavailable{parentErrors: errs}
+		return "", &errPackageManagerUnavailable{parentError: err}
 	}
 	if len(installed) == 1 {
 		return installed[0], nil
