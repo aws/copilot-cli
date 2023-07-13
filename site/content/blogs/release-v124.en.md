@@ -72,7 +72,7 @@ After successfully deploying with the updated manifest, Service Connect should b
 $ copilot svc show --name front-end
 
 ...
-Internal Service Endpoint
+Internal Service Endpoints
 
   Endpoint                      Environment  Type
   --------                      -----------  ----

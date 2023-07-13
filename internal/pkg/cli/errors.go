@@ -9,6 +9,52 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 )
 
+type errCannotDowngradePipelineVersion struct {
+	name            string
+	version         string
+	templateVersion string
+}
+
+func (e *errCannotDowngradePipelineVersion) init() *errCannotDowngradeVersion {
+	return &errCannotDowngradeVersion{
+		componentName: e.name,
+		componentType: "pipeline",
+		laterVersion:  e.version,
+		thisVersion:   e.templateVersion,
+	}
+}
+
+func (e *errCannotDowngradePipelineVersion) Error() string {
+	return e.init().Error()
+}
+
+func (e *errCannotDowngradePipelineVersion) RecommendActions() string {
+	return e.init().RecommendActions()
+}
+
+type errCannotDowngradeWkldVersion struct {
+	name            string
+	version         string
+	templateVersion string
+}
+
+func (e *errCannotDowngradeWkldVersion) init() *errCannotDowngradeVersion {
+	return &errCannotDowngradeVersion{
+		componentName: e.name,
+		componentType: "workload",
+		laterVersion:  e.version,
+		thisVersion:   e.templateVersion,
+	}
+}
+
+func (e *errCannotDowngradeWkldVersion) Error() string {
+	return e.init().Error()
+}
+
+func (e *errCannotDowngradeWkldVersion) RecommendActions() string {
+	return e.init().RecommendActions()
+}
+
 type errCannotDowngradeEnvVersion struct {
 	envName         string
 	envVersion      string
@@ -17,10 +63,10 @@ type errCannotDowngradeEnvVersion struct {
 
 func (e *errCannotDowngradeEnvVersion) init() *errCannotDowngradeVersion {
 	return &errCannotDowngradeVersion{
-		componentName:         e.envName,
-		componentType:         "environment",
-		currentVersion:        e.envVersion,
-		latestTemplateVersion: e.templateVersion,
+		componentName: e.envName,
+		componentType: "environment",
+		laterVersion:  e.envVersion,
+		thisVersion:   e.templateVersion,
 	}
 }
 
@@ -40,10 +86,10 @@ type errCannotDowngradeAppVersion struct {
 
 func (e *errCannotDowngradeAppVersion) init() *errCannotDowngradeVersion {
 	return &errCannotDowngradeVersion{
-		componentName:         e.appName,
-		componentType:         "application",
-		currentVersion:        e.appVersion,
-		latestTemplateVersion: e.templateVersion,
+		componentName: e.appName,
+		componentType: "application",
+		laterVersion:  e.appVersion,
+		thisVersion:   e.templateVersion,
 	}
 }
 
@@ -56,14 +102,14 @@ func (e *errCannotDowngradeAppVersion) RecommendActions() string {
 }
 
 type errCannotDowngradeVersion struct {
-	componentName         string
-	componentType         string
-	currentVersion        string
-	latestTemplateVersion string
+	componentName string
+	componentType string
+	laterVersion  string
+	thisVersion   string
 }
 
 func (e *errCannotDowngradeVersion) Error() string {
-	return fmt.Sprintf("cannot downgrade %s %q (currently in version %s) to version %s", e.componentType, e.componentName, e.currentVersion, e.latestTemplateVersion)
+	return fmt.Sprintf("cannot downgrade %s %q (currently in version %s) to version %s", e.componentType, e.componentName, e.laterVersion, e.thisVersion)
 }
 
 func (e *errCannotDowngradeVersion) RecommendActions() string {

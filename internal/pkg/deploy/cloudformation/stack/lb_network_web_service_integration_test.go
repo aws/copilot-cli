@@ -111,6 +111,7 @@ func TestNetworkLoadBalancedWebService_Template(t *testing.T) {
 				AccountID:                "123456789123",
 				Region:                   "us-west-2",
 				EnvVersion:               "v1.42.0",
+				Version:                  "v1.29.0",
 			},
 			RootUserARN: "arn:aws:iam::123456789123:root",
 		}, stack.WithNLB([]string{"10.0.0.0/24", "10.1.0.0/24"}))

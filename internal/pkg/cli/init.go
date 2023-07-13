@@ -188,6 +188,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		spinner:         spin,
 		cmd:             exec.NewCmd(),
 		sessProvider:    sessProvider,
+		templateVersion: version.LatestTemplateVersion(),
 	}
 	deploySvcCmd.newSvcDeployer = func() (workloadDeployer, error) {
 		return newSvcDeployer(deploySvcCmd)
@@ -203,6 +204,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		unmarshal:       manifest.UnmarshalWorkload,
 		cmd:             exec.NewCmd(),
 		sessProvider:    sessProvider,
+		templateVersion: version.LatestTemplateVersion(),
 	}
 	deployJobCmd.newJobDeployer = func() (workloadDeployer, error) {
 		return newJobDeployer(deployJobCmd)

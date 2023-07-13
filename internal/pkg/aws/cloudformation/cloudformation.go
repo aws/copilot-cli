@@ -218,9 +218,16 @@ func MetadataWithStackSetName(name string) MetadataOpts {
 }
 
 // Metadata returns the Metadata property of the CloudFormation stack(set)'s template.
+// If the stack does not exist, returns ErrStackNotFound.
 func (c *CloudFormation) Metadata(opt MetadataOpts) (string, error) {
 	out, err := c.GetTemplateSummary(opt)
 	if err != nil {
+		if stackDoesNotExist(err) {
+			if aws.StringValue(opt.StackName) != "" {
+				return "", &ErrStackNotFound{name: aws.StringValue(opt.StackName)}
+			}
+			return "", &ErrStackNotFound{name: aws.StringValue(opt.StackSetName)}
+		}
 		return "", fmt.Errorf("get template summary: %w", err)
 	}
 	return aws.StringValue(out.Metadata), nil
@@ -364,6 +371,19 @@ func (c *CloudFormation) ListStacksWithTags(tags map[string]string) ([]StackDesc
 		}
 	}
 	return summaries, nil
+}
+
+// CancelUpdateStack attempts to cancel the update for a CloudFormation stack specified by the stackName.
+// Returns an error if failed to cancel CloudFormation stack update.
+func (c *CloudFormation) CancelUpdateStack(stackName string) error {
+	if _, err := c.client.CancelUpdateStack(&cloudformation.CancelUpdateStackInput{
+		StackName: aws.String(stackName),
+	}); err != nil {
+		if !stackDoesNotExist(err) && !cancelUpdateStackNotInUpdateProgress(err) {
+			return fmt.Errorf("cancel update stack: %w", err)
+		}
+	}
+	return nil
 }
 
 func (c *CloudFormation) create(stack *Stack) (string, error) {
