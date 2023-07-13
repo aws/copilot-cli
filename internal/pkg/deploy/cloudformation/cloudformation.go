@@ -8,6 +8,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"io"
 	"os"
 	"strings"
@@ -130,6 +132,11 @@ type codePipelineClient interface {
 
 type s3Client interface {
 	Upload(bucket, fileName string, data io.Reader) (string, error)
+	EmptyBucket(bucket string) error
+}
+
+type imageRemover interface {
+	ClearRepository(repoName string) error
 }
 
 type stackSetClient interface {
@@ -141,6 +148,7 @@ type stackSetClient interface {
 	Describe(name string) (stackset.Description, error)
 	DescribeOperation(name, opID string) (stackset.Operation, error)
 	InstanceSummaries(name string, opts ...stackset.InstanceSummariesOption) ([]stackset.InstanceSummary, error)
+	DeleteInstance(name, account, region string) (string, error)
 	DeleteAllInstances(name string) (string, error)
 	Delete(name string) error
 	WaitForStackSetLastOperationComplete(name string) error
@@ -171,22 +179,24 @@ func (f *discardFile) Fd() uintptr {
 
 // CloudFormation wraps the CloudFormationAPI interface
 type CloudFormation struct {
-	cfnClient      cfnClient
-	codeStarClient codeStarClient
-	cpClient       codePipelineClient
-	ecsClient      ecsClient
-	cwClient       cwClient
-	regionalClient func(region string) cfnClient
-	appStackSet    stackSetClient
-	s3Client       s3Client
-	region         string
-	console        progress.FileWriter
+	cfnClient         cfnClient
+	codeStarClient    codeStarClient
+	cpClient          codePipelineClient
+	ecsClient         ecsClient
+	cwClient          cwClient
+	regionalClient    func(region string) cfnClient
+	appStackSet       stackSetClient
+	s3Client          s3Client
+	regionalECRClient func(region string) imageRemover
+	region            string
+	console           progress.FileWriter
 
 	// cached variables.
 	cachedDeployedStack *cloudformation.StackDescription
 
 	// Overridden in tests.
-	renderStackSet func(input renderStackSetInput) error
+	renderStackSet               func(input renderStackSetInput) error
+	dnsDelegatedAccountsForStack func(stack *sdkcloudformation.Stack) []string
 }
 
 // New returns a configured CloudFormation client.
@@ -202,6 +212,11 @@ func New(sess *session.Session, opts ...OptFn) CloudFormation {
 				Region: aws.String(region),
 			}))
 		},
+		regionalECRClient: func(region string) imageRemover {
+			return ecr.New(sess.Copy(&aws.Config{
+				Region: aws.String(region),
+			}))
+		},
 		appStackSet: stackset.New(sess),
 		s3Client:    s3.New(sess),
 		region:      aws.StringValue(sess.Config.Region),
@@ -211,6 +226,7 @@ func New(sess *session.Session, opts ...OptFn) CloudFormation {
 		opt(&client)
 	}
 	client.renderStackSet = client.renderStackSetImpl
+	client.dnsDelegatedAccountsForStack = stack.DNSDelegatedAccountsForStack
 	return client
 }
 
