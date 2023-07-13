@@ -415,7 +415,8 @@ func (cf CloudFormation) RemoveEnvFromApp(opts *RemoveEnvFromAppOpts) error {
 		if err != nil {
 			return err
 		}
-		if err := cf.s3Client.EmptyBucket(resources.S3Bucket); err != nil {
+		s3 := cf.regionalS3Client(opts.EnvToDelete.Region)
+		if err := s3.EmptyBucket(resources.S3Bucket); err != nil {
 			return err
 		}
 		ecr := cf.regionalECRClient(opts.EnvToDelete.Region)
