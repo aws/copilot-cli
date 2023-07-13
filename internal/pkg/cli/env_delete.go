@@ -73,11 +73,10 @@ type deleteEnvOpts struct {
 	rg                resourceGetter
 	deployer          environmentDeployer
 	envDeleterFromApp envDeleterFromApp
-
-	iam    roleDeleter
-	prog   progress
-	prompt prompter
-	sel    configSelector
+	iam               roleDeleter
+	prog              progress
+	prompt            prompter
+	sel               configSelector
 
 	// cached data to avoid fetching the same information multiple times.
 	envConfig *config.Environment
