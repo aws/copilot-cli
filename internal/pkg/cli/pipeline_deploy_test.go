@@ -14,7 +14,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
-	deploycfn "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
@@ -28,7 +27,7 @@ type deployPipelineMocks struct {
 	prompt                 *mocks.Mockprompter
 	prog                   *mocks.Mockprogress
 	deployer               *mocks.MockpipelineDeployer
-	pipelineStackConfig    *mocks.MockpipelineStackConfig
+	pipelineStackConfig    *mocks.MockstackConfiguration
 	mockDiffWriter         *strings.Builder
 	ws                     *mocks.MockwsPipelineReader
 	actionCmd              *mocks.MockactionCommand
@@ -914,7 +913,7 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 				deployer:               mocks.NewMockpipelineDeployer(ctrl),
 				ws:                     mocks.NewMockwsPipelineReader(ctrl),
 				actionCmd:              mocks.NewMockactionCommand(ctrl),
-				pipelineStackConfig:    mocks.NewMockpipelineStackConfig(ctrl),
+				pipelineStackConfig:    mocks.NewMockstackConfiguration(ctrl),
 				deployedPipelineLister: mocks.NewMockdeployedPipelineLister(ctrl),
 				versionGetter:          mocks.NewMockversionGetter(ctrl),
 				mockDiffWriter:         &strings.Builder{},
@@ -930,7 +929,7 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					allowDowngrade: tc.inAllowDowngrade,
 				},
 				pipelineDeployer: mocks.deployer,
-				pipelineStackConfig: func(in *deploy.CreatePipelineInput) deploycfn.StackConfiguration {
+				pipelineStackConfig: func(in *deploy.CreatePipelineInput) stackConfiguration {
 					return mocks.pipelineStackConfig
 				},
 				ws:              mocks.ws,

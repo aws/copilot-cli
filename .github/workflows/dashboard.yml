@@ -1,0 +1,38 @@
+name: Push metrics to CloudWatch
+on:
+  workflow_dispatch:
+  schedule:
+    # - cron: "0 0 * * *" # Every day.
+    - cron: "* * * * *" # Every minute, for testing.
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get metrics
+        id: get-metrics
+        uses: actions/github-script@v6
+        with:
+          # TODO(jwh): handle multiple pages
+          script: |
+            let openIssues = await github.rest.issues({
+                          owner: context.repo.owner,
+                          repo: context.repo.repo,
+                          state: 'open'
+                          per_page: 100
+                        })
+            count=$(echo $openIssues | jq '.[] | length')
+            return count
+     #     result-encoding: TK leave blank defaults to json #${{steps.get-metrics.outputs.result}}
+  push:
+    steps:
+      - name: Push to CloudWatch
+        uses: aws-actions/action-cloudwatch-metrics@TAG
+        with:
+          metric-dimensions:
+            - Name: "github.ref"
+              Value: "${{ github.ref }}"
+            - Name: "github.repository"
+              Value: "${{ github.repository }}"
+          metric-name: "OpenIssueCount"
+          metric-value: ${{steps.get-metrics.outputs.result}}
