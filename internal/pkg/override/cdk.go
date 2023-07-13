@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -186,7 +187,7 @@ type packageManager struct {
 	lockFile string
 }
 
-var packageManagers = []packageManager{
+var packageManagers = []packageManager{ // Alphabetically sorted based on name.
 	{
 		name:     "npm",
 		lockFile: "package-lock.json",
@@ -215,24 +216,37 @@ func (cdk *CDK) installedPackageManager() ([]string, []error) {
 
 var getwd = os.Getwd
 
-func (cdk *CDK) projectManager() (string, error) {
+// closestProjectManager returns the package manager of the project.
+// It searches five levels up from the working directory and look for the lock file of each package managers.
+// If no lock file is found, it returns an empty string.
+// If only one lock file is found, it returns that corresponding package manager name.
+// If multiple are found, it returns the package manager whose lock file is closer to the working dir.
+// If multiple are equally close, then it returns the one whose name is the alphabetically smallest.
+func (cdk *CDK) closestProjectManager() (string, error) {
 	wd, err := getwd()
 	if err != nil {
 		return "", fmt.Errorf("get working directory: %w", err)
 	}
+	var closestCandidate string
+	closestDistance := math.MaxInt
 	var errTargetNotFound *workspace.ErrTargetNotFound
 	for _, candidate := range packageManagers {
-		_, err = cdk.exec.Find(wd, 5, func(path string) (bool, error) {
+		path, err := cdk.exec.Find(wd, 5, func(path string) (bool, error) {
 			return afero.Exists(cdk.fs, path)
 		}, candidate.lockFile)
 		if err == nil {
-			return candidate.name, nil
+			distance := strings.Count(wd, "/") - strings.Count(path, "/")
+			if distance < closestDistance {
+				closestCandidate = candidate.name
+				closestDistance = distance
+			}
+			continue
 		}
 		if !errors.As(err, &errTargetNotFound) {
 			return "", fmt.Errorf("find %q: %w", candidate.lockFile, err)
 		}
 	}
-	return "", nil
+	return closestCandidate, nil
 }
 
 func (cdk *CDK) packageManager() (string, error) {
@@ -243,7 +257,7 @@ func (cdk *CDK) packageManager() (string, error) {
 	if len(installed) == 1 {
 		return installed[0], nil
 	}
-	manager, err := cdk.projectManager()
+	manager, err := cdk.closestProjectManager()
 	if err != nil {
 		return "", err
 	}
