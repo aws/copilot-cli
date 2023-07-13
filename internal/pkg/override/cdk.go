@@ -235,7 +235,7 @@ func (cdk *CDK) closestProjectManager() (string, error) {
 			return afero.Exists(cdk.fs, path)
 		}, candidate.lockFile)
 		if err == nil {
-			distance := strings.Count(wd, "/") - strings.Count(path, "/")
+			distance := strings.Count(wd, string(filepath.Separator)) - strings.Count(path, string(filepath.Separator))
 			if distance < closestDistance {
 				closestCandidate = candidate.name
 				closestDistance = distance
