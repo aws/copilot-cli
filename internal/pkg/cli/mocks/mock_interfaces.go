@@ -7692,3 +7692,99 @@ func (mr *MockenvPackagerMockRecorder) Validate(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Validate", reflect.TypeOf((*MockenvPackager)(nil).Validate), arg0)
 }
+
+// MockstackConfiguration is a mock of stackConfiguration interface.
+type MockstackConfiguration struct {
+	ctrl     *gomock.Controller
+	recorder *MockstackConfigurationMockRecorder
+}
+
+// MockstackConfigurationMockRecorder is the mock recorder for MockstackConfiguration.
+type MockstackConfigurationMockRecorder struct {
+	mock *MockstackConfiguration
+}
+
+// NewMockstackConfiguration creates a new mock instance.
+func NewMockstackConfiguration(ctrl *gomock.Controller) *MockstackConfiguration {
+	mock := &MockstackConfiguration{ctrl: ctrl}
+	mock.recorder = &MockstackConfigurationMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockstackConfiguration) EXPECT() *MockstackConfigurationMockRecorder {
+	return m.recorder
+}
+
+// Parameters mocks base method.
+func (m *MockstackConfiguration) Parameters() ([]*cloudformation.Parameter, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Parameters")
+	ret0, _ := ret[0].([]*cloudformation.Parameter)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Parameters indicates an expected call of Parameters.
+func (mr *MockstackConfigurationMockRecorder) Parameters() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Parameters", reflect.TypeOf((*MockstackConfiguration)(nil).Parameters))
+}
+
+// SerializedParameters mocks base method.
+func (m *MockstackConfiguration) SerializedParameters() (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SerializedParameters")
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SerializedParameters indicates an expected call of SerializedParameters.
+func (mr *MockstackConfigurationMockRecorder) SerializedParameters() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SerializedParameters", reflect.TypeOf((*MockstackConfiguration)(nil).SerializedParameters))
+}
+
+// StackName mocks base method.
+func (m *MockstackConfiguration) StackName() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StackName")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// StackName indicates an expected call of StackName.
+func (mr *MockstackConfigurationMockRecorder) StackName() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StackName", reflect.TypeOf((*MockstackConfiguration)(nil).StackName))
+}
+
+// Tags mocks base method.
+func (m *MockstackConfiguration) Tags() []*cloudformation.Tag {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Tags")
+	ret0, _ := ret[0].([]*cloudformation.Tag)
+	return ret0
+}
+
+// Tags indicates an expected call of Tags.
+func (mr *MockstackConfigurationMockRecorder) Tags() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Tags", reflect.TypeOf((*MockstackConfiguration)(nil).Tags))
+}
+
+// Template mocks base method.
+func (m *MockstackConfiguration) Template() (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Template")
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Template indicates an expected call of Template.
+func (mr *MockstackConfigurationMockRecorder) Template() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Template", reflect.TypeOf((*MockstackConfiguration)(nil).Template))
+}

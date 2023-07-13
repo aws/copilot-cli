@@ -55,7 +55,7 @@ Manifest: |
 			// GIVEN
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			describer := workloadStackDescriber{
+			describer := WorkloadStackDescriber{
 				app:  testApp,
 				env:  testEnv,
 				name: testWorkload,
@@ -252,7 +252,7 @@ func TestServiceDescriber_StackResources(t *testing.T) {
 
 			tc.setupMocks(mocks)
 
-			d := &workloadStackDescriber{
+			d := &WorkloadStackDescriber{
 				app:  testApp,
 				name: testWkld,
 				env:  testEnv,

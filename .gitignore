@@ -10,3 +10,4 @@ site/themes/docsy
 internal/pkg/template/templates/custom-resources/
 regression/*/copilot/
 cf-custom-resources/coverage
+gitstatus.txt

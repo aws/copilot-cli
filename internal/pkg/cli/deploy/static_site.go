@@ -36,7 +36,8 @@ type staticSiteDeployer struct {
 	staticSiteMft    *manifest.StaticSite
 	fs               afero.Fs
 	uploader         fileUploader
-	newStack         func(*stack.StaticSiteConfig) (*stack.StaticSite, error)
+	newStack         func(*stack.StaticSiteConfig) (cloudformation.StackConfiguration, error)
+
 	// cached.
 	wsRoot string
 }
@@ -74,8 +75,10 @@ func NewStaticSiteDeployer(in *WorkloadDeployerInput) (*staticSiteDeployer, erro
 				return err
 			},
 		},
-		wsRoot:   ws.ProjectRoot(),
-		newStack: stack.NewStaticSite,
+		wsRoot: ws.ProjectRoot(),
+		newStack: func(config *stack.StaticSiteConfig) (cloudformation.StackConfiguration, error) {
+			return stack.NewStaticSite(config)
+		},
 	}, nil
 }
 

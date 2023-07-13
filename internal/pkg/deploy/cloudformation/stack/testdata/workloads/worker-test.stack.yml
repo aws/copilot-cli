@@ -3,6 +3,7 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: CloudFormation template that represents a worker service on Amazon ECS.
 Metadata:
+  Version: v1.29.0
   Manifest: |
     # The manifest for the "dog-worker" service.
     # Read the full specification for the "Worker Service" type at:

@@ -27,7 +27,8 @@ const (
 var (
 	mockStack = NewStack("id", "template")
 
-	errDoesNotExist = awserr.New("ValidationError", "does not exist", nil)
+	errDoesNotExist             = awserr.New("ValidationError", "does not exist", nil)
+	errStackNotInUpdateProgress = awserr.New("ValidationError", "CancelUpdateStack cannot be called from current stack status", nil)
 )
 
 func TestCloudFormation_Create(t *testing.T) {
@@ -772,11 +773,30 @@ func TestStackDescriber_Metadata(t *testing.T) {
 
 			wantedErr: errors.New("get template summary: some error"),
 		},
+		"should return ErrStackNotFound if stack does not exist": {
+			createMock: func(ctrl *gomock.Controller) client {
+				m := mocks.NewMockclient(ctrl)
+				m.EXPECT().GetTemplateSummary(gomock.Any()).Return(nil, errDoesNotExist)
+				return m
+			},
+
+			wantedErr: errors.New("stack named phonetoolStack cannot be found"),
+		},
+		"should return ErrStackNotFound if stackset does not exist": {
+			isStackSet: true,
+			createMock: func(ctrl *gomock.Controller) client {
+				m := mocks.NewMockclient(ctrl)
+				m.EXPECT().GetTemplateSummary(gomock.Any()).Return(nil, errDoesNotExist)
+				return m
+			},
+
+			wantedErr: errors.New("stack named phonetoolStackSet cannot be found"),
+		},
 		"should return Metadata property of template summary on success for stack": {
 			createMock: func(ctrl *gomock.Controller) client {
 				m := mocks.NewMockclient(ctrl)
 				m.EXPECT().GetTemplateSummary(&cloudformation.GetTemplateSummaryInput{
-					StackName: aws.String("phonetool"),
+					StackName: aws.String("phonetoolStack"),
 				}).Return(&cloudformation.GetTemplateSummaryOutput{
 					Metadata: aws.String("hello"),
 				}, nil)
@@ -790,7 +810,7 @@ func TestStackDescriber_Metadata(t *testing.T) {
 			createMock: func(ctrl *gomock.Controller) client {
 				m := mocks.NewMockclient(ctrl)
 				m.EXPECT().GetTemplateSummary(&cloudformation.GetTemplateSummaryInput{
-					StackSetName: aws.String("phonetool"),
+					StackSetName: aws.String("phonetoolStackSet"),
 				}).Return(&cloudformation.GetTemplateSummaryOutput{
 					Metadata: aws.String("hello"),
 				}, nil)
@@ -811,9 +831,9 @@ func TestStackDescriber_Metadata(t *testing.T) {
 			}
 
 			// WHEN
-			name := MetadataWithStackName("phonetool")
+			name := MetadataWithStackName("phonetoolStack")
 			if tc.isStackSet {
-				name = MetadataWithStackSetName("phonetool")
+				name = MetadataWithStackSetName("phonetoolStackSet")
 			}
 			actual, err := c.Metadata(name)
 
@@ -1471,6 +1491,73 @@ func TestCloudFormation_ListStacksWithTags(t *testing.T) {
 				require.EqualError(t, err, tc.wantedErr)
 			} else {
 				require.Equal(t, tc.wantedStacks, stacks)
+			}
+		})
+	}
+}
+
+func TestCloudformation_CancelUpdateStack(t *testing.T) {
+	testCases := map[string]struct {
+		createMock func(ctrl *gomock.Controller) client
+
+		wantedErr error
+	}{
+		"return a wrapped error if fail to cancel stack update": {
+			createMock: func(ctrl *gomock.Controller) client {
+				m := mocks.NewMockclient(ctrl)
+				m.EXPECT().CancelUpdateStack(&cloudformation.CancelUpdateStackInput{
+					StackName: aws.String("phonetool-test-api"),
+				}).Return(nil, errors.New("some error"))
+				return m
+			},
+			wantedErr: fmt.Errorf("cancel update stack: some error"),
+		},
+		"return nil if the stack is not found": {
+			createMock: func(ctrl *gomock.Controller) client {
+				m := mocks.NewMockclient(ctrl)
+				m.EXPECT().CancelUpdateStack(&cloudformation.CancelUpdateStackInput{
+					StackName: aws.String("phonetool-test-api"),
+				}).Return(nil, errDoesNotExist)
+				return m
+			},
+		},
+		"return nil if the stack is not in update progress state": {
+			createMock: func(ctrl *gomock.Controller) client {
+				m := mocks.NewMockclient(ctrl)
+				m.EXPECT().CancelUpdateStack(&cloudformation.CancelUpdateStackInput{
+					StackName: aws.String("phonetool-test-api"),
+				}).Return(nil, errStackNotInUpdateProgress)
+				return m
+			},
+		},
+		"success": {
+			createMock: func(ctrl *gomock.Controller) client {
+				m := mocks.NewMockclient(ctrl)
+				m.EXPECT().CancelUpdateStack(&cloudformation.CancelUpdateStackInput{
+					StackName: aws.String("phonetool-test-api"),
+				}).Return(&cloudformation.CancelUpdateStackOutput{}, nil)
+				return m
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			c := CloudFormation{
+				client: tc.createMock(ctrl),
+			}
+
+			// WHEN
+			err := c.CancelUpdateStack("phonetool-test-api")
+
+			// THEN
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.NoError(t, err)
 			}
 		})
 	}

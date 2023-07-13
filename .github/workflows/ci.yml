@@ -36,6 +36,33 @@ jobs:
       - name: Cleanup
         run: make package-custom-resources-clean
 
+  mocks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: '1.20'
+
+      - name: Set up Node
+        uses: actions/setup-node@v1
+        with:
+          node-version: 16.x
+
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      - name: Generate mocks
+        run: make gen-mocks
+
+      - name: Print out local diff after mockgen
+        run: |
+             git status --porcelain=v1 1>gitstatus.txt
+             cat gitstatus.txt
+
+      - name: Check for nonzero diff
+        run: "[ -z \"$(cat gitstatus.txt)\" ] && echo \"Generated mocks all match\""
+
   test:
     runs-on: ubuntu-latest
     steps:

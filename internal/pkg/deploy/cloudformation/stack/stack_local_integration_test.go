@@ -82,6 +82,7 @@ func Test_Stack_Local_Integration(t *testing.T) {
 				},
 			},
 			EnvVersion: "v1.42.0",
+			Version:    "v1.29.0",
 		},
 	})
 	require.NoError(t, err)
