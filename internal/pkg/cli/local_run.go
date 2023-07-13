@@ -146,6 +146,9 @@ func (o *localRunOpts) isEnvironmentDeployed(envName string) (bool, error) {
 
 func (o *localRunOpts) validateEnvName() error {
 	envs, err := o.deployStore.ListEnvironmentsDeployedTo(o.appName, o.wkldName)
+	if err != nil {
+		return fmt.Errorf("list deployed environments for application %s: %w", o.appName, err)
+	}
 	isDeployed, err := o.isEnvironmentDeployed(o.envName)
 	if err != nil {
 		return err
@@ -207,6 +210,9 @@ func (o *localRunOpts) validateWkldName() error {
 		return fmt.Errorf("retrieve %s from application %s: %w", o.wkldName, o.appName, err)
 	}
 	envs, err := o.deployStore.ListEnvironmentsDeployedTo(o.appName, o.wkldName)
+	if err != nil {
+		return fmt.Errorf("list deployed environments for application %s: %w", o.appName, err)
+	}
 	if len(envs) == 0 {
 		return fmt.Errorf("workload %q is not deployed in any environment", o.wkldName)
 	}
