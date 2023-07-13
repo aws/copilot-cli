@@ -8,6 +8,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	clideploy "github.com/aws/copilot-cli/internal/pkg/cli/deploy"
 	"os"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -300,7 +301,7 @@ func (o *deleteSvcOpts) emptyECRRepos(envs []*config.Environment) error {
 	}
 
 	// TODO: centralized ECR repo name
-	repoName := fmt.Sprintf("%s/%s", o.appName, o.name)
+	repoName := clideploy.RepoName(o.appName, o.name)
 	for _, region := range uniqueRegions {
 		sess, err := o.sess.DefaultWithRegion(region)
 		if err != nil {
