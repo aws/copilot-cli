@@ -80,6 +80,9 @@ type CreatePipelineInput struct {
 
 	// PermissionsBoundary is the name of an IAM policy to set a permissions boundary.
 	PermissionsBoundary string
+
+	// Version is the pipeline template version.
+	Version string
 }
 
 // Build represents CodeBuild project used in the CodePipeline

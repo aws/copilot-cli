@@ -522,7 +522,6 @@ func validateWorkloadManifestCompatibilityWithEnv(ws wsEnvironmentsLister, env v
 func validateWkldVersion(vg versionGetter, name, templateVersion string) error {
 	svcVersion, err := vg.Version()
 	if err != nil {
-		// If the stack doesn't exist, exit gracefully.
 		var errStackNotExist *cloudformation.ErrStackNotFound
 		if errors.As(err, &errStackNotExist) {
 			return nil

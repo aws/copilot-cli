@@ -53,6 +53,7 @@ func TestBB_Pipeline_Template(t *testing.T) {
 			},
 		},
 		AdditionalTags: nil,
+		Version:        "v1.28.0",
 	})
 
 	actual, err := ps.Template()

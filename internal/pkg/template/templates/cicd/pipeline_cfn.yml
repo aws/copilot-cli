@@ -2,6 +2,8 @@
 # SPDX-License-Identifier: MIT-0
 AWSTemplateFormatVersion: '2010-09-09'
 Description: CodePipeline for {{$.AppName}}
+Metadata:
+  Version: {{ .Version }}
 Resources:
   {{- if isCodeStarConnection .Source}}
   {{if eq .Source.ConnectionARN ""}}
