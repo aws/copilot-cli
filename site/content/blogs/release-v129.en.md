@@ -24,13 +24,13 @@ Copilot v1.29 brings big enhancements to help you develop more flexibly and effi
 
 ???+ note "What’s AWS Copilot?"
 
-The AWS Copilot CLI is a tool for developers to build, release, and operate production ready containerized applications on AWS.
-From getting started, pushing to staging, and releasing to production, Copilot can help manage the entire lifecycle of your application development.
-At the foundation of Copilot is AWS CloudFormation, which enables you to provision infrastructure as code.
-Copilot provides pre-defined CloudFormation templates and user-friendly workflows for different types of micro service architectures,
-enabling you to focus on developing your application, instead of writing deployment scripts.
+    The AWS Copilot CLI is a tool for developers to build, release, and operate production ready containerized applications on AWS.
+    From getting started, pushing to staging, and releasing to production, Copilot can help manage the entire lifecycle of your application development.
+    At the foundation of Copilot is AWS CloudFormation, which enables you to provision infrastructure as code.
+    Copilot provides pre-defined CloudFormation templates and user-friendly workflows for different types of micro service architectures,
+    enabling you to focus on developing your application, instead of writing deployment scripts.
 
-See the section [Overview](../docs/concepts/overview.en.md) for a more detailed introduction to AWS Copilot.
+    See the section [Overview](../docs/concepts/overview.en.md) for a more detailed introduction to AWS Copilot.
 
 ## Pipeline overrides
 
