@@ -400,6 +400,71 @@ func TestStackSet_UpdateAndWait(t *testing.T) {
 	}
 }
 
+func TestStackSet_DeleteInstance(t *testing.T) {
+
+	testCases := map[string]struct {
+		mockClient   func(t *testing.T, ctrl *gomock.Controller) api
+		inputAccount string
+		inputRegion  string
+		wantedOpID   string
+		wantedError  error
+	}{
+
+		"returns if the account and region aren't found in the list of instances": {
+			mockClient: func(t *testing.T, ctrl *gomock.Controller) api {
+				m := mocks.NewMockapi(ctrl)
+				m.EXPECT().DeleteStackInstances(gomock.Any()).Return(nil, fmt.Errorf("some error"))
+				return m
+			},
+			inputRegion:  "us-west-1",
+			inputAccount: "1111",
+			wantedError:  errors.New("delete stack instance in region us-west-1 for account 1111 for stackset stackset: some error"),
+		},
+
+		"successfully deletes stack instance and returns the operation ID": {
+			mockClient: func(t *testing.T, ctrl *gomock.Controller) api {
+				m := mocks.NewMockapi(ctrl)
+				m.EXPECT().DeleteStackInstances(gomock.Any()).
+					DoAndReturn(func(in *cloudformation.DeleteStackInstancesInput) (*cloudformation.DeleteStackInstancesOutput, error) {
+						require.Equal(t, testName, aws.StringValue(in.StackSetName))
+						require.ElementsMatch(t, []string{"1111"}, aws.StringValueSlice(in.Accounts))
+						require.ElementsMatch(t, []string{"us-east-1"}, aws.StringValueSlice(in.Regions))
+						require.False(t, aws.BoolValue(in.RetainStacks))
+						return &cloudformation.DeleteStackInstancesOutput{
+							OperationId: aws.String("1"),
+						}, nil
+					})
+				return m
+			},
+			wantedOpID:   "1",
+			inputRegion:  "us-east-1",
+			inputAccount: "1111",
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			client := StackSet{
+				client: tc.mockClient(t, ctrl),
+			}
+
+			// WHEN
+			opID, err := client.DeleteInstance(testName, tc.inputAccount, tc.inputRegion)
+
+			// THEN
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedOpID, opID)
+			}
+		})
+	}
+}
+
 func TestStackSet_WaitForStackSetLastOperationComplete(t *testing.T) {
 	testCases := map[string]struct {
 		mockClient  func(ctrl *gomock.Controller) api

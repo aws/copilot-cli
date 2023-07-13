@@ -6,6 +6,7 @@ package cli
 import (
 	"context"
 	"encoding"
+	sdkcloudformation "github.com/aws/aws-sdk-go/service/cloudformation"
 	"io"
 
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -111,6 +112,7 @@ type environmentStore interface {
 	environmentGetter
 	environmentLister
 	environmentDeleter
+	applicationGetter
 }
 
 type environmentCreator interface {
@@ -705,4 +707,12 @@ type envPackager interface {
 	UploadArtifacts() (*clideploy.UploadEnvArtifactsOutput, error)
 	AddonsTemplate() (string, error)
 	templateDiffer
+}
+
+type stackConfiguration interface {
+	StackName() string
+	Template() (string, error)
+	Parameters() ([]*sdkcloudformation.Parameter, error)
+	Tags() []*sdkcloudformation.Tag
+	SerializedParameters() (string, error)
 }

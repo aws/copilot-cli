@@ -26,7 +26,7 @@ type packagePipelineMocks struct {
 	prompt                 *mocks.Mockprompter
 	prog                   *mocks.Mockprogress
 	deployer               *mocks.MockpipelineDeployer
-	pipelineStackConfig    *mocks.MockpipelineStackConfig
+	pipelineStackConfig    *mocks.MockstackConfiguration
 	ws                     *mocks.MockwsPipelineReader
 	actionCmd              *mocks.MockactionCommand
 	deployedPipelineLister *mocks.MockdeployedPipelineLister
@@ -256,7 +256,7 @@ func TestPipelinePackageOpts_Execute(t *testing.T) {
 			mockProgress := mocks.NewMockprogress(ctrl)
 			mockPrompt := mocks.NewMockprompter(ctrl)
 			mockActionCmd := mocks.NewMockactionCommand(ctrl)
-			mockPipelineStackConfig := mocks.NewMockpipelineStackConfig(ctrl)
+			mockPipelineStackConfig := mocks.NewMockstackConfiguration(ctrl)
 
 			mocks := packagePipelineMocks{
 				store:                  mockStore,

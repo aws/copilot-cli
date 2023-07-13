@@ -98,7 +98,7 @@ type deployPipelineOpts struct {
 	newSvcListCmd         func(io.Writer, string) cmd
 	newJobListCmd         func(io.Writer, string) cmd
 	pipelineVersionGetter func(string, string, bool) (versionGetter, error)
-	pipelineStackConfig   func(in *deploy.CreatePipelineInput) deploycfn.StackConfiguration
+	pipelineStackConfig   func(in *deploy.CreatePipelineInput) stackConfiguration
 
 	configureDeployedPipelineLister func() deployedPipelineLister
 
@@ -148,7 +148,7 @@ func newDeployPipelineOpts(vars deployPipelineVars) (*deployPipelineOpts, error)
 		sel:                selector.NewWsPipelineSelector(prompter, ws),
 		codestar:           cs.New(defaultSession),
 		templateVersion:    version.LatestTemplateVersion(),
-		pipelineStackConfig: func(in *deploy.CreatePipelineInput) deploycfn.StackConfiguration {
+		pipelineStackConfig: func(in *deploy.CreatePipelineInput) stackConfiguration {
 			return stack.NewPipelineStackConfig(in)
 		},
 		newSvcListCmd: func(w io.Writer, appName string) cmd {
