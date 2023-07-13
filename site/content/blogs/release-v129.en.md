@@ -35,6 +35,41 @@ Copilot v1.29 brings big enhancements to help you develop more flexibly and effi
 ## Pipeline overrides
 
 ## Static Site enhancements
+For more dynamic development, Copilot will now invalidate the CloudFront edge cache each time you redeploy a Static Site workload, enabling you to see and deliver your updated content right away.
+
+Our operational commands have some Static Site-specific additions as well:
+`copilot svc show` for Static Site workloads now includes a tree representation of your S3 bucket's contents.
+ ```console
+Service name: static-site
+About
+
+  Application  my-app
+  Name         static-site
+  Type         Static Site
+
+Routes
+  Environment  URL
+  -----------  ---
+  test         https://d399t9j1xbplme.cloudfront.net/
+
+S3 Bucket Objects
+
+  Environment  test
+.
+├── ReadMe.md
+├─
+├── index.html
+├── Images
+│   ├── SomeImage.PNG
+│   └── AnotherImage.PNG
+├── css
+│   ├── Style.css
+│   ├── all.min.css
+│   └── bootstrap.min.css
+└── images
+    └── bg-masthead.jpg
+```
+And `copilot svc status` for Static Site workloads includes the S3 bucket's object count and total size.
 
 ## What’s next?
 

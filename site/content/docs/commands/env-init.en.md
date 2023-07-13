@@ -14,6 +14,8 @@ You create environments using a [named profile](../credentials.en.md#environment
 Like all commands in the AWS Copilot CLI, if you don't provide required flags, we'll prompt you for all the information we need to get you going. You can skip the prompts by providing information via flags:
 ```
 Common Flags
+      --allow-downgrade                Optional. Allow using an older version of Copilot to update Copilot components
+                                       updated by a newer version of Copilot.
   -a, --app string                     Name of the application.
       --aws-access-key-id string       Optional. An AWS access key.
       --aws-secret-access-key string   Optional. An AWS secret access key.
