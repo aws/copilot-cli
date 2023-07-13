@@ -11,7 +11,7 @@ or add new resources to the job's template.
 
 ### Learn more
 
-To learn more check out the guides for overriding with [YAML Patches](../developing/overrides/yamlpatch.md) and the
+To learn more, check out the guides for overriding with [YAML Patches](../developing/overrides/yamlpatch.md) and the
 [AWS Cloud Development Kit](../developing/overrides/cdk.md).
 
 ## What are the flags?
