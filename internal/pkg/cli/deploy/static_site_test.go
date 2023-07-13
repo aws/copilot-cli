@@ -9,12 +9,13 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/cli/deploy/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	deployCFN "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
-	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/golang/mock/gomock"
 	"github.com/spf13/afero"
@@ -337,7 +338,7 @@ func TestStaticSiteDeployer_stackConfiguration(t *testing.T) {
 					VersionFn: ReturnsValues("v1.2.0", error(nil)),
 				},
 				staticSiteMft: &manifest.StaticSite{},
-				newStack: func(*stack.StaticSiteConfig) (*stack.StaticSite, error) {
+				newStack: func(*stack.StaticSiteConfig) (deployCFN.StackConfiguration, error) {
 					return nil, errors.New("some error")
 				},
 			},
@@ -362,7 +363,7 @@ func TestStaticSiteDeployer_stackConfiguration(t *testing.T) {
 					VersionFn: ReturnsValues("v1.2.0", error(nil)),
 				},
 				staticSiteMft: &manifest.StaticSite{},
-				newStack: func(*stack.StaticSiteConfig) (*stack.StaticSite, error) {
+				newStack: func(*stack.StaticSiteConfig) (deployCFN.StackConfiguration, error) {
 					return nil, nil
 				},
 			},
@@ -398,7 +399,7 @@ func TestStaticSiteDeployer_stackConfiguration(t *testing.T) {
 						},
 					},
 				},
-				newStack: func(*stack.StaticSiteConfig) (*stack.StaticSite, error) {
+				newStack: func(*stack.StaticSiteConfig) (deployCFN.StackConfiguration, error) {
 					return nil, nil
 				},
 			},
@@ -435,27 +436,8 @@ func TestStaticSiteDeployer_stackConfiguration(t *testing.T) {
 						},
 					},
 				},
-				newStack: func(*stack.StaticSiteConfig) (*stack.StaticSite, error) {
-					return stack.NewStaticSite(&stack.StaticSiteConfig{
-						EnvManifest: &manifest.Environment{
-							Workload: manifest.Workload{
-								Name: aws.String("mockEnv"),
-							},
-						},
-						App: &config.Application{
-							Name: "mockApp",
-						},
-						Manifest: &manifest.StaticSite{
-							Workload: manifest.Workload{
-								Name: aws.String("static"),
-								Type: aws.String(manifestinfo.StaticSiteType),
-							},
-						},
-						RuntimeConfig: stack.RuntimeConfig{
-							Region: "us-west-2",
-						},
-						ArtifactBucketName: "mockBucket",
-					})
+				newStack: func(*stack.StaticSiteConfig) (deployCFN.StackConfiguration, error) {
+					return &mockStaticSite{}, nil
 				},
 			},
 			wantTemplate: "mockOverride",
@@ -490,3 +472,11 @@ type mockOverrider struct{}
 func (o *mockOverrider) Override(body []byte) (out []byte, err error) {
 	return []byte("mockOverride"), nil
 }
+
+type mockStaticSite struct{}
+
+func (s *mockStaticSite) Template() (string, error)                        { return "", nil }
+func (s *mockStaticSite) StackName() string                                { return "" }
+func (s *mockStaticSite) Parameters() ([]*cloudformation.Parameter, error) { return nil, nil }
+func (s *mockStaticSite) Tags() []*cloudformation.Tag                      { return nil }
+func (s *mockStaticSite) SerializedParameters() (string, error)            { return "", nil }
