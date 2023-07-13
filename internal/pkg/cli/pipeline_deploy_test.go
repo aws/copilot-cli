@@ -905,6 +905,7 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 			// GIVEN
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
+
 			mocks := deployPipelineMocks{
 				store:                  mocks.NewMockstore(ctrl),
 				prompt:                 mocks.NewMockprompter(ctrl),

@@ -11,7 +11,8 @@ import (
 	reflect "reflect"
 
 	session "github.com/aws/aws-sdk-go/aws/session"
-	cloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
+	cloudformation "github.com/aws/aws-sdk-go/service/cloudformation"
+	cloudformation0 "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	codepipeline "github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 	ec2 "github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	ecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
@@ -20,7 +21,7 @@ import (
 	deploy "github.com/aws/copilot-cli/internal/pkg/cli/deploy"
 	config "github.com/aws/copilot-cli/internal/pkg/config"
 	deploy0 "github.com/aws/copilot-cli/internal/pkg/deploy"
-	cloudformation0 "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
+	cloudformation1 "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	stack "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	describe "github.com/aws/copilot-cli/internal/pkg/describe"
 	dockerengine "github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
@@ -3822,7 +3823,7 @@ func (m *MockenvironmentDeployer) EXPECT() *MockenvironmentDeployerMockRecorder 
 }
 
 // CreateAndRenderEnvironment mocks base method.
-func (m *MockenvironmentDeployer) CreateAndRenderEnvironment(conf cloudformation0.StackConfiguration, bucketARN string) error {
+func (m *MockenvironmentDeployer) CreateAndRenderEnvironment(conf cloudformation1.StackConfiguration, bucketARN string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateAndRenderEnvironment", conf, bucketARN)
 	ret0, _ := ret[0].(error)
@@ -4079,7 +4080,7 @@ func (mr *MockpipelineDeployerMockRecorder) AddPipelineResourcesToApp(app, regio
 }
 
 // CreatePipeline mocks base method.
-func (m *MockpipelineDeployer) CreatePipeline(bucketName string, stackConfig cloudformation0.StackConfiguration) error {
+func (m *MockpipelineDeployer) CreatePipeline(bucketName string, stackConfig cloudformation1.StackConfiguration) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreatePipeline", bucketName, stackConfig)
 	ret0, _ := ret[0].(error)
@@ -4137,7 +4138,7 @@ func (mr *MockpipelineDeployerMockRecorder) GetRegionalAppResources(app interfac
 }
 
 // PipelineExists mocks base method.
-func (m *MockpipelineDeployer) PipelineExists(stackConfig cloudformation0.StackConfiguration) (bool, error) {
+func (m *MockpipelineDeployer) PipelineExists(stackConfig cloudformation1.StackConfiguration) (bool, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "PipelineExists", stackConfig)
 	ret0, _ := ret[0].(bool)
@@ -4167,7 +4168,7 @@ func (mr *MockpipelineDeployerMockRecorder) Template(stackName interface{}) *gom
 }
 
 // UpdatePipeline mocks base method.
-func (m *MockpipelineDeployer) UpdatePipeline(bucketName string, stackConfig cloudformation0.StackConfiguration) error {
+func (m *MockpipelineDeployer) UpdatePipeline(bucketName string, stackConfig cloudformation1.StackConfiguration) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpdatePipeline", bucketName, stackConfig)
 	ret0, _ := ret[0].(error)
@@ -4204,7 +4205,7 @@ func (m *MockappDeployer) EXPECT() *MockappDeployerMockRecorder {
 }
 
 // AddEnvToApp mocks base method.
-func (m *MockappDeployer) AddEnvToApp(opts *cloudformation0.AddEnvToAppOpts) error {
+func (m *MockappDeployer) AddEnvToApp(opts *cloudformation1.AddEnvToAppOpts) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddEnvToApp", opts)
 	ret0, _ := ret[0].(error)
@@ -4218,7 +4219,7 @@ func (mr *MockappDeployerMockRecorder) AddEnvToApp(opts interface{}) *gomock.Cal
 }
 
 // AddJobToApp mocks base method.
-func (m *MockappDeployer) AddJobToApp(app *config.Application, jobName string, opts ...cloudformation0.AddWorkloadToAppOpt) error {
+func (m *MockappDeployer) AddJobToApp(app *config.Application, jobName string, opts ...cloudformation1.AddWorkloadToAppOpt) error {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{app, jobName}
 	for _, a := range opts {
@@ -4237,7 +4238,7 @@ func (mr *MockappDeployerMockRecorder) AddJobToApp(app, jobName interface{}, opt
 }
 
 // AddServiceToApp mocks base method.
-func (m *MockappDeployer) AddServiceToApp(app *config.Application, svcName string, opts ...cloudformation0.AddWorkloadToAppOpt) error {
+func (m *MockappDeployer) AddServiceToApp(app *config.Application, svcName string, opts ...cloudformation1.AddWorkloadToAppOpt) error {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{app, svcName}
 	for _, a := range opts {
@@ -4374,7 +4375,7 @@ func (m *MocktaskDeployer) EXPECT() *MocktaskDeployerMockRecorder {
 }
 
 // DeployTask mocks base method.
-func (m *MocktaskDeployer) DeployTask(input *deploy0.CreateTaskResourcesInput, opts ...cloudformation.StackOption) error {
+func (m *MocktaskDeployer) DeployTask(input *deploy0.CreateTaskResourcesInput, opts ...cloudformation0.StackOption) error {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{input}
 	for _, a := range opts {
@@ -4573,7 +4574,7 @@ func (m *Mockdeployer) EXPECT() *MockdeployerMockRecorder {
 }
 
 // AddEnvToApp mocks base method.
-func (m *Mockdeployer) AddEnvToApp(opts *cloudformation0.AddEnvToAppOpts) error {
+func (m *Mockdeployer) AddEnvToApp(opts *cloudformation1.AddEnvToAppOpts) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddEnvToApp", opts)
 	ret0, _ := ret[0].(error)
@@ -4587,7 +4588,7 @@ func (mr *MockdeployerMockRecorder) AddEnvToApp(opts interface{}) *gomock.Call {
 }
 
 // AddJobToApp mocks base method.
-func (m *Mockdeployer) AddJobToApp(app *config.Application, jobName string, opts ...cloudformation0.AddWorkloadToAppOpt) error {
+func (m *Mockdeployer) AddJobToApp(app *config.Application, jobName string, opts ...cloudformation1.AddWorkloadToAppOpt) error {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{app, jobName}
 	for _, a := range opts {
@@ -4620,7 +4621,7 @@ func (mr *MockdeployerMockRecorder) AddPipelineResourcesToApp(app, region interf
 }
 
 // AddServiceToApp mocks base method.
-func (m *Mockdeployer) AddServiceToApp(app *config.Application, svcName string, opts ...cloudformation0.AddWorkloadToAppOpt) error {
+func (m *Mockdeployer) AddServiceToApp(app *config.Application, svcName string, opts ...cloudformation1.AddWorkloadToAppOpt) error {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{app, svcName}
 	for _, a := range opts {
@@ -4639,7 +4640,7 @@ func (mr *MockdeployerMockRecorder) AddServiceToApp(app, svcName interface{}, op
 }
 
 // CreateAndRenderEnvironment mocks base method.
-func (m *Mockdeployer) CreateAndRenderEnvironment(conf cloudformation0.StackConfiguration, bucketARN string) error {
+func (m *Mockdeployer) CreateAndRenderEnvironment(conf cloudformation1.StackConfiguration, bucketARN string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateAndRenderEnvironment", conf, bucketARN)
 	ret0, _ := ret[0].(error)
@@ -4653,7 +4654,7 @@ func (mr *MockdeployerMockRecorder) CreateAndRenderEnvironment(conf, bucketARN i
 }
 
 // CreatePipeline mocks base method.
-func (m *Mockdeployer) CreatePipeline(bucketName string, stackConfig cloudformation0.StackConfiguration) error {
+func (m *Mockdeployer) CreatePipeline(bucketName string, stackConfig cloudformation1.StackConfiguration) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreatePipeline", bucketName, stackConfig)
 	ret0, _ := ret[0].(error)
@@ -4797,7 +4798,7 @@ func (mr *MockdeployerMockRecorder) ListTaskStacks(appName, envName interface{})
 }
 
 // PipelineExists mocks base method.
-func (m *Mockdeployer) PipelineExists(stackConfig cloudformation0.StackConfiguration) (bool, error) {
+func (m *Mockdeployer) PipelineExists(stackConfig cloudformation1.StackConfiguration) (bool, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "PipelineExists", stackConfig)
 	ret0, _ := ret[0].(bool)
@@ -4841,7 +4842,7 @@ func (mr *MockdeployerMockRecorder) UpdateEnvironmentTemplate(appName, envName, 
 }
 
 // UpdatePipeline mocks base method.
-func (m *Mockdeployer) UpdatePipeline(bucketName string, stackConfig cloudformation0.StackConfiguration) error {
+func (m *Mockdeployer) UpdatePipeline(bucketName string, stackConfig cloudformation1.StackConfiguration) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpdatePipeline", bucketName, stackConfig)
 	ret0, _ := ret[0].(error)
