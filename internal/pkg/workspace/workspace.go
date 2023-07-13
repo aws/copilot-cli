@@ -57,6 +57,7 @@ const (
 	buildspecFileName         = "buildspec.yml"
 )
 
+// MatchFn represents functions that take a path, and check whether it matches the criterias.
 type MatchFn func(path string) (bool, error)
 
 // Find searches for the target file or directory at most `maxLevels` up from the starting directory.
