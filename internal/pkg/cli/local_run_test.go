@@ -62,7 +62,7 @@ func TestLocalRunOpts_Ask(t *testing.T) {
 		inputWkldName string
 
 		setupMocks     func(m *localRunAskMocks)
-		mockEnvChecker func(ctrl *gomock.Controller) versionCompatibilityChecker
+		mockEnvChecker func(ctrl *gomock.Controller) versionGetter
 		wantedWkldName string
 		wantedEnvName  string
 		wantedError    error
@@ -158,7 +158,7 @@ func TestLocalRunOpts_Ask(t *testing.T) {
 					Name: "testWkld",
 				}, nil)
 			},
-			mockEnvChecker: func(ctrl *gomock.Controller) versionCompatibilityChecker {
+			mockEnvChecker: func(ctrl *gomock.Controller) versionGetter {
 				m := mocks.NewMockversionCompatibilityChecker(ctrl)
 				m.EXPECT().Version().Return("v1.12.1", nil)
 				return m
@@ -191,7 +191,7 @@ func TestLocalRunOpts_Ask(t *testing.T) {
 				m.deployStore.EXPECT().ListEnvironmentsDeployedTo(testAppName, testWkldName).Return([]string{"testEnv"}, nil).Times(2)
 				m.ws.EXPECT().ListWorkloads().Return([]string{"testWkld"}, nil)
 			},
-			mockEnvChecker: func(ctrl *gomock.Controller) versionCompatibilityChecker {
+			mockEnvChecker: func(ctrl *gomock.Controller) versionGetter {
 				m := mocks.NewMockversionCompatibilityChecker(ctrl)
 				m.EXPECT().Version().Return("v1.12.1", nil)
 				return m
@@ -206,7 +206,7 @@ func TestLocalRunOpts_Ask(t *testing.T) {
 				m.deployStore.EXPECT().ListEnvironmentsDeployedTo(testAppName, testWkldName).Return([]string{"testEnv"}, nil).Times(2)
 				m.ws.EXPECT().ListWorkloads().Return([]string{"testWkld"}, nil)
 			},
-			mockEnvChecker: func(ctrl *gomock.Controller) versionCompatibilityChecker {
+			mockEnvChecker: func(ctrl *gomock.Controller) versionGetter {
 				m := mocks.NewMockversionCompatibilityChecker(ctrl)
 				m.EXPECT().Version().Return("bootstrap", nil)
 				return m
