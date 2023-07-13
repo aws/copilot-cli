@@ -31,11 +31,13 @@ type localRunVars struct {
 type localRunOpts struct {
 	localRunVars
 
-	store             store
-	ws                wsWlDirReader
-	prompt            prompter
-	deployStore       deployedEnvironmentLister
-	envVersionChecker func(string) (versionCompatibilityChecker, error)
+	deployedWkld       []string
+	wkldDeployedToEnvs map[string][]string
+	store              store
+	ws                 wsWlDirReader
+	prompt             prompter
+	deployStore        deployedEnvironmentLister
+	envVersionGetter   func(string) (versionGetter, error)
 }
 
 func newLocalRunOpts(vars localRunVars) (*localRunOpts, error) {
@@ -59,12 +61,14 @@ func newLocalRunOpts(vars localRunVars) (*localRunOpts, error) {
 	opts := &localRunOpts{
 		localRunVars: vars,
 
-		prompt:      prompt.New(),
-		store:       store,
-		ws:          ws,
-		deployStore: deployStore,
+		deployedWkld:       []string{},
+		wkldDeployedToEnvs: make(map[string][]string),
+		prompt:             prompt.New(),
+		store:              store,
+		ws:                 ws,
+		deployStore:        deployStore,
 	}
-	opts.envVersionChecker = func(envName string) (versionCompatibilityChecker, error) {
+	opts.envVersionGetter = func(envName string) (versionGetter, error) {
 		envDescriber, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
 			App:         opts.appName,
 			Env:         envName,
@@ -89,10 +93,10 @@ func (o *localRunOpts) Validate() error {
 }
 
 func (o *localRunOpts) Ask() error {
-	if err := o.validateOrAskEnvName(); err != nil {
+	if err := o.validateOrAskWorkloadName(); err != nil {
 		return err
 	}
-	if err := o.validateOrAskWorkloadName(); err != nil {
+	if err := o.validateOrAskEnvName(); err != nil {
 		return err
 	}
 	return nil
@@ -108,19 +112,13 @@ func (o *localRunOpts) validateOrAskEnvName() error {
 	if o.envName != "" {
 		return o.validateEnvName()
 	}
-	envs, err := o.getDeployedEnvironments()
-	switch {
-	case err != nil:
-		return err
-	case len(envs) == 0:
-		return fmt.Errorf("no environment in the app %q is deployed", o.appName)
-	case len(envs) == 1:
-		log.Infof("Only one environment found, defaulting to: %s\n", color.HighlightUserInput(envs[0]))
-		o.envName = envs[0]
-		return nil
 
+	if len(o.wkldDeployedToEnvs[o.wkldName]) == 1 {
+		log.Infof("Only one environment found, defaulting to: %s\n", color.HighlightUserInput(o.wkldDeployedToEnvs[o.wkldName][0]))
+		o.envName = o.wkldDeployedToEnvs[o.wkldName][0]
+		return nil
 	}
-	selectedEnvName, err := o.prompt.SelectOne("Select an environment in which you want to test", "", envs, prompt.WithFinalMessage("Environment:"))
+	selectedEnvName, err := o.prompt.SelectOne("Select an environment in which you want to test", "", o.wkldDeployedToEnvs[o.wkldName], prompt.WithFinalMessage("Environment:"))
 	if err != nil {
 		return fmt.Errorf("select environment: %w", err)
 	}
@@ -128,30 +126,10 @@ func (o *localRunOpts) validateOrAskEnvName() error {
 	return nil
 }
 
-func (o *localRunOpts) getDeployedEnvironments() ([]string, error) {
-	envConfig, err := o.store.ListEnvironments(o.appName)
-	if err != nil {
-		return nil, fmt.Errorf("get environments for app %s: %w", o.appName, err)
-	}
-
-	var deployedEnvs []string
-	for _, env := range envConfig {
-		isDeployed, err := o.isEnvironmentDeployed(env.Name)
-		if err != nil {
-			return nil, err
-		}
-		if isDeployed {
-			deployedEnvs = append(deployedEnvs, env.Name)
-		}
-	}
-
-	return deployedEnvs, nil
-}
-
 func (o *localRunOpts) isEnvironmentDeployed(envName string) (bool, error) {
-	var checker versionCompatibilityChecker
+	var checker versionGetter
 
-	checker, err := o.envVersionChecker(envName)
+	checker, err := o.envVersionGetter(envName)
 	if err != nil {
 		return false, err
 	}
@@ -165,13 +143,18 @@ func (o *localRunOpts) isEnvironmentDeployed(envName string) (bool, error) {
 	}
 	return true, nil
 }
+
 func (o *localRunOpts) validateEnvName() error {
+	envs, err := o.deployStore.ListEnvironmentsDeployedTo(o.appName, o.wkldName)
 	isDeployed, err := o.isEnvironmentDeployed(o.envName)
 	if err != nil {
 		return err
 	}
 	if !isDeployed {
 		return fmt.Errorf(`cannot use an environment which is not deployed Please run "copilot env deploy, --name %s" to deploy the environment first`, o.envName)
+	}
+	if !contains(o.envName, envs) {
+		return fmt.Errorf("workload %q is not deployed in %q", o.wkldName, o.envName)
 	}
 	return nil
 }
@@ -180,37 +163,35 @@ func (o *localRunOpts) validateOrAskWorkloadName() error {
 	if o.wkldName != "" {
 		return o.validateWkldName()
 	}
-	services, err := o.deployStore.ListDeployedServices(o.appName, o.envName)
-	if err != nil {
-		return fmt.Errorf("get deployed services: %w", err)
-	}
 
-	jobs, err := o.deployStore.ListDeployedJobs(o.appName, o.envName)
-	if err != nil {
-		return fmt.Errorf("get deployed jobs: %w", err)
-	}
-
-	workloads := append(services, jobs...)
-	if len(workloads) == 0 {
-		return fmt.Errorf("no workload is deployed to this environment %s", o.envName)
-	}
-	if len(workloads) == 1 {
-		log.Infof("Only one workload found in this environment, defaulting to: %s\n", color.HighlightUserInput(workloads[0]))
-		o.wkldName = workloads[0]
-	} else {
-		selectedWorloadName, err := o.prompt.SelectOne("Select a workload that you want to run locally", "", workloads, prompt.WithFinalMessage("workload name"))
-		if err != nil {
-			return fmt.Errorf("select Workload: %w", err)
-		}
-		o.wkldName = selectedWorloadName
-	}
 	localWorkloads, err := o.ws.ListWorkloads()
 	if err != nil {
-		return fmt.Errorf("list workloads in the workspace : %w", err)
+		return fmt.Errorf("list workloads in the workspace %s : %w", o.appName, err)
 	}
-	if !contains(o.wkldName, localWorkloads) {
-		return fmt.Errorf("selected service %q does not exist in the workspace", o.wkldName)
+	for _, wkld := range localWorkloads {
+		envs, err := o.deployStore.ListEnvironmentsDeployedTo(o.appName, wkld)
+		if err != nil {
+			return fmt.Errorf("list deployed environments for application %s: %w", o.appName, err)
+		}
+		if len(envs) != 0 {
+			o.deployedWkld = append(o.deployedWkld, wkld)
+			o.wkldDeployedToEnvs[wkld] = envs
+		}
 	}
+
+	if len(o.deployedWkld) == 0 {
+		return fmt.Errorf("no workload is deployed in app %s", o.appName)
+	}
+	if len(o.deployedWkld) == 1 {
+		log.Infof("Only one deployed workload found, defaulting to: %s\n", color.HighlightUserInput(o.deployedWkld[0]))
+		o.wkldName = o.deployedWkld[0]
+		return nil
+	}
+	selectedWorloadName, err := o.prompt.SelectOne("Select a workload that you want to run locally", "", o.deployedWkld, prompt.WithFinalMessage("workload name"))
+	if err != nil {
+		return fmt.Errorf("select Workload: %w", err)
+	}
+	o.wkldName = selectedWorloadName
 	return nil
 }
 
@@ -220,12 +201,16 @@ func (o *localRunOpts) validateWkldName() error {
 		return fmt.Errorf("list workloads in the workspace %s : %w", o.wkldName, err)
 	}
 	if !contains(o.wkldName, names) {
-		return fmt.Errorf("service %q does not exist in the workspace", o.wkldName)
+		return fmt.Errorf("workload %q does not exist in the workspace", o.wkldName)
 	}
-
 	if _, err := o.store.GetWorkload(o.appName, o.wkldName); err != nil {
-		return fmt.Errorf("Workload %q does not exist in smm", o.wkldName)
+		return fmt.Errorf("retrieve %s from application %s: %w", o.wkldName, o.appName, err)
 	}
+	envs, err := o.deployStore.ListEnvironmentsDeployedTo(o.appName, o.wkldName)
+	if len(envs) == 0 {
+		return fmt.Errorf("workload %q is not deployed in any environment", o.wkldName)
+	}
+	o.wkldDeployedToEnvs[o.wkldName] = envs
 	return nil
 }
 
@@ -235,7 +220,7 @@ func BuildLocalRunCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:    "local run",
 		Short:  "Run the workload locally",
-		Long:   "Run the workload locally for debugging in a simulated AWS environment",
+		Long:   "Run the workload locally",
 		Hidden: true,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newLocalRunOpts(vars)

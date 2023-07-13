@@ -54,8 +54,6 @@ func TestLocalRunOpts_Ask(t *testing.T) {
 		testAppName  = "testApp"
 		testEnvName  = "testEnv"
 		testWkldName = "testWkld"
-		region       = "us-west-2"
-		accountID    = "123456789012"
 	)
 
 	testCases := map[string]struct {
@@ -69,118 +67,85 @@ func TestLocalRunOpts_Ask(t *testing.T) {
 		wantedEnvName  string
 		wantedError    error
 	}{
-		"error while returning all environments belonging to a application": {
+		"error while getting all the workloads in the workspace": {
 			inputAppName: testAppName,
 			setupMocks: func(m *localRunAskMocks) {
-				m.store.EXPECT().ListEnvironments(testAppName).Return(nil, testError)
+				m.ws.EXPECT().ListWorkloads().Return([]string{}, testError)
 			},
-			wantedError: fmt.Errorf("get environments for app %s: %w", testAppName, testError),
+			wantedError: fmt.Errorf("list workloads in the workspace %s : %w", testAppName, testError),
 		},
-		"return error if no deployed environemnts found": {
+		"error while returning list of environments a workload is deployed in": {
 			inputAppName: testAppName,
 			setupMocks: func(m *localRunAskMocks) {
-				m.store.EXPECT().ListEnvironments(testAppName).Return([]*config.Environment{}, nil)
+				m.ws.EXPECT().ListWorkloads().Return([]string{"testWkld"}, nil)
+				m.deployStore.EXPECT().ListEnvironmentsDeployedTo(testAppName, testWkldName).Return(nil, testError)
 			},
-			wantedError: fmt.Errorf("no environment in the app %q is deployed", testAppName),
+			wantedError: fmt.Errorf("list deployed environments for application %s: %w", testAppName, testError),
+		},
+		"return error if provided workload not exists in workspace": {
+			inputAppName:  testAppName,
+			inputWkldName: testWkldName,
+			setupMocks: func(m *localRunAskMocks) {
+				m.ws.EXPECT().ListWorkloads().Return([]string{"testSvc"}, nil)
+			},
+			wantedError: fmt.Errorf("workload %q does not exist in the workspace", testWkldName),
+		},
+		"return error if provided workload not exists in ssm": {
+			inputAppName:  testAppName,
+			inputWkldName: testWkldName,
+			setupMocks: func(m *localRunAskMocks) {
+				m.ws.EXPECT().ListWorkloads().Return([]string{"testWkld"}, nil)
+				m.store.EXPECT().GetWorkload(testAppName, testWkldName).Return(nil, testError)
+			},
+			wantedError: fmt.Errorf("retrieve %s from application %s: %w", testWkldName, testAppName, testError),
+		},
+		"return error if provided workload is not deployed": {
+			inputAppName:  testAppName,
+			inputWkldName: testWkldName,
+			setupMocks: func(m *localRunAskMocks) {
+				m.ws.EXPECT().ListWorkloads().Return([]string{"testWkld"}, nil)
+				m.store.EXPECT().GetWorkload(testAppName, testWkldName).Return(&config.Workload{Name: "testWkld"}, nil)
+				m.deployStore.EXPECT().ListEnvironmentsDeployedTo("testApp", "testWkld").Return([]string{}, nil)
+			},
+			wantedError: fmt.Errorf("workload %q is not deployed in any environment", testWkldName),
+		},
+		"successfully select environment if only workload name is given as flag": {
+			inputAppName:  testAppName,
+			inputWkldName: testWkldName,
+			setupMocks: func(m *localRunAskMocks) {
+				m.ws.EXPECT().ListWorkloads().Return([]string{"testWkld"}, nil)
+				m.store.EXPECT().GetWorkload(testAppName, testWkldName).Return(&config.Workload{
+					Name: "testWkld",
+				}, nil)
+				m.deployStore.EXPECT().ListEnvironmentsDeployedTo("testApp", "testWkld").Return([]string{"testEnv", "mockEnv"}, nil)
+				m.prompt.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("testEnv", nil)
+			},
+			wantedWkldName: testWkldName,
+			wantedEnvName:  testEnvName,
 		},
 		"return error while selecting environment": {
-			inputAppName: testAppName,
+			inputAppName:  testAppName,
+			inputWkldName: testWkldName,
 			setupMocks: func(m *localRunAskMocks) {
-				m.store.EXPECT().ListEnvironments(testAppName).Return([]*config.Environment{{
-					Name:      "testEnv",
-					Region:    region,
-					AccountID: accountID,
-				}, {
-					Name:      "mockEnv",
-					Region:    region,
-					AccountID: "123456712",
-				}}, nil)
+				m.ws.EXPECT().ListWorkloads().Return([]string{"testWkld"}, nil)
+				m.store.EXPECT().GetWorkload(testAppName, testWkldName).Return(&config.Workload{
+					Name: "testWkld",
+				}, nil)
+				m.deployStore.EXPECT().ListEnvironmentsDeployedTo(testAppName, testWkldName).Return([]string{"testEnv", "mockEnv"}, nil)
 				m.prompt.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("", testError)
-			},
-			mockEnvChecker: func(ctrl *gomock.Controller) versionCompatibilityChecker {
-				m := mocks.NewMockversionCompatibilityChecker(ctrl)
-				m.EXPECT().Version().Return("v1.12.1", nil)
-				return m
 			},
 			wantedError: fmt.Errorf("select environment: %w", testError),
 		},
 		"return error while selecting workload": {
 			inputAppName: testAppName,
 			setupMocks: func(m *localRunAskMocks) {
-				m.store.EXPECT().ListEnvironments(testAppName).Return([]*config.Environment{{
-					Name:      "testEnv",
-					Region:    region,
-					AccountID: accountID,
-				}, {
-					Name:      "mockEnv",
-					Region:    region,
-					AccountID: "123456712",
-				}}, nil)
-				m.prompt.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("testEnv", nil)
-				m.deployStore.EXPECT().ListDeployedServices(testAppName, testEnvName).Return([]string{"testWkld"}, nil)
-				m.deployStore.EXPECT().ListDeployedJobs(testAppName, testEnvName).Return([]string{"testJob"}, nil)
+				m.ws.EXPECT().ListWorkloads().Return([]string{"testWkld", "testSvc"}, nil)
+				m.deployStore.EXPECT().ListEnvironmentsDeployedTo(testAppName, testWkldName).Return([]string{"testEnv"}, nil)
+				m.deployStore.EXPECT().ListEnvironmentsDeployedTo(testAppName, "testSvc").Return([]string{"mockEnv"}, nil)
 				m.prompt.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("", testError)
-			},
-			mockEnvChecker: func(ctrl *gomock.Controller) versionCompatibilityChecker {
-				m := mocks.NewMockversionCompatibilityChecker(ctrl)
-				m.EXPECT().Version().Return("v1.12.1", nil)
-				return m
+
 			},
 			wantedError: fmt.Errorf("select Workload: %w", testError),
-		},
-		"return error if provided environment is not deployed": {
-			inputAppName: testAppName,
-			inputEnvName: testEnvName,
-			setupMocks: func(m *localRunAskMocks) {
-				m.store.EXPECT().GetEnvironment("testApp", "testEnv").Return(&config.Environment{}, nil).Times(0)
-			},
-			mockEnvChecker: func(ctrl *gomock.Controller) versionCompatibilityChecker {
-				m := mocks.NewMockversionCompatibilityChecker(ctrl)
-				m.EXPECT().Version().Return("bootstrap", nil)
-				return m
-			},
-			wantedError: fmt.Errorf(`cannot use an environment which is not deployed Please run "copilot env deploy, --name %s" to deploy the environment first`, testEnvName),
-		},
-		"return error if no workloads are found in the environment": {
-			inputAppName: testAppName,
-			inputEnvName: testEnvName,
-			setupMocks: func(m *localRunAskMocks) {
-				m.deployStore.EXPECT().ListDeployedServices(testAppName, testEnvName).Return([]string{}, nil)
-				m.deployStore.EXPECT().ListDeployedJobs(testAppName, testEnvName).Return([]string{}, nil)
-			},
-			mockEnvChecker: func(ctrl *gomock.Controller) versionCompatibilityChecker {
-				m := mocks.NewMockversionCompatibilityChecker(ctrl)
-				m.EXPECT().Version().Return("v1.12.1", nil)
-				return m
-			},
-			wantedError: fmt.Errorf("no workload is deployed to this environment %s", testEnvName),
-		},
-		"return error while getting the services": {
-			inputAppName: testAppName,
-			inputEnvName: testEnvName,
-			setupMocks: func(m *localRunAskMocks) {
-				m.deployStore.EXPECT().ListDeployedServices(testAppName, testEnvName).Return(nil, testError)
-			},
-			mockEnvChecker: func(ctrl *gomock.Controller) versionCompatibilityChecker {
-				m := mocks.NewMockversionCompatibilityChecker(ctrl)
-				m.EXPECT().Version().Return("v1.12.1", nil)
-				return m
-			},
-			wantedError: fmt.Errorf("get deployed services: %w", testError),
-		},
-		"return error while getting the jobs": {
-			inputAppName: testAppName,
-			inputEnvName: testEnvName,
-			setupMocks: func(m *localRunAskMocks) {
-				m.deployStore.EXPECT().ListDeployedServices(testAppName, testEnvName).Return([]string{"testWkld"}, nil)
-				m.deployStore.EXPECT().ListDeployedJobs(testAppName, testEnvName).Return(nil, testError)
-			},
-			mockEnvChecker: func(ctrl *gomock.Controller) versionCompatibilityChecker {
-				m := mocks.NewMockversionCompatibilityChecker(ctrl)
-				m.EXPECT().Version().Return("v1.12.1", nil)
-				return m
-			},
-			wantedError: fmt.Errorf("get deployed jobs: %w", testError),
 		},
 		"validate if flags are provided": {
 			inputAppName:  testAppName,
@@ -188,6 +153,7 @@ func TestLocalRunOpts_Ask(t *testing.T) {
 			inputWkldName: testWkldName,
 			setupMocks: func(m *localRunAskMocks) {
 				m.ws.EXPECT().ListWorkloads().Return([]string{"testWkld"}, nil)
+				m.deployStore.EXPECT().ListEnvironmentsDeployedTo(testAppName, testWkldName).Return([]string{"testEnv"}, nil).Times(2)
 				m.store.EXPECT().GetWorkload("testApp", "testWkld").Return(&config.Workload{
 					Name: "testWkld",
 				}, nil)
@@ -199,61 +165,31 @@ func TestLocalRunOpts_Ask(t *testing.T) {
 			},
 			wantedWkldName: testWkldName,
 			wantedEnvName:  testEnvName,
+		},
+		"return error if no workload is deployed in app": {
+			inputAppName: testAppName,
+			setupMocks: func(m *localRunAskMocks) {
+				m.ws.EXPECT().ListWorkloads().Return([]string{"testWkld", "testSvc"}, nil)
+				m.deployStore.EXPECT().ListEnvironmentsDeployedTo(testAppName, testWkldName).Return([]string{}, nil)
+				m.deployStore.EXPECT().ListEnvironmentsDeployedTo(testAppName, "testSvc").Return([]string{}, nil)
+			},
+			wantedError: fmt.Errorf("no workload is deployed in app %s", testAppName),
 		},
 		"defaults to environment and workload if only one of them is present": {
 			inputAppName: testAppName,
 			setupMocks: func(m *localRunAskMocks) {
-				m.store.EXPECT().ListEnvironments(testAppName).Return([]*config.Environment{{
-					Name:      "testEnv",
-					Region:    region,
-					AccountID: accountID,
-				}}, nil)
 				m.ws.EXPECT().ListWorkloads().Return([]string{"testWkld"}, nil)
-				m.deployStore.EXPECT().ListDeployedServices(testAppName, testEnvName).Return([]string{"testWkld"}, nil)
-				m.deployStore.EXPECT().ListDeployedJobs(testAppName, testEnvName).Return([]string{}, nil)
-			},
-			mockEnvChecker: func(ctrl *gomock.Controller) versionCompatibilityChecker {
-				m := mocks.NewMockversionCompatibilityChecker(ctrl)
-				m.EXPECT().Version().Return("v1.12.1", nil)
-				return m
+				m.deployStore.EXPECT().ListEnvironmentsDeployedTo(testAppName, testWkldName).Return([]string{"testEnv"}, nil)
 			},
 			wantedWkldName: testWkldName,
 			wantedEnvName:  testEnvName,
 		},
-		"prompts if more than one environment is present": {
-			inputAppName: testAppName,
-			setupMocks: func(m *localRunAskMocks) {
-				m.store.EXPECT().ListEnvironments(testAppName).Return([]*config.Environment{{
-					Name:      "testEnv",
-					Region:    region,
-					AccountID: accountID,
-				}, {
-					Name:      "mockEnv",
-					Region:    region,
-					AccountID: "123456712",
-				}}, nil)
-				m.prompt.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("testEnv", nil)
-				m.deployStore.EXPECT().ListDeployedServices(testAppName, testEnvName).Return([]string{"testWkld"}, nil)
-				m.deployStore.EXPECT().ListDeployedJobs(testAppName, testEnvName).Return([]string{"testJob"}, nil)
-				m.prompt.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("testWkld", nil)
-				m.ws.EXPECT().ListWorkloads().Return([]string{"testWkld"}, nil)
-			},
-			mockEnvChecker: func(ctrl *gomock.Controller) versionCompatibilityChecker {
-				m := mocks.NewMockversionCompatibilityChecker(ctrl)
-				m.EXPECT().Version().Return("v1.12.1", nil)
-				return m
-			},
-			wantedWkldName: testWkldName,
-			wantedEnvName:  testEnvName,
-		},
-		"if only environment name is given as flag": {
+		"successfully select workload if only environment name is given as flag": {
 			inputAppName: testAppName,
 			inputEnvName: testEnvName,
 			setupMocks: func(m *localRunAskMocks) {
-				m.deployStore.EXPECT().ListDeployedServices(testAppName, testEnvName).Return([]string{"testWkld"}, nil)
-				m.deployStore.EXPECT().ListDeployedJobs(testAppName, testEnvName).Return([]string{}, nil)
+				m.deployStore.EXPECT().ListEnvironmentsDeployedTo(testAppName, testWkldName).Return([]string{"testEnv"}, nil).Times(2)
 				m.ws.EXPECT().ListWorkloads().Return([]string{"testWkld"}, nil)
-
 			},
 			mockEnvChecker: func(ctrl *gomock.Controller) versionCompatibilityChecker {
 				m := mocks.NewMockversionCompatibilityChecker(ctrl)
@@ -263,44 +199,19 @@ func TestLocalRunOpts_Ask(t *testing.T) {
 			wantedWkldName: testWkldName,
 			wantedEnvName:  testEnvName,
 		},
-		"if only workload name is given as flag": {
-			inputAppName:  testAppName,
-			inputWkldName: testWkldName,
+		"return error if provided environment is not deployed": {
+			inputAppName: testAppName,
+			inputEnvName: testEnvName,
 			setupMocks: func(m *localRunAskMocks) {
-				m.store.EXPECT().ListEnvironments(testAppName).Return([]*config.Environment{{
-					Name:      "testEnv",
-					Region:    region,
-					AccountID: accountID,
-				}}, nil)
+				m.deployStore.EXPECT().ListEnvironmentsDeployedTo(testAppName, testWkldName).Return([]string{"testEnv"}, nil).Times(2)
 				m.ws.EXPECT().ListWorkloads().Return([]string{"testWkld"}, nil)
-				m.store.EXPECT().GetWorkload("testApp", "testWkld").Return(&config.Workload{
-					Name: "testWkld",
-				}, nil)
 			},
 			mockEnvChecker: func(ctrl *gomock.Controller) versionCompatibilityChecker {
 				m := mocks.NewMockversionCompatibilityChecker(ctrl)
-				m.EXPECT().Version().Return("v1.12.1", nil)
+				m.EXPECT().Version().Return("bootstrap", nil)
 				return m
 			},
-			wantedWkldName: testWkldName,
-			wantedEnvName:  testEnvName,
-		},
-		"should return a wrapped error when environment version cannot be retrieved": {
-			inputAppName:  testAppName,
-			inputWkldName: testWkldName,
-			setupMocks: func(m *localRunAskMocks) {
-				m.store.EXPECT().ListEnvironments(testAppName).Return([]*config.Environment{{
-					Name:      "testEnv",
-					Region:    region,
-					AccountID: accountID,
-				}}, nil)
-			},
-			mockEnvChecker: func(ctrl *gomock.Controller) versionCompatibilityChecker {
-				m := mocks.NewMockversionCompatibilityChecker(ctrl)
-				m.EXPECT().Version().Return("", errors.New("some error"))
-				return m
-			},
-			wantedError: fmt.Errorf("get environment %q version: %w", testEnvName, testError),
+			wantedError: fmt.Errorf(`cannot use an environment which is not deployed Please run "copilot env deploy, --name %s" to deploy the environment first`, testEnvName),
 		},
 	}
 
@@ -326,9 +237,11 @@ func TestLocalRunOpts_Ask(t *testing.T) {
 				ws:          m.ws,
 				prompt:      m.prompt,
 				deployStore: m.deployStore,
-				envVersionChecker: func(string) (versionCompatibilityChecker, error) {
+				envVersionGetter: func(string) (versionGetter, error) {
 					return tc.mockEnvChecker(ctrl), nil
 				},
+				wkldDeployedToEnvs: make(map[string][]string),
+				deployedWkld:       make([]string, 0),
 			}
 
 			// WHEN
