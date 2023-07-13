@@ -1263,7 +1263,9 @@ func TestCloudFormation_RemoveEnvFromApp(t *testing.T) {
 						_, err := in.createOpFn()
 						return err
 					},
-					s3Client: s3,
+					regionalS3Client: func(region string) s3Client {
+						return s3
+					},
 					regionalECRClient: func(region string) imageRemover {
 						return ecr
 					},
@@ -1351,7 +1353,9 @@ func TestCloudFormation_RemoveEnvFromApp(t *testing.T) {
 						_, err := in.createOpFn()
 						return err
 					},
-					s3Client: s3,
+					regionalS3Client: func(region string) s3Client {
+						return s3
+					},
 					regionalECRClient: func(region string) imageRemover {
 						return ecr
 					},
@@ -1359,7 +1363,7 @@ func TestCloudFormation_RemoveEnvFromApp(t *testing.T) {
 				}
 			},
 		},
-		"skips stack redeployment if 'RemoveAccountFromApp' is false": {
+		"skips stack redeployment if we don't need to remove account": {
 			inOpts: RemoveEnvFromAppOpts{
 				App: &config.Application{
 					Name:      "phonetool",
@@ -1419,7 +1423,7 @@ func TestCloudFormation_RemoveEnvFromApp(t *testing.T) {
 						_, err := in.createOpFn()
 						return err
 					},
-					s3Client: s3,
+					regionalS3Client: func(region string) s3Client { return s3 },
 					regionalECRClient: func(region string) imageRemover {
 						return ecr
 					},
@@ -1573,10 +1577,8 @@ func TestCloudFormation_RemoveEnvFromApp(t *testing.T) {
 					regionalClient: func(region string) cfnClient {
 						return regionalCfn
 					},
-					s3Client: s3,
-					regionalECRClient: func(region string) imageRemover {
-						return ecr
-					},
+					regionalS3Client:  func(region string) s3Client { return s3 },
+					regionalECRClient: func(region string) imageRemover { return ecr },
 				}
 			},
 		},
@@ -1663,7 +1665,9 @@ func TestCloudFormation_RemoveEnvFromApp(t *testing.T) {
 					regionalClient: func(region string) cfnClient {
 						return regionalCfn
 					},
-					s3Client: s3,
+					regionalS3Client: func(region string) s3Client {
+						return s3
+					},
 					regionalECRClient: func(region string) imageRemover {
 						return ecr
 					},
@@ -1733,7 +1737,9 @@ func TestCloudFormation_RemoveEnvFromApp(t *testing.T) {
 					regionalClient: func(region string) cfnClient {
 						return regionalCfn
 					},
-					s3Client: s3,
+					regionalS3Client: func(region string) s3Client {
+						return s3
+					},
 					regionalECRClient: func(region string) imageRemover {
 						return ecr
 					},
