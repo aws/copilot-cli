@@ -55,11 +55,13 @@ jobs:
       - name: Generate mocks
         run: make gen-mocks
 
-      - name: Check for nonzero git diff
+      - name: Print out local diff after mockgen
         run: |
              git status --porcelain=v1 1>gitstatus.txt
              cat gitstatus.txt
-             [ -z "$(cat gitstatus.txt)" ] && echo "Generated mocks all match"
+
+      - name: Check for nonzero diff
+        run: "[ -z \"$(cat gitstatus.txt)\" ] && echo \"Generated mocks all match\""
 
   test:
     runs-on: ubuntu-latest
