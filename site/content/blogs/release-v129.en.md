@@ -57,7 +57,7 @@ S3 Bucket Objects
   Environment  test
 .
 ├── ReadMe.md
-├─
+├── error.html
 ├── index.html
 ├── Images
 │   ├── SomeImage.PNG
@@ -67,7 +67,7 @@ S3 Bucket Objects
 │   ├── all.min.css
 │   └── bootstrap.min.css
 └── images
-    └── bg-masthead.jpg
+     └── bg-masthead.jpg
 ```
 And `copilot svc status` for Static Site workloads includes the S3 bucket's object count and total size.
 
