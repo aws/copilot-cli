@@ -6,9 +6,6 @@ package cli
 import (
 	"errors"
 	"fmt"
-	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
-	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
-	clideploy "github.com/aws/copilot-cli/internal/pkg/cli/deploy"
 	"os"
 	"strings"
 
@@ -76,8 +73,6 @@ type deleteEnvOpts struct {
 	rg                resourceGetter
 	deployer          environmentDeployer
 	envDeleterFromApp envDeleterFromApp
-	newBucketEmptier  func(region string) (bucketEmptier, error)
-	newImageRemover   func(region string) (imageRemover, error)
 
 	iam    roleDeleter
 	prog   progress
@@ -122,20 +117,6 @@ func newDeleteEnvOpts(vars deleteEnvVars) (*deleteEnvOpts, error) {
 			o.iam = iam.New(sess)
 			o.deployer = cloudformation.New(sess, cloudformation.WithProgressTracker(os.Stderr))
 			o.envDeleterFromApp = cloudformation.New(defaultSess, cloudformation.WithProgressTracker(os.Stderr))
-			o.newBucketEmptier = func(region string) (bucketEmptier, error) {
-				sess, err := sessProvider.DefaultWithRegion(region)
-				if err != nil {
-					return nil, err
-				}
-				return s3.New(sess), nil
-			}
-			o.newImageRemover = func(region string) (imageRemover, error) {
-				sess, err := sessProvider.DefaultWithRegion(region)
-				if err != nil {
-					return nil, err
-				}
-				return ecr.New(sess), nil
-			}
 			return nil
 		},
 	}, nil
@@ -397,65 +378,12 @@ func (o *deleteEnvOpts) cleanUpAppResources() error {
 		return err
 	}
 
-	var regionHasOtherEnvs bool
-	for _, env := range envs {
-		if env.Name != o.name {
-			if env.Region == currentEnv.Region {
-				regionHasOtherEnvs = true
-			}
-		}
-	}
-
-	if !regionHasOtherEnvs {
-		// Empty bucket and ECR repos if there are no other environments in this region.
-		// We need to do this before deleting the stackset instance to avoid CFN deletion failures.
-		if err := o.emptyS3BucketAndECRRepos(); err != nil {
-			return fmt.Errorf("empty S3 bucket and ECR repositories in region %s: %w", currentEnv.Region, err)
-		}
-	}
-
 	if err := o.envDeleterFromApp.RemoveEnvFromApp(&cloudformation.RemoveEnvFromAppOpts{
 		App:          app,
 		EnvToDelete:  currentEnv,
 		Environments: envs,
 	}); err != nil {
 		return fmt.Errorf("remove environment %s from application %s: %w", currentEnv.Name, app.Name, err)
-	}
-	return nil
-}
-
-func (o *deleteEnvOpts) emptyS3BucketAndECRRepos() error {
-	app, err := o.getAppConfig()
-	if err != nil {
-		return err
-	}
-	env, err := o.getEnvConfig()
-	if err != nil {
-		return err
-	}
-	var regionalResources *stack.AppRegionalResources
-	regionalResources, err = o.envDeleterFromApp.GetAppResourcesByRegion(app, env.Region)
-	if err != nil {
-		return fmt.Errorf("get regional resources stack in region %s for application %q: %w", env.Region, o.appName, err)
-	}
-
-	s3Client, err := o.newBucketEmptier(env.Region)
-	if err != nil {
-		return err
-	}
-	ecrClient, err := o.newImageRemover(env.Region)
-	if err != nil {
-		return err
-	}
-
-	if err := s3Client.EmptyBucket(regionalResources.S3Bucket); err != nil {
-		return fmt.Errorf("empty bucket %s: %w", regionalResources.S3Bucket, err)
-	}
-	for workload := range regionalResources.RepositoryURLs {
-		name := clideploy.RepoName(o.appName, workload)
-		if err := ecrClient.ClearRepository(name); err != nil {
-			return fmt.Errorf("empty repository %s: %w", name, err)
-		}
 	}
 	return nil
 }
