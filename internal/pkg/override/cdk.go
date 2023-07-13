@@ -21,6 +21,11 @@ import (
 	"github.com/spf13/afero"
 )
 
+const (
+	defaultPackageManager    = "npm"
+	maxNumberOfLevelsChecked = 5
+)
+
 // CDK is an Overrider that can transform a CloudFormation template with the Cloud Development Kit.
 type CDK struct {
 	rootAbsPath string // Absolute path to the overrides/ directory.
@@ -182,8 +187,6 @@ func (cdk *CDK) cleanUp(in []byte) ([]byte, error) {
 	return out.Bytes(), nil
 }
 
-const defaultPackageManager = "npm"
-
 type packageManager struct {
 	name     string
 	lockFile string
@@ -233,7 +236,7 @@ func (cdk *CDK) closestProjectManager() (string, error) {
 	closestDistance := math.MaxInt
 	var errTargetNotFound *workspace.ErrTargetNotFound
 	for _, candidate := range packageManagers {
-		path, err := cdk.exec.Find(wd, 5, func(path string) (bool, error) {
+		path, err := cdk.exec.Find(wd, maxNumberOfLevelsChecked, func(path string) (bool, error) {
 			return afero.Exists(cdk.fs, path)
 		}, candidate.lockFile)
 		if err == nil {
