@@ -182,6 +182,8 @@ func (cdk *CDK) cleanUp(in []byte) ([]byte, error) {
 	return out.Bytes(), nil
 }
 
+const defaultPackageManager = "npm"
+
 type packageManager struct {
 	name     string
 	lockFile string
@@ -262,7 +264,7 @@ func (cdk *CDK) packageManager() (string, error) {
 		return "", err
 	}
 	if manager == "" {
-		manager = "npm"
+		manager = defaultPackageManager
 	}
 	return manager, nil
 
