@@ -241,7 +241,7 @@
 
         nlb:
           port: 8080/tcp              # Traffic on port 8080/tcp is forwarded to the main container, on port 8080.
-          additional_rules:  
+          additional_listeners:  
             - port: 8084/tcp          # Traffic on port 8084/tcp is forwarded to the main container, on port 8084.
             - port: 8085/tcp          # Traffic on port 8085/tcp is forwarded to the sidecar "envoy", on port 3000.
               target_port: 3000         
