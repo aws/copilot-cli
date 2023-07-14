@@ -263,11 +263,10 @@ func (cdk *CDK) packageManager() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if manager == "" {
-		manager = defaultPackageManager
+	if manager != "" {
+		return manager, nil
 	}
-	return manager, nil
-
+	return defaultPackageManager, nil
 }
 
 // ScaffoldWithCDK bootstraps a CDK application under dir/ to override the seed CloudFormation resources.
