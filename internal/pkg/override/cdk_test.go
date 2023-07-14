@@ -47,7 +47,7 @@ look up "yarn": exec: "yarn": executable file not found in $PATH`)
 			LookPathFn: func(file string) (string, error) {
 				return "/bin/npm", nil
 			},
-			FindFn: func(_ string, _ int, _ workspace.MatchFn, _ string) (string, error) {
+			FindFn: func(_ string, _ int, _ workspace.TraverseUpProcessFn) (string, error) {
 				return "", errors.New("some error")
 			},
 		})
@@ -56,7 +56,7 @@ look up "yarn": exec: "yarn": executable file not found in $PATH`)
 		_, err := cdk.Override(nil)
 
 		// THEN
-		require.ErrorContains(t, err, `find "package-lock.json": some error`)
+		require.ErrorContains(t, err, `find a package lock file: some error`)
 	})
 	t.Run("on install: should return a wrapped error if npm install fails", func(t *testing.T) {
 		// GIVEN

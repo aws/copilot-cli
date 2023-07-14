@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -35,7 +34,7 @@ type CDK struct {
 	exec       struct {
 		LookPath func(file string) (string, error)
 		Command  func(name string, args ...string) *exec.Cmd
-		Find     func(startDir string, maxLevels int, matchFn workspace.MatchFn, target string) (string, error)
+		Find     func(startDir string, maxLevels int, matchFn workspace.TraverseUpProcessFn) (string, error)
 	} // For testing os/exec calls.
 }
 
@@ -46,7 +45,7 @@ type CDKOpts struct {
 	EnvVars    map[string]string                           // Environment variables key value pairs to pass to the "cdk synth" command.
 	LookPathFn func(executable string) (string, error)     // Search for the executable under $PATH. Defaults to exec.LookPath.
 	CommandFn  func(name string, args ...string) *exec.Cmd // Create a new executable command. Defaults to exec.Command rooted at the overrides/ dir.
-	FindFn     func(startDir string, maxLevels int, matchFn workspace.MatchFn, target string) (string, error)
+	FindFn     func(startDir string, maxLevels int, matchFn workspace.TraverseUpProcessFn) (string, error)
 }
 
 // WithCDK instantiates a new CDK Overrider with root being the path to the overrides/ directory.
@@ -80,7 +79,7 @@ func WithCDK(root string, opts CDKOpts) *CDK {
 	if opts.CommandFn != nil {
 		cmdFn = opts.CommandFn
 	}
-	findFn := workspace.Find
+	findFn := workspace.TraverseUp
 	if opts.FindFn != nil {
 		findFn = opts.FindFn
 	}
@@ -91,7 +90,7 @@ func WithCDK(root string, opts CDKOpts) *CDK {
 		exec: struct {
 			LookPath func(file string) (string, error)
 			Command  func(name string, args ...string) *exec.Cmd
-			Find     func(startDir string, maxLevels int, matchFn workspace.MatchFn, target string) (string, error)
+			Find     func(startDir string, maxLevels int, matchFn workspace.TraverseUpProcessFn) (string, error)
 		}{
 			LookPath: lookPathFn,
 			Command:  cmdFn,
@@ -232,26 +231,29 @@ func (cdk *CDK) closestProjectManager() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("get working directory: %w", err)
 	}
-	var closestCandidate string
-	closestDistance := math.MaxInt
-	var errTargetNotFound *workspace.ErrTargetNotFound
-	for _, candidate := range packageManagers {
-		path, err := cdk.exec.Find(wd, maxNumberOfLevelsChecked, func(path string) (bool, error) {
-			return afero.Exists(cdk.fs, path)
-		}, candidate.lockFile)
-		if err == nil {
-			distance := strings.Count(wd, string(filepath.Separator)) - strings.Count(path, string(filepath.Separator))
-			if distance < closestDistance {
-				closestCandidate = candidate.name
-				closestDistance = distance
+	var closest string
+	findLockFileFn := func(dir string) (string, error) {
+		for _, candidate := range packageManagers {
+			exists, err := afero.Exists(cdk.fs, filepath.Join(dir, candidate.lockFile))
+			if err != nil {
+				return "", err
 			}
-			continue
+			if exists {
+				closest = candidate.name
+				return "", workspace.ErrTraverseUpShouldStop
+			}
 		}
-		if !errors.As(err, &errTargetNotFound) {
-			return "", fmt.Errorf("find %q: %w", candidate.lockFile, err)
-		}
+		return "", nil
 	}
-	return closestCandidate, nil
+	_, err = cdk.exec.Find(wd, maxNumberOfLevelsChecked, findLockFileFn)
+	if err == nil {
+		return closest, nil
+	}
+	var errTargetNotFound *workspace.ErrTargetNotFound
+	if errors.As(err, &errTargetNotFound) {
+		return "", nil
+	}
+	return "", fmt.Errorf("find a package lock file: %w", err)
 }
 
 func (cdk *CDK) packageManager() (string, error) {

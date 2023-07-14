@@ -57,29 +57,33 @@ const (
 	buildspecFileName         = "buildspec.yml"
 )
 
-// MatchFn represents functions that take a path, and check whether it matches the criterias.
-type MatchFn func(path string) (bool, error)
+// ErrTraverseUpShouldStop signals that TraverseUp should stop.
+var ErrTraverseUpShouldStop = errors.New("should stop")
 
-// Find searches for the target file or directory at most `maxLevels` up from the starting directory.
-// If found, it returns the full path of the target file or directory.
-// If not found, it returns `ErrTargetNotFound`.
-// Otherwise, it returns any error as is.
-func Find(startDir string, maxLevels int, matchFn MatchFn, target string) (string, error) {
+// TraverseUpProcessFn represents a function that TraverseUp invokes at each level of traversal.
+// If TraverseUpProcessFn returns an ErrTraverseUpShouldStop, TraverseUp will stop traversing, return the result and a nil error.
+// If TraverseUpProcessFn returns some other error, TraverseUp will stop traversing, return an empty string and the error.
+// If TraverseUpProcessFn returns a nil error, TraverseUp will keep traversing up the directory tree.
+type TraverseUpProcessFn func(dir string) (result string, err error)
+
+// TraverseUp traverses at most `maxLevels` up from the starting directory, invoke process at each level, and returns
+// the value that it gets from process upon receiving an ErrTraverseUpShouldStop signal.
+// If process returns a non-nil error that is not ErrTraverseUpShouldStop, then TraverseUp will return the error as is.
+// If after traversing up `maxLevels`, it still hasn't received a ErrTraverseUpShouldStop signal, it will return ErrTargetNotFound.g
+func TraverseUp(startDir string, maxLevels int, process TraverseUpProcessFn) (string, error) {
 	searchingDir := startDir
 	for try := 0; try < maxLevels; try++ {
-		currentPath := filepath.Join(searchingDir, target)
-		match, err := matchFn(currentPath)
+		result, err := process(searchingDir)
+		if errors.Is(err, ErrTraverseUpShouldStop) {
+			return result, nil
+		}
 		if err != nil {
 			return "", err
-		}
-		if match {
-			return currentPath, nil
 		}
 		searchingDir = filepath.Dir(searchingDir)
 	}
 	return "", &ErrTargetNotFound{
 		startDir:              startDir,
-		target:                target,
 		numberOfLevelsChecked: maxLevels,
 	}
 }
@@ -641,14 +645,25 @@ func (ws *Workspace) copilotDirPath() (string, error) {
 	//
 	// Keep on searching the parent directories for that copilot directory (though only
 	// up to a finite limit, to avoid infinite recursion!)
-	path, err := Find(ws.workingDirAbs, maximumParentDirsToSearch, ws.fs.DirExists, CopilotDirName)
+	path, err := TraverseUp(ws.workingDirAbs, maximumParentDirsToSearch, func(dir string) (string, error) {
+		path := filepath.Join(dir, CopilotDirName)
+		exists, err := ws.fs.DirExists(path)
+		if err != nil {
+			return "", err
+		}
+		if exists {
+			return path, ErrTraverseUpShouldStop
+		}
+		return "", nil
+	})
 	if err == nil {
 		return path, nil
 	}
 	var targetNotFoundErr *ErrTargetNotFound
 	if errors.As(err, &targetNotFoundErr) {
 		return "", &ErrWorkspaceNotFound{
-			targetNotFoundErr,
+			ErrTargetNotFound: targetNotFoundErr,
+			target:            CopilotDirName,
 		}
 	}
 	return "", err
