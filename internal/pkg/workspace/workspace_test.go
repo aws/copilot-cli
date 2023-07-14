@@ -285,9 +285,9 @@ func TestWorkspace_Use(t *testing.T) {
 			expectedError: &ErrWorkspaceNotFound{
 				&ErrTargetNotFound{
 					startDir:              wd,
-					target:                CopilotDirName,
 					numberOfLevelsChecked: maximumParentDirsToSearch,
 				},
+				CopilotDirName,
 			},
 		},
 	}

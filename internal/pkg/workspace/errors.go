@@ -35,13 +35,11 @@ func (e *ErrFileNotExists) Error() string {
 // ErrTargetNotFound means that we couldn't locate the target file or the target directory.
 type ErrTargetNotFound struct {
 	startDir              string
-	target                string
 	numberOfLevelsChecked int
 }
 
 func (e *ErrTargetNotFound) Error() string {
-	return fmt.Sprintf("couldn't find a file or directory called %s up to %d levels up from %s",
-		e.target,
+	return fmt.Sprintf("couldn't find a target up to %d levels up from %s",
 		e.numberOfLevelsChecked,
 		e.startDir)
 }
@@ -49,6 +47,7 @@ func (e *ErrTargetNotFound) Error() string {
 // ErrWorkspaceNotFound means we couldn't locate a workspace root.
 type ErrWorkspaceNotFound struct {
 	*ErrTargetNotFound
+	target string
 }
 
 func (e *ErrWorkspaceNotFound) Error() string {

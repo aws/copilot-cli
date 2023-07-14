@@ -9,7 +9,7 @@ at least one of Application Load Balancer and Network Load Balancer must be enab
 <span class="parent-field">nlb.</span><a id="nlb-port" href="#nlb-port" class="field">`port`</a> <span class="type">String</span>  
 Required. The port and protocol for the Network Load Balancer to listen on. 
 
-Accepted protocols include `tcp` and `tls`. If the protocol is not specified, `tcp` is used by default. For example:
+Accepted protocols include `tcp`, `udp` and `tls`. If the protocol is not specified, `tcp` is used by default. For example:
 ```yaml
 nlb:
   port: 80

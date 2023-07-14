@@ -500,7 +500,7 @@ func (cfg NetworkLoadBalancerListener) exposedPorts(exposedPorts []ExposedPort, 
 	if cfg.IsEmpty() {
 		return nil, nil
 	}
-	nlbPort, _, err := ParsePortMapping(cfg.Port)
+	nlbPort, nlbProtocol, err := ParsePortMapping(cfg.Port)
 	if err != nil {
 		return nil, err
 	}
@@ -513,8 +513,16 @@ func (cfg NetworkLoadBalancerListener) exposedPorts(exposedPorts []ExposedPort, 
 	if cfg.TargetPort != nil {
 		targetPort = uint16(aws.IntValue(cfg.TargetPort))
 	}
+	targetProtocol := TCP
+	if nlbProtocol != nil {
+		// Expose TCP port for TLS listeners.
+		if protocol := aws.StringValue(nlbProtocol); !strings.EqualFold(protocol, TLS) {
+			targetProtocol = protocol
+		}
+	}
+	targetProtocol = strings.ToLower(targetProtocol)
 	for _, exposedPort := range exposedPorts {
-		if targetPort == exposedPort.Port {
+		if targetPort == exposedPort.Port && targetProtocol == exposedPort.Protocol {
 			return nil, nil
 		}
 	}
@@ -522,10 +530,11 @@ func (cfg NetworkLoadBalancerListener) exposedPorts(exposedPorts []ExposedPort, 
 	if cfg.TargetContainer != nil {
 		targetContainer = aws.StringValue(cfg.TargetContainer)
 	}
+
 	return []ExposedPort{
 		{
 			Port:          targetPort,
-			Protocol:      "tcp",
+			Protocol:      targetProtocol,
 			ContainerName: targetContainer,
 		},
 	}, nil
@@ -599,7 +608,7 @@ func (rr *RoutingRule) Target(exposedPorts ExposedPortsIndex) (targetContainer s
 	if rrTargetContainer == nil { // when target_container is nil
 		container, port := targetContainerFromTargetPort(exposedPorts, rrTargetPort)
 		targetPort = aws.StringValue(port)
-		//In general, containers aren't expected to be empty. But this condition is applied for extra safety.
+		// In general, containers aren't expected to be empty. But this condition is applied for extra safety.
 		if container != nil {
 			targetContainer = aws.StringValue(container)
 		}
@@ -690,7 +699,7 @@ func (listener NetworkLoadBalancerListener) Target(exposedPorts ExposedPortsInde
 	if listener.TargetContainer == nil { // when target_container is nil
 		container, port := targetContainerFromTargetPort(exposedPorts, uint16P(uint16(aws.IntValue(listener.TargetPort))))
 		targetPort = aws.StringValue(port)
-		//In general, containers aren't expected to be empty. But this condition is applied for extra safety.
+		// In general, containers aren't expected to be empty. But this condition is applied for extra safety.
 		if container != nil {
 			targetContainer = aws.StringValue(container)
 		}
