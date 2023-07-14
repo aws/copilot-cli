@@ -7,21 +7,10 @@ import (
 	"fmt"
 )
 
-type errorExecutableNotFound struct {
-	executable string
-	error      error
-}
-
-func (e *errorExecutableNotFound) Error() string {
-	return fmt.Sprintf("look up %q: %s", e.executable, e.error.Error())
-}
-
-type errPackageManagerUnavailable struct {
-	parentError error
-}
+type errPackageManagerUnavailable struct{}
 
 func (err *errPackageManagerUnavailable) Error() string {
-	return fmt.Sprintf("cannot find a package manager to override with the Cloud Development Kit:\n%s", err.parentError.Error())
+	return fmt.Sprintf("cannot find a package manager to override with the Cloud Development Kit")
 }
 
 // RecommendActions implements the cli.actionRecommender interface.

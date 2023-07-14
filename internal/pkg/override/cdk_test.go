@@ -28,7 +28,7 @@ func TestCDK_Override(t *testing.T) {
 		cdk := WithCDK("", CDKOpts{
 			FS: afero.NewMemMapFs(),
 			LookPathFn: func(file string) (string, error) {
-				return "", fmt.Errorf(`exec: "%s": executable file not found in $PATH`, file)
+				return "", &exec.Error{Name: "anything", Err: exec.ErrNotFound}
 			},
 		})
 
@@ -36,9 +36,7 @@ func TestCDK_Override(t *testing.T) {
 		_, err := cdk.Override(nil)
 
 		// THEN
-		require.EqualError(t, err, `cannot find a package manager to override with the Cloud Development Kit:
-look up "npm": exec: "npm": executable file not found in $PATH
-look up "yarn": exec: "yarn": executable file not found in $PATH`)
+		require.EqualError(t, err, `cannot find a package manager to override with the Cloud Development Kit`)
 	})
 	t.Run("on install: should return a wrapped error if unexpected error occurs while finding lock file", func(t *testing.T) {
 		// GIVEN
@@ -139,7 +137,7 @@ look up "yarn": exec: "yarn": executable file not found in $PATH`)
 				if file == "npm" {
 					return "/bin/npm", nil
 				}
-				return "", fmt.Errorf(`exec: "%s": executable file not found in $PATH`, file)
+				return "", &exec.Error{Name: "yarn", Err: exec.ErrNotFound}
 			},
 			CommandFn: func(name string, args ...string) *exec.Cmd {
 				return exec.Command("echo", fmt.Sprintf("Description: %s", strings.Join(append([]string{name}, args...), " ")))
@@ -164,7 +162,7 @@ look up "yarn": exec: "yarn": executable file not found in $PATH`)
 				if file == "yarn" {
 					return "/bin/yarn", nil
 				}
-				return "", fmt.Errorf(`exec: "%s": executable file not found in $PATH`, file)
+				return "", &exec.Error{Name: "npm", Err: exec.ErrNotFound}
 			},
 			CommandFn: func(name string, args ...string) *exec.Cmd {
 				return exec.Command("echo", fmt.Sprintf("Description: %s", strings.Join(append([]string{name}, args...), " ")))
