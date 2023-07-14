@@ -197,7 +197,7 @@ var packageManagers = []packageManager{ // Alphabetically sorted based on name.
 	},
 }
 
-func (cdk *CDK) installedPackageManager() ([]string, error) {
+func (cdk *CDK) installedPackageManagers() ([]string, error) {
 	var installed []string
 	for _, candidate := range packageManagers {
 		if _, err := cdk.exec.LookPath(candidate.name); err == nil {
@@ -248,7 +248,7 @@ func (cdk *CDK) closestProjectManager() (string, error) {
 }
 
 func (cdk *CDK) packageManager() (string, error) {
-	installed, err := cdk.installedPackageManager()
+	installed, err := cdk.installedPackageManagers()
 	if err != nil {
 		return "", err
 	}
