@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -178,10 +177,6 @@ func TestCDK_Override(t *testing.T) {
 		require.Contains(t, string(out), fmt.Sprintf("%s synth --no-version-reporting", binPath))
 	})
 	t.Run("should invoke npm install and cdk synth, if only package-lock.json is found", func(t *testing.T) {
-		defer func() { getwd = os.Getwd }()
-		getwd = func() (dir string, err error) {
-			return "film/web/user", nil
-		}
 		buf := new(strings.Builder)
 		fs := afero.NewMemMapFs()
 		_ = fs.MkdirAll("film/web/user", 0755)
@@ -196,6 +191,9 @@ func TestCDK_Override(t *testing.T) {
 				return exec.Command("echo", fmt.Sprintf("Description: %s", strings.Join(append([]string{name}, args...), " ")))
 			},
 		})
+		cdk.exec.Getwd = func() (dir string, err error) {
+			return "film/web/user", nil
+		}
 
 		// WHEN
 		out, err := cdk.Override(nil)
@@ -206,10 +204,6 @@ func TestCDK_Override(t *testing.T) {
 		require.Contains(t, string(out), fmt.Sprintf("%s synth --no-version-reporting", filepath.Join("node_modules", ".bin", "cdk")))
 	})
 	t.Run("should invoke yarn install and cdk synth, if only yarn.lock is found", func(t *testing.T) {
-		defer func() { getwd = os.Getwd }()
-		getwd = func() (dir string, err error) {
-			return "film/web/user", nil
-		}
 		buf := new(strings.Builder)
 		fs := afero.NewMemMapFs()
 		_ = fs.MkdirAll("film/web/user", 0755)
@@ -224,6 +218,9 @@ func TestCDK_Override(t *testing.T) {
 				return exec.Command("echo", fmt.Sprintf("Description: %s", strings.Join(append([]string{name}, args...), " ")))
 			},
 		})
+		cdk.exec.Getwd = func() (dir string, err error) {
+			return "film/web/user", nil
+		}
 
 		// WHEN
 		out, err := cdk.Override(nil)
@@ -234,10 +231,6 @@ func TestCDK_Override(t *testing.T) {
 		require.Contains(t, string(out), fmt.Sprintf("%s synth --no-version-reporting", filepath.Join("node_modules", ".bin", "cdk")))
 	})
 	t.Run("should invoke yarn install and cdk synth, if yarn.lock is found closer than package-lock.json", func(t *testing.T) {
-		defer func() { getwd = os.Getwd }()
-		getwd = func() (dir string, err error) {
-			return "/film/web/user/vip", nil
-		}
 		buf := new(strings.Builder)
 		fs := afero.NewMemMapFs()
 		_ = fs.MkdirAll("/film/web/user/vip", 0755)
@@ -253,6 +246,9 @@ func TestCDK_Override(t *testing.T) {
 				return exec.Command("echo", fmt.Sprintf("Description: %s", strings.Join(append([]string{name}, args...), " ")))
 			},
 		})
+		cdk.exec.Getwd = func() (dir string, err error) {
+			return "/film/web/user/vip", nil
+		}
 
 		// WHEN
 		out, err := cdk.Override(nil)
@@ -263,10 +259,6 @@ func TestCDK_Override(t *testing.T) {
 		require.Contains(t, string(out), fmt.Sprintf("%s synth --no-version-reporting", filepath.Join("node_modules", ".bin", "cdk")))
 	})
 	t.Run("should invoke yarn install and cdk synth, if package-lock.json is found closer than yarn.lock", func(t *testing.T) {
-		defer func() { getwd = os.Getwd }()
-		getwd = func() (dir string, err error) {
-			return "/film/web/user/vip", nil
-		}
 		buf := new(strings.Builder)
 		fs := afero.NewMemMapFs()
 		_ = fs.MkdirAll("/film/web/user/vip", 0755)
@@ -282,6 +274,9 @@ func TestCDK_Override(t *testing.T) {
 				return exec.Command("echo", fmt.Sprintf("Description: %s", strings.Join(append([]string{name}, args...), " ")))
 			},
 		})
+		cdk.exec.Getwd = func() (dir string, err error) {
+			return "/film/web/user/vip", nil
+		}
 
 		// WHEN
 		out, err := cdk.Override(nil)
@@ -292,10 +287,6 @@ func TestCDK_Override(t *testing.T) {
 		require.Contains(t, string(out), fmt.Sprintf("%s synth --no-version-reporting", filepath.Join("node_modules", ".bin", "cdk")))
 	})
 	t.Run("should invoke npm install and cdk synth, if the project manager is unknown", func(t *testing.T) {
-		defer func() { getwd = os.Getwd }()
-		getwd = func() (dir string, err error) {
-			return "film/web/user", nil
-		}
 		buf := new(strings.Builder)
 		fs := afero.NewMemMapFs()
 		_ = fs.MkdirAll("film/web/user", 0755)
@@ -309,6 +300,9 @@ func TestCDK_Override(t *testing.T) {
 				return exec.Command("echo", fmt.Sprintf("Description: %s", strings.Join(append([]string{name}, args...), " ")))
 			},
 		})
+		cdk.exec.Getwd = func() (dir string, err error) {
+			return "film/web/user", nil
+		}
 
 		// WHEN
 		out, err := cdk.Override(nil)

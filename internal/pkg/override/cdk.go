@@ -35,6 +35,7 @@ type CDK struct {
 		LookPath func(file string) (string, error)
 		Command  func(name string, args ...string) *exec.Cmd
 		Find     func(startDir string, maxLevels int, matchFn workspace.TraverseUpProcessFn) (string, error)
+		Getwd    func() (dir string, err error)
 	} // For testing os/exec calls.
 }
 
@@ -86,10 +87,12 @@ func WithCDK(root string, opts CDKOpts) *CDK {
 			LookPath func(file string) (string, error)
 			Command  func(name string, args ...string) *exec.Cmd
 			Find     func(startDir string, maxLevels int, matchFn workspace.TraverseUpProcessFn) (string, error)
+			Getwd    func() (dir string, err error)
 		}{
 			LookPath: lookPathFn,
 			Command:  cmdFn,
 			Find:     workspace.TraverseUp,
+			Getwd:    os.Getwd,
 		},
 	}
 }
@@ -209,8 +212,6 @@ func (cdk *CDK) installedPackageManagers() ([]string, error) {
 	return installed, nil
 }
 
-var getwd = os.Getwd
-
 // closestProjectManager returns the package manager of the project.
 // It searches five levels up from the working directory and look for the lock file of each package managers.
 // If no lock file is found, it returns an empty string.
@@ -218,7 +219,7 @@ var getwd = os.Getwd
 // If multiple are found, it returns the package manager whose lock file is closer to the working dir.
 // If multiple are equally close, then it returns the one whose name is the alphabetically smallest.
 func (cdk *CDK) closestProjectManager() (string, error) {
-	wd, err := getwd()
+	wd, err := cdk.exec.Getwd()
 	if err != nil {
 		return "", fmt.Errorf("get working directory: %w", err)
 	}
