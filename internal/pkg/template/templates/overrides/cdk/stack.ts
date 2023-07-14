@@ -6,13 +6,17 @@ import { {{$import.ImportName}} as {{$import.ImportShortRename}} } from 'aws-cdk
 
 interface TransformedStackProps extends cdk.StackProps {
     readonly appName: string;
+    {{- if .RequiresEnv }}
     readonly envName: string;
+    {{- end }}
 }
 
 export class TransformedStack extends cdk.Stack {
     public readonly template: cdk.cloudformation_include.CfnInclude;
     public readonly appName: string;
+    {{- if .RequiresEnv }}
     public readonly envName: string;
+    {{- end }}
 
     constructor (scope: cdk.App, id: string, props: TransformedStackProps) {
         super(scope, id, props);
@@ -20,7 +24,9 @@ export class TransformedStack extends cdk.Stack {
             templateFile: path.join('.build', 'in.yml'),
         });
         this.appName = props.appName;
+        {{- if .RequiresEnv }}
         this.envName = props.envName;
+        {{- end }}
 
         {{- range $resource := .Resources }}
         this.transform{{$resource.LogicalID}}();

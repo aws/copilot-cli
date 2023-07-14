@@ -181,6 +181,8 @@ transform{{$resource.LogicalID}}() {
 		},
 	}
 
+	requiresEnv := true
+
 	// WHEN
 	walked := map[string]bool{
 		"package.json": false,
@@ -227,7 +229,7 @@ transformHTTPListenerRule() {
 			require.Equal(t, "const app = new cdk.App();", content.String())
 		}
 		return nil
-	})
+	}, requiresEnv)
 
 	// THEN
 	require.NoError(t, err)

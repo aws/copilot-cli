@@ -12,9 +12,9 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/config"
-	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
+	"github.com/aws/copilot-cli/internal/pkg/version"
 	"golang.org/x/mod/semver"
 	"gopkg.in/yaml.v3"
 )
@@ -36,7 +36,7 @@ type EnvironmentPatcher struct {
 	TemplatePatcher environmentTemplateUpdateGetter
 }
 
-// EnsureManagerRoleIsAllowedToUpload checks if the environment manager role has the necessary permissions to upload  
+// EnsureManagerRoleIsAllowedToUpload checks if the environment manager role has the necessary permissions to upload
 // objects to bucket and patches the permissions if not.
 func (p *EnvironmentPatcher) EnsureManagerRoleIsAllowedToUpload(bucket string) error {
 	body, err := p.TemplatePatcher.Template(stack.NameForEnv(p.Env.App, p.Env.Name))
@@ -124,7 +124,7 @@ func isManagerRoleAllowedToUpload(body string) (bool, error) {
 	if err := yaml.Unmarshal([]byte(body), &tpl); err != nil {
 		return false, fmt.Errorf("unmarshal environment template to detect Metadata.Version: %v", err)
 	}
-	if tpl.Metadata.Version == deploy.EnvTemplateVersionBootstrap {
+	if tpl.Metadata.Version == version.EnvTemplateBootstrap {
 		// "bootstrap" version is introduced after v1.9.0. The environment manager roles must have had the permissions.
 		return true, nil
 	}

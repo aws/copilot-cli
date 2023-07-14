@@ -74,7 +74,7 @@ network:
 $ copilot svc show --name front-end
 
 ...
-Internal Service Endpoint
+Internal Service Endpoints
 
   Endpoint                      Environment  Type
   --------                      -----------  ----

@@ -196,6 +196,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		AppName:            s.app,
 		EnvName:            s.env,
 		EnvVersion:         s.rc.EnvVersion,
+		Version:            s.rc.Version,
 		SerializedManifest: string(s.rawManifest),
 		WorkloadName:       s.name,
 		WorkloadType:       manifestinfo.LoadBalancedWebServiceType,

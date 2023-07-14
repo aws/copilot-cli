@@ -855,6 +855,74 @@ func TestECS_HasDefaultCluster(t *testing.T) {
 	}
 }
 
+func TestECS_ActiveClusters(t *testing.T) {
+	testCases := map[string]struct {
+		mockECSClient func(m *mocks.Mockapi)
+
+		wantedError    error
+		wantedClusters []string
+	}{
+		"describe clusters returns error": {
+			mockECSClient: func(m *mocks.Mockapi) {
+				m.EXPECT().
+					DescribeClusters(gomock.Any()).
+					Return(nil, fmt.Errorf("some error"))
+			},
+			wantedError: fmt.Errorf("describe clusters: some error"),
+		},
+		"ignore inactive cluster": {
+			mockECSClient: func(m *mocks.Mockapi) {
+				m.EXPECT().
+					DescribeClusters(gomock.Any()).
+					Return(&ecs.DescribeClustersOutput{
+						Clusters: []*ecs.Cluster{
+							{
+								ClusterArn: aws.String("cluster1"),
+								Status:     aws.String(clusterStatusActive),
+							},
+							{
+								ClusterArn: aws.String("cluster2"),
+								Status:     aws.String("INACTIVE"),
+							},
+							{
+								ClusterArn: aws.String("cluster3"),
+								Status:     aws.String(clusterStatusActive),
+							},
+							{
+								ClusterArn: aws.String("cluster4"),
+								Status:     aws.String("random"),
+							},
+						},
+					}, nil)
+			},
+			wantedClusters: []string{
+				"cluster1",
+				"cluster3",
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockECSClient := mocks.NewMockapi(ctrl)
+			tc.mockECSClient(mockECSClient)
+
+			ecs := ECS{
+				client: mockECSClient,
+			}
+			clusters, err := ecs.ActiveClusters("arn1", "arn2")
+			if tc.wantedError != nil {
+				require.EqualError(t, tc.wantedError, err.Error())
+			} else {
+				require.Equal(t, tc.wantedClusters, clusters)
+			}
+		})
+	}
+}
+
 func TestECS_RunTask(t *testing.T) {
 	type input struct {
 		cluster         string

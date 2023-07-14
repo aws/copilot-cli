@@ -82,6 +82,7 @@ type RuntimeConfig struct {
 	AccountID                string
 	Region                   string
 	EnvVersion               string
+	Version                  string
 }
 
 func (cfg *RuntimeConfig) loadCustomResourceURLs(bucket string, crs []uploadable) {

@@ -6,6 +6,7 @@ package cli
 import (
 	"context"
 	"encoding"
+	sdkcloudformation "github.com/aws/aws-sdk-go/service/cloudformation"
 	"io"
 
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -111,6 +112,7 @@ type environmentStore interface {
 	environmentGetter
 	environmentLister
 	environmentDeleter
+	applicationGetter
 }
 
 type environmentCreator interface {
@@ -328,7 +330,9 @@ type wsEnvironmentReader interface {
 
 type wsPipelineReader interface {
 	wsPipelineGetter
+	wsPipelineManifestReader
 	relPath
+	PipelineOverridesPath(string) string
 }
 
 type wsPipelineGetter interface {
@@ -384,9 +388,9 @@ type imageRemover interface {
 }
 
 type pipelineDeployer interface {
-	CreatePipeline(env *deploy.CreatePipelineInput, bucketName string) error
-	UpdatePipeline(env *deploy.CreatePipelineInput, bucketName string) error
-	PipelineExists(env *deploy.CreatePipelineInput) (bool, error)
+	CreatePipeline(bucketName string, stackConfig cloudformation.StackConfiguration) error
+	UpdatePipeline(bucketName string, stackConfig cloudformation.StackConfiguration) error
+	PipelineExists(stackConfig cloudformation.StackConfiguration) (bool, error)
 	DeletePipeline(pipeline deploy.Pipeline) error
 	AddPipelineResourcesToApp(app *config.Application, region string) error
 	Template(stackName string) (string, error)
@@ -705,6 +709,10 @@ type envPackager interface {
 	templateDiffer
 }
 
-type pipelineStackConfig interface {
+type stackConfiguration interface {
+	StackName() string
 	Template() (string, error)
+	Parameters() ([]*sdkcloudformation.Parameter, error)
+	Tags() []*sdkcloudformation.Tag
+	SerializedParameters() (string, error)
 }

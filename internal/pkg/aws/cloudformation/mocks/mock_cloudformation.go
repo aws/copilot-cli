@@ -138,6 +138,21 @@ func (m *Mockclient) EXPECT() *MockclientMockRecorder {
 	return m.recorder
 }
 
+// CancelUpdateStack mocks base method.
+func (m *Mockclient) CancelUpdateStack(in *cloudformation.CancelUpdateStackInput) (*cloudformation.CancelUpdateStackOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CancelUpdateStack", in)
+	ret0, _ := ret[0].(*cloudformation.CancelUpdateStackOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CancelUpdateStack indicates an expected call of CancelUpdateStack.
+func (mr *MockclientMockRecorder) CancelUpdateStack(in interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CancelUpdateStack", reflect.TypeOf((*Mockclient)(nil).CancelUpdateStack), in)
+}
+
 // CreateChangeSet mocks base method.
 func (m *Mockclient) CreateChangeSet(arg0 *cloudformation.CreateChangeSetInput) (*cloudformation.CreateChangeSetOutput, error) {
 	m.ctrl.T.Helper()

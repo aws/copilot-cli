@@ -2,6 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 AWSTemplateFormatVersion: 2010-09-09
 Description: CloudFormation template that represents a scheduled job on Amazon ECS. 
+Metadata:
+  Version: v1.29.0
 Parameters: 
   AppName:
     Type: String

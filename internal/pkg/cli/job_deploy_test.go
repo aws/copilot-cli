@@ -190,20 +190,31 @@ func TestJobDeployOpts_Ask(t *testing.T) {
 
 func TestJobDeployOpts_Execute(t *testing.T) {
 	const (
-		mockAppName = "phonetool"
-		mockJobName = "upload"
-		mockEnvName = "prod-iad"
+		mockAppName         = "phonetool"
+		mockJobName         = "upload"
+		mockEnvName         = "prod-iad"
+		mockTemplateVersion = "v1.28.0"
+		mockPrevVersion     = "v1.27.0"
 	)
 	mockError := errors.New("some error")
 	testCases := map[string]struct {
-		inShowDiff bool
-		mock       func(m *deployMocks)
+		inShowDiff       bool
+		inAllowDowngrade bool
+		mock             func(m *deployMocks)
 
 		wantedDiff  string
 		wantedError error
 	}{
+		"error out if fail to get version": {
+			mock: func(m *deployMocks) {
+				m.mockVersionGetter.EXPECT().Version().Return("", mockError)
+			},
+
+			wantedError: fmt.Errorf("get template version of workload upload: some error"),
+		},
 		"error out if fail to read workload manifest": {
 			mock: func(m *deployMocks) {
+				m.mockVersionGetter.EXPECT().Version().Return(mockPrevVersion, nil)
 				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockJobName).Return(nil, mockError)
 			},
 
@@ -211,6 +222,7 @@ func TestJobDeployOpts_Execute(t *testing.T) {
 		},
 		"error out if fail to interpolate workload manifest": {
 			mock: func(m *deployMocks) {
+				m.mockVersionGetter.EXPECT().Version().Return(mockTemplateVersion, nil)
 				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockJobName).Return([]byte(""), nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", mockError)
 			},
@@ -219,6 +231,7 @@ func TestJobDeployOpts_Execute(t *testing.T) {
 		},
 		"error if fail to get a list of available features from the environment": {
 			mock: func(m *deployMocks) {
+				m.mockVersionGetter.EXPECT().Version().Return(mockTemplateVersion, nil)
 				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockJobName).Return([]byte(""), nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockEnvFeaturesDescriber.EXPECT().Version().Return("v1.mock", nil)
@@ -229,6 +242,7 @@ func TestJobDeployOpts_Execute(t *testing.T) {
 		},
 		"error if some required features are not available in the environment": {
 			mock: func(m *deployMocks) {
+				m.mockVersionGetter.EXPECT().Version().Return(mockTemplateVersion, nil)
 				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockJobName).Return([]byte(""), nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockMft = &mockWorkloadMft{
@@ -243,6 +257,7 @@ func TestJobDeployOpts_Execute(t *testing.T) {
 		},
 		"error if failed to upload artifacts": {
 			mock: func(m *deployMocks) {
+				m.mockVersionGetter.EXPECT().Version().Return(mockTemplateVersion, nil)
 				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockJobName).Return([]byte(""), nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockMft = &mockWorkloadMft{
@@ -261,6 +276,7 @@ func TestJobDeployOpts_Execute(t *testing.T) {
 		"error if failed to generate the template to show diff": {
 			inShowDiff: true,
 			mock: func(m *deployMocks) {
+				m.mockVersionGetter.EXPECT().Version().Return(mockTemplateVersion, nil)
 				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockJobName).Return([]byte(""), nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockMft = &mockWorkloadMft{
@@ -279,6 +295,7 @@ func TestJobDeployOpts_Execute(t *testing.T) {
 		"error if failed to generate the diff": {
 			inShowDiff: true,
 			mock: func(m *deployMocks) {
+				m.mockVersionGetter.EXPECT().Version().Return(mockTemplateVersion, nil)
 				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockJobName).Return([]byte(""), nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockMft = &mockWorkloadMft{
@@ -298,6 +315,7 @@ func TestJobDeployOpts_Execute(t *testing.T) {
 		"write 'no changes' if there is no diff": {
 			inShowDiff: true,
 			mock: func(m *deployMocks) {
+				m.mockVersionGetter.EXPECT().Version().Return(mockTemplateVersion, nil)
 				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockJobName).Return([]byte(""), nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockMft = &mockWorkloadMft{
@@ -319,6 +337,7 @@ func TestJobDeployOpts_Execute(t *testing.T) {
 		"write the correct diff": {
 			inShowDiff: true,
 			mock: func(m *deployMocks) {
+				m.mockVersionGetter.EXPECT().Version().Return(mockTemplateVersion, nil)
 				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockJobName).Return([]byte(""), nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockMft = &mockWorkloadMft{
@@ -340,6 +359,7 @@ func TestJobDeployOpts_Execute(t *testing.T) {
 		"error if fail to ask whether to continue the deployment": {
 			inShowDiff: true,
 			mock: func(m *deployMocks) {
+				m.mockVersionGetter.EXPECT().Version().Return(mockTemplateVersion, nil)
 				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockJobName).Return([]byte(""), nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockMft = &mockWorkloadMft{
@@ -361,6 +381,7 @@ func TestJobDeployOpts_Execute(t *testing.T) {
 		"do not deploy if asked to": {
 			inShowDiff: true,
 			mock: func(m *deployMocks) {
+				m.mockVersionGetter.EXPECT().Version().Return(mockTemplateVersion, nil)
 				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockJobName).Return([]byte(""), nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockMft = &mockWorkloadMft{
@@ -379,8 +400,9 @@ func TestJobDeployOpts_Execute(t *testing.T) {
 				m.mockDeployer.EXPECT().DeployWorkload(gomock.Any()).Times(0)
 			},
 		},
-		"deploy if asked to": {
-			inShowDiff: true,
+		"deploy if asked to and allow downgrade": {
+			inShowDiff:       true,
+			inAllowDowngrade: true,
 			mock: func(m *deployMocks) {
 				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockJobName).Return([]byte(""), nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
@@ -402,6 +424,7 @@ func TestJobDeployOpts_Execute(t *testing.T) {
 		},
 		"error if failed to deploy service": {
 			mock: func(m *deployMocks) {
+				m.mockVersionGetter.EXPECT().Version().Return(mockTemplateVersion, nil)
 				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockJobName).Return([]byte(""), nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockMft = &mockWorkloadMft{
@@ -432,15 +455,17 @@ func TestJobDeployOpts_Execute(t *testing.T) {
 				mockWsReader:             mocks.NewMockwsWlDirReader(ctrl),
 				mockEnvFeaturesDescriber: mocks.NewMockversionCompatibilityChecker(ctrl),
 				mockPrompter:             mocks.NewMockprompter(ctrl),
+				mockVersionGetter:        mocks.NewMockversionGetter(ctrl),
 			}
 			tc.mock(m)
 
 			opts := deployJobOpts{
 				deployWkldVars: deployWkldVars{
-					appName:  mockAppName,
-					name:     mockJobName,
-					envName:  mockEnvName,
-					showDiff: tc.inShowDiff,
+					appName:            mockAppName,
+					name:               mockJobName,
+					envName:            mockEnvName,
+					showDiff:           tc.inShowDiff,
+					allowWkldDowngrade: tc.inAllowDowngrade,
 
 					clientConfigured: true,
 				},
@@ -454,9 +479,11 @@ func TestJobDeployOpts_Execute(t *testing.T) {
 				unmarshal: func(b []byte) (manifest.DynamicWorkload, error) {
 					return m.mockMft, nil
 				},
+				jobVersionGetter:     m.mockVersionGetter,
 				envFeaturesDescriber: m.mockEnvFeaturesDescriber,
 				prompt:               m.mockPrompter,
 				diffWriter:           m.mockDiffWriter,
+				templateVersion:      mockTemplateVersion,
 
 				targetApp: &config.Application{},
 				targetEnv: &config.Environment{},

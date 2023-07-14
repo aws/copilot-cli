@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+	"github.com/aws/copilot-cli/internal/pkg/version"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -28,13 +29,14 @@ const (
 )
 
 type packageJobVars struct {
-	name         string
-	envName      string
-	appName      string
-	tag          string
-	outputDir    string
-	uploadAssets bool
-	showDiff     bool
+	name               string
+	envName            string
+	appName            string
+	tag                string
+	outputDir          string
+	uploadAssets       bool
+	showDiff           bool
+	allowWkldDowngrade bool
 }
 
 type packageJobOpts struct {
@@ -77,12 +79,13 @@ func newPackageJobOpts(vars packageJobVars) (*packageJobOpts, error) {
 	opts.newPackageCmd = func(o *packageJobOpts) {
 		opts.packageCmd = &packageSvcOpts{
 			packageSvcVars: packageSvcVars{
-				name:         o.name,
-				envName:      o.envName,
-				appName:      o.appName,
-				tag:          o.tag,
-				outputDir:    o.outputDir,
-				uploadAssets: o.uploadAssets,
+				name:               o.name,
+				envName:            o.envName,
+				appName:            o.appName,
+				tag:                o.tag,
+				outputDir:          o.outputDir,
+				uploadAssets:       o.uploadAssets,
+				allowWkldDowngrade: o.allowWkldDowngrade,
 			},
 			runner:            o.runner,
 			ws:                ws,
@@ -96,6 +99,7 @@ func newPackageJobOpts(vars packageJobVars) (*packageJobOpts, error) {
 			sessProvider:      sessProvider,
 			newStackGenerator: newWorkloadStackGenerator,
 			gitShortCommit:    imageTagFromGit(o.runner),
+			templateVersion:   version.LatestTemplateVersion(),
 		}
 	}
 	return opts, nil
@@ -203,6 +207,7 @@ func buildJobPackageCmd() *cobra.Command {
 	cmd.Flags().StringVar(&vars.outputDir, stackOutputDirFlag, "", stackOutputDirFlagDescription)
 	cmd.Flags().BoolVar(&vars.uploadAssets, uploadAssetsFlag, false, uploadAssetsFlagDescription)
 	cmd.Flags().BoolVar(&vars.showDiff, diffFlag, false, diffFlagDescription)
+	cmd.Flags().BoolVar(&vars.allowWkldDowngrade, allowDowngradeFlag, false, allowDowngradeFlagDescription)
 
 	cmd.MarkFlagsMutuallyExclusive(diffFlag, stackOutputDirFlag)
 	cmd.MarkFlagsMutuallyExclusive(diffFlag, uploadAssetsFlag)

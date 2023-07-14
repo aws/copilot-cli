@@ -57,6 +57,33 @@ const (
 	buildspecFileName         = "buildspec.yml"
 )
 
+// MatchFn represents functions that take a path, and check whether it matches the criterias.
+type MatchFn func(path string) (bool, error)
+
+// Find searches for the target file or directory at most `maxLevels` up from the starting directory.
+// If found, it returns the full path of the target file or directory.
+// If not found, it returns `ErrTargetNotFound`.
+// Otherwise, it returns any error as is.
+func Find(startDir string, maxLevels int, matchFn MatchFn, target string) (string, error) {
+	searchingDir := startDir
+	for try := 0; try < maxLevels; try++ {
+		currentPath := filepath.Join(searchingDir, target)
+		match, err := matchFn(currentPath)
+		if err != nil {
+			return "", err
+		}
+		if match {
+			return currentPath, nil
+		}
+		searchingDir = filepath.Dir(searchingDir)
+	}
+	return "", &ErrTargetNotFound{
+		startDir:              startDir,
+		target:                target,
+		numberOfLevelsChecked: maxLevels,
+	}
+}
+
 // Summary is a description of what's associated with this workspace.
 type Summary struct {
 	Application string `yaml:"application"` // Name of the application.
@@ -493,6 +520,11 @@ func (ws *Workspace) WorkloadOverridesPath(name string) string {
 	return filepath.Join(ws.CopilotDirAbs, name, overridesDirName)
 }
 
+// PipelineOverridesPath returns the default path to the overrides/ directory for a given pipeline.
+func (ws *Workspace) PipelineOverridesPath(name string) string {
+	return filepath.Join(ws.CopilotDirAbs, pipelinesDirName, name, overridesDirName)
+}
+
 // ListFiles returns a list of file paths to all the files under the dir.
 func (ws *Workspace) ListFiles(dirPath string) ([]string, error) {
 	var names []string
@@ -609,23 +641,17 @@ func (ws *Workspace) copilotDirPath() (string, error) {
 	//
 	// Keep on searching the parent directories for that copilot directory (though only
 	// up to a finite limit, to avoid infinite recursion!)
-	searchingDir := ws.workingDirAbs
-	for try := 0; try < maximumParentDirsToSearch; try++ {
-		currentDirectoryPath := filepath.Join(searchingDir, CopilotDirName)
-		inCurrentDirPath, err := ws.fs.DirExists(currentDirectoryPath)
-		if err != nil {
-			return "", err
-		}
-		if inCurrentDirPath {
-			return currentDirectoryPath, nil
-		}
-		searchingDir = filepath.Dir(searchingDir)
+	path, err := Find(ws.workingDirAbs, maximumParentDirsToSearch, ws.fs.DirExists, CopilotDirName)
+	if err == nil {
+		return path, nil
 	}
-	return "", &ErrWorkspaceNotFound{
-		CurrentDirectory:      ws.workingDirAbs,
-		ManifestDirectoryName: CopilotDirName,
-		NumberOfLevelsChecked: maximumParentDirsToSearch,
+	var targetNotFoundErr *ErrTargetNotFound
+	if errors.As(err, &targetNotFoundErr) {
+		return "", &ErrWorkspaceNotFound{
+			targetNotFoundErr,
+		}
 	}
+	return "", err
 }
 
 // write flushes the data to a file under the copilot directory joined by path elements.

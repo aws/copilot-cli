@@ -8,12 +8,26 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
 	"path/filepath"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+	rg "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
+	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
+	clideploy "github.com/aws/copilot-cli/internal/pkg/cli/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/cli/list"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	deploycfn "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
+	"github.com/aws/copilot-cli/internal/pkg/term/selector"
+	"github.com/aws/copilot-cli/internal/pkg/version"
+	"github.com/aws/copilot-cli/internal/pkg/workspace"
+	"github.com/spf13/afero"
 )
 
 type packagePipelineVars struct {
@@ -29,16 +43,80 @@ type packagePipelineOpts struct {
 	ws                              wsPipelineReader
 	codestar                        codestar
 	store                           store
-	pipelineStackConfig             func(in *deploy.CreatePipelineInput) pipelineStackConfig
+	pipelineStackConfig             func(in *deploy.CreatePipelineInput) deploycfn.StackConfiguration
 	configureDeployedPipelineLister func() deployedPipelineLister
 	newSvcListCmd                   func(io.Writer, string) cmd
 	newJobListCmd                   func(io.Writer, string) cmd
+	sessProvider                    *sessions.Provider
 
 	//catched variables
 	pipelineMft *manifest.Pipeline
 	app         *config.Application
 	svcBuffer   *bytes.Buffer
 	jobBuffer   *bytes.Buffer
+}
+
+func newPackagePipelineOpts(vars packagePipelineVars) (*packagePipelineOpts, error) {
+	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("pipeline package"))
+	defaultSession, err := sessProvider.Default()
+	if err != nil {
+		return nil, fmt.Errorf("default session: %w", err)
+	}
+	store := config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
+
+	ws, err := workspace.Use(afero.NewOsFs())
+	if err != nil {
+		return nil, err
+	}
+	opts := &packagePipelineOpts{
+		packagePipelineVars: vars,
+		pipelineDeployer:    deploycfn.New(defaultSession, deploycfn.WithProgressTracker(os.Stderr)),
+		tmplWriter:          os.Stdout,
+		ws:                  ws,
+		store:               store,
+		sessProvider:        sessProvider,
+		pipelineStackConfig: func(in *deploy.CreatePipelineInput) deploycfn.StackConfiguration {
+			return stack.NewPipelineStackConfig(in)
+		},
+		newSvcListCmd: func(w io.Writer, appName string) cmd {
+			return &listSvcOpts{
+				listWkldVars: listWkldVars{
+					appName: appName,
+				},
+				sel: selector.NewAppEnvSelector(prompt.New(), store),
+				list: &list.SvcListWriter{
+					Ws:    ws,
+					Store: store,
+					Out:   w,
+
+					ShowLocalSvcs: true,
+					OutputJSON:    true,
+				},
+			}
+		},
+		newJobListCmd: func(w io.Writer, appName string) cmd {
+			return &listJobOpts{
+				listWkldVars: listWkldVars{
+					appName: appName,
+				},
+				sel: selector.NewAppEnvSelector(prompt.New(), store),
+				list: &list.JobListWriter{
+					Ws:    ws,
+					Store: store,
+					Out:   w,
+
+					ShowLocalJobs: true,
+					OutputJSON:    true,
+				},
+			}
+		},
+		svcBuffer: &bytes.Buffer{},
+		jobBuffer: &bytes.Buffer{},
+		configureDeployedPipelineLister: func() deployedPipelineLister {
+			return deploy.NewPipelineStore(rg.New(defaultSession))
+		},
+	}
+	return opts, nil
 }
 
 func (o *packagePipelineOpts) Execute() error {
@@ -108,6 +186,11 @@ func (o *packagePipelineOpts) Execute() error {
 		return err
 	}
 
+	overrider, err := clideploy.NewOverrider(o.ws.PipelineOverridesPath(o.name), o.appName, "", afero.NewOsFs(), o.sessProvider)
+	if err != nil {
+		return err
+	}
+
 	deployPipelineInput := &deploy.CreatePipelineInput{
 		AppName:             o.appName,
 		Name:                o.name,
@@ -117,12 +200,14 @@ func (o *packagePipelineOpts) Execute() error {
 		Stages:              stages,
 		ArtifactBuckets:     artifactBuckets,
 		AdditionalTags:      o.app.Tags,
+		Version:             version.LatestTemplateVersion(),
 		PermissionsBoundary: o.app.PermissionsBoundary,
 	}
 
-	tpl, err := o.pipelineStackConfig(deployPipelineInput).Template()
+	stackConfig := deploycfn.WrapWithTemplateOverrider(o.pipelineStackConfig(deployPipelineInput), overrider)
+	tpl, err := stackConfig.Template()
 	if err != nil {
-		return fmt.Errorf("generate stack template: %w", err)
+		return err
 	}
 	if _, err := o.tmplWriter.Write([]byte(tpl)); err != nil {
 		return err

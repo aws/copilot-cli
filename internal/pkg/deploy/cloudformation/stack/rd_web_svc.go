@@ -121,6 +121,7 @@ func (s *RequestDrivenWebService) Template() (string, error) {
 		WorkloadName:       s.name,
 		SerializedManifest: string(s.rawManifest),
 		EnvVersion:         s.rc.EnvVersion,
+		Version:            s.rc.Version,
 
 		Variables:            convertEnvVars(s.manifest.Variables),
 		StartCommand:         s.manifest.StartCommand,

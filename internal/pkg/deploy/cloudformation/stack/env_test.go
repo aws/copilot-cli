@@ -150,7 +150,6 @@ func TestEnv_Template(t *testing.T) {
 					SecurityGroupConfig: nil,
 					FlowLogs:            nil,
 				},
-				LatestVersion: deploy.LatestEnvTemplateVersion,
 				CustomResources: map[string]template.S3ObjectLocation{
 					"CertificateValidationFunction": {
 						Bucket: "mockbucket",
