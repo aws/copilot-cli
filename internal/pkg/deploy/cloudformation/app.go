@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/aws/copilot-cli/internal/pkg/stream"
+	"github.com/aws/copilot-cli/internal/pkg/version"
 
 	"golang.org/x/sync/errgroup"
 
@@ -128,6 +129,66 @@ func (cf CloudFormation) upgradeAppStack(conf *stack.AppStackConfig) error {
 	return cf.executeAndRenderChangeSet(in)
 }
 
+// removeDNSDelegationAndCrossAccountAccess removes the provided account ID from the list of accounts that can write to the
+// application's DNS HostedZone. It does this by creating the new list of DNS delegated accounts, updating the app
+// infrastructure roles stack, then redeploying all the stackset instances with the new list of accounts.
+// If the list of accounts already excludes the account to remove, we return early for idempotency.
+func (cf CloudFormation) removeDNSDelegationAndCrossAccountAccess(appStack *stack.AppStackConfig, accountID string) error {
+	// Get the most recently deployed list of delegated accounts.
+	appStackDesc, err := cf.cfnClient.Describe(appStack.StackName())
+	if err != nil {
+		return fmt.Errorf("get existing application infrastructure stack: %w", err)
+	}
+	dnsDelegatedAccounts := cf.dnsDelegatedAccountsForStack(appStackDesc.SDK())
+
+	// Remove the desired account from this list.
+	var newAccountList []string
+	for _, account := range dnsDelegatedAccounts {
+		if account == accountID {
+			continue
+		}
+		newAccountList = append(newAccountList, account)
+	}
+	// If the lists are equal length, the account has already been removed and we don't have to redeploy the stackset instances.
+	if len(newAccountList) == len(dnsDelegatedAccounts) {
+		return nil
+	}
+	// Create a new AppStackConfig using the new account list.
+	newCfg := stack.NewAppStackConfig(&deploy.CreateAppInput{
+		Name:                  appStack.Name,
+		AccountID:             appStack.AccountID,
+		DNSDelegationAccounts: newAccountList,
+		DomainName:            appStack.DomainName,
+		DomainHostedZoneID:    appStack.DomainHostedZoneID,
+		PermissionsBoundary:   appStack.PermissionsBoundary,
+		AdditionalTags:        appStack.AdditionalTags,
+		Version:               appStack.Version,
+	})
+	// Redeploy the infrastructure roles stack.
+	s, err := toStack(newCfg)
+	if err != nil {
+		return err
+	}
+	// Update app stack.
+	if err := cf.cfnClient.UpdateAndWait(s); err != nil {
+		var errNoUpdates *cloudformation.ErrChangeSetEmpty
+		if errors.As(err, &errNoUpdates) {
+			return nil
+		}
+		return fmt.Errorf("update application to remove DNS delegation from account %s: %w", accountID, err)
+	}
+	// Update stackset instances to remove account.
+	appResourcesConfig, err := cf.getLastDeployedAppConfig(appStack)
+	if err != nil {
+		return err
+	}
+	appResourcesConfig.Accounts = newAccountList
+	if err := cf.deployAppConfig(newCfg, appResourcesConfig, true); err != nil {
+		return err
+	}
+	return nil
+}
+
 // DelegateDNSPermissions grants the provided account ID the ability to write to this application's
 // DNS HostedZone. This allows us to perform cross account DNS delegation.
 func (cf CloudFormation) DelegateDNSPermissions(app *config.Application, accountID string) error {
@@ -136,7 +197,7 @@ func (cf CloudFormation) DelegateDNSPermissions(app *config.Application, account
 		AccountID:          app.AccountID,
 		DomainName:         app.Domain,
 		DomainHostedZoneID: app.DomainHostedZoneID,
-		Version:            deploy.LatestAppTemplateVersion,
+		Version:            version.LatestTemplateVersion(),
 	}
 
 	appConfig := stack.NewAppStackConfig(&deployApp)
@@ -253,7 +314,7 @@ func (cf CloudFormation) addWorkloadToApp(app *config.Application, wlName string
 		Name:           app.Name,
 		AccountID:      app.AccountID,
 		AdditionalTags: app.Tags,
-		Version:        deploy.LatestAppTemplateVersion,
+		Version:        version.LatestTemplateVersion(),
 	})
 	previouslyDeployedConfig, err := cf.getLastDeployedAppConfig(appConfig)
 	if err != nil {
@@ -312,12 +373,76 @@ func (cf CloudFormation) RemoveJobFromApp(app *config.Application, jobName strin
 	return nil
 }
 
+// RemoveEnvFromAppOpts contains the parameters to call RemoveEnvFromApp.
+type RemoveEnvFromAppOpts struct {
+	App          *config.Application
+	EnvToDelete  *config.Environment
+	Environments []*config.Environment
+}
+
+// RemoveEnvFromApp optionally redeploys the app stack to remove the account and, if necessary, empties
+// ECR repos and a regional S3 bucket before deleting the stackset instance for that region. This method
+// cannot check that deleting the stackset or removing the app won't break copilot. Be careful.
+func (cf CloudFormation) RemoveEnvFromApp(opts *RemoveEnvFromAppOpts) error {
+	var accountHasOtherEnvs, regionHasOtherEnvs bool
+	for _, env := range opts.Environments {
+		if env.Name != opts.EnvToDelete.Name {
+			if env.AccountID == opts.EnvToDelete.AccountID {
+				accountHasOtherEnvs = true
+			}
+			if env.Region == opts.EnvToDelete.Region {
+				regionHasOtherEnvs = true
+			}
+		}
+	}
+
+	// This is a no-op if there are remaining environments in the region or account.
+	if regionHasOtherEnvs && accountHasOtherEnvs {
+		return nil
+	}
+
+	appConfig := stack.NewAppStackConfig(&deploy.CreateAppInput{
+		Name:               opts.App.Name,
+		AccountID:          opts.App.AccountID,
+		DomainName:         opts.App.Domain,
+		DomainHostedZoneID: opts.App.DomainHostedZoneID,
+		Version:            opts.App.Version,
+	})
+
+	if !regionHasOtherEnvs {
+		// empty s3 bucket and ECR repositories
+		resources, err := cf.GetAppResourcesByRegion(opts.App, opts.EnvToDelete.Region)
+		if err != nil {
+			return err
+		}
+		if err := cf.s3Client.EmptyBucket(resources.S3Bucket); err != nil {
+			return err
+		}
+		ecr := cf.regionalECRClient(opts.EnvToDelete.Region)
+		for repo := range resources.RepositoryURLs {
+			if err := ecr.ClearRepository(repo); err != nil {
+				return err
+			}
+		}
+
+		if err := cf.deleteStackSetInstance(appConfig.StackSetName(), opts.EnvToDelete.AccountID, opts.EnvToDelete.Region); err != nil {
+			return err
+		}
+	}
+
+	if !accountHasOtherEnvs {
+		return cf.removeDNSDelegationAndCrossAccountAccess(appConfig, opts.EnvToDelete.AccountID)
+	}
+
+	return nil
+}
+
 func (cf CloudFormation) removeWorkloadFromApp(app *config.Application, wlName string) error {
 	appConfig := stack.NewAppStackConfig(&deploy.CreateAppInput{
 		Name:           app.Name,
 		AccountID:      app.AccountID,
 		AdditionalTags: app.Tags,
-		Version:        deploy.LatestAppTemplateVersion,
+		Version:        app.Version,
 	})
 	previouslyDeployedConfig, err := cf.getLastDeployedAppConfig(appConfig)
 	if err != nil {
@@ -369,7 +494,7 @@ func (cf CloudFormation) AddEnvToApp(opts *AddEnvToAppOpts) error {
 		Name:           opts.App.Name,
 		AccountID:      opts.App.AccountID,
 		AdditionalTags: opts.App.Tags,
-		Version:        deploy.LatestAppTemplateVersion,
+		Version:        version.LatestTemplateVersion(),
 	})
 	previouslyDeployedConfig, err := cf.getLastDeployedAppConfig(appConfig)
 	if err != nil {
@@ -426,7 +551,7 @@ func (cf CloudFormation) AddPipelineResourcesToApp(
 	appConfig := stack.NewAppStackConfig(&deploy.CreateAppInput{
 		Name:      app.Name,
 		AccountID: app.AccountID,
-		Version:   deploy.LatestAppTemplateVersion,
+		Version:   version.LatestTemplateVersion(),
 	})
 
 	resourcesConfig, err := cf.getLastDeployedAppConfig(appConfig)
@@ -566,6 +691,17 @@ func (cf CloudFormation) deleteStackSetInstances(name string) error {
 		return err
 	}
 	return cf.appStackSet.WaitForOperation(name, opID)
+}
+
+func (cf CloudFormation) deleteStackSetInstance(name, account, region string) error {
+	opId, err := cf.appStackSet.DeleteInstance(name, account, region)
+	if err != nil {
+		if IsEmptyErr(err) {
+			return nil
+		}
+		return err
+	}
+	return cf.appStackSet.WaitForOperation(name, opId)
 }
 
 type renderStackSetInput struct {

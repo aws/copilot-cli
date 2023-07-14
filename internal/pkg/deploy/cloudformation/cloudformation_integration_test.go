@@ -31,6 +31,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
+	"github.com/aws/copilot-cli/internal/pkg/version"
 	"github.com/stretchr/testify/require"
 )
 
@@ -54,6 +55,7 @@ func Test_App_Infrastructure(t *testing.T) {
 	deployer := cloudformation.New(sess, cloudformation.WithProgressTracker(os.Stderr))
 	cfClient := awsCF.New(sess)
 	require.NoError(t, err)
+	version.Version = "v1.28.0"
 
 	t.Run("Deploys Application Admin Roles to CloudFormation and Creates StackSet", func(t *testing.T) {
 		app := config.Application{Name: randStringBytes(10), AccountID: callerInfo.Account}
@@ -85,7 +87,7 @@ func Test_App_Infrastructure(t *testing.T) {
 		err = deployer.DeployApp(&deploy.CreateAppInput{
 			Name:      app.Name,
 			AccountID: app.AccountID,
-			Version:   deploy.LatestAppTemplateVersion,
+			Version:   version.LatestTemplateVersion(),
 		})
 		require.NoError(t, err)
 
@@ -120,8 +122,8 @@ func Test_App_Infrastructure(t *testing.T) {
 					fmt.Sprintf("AdministrationRoleARN should be named {app}-adminrole but was %s", *output.OutputValue))
 			},
 			"TemplateVersion": func(output *awsCF.Output) {
-				require.Equal(t, *output.OutputValue, deploy.LatestAppTemplateVersion,
-					fmt.Sprintf("TemplateVersion should be %s but was %s", deploy.LatestAppTemplateVersion, *output.OutputValue))
+				require.Equal(t, *output.OutputValue, version.LatestTemplateVersion(),
+					fmt.Sprintf("TemplateVersion should be %s but was %s", version.LatestTemplateVersion(), *output.OutputValue))
 			},
 		}
 		require.True(t, len(deployedStack.Outputs) == len(expectedResultsForKey),
@@ -181,7 +183,7 @@ func Test_App_Infrastructure(t *testing.T) {
 		err = deployer.DeployApp(&deploy.CreateAppInput{
 			Name:      app.Name,
 			AccountID: app.AccountID,
-			Version:   deploy.LatestAppTemplateVersion,
+			Version:   version.LatestTemplateVersion(),
 		})
 		require.NoError(t, err)
 
@@ -256,8 +258,8 @@ func Test_App_Infrastructure(t *testing.T) {
 					"PipelineBucket should not be nil")
 			},
 			"TemplateVersion": func(output *awsCF.Output) {
-				require.Equal(t, *output.OutputValue, deploy.LatestAppTemplateVersion,
-					fmt.Sprintf("TemplateVersion should be %s but was %s", deploy.LatestAppTemplateVersion, *output.OutputValue))
+				require.Equal(t, *output.OutputValue, version.LatestTemplateVersion(),
+					fmt.Sprintf("TemplateVersion should be %s but was %s", version.LatestTemplateVersion(), *output.OutputValue))
 			},
 			"ECRRepomysvc": func(output *awsCF.Output) {
 				require.True(t,
@@ -338,7 +340,7 @@ func Test_App_Infrastructure(t *testing.T) {
 		err = deployer.DeployApp(&deploy.CreateAppInput{
 			Name:      app.Name,
 			AccountID: app.AccountID,
-			Version:   deploy.LatestAppTemplateVersion,
+			Version:   version.LatestTemplateVersion(),
 		})
 		require.NoError(t, err)
 
@@ -387,6 +389,7 @@ func Test_App_Infrastructure(t *testing.T) {
 // is failing to be spun up because you've reached some limits, try
 // switching your default region by running aws configure.
 func Test_Environment_Deployment_Integration(t *testing.T) {
+	version.Version = "v1.28.0"
 	sess, err := testSession(nil)
 	require.NoError(t, err)
 	deployer := cloudformation.New(sess, cloudformation.WithProgressTracker(os.Stderr))
@@ -407,7 +410,7 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 			Name:                appName,
 			AccountPrincipalARN: id.RootUserARN,
 		},
-		Version: deploy.LatestEnvTemplateVersion,
+		Version: version.LatestTemplateVersion(),
 	}
 	envStackName := fmt.Sprintf("%s-%s", environmentToDeploy.App.Name, environmentToDeploy.Name)
 

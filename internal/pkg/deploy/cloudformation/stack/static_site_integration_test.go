@@ -73,6 +73,7 @@ func TestStaticSiteService_TemplateAndParamsGeneration(t *testing.T) {
 				Manifest:    mft.(*manifest.StaticSite),
 				RuntimeConfig: stack.RuntimeConfig{
 					EnvVersion: "v1.42.0",
+					Version:    "v1.29.0",
 					Region:     "us-west-2",
 				},
 				ArtifactBucketName: "bucket",

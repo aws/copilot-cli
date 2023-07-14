@@ -7,12 +7,14 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"os"
+
 	awscfn "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/iam"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
 	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
-	"os"
+	"github.com/aws/copilot-cli/internal/pkg/version"
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
@@ -112,6 +114,10 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 	id := identity.New(defaultSess)
 	deployer := cloudformation.New(defaultSess, cloudformation.WithProgressTracker(os.Stderr))
 	iamClient := iam.New(defaultSess)
+	appVersionGetter, err := describe.NewAppDescriber(vars.appName)
+	if err != nil {
+		return nil, err
+	}
 	initAppCmd := &initAppOpts{
 		initAppVars: initAppVars{
 			name: vars.appName,
@@ -139,14 +145,15 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 			name:         defaultEnvironmentName,
 			isProduction: false,
 		},
-		store:       configStore,
-		appDeployer: deployer,
-		prog:        spin,
-		prompt:      prompt,
-		identity:    id,
-		appCFN:      cloudformation.New(defaultSess, cloudformation.WithProgressTracker(os.Stderr)),
-
-		sess: defaultSess,
+		store:            configStore,
+		appDeployer:      deployer,
+		prog:             spin,
+		prompt:           prompt,
+		identity:         id,
+		appVersionGetter: appVersionGetter,
+		appCFN:           cloudformation.New(defaultSess, cloudformation.WithProgressTracker(os.Stderr)),
+		sess:             defaultSess,
+		templateVersion:  version.LatestTemplateVersion(),
 	}
 	deployEnvCmd := &deployEnvOpts{
 		deployEnvVars: deployEnvVars{
@@ -158,6 +165,14 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		identity:        id,
 		fs:              fs,
 		newInterpolator: newManifestInterpolator,
+		newEnvVersionGetter: func(appName, envName string) (versionGetter, error) {
+			return describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
+				App:         appName,
+				Env:         envName,
+				ConfigStore: configStore,
+			})
+		},
+		templateVersion: version.LatestTemplateVersion(),
 	}
 	deploySvcCmd := &deploySvcOpts{
 		deployWkldVars: deployWkldVars{
@@ -173,6 +188,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		spinner:         spin,
 		cmd:             exec.NewCmd(),
 		sessProvider:    sessProvider,
+		templateVersion: version.LatestTemplateVersion(),
 	}
 	deploySvcCmd.newSvcDeployer = func() (workloadDeployer, error) {
 		return newSvcDeployer(deploySvcCmd)
@@ -188,6 +204,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		unmarshal:       manifest.UnmarshalWorkload,
 		cmd:             exec.NewCmd(),
 		sessProvider:    sessProvider,
+		templateVersion: version.LatestTemplateVersion(),
 	}
 	deployJobCmd.newJobDeployer = func() (workloadDeployer, error) {
 		return newJobDeployer(deployJobCmd)
@@ -256,16 +273,20 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 				opts := initJobOpts{
 					initJobVars: jobVars,
 
-					fs:                fs,
-					store:             configStore,
-					dockerfileSel:     dfSel,
-					scheduleSelector:  selector.NewStaticSelector(prompt),
-					prompt:            prompt,
+					fs:               fs,
+					store:            configStore,
+					dockerfileSel:    dfSel,
+					scheduleSelector: selector.NewStaticSelector(prompt),
+					prompt:           prompt,
+					newAppVersionGetter: func(appName string) (versionGetter, error) {
+						return describe.NewAppDescriber(appName)
+					},
 					dockerEngine:      dockerengine.New(cmd),
 					wsPendingCreation: true,
 					initParser: func(s string) dockerfileParser {
 						return dockerfile.New(fs, s)
 					},
+					templateVersion: version.LatestTemplateVersion(),
 					initEnvDescriber: func(appName string, envName string) (envDescriber, error) {
 						envDescriber, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
 							App:         appName,
@@ -273,7 +294,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 							ConfigStore: configStore,
 						})
 						if err != nil {
-							return nil, fmt.Errorf("initiate env describer: %w", err)
+							return nil, err
 						}
 						return envDescriber, nil
 					},
@@ -290,13 +311,17 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 				opts := initSvcOpts{
 					initSvcVars: svcVars,
 
-					fs:                fs,
-					sel:               dfSel,
-					store:             configStore,
-					topicSel:          snsSel,
-					prompt:            prompt,
+					fs:       fs,
+					sel:      dfSel,
+					store:    configStore,
+					topicSel: snsSel,
+					prompt:   prompt,
+					newAppVersionGetter: func(appName string) (versionGetter, error) {
+						return describe.NewAppDescriber(appName)
+					},
 					dockerEngine:      dockerengine.New(cmd),
 					wsPendingCreation: true,
+					templateVersion:   version.LatestTemplateVersion(),
 				}
 				opts.dockerfile = func(path string) dockerfileParser {
 					if opts.df != nil {
@@ -312,7 +337,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 						ConfigStore: opts.store,
 					})
 					if err != nil {
-						return nil, fmt.Errorf("initiate env describer: %w", err)
+						return nil, err
 					}
 					return envDescriber, nil
 				}

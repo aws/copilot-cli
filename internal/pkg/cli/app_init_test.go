@@ -13,6 +13,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/version"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -668,7 +669,7 @@ func TestInitAppOpts_Execute(t *testing.T) {
 					AdditionalTags: map[string]string{
 						"owner": "boss",
 					},
-					Version:             deploy.LatestAppTemplateVersion,
+					Version:             version.LatestTemplateVersion(),
 					PermissionsBoundary: "mockPolicy",
 				}).Return(nil)
 			},

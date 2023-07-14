@@ -5,6 +5,7 @@ package manifest
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"os"
 	"regexp"
@@ -72,7 +73,21 @@ func (i *Interpolator) applyInterpolation(node *yaml.Node) error {
 		if err != nil {
 			return err
 		}
-		node.Value = interpolated
+		var s []string
+		if err = json.Unmarshal([]byte(interpolated), &s); err == nil && len(s) != 0 {
+			seqNode := &yaml.Node{
+				Kind: yaml.SequenceNode,
+			}
+			for _, value := range s {
+				seqNode.Content = append(seqNode.Content, &yaml.Node{
+					Kind:  yaml.ScalarNode,
+					Value: value,
+				})
+			}
+			*node = *seqNode
+		} else {
+			node.Value = interpolated
+		}
 	default:
 		for _, content := range node.Content {
 			if err := i.applyInterpolation(content); err != nil {

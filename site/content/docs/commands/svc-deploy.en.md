@@ -21,6 +21,7 @@ The steps involved in service deploy are:
 ```
   -a, --app string                     Name of the application.
       --diff                           Compares the generated CloudFormation template to the deployed stack.
+      --diff-yes                       Skip interactive approval of diff before deploying.
   -e, --env string                     Name of the environment.
       --force                          Optional. Force a new service deployment using the existing image.
   -h, --help                           help for deploy

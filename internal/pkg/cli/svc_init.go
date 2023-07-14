@@ -15,6 +15,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
+	"github.com/aws/copilot-cli/internal/pkg/version"
 	"github.com/dustin/go-humanize/english"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -118,14 +119,15 @@ var serviceTypeHints = map[string]string{
 }
 
 type initWkldVars struct {
-	appName        string
-	wkldType       string
-	name           string
-	dockerfilePath string
-	image          string
-	subscriptions  []string
-	noSubscribe    bool
-	sourcePaths    []string
+	appName           string
+	wkldType          string
+	name              string
+	dockerfilePath    string
+	image             string
+	subscriptions     []string
+	noSubscribe       bool
+	sourcePaths       []string
+	allowAppDowngrade bool
 }
 
 type initSvcVars struct {
@@ -165,10 +167,12 @@ type initSvcOpts struct {
 	additionalFoundPort uint16 // For logging a personalized recommended action with multiple ports.
 	wsRoot              string
 
-	// Init a Dockerfile parser using fs and input path
-	dockerfile func(string) dockerfileParser
-	// Init a new EnvDescriber using environment name and app name.
-	initEnvDescriber func(string, string) (envDescriber, error)
+	dockerfile          func(path string) dockerfileParser
+	initEnvDescriber    func(appName, envName string) (envDescriber, error)
+	newAppVersionGetter func(appName string) (versionGetter, error)
+
+	// Overridden in tests.
+	templateVersion string
 }
 
 func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
@@ -204,20 +208,34 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 	if err != nil {
 		return nil, fmt.Errorf("init a new local file selector: %w", err)
 	}
-
 	opts := &initSvcOpts{
-		initSvcVars:  vars,
-		store:        store,
-		fs:           fs,
-		init:         initSvc,
-		prompt:       prompter,
-		sel:          dfSel,
-		topicSel:     snsSel,
-		sourceSel:    sourceSel,
-		mftReader:    ws,
-		dockerEngine: dockerengine.New(exec.NewCmd()),
-		wsAppName:    tryReadingAppName(),
-		wsRoot:       ws.ProjectRoot(),
+		initSvcVars: vars,
+		store:       store,
+		fs:          fs,
+		init:        initSvc,
+		prompt:      prompter,
+		sel:         dfSel,
+		topicSel:    snsSel,
+		sourceSel:   sourceSel,
+		mftReader:   ws,
+		newAppVersionGetter: func(appName string) (versionGetter, error) {
+			return describe.NewAppDescriber(appName)
+		},
+		initEnvDescriber: func(appName string, envName string) (envDescriber, error) {
+			envDescriber, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
+				App:         appName,
+				Env:         envName,
+				ConfigStore: store,
+			})
+			if err != nil {
+				return nil, err
+			}
+			return envDescriber, nil
+		},
+		dockerEngine:    dockerengine.New(exec.NewCmd()),
+		wsAppName:       tryReadingAppName(),
+		wsRoot:          ws.ProjectRoot(),
+		templateVersion: version.LatestTemplateVersion(),
 	}
 	opts.dockerfile = func(path string) dockerfileParser {
 		if opts.df != nil {
@@ -225,17 +243,6 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 		}
 		opts.df = dockerfile.New(opts.fs, opts.dockerfilePath)
 		return opts.df
-	}
-	opts.initEnvDescriber = func(appName string, envName string) (envDescriber, error) {
-		envDescriber, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
-			App:         appName,
-			Env:         envName,
-			ConfigStore: opts.store,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("initiate env describer: %w", err)
-		}
-		return envDescriber, nil
 	}
 	return opts, nil
 }
@@ -355,6 +362,15 @@ func (o *initSvcOpts) Ask() error {
 
 // Execute writes the service's manifest file and stores the service in SSM.
 func (o *initSvcOpts) Execute() error {
+	if !o.allowAppDowngrade {
+		appVersionGetter, err := o.newAppVersionGetter(o.appName)
+		if err != nil {
+			return err
+		}
+		if err := validateAppVersion(appVersionGetter, o.appName, o.templateVersion); err != nil {
+			return err
+		}
+	}
 	// Check for a valid healthcheck and add it to the opts.
 	var hc manifest.ContainerHealthCheck
 	var err error
@@ -928,6 +944,7 @@ This command is also run as part of "copilot init".`,
 	cmd.Flags().BoolVar(&vars.noSubscribe, noSubscriptionFlag, false, noSubscriptionFlagDescription)
 	cmd.Flags().StringVar(&vars.ingressType, ingressTypeFlag, "", ingressTypeFlagDescription)
 	cmd.Flags().StringArrayVar(&vars.sourcePaths, sourcesFlag, nil, sourcesFlagDescription)
+	cmd.Flags().BoolVar(&vars.allowAppDowngrade, allowDowngradeFlag, false, allowDowngradeFlagDescription)
 
 	return cmd
 }

@@ -93,9 +93,10 @@ func NewLBWebServiceDescriber(opt NewServiceConfig) (*LBWebServiceDescriber, err
 		}
 		svcDescr, err := newECSServiceDescriber(NewServiceConfig{
 			App:         opt.App,
+			Env:         env,
 			Svc:         opt.Svc,
 			ConfigStore: opt.ConfigStore,
-		}, env)
+		})
 		if err != nil {
 			return nil, err
 		}
@@ -309,7 +310,7 @@ func (w *webSvcDesc) HumanString() string {
 		fmt.Fprintf(writer, "  %s\t%s\n", route.Environment, route.URL)
 	}
 	if len(w.ServiceConnect) > 0 || len(w.ServiceDiscovery) > 0 {
-		fmt.Fprint(writer, color.Bold.Sprint("\nInternal Service Endpoint\n\n"))
+		fmt.Fprint(writer, color.Bold.Sprint("\nInternal Service Endpoints\n\n"))
 		writer.Flush()
 		endpoints := serviceEndpoints{
 			discoveries: w.ServiceDiscovery,

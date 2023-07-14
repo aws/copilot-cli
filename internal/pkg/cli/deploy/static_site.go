@@ -11,7 +11,6 @@ import (
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
-	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/asset"
@@ -20,6 +19,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/template"
+	"github.com/aws/copilot-cli/internal/pkg/version"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/spf13/afero"
 )
@@ -36,7 +36,8 @@ type staticSiteDeployer struct {
 	staticSiteMft    *manifest.StaticSite
 	fs               afero.Fs
 	uploader         fileUploader
-	newStack         func(*stack.StaticSiteConfig) (*stack.StaticSite, error)
+	newStack         func(*stack.StaticSiteConfig) (cloudformation.StackConfiguration, error)
+
 	// cached.
 	wsRoot string
 }
@@ -74,8 +75,10 @@ func NewStaticSiteDeployer(in *WorkloadDeployerInput) (*staticSiteDeployer, erro
 				return err
 			},
 		},
-		wsRoot:   ws.ProjectRoot(),
-		newStack: stack.NewStaticSite,
+		wsRoot: ws.ProjectRoot(),
+		newStack: func(config *stack.StaticSiteConfig) (cloudformation.StackConfiguration, error) {
+			return stack.NewStaticSite(config)
+		},
 	}, nil
 }
 
@@ -157,7 +160,7 @@ func (d *staticSiteDeployer) stackConfiguration(in *StackRuntimeConfiguration) (
 	if err := d.validateAlias(); err != nil {
 		return nil, err
 	}
-	if err := validateMinAppVersion(d.app.Name, d.name, d.appVersionGetter, deploy.StaticSiteMinAppTemplateVersion); err != nil {
+	if err := validateMinAppVersion(d.app.Name, d.name, d.appVersionGetter, version.AppTemplateMinStaticSite); err != nil {
 		return nil, fmt.Errorf("static sites not supported: %w", err)
 	}
 	conf, err := d.newStack(&stack.StaticSiteConfig{
