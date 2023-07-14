@@ -26,6 +26,15 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 )
 
+type errNoRegionalResources struct {
+	appName string
+	region  string
+}
+
+func (e *errNoRegionalResources) Error() string {
+	return fmt.Sprintf("no regional resources for application %s in region %s found", e.appName, e.region)
+}
+
 // DeployApp sets up everything required for our application-wide resources.
 // These resources include things that are regional, rather than scoped to a particular
 // environment, such as ECR Repos, CodePipeline KMS keys & S3 buckets.
@@ -230,7 +239,7 @@ func (cf CloudFormation) GetAppResourcesByRegion(app *config.Application, region
 		return nil, fmt.Errorf("describing application resources: %w", err)
 	}
 	if len(resources) == 0 {
-		return nil, fmt.Errorf("no regional resources for application %s in region %s found", app.Name, region)
+		return nil, &errNoRegionalResources{app.Name, region}
 	}
 
 	return resources[0], nil
@@ -410,22 +419,9 @@ func (cf CloudFormation) RemoveEnvFromApp(opts *RemoveEnvFromAppOpts) error {
 	})
 
 	if !regionHasOtherEnvs {
-		// empty s3 bucket and ECR repositories
-		resources, err := cf.GetAppResourcesByRegion(opts.App, opts.EnvToDelete.Region)
-		if err != nil {
+		if err := cf.cleanUpRegionalResources(opts.App, opts.EnvToDelete.Region); err != nil {
 			return err
 		}
-		s3 := cf.regionalS3Client(opts.EnvToDelete.Region)
-		if err := s3.EmptyBucket(resources.S3Bucket); err != nil {
-			return err
-		}
-		ecr := cf.regionalECRClient(opts.EnvToDelete.Region)
-		for repo := range resources.RepositoryURLs {
-			if err := ecr.ClearRepository(repo); err != nil {
-				return err
-			}
-		}
-
 		if err := cf.deleteStackSetInstance(appConfig.StackSetName(), opts.EnvToDelete.AccountID, opts.EnvToDelete.Region); err != nil {
 			return err
 		}
@@ -435,6 +431,31 @@ func (cf CloudFormation) RemoveEnvFromApp(opts *RemoveEnvFromAppOpts) error {
 		return cf.removeDNSDelegationAndCrossAccountAccess(appConfig, opts.EnvToDelete.AccountID)
 	}
 
+	return nil
+}
+
+// cleanUpRegionalResources checks for existing regional resources and optionally empties ECR Repos and S3 buckets.
+// If there are no regional resources in that region (i.e. a delete call has already been made) it returns nil.
+func (cf CloudFormation) cleanUpRegionalResources(app *config.Application, region string) error {
+	resources, err := cf.GetAppResourcesByRegion(app, region)
+	if err != nil {
+		// Return early for idempotency if resources not found.
+		var errNotFound *errNoRegionalResources
+		if errors.As(err, &errNotFound) {
+			return nil
+		}
+		return err
+	}
+	s3 := cf.regionalS3Client(region)
+	if err := s3.EmptyBucket(resources.S3Bucket); err != nil {
+		return err
+	}
+	ecr := cf.regionalECRClient(region)
+	for repo := range resources.RepositoryURLs {
+		if err := ecr.ClearRepository(repo); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
