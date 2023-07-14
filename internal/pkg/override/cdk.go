@@ -45,7 +45,6 @@ type CDKOpts struct {
 	EnvVars    map[string]string                           // Environment variables key value pairs to pass to the "cdk synth" command.
 	LookPathFn func(executable string) (string, error)     // Search for the executable under $PATH. Defaults to exec.LookPath.
 	CommandFn  func(name string, args ...string) *exec.Cmd // Create a new executable command. Defaults to exec.Command rooted at the overrides/ dir.
-	FindFn     func(startDir string, maxLevels int, matchFn workspace.TraverseUpProcessFn) (string, error)
 }
 
 // WithCDK instantiates a new CDK Overrider with root being the path to the overrides/ directory.
@@ -79,10 +78,6 @@ func WithCDK(root string, opts CDKOpts) *CDK {
 	if opts.CommandFn != nil {
 		cmdFn = opts.CommandFn
 	}
-	findFn := workspace.TraverseUp
-	if opts.FindFn != nil {
-		findFn = opts.FindFn
-	}
 	return &CDK{
 		rootAbsPath: root,
 		execWriter:  writer,
@@ -94,7 +89,7 @@ func WithCDK(root string, opts CDKOpts) *CDK {
 		}{
 			LookPath: lookPathFn,
 			Command:  cmdFn,
-			Find:     findFn,
+			Find:     workspace.TraverseUp,
 		},
 	}
 }

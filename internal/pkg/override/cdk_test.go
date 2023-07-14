@@ -47,10 +47,10 @@ look up "yarn": exec: "yarn": executable file not found in $PATH`)
 			LookPathFn: func(file string) (string, error) {
 				return "/bin/npm", nil
 			},
-			FindFn: func(_ string, _ int, _ workspace.TraverseUpProcessFn) (string, error) {
-				return "", errors.New("some error")
-			},
 		})
+		cdk.exec.Find = func(_ string, _ int, _ workspace.TraverseUpProcessFn) (string, error) {
+			return "", errors.New("some error")
+		}
 
 		// WHEN
 		_, err := cdk.Override(nil)
