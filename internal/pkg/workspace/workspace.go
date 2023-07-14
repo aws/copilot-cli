@@ -66,10 +66,9 @@ var ErrTraverseUpShouldStop = errors.New("should stop")
 // If TraverseUpProcessFn returns a nil error, TraverseUp will keep traversing up the directory tree.
 type TraverseUpProcessFn func(dir string) (result string, err error)
 
-// TraverseUp traverses at most `maxLevels` up from the starting directory, invoke process at each level, and returns
-// the value that it gets from process upon receiving an ErrTraverseUpShouldStop signal.
-// If process returns a non-nil error that is not ErrTraverseUpShouldStop, then TraverseUp will return the error as is.
-// If after traversing up `maxLevels`, it still hasn't received a ErrTraverseUpShouldStop signal, it will return ErrTargetNotFound.g
+// TraverseUp traverses at most `maxLevels` up from the starting directory, invoke TraverseUpProcessFn at each level,
+// and returns the value that it gets TraverseUpProcessFn process upon receiving an ErrTraverseUpShouldStop signal.
+// If after traversing up `maxLevels`, it still hasn't received a ErrTraverseUpShouldStop signal, it will return ErrTargetNotFound.
 func TraverseUp(startDir string, maxLevels int, process TraverseUpProcessFn) (string, error) {
 	searchingDir := startDir
 	for try := 0; try < maxLevels; try++ {
