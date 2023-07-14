@@ -10,7 +10,7 @@ import (
 type errPackageManagerUnavailable struct{}
 
 func (err *errPackageManagerUnavailable) Error() string {
-	return fmt.Sprintf("cannot find a JavaScript package manager to override with the Cloud Development Kit")
+	return "cannot find a JavaScript package manager to override with the Cloud Development Kit"
 }
 
 // RecommendActions implements the cli.actionRecommender interface.
