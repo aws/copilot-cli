@@ -112,26 +112,52 @@ func (ss *StackSet) UpdateAndWait(name, template string, opts ...CreateOrUpdateO
 	return ss.WaitForOperation(name, id)
 }
 
+func (ss *StackSet) getInstanceSummaries(name string) ([]InstanceSummary, error) {
+	summaries, err := ss.InstanceSummaries(name)
+	if err != nil {
+		// If the stack set doesn't exist - just move on.
+		if isNotFoundStackSet(errors.Unwrap(err)) {
+			return nil, &ErrStackSetNotFound{
+				name: name,
+			}
+		}
+		return nil, err
+	}
+
+	if len(summaries) == 0 {
+		return nil, &ErrStackSetInstancesNotFound{
+			name: name,
+		}
+	}
+	return summaries, nil
+}
+
+// DeleteInstance deletes the stackset instance for the stackset with the given name in the given account
+// and region and returns the operation ID.
+// If there is no instance in the given account and region, this function will return an operation ID
+// but the API call will take no action.
+func (ss *StackSet) DeleteInstance(name, account, region string) (string, error) {
+	out, err := ss.client.DeleteStackInstances(&cloudformation.DeleteStackInstancesInput{
+		StackSetName: aws.String(name),
+		Accounts:     aws.StringSlice([]string{account}),
+		Regions:      aws.StringSlice([]string{region}),
+		RetainStacks: aws.Bool(false),
+	})
+	if err != nil {
+		return "", fmt.Errorf("delete stack instance in region %v for account %v for stackset %s: %w",
+			region, account, name, err)
+	}
+	return aws.StringValue(out.OperationId), nil
+}
+
 // DeleteAllInstances removes all stack instances from a stack set and returns the operation ID.
 // If the stack set does not exist, then return [ErrStackSetNotFound].
 // If the stack set does not have any instances, then return [ErrStackSetInstancesNotFound].
 // Both errors should satisfy [IsEmptyStackSetErr], otherwise it's an unexpected error.
 func (ss *StackSet) DeleteAllInstances(name string) (string, error) {
-	summaries, err := ss.InstanceSummaries(name)
+	summaries, err := ss.getInstanceSummaries(name)
 	if err != nil {
-		// If the stack set doesn't exist - just move on.
-		if isNotFoundStackSet(errors.Unwrap(err)) {
-			return "", &ErrStackSetNotFound{
-				name: name,
-			}
-		}
 		return "", err
-	}
-
-	if len(summaries) == 0 {
-		return "", &ErrStackSetInstancesNotFound{
-			name: name,
-		}
 	}
 
 	// We want to delete all the stack instances, so we create a set of account IDs and regions.
