@@ -25,17 +25,46 @@ type localRunAskMocks struct {
 
 func TestLocalRunOpts_Validate(t *testing.T) {
 	testCases := map[string]struct {
-		wantedError error
+		inputAppName  string
+		setupMocks    func(m *localRunAskMocks)
+		wantedAppName string
+		wantedError   error
 	}{
 		"no app in workspace": {
 			wantedError: errNoAppInWorkspace,
+		},
+		"fail to read the application from SSM store": {
+			inputAppName: "testApp",
+			setupMocks: func(m *localRunAskMocks) {
+				m.store.EXPECT().GetApplication("testApp").Return(nil, testError)
+			},
+			wantedError: fmt.Errorf("get application testApp: %w", testError),
+		},
+		"successful validation": {
+			inputAppName: "testApp",
+			setupMocks: func(m *localRunAskMocks) {
+				m.store.EXPECT().GetApplication("testApp").Return(&config.Application{Name: "testApp"}, nil)
+			},
+			wantedAppName: "testApp",
 		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
-			opts := localRunOpts{}
-
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			m := &localRunAskMocks{
+				store: mocks.NewMockstore(ctrl),
+			}
+			if tc.setupMocks != nil {
+				tc.setupMocks(m)
+			}
+			opts := localRunOpts{
+				localRunVars: localRunVars{
+					appName: tc.inputAppName,
+				},
+				store: m.store,
+			}
 			// WHEN
 			err := opts.Validate()
 
@@ -62,7 +91,7 @@ func TestLocalRunOpts_Ask(t *testing.T) {
 		inputWkldName string
 
 		setupMocks     func(m *localRunAskMocks)
-		mockEnvChecker func(ctrl *gomock.Controller) versionGetter
+		mockEnvChecker func(ctrl *gomock.Controller) versionCompatibilityChecker
 		wantedWkldName string
 		wantedEnvName  string
 		wantedError    error
@@ -72,7 +101,7 @@ func TestLocalRunOpts_Ask(t *testing.T) {
 			setupMocks: func(m *localRunAskMocks) {
 				m.ws.EXPECT().ListWorkloads().Return([]string{}, testError)
 			},
-			wantedError: fmt.Errorf("list workloads in the workspace %s : %w", testAppName, testError),
+			wantedError: fmt.Errorf("list workloads in the workspace %s: %w", testAppName, testError),
 		},
 		"error while returning list of environments a workload is deployed in": {
 			inputAppName: testAppName,
@@ -145,7 +174,7 @@ func TestLocalRunOpts_Ask(t *testing.T) {
 				m.prompt.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("", testError)
 
 			},
-			wantedError: fmt.Errorf("select Workload: %w", testError),
+			wantedError: fmt.Errorf("select a Workload: %w", testError),
 		},
 		"validate if flags are provided": {
 			inputAppName:  testAppName,
@@ -158,7 +187,7 @@ func TestLocalRunOpts_Ask(t *testing.T) {
 					Name: "testWkld",
 				}, nil)
 			},
-			mockEnvChecker: func(ctrl *gomock.Controller) versionGetter {
+			mockEnvChecker: func(ctrl *gomock.Controller) versionCompatibilityChecker {
 				m := mocks.NewMockversionCompatibilityChecker(ctrl)
 				m.EXPECT().Version().Return("v1.12.1", nil)
 				return m
@@ -191,7 +220,7 @@ func TestLocalRunOpts_Ask(t *testing.T) {
 				m.deployStore.EXPECT().ListEnvironmentsDeployedTo(testAppName, testWkldName).Return([]string{"testEnv"}, nil).Times(2)
 				m.ws.EXPECT().ListWorkloads().Return([]string{"testWkld"}, nil)
 			},
-			mockEnvChecker: func(ctrl *gomock.Controller) versionGetter {
+			mockEnvChecker: func(ctrl *gomock.Controller) versionCompatibilityChecker {
 				m := mocks.NewMockversionCompatibilityChecker(ctrl)
 				m.EXPECT().Version().Return("v1.12.1", nil)
 				return m
@@ -206,7 +235,7 @@ func TestLocalRunOpts_Ask(t *testing.T) {
 				m.deployStore.EXPECT().ListEnvironmentsDeployedTo(testAppName, testWkldName).Return([]string{"testEnv"}, nil).Times(2)
 				m.ws.EXPECT().ListWorkloads().Return([]string{"testWkld"}, nil)
 			},
-			mockEnvChecker: func(ctrl *gomock.Controller) versionGetter {
+			mockEnvChecker: func(ctrl *gomock.Controller) versionCompatibilityChecker {
 				m := mocks.NewMockversionCompatibilityChecker(ctrl)
 				m.EXPECT().Version().Return("bootstrap", nil)
 				return m
