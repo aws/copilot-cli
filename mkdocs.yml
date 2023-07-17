@@ -57,9 +57,9 @@ nav:
       - Custom Environment Resources: docs/developing/custom-environment-resources.en.md
       - Domain: docs/developing/domain.en.md
       - Extend Copilot with Overrides:
-          - YAML Patch Overrides: docs/developing/overrides/yamlpatch.md
-          - CDK Overrides: docs/developing/overrides/cdk.md
-          - Task Definition Overrides: docs/developing/overrides/taskdef-overrides.md
+        - YAML Patch Overrides: docs/developing/overrides/yamlpatch.md
+        - CDK Overrides: docs/developing/overrides/cdk.md
+        - Task Definition Overrides: docs/developing/overrides/taskdef-overrides.md
       - Internal Load Balancers: docs/developing/internal-albs.en.md
       - Manifest Environment Variables: docs/developing/manifest-env-var.en.md
       - Observability: docs/developing/observability.en.md
@@ -77,7 +77,7 @@ nav:
         - app upgrade: docs/commands/app-upgrade.en.md
         - app delete: docs/commands/app-delete.en.md
         - env init: docs/commands/env-init.en.md
-        - env override: docs/commands/env-override.md
+        - env override: docs/commands/env-override.en.md
         - env package: docs/commands/env-package.en.md
         - env delete: docs/commands/env-delete.en.md
         - job init: docs/commands/job-init.en.md
@@ -85,7 +85,7 @@ nav:
         - job package: docs/commands/job-package.en.md
         - job delete: docs/commands/job-delete.en.md
         - svc init: docs/commands/svc-init.en.md
-        - svc override: docs/commands/svc-override.md
+        - svc override: docs/commands/svc-override.en.md
         - svc package: docs/commands/svc-package.en.md
         - svc delete: docs/commands/svc-delete.en.md
       - Release:
@@ -94,6 +94,7 @@ nav:
         - pipeline init: docs/commands/pipeline-init.en.md
         - pipeline deploy: docs/commands/pipeline-deploy.en.md
         - pipeline ls: docs/commands/pipeline-ls.en.md
+        - pipeline override: docs/commands/pipeline-override.en.md
         - pipeline show: docs/commands/pipeline-show.en.md
         - pipeline status: docs/commands/pipeline-status.en.md
         - pipeline delete: docs/commands/pipeline-delete.en.md
@@ -134,7 +135,7 @@ nav:
         - env deploy: docs/commands/env-deploy.en.md
         - env init: docs/commands/env-init.en.md
         - env ls: docs/commands/env-ls.en.md
-        - env override: docs/commands/env-override.md
+        - env override: docs/commands/env-override.en.md
         - env package: docs/commands/env-package.en.md
         - env show: docs/commands/env-show.en.md
         - init: docs/commands/init.en.md
@@ -150,6 +151,7 @@ nav:
         - pipeline deploy: docs/commands/pipeline-deploy.en.md
         - pipeline init: docs/commands/pipeline-init.en.md
         - pipeline ls: docs/commands/pipeline-ls.en.md
+        - pipeline override: docs/commands/pipeline-override.en.md
         - pipeline show: docs/commands/pipeline-show.en.md
         - pipeline status: docs/commands/pipeline-status.en.md
         - secret init: docs/commands/secret-init.en.md
@@ -160,7 +162,7 @@ nav:
         - svc init: docs/commands/svc-init.en.md
         - svc logs: docs/commands/svc-logs.en.md
         - svc ls: docs/commands/svc-ls.en.md
-        - svc override: docs/commands/svc-override.md
+        - svc override: docs/commands/svc-override.en.md
         - svc package: docs/commands/svc-package.en.md
         - svc show: docs/commands/svc-show.en.md
         - svc status: docs/commands/svc-status.en.md
@@ -219,20 +221,20 @@ markdown_extensions:
           - site/overrides/.icons
 
 plugins:
-    - search
-    - redirects:
-        redirect_maps:
-            'docs/installing.md': 'docs/getting-started/install.en.md'
-            'docs/getting-started.md': 'docs/getting-started/first-app-tutorial.en.md'
-            'docs/commands/pipeline-update.md': 'docs/commands/pipeline-deploy.en.md'
-            'docs/developing/additional-aws-resources.md': 'docs/developing/addons/workload.en.md'
-            'docs/developing/service-discovery.md': 'docs/developing/svc-to-svc-communication.en.md'
-            'docs/developing/taskdef-overrides.md': 'docs/developing/overrides/taskdef-overrides.md'
-    - i18n:
-        default_language: en
-        languages:
-          en: english
-          ja: japanese
-        material_alternate: false
-    - macros:
-        include_dir: site/content/docs/include
+  - search
+  - redirects:
+      redirect_maps:
+        'docs/installing.md': 'docs/getting-started/install.en.md'
+        'docs/getting-started.md': 'docs/getting-started/first-app-tutorial.en.md'
+        'docs/commands/pipeline-update.md': 'docs/commands/pipeline-deploy.en.md'
+        'docs/developing/additional-aws-resources.md': 'docs/developing/addons/workload.en.md'
+        'docs/developing/service-discovery.md': 'docs/developing/svc-to-svc-communication.en.md'
+        'docs/developing/taskdef-overrides.md': 'docs/developing/overrides/taskdef-overrides.md'
+  - i18n:
+      default_language: en
+      languages:
+        en: english
+        ja: japanese
+      material_alternate: false
+  - macros:
+      include_dir: site/content/docs/include

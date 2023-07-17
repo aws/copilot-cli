@@ -57,6 +57,36 @@ const (
 	buildspecFileName         = "buildspec.yml"
 )
 
+// ErrTraverseUpShouldStop signals that TraverseUp should stop.
+var ErrTraverseUpShouldStop = errors.New("should stop")
+
+// TraverseUpProcessFn represents a function that TraverseUp invokes at each level of traversal.
+// If TraverseUpProcessFn returns an ErrTraverseUpShouldStop, TraverseUp will stop traversing, return the result and a nil error.
+// If TraverseUpProcessFn returns some other error, TraverseUp will stop traversing, return an empty string and the error.
+// If TraverseUpProcessFn returns a nil error, TraverseUp will keep traversing up the directory tree.
+type TraverseUpProcessFn func(dir string) (result string, err error)
+
+// TraverseUp traverses at most `maxLevels` up from the starting directory, invoke TraverseUpProcessFn at each level,
+// and returns the value that it gets TraverseUpProcessFn process upon receiving an ErrTraverseUpShouldStop signal.
+// If after traversing up `maxLevels`, it still hasn't received a ErrTraverseUpShouldStop signal, it will return ErrTargetNotFound.
+func TraverseUp(startDir string, maxLevels int, process TraverseUpProcessFn) (string, error) {
+	searchingDir := startDir
+	for try := 0; try < maxLevels; try++ {
+		result, err := process(searchingDir)
+		if errors.Is(err, ErrTraverseUpShouldStop) {
+			return result, nil
+		}
+		if err != nil {
+			return "", err
+		}
+		searchingDir = filepath.Dir(searchingDir)
+	}
+	return "", &ErrTargetNotFound{
+		startDir:              startDir,
+		numberOfLevelsChecked: maxLevels,
+	}
+}
+
 // Summary is a description of what's associated with this workspace.
 type Summary struct {
 	Application string `yaml:"application"` // Name of the application.
@@ -614,23 +644,28 @@ func (ws *Workspace) copilotDirPath() (string, error) {
 	//
 	// Keep on searching the parent directories for that copilot directory (though only
 	// up to a finite limit, to avoid infinite recursion!)
-	searchingDir := ws.workingDirAbs
-	for try := 0; try < maximumParentDirsToSearch; try++ {
-		currentDirectoryPath := filepath.Join(searchingDir, CopilotDirName)
-		inCurrentDirPath, err := ws.fs.DirExists(currentDirectoryPath)
+	path, err := TraverseUp(ws.workingDirAbs, maximumParentDirsToSearch, func(dir string) (string, error) {
+		path := filepath.Join(dir, CopilotDirName)
+		exists, err := ws.fs.DirExists(path)
 		if err != nil {
 			return "", err
 		}
-		if inCurrentDirPath {
-			return currentDirectoryPath, nil
+		if exists {
+			return path, ErrTraverseUpShouldStop
 		}
-		searchingDir = filepath.Dir(searchingDir)
+		return "", nil
+	})
+	if err == nil {
+		return path, nil
 	}
-	return "", &ErrWorkspaceNotFound{
-		CurrentDirectory:      ws.workingDirAbs,
-		ManifestDirectoryName: CopilotDirName,
-		NumberOfLevelsChecked: maximumParentDirsToSearch,
+	var targetNotFoundErr *ErrTargetNotFound
+	if errors.As(err, &targetNotFoundErr) {
+		return "", &ErrWorkspaceNotFound{
+			ErrTargetNotFound: targetNotFoundErr,
+			target:            CopilotDirName,
+		}
 	}
+	return "", err
 }
 
 // write flushes the data to a file under the copilot directory joined by path elements.
