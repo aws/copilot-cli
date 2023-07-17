@@ -187,6 +187,7 @@ type CloudFormation struct {
 	regionalClient    func(region string) cfnClient
 	appStackSet       stackSetClient
 	s3Client          s3Client
+	regionalS3Client  func(region string) s3Client
 	regionalECRClient func(region string) imageRemover
 	region            string
 	console           progress.FileWriter
@@ -219,8 +220,13 @@ func New(sess *session.Session, opts ...OptFn) CloudFormation {
 		},
 		appStackSet: stackset.New(sess),
 		s3Client:    s3.New(sess),
-		region:      aws.StringValue(sess.Config.Region),
-		console:     new(discardFile),
+		regionalS3Client: func(region string) s3Client {
+			return s3.New(sess.Copy(&aws.Config{
+				Region: aws.String(region),
+			}))
+		},
+		region:  aws.StringValue(sess.Config.Region),
+		console: new(discardFile),
 	}
 	for _, opt := range opts {
 		opt(&client)
