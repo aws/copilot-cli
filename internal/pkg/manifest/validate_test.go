@@ -1809,7 +1809,7 @@ func TestNetworkLoadBalancerConfiguration_validate(t *testing.T) {
 				},
 			},
 			wantedErrorMsgPrefix: `validate "nlb": `,
-			wantedError:          fmt.Errorf(`validate "port": invalid protocol tps; valid protocols include TCP and TLS`),
+			wantedError:          fmt.Errorf(`validate "port": invalid protocol tps; valid protocols include TCP, UDP and TLS`),
 		},
 		"fail if protocol is not recognized in additional listeners": {
 			nlb: NetworkLoadBalancerConfiguration{
@@ -1823,7 +1823,7 @@ func TestNetworkLoadBalancerConfiguration_validate(t *testing.T) {
 				},
 			},
 			wantedErrorMsgPrefix: `validate "nlb": `,
-			wantedError:          fmt.Errorf(`validate "additional_listeners[0]": validate "port": invalid protocol tps; valid protocols include TCP and TLS`),
+			wantedError:          fmt.Errorf(`validate "additional_listeners[0]": validate "port": invalid protocol tps; valid protocols include TCP, UDP and TLS`),
 		},
 		"success if tcp": {
 			nlb: NetworkLoadBalancerConfiguration{
@@ -1832,15 +1832,14 @@ func TestNetworkLoadBalancerConfiguration_validate(t *testing.T) {
 				},
 			},
 		},
-		"error if udp": {
+		"success if udp": {
 			nlb: NetworkLoadBalancerConfiguration{
 				Listener: NetworkLoadBalancerListener{
 					Port: aws.String("161/udp"),
 				},
 			},
-			wantedError: fmt.Errorf(`validate "port": invalid protocol udp; valid protocols include TCP and TLS`),
 		},
-		"error if udp in additional listeners": {
+		"success if udp in additional listeners": {
 			nlb: NetworkLoadBalancerConfiguration{
 				Listener: NetworkLoadBalancerListener{
 					Port: aws.String("161/tcp"),
@@ -1851,7 +1850,6 @@ func TestNetworkLoadBalancerConfiguration_validate(t *testing.T) {
 					},
 				},
 			},
-			wantedError: fmt.Errorf(`validate "additional_listeners[0]": validate "port": invalid protocol udp; valid protocols include TCP and TLS`),
 		},
 		"error if additional listeners are defined before main listener": {
 			nlb: NetworkLoadBalancerConfiguration{
@@ -1888,7 +1886,7 @@ func TestNetworkLoadBalancerConfiguration_validate(t *testing.T) {
 					Port: aws.String("443/TCP_udp"),
 				},
 			},
-			wantedError: fmt.Errorf(`validate "port": invalid protocol TCP_udp; valid protocols include TCP and TLS`),
+			wantedError: fmt.Errorf(`validate "port": invalid protocol TCP_udp; valid protocols include TCP, UDP and TLS`),
 		},
 		"error if tcp_udp in additional listeners": {
 			nlb: NetworkLoadBalancerConfiguration{
@@ -1901,7 +1899,7 @@ func TestNetworkLoadBalancerConfiguration_validate(t *testing.T) {
 					},
 				},
 			},
-			wantedError: fmt.Errorf(`validate "additional_listeners[0]": validate "port": invalid protocol TCP_udp; valid protocols include TCP and TLS`),
+			wantedError: fmt.Errorf(`validate "additional_listeners[0]": validate "port": invalid protocol TCP_udp; valid protocols include TCP, UDP and TLS`),
 		},
 		"error if hosted zone is set": {
 			nlb: NetworkLoadBalancerConfiguration{

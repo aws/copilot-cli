@@ -7,17 +7,19 @@ import (
 	"fmt"
 )
 
-type errNPMUnavailable struct {
-	parent error
-}
+type errPackageManagerUnavailable struct{}
 
-func (err *errNPMUnavailable) Error() string {
-	return fmt.Sprintf(`"npm" cannot be found: "npm" is required to override with the Cloud Development Kit: %v`, err.parent)
+func (err *errPackageManagerUnavailable) Error() string {
+	return "cannot find a JavaScript package manager to override with the Cloud Development Kit"
 }
 
 // RecommendActions implements the cli.actionRecommender interface.
-func (err *errNPMUnavailable) RecommendActions() string {
-	return fmt.Sprintf(`Please follow instructions at: %q to install "npm"`, "https://docs.npmjs.com/downloading-and-installing-node-js-and-npm")
+func (err *errPackageManagerUnavailable) RecommendActions() string {
+	return fmt.Sprintf(`Please follow the instructions to install either one of the package managers:
+%q: %q
+%q: %q`,
+		"npm", "https://docs.npmjs.com/downloading-and-installing-node-js-and-npm",
+		"yarn", "https://yarnpkg.com/getting-started/install")
 }
 
 // ErrNotExist occurs when the path of the file associated with an Overrider does not exist.

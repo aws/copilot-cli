@@ -2641,6 +2641,9 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 								TargetPort:      aws.Int(8083),
 								TargetContainer: aws.String("xray"),
 							},
+							{
+								Port: aws.String("8084/udp"),
+							},
 						},
 					},
 				},
@@ -2652,6 +2655,12 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 						ContainerName:        "frontend",
 						Protocol:             "tcp",
 						isDefinedByContainer: true,
+					},
+					{
+						Port:                 8084,
+						ContainerName:        "frontend",
+						Protocol:             "udp",
+						isDefinedByContainer: false,
 					},
 				},
 				"xray": {
