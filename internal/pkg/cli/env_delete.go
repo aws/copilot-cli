@@ -69,16 +69,18 @@ type deleteEnvOpts struct {
 	deleteEnvVars
 
 	// Interfaces for dependencies.
-	store    environmentStore
-	rg       resourceGetter
-	deployer environmentDeployer
-	iam      roleDeleter
-	prog     progress
-	prompt   prompter
-	sel      configSelector
+	store             environmentStore
+	rg                resourceGetter
+	deployer          environmentDeployer
+	envDeleterFromApp envDeleterFromApp
+	iam               roleDeleter
+	prog              progress
+	prompt            prompter
+	sel               configSelector
 
 	// cached data to avoid fetching the same information multiple times.
 	envConfig *config.Environment
+	appConfig *config.Application
 
 	// initRuntimeClients is overridden in tests.
 	initRuntimeClients func(*deleteEnvOpts) error
@@ -113,6 +115,7 @@ func newDeleteEnvOpts(vars deleteEnvVars) (*deleteEnvOpts, error) {
 			o.rg = resourcegroupstaggingapi.New(sess)
 			o.iam = iam.New(sess)
 			o.deployer = cloudformation.New(sess, cloudformation.WithProgressTracker(os.Stderr))
+			o.envDeleterFromApp = cloudformation.New(defaultSess, cloudformation.WithProgressTracker(os.Stderr))
 			return nil
 		},
 	}, nil
@@ -169,9 +172,21 @@ func (o *deleteEnvOpts) Execute() error {
 		return err
 	}
 	o.prog.Stop(log.Ssuccessf(fmtRetainEnvRolesComplete, o.name))
+
+	o.prog.Start(fmt.Sprintf("Deleting resources for the %q environment\n", o.name))
 	if err := o.deleteStack(); err != nil {
+		o.prog.Stop(log.Serrorf("Failed to delete resources for the %q environment\n", o.name))
 		return err
 	}
+	o.prog.Stop(log.Ssuccessf("Deleted resources for the %q environment\n", o.name))
+
+	// Un-delegate DNS and optionally delete stackset instance.
+	o.prog.Start("Cleaning up app-level resources and permissions\n")
+	if err := o.cleanUpAppResources(); err != nil {
+		o.prog.Stop(log.Serrorf("Failed to remove environment resources from app %q\n", o.appName))
+		return err
+	}
+	o.prog.Stop(log.Ssuccessf("Cleaned up app-level resources for the %q environment\n", o.name))
 
 	o.prog.Start(fmt.Sprintf(fmtDeleteEnvStart, o.name, o.appName))
 	if err := o.tryDeleteRoles(); err != nil {
@@ -345,6 +360,31 @@ func (o *deleteEnvOpts) deleteStack() error {
 	return nil
 }
 
+func (o *deleteEnvOpts) cleanUpAppResources() error {
+	// Get list of environments and check if there are any other environments in this account OR region.
+	envs, err := o.store.ListEnvironments(o.appName)
+	if err != nil {
+		return err
+	}
+	currentEnv, err := o.getEnvConfig()
+	if err != nil {
+		return err
+	}
+	app, err := o.getAppConfig()
+	if err != nil {
+		return err
+	}
+
+	if err := o.envDeleterFromApp.RemoveEnvFromApp(&cloudformation.RemoveEnvFromAppOpts{
+		App:          app,
+		EnvToDelete:  currentEnv,
+		Environments: envs,
+	}); err != nil {
+		return fmt.Errorf("remove environment %s from application %s: %w", currentEnv.Name, app.Name, err)
+	}
+	return nil
+}
+
 // tryDeleteRoles attempts to delete the retained IAM roles part of an environment stack.
 // The operation is best-effort because of the ManagerRole. Since the iam client is created with a
 // session that assumes the ManagerRole, attempting to delete the same role can result in the following error:
@@ -381,6 +421,19 @@ func (o *deleteEnvOpts) getEnvConfig() (*config.Environment, error) {
 	}
 	o.envConfig = env
 	return env, nil
+}
+
+func (o *deleteEnvOpts) getAppConfig() (*config.Application, error) {
+	if o.appConfig != nil {
+		// Already fetched; return.
+		return o.appConfig, nil
+	}
+	app, err := o.store.GetApplication(o.appName)
+	if err != nil {
+		return nil, fmt.Errorf("get application %q configuration: %w", o.appName, err)
+	}
+	o.appConfig = app
+	return app, nil
 }
 
 // buildEnvDeleteCmd builds the command to delete environment(s).

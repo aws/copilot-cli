@@ -9,6 +9,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestErrNPMUnavailable_RecommendActions(t *testing.T) {
-	require.Equal(t, `Please follow instructions at: "https://docs.npmjs.com/downloading-and-installing-node-js-and-npm" to install "npm"`, new(errNPMUnavailable).RecommendActions())
+func TestErrPackageManagerUnavailable_RecommendActions(t *testing.T) {
+	require.Equal(t, `Please follow the instructions to install either one of the package managers:
+"npm": "https://docs.npmjs.com/downloading-and-installing-node-js-and-npm"
+"yarn": "https://yarnpkg.com/getting-started/install"`,
+		new(errPackageManagerUnavailable).RecommendActions())
 }
