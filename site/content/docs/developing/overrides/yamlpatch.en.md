@@ -4,7 +4,7 @@
 
 ## When should I use YAML Patch over CDK overrides?
 
-Both options are a "break the glass" mechanism to access and configure functionality that is not surfaced by Copilot [manifests](../../manifest/overview.en.md).
+Both options are a "break the glass" mechanism to access and configure functionality that is not surfaced by Copilot [manifests](../../manifest/overview.md).
 
 We recommend using YAML patch over the [AWS Cloud Development Kit (CDK) overrides](./cdk.md) if 1) you do not want to have a dependency
 on any other tooling and framework (such as [Node.js](https://nodejs.org) and the [CDK](https://docs.aws.amazon.com/cdk/v2/guide/home.html)),
