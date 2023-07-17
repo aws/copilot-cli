@@ -7,6 +7,7 @@ package mocks
 import (
 	context "context"
 	io "io"
+	os "os"
 	reflect "reflect"
 
 	cloudformation "github.com/aws/aws-sdk-go/service/cloudformation"
@@ -252,6 +253,20 @@ func NewMockcfnClient(ctrl *gomock.Controller) *MockcfnClient {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockcfnClient) EXPECT() *MockcfnClientMockRecorder {
 	return m.recorder
+}
+
+// CancelUpdateStack mocks base method.
+func (m *MockcfnClient) CancelUpdateStack(stackName string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CancelUpdateStack", stackName)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CancelUpdateStack indicates an expected call of CancelUpdateStack.
+func (mr *MockcfnClientMockRecorder) CancelUpdateStack(stackName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CancelUpdateStack", reflect.TypeOf((*MockcfnClient)(nil).CancelUpdateStack), stackName)
 }
 
 // Create mocks base method.
