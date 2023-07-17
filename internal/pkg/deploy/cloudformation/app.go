@@ -186,13 +186,19 @@ func (cf CloudFormation) removeDNSDelegationAndCrossAccountAccess(appStack *stac
 		}
 		return fmt.Errorf("update application to remove DNS delegation from account %s: %w", accountID, err)
 	}
+
 	// Update stackset instances to remove account.
 	appResourcesConfig, err := cf.getLastDeployedAppConfig(appStack)
 	if err != nil {
 		return err
 	}
-	appResourcesConfig.Accounts = newAccountList
-	if err := cf.deployAppConfig(newCfg, appResourcesConfig, true); err != nil {
+	newDeploymentConfig := &stack.AppResourcesConfig{
+		Version:   appResourcesConfig.Version + 1,
+		Workloads: appResourcesConfig.Workloads,
+		Accounts:  newAccountList,
+		App:       appResourcesConfig.App,
+	}
+	if err := cf.deployAppConfig(newCfg, newDeploymentConfig, true); err != nil {
 		return err
 	}
 	return nil
