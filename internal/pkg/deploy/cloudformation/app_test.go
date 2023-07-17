@@ -1803,6 +1803,73 @@ func TestCloudFormation_RemoveEnvFromApp(t *testing.T) {
 				}
 			},
 		},
+		"regional stack is already deleted": {
+			inOpts: RemoveEnvFromAppOpts{
+				App: &config.Application{
+					Name:      "phonetool",
+					AccountID: "1234",
+					Version:   "1",
+				},
+				EnvToDelete: &config.Environment{
+					Name:      "test",
+					AccountID: "1234",
+					Region:    "us-west-2",
+				},
+				Environments: []*config.Environment{
+					{
+						Name:      "test",
+						AccountID: "1234",
+						Region:    "us-west-2",
+					},
+					{
+						Name:      "prod",
+						AccountID: "1234",
+						Region:    "us-east-2",
+					},
+				},
+			},
+			mock: func(t *testing.T, ctrl *gomock.Controller) CloudFormation {
+				cfn := mocks.NewMockcfnClient(ctrl)
+				appStackSet := mocks.NewMockstackSetClient(ctrl)
+				s3 := mocks.NewMocks3Client(ctrl)
+				ecr := mocks.NewMockimageRemover(ctrl)
+				regionalCfn := mocks.NewMockcfnClient(ctrl)
+				// Empty ECR and S3
+				appStackSet.EXPECT().InstanceSummaries("phonetool-infrastructure", gomock.Any(), gomock.Any()).Return(nil, nil)
+				// no instance summaries returned means no describe call and no EmptyBucket/ClearRepository call.
+				regionalCfn.EXPECT().Describe(gomock.Any()).Times(0)
+				s3.EXPECT().EmptyBucket(gomock.Any()).Times(0)
+				ecr.EXPECT().ClearRepository(gomock.Any()).Times(0)
+				appStackSet.EXPECT().DeleteInstance("phonetool-infrastructure", "1234", "us-west-2").Return("12345", nil)
+				appStackSet.EXPECT().WaitForOperation("phonetool-infrastructure", "12345").Return(nil)
+				cfn.EXPECT().Describe(gomock.Any()).Times(0)
+				cfn.EXPECT().UpdateAndWait(gomock.Any()).Times(0)
+				appStackSet.EXPECT().Describe(gomock.Any()).Times(0)
+				appStackSet.EXPECT().Update(gomock.Any(), gomock.Any()).Times(0)
+				return CloudFormation{
+					cfnClient: cfn,
+					region:    "us-east-1",
+
+					appStackSet: appStackSet,
+					dnsDelegatedAccountsForStack: func(in *awscfn.Stack) []string {
+						return []string{"1234", "5678"}
+					},
+					renderStackSet: func(in renderStackSetInput) error {
+						_, err := in.createOpFn()
+						return err
+					},
+					regionalClient: func(region string) cfnClient {
+						return regionalCfn
+					},
+					regionalS3Client: func(region string) s3Client {
+						return s3
+					},
+					regionalECRClient: func(region string) imageRemover {
+						return ecr
+					},
+				}
+			},
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
