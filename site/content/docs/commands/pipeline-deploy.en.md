@@ -8,11 +8,13 @@ $ copilot pipeline deploy [flags]
 
 ## What are the flags?
 ```
--a, --app string    Name of the application.
-    --diff          Compares the generated CloudFormation template to the deployed stack.
--h, --help          help for deploy
--n, --name string   Name of the pipeline.
-    --yes           Skips confirmation prompt.
+      --allow-downgrade   Optional. Allow using an older version of Copilot to update Copilot components
+                          updated by a newer version of Copilot.
+  -a, --app string        Name of the application.
+      --diff              Compares the generated CloudFormation template to the deployed stack.
+  -h, --help              help for deploy
+  -n, --name string       Name of the pipeline.
+      --yes               Skips confirmation prompt.
 ```
 
 ## Examples

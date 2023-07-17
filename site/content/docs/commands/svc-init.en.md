@@ -15,6 +15,8 @@ After that, if you already have an environment set up, you can run `copilot depl
 
 ```
 Flags
+      --allow-downgrade                Optional. Allow using an older version of Copilot to update Copilot components
+                                       updated by a newer version of Copilot.
   -a, --app string                     Name of the application.
   -d, --dockerfile string              Path to the Dockerfile.
                                        Cannot be specified with --image.
