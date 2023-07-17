@@ -252,7 +252,7 @@ func (cf CloudFormation) Template(stackName string) (string, error) {
 	return cf.cfnClient.TemplateBody(stackName)
 }
 
-// WaitForSignalAndHandleInterrupt waits for a signal and handles interrupts while monitoring a CloudFormation stack.
+// WaitForSignalAndHandleInterrupt waits for a SIGINT signal and handles interrupt while monitoring a CloudFormation stack.
 // It cancels the operation and takes appropriate actions based on the stack status when a signal is received.
 // Returns stack deletion status, update cancellation status, and an error, if any.
 func (cf CloudFormation) WaitForSignalAndHandleInterrupt(ctx context.Context, cancel context.CancelFunc, stackName string) (isDeleted bool, isUpdateCanceled bool, err error) {
