@@ -180,10 +180,6 @@ func (o *deleteEnvOpts) Execute() error {
 	}
 	o.prog.Stop(log.Ssuccessf("Deleted resources for the %q environment\n", o.name))
 
-	envInfo, err := o.getEnvConfig()
-	if err != nil {
-		return err
-	}
 	// Un-delegate DNS and optionally delete stackset instance.
 	o.prog.Start("Cleaning up app-level resources and permissions\n")
 	if err := o.cleanUpAppResources(); err != nil {
