@@ -244,9 +244,6 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 				gomock.InOrder(
 					m.deployedPipelineLister.EXPECT().ListDeployedPipelines(appName).Return([]deploy.Pipeline{}, nil),
 					m.versionGetter.EXPECT().Version().Return(mockTemplateVersion, nil),
-					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployResourcesStart, appName)).Times(1),
-					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
-					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
 					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestPath).Return(mockPipelineManifest, nil),
 					m.ws.EXPECT().Rel(pipelineManifestPath).Return(relativePath, nil),
 					m.actionCmd.EXPECT().Execute().Times(2),
@@ -259,6 +256,11 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					m.deployer.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil),
 
 					m.ws.EXPECT().PipelineOverridesPath(pipelineName).Return("path"),
+
+					// bootstrap pipeline resources
+					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployResourcesStart, appName)).Times(1),
+					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
+					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
 
 					// deployPipeline
 					m.deployer.EXPECT().PipelineExists(gomock.Any()).Return(false, nil),
@@ -278,9 +280,6 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 				gomock.InOrder(
 					m.deployedPipelineLister.EXPECT().ListDeployedPipelines(appName).Return([]deploy.Pipeline{}, nil),
 					m.versionGetter.EXPECT().Version().Return(mockTemplateVersion, nil),
-					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployResourcesStart, appName)).Times(1),
-					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
-					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
 					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestPath).Return(mockPipelineManifest, nil),
 					m.ws.EXPECT().Rel(pipelineManifestPath).Return(relativePath, nil),
 					m.actionCmd.EXPECT().Execute().Times(2),
@@ -293,6 +292,11 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					m.deployer.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil),
 
 					m.ws.EXPECT().PipelineOverridesPath(pipelineName).Return("path"),
+
+					// bootstrap pipeline resources
+					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployResourcesStart, appName)).Times(1),
+					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
+					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
 
 					// deployPipeline
 					m.deployer.EXPECT().PipelineExists(gomock.Any()).Return(true, nil),
@@ -318,9 +322,6 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 						},
 					}, nil),
 					m.versionGetter.EXPECT().Version().Return(mockTemplateVersion, nil),
-					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployResourcesStart, appName)).Times(1),
-					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
-					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
 					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestPath).Return(mockPipelineManifest, nil),
 					m.ws.EXPECT().Rel(pipelineManifestPath).Return(relativePath, nil),
 					m.actionCmd.EXPECT().Execute().Times(2),
@@ -333,6 +334,11 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					m.deployer.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil),
 
 					m.ws.EXPECT().PipelineOverridesPath(pipelineName).Return("path"),
+
+					// bootstrap pipeline resources
+					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployResourcesStart, appName)).Times(1),
+					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
+					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
 
 					// deployPipeline
 					m.deployer.EXPECT().PipelineExists(gomock.Any()).Return(true, nil),
@@ -353,9 +359,6 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 				gomock.InOrder(
 					m.deployedPipelineLister.EXPECT().ListDeployedPipelines(appName).Return([]deploy.Pipeline{}, nil),
 					m.versionGetter.EXPECT().Version().Return(mockTemplateVersion, nil),
-					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployResourcesStart, appName)).Times(1),
-					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
-					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
 					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestPath).Return(mockPipelineManifest, nil),
 					m.ws.EXPECT().Rel(pipelineManifestPath).Return(relativePath, nil),
 					m.actionCmd.EXPECT().Execute().Times(2),
@@ -368,6 +371,11 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					m.deployer.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil),
 
 					m.ws.EXPECT().PipelineOverridesPath(pipelineName).Return("path"),
+
+					// bootstrap pipeline resources
+					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployResourcesStart, appName)).Times(1),
+					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
+					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
 
 					// deployPipeline
 					m.deployer.EXPECT().PipelineExists(gomock.Any()).Return(true, nil),
@@ -385,9 +393,6 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 				gomock.InOrder(
 					m.deployedPipelineLister.EXPECT().ListDeployedPipelines(appName).Return([]deploy.Pipeline{}, nil),
 					m.versionGetter.EXPECT().Version().Return(mockTemplateVersion, nil),
-					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployResourcesStart, appName)).Times(1),
-					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
-					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
 					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestPath).Return(mockPipelineManifest, nil),
 					m.ws.EXPECT().Rel(pipelineManifestPath).Return(relativePath, nil),
 					m.actionCmd.EXPECT().Execute().Times(2),
@@ -400,6 +405,11 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					m.deployer.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil),
 
 					m.ws.EXPECT().PipelineOverridesPath(pipelineName).Return("path"),
+
+					// bootstrap pipeline resources
+					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployResourcesStart, appName)).Times(1),
+					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
+					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
 
 					// deployPipeline
 					m.deployer.EXPECT().PipelineExists(gomock.Any()).Return(true, nil),
@@ -430,6 +440,21 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 				gomock.InOrder(
 					m.deployedPipelineLister.EXPECT().ListDeployedPipelines(appName).Return([]deploy.Pipeline{}, nil),
 					m.versionGetter.EXPECT().Version().Return(mockTemplateVersion, nil),
+
+					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestPath).Return(mockPipelineManifest, nil),
+					m.ws.EXPECT().Rel(pipelineManifestPath).Return(relativePath, nil),
+					m.actionCmd.EXPECT().Execute().Times(2),
+
+					// convertStages
+					m.store.EXPECT().GetEnvironment(appName, "chicken").Return(mockEnv, nil).Times(1),
+					m.store.EXPECT().GetEnvironment(appName, "wings").Return(mockEnv, nil).Times(1),
+
+					// getArtifactBuckets
+					m.deployer.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil),
+
+					m.ws.EXPECT().PipelineOverridesPath(pipelineName).Return("path"),
+
+					// bootstrap pipeline resources
 					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployResourcesStart, appName)).Times(1),
 					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(errors.New("some error")),
 					m.prog.EXPECT().Stop(log.Serrorf(fmtPipelineDeployResourcesFailed, appName)).Times(1),
@@ -445,9 +470,6 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 				gomock.InOrder(
 					m.deployedPipelineLister.EXPECT().ListDeployedPipelines(appName).Return([]deploy.Pipeline{}, nil),
 					m.versionGetter.EXPECT().Version().Return(mockTemplateVersion, nil),
-					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployResourcesStart, appName)).Times(1),
-					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
-					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
 					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestPath).Return(mockPipelineManifest, errors.New("some error")),
 				)
 			},
@@ -461,9 +483,6 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 				gomock.InOrder(
 					m.deployedPipelineLister.EXPECT().ListDeployedPipelines(appName).Return([]deploy.Pipeline{}, nil),
 					m.versionGetter.EXPECT().Version().Return(mockTemplateVersion, nil),
-					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployResourcesStart, appName)).Times(1),
-					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
-					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
 					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestPath).Return(nil, errors.New("some error")),
 				)
 			},
@@ -488,9 +507,6 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 				gomock.InOrder(
 					m.deployedPipelineLister.EXPECT().ListDeployedPipelines(appName).Return([]deploy.Pipeline{}, nil),
 					m.versionGetter.EXPECT().Version().Return(mockTemplateVersion, nil),
-					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployResourcesStart, appName)).Times(1),
-					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
-					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
 					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestPath).Return(mockBadPipelineManifest, nil),
 				)
 			},
@@ -516,9 +532,6 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 				gomock.InOrder(
 					m.deployedPipelineLister.EXPECT().ListDeployedPipelines(appName).Return([]deploy.Pipeline{}, nil),
 					m.versionGetter.EXPECT().Version().Return(mockTemplateVersion, nil),
-					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployResourcesStart, appName)).Times(1),
-					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
-					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
 					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestPath).Return(mockBadPipelineManifest, nil),
 				)
 			},
@@ -532,9 +545,6 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 				gomock.InOrder(
 					m.deployedPipelineLister.EXPECT().ListDeployedPipelines(appName).Return([]deploy.Pipeline{}, nil),
 					m.versionGetter.EXPECT().Version().Return(mockTemplateVersion, nil),
-					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployResourcesStart, appName)).Times(1),
-					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
-					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
 					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestPath).Return(mockPipelineManifest, nil),
 					m.ws.EXPECT().Rel(pipelineManifestPath).Return(relativePath, nil),
 					m.actionCmd.EXPECT().Execute().Return(errors.New("some error")),
@@ -550,9 +560,6 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 				gomock.InOrder(
 					m.deployedPipelineLister.EXPECT().ListDeployedPipelines(appName).Return([]deploy.Pipeline{}, nil),
 					m.versionGetter.EXPECT().Version().Return(mockTemplateVersion, nil),
-					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployResourcesStart, appName)).Times(1),
-					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
-					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
 					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestPath).Return(mockPipelineManifest, nil),
 					m.ws.EXPECT().Rel(pipelineManifestPath).Return(relativePath, nil),
 					m.actionCmd.EXPECT().Execute().Times(2),
@@ -575,9 +582,6 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 				gomock.InOrder(
 					m.deployedPipelineLister.EXPECT().ListDeployedPipelines(appName).Return([]deploy.Pipeline{}, nil),
 					m.versionGetter.EXPECT().Version().Return(mockTemplateVersion, nil),
-					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployResourcesStart, appName)).Times(1),
-					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
-					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
 					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestPath).Return(mockPipelineManifest, nil),
 					m.ws.EXPECT().Rel(pipelineManifestPath).Return(relativePath, nil),
 					m.actionCmd.EXPECT().Execute().Times(2),
@@ -590,6 +594,11 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					m.deployer.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil),
 
 					m.ws.EXPECT().PipelineOverridesPath(pipelineName).Return("path"),
+
+					// bootstrap pipeline resources
+					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployResourcesStart, appName)).Times(1),
+					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
+					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
 
 					// deployPipeline
 					m.deployer.EXPECT().PipelineExists(gomock.Any()).Return(false, errors.New("some error")),
@@ -605,9 +614,6 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 				gomock.InOrder(
 					m.deployedPipelineLister.EXPECT().ListDeployedPipelines(appName).Return([]deploy.Pipeline{}, nil),
 					m.versionGetter.EXPECT().Version().Return(mockTemplateVersion, nil),
-					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployResourcesStart, appName)).Times(1),
-					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
-					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
 					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestPath).Return(mockPipelineManifest, nil),
 					m.ws.EXPECT().Rel(pipelineManifestPath).Return(relativePath, nil),
 					m.actionCmd.EXPECT().Execute().Times(2),
@@ -620,6 +626,11 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					m.deployer.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil),
 
 					m.ws.EXPECT().PipelineOverridesPath(pipelineName).Return("path"),
+
+					// bootstrap pipeline resources
+					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployResourcesStart, appName)).Times(1),
+					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
+					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
 
 					// deployPipeline
 					m.deployer.EXPECT().PipelineExists(gomock.Any()).Return(false, nil),
@@ -639,9 +650,6 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 				gomock.InOrder(
 					m.deployedPipelineLister.EXPECT().ListDeployedPipelines(appName).Return([]deploy.Pipeline{}, nil),
 					m.versionGetter.EXPECT().Version().Return(mockTemplateVersion, nil),
-					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployResourcesStart, appName)).Times(1),
-					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
-					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
 					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestPath).Return(mockPipelineManifest, nil),
 					m.ws.EXPECT().Rel(pipelineManifestPath).Return(relativePath, nil),
 					m.actionCmd.EXPECT().Execute().Times(2),
@@ -654,6 +662,11 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					m.deployer.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil),
 
 					m.ws.EXPECT().PipelineOverridesPath(pipelineName).Return("path"),
+
+					// bootstrap pipeline resources
+					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployResourcesStart, appName)).Times(1),
+					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
+					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
 
 					// deployPipeline
 					m.deployer.EXPECT().PipelineExists(gomock.Any()).Return(true, nil),
@@ -699,9 +712,6 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 				gomock.InOrder(
 					m.deployedPipelineLister.EXPECT().ListDeployedPipelines(appName).Return([]deploy.Pipeline{}, nil),
 					m.versionGetter.EXPECT().Version().Return(mockTemplateVersion, nil),
-					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployResourcesStart, appName)).Times(1),
-					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
-					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
 					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestPath).Return(mockPipelineManifest, nil),
 					m.ws.EXPECT().Rel(pipelineManifestPath).Return(relativePath, nil),
 					m.actionCmd.EXPECT().Execute().Times(2),
@@ -714,6 +724,10 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					m.deployer.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil),
 
 					m.ws.EXPECT().PipelineOverridesPath(pipelineName).Return("path"),
+
+					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployResourcesStart, appName)).Times(1),
+					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
+					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
 
 					// deployPipeline
 					m.deployer.EXPECT().PipelineExists(gomock.Any()).Return(true, nil),
@@ -735,9 +749,6 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 				gomock.InOrder(
 					m.deployedPipelineLister.EXPECT().ListDeployedPipelines(appName).Return([]deploy.Pipeline{}, nil),
 					m.versionGetter.EXPECT().Version().Return(mockTemplateVersion, nil),
-					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployResourcesStart, appName)).Times(1),
-					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
-					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
 					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestPath).Return(mockPipelineManifest, nil),
 					m.ws.EXPECT().Rel(pipelineManifestPath).Return(relativePath, nil),
 					m.actionCmd.EXPECT().Execute().Times(2),
@@ -766,9 +777,6 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 				gomock.InOrder(
 					m.deployedPipelineLister.EXPECT().ListDeployedPipelines(appName).Return([]deploy.Pipeline{}, nil),
 					m.versionGetter.EXPECT().Version().Return(mockTemplateVersion, nil),
-					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployResourcesStart, appName)).Times(1),
-					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
-					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
 					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestPath).Return(mockPipelineManifest, nil),
 					m.ws.EXPECT().Rel(pipelineManifestPath).Return(relativePath, nil),
 					m.actionCmd.EXPECT().Execute().Times(2),
@@ -795,9 +803,6 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 			callMocks: func(m deployPipelineMocks) {
 				m.deployedPipelineLister.EXPECT().ListDeployedPipelines(appName).Return([]deploy.Pipeline{}, nil)
 				m.versionGetter.EXPECT().Version().Return(mockTemplateVersion, nil)
-				m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployResourcesStart, appName)).Times(1)
-				m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil)
-				m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1)
 				m.ws.EXPECT().ReadPipelineManifest(pipelineManifestPath).Return(mockPipelineManifest, nil)
 				m.ws.EXPECT().Rel(pipelineManifestPath).Return(relativePath, nil)
 				m.actionCmd.EXPECT().Execute().Times(2)
@@ -828,9 +833,6 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 			callMocks: func(m deployPipelineMocks) {
 				m.deployedPipelineLister.EXPECT().ListDeployedPipelines(appName).Return([]deploy.Pipeline{}, nil)
 				m.versionGetter.EXPECT().Version().Return(mockTemplateVersion, nil)
-				m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployResourcesStart, appName)).Times(1)
-				m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil)
-				m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1)
 				m.ws.EXPECT().ReadPipelineManifest(pipelineManifestPath).Return(mockPipelineManifest, nil)
 				m.ws.EXPECT().Rel(pipelineManifestPath).Return(relativePath, nil)
 				m.actionCmd.EXPECT().Execute().Times(2)
@@ -852,6 +854,10 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 
 				m.prompt.EXPECT().Confirm(continueDeploymentPrompt, "").Return(true, nil)
 
+				m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployResourcesStart, appName)).Times(1)
+				m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil)
+				m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1)
+
 				// deployPipeline
 				m.deployer.EXPECT().GetAppResourcesByRegion(&app, region).Return(mockResource, nil)
 				m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployStart, pipelineName)).Times(1)
@@ -867,9 +873,6 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 			inShowDiff:       true,
 			inAllowDowngrade: true,
 			callMocks: func(m deployPipelineMocks) {
-				m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployResourcesStart, appName)).Times(1)
-				m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil)
-				m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1)
 				m.ws.EXPECT().ReadPipelineManifest(pipelineManifestPath).Return(mockPipelineManifest, nil)
 				m.ws.EXPECT().Rel(pipelineManifestPath).Return(relativePath, nil)
 				m.actionCmd.EXPECT().Execute().Times(2)
@@ -887,6 +890,10 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 				m.deployer.EXPECT().Template(gomock.Any()).Return("name: mockEnv\ntype: Environment", nil)
 
 				m.prompt.EXPECT().Confirm(continueDeploymentPrompt, "").Return(true, nil)
+
+				m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployResourcesStart, appName)).Times(1)
+				m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil)
+				m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1)
 
 				// deployPipeline
 				m.deployer.EXPECT().PipelineExists(gomock.Any()).Return(true, nil)
