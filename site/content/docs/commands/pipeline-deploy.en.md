@@ -9,6 +9,7 @@ $ copilot pipeline deploy [flags]
 ## What are the flags?
 ```
 -a, --app string    Name of the application.
+    --diff          Compares the generated CloudFormation template to the deployed stack.
 -h, --help          help for deploy
 -n, --name string   Name of the pipeline.
     --yes           Skips confirmation prompt.
