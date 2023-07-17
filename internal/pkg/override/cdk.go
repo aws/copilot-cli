@@ -5,6 +5,7 @@ package override
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -12,10 +13,16 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"gopkg.in/yaml.v3"
 
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/spf13/afero"
+)
+
+const (
+	defaultPackageManager    = "npm"
+	maxNumberOfLevelsChecked = 5
 )
 
 // CDK is an Overrider that can transform a CloudFormation template with the Cloud Development Kit.
@@ -27,6 +34,8 @@ type CDK struct {
 	exec       struct {
 		LookPath func(file string) (string, error)
 		Command  func(name string, args ...string) *exec.Cmd
+		Find     func(startDir string, maxLevels int, matchFn workspace.TraverseUpProcessFn) (string, error)
+		Getwd    func() (dir string, err error)
 	} // For testing os/exec calls.
 }
 
@@ -70,7 +79,6 @@ func WithCDK(root string, opts CDKOpts) *CDK {
 	if opts.CommandFn != nil {
 		cmdFn = opts.CommandFn
 	}
-
 	return &CDK{
 		rootAbsPath: root,
 		execWriter:  writer,
@@ -78,9 +86,13 @@ func WithCDK(root string, opts CDKOpts) *CDK {
 		exec: struct {
 			LookPath func(file string) (string, error)
 			Command  func(name string, args ...string) *exec.Cmd
+			Find     func(startDir string, maxLevels int, matchFn workspace.TraverseUpProcessFn) (string, error)
+			Getwd    func() (dir string, err error)
 		}{
 			LookPath: lookPathFn,
 			Command:  cmdFn,
+			Find:     workspace.TraverseUp,
+			Getwd:    os.Getwd,
 		},
 	}
 }
@@ -100,11 +112,11 @@ func (cdk *CDK) Override(body []byte) ([]byte, error) {
 }
 
 func (cdk *CDK) install() error {
-	if _, err := cdk.exec.LookPath("npm"); err != nil {
-		return &errNPMUnavailable{parent: err}
+	manager, err := cdk.packageManager()
+	if err != nil {
+		return err
 	}
-
-	cmd := cdk.exec.Command("npm", "install")
+	cmd := cdk.exec.Command(manager, "install")
 	cmd.Stdout = cdk.execWriter
 	cmd.Stderr = cdk.execWriter
 
@@ -170,6 +182,91 @@ func (cdk *CDK) cleanUp(in []byte) ([]byte, error) {
 		return nil, fmt.Errorf("marshal cleaned up CDK transformed template: %w", err)
 	}
 	return out.Bytes(), nil
+}
+
+type packageManager struct {
+	name     string
+	lockFile string
+}
+
+var packageManagers = []packageManager{ // Alphabetically sorted based on name.
+	{
+		name:     "npm",
+		lockFile: "package-lock.json",
+	},
+	{
+		name:     "yarn",
+		lockFile: "yarn.lock",
+	},
+}
+
+func (cdk *CDK) installedPackageManagers() ([]string, error) {
+	var installed []string
+	for _, candidate := range packageManagers {
+		if _, err := cdk.exec.LookPath(candidate.name); err == nil {
+			installed = append(installed, candidate.name)
+		} else if !errors.Is(err, exec.ErrNotFound) {
+			return nil, err
+		}
+	}
+	return installed, nil
+}
+
+// closestProjectManager returns the package manager of the project.
+// It searches five levels up from the working directory and look for the lock file of each package managers.
+// If no lock file is found, it returns an empty string.
+// If only one lock file is found, it returns that corresponding package manager name.
+// If multiple are found, it returns the package manager whose lock file is closer to the working dir.
+// If multiple are equally close, then it returns the one whose name is the alphabetically smallest.
+func (cdk *CDK) closestProjectManager() (string, error) {
+	wd, err := cdk.exec.Getwd()
+	if err != nil {
+		return "", fmt.Errorf("get working directory: %w", err)
+	}
+	var closest string
+	findLockFileFn := func(dir string) (string, error) {
+		for _, candidate := range packageManagers {
+			exists, err := afero.Exists(cdk.fs, filepath.Join(dir, candidate.lockFile))
+			if err != nil {
+				return "", err
+			}
+			if exists {
+				closest = candidate.name
+				return "", workspace.ErrTraverseUpShouldStop
+			}
+		}
+		return "", nil
+	}
+	_, err = cdk.exec.Find(wd, maxNumberOfLevelsChecked, findLockFileFn)
+	if err == nil {
+		return closest, nil
+	}
+	var errTargetNotFound *workspace.ErrTargetNotFound
+	if errors.As(err, &errTargetNotFound) {
+		return "", nil
+	}
+	return "", fmt.Errorf("find a package lock file: %w", err)
+}
+
+func (cdk *CDK) packageManager() (string, error) {
+	installed, err := cdk.installedPackageManagers()
+	if err != nil {
+		return "", err
+	}
+	if len(installed) == 0 {
+		return "", &errPackageManagerUnavailable{}
+	}
+	if len(installed) == 1 {
+		return installed[0], nil
+	}
+	manager, err := cdk.closestProjectManager()
+	if err != nil {
+		return "", err
+	}
+	if manager != "" {
+		return manager, nil
+	}
+	return defaultPackageManager, nil
 }
 
 // ScaffoldWithCDK bootstraps a CDK application under dir/ to override the seed CloudFormation resources.

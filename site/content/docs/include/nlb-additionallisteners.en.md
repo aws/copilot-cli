@@ -2,7 +2,7 @@
     <span class="parent-field">nlb.additional_listeners.</span><a id="nlb-additional-listeners-port" href="#nlb-additional-listeners-port" class="field">`port`</a> <span class="type">String</span>  
     Required. The additional port and protocol for the Network Load Balancer to listen on.
     
-    Accepted protocols include `tcp` and `tls`. If the protocol is not specified, `tcp` is used by default.
+    Accepted protocols include `tcp`, `udp` and `tls`. If the protocol is not specified, `tcp` is used by default.
     
     <span class="parent-field">nlb.additional_listeners.</span><a id="nlb-additional-listeners-healthcheck" href="#nlb-additional-listeners-healthcheck" class="field">`healthcheck`</a> <span class="type">Map</span>  
     Specify the health check configuration for your additional listener on the Network Load Balancer.
