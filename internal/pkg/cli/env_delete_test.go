@@ -288,7 +288,7 @@ Resources:
 					ResourceTagMappingList: []*resourcegroupstaggingapi.ResourceTagMapping{}}, nil)
 
 				prog := mocks.NewMockprogress(ctrl)
-				prog.EXPECT().Start(gomock.Any())
+				prog.EXPECT().Start(gomock.Any()).Times(2)
 
 				deployer := mocks.NewMockenvironmentDeployer(ctrl)
 				deployer.EXPECT().Template(gomock.Any()).Return(`
