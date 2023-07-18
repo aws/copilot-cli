@@ -14,8 +14,8 @@ Resources:
       ProviderType: {{.Source.ProviderName}}
   {{- end}}
   {{- end}}
-  {{ include "build" . | indent 2}}
-  {{ include "test" . | indent 2 }}
+{{ include "build" . | indent 2}}
+{{ include "test" . | indent 2 }}
   PipelineRole:
     Type: AWS::IAM::Role
     Properties:
