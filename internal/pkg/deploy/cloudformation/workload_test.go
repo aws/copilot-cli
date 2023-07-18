@@ -4,6 +4,7 @@
 package cloudformation
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -70,7 +71,7 @@ func TestCloudFormation_DeployService(t *testing.T) {
 		},
 	}
 	when := func(cf CloudFormation) error {
-		return cf.DeployService(serviceConfig, "mockBucket")
+		return cf.DeployService(context.Background(), serviceConfig, "mockBucket")
 	}
 
 	t.Run("returns a wrapped error if pushing to s3 bucket fails", func(t *testing.T) {

@@ -128,15 +128,20 @@ func (d *lbWebSvcDeployer) GenerateCloudFormationTemplate(in *GenerateCloudForma
 }
 
 // DeployWorkload deploys a load balanced web service using CloudFormation.
-func (d *lbWebSvcDeployer) DeployWorkload(in *DeployWorkloadInput) (ActionRecommender, error) {
+func (d *lbWebSvcDeployer) DeployWorkload(in *DeployWorkloadInput) (*DeployWorkloadOutput, error) {
 	stackConfigOutput, err := d.stackConfiguration(&in.StackRuntimeConfiguration)
 	if err != nil {
 		return nil, err
 	}
-	if err := d.deploy(in.Options, *stackConfigOutput); err != nil {
+	deployOut, err := d.deploy(in.Options, *stackConfigOutput)
+	if err != nil {
 		return nil, err
 	}
-	return noopActionRecommender{}, nil
+	return &DeployWorkloadOutput{
+		IsWkldDeleted:        deployOut.IsWkldDeleted,
+		IsWkldUpdateCanceled: deployOut.IsWkldUpdateCanceled,
+		Recommendations:      noopActionRecommender{},
+	}, nil
 }
 
 func (d *lbWebSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*svcStackConfigurationOutput, error) {

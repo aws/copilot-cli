@@ -4,6 +4,7 @@
 package cloudformation
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -15,7 +16,7 @@ import (
 // DeployService deploys a service stack and renders progress updates to out until the deployment is done.
 // If the service stack doesn't exist, then it creates the stack.
 // If the service stack already exists, it updates the stack.
-func (cf CloudFormation) DeployService(conf StackConfiguration, bucketName string, opts ...cloudformation.StackOption) error {
+func (cf CloudFormation) DeployService(ctx context.Context, conf StackConfiguration, bucketName string, opts ...cloudformation.StackOption) error {
 	templateURL, err := cf.uploadStackTemplateToS3(bucketName, conf)
 	if err != nil {
 		return err
@@ -27,7 +28,7 @@ func (cf CloudFormation) DeployService(conf StackConfiguration, bucketName strin
 	for _, opt := range opts {
 		opt(stack)
 	}
-	return cf.executeAndRenderChangeSet(cf.newUpsertChangeSetInput(cf.console, stack))
+	return cf.executeAndRenderChangeSet(ctx, cf.newUpsertChangeSetInput(cf.console, stack))
 }
 
 type uploadableStack interface {

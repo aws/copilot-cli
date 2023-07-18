@@ -267,7 +267,7 @@ func (cf CloudFormation) WaitForSignalAndHandleInterrupt(ctx context.Context, ca
 			}
 			if aws.StringValue(stackDescr.StackStatus) == sdkcloudformation.StackStatusCreateInProgress {
 				log.Infof(color.Red.Sprintf("Received Interrupt for Ctrl-C.\nPressing Ctrl-C again will exit immediately but the deletion of stack %s still happens\n", stackName))
-				description := fmt.Sprintf("Deleting stack %s", stackName)
+				description := fmt.Sprintf("Delete stack %s", stackName)
 				if err := cf.deleteAndRenderStack(stackName, description, func() error {
 					return cf.cfnClient.DeleteAndWait(stackName)
 				}); err != nil {
@@ -293,7 +293,7 @@ func (cf CloudFormation) WaitForSignalAndHandleInterrupt(ctx context.Context, ca
 			}
 			return isDeleted, isUpdateCanceled, nil
 		case <-ctx.Done():
-			return isDeleted, isUpdateCanceled, ctx.Err()
+			return isDeleted, isUpdateCanceled, nil
 		}
 	}
 }
@@ -391,7 +391,7 @@ func (cf CloudFormation) newUpsertChangeSetInput(w progress.FileWriter, stack *c
 	return in
 }
 
-func (cf CloudFormation) executeAndRenderChangeSet(in *executeAndRenderChangeSetInput) error {
+func (cf CloudFormation) executeAndRenderChangeSet(ctx context.Context, in *executeAndRenderChangeSetInput) error {
 	changeSetID, err := in.createChangeSet()
 	if err != nil {
 		return err
@@ -399,7 +399,7 @@ func (cf CloudFormation) executeAndRenderChangeSet(in *executeAndRenderChangeSet
 	if _, ok := cf.console.(*discardFile); ok { // If we don't have to render skip the additional network calls.
 		return nil
 	}
-	waitCtx, cancelWait := context.WithTimeout(context.Background(), waitForStackTimeout)
+	waitCtx, cancelWait := context.WithTimeout(ctx, waitForStackTimeout)
 	defer cancelWait()
 	g, ctx := errgroup.WithContext(waitCtx)
 
@@ -728,7 +728,7 @@ func (cf CloudFormation) errOnFailedCancelUpdate(stackName string) error {
 		return err
 	}
 	status := aws.StringValue(stack.StackStatus)
-	if status != sdkcloudformation.StackStatusRollbackComplete {
+	if status != sdkcloudformation.StackStatusUpdateRollbackComplete {
 		return fmt.Errorf("stack %s did not rollback successfully and exited with status %s", stackName, status)
 	}
 	return nil

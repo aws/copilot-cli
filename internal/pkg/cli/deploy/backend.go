@@ -75,15 +75,20 @@ func (d *backendSvcDeployer) GenerateCloudFormationTemplate(in *GenerateCloudFor
 }
 
 // DeployWorkload deploys a backend service using CloudFormation.
-func (d *backendSvcDeployer) DeployWorkload(in *DeployWorkloadInput) (ActionRecommender, error) {
+func (d *backendSvcDeployer) DeployWorkload(in *DeployWorkloadInput) (*DeployWorkloadOutput, error) {
 	stackConfigOutput, err := d.stackConfiguration(&in.StackRuntimeConfiguration)
 	if err != nil {
 		return nil, err
 	}
-	if err := d.deploy(in.Options, *stackConfigOutput); err != nil {
+	deployOut, err := d.deploy(in.Options, *stackConfigOutput)
+	if err != nil {
 		return nil, err
 	}
-	return noopActionRecommender{}, nil
+	return &DeployWorkloadOutput{
+		IsWkldDeleted:        deployOut.IsWkldDeleted,
+		IsWkldUpdateCanceled: deployOut.IsWkldUpdateCanceled,
+		Recommendations:      noopActionRecommender{},
+	}, nil
 }
 
 func (d *backendSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*svcStackConfigurationOutput, error) {

@@ -106,28 +106,34 @@ func (d *staticSiteDeployer) GenerateCloudFormationTemplate(in *GenerateCloudFor
 }
 
 // DeployWorkload deploys a static site service using CloudFormation.
-func (d *staticSiteDeployer) DeployWorkload(in *DeployWorkloadInput) (ActionRecommender, error) {
+func (d *staticSiteDeployer) DeployWorkload(in *DeployWorkloadInput) (*DeployWorkloadOutput, error) {
 	conf, err := d.stackConfiguration(&in.StackRuntimeConfiguration)
 	if err != nil {
 		return nil, err
 	}
-	if err := d.deploy(in.Options, svcStackConfigurationOutput{conf: conf}); err != nil {
+	deployOut, err := d.deploy(in.Options, svcStackConfigurationOutput{conf: conf})
+	if err != nil {
 		return nil, err
 	}
-	return noopActionRecommender{}, nil
+	return &DeployWorkloadOutput{
+		IsWkldDeleted:        deployOut.IsWkldDeleted,
+		IsWkldUpdateCanceled: deployOut.IsWkldUpdateCanceled,
+		Recommendations:      noopActionRecommender{},
+	}, nil
 }
 
-func (d *staticSiteDeployer) deploy(deployOptions Options, stackConfigOutput svcStackConfigurationOutput) error {
+func (d *staticSiteDeployer) deploy(deployOptions Options, stackConfigOutput svcStackConfigurationOutput) (*DeployWorkloadOutput, error) {
 	opts := []awscloudformation.StackOption{
 		awscloudformation.WithRoleARN(d.env.ExecutionRoleARN),
 	}
 	if deployOptions.DisableRollback {
 		opts = append(opts, awscloudformation.WithDisableRollback())
 	}
-	if err := d.deployer.DeployService(stackConfigOutput.conf, d.resources.S3Bucket, opts...); err != nil {
-		return fmt.Errorf("deploy service: %w", err)
+	out, err := d.deployAndHandleInterrupt(stackConfigOutput.conf, opts)
+	if err != nil {
+		return nil, fmt.Errorf("deploy service: %w", err)
 	}
-	return nil
+	return out, nil
 }
 
 // UploadArtifacts uploads static assets to the app stackset bucket.

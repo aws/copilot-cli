@@ -104,7 +104,8 @@ type endpointGetter interface {
 }
 
 type serviceDeployer interface {
-	DeployService(conf cloudformation.StackConfiguration, bucketName string, opts ...awscloudformation.StackOption) error
+	DeployService(ctx context.Context, conf cloudformation.StackConfiguration, bucketName string, opts ...awscloudformation.StackOption) error
+	WaitForSignalAndHandleInterrupt(ctx context.Context, cancel context.CancelFunc, stackName string) (bool, bool, error)
 }
 
 type deployedTemplateGetter interface {
@@ -141,6 +142,13 @@ type StackRuntimeConfiguration struct {
 type DeployWorkloadInput struct {
 	StackRuntimeConfiguration
 	Options
+}
+
+// DeployWorkloadOutput is the output of DeployWorkload.
+type DeployWorkloadOutput struct {
+	IsWkldDeleted        bool
+	IsWkldUpdateCanceled bool
+	Recommendations      ActionRecommender
 }
 
 // Options specifies options for the deployment.
@@ -358,6 +366,38 @@ func (d *workloadDeployer) generateCloudFormationTemplate(conf stackSerializer) 
 		Template:   tpl,
 		Parameters: params,
 	}, nil
+}
+
+func (d *workloadDeployer) deployAndHandleInterrupt(conf cloudformation.StackConfiguration, opts []awscloudformation.StackOption) (*DeployWorkloadOutput, error) {
+	g, ctx := errgroup.WithContext(context.Background())
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	out := &DeployWorkloadOutput{}
+	deployService := func() error {
+		defer cancel()
+		err := d.deployer.DeployService(ctx, conf, d.resources.S3Bucket, opts...)
+		if err != nil {
+			if !errors.Is(err, context.Canceled) {
+				return err
+			}
+		}
+		return nil
+	}
+	waitForSignalAndHandleInterrupt := func() error {
+		isDeleted, isUpdateCanceled, err := d.deployer.WaitForSignalAndHandleInterrupt(ctx, cancel, conf.StackName())
+		out.IsWkldDeleted = isDeleted
+		out.IsWkldUpdateCanceled = isUpdateCanceled
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+	g.Go(deployService)
+	g.Go(waitForSignalAndHandleInterrupt)
+	if err := g.Wait(); err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 type forceDeployInput struct {

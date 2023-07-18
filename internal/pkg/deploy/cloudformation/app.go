@@ -47,7 +47,7 @@ func (cf CloudFormation) DeployApp(in *deploy.CreateAppInput) error {
 		return err
 	}
 
-	if err := cf.executeAndRenderChangeSet(cf.newCreateChangeSetInput(cf.console, s)); err != nil {
+	if err := cf.executeAndRenderChangeSet(context.Background(), cf.newCreateChangeSetInput(cf.console, s)); err != nil {
 		var alreadyExists *cloudformation.ErrStackAlreadyExists
 		if !errors.As(err, &alreadyExists) {
 			return err
@@ -135,7 +135,7 @@ func (cf CloudFormation) upgradeAppStack(conf *stack.AppStackConfig) error {
 		return changeSetID, nil
 	}
 
-	return cf.executeAndRenderChangeSet(in)
+	return cf.executeAndRenderChangeSet(context.Background(), in)
 }
 
 // removeDNSDelegationAndCrossAccountAccess removes the provided account ID from the list of accounts that can write to the

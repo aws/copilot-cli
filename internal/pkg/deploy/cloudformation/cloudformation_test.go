@@ -866,7 +866,7 @@ func TestCloudFormation_Template(t *testing.T) {
 	}
 }
 
-func TestCloudFormation_WaitAndHandleSignal(t *testing.T) {
+func TestCloudFormation_WaitForSignalAndHandleInterrupt(t *testing.T) {
 	inStackName := "mockstack"
 	deploymentTime := time.Date(2020, time.November, 23, 18, 0, 0, 0, time.UTC)
 	testCases := map[string]struct {
@@ -880,7 +880,6 @@ func TestCloudFormation_WaitAndHandleSignal(t *testing.T) {
 			mockSignalClient: func(m *mocks.MocksignalClient) {
 				m.EXPECT().NotifySignals().Return(nil)
 			},
-			wantedErr: errors.New(context.DeadlineExceeded.Error()),
 		},
 		"got an interrupt signal but stack is not in update in progress or create in progress status": {
 			mockSignalClient: func(m *mocks.MocksignalClient) {
@@ -1024,7 +1023,7 @@ Resources:
 							EventId:           aws.String("4"),
 							LogicalResourceId: aws.String(inStackName),
 							ResourceType:      aws.String("AWS::CloudFormation::Stack"),
-							ResourceStatus:    aws.String("ROLLBACK_COMPLETE"),
+							ResourceStatus:    aws.String("UPDATE_ROLLBACK_COMPLETE"),
 							Timestamp:         aws.Time(deploymentTime),
 						},
 					},
@@ -1032,7 +1031,7 @@ Resources:
 				m.EXPECT().CancelUpdateStack(inStackName).Return(nil)
 				m.EXPECT().Describe(gomock.Any()).Return(&cloudformation.StackDescription{
 					StackId:     aws.String("stack/webhook/1111"),
-					StackStatus: aws.String("ROLLBACK_COMPLETE"),
+					StackStatus: aws.String("UPDATE_ROLLBACK_COMPLETE"),
 					ChangeSetId: aws.String("1234"),
 				}, nil)
 			},
@@ -1124,11 +1123,11 @@ Resources:
 				m.EXPECT().CancelUpdateStack(inStackName).Return(nil)
 				m.EXPECT().Describe(gomock.Any()).Return(&cloudformation.StackDescription{
 					StackId:     aws.String("stack/webhook/1111"),
-					StackStatus: aws.String("ROLLBACK_FAILED"),
+					StackStatus: aws.String("UPDATE_ROLLBACK_FAILED"),
 					ChangeSetId: aws.String("1234"),
 				}, nil)
 			},
-			wantedErr: fmt.Errorf("stack %s did not rollback successfully and exited with status ROLLBACK_FAILED", inStackName),
+			wantedErr: fmt.Errorf("stack %s did not rollback successfully and exited with status UPDATE_ROLLBACK_FAILED", inStackName),
 		},
 	}
 	for name, tc := range testCases {

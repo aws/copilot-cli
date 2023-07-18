@@ -6,8 +6,9 @@ package cli
 import (
 	"context"
 	"encoding"
-	sdkcloudformation "github.com/aws/aws-sdk-go/service/cloudformation"
 	"io"
+
+	sdkcloudformation "github.com/aws/aws-sdk-go/service/cloudformation"
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
@@ -676,7 +677,7 @@ type workloadDeployer interface {
 	UploadArtifacts() (*clideploy.UploadArtifactsOutput, error)
 	GenerateCloudFormationTemplate(in *clideploy.GenerateCloudFormationTemplateInput) (
 		*clideploy.GenerateCloudFormationTemplateOutput, error)
-	DeployWorkload(in *clideploy.DeployWorkloadInput) (clideploy.ActionRecommender, error)
+	DeployWorkload(in *clideploy.DeployWorkloadInput) (*clideploy.DeployWorkloadOutput, error)
 	IsServiceAvailableInRegion(region string) (bool, error)
 	templateDiffer
 }

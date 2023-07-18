@@ -71,7 +71,7 @@ func (d *jobDeployer) GenerateCloudFormationTemplate(in *GenerateCloudFormationT
 }
 
 // DeployWorkload deploys a job using CloudFormation.
-func (d *jobDeployer) DeployWorkload(in *DeployWorkloadInput) (ActionRecommender, error) {
+func (d *jobDeployer) DeployWorkload(in *DeployWorkloadInput) (*DeployWorkloadOutput, error) {
 	opts := []awscloudformation.StackOption{
 		awscloudformation.WithRoleARN(d.env.ExecutionRoleARN),
 	}
@@ -82,10 +82,15 @@ func (d *jobDeployer) DeployWorkload(in *DeployWorkloadInput) (ActionRecommender
 	if err != nil {
 		return nil, err
 	}
-	if err := d.deployer.DeployService(stackConfigOutput.conf, d.resources.S3Bucket, opts...); err != nil {
+	deployOut, err := d.deployAndHandleInterrupt(stackConfigOutput.conf, opts)
+	if err != nil {
 		return nil, fmt.Errorf("deploy job: %w", err)
 	}
-	return noopActionRecommender{}, nil
+	return &DeployWorkloadOutput{
+		IsWkldDeleted:        deployOut.IsWkldDeleted,
+		IsWkldUpdateCanceled: deployOut.IsWkldUpdateCanceled,
+		Recommendations:      noopActionRecommender{},
+	}, nil
 }
 
 type jobStackConfigurationOutput struct {

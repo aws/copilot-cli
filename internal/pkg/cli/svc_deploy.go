@@ -82,7 +82,7 @@ type deploySvcOpts struct {
 	svcType           string
 	appliedDynamicMft manifest.DynamicWorkload
 	rootUserARN       string
-	deployRecs        clideploy.ActionRecommender
+	deployOutput      *clideploy.DeployWorkloadOutput
 	noDeploy          bool
 
 	// Overridden in tests.
@@ -291,7 +291,7 @@ func (o *deploySvcOpts) Execute() error {
 			return nil
 		}
 	}
-	deployRecs, err := deployer.DeployWorkload(&clideploy.DeployWorkloadInput{
+	deployWorkloadOutput, err := deployer.DeployWorkload(&clideploy.DeployWorkloadInput{
 		StackRuntimeConfiguration: clideploy.StackRuntimeConfiguration{
 			ImageDigests:              uploadOut.ImageDigests,
 			EnvFileARNs:               uploadOut.EnvFileARNs,
@@ -321,8 +321,13 @@ After fixing the deployment, you can:
 		}
 		return fmt.Errorf("deploy service %s to environment %s: %w", o.name, o.envName, err)
 	}
-	o.deployRecs = deployRecs
-	log.Successf("Deployed service %s.\n", color.HighlightUserInput(o.name))
+	o.deployOutput = deployWorkloadOutput
+	if !o.deployOutput.IsWkldDeleted && !o.deployOutput.IsWkldUpdateCanceled {
+		log.Successf("Deployed service %s.\n", color.HighlightUserInput(o.name))
+	}
+	if o.deployOutput.IsWkldUpdateCanceled {
+		log.Successf("Successfully rolled back service %s to the previous configuration.\n", color.HighlightUserInput(o.name))
+	}
 	return nil
 }
 
@@ -331,13 +336,16 @@ func (o *deploySvcOpts) RecommendActions() error {
 	if o.noDeploy {
 		return nil
 	}
+	if o.deployOutput.IsWkldDeleted {
+		return nil
+	}
 	var recommendations []string
 	uriRecs, err := o.uriRecommendedActions()
 	if err != nil {
 		return err
 	}
 	recommendations = append(recommendations, uriRecs...)
-	recommendations = append(recommendations, o.deployRecs.RecommendedActions()...)
+	recommendations = append(recommendations, o.deployOutput.Recommendations.RecommendedActions()...)
 	recommendations = append(recommendations, o.publishRecommendedActions()...)
 	logRecommendedActions(recommendations)
 	return nil
