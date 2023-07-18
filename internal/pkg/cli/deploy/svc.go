@@ -92,7 +92,7 @@ func (d *svcDeployer) deploy(deployOptions Options, stackConfigOutput svcStackCo
 			}
 		}
 	}
-	return out, nil
+	return &out, nil
 }
 
 type svcStackConfigurationOutput struct {

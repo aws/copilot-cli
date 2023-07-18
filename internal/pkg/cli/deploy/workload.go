@@ -368,11 +368,11 @@ func (d *workloadDeployer) generateCloudFormationTemplate(conf stackSerializer) 
 	}, nil
 }
 
-func (d *workloadDeployer) deployAndHandleInterrupt(conf cloudformation.StackConfiguration, opts []awscloudformation.StackOption) (*DeployWorkloadOutput, error) {
+func (d *workloadDeployer) deployAndHandleInterrupt(conf cloudformation.StackConfiguration, opts []awscloudformation.StackOption) (DeployWorkloadOutput, error) {
 	g, ctx := errgroup.WithContext(context.Background())
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
-	out := &DeployWorkloadOutput{}
+	out := DeployWorkloadOutput{}
 	deployService := func() error {
 		defer cancel()
 		err := d.deployer.DeployService(ctx, conf, d.resources.S3Bucket, opts...)
@@ -395,7 +395,7 @@ func (d *workloadDeployer) deployAndHandleInterrupt(conf cloudformation.StackCon
 	g.Go(deployService)
 	g.Go(waitForSignalAndHandleInterrupt)
 	if err := g.Wait(); err != nil {
-		return nil, err
+		return out, err
 	}
 	return out, nil
 }

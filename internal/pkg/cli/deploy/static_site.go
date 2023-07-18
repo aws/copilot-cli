@@ -133,7 +133,7 @@ func (d *staticSiteDeployer) deploy(deployOptions Options, stackConfigOutput svc
 	if err != nil {
 		return nil, fmt.Errorf("deploy service: %w", err)
 	}
-	return out, nil
+	return &out, nil
 }
 
 // UploadArtifacts uploads static assets to the app stackset bucket.
