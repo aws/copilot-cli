@@ -1115,7 +1115,7 @@ Resources:
 							EventId:           aws.String("4"),
 							LogicalResourceId: aws.String(inStackName),
 							ResourceType:      aws.String("AWS::CloudFormation::Stack"),
-							ResourceStatus:    aws.String("ROLLBACK_FAILED"),
+							ResourceStatus:    aws.String("UPDATE_ROLLBACK_FAILED"),
 							Timestamp:         aws.Time(deploymentTime),
 						},
 					},
