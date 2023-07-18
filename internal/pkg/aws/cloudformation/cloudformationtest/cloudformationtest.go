@@ -141,6 +141,7 @@ func (d *Double) DescribeStackEvents(input *sdk.DescribeStackEventsInput) (*sdk.
 	return d.DescribeStackEventsFn(input)
 }
 
+// CancelUpdateStack calls the stubbed function.
 func (d *Double) CancelUpdateStack(stackName string) error {
 	return d.CancelUpdateStackFn(stackName)
 }
