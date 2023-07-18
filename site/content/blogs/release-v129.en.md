@@ -9,7 +9,7 @@ image_height: '747'
 
 # AWS Copilot v1.29: Pipeline template overrides and CloudFront cache invalidation!
 
-Posted On: July 18, 2023
+Posted On: July 19, 2023
 
 The AWS Copilot core team is announcing the Copilot v1.29 release.
 
