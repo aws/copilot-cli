@@ -42,6 +42,8 @@ func newLocalRunOpts(vars localRunVars) (*localRunOpts, error) {
 	return opts, nil
 }
 
+// Validate validates the application name for running a workload locally.
+// It ensures that the application name is provided and exists in the workspace.
 func (o *localRunOpts) Validate() error {
 	if o.appName == "" {
 		return errNoAppInWorkspace
@@ -52,12 +54,14 @@ func (o *localRunOpts) Validate() error {
 	return nil
 }
 
+// Ask prompts the user for any unprovided required fields and validates them.
 func (o *localRunOpts) Ask() error {
 	//TODO(varun359): Validate and Ask SvcEnvName
 
 	return nil
 }
 
+// Execute builds and runs the workload images locally.
 func (o *localRunOpts) Execute() error {
 	//TODO(varun359): Get build information from the manifest and task definition for workloads
 
