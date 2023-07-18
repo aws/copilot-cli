@@ -34,7 +34,7 @@ Copilot v1.29 brings big enhancements to help you develop more flexibly and effi
 
 ## Pipeline overrides
 Copilot pipelines are much more nimble and extensible with CDK and YAML path overrides! This feature provides a safe and easy way to modify your pipeline's CloudFormation template.  
-Much like the other override commands, you can run `copilot pipeline override` to customize that CloudFormation template. You have the option of using either the CDK or YAML, depending on the extent of your modifications and personal preference.  
+Much like the other override commands, you can run `copilot pipeline override` to customize that CloudFormation template, with the option of using either the CDK or YAML.  
 A new `--diff` flag for `copilot pipeline deploy` enables you to preview the differences between your last deployed CloudFormation template and any local changes before the deployment is executed. Copilot will confirm that you'd like to proceed; use the `--yes` flag to skip the confirmation: `copilot pipeline deploy --diff --yes`.  
 
 To learn more about overrides and to see examples, check out the [CDK overrides guide](../docs/developing/overrides/cdk.md) and [YAML patch overrides guide](../docs/developing/overrides/yamlpatch.md).
