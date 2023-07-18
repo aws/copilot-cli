@@ -14,7 +14,7 @@ const (
 	fmtPipelinePartialsPath = "cicd/partials/%s.yml"
 )
 
-var pipelinePartialTemplateNames = []string{"build"}
+var pipelinePartialTemplateNames = []string{"build", "test"}
 
 // ParsePipeline parses a pipeline's CloudFormation template with the specified data object and returns its content.
 func (t *Template) ParsePipeline(data interface{}) (*Content, error) {

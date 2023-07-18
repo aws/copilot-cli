@@ -1,0 +1,26 @@
+{{- range $index, $stage := .Stages}}
+{{- if $stage.Test}}
+BuildTestCommands{{logicalIDSafe $stage.Name}}:
+  Type: AWS::CodeBuild::Project
+  Properties:
+    EncryptionKey: !ImportValue {{$.AppName}}-ArtifactKey
+    ServiceRole: !GetAtt BuildProjectRole.Arn
+    Artifacts:
+      Type: NO_ARTIFACTS
+    Environment:
+      Type: LINUX_CONTAINER
+      Image: aws/codebuild/amazonlinux2-x86_64-standard:4.0
+      ComputeType: BUILD_GENERAL1_SMALL
+      PrivilegedMode: true
+    Source:
+      Type: NO_SOURCE
+      BuildSpec: |
+        version: 0.2
+        phases:
+          build:
+            commands:
+            {{- range $index, $command := $stage.Test.Commands}}
+              - {{$command}}
+            {{- end}}
+{{- end}}
+{{- end}}

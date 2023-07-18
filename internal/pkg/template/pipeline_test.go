@@ -21,6 +21,7 @@ Resources:
   {{ isCodeStarConnection "randomSource" }}
 `), 0644)
 	_ = afero.WriteFile(fs, "templates/cicd/partials/build.yml", []byte("build"), 0644)
+	_ = afero.WriteFile(fs, "templates/cicd/partials/test.yml", []byte("test"), 0644)
 	tpl := &Template{
 		fs: &mockFS{
 			Fs: fs,
