@@ -42,12 +42,12 @@ func newLocalRunOpts(vars localRunVars) (*localRunOpts, error) {
 	return opts, nil
 }
 
-// Validate validates the application name for running a workload locally.
-// It ensures that the application name is provided and exists in the workspace.
+// Validate returns an error for any invalid optional flags.
 func (o *localRunOpts) Validate() error {
 	if o.appName == "" {
 		return errNoAppInWorkspace
 	}
+	// Ensure that the application name provided exists in the workspace
 	if _, err := o.store.GetApplication(o.appName); err != nil {
 		return fmt.Errorf("get application %s: %w", o.appName, err)
 	}
