@@ -24,15 +24,20 @@ Copilot v1.29 brings big enhancements to help you develop more flexibly and effi
 
 ???+ note "What’s AWS Copilot?"
 
-    The AWS Copilot CLI is a tool for developers to build, release, and operate production ready containerized applications on AWS.
+    The AWS Copilot CLI is a tool for developers to build, release, and operate production-ready applications on AWS.
     From getting started, pushing to staging, and releasing to production, Copilot can help manage the entire lifecycle of your application development.
-    At the foundation of Copilot is AWS CloudFormation, which enables you to provision infrastructure as code.
-    Copilot provides pre-defined CloudFormation templates and user-friendly workflows for different types of micro service architectures,
+    At the foundation of Copilot is AWS CloudFormation, which enables you to provision Infrastructure as Code.
+    Copilot provides pre-defined CloudFormation templates and user-friendly workflows for different types of microservice architectures,
     enabling you to focus on developing your application, instead of writing deployment scripts.
 
     See the section [Overview](../docs/concepts/overview.en.md) for a more detailed introduction to AWS Copilot.
 
 ## Pipeline overrides
+Copilot pipelines are much more nimble and extensible with CDK and YAML path overrides! This feature provides a safe and easy way to modify your pipeline's CloudFormation template.  
+Much like the other override commands, you can run `copilot pipeline override` to customize that CloudFormation template. You have the option of using either the CDK or YAML, depending on the extent of your modifications and personal preference.  
+A new `--diff` flag for `copilot pipeline deploy` enables you to preview the differences between your last deployed CloudFormation template and any local changes before the deployment is executed. Copilot will confirm that you'd like to proceed; use the `--yes` flag to skip the confirmation: `copilot pipeline deploy --diff --yes`.  
+
+To learn more about overrides and to see examples, check out the [CDK overrides guide](../docs/developing/overrides/cdk.md) and [YAML patch overrides guide](../docs/developing/overrides/yamlpatch.md).
 
 ## Static Site enhancements
 For more dynamic development, Copilot will now invalidate the CloudFront edge cache each time you redeploy a Static Site workload, enabling you to see and deliver your updated content right away.
