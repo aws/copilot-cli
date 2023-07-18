@@ -121,7 +121,7 @@ BuildProjectAdditionalPolicy:
   Properties:
     PolicyName: !Sub ${AWS::StackName}-BuildProjectAdditionalPolicy
     PolicyDocument:
-  {{.Build.AdditionalPolicyDocument | indent 8}}
+{{.Build.AdditionalPolicyDocument | indent 8}}
     Roles:
       - !Ref BuildProjectRole
 {{- end}}
