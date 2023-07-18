@@ -283,9 +283,11 @@ func TestWorkspace_Use(t *testing.T) {
 				return fs
 			},
 			expectedError: &ErrWorkspaceNotFound{
-				CurrentDirectory:      wd,
-				ManifestDirectoryName: CopilotDirName,
-				NumberOfLevelsChecked: maximumParentDirsToSearch,
+				&ErrTargetNotFound{
+					startDir:              wd,
+					numberOfLevelsChecked: maximumParentDirsToSearch,
+				},
+				CopilotDirName,
 			},
 		},
 	}

@@ -63,7 +63,7 @@ var (
 
 	essentialContainerDependsOnValidStatuses = []string{dependsOnStart, dependsOnHealthy}
 	dependsOnValidStatuses                   = []string{dependsOnStart, dependsOnComplete, dependsOnSuccess, dependsOnHealthy}
-	nlbValidProtocols                        = []string{TCP, TLS}
+	nlbValidProtocols                        = []string{TCP, udp, TLS}
 	validContainerProtocols                  = []string{TCP, udp}
 	tracingValidVendors                      = []string{awsXRAY}
 	ecsRollingUpdateStrategies               = []string{ECSDefaultRollingUpdateStrategy, ECSRecreateRollingUpdateStrategy}
