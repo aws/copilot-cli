@@ -1059,7 +1059,7 @@ Resources:
 			},
 			wantedErr: errors.New("describe stack events stack/webhook/1111: some error"),
 		},
-		"signal recieved and cancel update stack fails to to rollback the stack": {
+		"signal recieved and cancel update stack fails to rollback the stack": {
 			mockSignalClient: func(m *mocks.MocksignalClient) {
 				signals := make(chan os.Signal, 1)
 				signals <- syscall.SIGINT

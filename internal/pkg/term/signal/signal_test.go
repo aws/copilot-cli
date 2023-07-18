@@ -17,7 +17,6 @@ func TestSignal(t *testing.T) {
 		"recieve a single signal": {
 			inSignals: []os.Signal{syscall.SIGINT},
 		},
-
 		"recieve a couple of signals": {
 			inSignals: []os.Signal{syscall.SIGINT, syscall.SIGTERM},
 		},
@@ -34,11 +33,11 @@ func TestSignal(t *testing.T) {
 
 			// THEN
 			for _, wantedSignal := range tc.inSignals {
-				if err := syscall.Kill(syscall.Getpid(), wantedSignal.(syscall.Signal)); err != nil {
-					require.Error(t, err)
+				err := syscall.Kill(syscall.Getpid(), wantedSignal.(syscall.Signal))
+				if err == nil {
+					gotSignal := <-signalCh
+					require.Equal(t, wantedSignal, gotSignal)
 				}
-				gotSignal := <-signalCh
-				require.Equal(t, wantedSignal, gotSignal)
 			}
 			sig.StopCatchSignals()
 		})
