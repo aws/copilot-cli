@@ -156,6 +156,11 @@ func (s *Store) ListDeployedJobs(appName string, envName string) ([]string, erro
 	return s.listDeployedWorkloads(appName, envName, manifestinfo.JobTypes())
 }
 
+// ListDeployedWorkloads returns the names of deployed workloads in an environment.
+func (s *Store) ListDeployedWorkloads(appName string, envName string) ([]string, error) {
+	return s.listDeployedWorkloads(appName, envName, manifestinfo.WorkloadTypes())
+}
+
 func (s *Store) listDeployedWorkloads(appName string, envName string, workloadType []string) ([]string, error) {
 	allWorkloads, err := s.configStore.ListWorkloads(appName)
 	if err != nil {
@@ -310,6 +315,11 @@ func (s *Store) IsServiceDeployed(appName string, envName string, svcName string
 // IsJobDeployed returns whether a job is deployed in an environment or not by checking for a state machine.
 func (s *Store) IsJobDeployed(appName, envName, jobName string) (bool, error) {
 	return s.isWorkloadDeployed(appName, envName, jobName)
+}
+
+// IsWorkloadDeployed returns whether a workload is deployed in an environment or not.
+func (s *Store) IsWorkloadDeployed(appName, envName, wkldName string) (bool, error) {
+	return s.isWorkloadDeployed(appName, envName, wkldName)
 }
 
 func (s *Store) isWorkloadDeployed(appName, envName, name string) (bool, error) {
