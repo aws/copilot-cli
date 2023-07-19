@@ -8,12 +8,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
-	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"io"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -586,6 +587,41 @@ func (cf CloudFormation) deleteAndRenderStack(name, description string, deleteFn
 	return nil
 }
 
+type cancelUpdateAndRenderInput struct {
+	stackName      string
+	description    string
+	cancelUpdateFn func() error
+}
+
+func (cf CloudFormation) cancelUpdateAndRender(in *cancelUpdateAndRenderInput) error {
+	stackDescr, err := cf.cfnClient.Describe(in.stackName)
+	if err != nil {
+		return fmt.Errorf("describe stack %s: %w", in.stackName, err)
+	}
+	if stackDescr.ChangeSetId == nil {
+		return fmt.Errorf("ChangeSetID not found for stack %s", in.stackName)
+	}
+	waitCtx, cancelWait := context.WithTimeout(context.Background(), waitForStackTimeout)
+	defer cancelWait()
+	g, ctx := errgroup.WithContext(waitCtx)
+	g.Go(in.cancelUpdateFn)
+	renderer, err := cf.createChangeSetRenderer(g, ctx, aws.StringValue(stackDescr.ChangeSetId), in.stackName, in.description, progress.RenderOptions{})
+	if err != nil {
+		return err
+	}
+	g.Go(func() error {
+		_, err := progress.Render(ctx, progress.NewTabbedFileWriter(cf.console), renderer)
+		return err
+	})
+	if err := g.Wait(); err != nil {
+		return err
+	}
+	if err := cf.errOnFailedCancelUpdate(in.stackName); err != nil {
+		return err
+	}
+	return nil
+}
+
 type errFailedService struct {
 	stackName    string
 	resourceType string
@@ -601,6 +637,18 @@ func (e *errFailedService) RecommendActions() string {
 }
 func (e *errFailedService) Error() string {
 	return fmt.Sprintf("stack %s did not complete successfully and exited with status %s", e.stackName, e.status)
+}
+
+func (cf CloudFormation) errOnFailedCancelUpdate(stackName string) error {
+	stack, err := cf.cfnClient.Describe(stackName)
+	if err != nil {
+		return fmt.Errorf("describe stack %s: %w", stackName, err)
+	}
+	status := aws.StringValue(stack.StackStatus)
+	if status != sdkcloudformation.StackStatusUpdateRollbackComplete {
+		return fmt.Errorf("stack %s did not rollback successfully and exited with status %s", stackName, status)
+	}
+	return nil
 }
 
 func (cf CloudFormation) errOnFailedStack(stackName string) error {
