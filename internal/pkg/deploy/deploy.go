@@ -309,20 +309,16 @@ func (s *Store) ListEnvironmentsDeployedTo(appName string, svcName string) ([]st
 
 // IsServiceDeployed returns whether a service is deployed in an environment or not.
 func (s *Store) IsServiceDeployed(appName string, envName string, svcName string) (bool, error) {
-	return s.isWorkloadDeployed(appName, envName, svcName)
+	return s.IsWorkloadDeployed(appName, envName, svcName)
 }
 
 // IsJobDeployed returns whether a job is deployed in an environment or not by checking for a state machine.
 func (s *Store) IsJobDeployed(appName, envName, jobName string) (bool, error) {
-	return s.isWorkloadDeployed(appName, envName, jobName)
+	return s.IsWorkloadDeployed(appName, envName, jobName)
 }
 
 // IsWorkloadDeployed returns whether a workload is deployed in an environment or not.
-func (s *Store) IsWorkloadDeployed(appName, envName, wkldName string) (bool, error) {
-	return s.isWorkloadDeployed(appName, envName, wkldName)
-}
-
-func (s *Store) isWorkloadDeployed(appName, envName, name string) (bool, error) {
+func (s *Store) IsWorkloadDeployed(appName, envName, name string) (bool, error) {
 	rgClient, err := s.newRgClientFromIDs(appName, envName)
 	if err != nil {
 		return false, err
