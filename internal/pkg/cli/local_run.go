@@ -11,11 +11,17 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
+	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/spf13/cobra"
 )
 
+const workloadAskPrompt = "Which workload would you like to run locally?"
+
 type localRunVars struct {
 	wkldName string
+	wkldType string
 	appName  string
 	envName  string
 }
@@ -23,6 +29,7 @@ type localRunVars struct {
 type localRunOpts struct {
 	localRunVars
 
+	sel   deploySelector
 	store store
 }
 
@@ -34,10 +41,14 @@ func newLocalRunOpts(vars localRunVars) (*localRunOpts, error) {
 	}
 
 	store := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
+	deployStore, err := deploy.NewStore(sessProvider, store)
+	if err != nil {
+		return nil, err
+	}
 	opts := &localRunOpts{
 		localRunVars: vars,
-
-		store: store,
+		sel:          selector.NewDeploySelect(prompt.New(), store, deployStore),
+		store:        store,
 	}
 	return opts, nil
 }
@@ -56,8 +67,32 @@ func (o *localRunOpts) Validate() error {
 
 // Ask prompts the user for any unprovided required fields and validates them.
 func (o *localRunOpts) Ask() error {
-	//TODO(varun359): Validate and Ask SvcEnvName
+	if err := o.validateAndAskWkldEnvName(); err != nil {
+		return err
+	}
 
+	return nil
+}
+
+func (o *localRunOpts) validateAndAskWkldEnvName() error {
+	if o.envName != "" {
+		if _, err := o.store.GetEnvironment(o.appName, o.envName); err != nil {
+			return err
+		}
+	}
+	if o.wkldName != "" {
+		if _, err := o.store.GetWorkload(o.appName, o.wkldName); err != nil {
+			return err
+		}
+	}
+
+	deployedWorkload, err := o.sel.DeployedWorkload(workloadAskPrompt, "", o.appName, selector.WithEnv(o.envName), selector.WithName(o.wkldName))
+	if err != nil {
+		return fmt.Errorf("select deployed workloads for application %s: %w", o.appName, err)
+	}
+	o.wkldName = deployedWorkload.Name
+	o.envName = deployedWorkload.Env
+	o.wkldType = deployedWorkload.Type
 	return nil
 }
 
