@@ -1,0 +1,34 @@
+{{- range $stage := .Stages}}
+{{- range $action := $stage.PreDeployments}}
+Pre{{logicalIDSafe $stage.Name}}DeploymentAction{{logicalIDSafe $action.Name}}:
+  Type: AWS::CodeBuild::Project
+  Properties:
+    EncryptionKey: !ImportValue {{$.AppName}}-ArtifactKey
+    ServiceRole: !GetAtt BuildProjectRole.Arn
+    Artifacts:
+      Type: CODEPIPELINE
+    {{- if or (eq $action.Build.EnvironmentType "LINUX_CONTAINER") (eq $action.Build.EnvironmentType "ARM_CONTAINER")}}
+    Cache:
+      Modes:
+        - LOCAL_DOCKER_LAYER_CACHE
+      Type: LOCAL
+    {{- else }}
+    Cache:
+      Type: "NO_CACHE"
+    {{- end }}
+    Environment:
+      Type: {{$action.Build.EnvironmentType}}
+      ComputeType: BUILD_GENERAL1_SMALL
+      PrivilegedMode: true
+      Image: {{$action.Build.Image}}
+      EnvironmentVariables:
+        - Name: AWS_ACCOUNT_ID
+          Value: !Sub '${AWS::AccountId}'
+        - Name: PARTITION
+          Value: !Ref AWS::Partition
+    Source:
+      Type: CODEPIPELINE
+      BuildSpec: {{$action.Build.BuildspecPath}}
+    TimeoutInMinutes: 60
+{{- end}}
+{{- end}}
