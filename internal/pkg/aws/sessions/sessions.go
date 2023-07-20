@@ -227,7 +227,7 @@ func (p *Provider) userAgentHandler() request.NamedHandler {
 	extras := append([]string{runtime.GOOS}, p.userAgentExtras...)
 	return request.NamedHandler{
 		Name: "UserAgentHandler",
-		Fn:   request.MakeAddToUserAgentHandler(userAgentProductName, version.Version, extras...),
+		Fn:   request.MakeAddToUserAgentHandler(userAgentProductName, version.LatestTemplateVersion(), extras...),
 	}
 }
 

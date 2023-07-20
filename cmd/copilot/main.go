@@ -67,7 +67,7 @@ func buildRootCmd() *cobra.Command {
 
 	// Sets version for --version flag. Version command gives more detailed
 	// version information.
-	cmd.Version = version.Version
+	cmd.Version = version.LatestTemplateVersion()
 	cmd.SetVersionTemplate("copilot version: {{.Version}}\n")
 
 	// NOTE: Order for each grouping below is significant in that it affects help menu output ordering.

@@ -21,7 +21,7 @@ func BuildVersionCmd() *cobra.Command {
 		Use:   "version",
 		Short: "Print the version number.",
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
-			fmt.Printf("version: %s, built for %s\n", version.Version, runtime.GOOS)
+			fmt.Printf("version: %s, built for %s\n", version.LatestTemplateVersion(), runtime.GOOS)
 			return nil
 		}),
 		Annotations: map[string]string{

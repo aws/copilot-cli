@@ -501,8 +501,8 @@ func buildArgsPerContainer(name, workspacePath string, img ContainerImageIdentif
 		}
 		labels := make(map[string]string, 3)
 		labels[labelForBuilder] = "copilot-cli"
-		if version.Version != "" {
-			labels[labelForVersion] = version.Version
+		if version.LatestTemplateVersion() != "" {
+			labels[labelForVersion] = version.LatestTemplateVersion()
 		}
 		labels[labelForContainerName] = container
 		dArgs[container] = &dockerengine.BuildArguments{

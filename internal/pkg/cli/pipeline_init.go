@@ -777,7 +777,7 @@ func (o *initPipelineOpts) createBuildspec(buildSpecTemplatePath string) error {
 		ArtifactBuckets    []artifactBucket
 	}{
 		BinaryS3BucketPath: binaryS3BucketPath,
-		Version:            version.Version,
+		Version:            version.LatestTemplateVersion(),
 		ManifestPath:       filepath.ToSlash(o.manifestPath), // The manifest path must be rendered in the buildspec with '/' instead of os-specific separator.
 		ArtifactBuckets:    artifactBuckets,
 	})
