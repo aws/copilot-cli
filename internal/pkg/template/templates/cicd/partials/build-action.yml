@@ -1,22 +1,8 @@
 BuildProjectRole:
   Type: AWS::IAM::Role
   Properties:
-    AssumeRolePolicyDocument:
-      Version: '2012-10-17'
-      Statement:
-        - Effect: Allow
-          Principal:
-            Service:
-              - codebuild.amazonaws.com
-          Action:
-            - sts:AssumeRole
     Path: /
-    ManagedPolicyArns:
-      - 'arn:aws:iam::aws:policy/AmazonSSMReadOnlyAccess' # for env ls
-      - 'arn:aws:iam::aws:policy/AWSCloudFormationReadOnlyAccess' # for service package
-    {{- if .PermissionsBoundary}}
-    PermissionsBoundary: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/{{.PermissionsBoundary}}'
-    {{- end}}
+{{ include "role-config" . | indent 4}}
     Policies:
       - PolicyName: assume-env-manager
         PolicyDocument:
@@ -37,7 +23,7 @@ BuildProjectPolicy:
     Roles:
       - !Ref BuildProjectRole
     PolicyDocument:
-{{ include "build-role-policy-document" . | indent 6 }}
+{{ include "role-policy-document" . | indent 6 }}
 
 {{- if .Build.AdditionalPolicyDocument }}
 BuildProjectAdditionalPolicy:

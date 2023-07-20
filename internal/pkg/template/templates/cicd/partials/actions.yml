@@ -3,22 +3,8 @@
 Pre{{logicalIDSafe $stage.Name}}DeploymentAction{{logicalIDSafe $action.Name}}BuildProjectRole:
   Type: AWS::IAM::Role
   Properties:
-    AssumeRolePolicyDocument:
-      Version: '2012-10-17'
-      Statement:
-        - Effect: Allow
-          Principal:
-            Service:
-              - codebuild.amazonaws.com
-          Action:
-            - sts:AssumeRole
     Path: /
-    ManagedPolicyArns:
-      - 'arn:aws:iam::aws:policy/AmazonSSMReadOnlyAccess' # for env ls
-      - 'arn:aws:iam::aws:policy/AWSCloudFormationReadOnlyAccess' # for service package
-    {{- if $.PermissionsBoundary }}
-    PermissionsBoundary: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/{{$.PermissionsBoundary}}'
-    {{- end }}
+{{ include "role-config" $ | indent 4}}
     Policies:
       - PolicyName: assume-env-manager
         PolicyDocument:
@@ -28,39 +14,17 @@ Pre{{logicalIDSafe $stage.Name}}DeploymentAction{{logicalIDSafe $action.Name}}Bu
             Resource: 'arn:aws:iam::{{$stage.AccountID}}:role/{{$.AppName}}-{{$stage.Name}}-EnvManagerRole'
             Action:
               - sts:AssumeRole
-      - PolicyName: codebuild-policy
+      - PolicyName: build-role-policy
         PolicyDocument:
-{{ include "build-role-policy-document" $ | indent 10 }}
+{{ include "role-policy-document" $ | indent 10 }}
 
 Pre{{logicalIDSafe $stage.Name}}DeploymentAction{{logicalIDSafe $action.Name}}:
   Type: AWS::CodeBuild::Project
   Properties:
     EncryptionKey: !ImportValue {{$.AppName}}-ArtifactKey
-    ServiceRole: !GetAtt BuildProjectRole.Arn
+    ServiceRole: !GetAtt Pre{{logicalIDSafe $stage.Name}}DeploymentAction{{logicalIDSafe $action.Name}}BuildProjectRole.Arn
     Artifacts:
       Type: CODEPIPELINE
-    {{- if or (eq $action.Build.EnvironmentType "LINUX_CONTAINER") (eq $action.Build.EnvironmentType "ARM_CONTAINER")}}
-    Cache:
-      Modes:
-        - LOCAL_DOCKER_LAYER_CACHE
-      Type: LOCAL
-    {{- else }}
-    Cache:
-      Type: "NO_CACHE"
-    {{- end }}
-    Environment:
-      Type: {{$action.Build.EnvironmentType}}
-      ComputeType: BUILD_GENERAL1_SMALL
-      PrivilegedMode: true
-      Image: {{$action.Build.Image}}
-      EnvironmentVariables:
-        - Name: AWS_ACCOUNT_ID
-          Value: !Sub '${AWS::AccountId}'
-        - Name: PARTITION
-          Value: !Ref AWS::Partition
-    Source:
-      Type: CODEPIPELINE
-      BuildSpec: {{$action.Build.BuildspecPath}}
-    TimeoutInMinutes: 60
+{{ include "action-config" $action | indent 4}}
 {{- end}}
 {{- end}}
