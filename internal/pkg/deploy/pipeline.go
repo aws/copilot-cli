@@ -493,6 +493,8 @@ type PipelineStage struct {
 	execRoleARN       string
 	envManagerRoleARN string
 	deployments       manifest.Deployments
+	preDeployments    []Action
+	postDeployments   []Action
 }
 
 // Init populates the fields in PipelineStage against a target environment,
@@ -605,6 +607,16 @@ func (stg *PipelineStage) Deployments() ([]DeployAction, error) {
 		return actions[i].Name() < actions[j].Name()
 	})
 	return actions, nil
+}
+
+// PreDeployments returns a list of pre-deployment actions for the pipeline stage.
+func (stg *PipelineStage) PreDeployments() ([]Action, error) {
+	return nil, nil
+}
+
+// PostDeployments returns a list of post-deployment actions for the pipeline stage.
+func (stg *PipelineStage) PostDeployments() ([]Action, error) {
+	return nil, nil
 }
 
 func (stg *PipelineStage) buildDeploymentsGraph() *graph.Graph[string] {
@@ -728,4 +740,16 @@ func (a *TestCommandsAction) Name() string {
 // Commands returns the list commands to run part of the test action.
 func (a *TestCommandsAction) Commands() []string {
 	return a.commands
+}
+
+// Action represents a CodePipeline action.
+type Action struct {
+	action
+	Build
+	name string
+}
+
+// Name returns the name of the action.
+func (a *Action) Name() string {
+	return a.name
 }
