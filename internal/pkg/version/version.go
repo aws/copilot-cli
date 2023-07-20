@@ -4,6 +4,12 @@
 // Package version holds variables for generating version information
 package version
 
+import (
+	"strings"
+
+	"golang.org/x/mod/semver"
+)
+
 const (
 	// LegacyAppTemplate is the version associated with the application template before we started versioning.
 	LegacyAppTemplate = "v0.0.0"
@@ -24,7 +30,7 @@ const (
 // Version is this binary's version. Set with linker flags when building Copilot.
 var Version string
 
-// LatestTemplateVersion is the latest version number available for Copilot templates.
+// LatestTemplateVersion is the latest version number (e.g., v1.29.0) available for Copilot templates.
 func LatestTemplateVersion() string {
-	return Version
+	return strings.TrimSuffix(Version, semver.Prerelease(Version))
 }
