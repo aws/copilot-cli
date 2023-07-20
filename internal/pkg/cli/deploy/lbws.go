@@ -4,6 +4,7 @@
 package deploy
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -128,20 +129,19 @@ func (d *lbWebSvcDeployer) GenerateCloudFormationTemplate(in *GenerateCloudForma
 }
 
 // DeployWorkload deploys a load balanced web service using CloudFormation.
-func (d *lbWebSvcDeployer) DeployWorkload(in *DeployWorkloadInput) (*DeployWorkloadOutput, error) {
+func (d *lbWebSvcDeployer) DeployWorkload(in *DeployWorkloadInput) (ActionRecommender, error) {
 	stackConfigOutput, err := d.stackConfiguration(&in.StackRuntimeConfiguration)
 	if err != nil {
 		return nil, err
 	}
-	deployOut, err := d.deploy(in.Options, *stackConfigOutput)
-	if err != nil {
+	if err := d.deploy(in.Options, *stackConfigOutput); err != nil {
+		var errStackUpdateCanceledOnInterrupt *cloudformation.ErrStackUpdateCanceledOnInterrupt
+		if errors.As(err, &errStackUpdateCanceledOnInterrupt) {
+			return noopActionRecommender{}, err
+		}
 		return nil, err
 	}
-	return &DeployWorkloadOutput{
-		IsWkldDeleted:        deployOut.IsWkldDeleted,
-		IsWkldUpdateCanceled: deployOut.IsWkldUpdateCanceled,
-		Recommendations:      noopActionRecommender{},
-	}, nil
+	return noopActionRecommender{}, nil
 }
 
 func (d *lbWebSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*svcStackConfigurationOutput, error) {

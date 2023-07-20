@@ -7351,10 +7351,10 @@ func (mr *MockworkloadDeployerMockRecorder) DeployDiff(inTmpl interface{}) *gomo
 }
 
 // DeployWorkload mocks base method.
-func (m *MockworkloadDeployer) DeployWorkload(in *deploy.DeployWorkloadInput) (*deploy.DeployWorkloadOutput, error) {
+func (m *MockworkloadDeployer) DeployWorkload(in *deploy.DeployWorkloadInput) (deploy.ActionRecommender, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DeployWorkload", in)
-	ret0, _ := ret[0].(*deploy.DeployWorkloadOutput)
+	ret0, _ := ret[0].(deploy.ActionRecommender)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

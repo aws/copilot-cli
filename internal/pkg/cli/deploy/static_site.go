@@ -4,6 +4,7 @@
 package deploy
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"path/filepath"
@@ -106,34 +107,32 @@ func (d *staticSiteDeployer) GenerateCloudFormationTemplate(in *GenerateCloudFor
 }
 
 // DeployWorkload deploys a static site service using CloudFormation.
-func (d *staticSiteDeployer) DeployWorkload(in *DeployWorkloadInput) (*DeployWorkloadOutput, error) {
+func (d *staticSiteDeployer) DeployWorkload(in *DeployWorkloadInput) (ActionRecommender, error) {
 	conf, err := d.stackConfiguration(&in.StackRuntimeConfiguration)
 	if err != nil {
 		return nil, err
 	}
-	deployOut, err := d.deploy(in.Options, svcStackConfigurationOutput{conf: conf})
-	if err != nil {
+	if err := d.deploy(in.Options, svcStackConfigurationOutput{conf: conf}); err != nil {
+		var errStackUpdateCanceledOnInterrupt *cloudformation.ErrStackUpdateCanceledOnInterrupt
+		if errors.As(err, &errStackUpdateCanceledOnInterrupt) {
+			return noopActionRecommender{}, err
+		}
 		return nil, err
 	}
-	return &DeployWorkloadOutput{
-		IsWkldDeleted:        deployOut.IsWkldDeleted,
-		IsWkldUpdateCanceled: deployOut.IsWkldUpdateCanceled,
-		Recommendations:      noopActionRecommender{},
-	}, nil
+	return noopActionRecommender{}, nil
 }
 
-func (d *staticSiteDeployer) deploy(deployOptions Options, stackConfigOutput svcStackConfigurationOutput) (*DeployWorkloadOutput, error) {
+func (d *staticSiteDeployer) deploy(deployOptions Options, stackConfigOutput svcStackConfigurationOutput) error {
 	opts := []awscloudformation.StackOption{
 		awscloudformation.WithRoleARN(d.env.ExecutionRoleARN),
 	}
 	if deployOptions.DisableRollback {
 		opts = append(opts, awscloudformation.WithDisableRollback())
 	}
-	out, err := d.deployAndHandleInterrupt(stackConfigOutput.conf, opts)
-	if err != nil {
-		return nil, fmt.Errorf("deploy service: %w", err)
+	if err := d.deployAndHandleInterrupt(stackConfigOutput.conf, opts); err != nil {
+		return fmt.Errorf("deploy service: %w", err)
 	}
-	return &out, nil
+	return nil
 }
 
 // UploadArtifacts uploads static assets to the app stackset bucket.

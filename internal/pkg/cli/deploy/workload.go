@@ -10,9 +10,11 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -67,6 +69,10 @@ const (
 	pollIntervalForBuildAndPush    = 60 * time.Millisecond
 	defaultNumLinesForBuildAndPush = 5
 )
+const (
+	logInterruptMsg = `Received Interrupt for Ctrl-C.
+Press Ctrl-C again to exit immediately, but note that the ongoing action still continue.`
+)
 
 // ActionRecommender contains methods that output action recommendation.
 type ActionRecommender interface {
@@ -105,7 +111,7 @@ type endpointGetter interface {
 
 type serviceDeployer interface {
 	DeployService(ctx context.Context, conf cloudformation.StackConfiguration, bucketName string, opts ...awscloudformation.StackOption) error
-	WaitForSignalAndHandleInterrupt(ctx context.Context, cancel context.CancelFunc, stackName string) (bool, bool, error)
+	HandleInterruptOnStackStatus(stackName string) error
 }
 
 type deployedTemplateGetter interface {
@@ -142,13 +148,6 @@ type StackRuntimeConfiguration struct {
 type DeployWorkloadInput struct {
 	StackRuntimeConfiguration
 	Options
-}
-
-// DeployWorkloadOutput is the output of DeployWorkload.
-type DeployWorkloadOutput struct {
-	IsWkldDeleted        bool
-	IsWkldUpdateCanceled bool
-	Recommendations      ActionRecommender
 }
 
 // Options specifies options for the deployment.
@@ -205,6 +204,9 @@ type workloadDeployer struct {
 	envSess                  *session.Session
 	store                    *config.Store
 	envConfig                *manifest.Environment
+
+	// override in unit tests.
+	notifySignals func() chan os.Signal
 }
 
 // WorkloadDeployerInput is the input to for workloadDeployer constructor.
@@ -317,6 +319,7 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 		store:                    store,
 		envConfig:                envConfig,
 		labeledTermPrinter:       labeledTermPrinter,
+		notifySignals:            notifySignals,
 
 		mft:    in.Mft,
 		rawMft: in.RawMft,
@@ -368,15 +371,14 @@ func (d *workloadDeployer) generateCloudFormationTemplate(conf stackSerializer) 
 	}, nil
 }
 
-func (d *workloadDeployer) deployAndHandleInterrupt(conf cloudformation.StackConfiguration, opts []awscloudformation.StackOption) (DeployWorkloadOutput, error) {
+func (d *workloadDeployer) deployAndHandleInterrupt(conf cloudformation.StackConfiguration, opts []awscloudformation.StackOption) error {
 	g, ctx := errgroup.WithContext(context.Background())
 	ctx, cancel := context.WithCancel(ctx)
+	sigCh := d.notifySignals()
 	defer cancel()
-	out := DeployWorkloadOutput{}
 	deployService := func() error {
 		defer cancel()
-		err := d.deployer.DeployService(ctx, conf, d.resources.S3Bucket, opts...)
-		if err != nil {
+		if err := d.deployer.DeployService(ctx, conf, d.resources.S3Bucket, opts...); err != nil {
 			if !errors.Is(err, context.Canceled) {
 				return err
 			}
@@ -384,10 +386,17 @@ func (d *workloadDeployer) deployAndHandleInterrupt(conf cloudformation.StackCon
 		return nil
 	}
 	waitForSignalAndHandleInterrupt := func() error {
-		isDeleted, isUpdateCanceled, err := d.deployer.WaitForSignalAndHandleInterrupt(ctx, cancel, conf.StackName())
-		out.IsWkldDeleted = isDeleted
-		out.IsWkldUpdateCanceled = isUpdateCanceled
-		if err != nil {
+		if err := waitForSignalAndHandleInterrupt(handleInterruptInput{
+			ctx:      ctx,
+			cancelFn: cancel,
+			sigCh:    sigCh,
+			interruptHandlerFn: func() error {
+				if err := d.deployer.HandleInterruptOnStackStatus(conf.StackName()); err != nil {
+					return fmt.Errorf("handle interrupt based on status of the stack %s: %w", conf.StackName(), err)
+				}
+				return nil
+			},
+		}); err != nil {
 			return err
 		}
 		return nil
@@ -395,9 +404,44 @@ func (d *workloadDeployer) deployAndHandleInterrupt(conf cloudformation.StackCon
 	g.Go(deployService)
 	g.Go(waitForSignalAndHandleInterrupt)
 	if err := g.Wait(); err != nil {
-		return out, err
+		return err
 	}
-	return out, nil
+	return nil
+}
+
+type handleInterruptInput struct {
+	ctx                context.Context
+	cancelFn           context.CancelFunc
+	interruptHandlerFn func() error
+	sigCh              chan os.Signal
+}
+
+func waitForSignalAndHandleInterrupt(in handleInterruptInput) error {
+	for {
+		select {
+		case <-in.sigCh:
+			log.Infoln(logInterruptMsg)
+			in.cancelFn()
+			stopCatchSignals(in.sigCh)
+			if err := in.interruptHandlerFn(); err != nil {
+				return err
+			}
+			return nil
+		case <-in.ctx.Done():
+			stopCatchSignals(in.sigCh)
+			return nil
+		}
+	}
+}
+func notifySignals() chan os.Signal {
+	sigCh := make(chan os.Signal)
+	signal.Notify(sigCh, syscall.SIGINT)
+	return sigCh
+}
+
+func stopCatchSignals(sigCh chan os.Signal) {
+	signal.Stop(sigCh)
+	close(sigCh)
 }
 
 type forceDeployInput struct {

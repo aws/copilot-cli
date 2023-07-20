@@ -4,13 +4,10 @@
 package cloudformation
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"strings"
-	"syscall"
 	"testing"
 	"time"
 
@@ -866,28 +863,14 @@ func TestCloudFormation_Template(t *testing.T) {
 	}
 }
 
-func TestCloudFormation_WaitForSignalAndHandleInterrupt(t *testing.T) {
+func TestCloudFormation_HandleInterruptOnStackStatus(t *testing.T) {
 	inStackName := "mockstack"
 	deploymentTime := time.Date(2020, time.November, 23, 18, 0, 0, 0, time.UTC)
 	testCases := map[string]struct {
-		mockCFNClient           func(*mocks.MockcfnClient)
-		mockSignalClient        func(*mocks.MocksignalClient)
-		wantedIsDeleted         bool
-		wantedIsUpdatedCanceled bool
-		wantedErr               error
+		mockCFNClient func(*mocks.MockcfnClient)
+		wantedErr     error
 	}{
-		"did not receive an interrupt signal": {
-			mockSignalClient: func(m *mocks.MocksignalClient) {
-				m.EXPECT().NotifySignals().Return(nil)
-			},
-		},
 		"got an interrupt signal but stack is not in update in progress or create in progress status": {
-			mockSignalClient: func(m *mocks.MocksignalClient) {
-				signals := make(chan os.Signal, 1)
-				signals <- syscall.SIGINT
-				m.EXPECT().NotifySignals().Return(signals)
-				m.EXPECT().StopCatchSignals()
-			},
 			mockCFNClient: func(m *mocks.MockcfnClient) {
 				m.EXPECT().Describe(gomock.Any()).Return(&cloudformation.StackDescription{
 					StackId:     aws.String("stack/webhook/1111"),
@@ -895,13 +878,7 @@ func TestCloudFormation_WaitForSignalAndHandleInterrupt(t *testing.T) {
 				}, nil)
 			},
 		},
-		"signal recieved and success on deleting the stack": {
-			mockSignalClient: func(m *mocks.MocksignalClient) {
-				signals := make(chan os.Signal, 1)
-				signals <- syscall.SIGINT
-				m.EXPECT().NotifySignals().Return(signals)
-				m.EXPECT().StopCatchSignals()
-			},
+		"interrupt signal recieved and success on deleting the stack": {
 			mockCFNClient: func(m *mocks.MockcfnClient) {
 				m.EXPECT().DescribeStackEvents(&sdkcloudformation.DescribeStackEventsInput{
 					StackName: aws.String("stack/webhook/1111"),
@@ -917,7 +894,7 @@ func TestCloudFormation_WaitForSignalAndHandleInterrupt(t *testing.T) {
 						},
 						{
 							EventId:           aws.String("2"),
-							LogicalResourceId: aws.String("mockstack"),
+							LogicalResourceId: aws.String(inStackName),
 							ResourceType:      aws.String("AWS::CloudFormation::Stack"),
 							ResourceStatus:    aws.String("CREATE_IN_PROGRESS"),
 							Timestamp:         aws.Time(deploymentTime),
@@ -932,7 +909,7 @@ func TestCloudFormation_WaitForSignalAndHandleInterrupt(t *testing.T) {
 						},
 						{
 							EventId:           aws.String("4"),
-							LogicalResourceId: aws.String("mockstack"),
+							LogicalResourceId: aws.String(inStackName),
 							ResourceType:      aws.String("AWS::CloudFormation::Stack"),
 							ResourceStatus:    aws.String("DELETE_COMPLETE"),
 							Timestamp:         aws.Time(deploymentTime),
@@ -946,26 +923,20 @@ Resources:
       'aws:copilot:description': 'A CloudWatch log group to hold your service logs'
     Type: AWS::Logs::LogGroup`, nil)
 				m.EXPECT().Describe(gomock.Any()).Return(&cloudformation.StackDescription{
-					StackName:   aws.String("mockstack"),
+					StackName:   aws.String(inStackName),
 					StackId:     aws.String("stack/webhook/1111"),
 					StackStatus: aws.String("CREATE_IN_PROGRESS"),
 				}, nil)
 				m.EXPECT().DeleteAndWait("mockstack").Return(&cloudformation.ErrStackNotFound{})
 				m.EXPECT().Describe(gomock.Any()).Return(&cloudformation.StackDescription{
-					StackName: aws.String("mockstack"),
+					StackName: aws.String(inStackName),
 					StackId:   aws.String("stack/webhook/1111"),
 				}, nil)
 
 			},
-			wantedIsDeleted: true,
+			wantedErr: fmt.Errorf(fmt.Sprintf("stack %s is deleted on interrupt signal", inStackName)),
 		},
-		"signal recieved and cancel update stack successfully rollback the stack": {
-			mockSignalClient: func(m *mocks.MocksignalClient) {
-				signals := make(chan os.Signal, 1)
-				signals <- syscall.SIGINT
-				m.EXPECT().NotifySignals().Return(signals)
-				m.EXPECT().StopCatchSignals()
-			},
+		"interrupt signal recieved and cancel update stack successfully rollback the stack": {
 			mockCFNClient: func(m *mocks.MockcfnClient) {
 				m.EXPECT().Describe(gomock.Any()).Return(&cloudformation.StackDescription{
 					StackId:     aws.String("stack/webhook/1111"),
@@ -1035,18 +1006,12 @@ Resources:
 					ChangeSetId: aws.String("1234"),
 				}, nil)
 			},
-			wantedIsUpdatedCanceled: true,
+			wantedErr: fmt.Errorf(fmt.Sprintf("update for stack %s is canceled on interrupt signal", inStackName)),
 		},
-		"signal received and deletion of stack fails": {
-			mockSignalClient: func(m *mocks.MocksignalClient) {
-				signals := make(chan os.Signal, 1)
-				signals <- syscall.SIGINT
-				m.EXPECT().NotifySignals().Return(signals)
-				m.EXPECT().StopCatchSignals()
-			},
+		"interrupt signal received and deletion of stack fails": {
 			mockCFNClient: func(m *mocks.MockcfnClient) {
 				m.EXPECT().Describe(gomock.Any()).Return(&cloudformation.StackDescription{
-					StackName:   aws.String("mockstack"),
+					StackName:   aws.String(inStackName),
 					StackId:     aws.String("stack/webhook/1111"),
 					StackStatus: aws.String("CREATE_IN_PROGRESS"),
 				}, nil)
@@ -1059,13 +1024,7 @@ Resources:
 			},
 			wantedErr: errors.New("describe stack events stack/webhook/1111: some error"),
 		},
-		"signal recieved and cancel update stack fails to rollback the stack": {
-			mockSignalClient: func(m *mocks.MocksignalClient) {
-				signals := make(chan os.Signal, 1)
-				signals <- syscall.SIGINT
-				m.EXPECT().NotifySignals().Return(signals)
-				m.EXPECT().StopCatchSignals()
-			},
+		"interrupt signal recieved and cancel update stack fails to rollback the stack": {
 			mockCFNClient: func(m *mocks.MockcfnClient) {
 				m.EXPECT().Describe(gomock.Any()).Return(&cloudformation.StackDescription{
 					StackId:     aws.String("stack/webhook/1111"),
@@ -1139,20 +1098,12 @@ Resources:
 			if tc.mockCFNClient != nil {
 				tc.mockCFNClient(mockcfnClient)
 			}
-			mockSignalClient := mocks.NewMocksignalClient(ctrl)
-			if tc.mockSignalClient != nil {
-				tc.mockSignalClient(mockSignalClient)
-			}
-			ctx, cancel := context.WithTimeout(context.Background(), 350*time.Millisecond)
-			defer cancel()
 			cf := CloudFormation{
-				cfnClient:    mockcfnClient,
-				signalClient: mockSignalClient,
-				console:      mockFileWriter{Writer: &strings.Builder{}},
+				cfnClient: mockcfnClient,
+				console:   mockFileWriter{Writer: &strings.Builder{}},
 			}
-			gotIsDeleted, gotIsUpdateCanceled, gotErr := cf.WaitForSignalAndHandleInterrupt(ctx, cancel, inStackName)
-			require.Equal(t, tc.wantedIsDeleted, gotIsDeleted)
-			require.Equal(t, tc.wantedIsUpdatedCanceled, gotIsUpdateCanceled)
+			// WHEN
+			gotErr := cf.HandleInterruptOnStackStatus(inStackName)
 			if tc.wantedErr != nil {
 				require.EqualError(t, gotErr, tc.wantedErr.Error())
 			}

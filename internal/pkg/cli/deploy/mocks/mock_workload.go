@@ -344,20 +344,18 @@ func (mr *MockserviceDeployerMockRecorder) DeployService(ctx, conf, bucketName i
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployService", reflect.TypeOf((*MockserviceDeployer)(nil).DeployService), varargs...)
 }
 
-// WaitForSignalAndHandleInterrupt mocks base method.
-func (m *MockserviceDeployer) WaitForSignalAndHandleInterrupt(ctx context.Context, cancel context.CancelFunc, stackName string) (bool, bool, error) {
+// HandleInterruptOnStackStatus mocks base method.
+func (m *MockserviceDeployer) HandleInterruptOnStackStatus(stackName string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WaitForSignalAndHandleInterrupt", ctx, cancel, stackName)
-	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(bool)
-	ret2, _ := ret[2].(error)
-	return ret0, ret1, ret2
+	ret := m.ctrl.Call(m, "HandleInterruptOnStackStatus", stackName)
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
-// WaitForSignalAndHandleInterrupt indicates an expected call of WaitForSignalAndHandleInterrupt.
-func (mr *MockserviceDeployerMockRecorder) WaitForSignalAndHandleInterrupt(ctx, cancel, stackName interface{}) *gomock.Call {
+// HandleInterruptOnStackStatus indicates an expected call of HandleInterruptOnStackStatus.
+func (mr *MockserviceDeployerMockRecorder) HandleInterruptOnStackStatus(stackName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitForSignalAndHandleInterrupt", reflect.TypeOf((*MockserviceDeployer)(nil).WaitForSignalAndHandleInterrupt), ctx, cancel, stackName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleInterruptOnStackStatus", reflect.TypeOf((*MockserviceDeployer)(nil).HandleInterruptOnStackStatus), stackName)
 }
 
 // MockdeployedTemplateGetter is a mock of deployedTemplateGetter interface.

@@ -4,6 +4,7 @@
 package deploy
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -75,20 +76,19 @@ func (d *backendSvcDeployer) GenerateCloudFormationTemplate(in *GenerateCloudFor
 }
 
 // DeployWorkload deploys a backend service using CloudFormation.
-func (d *backendSvcDeployer) DeployWorkload(in *DeployWorkloadInput) (*DeployWorkloadOutput, error) {
+func (d *backendSvcDeployer) DeployWorkload(in *DeployWorkloadInput) (ActionRecommender, error) {
 	stackConfigOutput, err := d.stackConfiguration(&in.StackRuntimeConfiguration)
 	if err != nil {
 		return nil, err
 	}
-	deployOut, err := d.deploy(in.Options, *stackConfigOutput)
-	if err != nil {
+	if err := d.deploy(in.Options, *stackConfigOutput); err != nil {
+		var errStackUpdateCanceledOnInterrupt *cloudformation.ErrStackUpdateCanceledOnInterrupt
+		if errors.As(err, &errStackUpdateCanceledOnInterrupt) {
+			return noopActionRecommender{}, err
+		}
 		return nil, err
 	}
-	return &DeployWorkloadOutput{
-		IsWkldDeleted:        deployOut.IsWkldDeleted,
-		IsWkldUpdateCanceled: deployOut.IsWkldUpdateCanceled,
-		Recommendations:      noopActionRecommender{},
-	}, nil
+	return noopActionRecommender{}, nil
 }
 
 func (d *backendSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*svcStackConfigurationOutput, error) {

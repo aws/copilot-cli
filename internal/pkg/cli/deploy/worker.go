@@ -4,6 +4,7 @@
 package deploy
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -124,22 +125,22 @@ func (d *workerSvcDeployer) GenerateCloudFormationTemplate(in *GenerateCloudForm
 }
 
 // DeployWorkload deploys a worker service using CloudFormation.
-func (d *workerSvcDeployer) DeployWorkload(in *DeployWorkloadInput) (*DeployWorkloadOutput, error) {
+func (d *workerSvcDeployer) DeployWorkload(in *DeployWorkloadInput) (ActionRecommender, error) {
 	stackConfigOutput, err := d.stackConfiguration(&in.StackRuntimeConfiguration)
 	if err != nil {
 		return nil, err
 	}
-	deployOut, err := d.deploy(in.Options, stackConfigOutput.svcStackConfigurationOutput)
-	if err != nil {
+	recommendations := &workerSvcDeployOutput{
+		subs: stackConfigOutput.subscriptions,
+	}
+	if err := d.deploy(in.Options, stackConfigOutput.svcStackConfigurationOutput); err != nil {
+		var errStackUpdateCanceledOnInterrupt *cloudformation.ErrStackUpdateCanceledOnInterrupt
+		if errors.As(err, &errStackUpdateCanceledOnInterrupt) {
+			return recommendations, err
+		}
 		return nil, err
 	}
-	return &DeployWorkloadOutput{
-		IsWkldDeleted:        deployOut.IsWkldDeleted,
-		IsWkldUpdateCanceled: deployOut.IsWkldUpdateCanceled,
-		Recommendations: &workerSvcDeployOutput{
-			subs: stackConfigOutput.subscriptions,
-		},
-	}, nil
+	return recommendations, nil
 }
 
 func (d *workerSvcDeployOutput) buildWorkerQueueNames() string {

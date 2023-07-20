@@ -7,7 +7,6 @@ package mocks
 import (
 	context "context"
 	io "io"
-	os "os"
 	reflect "reflect"
 
 	cloudformation "github.com/aws/aws-sdk-go/service/cloudformation"
@@ -723,55 +722,6 @@ func (m *MockimageRemover) ClearRepository(repoName string) error {
 func (mr *MockimageRemoverMockRecorder) ClearRepository(repoName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClearRepository", reflect.TypeOf((*MockimageRemover)(nil).ClearRepository), repoName)
-}
-
-// MocksignalClient is a mock of signalClient interface.
-type MocksignalClient struct {
-	ctrl     *gomock.Controller
-	recorder *MocksignalClientMockRecorder
-}
-
-// MocksignalClientMockRecorder is the mock recorder for MocksignalClient.
-type MocksignalClientMockRecorder struct {
-	mock *MocksignalClient
-}
-
-// NewMocksignalClient creates a new mock instance.
-func NewMocksignalClient(ctrl *gomock.Controller) *MocksignalClient {
-	mock := &MocksignalClient{ctrl: ctrl}
-	mock.recorder = &MocksignalClientMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MocksignalClient) EXPECT() *MocksignalClientMockRecorder {
-	return m.recorder
-}
-
-// NotifySignals mocks base method.
-func (m *MocksignalClient) NotifySignals() <-chan os.Signal {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "NotifySignals")
-	ret0, _ := ret[0].(<-chan os.Signal)
-	return ret0
-}
-
-// NotifySignals indicates an expected call of NotifySignals.
-func (mr *MocksignalClientMockRecorder) NotifySignals() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NotifySignals", reflect.TypeOf((*MocksignalClient)(nil).NotifySignals))
-}
-
-// StopCatchSignals mocks base method.
-func (m *MocksignalClient) StopCatchSignals() {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "StopCatchSignals")
-}
-
-// StopCatchSignals indicates an expected call of StopCatchSignals.
-func (mr *MocksignalClientMockRecorder) StopCatchSignals() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StopCatchSignals", reflect.TypeOf((*MocksignalClient)(nil).StopCatchSignals))
 }
 
 // MockstackSetClient is a mock of stackSetClient interface.

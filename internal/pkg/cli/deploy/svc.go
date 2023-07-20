@@ -58,7 +58,7 @@ func newSvcDeployer(in *WorkloadDeployerInput) (*svcDeployer, error) {
 	}, nil
 }
 
-func (d *svcDeployer) deploy(deployOptions Options, stackConfigOutput svcStackConfigurationOutput) (*DeployWorkloadOutput, error) {
+func (d *svcDeployer) deploy(deployOptions Options, stackConfigOutput svcStackConfigurationOutput) error {
 	opts := []awscloudformation.StackOption{
 		awscloudformation.WithRoleARN(d.env.ExecutionRoleARN),
 	}
@@ -66,33 +66,32 @@ func (d *svcDeployer) deploy(deployOptions Options, stackConfigOutput svcStackCo
 		opts = append(opts, awscloudformation.WithDisableRollback())
 	}
 	cmdRunAt := d.now()
-	out, err := d.deployAndHandleInterrupt(stackConfigOutput.conf, opts)
-	if err != nil {
+	if err := d.deployAndHandleInterrupt(stackConfigOutput.conf, opts); err != nil {
 		var errEmptyCS *awscloudformation.ErrChangeSetEmpty
 		if !errors.As(err, &errEmptyCS) {
-			return nil, fmt.Errorf("deploy service: %w", err)
+			return fmt.Errorf("deploy service: %w", err)
 		}
 		if !deployOptions.ForceNewUpdate {
 			log.Warningln("Set --force to force an update for the service.")
-			return nil, fmt.Errorf("deploy service: %w", err)
+			return fmt.Errorf("deploy service: %w", err)
 		}
 	}
 	// Force update the service if --force is set and the service is not updated by the CFN.
 	if deployOptions.ForceNewUpdate {
 		lastUpdatedAt, err := stackConfigOutput.svcUpdater.LastUpdatedAt(d.app.Name, d.env.Name, d.name)
 		if err != nil {
-			return nil, fmt.Errorf("get the last updated deployment time for %s: %w", d.name, err)
+			return fmt.Errorf("get the last updated deployment time for %s: %w", d.name, err)
 		}
 		if cmdRunAt.After(lastUpdatedAt) {
 			if err := d.forceDeploy(&forceDeployInput{
 				spinner:    d.spinner,
 				svcUpdater: stackConfigOutput.svcUpdater,
 			}); err != nil {
-				return nil, err
+				return err
 			}
 		}
 	}
-	return &out, nil
+	return nil
 }
 
 type svcStackConfigurationOutput struct {

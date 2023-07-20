@@ -8,8 +8,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
+	"os/signal"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 
@@ -1105,7 +1108,7 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 				m.mockEnvVersionGetter.EXPECT().Version().Return("v1.42.0", nil)
 				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), "mockBucket", gomock.Any()).Return(errors.New("some error"))
-				m.mockServiceDeployer.EXPECT().WaitForSignalAndHandleInterrupt(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, false, nil)
+				m.mockServiceDeployer.EXPECT().HandleInterruptOnStackStatus(gomock.Any()).Return(nil)
 			},
 			wantErr: fmt.Errorf("deploy service: some error"),
 		},
@@ -1121,7 +1124,7 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 				m.mockEnvVersionGetter.EXPECT().Version().Return("v1.42.0", nil)
 				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), "mockBucket", gomock.Any()).Return(cloudformation.NewMockErrChangeSetEmpty())
-				m.mockServiceDeployer.EXPECT().WaitForSignalAndHandleInterrupt(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, false, nil)
+				m.mockServiceDeployer.EXPECT().HandleInterruptOnStackStatus(gomock.Any()).Return(nil)
 			},
 			wantErr: fmt.Errorf("deploy service: change set with name mockChangeSet for stack mockStack has no changes"),
 		},
@@ -1139,7 +1142,7 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 				m.mockEnvVersionGetter.EXPECT().Version().Return("v1.42.0", nil)
 				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), "mockBucket", gomock.Any()).
 					Return(nil)
-				m.mockServiceDeployer.EXPECT().WaitForSignalAndHandleInterrupt(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, false, nil)
+				m.mockServiceDeployer.EXPECT().HandleInterruptOnStackStatus(gomock.Any()).Return(nil)
 				m.mockServiceForceUpdater.EXPECT().LastUpdatedAt(mockAppName, mockEnvName, mockName).
 					Return(time.Time{}, mockError)
 			},
@@ -1159,7 +1162,7 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 				m.mockEnvVersionGetter.EXPECT().Version().Return("v1.42.0", nil)
 				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), "mockBucket", gomock.Any()).
 					Return(nil)
-				m.mockServiceDeployer.EXPECT().WaitForSignalAndHandleInterrupt(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, false, nil)
+				m.mockServiceDeployer.EXPECT().HandleInterruptOnStackStatus(gomock.Any()).Return(nil)
 				m.mockServiceForceUpdater.EXPECT().LastUpdatedAt(mockAppName, mockEnvName, mockName).
 					Return(mockAfterTime, nil)
 			},
@@ -1178,7 +1181,7 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 				m.mockEnvVersionGetter.EXPECT().Version().Return("v1.42.0", nil)
 				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), "mockBucket", gomock.Any()).
 					Return(cloudformation.NewMockErrChangeSetEmpty())
-				m.mockServiceDeployer.EXPECT().WaitForSignalAndHandleInterrupt(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, false, nil)
+				m.mockServiceDeployer.EXPECT().HandleInterruptOnStackStatus(gomock.Any()).Return(nil)
 				m.mockServiceForceUpdater.EXPECT().LastUpdatedAt(mockAppName, mockEnvName, mockName).
 					Return(mockBeforeTime, nil)
 				m.mockSpinner.EXPECT().Start(fmt.Sprintf(fmtForceUpdateSvcStart, mockName, mockEnvName))
@@ -1201,7 +1204,7 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 				m.mockEnvVersionGetter.EXPECT().Version().Return("v1.42.0", nil)
 				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), "mockBucket", gomock.Any()).
 					Return(cloudformation.NewMockErrChangeSetEmpty())
-				m.mockServiceDeployer.EXPECT().WaitForSignalAndHandleInterrupt(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, false, nil)
+				m.mockServiceDeployer.EXPECT().HandleInterruptOnStackStatus(gomock.Any()).Return(nil)
 				m.mockServiceForceUpdater.EXPECT().LastUpdatedAt(mockAppName, mockEnvName, mockName).
 					Return(mockBeforeTime, nil)
 				m.mockSpinner.EXPECT().Start(fmt.Sprintf(fmtForceUpdateSvcStart, mockName, mockEnvName))
@@ -1227,7 +1230,7 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 				m.mockEnvVersionGetter.EXPECT().Version().Return("v1.42.0", nil)
 				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), "mockBucket", gomock.Any()).Return(nil)
-				m.mockServiceDeployer.EXPECT().WaitForSignalAndHandleInterrupt(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, false, nil)
+				m.mockServiceDeployer.EXPECT().HandleInterruptOnStackStatus(gomock.Any()).Return(nil)
 			},
 		},
 		"success": {
@@ -1252,7 +1255,7 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 				m.mockEnvVersionGetter.EXPECT().Version().Return("v1.42.0", nil)
 				m.mockValidator.EXPECT().ValidateCertAliases([]string{"example.com", "foobar.com"}, mockCertARNs).Return(nil).Times(2)
 				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), "mockBucket", gomock.Any()).Return(nil)
-				m.mockServiceDeployer.EXPECT().WaitForSignalAndHandleInterrupt(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, false, nil)
+				m.mockServiceDeployer.EXPECT().HandleInterruptOnStackStatus(gomock.Any()).Return(nil)
 			},
 		},
 		"success with http redirect disabled and alb certs imported": {
@@ -1277,7 +1280,7 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 				m.mockEnvVersionGetter.EXPECT().Version().Return("v1.42.0", nil)
 				m.mockValidator.EXPECT().ValidateCertAliases([]string{"example.com", "foobar.com"}, mockCertARNs).Return(nil).Times(2)
 				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), "mockBucket", gomock.Any()).Return(nil)
-				m.mockServiceDeployer.EXPECT().WaitForSignalAndHandleInterrupt(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, false, nil)
+				m.mockServiceDeployer.EXPECT().HandleInterruptOnStackStatus(gomock.Any()).Return(nil)
 			},
 		},
 		"success with only cdn certs imported": {
@@ -1301,7 +1304,7 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 				m.mockEnvVersionGetter.EXPECT().Version().Return("v1.42.0", nil)
 				m.mockValidator.EXPECT().ValidateCertAliases([]string{"example.com", "foobar.com"}, []string{mockCDNCertARN}).Return(nil).Times(2)
 				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), "mockBucket", gomock.Any()).Return(nil)
-				m.mockServiceDeployer.EXPECT().WaitForSignalAndHandleInterrupt(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, false, nil)
+				m.mockServiceDeployer.EXPECT().HandleInterruptOnStackStatus(gomock.Any()).Return(nil)
 			},
 		},
 		"success with http redirect disabled and domain imported": {
@@ -1330,7 +1333,7 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 				m.mockEnvVersionGetter.EXPECT().Version().Return("v1.42.0", nil)
 				m.mockAppVersionGetter.EXPECT().Version().Return("v1.0.0", nil).Times(2)
 				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), "mockBucket", gomock.Any()).Return(nil)
-				m.mockServiceDeployer.EXPECT().WaitForSignalAndHandleInterrupt(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, false, nil)
+				m.mockServiceDeployer.EXPECT().HandleInterruptOnStackStatus(gomock.Any()).Return(nil)
 			},
 		},
 		"success with force update": {
@@ -1347,7 +1350,7 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 				m.mockEnvVersionGetter.EXPECT().Version().Return("v1.42.0", nil)
 				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), "mockBucket", gomock.Any()).
 					Return(cloudformation.NewMockErrChangeSetEmpty())
-				m.mockServiceDeployer.EXPECT().WaitForSignalAndHandleInterrupt(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, false, nil)
+				m.mockServiceDeployer.EXPECT().HandleInterruptOnStackStatus(gomock.Any()).Return(nil)
 				m.mockServiceForceUpdater.EXPECT().LastUpdatedAt(mockAppName, mockEnvName, mockName).
 					Return(mockBeforeTime, nil)
 				m.mockSpinner.EXPECT().Start(fmt.Sprintf(fmtForceUpdateSvcStart, mockName, mockEnvName))
@@ -1392,6 +1395,12 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 						spinner:          m.mockSpinner,
 						envVersionGetter: m.mockEnvVersionGetter,
 						overrider:        new(override.Noop),
+						notifySignals: func() chan os.Signal {
+							sigCh := make(chan os.Signal, 1)
+							signal.Notify(sigCh, syscall.SIGINT)
+							sigCh <- syscall.SIGINT
+							return sigCh
+						},
 					},
 					newSvcUpdater: func(f func(*session.Session) serviceForceUpdater) serviceForceUpdater {
 						return m.mockServiceForceUpdater

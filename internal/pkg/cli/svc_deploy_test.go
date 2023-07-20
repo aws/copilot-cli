@@ -394,7 +394,7 @@ func TestSvcDeployOpts_Execute(t *testing.T) {
 				m.mockDeployer.EXPECT().DeployDiff(gomock.Any()).Return("mock diff", nil)
 				m.mockDiffWriter = &strings.Builder{}
 				m.mockPrompter.EXPECT().Confirm(gomock.Eq("Continue with the deployment?"), gomock.Any(), gomock.Any()).Return(true, nil)
-				m.mockDeployer.EXPECT().DeployWorkload(gomock.Any()).Return(&clideploy.DeployWorkloadOutput{}, nil).Times(1)
+				m.mockDeployer.EXPECT().DeployWorkload(gomock.Any()).Times(1)
 			},
 		},
 		"skip prompt and deploy immediately after diff": {
@@ -417,7 +417,7 @@ func TestSvcDeployOpts_Execute(t *testing.T) {
 				m.mockDeployer.EXPECT().DeployDiff(gomock.Any()).Return("mock diff", nil)
 				m.mockDiffWriter = &strings.Builder{}
 				m.mockPrompter.EXPECT().Confirm(gomock.Eq("Continue with the deployment?"), gomock.Any(), gomock.Any()).Times(0)
-				m.mockDeployer.EXPECT().DeployWorkload(gomock.Any()).Return(&clideploy.DeployWorkloadOutput{}, nil).Times(1)
+				m.mockDeployer.EXPECT().DeployWorkload(gomock.Any()).Times(1)
 			},
 		},
 		"error if failed to deploy service": {
@@ -453,7 +453,7 @@ func TestSvcDeployOpts_Execute(t *testing.T) {
 				m.mockEnvFeaturesDescriber.EXPECT().Version().Return("v1.mock", nil)
 				m.mockEnvFeaturesDescriber.EXPECT().AvailableFeatures().Return([]string{"mockFeature1", "mockFeature2"}, nil)
 				m.mockDeployer.EXPECT().UploadArtifacts().Return(&clideploy.UploadArtifactsOutput{}, nil)
-				m.mockDeployer.EXPECT().DeployWorkload(gomock.Any()).Return(&clideploy.DeployWorkloadOutput{}, nil)
+				m.mockDeployer.EXPECT().DeployWorkload(gomock.Any()).Return(nil, nil)
 				m.mockDeployer.EXPECT().IsServiceAvailableInRegion("").Return(false, nil)
 			},
 		},
@@ -470,7 +470,7 @@ func TestSvcDeployOpts_Execute(t *testing.T) {
 				m.mockEnvFeaturesDescriber.EXPECT().Version().Return("v1.mock", nil)
 				m.mockEnvFeaturesDescriber.EXPECT().AvailableFeatures().Return([]string{"mockFeature1", "mockFeature2"}, nil)
 				m.mockDeployer.EXPECT().UploadArtifacts().Return(&clideploy.UploadArtifactsOutput{}, nil)
-				m.mockDeployer.EXPECT().DeployWorkload(gomock.Any()).Return(&clideploy.DeployWorkloadOutput{}, nil)
+				m.mockDeployer.EXPECT().DeployWorkload(gomock.Any()).Return(nil, nil)
 				m.mockDeployer.EXPECT().IsServiceAvailableInRegion("").Return(false, nil)
 			},
 		},
@@ -521,7 +521,6 @@ func TestSvcDeployOpts_Execute(t *testing.T) {
 				targetApp:            &config.Application{},
 				targetEnv:            &config.Environment{},
 				templateVersion:      mockVersion,
-				deployOutput:         &clideploy.DeployWorkloadOutput{},
 			}
 
 			// WHEN

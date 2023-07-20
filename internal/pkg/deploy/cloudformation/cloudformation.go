@@ -11,7 +11,6 @@ import (
 	"io"
 	"os"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
@@ -32,7 +31,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/progress"
-	"github.com/aws/copilot-cli/internal/pkg/term/signal"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -143,11 +141,6 @@ type imageRemover interface {
 	ClearRepository(repoName string) error
 }
 
-type signalClient interface {
-	NotifySignals() <-chan os.Signal
-	StopCatchSignals()
-}
-
 type stackSetClient interface {
 	Create(name, template string, opts ...stackset.CreateOrUpdateOption) error
 	CreateInstances(name string, accounts, regions []string) (string, error)
@@ -200,7 +193,6 @@ type CloudFormation struct {
 	regionalECRClient func(region string) imageRemover
 	region            string
 	console           progress.FileWriter
-	signalClient      signalClient
 
 	// cached variables.
 	cachedDeployedStack *cloudformation.StackDescription
@@ -235,9 +227,8 @@ func New(sess *session.Session, opts ...OptFn) CloudFormation {
 				Region: aws.String(region),
 			}))
 		},
-		region:       aws.StringValue(sess.Config.Region),
-		console:      new(discardFile),
-		signalClient: signal.New(syscall.SIGINT),
+		region:  aws.StringValue(sess.Config.Region),
+		console: new(discardFile),
 	}
 	for _, opt := range opts {
 		opt(&client)
@@ -252,50 +243,37 @@ func (cf CloudFormation) Template(stackName string) (string, error) {
 	return cf.cfnClient.TemplateBody(stackName)
 }
 
-// WaitForSignalAndHandleInterrupt waits for a SIGINT signal and handles interrupt while monitoring a CloudFormation stack.
-// It cancels the operation and takes appropriate actions based on the stack status when a signal is received.
-// Returns stack deletion status, update cancellation status, and an error, if any.
-func (cf CloudFormation) WaitForSignalAndHandleInterrupt(ctx context.Context, cancel context.CancelFunc, stackName string) (isDeleted bool, isUpdateCanceled bool, err error) {
-	for {
-		select {
-		case <-cf.signalClient.NotifySignals():
-			cancel()
-			cf.signalClient.StopCatchSignals()
-			stackDescr, err := cf.cfnClient.Describe(stackName)
-			if err != nil {
-				return isDeleted, isUpdateCanceled, err
-			}
-			if aws.StringValue(stackDescr.StackStatus) == sdkcloudformation.StackStatusCreateInProgress {
-				log.Infof(color.Red.Sprintf("Received Interrupt for Ctrl-C.\nPressing Ctrl-C again will exit immediately but the deletion of stack %s still happens\n", stackName))
-				description := fmt.Sprintf("Delete stack %s", stackName)
-				if err := cf.deleteAndRenderStack(stackName, description, func() error {
-					return cf.cfnClient.DeleteAndWait(stackName)
-				}); err != nil {
-					return isDeleted, isUpdateCanceled, err
-				}
-				isDeleted = true
-				return isDeleted, isUpdateCanceled, nil
-			}
-			if aws.StringValue(stackDescr.StackStatus) == sdkcloudformation.StackStatusUpdateInProgress {
-				log.Infof(color.Red.Sprintf("Received Interrupt for Ctrl-C.\nPressing Ctrl-C again will exit immediately but stack %s rollback will continue\n", stackName))
-				description := fmt.Sprintf("Canceling stack update %s", stackName)
-				if err := cf.cancelUpdateAndRender(&cancelUpdateAndRenderInput{
-					stackName:   stackName,
-					description: description,
-					cancelUpdateFn: func() error {
-						return cf.cfnClient.CancelUpdateStack(stackName)
-					},
-				}); err != nil {
-					return isDeleted, isUpdateCanceled, err
-				}
-				isUpdateCanceled = true
-				return isDeleted, isUpdateCanceled, nil
-			}
-			return isDeleted, isUpdateCanceled, nil
-		case <-ctx.Done():
-			return isDeleted, isUpdateCanceled, nil
-		}
+// HandleInterruptOnStackStatus processes the AWS CloudFormation stack based on its current status.
+// If the stack status is StackStatusCreateInProgress, it initiates the deletion of the stack and returns ErrStackDeletedOnInterrupt on success or any other error.
+// If the stack status is StackStatusUpdateInProgress, it cancels the stack update and returns ErrStackUpdateCanceledOnInterrupt on success or any other error.
+func (cf CloudFormation) HandleInterruptOnStackStatus(stackName string) error {
+	stackDescr, err := cf.cfnClient.Describe(stackName)
+	if err != nil {
+		return fmt.Errorf("describe stack %s: %w", stackName, err)
 	}
+	switch aws.StringValue(stackDescr.StackStatus) {
+	case sdkcloudformation.StackStatusCreateInProgress:
+		description := fmt.Sprintf("Delete stack %s", stackName)
+		if err := cf.deleteAndRenderStack(stackName, description, func() error {
+			return cf.cfnClient.DeleteAndWait(stackName)
+		}); err != nil {
+			return err
+		}
+		return &ErrStackDeletedOnInterrupt{stackName: stackName}
+	case sdkcloudformation.StackStatusUpdateInProgress:
+		description := fmt.Sprintf("Canceling stack update %s", stackName)
+		if err := cf.cancelUpdateAndRender(&cancelUpdateAndRenderInput{
+			stackName:   stackName,
+			description: description,
+			cancelUpdateFn: func() error {
+				return cf.cfnClient.CancelUpdateStack(stackName)
+			},
+		}); err != nil {
+			return err
+		}
+		return &ErrStackUpdateCanceledOnInterrupt{stackName: stackName}
+	}
+	return nil
 }
 
 // IsEmptyErr returns true if the error occurred because the cloudformation resource does not exist or does not contain any sub-resources.
@@ -658,7 +636,7 @@ type cancelUpdateAndRenderInput struct {
 func (cf CloudFormation) cancelUpdateAndRender(in *cancelUpdateAndRenderInput) error {
 	stackDescr, err := cf.cfnClient.Describe(in.stackName)
 	if err != nil {
-		return err
+		return fmt.Errorf("describe stack %s: %w", in.stackName, err)
 	}
 	if stackDescr.ChangeSetId == nil {
 		return fmt.Errorf("ChangeSetID not found for stack %s", in.stackName)
@@ -725,7 +703,7 @@ func (cf CloudFormation) errOnFailedStack(stackName string) error {
 func (cf CloudFormation) errOnFailedCancelUpdate(stackName string) error {
 	stack, err := cf.cfnClient.Describe(stackName)
 	if err != nil {
-		return err
+		return fmt.Errorf("describe stack %s: %w", stackName, err)
 	}
 	status := aws.StringValue(stack.StackStatus)
 	if status != sdkcloudformation.StackStatusUpdateRollbackComplete {
@@ -802,4 +780,20 @@ func stopSpinner(spinner *progress.Spinner, err error, label string) {
 		return
 	}
 	spinner.Stop(log.Serrorf("%s\n", label))
+}
+
+type ErrStackDeletedOnInterrupt struct {
+	stackName string
+}
+
+func (e *ErrStackDeletedOnInterrupt) Error() string {
+	return fmt.Sprintf("stack %s is deleted on interrupt signal", e.stackName)
+}
+
+type ErrStackUpdateCanceledOnInterrupt struct {
+	stackName string
+}
+
+func (e *ErrStackUpdateCanceledOnInterrupt) Error() string {
+	return fmt.Sprintf("update for stack %s is canceled on interrupt signal", e.stackName)
 }

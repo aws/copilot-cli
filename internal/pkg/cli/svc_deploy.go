@@ -17,6 +17,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/tags"
+	deploycfn "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/template"
@@ -82,8 +83,9 @@ type deploySvcOpts struct {
 	svcType           string
 	appliedDynamicMft manifest.DynamicWorkload
 	rootUserARN       string
-	deployOutput      *clideploy.DeployWorkloadOutput
+	deployRecs        clideploy.ActionRecommender
 	noDeploy          bool
+	isUpdateCanceled  bool
 
 	// Overridden in tests.
 	templateVersion string
@@ -291,7 +293,9 @@ func (o *deploySvcOpts) Execute() error {
 			return nil
 		}
 	}
-	deployWorkloadOutput, err := deployer.DeployWorkload(&clideploy.DeployWorkloadInput{
+	var errStackDeletedOnInterrupt *deploycfn.ErrStackDeletedOnInterrupt
+	var errStackUpdateCanceledOnInterrupt *deploycfn.ErrStackUpdateCanceledOnInterrupt
+	deployRecs, err := deployer.DeployWorkload(&clideploy.DeployWorkloadInput{
 		StackRuntimeConfiguration: clideploy.StackRuntimeConfiguration{
 			ImageDigests:              uploadOut.ImageDigests,
 			EnvFileARNs:               uploadOut.EnvFileARNs,
@@ -308,6 +312,15 @@ func (o *deploySvcOpts) Execute() error {
 		},
 	})
 	if err != nil {
+		if errors.As(err, &errStackDeletedOnInterrupt) {
+			o.noDeploy = true
+			return nil
+		}
+		if errors.As(err, &errStackUpdateCanceledOnInterrupt) {
+			o.deployRecs = deployRecs
+			log.Successf("Successfully rolled back service %s to the previous configuration.\n", color.HighlightUserInput(o.name))
+			return nil
+		}
 		if o.disableRollback {
 			stackName := stack.NameForWorkload(o.targetApp.Name, o.targetEnv.Name, o.name)
 			rollbackCmd := fmt.Sprintf("aws cloudformation rollback-stack --stack-name %s --role-arn %s", stackName, o.targetEnv.ExecutionRoleARN)
@@ -320,14 +333,10 @@ After fixing the deployment, you can:
 `, color.HighlightCode("copilot svc logs"), color.HighlightCode(rollbackCmd), color.HighlightCode("copilot svc deploy"))
 		}
 		return fmt.Errorf("deploy service %s to environment %s: %w", o.name, o.envName, err)
-	}
-	o.deployOutput = deployWorkloadOutput
-	if !o.deployOutput.IsWkldDeleted && !o.deployOutput.IsWkldUpdateCanceled {
+	} else {
 		log.Successf("Deployed service %s.\n", color.HighlightUserInput(o.name))
 	}
-	if o.deployOutput.IsWkldUpdateCanceled {
-		log.Successf("Successfully rolled back service %s to the previous configuration.\n", color.HighlightUserInput(o.name))
-	}
+	o.deployRecs = deployRecs
 	return nil
 }
 
@@ -336,16 +345,13 @@ func (o *deploySvcOpts) RecommendActions() error {
 	if o.noDeploy {
 		return nil
 	}
-	if o.deployOutput.IsWkldDeleted {
-		return nil
-	}
 	var recommendations []string
 	uriRecs, err := o.uriRecommendedActions()
 	if err != nil {
 		return err
 	}
 	recommendations = append(recommendations, uriRecs...)
-	recommendations = append(recommendations, o.deployOutput.Recommendations.RecommendedActions()...)
+	recommendations = append(recommendations, o.deployRecs.RecommendedActions()...)
 	recommendations = append(recommendations, o.publishRecommendedActions()...)
 	logRecommendedActions(recommendations)
 	return nil
