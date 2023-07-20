@@ -28,3 +28,34 @@ Pre{{logicalIDSafe $stage.Name}}DeploymentAction{{logicalIDSafe $action.Name}}:
 {{ include "action-config" $action | indent 4}}
 {{- end}}
 {{- end}}
+
+{{- range $stage := .Stages}}
+{{- range $action := $stage.PostDeployments}}
+Post{{logicalIDSafe $stage.Name}}DeploymentAction{{logicalIDSafe $action.Name}}BuildProjectRole:
+  Type: AWS::IAM::Role
+  Properties:
+    Path: /
+  {{ include "role-config" $ | indent 4}}
+Policies:
+  - PolicyName: assume-env-manager
+    PolicyDocument:
+      Version: '2012-10-17'
+      Statement:
+        - Effect: Allow
+          Resource: 'arn:aws:iam::{{$stage.AccountID}}:role/{{$.AppName}}-{{$stage.Name}}-EnvManagerRole'
+          Action:
+            - sts:AssumeRole
+  - PolicyName: build-role-policy
+    PolicyDocument:
+  {{ include "role-policy-document" $ | indent 10 }}
+
+Post{{logicalIDSafe $stage.Name}}DeploymentAction{{logicalIDSafe $action.Name}}:
+  Type: AWS::CodeBuild::Project
+  Properties:
+    EncryptionKey: !ImportValue {{$.AppName}}-ArtifactKey
+    ServiceRole: !GetAtt Post{{logicalIDSafe $stage.Name}}DeploymentAction{{logicalIDSafe $action.Name}}BuildProjectRole.Arn
+    Artifacts:
+      Type: CODEPIPELINE
+  {{ include "action-config" $action | indent 4}}
+{{- end}}
+{{- end}}
