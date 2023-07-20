@@ -28,6 +28,7 @@ const (
 )
 
 // Version is this binary's version. Set with linker flags when building Copilot.
+// WARNING: do not use this variable directly. Use LatestTemplateVersion() instead.
 var Version string
 
 // LatestTemplateVersion is the latest version number (e.g., v1.29.0) available for Copilot templates.
