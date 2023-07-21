@@ -20,7 +20,14 @@ import (
 
 const (
 	dashReplacement = "DASH"
+	plusReplacement = "%2B"
 )
+
+// URLSafeVersion takes a Copilot version and replaces the '+'
+// character with the URL-safe '%2B'.
+func URLSafeVersion(version string) string {
+	return strings.ReplaceAll(version, "+", plusReplacement)
+}
 
 // ReplaceDashesFunc takes a CloudFormation logical ID, and
 // sanitizes it by removing "-" characters (not allowed)
