@@ -41,6 +41,10 @@ type envReadParser interface {
 	ParseEnvBootstrap(data *template.EnvOpts, options ...template.ParseOption) (*template.Content, error)
 }
 
+type pipelineParser interface {
+	ParsePipeline(data interface{}) (*template.Content, error)
+}
+
 // embedFS is the interface to parse any embedded templates.
 type embedFS interface {
 	backendSvcReadParser

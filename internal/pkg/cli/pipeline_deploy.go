@@ -258,14 +258,6 @@ func (o *deployPipelineOpts) Execute() error {
 			return err
 		}
 	}
-	// bootstrap pipeline resources
-	o.prog.Start(fmt.Sprintf(fmtPipelineDeployResourcesStart, color.HighlightUserInput(o.appName)))
-	err := o.pipelineDeployer.AddPipelineResourcesToApp(o.app, o.region)
-	if err != nil {
-		o.prog.Stop(log.Serrorf(fmtPipelineDeployResourcesFailed, color.HighlightUserInput(o.appName)))
-		return fmt.Errorf("add pipeline resources to application %s in %s: %w", o.appName, o.region, err)
-	}
-	o.prog.Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, color.HighlightUserInput(o.appName)))
 
 	// Read pipeline manifest.
 	pipeline, err := o.getPipelineMft()
@@ -363,6 +355,16 @@ func (o *deployPipelineOpts) Execute() error {
 			}
 		}
 	}
+
+	// bootstrap pipeline resources
+	o.prog.Start(fmt.Sprintf(fmtPipelineDeployResourcesStart, color.HighlightUserInput(o.appName)))
+	err = o.pipelineDeployer.AddPipelineResourcesToApp(o.app, o.region)
+	if err != nil {
+		o.prog.Stop(log.Serrorf(fmtPipelineDeployResourcesFailed, color.HighlightUserInput(o.appName)))
+		return fmt.Errorf("add pipeline resources to application %s in %s: %w", o.appName, o.region, err)
+	}
+	o.prog.Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, color.HighlightUserInput(o.appName)))
+
 	if err := o.deployPipeline(deployPipelineInput, stackConfig); err != nil {
 		return err
 	}

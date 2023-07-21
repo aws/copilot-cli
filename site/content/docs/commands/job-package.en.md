@@ -10,6 +10,8 @@ $ copilot job package
 ## What are the flags?
 
 ```
+      --allow-downgrade     Optional. Allow using an older version of Copilot to update Copilot components
+                            updated by a newer version of Copilot.
   -a, --app string          Name of the application.
       --diff                Compares the generated CloudFormation template to the deployed stack.
   -e, --env string          Name of the environment.
