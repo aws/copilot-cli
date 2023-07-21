@@ -130,7 +130,7 @@ func (s *SecretsManager) GetSecretValue(name string) (string, error) {
 	return aws.StringValue(resp.SecretString), nil
 }
 
-// IsService returns true if the given ARN is secrets manager.
+// IsServiceARN returns true if the given ARN is secrets manager.
 func (s *SecretsManager) IsServiceARN(name string) (bool, error) {
 	parseArn, err := arn.Parse(name)
 	if err != nil {

@@ -65,7 +65,7 @@ func (s *SSM) PutSecret(in PutSecretInput) (*PutSecretOutput, error) {
 	return nil, err
 }
 
-// IsService returns true if the given ARN is ssm.
+// IsServiceARN returns true if the given ARN is ssm.
 func (s *SSM) IsServiceARN(name string) (bool, error) {
 	parseArn, err := arn.Parse(name)
 	if err != nil {
