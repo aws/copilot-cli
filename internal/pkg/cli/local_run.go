@@ -126,24 +126,6 @@ func (o *localRunOpts) Execute() error {
 	return nil
 }
 
-// func (o *localRunOpts) decryptedSecretManagerSecrets(secrets []*awsecs.ContainerSecret, awsSession *session.Session) ([]ecs.EnvVar, error) {
-// 	var secretManagerSecrets []ecs.EnvVar
-// 	for _, secret := range secrets {
-
-// 		if strings.HasPrefix(secret.ValueFrom, "arn:aws:secretsmanager:") {
-// 			secretValue, err := o.secretsManager.GetSecretValue(secret.ValueFrom)
-// 			if err != nil {
-// 				return nil, err
-// 			}
-// 			secretManagerSecrets = append(secretManagerSecrets, ecs.EnvVar{
-// 				Name:  secret.Name,
-// 				Value: secretValue,
-// 			})
-// 		}
-// 	}
-// 	return secretManagerSecrets, nil
-// }
-
 // BuildLocalRunCmd builds the command for running a workload locally
 func BuildLocalRunCmd() *cobra.Command {
 	vars := localRunVars{}
