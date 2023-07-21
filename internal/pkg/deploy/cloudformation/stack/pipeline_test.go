@@ -11,8 +11,8 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/template"
-	"github.com/aws/copilot-cli/internal/pkg/template/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 
@@ -123,8 +123,8 @@ func TestPipelineStackConfig_Template(t *testing.T) {
 		"error parsing file": {
 			in: mockCreatePipelineInput(),
 			mockDependencies: func(ctrl *gomock.Controller, c *pipelineStackConfig) {
-				m := mocks.NewMockReadParser(ctrl)
-				m.EXPECT().Parse(pipelineCfnTemplatePath, c, gomock.Any()).Return(nil, errors.New("some error"))
+				m := mocks.NewMockpipelineParser(ctrl)
+				m.EXPECT().ParsePipeline(c).Return(nil, errors.New("some error"))
 				c.parser = m
 			},
 			wantedError: errors.New("some error"),
@@ -132,8 +132,8 @@ func TestPipelineStackConfig_Template(t *testing.T) {
 		"successfully parses file": {
 			in: mockCreatePipelineInput(),
 			mockDependencies: func(ctrl *gomock.Controller, c *pipelineStackConfig) {
-				m := mocks.NewMockReadParser(ctrl)
-				m.EXPECT().Parse(pipelineCfnTemplatePath, c, gomock.Any()).Return(&template.Content{
+				m := mocks.NewMockpipelineParser(ctrl)
+				m.EXPECT().ParsePipeline(c).Return(&template.Content{
 					Buffer: bytes.NewBufferString("pipeline"),
 				}, nil)
 				c.parser = m
