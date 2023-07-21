@@ -4,6 +4,7 @@
 package deploy
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -81,6 +82,10 @@ func (d *backendSvcDeployer) DeployWorkload(in *DeployWorkloadInput) (ActionReco
 		return nil, err
 	}
 	if err := d.deploy(in.Options, *stackConfigOutput); err != nil {
+		var errStackUpdateCanceledOnInterrupt *cloudformation.ErrStackUpdateCanceledOnInterrupt
+		if errors.As(err, &errStackUpdateCanceledOnInterrupt) {
+			return noopActionRecommender{}, err
+		}
 		return nil, err
 	}
 	return noopActionRecommender{}, nil

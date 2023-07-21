@@ -4,6 +4,7 @@
 package deploy
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -134,6 +135,10 @@ func (d *lbWebSvcDeployer) DeployWorkload(in *DeployWorkloadInput) (ActionRecomm
 		return nil, err
 	}
 	if err := d.deploy(in.Options, *stackConfigOutput); err != nil {
+		var errStackUpdateCanceledOnInterrupt *cloudformation.ErrStackUpdateCanceledOnInterrupt
+		if errors.As(err, &errStackUpdateCanceledOnInterrupt) {
+			return noopActionRecommender{}, err
+		}
 		return nil, err
 	}
 	return noopActionRecommender{}, nil
