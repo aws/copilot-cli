@@ -49,6 +49,21 @@ func (mr *MockapiMockRecorder) AddTagsToResource(input interface{}) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddTagsToResource", reflect.TypeOf((*Mockapi)(nil).AddTagsToResource), input)
 }
 
+// GetParameter mocks base method.
+func (m *Mockapi) GetParameter(input *ssm.GetParameterInput) (*ssm.GetParameterOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetParameter", input)
+	ret0, _ := ret[0].(*ssm.GetParameterOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetParameter indicates an expected call of GetParameter.
+func (mr *MockapiMockRecorder) GetParameter(input interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetParameter", reflect.TypeOf((*Mockapi)(nil).GetParameter), input)
+}
+
 // PutParameter mocks base method.
 func (m *Mockapi) PutParameter(input *ssm.PutParameterInput) (*ssm.PutParameterOutput, error) {
 	m.ctrl.T.Helper()

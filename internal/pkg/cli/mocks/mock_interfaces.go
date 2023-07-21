@@ -1465,6 +1465,59 @@ func (mr *MocksecretsManagerMockRecorder) DescribeSecret(secretName interface{})
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeSecret", reflect.TypeOf((*MocksecretsManager)(nil).DescribeSecret), secretName)
 }
 
+// GetSecretValue mocks base method.
+func (m *MocksecretsManager) GetSecretValue(secretName string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetSecretValue", secretName)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetSecretValue indicates an expected call of GetSecretValue.
+func (mr *MocksecretsManagerMockRecorder) GetSecretValue(secretName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSecretValue", reflect.TypeOf((*MocksecretsManager)(nil).GetSecretValue), secretName)
+}
+
+// MocksecretGetter is a mock of secretGetter interface.
+type MocksecretGetter struct {
+	ctrl     *gomock.Controller
+	recorder *MocksecretGetterMockRecorder
+}
+
+// MocksecretGetterMockRecorder is the mock recorder for MocksecretGetter.
+type MocksecretGetterMockRecorder struct {
+	mock *MocksecretGetter
+}
+
+// NewMocksecretGetter creates a new mock instance.
+func NewMocksecretGetter(ctrl *gomock.Controller) *MocksecretGetter {
+	mock := &MocksecretGetter{ctrl: ctrl}
+	mock.recorder = &MocksecretGetterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MocksecretGetter) EXPECT() *MocksecretGetterMockRecorder {
+	return m.recorder
+}
+
+// GetSecretValue mocks base method.
+func (m *MocksecretGetter) GetSecretValue(secretName string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetSecretValue", secretName)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetSecretValue indicates an expected call of GetSecretValue.
+func (mr *MocksecretGetterMockRecorder) GetSecretValue(secretName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSecretValue", reflect.TypeOf((*MocksecretGetter)(nil).GetSecretValue), secretName)
+}
+
 // MocksecretCreator is a mock of secretCreator interface.
 type MocksecretCreator struct {
 	ctrl     *gomock.Controller
@@ -7255,6 +7308,44 @@ func (m *MocksecretPutter) PutSecret(in ssm.PutSecretInput) (*ssm.PutSecretOutpu
 func (mr *MocksecretPutterMockRecorder) PutSecret(in interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PutSecret", reflect.TypeOf((*MocksecretPutter)(nil).PutSecret), in)
+}
+
+// MocksecretDecrypter is a mock of secretDecrypter interface.
+type MocksecretDecrypter struct {
+	ctrl     *gomock.Controller
+	recorder *MocksecretDecrypterMockRecorder
+}
+
+// MocksecretDecrypterMockRecorder is the mock recorder for MocksecretDecrypter.
+type MocksecretDecrypterMockRecorder struct {
+	mock *MocksecretDecrypter
+}
+
+// NewMocksecretDecrypter creates a new mock instance.
+func NewMocksecretDecrypter(ctrl *gomock.Controller) *MocksecretDecrypter {
+	mock := &MocksecretDecrypter{ctrl: ctrl}
+	mock.recorder = &MocksecretDecrypterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MocksecretDecrypter) EXPECT() *MocksecretDecrypterMockRecorder {
+	return m.recorder
+}
+
+// GetSecretValue mocks base method.
+func (m *MocksecretDecrypter) GetSecretValue(s string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetSecretValue", s)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetSecretValue indicates an expected call of GetSecretValue.
+func (mr *MocksecretDecrypterMockRecorder) GetSecretValue(s interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSecretValue", reflect.TypeOf((*MocksecretDecrypter)(nil).GetSecretValue), s)
 }
 
 // MockservicePauser is a mock of servicePauser interface.

@@ -11,13 +11,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws/arn"
-	"github.com/aws/copilot-cli/internal/pkg/aws/stepfunctions"
-
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
+	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
+	"github.com/aws/copilot-cli/internal/pkg/aws/ssm"
+	"github.com/aws/copilot-cli/internal/pkg/aws/stepfunctions"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 )
 
@@ -52,6 +53,15 @@ type ecsClient interface {
 type stepFunctionsClient interface {
 	StateMachineDefinition(stateMachineARN string) (string, error)
 }
+type secretGetter interface {
+	GetSecretValue(secretName string) (string, error)
+}
+
+// EnvVar contains values of the environmental variables
+type EnvVar struct {
+	Name  string
+	Value string
+}
 
 // ServiceDesc contains the description of an ECS service.
 type ServiceDesc struct {
@@ -64,6 +74,7 @@ type ServiceDesc struct {
 // Client retrieves Copilot information from ECS endpoint.
 type Client struct {
 	rgGetter       resourceGetter
+	secretGetter   secretGetter
 	ecsClient      ecsClient
 	StepFuncClient stepFunctionsClient
 }
@@ -73,6 +84,7 @@ func New(sess *session.Session) *Client {
 	return &Client{
 		rgGetter:       resourcegroups.New(sess),
 		ecsClient:      ecs.New(sess),
+		secretGetter:   ssm.New(sess),
 		StepFuncClient: stepfunctions.New(sess),
 	}
 }
@@ -230,6 +242,24 @@ func (c Client) StopDefaultClusterTasks(familyName string) error {
 		taskIDs[n] = aws.StringValue(task.TaskArn)
 	}
 	return c.ecsClient.StopTasks(taskIDs, ecs.WithStopTaskReason(taskStopReason))
+}
+
+// DecryptedSSMSecrets returns the decrypted parameters from the SSM store.
+func (c Client) DecryptedSSMSecrets(secrets []*awsecs.ContainerSecret, secretGetter *session.Session) ([]EnvVar, error) {
+	var ssmSecrets []EnvVar
+	for _, secret := range secrets {
+		if !strings.HasPrefix(secret.ValueFrom, "arn:aws:secretsmanager:") {
+			secretValue, err := c.secretGetter.GetSecretValue(secret.ValueFrom)
+			if err != nil {
+				return nil, err
+			}
+			ssmSecrets = append(ssmSecrets, EnvVar{
+				Name:  secret.Name,
+				Value: secretValue,
+			})
+		}
+	}
+	return ssmSecrets, nil
 }
 
 // TaskDefinition returns the task definition of the service.
