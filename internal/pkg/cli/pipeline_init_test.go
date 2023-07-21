@@ -510,7 +510,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				m.workspace.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return(wantedManifestFile, nil)
 				m.workspace.EXPECT().WritePipelineBuildspec(gomock.Any(), wantedName).Return(wantedBuildspecFile, nil)
 				m.workspace.EXPECT().Rel(wantedManifestFile).Return(wantedManifestRelPath, nil)
-				m.parser.EXPECT().Parse(workloadsPipelineBuildspecTemplatePath, gomock.Any()).Return(&template.Content{
+				m.parser.EXPECT().Parse(workloadsPipelineBuildspecTemplatePath, gomock.Any(), gomock.Any()).Return(&template.Content{
 					Buffer: bytes.NewBufferString("hello"),
 				}, nil)
 				m.store.EXPECT().GetApplication("badgoose").Return(&config.Application{
@@ -541,7 +541,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				m.workspace.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return(wantedManifestFile, nil)
 				m.workspace.EXPECT().WritePipelineBuildspec(gomock.Any(), wantedName).Return(wantedBuildspecFile, nil)
 				m.workspace.EXPECT().Rel(wantedManifestFile).Return(wantedManifestRelPath, nil)
-				m.parser.EXPECT().Parse(workloadsPipelineBuildspecTemplatePath, gomock.Any()).Return(&template.Content{
+				m.parser.EXPECT().Parse(workloadsPipelineBuildspecTemplatePath, gomock.Any(), gomock.Any()).Return(&template.Content{
 					Buffer: bytes.NewBufferString("hello"),
 				}, nil)
 				m.store.EXPECT().GetApplication("badgoose").Return(&config.Application{
@@ -572,7 +572,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				m.workspace.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return(wantedManifestFile, nil)
 				m.workspace.EXPECT().WritePipelineBuildspec(gomock.Any(), wantedName).Return(wantedBuildspecFile, nil)
 				m.workspace.EXPECT().Rel(wantedManifestFile).Return(wantedManifestRelPath, nil)
-				m.parser.EXPECT().Parse(workloadsPipelineBuildspecTemplatePath, gomock.Any()).Return(&template.Content{
+				m.parser.EXPECT().Parse(workloadsPipelineBuildspecTemplatePath, gomock.Any(), gomock.Any()).Return(&template.Content{
 					Buffer: bytes.NewBufferString("hello"),
 				}, nil)
 				m.store.EXPECT().GetApplication("badgoose").Return(&config.Application{
@@ -608,7 +608,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				m.workspace.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return(wantedManifestFile, nil)
 				m.workspace.EXPECT().WritePipelineBuildspec(gomock.Any(), wantedName).Return(wantedBuildspecFile, nil)
 				m.workspace.EXPECT().Rel(wantedManifestFile).Return(wantedManifestRelPath, nil)
-				m.parser.EXPECT().Parse(workloadsPipelineBuildspecTemplatePath, gomock.Any()).Return(&template.Content{
+				m.parser.EXPECT().Parse(workloadsPipelineBuildspecTemplatePath, gomock.Any(), gomock.Any()).Return(&template.Content{
 					Buffer: bytes.NewBufferString("hello"),
 				}, nil)
 				m.store.EXPECT().GetApplication("badgoose").Return(&config.Application{
@@ -639,7 +639,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				m.workspace.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return(wantedManifestFile, nil)
 				m.workspace.EXPECT().WritePipelineBuildspec(gomock.Any(), wantedName).Return(wantedBuildspecFile, nil)
 				m.workspace.EXPECT().Rel(wantedManifestFile).Return(wantedManifestRelPath, nil)
-				m.parser.EXPECT().Parse(environmentsPipelineBuildspecTemplatePath, gomock.Any()).Return(&template.Content{
+				m.parser.EXPECT().Parse(environmentsPipelineBuildspecTemplatePath, gomock.Any(), gomock.Any()).Return(&template.Content{
 					Buffer: bytes.NewBufferString("hello"),
 				}, nil)
 				m.store.EXPECT().GetApplication("badgoose").Return(&config.Application{
@@ -673,7 +673,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				m.workspace.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return(wantedManifestFile, nil)
 				m.workspace.EXPECT().WritePipelineBuildspec(gomock.Any(), wantedName).Return(wantedBuildspecFile, nil)
 				m.workspace.EXPECT().Rel(wantedManifestFile).Return(wantedManifestRelPath, nil)
-				m.parser.EXPECT().Parse(workloadsPipelineBuildspecTemplatePath, gomock.Any()).Return(&template.Content{
+				m.parser.EXPECT().Parse(workloadsPipelineBuildspecTemplatePath, gomock.Any(), gomock.Any()).Return(&template.Content{
 					Buffer: bytes.NewBufferString("hello"),
 				}, nil)
 				m.store.EXPECT().GetApplication("badgoose").Return(&config.Application{
@@ -766,7 +766,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				m.workspace.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return(wantedManifestFile, nil)
 				m.workspace.EXPECT().WritePipelineBuildspec(gomock.Any(), wantedName).Times(0)
 				m.workspace.EXPECT().Rel(wantedManifestFile).Return(wantedManifestRelPath, nil)
-				m.parser.EXPECT().Parse(workloadsPipelineBuildspecTemplatePath, gomock.Any()).Return(nil, errors.New("some error"))
+				m.parser.EXPECT().Parse(workloadsPipelineBuildspecTemplatePath, gomock.Any(), gomock.Any()).Return(nil, errors.New("some error"))
 				m.store.EXPECT().GetApplication("badgoose").Return(&config.Application{
 					Name: "badgoose",
 				}, nil)
@@ -797,7 +797,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				m.workspace.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return("", manifestExistsErr)
 				m.workspace.EXPECT().WritePipelineBuildspec(gomock.Any(), wantedName).Return("", buildspecExistsErr)
 				m.workspace.EXPECT().Rel(wantedManifestFile).Return(wantedManifestRelPath, nil)
-				m.parser.EXPECT().Parse(workloadsPipelineBuildspecTemplatePath, gomock.Any()).Return(&template.Content{
+				m.parser.EXPECT().Parse(workloadsPipelineBuildspecTemplatePath, gomock.Any(), gomock.Any()).Return(&template.Content{
 					Buffer: bytes.NewBufferString("hello"),
 				}, nil)
 				m.store.EXPECT().GetApplication("badgoose").Return(&config.Application{
@@ -830,7 +830,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				m.workspace.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return(wantedManifestFile, nil)
 				m.workspace.EXPECT().Rel(wantedManifestFile).Return(wantedManifestRelPath, nil)
 				m.workspace.EXPECT().WritePipelineBuildspec(gomock.Any(), wantedName).Return("", errors.New("some error"))
-				m.parser.EXPECT().Parse(workloadsPipelineBuildspecTemplatePath, gomock.Any()).Return(&template.Content{
+				m.parser.EXPECT().Parse(workloadsPipelineBuildspecTemplatePath, gomock.Any(), gomock.Any()).Return(&template.Content{
 					Buffer: bytes.NewBufferString("hello"),
 				}, nil)
 				m.store.EXPECT().GetApplication("badgoose").Return(&config.Application{
