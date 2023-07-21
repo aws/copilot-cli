@@ -946,7 +946,7 @@ Resources:
 	client := CloudFormation{
 		cfnClient: mockcfnClient,
 		s3Client:  mS3Client,
-		console:   mockFileWriter{Writer: new(strings.Builder)},
+		console:   os.Stderr,
 		notifySignals: func() chan os.Signal {
 			sigCh := make(chan os.Signal, 1)
 			sigCh <- syscall.SIGINT
@@ -1044,7 +1044,7 @@ Resources:
 	client := CloudFormation{
 		cfnClient: mockcfnClient,
 		s3Client:  mS3Client,
-		console:   mockFileWriter{Writer: new(strings.Builder)},
+		console:   os.Stderr,
 		notifySignals: func() chan os.Signal {
 			sigCh := make(chan os.Signal, 1)
 			sigCh <- syscall.SIGINT
@@ -1141,7 +1141,7 @@ Resources:
 	client := CloudFormation{
 		cfnClient: mockcfnClient,
 		s3Client:  mS3Client,
-		console:   mockFileWriter{Writer: new(strings.Builder)},
+		console:   os.Stderr,
 		notifySignals: func() chan os.Signal {
 			sigCh := make(chan os.Signal, 1)
 			sigCh <- syscall.SIGINT
@@ -1238,7 +1238,7 @@ Resources:
 	client := CloudFormation{
 		cfnClient: mockcfnClient,
 		s3Client:  mS3Client,
-		console:   mockFileWriter{Writer: new(strings.Builder)},
+		console:   os.Stderr,
 		notifySignals: func() chan os.Signal {
 			sigCh := make(chan os.Signal, 1)
 			sigCh <- syscall.SIGINT
