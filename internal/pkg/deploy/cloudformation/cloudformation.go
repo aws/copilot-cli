@@ -360,10 +360,6 @@ func (cf CloudFormation) executeAndRenderChangeSet(in *executeAndRenderChangeSet
 	g, ctx := errgroup.WithContext(context.Background())
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
-	var sigChannel chan os.Signal
-	if in.enableInterrupt {
-		sigChannel = cf.notifySignals()
-	}
 	g.Go(func() error {
 		defer cancel()
 		if err := cf.renderChangeSet(ctx, changeSetID, in); err != nil {
@@ -378,7 +374,7 @@ func (cf CloudFormation) executeAndRenderChangeSet(in *executeAndRenderChangeSet
 	})
 	if in.enableInterrupt {
 		g.Go(func() error {
-			return cf.waitForSignalAndHandleInterrupt(ctx, cancel, sigChannel, in.stackName)
+			return cf.waitForSignalAndHandleInterrupt(ctx, cancel, cf.notifySignals(), in.stackName)
 		})
 	}
 	if err := g.Wait(); err != nil {
