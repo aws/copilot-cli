@@ -42,17 +42,17 @@ Post{{logicalIDSafe $stage.Name}}DeploymentAction{{logicalIDSafe $action.Name}}B
     {{- if $.PermissionsBoundary }}
     PermissionsBoundary: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/{{$.PermissionsBoundary}}'
     {{- end }}
-Policies:
-  - PolicyName: assume-env-manager
-    PolicyDocument:
-      Version: '2012-10-17'
-      Statement:
-        - Effect: Allow
-          Resource: 'arn:aws:iam::{{$stage.AccountID}}:role/{{$.AppName}}-{{$stage.Name}}-EnvManagerRole'
-          Action:
-            - sts:AssumeRole
-  - PolicyName: build-role-policy
-    PolicyDocument:
+    Policies:
+      - PolicyName: assume-env-manager
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Resource: 'arn:aws:iam::{{$stage.AccountID}}:role/{{$.AppName}}-{{$stage.Name}}-EnvManagerRole'
+              Action:
+                - sts:AssumeRole
+      - PolicyName: build-role-policy
+        PolicyDocument:
   {{ include "role-policy-document" $ | indent 10 }}
 
 Post{{logicalIDSafe $stage.Name}}DeploymentAction{{logicalIDSafe $action.Name}}:
