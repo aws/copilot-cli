@@ -8,12 +8,15 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/session"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
 )
+
+const namespace = "secretsmanager"
 
 type api interface {
 	CreateSecret(*secretsmanager.CreateSecretInput) (*secretsmanager.CreateSecretOutput, error)
@@ -125,6 +128,18 @@ func (s *SecretsManager) GetSecretValue(name string) (string, error) {
 		return "", fmt.Errorf("get secret %s from secrets manager: %w", name, err)
 	}
 	return aws.StringValue(resp.SecretString), nil
+}
+
+// IsService returns true if the given ARN is secrets manager.
+func (s *SecretsManager) IsService(name string) (bool, error) {
+	parseArn, err := arn.Parse(name)
+	if err != nil {
+		return false, fmt.Errorf("parse secrets manager arn: %w", err)
+	}
+	if parseArn.Service == namespace {
+		return true, nil
+	}
+	return false, nil
 }
 
 // ErrSecretAlreadyExists occurs if a secret with the same name already exists.

@@ -157,11 +157,6 @@ type deployedEnvironmentLister interface {
 type secretsManager interface {
 	secretCreator
 	secretDeleter
-	secretGetter
-}
-
-type secretGetter interface {
-	GetSecretValue(secretName string) (string, error)
 }
 
 type secretCreator interface {

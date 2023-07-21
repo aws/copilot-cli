@@ -15,8 +15,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
-	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
+	"github.com/aws/copilot-cli/internal/pkg/aws/secretsmanager"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/stepfunctions"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -55,6 +55,7 @@ type stepFunctionsClient interface {
 }
 type secretGetter interface {
 	GetSecretValue(secretName string) (string, error)
+	IsService(secretName string) (bool, error)
 }
 
 // EnvVar contains values of the environmental variables
@@ -75,6 +76,7 @@ type ServiceDesc struct {
 type Client struct {
 	rgGetter       resourceGetter
 	secretGetter   secretGetter
+	secretManger   secretGetter
 	ecsClient      ecsClient
 	StepFuncClient stepFunctionsClient
 }
@@ -85,6 +87,7 @@ func New(sess *session.Session) *Client {
 		rgGetter:       resourcegroups.New(sess),
 		ecsClient:      ecs.New(sess),
 		secretGetter:   ssm.New(sess),
+		secretManger:   secretsmanager.New(sess),
 		StepFuncClient: stepfunctions.New(sess),
 	}
 }
@@ -245,21 +248,47 @@ func (c Client) StopDefaultClusterTasks(familyName string) error {
 }
 
 // DecryptedSSMSecrets returns the decrypted parameters from the SSM store.
-func (c Client) DecryptedSSMSecrets(secrets []*awsecs.ContainerSecret, secretGetter *session.Session) ([]EnvVar, error) {
+func (c Client) DecryptedSSMSecrets(secrets []*ecs.ContainerSecret) ([]EnvVar, error) {
 	var ssmSecrets []EnvVar
 	for _, secret := range secrets {
-		if !strings.HasPrefix(secret.ValueFrom, "arn:aws:secretsmanager:") {
-			secretValue, err := c.secretGetter.GetSecretValue(secret.ValueFrom)
+		if arn.IsARN(secret.ValueFrom) {
+			isSSM, err := c.secretGetter.IsService(secret.ValueFrom)
+			if err != nil || !isSSM {
+				continue
+			}
+		}
+		secretValue, err := c.secretGetter.GetSecretValue(secret.ValueFrom)
+		if err != nil {
+			return nil, err
+		}
+		ssmSecrets = append(ssmSecrets, EnvVar{
+			Name:  secret.Name,
+			Value: secretValue,
+		})
+	}
+	return ssmSecrets, nil
+}
+
+// DecryptedSecretManagerSecrets returns the decrypted parameters from the secretsmanager.
+func (c Client) DecryptedSecretManagerSecrets(secrets []*ecs.ContainerSecret) ([]EnvVar, error) {
+	var secretManagerSecrets []EnvVar
+	for _, secret := range secrets {
+		isSecretsManager, err := c.secretManger.IsService(secret.ValueFrom)
+		if err != nil {
+			continue
+		}
+		if isSecretsManager {
+			secretValue, err := c.secretManger.GetSecretValue(secret.ValueFrom)
 			if err != nil {
 				return nil, err
 			}
-			ssmSecrets = append(ssmSecrets, EnvVar{
+			secretManagerSecrets = append(secretManagerSecrets, EnvVar{
 				Name:  secret.Name,
 				Value: secretValue,
 			})
 		}
 	}
-	return ssmSecrets, nil
+	return secretManagerSecrets, nil
 }
 
 // TaskDefinition returns the task definition of the service.

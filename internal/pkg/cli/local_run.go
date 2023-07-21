@@ -5,14 +5,12 @@ package cli
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
-	"github.com/aws/copilot-cli/internal/pkg/aws/secretsmanager"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -26,7 +24,8 @@ const workloadAskPrompt = "Which workload would you like to run locally?"
 
 type ecsLocalClient interface {
 	TaskDefinition(app, env, svc string) (*awsecs.TaskDefinition, error)
-	DecryptedSSMSecrets(secrets []*awsecs.ContainerSecret, secretGetter *session.Session) ([]ecs.EnvVar, error)
+	DecryptedSSMSecrets(secrets []*awsecs.ContainerSecret) ([]ecs.EnvVar, error)
+	DecryptedSecretManagerSecrets(secrets []*awsecs.ContainerSecret) ([]ecs.EnvVar, error)
 }
 
 type localRunVars struct {
@@ -41,7 +40,6 @@ type localRunOpts struct {
 
 	sel            deploySelector
 	ecsLocalClient ecsLocalClient
-	secretsManager secretsManager
 	sess           *session.Session
 	store          store
 }
@@ -62,7 +60,6 @@ func newLocalRunOpts(vars localRunVars) (*localRunOpts, error) {
 		localRunVars:   vars,
 		sel:            selector.NewDeploySelect(prompt.New(), store, deployStore),
 		store:          store,
-		secretsManager: secretsmanager.New(defaultSess),
 		ecsLocalClient: ecs.New(defaultSess),
 		sess:           defaultSess,
 	}
@@ -116,12 +113,12 @@ func (o *localRunOpts) Execute() error {
 	}
 
 	secrets := taskDef.Secrets()
-	_, err = o.ecsLocalClient.DecryptedSSMSecrets(secrets, o.sess)
+	_, err = o.ecsLocalClient.DecryptedSSMSecrets(secrets)
 	if err != nil {
 		return err
 	}
 
-	_, err = o.decryptedSecretManagerSecrets(secrets, o.sess)
+	_, err = o.ecsLocalClient.DecryptedSecretManagerSecrets(secrets)
 	if err != nil {
 		return err
 	}
@@ -129,22 +126,23 @@ func (o *localRunOpts) Execute() error {
 	return nil
 }
 
-func (o *localRunOpts) decryptedSecretManagerSecrets(secrets []*awsecs.ContainerSecret, awsSession *session.Session) ([]ecs.EnvVar, error) {
-	var secretManagerSecrets []ecs.EnvVar
-	for _, secret := range secrets {
-		if strings.HasPrefix(secret.ValueFrom, "arn:aws:secretsmanager:") {
-			secretValue, err := o.secretsManager.GetSecretValue(secret.ValueFrom)
-			if err != nil {
-				return nil, err
-			}
-			secretManagerSecrets = append(secretManagerSecrets, ecs.EnvVar{
-				Name:  secret.Name,
-				Value: secretValue,
-			})
-		}
-	}
-	return secretManagerSecrets, nil
-}
+// func (o *localRunOpts) decryptedSecretManagerSecrets(secrets []*awsecs.ContainerSecret, awsSession *session.Session) ([]ecs.EnvVar, error) {
+// 	var secretManagerSecrets []ecs.EnvVar
+// 	for _, secret := range secrets {
+
+// 		if strings.HasPrefix(secret.ValueFrom, "arn:aws:secretsmanager:") {
+// 			secretValue, err := o.secretsManager.GetSecretValue(secret.ValueFrom)
+// 			if err != nil {
+// 				return nil, err
+// 			}
+// 			secretManagerSecrets = append(secretManagerSecrets, ecs.EnvVar{
+// 				Name:  secret.Name,
+// 				Value: secretValue,
+// 			})
+// 		}
+// 	}
+// 	return secretManagerSecrets, nil
+// }
 
 // BuildLocalRunCmd builds the command for running a workload locally
 func BuildLocalRunCmd() *cobra.Command {
