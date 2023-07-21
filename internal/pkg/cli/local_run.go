@@ -24,8 +24,8 @@ const workloadAskPrompt = "Which workload would you like to run locally?"
 
 type ecsLocalClient interface {
 	TaskDefinition(app, env, svc string) (*awsecs.TaskDefinition, error)
-	DecryptedSSMSecrets(secrets []*awsecs.ContainerSecret) ([]ecs.EnvVar, error)
-	DecryptedSecretManagerSecrets(secrets []*awsecs.ContainerSecret) ([]ecs.EnvVar, error)
+	DecryptedSecrets(secrets []*awsecs.ContainerSecret) ([]ecs.EnvVar, error)
+	// DecryptedSecretManagerSecrets(secrets []*awsecs.ContainerSecret) ([]ecs.EnvVar, error)
 }
 
 type localRunVars struct {
@@ -113,14 +113,9 @@ func (o *localRunOpts) Execute() error {
 	}
 
 	secrets := taskDef.Secrets()
-	_, err = o.ecsLocalClient.DecryptedSSMSecrets(secrets)
+	_, err = o.ecsLocalClient.DecryptedSecrets(secrets)
 	if err != nil {
-		return err
-	}
-
-	_, err = o.ecsLocalClient.DecryptedSecretManagerSecrets(secrets)
-	if err != nil {
-		return err
+		return fmt.Errorf("get secret values: %w:", err)
 	}
 
 	return nil

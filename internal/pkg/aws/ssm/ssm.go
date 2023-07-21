@@ -66,15 +66,12 @@ func (s *SSM) PutSecret(in PutSecretInput) (*PutSecretOutput, error) {
 }
 
 // IsService returns true if the given ARN is ssm.
-func (s *SSM) IsService(name string) (bool, error) {
+func (s *SSM) IsServiceARN(name string) (bool, error) {
 	parseArn, err := arn.Parse(name)
 	if err != nil {
 		return false, fmt.Errorf("parse ssm arn: %w", err)
 	}
-	if parseArn.Service == namespace {
-		return true, nil
-	}
-	return false, nil
+	return parseArn.Service == namespace, nil
 }
 
 // GetSecretValue retrieves the value of a parameter from AWS Systems Manager Parameter Store.
