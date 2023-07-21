@@ -5,6 +5,9 @@ Pre{{logicalIDSafe $stage.Name}}DeploymentAction{{logicalIDSafe $action.Name}}Bu
   Properties:
     Path: /
 {{ include "role-config" $ | indent 4}}
+    {{- if $.PermissionsBoundary }}
+    PermissionsBoundary: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/{{$.PermissionsBoundary}}'
+    {{- end }}
     Policies:
       - PolicyName: assume-env-manager
         PolicyDocument:
@@ -36,6 +39,9 @@ Post{{logicalIDSafe $stage.Name}}DeploymentAction{{logicalIDSafe $action.Name}}B
   Properties:
     Path: /
   {{ include "role-config" $ | indent 4}}
+    {{- if $.PermissionsBoundary }}
+    PermissionsBoundary: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/{{$.PermissionsBoundary}}'
+    {{- end }}
 Policies:
   - PolicyName: assume-env-manager
     PolicyDocument:

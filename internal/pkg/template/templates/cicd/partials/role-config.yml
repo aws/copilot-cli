@@ -10,6 +10,3 @@ AssumeRolePolicyDocument:
 ManagedPolicyArns:
   - 'arn:aws:iam::aws:policy/AmazonSSMReadOnlyAccess' # for env ls
   - 'arn:aws:iam::aws:policy/AWSCloudFormationReadOnlyAccess' # for service package
-{{- if $.PermissionsBoundary }}
-PermissionsBoundary: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/{{$.PermissionsBoundary}}'
-{{- end }}

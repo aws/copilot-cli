@@ -3,6 +3,9 @@ BuildProjectRole:
   Properties:
     Path: /
 {{ include "role-config" . | indent 4}}
+  {{- if $.PermissionsBoundary }}
+    PermissionsBoundary: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/{{$.PermissionsBoundary}}'
+  {{- end }}
     Policies:
       - PolicyName: assume-env-manager
         PolicyDocument:
