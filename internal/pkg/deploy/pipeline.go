@@ -493,8 +493,6 @@ type PipelineStage struct {
 	execRoleARN       string
 	envManagerRoleARN string
 	deployments       manifest.Deployments
-	preDeployments    []Action
-	postDeployments   []Action
 }
 
 // Init populates the fields in PipelineStage against a target environment,
