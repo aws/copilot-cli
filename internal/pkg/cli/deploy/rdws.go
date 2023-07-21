@@ -112,12 +112,17 @@ func (d *rdwsDeployer) DeployWorkload(in *DeployWorkloadInput) (ActionRecommende
 	if err != nil {
 		return nil, err
 	}
+	recommendations := &rdwsDeployOutput{
+		rdwsAlias: stackConfigOutput.rdSvcAlias,
+	}
 	if err := d.deploy(in.Options, stackConfigOutput.svcStackConfigurationOutput); err != nil {
+		var errStackUpdateCanceledOnInterrupt *cloudformation.ErrStackUpdateCanceledOnInterrupt
+		if errors.As(err, &errStackUpdateCanceledOnInterrupt) {
+			return recommendations, err
+		}
 		return nil, err
 	}
-	return &rdwsDeployOutput{
-		rdwsAlias: stackConfigOutput.rdSvcAlias,
-	}, nil
+	return recommendations, nil
 }
 
 type rdwsStackConfigurationOutput struct {

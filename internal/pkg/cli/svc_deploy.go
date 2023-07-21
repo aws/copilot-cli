@@ -17,6 +17,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/tags"
+	deploycfn "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/template"
@@ -291,6 +292,8 @@ func (o *deploySvcOpts) Execute() error {
 			return nil
 		}
 	}
+	var errStackDeletedOnInterrupt *deploycfn.ErrStackDeletedOnInterrupt
+	var errStackUpdateCanceledOnInterrupt *deploycfn.ErrStackUpdateCanceledOnInterrupt
 	deployRecs, err := deployer.DeployWorkload(&clideploy.DeployWorkloadInput{
 		StackRuntimeConfiguration: clideploy.StackRuntimeConfiguration{
 			ImageDigests:              uploadOut.ImageDigests,
@@ -308,6 +311,15 @@ func (o *deploySvcOpts) Execute() error {
 		},
 	})
 	if err != nil {
+		if errors.As(err, &errStackDeletedOnInterrupt) {
+			o.noDeploy = true
+			return nil
+		}
+		if errors.As(err, &errStackUpdateCanceledOnInterrupt) {
+			log.Successf("Successfully rolled back service %s to the previous configuration.\n", color.HighlightUserInput(o.name))
+			o.deployRecs = deployRecs
+			return nil
+		}
 		if o.disableRollback {
 			stackName := stack.NameForWorkload(o.targetApp.Name, o.targetEnv.Name, o.name)
 			rollbackCmd := fmt.Sprintf("aws cloudformation rollback-stack --stack-name %s --role-arn %s", stackName, o.targetEnv.ExecutionRoleARN)
@@ -320,9 +332,10 @@ After fixing the deployment, you can:
 `, color.HighlightCode("copilot svc logs"), color.HighlightCode(rollbackCmd), color.HighlightCode("copilot svc deploy"))
 		}
 		return fmt.Errorf("deploy service %s to environment %s: %w", o.name, o.envName, err)
+	} else {
+		log.Successf("Deployed service %s.\n", color.HighlightUserInput(o.name))
 	}
 	o.deployRecs = deployRecs
-	log.Successf("Deployed service %s.\n", color.HighlightUserInput(o.name))
 	return nil
 }
 

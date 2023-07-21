@@ -27,7 +27,7 @@ func (cf CloudFormation) DeployService(conf StackConfiguration, bucketName strin
 	for _, opt := range opts {
 		opt(stack)
 	}
-	return cf.executeAndRenderChangeSet(cf.newUpsertChangeSetInput(cf.console, stack))
+	return cf.executeAndRenderChangeSet(cf.newUpsertChangeSetInput(cf.console, stack, withEnableInterrupt(true)))
 }
 
 type uploadableStack interface {

@@ -7,7 +7,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 
@@ -104,6 +106,10 @@ func testDeployWorkload_OnPushToS3Failure(t *testing.T, when func(cf CloudFormat
 	client := CloudFormation{
 		s3Client: mS3Client,
 		console:  mockFileWriter{Writer: buf},
+		notifySignals: func() chan os.Signal {
+			sigCh := make(chan os.Signal, 1)
+			return sigCh
+		},
 	}
 
 	// WHEN
@@ -124,7 +130,12 @@ func testDeployWorkload_OnCreateChangeSetFailure(t *testing.T, when func(cf Clou
 	m.EXPECT().Create(gomock.Any()).Return("", wantedErr)
 	m.EXPECT().ErrorEvents(gomock.Any()).Return(nil, nil)
 	buf := new(strings.Builder)
-	client := CloudFormation{cfnClient: m, s3Client: mS3Client, console: mockFileWriter{Writer: buf}}
+	client := CloudFormation{cfnClient: m, s3Client: mS3Client, console: mockFileWriter{Writer: buf},
+		notifySignals: func() chan os.Signal {
+			sigCh := make(chan os.Signal, 1)
+			return sigCh
+		},
+	}
 
 	// WHEN
 	err := when(client)
@@ -145,7 +156,12 @@ func testDeployWorkload_OnUpdateChangeSetFailure(t *testing.T, when func(cf Clou
 	m.EXPECT().Update(gomock.Any()).Return("", wantedErr)
 	m.EXPECT().ErrorEvents(gomock.Any()).Return(nil, nil)
 	buf := new(strings.Builder)
-	client := CloudFormation{cfnClient: m, s3Client: mS3Client, console: mockFileWriter{Writer: buf}}
+	client := CloudFormation{cfnClient: m, s3Client: mS3Client, console: mockFileWriter{Writer: buf},
+		notifySignals: func() chan os.Signal {
+			sigCh := make(chan os.Signal, 1)
+			return sigCh
+		},
+	}
 
 	// WHEN
 	err := when(client)
@@ -164,8 +180,12 @@ func testDeployWorkload_OnDescribeChangeSetFailure(t *testing.T, when func(cf Cl
 	m.EXPECT().Create(gomock.Any()).Return("1234", nil)
 	m.EXPECT().DescribeChangeSet(gomock.Any(), gomock.Any()).Return(nil, errors.New("DescribeChangeSet error"))
 	buf := new(strings.Builder)
-	client := CloudFormation{cfnClient: m, s3Client: mS3Client, console: mockFileWriter{Writer: buf}}
-
+	client := CloudFormation{cfnClient: m, s3Client: mS3Client, console: mockFileWriter{Writer: buf},
+		notifySignals: func() chan os.Signal {
+			sigCh := make(chan os.Signal, 1)
+			return sigCh
+		},
+	}
 	// WHEN
 	err := when(client)
 
@@ -184,7 +204,12 @@ func testDeployWorkload_OnTemplateBodyFailure(t *testing.T, when func(cf CloudFo
 	m.EXPECT().DescribeChangeSet(gomock.Any(), gomock.Any()).Return(&cloudformation.ChangeSetDescription{}, nil)
 	m.EXPECT().TemplateBodyFromChangeSet(gomock.Any(), gomock.Any()).Return("", errors.New("TemplateBody error"))
 	buf := new(strings.Builder)
-	client := CloudFormation{cfnClient: m, s3Client: mS3Client, console: mockFileWriter{Writer: buf}}
+	client := CloudFormation{cfnClient: m, s3Client: mS3Client, console: mockFileWriter{Writer: buf},
+		notifySignals: func() chan os.Signal {
+			sigCh := make(chan os.Signal, 1)
+			return sigCh
+		},
+	}
 
 	// WHEN
 	err := when(client)
@@ -206,8 +231,12 @@ func testDeployWorkload_StackStreamerFailureShouldCancelRenderer(t *testing.T, w
 	m.EXPECT().TemplateBodyFromChangeSet(gomock.Any(), gomock.Any()).Return("", nil)
 	m.EXPECT().DescribeStackEvents(gomock.Any()).Return(nil, wantedErr)
 	buf := new(strings.Builder)
-	client := CloudFormation{cfnClient: m, s3Client: mS3Client, console: mockFileWriter{Writer: buf}}
-
+	client := CloudFormation{cfnClient: m, s3Client: mS3Client, console: mockFileWriter{Writer: buf},
+		notifySignals: func() chan os.Signal {
+			sigCh := make(chan os.Signal, 1)
+			return sigCh
+		},
+	}
 	// WHEN
 	err := when(client)
 
@@ -250,7 +279,12 @@ func testDeployWorkload_StreamUntilStackCreationFails(t *testing.T, stackName st
 			},
 		}, nil)
 	buf := new(strings.Builder)
-	client := CloudFormation{cfnClient: m, s3Client: mS3Client, console: mockFileWriter{Writer: buf}}
+	client := CloudFormation{cfnClient: m, s3Client: mS3Client, console: mockFileWriter{Writer: buf},
+		notifySignals: func() chan os.Signal {
+			sigCh := make(chan os.Signal, 1)
+			return sigCh
+		},
+	}
 
 	// WHEN
 	err := when(client)
@@ -330,7 +364,12 @@ Resources:
 		StackStatus: aws.String("CREATE_COMPLETE"),
 	}, nil)
 	buf := new(strings.Builder)
-	client := CloudFormation{cfnClient: mockCFN, ecsClient: mockECS, s3Client: mS3Client, console: mockFileWriter{Writer: buf}}
+	client := CloudFormation{cfnClient: mockCFN, ecsClient: mockECS, s3Client: mS3Client, console: mockFileWriter{Writer: buf},
+		notifySignals: func() chan os.Signal {
+			sigCh := make(chan os.Signal, 1)
+			return sigCh
+		},
+	}
 
 	// WHEN
 	err := when(client)
@@ -410,7 +449,12 @@ Resources:
 		StackStatus: aws.String("CREATE_COMPLETE"),
 	}, nil)
 	buf := new(strings.Builder)
-	client := CloudFormation{cfnClient: mockCFN, s3Client: mS3Client, console: mockFileWriter{Writer: buf}}
+	client := CloudFormation{cfnClient: mockCFN, s3Client: mS3Client, console: mockFileWriter{Writer: buf},
+		notifySignals: func() chan os.Signal {
+			sigCh := make(chan os.Signal, 1)
+			return sigCh
+		},
+	}
 
 	// WHEN
 	err := when(client)
@@ -531,7 +575,12 @@ Resources:
 		},
 	}, nil).AnyTimes()
 	buf := new(strings.Builder)
-	client := CloudFormation{cfnClient: m, s3Client: mS3Client, console: mockFileWriter{Writer: buf}}
+	client := CloudFormation{cfnClient: m, s3Client: mS3Client, console: mockFileWriter{Writer: buf},
+		notifySignals: func() chan os.Signal {
+			sigCh := make(chan os.Signal, 1)
+			return sigCh
+		},
+	}
 
 	// WHEN
 	err := when(client)
@@ -815,6 +864,393 @@ Resources:
 	require.Contains(t, buf.String(), "An ECS cluster")
 	require.Contains(t, buf.String(), "An Addons CloudFormation Stack for your additional AWS resources")
 	require.Contains(t, buf.String(), "A DynamoDB table to store data")
+}
+
+func testDeployWorkload_OnCancelUpdateSuccess(t *testing.T, stackName string, when func(cf CloudFormation) error) {
+	// GIVEN
+	wantedErr := &ErrStackUpdateCanceledOnInterrupt{stackName: stackName}
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	deploymentTime := time.Date(2020, time.November, 23, 18, 0, 0, 0, time.UTC)
+	mS3Client := mocks.NewMocks3Client(ctrl)
+	mS3Client.EXPECT().Upload(gomock.Any(), gomock.Any(), gomock.Any()).Return("", nil)
+	mockcfnClient := mocks.NewMockcfnClient(ctrl)
+	mockcfnClient.EXPECT().Create(gomock.Any()).Return("", &cloudformation.ErrStackAlreadyExists{})
+	mockcfnClient.EXPECT().Update(gomock.Any()).Return("1234", nil)
+	mockcfnClient.EXPECT().DescribeChangeSet("1234", stackName).Return(&cloudformation.ChangeSetDescription{
+		Changes: []*sdkcloudformation.Change{
+			{
+				ResourceChange: &sdkcloudformation.ResourceChange{
+					LogicalResourceId: aws.String("log group"),
+					ResourceType:      aws.String("AWS::Logs::LogGroup"),
+				},
+			},
+		},
+	}, nil).Times(2)
+	mockcfnClient.EXPECT().TemplateBodyFromChangeSet("1234", stackName).Return(`
+Resources:
+  LogGroup:
+    Metadata:
+      'aws:copilot:description': 'A CloudWatch log group to hold your service logs'
+    Type: AWS::Logs::LogGroup`, nil).Times(2)
+	mockcfnClient.EXPECT().DescribeStackEvents(&sdkcloudformation.DescribeStackEventsInput{
+		StackName: aws.String(stackName),
+	}).Return(&sdkcloudformation.DescribeStackEventsOutput{
+		StackEvents: []*sdkcloudformation.StackEvent{
+			{
+				EventId:            aws.String("1"),
+				LogicalResourceId:  aws.String("log group"),
+				PhysicalResourceId: aws.String("arn:aws:logs:us-west-2:1111:loggroup/copilot"),
+				ResourceType:       aws.String("AWS::Logs::LogGroup"),
+				ResourceStatus:     aws.String("UPDATE_IN_PROGRESS"),
+				Timestamp:          aws.Time(deploymentTime),
+			},
+			{
+				EventId:            aws.String("2"),
+				LogicalResourceId:  aws.String("log group"),
+				PhysicalResourceId: aws.String("arn:aws:logs:us-west-2:1111:loggroup/copilot"),
+				ResourceType:       aws.String("AWS::Logs::LogGroup"),
+				ResourceStatus:     aws.String("UPDATE_IN_PROGRESS"),
+				Timestamp:          aws.Time(deploymentTime),
+			},
+			{
+				EventId:           aws.String("3"),
+				LogicalResourceId: aws.String(stackName),
+				ResourceType:      aws.String("AWS::CloudFormation::Stack"),
+				ResourceStatus:    aws.String("UPDATE_IN_PROGRESS"),
+				Timestamp:         aws.Time(deploymentTime),
+			},
+			{
+				EventId:           aws.String("4"),
+				LogicalResourceId: aws.String(stackName),
+				ResourceType:      aws.String("AWS::CloudFormation::Stack"),
+				ResourceStatus:    aws.String("UPDATE_ROLLBACK_COMPLETE"),
+				Timestamp:         aws.Time(deploymentTime),
+			},
+		},
+	}, nil).AnyTimes()
+	mockcfnClient.EXPECT().Describe(gomock.Any()).Return(&cloudformation.StackDescription{
+		StackId:     aws.String("stack/webhook/1111"),
+		StackStatus: aws.String("UPDATE_IN_PROGRESS"),
+	}, nil)
+	mockcfnClient.EXPECT().Describe(gomock.Any()).Return(&cloudformation.StackDescription{
+		StackId:     aws.String("stack/webhook/1111"),
+		StackStatus: aws.String("UPDATE_IN_PROGRESS"),
+		ChangeSetId: aws.String("1234"),
+	}, nil)
+	mockcfnClient.EXPECT().CancelUpdateStack(stackName).Return(nil)
+	mockcfnClient.EXPECT().Describe(gomock.Any()).Return(&cloudformation.StackDescription{
+		StackId:     aws.String("stack/webhook/1111"),
+		StackStatus: aws.String("UPDATE_ROLLBACK_COMPLETE"),
+	}, nil)
+	client := CloudFormation{
+		cfnClient: mockcfnClient,
+		s3Client:  mS3Client,
+		console:   mockFileWriter{Writer: new(strings.Builder)},
+		notifySignals: func() chan os.Signal {
+			sigCh := make(chan os.Signal, 1)
+			sigCh <- syscall.SIGINT
+			return sigCh
+		},
+	}
+
+	// WHEN
+	gotErr := when(client)
+
+	// THEN
+	require.EqualError(t, gotErr, wantedErr.Error())
+}
+
+func testDeployWorkload_OnCancelUpdateFAILED(t *testing.T, stackName string, when func(cf CloudFormation) error) {
+	// GIVEN
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	wantedError := errors.New("stack myapp-myenv-mysvc did not rollback successfully and exited with status UPDATE_ROLLBACK_FAILED")
+	deploymentTime := time.Date(2020, time.November, 23, 18, 0, 0, 0, time.UTC)
+	mS3Client := mocks.NewMocks3Client(ctrl)
+	mS3Client.EXPECT().Upload(gomock.Any(), gomock.Any(), gomock.Any()).Return("", nil)
+	mockcfnClient := mocks.NewMockcfnClient(ctrl)
+	mockcfnClient.EXPECT().Create(gomock.Any()).Return("", &cloudformation.ErrStackAlreadyExists{})
+	mockcfnClient.EXPECT().Update(gomock.Any()).Return("1234", nil)
+	mockcfnClient.EXPECT().DescribeChangeSet("1234", stackName).Return(&cloudformation.ChangeSetDescription{
+		Changes: []*sdkcloudformation.Change{
+			{
+				ResourceChange: &sdkcloudformation.ResourceChange{
+					LogicalResourceId: aws.String("log group"),
+					ResourceType:      aws.String("AWS::Logs::LogGroup"),
+				},
+			},
+		},
+	}, nil).Times(2)
+	mockcfnClient.EXPECT().TemplateBodyFromChangeSet("1234", stackName).Return(`
+Resources:
+  LogGroup:
+    Metadata:
+      'aws:copilot:description': 'A CloudWatch log group to hold your service logs'
+    Type: AWS::Logs::LogGroup`, nil).Times(2)
+	mockcfnClient.EXPECT().DescribeStackEvents(&sdkcloudformation.DescribeStackEventsInput{
+		StackName: aws.String(stackName),
+	}).Return(&sdkcloudformation.DescribeStackEventsOutput{
+		StackEvents: []*sdkcloudformation.StackEvent{
+			{
+				EventId:            aws.String("1"),
+				LogicalResourceId:  aws.String("log group"),
+				PhysicalResourceId: aws.String("arn:aws:logs:us-west-2:1111:loggroup/copilot"),
+				ResourceType:       aws.String("AWS::Logs::LogGroup"),
+				ResourceStatus:     aws.String("UPDATE_IN_PROGRESS"),
+				Timestamp:          aws.Time(deploymentTime),
+			},
+			{
+				EventId:           aws.String("2"),
+				LogicalResourceId: aws.String(stackName),
+				ResourceType:      aws.String("AWS::CloudFormation::Stack"),
+				ResourceStatus:    aws.String("UPDATE_IN_PROGRESS"),
+				Timestamp:         aws.Time(deploymentTime),
+			},
+			{
+				EventId:            aws.String("3"),
+				LogicalResourceId:  aws.String("log group"),
+				PhysicalResourceId: aws.String("arn:aws:logs:us-west-2:1111:loggroup/copilot"),
+				ResourceType:       aws.String("AWS::Logs::LogGroup"),
+				ResourceStatus:     aws.String("UPDATE_ROLLBACK_FAILED"),
+				Timestamp:          aws.Time(deploymentTime),
+			},
+			{
+				EventId:           aws.String("4"),
+				LogicalResourceId: aws.String(stackName),
+				ResourceType:      aws.String("AWS::CloudFormation::Stack"),
+				ResourceStatus:    aws.String("UPDATE_ROLLBACK_FAILED"),
+				Timestamp:         aws.Time(deploymentTime),
+			},
+		},
+	}, nil).AnyTimes()
+	mockcfnClient.EXPECT().Describe(stackName).Return(&cloudformation.StackDescription{
+		StackId:     aws.String("stack/webhook/1111"),
+		StackName:   aws.String(stackName),
+		StackStatus: aws.String("UPDATE_IN_PROGRESS"),
+	}, nil)
+	mockcfnClient.EXPECT().Describe(stackName).Return(&cloudformation.StackDescription{
+		StackId:     aws.String("stack/webhook/1111"),
+		StackName:   aws.String(stackName),
+		StackStatus: aws.String("UPDATE_IN_PROGRESS"),
+		ChangeSetId: aws.String("1234"),
+	}, nil)
+	mockcfnClient.EXPECT().CancelUpdateStack(stackName).Return(nil)
+	mockcfnClient.EXPECT().Describe(stackName).Return(&cloudformation.StackDescription{
+		StackId:     aws.String("stack/webhook/1111"),
+		StackName:   aws.String(stackName),
+		StackStatus: aws.String("UPDATE_ROLLBACK_FAILED"),
+	}, nil)
+	client := CloudFormation{
+		cfnClient: mockcfnClient,
+		s3Client:  mS3Client,
+		console:   mockFileWriter{Writer: new(strings.Builder)},
+		notifySignals: func() chan os.Signal {
+			sigCh := make(chan os.Signal, 1)
+			sigCh <- syscall.SIGINT
+			return sigCh
+		},
+	}
+
+	// WHEN
+	err := when(client)
+
+	// THEN
+	require.EqualError(t, err, wantedError.Error())
+}
+
+func testDeployWorkload_OnDeleteStackSuccess(t *testing.T, stackName string, when func(cf CloudFormation) error) {
+	// GIVEN
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	wantedErr := &ErrStackDeletedOnInterrupt{stackName: stackName}
+	deploymentTime := time.Date(2020, time.November, 23, 18, 0, 0, 0, time.UTC)
+	mS3Client := mocks.NewMocks3Client(ctrl)
+	mS3Client.EXPECT().Upload(gomock.Any(), gomock.Any(), gomock.Any()).Return("", nil)
+	mockcfnClient := mocks.NewMockcfnClient(ctrl)
+	mockcfnClient.EXPECT().Create(gomock.Any()).Return("1234", nil)
+	mockcfnClient.EXPECT().Describe(stackName).Return(&cloudformation.StackDescription{
+		StackId:     aws.String("stack/webhook/1111"),
+		StackName:   aws.String(stackName),
+		StackStatus: aws.String("CREATE_IN_PROGRESS"),
+	}, nil)
+	mockcfnClient.EXPECT().DescribeChangeSet("1234", stackName).Return(&cloudformation.ChangeSetDescription{
+		Changes: []*sdkcloudformation.Change{
+			{
+				ResourceChange: &sdkcloudformation.ResourceChange{
+					LogicalResourceId: aws.String("log group"),
+					ResourceType:      aws.String("AWS::Logs::LogGroup"),
+				},
+			},
+		},
+	}, nil)
+	mockcfnClient.EXPECT().TemplateBodyFromChangeSet("1234", stackName).Return(`
+Resources:
+  LogGroup:
+    Metadata:
+      aws:copilot:description': 'A CloudWatch log group to hold your service logs'
+    Type: AWS::Logs::LogGroup`, nil)
+	mockcfnClient.EXPECT().DescribeStackEvents(&sdkcloudformation.DescribeStackEventsInput{
+		StackName: aws.String("stack/webhook/1111"),
+	}).Return(&sdkcloudformation.DescribeStackEventsOutput{
+		StackEvents: []*sdkcloudformation.StackEvent{
+			{
+				EventId:            aws.String("1"),
+				LogicalResourceId:  aws.String("log group"),
+				PhysicalResourceId: aws.String("arn:aws:logs:us-west-2:1111:loggroup/copilot"),
+				ResourceType:       aws.String("AWS::Logs::LogGroup"),
+				ResourceStatus:     aws.String("CREATE_IN_PROGRESS"),
+				Timestamp:          aws.Time(deploymentTime),
+			},
+			{
+				EventId:           aws.String("2"),
+				LogicalResourceId: aws.String(stackName),
+				ResourceType:      aws.String("AWS::CloudFormation::Stack"),
+				ResourceStatus:    aws.String("CREATE_IN_PROGRESS"),
+				Timestamp:         aws.Time(deploymentTime),
+			},
+			{
+				EventId:            aws.String("3"),
+				LogicalResourceId:  aws.String("log group"),
+				PhysicalResourceId: aws.String("arn:aws:logs:us-west-2:1111:loggroup/copilot"),
+				ResourceType:       aws.String("AWS::Logs::LogGroup"),
+				ResourceStatus:     aws.String("DELETE_COMPLETE"),
+				Timestamp:          aws.Time(deploymentTime),
+			},
+			{
+				EventId:           aws.String("4"),
+				LogicalResourceId: aws.String(stackName),
+				ResourceType:      aws.String("AWS::CloudFormation::Stack"),
+				ResourceStatus:    aws.String("DELETE_COMPLETE"),
+				Timestamp:         aws.Time(deploymentTime),
+			},
+		},
+	}, nil).AnyTimes()
+	mockcfnClient.EXPECT().TemplateBody(stackName).Return(`
+Resources:
+  LogGroup:
+    Metadata:
+      aws:copilot:description': 'A CloudWatch log group to hold your service logs'
+    Type: AWS::Logs::LogGroup`, nil)
+	mockcfnClient.EXPECT().Describe(stackName).Return(&cloudformation.StackDescription{
+		StackId:     aws.String("stack/webhook/1111"),
+		StackName:   aws.String(stackName),
+		StackStatus: aws.String("CREATE_IN_PROGRESS"),
+	}, nil)
+	mockcfnClient.EXPECT().DeleteAndWait(stackName).Return(&cloudformation.ErrStackNotFound{})
+	client := CloudFormation{
+		cfnClient: mockcfnClient,
+		s3Client:  mS3Client,
+		console:   mockFileWriter{Writer: new(strings.Builder)},
+		notifySignals: func() chan os.Signal {
+			sigCh := make(chan os.Signal, 1)
+			sigCh <- syscall.SIGINT
+			return sigCh
+		},
+	}
+
+	// WHEN
+	err := when(client)
+
+	// THEN
+	require.EqualError(t, err, wantedErr.Error())
+}
+
+func testDeployWorkload_OnDeleteStackFailed(t *testing.T, stackName string, when func(cf CloudFormation) error) {
+	// GIVEN
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	wantedErr := errors.New("some error")
+	deploymentTime := time.Date(2020, time.November, 23, 18, 0, 0, 0, time.UTC)
+	mS3Client := mocks.NewMocks3Client(ctrl)
+	mS3Client.EXPECT().Upload(gomock.Any(), gomock.Any(), gomock.Any()).Return("", nil)
+	mockcfnClient := mocks.NewMockcfnClient(ctrl)
+	mockcfnClient.EXPECT().Create(gomock.Any()).Return("1234", nil)
+	mockcfnClient.EXPECT().Describe(stackName).Return(&cloudformation.StackDescription{
+		StackId:     aws.String("stack/webhook/1111"),
+		StackName:   aws.String(stackName),
+		StackStatus: aws.String("CREATE_IN_PROGRESS"),
+	}, nil)
+	mockcfnClient.EXPECT().DescribeChangeSet("1234", stackName).Return(&cloudformation.ChangeSetDescription{
+		Changes: []*sdkcloudformation.Change{
+			{
+				ResourceChange: &sdkcloudformation.ResourceChange{
+					LogicalResourceId: aws.String("log group"),
+					ResourceType:      aws.String("AWS::Logs::LogGroup"),
+				},
+			},
+		},
+	}, nil)
+	mockcfnClient.EXPECT().TemplateBodyFromChangeSet("1234", stackName).Return(`
+Resources:
+  LogGroup:
+    Metadata:
+      aws:copilot:description': 'A CloudWatch log group to hold your service logs'
+    Type: AWS::Logs::LogGroup`, nil)
+	mockcfnClient.EXPECT().DescribeStackEvents(&sdkcloudformation.DescribeStackEventsInput{
+		StackName: aws.String("stack/webhook/1111"),
+	}).Return(&sdkcloudformation.DescribeStackEventsOutput{
+		StackEvents: []*sdkcloudformation.StackEvent{
+			{
+				EventId:            aws.String("1"),
+				LogicalResourceId:  aws.String("log group"),
+				PhysicalResourceId: aws.String("arn:aws:logs:us-west-2:1111:loggroup/copilot"),
+				ResourceType:       aws.String("AWS::Logs::LogGroup"),
+				ResourceStatus:     aws.String("CREATE_IN_PROGRESS"),
+				Timestamp:          aws.Time(deploymentTime),
+			},
+			{
+				EventId:           aws.String("2"),
+				LogicalResourceId: aws.String(stackName),
+				ResourceType:      aws.String("AWS::CloudFormation::Stack"),
+				ResourceStatus:    aws.String("CREATE_IN_PROGRESS"),
+				Timestamp:         aws.Time(deploymentTime),
+			},
+			{
+				EventId:            aws.String("3"),
+				LogicalResourceId:  aws.String("log group"),
+				PhysicalResourceId: aws.String("arn:aws:logs:us-west-2:1111:loggroup/copilot"),
+				ResourceType:       aws.String("AWS::Logs::LogGroup"),
+				ResourceStatus:     aws.String("DELETE_IN_PROGRESS"),
+				Timestamp:          aws.Time(deploymentTime),
+			},
+			{
+				EventId:           aws.String("4"),
+				LogicalResourceId: aws.String(stackName),
+				ResourceType:      aws.String("AWS::CloudFormation::Stack"),
+				ResourceStatus:    aws.String("DELETE_IN_PROGRESS"),
+				Timestamp:         aws.Time(deploymentTime),
+			},
+		},
+	}, nil).AnyTimes()
+	mockcfnClient.EXPECT().TemplateBody(stackName).Return(`
+Resources:
+  LogGroup:
+    Metadata:
+      aws:copilot:description': 'A CloudWatch log group to hold your service logs'
+    Type: AWS::Logs::LogGroup`, nil)
+	mockcfnClient.EXPECT().Describe(stackName).Return(&cloudformation.StackDescription{
+		StackId:     aws.String("stack/webhook/1111"),
+		StackName:   aws.String(stackName),
+		StackStatus: aws.String("CREATE_IN_PROGRESS"),
+	}, nil)
+	mockcfnClient.EXPECT().DeleteAndWait(stackName).Return(errors.New("some error"))
+	client := CloudFormation{
+		cfnClient: mockcfnClient,
+		s3Client:  mS3Client,
+		console:   mockFileWriter{Writer: new(strings.Builder)},
+		notifySignals: func() chan os.Signal {
+			sigCh := make(chan os.Signal, 1)
+			sigCh <- syscall.SIGINT
+			return sigCh
+		},
+	}
+
+	// WHEN
+	err := when(client)
+
+	// THEN
+	require.EqualError(t, err, wantedErr.Error())
 }
 
 func TestCloudFormation_Template(t *testing.T) {
