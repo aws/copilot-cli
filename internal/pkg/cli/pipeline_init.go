@@ -780,7 +780,7 @@ func (o *initPipelineOpts) createBuildspec(buildSpecTemplatePath string) error {
 		Version:            version.Version,
 		ManifestPath:       filepath.ToSlash(o.manifestPath), // The manifest path must be rendered in the buildspec with '/' instead of os-specific separator.
 		ArtifactBuckets:    artifactBuckets,
-	})
+	}, template.WithFuncs(map[string]interface{}{"URLSafeVersion": template.URLSafeVersion}))
 	if err != nil {
 		return err
 	}
