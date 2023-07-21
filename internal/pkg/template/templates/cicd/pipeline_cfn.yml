@@ -241,6 +241,7 @@ Resources:
             {{- range $action := $stage.PreDeployments }}
             - Name: {{ $action.Name }}
               Region: {{ $stage.Region }}
+              RunOrder: {{ $action.RunOrder}}
               ActionTypeId:
                 Category: Build
                 Owner: AWS
@@ -252,6 +253,22 @@ Resources:
                   - Name: SCCheckoutArtifact
                 OutputArtifacts:
                   - Name: Pre{{logicalIDSafe $stage.Name}}DeploymentAction{{logicalIDSafe $action.Name}}Output
+            {{- end}}
+            {{- range $action := $stage.PostDeployments }}
+            - Name: {{ $action.Name }}
+              Region: {{ $stage.Region }}
+              RunOrder: {{ $action.RunOrder}}
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Version: 1
+                Provider: CodeBuild
+              Configuration:
+                ProjectName: !Ref Post{{logicalIDSafe $stage.Name}}DeploymentAction{{logicalIDSafe $action.Name}}
+                InputArtifacts:
+                  - Name: SCCheckoutArtifact
+                OutputArtifacts:
+                  - Name: Post{{logicalIDSafe $stage.Name}}DeploymentAction{{logicalIDSafe $action.Name}}Output
             {{- end}}
             {{- range $deployment := $stage.Deployments}}
             - Name: {{$deployment.Name}}
