@@ -82,6 +82,7 @@ func TestLocalRunOpts_Ask(t *testing.T) {
 		testAppName  = "testApp"
 		testEnvName  = "testEnv"
 		testWkldName = "testWkld"
+		testWkldType = "testWkldType"
 	)
 	testCases := map[string]struct {
 		inputAppName  string
@@ -89,9 +90,9 @@ func TestLocalRunOpts_Ask(t *testing.T) {
 		inputWkldName string
 
 		setupMocks     func(m *localRunAskMocks)
-		mockEnvChecker func(ctrl *gomock.Controller) versionCompatibilityChecker
 		wantedWkldName string
 		wantedEnvName  string
+		wantedWkldType string
 		wantedError    error
 	}{
 		"error if provided environment is not present in the workspace": {
@@ -121,10 +122,12 @@ func TestLocalRunOpts_Ask(t *testing.T) {
 				m.sel.EXPECT().DeployedWorkload(workloadAskPrompt, "", testAppName, gomock.Any()).Return(&selector.DeployedWorkload{
 					Env:  "testEnv",
 					Name: "testWkld",
+					Type: "testWkldType",
 				}, nil)
 			},
 			wantedEnvName:  testEnvName,
 			wantedWkldName: testWkldName,
+			wantedWkldType: testWkldType,
 		},
 		"prompt for workload and environment": {
 			inputAppName: testAppName,
@@ -134,10 +137,12 @@ func TestLocalRunOpts_Ask(t *testing.T) {
 				m.sel.EXPECT().DeployedWorkload(workloadAskPrompt, "", testAppName, gomock.Any()).Return(&selector.DeployedWorkload{
 					Env:  "testEnv",
 					Name: "testWkld",
+					Type: "testWkldType",
 				}, nil)
 			},
 			wantedEnvName:  testEnvName,
 			wantedWkldName: testWkldName,
+			wantedWkldType: testWkldType,
 		},
 		"return error while failed to select workload": {
 			inputAppName: testAppName,
@@ -145,7 +150,7 @@ func TestLocalRunOpts_Ask(t *testing.T) {
 				m.sel.EXPECT().DeployedWorkload(workloadAskPrompt, "", testAppName, gomock.Any()).
 					Return(nil, testError)
 			},
-			wantedError: fmt.Errorf("select deployed workloads for application %s: %w", testAppName, testError),
+			wantedError: fmt.Errorf("select a deployed workload from application %s: %w", testAppName, testError),
 		},
 	}
 	for name, tc := range testCases {

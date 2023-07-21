@@ -67,11 +67,7 @@ func (o *localRunOpts) Validate() error {
 
 // Ask prompts the user for any unprovided required fields and validates them.
 func (o *localRunOpts) Ask() error {
-	if err := o.validateAndAskWkldEnvName(); err != nil {
-		return err
-	}
-
-	return nil
+	return o.validateAndAskWkldEnvName()
 }
 
 func (o *localRunOpts) validateAndAskWkldEnvName() error {
@@ -88,7 +84,7 @@ func (o *localRunOpts) validateAndAskWkldEnvName() error {
 
 	deployedWorkload, err := o.sel.DeployedWorkload(workloadAskPrompt, "", o.appName, selector.WithEnv(o.envName), selector.WithName(o.wkldName))
 	if err != nil {
-		return fmt.Errorf("select deployed workloads for application %s: %w", o.appName, err)
+		return fmt.Errorf("select a deployed workload from application %s: %w", o.appName, err)
 	}
 	o.wkldName = deployedWorkload.Name
 	o.envName = deployedWorkload.Env

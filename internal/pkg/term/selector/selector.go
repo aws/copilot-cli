@@ -21,9 +21,9 @@ import (
 )
 
 const (
-	svcWorkloadType  = "service"
-	jobWorkloadType  = "job"
-	wkldWorkloadType = "workload"
+	svcWorkloadType = "service"
+	jobWorkloadType = "job"
+	anyWorkloadType = "workload"
 
 	every         = "@every %s"
 	rate          = "Rate"
@@ -598,7 +598,7 @@ func (s *DeploySelector) DeployedService(msg, help string, app string, opts ...G
 // DeployedWorkload has the user select a deployed workload. Callers can provide either a particular environment,
 // a particular workload to filter on, or both.
 func (s *DeploySelector) DeployedWorkload(msg, help string, app string, opts ...GetDeployedWorkloadOpts) (*DeployedWorkload, error) {
-	wkld, err := s.deployedWorkload(wkldWorkloadType, msg, help, app, opts...)
+	wkld, err := s.deployedWorkload(anyWorkloadType, msg, help, app, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -626,7 +626,7 @@ func (s *DeploySelector) deployedWorkload(workloadType string, msg, help string,
 		isWorkloadDeployed = s.deployStoreSvc.IsJobDeployed
 		listDeployedWorkloads = s.deployStoreSvc.ListDeployedJobs
 		finalMessage = deployedJobFinalMsg
-	case wkldWorkloadType:
+	case anyWorkloadType:
 		isWorkloadDeployed = s.deployStoreSvc.IsWorkloadDeployed
 		listDeployedWorkloads = s.deployStoreSvc.ListDeployedWorkloads
 		finalMessage = deployedWkldFinalMsg
