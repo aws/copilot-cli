@@ -608,12 +608,12 @@ func (stg *PipelineStage) Deployments() ([]DeployAction, error) {
 }
 
 // PreDeployments returns a list of pre-deployment actions for the pipeline stage.
-func (stg *PipelineStage) PreDeployments() ([]Action, error) {
+func (stg *PipelineStage) PreDeployments() ([]Step, error) {
 	return nil, nil
 }
 
 // PostDeployments returns a list of post-deployment actions for the pipeline stage.
-func (stg *PipelineStage) PostDeployments() ([]Action, error) {
+func (stg *PipelineStage) PostDeployments() ([]Step, error) {
 	return nil, nil
 }
 
@@ -740,14 +740,14 @@ func (a *TestCommandsAction) Commands() []string {
 	return a.commands
 }
 
-// Action represents a CodePipeline action.
-type Action struct {
+// Step represents a CodePipeline action backed by a CodeBuild project.
+type Step struct {
 	action
 	Build
 	name string
 }
 
 // Name returns the name of the action.
-func (a *Action) Name() string {
+func (a *Step) Name() string {
 	return a.name
 }
