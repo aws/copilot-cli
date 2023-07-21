@@ -86,6 +86,10 @@ const (
 
 var pipelineTypes = []string{pipelineTypeWorkloads, pipelineTypeEnvironments}
 
+var buildspecTemplateFunctions = map[string]interface{}{
+	"URLSafeVersion": template.URLSafeVersion,
+}
+
 var (
 	// Filled in via the -ldflags flag at compile time to support pipeline buildspec CLI pulling.
 	binaryS3BucketPath string
@@ -780,7 +784,7 @@ func (o *initPipelineOpts) createBuildspec(buildSpecTemplatePath string) error {
 		Version:            version.Version,
 		ManifestPath:       filepath.ToSlash(o.manifestPath), // The manifest path must be rendered in the buildspec with '/' instead of os-specific separator.
 		ArtifactBuckets:    artifactBuckets,
-	}, template.WithFuncs(map[string]interface{}{"URLSafeVersion": template.URLSafeVersion}))
+	}, template.WithFuncs(buildspecTemplateFunctions))
 	if err != nil {
 		return err
 	}
