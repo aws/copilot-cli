@@ -9,10 +9,7 @@ phases:
       - echo "cd into $CODEBUILD_SRC_DIR"
       - cd $CODEBUILD_SRC_DIR
       # Download the copilot linux binary.
-      # wget's behavior is to decode the URL when generating the filename. We have to URL-encode the version number
-      # because it includes a '+' character. The '%2B' is rendered in the filename as '+'.
-      - wget -q {{.BinaryS3BucketPath}}/copilot-linux-{{URLSafeVersion .Version}}
-      - mv ./copilot-linux-{{.Version}} ./copilot-linux
+      - wget -q {{.BinaryS3BucketPath}}/copilot-linux-{{URLSafeVersion .Version}} -O copilot-linux
       - chmod +x ./copilot-linux
   build:
     commands:
