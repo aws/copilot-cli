@@ -55,7 +55,6 @@ type stepFunctionsClient interface {
 }
 type secretGetter interface {
 	GetSecretValue(secretName string) (string, error)
-	IsServiceARN(secretName string) (bool, error)
 }
 
 // EnvVar contains values of the environmental variables
@@ -251,40 +250,29 @@ func (c Client) StopDefaultClusterTasks(familyName string) error {
 func (c Client) DecryptedSecrets(secrets []*ecs.ContainerSecret) ([]EnvVar, error) {
 	var ssmSecrets []EnvVar
 	var secretManagerSecrets []EnvVar
-
 	for _, secret := range secrets {
-		if arn.IsARN(secret.ValueFrom) {
-			isSecretsManager, err := c.secretManager.IsServiceARN(secret.ValueFrom)
+		parsed, err := arn.Parse(secret.ValueFrom)
+		if err != nil || parsed.Service == ssm.Namespace {
+			secretValue, err := c.ssm.GetSecretValue(secret.ValueFrom)
 			if err != nil {
 				return nil, err
 			}
-			if isSecretsManager {
-				secretValue, err := c.secretManager.GetSecretValue(secret.ValueFrom)
-				if err != nil {
-					return nil, err
-				}
-				secretManagerSecrets = append(secretManagerSecrets, EnvVar{
-					Name:  secret.Name,
-					Value: secretValue,
-				})
-				continue
-			}
-		} else {
-			isSSM, err := c.ssm.IsServiceARN(secret.ValueFrom)
-			if err != nil || !isSSM {
-				continue
-			}
+			ssmSecrets = append(ssmSecrets, EnvVar{
+				Name:  secret.Name,
+				Value: secretValue,
+			})
 		}
-		secretValue, err := c.ssm.GetSecretValue(secret.ValueFrom)
-		if err != nil {
-			return nil, err
+		if parsed.Service == secretsmanager.Namespace {
+			secretValue, err := c.secretManager.GetSecretValue(secret.ValueFrom)
+			if err != nil {
+				return nil, err
+			}
+			secretManagerSecrets = append(secretManagerSecrets, EnvVar{
+				Name:  secret.Name,
+				Value: secretValue,
+			})
 		}
-		ssmSecrets = append(ssmSecrets, EnvVar{
-			Name:  secret.Name,
-			Value: secretValue,
-		})
 	}
-
 	allSecrets := append(ssmSecrets, secretManagerSecrets...)
 	return allSecrets, nil
 }

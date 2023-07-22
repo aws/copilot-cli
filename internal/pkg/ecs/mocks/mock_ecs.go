@@ -340,18 +340,3 @@ func (mr *MocksecretGetterMockRecorder) GetSecretValue(secretName interface{}) *
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSecretValue", reflect.TypeOf((*MocksecretGetter)(nil).GetSecretValue), secretName)
 }
-
-// IsServiceARN mocks base method.
-func (m *MocksecretGetter) IsServiceARN(secretName string) (bool, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsServiceARN", secretName)
-	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// IsServiceARN indicates an expected call of IsServiceARN.
-func (mr *MocksecretGetterMockRecorder) IsServiceARN(secretName interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsServiceARN", reflect.TypeOf((*MocksecretGetter)(nil).IsServiceARN), secretName)
-}

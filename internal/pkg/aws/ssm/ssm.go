@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -17,7 +16,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm"
 )
 
-const namespace = "ssm"
+const Namespace = "ssm"
 
 type api interface {
 	PutParameter(input *ssm.PutParameterInput) (*ssm.PutParameterOutput, error)
@@ -63,15 +62,6 @@ func (s *SSM) PutSecret(in PutSecretInput) (*PutSecretOutput, error) {
 		return s.overwriteSecret(in)
 	}
 	return nil, err
-}
-
-// IsServiceARN returns true if the given ARN is ssm.
-func (s *SSM) IsServiceARN(name string) (bool, error) {
-	parseArn, err := arn.Parse(name)
-	if err != nil {
-		return false, fmt.Errorf("parse ssm arn: %w", err)
-	}
-	return parseArn.Service == namespace, nil
 }
 
 // GetSecretValue retrieves the value of a parameter from AWS Systems Manager Parameter Store.
