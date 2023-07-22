@@ -16,6 +16,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm"
 )
 
+// Namespace represents the AWS Systems Manager(SSM) service namespace.
 const Namespace = "ssm"
 
 type api interface {

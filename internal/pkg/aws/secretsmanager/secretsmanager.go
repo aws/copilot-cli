@@ -15,6 +15,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
 )
 
+// Namespace represents the AWS Secrets Manager service namespace.
 const Namespace = "secretsmanager"
 
 type api interface {
