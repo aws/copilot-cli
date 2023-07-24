@@ -332,10 +332,16 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 					ImageConfig: testImageConfig,
 					Sidecars: map[string]*SidecarConfig{
 						"foo": {
+							Image: Union[*string, ImageLocationOrBuild]{
+								Basic: aws.String("mockImage"),
+							},
 							DependsOn: map[string]string{"bar": "healthy"},
 							Essential: aws.Bool(false),
 						},
 						"bar": {
+							Image: Union[*string, ImageLocationOrBuild]{
+								Basic: aws.String("mockImage"),
+							},
 							DependsOn: map[string]string{"foo": "healthy"},
 							Essential: aws.Bool(false),
 						},
@@ -557,6 +563,9 @@ func TestBackendService_validate(t *testing.T) {
 					ImageConfig: testImageConfig,
 					Sidecars: map[string]*SidecarConfig{
 						"foo": {
+							Image: Union[*string, ImageLocationOrBuild]{
+								Basic: aws.String("mockImage"),
+							},
 							DependsOn: DependsOn{
 								"foo": "bar",
 							},
@@ -622,9 +631,15 @@ func TestBackendService_validate(t *testing.T) {
 					ImageConfig: testImageConfig,
 					Sidecars: map[string]*SidecarConfig{
 						"foo": {
+							Image: Union[*string, ImageLocationOrBuild]{
+								Basic: aws.String("mockImage"),
+							},
 							DependsOn: map[string]string{"bar": "start"},
 						},
 						"bar": {
+							Image: Union[*string, ImageLocationOrBuild]{
+								Basic: aws.String("mockImage"),
+							},
 							DependsOn: map[string]string{"foo": "start"},
 						},
 					},
@@ -1068,9 +1083,15 @@ func TestWorkerService_validate(t *testing.T) {
 					ImageConfig: testImageConfig,
 					Sidecars: map[string]*SidecarConfig{
 						"foo": {
+							Image: Union[*string, ImageLocationOrBuild]{
+								Basic: aws.String("mockImage"),
+							},
 							DependsOn: map[string]string{"bar": "start"},
 						},
 						"bar": {
+							Image: Union[*string, ImageLocationOrBuild]{
+								Basic: aws.String("mockImage"),
+							},
 							DependsOn: map[string]string{"foo": "start"},
 						},
 					},
@@ -1303,9 +1324,15 @@ func TestScheduledJob_validate(t *testing.T) {
 					},
 					Sidecars: map[string]*SidecarConfig{
 						"foo": {
+							Image: Union[*string, ImageLocationOrBuild]{
+								Basic: aws.String("mockImage"),
+							},
 							DependsOn: map[string]string{"bar": "start"},
 						},
 						"bar": {
+							Image: Union[*string, ImageLocationOrBuild]{
+								Basic: aws.String("mockImage"),
+							},
 							DependsOn: map[string]string{"foo": "start"},
 						},
 					},
