@@ -280,9 +280,9 @@ type executeAndRenderChangeSetInput struct {
 
 type executeAndRenderChangeSetOption func(in *executeAndRenderChangeSetInput)
 
-func withEnableInterrupt(enableInterrupt bool) executeAndRenderChangeSetOption {
+func withEnableInterrupt() executeAndRenderChangeSetOption {
 	return func(in *executeAndRenderChangeSetInput) {
-		in.enableInterrupt = enableInterrupt
+		in.enableInterrupt = true
 	}
 }
 
