@@ -1459,6 +1459,9 @@ func (l Logging) validate() error {
 
 // validate returns nil if SidecarConfig is configured correctly.
 func (s SidecarConfig) validate() error {
+	if err := s.validateSideCarImageFields(); err != nil {
+		return err
+	}
 	for ind, mp := range s.MountPoints {
 		if err := mp.validate(); err != nil {
 			return fmt.Errorf(`validate "mount_points[%d]": %w`, ind, err)
@@ -1487,9 +1490,6 @@ func (s SidecarConfig) validate() error {
 	if err := s.DependsOn.validate(); err != nil {
 		return fmt.Errorf(`validate "depends_on": %w`, err)
 	}
-	if err := s.Image.Advanced.validate(); err != nil {
-		return fmt.Errorf(`validate "build": %w`, err)
-	}
 	if s.EnvFile != nil {
 		envFile := aws.StringValue(s.EnvFile)
 		if filepath.Ext(envFile) != envFileExt {
@@ -1497,6 +1497,22 @@ func (s SidecarConfig) validate() error {
 		}
 	}
 	return s.ImageOverride.validate()
+}
+func (s SidecarConfig) validateSideCarImageFields() error {
+	if s.Image.Basic == nil && s.Image.Advanced.isEmpty() {
+		return &errSidecarImageFieldMutualExclusive{
+			errFieldMutualExclusive: errFieldMutualExclusive{
+				firstField:  "build",
+				secondField: "location",
+				mustExist:   true,
+			},
+			thirdField: "image",
+		}
+	}
+	if err := s.Image.Advanced.validate(); err != nil {
+		return fmt.Errorf(`validate "build": %w`, err)
+	}
+	return nil
 }
 
 // validate returns nil if SidecarMountPoint is configured correctly.
@@ -2236,7 +2252,6 @@ func (i ImageLocationOrBuild) validate() error {
 		return &errFieldMutualExclusive{
 			firstField:  "build",
 			secondField: "location",
-			mustExist:   true,
 		}
 	}
 	return nil

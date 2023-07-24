@@ -5,11 +5,12 @@ package manifest
 
 import (
 	"fmt"
+	"strconv"
+	"strings"
+
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudfront"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/dustin/go-humanize/english"
-	"strconv"
-	"strings"
 )
 
 // ErrInvalidWorkloadType occurs when a user requested a manifest template type that doesn't exist.
@@ -96,6 +97,15 @@ func (e *errFieldMutualExclusive) Error() string {
 		return fmt.Sprintf(`must specify one of "%s" and "%s"`, e.firstField, e.secondField)
 	}
 	return fmt.Sprintf(`must specify one, not both, of "%s" and "%s"`, e.firstField, e.secondField)
+}
+
+type errSidecarImageFieldMutualExclusive struct {
+	errFieldMutualExclusive
+	thirdField string
+}
+
+func (e *errSidecarImageFieldMutualExclusive) Error() string {
+	return fmt.Sprintf(`must specify one of "%s" and "%s" and "%s"`, e.firstField, e.secondField, e.thirdField)
 }
 
 type errGracePeriodsInBothALBAndNLB struct {

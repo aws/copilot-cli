@@ -2775,8 +2775,28 @@ func TestSidecarConfig_validate(t *testing.T) {
 
 		wantedErrorPrefix string
 	}{
+		"error if fail to validate image": {
+			config:            SidecarConfig{},
+			wantedErrorPrefix: `must specify one of "build" and "location" and "image"`,
+		},
+		"error if fail to validate image build": {
+			config: SidecarConfig{
+				Image: Union[*string, ImageLocationOrBuild]{
+					Advanced: ImageLocationOrBuild{
+						Build: BuildArgsOrString{
+							BuildString: aws.String("mockDockerfile"),
+						},
+						Location: aws.String("mockimage:tag"),
+					},
+				},
+			},
+			wantedErrorPrefix: `validate "build": `,
+		},
 		"error if fail to validate mount_points": {
 			config: SidecarConfig{
+				Image: Union[*string, ImageLocationOrBuild]{
+					Basic: aws.String("mockImage"),
+				},
 				MountPoints: []SidecarMountPoint{
 					{},
 				},
@@ -2785,6 +2805,9 @@ func TestSidecarConfig_validate(t *testing.T) {
 		},
 		"error if fail to validate depends_on": {
 			config: SidecarConfig{
+				Image: Union[*string, ImageLocationOrBuild]{
+					Basic: aws.String("mockImage"),
+				},
 				DependsOn: DependsOn{
 					"foo": "bar",
 				},
@@ -2793,6 +2816,9 @@ func TestSidecarConfig_validate(t *testing.T) {
 		},
 		"error if invalid env file": {
 			config: SidecarConfig{
+				Image: Union[*string, ImageLocationOrBuild]{
+					Basic: aws.String("mockImage"),
+				},
 				EnvFile: aws.String("foo"),
 			},
 			wantedErrorPrefix: `environment file foo must`,
@@ -4227,7 +4253,7 @@ func TestImageLocationOrBuild_validate(t *testing.T) {
 				Build:    BuildArgsOrString{BuildString: aws.String("web/Dockerfile")},
 				Location: aws.String("mockLocation"),
 			},
-			wantedError: fmt.Errorf(`must specify one of "build" and "location"`),
+			wantedError: fmt.Errorf(`must specify one, not both, of "build" and "location"`),
 		},
 		"return nil if only build is specified": {
 			in: ImageLocationOrBuild{
