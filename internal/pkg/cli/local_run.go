@@ -9,7 +9,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
-	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -21,12 +20,6 @@ import (
 )
 
 const workloadAskPrompt = "Which workload would you like to run locally?"
-
-type ecsLocalClient interface {
-	TaskDefinition(app, env, svc string) (*awsecs.TaskDefinition, error)
-	DecryptedSecrets(secrets []*awsecs.ContainerSecret) ([]ecs.EnvVar, error)
-	// DecryptedSecretManagerSecrets(secrets []*awsecs.ContainerSecret) ([]ecs.EnvVar, error)
-}
 
 type localRunVars struct {
 	wkldName string
@@ -115,7 +108,7 @@ func (o *localRunOpts) Execute() error {
 	secrets := taskDef.Secrets()
 	_, err = o.ecsLocalClient.DecryptedSecrets(secrets)
 	if err != nil {
-		return fmt.Errorf("get secret values: %w:", err)
+		return fmt.Errorf("get secret values: %w", err)
 	}
 
 	return nil
