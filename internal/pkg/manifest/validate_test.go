@@ -1487,7 +1487,7 @@ func TestImage_validate(t *testing.T) {
 					Location: aws.String("mockLocation"),
 				},
 			},
-			wantedError: fmt.Errorf(`must specify one of "build" and "location"`),
+			wantedError: fmt.Errorf(`must specify one, not both, of "build" and "location"`),
 		},
 		"error if neither build nor location is specified": {
 			Image:       Image{},
