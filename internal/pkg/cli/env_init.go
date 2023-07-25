@@ -159,23 +159,23 @@ type initEnvOpts struct {
 	initEnvVars
 
 	// Interfaces to interact with dependencies.
-	sessProvider     sessionProvider
-	store            store
-	envDeployer      deployer
-	appDeployer      deployer
-	identity         identityService
-	envIdentity      identityService
-	ec2Client        ec2Client
-	appVersionGetter versionGetter
-	iam              roleManager
-	cfn              stackExistChecker
-	prog             progress
-	prompt           prompter
-	selVPC           ec2Selector
-	selCreds         func() (credsSelector, error)
-	selApp           appSelector
-	appCFN           appResourcesGetter
-	manifestWriter   environmentManifestWriter
+	sessProvider        sessionProvider
+	store               store
+	envDeployer         deployer
+	appDeployer         deployer
+	identity            identityService
+	envIdentity         identityService
+	ec2Client           ec2Client
+	newAppVersionGetter func(appName string) (versionGetter, error)
+	iam                 roleManager
+	cfn                 stackExistChecker
+	prog                progress
+	prompt              prompter
+	selVPC              ec2Selector
+	selCreds            func() (credsSelector, error)
+	selApp              appSelector
+	appCFN              appResourcesGetter
+	manifestWriter      environmentManifestWriter
 
 	sess *session.Session // Session pointing to environment's AWS account and region.
 
@@ -217,6 +217,9 @@ func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
 				Profile: cfg,
 				Prompt:  prompt.New(),
 			}, nil
+		},
+		newAppVersionGetter: func(appName string) (versionGetter, error) {
+			return describe.NewAppDescriber(appName)
 		},
 		selApp:         selector.NewAppEnvSelector(prompt.New(), store),
 		appCFN:         deploycfn.New(defaultSession, deploycfn.WithProgressTracker(os.Stderr)),
@@ -269,7 +272,11 @@ func (o *initEnvOpts) Execute() error {
 		return err
 	}
 	if !o.allowAppDowngrade {
-		if err := validateAppVersion(o.appVersionGetter, o.appName, o.templateVersion); err != nil {
+		versionGetter, err := o.newAppVersionGetter(o.appName)
+		if err != nil {
+			return err
+		}
+		if err := validateAppVersion(versionGetter, o.appName, o.templateVersion); err != nil {
 			return err
 		}
 	}
@@ -353,13 +360,6 @@ func (o *initEnvOpts) initRuntimeClients() error {
 	}
 	if o.iam == nil {
 		o.iam = iam.New(o.sess)
-	}
-	if o.appVersionGetter == nil {
-		appDescriber, err := describe.NewAppDescriber(o.appName)
-		if err != nil {
-			return err
-		}
-		o.appVersionGetter = appDescriber
 	}
 	return nil
 }

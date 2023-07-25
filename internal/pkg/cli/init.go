@@ -114,10 +114,6 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 	id := identity.New(defaultSess)
 	deployer := cloudformation.New(defaultSess, cloudformation.WithProgressTracker(os.Stderr))
 	iamClient := iam.New(defaultSess)
-	appVersionGetter, err := describe.NewAppDescriber(vars.appName)
-	if err != nil {
-		return nil, err
-	}
 	initAppCmd := &initAppOpts{
 		initAppVars: initAppVars{
 			name: vars.appName,
@@ -145,15 +141,17 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 			name:         defaultEnvironmentName,
 			isProduction: false,
 		},
-		store:            configStore,
-		appDeployer:      deployer,
-		prog:             spin,
-		prompt:           prompt,
-		identity:         id,
-		appVersionGetter: appVersionGetter,
-		appCFN:           cloudformation.New(defaultSess, cloudformation.WithProgressTracker(os.Stderr)),
-		sess:             defaultSess,
-		templateVersion:  version.LatestTemplateVersion(),
+		store:       configStore,
+		appDeployer: deployer,
+		prog:        spin,
+		prompt:      prompt,
+		identity:    id,
+		newAppVersionGetter: func(appName string) (versionGetter, error) {
+			return describe.NewAppDescriber(appName)
+		},
+		appCFN:          cloudformation.New(defaultSess, cloudformation.WithProgressTracker(os.Stderr)),
+		sess:            defaultSess,
+		templateVersion: version.LatestTemplateVersion(),
 	}
 	deployEnvCmd := &deployEnvOpts{
 		deployEnvVars: deployEnvVars{
