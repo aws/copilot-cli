@@ -32,6 +32,7 @@ const (
 	noRollbackFlag     = "no-rollback"
 	manifestFlag       = "manifest"
 	resourceTagsFlag   = "resource-tags"
+	detachFlag         = "detach"
 
 	// Build flags.
 	dockerFileFlag        = "dockerfile"
@@ -269,6 +270,7 @@ rollback in case of deployment failure.
 We do not recommend using this flag for a
 production environment.`
 	forceEnvDeployFlagDescription = "Optional. Force update the environment stack template."
+	detachFlagDescription         = "Optional. Skip displaying CloudFormation stack events"
 
 	// Operational.
 	jsonFlagDescription = "Optional. Output in JSON format."

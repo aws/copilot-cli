@@ -276,6 +276,7 @@ type executeAndRenderChangeSetInput struct {
 	stackDescription string
 	createChangeSet  func() (string, error)
 	enableInterrupt  bool
+	detach           bool
 }
 
 type executeAndRenderChangeSetOption func(in *executeAndRenderChangeSetInput)
@@ -283,6 +284,12 @@ type executeAndRenderChangeSetOption func(in *executeAndRenderChangeSetInput)
 func withEnableInterrupt() executeAndRenderChangeSetOption {
 	return func(in *executeAndRenderChangeSetInput) {
 		in.enableInterrupt = false
+	}
+}
+
+func withDetach(detach bool) executeAndRenderChangeSetOption {
+	return func(in *executeAndRenderChangeSetInput) {
+		in.detach = detach
 	}
 }
 
@@ -356,6 +363,9 @@ func (cf CloudFormation) executeAndRenderChangeSet(in *executeAndRenderChangeSet
 	changeSetID, err := in.createChangeSet()
 	if err != nil {
 		return err
+	}
+	if in.detach {
+		return nil
 	}
 	var sigChannel chan os.Signal
 	if in.enableInterrupt {

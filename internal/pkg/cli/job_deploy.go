@@ -269,6 +269,9 @@ After fixing the deployment, you can:
 2. Run %s to make a new deployment.
 `, color.HighlightCode(rollbackCmd), color.HighlightCode("copilot job deploy"))
 		}
+		if o.detach {
+			return nil
+		}
 		return fmt.Errorf("deploy job %s to environment %s: %w", o.name, o.envName, err)
 	}
 	log.Successf("Deployed %s.\n", color.HighlightUserInput(o.name))
@@ -408,5 +411,6 @@ func buildJobDeployCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&vars.disableRollback, noRollbackFlag, false, noRollbackFlagDescription)
 	cmd.Flags().BoolVar(&vars.showDiff, diffFlag, false, diffFlagDescription)
 	cmd.Flags().BoolVar(&vars.allowWkldDowngrade, allowDowngradeFlag, false, allowDowngradeFlagDescription)
+	cmd.Flags().BoolVar(&vars.detach, detachFlag, false, detachFlagDescription)
 	return cmd
 }
