@@ -17,7 +17,8 @@ var cli *client.CLI
 var appName string
 var envName string
 
-/**
+/*
+*
 The Init Suite runs through the copilot init workflow for a brand new
 application. It creates a single environment, deploys a service to it, and then
 tears it down.
@@ -32,7 +33,7 @@ var _ = BeforeSuite(func() {
 	cli = ecsCli
 	Expect(err).NotTo(HaveOccurred())
 	appName = fmt.Sprintf("e2e-init-%d", time.Now().Unix())
-	envName = "test"
+	envName = "dev"
 })
 
 var _ = AfterSuite(func() {

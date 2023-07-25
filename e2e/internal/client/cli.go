@@ -32,6 +32,7 @@ type AppInitRequest struct {
 type InitRequest struct {
 	AppName      string
 	WorkloadName string
+	EnvName      string
 	Deploy       bool
 	ImageTag     string
 	Dockerfile   string
@@ -324,6 +325,7 @@ func (cli *CLI) Init(opts *InitRequest) (string, error) {
 		exec.Command(cli.path, "init",
 			"--app", opts.AppName,
 			"--name", opts.WorkloadName,
+			"--env", opts.EnvName,
 			"--type", opts.WorkloadType,
 			"--tag", opts.ImageTag,
 			"--dockerfile", opts.Dockerfile,
