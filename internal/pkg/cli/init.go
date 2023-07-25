@@ -45,8 +45,12 @@ const (
 )
 
 const (
-	initShouldDeployPrompt     = "Would you like to deploy a test environment?"
-	initShouldDeployHelpPrompt = "An environment with your service deployed to it. This will allow you to test your service before placing it in production."
+	initShouldDeployPrompt      = "Would you like to deploy a test environment?"
+	initShouldDeployHelpPrompt  = "An environment with your service deployed to it. This will allow you to test your service before placing it in production."
+	initExistingEnvSelectPrompt = "Which environment would you like to deploy to?"
+	initExistingEnvSelectHelp   = "Select an existing environment, or create a new one."
+
+	envPromptCreateNew = "Create a new environment"
 )
 
 type initVars struct {
@@ -93,6 +97,7 @@ type initOpts struct {
 	initWkldVars *initWkldVars
 
 	prompt prompter
+	store  environmentStore
 
 	setupWorkloadInit           func(*initOpts, string) error
 	useExistingWorkspaceForCMDs func(*initOpts) error
@@ -251,6 +256,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		envName: &initEnvCmd.name,
 
 		prompt: prompt,
+		store:  configStore,
 
 		setupWorkloadInit: func(o *initOpts, wkldType string) error {
 			wkldVars := initWkldVars{
@@ -559,7 +565,44 @@ func (o *initOpts) askEnvName() error {
 	if o.initVars.envName != "" {
 		return nil
 	}
-	v, err := o.prompt.Get(envInitNamePrompt, envInitNameHelpPrompt, validateEnvironmentName, prompt.WithDefaultInput(defaultEnvironmentName), prompt.WithFinalMessage("Environment name:"))
+	envs, err := o.store.ListEnvironments(*o.appName)
+	if err != nil {
+		return fmt.Errorf("list environments: %w", err)
+	}
+	// Configure prompt options based on number of environments.
+	var promptOptEnvDefaultName prompt.PromptConfig
+	switch len(envs) {
+	case 0:
+		promptOptEnvDefaultName = prompt.WithDefaultInput(defaultEnvironmentName)
+	case 1:
+		promptOptEnvDefaultName = prompt.WithDefaultInput(envs[0].Name)
+	default:
+		log.Infoln("It looks like you have more than one environment in this application.")
+		// Set up selection options.
+		options := make([]string, len(envs))
+		for e := range envs {
+			options[e] = envs[e].Name
+		}
+		options = append(options, envPromptCreateNew)
+		// Select one
+		v, err := o.prompt.SelectOne(initExistingEnvSelectPrompt, initExistingEnvSelectHelp, options)
+		if err != nil {
+			return fmt.Errorf("select environment: %w", err)
+		}
+		// Customer has selected an existing environment.
+		if v != envPromptCreateNew {
+			if initEnvCmd, ok := o.initEnvCmd.(*initEnvOpts); ok {
+				initEnvCmd.name = v
+			}
+			return nil
+		}
+	}
+	// Optionally include a default environment name.
+	promptOpts := []prompt.PromptConfig{prompt.WithFinalMessage("Environment name:")}
+	if promptOptEnvDefaultName != nil {
+		promptOpts = append(promptOpts, promptOptEnvDefaultName)
+	}
+	v, err := o.prompt.Get(envInitNamePrompt, envInitNameHelpPrompt, validateEnvironmentName, promptOpts...)
 	if err != nil {
 		return fmt.Errorf("get environment name: %w", err)
 	}
