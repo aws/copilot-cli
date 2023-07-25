@@ -357,6 +357,7 @@ func (cf CloudFormation) executeAndRenderChangeSet(in *executeAndRenderChangeSet
 	if err != nil {
 		return err
 	}
+	sigChannel := cf.notifySignals()
 	g, ctx := errgroup.WithContext(context.Background())
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -374,7 +375,7 @@ func (cf CloudFormation) executeAndRenderChangeSet(in *executeAndRenderChangeSet
 	})
 	if in.enableInterrupt {
 		g.Go(func() error {
-			return cf.waitForSignalAndHandleInterrupt(ctx, cancel, cf.notifySignals(), in.stackName)
+			return cf.waitForSignalAndHandleInterrupt(ctx, cancel, sigChannel, in.stackName)
 		})
 	}
 	if err := g.Wait(); err != nil {
@@ -472,11 +473,11 @@ func (cf CloudFormation) cancelUpdateAndRender(in *cancelUpdateAndRenderInput) e
 	waitCtx, cancelWait := context.WithTimeout(context.Background(), waitForStackTimeout)
 	defer cancelWait()
 	g, ctx := errgroup.WithContext(waitCtx)
-	g.Go(in.cancelUpdateFn)
 	renderer, err := cf.createChangeSetRenderer(g, ctx, aws.StringValue(stackDescr.ChangeSetId), in.stackName, in.description, progress.RenderOptions{})
 	if err != nil {
 		return err
 	}
+	g.Go(in.cancelUpdateFn)
 	g.Go(func() error {
 		_, err := progress.Render(ctx, progress.NewTabbedFileWriter(cf.console), renderer)
 		return err
