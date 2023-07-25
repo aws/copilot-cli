@@ -196,6 +196,7 @@ func BuildDeployCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&vars.forceNewUpdate, forceFlag, false, forceFlagDescription)
 	cmd.Flags().BoolVar(&vars.disableRollback, noRollbackFlag, false, noRollbackFlagDescription)
 	cmd.Flags().BoolVar(&vars.allowWkldDowngrade, allowDowngradeFlag, false, allowDowngradeFlagDescription)
+	cmd.Flags().BoolVar(&vars.detach, detachFlag, false, detachFlagDescription)
 
 	cmd.SetUsageTemplate(template.Usage)
 	cmd.Annotations = map[string]string{
