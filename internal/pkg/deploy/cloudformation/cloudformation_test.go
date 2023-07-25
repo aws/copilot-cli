@@ -1070,7 +1070,7 @@ func testDeployWorkload_OnDeleteStackSuccess(t *testing.T, stackName string, whe
 	mockcfnClient := mocks.NewMockcfnClient(ctrl)
 	mockcfnClient.EXPECT().Create(gomock.Any()).Return("1234", nil)
 	mockcfnClient.EXPECT().Describe(stackName).Return(&cloudformation.StackDescription{
-		StackId:     aws.String("stack/webhook/1111"),
+		StackId:     aws.String("myapp-myenv-mysvc"),
 		StackName:   aws.String(stackName),
 		StackStatus: aws.String("CREATE_IN_PROGRESS"),
 	}, nil)
@@ -1133,9 +1133,9 @@ Resources:
       aws:copilot:description': 'A CloudWatch log group to hold your service logs'
     Type: AWS::Logs::LogGroup`, nil)
 	mockcfnClient.EXPECT().Describe(stackName).Return(&cloudformation.StackDescription{
-		StackId:     aws.String("stack/webhook/1111"),
+		StackId:     aws.String("myapp-myenv-mysvc"),
 		StackName:   aws.String(stackName),
-		StackStatus: aws.String("CREATE_IN_PROGRESS"),
+		StackStatus: aws.String("DELETE_IN_PROGRESS"),
 	}, nil)
 	mockcfnClient.EXPECT().DeleteAndWait(stackName).Return(&cloudformation.ErrStackNotFound{})
 	client := CloudFormation{
