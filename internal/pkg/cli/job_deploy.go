@@ -251,6 +251,7 @@ func (o *deployJobOpts) Execute() error {
 		},
 		Options: deploy.Options{
 			DisableRollback: o.disableRollback,
+			Detach:          o.detach,
 		},
 	}); err != nil {
 		if errors.As(err, &errStackDeletedOnInterrupt) {
@@ -269,10 +270,10 @@ After fixing the deployment, you can:
 2. Run %s to make a new deployment.
 `, color.HighlightCode(rollbackCmd), color.HighlightCode("copilot job deploy"))
 		}
-		if o.detach {
-			return nil
-		}
 		return fmt.Errorf("deploy job %s to environment %s: %w", o.name, o.envName, err)
+	}
+	if o.detach {
+		return nil
 	}
 	log.Successf("Deployed %s.\n", color.HighlightUserInput(o.name))
 	return nil
