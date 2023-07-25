@@ -1091,7 +1091,7 @@ Resources:
       aws:copilot:description': 'A CloudWatch log group to hold your service logs'
     Type: AWS::Logs::LogGroup`, nil)
 	mockcfnClient.EXPECT().DescribeStackEvents(&sdkcloudformation.DescribeStackEventsInput{
-		StackName: aws.String("stack/webhook/1111"),
+		StackName: aws.String("myapp-myenv-mysvc"),
 	}).Return(&sdkcloudformation.DescribeStackEventsOutput{
 		StackEvents: []*sdkcloudformation.StackEvent{
 			{
