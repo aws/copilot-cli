@@ -53,6 +53,7 @@ type initVars struct {
 	// Flags unique to "init" that's not provided by other sub-commands.
 	shouldDeploy   bool
 	appName        string
+	envName        string
 	wkldType       string
 	svcName        string
 	dockerfilePath string
@@ -86,6 +87,7 @@ type initOpts struct {
 	// Since the sub-commands implement the actionCommand interface, without pointers to their internal fields
 	// we have to resort to type-casting the interface. These pointers simplify data access.
 	appName      *string
+	envName      *string
 	port         *uint16
 	schedule     *string
 	initWkldVars *initWkldVars
@@ -172,7 +174,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 	}
 	deploySvcCmd := &deploySvcOpts{
 		deployWkldVars: deployWkldVars{
-			envName:  defaultEnvironmentName,
+			envName:  vars.envName,
 			imageTag: vars.imageTag,
 		},
 
@@ -190,7 +192,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 	}
 	deployJobCmd := &deployJobOpts{
 		deployWkldVars: deployWkldVars{
-			envName:  defaultEnvironmentName,
+			envName:  vars.envName,
 			imageTag: vars.imageTag,
 		},
 		store:           configStore,
@@ -240,6 +242,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		deployJobCmd: deployJobCmd,
 
 		appName: &initAppCmd.name,
+		envName: &initEnvCmd.name,
 
 		prompt: prompt,
 
@@ -466,9 +469,12 @@ func (o *initOpts) deployEnv() error {
 	if initEnvCmd, ok := o.initEnvCmd.(*initEnvOpts); ok {
 		// Set the application name from app init to the env init command.
 		initEnvCmd.appName = *o.appName
+		initEnvCmd.name = *o.envName
 	}
 
-	log.Infoln()
+	if err := o.askEnvName(); err != nil {
+		return err
+	}
 	if err := o.initEnvCmd.Execute(); err != nil {
 		return err
 	}
@@ -476,6 +482,7 @@ func (o *initOpts) deployEnv() error {
 	if deployEnvCmd, ok := o.deployEnvCmd.(*deployEnvOpts); ok {
 		// Set the application name from app init to the env deploy command.
 		deployEnvCmd.appName = *o.appName
+		deployEnvCmd.name = *o.envName
 	}
 
 	if err := o.deployEnvCmd.Execute(); err != nil {
@@ -495,6 +502,7 @@ func (o *initOpts) deploySvc() error {
 		// Set the service's name and app name to the deploy sub-command.
 		deployOpts.name = o.initWkldVars.name
 		deployOpts.appName = *o.appName
+		deployOpts.envName = *o.envName
 	}
 
 	if err := o.deploySvcCmd.Ask(); err != nil {
@@ -517,6 +525,7 @@ func (o *initOpts) deployJob() error {
 		// Set the service's name and app name to the deploy sub-command.
 		deployOpts.name = o.initWkldVars.name
 		deployOpts.appName = *o.appName
+		deployOpts.envName = *o.envName
 	}
 
 	if err := o.deployJobCmd.Ask(); err != nil {
@@ -537,6 +546,20 @@ func (o *initOpts) askShouldDeploy() error {
 		return fmt.Errorf("failed to confirm deployment: %w", err)
 	}
 	o.ShouldDeploy = v
+	return nil
+}
+
+func (o *initOpts) askEnvName() error {
+	if o.initVars.envName != "" {
+		return nil
+	}
+	v, err := o.prompt.Get(envInitNamePrompt, envInitNameHelpPrompt, validateEnvironmentName, prompt.WithDefaultInput(defaultEnvironmentName), prompt.WithFinalMessage("Environment name:"))
+	if err != nil {
+		return fmt.Errorf("get environment name: %w", err)
+	}
+	if initEnvCmd, ok := o.initEnvCmd.(*initEnvOpts); ok {
+		initEnvCmd.name = v
+	}
 	return nil
 }
 
@@ -568,6 +591,7 @@ func BuildInitCmd() *cobra.Command {
 		}),
 	}
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
+	cmd.Flags().StringVarP(&vars.envName, envFlag, envFlagShort, "", envFlagDescription)
 	cmd.Flags().StringVarP(&vars.svcName, nameFlag, nameFlagShort, "", workloadFlagDescription)
 	cmd.Flags().StringVarP(&vars.wkldType, typeFlag, typeFlagShort, "", wkldTypeFlagDescription)
 	cmd.Flags().StringVarP(&vars.dockerfilePath, dockerFileFlag, dockerFileFlagShort, "", dockerFileFlagDescription)
