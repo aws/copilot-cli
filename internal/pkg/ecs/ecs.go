@@ -47,6 +47,7 @@ type ecsClient interface {
 	UpdateService(clusterName, serviceName string, opts ...ecs.UpdateServiceOpts) error
 	DescribeTasks(cluster string, taskARNs []string) ([]*ecs.Task, error)
 	ActiveClusters(arns ...string) ([]string, error)
+	ActiveServices(clusterARN string, serviceARNs ...string) ([]string, error)
 }
 
 type stepFunctionsClient interface {
@@ -449,10 +450,23 @@ func (c Client) serviceARN(app, env, svc string) (*ecs.ServiceArn, error) {
 	if len(services) == 0 {
 		return nil, fmt.Errorf("no ECS service found with tags %s", tags.String())
 	}
-	if len(services) > 1 {
+	arns := make([]string, len(services))
+	for i := range services {
+		arns[i] = services[i].ARN
+	}
+	serviceARN := ecs.ServiceArn(arns[0])
+	clusterArn, err := serviceARN.ClusterArn()
+	if err != nil {
+		return nil, fmt.Errorf("get cluster arn: %w", err)
+	}
+	active, err := c.ecsClient.ActiveServices(clusterArn, arns...)
+	if err != nil {
+		return nil, fmt.Errorf("check if clusters are active: %w", err)
+	}
+	if len(active) > 1 {
 		return nil, fmt.Errorf("more than one ECS service with tags %s", tags.String())
 	}
-	serviceArn := ecs.ServiceArn(services[0].ARN)
+	serviceArn := ecs.ServiceArn(active[0])
 	return &serviceArn, nil
 }
 
