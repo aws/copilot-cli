@@ -261,8 +261,7 @@ func (c Client) DecryptedSecrets(secrets []*ecs.ContainerSecret) ([]EnvVar, erro
 				Name:  secret.Name,
 				Value: secretValue,
 			})
-		}
-		if parsed.Service == secretsmanager.Namespace {
+		} else if parsed.Service == secretsmanager.Namespace {
 			secretValue, err := c.secretManager.GetSecretValue(secret.ValueFrom)
 			if err != nil {
 				return nil, err
