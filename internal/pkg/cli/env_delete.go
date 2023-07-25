@@ -173,12 +173,10 @@ func (o *deleteEnvOpts) Execute() error {
 	}
 	o.prog.Stop(log.Ssuccessf(fmtRetainEnvRolesComplete, o.name))
 
-	o.prog.Start(fmt.Sprintf("Deleting resources for the %q environment\n", o.name))
+	// DeleteStack streams the deletion events; we don't need a spinner over top of it.
 	if err := o.deleteStack(); err != nil {
-		o.prog.Stop(log.Serrorf("Failed to delete resources for the %q environment\n", o.name))
 		return err
 	}
-	o.prog.Stop(log.Ssuccessf("Deleted resources for the %q environment\n", o.name))
 
 	// Un-delegate DNS and optionally delete stackset instance.
 	o.prog.Start("Cleaning up app-level resources and permissions\n")
