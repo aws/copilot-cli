@@ -53,11 +53,12 @@ type ecsClient interface {
 type stepFunctionsClient interface {
 	StateMachineDefinition(stateMachineARN string) (string, error)
 }
+
 type secretGetter interface {
 	GetSecretValue(secretName string) (string, error)
 }
 
-// EnvVar contains values of the environmental variables
+// EnvVar contains the value of an environment variable
 type EnvVar struct {
 	Name  string
 	Value string
@@ -246,10 +247,9 @@ func (c Client) StopDefaultClusterTasks(familyName string) error {
 	return c.ecsClient.StopTasks(taskIDs, ecs.WithStopTaskReason(taskStopReason))
 }
 
-// DecryptedSecrets returns the decrypted parameters from either the SSM store or Secrets Manager.
+// DecryptedSecrets returns the decrypted parameters from either SSM parameter store or Secrets Manager.
 func (c Client) DecryptedSecrets(secrets []*ecs.ContainerSecret) ([]EnvVar, error) {
-	var ssmSecrets []EnvVar
-	var secretManagerSecrets []EnvVar
+	var vars []EnvVar
 	for _, secret := range secrets {
 		parsed, err := arn.Parse(secret.ValueFrom)
 		if err != nil || parsed.Service == ssm.Namespace {
@@ -257,7 +257,7 @@ func (c Client) DecryptedSecrets(secrets []*ecs.ContainerSecret) ([]EnvVar, erro
 			if err != nil {
 				return nil, err
 			}
-			ssmSecrets = append(ssmSecrets, EnvVar{
+			vars = append(vars, EnvVar{
 				Name:  secret.Name,
 				Value: secretValue,
 			})
@@ -267,14 +267,13 @@ func (c Client) DecryptedSecrets(secrets []*ecs.ContainerSecret) ([]EnvVar, erro
 			if err != nil {
 				return nil, err
 			}
-			secretManagerSecrets = append(secretManagerSecrets, EnvVar{
+			vars = append(vars, EnvVar{
 				Name:  secret.Name,
 				Value: secretValue,
 			})
 		}
 	}
-	allSecrets := append(ssmSecrets, secretManagerSecrets...)
-	return allSecrets, nil
+	return vars, nil
 }
 
 // TaskDefinition returns the task definition of the service.

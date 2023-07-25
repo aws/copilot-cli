@@ -73,7 +73,7 @@ func (s *SSM) GetSecretValue(name string) (string, error) {
 		WithDecryption: aws.Bool(true),
 	})
 	if err != nil {
-		return "", fmt.Errorf("get parameter %s from SSM with decryption: %w", name, err)
+		return "", fmt.Errorf("get parameter %q from SSM: %w", name, err)
 	}
 	return aws.StringValue(resp.Parameter.Value), nil
 }

@@ -125,7 +125,7 @@ func (s *SecretsManager) GetSecretValue(name string) (string, error) {
 		SecretId: aws.String(name),
 	})
 	if err != nil {
-		return "", fmt.Errorf("get secret %s from secrets manager: %w", name, err)
+		return "", fmt.Errorf("get secret %q from secrets manager: %w", name, err)
 	}
 	return aws.StringValue(resp.SecretString), nil
 }
