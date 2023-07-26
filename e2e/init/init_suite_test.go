@@ -18,7 +18,6 @@ var appName string
 var envName string
 
 /*
-*
 The Init Suite runs through the copilot init workflow for a brand new
 application. It creates a single environment, deploys a service to it, and then
 tears it down.
