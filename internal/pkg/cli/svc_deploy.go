@@ -293,8 +293,6 @@ func (o *deploySvcOpts) Execute() error {
 			return nil
 		}
 	}
-	var errStackDeletedOnInterrupt *deploycfn.ErrStackDeletedOnInterrupt
-	var errStackUpdateCanceledOnInterrupt *deploycfn.ErrStackUpdateCanceledOnInterrupt
 	deployRecs, err := deployer.DeployWorkload(&clideploy.DeployWorkloadInput{
 		StackRuntimeConfiguration: clideploy.StackRuntimeConfiguration{
 			ImageDigests:              uploadOut.ImageDigests,
@@ -313,6 +311,8 @@ func (o *deploySvcOpts) Execute() error {
 		},
 	})
 	if err != nil {
+		var errStackDeletedOnInterrupt *deploycfn.ErrStackDeletedOnInterrupt
+		var errStackUpdateCanceledOnInterrupt *deploycfn.ErrStackUpdateCanceledOnInterrupt
 		if errors.As(err, &errStackDeletedOnInterrupt) {
 			o.noDeploy = true
 			return nil

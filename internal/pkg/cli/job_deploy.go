@@ -237,8 +237,6 @@ func (o *deployJobOpts) Execute() error {
 			return nil
 		}
 	}
-	var errStackDeletedOnInterrupt *deploycfn.ErrStackDeletedOnInterrupt
-	var errStackUpdateCanceledOnInterrupt *deploycfn.ErrStackUpdateCanceledOnInterrupt
 	if _, err = deployer.DeployWorkload(&deploy.DeployWorkloadInput{
 		StackRuntimeConfiguration: deploy.StackRuntimeConfiguration{
 			ImageDigests:       uploadOut.ImageDigests,
@@ -254,6 +252,8 @@ func (o *deployJobOpts) Execute() error {
 			Detach:          o.detach,
 		},
 	}); err != nil {
+		var errStackDeletedOnInterrupt *deploycfn.ErrStackDeletedOnInterrupt
+		var errStackUpdateCanceledOnInterrupt *deploycfn.ErrStackUpdateCanceledOnInterrupt
 		if errors.As(err, &errStackDeletedOnInterrupt) {
 			return nil
 		}

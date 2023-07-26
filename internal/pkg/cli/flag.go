@@ -270,7 +270,7 @@ rollback in case of deployment failure.
 We do not recommend using this flag for a
 production environment.`
 	forceEnvDeployFlagDescription = "Optional. Force update the environment stack template."
-	detachFlagDescription         = "Optional. Skip displaying CloudFormation stack events"
+	detachFlagDescription         = "Optional. Skip displaying CloudFormation stack events."
 
 	// Operational.
 	jsonFlagDescription = "Optional. Output in JSON format."

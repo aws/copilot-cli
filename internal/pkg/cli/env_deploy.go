@@ -16,6 +16,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/cli/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	deploycfn "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -40,6 +41,7 @@ type deployEnvVars struct {
 	showDiff          bool
 	skipDiffPrompt    bool
 	allowEnvDowngrade bool
+	detach            bool
 }
 
 type deployEnvOpts struct {
@@ -212,6 +214,7 @@ func (o *deployEnvOpts) Execute() error {
 		ForceNewUpdate:      o.forceNewUpdate,
 		DisableRollback:     o.disableRollback,
 		Version:             o.templateVersion,
+		Detach:              o.detach,
 	}
 	if o.showDiff {
 		contd, err := o.showDiffAndConfirmDeployment(deployer, deployInput)
@@ -223,6 +226,15 @@ func (o *deployEnvOpts) Execute() error {
 		}
 	}
 	if err := deployer.DeployEnvironment(deployInput); err != nil {
+		var errStackDeletedOnInterrupt *deploycfn.ErrStackDeletedOnInterrupt
+		var errStackUpdateCanceledOnInterrupt *deploycfn.ErrStackUpdateCanceledOnInterrupt
+		if errors.As(err, &errStackDeletedOnInterrupt) {
+			return nil
+		}
+		if errors.As(err, &errStackUpdateCanceledOnInterrupt) {
+			log.Successf("Successfully rolled back service %s to the previous configuration.\n", color.HighlightUserInput(o.name))
+			return nil
+		}
 		var errEmptyChangeSet *awscfn.ErrChangeSetEmpty
 		if errors.As(err, &errEmptyChangeSet) {
 			log.Errorf(`Your update does not introduce immediate resource changes. 
@@ -381,5 +393,6 @@ Deploy an environment named "test".
 	cmd.Flags().BoolVar(&vars.showDiff, diffFlag, false, diffFlagDescription)
 	cmd.Flags().BoolVar(&vars.skipDiffPrompt, diffAutoApproveFlag, false, diffAutoApproveFlagDescription)
 	cmd.Flags().BoolVar(&vars.allowEnvDowngrade, allowDowngradeFlag, false, allowDowngradeFlagDescription)
+	cmd.Flags().BoolVar(&vars.detach, detachFlag, false, detachFlagDescription)
 	return cmd
 }
