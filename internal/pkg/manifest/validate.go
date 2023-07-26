@@ -1504,7 +1504,6 @@ func (s SidecarConfig) validateSideCarImageFields() error {
 			errFieldMutualExclusive: errFieldMutualExclusive{
 				firstField:  "build",
 				secondField: "location",
-				mustExist:   true,
 			},
 			thirdField: "image",
 		}
