@@ -44,7 +44,8 @@ For more dynamic development, Copilot will now invalidate the CloudFront edge ca
 
 Our operational commands have some Static Site-specific additions as well:
 `copilot svc show` for Static Site workloads now includes a tree representation of your S3 bucket's contents.
- ```console
+
+```console
 Service name: static-site
 About
 
@@ -74,6 +75,7 @@ S3 Bucket Objects
 └── images
      └── bg-masthead.jpg
 ```
+
 And `copilot svc status` for Static Site workloads includes the S3 bucket's object count and total size.
 
 ## What’s next?

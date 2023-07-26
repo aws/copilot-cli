@@ -5774,6 +5774,26 @@ func (mr *MockdeploySelectorMockRecorder) DeployedService(prompt, help, app inte
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployedService", reflect.TypeOf((*MockdeploySelector)(nil).DeployedService), varargs...)
 }
 
+// DeployedWorkload mocks base method.
+func (m *MockdeploySelector) DeployedWorkload(prompt, help, app string, opts ...selector.GetDeployedWorkloadOpts) (*selector.DeployedWorkload, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{prompt, help, app}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "DeployedWorkload", varargs...)
+	ret0, _ := ret[0].(*selector.DeployedWorkload)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeployedWorkload indicates an expected call of DeployedWorkload.
+func (mr *MockdeploySelectorMockRecorder) DeployedWorkload(prompt, help, app interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{prompt, help, app}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployedWorkload", reflect.TypeOf((*MockdeploySelector)(nil).DeployedWorkload), varargs...)
+}
+
 // MockpipelineEnvSelector is a mock of pipelineEnvSelector interface.
 type MockpipelineEnvSelector struct {
 	ctrl     *gomock.Controller
