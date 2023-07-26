@@ -711,6 +711,21 @@ func (mr *MockdeployedWorkloadsRetrieverMockRecorder) IsServiceDeployed(appName,
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsServiceDeployed", reflect.TypeOf((*MockdeployedWorkloadsRetriever)(nil).IsServiceDeployed), appName, envName, svcName)
 }
 
+// IsWorkloadDeployed mocks base method.
+func (m *MockdeployedWorkloadsRetriever) IsWorkloadDeployed(appName, envName, wkldName string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsWorkloadDeployed", appName, envName, wkldName)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// IsWorkloadDeployed indicates an expected call of IsWorkloadDeployed.
+func (mr *MockdeployedWorkloadsRetrieverMockRecorder) IsWorkloadDeployed(appName, envName, wkldName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsWorkloadDeployed", reflect.TypeOf((*MockdeployedWorkloadsRetriever)(nil).IsWorkloadDeployed), appName, envName, wkldName)
+}
+
 // ListDeployedJobs mocks base method.
 func (m *MockdeployedWorkloadsRetriever) ListDeployedJobs(appName, envName string) ([]string, error) {
 	m.ctrl.T.Helper()
@@ -739,6 +754,21 @@ func (m *MockdeployedWorkloadsRetriever) ListDeployedServices(appName, envName s
 func (mr *MockdeployedWorkloadsRetrieverMockRecorder) ListDeployedServices(appName, envName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDeployedServices", reflect.TypeOf((*MockdeployedWorkloadsRetriever)(nil).ListDeployedServices), appName, envName)
+}
+
+// ListDeployedWorkloads mocks base method.
+func (m *MockdeployedWorkloadsRetriever) ListDeployedWorkloads(appName, envName string) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListDeployedWorkloads", appName, envName)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListDeployedWorkloads indicates an expected call of ListDeployedWorkloads.
+func (mr *MockdeployedWorkloadsRetrieverMockRecorder) ListDeployedWorkloads(appName, envName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDeployedWorkloads", reflect.TypeOf((*MockdeployedWorkloadsRetriever)(nil).ListDeployedWorkloads), appName, envName)
 }
 
 // ListSNSTopics mocks base method.

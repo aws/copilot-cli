@@ -23,6 +23,7 @@ import (
 const (
 	svcWorkloadType = "service"
 	jobWorkloadType = "job"
+	anyWorkloadType = "workload"
 
 	every         = "@every %s"
 	rate          = "Rate"
@@ -73,6 +74,7 @@ const (
 	jobNameFinalMsg      = "Job name:"
 	deployedJobFinalMsg  = "Job:"
 	deployedSvcFinalMsg  = "Service:"
+	deployedWkldFinalMsg = "Workload:"
 	taskFinalMsg         = "Task:"
 	workloadFinalMsg     = "Name:"
 	dockerfileFinalMsg   = "Dockerfile:"
@@ -153,8 +155,10 @@ type workspaceRetriever interface {
 type deployedWorkloadsRetriever interface {
 	ListDeployedServices(appName string, envName string) ([]string, error)
 	ListDeployedJobs(appName, envName string) ([]string, error)
+	ListDeployedWorkloads(appName, envName string) ([]string, error)
 	IsServiceDeployed(appName string, envName string, svcName string) (bool, error)
 	IsJobDeployed(appName, envName, jobName string) (bool, error)
+	IsWorkloadDeployed(appName, envName, wkldName string) (bool, error)
 	ListSNSTopics(appName string, envName string) ([]deploy.Topic, error)
 }
 
@@ -591,6 +595,20 @@ func (s *DeploySelector) DeployedService(msg, help string, app string, opts ...G
 	}, nil
 }
 
+// DeployedWorkload has the user select a deployed workload. Callers can provide either a particular environment,
+// a particular workload to filter on, or both.
+func (s *DeploySelector) DeployedWorkload(msg, help string, app string, opts ...GetDeployedWorkloadOpts) (*DeployedWorkload, error) {
+	wkld, err := s.deployedWorkload(anyWorkloadType, msg, help, app, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &DeployedWorkload{
+		Name: wkld.Name,
+		Env:  wkld.Env,
+		Type: wkld.Type,
+	}, nil
+}
+
 func (s *DeploySelector) deployedWorkload(workloadType string, msg, help string, app string, opts ...GetDeployedWorkloadOpts) (*DeployedWorkload, error) {
 	for _, opt := range opts {
 		opt(s)
@@ -608,8 +626,13 @@ func (s *DeploySelector) deployedWorkload(workloadType string, msg, help string,
 		isWorkloadDeployed = s.deployStoreSvc.IsJobDeployed
 		listDeployedWorkloads = s.deployStoreSvc.ListDeployedJobs
 		finalMessage = deployedJobFinalMsg
+	case anyWorkloadType:
+		isWorkloadDeployed = s.deployStoreSvc.IsWorkloadDeployed
+		listDeployedWorkloads = s.deployStoreSvc.ListDeployedWorkloads
+		finalMessage = deployedWkldFinalMsg
 	default:
 		return nil, fmt.Errorf("unrecognized workload type %s", workloadType)
+
 	}
 
 	var err error
