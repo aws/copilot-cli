@@ -564,26 +564,23 @@ func (o *initOpts) askEnvName() error {
 		return fmt.Errorf("list environments: %w", err)
 	}
 	// Configure prompt options based on number of environments.
-	var promptOptEnvDefaultName prompt.PromptConfig
-	switch len(envs) {
-	case 0:
-		promptOptEnvDefaultName = prompt.WithDefaultInput(defaultEnvironmentName)
-	case 1:
-		promptOptEnvDefaultName = prompt.WithDefaultInput(envs[0].Name)
-	default:
-		log.Infoln("It looks like you have more than one environment in this application.")
+	promptOpts := []prompt.PromptConfig{prompt.WithFinalMessage("Environment name:")}
+	if len(envs) == 0 {
+		promptOpts = append(promptOpts, prompt.WithDefaultInput(defaultEnvironmentName))
+	} else {
+		log.Infoln("It looks like you have existing environments in this application.")
 		// Set up selection options.
 		options := make([]string, len(envs))
 		for e := range envs {
 			options[e] = envs[e].Name
 		}
 		options = append(options, envPromptCreateNew)
-		// Select one
+		// Select one of existing envs or create a new one.
 		v, err := o.prompt.SelectOne(initExistingEnvSelectPrompt, initExistingEnvSelectHelp, options)
 		if err != nil {
 			return fmt.Errorf("select environment: %w", err)
 		}
-		// Customer has selected an existing environment.
+		// Customer has selected an existing environment. Return early.
 		if v != envPromptCreateNew {
 			if initEnvCmd, ok := o.initEnvCmd.(*initEnvOpts); ok {
 				initEnvCmd.name = v
@@ -591,11 +588,7 @@ func (o *initOpts) askEnvName() error {
 			return nil
 		}
 	}
-	// Optionally include a default environment name.
-	promptOpts := []prompt.PromptConfig{prompt.WithFinalMessage("Environment name:")}
-	if promptOptEnvDefaultName != nil {
-		promptOpts = append(promptOpts, promptOptEnvDefaultName)
-	}
+
 	v, err := o.prompt.Get(envInitNamePrompt, envInitNameHelpPrompt, validateEnvironmentName, promptOpts...)
 	if err != nil {
 		return fmt.Errorf("get environment name: %w", err)
