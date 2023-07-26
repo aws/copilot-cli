@@ -130,7 +130,6 @@ func (d *workerSvcDeployer) DeployWorkload(in *DeployWorkloadInput) (ActionRecom
 		return nil, err
 	}
 	if err := d.deploy(in.Options, stackConfigOutput.svcStackConfigurationOutput); err != nil {
-
 		return nil, err
 	}
 	return &workerSvcDeployOutput{
