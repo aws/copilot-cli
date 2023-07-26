@@ -106,6 +106,8 @@ Resources:
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
         BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
   MyBucketAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
