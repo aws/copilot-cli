@@ -345,6 +345,7 @@ func (e *ECS) ActiveClusters(arns ...string) ([]string, error) {
 }
 
 // ActiveServices returns the subset of service arns that have an ACTIVE status.
+// Note that all services should be in the same cluster.
 func (e *ECS) ActiveServices(serviceARNs ...string) ([]string, error) {
 	if len(serviceARNs) == 0 {
 		return nil, nil
