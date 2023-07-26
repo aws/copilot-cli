@@ -137,7 +137,6 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 	}
 	initEnvCmd := &initEnvOpts{
 		initEnvVars: initEnvVars{
-			appName:      vars.appName,
 			name:         defaultEnvironmentName,
 			isProduction: false,
 		},
@@ -155,8 +154,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 	}
 	deployEnvCmd := &deployEnvOpts{
 		deployEnvVars: deployEnvVars{
-			appName: vars.appName,
-			name:    defaultEnvironmentName,
+			name: defaultEnvironmentName,
 		},
 		store:           configStore,
 		sessionProvider: sessProvider,
@@ -176,7 +174,6 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		deployWkldVars: deployWkldVars{
 			envName:  defaultEnvironmentName,
 			imageTag: vars.imageTag,
-			appName:  vars.appName,
 		},
 
 		store:           configStore,
@@ -195,7 +192,6 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		deployWkldVars: deployWkldVars{
 			envName:  defaultEnvironmentName,
 			imageTag: vars.imageTag,
-			appName:  vars.appName,
 		},
 		store:           configStore,
 		newInterpolator: newManifestInterpolator,
