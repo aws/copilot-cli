@@ -4,7 +4,6 @@
 package deploy
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 
@@ -130,17 +129,13 @@ func (d *workerSvcDeployer) DeployWorkload(in *DeployWorkloadInput) (ActionRecom
 	if err != nil {
 		return nil, err
 	}
-	recommendations := &workerSvcDeployOutput{
-		subs: stackConfigOutput.subscriptions,
-	}
 	if err := d.deploy(in.Options, stackConfigOutput.svcStackConfigurationOutput); err != nil {
-		var errStackUpdateCanceledOnInterrupt *cloudformation.ErrStackUpdateCanceledOnInterrupt
-		if errors.As(err, &errStackUpdateCanceledOnInterrupt) {
-			return recommendations, err
-		}
+
 		return nil, err
 	}
-	return recommendations, nil
+	return &workerSvcDeployOutput{
+		subs: stackConfigOutput.subscriptions,
+	}, nil
 }
 
 func (d *workerSvcDeployOutput) buildWorkerQueueNames() string {
