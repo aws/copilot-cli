@@ -321,6 +321,9 @@ func (e *ECS) HasDefaultCluster() (bool, error) {
 
 // ActiveClusters returns the subset of cluster arns that have an ACTIVE status.
 func (e *ECS) ActiveClusters(arns ...string) ([]string, error) {
+	if len(arns) == 0 {
+		return nil, nil
+	}
 	resp, err := e.client.DescribeClusters(&ecs.DescribeClustersInput{
 		Clusters: aws.StringSlice(arns),
 	})
@@ -342,9 +345,23 @@ func (e *ECS) ActiveClusters(arns ...string) ([]string, error) {
 }
 
 // ActiveServices returns the subset of service arns that have an ACTIVE status.
-func (e *ECS) ActiveServices(clusterARN string, serviceARNs ...string) ([]string, error) {
+func (e *ECS) ActiveServices(serviceARNs ...string) ([]string, error) {
+	if len(serviceARNs) == 0 {
+		return nil, nil
+	}
+	var prevSvcArn *ServiceArn
+	for _, arn := range serviceARNs {
+		svcArn, err := ParseServiceArn(arn)
+		if err != nil {
+			return nil, err
+		}
+		if prevSvcArn != nil && prevSvcArn.clusterName != svcArn.clusterName {
+			return nil, fmt.Errorf("service %q and service %q should be in the same cluster", prevSvcArn.String(), svcArn.String())
+		}
+		prevSvcArn = svcArn
+	}
 	resp, err := e.client.DescribeServices(&ecs.DescribeServicesInput{
-		Cluster:  aws.String(clusterARN),
+		Cluster:  aws.String(prevSvcArn.ClusterArn()),
 		Services: aws.StringSlice(serviceARNs),
 	})
 	switch {

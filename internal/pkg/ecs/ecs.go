@@ -47,7 +47,7 @@ type ecsClient interface {
 	UpdateService(clusterName, serviceName string, opts ...ecs.UpdateServiceOpts) error
 	DescribeTasks(cluster string, taskARNs []string) ([]*ecs.Task, error)
 	ActiveClusters(arns ...string) ([]string, error)
-	ActiveServices(clusterARN string, serviceARNs ...string) ([]string, error)
+	ActiveServices(serviceARNs ...string) ([]string, error)
 }
 
 type stepFunctionsClient interface {
@@ -249,18 +249,11 @@ func (c Client) NetworkConfiguration(app, env, svc string) (*ecs.NetworkConfigur
 	if err != nil {
 		return nil, err
 	}
-
 	arn, err := c.serviceARN(app, env, svc)
 	if err != nil {
 		return nil, err
 	}
-
-	svcName, err := arn.ServiceName()
-	if err != nil {
-		return nil, fmt.Errorf("extract service name from arn %s: %w", *arn, err)
-	}
-
-	return c.ecsClient.NetworkConfiguration(clusterARN, svcName)
+	return c.ecsClient.NetworkConfiguration(clusterARN, arn.ServiceName())
 }
 
 // NetworkConfigurationForJob returns the network configuration of the job.
@@ -426,15 +419,7 @@ func (c Client) fetchAndParseServiceARN(app, env, svc string) (cluster, service 
 	if err != nil {
 		return "", "", err
 	}
-	clusterName, err := svcARN.ClusterName()
-	if err != nil {
-		return "", "", fmt.Errorf("get cluster name: %w", err)
-	}
-	serviceName, err := svcARN.ServiceName()
-	if err != nil {
-		return "", "", fmt.Errorf("get service name: %w", err)
-	}
-	return clusterName, serviceName, nil
+	return svcARN.ClusterName(), svcARN.ServiceName(), nil
 }
 
 func (c Client) serviceARN(app, env, svc string) (*ecs.ServiceArn, error) {
@@ -454,20 +439,18 @@ func (c Client) serviceARN(app, env, svc string) (*ecs.ServiceArn, error) {
 	for i := range services {
 		arns[i] = services[i].ARN
 	}
-	serviceARN := ecs.ServiceArn(arns[0])
-	clusterArn, err := serviceARN.ClusterArn()
+	active, err := c.ecsClient.ActiveServices(arns...)
 	if err != nil {
-		return nil, fmt.Errorf("get cluster arn: %w", err)
-	}
-	active, err := c.ecsClient.ActiveServices(clusterArn, arns...)
-	if err != nil {
-		return nil, fmt.Errorf("check if clusters are active: %w", err)
+		return nil, fmt.Errorf("check if services are active: %w", err)
 	}
 	if len(active) > 1 {
 		return nil, fmt.Errorf("more than one ECS service with tags %s", tags.String())
 	}
-	serviceArn := ecs.ServiceArn(active[0])
-	return &serviceArn, nil
+	serviceARN, err := ecs.ParseServiceArn(active[0])
+	if err != nil {
+		return nil, fmt.Errorf("parse service arn: %w", err)
+	}
+	return serviceARN, nil
 }
 
 type tags map[string]string

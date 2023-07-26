@@ -93,9 +93,9 @@ func (mr *MockecsClientMockRecorder) ActiveClusters(arns ...interface{}) *gomock
 }
 
 // ActiveServices mocks base method.
-func (m *MockecsClient) ActiveServices(clusterARN string, serviceARNs ...string) ([]string, error) {
+func (m *MockecsClient) ActiveServices(serviceARNs ...string) ([]string, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{clusterARN}
+	varargs := []interface{}{}
 	for _, a := range serviceARNs {
 		varargs = append(varargs, a)
 	}
@@ -106,10 +106,9 @@ func (m *MockecsClient) ActiveServices(clusterARN string, serviceARNs ...string)
 }
 
 // ActiveServices indicates an expected call of ActiveServices.
-func (mr *MockecsClientMockRecorder) ActiveServices(clusterARN interface{}, serviceARNs ...interface{}) *gomock.Call {
+func (mr *MockecsClientMockRecorder) ActiveServices(serviceARNs ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{clusterARN}, serviceARNs...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ActiveServices", reflect.TypeOf((*MockecsClient)(nil).ActiveServices), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ActiveServices", reflect.TypeOf((*MockecsClient)(nil).ActiveServices), serviceARNs...)
 }
 
 // DefaultCluster mocks base method.
