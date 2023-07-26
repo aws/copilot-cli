@@ -357,7 +357,10 @@ func (cf CloudFormation) executeAndRenderChangeSet(in *executeAndRenderChangeSet
 	if err != nil {
 		return err
 	}
-	sigChannel := cf.notifySignals()
+	var sigChannel chan os.Signal
+	if in.enableInterrupt {
+		sigChannel = cf.notifySignals()
+	}
 	g, ctx := errgroup.WithContext(context.Background())
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
