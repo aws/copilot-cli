@@ -8,12 +8,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
-	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"io"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
+
+	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -117,6 +120,7 @@ type cfnClient interface {
 	Outputs(stack *cloudformation.Stack) (map[string]string, error)
 	StackResources(name string) ([]*cloudformation.StackResource, error)
 	Metadata(opts cloudformation.MetadataOpts) (string, error)
+	CancelUpdateStack(stackName string) error
 
 	// Methods vended by the aws sdk struct.
 	DescribeStackEvents(*sdkcloudformation.DescribeStackEventsInput) (*sdkcloudformation.DescribeStackEventsOutput, error)
@@ -198,6 +202,7 @@ type CloudFormation struct {
 	// Overridden in tests.
 	renderStackSet               func(input renderStackSetInput) error
 	dnsDelegatedAccountsForStack func(stack *sdkcloudformation.Stack) []string
+	notifySignals                func() chan os.Signal
 }
 
 // New returns a configured CloudFormation client.
@@ -233,6 +238,7 @@ func New(sess *session.Session, opts ...OptFn) CloudFormation {
 	}
 	client.renderStackSet = client.renderStackSetImpl
 	client.dnsDelegatedAccountsForStack = stack.DNSDelegatedAccountsForStack
+	client.notifySignals = notifySignals
 	return client
 }
 
@@ -269,6 +275,15 @@ type executeAndRenderChangeSetInput struct {
 	stackName        string
 	stackDescription string
 	createChangeSet  func() (string, error)
+	enableInterrupt  bool
+}
+
+type executeAndRenderChangeSetOption func(in *executeAndRenderChangeSetInput)
+
+func withEnableInterrupt() executeAndRenderChangeSetOption {
+	return func(in *executeAndRenderChangeSetInput) {
+		in.enableInterrupt = true
+	}
 }
 
 func (cf CloudFormation) newCreateChangeSetInput(w progress.FileWriter, stack *cloudformation.Stack) *executeAndRenderChangeSetInput {
@@ -293,7 +308,7 @@ func (cf CloudFormation) newCreateChangeSetInput(w progress.FileWriter, stack *c
 	return in
 }
 
-func (cf CloudFormation) newUpsertChangeSetInput(w progress.FileWriter, stack *cloudformation.Stack) *executeAndRenderChangeSetInput {
+func (cf CloudFormation) newUpsertChangeSetInput(w progress.FileWriter, stack *cloudformation.Stack, opts ...executeAndRenderChangeSetOption) *executeAndRenderChangeSetInput {
 	in := &executeAndRenderChangeSetInput{
 		stackName:        stack.Name,
 		stackDescription: fmt.Sprintf("Creating the infrastructure for stack %s", stack.Name),
@@ -331,6 +346,9 @@ func (cf CloudFormation) newUpsertChangeSetInput(w progress.FileWriter, stack *c
 		spinner.Stop(log.Ssuccessf("%s\n", label))
 		return changeSetID, nil
 	}
+	for _, opt := range opts {
+		opt(in)
+	}
 	return in
 }
 
@@ -339,10 +357,35 @@ func (cf CloudFormation) executeAndRenderChangeSet(in *executeAndRenderChangeSet
 	if err != nil {
 		return err
 	}
+	var sigChannel chan os.Signal
+	if in.enableInterrupt {
+		sigChannel = cf.notifySignals()
+	}
+	g, ctx := errgroup.WithContext(context.Background())
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	g.Go(func() error {
+		defer cancel()
+		if err := cf.renderChangeSet(ctx, changeSetID, in); err != nil {
+			if !errors.Is(err, context.Canceled) {
+				return err
+			}
+		}
+		return nil
+	})
+	if in.enableInterrupt {
+		g.Go(func() error {
+			return cf.waitForSignalAndHandleInterrupt(ctx, cancel, sigChannel, in.stackName)
+		})
+	}
+	return g.Wait()
+}
+
+func (cf CloudFormation) renderChangeSet(ctx context.Context, changeSetID string, in *executeAndRenderChangeSetInput) error {
 	if _, ok := cf.console.(*discardFile); ok { // If we don't have to render skip the additional network calls.
 		return nil
 	}
-	waitCtx, cancelWait := context.WithTimeout(context.Background(), waitForStackTimeout)
+	waitCtx, cancelWait := context.WithTimeout(ctx, waitForStackTimeout)
 	defer cancelWait()
 	g, ctx := errgroup.WithContext(waitCtx)
 
@@ -361,6 +404,125 @@ func (cf CloudFormation) executeAndRenderChangeSet(in *executeAndRenderChangeSet
 		return err
 	}
 	return nil
+}
+
+func (cf CloudFormation) waitForSignalAndHandleInterrupt(ctx context.Context, cancelFn context.CancelFunc, sigCh chan os.Signal, stackName string) error {
+	for {
+		select {
+		case <-sigCh:
+			cancelFn()
+			stopCatchSignals(sigCh)
+			stackDescr, err := cf.cfnClient.Describe(stackName)
+			if err != nil {
+				return fmt.Errorf("describe stack %s: %w", stackName, err)
+			}
+			switch aws.StringValue(stackDescr.StackStatus) {
+			case sdkcloudformation.StackStatusCreateInProgress:
+				log.Infof(`Received Interrupt for Ctrl-C.
+Pressing Ctrl-C again will exit immediately but the deletion of stack %s will continue
+`, stackName)
+				description := fmt.Sprintf("Delete stack %s", stackName)
+				if err := cf.deleteAndRenderStack(stackName, description, func() error {
+					return cf.cfnClient.DeleteAndWait(stackName)
+				}); err != nil {
+					return err
+				}
+				return &ErrStackDeletedOnInterrupt{stackName: stackName}
+			case sdkcloudformation.StackStatusUpdateInProgress:
+				log.Infof(`Received Interrupt for Ctrl-C.
+Pressing Ctrl-C again will exit immediately but stack %s rollback will continue
+`, stackName)
+				description := fmt.Sprintf("Canceling stack update %s", stackName)
+				if err := cf.cancelUpdateAndRender(&cancelUpdateAndRenderInput{
+					stackName:   stackName,
+					description: description,
+					cancelUpdateFn: func() error {
+						return cf.cfnClient.CancelUpdateStack(stackName)
+					},
+				}); err != nil {
+					return err
+				}
+				return &ErrStackUpdateCanceledOnInterrupt{stackName: stackName}
+			}
+			return nil
+		case <-ctx.Done():
+			stopCatchSignals(sigCh)
+			return nil
+		}
+	}
+}
+
+type cancelUpdateAndRenderInput struct {
+	stackName      string
+	description    string
+	cancelUpdateFn func() error
+}
+
+func (cf CloudFormation) cancelUpdateAndRender(in *cancelUpdateAndRenderInput) error {
+	stackDescr, err := cf.cfnClient.Describe(in.stackName)
+	if err != nil {
+		return fmt.Errorf("describe stack %s: %w", in.stackName, err)
+	}
+	if stackDescr.ChangeSetId == nil {
+		return fmt.Errorf("ChangeSetID not found for stack %s", in.stackName)
+
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), waitForStackTimeout)
+	defer cancel()
+	g, ctx := errgroup.WithContext(ctx)
+	renderer, err := cf.createChangeSetRenderer(g, ctx, aws.StringValue(stackDescr.ChangeSetId), in.stackName, in.description, progress.RenderOptions{})
+	if err != nil {
+		return err
+	}
+	g.Go(in.cancelUpdateFn)
+	g.Go(func() error {
+		_, err := progress.Render(ctx, progress.NewTabbedFileWriter(cf.console), renderer)
+		return err
+	})
+	if err := g.Wait(); err != nil {
+		return err
+	}
+	return cf.errOnFailedCancelUpdate(in.stackName)
+}
+func (cf CloudFormation) errOnFailedCancelUpdate(stackName string) error {
+	stack, err := cf.cfnClient.Describe(stackName)
+	if err != nil {
+		return fmt.Errorf("describe stack %s: %w", stackName, err)
+	}
+	status := aws.StringValue(stack.StackStatus)
+	if status != sdkcloudformation.StackStatusUpdateRollbackComplete {
+		return fmt.Errorf("stack %s did not rollback successfully and exited with status %s", stackName, status)
+	}
+	return nil
+}
+
+func notifySignals() chan os.Signal {
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGINT)
+	return sigCh
+}
+
+func stopCatchSignals(sigCh chan os.Signal) {
+	signal.Stop(sigCh)
+	close(sigCh)
+}
+
+// ErrStackDeletedOnInterrupt means stack is deleted on interrupt.
+type ErrStackDeletedOnInterrupt struct {
+	stackName string
+}
+
+func (e *ErrStackDeletedOnInterrupt) Error() string {
+	return fmt.Sprintf("stack %s was deleted on interrupt signal", e.stackName)
+}
+
+// ErrStackUpdateCanceledOnInterrupt means stack update is canceled on interrupt.
+type ErrStackUpdateCanceledOnInterrupt struct {
+	stackName string
+}
+
+func (e *ErrStackUpdateCanceledOnInterrupt) Error() string {
+	return fmt.Sprintf("update for stack %s was canceled on interrupt signal", e.stackName)
 }
 
 func (cf CloudFormation) createChangeSetRenderer(group *errgroup.Group, ctx context.Context, changeSetID, stackName, description string, opts progress.RenderOptions) (progress.DynamicRenderer, error) {
