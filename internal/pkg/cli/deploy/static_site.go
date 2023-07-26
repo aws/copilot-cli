@@ -4,7 +4,6 @@
 package deploy
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"path/filepath"
@@ -113,10 +112,6 @@ func (d *staticSiteDeployer) DeployWorkload(in *DeployWorkloadInput) (ActionReco
 		return nil, err
 	}
 	if err := d.deploy(in.Options, svcStackConfigurationOutput{conf: conf}); err != nil {
-		var errStackUpdateCanceledOnInterrupt *cloudformation.ErrStackUpdateCanceledOnInterrupt
-		if errors.As(err, &errStackUpdateCanceledOnInterrupt) {
-			return noopActionRecommender{}, err
-		}
 		return nil, err
 	}
 	return noopActionRecommender{}, nil

@@ -4,7 +4,6 @@
 package deploy
 
 import (
-	"errors"
 	"fmt"
 
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
@@ -84,10 +83,6 @@ func (d *jobDeployer) DeployWorkload(in *DeployWorkloadInput) (ActionRecommender
 		return nil, err
 	}
 	if err := d.deployer.DeployService(stackConfigOutput.conf, d.resources.S3Bucket, opts...); err != nil {
-		var errStackUpdateCanceledOnInterrupt *cloudformation.ErrStackUpdateCanceledOnInterrupt
-		if errors.As(err, &errStackUpdateCanceledOnInterrupt) {
-			return noopActionRecommender{}, err
-		}
 		return nil, fmt.Errorf("deploy job: %w", err)
 	}
 	return noopActionRecommender{}, nil

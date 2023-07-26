@@ -85,6 +85,7 @@ type deploySvcOpts struct {
 	rootUserARN       string
 	deployRecs        clideploy.ActionRecommender
 	noDeploy          bool
+	updateCanceled    bool
 
 	// Overridden in tests.
 	templateVersion string
@@ -317,7 +318,7 @@ func (o *deploySvcOpts) Execute() error {
 		}
 		if errors.As(err, &errStackUpdateCanceledOnInterrupt) {
 			log.Successf("Successfully rolled back service %s to the previous configuration.\n", color.HighlightUserInput(o.name))
-			o.deployRecs = deployRecs
+			o.noDeploy = true
 			return nil
 		}
 		if o.disableRollback {
