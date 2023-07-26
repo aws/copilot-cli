@@ -85,7 +85,6 @@ type deploySvcOpts struct {
 	rootUserARN       string
 	deployRecs        clideploy.ActionRecommender
 	noDeploy          bool
-	updateCanceled    bool
 
 	// Overridden in tests.
 	templateVersion string
