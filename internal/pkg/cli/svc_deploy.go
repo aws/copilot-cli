@@ -332,9 +332,8 @@ After fixing the deployment, you can:
 `, color.HighlightCode("copilot svc logs"), color.HighlightCode(rollbackCmd), color.HighlightCode("copilot svc deploy"))
 		}
 		return fmt.Errorf("deploy service %s to environment %s: %w", o.name, o.envName, err)
-	} else {
-		log.Successf("Deployed service %s.\n", color.HighlightUserInput(o.name))
 	}
+	log.Successf("Deployed service %s.\n", color.HighlightUserInput(o.name))
 	o.deployRecs = deployRecs
 	return nil
 }
