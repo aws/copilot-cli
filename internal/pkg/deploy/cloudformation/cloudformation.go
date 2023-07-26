@@ -367,9 +367,6 @@ func (cf CloudFormation) executeAndRenderChangeSet(in *executeAndRenderChangeSet
 	g.Go(func() error {
 		defer cancel()
 		if err := cf.renderChangeSet(ctx, changeSetID, in); err != nil {
-			if !in.enableInterrupt {
-				return err
-			}
 			if !errors.Is(err, context.Canceled) {
 				return err
 			}
@@ -381,10 +378,7 @@ func (cf CloudFormation) executeAndRenderChangeSet(in *executeAndRenderChangeSet
 			return cf.waitForSignalAndHandleInterrupt(ctx, cancel, sigChannel, in.stackName)
 		})
 	}
-	if err := g.Wait(); err != nil {
-		return err
-	}
-	return nil
+	return g.Wait()
 }
 
 func (cf CloudFormation) renderChangeSet(ctx context.Context, changeSetID string, in *executeAndRenderChangeSetInput) error {
@@ -473,9 +467,9 @@ func (cf CloudFormation) cancelUpdateAndRender(in *cancelUpdateAndRenderInput) e
 		return fmt.Errorf("ChangeSetID not found for stack %s", in.stackName)
 
 	}
-	waitCtx, cancelWait := context.WithTimeout(context.Background(), waitForStackTimeout)
-	defer cancelWait()
-	g, ctx := errgroup.WithContext(waitCtx)
+	ctx, cancel := context.WithTimeout(context.Background(), waitForStackTimeout)
+	defer cancel()
+	g, ctx := errgroup.WithContext(ctx)
 	renderer, err := cf.createChangeSetRenderer(g, ctx, aws.StringValue(stackDescr.ChangeSetId), in.stackName, in.description, progress.RenderOptions{})
 	if err != nil {
 		return err
@@ -488,10 +482,7 @@ func (cf CloudFormation) cancelUpdateAndRender(in *cancelUpdateAndRenderInput) e
 	if err := g.Wait(); err != nil {
 		return err
 	}
-	if err := cf.errOnFailedCancelUpdate(in.stackName); err != nil {
-		return err
-	}
-	return nil
+	return cf.errOnFailedCancelUpdate(in.stackName)
 }
 func (cf CloudFormation) errOnFailedCancelUpdate(stackName string) error {
 	stack, err := cf.cfnClient.Describe(stackName)
@@ -522,7 +513,7 @@ type ErrStackDeletedOnInterrupt struct {
 }
 
 func (e *ErrStackDeletedOnInterrupt) Error() string {
-	return fmt.Sprintf("stack %s is deleted on interrupt signal", e.stackName)
+	return fmt.Sprintf("stack %s was deleted on interrupt signal", e.stackName)
 }
 
 // ErrStackUpdateCanceledOnInterrupt means stack update is canceled on interrupt.
@@ -531,7 +522,7 @@ type ErrStackUpdateCanceledOnInterrupt struct {
 }
 
 func (e *ErrStackUpdateCanceledOnInterrupt) Error() string {
-	return fmt.Sprintf("update for stack %s is canceled on interrupt signal", e.stackName)
+	return fmt.Sprintf("update for stack %s was canceled on interrupt signal", e.stackName)
 }
 
 func (cf CloudFormation) createChangeSetRenderer(group *errgroup.Group, ctx context.Context, changeSetID, stackName, description string, opts progress.RenderOptions) (progress.DynamicRenderer, error) {
