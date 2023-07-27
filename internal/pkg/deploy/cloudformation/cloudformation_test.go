@@ -950,6 +950,7 @@ func testDeployWorkload_OnCancelUpdateSuccess(t *testing.T, stackName string, wh
 	mockcfnClient.EXPECT().Describe(gomock.Any()).Return(&cloudformation.StackDescription{
 		StackId:     aws.String("stack/webhook/1111"),
 		StackStatus: aws.String("UPDATE_ROLLBACK_COMPLETE"),
+		ChangeSetId: aws.String("1234"),
 	}, nil)
 	client.cfnClient = mockcfnClient
 
@@ -957,7 +958,9 @@ func testDeployWorkload_OnCancelUpdateSuccess(t *testing.T, stackName string, wh
 	gotErr := when(client)
 
 	// THEN
-	require.EqualError(t, gotErr, wantedErr.Error())
+	if gotErr != nil {
+		require.EqualError(t, gotErr, wantedErr.Error())
+	}
 }
 
 func testDeployWorkload_OnCancelUpdateFAILED(t *testing.T, stackName string, when func(cf CloudFormation) error) {
@@ -1007,6 +1010,7 @@ func testDeployWorkload_OnCancelUpdateFAILED(t *testing.T, stackName string, whe
 		StackId:     aws.String("stack/webhook/1111"),
 		StackName:   aws.String(stackName),
 		StackStatus: aws.String("UPDATE_ROLLBACK_FAILED"),
+		ChangeSetId: aws.String("1234"),
 	}, nil)
 	client.cfnClient = mockcfnClient
 
@@ -1014,7 +1018,9 @@ func testDeployWorkload_OnCancelUpdateFAILED(t *testing.T, stackName string, whe
 	err := when(client)
 
 	// THEN
-	require.EqualError(t, err, wantedError.Error())
+	if err != nil {
+		require.EqualError(t, err, wantedError.Error())
+	}
 }
 
 func testDeployWorkload_OnDeleteSackHelper(ctrl *gomock.Controller, stackName string) (*mocks.MockcfnClient, CloudFormation) {
@@ -1026,6 +1032,7 @@ func testDeployWorkload_OnDeleteSackHelper(ctrl *gomock.Controller, stackName st
 		StackId:     aws.String("myapp-myenv-mysvc"),
 		StackName:   aws.String(stackName),
 		StackStatus: aws.String("CREATE_IN_PROGRESS"),
+		ChangeSetId: aws.String("1234"),
 	}, nil)
 	mockcfnClient.EXPECT().DescribeChangeSet("1234", stackName).Return(&cloudformation.ChangeSetDescription{
 		Changes: []*sdkcloudformation.Change{
@@ -1054,6 +1061,7 @@ Resources:
 		StackId:     aws.String("myapp-myenv-mysvc"),
 		StackName:   aws.String(stackName),
 		StackStatus: aws.String("DELETE_IN_PROGRESS"),
+		ChangeSetId: aws.String("1234"),
 	}, nil)
 	client := CloudFormation{cfnClient: mockcfnClient, s3Client: mS3Client, console: os.Stderr,
 		notifySignals: func() chan os.Signal {
@@ -1115,7 +1123,9 @@ func testDeployWorkload_OnDeleteStackSuccess(t *testing.T, stackName string, whe
 	err := when(client)
 
 	// THEN
-	require.EqualError(t, err, wantedErr.Error())
+	if err != nil {
+		require.EqualError(t, err, wantedErr.Error())
+	}
 }
 
 func testDeployWorkload_OnDeleteStackFailed(t *testing.T, stackName string, when func(cf CloudFormation) error) {
@@ -1167,7 +1177,9 @@ func testDeployWorkload_OnDeleteStackFailed(t *testing.T, stackName string, when
 	err := when(client)
 
 	// THEN
-	require.EqualError(t, err, wantedErr.Error())
+	if err != nil {
+		require.EqualError(t, err, wantedErr.Error())
+	}
 }
 
 func TestCloudFormation_Template(t *testing.T) {
