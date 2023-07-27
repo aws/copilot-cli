@@ -285,14 +285,10 @@ Resources:
       EnableExecuteCommand: true
       LaunchType: FARGATE
       ServiceConnectConfiguration:
-        Enabled: True
-        Namespace: my-env.my-app.local
-        LogConfiguration:
-          LogDriver: awslogs
-          Options:
-            awslogs-region: !Ref AWS::Region
-            awslogs-group: !Ref LogGroup
-            awslogs-stream-prefix: copilot
+        !If
+          - IsGovCloud
+          - !Ref AWS::NoValue
+          - Enabled: False
       NetworkConfiguration:
         AwsvpcConfiguration:
           AssignPublicIp: ENABLED

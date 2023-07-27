@@ -91,6 +91,4 @@ environments:
   test:
     image:
       location: amazon/ecs-example
-    network:
-      connect: true
 
