@@ -10,6 +10,27 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestURLSafeVersionFunc(t *testing.T) {
+	testCases := map[string]struct {
+		in     string
+		wanted string
+	}{
+		"no plus": {
+			in:     "v1.29.0",
+			wanted: "v1.29.0",
+		},
+		"has plus": {
+			in:     "v1.29.0+5-g74ef584b3",
+			wanted: "v1.29.0%2B5-g74ef584b3",
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tc.wanted, URLSafeVersion(tc.in))
+		})
+	}
+}
+
 func TestReplaceDashesFunc(t *testing.T) {
 	testCases := map[string]struct {
 		in     string

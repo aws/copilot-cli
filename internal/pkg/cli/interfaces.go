@@ -6,8 +6,9 @@ package cli
 import (
 	"context"
 	"encoding"
-	sdkcloudformation "github.com/aws/aws-sdk-go/service/cloudformation"
 	"io"
+
+	sdkcloudformation "github.com/aws/aws-sdk-go/service/cloudformation"
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
@@ -178,6 +179,11 @@ type repositoryLogin interface {
 type repositoryService interface {
 	repositoryLogin
 	imageBuilderPusher
+}
+
+type ecsLocalClient interface {
+	TaskDefinition(app, env, svc string) (*awsecs.TaskDefinition, error)
+	DecryptedSecrets(secrets []*awsecs.ContainerSecret) ([]ecs.EnvVar, error)
 }
 
 type logEventsWriter interface {
@@ -518,6 +524,7 @@ type deploySelector interface {
 	appSelector
 	DeployedService(prompt, help string, app string, opts ...selector.GetDeployedWorkloadOpts) (*selector.DeployedService, error)
 	DeployedJob(prompt, help string, app string, opts ...selector.GetDeployedWorkloadOpts) (*selector.DeployedJob, error)
+	DeployedWorkload(prompt, help string, app string, opts ...selector.GetDeployedWorkloadOpts) (*selector.DeployedWorkload, error)
 }
 
 type pipelineEnvSelector interface {

@@ -542,6 +542,44 @@ func (mr *MockenvReadParserMockRecorder) Read(path interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Read", reflect.TypeOf((*MockenvReadParser)(nil).Read), path)
 }
 
+// MockpipelineParser is a mock of pipelineParser interface.
+type MockpipelineParser struct {
+	ctrl     *gomock.Controller
+	recorder *MockpipelineParserMockRecorder
+}
+
+// MockpipelineParserMockRecorder is the mock recorder for MockpipelineParser.
+type MockpipelineParserMockRecorder struct {
+	mock *MockpipelineParser
+}
+
+// NewMockpipelineParser creates a new mock instance.
+func NewMockpipelineParser(ctrl *gomock.Controller) *MockpipelineParser {
+	mock := &MockpipelineParser{ctrl: ctrl}
+	mock.recorder = &MockpipelineParserMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockpipelineParser) EXPECT() *MockpipelineParserMockRecorder {
+	return m.recorder
+}
+
+// ParsePipeline mocks base method.
+func (m *MockpipelineParser) ParsePipeline(data interface{}) (*template.Content, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ParsePipeline", data)
+	ret0, _ := ret[0].(*template.Content)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ParsePipeline indicates an expected call of ParsePipeline.
+func (mr *MockpipelineParserMockRecorder) ParsePipeline(data interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ParsePipeline", reflect.TypeOf((*MockpipelineParser)(nil).ParsePipeline), data)
+}
+
 // MockembedFS is a mock of embedFS interface.
 type MockembedFS struct {
 	ctrl     *gomock.Controller

@@ -10,13 +10,9 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 )
 
-const (
-	pipelineCfnTemplatePath = "cicd/pipeline_cfn.yml"
-)
-
 type pipelineStackConfig struct {
 	*deploy.CreatePipelineInput
-	parser template.Parser
+	parser pipelineParser
 }
 
 // NewPipelineStackConfig sets up a struct which can provide values to CloudFormation for
@@ -35,15 +31,7 @@ func (p *pipelineStackConfig) StackName() string {
 
 // Template returns the CloudFormation template for the service parametrized for the environment.
 func (p *pipelineStackConfig) Template() (string, error) {
-	content, err := p.parser.Parse(pipelineCfnTemplatePath, p, template.WithFuncs(cfTemplateFunctions), template.WithFuncs(map[string]interface{}{
-		"isCodeStarConnection": func(source interface{}) bool {
-			type connectionName interface {
-				ConnectionName() (string, error)
-			}
-			_, ok := source.(connectionName)
-			return ok
-		},
-	}))
+	content, err := p.parser.ParsePipeline(p)
 	if err != nil {
 		return "", err
 	}
@@ -51,7 +39,7 @@ func (p *pipelineStackConfig) Template() (string, error) {
 }
 
 // SerializedParameters returns the CloudFormation stack's parameters serialized to a JSON document.
-func (s *pipelineStackConfig) SerializedParameters() (string, error) {
+func (p *pipelineStackConfig) SerializedParameters() (string, error) {
 	// No-op for now.
 	return "", nil
 }
