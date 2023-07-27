@@ -65,7 +65,7 @@ func (cf CloudFormation) UpdateAndRenderEnvironment(conf StackConfiguration, buc
 		return changeSetID, nil
 	}
 	in.enableInterrupt = true
-	in.detach = true
+	in.detach = detach
 	return cf.executeAndRenderChangeSet(in)
 }
 
