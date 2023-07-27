@@ -23,8 +23,8 @@ func TestInitOpts_Run(t *testing.T) {
 	var mockPort uint16 = 80
 	var mockAppName = "demo"
 	testCases := map[string]struct {
-		inShouldDeploy          bool
-		inPromptForShouldDeploy bool
+		inShouldDeploy    bool
+		inShouldNotDeploy bool
 
 		inEnvName string
 		inAppName string
@@ -92,7 +92,6 @@ func TestInitOpts_Run(t *testing.T) {
 			wantedError: "execute Load Balanced Web Service init: my error",
 		},
 		"fail to deploy an environment": {
-			inPromptForShouldDeploy: true,
 			expect: func(opts *initOpts) {
 				opts.prompt.(*climocks.Mockprompter).EXPECT().SelectOption(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(manifestinfo.LoadBalancedWebServiceType, nil)
 				opts.initAppCmd.(*climocks.MockactionCommand).EXPECT().Ask().Return(nil)
@@ -112,7 +111,6 @@ func TestInitOpts_Run(t *testing.T) {
 			wantedError: "some error",
 		},
 		"fail to get env name": {
-			inPromptForShouldDeploy: true,
 			expect: func(opts *initOpts) {
 				opts.prompt.(*climocks.Mockprompter).EXPECT().SelectOption(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(manifestinfo.LoadBalancedWebServiceType, nil)
 				opts.initAppCmd.(*climocks.MockactionCommand).EXPECT().Ask().Return(nil)
@@ -129,7 +127,6 @@ func TestInitOpts_Run(t *testing.T) {
 			wantedError: "get environment name: some error",
 		},
 		"deploys environment": {
-			inPromptForShouldDeploy: true,
 			expect: func(opts *initOpts) {
 				opts.prompt.(*climocks.Mockprompter).EXPECT().SelectOption(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(manifestinfo.LoadBalancedWebServiceType, nil)
 				opts.initAppCmd.(*climocks.MockactionCommand).EXPECT().Ask().Return(nil)
@@ -150,8 +147,7 @@ func TestInitOpts_Run(t *testing.T) {
 			},
 		},
 		"env name flag skips prompt": {
-			inPromptForShouldDeploy: true,
-			inEnvName:               "test2",
+			inEnvName: "test2",
 			expect: func(opts *initOpts) {
 				opts.prompt.(*climocks.Mockprompter).EXPECT().SelectOption(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(manifestinfo.LoadBalancedWebServiceType, nil)
 				opts.initAppCmd.(*climocks.MockactionCommand).EXPECT().Ask().Return(nil)
@@ -170,7 +166,6 @@ func TestInitOpts_Run(t *testing.T) {
 			},
 		},
 		"should not error out if environment change set is empty": {
-			inPromptForShouldDeploy: true,
 			expect: func(opts *initOpts) {
 				opts.prompt.(*climocks.Mockprompter).EXPECT().SelectOption(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(manifestinfo.LoadBalancedWebServiceType, nil)
 				opts.initAppCmd.(*climocks.MockactionCommand).EXPECT().Ask().Return(nil)
@@ -192,8 +187,6 @@ func TestInitOpts_Run(t *testing.T) {
 			},
 		},
 		"deploy workload happy path": {
-			inPromptForShouldDeploy: true,
-			inShouldDeploy:          true,
 			expect: func(opts *initOpts) {
 				opts.prompt.(*climocks.Mockprompter).EXPECT().SelectOption(gomock.Any(), gomock.Any(), []prompt.Option{
 					{
@@ -243,8 +236,6 @@ func TestInitOpts_Run(t *testing.T) {
 			},
 		},
 		"env select and get when multiple envs returned + createNew selected": {
-			inPromptForShouldDeploy: true,
-			inShouldDeploy:          true,
 			expect: func(opts *initOpts) {
 				opts.prompt.(*climocks.Mockprompter).EXPECT().SelectOption(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(manifestinfo.LoadBalancedWebServiceType, nil)
 				opts.initAppCmd.(*climocks.MockactionCommand).EXPECT().Ask().Return(nil)
@@ -274,8 +265,6 @@ func TestInitOpts_Run(t *testing.T) {
 			},
 		},
 		"should not deploy the svc if shouldDeploy is false": {
-			inPromptForShouldDeploy: true,
-			inShouldDeploy:          false,
 			expect: func(opts *initOpts) {
 				opts.prompt.(*climocks.Mockprompter).EXPECT().SelectOption(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(manifestinfo.LoadBalancedWebServiceType, nil)
 				opts.initAppCmd.(*climocks.MockactionCommand).EXPECT().Ask().Return(nil)
@@ -289,6 +278,37 @@ func TestInitOpts_Run(t *testing.T) {
 					Return(false, nil)
 			},
 		},
+		"should not deploy the svc if --no-deploy is specified": {
+			inShouldNotDeploy: true,
+			expect: func(opts *initOpts) {
+				opts.prompt.(*climocks.Mockprompter).EXPECT().SelectOption(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(manifestinfo.LoadBalancedWebServiceType, nil)
+				opts.initAppCmd.(*climocks.MockactionCommand).EXPECT().Ask().Return(nil)
+				opts.initAppCmd.(*climocks.MockactionCommand).EXPECT().Validate().Return(nil)
+				opts.initWlCmd.(*climocks.MockactionCommand).EXPECT().Ask().Return(nil)
+				opts.initWlCmd.(*climocks.MockactionCommand).EXPECT().Validate().Return(nil)
+				opts.initAppCmd.(*climocks.MockactionCommand).EXPECT().Execute().Return(nil)
+				opts.initWlCmd.(*climocks.MockactionCommand).EXPECT().Execute().Return(nil)
+			},
+		},
+		"should skip prompting if all flags and --deploy explicitly specified": {
+			inShouldDeploy: true,
+			inEnvName:      "test2",
+			inWlType:       manifestinfo.LoadBalancedWebServiceType,
+			inAppName:      mockAppName,
+			expect: func(opts *initOpts) {
+				opts.initAppCmd.(*climocks.MockactionCommand).EXPECT().Ask().Return(nil)
+				opts.initAppCmd.(*climocks.MockactionCommand).EXPECT().Validate().Return(nil)
+				opts.initWlCmd.(*climocks.MockactionCommand).EXPECT().Ask().Return(nil)
+				opts.initWlCmd.(*climocks.MockactionCommand).EXPECT().Validate().Return(nil)
+				opts.initAppCmd.(*climocks.MockactionCommand).EXPECT().Execute().Return(nil)
+				opts.initWlCmd.(*climocks.MockactionCommand).EXPECT().Execute().Return(nil)
+				opts.initEnvCmd.(*climocks.MockactionCommand).EXPECT().Execute().Return(nil)
+				opts.deployEnvCmd.(*climocks.Mockcmd).EXPECT().Execute().Return(nil)
+				opts.deploySvcCmd.(*climocks.MockactionCommand).EXPECT().Ask().Return(nil)
+				opts.deploySvcCmd.(*climocks.MockactionCommand).EXPECT().Execute().Return(nil)
+				opts.deploySvcCmd.(*climocks.MockactionCommand).EXPECT().RecommendActions().Return(nil)
+			},
+		},
 	}
 
 	for name, tc := range testCases {
@@ -299,12 +319,12 @@ func TestInitOpts_Run(t *testing.T) {
 
 			opts := &initOpts{
 				initVars: initVars{
-					appName:  tc.inAppName,
-					wkldType: tc.inWlType,
-					envName:  tc.inEnvName,
+					appName:         tc.inAppName,
+					wkldType:        tc.inWlType,
+					envName:         tc.inEnvName,
+					shouldDeploy:    tc.inShouldDeploy,
+					shouldNotDeploy: tc.inShouldNotDeploy,
 				},
-				ShouldDeploy:          tc.inShouldDeploy,
-				promptForShouldDeploy: tc.inPromptForShouldDeploy,
 
 				initAppCmd:   climocks.NewMockactionCommand(ctrl),
 				initWlCmd:    climocks.NewMockactionCommand(ctrl),

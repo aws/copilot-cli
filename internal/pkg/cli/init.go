@@ -55,14 +55,15 @@ const (
 
 type initVars struct {
 	// Flags unique to "init" that's not provided by other sub-commands.
-	shouldDeploy   bool
-	appName        string
-	envName        string
-	wkldType       string
-	svcName        string
-	dockerfilePath string
-	image          string
-	imageTag       string
+	shouldDeploy    bool
+	shouldNotDeploy bool
+	appName         string
+	envName         string
+	wkldType        string
+	svcName         string
+	dockerfilePath  string
+	image           string
+	imageTag        string
 
 	// Service specific flags
 	port uint16
@@ -76,8 +77,7 @@ type initVars struct {
 type initOpts struct {
 	initVars
 
-	ShouldDeploy          bool // true means we should create a test environment and deploy the service to it. Defaults to false.
-	promptForShouldDeploy bool // true means that the user set the ShouldDeploy flag explicitly.
+	ShouldDeploy bool // true means we should create a test environment and deploy the service to it. Defaults to false.
 
 	// Sub-commands to execute.
 	initAppCmd   actionCommand
@@ -462,11 +462,9 @@ func (o *initOpts) askWorkload() (string, error) {
 
 // deployEnv prompts the user to deploy a test environment if the application doesn't already have one.
 func (o *initOpts) deployEnv() error {
-	if o.promptForShouldDeploy {
-		log.Infoln("All right, you're all set for local development.")
-		if err := o.askShouldDeploy(); err != nil {
-			return err
-		}
+	log.Infoln("All right, you're all set for local development.")
+	if err := o.askShouldDeploy(); err != nil {
+		return err
 	}
 	if !o.ShouldDeploy {
 		// User chose not to deploy the service, exit.
@@ -547,6 +545,17 @@ func (o *initOpts) deployJob() error {
 }
 
 func (o *initOpts) askShouldDeploy() error {
+	// --no-deploy was specified.
+	if o.shouldNotDeploy {
+		o.ShouldDeploy = false
+		return nil
+	}
+	// --deploy was specified
+	if o.shouldDeploy {
+		o.ShouldDeploy = true
+		return nil
+	}
+	// Neither deploy nor no-deploy was specified.
 	v, err := o.prompt.Confirm(initShouldDeployPrompt, initShouldDeployHelpPrompt, prompt.WithFinalMessage("Deploy:"))
 	if err != nil {
 		return fmt.Errorf("failed to confirm deployment: %w", err)
@@ -611,7 +620,6 @@ func BuildInitCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			opts.promptForShouldDeploy = !cmd.Flags().Changed(deployFlag)
 			if err := opts.Run(); err != nil {
 				return err
 			}
@@ -632,7 +640,8 @@ func BuildInitCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&vars.wkldType, typeFlag, typeFlagShort, "", wkldTypeFlagDescription)
 	cmd.Flags().StringVarP(&vars.dockerfilePath, dockerFileFlag, dockerFileFlagShort, "", dockerFileFlagDescription)
 	cmd.Flags().StringVarP(&vars.image, imageFlag, imageFlagShort, "", imageFlagDescription)
-	cmd.Flags().BoolVar(&vars.shouldDeploy, deployFlag, false, deployTestFlagDescription)
+	cmd.Flags().BoolVar(&vars.shouldDeploy, deployFlag, false, deployFlagDescription)
+	cmd.Flags().BoolVar(&vars.shouldNotDeploy, noDeployFlag, false, noDeployFlagDescription)
 	cmd.Flags().StringVar(&vars.imageTag, imageTagFlag, "", imageTagFlagDescription)
 	cmd.Flags().Uint16Var(&vars.port, svcPortFlag, 0, svcPortFlagDescription)
 	cmd.Flags().StringVar(&vars.schedule, scheduleFlag, "", scheduleFlagDescription)
@@ -642,5 +651,6 @@ func BuildInitCmd() *cobra.Command {
 	cmd.Annotations = map[string]string{
 		"group": group.GettingStarted,
 	}
+	cmd.MarkFlagsMutuallyExclusive(deployFlag, noDeployFlag)
 	return cmd
 }

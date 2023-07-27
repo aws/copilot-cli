@@ -44,6 +44,7 @@ const (
 	stackOutputDirFlag    = "output-dir"
 	uploadAssetsFlag      = "upload-assets"
 	deployFlag            = "deploy"
+	noDeployFlag          = "no-deploy"
 	diffFlag              = "diff"
 	diffAutoApproveFlag   = "diff-yes"
 	sourcesFlag           = "sources"
@@ -263,7 +264,8 @@ Allows you to categorize resources.`
 	diffAutoApproveFlagDescription = "Skip interactive approval of diff before deploying."
 
 	// Deployment.
-	deployTestFlagDescription     = `Deploy your service or job to a "test" environment.`
+	deployFlagDescription         = `Deploy your service or job to a new or existing environment.`
+	noDeployFlagDescription       = `Do not deploy; initialize the workload and exit.`
 	allowDowngradeFlagDescription = `Optional. Allow using an older version of Copilot to update Copilot components
 updated by a newer version of Copilot.`
 	forceFlagDescription = `Optional. Force a new service deployment using the existing image.
