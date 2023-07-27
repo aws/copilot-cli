@@ -863,13 +863,6 @@ func TestECS_ActiveClusters(t *testing.T) {
 		wantedError    error
 		wantedClusters []string
 	}{
-		"sucess with no arns": {
-			inArns: []string{},
-			mockECSClient: func(m *mocks.Mockapi) {
-				m.EXPECT().
-					DescribeClusters(gomock.Any()).Times(0)
-			},
-		},
 		"describe clusters returns error": {
 			inArns: []string{"arn1"},
 			mockECSClient: func(m *mocks.Mockapi) {
@@ -943,13 +936,6 @@ func TestECS_ActiveServices(t *testing.T) {
 		wantedError    error
 		wantedServices []string
 	}{
-		"success with no arns": {
-			inArns: []string{},
-			mockECSClient: func(m *mocks.Mockapi) {
-				m.EXPECT().
-					DescribeServices(gomock.Any()).Times(0)
-			},
-		},
 		"error if services are not in the same cluster": {
 			inArns: []string{"arn:aws:ecs:us-west-2:1234567890:service/cluster1/svc1", "arn:aws:ecs:us-west-2:1234567890:service/cluster2/svc2"},
 			mockECSClient: func(m *mocks.Mockapi) {
