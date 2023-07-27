@@ -78,3 +78,18 @@ func (mr *MockapiMockRecorder) DescribeSecret(input interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeSecret", reflect.TypeOf((*Mockapi)(nil).DescribeSecret), input)
 }
+
+// GetSecretValue mocks base method.
+func (m *Mockapi) GetSecretValue(input *secretsmanager.GetSecretValueInput) (*secretsmanager.GetSecretValueOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetSecretValue", input)
+	ret0, _ := ret[0].(*secretsmanager.GetSecretValueOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetSecretValue indicates an expected call of GetSecretValue.
+func (mr *MockapiMockRecorder) GetSecretValue(input interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSecretValue", reflect.TypeOf((*Mockapi)(nil).GetSecretValue), input)
+}

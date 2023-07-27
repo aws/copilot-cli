@@ -15,10 +15,14 @@ import (
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
 )
 
+// Namespace represents the AWS Secrets Manager service namespace.
+const Namespace = "secretsmanager"
+
 type api interface {
 	CreateSecret(*secretsmanager.CreateSecretInput) (*secretsmanager.CreateSecretOutput, error)
 	DeleteSecret(*secretsmanager.DeleteSecretInput) (*secretsmanager.DeleteSecretOutput, error)
 	DescribeSecret(input *secretsmanager.DescribeSecretInput) (*secretsmanager.DescribeSecretOutput, error)
+	GetSecretValue(input *secretsmanager.GetSecretValueInput) (*secretsmanager.GetSecretValueOutput, error)
 }
 
 // SecretsManager wraps the AWS SecretManager client.
@@ -112,6 +116,18 @@ func (s *SecretsManager) DescribeSecret(secretName string) (*DescribeSecretOutpu
 		CreatedDate: resp.CreatedDate,
 		Tags:        resp.Tags,
 	}, nil
+}
+
+// GetSecretValue retrieves the value of a secret from AWS Secrets Manager.
+// It takes the name of the secret as input and returns the corresponding value as a string.
+func (s *SecretsManager) GetSecretValue(name string) (string, error) {
+	resp, err := s.secretsManager.GetSecretValue(&secretsmanager.GetSecretValueInput{
+		SecretId: aws.String(name),
+	})
+	if err != nil {
+		return "", fmt.Errorf("get secret %q from secrets manager: %w", name, err)
+	}
+	return aws.StringValue(resp.SecretString), nil
 }
 
 // ErrSecretAlreadyExists occurs if a secret with the same name already exists.

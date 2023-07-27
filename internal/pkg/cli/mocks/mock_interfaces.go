@@ -1684,6 +1684,59 @@ func (mr *MockrepositoryServiceMockRecorder) Login() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Login", reflect.TypeOf((*MockrepositoryService)(nil).Login))
 }
 
+// MockecsLocalClient is a mock of ecsLocalClient interface.
+type MockecsLocalClient struct {
+	ctrl     *gomock.Controller
+	recorder *MockecsLocalClientMockRecorder
+}
+
+// MockecsLocalClientMockRecorder is the mock recorder for MockecsLocalClient.
+type MockecsLocalClientMockRecorder struct {
+	mock *MockecsLocalClient
+}
+
+// NewMockecsLocalClient creates a new mock instance.
+func NewMockecsLocalClient(ctrl *gomock.Controller) *MockecsLocalClient {
+	mock := &MockecsLocalClient{ctrl: ctrl}
+	mock.recorder = &MockecsLocalClientMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockecsLocalClient) EXPECT() *MockecsLocalClientMockRecorder {
+	return m.recorder
+}
+
+// DecryptedSecrets mocks base method.
+func (m *MockecsLocalClient) DecryptedSecrets(secrets []*ecs.ContainerSecret) ([]ecs0.EnvVar, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DecryptedSecrets", secrets)
+	ret0, _ := ret[0].([]ecs0.EnvVar)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DecryptedSecrets indicates an expected call of DecryptedSecrets.
+func (mr *MockecsLocalClientMockRecorder) DecryptedSecrets(secrets interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DecryptedSecrets", reflect.TypeOf((*MockecsLocalClient)(nil).DecryptedSecrets), secrets)
+}
+
+// TaskDefinition mocks base method.
+func (m *MockecsLocalClient) TaskDefinition(app, env, svc string) (*ecs.TaskDefinition, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "TaskDefinition", app, env, svc)
+	ret0, _ := ret[0].(*ecs.TaskDefinition)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// TaskDefinition indicates an expected call of TaskDefinition.
+func (mr *MockecsLocalClientMockRecorder) TaskDefinition(app, env, svc interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TaskDefinition", reflect.TypeOf((*MockecsLocalClient)(nil).TaskDefinition), app, env, svc)
+}
+
 // MocklogEventsWriter is a mock of logEventsWriter interface.
 type MocklogEventsWriter struct {
 	ctrl     *gomock.Controller
