@@ -1499,14 +1499,8 @@ func (s SidecarConfig) validate() error {
 	return s.ImageOverride.validate()
 }
 func (s SidecarConfig) validateSideCarImageFields() error {
-	if s.Image.Basic == nil && s.Image.Advanced.isEmpty() {
-		return &errSidecarImageFieldMutualExclusive{
-			errFieldMutualExclusive: errFieldMutualExclusive{
-				firstField:  "build",
-				secondField: "location",
-			},
-			thirdField: "image",
-		}
+	if s.Image.Basic == nil && s.Image.Advanced.Location == nil && s.Image.Advanced.Build.isEmpty() {
+		return fmt.Errorf(`must specify one of image or image.build or image.location`)
 	}
 	if err := s.Image.Advanced.validate(); err != nil {
 		return fmt.Errorf(`validate "build": %w`, err)

@@ -2804,7 +2804,7 @@ func TestSidecarConfig_validate(t *testing.T) {
 	}{
 		"error if fail to validate image": {
 			config:            SidecarConfig{},
-			wantedErrorPrefix: `must specify one of "build" and "location" and "image"`,
+			wantedErrorPrefix: `must specify one of image or image.build or image.location`,
 		},
 		"error if fail to validate image build": {
 			config: SidecarConfig{

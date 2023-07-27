@@ -99,15 +99,6 @@ func (e *errFieldMutualExclusive) Error() string {
 	return fmt.Sprintf(`must specify one, not both, of "%s" and "%s"`, e.firstField, e.secondField)
 }
 
-type errSidecarImageFieldMutualExclusive struct {
-	errFieldMutualExclusive
-	thirdField string
-}
-
-func (e *errSidecarImageFieldMutualExclusive) Error() string {
-	return fmt.Sprintf(`must specify one of "%s" and "%s" and "%s"`, e.firstField, e.secondField, e.thirdField)
-}
-
 type errGracePeriodsInBothALBAndNLB struct {
 	errFieldMutualExclusive
 }

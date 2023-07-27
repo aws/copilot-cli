@@ -139,10 +139,6 @@ type ImageLocationOrBuild struct {
 	Location *string           `yaml:"location"` // Use an existing image instead.
 }
 
-func (i *ImageLocationOrBuild) isEmpty() bool {
-	return i.Location == nil && i.Build.isEmpty()
-}
-
 // DependsOn represents container dependency for a container.
 type DependsOn map[string]string
 
