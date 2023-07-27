@@ -16,6 +16,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/version"
 	"github.com/spf13/afero"
 
+	deploycfn "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
@@ -236,6 +237,8 @@ func (o *deployJobOpts) Execute() error {
 			return nil
 		}
 	}
+	var errStackDeletedOnInterrupt *deploycfn.ErrStackDeletedOnInterrupt
+	var errStackUpdateCanceledOnInterrupt *deploycfn.ErrStackUpdateCanceledOnInterrupt
 	if _, err = deployer.DeployWorkload(&deploy.DeployWorkloadInput{
 		StackRuntimeConfiguration: deploy.StackRuntimeConfiguration{
 			ImageDigests:       uploadOut.ImageDigests,
@@ -250,6 +253,13 @@ func (o *deployJobOpts) Execute() error {
 			DisableRollback: o.disableRollback,
 		},
 	}); err != nil {
+		if errors.As(err, &errStackDeletedOnInterrupt) {
+			return nil
+		}
+		if errors.As(err, &errStackUpdateCanceledOnInterrupt) {
+			log.Successf("Successfully rolled back service %s to the previous configuration.\n", color.HighlightUserInput(o.name))
+			return nil
+		}
 		if o.disableRollback {
 			stackName := stack.NameForWorkload(o.targetApp.Name, o.targetEnv.Name, o.name)
 			rollbackCmd := fmt.Sprintf("aws cloudformation rollback-stack --stack-name %s --role-arn %s", stackName, o.targetEnv.ExecutionRoleARN)

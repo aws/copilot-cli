@@ -137,7 +137,7 @@ Resources:
       EngineVersion: '5.7.mysql_aurora.2.07.1'
       {{- else}}
       Engine: 'aurora-postgresql'
-      EngineVersion: '10.12'
+      EngineVersion: '13.9' # LTS versions of PostgreSQL for Aurora Serverless v1 are v13.9 and v11.9
       {{- end}}
       EngineMode: serverless
       DBClusterParameterGroupName: {{- if .ParameterGroup}} {{.ParameterGroup}} {{- else}} !Ref {{logicalIDSafe .ClusterName}}DBClusterParameterGroup {{- end}}

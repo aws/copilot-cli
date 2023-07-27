@@ -33,6 +33,7 @@ type Double struct {
 	ErrorEventsFn               func(stackName string) ([]cfn.StackEvent, error)
 	ListStacksWithTagsFn        func(tags map[string]string) ([]cfn.StackDescription, error)
 	DescribeStackEventsFn       func(input *sdk.DescribeStackEventsInput) (*sdk.DescribeStackEventsOutput, error)
+	CancelUpdateStackFn         func(stackName string) error
 }
 
 // Create calls the stubbed function.
@@ -138,4 +139,9 @@ func (d *Double) ListStacksWithTags(tags map[string]string) ([]cfn.StackDescript
 // DescribeStackEvents calls the stubbed function.
 func (d *Double) DescribeStackEvents(input *sdk.DescribeStackEventsInput) (*sdk.DescribeStackEventsOutput, error) {
 	return d.DescribeStackEventsFn(input)
+}
+
+// CancelUpdateStack calls the stubbed function.
+func (d *Double) CancelUpdateStack(stackName string) error {
+	return d.CancelUpdateStackFn(stackName)
 }
