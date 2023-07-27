@@ -181,6 +181,11 @@ type repositoryService interface {
 	imageBuilderPusher
 }
 
+type ecsLocalClient interface {
+	TaskDefinition(app, env, svc string) (*awsecs.TaskDefinition, error)
+	DecryptedSecrets(secrets []*awsecs.ContainerSecret) ([]ecs.EnvVar, error)
+}
+
 type logEventsWriter interface {
 	WriteLogEvents(opts logging.WriteLogEventsOpts) error
 }
