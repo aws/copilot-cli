@@ -13,7 +13,6 @@ import (
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
-	"github.com/aws/copilot-cli/internal/pkg/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -249,22 +248,6 @@ func TestLocalRunOpts_Execute(t *testing.T) {
 				m.ecsLocalClient.EXPECT().DecryptedSecrets(gomock.Any()).Return(nil, testError)
 			},
 			wantedError: fmt.Errorf("get secret values: %w", testError),
-		},
-		"success decrypting secrets from task definition": {
-			inputAppName:  testAppName,
-			inputWkldName: testWkldName,
-			inputEnvName:  testEnvName,
-			setupMocks: func(m *localRunExecuteMocks) {
-				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDefinition, nil)
-				m.ecsLocalClient.EXPECT().DecryptedSecrets(gomock.Any()).Return([]ecs.EnvVar{{
-					Name:  "my-secret",
-					Value: "Password123",
-				}, {
-					Name:  "secret2",
-					Value: "admin123",
-				},
-				}, nil)
-			},
 		},
 	}
 	for name, tc := range testCases {

@@ -71,6 +71,15 @@ type BuildArguments struct {
 	Labels     map[string]string // Required. Set metadata for an image.
 }
 
+// RunOptions holds the options for running a Docker container.
+type RunOptions struct {
+	ImageURI       string            // Required. The image name to run.
+	Secrets        map[string]string // Optional. Secrets to pass to the container as environment variables.
+	EnvVars        map[string]string // Optional. Environment variables to pass to the container.
+	ContainerName  string            // Optional. The name for the container.
+	ContainerPorts map[int64]int64   // Optional. Contains host and container ports.
+}
+
 // GenerateDockerBuildArgs returns command line arguments to be passed to the Docker build command based on the provided BuildArguments.
 // Returns an error if no tags are provided for building an image.
 func (in *BuildArguments) GenerateDockerBuildArgs(c DockerCmdClient) ([]string, error) {
@@ -199,6 +208,66 @@ func (c DockerCmdClient) Push(ctx context.Context, uri string, w io.Writer, tags
 		return "", fmt.Errorf("parse the digest from the repo digest '%s'", repoDigest)
 	}
 	return parts[1], nil
+}
+
+// Run runs a Docker container with the sepcified options.
+func (c DockerCmdClient) Run(ctx context.Context, options *RunOptions) error {
+	args := []string{"run"}
+
+	//Add container name option.
+	if options.ContainerName != "" {
+		args = append(args, "--name", options.ContainerName)
+	}
+
+	// Add port mappings.
+	for hostPort, containerPort := range options.ContainerPorts {
+		args = append(args, "-p", fmt.Sprintf("%d:%d", hostPort, containerPort))
+	}
+
+	// Add network option if it's not a "pause" container.
+	if options.ContainerName != "pause" {
+		args = append(args, "--network", "container:pause")
+	}
+
+	//Add secrets as environment variables.
+	for key, value := range options.Secrets {
+		args = append(args, "-e", fmt.Sprintf("%s=%s", key, value))
+	}
+
+	//Add environment variables.
+	for key, value := range options.EnvVars {
+		args = append(args, "-e", fmt.Sprintf("%s=%s", key, value))
+	}
+
+	//Add the image name.
+	args = append(args, options.ImageURI)
+
+	//Add "sleep infinity" command for the "pause" container
+	if options.ContainerName == "pause" {
+		args = append(args, "sleep", "infinity")
+	}
+
+	//Execute the Docker run command.
+	if err := c.runner.RunWithContext(ctx, "docker", args); err != nil {
+		return fmt.Errorf("running container: %w", err)
+	}
+
+	return nil
+}
+
+// IsContainerRunning checks if a specific Docker container is running.
+func (c DockerCmdClient) IsContainerRunning(containerName string) (bool, error) {
+	buf := &bytes.Buffer{}
+	err := c.runner.Run("docker", []string{"ps", "-q", "-f", "name=" + containerName}, exec.Stdout(buf))
+	if err != nil {
+		return false, fmt.Errorf("run docker ps: %w", err)
+	}
+
+	output := strings.TrimSpace(buf.String())
+	if output == "" {
+		return false, nil // The container is not running.
+	}
+	return true, nil // The container is running.
 }
 
 // CheckDockerEngineRunning will run `docker info` command to check if the docker engine is running.

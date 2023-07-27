@@ -7521,6 +7521,57 @@ func (mr *MocktemplateDifferMockRecorder) DeployDiff(inTmpl interface{}) *gomock
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployDiff", reflect.TypeOf((*MocktemplateDiffer)(nil).DeployDiff), inTmpl)
 }
 
+// MockdockerEngineRunner is a mock of dockerEngineRunner interface.
+type MockdockerEngineRunner struct {
+	ctrl     *gomock.Controller
+	recorder *MockdockerEngineRunnerMockRecorder
+}
+
+// MockdockerEngineRunnerMockRecorder is the mock recorder for MockdockerEngineRunner.
+type MockdockerEngineRunnerMockRecorder struct {
+	mock *MockdockerEngineRunner
+}
+
+// NewMockdockerEngineRunner creates a new mock instance.
+func NewMockdockerEngineRunner(ctrl *gomock.Controller) *MockdockerEngineRunner {
+	mock := &MockdockerEngineRunner{ctrl: ctrl}
+	mock.recorder = &MockdockerEngineRunnerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockdockerEngineRunner) EXPECT() *MockdockerEngineRunnerMockRecorder {
+	return m.recorder
+}
+
+// CheckDockerEngineRunning mocks base method.
+func (m *MockdockerEngineRunner) CheckDockerEngineRunning() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CheckDockerEngineRunning")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CheckDockerEngineRunning indicates an expected call of CheckDockerEngineRunning.
+func (mr *MockdockerEngineRunnerMockRecorder) CheckDockerEngineRunning() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckDockerEngineRunning", reflect.TypeOf((*MockdockerEngineRunner)(nil).CheckDockerEngineRunning))
+}
+
+// Run mocks base method.
+func (m *MockdockerEngineRunner) Run(ctx context.Context, options *dockerengine.RunOptions) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Run", ctx, options)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Run indicates an expected call of Run.
+func (mr *MockdockerEngineRunnerMockRecorder) Run(ctx, options interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockdockerEngineRunner)(nil).Run), ctx, options)
+}
+
 // MockworkloadStackGenerator is a mock of workloadStackGenerator interface.
 type MockworkloadStackGenerator struct {
 	ctrl     *gomock.Controller

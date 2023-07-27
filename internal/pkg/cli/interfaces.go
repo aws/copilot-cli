@@ -692,6 +692,12 @@ type templateDiffer interface {
 	DeployDiff(inTmpl string) (string, error)
 }
 
+type dockerEngineRunner interface {
+	CheckDockerEngineRunning() error
+	Run(context.Context, *dockerengine.RunOptions) error
+	IsContainerRunning(string) (bool, error)
+}
+
 type workloadStackGenerator interface {
 	UploadArtifacts() (*clideploy.UploadArtifactsOutput, error)
 	GenerateCloudFormationTemplate(in *clideploy.GenerateCloudFormationTemplateInput) (
