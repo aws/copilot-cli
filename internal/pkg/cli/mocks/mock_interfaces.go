@@ -7558,18 +7558,33 @@ func (mr *MockdockerEngineRunnerMockRecorder) CheckDockerEngineRunning() *gomock
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckDockerEngineRunning", reflect.TypeOf((*MockdockerEngineRunner)(nil).CheckDockerEngineRunning))
 }
 
-// Run mocks base method.
-func (m *MockdockerEngineRunner) Run(ctx context.Context, options *dockerengine.RunOptions) error {
+// IsContainerRunning mocks base method.
+func (m *MockdockerEngineRunner) IsContainerRunning(arg0 string) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Run", ctx, options)
+	ret := m.ctrl.Call(m, "IsContainerRunning", arg0)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// IsContainerRunning indicates an expected call of IsContainerRunning.
+func (mr *MockdockerEngineRunnerMockRecorder) IsContainerRunning(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsContainerRunning", reflect.TypeOf((*MockdockerEngineRunner)(nil).IsContainerRunning), arg0)
+}
+
+// Run mocks base method.
+func (m *MockdockerEngineRunner) Run(arg0 context.Context, arg1 *dockerengine.RunOptions) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Run", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Run indicates an expected call of Run.
-func (mr *MockdockerEngineRunnerMockRecorder) Run(ctx, options interface{}) *gomock.Call {
+func (mr *MockdockerEngineRunnerMockRecorder) Run(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockdockerEngineRunner)(nil).Run), ctx, options)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockdockerEngineRunner)(nil).Run), arg0, arg1)
 }
 
 // MockworkloadStackGenerator is a mock of workloadStackGenerator interface.

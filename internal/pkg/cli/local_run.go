@@ -319,12 +319,10 @@ func (o *localRunOpts) runPauseContainer(containerPorts map[int64]int64) error {
 				errCh <- fmt.Errorf("check if pause container is running: %w", err)
 				return
 			}
-
 			if isRunning {
 				errCh <- nil
 				return
 			}
-
 			// If the container isn't running yet, sleep for a short duration before checking again.
 			time.Sleep(time.Second)
 		}
