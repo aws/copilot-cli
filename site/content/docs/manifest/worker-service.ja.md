@@ -361,7 +361,12 @@ deployment:
 
 {% include 'command.ja.md' %}
 
-{% include 'network.ja.md' %}
+<div class="separator"></div>
+
+<a id="network" href="#network" class="field">`network`</a> <span class="type">Map</span>      
+`network` セクションは VPC 内の AWS リソースに接続するための設定です。
+
+{% include 'network-common.ja.md' %}
 
 {% include 'envvars.ja.md' %}
 
