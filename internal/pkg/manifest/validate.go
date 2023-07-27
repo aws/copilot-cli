@@ -344,9 +344,9 @@ func (b BackendServiceConfig) validate() error {
 	if err = b.Network.validate(); err != nil {
 		return fmt.Errorf(`validate "network": %w`, err)
 	}
-	if b.Network.Connect.Alias != nil {
+	if b.Network.Connect.Enabled() {
 		if b.HTTP.Main.TargetContainer == nil && b.ImageConfig.Port == nil {
-			return fmt.Errorf(`cannot set "network.connect.alias" when no ports are exposed`)
+			return fmt.Errorf(`cannot set "network.connect" when no ports are exposed`)
 		}
 	}
 	if err = b.PublishConfig.validate(); err != nil {
@@ -464,8 +464,8 @@ func (w WorkerServiceConfig) validate() error {
 	if err = w.Network.validate(); err != nil {
 		return fmt.Errorf(`validate "network": %w`, err)
 	}
-	if w.Network.Connect.Alias != nil {
-		return fmt.Errorf(`cannot set "network.connect.alias" when no ports are exposed`)
+	if w.Network.Connect.Enabled() {
+		return fmt.Errorf(`cannot set "network.connect" for %q`, manifestinfo.WorkerServiceType)
 	}
 	if err = w.Subscribe.validate(); err != nil {
 		return fmt.Errorf(`validate "subscribe": %w`, err)

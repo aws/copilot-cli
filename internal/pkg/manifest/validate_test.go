@@ -778,7 +778,7 @@ func TestBackendService_validate(t *testing.T) {
 					Name: aws.String("api"),
 				},
 			},
-			wantedError: fmt.Errorf(`cannot set "network.connect.alias" when no ports are exposed`),
+			wantedError: fmt.Errorf(`cannot set "network.connect" when no ports are exposed`),
 		},
 	}
 	for name, tc := range testCases {
@@ -1145,15 +1145,13 @@ func TestWorkerService_validate(t *testing.T) {
 			},
 			wantedErrorMsgPrefix: `validate "deployment":`,
 		},
-		"error if service connect is enabled without any port exposed": {
+		"error if service connect is enabled": {
 			config: WorkerService{
 				WorkerServiceConfig: WorkerServiceConfig{
 					ImageConfig: testImageConfig,
 					Network: NetworkConfig{
 						Connect: ServiceConnectBoolOrArgs{
-							ServiceConnectArgs: ServiceConnectArgs{
-								Alias: aws.String("some alias"),
-							},
+							EnableServiceConnect: aws.Bool(true),
 						},
 					},
 				},
@@ -1161,7 +1159,7 @@ func TestWorkerService_validate(t *testing.T) {
 					Name: aws.String("api"),
 				},
 			},
-			wantedError: fmt.Errorf(`cannot set "network.connect.alias" when no ports are exposed`),
+			wantedError: fmt.Errorf(`cannot set "network.connect" for "Worker Service"`),
 		},
 	}
 	for name, tc := range testCases {

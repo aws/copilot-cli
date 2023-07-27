@@ -371,7 +371,12 @@ deployment:
 
 {% include 'command.en.md' %}
 
-{% include 'network.en.md' %}
+<div class="separator"></div>
+
+<a id="network" href="#network" class="field">`network`</a> <span class="type">Map</span>      
+The `network` section contains parameters for connecting to AWS resources in a VPC.
+
+{% include 'network-common.en.md' %}
 
 {% include 'envvars.en.md' %}
 
