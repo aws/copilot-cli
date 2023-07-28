@@ -16,9 +16,13 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm"
 )
 
+// Namespace represents the AWS Systems Manager(SSM) service namespace.
+const Namespace = "ssm"
+
 type api interface {
 	PutParameter(input *ssm.PutParameterInput) (*ssm.PutParameterOutput, error)
 	AddTagsToResource(input *ssm.AddTagsToResourceInput) (*ssm.AddTagsToResourceOutput, error)
+	GetParameter(input *ssm.GetParameterInput) (*ssm.GetParameterOutput, error)
 }
 
 // SSM wraps an AWS SSM client.
@@ -59,6 +63,19 @@ func (s *SSM) PutSecret(in PutSecretInput) (*PutSecretOutput, error) {
 		return s.overwriteSecret(in)
 	}
 	return nil, err
+}
+
+// GetSecretValue retrieves the value of a parameter from AWS Systems Manager Parameter Store.
+// It takes the name of the parameter as input and returns the corresponding value as a string.
+func (s *SSM) GetSecretValue(name string) (string, error) {
+	resp, err := s.client.GetParameter(&ssm.GetParameterInput{
+		Name:           aws.String(name),
+		WithDecryption: aws.Bool(true),
+	})
+	if err != nil {
+		return "", fmt.Errorf("get parameter %q from SSM: %w", name, err)
+	}
+	return aws.StringValue(resp.Parameter.Value), nil
 }
 
 func (s *SSM) createSecret(in PutSecretInput) (*PutSecretOutput, error) {

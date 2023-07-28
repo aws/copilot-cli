@@ -1,7 +1,7 @@
 <span class="parent-field">http.additional_rules.</span><a id="http-additional-rules-path" href="#http-additional-rules-path" class="field">`path`</a> <span class="type">String</span>  
     Requests to this path will be forwarded to your service. Each listener rule should listen on a unique path.
     
-    {% include 'http-additionalrules-healthcheck.en.md' %}
+{% include 'http-additionalrules-healthcheck.en.md' %}
     
 <span class="parent-field">http.additional_rules.</span><a id="http-additional-rules-deregistration-delay" href="#http-additional-rules-deregistration-delay" class="field">`deregistration_delay`</a> <span class="type">Duration</span>  
     The amount of time to wait for targets to drain connections during deregistration. The default is 60s. Setting this to a larger value gives targets more time to gracefully drain connections, but increases the time required for new deployments. Range 0s-3600s.

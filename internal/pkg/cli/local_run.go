@@ -7,11 +7,13 @@ import (
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/spf13/cobra"
@@ -29,8 +31,10 @@ type localRunVars struct {
 type localRunOpts struct {
 	localRunVars
 
-	sel   deploySelector
-	store store
+	sel            deploySelector
+	ecsLocalClient ecsLocalClient
+	sess           *session.Session
+	store          store
 }
 
 func newLocalRunOpts(vars localRunVars) (*localRunOpts, error) {
@@ -46,9 +50,11 @@ func newLocalRunOpts(vars localRunVars) (*localRunOpts, error) {
 		return nil, err
 	}
 	opts := &localRunOpts{
-		localRunVars: vars,
-		sel:          selector.NewDeploySelect(prompt.New(), store, deployStore),
-		store:        store,
+		localRunVars:   vars,
+		sel:            selector.NewDeploySelect(prompt.New(), store, deployStore),
+		store:          store,
+		ecsLocalClient: ecs.New(defaultSess),
+		sess:           defaultSess,
 	}
 	return opts, nil
 }
@@ -94,7 +100,16 @@ func (o *localRunOpts) validateAndAskWkldEnvName() error {
 
 // Execute builds and runs the workload images locally.
 func (o *localRunOpts) Execute() error {
-	//TODO(varun359): Get build information from the manifest and task definition for workloads
+	taskDef, err := o.ecsLocalClient.TaskDefinition(o.appName, o.envName, o.wkldName)
+	if err != nil {
+		return fmt.Errorf("get task definition: %w", err)
+	}
+
+	secrets := taskDef.Secrets()
+	_, err = o.ecsLocalClient.DecryptedSecrets(secrets)
+	if err != nil {
+		return fmt.Errorf("get secret values: %w", err)
+	}
 
 	return nil
 }
