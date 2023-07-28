@@ -8,8 +8,12 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/aws/aws-sdk-go/aws"
+	ecsapi "github.com/aws/aws-sdk-go/service/ecs"
+	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -181,6 +185,112 @@ func TestLocalRunOpts_Ask(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, tc.wantedWkldName, opts.wkldName)
 				require.Equal(t, tc.wantedEnvName, opts.envName)
+			} else {
+				require.EqualError(t, err, tc.wantedError.Error())
+			}
+		})
+	}
+}
+
+type localRunExecuteMocks struct {
+	ecsLocalClient *mocks.MockecsLocalClient
+}
+
+func TestLocalRunOpts_Execute(t *testing.T) {
+	const (
+		testAppName  = "testApp"
+		testEnvName  = "testEnv"
+		testWkldName = "testWkld"
+		testWkldType = "testWkldType"
+	)
+	var taskDefinition = &awsecs.TaskDefinition{
+		ContainerDefinitions: []*ecsapi.ContainerDefinition{
+			{
+				Name: aws.String("container"),
+				Environment: []*ecsapi.KeyValuePair{
+					{
+						Name:  aws.String("COPILOT_SERVICE_NAME"),
+						Value: aws.String("testWkld"),
+					},
+					{
+						Name:  aws.String("COPILOT_ENVIRONMENT_NAME"),
+						Value: aws.String("testEnv"),
+					},
+				},
+			},
+		},
+	}
+	testCases := map[string]struct {
+		inputAppName  string
+		inputEnvName  string
+		inputWkldName string
+
+		setupMocks     func(m *localRunExecuteMocks)
+		wantedWkldName string
+		wantedEnvName  string
+		wantedWkldType string
+		wantedError    error
+	}{
+		"error getting the task Definition": {
+			inputAppName:  testAppName,
+			inputWkldName: testWkldName,
+			inputEnvName:  testEnvName,
+			setupMocks: func(m *localRunExecuteMocks) {
+				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(nil, testError)
+			},
+			wantedError: fmt.Errorf("get task definition: %w", testError),
+		},
+		"error decryting secrets from task definition": {
+			inputAppName:  testAppName,
+			inputWkldName: testWkldName,
+			inputEnvName:  testEnvName,
+			setupMocks: func(m *localRunExecuteMocks) {
+				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDefinition, nil)
+				m.ecsLocalClient.EXPECT().DecryptedSecrets(gomock.Any()).Return(nil, testError)
+			},
+			wantedError: fmt.Errorf("get secret values: %w", testError),
+		},
+		"success decrypting secrets from task definition": {
+			inputAppName:  testAppName,
+			inputWkldName: testWkldName,
+			inputEnvName:  testEnvName,
+			setupMocks: func(m *localRunExecuteMocks) {
+				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDefinition, nil)
+				m.ecsLocalClient.EXPECT().DecryptedSecrets(gomock.Any()).Return([]ecs.EnvVar{{
+					Name:  "my-secret",
+					Value: "Password123",
+				}, {
+					Name:  "secret2",
+					Value: "admin123",
+				},
+				}, nil)
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			m := &localRunExecuteMocks{
+				ecsLocalClient: mocks.NewMockecsLocalClient(ctrl),
+			}
+			tc.setupMocks(m)
+			opts := localRunOpts{
+				localRunVars: localRunVars{
+					appName:  tc.inputAppName,
+					wkldName: tc.inputWkldName,
+					envName:  tc.inputEnvName,
+				},
+				ecsLocalClient: m.ecsLocalClient,
+			}
+
+			// WHEN
+			err := opts.Execute()
+
+			// THEN
+			if tc.wantedError == nil {
+				require.NoError(t, err)
 			} else {
 				require.EqualError(t, err, tc.wantedError.Error())
 			}
