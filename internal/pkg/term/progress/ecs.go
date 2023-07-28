@@ -6,10 +6,11 @@ package progress
 import (
 	"bytes"
 	"fmt"
-	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatch"
 	"io"
 	"strconv"
 	"sync"
+
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatch"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/stream"
@@ -192,9 +193,7 @@ func reverseStrings(arr []string) []string {
 
 // parseServiceARN returns the cluster name and service name from a service ARN.
 func parseServiceARN(arn string) (cluster, service string) {
-	parsed := ecs.ServiceArn(arn)
+	parsed, _ := ecs.ParseServiceArn(arn)
 	// Errors can't happen on valid ARNs.
-	cluster, _ = parsed.ClusterName()
-	service, _ = parsed.ServiceName()
-	return cluster, service
+	return parsed.ClusterName(), parsed.ServiceName()
 }
