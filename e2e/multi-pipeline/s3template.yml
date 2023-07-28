@@ -22,6 +22,8 @@ Resources:
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
         BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
 
   e2epipelineaddonBucketPolicy:
     Metadata:

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -104,6 +105,10 @@ func testDeployWorkload_OnPushToS3Failure(t *testing.T, when func(cf CloudFormat
 	client := CloudFormation{
 		s3Client: mS3Client,
 		console:  mockFileWriter{Writer: buf},
+		notifySignals: func() chan os.Signal {
+			sigCh := make(chan os.Signal, 1)
+			return sigCh
+		},
 	}
 
 	// WHEN
@@ -124,7 +129,12 @@ func testDeployWorkload_OnCreateChangeSetFailure(t *testing.T, when func(cf Clou
 	m.EXPECT().Create(gomock.Any()).Return("", wantedErr)
 	m.EXPECT().ErrorEvents(gomock.Any()).Return(nil, nil)
 	buf := new(strings.Builder)
-	client := CloudFormation{cfnClient: m, s3Client: mS3Client, console: mockFileWriter{Writer: buf}}
+	client := CloudFormation{cfnClient: m, s3Client: mS3Client, console: mockFileWriter{Writer: buf},
+		notifySignals: func() chan os.Signal {
+			sigCh := make(chan os.Signal, 1)
+			return sigCh
+		},
+	}
 
 	// WHEN
 	err := when(client)
@@ -145,7 +155,12 @@ func testDeployWorkload_OnUpdateChangeSetFailure(t *testing.T, when func(cf Clou
 	m.EXPECT().Update(gomock.Any()).Return("", wantedErr)
 	m.EXPECT().ErrorEvents(gomock.Any()).Return(nil, nil)
 	buf := new(strings.Builder)
-	client := CloudFormation{cfnClient: m, s3Client: mS3Client, console: mockFileWriter{Writer: buf}}
+	client := CloudFormation{cfnClient: m, s3Client: mS3Client, console: mockFileWriter{Writer: buf},
+		notifySignals: func() chan os.Signal {
+			sigCh := make(chan os.Signal, 1)
+			return sigCh
+		},
+	}
 
 	// WHEN
 	err := when(client)
@@ -164,8 +179,12 @@ func testDeployWorkload_OnDescribeChangeSetFailure(t *testing.T, when func(cf Cl
 	m.EXPECT().Create(gomock.Any()).Return("1234", nil)
 	m.EXPECT().DescribeChangeSet(gomock.Any(), gomock.Any()).Return(nil, errors.New("DescribeChangeSet error"))
 	buf := new(strings.Builder)
-	client := CloudFormation{cfnClient: m, s3Client: mS3Client, console: mockFileWriter{Writer: buf}}
-
+	client := CloudFormation{cfnClient: m, s3Client: mS3Client, console: mockFileWriter{Writer: buf},
+		notifySignals: func() chan os.Signal {
+			sigCh := make(chan os.Signal, 1)
+			return sigCh
+		},
+	}
 	// WHEN
 	err := when(client)
 
@@ -184,7 +203,12 @@ func testDeployWorkload_OnTemplateBodyFailure(t *testing.T, when func(cf CloudFo
 	m.EXPECT().DescribeChangeSet(gomock.Any(), gomock.Any()).Return(&cloudformation.ChangeSetDescription{}, nil)
 	m.EXPECT().TemplateBodyFromChangeSet(gomock.Any(), gomock.Any()).Return("", errors.New("TemplateBody error"))
 	buf := new(strings.Builder)
-	client := CloudFormation{cfnClient: m, s3Client: mS3Client, console: mockFileWriter{Writer: buf}}
+	client := CloudFormation{cfnClient: m, s3Client: mS3Client, console: mockFileWriter{Writer: buf},
+		notifySignals: func() chan os.Signal {
+			sigCh := make(chan os.Signal, 1)
+			return sigCh
+		},
+	}
 
 	// WHEN
 	err := when(client)
@@ -206,8 +230,12 @@ func testDeployWorkload_StackStreamerFailureShouldCancelRenderer(t *testing.T, w
 	m.EXPECT().TemplateBodyFromChangeSet(gomock.Any(), gomock.Any()).Return("", nil)
 	m.EXPECT().DescribeStackEvents(gomock.Any()).Return(nil, wantedErr)
 	buf := new(strings.Builder)
-	client := CloudFormation{cfnClient: m, s3Client: mS3Client, console: mockFileWriter{Writer: buf}}
-
+	client := CloudFormation{cfnClient: m, s3Client: mS3Client, console: mockFileWriter{Writer: buf},
+		notifySignals: func() chan os.Signal {
+			sigCh := make(chan os.Signal, 1)
+			return sigCh
+		},
+	}
 	// WHEN
 	err := when(client)
 
@@ -250,7 +278,12 @@ func testDeployWorkload_StreamUntilStackCreationFails(t *testing.T, stackName st
 			},
 		}, nil)
 	buf := new(strings.Builder)
-	client := CloudFormation{cfnClient: m, s3Client: mS3Client, console: mockFileWriter{Writer: buf}}
+	client := CloudFormation{cfnClient: m, s3Client: mS3Client, console: mockFileWriter{Writer: buf},
+		notifySignals: func() chan os.Signal {
+			sigCh := make(chan os.Signal, 1)
+			return sigCh
+		},
+	}
 
 	// WHEN
 	err := when(client)
@@ -330,7 +363,12 @@ Resources:
 		StackStatus: aws.String("CREATE_COMPLETE"),
 	}, nil)
 	buf := new(strings.Builder)
-	client := CloudFormation{cfnClient: mockCFN, ecsClient: mockECS, s3Client: mS3Client, console: mockFileWriter{Writer: buf}}
+	client := CloudFormation{cfnClient: mockCFN, ecsClient: mockECS, s3Client: mS3Client, console: mockFileWriter{Writer: buf},
+		notifySignals: func() chan os.Signal {
+			sigCh := make(chan os.Signal, 1)
+			return sigCh
+		},
+	}
 
 	// WHEN
 	err := when(client)
@@ -410,7 +448,12 @@ Resources:
 		StackStatus: aws.String("CREATE_COMPLETE"),
 	}, nil)
 	buf := new(strings.Builder)
-	client := CloudFormation{cfnClient: mockCFN, s3Client: mS3Client, console: mockFileWriter{Writer: buf}}
+	client := CloudFormation{cfnClient: mockCFN, s3Client: mS3Client, console: mockFileWriter{Writer: buf},
+		notifySignals: func() chan os.Signal {
+			sigCh := make(chan os.Signal, 1)
+			return sigCh
+		},
+	}
 
 	// WHEN
 	err := when(client)
@@ -531,7 +574,12 @@ Resources:
 		},
 	}, nil).AnyTimes()
 	buf := new(strings.Builder)
-	client := CloudFormation{cfnClient: m, s3Client: mS3Client, console: mockFileWriter{Writer: buf}}
+	client := CloudFormation{cfnClient: m, s3Client: mS3Client, console: mockFileWriter{Writer: buf},
+		notifySignals: func() chan os.Signal {
+			sigCh := make(chan os.Signal, 1)
+			return sigCh
+		},
+	}
 
 	// WHEN
 	err := when(client)

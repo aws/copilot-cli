@@ -6,8 +6,9 @@ package cli
 import (
 	"errors"
 	"fmt"
-	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"testing"
+
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/resourcegroupstaggingapi"
@@ -353,7 +354,7 @@ Resources:
 				store := mocks.NewMockenvironmentStore(ctrl)
 				store.EXPECT().ListEnvironments("phonetool").Return([]*config.Environment{
 					&mockEnv,
-					&config.Environment{
+					{
 						Name:      "prod",
 						Region:    "us-west-2",
 						AccountID: "5678",
@@ -431,7 +432,7 @@ Resources:
 				store := mocks.NewMockenvironmentStore(ctrl)
 				store.EXPECT().ListEnvironments("phonetool").Return([]*config.Environment{
 					&mockEnv,
-					&config.Environment{
+					{
 						Name:      "prod",
 						Region:    "us-west-2",
 						AccountID: "5678",
