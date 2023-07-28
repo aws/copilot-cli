@@ -7,6 +7,7 @@ package selector
 import (
 	"errors"
 	"fmt"
+	"github.com/dustin/go-humanize/english"
 	"sort"
 	"strings"
 
@@ -756,24 +757,76 @@ func (s *LocalWorkloadSelector) Service(msg, help string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("retrieve services from workspace: %w", err)
 	}
-	storeServiceNames, err := s.ConfigSelector.workloadLister.ListServices(summary.Application)
+	storeServices, err := s.ConfigSelector.workloadLister.ListServices(summary.Application)
 	if err != nil {
 		return "", fmt.Errorf("retrieve services from store: %w", err)
 	}
-	serviceNames := filterWlsByName(storeServiceNames, wsServiceNames)
-	if len(serviceNames) == 0 {
-		return "", errors.New("no services found")
+	storeServiceNames := make([]string, len(storeServices))
+	for i := range storeServices {
+		storeServiceNames[i] = storeServices[i].Name
 	}
-	if len(serviceNames) == 1 {
-		log.Infof("Only found one service, defaulting to: %s\n", color.HighlightUserInput(serviceNames[0]))
-		return serviceNames[0], nil
+	options, err := s.generateOptions(storeServiceNames, wsServiceNames, svcWorkloadType)
+	if err != nil {
+		return "", err
 	}
 
-	selectedServiceName, err := s.prompt.SelectOne(msg, help, serviceNames, prompt.WithFinalMessage(svcNameFinalMsg))
+	if len(options) == 1 {
+		log.Infof("Only found one service, defaulting to: %s\n", color.HighlightUserInput(options[0].Value))
+		return options[0].Value, nil
+	}
+	selectedSvcName, err := s.prompt.SelectOption(msg, help, options, prompt.WithFinalMessage(workloadFinalMsg))
 	if err != nil {
 		return "", fmt.Errorf("select service: %w", err)
 	}
-	return selectedServiceName, nil
+	return selectedSvcName, nil
+}
+
+func (s *LocalWorkloadSelector) generateOptions(storeWls, wsWlNames []string, workloadType string) ([]prompt.Option, error) {
+	var pluralNounString string
+	switch workloadType {
+	case anyWorkloadType:
+		pluralNounString = "jobs or services"
+	case svcWorkloadType:
+		fallthrough
+	case jobWorkloadType:
+		pluralNounString = english.PluralWord(2, workloadType, "")
+	default:
+		return nil, fmt.Errorf("unrecognized workload type %q", workloadType)
+	}
+	var options []prompt.Option
+	if s.localWorkloadsOnly {
+		if len(wsWlNames) == 0 {
+			return nil, fmt.Errorf("no %s found in workspace", pluralNounString)
+		}
+		// Get the list of initialized workloads that are present in the workspace
+		initializedLocalWorkloads := filterStrings(storeWls, wsWlNames)
+		// Get the list of un-initialized workloads that are present in the workspace.
+		unInitializedLocalWorkloads := filterOutStrings(wsWlNames, initializedLocalWorkloads)
+		// Create the list of options (initialized workloads first, then un-initialized workloads with annotation.
+		for _, wl := range initializedLocalWorkloads {
+			options = append(options, prompt.Option{
+				Value:        wl,
+				FriendlyText: "",
+				Hint:         "",
+			})
+		}
+		for _, wl := range unInitializedLocalWorkloads {
+			options = append(options, prompt.Option{
+				Value: wl,
+				Hint:  "un-initialized",
+			})
+		}
+	} else {
+		// Logic for local workloads which are already initialized
+		wlNames := filterStrings(storeWls, wsWlNames)
+		if len(wlNames) == 0 {
+			return nil, fmt.Errorf("no %s found", pluralNounString)
+		}
+		for _, wl := range wlNames {
+			options = append(options, prompt.Option{Value: wl})
+		}
+	}
+	return options, nil
 }
 
 // Job fetches all jobs in the workspace and then prompts the user to select one.
@@ -786,33 +839,43 @@ func (s *LocalWorkloadSelector) Job(msg, help string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("retrieve jobs from workspace: %w", err)
 	}
-	storeJobNames, err := s.ConfigSelector.workloadLister.ListJobs(summary.Application)
+	storeJobs, err := s.ConfigSelector.workloadLister.ListJobs(summary.Application)
 	if err != nil {
 		return "", fmt.Errorf("retrieve jobs from store: %w", err)
 	}
-	jobNames := filterWlsByName(storeJobNames, wsJobNames)
-	if len(jobNames) == 0 {
-		return "", errors.New("no jobs found")
+	storeJobNames := make([]string, len(storeJobs))
+	for i := range storeJobs {
+		storeJobNames[i] = storeJobs[i].Name
 	}
-	if len(jobNames) == 1 {
-		log.Infof("Only found one job, defaulting to: %s\n", color.HighlightUserInput(jobNames[0]))
-		return jobNames[0], nil
+	options, err := s.generateOptions(storeJobNames, wsJobNames, jobWorkloadType)
+	if err != nil {
+		return "", err
 	}
 
-	selectedJobName, err := s.prompt.SelectOne(msg, help, jobNames, prompt.WithFinalMessage(jobNameFinalMsg))
+	if len(options) == 1 {
+		log.Infof("Only found one workload, defaulting to: %s\n", color.HighlightUserInput(options[0].Value))
+		return options[0].Value, nil
+	}
+	selectedJobName, err := s.prompt.SelectOption(msg, help, options, prompt.WithFinalMessage(workloadFinalMsg))
 	if err != nil {
 		return "", fmt.Errorf("select job: %w", err)
 	}
 	return selectedJobName, nil
+
 }
 
+// SelectOption represents an option for customizing LocalWorkloadSelector's behavior.
 type SelectOption func(selector *LocalWorkloadSelector)
 
+// LocalWorkloadsOnly modifies LocalWorkloadSelector to show ALL workloads in the workspace,
+// regardless of whether they exist in the config store.
 var LocalWorkloadsOnly SelectOption = func(s *LocalWorkloadSelector) {
 	s.localWorkloadsOnly = true
 }
 
-// Workload fetches all jobs and services in an app and prompts the user to select one.
+// Workload fetches all jobs and services in a workspace and prompts the user to select one.
+// It can optionally select only initialized workloads which exist in the app (default behavior)
+// or
 func (s *LocalWorkloadSelector) Workload(msg, help string) (wl string, err error) {
 	summary, err := s.ws.Summary()
 	if err != nil {
@@ -869,6 +932,21 @@ func (s *LocalWorkloadSelector) Workload(msg, help string) (wl string, err error
 		return "", fmt.Errorf("select workload: %w", err)
 	}
 	return selectedWlName, nil
+}
+
+func filterStrings(allStrings []string, wantedStrings []string) []string {
+	isWanted := make(map[string]bool)
+	for _, name := range wantedStrings {
+		isWanted[name] = true
+	}
+	var filtered []string
+	for _, wl := range allStrings {
+		if _, ok := isWanted[wl]; !ok {
+			continue
+		}
+		filtered = append(filtered, wl)
+	}
+	return filtered
 }
 
 func filterOutStrings(allStrings []string, unwantedStrings []string) []string {
@@ -932,18 +1010,11 @@ func filterEnvsByName(envs []*config.Environment, wantedNames []string) []string
 }
 
 func filterWlsByName(wls []*config.Workload, wantedNames []string) []string {
-	isWanted := make(map[string]bool)
-	for _, name := range wantedNames {
-		isWanted[name] = true
+	stringWls := make([]string, len(wls))
+	for i := range wls {
+		stringWls[i] = wls[i].Name
 	}
-	var filtered []string
-	for _, wl := range wls {
-		if _, ok := isWanted[wl.Name]; !ok {
-			continue
-		}
-		filtered = append(filtered, wl.Name)
-	}
-	return filtered
+	return filterStrings(stringWls, wantedNames)
 }
 
 // WsPipeline fetches all the pipelines in a workspace and prompts the user to select one.
