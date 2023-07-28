@@ -34,8 +34,13 @@ const (
 	jobWkldType = "job"
 )
 
-type deployOpts struct {
+type deployVars struct {
 	deployWkldVars
+	yesInitWkld bool
+}
+
+type deployOpts struct {
+	deployVars
 
 	deployWkld     actionCommand
 	setupDeployCmd func(*deployOpts, string)
@@ -49,7 +54,7 @@ type deployOpts struct {
 	wlType string
 }
 
-func newDeployOpts(vars deployWkldVars) (*deployOpts, error) {
+func newDeployOpts(vars deployVars) (*deployOpts, error) {
 	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("deploy"))
 	defaultSess, err := sessProvider.Default()
 	if err != nil {
@@ -62,11 +67,11 @@ func newDeployOpts(vars deployWkldVars) (*deployOpts, error) {
 	}
 	prompter := prompt.New()
 	return &deployOpts{
-		deployWkldVars: vars,
-		store:          store,
-		sel:            selector.NewLocalWorkloadSelector(prompter, store, ws),
-		ws:             ws,
-		prompt:         prompter,
+		deployVars: vars,
+		store:      store,
+		sel:        selector.NewLocalWorkloadSelector(prompter, store, ws),
+		ws:         ws,
+		prompt:     prompter,
 
 		setupDeployCmd: func(o *deployOpts, workloadType string) {
 			switch {
@@ -167,7 +172,7 @@ func (o *deployOpts) loadWkldCmd() error {
 
 // BuildDeployCmd is the deploy command.
 func BuildDeployCmd() *cobra.Command {
-	vars := deployWkldVars{}
+	vars := deployVars{}
 	cmd := &cobra.Command{
 		Use:   "deploy",
 		Short: "Deploy a Copilot job or service.",
@@ -196,6 +201,7 @@ func BuildDeployCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&vars.forceNewUpdate, forceFlag, false, forceFlagDescription)
 	cmd.Flags().BoolVar(&vars.disableRollback, noRollbackFlag, false, noRollbackFlagDescription)
 	cmd.Flags().BoolVar(&vars.allowWkldDowngrade, allowDowngradeFlag, false, allowDowngradeFlagDescription)
+	cmd.Flags().BoolVar(&vars.yesInitWkld, yesInitWorkloadFlag, false, yesInitWorkloadFlagDescription)
 
 	cmd.SetUsageTemplate(template.Usage)
 	cmd.Annotations = map[string]string{

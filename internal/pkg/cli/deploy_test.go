@@ -142,10 +142,13 @@ func TestDeployOpts_Run(t *testing.T) {
 			tc.mockSel(mockSel)
 			tc.mockActionCommand(mockCmd)
 			opts := &deployOpts{
-				deployWkldVars: deployWkldVars{
-					appName: tc.inAppName,
-					name:    tc.inName,
-					envName: "test",
+				deployVars: deployVars{
+					deployWkldVars: deployWkldVars{
+						appName: tc.inAppName,
+						name:    tc.inName,
+						envName: "test",
+					},
+					yesInitWkld: false,
 				},
 				deployWkld: mockCmd,
 				sel:        mockSel,

@@ -33,6 +33,10 @@ const (
 	manifestFlag       = "manifest"
 	resourceTagsFlag   = "resource-tags"
 
+	// Deploy flags.
+	yesInitWorkloadFlag = "yes-wkld"
+	yesInitEnvFlag      = "yes-env"
+
 	// Build flags.
 	dockerFileFlag        = "dockerfile"
 	dockerFileContextFlag = "build-context"
@@ -268,7 +272,9 @@ Not available with the "Static Site" service type.`
 rollback in case of deployment failure.
 We do not recommend using this flag for a
 production environment.`
-	forceEnvDeployFlagDescription = "Optional. Force update the environment stack template."
+	forceEnvDeployFlagDescription  = "Optional. Force update the environment stack template."
+	yesInitWorkloadFlagDescription = "Optional. Initialize a workload before deploying it."
+	yesInitEnvFlagDescription      = "Optional. Initialize an environment before deploying it."
 
 	// Operational.
 	jsonFlagDescription = "Optional. Output in JSON format."
