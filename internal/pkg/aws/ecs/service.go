@@ -117,38 +117,63 @@ func (s *Service) TargetGroups() []string {
 }
 
 // ServiceArn is the arn of an ECS service.
-type ServiceArn string
+type ServiceArn struct {
+	accountID   string
+	partition   string
+	region      string
+	name        string
+	clusterName string
+}
 
-// ClusterName returns the cluster name.
+// ParseServiceArn parses an arn into ServiceArn.
 // For example: arn:aws:ecs:us-west-2:1234567890:service/my-project-test-Cluster-9F7Y0RLP60R7/my-project-test-myService-JSOH5GYBFAIB
-// will return my-project-test-Cluster-9F7Y0RLP60R7
-func (s *ServiceArn) ClusterName() (string, error) {
-	serviceArn := string(*s)
-	parsedArn, err := arn.Parse(serviceArn)
+func ParseServiceArn(s string) (*ServiceArn, error) {
+	parsedArn, err := arn.Parse(s)
 	if err != nil {
-		return "", err
+		return nil, err
+	}
+	if parsedArn.Service != EndpointsID {
+		return nil, fmt.Errorf("expected an ECS arn, but got %q", s)
 	}
 	resources := strings.Split(parsedArn.Resource, "/")
 	if len(resources) != 3 {
-		return "", fmt.Errorf("cannot parse resource for ARN %s", serviceArn)
+		return nil, fmt.Errorf("cannot parse resource for ARN %q", s)
 	}
-	return resources[1], nil
+	if resources[0] != "service" {
+		return nil, fmt.Errorf("expect an ECS service: got %q", s)
+	}
+	return &ServiceArn{
+		accountID:   parsedArn.AccountID,
+		partition:   parsedArn.Partition,
+		region:      parsedArn.Region,
+		name:        resources[2],
+		clusterName: resources[1],
+	}, nil
+}
+
+func (s *ServiceArn) String() string {
+	return fmt.Sprintf("arn:%s:%s:%s:%s:service/%s/%s", s.partition, EndpointsID, s.region, s.accountID, s.clusterName, s.name)
+}
+
+// ClusterArn returns the cluster arn.
+// For example: arn:aws:ecs:us-west-2:1234567890:service/my-project-test-Cluster-9F7Y0RLP60R7/my-project-test-myService-JSOH5GYBFAIB
+// will return arn:aws:ecs:us-west-2:1234567890:cluster/my-project-test-Cluster-9F7Y0RLP60R7
+func (s *ServiceArn) ClusterArn() string {
+	return fmt.Sprintf("arn:%s:%s:%s:%s:cluster/%s", s.partition, EndpointsID, s.region, s.accountID, s.clusterName)
 }
 
 // ServiceName returns the service name.
 // For example: arn:aws:ecs:us-west-2:1234567890:service/my-project-test-Cluster-9F7Y0RLP60R7/my-project-test-myService-JSOH5GYBFAIB
 // will return my-project-test-myService-JSOH5GYBFAIB
-func (s *ServiceArn) ServiceName() (string, error) {
-	serviceArn := string(*s)
-	parsedArn, err := arn.Parse(serviceArn)
-	if err != nil {
-		return "", err
-	}
-	resources := strings.Split(parsedArn.Resource, "/")
-	if len(resources) != 3 {
-		return "", fmt.Errorf("cannot parse resource for ARN %s", serviceArn)
-	}
-	return resources[2], nil
+func (s *ServiceArn) ServiceName() string {
+	return s.name
+}
+
+// ClusterName returns the cluster name.
+// For example: arn:aws:ecs:us-west-2:1234567890:service/my-project-test-Cluster-9F7Y0RLP60R7/my-project-test-myService-JSOH5GYBFAIB
+// will return my-project-test-Cluster-9F7Y0RLP60R7
+func (s *ServiceArn) ClusterName() string {
+	return s.clusterName
 }
 
 // NetworkConfiguration holds service's NetworkConfiguration.
