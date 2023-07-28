@@ -1626,6 +1626,240 @@ func TestWorkspaceSelect_EnvironmentsInWorkspace(t *testing.T) {
 	}
 }
 
+func TestWorkspaceSelect_LocalOrConfigWorkload(t *testing.T) {
+	testCases := map[string]struct {
+		setupMocks              func(mocks workspaceSelectMocks)
+		wantErr                 error
+		want                    string
+		wantNeedsInitialization bool
+	}{
+		"with no workspace workloads and no store workloads": {
+			setupMocks: func(m workspaceSelectMocks) {
+				m.ws.EXPECT().Summary().Return(
+					&workspace.Summary{
+						Application: "app-name",
+					}, nil).Times(1)
+				m.ws.EXPECT().ListWorkloads().Return(
+					[]string{}, nil).Times(1)
+				m.configLister.EXPECT().ListWorkloads("app-name").Return(
+					[]*config.Workload{}, nil).Times(0)
+				m.prompt.EXPECT().SelectOption(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			wantErr: fmt.Errorf("no jobs or services found in workspace"),
+		},
+		"with one workspace service but no store services": {
+			setupMocks: func(m workspaceSelectMocks) {
+				m.ws.EXPECT().Summary().Return(
+					&workspace.Summary{
+						Application: "app-name",
+					}, nil)
+				m.ws.EXPECT().ListWorkloads().Return(
+					[]string{
+						"service1",
+					}, nil).
+					Times(1)
+				m.configLister.EXPECT().ListWorkloads("app-name").Return(
+					[]*config.Workload{}, nil).Times(1)
+				m.prompt.EXPECT().SelectOption(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			},
+			want:                    "service1",
+			wantNeedsInitialization: true,
+		},
+		"with one store service and one workspace service": {
+			setupMocks: func(m workspaceSelectMocks) {
+				m.ws.EXPECT().Summary().Return(
+					&workspace.Summary{
+						Application: "app-name",
+					}, nil)
+				m.ws.EXPECT().ListWorkloads().Return(
+					[]string{
+						"service1",
+					}, nil).
+					Times(1)
+				m.configLister.EXPECT().ListWorkloads("app-name").Return(
+					[]*config.Workload{
+						{
+							Name: "service1",
+						},
+					}, nil).Times(1)
+				m.prompt.EXPECT().SelectOption(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			},
+			want:                    "service1",
+			wantNeedsInitialization: false,
+		},
+		"multiple workloads, pick un-initialized": {
+			setupMocks: func(m workspaceSelectMocks) {
+				m.ws.EXPECT().Summary().Return(
+					&workspace.Summary{
+						Application: "app-name",
+					}, nil)
+				m.ws.EXPECT().ListWorkloads().Return(
+					[]string{
+						"service1",
+						"job2",
+						"worker",
+					}, nil).
+					Times(1)
+				m.configLister.EXPECT().ListWorkloads("app-name").Return(
+					[]*config.Workload{
+						{
+							Name: "service1",
+						},
+						{
+							Name: "job2",
+						},
+					}, nil).Times(1)
+				m.prompt.EXPECT().SelectOption(gomock.Any(), gomock.Any(), []prompt.Option{
+					{Value: "service1"},
+					{Value: "job2"},
+					{
+						Value: "worker",
+						Hint:  "un-initialized",
+					},
+				}, gomock.Any()).Return("worker", nil).Times(1)
+			},
+			want:                    "worker",
+			wantNeedsInitialization: true,
+		},
+		"multiple workloads, pick initialized": {
+			setupMocks: func(m workspaceSelectMocks) {
+				m.ws.EXPECT().Summary().Return(
+					&workspace.Summary{
+						Application: "app-name",
+					}, nil)
+				m.ws.EXPECT().ListWorkloads().Return(
+					[]string{
+						"service1",
+						"job2",
+						"worker",
+					}, nil).
+					Times(1)
+				m.configLister.EXPECT().ListWorkloads("app-name").Return(
+					[]*config.Workload{
+						{
+							Name: "service1",
+						},
+						{
+							Name: "job2",
+						},
+					}, nil).Times(1)
+				m.prompt.EXPECT().SelectOption(gomock.Any(), gomock.Any(), []prompt.Option{
+					{Value: "service1"},
+					{Value: "job2"},
+					{
+						Value: "worker",
+						Hint:  "un-initialized",
+					},
+				}, gomock.Any()).Return("service1", nil).Times(1)
+			},
+			want:                    "service1",
+			wantNeedsInitialization: false,
+		},
+		"fails getting summary": {
+			setupMocks: func(m workspaceSelectMocks) {
+				m.ws.EXPECT().Summary().Return(
+					nil, errors.New("some error")).Times(1)
+				m.ws.EXPECT().ListWorkloads().Times(0)
+				m.configLister.EXPECT().ListWorkloads(gomock.Any()).Times(0)
+				m.prompt.EXPECT().SelectOption(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			wantErr: errors.New("read workspace summary: some error"),
+		},
+		"fails retrieving ws workloads": {
+			setupMocks: func(m workspaceSelectMocks) {
+				m.ws.EXPECT().Summary().Return(
+					&workspace.Summary{Application: "my-app"}, nil).Times(1)
+				m.ws.EXPECT().ListWorkloads().Return(nil, errors.New("some error")).Times(1)
+				m.configLister.EXPECT().ListWorkloads(gomock.Any()).Times(0)
+				m.prompt.EXPECT().SelectOption(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			wantErr: errors.New("retrieve jobs and services from workspace: some error"),
+		},
+		"fails retrieving store workloads": {
+			setupMocks: func(m workspaceSelectMocks) {
+				m.ws.EXPECT().Summary().Return(
+					&workspace.Summary{Application: "my-app"}, nil).Times(1)
+				m.ws.EXPECT().ListWorkloads().Return([]string{"wkld"}, nil).Times(1)
+				m.configLister.EXPECT().ListWorkloads(gomock.Any()).Return(nil, errors.New("some error")).
+					Times(1)
+				m.prompt.EXPECT().SelectOption(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			wantErr: errors.New("retrieve jobs and services from store: some error"),
+		},
+		"fails selecting workload": {
+			setupMocks: func(m workspaceSelectMocks) {
+				m.ws.EXPECT().Summary().Return(
+					&workspace.Summary{
+						Application: "app-name",
+					}, nil)
+				m.ws.EXPECT().ListWorkloads().Return(
+					[]string{
+						"service1",
+						"job2",
+						"worker",
+					}, nil).
+					Times(1)
+				m.configLister.EXPECT().ListWorkloads("app-name").Return(
+					[]*config.Workload{
+						{
+							Name: "service1",
+						},
+						{
+							Name: "job2",
+						},
+					}, nil).Times(1)
+				m.prompt.EXPECT().SelectOption(gomock.Any(), gomock.Any(), []prompt.Option{
+					{Value: "service1"},
+					{Value: "job2"},
+					{
+						Value: "worker",
+						Hint:  "un-initialized",
+					},
+				}, gomock.Any()).Return("", errors.New("some error")).Times(1)
+			},
+			wantErr: errors.New("get workload: some error"),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockwsRetriever := mocks.NewMockworkspaceRetriever(ctrl)
+			MockconfigLister := mocks.NewMockconfigLister(ctrl)
+			mockprompt := mocks.NewMockPrompter(ctrl)
+			mocks := workspaceSelectMocks{
+				ws:           mockwsRetriever,
+				configLister: MockconfigLister,
+				prompt:       mockprompt,
+			}
+			tc.setupMocks(mocks)
+
+			sel := LocalWorkloadSelector{
+				ConfigSelector: &ConfigSelector{
+					AppEnvSelector: &AppEnvSelector{
+						prompt:       mockprompt,
+						appEnvLister: MockconfigLister,
+					},
+					workloadLister: MockconfigLister,
+				},
+				ws: mockwsRetriever,
+			}
+			got, gotNeedsInit, err := sel.LocalOrConfigWorkload("Select a workload", "Help text")
+			if tc.wantErr != nil {
+				require.EqualError(t, err, tc.wantErr.Error())
+			} else {
+				require.Equal(t, tc.want, got)
+				require.Equal(t, tc.wantNeedsInitialization, gotNeedsInit)
+			}
+		})
+	}
+}
+
 type configSelectMocks struct {
 	workloadLister *mocks.MockconfigLister
 	prompt         *mocks.MockPrompter
