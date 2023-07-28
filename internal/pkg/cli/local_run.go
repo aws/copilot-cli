@@ -52,13 +52,16 @@ type localRunOpts struct {
 
 	sel            deploySelector
 	ecsLocalClient ecsLocalClient
-	sessProvider   *sessions.Provider
+	sessProvider   sessionProvider
 	sess           *session.Session
+	targetEnv      *config.Environment
+	targetApp      *config.Application
 	store          store
 	ws             wsWlDirReader
 	cmd            execRunner
 	dockerEngine   dockerEngineRunner
 
+	configureClients   func(o *localRunOpts) (repositoryService, error)
 	labeledTermPrinter func(fw syncbuffer.FileWriter, bufs []*syncbuffer.LabeledSyncBuffer, opts ...syncbuffer.LabeledTermPrinterOption) clideploy.LabeledTermPrinter
 	unmarshal          func([]byte) (manifest.DynamicWorkload, error)
 	newInterpolator    func(app, env string) interpolator
@@ -102,6 +105,20 @@ func newLocalRunOpts(vars localRunVars) (*localRunOpts, error) {
 		cmd:                exec.NewCmd(),
 		dockerEngine:       dockerengine.New(exec.NewCmd()),
 		labeledTermPrinter: labeledTermPrinter,
+	}
+	opts.configureClients = func(o *localRunOpts) (repositoryService, error) {
+		defaultSessEnvRegion, err := o.sessProvider.DefaultWithRegion(o.targetEnv.Region)
+		if err != nil {
+			return nil, fmt.Errorf("create default session with region %s: %w", o.targetEnv.Region, err)
+		}
+		resources, err := cloudformation.New(o.sess, cloudformation.WithProgressTracker(os.Stderr)).GetAppResourcesByRegion(o.targetApp, o.targetEnv.Region)
+		if err != nil {
+			return nil, fmt.Errorf("get application %s resources from region %s: %w", o.appName, o.envName, err)
+		}
+		repoName := clideploy.RepoName(o.appName, o.wkldName)
+		repository := repository.NewWithURI(
+			ecr.New(defaultSessEnvRegion), repoName, resources.RepositoryURLs[o.wkldName])
+		return repository, nil
 	}
 	return opts, nil
 }
@@ -178,11 +195,13 @@ func (o *localRunOpts) Execute() error {
 	if err != nil {
 		return fmt.Errorf("get environment %q configuration: %w", o.envName, err)
 	}
+	o.targetEnv = env
 
 	app, err := o.store.GetApplication(o.appName)
 	if err != nil {
 		return fmt.Errorf("get application %q configuration: %w", o.appName, err)
 	}
+	o.targetApp = app
 
 	envSess, err := o.sessProvider.FromRole(env.ManagerRoleARN, env.Region)
 	if err != nil {
@@ -206,18 +225,10 @@ func (o *localRunOpts) Execute() error {
 		GitShortCommitTag: gitShortCommit,
 	}
 
-	defaultSessEnvRegion, err := o.sessProvider.DefaultWithRegion(env.Region)
+	repository, err := o.configureClients(o)
 	if err != nil {
-		return fmt.Errorf("create default session with region %s: %w", env.Region, err)
+		return err
 	}
-	resources, err := cloudformation.New(o.sess, cloudformation.WithProgressTracker(os.Stderr)).GetAppResourcesByRegion(app, env.Region)
-	if err != nil {
-		return fmt.Errorf("get application %s resources from region %s: %w", o.appName, o.envName, err)
-	}
-	repoName := clideploy.RepoName(o.appName, o.wkldName)
-	repository := repository.NewWithURI(
-		ecr.New(defaultSessEnvRegion), repoName, resources.RepositoryURLs[o.wkldName])
-
 	in := &clideploy.BuildImageArgs{
 		Name:               o.wkldName,
 		WorkspacePath:      o.ws.Path(),

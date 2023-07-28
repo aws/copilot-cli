@@ -170,6 +170,7 @@ type secretDeleter interface {
 
 type imageBuilderPusher interface {
 	BuildAndPush(ctx context.Context, args *dockerengine.BuildArguments, w io.Writer) (string, error)
+	Build(ctx context.Context, args *dockerengine.BuildArguments, w io.Writer) (string, error)
 }
 
 type repositoryLogin interface {
