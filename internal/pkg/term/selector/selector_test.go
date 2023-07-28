@@ -1830,6 +1830,28 @@ func TestWorkspaceSelect_Workload(t *testing.T) {
 	}
 }
 
+func TestSelectOption(t *testing.T) {
+	testCases := map[string]struct {
+		optionToTest   SelectOption
+		wantedSelector LocalWorkloadSelector
+	}{
+		"LocalWorkloadsOnly": {
+			optionToTest: LocalWorkloadsOnly,
+			wantedSelector: LocalWorkloadSelector{
+				localWorkloadsOnly: true,
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			sel := &LocalWorkloadSelector{}
+			tc.optionToTest(sel)
+
+			require.Equal(t, tc.wantedSelector, *sel)
+		})
+	}
+}
+
 type configSelectMocks struct {
 	workloadLister *mocks.MockconfigLister
 	prompt         *mocks.MockPrompter
