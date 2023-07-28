@@ -2790,7 +2790,7 @@ func TestSidecarConfig_validate(t *testing.T) {
 		},
 		"error if fail to validate image build": {
 			config: SidecarConfig{
-				Image: AdvancedToUnion[*string, ImageLocationOrBuild](ImageLocationOrBuild{
+				Image: AdvancedToUnion[*string](ImageLocationOrBuild{
 					Build: BuildArgsOrString{
 						BuildString: aws.String("mockDockerfile"),
 					},
