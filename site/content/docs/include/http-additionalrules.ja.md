@@ -2,7 +2,7 @@
     指定したパスに対するリクエストが、Service に転送されます。各リスナールールはユニークなパスで
     公開している必要があります。 
 
-    {% include 'http-additionalrules-healthcheck.ja.md' %}
+{% include 'http-additionalrules-healthcheck.ja.md' %}
     
 <span class="parent-field">http.additional_rules.</span><a id="http-additional-rules-deregistration-delay" href="#http-additional-rules-deregistration-delay" class="field">`deregistration_delay`</a> <span class="type">Duration</span> 
     登録解除時に、ターゲットがコネクションをドレイニングするのを待つ時間です。デフォルト値は 60 秒です。大きな値に設定すると、安全にコネクションをドレイニングするのに長い時間を使える様になりますが、新しいデプロイに必要な時間が増加します。設定可能な範囲は、0 秒 - 3600 秒です。
