@@ -1626,14 +1626,16 @@ func TestWorkspaceSelect_EnvironmentsInWorkspace(t *testing.T) {
 	}
 }
 
-func TestWorkspaceSelect_LocalOrConfigWorkload(t *testing.T) {
+func TestWorkspaceSelect_Workload(t *testing.T) {
 	testCases := map[string]struct {
-		setupMocks              func(mocks workspaceSelectMocks)
-		wantErr                 error
-		want                    string
-		wantNeedsInitialization bool
+		setupMocks           func(mocks workspaceSelectMocks)
+		inLocalWorkloadsOnly bool
+
+		wantErr error
+		want    string
 	}{
 		"with no workspace workloads and no store workloads": {
+			inLocalWorkloadsOnly: true,
 			setupMocks: func(m workspaceSelectMocks) {
 				m.ws.EXPECT().Summary().Return(
 					&workspace.Summary{
@@ -1642,13 +1644,14 @@ func TestWorkspaceSelect_LocalOrConfigWorkload(t *testing.T) {
 				m.ws.EXPECT().ListWorkloads().Return(
 					[]string{}, nil).Times(1)
 				m.configLister.EXPECT().ListWorkloads("app-name").Return(
-					[]*config.Workload{}, nil).Times(0)
+					[]*config.Workload{}, nil).Times(1)
 				m.prompt.EXPECT().SelectOption(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Times(0)
 			},
 			wantErr: fmt.Errorf("no jobs or services found in workspace"),
 		},
 		"with one workspace service but no store services": {
+			inLocalWorkloadsOnly: true,
 			setupMocks: func(m workspaceSelectMocks) {
 				m.ws.EXPECT().Summary().Return(
 					&workspace.Summary{
@@ -1663,8 +1666,7 @@ func TestWorkspaceSelect_LocalOrConfigWorkload(t *testing.T) {
 					[]*config.Workload{}, nil).Times(1)
 				m.prompt.EXPECT().SelectOption(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
-			want:                    "service1",
-			wantNeedsInitialization: true,
+			want: "service1",
 		},
 		"with one store service and one workspace service": {
 			setupMocks: func(m workspaceSelectMocks) {
@@ -1685,10 +1687,10 @@ func TestWorkspaceSelect_LocalOrConfigWorkload(t *testing.T) {
 					}, nil).Times(1)
 				m.prompt.EXPECT().SelectOption(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
-			want:                    "service1",
-			wantNeedsInitialization: false,
+			want: "service1",
 		},
 		"multiple workloads, pick un-initialized": {
+			inLocalWorkloadsOnly: true,
 			setupMocks: func(m workspaceSelectMocks) {
 				m.ws.EXPECT().Summary().Return(
 					&workspace.Summary{
@@ -1719,42 +1721,7 @@ func TestWorkspaceSelect_LocalOrConfigWorkload(t *testing.T) {
 					},
 				}, gomock.Any()).Return("worker", nil).Times(1)
 			},
-			want:                    "worker",
-			wantNeedsInitialization: true,
-		},
-		"multiple workloads, pick initialized": {
-			setupMocks: func(m workspaceSelectMocks) {
-				m.ws.EXPECT().Summary().Return(
-					&workspace.Summary{
-						Application: "app-name",
-					}, nil)
-				m.ws.EXPECT().ListWorkloads().Return(
-					[]string{
-						"service1",
-						"job2",
-						"worker",
-					}, nil).
-					Times(1)
-				m.configLister.EXPECT().ListWorkloads("app-name").Return(
-					[]*config.Workload{
-						{
-							Name: "service1",
-						},
-						{
-							Name: "job2",
-						},
-					}, nil).Times(1)
-				m.prompt.EXPECT().SelectOption(gomock.Any(), gomock.Any(), []prompt.Option{
-					{Value: "service1"},
-					{Value: "job2"},
-					{
-						Value: "worker",
-						Hint:  "un-initialized",
-					},
-				}, gomock.Any()).Return("service1", nil).Times(1)
-			},
-			want:                    "service1",
-			wantNeedsInitialization: false,
+			want: "worker",
 		},
 		"fails getting summary": {
 			setupMocks: func(m workspaceSelectMocks) {
@@ -1791,6 +1758,7 @@ func TestWorkspaceSelect_LocalOrConfigWorkload(t *testing.T) {
 			wantErr: errors.New("retrieve jobs and services from store: some error"),
 		},
 		"fails selecting workload": {
+			inLocalWorkloadsOnly: true,
 			setupMocks: func(m workspaceSelectMocks) {
 				m.ws.EXPECT().Summary().Return(
 					&workspace.Summary{
@@ -1821,7 +1789,7 @@ func TestWorkspaceSelect_LocalOrConfigWorkload(t *testing.T) {
 					},
 				}, gomock.Any()).Return("", errors.New("some error")).Times(1)
 			},
-			wantErr: errors.New("get workload: some error"),
+			wantErr: errors.New("select workload: some error"),
 		},
 	}
 	for name, tc := range testCases {
@@ -1847,14 +1815,14 @@ func TestWorkspaceSelect_LocalOrConfigWorkload(t *testing.T) {
 					},
 					workloadLister: MockconfigLister,
 				},
-				ws: mockwsRetriever,
+				ws:                 mockwsRetriever,
+				localWorkloadsOnly: tc.inLocalWorkloadsOnly,
 			}
-			got, gotNeedsInit, err := sel.LocalOrConfigWorkload("Select a workload", "Help text")
+			got, err := sel.Workload("Select a workload", "Help text")
 			if tc.wantErr != nil {
 				require.EqualError(t, err, tc.wantErr.Error())
 			} else {
 				require.Equal(t, tc.want, got)
-				require.Equal(t, tc.wantNeedsInitialization, gotNeedsInit)
 			}
 		})
 	}

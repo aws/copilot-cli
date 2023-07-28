@@ -190,6 +190,9 @@ type ConfigSelector struct {
 type LocalWorkloadSelector struct {
 	*ConfigSelector
 	ws workspaceRetriever
+
+	// Option, engaged by passing SelectOptLocalWorkloadsOnly to selector.
+	localWorkloadsOnly bool
 }
 
 // LocalEnvironmentSelector is an application and environment selector, but can also choose an environment from the workspace.
@@ -296,11 +299,15 @@ func NewConfigSelector(prompt Prompter, store configLister) *ConfigSelector {
 
 // NewLocalWorkloadSelector returns a new selector that chooses applications and environments from the config store, but
 // services from the local workspace.
-func NewLocalWorkloadSelector(prompt Prompter, store configLister, ws workspaceRetriever) *LocalWorkloadSelector {
-	return &LocalWorkloadSelector{
+func NewLocalWorkloadSelector(prompt Prompter, store configLister, ws workspaceRetriever, options ...SelectOption) *LocalWorkloadSelector {
+	s := &LocalWorkloadSelector{
 		ConfigSelector: NewConfigSelector(prompt, store),
 		ws:             ws,
 	}
+	for _, opt := range options {
+		opt(s)
+	}
+	return s
 }
 
 // NewLocalEnvironmentSelector returns a new selector that chooses applications from the config store, but an environment
@@ -799,6 +806,12 @@ func (s *LocalWorkloadSelector) Job(msg, help string) (string, error) {
 	return selectedJobName, nil
 }
 
+type SelectOption func(selector *LocalWorkloadSelector)
+
+var LocalWorkloadsOnly SelectOption = func(s *LocalWorkloadSelector) {
+	s.localWorkloadsOnly = true
+}
+
 // Workload fetches all jobs and services in an app and prompts the user to select one.
 func (s *LocalWorkloadSelector) Workload(msg, help string) (wl string, err error) {
 	summary, err := s.ws.Summary()
@@ -813,84 +826,51 @@ func (s *LocalWorkloadSelector) Workload(msg, help string) (wl string, err error
 	if err != nil {
 		return "", fmt.Errorf("retrieve jobs and services from store: %w", err)
 	}
-	wlNames := filterWlsByName(storeWls, wsWlNames)
-	if len(wlNames) == 0 {
-		return "", errors.New("no jobs or services found")
+	var options []prompt.Option
+	if s.localWorkloadsOnly {
+		if len(wsWlNames) == 0 {
+			return "", fmt.Errorf("no jobs or services found in workspace")
+		}
+		// Get the list of initialized workloads that are present in the workspace
+		initializedLocalWorkloads := filterWlsByName(storeWls, wsWlNames)
+		// Get the list of un-initialized workloads that are present in the workspace.
+		unInitializedLocalWorkloads := filterOutStrings(wsWlNames, initializedLocalWorkloads)
+		// Create the list of options (initialized workloads first, then un-initialized workloads with annotation.
+		for _, wl := range initializedLocalWorkloads {
+			options = append(options, prompt.Option{
+				Value:        wl,
+				FriendlyText: "",
+				Hint:         "",
+			})
+		}
+		for _, wl := range unInitializedLocalWorkloads {
+			options = append(options, prompt.Option{
+				Value: wl,
+				Hint:  "un-initialized",
+			})
+		}
+	} else {
+		// Logic for local workloads which are already initialized
+		wlNames := filterWlsByName(storeWls, wsWlNames)
+		if len(wlNames) == 0 {
+			return "", errors.New("no jobs or services found")
+		}
+		for _, wl := range wlNames {
+			options = append(options, prompt.Option{Value: wl})
+		}
 	}
-	if len(wlNames) == 1 {
-		log.Infof("Only found one workload, defaulting to: %s\n", color.HighlightUserInput(wlNames[0]))
-		return wlNames[0], nil
+
+	if len(options) == 1 {
+		log.Infof("Only found one workload, defaulting to: %s\n", color.HighlightUserInput(options[0].Value))
+		return options[0].Value, nil
 	}
-	selectedWlName, err := s.prompt.SelectOne(msg, help, wlNames, prompt.WithFinalMessage(workloadFinalMsg))
+	selectedWlName, err := s.prompt.SelectOption(msg, help, options, prompt.WithFinalMessage(workloadFinalMsg))
 	if err != nil {
 		return "", fmt.Errorf("select workload: %w", err)
 	}
 	return selectedWlName, nil
 }
 
-// LocalOrConfigWorkload offers the choice of all initialized or un-initialized workloads in the workspace,
-// with hints to show which ones need initialization.
-// Returns the name of the workload, a boolean
-func (s *LocalWorkloadSelector) LocalOrConfigWorkload(msg, help string) (wlName string, needsInitialization bool, err error) {
-	summary, err := s.ws.Summary()
-	if err != nil {
-		return "", false, fmt.Errorf("read workspace summary: %w", err)
-	}
-	wsWlNames, err := s.retrieveWorkspaceWorkloads()
-	if err != nil {
-		return "", false, fmt.Errorf("retrieve jobs and services from workspace: %w", err)
-	}
-	if len(wsWlNames) == 0 {
-		return "", false, errors.New("no jobs or services found in workspace")
-	}
-	storeWls, err := s.ConfigSelector.workloadLister.ListWorkloads(summary.Application)
-	if err != nil {
-		return "", false, fmt.Errorf("retrieve jobs and services from store: %w", err)
-	}
-	// Get the list of initialized workloads that are present in the workspace
-	initializedLocalWorkloads := filterWlsByName(storeWls, wsWlNames)
-	// Get the list of un-initialized workloads that are present in the workspace.
-	unInitializedLocalWorkloads := filterOutStrings(wsWlNames, initializedLocalWorkloads)
-	// Create the list of options (initialized workloads first, then un-initialized workloads with annotation.
-	options := make([]prompt.Option, 0, len(initializedLocalWorkloads)+len(unInitializedLocalWorkloads))
-	for _, wl := range initializedLocalWorkloads {
-		options = append(options, prompt.Option{
-			Value:        wl,
-			FriendlyText: "",
-			Hint:         "",
-		})
-	}
-	for _, wl := range unInitializedLocalWorkloads {
-		options = append(options, prompt.Option{
-			Value: wl,
-			Hint:  "un-initialized",
-		})
-	}
-	// Early return if there's only one workload.
-	if len(options) == 1 {
-		wlName = options[0].Value
-		needsInitialization = contains[string](unInitializedLocalWorkloads, wlName)
-		log.Infof("Only found one workload in the workspace, defaulting to: %s\n", color.HighlightUserInput(wlName))
-		return
-	}
-
-	wlName, err = s.prompt.SelectOption(msg, help, options, prompt.WithFinalMessage("Workload:"))
-	if err != nil {
-		return "", false, fmt.Errorf("get workload: %w", err)
-	}
-	// workloadName, needsInitialization, error
-	needsInitialization = contains[string](unInitializedLocalWorkloads, wlName)
-	return
-}
-
-func contains[T comparable](collection []T, desired T) bool {
-	for item := range collection {
-		if collection[item] == desired {
-			return true
-		}
-	}
-	return false
-}
 func filterOutStrings(allStrings []string, unwantedStrings []string) []string {
 	isUnWanted := make(map[string]bool)
 	for _, name := range unwantedStrings {
