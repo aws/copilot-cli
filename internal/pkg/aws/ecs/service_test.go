@@ -4,6 +4,7 @@
 package ecs
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -175,6 +176,54 @@ func TestService_ServiceConnectAliases(t *testing.T) {
 
 			// THEN
 			require.ElementsMatch(t, get, tc.wanted)
+		})
+	}
+}
+
+func TestParseServiceArn(t *testing.T) {
+	tests := map[string]struct {
+		inArnStr string
+
+		wantedError error
+		wantedArn   ServiceArn
+	}{
+		"error if invalid arn": {
+			inArnStr:    "random string",
+			wantedError: fmt.Errorf("arn: invalid prefix"),
+		},
+		"error if non ecs arn": {
+			inArnStr:    "arn:aws:acm:us-west-2:1234567890:service/my-project-test-Cluster-9F7Y0RLP60R7/my-project-test-myService-JSOH5GYBFAIB",
+			wantedError: fmt.Errorf(`expected an ECS arn, but got "arn:aws:acm:us-west-2:1234567890:service/my-project-test-Cluster-9F7Y0RLP60R7/my-project-test-myService-JSOH5GYBFAIB"`),
+		},
+		"error if invalid resource": {
+			inArnStr:    "arn:aws:ecs:us-west-2:1234567890:service/my-project-test-Cluster-9F7Y0RLP60R7",
+			wantedError: fmt.Errorf(`cannot parse resource for ARN "arn:aws:ecs:us-west-2:1234567890:service/my-project-test-Cluster-9F7Y0RLP60R7"`),
+		},
+		"error if invalid resource type": {
+			inArnStr:    "arn:aws:ecs:us-west-2:1234567890:task/my-project-test-Cluster-9F7Y0RLP60R7/my-project-test-myService-JSOH5GYBFAIB",
+			wantedError: fmt.Errorf(`expect an ECS service: got "arn:aws:ecs:us-west-2:1234567890:task/my-project-test-Cluster-9F7Y0RLP60R7/my-project-test-myService-JSOH5GYBFAIB"`),
+		},
+		"success": {
+			inArnStr: "arn:aws:ecs:us-west-2:1234567890:service/my-project-test-Cluster-9F7Y0RLP60R7/my-project-test-myService-JSOH5GYBFAIB",
+			wantedArn: ServiceArn{
+				accountID:   "1234567890",
+				partition:   "aws",
+				region:      "us-west-2",
+				name:        "my-project-test-myService-JSOH5GYBFAIB",
+				clusterName: "my-project-test-Cluster-9F7Y0RLP60R7",
+			},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// WHEN
+			arn, err := ParseServiceArn(tc.inArnStr)
+			if tc.wantedError != nil {
+				require.EqualError(t, tc.wantedError, err.Error())
+			} else {
+				require.Equal(t, tc.wantedArn, *arn)
+			}
 		})
 	}
 }
