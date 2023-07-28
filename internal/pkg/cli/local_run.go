@@ -50,21 +50,25 @@ type localRunVars struct {
 type localRunOpts struct {
 	localRunVars
 
-	sel            deploySelector
-	ecsLocalClient ecsLocalClient
-	sessProvider   sessionProvider
-	sess           *session.Session
-	targetEnv      *config.Environment
-	targetApp      *config.Application
-	store          store
-	ws             wsWlDirReader
-	cmd            execRunner
-	dockerEngine   dockerEngineRunner
+	sel               deploySelector
+	ecsLocalClient    ecsLocalClient
+	sessProvider      sessionProvider
+	sess              *session.Session
+	targetEnv         *config.Environment
+	targetApp         *config.Application
+	store             store
+	ws                wsWlDirReader
+	cmd               execRunner
+	dockerEngine      dockerEngineRunner
+	repository        repositoryService
+	appliedDynamicMft manifest.DynamicWorkload
+	out               clideploy.UploadArtifactsOutput
 
-	configureClients   func(o *localRunOpts) (repositoryService, error)
-	labeledTermPrinter func(fw syncbuffer.FileWriter, bufs []*syncbuffer.LabeledSyncBuffer, opts ...syncbuffer.LabeledTermPrinterOption) clideploy.LabeledTermPrinter
-	unmarshal          func([]byte) (manifest.DynamicWorkload, error)
-	newInterpolator    func(app, env string) interpolator
+	buildContainerImages func(o *localRunOpts) error
+	configureClients     func(o *localRunOpts) (repositoryService, error)
+	labeledTermPrinter   func(fw syncbuffer.FileWriter, bufs []*syncbuffer.LabeledSyncBuffer, opts ...syncbuffer.LabeledTermPrinterOption) clideploy.LabeledTermPrinter
+	unmarshal            func([]byte) (manifest.DynamicWorkload, error)
+	newInterpolator      func(app, env string) interpolator
 }
 
 type imageInfo struct {
@@ -105,6 +109,7 @@ func newLocalRunOpts(vars localRunVars) (*localRunOpts, error) {
 		cmd:                exec.NewCmd(),
 		dockerEngine:       dockerengine.New(exec.NewCmd()),
 		labeledTermPrinter: labeledTermPrinter,
+		out:                clideploy.UploadArtifactsOutput{},
 	}
 	opts.configureClients = func(o *localRunOpts) (repositoryService, error) {
 		defaultSessEnvRegion, err := o.sessProvider.DefaultWithRegion(o.targetEnv.Region)
@@ -119,6 +124,25 @@ func newLocalRunOpts(vars localRunVars) (*localRunOpts, error) {
 		repository := repository.NewWithURI(
 			ecr.New(defaultSessEnvRegion), repoName, resources.RepositoryURLs[o.wkldName])
 		return repository, nil
+	}
+	opts.buildContainerImages = func(o *localRunOpts) error {
+		gitShortCommit := imageTagFromGit(o.cmd)
+		image := clideploy.ContainerImageIdentifier{
+			GitShortCommitTag: gitShortCommit,
+		}
+		in := &clideploy.BuildImageArgs{
+			Name:               o.wkldName,
+			WorkspacePath:      o.ws.Path(),
+			Image:              image,
+			Mft:                o.appliedDynamicMft.Manifest(),
+			Out:                &o.out,
+			GitShortCommitTag:  gitShortCommit,
+			BuildFunc:          o.repository.Build,
+			Login:              o.repository.Login,
+			CheckDockerEngine:  o.dockerEngine.CheckDockerEngineRunning,
+			LabeledTermPrinter: o.labeledTermPrinter,
+		}
+		return clideploy.BuildContainerImages(in)
 	}
 	return opts, nil
 }
@@ -219,35 +243,19 @@ func (o *localRunOpts) Execute() error {
 	if err != nil {
 		return err
 	}
-	out := &clideploy.UploadArtifactsOutput{}
-	gitShortCommit := imageTagFromGit(o.cmd)
-	image := clideploy.ContainerImageIdentifier{
-		GitShortCommitTag: gitShortCommit,
-	}
-
-	repository, err := o.configureClients(o)
+	o.appliedDynamicMft = mft
+	o.repository, err = o.configureClients(o)
 	if err != nil {
 		return err
 	}
-	in := &clideploy.BuildImageArgs{
-		Name:               o.wkldName,
-		WorkspacePath:      o.ws.Path(),
-		Image:              image,
-		Mft:                mft.Manifest(),
-		Out:                out,
-		GitShortCommitTag:  gitShortCommit,
-		BuildFunc:          repository.Build,
-		Login:              repository.Login,
-		CheckDockerEngine:  o.dockerEngine.CheckDockerEngineRunning,
-		LabeledTermPrinter: o.labeledTermPrinter,
-	}
-	err = clideploy.BuildContainerImages(in)
+
+	err = o.buildContainerImages(o)
 	if err != nil {
 		return fmt.Errorf("building container image: %w", err)
 	}
 
-	containerNames := out.ContainerNames
-	imageNames := out.ImageNames
+	containerNames := o.out.ContainerNames
+	imageNames := o.out.ImageNames
 
 	secretsList := make(map[string]string)
 	for _, s := range decrytedSecrets {
@@ -263,8 +271,8 @@ func (o *localRunOpts) Execute() error {
 		imageInfoList = append(imageInfoList, imageInfo)
 	}
 
-	manifestContent := mft.Manifest()
 	var sideCarListInfo []imageInfo
+	manifestContent := o.appliedDynamicMft.Manifest()
 	switch t := manifestContent.(type) {
 	case *manifest.ScheduledJob:
 		sideCarListInfo = getBuiltSideCarImages(t.Sidecars)
@@ -286,6 +294,7 @@ func (o *localRunOpts) Execute() error {
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 
