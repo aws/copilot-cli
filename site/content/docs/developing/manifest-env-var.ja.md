@@ -17,8 +17,27 @@ image:
 
 これにより、Copilot は `id.dkr.ecr.zone.amazonaws.com/project-name` の tag `version01` であるコンテナイメージを利用してサービスをデプロイします。
 
+Manifest ファイルにおいて、環境変数が次の様に使われている場合、`Array of Strings` から補完できます。
+
+```yaml
+network:
+  vpc:
+    security_groups: ${SECURITY_GROUPS}
+```
+
+シェルが環境変数 `SECURITY_GROUPS=["sg-06b511534b8fa8bbb","sg-06b511534b8fa8bbb","sg-0e921ad50faae7777"]` を持っている場合、 Manifest　の例は次の様に解釈されます。
+
+```yaml
+network:
+  vpc:
+    security_groups:
+      - sg-06b511534b8fa8bbb
+      - sg-06b511534b8fa8bbb
+      - sg-0e921ad50faae7777
+```
+
 !!! Info
-    現時点では、Manifest 内の文字列型フィールドに対してのみシェル環境変数を代入できます。`String` (例 `image.location`), `Array of Strings` (例 `entrypoint`), `Map` で値のタイプが `String` (e.g., `secrets`) などがそれに当たります。
+    現時点では、Manifest 内の文字列型フィールドに対してのみシェル環境変数を代入できます。`String` (例 `image.location`), `Array of Strings` (例 `entrypoint`), `Map` で値のタイプが `String` または、`Array of Strings` (e.g., `secrets`) などがそれに当たります。
 
 ## 予約済み変数
 予約済み変数は、Manifest を解釈する際に Copilot によって事前定義された環境変数です。現在、利用可能な予約済み変数は次のとおりです。

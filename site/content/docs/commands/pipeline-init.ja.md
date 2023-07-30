@@ -8,13 +8,13 @@ $ copilot pipeline init [flags]
 
 ## フラグ
 ```
--a, --app string             Name of the application.
--e, --environments strings   Environments to add to the pipeline.
--b, --git-branch string      Branch used to trigger your pipeline.
--h, --help                   help for init
--n, --name string            Name of the pipeline.
--p, --pipeline-type string   The type of pipeline. Must be either "Workloads" or "Environments".
--u, --url string             The repository URL to trigger your pipeline.
+  -a, --app string             Name of the application.
+  -e, --environments strings   Environments to add to the pipeline.
+  -b, --git-branch string      Branch used to trigger your pipeline.
+  -h, --help                   help for init
+  -n, --name string            Name of the pipeline.
+  -p, --pipeline-type string   The type of pipeline. Must be either "Workloads" or "Environments".
+  -u, --url string             The repository URL to trigger your pipeline.
 ```
 
 ## 実行例

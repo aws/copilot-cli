@@ -8,15 +8,18 @@ $ copilot deploy
 このコマンドは、[`copilot svc deploy`](../commands/svc-deploy.ja.md) または [`copilot job deploy`](../commands/job-deploy.ja.md) の内部で利用されています。
 `copilot deploy` の中で実行される各ステップは、`copilot svc deploy` や `copilot job deploy` で実行されるステップと同様です。
 
-1. ローカルの Dockerfile からコンテナイメージを作成
-2. `--tag` で指定された値、または最新の git sha を利用してタグ付け(git 管理されている場合)
-3. コンテナイメージを ECR に対してプッシュ
-4. Manifest ファイルと Addon を CloudFormation テンプレートにパッケージ
-5. ECS タスク定義を作成/更新し、Job や Service を作成/更新
+1. `image.build` が Manifest に存在する場合
+    1. ローカルの Dockerfile からコンテナイメージを作成
+    2. `--tag` で指定された値、または最新の git sha を利用してタグ付け(git 管理されている場合)
+    3. コンテナイメージを ECR に対してプッシュ
+2. Manifest ファイルと Addon を CloudFormation テンプレートにパッケージ
+3. ECS タスク定義を作成/更新し、Job や Service を作成/更新
 
 ## フラグ
 
 ```
+      --allow-downgrade                Optional. Allow using an older version of Copilot to update Copilot components
+                                       updated by a newer version of Copilot.
   -a, --app string                     Name of the application.
   -e, --env string                     Name of the environment.
       --force                          Optional. Force a new service deployment using the existing image.
