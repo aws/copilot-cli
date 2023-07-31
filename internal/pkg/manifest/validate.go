@@ -2241,12 +2241,6 @@ func (i ImageLocationOrBuild) validate() error {
 			mustExist:   true,
 		}
 	}
-	if !i.Build.isEmpty() && i.Location != nil {
-		return &errFieldMutualExclusive{
-			firstField:  "build",
-			secondField: "location",
-		}
-	}
 	return nil
 }
 
