@@ -711,13 +711,6 @@ func (i Image) validate() error {
 	if err := i.ImageLocationOrBuild.validate(); err != nil {
 		return err
 	}
-	if i.Build.isEmpty() == (i.Location == nil) {
-		return &errFieldMutualExclusive{
-			firstField:  "build",
-			secondField: "location",
-			mustExist:   true,
-		}
-	}
 	if err = i.DependsOn.validate(); err != nil {
 		return fmt.Errorf(`validate "depends_on": %w`, err)
 	}
@@ -2240,6 +2233,13 @@ func contains(name string, names []string) bool {
 func (i ImageLocationOrBuild) validate() error {
 	if err := i.Build.validate(); err != nil {
 		return fmt.Errorf(`validate "build": %w`, err)
+	}
+	if i.Build.isEmpty() == (i.Location == nil) {
+		return &errFieldMutualExclusive{
+			firstField:  "build",
+			secondField: "location",
+			mustExist:   true,
+		}
 	}
 	if !i.Build.isEmpty() && i.Location != nil {
 		return &errFieldMutualExclusive{
