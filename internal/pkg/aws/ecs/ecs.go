@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	clusterStatusActive              = "ACTIVE"
+	statusActive                     = "ACTIVE"
 	waitServiceStablePollingInterval = 15 * time.Second
 	waitServiceStableMaxTry          = 80
 	stableServiceDeploymentNum       = 1
@@ -301,7 +301,7 @@ func (e *ECS) DefaultCluster() (string, error) {
 
 	// NOTE: right now at most 1 default cluster is possible, so cluster[0] must be the default cluster
 	cluster := resp.Clusters[0]
-	if aws.StringValue(cluster.Status) != clusterStatusActive {
+	if aws.StringValue(cluster.Status) != statusActive {
 		return "", ErrNoDefaultCluster
 	}
 
@@ -319,7 +319,7 @@ func (e *ECS) HasDefaultCluster() (bool, error) {
 	return true, nil
 }
 
-// ActiveClusters returns the subset of arns that have an ACTIVE status.
+// ActiveClusters returns the subset of cluster arns that have an ACTIVE status.
 func (e *ECS) ActiveClusters(arns ...string) ([]string, error) {
 	resp, err := e.client.DescribeClusters(&ecs.DescribeClustersInput{
 		Clusters: aws.StringSlice(arns),
@@ -333,13 +333,47 @@ func (e *ECS) ActiveClusters(arns ...string) ([]string, error) {
 
 	var active []string
 	for _, cluster := range resp.Clusters {
-		if aws.StringValue(cluster.Status) == clusterStatusActive {
+		if aws.StringValue(cluster.Status) == statusActive {
 			active = append(active, aws.StringValue(cluster.ClusterArn))
 		}
 	}
 
 	return active, nil
+}
 
+// ActiveServices returns the subset of service arns that have an ACTIVE status.
+// Note that all services should be in the same cluster.
+func (e *ECS) ActiveServices(serviceARNs ...string) ([]string, error) {
+	var prevSvcArn *ServiceArn
+	for _, arn := range serviceARNs {
+		svcArn, err := ParseServiceArn(arn)
+		if err != nil {
+			return nil, err
+		}
+		if prevSvcArn != nil && prevSvcArn.clusterName != svcArn.clusterName {
+			return nil, fmt.Errorf("service %q and service %q should be in the same cluster", prevSvcArn.String(), svcArn.String())
+		}
+		prevSvcArn = svcArn
+	}
+	resp, err := e.client.DescribeServices(&ecs.DescribeServicesInput{
+		Cluster:  aws.String(prevSvcArn.ClusterArn()),
+		Services: aws.StringSlice(serviceARNs),
+	})
+	switch {
+	case err != nil:
+		return nil, fmt.Errorf("describe services: %w", err)
+	case len(resp.Failures) > 0:
+		return nil, fmt.Errorf("describe services: %s", resp.Failures[0].GoString())
+	}
+
+	var active []string
+	for _, svc := range resp.Services {
+		if aws.StringValue(svc.Status) == statusActive {
+			active = append(active, aws.StringValue(svc.ServiceArn))
+		}
+	}
+
+	return active, nil
 }
 
 // RunTask runs a number of tasks with the task definition and network configurations in a cluster, and returns after
