@@ -1452,7 +1452,7 @@ func (l Logging) validate() error {
 
 // validate returns nil if SidecarConfig is configured correctly.
 func (s SidecarConfig) validate() error {
-	if err := s.validateImages(); err != nil {
+	if err := s.validateImage(); err != nil {
 		return err
 	}
 	for ind, mp := range s.MountPoints {
@@ -1491,7 +1491,7 @@ func (s SidecarConfig) validate() error {
 	}
 	return s.ImageOverride.validate()
 }
-func (s SidecarConfig) validateImages() error {
+func (s SidecarConfig) validateImage() error {
 	if s.Image.IsZero() {
 		return fmt.Errorf(`must specify one of "image", "image.build, or "image.location"`)
 	}
