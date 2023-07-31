@@ -77,7 +77,7 @@ type RunOptions struct {
 	Secrets        map[string]string // Optional. Secrets to pass to the container as environment variables.
 	EnvVars        map[string]string // Optional. Environment variables to pass to the container.
 	ContainerName  string            // Optional. The name for the container.
-	ContainerPorts map[int64]int64   // Optional. Contains host and container ports.
+	ContainerPorts map[string]string // Optional. Contains host and container ports.
 }
 
 // GenerateDockerBuildArgs returns command line arguments to be passed to the Docker build command based on the provided BuildArguments.
@@ -210,48 +210,54 @@ func (c DockerCmdClient) Push(ctx context.Context, uri string, w io.Writer, tags
 	return parts[1], nil
 }
 
-// Run runs a Docker container with the sepcified options.
-func (c DockerCmdClient) Run(ctx context.Context, options *RunOptions) error {
+func (in *RunOptions) generateRunArguments() []string {
 	args := []string{"run"}
 
 	//Add container name option.
-	if options.ContainerName != "" {
-		args = append(args, "--name", options.ContainerName)
+	if in.ContainerName != "" {
+		args = append(args, "--name", in.ContainerName)
 	}
 
 	// Add port mappings.
-	for hostPort, containerPort := range options.ContainerPorts {
-		args = append(args, "-p", fmt.Sprintf("%d:%d", hostPort, containerPort))
+	for hostPort, containerPort := range in.ContainerPorts {
+		args = append(args, "-p", fmt.Sprintf("%s:%s", hostPort, containerPort))
 	}
 
 	// Add network option if it's not a "pause" container.
-	if options.ContainerName != "pause" {
+	if in.ContainerName != "pause" {
 		args = append(args, "--network", "container:pause")
 	}
 
 	//Add secrets as environment variables.
-	for key, value := range options.Secrets {
+	for key, value := range in.Secrets {
 		args = append(args, "-e", fmt.Sprintf("%s=%s", key, value))
 	}
 
 	//Add environment variables.
-	for key, value := range options.EnvVars {
+	for key, value := range in.EnvVars {
 		args = append(args, "-e", fmt.Sprintf("%s=%s", key, value))
 	}
 
 	//Add the image name.
-	args = append(args, options.ImageURI)
+	if in.ImageURI != "" {
+		args = append(args, in.ImageURI)
+	}
 
 	//Add "sleep infinity" command for the "pause" container
-	if options.ContainerName == "pause" {
+	if in.ContainerName == "pause" {
 		args = append(args, "sleep", "infinity")
 	}
+	return args
+}
+
+// Run runs a Docker container with the sepcified options.
+func (c DockerCmdClient) Run(ctx context.Context, options *RunOptions) error {
+	args := options.generateRunArguments()
 
 	//Execute the Docker run command.
 	if err := c.runner.RunWithContext(ctx, "docker", args); err != nil {
 		return fmt.Errorf("running container: %w", err)
 	}
-
 	return nil
 }
 

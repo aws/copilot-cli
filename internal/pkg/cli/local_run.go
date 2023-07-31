@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -194,7 +195,7 @@ func (o *localRunOpts) Execute() error {
 	}
 
 	secrets := taskDef.Secrets()
-	decrytedSecrets, err := o.ecsLocalClient.DecryptedSecrets(secrets)
+	decryptedSecrets, err := o.ecsLocalClient.DecryptedSecrets(secrets)
 	if err != nil {
 		return fmt.Errorf("get secret values: %w", err)
 	}
@@ -205,13 +206,15 @@ func (o *localRunOpts) Execute() error {
 		envVars[envVariable.Name] = envVariable.Value
 	}
 
-	containerPorts := make(map[int64]int64)
+	containerPorts := make(map[string]string)
 	containerdef := taskDef.ContainerDefinitions
 	for _, container := range containerdef {
 		for _, portMapping := range container.PortMappings {
 			hostPort := aws.Int64Value(portMapping.HostPort)
+			hostPortStr := strconv.FormatInt(hostPort, 10)
 			containerport := aws.Int64Value(portMapping.ContainerPort)
-			containerPorts[hostPort] = containerport
+			containerportStr := strconv.FormatInt(containerport, 10)
+			containerPorts[hostPortStr] = containerportStr
 		}
 	}
 
@@ -258,7 +261,7 @@ func (o *localRunOpts) Execute() error {
 	imageNames := o.out.ImageNames
 
 	secretsList := make(map[string]string)
-	for _, s := range decrytedSecrets {
+	for _, s := range decryptedSecrets {
 		secretsList[s.Name] = s.Value
 	}
 
@@ -317,7 +320,7 @@ func getBuiltSideCarImages(sidecars map[string]*manifest.SidecarConfig) []imageI
 	return sideCarBuiltImageInfo
 }
 
-func (o *localRunOpts) runPauseContainer(containerPorts map[int64]int64) error {
+func (o *localRunOpts) runPauseContainer(containerPorts map[string]string) error {
 	runOptions := &dockerengine.RunOptions{
 		ImageURI:       pauseContainerURI,
 		ContainerName:  pauseContainerName,
