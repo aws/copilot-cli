@@ -64,6 +64,7 @@ type localRunOpts struct {
 	repository        repositoryService
 	appliedDynamicMft manifest.DynamicWorkload
 	out               clideploy.UploadArtifactsOutput
+	imageInfoList     []imageInfo
 
 	buildContainerImages func(o *localRunOpts) error
 	configureClients     func(o *localRunOpts) (repositoryService, error)
@@ -265,13 +266,12 @@ func (o *localRunOpts) Execute() error {
 		secretsList[s.Name] = s.Value
 	}
 
-	var imageInfoList []imageInfo
 	for i, image := range imageNames {
 		imageInfo := imageInfo{
 			containerName: containerNames[i],
 			imageURI:      image,
 		}
-		imageInfoList = append(imageInfoList, imageInfo)
+		o.imageInfoList = append(o.imageInfoList, imageInfo)
 	}
 
 	var sideCarListInfo []imageInfo
@@ -286,14 +286,14 @@ func (o *localRunOpts) Execute() error {
 	case *manifest.BackendService:
 		sideCarListInfo = getBuiltSideCarImages(t.Sidecars)
 	}
-	imageInfoList = append(imageInfoList, sideCarListInfo...)
+	o.imageInfoList = append(o.imageInfoList, sideCarListInfo...)
 
 	err = o.runPauseContainer(containerPorts)
 	if err != nil {
 		return err
 	}
 
-	err = o.runContainers(imageInfoList, secretsList, envVars)
+	err = o.runContainers(o.imageInfoList, secretsList, envVars)
 	if err != nil {
 		return err
 	}
