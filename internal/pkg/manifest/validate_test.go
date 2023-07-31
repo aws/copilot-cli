@@ -2797,7 +2797,7 @@ func TestSidecarConfig_validate(t *testing.T) {
 					Location: aws.String("mockimage:tag"),
 				}),
 			},
-			wantedErrorPrefix: `validate "image.build": `,
+			wantedErrorPrefix: `validate "image": `,
 		},
 		"error if fail to validate mount_points": {
 			config: SidecarConfig{
