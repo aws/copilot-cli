@@ -1,4 +1,4 @@
-AWS Copilot uses AWS credentials to access the AWS API, store and look up an [application's metadata](concepts/applications.en.md), and deploy and operate an application's workloads.
+CAWS Copilot uses AWS credentials to access the AWS API, store and look up an [application's metadata](concepts/applications.en.md), and deploy and operate an application's workloads.
 
 You can learn more on how to configure AWS credentials in the [AWS CLI's documentation](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-quickstart.html).
 
