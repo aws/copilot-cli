@@ -58,7 +58,7 @@ func NewWithURI(registry Registry, name, uri string) *Repository {
 // Build build the image from Dockerfile
 func (r *Repository) Build(ctx context.Context, args *dockerengine.BuildArguments, w io.Writer) (digest string, err error) {
 	if err := r.docker.Build(ctx, args, w); err != nil {
-		return "", fmt.Errorf("build Dockerfile at %s: %w", args.Dockerfile, err)
+		return "", fmt.Errorf("build from Dockerfile at %s: %w", args.Dockerfile, err)
 	}
 	return digest, nil
 }

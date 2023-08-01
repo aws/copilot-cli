@@ -215,12 +215,10 @@ func (c DockerCmdClient) Push(ctx context.Context, uri string, w io.Writer, tags
 func (in *RunOptions) generateRunArguments() []string {
 	args := []string{"run"}
 
-	//Add container name option.
 	if in.ContainerName != "" {
 		args = append(args, "--name", in.ContainerName)
 	}
 
-	// Add port mappings.
 	for hostPort, containerPort := range in.ContainerPorts {
 		args = append(args, "--publish", fmt.Sprintf("%s:%s", hostPort, containerPort))
 	}
@@ -230,20 +228,15 @@ func (in *RunOptions) generateRunArguments() []string {
 		args = append(args, "--network", fmt.Sprintf("container:%s", in.ContainerNetwork))
 	}
 
-	//Add secrets as environment variables.
 	for key, value := range in.Secrets {
 		args = append(args, "--env", fmt.Sprintf("%s=%s", key, value))
 	}
 
-	//Add environment variables.
 	for key, value := range in.EnvVars {
 		args = append(args, "--env", fmt.Sprintf("%s=%s", key, value))
 	}
 
-	//Add the image name.
-	if in.ImageURI != "" {
-		args = append(args, in.ImageURI)
-	}
+	args = append(args, in.ImageURI)
 
 	if in.Command != nil && len(in.Command) > 0 {
 		args = append(args, in.Command...)
@@ -253,10 +246,8 @@ func (in *RunOptions) generateRunArguments() []string {
 
 // Run runs a Docker container with the sepcified options.
 func (c DockerCmdClient) Run(ctx context.Context, options *RunOptions) error {
-	args := options.generateRunArguments()
-
 	//Execute the Docker run command.
-	if err := c.runner.RunWithContext(ctx, "docker", args); err != nil {
+	if err := c.runner.RunWithContext(ctx, "docker", options.generateRunArguments()); err != nil {
 		return fmt.Errorf("running container: %w", err)
 	}
 	return nil
@@ -271,10 +262,7 @@ func (c DockerCmdClient) IsContainerRunning(containerName string) (bool, error) 
 	}
 
 	output := strings.TrimSpace(buf.String())
-	if output == "" {
-		return false, nil // The container is not running.
-	}
-	return true, nil // The container is running.
+	return output != "", nil
 }
 
 // CheckDockerEngineRunning will run `docker info` command to check if the docker engine is running.

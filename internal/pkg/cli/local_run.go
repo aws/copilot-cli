@@ -133,7 +133,7 @@ func newLocalRunOpts(vars localRunVars) (*localRunOpts, error) {
 		image := clideploy.ContainerImageIdentifier{
 			GitShortCommitTag: gitShortCommit,
 		}
-		in := &clideploy.BuildImageArgs{
+		return clideploy.BuildContainerImages(&clideploy.BuildAndPushImagesInput{
 			Name:               o.wkldName,
 			WorkspacePath:      o.ws.Path(),
 			Image:              image,
@@ -143,9 +143,7 @@ func newLocalRunOpts(vars localRunVars) (*localRunOpts, error) {
 			BuildFunc:          o.repository.Build,
 			Login:              o.repository.Login,
 			CheckDockerEngine:  o.dockerEngine.CheckDockerEngineRunning,
-			LabeledTermPrinter: o.labeledTermPrinter,
-		}
-		return clideploy.BuildContainerImages(in)
+			LabeledTermPrinter: o.labeledTermPrinter})
 	}
 	return opts, nil
 }
@@ -156,9 +154,11 @@ func (o *localRunOpts) Validate() error {
 		return errNoAppInWorkspace
 	}
 	// Ensure that the application name provided exists in the workspace
-	if _, err := o.store.GetApplication(o.appName); err != nil {
+	app, err := o.store.GetApplication(o.appName)
+	if err != nil {
 		return fmt.Errorf("get application %s: %w", o.appName, err)
 	}
+	o.targetApp = app
 	return nil
 }
 
@@ -169,9 +169,11 @@ func (o *localRunOpts) Ask() error {
 
 func (o *localRunOpts) validateAndAskWkldEnvName() error {
 	if o.envName != "" {
-		if _, err := o.store.GetEnvironment(o.appName, o.envName); err != nil {
+		env, err := o.store.GetEnvironment(o.appName, o.envName)
+		if err != nil {
 			return err
 		}
+		o.targetEnv = env
 	}
 	if o.wkldName != "" {
 		if _, err := o.store.GetWorkload(o.appName, o.wkldName); err != nil {
@@ -183,6 +185,14 @@ func (o *localRunOpts) validateAndAskWkldEnvName() error {
 	if err != nil {
 		return fmt.Errorf("select a deployed workload from application %s: %w", o.appName, err)
 	}
+	if o.envName == "" {
+		env, err := o.store.GetEnvironment(o.appName, deployedWorkload.Env)
+		if err != nil {
+			return fmt.Errorf("get environment %q configuration: %w", o.envName, err)
+		}
+		o.targetEnv = env
+	}
+
 	o.wkldName = deployedWorkload.Name
 	o.envName = deployedWorkload.Env
 	o.wkldType = deployedWorkload.Type
@@ -231,19 +241,7 @@ func (o *localRunOpts) Execute() error {
 		}
 	}
 
-	env, err := o.store.GetEnvironment(o.appName, o.envName)
-	if err != nil {
-		return fmt.Errorf("get environment %q configuration: %w", o.envName, err)
-	}
-	o.targetEnv = env
-
-	app, err := o.store.GetApplication(o.appName)
-	if err != nil {
-		return fmt.Errorf("get application %q configuration: %w", o.appName, err)
-	}
-	o.targetApp = app
-
-	envSess, err := o.sessProvider.FromRole(env.ManagerRoleARN, env.Region)
+	envSess, err := o.sessProvider.FromRole(o.targetEnv.ManagerRoleARN, o.targetEnv.Region)
 	if err != nil {
 		return fmt.Errorf("get env session: %w", err)
 	}
@@ -267,7 +265,7 @@ func (o *localRunOpts) Execute() error {
 
 	err = o.buildContainerImages(o)
 	if err != nil {
-		return fmt.Errorf("building container image: %w", err)
+		return err
 	}
 
 	containerNames := o.out.ContainerNames
@@ -280,19 +278,19 @@ func (o *localRunOpts) Execute() error {
 		})
 	}
 
-	var sideCarListInfo []imageInfo
+	var sidecarImageLocations []imageInfo //sidecarImageLocations has the image locations which are already built
 	manifestContent := o.appliedDynamicMft.Manifest()
 	switch t := manifestContent.(type) {
 	case *manifest.ScheduledJob:
-		sideCarListInfo = getBuiltSideCarImages(t.Sidecars)
+		sidecarImageLocations = getBuiltSidecarImageLocations(t.Sidecars)
 	case *manifest.LoadBalancedWebService:
-		sideCarListInfo = getBuiltSideCarImages(t.Sidecars)
+		sidecarImageLocations = getBuiltSidecarImageLocations(t.Sidecars)
 	case *manifest.WorkerService:
-		sideCarListInfo = getBuiltSideCarImages(t.Sidecars)
+		sidecarImageLocations = getBuiltSidecarImageLocations(t.Sidecars)
 	case *manifest.BackendService:
-		sideCarListInfo = getBuiltSideCarImages(t.Sidecars)
+		sidecarImageLocations = getBuiltSidecarImageLocations(t.Sidecars)
 	}
-	o.imageInfoList = append(o.imageInfoList, sideCarListInfo...)
+	o.imageInfoList = append(o.imageInfoList, sidecarImageLocations...)
 
 	err = o.runPauseContainer(context.Background(), containerPorts)
 	if err != nil {
@@ -312,19 +310,18 @@ func (o *localRunOpts) getContainerSuffix() string {
 	return containerSuffix
 }
 
-func getBuiltSideCarImages(sidecars map[string]*manifest.SidecarConfig) []imageInfo {
-	//get the image URI for the sidecars which are in a registry
-	var sideCarBuiltImageInfo []imageInfo
+func getBuiltSidecarImageLocations(sidecars map[string]*manifest.SidecarConfig) []imageInfo {
+	//get the image location for the sidecars which are already built and are in a registry
+	var sideCarBuiltImageLocations []imageInfo
 	for sideCarName, sidecar := range sidecars {
 		if uri, hasLocation := sidecar.ImageURI(); hasLocation {
-			imageInfo := imageInfo{
+			sideCarBuiltImageLocations = append(sideCarBuiltImageLocations, imageInfo{
 				containerName: sideCarName,
 				imageURI:      uri,
-			}
-			sideCarBuiltImageInfo = append(sideCarBuiltImageInfo, imageInfo)
+			})
 		}
 	}
-	return sideCarBuiltImageInfo
+	return sideCarBuiltImageLocations
 }
 
 func (o *localRunOpts) runPauseContainer(ctx context.Context, containerPorts map[string]string) error {

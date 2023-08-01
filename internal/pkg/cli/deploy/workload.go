@@ -224,7 +224,7 @@ type ContainerImageIdentifier struct {
 }
 
 // BuildImageArgs represent the input parameters for building and uploading container images.
-type BuildImageArgs struct {
+type BuildAndPushImagesInput struct {
 	Name               string
 	WorkspacePath      string
 	Image              ContainerImageIdentifier
@@ -409,7 +409,7 @@ func (img ContainerImageIdentifier) Tag() string {
 }
 
 func (d *workloadDeployer) uploadContainerImages(out *UploadArtifactsOutput) error {
-	in := &BuildImageArgs{
+	return buildAndPushImages(&BuildAndPushImagesInput{
 		Name:               d.name,
 		WorkspacePath:      d.workspacePath,
 		Image:              d.image,
@@ -421,16 +421,15 @@ func (d *workloadDeployer) uploadContainerImages(out *UploadArtifactsOutput) err
 		Login:              d.repository.Login,
 		CheckDockerEngine:  d.docker.CheckDockerEngineRunning,
 		LabeledTermPrinter: d.labeledTermPrinter,
-	}
-	return buildContainerImages(in)
+	})
 }
 
 // BuildContainerImages builds the all the images given the build arguments
-func BuildContainerImages(in *BuildImageArgs) error {
-	return buildContainerImages(in)
+func BuildContainerImages(in *BuildAndPushImagesInput) error {
+	return buildAndPushImages(in)
 }
 
-func buildContainerImages(in *BuildImageArgs) error {
+func buildAndPushImages(in *BuildAndPushImagesInput) error {
 	// If it is built from local Dockerfile, build and push to the ECR repo.
 	buildArgsPerContainer, err := buildArgsPerContainer(in.Name, in.WorkspacePath, in.Image, in.Mft)
 	if err != nil {
