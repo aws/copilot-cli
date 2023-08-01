@@ -225,10 +225,10 @@ type ContainerImageIdentifier struct {
 
 // BuildAndPushImagesInput represent the input parameters for building and uploading container images.
 type BuildAndPushImagesInput struct {
-	Name               string
-	WorkspacePath      string
-	Image              ContainerImageIdentifier
-	Out                *UploadArtifactsOutput
+	Name          string
+	WorkspacePath string
+	Image         ContainerImageIdentifier
+	//Out                *UploadArtifactsOutput
 	CustomTag          string
 	GitShortCommitTag  string
 	Mft                interface{}
@@ -410,26 +410,26 @@ func (img ContainerImageIdentifier) Tag() string {
 
 func (d *workloadDeployer) uploadContainerImages(out *UploadArtifactsOutput) error {
 	return buildAndPushImages(&BuildAndPushImagesInput{
-		Name:               d.name,
-		WorkspacePath:      d.workspacePath,
-		Image:              d.image,
-		Mft:                d.mft,
-		Out:                out,
+		Name:          d.name,
+		WorkspacePath: d.workspacePath,
+		Image:         d.image,
+		Mft:           d.mft,
+		//	Out:                out,
 		CustomTag:          d.image.CustomTag,
 		GitShortCommitTag:  d.image.GitShortCommitTag,
 		BuildFunc:          d.repository.BuildAndPush,
 		Login:              d.repository.Login,
 		CheckDockerEngine:  d.docker.CheckDockerEngineRunning,
 		LabeledTermPrinter: d.labeledTermPrinter,
-	})
+	}, out)
 }
 
 // BuildContainerImages builds the all the images given the build arguments
-func BuildContainerImages(in *BuildAndPushImagesInput) error {
-	return buildAndPushImages(in)
+func BuildContainerImages(in *BuildAndPushImagesInput, out *UploadArtifactsOutput) error {
+	return buildAndPushImages(in, out)
 }
 
-func buildAndPushImages(in *BuildAndPushImagesInput) error {
+func buildAndPushImages(in *BuildAndPushImagesInput, out *UploadArtifactsOutput) error {
 	// If it is built from local Dockerfile, build and push to the ECR repo.
 	buildArgsPerContainer, err := buildArgsPerContainer(in.Name, in.WorkspacePath, in.Image, in.Mft)
 	if err != nil {
@@ -447,7 +447,7 @@ func buildAndPushImages(in *BuildAndPushImagesInput) error {
 	}
 
 	var digestsMu sync.Mutex
-	in.Out.ImageDigests = make(map[string]ContainerImageIdentifier, len(buildArgsPerContainer))
+	out.ImageDigests = make(map[string]ContainerImageIdentifier, len(buildArgsPerContainer))
 	var labeledBuffers []*syncbuffer.LabeledSyncBuffer
 	g, ctx := errgroup.WithContext(context.Background())
 	cursor := cursor.New()
@@ -473,14 +473,14 @@ func buildAndPushImages(in *BuildAndPushImagesInput) error {
 			}
 			digestsMu.Lock()
 			defer digestsMu.Unlock()
-			in.Out.ImageDigests[name] = ContainerImageIdentifier{
+			out.ImageDigests[name] = ContainerImageIdentifier{
 				Digest:            digest,
 				CustomTag:         in.CustomTag,
 				GitShortCommitTag: in.GitShortCommitTag,
 			}
 			imageName := fmt.Sprintf("%s:%s", uri, buildArgs.Tags[0])
-			in.Out.ImageNames = append(in.Out.ImageNames, imageName)
-			in.Out.ContainerNames = append(in.Out.ContainerNames, name)
+			out.ImageNames = append(out.ImageNames, imageName)
+			out.ContainerNames = append(out.ContainerNames, name)
 			return nil
 		})
 		g.Go(func() error {

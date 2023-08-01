@@ -134,16 +134,16 @@ func newLocalRunOpts(vars localRunVars) (*localRunOpts, error) {
 			GitShortCommitTag: gitShortCommit,
 		}
 		return clideploy.BuildContainerImages(&clideploy.BuildAndPushImagesInput{
-			Name:               o.wkldName,
-			WorkspacePath:      o.ws.Path(),
-			Image:              image,
-			Mft:                o.appliedDynamicMft.Manifest(),
-			Out:                &o.out,
+			Name:          o.wkldName,
+			WorkspacePath: o.ws.Path(),
+			Image:         image,
+			Mft:           o.appliedDynamicMft.Manifest(),
+			//Out:                &o.out,
 			GitShortCommitTag:  gitShortCommit,
 			BuildFunc:          o.repository.Build,
 			Login:              o.repository.Login,
 			CheckDockerEngine:  o.dockerEngine.CheckDockerEngineRunning,
-			LabeledTermPrinter: o.labeledTermPrinter})
+			LabeledTermPrinter: o.labeledTermPrinter}, &o.out)
 	}
 	return opts, nil
 }
@@ -270,7 +270,6 @@ func (o *localRunOpts) Execute() error {
 
 	containerNames := o.out.ContainerNames
 	imageNames := o.out.ImageNames
-
 	for i, image := range imageNames {
 		o.imageInfoList = append(o.imageInfoList, imageInfo{
 			containerName: containerNames[i],

@@ -142,6 +142,7 @@ func TestLocalRunOpts_Ask(t *testing.T) {
 					Name: "testWkld",
 					Type: "testWkldType",
 				}, nil)
+				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Times(1)
 			},
 			wantedEnvName:  testEnvName,
 			wantedWkldName: testWkldName,
