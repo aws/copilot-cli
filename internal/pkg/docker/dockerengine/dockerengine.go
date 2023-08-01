@@ -73,11 +73,13 @@ type BuildArguments struct {
 
 // RunOptions holds the options for running a Docker container.
 type RunOptions struct {
-	ImageURI       string            // Required. The image name to run.
-	Secrets        map[string]string // Optional. Secrets to pass to the container as environment variables.
-	EnvVars        map[string]string // Optional. Environment variables to pass to the container.
-	ContainerName  string            // Optional. The name for the container.
-	ContainerPorts map[string]string // Optional. Contains host and container ports.
+	ImageURI         string            // Required. The image name to run.
+	Secrets          map[string]string // Optional. Secrets to pass to the container as environment variables.
+	EnvVars          map[string]string // Optional. Environment variables to pass to the container.
+	ContainerName    string            // Optional. The name for the container.
+	ContainerPorts   map[string]string // Optional. Contains host and container ports.
+	Command          []string          // Optional. The command to run in the container.
+	ContainerNetwork string            // Optional. Network mode for the container.
 }
 
 // GenerateDockerBuildArgs returns command line arguments to be passed to the Docker build command based on the provided BuildArguments.
@@ -220,22 +222,22 @@ func (in *RunOptions) generateRunArguments() []string {
 
 	// Add port mappings.
 	for hostPort, containerPort := range in.ContainerPorts {
-		args = append(args, "-p", fmt.Sprintf("%s:%s", hostPort, containerPort))
+		args = append(args, "--publish", fmt.Sprintf("%s:%s", hostPort, containerPort))
 	}
 
 	// Add network option if it's not a "pause" container.
-	if in.ContainerName != "pause" {
-		args = append(args, "--network", "container:pause")
+	if !strings.HasPrefix(in.ContainerName, "pause") {
+		args = append(args, "--network", fmt.Sprintf("container:%s", in.ContainerNetwork))
 	}
 
 	//Add secrets as environment variables.
 	for key, value := range in.Secrets {
-		args = append(args, "-e", fmt.Sprintf("%s=%s", key, value))
+		args = append(args, "--env", fmt.Sprintf("%s=%s", key, value))
 	}
 
 	//Add environment variables.
 	for key, value := range in.EnvVars {
-		args = append(args, "-e", fmt.Sprintf("%s=%s", key, value))
+		args = append(args, "--env", fmt.Sprintf("%s=%s", key, value))
 	}
 
 	//Add the image name.
@@ -243,9 +245,8 @@ func (in *RunOptions) generateRunArguments() []string {
 		args = append(args, in.ImageURI)
 	}
 
-	//Add "sleep infinity" command for the "pause" container
-	if in.ContainerName == "pause" {
-		args = append(args, "sleep", "infinity")
+	if in.Command != nil && len(in.Command) > 0 {
+		args = append(args, in.Command...)
 	}
 	return args
 }
@@ -264,7 +265,7 @@ func (c DockerCmdClient) Run(ctx context.Context, options *RunOptions) error {
 // IsContainerRunning checks if a specific Docker container is running.
 func (c DockerCmdClient) IsContainerRunning(containerName string) (bool, error) {
 	buf := &bytes.Buffer{}
-	err := c.runner.Run("docker", []string{"ps", "-q", "-f", "name=" + containerName}, exec.Stdout(buf))
+	err := c.runner.Run("docker", []string{"ps", "-q", "--filter", "name=" + containerName}, exec.Stdout(buf))
 	if err != nil {
 		return false, fmt.Errorf("run docker ps: %w", err)
 	}

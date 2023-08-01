@@ -422,15 +422,15 @@ func (d *workloadDeployer) uploadContainerImages(out *UploadArtifactsOutput) err
 		CheckDockerEngine:  d.docker.CheckDockerEngineRunning,
 		LabeledTermPrinter: d.labeledTermPrinter,
 	}
-	return uploadBuildContainerImages(in)
+	return buildContainerImages(in)
 }
 
 // BuildContainerImages builds the all the images given the build arguments
 func BuildContainerImages(in *BuildImageArgs) error {
-	return uploadBuildContainerImages(in)
+	return buildContainerImages(in)
 }
 
-func uploadBuildContainerImages(in *BuildImageArgs) error {
+func buildContainerImages(in *BuildImageArgs) error {
 	// If it is built from local Dockerfile, build and push to the ECR repo.
 	buildArgsPerContainer, err := buildArgsPerContainer(in.Name, in.WorkspacePath, in.Image, in.Mft)
 	if err != nil {

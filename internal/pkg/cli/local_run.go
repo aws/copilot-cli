@@ -65,6 +65,7 @@ type localRunOpts struct {
 	appliedDynamicMft manifest.DynamicWorkload
 	out               clideploy.UploadArtifactsOutput
 	imageInfoList     []imageInfo
+	containerSuffix   string
 
 	buildContainerImages func(o *localRunOpts) error
 	configureClients     func(o *localRunOpts) (repositoryService, error)
@@ -185,6 +186,7 @@ func (o *localRunOpts) validateAndAskWkldEnvName() error {
 	o.wkldName = deployedWorkload.Name
 	o.envName = deployedWorkload.Env
 	o.wkldType = deployedWorkload.Type
+	o.containerSuffix = o.getContainerSuffix()
 	return nil
 }
 
@@ -201,6 +203,11 @@ func (o *localRunOpts) Execute() error {
 		return fmt.Errorf("get secret values: %w", err)
 	}
 
+	secretsList := make(map[string]string)
+	for _, s := range decryptedSecrets {
+		secretsList[s.Name] = s.Value
+	}
+
 	envVars := make(map[string]string)
 	envVariables := taskDef.EnvironmentVariables()
 	for _, envVariable := range envVariables {
@@ -213,8 +220,13 @@ func (o *localRunOpts) Execute() error {
 		for _, portMapping := range container.PortMappings {
 			hostPort := aws.Int64Value(portMapping.HostPort)
 			hostPortStr := strconv.FormatInt(hostPort, 10)
-			containerport := aws.Int64Value(portMapping.ContainerPort)
-			containerportStr := strconv.FormatInt(containerport, 10)
+			var containerPort int64
+			if portMapping.ContainerPort == nil {
+				containerPort = hostPort
+			} else {
+				containerPort = aws.Int64Value(portMapping.ContainerPort)
+			}
+			containerportStr := strconv.FormatInt(containerPort, 10)
 			containerPorts[hostPortStr] = containerportStr
 		}
 	}
@@ -261,17 +273,11 @@ func (o *localRunOpts) Execute() error {
 	containerNames := o.out.ContainerNames
 	imageNames := o.out.ImageNames
 
-	secretsList := make(map[string]string)
-	for _, s := range decryptedSecrets {
-		secretsList[s.Name] = s.Value
-	}
-
 	for i, image := range imageNames {
-		imageInfo := imageInfo{
+		o.imageInfoList = append(o.imageInfoList, imageInfo{
 			containerName: containerNames[i],
 			imageURI:      image,
-		}
-		o.imageInfoList = append(o.imageInfoList, imageInfo)
+		})
 	}
 
 	var sideCarListInfo []imageInfo
@@ -288,12 +294,12 @@ func (o *localRunOpts) Execute() error {
 	}
 	o.imageInfoList = append(o.imageInfoList, sideCarListInfo...)
 
-	err = o.runPauseContainer(containerPorts)
+	err = o.runPauseContainer(context.Background(), containerPorts)
 	if err != nil {
 		return err
 	}
 
-	err = o.runContainers(o.imageInfoList, secretsList, envVars)
+	err = o.runContainers(context.Background(), o.imageInfoList, secretsList, envVars)
 	if err != nil {
 		return err
 	}
@@ -301,43 +307,46 @@ func (o *localRunOpts) Execute() error {
 	return nil
 }
 
+func (o *localRunOpts) getContainerSuffix() string {
+	containerSuffix := fmt.Sprintf("%s-%s-%s", o.appName, o.envName, o.wkldName)
+	return containerSuffix
+}
+
 func getBuiltSideCarImages(sidecars map[string]*manifest.SidecarConfig) []imageInfo {
 	//get the image URI for the sidecars which are in a registry
-	sideCarBuiltImages := make(map[string]string)
+	var sideCarBuiltImageInfo []imageInfo
 	for sideCarName, sidecar := range sidecars {
 		if uri, hasLocation := sidecar.ImageURI(); hasLocation {
-			sideCarBuiltImages[sideCarName] = uri
+			imageInfo := imageInfo{
+				containerName: sideCarName,
+				imageURI:      uri,
+			}
+			sideCarBuiltImageInfo = append(sideCarBuiltImageInfo, imageInfo)
 		}
-	}
-	var sideCarBuiltImageInfo []imageInfo
-	for sidecarName, image := range sideCarBuiltImages {
-		imageInfo := imageInfo{
-			containerName: sidecarName,
-			imageURI:      image,
-		}
-		sideCarBuiltImageInfo = append(sideCarBuiltImageInfo, imageInfo)
 	}
 	return sideCarBuiltImageInfo
 }
 
-func (o *localRunOpts) runPauseContainer(containerPorts map[string]string) error {
+func (o *localRunOpts) runPauseContainer(ctx context.Context, containerPorts map[string]string) error {
+	containerNameWithSuffix := fmt.Sprintf("%s-%s", pauseContainerName, o.containerSuffix)
 	runOptions := &dockerengine.RunOptions{
 		ImageURI:       pauseContainerURI,
-		ContainerName:  pauseContainerName,
+		ContainerName:  containerNameWithSuffix,
 		ContainerPorts: containerPorts,
+		Command:        []string{"sleep", "infinity"},
 	}
 
 	//channel to receive any error from the goroutine
 	errCh := make(chan error, 1)
 
 	go func() {
-		errCh <- o.dockerEngine.Run(context.Background(), runOptions)
+		errCh <- o.dockerEngine.Run(ctx, runOptions)
 	}()
 
 	// go routine to check if pause container is running
 	go func() {
 		for {
-			isRunning, err := o.dockerEngine.IsContainerRunning(pauseContainerName)
+			isRunning, err := o.dockerEngine.IsContainerRunning(containerNameWithSuffix)
 			if err != nil {
 				errCh <- fmt.Errorf("check if pause container is running: %w", err)
 				return
@@ -359,22 +368,25 @@ func (o *localRunOpts) runPauseContainer(containerPorts map[string]string) error
 
 }
 
-func (o *localRunOpts) runContainers(imageInfoList []imageInfo, secrets map[string]string, envVars map[string]string) error {
+func (o *localRunOpts) runContainers(ctx context.Context, imageInfoList []imageInfo, secrets map[string]string, envVars map[string]string) error {
 	var errGroup errgroup.Group
 
 	// Iterate over the image info list and perform parallel container runs
 	for _, imageInfo := range imageInfoList {
 		imageInfo := imageInfo
 
+		containerNameWithSuffix := fmt.Sprintf("%s-%s", imageInfo.containerName, o.containerSuffix)
+		containerNetwork := fmt.Sprintf("%s-%s", pauseContainerName, o.containerSuffix)
 		// Execute each container run in a separate goroutine
 		errGroup.Go(func() error {
 			runOptions := &dockerengine.RunOptions{
-				ImageURI:      imageInfo.imageURI,
-				ContainerName: imageInfo.containerName,
-				Secrets:       secrets,
-				EnvVars:       envVars,
+				ImageURI:         imageInfo.imageURI,
+				ContainerName:    containerNameWithSuffix,
+				Secrets:          secrets,
+				EnvVars:          envVars,
+				ContainerNetwork: containerNetwork,
 			}
-			if err := o.dockerEngine.Run(context.Background(), runOptions); err != nil {
+			if err := o.dockerEngine.Run(ctx, runOptions); err != nil {
 				return fmt.Errorf("run container: %w", err)
 			}
 			return nil
