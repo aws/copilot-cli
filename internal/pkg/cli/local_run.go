@@ -64,7 +64,7 @@ type localRunOpts struct {
 	repository        repositoryService
 	appliedDynamicMft manifest.DynamicWorkload
 	out               clideploy.UploadArtifactsOutput
-	imageInfoList     []imageInfo
+	imageInfoList     []clideploy.ImagePerContainer
 	containerSuffix   string
 
 	buildContainerImages func(o *localRunOpts) error
@@ -74,10 +74,10 @@ type localRunOpts struct {
 	newInterpolator      func(app, env string) interpolator
 }
 
-type imageInfo struct {
-	containerName string
-	imageURI      string
-}
+// type imageInfo struct {
+// 	containerName string
+// 	imageURI      string
+// }
 
 func newLocalRunOpts(vars localRunVars) (*localRunOpts, error) {
 	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("local run"))
@@ -133,14 +133,13 @@ func newLocalRunOpts(vars localRunVars) (*localRunOpts, error) {
 		image := clideploy.ContainerImageIdentifier{
 			GitShortCommitTag: gitShortCommit,
 		}
-		return clideploy.BuildContainerImages(&clideploy.BuildAndPushImagesInput{
-			Name:          o.wkldName,
-			WorkspacePath: o.ws.Path(),
-			Image:         image,
-			Mft:           o.appliedDynamicMft.Manifest(),
-			//Out:                &o.out,
+		return clideploy.BuildContainerImages(&clideploy.ImageActionInput{
+			Name:               o.wkldName,
+			WorkspacePath:      o.ws.Path(),
+			Image:              image,
+			Mft:                o.appliedDynamicMft.Manifest(),
 			GitShortCommitTag:  gitShortCommit,
-			BuildFunc:          o.repository.Build,
+			Builder:            o.repository,
 			Login:              o.repository.Login,
 			CheckDockerEngine:  o.dockerEngine.CheckDockerEngineRunning,
 			LabeledTermPrinter: o.labeledTermPrinter}, &o.out)
@@ -271,13 +270,13 @@ func (o *localRunOpts) Execute() error {
 	containerNames := o.out.ContainerNames
 	imageNames := o.out.ImageNames
 	for i, image := range imageNames {
-		o.imageInfoList = append(o.imageInfoList, imageInfo{
-			containerName: containerNames[i],
-			imageURI:      image,
+		o.imageInfoList = append(o.imageInfoList, clideploy.ImagePerContainer{
+			ContainerName: containerNames[i],
+			ImageURI:      image,
 		})
 	}
 
-	var sidecarImageLocations []imageInfo //sidecarImageLocations has the image locations which are already built
+	var sidecarImageLocations []clideploy.ImagePerContainer //sidecarImageLocations has the image locations which are already built
 	manifestContent := o.appliedDynamicMft.Manifest()
 	switch t := manifestContent.(type) {
 	case *manifest.ScheduledJob:
@@ -291,6 +290,9 @@ func (o *localRunOpts) Execute() error {
 	}
 	o.imageInfoList = append(o.imageInfoList, sidecarImageLocations...)
 
+	// g, ctx := errgroup.WithContext(context.Background())
+	// ctx, cancel := context.WithCancel(ctx)
+	// defer cancel()
 	err = o.runPauseContainer(context.Background(), containerPorts)
 	if err != nil {
 		return err
@@ -309,14 +311,14 @@ func (o *localRunOpts) getContainerSuffix() string {
 	return containerSuffix
 }
 
-func getBuiltSidecarImageLocations(sidecars map[string]*manifest.SidecarConfig) []imageInfo {
+func getBuiltSidecarImageLocations(sidecars map[string]*manifest.SidecarConfig) []clideploy.ImagePerContainer {
 	//get the image location for the sidecars which are already built and are in a registry
-	var sideCarBuiltImageLocations []imageInfo
+	var sideCarBuiltImageLocations []clideploy.ImagePerContainer
 	for sideCarName, sidecar := range sidecars {
 		if uri, hasLocation := sidecar.ImageURI(); hasLocation {
-			sideCarBuiltImageLocations = append(sideCarBuiltImageLocations, imageInfo{
-				containerName: sideCarName,
-				imageURI:      uri,
+			sideCarBuiltImageLocations = append(sideCarBuiltImageLocations, clideploy.ImagePerContainer{
+				ContainerName: sideCarName,
+				ImageURI:      uri,
 			})
 		}
 	}
@@ -364,19 +366,19 @@ func (o *localRunOpts) runPauseContainer(ctx context.Context, containerPorts map
 
 }
 
-func (o *localRunOpts) runContainers(ctx context.Context, imageInfoList []imageInfo, secrets map[string]string, envVars map[string]string) error {
+func (o *localRunOpts) runContainers(ctx context.Context, imageInfoList []clideploy.ImagePerContainer, secrets map[string]string, envVars map[string]string) error {
 	var errGroup errgroup.Group
 
 	// Iterate over the image info list and perform parallel container runs
 	for _, imageInfo := range imageInfoList {
 		imageInfo := imageInfo
 
-		containerNameWithSuffix := fmt.Sprintf("%s-%s", imageInfo.containerName, o.containerSuffix)
+		containerNameWithSuffix := fmt.Sprintf("%s-%s", imageInfo.ContainerName, o.containerSuffix)
 		containerNetwork := fmt.Sprintf("%s-%s", pauseContainerName, o.containerSuffix)
 		// Execute each container run in a separate goroutine
 		errGroup.Go(func() error {
 			runOptions := &dockerengine.RunOptions{
-				ImageURI:         imageInfo.imageURI,
+				ImageURI:         imageInfo.ImageURI,
 				ContainerName:    containerNameWithSuffix,
 				Secrets:          secrets,
 				EnvVars:          envVars,

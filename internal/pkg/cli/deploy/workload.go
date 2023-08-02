@@ -82,6 +82,7 @@ func (noopActionRecommender) RecommendedActions() []string {
 type repositoryService interface {
 	Login() (string, error)
 	BuildAndPush(ctx context.Context, args *dockerengine.BuildArguments, w io.Writer) (string, error)
+	Build(ctx context.Context, args *dockerengine.BuildArguments, w io.Writer) (string, error)
 }
 
 type templater interface {
@@ -200,6 +201,12 @@ type workloadDeployer struct {
 	envConfig                *manifest.Environment
 }
 
+// ImagePerContainer contains the contains name and its ImageURI
+type ImagePerContainer struct {
+	ContainerName string
+	ImageURI      string
+}
+
 // WorkloadDeployerInput is the input to for workloadDeployer constructor.
 type WorkloadDeployerInput struct {
 	SessionProvider  *sessions.Provider
@@ -224,16 +231,16 @@ type ContainerImageIdentifier struct {
 }
 
 // BuildAndPushImagesInput represent the input parameters for building and uploading container images.
-type BuildAndPushImagesInput struct {
-	Name          string
-	WorkspacePath string
-	Image         ContainerImageIdentifier
-	//Out                *UploadArtifactsOutput
-	CustomTag          string
-	GitShortCommitTag  string
-	Mft                interface{}
-	Login              func() (string, error)
-	BuildFunc          func(ctx context.Context, args *dockerengine.BuildArguments, w io.Writer) (string, error)
+type ImageActionInput struct {
+	Name              string
+	WorkspacePath     string
+	Image             ContainerImageIdentifier
+	CustomTag         string
+	GitShortCommitTag string
+	Mft               interface{}
+	Login             func() (string, error)
+	Builder           repositoryService
+
 	CheckDockerEngine  func() error
 	LabeledTermPrinter func(fw syncbuffer.FileWriter, bufs []*syncbuffer.LabeledSyncBuffer, opts ...syncbuffer.LabeledTermPrinterOption) LabeledTermPrinter
 }
@@ -409,28 +416,36 @@ func (img ContainerImageIdentifier) Tag() string {
 }
 
 func (d *workloadDeployer) uploadContainerImages(out *UploadArtifactsOutput) error {
-	return buildAndPushImages(&BuildAndPushImagesInput{
-		Name:          d.name,
-		WorkspacePath: d.workspacePath,
-		Image:         d.image,
-		Mft:           d.mft,
-		//	Out:                out,
+	return buildAndPushImages(&ImageActionInput{
+		Name:               d.name,
+		WorkspacePath:      d.workspacePath,
+		Image:              d.image,
+		Mft:                d.mft,
 		CustomTag:          d.image.CustomTag,
 		GitShortCommitTag:  d.image.GitShortCommitTag,
-		BuildFunc:          d.repository.BuildAndPush,
+		Builder:            d.repository,
 		Login:              d.repository.Login,
 		CheckDockerEngine:  d.docker.CheckDockerEngineRunning,
 		LabeledTermPrinter: d.labeledTermPrinter,
 	}, out)
+
 }
 
 // BuildContainerImages builds the all the images given the build arguments
-func BuildContainerImages(in *BuildAndPushImagesInput, out *UploadArtifactsOutput) error {
-	return buildAndPushImages(in, out)
+func BuildContainerImages(in *ImageActionInput, out *UploadArtifactsOutput) error {
+	return buildImages(in, out)
 }
 
-func buildAndPushImages(in *BuildAndPushImagesInput, out *UploadArtifactsOutput) error {
-	// If it is built from local Dockerfile, build and push to the ECR repo.
+func buildImages(in *ImageActionInput, out *UploadArtifactsOutput) error {
+	return performImageAction(in, out, in.Builder.Build)
+}
+
+func buildAndPushImages(in *ImageActionInput, out *UploadArtifactsOutput) error {
+	return performImageAction(in, out, in.Builder.BuildAndPush)
+}
+
+func performImageAction(in *ImageActionInput, out *UploadArtifactsOutput, buildFunc func(ctx context.Context, args *dockerengine.BuildArguments, w io.Writer) (string, error)) error {
+	//this function could either build or buildAndPush the image based on the function received
 	buildArgsPerContainer, err := buildArgsPerContainer(in.Name, in.WorkspacePath, in.Image, in.Mft)
 	if err != nil {
 		return err
@@ -467,7 +482,7 @@ func buildAndPushImages(in *BuildAndPushImagesInput, out *UploadArtifactsOutput)
 		pr, pw := io.Pipe()
 		g.Go(func() error {
 			defer pw.Close()
-			digest, err := in.BuildFunc(ctx, buildArgs, pw)
+			digest, err := buildFunc(ctx, buildArgs, pw)
 			if err != nil {
 				return fmt.Errorf("build and push the image %q: %w", name, err)
 			}

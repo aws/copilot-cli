@@ -76,6 +76,21 @@ func (m *MockrepositoryService) EXPECT() *MockrepositoryServiceMockRecorder {
 	return m.recorder
 }
 
+// Build mocks base method.
+func (m *MockrepositoryService) Build(ctx context.Context, args *dockerengine.BuildArguments, w io.Writer) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Build", ctx, args, w)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Build indicates an expected call of Build.
+func (mr *MockrepositoryServiceMockRecorder) Build(ctx, args, w interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Build", reflect.TypeOf((*MockrepositoryService)(nil).Build), ctx, args, w)
+}
+
 // BuildAndPush mocks base method.
 func (m *MockrepositoryService) BuildAndPush(ctx context.Context, args *dockerengine.BuildArguments, w io.Writer) (string, error) {
 	m.ctrl.T.Helper()
