@@ -230,7 +230,7 @@ type ContainerImageIdentifier struct {
 	GitShortCommitTag string
 }
 
-// BuildAndPushImagesInput represent the input parameters for building and uploading container images.
+// ImageActionInput represent the input parameters for building and uploading container images.
 type ImageActionInput struct {
 	Name              string
 	WorkspacePath     string
