@@ -56,6 +56,12 @@ image:
   port: 80
   labels: |
     ["label1","label2"]
+  "com.datadoghq.ad.instances": |
+    [
+      {
+        "prometheus_url": "http://metrics",
+      }
+    ]
 
 cpu: 256#${CPU}
 memory: 512    # ${Memory}
@@ -93,6 +99,12 @@ image:
   port: 80
   labels: |
     ["label1","label2"]
+  "com.datadoghq.ad.instances": |
+    [
+      {
+        "prometheus_url": "http://metrics",
+      }
+    ]
 cpu: 256#512
 memory: 512 # ${Memory}
 variables:
