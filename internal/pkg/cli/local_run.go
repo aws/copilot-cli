@@ -206,17 +206,17 @@ func (o *localRunOpts) Execute() error {
 		return fmt.Errorf("get secret values: %w", err)
 	}
 
-	secretsList := make(map[string]string)
+	secretsList := make(map[string]string, len(decryptedSecrets))
 	for _, s := range decryptedSecrets {
 		secretsList[s.Name] = s.Value
 	}
 
-	envVars := make(map[string]string)
+	envVars := make(map[string]string, len(taskDef.EnvironmentVariables()))
 	for _, envVariable := range taskDef.EnvironmentVariables() {
 		envVars[envVariable.Name] = envVariable.Value
 	}
 
-	containerPorts := make(map[string]string)
+	containerPorts := make(map[string]string, len(taskDef.ContainerDefinitions))
 	for _, container := range taskDef.ContainerDefinitions {
 		for _, portMapping := range container.PortMappings {
 			hostPort := strconv.FormatInt(aws.Int64Value(portMapping.HostPort), 10)
@@ -278,9 +278,6 @@ func (o *localRunOpts) Execute() error {
 	}
 	o.imageInfoList = append(o.imageInfoList, sidecarImageLocations...)
 
-	// g, ctx := errgroup.WithContext(context.Background())
-	// ctx, cancel := context.WithCancel(ctx)
-	// defer cancel()
 	err = o.runPauseContainer(context.Background(), containerPorts)
 	if err != nil {
 		return err
@@ -354,7 +351,7 @@ func (o *localRunOpts) runPauseContainer(ctx context.Context, containerPorts map
 }
 
 func (o *localRunOpts) runContainers(ctx context.Context, imageInfoList []clideploy.ImagePerContainer, secrets map[string]string, envVars map[string]string) error {
-	var errGroup errgroup.Group
+	g, ctx := errgroup.WithContext(ctx)
 
 	// Iterate over the image info list and perform parallel container runs
 	for _, imageInfo := range imageInfoList {
@@ -363,7 +360,7 @@ func (o *localRunOpts) runContainers(ctx context.Context, imageInfoList []clidep
 		containerNameWithSuffix := fmt.Sprintf("%s-%s", imageInfo.ContainerName, o.containerSuffix)
 		containerNetwork := fmt.Sprintf("%s-%s", pauseContainerName, o.containerSuffix)
 		// Execute each container run in a separate goroutine
-		errGroup.Go(func() error {
+		g.Go(func() error {
 			runOptions := &dockerengine.RunOptions{
 				ImageURI:         imageInfo.ImageURI,
 				ContainerName:    containerNameWithSuffix,
@@ -379,7 +376,7 @@ func (o *localRunOpts) runContainers(ctx context.Context, imageInfoList []clidep
 	}
 
 	// Wait for all the container runs to complete
-	if err := errGroup.Wait(); err != nil {
+	if err := g.Wait(); err != nil {
 		return err
 	}
 	return nil
