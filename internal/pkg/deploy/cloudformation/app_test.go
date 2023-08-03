@@ -628,6 +628,35 @@ func TestCloudFormation_AddServiceToApp(t *testing.T) {
 				return m
 			},
 		},
+		"with new app to existing app with existing Workloads": {
+			app:     &mockApp,
+			svcName: "test",
+			mockStackSet: func(t *testing.T, ctrl *gomock.Controller) stackSetClient {
+				m := mocks.NewMockstackSetClient(ctrl)
+				m.EXPECT().Describe(gomock.Any()).Return(stackset.Description{
+					Template: `Metadata:
+  Version: 1
+  Services: "See #5140"
+  Workloads:
+  - Name: firsttest
+    WithECR: true`,
+				}, nil)
+				m.EXPECT().Update(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return("", nil).
+					Do(func(_, template string, _ ...stackset.CreateOrUpdateOption) {
+						configToDeploy, err := stack.AppConfigFrom(&template)
+						require.NoError(t, err)
+						require.ElementsMatch(t, []stack.AppResourcesWorkload{
+							{Name: "test", WithECR: true},
+							{Name: "firsttest", WithECR: true},
+						}, configToDeploy.Workloads)
+						require.Empty(t, configToDeploy.Accounts, "there should be no new accounts to deploy")
+						require.Equal(t, 2, configToDeploy.Version)
+
+					})
+				return m
+			},
+		},
 	}
 
 	for name, tc := range testCases {
