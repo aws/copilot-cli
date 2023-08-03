@@ -74,11 +74,6 @@ type localRunOpts struct {
 	newInterpolator      func(app, env string) interpolator
 }
 
-// type imageInfo struct {
-// 	containerName string
-// 	imageURI      string
-// }
-
 func newLocalRunOpts(vars localRunVars) (*localRunOpts, error) {
 	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("local run"))
 	defaultSess, err := sessProvider.Default()
@@ -112,7 +107,6 @@ func newLocalRunOpts(vars localRunVars) (*localRunOpts, error) {
 		cmd:                exec.NewCmd(),
 		dockerEngine:       dockerengine.New(exec.NewCmd()),
 		labeledTermPrinter: labeledTermPrinter,
-		out:                clideploy.UploadArtifactsOutput{},
 	}
 	opts.configureClients = func(o *localRunOpts) (repositoryService, error) {
 		defaultSessEnvRegion, err := o.sessProvider.DefaultWithRegion(o.targetEnv.Region)
@@ -218,25 +212,20 @@ func (o *localRunOpts) Execute() error {
 	}
 
 	envVars := make(map[string]string)
-	envVariables := taskDef.EnvironmentVariables()
-	for _, envVariable := range envVariables {
+	for _, envVariable := range taskDef.EnvironmentVariables() {
 		envVars[envVariable.Name] = envVariable.Value
 	}
 
 	containerPorts := make(map[string]string)
-	containerdef := taskDef.ContainerDefinitions
-	for _, container := range containerdef {
+	for _, container := range taskDef.ContainerDefinitions {
 		for _, portMapping := range container.PortMappings {
-			hostPort := aws.Int64Value(portMapping.HostPort)
-			hostPortStr := strconv.FormatInt(hostPort, 10)
-			var containerPort int64
+			hostPort := strconv.FormatInt(aws.Int64Value(portMapping.HostPort), 10)
+
+			containerPort := hostPort
 			if portMapping.ContainerPort == nil {
-				containerPort = hostPort
-			} else {
-				containerPort = aws.Int64Value(portMapping.ContainerPort)
+				containerPort = strconv.FormatInt(aws.Int64Value(portMapping.ContainerPort), 10)
 			}
-			containerportStr := strconv.FormatInt(containerPort, 10)
-			containerPorts[hostPortStr] = containerportStr
+			containerPorts[hostPort] = containerPort
 		}
 	}
 
@@ -262,8 +251,7 @@ func (o *localRunOpts) Execute() error {
 		return err
 	}
 
-	err = o.buildContainerImages(o)
-	if err != nil {
+	if err := o.buildContainerImages(o); err != nil {
 		return err
 	}
 
@@ -307,8 +295,7 @@ func (o *localRunOpts) Execute() error {
 }
 
 func (o *localRunOpts) getContainerSuffix() string {
-	containerSuffix := fmt.Sprintf("%s-%s-%s", o.appName, o.envName, o.wkldName)
-	return containerSuffix
+	return fmt.Sprintf("%s-%s-%s", o.appName, o.envName, o.wkldName)
 }
 
 func getBuiltSidecarImageLocations(sidecars map[string]*manifest.SidecarConfig) []clideploy.ImagePerContainer {

@@ -416,32 +416,23 @@ func (img ContainerImageIdentifier) Tag() string {
 }
 
 func (d *workloadDeployer) uploadContainerImages(out *UploadArtifactsOutput) error {
-	return buildAndPushImages(&ImageActionInput{
+	return performImageAction(&ImageActionInput{
 		Name:               d.name,
 		WorkspacePath:      d.workspacePath,
 		Image:              d.image,
 		Mft:                d.mft,
 		CustomTag:          d.image.CustomTag,
 		GitShortCommitTag:  d.image.GitShortCommitTag,
-		Builder:            d.repository,
 		Login:              d.repository.Login,
 		CheckDockerEngine:  d.docker.CheckDockerEngineRunning,
 		LabeledTermPrinter: d.labeledTermPrinter,
-	}, out)
+	}, out, d.repository.BuildAndPush)
 
 }
 
 // BuildContainerImages builds the all the images given the build arguments
 func BuildContainerImages(in *ImageActionInput, out *UploadArtifactsOutput) error {
-	return buildImages(in, out)
-}
-
-func buildImages(in *ImageActionInput, out *UploadArtifactsOutput) error {
 	return performImageAction(in, out, in.Builder.Build)
-}
-
-func buildAndPushImages(in *ImageActionInput, out *UploadArtifactsOutput) error {
-	return performImageAction(in, out, in.Builder.BuildAndPush)
 }
 
 func performImageAction(in *ImageActionInput, out *UploadArtifactsOutput, buildFunc func(ctx context.Context, args *dockerengine.BuildArguments, w io.Writer) (string, error)) error {
