@@ -228,6 +228,7 @@ type ContainerImageIdentifier struct {
 	Digest            string
 	CustomTag         string
 	GitShortCommitTag string
+	ImageName         string
 }
 
 // ImageActionInput represent the input parameters for building and uploading container images.
@@ -479,14 +480,13 @@ func performImageAction(in *ImageActionInput, out *UploadArtifactsOutput, buildF
 			}
 			digestsMu.Lock()
 			defer digestsMu.Unlock()
+			imageName := fmt.Sprintf("%s:%s", uri, buildArgs.Tags[0])
 			out.ImageDigests[name] = ContainerImageIdentifier{
 				Digest:            digest,
 				CustomTag:         in.CustomTag,
 				GitShortCommitTag: in.GitShortCommitTag,
+				ImageName:         imageName,
 			}
-			imageName := fmt.Sprintf("%s:%s", uri, buildArgs.Tags[0])
-			out.ImageNames = append(out.ImageNames, imageName)
-			out.ContainerNames = append(out.ContainerNames, name)
 			return nil
 		})
 		g.Go(func() error {
@@ -590,8 +590,6 @@ type UploadArtifactsOutput struct {
 	AddonsURL                      string
 	CustomResourceURLs             map[string]string
 	StaticSiteAssetMappingLocation string
-	ImageNames                     []string
-	ContainerNames                 []string
 }
 
 // uploadArtifactFunc uploads an artifact and updates out

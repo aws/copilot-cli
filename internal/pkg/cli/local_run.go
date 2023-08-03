@@ -255,12 +255,10 @@ func (o *localRunOpts) Execute() error {
 		return err
 	}
 
-	containerNames := o.out.ContainerNames
-	imageNames := o.out.ImageNames
-	for i, image := range imageNames {
+	for name, imageInfo := range o.out.ImageDigests {
 		o.imageInfoList = append(o.imageInfoList, clideploy.ImagePerContainer{
-			ContainerName: containerNames[i],
-			ImageURI:      image,
+			ContainerName: name,
+			ImageURI:      imageInfo.ImageName,
 		})
 	}
 
