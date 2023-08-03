@@ -80,6 +80,7 @@ In this example, you can view how to:
 - Delete a resource property.
 - Create new resources.
 - Modify a property of an existing resource.
+- Delete a resource.
 
 ??? note "View sample `stack.ts`"
 
@@ -173,4 +174,35 @@ The following example showcases how you can add a property for only a particular
             }
         }
     }
+    ```
+
+The following example showcases how you can delete the default log group created by copilot that holds service logs.
+
+??? note "View sample `stack.ts`"
+
+    ```typescript
+import * as cdk from 'aws-cdk-lib';
+import * as path from 'path';
+
+interface TransformedStackProps extends cdk.StackProps {
+  readonly appName: string;
+  readonly envName: string;
+}
+
+export class TransformedStack extends cdk.Stack {
+  public readonly template: cdk.cloudformation_include.CfnInclude;
+  public readonly appName: string;
+  public readonly envName: string;
+
+  constructor(scope: cdk.App, id: string, props: TransformedStackProps) {
+    super(scope, id, props);
+    this.template = new cdk.cloudformation_include.CfnInclude(this, 'Template', {
+      templateFile: path.join('.build', 'in.yml'),
+    });
+    this.appName = props.appName;
+    this.envName = props.envName;
+    // Deletes the default log group resource.
+    this.template.node.tryRemoveChild("LogGroup")
+  }
+}
     ```
