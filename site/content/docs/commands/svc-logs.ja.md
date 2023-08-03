@@ -6,19 +6,24 @@ $ copilot svc logs
 ## コマンドの概要
 
 `copilot svc logs` はデプロイ済みの Service のログを表示します。
+(ログは Static Site Service では利用できません。)
 
 ## フラグ
 
 ```
-  -a, --app string          Name of the application.
+  -a, --app string          Name of the application. (default "testing-buildspec")
+      --container string    Optional. Return only logs from a specific container.
       --end-time string     Optional. Only return logs before a specific date (RFC3339).
                             Defaults to all logs. Only one of end-time / follow may be used.
   -e, --env string          Name of the environment.
       --follow              Optional. Specifies if the logs should be streamed.
   -h, --help                help for logs
       --json                Optional. Output in JSON format.
-      --limit int           Optional. The maximum number of log events returned. (default 10)
+      --limit int           Optional. The maximum number of log events returned. Default is 10
+                            unless any time filtering flags are set.
+      --log-group string    Optional. Only return logs from specific log group.
   -n, --name string         Name of the service.
+  -p, --previous            Optional. Print logs for the last stopped task if exists.
       --since duration      Optional. Only return logs newer than a relative duration like 5s, 2m, or 3h.
                             Defaults to all logs. Only one of start-time / since may be used.
       --start-time string   Optional. Only return logs after a specific date (RFC3339).
