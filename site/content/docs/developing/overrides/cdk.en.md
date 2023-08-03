@@ -181,28 +181,28 @@ The following example showcases how you can delete the default log group created
 ??? note "View sample `stack.ts`"
 
     ```typescript
-import * as cdk from 'aws-cdk-lib';
-import * as path from 'path';
+    import * as cdk from 'aws-cdk-lib';
+    import * as path from 'path';
 
-interface TransformedStackProps extends cdk.StackProps {
-  readonly appName: string;
-  readonly envName: string;
-}
+    interface TransformedStackProps extends cdk.StackProps {
+        readonly appName: string;
+        readonly envName: string;
+    }
 
-export class TransformedStack extends cdk.Stack {
-  public readonly template: cdk.cloudformation_include.CfnInclude;
-  public readonly appName: string;
-  public readonly envName: string;
+    export class TransformedStack extends cdk.Stack {
+        public readonly template: cdk.cloudformation_include.CfnInclude;
+        public readonly appName: string;
+        public readonly envName: string;
 
-  constructor(scope: cdk.App, id: string, props: TransformedStackProps) {
-    super(scope, id, props);
-    this.template = new cdk.cloudformation_include.CfnInclude(this, 'Template', {
-      templateFile: path.join('.build', 'in.yml'),
-    });
-    this.appName = props.appName;
-    this.envName = props.envName;
-    // Deletes the default log group resource.
-    this.template.node.tryRemoveChild("LogGroup")
-  }
-}
+        constructor(scope: cdk.App, id: string, props: TransformedStackProps) {
+            super(scope, id, props);
+            this.template = new cdk.cloudformation_include.CfnInclude(this, 'Template', {
+            templateFile: path.join('.build', 'in.yml'),
+            });
+            this.appName = props.appName;
+            this.envName = props.envName;
+            // Deletes the default log group resource.
+            this.template.node.tryRemoveChild("LogGroup")
+        }
+    }
     ```
