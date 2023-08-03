@@ -236,12 +236,12 @@ type ImageActionInput struct {
 	Name              string
 	WorkspacePath     string
 	Image             ContainerImageIdentifier
+	Builder           repositoryService
 	CustomTag         string
 	GitShortCommitTag string
 	Mft               interface{}
-	Login             func() (string, error)
-	Builder           repositoryService
 
+	Login              func() (string, error)
 	CheckDockerEngine  func() error
 	LabeledTermPrinter func(fw syncbuffer.FileWriter, bufs []*syncbuffer.LabeledSyncBuffer, opts ...syncbuffer.LabeledTermPrinterOption) LabeledTermPrinter
 }
