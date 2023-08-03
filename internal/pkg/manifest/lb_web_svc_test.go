@@ -315,7 +315,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 									},
 									EFS: EFSConfigOrBool{
 										Advanced: EFSVolumeConfiguration{
-											FileSystemID: aws.String("fs-1234"),
+											FileSystemID: &stringOrFromCFN{Plain: aws.String("fs-12345")},
 										},
 									},
 								},
@@ -385,7 +385,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 									},
 									EFS: EFSConfigOrBool{
 										Advanced: EFSVolumeConfiguration{
-											FileSystemID: aws.String("fs-1234"),
+											FileSystemID: &stringOrFromCFN{Plain: aws.String("fs-12345")},
 										},
 									},
 								},
@@ -479,7 +479,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 									},
 									EFS: EFSConfigOrBool{
 										Advanced: EFSVolumeConfiguration{
-											FileSystemID: aws.String("fs-1234"),
+											FileSystemID: &stringOrFromCFN{Plain: aws.String("fs-12345")},
 											AuthConfig: AuthorizationConfig{
 												IAM:           aws.Bool(true),
 												AccessPointID: aws.String("ap-1234"),
@@ -568,7 +568,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 									"myEFSVolume": {
 										EFS: EFSConfigOrBool{
 											Advanced: EFSVolumeConfiguration{
-												FileSystemID: aws.String("fs-5678"),
+												FileSystemID: &stringOrFromCFN{Plain: aws.String("fs-12345")},
 												AuthConfig: AuthorizationConfig{
 													AccessPointID: aws.String("ap-5678"),
 												},
@@ -700,7 +700,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 									},
 									EFS: EFSConfigOrBool{
 										Advanced: EFSVolumeConfiguration{
-											FileSystemID: aws.String("fs-5678"),
+											FileSystemID: &stringOrFromCFN{Plain: aws.String("fs-12345")},
 											AuthConfig: AuthorizationConfig{
 												IAM:           aws.Bool(true),
 												AccessPointID: aws.String("ap-5678"),
@@ -1708,7 +1708,7 @@ func TestLoadBalancedWebService_RequiredEnvironmentFeatures(t *testing.T) {
 						"mock-imported-volume": {
 							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									FileSystemID: aws.String("mock-id"),
+									FileSystemID: &stringOrFromCFN{FromCFN: fromCFN{Name: aws.String("fs-12345")}},
 								},
 							},
 						},
@@ -1731,7 +1731,7 @@ func TestLoadBalancedWebService_RequiredEnvironmentFeatures(t *testing.T) {
 						"mock-imported-volume": {
 							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									FileSystemID: aws.String("mock-id"),
+									FileSystemID: &stringOrFromCFN{Plain: aws.String("fs-12345")},
 								},
 							},
 						},
@@ -1747,7 +1747,7 @@ func TestLoadBalancedWebService_RequiredEnvironmentFeatures(t *testing.T) {
 						"mock-imported-volume": {
 							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									FileSystemID: aws.String("mock-id"),
+									FileSystemID: &stringOrFromCFN{Plain: aws.String("fs-12345")},
 								},
 							},
 						},

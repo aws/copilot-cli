@@ -57,6 +57,13 @@ environments:
           - sg-09295097b2a41b59d
           - from_cfn: MyUserDBAccessSecurityGroup1
           - from_cfn: MyUserDBAccessSecurityGroup2
+    storage:
+      volumes:
+        externalEFSVolume:
+          path: '/etc/mount1'
+          efs:
+            id:
+             from_cfn: stack-fs-12345
   staging:
     image:
       location: 123456789000.dkr.ecr.us-east-1.amazonaws.com/vault/e2e:${TAG}

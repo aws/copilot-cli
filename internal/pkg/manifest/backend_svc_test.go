@@ -243,7 +243,7 @@ func TestBackendService_RequiredEnvironmentFeatures(t *testing.T) {
 						"mock-imported-volume": {
 							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									FileSystemID: aws.String("mock-id"),
+									FileSystemID: &stringOrFromCFN{Plain: aws.String("mock-id")},
 								},
 							},
 						},
@@ -259,7 +259,7 @@ func TestBackendService_RequiredEnvironmentFeatures(t *testing.T) {
 						"mock-imported-volume": {
 							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									FileSystemID: aws.String("mock-id"),
+									FileSystemID: &stringOrFromCFN{Plain: aws.String("mock-id")},
 								},
 							},
 						},

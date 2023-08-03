@@ -89,7 +89,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
             - Name: LOG_LEVEL
               Value: "info"
             - Name: COPILOT_MOUNT_POINTS
-              Value: '{"persistence":"/etc/scratch"}'
+              Value: '{"persistence":"/etc/scratch","externalEFSVolume":"/etc/mount1"}'
           EnvironmentFiles:
             - !If
               - HasEnvFile
@@ -106,12 +106,22 @@ Resources: # If a bucket URL is specified, that means the template exists.
             - ContainerPath: '/etc/scratch'
               ReadOnly: true
               SourceVolume: persistence
+            - ContainerPath: '/etc/mount1'
+              ReadOnly: true
+              SourceVolume: externalEFSVolume
           PortMappings:
             - ContainerPort: 4000
               Protocol: tcp
               Name: target
       Volumes:
         - Name: persistence
+        - Name: externalEFSVolume
+          EFSVolumeConfiguration:
+            FilesystemId: !ImportValue stack-fs-12345
+            RootDirectory: '/'
+            TransitEncryption: ENABLED
+            AuthorizationConfig:
+              IAM: DISABLED
   ExecutionRole:
     Metadata:
       'aws:copilot:description': 'An IAM Role for the Fargate agent to make AWS API calls on your behalf'
@@ -216,6 +226,15 @@ Resources: # If a bucket URL is specified, that means the template exists.
                 Resource:
                   - !Ref givesdogsSNSTopic
                   - !Ref mytopicfifoSNSTopic
+        - PolicyName: !Join ['', ['GrantEFSAccess', !ImportValue stack-fs-12345]]
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action:
+                  - 'elasticfilesystem:ClientMount'
+                Resource:
+                  - !Join ['', [!Sub 'arn:${AWS::Partition}:elasticfilesystem:${AWS::Region}:${AWS::AccountId}:file-system', '/', !ImportValue stack-fs-12345]]
   DiscoveryService:
     Metadata:
       'aws:copilot:description': 'Service discovery for your services to communicate within the VPC'
