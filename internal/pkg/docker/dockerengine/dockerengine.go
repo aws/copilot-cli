@@ -90,6 +90,7 @@ type BuildArguments struct {
 	Platform          string            // Optional. OS/Arch to pass to `docker build`.
 	Args              map[string]string // Optional. Build args to pass via `--build-arg` flags. Equivalent to ARG directives in dockerfile.
 	Labels            map[string]string // Required. Set metadata for an image.
+	Engine            string            // Optional. Currently supported options are "docker" and "podman". Defaults to "docker".
 }
 
 // RunOptions holds the options for running a Docker container.
@@ -232,12 +233,22 @@ func (c DockerCmdClient) Exec(ctx context.Context, container string, out io.Writ
 }
 
 // Push pushes the images with the specified tags and ecr repository URI, and returns the image digest on success.
-func (c DockerCmdClient) Push(ctx context.Context, uri string, w io.Writer, tags ...string) (digest string, err error) {
+func (c DockerCmdClient) Push(ctx context.Context, uri string, engine string, w io.Writer, tags ...string) (digest string, err error) {
 	images := []string{}
 	for _, tag := range tags {
 		images = append(images, imageName(uri, tag))
 	}
 	var args []string
+	// Podman image digests are based on the compressed image, so need to be gathered from podman.
+	var digestFile *os.File
+	if engine == "podman" {
+		digestFile, err = os.CreateTemp("", "copilot-digest")
+		if err != nil {
+			return "", fmt.Errorf("create temp file for digest: %w", err)
+		}
+		defer os.Remove(digestFile.Name())
+		args = append(args, "--digestfile", digestFile.Name())
+	}
 	if ci, _ := c.lookupEnv("CI"); ci == "true" {
 		args = append(args, "--quiet")
 	}
@@ -247,6 +258,14 @@ func (c DockerCmdClient) Push(ctx context.Context, uri string, w io.Writer, tags
 			return "", fmt.Errorf("docker push %s: %w", img, err)
 		}
 	}
+	if engine == "podman" {
+		digest, err := os.ReadFile(digestFile.Name())
+		if err != nil {
+			return "", fmt.Errorf("read digest file: %w", err)
+		}
+		return string(digest), nil
+	}
+
 	buf := new(strings.Builder)
 	// The container image will have the same digest regardless of the associated tag.
 	// Pick the first tag and get the image's digest.

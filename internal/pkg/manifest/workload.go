@@ -178,6 +178,7 @@ func (i *ImageLocationOrBuild) BuildConfig(rootDirectory string) *DockerBuildArg
 		Args:       i.args(),
 		Target:     i.target(),
 		CacheFrom:  i.cacheFrom(),
+		Engine:     i.engine(),
 	}
 }
 
@@ -236,6 +237,14 @@ func (i *ImageLocationOrBuild) target() *string {
 // Otherwise it returns nil.
 func (i *ImageLocationOrBuild) cacheFrom() []string {
 	return i.Build.BuildArgs.CacheFrom
+}
+
+// engine returns the engine to use for building the image if it exists, otherwise "docker"
+func (i *ImageLocationOrBuild) engine() *string {
+	if i.Build.BuildArgs.Engine != nil {
+		return i.Build.BuildArgs.Engine
+	}
+	return aws.String("docker")
 }
 
 // ImageOverride holds fields that override Dockerfile image defaults.
@@ -398,6 +407,7 @@ type DockerBuildArgs struct {
 	Args       map[string]string `yaml:"args,omitempty"`
 	Target     *string           `yaml:"target,omitempty"`
 	CacheFrom  []string          `yaml:"cache_from,omitempty"`
+	Engine     *string           `yaml:"engine,omitempty"`
 }
 
 func (b *DockerBuildArgs) isEmpty() bool {
