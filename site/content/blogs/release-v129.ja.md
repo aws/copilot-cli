@@ -1,5 +1,5 @@
 ---
-title: 'AWS Copilot v1.29: パイプラインテンプレートのオーバライドと CloudFront キャッシュの無効化'
+title: 'AWS Copilot v1.29: Pipeline テンプレートのオーバライドと CloudFront キャッシュの無効化'
 twitter_title: 'AWS Copilot v1.29'
 image: ''
 image_alt: ''
@@ -7,7 +7,7 @@ image_width: '1051'
 image_height: '747'
 ---
 
-# AWS Copilot v1.29: AWS Copilot v1.29: パイプラインテンプレートのオーバライドと CloudFront キャッシュの無効化！
+# AWS Copilot v1.29: AWS Copilot v1.29: Pipeline テンプレートのオーバライドと CloudFront キャッシュの無効化！
 
 投稿日: 2023 年 7 月 20 日
 
@@ -19,10 +19,10 @@ AWS Copilot へご支援、ご支持いただいている皆様お一人お一�
 
 Copilot v1.29 ではより柔軟で効率的な開発を支援する大きな機能強化が行われました:
 
-- **パイプラインオーバーライド**: [v1.27.0](https://aws.github.io/copilot-cli/ja/blogs/release-v127/#copilot-aws-cloudformation)では、ワークロードと Environment の Cloudformation テンプレートに対する CDK と YAML パッチオーバーライドを導入しました。今回のリリースで、Copilot パイプラインテンプレートに対しても同様の拡張性を利用できる様になりました！[詳細セクションはこちらをご覧ください](#pipeline-overrides)。
+- **Pipeline オーバーライド**: [v1.27.0](https://aws.github.io/copilot-cli/ja/blogs/release-v127/#copilot-aws-cloudformation)では、ワークロードと Environment の CloudFormation テンプレートに対する CDK と YAML パッチオーバーライドを導入しました。今回のリリースで、Copilot Pipeline テンプレートに対しても同様の拡張性を利用できる様になりました！[詳細セクションはこちらをご覧ください](#pipeline-overrides)。
 - **Static Site 機能拡張**: CloudFront キャッシュの無効化と Static Site に合わせた運用コマンドで[最近追加されたワークロードタイプ](https://aws.github.io/copilot-cli/ja/blogs/release-v128/#static-site-service-type)を改善しました。[詳細セクションはこちらをご覧ください](#static-site-enhancements)。
 
-???+ note "What’s AWS Copilot?"
+???+ note "AWS Copilot とは？"
 
     AWS Copilot CLI は AWS 上でプロダクションレディなコンテナ化されたアプリケーションのビルド、リリース、そして運用のためのツールです。
     開発のスタートからステージング環境へのプッシュ、本番環境へのリリースまで、Copilot はアプリケーション開発ライフサイクル全体の管理を容易にします。
@@ -33,8 +33,8 @@ Copilot v1.29 ではより柔軟で効率的な開発を支援する大きな機
     より詳細な AWS Copilot の紹介については、[Overview](../docs/concepts/overview.ja.md) を確認してください。
 
 <a id="#pipeline-overrides"></a>
-## パイプラインオーバーライド
-Copilot Pipeline は CDK と YAML パッチオーバライドにより、より軽快で拡張性があります！この機能はパイプラインの CloudFormation テンプレートを安全かつ簡単に変更する方法を提供します。
+## Pipeline オーバーライド
+Copilot Pipeline は CDK と YAML パッチオーバライドにより、より軽快で拡張性があります！この機能は Pipeline の CloudFormation テンプレートを安全かつ簡単に変更する方法を提供します。
 他のオーバライドコマンドと同様に、`copilot pipeline override` を実行し、CloudFormation テンプレートのカスタマイズを行います。CDK または YAML が使用できます。
 `copilot pipeline deploy` に対する新しい `--diff` フラグは、デプロイを実施する前に、最後にデプロイした CloudFormation テンプレートとローカルでの変更との変更点についてプレビューできます。プレビュー後、Copilot は処理を継続するか確認します。確認をスキップする場合は、`copilot pipeline deploy --diff --yes` の様に `--yes` フラグを使用します。
 

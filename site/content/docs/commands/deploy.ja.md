@@ -12,7 +12,7 @@ $ copilot deploy
     1. ローカルの Dockerfile からコンテナイメージを作成
     2. `--tag` で指定された値、または最新の git sha を利用してタグ付け(git 管理されている場合)
     3. コンテナイメージを ECR に対してプッシュ
-2. Manifest ファイルと Addon を CloudFormation テンプレートにパッケージ
+2. Manifest ファイルと Addon をまとめて CloudFormation テンプレートにパッケージ
 3. ECS タスク定義を作成/更新し、Job や Service を作成/更新
 
 ## フラグ
