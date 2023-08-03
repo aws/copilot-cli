@@ -4,9 +4,9 @@ $ copilot svc status
 ```
 
 ## コマンドの概要
-`copilot svc status` はデプロイ済み Service のステータス、タスクのステータス、関連する CloudWatch アラームなどのヘルスステータスを表示します。
+`copilot svc status` はデプロイ済み Service のへルスステータスを表示します。タスクのステータス、Service の種類に応じて、サービス、タスク、関連するアラームや、ログ、S3 バケットのデータが含まれます。
 
-## What are the flags?
+## フラグ
 ```
   -a, --app string    Name of the application.
   -e, --env string    Name of the environment.

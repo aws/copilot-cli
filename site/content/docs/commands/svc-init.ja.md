@@ -17,6 +17,8 @@ $ copilot svc init
 
 ```
 Flags
+      --allow-downgrade                Optional. Allow using an older version of Copilot to update Copilot components
+                                       updated by a newer version of Copilot.
   -a, --app string                     Name of the application.
   -d, --dockerfile string              Path to the Dockerfile.
                                        Cannot be specified with --image.
