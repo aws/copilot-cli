@@ -232,7 +232,7 @@ func (o *deployEnvOpts) Execute() error {
 			return nil
 		}
 		if errors.As(err, &errStackUpdateCanceledOnInterrupt) {
-			log.Successf("Successfully rolled back service %s to the previous configuration.\n", color.HighlightUserInput(o.name))
+			log.Successf("Successfully rolled back service %q to the previous configuration.\n", color.HighlightUserInput(o.name))
 			return nil
 		}
 		var errEmptyChangeSet *awscfn.ErrChangeSetEmpty
