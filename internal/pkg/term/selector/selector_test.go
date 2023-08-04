@@ -1719,7 +1719,7 @@ func TestWorkspaceSelect_Workload(t *testing.T) {
 					{Value: "job2"},
 					{
 						Value: "worker",
-						Hint:  "un-initialized",
+						Hint:  "uninitialized",
 					},
 				}, gomock.Any()).Return("worker", nil).Times(1)
 			},
@@ -1787,7 +1787,7 @@ func TestWorkspaceSelect_Workload(t *testing.T) {
 					{Value: "job2"},
 					{
 						Value: "worker",
-						Hint:  "un-initialized",
+						Hint:  "uninitialized",
 					},
 				}, gomock.Any()).Return("", errors.New("some error")).Times(1)
 			},
@@ -1817,8 +1817,8 @@ func TestWorkspaceSelect_Workload(t *testing.T) {
 					},
 					workloadLister: MockconfigLister,
 				},
-				ws:                 mockwsRetriever,
-				localWorkloadsOnly: tc.inLocalWorkloadsOnly,
+				ws:                mockwsRetriever,
+				allLocalWorkloads: tc.inLocalWorkloadsOnly,
 			}
 			got, err := sel.Workload("Select a workload", "Help text")
 			if tc.wantErr != nil {
@@ -1836,9 +1836,9 @@ func TestSelectOption(t *testing.T) {
 		wantedSelector LocalWorkloadSelector
 	}{
 		"LocalWorkloadsOnly": {
-			optionToTest: LocalWorkloadsOnly,
+			optionToTest: AllLocalWorkloads,
 			wantedSelector: LocalWorkloadSelector{
-				localWorkloadsOnly: true,
+				allLocalWorkloads: true,
 			},
 		},
 	}
