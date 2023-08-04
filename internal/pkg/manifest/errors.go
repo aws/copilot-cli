@@ -5,11 +5,12 @@ package manifest
 
 import (
 	"fmt"
+	"strconv"
+	"strings"
+
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudfront"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/dustin/go-humanize/english"
-	"strconv"
-	"strings"
 )
 
 // ErrInvalidWorkloadType occurs when a user requested a manifest template type that doesn't exist.

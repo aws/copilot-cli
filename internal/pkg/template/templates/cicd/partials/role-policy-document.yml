@@ -1,0 +1,77 @@
+Version: '2012-10-17'
+Statement:
+  - Effect: Allow
+    Action:
+      - codebuild:CreateReportGroup
+      - codebuild:CreateReport
+      - codebuild:UpdateReport
+      - codebuild:BatchPutTestCases
+      - codebuild:BatchPutCodeCoverages
+    Resource: !Sub arn:aws:codebuild:${AWS::Region}:${AWS::AccountId}:report-group/pipeline-{{$.AppName}}-*
+  - Effect: Allow
+    Action:
+      - s3:PutObject
+      - s3:GetObject
+      - s3:GetObjectVersion
+    # TODO: This might not be necessary. We may only need the bucket
+    # that is in the same region as the pipeline.
+    # Loop through all the artifact buckets created in the stackset
+    Resource:{{range .ArtifactBuckets}}
+    - !Join ['', ['arn:aws:s3:::', '{{.BucketName}}']]
+    - !Join ['', ['arn:aws:s3:::', '{{.BucketName}}', '/*']]{{end}}
+  - Effect: Allow
+    Action:
+      # TODO: scope this down if possible
+      - kms:*
+    # TODO: This might not be necessary. We may only need the KMS key
+    # that is in the same region as the pipeline.
+    # Loop through all the KMS keys used to en/decrypt artifacts
+    # across (cross-regional) pipeline stages, with each stage
+    # backed by a (regional) S3 bucket.
+    Resource:{{range .ArtifactBuckets}}
+    - {{.KeyArn}}{{end}}
+  - Effect: Allow
+    Action:
+      - logs:CreateLogGroup
+      - logs:CreateLogStream
+      - logs:PutLogEvents
+    Resource: arn:aws:logs:*:*:*
+  - Effect: Allow
+    Action:
+      - ecr:GetAuthorizationToken
+    Resource: '*'
+  - Effect: Allow
+    Action:
+      - ecr:DescribeImageScanFindings
+      - ecr:GetLifecyclePolicyPreview
+      - ecr:GetDownloadUrlForLayer
+      - ecr:BatchGetImage
+      - ecr:DescribeImages
+      - ecr:ListTagsForResource
+      - ecr:BatchCheckLayerAvailability
+      - ecr:GetLifecyclePolicy
+      - ecr:GetRepositoryPolicy
+      - ecr:PutImage
+      - ecr:InitiateLayerUpload
+      - ecr:UploadLayerPart
+      - ecr:CompleteLayerUpload
+    Resource: '*'
+    Condition: {StringEquals: {'ecr:ResourceTag/copilot-application': {{$.AppName}}}}
+  {{- if ne .Source.ProviderName "GitHubV1" }} {{- if eq .Source.OutputArtifactFormat "CODEBUILD_CLONE_REF" }}
+  # Add the policy needed to use CODEBUILD_CLONE_REF.
+  {{- if eq .Source.ProviderName "CodeCommit" }}
+  - Effect: Allow
+    Action:
+      - codecommit:GitPull
+    Resource: !Sub 'arn:${AWS::Partition}:codecommit:${AWS::Region}:${AWS::AccountId}:{{.Source.Repository}}'
+  {{- else if isCodeStarConnection .Source }}
+  - Effect: Allow
+    Action:
+      - codestar-connections:UseConnection
+    {{- if eq .Source.ConnectionARN ""}}
+    Resource: !Ref SourceConnection
+    {{- else}}
+    Resource: {{$.Source.Connection}}
+    {{- end }} {{/* endif eq .Source.ConnectionARN "" */}}
+  {{- end }} {{/* if eq .Source.ProviderName "CodeCommit" */}}
+  {{- end }} {{/* endif ne .Source.OutputArtifactFormat "" */}}{{- end }} {{/* endif ne .Source.ProviderName "GitHubV1" */}}

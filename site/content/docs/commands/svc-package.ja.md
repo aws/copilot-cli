@@ -10,6 +10,8 @@ $ copilot svc package
 ## フラグ
 
 ```
+      --allow-downgrade     Optional. Allow using an older version of Copilot to update Copilot components
+                            updated by a newer version of Copilot.
   -a, --app string          Name of the application.
   -e, --env string          Name of the environment.
   -h, --help                help for package

@@ -332,10 +332,12 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 					ImageConfig: testImageConfig,
 					Sidecars: map[string]*SidecarConfig{
 						"foo": {
+							Image:     BasicToUnion[*string, ImageLocationOrBuild](aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon")),
 							DependsOn: map[string]string{"bar": "healthy"},
 							Essential: aws.Bool(false),
 						},
 						"bar": {
+							Image:     BasicToUnion[*string, ImageLocationOrBuild](aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon")),
 							DependsOn: map[string]string{"foo": "healthy"},
 							Essential: aws.Bool(false),
 						},
@@ -557,6 +559,7 @@ func TestBackendService_validate(t *testing.T) {
 					ImageConfig: testImageConfig,
 					Sidecars: map[string]*SidecarConfig{
 						"foo": {
+							Image: BasicToUnion[*string, ImageLocationOrBuild](aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon")),
 							DependsOn: DependsOn{
 								"foo": "bar",
 							},
@@ -622,9 +625,11 @@ func TestBackendService_validate(t *testing.T) {
 					ImageConfig: testImageConfig,
 					Sidecars: map[string]*SidecarConfig{
 						"foo": {
+							Image:     BasicToUnion[*string, ImageLocationOrBuild](aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon")),
 							DependsOn: map[string]string{"bar": "start"},
 						},
 						"bar": {
+							Image:     BasicToUnion[*string, ImageLocationOrBuild](aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon")),
 							DependsOn: map[string]string{"foo": "start"},
 						},
 					},
@@ -1068,9 +1073,11 @@ func TestWorkerService_validate(t *testing.T) {
 					ImageConfig: testImageConfig,
 					Sidecars: map[string]*SidecarConfig{
 						"foo": {
+							Image:     BasicToUnion[*string, ImageLocationOrBuild](aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon")),
 							DependsOn: map[string]string{"bar": "start"},
 						},
 						"bar": {
+							Image:     BasicToUnion[*string, ImageLocationOrBuild](aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon")),
 							DependsOn: map[string]string{"foo": "start"},
 						},
 					},
@@ -1303,9 +1310,11 @@ func TestScheduledJob_validate(t *testing.T) {
 					},
 					Sidecars: map[string]*SidecarConfig{
 						"foo": {
+							Image:     BasicToUnion[*string, ImageLocationOrBuild](aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon")),
 							DependsOn: map[string]string{"bar": "start"},
 						},
 						"bar": {
+							Image:     BasicToUnion[*string, ImageLocationOrBuild](aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon")),
 							DependsOn: map[string]string{"foo": "start"},
 						},
 					},
@@ -2775,8 +2784,24 @@ func TestSidecarConfig_validate(t *testing.T) {
 
 		wantedErrorPrefix string
 	}{
+		"error if fail to validate image": {
+			config:            SidecarConfig{},
+			wantedErrorPrefix: `must specify one of "image", "image.build, or "image.location"`,
+		},
+		"error if fail to validate image build": {
+			config: SidecarConfig{
+				Image: AdvancedToUnion[*string](ImageLocationOrBuild{
+					Build: BuildArgsOrString{
+						BuildString: aws.String("mockDockerfile"),
+					},
+					Location: aws.String("mockimage:tag"),
+				}),
+			},
+			wantedErrorPrefix: `validate "image": `,
+		},
 		"error if fail to validate mount_points": {
 			config: SidecarConfig{
+				Image: BasicToUnion[*string, ImageLocationOrBuild](aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon")),
 				MountPoints: []SidecarMountPoint{
 					{},
 				},
@@ -2785,6 +2810,7 @@ func TestSidecarConfig_validate(t *testing.T) {
 		},
 		"error if fail to validate depends_on": {
 			config: SidecarConfig{
+				Image: BasicToUnion[*string, ImageLocationOrBuild](aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon")),
 				DependsOn: DependsOn{
 					"foo": "bar",
 				},
@@ -2793,6 +2819,7 @@ func TestSidecarConfig_validate(t *testing.T) {
 		},
 		"error if invalid env file": {
 			config: SidecarConfig{
+				Image:   BasicToUnion[*string, ImageLocationOrBuild](aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon")),
 				EnvFile: aws.String("foo"),
 			},
 			wantedErrorPrefix: `environment file foo must`,
