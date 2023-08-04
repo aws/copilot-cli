@@ -233,13 +233,14 @@ func TestLocalRunOpts_Execute(t *testing.T) {
 		AccountID: "123456789",
 	}
 
-	mockDecryptedSecrets := []ecs.EnvVar{{
-		Name:  "my-secret",
-		Value: "Password123",
-	}, {
-		Name:  "secret2",
-		Value: "admin123",
-	},
+	mockDecryptedSecrets := []ecs.EnvVar{
+		{
+			Name:  "my-secret",
+			Value: "Password123",
+		}, {
+			Name:  "secret2",
+			Value: "admin123",
+		},
 	}
 
 	mockImageInfoList := []clideploy.ImagePerContainer{
