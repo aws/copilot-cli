@@ -748,6 +748,6 @@ type Step struct {
 }
 
 // Name returns the name of the action.
-func (a *Step) Name() string {
-	return a.name
+func (s *Step) Name() string {
+	return s.name
 }
