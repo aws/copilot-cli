@@ -11,13 +11,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws/arn"
-	"github.com/aws/copilot-cli/internal/pkg/aws/stepfunctions"
-
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
+	"github.com/aws/copilot-cli/internal/pkg/aws/secretsmanager"
+	"github.com/aws/copilot-cli/internal/pkg/aws/ssm"
+	"github.com/aws/copilot-cli/internal/pkg/aws/stepfunctions"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 )
 
@@ -47,10 +48,21 @@ type ecsClient interface {
 	UpdateService(clusterName, serviceName string, opts ...ecs.UpdateServiceOpts) error
 	DescribeTasks(cluster string, taskARNs []string) ([]*ecs.Task, error)
 	ActiveClusters(arns ...string) ([]string, error)
+	ActiveServices(serviceARNs ...string) ([]string, error)
 }
 
 type stepFunctionsClient interface {
 	StateMachineDefinition(stateMachineARN string) (string, error)
+}
+
+type secretGetter interface {
+	GetSecretValue(secretName string) (string, error)
+}
+
+// EnvVar contains the value of an environment variable
+type EnvVar struct {
+	Name  string
+	Value string
 }
 
 // ServiceDesc contains the description of an ECS service.
@@ -64,6 +76,8 @@ type ServiceDesc struct {
 // Client retrieves Copilot information from ECS endpoint.
 type Client struct {
 	rgGetter       resourceGetter
+	ssm            secretGetter
+	secretManager  secretGetter
 	ecsClient      ecsClient
 	StepFuncClient stepFunctionsClient
 }
@@ -73,6 +87,8 @@ func New(sess *session.Session) *Client {
 	return &Client{
 		rgGetter:       resourcegroups.New(sess),
 		ecsClient:      ecs.New(sess),
+		ssm:            ssm.New(sess),
+		secretManager:  secretsmanager.New(sess),
 		StepFuncClient: stepfunctions.New(sess),
 	}
 }
@@ -232,6 +248,48 @@ func (c Client) StopDefaultClusterTasks(familyName string) error {
 	return c.ecsClient.StopTasks(taskIDs, ecs.WithStopTaskReason(taskStopReason))
 }
 
+func secretNameSpace(secret string) (string, error) {
+	// A secret value can be a SSM Parameter Name/ SSM Parameter ARN/ Secrets Manager ARN
+	// Note: If there is an error while parsing the secret value, this functions assumes it to be SSM Parameter.
+	// Refer to https://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_Secret.html
+	parsed, err := arn.Parse(secret)
+	if err != nil {
+		return ssm.Namespace, nil
+	}
+	switch parsed.Service {
+	case ssm.Namespace, secretsmanager.Namespace:
+		return parsed.Service, nil
+	default:
+		return "", fmt.Errorf("invalid ARN: not an SSM or Secrets Manager ARN")
+	}
+}
+
+// DecryptedSecrets returns the decrypted parameters from either SSM parameter store or Secrets Manager.
+func (c Client) DecryptedSecrets(secrets []*ecs.ContainerSecret) ([]EnvVar, error) {
+	var vars []EnvVar
+	for _, secret := range secrets {
+		namespace, err := secretNameSpace(secret.ValueFrom)
+		if err != nil {
+			return nil, err
+		}
+		var secretValue string
+		switch namespace {
+		case ssm.Namespace:
+			secretValue, err = c.ssm.GetSecretValue(secret.ValueFrom)
+		case secretsmanager.Namespace:
+			secretValue, err = c.secretManager.GetSecretValue(secret.ValueFrom)
+		}
+		if err != nil {
+			return nil, err
+		}
+		vars = append(vars, EnvVar{
+			Name:  secret.Name,
+			Value: secretValue,
+		})
+	}
+	return vars, nil
+}
+
 // TaskDefinition returns the task definition of the service.
 func (c Client) TaskDefinition(app, env, svc string) (*ecs.TaskDefinition, error) {
 	taskDefName := fmt.Sprintf("%s-%s-%s", app, env, svc)
@@ -248,18 +306,11 @@ func (c Client) NetworkConfiguration(app, env, svc string) (*ecs.NetworkConfigur
 	if err != nil {
 		return nil, err
 	}
-
 	arn, err := c.serviceARN(app, env, svc)
 	if err != nil {
 		return nil, err
 	}
-
-	svcName, err := arn.ServiceName()
-	if err != nil {
-		return nil, fmt.Errorf("extract service name from arn %s: %w", *arn, err)
-	}
-
-	return c.ecsClient.NetworkConfiguration(clusterARN, svcName)
+	return c.ecsClient.NetworkConfiguration(clusterARN, arn.ServiceName())
 }
 
 // NetworkConfigurationForJob returns the network configuration of the job.
@@ -425,15 +476,7 @@ func (c Client) fetchAndParseServiceARN(app, env, svc string) (cluster, service 
 	if err != nil {
 		return "", "", err
 	}
-	clusterName, err := svcARN.ClusterName()
-	if err != nil {
-		return "", "", fmt.Errorf("get cluster name: %w", err)
-	}
-	serviceName, err := svcARN.ServiceName()
-	if err != nil {
-		return "", "", fmt.Errorf("get service name: %w", err)
-	}
-	return clusterName, serviceName, nil
+	return svcARN.ClusterName(), svcARN.ServiceName(), nil
 }
 
 func (c Client) serviceARN(app, env, svc string) (*ecs.ServiceArn, error) {
@@ -449,11 +492,22 @@ func (c Client) serviceARN(app, env, svc string) (*ecs.ServiceArn, error) {
 	if len(services) == 0 {
 		return nil, fmt.Errorf("no ECS service found with tags %s", tags.String())
 	}
-	if len(services) > 1 {
+	arns := make([]string, len(services))
+	for i := range services {
+		arns[i] = services[i].ARN
+	}
+	active, err := c.ecsClient.ActiveServices(arns...)
+	if err != nil {
+		return nil, fmt.Errorf("check if services are active: %w", err)
+	}
+	if len(active) > 1 {
 		return nil, fmt.Errorf("more than one ECS service with tags %s", tags.String())
 	}
-	serviceArn := ecs.ServiceArn(services[0].ARN)
-	return &serviceArn, nil
+	serviceARN, err := ecs.ParseServiceArn(active[0])
+	if err != nil {
+		return nil, fmt.Errorf("parse service arn: %w", err)
+	}
+	return serviceARN, nil
 }
 
 type tags map[string]string

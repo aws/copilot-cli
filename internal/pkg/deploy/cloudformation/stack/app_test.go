@@ -443,6 +443,27 @@ Accounts:
 				App:      "demo",
 			},
 		},
+		"unmarshal v1.28, v1.29 service config field": {
+			in: []byte(`Workloads:
+  - Name: frontend
+    WithECR: true
+  - Name: backend
+    WithECR: false
+TemplateVersion: 'v1.1.0'
+Version: 6
+App: demo
+Accounts:
+  - 1234567890`),
+			wanted: AppResourcesConfig{
+				Workloads: []AppResourcesWorkload{
+					{Name: "frontend", WithECR: true},
+					{Name: "backend", WithECR: false},
+				},
+				Accounts: []string{"1234567890"},
+				Version:  6,
+				App:      "demo",
+			},
+		},
 		"unmarshal new service config": {
 			in: []byte(`Workloads:
   - Name: frontend
@@ -450,6 +471,7 @@ Accounts:
   - Name: backend
     WithECR: false
 TemplateVersion: 'v1.1.0'
+Services: "See #5140"
 Version: 6
 App: demo
 Accounts:

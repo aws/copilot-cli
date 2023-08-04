@@ -732,12 +732,12 @@ func TestECS_DefaultCluster(t *testing.T) {
 							{
 								ClusterArn:  aws.String("arn:aws:ecs:us-east-1:0123456:cluster/cluster1"),
 								ClusterName: aws.String("cluster1"),
-								Status:      aws.String(clusterStatusActive),
+								Status:      aws.String(statusActive),
 							},
 							{
 								ClusterArn:  aws.String("arn:aws:ecs:us-east-1:0123456:cluster/cluster2"),
 								ClusterName: aws.String("cluster2"),
-								Status:      aws.String(clusterStatusActive),
+								Status:      aws.String(statusActive),
 							},
 						},
 					}, nil)
@@ -822,7 +822,7 @@ func TestECS_HasDefaultCluster(t *testing.T) {
 						Clusters: []*ecs.Cluster{
 							{
 								ClusterArn: aws.String("cluster"),
-								Status:     aws.String(clusterStatusActive),
+								Status:     aws.String(statusActive),
 							},
 						},
 					}, nil)
@@ -857,12 +857,14 @@ func TestECS_HasDefaultCluster(t *testing.T) {
 
 func TestECS_ActiveClusters(t *testing.T) {
 	testCases := map[string]struct {
+		inArns        []string
 		mockECSClient func(m *mocks.Mockapi)
 
 		wantedError    error
 		wantedClusters []string
 	}{
 		"describe clusters returns error": {
+			inArns: []string{"arn1"},
 			mockECSClient: func(m *mocks.Mockapi) {
 				m.EXPECT().
 					DescribeClusters(gomock.Any()).
@@ -871,14 +873,17 @@ func TestECS_ActiveClusters(t *testing.T) {
 			wantedError: fmt.Errorf("describe clusters: some error"),
 		},
 		"ignore inactive cluster": {
+			inArns: []string{"arn1", "arn2"},
 			mockECSClient: func(m *mocks.Mockapi) {
 				m.EXPECT().
-					DescribeClusters(gomock.Any()).
+					DescribeClusters(&ecs.DescribeClustersInput{
+						Clusters: aws.StringSlice([]string{"arn1", "arn2"}),
+					}).
 					Return(&ecs.DescribeClustersOutput{
 						Clusters: []*ecs.Cluster{
 							{
 								ClusterArn: aws.String("cluster1"),
-								Status:     aws.String(clusterStatusActive),
+								Status:     aws.String(statusActive),
 							},
 							{
 								ClusterArn: aws.String("cluster2"),
@@ -886,7 +891,7 @@ func TestECS_ActiveClusters(t *testing.T) {
 							},
 							{
 								ClusterArn: aws.String("cluster3"),
-								Status:     aws.String(clusterStatusActive),
+								Status:     aws.String(statusActive),
 							},
 							{
 								ClusterArn: aws.String("cluster4"),
@@ -913,11 +918,81 @@ func TestECS_ActiveClusters(t *testing.T) {
 			ecs := ECS{
 				client: mockECSClient,
 			}
-			clusters, err := ecs.ActiveClusters("arn1", "arn2")
+			clusters, err := ecs.ActiveClusters(tc.inArns...)
 			if tc.wantedError != nil {
 				require.EqualError(t, tc.wantedError, err.Error())
 			} else {
 				require.Equal(t, tc.wantedClusters, clusters)
+			}
+		})
+	}
+}
+
+func TestECS_ActiveServices(t *testing.T) {
+	testCases := map[string]struct {
+		inArns        []string
+		mockECSClient func(m *mocks.Mockapi)
+
+		wantedError    error
+		wantedServices []string
+	}{
+		"error if services are not in the same cluster": {
+			inArns: []string{"arn:aws:ecs:us-west-2:1234567890:service/cluster1/svc1", "arn:aws:ecs:us-west-2:1234567890:service/cluster2/svc2"},
+			mockECSClient: func(m *mocks.Mockapi) {
+				m.EXPECT().
+					DescribeServices(gomock.Any()).Times(0)
+			},
+			wantedError: fmt.Errorf(`service "arn:aws:ecs:us-west-2:1234567890:service/cluster1/svc1" and service "arn:aws:ecs:us-west-2:1234567890:service/cluster2/svc2" should be in the same cluster`),
+		},
+		"describe services returns error": {
+			inArns: []string{"arn:aws:ecs:us-west-2:1234567890:service/cluster1/svc1"},
+			mockECSClient: func(m *mocks.Mockapi) {
+				m.EXPECT().
+					DescribeServices(gomock.Any()).
+					Return(nil, fmt.Errorf("some error"))
+			},
+			wantedError: fmt.Errorf("describe services: some error"),
+		},
+		"ignore inactive service": {
+			inArns: []string{"arn:aws:ecs:us-west-2:1234567890:service/cluster1/svc1", "arn:aws:ecs:us-west-2:1234567890:service/cluster1/svc2"},
+			mockECSClient: func(m *mocks.Mockapi) {
+				m.EXPECT().
+					DescribeServices(gomock.Any()).
+					Return(&ecs.DescribeServicesOutput{
+						Services: []*ecs.Service{
+							{
+								ServiceArn: aws.String("service1"),
+								Status:     aws.String(statusActive),
+							},
+							{
+								ServiceArn: aws.String("service2"),
+								Status:     aws.String("random"),
+							},
+						},
+					}, nil)
+			},
+			wantedServices: []string{
+				"service1",
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockECSClient := mocks.NewMockapi(ctrl)
+			tc.mockECSClient(mockECSClient)
+
+			ecs := ECS{
+				client: mockECSClient,
+			}
+			services, err := ecs.ActiveServices(tc.inArns...)
+			if tc.wantedError != nil {
+				require.EqualError(t, tc.wantedError, err.Error())
+			} else {
+				require.Equal(t, tc.wantedServices, services)
 			}
 		})
 	}

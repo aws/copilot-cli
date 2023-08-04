@@ -7,15 +7,23 @@ import (
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/ecs"
+	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
+	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/spf13/cobra"
 )
 
+const workloadAskPrompt = "Which workload would you like to run locally?"
+
 type localRunVars struct {
 	wkldName string
+	wkldType string
 	appName  string
 	envName  string
 }
@@ -23,7 +31,10 @@ type localRunVars struct {
 type localRunOpts struct {
 	localRunVars
 
-	store store
+	sel            deploySelector
+	ecsLocalClient ecsLocalClient
+	sess           *session.Session
+	store          store
 }
 
 func newLocalRunOpts(vars localRunVars) (*localRunOpts, error) {
@@ -34,10 +45,16 @@ func newLocalRunOpts(vars localRunVars) (*localRunOpts, error) {
 	}
 
 	store := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
+	deployStore, err := deploy.NewStore(sessProvider, store)
+	if err != nil {
+		return nil, err
+	}
 	opts := &localRunOpts{
-		localRunVars: vars,
-
-		store: store,
+		localRunVars:   vars,
+		sel:            selector.NewDeploySelect(prompt.New(), store, deployStore),
+		store:          store,
+		ecsLocalClient: ecs.New(defaultSess),
+		sess:           defaultSess,
 	}
 	return opts, nil
 }
@@ -56,14 +73,43 @@ func (o *localRunOpts) Validate() error {
 
 // Ask prompts the user for any unprovided required fields and validates them.
 func (o *localRunOpts) Ask() error {
-	//TODO(varun359): Validate and Ask SvcEnvName
+	return o.validateAndAskWkldEnvName()
+}
 
+func (o *localRunOpts) validateAndAskWkldEnvName() error {
+	if o.envName != "" {
+		if _, err := o.store.GetEnvironment(o.appName, o.envName); err != nil {
+			return err
+		}
+	}
+	if o.wkldName != "" {
+		if _, err := o.store.GetWorkload(o.appName, o.wkldName); err != nil {
+			return err
+		}
+	}
+
+	deployedWorkload, err := o.sel.DeployedWorkload(workloadAskPrompt, "", o.appName, selector.WithEnv(o.envName), selector.WithName(o.wkldName))
+	if err != nil {
+		return fmt.Errorf("select a deployed workload from application %s: %w", o.appName, err)
+	}
+	o.wkldName = deployedWorkload.Name
+	o.envName = deployedWorkload.Env
+	o.wkldType = deployedWorkload.Type
 	return nil
 }
 
 // Execute builds and runs the workload images locally.
 func (o *localRunOpts) Execute() error {
-	//TODO(varun359): Get build information from the manifest and task definition for workloads
+	taskDef, err := o.ecsLocalClient.TaskDefinition(o.appName, o.envName, o.wkldName)
+	if err != nil {
+		return fmt.Errorf("get task definition: %w", err)
+	}
+
+	secrets := taskDef.Secrets()
+	_, err = o.ecsLocalClient.DecryptedSecrets(secrets)
+	if err != nil {
+		return fmt.Errorf("get secret values: %w", err)
+	}
 
 	return nil
 }
