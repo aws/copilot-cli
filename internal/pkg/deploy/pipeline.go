@@ -607,6 +607,16 @@ func (stg *PipelineStage) Deployments() ([]DeployAction, error) {
 	return actions, nil
 }
 
+// PreDeployments returns a list of pre-deployment actions for the pipeline stage.
+func (stg *PipelineStage) PreDeployments() ([]Step, error) {
+	return nil, nil
+}
+
+// PostDeployments returns a list of post-deployment actions for the pipeline stage.
+func (stg *PipelineStage) PostDeployments() ([]Step, error) {
+	return nil, nil
+}
+
 func (stg *PipelineStage) buildDeploymentsGraph() *graph.Graph[string] {
 	var names []string
 	for name := range stg.deployments {
@@ -728,4 +738,16 @@ func (a *TestCommandsAction) Name() string {
 // Commands returns the list commands to run part of the test action.
 func (a *TestCommandsAction) Commands() []string {
 	return a.commands
+}
+
+// Step represents a CodePipeline action backed by a CodeBuild project.
+type Step struct {
+	action
+	Build
+	name string
+}
+
+// Name returns the name of the action.
+func (s *Step) Name() string {
+	return s.name
 }
