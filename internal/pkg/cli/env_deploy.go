@@ -227,6 +227,7 @@ func (o *deployEnvOpts) Execute() error {
 	}
 	err = deployer.DeployEnvironment(deployInput)
 	if err == nil {
+		log.Successf("Succesfully deployed environment %s", o.name)
 		return nil
 	}
 	var errStackDeletedOnInterrupt *deploycfn.ErrStackDeletedOnInterrupt
@@ -256,10 +257,8 @@ After fixing the deployment, you can:
 2. Run %s to make a new deployment.
 `, color.HighlightCode(rollbackCmd), color.HighlightCode("copilot env deploy"))
 		}
-		return fmt.Errorf("deploy environment %s: %w", o.name, err)
 	}
-	log.Ssuccessf("Deployed environment %s.\n", color.HighlightUserInput(o.name))
-	return nil
+	return fmt.Errorf("deploy environment %s: %w", o.name, err)
 }
 
 func environmentManifest(envName string, rawMft []byte, transformer interpolator) (*manifest.Environment, error) {
