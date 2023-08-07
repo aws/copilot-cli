@@ -225,25 +225,27 @@ func (o *deployEnvOpts) Execute() error {
 			return nil
 		}
 	}
-	if err := deployer.DeployEnvironment(deployInput); err != nil {
-		var errStackDeletedOnInterrupt *deploycfn.ErrStackDeletedOnInterrupt
-		var errStackUpdateCanceledOnInterrupt *deploycfn.ErrStackUpdateCanceledOnInterrupt
-		if errors.As(err, &errStackDeletedOnInterrupt) {
-			return nil
-		}
-		if errors.As(err, &errStackUpdateCanceledOnInterrupt) {
-			log.Successf("Successfully rolled back service %q to the previous configuration.\n", color.HighlightUserInput(o.name))
-			return nil
-		}
-		var errEmptyChangeSet *awscfn.ErrChangeSetEmpty
-		if errors.As(err, &errEmptyChangeSet) {
-			log.Errorf(`Your update does not introduce immediate resource changes. 
+	err = deployer.DeployEnvironment(deployInput)
+	if err == nil {
+		return nil
+	}
+	var errStackDeletedOnInterrupt *deploycfn.ErrStackDeletedOnInterrupt
+	var errStackUpdateCanceledOnInterrupt *deploycfn.ErrStackUpdateCanceledOnInterrupt
+	var errEmptyChangeSet *awscfn.ErrChangeSetEmpty
+	switch {
+	case errors.As(err, &errStackDeletedOnInterrupt):
+		return nil
+
+	case errors.As(err, &errStackUpdateCanceledOnInterrupt):
+		log.Successf("Successfully rolled back service %s to the previous configuration.\n", color.HighlightUserInput(o.name))
+		return nil
+	case errors.As(err, &errEmptyChangeSet):
+		log.Errorf(`Your update does not introduce immediate resource changes. 
 This may be because the resources are not created until they are deemed 
 necessary by a service deployment.
 
 In this case, you can run %s to push a modified template, even if there are no immediate changes.
 `, color.HighlightCode("copilot env deploy --force"))
-		}
 		if o.disableRollback {
 			stackName := stack.NameForEnv(o.targetApp.Name, o.targetEnv.Name)
 			rollbackCmd := fmt.Sprintf("aws cloudformation rollback-stack --stack-name %s --role-arn %s", stackName, o.targetEnv.ExecutionRoleARN)
@@ -256,6 +258,7 @@ After fixing the deployment, you can:
 		}
 		return fmt.Errorf("deploy environment %s: %w", o.name, err)
 	}
+	log.Ssuccessf("Deployed environment %s.\n", color.HighlightUserInput(o.name))
 	return nil
 }
 
