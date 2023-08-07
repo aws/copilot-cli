@@ -5,6 +5,8 @@ package cli
 
 import (
 	"fmt"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/initialize"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -37,13 +39,15 @@ const (
 type deployVars struct {
 	deployWkldVars
 	yesInitWkld bool
+	noInitWkld  bool
 }
 
 type deployOpts struct {
 	deployVars
 
-	deployWkld     actionCommand
-	setupDeployCmd func(*deployOpts, string)
+	deployWkld       actionCommand
+	newWorkloadAdder func() wkldInitializerWithoutManifest
+	setupDeployCmd   func(*deployOpts, string)
 
 	sel    wsSelector
 	store  store
@@ -72,7 +76,14 @@ func newDeployOpts(vars deployVars) (*deployOpts, error) {
 		sel:        selector.NewLocalWorkloadSelector(prompter, store, ws),
 		ws:         ws,
 		prompt:     prompter,
-
+		newWorkloadAdder: func() wkldInitializerWithoutManifest {
+			return &initialize.WorkloadInitializer{
+				Store:    store,
+				Deployer: cloudformation.New(defaultSess),
+				Ws:       ws,
+				Prog:     termprogress.NewSpinner(log.DiagnosticWriter),
+			}
+		},
 		setupDeployCmd: func(o *deployOpts, workloadType string) {
 			switch {
 			case contains(workloadType, manifestinfo.JobTypes()):
@@ -115,10 +126,70 @@ func newDeployOpts(vars deployVars) (*deployOpts, error) {
 	}, nil
 }
 
+func (o *deployOpts) maybeInitWkld() error {
+	// Confirm that the workload needs to be initialized after asking for the name.
+	initializedWorkloads, err := o.store.ListWorkloads(o.appName)
+	if err != nil {
+		return fmt.Errorf("retrieve workloads: %w", err)
+	}
+	wlNames := make([]string, len(initializedWorkloads))
+	for i := range initializedWorkloads {
+		wlNames[i] = initializedWorkloads[i].Name
+	}
+
+	// Workload is already initialized. Return early.
+	if contains(o.name, wlNames) {
+		return nil
+	}
+
+	// Get workload type and confirm readable manifest.
+	mf, err := o.ws.ReadWorkloadManifest(o.name)
+	if err != nil {
+		return fmt.Errorf("read manifest for workload %s: %w", o.name, err)
+	}
+	workloadType, err := mf.WorkloadType()
+	if err != nil {
+		return fmt.Errorf("get workload type from manifest for workload %s: %w", o.name, err)
+	}
+
+	if !contains(workloadType, manifestinfo.WorkloadTypes()) {
+		return fmt.Errorf("unrecognized workload type %q in manifest for workload %s", workloadType, o.name)
+	}
+
+	// User specified not to initialize workloads even if needed.
+	if o.noInitWkld {
+		return fmt.Errorf("workload %s is uninitialized but --%s was specified", o.name, noInitWorkloadFlag)
+	}
+
+	// If init-wkld and no-init-wkld flags aren't set, prompt customer to initialize.
+	if !o.yesInitWkld {
+		o.yesInitWkld, err = o.prompt.Confirm(fmt.Sprintf("Found manifest for uninitialized %s %q. Initialize it?", workloadType, o.name), "This workload will be initialized, then deployed.", prompt.WithConfirmFinalMessage())
+		if err != nil {
+			return fmt.Errorf("confirm initialize workload: %w", err)
+		}
+	}
+
+	// User selected no.
+	if !o.yesInitWkld {
+		return nil
+	}
+
+	wkldAdder := o.newWorkloadAdder()
+	if err = wkldAdder.AddWorkloadToApp(o.appName, o.name, workloadType); err != nil {
+		return fmt.Errorf("add workload to app: %w", err)
+	}
+	return nil
+}
+
 func (o *deployOpts) Run() error {
 	if err := o.askName(); err != nil {
 		return err
 	}
+
+	if err := o.maybeInitWkld(); err != nil {
+		return err
+	}
+
 	if err := o.loadWkld(); err != nil {
 		return err
 	}
@@ -202,7 +273,9 @@ func BuildDeployCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&vars.disableRollback, noRollbackFlag, false, noRollbackFlagDescription)
 	cmd.Flags().BoolVar(&vars.allowWkldDowngrade, allowDowngradeFlag, false, allowDowngradeFlagDescription)
 	cmd.Flags().BoolVar(&vars.yesInitWkld, yesInitWorkloadFlag, false, yesInitWorkloadFlagDescription)
+	cmd.Flags().BoolVar(&vars.noInitWkld, noInitWorkloadFlag, false, noInitWorkloadFlagDescription)
 
+	cmd.MarkFlagsMutuallyExclusive(yesInitWorkloadFlag, noInitWorkloadFlag)
 	cmd.SetUsageTemplate(template.Usage)
 	cmd.Annotations = map[string]string{
 		"group": group.Release,

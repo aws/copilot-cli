@@ -6579,6 +6579,43 @@ func (mr *MocksvcInitializerMockRecorder) Service(props interface{}) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Service", reflect.TypeOf((*MocksvcInitializer)(nil).Service), props)
 }
 
+// MockwkldInitializerWithoutManifest is a mock of wkldInitializerWithoutManifest interface.
+type MockwkldInitializerWithoutManifest struct {
+	ctrl     *gomock.Controller
+	recorder *MockwkldInitializerWithoutManifestMockRecorder
+}
+
+// MockwkldInitializerWithoutManifestMockRecorder is the mock recorder for MockwkldInitializerWithoutManifest.
+type MockwkldInitializerWithoutManifestMockRecorder struct {
+	mock *MockwkldInitializerWithoutManifest
+}
+
+// NewMockwkldInitializerWithoutManifest creates a new mock instance.
+func NewMockwkldInitializerWithoutManifest(ctrl *gomock.Controller) *MockwkldInitializerWithoutManifest {
+	mock := &MockwkldInitializerWithoutManifest{ctrl: ctrl}
+	mock.recorder = &MockwkldInitializerWithoutManifestMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockwkldInitializerWithoutManifest) EXPECT() *MockwkldInitializerWithoutManifestMockRecorder {
+	return m.recorder
+}
+
+// AddWorkloadToApp mocks base method.
+func (m *MockwkldInitializerWithoutManifest) AddWorkloadToApp(appName, name, workloadType string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AddWorkloadToApp", appName, name, workloadType)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// AddWorkloadToApp indicates an expected call of AddWorkloadToApp.
+func (mr *MockwkldInitializerWithoutManifestMockRecorder) AddWorkloadToApp(appName, name, workloadType interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddWorkloadToApp", reflect.TypeOf((*MockwkldInitializerWithoutManifest)(nil).AddWorkloadToApp), appName, name, workloadType)
+}
+
 // MockroleDeleter is a mock of roleDeleter interface.
 type MockroleDeleter struct {
 	ctrl     *gomock.Controller

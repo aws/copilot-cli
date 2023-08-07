@@ -5,6 +5,8 @@ package cli
 
 import (
 	"errors"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
+	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
@@ -24,17 +26,24 @@ func TestDeployOpts_Run(t *testing.T) {
 		Name: "mailer",
 		Type: "Scheduled Job",
 	}
+	mockManifest := workspace.WorkloadManifest(`
+name: fe
+type: Load Balanced Web Service`)
 	testCases := map[string]struct {
-		inAppName string
-		inName    string
+		inAppName       string
+		inName          string
+		inShouldInit    bool
+		inShouldNotInit bool
 
-		wantedErr string
-
+		wantedErr         string
 		mockSel           func(m *mocks.MockwsSelector)
+		mockPrompt        func(m *mocks.Mockprompter)
 		mockActionCommand func(m *mocks.MockactionCommand)
 		mockStore         func(m *mocks.Mockstore)
+		mockWs            func(m *mocks.MockwsWlDirReader)
+		mockInit          func(m *mocks.MockwkldInitializerWithoutManifest)
 	}{
-		"prompts for workload": {
+		"prompts for workload selection": {
 			inAppName: "app",
 			mockSel: func(m *mocks.MockwsSelector) {
 				m.EXPECT().Workload("Select a service or job in your workspace", "").Return("fe", nil)
@@ -46,7 +55,176 @@ func TestDeployOpts_Run(t *testing.T) {
 				m.EXPECT().RecommendActions()
 			},
 			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().ListWorkloads("app").Return([]*config.Workload{&mockWl}, nil)
 				m.EXPECT().GetWorkload("app", "fe").Return(&mockWl, nil)
+			},
+			mockWs: func(m *mocks.MockwsWlDirReader) {
+				m.EXPECT().ReadWorkloadManifest("fe").Times(0)
+			},
+			mockPrompt: func(m *mocks.Mockprompter) {},
+			mockInit:   func(m *mocks.MockwkldInitializerWithoutManifest) {},
+		},
+		"prompts for initializing workload": {
+			inAppName:    "app",
+			inName:       "fe",
+			inShouldInit: false,
+			mockWs: func(m *mocks.MockwsWlDirReader) {
+				m.EXPECT().ReadWorkloadManifest("fe").Return(mockManifest, nil)
+			},
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Confirm(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
+			},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().ListWorkloads("app").Return(nil, nil)
+				m.EXPECT().GetWorkload("app", "fe").Return(&mockWl, nil)
+			},
+			mockActionCommand: func(m *mocks.MockactionCommand) {
+				m.EXPECT().Ask()
+				m.EXPECT().Validate()
+				m.EXPECT().Execute()
+				m.EXPECT().RecommendActions()
+			},
+			mockSel: func(m *mocks.MockwsSelector) {},
+			mockInit: func(m *mocks.MockwkldInitializerWithoutManifest) {
+				m.EXPECT().AddWorkloadToApp("app", "fe", manifestinfo.LoadBalancedWebServiceType).Return(nil)
+			},
+		},
+		"initializes workload with flag specified": {
+			inAppName:    "app",
+			inName:       "fe",
+			inShouldInit: true,
+			mockWs: func(m *mocks.MockwsWlDirReader) {
+				m.EXPECT().ReadWorkloadManifest("fe").Return(mockManifest, nil)
+			},
+			mockPrompt: func(m *mocks.Mockprompter) {},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().ListWorkloads("app").Return(nil, nil)
+				m.EXPECT().GetWorkload("app", "fe").Return(&mockWl, nil)
+			},
+			mockActionCommand: func(m *mocks.MockactionCommand) {
+				m.EXPECT().Ask()
+				m.EXPECT().Validate()
+				m.EXPECT().Execute()
+				m.EXPECT().RecommendActions()
+			},
+			mockSel: func(m *mocks.MockwsSelector) {},
+			mockInit: func(m *mocks.MockwkldInitializerWithoutManifest) {
+				m.EXPECT().AddWorkloadToApp("app", "fe", manifestinfo.LoadBalancedWebServiceType).Return(nil)
+			},
+		},
+		"errors if noInit specified": {
+			inAppName:       "app",
+			inName:          "fe",
+			inShouldInit:    false,
+			inShouldNotInit: true,
+			mockWs: func(m *mocks.MockwsWlDirReader) {
+				m.EXPECT().ReadWorkloadManifest("fe").Return(mockManifest, nil)
+			},
+			mockPrompt: func(m *mocks.Mockprompter) {},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().ListWorkloads("app").Return(nil, nil)
+			},
+			mockActionCommand: func(m *mocks.MockactionCommand) {
+				m.EXPECT().Ask().Times(0)
+				m.EXPECT().Validate().Times(0)
+				m.EXPECT().Execute().Times(0)
+				m.EXPECT().RecommendActions().Times(0)
+			},
+			mockSel: func(m *mocks.MockwsSelector) {},
+			mockInit: func(m *mocks.MockwkldInitializerWithoutManifest) {
+				m.EXPECT().AddWorkloadToApp(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			},
+			wantedErr: "workload fe is uninitialized but --no-init-wkld was specified",
+		},
+		"errors reading manifest": {
+			inAppName:       "app",
+			inName:          "fe",
+			inShouldInit:    false,
+			inShouldNotInit: true,
+			mockWs: func(m *mocks.MockwsWlDirReader) {
+				m.EXPECT().ReadWorkloadManifest("fe").Return(nil, errors.New("some error"))
+			},
+			mockPrompt: func(m *mocks.Mockprompter) {},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().ListWorkloads("app").Return(nil, nil)
+			},
+			mockActionCommand: func(m *mocks.MockactionCommand) {
+				m.EXPECT().Ask().Times(0)
+				m.EXPECT().Validate().Times(0)
+				m.EXPECT().Execute().Times(0)
+				m.EXPECT().RecommendActions().Times(0)
+			},
+			mockSel: func(m *mocks.MockwsSelector) {},
+			mockInit: func(m *mocks.MockwkldInitializerWithoutManifest) {
+				m.EXPECT().AddWorkloadToApp(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			},
+			wantedErr: "read manifest for workload fe: some error",
+		},
+		"error getting workload type": {
+			inAppName:       "app",
+			inName:          "fe",
+			inShouldInit:    false,
+			inShouldNotInit: false,
+			mockWs: func(m *mocks.MockwsWlDirReader) {
+				m.EXPECT().ReadWorkloadManifest("fe").Return(workspace.WorkloadManifest(`type: nothing here`), nil)
+			},
+			mockPrompt: func(m *mocks.Mockprompter) {},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().ListWorkloads("app").Return(nil, nil)
+			},
+			mockActionCommand: func(m *mocks.MockactionCommand) {
+				m.EXPECT().Ask().Times(0)
+				m.EXPECT().Validate().Times(0)
+				m.EXPECT().Execute().Times(0)
+				m.EXPECT().RecommendActions().Times(0)
+			},
+			mockSel: func(m *mocks.MockwsSelector) {},
+			mockInit: func(m *mocks.MockwkldInitializerWithoutManifest) {
+				m.EXPECT().AddWorkloadToApp(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			},
+			wantedErr: "unrecognized workload type \"nothing here\" in manifest for workload fe",
+		},
+		"error listing workloads": {
+			inAppName: "app",
+			inName:    "fe",
+			mockSel:   func(m *mocks.MockwsSelector) {},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().ListWorkloads("app").Return(nil, errors.New("some error"))
+				m.EXPECT().GetWorkload("app", "fe").Times(0)
+			},
+			mockActionCommand: func(m *mocks.MockactionCommand) {},
+			mockPrompt:        func(m *mocks.Mockprompter) {},
+			mockInit: func(m *mocks.MockwkldInitializerWithoutManifest) {
+				m.EXPECT().AddWorkloadToApp(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			},
+			mockWs: func(m *mocks.MockwsWlDirReader) {
+				m.EXPECT().ReadWorkloadManifest("fe").Times(0)
+			},
+			wantedErr: "retrieve workloads: some error",
+		},
+		"initializes and deploys local manifest with prompts": {
+			inAppName: "app",
+			mockWs: func(m *mocks.MockwsWlDirReader) {
+				m.EXPECT().ReadWorkloadManifest("fe").Return(mockManifest, nil)
+			},
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Confirm(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
+			},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().ListWorkloads("app").Return(nil, nil)
+				m.EXPECT().GetWorkload("app", "fe").Return(&mockWl, nil)
+			},
+			mockActionCommand: func(m *mocks.MockactionCommand) {
+				m.EXPECT().Ask()
+				m.EXPECT().Validate()
+				m.EXPECT().Execute()
+				m.EXPECT().RecommendActions()
+			},
+			mockSel: func(m *mocks.MockwsSelector) {
+				m.EXPECT().Workload(gomock.Any(), gomock.Any()).Return("fe", nil)
+			},
+			mockInit: func(m *mocks.MockwkldInitializerWithoutManifest) {
+				m.EXPECT().AddWorkloadToApp("app", "fe", manifestinfo.LoadBalancedWebServiceType).Return(nil)
 			},
 		},
 		"errors correctly if job returned": {
@@ -59,7 +237,15 @@ func TestDeployOpts_Run(t *testing.T) {
 				m.EXPECT().Ask().Return(errors.New("some error"))
 			},
 			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().ListWorkloads("app").Return([]*config.Workload{&mockJob}, nil)
 				m.EXPECT().GetWorkload("app", "mailer").Return(&mockJob, nil)
+			},
+			mockPrompt: func(m *mocks.Mockprompter) {},
+			mockInit: func(m *mocks.MockwkldInitializerWithoutManifest) {
+				m.EXPECT().AddWorkloadToApp(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			},
+			mockWs: func(m *mocks.MockwsWlDirReader) {
+				m.EXPECT().ReadWorkloadManifest("fe").Times(0)
 			},
 		},
 		"doesn't prompt if name is specified": {
@@ -74,7 +260,15 @@ func TestDeployOpts_Run(t *testing.T) {
 				m.EXPECT().RecommendActions()
 			},
 			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().ListWorkloads("app").Return([]*config.Workload{&mockWl}, nil)
 				m.EXPECT().GetWorkload("app", "fe").Return(&mockWl, nil)
+			},
+			mockPrompt: func(m *mocks.Mockprompter) {},
+			mockInit: func(m *mocks.MockwkldInitializerWithoutManifest) {
+				m.EXPECT().AddWorkloadToApp(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			},
+			mockWs: func(m *mocks.MockwsWlDirReader) {
+				m.EXPECT().ReadWorkloadManifest("fe").Times(0)
 			},
 		},
 		"get name error": {
@@ -85,6 +279,13 @@ func TestDeployOpts_Run(t *testing.T) {
 			},
 			mockActionCommand: func(m *mocks.MockactionCommand) {},
 			mockStore:         func(m *mocks.Mockstore) {},
+			mockPrompt:        func(m *mocks.Mockprompter) {},
+			mockInit: func(m *mocks.MockwkldInitializerWithoutManifest) {
+				m.EXPECT().AddWorkloadToApp(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			},
+			mockWs: func(m *mocks.MockwsWlDirReader) {
+				m.EXPECT().ReadWorkloadManifest("fe").Times(0)
+			},
 		},
 		"ask error": {
 			inAppName: "app",
@@ -97,6 +298,15 @@ func TestDeployOpts_Run(t *testing.T) {
 			},
 			mockStore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetWorkload("app", "fe").Return(&mockWl, nil)
+				m.EXPECT().ListWorkloads("app").Return([]*config.Workload{&mockWl}, nil)
+
+			},
+			mockPrompt: func(m *mocks.Mockprompter) {},
+			mockInit: func(m *mocks.MockwkldInitializerWithoutManifest) {
+				m.EXPECT().AddWorkloadToApp(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			},
+			mockWs: func(m *mocks.MockwsWlDirReader) {
+				m.EXPECT().ReadWorkloadManifest("fe").Times(0)
 			},
 		},
 		"validate error": {
@@ -111,6 +321,15 @@ func TestDeployOpts_Run(t *testing.T) {
 			},
 			mockStore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetWorkload("app", "fe").Return(&mockWl, nil)
+				m.EXPECT().ListWorkloads("app").Return([]*config.Workload{&mockWl}, nil)
+
+			},
+			mockPrompt: func(m *mocks.Mockprompter) {},
+			mockInit: func(m *mocks.MockwkldInitializerWithoutManifest) {
+				m.EXPECT().AddWorkloadToApp(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			},
+			mockWs: func(m *mocks.MockwsWlDirReader) {
+				m.EXPECT().ReadWorkloadManifest("fe").Times(0)
 			},
 		},
 		"execute error": {
@@ -126,6 +345,15 @@ func TestDeployOpts_Run(t *testing.T) {
 			},
 			mockStore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetWorkload("app", "fe").Return(&mockWl, nil)
+				m.EXPECT().ListWorkloads("app").Return([]*config.Workload{&mockWl}, nil)
+
+			},
+			mockPrompt: func(m *mocks.Mockprompter) {},
+			mockInit: func(m *mocks.MockwkldInitializerWithoutManifest) {
+				m.EXPECT().AddWorkloadToApp(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			},
+			mockWs: func(m *mocks.MockwsWlDirReader) {
+				m.EXPECT().ReadWorkloadManifest("fe").Times(0)
 			},
 		},
 	}
@@ -138,9 +366,17 @@ func TestDeployOpts_Run(t *testing.T) {
 			mockSel := mocks.NewMockwsSelector(ctrl)
 			mockCmd := mocks.NewMockactionCommand(ctrl)
 			mockStore := mocks.NewMockstore(ctrl)
+			mockWs := mocks.NewMockwsWlDirReader(ctrl)
+			mockPrompt := mocks.NewMockprompter(ctrl)
+			mockInit := mocks.NewMockwkldInitializerWithoutManifest(ctrl)
+
 			tc.mockStore(mockStore)
 			tc.mockSel(mockSel)
 			tc.mockActionCommand(mockCmd)
+			tc.mockWs(mockWs)
+			tc.mockPrompt(mockPrompt)
+			tc.mockInit(mockInit)
+
 			opts := &deployOpts{
 				deployVars: deployVars{
 					deployWkldVars: deployWkldVars{
@@ -148,11 +384,16 @@ func TestDeployOpts_Run(t *testing.T) {
 						name:    tc.inName,
 						envName: "test",
 					},
-					yesInitWkld: false,
+					yesInitWkld: tc.inShouldInit,
+					noInitWkld:  tc.inShouldNotInit,
 				},
 				deployWkld: mockCmd,
 				sel:        mockSel,
+				prompt:     mockPrompt,
 				store:      mockStore,
+				ws:         mockWs,
+
+				newWorkloadAdder: func() wkldInitializerWithoutManifest { return mockInit },
 
 				setupDeployCmd: func(o *deployOpts, wlType string) {},
 			}

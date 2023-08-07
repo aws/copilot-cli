@@ -34,7 +34,8 @@ const (
 	resourceTagsFlag   = "resource-tags"
 
 	// Deploy flags.
-	yesInitWorkloadFlag = "yes-wkld"
+	yesInitWorkloadFlag = "init-wkld"
+	noInitWorkloadFlag  = "no-init-wkld"
 	yesInitEnvFlag      = "yes-env"
 
 	// Build flags.
@@ -276,7 +277,7 @@ We do not recommend using this flag for a
 production environment.`
 	forceEnvDeployFlagDescription  = "Optional. Force update the environment stack template."
 	yesInitWorkloadFlagDescription = "Optional. Initialize a workload before deploying it."
-	yesInitEnvFlagDescription      = "Optional. Initialize an environment before deploying it."
+	noInitWorkloadFlagDescription  = "Optional. Do not initialize the given workload if it does not exist."
 
 	// Operational.
 	jsonFlagDescription = "Optional. Output in JSON format."
