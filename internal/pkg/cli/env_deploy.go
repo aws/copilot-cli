@@ -227,6 +227,9 @@ func (o *deployEnvOpts) Execute() error {
 	}
 	err = deployer.DeployEnvironment(deployInput)
 	if err == nil {
+		if o.detach {
+			return nil
+		}
 		log.Successf("Succesfully deployed environment %s", o.name)
 		return nil
 	}

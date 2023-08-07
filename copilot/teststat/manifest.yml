@@ -1,0 +1,25 @@
+# The manifest for the "teststat" service.
+# Read the full specification for the "Static Site" type at:
+# https://aws.github.io/copilot-cli/docs/manifest/static-site/
+
+# Your service name will be used in naming your resources like S3 buckets, etc.
+name: teststat
+type: Static Site
+http:
+  alias: teststat.test.learnerdomain.gif.adithyakolla.link
+files:
+  - source: ./
+    exclude:
+      - copilot/
+
+# You can override any of the values defined above by environment.
+# environments:
+#   test:
+#     files:
+#       - source: './blob'
+#         recursive: true
+#         destination: 'assets'
+#         exclude: '*'
+#         reinclude:
+#           - '*.txt'
+#           - '*.png'
