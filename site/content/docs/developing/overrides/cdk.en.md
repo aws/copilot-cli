@@ -174,3 +174,34 @@ The following example showcases how you can add a property for only a particular
         }
     }
     ```
+
+The following example showcases how you can delete a resource, the Copilot-created default log group that holds service logs.
+
+??? note "View sample `stack.ts`"
+
+    ```typescript
+    import * as cdk from 'aws-cdk-lib';
+    import * as path from 'path';
+
+    interface TransformedStackProps extends cdk.StackProps {
+        readonly appName: string;
+        readonly envName: string;
+    }
+
+    export class TransformedStack extends cdk.Stack {
+        public readonly template: cdk.cloudformation_include.CfnInclude;
+        public readonly appName: string;
+        public readonly envName: string;
+
+        constructor(scope: cdk.App, id: string, props: TransformedStackProps) {
+            super(scope, id, props);
+            this.template = new cdk.cloudformation_include.CfnInclude(this, 'Template', {
+            templateFile: path.join('.build', 'in.yml'),
+            });
+            this.appName = props.appName;
+            this.envName = props.envName;
+            // Deletes the default log group resource.
+            this.template.node.tryRemoveChild("LogGroup")
+        }
+    }
+    ```
