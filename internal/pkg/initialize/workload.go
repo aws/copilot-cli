@@ -7,9 +7,6 @@ package initialize
 import (
 	"encoding"
 	"fmt"
-	"os"
-	"path/filepath"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
@@ -17,7 +14,10 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
+	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
+	"os"
+	"path/filepath"
 )
 
 const (
@@ -94,6 +94,28 @@ type WorkloadInitializer struct {
 	Deployer WorkloadAdder
 	Ws       Workspace
 	Prog     Prog
+
+	writeManifest bool // Default true. Switchable with SkipWritingManifest option.
+}
+
+// AddWorkloadToApp contains the logic to create the SSM parameter and perform the stackset template update required
+// to add any workload to the app. It does not write the manifest.
+func (w *WorkloadInitializer) AddWorkloadToApp(appName, name, workloadType string) error {
+	svcOrJob := svcWlType
+	if manifestinfo.IsTypeAJob(workloadType) {
+		svcOrJob = jobWlType
+	}
+
+	app, err := w.Store.GetApplication(appName)
+	if err != nil {
+		return fmt.Errorf("get application %s: %w", appName, err)
+	}
+	// addWlToAppandSSM only uses the App, Name, and Type
+	return w.addWlToAppAndSSM(app, WorkloadProps{
+		App:  appName,
+		Type: workloadType,
+		Name: name,
+	}, svcOrJob)
 }
 
 // Service writes the service manifest, creates an ECR repository, and adds the service to SSM.
@@ -249,6 +271,7 @@ func (w *WorkloadInitializer) addJobToAppAndSSM(app *config.Application, props W
 	return w.addWlToAppAndSSM(app, props, jobWlType)
 }
 
+// addWlToAppAndSSM is a type-agnostic method to add a workload to the app and config store.
 func (w *WorkloadInitializer) addWlToAppAndSSM(app *config.Application, props WorkloadProps, wlType string) error {
 	if err := w.addWlToApp(app, props, wlType); err != nil {
 		return fmt.Errorf("add %s %s to application %s: %w", wlType, props.Name, props.App, err)
