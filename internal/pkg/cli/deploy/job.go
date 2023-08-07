@@ -82,7 +82,7 @@ func (d *jobDeployer) DeployWorkload(in *DeployWorkloadInput) (ActionRecommender
 	if err != nil {
 		return nil, err
 	}
-	if err := d.deployer.DeployService(stackConfigOutput.conf, d.resources.S3Bucket, opts...); err != nil {
+	if err := d.deployer.DeployService(stackConfigOutput.conf, d.resources.S3Bucket, in.Detach, opts...); err != nil {
 		return nil, fmt.Errorf("deploy job: %w", err)
 	}
 	return noopActionRecommender{}, nil

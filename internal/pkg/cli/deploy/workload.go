@@ -104,7 +104,7 @@ type endpointGetter interface {
 }
 
 type serviceDeployer interface {
-	DeployService(conf cloudformation.StackConfiguration, bucketName string, opts ...awscloudformation.StackOption) error
+	DeployService(conf cloudformation.StackConfiguration, bucketName string, detach bool, opts ...awscloudformation.StackOption) error
 }
 
 type deployedTemplateGetter interface {
@@ -147,6 +147,7 @@ type DeployWorkloadInput struct {
 type Options struct {
 	ForceNewUpdate  bool
 	DisableRollback bool
+	Detach          bool
 }
 
 // GenerateCloudFormationTemplateInput is the input of GenerateCloudFormationTemplate.
