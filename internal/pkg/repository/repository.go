@@ -60,6 +60,7 @@ func (r *Repository) Build(ctx context.Context, args *dockerengine.BuildArgument
 	if err := r.docker.Build(ctx, args, w); err != nil {
 		return "", fmt.Errorf("build from Dockerfile at %s: %w", args.Dockerfile, err)
 	}
+	// digest will be an empty string here
 	return digest, nil
 }
 

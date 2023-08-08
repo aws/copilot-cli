@@ -416,8 +416,8 @@ func (img ContainerImageIdentifier) Tag() string {
 	return img.GitShortCommitTag
 }
 
-func (d *workloadDeployer) uploadContainerImages(out *UploadArtifactsOutput) error {
-	return performImageAction(&ImageActionInput{
+func (d *workloadDeployer) buildAndPushContainerImages(out *UploadArtifactsOutput) error {
+	return processContainerImages(&ImageActionInput{
 		Name:               d.name,
 		WorkspacePath:      d.workspacePath,
 		Image:              d.image,
@@ -433,10 +433,10 @@ func (d *workloadDeployer) uploadContainerImages(out *UploadArtifactsOutput) err
 
 // BuildContainerImages builds the all the images given the build arguments
 func BuildContainerImages(in *ImageActionInput, out *UploadArtifactsOutput) error {
-	return performImageAction(in, out, in.Builder.Build)
+	return processContainerImages(in, out, in.Builder.Build)
 }
 
-func performImageAction(in *ImageActionInput, out *UploadArtifactsOutput, buildFunc func(ctx context.Context, args *dockerengine.BuildArguments, w io.Writer) (string, error)) error {
+func processContainerImages(in *ImageActionInput, out *UploadArtifactsOutput, buildFunc func(ctx context.Context, args *dockerengine.BuildArguments, w io.Writer) (string, error)) error {
 	//this function could either build or buildAndPush the image based on the function received
 	buildArgsPerContainer, err := buildArgsPerContainer(in.Name, in.WorkspacePath, in.Image, in.Mft)
 	if err != nil {

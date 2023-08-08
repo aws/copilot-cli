@@ -256,8 +256,7 @@ func (c DockerCmdClient) Run(ctx context.Context, options *RunOptions) error {
 // IsContainerRunning checks if a specific Docker container is running.
 func (c DockerCmdClient) IsContainerRunning(containerName string) (bool, error) {
 	buf := &bytes.Buffer{}
-	err := c.runner.Run("docker", []string{"ps", "-q", "--filter", "name=" + containerName}, exec.Stdout(buf))
-	if err != nil {
+	if err := c.runner.Run("docker", []string{"ps", "-q", "--filter", "name=" + containerName}, exec.Stdout(buf)); err != nil {
 		return false, fmt.Errorf("run docker ps: %w", err)
 	}
 

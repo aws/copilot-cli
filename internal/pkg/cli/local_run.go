@@ -212,8 +212,8 @@ func (o *localRunOpts) Execute() error {
 	}
 
 	envVars := make(map[string]string, len(taskDef.EnvironmentVariables()))
-	for _, envVariable := range taskDef.EnvironmentVariables() {
-		envVars[envVariable.Name] = envVariable.Value
+	for _, e := range taskDef.EnvironmentVariables() {
+		envVars[e.Name] = e.Value
 	}
 
 	containerPorts := make(map[string]string, len(taskDef.ContainerDefinitions))
