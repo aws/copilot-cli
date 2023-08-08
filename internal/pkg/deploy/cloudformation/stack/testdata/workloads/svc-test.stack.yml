@@ -89,7 +89,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
             - Name: LOG_LEVEL
               Value: "info"
             - Name: COPILOT_MOUNT_POINTS
-              Value: '{"persistence":"/etc/scratch","externalEFSVolume":"/etc/mount1"}'
+              Value: '{"externalEFSVolume":"/etc/mount1","persistence":"/etc/scratch"}'
           EnvironmentFiles:
             - !If
               - HasEnvFile

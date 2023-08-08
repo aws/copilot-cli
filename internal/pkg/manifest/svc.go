@@ -441,6 +441,14 @@ func (s *stringOrFromCFN) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
+// PlainTostringOrFromCFN returns the new stringOrFromCFN struct with the
+// underlying plain field set, holding value.
+func PlainTostringOrFromCFN(value string) *stringOrFromCFN {
+	return &stringOrFromCFN{
+		Plain: aws.String(value),
+	}
+}
+
 func (cfg ImageWithPortAndHealthcheck) exposedPorts(workloadName string) []ExposedPort {
 	if cfg.Port == nil {
 		return nil

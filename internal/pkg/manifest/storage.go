@@ -84,14 +84,6 @@ type EFSVolumeConfiguration struct {
 	GID           *uint32             `yaml:"gid"`      // GID for managed EFS.
 }
 
-// PlainFileSystemID returns the new stringOrFromCFN struct with the
-// underlying plain field set, holding value.
-func PlainFileSystemID(value string) *stringOrFromCFN {
-	return &stringOrFromCFN{
-		Plain: aws.String(value),
-	}
-}
-
 // IsEmpty returns empty if the struct has all zero members.
 func (e *EFSVolumeConfiguration) IsEmpty() bool {
 	return e.FileSystemID == nil && e.RootDirectory == nil && e.AuthConfig.IsEmpty() && e.UID == nil && e.GID == nil
