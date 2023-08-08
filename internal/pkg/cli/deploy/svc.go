@@ -66,7 +66,7 @@ func (d *svcDeployer) deploy(deployOptions Options, stackConfigOutput svcStackCo
 		opts = append(opts, awscloudformation.WithDisableRollback())
 	}
 	cmdRunAt := d.now()
-	if err := d.deployer.DeployService(stackConfigOutput.conf, d.resources.S3Bucket, opts...); err != nil {
+	if err := d.deployer.DeployService(stackConfigOutput.conf, d.resources.S3Bucket, deployOptions.Detach, opts...); err != nil {
 		var errEmptyCS *awscloudformation.ErrChangeSetEmpty
 		if !errors.As(err, &errEmptyCS) {
 			return fmt.Errorf("deploy service: %w", err)
