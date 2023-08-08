@@ -105,7 +105,7 @@ type endpointGetter interface {
 }
 
 type serviceDeployer interface {
-	DeployService(conf cloudformation.StackConfiguration, bucketName string, opts ...awscloudformation.StackOption) error
+	DeployService(conf cloudformation.StackConfiguration, bucketName string, detach bool, opts ...awscloudformation.StackOption) error
 }
 
 type deployedTemplateGetter interface {
@@ -149,6 +149,7 @@ type DeployWorkloadInput struct {
 type Options struct {
 	ForceNewUpdate  bool
 	DisableRollback bool
+	Detach          bool
 }
 
 // GenerateCloudFormationTemplateInput is the input of GenerateCloudFormationTemplate.
@@ -452,7 +453,31 @@ func processContainerImages(in *ImageActionInput, out *UploadArtifactsOutput, bu
 	if err != nil {
 		return fmt.Errorf("login to image repository: %w", err)
 	}
+	isMultipleContainerImages := len(buildArgsPerContainer) > 1
+	if isMultipleContainerImages {
+		return d.buildContainerImagesInParallel(uri, buildArgsPerContainer, out)
+	}
+	return d.buildSingleContainerImage(uri, buildArgsPerContainer, out)
+}
 
+func (d *workloadDeployer) buildSingleContainerImage(uri string, buildArgsPerContainer map[string]*dockerengine.BuildArguments, out *UploadArtifactsOutput) error {
+	out.ImageDigests = make(map[string]ContainerImageIdentifier, len(buildArgsPerContainer))
+	for name, buildArgs := range buildArgsPerContainer {
+		buildArgs.URI = uri
+		digest, err := d.repository.BuildAndPush(context.Background(), buildArgs, os.Stderr)
+		if err != nil {
+			return fmt.Errorf("build and push the image %q: %w", name, err)
+		}
+		out.ImageDigests[name] = ContainerImageIdentifier{
+			Digest:            digest,
+			CustomTag:         d.image.CustomTag,
+			GitShortCommitTag: d.image.GitShortCommitTag,
+		}
+	}
+	return nil
+}
+
+func (d *workloadDeployer) buildContainerImagesInParallel(uri string, buildArgsPerContainer map[string]*dockerengine.BuildArguments, out *UploadArtifactsOutput) error {
 	var digestsMu sync.Mutex
 	out.ImageDigests = make(map[string]ContainerImageIdentifier, len(buildArgsPerContainer))
 	var labeledBuffers []*syncbuffer.LabeledSyncBuffer
