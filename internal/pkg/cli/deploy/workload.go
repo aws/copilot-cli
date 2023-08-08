@@ -418,6 +418,7 @@ func (d *workloadDeployer) uploadContainerImages(out *UploadArtifactsOutput) err
 func (d *workloadDeployer) buildSingleContainerImage(uri string, buildArgsPerContainer map[string]*dockerengine.BuildArguments, out *UploadArtifactsOutput) error {
 	out.ImageDigests = make(map[string]ContainerImageIdentifier, len(buildArgsPerContainer))
 	for name, buildArgs := range buildArgsPerContainer {
+		buildArgs.URI = uri
 		digest, err := d.repository.BuildAndPush(context.Background(), buildArgs, os.Stderr)
 		if err != nil {
 			return fmt.Errorf("build and push the image %q: %w", name, err)
