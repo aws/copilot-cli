@@ -455,29 +455,29 @@ func processContainerImages(in *ImageActionInput, out *UploadArtifactsOutput, bu
 	}
 	isMultipleContainerImages := len(buildArgsPerContainer) > 1
 	if isMultipleContainerImages {
-		return d.buildContainerImagesInParallel(uri, buildArgsPerContainer, out)
+		return buildContainerImagesInParallel(in, uri, buildArgsPerContainer, buildFunc, out)
 	}
-	return d.buildSingleContainerImage(uri, buildArgsPerContainer, out)
+	return buildSingleContainerImage(in, uri, buildArgsPerContainer, buildFunc, out)
 }
 
-func (d *workloadDeployer) buildSingleContainerImage(uri string, buildArgsPerContainer map[string]*dockerengine.BuildArguments, out *UploadArtifactsOutput) error {
+func buildSingleContainerImage(in *ImageActionInput, uri string, buildArgsPerContainer map[string]*dockerengine.BuildArguments, buildFunc func(ctx context.Context, args *dockerengine.BuildArguments, w io.Writer) (string, error), out *UploadArtifactsOutput) error {
 	out.ImageDigests = make(map[string]ContainerImageIdentifier, len(buildArgsPerContainer))
 	for name, buildArgs := range buildArgsPerContainer {
 		buildArgs.URI = uri
-		digest, err := d.repository.BuildAndPush(context.Background(), buildArgs, os.Stderr)
+		digest, err := buildFunc(context.Background(), buildArgs, os.Stderr)
 		if err != nil {
 			return fmt.Errorf("build and push the image %q: %w", name, err)
 		}
 		out.ImageDigests[name] = ContainerImageIdentifier{
 			Digest:            digest,
-			CustomTag:         d.image.CustomTag,
-			GitShortCommitTag: d.image.GitShortCommitTag,
+			CustomTag:         in.CustomTag,
+			GitShortCommitTag: in.GitShortCommitTag,
 		}
 	}
 	return nil
 }
 
-func (d *workloadDeployer) buildContainerImagesInParallel(uri string, buildArgsPerContainer map[string]*dockerengine.BuildArguments, out *UploadArtifactsOutput) error {
+func buildContainerImagesInParallel(in *ImageActionInput, uri string, buildArgsPerContainer map[string]*dockerengine.BuildArguments, buildFunc func(ctx context.Context, args *dockerengine.BuildArguments, w io.Writer) (string, error), out *UploadArtifactsOutput) error {
 	var digestsMu sync.Mutex
 	out.ImageDigests = make(map[string]ContainerImageIdentifier, len(buildArgsPerContainer))
 	var labeledBuffers []*syncbuffer.LabeledSyncBuffer
