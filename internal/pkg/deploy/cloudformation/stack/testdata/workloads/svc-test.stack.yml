@@ -117,7 +117,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
         - Name: persistence
         - Name: externalEFSVolume
           EFSVolumeConfiguration:
-            FilesystemId: !ImportValue stack-fs-12345
+            FilesystemId: !ImportValue 'stack-fs-12345'
             RootDirectory: '/'
             TransitEncryption: ENABLED
             AuthorizationConfig:
@@ -217,6 +217,15 @@ Resources: # If a bucket URL is specified, that means the template exists.
                   StringEquals:
                     'iam:ResourceTag/copilot-application': !Sub '${AppName}'
                     'iam:ResourceTag/copilot-environment': !Sub '${EnvName}'
+        - PolicyName: !Join ['', ['GrantEFSAccess', !ImportValue 'stack-fs-12345']]
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action:
+                  - 'elasticfilesystem:ClientMount'
+                Resource:
+                  - !Join ['', [!Sub 'arn:${AWS::Partition}:elasticfilesystem:${AWS::Region}:${AWS::AccountId}:file-system', '/', !ImportValue 'stack-fs-12345']]
         - PolicyName: 'Publish2SNS'
           PolicyDocument:
             Version: '2012-10-17'
@@ -226,15 +235,6 @@ Resources: # If a bucket URL is specified, that means the template exists.
                 Resource:
                   - !Ref givesdogsSNSTopic
                   - !Ref mytopicfifoSNSTopic
-        - PolicyName: !Join ['', ['GrantEFSAccess', !ImportValue stack-fs-12345]]
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: 'Allow'
-                Action:
-                  - 'elasticfilesystem:ClientMount'
-                Resource:
-                  - !Join ['', [!Sub 'arn:${AWS::Partition}:elasticfilesystem:${AWS::Region}:${AWS::AccountId}:file-system', '/', !ImportValue stack-fs-12345]]
   DiscoveryService:
     Metadata:
       'aws:copilot:description': 'Service discovery for your services to communicate within the VPC'
