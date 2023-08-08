@@ -326,9 +326,9 @@ func (m *MockserviceDeployer) EXPECT() *MockserviceDeployerMockRecorder {
 }
 
 // DeployService mocks base method.
-func (m *MockserviceDeployer) DeployService(conf cloudformation0.StackConfiguration, bucketName string, opts ...cloudformation.StackOption) error {
+func (m *MockserviceDeployer) DeployService(conf cloudformation0.StackConfiguration, bucketName string, detach bool, opts ...cloudformation.StackOption) error {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{conf, bucketName}
+	varargs := []interface{}{conf, bucketName, detach}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -338,9 +338,9 @@ func (m *MockserviceDeployer) DeployService(conf cloudformation0.StackConfigurat
 }
 
 // DeployService indicates an expected call of DeployService.
-func (mr *MockserviceDeployerMockRecorder) DeployService(conf, bucketName interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockserviceDeployerMockRecorder) DeployService(conf, bucketName, detach interface{}, opts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{conf, bucketName}, opts...)
+	varargs := append([]interface{}{conf, bucketName, detach}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployService", reflect.TypeOf((*MockserviceDeployer)(nil).DeployService), varargs...)
 }
 

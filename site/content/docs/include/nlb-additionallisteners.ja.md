@@ -2,7 +2,7 @@
     <span class="parent-field">nlb.additional_listeners.</span><a id="nlb-additional-listeners-port" href="#nlb-additional-listeners-port" class="field">`port`</a> <span class="type">String</span>  
     必須項目。Network Load Balancer が待ち受ける為の追加ポートとプロトコル。
     
-    使用可能なプロトコルには `tcp` と `tls` です。プロトコルが指定されていない場合、デフォルト値として `tcp` が使用されます。
+    使用可能なプロトコルには `tcp` 、`udp` と `tls` です。プロトコルが指定されていない場合、デフォルト値として `tcp` が使用されます。
     
     <span class="parent-field">nlb.additional_listeners.</span><a id="nlb-additional-listeners-healthcheck" href="#nlb-additional-listeners-healthcheck" class="field">`healthcheck`</a> <span class="type">Map</span>
     Network Load Balancer の追加リスナーに対するヘルスチェック設定を指定します。

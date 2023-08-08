@@ -1,0 +1,53 @@
+BuildProjectRole:
+  Type: AWS::IAM::Role
+  Properties:
+    Path: /
+{{ include "role-config" . | indent 4}}
+  {{- if $.PermissionsBoundary }}
+    PermissionsBoundary: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/{{$.PermissionsBoundary}}'
+  {{- end }}
+    Policies:
+      - PolicyName: assume-env-manager
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          {{- range $stage := .Stages}}
+          - Effect: Allow
+            Resource: 'arn:aws:iam::{{$stage.AccountID}}:role/{{$.AppName}}-{{$stage.Name}}-EnvManagerRole'
+            Action:
+              - sts:AssumeRole
+          {{- end }}
+
+BuildProjectPolicy:
+  Type: AWS::IAM::Policy
+  DependsOn: BuildProjectRole
+  Properties:
+    PolicyName: !Sub ${AWS::StackName}-CodeBuildPolicy
+    Roles:
+      - !Ref BuildProjectRole
+    PolicyDocument:
+{{ include "role-policy-document" . | indent 6 }}
+
+{{- if .Build.AdditionalPolicyDocument }}
+BuildProjectAdditionalPolicy:
+  Type: 'AWS::IAM::Policy'
+  Properties:
+    PolicyName: !Sub ${AWS::StackName}-BuildProjectAdditionalPolicy
+    PolicyDocument:
+{{.Build.AdditionalPolicyDocument | indent 8}}
+    Roles:
+      - !Ref BuildProjectRole
+{{- end}}
+
+BuildProject:
+  Type: AWS::CodeBuild::Project
+  Properties:
+    Name: !Sub ${AWS::StackName}-BuildProject
+    Description: !Sub Build for ${AWS::StackName}
+    # ArtifactKey is the KMS key ID or ARN that is used with the artifact bucket
+    # created in the same region as this pipeline.
+    EncryptionKey: !ImportValue {{$.AppName}}-ArtifactKey
+    ServiceRole: !GetAtt BuildProjectRole.Arn
+    Artifacts:
+      Type: CODEPIPELINE
+{{- include "action-config" . | indent 4}}

@@ -9,7 +9,7 @@ Load Balanced Web Service では、Application Load Balancer と Network Load Ba
 <span class="parent-field">nlb.</span><a id="nlb-port" href="#nlb-port" class="field">`port`</a> <span class="type">String</span>  
 必須項目。Network Load Balancer がリッスンするポートとプロトコルを指定します。
 
-使用可能なプロトコルは `tcp` と `tls` です。プロトコルを指定しない場合、デフォルトで `tcp` が使用されます。  
+使用可能なプロトコルは `tcp` 、 `udp` と `tls` です。プロトコルを指定しない場合、デフォルトで `tcp` が使用されます。  
 設定例:
 ```yaml
 nlb:
