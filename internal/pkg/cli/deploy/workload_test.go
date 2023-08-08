@@ -241,8 +241,6 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 						"com.aws.copilot.image.container.name": "mockWkld",
 					},
 				}, gomock.Any()).Return("", mockError)
-				m.mockLabeledTermPrinter.EXPECT().IsDone().Return(true).AnyTimes()
-				m.mockLabeledTermPrinter.EXPECT().Print().AnyTimes()
 			},
 			wantErr: fmt.Errorf("build and push the image \"mockWkld\": some error"),
 		},
@@ -269,8 +267,6 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 						"com.aws.copilot.image.container.name": "mockWkld",
 					},
 				}, gomock.Any()).Return("mockDigest", nil)
-				m.mockLabeledTermPrinter.EXPECT().IsDone().Return(true).AnyTimes()
-				m.mockLabeledTermPrinter.EXPECT().Print().AnyTimes()
 				m.mockAddons = nil
 			},
 			wantImages: map[string]ContainerImageIdentifier{
@@ -303,8 +299,6 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 						"com.aws.copilot.image.container.name": "mockWkld",
 					},
 				}, gomock.Any()).Return("mockDigest", nil)
-				m.mockLabeledTermPrinter.EXPECT().IsDone().Return(true).AnyTimes()
-				m.mockLabeledTermPrinter.EXPECT().Print().AnyTimes()
 				m.mockAddons = nil
 			},
 			wantImages: map[string]ContainerImageIdentifier{
