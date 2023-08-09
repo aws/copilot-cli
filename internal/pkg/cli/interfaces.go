@@ -605,6 +605,10 @@ type policyLister interface {
 	ListPolicyNames() ([]string, error)
 }
 
+type bucketDeleter interface {
+	EmptyBucket(string) error
+}
+
 type serviceDescriber interface {
 	DescribeService(app, env, svc string) (*ecs.ServiceDesc, error)
 }

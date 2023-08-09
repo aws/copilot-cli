@@ -17,10 +17,12 @@ import (
 	"github.com/aws/aws-sdk-go/service/resourcegroupstaggingapi"
 	awscfn "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/iam"
+	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
+	descstack "github.com/aws/copilot-cli/internal/pkg/describe/stack"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
@@ -67,6 +69,7 @@ type deleteEnvVars struct {
 
 type deleteEnvOpts struct {
 	deleteEnvVars
+	*descstack.StackDescriber
 
 	// Interfaces for dependencies.
 	store             environmentStore
@@ -74,6 +77,7 @@ type deleteEnvOpts struct {
 	deployer          environmentDeployer
 	envDeleterFromApp envDeleterFromApp
 	iam               roleDeleter
+	s3                bucketDeleter
 	prog              progress
 	prompt            prompter
 	sel               configSelector
@@ -114,6 +118,8 @@ func newDeleteEnvOpts(vars deleteEnvVars) (*deleteEnvOpts, error) {
 			}
 			o.rg = resourcegroupstaggingapi.New(sess)
 			o.iam = iam.New(sess)
+			o.s3 = s3.New(sess)
+			o.StackDescriber = descstack.NewStackDescriber(stack.NameForEnv(o.appName, o.name), sess)
 			o.deployer = cloudformation.New(sess, cloudformation.WithProgressTracker(os.Stderr))
 			o.envDeleterFromApp = cloudformation.New(defaultSess, cloudformation.WithProgressTracker(os.Stderr))
 			return nil
@@ -153,9 +159,10 @@ func (o *deleteEnvOpts) Ask() error {
 }
 
 // Execute deletes the environment from the application by:
-// 1. Deleting the cloudformation stack.
-// 2. Deleting the EnvManagerRole and CFNExecutionRole.
-// 3. Deleting the parameter from the SSM store.
+// 1. Emptying environment managed S3 buckets.
+// 2. Deleting the cloudformation stack.
+// 3. Deleting the EnvManagerRole and CFNExecutionRole.
+// 4. Deleting the parameter from the SSM store.
 // The environment is removed from the store only if other delete operations succeed.
 // Execute assumes that Validate is invoked first.
 func (o *deleteEnvOpts) Execute() error {
@@ -172,6 +179,13 @@ func (o *deleteEnvOpts) Execute() error {
 		return err
 	}
 	o.prog.Stop(log.Ssuccessf(fmtRetainEnvRolesComplete, o.name))
+
+	o.prog.Start(fmt.Sprintf("Emptying S3 buckets managed by the %q environment\n", o.name))
+	if err := o.emptyBuckets(); err != nil {
+		o.prog.Stop(log.Serrorf("Failed to empty buckets managed by the %q environment\n", o.name))
+		return err
+	}
+	o.prog.Stop(fmt.Sprintf("Emptied S3 buckets managed by the %q environment\n", o.name))
 
 	o.prog.Start(fmt.Sprintf("Deleting resources for the %q environment\n", o.name))
 	if err := o.deleteStack(); err != nil {
@@ -344,6 +358,26 @@ func (o *deleteEnvOpts) ensureRolesAreRetained() error {
 	}
 	if err := o.deployer.UpdateEnvironmentTemplate(o.appName, o.name, newBody, env.ExecutionRoleARN); err != nil {
 		return fmt.Errorf("update environment stack to retain environment roles: %w", err)
+	}
+	return nil
+}
+
+// emptyBuckets returns nil if buckets were deleted successfully. Otherwise, returns the error.
+func (o *deleteEnvOpts) emptyBuckets() error {
+	resources, err := o.StackDescriber.Resources()
+	if err != nil {
+		return err
+	}
+
+	var bucket *string
+	for _, resource := range resources {
+		if resource.LogicalID == "ELBAccessLogsBucket" {
+			bucket = &resource.PhysicalID
+		}
+	}
+
+	if err = o.s3.EmptyBucket(*bucket); err != nil {
+		return err
 	}
 	return nil
 }
