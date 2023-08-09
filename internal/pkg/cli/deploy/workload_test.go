@@ -60,7 +60,7 @@ type deployMocks struct {
 	mockEnvVersionGetter       *mocks.MockversionGetter
 	mockFileSystem             afero.Fs
 	mockValidator              *mocks.MockaliasCertValidator
-	mockLabeledTermPrinter     *mocks.MocklabeledTermPrinter
+	mockLabeledTermPrinter     *mocks.MockLabeledTermPrinter
 	mockdockerEngineRunChecker *mocks.MockdockerEngineRunChecker
 }
 
@@ -353,10 +353,12 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				"nginx": {
 					Digest:            "sidecarMockDigest1",
 					GitShortCommitTag: "gitTag",
+					ImageName:         "mockRepoURI:nginx-latest",
 				},
 				"logging": {
 					Digest:            "sidecarMockDigest2",
 					GitShortCommitTag: "gitTag",
+					ImageName:         "mockRepoURI:logging-latest",
 				},
 			},
 		},
@@ -628,7 +630,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				mockAddons:                 mocks.NewMockstackBuilder(ctrl),
 				mockRepositoryService:      mocks.NewMockrepositoryService(ctrl),
 				mockFileSystem:             afero.NewMemMapFs(),
-				mockLabeledTermPrinter:     mocks.NewMocklabeledTermPrinter(ctrl),
+				mockLabeledTermPrinter:     mocks.NewMockLabeledTermPrinter(ctrl),
 				mockdockerEngineRunChecker: mocks.NewMockdockerEngineRunChecker(ctrl),
 			}
 			tc.mock(t, m)
@@ -667,7 +669,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				templateFS:      fakeTemplateFS(),
 				overrider:       new(override.Noop),
 				customResources: crFn,
-				labeledTermPrinter: func(fw syncbuffer.FileWriter, bufs []*syncbuffer.LabeledSyncBuffer, opts ...syncbuffer.LabeledTermPrinterOption) labeledTermPrinter {
+				labeledTermPrinter: func(fw syncbuffer.FileWriter, bufs []*syncbuffer.LabeledSyncBuffer, opts ...syncbuffer.LabeledTermPrinterOption) LabeledTermPrinter {
 					return m.mockLabeledTermPrinter
 				},
 			}
