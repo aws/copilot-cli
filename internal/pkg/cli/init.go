@@ -45,8 +45,8 @@ const (
 )
 
 const (
-	initShouldDeployPrompt      = "Would you like to deploy a test environment?"
-	initShouldDeployHelpPrompt  = "An environment with your service deployed to it. This will allow you to test your service before placing it in production."
+	initShouldDeployPrompt      = "Would you like to deploy an environment?"
+	initShouldDeployHelpPrompt  = "An environment to deploy your service into."
 	initExistingEnvSelectPrompt = "Which environment would you like to deploy to?"
 	initExistingEnvSelectHelp   = "Select an existing environment, or create a new one."
 
@@ -97,6 +97,7 @@ type initOpts struct {
 	initWkldVars *initWkldVars
 
 	prompt prompter
+	sel    configSelector
 	store  environmentStore
 
 	setupWorkloadInit           func(*initOpts, string) error
@@ -112,6 +113,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 	}
 	configStore := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
 	prompt := prompt.New()
+	sel := selector.NewConfigSelector(prompt, configStore)
 	deployStore, err := deploy.NewStore(sessProvider, configStore)
 	if err != nil {
 		return nil, err
@@ -144,7 +146,6 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 	}
 	initEnvCmd := &initEnvOpts{
 		initEnvVars: initEnvVars{
-			name:         vars.envName,
 			isProduction: false,
 		},
 		store:       configStore,
@@ -160,9 +161,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		templateVersion: version.LatestTemplateVersion(),
 	}
 	deployEnvCmd := &deployEnvOpts{
-		deployEnvVars: deployEnvVars{
-			name: vars.envName,
-		},
+		deployEnvVars:   deployEnvVars{},
 		store:           configStore,
 		sessionProvider: sessProvider,
 		identity:        id,
@@ -179,7 +178,6 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 	}
 	deploySvcCmd := &deploySvcOpts{
 		deployWkldVars: deployWkldVars{
-			envName:  vars.envName,
 			imageTag: vars.imageTag,
 		},
 
@@ -197,7 +195,6 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 	}
 	deployJobCmd := &deployJobOpts{
 		deployWkldVars: deployWkldVars{
-			envName:  vars.envName,
 			imageTag: vars.imageTag,
 		},
 		store:           configStore,
@@ -250,6 +247,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		envName: &initEnvCmd.name,
 
 		prompt: prompt,
+		sel:    sel,
 		store:  configStore,
 
 		setupWorkloadInit: func(o *initOpts, wkldType string) error {
@@ -473,18 +471,15 @@ func (o *initOpts) deployEnv() error {
 		return nil
 	}
 	if initEnvCmd, ok := o.initEnvCmd.(*initEnvOpts); ok {
-		// Set the application name from app init to the env init command.
+		// Set the application name from app init to the env init command. Set an env name if available.
 		initEnvCmd.appName = *o.appName
-		initEnvCmd.name = *o.envName
+		initEnvCmd.name = o.initVars.envName
 	}
 
-	if err := o.askEnvName(); err != nil {
+	if err := o.askEnvNameAndMaybeInit(); err != nil {
 		return err
 	}
-	if err := o.initEnvCmd.Execute(); err != nil {
-		return err
-	}
-	log.Successf("Provisioned bootstrap resources for environment %s.\n", defaultEnvironmentName)
+
 	if deployEnvCmd, ok := o.deployEnvCmd.(*deployEnvOpts); ok {
 		// Set the application name from app init to the env deploy command.
 		deployEnvCmd.appName = *o.appName
@@ -555,47 +550,44 @@ func (o *initOpts) askShouldDeploy() error {
 	return nil
 }
 
-func (o *initOpts) askEnvName() error {
-	if o.initVars.envName != "" {
-		return nil
-	}
-	envs, err := o.store.ListEnvironments(*o.appName)
-	if err != nil {
-		return fmt.Errorf("list environments: %w", err)
-	}
-	// Configure prompt options based on number of environments.
-	promptOpts := []prompt.PromptConfig{prompt.WithFinalMessage("Environment name:")}
-	if len(envs) == 0 {
-		promptOpts = append(promptOpts, prompt.WithDefaultInput(defaultEnvironmentName))
-	} else {
-		log.Infoln("It looks like you have existing environments in this application.")
-		// Set up selection options.
-		options := make([]string, len(envs))
-		for e := range envs {
-			options[e] = envs[e].Name
-		}
-		options = append(options, envPromptCreateNew)
+func (o *initOpts) askEnvNameAndMaybeInit() error {
+	if o.initVars.envName == "" {
 		// Select one of existing envs or create a new one.
-		v, err := o.prompt.SelectOne(initExistingEnvSelectPrompt, initExistingEnvSelectHelp, options)
+		selectedEnv, err := o.sel.Environment(initExistingEnvSelectPrompt, initExistingEnvSelectHelp, *o.appName, envPromptCreateNew)
 		if err != nil {
 			return fmt.Errorf("select environment: %w", err)
 		}
 		// Customer has selected an existing environment. Return early.
-		if v != envPromptCreateNew {
-			if initEnvCmd, ok := o.initEnvCmd.(*initEnvOpts); ok {
-				initEnvCmd.name = v
-			}
+		if selectedEnv != envPromptCreateNew {
 			return nil
 		}
-	}
 
-	v, err := o.prompt.Get(envInitNamePrompt, envInitNameHelpPrompt, validateEnvironmentName, promptOpts...)
-	if err != nil {
-		return fmt.Errorf("get environment name: %w", err)
+		o.initVars.envName, err = o.prompt.Get(envInitNamePrompt, envInitNameHelpPrompt, validateEnvironmentName, prompt.WithFinalMessage("Environment name:"))
+		if err != nil {
+			return fmt.Errorf("get environment name: %w", err)
+		}
 	}
 	if initEnvCmd, ok := o.initEnvCmd.(*initEnvOpts); ok {
-		initEnvCmd.name = v
+		initEnvCmd.name = o.initVars.envName
 	}
+
+	// If the environment doesn't exist, initialize it. If it does exist, return early.
+	_, err := o.store.GetEnvironment(*o.appName, o.initVars.envName)
+	if err != nil {
+		var noSuchEnv *config.ErrNoSuchEnvironment
+		if !errors.As(err, &noSuchEnv) {
+			return err
+		}
+	} else {
+		// nil error means environment exists.
+		return nil
+	}
+	log.Infof("Environment %s does not yet exist in application %s; initializing it.\n", o.initVars.envName, o.initVars.appName)
+	if err := o.initEnvCmd.Execute(); err != nil {
+		return err
+	}
+	log.Successf("Provisioned bootstrap resources for environment %s.\n", o.initVars.envName)
+
 	return nil
 }
 
