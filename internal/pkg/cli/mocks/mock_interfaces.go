@@ -6654,6 +6654,43 @@ func (mr *MockpolicyListerMockRecorder) ListPolicyNames() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPolicyNames", reflect.TypeOf((*MockpolicyLister)(nil).ListPolicyNames))
 }
 
+// MockbucketDeleter is a mock of bucketDeleter interface.
+type MockbucketDeleter struct {
+	ctrl     *gomock.Controller
+	recorder *MockbucketDeleterMockRecorder
+}
+
+// MockbucketDeleterMockRecorder is the mock recorder for MockbucketDeleter.
+type MockbucketDeleterMockRecorder struct {
+	mock *MockbucketDeleter
+}
+
+// NewMockbucketDeleter creates a new mock instance.
+func NewMockbucketDeleter(ctrl *gomock.Controller) *MockbucketDeleter {
+	mock := &MockbucketDeleter{ctrl: ctrl}
+	mock.recorder = &MockbucketDeleterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockbucketDeleter) EXPECT() *MockbucketDeleterMockRecorder {
+	return m.recorder
+}
+
+// EmptyBucket mocks base method.
+func (m *MockbucketDeleter) EmptyBucket(arg0 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EmptyBucket", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// EmptyBucket indicates an expected call of EmptyBucket.
+func (mr *MockbucketDeleterMockRecorder) EmptyBucket(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EmptyBucket", reflect.TypeOf((*MockbucketDeleter)(nil).EmptyBucket), arg0)
+}
+
 // MockserviceDescriber is a mock of serviceDescriber interface.
 type MockserviceDescriber struct {
 	ctrl     *gomock.Controller
