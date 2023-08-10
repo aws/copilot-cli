@@ -573,15 +573,17 @@ func (o *initOpts) askEnvNameAndMaybeInit() error {
 
 	// If the environment doesn't exist, initialize it. If it does exist, return early.
 	_, err := o.store.GetEnvironment(*o.appName, o.initVars.envName)
-	if err != nil {
-		var noSuchEnv *config.ErrNoSuchEnvironment
-		if !errors.As(err, &noSuchEnv) {
-			return err
-		}
-	} else {
-		// nil error means environment exists.
+	// nil error means environment exists and we don't need to init.
+	if err == nil {
 		return nil
 	}
+	// ErrNoSuchEnvironment means we need to initialize the environment, so we can continue.
+	// If the error isn't ErrNoSuchEnvironment, surface it by erroring out.
+	var noSuchEnv *config.ErrNoSuchEnvironment
+	if !errors.As(err, &noSuchEnv) {
+		return err
+	}
+
 	log.Infof("Environment %s does not yet exist in application %s; initializing it.\n", o.initVars.envName, o.initVars.appName)
 	if err := o.initEnvCmd.Execute(); err != nil {
 		return err
