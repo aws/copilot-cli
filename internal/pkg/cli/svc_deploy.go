@@ -15,6 +15,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
+	awscfn "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/tags"
 	deploycfn "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
@@ -313,6 +314,7 @@ func (o *deploySvcOpts) Execute() error {
 	if err != nil {
 		var errStackDeletedOnInterrupt *deploycfn.ErrStackDeletedOnInterrupt
 		var errStackUpdateCanceledOnInterrupt *deploycfn.ErrStackUpdateCanceledOnInterrupt
+		var errEmptyChangeSet *awscfn.ErrChangeSetEmpty
 		if errors.As(err, &errStackDeletedOnInterrupt) {
 			o.noDeploy = true
 			return nil
@@ -332,6 +334,9 @@ After fixing the deployment, you can:
 1. Run %s to rollback the deployment.
 2. Run %s to make a new deployment.
 `, color.HighlightCode("copilot svc logs"), color.HighlightCode(rollbackCmd), color.HighlightCode("copilot svc deploy"))
+		}
+		if errors.As(err, &errEmptyChangeSet) {
+			return &errNoInfrastructureChanges{parentErr: err}
 		}
 		return fmt.Errorf("deploy service %s to environment %s: %w", o.name, o.envName, err)
 	}
@@ -661,6 +666,18 @@ func (e *errHasDiff) Error() string {
 // ExitCode returns 1 for a non-empty diff.
 func (e *errHasDiff) ExitCode() int {
 	return 1
+}
+
+type errNoInfrastructureChanges struct {
+	parentErr error
+}
+
+func (e *errNoInfrastructureChanges) Error() string {
+	return e.parentErr.Error()
+}
+
+func (e *errNoInfrastructureChanges) ExitCode() int {
+	return 0
 }
 
 func diff(differ templateDiffer, tmpl string, writer io.Writer) error {
