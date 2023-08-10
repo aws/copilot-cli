@@ -261,7 +261,6 @@ func (c DockerCmdClient) Run(ctx context.Context, options *RunOptions) error {
 	}
 
 	g, ctx := errgroup.WithContext(ctx)
-
 	logger := func() io.Writer {
 		pr, pw := io.Pipe()
 		g.Go(func() error {

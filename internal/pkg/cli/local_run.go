@@ -258,7 +258,6 @@ func (o *localRunOpts) Execute() error {
 		return err
 	}
 
-	fmt.Printf("image digests: %q\n", o.out.ImageDigests)
 	for name, imageInfo := range o.out.ImageDigests {
 		o.imageInfoList = append(o.imageInfoList, clideploy.ImagePerContainer{
 			ContainerName: name,
