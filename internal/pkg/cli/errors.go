@@ -118,3 +118,15 @@ func (e *errCannotDowngradeVersion) RecommendActions() string {
 - Alternatively, you can run with %s to override. However, this can cause unsuccessful deployment. Please use with caution!`,
 		color.HighlightCode(fmt.Sprintf("%s %s", e.componentType, e.componentName)), color.HighlightCode(fmt.Sprintf("--%s", allowDowngradeFlag)))
 }
+
+type errNoInfrastructureChanges struct {
+	parentErr error
+}
+
+func (e *errNoInfrastructureChanges) Error() string {
+	return e.parentErr.Error()
+}
+
+func (e *errNoInfrastructureChanges) ExitCode() int {
+	return 0
+}
