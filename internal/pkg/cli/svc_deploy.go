@@ -668,18 +668,6 @@ func (e *errHasDiff) ExitCode() int {
 	return 1
 }
 
-type errNoInfrastructureChanges struct {
-	parentErr error
-}
-
-func (e *errNoInfrastructureChanges) Error() string {
-	return e.parentErr.Error()
-}
-
-func (e *errNoInfrastructureChanges) ExitCode() int {
-	return 0
-}
-
 func diff(differ templateDiffer, tmpl string, writer io.Writer) error {
 	if out, err := differ.DeployDiff(tmpl); err != nil {
 		return err
