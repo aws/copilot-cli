@@ -472,6 +472,7 @@ func buildSingleContainerImage(in *ImageActionInput, uri string, buildArgsPerCon
 			Digest:            digest,
 			CustomTag:         in.CustomTag,
 			GitShortCommitTag: in.GitShortCommitTag,
+			ImageName:         fmt.Sprintf("%s:%s", uri, buildArgs.Tags[0]),
 		}
 	}
 	return nil
