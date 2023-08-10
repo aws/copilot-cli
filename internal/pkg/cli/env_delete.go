@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
@@ -22,7 +23,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
-	descstack "github.com/aws/copilot-cli/internal/pkg/describe/stack"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
@@ -49,6 +49,11 @@ const (
 	fmtDeleteEnvComplete  = "Deleted environment %q from application %q.\n"
 )
 
+const (
+	envS3BucketStackNameTagKey = "aws:cloudformation:stack-name"
+	envS3BucketStackIDTagKey   = "aws:cloudformation:stack-id"
+)
+
 var (
 	envDeleteAppNamePrompt = fmt.Sprintf("In which %s would you like to delete the environment?", color.Emphasize("application"))
 )
@@ -69,7 +74,6 @@ type deleteEnvVars struct {
 
 type deleteEnvOpts struct {
 	deleteEnvVars
-	*descstack.StackDescriber
 
 	// Interfaces for dependencies.
 	store             environmentStore
@@ -77,7 +81,7 @@ type deleteEnvOpts struct {
 	deployer          environmentDeployer
 	envDeleterFromApp envDeleterFromApp
 	iam               roleDeleter
-	s3                bucketDeleter
+	s3                bucketEmptier
 	prog              progress
 	prompt            prompter
 	sel               configSelector
@@ -119,7 +123,6 @@ func newDeleteEnvOpts(vars deleteEnvVars) (*deleteEnvOpts, error) {
 			o.rg = resourcegroupstaggingapi.New(sess)
 			o.iam = iam.New(sess)
 			o.s3 = s3.New(sess)
-			o.StackDescriber = descstack.NewStackDescriber(stack.NameForEnv(o.appName, o.name), sess)
 			o.deployer = cloudformation.New(sess, cloudformation.WithProgressTracker(os.Stderr))
 			o.envDeleterFromApp = cloudformation.New(defaultSess, cloudformation.WithProgressTracker(os.Stderr))
 			return nil
@@ -182,10 +185,10 @@ func (o *deleteEnvOpts) Execute() error {
 
 	o.prog.Start(fmt.Sprintf("Emptying S3 buckets managed by the %q environment\n", o.name))
 	if err := o.emptyBuckets(); err != nil {
+		// Don't error out when buckets fail to empty, this only causes them to hang, and doesn't interfere with the rest of the stack deletion
 		o.prog.Stop(log.Serrorf("Failed to empty buckets managed by the %q environment\n", o.name))
-		return err
 	}
-	o.prog.Stop(fmt.Sprintf("Emptied S3 buckets managed by the %q environment\n", o.name))
+	o.prog.Stop(log.Ssuccessf("Emptied S3 buckets managed by the %q environment\n", o.name))
 
 	o.prog.Start(fmt.Sprintf("Deleting resources for the %q environment\n", o.name))
 	if err := o.deleteStack(); err != nil {
@@ -364,21 +367,75 @@ func (o *deleteEnvOpts) ensureRolesAreRetained() error {
 
 // emptyBuckets returns nil if buckets were deleted successfully. Otherwise, returns the error.
 func (o *deleteEnvOpts) emptyBuckets() error {
-	resources, err := o.StackDescriber.Resources()
+	envStack, err := o.rg.GetResources(&resourcegroupstaggingapi.GetResourcesInput{
+		ResourceTypeFilters: []*string{aws.String("cloudformation")},
+		TagFilters: []*resourcegroupstaggingapi.TagFilter{
+			{
+				Key:    aws.String(deploy.EnvTagKey),
+				Values: []*string{aws.String(o.name)},
+			},
+			{
+				Key:    aws.String(deploy.AppTagKey),
+				Values: []*string{aws.String(o.appName)},
+			},
+		},
+	})
 	if err != nil {
-		return err
+		return fmt.Errorf("find env stack resource: %w", err)
+	}
+	if len(envStack.ResourceTagMappingList) > 1 {
+		return fmt.Errorf("ambiguous env stacks found: %w", err)
+	} else if len(envStack.ResourceTagMappingList) < 1 {
+		return fmt.Errorf("no env stack found: %w", err)
+	}
+	stackID := envStack.ResourceTagMappingList[0].ResourceARN
+
+	s3buckets, err := o.rg.GetResources(&resourcegroupstaggingapi.GetResourcesInput{
+		ResourceTypeFilters: []*string{aws.String("s3:bucket")},
+		TagFilters: []*resourcegroupstaggingapi.TagFilter{
+			{
+				Key:    aws.String(envS3BucketStackNameTagKey),
+				Values: []*string{aws.String(stack.NameForEnv(o.appName, o.name))},
+			},
+			{
+				Key:    aws.String(envS3BucketStackIDTagKey),
+				Values: []*string{stackID},
+			},
+			{
+				Key:    aws.String(deploy.EnvTagKey),
+				Values: []*string{aws.String(o.name)},
+			},
+			{
+				Key:    aws.String(deploy.AppTagKey),
+				Values: []*string{aws.String(o.appName)},
+			},
+		},
+	})
+
+	if err != nil {
+		return fmt.Errorf("find s3 bucket resources: %w", err)
 	}
 
-	var bucket *string
-	for _, resource := range resources {
-		if resource.LogicalID == "ELBAccessLogsBucket" {
-			bucket = &resource.PhysicalID
+	var failedBuckets []string
+	emptyBucketFailed := false
+	for _, resourceTagMapping := range s3buckets.ResourceTagMappingList {
+		bucketARN, err := arn.Parse(*resourceTagMapping.ResourceARN)
+		if err != nil {
+			return err
+		}
+
+		if err = o.s3.EmptyBucket(bucketARN.Resource); err != nil {
+			emptyBucketFailed = true
+			failedBuckets = append(failedBuckets, bucketARN.Resource)
 		}
 	}
 
-	if err = o.s3.EmptyBucket(*bucket); err != nil {
-		return err
+	if emptyBucketFailed {
+		return &errBucketEmptyingFailed{
+			failedBuckets: failedBuckets,
+		}
 	}
+
 	return nil
 }
 

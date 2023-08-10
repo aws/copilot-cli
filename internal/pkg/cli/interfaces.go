@@ -364,10 +364,6 @@ type uploader interface {
 	Upload(bucket, key string, data io.Reader) (string, error)
 }
 
-type bucketEmptier interface {
-	EmptyBucket(bucket string) error
-}
-
 // Interfaces for deploying resources through CloudFormation. Facilitates mocking.
 type environmentDeployer interface {
 	CreateAndRenderEnvironment(conf cloudformation.StackConfiguration, bucketARN string) error
@@ -605,7 +601,7 @@ type policyLister interface {
 	ListPolicyNames() ([]string, error)
 }
 
-type bucketDeleter interface {
+type bucketEmptier interface {
 	EmptyBucket(string) error
 }
 
