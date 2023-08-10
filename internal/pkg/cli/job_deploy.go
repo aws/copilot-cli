@@ -237,8 +237,6 @@ func (o *deployJobOpts) Execute() error {
 			return nil
 		}
 	}
-	var errStackDeletedOnInterrupt *deploycfn.ErrStackDeletedOnInterrupt
-	var errStackUpdateCanceledOnInterrupt *deploycfn.ErrStackUpdateCanceledOnInterrupt
 	if _, err = deployer.DeployWorkload(&deploy.DeployWorkloadInput{
 		StackRuntimeConfiguration: deploy.StackRuntimeConfiguration{
 			ImageDigests:       uploadOut.ImageDigests,
@@ -251,8 +249,11 @@ func (o *deployJobOpts) Execute() error {
 		},
 		Options: deploy.Options{
 			DisableRollback: o.disableRollback,
+			Detach:          o.detach,
 		},
 	}); err != nil {
+		var errStackDeletedOnInterrupt *deploycfn.ErrStackDeletedOnInterrupt
+		var errStackUpdateCanceledOnInterrupt *deploycfn.ErrStackUpdateCanceledOnInterrupt
 		if errors.As(err, &errStackDeletedOnInterrupt) {
 			return nil
 		}
@@ -270,6 +271,9 @@ After fixing the deployment, you can:
 `, color.HighlightCode(rollbackCmd), color.HighlightCode("copilot job deploy"))
 		}
 		return fmt.Errorf("deploy job %s to environment %s: %w", o.name, o.envName, err)
+	}
+	if o.detach {
+		return nil
 	}
 	log.Successf("Deployed %s.\n", color.HighlightUserInput(o.name))
 	return nil
@@ -408,5 +412,6 @@ func buildJobDeployCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&vars.disableRollback, noRollbackFlag, false, noRollbackFlagDescription)
 	cmd.Flags().BoolVar(&vars.showDiff, diffFlag, false, diffFlagDescription)
 	cmd.Flags().BoolVar(&vars.allowWkldDowngrade, allowDowngradeFlag, false, allowDowngradeFlagDescription)
+	cmd.Flags().BoolVar(&vars.detach, detachFlag, false, detachFlagDescription)
 	return cmd
 }

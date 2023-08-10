@@ -18,6 +18,60 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestRepository_Build(t *testing.T) {
+	inDockerfilePath := "path/to/dockerfile"
+	inRepoName := "my-repo"
+	mockTag1, mockTag2, mockTag3 := "tag1", "tag2", "tag3"
+	ctx := context.Background()
+
+	defaultDockerArguments := dockerengine.BuildArguments{
+		Dockerfile: inDockerfilePath,
+		Context:    filepath.Dir(inDockerfilePath),
+		Tags:       []string{mockTag1, mockTag2, mockTag3},
+	}
+
+	testCases := map[string]struct {
+		inMockDocker func(m *mocks.MockContainerLoginBuildPusher)
+
+		wantedError  error
+		wantedDigest string
+	}{
+		"failed to build image": {
+			inMockDocker: func(m *mocks.MockContainerLoginBuildPusher) {
+				m.EXPECT().Build(ctx, &defaultDockerArguments, gomock.Any()).Return(errors.New("error building image"))
+			},
+			wantedError: fmt.Errorf("build from Dockerfile at %s: %w", inDockerfilePath, errors.New("error building image")),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			mockDocker := mocks.NewMockContainerLoginBuildPusher(ctrl)
+
+			if tc.inMockDocker != nil {
+				tc.inMockDocker(mockDocker)
+			}
+			buf := new(strings.Builder)
+			repo := &Repository{
+				name:   inRepoName,
+				docker: mockDocker,
+			}
+			digest, err := repo.Build(ctx, &dockerengine.BuildArguments{
+				Dockerfile: inDockerfilePath,
+				Context:    filepath.Dir(inDockerfilePath),
+				Tags:       []string{mockTag1, mockTag2, mockTag3},
+			}, buf)
+			if tc.wantedError != nil {
+				require.EqualError(t, tc.wantedError, err.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedDigest, digest)
+			}
+		})
+	}
+}
+
 func TestRepository_BuildAndPush(t *testing.T) {
 	inRepoName := "my-repo"
 	inDockerfilePath := "path/to/dockerfile"

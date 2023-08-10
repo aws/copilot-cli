@@ -32,7 +32,6 @@ type AppResources struct {
 // AppResourcesConfig is a configuration for a deployed Application StackSet.
 type AppResourcesConfig struct {
 	Accounts  []string               `yaml:"Accounts"`
-	Services  []string               `yaml:"Services"` // Deprecated since v1.2.0: Use Workloads instead of Services.
 	Workloads []AppResourcesWorkload `yaml:"Workloads"`
 	App       string                 `yaml:"App"`
 	Version   int                    `yaml:"Version"`
@@ -51,13 +50,20 @@ func (s *AppResources) UnmarshalYAML(value *yaml.Node) error {
 	if err := value.Decode(&s.AppResourcesConfig); err != nil {
 		return err
 	}
-	for _, svc := range s.AppResourcesConfig.Services {
-		s.AppResourcesConfig.Workloads = append(s.AppResourcesConfig.Workloads, AppResourcesWorkload{
-			Name:    svc,
-			WithECR: true,
-		})
+
+	deprecated := struct {
+		Services []string `yaml:"Services"` // Deprecated since v1.2.0: Use Workloads instead of Services.
+	}{}
+	if err := value.Decode(&deprecated); err == nil {
+		// if there are services around, convert them to workloads
+		for _, svc := range deprecated.Services {
+			s.AppResourcesConfig.Workloads = append(s.AppResourcesConfig.Workloads, AppResourcesWorkload{
+				Name:    svc,
+				WithECR: true,
+			})
+		}
 	}
-	s.Services = nil
+
 	return nil
 }
 

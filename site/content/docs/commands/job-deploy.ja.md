@@ -9,15 +9,18 @@ $ copilot job deploy
 
 `job deploy` は以下のステップを実行します。
 
-1. ローカルの Dockerfile をビルドしてコンテナイメージを作成
-2. `--tag` あるいは git ディレクトリにいる場合は最新の git ハッシュ値を使ってコンテナイメージにタグ付け
-3. ECR にコンテナイメージをプッシュ
-4. Manifest ファイルと Addon をまとめて CloudFormation テンプレートを生成する。
-5. ECS のタスク定義と Job を作成/更新
+1. `image.build` が Manifest に存在する場合
+    1. ローカルの Dockerfile をビルドしてコンテナイメージを作成
+    2. `--tag` あるいは git ディレクトリにいる場合は最新の git ハッシュ値を使ってコンテナイメージにタグ付け
+    3. ECR にコンテナイメージをプッシュ
+2. Manifest ファイルと Addon をまとめて CloudFormation テンプレートにパッケージ
+3. ECS のタスク定義と Job を作成/更新
 
 ## フラグ
 
 ```
+      --allow-downgrade                Optional. Allow using an older version of Copilot to update Copilot components
+                                       updated by a newer version of Copilot.
   -a, --app string                     Name of the application.
       --diff                           Compares the generated CloudFormation template to the deployed stack.
   -e, --env string                     Name of the environment.
