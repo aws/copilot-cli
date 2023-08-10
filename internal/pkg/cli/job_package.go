@@ -72,7 +72,7 @@ func newPackageJobOpts(vars packageJobVars) (*packageJobOpts, error) {
 		ws:             ws,
 		store:          store,
 		runner:         exec.NewCmd(),
-		sel:            selector.NewLocalWorkloadSelector(prompter, store, ws),
+		sel:            selector.NewLocalWorkloadSelector(prompter, store, ws, selector.OnlyInitializedWorkloads),
 		prompt:         prompter,
 	}
 
