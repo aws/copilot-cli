@@ -185,8 +185,15 @@ func (o *deleteEnvOpts) Execute() error {
 
 	o.prog.Start(fmt.Sprintf("Emptying S3 buckets managed by the %q environment\n", o.name))
 	if err := o.emptyBuckets(); err != nil {
-		// Don't error out when buckets fail to empty, this only causes them to hang, and doesn't interfere with the rest of the stack deletion
 		o.prog.Stop(log.Serrorf("Failed to empty buckets managed by the %q environment\n", o.name))
+		switch t := err.(type) {
+		// Handle error and recommend action, don't exit program
+		case *errBucketEmptyingFailed:
+			log.Errorln(t.Error())
+			log.Warningln(t.RecommendActions())
+		default:
+			return err
+		}
 	}
 	o.prog.Stop(log.Ssuccessf("Emptied S3 buckets managed by the %q environment\n", o.name))
 
@@ -384,9 +391,9 @@ func (o *deleteEnvOpts) emptyBuckets() error {
 		return fmt.Errorf("find env stack resource: %w", err)
 	}
 	if len(envStack.ResourceTagMappingList) > 1 {
-		return fmt.Errorf("ambiguous env stacks found: %w", err)
+		return fmt.Errorf("ambiguous env stacks found")
 	} else if len(envStack.ResourceTagMappingList) < 1 {
-		return fmt.Errorf("no env stack found: %w", err)
+		return fmt.Errorf("no env stack found")
 	}
 	stackID := envStack.ResourceTagMappingList[0].ResourceARN
 
