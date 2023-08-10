@@ -256,7 +256,10 @@ func (in *RunOptions) generateRunArguments() []string {
 // Run runs a Docker container with the sepcified options.
 func (c DockerCmdClient) Run(ctx context.Context, options *RunOptions) error {
 	//Execute the Docker run command.
-	// TODO handle zero color
+	if options.LogOptions.Color == nil {
+		options.LogOptions.Color = color.New()
+	}
+
 	g, ctx := errgroup.WithContext(ctx)
 
 	logger := func() io.Writer {
@@ -271,27 +274,7 @@ func (c DockerCmdClient) Run(ctx context.Context, options *RunOptions) error {
 		return pw
 	}
 
-	/*
-		// pipe impl
-			logger := func(pipe io.ReadCloser, err error) {
-				g.Go(func() error {
-					// check pipe creation error
-					if err != nil {
-						return fmt.Errorf("PIPE ERR %w", err)
-					}
-					defer pipe.Close()
-
-					scanner := bufio.NewScanner(pipe)
-					for scanner.Scan() {
-						options.LogOptions.Color.Fprintln(os.Stderr, options.LogOptions.LinePrefix+scanner.Text())
-					}
-					return scanner.Err()
-				})
-			}
-	*/
-
 	g.Go(func() error {
-		//if err := c.runner.RunWithContext(ctx, "docker", options.generateRunArguments(), exec.StdoutPipe(logger), exec.StderrPipe(logger)); err != nil {
 		if err := c.runner.RunWithContext(ctx, "docker", options.generateRunArguments(), exec.Stdout(logger()), exec.Stderr(logger())); err != nil {
 			return fmt.Errorf("running container: %w", err)
 		}

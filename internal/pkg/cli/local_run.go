@@ -29,6 +29,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/term/syncbuffer"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
+	"github.com/fatih/color"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
@@ -66,6 +67,7 @@ type localRunOpts struct {
 	out               clideploy.UploadArtifactsOutput
 	imageInfoList     []clideploy.ImagePerContainer
 	containerSuffix   string
+	newColor          func() *color.Color
 
 	buildContainerImages func(o *localRunOpts) error
 	configureClients     func(o *localRunOpts) (repositoryService, error)
@@ -107,6 +109,7 @@ func newLocalRunOpts(vars localRunVars) (*localRunOpts, error) {
 		cmd:                exec.NewCmd(),
 		dockerEngine:       dockerengine.New(exec.NewCmd()),
 		labeledTermPrinter: labeledTermPrinter,
+		newColor:           colorGenerator(),
 	}
 	opts.configureClients = func(o *localRunOpts) (repositoryService, error) {
 		defaultSessEnvRegion, err := o.sessProvider.DefaultWithRegion(o.targetEnv.Region)
@@ -255,6 +258,7 @@ func (o *localRunOpts) Execute() error {
 		return err
 	}
 
+	fmt.Printf("image digests: %q\n", o.out.ImageDigests)
 	for name, imageInfo := range o.out.ImageDigests {
 		o.imageInfoList = append(o.imageInfoList, clideploy.ImagePerContainer{
 			ContainerName: name,
@@ -314,6 +318,10 @@ func (o *localRunOpts) runPauseContainer(ctx context.Context, containerPorts map
 		ContainerName:  containerNameWithSuffix,
 		ContainerPorts: containerPorts,
 		Command:        []string{"sleep", "infinity"},
+		LogOptions: dockerengine.RunLogOptions{
+			Color:      o.newColor(),
+			LinePrefix: "[pause] ",
+		},
 	}
 
 	//channel to receive any error from the goroutine
@@ -365,6 +373,10 @@ func (o *localRunOpts) runContainers(ctx context.Context, imageInfoList []clidep
 				Secrets:          secrets,
 				EnvVars:          envVars,
 				ContainerNetwork: containerNetwork,
+				LogOptions: dockerengine.RunLogOptions{
+					Color:      o.newColor(),
+					LinePrefix: fmt.Sprintf("[%s] ", imageInfo.ContainerName),
+				},
 			}
 			if err := o.dockerEngine.Run(ctx, runOptions); err != nil {
 				return fmt.Errorf("run container: %w", err)
@@ -378,6 +390,26 @@ func (o *localRunOpts) runContainers(ctx context.Context, imageInfoList []clidep
 		return err
 	}
 	return nil
+}
+
+func colorGenerator() func() *color.Color {
+	// max 10 containers per task, so 10 should be enough
+	colors := []*color.Color{
+		color.New(color.FgHiRed),
+		color.New(color.FgHiGreen),
+		color.New(color.FgHiYellow),
+		color.New(color.FgHiBlue),
+		color.New(color.FgHiMagenta),
+		color.New(color.FgHiCyan),
+		color.New(color.FgRed),
+		color.New(color.FgGreen),
+		color.New(color.FgYellow),
+		color.New(color.FgBlue),
+	}
+	i := 0
+	return func() *color.Color {
+		return colors[i%len(colors)]
+	}
 }
 
 // BuildLocalRunCmd builds the command for running a workload locally
