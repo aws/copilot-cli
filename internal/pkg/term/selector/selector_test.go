@@ -1105,7 +1105,8 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 					},
 					workloadLister: MockconfigLister,
 				},
-				ws: mockwsRetriever,
+				ws:                       mockwsRetriever,
+				onlyInitializedWorkloads: true,
 			}
 			got, err := sel.Service("Select a service", "Help text")
 			if tc.wantErr != nil {
@@ -1405,7 +1406,8 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 					},
 					workloadLister: MockconfigLister,
 				},
-				ws: mockwsRetriever,
+				ws:                       mockwsRetriever,
+				onlyInitializedWorkloads: true,
 			}
 			got, err := sel.Job("Select a job", "Help text")
 			if tc.wantErr != nil {
@@ -1630,14 +1632,14 @@ func TestWorkspaceSelect_EnvironmentsInWorkspace(t *testing.T) {
 
 func TestWorkspaceSelect_Workload(t *testing.T) {
 	testCases := map[string]struct {
-		setupMocks           func(mocks workspaceSelectMocks)
-		inLocalWorkloadsOnly bool
+		setupMocks                 func(mocks workspaceSelectMocks)
+		inOnlyInitializedWorkloads bool
 
 		wantErr error
 		want    string
 	}{
 		"with no workspace workloads and no store workloads": {
-			inLocalWorkloadsOnly: true,
+			inOnlyInitializedWorkloads: false,
 			setupMocks: func(m workspaceSelectMocks) {
 				m.ws.EXPECT().Summary().Return(
 					&workspace.Summary{
@@ -1653,7 +1655,7 @@ func TestWorkspaceSelect_Workload(t *testing.T) {
 			wantErr: fmt.Errorf("no jobs or services found in workspace"),
 		},
 		"with one workspace service but no store services": {
-			inLocalWorkloadsOnly: true,
+			inOnlyInitializedWorkloads: false,
 			setupMocks: func(m workspaceSelectMocks) {
 				m.ws.EXPECT().Summary().Return(
 					&workspace.Summary{
@@ -1692,7 +1694,7 @@ func TestWorkspaceSelect_Workload(t *testing.T) {
 			want: "service1",
 		},
 		"multiple workloads, pick un-initialized": {
-			inLocalWorkloadsOnly: true,
+			inOnlyInitializedWorkloads: false,
 			setupMocks: func(m workspaceSelectMocks) {
 				m.ws.EXPECT().Summary().Return(
 					&workspace.Summary{
@@ -1760,7 +1762,7 @@ func TestWorkspaceSelect_Workload(t *testing.T) {
 			wantErr: errors.New("retrieve jobs and services from store: some error"),
 		},
 		"fails selecting workload": {
-			inLocalWorkloadsOnly: true,
+			inOnlyInitializedWorkloads: false,
 			setupMocks: func(m workspaceSelectMocks) {
 				m.ws.EXPECT().Summary().Return(
 					&workspace.Summary{
@@ -1817,8 +1819,8 @@ func TestWorkspaceSelect_Workload(t *testing.T) {
 					},
 					workloadLister: MockconfigLister,
 				},
-				ws:                mockwsRetriever,
-				allLocalWorkloads: tc.inLocalWorkloadsOnly,
+				ws:                       mockwsRetriever,
+				onlyInitializedWorkloads: tc.inOnlyInitializedWorkloads,
 			}
 			got, err := sel.Workload("Select a workload", "Help text")
 			if tc.wantErr != nil {
@@ -1835,10 +1837,10 @@ func TestSelectOption(t *testing.T) {
 		optionToTest   SelectOption
 		wantedSelector LocalWorkloadSelector
 	}{
-		"LocalWorkloadsOnly": {
-			optionToTest: AllLocalWorkloads,
+		"OnlyInitializedWorkloads": {
+			optionToTest: OnlyInitializedWorkloads,
 			wantedSelector: LocalWorkloadSelector{
-				allLocalWorkloads: true,
+				onlyInitializedWorkloads: true,
 			},
 		},
 	}

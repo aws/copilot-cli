@@ -103,7 +103,7 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 		fs:                fs,
 		unmarshal:         manifest.UnmarshalWorkload,
 		runner:            exec.NewCmd(),
-		sel:               selector.NewLocalWorkloadSelector(prompter, store, ws),
+		sel:               selector.NewLocalWorkloadSelector(prompter, store, ws, selector.OnlyInitializedWorkloads),
 		templateWriter:    os.Stdout,
 		paramsWriter:      discardFile{},
 		addonsWriter:      discardFile{},

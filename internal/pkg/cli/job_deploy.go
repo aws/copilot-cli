@@ -81,7 +81,7 @@ func newJobDeployOpts(vars deployWkldVars) (*deployJobOpts, error) {
 		store:           store,
 		ws:              ws,
 		unmarshal:       manifest.UnmarshalWorkload,
-		sel:             selector.NewLocalWorkloadSelector(prompter, store, ws),
+		sel:             selector.NewLocalWorkloadSelector(prompter, store, ws, selector.OnlyInitializedWorkloads),
 		prompt:          prompter,
 		sessProvider:    sessProvider,
 		newInterpolator: newManifestInterpolator,

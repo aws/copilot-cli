@@ -192,8 +192,8 @@ type LocalWorkloadSelector struct {
 	*ConfigSelector
 	ws workspaceRetriever
 
-	// Option, engaged by passing SelectOpt AllLocalWorkloads to NewSelector.
-	allLocalWorkloads bool
+	// Option, turned on by passing WithOnlyInitialized to NewLocalWorkloadSelector.
+	onlyInitializedWorkloads bool
 }
 
 // LocalEnvironmentSelector is an application and environment selector, but can also choose an environment from the workspace.
@@ -830,7 +830,7 @@ func (s *LocalWorkloadSelector) getWorkloadSelectOptions(storeWls []*config.Work
 	}
 
 	// Return early if we're only looking for config store workloads.
-	if !s.allLocalWorkloads {
+	if s.onlyInitializedWorkloads {
 		if len(initializedLocalWorkloads) == 0 {
 			return nil, fmt.Errorf("no %s found", pluralNounString)
 		}
@@ -855,10 +855,10 @@ func (s *LocalWorkloadSelector) getWorkloadSelectOptions(storeWls []*config.Work
 // SelectOption represents an option for customizing LocalWorkloadSelector's behavior.
 type SelectOption func(selector *LocalWorkloadSelector)
 
-// AllLocalWorkloads modifies LocalWorkloadSelector to show ALL workloads in the workspace,
-// regardless of whether they exist in the config store.
-var AllLocalWorkloads SelectOption = func(s *LocalWorkloadSelector) {
-	s.allLocalWorkloads = true
+// OnlyInitializedWorkloads modifies LocalWorkloadSelector to show only the initialized workloads in the workspace,
+// regardless of whether there is a local manifest file.
+var OnlyInitializedWorkloads SelectOption = func(s *LocalWorkloadSelector) {
+	s.onlyInitializedWorkloads = true
 }
 
 // Workload fetches all jobs and services in a workspace and prompts the user to select one.
