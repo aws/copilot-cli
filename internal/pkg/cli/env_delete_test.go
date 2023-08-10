@@ -282,9 +282,6 @@ Resources:
 			},
 			wantedError: errors.New("update environment stack to retain environment roles: some error"),
 		},
-		/*
-			DELETE S3 BUCKET TESTS GO HERE
-		*/
 		"returns wrapped error when failed to retrieve environment stack": {
 			given: func(t *testing.T, ctrl *gomock.Controller) *deleteEnvOpts {
 				rg := mocks.NewMockresourceGetter(ctrl)
@@ -376,33 +373,6 @@ Resources:
 
 			wantedError: errors.New("find s3 bucket resources: some error"),
 		},
-		// rg.EXPECT().GetResources(gomock.Any()).Return(&resourcegroupstaggingapi.GetResourcesOutput{
-		// 	ResourceTagMappingList: []*resourcegroupstaggingapi.ResourceTagMapping{
-		// 		{
-		// 			Tags: []*resourcegroupstaggingapi.Tag{
-		// 				{
-		// 					Key:   aws.String(envS3BucketStackNameTagKey),
-		// 					Value: aws.String("mockapp-mockenv"),
-		// 				},
-		// 				{
-		// 					Key:   aws.String(envS3BucketStackIDTagKey),
-		// 					Value: aws.String("mockstackid"),
-		// 				},
-		// 				{
-		// 					Key:   aws.String(deploy.EnvTagKey),
-		// 					Value: aws.String("mockenv"),
-		// 				},
-		// 				{
-		// 					Key:   aws.String(deploy.AppTagKey),
-		// 					Value: aws.String("mockapp"),
-		// 				},
-		// 			},
-		// 		},
-		// 	},
-		// }, nil)
-		/*
-			END S3 TESTS
-		*/
 		"returns wrapped error when stack cannot be deleted": {
 			given: func(t *testing.T, ctrl *gomock.Controller) *deleteEnvOpts {
 				rg := mocks.NewMockresourceGetter(ctrl)
