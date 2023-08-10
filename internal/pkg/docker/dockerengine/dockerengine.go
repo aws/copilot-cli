@@ -5,6 +5,7 @@
 package dockerengine
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -17,6 +18,8 @@ import (
 	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/exec"
+	"github.com/fatih/color"
+	"golang.org/x/sync/errgroup"
 )
 
 // Cmd is the interface implemented by external commands.
@@ -80,6 +83,12 @@ type RunOptions struct {
 	ContainerPorts   map[string]string // Optional. Contains host and container ports.
 	Command          []string          // Optional. The command to run in the container.
 	ContainerNetwork string            // Optional. Network mode for the container.
+	LogOptions       RunLogOptions
+}
+
+type RunLogOptions struct {
+	Color      *color.Color
+	LinePrefix string
 }
 
 // GenerateDockerBuildArgs returns command line arguments to be passed to the Docker build command based on the provided BuildArguments.
@@ -247,10 +256,49 @@ func (in *RunOptions) generateRunArguments() []string {
 // Run runs a Docker container with the sepcified options.
 func (c DockerCmdClient) Run(ctx context.Context, options *RunOptions) error {
 	//Execute the Docker run command.
-	if err := c.runner.RunWithContext(ctx, "docker", options.generateRunArguments()); err != nil {
-		return fmt.Errorf("running container: %w", err)
+	// TODO handle zero color
+	g, ctx := errgroup.WithContext(ctx)
+
+	logger := func() io.Writer {
+		pr, pw := io.Pipe()
+		g.Go(func() error {
+			scanner := bufio.NewScanner(pr)
+			for scanner.Scan() {
+				options.LogOptions.Color.Fprintln(os.Stderr, options.LogOptions.LinePrefix+scanner.Text())
+			}
+			return scanner.Err()
+		})
+		return pw
 	}
-	return nil
+
+	/*
+		// pipe impl
+			logger := func(pipe io.ReadCloser, err error) {
+				g.Go(func() error {
+					// check pipe creation error
+					if err != nil {
+						return fmt.Errorf("PIPE ERR %w", err)
+					}
+					defer pipe.Close()
+
+					scanner := bufio.NewScanner(pipe)
+					for scanner.Scan() {
+						options.LogOptions.Color.Fprintln(os.Stderr, options.LogOptions.LinePrefix+scanner.Text())
+					}
+					return scanner.Err()
+				})
+			}
+	*/
+
+	g.Go(func() error {
+		//if err := c.runner.RunWithContext(ctx, "docker", options.generateRunArguments(), exec.StdoutPipe(logger), exec.StderrPipe(logger)); err != nil {
+		if err := c.runner.RunWithContext(ctx, "docker", options.generateRunArguments(), exec.Stdout(logger()), exec.Stderr(logger())); err != nil {
+			return fmt.Errorf("running container: %w", err)
+		}
+		return nil
+	})
+
+	return g.Wait()
 }
 
 // IsContainerRunning checks if a specific Docker container is running.
