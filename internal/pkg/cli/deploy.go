@@ -80,6 +80,7 @@ func newDeployOpts(vars deployWkldVars) (*deployOpts, error) {
 					unmarshal:       manifest.UnmarshalWorkload,
 					sel:             selector.NewLocalWorkloadSelector(o.prompt, o.store, ws, selector.OnlyInitializedWorkloads),
 					cmd:             exec.NewCmd(),
+					templateVersion: version.LatestTemplateVersion(),
 					sessProvider:    sessProvider,
 				}
 				opts.newJobDeployer = func() (workloadDeployer, error) {
