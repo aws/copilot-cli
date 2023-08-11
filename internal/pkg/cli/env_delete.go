@@ -52,6 +52,13 @@ const (
 const (
 	envS3BucketStackNameTagKey = "aws:cloudformation:stack-name"
 	envS3BucketStackIDTagKey   = "aws:cloudformation:stack-id"
+	envS3BucketLogicalIDTagKey = "aws:cloudformation:logical-id"
+)
+
+var (
+	envManagedS3BucketLogicalIds = []string{
+		stack.ELBAccessLogsBucket,
+	}
 )
 
 var (
@@ -415,6 +422,10 @@ func (o *deleteEnvOpts) emptyBuckets() error {
 				Values: []*string{stackID},
 			},
 			{
+				Key:    aws.String(envS3BucketLogicalIDTagKey),
+				Values: aws.StringSlice(envManagedS3BucketLogicalIds),
+			},
+			{
 				Key:    aws.String(deploy.EnvTagKey),
 				Values: []*string{aws.String(o.name)},
 			},
@@ -430,7 +441,6 @@ func (o *deleteEnvOpts) emptyBuckets() error {
 	}
 
 	var failedBuckets []string
-	var emptyBucketFailed bool
 	for _, resourceTagMapping := range s3buckets.ResourceTagMappingList {
 		bucketARN, err := arn.Parse(aws.StringValue(resourceTagMapping.ResourceARN))
 		if err != nil {
@@ -438,12 +448,11 @@ func (o *deleteEnvOpts) emptyBuckets() error {
 		}
 
 		if err = o.s3.EmptyBucket(bucketARN.Resource); err != nil {
-			emptyBucketFailed = true
 			failedBuckets = append(failedBuckets, bucketARN.Resource)
 		}
 	}
 
-	if emptyBucketFailed {
+	if len(failedBuckets) > 0 {
 		return &errBucketEmptyingFailed{
 			failedBuckets: failedBuckets,
 		}

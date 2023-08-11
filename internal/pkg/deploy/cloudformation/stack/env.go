@@ -47,6 +47,11 @@ const (
 	envOutputManagerRoleKey      = "EnvironmentManagerRoleARN"
 )
 
+// Environment managed S3 buckets.
+const (
+	ELBAccessLogsBucket = "ELBAccessLogsBucket"
+)
+
 const (
 	// DefaultVPCCIDR is the default CIDR used for a manged VPC.
 	DefaultVPCCIDR = "10.0.0.0/16"
