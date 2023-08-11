@@ -186,13 +186,13 @@ func (o *deleteEnvOpts) Execute() error {
 	o.prog.Start(fmt.Sprintf("Emptying S3 buckets managed by the %q environment\n", o.name))
 	if err := o.emptyBuckets(); err != nil {
 		o.prog.Stop(log.Serrorf("Failed to empty buckets managed by the %q environment\n", o.name))
-		switch t := err.(type) {
 		// Handle error and recommend action, don't exit program
+		switch t := err.(type) {
 		case *errBucketEmptyingFailed:
 			log.Errorln(t.Error())
 			log.Warningln(t.RecommendActions())
 		default:
-			return err
+			log.Errorln(fmt.Errorf("empty s3 buckets: %w", err))
 		}
 	}
 	o.prog.Stop(log.Ssuccessf("Emptied S3 buckets managed by the %q environment\n", o.name))
