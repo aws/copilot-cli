@@ -147,3 +147,11 @@ func (e *errBucketEmptyingFailed) RecommendActions() string {
 - We recommend logging into the S3 console and manually deleting the affected %v.`,
 		english.PluralWord(len(e.failedBuckets), "an S3 bucket", "S3 buckets"), english.PluralWord(len(e.failedBuckets), "bucket is", "buckets are"), english.PluralWord(len(e.failedBuckets), "bucket", "buckets"))
 }
+
+type errAmbiguousEnvStacks struct {
+	stackARNs []string
+}
+
+func (e *errAmbiguousEnvStacks) Error() string {
+	return fmt.Sprintf("ambiguous env stacks found: %v", english.WordSeries(template.QuoteSliceFunc(e.stackARNs), "and"))
+}
