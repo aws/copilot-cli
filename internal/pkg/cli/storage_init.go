@@ -211,7 +211,7 @@ func newStorageInitOpts(vars initStorageVars) (*initStorageOpts, error) {
 		fs:        fs,
 		store:     store,
 		ws:        ws,
-		sel:       selector.NewLocalWorkloadSelector(prompter, store, ws),
+		sel:       selector.NewLocalWorkloadSelector(prompter, store, ws, selector.OnlyInitializedWorkloads),
 		configSel: selector.NewConfigSelector(prompter, store),
 		prompt:    prompter,
 	}, nil
