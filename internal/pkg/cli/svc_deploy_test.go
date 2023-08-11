@@ -212,7 +212,7 @@ func TestSvcDeployOpts_Execute(t *testing.T) {
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 			},
 
-			wantedError: fmt.Errorf(`--force is not supported for service type "Static Site"`),
+			wantedError: fmt.Errorf(`--restart is not supported for service type "Static Site"`),
 		},
 		"error if some required features are not available in the environment": {
 			mock: func(m *deployMocks) {

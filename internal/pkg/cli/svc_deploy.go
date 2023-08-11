@@ -233,7 +233,7 @@ func (o *deploySvcOpts) Execute() error {
 		return err
 	}
 	if o.forceNewUpdate && o.svcType == manifestinfo.StaticSiteType {
-		return fmt.Errorf("--%s is not supported for service type %q", forceFlag, manifestinfo.StaticSiteType)
+		return fmt.Errorf("--%s is not supported for service type %q", restartFlag, manifestinfo.StaticSiteType)
 	}
 	o.appliedDynamicMft = mft
 	if err := validateWorkloadManifestCompatibilityWithEnv(o.ws, o.envFeaturesDescriber, mft, o.envName); err != nil {
@@ -703,7 +703,7 @@ func buildSvcDeployCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&vars.envName, envFlag, envFlagShort, "", envFlagDescription)
 	cmd.Flags().StringVar(&vars.imageTag, imageTagFlag, "", imageTagFlagDescription)
 	cmd.Flags().StringToStringVar(&vars.resourceTags, resourceTagsFlag, nil, resourceTagsFlagDescription)
-	cmd.Flags().BoolVar(&vars.forceNewUpdate, forceFlag, false, forceFlagDescription)
+	cmd.Flags().BoolVar(&vars.forceNewUpdate, restartFlag, false, restartFlagDescription)
 	cmd.Flags().BoolVar(&vars.disableRollback, noRollbackFlag, false, noRollbackFlagDescription)
 	cmd.Flags().BoolVar(&vars.showDiff, diffFlag, false, diffFlagDescription)
 	cmd.Flags().BoolVar(&vars.skipDiffPrompt, diffAutoApproveFlag, false, diffAutoApproveFlagDescription)

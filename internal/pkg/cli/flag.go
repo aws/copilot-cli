@@ -28,6 +28,7 @@ const (
 	jsonFlag           = "json"
 	allFlag            = "all"
 	forceFlag          = "force"
+	restartFlag        = "restart"
 	allowDowngradeFlag = "allow-downgrade"
 	noRollbackFlag     = "no-rollback"
 	manifestFlag       = "manifest"
@@ -263,7 +264,7 @@ Allows you to categorize resources.`
 	deployTestFlagDescription     = `Deploy your service or job to a "test" environment.`
 	allowDowngradeFlagDescription = `Optional. Allow using an older version of Copilot to update Copilot components
 updated by a newer version of Copilot.`
-	forceFlagDescription = `Optional. Force a new service deployment using the existing image.
+	restartFlagDescription = `Optional. Force a new service deployment using the existing image.
 Not available with the "Static Site" service type.`
 	noRollbackFlagDescription = `Optional. Disable automatic stack 
 rollback in case of deployment failure.
