@@ -121,6 +121,18 @@ func (e *errCannotDowngradeVersion) RecommendActions() string {
 		color.HighlightCode(fmt.Sprintf("%s %s", e.componentType, e.componentName)), color.HighlightCode(fmt.Sprintf("--%s", allowDowngradeFlag)))
 }
 
+type errNoInfrastructureChanges struct {
+	parentErr error
+}
+
+func (e *errNoInfrastructureChanges) Error() string {
+	return e.parentErr.Error()
+}
+
+func (e *errNoInfrastructureChanges) ExitCode() int {
+	return 0
+}
+
 type errBucketEmptyingFailed struct {
 	failedBuckets []string
 }

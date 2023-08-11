@@ -82,6 +82,7 @@ func (noopActionRecommender) RecommendedActions() []string {
 type repositoryService interface {
 	Login() (string, error)
 	BuildAndPush(ctx context.Context, args *dockerengine.BuildArguments, w io.Writer) (string, error)
+	Build(ctx context.Context, args *dockerengine.BuildArguments, w io.Writer) (string, error)
 }
 
 type templater interface {
@@ -116,7 +117,8 @@ type spinner interface {
 	Stop(label string)
 }
 
-type labeledTermPrinter interface {
+// LabeledTermPrinter is an interface for printing and managing labeled log outputs.
+type LabeledTermPrinter interface {
 	IsDone() bool
 	Print()
 }
@@ -190,7 +192,7 @@ type workloadDeployer struct {
 	overrider          Overrider
 	docker             dockerEngineRunChecker
 	customResources    customResourcesFunc
-	labeledTermPrinter func(fw syncbuffer.FileWriter, bufs []*syncbuffer.LabeledSyncBuffer, opts ...syncbuffer.LabeledTermPrinterOption) labeledTermPrinter
+	labeledTermPrinter func(fw syncbuffer.FileWriter, bufs []*syncbuffer.LabeledSyncBuffer, opts ...syncbuffer.LabeledTermPrinterOption) LabeledTermPrinter
 
 	// Cached variables.
 	defaultSess              *session.Session
@@ -198,6 +200,12 @@ type workloadDeployer struct {
 	envSess                  *session.Session
 	store                    *config.Store
 	envConfig                *manifest.Environment
+}
+
+// ImagePerContainer contains the contains name and its ImageURI
+type ImagePerContainer struct {
+	ContainerName string
+	ImageURI      string
 }
 
 // WorkloadDeployerInput is the input to for workloadDeployer constructor.
@@ -221,6 +229,22 @@ type ContainerImageIdentifier struct {
 	Digest            string
 	CustomTag         string
 	GitShortCommitTag string
+	ImageName         string
+}
+
+// ImageActionInput represent the input parameters for building and uploading container images.
+type ImageActionInput struct {
+	Name              string
+	WorkspacePath     string
+	Image             ContainerImageIdentifier
+	Builder           repositoryService
+	CustomTag         string
+	GitShortCommitTag string
+	Mft               interface{}
+
+	Login              func() (string, error)
+	CheckDockerEngine  func() error
+	LabeledTermPrinter func(fw syncbuffer.FileWriter, bufs []*syncbuffer.LabeledSyncBuffer, opts ...syncbuffer.LabeledTermPrinterOption) LabeledTermPrinter
 }
 
 // newWorkloadDeployer is the constructor for workloadDeployer.
@@ -280,7 +304,7 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 
 	cfn := cloudformation.New(envSession, cloudformation.WithProgressTracker(os.Stderr))
 
-	labeledTermPrinter := func(fw syncbuffer.FileWriter, bufs []*syncbuffer.LabeledSyncBuffer, opts ...syncbuffer.LabeledTermPrinterOption) labeledTermPrinter {
+	labeledTermPrinter := func(fw syncbuffer.FileWriter, bufs []*syncbuffer.LabeledSyncBuffer, opts ...syncbuffer.LabeledTermPrinterOption) LabeledTermPrinter {
 		return syncbuffer.NewLabeledTermPrinter(fw, bufs, opts...)
 	}
 	docker := dockerengine.New(exec.NewCmd())
@@ -393,47 +417,67 @@ func (img ContainerImageIdentifier) Tag() string {
 	return img.GitShortCommitTag
 }
 
-func (d *workloadDeployer) uploadContainerImages(out *UploadArtifactsOutput) error {
-	// If it is built from local Dockerfile, build and push to the ECR repo.
-	buildArgsPerContainer, err := buildArgsPerContainer(d.name, d.workspacePath, d.image, d.mft)
+func (d *workloadDeployer) buildAndPushContainerImages(out *UploadArtifactsOutput) error {
+	return processContainerImages(&ImageActionInput{
+		Name:               d.name,
+		WorkspacePath:      d.workspacePath,
+		Image:              d.image,
+		Mft:                d.mft,
+		CustomTag:          d.image.CustomTag,
+		GitShortCommitTag:  d.image.GitShortCommitTag,
+		Login:              d.repository.Login,
+		CheckDockerEngine:  d.docker.CheckDockerEngineRunning,
+		LabeledTermPrinter: d.labeledTermPrinter,
+	}, out, d.repository.BuildAndPush)
+
+}
+
+// BuildContainerImages builds the all the images given the build arguments
+func BuildContainerImages(in *ImageActionInput, out *UploadArtifactsOutput) error {
+	return processContainerImages(in, out, in.Builder.Build)
+}
+
+func processContainerImages(in *ImageActionInput, out *UploadArtifactsOutput, buildFunc func(ctx context.Context, args *dockerengine.BuildArguments, w io.Writer) (string, error)) error {
+	//this function could either build or buildAndPush the image based on the function received
+	buildArgsPerContainer, err := buildArgsPerContainer(in.Name, in.WorkspacePath, in.Image, in.Mft)
 	if err != nil {
 		return err
 	}
 	if len(buildArgsPerContainer) == 0 {
 		return nil
 	}
-	if err := d.docker.CheckDockerEngineRunning(); err != nil {
+	if err := in.CheckDockerEngine(); err != nil {
 		return fmt.Errorf("check if docker engine is running: %w", err)
 	}
-	uri, err := d.repository.Login()
+	uri, err := in.Login()
 	if err != nil {
 		return fmt.Errorf("login to image repository: %w", err)
 	}
 	isMultipleContainerImages := len(buildArgsPerContainer) > 1
 	if isMultipleContainerImages {
-		return d.buildContainerImagesInParallel(uri, buildArgsPerContainer, out)
+		return buildContainerImagesInParallel(in, uri, buildArgsPerContainer, buildFunc, out)
 	}
-	return d.buildSingleContainerImage(uri, buildArgsPerContainer, out)
+	return buildSingleContainerImage(in, uri, buildArgsPerContainer, buildFunc, out)
 }
 
-func (d *workloadDeployer) buildSingleContainerImage(uri string, buildArgsPerContainer map[string]*dockerengine.BuildArguments, out *UploadArtifactsOutput) error {
+func buildSingleContainerImage(in *ImageActionInput, uri string, buildArgsPerContainer map[string]*dockerengine.BuildArguments, buildFunc func(ctx context.Context, args *dockerengine.BuildArguments, w io.Writer) (string, error), out *UploadArtifactsOutput) error {
 	out.ImageDigests = make(map[string]ContainerImageIdentifier, len(buildArgsPerContainer))
 	for name, buildArgs := range buildArgsPerContainer {
 		buildArgs.URI = uri
-		digest, err := d.repository.BuildAndPush(context.Background(), buildArgs, os.Stderr)
+		digest, err := buildFunc(context.Background(), buildArgs, os.Stderr)
 		if err != nil {
 			return fmt.Errorf("build and push the image %q: %w", name, err)
 		}
 		out.ImageDigests[name] = ContainerImageIdentifier{
 			Digest:            digest,
-			CustomTag:         d.image.CustomTag,
-			GitShortCommitTag: d.image.GitShortCommitTag,
+			CustomTag:         in.CustomTag,
+			GitShortCommitTag: in.GitShortCommitTag,
 		}
 	}
 	return nil
 }
 
-func (d *workloadDeployer) buildContainerImagesInParallel(uri string, buildArgsPerContainer map[string]*dockerengine.BuildArguments, out *UploadArtifactsOutput) error {
+func buildContainerImagesInParallel(in *ImageActionInput, uri string, buildArgsPerContainer map[string]*dockerengine.BuildArguments, buildFunc func(ctx context.Context, args *dockerengine.BuildArguments, w io.Writer) (string, error), out *UploadArtifactsOutput) error {
 	var digestsMu sync.Mutex
 	out.ImageDigests = make(map[string]ContainerImageIdentifier, len(buildArgsPerContainer))
 	var labeledBuffers []*syncbuffer.LabeledSyncBuffer
@@ -455,16 +499,18 @@ func (d *workloadDeployer) buildContainerImagesInParallel(uri string, buildArgsP
 		pr, pw := io.Pipe()
 		g.Go(func() error {
 			defer pw.Close()
-			digest, err := d.repository.BuildAndPush(ctx, buildArgs, pw)
+			digest, err := buildFunc(ctx, buildArgs, pw)
 			if err != nil {
 				return fmt.Errorf("build and push the image %q: %w", name, err)
 			}
 			digestsMu.Lock()
 			defer digestsMu.Unlock()
+			imageName := fmt.Sprintf("%s:%s", uri, buildArgs.Tags[0])
 			out.ImageDigests[name] = ContainerImageIdentifier{
 				Digest:            digest,
-				CustomTag:         d.image.CustomTag,
-				GitShortCommitTag: d.image.GitShortCommitTag,
+				CustomTag:         in.CustomTag,
+				GitShortCommitTag: in.GitShortCommitTag,
+				ImageName:         imageName,
 			}
 			return nil
 		})
@@ -479,7 +525,7 @@ func (d *workloadDeployer) buildContainerImagesInParallel(uri string, buildArgsP
 	if os.Getenv("CI") != "true" {
 		opts = append(opts, syncbuffer.WithNumLines(defaultNumLinesForBuildAndPush))
 	}
-	ltp := d.labeledTermPrinter(os.Stderr, labeledBuffers, opts...)
+	ltp := in.LabeledTermPrinter(os.Stderr, labeledBuffers, opts...)
 	g.Go(func() error {
 		for {
 			ltp.Print()
