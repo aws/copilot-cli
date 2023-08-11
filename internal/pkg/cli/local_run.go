@@ -392,15 +392,13 @@ func (o *localRunOpts) runContainers(ctx context.Context, imageInfoList []clidep
 }
 
 func colorGenerator() func() *color.Color {
-	// max 10 containers per task, so 10 should be enough
+	// don't use red since it looks like an error
 	colors := []*color.Color{
-		color.New(color.FgHiRed),
 		color.New(color.FgHiGreen),
 		color.New(color.FgHiYellow),
 		color.New(color.FgHiBlue),
 		color.New(color.FgHiMagenta),
 		color.New(color.FgHiCyan),
-		color.New(color.FgRed),
 		color.New(color.FgGreen),
 		color.New(color.FgYellow),
 		color.New(color.FgBlue),

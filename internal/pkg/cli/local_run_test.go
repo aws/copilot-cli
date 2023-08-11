@@ -485,5 +485,5 @@ func TestColorGenerator(t *testing.T) {
 		colors[color] = struct{}{}
 		require.NotNil(t, color)
 	}
-	require.Equal(t, len(colors), 10)
+	require.Equal(t, len(colors), 8)
 }
