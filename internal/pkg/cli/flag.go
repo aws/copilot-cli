@@ -158,6 +158,9 @@ const (
 	permissionsBoundaryFlag = "permissions-boundary"
 	prodEnvFlag             = "prod"
 	deleteSecretFlag        = "delete-secret"
+	deployEnvFlag           = "deploy-env"
+	yesInitEnvFlag          = "yes-init-env"
+	noInitEnvFlag           = "no-init-env"
 )
 
 // Short flag names.
@@ -423,7 +426,10 @@ are also accepted.`
 	secretOverwriteFlagDescription     = "Optional. Whether to overwrite an existing secret."
 	permissionsBoundaryFlagDescription = `Optional. The name or ARN of an existing IAM policy with which to set a
 permissions boundary for all roles generated within the application.`
-	prodEnvFlagDescription = "If the environment contains production services."
+	prodEnvFlagDescription    = "If the environment contains production services."
+	deployEnvFlagDescription  = "Deploy the target environment before deploying the workload."
+	yesInitEnvFlagDescription = "Confirm initializing the target environment if it does not exist."
+	noInitEnvFlagDescription  = "Do not initialize the target environment if it does not exist."
 )
 
 type portOverride struct {

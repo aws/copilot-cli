@@ -1424,6 +1424,7 @@ func TestWorkspaceSelect_EnvironmentsInWorkspace(t *testing.T) {
 		setupMocks func(mocks workspaceSelectMocks)
 		wantErr    error
 		want       string
+		allLocal   bool
 	}{
 		"fail to retrieve workspace app name": {
 			setupMocks: func(m workspaceSelectMocks) {
@@ -1469,7 +1470,7 @@ func TestWorkspaceSelect_EnvironmentsInWorkspace(t *testing.T) {
 						Name: "mockEnv2",
 					},
 				}, nil)
-				m.prompt.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Eq([]string{"mockEnv1", "mockEnv2"}), gomock.Any()).
+				m.prompt.EXPECT().SelectOption(gomock.Any(), gomock.Any(), gomock.Eq([]prompt.Option{{Value: "mockEnv1"}, {Value: "mockEnv2"}}), gomock.Any()).
 					Return("", errors.New("some error")).
 					Times(1)
 			},
@@ -1482,10 +1483,10 @@ func TestWorkspaceSelect_EnvironmentsInWorkspace(t *testing.T) {
 						Application: "mockApp",
 					}, nil)
 				m.ws.EXPECT().ListEnvironments().Return([]string{}, nil).Times(1)
-				m.configLister.EXPECT().ListEnvironments("mockApp").Return([]*config.Environment{}, nil)
-				m.prompt.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+				m.configLister.EXPECT().ListEnvironments(gomock.Any()).Times(0)
+				m.prompt.EXPECT().SelectOption(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
-			wantErr: fmt.Errorf("no environments found"),
+			wantErr: fmt.Errorf("no environments found in workspace"),
 		},
 		"with one workspace environment but no store environment": {
 			setupMocks: func(m workspaceSelectMocks) {
@@ -1495,9 +1496,22 @@ func TestWorkspaceSelect_EnvironmentsInWorkspace(t *testing.T) {
 					}, nil)
 				m.ws.EXPECT().ListEnvironments().Return([]string{"mockEnv"}, nil).Times(1)
 				m.configLister.EXPECT().ListEnvironments("mockApp").Return([]*config.Environment{}, nil)
-				m.prompt.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+				m.prompt.EXPECT().SelectOption(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
 			wantErr: fmt.Errorf("no environments found"),
+		},
+		"workspace environment, show uninitialized": {
+			setupMocks: func(m workspaceSelectMocks) {
+				m.ws.EXPECT().Summary().Return(
+					&workspace.Summary{
+						Application: "mockApp",
+					}, nil)
+				m.ws.EXPECT().ListEnvironments().Return([]string{"mockEnv"}, nil).Times(1)
+				m.configLister.EXPECT().ListEnvironments("mockApp").Return([]*config.Environment{}, nil)
+				m.prompt.EXPECT().SelectOption(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			},
+			allLocal: true,
+			want:     "mockEnv",
 		},
 		"with one store environment but no workspace environments": {
 			setupMocks: func(m workspaceSelectMocks) {
@@ -1506,15 +1520,10 @@ func TestWorkspaceSelect_EnvironmentsInWorkspace(t *testing.T) {
 						Application: "mockApp",
 					}, nil)
 				m.ws.EXPECT().ListEnvironments().Return([]string{}, nil).Times(1)
-				m.configLister.EXPECT().ListEnvironments("mockApp").Return([]*config.Environment{
-					{
-						App:  "mockApp",
-						Name: "mockEnv",
-					},
-				}, nil)
-				m.prompt.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+				m.configLister.EXPECT().ListEnvironments(gomock.Any()).Times(0)
+				m.prompt.EXPECT().SelectOption(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
-			wantErr: fmt.Errorf("no environments found"),
+			wantErr: fmt.Errorf("no environments found in workspace"),
 		},
 		"with only one in both workspace and store (skips prompting)": {
 			setupMocks: func(m workspaceSelectMocks) {
@@ -1529,7 +1538,7 @@ func TestWorkspaceSelect_EnvironmentsInWorkspace(t *testing.T) {
 						Name: "mockEnv",
 					},
 				}, nil)
-				m.prompt.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+				m.prompt.EXPECT().SelectOption(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
 			want: "mockEnv",
 		},
@@ -1546,7 +1555,7 @@ func TestWorkspaceSelect_EnvironmentsInWorkspace(t *testing.T) {
 						Name: "mockEnv1",
 					},
 				}, nil)
-				m.prompt.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+				m.prompt.EXPECT().SelectOption(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
 			want: "mockEnv1",
 		},
@@ -1567,7 +1576,7 @@ func TestWorkspaceSelect_EnvironmentsInWorkspace(t *testing.T) {
 						Name: "mockEnv2",
 					},
 				}, nil)
-				m.prompt.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+				m.prompt.EXPECT().SelectOption(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
 			want: "mockEnv1",
 		},
@@ -1592,11 +1601,39 @@ func TestWorkspaceSelect_EnvironmentsInWorkspace(t *testing.T) {
 						Name: "mockEnv4",
 					},
 				}, nil)
-				m.prompt.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Eq([]string{"mockEnv1", "mockEnv2"}), gomock.Any()).
+				m.prompt.EXPECT().SelectOption(gomock.Any(), gomock.Any(), gomock.Eq([]prompt.Option{{Value: "mockEnv1"}, {Value: "mockEnv2"}}), gomock.Any()).
 					Return("mockEnv1", nil).
 					Times(1)
 			},
 			want: "mockEnv1",
+		},
+		"with multiple workspace environments and multiple store environments, of which multiple overlap; show all": {
+			setupMocks: func(m workspaceSelectMocks) {
+				m.ws.EXPECT().Summary().Return(
+					&workspace.Summary{
+						Application: "mockApp",
+					}, nil)
+				m.ws.EXPECT().ListEnvironments().Return([]string{"mockEnv1", "mockEnv2", "mockEnv3"}, nil).Times(1)
+				m.configLister.EXPECT().ListEnvironments("mockApp").Return([]*config.Environment{
+					{
+						App:  "mockApp",
+						Name: "mockEnv1",
+					},
+					{
+						App:  "mockApp",
+						Name: "mockEnv2",
+					},
+					{
+						App:  "mockApp",
+						Name: "mockEnv4",
+					},
+				}, nil)
+				m.prompt.EXPECT().SelectOption(gomock.Any(), gomock.Any(), gomock.Eq([]prompt.Option{{Value: "mockEnv1"}, {Value: "mockEnv2"}, {Value: "mockEnv3", Hint: "uninitialized"}}), gomock.Any()).
+					Return("mockEnv1", nil).
+					Times(1)
+			},
+			allLocal: true,
+			want:     "mockEnv1",
 		},
 	}
 
@@ -1617,7 +1654,8 @@ func TestWorkspaceSelect_EnvironmentsInWorkspace(t *testing.T) {
 					prompt:       m.prompt,
 					appEnvLister: m.configLister,
 				},
-				ws: m.ws,
+				ws:                  m.ws,
+				onlyInitializedEnvs: !tc.allLocal,
 			}
 			got, err := sel.LocalEnvironment("Select an environment", "Help text")
 			if tc.wantErr != nil {
@@ -1834,7 +1872,7 @@ func TestWorkspaceSelect_Workload(t *testing.T) {
 
 func TestSelectOption(t *testing.T) {
 	testCases := map[string]struct {
-		optionToTest   SelectOption
+		optionToTest   WorkloadSelectOption
 		wantedSelector LocalWorkloadSelector
 	}{
 		"OnlyInitializedWorkloads": {

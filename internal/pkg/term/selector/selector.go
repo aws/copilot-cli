@@ -200,6 +200,9 @@ type LocalWorkloadSelector struct {
 type LocalEnvironmentSelector struct {
 	*AppEnvSelector
 	ws workspaceRetriever
+
+	// Option, turned on by passing WithOnlyInitialized to NewLocalEnvironmentSelector.
+	onlyInitializedEnvs bool
 }
 
 // WorkspaceSelector selects from local workspace.
@@ -300,7 +303,7 @@ func NewConfigSelector(prompt Prompter, store configLister) *ConfigSelector {
 
 // NewLocalWorkloadSelector returns a new selector that chooses applications and environments from the config store, but
 // services from the local workspace.
-func NewLocalWorkloadSelector(prompt Prompter, store configLister, ws workspaceRetriever, options ...SelectOption) *LocalWorkloadSelector {
+func NewLocalWorkloadSelector(prompt Prompter, store configLister, ws workspaceRetriever, options ...WorkloadSelectOption) *LocalWorkloadSelector {
 	s := &LocalWorkloadSelector{
 		ConfigSelector: NewConfigSelector(prompt, store),
 		ws:             ws,
@@ -313,11 +316,15 @@ func NewLocalWorkloadSelector(prompt Prompter, store configLister, ws workspaceR
 
 // NewLocalEnvironmentSelector returns a new selector that chooses applications from the config store, but an environment
 // from the local workspace.
-func NewLocalEnvironmentSelector(prompt Prompter, store configLister, ws workspaceRetriever) *LocalEnvironmentSelector {
-	return &LocalEnvironmentSelector{
+func NewLocalEnvironmentSelector(prompt Prompter, store configLister, ws workspaceRetriever, options ...EnvSelectOption) *LocalEnvironmentSelector {
+	sel := &LocalEnvironmentSelector{
 		AppEnvSelector: NewAppEnvSelector(prompt, store),
 		ws:             ws,
 	}
+	for _, opt := range options {
+		opt(sel)
+	}
+	return sel
 }
 
 // NewWorkspaceSelector returns a new selector that prompts for local information.
@@ -852,13 +859,22 @@ func (s *LocalWorkloadSelector) getWorkloadSelectOptions(storeWls []*config.Work
 	return options, nil
 }
 
-// SelectOption represents an option for customizing LocalWorkloadSelector's behavior.
-type SelectOption func(selector *LocalWorkloadSelector)
+// WorkloadSelectOption represents an option for customizing LocalWorkloadSelector's behavior.
+type WorkloadSelectOption func(selector *LocalWorkloadSelector)
 
 // OnlyInitializedWorkloads modifies LocalWorkloadSelector to show only the initialized workloads in the workspace,
-// regardless of whether there is a local manifest file.
-var OnlyInitializedWorkloads SelectOption = func(s *LocalWorkloadSelector) {
+// ignoring uninitialized workloads with local manifests.
+var OnlyInitializedWorkloads WorkloadSelectOption = func(s *LocalWorkloadSelector) {
 	s.onlyInitializedWorkloads = true
+}
+
+// EnvSelectOption represents an option for customizing LocalEnvironmentSelector's behavior.
+type EnvSelectOption func(selector *LocalEnvironmentSelector)
+
+// OnlyInitializedEnvs modifies LocalEnvironmentSelector to show only the initialized environments in the workspace,
+// ignoring uninitialized environments with local manifests.
+var OnlyInitializedEnvs EnvSelectOption = func(s *LocalEnvironmentSelector) {
+	s.onlyInitializedEnvs = true
 }
 
 // Workload fetches all jobs and services in a workspace and prompts the user to select one.
@@ -926,7 +942,7 @@ func filterOutStrings(allStrings []string, unwantedStrings []string) []string {
 }
 
 // LocalEnvironment fetches all environments belong to the app in the workspace and prompts the user to select one.
-func (s *LocalEnvironmentSelector) LocalEnvironment(msg, help string) (wl string, err error) {
+func (s *LocalEnvironmentSelector) LocalEnvironment(msg, help string) (string, error) {
 	summary, err := s.ws.Summary()
 	if err != nil {
 		return "", fmt.Errorf("read workspace summary: %w", err)
@@ -935,19 +951,37 @@ func (s *LocalEnvironmentSelector) LocalEnvironment(msg, help string) (wl string
 	if err != nil {
 		return "", fmt.Errorf("retrieve environments from workspace: %w", err)
 	}
+	if len(wsEnvNames) == 0 {
+		return "", errors.New("no environments found in workspace")
+	}
 	envs, err := s.appEnvLister.ListEnvironments(summary.Application)
 	if err != nil {
 		return "", fmt.Errorf("retrieve environments from store: %w", err)
 	}
-	filteredEnvNames := filterEnvsByName(envs, wsEnvNames)
-	if len(filteredEnvNames) == 0 {
+	initializedLocalEnvs := filterEnvsByName(envs, wsEnvNames)
+
+	var options []prompt.Option
+	for _, env := range initializedLocalEnvs {
+		options = append(options, prompt.Option{Value: env})
+	}
+	if !s.onlyInitializedEnvs {
+		uninitializedLocalEnvs := filterOutStrings(wsEnvNames, initializedLocalEnvs)
+		for _, env := range uninitializedLocalEnvs {
+			options = append(options, prompt.Option{
+				Value: env,
+				Hint:  "uninitialized",
+			})
+		}
+	}
+
+	if len(options) == 0 {
 		return "", ErrLocalEnvsNotFound
 	}
-	if len(filteredEnvNames) == 1 {
-		log.Infof("Found only one environment, defaulting to: %s\n", color.HighlightUserInput(filteredEnvNames[0]))
-		return filteredEnvNames[0], nil
+	if len(options) == 1 {
+		log.Infof("Found only one environment, defaulting to: %s\n", color.HighlightUserInput(options[0].Value))
+		return options[0].Value, nil
 	}
-	selectedEnvName, err := s.prompt.SelectOne(msg, help, filteredEnvNames, prompt.WithFinalMessage(workloadFinalMsg))
+	selectedEnvName, err := s.prompt.SelectOption(msg, help, options, prompt.WithFinalMessage(workloadFinalMsg))
 	if err != nil {
 		return "", fmt.Errorf("select environment: %w", err)
 	}

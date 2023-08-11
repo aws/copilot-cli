@@ -103,7 +103,7 @@ func newPackageEnvOpts(vars packageEnvVars) (*packageEnvOpts, error) {
 
 		cfgStore:        cfgStore,
 		ws:              ws,
-		sel:             selector.NewLocalEnvironmentSelector(prompt.New(), cfgStore, ws),
+		sel:             selector.NewLocalEnvironmentSelector(prompt.New(), cfgStore, ws, selector.OnlyInitializedEnvs),
 		caller:          identity.New(defaultSess),
 		fs:              fs,
 		tplWriter:       os.Stdout,

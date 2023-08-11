@@ -4,31 +4,31 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
-	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
-	"github.com/aws/copilot-cli/internal/pkg/initialize"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
-	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
-	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
-	"github.com/aws/copilot-cli/internal/pkg/version"
 	"github.com/spf13/afero"
-
-	"github.com/aws/copilot-cli/internal/pkg/exec"
+	"github.com/spf13/cobra"
 
 	"github.com/aws/copilot-cli/cmd/copilot/template"
+	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/cli/group"
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/exec"
+	"github.com/aws/copilot-cli/internal/pkg/initialize"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
+	"github.com/aws/copilot-cli/internal/pkg/version"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
-	"github.com/spf13/cobra"
 )
 
 const (
@@ -38,7 +38,11 @@ const (
 
 type deployVars struct {
 	deployWkldVars
+	deployEnvVars
+
 	yesInitWkld *bool
+	deployEnv   *bool
+	yesInitEnv  *bool
 }
 
 type deployOpts struct {
@@ -47,6 +51,9 @@ type deployOpts struct {
 	deployWkld       actionCommand
 	newWorkloadAdder func() wkldInitializerWithoutManifest
 	setupDeployCmd   func(*deployOpts, string)
+
+	newInitEnvCmd   func(o *deployOpts) (cmd, error)
+	newDeployEnvCmd func(o *deployOpts) (cmd, error)
 
 	sel    wsSelector
 	store  store
@@ -75,6 +82,7 @@ func newDeployOpts(vars deployVars) (*deployOpts, error) {
 		sel:        selector.NewLocalWorkloadSelector(prompter, store, ws),
 		ws:         ws,
 		prompt:     prompter,
+
 		newWorkloadAdder: func() wkldInitializerWithoutManifest {
 			return &initialize.WorkloadInitializer{
 				Store:    store,
@@ -83,6 +91,23 @@ func newDeployOpts(vars deployVars) (*deployOpts, error) {
 				Prog:     termprogress.NewSpinner(log.DiagnosticWriter),
 			}
 		},
+		newDeployEnvCmd: func(o *deployOpts) (cmd, error) {
+			cmd, err := newEnvDeployOpts(deployEnvVars{
+				appName:           o.deployWkldVars.appName,
+				name:              o.envName,
+				forceNewUpdate:    o.deployWkldVars.forceNewUpdate,
+				disableRollback:   o.deployWkldVars.disableRollback,
+				showDiff:          o.deployWkldVars.showDiff,
+				skipDiffPrompt:    o.deployWkldVars.skipDiffPrompt,
+				allowEnvDowngrade: o.deployWkldVars.allowWkldDowngrade,
+				detach:            o.deployWkldVars.detach,
+			})
+			if err != nil {
+				return nil, err
+			}
+			return cmd, nil
+		},
+
 		setupDeployCmd: func(o *deployOpts, workloadType string) {
 			switch {
 			case contains(workloadType, manifestinfo.JobTypes()):
@@ -128,7 +153,7 @@ func newDeployOpts(vars deployVars) (*deployOpts, error) {
 
 func (o *deployOpts) maybeInitWkld() error {
 	// Confirm that the workload needs to be initialized after asking for the name.
-	initializedWorkloads, err := o.store.ListWorkloads(o.appName)
+	initializedWorkloads, err := o.store.ListWorkloads(o.deployWkldVars.appName)
 	if err != nil {
 		return fmt.Errorf("retrieve workloads: %w", err)
 	}
@@ -138,22 +163,22 @@ func (o *deployOpts) maybeInitWkld() error {
 	}
 
 	// Workload is already initialized. Return early.
-	if contains(o.name, wlNames) {
+	if contains(o.deployWkldVars.name, wlNames) {
 		return nil
 	}
 
 	// Get workload type and confirm readable manifest.
-	mf, err := o.ws.ReadWorkloadManifest(o.name)
+	mf, err := o.ws.ReadWorkloadManifest(o.deployWkldVars.name)
 	if err != nil {
-		return fmt.Errorf("read manifest for workload %s: %w", o.name, err)
+		return fmt.Errorf("read manifest for workload %s: %w", o.deployWkldVars.name, err)
 	}
 	workloadType, err := mf.WorkloadType()
 	if err != nil {
-		return fmt.Errorf("get workload type from manifest for workload %s: %w", o.name, err)
+		return fmt.Errorf("get workload type from manifest for workload %s: %w", o.deployWkldVars.name, err)
 	}
 
 	if !contains(workloadType, manifestinfo.WorkloadTypes()) {
-		return fmt.Errorf("unrecognized workload type %q in manifest for workload %s", workloadType, o.name)
+		return fmt.Errorf("unrecognized workload type %q in manifest for workload %s", workloadType, o.deployWkldVars.name)
 	}
 
 	if o.yesInitWkld == nil {
@@ -169,18 +194,33 @@ func (o *deployOpts) maybeInitWkld() error {
 	}
 
 	wkldAdder := o.newWorkloadAdder()
-	if err = wkldAdder.AddWorkloadToApp(o.appName, o.name, workloadType); err != nil {
+	if err = wkldAdder.AddWorkloadToApp(o.deployWkldVars.appName, o.deployWkldVars.name, workloadType); err != nil {
 		return fmt.Errorf("add workload to app: %w", err)
 	}
 	return nil
 }
 
 func (o *deployOpts) Run() error {
+
+	// ask env, ask whether to deploy.
+	if err := o.maybeInitWkld(); err != nil {
+		return err
+	}
+
+	if err := o.askEnv(); err != nil {
+		return err
+	}
+
+	// confirm deploying workload
 	if err := o.askName(); err != nil {
 		return err
 	}
 
-	if err := o.maybeInitWkld(); err != nil {
+	if err := o.maybeInitEnv(); err != nil {
+		return err
+	}
+
+	if err := o.deployEnv(); err != nil {
 		return err
 	}
 
@@ -197,15 +237,44 @@ func (o *deployOpts) Run() error {
 }
 
 func (o *deployOpts) askName() error {
-	if o.name != "" {
+	if o.deployWkldVars.name != "" {
 		return nil
 	}
 	name, err := o.sel.Workload("Select a service or job in your workspace", "")
 	if err != nil {
 		return fmt.Errorf("select service or job: %w", err)
 	}
-	o.name = name
+	o.deployWkldVars.name = name
 	return nil
+}
+
+func (o *deployOpts) askEnv() error {
+	var needsInitialization bool
+	if o.envName != nil {
+		// check that env exists in either ws or store.
+
+	}
+
+	envExistsInStore := true
+	_, err := o.store.GetEnvironment(o.appName, o.envName)
+	if err != nil {
+		var errNotFound *config.ErrNoSuchEnvironment
+		if !errors.As(err, &errNotFound) {
+			return fmt.Errorf("get environment from config store: %w", err)
+		}
+		envExistsInStore = false
+	}
+
+	// If no initialization flags were specified and the env wasn't initialized, ask to confirm.
+	if !envExistsInStore && !(o.yesInitEnv || o.noInitEnv) {
+		o.prompt.Confirm(fmt.Sprintf("Environment %q does not exist in app %q. Initialize it?", o.name))
+	}
+	o.envAdder.AddEnvToApp(cloudformation.AddEnvToAppOpts{
+		App:          nil,
+		EnvName:      "",
+		EnvAccountID: "",
+		EnvRegion:    "",
+	})
 }
 
 func (o *deployOpts) loadWkld() error {
@@ -239,6 +308,9 @@ func (o *deployOpts) loadWkldCmd() error {
 func BuildDeployCmd() *cobra.Command {
 	vars := deployVars{}
 	var initWorkload bool
+	var initEnvironment bool
+	var deployEnvironment bool
+
 	cmd := &cobra.Command{
 		Use:   "deploy",
 		Short: "Deploy a Copilot job or service.",
@@ -260,21 +332,38 @@ func BuildDeployCmd() *cobra.Command {
 					opts.yesInitWkld = aws.Bool(true)
 				}
 			}
+
+			if cmd.Flags().Changed(yesInitEnvFlag) {
+				opts.yesInitEnv = aws.Bool(false)
+				if initEnvironment {
+					opts.yesInitEnv = aws.Bool(true)
+				}
+			}
+
+			if cmd.Flags().Changed(deployEnvFlag) {
+				opts.deployEnv = aws.Bool(false)
+				if deployEnvironment {
+					opts.deployEnv = aws.Bool(true)
+				}
+			}
+
 			if err := opts.Run(); err != nil {
 				return err
 			}
 			return nil
 		}),
 	}
-	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
-	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, "", workloadFlagDescription)
+	cmd.Flags().StringVarP(&vars.deployWkldVars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
+	cmd.Flags().StringVarP(&vars.deployWkldVars.name, nameFlag, nameFlagShort, "", workloadFlagDescription)
 	cmd.Flags().StringVarP(&vars.envName, envFlag, envFlagShort, "", envFlagDescription)
 	cmd.Flags().StringVar(&vars.imageTag, imageTagFlag, "", imageTagFlagDescription)
 	cmd.Flags().StringToStringVar(&vars.resourceTags, resourceTagsFlag, nil, resourceTagsFlagDescription)
-	cmd.Flags().BoolVar(&vars.forceNewUpdate, forceFlag, false, forceFlagDescription)
-	cmd.Flags().BoolVar(&vars.disableRollback, noRollbackFlag, false, noRollbackFlagDescription)
+	cmd.Flags().BoolVar(&vars.deployWkldVars.forceNewUpdate, forceFlag, false, forceFlagDescription)
+	cmd.Flags().BoolVar(&vars.deployWkldVars.disableRollback, noRollbackFlag, false, noRollbackFlagDescription)
 	cmd.Flags().BoolVar(&vars.allowWkldDowngrade, allowDowngradeFlag, false, allowDowngradeFlagDescription)
-	cmd.Flags().BoolVar(&vars.detach, detachFlag, false, detachFlagDescription)
+	cmd.Flags().BoolVar(&vars.deployWkldVars.detach, detachFlag, false, detachFlagDescription)
+	cmd.Flags().BoolVar(&deployEnvironment, deployEnvFlag, false, deployEnvFlagDescription)
+	cmd.Flags().BoolVar(&initEnvironment, yesInitEnvFlag, false, yesInitEnvFlagDescription)
 	cmd.Flags().BoolVar(&initWorkload, yesInitWorkloadFlag, false, yesInitWorkloadFlagDescription)
 
 	cmd.SetUsageTemplate(template.Usage)
