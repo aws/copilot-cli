@@ -712,7 +712,6 @@ Resources:
     Metadata:
       "aws:copilot:description": "A S3 bucket for the Load Balancer's access logs"
     Type: AWS::S3::Bucket
-    Condition: CreateALB
     Properties:
       VersioningConfiguration:
         Status: Enabled

@@ -375,7 +375,7 @@ func (o *deleteEnvOpts) ensureRolesAreRetained() error {
 // emptyBuckets returns nil if buckets were deleted successfully. Otherwise, returns the error.
 func (o *deleteEnvOpts) emptyBuckets() error {
 	envStack, err := o.rg.GetResources(&resourcegroupstaggingapi.GetResourcesInput{
-		ResourceTypeFilters: []*string{aws.String("cloudformation")},
+		ResourceTypeFilters: aws.StringSlice([]string{"cloudformation"}),
 		TagFilters: []*resourcegroupstaggingapi.TagFilter{
 			{
 				Key:    aws.String(deploy.EnvTagKey),
@@ -398,7 +398,7 @@ func (o *deleteEnvOpts) emptyBuckets() error {
 	stackID := envStack.ResourceTagMappingList[0].ResourceARN
 
 	s3buckets, err := o.rg.GetResources(&resourcegroupstaggingapi.GetResourcesInput{
-		ResourceTypeFilters: []*string{aws.String("s3:bucket")},
+		ResourceTypeFilters: aws.StringSlice([]string{"s3:bucket"}),
 		TagFilters: []*resourcegroupstaggingapi.TagFilter{
 			{
 				Key:    aws.String(envS3BucketStackNameTagKey),
@@ -424,11 +424,11 @@ func (o *deleteEnvOpts) emptyBuckets() error {
 	}
 
 	var failedBuckets []string
-	emptyBucketFailed := false
+	var emptyBucketFailed bool
 	for _, resourceTagMapping := range s3buckets.ResourceTagMappingList {
-		bucketARN, err := arn.Parse(*resourceTagMapping.ResourceARN)
+		bucketARN, err := arn.Parse(aws.StringValue(resourceTagMapping.ResourceARN))
 		if err != nil {
-			return err
+			return fmt.Errorf("parse the arn %s: %w", aws.StringValue(resourceTagMapping.ResourceARN), err)
 		}
 
 		if err = o.s3.EmptyBucket(bucketARN.Resource); err != nil {
