@@ -407,6 +407,7 @@ func colorGenerator() func() *color.Color {
 	}
 	i := 0
 	return func() *color.Color {
+		defer func() { i++ }()
 		return colors[i%len(colors)]
 	}
 }

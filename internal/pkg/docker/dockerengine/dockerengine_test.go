@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/aws/copilot-cli/internal/pkg/exec"
 
@@ -647,7 +648,6 @@ func TestDockerCommand_Run(t *testing.T) {
 		"API_KEY":     "myapikey",
 	}
 	mockImageURI := "mockImageUri"
-	ctx := context.Background()
 
 	var mockCmd *MockCmd
 	tests := map[string]struct {
@@ -658,16 +658,22 @@ func TestDockerCommand_Run(t *testing.T) {
 		ports            map[string]string
 		command          []string
 		containerNetwork string
+		logPrefix        string
 		setupMocks       func(controller *gomock.Controller)
 
-		wantedError error
+		wantedOutput string
+		wantedError  error
 	}{
-		"should error if the docker build command fails": {
+		"should error if the docker run command fails": {
 			containerName: mockPauseContainer,
+			command:       mockCommand,
+			uri:           mockImageURI,
 			setupMocks: func(controller *gomock.Controller) {
 				mockCmd = NewMockCmd(controller)
-				mockCmd.EXPECT().RunWithContext(ctx, "docker", []string{"run",
-					"--name", mockPauseContainer, ""}).Return(mockError)
+				mockCmd.EXPECT().RunWithContext(gomock.Any(), "docker", []string{"run",
+					"--name", mockPauseContainer,
+					"mockImageUri",
+					"sleep", "infinity"}, gomock.Any(), gomock.Any()).Return(mockError)
 			},
 			wantedError: fmt.Errorf("running container: %w", mockError),
 		},
@@ -678,8 +684,12 @@ func TestDockerCommand_Run(t *testing.T) {
 			uri:           mockImageURI,
 			setupMocks: func(controller *gomock.Controller) {
 				mockCmd = NewMockCmd(controller)
-				mockCmd.EXPECT().RunWithContext(ctx, "docker", gomock.InAnyOrder([]string{"run",
-					"--name", mockPauseContainer, "--publish", "8080:8080", "--publish", "8081:8081", mockImageURI, "sleep", "infinity"})).Return(nil)
+				mockCmd.EXPECT().RunWithContext(gomock.Any(), "docker", gomock.InAnyOrder([]string{"run",
+					"--name", mockPauseContainer,
+					"--publish", "8080:8080",
+					"--publish", "8081:8081",
+					mockImageURI,
+					"sleep", "infinity"}), gomock.Any(), gomock.Any()).Return(nil)
 			},
 		},
 		"success with run options for service containers": {
@@ -690,11 +700,51 @@ func TestDockerCommand_Run(t *testing.T) {
 			uri:              mockImageURI,
 			setupMocks: func(controller *gomock.Controller) {
 				mockCmd = NewMockCmd(controller)
-				mockCmd.EXPECT().RunWithContext(ctx, "docker", gomock.InAnyOrder([]string{"run",
-					"--name", mockContainerName, "--network", "container:pauseContainer", "--env", "DB_PASSWORD=mysecretPassword",
-					"--env", "API_KEY=myapikey", "--env", "COPILOT_APPLICATION_NAME=mockAppName",
-					"--env", "COPILOT_SERVICE_NAME=mockSvcName", "--env", "COPILOT_ENVIRONMENT_NAME=mockEnvName", mockImageURI})).Return(nil)
+				mockCmd.EXPECT().RunWithContext(gomock.Any(), "docker", gomock.InAnyOrder([]string{"run",
+					"--name", mockContainerName,
+					"--network", "container:pauseContainer",
+					"--env", "DB_PASSWORD=mysecretPassword",
+					"--env", "API_KEY=myapikey",
+					"--env", "COPILOT_APPLICATION_NAME=mockAppName",
+					"--env", "COPILOT_SERVICE_NAME=mockSvcName",
+					"--env", "COPILOT_ENVIRONMENT_NAME=mockEnvName",
+					mockImageURI}), gomock.Any(), gomock.Any()).Return(nil)
 			},
+		},
+		"logs are successfully copied to expected target": {
+			containerName:    mockContainerName,
+			containerNetwork: mockPauseContainer,
+			secrets:          mockSecrets,
+			envVars:          mockEnvVars,
+			uri:              mockImageURI,
+			logPrefix:        "[asdf] ",
+			setupMocks: func(controller *gomock.Controller) {
+				mockCmd = NewMockCmd(controller)
+				mockCmd.EXPECT().RunWithContext(gomock.Any(), "docker", gomock.InAnyOrder([]string{"run",
+					"--name", mockContainerName,
+					"--network", "container:pauseContainer",
+					"--env", "DB_PASSWORD=mysecretPassword",
+					"--env", "API_KEY=myapikey",
+					"--env", "COPILOT_APPLICATION_NAME=mockAppName",
+					"--env", "COPILOT_SERVICE_NAME=mockSvcName",
+					"--env", "COPILOT_ENVIRONMENT_NAME=mockEnvName",
+					mockImageURI}), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, name string, args []string, opts ...exec.CmdOption) error {
+					// nab stdin and stderr
+					cmd := &osexec.Cmd{}
+					for _, opt := range opts {
+						opt(cmd)
+					}
+
+					cmd.Stdout.Write([]byte("i am stdout!\ni have a newline"))
+					time.Sleep(500 * time.Millisecond) // sleep to ensure logs are in consistent order
+					cmd.Stderr.Write([]byte("i am stderr!"))
+					return nil
+				})
+			},
+			wantedOutput: `[asdf] i am stdout!
+[asdf] i have a newline
+[asdf] i am stderr!
+`,
 		},
 	}
 	for name, tc := range tests {
@@ -710,6 +760,7 @@ func TestDockerCommand_Run(t *testing.T) {
 					return "", false
 				},
 			}
+			out := &bytes.Buffer{}
 			runInput := RunOptions{
 				ImageURI:         tc.uri,
 				Secrets:          tc.secrets,
@@ -718,13 +769,18 @@ func TestDockerCommand_Run(t *testing.T) {
 				ContainerNetwork: tc.containerNetwork,
 				Command:          tc.command,
 				ContainerPorts:   tc.ports,
+				LogOptions: RunLogOptions{
+					LinePrefix: tc.logPrefix,
+					Output:     out,
+				},
 			}
-			err := s.Run(ctx, &runInput)
+			err := s.Run(context.Background(), &runInput)
 
 			if tc.wantedError != nil {
 				require.EqualError(t, tc.wantedError, err.Error())
 			} else {
 				require.Nil(t, err)
+				require.Equal(t, tc.wantedOutput, out.String())
 			}
 		})
 	}

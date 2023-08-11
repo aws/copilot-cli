@@ -88,6 +88,7 @@ type RunOptions struct {
 
 type RunLogOptions struct {
 	Color      *color.Color
+	Output     io.Writer
 	LinePrefix string
 }
 
@@ -255,26 +256,37 @@ func (in *RunOptions) generateRunArguments() []string {
 
 // Run runs a Docker container with the sepcified options.
 func (c DockerCmdClient) Run(ctx context.Context, options *RunOptions) error {
-	//Execute the Docker run command.
+	// set default options
 	if options.LogOptions.Color == nil {
 		options.LogOptions.Color = color.New()
 	}
+	if options.LogOptions.Output == nil {
+		options.LogOptions.Output = os.Stderr
+	}
 
 	g, ctx := errgroup.WithContext(ctx)
-	logger := func() io.Writer {
+	logger := func() (io.Writer, func() error) {
 		pr, pw := io.Pipe()
 		g.Go(func() error {
 			scanner := bufio.NewScanner(pr)
 			for scanner.Scan() {
-				options.LogOptions.Color.Fprintln(os.Stderr, options.LogOptions.LinePrefix+scanner.Text())
+				options.LogOptions.Color.Fprintln(options.LogOptions.Output, options.LogOptions.LinePrefix+scanner.Text())
 			}
 			return scanner.Err()
 		})
-		return pw
+		return pw, pw.Close
 	}
 
 	g.Go(func() error {
-		if err := c.runner.RunWithContext(ctx, "docker", options.generateRunArguments(), exec.Stdout(logger()), exec.Stderr(logger())); err != nil {
+		// Close loggers to ensure scanner.Scan() in the logger goroutine returns.
+		// This is really only an issue in tests; os/exec.Cmd.Run() returns EOF to
+		// output streams when the command exits.
+		stdout, stdoutClose := logger()
+		defer stdoutClose()
+		stderr, stderrClose := logger()
+		defer stderrClose()
+
+		if err := c.runner.RunWithContext(ctx, "docker", options.generateRunArguments(), exec.Stdout(stdout), exec.Stderr(stderr)); err != nil {
 			return fmt.Errorf("running container: %w", err)
 		}
 		return nil
