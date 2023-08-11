@@ -14,8 +14,9 @@ Resources:
       ProviderType: {{.Source.ProviderName}}
   {{- end}}
   {{- end}}
-{{ include "build" . | indent 2}}
+{{ include "build-action" . | indent 2}}
 {{ include "test" . | indent 2 }}
+{{ include "actions" . | indent 2}}
   PipelineRole:
     Type: AWS::IAM::Role
     Properties:
@@ -125,6 +126,7 @@ Resources:
               - arn:aws:iam::{{$stage.AccountID}}:role/{{$.AppName}}-{{$stage.Name}}-EnvManagerRole{{end}}
       Roles:
         - !Ref PipelineRole
+
   Pipeline:
     Type: AWS::CodePipeline::Pipeline
     DependsOn:
@@ -235,6 +237,38 @@ Resources:
                 Version: 1
                 Provider: Manual
               RunOrder: {{$stage.Approval.RunOrder}}
+            {{- end}}
+            {{- range $action := $stage.PreDeployments }}
+            - Name: {{ $action.Name }}
+              Region: {{ $stage.Region }}
+              RunOrder: {{ $action.RunOrder}}
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Version: 1
+                Provider: CodeBuild
+              Configuration:
+                ProjectName: !Ref Pre{{logicalIDSafe $stage.Name}}DeploymentAction{{logicalIDSafe $action.Name}}
+                InputArtifacts:
+                  - Name: SCCheckoutArtifact
+                OutputArtifacts:
+                  - Name: Pre{{logicalIDSafe $stage.Name}}DeploymentAction{{logicalIDSafe $action.Name}}Output
+            {{- end}}
+            {{- range $action := $stage.PostDeployments }}
+            - Name: {{ $action.Name }}
+              Region: {{ $stage.Region }}
+              RunOrder: {{ $action.RunOrder}}
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Version: 1
+                Provider: CodeBuild
+              Configuration:
+                ProjectName: !Ref Post{{logicalIDSafe $stage.Name}}DeploymentAction{{logicalIDSafe $action.Name}}
+                InputArtifacts:
+                  - Name: SCCheckoutArtifact
+                OutputArtifacts:
+                  - Name: Post{{logicalIDSafe $stage.Name}}DeploymentAction{{logicalIDSafe $action.Name}}Output
             {{- end}}
             {{- range $deployment := $stage.Deployments}}
             - Name: {{$deployment.Name}}

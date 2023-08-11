@@ -44,7 +44,7 @@ func (cf CloudFormation) CreateAndRenderEnvironment(conf StackConfiguration, buc
 }
 
 // UpdateAndRenderEnvironment updates the CloudFormation stack for an environment, and render the stack creation to out.
-func (cf CloudFormation) UpdateAndRenderEnvironment(conf StackConfiguration, bucketARN string, opts ...cloudformation.StackOption) error {
+func (cf CloudFormation) UpdateAndRenderEnvironment(conf StackConfiguration, bucketARN string, detach bool, opts ...cloudformation.StackOption) error {
 	cfnStack, err := cf.toUploadedStack(bucketARN, conf)
 	if err != nil {
 		return err
@@ -64,6 +64,8 @@ func (cf CloudFormation) UpdateAndRenderEnvironment(conf StackConfiguration, buc
 		}
 		return changeSetID, nil
 	}
+	in.enableInterrupt = true
+	in.detach = detach
 	return cf.executeAndRenderChangeSet(in)
 }
 

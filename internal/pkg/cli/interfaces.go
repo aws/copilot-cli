@@ -170,6 +170,7 @@ type secretDeleter interface {
 
 type imageBuilderPusher interface {
 	BuildAndPush(ctx context.Context, args *dockerengine.BuildArguments, w io.Writer) (string, error)
+	Build(ctx context.Context, args *dockerengine.BuildArguments, w io.Writer) (string, error)
 }
 
 type repositoryLogin interface {
@@ -690,6 +691,12 @@ type workloadDeployer interface {
 
 type templateDiffer interface {
 	DeployDiff(inTmpl string) (string, error)
+}
+
+type dockerEngineRunner interface {
+	CheckDockerEngineRunning() error
+	Run(context.Context, *dockerengine.RunOptions) error
+	IsContainerRunning(string) (bool, error)
 }
 
 type workloadStackGenerator interface {

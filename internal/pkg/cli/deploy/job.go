@@ -57,7 +57,7 @@ func scheduledJobCustomResources(fs template.Reader) ([]*customresource.CustomRe
 
 // UploadArtifacts uploads the deployment artifacts such as the container image, custom resources, addons and env files.
 func (d *jobDeployer) UploadArtifacts() (*UploadArtifactsOutput, error) {
-	return d.uploadArtifacts(d.uploadContainerImages, d.uploadArtifactsToS3, d.uploadCustomResources)
+	return d.uploadArtifacts(d.buildAndPushContainerImages, d.uploadArtifactsToS3, d.uploadCustomResources)
 }
 
 // GenerateCloudFormationTemplate generates a CloudFormation template and parameters for a workload.
@@ -82,7 +82,7 @@ func (d *jobDeployer) DeployWorkload(in *DeployWorkloadInput) (ActionRecommender
 	if err != nil {
 		return nil, err
 	}
-	if err := d.deployer.DeployService(stackConfigOutput.conf, d.resources.S3Bucket, opts...); err != nil {
+	if err := d.deployer.DeployService(stackConfigOutput.conf, d.resources.S3Bucket, in.Detach, opts...); err != nil {
 		return nil, fmt.Errorf("deploy job: %w", err)
 	}
 	return noopActionRecommender{}, nil

@@ -20,7 +20,11 @@ Resources:
   {{ logicalIDSafe "this-is-not-safe" }}
   {{ isCodeStarConnection "randomSource" }}
 `), 0644)
-	_ = afero.WriteFile(fs, "templates/cicd/partials/build.yml", []byte("build"), 0644)
+	_ = afero.WriteFile(fs, "templates/cicd/partials/build-action.yml", []byte("build-action"), 0644)
+	_ = afero.WriteFile(fs, "templates/cicd/partials/role-policy-document.yml", []byte("role-policy-document"), 0644)
+	_ = afero.WriteFile(fs, "templates/cicd/partials/role-config.yml", []byte("role-config"), 0644)
+	_ = afero.WriteFile(fs, "templates/cicd/partials/actions.yml", []byte("actions"), 0644)
+	_ = afero.WriteFile(fs, "templates/cicd/partials/action-config.yml", []byte("action-config"), 0644)
 	_ = afero.WriteFile(fs, "templates/cicd/partials/test.yml", []byte("test"), 0644)
 	tpl := &Template{
 		fs: &mockFS{

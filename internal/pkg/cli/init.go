@@ -215,7 +215,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		if err != nil {
 			return err
 		}
-		sel := selector.NewLocalWorkloadSelector(prompt, configStore, ws)
+		sel := selector.NewLocalWorkloadSelector(prompt, configStore, ws, selector.OnlyInitializedWorkloads)
 		initEnvCmd.manifestWriter = ws
 		deployEnvCmd.ws = ws
 		deployEnvCmd.newEnvDeployer = func() (envDeployer, error) {

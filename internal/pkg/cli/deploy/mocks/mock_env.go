@@ -233,9 +233,9 @@ func (mr *MockenvironmentDeployerMockRecorder) ForceUpdateOutputID(app, env inte
 }
 
 // UpdateAndRenderEnvironment mocks base method.
-func (m *MockenvironmentDeployer) UpdateAndRenderEnvironment(conf cloudformation1.StackConfiguration, bucketARN string, opts ...cloudformation0.StackOption) error {
+func (m *MockenvironmentDeployer) UpdateAndRenderEnvironment(conf cloudformation1.StackConfiguration, bucketARN string, detach bool, opts ...cloudformation0.StackOption) error {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{conf, bucketARN}
+	varargs := []interface{}{conf, bucketARN, detach}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -245,9 +245,9 @@ func (m *MockenvironmentDeployer) UpdateAndRenderEnvironment(conf cloudformation
 }
 
 // UpdateAndRenderEnvironment indicates an expected call of UpdateAndRenderEnvironment.
-func (mr *MockenvironmentDeployerMockRecorder) UpdateAndRenderEnvironment(conf, bucketARN interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockenvironmentDeployerMockRecorder) UpdateAndRenderEnvironment(conf, bucketARN, detach interface{}, opts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{conf, bucketARN}, opts...)
+	varargs := append([]interface{}{conf, bucketARN, detach}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAndRenderEnvironment", reflect.TypeOf((*MockenvironmentDeployer)(nil).UpdateAndRenderEnvironment), varargs...)
 }
 
