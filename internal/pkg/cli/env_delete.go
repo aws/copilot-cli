@@ -391,7 +391,13 @@ func (o *deleteEnvOpts) emptyBuckets() error {
 		return fmt.Errorf("find env stack resource: %w", err)
 	}
 	if len(envStack.ResourceTagMappingList) > 1 {
-		return fmt.Errorf("ambiguous env stacks found")
+		var stackARNs []string
+		for _, stack := range envStack.ResourceTagMappingList {
+			stackARNs = append(stackARNs, aws.StringValue(stack.ResourceARN))
+		}
+		return &errAmbiguousEnvStacks{
+			stackARNs: stackARNs,
+		}
 	} else if len(envStack.ResourceTagMappingList) < 1 {
 		return fmt.Errorf("no env stack found")
 	}
