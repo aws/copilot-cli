@@ -261,6 +261,9 @@ After fixing the deployment, you can:
 `, color.HighlightCode(rollbackCmd), color.HighlightCode("copilot env deploy"))
 		}
 	}
+	if errors.As(err, &errEmptyChangeSet) {
+		return &errNoInfrastructureChanges{parentErr: err}
+	}
 	return fmt.Errorf("deploy environment %s: %w", o.name, err)
 }
 

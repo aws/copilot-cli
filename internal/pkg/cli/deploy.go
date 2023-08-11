@@ -64,7 +64,7 @@ func newDeployOpts(vars deployWkldVars) (*deployOpts, error) {
 	return &deployOpts{
 		deployWkldVars: vars,
 		store:          store,
-		sel:            selector.NewLocalWorkloadSelector(prompter, store, ws),
+		sel:            selector.NewLocalWorkloadSelector(prompter, store, ws, selector.OnlyInitializedWorkloads),
 		ws:             ws,
 		prompt:         prompter,
 
@@ -78,8 +78,9 @@ func newDeployOpts(vars deployWkldVars) (*deployOpts, error) {
 					ws:              o.ws,
 					newInterpolator: newManifestInterpolator,
 					unmarshal:       manifest.UnmarshalWorkload,
-					sel:             selector.NewLocalWorkloadSelector(o.prompt, o.store, ws),
+					sel:             selector.NewLocalWorkloadSelector(o.prompt, o.store, ws, selector.OnlyInitializedWorkloads),
 					cmd:             exec.NewCmd(),
+					templateVersion: version.LatestTemplateVersion(),
 					sessProvider:    sessProvider,
 				}
 				opts.newJobDeployer = func() (workloadDeployer, error) {
@@ -95,7 +96,7 @@ func newDeployOpts(vars deployWkldVars) (*deployOpts, error) {
 					newInterpolator: newManifestInterpolator,
 					unmarshal:       manifest.UnmarshalWorkload,
 					spinner:         termprogress.NewSpinner(log.DiagnosticWriter),
-					sel:             selector.NewLocalWorkloadSelector(o.prompt, o.store, ws),
+					sel:             selector.NewLocalWorkloadSelector(o.prompt, o.store, ws, selector.OnlyInitializedWorkloads),
 					prompt:          o.prompt,
 					cmd:             exec.NewCmd(),
 					sessProvider:    sessProvider,

@@ -23,6 +23,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	awscfn "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/aws/tags"
@@ -81,7 +82,7 @@ func newJobDeployOpts(vars deployWkldVars) (*deployJobOpts, error) {
 		store:           store,
 		ws:              ws,
 		unmarshal:       manifest.UnmarshalWorkload,
-		sel:             selector.NewLocalWorkloadSelector(prompter, store, ws),
+		sel:             selector.NewLocalWorkloadSelector(prompter, store, ws, selector.OnlyInitializedWorkloads),
 		prompt:          prompter,
 		sessProvider:    sessProvider,
 		newInterpolator: newManifestInterpolator,
@@ -254,6 +255,7 @@ func (o *deployJobOpts) Execute() error {
 	}); err != nil {
 		var errStackDeletedOnInterrupt *deploycfn.ErrStackDeletedOnInterrupt
 		var errStackUpdateCanceledOnInterrupt *deploycfn.ErrStackUpdateCanceledOnInterrupt
+		var errEmptyChangeSet *awscfn.ErrChangeSetEmpty
 		if errors.As(err, &errStackDeletedOnInterrupt) {
 			return nil
 		}
@@ -269,6 +271,9 @@ After fixing the deployment, you can:
 1. Run %s to rollback the deployment.
 2. Run %s to make a new deployment.
 `, color.HighlightCode(rollbackCmd), color.HighlightCode("copilot job deploy"))
+		}
+		if errors.As(err, &errEmptyChangeSet) {
+			return &errNoInfrastructureChanges{parentErr: err}
 		}
 		return fmt.Errorf("deploy job %s to environment %s: %w", o.name, o.envName, err)
 	}

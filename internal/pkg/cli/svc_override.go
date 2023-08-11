@@ -61,7 +61,7 @@ func newOverrideWorkloadOpts(vars overrideWorkloadVars) (*overrideWorkloadOpts, 
 			spinner:      termprogress.NewSpinner(log.DiagnosticWriter),
 		},
 		ws:       ws,
-		wsPrompt: selector.NewLocalWorkloadSelector(prompt, cfgStore, ws),
+		wsPrompt: selector.NewLocalWorkloadSelector(prompt, cfgStore, ws, selector.OnlyInitializedWorkloads),
 	}
 	return cmd, nil
 }
