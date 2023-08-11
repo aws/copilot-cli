@@ -86,6 +86,7 @@ type RunOptions struct {
 	LogOptions       RunLogOptions
 }
 
+// RunLogOptions holds the logging configuration for Run().
 type RunLogOptions struct {
 	Color      *color.Color
 	Output     io.Writer
@@ -265,7 +266,7 @@ func (c DockerCmdClient) Run(ctx context.Context, options *RunOptions) error {
 	}
 
 	g, ctx := errgroup.WithContext(ctx)
-	logger := func() (io.Writer, func() error) {
+	logger := func() (io.Writer, func()) {
 		pr, pw := io.Pipe()
 		g.Go(func() error {
 			scanner := bufio.NewScanner(pr)
@@ -274,7 +275,10 @@ func (c DockerCmdClient) Run(ctx context.Context, options *RunOptions) error {
 			}
 			return scanner.Err()
 		})
-		return pw, pw.Close
+		return pw, func() {
+			// we can ignore the error since pw.Close() never returns an error
+			pw.Close()
+		}
 	}
 
 	g.Go(func() error {
