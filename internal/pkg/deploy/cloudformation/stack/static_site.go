@@ -101,6 +101,10 @@ func (s *StaticSite) Template() (string, error) {
 			return "", err
 		}
 	}
+	staticSiteAlias := fmt.Sprintf("%s.%s.%s.%s", s.name, s.env, s.app, s.appInfo.Domain)
+	if s.manifest.HTTP.Alias != "" {
+		staticSiteAlias = s.manifest.HTTP.Alias
+	}
 	dnsDelegationRole, dnsName := convertAppInformation(s.appInfo)
 	content, err := s.parser.ParseStaticSite(template.WorkloadOpts{
 		// Workload parameters.
@@ -124,7 +128,7 @@ func (s *StaticSite) Template() (string, error) {
 		AppDNSDelegationRole:   dnsDelegationRole,
 		AssetMappingFileBucket: bucket,
 		AssetMappingFilePath:   path,
-		StaticSiteAlias:        s.manifest.HTTP.Alias,
+		StaticSiteAlias:        staticSiteAlias,
 	})
 	if err != nil {
 		return "", err
