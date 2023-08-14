@@ -61,6 +61,10 @@ const (
 	taskIDFlag                  = "task-id"
 	containerFlag               = "container"
 
+	// Run local flags
+	portsFlag  = "port-override"
+	envVarFlag = "env-override"
+
 	// Flags for CI/CD.
 	githubURLFlag         = "github-url"
 	repoURLFlag           = "url"
@@ -291,6 +295,7 @@ Defaults to all logs. Only one of end-time / follow may be used.`
 	includeStateMachineLogsFlagDescription = "Optional. Include logs from the state machine executions."
 	logGroupFlagDescription                = "Optional. Only return logs from specific log group."
 	containerLogFlagDescription            = "Optional. Return only logs from a specific container."
+	portOverridesFlagDescription           = "Optional. Environment variables specified by key=value separated by commas."
 
 	envResourcesFlagDescription      = "Optional. Show the resources in your environment."
 	svcResourcesFlagDescription      = "Optional. Show the resources in your service."
