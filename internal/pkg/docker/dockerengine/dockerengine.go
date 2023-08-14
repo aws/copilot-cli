@@ -16,6 +16,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/fatih/color"
@@ -265,13 +266,18 @@ func (c DockerCmdClient) Run(ctx context.Context, options *RunOptions) error {
 		options.LogOptions.Output = os.Stderr
 	}
 
+	// Ensure only one thread is writing to Output at a time
+	// since we don't know if the Writer is thread safe.
+	mu := &sync.Mutex{}
 	g, ctx := errgroup.WithContext(ctx)
 	logger := func() (io.Writer, func()) {
 		pr, pw := io.Pipe()
 		g.Go(func() error {
 			scanner := bufio.NewScanner(pr)
 			for scanner.Scan() {
+				mu.Lock()
 				options.LogOptions.Color.Fprintln(options.LogOptions.Output, options.LogOptions.LinePrefix+scanner.Text())
+				mu.Unlock()
 			}
 			return scanner.Err()
 		})

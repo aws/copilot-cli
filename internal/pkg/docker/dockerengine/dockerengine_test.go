@@ -12,7 +12,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/aws/copilot-cli/internal/pkg/exec"
 
@@ -661,7 +660,7 @@ func TestDockerCommand_Run(t *testing.T) {
 		logPrefix        string
 		setupMocks       func(controller *gomock.Controller)
 
-		wantedOutput string
+		wantedOutput []string
 		wantedError  error
 	}{
 		"should error if the docker run command fails": {
@@ -736,15 +735,15 @@ func TestDockerCommand_Run(t *testing.T) {
 					}
 
 					cmd.Stdout.Write([]byte("i am stdout!\ni have a newline"))
-					time.Sleep(500 * time.Millisecond) // sleep to ensure logs are in consistent order
 					cmd.Stderr.Write([]byte("i am stderr!"))
 					return nil
 				})
 			},
-			wantedOutput: `[asdf] i am stdout!
-[asdf] i have a newline
-[asdf] i am stderr!
-`,
+			wantedOutput: []string{
+				"[asdf] i am stdout!",
+				"[asdf] i have a newline",
+				"[asdf] i am stderr!",
+			},
 		},
 	}
 	for name, tc := range tests {
@@ -778,10 +777,12 @@ func TestDockerCommand_Run(t *testing.T) {
 
 			if tc.wantedError != nil {
 				require.EqualError(t, tc.wantedError, err.Error())
-			} else {
-				require.Nil(t, err)
-				require.Equal(t, tc.wantedOutput, out.String())
+				return
 			}
+
+			require.Nil(t, err)
+			split := strings.Split(out.String(), "\n")
+			require.ElementsMatch(t, tc.wantedOutput, split[:len(split)-1])
 		})
 	}
 }

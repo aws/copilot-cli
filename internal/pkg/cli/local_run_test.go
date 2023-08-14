@@ -463,6 +463,9 @@ func TestLocalRunOpts_Execute(t *testing.T) {
 				targetEnv:       &mockEnv,
 				targetApp:       &mockApp,
 				containerSuffix: mockContainerSuffix,
+				newColor: func() *color.Color {
+					return nil
+				},
 			}
 			// WHEN
 			err := opts.Execute()

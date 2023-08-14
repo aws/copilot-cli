@@ -274,6 +274,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 					Digest:            "mockDigest",
 					CustomTag:         "v1.0",
 					GitShortCommitTag: "gitTag",
+					ImageName:         "mockRepoURI:latest",
 				},
 			},
 		},
@@ -305,6 +306,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				mockName: {
 					Digest:            "mockDigest",
 					GitShortCommitTag: "gitTag",
+					ImageName:         "mockRepoURI:latest",
 				},
 			},
 		},
