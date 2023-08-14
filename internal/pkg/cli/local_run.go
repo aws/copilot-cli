@@ -115,7 +115,12 @@ func newLocalRunOpts(vars localRunVars) (*localRunOpts, error) {
 		if err != nil {
 			return fmt.Errorf("create default session with region %s: %w", o.targetEnv.Region, err)
 		}
-		o.ecsLocalClient = ecs.New(defaultSessEnvRegion)
+		envSess, err := o.sessProvider.FromRole(o.targetEnv.ManagerRoleARN, o.targetEnv.Region)
+		if err != nil {
+			return fmt.Errorf("create env session %s: %w", o.targetEnv.Region, err)
+		}
+
+		o.ecsLocalClient = ecs.New(envSess)
 
 		resources, err := cloudformation.New(o.sess, cloudformation.WithProgressTracker(os.Stderr)).GetAppResourcesByRegion(o.targetApp, o.targetEnv.Region)
 		if err != nil {
