@@ -447,8 +447,8 @@ func TestLocalRunOpts_Execute(t *testing.T) {
 				unmarshal: func(b []byte) (manifest.DynamicWorkload, error) {
 					return m.mockMft, nil
 				},
-				configureClients: func(o *localRunOpts) (repositoryService, error) {
-					return m.mockrepositorySerivce, nil
+				configureClients: func(o *localRunOpts) error {
+					return nil
 				},
 				buildContainerImages: func(o *localRunOpts) error {
 					return nil
@@ -460,6 +460,7 @@ func TestLocalRunOpts_Execute(t *testing.T) {
 				sessProvider:    m.sessProvider,
 				cmd:             m.mockRunner,
 				dockerEngine:    m.mockDockerEngine,
+				repository:      m.mockrepositorySerivce,
 				targetEnv:       &mockEnv,
 				targetApp:       &mockApp,
 				containerSuffix: mockContainerSuffix,

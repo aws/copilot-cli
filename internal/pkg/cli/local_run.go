@@ -70,7 +70,7 @@ type localRunOpts struct {
 	newColor          func() *color.Color
 
 	buildContainerImages func(o *localRunOpts) error
-	configureClients     func(o *localRunOpts) (repositoryService, error)
+	configureClients     func(o *localRunOpts) error
 	labeledTermPrinter   func(fw syncbuffer.FileWriter, bufs []*syncbuffer.LabeledSyncBuffer, opts ...syncbuffer.LabeledTermPrinterOption) clideploy.LabeledTermPrinter
 	unmarshal            func([]byte) (manifest.DynamicWorkload, error)
 	newInterpolator      func(app, env string) interpolator
@@ -101,7 +101,6 @@ func newLocalRunOpts(vars localRunVars) (*localRunOpts, error) {
 		sel:                selector.NewDeploySelect(prompt.New(), store, deployStore),
 		store:              store,
 		ws:                 ws,
-		ecsLocalClient:     ecs.New(defaultSess),
 		newInterpolator:    newManifestInterpolator,
 		sessProvider:       sessProvider,
 		unmarshal:          manifest.UnmarshalWorkload,
@@ -111,19 +110,20 @@ func newLocalRunOpts(vars localRunVars) (*localRunOpts, error) {
 		labeledTermPrinter: labeledTermPrinter,
 		newColor:           colorGenerator(),
 	}
-	opts.configureClients = func(o *localRunOpts) (repositoryService, error) {
+	opts.configureClients = func(o *localRunOpts) error {
 		defaultSessEnvRegion, err := o.sessProvider.DefaultWithRegion(o.targetEnv.Region)
 		if err != nil {
-			return nil, fmt.Errorf("create default session with region %s: %w", o.targetEnv.Region, err)
+			return fmt.Errorf("create default session with region %s: %w", o.targetEnv.Region, err)
 		}
+		o.ecsLocalClient = ecs.New(defaultSess)
+
 		resources, err := cloudformation.New(o.sess, cloudformation.WithProgressTracker(os.Stderr)).GetAppResourcesByRegion(o.targetApp, o.targetEnv.Region)
 		if err != nil {
-			return nil, fmt.Errorf("get application %s resources from region %s: %w", o.appName, o.envName, err)
+			return fmt.Errorf("get application %s resources from region %s: %w", o.appName, o.envName, err)
 		}
 		repoName := clideploy.RepoName(o.appName, o.wkldName)
-		repository := repository.NewWithURI(
-			ecr.New(defaultSessEnvRegion), repoName, resources.RepositoryURLs[o.wkldName])
-		return repository, nil
+		o.repository = repository.NewWithURI(ecr.New(defaultSessEnvRegion), repoName, resources.RepositoryURLs[o.wkldName])
+		return nil
 	}
 	opts.buildContainerImages = func(o *localRunOpts) error {
 		gitShortCommit := imageTagFromGit(o.cmd)
@@ -198,6 +198,10 @@ func (o *localRunOpts) validateAndAskWkldEnvName() error {
 
 // Execute builds and runs the workload images locally.
 func (o *localRunOpts) Execute() error {
+	if err := o.configureClients(o); err != nil {
+		return err
+	}
+
 	taskDef, err := o.ecsLocalClient.TaskDefinition(o.appName, o.envName, o.wkldName)
 	if err != nil {
 		return fmt.Errorf("get task definition: %w", err)
@@ -249,10 +253,6 @@ func (o *localRunOpts) Execute() error {
 		return err
 	}
 	o.appliedDynamicMft = mft
-	o.repository, err = o.configureClients(o)
-	if err != nil {
-		return err
-	}
 
 	if err := o.buildContainerImages(o); err != nil {
 		return err
