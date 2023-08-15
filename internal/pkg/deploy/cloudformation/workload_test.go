@@ -70,7 +70,7 @@ func TestCloudFormation_DeployService(t *testing.T) {
 		},
 	}
 	when := func(cf CloudFormation) error {
-		return cf.DeployService(serviceConfig, "mockBucket")
+		return cf.DeployService(serviceConfig, "mockBucket", false)
 	}
 
 	t.Run("returns a wrapped error if pushing to s3 bucket fails", func(t *testing.T) {
@@ -103,18 +103,6 @@ func TestCloudFormation_DeployService(t *testing.T) {
 	})
 	t.Run("renders a stack with addons template if stack creation is successful", func(t *testing.T) {
 		testDeployWorkload_RenderNewlyCreatedStackWithAddons(t, "myapp-myenv-mysvc", when)
-	})
-	t.Run("received a interrupt signal and cancel update stack is successful", func(t *testing.T) {
-		testDeployWorkload_OnCancelUpdateSuccess(t, "myapp-myenv-mysvc", when)
-	})
-	t.Run("received a interrupt signal and cancel update failed", func(t *testing.T) {
-		testDeployWorkload_OnCancelUpdateFAILED(t, "myapp-myenv-mysvc", when)
-	})
-	t.Run("received a interrupt signal and deletion of stack is successful", func(t *testing.T) {
-		testDeployWorkload_OnDeleteStackSuccess(t, "myapp-myenv-mysvc", when)
-	})
-	t.Run("received a interrupt signal and deletion of stack is failed", func(t *testing.T) {
-		testDeployWorkload_OnDeleteStackFailed(t, "myapp-myenv-mysvc", when)
 	})
 }
 

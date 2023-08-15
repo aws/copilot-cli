@@ -12,6 +12,7 @@ Metadata:
       WithECR: {{$workload.WithECR}}{{end}}{{end}}
   Accounts:{{if not $accounts}} []{{else}}{{range $account := $accounts}}
     - {{$account}}{{end}}{{end}}
+  Services: "See #5140"
 Resources:
   KMSKey:
     Metadata:

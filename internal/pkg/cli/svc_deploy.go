@@ -15,6 +15,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
+	awscfn "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/tags"
 	deploycfn "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
@@ -52,6 +53,7 @@ type deployWkldVars struct {
 	showDiff           bool
 	skipDiffPrompt     bool
 	allowWkldDowngrade bool
+	detach             bool
 
 	// To facilitate unit tests.
 	clientConfigured bool
@@ -112,7 +114,7 @@ func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
 		ws:              ws,
 		unmarshal:       manifest.UnmarshalWorkload,
 		spinner:         termprogress.NewSpinner(log.DiagnosticWriter),
-		sel:             selector.NewLocalWorkloadSelector(prompter, store, ws),
+		sel:             selector.NewLocalWorkloadSelector(prompter, store, ws, selector.OnlyInitializedWorkloads),
 		prompt:          prompter,
 		newInterpolator: newManifestInterpolator,
 		cmd:             exec.NewCmd(),
@@ -292,8 +294,6 @@ func (o *deploySvcOpts) Execute() error {
 			return nil
 		}
 	}
-	var errStackDeletedOnInterrupt *deploycfn.ErrStackDeletedOnInterrupt
-	var errStackUpdateCanceledOnInterrupt *deploycfn.ErrStackUpdateCanceledOnInterrupt
 	deployRecs, err := deployer.DeployWorkload(&clideploy.DeployWorkloadInput{
 		StackRuntimeConfiguration: clideploy.StackRuntimeConfiguration{
 			ImageDigests:              uploadOut.ImageDigests,
@@ -308,9 +308,13 @@ func (o *deploySvcOpts) Execute() error {
 		Options: clideploy.Options{
 			ForceNewUpdate:  o.forceNewUpdate,
 			DisableRollback: o.disableRollback,
+			Detach:          o.detach,
 		},
 	})
 	if err != nil {
+		var errStackDeletedOnInterrupt *deploycfn.ErrStackDeletedOnInterrupt
+		var errStackUpdateCanceledOnInterrupt *deploycfn.ErrStackUpdateCanceledOnInterrupt
+		var errEmptyChangeSet *awscfn.ErrChangeSetEmpty
 		if errors.As(err, &errStackDeletedOnInterrupt) {
 			o.noDeploy = true
 			return nil
@@ -331,7 +335,13 @@ After fixing the deployment, you can:
 2. Run %s to make a new deployment.
 `, color.HighlightCode("copilot svc logs"), color.HighlightCode(rollbackCmd), color.HighlightCode("copilot svc deploy"))
 		}
+		if errors.As(err, &errEmptyChangeSet) {
+			return &errNoInfrastructureChanges{parentErr: err}
+		}
 		return fmt.Errorf("deploy service %s to environment %s: %w", o.name, o.envName, err)
+	}
+	if o.detach {
+		return nil
 	}
 	log.Successf("Deployed service %s.\n", color.HighlightUserInput(o.name))
 	o.deployRecs = deployRecs
@@ -340,7 +350,7 @@ After fixing the deployment, you can:
 
 // RecommendActions returns follow-up actions the user can take after successfully executing the command.
 func (o *deploySvcOpts) RecommendActions() error {
-	if o.noDeploy {
+	if o.noDeploy || o.detach {
 		return nil
 	}
 	var recommendations []string
@@ -703,5 +713,6 @@ func buildSvcDeployCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&vars.showDiff, diffFlag, false, diffFlagDescription)
 	cmd.Flags().BoolVar(&vars.skipDiffPrompt, diffAutoApproveFlag, false, diffAutoApproveFlagDescription)
 	cmd.Flags().BoolVar(&vars.allowWkldDowngrade, allowDowngradeFlag, false, allowDowngradeFlagDescription)
+	cmd.Flags().BoolVar(&vars.detach, detachFlag, false, detachFlagDescription)
 	return cmd
 }

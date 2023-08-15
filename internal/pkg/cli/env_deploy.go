@@ -16,6 +16,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/cli/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	deploycfn "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -40,6 +41,7 @@ type deployEnvVars struct {
 	showDiff          bool
 	skipDiffPrompt    bool
 	allowEnvDowngrade bool
+	detach            bool
 }
 
 type deployEnvOpts struct {
@@ -212,6 +214,7 @@ func (o *deployEnvOpts) Execute() error {
 		ForceNewUpdate:      o.forceNewUpdate,
 		DisableRollback:     o.disableRollback,
 		Version:             o.templateVersion,
+		Detach:              o.detach,
 	}
 	if o.showDiff {
 		contd, err := o.showDiffAndConfirmDeployment(deployer, deployInput)
@@ -222,16 +225,31 @@ func (o *deployEnvOpts) Execute() error {
 			return nil
 		}
 	}
-	if err := deployer.DeployEnvironment(deployInput); err != nil {
-		var errEmptyChangeSet *awscfn.ErrChangeSetEmpty
-		if errors.As(err, &errEmptyChangeSet) {
-			log.Errorf(`Your update does not introduce immediate resource changes. 
+	err = deployer.DeployEnvironment(deployInput)
+	if err == nil {
+		if o.detach {
+			return nil
+		}
+		log.Successf("Succesfully deployed environment %s", o.name)
+		return nil
+	}
+	var errStackDeletedOnInterrupt *deploycfn.ErrStackDeletedOnInterrupt
+	var errStackUpdateCanceledOnInterrupt *deploycfn.ErrStackUpdateCanceledOnInterrupt
+	var errEmptyChangeSet *awscfn.ErrChangeSetEmpty
+	switch {
+	case errors.As(err, &errStackDeletedOnInterrupt):
+		return nil
+
+	case errors.As(err, &errStackUpdateCanceledOnInterrupt):
+		log.Successf("Successfully rolled back service %s to the previous configuration.\n", color.HighlightUserInput(o.name))
+		return nil
+	case errors.As(err, &errEmptyChangeSet):
+		log.Errorf(`Your update does not introduce immediate resource changes. 
 This may be because the resources are not created until they are deemed 
 necessary by a service deployment.
 
 In this case, you can run %s to push a modified template, even if there are no immediate changes.
 `, color.HighlightCode("copilot env deploy --force"))
-		}
 		if o.disableRollback {
 			stackName := stack.NameForEnv(o.targetApp.Name, o.targetEnv.Name)
 			rollbackCmd := fmt.Sprintf("aws cloudformation rollback-stack --stack-name %s --role-arn %s", stackName, o.targetEnv.ExecutionRoleARN)
@@ -242,9 +260,11 @@ After fixing the deployment, you can:
 2. Run %s to make a new deployment.
 `, color.HighlightCode(rollbackCmd), color.HighlightCode("copilot env deploy"))
 		}
-		return fmt.Errorf("deploy environment %s: %w", o.name, err)
 	}
-	return nil
+	if errors.As(err, &errEmptyChangeSet) {
+		return &errNoInfrastructureChanges{parentErr: err}
+	}
+	return fmt.Errorf("deploy environment %s: %w", o.name, err)
 }
 
 func environmentManifest(envName string, rawMft []byte, transformer interpolator) (*manifest.Environment, error) {
@@ -381,5 +401,6 @@ Deploy an environment named "test".
 	cmd.Flags().BoolVar(&vars.showDiff, diffFlag, false, diffFlagDescription)
 	cmd.Flags().BoolVar(&vars.skipDiffPrompt, diffAutoApproveFlag, false, diffAutoApproveFlagDescription)
 	cmd.Flags().BoolVar(&vars.allowEnvDowngrade, allowDowngradeFlag, false, allowDowngradeFlagDescription)
+	cmd.Flags().BoolVar(&vars.detach, detachFlag, false, detachFlagDescription)
 	return cmd
 }
