@@ -145,9 +145,6 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		iamRoleManager: iamClient,
 	}
 	initEnvCmd := &initEnvOpts{
-		initEnvVars: initEnvVars{
-			isProduction: false,
-		},
 		store:       configStore,
 		appDeployer: deployer,
 		prog:        spin,
@@ -161,7 +158,6 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		templateVersion: version.LatestTemplateVersion(),
 	}
 	deployEnvCmd := &deployEnvOpts{
-		deployEnvVars:   deployEnvVars{},
 		store:           configStore,
 		sessionProvider: sessProvider,
 		identity:        id,
@@ -566,9 +562,9 @@ func (o *initOpts) askEnvNameAndMaybeInit() error {
 		if err != nil {
 			return fmt.Errorf("get environment name: %w", err)
 		}
-	}
-	if initEnvCmd, ok := o.initEnvCmd.(*initEnvOpts); ok {
-		initEnvCmd.name = o.initVars.envName
+		if initEnvCmd, ok := o.initEnvCmd.(*initEnvOpts); ok {
+			initEnvCmd.name = o.initVars.envName
+		}
 	}
 
 	// If the environment doesn't exist, initialize it. If it does exist, return early.
