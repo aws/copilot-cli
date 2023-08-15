@@ -270,7 +270,7 @@ func (c DockerCmdClient) Run(ctx context.Context, options *RunOptions) error {
 	// since we don't know if the Writer is thread safe.
 	mu := &sync.Mutex{}
 	g, ctx := errgroup.WithContext(ctx)
-	logger := func() (io.Writer, func()) {
+	logger := func() io.WriteCloser {
 		pr, pw := io.Pipe()
 		g.Go(func() error {
 			scanner := bufio.NewScanner(pr)
@@ -281,20 +281,17 @@ func (c DockerCmdClient) Run(ctx context.Context, options *RunOptions) error {
 			}
 			return scanner.Err()
 		})
-		return pw, func() {
-			// we can ignore the error since pw.Close() never returns an error
-			pw.Close()
-		}
+		return pw
 	}
 
 	g.Go(func() error {
 		// Close loggers to ensure scanner.Scan() in the logger goroutine returns.
 		// This is really only an issue in tests; os/exec.Cmd.Run() returns EOF to
 		// output streams when the command exits.
-		stdout, stdoutClose := logger()
-		defer stdoutClose()
-		stderr, stderrClose := logger()
-		defer stderrClose()
+		stdout := logger()
+		defer stdout.Close()
+		stderr := logger()
+		defer stderr.Close()
 
 		if err := c.runner.RunWithContext(ctx, "docker", options.generateRunArguments(), exec.Stdout(stdout), exec.Stderr(stderr)); err != nil {
 			return fmt.Errorf("running container: %w", err)
