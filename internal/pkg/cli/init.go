@@ -45,14 +45,19 @@ const (
 )
 
 const (
-	initShouldDeployPrompt     = "Would you like to deploy a test environment?"
-	initShouldDeployHelpPrompt = "An environment with your service deployed to it. This will allow you to test your service before placing it in production."
+	initShouldDeployPrompt      = "Would you like to deploy an environment?"
+	initShouldDeployHelpPrompt  = "An environment to deploy your service into."
+	initExistingEnvSelectPrompt = "Which environment would you like to deploy to?"
+	initExistingEnvSelectHelp   = "Select an existing environment, or create a new one."
+
+	envPromptCreateNew = "Create a new environment"
 )
 
 type initVars struct {
 	// Flags unique to "init" that's not provided by other sub-commands.
 	shouldDeploy   bool
 	appName        string
+	envName        string
 	wkldType       string
 	svcName        string
 	dockerfilePath string
@@ -86,11 +91,14 @@ type initOpts struct {
 	// Since the sub-commands implement the actionCommand interface, without pointers to their internal fields
 	// we have to resort to type-casting the interface. These pointers simplify data access.
 	appName      *string
+	envName      *string
 	port         *uint16
 	schedule     *string
 	initWkldVars *initWkldVars
 
 	prompt prompter
+	sel    configSelector
+	store  environmentStore
 
 	setupWorkloadInit           func(*initOpts, string) error
 	useExistingWorkspaceForCMDs func(*initOpts) error
@@ -105,6 +113,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 	}
 	configStore := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
 	prompt := prompt.New()
+	sel := selector.NewConfigSelector(prompt, configStore)
 	deployStore, err := deploy.NewStore(sessProvider, configStore)
 	if err != nil {
 		return nil, err
@@ -136,10 +145,6 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		iamRoleManager: iamClient,
 	}
 	initEnvCmd := &initEnvOpts{
-		initEnvVars: initEnvVars{
-			name:         defaultEnvironmentName,
-			isProduction: false,
-		},
 		store:       configStore,
 		appDeployer: deployer,
 		prog:        spin,
@@ -153,9 +158,6 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		templateVersion: version.LatestTemplateVersion(),
 	}
 	deployEnvCmd := &deployEnvOpts{
-		deployEnvVars: deployEnvVars{
-			name: defaultEnvironmentName,
-		},
 		store:           configStore,
 		sessionProvider: sessProvider,
 		identity:        id,
@@ -172,7 +174,6 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 	}
 	deploySvcCmd := &deploySvcOpts{
 		deployWkldVars: deployWkldVars{
-			envName:  defaultEnvironmentName,
 			imageTag: vars.imageTag,
 		},
 
@@ -190,7 +191,6 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 	}
 	deployJobCmd := &deployJobOpts{
 		deployWkldVars: deployWkldVars{
-			envName:  defaultEnvironmentName,
 			imageTag: vars.imageTag,
 		},
 		store:           configStore,
@@ -240,8 +240,11 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		deployJobCmd: deployJobCmd,
 
 		appName: &initAppCmd.name,
+		envName: &initEnvCmd.name,
 
 		prompt: prompt,
+		sel:    sel,
+		store:  configStore,
 
 		setupWorkloadInit: func(o *initOpts, wkldType string) error {
 			wkldVars := initWkldVars{
@@ -464,18 +467,19 @@ func (o *initOpts) deployEnv() error {
 		return nil
 	}
 	if initEnvCmd, ok := o.initEnvCmd.(*initEnvOpts); ok {
-		// Set the application name from app init to the env init command.
+		// Set the application name from app init to the env init command. Set an env name if available.
 		initEnvCmd.appName = *o.appName
+		initEnvCmd.name = o.initVars.envName
 	}
 
-	log.Infoln()
-	if err := o.initEnvCmd.Execute(); err != nil {
+	if err := o.askEnvNameAndMaybeInit(); err != nil {
 		return err
 	}
-	log.Successf("Provisioned bootstrap resources for environment %s.\n", defaultEnvironmentName)
+
 	if deployEnvCmd, ok := o.deployEnvCmd.(*deployEnvOpts); ok {
 		// Set the application name from app init to the env deploy command.
 		deployEnvCmd.appName = *o.appName
+		deployEnvCmd.name = *o.envName
 	}
 
 	if err := o.deployEnvCmd.Execute(); err != nil {
@@ -495,6 +499,7 @@ func (o *initOpts) deploySvc() error {
 		// Set the service's name and app name to the deploy sub-command.
 		deployOpts.name = o.initWkldVars.name
 		deployOpts.appName = *o.appName
+		deployOpts.envName = *o.envName
 	}
 
 	if err := o.deploySvcCmd.Ask(); err != nil {
@@ -517,6 +522,7 @@ func (o *initOpts) deployJob() error {
 		// Set the service's name and app name to the deploy sub-command.
 		deployOpts.name = o.initWkldVars.name
 		deployOpts.appName = *o.appName
+		deployOpts.envName = *o.envName
 	}
 
 	if err := o.deployJobCmd.Ask(); err != nil {
@@ -537,6 +543,49 @@ func (o *initOpts) askShouldDeploy() error {
 		return fmt.Errorf("failed to confirm deployment: %w", err)
 	}
 	o.ShouldDeploy = v
+	return nil
+}
+
+func (o *initOpts) askEnvNameAndMaybeInit() error {
+	if o.initVars.envName == "" {
+		// Select one of existing envs or create a new one.
+		selectedEnv, err := o.sel.Environment(initExistingEnvSelectPrompt, initExistingEnvSelectHelp, *o.appName, envPromptCreateNew)
+		if err != nil {
+			return fmt.Errorf("select environment: %w", err)
+		}
+		// Customer has selected an existing environment. Return early.
+		if selectedEnv != envPromptCreateNew {
+			return nil
+		}
+
+		o.initVars.envName, err = o.prompt.Get(envInitNamePrompt, envInitNameHelpPrompt, validateEnvironmentName, prompt.WithFinalMessage("Environment name:"))
+		if err != nil {
+			return fmt.Errorf("get environment name: %w", err)
+		}
+		if initEnvCmd, ok := o.initEnvCmd.(*initEnvOpts); ok {
+			initEnvCmd.name = o.initVars.envName
+		}
+	}
+
+	// If the environment doesn't exist, initialize it. If it does exist, return early.
+	_, err := o.store.GetEnvironment(*o.appName, o.initVars.envName)
+	// nil error means environment exists and we don't need to init.
+	if err == nil {
+		return nil
+	}
+	// ErrNoSuchEnvironment means we need to initialize the environment, so we can continue.
+	// If the error isn't ErrNoSuchEnvironment, surface it by erroring out.
+	var noSuchEnv *config.ErrNoSuchEnvironment
+	if !errors.As(err, &noSuchEnv) {
+		return err
+	}
+
+	log.Infof("Environment %s does not yet exist in application %s; initializing it.\n", o.initVars.envName, o.initVars.appName)
+	if err := o.initEnvCmd.Execute(); err != nil {
+		return err
+	}
+	log.Successf("Provisioned bootstrap resources for environment %s.\n", o.initVars.envName)
+
 	return nil
 }
 
@@ -568,6 +617,7 @@ func BuildInitCmd() *cobra.Command {
 		}),
 	}
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
+	cmd.Flags().StringVarP(&vars.envName, envFlag, envFlagShort, "", envFlagDescription)
 	cmd.Flags().StringVarP(&vars.svcName, nameFlag, nameFlagShort, "", workloadFlagDescription)
 	cmd.Flags().StringVarP(&vars.wkldType, typeFlag, typeFlagShort, "", wkldTypeFlagDescription)
 	cmd.Flags().StringVarP(&vars.dockerfilePath, dockerFileFlag, dockerFileFlagShort, "", dockerFileFlagDescription)

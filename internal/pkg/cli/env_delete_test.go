@@ -291,7 +291,7 @@ Resources:
 					ResourceTagMappingList: []*resourcegroupstaggingapi.ResourceTagMapping{}}, nil)
 
 				prog := mocks.NewMockprogress(ctrl)
-				prog.EXPECT().Start(gomock.Any()).Times(3)
+				prog.EXPECT().Start(gomock.Any()).Times(2)
 
 				deployer := mocks.NewMockenvironmentDeployer(ctrl)
 				deployer.EXPECT().Template(gomock.Any()).Return(`
@@ -310,7 +310,7 @@ Resources:
 
 				deployer.EXPECT().DeleteEnvironment(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("some error"))
 
-				prog.EXPECT().Stop(gomock.Any()).Times(3)
+				prog.EXPECT().Stop(gomock.Any()).Times(2)
 
 				return &deleteEnvOpts{
 					deleteEnvVars: deleteEnvVars{
