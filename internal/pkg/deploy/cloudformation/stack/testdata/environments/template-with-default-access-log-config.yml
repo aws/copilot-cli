@@ -371,6 +371,11 @@ Resources:
                   "kms:Decrypt"
                 ]
                 Resource: "*"
+              - Sid: EmptyEnvManagedBucket
+                Effect: Allow
+                Action:
+                  - s3:EmptyBucket
+                Resource: !Join [ "/" , [!GetAtt ELBAccessLogsBucket.Arn, "*"]]
               - Sid: PutObjectsToArtifactBucket
                 Effect: Allow
                 Action:
