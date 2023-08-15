@@ -414,11 +414,8 @@ func (o *deleteEnvOpts) emptyBuckets() error {
 
 	var stackBucketARNs []string
 	for _, resource := range envResources {
-		for _, stackId := range envManagedS3BucketLogicalIds {
-			if resource.PhysicalID == stackId {
-				stackBucketARNs = append(stackBucketARNs, resource.PhysicalID)
-				break
-			}
+		if contains(resource.PhysicalID, envManagedS3BucketLogicalIds) {
+			stackBucketARNs = append(stackBucketARNs, resource.PhysicalID)
 		}
 	}
 
@@ -430,19 +427,14 @@ func (o *deleteEnvOpts) emptyBuckets() error {
 			return fmt.Errorf("parse the arn %s: %w", aws.StringValue(resourceTagMapping.ResourceARN), err)
 		}
 
+		// Attempt to empty all buckets found via GetResources API call
 		if err = o.s3.EmptyBucket(bucketARN.Resource); err != nil {
 			failedBuckets = append(failedBuckets, bucketARN.Resource)
 			bucketErrors = append(bucketErrors, err)
-		} else {
-			var inStack bool
-			for _, stackARN := range stackBucketARNs {
-				if stackARN == bucketARN.String() {
-					inStack = true
-				}
-			}
-			if !inStack {
-				log.Warningf(`Bucket \"%v\" was emptied, but was not found in the Cloudformation stack. This resource is now hanging, and must be manually deleted from the S3 console.\n`, bucketARN)
-			}
+		} else if !contains(bucketARN.String(), stackBucketARNs) {
+			// Warn about hanging bucket when bucket is found via API call but is not in the env CFN stack
+			// Those found via API call but not CFN stack cannot be deleted by Copilot
+			log.Warningf(`Bucket \"%v\" was emptied, but was not found in the Cloudformation stack. This resource is now hanging, and must be manually deleted from the S3 console.\n`, bucketARN)
 		}
 	}
 
