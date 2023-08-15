@@ -15,6 +15,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+	"github.com/aws/copilot-cli/internal/pkg/aws/secretsmanager"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	clideploy "github.com/aws/copilot-cli/internal/pkg/cli/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -120,7 +121,10 @@ func newLocalRunOpts(vars localRunVars) (*localRunOpts, error) {
 			return fmt.Errorf("create env session %s: %w", o.targetEnv.Region, err)
 		}
 
-		o.ecsLocalClient = ecs.New(envSess)
+		// EnvManagerRole has permissions to get task def and get SSM values.
+		// However, it doesn't have permissions to get secrets from secrets manager,
+		// so use the default sess and *hope* they have permissions.
+		o.ecsLocalClient = ecs.NewWithOptions(envSess, ecs.WithSecretGetter(secretsmanager.New(defaultSessEnvRegion)))
 
 		resources, err := cloudformation.New(o.sess, cloudformation.WithProgressTracker(os.Stderr)).GetAppResourcesByRegion(o.targetApp, o.targetEnv.Region)
 		if err != nil {
