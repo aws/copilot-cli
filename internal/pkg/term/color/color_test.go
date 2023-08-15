@@ -54,3 +54,14 @@ func TestColorEnvVarNotSet(t *testing.T) {
 
 	require.Equal(t, core.DisableColor, color.NoColor, "expected to be the same as color.NoColor")
 }
+
+func TestColorGenerator(t *testing.T) {
+	newColor := ColorGenerator()
+	colors := make(map[*color.Color]struct{})
+	for i := 0; i < 50; i++ {
+		color := newColor()
+		colors[color] = struct{}{}
+		require.NotNil(t, color)
+	}
+	require.Equal(t, len(colors), 8)
+}

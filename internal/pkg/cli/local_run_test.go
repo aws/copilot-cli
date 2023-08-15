@@ -480,14 +480,3 @@ func TestLocalRunOpts_Execute(t *testing.T) {
 		})
 	}
 }
-
-func TestColorGenerator(t *testing.T) {
-	newColor := colorGenerator()
-	colors := make(map[*color.Color]struct{})
-	for i := 0; i < 50; i++ {
-		color := newColor()
-		colors[color] = struct{}{}
-		require.NotNil(t, color)
-	}
-	require.Equal(t, len(colors), 8)
-}
