@@ -218,6 +218,31 @@ stages:
 			inContent:   `corrupted yaml`,
 			expectedErr: errors.New("yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `corrupt...` into manifest.Pipeline"),
 		},
+		"invalid pipeline.yml with both test_commands and post_deployment": {
+			inContent: `
+name:    pipepiper
+version: 1
+
+source: 
+  provider: GitHub
+  properties:
+    repository: aws/somethingCool
+    access_token_secret: "github-token-badgoose-backend"
+    branch: main
+
+build:
+  image: aws/codebuild/standard:3.0
+
+stages:
+  -
+    name: chicken
+    post_deployment:
+      first_action:
+        buildspec_path: copilot/pipelines/my-pipeline/buildspecs/migration.yml 
+    test_commands: ["testing", "testing 123"]
+`,
+			expectedErr: errors.New(`mutually exclusive fields 'test_commands' and 'post_deployment' found in stage "chicken"`),
+		},
 		"valid pipeline.yml without build": {
 			inContent: `
 name: pipepiper

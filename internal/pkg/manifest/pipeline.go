@@ -188,10 +188,12 @@ type Build struct {
 
 // PipelineStage represents a stage in the pipeline manifest
 type PipelineStage struct {
-	Name             string      `yaml:"name"`
-	RequiresApproval bool        `yaml:"requires_approval,omitempty"`
-	TestCommands     []string    `yaml:"test_commands,omitempty"`
-	Deployments      Deployments `yaml:"deployments,omitempty"`
+	Name             string             `yaml:"name"`
+	RequiresApproval bool               `yaml:"requires_approval,omitempty"`
+	TestCommands     []string           `yaml:"test_commands,omitempty"`
+	Deployments      Deployments        `yaml:"deployments,omitempty"`
+	PreDeployment    PrePostDeployments `yaml:"pre_deployment,omitempty"`
+	PostDeployment   PrePostDeployments `yaml:"post_deployment,omitempty"`
 }
 
 // Deployments represent a directed graph of cloudformation deployments.
@@ -203,6 +205,15 @@ type Deployment struct {
 	TemplatePath   string   `yaml:"template_path"`
 	TemplateConfig string   `yaml:"template_config"`
 	DependsOn      []string `yaml:"depends_on"`
+}
+
+// PrePostDeployments represent a directed graph of cloudformation deployments.
+type PrePostDeployments map[string]*PrePostDeployment
+
+// PrePostDeployment is the config for a pre- or post-deployment action.
+type PrePostDeployment struct {
+	BuildspecPath string   `yaml:"buildspec_path"`
+	DependsOn     []string `yaml:"depends_on,omitempty"`
 }
 
 // NewPipeline returns a pipeline manifest object.
@@ -250,10 +261,16 @@ func UnmarshalPipeline(in []byte) (*Pipeline, error) {
 	if version, err = validateVersion(&pm); err != nil {
 		return nil, err
 	}
+
+	if err := validateTestCommands(&pm); err != nil {
+		return nil, err
+	}
+
 	switch version {
 	case Ver1:
 		return &pm, nil
 	}
+
 	// we should never reach here, this is just to make the compiler happy
 	return nil, errors.New("unexpected error occurs while unmarshalling manifest.yml")
 }
@@ -280,4 +297,13 @@ func validateVersion(pm *Pipeline) (PipelineSchemaMajorVersion, error) {
 				invalidVersion: pm.Version,
 			}
 	}
+}
+
+func validateTestCommands(pm *Pipeline) error {
+	for _, stage := range pm.Stages {
+		if len(stage.TestCommands) != 0 && stage.PostDeployment != nil {
+			return fmt.Errorf("mutually exclusive fields 'test_commands' and 'post_deployment' found in stage %q", stage.Name)
+		}
+	}
+	return nil
 }
