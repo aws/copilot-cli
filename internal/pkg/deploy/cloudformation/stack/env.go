@@ -47,9 +47,22 @@ const (
 	envOutputManagerRoleKey      = "EnvironmentManagerRoleARN"
 )
 
+// S3 bucket tag keys.
+const (
+	EnvS3BucketStackNameTagKey = "aws:cloudformation:stack-name"
+	EnvS3BucketLogicalIDTagKey = "aws:cloudformation:logical-id"
+)
+
 // Environment managed S3 buckets.
 const (
 	ELBAccessLogsBucket = "ELBAccessLogsBucket"
+)
+
+// Slice of environment managed S3 bucket IDs.
+var (
+	EnvManagedS3BucketLogicalIds = []string{
+		ELBAccessLogsBucket,
+	}
 )
 
 const (

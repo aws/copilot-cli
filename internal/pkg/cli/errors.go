@@ -147,7 +147,7 @@ func (e *errBucketEmptyingFailed) Error() string {
 }
 
 func (e *errBucketEmptyingFailed) RecommendActions() string {
-	return fmt.Sprintf(`Copilot failed to empty and delete %v managed by your environment. The %v now a hanging resource.
+	return fmt.Sprintf(`Copilot failed to empty and delete %v managed by your environment. The %v now a dangling resource.
 - We recommend logging into the S3 console and manually deleting the affected %v.`,
 		english.PluralWord(len(e.failedBuckets), "an S3 bucket", "S3 buckets"), english.PluralWord(len(e.failedBuckets), "bucket is", "buckets are"), english.PluralWord(len(e.failedBuckets), "bucket", "buckets"))
 }

@@ -50,17 +50,6 @@ const (
 	fmtDeleteEnvComplete  = "Deleted environment %q from application %q.\n"
 )
 
-const (
-	envS3BucketStackNameTagKey = "aws:cloudformation:stack-name"
-	envS3BucketLogicalIDTagKey = "aws:cloudformation:logical-id"
-)
-
-var (
-	envManagedS3BucketLogicalIds = []string{
-		stack.ELBAccessLogsBucket,
-	}
-)
-
 var (
 	envDeleteAppNamePrompt = fmt.Sprintf("In which %s would you like to delete the environment?", color.Emphasize("application"))
 )
@@ -192,7 +181,7 @@ func (o *deleteEnvOpts) Execute() error {
 	}
 	o.prog.Stop(log.Ssuccessf(fmtRetainEnvRolesComplete, o.name))
 
-	o.prog.Start(fmt.Sprintf("Emptying S3 buckets managed by the %q environment\n", o.name))
+	o.prog.Start(fmt.Sprintln("Emptying S3 buckets managed by the %q environment", o.name))
 	if err := o.emptyBuckets(); err != nil {
 		o.prog.Stop(log.Serrorf("Failed to empty buckets managed by the %q environment\n", o.name))
 		// Handle error and recommend action, don't exit program
@@ -203,8 +192,9 @@ func (o *deleteEnvOpts) Execute() error {
 		default:
 			log.Errorln(fmt.Errorf("empty s3 buckets: %w", err))
 		}
+	} else {
+		o.prog.Stop(log.Ssuccessf("Emptied S3 buckets managed by the %q environment\n", o.name))
 	}
-	o.prog.Stop(log.Ssuccessf("Emptied S3 buckets managed by the %q environment\n", o.name))
 
 	// DeleteStack streams the deletion events; we don't need a spinner over top of it.
 	if err := o.deleteStack(); err != nil {
@@ -385,12 +375,12 @@ func (o *deleteEnvOpts) emptyBuckets() error {
 		ResourceTypeFilters: aws.StringSlice([]string{"s3:bucket"}),
 		TagFilters: []*resourcegroupstaggingapi.TagFilter{
 			{
-				Key:    aws.String(envS3BucketStackNameTagKey),
+				Key:    aws.String(stack.EnvS3BucketStackNameTagKey),
 				Values: []*string{aws.String(stack.NameForEnv(o.appName, o.name))},
 			},
 			{
-				Key:    aws.String(envS3BucketLogicalIDTagKey),
-				Values: aws.StringSlice(envManagedS3BucketLogicalIds),
+				Key:    aws.String(stack.EnvS3BucketLogicalIDTagKey),
+				Values: aws.StringSlice(stack.EnvManagedS3BucketLogicalIds),
 			},
 			{
 				Key:    aws.String(deploy.EnvTagKey),
@@ -414,7 +404,7 @@ func (o *deleteEnvOpts) emptyBuckets() error {
 
 	var stackBucketARNs []string
 	for _, resource := range envResources {
-		if contains(resource.PhysicalID, envManagedS3BucketLogicalIds) {
+		if contains(resource.PhysicalID, stack.EnvManagedS3BucketLogicalIds) {
 			stackBucketARNs = append(stackBucketARNs, resource.PhysicalID)
 		}
 	}
@@ -431,10 +421,13 @@ func (o *deleteEnvOpts) emptyBuckets() error {
 		if err = o.s3.EmptyBucket(bucketARN.Resource); err != nil {
 			failedBuckets = append(failedBuckets, bucketARN.Resource)
 			bucketErrors = append(bucketErrors, err)
-		} else if !contains(bucketARN.String(), stackBucketARNs) {
-			// Warn about hanging bucket when bucket is found via API call but is not in the env CFN stack
-			// Those found via API call but not CFN stack cannot be deleted by Copilot
-			log.Warningf(`Bucket \"%v\" was emptied, but was not found in the Cloudformation stack. This resource is now hanging, and must be manually deleted from the S3 console.\n`, bucketARN)
+			continue
+		}
+
+		// Warn about hanging bucket when bucket is found via API call but is not in the env CFN stack
+		// Those found via API call but not CFN stack cannot be deleted by Copilot
+		if !contains(bucketARN.String(), stackBucketARNs) {
+			log.Warningln(`Bucket %q was emptied, but was not found in the Cloudformation stack. This resource is now dangling, and can be deleted from the S3 console.`, bucketARN)
 		}
 	}
 
