@@ -26,6 +26,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/repository"
+	termcolor "github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/term/syncbuffer"
@@ -109,7 +110,7 @@ func newLocalRunOpts(vars localRunVars) (*localRunOpts, error) {
 		cmd:                exec.NewCmd(),
 		dockerEngine:       dockerengine.New(exec.NewCmd()),
 		labeledTermPrinter: labeledTermPrinter,
-		newColor:           colorGenerator(),
+		newColor:           termcolor.ColorGenerator(),
 	}
 	opts.configureClients = func(o *localRunOpts) error {
 		defaultSessEnvRegion, err := o.sessProvider.DefaultWithRegion(o.targetEnv.Region)
@@ -268,9 +269,12 @@ func (o *localRunOpts) Execute() error {
 	}
 
 	for name, imageInfo := range o.out.ImageDigests {
+		if len(imageInfo.RepoTags) == 0 {
+			return fmt.Errorf("no repo tags for image %q", name)
+		}
 		o.imageInfoList = append(o.imageInfoList, clideploy.ImagePerContainer{
 			ContainerName: name,
-			ImageURI:      imageInfo.ImageName,
+			ImageURI:      imageInfo.RepoTags[0],
 		})
 	}
 
@@ -398,25 +402,6 @@ func (o *localRunOpts) runContainers(ctx context.Context, imageInfoList []clidep
 		return err
 	}
 	return nil
-}
-
-func colorGenerator() func() *color.Color {
-	// don't use red since it looks like an error
-	colors := []*color.Color{
-		color.New(color.FgHiGreen),
-		color.New(color.FgHiYellow),
-		color.New(color.FgHiBlue),
-		color.New(color.FgHiMagenta),
-		color.New(color.FgHiCyan),
-		color.New(color.FgGreen),
-		color.New(color.FgYellow),
-		color.New(color.FgBlue),
-	}
-	i := 0
-	return func() *color.Color {
-		defer func() { i++ }()
-		return colors[i%len(colors)]
-	}
 }
 
 // BuildLocalRunCmd builds the command for running a workload locally

@@ -274,7 +274,10 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 					Digest:            "mockDigest",
 					CustomTag:         "v1.0",
 					GitShortCommitTag: "gitTag",
-					ImageName:         "mockRepoURI:latest",
+					RepoTags: []string{
+						"mockRepoURI:latest",
+						"mockRepoURI:v1.0",
+					},
 				},
 			},
 		},
@@ -306,7 +309,10 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				mockName: {
 					Digest:            "mockDigest",
 					GitShortCommitTag: "gitTag",
-					ImageName:         "mockRepoURI:latest",
+					RepoTags: []string{
+						"mockRepoURI:gitTag",
+						"mockRepoURI:latest",
+					},
 				},
 			},
 		},
@@ -355,12 +361,18 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				"nginx": {
 					Digest:            "sidecarMockDigest1",
 					GitShortCommitTag: "gitTag",
-					ImageName:         "mockRepoURI:nginx-latest",
+					RepoTags: []string{
+						"mockRepoURI:nginx-gitTag",
+						"mockRepoURI:nginx-latest",
+					},
 				},
 				"logging": {
 					Digest:            "sidecarMockDigest2",
 					GitShortCommitTag: "gitTag",
-					ImageName:         "mockRepoURI:logging-latest",
+					RepoTags: []string{
+						"mockRepoURI:logging-gitTag",
+						"mockRepoURI:logging-latest",
+					},
 				},
 			},
 		},
