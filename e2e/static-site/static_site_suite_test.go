@@ -5,7 +5,10 @@ package static_site_test
 
 import (
 	"fmt"
+	"io"
+	"net/http"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -36,3 +39,28 @@ var _ = BeforeSuite(func() {
 })
 
 var _ = AfterSuite(func() {})
+
+func testResponse(url string) {
+	// Make sure the service response is OK.
+	var resp *http.Response
+	var fetchErr error
+	resp, fetchErr = http.Get(url)
+	Expect(fetchErr).NotTo(HaveOccurred())
+	Expect(resp.StatusCode).To(Equal(200))
+	bodyBytes, err := io.ReadAll(resp.Body)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(string(bodyBytes)).To(Equal("hello"))
+
+	// HTTP should work.
+	resp, fetchErr = http.Get(strings.Replace(url, "https", "http", 1))
+	Expect(fetchErr).NotTo(HaveOccurred())
+	Expect(resp.StatusCode).To(Equal(200))
+
+	// Make sure we route to index.html for sub-path.
+	resp, fetchErr = http.Get(fmt.Sprintf("%s/static", url))
+	Expect(fetchErr).NotTo(HaveOccurred())
+	Expect(resp.StatusCode).To(Equal(200))
+	bodyBytes, err = io.ReadAll(resp.Body)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(string(bodyBytes)).To(Equal("bye"))
+}
