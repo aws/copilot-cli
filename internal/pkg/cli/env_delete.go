@@ -181,7 +181,7 @@ func (o *deleteEnvOpts) Execute() error {
 	}
 	o.prog.Stop(log.Ssuccessf(fmtRetainEnvRolesComplete, o.name))
 
-	o.prog.Start(fmt.Sprintln("Emptying S3 buckets managed by the %q environment", o.name))
+	o.prog.Start(fmt.Sprintf("Emptying S3 buckets managed by the %q environment\n", o.name))
 	if err := o.emptyBuckets(); err != nil {
 		o.prog.Stop(log.Serrorf("Failed to empty buckets managed by the %q environment\n", o.name))
 		// Handle error and recommend action, don't exit program
@@ -427,7 +427,7 @@ func (o *deleteEnvOpts) emptyBuckets() error {
 		// Warn about hanging bucket when bucket is found via API call but is not in the env CFN stack
 		// Those found via API call but not CFN stack cannot be deleted by Copilot
 		if !contains(bucketARN.String(), stackBucketARNs) {
-			log.Warningln(`Bucket %q was emptied, but was not found in the Cloudformation stack. This resource is now dangling, and can be deleted from the S3 console.`, bucketARN)
+			log.Warningf(`Bucket %q was emptied, but was not found in the Cloudformation stack. This resource is now dangling, and can be deleted from the S3 console.\n`, bucketARN)
 		}
 	}
 
