@@ -371,7 +371,7 @@ Resources:
                   "kms:Decrypt"
                 ]
                 Resource: "*"
-              - Sid: EmptyEnvManagedBucket
+              - Sid: EmptyELBAccessLogsBucket
                 Effect: Allow
                 Action:
                   - s3:EmptyBucket

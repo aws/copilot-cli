@@ -55,13 +55,13 @@ const (
 
 // Environment managed S3 buckets.
 const (
-	ELBAccessLogsBucket = "ELBAccessLogsBucket"
+	ELBAccessLogsBucketLogicalID = "ELBAccessLogsBucket"
 )
 
 // Slice of environment managed S3 bucket IDs.
 var (
 	EnvManagedS3BucketLogicalIds = []string{
-		ELBAccessLogsBucket,
+		ELBAccessLogsBucketLogicalID,
 	}
 )
 

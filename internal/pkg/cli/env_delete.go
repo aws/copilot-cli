@@ -404,7 +404,7 @@ func (o *deleteEnvOpts) emptyBuckets() error {
 
 	var stackBucketARNs []string
 	for _, resource := range envResources {
-		if contains(resource.PhysicalID, stack.EnvManagedS3BucketLogicalIds) {
+		if contains(resource.LogicalID, stack.EnvManagedS3BucketLogicalIds) {
 			stackBucketARNs = append(stackBucketARNs, resource.PhysicalID)
 		}
 	}
