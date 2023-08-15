@@ -1386,6 +1386,23 @@ func TestPipelineManifest_validate(t *testing.T) {
 				Stages: []PipelineStage{
 					{
 						Name: "test",
+						PostDeployment: PrePostDeployments{
+							"first_action": &PrePostDeployment{
+								BuildspecPath: "copilot/pipelines/my-pipeline/buildspecs/migration.yml",
+							},
+						},
+						TestCommands: []string{"testing", "testing123"},
+					},
+				},
+			},
+			wantedError: errors.New(`validate "stages" for pipeline "release": mutually exclusive fields 'test_commands' and 'post_deployment' found in stage "test"`),
+		},
+		"should validate pipeline deployments": {
+			Pipeline: Pipeline{
+				Name: "release",
+				Stages: []PipelineStage{
+					{
+						Name: "test",
 						Deployments: map[string]*Deployment{
 							"frontend": {
 								DependsOn: []string{"backend"},

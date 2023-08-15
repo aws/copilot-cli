@@ -615,9 +615,20 @@ func (p Pipeline) Validate() error {
 		return fmt.Errorf(`pipeline name '%s' must be shorter than 100 characters`, p.Name)
 	}
 	for _, stg := range p.Stages {
+		if err := stg.validate(); err != nil {
+			return fmt.Errorf(`validate "stages" for pipeline %q: %w`, p.Name, err)
+		}
 		if err := stg.Deployments.validate(); err != nil {
 			return fmt.Errorf(`validate "deployments" for pipeline stage %s: %w`, stg.Name, err)
 		}
+	}
+	return nil
+}
+
+// validate returns nil if stages are configured correctly.
+func (s PipelineStage) validate() error {
+	if len(s.TestCommands) != 0 && s.PostDeployment != nil {
+		return fmt.Errorf("mutually exclusive fields 'test_commands' and 'post_deployment' found in stage %q", s.Name)
 	}
 	return nil
 }

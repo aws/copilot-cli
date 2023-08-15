@@ -213,7 +213,7 @@ type PrePostDeployments map[string]*PrePostDeployment
 // PrePostDeployment is the config for a pre- or post-deployment action.
 type PrePostDeployment struct {
 	BuildspecPath string   `yaml:"buildspec_path"`
-	DependsOn     []string `yaml:"depends_on,omitempty"`
+	DependsOn     []string `yaml:"depends_on"`
 }
 
 // NewPipeline returns a pipeline manifest object.
@@ -261,16 +261,10 @@ func UnmarshalPipeline(in []byte) (*Pipeline, error) {
 	if version, err = validateVersion(&pm); err != nil {
 		return nil, err
 	}
-
-	if err := validateTestCommands(&pm); err != nil {
-		return nil, err
-	}
-
 	switch version {
 	case Ver1:
 		return &pm, nil
 	}
-
 	// we should never reach here, this is just to make the compiler happy
 	return nil, errors.New("unexpected error occurs while unmarshalling manifest.yml")
 }
@@ -297,13 +291,4 @@ func validateVersion(pm *Pipeline) (PipelineSchemaMajorVersion, error) {
 				invalidVersion: pm.Version,
 			}
 	}
-}
-
-func validateTestCommands(pm *Pipeline) error {
-	for _, stage := range pm.Stages {
-		if len(stage.TestCommands) != 0 && stage.PostDeployment != nil {
-			return fmt.Errorf("mutually exclusive fields 'test_commands' and 'post_deployment' found in stage %q", stage.Name)
-		}
-	}
-	return nil
 }
