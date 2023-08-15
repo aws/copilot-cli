@@ -23,6 +23,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
+	stackdescr "github.com/aws/copilot-cli/internal/pkg/describe/stack"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
@@ -51,7 +52,6 @@ const (
 
 const (
 	envS3BucketStackNameTagKey = "aws:cloudformation:stack-name"
-	envS3BucketStackIDTagKey   = "aws:cloudformation:stack-id"
 	envS3BucketLogicalIDTagKey = "aws:cloudformation:logical-id"
 )
 
@@ -89,6 +89,7 @@ type deleteEnvOpts struct {
 	envDeleterFromApp envDeleterFromApp
 	iam               roleDeleter
 	s3                bucketEmptier
+	envStackDescriber stackDescriber
 	prog              progress
 	prompt            prompter
 	sel               configSelector
@@ -130,6 +131,7 @@ func newDeleteEnvOpts(vars deleteEnvVars) (*deleteEnvOpts, error) {
 			o.rg = resourcegroupstaggingapi.New(sess)
 			o.iam = iam.New(sess)
 			o.s3 = s3.New(sess)
+			o.envStackDescriber = stackdescr.NewStackDescriber(stack.NameForEnv(o.appName, o.name), sess)
 			o.deployer = cloudformation.New(sess, cloudformation.WithProgressTracker(os.Stderr))
 			o.envDeleterFromApp = cloudformation.New(defaultSess, cloudformation.WithProgressTracker(os.Stderr))
 			return nil
@@ -381,45 +383,12 @@ func (o *deleteEnvOpts) ensureRolesAreRetained() error {
 
 // emptyBuckets returns nil if buckets were deleted successfully. Otherwise, returns the error.
 func (o *deleteEnvOpts) emptyBuckets() error {
-	envStack, err := o.rg.GetResources(&resourcegroupstaggingapi.GetResourcesInput{
-		ResourceTypeFilters: aws.StringSlice([]string{"cloudformation"}),
-		TagFilters: []*resourcegroupstaggingapi.TagFilter{
-			{
-				Key:    aws.String(deploy.EnvTagKey),
-				Values: []*string{aws.String(o.name)},
-			},
-			{
-				Key:    aws.String(deploy.AppTagKey),
-				Values: []*string{aws.String(o.appName)},
-			},
-		},
-	})
-	if err != nil {
-		return fmt.Errorf("find env stack resource: %w", err)
-	}
-	if len(envStack.ResourceTagMappingList) > 1 {
-		var stackARNs []string
-		for _, stack := range envStack.ResourceTagMappingList {
-			stackARNs = append(stackARNs, aws.StringValue(stack.ResourceARN))
-		}
-		return &errAmbiguousEnvStacks{
-			stackARNs: stackARNs,
-		}
-	} else if len(envStack.ResourceTagMappingList) < 1 {
-		return fmt.Errorf("no env stack found")
-	}
-	stackID := envStack.ResourceTagMappingList[0].ResourceARN
-
 	s3buckets, err := o.rg.GetResources(&resourcegroupstaggingapi.GetResourcesInput{
 		ResourceTypeFilters: aws.StringSlice([]string{"s3:bucket"}),
 		TagFilters: []*resourcegroupstaggingapi.TagFilter{
 			{
 				Key:    aws.String(envS3BucketStackNameTagKey),
 				Values: []*string{aws.String(stack.NameForEnv(o.appName, o.name))},
-			},
-			{
-				Key:    aws.String(envS3BucketStackIDTagKey),
-				Values: []*string{stackID},
 			},
 			{
 				Key:    aws.String(envS3BucketLogicalIDTagKey),
@@ -440,7 +409,23 @@ func (o *deleteEnvOpts) emptyBuckets() error {
 		return fmt.Errorf("find s3 bucket resources: %w", err)
 	}
 
+	envResources, err := o.envStackDescriber.Resources()
+	if err != nil {
+		return fmt.Errorf("find stack resources: %w", err)
+	}
+
+	var stackBucketARNs []string
+	for _, resource := range envResources {
+		for _, stackId := range envManagedS3BucketLogicalIds {
+			if resource.PhysicalID == stackId {
+				stackBucketARNs = append(stackBucketARNs, resource.PhysicalID)
+				break
+			}
+		}
+	}
+
 	var failedBuckets []string
+	var bucketErrors []error
 	for _, resourceTagMapping := range s3buckets.ResourceTagMappingList {
 		bucketARN, err := arn.Parse(aws.StringValue(resourceTagMapping.ResourceARN))
 		if err != nil {
@@ -449,12 +434,24 @@ func (o *deleteEnvOpts) emptyBuckets() error {
 
 		if err = o.s3.EmptyBucket(bucketARN.Resource); err != nil {
 			failedBuckets = append(failedBuckets, bucketARN.Resource)
+			bucketErrors = append(bucketErrors, err)
+		} else {
+			var inStack bool
+			for _, stackARN := range stackBucketARNs {
+				if stackARN == bucketARN.String() {
+					inStack = true
+				}
+			}
+			if !inStack {
+				log.Warningf(`Bucket \"%v\" was emptied, but was not found in the Cloudformation stack. This resource is now hanging, and must be manually deleted from the S3 console.\n`, bucketARN)
+			}
 		}
 	}
 
 	if len(failedBuckets) > 0 {
 		return &errBucketEmptyingFailed{
 			failedBuckets: failedBuckets,
+			bucketErrors:  bucketErrors,
 		}
 	}
 

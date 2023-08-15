@@ -6,7 +6,6 @@ package cli
 import (
 	"fmt"
 
-	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/dustin/go-humanize/english"
 )
@@ -135,23 +134,20 @@ func (e *errNoInfrastructureChanges) ExitCode() int {
 
 type errBucketEmptyingFailed struct {
 	failedBuckets []string
+	bucketErrors  []error
 }
 
 func (e *errBucketEmptyingFailed) Error() string {
-	return fmt.Sprintf("emptying %v %v failed", english.PluralWord(len(e.failedBuckets), "bucket", "buckets"),
-		english.WordSeries(template.QuoteSliceFunc(e.failedBuckets), "and"))
+	var bucketFailureMsgs []string
+	for i := range e.failedBuckets {
+		bucketFailureMsgs = append(bucketFailureMsgs, fmt.Sprintf("\"%v\": %v", e.failedBuckets[i], e.bucketErrors[i].Error()))
+	}
+	return fmt.Sprintf("emptying %v failed: %v", english.PluralWord(len(e.failedBuckets), "bucket", "buckets"),
+		english.WordSeries(bucketFailureMsgs, "and"))
 }
 
 func (e *errBucketEmptyingFailed) RecommendActions() string {
 	return fmt.Sprintf(`Copilot failed to empty and delete %v managed by your environment. The %v now a hanging resource.
 - We recommend logging into the S3 console and manually deleting the affected %v.`,
 		english.PluralWord(len(e.failedBuckets), "an S3 bucket", "S3 buckets"), english.PluralWord(len(e.failedBuckets), "bucket is", "buckets are"), english.PluralWord(len(e.failedBuckets), "bucket", "buckets"))
-}
-
-type errAmbiguousEnvStacks struct {
-	stackARNs []string
-}
-
-func (e *errAmbiguousEnvStacks) Error() string {
-	return fmt.Sprintf("ambiguous env stacks found: %v", english.WordSeries(template.QuoteSliceFunc(e.stackARNs), "and"))
 }

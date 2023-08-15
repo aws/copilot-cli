@@ -16,6 +16,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
+	stackdescr "github.com/aws/copilot-cli/internal/pkg/describe/stack"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -171,10 +172,11 @@ func TestDeleteEnvOpts_Execute(t *testing.T) {
 	testCases := map[string]struct {
 		given func(t *testing.T, ctrl *gomock.Controller) *deleteEnvOpts
 
-		mockRG     func(ctrl *gomock.Controller) *mocks.MockresourceGetter
-		mockProg   func(ctrl *gomock.Controller) *mocks.Mockprogress
-		mockDeploy func(ctrl *gomock.Controller) *mocks.MockenvironmentDeployer
-		mockStore  func(ctrl *gomock.Controller) *mocks.MockenvironmentStore
+		mockRG        func(ctrl *gomock.Controller) *mocks.MockresourceGetter
+		mockDescriber func(ctrl *gomock.Controller) *mocks.MockstackDescriber
+		mockProg      func(ctrl *gomock.Controller) *mocks.Mockprogress
+		mockDeploy    func(ctrl *gomock.Controller) *mocks.MockenvironmentDeployer
+		mockStore     func(ctrl *gomock.Controller) *mocks.MockenvironmentStore
 
 		wantedError error
 	}{
@@ -300,22 +302,9 @@ Resources:
     # An IAM Role to manage resources in your environment
     DeletionPolicy: Retain`, nil)
 
-				rg.EXPECT().GetResources(gomock.Any()).Return(&resourcegroupstaggingapi.GetResourcesOutput{
-					ResourceTagMappingList: []*resourcegroupstaggingapi.ResourceTagMapping{
-						{
-							Tags: []*resourcegroupstaggingapi.Tag{
-								{
-									Key:   aws.String(deploy.EnvTagKey),
-									Value: aws.String("mockenv"),
-								},
-								{
-									Key:   aws.String(deploy.AppTagKey),
-									Value: aws.String("mockapp"),
-								},
-							},
-						},
-					},
-				}, nil)
+				descr := mocks.NewMockstackDescriber(ctrl)
+				descr.EXPECT().Resources().Return([]*stackdescr.Resource{}, nil)
+
 				rg.EXPECT().GetResources(gomock.Any()).Return(&resourcegroupstaggingapi.GetResourcesOutput{
 					ResourceTagMappingList: []*resourcegroupstaggingapi.ResourceTagMapping{}}, nil)
 
@@ -329,6 +318,7 @@ Resources:
 						name:    "test",
 					},
 					rg:                 rg,
+					envStackDescriber:  descr,
 					deployer:           deployer,
 					prog:               prog,
 					envConfig:          &config.Environment{},
@@ -370,22 +360,9 @@ Resources:
     Type: AWS::IAM::Role
 `, nil)
 
-				rg.EXPECT().GetResources(gomock.Any()).Return(&resourcegroupstaggingapi.GetResourcesOutput{
-					ResourceTagMappingList: []*resourcegroupstaggingapi.ResourceTagMapping{
-						{
-							Tags: []*resourcegroupstaggingapi.Tag{
-								{
-									Key:   aws.String(deploy.EnvTagKey),
-									Value: aws.String("mockenv"),
-								},
-								{
-									Key:   aws.String(deploy.AppTagKey),
-									Value: aws.String("mockapp"),
-								},
-							},
-						},
-					},
-				}, nil)
+				descr := mocks.NewMockstackDescriber(ctrl)
+				descr.EXPECT().Resources().Return([]*stackdescr.Resource{}, nil)
+
 				rg.EXPECT().GetResources(gomock.Any()).Return(&resourcegroupstaggingapi.GetResourcesOutput{
 					ResourceTagMappingList: []*resourcegroupstaggingapi.ResourceTagMapping{}}, nil)
 
@@ -425,6 +402,7 @@ Resources:
 						name:    "test",
 					},
 					rg:                 rg,
+					envStackDescriber:  descr,
 					deployer:           deployer,
 					prog:               prog,
 					store:              store,
@@ -552,24 +530,6 @@ Resources:
     DeletionPolicy: Retain
     Type: AWS::IAM::Role
 `, nil)
-
-				rg.EXPECT().GetResources(gomock.Any()).Return(&resourcegroupstaggingapi.GetResourcesOutput{
-					ResourceTagMappingList: []*resourcegroupstaggingapi.ResourceTagMapping{
-						{
-							Tags: []*resourcegroupstaggingapi.Tag{
-								{
-									Key:   aws.String(deploy.EnvTagKey),
-									Value: aws.String("mockenv"),
-								},
-								{
-									Key:   aws.String(deploy.AppTagKey),
-									Value: aws.String("mockapp"),
-								},
-							},
-						},
-					},
-				}, nil)
-
 				rg.EXPECT().GetResources(gomock.Any()).Return(nil, errors.New("some error"))
 
 				deployer.EXPECT().DeleteEnvironment("phonetool", "test", "execARN").Return(nil)
@@ -655,22 +615,17 @@ Resources:
     Type: AWS::IAM::Role
 `, nil)
 
-				rg.EXPECT().GetResources(gomock.Any()).Return(&resourcegroupstaggingapi.GetResourcesOutput{
-					ResourceTagMappingList: []*resourcegroupstaggingapi.ResourceTagMapping{
+				descr := mocks.NewMockstackDescriber(ctrl)
+				descr.EXPECT().Resources().Return(
+					[]*stackdescr.Resource{
 						{
-							Tags: []*resourcegroupstaggingapi.Tag{
-								{
-									Key:   aws.String(deploy.EnvTagKey),
-									Value: aws.String("mockenv"),
-								},
-								{
-									Key:   aws.String(deploy.AppTagKey),
-									Value: aws.String("mockapp"),
-								},
-							},
+							Type:       "AWS::S3::Bucket",
+							LogicalID:  "ELBAccessLogsBucket",
+							PhysicalID: "arn:aws:s3:::mockapp-mockenv-mockbucket",
 						},
-					},
-				}, nil)
+					}, nil,
+				)
+
 				rg.EXPECT().GetResources(gomock.Any()).Return(&resourcegroupstaggingapi.GetResourcesOutput{
 					ResourceTagMappingList: []*resourcegroupstaggingapi.ResourceTagMapping{
 						{
@@ -679,10 +634,6 @@ Resources:
 								{
 									Key:   aws.String(envS3BucketStackNameTagKey),
 									Value: aws.String("mockapp-mockenv"),
-								},
-								{
-									Key:   aws.String(envS3BucketStackIDTagKey),
-									Value: aws.String("mockstackid"),
 								},
 								{
 									Key:   aws.String(deploy.EnvTagKey),
@@ -740,6 +691,7 @@ Resources:
 						name:    "test",
 					},
 					rg:                 rg,
+					envStackDescriber:  descr,
 					s3:                 s3,
 					deployer:           deployer,
 					prog:               prog,
