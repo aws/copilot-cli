@@ -5,6 +5,7 @@
 package dockerengine
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -15,8 +16,11 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/aws/copilot-cli/internal/pkg/exec"
+	"github.com/fatih/color"
+	"golang.org/x/sync/errgroup"
 )
 
 // Cmd is the interface implemented by external commands.
@@ -80,6 +84,14 @@ type RunOptions struct {
 	ContainerPorts   map[string]string // Optional. Contains host and container ports.
 	Command          []string          // Optional. The command to run in the container.
 	ContainerNetwork string            // Optional. Network mode for the container.
+	LogOptions       RunLogOptions
+}
+
+// RunLogOptions holds the logging configuration for Run().
+type RunLogOptions struct {
+	Color      *color.Color
+	Output     io.Writer
+	LinePrefix string
 }
 
 // GenerateDockerBuildArgs returns command line arguments to be passed to the Docker build command based on the provided BuildArguments.
@@ -246,11 +258,48 @@ func (in *RunOptions) generateRunArguments() []string {
 
 // Run runs a Docker container with the sepcified options.
 func (c DockerCmdClient) Run(ctx context.Context, options *RunOptions) error {
-	//Execute the Docker run command.
-	if err := c.runner.RunWithContext(ctx, "docker", options.generateRunArguments()); err != nil {
-		return fmt.Errorf("running container: %w", err)
+	// set default options
+	if options.LogOptions.Color == nil {
+		options.LogOptions.Color = color.New()
 	}
-	return nil
+	if options.LogOptions.Output == nil {
+		options.LogOptions.Output = os.Stderr
+	}
+
+	// Ensure only one thread is writing to Output at a time
+	// since we don't know if the Writer is thread safe.
+	mu := &sync.Mutex{}
+	g, ctx := errgroup.WithContext(ctx)
+	logger := func() io.WriteCloser {
+		pr, pw := io.Pipe()
+		g.Go(func() error {
+			scanner := bufio.NewScanner(pr)
+			for scanner.Scan() {
+				mu.Lock()
+				options.LogOptions.Color.Fprintln(options.LogOptions.Output, options.LogOptions.LinePrefix+scanner.Text())
+				mu.Unlock()
+			}
+			return scanner.Err()
+		})
+		return pw
+	}
+
+	g.Go(func() error {
+		// Close loggers to ensure scanner.Scan() in the logger goroutine returns.
+		// This is really only an issue in tests; os/exec.Cmd.Run() returns EOF to
+		// output streams when the command exits.
+		stdout := logger()
+		defer stdout.Close()
+		stderr := logger()
+		defer stderr.Close()
+
+		if err := c.runner.RunWithContext(ctx, "docker", options.generateRunArguments(), exec.Stdout(stdout), exec.Stderr(stderr)); err != nil {
+			return fmt.Errorf("running container: %w", err)
+		}
+		return nil
+	})
+
+	return g.Wait()
 }
 
 // IsContainerRunning checks if a specific Docker container is running.
