@@ -47,7 +47,7 @@ const (
 	envOutputManagerRoleKey      = "EnvironmentManagerRoleARN"
 )
 
-// S3 bucket tag keys.
+// Cloudformation stack tag keys.
 const (
 	StackNameTagKey = "aws:cloudformation:stack-name"
 	LogicalIDTagKey = "aws:cloudformation:logical-id"
