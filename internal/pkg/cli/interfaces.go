@@ -734,3 +734,7 @@ type stackConfiguration interface {
 	Tags() []*sdkcloudformation.Tag
 	SerializedParameters() (string, error)
 }
+
+type secretGetter interface {
+	GetSecretValue(context.Context, string) (string, error)
+}

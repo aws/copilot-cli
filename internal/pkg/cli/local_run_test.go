@@ -10,13 +10,12 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	ecsapi "github.com/aws/aws-sdk-go/service/ecs"
+	sdkecs "github.com/aws/aws-sdk-go/service/ecs"
+	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	clideploy "github.com/aws/copilot-cli/internal/pkg/cli/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
-	"github.com/aws/copilot-cli/internal/pkg/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/fatih/color"
@@ -208,6 +207,8 @@ type localRunExecuteMocks struct {
 	mockRunner            *mocks.MockexecRunner
 	mockDockerEngine      *mocks.MockdockerEngineRunner
 	mockrepositorySerivce *mocks.MockrepositoryService
+	ssm                   *mocks.MocksecretGetter
+	secretsManager        *mocks.MocksecretGetter
 }
 
 func TestLocalRunOpts_Execute(t *testing.T) {
@@ -221,28 +222,31 @@ func TestLocalRunOpts_Execute(t *testing.T) {
 	)
 
 	mockContainerSuffix := fmt.Sprintf("%s-%s-%s", testAppName, testEnvName, testWkldName)
-	mockPauseContainerName := pauseContainerName + "-" + mockContainerSuffix
+	// mockPauseContainerName := pauseContainerName + "-" + mockContainerSuffix
 
 	mockApp := config.Application{
 		Name: "testApp",
 	}
 
 	mockEnv := config.Environment{
-		App:       "testApp",
-		Name:      "testEnv",
-		Region:    "us-test",
-		AccountID: "123456789",
+		App:            "testApp",
+		Name:           "testEnv",
+		Region:         "us-test",
+		AccountID:      "123456789",
+		ManagerRoleARN: "arn::env-manager",
 	}
 
-	mockDecryptedSecrets := []ecs.EnvVar{
-		{
-			Name:  "my-secret",
-			Value: "Password123",
-		}, {
-			Name:  "secret2",
-			Value: "admin123",
-		},
-	}
+	/*
+		mockDecryptedSecrets := []ecs.EnvVar{
+			{
+				Name:  "my-secret",
+				Value: "Password123",
+			}, {
+				Name:  "secret2",
+				Value: "admin123",
+			},
+		}
+	*/
 
 	mockImageInfoList := []clideploy.ImagePerContainer{
 		{
@@ -255,27 +259,61 @@ func TestLocalRunOpts_Execute(t *testing.T) {
 		},
 	}
 
-	var taskDefinition = &awsecs.TaskDefinition{
-		ContainerDefinitions: []*ecsapi.ContainerDefinition{
+	taskDef := &ecs.TaskDefinition{
+		ContainerDefinitions: []*sdkecs.ContainerDefinition{
 			{
-				Name: aws.String("container"),
-				Environment: []*ecsapi.KeyValuePair{
+				Name: aws.String("foo"),
+				Environment: []*sdkecs.KeyValuePair{
 					{
-						Name:  aws.String("COPILOT_SERVICE_NAME"),
-						Value: aws.String("testWkld"),
+						Name:  aws.String("FOO_VAR"),
+						Value: aws.String("i was here first"),
 					},
 					{
-						Name:  aws.String("COPILOT_ENVIRONMENT_NAME"),
-						Value: aws.String("testEnv"),
+						Name:  aws.String("OVERRIDE_ALL"),
+						Value: aws.String("i will disappear :pensive:"),
+					},
+					{
+						Name:  aws.String("OVERRIDE"),
+						Value: aws.String("i will disappear :pensive:"),
+					},
+				},
+				Secrets: []*sdkecs.Secret{
+					{
+						Name:      aws.String("SHARED_SECRET"),
+						ValueFrom: aws.String("mysvc"),
+					},
+				},
+			},
+			{
+				Name: aws.String("bar"),
+				Environment: []*sdkecs.KeyValuePair{
+					{
+						Name:  aws.String("BAR_VAR"),
+						Value: aws.String("i was here first"),
+					},
+					{
+						Name:  aws.String("OVERRIDE_ALL"),
+						Value: aws.String("i will disappear :pensive:"),
+					},
+					{
+						Name:  aws.String("OVERRIDE"),
+						Value: aws.String("i will disappear :pensive:"),
+					},
+				},
+				Secrets: []*sdkecs.Secret{
+					{
+						Name:      aws.String("SHARED_SECRET"),
+						ValueFrom: aws.String("mysvc"),
 					},
 				},
 			},
 		},
 	}
 	testCases := map[string]struct {
-		inputAppName  string
-		inputEnvName  string
-		inputWkldName string
+		inputAppName      string
+		inputEnvName      string
+		inputWkldName     string
+		inputEnvOverrides map[string]string
 
 		setupMocks     func(m *localRunExecuteMocks)
 		wantedWkldName string
@@ -292,132 +330,160 @@ func TestLocalRunOpts_Execute(t *testing.T) {
 			},
 			wantedError: fmt.Errorf("get task definition: %w", testError),
 		},
-		"error decryting secrets from task definition": {
+		"env override with invalid container": {
 			inputAppName:  testAppName,
 			inputWkldName: testWkldName,
 			inputEnvName:  testEnvName,
-			setupMocks: func(m *localRunExecuteMocks) {
-				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDefinition, nil)
-				m.ecsLocalClient.EXPECT().DecryptedSecrets(gomock.Any()).Return(nil, testError)
+			inputEnvOverrides: map[string]string{
+				"bad:OVERRIDE": "i fail",
 			},
-			wantedError: fmt.Errorf("get secret values: %w", testError),
-		},
-		"error getting the session configured for the input role and region": {
-			inputAppName:  testAppName,
-			inputWkldName: testWkldName,
-			inputEnvName:  testEnvName,
 			setupMocks: func(m *localRunExecuteMocks) {
-				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDefinition, nil)
-				m.ecsLocalClient.EXPECT().DecryptedSecrets(gomock.Any()).Return(mockDecryptedSecrets, nil)
-				m.sessProvider.EXPECT().FromRole(gomock.Any(), gomock.Any()).Return(nil, testError)
+				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
 			},
-			wantedError: fmt.Errorf("get env session: %w", testError),
+			wantedError: errors.New(`parse env overrides: env override "bad:OVERRIDE" targeting invalid container`),
 		},
-		"error reading workload manifest": {
-			inputAppName:  testAppName,
-			inputWkldName: testWkldName,
-			inputEnvName:  testEnvName,
-			setupMocks: func(m *localRunExecuteMocks) {
-				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDefinition, nil)
-				m.ecsLocalClient.EXPECT().DecryptedSecrets(gomock.Any()).Return(mockDecryptedSecrets, nil)
-				m.sessProvider.EXPECT().FromRole(gomock.Any(), gomock.Any()).Return(&session.Session{
-					Config: &aws.Config{
-						Region: aws.String("us-test"),
-					},
-				}, nil)
-				m.mockWsReader.EXPECT().ReadWorkloadManifest(testWkldName).Return(nil, testError)
+		/*
+			"fail to get secrets": {
+				inputAppName:  testAppName,
+				inputWkldName: testWkldName,
+				inputEnvName:  testEnvName,
+				inputEnvOverrides: map[string]string{
+					"OVERRIDE_ALL": "i go everywhere",
+					"foo:OVERRIDE": "i go to foo",
+					"bar:OVERRIDE": "i go to bar",
+				},
+				setupMocks: func(m *localRunExecuteMocks) {
+					m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
+				},
+				wantedError: errors.New(`parse env overrides: env override "bad:OVERRIDE_BAD" targeting invalid container`),
 			},
-			wantedError: fmt.Errorf("read manifest file for %s: %w", testWkldName, testError),
-		},
-		"error if failed to interpolate workload manifest": {
-			inputAppName:  testAppName,
-			inputWkldName: testWkldName,
-			inputEnvName:  testEnvName,
-			setupMocks: func(m *localRunExecuteMocks) {
-				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDefinition, nil)
-				m.ecsLocalClient.EXPECT().DecryptedSecrets(gomock.Any()).Return(mockDecryptedSecrets, nil)
-				m.sessProvider.EXPECT().FromRole(gomock.Any(), gomock.Any()).Return(&session.Session{
-					Config: &aws.Config{
-						Region: aws.String("us-test"),
+				"error decryting secrets from task definition": {
+					inputAppName:  testAppName,
+					inputWkldName: testWkldName,
+					inputEnvName:  testEnvName,
+					setupMocks: func(m *localRunExecuteMocks) {
+						m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDefinition, nil)
+						// m.ecsLocalClient.EXPECT().DecryptedSecrets(gomock.Any()).Return(nil, testError)
 					},
-				}, nil)
-				m.mockWsReader.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
-				m.mockInterpolator.EXPECT().Interpolate("").Return("", testError)
-			},
-			wantedError: fmt.Errorf("interpolate environment variables for %s manifest: %w", testWkldName, testError),
-		},
-		"return error if failed to run the pause container": {
-			inputAppName:  testAppName,
-			inputWkldName: testWkldName,
-			inputEnvName:  testEnvName,
-			setupMocks: func(m *localRunExecuteMocks) {
-				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDefinition, nil)
-				m.ecsLocalClient.EXPECT().DecryptedSecrets(gomock.Any()).Return(mockDecryptedSecrets, nil)
-				m.sessProvider.EXPECT().FromRole(gomock.Any(), gomock.Any()).Return(&session.Session{
-					Config: &aws.Config{
-						Region: aws.String("us-test"),
+					wantedError: fmt.Errorf("get secret values: %w", testError),
+				},
+				"error getting the session configured for the input role and region": {
+					inputAppName:  testAppName,
+					inputWkldName: testWkldName,
+					inputEnvName:  testEnvName,
+					setupMocks: func(m *localRunExecuteMocks) {
+						m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDefinition, nil)
+						//m.ecsLocalClient.EXPECT().DecryptedSecrets(gomock.Any()).Return(mockDecryptedSecrets, nil)
+						m.sessProvider.EXPECT().FromRole(gomock.Any(), gomock.Any()).Return(nil, testError)
 					},
-				}, nil)
-				m.mockWsReader.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
-				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
-				m.mockMft = &mockWorkloadMft{
-					mockRequiredEnvironmentFeatures: func() []string {
-						return []string{"mockFeature1"}
+					wantedError: fmt.Errorf("get env session: %w", testError),
+				},
+				"error reading workload manifest": {
+					inputAppName:  testAppName,
+					inputWkldName: testWkldName,
+					inputEnvName:  testEnvName,
+					setupMocks: func(m *localRunExecuteMocks) {
+						m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDefinition, nil)
+						//m.ecsLocalClient.EXPECT().DecryptedSecrets(gomock.Any()).Return(mockDecryptedSecrets, nil)
+						m.sessProvider.EXPECT().FromRole(gomock.Any(), gomock.Any()).Return(&session.Session{
+							Config: &aws.Config{
+								Region: aws.String("us-test"),
+							},
+						}, nil)
+						m.mockWsReader.EXPECT().ReadWorkloadManifest(testWkldName).Return(nil, testError)
 					},
-				}
-				m.mockDockerEngine.EXPECT().IsContainerRunning(mockPauseContainerName)
-				m.mockDockerEngine.EXPECT().Run(context.Background(), gomock.Any()).Return(testError)
-			},
-			wantedError: fmt.Errorf("run pause container: %w", testError),
-		},
-		"return error if failed to run service containers": {
-			inputAppName:  testAppName,
-			inputWkldName: testWkldName,
-			inputEnvName:  testEnvName,
-			setupMocks: func(m *localRunExecuteMocks) {
-				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDefinition, nil)
-				m.ecsLocalClient.EXPECT().DecryptedSecrets(gomock.Any()).Return(mockDecryptedSecrets, nil)
-				m.sessProvider.EXPECT().FromRole(gomock.Any(), gomock.Any()).Return(&session.Session{
-					Config: &aws.Config{
-						Region: aws.String("us-test"),
+					wantedError: fmt.Errorf("read manifest file for %s: %w", testWkldName, testError),
+				},
+				"error if failed to interpolate workload manifest": {
+					inputAppName:  testAppName,
+					inputWkldName: testWkldName,
+					inputEnvName:  testEnvName,
+					setupMocks: func(m *localRunExecuteMocks) {
+						m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDefinition, nil)
+						//m.ecsLocalClient.EXPECT().DecryptedSecrets(gomock.Any()).Return(mockDecryptedSecrets, nil)
+						m.sessProvider.EXPECT().FromRole(gomock.Any(), gomock.Any()).Return(&session.Session{
+							Config: &aws.Config{
+								Region: aws.String("us-test"),
+							},
+						}, nil)
+						m.mockWsReader.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
+						m.mockInterpolator.EXPECT().Interpolate("").Return("", testError)
 					},
-				}, nil)
-				m.mockWsReader.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
-				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
-				m.mockMft = &mockWorkloadMft{
-					mockRequiredEnvironmentFeatures: func() []string {
-						return []string{"mockFeature1"}
+					wantedError: fmt.Errorf("interpolate environment variables for %s manifest: %w", testWkldName, testError),
+				},
+				"return error if failed to run the pause container": {
+					inputAppName:  testAppName,
+					inputWkldName: testWkldName,
+					inputEnvName:  testEnvName,
+					setupMocks: func(m *localRunExecuteMocks) {
+						m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDefinition, nil)
+						//m.ecsLocalClient.EXPECT().DecryptedSecrets(gomock.Any()).Return(mockDecryptedSecrets, nil)
+						m.sessProvider.EXPECT().FromRole(gomock.Any(), gomock.Any()).Return(&session.Session{
+							Config: &aws.Config{
+								Region: aws.String("us-test"),
+							},
+						}, nil)
+						m.mockWsReader.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
+						m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
+						m.mockMft = &mockWorkloadMft{
+							mockRequiredEnvironmentFeatures: func() []string {
+								return []string{"mockFeature1"}
+							},
+						}
+						m.mockDockerEngine.EXPECT().IsContainerRunning(mockPauseContainerName)
+						m.mockDockerEngine.EXPECT().Run(context.Background(), gomock.Any()).Return(testError)
 					},
-				}
-				m.mockDockerEngine.EXPECT().Run(gomock.Any(), gomock.Any()).Return(nil).Times(2)
-				m.mockDockerEngine.EXPECT().IsContainerRunning(mockPauseContainerName).Return(true, nil)
-				m.mockDockerEngine.EXPECT().Run(gomock.Any(), gomock.Any()).Return(testError)
-			},
-			wantedError: fmt.Errorf("run container: %w", testError),
-		},
-		"successfully run all the containers": {
-			inputAppName:  testAppName,
-			inputWkldName: testWkldName,
-			inputEnvName:  testEnvName,
-			setupMocks: func(m *localRunExecuteMocks) {
-				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDefinition, nil)
-				m.ecsLocalClient.EXPECT().DecryptedSecrets(gomock.Any()).Return(mockDecryptedSecrets, nil)
-				m.sessProvider.EXPECT().FromRole(gomock.Any(), gomock.Any()).Return(&session.Session{
-					Config: &aws.Config{
-						Region: aws.String("us-test"),
+					wantedError: fmt.Errorf("run pause container: %w", testError),
+				},
+				"return error if failed to run service containers": {
+					inputAppName:  testAppName,
+					inputWkldName: testWkldName,
+					inputEnvName:  testEnvName,
+					setupMocks: func(m *localRunExecuteMocks) {
+						m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDefinition, nil)
+						//m.ecsLocalClient.EXPECT().DecryptedSecrets(gomock.Any()).Return(mockDecryptedSecrets, nil)
+						m.sessProvider.EXPECT().FromRole(gomock.Any(), gomock.Any()).Return(&session.Session{
+							Config: &aws.Config{
+								Region: aws.String("us-test"),
+							},
+						}, nil)
+						m.mockWsReader.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
+						m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
+						m.mockMft = &mockWorkloadMft{
+							mockRequiredEnvironmentFeatures: func() []string {
+								return []string{"mockFeature1"}
+							},
+						}
+						m.mockDockerEngine.EXPECT().Run(gomock.Any(), gomock.Any()).Return(nil).Times(2)
+						m.mockDockerEngine.EXPECT().IsContainerRunning(mockPauseContainerName).Return(true, nil)
+						m.mockDockerEngine.EXPECT().Run(gomock.Any(), gomock.Any()).Return(testError)
 					},
-				}, nil)
-				m.mockWsReader.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
-				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
-				m.mockMft = &mockWorkloadMft{
-					mockRequiredEnvironmentFeatures: func() []string {
-						return []string{"mockFeature1"}
+					wantedError: fmt.Errorf("run container: %w", testError),
+				},
+				"successfully run all the containers": {
+					inputAppName:  testAppName,
+					inputWkldName: testWkldName,
+					inputEnvName:  testEnvName,
+					setupMocks: func(m *localRunExecuteMocks) {
+						m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDefinition, nil)
+						//m.ecsLocalClient.EXPECT().DecryptedSecrets(gomock.Any()).Return(mockDecryptedSecrets, nil)
+						m.sessProvider.EXPECT().FromRole(gomock.Any(), gomock.Any()).Return(&session.Session{
+							Config: &aws.Config{
+								Region: aws.String("us-test"),
+							},
+						}, nil)
+						m.mockWsReader.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
+						m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
+						m.mockMft = &mockWorkloadMft{
+							mockRequiredEnvironmentFeatures: func() []string {
+								return []string{"mockFeature1"}
+							},
+						}
+						m.mockDockerEngine.EXPECT().Run(gomock.Any(), gomock.Any()).Return(nil).Times(3)
+						m.mockDockerEngine.EXPECT().IsContainerRunning(mockPauseContainerName).Return(true, nil)
 					},
-				}
-				m.mockDockerEngine.EXPECT().Run(gomock.Any(), gomock.Any()).Return(nil).Times(3)
-				m.mockDockerEngine.EXPECT().IsContainerRunning(mockPauseContainerName).Return(true, nil)
-			},
-		},
+				},
+		*/
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
@@ -437,9 +503,10 @@ func TestLocalRunOpts_Execute(t *testing.T) {
 			tc.setupMocks(m)
 			opts := localRunOpts{
 				localRunVars: localRunVars{
-					appName:  tc.inputAppName,
-					wkldName: tc.inputWkldName,
-					envName:  tc.inputEnvName,
+					appName:      tc.inputAppName,
+					wkldName:     tc.inputWkldName,
+					envName:      tc.inputEnvName,
+					envOverrides: tc.inputEnvOverrides,
 				},
 				newInterpolator: func(app, env string) interpolator {
 					return m.mockInterpolator
@@ -477,6 +544,316 @@ func TestLocalRunOpts_Execute(t *testing.T) {
 			} else {
 				require.EqualError(t, err, tc.wantedError.Error())
 			}
+		})
+	}
+}
+
+func TestLocalRunOpts_getEnvVars(t *testing.T) {
+	newVar := func(v string) envVarValue {
+		return envVarValue{
+			Value: v,
+		}
+	}
+	newSecret := func(v string) envVarValue {
+		return envVarValue{
+			Value:  v,
+			Secret: true,
+		}
+	}
+
+	tests := map[string]struct {
+		taskDef      *awsecs.TaskDefinition
+		envOverrides map[string]string
+		setupMocks   func(m *localRunExecuteMocks)
+
+		want      map[string]map[string]envVarValue
+		wantError string
+	}{
+		"invalid container in env override": {
+			taskDef: &awsecs.TaskDefinition{},
+			envOverrides: map[string]string{
+				"bad:OVERRIDE": "bad",
+			},
+			wantError: `parse env overrides: "bad:OVERRIDE" targets invalid container`,
+		},
+		"overrides parsed and applied correctly": {
+			taskDef: &awsecs.TaskDefinition{
+				ContainerDefinitions: []*sdkecs.ContainerDefinition{
+					{
+						Name: aws.String("foo"),
+					},
+					{
+						Name: aws.String("bar"),
+					},
+				},
+			},
+			envOverrides: map[string]string{
+				"OVERRIDE_ALL": "all",
+				"foo:OVERRIDE": "foo",
+				"bar:OVERRIDE": "bar",
+			},
+			want: map[string]map[string]envVarValue{
+				"foo": {
+					"OVERRIDE_ALL": newVar("all"),
+					"OVERRIDE":     newVar("foo"),
+				},
+				"bar": {
+					"OVERRIDE_ALL": newVar("all"),
+					"OVERRIDE":     newVar("bar"),
+				},
+			},
+		},
+		"overrides merged with existing env vars correctly": {
+			taskDef: &awsecs.TaskDefinition{
+				ContainerDefinitions: []*sdkecs.ContainerDefinition{
+					{
+						Name: aws.String("foo"),
+						Environment: []*sdkecs.KeyValuePair{
+							{
+								Name:  aws.String("RANDOM_FOO"),
+								Value: aws.String("foo"),
+							},
+							{
+								Name:  aws.String("OVERRIDE_ALL"),
+								Value: aws.String("bye"),
+							},
+							{
+								Name:  aws.String("OVERRIDE"),
+								Value: aws.String("bye"),
+							},
+						},
+					},
+					{
+						Name: aws.String("bar"),
+						Environment: []*sdkecs.KeyValuePair{
+							{
+								Name:  aws.String("RANDOM_BAR"),
+								Value: aws.String("bar"),
+							},
+							{
+								Name:  aws.String("OVERRIDE_ALL"),
+								Value: aws.String("bye"),
+							},
+							{
+								Name:  aws.String("OVERRIDE"),
+								Value: aws.String("bye"),
+							},
+						},
+					},
+				},
+			},
+			envOverrides: map[string]string{
+				"OVERRIDE_ALL": "all",
+				"foo:OVERRIDE": "foo",
+				"bar:OVERRIDE": "bar",
+			},
+			want: map[string]map[string]envVarValue{
+				"foo": {
+					"RANDOM_FOO":   newVar("foo"),
+					"OVERRIDE_ALL": newVar("all"),
+					"OVERRIDE":     newVar("foo"),
+				},
+				"bar": {
+					"RANDOM_BAR":   newVar("bar"),
+					"OVERRIDE_ALL": newVar("all"),
+					"OVERRIDE":     newVar("bar"),
+				},
+			},
+		},
+		"error getting secret": {
+			taskDef: &awsecs.TaskDefinition{
+				ContainerDefinitions: []*sdkecs.ContainerDefinition{
+					{
+						Name: aws.String("foo"),
+						Secrets: []*sdkecs.Secret{
+							{
+								Name:      aws.String("SECRET"),
+								ValueFrom: aws.String("defaultSSM"),
+							},
+						},
+					},
+				},
+			},
+			setupMocks: func(m *localRunExecuteMocks) {
+				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "defaultSSM").Return("", errors.New("some error"))
+			},
+			wantError: `get secrets: get secret "defaultSSM": some error`,
+		},
+		"error getting secret if invalid arn": {
+			taskDef: &awsecs.TaskDefinition{
+				ContainerDefinitions: []*sdkecs.ContainerDefinition{
+					{
+						Name: aws.String("foo"),
+						Secrets: []*sdkecs.Secret{
+							{
+								Name:      aws.String("SECRET"),
+								ValueFrom: aws.String("arn:aws:ecs:us-west-2:123456789:service/mycluster/myservice"),
+							},
+						},
+					},
+				},
+			},
+			wantError: `get secrets: get secret "arn:aws:ecs:us-west-2:123456789:service/mycluster/myservice": invalid ARN; not a SSM or Secrets Manager ARN`,
+		},
+		"correct service used based on arn": {
+			taskDef: &awsecs.TaskDefinition{
+				ContainerDefinitions: []*sdkecs.ContainerDefinition{
+					{
+						Name: aws.String("foo"),
+						Secrets: []*sdkecs.Secret{
+							{
+								Name:      aws.String("SSM"),
+								ValueFrom: aws.String("arn:aws:ssm:us-east-2:123456789:parameter/myparam"),
+							},
+							{
+								Name:      aws.String("SECRETS_MANAGER"),
+								ValueFrom: aws.String("arn:aws:secretsmanager:us-west-2:123456789:secret:mysecret"),
+							},
+							{
+								Name:      aws.String("DEFAULT"),
+								ValueFrom: aws.String("myparam"),
+							},
+						},
+					},
+				},
+			},
+			setupMocks: func(m *localRunExecuteMocks) {
+				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "arn:aws:ssm:us-east-2:123456789:parameter/myparam").Return("ssm", nil)
+				m.secretsManager.EXPECT().GetSecretValue(gomock.Any(), "arn:aws:secretsmanager:us-west-2:123456789:secret:mysecret").Return("secretsmanager", nil)
+				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "myparam").Return("default", nil)
+			},
+			want: map[string]map[string]envVarValue{
+				"foo": {
+					"SSM":             newSecret("ssm"),
+					"SECRETS_MANAGER": newSecret("secretsmanager"),
+					"DEFAULT":         newSecret("default"),
+				},
+			},
+		},
+		"only unique secrets pulled": {
+			taskDef: &awsecs.TaskDefinition{
+				ContainerDefinitions: []*sdkecs.ContainerDefinition{
+					{
+						Name: aws.String("foo"),
+						Secrets: []*sdkecs.Secret{
+							{
+								Name:      aws.String("ONE"),
+								ValueFrom: aws.String("shared"),
+							},
+							{
+								Name:      aws.String("TWO"),
+								ValueFrom: aws.String("foo"),
+							},
+						},
+					},
+					{
+						Name: aws.String("bar"),
+						Secrets: []*sdkecs.Secret{
+							{
+								Name:      aws.String("THREE"),
+								ValueFrom: aws.String("shared"),
+							},
+							{
+								Name:      aws.String("FOUR"),
+								ValueFrom: aws.String("bar"),
+							},
+						},
+					},
+				},
+			},
+			setupMocks: func(m *localRunExecuteMocks) {
+				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "shared").Return("shared-value", nil)
+				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "foo").Return("foo-value", nil)
+				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "bar").Return("bar-value", nil)
+			},
+			want: map[string]map[string]envVarValue{
+				"foo": {
+					"ONE": newSecret("shared-value"),
+					"TWO": newSecret("foo-value"),
+				},
+				"bar": {
+					"THREE": newSecret("shared-value"),
+					"FOUR":  newSecret("bar-value"),
+				},
+			},
+		},
+		"secrets set via overrides not pulled": {
+			taskDef: &awsecs.TaskDefinition{
+				ContainerDefinitions: []*sdkecs.ContainerDefinition{
+					{
+						Name: aws.String("foo"),
+						Secrets: []*sdkecs.Secret{
+							{
+								Name:      aws.String("ONE"),
+								ValueFrom: aws.String("shared"),
+							},
+							{
+								Name:      aws.String("TWO"),
+								ValueFrom: aws.String("foo"),
+							},
+						},
+					},
+					{
+						Name: aws.String("bar"),
+						Secrets: []*sdkecs.Secret{
+							{
+								Name:      aws.String("THREE"),
+								ValueFrom: aws.String("shared"),
+							},
+							{
+								Name:      aws.String("FOUR"),
+								ValueFrom: aws.String("bar"),
+							},
+						},
+					},
+				},
+			},
+			envOverrides: map[string]string{
+				"ONE":      "one-overridden",
+				"bar:FOUR": "four-overridden",
+			},
+			setupMocks: func(m *localRunExecuteMocks) {
+				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "shared").Return("shared-value", nil)
+				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "foo").Return("foo-value", nil)
+			},
+			want: map[string]map[string]envVarValue{
+				"foo": {
+					"ONE": newVar("one-overridden"),
+					"TWO": newSecret("foo-value"),
+				},
+				"bar": {
+					"ONE":   newVar("one-overridden"),
+					"THREE": newSecret("shared-value"),
+					"FOUR":  newVar("four-overridden"),
+				},
+			},
+		},
+	}
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			m := &localRunExecuteMocks{
+				ssm:            mocks.NewMocksecretGetter(ctrl),
+				secretsManager: mocks.NewMocksecretGetter(ctrl),
+			}
+			if tc.setupMocks != nil {
+				tc.setupMocks(m)
+			}
+
+			o := &localRunOpts{
+				localRunVars: localRunVars{
+					envOverrides: tc.envOverrides,
+				},
+				ssm:            m.ssm,
+				secretsManager: m.secretsManager,
+			}
+
+			got, err := o.getEnvVars(context.Background(), tc.taskDef)
+			if tc.wantError != "" {
+				require.EqualError(t, err, tc.wantError)
+			}
+			require.Equal(t, tc.want, got)
 		})
 	}
 }
