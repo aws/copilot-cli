@@ -15,6 +15,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
+	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/secretsmanager"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
@@ -236,25 +237,38 @@ func (o *localRunOpts) Execute() error {
 		return fmt.Errorf("get task definition: %w", err)
 	}
 
-	secrets := taskDef.Secrets()
-	decryptedSecrets, err := o.ecsLocalClient.DecryptedSecrets(secrets)
-	if err != nil {
-		return fmt.Errorf("get secret values: %w", err)
+	envVars := make(map[string]map[string]envVarValue)
+	for _, ctr := range taskDef.ContainerDefinitions {
+		envVars[aws.StringValue(ctr.Name)] = make(map[string]envVarValue)
+	}
+	for _, ctr := range taskDef.ContainerDefinitions {
+		for _, env := range ctr.Environment {
+			envVars[aws.StringValue(ctr.Name)][aws.StringValue(env.Name)] = envVarValue{
+				Value: aws.StringValue(env.Value),
+			}
+		}
+	}
+	if err := o.fillEnvOverrides(envVars); err != nil {
+		return fmt.Errorf("parse env overrides: %w", err)
 	}
 
-	secretsList := make(map[string]string, len(decryptedSecrets))
-	for _, s := range decryptedSecrets {
-		secretsList[s.Name] = s.Value
-	}
+	//decryptedSecrets, err := o.ecsLocalClient.DecryptedSecrets(taskDef.Secrets())
+	//if err != nil {
+	//	return fmt.Errorf("get secret values: %w", err)
+	//}
 
-	envVars := make(map[string]string, len(taskDef.EnvironmentVariables()))
-	for _, e := range taskDef.EnvironmentVariables() {
-		envVars[e.Name] = e.Value
-	}
+	// secrets is a map[containerName]->key->valueFrom
+	//secrets := make(map[string]string, len(decryptedSecrets))
+	//for _, s := range decryptedSecrets {
+	//	secrets[s.Name] = s.Value
+	//}
 
-	for k, v := range o.envOverrides {
-		envVars[k] = v
-	}
+	/*
+		for k, v := range o.envOverrides {
+			// TODO no : in key should mean "apply to all containers"
+			// envVars[k] = v
+		}
+	*/
 
 	containerPorts := make(map[string]string, len(taskDef.ContainerDefinitions))
 	for _, container := range taskDef.ContainerDefinitions {
@@ -326,7 +340,7 @@ func (o *localRunOpts) Execute() error {
 		return err
 	}
 
-	err = o.runContainers(context.Background(), o.imageInfoList, secretsList, envVars)
+	err = o.runContainers(context.Background(), o.imageInfoList, secrets, envVars)
 	if err != nil {
 		return err
 	}
@@ -394,7 +408,6 @@ func (o *localRunOpts) runPauseContainer(ctx context.Context, containerPorts map
 	}
 
 	return nil
-
 }
 
 func (o *localRunOpts) runContainers(ctx context.Context, imageInfoList []clideploy.ImagePerContainer, secrets map[string]string, envVars map[string]string) error {
@@ -433,6 +446,84 @@ func (o *localRunOpts) runContainers(ctx context.Context, imageInfoList []clidep
 	return nil
 }
 
+type envVarValue struct {
+	Value  string
+	Secret bool
+}
+
+func (o *localRunOpts) fillEnvOverrides(envVars map[string]map[string]envVarValue) error {
+	set := func(ctr, key, value string) {
+		// preserve the current "Secret" setting
+		cur := envVars[ctr][key]
+		cur.Value = value
+		envVars[ctr][key] = cur
+	}
+
+	for k, v := range o.envOverrides {
+		if !strings.Contains(k, ":") {
+			// apply override to all containers
+			for ctr := range envVars {
+				set(ctr, k, v)
+			}
+			continue
+		}
+
+		// only apply override to the specified container
+		split := strings.SplitN(k, ":", 1)
+		ctr, key := split[0], split[1] // len(split) will always be 2 since we know there is a ":"
+		if _, ok := envVars[ctr]; !ok {
+			return fmt.Errorf("env override %q targeting invalid container", k)
+		}
+		set(ctr, key, v)
+	}
+
+	return nil
+}
+
+// TODO: make env vars & secrets specific to each container
+// --env-override ctrName:HI=asdf
+func (o *localRunOpts) getSecrets(ctx context.Context, taskDef *awsecs.TaskDefinition) (map[string]map[string]string, error) {
+	ctrSecrets := taskDef.Secrets()
+
+	needToGet := make(map[string]bool)
+	for _, secret := range ctrSecrets {
+		needToGet[secret.ValueFrom] = true
+	}
+
+	// figure out which ones we need to get
+	/*
+		decrypt := func(key, valueFrom string) error {
+			if v, ok := o.envOverrides[key]; ok {
+			}
+
+			namespace := ssm.Namespace
+			parsed, err := arn.Parse(secret.ValueFrom)
+			if err == nil {
+			}
+		}
+	*/
+
+	//namespace, err := secretNameSpace(secret.ValueFrom)
+	//if err != nil {
+	//	return nil, err
+	//}
+	//var secretValue string
+	//switch namespace {
+	//case ssm.Namespace:
+	//	secretValue, err = c.ssm.GetSecretValue(secret.ValueFrom)
+	//case secretsmanager.Namespace:
+	//	secretValue, err = c.secretManager.GetSecretValue(secret.ValueFrom)
+	//}
+	//if err != nil {
+	//	return nil, err
+	//}
+	//vars = append(vars, EnvVar{
+	//	Name:  secret.Name,
+	//	Value: secretValue,
+	//})
+	return nil, nil
+}
+
 // BuildLocalRunCmd builds the command for running a workload locally
 func BuildLocalRunCmd() *cobra.Command {
 	vars := localRunVars{}
@@ -452,7 +543,7 @@ func BuildLocalRunCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&vars.wkldName, nameFlag, nameFlagShort, "", workloadFlagDescription)
 	cmd.Flags().StringVarP(&vars.envName, envFlag, envFlagShort, "", envFlagDescription)
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
-	cmd.Flags().StringToStringVar(&vars.envOverrides, envVarFlag, nil, envVarsFlagDescription)
-	cmd.Flags().StringSliceVar(&vars.portOverrides, portsFlag, nil, portOverridesFlagDescription)
+	cmd.Flags().StringToStringVar(&vars.envOverrides, envVarOverrideFlag, nil, envVarsFlagDescription)
+	cmd.Flags().StringSliceVar(&vars.portOverrides, portOverrideFlag, nil, portOverridesFlagDescription)
 	return cmd
 }

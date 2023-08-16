@@ -62,8 +62,8 @@ const (
 	containerFlag               = "container"
 
 	// Run local flags
-	portsFlag  = "port-override"
-	envVarFlag = "env-override"
+	portOverrideFlag   = "port-override"
+	envVarOverrideFlag = "env-override"
 
 	// Flags for CI/CD.
 	githubURLFlag         = "github-url"
@@ -295,7 +295,6 @@ Defaults to all logs. Only one of end-time / follow may be used.`
 	includeStateMachineLogsFlagDescription = "Optional. Include logs from the state machine executions."
 	logGroupFlagDescription                = "Optional. Only return logs from specific log group."
 	containerLogFlagDescription            = "Optional. Return only logs from a specific container."
-	portOverridesFlagDescription           = "Optional. Environment variables specified by key=value separated by commas."
 
 	envResourcesFlagDescription      = "Optional. Show the resources in your environment."
 	svcResourcesFlagDescription      = "Optional. Show the resources in your service."
@@ -303,6 +302,12 @@ Defaults to all logs. Only one of end-time / follow may be used.`
 	localSvcFlagDescription          = "Only show services in the workspace."
 	localJobFlagDescription          = "Only show jobs in the workspace."
 	localPipelineFlagDescription     = "Only show pipelines in the workspace."
+
+	// Run local
+	envVarOverrideFlagDescription = `Optional. Override environment variables passed to containers.
+Format: [container]:KEY=VALUE. Omit container name to apply to all containers.`
+	portOverridesFlagDescription = `Optional. Override ports exposed by service. Format: <host port>:<service port>.
+Example: --port-override 5000:80 binds localhost:5000 to the service's port 80.`
 
 	svcManifestFlagDescription = `Optional. Name of the environment in which the service was deployed;
 output the manifest file used for that deployment.`
