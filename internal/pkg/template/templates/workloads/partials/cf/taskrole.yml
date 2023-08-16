@@ -78,7 +78,7 @@ TaskRole:
               {{- if not $EFS.FilesystemID.RequiresImport}}
                 - !Sub 'arn:${AWS::Partition}:elasticfilesystem:${AWS::Region}:${AWS::AccountId}:file-system/{{$EFS.FilesystemID}}'
               {{- else}}
-                - !Join ['',[!Sub 'arn:${AWS::Partition}:elasticfilesystem:${AWS::Region}:${AWS::AccountId}:file-system','/',!ImportValue {{$EFS.FilesystemID.Value}}]]
+                - !Join ['/',[!Sub 'arn:${AWS::Partition}:elasticfilesystem:${AWS::Region}:${AWS::AccountId}:file-system',!ImportValue {{$EFS.FilesystemID.Value}}]]
               {{- end}}
       {{- end}}
       {{- if .Storage.ManagedVolumeInfo}}

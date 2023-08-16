@@ -225,7 +225,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
                 Action:
                   - 'elasticfilesystem:ClientMount'
                 Resource:
-                  - !Join ['', [!Sub 'arn:${AWS::Partition}:elasticfilesystem:${AWS::Region}:${AWS::AccountId}:file-system', '/', !ImportValue 'stack-fs-12345']]
+                  - !Join ['/', [!Sub 'arn:${AWS::Partition}:elasticfilesystem:${AWS::Region}:${AWS::AccountId}:file-system', !ImportValue 'stack-fs-12345']]
         - PolicyName: 'Publish2SNS'
           PolicyDocument:
             Version: '2012-10-17'
