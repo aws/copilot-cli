@@ -1737,21 +1737,6 @@ func (m *MockecsLocalClient) EXPECT() *MockecsLocalClientMockRecorder {
 	return m.recorder
 }
 
-// DecryptedSecrets mocks base method.
-func (m *MockecsLocalClient) DecryptedSecrets(secrets []*ecs.ContainerSecret) ([]ecs0.EnvVar, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DecryptedSecrets", secrets)
-	ret0, _ := ret[0].([]ecs0.EnvVar)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// DecryptedSecrets indicates an expected call of DecryptedSecrets.
-func (mr *MockecsLocalClientMockRecorder) DecryptedSecrets(secrets interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DecryptedSecrets", reflect.TypeOf((*MockecsLocalClient)(nil).DecryptedSecrets), secrets)
-}
-
 // TaskDefinition mocks base method.
 func (m *MockecsLocalClient) TaskDefinition(app, env, svc string) (*ecs.TaskDefinition, error) {
 	m.ctrl.T.Helper()
