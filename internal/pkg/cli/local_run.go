@@ -9,16 +9,19 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/ssm"
+	sdkssm "github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/secretsmanager"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
+	"github.com/aws/copilot-cli/internal/pkg/aws/ssm"
 	clideploy "github.com/aws/copilot-cli/internal/pkg/cli/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -55,11 +58,17 @@ type localRunVars struct {
 	portOverrides []string
 }
 
+type secretGetter interface {
+	GetSecretValue(context.Context, string) (string, error)
+}
+
 type localRunOpts struct {
 	localRunVars
 
 	sel               deploySelector
 	ecsLocalClient    ecsLocalClient
+	ssm               secretGetter
+	secretsManager    secretGetter
 	sessProvider      sessionProvider
 	sess              *session.Session
 	targetEnv         *config.Environment
@@ -89,7 +98,7 @@ func newLocalRunOpts(vars localRunVars) (*localRunOpts, error) {
 		return nil, err
 	}
 
-	store := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
+	store := config.NewSSMStore(identity.New(defaultSess), sdkssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
 	deployStore, err := deploy.NewStore(sessProvider, store)
 	if err != nil {
 		return nil, err
@@ -129,7 +138,9 @@ func newLocalRunOpts(vars localRunVars) (*localRunOpts, error) {
 		// EnvManagerRole has permissions to get task def and get SSM values.
 		// However, it doesn't have permissions to get secrets from secrets manager,
 		// so use the default sess and *hope* they have permissions.
-		o.ecsLocalClient = ecs.NewWithOptions(envSess, ecs.WithSecretGetter(secretsmanager.New(defaultSessEnvRegion)))
+		o.ecsLocalClient = ecs.New(envSess)
+		o.ssm = ssm.New(envSess)
+		o.secretsManager = secretsmanager.New(defaultSessEnvRegion)
 
 		resources, err := cloudformation.New(o.sess, cloudformation.WithProgressTracker(os.Stderr)).GetAppResourcesByRegion(o.targetApp, o.targetEnv.Region)
 		if err != nil {
@@ -232,45 +243,35 @@ func (o *localRunOpts) Execute() error {
 		return err
 	}
 
+	ctx := context.Background()
+
 	taskDef, err := o.ecsLocalClient.TaskDefinition(o.appName, o.envName, o.wkldName)
 	if err != nil {
 		return fmt.Errorf("get task definition: %w", err)
 	}
 
+	// get env vars and secrets
 	envVars := make(map[string]map[string]envVarValue)
 	for _, ctr := range taskDef.ContainerDefinitions {
 		envVars[aws.StringValue(ctr.Name)] = make(map[string]envVarValue)
 	}
-	for _, ctr := range taskDef.ContainerDefinitions {
-		for _, env := range ctr.Environment {
-			envVars[aws.StringValue(ctr.Name)][aws.StringValue(env.Name)] = envVarValue{
-				Value: aws.StringValue(env.Value),
-			}
-		}
-	}
 	if err := o.fillEnvOverrides(envVars); err != nil {
 		return fmt.Errorf("parse env overrides: %w", err)
 	}
-
-	//decryptedSecrets, err := o.ecsLocalClient.DecryptedSecrets(taskDef.Secrets())
-	//if err != nil {
-	//	return fmt.Errorf("get secret values: %w", err)
-	//}
-
-	// secrets is a map[containerName]->key->valueFrom
-	//secrets := make(map[string]string, len(decryptedSecrets))
-	//for _, s := range decryptedSecrets {
-	//	secrets[s.Name] = s.Value
-	//}
-
-	/*
-		for k, v := range o.envOverrides {
-			// TODO no : in key should mean "apply to all containers"
-			// envVars[k] = v
+	for _, e := range taskDef.EnvironmentVariables() {
+		// only set if it wasn't overridden
+		if _, ok := envVars[e.Container][e.Name]; !ok {
+			envVars[e.Container][e.Name] = envVarValue{
+				Value: e.Value,
+			}
 		}
-	*/
+	}
+	if err := o.fillSecrets(ctx, envVars, taskDef); err != nil {
+		return fmt.Errorf("parse env overrides: %w", err)
+	}
 
-	containerPorts := make(map[string]string, len(taskDef.ContainerDefinitions))
+	// figure out ports to expose
+	ports := make(map[string]string, len(taskDef.ContainerDefinitions))
 	for _, container := range taskDef.ContainerDefinitions {
 		for _, portMapping := range container.PortMappings {
 			hostPort := strconv.FormatInt(aws.Int64Value(portMapping.HostPort), 10)
@@ -279,14 +280,13 @@ func (o *localRunOpts) Execute() error {
 			if portMapping.ContainerPort == nil {
 				containerPort = strconv.FormatInt(aws.Int64Value(portMapping.ContainerPort), 10)
 			}
-			containerPorts[hostPort] = containerPort
+			ports[hostPort] = containerPort
 		}
 	}
-
 	for _, port := range o.portOverrides {
 		// already validated in Validate()
 		split := strings.Split(port, ":")
-		containerPorts[split[0]] = split[1]
+		ports[split[0]] = split[1]
 	}
 
 	envSess, err := o.sessProvider.FromRole(o.targetEnv.ManagerRoleARN, o.targetEnv.Region)
@@ -335,7 +335,7 @@ func (o *localRunOpts) Execute() error {
 	}
 	o.imageInfoList = append(o.imageInfoList, sidecarImageLocations...)
 
-	err = o.runPauseContainer(context.Background(), containerPorts)
+	err = o.runPauseContainer(context.Background(), ports)
 	if err != nil {
 		return err
 	}
@@ -452,18 +452,13 @@ type envVarValue struct {
 }
 
 func (o *localRunOpts) fillEnvOverrides(envVars map[string]map[string]envVarValue) error {
-	set := func(ctr, key, value string) {
-		// preserve the current "Secret" setting
-		cur := envVars[ctr][key]
-		cur.Value = value
-		envVars[ctr][key] = cur
-	}
-
 	for k, v := range o.envOverrides {
 		if !strings.Contains(k, ":") {
 			// apply override to all containers
 			for ctr := range envVars {
-				set(ctr, k, v)
+				envVars[ctr][k] = envVarValue{
+					Value: v,
+				}
 			}
 			continue
 		}
@@ -474,54 +469,79 @@ func (o *localRunOpts) fillEnvOverrides(envVars map[string]map[string]envVarValu
 		if _, ok := envVars[ctr]; !ok {
 			return fmt.Errorf("env override %q targeting invalid container", k)
 		}
-		set(ctr, key, v)
+		envVars[ctr][key] = envVarValue{
+			Value: v,
+		}
 	}
 
 	return nil
 }
 
-// TODO: make env vars & secrets specific to each container
-// --env-override ctrName:HI=asdf
-func (o *localRunOpts) getSecrets(ctx context.Context, taskDef *awsecs.TaskDefinition) (map[string]map[string]string, error) {
-	ctrSecrets := taskDef.Secrets()
-
-	needToGet := make(map[string]bool)
-	for _, secret := range ctrSecrets {
-		needToGet[secret.ValueFrom] = true
+func (o *localRunOpts) fillSecrets(ctx context.Context, envVars map[string]map[string]envVarValue, taskDef *awsecs.TaskDefinition) error {
+	// figure out which secrets we need to get, set value to ValueFrom
+	unique := make(map[string]string)
+	for _, s := range taskDef.Secrets() {
+		// only set if it wasn't overridden
+		if _, ok := envVars[s.Container][s.Name]; !ok {
+			envVars[s.Container][s.Name] = envVarValue{
+				Value:  s.ValueFrom,
+				Secret: true,
+			}
+			unique[s.ValueFrom] = ""
+		}
 	}
 
-	// figure out which ones we need to get
-	/*
-		decrypt := func(key, valueFrom string) error {
-			if v, ok := o.envOverrides[key]; ok {
+	// get value of all needed secrets
+	mu := &sync.Mutex{}
+	g, ctx := errgroup.WithContext(ctx)
+	for valueFrom := range unique {
+		valueFrom := valueFrom
+		g.Go(func() error {
+			val, err := o.getSecret(ctx, valueFrom)
+			if err != nil {
+				return fmt.Errorf("get secret %q: %w", valueFrom, err)
 			}
 
-			namespace := ssm.Namespace
-			parsed, err := arn.Parse(secret.ValueFrom)
-			if err == nil {
+			mu.Lock()
+			defer mu.Unlock()
+			unique[valueFrom] = val
+			return nil
+		})
+	}
+	if err := g.Wait(); err != nil {
+		return err
+	}
+
+	// replace secrets with resolved values
+	for ctr, vars := range envVars {
+		for key, val := range vars {
+			if val.Secret {
+				envVars[ctr][key] = envVarValue{
+					Value:  unique[val.Value],
+					Secret: true,
+				}
 			}
 		}
-	*/
+	}
 
-	//namespace, err := secretNameSpace(secret.ValueFrom)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//var secretValue string
-	//switch namespace {
-	//case ssm.Namespace:
-	//	secretValue, err = c.ssm.GetSecretValue(secret.ValueFrom)
-	//case secretsmanager.Namespace:
-	//	secretValue, err = c.secretManager.GetSecretValue(secret.ValueFrom)
-	//}
-	//if err != nil {
-	//	return nil, err
-	//}
-	//vars = append(vars, EnvVar{
-	//	Name:  secret.Name,
-	//	Value: secretValue,
-	//})
-	return nil, nil
+	return nil
+}
+
+func (o *localRunOpts) getSecret(ctx context.Context, valueFrom string) (string, error) {
+	// default to ssm
+	getter := o.ssm
+	if parsed, err := arn.Parse(valueFrom); err == nil { // only overwrite if successful
+		switch parsed.Service {
+		case sdkssm.ServiceName:
+			getter = o.ssm
+		case secretsmanager.ServiceName:
+			getter = o.secretsManager
+		default:
+			return "", fmt.Errorf("invalid ARN: not an SSM or Secrets Manager ARN")
+		}
+	}
+
+	return getter.GetSecretValue(ctx, valueFrom)
 }
 
 // BuildLocalRunCmd builds the command for running a workload locally
