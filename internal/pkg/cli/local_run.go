@@ -15,6 +15,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+	"github.com/aws/copilot-cli/internal/pkg/aws/secretsmanager"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	clideploy "github.com/aws/copilot-cli/internal/pkg/cli/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -25,10 +26,12 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/repository"
+	termcolor "github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/term/syncbuffer"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
+	"github.com/fatih/color"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
@@ -66,9 +69,10 @@ type localRunOpts struct {
 	out               clideploy.UploadArtifactsOutput
 	imageInfoList     []clideploy.ImagePerContainer
 	containerSuffix   string
+	newColor          func() *color.Color
 
 	buildContainerImages func(o *localRunOpts) error
-	configureClients     func(o *localRunOpts) (repositoryService, error)
+	configureClients     func(o *localRunOpts) error
 	labeledTermPrinter   func(fw syncbuffer.FileWriter, bufs []*syncbuffer.LabeledSyncBuffer, opts ...syncbuffer.LabeledTermPrinterOption) clideploy.LabeledTermPrinter
 	unmarshal            func([]byte) (manifest.DynamicWorkload, error)
 	newInterpolator      func(app, env string) interpolator
@@ -99,7 +103,6 @@ func newLocalRunOpts(vars localRunVars) (*localRunOpts, error) {
 		sel:                selector.NewDeploySelect(prompt.New(), store, deployStore),
 		store:              store,
 		ws:                 ws,
-		ecsLocalClient:     ecs.New(defaultSess),
 		newInterpolator:    newManifestInterpolator,
 		sessProvider:       sessProvider,
 		unmarshal:          manifest.UnmarshalWorkload,
@@ -107,20 +110,30 @@ func newLocalRunOpts(vars localRunVars) (*localRunOpts, error) {
 		cmd:                exec.NewCmd(),
 		dockerEngine:       dockerengine.New(exec.NewCmd()),
 		labeledTermPrinter: labeledTermPrinter,
+		newColor:           termcolor.ColorGenerator(),
 	}
-	opts.configureClients = func(o *localRunOpts) (repositoryService, error) {
+	opts.configureClients = func(o *localRunOpts) error {
 		defaultSessEnvRegion, err := o.sessProvider.DefaultWithRegion(o.targetEnv.Region)
 		if err != nil {
-			return nil, fmt.Errorf("create default session with region %s: %w", o.targetEnv.Region, err)
+			return fmt.Errorf("create default session with region %s: %w", o.targetEnv.Region, err)
 		}
+		envSess, err := o.sessProvider.FromRole(o.targetEnv.ManagerRoleARN, o.targetEnv.Region)
+		if err != nil {
+			return fmt.Errorf("create env session %s: %w", o.targetEnv.Region, err)
+		}
+
+		// EnvManagerRole has permissions to get task def and get SSM values.
+		// However, it doesn't have permissions to get secrets from secrets manager,
+		// so use the default sess and *hope* they have permissions.
+		o.ecsLocalClient = ecs.NewWithOptions(envSess, ecs.WithSecretGetter(secretsmanager.New(defaultSessEnvRegion)))
+
 		resources, err := cloudformation.New(o.sess, cloudformation.WithProgressTracker(os.Stderr)).GetAppResourcesByRegion(o.targetApp, o.targetEnv.Region)
 		if err != nil {
-			return nil, fmt.Errorf("get application %s resources from region %s: %w", o.appName, o.envName, err)
+			return fmt.Errorf("get application %s resources from region %s: %w", o.appName, o.envName, err)
 		}
 		repoName := clideploy.RepoName(o.appName, o.wkldName)
-		repository := repository.NewWithURI(
-			ecr.New(defaultSessEnvRegion), repoName, resources.RepositoryURLs[o.wkldName])
-		return repository, nil
+		o.repository = repository.NewWithURI(ecr.New(defaultSessEnvRegion), repoName, resources.RepositoryURLs[o.wkldName])
+		return nil
 	}
 	opts.buildContainerImages = func(o *localRunOpts) error {
 		gitShortCommit := imageTagFromGit(o.cmd)
@@ -195,6 +208,10 @@ func (o *localRunOpts) validateAndAskWkldEnvName() error {
 
 // Execute builds and runs the workload images locally.
 func (o *localRunOpts) Execute() error {
+	if err := o.configureClients(o); err != nil {
+		return err
+	}
+
 	taskDef, err := o.ecsLocalClient.TaskDefinition(o.appName, o.envName, o.wkldName)
 	if err != nil {
 		return fmt.Errorf("get task definition: %w", err)
@@ -246,19 +263,18 @@ func (o *localRunOpts) Execute() error {
 		return err
 	}
 	o.appliedDynamicMft = mft
-	o.repository, err = o.configureClients(o)
-	if err != nil {
-		return err
-	}
 
 	if err := o.buildContainerImages(o); err != nil {
 		return err
 	}
 
 	for name, imageInfo := range o.out.ImageDigests {
+		if len(imageInfo.RepoTags) == 0 {
+			return fmt.Errorf("no repo tags for image %q", name)
+		}
 		o.imageInfoList = append(o.imageInfoList, clideploy.ImagePerContainer{
 			ContainerName: name,
-			ImageURI:      imageInfo.ImageName,
+			ImageURI:      imageInfo.RepoTags[0],
 		})
 	}
 
@@ -314,6 +330,10 @@ func (o *localRunOpts) runPauseContainer(ctx context.Context, containerPorts map
 		ContainerName:  containerNameWithSuffix,
 		ContainerPorts: containerPorts,
 		Command:        []string{"sleep", "infinity"},
+		LogOptions: dockerengine.RunLogOptions{
+			Color:      o.newColor(),
+			LinePrefix: "[pause] ",
+		},
 	}
 
 	//channel to receive any error from the goroutine
@@ -365,6 +385,10 @@ func (o *localRunOpts) runContainers(ctx context.Context, imageInfoList []clidep
 				Secrets:          secrets,
 				EnvVars:          envVars,
 				ContainerNetwork: containerNetwork,
+				LogOptions: dockerengine.RunLogOptions{
+					Color:      o.newColor(),
+					LinePrefix: fmt.Sprintf("[%s] ", imageInfo.ContainerName),
+				},
 			}
 			if err := o.dockerEngine.Run(ctx, runOptions); err != nil {
 				return fmt.Errorf("run container: %w", err)
