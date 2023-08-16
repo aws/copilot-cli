@@ -15,6 +15,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/session"
+	sdksecretsmanager "github.com/aws/aws-sdk-go/service/secretsmanager"
 	sdkssm "github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
@@ -340,7 +341,7 @@ func (o *localRunOpts) Execute() error {
 		return err
 	}
 
-	err = o.runContainers(context.Background(), o.imageInfoList, secrets, envVars)
+	err = o.runContainers(context.Background(), o.imageInfoList, envVars)
 	if err != nil {
 		return err
 	}
@@ -410,7 +411,7 @@ func (o *localRunOpts) runPauseContainer(ctx context.Context, containerPorts map
 	return nil
 }
 
-func (o *localRunOpts) runContainers(ctx context.Context, imageInfoList []clideploy.ImagePerContainer, secrets map[string]string, envVars map[string]string) error {
+func (o *localRunOpts) runContainers(ctx context.Context, imageInfoList []clideploy.ImagePerContainer, envVars map[string]map[string]envVarValue) error {
 	g, ctx := errgroup.WithContext(ctx)
 
 	// Iterate over the image info list and perform parallel container runs
@@ -419,13 +420,23 @@ func (o *localRunOpts) runContainers(ctx context.Context, imageInfoList []clidep
 
 		containerNameWithSuffix := fmt.Sprintf("%s-%s", imageInfo.ContainerName, o.containerSuffix)
 		containerNetwork := fmt.Sprintf("%s-%s", pauseContainerName, o.containerSuffix)
+
+		vars, secrets := make(map[string]string), make(map[string]string)
+		for k, v := range envVars[imageInfo.ContainerName] {
+			if v.Secret {
+				secrets[k] = v.Value
+			} else {
+				vars[k] = v.Value
+			}
+		}
+
 		// Execute each container run in a separate goroutine
 		g.Go(func() error {
 			runOptions := &dockerengine.RunOptions{
 				ImageURI:         imageInfo.ImageURI,
 				ContainerName:    containerNameWithSuffix,
 				Secrets:          secrets,
-				EnvVars:          envVars,
+				EnvVars:          vars,
 				ContainerNetwork: containerNetwork,
 				LogOptions: dockerengine.RunLogOptions{
 					Color:      o.newColor(),
@@ -534,7 +545,7 @@ func (o *localRunOpts) getSecret(ctx context.Context, valueFrom string) (string,
 		switch parsed.Service {
 		case sdkssm.ServiceName:
 			getter = o.ssm
-		case secretsmanager.ServiceName:
+		case sdksecretsmanager.ServiceName:
 			getter = o.secretsManager
 		default:
 			return "", fmt.Errorf("invalid ARN: not an SSM or Secrets Manager ARN")
