@@ -47,6 +47,24 @@ const (
 	envOutputManagerRoleKey      = "EnvironmentManagerRoleARN"
 )
 
+// Cloudformation stack tag keys.
+const (
+	StackNameTagKey = "aws:cloudformation:stack-name"
+	LogicalIDTagKey = "aws:cloudformation:logical-id"
+)
+
+// Environment managed S3 buckets.
+const (
+	ELBAccessLogsBucketLogicalID = "ELBAccessLogsBucket"
+)
+
+// Slice of environment managed S3 bucket IDs.
+var (
+	EnvManagedS3BucketLogicalIds = []string{
+		ELBAccessLogsBucketLogicalID,
+	}
+)
+
 const (
 	// DefaultVPCCIDR is the default CIDR used for a manged VPC.
 	DefaultVPCCIDR = "10.0.0.0/16"
