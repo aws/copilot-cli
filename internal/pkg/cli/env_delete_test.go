@@ -632,7 +632,7 @@ Resources:
 							ResourceARN: aws.String("arn:aws:s3:::mockapp-mockenv-mockbucket"),
 							Tags: []*resourcegroupstaggingapi.Tag{
 								{
-									Key:   aws.String(stack.EnvS3BucketStackNameTagKey),
+									Key:   aws.String(stack.StackNameTagKey),
 									Value: aws.String("mockapp-mockenv"),
 								},
 								{

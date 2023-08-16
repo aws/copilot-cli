@@ -49,8 +49,8 @@ const (
 
 // S3 bucket tag keys.
 const (
-	EnvS3BucketStackNameTagKey = "aws:cloudformation:stack-name"
-	EnvS3BucketLogicalIDTagKey = "aws:cloudformation:logical-id"
+	StackNameTagKey = "aws:cloudformation:stack-name"
+	LogicalIDTagKey = "aws:cloudformation:logical-id"
 )
 
 // Environment managed S3 buckets.

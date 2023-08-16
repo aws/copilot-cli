@@ -4,6 +4,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
@@ -138,12 +139,8 @@ type errBucketEmptyingFailed struct {
 }
 
 func (e *errBucketEmptyingFailed) Error() string {
-	var bucketFailureMsgs []string
-	for i := range e.failedBuckets {
-		bucketFailureMsgs = append(bucketFailureMsgs, fmt.Sprintf("\"%v\": %v", e.failedBuckets[i], e.bucketErrors[i].Error()))
-	}
-	return fmt.Sprintf("emptying %v failed: %v", english.PluralWord(len(e.failedBuckets), "bucket", "buckets"),
-		english.WordSeries(bucketFailureMsgs, "and"))
+	return fmt.Sprintf("emptying %v %v failed: %v", english.PluralWord(len(e.failedBuckets), "bucket", "buckets"),
+		english.WordSeries(e.failedBuckets, "and"), errors.Join(e.bucketErrors...))
 }
 
 func (e *errBucketEmptyingFailed) RecommendActions() string {

@@ -375,11 +375,11 @@ func (o *deleteEnvOpts) emptyBuckets() error {
 		ResourceTypeFilters: aws.StringSlice([]string{"s3:bucket"}),
 		TagFilters: []*resourcegroupstaggingapi.TagFilter{
 			{
-				Key:    aws.String(stack.EnvS3BucketStackNameTagKey),
+				Key:    aws.String(stack.StackNameTagKey),
 				Values: []*string{aws.String(stack.NameForEnv(o.appName, o.name))},
 			},
 			{
-				Key:    aws.String(stack.EnvS3BucketLogicalIDTagKey),
+				Key:    aws.String(stack.LogicalIDTagKey),
 				Values: aws.StringSlice(stack.EnvManagedS3BucketLogicalIds),
 			},
 			{
