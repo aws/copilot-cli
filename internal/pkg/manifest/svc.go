@@ -413,9 +413,10 @@ func (cfg *fromCFN) isEmpty() bool {
 	return cfg.Name == nil
 }
 
+// StringOrFromCFN represents a choice between a plain string value and a value retrieved from CloudFormation.
 type StringOrFromCFN struct {
-	Plain   *string
-	FromCFN fromCFN
+	Plain   *string // Plain is a user-defined string value.
+	FromCFN fromCFN // FromCFN holds a value obtained from CloudFormation.
 }
 
 func (s StringOrFromCFN) isEmpty() bool {
