@@ -413,17 +413,17 @@ func (cfg *fromCFN) isEmpty() bool {
 	return cfg.Name == nil
 }
 
-type stringOrFromCFN struct {
+type StringOrFromCFN struct {
 	Plain   *string
 	FromCFN fromCFN
 }
 
-func (s stringOrFromCFN) isEmpty() bool {
+func (s StringOrFromCFN) isEmpty() bool {
 	return s.FromCFN.isEmpty() && s.Plain == nil
 }
 
 // UnmarshalYAML implements the yaml.Unmarshaler (v3) interface to override the default YAML unmarshalling logic.
-func (s *stringOrFromCFN) UnmarshalYAML(value *yaml.Node) error {
+func (s *StringOrFromCFN) UnmarshalYAML(value *yaml.Node) error {
 	if err := value.Decode(&s.FromCFN); err != nil {
 		switch err.(type) {
 		case *yaml.TypeError:
@@ -439,14 +439,6 @@ func (s *stringOrFromCFN) UnmarshalYAML(value *yaml.Node) error {
 		return errors.New(`cannot unmarshal field to a string or into a map`)
 	}
 	return nil
-}
-
-// PlainTostringOrFromCFN returns the new stringOrFromCFN struct with the
-// underlying plain field set, holding value.
-func PlainTostringOrFromCFN(value string) *stringOrFromCFN {
-	return &stringOrFromCFN{
-		Plain: aws.String(value),
-	}
 }
 
 func (cfg ImageWithPortAndHealthcheck) exposedPorts(workloadName string) []ExposedPort {

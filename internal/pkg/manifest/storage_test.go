@@ -28,7 +28,7 @@ efs:
 			want: testVolume{
 				EFS: EFSConfigOrBool{
 					Advanced: EFSVolumeConfiguration{
-						FileSystemID: &stringOrFromCFN{Plain: aws.String("fs-12345")},
+						FileSystemID: &StringOrFromCFN{Plain: aws.String("fs-12345")},
 					},
 				},
 			},
@@ -64,7 +64,7 @@ efs:
 			want: testVolume{
 				EFS: EFSConfigOrBool{
 					Advanced: EFSVolumeConfiguration{
-						FileSystemID: &stringOrFromCFN{FromCFN: fromCFN{Name: aws.String("expoted-fs-id")}},
+						FileSystemID: &StringOrFromCFN{FromCFN: fromCFN{Name: aws.String("expoted-fs-id")}},
 					},
 				},
 			},
@@ -80,7 +80,7 @@ efs:
 			want: testVolume{
 				EFS: EFSConfigOrBool{
 					Advanced: EFSVolumeConfiguration{
-						FileSystemID:  &stringOrFromCFN{Plain: aws.String("fs-12345")},
+						FileSystemID:  &StringOrFromCFN{Plain: aws.String("fs-12345")},
 						RootDirectory: aws.String("/"),
 						AuthConfig: AuthorizationConfig{
 							IAM:           aws.Bool(true),
@@ -157,7 +157,7 @@ func Test_EmptyVolume(t *testing.T) {
 			in: EFSConfigOrBool{
 				Enabled: aws.Bool(true),
 				Advanced: EFSVolumeConfiguration{
-					FileSystemID: &stringOrFromCFN{Plain: aws.String("fs-12345")},
+					FileSystemID: &StringOrFromCFN{Plain: aws.String("fs-12345")},
 				},
 			},
 			want: false,
@@ -165,7 +165,7 @@ func Test_EmptyVolume(t *testing.T) {
 		"misconfigured with FSID and UID": {
 			in: EFSConfigOrBool{
 				Advanced: EFSVolumeConfiguration{
-					FileSystemID: &stringOrFromCFN{Plain: aws.String("fs-12345")},
+					FileSystemID: &StringOrFromCFN{Plain: aws.String("fs-12345")},
 					UID:          aws.Uint32(6777),
 					GID:          aws.Uint32(6777),
 				},
@@ -228,7 +228,7 @@ func Test_UseManagedFS(t *testing.T) {
 			in: EFSConfigOrBool{
 				Enabled: aws.Bool(true),
 				Advanced: EFSVolumeConfiguration{
-					FileSystemID: &stringOrFromCFN{Plain: aws.String("fs-12345")},
+					FileSystemID: &StringOrFromCFN{Plain: aws.String("fs-12345")},
 				},
 			},
 			want: true,
@@ -236,7 +236,7 @@ func Test_UseManagedFS(t *testing.T) {
 		"misconfigured with FSID and UID": {
 			in: EFSConfigOrBool{
 				Advanced: EFSVolumeConfiguration{
-					FileSystemID: &stringOrFromCFN{Plain: aws.String("fs-12345")},
+					FileSystemID: &StringOrFromCFN{Plain: aws.String("fs-12345")},
 					UID:          aws.Uint32(6777),
 					GID:          aws.Uint32(6777),
 				},

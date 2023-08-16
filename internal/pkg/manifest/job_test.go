@@ -67,7 +67,7 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 						TaskConfig: TaskConfig{
 							Variables: map[string]Variable{
 								"LOG_LEVEL": {
-									stringOrFromCFN{
+									StringOrFromCFN{
 										Plain: stringP("prod"),
 									},
 								},
@@ -106,7 +106,7 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 						},
 						Variables: map[string]Variable{
 							"LOG_LEVEL": {
-								stringOrFromCFN{
+								StringOrFromCFN{
 									Plain: stringP("prod"),
 								},
 							},
@@ -369,7 +369,7 @@ func TestScheduledJob_RequiredEnvironmentFeatures(t *testing.T) {
 						"mock-imported-volume": {
 							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									FileSystemID: &stringOrFromCFN{Plain: aws.String("fs-12345")},
+									FileSystemID: &StringOrFromCFN{Plain: aws.String("fs-12345")},
 								},
 							},
 						},
@@ -385,7 +385,7 @@ func TestScheduledJob_RequiredEnvironmentFeatures(t *testing.T) {
 						"mock-imported-volume": {
 							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									FileSystemID: &stringOrFromCFN{Plain: aws.String("fs-12345")},
+									FileSystemID: &StringOrFromCFN{Plain: aws.String("fs-12345")},
 								},
 							},
 						},

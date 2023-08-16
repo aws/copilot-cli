@@ -77,7 +77,7 @@ type SidecarMountPoint struct {
 
 // EFSVolumeConfiguration holds options which tell ECS how to reach out to the EFS filesystem.
 type EFSVolumeConfiguration struct {
-	FileSystemID  *stringOrFromCFN    `yaml:"id"`       // Required. Can be specified as "copilot" or "managed" magic keys.
+	FileSystemID  *StringOrFromCFN    `yaml:"id"`       // Required. Can be specified as "copilot" or "managed" magic keys.
 	RootDirectory *string             `yaml:"root_dir"` // Default "/". For BYO EFS.
 	AuthConfig    AuthorizationConfig `yaml:"auth"`     // Auth config for BYO EFS.
 	UID           *uint32             `yaml:"uid"`      // UID for managed EFS.

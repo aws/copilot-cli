@@ -1074,17 +1074,17 @@ func TestEfsVolumeConfigurationTransformer_Transformer(t *testing.T) {
 				e.GID = aws.Uint32(53589793)
 			},
 			override: func(e *EFSVolumeConfiguration) {
-				e.FileSystemID = &stringOrFromCFN{Plain: aws.String("mockFileSystem")}
+				e.FileSystemID = &StringOrFromCFN{Plain: aws.String("mockFileSystem")}
 				e.RootDirectory = aws.String("mockRootDir")
 			},
 			wanted: func(e *EFSVolumeConfiguration) {
-				e.FileSystemID = &stringOrFromCFN{Plain: aws.String("mockFileSystem")}
+				e.FileSystemID = &StringOrFromCFN{Plain: aws.String("mockFileSystem")}
 				e.RootDirectory = aws.String("mockRootDir")
 			},
 		},
 		"BYO config set to empty if UID config is not empty": {
 			original: func(e *EFSVolumeConfiguration) {
-				e.FileSystemID = &stringOrFromCFN{FromCFN: fromCFN{Name: aws.String("mockFileSystem")}}
+				e.FileSystemID = &StringOrFromCFN{FromCFN: fromCFN{Name: aws.String("mockFileSystem")}}
 				e.RootDirectory = aws.String("mockRootDir")
 			},
 			override: func(e *EFSVolumeConfiguration) {
@@ -1250,7 +1250,7 @@ func TestSecretTransformer_Transformer(t *testing.T) {
 	}{
 		`"from" set to empty when overriding with "secretsmanager"`: {
 			original: func(s *Secret) {
-				s.from = stringOrFromCFN{
+				s.from = StringOrFromCFN{
 					Plain: aws.String("/github/token"),
 				}
 			},
@@ -1272,12 +1272,12 @@ func TestSecretTransformer_Transformer(t *testing.T) {
 				}
 			},
 			override: func(s *Secret) {
-				s.from = stringOrFromCFN{
+				s.from = StringOrFromCFN{
 					Plain: aws.String("/github/token"),
 				}
 			},
 			wanted: func(s *Secret) {
-				s.from = stringOrFromCFN{
+				s.from = StringOrFromCFN{
 					Plain: aws.String("/github/token"),
 				}
 			},
@@ -1289,14 +1289,14 @@ func TestSecretTransformer_Transformer(t *testing.T) {
 				}
 			},
 			override: func(s *Secret) {
-				s.from = stringOrFromCFN{
+				s.from = StringOrFromCFN{
 					FromCFN: fromCFN{
 						Name: aws.String("stack-SSMGHTokenName"),
 					},
 				}
 			},
 			wanted: func(s *Secret) {
-				s.from = stringOrFromCFN{
+				s.from = StringOrFromCFN{
 					FromCFN: fromCFN{
 						Name: aws.String("stack-SSMGHTokenName"),
 					},

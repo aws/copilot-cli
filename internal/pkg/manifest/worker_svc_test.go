@@ -521,7 +521,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 					CPU: aws.Int(512),
 					Variables: map[string]Variable{
 						"LOG_LEVEL": {
-							stringOrFromCFN{
+							StringOrFromCFN{
 								Plain: stringP(""),
 							},
 						},
@@ -915,7 +915,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 						},
 						Variables: map[string]Variable{
 							"LOG_LEVEL": {
-								stringOrFromCFN{
+								StringOrFromCFN{
 									Plain: stringP(""),
 								},
 							},
@@ -1528,7 +1528,7 @@ func TestWorkerService_RequiredEnvironmentFeatures(t *testing.T) {
 						"mock-imported-volume": {
 							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									FileSystemID: &stringOrFromCFN{Plain: aws.String("mock-id")},
+									FileSystemID: &StringOrFromCFN{Plain: aws.String("mock-id")},
 								},
 							},
 						},
@@ -1544,7 +1544,7 @@ func TestWorkerService_RequiredEnvironmentFeatures(t *testing.T) {
 						"mock-imported-volume": {
 							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									FileSystemID: &stringOrFromCFN{Plain: aws.String("mock-id")},
+									FileSystemID: &StringOrFromCFN{Plain: aws.String("mock-id")},
 								},
 							},
 						},
