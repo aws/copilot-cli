@@ -82,14 +82,33 @@ type Client struct {
 	StepFuncClient stepFunctionsClient
 }
 
-// New inits a new Client.
+// New creates a new Client.
 func New(sess *session.Session) *Client {
-	return &Client{
+	return NewWithOptions(sess)
+}
+
+// NewWithOptions creates a new Client with opts.
+func NewWithOptions(sess *session.Session, opts ...Option) *Client {
+	c := &Client{
 		rgGetter:       resourcegroups.New(sess),
 		ecsClient:      ecs.New(sess),
 		ssm:            ssm.New(sess),
 		secretManager:  secretsmanager.New(sess),
 		StepFuncClient: stepfunctions.New(sess),
+	}
+	for _, opt := range opts {
+		opt(c)
+	}
+	return c
+}
+
+// Option is for functional options.
+type Option func(*Client)
+
+// WithSecretGetter returns an option to set a custom secret getter on Client.
+func WithSecretGetter(s secretGetter) Option {
+	return func(c *Client) {
+		c.secretManager = s
 	}
 }
 

@@ -27,6 +27,7 @@ var _ = Describe("init flow", Ordered, func() {
 		_, initErr = cli.Init(&client.InitRequest{
 			AppName:      appName,
 			WorkloadName: svcName,
+			EnvName:      envName,
 			ImageTag:     "gallopinggurdey",
 			Dockerfile:   "./front-end/Dockerfile",
 			WorkloadType: "Load Balanced Web Service",
@@ -37,6 +38,7 @@ var _ = Describe("init flow", Ordered, func() {
 		_, jobInitErr = cli.Init(&client.InitRequest{
 			AppName:      appName,
 			WorkloadName: jobName,
+			EnvName:      envName,
 			ImageTag:     "thepostalservice",
 			Dockerfile:   "./mailer/Dockerfile",
 			WorkloadType: "Scheduled Job",
@@ -122,7 +124,7 @@ var _ = Describe("init flow", Ordered, func() {
 
 		It("should return a valid route", func() {
 			Expect(len(svc.Routes)).To(Equal(1))
-			Expect(svc.Routes[0].Environment).To(Equal("test"))
+			Expect(svc.Routes[0].Environment).To(Equal("dev"))
 			Eventually(func() (int, error) {
 				resp, fetchErr := http.Get(svc.Routes[0].URL)
 				return resp.StatusCode, fetchErr
@@ -131,7 +133,7 @@ var _ = Describe("init flow", Ordered, func() {
 
 		It("should return a valid service discovery namespace", func() {
 			Expect(len(svc.ServiceDiscoveries)).To(Equal(1))
-			Expect(svc.ServiceDiscoveries[0].Environment).To(Equal([]string{"test"}))
+			Expect(svc.ServiceDiscoveries[0].Environment).To(Equal([]string{"dev"}))
 			Expect(svc.ServiceDiscoveries[0].Endpoint).To(Equal(fmt.Sprintf("%s.%s.%s.local:80", svcName, envName, appName)))
 		})
 
@@ -139,7 +141,7 @@ var _ = Describe("init flow", Ordered, func() {
 			Expect(len(svc.Variables)).To(Equal(5))
 			expectedVars := map[string]string{
 				"COPILOT_APPLICATION_NAME":           appName,
-				"COPILOT_ENVIRONMENT_NAME":           "test",
+				"COPILOT_ENVIRONMENT_NAME":           "dev",
 				"COPILOT_LB_DNS":                     strings.TrimPrefix(svc.Routes[0].URL, "http://"),
 				"COPILOT_SERVICE_NAME":               svcName,
 				"COPILOT_SERVICE_DISCOVERY_ENDPOINT": fmt.Sprintf("%s.%s.local", envName, appName),
@@ -158,7 +160,7 @@ var _ = Describe("init flow", Ordered, func() {
 				svcLogs, svcLogsErr = cli.SvcLogs(&client.SvcLogsRequest{
 					AppName: appName,
 					Name:    svcName,
-					EnvName: "test",
+					EnvName: "dev",
 					Since:   "1h",
 				})
 				return svcLogs, svcLogsErr
@@ -178,7 +180,7 @@ var _ = Describe("init flow", Ordered, func() {
 		BeforeAll(func() {
 			_, err = cli.SvcDeploy(&client.SvcDeployInput{
 				Name:     svcName,
-				EnvName:  "test",
+				EnvName:  "dev",
 				Force:    true,
 				ImageTag: "gallopinggurdey",
 			})
@@ -193,7 +195,7 @@ var _ = Describe("init flow", Ordered, func() {
 			})
 			Expect(svcShowErr).NotTo(HaveOccurred())
 			Expect(len(svc.Routes)).To(Equal(1))
-			Expect(svc.Routes[0].Environment).To(Equal("test"))
+			Expect(svc.Routes[0].Environment).To(Equal("dev"))
 			Eventually(func() (int, error) {
 				resp, fetchErr := http.Get(svc.Routes[0].URL)
 				return resp.StatusCode, fetchErr
