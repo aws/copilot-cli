@@ -7643,31 +7643,31 @@ func (mr *MockdockerEngineRunnerMockRecorder) IsContainerRunning(arg0 interface{
 }
 
 // KillContainer mocks base method.
-func (m *MockdockerEngineRunner) KillContainer(containerName string) error {
+func (m *MockdockerEngineRunner) KillContainer(arg0 string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "KillContainer", containerName)
+	ret := m.ctrl.Call(m, "KillContainer", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // KillContainer indicates an expected call of KillContainer.
-func (mr *MockdockerEngineRunnerMockRecorder) KillContainer(containerName interface{}) *gomock.Call {
+func (mr *MockdockerEngineRunnerMockRecorder) KillContainer(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "KillContainer", reflect.TypeOf((*MockdockerEngineRunner)(nil).KillContainer), containerName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "KillContainer", reflect.TypeOf((*MockdockerEngineRunner)(nil).KillContainer), arg0)
 }
 
 // RemoveContainer mocks base method.
-func (m *MockdockerEngineRunner) RemoveContainer(containerName string) error {
+func (m *MockdockerEngineRunner) RemoveContainer(arg0 string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RemoveContainer", containerName)
+	ret := m.ctrl.Call(m, "RemoveContainer", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // RemoveContainer indicates an expected call of RemoveContainer.
-func (mr *MockdockerEngineRunnerMockRecorder) RemoveContainer(containerName interface{}) *gomock.Call {
+func (mr *MockdockerEngineRunnerMockRecorder) RemoveContainer(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveContainer", reflect.TypeOf((*MockdockerEngineRunner)(nil).RemoveContainer), containerName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveContainer", reflect.TypeOf((*MockdockerEngineRunner)(nil).RemoveContainer), arg0)
 }
 
 // Run mocks base method.
