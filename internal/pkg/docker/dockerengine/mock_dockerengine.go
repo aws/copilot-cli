@@ -72,3 +72,56 @@ func (mr *MockCmdMockRecorder) RunWithContext(ctx, name, args interface{}, opts 
 	varargs := append([]interface{}{ctx, name, args}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RunWithContext", reflect.TypeOf((*MockCmd)(nil).RunWithContext), varargs...)
 }
+
+// MockcontainerStatus is a mock of containerStatus interface.
+type MockcontainerStatus struct {
+	ctrl     *gomock.Controller
+	recorder *MockcontainerStatusMockRecorder
+}
+
+// MockcontainerStatusMockRecorder is the mock recorder for MockcontainerStatus.
+type MockcontainerStatusMockRecorder struct {
+	mock *MockcontainerStatus
+}
+
+// NewMockcontainerStatus creates a new mock instance.
+func NewMockcontainerStatus(ctrl *gomock.Controller) *MockcontainerStatus {
+	mock := &MockcontainerStatus{ctrl: ctrl}
+	mock.recorder = &MockcontainerStatusMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockcontainerStatus) EXPECT() *MockcontainerStatusMockRecorder {
+	return m.recorder
+}
+
+// IsContainerPresent mocks base method.
+func (m *MockcontainerStatus) IsContainerPresent(arg0 string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsContainerPresent", arg0)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// IsContainerPresent indicates an expected call of IsContainerPresent.
+func (mr *MockcontainerStatusMockRecorder) IsContainerPresent(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsContainerPresent", reflect.TypeOf((*MockcontainerStatus)(nil).IsContainerPresent), arg0)
+}
+
+// IsContainerRunning mocks base method.
+func (m *MockcontainerStatus) IsContainerRunning(arg0 string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsContainerRunning", arg0)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// IsContainerRunning indicates an expected call of IsContainerRunning.
+func (mr *MockcontainerStatusMockRecorder) IsContainerRunning(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsContainerRunning", reflect.TypeOf((*MockcontainerStatus)(nil).IsContainerRunning), arg0)
+}

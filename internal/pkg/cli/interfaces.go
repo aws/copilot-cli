@@ -702,6 +702,8 @@ type dockerEngineRunner interface {
 	CheckDockerEngineRunning() error
 	Run(context.Context, *dockerengine.RunOptions) error
 	IsContainerRunning(string) (bool, error)
+	KillContainer(containerName string) error
+	RemoveContainer(containerName string) error
 }
 
 type workloadStackGenerator interface {

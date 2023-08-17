@@ -7,7 +7,10 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/signal"
 	"strconv"
+	"sync"
+	"syscall"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -54,22 +57,24 @@ type localRunVars struct {
 type localRunOpts struct {
 	localRunVars
 
-	sel               deploySelector
-	ecsLocalClient    ecsLocalClient
-	sessProvider      sessionProvider
-	sess              *session.Session
-	targetEnv         *config.Environment
-	targetApp         *config.Application
-	store             store
-	ws                wsWlDirReader
-	cmd               execRunner
-	dockerEngine      dockerEngineRunner
-	repository        repositoryService
-	appliedDynamicMft manifest.DynamicWorkload
-	out               clideploy.UploadArtifactsOutput
-	imageInfoList     []clideploy.ImagePerContainer
-	containerSuffix   string
-	newColor          func() *color.Color
+	sel                    deploySelector
+	ecsLocalClient         ecsLocalClient
+	sessProvider           sessionProvider
+	sess                   *session.Session
+	targetEnv              *config.Environment
+	targetApp              *config.Application
+	store                  store
+	ws                     wsWlDirReader
+	cmd                    execRunner
+	dockerEngine           dockerEngineRunner
+	repository             repositoryService
+	appliedDynamicMft      manifest.DynamicWorkload
+	out                    clideploy.UploadArtifactsOutput
+	imageInfoList          []clideploy.ImagePerContainer
+	containerSuffix        string
+	isContainerTermination bool
+	mutex                  sync.Mutex
+	newColor               func() *color.Color
 
 	buildContainerImages func(o *localRunOpts) error
 	configureClients     func(o *localRunOpts) error
@@ -292,21 +297,49 @@ func (o *localRunOpts) Execute() error {
 	}
 	o.imageInfoList = append(o.imageInfoList, sidecarImageLocations...)
 
-	err = o.runPauseContainer(context.Background(), containerPorts)
+	errCh := make(chan error, 1)
+	// Handle containers when a termination signal is received.
+	go func() {
+		sig := o.NotifyInterrupt()
+		fmt.Println("Received signal:", sig)
+		o.mutex.Lock()
+		o.isContainerTermination = true
+		o.mutex.Unlock()
+		err := o.handleContainers()
+
+		// Wait for a short duration to allow containers to stop or get killed.
+		time.Sleep(1 * time.Second)
+		errCh <- err
+	}()
+
+	go func() {
+		err = o.runPauseContainer(context.Background(), containerPorts)
+		if err != nil {
+			errCh <- err
+			return
+		}
+		err = o.runContainers(context.Background(), o.imageInfoList, secretsList, envVars)
+		if err != nil {
+			errCh <- err
+			return
+		}
+	}()
+
+	err = <-errCh
 	if err != nil {
 		return err
 	}
-
-	err = o.runContainers(context.Background(), o.imageInfoList, secretsList, envVars)
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 
 func (o *localRunOpts) getContainerSuffix() string {
 	return fmt.Sprintf("%s-%s-%s", o.appName, o.envName, o.wkldName)
+}
+
+func (o *localRunOpts) NotifyInterrupt() os.Signal {
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+	return <-sigCh
 }
 
 func getBuiltSidecarImageLocations(sidecars map[string]*manifest.SidecarConfig) []clideploy.ImagePerContainer {
@@ -341,6 +374,13 @@ func (o *localRunOpts) runPauseContainer(ctx context.Context, containerPorts map
 
 	go func() {
 		if err := o.dockerEngine.Run(ctx, runOptions); err != nil {
+			o.mutex.Lock()
+			terminate := o.isContainerTermination
+			o.mutex.Unlock()
+			if terminate {
+				errCh <- nil
+				return
+			}
 			errCh <- err
 		}
 	}()
@@ -365,9 +405,7 @@ func (o *localRunOpts) runPauseContainer(ctx context.Context, containerPorts map
 	if err != nil {
 		return fmt.Errorf("run pause container: %w", err)
 	}
-
 	return nil
-
 }
 
 func (o *localRunOpts) runContainers(ctx context.Context, imageInfoList []clideploy.ImagePerContainer, secrets map[string]string, envVars map[string]string) error {
@@ -393,6 +431,12 @@ func (o *localRunOpts) runContainers(ctx context.Context, imageInfoList []clidep
 				},
 			}
 			if err := o.dockerEngine.Run(ctx, runOptions); err != nil {
+				o.mutex.Lock()
+				terminate := o.isContainerTermination
+				o.mutex.Unlock()
+				if terminate {
+					return nil
+				}
 				return fmt.Errorf("run container: %w", err)
 			}
 			return nil
@@ -402,6 +446,33 @@ func (o *localRunOpts) runContainers(ctx context.Context, imageInfoList []clidep
 	// Wait for all the container runs to complete
 	if err := g.Wait(); err != nil {
 		return err
+	}
+	return nil
+}
+
+func (o *localRunOpts) killAndRemoveContainer(containerName string) error {
+	if err := o.dockerEngine.KillContainer(containerName); err != nil {
+		return fmt.Errorf("kill container: %w", err)
+	}
+	if err := o.dockerEngine.RemoveContainer(containerName); err != nil {
+		return fmt.Errorf("remove container: %w", err)
+	}
+	return nil
+}
+
+func (o *localRunOpts) handleContainers() error {
+	//kills and removes all the containers ran earlier.
+	containerNetwork := fmt.Sprintf("%s-%s", pauseContainerName, o.containerSuffix)
+	err := o.killAndRemoveContainer(containerNetwork)
+	if err != nil {
+		return err
+	}
+	for _, imageInfo := range o.imageInfoList {
+		containerNameWithSuffix := fmt.Sprintf("%s-%s", imageInfo.ContainerName, o.containerSuffix)
+		err := o.killAndRemoveContainer(containerNameWithSuffix)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }

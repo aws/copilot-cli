@@ -832,3 +832,177 @@ func TestDockerCommand_IsContainerRunning(t *testing.T) {
 		})
 	}
 }
+
+func TestDockerCommand_IsContainerPresent(t *testing.T) {
+	mockError := errors.New("some error")
+	mockContainerName := "mockContainer"
+	mockUnknownContainerName := "mockUnknownContainer"
+	var mockCmd *MockCmd
+
+	tests := map[string]struct {
+		setupMocks      func(controller *gomock.Controller)
+		inContainerName string
+
+		wantedErr error
+	}{
+		"error running docker ps": {
+			inContainerName: mockUnknownContainerName,
+			setupMocks: func(controller *gomock.Controller) {
+				mockCmd = NewMockCmd(controller)
+				mockCmd.EXPECT().Run("docker", []string{"ps", "-aq", "--filter", "name=mockUnknownContainer"}, gomock.Any()).Return(mockError)
+			},
+			wantedErr: fmt.Errorf("run docker ps: some error"),
+		},
+		"successfully check if the container is present": {
+			inContainerName: mockContainerName,
+			setupMocks: func(controller *gomock.Controller) {
+				mockCmd = NewMockCmd(controller)
+				mockCmd.EXPECT().Run("docker", []string{"ps", "-aq", "--filter", "name=mockContainer"}, gomock.Any()).Return(nil)
+			},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			tc.setupMocks(controller)
+			s := DockerCmdClient{
+				runner: mockCmd,
+			}
+			_, err := s.IsContainerPresent(tc.inContainerName)
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestDockerCmdClient_KillContainer(t *testing.T) {
+	mockError := errors.New("some error")
+	mockContainerName := "mockContainer"
+	var mockCmd *MockCmd
+	var mockContainerStatus *MockcontainerStatus
+
+	tests := map[string]struct {
+		setupMocks      func(controller *gomock.Controller)
+		inContainerName string
+		wantErr         error
+	}{
+		"error checking if container is running": {
+			inContainerName: mockContainerName,
+			setupMocks: func(controller *gomock.Controller) {
+				mockCmd = NewMockCmd(controller)
+				mockContainerStatus = NewMockcontainerStatus(controller)
+				mockContainerStatus.EXPECT().IsContainerRunning(gomock.Eq(mockContainerName)).Return(false, mockError)
+			},
+			wantErr: mockError,
+		},
+		"container is not running": {
+			inContainerName: mockContainerName,
+			setupMocks: func(controller *gomock.Controller) {
+				mockCmd = NewMockCmd(controller)
+				mockContainerStatus = NewMockcontainerStatus(controller)
+				mockContainerStatus.EXPECT().IsContainerRunning(gomock.Eq(mockContainerName)).Return(false, nil)
+			},
+			wantErr: nil,
+		},
+		"successfully kill container": {
+			inContainerName: mockContainerName,
+			setupMocks: func(controller *gomock.Controller) {
+				mockCmd = NewMockCmd(controller)
+				mockContainerStatus = NewMockcontainerStatus(controller)
+				mockContainerStatus.EXPECT().IsContainerRunning(gomock.Eq(mockContainerName)).Return(true, nil)
+				mockCmd.EXPECT().Run("docker", []string{"kill", mockContainerName}).Return(nil)
+			},
+			wantErr: nil,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+			tc.setupMocks(controller)
+			s := DockerCmdClient{
+				runner:          mockCmd,
+				containerStatus: mockContainerStatus,
+			}
+			err := s.KillContainer(tc.inContainerName)
+			if tc.wantErr != nil {
+				if err == nil || err.Error() != tc.wantErr.Error() {
+					t.Errorf("wanted error %v, but got %v", tc.wantErr, err)
+				}
+			} else {
+				if err != nil {
+					t.Errorf("unexpected error: %v", err)
+				}
+			}
+		})
+	}
+}
+
+func TestDockerCmdClient_RemoveContainer(t *testing.T) {
+	mockError := errors.New("some error")
+	mockContainerName := "mockContainer"
+	var mockCmd *MockCmd
+	var mockContainerStatus *MockcontainerStatus
+
+	tests := map[string]struct {
+		setupMocks      func(controller *gomock.Controller)
+		inContainerName string
+		wantErr         error
+	}{
+		"error checking if container is present": {
+			inContainerName: mockContainerName,
+			setupMocks: func(controller *gomock.Controller) {
+				mockCmd = NewMockCmd(controller)
+				mockContainerStatus = NewMockcontainerStatus(controller)
+				mockContainerStatus.EXPECT().IsContainerPresent(gomock.Eq(mockContainerName)).Return(false, mockError)
+			},
+			wantErr: mockError,
+		},
+		"container is not present": {
+			inContainerName: mockContainerName,
+			setupMocks: func(controller *gomock.Controller) {
+				mockCmd = NewMockCmd(controller)
+				mockContainerStatus = NewMockcontainerStatus(controller)
+				mockContainerStatus.EXPECT().IsContainerPresent(gomock.Eq(mockContainerName)).Return(false, nil)
+			},
+			wantErr: nil,
+		},
+		"successfully remove container": {
+			inContainerName: mockContainerName,
+			setupMocks: func(controller *gomock.Controller) {
+				mockCmd = NewMockCmd(controller)
+				mockContainerStatus = NewMockcontainerStatus(controller)
+				mockContainerStatus.EXPECT().IsContainerPresent(gomock.Eq(mockContainerName)).Return(true, nil)
+				mockCmd.EXPECT().Run("docker", []string{"rm", mockContainerName}).Return(nil)
+			},
+			wantErr: nil,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+			tc.setupMocks(controller)
+			s := DockerCmdClient{
+				runner:          mockCmd,
+				containerStatus: mockContainerStatus,
+			}
+			err := s.RemoveContainer(tc.inContainerName)
+			if tc.wantErr != nil {
+				if err == nil || err.Error() != tc.wantErr.Error() {
+					t.Errorf("wanted error %v, but got %v", tc.wantErr, err)
+				}
+			} else {
+				if err != nil {
+					t.Errorf("unexpected error: %v", err)
+				}
+			}
+		})
+	}
+}

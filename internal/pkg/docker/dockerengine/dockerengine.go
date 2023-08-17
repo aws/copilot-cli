@@ -29,6 +29,11 @@ type Cmd interface {
 	RunWithContext(ctx context.Context, name string, args []string, opts ...exec.CmdOption) error
 }
 
+type containerStatus interface {
+	IsContainerRunning(string) (bool, error)
+	IsContainerPresent(string) (bool, error)
+}
+
 // Operating systems and architectures supported by docker.
 const (
 	OSLinux   = "linux"
@@ -48,18 +53,21 @@ const (
 type DockerCmdClient struct {
 	runner Cmd
 	// Override in unit tests.
-	buf       *bytes.Buffer
-	homePath  string
-	lookupEnv func(string) (string, bool)
+	containerStatus containerStatus
+	buf             *bytes.Buffer
+	homePath        string
+	lookupEnv       func(string) (string, bool)
 }
 
 // New returns CmdClient to make requests against the Docker daemon via external commands.
 func New(cmd Cmd) DockerCmdClient {
-	return DockerCmdClient{
+	dockerClient := DockerCmdClient{
 		runner:    cmd,
 		homePath:  userHomeDirectory(),
 		lookupEnv: os.LookupEnv,
 	}
+	dockerClient.containerStatus = dockerClient
+	return dockerClient
 }
 
 // BuildArguments holds the arguments that can be passed while building a container.
@@ -311,6 +319,48 @@ func (c DockerCmdClient) IsContainerRunning(containerName string) (bool, error) 
 
 	output := strings.TrimSpace(buf.String())
 	return output != "", nil
+}
+
+// KillContainer sends a SIGTERM signal to a Docker container with the given containerName if it's running.
+func (c DockerCmdClient) KillContainer(containerName string) error {
+	// Check if the container is running.
+	if running, err := c.containerStatus.IsContainerRunning(containerName); err != nil {
+		return err
+	} else if !running {
+		return nil
+	}
+
+	// Execute the Docker kill command with SIGTERM signal.
+	if err := c.runner.Run("docker", []string{"kill", containerName}); err != nil {
+		return fmt.Errorf("killing container: %w", err)
+	}
+	return nil
+}
+
+// IsContainerPresent checks if a specific Docker container is present.
+func (c DockerCmdClient) IsContainerPresent(containerName string) (bool, error) {
+	buf := &bytes.Buffer{}
+	if err := c.runner.Run("docker", []string{"ps", "-aq", "--filter", "name=" + containerName}, exec.Stdout(buf)); err != nil {
+		return false, fmt.Errorf("run docker ps: %w", err)
+	}
+
+	output := strings.TrimSpace(buf.String())
+	return output != "", nil
+}
+
+// RemoveContainer removes a Docker container with the given containerName if it's present.
+func (c DockerCmdClient) RemoveContainer(containerName string) error {
+	if exists, err := c.containerStatus.IsContainerPresent(containerName); err != nil {
+		return err
+	} else if !exists {
+		return nil
+	}
+
+	// Execute the Docker remove command.
+	if err := c.runner.Run("docker", []string{"rm", containerName}); err != nil {
+		return fmt.Errorf("remove container: %w", err)
+	}
+	return nil
 }
 
 // CheckDockerEngineRunning will run `docker info` command to check if the docker engine is running.
