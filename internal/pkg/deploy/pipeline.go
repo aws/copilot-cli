@@ -492,7 +492,9 @@ type PipelineStage struct {
 	testCommands      []string
 	execRoleARN       string
 	envManagerRoleARN string
+	preDeployments    manifest.PrePostDeployments
 	deployments       manifest.Deployments
+	postDeployments   manifest.PrePostDeployments
 }
 
 // Init populates the fields in PipelineStage against a target environment,
@@ -512,8 +514,9 @@ func (stg *PipelineStage) Init(env *config.Environment, mftStage *manifest.Pipel
 			deployments[workload] = nil
 		}
 	}
-
+	stg.preDeployments = mftStage.PreDeployment
 	stg.deployments = deployments
+	stg.postDeployments = mftStage.PostDeployment
 	stg.requiresApproval = mftStage.RequiresApproval
 	stg.testCommands = mftStage.TestCommands
 	stg.execRoleARN = env.ExecutionRoleARN
@@ -578,8 +581,14 @@ func (stg *PipelineStage) Test() (*TestCommandsAction, error) {
 // Deployments returns a list of deploy actions for the pipeline.
 func (stg *PipelineStage) Deployments() ([]DeployAction, error) {
 	var prevActions []orderedRunner
+	var preDeployActions []PrePostDeployAction
 	if approval := stg.Approval(); approval != nil {
 		prevActions = append(prevActions, approval)
+	}
+	if preDepActions, _ := stg.PreDeployments(); preDepActions != nil {
+		for _, preDepAction := range preDepActions {
+			preDeployActions = append(preDeployActions, preDepAction)
+		}
 	}
 
 	topo, err := graph.TopologicalOrder(stg.buildDeploymentsGraph())
@@ -591,7 +600,8 @@ func (stg *PipelineStage) Deployments() ([]DeployAction, error) {
 	for name, conf := range stg.deployments {
 		actions = append(actions, DeployAction{
 			action: action{
-				prevActions: prevActions,
+				prevActions:      prevActions,
+				preDeployActions: preDeployActions,
 			},
 			name:     name,
 			envName:  stg.associatedEnvironment.Name,
@@ -608,13 +618,94 @@ func (stg *PipelineStage) Deployments() ([]DeployAction, error) {
 }
 
 // PreDeployments returns a list of pre-deployment actions for the pipeline stage.
-func (stg *PipelineStage) PreDeployments() ([]Step, error) {
-	return nil, nil
+func (stg *PipelineStage) PreDeployments() ([]PrePostDeployAction, error) {
+	var prevActions []orderedRunner
+	if approval := stg.Approval(); approval != nil {
+		prevActions = append(prevActions, approval)
+	}
+
+	topo, err := graph.TopologicalOrder(stg.buildPrePostDeploymentsGraph("pre"))
+	if err != nil {
+		return nil, fmt.Errorf("find an ordering for deployments: %v", err)
+	}
+
+	var actions []PrePostDeployAction
+	var buildspecPath string
+	for name, conf := range stg.preDeployments {
+		if conf.BuildspecPath != "" {
+			buildspecPath = conf.BuildspecPath
+		}
+		actions = append(actions, PrePostDeployAction{
+			name: name,
+			action: action{
+				prevActions: prevActions,
+			},
+			Build: Build{
+				Image:           defaultPipelineBuildImage,
+				EnvironmentType: defaultPipelineEnvironmentType,
+				BuildspecPath:   buildspecPath,
+			},
+			ranker: topo,
+		})
+	}
+
+	sort.Slice(actions, func(i, j int) bool {
+		return actions[i].Name() < actions[j].Name()
+	})
+	return actions, nil
 }
 
 // PostDeployments returns a list of post-deployment actions for the pipeline stage.
-func (stg *PipelineStage) PostDeployments() ([]Step, error) {
-	return nil, nil
+func (stg *PipelineStage) PostDeployments() ([]PrePostDeployAction, error) {
+	var prevActions []orderedRunner
+	var preDeployActions []PrePostDeployAction
+	var deployActions []DeployAction
+
+	if approval := stg.Approval(); approval != nil {
+		prevActions = append(prevActions, approval)
+	}
+	if preDepActions, _ := stg.PreDeployments(); preDepActions != nil {
+		for _, preDepAction := range preDepActions {
+			preDeployActions = append(preDeployActions, preDepAction)
+		}
+	}
+	if depActions, _ := stg.Deployments(); depActions != nil {
+		for _, depAction := range depActions {
+			deployActions = append(deployActions, depAction)
+		}
+	}
+
+	topo, err := graph.TopologicalOrder(stg.buildPrePostDeploymentsGraph("post"))
+	if err != nil {
+		return nil, fmt.Errorf("find an ordering for deployments: %v", err)
+	}
+
+	var actions []PrePostDeployAction
+	var buildspecPath string
+	for name, conf := range stg.postDeployments {
+		if conf.BuildspecPath != "" {
+			buildspecPath = conf.BuildspecPath
+		}
+		actions = append(actions, PrePostDeployAction{
+			name: name,
+			action: action{
+				prevActions:      prevActions,
+				preDeployActions: preDeployActions,
+				deployActions:    deployActions,
+			},
+			Build: Build{
+				Image:           defaultPipelineBuildImage,
+				EnvironmentType: defaultPipelineEnvironmentType,
+				BuildspecPath:   buildspecPath,
+			},
+			ranker: topo,
+		})
+	}
+
+	sort.Slice(actions, func(i, j int) bool {
+		return actions[i].Name() < actions[j].Name()
+	})
+	return actions, nil
 }
 
 func (stg *PipelineStage) buildDeploymentsGraph() *graph.Graph[string] {
@@ -637,13 +728,42 @@ func (stg *PipelineStage) buildDeploymentsGraph() *graph.Graph[string] {
 	return digraph
 }
 
+func (stg *PipelineStage) buildPrePostDeploymentsGraph(depType string) *graph.Graph[string] {
+	var names []string
+	var deployments manifest.PrePostDeployments
+	switch depType {
+	case "pre":
+		deployments = stg.preDeployments
+	case "post":
+		deployments = stg.postDeployments
+	}
+	for name := range deployments {
+		names = append(names, name)
+	}
+	digraph := graph.New(names...)
+	for name, conf := range deployments {
+		if conf == nil {
+			continue
+		}
+		for _, dependency := range conf.DependsOn {
+			digraph.Add(graph.Edge[string]{
+				From: dependency, // Dependency must be completed before name.
+				To:   name,
+			})
+		}
+	}
+	return digraph
+}
+
 type orderedRunner interface {
 	RunOrder() int
 }
 
 // action represents a generic CodePipeline action.
 type action struct {
-	prevActions []orderedRunner // The last actions to be executed immediately before this action.
+	prevActions      []orderedRunner // The last actions to be executed immediately before this action.
+	preDeployActions []PrePostDeployAction
+	deployActions    []DeployAction
 }
 
 // RunOrder returns the order in which the action should run. A higher numbers means the action is run later.
@@ -652,6 +772,16 @@ func (a *action) RunOrder() int {
 	max := 0
 	for _, prevAction := range a.prevActions {
 		if cur := prevAction.RunOrder(); cur > max {
+			max = cur
+		}
+	}
+	for _, prePostDeployAction := range a.preDeployActions {
+		if cur := prePostDeployAction.RunOrder(); cur > max {
+			max = cur
+		}
+	}
+	for _, deployAction := range a.deployActions {
+		if cur := deployAction.RunOrder(); cur > max {
 			max = cur
 		}
 	}
@@ -740,14 +870,21 @@ func (a *TestCommandsAction) Commands() []string {
 	return a.commands
 }
 
-// Step represents a CodePipeline action backed by a CodeBuild project.
-type Step struct {
+// PrePostDeployAction represents a CodePipeline action of category "Build" backed by a CodeBuild project.
+type PrePostDeployAction struct {
 	action
 	Build
-	name string
+	name   string
+	ranker ranker // Interface to rank this deployment action against others in the same stage.
 }
 
 // Name returns the name of the action.
-func (s *Step) Name() string {
-	return s.name
+func (p *PrePostDeployAction) Name() string {
+	return p.name
+}
+
+// RunOrder returns the order in which the action should run.
+func (p *PrePostDeployAction) RunOrder() int {
+	rank, _ := p.ranker.Rank(p.name) // The deployment is guaranteed to be in the ranker.
+	return p.action.RunOrder() /* baseline */ + rank
 }
