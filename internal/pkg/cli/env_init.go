@@ -429,8 +429,15 @@ func (o *initEnvOpts) askEnvSession() error {
 
 	selCreds, err := o.selCreds()
 	if err != nil {
-		return err
+		errRetrieveCreds := err
+		sess, err := o.sessProvider.Default()
+		if err != nil {
+			return errors.Join(errRetrieveCreds, fmt.Errorf("falling back on default credentials: %w", err))
+		}
+		o.sess = sess
+		return nil
 	}
+
 	sess, err := selCreds.Creds(fmt.Sprintf(fmtEnvInitCredsPrompt, color.HighlightUserInput(o.name)), envInitCredsHelpPrompt)
 	if err != nil {
 		return fmt.Errorf("select creds: %w", err)

@@ -356,12 +356,18 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 		inAdjustVPCVars      adjustVPCVars
 		inInternalALBSubnets []string
 
-		setupMocks func(mocks initEnvMocks)
+		getMockCredsSelector func(credsSelector) func() (credsSelector, error)
+		setupMocks           func(mocks initEnvMocks)
 
 		wantedError error
 	}{
 		"fail to get env name": {
 			inAppName: mockApp,
+			getMockCredsSelector: func(c credsSelector) func() (credsSelector, error) {
+				return func() (credsSelector, error) {
+					return c, nil
+				}
+			},
 			setupMocks: func(m initEnvMocks) {
 				gomock.InOrder(
 					m.prompt.EXPECT().
@@ -373,6 +379,11 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 		},
 		"should error if environment already exists": {
 			inAppName: mockApp,
+			getMockCredsSelector: func(c credsSelector) func() (credsSelector, error) {
+				return func() (credsSelector, error) {
+					return c, nil
+				}
+			},
 			setupMocks: func(m initEnvMocks) {
 				gomock.InOrder(
 					m.prompt.EXPECT().
@@ -388,6 +399,11 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			inEnv:     mockEnv,
 			inProfile: mockProfile,
 			inDefault: true,
+			getMockCredsSelector: func(c credsSelector) func() (credsSelector, error) {
+				return func() (credsSelector, error) {
+					return c, nil
+				}
+			},
 			setupMocks: func(m initEnvMocks) {
 				m.sessProvider.EXPECT().FromProfile(mockProfile).Return(&session.Session{
 					Config: &aws.Config{
@@ -404,6 +420,11 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 				SecretAccessKey: "efgh",
 			},
 			inDefault: true,
+			getMockCredsSelector: func(c credsSelector) func() (credsSelector, error) {
+				return func() (credsSelector, error) {
+					return c, nil
+				}
+			},
 			setupMocks: func(m initEnvMocks) {
 				m.sessProvider.EXPECT().FromStaticCreds("abcd", "efgh", "").Return(mockSession, nil)
 			},
@@ -412,8 +433,30 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			inAppName: mockApp,
 			inEnv:     mockEnv,
 			inDefault: true,
+			getMockCredsSelector: func(c credsSelector) func() (credsSelector, error) {
+				return func() (credsSelector, error) {
+					return c, nil
+				}
+			},
 			setupMocks: func(m initEnvMocks) {
 				m.selCreds.EXPECT().Creds("Which credentials would you like to use to create test?", gomock.Any()).Return(mockSession, nil)
+			},
+		},
+		"should fallback on default session if credentials cant be found": {
+			inAppName: mockApp,
+			inEnv:     mockEnv,
+			inDefault: true,
+			getMockCredsSelector: func(c credsSelector) func() (credsSelector, error) {
+				return func() (credsSelector, error) {
+					return nil, mockErr
+				}
+			},
+			setupMocks: func(m initEnvMocks) {
+				m.sessProvider.EXPECT().Default().Return(&session.Session{
+					Config: &aws.Config{
+						Region: aws.String("us-west-2"),
+					},
+				}, nil)
 			},
 		},
 		"should prompt for region if user configuration does not have one": {
@@ -421,6 +464,11 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			inEnv:     mockEnv,
 			inProfile: mockProfile,
 			inDefault: true,
+			getMockCredsSelector: func(c credsSelector) func() (credsSelector, error) {
+				return func() (credsSelector, error) {
+					return c, nil
+				}
+			},
 			setupMocks: func(m initEnvMocks) {
 				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(&session.Session{
 					Config: &aws.Config{},
@@ -434,6 +482,11 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			inProfile: mockProfile,
 			inRegion:  mockRegion,
 			inDefault: true,
+			getMockCredsSelector: func(c credsSelector) func() (credsSelector, error) {
+				return func() (credsSelector, error) {
+					return c, nil
+				}
+			},
 			setupMocks: func(m initEnvMocks) {
 				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(&session.Session{
 					Config: &aws.Config{},
@@ -446,6 +499,11 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			inEnv:     mockEnv,
 			inProfile: mockProfile,
 			inDefault: true,
+			getMockCredsSelector: func(c credsSelector) func() (credsSelector, error) {
+				return func() (credsSelector, error) {
+					return c, nil
+				}
+			},
 			setupMocks: func(m initEnvMocks) {
 				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
 				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
@@ -455,6 +513,11 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			inAppName: mockApp,
 			inEnv:     mockEnv,
 			inProfile: mockProfile,
+			getMockCredsSelector: func(c credsSelector) func() (credsSelector, error) {
+				return func() (credsSelector, error) {
+					return c, nil
+				}
+			},
 			setupMocks: func(m initEnvMocks) {
 				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
 				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes, gomock.Any()).
@@ -466,6 +529,11 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			inAppName: mockApp,
 			inEnv:     mockEnv,
 			inProfile: mockProfile,
+			getMockCredsSelector: func(c credsSelector) func() (credsSelector, error) {
+				return func() (credsSelector, error) {
+					return c, nil
+				}
+			},
 			setupMocks: func(m initEnvMocks) {
 				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
 				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes, gomock.Any()).
@@ -476,6 +544,11 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			inAppName: mockApp,
 			inEnv:     mockEnv,
 			inProfile: mockProfile,
+			getMockCredsSelector: func(c credsSelector) func() (credsSelector, error) {
+				return func() (credsSelector, error) {
+					return c, nil
+				}
+			},
 			setupMocks: func(m initEnvMocks) {
 				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
 				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes, gomock.Any()).
@@ -488,6 +561,11 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			inAppName: mockApp,
 			inEnv:     mockEnv,
 			inProfile: mockProfile,
+			getMockCredsSelector: func(c credsSelector) func() (credsSelector, error) {
+				return func() (credsSelector, error) {
+					return c, nil
+				}
+			},
 			setupMocks: func(m initEnvMocks) {
 				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
 				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes, gomock.Any()).
@@ -501,6 +579,11 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			inAppName: mockApp,
 			inEnv:     mockEnv,
 			inProfile: mockProfile,
+			getMockCredsSelector: func(c credsSelector) func() (credsSelector, error) {
+				return func() (credsSelector, error) {
+					return c, nil
+				}
+			},
 			setupMocks: func(m initEnvMocks) {
 				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
 				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes, gomock.Any()).
@@ -514,6 +597,11 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			inAppName: mockApp,
 			inEnv:     mockEnv,
 			inProfile: mockProfile,
+			getMockCredsSelector: func(c credsSelector) func() (credsSelector, error) {
+				return func() (credsSelector, error) {
+					return c, nil
+				}
+			},
 			setupMocks: func(m initEnvMocks) {
 				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
 				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes, gomock.Any()).
@@ -529,6 +617,11 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			inAppName: mockApp,
 			inEnv:     mockEnv,
 			inProfile: mockProfile,
+			getMockCredsSelector: func(c credsSelector) func() (credsSelector, error) {
+				return func() (credsSelector, error) {
+					return c, nil
+				}
+			},
 			setupMocks: func(m initEnvMocks) {
 				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
 				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes, gomock.Any()).
@@ -544,6 +637,11 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			inAppName: mockApp,
 			inEnv:     mockEnv,
 			inProfile: mockProfile,
+			getMockCredsSelector: func(c credsSelector) func() (credsSelector, error) {
+				return func() (credsSelector, error) {
+					return c, nil
+				}
+			},
 			setupMocks: func(m initEnvMocks) {
 				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
 				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes, gomock.Any()).
@@ -561,6 +659,11 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			inAppName: mockApp,
 			inEnv:     mockEnv,
 			inProfile: mockProfile,
+			getMockCredsSelector: func(c credsSelector) func() (credsSelector, error) {
+				return func() (credsSelector, error) {
+					return c, nil
+				}
+			},
 			setupMocks: func(m initEnvMocks) {
 				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
 				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes, gomock.Any()).
@@ -578,6 +681,11 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			inAppName: mockApp,
 			inEnv:     mockEnv,
 			inProfile: mockProfile,
+			getMockCredsSelector: func(c credsSelector) func() (credsSelector, error) {
+				return func() (credsSelector, error) {
+					return c, nil
+				}
+			},
 			setupMocks: func(m initEnvMocks) {
 				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
 				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes, gomock.Any()).
@@ -594,6 +702,11 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			inAppName: mockApp,
 			inEnv:     mockEnv,
 			inProfile: mockProfile,
+			getMockCredsSelector: func(c credsSelector) func() (credsSelector, error) {
+				return func() (credsSelector, error) {
+					return c, nil
+				}
+			},
 			setupMocks: func(m initEnvMocks) {
 				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
 				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes, gomock.Any()).
@@ -610,6 +723,11 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			inAppName: mockApp,
 			inEnv:     mockEnv,
 			inProfile: mockProfile,
+			getMockCredsSelector: func(c credsSelector) func() (credsSelector, error) {
+				return func() (credsSelector, error) {
+					return c, nil
+				}
+			},
 			setupMocks: func(m initEnvMocks) {
 				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
 				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes, gomock.Any()).
@@ -631,6 +749,11 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 				PrivateSubnetIDs: []string{"mockPrivateSubnetID", "anotherMockPrivateSubnetID"},
 				PublicSubnetIDs:  []string{"mockPublicSubnetID", "anotherMockPublicSubnetID"},
 			},
+			getMockCredsSelector: func(c credsSelector) func() (credsSelector, error) {
+				return func() (credsSelector, error) {
+					return c, nil
+				}
+			},
 			setupMocks: func(m initEnvMocks) {
 				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
 				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
@@ -643,6 +766,11 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			inProfile: mockProfile,
 			inImportVPCVars: importVPCVars{
 				ID: "mockVPC",
+			},
+			getMockCredsSelector: func(c credsSelector) func() (credsSelector, error) {
+				return func() (credsSelector, error) {
+					return c, nil
+				}
 			},
 			setupMocks: func(m initEnvMocks) {
 				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
@@ -661,6 +789,11 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 				PrivateSubnetIDs: []string{"mockPrivateSubnetID", "anotherMockPrivateSubnetID"},
 				PublicSubnetIDs:  []string{"mockPublicSubnetID", "anotherMockPublicSubnetID"},
 			},
+			getMockCredsSelector: func(c credsSelector) func() (credsSelector, error) {
+				return func() (credsSelector, error) {
+					return c, nil
+				}
+			},
 			setupMocks: func(m initEnvMocks) {
 				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
 				m.selVPC.EXPECT().VPC(envInitVPCSelectPrompt, "").Return("mockVPC", nil)
@@ -674,6 +807,11 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			inImportVPCVars: importVPCVars{
 				ID:               "mockVPC",
 				PrivateSubnetIDs: []string{"mockPrivateSubnetID", "anotherMockPrivateSubnetID"},
+			},
+			getMockCredsSelector: func(c credsSelector) func() (credsSelector, error) {
+				return func() (credsSelector, error) {
+					return c, nil
+				}
 			},
 			setupMocks: func(m initEnvMocks) {
 				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
@@ -690,6 +828,11 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 				ID:              "mockVPC",
 				PublicSubnetIDs: []string{"mockPublicSubnetID", "anotherMockPublicSubnetID"},
 			},
+			getMockCredsSelector: func(c credsSelector) func() (credsSelector, error) {
+				return func() (credsSelector, error) {
+					return c, nil
+				}
+			},
 			setupMocks: func(m initEnvMocks) {
 				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
 				m.ec2Client.EXPECT().HasDNSSupport("mockVPC").Return(true, nil)
@@ -705,6 +848,11 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 				ID: "mockVPC",
 			},
 			inInternalALBSubnets: []string{"nonexistentSubnet", "anotherNonexistentSubnet"},
+			getMockCredsSelector: func(c credsSelector) func() (credsSelector, error) {
+				return func() (credsSelector, error) {
+					return c, nil
+				}
+			},
 			setupMocks: func(m initEnvMocks) {
 				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
 				m.ec2Client.EXPECT().HasDNSSupport("mockVPC").Return(true, nil)
@@ -723,6 +871,11 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			inImportVPCVars: importVPCVars{
 				ID: "mockVPC",
 			},
+			getMockCredsSelector: func(c credsSelector) func() (credsSelector, error) {
+				return func() (credsSelector, error) {
+					return c, nil
+				}
+			},
 			setupMocks: func(m initEnvMocks) {
 				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
 				m.ec2Client.EXPECT().HasDNSSupport("mockVPC").Return(true, nil)
@@ -738,6 +891,11 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			inEnv:                mockEnv,
 			inProfile:            mockProfile,
 			inInternalALBSubnets: []string{"mockPrivateSubnet", "anotherMockPrivateSubnet"},
+			getMockCredsSelector: func(c credsSelector) func() (credsSelector, error) {
+				return func() (credsSelector, error) {
+					return c, nil
+				}
+			},
 			setupMocks: func(m initEnvMocks) {
 				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
 				m.selVPC.EXPECT().VPC(envInitVPCSelectPrompt, "").Return("mockVPC", nil)
@@ -752,6 +910,11 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			inAppName: mockApp,
 			inEnv:     mockEnv,
 			inProfile: mockProfile,
+			getMockCredsSelector: func(c credsSelector) func() (credsSelector, error) {
+				return func() (credsSelector, error) {
+					return c, nil
+				}
+			},
 			setupMocks: func(m initEnvMocks) {
 				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
 				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes, gomock.Any()).
@@ -765,6 +928,11 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			inAppName: mockApp,
 			inEnv:     mockEnv,
 			inProfile: mockProfile,
+			getMockCredsSelector: func(c credsSelector) func() (credsSelector, error) {
+				return func() (credsSelector, error) {
+					return c, nil
+				}
+			},
 			setupMocks: func(m initEnvMocks) {
 				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
 				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, gomock.Any(), gomock.Any(), gomock.Any()).
@@ -779,6 +947,11 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			inAppName: mockApp,
 			inEnv:     mockEnv,
 			inProfile: mockProfile,
+			getMockCredsSelector: func(c credsSelector) func() (credsSelector, error) {
+				return func() (credsSelector, error) {
+					return c, nil
+				}
+			},
 			setupMocks: func(m initEnvMocks) {
 				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
 				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, gomock.Any(), gomock.Any(), gomock.Any()).
@@ -797,6 +970,11 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			inAppName: mockApp,
 			inEnv:     mockEnv,
 			inProfile: mockProfile,
+			getMockCredsSelector: func(c credsSelector) func() (credsSelector, error) {
+				return func() (credsSelector, error) {
+					return c, nil
+				}
+			},
 			setupMocks: func(m initEnvMocks) {
 				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
 				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, gomock.Any(), gomock.Any(), gomock.Any()).
@@ -822,6 +1000,11 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			inAppName: mockApp,
 			inEnv:     mockEnv,
 			inProfile: mockProfile,
+			getMockCredsSelector: func(c credsSelector) func() (credsSelector, error) {
+				return func() (credsSelector, error) {
+					return c, nil
+				}
+			},
 			setupMocks: func(m initEnvMocks) {
 				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
 				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, gomock.Any(), gomock.Any(), gomock.Any()).
@@ -849,6 +1032,11 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			inAppName: mockApp,
 			inEnv:     mockEnv,
 			inProfile: mockProfile,
+			getMockCredsSelector: func(c credsSelector) func() (credsSelector, error) {
+				return func() (credsSelector, error) {
+					return c, nil
+				}
+			},
 			setupMocks: func(m initEnvMocks) {
 				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
 				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes, gomock.Any()).
@@ -883,6 +1071,11 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 				AZs:                []string{"us-east-1a", "us-east-1b"},
 				PrivateSubnetCIDRs: []string{"mockPrivateCIDR1", "mockPrivateCIDR2"},
 				PublicSubnetCIDRs:  []string{"mockPublicCIDR1", "mockPublicCIDR2"},
+			},
+			getMockCredsSelector: func(c credsSelector) func() (credsSelector, error) {
+				return func() (credsSelector, error) {
+					return c, nil
+				}
 			},
 			setupMocks: func(m initEnvMocks) {
 				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
@@ -922,13 +1115,11 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 				},
 				sessProvider: mocks.sessProvider,
 				selVPC:       mocks.selVPC,
-				selCreds: func() (credsSelector, error) {
-					return mocks.selCreds, nil
-				},
-				ec2Client: mocks.ec2Client,
-				prompt:    mocks.prompt,
-				selApp:    mocks.selApp,
-				store:     mocks.store,
+				selCreds:     tc.getMockCredsSelector(mocks.selCreds),
+				ec2Client:    mocks.ec2Client,
+				prompt:       mocks.prompt,
+				selApp:       mocks.selApp,
+				store:        mocks.store,
 			}
 
 			// WHEN
