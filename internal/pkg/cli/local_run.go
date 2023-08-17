@@ -523,8 +523,9 @@ func (o *localRunOpts) fillSecrets(ctx context.Context, envVars map[string]map[s
 	}
 
 	// get value of all needed secrets
-	mu := &sync.Mutex{}
 	g, ctx := errgroup.WithContext(ctx)
+	mu := &sync.Mutex{}
+	mu.Lock() // lock until finished ranging over unique
 	for valueFrom := range unique {
 		valueFrom := valueFrom
 		g.Go(func() error {
@@ -539,6 +540,7 @@ func (o *localRunOpts) fillSecrets(ctx context.Context, envVars map[string]map[s
 			return nil
 		})
 	}
+	mu.Unlock()
 	if err := g.Wait(); err != nil {
 		return err
 	}

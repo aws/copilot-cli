@@ -53,10 +53,6 @@ type stepFunctionsClient interface {
 	StateMachineDefinition(stateMachineARN string) (string, error)
 }
 
-type secretGetter interface {
-	GetSecretValue(secretName string) (string, error)
-}
-
 // EnvVar contains the value of an environment variable
 type EnvVar struct {
 	Name  string
