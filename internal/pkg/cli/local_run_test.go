@@ -4,7 +4,6 @@
 package cli
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"testing"
@@ -365,8 +364,9 @@ func TestLocalRunOpts_Execute(t *testing.T) {
 						return []string{"mockFeature1"}
 					},
 				}
-				m.mockDockerEngine.EXPECT().IsContainerRunning(mockPauseContainerName)
-				m.mockDockerEngine.EXPECT().Run(context.Background(), gomock.Any()).Return(testError)
+				m.mockDockerEngine.EXPECT().IsContainerRunning(mockPauseContainerName).AnyTimes()
+				m.mockDockerEngine.EXPECT().Run(gomock.Any(), gomock.Any()).Return(testError)
+
 			},
 			wantedError: fmt.Errorf("run pause container: %w", testError),
 		},
