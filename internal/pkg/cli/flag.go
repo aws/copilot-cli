@@ -63,7 +63,7 @@ const (
 
 	// Run local flags
 	portOverrideFlag   = "port-override"
-	envVarOverrideFlag = "env-override"
+	envVarOverrideFlag = "env-var-override"
 
 	// Flags for CI/CD.
 	githubURLFlag         = "github-url"
