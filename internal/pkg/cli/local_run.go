@@ -288,7 +288,7 @@ func (o *localRunOpts) Execute() error {
 	o.appliedDynamicMft = mft
 
 	if err := o.buildContainerImages(o); err != nil {
-		return err
+		return fmt.Errorf("build images: %w", err)
 	}
 
 	for name, imageInfo := range o.out.ImageDigests {
@@ -317,7 +317,7 @@ func (o *localRunOpts) Execute() error {
 
 	err = o.runPauseContainer(context.Background(), ports)
 	if err != nil {
-		return err
+		return fmt.Errorf("run pause container: %w", err)
 	}
 
 	err = o.runContainers(context.Background(), o.imageInfoList, envVars)
@@ -371,7 +371,7 @@ func (o *localRunOpts) runPauseContainer(ctx context.Context, containerPorts map
 		for {
 			isRunning, err := o.dockerEngine.IsContainerRunning(containerNameWithSuffix)
 			if err != nil {
-				errCh <- fmt.Errorf("check if pause container is running: %w", err)
+				errCh <- fmt.Errorf("check if container is running: %w", err)
 				return
 			}
 			if isRunning {
@@ -384,7 +384,7 @@ func (o *localRunOpts) runPauseContainer(ctx context.Context, containerPorts map
 	}()
 	err := <-errCh
 	if err != nil {
-		return fmt.Errorf("run pause container: %w", err)
+		return err
 	}
 
 	return nil
@@ -423,7 +423,7 @@ func (o *localRunOpts) runContainers(ctx context.Context, imageInfoList []clidep
 				},
 			}
 			if err := o.dockerEngine.Run(ctx, runOptions); err != nil {
-				return fmt.Errorf("run container: %w", err)
+				return fmt.Errorf("run container %q: %w", imageInfo.ContainerName, err)
 			}
 			return nil
 		})
@@ -441,6 +441,10 @@ type envVarValue struct {
 	Secret bool
 }
 
+// getEnvVars uses env overrides passed by flags and environment variables/secrets
+// specified in the Task Definition to return a set of environment varibles for each
+// continer defined in the TaskDefinition. The returned map is a map of container names,
+// each of which contains a mapping of key->envVarValue, which defines if the variable is a secret or not.
 func (o *localRunOpts) getEnvVars(ctx context.Context, taskDef *awsecs.TaskDefinition) (map[string]map[string]envVarValue, error) {
 	envVars := make(map[string]map[string]envVarValue)
 	for _, ctr := range taskDef.ContainerDefinitions {
@@ -466,6 +470,10 @@ func (o *localRunOpts) getEnvVars(ctx context.Context, taskDef *awsecs.TaskDefin
 	return envVars, nil
 }
 
+// fillEnvOverrides parses environment variable overrides passed via flag.
+// The expected format of the flag values is KEY=VALUE, with an optional container name
+// in the format of [containerName]:KEY=VALUE. If the container name is omitted,
+// the environment variable override is applied to all containers in the task definition.
 func (o *localRunOpts) fillEnvOverrides(envVars map[string]map[string]envVarValue) error {
 	for k, v := range o.envOverrides {
 		if !strings.Contains(k, ":") {
@@ -492,6 +500,8 @@ func (o *localRunOpts) fillEnvOverrides(envVars map[string]map[string]envVarValu
 	return nil
 }
 
+// fillSecrets collects non-overridden secrets from the task definition and
+// makes requests to SSM and Secrets Manager to get their value.
 func (o *localRunOpts) fillSecrets(ctx context.Context, envVars map[string]map[string]envVarValue, taskDef *awsecs.TaskDefinition) error {
 	// figure out which secrets we need to get, set value to ValueFrom
 	unique := make(map[string]string)
@@ -578,7 +588,7 @@ func BuildLocalRunCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&vars.wkldName, nameFlag, nameFlagShort, "", workloadFlagDescription)
 	cmd.Flags().StringVarP(&vars.envName, envFlag, envFlagShort, "", envFlagDescription)
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
-	cmd.Flags().StringToStringVar(&vars.envOverrides, envVarOverrideFlag, nil, envVarsFlagDescription)
+	cmd.Flags().StringToStringVar(&vars.envOverrides, envVarOverrideFlag, nil, envVarOverrideFlagDescription)
 	cmd.Flags().StringSliceVar(&vars.portOverrides, portOverrideFlag, nil, portOverridesFlagDescription)
 	return cmd
 }

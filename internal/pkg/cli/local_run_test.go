@@ -16,6 +16,7 @@ import (
 	clideploy "github.com/aws/copilot-cli/internal/pkg/cli/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/fatih/color"
@@ -198,17 +199,17 @@ func TestLocalRunOpts_Ask(t *testing.T) {
 }
 
 type localRunExecuteMocks struct {
-	ecsLocalClient        *mocks.MockecsLocalClient
-	store                 *mocks.Mockstore
-	sessProvider          *mocks.MocksessionProvider
-	mockInterpolator      *mocks.Mockinterpolator
-	mockWsReader          *mocks.MockwsWlDirReader
-	mockMft               *mockWorkloadMft
-	mockRunner            *mocks.MockexecRunner
-	mockDockerEngine      *mocks.MockdockerEngineRunner
-	mockrepositorySerivce *mocks.MockrepositoryService
-	ssm                   *mocks.MocksecretGetter
-	secretsManager        *mocks.MocksecretGetter
+	ecsLocalClient *mocks.MockecsLocalClient
+	store          *mocks.Mockstore
+	sessProvider   *mocks.MocksessionProvider
+	interpolator   *mocks.Mockinterpolator
+	ws             *mocks.MockwsWlDirReader
+	mockMft        *mockWorkloadMft
+	mockRunner     *mocks.MockexecRunner
+	dockerEngine   *mocks.MockdockerEngineRunner
+	repository     *mocks.MockrepositoryService
+	ssm            *mocks.MocksecretGetter
+	secretsManager *mocks.MocksecretGetter
 }
 
 func TestLocalRunOpts_Execute(t *testing.T) {
@@ -221,13 +222,9 @@ func TestLocalRunOpts_Execute(t *testing.T) {
 		testContainerName = "testConatiner"
 	)
 
-	mockContainerSuffix := fmt.Sprintf("%s-%s-%s", testAppName, testEnvName, testWkldName)
-	// mockPauseContainerName := pauseContainerName + "-" + mockContainerSuffix
-
 	mockApp := config.Application{
 		Name: "testApp",
 	}
-
 	mockEnv := config.Environment{
 		App:            "testApp",
 		Name:           "testEnv",
@@ -236,25 +233,16 @@ func TestLocalRunOpts_Execute(t *testing.T) {
 		ManagerRoleARN: "arn::env-manager",
 	}
 
-	/*
-		mockDecryptedSecrets := []ecs.EnvVar{
-			{
-				Name:  "my-secret",
-				Value: "Password123",
-			}, {
-				Name:  "secret2",
-				Value: "admin123",
-			},
-		}
-	*/
+	mockContainerSuffix := fmt.Sprintf("%s-%s-%s", testAppName, testEnvName, testWkldName)
+	mockPauseContainerName := pauseContainerName + "-" + mockContainerSuffix
 
 	mockImageInfoList := []clideploy.ImagePerContainer{
 		{
-			ContainerName: testWkldName,
+			ContainerName: "foo",
 			ImageURI:      "image1",
 		},
 		{
-			ContainerName: "testSvc",
+			ContainerName: "bar",
 			ImageURI:      "image2",
 		},
 	}
@@ -266,21 +254,13 @@ func TestLocalRunOpts_Execute(t *testing.T) {
 				Environment: []*sdkecs.KeyValuePair{
 					{
 						Name:  aws.String("FOO_VAR"),
-						Value: aws.String("i was here first"),
-					},
-					{
-						Name:  aws.String("OVERRIDE_ALL"),
-						Value: aws.String("i will disappear :pensive:"),
-					},
-					{
-						Name:  aws.String("OVERRIDE"),
-						Value: aws.String("i will disappear :pensive:"),
+						Value: aws.String("foo-value"),
 					},
 				},
 				Secrets: []*sdkecs.Secret{
 					{
 						Name:      aws.String("SHARED_SECRET"),
-						ValueFrom: aws.String("mysvc"),
+						ValueFrom: aws.String("mysecret"),
 					},
 				},
 			},
@@ -289,24 +269,54 @@ func TestLocalRunOpts_Execute(t *testing.T) {
 				Environment: []*sdkecs.KeyValuePair{
 					{
 						Name:  aws.String("BAR_VAR"),
-						Value: aws.String("i was here first"),
-					},
-					{
-						Name:  aws.String("OVERRIDE_ALL"),
-						Value: aws.String("i will disappear :pensive:"),
-					},
-					{
-						Name:  aws.String("OVERRIDE"),
-						Value: aws.String("i will disappear :pensive:"),
+						Value: aws.String("bar-value"),
 					},
 				},
 				Secrets: []*sdkecs.Secret{
 					{
 						Name:      aws.String("SHARED_SECRET"),
-						ValueFrom: aws.String("mysvc"),
+						ValueFrom: aws.String("mysecret"),
 					},
 				},
 			},
+		},
+	}
+	expectedRunPauseArgs := &dockerengine.RunOptions{
+		ImageURI:      pauseContainerURI,
+		ContainerName: mockPauseContainerName,
+		// TODO port overrides
+		ContainerPorts: map[string]string{},
+		Command:        []string{"sleep", "infinity"},
+		LogOptions: dockerengine.RunLogOptions{
+			LinePrefix: "[pause] ",
+		},
+	}
+	expectedRunFooArgs := &dockerengine.RunOptions{
+		ContainerName: "foo" + "-" + mockContainerSuffix,
+		ImageURI:      "image1",
+		EnvVars: map[string]string{
+			"FOO_VAR": "foo-value",
+		},
+		Secrets: map[string]string{
+			"SHARED_SECRET": "secretvalue",
+		},
+		ContainerNetwork: mockPauseContainerName,
+		LogOptions: dockerengine.RunLogOptions{
+			LinePrefix: "[foo] ",
+		},
+	}
+	expectedRunBarArgs := &dockerengine.RunOptions{
+		ContainerName: "bar" + "-" + mockContainerSuffix,
+		ImageURI:      "image2",
+		EnvVars: map[string]string{
+			"BAR_VAR": "bar-value",
+		},
+		Secrets: map[string]string{
+			"SHARED_SECRET": "secretvalue",
+		},
+		ContainerNetwork: mockPauseContainerName,
+		LogOptions: dockerengine.RunLogOptions{
+			LinePrefix: "[bar] ",
 		},
 	}
 	testCases := map[string]struct {
@@ -314,6 +324,7 @@ func TestLocalRunOpts_Execute(t *testing.T) {
 		inputEnvName      string
 		inputWkldName     string
 		inputEnvOverrides map[string]string
+		buildImagesError  error
 
 		setupMocks     func(m *localRunExecuteMocks)
 		wantedWkldName string
@@ -330,7 +341,7 @@ func TestLocalRunOpts_Execute(t *testing.T) {
 			},
 			wantedError: fmt.Errorf("get task definition: %w", testError),
 		},
-		"env override with invalid container": {
+		"error getting env vars due to bad override": {
 			inputAppName:  testAppName,
 			inputWkldName: testWkldName,
 			inputEnvName:  testEnvName,
@@ -340,150 +351,130 @@ func TestLocalRunOpts_Execute(t *testing.T) {
 			setupMocks: func(m *localRunExecuteMocks) {
 				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
 			},
-			wantedError: errors.New(`parse env overrides: env override "bad:OVERRIDE" targeting invalid container`),
+			wantedError: errors.New(`get env vars: parse env overrides: "bad:OVERRIDE" targets invalid container`),
 		},
-		/*
-			"fail to get secrets": {
-				inputAppName:  testAppName,
-				inputWkldName: testWkldName,
-				inputEnvName:  testEnvName,
-				inputEnvOverrides: map[string]string{
-					"OVERRIDE_ALL": "i go everywhere",
-					"foo:OVERRIDE": "i go to foo",
-					"bar:OVERRIDE": "i go to bar",
-				},
-				setupMocks: func(m *localRunExecuteMocks) {
-					m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
-				},
-				wantedError: errors.New(`parse env overrides: env override "bad:OVERRIDE_BAD" targeting invalid container`),
+		"error reading workload manifest": {
+			inputAppName:  testAppName,
+			inputWkldName: testWkldName,
+			inputEnvName:  testEnvName,
+			setupMocks: func(m *localRunExecuteMocks) {
+				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
+				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
+				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return(nil, errors.New("some error"))
 			},
-				"error decryting secrets from task definition": {
-					inputAppName:  testAppName,
-					inputWkldName: testWkldName,
-					inputEnvName:  testEnvName,
-					setupMocks: func(m *localRunExecuteMocks) {
-						m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDefinition, nil)
-						// m.ecsLocalClient.EXPECT().DecryptedSecrets(gomock.Any()).Return(nil, testError)
-					},
-					wantedError: fmt.Errorf("get secret values: %w", testError),
-				},
-				"error getting the session configured for the input role and region": {
-					inputAppName:  testAppName,
-					inputWkldName: testWkldName,
-					inputEnvName:  testEnvName,
-					setupMocks: func(m *localRunExecuteMocks) {
-						m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDefinition, nil)
-						//m.ecsLocalClient.EXPECT().DecryptedSecrets(gomock.Any()).Return(mockDecryptedSecrets, nil)
-						m.sessProvider.EXPECT().FromRole(gomock.Any(), gomock.Any()).Return(nil, testError)
-					},
-					wantedError: fmt.Errorf("get env session: %w", testError),
-				},
-				"error reading workload manifest": {
-					inputAppName:  testAppName,
-					inputWkldName: testWkldName,
-					inputEnvName:  testEnvName,
-					setupMocks: func(m *localRunExecuteMocks) {
-						m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDefinition, nil)
-						//m.ecsLocalClient.EXPECT().DecryptedSecrets(gomock.Any()).Return(mockDecryptedSecrets, nil)
-						m.sessProvider.EXPECT().FromRole(gomock.Any(), gomock.Any()).Return(&session.Session{
-							Config: &aws.Config{
-								Region: aws.String("us-test"),
-							},
-						}, nil)
-						m.mockWsReader.EXPECT().ReadWorkloadManifest(testWkldName).Return(nil, testError)
-					},
-					wantedError: fmt.Errorf("read manifest file for %s: %w", testWkldName, testError),
-				},
-				"error if failed to interpolate workload manifest": {
-					inputAppName:  testAppName,
-					inputWkldName: testWkldName,
-					inputEnvName:  testEnvName,
-					setupMocks: func(m *localRunExecuteMocks) {
-						m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDefinition, nil)
-						//m.ecsLocalClient.EXPECT().DecryptedSecrets(gomock.Any()).Return(mockDecryptedSecrets, nil)
-						m.sessProvider.EXPECT().FromRole(gomock.Any(), gomock.Any()).Return(&session.Session{
-							Config: &aws.Config{
-								Region: aws.String("us-test"),
-							},
-						}, nil)
-						m.mockWsReader.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
-						m.mockInterpolator.EXPECT().Interpolate("").Return("", testError)
-					},
-					wantedError: fmt.Errorf("interpolate environment variables for %s manifest: %w", testWkldName, testError),
-				},
-				"return error if failed to run the pause container": {
-					inputAppName:  testAppName,
-					inputWkldName: testWkldName,
-					inputEnvName:  testEnvName,
-					setupMocks: func(m *localRunExecuteMocks) {
-						m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDefinition, nil)
-						//m.ecsLocalClient.EXPECT().DecryptedSecrets(gomock.Any()).Return(mockDecryptedSecrets, nil)
-						m.sessProvider.EXPECT().FromRole(gomock.Any(), gomock.Any()).Return(&session.Session{
-							Config: &aws.Config{
-								Region: aws.String("us-test"),
-							},
-						}, nil)
-						m.mockWsReader.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
-						m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
-						m.mockMft = &mockWorkloadMft{
-							mockRequiredEnvironmentFeatures: func() []string {
-								return []string{"mockFeature1"}
-							},
-						}
-						m.mockDockerEngine.EXPECT().IsContainerRunning(mockPauseContainerName)
-						m.mockDockerEngine.EXPECT().Run(context.Background(), gomock.Any()).Return(testError)
-					},
-					wantedError: fmt.Errorf("run pause container: %w", testError),
-				},
-				"return error if failed to run service containers": {
-					inputAppName:  testAppName,
-					inputWkldName: testWkldName,
-					inputEnvName:  testEnvName,
-					setupMocks: func(m *localRunExecuteMocks) {
-						m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDefinition, nil)
-						//m.ecsLocalClient.EXPECT().DecryptedSecrets(gomock.Any()).Return(mockDecryptedSecrets, nil)
-						m.sessProvider.EXPECT().FromRole(gomock.Any(), gomock.Any()).Return(&session.Session{
-							Config: &aws.Config{
-								Region: aws.String("us-test"),
-							},
-						}, nil)
-						m.mockWsReader.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
-						m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
-						m.mockMft = &mockWorkloadMft{
-							mockRequiredEnvironmentFeatures: func() []string {
-								return []string{"mockFeature1"}
-							},
-						}
-						m.mockDockerEngine.EXPECT().Run(gomock.Any(), gomock.Any()).Return(nil).Times(2)
-						m.mockDockerEngine.EXPECT().IsContainerRunning(mockPauseContainerName).Return(true, nil)
-						m.mockDockerEngine.EXPECT().Run(gomock.Any(), gomock.Any()).Return(testError)
-					},
-					wantedError: fmt.Errorf("run container: %w", testError),
-				},
-				"successfully run all the containers": {
-					inputAppName:  testAppName,
-					inputWkldName: testWkldName,
-					inputEnvName:  testEnvName,
-					setupMocks: func(m *localRunExecuteMocks) {
-						m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDefinition, nil)
-						//m.ecsLocalClient.EXPECT().DecryptedSecrets(gomock.Any()).Return(mockDecryptedSecrets, nil)
-						m.sessProvider.EXPECT().FromRole(gomock.Any(), gomock.Any()).Return(&session.Session{
-							Config: &aws.Config{
-								Region: aws.String("us-test"),
-							},
-						}, nil)
-						m.mockWsReader.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
-						m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
-						m.mockMft = &mockWorkloadMft{
-							mockRequiredEnvironmentFeatures: func() []string {
-								return []string{"mockFeature1"}
-							},
-						}
-						m.mockDockerEngine.EXPECT().Run(gomock.Any(), gomock.Any()).Return(nil).Times(3)
-						m.mockDockerEngine.EXPECT().IsContainerRunning(mockPauseContainerName).Return(true, nil)
-					},
-				},
-		*/
+			wantedError: errors.New(`read manifest file for testWkld: some error`),
+		},
+		"error interpolating workload manifest": {
+			inputAppName:  testAppName,
+			inputWkldName: testWkldName,
+			inputEnvName:  testEnvName,
+			setupMocks: func(m *localRunExecuteMocks) {
+				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
+				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
+				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
+				m.interpolator.EXPECT().Interpolate("").Return("", errors.New("some error"))
+			},
+			wantedError: errors.New(`interpolate environment variables for testWkld manifest: some error`),
+		},
+		"error building container images": {
+			inputAppName:     testAppName,
+			inputWkldName:    testWkldName,
+			inputEnvName:     testEnvName,
+			buildImagesError: errors.New("some error"),
+			setupMocks: func(m *localRunExecuteMocks) {
+				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
+				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
+				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
+				m.interpolator.EXPECT().Interpolate("").Return("", nil)
+			},
+			wantedError: errors.New(`build images: some error`),
+		},
+		"error if fail to run pause container": {
+			inputAppName:  testAppName,
+			inputWkldName: testWkldName,
+			inputEnvName:  testEnvName,
+			setupMocks: func(m *localRunExecuteMocks) {
+				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
+				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
+				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
+				m.interpolator.EXPECT().Interpolate("").Return("", nil)
+				m.dockerEngine.EXPECT().Run(gomock.Any(), expectedRunPauseArgs).Return(errors.New("some error"))
+				m.dockerEngine.EXPECT().IsContainerRunning(mockPauseContainerName).Return(false, nil).AnyTimes()
+			},
+			wantedError: errors.New(`run pause container: some error`),
+		},
+		"error if fail to check if pause container running": {
+			inputAppName:  testAppName,
+			inputWkldName: testWkldName,
+			inputEnvName:  testEnvName,
+			setupMocks: func(m *localRunExecuteMocks) {
+				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
+				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
+				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
+				m.interpolator.EXPECT().Interpolate("").Return("", nil)
+
+				runCalled := make(chan struct{})
+				isRunningCalled := make(chan struct{})
+				m.dockerEngine.EXPECT().Run(gomock.Any(), expectedRunPauseArgs).DoAndReturn(func(ctx context.Context, opts *dockerengine.RunOptions) error {
+					close(runCalled)
+					<-isRunningCalled
+					return nil
+				})
+				m.dockerEngine.EXPECT().IsContainerRunning(mockPauseContainerName).DoAndReturn(func(name string) (bool, error) {
+					<-runCalled
+					defer close(isRunningCalled)
+					return false, errors.New("some error")
+				})
+			},
+			wantedError: errors.New(`run pause container: check if container is running: some error`),
+		},
+		"error if fail to run service container": {
+			inputAppName:  testAppName,
+			inputWkldName: testWkldName,
+			inputEnvName:  testEnvName,
+			setupMocks: func(m *localRunExecuteMocks) {
+				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
+				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
+				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
+				m.interpolator.EXPECT().Interpolate("").Return("", nil)
+
+				runCalled := make(chan struct{})
+				m.dockerEngine.EXPECT().Run(gomock.Any(), expectedRunPauseArgs).DoAndReturn(func(ctx context.Context, opts *dockerengine.RunOptions) error {
+					close(runCalled)
+					return nil
+				})
+				m.dockerEngine.EXPECT().IsContainerRunning(mockPauseContainerName).DoAndReturn(func(name string) (bool, error) {
+					<-runCalled
+					return true, nil
+				})
+				m.dockerEngine.EXPECT().Run(gomock.Any(), expectedRunFooArgs).Return(errors.New("some error"))
+				m.dockerEngine.EXPECT().Run(gomock.Any(), expectedRunBarArgs).Return(nil)
+			},
+			wantedError: errors.New(`run container "foo": some error`),
+		},
+		"success": {
+			inputAppName:  testAppName,
+			inputWkldName: testWkldName,
+			inputEnvName:  testEnvName,
+			setupMocks: func(m *localRunExecuteMocks) {
+				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
+				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
+				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
+				m.interpolator.EXPECT().Interpolate("").Return("", nil)
+
+				runCalled := make(chan struct{})
+				m.dockerEngine.EXPECT().Run(gomock.Any(), expectedRunPauseArgs).DoAndReturn(func(ctx context.Context, opts *dockerengine.RunOptions) error {
+					close(runCalled)
+					return nil
+				})
+				m.dockerEngine.EXPECT().IsContainerRunning(mockPauseContainerName).DoAndReturn(func(name string) (bool, error) {
+					<-runCalled
+					return true, nil
+				})
+				m.dockerEngine.EXPECT().Run(gomock.Any(), expectedRunFooArgs).Return(nil)
+				m.dockerEngine.EXPECT().Run(gomock.Any(), expectedRunBarArgs).Return(nil)
+			},
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
@@ -491,14 +482,16 @@ func TestLocalRunOpts_Execute(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			m := &localRunExecuteMocks{
-				ecsLocalClient:        mocks.NewMockecsLocalClient(ctrl),
-				store:                 mocks.NewMockstore(ctrl),
-				sessProvider:          mocks.NewMocksessionProvider(ctrl),
-				mockInterpolator:      mocks.NewMockinterpolator(ctrl),
-				mockWsReader:          mocks.NewMockwsWlDirReader(ctrl),
-				mockRunner:            mocks.NewMockexecRunner(ctrl),
-				mockDockerEngine:      mocks.NewMockdockerEngineRunner(ctrl),
-				mockrepositorySerivce: mocks.NewMockrepositoryService(ctrl),
+				ecsLocalClient: mocks.NewMockecsLocalClient(ctrl),
+				ssm:            mocks.NewMocksecretGetter(ctrl),
+				secretsManager: mocks.NewMocksecretGetter(ctrl),
+				store:          mocks.NewMockstore(ctrl),
+				sessProvider:   mocks.NewMocksessionProvider(ctrl),
+				interpolator:   mocks.NewMockinterpolator(ctrl),
+				ws:             mocks.NewMockwsWlDirReader(ctrl),
+				mockRunner:     mocks.NewMockexecRunner(ctrl),
+				dockerEngine:   mocks.NewMockdockerEngineRunner(ctrl),
+				repository:     mocks.NewMockrepositoryService(ctrl),
 			}
 			tc.setupMocks(m)
 			opts := localRunOpts{
@@ -509,7 +502,7 @@ func TestLocalRunOpts_Execute(t *testing.T) {
 					envOverrides: tc.inputEnvOverrides,
 				},
 				newInterpolator: func(app, env string) interpolator {
-					return m.mockInterpolator
+					return m.interpolator
 				},
 				unmarshal: func(b []byte) (manifest.DynamicWorkload, error) {
 					return m.mockMft, nil
@@ -518,16 +511,18 @@ func TestLocalRunOpts_Execute(t *testing.T) {
 					return nil
 				},
 				buildContainerImages: func(o *localRunOpts) error {
-					return nil
+					return tc.buildImagesError
 				},
 				imageInfoList:   mockImageInfoList,
-				ws:              m.mockWsReader,
+				ws:              m.ws,
 				ecsLocalClient:  m.ecsLocalClient,
+				ssm:             m.ssm,
+				secretsManager:  m.secretsManager,
 				store:           m.store,
 				sessProvider:    m.sessProvider,
 				cmd:             m.mockRunner,
-				dockerEngine:    m.mockDockerEngine,
-				repository:      m.mockrepositorySerivce,
+				dockerEngine:    m.dockerEngine,
+				repository:      m.repository,
 				targetEnv:       &mockEnv,
 				targetApp:       &mockApp,
 				containerSuffix: mockContainerSuffix,
