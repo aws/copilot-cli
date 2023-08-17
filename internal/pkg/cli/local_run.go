@@ -187,10 +187,10 @@ func (o *localRunOpts) Validate() error {
 			return err
 		}
 
-		if _, err := strconv.Atoi(split[0]); err != nil {
+		if _, ok := strconv.Atoi(split[0]); ok != nil {
 			return err
 		}
-		if _, err := strconv.Atoi(split[1]); err != nil {
+		if _, ok := strconv.Atoi(split[1]); ok != nil {
 			return err
 		}
 	}
@@ -254,23 +254,24 @@ func (o *localRunOpts) Execute() error {
 		return fmt.Errorf("get env vars: %w", err)
 	}
 
-	// figure out ports to expose
-	ports := make(map[string]string, len(taskDef.ContainerDefinitions))
+	// map of containerPort -> hostPort
+	ports := make(map[string]string)
 	for _, container := range taskDef.ContainerDefinitions {
-		for _, portMapping := range container.PortMappings {
-			hostPort := strconv.FormatInt(aws.Int64Value(portMapping.HostPort), 10)
+		container := container
+		for _, mapping := range container.PortMappings {
+			host := strconv.FormatInt(aws.Int64Value(mapping.HostPort), 10)
 
-			containerPort := hostPort
-			if portMapping.ContainerPort == nil {
-				containerPort = strconv.FormatInt(aws.Int64Value(portMapping.ContainerPort), 10)
+			ctr := host
+			if mapping.ContainerPort != nil {
+				ctr = strconv.FormatInt(aws.Int64Value(mapping.ContainerPort), 10)
 			}
-			ports[hostPort] = containerPort
+			ports[ctr] = host
 		}
 	}
 	for _, port := range o.portOverrides {
 		// already validated in Validate()
 		split := strings.Split(port, ":")
-		ports[split[0]] = split[1]
+		ports[split[1]] = split[0]
 	}
 
 	mft, err := workloadManifest(&workloadManifestInput{
@@ -346,12 +347,17 @@ func getBuiltSidecarImageLocations(sidecars map[string]*manifest.SidecarConfig) 
 	return sideCarBuiltImageLocations
 }
 
-func (o *localRunOpts) runPauseContainer(ctx context.Context, containerPorts map[string]string) error {
+func (o *localRunOpts) runPauseContainer(ctx context.Context, ports map[string]string) error {
+	// flip ports to be host->ctr
+	flippedPorts := make(map[string]string, len(ports))
+	for k, v := range ports {
+		flippedPorts[v] = k
+	}
 	containerNameWithSuffix := fmt.Sprintf("%s-%s", pauseContainerName, o.containerSuffix)
 	runOptions := &dockerengine.RunOptions{
 		ImageURI:       pauseContainerURI,
 		ContainerName:  containerNameWithSuffix,
-		ContainerPorts: containerPorts,
+		ContainerPorts: flippedPorts,
 		Command:        []string{"sleep", "infinity"},
 		LogOptions: dockerengine.RunLogOptions{
 			Color:      o.newColor(),

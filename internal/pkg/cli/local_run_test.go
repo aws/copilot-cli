@@ -33,27 +33,52 @@ type localRunAskMocks struct {
 
 func TestLocalRunOpts_Validate(t *testing.T) {
 	testCases := map[string]struct {
-		inputAppName  string
-		setupMocks    func(m *localRunAskMocks)
-		wantedAppName string
-		wantedError   error
+		inAppName       string
+		inPortOverrides []string
+		setupMocks      func(m *localRunAskMocks)
+		wantAppName     string
+		wantError       error
 	}{
 		"no app in workspace": {
-			wantedError: errNoAppInWorkspace,
+			wantError: errNoAppInWorkspace,
 		},
 		"fail to read the application from SSM store": {
-			inputAppName: "testApp",
+			inAppName: "testApp",
 			setupMocks: func(m *localRunAskMocks) {
 				m.store.EXPECT().GetApplication("testApp").Return(nil, testError)
 			},
-			wantedError: fmt.Errorf("get application testApp: %w", testError),
+			wantError: fmt.Errorf("get application testApp: %w", testError),
 		},
-		"successful validation": {
-			inputAppName: "testApp",
+		"invalid port override, format": {
+			inAppName:       "testApp",
+			inPortOverrides: []string{"1:2:3"},
 			setupMocks: func(m *localRunAskMocks) {
 				m.store.EXPECT().GetApplication("testApp").Return(&config.Application{Name: "testApp"}, nil)
 			},
-			wantedAppName: "testApp",
+			wantError: errors.New(`invalid port override "1:2:3": should be in format 8080:80`),
+		},
+		"invalid port override, host not a number": {
+			inAppName:       "testApp",
+			inPortOverrides: []string{"asdf:jkl"},
+			setupMocks: func(m *localRunAskMocks) {
+				m.store.EXPECT().GetApplication("testApp").Return(&config.Application{Name: "testApp"}, nil)
+			},
+			wantError: errors.New(`invalid port override "asdf:jkl": should be in format 8080:80`),
+		},
+		"invalid port override, ctr not a number": {
+			inAppName:       "testApp",
+			inPortOverrides: []string{"80:jkl"},
+			setupMocks: func(m *localRunAskMocks) {
+				m.store.EXPECT().GetApplication("testApp").Return(&config.Application{Name: "testApp"}, nil)
+			},
+			wantError: errors.New(`invalid port override "80:jkl": should be in format 8080:80`),
+		},
+		"success": {
+			inAppName:       "testApp",
+			inPortOverrides: []string{"77:7777"},
+			setupMocks: func(m *localRunAskMocks) {
+				m.store.EXPECT().GetApplication("testApp").Return(&config.Application{Name: "testApp"}, nil)
+			},
 		},
 	}
 	for name, tc := range testCases {
@@ -69,7 +94,8 @@ func TestLocalRunOpts_Validate(t *testing.T) {
 			}
 			opts := localRunOpts{
 				localRunVars: localRunVars{
-					appName: tc.inputAppName,
+					appName:       tc.inAppName,
+					portOverrides: tc.inPortOverrides,
 				},
 				store: m.store,
 			}
@@ -77,8 +103,8 @@ func TestLocalRunOpts_Validate(t *testing.T) {
 			err := opts.Validate()
 
 			// THEN
-			if tc.wantedError != nil {
-				require.EqualError(t, err, tc.wantedError.Error())
+			if tc.wantError != nil {
+				require.EqualError(t, err, tc.wantError.Error())
 			} else {
 				require.NoError(t, err)
 			}
@@ -263,6 +289,15 @@ func TestLocalRunOpts_Execute(t *testing.T) {
 						ValueFrom: aws.String("mysecret"),
 					},
 				},
+				PortMappings: []*sdkecs.PortMapping{
+					{
+						HostPort:      aws.Int64(80),
+						ContainerPort: aws.Int64(8080),
+					},
+					{
+						HostPort: aws.Int64(9999),
+					},
+				},
 			},
 			{
 				Name: aws.String("bar"),
@@ -278,15 +313,28 @@ func TestLocalRunOpts_Execute(t *testing.T) {
 						ValueFrom: aws.String("mysecret"),
 					},
 				},
+				PortMappings: []*sdkecs.PortMapping{
+					{
+						HostPort: aws.Int64(10000),
+					},
+					{
+						HostPort:      aws.Int64(77),
+						ContainerPort: aws.Int64(7777),
+					},
+				},
 			},
 		},
 	}
 	expectedRunPauseArgs := &dockerengine.RunOptions{
 		ImageURI:      pauseContainerURI,
 		ContainerName: mockPauseContainerName,
-		// TODO port overrides
-		ContainerPorts: map[string]string{},
-		Command:        []string{"sleep", "infinity"},
+		ContainerPorts: map[string]string{
+			"80":    "8080",
+			"999":   "9999",
+			"10000": "10000",
+			"777":   "7777",
+		},
+		Command: []string{"sleep", "infinity"},
 		LogOptions: dockerengine.RunLogOptions{
 			LinePrefix: "[pause] ",
 		},
@@ -320,11 +368,12 @@ func TestLocalRunOpts_Execute(t *testing.T) {
 		},
 	}
 	testCases := map[string]struct {
-		inputAppName      string
-		inputEnvName      string
-		inputWkldName     string
-		inputEnvOverrides map[string]string
-		buildImagesError  error
+		inputAppName       string
+		inputEnvName       string
+		inputWkldName      string
+		inputEnvOverrides  map[string]string
+		inputPortOverrides []string
+		buildImagesError   error
 
 		setupMocks     func(m *localRunExecuteMocks)
 		wantedWkldName string
@@ -500,6 +549,10 @@ func TestLocalRunOpts_Execute(t *testing.T) {
 					wkldName:     tc.inputWkldName,
 					envName:      tc.inputEnvName,
 					envOverrides: tc.inputEnvOverrides,
+					portOverrides: []string{
+						"777:7777",
+						"999:9999",
+					},
 				},
 				newInterpolator: func(app, env string) interpolator {
 					return m.interpolator
