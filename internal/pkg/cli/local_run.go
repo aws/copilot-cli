@@ -369,7 +369,9 @@ func (o *localRunOpts) runPauseContainer(ctx context.Context, ports map[string]s
 	errCh := make(chan error, 1)
 
 	go func() {
-		errCh <- o.dockerEngine.Run(ctx, runOptions)
+		if err := o.dockerEngine.Run(ctx, runOptions); err != nil {
+			errCh <- err
+		}
 	}()
 
 	// go routine to check if pause container is running
