@@ -323,9 +323,11 @@ func (c DockerCmdClient) IsContainerRunning(containerName string) (bool, error) 
 
 // KillContainer sends a SIGTERM signal to a Docker container with the given containerName if it's running.
 func (c DockerCmdClient) KillContainer(containerName string) error {
-	if running, err := c.containerStatus.IsContainerRunning(containerName); err != nil {
+	running, err := c.containerStatus.IsContainerRunning(containerName)
+	if err != nil {
 		return err
-	} else if !running {
+	}
+	if !running {
 		return nil
 	}
 
@@ -348,9 +350,11 @@ func (c DockerCmdClient) IsContainerPresent(containerName string) (bool, error) 
 
 // RemoveContainer removes a Docker container with the given containerName if it's present.
 func (c DockerCmdClient) RemoveContainer(containerName string) error {
-	if exists, err := c.containerStatus.IsContainerPresent(containerName); err != nil {
+	exists, err := c.containerStatus.IsContainerPresent(containerName)
+	if err != nil {
 		return err
-	} else if !exists {
+	}
+	if !exists {
 		return nil
 	}
 

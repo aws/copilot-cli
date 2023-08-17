@@ -6,6 +6,7 @@ package cli
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"os/signal"
 	"strconv"
@@ -298,27 +299,32 @@ func (o *localRunOpts) Execute() error {
 	o.imageInfoList = append(o.imageInfoList, sidecarImageLocations...)
 
 	errCh := make(chan error, 1)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	// Handle containers when a termination signal is received.
 	go func() {
 		sig := o.NotifyInterrupt()
-		fmt.Println("Received signal:", sig)
+		log.Println("Received signal:", sig)
 		o.mutex.Lock()
 		o.isContainerTermination = true
 		o.mutex.Unlock()
-		err := o.handleContainers()
-
-		// Wait for a short duration to allow containers to stop or get killed.
-		time.Sleep(1 * time.Second)
-		errCh <- err
+		errCh <- o.handleContainers()
+		// Wait for a max duration to allow containers to stop and get removed.
+		timeout := 30 * time.Second
+		select {
+		case <-time.After(timeout):
+			errCh <- fmt.Errorf("containers were not handled within the timeout %s", timeout)
+		}
 	}()
 
 	go func() {
-		err = o.runPauseContainer(context.Background(), containerPorts)
+		err := o.runPauseContainer(ctx, containerPorts)
 		if err != nil {
 			errCh <- err
 			return
 		}
-		err = o.runContainers(context.Background(), o.imageInfoList, secretsList, envVars)
+		err = o.runContainers(ctx, o.imageInfoList, secretsList, envVars)
 		if err != nil {
 			errCh <- err
 			return
@@ -338,7 +344,7 @@ func (o *localRunOpts) getContainerSuffix() string {
 
 func (o *localRunOpts) NotifyInterrupt() os.Signal {
 	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+	signal.Notify(sigCh, syscall.SIGINT)
 	return <-sigCh
 }
 
@@ -463,14 +469,12 @@ func (o *localRunOpts) killAndRemoveContainer(containerName string) error {
 func (o *localRunOpts) handleContainers() error {
 	//kills and removes all the containers ran earlier.
 	containerNetwork := fmt.Sprintf("%s-%s", pauseContainerName, o.containerSuffix)
-	err := o.killAndRemoveContainer(containerNetwork)
-	if err != nil {
+	if err := o.killAndRemoveContainer(containerNetwork); err != nil {
 		return err
 	}
 	for _, imageInfo := range o.imageInfoList {
 		containerNameWithSuffix := fmt.Sprintf("%s-%s", imageInfo.ContainerName, o.containerSuffix)
-		err := o.killAndRemoveContainer(containerNameWithSuffix)
-		if err != nil {
+		if err := o.killAndRemoveContainer(containerNameWithSuffix); err != nil {
 			return err
 		}
 	}
