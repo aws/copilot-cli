@@ -24,6 +24,7 @@ import (
 	cloudformation1 "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	stack "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	describe "github.com/aws/copilot-cli/internal/pkg/describe"
+	stack0 "github.com/aws/copilot-cli/internal/pkg/describe/stack"
 	dockerengine "github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 	dockerfile "github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
 	ecs0 "github.com/aws/copilot-cli/internal/pkg/ecs"
@@ -3865,6 +3866,44 @@ func (m *MockbucketEmptier) EmptyBucket(bucket string) error {
 func (mr *MockbucketEmptierMockRecorder) EmptyBucket(bucket interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EmptyBucket", reflect.TypeOf((*MockbucketEmptier)(nil).EmptyBucket), bucket)
+}
+
+// MockstackDescriber is a mock of stackDescriber interface.
+type MockstackDescriber struct {
+	ctrl     *gomock.Controller
+	recorder *MockstackDescriberMockRecorder
+}
+
+// MockstackDescriberMockRecorder is the mock recorder for MockstackDescriber.
+type MockstackDescriberMockRecorder struct {
+	mock *MockstackDescriber
+}
+
+// NewMockstackDescriber creates a new mock instance.
+func NewMockstackDescriber(ctrl *gomock.Controller) *MockstackDescriber {
+	mock := &MockstackDescriber{ctrl: ctrl}
+	mock.recorder = &MockstackDescriberMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockstackDescriber) EXPECT() *MockstackDescriberMockRecorder {
+	return m.recorder
+}
+
+// Resources mocks base method.
+func (m *MockstackDescriber) Resources() ([]*stack0.Resource, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Resources")
+	ret0, _ := ret[0].([]*stack0.Resource)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Resources indicates an expected call of Resources.
+func (mr *MockstackDescriberMockRecorder) Resources() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Resources", reflect.TypeOf((*MockstackDescriber)(nil).Resources))
 }
 
 // MockenvironmentDeployer is a mock of environmentDeployer interface.

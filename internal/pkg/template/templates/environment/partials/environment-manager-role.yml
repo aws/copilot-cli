@@ -234,6 +234,13 @@ EnvironmentManagerRole:
             "kms:Decrypt"
           ]
           Resource: "*"
+{{- if .PublicHTTPConfig.ELBAccessLogs.ShouldCreateBucket}}
+        - Sid: EmptyELBAccessLogsBucket
+          Effect: Allow
+          Action:
+            - s3:EmptyBucket
+          Resource: !Join [ "/" , [!GetAtt ELBAccessLogsBucket.Arn, "*"]]
+{{- end}}
         - Sid: PutObjectsToArtifactBucket
           Effect: Allow
           Action:
