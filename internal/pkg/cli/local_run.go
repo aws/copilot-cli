@@ -257,7 +257,6 @@ func (o *localRunOpts) Execute() error {
 	// map of containerPort -> hostPort
 	ports := make(map[string]string)
 	for _, container := range taskDef.ContainerDefinitions {
-		container := container
 		for _, mapping := range container.PortMappings {
 			host := strconv.FormatInt(aws.Int64Value(mapping.HostPort), 10)
 
