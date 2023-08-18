@@ -614,7 +614,7 @@ func TestLocalRunOpts_getEnvVars(t *testing.T) {
 		envOverrides map[string]string
 		setupMocks   func(m *localRunExecuteMocks)
 
-		want      map[string]map[string]envVarValue
+		want      map[string]containerEnv
 		wantError string
 	}{
 		"invalid container in env override": {
@@ -640,7 +640,7 @@ func TestLocalRunOpts_getEnvVars(t *testing.T) {
 				"foo:OVERRIDE": "foo",
 				"bar:OVERRIDE": "bar",
 			},
-			want: map[string]map[string]envVarValue{
+			want: map[string]containerEnv{
 				"foo": {
 					"OVERRIDE_ALL": newVar("all"),
 					"OVERRIDE":     newVar("foo"),
@@ -695,7 +695,7 @@ func TestLocalRunOpts_getEnvVars(t *testing.T) {
 				"foo:OVERRIDE": "foo",
 				"bar:OVERRIDE": "bar",
 			},
-			want: map[string]map[string]envVarValue{
+			want: map[string]containerEnv{
 				"foo": {
 					"RANDOM_FOO":   newVar("foo"),
 					"OVERRIDE_ALL": newVar("all"),
@@ -770,7 +770,7 @@ func TestLocalRunOpts_getEnvVars(t *testing.T) {
 				m.secretsManager.EXPECT().GetSecretValue(gomock.Any(), "arn:aws:secretsmanager:us-west-2:123456789:secret:mysecret").Return("secretsmanager", nil)
 				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "myparam").Return("default", nil)
 			},
-			want: map[string]map[string]envVarValue{
+			want: map[string]containerEnv{
 				"foo": {
 					"SSM":             newSecret("ssm"),
 					"SECRETS_MANAGER": newSecret("secretsmanager"),
@@ -814,7 +814,7 @@ func TestLocalRunOpts_getEnvVars(t *testing.T) {
 				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "foo").Return("foo-value", nil)
 				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "bar").Return("bar-value", nil)
 			},
-			want: map[string]map[string]envVarValue{
+			want: map[string]containerEnv{
 				"foo": {
 					"ONE": newSecret("shared-value"),
 					"TWO": newSecret("foo-value"),
@@ -864,7 +864,7 @@ func TestLocalRunOpts_getEnvVars(t *testing.T) {
 				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "shared").Return("shared-value", nil)
 				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "foo").Return("foo-value", nil)
 			},
-			want: map[string]map[string]envVarValue{
+			want: map[string]containerEnv{
 				"foo": {
 					"ONE": newVar("one-overridden"),
 					"TWO": newSecret("foo-value"),

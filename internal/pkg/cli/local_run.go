@@ -167,6 +167,30 @@ func newLocalRunOpts(vars localRunVars) (*localRunOpts, error) {
 	return opts, nil
 }
 
+type portOverride struct {
+	host      string
+	container string
+}
+
+func parsePortOverride(s string) (portOverride, error) {
+	err := fmt.Errorf("invalid port override %q: should be in format 8080:80", s)
+	split := strings.Split(s, ":")
+	if len(split) != 2 {
+		return portOverride{}, err
+	}
+
+	if _, ok := strconv.Atoi(split[0]); ok != nil {
+		return portOverride{}, err
+	}
+	if _, ok := strconv.Atoi(split[1]); ok != nil {
+		return portOverride{}, err
+	}
+	return portOverride{
+		host:      split[0],
+		container: split[0],
+	}, nil
+}
+
 // Validate returns an error for any invalid optional flags.
 func (o *localRunOpts) Validate() error {
 	if o.appName == "" {
@@ -181,16 +205,7 @@ func (o *localRunOpts) Validate() error {
 
 	// validate portOverrides
 	for _, p := range o.portOverrides {
-		err := fmt.Errorf("invalid port override %q: should be in format 8080:80", p)
-		split := strings.Split(p, ":")
-		if len(split) != 2 {
-			return err
-		}
-
-		if _, ok := strconv.Atoi(split[0]); ok != nil {
-			return err
-		}
-		if _, ok := strconv.Atoi(split[1]); ok != nil {
+		if _, err := parsePortOverride(p); err != nil {
 			return err
 		}
 	}
@@ -269,8 +284,8 @@ func (o *localRunOpts) Execute() error {
 	}
 	for _, port := range o.portOverrides {
 		// already validated in Validate()
-		split := strings.Split(port, ":")
-		ports[split[1]] = split[0]
+		override, _ := parsePortOverride(port)
+		ports[override.container] = ports[override.host]
 	}
 
 	mft, err := workloadManifest(&workloadManifestInput{
@@ -397,7 +412,7 @@ func (o *localRunOpts) runPauseContainer(ctx context.Context, ports map[string]s
 	return nil
 }
 
-func (o *localRunOpts) runContainers(ctx context.Context, imageInfoList []clideploy.ImagePerContainer, envVars map[string]map[string]envVarValue) error {
+func (o *localRunOpts) runContainers(ctx context.Context, imageInfoList []clideploy.ImagePerContainer, envVars map[string]containerEnv) error {
 	g, ctx := errgroup.WithContext(ctx)
 
 	// Iterate over the image info list and perform parallel container runs
@@ -443,6 +458,8 @@ func (o *localRunOpts) runContainers(ctx context.Context, imageInfoList []clidep
 	return nil
 }
 
+type containerEnv map[string]envVarValue
+
 type envVarValue struct {
 	Value  string
 	Secret bool
@@ -452,8 +469,8 @@ type envVarValue struct {
 // specified in the Task Definition to return a set of environment varibles for each
 // continer defined in the TaskDefinition. The returned map is a map of container names,
 // each of which contains a mapping of key->envVarValue, which defines if the variable is a secret or not.
-func (o *localRunOpts) getEnvVars(ctx context.Context, taskDef *awsecs.TaskDefinition) (map[string]map[string]envVarValue, error) {
-	envVars := make(map[string]map[string]envVarValue)
+func (o *localRunOpts) getEnvVars(ctx context.Context, taskDef *awsecs.TaskDefinition) (map[string]containerEnv, error) {
+	envVars := make(map[string]containerEnv)
 	for _, ctr := range taskDef.ContainerDefinitions {
 		envVars[aws.StringValue(ctr.Name)] = make(map[string]envVarValue)
 	}
@@ -478,7 +495,7 @@ func (o *localRunOpts) getEnvVars(ctx context.Context, taskDef *awsecs.TaskDefin
 // The expected format of the flag values is KEY=VALUE, with an optional container name
 // in the format of [containerName]:KEY=VALUE. If the container name is omitted,
 // the environment variable override is applied to all containers in the task definition.
-func (o *localRunOpts) fillEnvOverrides(envVars map[string]map[string]envVarValue) error {
+func (o *localRunOpts) fillEnvOverrides(envVars map[string]containerEnv) error {
 	for k, v := range o.envOverrides {
 		if !strings.Contains(k, ":") {
 			// apply override to all containers
@@ -506,7 +523,7 @@ func (o *localRunOpts) fillEnvOverrides(envVars map[string]map[string]envVarValu
 
 // fillSecrets collects non-overridden secrets from the task definition and
 // makes requests to SSM and Secrets Manager to get their value.
-func (o *localRunOpts) fillSecrets(ctx context.Context, envVars map[string]map[string]envVarValue, taskDef *awsecs.TaskDefinition) error {
+func (o *localRunOpts) fillSecrets(ctx context.Context, envVars map[string]containerEnv, taskDef *awsecs.TaskDefinition) error {
 	// figure out which secrets we need to get, set value to ValueFrom
 	unique := make(map[string]string)
 	for _, s := range taskDef.Secrets() {
