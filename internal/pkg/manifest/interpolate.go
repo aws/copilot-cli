@@ -74,7 +74,7 @@ func (i *Interpolator) applyInterpolation(node *yaml.Node) error {
 			return err
 		}
 		var s []string
-		if err = json.Unmarshal([]byte(interpolated), &s); err == nil && len(s) != 0 {
+		if err = json.Unmarshal([]byte(interpolated), &s); err == nil && len(s) != 0 && node.Style != yaml.LiteralStyle {
 			seqNode := &yaml.Node{
 				Kind: yaml.SequenceNode,
 			}

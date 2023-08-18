@@ -14,6 +14,8 @@ $ copilot env init [flags]
 AWS Copilot CLI の全てのコマンド同様、必須フラグを省略した場合にはそれらの情報の入力をインタラクティブに求められます。必須フラグを明示的に渡してコマンドを実行することでこれをスキップできます。
 ```
 Common Flags
+      --allow-downgrade                Optional. Allow using an older version of Copilot to update Copilot components
+                                       updated by a newer version of Copilot.
   -a, --app string                     Name of the application.
       --aws-access-key-id string       Optional. An AWS access key.
       --aws-secret-access-key string   Optional. An AWS secret access key.

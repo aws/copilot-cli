@@ -23,6 +23,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
+	stackdescr "github.com/aws/copilot-cli/internal/pkg/describe/stack"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
@@ -170,6 +171,7 @@ type secretDeleter interface {
 
 type imageBuilderPusher interface {
 	BuildAndPush(ctx context.Context, args *dockerengine.BuildArguments, w io.Writer) (string, error)
+	Build(ctx context.Context, args *dockerengine.BuildArguments, w io.Writer) (string, error)
 }
 
 type repositoryLogin interface {
@@ -366,6 +368,10 @@ type uploader interface {
 
 type bucketEmptier interface {
 	EmptyBucket(bucket string) error
+}
+
+type stackDescriber interface {
+	Resources() ([]*stackdescr.Resource, error)
 }
 
 // Interfaces for deploying resources through CloudFormation. Facilitates mocking.
@@ -694,6 +700,12 @@ type workloadDeployer interface {
 
 type templateDiffer interface {
 	DeployDiff(inTmpl string) (string, error)
+}
+
+type dockerEngineRunner interface {
+	CheckDockerEngineRunning() error
+	Run(context.Context, *dockerengine.RunOptions) error
+	IsContainerRunning(string) (bool, error)
 }
 
 type workloadStackGenerator interface {

@@ -72,10 +72,10 @@ func newDeployOpts(vars deployVars) (*deployOpts, error) {
 	prompter := prompt.New()
 	return &deployOpts{
 		deployVars: vars,
-		store:      store,
-		sel:        selector.NewLocalWorkloadSelector(prompter, store, ws),
-		ws:         ws,
-		prompt:     prompter,
+		store:            store,
+		sel:              selector.NewLocalWorkloadSelector(prompter, store, ws),
+		ws:               ws,
+		prompt:           prompter,
 		newWorkloadAdder: func() wkldInitializerWithoutManifest {
 			return &initialize.WorkloadInitializer{
 				Store:    store,
@@ -96,6 +96,7 @@ func newDeployOpts(vars deployVars) (*deployOpts, error) {
 					unmarshal:       manifest.UnmarshalWorkload,
 					sel:             selector.NewLocalWorkloadSelector(o.prompt, o.store, ws),
 					cmd:             exec.NewCmd(),
+					templateVersion: version.LatestTemplateVersion(),
 					sessProvider:    sessProvider,
 				}
 				opts.newJobDeployer = func() (workloadDeployer, error) {
@@ -272,6 +273,7 @@ func BuildDeployCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&vars.forceNewUpdate, forceFlag, false, forceFlagDescription)
 	cmd.Flags().BoolVar(&vars.disableRollback, noRollbackFlag, false, noRollbackFlagDescription)
 	cmd.Flags().BoolVar(&vars.allowWkldDowngrade, allowDowngradeFlag, false, allowDowngradeFlagDescription)
+	cmd.Flags().BoolVar(&vars.detach, detachFlag, false, detachFlagDescription)
 	cmd.Flags().BoolVar(&vars.yesInitWkld, yesInitWorkloadFlag, false, yesInitWorkloadFlagDescription)
 	cmd.Flags().BoolVar(&vars.noInitWkld, noInitWorkloadFlag, false, noInitWorkloadFlagDescription)
 

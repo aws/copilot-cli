@@ -1,0 +1,23 @@
+{{- if or (eq .Build.EnvironmentType "LINUX_CONTAINER") (eq .Build.EnvironmentType "ARM_CONTAINER")}}
+Cache:
+  Modes:
+    - LOCAL_DOCKER_LAYER_CACHE
+  Type: LOCAL
+{{- else }}
+Cache:
+  Type: "NO_CACHE"
+{{- end }}
+Environment:
+  Type: {{.Build.EnvironmentType}}
+  ComputeType: BUILD_GENERAL1_SMALL
+  PrivilegedMode: true
+  Image: {{.Build.Image}}
+  EnvironmentVariables:
+    - Name: AWS_ACCOUNT_ID
+      Value: !Sub '${AWS::AccountId}'
+    - Name: PARTITION
+      Value: !Ref AWS::Partition
+Source:
+  Type: CODEPIPELINE
+  BuildSpec: {{.Build.BuildspecPath}}
+TimeoutInMinutes: 60

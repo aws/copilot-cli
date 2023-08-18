@@ -5,6 +5,7 @@
 package dockerengine
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -15,8 +16,11 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/aws/copilot-cli/internal/pkg/exec"
+	"github.com/fatih/color"
+	"golang.org/x/sync/errgroup"
 )
 
 // Cmd is the interface implemented by external commands.
@@ -69,6 +73,25 @@ type BuildArguments struct {
 	Platform   string            // Optional. OS/Arch to pass to `docker build`.
 	Args       map[string]string // Optional. Build args to pass via `--build-arg` flags. Equivalent to ARG directives in dockerfile.
 	Labels     map[string]string // Required. Set metadata for an image.
+}
+
+// RunOptions holds the options for running a Docker container.
+type RunOptions struct {
+	ImageURI         string            // Required. The image name to run.
+	Secrets          map[string]string // Optional. Secrets to pass to the container as environment variables.
+	EnvVars          map[string]string // Optional. Environment variables to pass to the container.
+	ContainerName    string            // Optional. The name for the container.
+	ContainerPorts   map[string]string // Optional. Contains host and container ports.
+	Command          []string          // Optional. The command to run in the container.
+	ContainerNetwork string            // Optional. Network mode for the container.
+	LogOptions       RunLogOptions
+}
+
+// RunLogOptions holds the logging configuration for Run().
+type RunLogOptions struct {
+	Color      *color.Color
+	Output     io.Writer
+	LinePrefix string
 }
 
 // GenerateDockerBuildArgs returns command line arguments to be passed to the Docker build command based on the provided BuildArguments.
@@ -199,6 +222,95 @@ func (c DockerCmdClient) Push(ctx context.Context, uri string, w io.Writer, tags
 		return "", fmt.Errorf("parse the digest from the repo digest '%s'", repoDigest)
 	}
 	return parts[1], nil
+}
+
+func (in *RunOptions) generateRunArguments() []string {
+	args := []string{"run"}
+
+	if in.ContainerName != "" {
+		args = append(args, "--name", in.ContainerName)
+	}
+
+	for hostPort, containerPort := range in.ContainerPorts {
+		args = append(args, "--publish", fmt.Sprintf("%s:%s", hostPort, containerPort))
+	}
+
+	// Add network option if it's not a "pause" container.
+	if !strings.HasPrefix(in.ContainerName, "pause") {
+		args = append(args, "--network", fmt.Sprintf("container:%s", in.ContainerNetwork))
+	}
+
+	for key, value := range in.Secrets {
+		args = append(args, "--env", fmt.Sprintf("%s=%s", key, value))
+	}
+
+	for key, value := range in.EnvVars {
+		args = append(args, "--env", fmt.Sprintf("%s=%s", key, value))
+	}
+
+	args = append(args, in.ImageURI)
+
+	if in.Command != nil && len(in.Command) > 0 {
+		args = append(args, in.Command...)
+	}
+	return args
+}
+
+// Run runs a Docker container with the sepcified options.
+func (c DockerCmdClient) Run(ctx context.Context, options *RunOptions) error {
+	// set default options
+	if options.LogOptions.Color == nil {
+		options.LogOptions.Color = color.New()
+	}
+	if options.LogOptions.Output == nil {
+		options.LogOptions.Output = os.Stderr
+	}
+
+	// Ensure only one thread is writing to Output at a time
+	// since we don't know if the Writer is thread safe.
+	mu := &sync.Mutex{}
+	g, ctx := errgroup.WithContext(ctx)
+	logger := func() io.WriteCloser {
+		pr, pw := io.Pipe()
+		g.Go(func() error {
+			scanner := bufio.NewScanner(pr)
+			for scanner.Scan() {
+				mu.Lock()
+				options.LogOptions.Color.Fprintln(options.LogOptions.Output, options.LogOptions.LinePrefix+scanner.Text())
+				mu.Unlock()
+			}
+			return scanner.Err()
+		})
+		return pw
+	}
+
+	g.Go(func() error {
+		// Close loggers to ensure scanner.Scan() in the logger goroutine returns.
+		// This is really only an issue in tests; os/exec.Cmd.Run() returns EOF to
+		// output streams when the command exits.
+		stdout := logger()
+		defer stdout.Close()
+		stderr := logger()
+		defer stderr.Close()
+
+		if err := c.runner.RunWithContext(ctx, "docker", options.generateRunArguments(), exec.Stdout(stdout), exec.Stderr(stderr)); err != nil {
+			return fmt.Errorf("running container: %w", err)
+		}
+		return nil
+	})
+
+	return g.Wait()
+}
+
+// IsContainerRunning checks if a specific Docker container is running.
+func (c DockerCmdClient) IsContainerRunning(containerName string) (bool, error) {
+	buf := &bytes.Buffer{}
+	if err := c.runner.Run("docker", []string{"ps", "-q", "--filter", "name=" + containerName}, exec.Stdout(buf)); err != nil {
+		return false, fmt.Errorf("run docker ps: %w", err)
+	}
+
+	output := strings.TrimSpace(buf.String())
+	return output != "", nil
 }
 
 // CheckDockerEngineRunning will run `docker info` command to check if the docker engine is running.

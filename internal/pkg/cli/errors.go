@@ -4,9 +4,11 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
+	"github.com/dustin/go-humanize/english"
 )
 
 type errCannotDowngradePipelineVersion struct {
@@ -117,4 +119,32 @@ func (e *errCannotDowngradeVersion) RecommendActions() string {
 - We recommend upgrade your local Copilot CLI version and run this command again.
 - Alternatively, you can run with %s to override. However, this can cause unsuccessful deployment. Please use with caution!`,
 		color.HighlightCode(fmt.Sprintf("%s %s", e.componentType, e.componentName)), color.HighlightCode(fmt.Sprintf("--%s", allowDowngradeFlag)))
+}
+
+type errNoInfrastructureChanges struct {
+	parentErr error
+}
+
+func (e *errNoInfrastructureChanges) Error() string {
+	return e.parentErr.Error()
+}
+
+func (e *errNoInfrastructureChanges) ExitCode() int {
+	return 0
+}
+
+type errBucketEmptyingFailed struct {
+	failedBuckets []string
+	bucketErrors  []error
+}
+
+func (e *errBucketEmptyingFailed) Error() string {
+	return fmt.Sprintf("emptying %v %v failed: %v", english.PluralWord(len(e.failedBuckets), "bucket", "buckets"),
+		english.WordSeries(e.failedBuckets, "and"), errors.Join(e.bucketErrors...))
+}
+
+func (e *errBucketEmptyingFailed) RecommendActions() string {
+	return fmt.Sprintf(`Copilot failed to empty and delete %v managed by your environment. The %v now a dangling resource.
+- We recommend logging into the S3 console and manually deleting the affected %v.`,
+		english.PluralWord(len(e.failedBuckets), "an S3 bucket", "S3 buckets"), english.PluralWord(len(e.failedBuckets), "bucket is", "buckets are"), english.PluralWord(len(e.failedBuckets), "bucket", "buckets"))
 }

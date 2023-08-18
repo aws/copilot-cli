@@ -27,6 +27,7 @@ var _ = Describe("App Runner", Ordered, func() {
 	BeforeAll(func() {
 		_, initErr = cli.Init(&client.InitRequest{
 			AppName:      appName,
+			EnvName:      envName,
 			WorkloadName: feSvcName,
 			ImageTag:     "gallopinggurdey",
 			Dockerfile:   "./front-end/Dockerfile",

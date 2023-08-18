@@ -52,7 +52,7 @@ type appResourcesGetter interface {
 }
 
 type environmentDeployer interface {
-	UpdateAndRenderEnvironment(conf deploycfn.StackConfiguration, bucketARN string, opts ...cloudformation.StackOption) error
+	UpdateAndRenderEnvironment(conf deploycfn.StackConfiguration, bucketARN string, detach bool, opts ...cloudformation.StackOption) error
 	DeployedEnvironmentParameters(app, env string) ([]*awscfn.Parameter, error)
 	ForceUpdateOutputID(app, env string) (string, error)
 }
@@ -272,6 +272,7 @@ type DeployEnvironmentInput struct {
 	PermissionsBoundary string
 	DisableRollback     bool
 	Version             string
+	Detach              bool
 }
 
 // GenerateCloudFormationTemplate returns the environment stack's template and parameter configuration.
@@ -330,7 +331,7 @@ func (d *envDeployer) DeployEnvironment(in *DeployEnvironmentInput) error {
 	if err != nil {
 		return err
 	}
-	return d.envDeployer.UpdateAndRenderEnvironment(stack, stackInput.ArtifactBucketARN, opts...)
+	return d.envDeployer.UpdateAndRenderEnvironment(stack, stackInput.ArtifactBucketARN, in.Detach, opts...)
 }
 
 func (d *envDeployer) getAppRegionalResources() (*cfnstack.AppRegionalResources, error) {

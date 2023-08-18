@@ -32,6 +32,7 @@ const (
 	noRollbackFlag     = "no-rollback"
 	manifestFlag       = "manifest"
 	resourceTagsFlag   = "resource-tags"
+	detachFlag         = "detach"
 
 	// Deploy flags.
 	yesInitWorkloadFlag = "init-wkld"
@@ -278,6 +279,7 @@ production environment.`
 	forceEnvDeployFlagDescription  = "Optional. Force update the environment stack template."
 	yesInitWorkloadFlagDescription = "Optional. Initialize a workload before deploying it."
 	noInitWorkloadFlagDescription  = "Optional. Do not initialize the given workload if it does not exist."
+	detachFlagDescription         = "Optional. Skip displaying CloudFormation deployment progress."
 
 	// Operational.
 	jsonFlagDescription = "Optional. Output in JSON format."
