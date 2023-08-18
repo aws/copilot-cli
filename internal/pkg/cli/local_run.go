@@ -10,7 +10,6 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
-	"sync"
 	"syscall"
 	"time"
 
@@ -58,24 +57,22 @@ type localRunVars struct {
 type localRunOpts struct {
 	localRunVars
 
-	sel                    deploySelector
-	ecsLocalClient         ecsLocalClient
-	sessProvider           sessionProvider
-	sess                   *session.Session
-	targetEnv              *config.Environment
-	targetApp              *config.Application
-	store                  store
-	ws                     wsWlDirReader
-	cmd                    execRunner
-	dockerEngine           dockerEngineRunner
-	repository             repositoryService
-	appliedDynamicMft      manifest.DynamicWorkload
-	out                    clideploy.UploadArtifactsOutput
-	imageInfoList          []clideploy.ImagePerContainer
-	containerSuffix        string
-	isContainerTermination bool
-	mutex                  sync.Mutex
-	newColor               func() *color.Color
+	sel               deploySelector
+	ecsLocalClient    ecsLocalClient
+	sessProvider      sessionProvider
+	sess              *session.Session
+	targetEnv         *config.Environment
+	targetApp         *config.Application
+	store             store
+	ws                wsWlDirReader
+	cmd               execRunner
+	dockerEngine      dockerEngineRunner
+	repository        repositoryService
+	appliedDynamicMft manifest.DynamicWorkload
+	out               clideploy.UploadArtifactsOutput
+	imageInfoList     []clideploy.ImagePerContainer
+	containerSuffix   string
+	newColor          func() *color.Color
 
 	buildContainerImages func(o *localRunOpts) error
 	configureClients     func(o *localRunOpts) error
