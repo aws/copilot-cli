@@ -7,6 +7,9 @@ package initialize
 import (
 	"encoding"
 	"fmt"
+	"os"
+	"path/filepath"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
@@ -15,8 +18,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
-	"os"
-	"path/filepath"
 )
 
 const (
@@ -93,8 +94,6 @@ type WorkloadInitializer struct {
 	Deployer WorkloadAdder
 	Ws       Workspace
 	Prog     Prog
-
-	writeManifest bool // Default true. Switchable with SkipWritingManifest option.
 }
 
 // AddWorkloadToApp contains the logic to create the SSM parameter and perform the stackset template update required

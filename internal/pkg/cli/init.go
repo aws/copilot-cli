@@ -546,6 +546,12 @@ func (o *initOpts) askShouldDeploy() error {
 		o.ShouldDeploy = true
 		return nil
 	}
+
+	// This can't ordinarily happen, due to flags being mutually exclusive.
+	if o.shouldDeploy && o.shouldNotDeploy {
+		return fmt.Errorf("--%s and --%s are mutually exclusive", deployFlag, noDeployFlag)
+	}
+
 	// Neither deploy nor no-deploy was specified.
 	v, err := o.prompt.Confirm(initShouldDeployPrompt, initShouldDeployHelpPrompt, prompt.WithFinalMessage("Deploy:"))
 	if err != nil {
