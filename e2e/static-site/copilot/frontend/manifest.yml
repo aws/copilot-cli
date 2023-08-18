@@ -1,0 +1,9 @@
+name: frontend
+type: Static Site
+
+files:
+  - source: ./
+    recursive: true
+    exclude:
+      - copilot/
+      - "*.go"
