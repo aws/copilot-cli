@@ -306,9 +306,7 @@ func (o *localRunOpts) Execute() error {
 	go func() {
 		sig := o.NotifyInterrupt()
 		log.Println("Received signal:", sig)
-		o.mutex.Lock()
-		o.isContainerTermination = true
-		o.mutex.Unlock()
+		cancel()
 		errCh <- o.handleContainers()
 		// Wait for a max duration to allow containers to stop and get removed.
 		timeout := 30 * time.Second
@@ -381,15 +379,13 @@ func (o *localRunOpts) runPauseContainer(ctx context.Context, containerPorts map
 	errCh := make(chan error, 1)
 
 	go func() {
-		if err := o.dockerEngine.Run(ctx, runOptions); err != nil {
-			o.mutex.Lock()
-			terminate := o.isContainerTermination
-			o.mutex.Unlock()
-			if terminate {
-				errCh <- nil
+		if err := o.dockerEngine.Run(context.Background(), runOptions); err != nil {
+			select {
+			case <-ctx.Done():
 				return
+			default:
+				errCh <- err
 			}
-			errCh <- err
 		}
 	}()
 
@@ -438,14 +434,13 @@ func (o *localRunOpts) runContainers(ctx context.Context, imageInfoList []clidep
 					LinePrefix: fmt.Sprintf("[%s] ", imageInfo.ContainerName),
 				},
 			}
-			if err := o.dockerEngine.Run(ctx, runOptions); err != nil {
-				o.mutex.Lock()
-				terminate := o.isContainerTermination
-				o.mutex.Unlock()
-				if terminate {
+			if err := o.dockerEngine.Run(context.Background(), runOptions); err != nil {
+				select {
+				case <-ctx.Done():
 					return nil
+				default:
+					return fmt.Errorf("run container: %w", err)
 				}
-				return fmt.Errorf("run container: %w", err)
 			}
 			return nil
 		})
