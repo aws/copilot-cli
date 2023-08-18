@@ -38,8 +38,7 @@ const (
 
 type deployVars struct {
 	deployWkldVars
-	yesInitWkld bool
-	noInitWkld  bool
+	yesInitWkld *bool
 }
 
 type deployOpts struct {
@@ -72,10 +71,10 @@ func newDeployOpts(vars deployVars) (*deployOpts, error) {
 	prompter := prompt.New()
 	return &deployOpts{
 		deployVars: vars,
-		store:            store,
-		sel:              selector.NewLocalWorkloadSelector(prompter, store, ws),
-		ws:               ws,
-		prompt:           prompter,
+		store:      store,
+		sel:        selector.NewLocalWorkloadSelector(prompter, store, ws),
+		ws:         ws,
+		prompt:     prompter,
 		newWorkloadAdder: func() wkldInitializerWithoutManifest {
 			return &initialize.WorkloadInitializer{
 				Store:    store,
@@ -157,22 +156,16 @@ func (o *deployOpts) maybeInitWkld() error {
 		return fmt.Errorf("unrecognized workload type %q in manifest for workload %s", workloadType, o.name)
 	}
 
-	// User specified not to initialize workloads even if needed.
-	if o.noInitWkld {
-		return fmt.Errorf("workload %s is uninitialized but --%s was specified", o.name, noInitWorkloadFlag)
-	}
-
-	// If init-wkld and no-init-wkld flags aren't set, prompt customer to initialize.
-	if !o.yesInitWkld {
-		o.yesInitWkld, err = o.prompt.Confirm(fmt.Sprintf("Found manifest for uninitialized %s %q. Initialize it?", workloadType, o.name), "This workload will be initialized, then deployed.", prompt.WithConfirmFinalMessage())
+	if o.yesInitWkld == nil {
+		confirmInitWkld, err := o.prompt.Confirm(fmt.Sprintf("Found manifest for uninitialized %s %q. Initialize it?", workloadType, o.name), "This workload will be initialized, then deployed.", prompt.WithConfirmFinalMessage())
 		if err != nil {
 			return fmt.Errorf("confirm initialize workload: %w", err)
 		}
+		o.yesInitWkld = aws.Bool(confirmInitWkld)
 	}
 
-	// User selected no.
-	if !o.yesInitWkld {
-		return nil
+	if !aws.BoolValue(o.yesInitWkld) {
+		return fmt.Errorf("workload %s is uninitialized but --%s was specified", o.name, noInitWorkloadFlag)
 	}
 
 	wkldAdder := o.newWorkloadAdder()
@@ -245,6 +238,7 @@ func (o *deployOpts) loadWkldCmd() error {
 // BuildDeployCmd is the deploy command.
 func BuildDeployCmd() *cobra.Command {
 	vars := deployVars{}
+	var initWorkload bool
 	cmd := &cobra.Command{
 		Use:   "deploy",
 		Short: "Deploy a Copilot job or service.",
@@ -258,6 +252,13 @@ func BuildDeployCmd() *cobra.Command {
 			opts, err := newDeployOpts(vars)
 			if err != nil {
 				return err
+			}
+
+			if cmd.Flags().Changed(yesInitWorkloadFlag) {
+				opts.yesInitWkld = aws.Bool(false)
+				if initWorkload {
+					opts.yesInitWkld = aws.Bool(true)
+				}
 			}
 			if err := opts.Run(); err != nil {
 				return err
@@ -274,10 +275,8 @@ func BuildDeployCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&vars.disableRollback, noRollbackFlag, false, noRollbackFlagDescription)
 	cmd.Flags().BoolVar(&vars.allowWkldDowngrade, allowDowngradeFlag, false, allowDowngradeFlagDescription)
 	cmd.Flags().BoolVar(&vars.detach, detachFlag, false, detachFlagDescription)
-	cmd.Flags().BoolVar(&vars.yesInitWkld, yesInitWorkloadFlag, false, yesInitWorkloadFlagDescription)
-	cmd.Flags().BoolVar(&vars.noInitWkld, noInitWorkloadFlag, false, noInitWorkloadFlagDescription)
+	cmd.Flags().BoolVar(&initWorkload, yesInitWorkloadFlag, false, yesInitWorkloadFlagDescription)
 
-	cmd.MarkFlagsMutuallyExclusive(yesInitWorkloadFlag, noInitWorkloadFlag)
 	cmd.SetUsageTemplate(template.Usage)
 	cmd.Annotations = map[string]string{
 		"group": group.Release,

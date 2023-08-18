@@ -5,6 +5,7 @@ package cli
 
 import (
 	"errors"
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"testing"
@@ -32,7 +33,7 @@ type: Load Balanced Web Service`)
 	testCases := map[string]struct {
 		inAppName       string
 		inName          string
-		inShouldInit    bool
+		inShouldInit    *bool
 		inShouldNotInit bool
 
 		wantedErr         string
@@ -67,7 +68,7 @@ type: Load Balanced Web Service`)
 		"prompts for initializing workload": {
 			inAppName:    "app",
 			inName:       "fe",
-			inShouldInit: false,
+			inShouldInit: nil,
 			mockWs: func(m *mocks.MockwsWlDirReader) {
 				m.EXPECT().ReadWorkloadManifest("fe").Return(mockManifest, nil)
 			},
@@ -92,7 +93,7 @@ type: Load Balanced Web Service`)
 		"initializes workload with flag specified": {
 			inAppName:    "app",
 			inName:       "fe",
-			inShouldInit: true,
+			inShouldInit: aws.Bool(true),
 			mockWs: func(m *mocks.MockwsWlDirReader) {
 				m.EXPECT().ReadWorkloadManifest("fe").Return(mockManifest, nil)
 			},
@@ -115,7 +116,7 @@ type: Load Balanced Web Service`)
 		"errors if noInit specified": {
 			inAppName:       "app",
 			inName:          "fe",
-			inShouldInit:    false,
+			inShouldInit:    aws.Bool(false),
 			inShouldNotInit: true,
 			mockWs: func(m *mocks.MockwsWlDirReader) {
 				m.EXPECT().ReadWorkloadManifest("fe").Return(mockManifest, nil)
@@ -139,7 +140,6 @@ type: Load Balanced Web Service`)
 		"errors reading manifest": {
 			inAppName:       "app",
 			inName:          "fe",
-			inShouldInit:    false,
 			inShouldNotInit: true,
 			mockWs: func(m *mocks.MockwsWlDirReader) {
 				m.EXPECT().ReadWorkloadManifest("fe").Return(nil, errors.New("some error"))
@@ -163,7 +163,6 @@ type: Load Balanced Web Service`)
 		"error getting workload type": {
 			inAppName:       "app",
 			inName:          "fe",
-			inShouldInit:    false,
 			inShouldNotInit: false,
 			mockWs: func(m *mocks.MockwsWlDirReader) {
 				m.EXPECT().ReadWorkloadManifest("fe").Return(workspace.WorkloadManifest(`type: nothing here`), nil)
@@ -385,7 +384,6 @@ type: Load Balanced Web Service`)
 						envName: "test",
 					},
 					yesInitWkld: tc.inShouldInit,
-					noInitWkld:  tc.inShouldNotInit,
 				},
 				deployWkld: mockCmd,
 				sel:        mockSel,
