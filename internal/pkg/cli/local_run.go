@@ -461,8 +461,9 @@ func (o *localRunOpts) runContainers(ctx context.Context, imageInfoList []clidep
 type containerEnv map[string]envVarValue
 
 type envVarValue struct {
-	Value  string
-	Secret bool
+	Value    string
+	Secret   bool
+	Override bool
 }
 
 // getEnvVars uses env overrides passed by flags and environment variables/secrets
@@ -501,7 +502,8 @@ func (o *localRunOpts) fillEnvOverrides(envVars map[string]containerEnv) error {
 			// apply override to all containers
 			for ctr := range envVars {
 				envVars[ctr][k] = envVarValue{
-					Value: v,
+					Value:    v,
+					Override: true,
 				}
 			}
 			continue
@@ -514,7 +516,8 @@ func (o *localRunOpts) fillEnvOverrides(envVars map[string]containerEnv) error {
 			return fmt.Errorf("%q targets invalid container", k)
 		}
 		envVars[ctr][key] = envVarValue{
-			Value: v,
+			Value:    v,
+			Override: true,
 		}
 	}
 
@@ -527,14 +530,19 @@ func (o *localRunOpts) fillSecrets(ctx context.Context, envVars map[string]conta
 	// figure out which secrets we need to get, set value to ValueFrom
 	unique := make(map[string]string)
 	for _, s := range taskDef.Secrets() {
-		// only set if it wasn't overridden
-		if _, ok := envVars[s.Container][s.Name]; !ok {
-			envVars[s.Container][s.Name] = envVarValue{
-				Value:  s.ValueFrom,
-				Secret: true,
-			}
-			unique[s.ValueFrom] = ""
+		cur, ok := envVars[s.Container][s.Name]
+		if cur.Override {
+			// ignore secrets that were overridden
+			continue
+		} else if ok {
+			return fmt.Errorf("secret names must be unique, but an environment variable %q already exists", s.Name)
 		}
+
+		envVars[s.Container][s.Name] = envVarValue{
+			Value:  s.ValueFrom,
+			Secret: true,
+		}
+		unique[s.ValueFrom] = ""
 	}
 
 	// get value of all needed secrets

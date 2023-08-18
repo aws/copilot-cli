@@ -597,15 +597,11 @@ func TestLocalRunOpts_Execute(t *testing.T) {
 }
 
 func TestLocalRunOpts_getEnvVars(t *testing.T) {
-	newVar := func(v string) envVarValue {
+	newVar := func(v string, overridden, secret bool) envVarValue {
 		return envVarValue{
-			Value: v,
-		}
-	}
-	newSecret := func(v string) envVarValue {
-		return envVarValue{
-			Value:  v,
-			Secret: true,
+			Value:    v,
+			Override: overridden,
+			Secret:   secret,
 		}
 	}
 
@@ -642,12 +638,12 @@ func TestLocalRunOpts_getEnvVars(t *testing.T) {
 			},
 			want: map[string]containerEnv{
 				"foo": {
-					"OVERRIDE_ALL": newVar("all"),
-					"OVERRIDE":     newVar("foo"),
+					"OVERRIDE_ALL": newVar("all", true, false),
+					"OVERRIDE":     newVar("foo", true, false),
 				},
 				"bar": {
-					"OVERRIDE_ALL": newVar("all"),
-					"OVERRIDE":     newVar("bar"),
+					"OVERRIDE_ALL": newVar("all", true, false),
+					"OVERRIDE":     newVar("bar", true, false),
 				},
 			},
 		},
@@ -697,14 +693,14 @@ func TestLocalRunOpts_getEnvVars(t *testing.T) {
 			},
 			want: map[string]containerEnv{
 				"foo": {
-					"RANDOM_FOO":   newVar("foo"),
-					"OVERRIDE_ALL": newVar("all"),
-					"OVERRIDE":     newVar("foo"),
+					"RANDOM_FOO":   newVar("foo", false, false),
+					"OVERRIDE_ALL": newVar("all", true, false),
+					"OVERRIDE":     newVar("foo", true, false),
 				},
 				"bar": {
-					"RANDOM_BAR":   newVar("bar"),
-					"OVERRIDE_ALL": newVar("all"),
-					"OVERRIDE":     newVar("bar"),
+					"RANDOM_BAR":   newVar("bar", false, false),
+					"OVERRIDE_ALL": newVar("all", true, false),
+					"OVERRIDE":     newVar("bar", true, false),
 				},
 			},
 		},
@@ -743,6 +739,28 @@ func TestLocalRunOpts_getEnvVars(t *testing.T) {
 			},
 			wantError: `get secrets: get secret "arn:aws:ecs:us-west-2:123456789:service/mycluster/myservice": invalid ARN; not a SSM or Secrets Manager ARN`,
 		},
+		"error if secret redefines a var": {
+			taskDef: &awsecs.TaskDefinition{
+				ContainerDefinitions: []*sdkecs.ContainerDefinition{
+					{
+						Name: aws.String("foo"),
+						Environment: []*sdkecs.KeyValuePair{
+							{
+								Name:  aws.String("SHOULD_BE_A_VAR"),
+								Value: aws.String("foo"),
+							},
+						},
+						Secrets: []*sdkecs.Secret{
+							{
+								Name:      aws.String("SHOULD_BE_A_VAR"),
+								ValueFrom: aws.String("bad"),
+							},
+						},
+					},
+				},
+			},
+			wantError: `get secrets: secret names must be unique, but an environment variable "SHOULD_BE_A_VAR" already exists`,
+		},
 		"correct service used based on arn": {
 			taskDef: &awsecs.TaskDefinition{
 				ContainerDefinitions: []*sdkecs.ContainerDefinition{
@@ -772,9 +790,9 @@ func TestLocalRunOpts_getEnvVars(t *testing.T) {
 			},
 			want: map[string]containerEnv{
 				"foo": {
-					"SSM":             newSecret("ssm"),
-					"SECRETS_MANAGER": newSecret("secretsmanager"),
-					"DEFAULT":         newSecret("default"),
+					"SSM":             newVar("ssm", false, true),
+					"SECRETS_MANAGER": newVar("secretsmanager", false, true),
+					"DEFAULT":         newVar("default", false, true),
 				},
 			},
 		},
@@ -816,12 +834,12 @@ func TestLocalRunOpts_getEnvVars(t *testing.T) {
 			},
 			want: map[string]containerEnv{
 				"foo": {
-					"ONE": newSecret("shared-value"),
-					"TWO": newSecret("foo-value"),
+					"ONE": newVar("shared-value", false, true),
+					"TWO": newVar("foo-value", false, true),
 				},
 				"bar": {
-					"THREE": newSecret("shared-value"),
-					"FOUR":  newSecret("bar-value"),
+					"THREE": newVar("shared-value", false, true),
+					"FOUR":  newVar("bar-value", false, true),
 				},
 			},
 		},
@@ -866,13 +884,13 @@ func TestLocalRunOpts_getEnvVars(t *testing.T) {
 			},
 			want: map[string]containerEnv{
 				"foo": {
-					"ONE": newVar("one-overridden"),
-					"TWO": newSecret("foo-value"),
+					"ONE": newVar("one-overridden", true, false),
+					"TWO": newVar("foo-value", false, true),
 				},
 				"bar": {
-					"ONE":   newVar("one-overridden"),
-					"THREE": newSecret("shared-value"),
-					"FOUR":  newVar("four-overridden"),
+					"ONE":   newVar("one-overridden", true, false),
+					"THREE": newVar("shared-value", false, true),
+					"FOUR":  newVar("four-overridden", true, false),
 				},
 			},
 		},
@@ -900,7 +918,9 @@ func TestLocalRunOpts_getEnvVars(t *testing.T) {
 			got, err := o.getEnvVars(context.Background(), tc.taskDef)
 			if tc.wantError != "" {
 				require.EqualError(t, err, tc.wantError)
+				return
 			}
+			require.NoError(t, err)
 			require.Equal(t, tc.want, got)
 		})
 	}
