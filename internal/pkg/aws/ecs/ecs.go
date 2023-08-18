@@ -496,17 +496,17 @@ func (e *ECS) service(clusterName, serviceName string) (*Service, error) {
 
 // filterServiceARNs returns subset of the ServiceARNs that belong to the given Cluster.
 func (e *ECS) filterServiceARNs(clusterARN string, serviceARNs ...string) ([]string, error) {
-	var filteredSvcARNS []string
+	var filtered []string
 	for _, arn := range serviceARNs {
 		svcArn, err := ParseServiceArn(arn)
 		if err != nil {
 			return nil, err
 		}
 		if svcArn.ClusterArn() == clusterARN {
-			filteredSvcARNS = append(filteredSvcARNS, arn)
+			filtered = append(filtered, arn)
 		}
 	}
-	return filteredSvcARNS, nil
+	return filtered, nil
 }
 
 func isRequestTimeoutErr(err error) bool {
