@@ -458,17 +458,14 @@ func (o *localRunOpts) getEnvVars(ctx context.Context, taskDef *awsecs.TaskDefin
 		envVars[aws.StringValue(ctr.Name)] = make(map[string]envVarValue)
 	}
 
-	if err := o.fillEnvOverrides(envVars); err != nil {
-		return nil, fmt.Errorf("parse env overrides: %w", err)
+	for _, e := range taskDef.EnvironmentVariables() {
+		envVars[e.Container][e.Name] = envVarValue{
+			Value: e.Value,
+		}
 	}
 
-	for _, e := range taskDef.EnvironmentVariables() {
-		// only set if it wasn't overridden
-		if _, ok := envVars[e.Container][e.Name]; !ok {
-			envVars[e.Container][e.Name] = envVarValue{
-				Value: e.Value,
-			}
-		}
+	if err := o.fillEnvOverrides(envVars); err != nil {
+		return nil, fmt.Errorf("parse env overrides: %w", err)
 	}
 
 	if err := o.fillSecrets(ctx, envVars, taskDef); err != nil {
