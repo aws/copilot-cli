@@ -188,6 +188,9 @@ func (d *lbWebSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*s
 }
 
 func (d *lbWebSvcDeployer) validateALBRuntime() error {
+	if d.lbMft.HTTPOrBool.Disabled() {
+		return nil
+	}
 
 	if err := d.validateRuntimeRoutingRule(d.lbMft.HTTPOrBool.Main); err != nil {
 		return fmt.Errorf(`validate ALB runtime configuration for "http": %w`, err)
