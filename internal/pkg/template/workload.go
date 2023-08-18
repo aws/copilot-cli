@@ -174,7 +174,7 @@ func (s *StorageOpts) requiresEFSCreation() bool {
 
 // EFSPermission holds information needed to render an IAM policy statement.
 type EFSPermission struct {
-	FilesystemID  *string
+	FilesystemID  FileSystemID
 	Write         bool
 	AccessPointID *string
 }
@@ -204,7 +204,7 @@ type ManagedVolumeCreationInfo struct {
 // EFSVolumeConfiguration contains information about how to specify externally managed file systems.
 type EFSVolumeConfiguration struct {
 	// EFSVolumeConfiguration
-	Filesystem    *string
+	Filesystem    FileSystemID
 	RootDirectory *string // "/" or empty are equivalent
 
 	// Authorization Config
@@ -263,6 +263,43 @@ type importable interface {
 type importableValue interface {
 	importable
 	Value() string
+}
+
+// FileSystemID represnts the EFS FilesystemID.
+type FileSystemID importableValue
+
+// PlainFileSystemID returns a EFS FilesystemID that is a plain string value.
+func PlainFileSystemID(value string) FileSystemID {
+	return plainFileSystemID(value)
+}
+
+// ImportedFileSystemID returns a EFS FilesystemID that is imported from a stack.
+func ImportedFileSystemID(value string) FileSystemID {
+	return importedFileSystemID(value)
+}
+
+type plainFileSystemID string
+
+// RequiresImport returns false for a plain EFS FilesystemID.
+func (fs plainFileSystemID) RequiresImport() bool {
+	return false
+}
+
+// Value returns the plain string value of the plain EFS FilesystemID.
+func (fs plainFileSystemID) Value() string {
+	return string(fs)
+}
+
+type importedFileSystemID string
+
+// RequiresImport returns true for a imported EFS FilesystemID.
+func (fs importedFileSystemID) RequiresImport() bool {
+	return true
+}
+
+// Value returns the name of the import that will be the value of the EFS Filesystem ID.
+func (fs importedFileSystemID) Value() string {
+	return string(fs)
 }
 
 // Variable represents the value of an environment variable.

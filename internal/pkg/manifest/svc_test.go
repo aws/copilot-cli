@@ -147,14 +147,14 @@ environments:
 							},
 							Variables: map[string]Variable{
 								"LOG_LEVEL": {
-									stringOrFromCFN{
+									StringOrFromCFN{
 										Plain: stringP("WARN"),
 									},
 								},
 							},
 							Secrets: map[string]Secret{
 								"DB_PASSWORD": {
-									from: stringOrFromCFN{
+									from: StringOrFromCFN{
 										Plain: aws.String("MYSQL_DB_PASSWORD"),
 									},
 								},
@@ -194,7 +194,7 @@ environments:
 							ConfigFile:     aws.String("/extra.conf"),
 							SecretOptions: map[string]Secret{
 								"LOG_TOKEN": {
-									from: stringOrFromCFN{
+									from: StringOrFromCFN{
 										Plain: aws.String("LOG_TOKEN"),
 									},
 								},
@@ -324,7 +324,7 @@ secrets:
 							},
 							Secrets: map[string]Secret{
 								"API_TOKEN": {
-									from: stringOrFromCFN{
+									from: StringOrFromCFN{
 										Plain: aws.String("SUBS_API_TOKEN"),
 									},
 								},
@@ -459,7 +459,7 @@ type: 'OH NO'
 
 func TestStringOrFromCFN_UnmarshalYAML(t *testing.T) {
 	type mockField struct {
-		stringOrFromCFN
+		StringOrFromCFN
 	}
 	type mockParentField struct {
 		MockField mockField `yaml:"mock_field"`
@@ -473,7 +473,7 @@ func TestStringOrFromCFN_UnmarshalYAML(t *testing.T) {
 			in: []byte(`mock_field: hey`),
 			wanted: mockParentField{
 				MockField: mockField{
-					stringOrFromCFN{
+					StringOrFromCFN{
 						Plain: aws.String("hey"),
 					},
 				},
@@ -484,7 +484,7 @@ func TestStringOrFromCFN_UnmarshalYAML(t *testing.T) {
   from_cfn: yo`),
 			wanted: mockParentField{
 				MockField: mockField{
-					stringOrFromCFN{
+					StringOrFromCFN{
 						FromCFN: fromCFN{
 							Name: aws.String("yo"),
 						},

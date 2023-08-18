@@ -413,17 +413,18 @@ func (cfg *fromCFN) isEmpty() bool {
 	return cfg.Name == nil
 }
 
-type stringOrFromCFN struct {
-	Plain   *string
-	FromCFN fromCFN
+// StringOrFromCFN represents a choice between a plain string value and a value retrieved from CloudFormation.
+type StringOrFromCFN struct {
+	Plain   *string // Plain is a user-defined string value.
+	FromCFN fromCFN // FromCFN holds a value obtained from CloudFormation.
 }
 
-func (s stringOrFromCFN) isEmpty() bool {
+func (s StringOrFromCFN) isEmpty() bool {
 	return s.FromCFN.isEmpty() && s.Plain == nil
 }
 
 // UnmarshalYAML implements the yaml.Unmarshaler (v3) interface to override the default YAML unmarshalling logic.
-func (s *stringOrFromCFN) UnmarshalYAML(value *yaml.Node) error {
+func (s *StringOrFromCFN) UnmarshalYAML(value *yaml.Node) error {
 	if err := value.Decode(&s.FromCFN); err != nil {
 		switch err.(type) {
 		case *yaml.TypeError:

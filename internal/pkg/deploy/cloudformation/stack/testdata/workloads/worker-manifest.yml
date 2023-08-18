@@ -77,6 +77,13 @@ subscribe:
       service: nonfifotopic
       queue:
         fifo: false
+storage:
+  volumes:
+    externalEFSVolume:
+      path: '/etc/mount1'
+      efs:
+        id:
+         from_cfn: stack-fs-12345
 
 # Optional fields for more advanced use-cases.
 #

@@ -55,7 +55,11 @@ TaskRole:
       {{- end }}
       {{- if .Storage}}
       {{- range $EFS := .Storage.EFSPerms}}
-      - PolicyName: 'GrantEFSAccess{{$EFS.FilesystemID}}'
+      {{- if not $EFS.FilesystemID.RequiresImport}}
+      - PolicyName: 'GrantEFSAccess{{$EFS.FilesystemID.Value}}'
+      {{- else}}
+      - PolicyName: !Join ['',[ 'GrantEFSAccess', !ImportValue {{$EFS.FilesystemID.Value}}]]
+      {{- end}}
         PolicyDocument: 
           Version: '2012-10-17'
           Statement:
@@ -71,7 +75,11 @@ TaskRole:
                   'elasticfilesystem:AccessPointArn': !Sub 'arn:${AWS::Partition}:elasticfilesystem:${AWS::Region}:${AWS::AccountId}:access-point/{{$EFS.AccessPointID}}'
               {{- end}}
               Resource:
+              {{- if not $EFS.FilesystemID.RequiresImport}}
                 - !Sub 'arn:${AWS::Partition}:elasticfilesystem:${AWS::Region}:${AWS::AccountId}:file-system/{{$EFS.FilesystemID}}'
+              {{- else}}
+                - !Join ['/',[!Sub 'arn:${AWS::Partition}:elasticfilesystem:${AWS::Region}:${AWS::AccountId}:file-system',!ImportValue {{$EFS.FilesystemID.Value}}]]
+              {{- end}}
       {{- end}}
       {{- if .Storage.ManagedVolumeInfo}}
       - PolicyName: 'GrantAccessCopilotManagedEFS'

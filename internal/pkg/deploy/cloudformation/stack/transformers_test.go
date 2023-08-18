@@ -918,7 +918,7 @@ func Test_convertManagedFSInfo(t *testing.T) {
 				"wordpress": {
 					EFS: manifest.EFSConfigOrBool{
 						Advanced: manifest.EFSVolumeConfiguration{
-							FileSystemID: aws.String("fs-1234"),
+							FileSystemID: &manifest.StringOrFromCFN{Plain: aws.String("fs-1234")},
 						},
 					},
 					MountPointOpts: manifest.MountPointOpts{
@@ -931,7 +931,7 @@ func Test_convertManagedFSInfo(t *testing.T) {
 				"wordpress": {
 					EFS: manifest.EFSConfigOrBool{
 						Advanced: manifest.EFSVolumeConfiguration{
-							FileSystemID: aws.String("fs-1234"),
+							FileSystemID: &manifest.StringOrFromCFN{Plain: aws.String("fs-1234")},
 						},
 					},
 					MountPointOpts: manifest.MountPointOpts{
@@ -1003,7 +1003,7 @@ func Test_convertStorageOpts(t *testing.T) {
 				"wordpress": {
 					EFS: manifest.EFSConfigOrBool{
 						Advanced: manifest.EFSVolumeConfiguration{
-							FileSystemID: aws.String("fs-1234"),
+							FileSystemID: &manifest.StringOrFromCFN{Plain: aws.String("fs-1234")},
 						},
 					},
 					MountPointOpts: manifest.MountPointOpts{
@@ -1016,7 +1016,7 @@ func Test_convertStorageOpts(t *testing.T) {
 					{
 						Name: aws.String("wordpress"),
 						EFS: &template.EFSVolumeConfiguration{
-							Filesystem:    aws.String("fs-1234"),
+							Filesystem:    template.PlainFileSystemID("fs-1234"),
 							RootDirectory: aws.String("/"),
 							IAM:           aws.String("DISABLED"),
 						},
@@ -1031,7 +1031,7 @@ func Test_convertStorageOpts(t *testing.T) {
 				},
 				EFSPerms: []*template.EFSPermission{
 					{
-						FilesystemID: aws.String("fs-1234"),
+						FilesystemID: template.PlainFileSystemID("fs-1234"),
 						Write:        false,
 					},
 				},
@@ -1068,7 +1068,7 @@ func Test_convertStorageOpts(t *testing.T) {
 				"wordpress": {
 					EFS: manifest.EFSConfigOrBool{
 						Advanced: manifest.EFSVolumeConfiguration{
-							FileSystemID:  aws.String("fs-1234"),
+							FileSystemID:  &manifest.StringOrFromCFN{Plain: aws.String("fs-1234")},
 							RootDirectory: aws.String("/"),
 							AuthConfig: manifest.AuthorizationConfig{
 								IAM:           aws.Bool(true),
@@ -1087,7 +1087,7 @@ func Test_convertStorageOpts(t *testing.T) {
 					{
 						Name: aws.String("wordpress"),
 						EFS: &template.EFSVolumeConfiguration{
-							Filesystem:    aws.String("fs-1234"),
+							Filesystem:    template.PlainFileSystemID("fs-1234"),
 							RootDirectory: aws.String("/"),
 							IAM:           aws.String("ENABLED"),
 							AccessPointID: aws.String("ap-1234"),
@@ -1103,7 +1103,7 @@ func Test_convertStorageOpts(t *testing.T) {
 				},
 				EFSPerms: []*template.EFSPermission{
 					{
-						FilesystemID:  aws.String("fs-1234"),
+						FilesystemID:  template.PlainFileSystemID("fs-1234"),
 						AccessPointID: aws.String("ap-1234"),
 						Write:         true,
 					},
@@ -1115,7 +1115,7 @@ func Test_convertStorageOpts(t *testing.T) {
 				"wordpress": {
 					EFS: manifest.EFSConfigOrBool{
 						Advanced: manifest.EFSVolumeConfiguration{
-							FileSystemID:  aws.String("fs-1234"),
+							FileSystemID:  &manifest.StringOrFromCFN{Plain: aws.String("fs-1234")},
 							RootDirectory: aws.String("/wordpress"),
 							AuthConfig: manifest.AuthorizationConfig{
 								IAM: aws.Bool(true),
@@ -1133,7 +1133,7 @@ func Test_convertStorageOpts(t *testing.T) {
 					{
 						Name: aws.String("wordpress"),
 						EFS: &template.EFSVolumeConfiguration{
-							Filesystem:    aws.String("fs-1234"),
+							Filesystem:    template.PlainFileSystemID("fs-1234"),
 							RootDirectory: aws.String("/wordpress"),
 							IAM:           aws.String("ENABLED"),
 						},
@@ -1148,7 +1148,7 @@ func Test_convertStorageOpts(t *testing.T) {
 				},
 				EFSPerms: []*template.EFSPermission{
 					{
-						FilesystemID: aws.String("fs-1234"),
+						FilesystemID: template.PlainFileSystemID("fs-1234"),
 						Write:        true,
 					},
 				},
@@ -1227,7 +1227,7 @@ func Test_convertStorageOpts(t *testing.T) {
 				"otherefs": {
 					EFS: manifest.EFSConfigOrBool{
 						Advanced: manifest.EFSVolumeConfiguration{
-							FileSystemID: aws.String("fs-1234"),
+							FileSystemID: &manifest.StringOrFromCFN{Plain: aws.String("fs-1234")},
 						},
 					},
 					MountPointOpts: manifest.MountPointOpts{
@@ -1254,7 +1254,7 @@ func Test_convertStorageOpts(t *testing.T) {
 					{
 						Name: aws.String("otherefs"),
 						EFS: &template.EFSVolumeConfiguration{
-							Filesystem:    aws.String("fs-1234"),
+							Filesystem:    template.PlainFileSystemID("fs-1234"),
 							RootDirectory: aws.String("/"),
 							IAM:           aws.String("DISABLED"),
 						},
@@ -1282,7 +1282,7 @@ func Test_convertStorageOpts(t *testing.T) {
 				},
 				EFSPerms: []*template.EFSPermission{
 					{
-						FilesystemID: aws.String("fs-1234"),
+						FilesystemID: template.PlainFileSystemID("fs-1234"),
 						Write:        true,
 					},
 				},
@@ -1293,7 +1293,7 @@ func Test_convertStorageOpts(t *testing.T) {
 				"wordpress": {
 					EFS: manifest.EFSConfigOrBool{
 						Advanced: manifest.EFSVolumeConfiguration{
-							FileSystemID: aws.String("fs-1234"),
+							FileSystemID: &manifest.StringOrFromCFN{Plain: aws.String("fs-1234")},
 						},
 					},
 					MountPointOpts: manifest.MountPointOpts{
@@ -1307,7 +1307,7 @@ func Test_convertStorageOpts(t *testing.T) {
 					{
 						Name: aws.String("wordpress"),
 						EFS: &template.EFSVolumeConfiguration{
-							Filesystem:    aws.String("fs-1234"),
+							Filesystem:    template.PlainFileSystemID("fs-1234"),
 							RootDirectory: aws.String("/"),
 							IAM:           aws.String("DISABLED"),
 						},
@@ -1322,7 +1322,7 @@ func Test_convertStorageOpts(t *testing.T) {
 				},
 				EFSPerms: []*template.EFSPermission{
 					{
-						FilesystemID: aws.String("fs-1234"),
+						FilesystemID: template.PlainFileSystemID("fs-1234"),
 						Write:        false,
 					},
 				},

@@ -14,7 +14,11 @@ Volumes:
   - Name: {{$vol.Name}}
   {{- if $vol.EFS}}
     EFSVolumeConfiguration:
-      FilesystemId: {{$vol.EFS.Filesystem}}
+      {{- if not $vol.EFS.Filesystem.RequiresImport}}
+      FilesystemId: {{$vol.EFS.Filesystem.Value}}
+      {{- else}}
+      FilesystemId: !ImportValue {{$vol.EFS.Filesystem.Value}}
+      {{- end}}
       RootDirectory: '{{$vol.EFS.RootDirectory}}'
       TransitEncryption: ENABLED
       {{- if or $vol.EFS.AccessPointID $vol.EFS.IAM}}

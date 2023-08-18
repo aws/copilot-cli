@@ -850,7 +850,7 @@ func convertEFSPermissions(input map[string]*manifest.Volume) []*template.EFSPer
 		output = append(output, &template.EFSPermission{
 			Write:         write,
 			AccessPointID: accessPointID,
-			FilesystemID:  volume.EFS.Advanced.FileSystemID,
+			FilesystemID:  convertFileSystemID(volume.EFS.Advanced),
 		})
 	}
 	return output
@@ -932,7 +932,7 @@ func convertEFSConfiguration(in manifest.EFSVolumeConfiguration) *template.EFSVo
 	iam := aws.String(defaultIAM)
 	if in.AuthConfig.IsEmpty() {
 		return &template.EFSVolumeConfiguration{
-			Filesystem:    in.FileSystemID,
+			Filesystem:    convertFileSystemID(in),
 			RootDirectory: rootDir,
 			IAM:           iam,
 		}
@@ -943,11 +943,18 @@ func convertEFSConfiguration(in manifest.EFSVolumeConfiguration) *template.EFSVo
 	}
 
 	return &template.EFSVolumeConfiguration{
-		Filesystem:    in.FileSystemID,
+		Filesystem:    convertFileSystemID(in),
 		RootDirectory: rootDir,
 		IAM:           iam,
 		AccessPointID: in.AuthConfig.AccessPointID,
 	}
+}
+
+func convertFileSystemID(in manifest.EFSVolumeConfiguration) template.FileSystemID {
+	if in.FileSystemID.Plain != nil {
+		return template.PlainFileSystemID(aws.StringValue(in.FileSystemID.Plain))
+	}
+	return template.ImportedFileSystemID(aws.StringValue(in.FileSystemID.FromCFN.Name))
 }
 
 func convertNetworkConfig(network manifest.NetworkConfig) template.NetworkOpts {
