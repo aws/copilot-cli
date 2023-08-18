@@ -101,9 +101,9 @@ func (s *StaticSite) Template() (string, error) {
 			return "", err
 		}
 	}
-	// Note: Unlike NLB, App Runner, and LBWS, uses AWS::Route53::RecordSetGroup to
+	// NLB, App Runner, and LBWS use AWS::Route53::RecordSetGroup to
 	// create the A-Record to route traffic to the Load balancer endpoint.
-	// Where as Static Site default domain alias is created using custom resources.
+	// Static Site default domain alias is created by a custom resource.
 	staticSiteAlias := fmt.Sprintf("%s.%s.%s.%s", s.name, s.env, s.app, s.appInfo.Domain)
 	if s.manifest.HTTP.Alias != "" {
 		staticSiteAlias = s.manifest.HTTP.Alias
