@@ -187,7 +187,7 @@ func parsePortOverride(s string) (portOverride, error) {
 	}
 	return portOverride{
 		host:      split[0],
-		container: split[0],
+		container: split[1],
 	}, nil
 }
 
@@ -285,7 +285,7 @@ func (o *localRunOpts) Execute() error {
 	for _, port := range o.portOverrides {
 		// already validated in Validate()
 		override, _ := parsePortOverride(port)
-		ports[override.container] = ports[override.host]
+		ports[override.container] = override.host
 	}
 
 	mft, err := workloadManifest(&workloadManifestInput{
