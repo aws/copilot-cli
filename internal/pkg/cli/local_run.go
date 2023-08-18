@@ -377,12 +377,10 @@ func (o *localRunOpts) runPauseContainer(ctx context.Context, containerPorts map
 
 	go func() {
 		if err := o.dockerEngine.Run(context.Background(), runOptions); err != nil {
-			select {
-			case <-ctx.Done():
+			if ctx.Err() != nil {
 				return
-			default:
-				errCh <- err
 			}
+			errCh <- err
 		}
 	}()
 
@@ -432,12 +430,10 @@ func (o *localRunOpts) runContainers(ctx context.Context, imageInfoList []clidep
 				},
 			}
 			if err := o.dockerEngine.Run(context.Background(), runOptions); err != nil {
-				select {
-				case <-ctx.Done():
+				if ctx.Err() != nil {
 					return nil
-				default:
-					return fmt.Errorf("run container: %w", err)
 				}
+				return fmt.Errorf("run container: %w", err)
 			}
 			return nil
 		})
