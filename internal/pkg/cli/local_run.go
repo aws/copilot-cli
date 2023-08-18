@@ -315,6 +315,8 @@ func (o *localRunOpts) Execute() error {
 		select {
 		case <-time.After(timeout):
 			errCh <- fmt.Errorf("containers were not handled within the timeout %s", timeout)
+		default:
+			return
 		}
 	}()
 
