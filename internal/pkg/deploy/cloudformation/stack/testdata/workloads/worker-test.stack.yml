@@ -84,6 +84,13 @@ Metadata:
           service: nonfifotopic
           queue:
             fifo: false
+    storage:
+      volumes:
+        externalEFSVolume:
+          path: '/etc/mount1'
+          efs:
+            id:
+             from_cfn: stack-fs-12345
 
     # Optional fields for more advanced use-cases.
     #
@@ -179,6 +186,8 @@ Resources:
                   mytopicmytopicfifoURL: !Ref mytopicmytopicfifoEventsQueue
                   yourtopicyourtopicfifoURL: !Ref yourtopicyourtopicfifoEventsQueue
                   nonfifotopicnonfifotopicURL: !Ref nonfifotopicnonfifotopicEventsQueue
+            - Name: COPILOT_MOUNT_POINTS
+              Value: '{"externalEFSVolume":"/etc/mount1"}'
           EnvironmentFiles:
           - !If
             - HasEnvFile
@@ -191,6 +200,18 @@ Resources:
               awslogs-region: !Ref AWS::Region
               awslogs-group: !Ref LogGroup
               awslogs-stream-prefix: copilot
+          MountPoints:
+            - ContainerPath: '/etc/mount1'
+              ReadOnly: true
+              SourceVolume: externalEFSVolume
+      Volumes:
+        - Name: externalEFSVolume
+          EFSVolumeConfiguration:
+            FilesystemId: !ImportValue 'stack-fs-12345'
+            RootDirectory: '/'
+            TransitEncryption: ENABLED
+            AuthorizationConfig:
+              IAM: DISABLED
   ExecutionRole:
     Metadata:
       'aws:copilot:description': 'An IAM Role for the Fargate agent to make AWS API calls on your behalf'
@@ -293,6 +314,15 @@ Resources:
               - Effect: 'Allow'
                 Action: ["logs:CreateLogStream", "logs:DescribeLogGroups", "logs:DescribeLogStreams", "logs:PutLogEvents"]
                 Resource: "*"
+        - PolicyName: !Join ['', ['GrantEFSAccess', !ImportValue 'stack-fs-12345']]
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action:
+                  - 'elasticfilesystem:ClientMount'
+                Resource:
+                  - !Join ['/', [!Sub 'arn:${AWS::Partition}:elasticfilesystem:${AWS::Region}:${AWS::AccountId}:file-system', !ImportValue 'stack-fs-12345']]
         - PolicyName: 'Publish2SNS'
           PolicyDocument:
             Version: '2012-10-17'
