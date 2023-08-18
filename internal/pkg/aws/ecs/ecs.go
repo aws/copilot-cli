@@ -341,23 +341,16 @@ func (e *ECS) ActiveClusters(arns ...string) ([]string, error) {
 	return active, nil
 }
 
-// ActiveServices returns the subset of service arns that have an ACTIVE status.
-// Note that all services should be in the same cluster.
-func (e *ECS) ActiveServices(serviceARNs ...string) ([]string, error) {
-	var prevSvcArn *ServiceArn
-	for _, arn := range serviceARNs {
-		svcArn, err := ParseServiceArn(arn)
-		if err != nil {
-			return nil, err
-		}
-		if prevSvcArn != nil && prevSvcArn.clusterName != svcArn.clusterName {
-			return nil, fmt.Errorf("service %q and service %q should be in the same cluster", prevSvcArn.String(), svcArn.String())
-		}
-		prevSvcArn = svcArn
+// ActiveServices returns the subset of service arns that have an ACTIVE status from the given cluster.
+func (e *ECS) ActiveServices(clusterARN string, serviceARNs ...string) ([]string, error) {
+	// All the filteredSvcARNs will belong to the given Cluster.
+	filteredSvcARNS, err := e.filterServiceARNs(clusterARN, serviceARNs...)
+	if err != nil {
+		return nil, err
 	}
 	resp, err := e.client.DescribeServices(&ecs.DescribeServicesInput{
-		Cluster:  aws.String(prevSvcArn.ClusterArn()),
-		Services: aws.StringSlice(serviceARNs),
+		Cluster:  aws.String(clusterARN),
+		Services: aws.StringSlice(filteredSvcARNS),
 	})
 	switch {
 	case err != nil:
@@ -499,6 +492,21 @@ func (e *ECS) service(clusterName, serviceName string) (*Service, error) {
 		}
 	}
 	return nil, fmt.Errorf("cannot find service %s", serviceName)
+}
+
+// filterServiceARNs returns subset of the ServiceARNs that belong to the given Cluster.
+func (e *ECS) filterServiceARNs(clusterARN string, serviceARNs ...string) ([]string, error) {
+	var filtered []string
+	for _, arn := range serviceARNs {
+		svcArn, err := ParseServiceArn(arn)
+		if err != nil {
+			return nil, err
+		}
+		if svcArn.ClusterArn() == clusterARN {
+			filtered = append(filtered, arn)
+		}
+	}
+	return filtered, nil
 }
 
 func isRequestTimeoutErr(err error) bool {
