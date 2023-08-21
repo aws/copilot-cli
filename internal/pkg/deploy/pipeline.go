@@ -603,7 +603,7 @@ func (stg *PipelineStage) Deployments() ([]DeployAction, error) {
 	}
 	preDeployActions, err := stg.PreDeployments()
 	if err != nil {
-		return nil, fmt.Errorf("get list of pre-deployments for ordering: %w", err)
+		return nil, err
 	}
 	for i := range preDeployActions {
 		prevActions = append(prevActions, &preDeployActions[i])
@@ -646,14 +646,14 @@ func (stg *PipelineStage) PostDeployments() ([]PrePostDeployAction, error) {
 	}
 	preDeployActions, err := stg.PreDeployments()
 	if err != nil {
-		return nil, fmt.Errorf("get list of pre-deployments for ordering: %w", err)
+		return nil, err
 	}
 	for i := range preDeployActions {
 		prevActions = append(prevActions, &preDeployActions[i])
 	}
 	deployActions, err := stg.Deployments()
 	if err != nil {
-		return nil, fmt.Errorf("get list of deployments for ordering: %w", err)
+		return nil, err
 	}
 	for i := range deployActions {
 		prevActions = append(prevActions, &deployActions[i])
@@ -703,21 +703,21 @@ func (stg *PipelineStage) Test() (*TestCommandsAction, error) {
 	}
 	preDeployActions, err := stg.PreDeployments()
 	if err != nil {
-		return nil, fmt.Errorf("get list of pre-deployments for ordering: %w", err)
+		return nil, err
 	}
 	for i := range preDeployActions {
 		prevActions = append(prevActions, &preDeployActions[i])
 	}
 	deployActions, err := stg.Deployments()
 	if err != nil {
-		return nil, fmt.Errorf("get list of deployments for ordering: %w", err)
+		return nil, err
 	}
 	for i := range deployActions {
 		prevActions = append(prevActions, &deployActions[i])
 	}
 	postDeployActions, err := stg.PostDeployments()
 	if err != nil {
-		return nil, fmt.Errorf("get list of post-deployments for ordering: %w", err)
+		return nil, err
 	}
 	for i := range postDeployActions {
 		prevActions = append(prevActions, &postDeployActions[i])

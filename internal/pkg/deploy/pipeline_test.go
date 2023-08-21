@@ -393,6 +393,119 @@ func TestPipelineStage_Init(t *testing.T) {
 	})
 }
 
+func TestPipelineStage_PreDeployments(t *testing.T) {
+	testCases := map[string]struct {
+		stg *PipelineStage
+
+		wantedRunOrder      map[string]int
+		wantedTemplateOrder []string
+		wantedErr           error
+	}{
+		"should come after manual approval": {
+			stg: func() *PipelineStage {
+				// Create a pre-deployment with parallel actions after approval.
+				var stg PipelineStage
+				stg.Init(&config.Environment{Name: "test"}, &manifest.PipelineStage{
+					Name: "test",
+					PreDeployment: map[string]*manifest.PrePostDeployment{
+						"ipa": {},
+						"api": {},
+					},
+					RequiresApproval: true,
+				}, nil)
+				return &stg
+			}(),
+			wantedRunOrder: map[string]int{
+				"api": 2,
+				"ipa": 2,
+			},
+		},
+		"actions should be ordered as indicated by depends_on": {
+			stg: func() *PipelineStage {
+				// Create a pre-deployment with ordered actions.
+				var stg PipelineStage
+				stg.Init(&config.Environment{Name: "test"}, &manifest.PipelineStage{
+					Name: "test",
+					PreDeployment: map[string]*manifest.PrePostDeployment{
+						"a": {},
+						"b": {
+							DependsOn: []string{"a"},
+						},
+						"c": {
+							DependsOn: []string{"a"},
+						},
+						"d": {
+							DependsOn: []string{"a", "b"},
+						},
+					},
+				}, nil)
+				return &stg
+			}(),
+			wantedRunOrder: map[string]int{
+				"a": 1,
+				"b": 2,
+				"c": 2,
+				"d": 3,
+			},
+			wantedTemplateOrder: []string{"a", "b", "c", "d"},
+		},
+		"actions should be alphabetized for integ tests": {
+			stg: func() *PipelineStage {
+				// Create a pre-deployment with all actions deployed in parallel.
+				var stg PipelineStage
+				stg.Init(&config.Environment{Name: "test"}, &manifest.PipelineStage{
+					Name: "test",
+					PreDeployment: map[string]*manifest.PrePostDeployment{
+						"ipa": {},
+						"api": {},
+					},
+				}, nil)
+				return &stg
+			}(),
+			wantedRunOrder: map[string]int{
+				"api": 1,
+				"ipa": 1,
+			},
+			wantedTemplateOrder: []string{"api", "ipa"},
+		},
+		"should error if cyclical depends_on actions": {
+			stg: func() *PipelineStage {
+				// Create a pre-deployment with mutually-dependent actions.
+				var stg PipelineStage
+				stg.Init(&config.Environment{Name: "test"}, &manifest.PipelineStage{
+					Name: "test",
+					PreDeployment: map[string]*manifest.PrePostDeployment{
+						"api": {
+							DependsOn: []string{"api"},
+						},
+					},
+				}, nil)
+				return &stg
+			}(),
+			wantedErr: errors.New("find an ordering for deployments: graph contains a cycle: api"),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			preDeployments, err := tc.stg.PreDeployments()
+
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.NoError(t, err)
+				for _, preDeployment := range preDeployments {
+					wanted, ok := tc.wantedRunOrder[preDeployment.Name()]
+					require.True(t, ok, "expected pre-deployment action named %s to be created", preDeployment.Name())
+					require.Equal(t, wanted, preDeployment.RunOrder(), "order for predeployment action %s does not match", preDeployment.Name())
+				}
+				for i, wanted := range tc.wantedTemplateOrder {
+					require.Equal(t, wanted, preDeployments[i].Name(), "predeployment name at index %d does not match", i)
+				}
+			}
+		})
+	}
+}
+
 func TestPipelineStage_Deployments(t *testing.T) {
 	testCases := map[string]struct {
 		stg *PipelineStage
@@ -436,7 +549,6 @@ func TestPipelineStage_Deployments(t *testing.T) {
 						"warehouse": nil,
 					},
 				}, nil)
-
 				return &stg
 			}(),
 			wantedRunOrder: map[string]int{
@@ -481,6 +593,81 @@ func TestPipelineStage_Deployments(t *testing.T) {
 				}
 				for i, wanted := range tc.wantedTemplateOrder {
 					require.Equal(t, wanted, deployments[i].Name(), "deployment name at index %d do not match", i)
+				}
+			}
+		})
+	}
+}
+
+func TestPipelineStage_PostDeployments(t *testing.T) {
+	testCases := map[string]struct {
+		stg *PipelineStage
+
+		wantedRunOrder      map[string]int
+		wantedTemplateOrder []string
+		wantedErr           error
+	}{
+		"should come after manual approval, pre-deployments, deployments; alpha in template": {
+			stg: func() *PipelineStage {
+				var stg PipelineStage
+				stg.Init(&config.Environment{Name: "test"}, &manifest.PipelineStage{
+					Name:             "test",
+					RequiresApproval: true,
+					PreDeployment: map[string]*manifest.PrePostDeployment{
+						"ipa": {},
+						"api": {},
+					},
+					Deployments: map[string]*manifest.Deployment{
+						"frontend":  nil,
+						"orders":    nil,
+						"payments":  nil,
+						"warehouse": nil,
+					},
+					PostDeployment: map[string]*manifest.PrePostDeployment{
+						"post": {},
+						"it":   {},
+					},
+				}, nil)
+				return &stg
+			}(),
+			wantedRunOrder: map[string]int{
+				"post": 4,
+				"it":   4,
+			},
+			wantedTemplateOrder: []string{"it", "post"},
+		},
+		"should error if cyclical depends_on actions": {
+			stg: func() *PipelineStage {
+				// Create a post-deployment with mutually-dependent actions.
+				var stg PipelineStage
+				stg.Init(&config.Environment{Name: "test"}, &manifest.PipelineStage{
+					Name: "test",
+					PostDeployment: map[string]*manifest.PrePostDeployment{
+						"post": {
+							DependsOn: []string{"post"},
+						},
+					},
+				}, nil)
+				return &stg
+			}(),
+			wantedErr: errors.New("find an ordering for deployments: graph contains a cycle: post"),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			postDeployments, err := tc.stg.PostDeployments()
+
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.NoError(t, err)
+				for _, postDeployment := range postDeployments {
+					wanted, ok := tc.wantedRunOrder[postDeployment.Name()]
+					require.True(t, ok, "expected deployment named %s to be created", postDeployment.Name())
+					require.Equal(t, wanted, postDeployment.RunOrder(), "order for deployment %s does not match", postDeployment.Name())
+				}
+				for i, wanted := range tc.wantedTemplateOrder {
+					require.Equal(t, wanted, postDeployments[i].Name(), "deployment name at index %d do not match", i)
 				}
 			}
 		})
