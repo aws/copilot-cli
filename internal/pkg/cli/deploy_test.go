@@ -135,7 +135,7 @@ type: Load Balanced Web Service`)
 			mockInit: func(m *mocks.MockwkldInitializerWithoutManifest) {
 				m.EXPECT().AddWorkloadToApp(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
-			wantedErr: "workload fe is uninitialized but --no-init-wkld was specified",
+			wantedErr: "workload fe is uninitialized but --init-wkld=false was specified",
 		},
 		"errors reading manifest": {
 			inAppName:       "app",

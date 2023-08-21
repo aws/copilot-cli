@@ -6,6 +6,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"testing"
 
@@ -23,8 +24,7 @@ func TestInitOpts_Run(t *testing.T) {
 	var mockPort uint16 = 80
 	var mockAppName = "demo"
 	testCases := map[string]struct {
-		inShouldDeploy    bool
-		inShouldNotDeploy bool
+		inShouldDeploy *bool
 
 		inEnvName string
 		inAppName string
@@ -253,8 +253,8 @@ func TestInitOpts_Run(t *testing.T) {
 					Return(false, nil)
 			},
 		},
-		"should not deploy the svc if --no-deploy is specified": {
-			inShouldNotDeploy: true,
+		"should not deploy the svc if --deploy=false is specified": {
+			inShouldDeploy: aws.Bool(false),
 			expect: func(opts *initOpts) {
 				opts.prompt.(*climocks.Mockprompter).EXPECT().SelectOption(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(manifestinfo.LoadBalancedWebServiceType, nil)
 				opts.initAppCmd.(*climocks.MockactionCommand).EXPECT().Ask().Return(nil)
@@ -266,7 +266,7 @@ func TestInitOpts_Run(t *testing.T) {
 			},
 		},
 		"should skip prompting if all flags and --deploy explicitly specified": {
-			inShouldDeploy: true,
+			inShouldDeploy: aws.Bool(true),
 			inEnvName:      "test2",
 			inWlType:       manifestinfo.LoadBalancedWebServiceType,
 			inAppName:      mockAppName,
@@ -286,7 +286,7 @@ func TestInitOpts_Run(t *testing.T) {
 			},
 		},
 		"env already exists; should skip initializing": {
-			inShouldDeploy: true,
+			inShouldDeploy: aws.Bool(true),
 			inEnvName:      "test2",
 			inWlType:       manifestinfo.LoadBalancedWebServiceType,
 			inAppName:      mockAppName,
@@ -306,7 +306,7 @@ func TestInitOpts_Run(t *testing.T) {
 			},
 		},
 		"error retrieving environment": {
-			inShouldDeploy: true,
+			inShouldDeploy: aws.Bool(true),
 			inEnvName:      "test2",
 			inWlType:       manifestinfo.LoadBalancedWebServiceType,
 			inAppName:      mockAppName,
@@ -336,11 +336,10 @@ func TestInitOpts_Run(t *testing.T) {
 
 			opts := &initOpts{
 				initVars: initVars{
-					appName:         tc.inAppName,
-					wkldType:        tc.inWlType,
-					envName:         tc.inEnvName,
-					shouldDeploy:    tc.inShouldDeploy,
-					shouldNotDeploy: tc.inShouldNotDeploy,
+					appName:      tc.inAppName,
+					wkldType:     tc.inWlType,
+					envName:      tc.inEnvName,
+					shouldDeploy: tc.inShouldDeploy,
 				},
 
 				initAppCmd:   climocks.NewMockactionCommand(ctrl),

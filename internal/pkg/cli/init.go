@@ -55,15 +55,14 @@ const (
 
 type initVars struct {
 	// Flags unique to "init" that's not provided by other sub-commands.
-	shouldDeploy    bool
-	shouldNotDeploy bool
-	appName         string
-	envName         string
-	wkldType        string
-	svcName         string
-	dockerfilePath  string
-	image           string
-	imageTag        string
+	shouldDeploy   *bool
+	appName        string
+	envName        string
+	wkldType       string
+	svcName        string
+	dockerfilePath string
+	image          string
+	imageTag       string
 
 	// Service specific flags
 	port uint16
@@ -76,8 +75,6 @@ type initVars struct {
 
 type initOpts struct {
 	initVars
-
-	ShouldDeploy bool // true means we should create a test environment and deploy the service to it. Defaults to false.
 
 	// Sub-commands to execute.
 	initAppCmd   actionCommand
@@ -230,8 +227,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		return nil
 	}
 	return &initOpts{
-		initVars:     vars,
-		ShouldDeploy: vars.shouldDeploy,
+		initVars: vars,
 
 		initAppCmd:   initAppCmd,
 		initEnvCmd:   initEnvCmd,
@@ -460,10 +456,11 @@ func (o *initOpts) deployEnv() error {
 	if err := o.askShouldDeploy(); err != nil {
 		return err
 	}
-	if !o.ShouldDeploy {
+	if !aws.BoolValue(o.shouldDeploy) {
 		// User chose not to deploy the service, exit.
 		return nil
 	}
+
 	if initEnvCmd, ok := o.initEnvCmd.(*initEnvOpts); ok {
 		// Set the application name from app init to the env init command. Set an env name if available.
 		initEnvCmd.appName = *o.appName
@@ -490,7 +487,7 @@ func (o *initOpts) deployEnv() error {
 }
 
 func (o *initOpts) deploySvc() error {
-	if !o.ShouldDeploy {
+	if !aws.BoolValue(o.shouldDeploy) {
 		return nil
 	}
 	if deployOpts, ok := o.deploySvcCmd.(*deploySvcOpts); ok {
@@ -513,7 +510,7 @@ func (o *initOpts) deploySvc() error {
 }
 
 func (o *initOpts) deployJob() error {
-	if !o.ShouldDeploy {
+	if !aws.BoolValue(o.shouldDeploy) {
 		return nil
 	}
 	if deployOpts, ok := o.deployJobCmd.(*deployJobOpts); ok {
@@ -536,28 +533,14 @@ func (o *initOpts) deployJob() error {
 }
 
 func (o *initOpts) askShouldDeploy() error {
-	// --no-deploy was specified.
-	if o.shouldNotDeploy {
-		o.ShouldDeploy = false
-		return nil
+	if o.shouldDeploy == nil {
+		// Neither deploy nor no-deploy was specified.
+		v, err := o.prompt.Confirm(initShouldDeployPrompt, initShouldDeployHelpPrompt, prompt.WithFinalMessage("Deploy:"))
+		if err != nil {
+			return fmt.Errorf("failed to confirm deployment: %w", err)
+		}
+		o.shouldDeploy = aws.Bool(v)
 	}
-	// --deploy was specified
-	if o.shouldDeploy {
-		o.ShouldDeploy = true
-		return nil
-	}
-
-	// This can't ordinarily happen, due to flags being mutually exclusive.
-	if o.shouldDeploy && o.shouldNotDeploy {
-		return fmt.Errorf("--%s and --%s are mutually exclusive", deployFlag, noDeployFlag)
-	}
-
-	// Neither deploy nor no-deploy was specified.
-	v, err := o.prompt.Confirm(initShouldDeployPrompt, initShouldDeployHelpPrompt, prompt.WithFinalMessage("Deploy:"))
-	if err != nil {
-		return fmt.Errorf("failed to confirm deployment: %w", err)
-	}
-	o.ShouldDeploy = v
 	return nil
 }
 
@@ -607,6 +590,7 @@ func (o *initOpts) askEnvNameAndMaybeInit() error {
 // BuildInitCmd builds the command for bootstrapping an application.
 func BuildInitCmd() *cobra.Command {
 	vars := initVars{}
+	var shouldDeploy bool
 	cmd := &cobra.Command{
 		Use:   "init",
 		Short: "Create a new ECS or App Runner application.",
@@ -616,10 +600,20 @@ func BuildInitCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+
+			if cmd.Flags().Changed(deployFlag) {
+				opts.shouldDeploy = aws.Bool(false)
+				if shouldDeploy {
+					opts.shouldDeploy = aws.Bool(true)
+				}
+			}
+
 			if err := opts.Run(); err != nil {
 				return err
 			}
-			if !opts.ShouldDeploy {
+
+			// ShouldDeploy will always be set after flags or prompting.
+			if !aws.BoolValue(opts.shouldDeploy) {
 				log.Info("\nNo problem, you can deploy your service later:\n")
 				log.Infof("- Run %s to create your environment.\n", color.HighlightCode("copilot env init"))
 				log.Infof("- Run %s to deploy your service.\n", color.HighlightCode("copilot deploy"))
@@ -636,8 +630,7 @@ func BuildInitCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&vars.wkldType, typeFlag, typeFlagShort, "", wkldTypeFlagDescription)
 	cmd.Flags().StringVarP(&vars.dockerfilePath, dockerFileFlag, dockerFileFlagShort, "", dockerFileFlagDescription)
 	cmd.Flags().StringVarP(&vars.image, imageFlag, imageFlagShort, "", imageFlagDescription)
-	cmd.Flags().BoolVar(&vars.shouldDeploy, deployFlag, false, deployFlagDescription)
-	cmd.Flags().BoolVar(&vars.shouldNotDeploy, noDeployFlag, false, noDeployFlagDescription)
+	cmd.Flags().BoolVar(&shouldDeploy, deployFlag, false, deployFlagDescription)
 	cmd.Flags().StringVar(&vars.imageTag, imageTagFlag, "", imageTagFlagDescription)
 	cmd.Flags().Uint16Var(&vars.port, svcPortFlag, 0, svcPortFlagDescription)
 	cmd.Flags().StringVar(&vars.schedule, scheduleFlag, "", scheduleFlagDescription)
@@ -647,6 +640,5 @@ func BuildInitCmd() *cobra.Command {
 	cmd.Annotations = map[string]string{
 		"group": group.GettingStarted,
 	}
-	cmd.MarkFlagsMutuallyExclusive(deployFlag, noDeployFlag)
 	return cmd
 }
