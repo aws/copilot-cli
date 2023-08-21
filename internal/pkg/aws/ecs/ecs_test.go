@@ -929,23 +929,18 @@ func TestECS_ActiveClusters(t *testing.T) {
 }
 
 func TestECS_ActiveServices(t *testing.T) {
+	mockClusterArn := "arn:aws:ecs:us-west-2:1234567890:cluster/cluster1"
 	testCases := map[string]struct {
+		inClusterARN  string
 		inArns        []string
 		mockECSClient func(m *mocks.Mockapi)
 
 		wantedError    error
 		wantedServices []string
 	}{
-		"error if services are not in the same cluster": {
-			inArns: []string{"arn:aws:ecs:us-west-2:1234567890:service/cluster1/svc1", "arn:aws:ecs:us-west-2:1234567890:service/cluster2/svc2"},
-			mockECSClient: func(m *mocks.Mockapi) {
-				m.EXPECT().
-					DescribeServices(gomock.Any()).Times(0)
-			},
-			wantedError: fmt.Errorf(`service "arn:aws:ecs:us-west-2:1234567890:service/cluster1/svc1" and service "arn:aws:ecs:us-west-2:1234567890:service/cluster2/svc2" should be in the same cluster`),
-		},
 		"describe services returns error": {
-			inArns: []string{"arn:aws:ecs:us-west-2:1234567890:service/cluster1/svc1"},
+			inClusterARN: mockClusterArn,
+			inArns:       []string{"arn:aws:ecs:us-west-2:1234567890:service/cluster1/svc1", "arn:aws:ecs:us-west-2:1234567890:service/cluster2/svc2"},
 			mockECSClient: func(m *mocks.Mockapi) {
 				m.EXPECT().
 					DescribeServices(gomock.Any()).
@@ -954,7 +949,8 @@ func TestECS_ActiveServices(t *testing.T) {
 			wantedError: fmt.Errorf("describe services: some error"),
 		},
 		"ignore inactive service": {
-			inArns: []string{"arn:aws:ecs:us-west-2:1234567890:service/cluster1/svc1", "arn:aws:ecs:us-west-2:1234567890:service/cluster1/svc2"},
+			inClusterARN: "arn:aws:ecs:us-west-2:1234567890:cluster/cluster1",
+			inArns:       []string{"arn:aws:ecs:us-west-2:1234567890:service/cluster1/svc1", "arn:aws:ecs:us-west-2:1234567890:service/cluster1/svc2"},
 			mockECSClient: func(m *mocks.Mockapi) {
 				m.EXPECT().
 					DescribeServices(gomock.Any()).
@@ -988,7 +984,7 @@ func TestECS_ActiveServices(t *testing.T) {
 			ecs := ECS{
 				client: mockECSClient,
 			}
-			services, err := ecs.ActiveServices(tc.inArns...)
+			services, err := ecs.ActiveServices(tc.inClusterARN, tc.inArns...)
 			if tc.wantedError != nil {
 				require.EqualError(t, tc.wantedError, err.Error())
 			} else {

@@ -365,8 +365,9 @@ async function requestCertificate({ aliases, idempotencyToken }) {
  * @param {Set<String>} aliases for the service.
  */
 async function waitForValidationOptionsToBeReady(certificateARN, aliases) {
-  let expectedCount = aliases.size + 1; // Expect one validation option for each alias and the cert domain.
-
+  // If the certificate domain is one of the aliases, expect one validation option for each alias.
+  // Otherwise, include an extra validation option for the certificate domain itself.
+  let expectedCount = aliases.has(certificateDomain) ? aliases.size : aliases.size + 1;
   let attempt; // TODO: This wait loops could be further abstracted.
   for (attempt = 0; attempt < ATTEMPTS_VALIDATION_OPTIONS_READY; attempt++) {
     let readyCount = 0;

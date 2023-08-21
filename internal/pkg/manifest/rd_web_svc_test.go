@@ -180,12 +180,12 @@ func TestRequestDrivenWebService_UnmarshalYaml(t *testing.T) {
 				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
 					Variables: map[string]Variable{
 						"LOG_LEVEL": {
-							stringOrFromCFN{
+							StringOrFromCFN{
 								Plain: stringP("info"),
 							},
 						},
 						"NODE_ENV": {
-							stringOrFromCFN{
+							StringOrFromCFN{
 								Plain: stringP("development"),
 							},
 						},

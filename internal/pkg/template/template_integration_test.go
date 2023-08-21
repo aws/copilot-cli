@@ -306,7 +306,7 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 					EFSPerms: []*template.EFSPermission{
 						{
 							AccessPointID: aws.String("ap-1234"),
-							FilesystemID:  aws.String("fs-5678"),
+							FilesystemID:  template.PlainFileSystemID("fs-5678"),
 							Write:         true,
 						},
 					},
@@ -321,7 +321,7 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 						{
 							EFS: &template.EFSVolumeConfiguration{
 								AccessPointID: aws.String("ap-1234"),
-								Filesystem:    aws.String("fs-5678"),
+								Filesystem:    template.PlainFileSystemID("fs-5678"),
 								IAM:           aws.String("ENABLED"),
 								RootDirectory: aws.String("/"),
 							},
@@ -357,7 +357,7 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 				Storage: &template.StorageOpts{
 					EFSPerms: []*template.EFSPermission{
 						{
-							FilesystemID: aws.String("fs-5678"),
+							FilesystemID: template.PlainFileSystemID("fs-5678"),
 						},
 					},
 					MountPoints: []*template.MountPoint{
@@ -371,7 +371,7 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 						{
 							Name: aws.String("efs"),
 							EFS: &template.EFSVolumeConfiguration{
-								Filesystem:    aws.String("fs-5678"),
+								Filesystem:    template.PlainFileSystemID("fs-5678"),
 								RootDirectory: aws.String("/"),
 							},
 						},

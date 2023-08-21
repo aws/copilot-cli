@@ -5,9 +5,6 @@ package static_site_test
 
 import (
 	"fmt"
-	"io"
-	"net/http"
-	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -73,16 +70,47 @@ var _ = Describe("Static Site", func() {
 		})
 	})
 
-	Context("when initializing Static Site", Ordered, func() {
+	Context("when initializing Static Site services", Ordered, func() {
 		var svcInitErr error
+		var frontendSVCInitErr error
 		BeforeAll(func() {
 			_, svcInitErr = cli.SvcInit(&client.SvcInitRequest{
 				Name:    "svc",
 				SvcType: "Static Site",
 			})
+			_, frontendSVCInitErr = cli.SvcInit(&client.SvcInitRequest{
+				Name:    "frontend",
+				SvcType: "Static Site",
+			})
 		})
-		It("svc init should succeed", func() {
+		It("svc init should succeed for svc", func() {
 			Expect(svcInitErr).NotTo(HaveOccurred())
+		})
+		It("svc init should succeed for frontend", func() {
+			Expect(frontendSVCInitErr).NotTo(HaveOccurred())
+		})
+	})
+
+	Context("svc ls", Ordered, func() {
+		var (
+			svcList      *client.SvcListOutput
+			svcListError error
+		)
+
+		BeforeAll(func() {
+			svcList, svcListError = cli.SvcList(appName)
+		})
+
+		It("should not return an error", func() {
+			Expect(svcListError).NotTo(HaveOccurred())
+		})
+
+		It("should return both services", func() {
+			Expect(len(svcList.Services)).To(Equal(2))
+			Expect(svcList.Services[0].Name).To(Equal("frontend"))
+			Expect(svcList.Services[0].AppName).To(Equal(appName))
+			Expect(svcList.Services[1].Name).To(Equal("svc"))
+			Expect(svcList.Services[1].AppName).To(Equal(appName))
 		})
 	})
 
@@ -109,29 +137,34 @@ var _ = Describe("Static Site", func() {
 			// Validate route has the expected HTTPS endpoint.
 			Expect(route.URL).To(ContainSubstring(wantedURLs[route.Environment]))
 			url := wantedURLs[route.Environment]
+			testResponse(url)
+		})
+	})
 
-			// Make sure the service response is OK.
-			var resp *http.Response
-			var fetchErr error
-			resp, fetchErr = http.Get(url)
-			Expect(fetchErr).NotTo(HaveOccurred())
-			Expect(resp.StatusCode).To(Equal(200))
-			bodyBytes, err := io.ReadAll(resp.Body)
+	Context("when deploying a frontend Static Site service", Ordered, func() {
+		It("deployment should succeed", func() {
+			_, err := cli.SvcDeploy(&client.SvcDeployInput{
+				Name:    "frontend",
+				EnvName: "test",
+			})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(string(bodyBytes)).To(Equal("hello"))
+		})
 
-			// HTTP should work.
-			resp, fetchErr = http.Get(strings.Replace(url, "https", "http", 1))
-			Expect(fetchErr).NotTo(HaveOccurred())
-			Expect(resp.StatusCode).To(Equal(200))
-
-			// Make sure we route to index.html for sub-path.
-			resp, fetchErr = http.Get(fmt.Sprintf("%s/static", url))
-			Expect(fetchErr).NotTo(HaveOccurred())
-			Expect(resp.StatusCode).To(Equal(200))
-			bodyBytes, err = io.ReadAll(resp.Body)
+		It("svc show should contain the default domain alias and the request should succeed", func() {
+			svc, err := cli.SvcShow(&client.SvcShowRequest{
+				Name:    "frontend",
+				AppName: appName,
+			})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(string(bodyBytes)).To(Equal("bye"))
+			Expect(len(svc.Routes)).To(Equal(1))
+			route := svc.Routes[0]
+			wantedURLs := map[string]string{
+				"test": fmt.Sprintf("https://%s.%s.%s.%s", "frontend", "test", appName, domainName),
+			}
+			// Validate route has the expected HTTPS endpoint.
+			Expect(route.URL).To(ContainSubstring(wantedURLs[route.Environment]))
+			url := wantedURLs[route.Environment]
+			testResponse(url)
 		})
 	})
 

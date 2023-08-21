@@ -95,7 +95,7 @@ variables:
 			wanted: mockParentField{
 				Variables: map[string]Variable{
 					"LOG_LEVEL": {
-						stringOrFromCFN{
+						StringOrFromCFN{
 							Plain: stringP("DEBUG"),
 						},
 					},
@@ -111,7 +111,7 @@ variables:
 			wanted: mockParentField{
 				Variables: map[string]Variable{
 					"DB_NAME": {
-						stringOrFromCFN{
+						StringOrFromCFN{
 							FromCFN: fromCFN{
 								Name: stringP("MyUserDB"),
 							},
@@ -152,7 +152,7 @@ func TestVariable_RequiresImport(t *testing.T) {
 	}{
 		"requires import": {
 			in: Variable{
-				stringOrFromCFN{
+				StringOrFromCFN{
 					FromCFN: fromCFN{
 						Name: stringP("prod-MyDB"),
 					},
@@ -162,7 +162,7 @@ func TestVariable_RequiresImport(t *testing.T) {
 		},
 		"does not require import if it is a plain value": {
 			in: Variable{
-				stringOrFromCFN{
+				StringOrFromCFN{
 					Plain: stringP("plain"),
 				},
 			},
@@ -182,7 +182,7 @@ func TestVariable_Value(t *testing.T) {
 	}{
 		"requires import": {
 			in: Variable{
-				stringOrFromCFN{
+				StringOrFromCFN{
 					FromCFN: fromCFN{
 						Name: stringP("prod-MyDB"),
 					},
@@ -192,7 +192,7 @@ func TestVariable_Value(t *testing.T) {
 		},
 		"does not require import if it is a plain value": {
 			in: Variable{
-				stringOrFromCFN{
+				StringOrFromCFN{
 					Plain: stringP("plain"),
 				},
 			},
@@ -220,7 +220,7 @@ func TestSecret_UnmarshalYAML(t *testing.T) {
 		"should be able to unmarshal a plain SSM parameter name": {
 			in: "/github/token",
 			wanted: Secret{
-				from: stringOrFromCFN{
+				from: StringOrFromCFN{
 					Plain: aws.String("/github/token"),
 				},
 			},
@@ -228,7 +228,7 @@ func TestSecret_UnmarshalYAML(t *testing.T) {
 		"should be able to unmarshal an imported SSM parameter name from other cloudformation stack": {
 			in: `from_cfn: "stack-SSMGHTokenName"`,
 			wanted: Secret{
-				from: stringOrFromCFN{
+				from: StringOrFromCFN{
 					FromCFN: fromCFN{
 						Name: aws.String("stack-SSMGHTokenName"),
 					},
@@ -238,7 +238,7 @@ func TestSecret_UnmarshalYAML(t *testing.T) {
 		"should be able to unmarshal a plain SecretsManager ARN": {
 			in: "arn:aws:secretsmanager:us-west-2:111122223333:secret:aes128-1a2b3c",
 			wanted: Secret{
-				from: stringOrFromCFN{
+				from: StringOrFromCFN{
 					Plain: aws.String("arn:aws:secretsmanager:us-west-2:111122223333:secret:aes128-1a2b3c"),
 				},
 			},
@@ -275,7 +275,7 @@ func TestSecret_IsSecretsManagerName(t *testing.T) {
 	}{
 		"should return false if the secret refers to an SSM parameter": {
 			in: Secret{
-				from: stringOrFromCFN{
+				from: StringOrFromCFN{
 					Plain: aws.String("/github/token"),
 				},
 			},
@@ -286,7 +286,7 @@ func TestSecret_IsSecretsManagerName(t *testing.T) {
 		},
 		"should return false if the secret is imported": {
 			in: Secret{
-				from: stringOrFromCFN{
+				from: StringOrFromCFN{
 					FromCFN: fromCFN{aws.String("stack-SSMGHTokenName")},
 				},
 			},
@@ -306,14 +306,14 @@ func TestSSMOrSecretARN_RequiresImport(t *testing.T) {
 	}{
 		"should return false if secret is plain": {
 			in: Secret{
-				from: stringOrFromCFN{
+				from: StringOrFromCFN{
 					Plain: aws.String("aes128-1a2b3c"),
 				},
 			},
 		},
 		"should return true if secret is imported": {
 			in: Secret{
-				from: stringOrFromCFN{
+				from: StringOrFromCFN{
 					FromCFN: fromCFN{
 						Name: aws.String("stack-SSMGHTokenName"),
 					},
@@ -343,7 +343,7 @@ func TestSecret_Value(t *testing.T) {
 	}{
 		"should return the SSM parameter name if the secret is just a string": {
 			in: Secret{
-				from: stringOrFromCFN{
+				from: StringOrFromCFN{
 					Plain: aws.String("/github/token"),
 				},
 			},
@@ -351,7 +351,7 @@ func TestSecret_Value(t *testing.T) {
 		},
 		"should return the imported name of the SSM parameter or secretARN": {
 			in: Secret{
-				from: stringOrFromCFN{
+				from: StringOrFromCFN{
 					FromCFN: fromCFN{
 						Name: aws.String("stack-SSMGHTokenName"),
 					},
@@ -403,7 +403,7 @@ func TestLogging_IsEmpty(t *testing.T) {
 			in: Logging{
 				SecretOptions: map[string]Secret{
 					"secret1": {
-						from: stringOrFromCFN{
+						from: StringOrFromCFN{
 							Plain: aws.String("value1"),
 						},
 					},
