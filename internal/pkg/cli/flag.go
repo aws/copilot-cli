@@ -4,6 +4,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -420,3 +421,38 @@ are also accepted.`
 permissions boundary for all roles generated within the application.`
 	prodEnvFlagDescription = "If the environment contains production services."
 )
+
+type portOverride struct {
+	host      string
+	container string
+}
+
+type portOverrides []portOverride
+
+func (p *portOverrides) Set(val string) error {
+	err := errors.New("should be in format 8080:80")
+	split := strings.Split(val, ":")
+	if len(split) != 2 {
+		return err
+	}
+	if _, ok := strconv.Atoi(split[0]); ok != nil {
+		return err
+	}
+	if _, ok := strconv.Atoi(split[1]); ok != nil {
+		return err
+	}
+
+	*p = append(*p, portOverride{
+		host:      split[0],
+		container: split[1],
+	})
+	return nil
+}
+
+func (p *portOverrides) Type() string {
+	return "list"
+}
+
+func (p *portOverrides) String() string {
+	return fmt.Sprintf("%+v", *p)
+}

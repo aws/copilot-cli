@@ -33,11 +33,10 @@ type localRunAskMocks struct {
 
 func TestLocalRunOpts_Validate(t *testing.T) {
 	testCases := map[string]struct {
-		inAppName       string
-		inPortOverrides []string
-		setupMocks      func(m *localRunAskMocks)
-		wantAppName     string
-		wantError       error
+		inAppName   string
+		setupMocks  func(m *localRunAskMocks)
+		wantAppName string
+		wantError   error
 	}{
 		"no app in workspace": {
 			wantError: errNoAppInWorkspace,
@@ -48,37 +47,6 @@ func TestLocalRunOpts_Validate(t *testing.T) {
 				m.store.EXPECT().GetApplication("testApp").Return(nil, testError)
 			},
 			wantError: fmt.Errorf("get application testApp: %w", testError),
-		},
-		"invalid port override, format": {
-			inAppName:       "testApp",
-			inPortOverrides: []string{"1:2:3"},
-			setupMocks: func(m *localRunAskMocks) {
-				m.store.EXPECT().GetApplication("testApp").Return(&config.Application{Name: "testApp"}, nil)
-			},
-			wantError: errors.New(`invalid port override "1:2:3": should be in format 8080:80`),
-		},
-		"invalid port override, host not a number": {
-			inAppName:       "testApp",
-			inPortOverrides: []string{"asdf:jkl"},
-			setupMocks: func(m *localRunAskMocks) {
-				m.store.EXPECT().GetApplication("testApp").Return(&config.Application{Name: "testApp"}, nil)
-			},
-			wantError: errors.New(`invalid port override "asdf:jkl": should be in format 8080:80`),
-		},
-		"invalid port override, ctr not a number": {
-			inAppName:       "testApp",
-			inPortOverrides: []string{"80:jkl"},
-			setupMocks: func(m *localRunAskMocks) {
-				m.store.EXPECT().GetApplication("testApp").Return(&config.Application{Name: "testApp"}, nil)
-			},
-			wantError: errors.New(`invalid port override "80:jkl": should be in format 8080:80`),
-		},
-		"success": {
-			inAppName:       "testApp",
-			inPortOverrides: []string{"77:7777"},
-			setupMocks: func(m *localRunAskMocks) {
-				m.store.EXPECT().GetApplication("testApp").Return(&config.Application{Name: "testApp"}, nil)
-			},
 		},
 	}
 	for name, tc := range testCases {
@@ -94,8 +62,7 @@ func TestLocalRunOpts_Validate(t *testing.T) {
 			}
 			opts := localRunOpts{
 				localRunVars: localRunVars{
-					appName:       tc.inAppName,
-					portOverrides: tc.inPortOverrides,
+					appName: tc.inAppName,
 				},
 				store: m.store,
 			}
@@ -549,9 +516,15 @@ func TestLocalRunOpts_Execute(t *testing.T) {
 					wkldName:     tc.inputWkldName,
 					envName:      tc.inputEnvName,
 					envOverrides: tc.inputEnvOverrides,
-					portOverrides: []string{
-						"777:7777",
-						"999:9999",
+					portOverrides: portOverrides{
+						{
+							host:      "777",
+							container: "7777",
+						},
+						{
+							host:      "999",
+							container: "9999",
+						},
 					},
 				},
 				newInterpolator: func(app, env string) interpolator {

@@ -56,7 +56,7 @@ type localRunVars struct {
 	appName       string
 	envName       string
 	envOverrides  map[string]string
-	portOverrides []string
+	portOverrides portOverrides
 }
 
 type localRunOpts struct {
@@ -167,30 +167,6 @@ func newLocalRunOpts(vars localRunVars) (*localRunOpts, error) {
 	return opts, nil
 }
 
-type portOverride struct {
-	host      string
-	container string
-}
-
-func parsePortOverride(s string) (portOverride, error) {
-	err := fmt.Errorf("invalid port override %q: should be in format 8080:80", s)
-	split := strings.Split(s, ":")
-	if len(split) != 2 {
-		return portOverride{}, err
-	}
-
-	if _, ok := strconv.Atoi(split[0]); ok != nil {
-		return portOverride{}, err
-	}
-	if _, ok := strconv.Atoi(split[1]); ok != nil {
-		return portOverride{}, err
-	}
-	return portOverride{
-		host:      split[0],
-		container: split[1],
-	}, nil
-}
-
 // Validate returns an error for any invalid optional flags.
 func (o *localRunOpts) Validate() error {
 	if o.appName == "" {
@@ -202,13 +178,6 @@ func (o *localRunOpts) Validate() error {
 		return fmt.Errorf("get application %s: %w", o.appName, err)
 	}
 	o.targetApp = app
-
-	// validate portOverrides
-	for _, p := range o.portOverrides {
-		if _, err := parsePortOverride(p); err != nil {
-			return err
-		}
-	}
 	return nil
 }
 
@@ -283,9 +252,7 @@ func (o *localRunOpts) Execute() error {
 		}
 	}
 	for _, port := range o.portOverrides {
-		// already validated in Validate()
-		override, _ := parsePortOverride(port)
-		ports[override.container] = override.host
+		ports[port.container] = port.host
 	}
 
 	mft, err := workloadManifest(&workloadManifestInput{
@@ -619,7 +586,8 @@ func BuildLocalRunCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&vars.wkldName, nameFlag, nameFlagShort, "", workloadFlagDescription)
 	cmd.Flags().StringVarP(&vars.envName, envFlag, envFlagShort, "", envFlagDescription)
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
+	cmd.Flags().Var(&vars.portOverrides, portOverrideFlag, portOverridesFlagDescription)
 	cmd.Flags().StringToStringVar(&vars.envOverrides, envVarOverrideFlag, nil, envVarOverrideFlagDescription)
-	cmd.Flags().StringSliceVar(&vars.portOverrides, portOverrideFlag, nil, portOverridesFlagDescription)
+	// cmd.Flags().StringSliceVar(&vars.portOverrides, portOverrideFlag, nil, portOverridesFlagDescription)
 	return cmd
 }
