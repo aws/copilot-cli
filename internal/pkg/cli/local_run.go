@@ -501,7 +501,8 @@ func (o *localRunOpts) fillSecrets(ctx context.Context, envVars map[string]conta
 		if cur.Override {
 			// ignore secrets that were overridden
 			continue
-		} else if ok {
+		}
+		if ok {
 			return fmt.Errorf("secret names must be unique, but an environment variable %q already exists", s.Name)
 		}
 
@@ -551,7 +552,8 @@ func (o *localRunOpts) fillSecrets(ctx context.Context, envVars map[string]conta
 }
 
 func (o *localRunOpts) getSecret(ctx context.Context, valueFrom string) (string, error) {
-	// default to ssm
+	// SSM secrets can be specified as parameter name instead of an ARN.
+	// Default to ssm if valueFrom is not an ARN.
 	getter := o.ssm
 	if parsed, err := arn.Parse(valueFrom); err == nil { // only overwrite if successful
 		switch parsed.Service {
