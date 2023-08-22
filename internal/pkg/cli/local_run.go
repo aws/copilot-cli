@@ -588,6 +588,5 @@ func BuildLocalRunCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
 	cmd.Flags().Var(&vars.portOverrides, portOverrideFlag, portOverridesFlagDescription)
 	cmd.Flags().StringToStringVar(&vars.envOverrides, envVarOverrideFlag, nil, envVarOverrideFlagDescription)
-	// cmd.Flags().StringSliceVar(&vars.portOverrides, portOverrideFlag, nil, portOverridesFlagDescription)
 	return cmd
 }
