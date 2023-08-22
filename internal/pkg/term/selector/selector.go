@@ -179,6 +179,8 @@ type taskLister interface {
 type AppEnvSelector struct {
 	prompt       Prompter
 	appEnvLister appEnvLister
+
+	alsoShowLocalEnvs bool
 }
 
 // ConfigSelector is an application and environment selector, but can also choose a service from the config store.
@@ -200,9 +202,6 @@ type LocalWorkloadSelector struct {
 type LocalEnvironmentSelector struct {
 	*AppEnvSelector
 	ws workspaceRetriever
-
-	// Option, turned on by passing WithOnlyInitialized to NewLocalEnvironmentSelector.
-	onlyInitializedEnvs bool
 }
 
 // WorkspaceSelector selects from local workspace.
@@ -316,15 +315,11 @@ func NewLocalWorkloadSelector(prompt Prompter, store configLister, ws workspaceR
 
 // NewLocalEnvironmentSelector returns a new selector that chooses applications from the config store, but an environment
 // from the local workspace.
-func NewLocalEnvironmentSelector(prompt Prompter, store configLister, ws workspaceRetriever, options ...EnvSelectOption) *LocalEnvironmentSelector {
-	sel := &LocalEnvironmentSelector{
+func NewLocalEnvironmentSelector(prompt Prompter, store configLister, ws workspaceRetriever) *LocalEnvironmentSelector {
+	return &LocalEnvironmentSelector{
 		AppEnvSelector: NewAppEnvSelector(prompt, store),
 		ws:             ws,
 	}
-	for _, opt := range options {
-		opt(sel)
-	}
-	return sel
 }
 
 // NewWorkspaceSelector returns a new selector that prompts for local information.
@@ -868,15 +863,6 @@ var OnlyInitializedWorkloads WorkloadSelectOption = func(s *LocalWorkloadSelecto
 	s.onlyInitializedWorkloads = true
 }
 
-// EnvSelectOption represents an option for customizing LocalEnvironmentSelector's behavior.
-type EnvSelectOption func(selector *LocalEnvironmentSelector)
-
-// OnlyInitializedEnvs modifies LocalEnvironmentSelector to show only the initialized environments in the workspace,
-// ignoring uninitialized environments with local manifests.
-var OnlyInitializedEnvs EnvSelectOption = func(s *LocalEnvironmentSelector) {
-	s.onlyInitializedEnvs = true
-}
-
 // Workload fetches all jobs and services in a workspace and prompts the user to select one.
 // It can optionally select only initialized workloads which exist in the app (default behavior)
 // or list all workloads for which there are manifests in the workspace.
@@ -951,37 +937,19 @@ func (s *LocalEnvironmentSelector) LocalEnvironment(msg, help string) (string, e
 	if err != nil {
 		return "", fmt.Errorf("retrieve environments from workspace: %w", err)
 	}
-	if len(wsEnvNames) == 0 {
-		return "", errors.New("no environments found in workspace")
-	}
 	envs, err := s.appEnvLister.ListEnvironments(summary.Application)
 	if err != nil {
 		return "", fmt.Errorf("retrieve environments from store: %w", err)
 	}
-	initializedLocalEnvs := filterEnvsByName(envs, wsEnvNames)
-
-	var options []prompt.Option
-	for _, env := range initializedLocalEnvs {
-		options = append(options, prompt.Option{Value: env})
-	}
-	if !s.onlyInitializedEnvs {
-		uninitializedLocalEnvs := filterOutStrings(wsEnvNames, initializedLocalEnvs)
-		for _, env := range uninitializedLocalEnvs {
-			options = append(options, prompt.Option{
-				Value: env,
-				Hint:  "uninitialized",
-			})
-		}
-	}
-
-	if len(options) == 0 {
+	filteredEnvNames := filterEnvsByName(envs, wsEnvNames)
+	if len(filteredEnvNames) == 0 {
 		return "", ErrLocalEnvsNotFound
 	}
-	if len(options) == 1 {
-		log.Infof("Found only one environment, defaulting to: %s\n", color.HighlightUserInput(options[0].Value))
-		return options[0].Value, nil
+	if len(filteredEnvNames) == 1 {
+		log.Infof("Found only one environment, defaulting to: %s\n", color.HighlightUserInput(filteredEnvNames[0]))
+		return filteredEnvNames[0], nil
 	}
-	selectedEnvName, err := s.prompt.SelectOption(msg, help, options, prompt.WithFinalMessage(workloadFinalMsg))
+	selectedEnvName, err := s.prompt.SelectOne(msg, help, filteredEnvNames, prompt.WithFinalMessage(workloadFinalMsg))
 	if err != nil {
 		return "", fmt.Errorf("select environment: %w", err)
 	}
@@ -1136,25 +1104,29 @@ func (s *ConfigSelector) Workload(msg, help, app string) (string, error) {
 }
 
 // Environment fetches all the environments in an app and prompts the user to select one.
-func (s *AppEnvSelector) Environment(msg, help, app string, additionalOpts ...string) (string, error) {
+func (s *AppEnvSelector) Environment(msg, help, app string, additionalOpts ...prompt.Option) (string, error) {
 	envs, err := s.retrieveEnvironments(app)
 	if err != nil {
 		return "", fmt.Errorf("get environments for app %s from metadata store: %w", app, err)
 	}
 
-	envs = append(envs, additionalOpts...)
-	if len(envs) == 0 {
+	envOpts := make([]prompt.Option, len(envs))
+	for k := range envs {
+		envOpts[k] = prompt.Option{Value: envs[k]}
+	}
+	envOpts = append(envOpts, additionalOpts...)
+	if len(envOpts) == 0 {
 		log.Infof("Couldn't find any environments associated with app %s, try initializing one: %s\n",
 			color.HighlightUserInput(app),
 			color.HighlightCode("copilot env init"))
 		return "", fmt.Errorf("no environments found in app %s", app)
 	}
-	if len(envs) == 1 {
-		log.Infof("Only found one option, defaulting to: %s\n", color.HighlightUserInput(envs[0]))
-		return envs[0], nil
+	if len(envOpts) == 1 {
+		log.Infof("Only found one option, defaulting to: %s\n", color.HighlightUserInput(envOpts[0].Value))
+		return envOpts[0].Value, nil
 	}
 
-	selectedEnvName, err := s.prompt.SelectOne(msg, help, envs, prompt.WithFinalMessage(envNameFinalMessage))
+	selectedEnvName, err := s.prompt.SelectOption(msg, help, envOpts, prompt.WithFinalMessage(envNameFinalMessage))
 	if err != nil {
 		return "", fmt.Errorf("select environment: %w", err)
 	}

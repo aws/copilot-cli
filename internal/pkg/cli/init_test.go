@@ -231,7 +231,7 @@ func TestInitOpts_Run(t *testing.T) {
 
 				opts.prompt.(*climocks.Mockprompter).EXPECT().Confirm(initShouldDeployPrompt, initShouldDeployHelpPrompt, gomock.Any()).
 					Return(true, nil)
-				opts.sel.(*climocks.MockconfigSelector).EXPECT().Environment(initExistingEnvSelectPrompt, initExistingEnvSelectHelp, mockAppName, envPromptCreateNew).Return("test2", nil)
+				opts.sel.(*climocks.MockconfigSelector).EXPECT().Environment(initExistingEnvSelectPrompt, initExistingEnvSelectHelp, mockAppName, prompt.Option{Value: envPromptCreateNew}).Return("test2", nil)
 				opts.initEnvCmd.(*climocks.MockactionCommand).EXPECT().Execute().Times(0)
 				opts.deployEnvCmd.(*climocks.Mockcmd).EXPECT().Execute().Return(nil)
 				opts.deploySvcCmd.(*climocks.MockactionCommand).EXPECT().Ask().Return(nil)

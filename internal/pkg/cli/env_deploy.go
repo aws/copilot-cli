@@ -89,7 +89,7 @@ func newEnvDeployOpts(vars deployEnvVars) (*deployEnvOpts, error) {
 
 		store:           store,
 		sessionProvider: sessProvider,
-		sel:             selector.NewLocalEnvironmentSelector(prompter, store, ws, selector.OnlyInitializedEnvs),
+		sel:             selector.NewLocalEnvironmentSelector(prompter, store, ws),
 		newEnvVersionGetter: func(appName, envName string) (versionGetter, error) {
 			return describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
 				App:         appName,

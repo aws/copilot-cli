@@ -38,6 +38,7 @@ const (
 	// Deploy flags.
 	yesInitWorkloadFlag = "init-wkld"
 
+	yesInitEnvFlag      = "yes-env"
 	// Build flags.
 	dockerFileFlag        = "dockerfile"
 	dockerFileContextFlag = "build-context"
@@ -159,8 +160,7 @@ const (
 	prodEnvFlag             = "prod"
 	deleteSecretFlag        = "delete-secret"
 	deployEnvFlag           = "deploy-env"
-	yesInitEnvFlag          = "yes-init-env"
-	noInitEnvFlag           = "no-init-env"
+	yesInitEnvFlag          = "init-env"
 )
 
 // Short flag names.
@@ -429,7 +429,6 @@ permissions boundary for all roles generated within the application.`
 	prodEnvFlagDescription    = "If the environment contains production services."
 	deployEnvFlagDescription  = "Deploy the target environment before deploying the workload."
 	yesInitEnvFlagDescription = "Confirm initializing the target environment if it does not exist."
-	noInitEnvFlagDescription  = "Do not initialize the target environment if it does not exist."
 )
 
 type portOverride struct {

@@ -114,10 +114,9 @@ type: Load Balanced Web Service`)
 			},
 		},
 		"errors if noInit specified": {
-			inAppName:       "app",
-			inName:          "fe",
-			inShouldInit:    aws.Bool(false),
-			inShouldNotInit: true,
+			inAppName:    "app",
+			inName:       "fe",
+			inShouldInit: aws.Bool(false),
 			mockWs: func(m *mocks.MockwsWlDirReader) {
 				m.EXPECT().ReadWorkloadManifest("fe").Return(mockManifest, nil)
 			},
