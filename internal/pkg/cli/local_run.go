@@ -303,6 +303,7 @@ func (o *localRunOpts) Execute() error {
 
 	g, ctx := errgroup.WithContext(context.Background())
 	gotSigInt := &atomic.Bool{}
+	finishedErr := errors.New("containers stopped")
 
 	g.Go(func() (err error) {
 		defer func() {
@@ -321,27 +322,32 @@ func (o *localRunOpts) Execute() error {
 			return err
 		}
 
-		return errors.New("containers stopped")
+		return finishedErr
 	})
 
 	g.Go(func() error {
 		sigCh := make(chan os.Signal, 1)
 		signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+		defer signal.Stop(sigCh)
 
 		select {
 		case <-ctx.Done():
 			return nil
 		case <-sigCh:
 			gotSigInt.Store(true)
-			signal.Stop(sigCh) // reset signal handler in case we get ctrl+c again
-
+			// reset signal handler in case we get ctrl+c again
+			// while trying to stop containers
+			signal.Stop(sigCh)
 			fmt.Printf("\nStopping containers...\n\n")
 		}
 
 		return o.stopAndRemoveContainers(ctx)
 	})
 
-	return g.Wait()
+	if err := g.Wait(); !errors.Is(err, finishedErr) {
+		return err
+	}
+	return nil
 }
 
 func (o *localRunOpts) getContainerSuffix() string {
@@ -477,13 +483,13 @@ func (o *localRunOpts) stopAndRemoveContainers(ctx context.Context) error {
 	for _, image := range o.imageInfoList {
 		ctr := fmt.Sprintf("%s-%s", image.ContainerName, o.containerSuffix)
 		if err := cleanUp(ctr); err != nil {
-			errs = append(errs, fmt.Errorf("clean up %q", ctr))
+			errs = append(errs, fmt.Errorf("clean up %q: %w", ctr, err))
 		}
 	}
 
 	pauseCtr := fmt.Sprintf("%s-%s", pauseContainerName, o.containerSuffix)
 	if err := cleanUp(pauseCtr); err != nil {
-		errs = append(errs, fmt.Errorf("clean up %q", pauseCtr))
+		errs = append(errs, fmt.Errorf("clean up %q: %w", pauseCtr, err))
 	}
 
 	if len(errs) > 0 {
