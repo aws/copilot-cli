@@ -294,12 +294,12 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						},
 						Variables: map[string]Variable{
 							"VAR1": {
-								stringOrFromCFN{
+								StringOrFromCFN{
 									Plain: stringP("var1"),
 								},
 							},
 							"VAR2": {
-								stringOrFromCFN{
+								StringOrFromCFN{
 									FromCFN: fromCFN{
 										Name: stringP("import-var2"),
 									},
@@ -315,7 +315,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 									},
 									EFS: EFSConfigOrBool{
 										Advanced: EFSVolumeConfiguration{
-											FileSystemID: aws.String("fs-1234"),
+											FileSystemID: &StringOrFromCFN{Plain: aws.String("fs-12345")},
 										},
 									},
 								},
@@ -364,12 +364,12 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						},
 						Variables: map[string]Variable{
 							"VAR1": {
-								stringOrFromCFN{
+								StringOrFromCFN{
 									Plain: stringP("var1"),
 								},
 							},
 							"VAR2": {
-								stringOrFromCFN{
+								StringOrFromCFN{
 									FromCFN: fromCFN{
 										Name: stringP("import-var2"),
 									},
@@ -385,7 +385,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 									},
 									EFS: EFSConfigOrBool{
 										Advanced: EFSVolumeConfiguration{
-											FileSystemID: aws.String("fs-1234"),
+											FileSystemID: &StringOrFromCFN{Plain: aws.String("fs-12345")},
 										},
 									},
 								},
@@ -434,24 +434,24 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						},
 						Variables: map[string]Variable{
 							"LOG_LEVEL": {
-								stringOrFromCFN{
+								StringOrFromCFN{
 									Plain: stringP("DEBUG"),
 								},
 							},
 							"S3_TABLE_NAME": {
-								stringOrFromCFN{
+								StringOrFromCFN{
 									Plain: stringP("doggo"),
 								},
 							},
 							"RDS_TABLE_NAME": {
-								stringOrFromCFN{
+								StringOrFromCFN{
 									FromCFN: fromCFN{
 										Name: stringP("duckling"),
 									},
 								},
 							},
 							"DDB_TABLE_NAME": {
-								stringOrFromCFN{
+								StringOrFromCFN{
 									FromCFN: fromCFN{
 										Name: stringP("awards"),
 									},
@@ -460,12 +460,12 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						},
 						Secrets: map[string]Secret{
 							"GITHUB_TOKEN": {
-								from: stringOrFromCFN{
+								from: StringOrFromCFN{
 									Plain: aws.String("1111"),
 								},
 							},
 							"TWILIO_TOKEN": {
-								from: stringOrFromCFN{
+								from: StringOrFromCFN{
 									Plain: aws.String("1111"),
 								},
 							},
@@ -479,7 +479,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 									},
 									EFS: EFSConfigOrBool{
 										Advanced: EFSVolumeConfiguration{
-											FileSystemID: aws.String("fs-1234"),
+											FileSystemID: &StringOrFromCFN{Plain: aws.String("fs-12345")},
 											AuthConfig: AuthorizationConfig{
 												IAM:           aws.Bool(true),
 												AccessPointID: aws.String("ap-1234"),
@@ -508,7 +508,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 								PlacementString: placementStringP(PublicSubnetPlacement),
 							},
 							SecurityGroups: SecurityGroupsIDsOrConfig{
-								IDs: []stringOrFromCFN{{
+								IDs: []StringOrFromCFN{{
 									Plain: aws.String("sg-123"),
 								}},
 							},
@@ -545,20 +545,20 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							},
 							Variables: map[string]Variable{
 								"LOG_LEVEL": {
-									stringOrFromCFN{
+									StringOrFromCFN{
 										Plain: stringP("ERROR"),
 									},
 								},
 								"S3_TABLE_NAME": {
-									stringOrFromCFN{
+									StringOrFromCFN{
 										FromCFN: fromCFN{Name: stringP("prod-doggo")},
 									},
 								},
 								"RDS_TABLE_NAME": {
-									stringOrFromCFN{Plain: stringP("duckling-prod")},
+									StringOrFromCFN{Plain: stringP("duckling-prod")},
 								},
 								"DDB_TABLE_NAME": {
-									stringOrFromCFN{
+									StringOrFromCFN{
 										FromCFN: fromCFN{Name: stringP("awards-prod")},
 									},
 								},
@@ -568,7 +568,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 									"myEFSVolume": {
 										EFS: EFSConfigOrBool{
 											Advanced: EFSVolumeConfiguration{
-												FileSystemID: aws.String("fs-5678"),
+												FileSystemID: &StringOrFromCFN{Plain: aws.String("fs-12345")},
 												AuthConfig: AuthorizationConfig{
 													AccessPointID: aws.String("ap-5678"),
 												},
@@ -595,7 +595,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						Logging: Logging{
 							SecretOptions: map[string]Secret{
 								"FOO": {
-									from: stringOrFromCFN{
+									from: StringOrFromCFN{
 										Plain: aws.String("BAR"),
 									},
 								},
@@ -604,7 +604,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						Network: NetworkConfig{
 							VPC: vpcConfig{
 								SecurityGroups: SecurityGroupsIDsOrConfig{
-									IDs: []stringOrFromCFN{
+									IDs: []StringOrFromCFN{
 										{
 											Plain: aws.String("sg-456"),
 										},
@@ -659,34 +659,34 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						},
 						Variables: map[string]Variable{
 							"LOG_LEVEL": {
-								stringOrFromCFN{
+								StringOrFromCFN{
 									Plain: stringP("ERROR"),
 								},
 							},
 							"S3_TABLE_NAME": {
-								stringOrFromCFN{
+								StringOrFromCFN{
 									FromCFN: fromCFN{Name: stringP("prod-doggo")},
 								},
 							},
 							"RDS_TABLE_NAME": {
-								stringOrFromCFN{
+								StringOrFromCFN{
 									Plain: stringP("duckling-prod"),
 								},
 							},
 							"DDB_TABLE_NAME": {
-								stringOrFromCFN{
+								StringOrFromCFN{
 									FromCFN: fromCFN{Name: stringP("awards-prod")},
 								},
 							},
 						},
 						Secrets: map[string]Secret{
 							"GITHUB_TOKEN": {
-								from: stringOrFromCFN{
+								from: StringOrFromCFN{
 									Plain: aws.String("1111"),
 								},
 							},
 							"TWILIO_TOKEN": {
-								from: stringOrFromCFN{
+								from: StringOrFromCFN{
 									Plain: aws.String("1111"),
 								},
 							},
@@ -700,7 +700,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 									},
 									EFS: EFSConfigOrBool{
 										Advanced: EFSVolumeConfiguration{
-											FileSystemID: aws.String("fs-5678"),
+											FileSystemID: &StringOrFromCFN{Plain: aws.String("fs-12345")},
 											AuthConfig: AuthorizationConfig{
 												IAM:           aws.Bool(true),
 												AccessPointID: aws.String("ap-5678"),
@@ -733,7 +733,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						ConfigFile: aws.String("mockConfigFile"),
 						SecretOptions: map[string]Secret{
 							"FOO": {
-								from: stringOrFromCFN{
+								from: StringOrFromCFN{
 									Plain: aws.String("BAR"),
 								},
 							},
@@ -745,7 +745,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 								PlacementString: placementStringP(PublicSubnetPlacement),
 							},
 							SecurityGroups: SecurityGroupsIDsOrConfig{
-								IDs: []stringOrFromCFN{
+								IDs: []StringOrFromCFN{
 									{
 										Plain: aws.String("sg-456"),
 									},
@@ -771,12 +771,12 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						},
 						Variables: map[string]Variable{
 							"VAR1": {
-								stringOrFromCFN{
+								StringOrFromCFN{
 									Plain: stringP("var1"),
 								},
 							},
 							"VAR2": {
-								stringOrFromCFN{
+								StringOrFromCFN{
 									FromCFN: fromCFN{Name: stringP("import-var2")},
 								},
 							},
@@ -809,12 +809,12 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						},
 						Variables: map[string]Variable{
 							"VAR1": {
-								stringOrFromCFN{
+								StringOrFromCFN{
 									Plain: stringP("var1"),
 								},
 							},
 							"VAR2": {
-								stringOrFromCFN{
+								StringOrFromCFN{
 									FromCFN: fromCFN{Name: stringP("import-var2")},
 								},
 							},
@@ -851,7 +851,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 								PlacementString: placementStringP(PublicSubnetPlacement),
 							},
 							SecurityGroups: SecurityGroupsIDsOrConfig{
-								IDs: []stringOrFromCFN{
+								IDs: []StringOrFromCFN{
 									{
 										Plain: aws.String("sg-456"),
 									},
@@ -886,7 +886,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 								PlacementString: placementStringP(PublicSubnetPlacement),
 							},
 							SecurityGroups: SecurityGroupsIDsOrConfig{
-								IDs: []stringOrFromCFN{
+								IDs: []StringOrFromCFN{
 									{
 										Plain: aws.String("sg-456"),
 									},
@@ -910,7 +910,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							},
 							SecurityGroups: SecurityGroupsIDsOrConfig{
 								AdvancedConfig: SecurityGroupsConfig{
-									SecurityGroups: []stringOrFromCFN{
+									SecurityGroups: []StringOrFromCFN{
 										{
 											Plain: aws.String("sg-535"),
 										},
@@ -929,7 +929,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							VPC: vpcConfig{
 								SecurityGroups: SecurityGroupsIDsOrConfig{
 									AdvancedConfig: SecurityGroupsConfig{
-										SecurityGroups: []stringOrFromCFN{
+										SecurityGroups: []StringOrFromCFN{
 											{
 												Plain: aws.String("sg-456"),
 											},
@@ -956,7 +956,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							},
 							SecurityGroups: SecurityGroupsIDsOrConfig{
 								AdvancedConfig: SecurityGroupsConfig{
-									SecurityGroups: []stringOrFromCFN{
+									SecurityGroups: []StringOrFromCFN{
 										{
 											Plain: aws.String("sg-456"),
 										},
@@ -1708,7 +1708,7 @@ func TestLoadBalancedWebService_RequiredEnvironmentFeatures(t *testing.T) {
 						"mock-imported-volume": {
 							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									FileSystemID: aws.String("mock-id"),
+									FileSystemID: &StringOrFromCFN{FromCFN: fromCFN{Name: aws.String("fs-12345")}},
 								},
 							},
 						},
@@ -1731,7 +1731,7 @@ func TestLoadBalancedWebService_RequiredEnvironmentFeatures(t *testing.T) {
 						"mock-imported-volume": {
 							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									FileSystemID: aws.String("mock-id"),
+									FileSystemID: &StringOrFromCFN{Plain: aws.String("fs-12345")},
 								},
 							},
 						},
@@ -1747,7 +1747,7 @@ func TestLoadBalancedWebService_RequiredEnvironmentFeatures(t *testing.T) {
 						"mock-imported-volume": {
 							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									FileSystemID: aws.String("mock-id"),
+									FileSystemID: &StringOrFromCFN{Plain: aws.String("fs-12345")},
 								},
 							},
 						},

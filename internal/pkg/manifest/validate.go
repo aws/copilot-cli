@@ -1884,8 +1884,8 @@ func (v Variable) validate() error {
 	return nil
 }
 
-// validate returns nil if stringorFromCFN is configured correctly.
-func (s stringOrFromCFN) validate() error {
+// validate returns nil if StringOrFromCFN is configured correctly.
+func (s StringOrFromCFN) validate() error {
 	if s.isEmpty() {
 		return nil
 	}

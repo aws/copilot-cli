@@ -11,6 +11,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -229,7 +230,7 @@ type ContainerImageIdentifier struct {
 	Digest            string
 	CustomTag         string
 	GitShortCommitTag string
-	ImageName         string
+	RepoTags          []string
 }
 
 // ImageActionInput represent the input parameters for building and uploading container images.
@@ -468,11 +469,16 @@ func buildSingleContainerImage(in *ImageActionInput, uri string, buildArgsPerCon
 		if err != nil {
 			return fmt.Errorf("build and push the image %q: %w", name, err)
 		}
-		out.ImageDigests[name] = ContainerImageIdentifier{
+		id := ContainerImageIdentifier{
 			Digest:            digest,
 			CustomTag:         in.CustomTag,
 			GitShortCommitTag: in.GitShortCommitTag,
 		}
+		for _, tag := range buildArgs.Tags {
+			id.RepoTags = append(id.RepoTags, fmt.Sprintf("%s:%s", uri, tag))
+		}
+		sort.Strings(id.RepoTags)
+		out.ImageDigests[name] = id
 	}
 	return nil
 }
@@ -503,15 +509,19 @@ func buildContainerImagesInParallel(in *ImageActionInput, uri string, buildArgsP
 			if err != nil {
 				return fmt.Errorf("build and push the image %q: %w", name, err)
 			}
-			digestsMu.Lock()
-			defer digestsMu.Unlock()
-			imageName := fmt.Sprintf("%s:%s", uri, buildArgs.Tags[0])
-			out.ImageDigests[name] = ContainerImageIdentifier{
+
+			id := ContainerImageIdentifier{
 				Digest:            digest,
 				CustomTag:         in.CustomTag,
 				GitShortCommitTag: in.GitShortCommitTag,
-				ImageName:         imageName,
 			}
+			for _, tag := range buildArgs.Tags {
+				id.RepoTags = append(id.RepoTags, fmt.Sprintf("%s:%s", uri, tag))
+			}
+			sort.Strings(id.RepoTags)
+			digestsMu.Lock()
+			defer digestsMu.Unlock()
+			out.ImageDigests[name] = id
 			return nil
 		})
 		g.Go(func() error {

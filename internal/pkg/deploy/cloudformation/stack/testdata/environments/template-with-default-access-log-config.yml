@@ -371,6 +371,11 @@ Resources:
                   "kms:Decrypt"
                 ]
                 Resource: "*"
+              - Sid: EmptyELBAccessLogsBucket
+                Effect: Allow
+                Action:
+                  - s3:EmptyBucket
+                Resource: !Join [ "/" , [!GetAtt ELBAccessLogsBucket.Arn, "*"]]
               - Sid: PutObjectsToArtifactBucket
                 Effect: Allow
                 Action:
@@ -712,7 +717,6 @@ Resources:
     Metadata:
       "aws:copilot:description": "A S3 bucket for the Load Balancer's access logs"
     Type: AWS::S3::Bucket
-    Condition: CreateALB
     Properties:
       VersioningConfiguration:
         Status: Enabled

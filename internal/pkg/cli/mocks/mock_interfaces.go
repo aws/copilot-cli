@@ -24,6 +24,7 @@ import (
 	cloudformation1 "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	stack "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	describe "github.com/aws/copilot-cli/internal/pkg/describe"
+	stack0 "github.com/aws/copilot-cli/internal/pkg/describe/stack"
 	dockerengine "github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 	dockerfile "github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
 	ecs0 "github.com/aws/copilot-cli/internal/pkg/ecs"
@@ -1735,21 +1736,6 @@ func NewMockecsLocalClient(ctrl *gomock.Controller) *MockecsLocalClient {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockecsLocalClient) EXPECT() *MockecsLocalClientMockRecorder {
 	return m.recorder
-}
-
-// DecryptedSecrets mocks base method.
-func (m *MockecsLocalClient) DecryptedSecrets(secrets []*ecs.ContainerSecret) ([]ecs0.EnvVar, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DecryptedSecrets", secrets)
-	ret0, _ := ret[0].([]ecs0.EnvVar)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// DecryptedSecrets indicates an expected call of DecryptedSecrets.
-func (mr *MockecsLocalClientMockRecorder) DecryptedSecrets(secrets interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DecryptedSecrets", reflect.TypeOf((*MockecsLocalClient)(nil).DecryptedSecrets), secrets)
 }
 
 // TaskDefinition mocks base method.
@@ -3880,6 +3866,44 @@ func (m *MockbucketEmptier) EmptyBucket(bucket string) error {
 func (mr *MockbucketEmptierMockRecorder) EmptyBucket(bucket interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EmptyBucket", reflect.TypeOf((*MockbucketEmptier)(nil).EmptyBucket), bucket)
+}
+
+// MockstackDescriber is a mock of stackDescriber interface.
+type MockstackDescriber struct {
+	ctrl     *gomock.Controller
+	recorder *MockstackDescriberMockRecorder
+}
+
+// MockstackDescriberMockRecorder is the mock recorder for MockstackDescriber.
+type MockstackDescriberMockRecorder struct {
+	mock *MockstackDescriber
+}
+
+// NewMockstackDescriber creates a new mock instance.
+func NewMockstackDescriber(ctrl *gomock.Controller) *MockstackDescriber {
+	mock := &MockstackDescriber{ctrl: ctrl}
+	mock.recorder = &MockstackDescriberMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockstackDescriber) EXPECT() *MockstackDescriberMockRecorder {
+	return m.recorder
+}
+
+// Resources mocks base method.
+func (m *MockstackDescriber) Resources() ([]*stack0.Resource, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Resources")
+	ret0, _ := ret[0].([]*stack0.Resource)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Resources indicates an expected call of Resources.
+func (mr *MockstackDescriberMockRecorder) Resources() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Resources", reflect.TypeOf((*MockstackDescriber)(nil).Resources))
 }
 
 // MockenvironmentDeployer is a mock of environmentDeployer interface.
@@ -8024,4 +8048,42 @@ func (m *MockstackConfiguration) Template() (string, error) {
 func (mr *MockstackConfigurationMockRecorder) Template() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Template", reflect.TypeOf((*MockstackConfiguration)(nil).Template))
+}
+
+// MocksecretGetter is a mock of secretGetter interface.
+type MocksecretGetter struct {
+	ctrl     *gomock.Controller
+	recorder *MocksecretGetterMockRecorder
+}
+
+// MocksecretGetterMockRecorder is the mock recorder for MocksecretGetter.
+type MocksecretGetterMockRecorder struct {
+	mock *MocksecretGetter
+}
+
+// NewMocksecretGetter creates a new mock instance.
+func NewMocksecretGetter(ctrl *gomock.Controller) *MocksecretGetter {
+	mock := &MocksecretGetter{ctrl: ctrl}
+	mock.recorder = &MocksecretGetterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MocksecretGetter) EXPECT() *MocksecretGetterMockRecorder {
+	return m.recorder
+}
+
+// GetSecretValue mocks base method.
+func (m *MocksecretGetter) GetSecretValue(arg0 context.Context, arg1 string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetSecretValue", arg0, arg1)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetSecretValue indicates an expected call of GetSecretValue.
+func (mr *MocksecretGetterMockRecorder) GetSecretValue(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSecretValue", reflect.TypeOf((*MocksecretGetter)(nil).GetSecretValue), arg0, arg1)
 }

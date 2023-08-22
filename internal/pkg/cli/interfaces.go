@@ -23,6 +23,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
+	stackdescr "github.com/aws/copilot-cli/internal/pkg/describe/stack"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
@@ -184,7 +185,6 @@ type repositoryService interface {
 
 type ecsLocalClient interface {
 	TaskDefinition(app, env, svc string) (*awsecs.TaskDefinition, error)
-	DecryptedSecrets(secrets []*awsecs.ContainerSecret) ([]ecs.EnvVar, error)
 }
 
 type logEventsWriter interface {
@@ -367,6 +367,10 @@ type uploader interface {
 
 type bucketEmptier interface {
 	EmptyBucket(bucket string) error
+}
+
+type stackDescriber interface {
+	Resources() ([]*stackdescr.Resource, error)
 }
 
 // Interfaces for deploying resources through CloudFormation. Facilitates mocking.
@@ -734,4 +738,8 @@ type stackConfiguration interface {
 	Parameters() ([]*sdkcloudformation.Parameter, error)
 	Tags() []*sdkcloudformation.Tag
 	SerializedParameters() (string, error)
+}
+
+type secretGetter interface {
+	GetSecretValue(context.Context, string) (string, error)
 }

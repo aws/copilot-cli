@@ -356,7 +356,8 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 		inAdjustVPCVars      adjustVPCVars
 		inInternalALBSubnets []string
 
-		setupMocks func(mocks initEnvMocks)
+		getMockCredsSelector func() (credsSelector, error)
+		setupMocks           func(mocks initEnvMocks)
 
 		wantedError error
 	}{
@@ -414,6 +415,21 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			inDefault: true,
 			setupMocks: func(m initEnvMocks) {
 				m.selCreds.EXPECT().Creds("Which credentials would you like to use to create test?", gomock.Any()).Return(mockSession, nil)
+			},
+		},
+		"should fallback on default session if credentials cant be found": {
+			inAppName: mockApp,
+			inEnv:     mockEnv,
+			inDefault: true,
+			getMockCredsSelector: func() (credsSelector, error) {
+				return nil, mockErr
+			},
+			setupMocks: func(m initEnvMocks) {
+				m.sessProvider.EXPECT().Default().Return(&session.Session{
+					Config: &aws.Config{
+						Region: aws.String("us-west-2"),
+					},
+				}, nil)
 			},
 		},
 		"should prompt for region if user configuration does not have one": {
@@ -923,6 +939,9 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 				sessProvider: mocks.sessProvider,
 				selVPC:       mocks.selVPC,
 				selCreds: func() (credsSelector, error) {
+					if tc.getMockCredsSelector != nil {
+						return tc.getMockCredsSelector()
+					}
 					return mocks.selCreds, nil
 				},
 				ec2Client: mocks.ec2Client,

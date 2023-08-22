@@ -5,17 +5,17 @@
 package secretsmanager
 
 import (
+	"context"
 	"errors"
 	"fmt"
-	"github.com/aws/aws-sdk-go/service/secretsmanager"
 	"testing"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/service/secretsmanager"
 	"github.com/aws/copilot-cli/internal/pkg/aws/secretsmanager/mocks"
 	"github.com/golang/mock/gomock"
-
 	"github.com/stretchr/testify/require"
 )
 
@@ -248,6 +248,57 @@ func TestSecretsManager_DescribeSecret(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, tc.expectedResp, resp)
 			}
+		})
+	}
+}
+
+func TestSecretsManager_GetSecretValue(t *testing.T) {
+	tests := map[string]struct {
+		secretName string
+		setupMock  func(m *mocks.Mockapi)
+
+		want      string
+		wantError string
+	}{
+		"error": {
+			secretName: "asdf",
+			setupMock: func(m *mocks.Mockapi) {
+				m.EXPECT().GetSecretValueWithContext(gomock.Any(), &secretsmanager.GetSecretValueInput{
+					SecretId: aws.String("asdf"),
+				}).Return(nil, errors.New("some error"))
+			},
+			wantError: `get secret "asdf" from secrets manager: some error`,
+		},
+		"success": {
+			secretName: "asdf",
+			setupMock: func(m *mocks.Mockapi) {
+				m.EXPECT().GetSecretValueWithContext(gomock.Any(), &secretsmanager.GetSecretValueInput{
+					SecretId: aws.String("asdf"),
+				}).Return(&secretsmanager.GetSecretValueOutput{
+					SecretString: aws.String("hi"),
+				}, nil)
+			},
+			want: "hi",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			api := mocks.NewMockapi(ctrl)
+			tc.setupMock(api)
+
+			sm := SecretsManager{
+				secretsManager: api,
+			}
+
+			got, err := sm.GetSecretValue(context.Background(), tc.secretName)
+			if tc.wantError != "" {
+				require.EqualError(t, err, tc.wantError)
+			}
+			require.Equal(t, tc.want, got)
 		})
 	}
 }

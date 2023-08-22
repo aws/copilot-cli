@@ -1116,7 +1116,7 @@ func (s *AppEnvSelector) Environment(msg, help, app string, additionalOpts ...st
 		return "", fmt.Errorf("no environments found in app %s", app)
 	}
 	if len(envs) == 1 {
-		log.Infof("Found only one environment, defaulting to: %s\n", color.HighlightUserInput(envs[0]))
+		log.Infof("Only found one option, defaulting to: %s\n", color.HighlightUserInput(envs[0]))
 		return envs[0], nil
 	}
 

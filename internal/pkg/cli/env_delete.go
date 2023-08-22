@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
@@ -17,10 +18,12 @@ import (
 	"github.com/aws/aws-sdk-go/service/resourcegroupstaggingapi"
 	awscfn "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/iam"
+	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
+	stackdescr "github.com/aws/copilot-cli/internal/pkg/describe/stack"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
@@ -74,6 +77,8 @@ type deleteEnvOpts struct {
 	deployer          environmentDeployer
 	envDeleterFromApp envDeleterFromApp
 	iam               roleDeleter
+	s3                bucketEmptier
+	envStackDescriber stackDescriber
 	prog              progress
 	prompt            prompter
 	sel               configSelector
@@ -114,6 +119,8 @@ func newDeleteEnvOpts(vars deleteEnvVars) (*deleteEnvOpts, error) {
 			}
 			o.rg = resourcegroupstaggingapi.New(sess)
 			o.iam = iam.New(sess)
+			o.s3 = s3.New(sess)
+			o.envStackDescriber = stackdescr.NewStackDescriber(stack.NameForEnv(o.appName, o.name), sess)
 			o.deployer = cloudformation.New(sess, cloudformation.WithProgressTracker(os.Stderr))
 			o.envDeleterFromApp = cloudformation.New(defaultSess, cloudformation.WithProgressTracker(os.Stderr))
 			return nil
@@ -153,9 +160,10 @@ func (o *deleteEnvOpts) Ask() error {
 }
 
 // Execute deletes the environment from the application by:
-// 1. Deleting the cloudformation stack.
-// 2. Deleting the EnvManagerRole and CFNExecutionRole.
-// 3. Deleting the parameter from the SSM store.
+// 1. Emptying environment managed S3 buckets.
+// 2. Deleting the cloudformation stack.
+// 3. Deleting the EnvManagerRole and CFNExecutionRole.
+// 4. Deleting the parameter from the SSM store.
 // The environment is removed from the store only if other delete operations succeed.
 // Execute assumes that Validate is invoked first.
 func (o *deleteEnvOpts) Execute() error {
@@ -173,12 +181,25 @@ func (o *deleteEnvOpts) Execute() error {
 	}
 	o.prog.Stop(log.Ssuccessf(fmtRetainEnvRolesComplete, o.name))
 
-	o.prog.Start(fmt.Sprintf("Deleting resources for the %q environment\n", o.name))
+	o.prog.Start(fmt.Sprintf("Emptying S3 buckets managed by the %q environment\n", o.name))
+	if err := o.emptyBuckets(); err != nil {
+		o.prog.Stop(log.Serrorf("Failed to empty buckets managed by the %q environment\n", o.name))
+		// Handle error and recommend action, don't exit program
+		switch t := err.(type) {
+		case *errBucketEmptyingFailed:
+			log.Errorln(t.Error())
+			log.Warningln(t.RecommendActions())
+		default:
+			log.Errorln(fmt.Errorf("empty s3 buckets: %w", err))
+		}
+	} else {
+		o.prog.Stop(log.Ssuccessf("Emptied S3 buckets managed by the %q environment\n", o.name))
+	}
+
+	// DeleteStack streams the deletion events; we don't need a spinner over top of it.
 	if err := o.deleteStack(); err != nil {
-		o.prog.Stop(log.Serrorf("Failed to delete resources for the %q environment\n", o.name))
 		return err
 	}
-	o.prog.Stop(log.Ssuccessf("Deleted resources for the %q environment\n", o.name))
 
 	// Un-delegate DNS and optionally delete stackset instance.
 	o.prog.Start("Cleaning up app-level resources and permissions\n")
@@ -345,6 +366,78 @@ func (o *deleteEnvOpts) ensureRolesAreRetained() error {
 	if err := o.deployer.UpdateEnvironmentTemplate(o.appName, o.name, newBody, env.ExecutionRoleARN); err != nil {
 		return fmt.Errorf("update environment stack to retain environment roles: %w", err)
 	}
+	return nil
+}
+
+// emptyBuckets returns nil if buckets were deleted successfully. Otherwise, returns the error.
+func (o *deleteEnvOpts) emptyBuckets() error {
+	s3buckets, err := o.rg.GetResources(&resourcegroupstaggingapi.GetResourcesInput{
+		ResourceTypeFilters: aws.StringSlice([]string{"s3:bucket"}),
+		TagFilters: []*resourcegroupstaggingapi.TagFilter{
+			{
+				Key:    aws.String(stack.StackNameTagKey),
+				Values: []*string{aws.String(stack.NameForEnv(o.appName, o.name))},
+			},
+			{
+				Key:    aws.String(stack.LogicalIDTagKey),
+				Values: aws.StringSlice(stack.EnvManagedS3BucketLogicalIds),
+			},
+			{
+				Key:    aws.String(deploy.EnvTagKey),
+				Values: []*string{aws.String(o.name)},
+			},
+			{
+				Key:    aws.String(deploy.AppTagKey),
+				Values: []*string{aws.String(o.appName)},
+			},
+		},
+	})
+
+	if err != nil {
+		return fmt.Errorf("find s3 bucket resources: %w", err)
+	}
+
+	envResources, err := o.envStackDescriber.Resources()
+	if err != nil {
+		return fmt.Errorf("find stack resources: %w", err)
+	}
+
+	var stackBucketARNs []string
+	for _, resource := range envResources {
+		if contains(resource.LogicalID, stack.EnvManagedS3BucketLogicalIds) {
+			stackBucketARNs = append(stackBucketARNs, resource.PhysicalID)
+		}
+	}
+
+	var failedBuckets []string
+	var bucketErrors []error
+	for _, resourceTagMapping := range s3buckets.ResourceTagMappingList {
+		bucketARN, err := arn.Parse(aws.StringValue(resourceTagMapping.ResourceARN))
+		if err != nil {
+			return fmt.Errorf("parse the arn %s: %w", aws.StringValue(resourceTagMapping.ResourceARN), err)
+		}
+
+		// Attempt to empty all buckets found via GetResources API call
+		if err = o.s3.EmptyBucket(bucketARN.Resource); err != nil {
+			failedBuckets = append(failedBuckets, bucketARN.Resource)
+			bucketErrors = append(bucketErrors, err)
+			continue
+		}
+
+		// Warn about hanging bucket when bucket is found via API call but is not in the env CFN stack
+		// Those found via API call but not CFN stack cannot be deleted by Copilot
+		if !contains(bucketARN.String(), stackBucketARNs) {
+			log.Warningf(`Bucket %q was emptied, but was not found in the Cloudformation stack. This resource is now dangling, and can be deleted from the S3 console.\n`, bucketARN)
+		}
+	}
+
+	if len(failedBuckets) > 0 {
+		return &errBucketEmptyingFailed{
+			failedBuckets: failedBuckets,
+			bucketErrors:  bucketErrors,
+		}
+	}
+
 	return nil
 }
 
