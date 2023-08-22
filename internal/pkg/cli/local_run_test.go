@@ -196,7 +196,6 @@ func TestLocalRunOpts_Ask(t *testing.T) {
 type localRunExecuteMocks struct {
 	ecsLocalClient *mocks.MockecsLocalClient
 	store          *mocks.Mockstore
-	sessProvider   *mocks.MocksessionProvider
 	sessCreds      credentials.Provider
 	interpolator   *mocks.Mockinterpolator
 	ws             *mocks.MockwsWlDirReader
