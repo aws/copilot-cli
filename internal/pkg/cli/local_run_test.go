@@ -197,7 +197,7 @@ type localRunExecuteMocks struct {
 	ecsLocalClient *mocks.MockecsLocalClient
 	store          *mocks.Mockstore
 	sessProvider   *mocks.MocksessionProvider
-	sess           *session.Session
+	sessCreds      credentials.Provider
 	interpolator   *mocks.Mockinterpolator
 	ws             *mocks.MockwsWlDirReader
 	mockMft        *mockWorkloadMft
@@ -206,6 +206,18 @@ type localRunExecuteMocks struct {
 	repository     *mocks.MockrepositoryService
 	ssm            *mocks.MocksecretGetter
 	secretsManager *mocks.MocksecretGetter
+}
+
+type mockProvider struct {
+	FnRetrieve func() (credentials.Value, error)
+}
+
+func (m *mockProvider) Retrieve() (credentials.Value, error) {
+	return m.FnRetrieve()
+}
+
+func (m *mockProvider) IsExpired() bool {
+	return false
 }
 
 func TestLocalRunOpts_Execute(t *testing.T) {
@@ -594,10 +606,15 @@ func TestLocalRunOpts_getEnvVars(t *testing.T) {
 		taskDef      *awsecs.TaskDefinition
 		envOverrides map[string]string
 		setupMocks   func(m *localRunExecuteMocks)
+		credsError   error
 
 		want      map[string]containerEnv
 		wantError string
 	}{
+		"error getting creds": {
+			credsError: errors.New("some error"),
+			wantError:  `get IAM credentials: some error`,
+		},
 		"invalid container in env override": {
 			taskDef: &awsecs.TaskDefinition{},
 			envOverrides: map[string]string{
@@ -623,12 +640,18 @@ func TestLocalRunOpts_getEnvVars(t *testing.T) {
 			},
 			want: map[string]containerEnv{
 				"foo": {
-					"OVERRIDE_ALL": newVar("all", true, false),
-					"OVERRIDE":     newVar("foo", true, false),
+					"OVERRIDE_ALL":          newVar("all", true, false),
+					"OVERRIDE":              newVar("foo", true, false),
+					"AWS_ACCESS_KEY_ID":     newVar("myID", false, false),
+					"AWS_SECRET_ACCESS_KEY": newVar("mySecret", false, false),
+					"AWS_SESSION_TOKEN":     newVar("myToken", false, false),
 				},
 				"bar": {
-					"OVERRIDE_ALL": newVar("all", true, false),
-					"OVERRIDE":     newVar("bar", true, false),
+					"OVERRIDE_ALL":          newVar("all", true, false),
+					"OVERRIDE":              newVar("bar", true, false),
+					"AWS_ACCESS_KEY_ID":     newVar("myID", false, false),
+					"AWS_SECRET_ACCESS_KEY": newVar("mySecret", false, false),
+					"AWS_SESSION_TOKEN":     newVar("myToken", false, false),
 				},
 			},
 		},
@@ -678,14 +701,20 @@ func TestLocalRunOpts_getEnvVars(t *testing.T) {
 			},
 			want: map[string]containerEnv{
 				"foo": {
-					"RANDOM_FOO":   newVar("foo", false, false),
-					"OVERRIDE_ALL": newVar("all", true, false),
-					"OVERRIDE":     newVar("foo", true, false),
+					"RANDOM_FOO":            newVar("foo", false, false),
+					"OVERRIDE_ALL":          newVar("all", true, false),
+					"OVERRIDE":              newVar("foo", true, false),
+					"AWS_ACCESS_KEY_ID":     newVar("myID", false, false),
+					"AWS_SECRET_ACCESS_KEY": newVar("mySecret", false, false),
+					"AWS_SESSION_TOKEN":     newVar("myToken", false, false),
 				},
 				"bar": {
-					"RANDOM_BAR":   newVar("bar", false, false),
-					"OVERRIDE_ALL": newVar("all", true, false),
-					"OVERRIDE":     newVar("bar", true, false),
+					"RANDOM_BAR":            newVar("bar", false, false),
+					"OVERRIDE_ALL":          newVar("all", true, false),
+					"OVERRIDE":              newVar("bar", true, false),
+					"AWS_ACCESS_KEY_ID":     newVar("myID", false, false),
+					"AWS_SECRET_ACCESS_KEY": newVar("mySecret", false, false),
+					"AWS_SESSION_TOKEN":     newVar("myToken", false, false),
 				},
 			},
 		},
@@ -775,9 +804,12 @@ func TestLocalRunOpts_getEnvVars(t *testing.T) {
 			},
 			want: map[string]containerEnv{
 				"foo": {
-					"SSM":             newVar("ssm", false, true),
-					"SECRETS_MANAGER": newVar("secretsmanager", false, true),
-					"DEFAULT":         newVar("default", false, true),
+					"SSM":                   newVar("ssm", false, true),
+					"SECRETS_MANAGER":       newVar("secretsmanager", false, true),
+					"DEFAULT":               newVar("default", false, true),
+					"AWS_ACCESS_KEY_ID":     newVar("myID", false, false),
+					"AWS_SECRET_ACCESS_KEY": newVar("mySecret", false, false),
+					"AWS_SESSION_TOKEN":     newVar("myToken", false, false),
 				},
 			},
 		},
@@ -819,12 +851,18 @@ func TestLocalRunOpts_getEnvVars(t *testing.T) {
 			},
 			want: map[string]containerEnv{
 				"foo": {
-					"ONE": newVar("shared-value", false, true),
-					"TWO": newVar("foo-value", false, true),
+					"ONE":                   newVar("shared-value", false, true),
+					"TWO":                   newVar("foo-value", false, true),
+					"AWS_ACCESS_KEY_ID":     newVar("myID", false, false),
+					"AWS_SECRET_ACCESS_KEY": newVar("mySecret", false, false),
+					"AWS_SESSION_TOKEN":     newVar("myToken", false, false),
 				},
 				"bar": {
-					"THREE": newVar("shared-value", false, true),
-					"FOUR":  newVar("bar-value", false, true),
+					"THREE":                 newVar("shared-value", false, true),
+					"FOUR":                  newVar("bar-value", false, true),
+					"AWS_ACCESS_KEY_ID":     newVar("myID", false, false),
+					"AWS_SECRET_ACCESS_KEY": newVar("mySecret", false, false),
+					"AWS_SESSION_TOKEN":     newVar("myToken", false, false),
 				},
 			},
 		},
@@ -869,13 +907,19 @@ func TestLocalRunOpts_getEnvVars(t *testing.T) {
 			},
 			want: map[string]containerEnv{
 				"foo": {
-					"ONE": newVar("one-overridden", true, false),
-					"TWO": newVar("foo-value", false, true),
+					"ONE":                   newVar("one-overridden", true, false),
+					"TWO":                   newVar("foo-value", false, true),
+					"AWS_ACCESS_KEY_ID":     newVar("myID", false, false),
+					"AWS_SECRET_ACCESS_KEY": newVar("mySecret", false, false),
+					"AWS_SESSION_TOKEN":     newVar("myToken", false, false),
 				},
 				"bar": {
-					"ONE":   newVar("one-overridden", true, false),
-					"THREE": newVar("shared-value", false, true),
-					"FOUR":  newVar("four-overridden", true, false),
+					"ONE":                   newVar("one-overridden", true, false),
+					"THREE":                 newVar("shared-value", false, true),
+					"FOUR":                  newVar("four-overridden", true, false),
+					"AWS_ACCESS_KEY_ID":     newVar("myID", false, false),
+					"AWS_SECRET_ACCESS_KEY": newVar("mySecret", false, false),
+					"AWS_SESSION_TOKEN":     newVar("myToken", false, false),
 				},
 			},
 		},
@@ -887,6 +931,15 @@ func TestLocalRunOpts_getEnvVars(t *testing.T) {
 			m := &localRunExecuteMocks{
 				ssm:            mocks.NewMocksecretGetter(ctrl),
 				secretsManager: mocks.NewMocksecretGetter(ctrl),
+				sessCreds: &mockProvider{
+					FnRetrieve: func() (credentials.Value, error) {
+						return credentials.Value{
+							AccessKeyID:     "myID",
+							SecretAccessKey: "mySecret",
+							SessionToken:    "myToken",
+						}, tc.credsError
+					},
+				},
 			}
 			if tc.setupMocks != nil {
 				tc.setupMocks(m)
@@ -895,6 +948,11 @@ func TestLocalRunOpts_getEnvVars(t *testing.T) {
 			o := &localRunOpts{
 				localRunVars: localRunVars{
 					envOverrides: tc.envOverrides,
+				},
+				sess: &session.Session{
+					Config: &aws.Config{
+						Credentials: credentials.NewCredentials(m.sessCreds),
+					},
 				},
 				ssm:            m.ssm,
 				secretsManager: m.secretsManager,
