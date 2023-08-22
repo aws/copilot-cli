@@ -5,9 +5,11 @@
 package secretsmanager
 
 import (
+	"context"
 	"fmt"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -15,14 +17,11 @@ import (
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
 )
 
-// Namespace represents the AWS Secrets Manager service namespace.
-const Namespace = "secretsmanager"
-
 type api interface {
 	CreateSecret(*secretsmanager.CreateSecretInput) (*secretsmanager.CreateSecretOutput, error)
 	DeleteSecret(*secretsmanager.DeleteSecretInput) (*secretsmanager.DeleteSecretOutput, error)
-	DescribeSecret(input *secretsmanager.DescribeSecretInput) (*secretsmanager.DescribeSecretOutput, error)
-	GetSecretValue(input *secretsmanager.GetSecretValueInput) (*secretsmanager.GetSecretValueOutput, error)
+	DescribeSecret(*secretsmanager.DescribeSecretInput) (*secretsmanager.DescribeSecretOutput, error)
+	GetSecretValueWithContext(context.Context, *secretsmanager.GetSecretValueInput, ...request.Option) (*secretsmanager.GetSecretValueOutput, error)
 }
 
 // SecretsManager wraps the AWS SecretManager client.
@@ -120,8 +119,8 @@ func (s *SecretsManager) DescribeSecret(secretName string) (*DescribeSecretOutpu
 
 // GetSecretValue retrieves the value of a secret from AWS Secrets Manager.
 // It takes the name of the secret as input and returns the corresponding value as a string.
-func (s *SecretsManager) GetSecretValue(name string) (string, error) {
-	resp, err := s.secretsManager.GetSecretValue(&secretsmanager.GetSecretValueInput{
+func (s *SecretsManager) GetSecretValue(ctx context.Context, name string) (string, error) {
+	resp, err := s.secretsManager.GetSecretValueWithContext(ctx, &secretsmanager.GetSecretValueInput{
 		SecretId: aws.String(name),
 	})
 	if err != nil {

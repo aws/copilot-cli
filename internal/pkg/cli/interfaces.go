@@ -185,7 +185,6 @@ type repositoryService interface {
 
 type ecsLocalClient interface {
 	TaskDefinition(app, env, svc string) (*awsecs.TaskDefinition, error)
-	DecryptedSecrets(secrets []*awsecs.ContainerSecret) ([]ecs.EnvVar, error)
 }
 
 type logEventsWriter interface {
@@ -739,4 +738,8 @@ type stackConfiguration interface {
 	Parameters() ([]*sdkcloudformation.Parameter, error)
 	Tags() []*sdkcloudformation.Tag
 	SerializedParameters() (string, error)
+}
+
+type secretGetter interface {
+	GetSecretValue(context.Context, string) (string, error)
 }

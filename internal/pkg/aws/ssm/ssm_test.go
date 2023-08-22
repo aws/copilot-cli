@@ -4,21 +4,18 @@
 package ssm
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws/awserr"
-
-	"github.com/stretchr/testify/require"
-
-	"github.com/aws/copilot-cli/internal/pkg/deploy"
-
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ssm/mocks"
-
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/require"
 )
 
 func TestSSM_PutSecret(t *testing.T) {
@@ -358,6 +355,61 @@ func TestSSM_PutSecret(t *testing.T) {
 				require.Equal(t, tc.wantedOut, got)
 			}
 
+		})
+	}
+}
+
+func TestSSM_GetSecretValue(t *testing.T) {
+	tests := map[string]struct {
+		secretName string
+		setupMock  func(m *mocks.Mockapi)
+
+		want      string
+		wantError string
+	}{
+		"error": {
+			secretName: "asdf",
+			setupMock: func(m *mocks.Mockapi) {
+				m.EXPECT().GetParameterWithContext(gomock.Any(), &ssm.GetParameterInput{
+					Name:           aws.String("asdf"),
+					WithDecryption: aws.Bool(true),
+				}).Return(nil, errors.New("some error"))
+			},
+			wantError: `get parameter "asdf" from SSM: some error`,
+		},
+		"success": {
+			secretName: "asdf",
+			setupMock: func(m *mocks.Mockapi) {
+				m.EXPECT().GetParameterWithContext(gomock.Any(), &ssm.GetParameterInput{
+					Name:           aws.String("asdf"),
+					WithDecryption: aws.Bool(true),
+				}).Return(&ssm.GetParameterOutput{
+					Parameter: &ssm.Parameter{
+						Value: aws.String("hi"),
+					},
+				}, nil)
+			},
+			want: "hi",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			api := mocks.NewMockapi(ctrl)
+			tc.setupMock(api)
+
+			ssm := SSM{
+				client: api,
+			}
+
+			got, err := ssm.GetSecretValue(context.Background(), tc.secretName)
+			if tc.wantError != "" {
+				require.EqualError(t, err, tc.wantError)
+			}
+			require.Equal(t, tc.want, got)
 		})
 	}
 }
