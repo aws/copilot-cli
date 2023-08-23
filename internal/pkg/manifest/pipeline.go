@@ -212,7 +212,7 @@ type PrePostDeployments map[string]*PrePostDeployment
 
 // PrePostDeployment is the config for a pre- or post-deployment action.
 type PrePostDeployment struct {
-	BuildspecPath string   `yaml:"buildspec_path"`
+	BuildspecPath string   `yaml:"buildspec"`
 	DependsOn     []string `yaml:"depends_on"`
 }
 
