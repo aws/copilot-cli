@@ -5,8 +5,10 @@
 package mocks
 
 import (
+	context "context"
 	reflect "reflect"
 
+	request "github.com/aws/aws-sdk-go/aws/request"
 	secretsmanager "github.com/aws/aws-sdk-go/service/secretsmanager"
 	gomock "github.com/golang/mock/gomock"
 )
@@ -65,31 +67,36 @@ func (mr *MockapiMockRecorder) DeleteSecret(arg0 interface{}) *gomock.Call {
 }
 
 // DescribeSecret mocks base method.
-func (m *Mockapi) DescribeSecret(input *secretsmanager.DescribeSecretInput) (*secretsmanager.DescribeSecretOutput, error) {
+func (m *Mockapi) DescribeSecret(arg0 *secretsmanager.DescribeSecretInput) (*secretsmanager.DescribeSecretOutput, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DescribeSecret", input)
+	ret := m.ctrl.Call(m, "DescribeSecret", arg0)
 	ret0, _ := ret[0].(*secretsmanager.DescribeSecretOutput)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // DescribeSecret indicates an expected call of DescribeSecret.
-func (mr *MockapiMockRecorder) DescribeSecret(input interface{}) *gomock.Call {
+func (mr *MockapiMockRecorder) DescribeSecret(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeSecret", reflect.TypeOf((*Mockapi)(nil).DescribeSecret), input)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeSecret", reflect.TypeOf((*Mockapi)(nil).DescribeSecret), arg0)
 }
 
-// GetSecretValue mocks base method.
-func (m *Mockapi) GetSecretValue(input *secretsmanager.GetSecretValueInput) (*secretsmanager.GetSecretValueOutput, error) {
+// GetSecretValueWithContext mocks base method.
+func (m *Mockapi) GetSecretValueWithContext(arg0 context.Context, arg1 *secretsmanager.GetSecretValueInput, arg2 ...request.Option) (*secretsmanager.GetSecretValueOutput, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetSecretValue", input)
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetSecretValueWithContext", varargs...)
 	ret0, _ := ret[0].(*secretsmanager.GetSecretValueOutput)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetSecretValue indicates an expected call of GetSecretValue.
-func (mr *MockapiMockRecorder) GetSecretValue(input interface{}) *gomock.Call {
+// GetSecretValueWithContext indicates an expected call of GetSecretValueWithContext.
+func (mr *MockapiMockRecorder) GetSecretValueWithContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSecretValue", reflect.TypeOf((*Mockapi)(nil).GetSecretValue), input)
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSecretValueWithContext", reflect.TypeOf((*Mockapi)(nil).GetSecretValueWithContext), varargs...)
 }

@@ -93,9 +93,9 @@ func (mr *MockecsClientMockRecorder) ActiveClusters(arns ...interface{}) *gomock
 }
 
 // ActiveServices mocks base method.
-func (m *MockecsClient) ActiveServices(serviceARNs ...string) ([]string, error) {
+func (m *MockecsClient) ActiveServices(clusterName string, serviceARNs ...string) ([]string, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{}
+	varargs := []interface{}{clusterName}
 	for _, a := range serviceARNs {
 		varargs = append(varargs, a)
 	}
@@ -106,9 +106,10 @@ func (m *MockecsClient) ActiveServices(serviceARNs ...string) ([]string, error) 
 }
 
 // ActiveServices indicates an expected call of ActiveServices.
-func (mr *MockecsClientMockRecorder) ActiveServices(serviceARNs ...interface{}) *gomock.Call {
+func (mr *MockecsClientMockRecorder) ActiveServices(clusterName interface{}, serviceARNs ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ActiveServices", reflect.TypeOf((*MockecsClient)(nil).ActiveServices), serviceARNs...)
+	varargs := append([]interface{}{clusterName}, serviceARNs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ActiveServices", reflect.TypeOf((*MockecsClient)(nil).ActiveServices), varargs...)
 }
 
 // DefaultCluster mocks base method.
@@ -320,42 +321,4 @@ func (m *MockstepFunctionsClient) StateMachineDefinition(stateMachineARN string)
 func (mr *MockstepFunctionsClientMockRecorder) StateMachineDefinition(stateMachineARN interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StateMachineDefinition", reflect.TypeOf((*MockstepFunctionsClient)(nil).StateMachineDefinition), stateMachineARN)
-}
-
-// MocksecretGetter is a mock of secretGetter interface.
-type MocksecretGetter struct {
-	ctrl     *gomock.Controller
-	recorder *MocksecretGetterMockRecorder
-}
-
-// MocksecretGetterMockRecorder is the mock recorder for MocksecretGetter.
-type MocksecretGetterMockRecorder struct {
-	mock *MocksecretGetter
-}
-
-// NewMocksecretGetter creates a new mock instance.
-func NewMocksecretGetter(ctrl *gomock.Controller) *MocksecretGetter {
-	mock := &MocksecretGetter{ctrl: ctrl}
-	mock.recorder = &MocksecretGetterMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MocksecretGetter) EXPECT() *MocksecretGetterMockRecorder {
-	return m.recorder
-}
-
-// GetSecretValue mocks base method.
-func (m *MocksecretGetter) GetSecretValue(secretName string) (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetSecretValue", secretName)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetSecretValue indicates an expected call of GetSecretValue.
-func (mr *MocksecretGetterMockRecorder) GetSecretValue(secretName interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSecretValue", reflect.TypeOf((*MocksecretGetter)(nil).GetSecretValue), secretName)
 }
