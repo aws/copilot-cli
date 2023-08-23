@@ -1395,7 +1395,7 @@ func TestPipelineManifest_validate(t *testing.T) {
 					},
 				},
 			},
-			wantedError: errors.New(`validate "stages" for pipeline "release": mutually exclusive fields 'test_commands' and 'post_deployment' found in stage "test"`),
+			wantedError: errors.New(`validate "stages" for pipeline "release": must specify one, not both, of "post_deployments" and "test_commands"`),
 		},
 		"should validate pipeline deployments": {
 			Pipeline: Pipeline{
