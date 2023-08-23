@@ -5,6 +5,8 @@ package cli
 
 import (
 	"fmt"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/initialize"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -34,11 +36,17 @@ const (
 	jobWkldType = "job"
 )
 
-type deployOpts struct {
+type deployVars struct {
 	deployWkldVars
+	yesInitWkld *bool
+}
 
-	deployWkld     actionCommand
-	setupDeployCmd func(*deployOpts, string)
+type deployOpts struct {
+	deployVars
+
+	deployWkld       actionCommand
+	newWorkloadAdder func() wkldInitializerWithoutManifest
+	setupDeployCmd   func(*deployOpts, string)
 
 	sel    wsSelector
 	store  store
@@ -49,7 +57,7 @@ type deployOpts struct {
 	wlType string
 }
 
-func newDeployOpts(vars deployWkldVars) (*deployOpts, error) {
+func newDeployOpts(vars deployVars) (*deployOpts, error) {
 	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("deploy"))
 	defaultSess, err := sessProvider.Default()
 	if err != nil {
@@ -62,12 +70,19 @@ func newDeployOpts(vars deployWkldVars) (*deployOpts, error) {
 	}
 	prompter := prompt.New()
 	return &deployOpts{
-		deployWkldVars: vars,
-		store:          store,
-		sel:            selector.NewLocalWorkloadSelector(prompter, store, ws, selector.OnlyInitializedWorkloads),
-		ws:             ws,
-		prompt:         prompter,
-
+		deployVars: vars,
+		store:      store,
+		sel:        selector.NewLocalWorkloadSelector(prompter, store, ws),
+		ws:         ws,
+		prompt:     prompter,
+		newWorkloadAdder: func() wkldInitializerWithoutManifest {
+			return &initialize.WorkloadInitializer{
+				Store:    store,
+				Deployer: cloudformation.New(defaultSess),
+				Ws:       ws,
+				Prog:     termprogress.NewSpinner(log.DiagnosticWriter),
+			}
+		},
 		setupDeployCmd: func(o *deployOpts, workloadType string) {
 			switch {
 			case contains(workloadType, manifestinfo.JobTypes()):
@@ -78,7 +93,7 @@ func newDeployOpts(vars deployWkldVars) (*deployOpts, error) {
 					ws:              o.ws,
 					newInterpolator: newManifestInterpolator,
 					unmarshal:       manifest.UnmarshalWorkload,
-					sel:             selector.NewLocalWorkloadSelector(o.prompt, o.store, ws, selector.OnlyInitializedWorkloads),
+					sel:             selector.NewLocalWorkloadSelector(o.prompt, o.store, ws),
 					cmd:             exec.NewCmd(),
 					templateVersion: version.LatestTemplateVersion(),
 					sessProvider:    sessProvider,
@@ -96,7 +111,7 @@ func newDeployOpts(vars deployWkldVars) (*deployOpts, error) {
 					newInterpolator: newManifestInterpolator,
 					unmarshal:       manifest.UnmarshalWorkload,
 					spinner:         termprogress.NewSpinner(log.DiagnosticWriter),
-					sel:             selector.NewLocalWorkloadSelector(o.prompt, o.store, ws, selector.OnlyInitializedWorkloads),
+					sel:             selector.NewLocalWorkloadSelector(o.prompt, o.store, ws),
 					prompt:          o.prompt,
 					cmd:             exec.NewCmd(),
 					sessProvider:    sessProvider,
@@ -111,10 +126,64 @@ func newDeployOpts(vars deployWkldVars) (*deployOpts, error) {
 	}, nil
 }
 
+func (o *deployOpts) maybeInitWkld() error {
+	// Confirm that the workload needs to be initialized after asking for the name.
+	initializedWorkloads, err := o.store.ListWorkloads(o.appName)
+	if err != nil {
+		return fmt.Errorf("retrieve workloads: %w", err)
+	}
+	wlNames := make([]string, len(initializedWorkloads))
+	for i := range initializedWorkloads {
+		wlNames[i] = initializedWorkloads[i].Name
+	}
+
+	// Workload is already initialized. Return early.
+	if contains(o.name, wlNames) {
+		return nil
+	}
+
+	// Get workload type and confirm readable manifest.
+	mf, err := o.ws.ReadWorkloadManifest(o.name)
+	if err != nil {
+		return fmt.Errorf("read manifest for workload %s: %w", o.name, err)
+	}
+	workloadType, err := mf.WorkloadType()
+	if err != nil {
+		return fmt.Errorf("get workload type from manifest for workload %s: %w", o.name, err)
+	}
+
+	if !contains(workloadType, manifestinfo.WorkloadTypes()) {
+		return fmt.Errorf("unrecognized workload type %q in manifest for workload %s", workloadType, o.name)
+	}
+
+	if o.yesInitWkld == nil {
+		confirmInitWkld, err := o.prompt.Confirm(fmt.Sprintf("Found manifest for uninitialized %s %q. Initialize it?", workloadType, o.name), "This workload will be initialized, then deployed.", prompt.WithConfirmFinalMessage())
+		if err != nil {
+			return fmt.Errorf("confirm initialize workload: %w", err)
+		}
+		o.yesInitWkld = aws.Bool(confirmInitWkld)
+	}
+
+	if !aws.BoolValue(o.yesInitWkld) {
+		return fmt.Errorf("workload %s is uninitialized but --%s=false was specified", o.name, yesInitWorkloadFlag)
+	}
+
+	wkldAdder := o.newWorkloadAdder()
+	if err = wkldAdder.AddWorkloadToApp(o.appName, o.name, workloadType); err != nil {
+		return fmt.Errorf("add workload to app: %w", err)
+	}
+	return nil
+}
+
 func (o *deployOpts) Run() error {
 	if err := o.askName(); err != nil {
 		return err
 	}
+
+	if err := o.maybeInitWkld(); err != nil {
+		return err
+	}
+
 	if err := o.loadWkld(); err != nil {
 		return err
 	}
@@ -168,7 +237,8 @@ func (o *deployOpts) loadWkldCmd() error {
 
 // BuildDeployCmd is the deploy command.
 func BuildDeployCmd() *cobra.Command {
-	vars := deployWkldVars{}
+	vars := deployVars{}
+	var initWorkload bool
 	cmd := &cobra.Command{
 		Use:   "deploy",
 		Short: "Deploy a Copilot job or service.",
@@ -182,6 +252,13 @@ func BuildDeployCmd() *cobra.Command {
 			opts, err := newDeployOpts(vars)
 			if err != nil {
 				return err
+			}
+
+			if cmd.Flags().Changed(yesInitWorkloadFlag) {
+				opts.yesInitWkld = aws.Bool(false)
+				if initWorkload {
+					opts.yesInitWkld = aws.Bool(true)
+				}
 			}
 			if err := opts.Run(); err != nil {
 				return err
@@ -198,6 +275,7 @@ func BuildDeployCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&vars.disableRollback, noRollbackFlag, false, noRollbackFlagDescription)
 	cmd.Flags().BoolVar(&vars.allowWkldDowngrade, allowDowngradeFlag, false, allowDowngradeFlagDescription)
 	cmd.Flags().BoolVar(&vars.detach, detachFlag, false, detachFlagDescription)
+	cmd.Flags().BoolVar(&initWorkload, yesInitWorkloadFlag, false, yesInitWorkloadFlagDescription)
 
 	cmd.SetUsageTemplate(template.Usage)
 	cmd.Annotations = map[string]string{

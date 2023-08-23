@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"syscall"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -436,6 +437,9 @@ func TestLocalRunOpts_Execute(t *testing.T) {
 				m.interpolator.EXPECT().Interpolate("").Return("", nil)
 				m.dockerEngine.EXPECT().Run(gomock.Any(), expectedRunPauseArgs).Return(errors.New("some error"))
 				m.dockerEngine.EXPECT().IsContainerRunning(mockPauseContainerName).Return(false, nil).AnyTimes()
+
+				m.dockerEngine.EXPECT().Stop(gomock.Any()).Return(nil).Times(3)
+				m.dockerEngine.EXPECT().Rm(gomock.Any()).Return(nil).Times(3)
 			},
 			wantedError: errors.New(`run pause container: some error`),
 		},
@@ -461,6 +465,9 @@ func TestLocalRunOpts_Execute(t *testing.T) {
 					defer close(isRunningCalled)
 					return false, errors.New("some error")
 				})
+
+				m.dockerEngine.EXPECT().Stop(gomock.Any()).Return(nil).Times(3)
+				m.dockerEngine.EXPECT().Rm(gomock.Any()).Return(nil).Times(3)
 			},
 			wantedError: errors.New(`run pause container: check if container is running: some error`),
 		},
@@ -485,6 +492,9 @@ func TestLocalRunOpts_Execute(t *testing.T) {
 				})
 				m.dockerEngine.EXPECT().Run(gomock.Any(), expectedRunFooArgs).Return(errors.New("some error"))
 				m.dockerEngine.EXPECT().Run(gomock.Any(), expectedRunBarArgs).Return(nil)
+
+				m.dockerEngine.EXPECT().Stop(gomock.Any()).Return(nil).Times(3)
+				m.dockerEngine.EXPECT().Rm(gomock.Any()).Return(nil).Times(3)
 			},
 			wantedError: errors.New(`run container "foo": some error`),
 		},
@@ -509,6 +519,85 @@ func TestLocalRunOpts_Execute(t *testing.T) {
 				})
 				m.dockerEngine.EXPECT().Run(gomock.Any(), expectedRunFooArgs).Return(nil)
 				m.dockerEngine.EXPECT().Run(gomock.Any(), expectedRunBarArgs).Return(nil)
+
+				m.dockerEngine.EXPECT().Stop(gomock.Any()).Return(nil).Times(3)
+				m.dockerEngine.EXPECT().Rm(gomock.Any()).Return(nil).Times(3)
+			},
+		},
+		"ctrl-c, errors stopping and removing containers": {
+			inputAppName:  testAppName,
+			inputWkldName: testWkldName,
+			inputEnvName:  testEnvName,
+			setupMocks: func(m *localRunExecuteMocks) {
+				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
+				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
+				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
+				m.interpolator.EXPECT().Interpolate("").Return("", nil)
+
+				runCalled := make(chan struct{})
+				stopCalled := make(chan struct{})
+				m.dockerEngine.EXPECT().Run(gomock.Any(), expectedRunPauseArgs).DoAndReturn(func(ctx context.Context, opts *dockerengine.RunOptions) error {
+					close(runCalled)
+					return nil
+				})
+				m.dockerEngine.EXPECT().IsContainerRunning(mockPauseContainerName).DoAndReturn(func(name string) (bool, error) {
+					<-runCalled
+					return true, nil
+				})
+				m.dockerEngine.EXPECT().Run(gomock.Any(), expectedRunFooArgs).DoAndReturn(func(ctx context.Context, opts *dockerengine.RunOptions) error {
+					syscall.Kill(syscall.Getpid(), syscall.SIGINT)
+					<-stopCalled
+					return errors.New("hi")
+				})
+				m.dockerEngine.EXPECT().Run(gomock.Any(), expectedRunBarArgs).Return(nil)
+
+				m.dockerEngine.EXPECT().Stop(expectedRunFooArgs.ContainerName).DoAndReturn(func(id string) error {
+					close(stopCalled)
+					return errors.New("stop foo")
+				})
+				m.dockerEngine.EXPECT().Stop(expectedRunBarArgs.ContainerName).Return(nil)
+				m.dockerEngine.EXPECT().Rm(expectedRunBarArgs.ContainerName).Return(errors.New("rm bar"))
+				m.dockerEngine.EXPECT().Stop(expectedRunPauseArgs.ContainerName).Return(nil)
+				m.dockerEngine.EXPECT().Rm(expectedRunPauseArgs.ContainerName).Return(errors.New("rm stop"))
+			},
+			wantedError: fmt.Errorf("clean up %q: stop: stop foo\nclean up %q: rm: rm bar\nclean up %q: rm: rm stop", expectedRunFooArgs.ContainerName, expectedRunBarArgs.ContainerName, expectedRunPauseArgs.ContainerName),
+		},
+		"handles ctrl-c successfully, errors from running ignored": {
+			inputAppName:  testAppName,
+			inputWkldName: testWkldName,
+			inputEnvName:  testEnvName,
+			setupMocks: func(m *localRunExecuteMocks) {
+				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
+				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
+				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
+				m.interpolator.EXPECT().Interpolate("").Return("", nil)
+
+				runCalled := make(chan struct{})
+				stopCalled := make(chan struct{})
+				m.dockerEngine.EXPECT().Run(gomock.Any(), expectedRunPauseArgs).DoAndReturn(func(ctx context.Context, opts *dockerengine.RunOptions) error {
+					close(runCalled)
+					return nil
+				})
+				m.dockerEngine.EXPECT().IsContainerRunning(mockPauseContainerName).DoAndReturn(func(name string) (bool, error) {
+					<-runCalled
+					return true, nil
+				})
+				m.dockerEngine.EXPECT().Run(gomock.Any(), expectedRunFooArgs).DoAndReturn(func(ctx context.Context, opts *dockerengine.RunOptions) error {
+					syscall.Kill(syscall.Getpid(), syscall.SIGINT)
+					<-stopCalled
+					return errors.New("hi")
+				})
+				m.dockerEngine.EXPECT().Run(gomock.Any(), expectedRunBarArgs).Return(nil)
+
+				m.dockerEngine.EXPECT().Stop(expectedRunFooArgs.ContainerName).DoAndReturn(func(id string) error {
+					close(stopCalled)
+					return nil
+				})
+				m.dockerEngine.EXPECT().Rm(expectedRunFooArgs.ContainerName).Return(nil)
+				m.dockerEngine.EXPECT().Stop(expectedRunBarArgs.ContainerName).Return(nil)
+				m.dockerEngine.EXPECT().Rm(expectedRunBarArgs.ContainerName).Return(nil)
+				m.dockerEngine.EXPECT().Stop(expectedRunPauseArgs.ContainerName).Return(nil)
+				m.dockerEngine.EXPECT().Rm(expectedRunPauseArgs.ContainerName).Return(nil)
 			},
 		},
 	}
