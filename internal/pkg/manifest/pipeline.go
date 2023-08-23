@@ -210,10 +210,24 @@ type Deployment struct {
 // PrePostDeployments represent a directed graph of cloudformation deployments.
 type PrePostDeployments map[string]*PrePostDeployment
 
-// PrePostDeployment is the config for a pre- or post-deployment action.
+// PrePostDeployment is the config for a pre- or post-deployment action backed by CodeBuild.
 type PrePostDeployment struct {
 	BuildspecPath string   `yaml:"buildspec"`
 	DependsOn     []string `yaml:"depends_on"`
+}
+
+func (dep *Deployment) Dependencies() []string {
+	if dep == nil {
+		return nil
+	}
+	return dep.DependsOn
+}
+
+func (ppd *PrePostDeployment) Dependencies() []string {
+	if ppd == nil {
+		return nil
+	}
+	return ppd.DependsOn
 }
 
 // NewPipeline returns a pipeline manifest object.

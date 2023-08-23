@@ -1395,7 +1395,7 @@ func TestPipelineManifest_validate(t *testing.T) {
 					},
 				},
 			},
-			wantedError: errors.New(`validate "stages" for pipeline "release": must specify one, not both, of "post_deployments" and "test_commands"`),
+			wantedError: errors.New(`validate stage "test" for pipeline "release": must specify one, not both, of "post_deployments" and "test_commands"`),
 		},
 		"should validate pipeline deployments": {
 			Pipeline: Pipeline{

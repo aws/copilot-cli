@@ -616,7 +616,7 @@ func (p Pipeline) Validate() error {
 	}
 	for _, stg := range p.Stages {
 		if err := stg.validate(); err != nil {
-			return fmt.Errorf(`validate "stages" for pipeline %q: %w`, p.Name, err)
+			return fmt.Errorf(`validate stage %q for pipeline %q: %w`, stg.Name, p.Name, err)
 		}
 		if err := stg.Deployments.validate(); err != nil {
 			return fmt.Errorf(`validate "deployments" for pipeline stage %s: %w`, stg.Name, err)

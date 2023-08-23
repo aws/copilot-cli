@@ -564,7 +564,14 @@ func (stg *PipelineStage) PreDeployments() ([]PrePostDeployAction, error) {
 		prevActions = append(prevActions, approval)
 	}
 
-	topo, err := graph.TopologicalOrder(stg.buildPrePostDeploymentsGraph("pre"))
+	var rankableDeps []rankableDeployment
+	for name := range stg.preDeployments {
+		rankableDeps = append(rankableDeps, rankableDeployment{
+			rankable: stg.preDeployments[name],
+			name:     name,
+		})
+	}
+	topo, err := graph.TopologicalOrder(stg.buildDeploymentsGraph(rankableDeps))
 	if err != nil {
 		return nil, fmt.Errorf("find an ordering for deployments: %v", err)
 	}
@@ -597,6 +604,9 @@ func (stg *PipelineStage) PreDeployments() ([]PrePostDeployAction, error) {
 
 // Deployments returns a list of deploy actions for the pipeline.
 func (stg *PipelineStage) Deployments() ([]DeployAction, error) {
+	if len(stg.deployments) == 0 {
+		return nil, nil
+	}
 	var prevActions []orderedRunner
 	if approval := stg.Approval(); approval != nil {
 		prevActions = append(prevActions, approval)
@@ -608,8 +618,14 @@ func (stg *PipelineStage) Deployments() ([]DeployAction, error) {
 	for i := range preDeployActions {
 		prevActions = append(prevActions, &preDeployActions[i])
 	}
-
-	topo, err := graph.TopologicalOrder(stg.buildDeploymentsGraph())
+	var rankableDeps []rankableDeployment
+	for name := range stg.deployments {
+		rankableDeps = append(rankableDeps, rankableDeployment{
+			rankable: stg.deployments[name],
+			name:     name,
+		})
+	}
+	topo, err := graph.TopologicalOrder(stg.buildDeploymentsGraph(rankableDeps))
 	if err != nil {
 		return nil, fmt.Errorf("find an ordering for deployments: %v", err)
 	}
@@ -658,8 +674,15 @@ func (stg *PipelineStage) PostDeployments() ([]PrePostDeployAction, error) {
 	for i := range deployActions {
 		prevActions = append(prevActions, &deployActions[i])
 	}
+	var rankableDeps []rankableDeployment
+	for name := range stg.postDeployments {
+		rankableDeps = append(rankableDeps, rankableDeployment{
+			rankable: stg.postDeployments[name],
+			name:     name,
+		})
+	}
 
-	topo, err := graph.TopologicalOrder(stg.buildPrePostDeploymentsGraph("post"))
+	topo, err := graph.TopologicalOrder(stg.buildDeploymentsGraph(rankableDeps))
 	if err != nil {
 		return nil, fmt.Errorf("find an ordering for deployments: %v", err)
 	}
@@ -724,47 +747,30 @@ func (stg *PipelineStage) Test() (*TestCommandsAction, error) {
 	}, nil
 }
 
-func (stg *PipelineStage) buildDeploymentsGraph() *graph.Graph[string] {
-	var names []string
-	for name := range stg.deployments {
-		names = append(names, name)
-	}
-	digraph := graph.New(names...)
-	for name, conf := range stg.deployments {
-		if conf == nil {
-			continue
-		}
-		for _, dependency := range conf.DependsOn {
-			digraph.Add(graph.Edge[string]{
-				From: dependency, // Dependency must be completed before name.
-				To:   name,
-			})
-		}
-	}
-	return digraph
+type rankableDeployment struct {
+	rankable rankable
+	name     string
 }
 
-func (stg *PipelineStage) buildPrePostDeploymentsGraph(depType string) *graph.Graph[string] {
+type rankable interface {
+	Dependencies() []string
+}
+
+func (stg *PipelineStage) buildDeploymentsGraph(rankableDeps []rankableDeployment) *graph.Graph[string] {
 	var names []string
-	var deployments manifest.PrePostDeployments
-	switch depType {
-	case "pre":
-		deployments = stg.preDeployments
-	case "post":
-		deployments = stg.postDeployments
-	}
-	for name := range deployments {
-		names = append(names, name)
+	for _, rankableDep := range rankableDeps {
+		names = append(names, rankableDep.name)
 	}
 	digraph := graph.New(names...)
-	for name, conf := range deployments {
-		if conf == nil {
+
+	for _, rankableDep := range rankableDeps {
+		if rankableDep.rankable == nil || rankableDep.rankable.Dependencies() == nil {
 			continue
 		}
-		for _, dependency := range conf.DependsOn {
+		for _, dependency := range rankableDep.rankable.Dependencies() {
 			digraph.Add(graph.Edge[string]{
 				From: dependency, // Dependency must be completed before name.
-				To:   name,
+				To:   rankableDep.name,
 			})
 		}
 	}
