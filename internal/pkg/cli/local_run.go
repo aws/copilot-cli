@@ -438,9 +438,24 @@ type envVarValue struct {
 // continer defined in the TaskDefinition. The returned map is a map of container names,
 // each of which contains a mapping of key->envVarValue, which defines if the variable is a secret or not.
 func (o *localRunOpts) getEnvVars(ctx context.Context, taskDef *awsecs.TaskDefinition) (map[string]containerEnv, error) {
+	creds, err := o.sess.Config.Credentials.GetWithContext(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("get IAM credentials: %w", err)
+	}
+
 	envVars := make(map[string]containerEnv)
 	for _, ctr := range taskDef.ContainerDefinitions {
-		envVars[aws.StringValue(ctr.Name)] = make(map[string]envVarValue)
+		envVars[aws.StringValue(ctr.Name)] = map[string]envVarValue{
+			"AWS_ACCESS_KEY_ID": {
+				Value: creds.AccessKeyID,
+			},
+			"AWS_SECRET_ACCESS_KEY": {
+				Value: creds.SecretAccessKey,
+			},
+			"AWS_SESSION_TOKEN": {
+				Value: creds.SessionToken,
+			},
+		}
 	}
 
 	for _, e := range taskDef.EnvironmentVariables() {
