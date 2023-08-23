@@ -36,7 +36,6 @@ const (
 
 	// Deploy flags.
 	yesInitWorkloadFlag = "init-wkld"
-	yesInitEnvFlag      = "yes-env"
 
 	// Build flags.
 	dockerFileFlag        = "dockerfile"
@@ -265,7 +264,6 @@ Allows you to categorize resources.`
 
 	// Deployment.
 	deployFlagDescription         = `Deploy your service or job to a new or existing environment.`
-	noDeployFlagDescription       = `Do not deploy; initialize the workload and exit.`
 	allowDowngradeFlagDescription = `Optional. Allow using an older version of Copilot to update Copilot components
 updated by a newer version of Copilot.`
 	forceFlagDescription = `Optional. Force a new service deployment using the existing image.
@@ -276,7 +274,6 @@ We do not recommend using this flag for a
 production environment.`
 	forceEnvDeployFlagDescription  = "Optional. Force update the environment stack template."
 	yesInitWorkloadFlagDescription = "Optional. Initialize a workload before deploying it."
-	noInitWorkloadFlagDescription  = "Optional. Do not initialize the given workload if it does not exist."
 	detachFlagDescription          = "Optional. Skip displaying CloudFormation deployment progress."
 
 	// Operational.
