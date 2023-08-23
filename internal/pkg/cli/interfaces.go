@@ -602,6 +602,10 @@ type svcInitializer interface {
 	Service(props *initialize.ServiceProps) (string, error)
 }
 
+type wkldInitializerWithoutManifest interface {
+	AddWorkloadToApp(appName, name, workloadType string) error
+}
+
 type roleDeleter interface {
 	DeleteRole(string) error
 }
