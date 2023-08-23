@@ -548,7 +548,7 @@ func TestLocalRunOpts_Execute(t *testing.T) {
 				configureClients: func(o *localRunOpts) error {
 					return nil
 				},
-				buildContainerImages: func(o *localRunOpts, mft manifest.DynamicWorkload) (map[string]string, error) {
+				buildContainerImages: func(mft manifest.DynamicWorkload) (map[string]string, error) {
 					return mockContainerURIs, tc.buildImagesError
 				},
 				ws:             m.ws,

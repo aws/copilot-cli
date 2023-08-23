@@ -79,7 +79,7 @@ type localRunOpts struct {
 	containerSuffix string
 	newColor        func() *color.Color
 
-	buildContainerImages func(o *localRunOpts, mft manifest.DynamicWorkload) (map[string]string, error)
+	buildContainerImages func(mft manifest.DynamicWorkload) (map[string]string, error)
 	configureClients     func(o *localRunOpts) error
 	labeledTermPrinter   func(fw syncbuffer.FileWriter, bufs []*syncbuffer.LabeledSyncBuffer, opts ...syncbuffer.LabeledTermPrinterOption) clideploy.LabeledTermPrinter
 	unmarshal            func([]byte) (manifest.DynamicWorkload, error)
@@ -145,30 +145,30 @@ func newLocalRunOpts(vars localRunVars) (*localRunOpts, error) {
 		o.repository = repository.NewWithURI(ecr.New(defaultSessEnvRegion), repoName, resources.RepositoryURLs[o.wkldName])
 		return nil
 	}
-	opts.buildContainerImages = func(o *localRunOpts, mft manifest.DynamicWorkload) (map[string]string, error) {
-		gitShortCommit := imageTagFromGit(o.cmd)
+	opts.buildContainerImages = func(mft manifest.DynamicWorkload) (map[string]string, error) {
+		gitShortCommit := imageTagFromGit(opts.cmd)
 		image := clideploy.ContainerImageIdentifier{
 			GitShortCommitTag: gitShortCommit,
 		}
 		out := &clideploy.UploadArtifactsOutput{}
-		err := clideploy.BuildContainerImages(&clideploy.ImageActionInput{
-			Name:               o.wkldName,
-			WorkspacePath:      o.ws.Path(),
+		if err := clideploy.BuildContainerImages(&clideploy.ImageActionInput{
+			Name:               opts.wkldName,
+			WorkspacePath:      opts.ws.Path(),
 			Image:              image,
 			Mft:                mft.Manifest(),
 			GitShortCommitTag:  gitShortCommit,
-			Builder:            o.repository,
-			Login:              o.repository.Login,
-			CheckDockerEngine:  o.dockerEngine.CheckDockerEngineRunning,
-			LabeledTermPrinter: o.labeledTermPrinter,
-		}, out)
-		if err != nil {
+			Builder:            opts.repository,
+			Login:              opts.repository.Login,
+			CheckDockerEngine:  opts.dockerEngine.CheckDockerEngineRunning,
+			LabeledTermPrinter: opts.labeledTermPrinter,
+		}, out); err != nil {
 			return nil, err
 		}
 
 		containerURIs := make(map[string]string, len(out.ImageDigests))
 		for name, info := range out.ImageDigests {
 			if len(info.RepoTags) == 0 {
+				// this shouldn't happen, but just to avoid a panic in case
 				return nil, fmt.Errorf("no repo tags for image %q", name)
 			}
 			containerURIs[name] = info.RepoTags[0]
@@ -278,7 +278,7 @@ func (o *localRunOpts) Execute() error {
 		return err
 	}
 
-	containerURIs, err := o.buildContainerImages(o, mft)
+	containerURIs, err := o.buildContainerImages(mft)
 	if err != nil {
 		return fmt.Errorf("build images: %w", err)
 	}
