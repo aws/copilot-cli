@@ -438,8 +438,8 @@ func TestLocalRunOpts_Execute(t *testing.T) {
 				m.dockerEngine.EXPECT().Run(gomock.Any(), expectedRunPauseArgs).Return(errors.New("some error"))
 				m.dockerEngine.EXPECT().IsContainerRunning(mockPauseContainerName).Return(false, nil).AnyTimes()
 
-				m.dockerEngine.EXPECT().Stop(gomock.Any()).Return(nil).AnyTimes()
-				m.dockerEngine.EXPECT().Rm(gomock.Any()).Return(nil).AnyTimes()
+				m.dockerEngine.EXPECT().Stop(gomock.Any()).Return(nil).Times(3)
+				m.dockerEngine.EXPECT().Rm(gomock.Any()).Return(nil).Times(3)
 			},
 			wantedError: errors.New(`run pause container: some error`),
 		},
