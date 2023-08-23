@@ -634,6 +634,26 @@ func (s PipelineStage) validate() error {
 			mustExist:   false,
 		}
 	}
+	if s.PreDeployments != nil {
+		for _, preDep := range s.PreDeployments {
+			if preDep.BuildspecPath == "" {
+				return &errFieldMustBeSpecified{
+					missingField: "buildspec",
+				}
+			}
+		}
+
+	}
+	if s.PostDeployments != nil {
+		for _, postDep := range s.PostDeployments {
+			if postDep.BuildspecPath == "" {
+				return &errFieldMustBeSpecified{
+					missingField: "buildspec",
+				}
+			}
+		}
+
+	}
 	return nil
 }
 

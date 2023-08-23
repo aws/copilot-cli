@@ -1397,6 +1397,23 @@ func TestPipelineManifest_validate(t *testing.T) {
 			},
 			wantedError: errors.New(`validate stage "test" for pipeline "release": must specify one, not both, of "post_deployments" and "test_commands"`),
 		},
+		"should validate buildspec exists for pre/post-deployments": {
+			Pipeline: Pipeline{
+				Name: "release",
+				Stages: []PipelineStage{
+					{
+						Name: "test",
+						PostDeployments: PrePostDeployments{
+							"first_action": &PrePostDeployment{
+								BuildspecPath: "copilot/pipelines/my-pipeline/buildspecs/migration.yml",
+							},
+							"second_action": &PrePostDeployment{},
+						},
+					},
+				},
+			},
+			wantedError: errors.New(`validate stage "test" for pipeline "release": "buildspec" must be specified`),
+		},
 		"should validate pipeline deployments": {
 			Pipeline: Pipeline{
 				Name: "release",

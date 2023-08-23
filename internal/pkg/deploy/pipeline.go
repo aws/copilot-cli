@@ -579,9 +579,7 @@ func (stg *PipelineStage) PreDeployments() ([]PrePostDeployAction, error) {
 	var actions []PrePostDeployAction
 	var buildspecPath string
 	for name, conf := range stg.preDeployments {
-		if conf.BuildspecPath != "" {
-			buildspecPath = conf.BuildspecPath
-		}
+		buildspecPath = conf.BuildspecPath
 		actions = append(actions, PrePostDeployAction{
 			name: name,
 			action: action{
@@ -690,9 +688,7 @@ func (stg *PipelineStage) PostDeployments() ([]PrePostDeployAction, error) {
 	var actions []PrePostDeployAction
 	var buildspecPath string
 	for name, conf := range stg.postDeployments {
-		if conf.BuildspecPath != "" {
-			buildspecPath = conf.BuildspecPath
-		}
+		buildspecPath = conf.BuildspecPath
 		actions = append(actions, PrePostDeployAction{
 			name: name,
 			action: action{

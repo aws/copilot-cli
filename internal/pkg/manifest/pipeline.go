@@ -216,6 +216,7 @@ type PrePostDeployment struct {
 	DependsOn     []string `yaml:"depends_on"`
 }
 
+// Dependencies returns ordering requirements for the deployment's actions.
 func (dep *Deployment) Dependencies() []string {
 	if dep == nil {
 		return nil
@@ -223,6 +224,7 @@ func (dep *Deployment) Dependencies() []string {
 	return dep.DependsOn
 }
 
+// Dependencies returns ordering requirements for the pre- or post-deployment's actions.
 func (ppd *PrePostDeployment) Dependencies() []string {
 	if ppd == nil {
 		return nil
