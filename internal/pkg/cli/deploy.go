@@ -245,11 +245,11 @@ func (o *deployOpts) Run() error {
 		return err
 	}
 
-	if err := o.maybeInitWkld(); err != nil {
+	if err := o.maybeDeployEnv(); err != nil {
 		return err
 	}
 
-	if err := o.maybeDeployEnv(); err != nil {
+	if err := o.maybeInitWkld(); err != nil {
 		return err
 	}
 
@@ -291,7 +291,7 @@ func (o *deployOpts) askEnv() error {
 	}
 
 	// Get uninitialized local environments and append them to the env selector call.
-	var extraOptions []string
+	var extraOptions []prompt.Option
 	for _, localEnv := range localEnvs {
 		var envIsInitted bool
 		for _, inittedEnv := range initializedEnvs {
@@ -303,7 +303,7 @@ func (o *deployOpts) askEnv() error {
 		if envIsInitted {
 			continue
 		}
-		extraOptions = append(extraOptions, fmt.Sprintf("%s (uninitialized)", localEnv))
+		extraOptions = append(extraOptions, prompt.Option{Value: localEnv, Hint: "uninitialized"})
 	}
 
 	o.deployWkldVars.envName, err = o.sel.Environment("Select an environment to deploy to", "", o.deployWkldVars.appName, extraOptions...)
@@ -353,7 +353,7 @@ func (o *deployOpts) maybeInitEnv() error {
 	}
 	// If no initialization flags were specified and the env wasn't initialized, ask to confirm.
 	if !o.envExistsInApp && o.yesInitEnv == nil {
-		v, err := o.prompt.Confirm(fmt.Sprintf("Environment %q does not exist in app %q. Initialize it?", o.envName, o.deployEnvVars.appName), "")
+		v, err := o.prompt.Confirm(fmt.Sprintf("Environment %q does not exist in app %q. Initialize it?", o.envName, o.deployWkldVars.appName), "")
 		if err != nil {
 			return fmt.Errorf("confirm env init: %w", err)
 		}
@@ -371,7 +371,17 @@ func (o *deployOpts) maybeInitEnv() error {
 		if err = cmd.Ask(); err != nil {
 			return err
 		}
-		return cmd.Execute()
+		if err = cmd.Execute(); err != nil {
+			return err
+		}
+		if o.deployEnv == nil {
+			log.Infof("Environment %q was just initialized. We'll deploy it now.\n", o.deployWkldVars.envName)
+			o.deployEnv = aws.Bool(true)
+		} else if *o.deployEnv == false {
+			log.Errorf("Environment is not deployed but --%s=false was specified. Deploy the environment with %s in order to deploy a workload to it.\n", deployEnvFlag, color.HighlightCode("copilot env deploy"))
+			return fmt.Errorf("environment %s is has not yet been deployed", o.deployWkldVars.envName)
+		}
+		return nil
 	}
 	log.Errorf("Environment %q does not exist in application %q and was not initialized after prompting.\n", o.deployWkldVars.envName, o.deployWkldVars.appName)
 	return fmt.Errorf("env %s does not exist in app %s", o.deployWkldVars.envName, o.deployWkldVars.appName)
@@ -379,7 +389,7 @@ func (o *deployOpts) maybeInitEnv() error {
 
 func (o *deployOpts) maybeDeployEnv() error {
 	if o.deployEnv == nil {
-		v, err := o.prompt.Confirm("Would you like to deploy the environment %q before deploying your workload?", "")
+		v, err := o.prompt.Confirm(fmt.Sprintf("Would you like to deploy the environment %q before deploying your workload?", o.deployWkldVars.envName), "")
 		if err != nil {
 			return fmt.Errorf("confirm env deployment: %w", err)
 		}
