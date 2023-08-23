@@ -349,8 +349,10 @@ func (o *deployOpts) maybeInitEnv() error {
 	}
 
 	if o.envExistsInApp {
+		log.Infof("Environment %q exists in application %q. Skipping initialization.\n", o.deployWkldVars.envName, o.deployWkldVars.appName)
 		return nil
 	}
+
 	// If no initialization flags were specified and the env wasn't initialized, ask to confirm.
 	if !o.envExistsInApp && o.yesInitEnv == nil {
 		v, err := o.prompt.Confirm(fmt.Sprintf("Environment %q does not exist in app %q. Initialize it?", o.envName, o.deployWkldVars.appName), "")
@@ -377,7 +379,7 @@ func (o *deployOpts) maybeInitEnv() error {
 		if o.deployEnv == nil {
 			log.Infof("Environment %q was just initialized. We'll deploy it now.\n", o.deployWkldVars.envName)
 			o.deployEnv = aws.Bool(true)
-		} else if *o.deployEnv == false {
+		} else if aws.BoolValue(o.deployEnv) == false {
 			log.Errorf("Environment is not deployed but --%s=false was specified. Deploy the environment with %s in order to deploy a workload to it.\n", deployEnvFlag, color.HighlightCode("copilot env deploy"))
 			return fmt.Errorf("environment %s is has not yet been deployed", o.deployWkldVars.envName)
 		}
