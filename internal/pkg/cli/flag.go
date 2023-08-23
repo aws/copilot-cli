@@ -38,7 +38,6 @@ const (
 	// Deploy flags.
 	yesInitWorkloadFlag = "init-wkld"
 
-	yesInitEnvFlag      = "yes-env"
 	// Build flags.
 	dockerFileFlag        = "dockerfile"
 	dockerFileContextFlag = "build-context"
