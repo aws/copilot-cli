@@ -243,7 +243,6 @@ func (o *localRunOpts) Execute() error {
 		return fmt.Errorf("get task definition: %w", err)
 	}
 
-	// get env vars and secrets
 	envVars, err := o.getEnvVars(ctx, taskDef)
 	if err != nil {
 		return fmt.Errorf("get env vars: %w", err)
