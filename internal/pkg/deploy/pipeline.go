@@ -514,9 +514,9 @@ func (stg *PipelineStage) Init(env *config.Environment, mftStage *manifest.Pipel
 			deployments[workload] = nil
 		}
 	}
-	stg.preDeployments = mftStage.PreDeployment
+	stg.preDeployments = mftStage.PreDeployments
 	stg.deployments = deployments
-	stg.postDeployments = mftStage.PostDeployment
+	stg.postDeployments = mftStage.PostDeployments
 	stg.requiresApproval = mftStage.RequiresApproval
 	stg.testCommands = mftStage.TestCommands
 	stg.execRoleARN = env.ExecutionRoleARN

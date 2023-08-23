@@ -1386,7 +1386,7 @@ func TestPipelineManifest_validate(t *testing.T) {
 				Stages: []PipelineStage{
 					{
 						Name: "test",
-						PostDeployment: PrePostDeployments{
+						PostDeployments: PrePostDeployments{
 							"first_action": &PrePostDeployment{
 								BuildspecPath: "copilot/pipelines/my-pipeline/buildspecs/migration.yml",
 							},

@@ -627,7 +627,7 @@ func (p Pipeline) Validate() error {
 
 // validate returns nil if stages are configured correctly.
 func (s PipelineStage) validate() error {
-	if len(s.TestCommands) != 0 && s.PostDeployment != nil {
+	if len(s.TestCommands) != 0 && s.PostDeployments != nil {
 		return fmt.Errorf("mutually exclusive fields 'test_commands' and 'post_deployment' found in stage %q", s.Name)
 	}
 	return nil

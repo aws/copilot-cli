@@ -35,7 +35,7 @@ func TestGHPipeline_Template(t *testing.T) {
 	}, &manifest.PipelineStage{
 		Name:             "test",
 		RequiresApproval: true,
-		PreDeployment: map[string]*manifest.PrePostDeployment{
+		PreDeployments: map[string]*manifest.PrePostDeployment{
 			"preAction1": {
 				BuildspecPath: "./buildspec.yml",
 			},
@@ -44,7 +44,7 @@ func TestGHPipeline_Template(t *testing.T) {
 				DependsOn:     []string{"preAction1"},
 			},
 		},
-		PostDeployment: map[string]*manifest.PrePostDeployment{
+		PostDeployments: map[string]*manifest.PrePostDeployment{
 			"postAction1": {
 				BuildspecPath: ".anotherPath/buildspec.yml",
 			},

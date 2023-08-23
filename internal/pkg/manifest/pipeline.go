@@ -192,8 +192,8 @@ type PipelineStage struct {
 	RequiresApproval bool               `yaml:"requires_approval,omitempty"`
 	TestCommands     []string           `yaml:"test_commands,omitempty"`
 	Deployments      Deployments        `yaml:"deployments,omitempty"`
-	PreDeployment    PrePostDeployments `yaml:"pre_deployment,omitempty"`
-	PostDeployment   PrePostDeployments `yaml:"post_deployment,omitempty"`
+	PreDeployments   PrePostDeployments `yaml:"pre_deployments,omitempty"`
+	PostDeployments  PrePostDeployments `yaml:"post_deployments,omitempty"`
 }
 
 // Deployments represent a directed graph of cloudformation deployments.

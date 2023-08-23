@@ -407,7 +407,7 @@ func TestPipelineStage_PreDeployments(t *testing.T) {
 				var stg PipelineStage
 				stg.Init(&config.Environment{Name: "test"}, &manifest.PipelineStage{
 					Name: "test",
-					PreDeployment: map[string]*manifest.PrePostDeployment{
+					PreDeployments: map[string]*manifest.PrePostDeployment{
 						"ipa": {},
 						"api": {},
 					},
@@ -426,7 +426,7 @@ func TestPipelineStage_PreDeployments(t *testing.T) {
 				var stg PipelineStage
 				stg.Init(&config.Environment{Name: "test"}, &manifest.PipelineStage{
 					Name: "test",
-					PreDeployment: map[string]*manifest.PrePostDeployment{
+					PreDeployments: map[string]*manifest.PrePostDeployment{
 						"a": {},
 						"b": {
 							DependsOn: []string{"a"},
@@ -455,7 +455,7 @@ func TestPipelineStage_PreDeployments(t *testing.T) {
 				var stg PipelineStage
 				stg.Init(&config.Environment{Name: "test"}, &manifest.PipelineStage{
 					Name: "test",
-					PreDeployment: map[string]*manifest.PrePostDeployment{
+					PreDeployments: map[string]*manifest.PrePostDeployment{
 						"ipa": {},
 						"api": {},
 					},
@@ -474,7 +474,7 @@ func TestPipelineStage_PreDeployments(t *testing.T) {
 				var stg PipelineStage
 				stg.Init(&config.Environment{Name: "test"}, &manifest.PipelineStage{
 					Name: "test",
-					PreDeployment: map[string]*manifest.PrePostDeployment{
+					PreDeployments: map[string]*manifest.PrePostDeployment{
 						"api": {
 							DependsOn: []string{"api"},
 						},
@@ -613,7 +613,7 @@ func TestPipelineStage_PostDeployments(t *testing.T) {
 				stg.Init(&config.Environment{Name: "test"}, &manifest.PipelineStage{
 					Name:             "test",
 					RequiresApproval: true,
-					PreDeployment: map[string]*manifest.PrePostDeployment{
+					PreDeployments: map[string]*manifest.PrePostDeployment{
 						"ipa": {},
 						"api": {},
 					},
@@ -623,7 +623,7 @@ func TestPipelineStage_PostDeployments(t *testing.T) {
 						"payments":  nil,
 						"warehouse": nil,
 					},
-					PostDeployment: map[string]*manifest.PrePostDeployment{
+					PostDeployments: map[string]*manifest.PrePostDeployment{
 						"post": {},
 						"it":   {},
 					},
@@ -642,7 +642,7 @@ func TestPipelineStage_PostDeployments(t *testing.T) {
 				var stg PipelineStage
 				stg.Init(&config.Environment{Name: "test"}, &manifest.PipelineStage{
 					Name: "test",
-					PostDeployment: map[string]*manifest.PrePostDeployment{
+					PostDeployments: map[string]*manifest.PrePostDeployment{
 						"post": {
 							DependsOn: []string{"post"},
 						},
