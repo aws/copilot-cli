@@ -284,7 +284,7 @@ func (o *localRunOpts) Execute() error {
 		return fmt.Errorf("build images: %w", err)
 	}
 
-	// use the location for any missing URIs
+	// fill the location from the task def for containers without a URI
 	for _, container := range taskDef.ContainerDefinitions {
 		name := aws.StringValue(container.Name)
 		if _, ok := containerURIs[name]; !ok {
