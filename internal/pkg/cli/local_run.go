@@ -5,11 +5,15 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
+	"os/signal"
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
+	"syscall"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -297,17 +301,50 @@ func (o *localRunOpts) Execute() error {
 	}
 	o.imageInfoList = append(o.imageInfoList, sidecarImageLocations...)
 
-	err = o.runPauseContainer(context.Background(), ports)
-	if err != nil {
-		return fmt.Errorf("run pause container: %w", err)
-	}
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 
-	err = o.runContainers(context.Background(), o.imageInfoList, envVars)
-	if err != nil {
+	g, ctx := errgroup.WithContext(ctx)
+	gotSigInt := &atomic.Bool{}
+
+	g.Go(func() error {
+		defer cancel() // needed in case all containers exit successfully
+
+		if err := o.runPauseContainer(ctx, ports); err != nil {
+			// if we've received a sigint, we want to ignore
+			// any errors coming from this goroutine
+			if gotSigInt.Load() {
+				return nil
+			}
+			return fmt.Errorf("run pause container: %w", err)
+		}
+
+		err := o.runContainers(ctx, o.imageInfoList, envVars)
+		if gotSigInt.Load() {
+			return nil
+		}
 		return err
-	}
+	})
 
-	return nil
+	g.Go(func() error {
+		sigCh := make(chan os.Signal, 1)
+		signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+		defer signal.Stop(sigCh)
+
+		select {
+		case <-ctx.Done():
+		case <-sigCh:
+			gotSigInt.Store(true)
+			// reset signal handler in case we get ctrl+c again
+			// while trying to stop containers
+			signal.Stop(sigCh)
+			fmt.Printf("\nStopping containers...\n\n")
+		}
+
+		return o.cleanUpContainers(context.Background())
+	})
+
+	return g.Wait()
 }
 
 func (o *localRunOpts) getContainerSuffix() string {
@@ -421,6 +458,39 @@ func (o *localRunOpts) runContainers(ctx context.Context, imageInfoList []clidep
 	// Wait for all the container runs to complete
 	if err := g.Wait(); err != nil {
 		return err
+	}
+	return nil
+}
+
+func (o *localRunOpts) cleanUpContainers(ctx context.Context) error {
+	cleanUp := func(id string) error {
+		fmt.Printf("Cleaning up %q\n", id)
+
+		if err := o.dockerEngine.Stop(id); err != nil {
+			return fmt.Errorf("stop: %w", err)
+		}
+		if err := o.dockerEngine.Rm(id); err != nil {
+			return fmt.Errorf("rm: %w", err)
+		}
+		return nil
+	}
+
+	var errs []error
+
+	for _, image := range o.imageInfoList {
+		ctr := fmt.Sprintf("%s-%s", image.ContainerName, o.containerSuffix)
+		if err := cleanUp(ctr); err != nil {
+			errs = append(errs, fmt.Errorf("clean up %q: %w", ctr, err))
+		}
+	}
+
+	pauseCtr := fmt.Sprintf("%s-%s", pauseContainerName, o.containerSuffix)
+	if err := cleanUp(pauseCtr); err != nil {
+		errs = append(errs, fmt.Errorf("clean up %q: %w", pauseCtr, err))
+	}
+
+	if len(errs) > 0 {
+		return errors.Join(errs...)
 	}
 	return nil
 }
