@@ -1738,21 +1738,6 @@ func (m *MockecsLocalClient) EXPECT() *MockecsLocalClientMockRecorder {
 	return m.recorder
 }
 
-// DecryptedSecrets mocks base method.
-func (m *MockecsLocalClient) DecryptedSecrets(secrets []*ecs.ContainerSecret) ([]ecs0.EnvVar, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DecryptedSecrets", secrets)
-	ret0, _ := ret[0].([]ecs0.EnvVar)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// DecryptedSecrets indicates an expected call of DecryptedSecrets.
-func (mr *MockecsLocalClientMockRecorder) DecryptedSecrets(secrets interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DecryptedSecrets", reflect.TypeOf((*MockecsLocalClient)(nil).DecryptedSecrets), secrets)
-}
-
 // TaskDefinition mocks base method.
 func (m *MockecsLocalClient) TaskDefinition(app, env, svc string) (*ecs.TaskDefinition, error) {
 	m.ctrl.T.Helper()
@@ -6648,6 +6633,43 @@ func (mr *MocksvcInitializerMockRecorder) Service(props interface{}) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Service", reflect.TypeOf((*MocksvcInitializer)(nil).Service), props)
 }
 
+// MockwkldInitializerWithoutManifest is a mock of wkldInitializerWithoutManifest interface.
+type MockwkldInitializerWithoutManifest struct {
+	ctrl     *gomock.Controller
+	recorder *MockwkldInitializerWithoutManifestMockRecorder
+}
+
+// MockwkldInitializerWithoutManifestMockRecorder is the mock recorder for MockwkldInitializerWithoutManifest.
+type MockwkldInitializerWithoutManifestMockRecorder struct {
+	mock *MockwkldInitializerWithoutManifest
+}
+
+// NewMockwkldInitializerWithoutManifest creates a new mock instance.
+func NewMockwkldInitializerWithoutManifest(ctrl *gomock.Controller) *MockwkldInitializerWithoutManifest {
+	mock := &MockwkldInitializerWithoutManifest{ctrl: ctrl}
+	mock.recorder = &MockwkldInitializerWithoutManifestMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockwkldInitializerWithoutManifest) EXPECT() *MockwkldInitializerWithoutManifestMockRecorder {
+	return m.recorder
+}
+
+// AddWorkloadToApp mocks base method.
+func (m *MockwkldInitializerWithoutManifest) AddWorkloadToApp(appName, name, workloadType string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AddWorkloadToApp", appName, name, workloadType)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// AddWorkloadToApp indicates an expected call of AddWorkloadToApp.
+func (mr *MockwkldInitializerWithoutManifestMockRecorder) AddWorkloadToApp(appName, name, workloadType interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddWorkloadToApp", reflect.TypeOf((*MockwkldInitializerWithoutManifest)(nil).AddWorkloadToApp), appName, name, workloadType)
+}
+
 // MockroleDeleter is a mock of roleDeleter interface.
 type MockroleDeleter struct {
 	ctrl     *gomock.Controller
@@ -8063,4 +8085,42 @@ func (m *MockstackConfiguration) Template() (string, error) {
 func (mr *MockstackConfigurationMockRecorder) Template() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Template", reflect.TypeOf((*MockstackConfiguration)(nil).Template))
+}
+
+// MocksecretGetter is a mock of secretGetter interface.
+type MocksecretGetter struct {
+	ctrl     *gomock.Controller
+	recorder *MocksecretGetterMockRecorder
+}
+
+// MocksecretGetterMockRecorder is the mock recorder for MocksecretGetter.
+type MocksecretGetterMockRecorder struct {
+	mock *MocksecretGetter
+}
+
+// NewMocksecretGetter creates a new mock instance.
+func NewMocksecretGetter(ctrl *gomock.Controller) *MocksecretGetter {
+	mock := &MocksecretGetter{ctrl: ctrl}
+	mock.recorder = &MocksecretGetterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MocksecretGetter) EXPECT() *MocksecretGetterMockRecorder {
+	return m.recorder
+}
+
+// GetSecretValue mocks base method.
+func (m *MocksecretGetter) GetSecretValue(arg0 context.Context, arg1 string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetSecretValue", arg0, arg1)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetSecretValue indicates an expected call of GetSecretValue.
+func (mr *MocksecretGetterMockRecorder) GetSecretValue(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSecretValue", reflect.TypeOf((*MocksecretGetter)(nil).GetSecretValue), arg0, arg1)
 }

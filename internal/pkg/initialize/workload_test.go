@@ -888,3 +888,125 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 		})
 	}
 }
+
+func TestWorkloadInitializer_AddWorkloadToApp(t *testing.T) {
+	testCases := map[string]struct {
+		inWlType  string
+		inWlName  string
+		inAppName string
+
+		mockstore       func(m *mocks.MockStore)
+		mockappDeployer func(m *mocks.MockWorkloadAdder)
+
+		wantedErr error
+	}{
+		"adds job to app": {
+			inWlType:  manifestinfo.ScheduledJobType,
+			inAppName: "app",
+			inWlName:  "job",
+
+			mockstore: func(m *mocks.MockStore) {
+				m.EXPECT().GetApplication("app").Return(&config.Application{
+					Name: "app",
+				}, nil)
+				m.EXPECT().CreateJob(&config.Workload{
+					App:  "app",
+					Name: "job",
+					Type: manifestinfo.ScheduledJobType,
+				})
+			},
+			mockappDeployer: func(m *mocks.MockWorkloadAdder) {
+				m.EXPECT().AddJobToApp(&config.Application{
+					Name: "app",
+				}, "job").Return(nil)
+			},
+		},
+		"adds service to app": {
+			inWlType:  manifestinfo.LoadBalancedWebServiceType,
+			inAppName: "app",
+			inWlName:  "svc",
+
+			mockstore: func(m *mocks.MockStore) {
+				m.EXPECT().GetApplication("app").Return(&config.Application{
+					Name: "app",
+				}, nil)
+				m.EXPECT().CreateService(&config.Workload{
+					App:  "app",
+					Name: "svc",
+					Type: manifestinfo.LoadBalancedWebServiceType,
+				})
+			},
+			mockappDeployer: func(m *mocks.MockWorkloadAdder) {
+				m.EXPECT().AddServiceToApp(&config.Application{
+					Name: "app",
+				}, "svc").Return(nil)
+			},
+		},
+		"adds static site to app": {
+			inWlType:  manifestinfo.StaticSiteType,
+			inAppName: "app",
+			inWlName:  "svc",
+
+			mockstore: func(m *mocks.MockStore) {
+				m.EXPECT().GetApplication("app").Return(&config.Application{
+					Name: "app",
+				}, nil)
+				m.EXPECT().CreateService(&config.Workload{
+					App:  "app",
+					Name: "svc",
+					Type: manifestinfo.StaticSiteType,
+				})
+			},
+			mockappDeployer: func(m *mocks.MockWorkloadAdder) {
+				m.EXPECT().AddServiceToApp(&config.Application{
+					Name: "app",
+				}, "svc", gomock.Any()).Return(nil)
+			},
+		},
+		"error getting app": {
+			inWlType:  manifestinfo.LoadBalancedWebServiceType,
+			inAppName: "app",
+			inWlName:  "svc",
+
+			wantedErr: errors.New("get application app: some error"),
+			mockstore: func(m *mocks.MockStore) {
+				m.EXPECT().GetApplication("app").Return(&config.Application{
+					Name: "app",
+				}, errors.New("some error"))
+				m.EXPECT().CreateService(gomock.Any()).Times(0)
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockstore := mocks.NewMockStore(ctrl)
+			mockappDeployer := mocks.NewMockWorkloadAdder(ctrl)
+
+			if tc.mockstore != nil {
+				tc.mockstore(mockstore)
+			}
+			if tc.mockappDeployer != nil {
+				tc.mockappDeployer(mockappDeployer)
+			}
+
+			initializer := &WorkloadInitializer{
+				Store:    mockstore,
+				Deployer: mockappDeployer,
+			}
+
+			// WHEN
+			err := initializer.AddWorkloadToApp(tc.inAppName, tc.inWlName, tc.inWlType)
+
+			// THEN
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}

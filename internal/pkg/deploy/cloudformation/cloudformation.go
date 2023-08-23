@@ -283,7 +283,7 @@ type executeAndRenderChangeSetOption func(in *executeAndRenderChangeSetInput)
 
 func withEnableInterrupt() executeAndRenderChangeSetOption {
 	return func(in *executeAndRenderChangeSetInput) {
-		in.enableInterrupt = false
+		in.enableInterrupt = true
 	}
 }
 

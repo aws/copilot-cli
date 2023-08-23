@@ -4,6 +4,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -34,6 +35,9 @@ const (
 	resourceTagsFlag   = "resource-tags"
 	detachFlag         = "detach"
 
+	// Deploy flags.
+	yesInitWorkloadFlag = "init-wkld"
+
 	// Build flags.
 	dockerFileFlag        = "dockerfile"
 	dockerFileContextFlag = "build-context"
@@ -60,6 +64,10 @@ const (
 	resourcesFlag               = "resources"
 	taskIDFlag                  = "task-id"
 	containerFlag               = "container"
+
+	// Run local flags
+	portOverrideFlag   = "port-override"
+	envVarOverrideFlag = "env-var-override"
 
 	// Flags for CI/CD.
 	githubURLFlag         = "github-url"
@@ -260,7 +268,7 @@ Allows you to categorize resources.`
 	diffAutoApproveFlagDescription = "Skip interactive approval of diff before deploying."
 
 	// Deployment.
-	deployTestFlagDescription     = `Deploy your service or job to a "test" environment.`
+	deployFlagDescription         = `Deploy your service or job to a new or existing environment.`
 	allowDowngradeFlagDescription = `Optional. Allow using an older version of Copilot to update Copilot components
 updated by a newer version of Copilot.`
 	forceFlagDescription = `Optional. Force a new service deployment using the existing image.
@@ -269,8 +277,9 @@ Not available with the "Static Site" service type.`
 rollback in case of deployment failure.
 We do not recommend using this flag for a
 production environment.`
-	forceEnvDeployFlagDescription = "Optional. Force update the environment stack template."
-	detachFlagDescription         = "Optional. Skip displaying CloudFormation deployment progress."
+	forceEnvDeployFlagDescription  = "Optional. Force update the environment stack template."
+	yesInitWorkloadFlagDescription = "Optional. Initialize a workload before deploying it."
+	detachFlagDescription          = "Optional. Skip displaying CloudFormation deployment progress."
 
 	// Operational.
 	jsonFlagDescription = "Optional. Output in JSON format."
@@ -298,6 +307,12 @@ Defaults to all logs. Only one of end-time / follow may be used.`
 	localSvcFlagDescription          = "Only show services in the workspace."
 	localJobFlagDescription          = "Only show jobs in the workspace."
 	localPipelineFlagDescription     = "Only show pipelines in the workspace."
+
+	// Run local
+	envVarOverrideFlagDescription = `Optional. Override environment variables passed to containers.
+Format: [container]:KEY=VALUE. Omit container name to apply to all containers.`
+	portOverridesFlagDescription = `Optional. Override ports exposed by service. Format: <host port>:<service port>.
+Example: --port-override 5000:80 binds localhost:5000 to the service's port 80.`
 
 	svcManifestFlagDescription = `Optional. Name of the environment in which the service was deployed;
 output the manifest file used for that deployment.`
@@ -410,3 +425,38 @@ are also accepted.`
 permissions boundary for all roles generated within the application.`
 	prodEnvFlagDescription = "If the environment contains production services."
 )
+
+type portOverride struct {
+	host      string
+	container string
+}
+
+type portOverrides []portOverride
+
+func (p *portOverrides) Set(val string) error {
+	err := errors.New("should be in format 8080:80")
+	split := strings.Split(val, ":")
+	if len(split) != 2 {
+		return err
+	}
+	if _, ok := strconv.Atoi(split[0]); ok != nil {
+		return err
+	}
+	if _, ok := strconv.Atoi(split[1]); ok != nil {
+		return err
+	}
+
+	*p = append(*p, portOverride{
+		host:      split[0],
+		container: split[1],
+	})
+	return nil
+}
+
+func (p *portOverrides) Type() string {
+	return "list"
+}
+
+func (p *portOverrides) String() string {
+	return fmt.Sprintf("%+v", *p)
+}

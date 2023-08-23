@@ -16,8 +16,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
-	"github.com/aws/copilot-cli/internal/pkg/aws/secretsmanager"
-	"github.com/aws/copilot-cli/internal/pkg/aws/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/stepfunctions"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 )
@@ -55,10 +53,6 @@ type stepFunctionsClient interface {
 	StateMachineDefinition(stateMachineARN string) (string, error)
 }
 
-type secretGetter interface {
-	GetSecretValue(secretName string) (string, error)
-}
-
 // EnvVar contains the value of an environment variable
 type EnvVar struct {
 	Name  string
@@ -76,39 +70,16 @@ type ServiceDesc struct {
 // Client retrieves Copilot information from ECS endpoint.
 type Client struct {
 	rgGetter       resourceGetter
-	ssm            secretGetter
-	secretManager  secretGetter
 	ecsClient      ecsClient
 	StepFuncClient stepFunctionsClient
 }
 
 // New creates a new Client.
 func New(sess *session.Session) *Client {
-	return NewWithOptions(sess)
-}
-
-// NewWithOptions creates a new Client with opts.
-func NewWithOptions(sess *session.Session, opts ...Option) *Client {
-	c := &Client{
+	return &Client{
 		rgGetter:       resourcegroups.New(sess),
 		ecsClient:      ecs.New(sess),
-		ssm:            ssm.New(sess),
-		secretManager:  secretsmanager.New(sess),
 		StepFuncClient: stepfunctions.New(sess),
-	}
-	for _, opt := range opts {
-		opt(c)
-	}
-	return c
-}
-
-// Option is for functional options.
-type Option func(*Client)
-
-// WithSecretGetter returns an option to set a custom secret getter on Client.
-func WithSecretGetter(s secretGetter) Option {
-	return func(c *Client) {
-		c.secretManager = s
 	}
 }
 
@@ -265,48 +236,6 @@ func (c Client) StopDefaultClusterTasks(familyName string) error {
 		taskIDs[n] = aws.StringValue(task.TaskArn)
 	}
 	return c.ecsClient.StopTasks(taskIDs, ecs.WithStopTaskReason(taskStopReason))
-}
-
-func secretNameSpace(secret string) (string, error) {
-	// A secret value can be a SSM Parameter Name/ SSM Parameter ARN/ Secrets Manager ARN
-	// Note: If there is an error while parsing the secret value, this functions assumes it to be SSM Parameter.
-	// Refer to https://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_Secret.html
-	parsed, err := arn.Parse(secret)
-	if err != nil {
-		return ssm.Namespace, nil
-	}
-	switch parsed.Service {
-	case ssm.Namespace, secretsmanager.Namespace:
-		return parsed.Service, nil
-	default:
-		return "", fmt.Errorf("invalid ARN: not an SSM or Secrets Manager ARN")
-	}
-}
-
-// DecryptedSecrets returns the decrypted parameters from either SSM parameter store or Secrets Manager.
-func (c Client) DecryptedSecrets(secrets []*ecs.ContainerSecret) ([]EnvVar, error) {
-	var vars []EnvVar
-	for _, secret := range secrets {
-		namespace, err := secretNameSpace(secret.ValueFrom)
-		if err != nil {
-			return nil, err
-		}
-		var secretValue string
-		switch namespace {
-		case ssm.Namespace:
-			secretValue, err = c.ssm.GetSecretValue(secret.ValueFrom)
-		case secretsmanager.Namespace:
-			secretValue, err = c.secretManager.GetSecretValue(secret.ValueFrom)
-		}
-		if err != nil {
-			return nil, err
-		}
-		vars = append(vars, EnvVar{
-			Name:  secret.Name,
-			Value: secretValue,
-		})
-	}
-	return vars, nil
 }
 
 // TaskDefinition returns the task definition of the service.
