@@ -288,8 +288,6 @@ func (o *localRunOpts) Execute() error {
 	for _, container := range taskDef.ContainerDefinitions {
 		name := aws.StringValue(container.Name)
 		if _, ok := containerURIs[name]; !ok {
-			// TODO: check if we should ignore ones that don't have an image
-			// location value. Mostly thinking about ECS injected sidecars (envoy?)
 			containerURIs[name] = aws.StringValue(container.Image)
 		}
 	}
