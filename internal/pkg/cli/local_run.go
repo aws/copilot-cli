@@ -301,28 +301,29 @@ func (o *localRunOpts) Execute() error {
 	}
 	o.imageInfoList = append(o.imageInfoList, sidecarImageLocations...)
 
-	g, ctx := errgroup.WithContext(context.Background())
-	gotSigInt := &atomic.Bool{}
-	finishedErr := errors.New("containers stopped")
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 
-	g.Go(func() (err error) {
-		defer func() {
+	g, ctx := errgroup.WithContext(ctx)
+	gotSigInt := &atomic.Bool{}
+
+	g.Go(func() error {
+		defer cancel() // needed in case all containers exit successfully
+
+		if err := o.runPauseContainer(ctx, ports); err != nil {
 			// if we've received a sigint, we want to ignore
 			// any errors coming from this goroutine
 			if gotSigInt.Load() {
-				err = nil
+				return nil
 			}
-		}()
-
-		if err := o.runPauseContainer(ctx, ports); err != nil {
 			return fmt.Errorf("run pause container: %w", err)
 		}
 
-		if err := o.runContainers(ctx, o.imageInfoList, envVars); err != nil {
-			return err
+		err := o.runContainers(ctx, o.imageInfoList, envVars)
+		if gotSigInt.Load() {
+			return nil
 		}
-
-		return finishedErr
+		return err
 	})
 
 	g.Go(func() error {
@@ -332,7 +333,6 @@ func (o *localRunOpts) Execute() error {
 
 		select {
 		case <-ctx.Done():
-			return nil
 		case <-sigCh:
 			gotSigInt.Store(true)
 			// reset signal handler in case we get ctrl+c again
@@ -341,13 +341,10 @@ func (o *localRunOpts) Execute() error {
 			fmt.Printf("\nStopping containers...\n\n")
 		}
 
-		return o.stopAndRemoveContainers(ctx)
+		return o.cleanUpContainers(context.Background())
 	})
 
-	if err := g.Wait(); !errors.Is(err, finishedErr) {
-		return err
-	}
-	return nil
+	return g.Wait()
 }
 
 func (o *localRunOpts) getContainerSuffix() string {
@@ -465,9 +462,9 @@ func (o *localRunOpts) runContainers(ctx context.Context, imageInfoList []clidep
 	return nil
 }
 
-func (o *localRunOpts) stopAndRemoveContainers(ctx context.Context) error {
+func (o *localRunOpts) cleanUpContainers(ctx context.Context) error {
 	cleanUp := func(id string) error {
-		fmt.Printf("Stopping %q\n", id)
+		fmt.Printf("Cleaning up %q\n", id)
 
 		if err := o.dockerEngine.Stop(id); err != nil {
 			return fmt.Errorf("stop: %w", err)
@@ -495,8 +492,6 @@ func (o *localRunOpts) stopAndRemoveContainers(ctx context.Context) error {
 	if len(errs) > 0 {
 		return errors.Join(errs...)
 	}
-
-	fmt.Printf("All containers successfully stopped!\n")
 	return nil
 }
 
