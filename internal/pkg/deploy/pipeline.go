@@ -715,13 +715,6 @@ func (stg *PipelineStage) Test() (*TestCommandsAction, error) {
 	for i := range deployActions {
 		prevActions = append(prevActions, &deployActions[i])
 	}
-	postDeployActions, err := stg.PostDeployments()
-	if err != nil {
-		return nil, err
-	}
-	for i := range postDeployActions {
-		prevActions = append(prevActions, &postDeployActions[i])
-	}
 
 	return &TestCommandsAction{
 		action: action{
