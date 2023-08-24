@@ -38,7 +38,7 @@ Post{{logicalIDSafe $stage.Name}}DeploymentAction{{logicalIDSafe $action.Name}}B
   Type: AWS::IAM::Role
   Properties:
     Path: /
-  {{ include "role-config" $ | indent 4}}
+{{ include "role-config" $ | indent 4}}
     {{- if $.PermissionsBoundary }}
     PermissionsBoundary: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/{{$.PermissionsBoundary}}'
     {{- end }}
@@ -47,13 +47,13 @@ Post{{logicalIDSafe $stage.Name}}DeploymentAction{{logicalIDSafe $action.Name}}B
         PolicyDocument:
           Version: '2012-10-17'
           Statement:
-            - Effect: Allow
-              Resource: 'arn:aws:iam::{{$stage.AccountID}}:role/{{$.AppName}}-{{$stage.Name}}-EnvManagerRole'
-              Action:
-                - sts:AssumeRole
+          - Effect: Allow
+            Resource: 'arn:aws:iam::{{$stage.AccountID}}:role/{{$.AppName}}-{{$stage.Name}}-EnvManagerRole'
+            Action:
+              - sts:AssumeRole
       - PolicyName: build-role-policy
         PolicyDocument:
-  {{ include "role-policy-document" $ | indent 10 }}
+{{ include "role-policy-document" $ | indent 10 }}
 
 Post{{logicalIDSafe $stage.Name}}DeploymentAction{{logicalIDSafe $action.Name}}:
   Type: AWS::CodeBuild::Project
@@ -62,6 +62,6 @@ Post{{logicalIDSafe $stage.Name}}DeploymentAction{{logicalIDSafe $action.Name}}:
     ServiceRole: !GetAtt Post{{logicalIDSafe $stage.Name}}DeploymentAction{{logicalIDSafe $action.Name}}BuildProjectRole.Arn
     Artifacts:
       Type: CODEPIPELINE
-  {{ include "action-config" $action | indent 4}}
+{{ include "action-config" $action | indent 4}}
 {{- end}}
 {{- end}}

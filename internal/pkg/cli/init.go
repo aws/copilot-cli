@@ -462,9 +462,9 @@ func (o *initOpts) deployEnv() error {
 	}
 
 	if initEnvCmd, ok := o.initEnvCmd.(*initEnvOpts); ok {
-		// Set the application name from app init to the env init command. Set an env name if available.
+		// Set the application name from app init to the env init command, and check whether a flag has been passed for envName.
 		initEnvCmd.appName = *o.appName
-		initEnvCmd.name = *o.envName
+		initEnvCmd.name = o.initVars.envName
 	}
 
 	if err := o.askEnvNameAndMaybeInit(); err != nil {

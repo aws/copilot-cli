@@ -72,22 +72,22 @@ var _ = Describe("Static Site", func() {
 
 	Context("when initializing Static Site services", Ordered, func() {
 		var svcInitErr error
-		var frontendSVCInitErr error
+		var fooSVCInitErr error
 		BeforeAll(func() {
 			_, svcInitErr = cli.SvcInit(&client.SvcInitRequest{
 				Name:    "svc",
 				SvcType: "Static Site",
 			})
-			_, frontendSVCInitErr = cli.SvcInit(&client.SvcInitRequest{
-				Name:    "frontend",
+			_, fooSVCInitErr = cli.SvcInit(&client.SvcInitRequest{
+				Name:    "foo",
 				SvcType: "Static Site",
 			})
 		})
 		It("svc init should succeed for svc", func() {
 			Expect(svcInitErr).NotTo(HaveOccurred())
 		})
-		It("svc init should succeed for frontend", func() {
-			Expect(frontendSVCInitErr).NotTo(HaveOccurred())
+		It("svc init should succeed for foo", func() {
+			Expect(fooSVCInitErr).NotTo(HaveOccurred())
 		})
 	})
 
@@ -107,7 +107,7 @@ var _ = Describe("Static Site", func() {
 
 		It("should return both services", func() {
 			Expect(len(svcList.Services)).To(Equal(2))
-			Expect(svcList.Services[0].Name).To(Equal("frontend"))
+			Expect(svcList.Services[0].Name).To(Equal("foo"))
 			Expect(svcList.Services[0].AppName).To(Equal(appName))
 			Expect(svcList.Services[1].Name).To(Equal("svc"))
 			Expect(svcList.Services[1].AppName).To(Equal(appName))
@@ -141,10 +141,10 @@ var _ = Describe("Static Site", func() {
 		})
 	})
 
-	Context("when deploying a frontend Static Site service", Ordered, func() {
+	Context("when deploying a foo Static Site service", Ordered, func() {
 		It("deployment should succeed", func() {
 			_, err := cli.SvcDeploy(&client.SvcDeployInput{
-				Name:    "frontend",
+				Name:    "foo",
 				EnvName: "test",
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -152,14 +152,14 @@ var _ = Describe("Static Site", func() {
 
 		It("svc show should contain the default domain alias and the request should succeed", func() {
 			svc, err := cli.SvcShow(&client.SvcShowRequest{
-				Name:    "frontend",
+				Name:    "foo",
 				AppName: appName,
 			})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(len(svc.Routes)).To(Equal(1))
 			route := svc.Routes[0]
 			wantedURLs := map[string]string{
-				"test": fmt.Sprintf("https://%s.%s.%s.%s", "frontend", "test", appName, domainName),
+				"test": fmt.Sprintf("https://%s.%s.%s.%s", "foo", "test", appName, domainName),
 			}
 			// Validate route has the expected HTTPS endpoint.
 			Expect(route.URL).To(ContainSubstring(wantedURLs[route.Environment]))
