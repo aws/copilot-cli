@@ -216,22 +216,6 @@ type PrePostDeployment struct {
 	DependsOn     []string `yaml:"depends_on"`
 }
 
-// Dependencies returns ordering requirements for the deployment's actions.
-func (dep *Deployment) Dependencies() []string {
-	if dep == nil {
-		return nil
-	}
-	return dep.DependsOn
-}
-
-// Dependencies returns ordering requirements for the pre- or post-deployment's actions.
-func (ppd *PrePostDeployment) Dependencies() []string {
-	if ppd == nil {
-		return nil
-	}
-	return ppd.DependsOn
-}
-
 // NewPipeline returns a pipeline manifest object.
 func NewPipeline(pipelineName string, provider Provider, stages []PipelineStage) (*Pipeline, error) {
 	// TODO: #221 Do more validations
