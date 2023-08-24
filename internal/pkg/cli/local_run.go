@@ -66,27 +66,24 @@ type localRunVars struct {
 type localRunOpts struct {
 	localRunVars
 
-	sel               deploySelector
-	ecsLocalClient    ecsLocalClient
-	ssm               secretGetter
-	secretsManager    secretGetter
-	sessProvider      sessionProvider
-	sess              *session.Session
-	envSess           *session.Session
-	targetEnv         *config.Environment
-	targetApp         *config.Application
-	store             store
-	ws                wsWlDirReader
-	cmd               execRunner
-	dockerEngine      dockerEngineRunner
-	repository        repositoryService
-	appliedDynamicMft manifest.DynamicWorkload
-	out               clideploy.UploadArtifactsOutput
-	imageInfoList     []clideploy.ImagePerContainer
-	containerSuffix   string
-	newColor          func() *color.Color
+	sel             deploySelector
+	ecsLocalClient  ecsLocalClient
+	ssm             secretGetter
+	secretsManager  secretGetter
+	sessProvider    sessionProvider
+	sess            *session.Session
+	envSess         *session.Session
+	targetEnv       *config.Environment
+	targetApp       *config.Application
+	store           store
+	ws              wsWlDirReader
+	cmd             execRunner
+	dockerEngine    dockerEngineRunner
+	repository      repositoryService
+	containerSuffix string
+	newColor        func() *color.Color
 
-	buildContainerImages func(o *localRunOpts) error
+	buildContainerImages func(mft manifest.DynamicWorkload) (map[string]string, error)
 	configureClients     func(o *localRunOpts) error
 	labeledTermPrinter   func(fw syncbuffer.FileWriter, bufs []*syncbuffer.LabeledSyncBuffer, opts ...syncbuffer.LabeledTermPrinterOption) clideploy.LabeledTermPrinter
 	unmarshal            func([]byte) (manifest.DynamicWorkload, error)
@@ -152,21 +149,35 @@ func newLocalRunOpts(vars localRunVars) (*localRunOpts, error) {
 		o.repository = repository.NewWithURI(ecr.New(defaultSessEnvRegion), repoName, resources.RepositoryURLs[o.wkldName])
 		return nil
 	}
-	opts.buildContainerImages = func(o *localRunOpts) error {
-		gitShortCommit := imageTagFromGit(o.cmd)
+	opts.buildContainerImages = func(mft manifest.DynamicWorkload) (map[string]string, error) {
+		gitShortCommit := imageTagFromGit(opts.cmd)
 		image := clideploy.ContainerImageIdentifier{
 			GitShortCommitTag: gitShortCommit,
 		}
-		return clideploy.BuildContainerImages(&clideploy.ImageActionInput{
-			Name:               o.wkldName,
-			WorkspacePath:      o.ws.Path(),
+		out := &clideploy.UploadArtifactsOutput{}
+		if err := clideploy.BuildContainerImages(&clideploy.ImageActionInput{
+			Name:               opts.wkldName,
+			WorkspacePath:      opts.ws.Path(),
 			Image:              image,
-			Mft:                o.appliedDynamicMft.Manifest(),
+			Mft:                mft.Manifest(),
 			GitShortCommitTag:  gitShortCommit,
-			Builder:            o.repository,
-			Login:              o.repository.Login,
-			CheckDockerEngine:  o.dockerEngine.CheckDockerEngineRunning,
-			LabeledTermPrinter: o.labeledTermPrinter}, &o.out)
+			Builder:            opts.repository,
+			Login:              opts.repository.Login,
+			CheckDockerEngine:  opts.dockerEngine.CheckDockerEngineRunning,
+			LabeledTermPrinter: opts.labeledTermPrinter,
+		}, out); err != nil {
+			return nil, err
+		}
+
+		containerURIs := make(map[string]string, len(out.ImageDigests))
+		for name, info := range out.ImageDigests {
+			if len(info.RepoTags) == 0 {
+				// this shouldn't happen, but just to avoid a panic in case
+				return nil, fmt.Errorf("no repo tags for image %q", name)
+			}
+			containerURIs[name] = info.RepoTags[0]
+		}
+		return containerURIs, nil
 	}
 	return opts, nil
 }
@@ -236,7 +247,6 @@ func (o *localRunOpts) Execute() error {
 		return fmt.Errorf("get task definition: %w", err)
 	}
 
-	// get env vars and secrets
 	envVars, err := o.getEnvVars(ctx, taskDef)
 	if err != nil {
 		return fmt.Errorf("get env vars: %w", err)
@@ -271,35 +281,19 @@ func (o *localRunOpts) Execute() error {
 	if err != nil {
 		return err
 	}
-	o.appliedDynamicMft = mft
 
-	if err := o.buildContainerImages(o); err != nil {
+	containerURIs, err := o.buildContainerImages(mft)
+	if err != nil {
 		return fmt.Errorf("build images: %w", err)
 	}
 
-	for name, imageInfo := range o.out.ImageDigests {
-		if len(imageInfo.RepoTags) == 0 {
-			return fmt.Errorf("no repo tags for image %q", name)
+	// fill the location from the task def for containers without a URI
+	for _, container := range taskDef.ContainerDefinitions {
+		name := aws.StringValue(container.Name)
+		if _, ok := containerURIs[name]; !ok {
+			containerURIs[name] = aws.StringValue(container.Image)
 		}
-		o.imageInfoList = append(o.imageInfoList, clideploy.ImagePerContainer{
-			ContainerName: name,
-			ImageURI:      imageInfo.RepoTags[0],
-		})
 	}
-
-	var sidecarImageLocations []clideploy.ImagePerContainer //sidecarImageLocations has the image locations which are already built
-	manifestContent := o.appliedDynamicMft.Manifest()
-	switch t := manifestContent.(type) {
-	case *manifest.ScheduledJob:
-		sidecarImageLocations = getBuiltSidecarImageLocations(t.Sidecars)
-	case *manifest.LoadBalancedWebService:
-		sidecarImageLocations = getBuiltSidecarImageLocations(t.Sidecars)
-	case *manifest.WorkerService:
-		sidecarImageLocations = getBuiltSidecarImageLocations(t.Sidecars)
-	case *manifest.BackendService:
-		sidecarImageLocations = getBuiltSidecarImageLocations(t.Sidecars)
-	}
-	o.imageInfoList = append(o.imageInfoList, sidecarImageLocations...)
 
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -319,7 +313,7 @@ func (o *localRunOpts) Execute() error {
 			return fmt.Errorf("run pause container: %w", err)
 		}
 
-		err := o.runContainers(ctx, o.imageInfoList, envVars)
+		err := o.runContainers(ctx, containerURIs, envVars)
 		if gotSigInt.Load() {
 			return nil
 		}
@@ -341,7 +335,7 @@ func (o *localRunOpts) Execute() error {
 			fmt.Printf("\nStopping containers...\n\n")
 		}
 
-		return o.cleanUpContainers(context.Background())
+		return o.cleanUpContainers(context.Background(), containerURIs)
 	})
 
 	return g.Wait()
@@ -349,20 +343,6 @@ func (o *localRunOpts) Execute() error {
 
 func (o *localRunOpts) getContainerSuffix() string {
 	return fmt.Sprintf("%s-%s-%s", o.appName, o.envName, o.wkldName)
-}
-
-func getBuiltSidecarImageLocations(sidecars map[string]*manifest.SidecarConfig) []clideploy.ImagePerContainer {
-	//get the image location for the sidecars which are already built and are in a registry
-	var sideCarBuiltImageLocations []clideploy.ImagePerContainer
-	for sideCarName, sidecar := range sidecars {
-		if uri, hasLocation := sidecar.ImageURI(); hasLocation {
-			sideCarBuiltImageLocations = append(sideCarBuiltImageLocations, clideploy.ImagePerContainer{
-				ContainerName: sideCarName,
-				ImageURI:      uri,
-			})
-		}
-	}
-	return sideCarBuiltImageLocations
 }
 
 func (o *localRunOpts) runPauseContainer(ctx context.Context, ports map[string]string) error {
@@ -416,18 +396,14 @@ func (o *localRunOpts) runPauseContainer(ctx context.Context, ports map[string]s
 	return nil
 }
 
-func (o *localRunOpts) runContainers(ctx context.Context, imageInfoList []clideploy.ImagePerContainer, envVars map[string]containerEnv) error {
+func (o *localRunOpts) runContainers(ctx context.Context, containerURIs map[string]string, envVars map[string]containerEnv) error {
 	g, ctx := errgroup.WithContext(ctx)
-
-	// Iterate over the image info list and perform parallel container runs
-	for _, imageInfo := range imageInfoList {
-		imageInfo := imageInfo
-
-		containerNameWithSuffix := fmt.Sprintf("%s-%s", imageInfo.ContainerName, o.containerSuffix)
-		containerNetwork := fmt.Sprintf("%s-%s", pauseContainerName, o.containerSuffix)
+	for name, uri := range containerURIs {
+		name := name
+		uri := uri
 
 		vars, secrets := make(map[string]string), make(map[string]string)
-		for k, v := range envVars[imageInfo.ContainerName] {
+		for k, v := range envVars[name] {
 			if v.Secret {
 				secrets[k] = v.Value
 			} else {
@@ -438,31 +414,27 @@ func (o *localRunOpts) runContainers(ctx context.Context, imageInfoList []clidep
 		// Execute each container run in a separate goroutine
 		g.Go(func() error {
 			runOptions := &dockerengine.RunOptions{
-				ImageURI:         imageInfo.ImageURI,
-				ContainerName:    containerNameWithSuffix,
+				ImageURI:         uri,
+				ContainerName:    fmt.Sprintf("%s-%s", name, o.containerSuffix),
 				Secrets:          secrets,
 				EnvVars:          vars,
-				ContainerNetwork: containerNetwork,
+				ContainerNetwork: fmt.Sprintf("%s-%s", pauseContainerName, o.containerSuffix),
 				LogOptions: dockerengine.RunLogOptions{
 					Color:      o.newColor(),
-					LinePrefix: fmt.Sprintf("[%s] ", imageInfo.ContainerName),
+					LinePrefix: fmt.Sprintf("[%s] ", name),
 				},
 			}
 			if err := o.dockerEngine.Run(ctx, runOptions); err != nil {
-				return fmt.Errorf("run container %q: %w", imageInfo.ContainerName, err)
+				return fmt.Errorf("run container %q: %w", name, err)
 			}
 			return nil
 		})
 	}
 
-	// Wait for all the container runs to complete
-	if err := g.Wait(); err != nil {
-		return err
-	}
-	return nil
+	return g.Wait()
 }
 
-func (o *localRunOpts) cleanUpContainers(ctx context.Context) error {
+func (o *localRunOpts) cleanUpContainers(ctx context.Context, containerURIs map[string]string) error {
 	cleanUp := func(id string) error {
 		fmt.Printf("Cleaning up %q\n", id)
 
@@ -477,8 +449,8 @@ func (o *localRunOpts) cleanUpContainers(ctx context.Context) error {
 
 	var errs []error
 
-	for _, image := range o.imageInfoList {
-		ctr := fmt.Sprintf("%s-%s", image.ContainerName, o.containerSuffix)
+	for name := range containerURIs {
+		ctr := fmt.Sprintf("%s-%s", name, o.containerSuffix)
 		if err := cleanUp(ctr); err != nil {
 			errs = append(errs, fmt.Errorf("clean up %q: %w", ctr, err))
 		}
@@ -515,7 +487,8 @@ func (o *localRunOpts) getEnvVars(ctx context.Context, taskDef *awsecs.TaskDefin
 
 	envVars := make(map[string]containerEnv)
 	for _, ctr := range taskDef.ContainerDefinitions {
-		envVars[aws.StringValue(ctr.Name)] = map[string]envVarValue{
+		name := aws.StringValue(ctr.Name)
+		envVars[name] = map[string]envVarValue{
 			"AWS_ACCESS_KEY_ID": {
 				Value: creds.AccessKeyID,
 			},
@@ -525,6 +498,13 @@ func (o *localRunOpts) getEnvVars(ctx context.Context, taskDef *awsecs.TaskDefin
 			"AWS_SESSION_TOKEN": {
 				Value: creds.SessionToken,
 			},
+		}
+		if o.sess.Config.Region != nil {
+			val := envVarValue{
+				Value: aws.StringValue(o.sess.Config.Region),
+			}
+			envVars[name]["AWS_DEFAULT_REGION"] = val
+			envVars[name]["AWS_REGION"] = val
 		}
 	}
 

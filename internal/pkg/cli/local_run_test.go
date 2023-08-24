@@ -16,7 +16,6 @@ import (
 	sdkecs "github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
-	clideploy "github.com/aws/copilot-cli/internal/pkg/cli/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
@@ -244,15 +243,9 @@ func TestLocalRunOpts_Execute(t *testing.T) {
 	mockContainerSuffix := fmt.Sprintf("%s-%s-%s", testAppName, testEnvName, testWkldName)
 	mockPauseContainerName := pauseContainerName + "-" + mockContainerSuffix
 
-	mockImageInfoList := []clideploy.ImagePerContainer{
-		{
-			ContainerName: "foo",
-			ImageURI:      "image1",
-		},
-		{
-			ContainerName: "bar",
-			ImageURI:      "image2",
-		},
+	mockContainerURIs := map[string]string{
+		"foo": "image1",
+		"bar": "image2",
 	}
 
 	taskDef := &ecs.TaskDefinition{
@@ -644,10 +637,9 @@ func TestLocalRunOpts_Execute(t *testing.T) {
 				configureClients: func(o *localRunOpts) error {
 					return nil
 				},
-				buildContainerImages: func(o *localRunOpts) error {
-					return tc.buildImagesError
+				buildContainerImages: func(mft manifest.DynamicWorkload) (map[string]string, error) {
+					return mockContainerURIs, tc.buildImagesError
 				},
-				imageInfoList:  mockImageInfoList,
 				ws:             m.ws,
 				ecsLocalClient: m.ecsLocalClient,
 				ssm:            m.ssm,
@@ -695,6 +687,7 @@ func TestLocalRunOpts_getEnvVars(t *testing.T) {
 		envOverrides map[string]string
 		setupMocks   func(m *localRunExecuteMocks)
 		credsError   error
+		region       *string
 
 		want      map[string]containerEnv
 		wantError string
@@ -1011,6 +1004,26 @@ func TestLocalRunOpts_getEnvVars(t *testing.T) {
 				},
 			},
 		},
+		"region env vars set": {
+			taskDef: &awsecs.TaskDefinition{
+				ContainerDefinitions: []*sdkecs.ContainerDefinition{
+					{
+						Name:        aws.String("foo"),
+						Environment: []*sdkecs.KeyValuePair{},
+					},
+				},
+			},
+			region: aws.String("myRegion"),
+			want: map[string]containerEnv{
+				"foo": {
+					"AWS_ACCESS_KEY_ID":     newVar("myID", false, false),
+					"AWS_SECRET_ACCESS_KEY": newVar("mySecret", false, false),
+					"AWS_SESSION_TOKEN":     newVar("myToken", false, false),
+					"AWS_REGION":            newVar("myRegion", false, false),
+					"AWS_DEFAULT_REGION":    newVar("myRegion", false, false),
+				},
+			},
+		},
 	}
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -1040,6 +1053,7 @@ func TestLocalRunOpts_getEnvVars(t *testing.T) {
 				sess: &session.Session{
 					Config: &aws.Config{
 						Credentials: credentials.NewCredentials(m.sessCreds),
+						Region:      tc.region,
 					},
 				},
 				ssm:            m.ssm,
