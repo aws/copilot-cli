@@ -249,10 +249,10 @@ Resources:
                 Provider: CodeBuild
               Configuration:
                 ProjectName: !Ref Pre{{logicalIDSafe $stage.Name}}DeploymentAction{{logicalIDSafe $action.Name}}
-                InputArtifacts:
-                  - Name: SCCheckoutArtifact
-                OutputArtifacts:
-                  - Name: Pre{{logicalIDSafe $stage.Name}}DeploymentAction{{logicalIDSafe $action.Name}}Output
+              InputArtifacts:
+                - Name: SCCheckoutArtifact
+              OutputArtifacts:
+                - Name: Pre{{logicalIDSafe $stage.Name}}DeploymentAction{{logicalIDSafe $action.Name}}Output
             {{- end}}
             {{- range $action := $stage.PostDeployments }}
             - Name: {{ $action.Name }}
@@ -265,10 +265,10 @@ Resources:
                 Provider: CodeBuild
               Configuration:
                 ProjectName: !Ref Post{{logicalIDSafe $stage.Name}}DeploymentAction{{logicalIDSafe $action.Name}}
-                InputArtifacts:
-                  - Name: SCCheckoutArtifact
-                OutputArtifacts:
-                  - Name: Post{{logicalIDSafe $stage.Name}}DeploymentAction{{logicalIDSafe $action.Name}}Output
+              InputArtifacts:
+                - Name: SCCheckoutArtifact
+              OutputArtifacts:
+                - Name: Post{{logicalIDSafe $stage.Name}}DeploymentAction{{logicalIDSafe $action.Name}}Output
             {{- end}}
             {{- range $deployment := $stage.Deployments}}
             - Name: {{$deployment.Name}}
