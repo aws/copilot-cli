@@ -40,6 +40,12 @@ const (
 	DefaultPipelineArtifactsDir = "infrastructure"
 )
 
+// Name of the environment varialbes injected into the CodeBuild projects that support pre/post-deployment actions.
+const (
+	envVarNameEnvironmentName = "COPILOT_ENVIRONMENT_NAME"
+	envVarNameApplicationName = "COPILOT_APPLICATION_NAME"
+)
+
 var (
 	// NOTE: this is duplicated from validate.go
 	// Ex: https://github.com/koke/grit
@@ -93,6 +99,7 @@ type Build struct {
 	EnvironmentType          string
 	BuildspecPath            string
 	AdditionalPolicyDocument string
+	Variables                map[string]string
 }
 
 // Init populates the fields in Build by parsing the manifest file's "build" section.
@@ -591,6 +598,10 @@ func (stg *PipelineStage) PreDeployments() ([]PrePostDeployAction, error) {
 				Image:           defaultPipelineBuildImage,
 				EnvironmentType: defaultPipelineEnvironmentType,
 				BuildspecPath:   conf.BuildspecPath,
+				Variables: map[string]string{
+					envVarNameApplicationName: stg.AppName,
+					envVarNameEnvironmentName: stg.associatedEnvironment.Name,
+				},
 			},
 			ranker: topo,
 		})
@@ -708,6 +719,10 @@ func (stg *PipelineStage) PostDeployments() ([]PrePostDeployAction, error) {
 				Image:           defaultPipelineBuildImage,
 				EnvironmentType: defaultPipelineEnvironmentType,
 				BuildspecPath:   conf.BuildspecPath,
+				Variables: map[string]string{
+					envVarNameApplicationName: stg.AppName,
+					envVarNameEnvironmentName: stg.associatedEnvironment.Name,
+				},
 			},
 			ranker: topo,
 		})
