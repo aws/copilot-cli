@@ -39,7 +39,6 @@ const (
 
 type deployVars struct {
 	deployWkldVars
-	deployEnvVars
 
 	yesInitWkld *bool
 	deployEnv   *bool
@@ -210,7 +209,7 @@ func (o *deployOpts) maybeInitWkld() error {
 	}
 
 	if o.yesInitWkld == nil {
-		confirmInitWkld, err := o.prompt.Confirm(fmt.Sprintf("Found manifest for uninitialized %s %q. Initialize it?", workloadType, o.deployWkldVars.name), "This workload will be initialized, then deployed.", prompt.WithConfirmFinalMessage())
+		confirmInitWkld, err := o.prompt.Confirm(fmt.Sprintf("Found manifest for uninitialized %s %q. Initialize it?", workloadType, o.deployWkldVars.name), "This workload will be initialized, then deployed.", prompt.WithFinalMessage("Initialize workload:"))
 		if err != nil {
 			return fmt.Errorf("confirm initialize workload: %w", err)
 		}
@@ -379,7 +378,7 @@ func (o *deployOpts) maybeInitEnv() error {
 		if o.deployEnv == nil {
 			log.Infof("Environment %q was just initialized. We'll deploy it now.\n", o.deployWkldVars.envName)
 			o.deployEnv = aws.Bool(true)
-		} else if aws.BoolValue(o.deployEnv) == false {
+		} else if !aws.BoolValue(o.deployEnv) {
 			log.Errorf("Environment is not deployed but --%s=false was specified. Deploy the environment with %s in order to deploy a workload to it.\n", deployEnvFlag, color.HighlightCode("copilot env deploy"))
 			return fmt.Errorf("environment %s is has not yet been deployed", o.deployWkldVars.envName)
 		}
@@ -391,7 +390,7 @@ func (o *deployOpts) maybeInitEnv() error {
 
 func (o *deployOpts) maybeDeployEnv() error {
 	if o.deployEnv == nil {
-		v, err := o.prompt.Confirm(fmt.Sprintf("Would you like to deploy the environment %q before deploying your workload?", o.deployWkldVars.envName), "")
+		v, err := o.prompt.Confirm(fmt.Sprintf("Would you like to deploy the environment %q before deploying your workload?", o.deployWkldVars.envName, prompt.WithFinalMessage("Deploy environment:")), "")
 		if err != nil {
 			return fmt.Errorf("confirm env deployment: %w", err)
 		}

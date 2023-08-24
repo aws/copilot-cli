@@ -179,8 +179,6 @@ type taskLister interface {
 type AppEnvSelector struct {
 	prompt       Prompter
 	appEnvLister appEnvLister
-
-	alsoShowLocalEnvs bool
 }
 
 // ConfigSelector is an application and environment selector, but can also choose a service from the config store.
