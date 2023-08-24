@@ -1,4 +1,4 @@
-name: frontend
+name: foo
 type: Static Site
 
 files:

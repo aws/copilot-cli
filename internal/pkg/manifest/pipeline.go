@@ -188,10 +188,12 @@ type Build struct {
 
 // PipelineStage represents a stage in the pipeline manifest
 type PipelineStage struct {
-	Name             string      `yaml:"name"`
-	RequiresApproval bool        `yaml:"requires_approval,omitempty"`
-	TestCommands     []string    `yaml:"test_commands,omitempty"`
-	Deployments      Deployments `yaml:"deployments,omitempty"`
+	Name             string             `yaml:"name"`
+	RequiresApproval bool               `yaml:"requires_approval,omitempty"`
+	TestCommands     []string           `yaml:"test_commands,omitempty"`
+	Deployments      Deployments        `yaml:"deployments,omitempty"`
+	PreDeployments   PrePostDeployments `yaml:"pre_deployments,omitempty"`
+	PostDeployments  PrePostDeployments `yaml:"post_deployments,omitempty"`
 }
 
 // Deployments represent a directed graph of cloudformation deployments.
@@ -203,6 +205,15 @@ type Deployment struct {
 	TemplatePath   string   `yaml:"template_path"`
 	TemplateConfig string   `yaml:"template_config"`
 	DependsOn      []string `yaml:"depends_on"`
+}
+
+// PrePostDeployments represent a directed graph of cloudformation deployments.
+type PrePostDeployments map[string]*PrePostDeployment
+
+// PrePostDeployment is the config for a pre- or post-deployment action backed by CodeBuild.
+type PrePostDeployment struct {
+	BuildspecPath string   `yaml:"buildspec"`
+	DependsOn     []string `yaml:"depends_on"`
 }
 
 // NewPipeline returns a pipeline manifest object.

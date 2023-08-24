@@ -6633,6 +6633,43 @@ func (mr *MocksvcInitializerMockRecorder) Service(props interface{}) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Service", reflect.TypeOf((*MocksvcInitializer)(nil).Service), props)
 }
 
+// MockwkldInitializerWithoutManifest is a mock of wkldInitializerWithoutManifest interface.
+type MockwkldInitializerWithoutManifest struct {
+	ctrl     *gomock.Controller
+	recorder *MockwkldInitializerWithoutManifestMockRecorder
+}
+
+// MockwkldInitializerWithoutManifestMockRecorder is the mock recorder for MockwkldInitializerWithoutManifest.
+type MockwkldInitializerWithoutManifestMockRecorder struct {
+	mock *MockwkldInitializerWithoutManifest
+}
+
+// NewMockwkldInitializerWithoutManifest creates a new mock instance.
+func NewMockwkldInitializerWithoutManifest(ctrl *gomock.Controller) *MockwkldInitializerWithoutManifest {
+	mock := &MockwkldInitializerWithoutManifest{ctrl: ctrl}
+	mock.recorder = &MockwkldInitializerWithoutManifestMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockwkldInitializerWithoutManifest) EXPECT() *MockwkldInitializerWithoutManifestMockRecorder {
+	return m.recorder
+}
+
+// AddWorkloadToApp mocks base method.
+func (m *MockwkldInitializerWithoutManifest) AddWorkloadToApp(appName, name, workloadType string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AddWorkloadToApp", appName, name, workloadType)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// AddWorkloadToApp indicates an expected call of AddWorkloadToApp.
+func (mr *MockwkldInitializerWithoutManifestMockRecorder) AddWorkloadToApp(appName, name, workloadType interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddWorkloadToApp", reflect.TypeOf((*MockwkldInitializerWithoutManifest)(nil).AddWorkloadToApp), appName, name, workloadType)
+}
+
 // MockroleDeleter is a mock of roleDeleter interface.
 type MockroleDeleter struct {
 	ctrl     *gomock.Controller
@@ -7627,6 +7664,20 @@ func (mr *MockdockerEngineRunnerMockRecorder) IsContainerRunning(arg0 interface{
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsContainerRunning", reflect.TypeOf((*MockdockerEngineRunner)(nil).IsContainerRunning), arg0)
 }
 
+// Rm mocks base method.
+func (m *MockdockerEngineRunner) Rm(arg0 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Rm", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Rm indicates an expected call of Rm.
+func (mr *MockdockerEngineRunnerMockRecorder) Rm(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Rm", reflect.TypeOf((*MockdockerEngineRunner)(nil).Rm), arg0)
+}
+
 // Run mocks base method.
 func (m *MockdockerEngineRunner) Run(arg0 context.Context, arg1 *dockerengine.RunOptions) error {
 	m.ctrl.T.Helper()
@@ -7639,6 +7690,20 @@ func (m *MockdockerEngineRunner) Run(arg0 context.Context, arg1 *dockerengine.Ru
 func (mr *MockdockerEngineRunnerMockRecorder) Run(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockdockerEngineRunner)(nil).Run), arg0, arg1)
+}
+
+// Stop mocks base method.
+func (m *MockdockerEngineRunner) Stop(arg0 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Stop", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Stop indicates an expected call of Stop.
+func (mr *MockdockerEngineRunnerMockRecorder) Stop(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockdockerEngineRunner)(nil).Stop), arg0)
 }
 
 // MockworkloadStackGenerator is a mock of workloadStackGenerator interface.

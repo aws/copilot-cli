@@ -602,6 +602,10 @@ type svcInitializer interface {
 	Service(props *initialize.ServiceProps) (string, error)
 }
 
+type wkldInitializerWithoutManifest interface {
+	AddWorkloadToApp(appName, name, workloadType string) error
+}
+
 type roleDeleter interface {
 	DeleteRole(string) error
 }
@@ -701,6 +705,8 @@ type dockerEngineRunner interface {
 	CheckDockerEngineRunning() error
 	Run(context.Context, *dockerengine.RunOptions) error
 	IsContainerRunning(string) (bool, error)
+	Stop(string) error
+	Rm(string) error
 }
 
 type workloadStackGenerator interface {

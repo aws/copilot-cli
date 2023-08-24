@@ -35,6 +35,9 @@ const (
 	resourceTagsFlag   = "resource-tags"
 	detachFlag         = "detach"
 
+	// Deploy flags.
+	yesInitWorkloadFlag = "init-wkld"
+
 	// Build flags.
 	dockerFileFlag        = "dockerfile"
 	dockerFileContextFlag = "build-context"
@@ -265,7 +268,7 @@ Allows you to categorize resources.`
 	diffAutoApproveFlagDescription = "Skip interactive approval of diff before deploying."
 
 	// Deployment.
-	deployTestFlagDescription     = `Deploy your service or job to a "test" environment.`
+	deployFlagDescription         = `Deploy your service or job to a new or existing environment.`
 	allowDowngradeFlagDescription = `Optional. Allow using an older version of Copilot to update Copilot components
 updated by a newer version of Copilot.`
 	forceFlagDescription = `Optional. Force a new service deployment using the existing image.
@@ -274,8 +277,9 @@ Not available with the "Static Site" service type.`
 rollback in case of deployment failure.
 We do not recommend using this flag for a
 production environment.`
-	forceEnvDeployFlagDescription = "Optional. Force update the environment stack template."
-	detachFlagDescription         = "Optional. Skip displaying CloudFormation deployment progress."
+	forceEnvDeployFlagDescription  = "Optional. Force update the environment stack template."
+	yesInitWorkloadFlagDescription = "Optional. Initialize a workload before deploying it."
+	detachFlagDescription          = "Optional. Skip displaying CloudFormation deployment progress."
 
 	// Operational.
 	jsonFlagDescription = "Optional. Output in JSON format."
