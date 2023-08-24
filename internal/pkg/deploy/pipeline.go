@@ -567,8 +567,8 @@ func (stg *PipelineStage) PreDeployments() ([]PrePostDeployAction, error) {
 	var namedRankables []namedRankable
 	for name, action := range stg.preDeployments {
 		namedRankables = append(namedRankables, namedRankable{
-			rankable: action,
-			name:     name,
+			name:         name,
+			dependencies: action.Dependencies(),
 		})
 	}
 	topo, err := graph.TopologicalOrder(stg.buildActionsGraph(namedRankables))
@@ -617,8 +617,8 @@ func (stg *PipelineStage) Deployments() ([]DeployAction, error) {
 	var namedRankables []namedRankable
 	for name, action := range stg.deployments {
 		namedRankables = append(namedRankables, namedRankable{
-			rankable: action,
-			name:     name,
+			name:         name,
+			dependencies: action.Dependencies(),
 		})
 	}
 	topo, err := graph.TopologicalOrder(stg.buildActionsGraph(namedRankables))
@@ -673,8 +673,8 @@ func (stg *PipelineStage) PostDeployments() ([]PrePostDeployAction, error) {
 	var namedRankables []namedRankable
 	for name, action := range stg.postDeployments {
 		namedRankables = append(namedRankables, namedRankable{
-			rankable: action,
-			name:     name,
+			name:         name,
+			dependencies: action.Dependencies(),
 		})
 	}
 
@@ -740,12 +740,8 @@ func (stg *PipelineStage) Test() (*TestCommandsAction, error) {
 }
 
 type namedRankable struct {
-	rankable rankable
-	name     string
-}
-
-type rankable interface {
-	Dependencies() []string
+	name         string
+	dependencies []string
 }
 
 func (stg *PipelineStage) buildActionsGraph(rankables []namedRankable) *graph.Graph[string] {
@@ -756,10 +752,10 @@ func (stg *PipelineStage) buildActionsGraph(rankables []namedRankable) *graph.Gr
 	digraph := graph.New(names...)
 
 	for _, r := range rankables {
-		if r.rankable == nil || r.rankable.Dependencies() == nil {
+		if r.dependencies == nil {
 			continue
 		}
-		for _, dependency := range r.rankable.Dependencies() {
+		for _, dependency := range r.dependencies {
 			digraph.Add(graph.Edge[string]{
 				From: dependency, // Dependency must be completed before name.
 				To:   r.name,
