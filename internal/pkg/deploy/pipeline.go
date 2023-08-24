@@ -564,14 +564,14 @@ func (stg *PipelineStage) PreDeployments() ([]PrePostDeployAction, error) {
 		prevActions = append(prevActions, approval)
 	}
 
-	var rankableDeps []rankableDeployment
+	var namedRankables []namedRankable
 	for name, action := range stg.preDeployments {
-		rankableDeps = append(rankableDeps, rankableDeployment{
+		namedRankables = append(namedRankables, namedRankable{
 			rankable: action,
 			name:     name,
 		})
 	}
-	topo, err := graph.TopologicalOrder(stg.buildDeploymentsGraph(rankableDeps))
+	topo, err := graph.TopologicalOrder(stg.buildActionsGraph(namedRankables))
 	if err != nil {
 		return nil, fmt.Errorf("find an ordering for deployments: %v", err)
 	}
@@ -614,14 +614,14 @@ func (stg *PipelineStage) Deployments() ([]DeployAction, error) {
 	for i := range preDeployActions {
 		prevActions = append(prevActions, &preDeployActions[i])
 	}
-	var rankableDeps []rankableDeployment
+	var namedRankables []namedRankable
 	for name, action := range stg.deployments {
-		rankableDeps = append(rankableDeps, rankableDeployment{
+		namedRankables = append(namedRankables, namedRankable{
 			rankable: action,
 			name:     name,
 		})
 	}
-	topo, err := graph.TopologicalOrder(stg.buildDeploymentsGraph(rankableDeps))
+	topo, err := graph.TopologicalOrder(stg.buildActionsGraph(namedRankables))
 	if err != nil {
 		return nil, fmt.Errorf("find an ordering for deployments: %v", err)
 	}
@@ -670,15 +670,15 @@ func (stg *PipelineStage) PostDeployments() ([]PrePostDeployAction, error) {
 	for i := range deployActions {
 		prevActions = append(prevActions, &deployActions[i])
 	}
-	var rankableDeps []rankableDeployment
+	var namedRankables []namedRankable
 	for name, action := range stg.postDeployments {
-		rankableDeps = append(rankableDeps, rankableDeployment{
+		namedRankables = append(namedRankables, namedRankable{
 			rankable: action,
 			name:     name,
 		})
 	}
 
-	topo, err := graph.TopologicalOrder(stg.buildDeploymentsGraph(rankableDeps))
+	topo, err := graph.TopologicalOrder(stg.buildActionsGraph(namedRankables))
 	if err != nil {
 		return nil, fmt.Errorf("find an ordering for deployments: %v", err)
 	}
@@ -739,7 +739,7 @@ func (stg *PipelineStage) Test() (*TestCommandsAction, error) {
 	}, nil
 }
 
-type rankableDeployment struct {
+type namedRankable struct {
 	rankable rankable
 	name     string
 }
@@ -748,21 +748,21 @@ type rankable interface {
 	Dependencies() []string
 }
 
-func (stg *PipelineStage) buildDeploymentsGraph(rankableDeps []rankableDeployment) *graph.Graph[string] {
+func (stg *PipelineStage) buildActionsGraph(rankables []namedRankable) *graph.Graph[string] {
 	var names []string
-	for _, rankableDep := range rankableDeps {
-		names = append(names, rankableDep.name)
+	for _, r := range rankables {
+		names = append(names, r.name)
 	}
 	digraph := graph.New(names...)
 
-	for _, rankableDep := range rankableDeps {
-		if rankableDep.rankable == nil || rankableDep.rankable.Dependencies() == nil {
+	for _, r := range rankables {
+		if r.rankable == nil || r.rankable.Dependencies() == nil {
 			continue
 		}
-		for _, dependency := range rankableDep.rankable.Dependencies() {
+		for _, dependency := range r.rankable.Dependencies() {
 			digraph.Add(graph.Edge[string]{
 				From: dependency, // Dependency must be completed before name.
-				To:   rankableDep.name,
+				To:   r.name,
 			})
 		}
 	}
