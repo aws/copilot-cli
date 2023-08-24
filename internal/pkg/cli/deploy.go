@@ -218,7 +218,7 @@ func (o *deployOpts) maybeInitWkld() error {
 	}
 
 	if !aws.BoolValue(o.yesInitWkld) {
-		return fmt.Errorf("workload %s is uninitialized but --%s=false was specified", o.name, yesInitWorkloadFlag)
+		return fmt.Errorf("workload %s is uninitialized but --%s=false was specified", o.deployWkldVars.name, yesInitWorkloadFlag)
 	}
 
 	wkldAdder := o.newWorkloadAdder()

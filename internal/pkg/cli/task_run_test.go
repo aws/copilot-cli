@@ -624,7 +624,7 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 			},
 			mockSel: func(m *mocks.MockappEnvSelector) {
 				m.EXPECT().Environment(taskRunEnvPrompt, gomock.Any(),
-					"my-app", appEnvOptionNone).Return("test", nil)
+					"my-app", prompt.Option{Value: appEnvOptionNone}).Return("test", nil)
 			},
 
 			wantedEnv: "test",
