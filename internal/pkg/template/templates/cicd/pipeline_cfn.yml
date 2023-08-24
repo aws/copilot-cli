@@ -240,7 +240,7 @@ Resources:
             {{- end}}
             {{- range $action := $stage.PreDeployments }}
             - Name: {{ $action.Name }}
-              Region: {{ $stage.Region }}
+              Region: !Ref AWS::Region
               RunOrder: {{ $action.RunOrder}}
               ActionTypeId:
                 Category: Build
@@ -256,7 +256,7 @@ Resources:
             {{- end}}
             {{- range $action := $stage.PostDeployments }}
             - Name: {{ $action.Name }}
-              Region: {{ $stage.Region }}
+              Region: !Ref AWS::Region
               RunOrder: {{ $action.RunOrder}}
               ActionTypeId:
                 Category: Build
