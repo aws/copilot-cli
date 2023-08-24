@@ -347,6 +347,7 @@ type: Load Balanced Web Service`)
 
 			},
 			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetEnvironment("app", "test").Return(&mockEnv, nil)
 				m.EXPECT().ListWorkloads("app").Return([]*config.Workload{&mockJob}, nil)
 				m.EXPECT().GetWorkload("app", "mailer").Return(&mockJob, nil)
 			},
@@ -355,6 +356,7 @@ type: Load Balanced Web Service`)
 				m.EXPECT().AddWorkloadToApp(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
 			mockWs: func(m *mocks.MockwsWlDirReader) {
+				m.EXPECT().ListEnvironments().Return([]string{"test"}, nil)
 				m.EXPECT().ReadWorkloadManifest("fe").Times(0)
 			},
 		},
@@ -481,6 +483,7 @@ type: Load Balanced Web Service`)
 			},
 			mockCmd: func(m *mocks.Mockcmd) {},
 			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetEnvironment("app", "test").Return(&mockEnv, nil)
 				m.EXPECT().GetWorkload("app", "fe").Return(&mockWl, nil)
 				m.EXPECT().ListWorkloads("app").Return([]*config.Workload{&mockWl}, nil)
 
@@ -490,6 +493,7 @@ type: Load Balanced Web Service`)
 				m.EXPECT().AddWorkloadToApp(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
 			mockWs: func(m *mocks.MockwsWlDirReader) {
+				m.EXPECT().ListEnvironments().Return([]string{"test"}, nil)
 				m.EXPECT().ReadWorkloadManifest("fe").Times(0)
 			},
 		},
