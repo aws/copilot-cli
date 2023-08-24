@@ -565,9 +565,9 @@ func (stg *PipelineStage) PreDeployments() ([]PrePostDeployAction, error) {
 	}
 
 	var rankableDeps []rankableDeployment
-	for name := range stg.preDeployments {
+	for name, action := range stg.preDeployments {
 		rankableDeps = append(rankableDeps, rankableDeployment{
-			rankable: stg.preDeployments[name],
+			rankable: action,
 			name:     name,
 		})
 	}
@@ -577,9 +577,7 @@ func (stg *PipelineStage) PreDeployments() ([]PrePostDeployAction, error) {
 	}
 
 	var actions []PrePostDeployAction
-	var buildspecPath string
 	for name, conf := range stg.preDeployments {
-		buildspecPath = conf.BuildspecPath
 		actions = append(actions, PrePostDeployAction{
 			name: name,
 			action: action{
@@ -588,7 +586,7 @@ func (stg *PipelineStage) PreDeployments() ([]PrePostDeployAction, error) {
 			Build: Build{
 				Image:           defaultPipelineBuildImage,
 				EnvironmentType: defaultPipelineEnvironmentType,
-				BuildspecPath:   buildspecPath,
+				BuildspecPath:   conf.BuildspecPath,
 			},
 			ranker: topo,
 		})
@@ -617,9 +615,9 @@ func (stg *PipelineStage) Deployments() ([]DeployAction, error) {
 		prevActions = append(prevActions, &preDeployActions[i])
 	}
 	var rankableDeps []rankableDeployment
-	for name := range stg.deployments {
+	for name, action := range stg.deployments {
 		rankableDeps = append(rankableDeps, rankableDeployment{
-			rankable: stg.deployments[name],
+			rankable: action,
 			name:     name,
 		})
 	}
@@ -673,9 +671,9 @@ func (stg *PipelineStage) PostDeployments() ([]PrePostDeployAction, error) {
 		prevActions = append(prevActions, &deployActions[i])
 	}
 	var rankableDeps []rankableDeployment
-	for name := range stg.postDeployments {
+	for name, action := range stg.postDeployments {
 		rankableDeps = append(rankableDeps, rankableDeployment{
-			rankable: stg.postDeployments[name],
+			rankable: action,
 			name:     name,
 		})
 	}
@@ -686,9 +684,7 @@ func (stg *PipelineStage) PostDeployments() ([]PrePostDeployAction, error) {
 	}
 
 	var actions []PrePostDeployAction
-	var buildspecPath string
 	for name, conf := range stg.postDeployments {
-		buildspecPath = conf.BuildspecPath
 		actions = append(actions, PrePostDeployAction{
 			name: name,
 			action: action{
@@ -697,7 +693,7 @@ func (stg *PipelineStage) PostDeployments() ([]PrePostDeployAction, error) {
 			Build: Build{
 				Image:           defaultPipelineBuildImage,
 				EnvironmentType: defaultPipelineEnvironmentType,
-				BuildspecPath:   buildspecPath,
+				BuildspecPath:   conf.BuildspecPath,
 			},
 			ranker: topo,
 		})
