@@ -240,6 +240,10 @@ Resources:
             Value: !Sub '${AWS::AccountId}'
           - Name: PARTITION
             Value: !Ref AWS::Partition
+          - Name: COPILOT_APPLICATION_NAME
+            Value: phonetool
+          - Name: COPILOT_ENVIRONMENT_NAME
+            Value: test
       Source:
         Type: CODEPIPELINE
         BuildSpec: ./buildspec.yml
@@ -351,6 +355,10 @@ Resources:
             Value: !Sub '${AWS::AccountId}'
           - Name: PARTITION
             Value: !Ref AWS::Partition
+          - Name: COPILOT_APPLICATION_NAME
+            Value: phonetool
+          - Name: COPILOT_ENVIRONMENT_NAME
+            Value: test
       Source:
         Type: CODEPIPELINE
         BuildSpec: copilot/pipelines/buildspec.yml
@@ -465,6 +473,10 @@ Resources:
             Value: !Sub '${AWS::AccountId}'
           - Name: PARTITION
             Value: !Ref AWS::Partition
+          - Name: COPILOT_APPLICATION_NAME
+            Value: phonetool
+          - Name: COPILOT_ENVIRONMENT_NAME
+            Value: test
       Source:
         Type: CODEPIPELINE
         BuildSpec: .anotherPath/buildspec.yml
@@ -579,6 +591,10 @@ Resources:
             Value: !Sub '${AWS::AccountId}'
           - Name: PARTITION
             Value: !Ref AWS::Partition
+          - Name: COPILOT_APPLICATION_NAME
+            Value: phonetool
+          - Name: COPILOT_ENVIRONMENT_NAME
+            Value: test
       Source:
         Type: CODEPIPELINE
         BuildSpec: .somePath/buildspec.yml
@@ -693,6 +709,10 @@ Resources:
             Value: !Sub '${AWS::AccountId}'
           - Name: PARTITION
             Value: !Ref AWS::Partition
+          - Name: COPILOT_APPLICATION_NAME
+            Value: phonetool
+          - Name: COPILOT_ENVIRONMENT_NAME
+            Value: test
       Source:
         Type: CODEPIPELINE
         BuildSpec: .someOtherPath/buildspec.yml
