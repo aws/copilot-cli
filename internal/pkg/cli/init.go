@@ -553,6 +553,7 @@ func (o *initOpts) askEnvNameAndMaybeInit() error {
 		}
 		// Customer has selected an existing environment. Return early.
 		if selectedEnv != envPromptCreateNew {
+			o.envName = &selectedEnv
 			return nil
 		}
 
