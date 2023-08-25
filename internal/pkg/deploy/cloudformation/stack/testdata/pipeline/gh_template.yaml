@@ -131,6 +131,572 @@ Resources:
         Type: CODEPIPELINE
         BuildSpec: copilot/pipelines/phonetool-pipeline/buildspec.yml
       TimeoutInMinutes: 60
+  PretestDeploymentActionpreAction1BuildProjectRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - codebuild.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/AmazonSSMReadOnlyAccess' # for env ls
+        - 'arn:aws:iam::aws:policy/AWSCloudFormationReadOnlyAccess' # for service package
+
+      Policies:
+        - PolicyName: assume-env-manager
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Resource: arn:aws:iam::1111:role/phonetool-test-EnvManagerRole
+                Action:
+                  - sts:AssumeRole
+        - PolicyName: build-role-policy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - codebuild:CreateReportGroup
+                  - codebuild:CreateReport
+                  - codebuild:UpdateReport
+                  - codebuild:BatchPutTestCases
+                  - codebuild:BatchPutCodeCoverages
+                Resource: !Sub arn:aws:codebuild:${AWS::Region}:${AWS::AccountId}:report-group/pipeline-phonetool-*
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                # TODO: This might not be necessary. We may only need the bucket
+                # that is in the same region as the pipeline.
+                # Loop through all the artifact buckets created in the stackset
+                Resource:
+                  - !Join [ '', [ 'arn:aws:s3:::', 'fancy-bucket' ] ]
+                  - !Join [ '', [ 'arn:aws:s3:::', 'fancy-bucket', '/*' ] ]
+              - Effect: Allow
+                Action:
+                  # TODO: scope this down if possible
+                  - kms:*
+                # TODO: This might not be necessary. We may only need the KMS key
+                # that is in the same region as the pipeline.
+                # Loop through all the KMS keys used to en/decrypt artifacts
+                # across (cross-regional) pipeline stages, with each stage
+                # backed by a (regional) S3 bucket.
+                Resource:
+                  - arn:aws:kms:us-west-2:1111:key/abcd
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: arn:aws:logs:*:*:*
+              - Effect: Allow
+                Action:
+                  - ecr:GetAuthorizationToken
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - ecr:DescribeImageScanFindings
+                  - ecr:GetLifecyclePolicyPreview
+                  - ecr:GetDownloadUrlForLayer
+                  - ecr:BatchGetImage
+                  - ecr:DescribeImages
+                  - ecr:ListTagsForResource
+                  - ecr:BatchCheckLayerAvailability
+                  - ecr:GetLifecyclePolicy
+                  - ecr:GetRepositoryPolicy
+                  - ecr:PutImage
+                  - ecr:InitiateLayerUpload
+                  - ecr:UploadLayerPart
+                  - ecr:CompleteLayerUpload
+                Resource: '*'
+                Condition: { StringEquals: { 'ecr:ResourceTag/copilot-application': phonetool } }
+
+  PretestDeploymentActionpreAction1:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      EncryptionKey: !ImportValue phonetool-ArtifactKey
+      ServiceRole: !GetAtt PretestDeploymentActionpreAction1BuildProjectRole.Arn
+      Artifacts:
+        Type: CODEPIPELINE
+      Cache:
+        Modes:
+          - LOCAL_DOCKER_LAYER_CACHE
+        Type: LOCAL
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        PrivilegedMode: true
+        Image: aws/codebuild/amazonlinux2-x86_64-standard:4.0
+        EnvironmentVariables:
+          - Name: AWS_ACCOUNT_ID
+            Value: !Sub '${AWS::AccountId}'
+          - Name: PARTITION
+            Value: !Ref AWS::Partition
+      Source:
+        Type: CODEPIPELINE
+        BuildSpec: ./buildspec.yml
+      TimeoutInMinutes: 60
+  PretestDeploymentActionpreAction2BuildProjectRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - codebuild.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/AmazonSSMReadOnlyAccess' # for env ls
+        - 'arn:aws:iam::aws:policy/AWSCloudFormationReadOnlyAccess' # for service package
+      Policies:
+        - PolicyName: assume-env-manager
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Resource: arn:aws:iam::1111:role/phonetool-test-EnvManagerRole
+                Action:
+                  - sts:AssumeRole
+        - PolicyName: build-role-policy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - codebuild:CreateReportGroup
+                  - codebuild:CreateReport
+                  - codebuild:UpdateReport
+                  - codebuild:BatchPutTestCases
+                  - codebuild:BatchPutCodeCoverages
+                Resource: !Sub arn:aws:codebuild:${AWS::Region}:${AWS::AccountId}:report-group/pipeline-phonetool-*
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                # TODO: This might not be necessary. We may only need the bucket
+                # that is in the same region as the pipeline.
+                # Loop through all the artifact buckets created in the stackset
+                Resource:
+                  - !Join [ '', [ 'arn:aws:s3:::', 'fancy-bucket' ] ]
+                  - !Join [ '', [ 'arn:aws:s3:::', 'fancy-bucket', '/*' ] ]
+              - Effect: Allow
+                Action:
+                  # TODO: scope this down if possible
+                  - kms:*
+                # TODO: This might not be necessary. We may only need the KMS key
+                # that is in the same region as the pipeline.
+                # Loop through all the KMS keys used to en/decrypt artifacts
+                # across (cross-regional) pipeline stages, with each stage
+                # backed by a (regional) S3 bucket.
+                Resource:
+                  - arn:aws:kms:us-west-2:1111:key/abcd
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: arn:aws:logs:*:*:*
+              - Effect: Allow
+                Action:
+                  - ecr:GetAuthorizationToken
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - ecr:DescribeImageScanFindings
+                  - ecr:GetLifecyclePolicyPreview
+                  - ecr:GetDownloadUrlForLayer
+                  - ecr:BatchGetImage
+                  - ecr:DescribeImages
+                  - ecr:ListTagsForResource
+                  - ecr:BatchCheckLayerAvailability
+                  - ecr:GetLifecyclePolicy
+                  - ecr:GetRepositoryPolicy
+                  - ecr:PutImage
+                  - ecr:InitiateLayerUpload
+                  - ecr:UploadLayerPart
+                  - ecr:CompleteLayerUpload
+                Resource: '*'
+                Condition: { StringEquals: { 'ecr:ResourceTag/copilot-application': phonetool } }
+  PretestDeploymentActionpreAction2:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      EncryptionKey: !ImportValue phonetool-ArtifactKey
+      ServiceRole: !GetAtt PretestDeploymentActionpreAction2BuildProjectRole.Arn
+      Artifacts:
+        Type: CODEPIPELINE
+      Cache:
+        Modes:
+          - LOCAL_DOCKER_LAYER_CACHE
+        Type: LOCAL
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        PrivilegedMode: true
+        Image: aws/codebuild/amazonlinux2-x86_64-standard:4.0
+        EnvironmentVariables:
+          - Name: AWS_ACCOUNT_ID
+            Value: !Sub '${AWS::AccountId}'
+          - Name: PARTITION
+            Value: !Ref AWS::Partition
+      Source:
+        Type: CODEPIPELINE
+        BuildSpec: copilot/pipelines/buildspec.yml
+      TimeoutInMinutes: 60
+  PosttestDeploymentActionpostAction1BuildProjectRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - codebuild.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/AmazonSSMReadOnlyAccess' # for env ls
+        - 'arn:aws:iam::aws:policy/AWSCloudFormationReadOnlyAccess' # for service package
+
+      Policies:
+        - PolicyName: assume-env-manager
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Resource: arn:aws:iam::1111:role/phonetool-test-EnvManagerRole
+                Action:
+                  - sts:AssumeRole
+        - PolicyName: build-role-policy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - codebuild:CreateReportGroup
+                  - codebuild:CreateReport
+                  - codebuild:UpdateReport
+                  - codebuild:BatchPutTestCases
+                  - codebuild:BatchPutCodeCoverages
+                Resource: !Sub arn:aws:codebuild:${AWS::Region}:${AWS::AccountId}:report-group/pipeline-phonetool-*
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                # TODO: This might not be necessary. We may only need the bucket
+                # that is in the same region as the pipeline.
+                # Loop through all the artifact buckets created in the stackset
+                Resource:
+                  - !Join [ '', [ 'arn:aws:s3:::', 'fancy-bucket' ] ]
+                  - !Join [ '', [ 'arn:aws:s3:::', 'fancy-bucket', '/*' ] ]
+              - Effect: Allow
+                Action:
+                  # TODO: scope this down if possible
+                  - kms:*
+                # TODO: This might not be necessary. We may only need the KMS key
+                # that is in the same region as the pipeline.
+                # Loop through all the KMS keys used to en/decrypt artifacts
+                # across (cross-regional) pipeline stages, with each stage
+                # backed by a (regional) S3 bucket.
+                Resource:
+                  - arn:aws:kms:us-west-2:1111:key/abcd
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: arn:aws:logs:*:*:*
+              - Effect: Allow
+                Action:
+                  - ecr:GetAuthorizationToken
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - ecr:DescribeImageScanFindings
+                  - ecr:GetLifecyclePolicyPreview
+                  - ecr:GetDownloadUrlForLayer
+                  - ecr:BatchGetImage
+                  - ecr:DescribeImages
+                  - ecr:ListTagsForResource
+                  - ecr:BatchCheckLayerAvailability
+                  - ecr:GetLifecyclePolicy
+                  - ecr:GetRepositoryPolicy
+                  - ecr:PutImage
+                  - ecr:InitiateLayerUpload
+                  - ecr:UploadLayerPart
+                  - ecr:CompleteLayerUpload
+                Resource: '*'
+                Condition: { StringEquals: { 'ecr:ResourceTag/copilot-application': phonetool } }
+
+  PosttestDeploymentActionpostAction1:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      EncryptionKey: !ImportValue phonetool-ArtifactKey
+      ServiceRole: !GetAtt PosttestDeploymentActionpostAction1BuildProjectRole.Arn
+      Artifacts:
+        Type: CODEPIPELINE
+
+      Cache:
+        Modes:
+          - LOCAL_DOCKER_LAYER_CACHE
+        Type: LOCAL
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        PrivilegedMode: true
+        Image: aws/codebuild/amazonlinux2-x86_64-standard:4.0
+        EnvironmentVariables:
+          - Name: AWS_ACCOUNT_ID
+            Value: !Sub '${AWS::AccountId}'
+          - Name: PARTITION
+            Value: !Ref AWS::Partition
+      Source:
+        Type: CODEPIPELINE
+        BuildSpec: .anotherPath/buildspec.yml
+      TimeoutInMinutes: 60
+  PosttestDeploymentActionpostAction2BuildProjectRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - codebuild.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/AmazonSSMReadOnlyAccess' # for env ls
+        - 'arn:aws:iam::aws:policy/AWSCloudFormationReadOnlyAccess' # for service package
+
+      Policies:
+        - PolicyName: assume-env-manager
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Resource: arn:aws:iam::1111:role/phonetool-test-EnvManagerRole
+                Action:
+                  - sts:AssumeRole
+        - PolicyName: build-role-policy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - codebuild:CreateReportGroup
+                  - codebuild:CreateReport
+                  - codebuild:UpdateReport
+                  - codebuild:BatchPutTestCases
+                  - codebuild:BatchPutCodeCoverages
+                Resource: !Sub arn:aws:codebuild:${AWS::Region}:${AWS::AccountId}:report-group/pipeline-phonetool-*
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                # TODO: This might not be necessary. We may only need the bucket
+                # that is in the same region as the pipeline.
+                # Loop through all the artifact buckets created in the stackset
+                Resource:
+                  - !Join [ '', [ 'arn:aws:s3:::', 'fancy-bucket' ] ]
+                  - !Join [ '', [ 'arn:aws:s3:::', 'fancy-bucket', '/*' ] ]
+              - Effect: Allow
+                Action:
+                  # TODO: scope this down if possible
+                  - kms:*
+                # TODO: This might not be necessary. We may only need the KMS key
+                # that is in the same region as the pipeline.
+                # Loop through all the KMS keys used to en/decrypt artifacts
+                # across (cross-regional) pipeline stages, with each stage
+                # backed by a (regional) S3 bucket.
+                Resource:
+                  - arn:aws:kms:us-west-2:1111:key/abcd
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: arn:aws:logs:*:*:*
+              - Effect: Allow
+                Action:
+                  - ecr:GetAuthorizationToken
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - ecr:DescribeImageScanFindings
+                  - ecr:GetLifecyclePolicyPreview
+                  - ecr:GetDownloadUrlForLayer
+                  - ecr:BatchGetImage
+                  - ecr:DescribeImages
+                  - ecr:ListTagsForResource
+                  - ecr:BatchCheckLayerAvailability
+                  - ecr:GetLifecyclePolicy
+                  - ecr:GetRepositoryPolicy
+                  - ecr:PutImage
+                  - ecr:InitiateLayerUpload
+                  - ecr:UploadLayerPart
+                  - ecr:CompleteLayerUpload
+                Resource: '*'
+                Condition: { StringEquals: { 'ecr:ResourceTag/copilot-application': phonetool } }
+
+  PosttestDeploymentActionpostAction2:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      EncryptionKey: !ImportValue phonetool-ArtifactKey
+      ServiceRole: !GetAtt PosttestDeploymentActionpostAction2BuildProjectRole.Arn
+      Artifacts:
+        Type: CODEPIPELINE
+
+      Cache:
+        Modes:
+          - LOCAL_DOCKER_LAYER_CACHE
+        Type: LOCAL
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        PrivilegedMode: true
+        Image: aws/codebuild/amazonlinux2-x86_64-standard:4.0
+        EnvironmentVariables:
+          - Name: AWS_ACCOUNT_ID
+            Value: !Sub '${AWS::AccountId}'
+          - Name: PARTITION
+            Value: !Ref AWS::Partition
+      Source:
+        Type: CODEPIPELINE
+        BuildSpec: .somePath/buildspec.yml
+      TimeoutInMinutes: 60
+  PosttestDeploymentActionpostAction3BuildProjectRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - codebuild.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/AmazonSSMReadOnlyAccess' # for env ls
+        - 'arn:aws:iam::aws:policy/AWSCloudFormationReadOnlyAccess' # for service package
+
+      Policies:
+        - PolicyName: assume-env-manager
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Resource: arn:aws:iam::1111:role/phonetool-test-EnvManagerRole
+                Action:
+                  - sts:AssumeRole
+        - PolicyName: build-role-policy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - codebuild:CreateReportGroup
+                  - codebuild:CreateReport
+                  - codebuild:UpdateReport
+                  - codebuild:BatchPutTestCases
+                  - codebuild:BatchPutCodeCoverages
+                Resource: !Sub arn:aws:codebuild:${AWS::Region}:${AWS::AccountId}:report-group/pipeline-phonetool-*
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                # TODO: This might not be necessary. We may only need the bucket
+                # that is in the same region as the pipeline.
+                # Loop through all the artifact buckets created in the stackset
+                Resource:
+                  - !Join [ '', [ 'arn:aws:s3:::', 'fancy-bucket' ] ]
+                  - !Join [ '', [ 'arn:aws:s3:::', 'fancy-bucket', '/*' ] ]
+              - Effect: Allow
+                Action:
+                  # TODO: scope this down if possible
+                  - kms:*
+                # TODO: This might not be necessary. We may only need the KMS key
+                # that is in the same region as the pipeline.
+                # Loop through all the KMS keys used to en/decrypt artifacts
+                # across (cross-regional) pipeline stages, with each stage
+                # backed by a (regional) S3 bucket.
+                Resource:
+                  - arn:aws:kms:us-west-2:1111:key/abcd
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: arn:aws:logs:*:*:*
+              - Effect: Allow
+                Action:
+                  - ecr:GetAuthorizationToken
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - ecr:DescribeImageScanFindings
+                  - ecr:GetLifecyclePolicyPreview
+                  - ecr:GetDownloadUrlForLayer
+                  - ecr:BatchGetImage
+                  - ecr:DescribeImages
+                  - ecr:ListTagsForResource
+                  - ecr:BatchCheckLayerAvailability
+                  - ecr:GetLifecyclePolicy
+                  - ecr:GetRepositoryPolicy
+                  - ecr:PutImage
+                  - ecr:InitiateLayerUpload
+                  - ecr:UploadLayerPart
+                  - ecr:CompleteLayerUpload
+                Resource: '*'
+                Condition: { StringEquals: { 'ecr:ResourceTag/copilot-application': phonetool } }
+
+  PosttestDeploymentActionpostAction3:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      EncryptionKey: !ImportValue phonetool-ArtifactKey
+      ServiceRole: !GetAtt PosttestDeploymentActionpostAction3BuildProjectRole.Arn
+      Artifacts:
+        Type: CODEPIPELINE
+
+      Cache:
+        Modes:
+          - LOCAL_DOCKER_LAYER_CACHE
+        Type: LOCAL
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        PrivilegedMode: true
+        Image: aws/codebuild/amazonlinux2-x86_64-standard:4.0
+        EnvironmentVariables:
+          - Name: AWS_ACCOUNT_ID
+            Value: !Sub '${AWS::AccountId}'
+          - Name: PARTITION
+            Value: !Ref AWS::Partition
+      Source:
+        Type: CODEPIPELINE
+        BuildSpec: .someOtherPath/buildspec.yml
+      TimeoutInMinutes: 60
   PipelineRole:
     Type: AWS::IAM::Role
     Properties:
@@ -224,26 +790,6 @@ Resources:
               - arn:aws:iam::1111:role/phonetool-test-EnvManagerRole
       Roles:
         - !Ref PipelineRole
-  BuildTestCommandstest:
-    Type: AWS::CodeBuild::Project
-    Properties:
-      EncryptionKey: !ImportValue phonetool-ArtifactKey
-      ServiceRole: !GetAtt BuildProjectRole.Arn
-      Artifacts:
-        Type: NO_ARTIFACTS
-      Environment:
-        Type: LINUX_CONTAINER
-        Image: aws/codebuild/amazonlinux2-x86_64-standard:4.0
-        ComputeType: BUILD_GENERAL1_SMALL
-        PrivilegedMode: true
-      Source:
-        Type: NO_SOURCE
-        BuildSpec: |
-          version: 0.2
-          phases:
-            build:
-              commands:
-                - echo "test"
   Pipeline:
     Type: AWS::CodePipeline::Pipeline
     DependsOn:
@@ -299,6 +845,71 @@ Resources:
                 Version: 1
                 Provider: Manual
               RunOrder: 1
+            - Name: preAction1
+              RunOrder: 2
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Version: 1
+                Provider: CodeBuild
+              Configuration:
+                ProjectName: !Ref PretestDeploymentActionpreAction1
+              InputArtifacts:
+                - Name: SCCheckoutArtifact
+              OutputArtifacts:
+                - Name: PretestDeploymentActionpreAction1Output
+            - Name: preAction2
+              RunOrder: 3
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Version: 1
+                Provider: CodeBuild
+              Configuration:
+                ProjectName: !Ref PretestDeploymentActionpreAction2
+              InputArtifacts:
+                - Name: SCCheckoutArtifact
+              OutputArtifacts:
+                - Name: PretestDeploymentActionpreAction2Output
+            - Name: postAction1
+              RunOrder: 5
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Version: 1
+                Provider: CodeBuild
+              Configuration:
+                ProjectName: !Ref PosttestDeploymentActionpostAction1
+              InputArtifacts:
+                - Name: SCCheckoutArtifact
+              OutputArtifacts:
+                - Name: PosttestDeploymentActionpostAction1Output
+            - Name: postAction2
+              RunOrder: 6
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Version: 1
+                Provider: CodeBuild
+              Configuration:
+                ProjectName: !Ref PosttestDeploymentActionpostAction2
+              InputArtifacts:
+                - Name: SCCheckoutArtifact
+              OutputArtifacts:
+                - Name: PosttestDeploymentActionpostAction2Output
+            - Name: postAction3
+              RunOrder: 5
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Version: 1
+                Provider: CodeBuild
+              Configuration:
+                ProjectName: !Ref PosttestDeploymentActionpostAction3
+              InputArtifacts:
+                - Name: SCCheckoutArtifact
+              OutputArtifacts:
+                - Name: PosttestDeploymentActionpostAction3Output
             - Name: CreateOrUpdate-api-test
               Region: us-west-2
               ActionTypeId:
@@ -315,7 +926,7 @@ Resources:
                 RoleArn: arn:aws:iam::1111:role/phonetool-test-CFNExecutionRole
               InputArtifacts:
                 - Name: BuildOutput
-              RunOrder: 2
+              RunOrder: 4
               RoleArn: arn:aws:iam::1111:role/phonetool-test-EnvManagerRole
             - Name: CreateOrUpdate-frontend-test
               Region: us-west-2
@@ -333,19 +944,8 @@ Resources:
                 RoleArn: arn:aws:iam::1111:role/phonetool-test-CFNExecutionRole
               InputArtifacts:
                 - Name: BuildOutput
-              RunOrder: 2
+              RunOrder: 4
               RoleArn: arn:aws:iam::1111:role/phonetool-test-EnvManagerRole
-            - Name: TestCommands
-              ActionTypeId:
-                Category: Test
-                Owner: AWS
-                Version: 1
-                Provider: CodeBuild
-              Configuration:
-                ProjectName: !Ref BuildTestCommandstest
-              RunOrder: 3
-              InputArtifacts:
-                - Name: SCCheckoutArtifact
 Outputs:
   PipelineConnectionARN:
     Description: "ARN of CodeStar Connections connection"

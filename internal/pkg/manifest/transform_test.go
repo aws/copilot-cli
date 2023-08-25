@@ -1074,17 +1074,17 @@ func TestEfsVolumeConfigurationTransformer_Transformer(t *testing.T) {
 				e.GID = aws.Uint32(53589793)
 			},
 			override: func(e *EFSVolumeConfiguration) {
-				e.FileSystemID = &StringOrFromCFN{Plain: aws.String("mockFileSystem")}
+				e.FileSystemID = StringOrFromCFN{Plain: aws.String("mockFileSystem")}
 				e.RootDirectory = aws.String("mockRootDir")
 			},
 			wanted: func(e *EFSVolumeConfiguration) {
-				e.FileSystemID = &StringOrFromCFN{Plain: aws.String("mockFileSystem")}
+				e.FileSystemID = StringOrFromCFN{Plain: aws.String("mockFileSystem")}
 				e.RootDirectory = aws.String("mockRootDir")
 			},
 		},
 		"BYO config set to empty if UID config is not empty": {
 			original: func(e *EFSVolumeConfiguration) {
-				e.FileSystemID = &StringOrFromCFN{FromCFN: fromCFN{Name: aws.String("mockFileSystem")}}
+				e.FileSystemID = StringOrFromCFN{FromCFN: fromCFN{Name: aws.String("mockFileSystem")}}
 				e.RootDirectory = aws.String("mockRootDir")
 			},
 			override: func(e *EFSVolumeConfiguration) {

@@ -615,9 +615,44 @@ func (p Pipeline) Validate() error {
 		return fmt.Errorf(`pipeline name '%s' must be shorter than 100 characters`, p.Name)
 	}
 	for _, stg := range p.Stages {
+		if err := stg.validate(); err != nil {
+			return fmt.Errorf(`validate stage %q for pipeline %q: %w`, stg.Name, p.Name, err)
+		}
 		if err := stg.Deployments.validate(); err != nil {
 			return fmt.Errorf(`validate "deployments" for pipeline stage %s: %w`, stg.Name, err)
 		}
+	}
+	return nil
+}
+
+// validate returns nil if stages are configured correctly.
+func (s PipelineStage) validate() error {
+	if len(s.TestCommands) != 0 && s.PostDeployments != nil {
+		return &errFieldMutualExclusive{
+			firstField:  "post_deployments",
+			secondField: "test_commands",
+			mustExist:   false,
+		}
+	}
+	if s.PreDeployments != nil {
+		for _, preDep := range s.PreDeployments {
+			if preDep.BuildspecPath == "" {
+				return &errFieldMustBeSpecified{
+					missingField: "buildspec",
+				}
+			}
+		}
+
+	}
+	if s.PostDeployments != nil {
+		for _, postDep := range s.PostDeployments {
+			if postDep.BuildspecPath == "" {
+				return &errFieldMustBeSpecified{
+					missingField: "buildspec",
+				}
+			}
+		}
+
 	}
 	return nil
 }
