@@ -203,5 +203,4 @@ Define these actions in [buildspec files]( https://docs.aws.amazon.com/codebuild
 You may specify the run order of the actions using the `depends_on` subfield, just like you would to indicate your desired order of deployments.  
 
 !!! info
-    The CodeBuild projects generated for pre- and post-deployments are deployed in the same region as the pipeline and app.
-To access the VPC of the environment being deployed or deployed to, use Copilot commands in your buildspec or directly in `test_commands`.
+    The CodeBuild projects generated for pre- and post-deployments are deployed in the same region as the pipeline and app. To access the VPC of the environment being deployed or deployed to, use Copilot commands in your buildspec or directly in `test_commands`.
