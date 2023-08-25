@@ -18,7 +18,7 @@ Copilot can set up a CodePipeline for you with a few commands - but before we ju
 
 1. __Source Stage__ - when you push to a configured GitHub, Bitbucket, or CodeCommit repository branch, a new pipeline execution is triggered.
 2. __Build Stage__ - after your source code is pulled from your repository host, your service's container image is built and published to every environment's ECR repository and any input files, such as [addons](../developing/addons/workload.en.md) templates, lambda function zip files, and [environment variable files](../developing/environment-variables.en.md), are uploaded to S3.
-3. __Deploy Stages__ - after your code is built, you can deploy to any or all of your environments, with optional post-deployment tests or manual approvals.
+3. __Deploy Stages__ - after your code is built, you can deploy to any or all of your environments, with optional manual approvals, pre- and post-deployment actions, and/or test commands.
 
 Once you've set up a CodePipeline using Copilot, all you'll have to do is push to your GitHub, Bitbucket, or CodeCommit repository, and CodePipeline will orchestrate the deployments.
 
@@ -103,7 +103,7 @@ You can see every available configuration option for `manifest.yml` on the [pipe
 
 There are 3 main parts of this file: the `name` field, which is the name of your pipeline, the `source` section, which details the repository and branch to track, and the `stages` section, which lists the environments you want this pipeline to deploy to. You can update this anytime, but you must commit and push the changed files and run `copilot pipeline deploy` afterwards.
 
-Typically, you'll update this file if you add new environments you want to deploy to, or want to track a different branch. If you are using CodeStar Connections to connect to your repository and would like to utilize an existing connection rather than let Copilot generate one for you, you may add the connection name here. The pipeline manifest is also where you may add a manual approval step before deployment or commands to run tests (see "Adding Tests," below) after deployment.
+Typically, you'll update this file to add environments to deploy to, specify the order of deployments, add actions for the pipeline to run before or after deployment, or change the branch to track. You may add a manual approval step before deployment or commands to run tests (see "Adding Tests and Other Actions," below). If you are using CodeStar Connections to connect to your repository and would like to utilize an existing connection rather than let Copilot generate one for you, you may add the connection name here.
 
 ### Step 3: Updating the Buildspec (optional)
 
@@ -146,7 +146,7 @@ After creating your pipeline, you can manage the version of Copilot used by your
 ...
 ```
 
-## Adding Tests
+## Adding Tests and Other Actions
 
 Of course, one of the most important parts of a pipeline is the automated testing. To add tests, such as integration or end-to-end tests, that run after a deployment stage, include those commands in the `test_commands` section. If all the tests succeed, your change is promoted to the next stage.
 
@@ -178,3 +178,30 @@ stages:
 ```
 !!! info
     AWS's own Nathan Peck provides a great example of a Copilot pipeline, paying special attention to `test_commands`: https://aws.amazon.com/blogs/containers/automatically-deploying-your-container-application-with-aws-copilot/
+
+For even more power and flexibility, add pre- and post-deployments to your pipeline manifest.
+```yaml
+stages:
+    - name: test
+      require_approval: true
+      pre_deployments:
+        db_migration:
+          buildspec: copilot/pipelines/demo-api-frontend-main/buildspecs/buildspec.yml
+      deployments:
+        orders:
+        warehouse:
+        frontend:
+          depends_on: [orders, warehouse]
+      post_deployments:
+        db_migration:
+          buildspec: copilot/pipelines/demo-api-frontend-main/buildspecs/post_buildspec.yml
+        integration:
+          buildspec: copilot/pipelines/demo-api-frontend-main/buildspecs/integ-buildspec.yml
+          depends_on: [db_migration]
+```
+Define these actions in [buildspec files]( https://docs.aws.amazon.com/codebuild/latest/userguide/build-spec-ref.html) stored locally, and add the paths, relative to your project root, to the manifest.
+You may specify the run order of the actions using the `depends_on` subfield, just like you would to indicate your desired order of deployments.  
+
+!!! info
+    The CodeBuild projects generated for pre- and post-deployments are deployed in the same region as the pipeline and app.
+To access the VPC of the environment being deployed or deployed to, use Copilot commands in your buildspec or directly in `test_commands`.
