@@ -77,7 +77,7 @@ type SidecarMountPoint struct {
 
 // EFSVolumeConfiguration holds options which tell ECS how to reach out to the EFS filesystem.
 type EFSVolumeConfiguration struct {
-	FileSystemID  *StringOrFromCFN    `yaml:"id"`       // Required. Can be specified as "copilot" or "managed" magic keys.
+	FileSystemID  StringOrFromCFN     `yaml:"id"`       // Required. Can be specified as "copilot" or "managed" magic keys.
 	RootDirectory *string             `yaml:"root_dir"` // Default "/". For BYO EFS.
 	AuthConfig    AuthorizationConfig `yaml:"auth"`     // Auth config for BYO EFS.
 	UID           *uint32             `yaml:"uid"`      // UID for managed EFS.
@@ -86,7 +86,7 @@ type EFSVolumeConfiguration struct {
 
 // IsEmpty returns empty if the struct has all zero members.
 func (e *EFSVolumeConfiguration) IsEmpty() bool {
-	return e.FileSystemID == nil && e.RootDirectory == nil && e.AuthConfig.IsEmpty() && e.UID == nil && e.GID == nil
+	return e.FileSystemID.isEmpty() && e.RootDirectory == nil && e.AuthConfig.IsEmpty() && e.UID == nil && e.GID == nil
 }
 
 // EFSConfigOrBool contains custom unmarshaling logic for the `efs` field in the manifest.
@@ -154,7 +154,7 @@ func (e *EFSConfigOrBool) Disabled() bool {
 // EmptyBYOConfig returns true if the `id`, `root_directory`, and `auth` fields are all empty.
 // This would mean that no custom EFS information has been specified.
 func (e *EFSVolumeConfiguration) EmptyBYOConfig() bool {
-	return e.FileSystemID == nil && e.AuthConfig.IsEmpty() && e.RootDirectory == nil
+	return e.FileSystemID.isEmpty() && e.AuthConfig.IsEmpty() && e.RootDirectory == nil
 }
 
 // EmptyUIDConfig returns true if the `uid` and `gid` fields are empty. These fields are mutually exclusive
@@ -164,7 +164,7 @@ func (e *EFSVolumeConfiguration) EmptyUIDConfig() bool {
 }
 
 func (e *EFSVolumeConfiguration) unsetBYOConfig() {
-	e.FileSystemID = nil
+	e.FileSystemID = StringOrFromCFN{}
 	e.AuthConfig = AuthorizationConfig{}
 	e.RootDirectory = nil
 }
