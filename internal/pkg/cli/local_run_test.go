@@ -553,7 +553,7 @@ func TestLocalRunOpts_Execute(t *testing.T) {
 				m.dockerEngine.EXPECT().Stop(expectedRunPauseArgs.ContainerName).Return(nil)
 				m.dockerEngine.EXPECT().Rm(expectedRunPauseArgs.ContainerName).Return(errors.New("rm stop"))
 			},
-			wantedError: fmt.Errorf("clean up %q: stop: stop foo\nclean up %q: rm: rm bar\nclean up %q: rm: rm stop", expectedRunFooArgs.ContainerName, expectedRunBarArgs.ContainerName, expectedRunPauseArgs.ContainerName),
+			wantedError: fmt.Errorf("clean up %q: rm: rm bar\nclean up %q: stop: stop foo\nclean up %q: rm: rm stop", expectedRunBarArgs.ContainerName, expectedRunFooArgs.ContainerName, expectedRunPauseArgs.ContainerName),
 		},
 		"handles ctrl-c successfully, errors from running ignored": {
 			inputAppName:  testAppName,
