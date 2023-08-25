@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -462,6 +463,9 @@ func (o *localRunOpts) cleanUpContainers(ctx context.Context, containerURIs map[
 	}
 
 	if len(errs) > 0 {
+		sort.Slice(errs, func(i, j int) bool {
+			return errs[i].Error() < errs[j].Error()
+		})
 		return errors.Join(errs...)
 	}
 	return nil
