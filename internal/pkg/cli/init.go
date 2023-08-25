@@ -97,8 +97,9 @@ type initOpts struct {
 	sel    configSelector
 	store  environmentStore
 
-	setupWorkloadInit           func(*initOpts, string) error
-	useExistingWorkspaceForCMDs func(*initOpts) error
+	setupWorkloadInit                    func(*initOpts, string) error
+	useExistingWorkspaceForCMDs          func(*initOpts) error
+	tryUseExistingWorkspaceForValidation func(*initOpts)
 }
 
 func newInitOpts(vars initVars) (*initOpts, error) {
@@ -218,11 +219,11 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		deploySvcCmd.sel = sel
 		deployJobCmd.ws = ws
 		deployJobCmd.sel = sel
-		if initWkCmd, ok := o.initWlCmd.(*initSvcOpts); ok {
-			initWkCmd.init = &initialize.WorkloadInitializer{Store: configStore, Ws: ws, Prog: spin, Deployer: deployer}
+		if initSvcCmd, ok := o.initWlCmd.(*initSvcOpts); ok {
+			initSvcCmd.init = &initialize.WorkloadInitializer{Store: configStore, Ws: ws, Prog: spin, Deployer: deployer}
 		}
-		if initWkCmd, ok := o.initWlCmd.(*initJobOpts); ok {
-			initWkCmd.init = &initialize.WorkloadInitializer{Store: configStore, Ws: ws, Prog: spin, Deployer: deployer}
+		if initJobCmd, ok := o.initWlCmd.(*initJobOpts); ok {
+			initJobCmd.init = &initialize.WorkloadInitializer{Store: configStore, Ws: ws, Prog: spin, Deployer: deployer}
 		}
 		return nil
 	}
@@ -343,6 +344,25 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 			return nil
 		},
 		useExistingWorkspaceForCMDs: useExistingWorkspaceClient,
+		tryUseExistingWorkspaceForValidation: func(o *initOpts) {
+			ws, err := workspace.Use(fs)
+			if err != nil {
+				return
+			}
+
+			if initSvcCmd, ok := o.initWlCmd.(*initSvcOpts); ok {
+				initSvcCmd.svcLister = ws
+				initSvcCmd.mftReader = ws
+				initSvcCmd.wsAppName = initAppCmd.name
+				initSvcCmd.wsRoot = ws.ProjectRoot()
+				initSvcCmd.wsPendingCreation = false
+			}
+			if initJobCmd, ok := o.initWlCmd.(*initJobOpts); ok {
+				initJobCmd.mftReader = ws
+				initJobCmd.wsAppName = initAppCmd.name
+				initJobCmd.wsPendingCreation = false
+			}
+		},
 	}, nil
 }
 
@@ -431,6 +451,7 @@ func (o *initOpts) loadWkldCmd() error {
 	if err := o.setupWorkloadInit(o, wkldType); err != nil {
 		return err
 	}
+	o.tryUseExistingWorkspaceForValidation(o)
 
 	return nil
 }
