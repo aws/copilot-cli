@@ -497,6 +497,57 @@ type: Load Balanced Web Service`)
 				m.EXPECT().ReadWorkloadManifest("fe").Times(0)
 			},
 		},
+		"workload init error": {
+			inAppName:         "app",
+			inName:            "fe",
+			inEnvName:         "test",
+			wantedErr:         "add workload to app: some error",
+			inDeployEnv:       aws.Bool(false),
+			inShouldInit:      aws.Bool(true),
+			mockSel:           func(m *mocks.MockwsSelector) {},
+			mockPrompt:        func(m *mocks.Mockprompter) {},
+			mockActionCommand: func(m *mocks.MockactionCommand) {},
+			mockCmd:           func(m *mocks.Mockcmd) {},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetEnvironment("app", "test").Return(&mockEnv, nil)
+				// After env init/deploy
+				m.EXPECT().ListWorkloads("app").Return(nil, nil)
+				// After wkld init
+				m.EXPECT().GetWorkload("app", "fe").Times(0)
+			},
+			mockWs: func(m *mocks.MockwsWlDirReader) {
+				m.EXPECT().ListEnvironments().Return([]string{"test"}, nil)
+				m.EXPECT().ReadWorkloadManifest("fe").Return(mockManifest, nil)
+			},
+			mockInit: func(m *mocks.MockwkldInitializerWithoutManifest) {
+				m.EXPECT().AddWorkloadToApp("app", "fe", "Load Balanced Web Service").Return(errors.New("some error"))
+			},
+		},
+		"confirm workload init error": {
+			inAppName:   "app",
+			inName:      "fe",
+			inEnvName:   "test",
+			wantedErr:   "confirm initialize workload: some error",
+			inDeployEnv: aws.Bool(false),
+			mockSel:     func(m *mocks.MockwsSelector) {},
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Confirm("Found manifest for uninitialized Load Balanced Web Service \"fe\". Initialize it?", gomock.Any(), gomock.Any()).Return(false, errors.New("some error"))
+			},
+			mockActionCommand: func(m *mocks.MockactionCommand) {},
+			mockCmd:           func(m *mocks.Mockcmd) {},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetEnvironment("app", "test").Return(&mockEnv, nil)
+				// After env init/deploy
+				m.EXPECT().ListWorkloads("app").Return(nil, nil)
+				// After wkld init
+				m.EXPECT().GetWorkload("app", "fe").Times(0)
+			},
+			mockWs: func(m *mocks.MockwsWlDirReader) {
+				m.EXPECT().ListEnvironments().Return([]string{"test"}, nil)
+				m.EXPECT().ReadWorkloadManifest("fe").Return(mockManifest, nil)
+			},
+			mockInit: func(m *mocks.MockwkldInitializerWithoutManifest) {},
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
