@@ -61,8 +61,8 @@ func TestLocalRunOpts_Validate(t *testing.T) {
 			if tc.setupMocks != nil {
 				tc.setupMocks(m)
 			}
-			opts := localRunOpts{
-				localRunVars: localRunVars{
+			opts := runLocalOpts{
+				runLocalVars: runLocalVars{
 					appName: tc.inAppName,
 				},
 				store: m.store,
@@ -167,8 +167,8 @@ func TestLocalRunOpts_Ask(t *testing.T) {
 				sel:   mocks.NewMockdeploySelector(ctrl),
 			}
 			tc.setupMocks(m)
-			opts := localRunOpts{
-				localRunVars: localRunVars{
+			opts := runLocalOpts{
+				runLocalVars: runLocalVars{
 					appName:  tc.inputAppName,
 					wkldName: tc.inputWkldName,
 					envName:  tc.inputEnvName,
@@ -610,8 +610,8 @@ func TestLocalRunOpts_Execute(t *testing.T) {
 				repository:     mocks.NewMockrepositoryService(ctrl),
 			}
 			tc.setupMocks(m)
-			opts := localRunOpts{
-				localRunVars: localRunVars{
+			opts := runLocalOpts{
+				runLocalVars: runLocalVars{
 					appName:      tc.inputAppName,
 					wkldName:     tc.inputWkldName,
 					envName:      tc.inputEnvName,
@@ -633,7 +633,7 @@ func TestLocalRunOpts_Execute(t *testing.T) {
 				unmarshal: func(b []byte) (manifest.DynamicWorkload, error) {
 					return m.mockMft, nil
 				},
-				configureClients: func(o *localRunOpts) error {
+				configureClients: func(o *runLocalOpts) error {
 					return nil
 				},
 				buildContainerImages: func(mft manifest.DynamicWorkload) (map[string]string, error) {
@@ -1045,8 +1045,8 @@ func TestLocalRunOpts_getEnvVars(t *testing.T) {
 				tc.setupMocks(m)
 			}
 
-			o := &localRunOpts{
-				localRunVars: localRunVars{
+			o := &runLocalOpts{
+				runLocalVars: runLocalVars{
 					envOverrides: tc.envOverrides,
 				},
 				sess: &session.Session{
