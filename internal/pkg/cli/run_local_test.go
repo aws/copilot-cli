@@ -27,15 +27,15 @@ import (
 
 var testError = errors.New("some error")
 
-type localRunAskMocks struct {
+type runLocalAskMocks struct {
 	store *mocks.Mockstore
 	sel   *mocks.MockdeploySelector
 }
 
-func TestLocalRunOpts_Validate(t *testing.T) {
+func TestRunLocalOpts_Validate(t *testing.T) {
 	testCases := map[string]struct {
 		inAppName   string
-		setupMocks  func(m *localRunAskMocks)
+		setupMocks  func(m *runLocalAskMocks)
 		wantAppName string
 		wantError   error
 	}{
@@ -44,7 +44,7 @@ func TestLocalRunOpts_Validate(t *testing.T) {
 		},
 		"fail to read the application from SSM store": {
 			inAppName: "testApp",
-			setupMocks: func(m *localRunAskMocks) {
+			setupMocks: func(m *runLocalAskMocks) {
 				m.store.EXPECT().GetApplication("testApp").Return(nil, testError)
 			},
 			wantError: fmt.Errorf("get application testApp: %w", testError),
@@ -55,7 +55,7 @@ func TestLocalRunOpts_Validate(t *testing.T) {
 			// GIVEN
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			m := &localRunAskMocks{
+			m := &runLocalAskMocks{
 				store: mocks.NewMockstore(ctrl),
 			}
 			if tc.setupMocks != nil {
@@ -80,7 +80,7 @@ func TestLocalRunOpts_Validate(t *testing.T) {
 	}
 }
 
-func TestLocalRunOpts_Ask(t *testing.T) {
+func TestRunLocalOpts_Ask(t *testing.T) {
 	const (
 		testAppName  = "testApp"
 		testEnvName  = "testEnv"
@@ -92,7 +92,7 @@ func TestLocalRunOpts_Ask(t *testing.T) {
 		inputEnvName  string
 		inputWkldName string
 
-		setupMocks     func(m *localRunAskMocks)
+		setupMocks     func(m *runLocalAskMocks)
 		wantedWkldName string
 		wantedEnvName  string
 		wantedWkldType string
@@ -101,7 +101,7 @@ func TestLocalRunOpts_Ask(t *testing.T) {
 		"error if provided environment is not present in the workspace": {
 			inputAppName: testAppName,
 			inputEnvName: testEnvName,
-			setupMocks: func(m *localRunAskMocks) {
+			setupMocks: func(m *runLocalAskMocks) {
 				m.store.EXPECT().GetEnvironment(testAppName, testEnvName).Return(nil, testError)
 			},
 			wantedError: testError,
@@ -109,7 +109,7 @@ func TestLocalRunOpts_Ask(t *testing.T) {
 		"error if provided workload is not present in the workspace": {
 			inputAppName:  testAppName,
 			inputWkldName: testWkldName,
-			setupMocks: func(m *localRunAskMocks) {
+			setupMocks: func(m *runLocalAskMocks) {
 				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Times(0)
 				m.store.EXPECT().GetWorkload(testAppName, testWkldName).Return(nil, testError)
 			},
@@ -119,7 +119,7 @@ func TestLocalRunOpts_Ask(t *testing.T) {
 			inputAppName:  testAppName,
 			inputWkldName: testWkldName,
 			inputEnvName:  testEnvName,
-			setupMocks: func(m *localRunAskMocks) {
+			setupMocks: func(m *runLocalAskMocks) {
 				m.store.EXPECT().GetEnvironment(testAppName, testEnvName).Return(&config.Environment{Name: "testEnv"}, nil)
 				m.store.EXPECT().GetWorkload(testAppName, testWkldName).Return(&config.Workload{Name: "testWkld"}, nil)
 				m.sel.EXPECT().DeployedWorkload(workloadAskPrompt, "", testAppName, gomock.Any()).Return(&selector.DeployedWorkload{
@@ -134,7 +134,7 @@ func TestLocalRunOpts_Ask(t *testing.T) {
 		},
 		"prompt for workload and environment": {
 			inputAppName: testAppName,
-			setupMocks: func(m *localRunAskMocks) {
+			setupMocks: func(m *runLocalAskMocks) {
 				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Times(0)
 				m.store.EXPECT().GetWorkload(gomock.Any(), gomock.Any()).Times(0)
 				m.sel.EXPECT().DeployedWorkload(workloadAskPrompt, "", testAppName, gomock.Any()).Return(&selector.DeployedWorkload{
@@ -150,7 +150,7 @@ func TestLocalRunOpts_Ask(t *testing.T) {
 		},
 		"return error while failed to select workload": {
 			inputAppName: testAppName,
-			setupMocks: func(m *localRunAskMocks) {
+			setupMocks: func(m *runLocalAskMocks) {
 				m.sel.EXPECT().DeployedWorkload(workloadAskPrompt, "", testAppName, gomock.Any()).
 					Return(nil, testError)
 			},
@@ -162,7 +162,7 @@ func TestLocalRunOpts_Ask(t *testing.T) {
 			// GIVEN
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			m := &localRunAskMocks{
+			m := &runLocalAskMocks{
 				store: mocks.NewMockstore(ctrl),
 				sel:   mocks.NewMockdeploySelector(ctrl),
 			}
@@ -192,7 +192,7 @@ func TestLocalRunOpts_Ask(t *testing.T) {
 	}
 }
 
-type localRunExecuteMocks struct {
+type runLocalExecuteMocks struct {
 	ecsLocalClient *mocks.MockecsLocalClient
 	store          *mocks.Mockstore
 	sessCreds      credentials.Provider
@@ -218,7 +218,7 @@ func (m *mockProvider) IsExpired() bool {
 	return false
 }
 
-func TestLocalRunOpts_Execute(t *testing.T) {
+func TestRunLocalOpts_Execute(t *testing.T) {
 	const (
 		testAppName       = "testApp"
 		testEnvName       = "testEnv"
@@ -355,7 +355,7 @@ func TestLocalRunOpts_Execute(t *testing.T) {
 		inputPortOverrides []string
 		buildImagesError   error
 
-		setupMocks     func(m *localRunExecuteMocks)
+		setupMocks     func(m *runLocalExecuteMocks)
 		wantedWkldName string
 		wantedEnvName  string
 		wantedWkldType string
@@ -365,7 +365,7 @@ func TestLocalRunOpts_Execute(t *testing.T) {
 			inputAppName:  testAppName,
 			inputWkldName: testWkldName,
 			inputEnvName:  testEnvName,
-			setupMocks: func(m *localRunExecuteMocks) {
+			setupMocks: func(m *runLocalExecuteMocks) {
 				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(nil, testError)
 			},
 			wantedError: fmt.Errorf("get task definition: %w", testError),
@@ -377,7 +377,7 @@ func TestLocalRunOpts_Execute(t *testing.T) {
 			inputEnvOverrides: map[string]string{
 				"bad:OVERRIDE": "i fail",
 			},
-			setupMocks: func(m *localRunExecuteMocks) {
+			setupMocks: func(m *runLocalExecuteMocks) {
 				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
 			},
 			wantedError: errors.New(`get env vars: parse env overrides: "bad:OVERRIDE" targets invalid container`),
@@ -386,7 +386,7 @@ func TestLocalRunOpts_Execute(t *testing.T) {
 			inputAppName:  testAppName,
 			inputWkldName: testWkldName,
 			inputEnvName:  testEnvName,
-			setupMocks: func(m *localRunExecuteMocks) {
+			setupMocks: func(m *runLocalExecuteMocks) {
 				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
 				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
 				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return(nil, errors.New("some error"))
@@ -397,7 +397,7 @@ func TestLocalRunOpts_Execute(t *testing.T) {
 			inputAppName:  testAppName,
 			inputWkldName: testWkldName,
 			inputEnvName:  testEnvName,
-			setupMocks: func(m *localRunExecuteMocks) {
+			setupMocks: func(m *runLocalExecuteMocks) {
 				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
 				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
 				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
@@ -410,7 +410,7 @@ func TestLocalRunOpts_Execute(t *testing.T) {
 			inputWkldName:    testWkldName,
 			inputEnvName:     testEnvName,
 			buildImagesError: errors.New("some error"),
-			setupMocks: func(m *localRunExecuteMocks) {
+			setupMocks: func(m *runLocalExecuteMocks) {
 				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
 				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
 				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
@@ -422,7 +422,7 @@ func TestLocalRunOpts_Execute(t *testing.T) {
 			inputAppName:  testAppName,
 			inputWkldName: testWkldName,
 			inputEnvName:  testEnvName,
-			setupMocks: func(m *localRunExecuteMocks) {
+			setupMocks: func(m *runLocalExecuteMocks) {
 				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
 				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
 				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
@@ -439,7 +439,7 @@ func TestLocalRunOpts_Execute(t *testing.T) {
 			inputAppName:  testAppName,
 			inputWkldName: testWkldName,
 			inputEnvName:  testEnvName,
-			setupMocks: func(m *localRunExecuteMocks) {
+			setupMocks: func(m *runLocalExecuteMocks) {
 				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
 				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
 				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
@@ -467,7 +467,7 @@ func TestLocalRunOpts_Execute(t *testing.T) {
 			inputAppName:  testAppName,
 			inputWkldName: testWkldName,
 			inputEnvName:  testEnvName,
-			setupMocks: func(m *localRunExecuteMocks) {
+			setupMocks: func(m *runLocalExecuteMocks) {
 				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
 				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
 				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
@@ -494,7 +494,7 @@ func TestLocalRunOpts_Execute(t *testing.T) {
 			inputAppName:  testAppName,
 			inputWkldName: testWkldName,
 			inputEnvName:  testEnvName,
-			setupMocks: func(m *localRunExecuteMocks) {
+			setupMocks: func(m *runLocalExecuteMocks) {
 				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
 				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
 				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
@@ -520,7 +520,7 @@ func TestLocalRunOpts_Execute(t *testing.T) {
 			inputAppName:  testAppName,
 			inputWkldName: testWkldName,
 			inputEnvName:  testEnvName,
-			setupMocks: func(m *localRunExecuteMocks) {
+			setupMocks: func(m *runLocalExecuteMocks) {
 				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
 				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
 				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
@@ -558,7 +558,7 @@ func TestLocalRunOpts_Execute(t *testing.T) {
 			inputAppName:  testAppName,
 			inputWkldName: testWkldName,
 			inputEnvName:  testEnvName,
-			setupMocks: func(m *localRunExecuteMocks) {
+			setupMocks: func(m *runLocalExecuteMocks) {
 				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
 				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
 				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
@@ -598,7 +598,7 @@ func TestLocalRunOpts_Execute(t *testing.T) {
 			// GIVEN
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			m := &localRunExecuteMocks{
+			m := &runLocalExecuteMocks{
 				ecsLocalClient: mocks.NewMockecsLocalClient(ctrl),
 				ssm:            mocks.NewMocksecretGetter(ctrl),
 				secretsManager: mocks.NewMocksecretGetter(ctrl),
@@ -672,7 +672,7 @@ func TestLocalRunOpts_Execute(t *testing.T) {
 	}
 }
 
-func TestLocalRunOpts_getEnvVars(t *testing.T) {
+func TestRunLocalOpts_getEnvVars(t *testing.T) {
 	newVar := func(v string, overridden, secret bool) envVarValue {
 		return envVarValue{
 			Value:    v,
@@ -684,7 +684,7 @@ func TestLocalRunOpts_getEnvVars(t *testing.T) {
 	tests := map[string]struct {
 		taskDef      *ecs.TaskDefinition
 		envOverrides map[string]string
-		setupMocks   func(m *localRunExecuteMocks)
+		setupMocks   func(m *runLocalExecuteMocks)
 		credsError   error
 		region       *string
 
@@ -812,7 +812,7 @@ func TestLocalRunOpts_getEnvVars(t *testing.T) {
 					},
 				},
 			},
-			setupMocks: func(m *localRunExecuteMocks) {
+			setupMocks: func(m *runLocalExecuteMocks) {
 				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "defaultSSM").Return("", errors.New("some error"))
 			},
 			wantError: `get secrets: get secret "defaultSSM": some error`,
@@ -877,7 +877,7 @@ func TestLocalRunOpts_getEnvVars(t *testing.T) {
 					},
 				},
 			},
-			setupMocks: func(m *localRunExecuteMocks) {
+			setupMocks: func(m *runLocalExecuteMocks) {
 				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "arn:aws:ssm:us-east-2:123456789:parameter/myparam").Return("ssm", nil)
 				m.secretsManager.EXPECT().GetSecretValue(gomock.Any(), "arn:aws:secretsmanager:us-west-2:123456789:secret:mysecret").Return("secretsmanager", nil)
 				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "myparam").Return("default", nil)
@@ -924,7 +924,7 @@ func TestLocalRunOpts_getEnvVars(t *testing.T) {
 					},
 				},
 			},
-			setupMocks: func(m *localRunExecuteMocks) {
+			setupMocks: func(m *runLocalExecuteMocks) {
 				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "shared").Return("shared-value", nil)
 				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "foo").Return("foo-value", nil)
 				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "bar").Return("bar-value", nil)
@@ -981,7 +981,7 @@ func TestLocalRunOpts_getEnvVars(t *testing.T) {
 				"ONE":      "one-overridden",
 				"bar:FOUR": "four-overridden",
 			},
-			setupMocks: func(m *localRunExecuteMocks) {
+			setupMocks: func(m *runLocalExecuteMocks) {
 				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "shared").Return("shared-value", nil)
 				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "foo").Return("foo-value", nil)
 			},
@@ -1028,7 +1028,7 @@ func TestLocalRunOpts_getEnvVars(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			m := &localRunExecuteMocks{
+			m := &runLocalExecuteMocks{
 				ssm:            mocks.NewMocksecretGetter(ctrl),
 				secretsManager: mocks.NewMocksecretGetter(ctrl),
 				sessCreds: &mockProvider{
