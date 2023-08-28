@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -172,11 +173,13 @@ func TestDeleteEnvOpts_Execute(t *testing.T) {
 	testCases := map[string]struct {
 		given func(t *testing.T, ctrl *gomock.Controller) *deleteEnvOpts
 
-		mockRG        func(ctrl *gomock.Controller) *mocks.MockresourceGetter
-		mockDescriber func(ctrl *gomock.Controller) *mocks.MockstackDescriber
-		mockProg      func(ctrl *gomock.Controller) *mocks.Mockprogress
-		mockDeploy    func(ctrl *gomock.Controller) *mocks.MockenvironmentDeployer
-		mockStore     func(ctrl *gomock.Controller) *mocks.MockenvironmentStore
+		mockRG             func(ctrl *gomock.Controller) *mocks.MockresourceGetter
+		mockDescriber      func(ctrl *gomock.Controller) *mocks.MockstackDescriber
+		mockProg           func(ctrl *gomock.Controller) *mocks.Mockprogress
+		mockDeploy         func(ctrl *gomock.Controller) *mocks.MockenvironmentDeployer
+		mockStore          func(ctrl *gomock.Controller) *mocks.MockenvironmentStore
+		mockPipelineLister func(ctrl *gomock.Controller) *mocks.MockdeployedPipelineLister
+		mockPipelineGetter func(ctrl *gomock.Controller) *mocks.MockpipelineGetter
 
 		wantedError error
 	}{
@@ -222,13 +225,54 @@ func TestDeleteEnvOpts_Execute(t *testing.T) {
 				}
 			},
 
-			wantedError: errors.New("service 'frontend, backend' still exist within the environment test"),
+			wantedError: errors.New(`service "frontend, backend" still exist within the environment test`),
+		},
+		"returns error when more pipelines are using the env": {
+			given: func(t *testing.T, ctrl *gomock.Controller) *deleteEnvOpts {
+				rg := mocks.NewMockresourceGetter(ctrl)
+				rg.EXPECT().GetResources(gomock.Any()).Return(&resourcegroupstaggingapi.GetResourcesOutput{
+					ResourceTagMappingList: []*resourcegroupstaggingapi.ResourceTagMapping{},
+				}, nil)
+
+				lister := mocks.NewMockdeployedPipelineLister(ctrl)
+				lister.EXPECT().ListDeployedPipelines("phonetool").Return([]deploy.Pipeline{
+					{
+						ResourceName: "mockResourceName",
+						Name:         "mockName",
+					},
+				}, nil)
+
+				getter := mocks.NewMockpipelineGetter(ctrl)
+				getter.EXPECT().GetPipeline("mockResourceName").Return(&codepipeline.Pipeline{
+					Stages: []*codepipeline.Stage{
+						{
+							Name: "DeployTo-test",
+						},
+					},
+				}, nil)
+
+				return &deleteEnvOpts{
+					deleteEnvVars: deleteEnvVars{
+						appName: "phonetool",
+						name:    "test",
+					},
+					rg:                     rg,
+					deployedPipelineLister: lister,
+					pipelineGetter:         getter,
+					initRuntimeClients:     noopInitRuntimeClients,
+				}
+			},
+
+			wantedError: errors.New(`pipeline "mockName" still uses the environment test`),
 		},
 		"returns wrapped error when environment stack cannot be updated to retain roles": {
 			given: func(t *testing.T, ctrl *gomock.Controller) *deleteEnvOpts {
 				rg := mocks.NewMockresourceGetter(ctrl)
 				rg.EXPECT().GetResources(gomock.Any()).Return(&resourcegroupstaggingapi.GetResourcesOutput{
 					ResourceTagMappingList: []*resourcegroupstaggingapi.ResourceTagMapping{}}, nil)
+
+				lister := mocks.NewMockdeployedPipelineLister(ctrl)
+				lister.EXPECT().ListDeployedPipelines("phonetool").Return([]deploy.Pipeline{}, nil)
 
 				prog := mocks.NewMockprogress(ctrl)
 				prog.EXPECT().Start(gomock.Any())
@@ -273,9 +317,10 @@ Resources:
 						appName: "phonetool",
 						name:    "test",
 					},
-					rg:       rg,
-					deployer: deployer,
-					prog:     prog,
+					rg:                     rg,
+					deployer:               deployer,
+					prog:                   prog,
+					deployedPipelineLister: lister,
 					envConfig: &config.Environment{
 						ExecutionRoleARN: "arn",
 					},
@@ -289,6 +334,9 @@ Resources:
 				rg := mocks.NewMockresourceGetter(ctrl)
 				rg.EXPECT().GetResources(gomock.Any()).Return(&resourcegroupstaggingapi.GetResourcesOutput{
 					ResourceTagMappingList: []*resourcegroupstaggingapi.ResourceTagMapping{}}, nil)
+
+				lister := mocks.NewMockdeployedPipelineLister(ctrl)
+				lister.EXPECT().ListDeployedPipelines("phonetool").Return([]deploy.Pipeline{}, nil)
 
 				prog := mocks.NewMockprogress(ctrl)
 				prog.EXPECT().Start(gomock.Any()).Times(2)
@@ -317,12 +365,13 @@ Resources:
 						appName: "phonetool",
 						name:    "test",
 					},
-					rg:                 rg,
-					envStackDescriber:  descr,
-					deployer:           deployer,
-					prog:               prog,
-					envConfig:          &config.Environment{},
-					initRuntimeClients: noopInitRuntimeClients,
+					rg:                     rg,
+					envStackDescriber:      descr,
+					deployedPipelineLister: lister,
+					deployer:               deployer,
+					prog:                   prog,
+					envConfig:              &config.Environment{},
+					initRuntimeClients:     noopInitRuntimeClients,
 				}
 			},
 
@@ -344,6 +393,9 @@ Resources:
 				rg := mocks.NewMockresourceGetter(ctrl)
 				rg.EXPECT().GetResources(gomock.Any()).Return(&resourcegroupstaggingapi.GetResourcesOutput{
 					ResourceTagMappingList: []*resourcegroupstaggingapi.ResourceTagMapping{}}, nil)
+
+				lister := mocks.NewMockdeployedPipelineLister(ctrl)
+				lister.EXPECT().ListDeployedPipelines("phonetool").Return([]deploy.Pipeline{}, nil)
 
 				prog := mocks.NewMockprogress(ctrl)
 				prog.EXPECT().Start(gomock.Any()).AnyTimes()
@@ -401,13 +453,14 @@ Resources:
 						appName: "phonetool",
 						name:    "test",
 					},
-					rg:                 rg,
-					envStackDescriber:  descr,
-					deployer:           deployer,
-					prog:               prog,
-					store:              store,
-					envDeleterFromApp:  envDeleter,
-					initRuntimeClients: noopInitRuntimeClients,
+					rg:                     rg,
+					envStackDescriber:      descr,
+					deployer:               deployer,
+					prog:                   prog,
+					deployedPipelineLister: lister,
+					store:                  store,
+					envDeleterFromApp:      envDeleter,
+					initRuntimeClients:     noopInitRuntimeClients,
 				}
 			},
 			wantedError: errors.New("remove environment test from application phonetool: some error"),
@@ -429,6 +482,9 @@ Resources:
 				rg.EXPECT().GetResources(gomock.Any()).Return(&resourcegroupstaggingapi.GetResourcesOutput{
 					ResourceTagMappingList: []*resourcegroupstaggingapi.ResourceTagMapping{}}, nil)
 
+				lister := mocks.NewMockdeployedPipelineLister(ctrl)
+				lister.EXPECT().ListDeployedPipelines("phonetool").Return([]deploy.Pipeline{}, nil)
+
 				iam := mocks.NewMockroleDeleter(ctrl)
 
 				prog := mocks.NewMockprogress(ctrl)
@@ -487,13 +543,14 @@ Resources:
 						appName: "phonetool",
 						name:    "test",
 					},
-					rg:                 rg,
-					deployer:           deployer,
-					prog:               prog,
-					store:              store,
-					iam:                iam,
-					envDeleterFromApp:  envDeleter,
-					initRuntimeClients: noopInitRuntimeClients,
+					rg:                     rg,
+					deployer:               deployer,
+					prog:                   prog,
+					deployedPipelineLister: lister,
+					store:                  store,
+					iam:                    iam,
+					envDeleterFromApp:      envDeleter,
+					initRuntimeClients:     noopInitRuntimeClients,
 				}
 			},
 		},
@@ -514,6 +571,9 @@ Resources:
 				rg.EXPECT().GetResources(gomock.Any()).Return(&resourcegroupstaggingapi.GetResourcesOutput{
 					ResourceTagMappingList: []*resourcegroupstaggingapi.ResourceTagMapping{}}, nil)
 
+				lister := mocks.NewMockdeployedPipelineLister(ctrl)
+				lister.EXPECT().ListDeployedPipelines("phonetool").Return([]deploy.Pipeline{}, nil)
+
 				iam := mocks.NewMockroleDeleter(ctrl)
 
 				prog := mocks.NewMockprogress(ctrl)
@@ -571,13 +631,14 @@ Resources:
 						appName: "phonetool",
 						name:    "test",
 					},
-					rg:                 rg,
-					deployer:           deployer,
-					prog:               prog,
-					store:              store,
-					iam:                iam,
-					envDeleterFromApp:  envDeleter,
-					initRuntimeClients: noopInitRuntimeClients,
+					rg:                     rg,
+					deployer:               deployer,
+					prog:                   prog,
+					store:                  store,
+					deployedPipelineLister: lister,
+					iam:                    iam,
+					envDeleterFromApp:      envDeleter,
+					initRuntimeClients:     noopInitRuntimeClients,
 				}
 			},
 		},
@@ -597,6 +658,9 @@ Resources:
 				rg := mocks.NewMockresourceGetter(ctrl)
 				rg.EXPECT().GetResources(gomock.Any()).Return(&resourcegroupstaggingapi.GetResourcesOutput{
 					ResourceTagMappingList: []*resourcegroupstaggingapi.ResourceTagMapping{}}, nil)
+
+				lister := mocks.NewMockdeployedPipelineLister(ctrl)
+				lister.EXPECT().ListDeployedPipelines("phonetool").Return([]deploy.Pipeline{}, nil)
 
 				iam := mocks.NewMockroleDeleter(ctrl)
 
@@ -690,15 +754,16 @@ Resources:
 						appName: "phonetool",
 						name:    "test",
 					},
-					rg:                 rg,
-					envStackDescriber:  descr,
-					s3:                 s3,
-					deployer:           deployer,
-					prog:               prog,
-					store:              store,
-					iam:                iam,
-					envDeleterFromApp:  envDeleter,
-					initRuntimeClients: noopInitRuntimeClients,
+					rg:                     rg,
+					envStackDescriber:      descr,
+					s3:                     s3,
+					deployer:               deployer,
+					prog:                   prog,
+					store:                  store,
+					deployedPipelineLister: lister,
+					iam:                    iam,
+					envDeleterFromApp:      envDeleter,
+					initRuntimeClients:     noopInitRuntimeClients,
 				}
 			},
 		},

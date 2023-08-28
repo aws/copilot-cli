@@ -371,6 +371,9 @@ func TestPipelineStage_Init(t *testing.T) {
 	t.Run("stage name matches the environment's name", func(t *testing.T) {
 		require.Equal(t, "test", stg.Name())
 	})
+	t.Run("stage full name matches the pipeline stage's name", func(t *testing.T) {
+		require.Equal(t, "DeployTo-test", stg.FullName())
+	})
 	t.Run("stage region matches the environment's region", func(t *testing.T) {
 		require.Equal(t, "us-west-2", stg.Region())
 	})
