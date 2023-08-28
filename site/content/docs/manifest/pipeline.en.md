@@ -201,6 +201,9 @@ The path to a buildspec file, relative to the project root, to use for this buil
 <span class="parent-field">stages.pre_deployments.`<name>`.</span><a id="stages-predeployments-dependson" href="#stages-predeployments-dependson" class="field">`depends_on`</a> <span class="type">Array of Strings</span>  
 Optional. Names of other pre-deployment actions that should be deployed prior to deploying this action. Defaults to no dependencies.
 
+!!! info
+    For more on pre- and post-deployments, see the [v1.30.0 blog post](../../blogs/release-v130.en.md) and the [Pipelines](../concepts/pipelines.en.md) page.
+
 <span class="parent-field">stages.</span><a id="stages-deployments" href="#stages-deployments" class="field">`deployments`</a> <span class="type">Map</span>  
 Optional. Control which CloudFormation stacks to deploy and their order.  
 The `deployments` dependencies are specified in a map of the form:
