@@ -40,6 +40,8 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/repository"
 	termcolor "github.com/aws/copilot-cli/internal/pkg/term/color"
+	"github.com/aws/copilot-cli/internal/pkg/term/log"
+	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/term/syncbuffer"
@@ -85,6 +87,7 @@ type runLocalOpts struct {
 	repository      repositoryService
 	containerSuffix string
 	newColor        func() *color.Color
+	prog            progress
 
 	buildContainerImages func(mft manifest.DynamicWorkload) (map[string]string, error)
 	configureClients     func(o *runLocalOpts) error
@@ -126,6 +129,7 @@ func newRunLocalOpts(vars runLocalVars) (*runLocalOpts, error) {
 		dockerEngine:       dockerengine.New(exec.NewCmd()),
 		labeledTermPrinter: labeledTermPrinter,
 		newColor:           termcolor.ColorGenerator(),
+		prog:               termprogress.NewSpinner(log.DiagnosticWriter),
 	}
 	opts.configureClients = func(o *runLocalOpts) error {
 		defaultSessEnvRegion, err := o.sessProvider.DefaultWithRegion(o.targetEnv.Region)
@@ -439,14 +443,19 @@ func (o *runLocalOpts) runContainers(ctx context.Context, containerURIs map[stri
 
 func (o *runLocalOpts) cleanUpContainers(ctx context.Context, containerURIs map[string]string) error {
 	cleanUp := func(id string) error {
-		fmt.Printf("Cleaning up %q\n", id)
-
+		o.prog.Start(fmt.Sprintf("Stopping %q", id))
 		if err := o.dockerEngine.Stop(id); err != nil {
+			o.prog.Stop(log.Serrorf("Failed to stop %q\n", id))
 			return fmt.Errorf("stop: %w", err)
 		}
+
+		o.prog.Start(fmt.Sprintf("Removing %q", id))
 		if err := o.dockerEngine.Rm(id); err != nil {
+			o.prog.Stop(log.Serrorf("Failed to remove %q\n", id))
 			return fmt.Errorf("rm: %w", err)
 		}
+
+		o.prog.Stop(log.Ssuccessf("Cleaned up %q\n", id))
 		return nil
 	}
 

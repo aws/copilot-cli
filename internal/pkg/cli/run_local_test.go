@@ -204,6 +204,7 @@ type runLocalExecuteMocks struct {
 	repository     *mocks.MockrepositoryService
 	ssm            *mocks.MocksecretGetter
 	secretsManager *mocks.MocksecretGetter
+	prog           *mocks.Mockprogress
 }
 
 type mockProvider struct {
@@ -430,6 +431,8 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 				m.dockerEngine.EXPECT().Run(gomock.Any(), expectedRunPauseArgs).Return(errors.New("some error"))
 				m.dockerEngine.EXPECT().IsContainerRunning(mockPauseContainerName).Return(false, nil).AnyTimes()
 
+				m.prog.EXPECT().Start(gomock.Any()).Return().Times(6)
+				m.prog.EXPECT().Stop(gomock.Any()).Return().Times(3)
 				m.dockerEngine.EXPECT().Stop(gomock.Any()).Return(nil).Times(3)
 				m.dockerEngine.EXPECT().Rm(gomock.Any()).Return(nil).Times(3)
 			},
@@ -458,6 +461,8 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 					return false, errors.New("some error")
 				})
 
+				m.prog.EXPECT().Start(gomock.Any()).Return().Times(6)
+				m.prog.EXPECT().Stop(gomock.Any()).Return().Times(3)
 				m.dockerEngine.EXPECT().Stop(gomock.Any()).Return(nil).Times(3)
 				m.dockerEngine.EXPECT().Rm(gomock.Any()).Return(nil).Times(3)
 			},
@@ -485,6 +490,8 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 				m.dockerEngine.EXPECT().Run(gomock.Any(), expectedRunFooArgs).Return(errors.New("some error"))
 				m.dockerEngine.EXPECT().Run(gomock.Any(), expectedRunBarArgs).Return(nil)
 
+				m.prog.EXPECT().Start(gomock.Any()).Return().Times(6)
+				m.prog.EXPECT().Stop(gomock.Any()).Return().Times(3)
 				m.dockerEngine.EXPECT().Stop(gomock.Any()).Return(nil).Times(3)
 				m.dockerEngine.EXPECT().Rm(gomock.Any()).Return(nil).Times(3)
 			},
@@ -512,6 +519,8 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 				m.dockerEngine.EXPECT().Run(gomock.Any(), expectedRunFooArgs).Return(nil)
 				m.dockerEngine.EXPECT().Run(gomock.Any(), expectedRunBarArgs).Return(nil)
 
+				m.prog.EXPECT().Start(gomock.Any()).Return().Times(6)
+				m.prog.EXPECT().Stop(gomock.Any()).Return().Times(3)
 				m.dockerEngine.EXPECT().Stop(gomock.Any()).Return(nil).Times(3)
 				m.dockerEngine.EXPECT().Rm(gomock.Any()).Return(nil).Times(3)
 			},
@@ -543,6 +552,8 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 				})
 				m.dockerEngine.EXPECT().Run(gomock.Any(), expectedRunBarArgs).Return(nil)
 
+				m.prog.EXPECT().Start(gomock.Any()).Return().Times(5)
+				m.prog.EXPECT().Stop(gomock.Any()).Return().Times(3)
 				m.dockerEngine.EXPECT().Stop(expectedRunFooArgs.ContainerName).DoAndReturn(func(id string) error {
 					close(stopCalled)
 					return errors.New("stop foo")
@@ -581,6 +592,8 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 				})
 				m.dockerEngine.EXPECT().Run(gomock.Any(), expectedRunBarArgs).Return(nil)
 
+				m.prog.EXPECT().Start(gomock.Any()).Return().Times(6)
+				m.prog.EXPECT().Stop(gomock.Any()).Return().Times(3)
 				m.dockerEngine.EXPECT().Stop(expectedRunFooArgs.ContainerName).DoAndReturn(func(id string) error {
 					close(stopCalled)
 					return nil
@@ -608,6 +621,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 				mockRunner:     mocks.NewMockexecRunner(ctrl),
 				dockerEngine:   mocks.NewMockdockerEngineRunner(ctrl),
 				repository:     mocks.NewMockrepositoryService(ctrl),
+				prog:           mocks.NewMockprogress(ctrl),
 			}
 			tc.setupMocks(m)
 			opts := runLocalOpts{
@@ -656,8 +670,10 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 				targetApp:       &mockApp,
 				containerSuffix: mockContainerSuffix,
 				newColor: func() *color.Color {
+
 					return nil
 				},
+				prog: m.prog,
 			}
 			// WHEN
 			err := opts.Execute()

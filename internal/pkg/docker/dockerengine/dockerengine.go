@@ -315,12 +315,20 @@ func (c DockerCmdClient) IsContainerRunning(containerName string) (bool, error) 
 
 // Stop calls `docker stop` to stop a running container.
 func (c DockerCmdClient) Stop(containerID string) error {
-	return c.runner.Run("docker", []string{"stop", containerID}, exec.Stdout(io.Discard))
+	buf := &bytes.Buffer{}
+	if err := c.runner.Run("docker", []string{"stop", containerID}, exec.Stdout(buf), exec.Stderr(buf)); err != nil {
+		return fmt.Errorf("%s: %s", strings.TrimSpace(buf.String()), err)
+	}
+	return nil
 }
 
 // Rm calls `docker rm` to remove a stopped container.
 func (c DockerCmdClient) Rm(containerID string) error {
-	return c.runner.Run("docker", []string{"rm", containerID}, exec.Stdout(io.Discard))
+	buf := &bytes.Buffer{}
+	if err := c.runner.Run("docker", []string{"rm", containerID}, exec.Stdout(buf), exec.Stderr(buf)); err != nil {
+		return fmt.Errorf("%s: %s", strings.TrimSpace(buf.String()), err)
+	}
+	return nil
 }
 
 // CheckDockerEngineRunning will run `docker info` command to check if the docker engine is running.
