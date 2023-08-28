@@ -17,6 +17,10 @@ Environment:
       Value: !Sub '${AWS::AccountId}'
     - Name: PARTITION
       Value: !Ref AWS::Partition
+{{- range $name, $value := .Build.Variables}}
+    - Name: {{$name}}
+      Value: {{$value}}
+{{- end}}
 Source:
   Type: CODEPIPELINE
   BuildSpec: {{.Build.BuildspecPath}}
