@@ -22,6 +22,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	sdksecretsmanager "github.com/aws/aws-sdk-go/service/secretsmanager"
 	sdkssm "github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/copilot-cli/cmd/copilot/template"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
@@ -29,6 +30,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ssm"
 	clideploy "github.com/aws/copilot-cli/internal/pkg/cli/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/cli/group"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
@@ -643,8 +645,8 @@ func BuildLocalRunCmd() *cobra.Command {
 	vars := localRunVars{}
 	cmd := &cobra.Command{
 		Use:    "local run",
-		Short:  "Run the workload locally",
-		Long:   "Run the workload locally",
+		Short:  "Run the workload locally.",
+		Long:   "Run the workload locally.",
 		Hidden: true,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newLocalRunOpts(vars)
@@ -653,7 +655,12 @@ func BuildLocalRunCmd() *cobra.Command {
 			}
 			return run(opts)
 		}),
+		Annotations: map[string]string{
+			"group": group.Develop,
+		},
 	}
+	cmd.SetUsageTemplate(template.Usage)
+
 	cmd.Flags().StringVarP(&vars.wkldName, nameFlag, nameFlagShort, "", workloadFlagDescription)
 	cmd.Flags().StringVarP(&vars.envName, envFlag, envFlagShort, "", envFlagDescription)
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)

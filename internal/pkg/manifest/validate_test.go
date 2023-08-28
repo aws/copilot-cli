@@ -2087,7 +2087,7 @@ func TestTaskConfig_validate(t *testing.T) {
 							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									UID:          aws.Uint32(123),
-									FileSystemID: &StringOrFromCFN{Plain: aws.String("mock-ID")},
+									FileSystemID: StringOrFromCFN{Plain: aws.String("mock-ID")},
 								},
 							},
 						},
@@ -2691,7 +2691,7 @@ func TestStorage_validate(t *testing.T) {
 					"foobar": {
 						EFS: EFSConfigOrBool{
 							Advanced: EFSVolumeConfiguration{
-								FileSystemID: &StringOrFromCFN{Plain: aws.String("fs-1234567")},
+								FileSystemID: StringOrFromCFN{Plain: aws.String("fs-1234567")},
 							},
 						},
 						MountPointOpts: MountPointOpts{
