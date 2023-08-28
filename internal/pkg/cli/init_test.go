@@ -362,6 +362,7 @@ func TestInitOpts_Run(t *testing.T) {
 				useExistingWorkspaceForCMDs: func(opts *initOpts) error {
 					return nil
 				},
+				tryUseExistingWorkspaceForValidation: func(*initOpts) {},
 			}
 			tc.expect(opts)
 
