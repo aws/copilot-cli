@@ -35,6 +35,7 @@ type initSvcMocks struct {
 	mockDockerEngine *mocks.MockdockerEngine
 	mockMftReader    *mocks.MockmanifestReader
 	mockStore        *mocks.Mockstore
+	mockSvcLister    *mocks.MockwlLister
 	mockCachedWSRoot string
 }
 
@@ -346,8 +347,24 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 				m.mockPrompt.EXPECT().Get(gomock.Eq("What do you want to name this service?"), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(wantedSvcName, nil)
 				m.mockStore.EXPECT().GetService(mockAppName, wantedSvcName).Return(&config.Workload{}, nil)
+				m.mockSvcLister.EXPECT().ListWorkloads().Return([]string{}, nil)
 			},
 			wantedErr: fmt.Errorf("service frontend already exists"),
+		},
+		"skip error if service already exists within workspace": {
+			inSvcType:        wantedSvcType,
+			inSvcName:        "",
+			inSvcPort:        wantedSvcPort,
+			inDockerfilePath: wantedDockerfilePath,
+
+			setupMocks: func(m *initSvcMocks) {
+				m.mockPrompt.EXPECT().Get(gomock.Eq("What do you want to name this service?"), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(wantedSvcName, nil)
+				m.mockStore.EXPECT().GetService(mockAppName, wantedSvcName).Return(&config.Workload{}, nil)
+				m.mockSvcLister.EXPECT().ListWorkloads().Return([]string{wantedSvcName}, nil)
+				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte(`
+type: Load Balanced Web Service`), nil)
+			},
 		},
 		"returns an error if fail to validate service existence": {
 			inSvcType:        wantedSvcType,
@@ -843,6 +860,7 @@ type: Request-Driven Web Service`), nil)
 				mockDockerEngine: mocks.NewMockdockerEngine(ctrl),
 				mockMftReader:    mocks.NewMockmanifestReader(ctrl),
 				mockStore:        mocks.NewMockstore(ctrl),
+				mockSvcLister:    mocks.NewMockwlLister(ctrl),
 			}
 			if tc.setupMocks != nil {
 				tc.setupMocks(&m)
@@ -870,6 +888,7 @@ type: Request-Driven Web Service`), nil)
 				df:                m.mockDockerfile,
 				prompt:            m.mockPrompt,
 				mftReader:         m.mockMftReader,
+				svcLister:         m.mockSvcLister,
 				sel:               m.mockSel,
 				topicSel:          m.mocktopicSel,
 				sourceSel:         m.mockSourceSel,
@@ -922,6 +941,7 @@ network:
 		mockTopicSel     func(m *mocks.MocktopicSelector)
 		mockStore        func(m *mocks.Mockstore)
 		mockEnvDescriber func(m *mocks.MockenvDescriber)
+		mockSvcLister    func(m *mocks.MockwlLister)
 		inSvcPort        uint16
 		inSvcType        string
 		inSvcName        string
@@ -933,6 +953,13 @@ network:
 		wantedErr          error
 		wantedManifestPath string
 	}{
+		"skip execute if duplicate svc exists in workspace": {
+			inSvcName: "frontend",
+
+			mockSvcLister: func(m *mocks.MockwlLister) {
+				m.EXPECT().ListWorkloads().Return([]string{"frontend"}, nil)
+			},
+		},
 		"success on typical svc props": {
 			inAppName:        "sample",
 			inSvcName:        "frontend",
@@ -941,6 +968,9 @@ network:
 
 			inSvcPort: 80,
 
+			mockSvcLister: func(m *mocks.MockwlLister) {
+				m.EXPECT().ListWorkloads().Return([]string{}, nil)
+			},
 			mockSvcInit: func(m *mocks.MocksvcInitializer) {
 				m.EXPECT().Service(&initialize.ServiceProps{
 					WorkloadProps: initialize.WorkloadProps{
@@ -971,6 +1001,9 @@ network:
 			inDockerfilePath: "./Dockerfile",
 			inSvcType:        manifestinfo.BackendServiceType,
 
+			mockSvcLister: func(m *mocks.MockwlLister) {
+				m.EXPECT().ListWorkloads().Return([]string{}, nil)
+			},
 			mockSvcInit: func(m *mocks.MocksvcInitializer) {
 				m.EXPECT().Service(&initialize.ServiceProps{
 					WorkloadProps: initialize.WorkloadProps{
@@ -1002,6 +1035,9 @@ network:
 			inSvcPort:        80,
 			inManifestExists: true,
 
+			mockSvcLister: func(m *mocks.MockwlLister) {
+				m.EXPECT().ListWorkloads().Return([]string{}, nil)
+			},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {
 				m.EXPECT().GetHealthCheck().Return(nil, nil)
 			},
@@ -1033,6 +1069,9 @@ network:
 
 			inSvcPort: 80,
 
+			mockSvcLister: func(m *mocks.MockwlLister) {
+				m.EXPECT().ListWorkloads().Return([]string{}, nil)
+			},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {
 				m.EXPECT().GetHealthCheck().Return(nil, nil)
 			},
@@ -1065,6 +1104,9 @@ network:
 
 			inSvcPort: 80,
 
+			mockSvcLister: func(m *mocks.MockwlLister) {
+				m.EXPECT().ListWorkloads().Return([]string{}, nil)
+			},
 			mockSvcInit: func(m *mocks.MocksvcInitializer) {
 				m.EXPECT().Service(&initialize.ServiceProps{
 					WorkloadProps: initialize.WorkloadProps{
@@ -1100,6 +1142,9 @@ network:
 
 			inSvcPort: 80,
 
+			mockSvcLister: func(m *mocks.MockwlLister) {
+				m.EXPECT().ListWorkloads().Return([]string{}, nil)
+			},
 			mockSvcInit: func(m *mocks.MocksvcInitializer) {
 				m.EXPECT().Service(&initialize.ServiceProps{
 					WorkloadProps: initialize.WorkloadProps{
@@ -1133,6 +1178,9 @@ network:
 			inDockerfilePath: "./Dockerfile",
 			inSvcType:        manifestinfo.WorkerServiceType,
 
+			mockSvcLister: func(m *mocks.MockwlLister) {
+				m.EXPECT().ListWorkloads().Return([]string{}, nil)
+			},
 			mockSvcInit: func(m *mocks.MocksvcInitializer) {
 				m.EXPECT().Service(&initialize.ServiceProps{
 					WorkloadProps: initialize.WorkloadProps{
@@ -1176,6 +1224,9 @@ network:
 			inImage:          "nginx:latest",
 			inSvcType:        manifestinfo.BackendServiceType,
 
+			mockSvcLister: func(m *mocks.MockwlLister) {
+				m.EXPECT().ListWorkloads().Return([]string{}, nil)
+			},
 			mockSvcInit: func(m *mocks.MocksvcInitializer) {
 				m.EXPECT().Service(&initialize.ServiceProps{
 					WorkloadProps: initialize.WorkloadProps{
@@ -1201,6 +1252,9 @@ network:
 			inImage:          "nginx:latest",
 			inSvcType:        manifestinfo.LoadBalancedWebServiceType,
 
+			mockSvcLister: func(m *mocks.MockwlLister) {
+				m.EXPECT().ListWorkloads().Return([]string{}, nil)
+			},
 			mockSvcInit: func(m *mocks.MocksvcInitializer) {
 				m.EXPECT().Service(&initialize.ServiceProps{
 					WorkloadProps: initialize.WorkloadProps{
@@ -1220,6 +1274,9 @@ network:
 			wantedManifestPath: "manifest/path",
 		},
 		"return error if platform detection fails": {
+			mockSvcLister: func(m *mocks.MockwlLister) {
+				m.EXPECT().ListWorkloads().Return([]string{}, nil)
+			},
 			mockDockerEngine: func(m *mocks.MockdockerEngine) {
 				m.EXPECT().CheckDockerEngineRunning().Return(nil)
 				m.EXPECT().GetPlatform().Return("", "", errors.New("some error"))
@@ -1234,6 +1291,9 @@ network:
 
 			inSvcPort: 80,
 
+			mockSvcLister: func(m *mocks.MockwlLister) {
+				m.EXPECT().ListWorkloads().Return([]string{}, nil)
+			},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {
 				m.EXPECT().GetHealthCheck().Return(nil, nil)
 			},
@@ -1244,6 +1304,9 @@ network:
 			wantedErr: errors.New("redirect docker engine platform: Windows is not supported for App Runner services"),
 		},
 		"failure": {
+			mockSvcLister: func(m *mocks.MockwlLister) {
+				m.EXPECT().ListWorkloads().Return([]string{}, nil)
+			},
 			mockDockerEngine: func(m *mocks.MockdockerEngine) {
 				m.EXPECT().CheckDockerEngineRunning().Return(nil)
 				m.EXPECT().GetPlatform().Return("linux", "amd64", nil)
@@ -1261,6 +1324,9 @@ network:
 
 			inSvcPort: 80,
 
+			mockSvcLister: func(m *mocks.MockwlLister) {
+				m.EXPECT().ListWorkloads().Return([]string{}, nil)
+			},
 			mockSvcInit: func(m *mocks.MocksvcInitializer) {
 				m.EXPECT().Service(&initialize.ServiceProps{
 					WorkloadProps: initialize.WorkloadProps{
@@ -1303,6 +1369,9 @@ network:
 			inSvcType:        manifestinfo.LoadBalancedWebServiceType,
 
 			inSvcPort: 80,
+			mockSvcLister: func(m *mocks.MockwlLister) {
+				m.EXPECT().ListWorkloads().Return([]string{}, nil)
+			},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {
 				m.EXPECT().GetHealthCheck().Return(nil, nil)
 			},
@@ -1337,11 +1406,14 @@ network:
 			mockTopicSel := mocks.NewMocktopicSelector(ctrl)
 			mockStore := mocks.NewMockstore(ctrl)
 			mockEnvDescriber := mocks.NewMockenvDescriber(ctrl)
+			mockSvcLister := mocks.NewMockwlLister(ctrl)
 
 			if tc.mockStore != nil {
 				tc.mockStore(mockStore)
 			}
-
+			if tc.mockSvcLister != nil {
+				tc.mockSvcLister(mockSvcLister)
+			}
 			if tc.mockSvcInit != nil {
 				tc.mockSvcInit(mockSvcInitializer)
 			}
@@ -1373,6 +1445,7 @@ network:
 				df:             mockDockerfile,
 				dockerEngine:   mockDockerEngine,
 				store:          mockStore,
+				svcLister:      mockSvcLister,
 				topicSel:       mockTopicSel,
 				manifestExists: tc.inManifestExists,
 				initEnvDescriber: func(string, string) (envDescriber, error) {

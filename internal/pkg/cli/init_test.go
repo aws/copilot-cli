@@ -6,9 +6,10 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"testing"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/config"
-	"testing"
 
 	awscfn "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
