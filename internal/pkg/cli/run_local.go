@@ -644,10 +644,9 @@ func (o *runLocalOpts) getSecret(ctx context.Context, valueFrom string) (string,
 func BuildRunLocalCmd() *cobra.Command {
 	vars := runLocalVars{}
 	cmd := &cobra.Command{
-		Use:    "run local",
-		Short:  "Run the workload locally.",
-		Long:   "Run the workload locally.",
-		Hidden: true,
+		Use:   "run local",
+		Short: "Run the workload locally.",
+		Long:  "Run the workload locally.",
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newRunLocalOpts(vars)
 			if err != nil {
