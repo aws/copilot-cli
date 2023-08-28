@@ -918,7 +918,7 @@ func Test_convertManagedFSInfo(t *testing.T) {
 				"wordpress": {
 					EFS: manifest.EFSConfigOrBool{
 						Advanced: manifest.EFSVolumeConfiguration{
-							FileSystemID: &manifest.StringOrFromCFN{Plain: aws.String("fs-1234")},
+							FileSystemID: manifest.StringOrFromCFN{Plain: aws.String("fs-1234")},
 						},
 					},
 					MountPointOpts: manifest.MountPointOpts{
@@ -931,7 +931,7 @@ func Test_convertManagedFSInfo(t *testing.T) {
 				"wordpress": {
 					EFS: manifest.EFSConfigOrBool{
 						Advanced: manifest.EFSVolumeConfiguration{
-							FileSystemID: &manifest.StringOrFromCFN{Plain: aws.String("fs-1234")},
+							FileSystemID: manifest.StringOrFromCFN{Plain: aws.String("fs-1234")},
 						},
 					},
 					MountPointOpts: manifest.MountPointOpts{
@@ -1003,7 +1003,7 @@ func Test_convertStorageOpts(t *testing.T) {
 				"wordpress": {
 					EFS: manifest.EFSConfigOrBool{
 						Advanced: manifest.EFSVolumeConfiguration{
-							FileSystemID: &manifest.StringOrFromCFN{Plain: aws.String("fs-1234")},
+							FileSystemID: manifest.StringOrFromCFN{Plain: aws.String("fs-1234")},
 						},
 					},
 					MountPointOpts: manifest.MountPointOpts{
@@ -1068,7 +1068,7 @@ func Test_convertStorageOpts(t *testing.T) {
 				"wordpress": {
 					EFS: manifest.EFSConfigOrBool{
 						Advanced: manifest.EFSVolumeConfiguration{
-							FileSystemID:  &manifest.StringOrFromCFN{Plain: aws.String("fs-1234")},
+							FileSystemID:  manifest.StringOrFromCFN{Plain: aws.String("fs-1234")},
 							RootDirectory: aws.String("/"),
 							AuthConfig: manifest.AuthorizationConfig{
 								IAM:           aws.Bool(true),
@@ -1115,7 +1115,7 @@ func Test_convertStorageOpts(t *testing.T) {
 				"wordpress": {
 					EFS: manifest.EFSConfigOrBool{
 						Advanced: manifest.EFSVolumeConfiguration{
-							FileSystemID:  &manifest.StringOrFromCFN{Plain: aws.String("fs-1234")},
+							FileSystemID:  manifest.StringOrFromCFN{Plain: aws.String("fs-1234")},
 							RootDirectory: aws.String("/wordpress"),
 							AuthConfig: manifest.AuthorizationConfig{
 								IAM: aws.Bool(true),
@@ -1227,7 +1227,7 @@ func Test_convertStorageOpts(t *testing.T) {
 				"otherefs": {
 					EFS: manifest.EFSConfigOrBool{
 						Advanced: manifest.EFSVolumeConfiguration{
-							FileSystemID: &manifest.StringOrFromCFN{Plain: aws.String("fs-1234")},
+							FileSystemID: manifest.StringOrFromCFN{Plain: aws.String("fs-1234")},
 						},
 					},
 					MountPointOpts: manifest.MountPointOpts{
@@ -1293,7 +1293,7 @@ func Test_convertStorageOpts(t *testing.T) {
 				"wordpress": {
 					EFS: manifest.EFSConfigOrBool{
 						Advanced: manifest.EFSVolumeConfiguration{
-							FileSystemID: &manifest.StringOrFromCFN{Plain: aws.String("fs-1234")},
+							FileSystemID: manifest.StringOrFromCFN{Plain: aws.String("fs-1234")},
 						},
 					},
 					MountPointOpts: manifest.MountPointOpts{
