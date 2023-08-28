@@ -15,7 +15,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	sdkecs "github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
-	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
@@ -553,7 +552,7 @@ func TestLocalRunOpts_Execute(t *testing.T) {
 				m.dockerEngine.EXPECT().Stop(expectedRunPauseArgs.ContainerName).Return(nil)
 				m.dockerEngine.EXPECT().Rm(expectedRunPauseArgs.ContainerName).Return(errors.New("rm stop"))
 			},
-			wantedError: fmt.Errorf("clean up %q: stop: stop foo\nclean up %q: rm: rm bar\nclean up %q: rm: rm stop", expectedRunFooArgs.ContainerName, expectedRunBarArgs.ContainerName, expectedRunPauseArgs.ContainerName),
+			wantedError: fmt.Errorf("clean up %q: rm: rm bar\nclean up %q: stop: stop foo\nclean up %q: rm: rm stop", expectedRunBarArgs.ContainerName, expectedRunFooArgs.ContainerName, expectedRunPauseArgs.ContainerName),
 		},
 		"handles ctrl-c successfully, errors from running ignored": {
 			inputAppName:  testAppName,
@@ -683,7 +682,7 @@ func TestLocalRunOpts_getEnvVars(t *testing.T) {
 	}
 
 	tests := map[string]struct {
-		taskDef      *awsecs.TaskDefinition
+		taskDef      *ecs.TaskDefinition
 		envOverrides map[string]string
 		setupMocks   func(m *localRunExecuteMocks)
 		credsError   error
@@ -697,14 +696,14 @@ func TestLocalRunOpts_getEnvVars(t *testing.T) {
 			wantError:  `get IAM credentials: some error`,
 		},
 		"invalid container in env override": {
-			taskDef: &awsecs.TaskDefinition{},
+			taskDef: &ecs.TaskDefinition{},
 			envOverrides: map[string]string{
 				"bad:OVERRIDE": "bad",
 			},
 			wantError: `parse env overrides: "bad:OVERRIDE" targets invalid container`,
 		},
 		"overrides parsed and applied correctly": {
-			taskDef: &awsecs.TaskDefinition{
+			taskDef: &ecs.TaskDefinition{
 				ContainerDefinitions: []*sdkecs.ContainerDefinition{
 					{
 						Name: aws.String("foo"),
@@ -737,7 +736,7 @@ func TestLocalRunOpts_getEnvVars(t *testing.T) {
 			},
 		},
 		"overrides merged with existing env vars correctly": {
-			taskDef: &awsecs.TaskDefinition{
+			taskDef: &ecs.TaskDefinition{
 				ContainerDefinitions: []*sdkecs.ContainerDefinition{
 					{
 						Name: aws.String("foo"),
@@ -800,7 +799,7 @@ func TestLocalRunOpts_getEnvVars(t *testing.T) {
 			},
 		},
 		"error getting secret": {
-			taskDef: &awsecs.TaskDefinition{
+			taskDef: &ecs.TaskDefinition{
 				ContainerDefinitions: []*sdkecs.ContainerDefinition{
 					{
 						Name: aws.String("foo"),
@@ -819,7 +818,7 @@ func TestLocalRunOpts_getEnvVars(t *testing.T) {
 			wantError: `get secrets: get secret "defaultSSM": some error`,
 		},
 		"error getting secret if invalid arn": {
-			taskDef: &awsecs.TaskDefinition{
+			taskDef: &ecs.TaskDefinition{
 				ContainerDefinitions: []*sdkecs.ContainerDefinition{
 					{
 						Name: aws.String("foo"),
@@ -835,7 +834,7 @@ func TestLocalRunOpts_getEnvVars(t *testing.T) {
 			wantError: `get secrets: get secret "arn:aws:ecs:us-west-2:123456789:service/mycluster/myservice": invalid ARN; not a SSM or Secrets Manager ARN`,
 		},
 		"error if secret redefines a var": {
-			taskDef: &awsecs.TaskDefinition{
+			taskDef: &ecs.TaskDefinition{
 				ContainerDefinitions: []*sdkecs.ContainerDefinition{
 					{
 						Name: aws.String("foo"),
@@ -857,7 +856,7 @@ func TestLocalRunOpts_getEnvVars(t *testing.T) {
 			wantError: `get secrets: secret names must be unique, but an environment variable "SHOULD_BE_A_VAR" already exists`,
 		},
 		"correct service used based on arn": {
-			taskDef: &awsecs.TaskDefinition{
+			taskDef: &ecs.TaskDefinition{
 				ContainerDefinitions: []*sdkecs.ContainerDefinition{
 					{
 						Name: aws.String("foo"),
@@ -895,7 +894,7 @@ func TestLocalRunOpts_getEnvVars(t *testing.T) {
 			},
 		},
 		"only unique secrets pulled": {
-			taskDef: &awsecs.TaskDefinition{
+			taskDef: &ecs.TaskDefinition{
 				ContainerDefinitions: []*sdkecs.ContainerDefinition{
 					{
 						Name: aws.String("foo"),
@@ -948,7 +947,7 @@ func TestLocalRunOpts_getEnvVars(t *testing.T) {
 			},
 		},
 		"secrets set via overrides not pulled": {
-			taskDef: &awsecs.TaskDefinition{
+			taskDef: &ecs.TaskDefinition{
 				ContainerDefinitions: []*sdkecs.ContainerDefinition{
 					{
 						Name: aws.String("foo"),
@@ -1005,7 +1004,7 @@ func TestLocalRunOpts_getEnvVars(t *testing.T) {
 			},
 		},
 		"region env vars set": {
-			taskDef: &awsecs.TaskDefinition{
+			taskDef: &ecs.TaskDefinition{
 				ContainerDefinitions: []*sdkecs.ContainerDefinition{
 					{
 						Name:        aws.String("foo"),
