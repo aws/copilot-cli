@@ -846,7 +846,6 @@ Resources:
                 Provider: Manual
               RunOrder: 1
             - Name: preAction1
-              Region: us-west-2
               RunOrder: 2
               ActionTypeId:
                 Category: Build
@@ -860,7 +859,6 @@ Resources:
               OutputArtifacts:
                 - Name: PretestDeploymentActionpreAction1Output
             - Name: preAction2
-              Region: us-west-2
               RunOrder: 3
               ActionTypeId:
                 Category: Build
@@ -874,7 +872,6 @@ Resources:
               OutputArtifacts:
                 - Name: PretestDeploymentActionpreAction2Output
             - Name: postAction1
-              Region: us-west-2
               RunOrder: 5
               ActionTypeId:
                 Category: Build
@@ -888,7 +885,6 @@ Resources:
               OutputArtifacts:
                 - Name: PosttestDeploymentActionpostAction1Output
             - Name: postAction2
-              Region: us-west-2
               RunOrder: 6
               ActionTypeId:
                 Category: Build
@@ -902,7 +898,6 @@ Resources:
               OutputArtifacts:
                 - Name: PosttestDeploymentActionpostAction2Output
             - Name: postAction3
-              Region: us-west-2
               RunOrder: 5
               ActionTypeId:
                 Category: Build
