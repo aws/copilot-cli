@@ -952,3 +952,92 @@ func Test_deployOpts_maybeInitEnv(t *testing.T) {
 		})
 	}
 }
+
+func Test_deployOpts_maybeDeployEnv(t *testing.T) {
+	mockError := errors.New("some error")
+	tests := map[string]struct {
+		envExistsInWs bool
+		deployEnv     *bool
+
+		mockPrompt       func(m *mocks.Mockprompter)
+		mockDeployEnvCmd func(m *mocks.Mockcmd)
+
+		wantErr string
+	}{
+		"env does not exist in ws": {
+			envExistsInWs:    false,
+			mockPrompt:       func(m *mocks.Mockprompter) {},
+			mockDeployEnvCmd: func(m *mocks.Mockcmd) {},
+		},
+		"env exists; deploy false when prompted": {
+			envExistsInWs: true,
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Confirm(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, nil)
+			},
+			mockDeployEnvCmd: func(m *mocks.Mockcmd) {},
+		},
+		"env exists; deploy true when prompted": {
+			envExistsInWs: true,
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Confirm(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
+			},
+			mockDeployEnvCmd: func(m *mocks.Mockcmd) {
+				m.EXPECT().Validate().Return(nil)
+				m.EXPECT().Ask().Return(nil)
+				m.EXPECT().Execute().Return(nil)
+			},
+		},
+		"error selecting whether to deploy env": {
+			envExistsInWs: true,
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Confirm(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, mockError)
+			},
+			mockDeployEnvCmd: func(m *mocks.Mockcmd) {},
+			wantErr:          "confirm env deployment: some error",
+		},
+		"env exists; deploy flag set": {
+			envExistsInWs: true,
+			deployEnv:     aws.Bool(true),
+			mockPrompt:    func(m *mocks.Mockprompter) {},
+			mockDeployEnvCmd: func(m *mocks.Mockcmd) {
+				m.EXPECT().Validate().Return(nil)
+				m.EXPECT().Ask().Return(nil)
+				m.EXPECT().Execute().Return(nil)
+			},
+		},
+	}
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockPrompt := mocks.NewMockprompter(ctrl)
+			mockDeployEnvCmd := mocks.NewMockcmd(ctrl)
+
+			tc.mockPrompt(mockPrompt)
+			tc.mockDeployEnvCmd(mockDeployEnvCmd)
+
+			o := &deployOpts{
+				deployVars: deployVars{
+					deployWkldVars: deployWkldVars{
+						envName: "test",
+						appName: "app",
+					},
+					deployEnv: tc.deployEnv,
+				},
+				envExistsInWs: tc.envExistsInWs,
+				prompt:        mockPrompt,
+				newDeployEnvCmd: func(o *deployOpts) (cmd, error) {
+					return mockDeployEnvCmd, nil
+				},
+			}
+
+			err := o.maybeDeployEnv()
+			if err != nil {
+				require.EqualError(t, err, tc.wantErr)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
