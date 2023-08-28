@@ -380,7 +380,7 @@ func (o *deployOpts) maybeInitEnv() error {
 			o.deployEnv = aws.Bool(true)
 		} else if !aws.BoolValue(o.deployEnv) {
 			log.Errorf("Environment is not deployed but --%s=false was specified. Deploy the environment with %s in order to deploy a workload to it.\n", deployEnvFlag, color.HighlightCode("copilot env deploy"))
-			return fmt.Errorf("environment %s is has not yet been deployed", o.deployWkldVars.envName)
+			return fmt.Errorf("environment %s was initialized but has not been deployed", o.deployWkldVars.envName)
 		}
 		return nil
 	}

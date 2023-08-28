@@ -7,6 +7,7 @@ import (
 	"errors"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
+	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"testing"
 
@@ -548,6 +549,82 @@ type: Load Balanced Web Service`)
 			},
 			mockInit: func(m *mocks.MockwkldInitializerWithoutManifest) {},
 		},
+		"both uninitialized and initialized environments and workloads": {
+			inAppName: "app",
+			wantedErr: "",
+			mockSel: func(m *mocks.MockwsSelector) {
+				m.EXPECT().Workload("Select a service or job in your workspace", "").Return("fe", nil)
+				m.EXPECT().Environment("Select an environment to deploy to", "", "app", prompt.Option{Value: "prod", Hint: "uninitialized"}).Return("prod", nil)
+			},
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Confirm("Environment \"prod\" does not exist in app \"app\". Initialize it?", "").Return(true, nil)
+			},
+			mockActionCommand: func(m *mocks.MockactionCommand) {
+				// Deploy svc
+				m.EXPECT().Ask()
+				m.EXPECT().Validate()
+				m.EXPECT().Execute()
+				m.EXPECT().RecommendActions()
+			},
+			mockCmd: func(m *mocks.Mockcmd) {
+				// Init env
+				m.EXPECT().Validate()
+				m.EXPECT().Ask()
+				m.EXPECT().Execute()
+				// Deploy env
+				m.EXPECT().Validate()
+				m.EXPECT().Ask()
+				m.EXPECT().Execute()
+			},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().ListEnvironments("app").Return([]*config.Environment{&mockEnv}, nil)
+				m.EXPECT().GetEnvironment("app", "prod").Return(nil, &config.ErrNoSuchEnvironment{})
+				// After env init/deploy
+				m.EXPECT().ListWorkloads("app").Return([]*config.Workload{{Name: "fe", Type: "Load Balanced Web Service"}}, nil)
+				m.EXPECT().GetWorkload("app", "fe").Return(&config.Workload{Name: "fe", Type: "Load Balanced Web Service"}, nil)
+			},
+			mockWs: func(m *mocks.MockwsWlDirReader) {
+				m.EXPECT().ListEnvironments().Return([]string{"test", "prod"}, nil)
+				m.EXPECT().ListEnvironments().Return([]string{"test", "prod"}, nil)
+			},
+			mockInit: func(m *mocks.MockwkldInitializerWithoutManifest) {
+
+			},
+		},
+		"error listing ws envs": {
+			inAppName:         "app",
+			inName:            "fe",
+			wantedErr:         "get initialized environments: some error",
+			mockSel:           func(m *mocks.MockwsSelector) {},
+			mockPrompt:        func(m *mocks.Mockprompter) {},
+			mockActionCommand: func(m *mocks.MockactionCommand) {},
+			mockCmd:           func(m *mocks.Mockcmd) {},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().ListEnvironments("app").Return(nil, errors.New("some error"))
+			},
+			mockWs: func(m *mocks.MockwsWlDirReader) {
+				m.EXPECT().ListEnvironments().Return([]string{}, nil)
+			},
+			mockInit: func(m *mocks.MockwkldInitializerWithoutManifest) {},
+		},
+		"error selecting environment": {
+			inAppName: "app",
+			inName:    "fe",
+			wantedErr: "get environment name: some error",
+			mockSel: func(m *mocks.MockwsSelector) {
+				m.EXPECT().Environment(gomock.Any(), "", "app", prompt.Option{Value: "prod", Hint: "uninitialized"}).Return("", errors.New("some error"))
+			},
+			mockPrompt:        func(m *mocks.Mockprompter) {},
+			mockActionCommand: func(m *mocks.MockactionCommand) {},
+			mockCmd:           func(m *mocks.Mockcmd) {},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().ListEnvironments("app").Return([]*config.Environment{&mockEnv}, nil)
+			},
+			mockWs: func(m *mocks.MockwsWlDirReader) {
+				m.EXPECT().ListEnvironments().Return([]string{"prod"}, nil)
+			},
+			mockInit: func(m *mocks.MockwkldInitializerWithoutManifest) {},
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
@@ -601,6 +678,276 @@ type: Load Balanced Web Service`)
 			// THEN
 			if tc.wantedErr != "" {
 				require.EqualError(t, err, tc.wantedErr)
+			}
+		})
+	}
+}
+
+func Test_deployOpts_checkEnvExists(t *testing.T) {
+	mockError := errors.New("some error")
+	tests := map[string]struct {
+		wantEnvExistsInApp, wantEnvExistsInWs bool
+
+		mockStore func(m *mocks.Mockstore)
+		mockWs    func(m *mocks.MockwsWlDirReader)
+
+		wantErr string
+	}{
+		"error getting environment": {
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetEnvironment("app", "test").Return(nil, mockError)
+			},
+			mockWs:  func(m *mocks.MockwsWlDirReader) {},
+			wantErr: "get environment from config store: some error",
+		},
+		"env exists in ws but not app": {
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetEnvironment("app", "test").Return(nil, &config.ErrNoSuchEnvironment{"app", "test"})
+			},
+			mockWs: func(m *mocks.MockwsWlDirReader) {
+				m.EXPECT().ListEnvironments().Return([]string{"test"}, nil)
+			},
+			wantEnvExistsInWs:  true,
+			wantEnvExistsInApp: false,
+		},
+		"env exists in app but not ws": {
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetEnvironment("app", "test").Return(&config.Environment{
+					App:  "app",
+					Name: "test",
+				}, nil)
+			},
+			mockWs: func(m *mocks.MockwsWlDirReader) {
+				m.EXPECT().ListEnvironments().Return(nil, nil)
+			},
+			wantEnvExistsInWs:  false,
+			wantEnvExistsInApp: true,
+		},
+		"env does not exist anywhere": {
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetEnvironment("app", "test").Return(nil, &config.ErrNoSuchEnvironment{"app", "test"})
+			},
+			mockWs: func(m *mocks.MockwsWlDirReader) {
+				m.EXPECT().ListEnvironments().Return(nil, nil)
+			},
+			wantErr: "environment \"test\" does not exist in the workspace",
+		},
+		"error listing envs": {
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetEnvironment("app", "test").Return(&config.Environment{
+					App:  "app",
+					Name: "test",
+				}, nil)
+			},
+			mockWs: func(m *mocks.MockwsWlDirReader) {
+				m.EXPECT().ListEnvironments().Return(nil, mockError)
+			},
+			wantErr: "list environments in workspace: some error",
+		},
+	}
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockStore := mocks.NewMockstore(ctrl)
+			mockWs := mocks.NewMockwsWlDirReader(ctrl)
+
+			tc.mockWs(mockWs)
+			tc.mockStore(mockStore)
+
+			o := &deployOpts{
+				deployVars: deployVars{
+					deployWkldVars: deployWkldVars{
+						envName: "test",
+						appName: "app",
+					},
+				},
+				store: mockStore,
+				ws:    mockWs,
+			}
+
+			err := o.checkEnvExists()
+			if err != nil {
+				require.EqualError(t, err, tc.wantErr)
+			} else {
+				require.Equal(t, tc.wantEnvExistsInApp, o.envExistsInApp)
+				require.Equal(t, tc.wantEnvExistsInWs, o.envExistsInWs)
+			}
+		})
+	}
+}
+
+func Test_deployOpts_maybeInitEnv(t *testing.T) {
+	mockError := errors.New("some error")
+	tests := map[string]struct {
+		envExistsInApp bool
+		envExistsInWs  bool
+		yesInitEnv     *bool
+		deployEnv      *bool
+
+		mockPrompt     func(m *mocks.Mockprompter)
+		mockInitEnvCmd func(m *mocks.Mockcmd)
+
+		wantDeployEnv *bool
+		wantErr       string
+	}{
+		"env does not exist": {
+			envExistsInWs:  false,
+			envExistsInApp: false,
+
+			mockPrompt:     func(m *mocks.Mockprompter) {},
+			mockInitEnvCmd: func(m *mocks.Mockcmd) {},
+			wantErr:        `environment "test" does not exist in the workspace`,
+		},
+		"env already exists": {
+			envExistsInApp: true,
+
+			mockPrompt:     func(m *mocks.Mockprompter) {},
+			mockInitEnvCmd: func(m *mocks.Mockcmd) {},
+
+			deployEnv:     nil,
+			wantDeployEnv: nil,
+		},
+		"error prompt to confirm env init": {
+			envExistsInWs:  true,
+			envExistsInApp: false,
+			yesInitEnv:     nil,
+
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Confirm(gomock.Any(), gomock.Any()).Return(false, mockError)
+			},
+			mockInitEnvCmd: func(m *mocks.Mockcmd) {},
+			wantErr:        "confirm env init: some error",
+		},
+		"confirm env init returns false": {
+			envExistsInWs:  true,
+			envExistsInApp: false,
+			yesInitEnv:     nil,
+
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Confirm(gomock.Any(), gomock.Any()).Return(false, nil)
+			},
+			mockInitEnvCmd: func(m *mocks.Mockcmd) {},
+			wantErr:        "env test does not exist in app app",
+		},
+		"error validating initEnvCmd": {
+			envExistsInApp: false,
+			envExistsInWs:  true,
+			yesInitEnv:     aws.Bool(true),
+
+			mockPrompt: func(m *mocks.Mockprompter) {},
+			mockInitEnvCmd: func(m *mocks.Mockcmd) {
+				m.EXPECT().Validate().Return(mockError)
+			},
+
+			wantErr: "some error",
+		},
+		"error in initEnvCmd.Ask": {
+			envExistsInApp: false,
+			envExistsInWs:  true,
+			yesInitEnv:     aws.Bool(true),
+
+			mockPrompt: func(m *mocks.Mockprompter) {},
+			mockInitEnvCmd: func(m *mocks.Mockcmd) {
+				m.EXPECT().Validate().Return(nil)
+				m.EXPECT().Ask().Return(mockError)
+			},
+
+			wantErr: "some error",
+		},
+		"error in initEnvCmd.Execute": {
+			envExistsInApp: false,
+			envExistsInWs:  true,
+			yesInitEnv:     aws.Bool(true),
+
+			mockPrompt: func(m *mocks.Mockprompter) {},
+			mockInitEnvCmd: func(m *mocks.Mockcmd) {
+				m.EXPECT().Validate().Return(nil)
+				m.EXPECT().Ask().Return(nil)
+				m.EXPECT().Execute().Return(mockError)
+			},
+
+			wantErr: "some error",
+		},
+		"error when env initialized but deploy is false": {
+			envExistsInApp: false,
+			envExistsInWs:  true,
+			yesInitEnv:     aws.Bool(true),
+			deployEnv:      aws.Bool(false),
+
+			mockPrompt: func(m *mocks.Mockprompter) {},
+			mockInitEnvCmd: func(m *mocks.Mockcmd) {
+				m.EXPECT().Validate().Return(nil)
+				m.EXPECT().Ask().Return(nil)
+				m.EXPECT().Execute().Return(nil)
+			},
+
+			wantErr: "environment test was initialized but has not been deployed",
+		},
+		"error when environment was not initialized due to prompting or flags": {
+			envExistsInApp: false,
+			envExistsInWs:  true,
+			yesInitEnv:     aws.Bool(false),
+			deployEnv:      aws.Bool(false),
+
+			mockPrompt: func(m *mocks.Mockprompter) {},
+			mockInitEnvCmd: func(m *mocks.Mockcmd) {
+				m.EXPECT().Validate().Return(nil).Times(0)
+				m.EXPECT().Ask().Return(nil).Times(0)
+				m.EXPECT().Execute().Return(nil).Times(0)
+			},
+
+			wantErr: "env test does not exist in app app",
+		},
+		"deployEnv set correctly after initializing app": {
+			envExistsInApp: false,
+			envExistsInWs:  true,
+			yesInitEnv:     aws.Bool(true),
+
+			mockPrompt: func(m *mocks.Mockprompter) {},
+			mockInitEnvCmd: func(m *mocks.Mockcmd) {
+				m.EXPECT().Validate().Return(nil)
+				m.EXPECT().Ask().Return(nil)
+				m.EXPECT().Execute().Return(nil)
+			},
+			wantDeployEnv: aws.Bool(true),
+		},
+	}
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockPrompt := mocks.NewMockprompter(ctrl)
+			mockInitEnvCmd := mocks.NewMockcmd(ctrl)
+
+			tc.mockPrompt(mockPrompt)
+			tc.mockInitEnvCmd(mockInitEnvCmd)
+
+			o := &deployOpts{
+				deployVars: deployVars{
+					deployWkldVars: deployWkldVars{
+						envName: "test",
+						appName: "app",
+					},
+					deployEnv:  tc.deployEnv,
+					yesInitEnv: tc.yesInitEnv,
+				},
+				envExistsInApp: tc.envExistsInApp,
+				envExistsInWs:  tc.envExistsInWs,
+				prompt:         mockPrompt,
+				newInitEnvCmd: func(o *deployOpts) (cmd, error) {
+					return mockInitEnvCmd, nil
+				},
+			}
+
+			err := o.maybeInitEnv()
+			if err != nil {
+				require.EqualError(t, err, tc.wantErr)
+			} else {
+				require.Equal(t, tc.wantDeployEnv, o.deployEnv)
+				require.NoError(t, err)
 			}
 		})
 	}
