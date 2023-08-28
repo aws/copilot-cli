@@ -7,9 +7,9 @@ package selector
 import (
 	"errors"
 	"fmt"
-	"github.com/dustin/go-humanize/english"
 	"sort"
-	"strings"
+
+	"github.com/dustin/go-humanize/english"
 
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -705,11 +705,13 @@ func (s *DeploySelector) deployedWorkload(workloadType string, msg, help string,
 	var deployedWkld *DeployedWorkload
 	if len(wkldEnvs) == 1 {
 		deployedWkld = wkldEnvs[0]
-		if s.name == "" && s.env == "" {
+		switch {
+		case s.name == "" && s.env == "":
 			log.Infof("Found only one deployed %s %s in environment %s\n", workloadType, color.HighlightUserInput(deployedWkld.Name), color.HighlightUserInput(deployedWkld.Env))
-		}
-		if (s.name != "") != (s.env != "") {
-			log.Infof("%s %s found in environment %s\n", strings.ToTitle(workloadType), color.HighlightUserInput(deployedWkld.Name), color.HighlightUserInput(deployedWkld.Env))
+		case s.name != "" && s.env == "":
+			log.Infof("%s found only in environment %s\n", color.HighlightUserInput(deployedWkld.Name), color.HighlightUserInput(deployedWkld.Env))
+		case s.name == "" && s.env != "":
+			log.Infof("Only the %s %s is found in the environment %s\n", deployedWkld.Type, color.HighlightUserInput(deployedWkld.Name), color.HighlightUserInput(deployedWkld.Env))
 		}
 		return deployedWkld, nil
 	}

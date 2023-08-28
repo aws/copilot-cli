@@ -50,6 +50,7 @@ func withPipelineParsingFuncs() ParseOption {
 				return ok
 			},
 			"logicalIDSafe": ReplaceDashesFunc,
+			"alphanumeric":  StripNonAlphaNumFunc,
 		})
 	}
 }
