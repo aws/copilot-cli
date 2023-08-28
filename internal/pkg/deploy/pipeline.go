@@ -8,13 +8,13 @@ package deploy
 import (
 	"errors"
 	"fmt"
+	"github.com/aws/copilot-cli/internal/pkg/graph"
+	"gopkg.in/yaml.v3"
 	"path"
 	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
-
-	"github.com/aws/copilot-cli/internal/pkg/graph"
 
 	"github.com/aws/copilot-cli/internal/pkg/config"
 
