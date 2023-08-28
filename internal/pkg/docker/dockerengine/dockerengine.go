@@ -317,7 +317,7 @@ func (c DockerCmdClient) IsContainerRunning(containerName string) (bool, error) 
 func (c DockerCmdClient) Stop(containerID string) error {
 	buf := &bytes.Buffer{}
 	if err := c.runner.Run("docker", []string{"stop", containerID}, exec.Stdout(buf), exec.Stderr(buf)); err != nil {
-		return fmt.Errorf("%s: %s", strings.TrimSpace(buf.String()), err)
+		return fmt.Errorf("%s: %w", strings.TrimSpace(buf.String()), err)
 	}
 	return nil
 }
@@ -326,7 +326,7 @@ func (c DockerCmdClient) Stop(containerID string) error {
 func (c DockerCmdClient) Rm(containerID string) error {
 	buf := &bytes.Buffer{}
 	if err := c.runner.Run("docker", []string{"rm", containerID}, exec.Stdout(buf), exec.Stderr(buf)); err != nil {
-		return fmt.Errorf("%s: %s", strings.TrimSpace(buf.String()), err)
+		return fmt.Errorf("%s: %w", strings.TrimSpace(buf.String()), err)
 	}
 	return nil
 }

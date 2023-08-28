@@ -670,7 +670,6 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 				targetApp:       &mockApp,
 				containerSuffix: mockContainerSuffix,
 				newColor: func() *color.Color {
-
 					return nil
 				},
 				prog: m.prog,
