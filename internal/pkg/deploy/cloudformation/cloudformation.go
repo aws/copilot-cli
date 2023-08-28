@@ -404,7 +404,7 @@ func (cf CloudFormation) executeAndRenderChangeSet(in *executeAndRenderChangeSet
 	return g.Wait()
 }
 
-// This function renders and executes a CloudFormation change set, providing progress updates if necessary.
+// renderChangeSet renders and executes a CloudFormation change set, providing progress updates if necessary.
 // It returns the number of rendered lines and any encountered error.
 func (cf CloudFormation) renderChangeSet(ctx context.Context, changeSetID string, in *executeAndRenderChangeSetInput) (int, error) {
 	if _, ok := cf.console.(*discardFile); ok { // If we don't have to render skip the additional network calls.
