@@ -182,7 +182,7 @@ The name of an environment to deploy your services to.
 <span class="parent-field">stages.</span><a id="stages-approval" href="#stages-approval" class="field">`requires_approval`</a> <span class="type">Boolean</span>  
 Optional. Indicates whether to add a manual approval step before the deployment (or the pre-deployment actions, if you have added any). Defaults to `false`.
 
-<span class="parent-field">stages.</span><a id="stages-predeployments" class="field">`pre_deployments`</a> <span class="type">Map</span>  
+<span class="parent-field">stages.</span><a id="stages-predeployments" class="field">`pre_deployments`</a> <span class="type">Map</span> <span class="version">Modified in [v1.30.0](../../blogs/release-v130.en.md#deployment-actions)</span>  
 Optional. Add actions to be executed before deployments.
 ```yaml
 stages:
@@ -192,13 +192,13 @@ stages:
         buildspec: <path to local buildspec>
         depends_on: [<other action's name>, ...]
 ```
-<span class="parent-field">stages.pre_deployments</span><a id="stages-predeployments-name" href="#stages-predeployments-name" class="field">`<name>`</a> <span class="type">Map</span>  
+<span class="parent-field">stages.pre_deployments</span><a id="stages-predeployments-name" href="#stages-predeployments-name" class="field">`<name>`</a> <span class="type">Map</span> <span class="version">Modified in [v1.30.0](../../blogs/release-v130.en.md#deployment-actions)</span>  
 Name of the pre-deployment action.
 
-<span class="parent-field">stages.pre_deployments.`<name>`.</span><a id="stages-predeployments-buildspec" href="#stages-predeployments-buildspec" class="field">`buildspec`</a> <span class="type">String</span>  
+<span class="parent-field">stages.pre_deployments.`<name>`.</span><a id="stages-predeployments-buildspec" href="#stages-predeployments-buildspec" class="field">`buildspec`</a> <span class="type">String</span> <span class="version">Modified in [v1.30.0](../../blogs/release-v130.en.md#deployment-actions)</span>  
 The path to a buildspec file, relative to the project root, to use for this build project.
 
-<span class="parent-field">stages.pre_deployments.`<name>`.</span><a id="stages-predeployments-dependson" href="#stages-predeployments-dependson" class="field">`depends_on`</a> <span class="type">Array of Strings</span>  
+<span class="parent-field">stages.pre_deployments.`<name>`.</span><a id="stages-predeployments-dependson" href="#stages-predeployments-dependson" class="field">`depends_on`</a> <span class="type">Array of Strings</span> <span class="version">Modified in [v1.30.0](../../blogs/release-v130.en.md#deployment-actions)</span>  
 Optional. Names of other pre-deployment actions that should be deployed prior to deploying this action. Defaults to no dependencies.
 
 !!! info
@@ -261,7 +261,7 @@ Optional. Path to the CloudFormation template generated during the `build` phase
 <span class="parent-field">stages.deployments.`<name>`.</span><a id="stages-deployments-templateconfig" href="#stages-deployments-templatepath" class="field">`template_config`</a> <span class="type">String</span>  
 Optional. Path to the CloudFormation template configuration generated during the `build` phase. Defaults to `infrastructure/<deployment name>-<stage name>.params.json`.
 
-<span class="parent-field">stages.</span><a id="stages-postdeployments" class="field">`post_deployments`</a> <span class="type">Map</span>  
+<span class="parent-field">stages.</span><a id="stages-postdeployments" class="field">`post_deployments`</a> <span class="type">Map</span><span class="version">Modified in [v1.30.0](../../blogs/release-v130.en.md#deployment-actions)</span>  
 Optional. Add actions to be executed after deployments. Mutually exclusive with `stages.test_commands`.
 ```yaml
 stages:
@@ -271,13 +271,13 @@ stages:
         buildspec: <path to local buildspec>
         depends_on: [<other action's name>, ...]
 ```
-<span class="parent-field">stages.post_deployments</span><a id="stages-postdeployments-name" href="#stages-postdeployments-name" class="field">`<name>`</a> <span class="type">Map</span>  
+<span class="parent-field">stages.post_deployments</span><a id="stages-postdeployments-name" href="#stages-postdeployments-name" class="field">`<name>`</a> <span class="type">Map</span> <span class="version">Modified in [v1.30.0](../../blogs/release-v130.en.md#deployment-actions)</span>  
 Name of the post-deployment action.
 
-<span class="parent-field">stages.post_deployments.`<name>`.</span><a id="stages-postdeployments-buildspec" href="#stages-postdeployments-buildspec" class="field">`buildspec`</a> <span class="type">String</span>  
+<span class="parent-field">stages.post_deployments.`<name>`.</span><a id="stages-postdeployments-buildspec" href="#stages-postdeployments-buildspec" class="field">`buildspec`</a> <span class="type">String</span> <span class="version">Modified in [v1.30.0](../../blogs/release-v130.en.md#deployment-actions)</span>  
 The path to a buildspec file, relative to the project root, to use for this build project.
 
-<span class="parent-field">stages.post_deployments.`<name>`.</span><a id="stages-postdeployments-depends_on" href="#stages-postdeployments-dependson" class="field">`depends_on`</a> <span class="type">Array of Strings</span>  
+<span class="parent-field">stages.post_deployments.`<name>`.</span><a id="stages-postdeployments-depends_on" href="#stages-postdeployments-dependson" class="field">`depends_on`</a> <span class="type">Array of Strings</span> <span class="version">Modified in [v1.30.0](../../blogs/release-v130.en.md#deployment-actions)</span>   
 Optional. Names of other post-deployment actions that should be deployed prior to deploying this action. Defaults to no dependencies.
 
 <span class="parent-field">stages.</span><a id="stages-test-cmds" href="#stages-test-cmds" class="field">`test_commands`</a> <span class="type">Array of Strings</span>  

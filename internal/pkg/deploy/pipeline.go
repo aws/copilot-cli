@@ -14,8 +14,6 @@ import (
 	"sort"
 	"strings"
 
-	"gopkg.in/yaml.v3"
-
 	"github.com/aws/copilot-cli/internal/pkg/graph"
 
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -40,7 +38,7 @@ const (
 	DefaultPipelineArtifactsDir = "infrastructure"
 )
 
-// Name of the environment varialbes injected into the CodeBuild projects that support pre/post-deployment actions.
+// Name of the environment variables injected into the CodeBuild projects that support pre/post-deployment actions.
 const (
 	envVarNameEnvironmentName = "COPILOT_ENVIRONMENT_NAME"
 	envVarNameApplicationName = "COPILOT_APPLICATION_NAME"

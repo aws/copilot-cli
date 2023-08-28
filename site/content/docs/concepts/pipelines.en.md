@@ -101,9 +101,9 @@ stages:
 ```
 You can see every available configuration option for `manifest.yml` on the [pipeline manifest](../manifest/pipeline.en.md) page.
 
-There are 3 main parts of this file: the `name` field, which is the name of your pipeline, the `source` section, which details the repository and branch to track, and the `stages` section, which lists the environments you want this pipeline to deploy to. You can update this anytime, but you must commit and push the changed files and run `copilot pipeline deploy` afterwards.
+There are 3 main parts of this file: the `name` field, which is the name of your pipeline, the `source` section, which details the repository and branch to track, and the `stages` section, which lists the environments you want this pipeline to deploy to. You can update this anytime, but you must commit and push the changed files and run `copilot pipeline deploy` afterward.
 
-Typically, you'll update this file to add environments to deploy to, specify the order of deployments, add actions for the pipeline to run before or after deployment, or change the branch to track. You may add a manual approval step before deployment or commands to run tests (see "Adding Tests and Other Actions," below). If you are using CodeStar Connections to connect to your repository and would like to utilize an existing connection rather than let Copilot generate one for you, you may add the connection name here.
+Typically, you'll update this file to add environments to deploy to, specify the order of deployments, add actions for the pipeline to run before or after deployment, or change the branch to track. You also may add a manual approval step before deployment or commands to run tests (see [Customization](#customization)). If you are using CodeStar Connections to connect to your repository and would like to utilize an existing connection rather than let Copilot generate one for you, you may add the connection name here.
 
 ### Step 3: Updating the Buildspec (optional)
 
@@ -146,12 +146,57 @@ After creating your pipeline, you can manage the version of Copilot used by your
 ...
 ```
 
-## Adding Tests and Other Actions
+## Customization
+### Manual approval
+To add an approval step, set the `require_approval` field to 'true'. No pre-deployment
+or deployment actions will run without manual intervention via the CodePipeline console.
+### Pre- and Post-deployment Actions
+As of [v1.30.0](../../blogs/release-v130.en.md), you can insert actions into your pipeline, 
+before and/or after each workload or environment deployment. Add these database migration, 
+testing, or other actions right into your pipeline manifest.
+```yaml
+stages:
+  - name: test
+    require_approval: true
+    pre_deployments:
+      db_migration: # The name of this action.
+        buildspec: copilot/pipelines/demo-api-frontend-main/buildspecs/buildspec.yml # The path to the buildspec.
+    deployments: # Optional, ordering of deployments. 
+      orders:
+      warehouse:
+      frontend:
+        depends_on: [orders, warehouse]
+    post_deployments:
+      db_migration:
+        buildspec: copilot/pipelines/demo-api-frontend-main/buildspecs/post_buildspec.yml
+      integration:
+        buildspec: copilot/pipelines/demo-api-frontend-main/buildspecs/integ-buildspec.yml
+        depends_on: [db_migration] # Optional, ordering of actions.
+```
+In the `buildspec` manifest field, add the path, relative to your project root, 
+of your [buildspec file]( https://docs.aws.amazon.com/codebuild/latest/userguide/build-spec-ref.html).
+The Copilot environment variables `COPILOT_APPLICATION_NAME` and `$COPILOT_ENVIRONMENT_NAME` are available
+for use within these buildspecs.
 
-Of course, one of the most important parts of a pipeline is the automated testing. To add tests, such as integration or end-to-end tests, that run after a deployment stage, include those commands in the `test_commands` section. If all the tests succeed, your change is promoted to the next stage.
+You may specify the run order of the actions using the `depends_on` subfield, just like you would to indicate your desired [order of deployments](#ordering).  
 
-Adding `test_commands` generates a CodeBuild project with the [aws/codebuild/amazonlinux2-x86_64-standard:3.0](https://docs.aws.amazon.com/codebuild/latest/userguide/build-env-ref-available.html) image - so most commands from Amazon Linux 2 (including `make`) are available for use.
+!!! info
+    The CodeBuild projects generated for pre- and post-deployments and test commands are deployed in the same region as the pipeline and app. To access the VPC of the environment being deployed or deployed to, use Copilot commands in your pre-/post-deployment action buildspec or directly in your test commands.
 
+### Ordering
+The `deployments` field enables you to specify the deployment order of 
+workloads or environments (depending on the type of pipeline). If this 
+is not specified, deployments run in parallel. (See [this blog post](../../blogs/release-v118.en.md#controlling-order-of-deployments-in-a-pipeline) for more info.)
+
+### Testing
+If your post-deployment testing requires only a handful of commands and doesn't necessarily
+warrant wiring up a separate buildspec, utilize the `test_commands` field.
+
+!!! warning
+    The `post_deployments` and `test_commands` fields within a stage are mutually exclusive.
+
+
+Pre-deployments, post-deployments, and test commands generate CodeBuild projects with the [aws/codebuild/amazonlinux2-x86_64-standard:3.0](https://docs.aws.amazon.com/codebuild/latest/userguide/build-env-ref-available.html) image, so most commands from Amazon Linux 2 (including `make`) are available for use. 
 Are your tests configured to run inside a Docker container? Copilot's test commands CodeBuild project supports Docker, so `docker build` commands are available as well.
 
 In the example below, the pipeline will run the `make test` command (in your source code directory) and only promote the change to the prod stage if that command exits successfully.
@@ -179,30 +224,7 @@ stages:
 !!! info
     AWS's own Nathan Peck provides a great example of a Copilot pipeline, paying special attention to `test_commands`: https://aws.amazon.com/blogs/containers/automatically-deploying-your-container-application-with-aws-copilot/
 
-For even more power and flexibility, add pre- and post-deployments to your pipeline manifest.
-```yaml
-stages:
-    - name: test
-      require_approval: true
-      pre_deployments:
-        db_migration:
-          buildspec: copilot/pipelines/demo-api-frontend-main/buildspecs/buildspec.yml
-      deployments:
-        orders:
-        warehouse:
-        frontend:
-          depends_on: [orders, warehouse]
-      post_deployments:
-        db_migration:
-          buildspec: copilot/pipelines/demo-api-frontend-main/buildspecs/post_buildspec.yml
-        integration:
-          buildspec: copilot/pipelines/demo-api-frontend-main/buildspecs/integ-buildspec.yml
-          depends_on: [db_migration]
-```
-Define these actions in [buildspec files]( https://docs.aws.amazon.com/codebuild/latest/userguide/build-spec-ref.html) stored locally, and add the paths, relative to your project root, to the manifest.
-You may specify the run order of the actions using the `depends_on` subfield, just like you would to indicate your desired order of deployments.  
-
-!!! info
-    The CodeBuild projects generated for pre- and post-deployments are deployed in the same region as the pipeline and app. To access the VPC of the environment being deployed or deployed to, use Copilot commands in your buildspec or directly in `test_commands`.  
-
-For more information on pre- and post-deployments, see the [v.1.30.0 blog post](../../blogs/release-v130.en.md).
+### Pipeline Overrides
+If all of these options for custom configuration still don't give you the pipeline you'd like,
+you can use Copilot's "break the glass" solution, [pipeline overrides](../../blogs/release-v129.en.md#pipeline-overrides), with the 
+[CDK](../developing/overrides/cdk.en.md) or [YAML](../developing/overrides/yamlpatch.en.md) to change the pipeline's CloudFormation template.
