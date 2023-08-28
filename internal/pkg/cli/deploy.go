@@ -389,6 +389,9 @@ func (o *deployOpts) maybeInitEnv() error {
 }
 
 func (o *deployOpts) maybeDeployEnv() error {
+	if !o.envExistsInWs {
+		return nil
+	}
 	if o.deployEnv == nil {
 		v, err := o.prompt.Confirm(fmt.Sprintf("Would you like to deploy the environment %q before deploying your workload?", o.envName), "", prompt.WithFinalMessage("Deploy environment:"))
 		if err != nil {

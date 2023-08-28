@@ -702,7 +702,7 @@ func Test_deployOpts_checkEnvExists(t *testing.T) {
 		},
 		"env exists in ws but not app": {
 			mockStore: func(m *mocks.Mockstore) {
-				m.EXPECT().GetEnvironment("app", "test").Return(nil, &config.ErrNoSuchEnvironment{"app", "test"})
+				m.EXPECT().GetEnvironment("app", "test").Return(nil, &config.ErrNoSuchEnvironment{})
 			},
 			mockWs: func(m *mocks.MockwsWlDirReader) {
 				m.EXPECT().ListEnvironments().Return([]string{"test"}, nil)
@@ -725,7 +725,7 @@ func Test_deployOpts_checkEnvExists(t *testing.T) {
 		},
 		"env does not exist anywhere": {
 			mockStore: func(m *mocks.Mockstore) {
-				m.EXPECT().GetEnvironment("app", "test").Return(nil, &config.ErrNoSuchEnvironment{"app", "test"})
+				m.EXPECT().GetEnvironment("app", "test").Return(nil, &config.ErrNoSuchEnvironment{})
 			},
 			mockWs: func(m *mocks.MockwsWlDirReader) {
 				m.EXPECT().ListEnvironments().Return(nil, nil)
