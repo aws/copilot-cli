@@ -5633,7 +5633,7 @@ func (mr *MockappEnvSelectorMockRecorder) Application(prompt, help interface{}, 
 }
 
 // Environment mocks base method.
-func (m *MockappEnvSelector) Environment(prompt, help, app string, additionalOpts ...string) (string, error) {
+func (m *MockappEnvSelector) Environment(prompt, help, app string, additionalOpts ...prompt.Option) (string, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{prompt, help, app}
 	for _, a := range additionalOpts {
@@ -5734,7 +5734,7 @@ func (mr *MockconfigSelectorMockRecorder) Application(prompt, help interface{}, 
 }
 
 // Environment mocks base method.
-func (m *MockconfigSelector) Environment(prompt, help, app string, additionalOpts ...string) (string, error) {
+func (m *MockconfigSelector) Environment(prompt, help, app string, additionalOpts ...prompt.Option) (string, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{prompt, help, app}
 	for _, a := range additionalOpts {
@@ -6117,7 +6117,7 @@ func (mr *MockwsSelectorMockRecorder) Application(prompt, help interface{}, addi
 }
 
 // Environment mocks base method.
-func (m *MockwsSelector) Environment(prompt, help, app string, additionalOpts ...string) (string, error) {
+func (m *MockwsSelector) Environment(prompt, help, app string, additionalOpts ...prompt.Option) (string, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{prompt, help, app}
 	for _, a := range additionalOpts {
