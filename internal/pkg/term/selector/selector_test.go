@@ -283,7 +283,7 @@ func TestDeploySelect_Service(t *testing.T) {
 					SelectOne("Select a deployed service", "Help text", []string{"mockSvc1 (test)", "mockSvc2 (test)"}, gomock.Any()).
 					Return("", errors.New("some error"))
 			},
-			wantErr: fmt.Errorf("select deployed services for application %s: some error", testApp),
+			wantErr: errors.New("some error"),
 		},
 		"success": {
 			setupMocks: func(m deploySelectMocks) {
@@ -607,7 +607,7 @@ func TestDeploySelect_Job(t *testing.T) {
 					SelectOne("Select a deployed job", "Help text", []string{"mockJob1 (test)", "mockJob2 (test)"}, gomock.Any()).
 					Return("", errors.New("some error"))
 			},
-			wantErr: fmt.Errorf("select deployed jobs for application %s: some error", testApp),
+			wantErr: errors.New("some error"),
 		},
 		"success": {
 			setupMocks: func(m deploySelectMocks) {
@@ -1834,7 +1834,7 @@ func TestWorkspaceSelect_Workload(t *testing.T) {
 
 func TestSelectOption(t *testing.T) {
 	testCases := map[string]struct {
-		optionToTest   SelectOption
+		optionToTest   WorkloadSelectOption
 		wantedSelector LocalWorkloadSelector
 	}{
 		"OnlyInitializedWorkloads": {
@@ -2242,7 +2242,7 @@ func TestSelect_Environment(t *testing.T) {
 	additionalOpt1, additionalOpt2 := "opt1", "opt2"
 
 	testCases := map[string]struct {
-		inAdditionalOpts []string
+		inAdditionalOpts []prompt.Option
 
 		setupMocks func(m environmentMocks)
 		wantErr    error
@@ -2257,7 +2257,7 @@ func TestSelect_Environment(t *testing.T) {
 					Times(1)
 				m.prompt.
 					EXPECT().
-					SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					SelectOption(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Times(0)
 
 			},
@@ -2277,7 +2277,7 @@ func TestSelect_Environment(t *testing.T) {
 					Times(1)
 				m.prompt.
 					EXPECT().
-					SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					SelectOption(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Times(0)
 
 			},
@@ -2301,10 +2301,10 @@ func TestSelect_Environment(t *testing.T) {
 					Times(1)
 				m.prompt.
 					EXPECT().
-					SelectOne(
+					SelectOption(
 						gomock.Eq("Select an environment"),
 						gomock.Eq("Help text"),
-						gomock.Eq([]string{"env1", "env2"}),
+						gomock.Eq([]prompt.Option{{Value: "env1"}, {Value: "env2"}}),
 						gomock.Any()).
 					Return("env2", nil).
 					Times(1)
@@ -2329,14 +2329,14 @@ func TestSelect_Environment(t *testing.T) {
 					Times(1)
 				m.prompt.
 					EXPECT().
-					SelectOne(gomock.Any(), gomock.Any(), gomock.Eq([]string{"env1", "env2"}), gomock.Any()).
+					SelectOption(gomock.Any(), gomock.Any(), gomock.Eq([]prompt.Option{{Value: "env1"}, {Value: "env2"}}), gomock.Any()).
 					Return("", fmt.Errorf("error selecting")).
 					Times(1)
 			},
 			wantErr: fmt.Errorf("select environment: error selecting"),
 		},
 		"no environment but with one additional option": {
-			inAdditionalOpts: []string{additionalOpt1},
+			inAdditionalOpts: []prompt.Option{{Value: additionalOpt1}},
 			setupMocks: func(m environmentMocks) {
 				m.envLister.
 					EXPECT().
@@ -2345,14 +2345,14 @@ func TestSelect_Environment(t *testing.T) {
 					Times(1)
 				m.prompt.
 					EXPECT().
-					SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					SelectOption(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Times(0)
 			},
 
 			want: additionalOpt1,
 		},
 		"no environment but with multiple additional options": {
-			inAdditionalOpts: []string{additionalOpt1, additionalOpt2},
+			inAdditionalOpts: []prompt.Option{{Value: additionalOpt1}, {Value: additionalOpt2}},
 			setupMocks: func(m environmentMocks) {
 				m.envLister.
 					EXPECT().
@@ -2361,7 +2361,7 @@ func TestSelect_Environment(t *testing.T) {
 					Times(1)
 				m.prompt.
 					EXPECT().
-					SelectOne(gomock.Any(), gomock.Any(), []string{additionalOpt1, additionalOpt2}, gomock.Any()).
+					SelectOption(gomock.Any(), gomock.Any(), []prompt.Option{{Value: additionalOpt1}, {Value: additionalOpt2}}, gomock.Any()).
 					Times(1).
 					Return(additionalOpt2, nil)
 			},

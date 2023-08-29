@@ -78,7 +78,7 @@ stages:
         buildspec: copilot/pipelines/demo-api-frontend-main/buildspecs/integ-buildspec.yml
         depends_on: [db_migration] # Optional, ordering of actions.
 ```
- 
+
 ## `copilot deploy` enhancements
 
 ## What’s next?
