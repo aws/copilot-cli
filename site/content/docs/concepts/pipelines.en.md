@@ -55,9 +55,11 @@ This won't create your pipeline, but it will create some local files under `copi
 
 * __Pipeline name__: We suggest naming your pipeline `[repository name]-[branch name]` (press 'Enter' when asked, to accept the default name). This will distinguish it from your other pipelines, should you create multiple, and works well if you follow a pipeline-per-branch workflow.
 
-* __Release order__: You'll be prompted for environments you want to deploy to – select them based on the order you want them to be deployed in your pipeline (deployments happen one environment at a time). You may, for example, want to deploy to your `test` environment first, and then your `prod` environment.
+* __Pipeline type__: You may select either 'Workloads' or '[Environments](../../blogs/release-v120.en.md#continuous-delivery)'; this determines what your pipeline deploys when triggered.
 
-* __Tracking repository__: After you've selected the environments you want to deploy to, you'll be prompted to select which repository you want your CodePipeline to track. This is the repository that, when pushed to, will trigger a pipeline execution. (If the repository you're interested in doesn't show up, you can pass it in using the `--url` flag.)
+* __Release order__: You'll be prompted for environments you want to deploy or deploy to – select them based on the order you want them to be deployed in your pipeline (deployments happen one environment at a time). You may, for example, want to deploy to your `test` environment first, and then your `prod` environment.
+
+* __Tracking repository__: After you've selected the environments you want to deploy or deploy to, you'll be prompted to select which repository you want your CodePipeline to track. This is the repository that, when pushed to, will trigger a pipeline execution. (If the repository you're interested in doesn't show up, you can pass it in using the `--url` flag.)
 
 * __Tracking branch__: After you've selected the repository, Copilot will designate your current local branch as the branch your pipeline will follow. This can be changed in Step 2.
 
@@ -101,9 +103,9 @@ stages:
 ```
 You can see every available configuration option for `manifest.yml` on the [pipeline manifest](../manifest/pipeline.en.md) page.
 
-There are 3 main parts of this file: the `name` field, which is the name of your pipeline, the `source` section, which details the repository and branch to track, and the `stages` section, which lists the environments you want this pipeline to deploy to. You can update this anytime, but you must commit and push the changed files and run `copilot pipeline deploy` afterward.
+There are 3 main parts of this file: the `name` field, which is the name of your pipeline, the `source` section, which details the repository and branch to track, and the `stages` section, which lists the environments you want this pipeline to deploy or deploy to. You can update this anytime, but you must commit and push the changed files and run `copilot pipeline deploy` afterward.
 
-Typically, you'll update this file to add environments to deploy to, specify the order of deployments, add actions for the pipeline to run before or after deployment, or change the branch to track. You also may add a manual approval step before deployment or commands to run tests (see [Customization](#customization)). If you are using CodeStar Connections to connect to your repository and would like to utilize an existing connection rather than let Copilot generate one for you, you may add the connection name here.
+Typically, you'll update this file to add environments, specify the order of deployments, add actions for the pipeline to run before or after deployment, or change the branch to track. You also may add a manual approval step before deployment or commands to run tests (see [Customization](#customization)). If you are using CodeStar Connections to connect to your repository and would like to utilize an existing connection rather than let Copilot generate one for you, you may add the connection name here.
 
 ### Step 3: Updating the Buildspec (optional)
 
@@ -174,8 +176,8 @@ stages:
         depends_on: [db_migration] # Optional, ordering of actions.
 ```
 In the `buildspec` manifest field, add the path, relative to your project root, 
-of your [buildspec file]( https://docs.aws.amazon.com/codebuild/latest/userguide/build-spec-ref.html).
-The Copilot environment variables `COPILOT_APPLICATION_NAME` and `$COPILOT_ENVIRONMENT_NAME` are available
+of your [buildspec file](https://docs.aws.amazon.com/codebuild/latest/userguide/build-spec-ref.html).
+The Copilot environment variables `$COPILOT_APPLICATION_NAME` and `$COPILOT_ENVIRONMENT_NAME` are available
 for use within these buildspecs.
 
 You may specify the run order of the actions using the `depends_on` subfield, just like you would to indicate your desired [order of deployments](#ordering).  
@@ -196,7 +198,7 @@ warrant wiring up a separate buildspec, utilize the `test_commands` field.
     The `post_deployments` and `test_commands` fields within a stage are mutually exclusive.
 
 
-Pre-deployments, post-deployments, and test commands generate CodeBuild projects with the [aws/codebuild/amazonlinux2-x86_64-standard:3.0](https://docs.aws.amazon.com/codebuild/latest/userguide/build-env-ref-available.html) image, so most commands from Amazon Linux 2 (including `make`) are available for use. 
+Pre-deployments, post-deployments, and test commands generate CodeBuild projects with the [aws/codebuild/amazonlinux2-x86_64-standard:4.0](https://docs.aws.amazon.com/codebuild/latest/userguide/build-env-ref-available.html) image, so most commands from Amazon Linux 2 (including `make`) are available for use. 
 Are your tests configured to run inside a Docker container? Copilot's test commands CodeBuild project supports Docker, so `docker build` commands are available as well.
 
 In the example below, the pipeline will run the `make test` command (in your source code directory) and only promote the change to the prod stage if that command exits successfully.
@@ -211,15 +213,13 @@ source:
     repository: https://github.com/kohidave/demo-api-frontend
 
 stages:
-    -
-      name: test
+    - name: test
       # A change will only deploy to the production stage if the
       # make test and echo commands exit successfully.
       test_commands:
         - make test
         - echo "woo! Tests passed"
-    -
-      name: prod
+    - name: prod
 ```
 !!! info
     AWS's own Nathan Peck provides a great example of a Copilot pipeline, paying special attention to `test_commands`: https://aws.amazon.com/blogs/containers/automatically-deploying-your-container-application-with-aws-copilot/
