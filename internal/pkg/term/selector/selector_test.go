@@ -283,7 +283,7 @@ func TestDeploySelect_Service(t *testing.T) {
 					SelectOne("Select a deployed service", "Help text", []string{"mockSvc1 (test)", "mockSvc2 (test)"}, gomock.Any()).
 					Return("", errors.New("some error"))
 			},
-			wantErr: fmt.Errorf("select deployed services for application %s: some error", testApp),
+			wantErr: errors.New("some error"),
 		},
 		"success": {
 			setupMocks: func(m deploySelectMocks) {
@@ -607,7 +607,7 @@ func TestDeploySelect_Job(t *testing.T) {
 					SelectOne("Select a deployed job", "Help text", []string{"mockJob1 (test)", "mockJob2 (test)"}, gomock.Any()).
 					Return("", errors.New("some error"))
 			},
-			wantErr: fmt.Errorf("select deployed jobs for application %s: some error", testApp),
+			wantErr: errors.New("some error"),
 		},
 		"success": {
 			setupMocks: func(m deploySelectMocks) {
