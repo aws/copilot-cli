@@ -40,9 +40,12 @@ Copilot v1.30 brings big enhancements to help you develop more flexibly and effi
 
 When your Copilot Service is failing to deploy, You can now hit `Ctrl-C` to rollback your current CloudFormation stack to previous configuration.
 If you hit 'Ctrl-C' again during a rollback, the rollback of CloudFormation stack will continue in the background.
+
 If you are deploying Copilot service for the first time in an environment, hitting `Ctrl-C` during deployment will delete the stack.
 If you hit 'Ctrl-C' again during a stack deletion, the deletion of CloudFormation stack will continue in the background.
-you can also now use `--detach` flag to skip the progress of Cloudformation Stack Events on your terminal.   
+
+You can also now use `--detach` flag to skip the progress of Cloudformation Stack Events on your terminal.   
+
 `Ctrl-C` and `--detach` flag is now enabled for `copilot svc deploy`, `copilot job deploy`, `copilot env deploy` and `copilot deploy` commands.
 
 ## Deployment actions
