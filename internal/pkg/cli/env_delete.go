@@ -11,7 +11,9 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+	rg "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -72,16 +74,18 @@ type deleteEnvOpts struct {
 	deleteEnvVars
 
 	// Interfaces for dependencies.
-	store             environmentStore
-	rg                resourceGetter
-	deployer          environmentDeployer
-	envDeleterFromApp envDeleterFromApp
-	iam               roleDeleter
-	s3                bucketEmptier
-	envStackDescriber stackDescriber
-	prog              progress
-	prompt            prompter
-	sel               configSelector
+	store                  environmentStore
+	rg                     resourceGetter
+	deployer               environmentDeployer
+	envDeleterFromApp      envDeleterFromApp
+	iam                    roleDeleter
+	s3                     bucketEmptier
+	envStackDescriber      stackDescriber
+	deployedPipelineLister deployedPipelineLister
+	pipelineGetter         pipelineGetter
+	prog                   progress
+	prompt                 prompter
+	sel                    configSelector
 
 	// cached data to avoid fetching the same information multiple times.
 	envConfig *config.Environment
@@ -123,6 +127,8 @@ func newDeleteEnvOpts(vars deleteEnvVars) (*deleteEnvOpts, error) {
 			o.envStackDescriber = stackdescr.NewStackDescriber(stack.NameForEnv(o.appName, o.name), sess)
 			o.deployer = cloudformation.New(sess, cloudformation.WithProgressTracker(os.Stderr))
 			o.envDeleterFromApp = cloudformation.New(defaultSess, cloudformation.WithProgressTracker(os.Stderr))
+			o.pipelineGetter = codepipeline.New(defaultSess)
+			o.deployedPipelineLister = deploy.NewPipelineStore(rg.New(defaultSess))
 			return nil
 		},
 	}, nil
@@ -171,6 +177,10 @@ func (o *deleteEnvOpts) Execute() error {
 		return err
 	}
 	if err := o.validateNoRunningServices(); err != nil {
+		return err
+	}
+
+	if err := o.validateNoDependencyPipelines(); err != nil {
 		return err
 	}
 
@@ -286,7 +296,29 @@ func (o *deleteEnvOpts) validateNoRunningServices() error {
 				svcNames = append(svcNames, *t.Value)
 			}
 		}
-		return fmt.Errorf("service '%s' still exist within the environment %s", strings.Join(svcNames, ", "), o.name)
+		return fmt.Errorf("service %q still exist within the environment %s", strings.Join(svcNames, ", "), o.name)
+	}
+	return nil
+}
+
+func (o *deleteEnvOpts) validateNoDependencyPipelines() error {
+	pipelines, err := o.deployedPipelineLister.ListDeployedPipelines(o.appName)
+	if err != nil {
+		return fmt.Errorf("list deployed pipelines: %w", err)
+	}
+	for _, pipeline := range pipelines {
+		info, err := o.pipelineGetter.GetPipeline(pipeline.ResourceName)
+		if err != nil {
+			return fmt.Errorf("get pipeline %s: %w", pipeline.ResourceName, err)
+		}
+		for _, stage := range info.Stages {
+			if strings.TrimPrefix(stage.Name, deploy.StageFullNamePrefix) == o.name {
+				return &errPipelineDependsOnEnv{
+					pipeline: pipeline.Name,
+					env:      o.name,
+				}
+			}
+		}
 	}
 	return nil
 }
