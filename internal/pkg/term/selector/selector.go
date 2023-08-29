@@ -730,7 +730,7 @@ func (s *DeploySelector) deployedWorkload(workloadType string, msg, help string,
 		prompt.WithFinalMessage(finalMessage),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("select deployed %ss for application %s: %w", workloadType, app, err)
+		return nil, err
 	}
 	deployedWkld = wkldEnvNameMap[wkldEnvName]
 
