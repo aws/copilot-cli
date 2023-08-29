@@ -186,6 +186,10 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 			appName: mockAppName,
 			setupMocks: func(mocks deleteAppMocks) {
 				gomock.InOrder(
+					// delete pipelines
+					mocks.codepipeline.EXPECT().ListDeployedPipelines(mockAppName).Return(mockPipelines, nil),
+					mocks.pipelineDeleter.EXPECT().Execute().Return(nil).Times(2),
+
 					// deleteSvcs
 					mocks.store.EXPECT().ListServices(mockAppName).Return(mockServices, nil),
 					mocks.svcDeleter.EXPECT().Execute().Return(nil).Times(2),
@@ -211,10 +215,6 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 					mocks.spinner.EXPECT().Start(deleteAppCleanResourcesStartMsg),
 					mocks.bucketEmptier.EXPECT().EmptyBucket(mockResources[0].S3Bucket).Return(nil),
 					mocks.spinner.EXPECT().Stop(log.Ssuccess(deleteAppCleanResourcesStopMsg)),
-
-					// delete pipelines
-					mocks.codepipeline.EXPECT().ListDeployedPipelines(mockAppName).Return(mockPipelines, nil),
-					mocks.pipelineDeleter.EXPECT().Execute().Return(nil).Times(2),
 
 					// deleteAppResources
 					mocks.deployer.EXPECT().DeleteApp(mockAppName).Return(nil),
@@ -236,6 +236,10 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 			appName: mockAppName,
 			setupMocks: func(mocks deleteAppMocks) {
 				gomock.InOrder(
+					// delete pipelines
+					mocks.codepipeline.EXPECT().ListDeployedPipelines(mockAppName).Return(mockPipelines, nil),
+					mocks.pipelineDeleter.EXPECT().Execute().Return(nil).Times(2),
+
 					// deleteSvcs
 					mocks.store.EXPECT().ListServices(mockAppName).Return(mockServices, nil),
 					mocks.svcDeleter.EXPECT().Execute().Return(nil).Times(2),
@@ -254,16 +258,13 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 					// deleteEnvs
 					mocks.envDeleter.EXPECT().Ask().Return(nil),
 					mocks.envDeleter.EXPECT().Execute().Return(nil),
+
 					// emptyS3bucket
 					mocks.store.EXPECT().GetApplication(mockAppName).Return(mockApp, nil),
 					mocks.deployer.EXPECT().GetRegionalAppResources(mockApp).Return(mockResources, nil),
 					mocks.spinner.EXPECT().Start(deleteAppCleanResourcesStartMsg),
 					mocks.bucketEmptier.EXPECT().EmptyBucket(mockResources[0].S3Bucket).Return(nil),
 					mocks.spinner.EXPECT().Stop(log.Ssuccess(deleteAppCleanResourcesStopMsg)),
-
-					// delete pipelines
-					mocks.codepipeline.EXPECT().ListDeployedPipelines(mockAppName).Return(mockPipelines, nil),
-					mocks.pipelineDeleter.EXPECT().Execute().Return(nil).Times(2),
 
 					// deleteAppResources
 					mocks.deployer.EXPECT().DeleteApp(mockAppName).Return(nil),
