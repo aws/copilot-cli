@@ -7,9 +7,9 @@ package selector
 import (
 	"errors"
 	"fmt"
-	"github.com/dustin/go-humanize/english"
 	"sort"
-	"strings"
+
+	"github.com/dustin/go-humanize/english"
 
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -300,7 +300,7 @@ func NewConfigSelector(prompt Prompter, store configLister) *ConfigSelector {
 
 // NewLocalWorkloadSelector returns a new selector that chooses applications and environments from the config store, but
 // services from the local workspace.
-func NewLocalWorkloadSelector(prompt Prompter, store configLister, ws workspaceRetriever, options ...SelectOption) *LocalWorkloadSelector {
+func NewLocalWorkloadSelector(prompt Prompter, store configLister, ws workspaceRetriever, options ...WorkloadSelectOption) *LocalWorkloadSelector {
 	s := &LocalWorkloadSelector{
 		ConfigSelector: NewConfigSelector(prompt, store),
 		ws:             ws,
@@ -705,11 +705,13 @@ func (s *DeploySelector) deployedWorkload(workloadType string, msg, help string,
 	var deployedWkld *DeployedWorkload
 	if len(wkldEnvs) == 1 {
 		deployedWkld = wkldEnvs[0]
-		if s.name == "" && s.env == "" {
+		switch {
+		case s.name == "" && s.env == "":
 			log.Infof("Found only one deployed %s %s in environment %s\n", workloadType, color.HighlightUserInput(deployedWkld.Name), color.HighlightUserInput(deployedWkld.Env))
-		}
-		if (s.name != "") != (s.env != "") {
-			log.Infof("%s %s found in environment %s\n", strings.ToTitle(workloadType), color.HighlightUserInput(deployedWkld.Name), color.HighlightUserInput(deployedWkld.Env))
+		case s.name != "" && s.env == "":
+			log.Infof("%s found only in environment %s\n", color.HighlightUserInput(deployedWkld.Name), color.HighlightUserInput(deployedWkld.Env))
+		case s.name == "" && s.env != "":
+			log.Infof("Only the %s %s is found in the environment %s\n", deployedWkld.Type, color.HighlightUserInput(deployedWkld.Name), color.HighlightUserInput(deployedWkld.Env))
 		}
 		return deployedWkld, nil
 	}
@@ -728,7 +730,7 @@ func (s *DeploySelector) deployedWorkload(workloadType string, msg, help string,
 		prompt.WithFinalMessage(finalMessage),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("select deployed %ss for application %s: %w", workloadType, app, err)
+		return nil, err
 	}
 	deployedWkld = wkldEnvNameMap[wkldEnvName]
 
@@ -852,12 +854,12 @@ func (s *LocalWorkloadSelector) getWorkloadSelectOptions(storeWls []*config.Work
 	return options, nil
 }
 
-// SelectOption represents an option for customizing LocalWorkloadSelector's behavior.
-type SelectOption func(selector *LocalWorkloadSelector)
+// WorkloadSelectOption represents an option for customizing LocalWorkloadSelector's behavior.
+type WorkloadSelectOption func(selector *LocalWorkloadSelector)
 
 // OnlyInitializedWorkloads modifies LocalWorkloadSelector to show only the initialized workloads in the workspace,
-// regardless of whether there is a local manifest file.
-var OnlyInitializedWorkloads SelectOption = func(s *LocalWorkloadSelector) {
+// ignoring uninitialized workloads with local manifests.
+var OnlyInitializedWorkloads WorkloadSelectOption = func(s *LocalWorkloadSelector) {
 	s.onlyInitializedWorkloads = true
 }
 
@@ -926,7 +928,7 @@ func filterOutStrings(allStrings []string, unwantedStrings []string) []string {
 }
 
 // LocalEnvironment fetches all environments belong to the app in the workspace and prompts the user to select one.
-func (s *LocalEnvironmentSelector) LocalEnvironment(msg, help string) (wl string, err error) {
+func (s *LocalEnvironmentSelector) LocalEnvironment(msg, help string) (string, error) {
 	summary, err := s.ws.Summary()
 	if err != nil {
 		return "", fmt.Errorf("read workspace summary: %w", err)
@@ -1102,25 +1104,29 @@ func (s *ConfigSelector) Workload(msg, help, app string) (string, error) {
 }
 
 // Environment fetches all the environments in an app and prompts the user to select one.
-func (s *AppEnvSelector) Environment(msg, help, app string, additionalOpts ...string) (string, error) {
+func (s *AppEnvSelector) Environment(msg, help, app string, additionalOpts ...prompt.Option) (string, error) {
 	envs, err := s.retrieveEnvironments(app)
 	if err != nil {
 		return "", fmt.Errorf("get environments for app %s from metadata store: %w", app, err)
 	}
 
-	envs = append(envs, additionalOpts...)
-	if len(envs) == 0 {
+	envOpts := make([]prompt.Option, len(envs))
+	for k := range envs {
+		envOpts[k] = prompt.Option{Value: envs[k]}
+	}
+	envOpts = append(envOpts, additionalOpts...)
+	if len(envOpts) == 0 {
 		log.Infof("Couldn't find any environments associated with app %s, try initializing one: %s\n",
 			color.HighlightUserInput(app),
 			color.HighlightCode("copilot env init"))
 		return "", fmt.Errorf("no environments found in app %s", app)
 	}
-	if len(envs) == 1 {
-		log.Infof("Only found one option, defaulting to: %s\n", color.HighlightUserInput(envs[0]))
-		return envs[0], nil
+	if len(envOpts) == 1 {
+		log.Infof("Only found one option, defaulting to: %s\n", color.HighlightUserInput(envOpts[0].Value))
+		return envOpts[0].Value, nil
 	}
 
-	selectedEnvName, err := s.prompt.SelectOne(msg, help, envs, prompt.WithFinalMessage(envNameFinalMessage))
+	selectedEnvName, err := s.prompt.SelectOption(msg, help, envOpts, prompt.WithFinalMessage(envNameFinalMessage))
 	if err != nil {
 		return "", fmt.Errorf("select environment: %w", err)
 	}
