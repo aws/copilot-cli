@@ -791,14 +791,6 @@ func Test_deployOpts_maybeInitEnv(t *testing.T) {
 		wantDeployEnv *bool
 		wantErr       string
 	}{
-		"env does not exist": {
-			envExistsInWs:  false,
-			envExistsInApp: false,
-
-			mockPrompt:     func(m *mocks.Mockprompter) {},
-			mockInitEnvCmd: func(m *mocks.Mockcmd) {},
-			wantErr:        `environment "test" does not exist in the workspace`,
-		},
 		"env already exists": {
 			envExistsInApp: true,
 

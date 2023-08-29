@@ -352,11 +352,6 @@ func (o *deployOpts) checkEnvExists() error {
 }
 
 func (o *deployOpts) maybeInitEnv() error {
-	// Env has no manifest and doesn't exist in app; we can't do anything more.
-	if !o.envExistsInWs && !o.envExistsInApp {
-		return fmt.Errorf("environment %q does not exist in the workspace", o.envName)
-	}
-
 	if o.envExistsInApp {
 		log.Infof("Environment %q exists in application %q. Skipping initialization.\n", o.envName, o.appName)
 		return nil
