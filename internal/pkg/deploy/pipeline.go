@@ -8,7 +8,6 @@ package deploy
 import (
 	"errors"
 	"fmt"
-	"github.com/aws/copilot-cli/internal/pkg/graph"
 	"gopkg.in/yaml.v3"
 	"path"
 	"path/filepath"
@@ -16,11 +15,10 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/aws/copilot-cli/internal/pkg/config"
-
-	"github.com/aws/copilot-cli/internal/pkg/manifest"
-
 	"github.com/aws/aws-sdk-go/aws/arn"
+	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/graph"
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
 )
 
 // DefaultPipelineBranch is the default repository branch to use for pipeline.
