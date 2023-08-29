@@ -182,7 +182,7 @@ The name of an environment to deploy your services to.
 <span class="parent-field">stages.</span><a id="stages-approval" href="#stages-approval" class="field">`requires_approval`</a> <span class="type">Boolean</span>  
 Optional. Indicates whether to add a manual approval step before the deployment (or the pre-deployment actions, if you have added any). Defaults to `false`.
 
-<span class="parent-field">stages.</span><a id="stages-predeployments" class="field">`pre_deployments`</a> <span class="type">Map</span> <span class="version">Added in [v1.30.0](../../blogs/release-v130.en.md#deployment-actions)</span>  
+<span class="parent-field">stages.</span><a id="stages-predeployments" href="#stages-predeployments" class="field">`pre_deployments`</a> <span class="type">Map</span> <span class="version">Added in [v1.30.0](../../blogs/release-v130.en.md#deployment-actions)</span>  
 Optional. Add actions to be executed before deployments.
 ```yaml
 stages:
@@ -261,7 +261,7 @@ Optional. Path to the CloudFormation template generated during the `build` phase
 <span class="parent-field">stages.deployments.`<name>`.</span><a id="stages-deployments-templateconfig" href="#stages-deployments-templatepath" class="field">`template_config`</a> <span class="type">String</span>  
 Optional. Path to the CloudFormation template configuration generated during the `build` phase. Defaults to `infrastructure/<deployment name>-<stage name>.params.json`.
 
-<span class="parent-field">stages.</span><a id="stages-postdeployments" class="field">`post_deployments`</a> <span class="type">Map</span><span class="version">Added in [v1.30.0](../../blogs/release-v130.en.md#deployment-actions)</span>  
+<span class="parent-field">stages.</span><a id="stages-postdeployments" href="#stages-postdeployments" class="field">`post_deployments`</a> <span class="type">Map</span><span class="version">Added in [v1.30.0](../../blogs/release-v130.en.md#deployment-actions)</span>  
 Optional. Add actions to be executed after deployments. Mutually exclusive with `stages.test_commands`.
 ```yaml
 stages:
