@@ -204,6 +204,13 @@ func TestECSDeploymentStreamer_Fetch(t *testing.T) {
 					StoppedReason: aws.String("ELB healthcheck failed"),
 					StoppingAt:    aws.Time(startDate.Add(20 * time.Second)),
 				},
+				{
+					TaskArn:       aws.String("arn:aws:ecs:us-east-2:197732814171:task/bugbash-test-Cluster-qrvEBu"),
+					DesiredStatus: aws.String("Stopped"),
+					LastStatus:    aws.String("Deprovisioning"),
+					StoppedReason: aws.String("Scaling activity initiated by deployment ecs-svc/mocktaskid"),
+					StoppingAt:    aws.Time(startDate.Add(30 * time.Second)),
+				},
 			},
 		}
 		cw := mockCW{
