@@ -20,6 +20,7 @@ This command is used to run either [`copilot svc deploy`](../commands/svc-deploy
       --allow-downgrade                Optional. Allow using an older version of Copilot to update Copilot components
                                        updated by a newer version of Copilot.
   -a, --app string                     Name of the application.
+      --detach                         Optional. Skip displaying CloudFormation deployment progress.
   -e, --env string                     Name of the environment.
       --force                          Optional. Force a new service deployment using the existing image.
   -h, --help                           help for deploy
