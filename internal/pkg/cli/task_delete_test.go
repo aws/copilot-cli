@@ -5,6 +5,7 @@ package cli
 
 import (
 	"errors"
+	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -242,7 +243,7 @@ func TestDeleteTaskOpts_Ask(t *testing.T) {
 			},
 			mockSel: func(m *mocks.MockwsSelector) {
 				m.EXPECT().Application(taskDeleteAppPrompt, "", appEnvOptionNone).Return("phonetool", nil)
-				m.EXPECT().Environment(taskDeleteEnvPrompt, "", "phonetool", appEnvOptionNone).Return("test", nil)
+				m.EXPECT().Environment(taskDeleteEnvPrompt, "", "phonetool", prompt.Option{Value: appEnvOptionNone}).Return("test", nil)
 			},
 			mockTaskSelect: func(m *mocks.MockcfTaskSelector) {
 				m.EXPECT().Task(taskDeleteNamePrompt, "", gomock.Any()).Return("abc", nil)
