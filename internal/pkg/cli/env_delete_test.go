@@ -263,7 +263,7 @@ func TestDeleteEnvOpts_Execute(t *testing.T) {
 				}
 			},
 
-			wantedError: errors.New(`pipeline "mockName" still uses the environment test`),
+			wantedError: errors.New(`environment "test" cannot be deleted because pipeline "mockName" depends on it`),
 		},
 		"returns wrapped error when environment stack cannot be updated to retain roles": {
 			given: func(t *testing.T, ctrl *gomock.Controller) *deleteEnvOpts {

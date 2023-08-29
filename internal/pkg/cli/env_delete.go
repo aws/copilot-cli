@@ -318,7 +318,10 @@ func (o *deleteEnvOpts) validateNoDependencyPipelines() error {
 		}
 		for _, stage := range info.Stages {
 			if strings.TrimPrefix(stage.Name, deploy.StageFullNamePrefix) == o.name {
-				return fmt.Errorf("pipeline %q still uses the environment %s", pipeline.Name, o.name)
+				return &errPipelineDependsOnEnv{
+					pipeline: pipeline.Name,
+					env:      o.name,
+				}
 			}
 		}
 	}
