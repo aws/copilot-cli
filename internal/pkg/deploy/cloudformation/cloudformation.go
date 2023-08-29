@@ -375,8 +375,9 @@ func (cf CloudFormation) executeAndRenderChangeSet(in *executeAndRenderChangeSet
 	g, ctx := errgroup.WithContext(context.Background())
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
-	prevStackEventsErased := make(chan bool)
+	prevChangeSetRenderComplete := make(chan bool)
 	g.Go(func() error {
+		defer close(prevChangeSetRenderComplete)
 		defer cancel()
 		nl, err := cf.renderChangeSet(ctx, changeSetID, in)
 		if err != nil {
@@ -386,18 +387,17 @@ func (cf CloudFormation) executeAndRenderChangeSet(in *executeAndRenderChangeSet
 			// Erase previous stack events only if context is canceled
 			// by waitForSignalAndHandleInterrupt().
 			cursor.EraseLinesAbove(cf.console, nl)
-			close(prevStackEventsErased)
 		}
 		return nil
 	})
 	if in.enableInterrupt {
 		g.Go(func() error {
 			return cf.waitForSignalAndHandleInterrupt(signalHandlerInput{
-				ctx:                   ctx,
-				cancelFn:              cancel,
-				sigCh:                 sigChannel,
-				stackName:             in.stackName,
-				prevStackEventsErased: prevStackEventsErased,
+				ctx:                         ctx,
+				cancelFn:                    cancel,
+				sigCh:                       sigChannel,
+				stackName:                   in.stackName,
+				prevChangeSetRenderComplete: prevChangeSetRenderComplete,
 			})
 		})
 	}
@@ -434,11 +434,11 @@ func (cf CloudFormation) renderChangeSet(ctx context.Context, changeSetID string
 }
 
 type signalHandlerInput struct {
-	ctx                   context.Context
-	cancelFn              context.CancelFunc
-	sigCh                 chan os.Signal
-	stackName             string
-	prevStackEventsErased chan bool
+	ctx                         context.Context
+	cancelFn                    context.CancelFunc
+	sigCh                       chan os.Signal
+	stackName                   string
+	prevChangeSetRenderComplete chan bool
 }
 
 func (cf CloudFormation) waitForSignalAndHandleInterrupt(in signalHandlerInput) error {
@@ -447,7 +447,7 @@ func (cf CloudFormation) waitForSignalAndHandleInterrupt(in signalHandlerInput) 
 		case <-in.sigCh:
 			in.cancelFn()
 			stopCatchSignals(in.sigCh)
-			<-in.prevStackEventsErased
+			<-in.prevChangeSetRenderComplete
 			stackDescr, err := cf.cfnClient.Describe(in.stackName)
 			if err != nil {
 				return fmt.Errorf("describe stack %s: %w", in.stackName, err)
