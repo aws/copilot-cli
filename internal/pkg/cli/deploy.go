@@ -70,6 +70,9 @@ type deployOpts struct {
 	// values for initialization logic
 	envExistsInApp bool
 	envExistsInWs  bool
+
+	// Cached variables
+	wsEnvironments []string
 }
 
 func newDeployOpts(vars deployVars) (*deployOpts, error) {
@@ -268,11 +271,26 @@ func (o *deployOpts) askName() error {
 	return nil
 }
 
+func (o *deployOpts) listWsEnvironments() ([]string, error) {
+	if o.wsEnvironments == nil {
+		envs, err := o.ws.ListEnvironments()
+		if err != nil {
+			return nil, err
+		}
+		if len(envs) == 0 {
+			envs = []string{}
+		}
+		o.wsEnvironments = envs
+		return o.wsEnvironments, nil
+	}
+	return o.wsEnvironments, nil
+}
+
 func (o *deployOpts) askEnv() error {
 	if o.envName != "" {
 		return nil
 	}
-	localEnvs, err := o.ws.ListEnvironments()
+	localEnvs, err := o.listWsEnvironments()
 	if err != nil {
 		return fmt.Errorf("get workspace environments: %w", err)
 	}
@@ -315,7 +333,7 @@ func (o *deployOpts) checkEnvExists() error {
 		}
 		o.envExistsInApp = false
 	}
-	envs, err := o.ws.ListEnvironments()
+	envs, err := o.listWsEnvironments()
 	if err != nil {
 		return fmt.Errorf("list environments in workspace: %w", err)
 	}

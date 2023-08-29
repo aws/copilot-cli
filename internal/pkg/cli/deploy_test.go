@@ -585,7 +585,6 @@ type: Load Balanced Web Service`)
 			},
 			mockWs: func(m *mocks.MockwsWlDirReader) {
 				m.EXPECT().ListEnvironments().Return([]string{"test", "prod"}, nil)
-				m.EXPECT().ListEnvironments().Return([]string{"test", "prod"}, nil)
 			},
 			mockInit: func(m *mocks.MockwkldInitializerWithoutManifest) {
 
