@@ -185,8 +185,8 @@ func (o *deleteAppOpts) Ask() error {
 }
 
 // Execute deletes the application.
-// It removes all the services from each environment, the environments, the pipeline S3 buckets,
-// the pipeline, the application, removes the variables from the config store, and deletes the local workspace.
+// It removes the pipelines, all the services from each environment, the environments, the pipeline S3 buckets,
+// the application, removes the variables from the config store, and deletes the local workspace.
 func (o *deleteAppOpts) Execute() error {
 	if err := o.deletePipelines(); err != nil {
 		return err
