@@ -63,7 +63,7 @@ efs:
 <span class="parent-field">storage.volumes.`<volume>`.efs.</span><a id="id" href="#id" class="field">`id`</a> <span class="type">String</span>  
 Required. The ID of the filesystem you would like to mount.
 
-<span class="parent-field">storage.volumes.`<volume>`.efs.id.</span><a id="from_cfn" href="#from_cfn" class="field">`from_cfn`</a> <span class="type">String</span>  
+<span class="parent-field">storage.volumes.`<volume>`.efs.id.</span><a id="from_cfn" href="#from_cfn" class="field">`from_cfn`</a> <span class="type">String</span><span class="version">Added in [v1.30.0](../../blogs/release-v130.en.md#deployment-actions)</span>  
 The name of a [CloudFormation stack export](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-cfn-stack-exports.html).
 
 <span class="parent-field">storage.volumes.`<volume>`.efs.</span><a id="root_dir" href="#root-dir" class="field">`root_dir`</a> <span class="type">String</span>  
