@@ -5,9 +5,10 @@ package stream
 
 import (
 	"errors"
-	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatch"
 	"testing"
 	"time"
+
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatch"
 
 	"github.com/aws/aws-sdk-go/aws"
 	awsecs "github.com/aws/aws-sdk-go/service/ecs"
@@ -16,8 +17,10 @@ import (
 )
 
 type mockECS struct {
-	out *ecs.Service
-	err error
+	out       *ecs.Service
+	tasks     []*ecs.Task
+	err       error
+	taskError error
 }
 
 type mockCW struct {
@@ -27,6 +30,9 @@ type mockCW struct {
 
 func (m mockECS) Service(clusterName, serviceName string) (*ecs.Service, error) {
 	return m.out, m.err
+}
+func (m mockECS) StoppedServiceTasks(clusterName, serviceName string) ([]*ecs.Task, error) {
+	return m.tasks, m.taskError
 }
 
 func (m mockCW) AlarmStatuses(opts ...cloudwatch.DescribeAlarmOpts) ([]cloudwatch.AlarmStatus, error) {
@@ -97,6 +103,37 @@ func TestECSDeploymentStreamer_Fetch(t *testing.T) {
 		// THEN
 		require.EqualError(t, err, "retrieve alarm statuses: some error")
 	})
+	t.Run("returns a wrapped error on stopped tasks call failure", func(t *testing.T) {
+		// GIVEN
+		m := mockECS{
+			out: &ecs.Service{
+				DeploymentConfiguration: &awsecs.DeploymentConfiguration{
+					Alarms: &awsecs.DeploymentAlarms{
+						AlarmNames: []*string{aws.String("alarm1"), aws.String("alarm2")},
+						Enable:     aws.Bool(true),
+						Rollback:   aws.Bool(true),
+					},
+				},
+			},
+			tasks: []*ecs.Task{
+				{
+					TaskArn:       aws.String("arn:aws:ecs:us-east-2:197732814171:task/testbugbash-testenv-Cluster-qrvEB"),
+					DesiredStatus: aws.String("Stopped"),
+					LastStatus:    aws.String("Deprovisioning"),
+					StoppedReason: aws.String("unable to pull secrets"),
+				},
+			},
+			taskError: errors.New("some error"),
+		}
+		cw := mockCW{}
+		streamer := NewECSDeploymentStreamer(m, cw, "my-cluster", "my-svc", time.Now())
+
+		// WHEN
+		_, _, err := streamer.Fetch()
+
+		// THEN
+		require.EqualError(t, err, "fetch stopped tasks: some error")
+	})
 	t.Run("stores events, alarms, and failures until deployment is done", func(t *testing.T) {
 		// GIVEN
 		oldStartDate := time.Date(2020, time.November, 23, 17, 0, 0, 0, time.UTC)
@@ -143,6 +180,29 @@ func TestECSDeploymentStreamer_Fetch(t *testing.T) {
 						Id:        aws.String("id2"),
 						Message:   aws.String("rolling back to deployment X"),
 					},
+				},
+			},
+			tasks: []*ecs.Task{
+				{
+					TaskArn:       aws.String("arn:aws:ecs:us-east-2:197732814171:task/bugbash-test-Cluster-qrvEB"),
+					DesiredStatus: aws.String("Stopped"),
+					LastStatus:    aws.String("Deprovisioning"),
+					StoppedReason: aws.String("unable to pull secrets"),
+					StoppingAt:    aws.Time(startDate.Add(10 * time.Second)),
+				},
+				{
+					TaskArn:       aws.String("arn:aws:ecs:us-east-2:197732814171:task/bugbash-test-Cluster-qrvEBt"),
+					DesiredStatus: aws.String("Stopped"),
+					LastStatus:    aws.String("Stopped"),
+					StoppedReason: aws.String("unable to pull secrets"),
+					StoppingAt:    aws.Time(oldStartDate),
+				},
+				{
+					TaskArn:       aws.String("arn:aws:ecs:us-east-2:197732814171:task/bugbash-test-Cluster-qrvEBs"),
+					DesiredStatus: aws.String("Stopped"),
+					LastStatus:    aws.String("Deprovisioning"),
+					StoppedReason: aws.String("ELB healthcheck failed"),
+					StoppingAt:    aws.Time(startDate.Add(20 * time.Second)),
 				},
 			},
 		}
@@ -200,6 +260,22 @@ func TestECSDeploymentStreamer_Fetch(t *testing.T) {
 					},
 				},
 				LatestFailureEvents: []string{"deployment failed: alarm detected", "rolling back to deployment X"},
+				StoppedTasks: []ecs.Task{
+					{
+						TaskArn:       aws.String("arn:aws:ecs:us-east-2:197732814171:task/bugbash-test-Cluster-qrvEBs"),
+						DesiredStatus: aws.String("Stopped"),
+						LastStatus:    aws.String("Deprovisioning"),
+						StoppedReason: aws.String("ELB healthcheck failed"),
+						StoppingAt:    aws.Time(startDate.Add(20 * time.Second)),
+					},
+					{
+						TaskArn:       aws.String("arn:aws:ecs:us-east-2:197732814171:task/bugbash-test-Cluster-qrvEB"),
+						DesiredStatus: aws.String("Stopped"),
+						LastStatus:    aws.String("Deprovisioning"),
+						StoppedReason: aws.String("unable to pull secrets"),
+						StoppingAt:    aws.Time(startDate.Add(10 * time.Second)),
+					},
+				},
 			},
 		}, streamer.eventsToFlush)
 		require.True(t, done, "there should be no more work to do since the deployment is completed")

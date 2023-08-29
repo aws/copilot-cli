@@ -10,7 +10,9 @@ import (
 	"strconv"
 	"sync"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatch"
+	"github.com/dustin/go-humanize/english"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/stream"
@@ -19,6 +21,10 @@ import (
 
 const (
 	maxServiceEventsToDisplay = 5 // Total number of events we want to display at most for ECS service events.
+)
+
+const (
+	maxStoppedTasksToDisplay = 2
 )
 
 // ECSServiceSubscriber is the interface to subscribe channels to ECS service descriptions.
@@ -40,9 +46,10 @@ func ListeningRollingUpdateRenderer(streamer ECSServiceSubscriber, opts RenderOp
 
 type rollingUpdateComponent struct {
 	// Data to render.
-	deployments []stream.ECSDeployment
-	failureMsgs []string
-	alarms      []cloudwatch.AlarmStatus
+	deployments  []stream.ECSDeployment
+	failureMsgs  []string
+	alarms       []cloudwatch.AlarmStatus
+	stoppedTasks []ecs.Task
 
 	// Style configuration for the component.
 	padding           int
@@ -58,6 +65,10 @@ func (c *rollingUpdateComponent) Listen() {
 	for ev := range c.stream {
 		c.mu.Lock()
 		c.deployments = ev.Deployments
+		c.stoppedTasks = ev.StoppedTasks
+		if len(c.stoppedTasks) > maxStoppedTasksToDisplay {
+			c.stoppedTasks = c.stoppedTasks[:maxStoppedTasksToDisplay]
+		}
 		c.failureMsgs = append(c.failureMsgs, ev.LatestFailureEvents...)
 		if len(c.failureMsgs) > c.maxLenFailureMsgs {
 			c.failureMsgs = c.failureMsgs[len(c.failureMsgs)-c.maxLenFailureMsgs:]
@@ -75,6 +86,12 @@ func (c *rollingUpdateComponent) Render(out io.Writer) (numLines int, err error)
 	buf := new(bytes.Buffer)
 
 	nl, err := c.renderDeployments(buf)
+	if err != nil {
+		return 0, err
+	}
+	numLines += nl
+
+	nl, err = c.renderStoppedTasks(buf)
 	if err != nil {
 		return 0, err
 	}
@@ -178,6 +195,55 @@ func (c *rollingUpdateComponent) renderAlarms(out io.Writer) (numLines int, err 
 		table,
 	}
 	return renderComponents(out, components)
+}
+
+func (c *rollingUpdateComponent) renderStoppedTasks(out io.Writer) (numLines int, err error) {
+	if len(c.stoppedTasks) == 0 {
+		return 0, nil
+	}
+	header := []string{"TaskId", "CurrentStatus", "DesiredStatus"}
+	var rows [][]string
+	title := fmt.Sprintf("Latest %d %s stopped reason", len(c.stoppedTasks), english.PluralWord(len(c.stoppedTasks), "task", "tasks"))
+	title = fmt.Sprintf("%s%s", color.DullRed.Sprintf("✘ "), color.Faint.Sprintf(title))
+	childComponents := []Renderer{
+		&singleLineComponent{}, // Add an empty line before rendering task stopped events.
+		&singleLineComponent{
+			Text:    title,
+			Padding: c.padding,
+		},
+	}
+	for _, st := range c.stoppedTasks {
+		id, err := ecs.TaskID(aws.StringValue(st.TaskArn))
+		if err != nil {
+			return 0, err
+		}
+		rows = append(rows, []string{
+			id,
+			aws.StringValue(st.LastStatus),
+			aws.StringValue(st.DesiredStatus),
+		})
+		for i, truncatedReason := range splitByLength(fmt.Sprintf("%s: %s", id, aws.StringValue(st.StoppedReason)), maxCellLength) {
+			pretty := fmt.Sprintf("  %s", truncatedReason)
+			if i == 0 {
+				pretty = fmt.Sprintf("- %s", truncatedReason)
+			}
+			childComponents = append(childComponents, &singleLineComponent{
+				Text:    pretty,
+				Padding: c.padding + nestedComponentPadding,
+			})
+		}
+	}
+	table := newTableComponent(color.Faint.Sprintf("Latest %d stopped %s", len(c.stoppedTasks), english.PluralWord(len(c.stoppedTasks), "task", "tasks")), header, rows)
+	table.Padding = c.padding
+	treeComponent := treeComponent{
+		Root:     table,
+		Children: childComponents,
+	}
+	nl, err := treeComponent.Render(out)
+	if err != nil {
+		return 0, fmt.Errorf("render deployments table: %w", err)
+	}
+	return nl, err
 }
 
 func reverseStrings(arr []string) []string {

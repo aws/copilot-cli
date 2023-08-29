@@ -6,6 +6,7 @@ package stream
 import (
 	"fmt"
 	"math/rand"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -24,11 +25,16 @@ const (
 	rollOutEmpty               = ""
 )
 
+const (
+	ecsScalingActivity = "Scaling activity initiated by"
+)
+
 var ecsEventFailureKeywords = []string{"fail", "unhealthy", "error", "throttle", "unable", "missing", "alarm detected", "rolling back"}
 
 // ECSServiceDescriber is the interface to describe an ECS service.
 type ECSServiceDescriber interface {
 	Service(clusterName, serviceName string) (*ecs.Service, error)
+	StoppedServiceTasks(cluster, service string) ([]*ecs.Task, error)
 }
 
 // CloudWatchDescriber is the interface to describe CW alarms.
@@ -69,6 +75,7 @@ type ECSService struct {
 	Deployments         []ECSDeployment
 	LatestFailureEvents []string
 	Alarms              []cloudwatch.AlarmStatus
+	StoppedTasks        []ecs.Task
 }
 
 // ECSDeploymentStreamer is a Streamer for ECSService descriptions until the deployment is completed.
@@ -154,6 +161,35 @@ func (s *ECSDeploymentStreamer) Fetch() (next time.Time, done bool, err error) {
 			done = true
 		}
 	}
+
+	stoppedSvcTasks, err := s.client.StoppedServiceTasks(s.cluster, s.service)
+	if err != nil {
+		if request.IsErrorThrottle(err) {
+			s.ecsRetries += 1
+			return nextFetchDate(s.clock, s.rand, s.ecsRetries), false, nil
+		}
+		return next, false, fmt.Errorf("fetch stopped tasks: %w", err)
+	}
+	s.ecsRetries = 0
+
+	var stoppedTasks []ecs.Task
+	for _, st := range stoppedSvcTasks {
+		if stoppingAt := aws.TimeValue(st.StoppingAt); stoppingAt.Before(s.deploymentCreationTime) ||
+			(strings.Contains(aws.StringValue(st.StoppedReason), ecsScalingActivity)) {
+			continue
+		}
+		stoppedTasks = append(stoppedTasks, ecs.Task{
+			TaskArn:       st.TaskArn,
+			DesiredStatus: st.DesiredStatus,
+			LastStatus:    st.LastStatus,
+			StoppedReason: st.StoppedReason,
+			StoppingAt:    st.StoppingAt,
+		})
+	}
+	sort.SliceStable(stoppedTasks, func(i, j int) bool {
+		return aws.TimeValue(stoppedTasks[i].StoppingAt).After(aws.TimeValue(stoppedTasks[j].StoppingAt))
+	})
+
 	var failureMsgs []string
 	for _, event := range out.Events {
 		if createdAt := aws.TimeValue(event.CreatedAt); createdAt.Before(s.deploymentCreationTime) {
@@ -187,6 +223,7 @@ func (s *ECSDeploymentStreamer) Fetch() (next time.Time, done bool, err error) {
 		Deployments:         deployments,
 		LatestFailureEvents: failureMsgs,
 		Alarms:              alarms,
+		StoppedTasks:        stoppedTasks,
 	})
 	return nextFetchDate(s.clock, s.rand, 0), done, nil
 }

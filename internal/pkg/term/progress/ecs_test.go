@@ -4,11 +4,14 @@
 package progress
 
 import (
-	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatch"
-	"github.com/aws/copilot-cli/internal/pkg/stream"
-	"github.com/stretchr/testify/require"
 	"strings"
 	"testing"
+
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatch"
+	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
+	"github.com/aws/copilot-cli/internal/pkg/stream"
+	"github.com/stretchr/testify/require"
 )
 
 func TestRollingUpdateComponent_Listen(t *testing.T) {
@@ -77,9 +80,10 @@ func TestRollingUpdateComponent_Listen(t *testing.T) {
 
 func TestRollingUpdateComponent_Render(t *testing.T) {
 	testCases := map[string]struct {
-		inDeployments []stream.ECSDeployment
-		inFailureMsgs []string
-		inAlarms      []cloudwatch.AlarmStatus
+		inDeployments  []stream.ECSDeployment
+		inFailureMsgs  []string
+		inAlarms       []cloudwatch.AlarmStatus
+		inStoppedTasks []ecs.Task
 
 		wantedNumLines int
 		wantedOut      string
@@ -153,6 +157,32 @@ Alarms
   alarm2  [ALARM]
 `,
 		},
+		"should render stopped tasks and their statuses": {
+			inStoppedTasks: []ecs.Task{
+				{
+					TaskArn:       aws.String("arn:aws:ecs:us-east-2:197732814171:task/bugbash-test-Cluster-qrvEBaBlImsZ/21479dca3393490a9d95f27353186bf6"),
+					DesiredStatus: aws.String("STOPPED"),
+					LastStatus:    aws.String("DEPROVISIONING"),
+					StoppedReason: aws.String("ELB healthcheck failed"),
+				},
+				{
+					TaskArn:       aws.String("arn:aws:ecs:us-east-2:197732814171:task/bugbash-test-Cluster-qrvEBaBlImsZ/2243bac3ca1d4b3a8c66888348cba2e1"),
+					DesiredStatus: aws.String("STOPPED"),
+					LastStatus:    aws.String("STOPPING"),
+					StoppedReason: aws.String("unable to pull secrets"),
+				},
+			},
+			wantedNumLines: 8,
+			wantedOut: `Latest 2 stopped tasks
+  TaskId                            CurrentStatus   DesiredStatus
+  21479dca3393490a9d95f27353186bf6  DEPROVISIONING  STOPPED
+  2243bac3ca1d4b3a8c66888348cba2e1  STOPPING        STOPPED
+
+✘ Latest 2 tasks stopped reason
+  - 21479dca3393490a9d95f27353186bf6: ELB healthcheck failed
+  - 2243bac3ca1d4b3a8c66888348cba2e1: unable to pull secrets
+`,
+		},
 	}
 
 	for name, tc := range testCases {
@@ -160,9 +190,10 @@ Alarms
 			// GIVEN
 			buf := new(strings.Builder)
 			c := &rollingUpdateComponent{
-				deployments: tc.inDeployments,
-				failureMsgs: tc.inFailureMsgs,
-				alarms:      tc.inAlarms,
+				deployments:  tc.inDeployments,
+				failureMsgs:  tc.inFailureMsgs,
+				alarms:       tc.inAlarms,
+				stoppedTasks: tc.inStoppedTasks,
 			}
 
 			// WHEN
