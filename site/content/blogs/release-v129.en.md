@@ -13,7 +13,7 @@ Posted On: July 19, 2023
 
 The AWS Copilot core team is announcing the Copilot v1.29 release.
 
-Special thanks to [@tjhorner](https://github.com/tjhorner) and [@build-with-aws-copilot](https://github.com/build-with-aws-copilot), who contributed to this <release class=""></release>
+Special thanks to [@tjhorner](https://github.com/tjhorner) and [@build-with-aws-copilot](https://github.com/build-with-aws-copilot), who contributed to this release.
 Our public [сommunity сhat](https://app.gitter.im/#/room/#aws_copilot-cli:gitter.im) is growing and has nearly 500 people online and over 2.9k stars on [GitHub](http://github.com/aws/copilot-cli/).
 Thanks to every one of you who shows love and support for AWS Copilot.
 
