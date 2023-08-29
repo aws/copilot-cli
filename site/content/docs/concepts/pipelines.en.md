@@ -105,7 +105,7 @@ You can see every available configuration option for `manifest.yml` on the [pipe
 
 There are 3 main parts of this file: the `name` field, which is the name of your pipeline, the `source` section, which details the repository and branch to track, and the `stages` section, which lists the environments you want this pipeline to deploy or deploy to. You can update this anytime, but you must commit and push the changed files and run `copilot pipeline deploy` afterward.
 
-Typically, you'll update this file to add environments, specify the order of deployments, add actions for the pipeline to run before or after deployment, or change the branch to track. You also may add a manual approval step before deployment or commands to run tests (see [Customization](#customization)). If you are using CodeStar Connections to connect to your repository and would like to utilize an existing connection rather than let Copilot generate one for you, you may add the connection name here.
+Typically, you'll update this file to change which environments to deploy or deploy workloads to, specify the order of deployments, add actions for the pipeline to run before or after deployment, or change the branch to track. You also may add a manual approval step before deployment or commands to run tests (see [Customization](#customization)). If you are using CodeStar Connections to connect to your repository and would like to utilize an existing connection rather than let Copilot generate one for you, you may add the connection name here.
 
 ### Step 3: Updating the Buildspec (optional)
 
