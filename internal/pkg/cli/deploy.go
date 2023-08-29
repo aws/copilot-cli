@@ -101,7 +101,7 @@ func newDeployOpts(vars deployVars) (*deployOpts, error) {
 		},
 		newDeployEnvCmd: func(o *deployOpts) (cmd, error) {
 			// This command passes flags down from
-			cmd, err := newEnvDeployOpts(deployEnvVars{
+			return newEnvDeployOpts(deployEnvVars{
 				appName:           o.appName,
 				name:              o.envName,
 				forceNewUpdate:    o.forceNewUpdate,
@@ -111,16 +111,12 @@ func newDeployOpts(vars deployVars) (*deployOpts, error) {
 				allowEnvDowngrade: o.allowWkldDowngrade,
 				detach:            o.detach,
 			})
-			if err != nil {
-				return nil, err
-			}
-			return cmd, nil
 		},
 
 		newInitEnvCmd: func(o *deployOpts) (cmd, error) {
 			// This vars struct sets "default config" so that no vpc questions are asked during env init and the manifest
 			// is not written. It passes in credential flags and allow-downgrade from the parent command.
-			cmd, err := newInitEnvOpts(initEnvVars{
+			return newInitEnvOpts(initEnvVars{
 				appName:           o.appName,
 				name:              o.envName,
 				profile:           o.profile,
@@ -129,10 +125,6 @@ func newDeployOpts(vars deployVars) (*deployOpts, error) {
 				tempCreds:         o.tempCreds,
 				region:            o.region,
 			})
-			if err != nil {
-				return nil, err
-			}
-			return cmd, err
 		},
 
 		setupDeployCmd: func(o *deployOpts, workloadType string) {
@@ -209,7 +201,7 @@ func (o *deployOpts) maybeInitWkld() error {
 	}
 
 	if o.yesInitWkld == nil {
-		confirmInitWkld, err := o.prompt.Confirm(fmt.Sprintf("Found manifest for uninitialized %s %q. Initialize it?", workloadType, o.name), "This workload will be initialized, then deployed.", prompt.WithFinalMessage("Initialize workload:"))
+		confirmInitWkld, err := o.prompt.Confirm(fmt.Sprintf("Found manifest for uninitialized %s %q. Initialize it?", workloadType, o.name), "This workload will be initialized, then deployed.", prompt.WithFinalMessage(fmt.Sprintf("Initialize %s:", workloadType)))
 		if err != nil {
 			return fmt.Errorf("confirm initialize workload: %w", err)
 		}
