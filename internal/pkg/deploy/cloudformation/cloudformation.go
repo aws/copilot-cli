@@ -428,9 +428,9 @@ func (cf CloudFormation) renderChangeSet(ctx context.Context, changeSetID string
 		return prevNumLines, err
 	}
 	if err := cf.errOnFailedStack(in.stackName); err != nil {
-		return 0, err
+		return prevNumLines, err
 	}
-	return 0, nil
+	return prevNumLines, nil
 }
 
 type signalHandlerInput struct {
