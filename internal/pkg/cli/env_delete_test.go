@@ -339,7 +339,7 @@ Resources:
 				lister.EXPECT().ListDeployedPipelines("phonetool").Return([]deploy.Pipeline{}, nil)
 
 				prog := mocks.NewMockprogress(ctrl)
-				prog.EXPECT().Start(gomock.Any()).Times(2)
+				prog.EXPECT().Start(gomock.Any()).Times(1)
 
 				deployer := mocks.NewMockenvironmentDeployer(ctrl)
 				deployer.EXPECT().Template(gomock.Any()).Return(`
@@ -358,7 +358,7 @@ Resources:
 
 				deployer.EXPECT().DeleteEnvironment(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("some error"))
 
-				prog.EXPECT().Stop(gomock.Any()).Times(2)
+				prog.EXPECT().Stop(gomock.Any()).Times(1)
 
 				return &deleteEnvOpts{
 					deleteEnvVars: deleteEnvVars{

@@ -191,19 +191,14 @@ func (o *deleteEnvOpts) Execute() error {
 	}
 	o.prog.Stop(log.Ssuccessf(fmtRetainEnvRolesComplete, o.name))
 
-	o.prog.Start(fmt.Sprintf("Emptying S3 buckets managed by the %q environment\n", o.name))
+	// EmptyBuckets checks for env managed s3 buckets and makes a best-effort attempt to delete them.
 	if err := o.emptyBuckets(); err != nil {
-		o.prog.Stop(log.Serrorf("Failed to empty buckets managed by the %q environment\n", o.name))
-		// Handle error and recommend action, don't exit program
-		switch t := err.(type) {
-		case *errBucketEmptyingFailed:
-			log.Errorln(t.Error())
-			log.Warningln(t.RecommendActions())
-		default:
-			log.Errorln(fmt.Errorf("empty s3 buckets: %w", err))
+		// Handle empty bucket error and recommend action, don't exit program. Otherwise swallow error and move on.
+		var emptyBucketErr *errBucketEmptyingFailed
+		if errors.As(err, &emptyBucketErr) {
+			log.Errorln(emptyBucketErr.Error())
+			log.Warningln(emptyBucketErr.RecommendActions())
 		}
-	} else {
-		o.prog.Stop(log.Ssuccessf("Emptied S3 buckets managed by the %q environment\n", o.name))
 	}
 
 	// DeleteStack streams the deletion events; we don't need a spinner over top of it.
