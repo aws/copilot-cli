@@ -428,6 +428,7 @@ func (cf CloudFormation) waitForSignalAndHandleInterrupt(ctx context.Context, ca
 			}
 			switch aws.StringValue(stackDescr.StackStatus) {
 			case sdkcloudformation.StackStatusCreateInProgress:
+				log.Infoln()
 				log.Infof(`Received Interrupt for Ctrl-C.
 Pressing Ctrl-C again will exit immediately but the deletion of stack %s will continue
 `, stackName)
@@ -439,6 +440,7 @@ Pressing Ctrl-C again will exit immediately but the deletion of stack %s will co
 				}
 				return &ErrStackDeletedOnInterrupt{stackName: stackName}
 			case sdkcloudformation.StackStatusUpdateInProgress:
+				log.Infoln()
 				log.Infof(`Received Interrupt for Ctrl-C.
 Pressing Ctrl-C again will exit immediately but stack %s rollback will continue
 `, stackName)
