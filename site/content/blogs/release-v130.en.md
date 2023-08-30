@@ -20,7 +20,7 @@ Thanks to every one of you who shows love and support for AWS Copilot.
 Copilot v1.30 brings big enhancements to help you develop more flexibly and efficiently:
 
 - **`copilot run local`**: Copilot has a new operational command that enables you to run services locally! [See detailed section](#copilot-run-local).
-- **Roll back deployments with Ctrl+C**: The wait is over! Roll back your CloudFormation deployment right from the terminal, whenever you want. [See detailed section](#roll-back-deployments-with-ctrlc).
+- **Roll back deployments with Ctrl-C**: The wait is over! Roll back your CloudFormation deployment right from the terminal, whenever you want. [See detailed section](#roll-back-deployments-with-ctrl-c).
 - **Pre- and post- deployment pipeline actions**: Insert db migrations, integration tests, and/or other actions before or after workload/environment deployments. [See detailed section](#deployment-actions). 
 - **`copilot deploy` enhancements**: We've increased the scope and flexibility of this command. [See detailed section](#copilot-deploy-enhancements).
 - **`detach flag`: Skip progress of CloudFormation stack events on your terminal. [see detailed section](#detach-flag)
@@ -37,7 +37,7 @@ Copilot v1.30 brings big enhancements to help you develop more flexibly and effi
 
 ## `copilot run local`
 
-## Roll back deployments with Ctrl+C
+## Roll back deployments with Ctrl-C
 
 While waiting for your Copilot service, environment, or job to deploy, You can now hit `Ctrl-C` to rollback your current CloudFormation stack to previous configuration.
 If you hit 'Ctrl-C' a second time, the program will exit, but the stack rollback will continue.
