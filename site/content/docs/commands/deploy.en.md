@@ -14,7 +14,7 @@ If the desired environment is uninitialized, you may initialize it with `--init-
 The `--deploy-env` flag can be specified to skip environment deployment confirmation, or can be set to false (`--deploy-env=false`) to skip 
 deploying the environment.
 
-The resteps involved in `copilot deploy` are as follows:
+The steps involved in `copilot deploy` are as follows:
 
 1. If your service does not exist, optionally initialize it.
 2. If the target environment does not exist, optionally initialize it with custom credentials.
