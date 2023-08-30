@@ -39,11 +39,10 @@ Copilot v1.30 brings big enhancements to help you develop more flexibly and effi
 
 ## Roll back deployments with Ctrl-C
 
-While waiting for your Copilot service, environment, or job to deploy, You can now hit `Ctrl-C` to rollback your current CloudFormation stack to previous configuration.
-If you hit 'Ctrl-C' a second time, the program will exit, but the stack rollback will continue.
+While waiting for your service, job, or environment to deploy, you can now hit `Ctrl-C` to cancel the update. This will either rollback your stack to its previous configuration, or delete the stack if it was being deployed for the first time.
 
-If you are deploying a resource for the first time, hitting `Ctrl-C` during deployment will delete the stack.
-If you hit 'Ctrl-C' a second time, the program will exit, the deletion of stack will continue.
+If you hit 'Ctrl-C' a second time, the program will exit, but the stack rollback/deletion will continue.
+
 
 `Ctrl-C` is now enabled for `copilot svc deploy`, `copilot job deploy`, `copilot env deploy` and `copilot deploy` commands.
 
