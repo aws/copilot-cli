@@ -5,7 +5,7 @@ $ copilot deploy
 
 ## What does it do?
 
-This command is used to get you from local manifests to deployed service and environment. It will check for deployed infrastructure and local manifests, help you initialize and deploy an environment, and deploy a workload
+This command is used to get you from local manifests to deployed service and environment. It will check for deployed infrastructure and local manifests, help you initialize and deploy an environment, and deploy a workload.
 
 If a workload is uninitialized, `--init-wkld` will initialize the workload before deploying it.
 
