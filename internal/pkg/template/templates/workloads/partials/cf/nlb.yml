@@ -1,4 +1,4 @@
-PublicNetworkLoadBalancer:
+NetworkLoadBalancer:
   Metadata:
     'aws:copilot:description': 'A Network Load Balancer to distribute public traffic to your service'
   Type: AWS::ElasticLoadBalancingV2::LoadBalancer
@@ -10,6 +10,30 @@ PublicNetworkLoadBalancer:
         - Fn::ImportValue:
             !Sub '${AppName}-${EnvName}-PublicSubnets'
     Type: network
+    SecurityGroups:
+      - !GetAtt NetworkLoadBalancerSecurityGroup.GroupId
+NetworkLoadBalancerSecurityGroup:
+  Metadata:
+    'aws:copilot:description': 'A security group for your network load balancer allowing public traffic'
+  Type: AWS::EC2::SecurityGroup
+  Properties:
+    GroupDescription: HTTP access to the public facing load balancer
+    SecurityGroupIngress:
+      - CidrIp: 0.0.0.0/0
+        Description: Allow from anyone on port
+        FromPort: 0
+        IpProtocol: -1
+        ToPort: 65535
+EnvironmentSecurityGroupIngressFromNetworkLoadBalancerSecurityGroup:
+  Type: AWS::EC2::SecurityGroupIngress
+  Metadata:
+    'aws:copilot:description': 'Allow ingress from the network load balancer to services in your environment'
+  Properties:
+    GroupId:
+      Fn::ImportValue:
+        !Sub '${AppName}-${EnvName}-EnvironmentSecurityGroup'
+    IpProtocol: -1
+    SourceSecurityGroupId: !Ref NetworkLoadBalancerSecurityGroup
 {{- range $i, $listener := .NLB.Listener }}
 NLBListener{{- if ne $i 0 }}{{$i}}{{end}}:
   Metadata:
@@ -17,9 +41,9 @@ NLBListener{{- if ne $i 0 }}{{$i}}{{end}}:
   Type: AWS::ElasticLoadBalancingV2::Listener
   Properties:
     DefaultActions:
-      - TargetGroupArn: !Ref NLBTargetGroup{{- if ne $i 0 }}{{$i}}{{end}}
+      - TargetGroupArn: !Ref NetworkLoadBalancerTargetGroup{{- if ne $i 0 }}{{$i}}{{end}}
         Type: forward
-    LoadBalancerArn: !Ref PublicNetworkLoadBalancer
+    LoadBalancerArn: !Ref NetworkLoadBalancer
     Port: {{ $listener.Port }}
     Protocol: {{ $listener.Protocol }}
   {{- if eq $listener.Protocol "TLS" }}
@@ -28,7 +52,7 @@ NLBListener{{- if ne $i 0 }}{{$i}}{{end}}:
     SslPolicy: {{ if $listener.SSLPolicy }}{{ $listener.SSLPolicy }}{{ else }} ELBSecurityPolicy-TLS13-1-2-2021-06 {{ end }}
   {{- end}}
 
-NLBTargetGroup{{- if ne $i 0 }}{{$i}}{{end}}:
+NetworkLoadBalancerTargetGroup{{- if ne $i 0 }}{{$i}}{{end}}:
   Metadata:
     'aws:copilot:description': 'A target group to connect the network load balancer to your service on port {{$listener.TargetPort}}'
   Type: AWS::ElasticLoadBalancingV2::TargetGroup
@@ -64,35 +88,6 @@ NLBTargetGroup{{- if ne $i 0 }}{{$i}}{{end}}:
       Fn::ImportValue:
         !Sub "${AppName}-${EnvName}-VpcId"
 {{- end }}
-NLBSecurityGroup:
-  Metadata:
-    'aws:copilot:description': 'A security group for your network load balancer to route traffic to service'
-  Type: AWS::EC2::SecurityGroup
-  Properties:
-    GroupDescription: Allow access from the network load balancer to service
-    SecurityGroupIngress:
-{{range $cidr := .NLB.PublicSubnetCIDRs}}
-  {{- range $listener := $.NLB.Listener}}
-      - CidrIp: {{$cidr}}
-        Description: Ingress to allow access from Network Load Balancer subnet
-        FromPort: {{ $listener.TargetPort }}
-        IpProtocol: {{- if eq $listener.Protocol "TLS" }} TCP {{- else }} {{ $listener.Protocol }} {{- end}}
-        ToPort: {{ $listener.TargetPort }}
-      {{- if $listener.HealthCheck.Port}}{{- if ne $listener.HealthCheck.Port $listener.Port}}
-      - CidrIp: {{$cidr}}
-        Description: Ingress to allow access from Network Load Balancer subnet for health check
-        FromPort: {{ $listener.HealthCheck.Port }}
-        ToPort: {{ $listener.HealthCheck.Port }}
-        IpProtocol: TCP
-      {{- end}}{{- end}}
-  {{- end}}
-{{end}}
-    Tags:
-      - Key: Name
-        Value: !Sub 'copilot-${AppName}-${EnvName}-${WorkloadName}-nlb'
-    VpcId:
-      Fn::ImportValue:
-        !Sub "${AppName}-${EnvName}-VpcId"
 {{- if not .NLB.Aliases}}
 NLBDNSAlias:
   Metadata:
@@ -114,8 +109,8 @@ NLBDNSAlias:
             - ""
         Type: A
         AliasTarget:
-          HostedZoneId: !GetAtt PublicNetworkLoadBalancer.CanonicalHostedZoneID
-          DNSName: !GetAtt PublicNetworkLoadBalancer.DNSName
+          HostedZoneId: !GetAtt NetworkLoadBalancer.CanonicalHostedZoneID
+          DNSName: !GetAtt NetworkLoadBalancer.DNSName
 {{- else}}
 NLBCustomDomainAction:
   Metadata:
@@ -124,8 +119,8 @@ NLBCustomDomainAction:
   Condition: HasAssociatedDomain
   Properties:
     ServiceToken: !GetAtt NLBCustomDomainFunction.Arn
-    PublicAccessHostedZoneID: !GetAtt PublicNetworkLoadBalancer.CanonicalHostedZoneID
-    PublicAccessDNS: !GetAtt PublicNetworkLoadBalancer.DNSName
+    PublicAccessHostedZoneID: !GetAtt NetworkLoadBalancer.CanonicalHostedZoneID
+    PublicAccessDNS: !GetAtt NetworkLoadBalancer.DNSName
     EnvHostedZoneId:
       Fn::ImportValue:
         !Sub "${AppName}-${EnvName}-HostedZone"
@@ -205,7 +200,7 @@ NLBCertValidatorAction:
   Condition: HasAssociatedDomain
   Properties:
     ServiceToken: !GetAtt NLBCertValidatorFunction.Arn
-    LoadBalancerDNS: !GetAtt PublicNetworkLoadBalancer.DNSName
+    LoadBalancerDNS: !GetAtt NetworkLoadBalancer.DNSName
     EnvHostedZoneId:
       Fn::ImportValue:
         !Sub "${AppName}-${EnvName}-HostedZone"
