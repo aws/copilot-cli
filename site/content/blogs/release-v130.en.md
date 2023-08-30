@@ -43,7 +43,6 @@ While waiting for your service, job, or environment to deploy, you can now hit `
 
 If you hit 'Ctrl-C' a second time, the program will exit, but the stack rollback/deletion will continue.
 
-
 `Ctrl-C` is now enabled for `copilot svc deploy`, `copilot job deploy`, `copilot env deploy` and `copilot deploy` commands.
 
 ## Deployment actions
