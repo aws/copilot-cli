@@ -51,6 +51,45 @@ Logs from your service are streamed to your terminal. When you're finished testi
 ## Ctrl-C
 
 ## Deployment actions
+Maybe you want to run a database migration before a workload deployment, and the workload's health check depends on the
+update. Or maybe you'd like your pipeline to execute some end-to-end or integration tests after a workload deployment. These actions are
+now possible with [Copilot pipelines](../docs/concepts/pipelines.en.md)!  
+
+While Copilot has supported ['test_commands'](https://aws.github.io/copilot-cli/docs/manifest/pipeline/#stages-test-cmds) for some time now, [pre-](https://aws.github.io/copilot-cli/docs/manifest/pipeline/#stages-predeployments) and [post-deployment](https://aws.github.io/copilot-cli/docs/manifest/pipeline/#stages-postdeployments) actions extend pipeline functionality 
+and flexibility. For `test_commands`, Copilot inlines a buildspec with your command strings into the pipeline
+Cloudformation template; for `pre_deployments` and `post_deployments`, Copilot reads the [buildspec(s)](https://docs.aws.amazon.com/codebuild/latest/userguide/build-spec-ref.html)
+in your local workspace.  
+
+You control all the configuration for these actions right in your [pipeline manifest](../docs/manifest/pipeline.en.md). You may have multiple pre-deployment actions and multiple 
+post-deployment actions; for each one, you must provide the path to the [buildspec](https://docs.aws.amazon.com/codebuild/latest/userguide/build-spec-ref.html),
+relative to your project root, in the `[pre_/post_]deployments.buildspec` field. Copilot will generate a CodeBuild project for your action, deployed
+in the same region as the pipeline and app. Use Copilot commands–such as `copilot svc exec` or `copilot task run`–within your buildspec to access the VPC of the environment
+being deployed or deployed to; you may use the `$COPILOT_APPLICATION_NAME` and `$COPILOT_ENVIRONMENT_NAME` Copilot environment variables
+to reuse your buildspec file for multiple environments.
+
+You can even specify the order of actions within your pre-deployment and
+post-deployment groups by using the `depends_on` field; by default, the actions will run in parallel. 
+
+`post_deployments` and `test_commands` are mutually exclusive.
+```yaml
+stages:
+  - name: test
+    require_approval: true
+    pre_deployments:
+      db_migration: # The name of this action.
+        buildspec: copilot/pipelines/demo-api-frontend-main/buildspecs/buildspec.yml # The path to the buildspec.
+    deployments: # Optional, ordering of deployments. 
+      orders:
+      warehouse:
+      frontend:
+        depends_on: [orders, warehouse]
+    post_deployments:
+      db_migration:
+        buildspec: copilot/pipelines/demo-api-frontend-main/buildspecs/post_buildspec.yml
+      integration:
+        buildspec: copilot/pipelines/demo-api-frontend-main/buildspecs/integ-buildspec.yml
+        depends_on: [db_migration] # Optional, ordering of actions.
+```
 
 ## `copilot deploy` enhancements
 
