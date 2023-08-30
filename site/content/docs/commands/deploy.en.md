@@ -5,9 +5,7 @@ $ copilot deploy
 
 ## What does it do?
 
-This command is used to run either [`copilot svc deploy`](../commands/svc-deploy.en.md) or [`copilot job deploy`](../commands/job-deploy.en.md) under the hood.
-
-It also checks for service and environment manifests in the local workspace, and allows you to initialize and deploy workloads and environments.
+This command is used to get you from local manifests to deployed service and environment. It will check for deployed infrastructure and local manifests, help you initialize and deploy an environment, and deploy a workload
 
 If a workload is uninitialized, `--init-wkld` will initialize the workload before deploying it.
 
@@ -16,11 +14,11 @@ If the desired environment is uninitialized, you may initialize it with `--init-
 The `--deploy-env` flag can be specified to skip environment deployment confirmation, or can be set to false (`--deploy-env=false`) to skip 
 deploying the environment.
 
-The steps involved in `copilot deploy` are the same as those involved in `copilot svc deploy` and `copilot job deploy`:
+The resteps involved in `copilot deploy` are as follows:
 
-1. If your service does not exist, optionally initialize it (via `--init-env[=false]`).
-2. If the target environment does not exist, optionally initialize it with custom credentials (via `--init-env[=false]`, `--region`, `--profile`, or `--aws-*` flags).
-3. Optionally deploy the environment before service deployment (via `--deploy-env[=false]`).
+1. If your service does not exist, optionally initialize it.
+2. If the target environment does not exist, optionally initialize it with custom credentials.
+3. Optionally deploy the environment before service deployment.
 4. When `image.build` exists in the manifest:
     1. Build your local Dockerfile into an image
     2. Tag it with the value from `--tag` or the latest git sha (if you're in a git directory)
