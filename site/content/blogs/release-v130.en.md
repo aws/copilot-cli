@@ -46,7 +46,7 @@ Copilot will do the following for both your primary container and any sidecars:
 3. Get credentials for your current IAM user/role
 4. Run images from step 1 with [`variables`](../docs/manifest/lb-web-service#variables), secrets from step 2, and IAM credentials from step 3 on your local machine
 
-Logs from your service are streamed to your terminal. When you're finished testing, type Ctrl+C and Copilot will clean up all of running containers before exiting!
+Logs from your service are streamed to your terminal. When you're finished testing, type Ctrl-C and Copilot will clean up all of running containers before exiting!
 
 ## Ctrl-C
 
