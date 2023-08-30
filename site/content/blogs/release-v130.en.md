@@ -99,6 +99,29 @@ stages:
 ```
 
 ## `copilot deploy` enhancements
+`copilot deploy` now supports initialization of workloads, and initialization and deployment of environments. 
+You can now start from a repo containing only an app and manifests, and with a single command, deploy a working 
+environment and service. You can also deploy environments before deploying your desired workload. 
+
+For example, imagine you would like to clone and deploy a repository containing manifests for a "prod" environment and "frontend" and "backend" services.
+`copilot deploy` will now prompt you to initialize your workload and environment if necessary, ask you for credentials 
+for the account in which you'd like to deploy the environment, then deploy it and the workload. 
+```console
+$ git clone myrepo
+$ cd myrepo
+$ copilot app init myapp
+$ copilot deploy -n frontend -e prod
+```
+
+To specify the profile and region where the environment will be deployed:
+```console
+$ copilot deploy --region us-west-2 --profile prod-profile -e prod --init-env
+```
+
+To skip deploying the environment if it already exists: 
+```console
+$ copilot deploy --deploy-env=false 
+```
 
 ## Use `--detach` to deploy without waiting
 
