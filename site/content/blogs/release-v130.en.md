@@ -20,7 +20,7 @@ Thanks to every one of you who shows love and support for AWS Copilot.
 Copilot v1.30 brings big enhancements to help you develop more flexibly and efficiently:
 
 - **`copilot run local`**: Copilot has a new operational command that enables you to run services locally! [See detailed section](#copilot-run-local).
-- **Ctrl-C**: The wait is over! Roll back your CloudFormation deployment right from the terminal, whenever you want. [See detailed section](#ctrl-c).
+- **Roll back deployments with Ctrl+C**: The wait is over! Roll back your CloudFormation deployment right from the terminal, whenever you want. [See detailed section](#roll-back-deployments-with-ctrlc).
 - **Pre- and post- deployment pipeline actions**: Insert db migrations, integration tests, and/or other actions before or after workload/environment deployments. [See detailed section](#deployment-actions). 
 - **`copilot deploy` enhancements**: We've increased the scope and flexibility of this command. [See detailed section](#copilot-deploy-enhancements).
 
@@ -36,17 +36,15 @@ Copilot v1.30 brings big enhancements to help you develop more flexibly and effi
 
 ## `copilot run local`
 
-## Ctrl-C
+## Roll back deployments with Ctrl+C
 
-When your Copilot Service is failing to deploy, You can now hit `Ctrl-C` to rollback your current CloudFormation stack to previous configuration.
-If you hit 'Ctrl-C' again during a rollback, the rollback of CloudFormation stack will continue in the background.
+While waiting for your Copilot service, environment, or job to deploy, You can now hit `Ctrl-C` to rollback your current CloudFormation stack to previous configuration.
+If you hit 'Ctrl-C' a second time, the program will exit, but the stack rollback will continue.
 
-If you are deploying Copilot service for the first time in an environment, hitting `Ctrl-C` during deployment will delete the stack.
-If you hit 'Ctrl-C' again during a stack deletion, the deletion of CloudFormation stack will continue in the background.
+If you are deploying a resource for the first time, hitting `Ctrl-C` during deployment will delete the stack.
+If you hit 'Ctrl-C' a second time, the program will exit, the deletion of stack will continue.
 
-You can also now use `--detach` flag to skip the progress of Cloudformation Stack Events on your terminal.   
-
-`Ctrl-C` and `--detach` flag is now enabled for `copilot svc deploy`, `copilot job deploy`, `copilot env deploy` and `copilot deploy` commands.
+`Ctrl-C` is now enabled for `copilot svc deploy`, `copilot job deploy`, `copilot env deploy` and `copilot deploy` commands.
 
 ## Deployment actions
 Maybe you want to run a database migration before a workload deployment, and the workload's health check depends on the
