@@ -20,9 +20,10 @@ Thanks to every one of you who shows love and support for AWS Copilot.
 Copilot v1.30 brings big enhancements to help you develop more flexibly and efficiently:
 
 - **`copilot run local`**: Copilot has a new operational command that enables you to run services locally! [See detailed section](#copilot-run-local).
-- **Ctrl-C**: The wait is over! Roll back your CloudFormation deployment right from the terminal, whenever you want. [See detailed section](#ctrl-c).
+- **Roll back deployments with Ctrl-C**: The wait is over! Roll back your CloudFormation deployment right from the terminal, whenever you want. [See detailed section](#roll-back-deployments-with-ctrl-c).
 - **Pre- and post- deployment pipeline actions**: Insert db migrations, integration tests, and/or other actions before or after workload/environment deployments. [See detailed section](#deployment-actions). 
 - **`copilot deploy` enhancements**: We've increased the scope and flexibility of this command. [See detailed section](#copilot-deploy-enhancements).
+- **`--detach flag`**: Skip progress of CloudFormation stack events on your terminal. [see detailed section](#use---detach-to-deploy-without-waiting).
 
 ???+ note "What’s AWS Copilot?"
 
@@ -48,7 +49,13 @@ Copilot will do the following for both your primary container and any sidecars:
 
 Logs from your service are streamed to your terminal. When you're finished testing, type Ctrl-C and Copilot will clean up all of running containers before exiting!
 
-## Ctrl-C
+## Roll back deployments with Ctrl-C
+
+While waiting for your service, job, or environment to deploy, you can now hit `Ctrl-C` to cancel the update. This will either rollback your stack to its previous configuration, or delete the stack if it was being deployed for the first time.
+
+If you hit 'Ctrl-C' a second time, the program will exit, but the stack rollback/deletion will continue.
+
+`Ctrl-C` is now enabled for `copilot svc deploy`, `copilot job deploy`, `copilot env deploy` and `copilot deploy` commands.
 
 ## Deployment actions
 Maybe you want to run a database migration before a workload deployment, and the workload's health check depends on the
@@ -92,6 +99,14 @@ stages:
 ```
 
 ## `copilot deploy` enhancements
+
+## Use `--detach` to deploy without waiting
+
+Typically, after you run any `deploy` commands, Copilot prints the progress to your terminal and waits for the deployment to finish.
+
+Now, if you don't want Copilot to wait, you can use the `--detach` flag. Copilot will trigger the deployment and exit the program, without printing the progress or waiting for the deployment.
+
+The `--detach` flag is available for `copilot svc deploy`, `copilot job deploy`, `copilot env deploy` and `copilot deploy` commands.
 
 ## What’s next?
 
