@@ -43,7 +43,7 @@ Maybe you want to run a database migration before a workload deployment, and the
 update. Or maybe you'd like your pipeline to execute some end-to-end or integration tests after a workload deployment. These actions are
 now possible with [Copilot pipelines](../docs/concepts/pipelines.en.md)!  
 
-While Copilot has supported 'test_commands' for some time now, pre- and post-deployment actions extend pipeline functionality 
+While Copilot has supported ['test_commands'](https://aws.github.io/copilot-cli/docs/manifest/pipeline/#stages-test-cmds) for some time now, [pre-](https://aws.github.io/copilot-cli/docs/manifest/pipeline/#stages-predeployments) and [post-deployment](https://aws.github.io/copilot-cli/docs/manifest/pipeline/#stages-postdeployments) actions extend pipeline functionality 
 and flexibility. For `test_commands`, Copilot inlines a buildspec with your command strings into the pipeline
 Cloudformation template; for `pre_deployments` and `post_deployments`, Copilot reads the [buildspec(s)](https://docs.aws.amazon.com/codebuild/latest/userguide/build-spec-ref.html)
 in your local workspace.  
