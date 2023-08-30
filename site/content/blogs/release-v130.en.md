@@ -23,7 +23,7 @@ Copilot v1.30 brings big enhancements to help you develop more flexibly and effi
 - **Roll back deployments with Ctrl-C**: The wait is over! Roll back your CloudFormation deployment right from the terminal, whenever you want. [See detailed section](#roll-back-deployments-with-ctrl-c).
 - **Pre- and post- deployment pipeline actions**: Insert db migrations, integration tests, and/or other actions before or after workload/environment deployments. [See detailed section](#deployment-actions). 
 - **`copilot deploy` enhancements**: We've increased the scope and flexibility of this command. [See detailed section](#copilot-deploy-enhancements).
-- **`detach flag`: Skip progress of CloudFormation stack events on your terminal. [see detailed section](#detach-flag)
+- **`detach flag`**: Skip progress of CloudFormation stack events on your terminal. [see detailed section](#detach-flag).
 
 ???+ note "What’s AWS Copilot?"
 
