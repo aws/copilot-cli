@@ -23,7 +23,7 @@ Copilot v1.30 brings big enhancements to help you develop more flexibly and effi
 - **Roll back deployments with Ctrl-C**: The wait is over! Roll back your CloudFormation deployment right from the terminal, whenever you want. [See detailed section](#roll-back-deployments-with-ctrl-c).
 - **Pre- and post- deployment pipeline actions**: Insert db migrations, integration tests, and/or other actions before or after workload/environment deployments. [See detailed section](#deployment-actions). 
 - **`copilot deploy` enhancements**: We've increased the scope and flexibility of this command. [See detailed section](#copilot-deploy-enhancements).
-- **`detach flag`**: Skip progress of CloudFormation stack events on your terminal. [see detailed section](#detach-flag).
+- **`detach flag`**: Skip progress of CloudFormation stack events on your terminal. [see detailed section](#use---detach-to-deploy-without-waiting).
 
 ???+ note "What’s AWS Copilot?"
 
@@ -89,9 +89,13 @@ stages:
 
 ## `copilot deploy` enhancements
 
-## `detach flag`
+## Use `--detach` to deploy without waiting
 
-You can now use `--detach` flag for `copilot svc deploy`, `copilot job deploy`, `copilot env deploy` and `copilot deploy` commands to skip the progress of CloudFormation stack events on your terminal.
+Typically, after you run any `deploy` commands, Copilot prints the progress to your terminal and waits for the deployment to finish.
+
+Now, if you don't want Copilot to wait, you can use the `--detach` flag. Copilot will trigger the deployment and exit the program, without printing the progress or waiting for the deployment.
+
+The `--detach` flag is available for `copilot svc deploy`, `copilot job deploy`, `copilot env deploy` and `copilot deploy` commands.
 
 ## What’s next?
 
