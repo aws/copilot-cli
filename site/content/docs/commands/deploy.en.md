@@ -5,7 +5,18 @@ $ copilot deploy
 
 ## What does it do?
 
-This command is used to run either [`copilot svc deploy`](../commands/svc-deploy.en.md) or [`copilot job deploy`](../commands/job-deploy.en.md) under the hood. The steps involved in `copilot deploy` are the same as those involved in `copilot svc deploy` and `copilot job deploy`:
+This command is used to run either [`copilot svc deploy`](../commands/svc-deploy.en.md) or [`copilot job deploy`](../commands/job-deploy.en.md) under the hood.
+
+It also checks for service and environment manifests in the local workspace, and allows you to initialize and deploy workloads and environments.
+
+If a workload is uninitialized, `--init-wkld` will initialize the workload before deploying it.
+
+If the desired environment is uninitialized, you may initialize it with `--init-env`. 
+
+The `--deploy-env` flag can be specified to skip environment deployment confirmation, or can be set to false (`--deploy-env=false`) to skip 
+deploying the environment.
+
+The steps involved in `copilot deploy` are the same as those involved in `copilot svc deploy` and `copilot job deploy`:
 
 1. If your service does not exist, optionally initialize it (via `--init-env[=false]`).
 2. If the target environment does not exist, optionally initialize it with custom credentials (via `--init-env[=false]`, `--region`, `--profile`, or `--aws-*` flags).
@@ -26,16 +37,16 @@ This command is used to run either [`copilot svc deploy`](../commands/svc-deploy
       --aws-access-key-id string       Optional. An AWS access key for the environment account.
       --aws-secret-access-key string   Optional. An AWS secret access key for the environment account.
       --aws-session-token string       Optional. An AWS session token for temporary credentials.
-      --deploy-env                     Deploy the target environment before deploying the workload.
-      --detach                         Optional. Skip displaying CloudFormation deployment progress.
+      --deploy-env bool                Deploy the target environment before deploying the workload.
+      --detach bool                    Optional. Skip displaying CloudFormation deployment progress.
   -e, --env string                     Name of the environment.
       --force                          Optional. Force a new service deployment using the existing image.
                                        Not available with the "Static Site" service type.
   -h, --help                           help for deploy
-      --init-env                       Confirm initializing the target environment if it does not exist.
-      --init-wkld                      Optional. Initialize a workload before deploying it.
+      --init-env bool                  Confirm initializing the target environment if it does not exist.
+      --init-wkld bool                 Optional. Initialize a workload before deploying it.
   -n, --name string                    Name of the service or job.
-      --no-rollback                    Optional. Disable automatic stack 
+      --no-rollback bool               Optional. Disable automatic stack 
                                        rollback in case of deployment failure.
                                        We do not recommend using this flag for a
                                        production environment.
