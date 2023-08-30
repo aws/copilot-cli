@@ -36,6 +36,18 @@ Copilot v1.30 brings big enhancements to help you develop more flexibly and effi
     See the section [Overview](../docs/concepts/overview.en.md) for a more detailed introduction to AWS Copilot.
 
 ## `copilot run local`
+As you're developing changes to your services, `copilot run local` speeds up your iteration loop by enabling you to test changes to your code
+without the overhead of a deployment. To get started, you first need to deploy a version of your service by running `copilot svc deploy`.
+
+After you have your service deployed, you can start making modifications to your code. When you're ready to test your changes, run `copilot run local` and
+Copilot will do the following for both your primary container and any sidecars:
+
+1. Build or pull the image specified by [`image`](../docs/manifest/lb-web-service#image)
+2. Get the values for secrets specified by [`secrets`](../docs/manifest/lb-web-service#secrets)
+3. Get credentials for your current IAM user/role
+4. Run images from step 1 with [`variables`](../docs/manifest/lb-web-service#variables), secrets from step 2, and IAM credentials from step 3 on your local machine
+
+Logs from your service are streamed to your terminal. When you're finished testing, type Ctrl-C and Copilot will clean up all of running containers before exiting!
 
 ## Roll back deployments with Ctrl-C
 
