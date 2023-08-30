@@ -8,21 +8,17 @@ package deploy
 import (
 	"errors"
 	"fmt"
+	"gopkg.in/yaml.v3"
 	"path"
 	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
 
-	"gopkg.in/yaml.v3"
-
-	"github.com/aws/copilot-cli/internal/pkg/graph"
-
-	"github.com/aws/copilot-cli/internal/pkg/config"
-
-	"github.com/aws/copilot-cli/internal/pkg/manifest"
-
 	"github.com/aws/aws-sdk-go/aws/arn"
+	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/graph"
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
 )
 
 const (
@@ -41,7 +37,7 @@ const (
 	StageFullNamePrefix = "DeployTo-"
 )
 
-// Name of the environment varialbes injected into the CodeBuild projects that support pre/post-deployment actions.
+// Name of the environment variables injected into the CodeBuild projects that support pre/post-deployment actions.
 const (
 	envVarNameEnvironmentName = "COPILOT_ENVIRONMENT_NAME"
 	envVarNameApplicationName = "COPILOT_APPLICATION_NAME"
