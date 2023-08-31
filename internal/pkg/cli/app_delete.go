@@ -173,7 +173,6 @@ func (o *deleteAppOpts) Ask() error {
 	manualConfirm, err := o.prompt.Confirm(
 		fmt.Sprintf(fmtDeleteAppConfirmPrompt, o.name),
 		deleteAppConfirmHelp,
-		prompt.WithTrueDefault(),
 		prompt.WithConfirmFinalMessage())
 	if err != nil {
 		return fmt.Errorf("confirm app deletion: %w", err)
