@@ -68,9 +68,8 @@ type deployOpts struct {
 	wlType string
 
 	// values for initialization logic
-	envExistsInApp     bool
-	envExistsInWs      bool
-	promptForEnvDeploy bool
+	envExistsInApp bool
+	envExistsInWs  bool
 
 	// Cached variables
 	wsEnvironments []string
@@ -94,8 +93,6 @@ func newDeployOpts(vars deployVars) (*deployOpts, error) {
 		sel:        selector.NewLocalWorkloadSelector(prompter, store, ws),
 		ws:         ws,
 		prompt:     prompter,
-
-		promptForEnvDeploy: true,
 
 		newWorkloadAdder: func() wkldInitializerWithoutManifest {
 			return &initialize.WorkloadInitializer{
@@ -400,13 +397,6 @@ func (o *deployOpts) maybeDeployEnv() error {
 	if !o.envExistsInWs {
 		return nil
 	}
-	if o.promptForEnvDeploy {
-		v, err := o.prompt.Confirm(fmt.Sprintf("Would you like to deploy the environment %q before deploying your workload?", o.envName), "", prompt.WithFinalMessage("Deploy environment:"))
-		if err != nil {
-			return fmt.Errorf("confirm env deployment: %w", err)
-		}
-		o.deployEnv = aws.Bool(v)
-	}
 
 	if aws.BoolValue(o.deployEnv) {
 		cmd, err := o.newDeployEnvCmd(o)
@@ -464,14 +454,14 @@ func BuildDeployCmd() *cobra.Command {
 		Long:  "Deploy a Copilot job or service.",
 		Example: `
   Deploys a service named "frontend" to a "test" environment.
-  /code $ copilot deploy --name frontend --env test
+  /code $ copilot deploy --name frontend --env test --deploy-env=false
   Deploys a job named "mailer" with additional resource tags to a "prod" environment.
-  /code $ copilot deploy -n mailer -e prod --resource-tags source/revision=bb133e7,deployment/initiator=manual
+  /code $ copilot deploy -n mailer -e prod --resource-tags source/revision=bb133e7,deployment/initiator=manual --deploy-env=false
   Initializes and deploys an environment named "test" in us-west-2 under the "default" profile with local manifest, 
     then deploys a service named "api"
   /code $ copilot deploy --init-env --deploy-env --env test --name api --profile default --region us-west-2
   Initializes and deploys a service named "backend" to a "prod" environment.
-  /code $ copilot deploy --init-wkld --env prod --name backend`,
+  /code $ copilot deploy --init-wkld --deploy-env=false --env prod --name backend`,
 
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newDeployOpts(vars)
@@ -498,10 +488,6 @@ func BuildDeployCmd() *cobra.Command {
 				if deployEnvironment {
 					opts.deployEnv = aws.Bool(true)
 				}
-			}
-
-			if cmd.Flags().Changed(envFlag) || cmd.Flags().Changed(deployEnvFlag) {
-				opts.promptForEnvDeploy = false
 			}
 
 			if err := opts.Run(); err != nil {

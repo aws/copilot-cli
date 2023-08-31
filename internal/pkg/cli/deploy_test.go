@@ -946,51 +946,30 @@ func Test_deployOpts_maybeInitEnv(t *testing.T) {
 
 func Test_deployOpts_maybeDeployEnv(t *testing.T) {
 	tests := map[string]struct {
-		envExistsInWs      bool
-		promptForEnvDeploy bool
-		deployEnv          *bool
+		envExistsInWs bool
+		deployEnv     *bool
 
 		mockDeployEnvCmd func(m *mocks.Mockcmd)
-		mockPrompter     func(m *mocks.Mockprompter)
 
 		wantErr string
 	}{
 		"env does not exist in ws": {
 			envExistsInWs:    false,
 			mockDeployEnvCmd: func(m *mocks.Mockcmd) {},
-			mockPrompter:     func(m *mocks.Mockprompter) {},
 		},
 		"env exists in app, flag set false": {
 			envExistsInWs:    true,
 			deployEnv:        aws.Bool(false),
 			mockDeployEnvCmd: func(m *mocks.Mockcmd) {},
-			mockPrompter:     func(m *mocks.Mockprompter) {},
 		},
 		"env exists; deploy flag set": {
 			envExistsInWs: true,
 			deployEnv:     aws.Bool(true),
-			mockPrompter:  func(m *mocks.Mockprompter) {},
 			mockDeployEnvCmd: func(m *mocks.Mockcmd) {
 				m.EXPECT().Validate().Return(nil)
 				m.EXPECT().Ask().Return(nil)
 				m.EXPECT().Execute().Return(nil)
 			},
-		},
-		"no env name specified, deployEnv flag unset": {
-			envExistsInWs:      true,
-			promptForEnvDeploy: true,
-			deployEnv:          nil,
-			mockDeployEnvCmd:   func(m *mocks.Mockcmd) {},
-			mockPrompter: func(m *mocks.Mockprompter) {
-				m.EXPECT().Confirm(gomock.Any(), "", gomock.Any()).Return(false, nil)
-			},
-		},
-		"no env name specified, deployEnv set": {
-			envExistsInWs:      true,
-			promptForEnvDeploy: false,
-			deployEnv:          aws.Bool(false),
-			mockDeployEnvCmd:   func(m *mocks.Mockcmd) {},
-			mockPrompter:       func(m *mocks.Mockprompter) {},
 		},
 	}
 	for name, tc := range tests {
@@ -999,10 +978,8 @@ func Test_deployOpts_maybeDeployEnv(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockDeployEnvCmd := mocks.NewMockcmd(ctrl)
-			mockPrompter := mocks.NewMockprompter(ctrl)
 
 			tc.mockDeployEnvCmd(mockDeployEnvCmd)
-			tc.mockPrompter(mockPrompter)
 
 			o := &deployOpts{
 				deployVars: deployVars{
@@ -1012,12 +989,10 @@ func Test_deployOpts_maybeDeployEnv(t *testing.T) {
 					},
 					deployEnv: tc.deployEnv,
 				},
-				promptForEnvDeploy: tc.promptForEnvDeploy,
-				envExistsInWs:      tc.envExistsInWs,
+				envExistsInWs: tc.envExistsInWs,
 				newDeployEnvCmd: func(o *deployOpts) (cmd, error) {
 					return mockDeployEnvCmd, nil
 				},
-				prompt: mockPrompter,
 			}
 
 			err := o.maybeDeployEnv()
