@@ -64,12 +64,12 @@ rollback of the stack via the AWS console or AWS CLI before the next deployment.
 ## Examples
 Deploys a service named "frontend" to a "test" environment.
 ```console
-$ copilot deploy --name frontend --env test --deploy-env=false
+$ copilot deploy --name frontend --env test
 ```
 
 Deploys a job named "mailer" with additional resource tags to a "prod" environment.
 ```console
-$ copilot deploy -n mailer -e prod --resource-tags source/revision=bb133e7,deployment/initiator=manual --deploy-env=false
+$ copilot deploy -n mailer -e prod --resource-tags source/revision=bb133e7,deployment/initiator=manual
 ```
 
 Initializes and deploys an environment named "test" in us-west-2 under the "default" profile with local manifest,
