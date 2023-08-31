@@ -18,6 +18,9 @@ NetworkLoadBalancerSecurityGroup:
   Type: AWS::EC2::SecurityGroup
   Properties:
     GroupDescription: HTTP access to the public facing load balancer
+    VpcId:
+      Fn::ImportValue:
+        !Sub "${AppName}-${EnvName}-VpcId" 
     SecurityGroupIngress:
       - CidrIp: 0.0.0.0/0
         Description: Allow from anyone on port
@@ -33,7 +36,7 @@ EnvironmentSecurityGroupIngressFromNetworkLoadBalancerSecurityGroup:
       Fn::ImportValue:
         !Sub '${AppName}-${EnvName}-EnvironmentSecurityGroup'
     IpProtocol: -1
-    SourceSecurityGroupId: !Ref NetworkLoadBalancerSecurityGroup
+    SourceSecurityGroupId: !GetAtt NetworkLoadBalancerSecurityGroup.GroupId
 {{- range $i, $listener := .NLB.Listener }}
 NLBListener{{- if ne $i 0 }}{{$i}}{{end}}:
   Metadata:
