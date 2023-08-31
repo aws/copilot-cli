@@ -397,13 +397,6 @@ func (o *deployOpts) maybeDeployEnv() error {
 	if !o.envExistsInWs {
 		return nil
 	}
-	if o.deployEnv == nil {
-		v, err := o.prompt.Confirm(fmt.Sprintf("Would you like to deploy the environment %q before deploying your workload?", o.envName), "", prompt.WithFinalMessage("Deploy environment:"))
-		if err != nil {
-			return fmt.Errorf("confirm env deployment: %w", err)
-		}
-		o.deployEnv = aws.Bool(v)
-	}
 
 	if aws.BoolValue(o.deployEnv) {
 		cmd, err := o.newDeployEnvCmd(o)
