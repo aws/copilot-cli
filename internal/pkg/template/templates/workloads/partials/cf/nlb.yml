@@ -22,11 +22,20 @@ NetworkLoadBalancerSecurityGroup:
       Fn::ImportValue:
         !Sub "${AppName}-${EnvName}-VpcId" 
     SecurityGroupIngress:
-      - CidrIp: 0.0.0.0/0
-        Description: Allow from anyone on port
+{{- range $i, $cidrblock := .NLB.PublicSubnetCIDRs }}
+      - CidrIp: {{ $cidrblock }}
+        Description: Allow from anyone on port within subnet
         FromPort: 0
         IpProtocol: -1
         ToPort: 65535
+{{- end}}
+{{- range $i, $listener := .NLB.Listener }}
+      - CidrIp: 0.0.0.0/0
+        Description: Allow ingress from NLB listener
+        FromPort: {{ $listener.Port }}
+        IpProtocol: {{ $listener.Protocol }}
+        ToPort: {{ $listener.Port }}
+{{- end}}
 EnvironmentSecurityGroupIngressFromNetworkLoadBalancerSecurityGroup:
   Type: AWS::EC2::SecurityGroupIngress
   Metadata:
