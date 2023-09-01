@@ -9,6 +9,7 @@ import (
 	"net"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -921,7 +922,7 @@ func (r RoutingRule) validate() error {
 		}
 	}
 	if r.ProtocolVersion != nil {
-		if !contains(strings.ToUpper(*r.ProtocolVersion), httpProtocolVersions) {
+		if !slices.Contains(httpProtocolVersions, strings.ToUpper(*r.ProtocolVersion)) {
 			return fmt.Errorf(`"version" field value '%s' must be one of %s`, *r.ProtocolVersion, english.WordSeries(httpProtocolVersions, "or"))
 		}
 	}
@@ -1868,14 +1869,14 @@ func (q FIFOAdvanceConfig) validateHighThroughputFIFO() error {
 }
 
 func (q FIFOAdvanceConfig) validateDeduplicationScope() error {
-	if q.DeduplicationScope != nil && !contains(aws.StringValue(q.DeduplicationScope), validSQSDeduplicationScopeValues) {
+	if q.DeduplicationScope != nil && !slices.Contains(validSQSDeduplicationScopeValues, aws.StringValue(q.DeduplicationScope)) {
 		return fmt.Errorf(`validate "deduplication_scope": deduplication scope value must be one of %s`, english.WordSeries(validSQSDeduplicationScopeValues, "or"))
 	}
 	return nil
 }
 
 func (q FIFOAdvanceConfig) validateFIFOThroughputLimit() error {
-	if q.FIFOThroughputLimit != nil && !contains(aws.StringValue(q.FIFOThroughputLimit), validSQSFIFOThroughputLimitValues) {
+	if q.FIFOThroughputLimit != nil && !slices.Contains(validSQSFIFOThroughputLimitValues, aws.StringValue(q.FIFOThroughputLimit)) {
 		return fmt.Errorf(`validate "throughput_limit": fifo throughput limit value must be one of %s`, english.WordSeries(validSQSFIFOThroughputLimitValues, "or"))
 	}
 	return nil
@@ -2253,15 +2254,6 @@ func validateARM(opts validateARMOpts) error {
 		return errors.New(`'Fargate Spot' is not supported when deploying on ARM architecture`)
 	}
 	return nil
-}
-
-func contains(name string, names []string) bool {
-	for _, n := range names {
-		if name == n {
-			return true
-		}
-	}
-	return false
 }
 
 // validate returns nil if ImageLocationOrBuild is configured correctly.

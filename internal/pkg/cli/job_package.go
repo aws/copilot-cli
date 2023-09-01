@@ -6,6 +6,7 @@ package cli
 import (
 	"fmt"
 	"os"
+	"slices"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
@@ -115,7 +116,7 @@ func (o *packageJobOpts) Validate() error {
 		if err != nil {
 			return fmt.Errorf("list jobs in the workspace: %w", err)
 		}
-		if !contains(o.name, names) {
+		if !slices.Contains(names, o.name) {
 			return fmt.Errorf("job '%s' does not exist in the workspace", o.name)
 		}
 	}
