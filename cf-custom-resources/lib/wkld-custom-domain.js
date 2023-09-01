@@ -185,13 +185,15 @@ exports.handler = async function (event, context) {
     switch (event.RequestType) {
       case "Update":
         let oldAliases = new Set(event.OldResourceProperties.Aliases);
-        if (setEqual(oldAliases, aliases)) {
+        let oldHostedZoneId = event.OldResourceProperties.PublicAccessHostedZoneID;
+        let oldDNS = event.OldResourceProperties.PublicAccessDNS;
+        if (setEqual(oldAliases, aliases) && oldHostedZoneId === publicAccessHostedZoneID && oldDNS === publicAccessDNS) {
           break;
         }
         await validateAliases(aliases, publicAccessDNS);
         await activate(aliases, publicAccessDNS, publicAccessHostedZoneID);
         let unusedAliases = new Set([...oldAliases].filter((a) => !aliases.has(a)));
-        await deactivate(unusedAliases, publicAccessDNS, publicAccessHostedZoneID);
+        await deactivate(unusedAliases, oldDNS, oldHostedZoneId);
         break;
       case "Create":
         await validateAliases(aliases, publicAccessDNS);
