@@ -17,7 +17,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
-          go-version: '1.20'
+          go-version: '1.21'
 
       - name: Set up Node
         uses: actions/setup-node@v1
@@ -42,7 +42,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
-          go-version: '1.20'
+          go-version: '1.21'
 
       - name: Set up Node
         uses: actions/setup-node@v1
@@ -57,11 +57,11 @@ jobs:
 
       - name: Print out local diff after mockgen
         run: |
-             git status --porcelain=v1 1>gitstatus.txt
-             cat gitstatus.txt
+          git status --porcelain=v1 1>gitstatus.txt
+          cat gitstatus.txt
 
       - name: Check for nonzero diff
-        run: "[ -z \"$(cat gitstatus.txt)\" ] && echo \"Generated mocks all match\""
+        run: '[ -z "$(cat gitstatus.txt)" ] && echo "Generated mocks all match"'
 
   test:
     runs-on: ubuntu-latest
@@ -69,7 +69,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
-          go-version: '1.20'
+          go-version: '1.21'
 
       - name: Set up Node
         uses: actions/setup-node@v1
@@ -98,7 +98,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
-          go-version: '1.20'
+          go-version: '1.21'
 
       - name: Check out code
         uses: actions/checkout@v2
@@ -115,7 +115,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
-          go-version: '1.20'
+          go-version: '1.21'
 
       - name: Check out code
         uses: actions/checkout@v2
