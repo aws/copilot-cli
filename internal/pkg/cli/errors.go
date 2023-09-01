@@ -148,3 +148,18 @@ func (e *errBucketEmptyingFailed) RecommendActions() string {
 - We recommend logging into the S3 console and manually deleting the affected %v.`,
 		english.PluralWord(len(e.failedBuckets), "an S3 bucket", "S3 buckets"), english.PluralWord(len(e.failedBuckets), "bucket is", "buckets are"), english.PluralWord(len(e.failedBuckets), "bucket", "buckets"))
 }
+
+type errPipelineDependsOnEnv struct {
+	pipeline string
+	env      string
+}
+
+func (e *errPipelineDependsOnEnv) Error() string {
+	return fmt.Sprintf("environment %q cannot be deleted because pipeline %q depends on it", e.env, e.pipeline)
+}
+
+func (e *errPipelineDependsOnEnv) RecommendActions() string {
+	return fmt.Sprintf(`You can update the manifest of the pipeline %q to remove its dependency on environment %q,
+or run %s to delete the pipeline before running %s to delete the environment`,
+		e.pipeline, e.env, color.HighlightCode(fmt.Sprintf("copilot pipeline delete -n %s", e.pipeline)), color.HighlightCode(fmt.Sprintf("copilot env delete -n %s", e.env)))
+}

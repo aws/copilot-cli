@@ -158,6 +158,8 @@ const (
 	permissionsBoundaryFlag = "permissions-boundary"
 	prodEnvFlag             = "prod"
 	deleteSecretFlag        = "delete-secret"
+	deployEnvFlag           = "deploy-env"
+	yesInitEnvFlag          = "init-env"
 )
 
 // Short flag names.
@@ -398,9 +400,9 @@ Cannot be specified with --default-config or any of the --override flags.`
 	enableContainerInsightsFlagDescription = "Optional. Enable CloudWatch Container Insights."
 	defaultConfigFlagDescription           = "Optional. Skip prompting and use default environment configuration."
 
-	profileFlagDescription         = "Name of the profile."
-	accessKeyIDFlagDescription     = "Optional. An AWS access key."
-	secretAccessKeyFlagDescription = "Optional. An AWS secret access key."
+	profileFlagDescription         = "Name of the profile for the environment account."
+	accessKeyIDFlagDescription     = "Optional. An AWS access key for the environment account."
+	secretAccessKeyFlagDescription = "Optional. An AWS secret access key for the environment account."
 	sessionTokenFlagDescription    = "Optional. An AWS session token for temporary credentials."
 	envRegionTokenFlagDescription  = "Optional. An AWS region where the environment will be created."
 
@@ -423,7 +425,9 @@ are also accepted.`
 	secretOverwriteFlagDescription     = "Optional. Whether to overwrite an existing secret."
 	permissionsBoundaryFlagDescription = `Optional. The name or ARN of an existing IAM policy with which to set a
 permissions boundary for all roles generated within the application.`
-	prodEnvFlagDescription = "If the environment contains production services."
+	prodEnvFlagDescription    = "If the environment contains production services."
+	deployEnvFlagDescription  = "Deploy the target environment before deploying the workload."
+	yesInitEnvFlagDescription = "Confirm initializing the target environment if it does not exist."
 )
 
 type portOverride struct {

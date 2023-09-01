@@ -40,6 +40,8 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/repository"
 	termcolor "github.com/aws/copilot-cli/internal/pkg/term/color"
+	"github.com/aws/copilot-cli/internal/pkg/term/log"
+	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/term/syncbuffer"
@@ -57,7 +59,7 @@ const (
 	pauseContainerName = "pause"
 )
 
-type localRunVars struct {
+type runLocalVars struct {
 	wkldName      string
 	wkldType      string
 	appName       string
@@ -66,8 +68,8 @@ type localRunVars struct {
 	portOverrides portOverrides
 }
 
-type localRunOpts struct {
-	localRunVars
+type runLocalOpts struct {
+	runLocalVars
 
 	sel             deploySelector
 	ecsLocalClient  ecsLocalClient
@@ -85,16 +87,17 @@ type localRunOpts struct {
 	repository      repositoryService
 	containerSuffix string
 	newColor        func() *color.Color
+	prog            progress
 
 	buildContainerImages func(mft manifest.DynamicWorkload) (map[string]string, error)
-	configureClients     func(o *localRunOpts) error
+	configureClients     func(o *runLocalOpts) error
 	labeledTermPrinter   func(fw syncbuffer.FileWriter, bufs []*syncbuffer.LabeledSyncBuffer, opts ...syncbuffer.LabeledTermPrinterOption) clideploy.LabeledTermPrinter
 	unmarshal            func([]byte) (manifest.DynamicWorkload, error)
 	newInterpolator      func(app, env string) interpolator
 }
 
-func newLocalRunOpts(vars localRunVars) (*localRunOpts, error) {
-	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("local run"))
+func newRunLocalOpts(vars runLocalVars) (*runLocalOpts, error) {
+	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("run local"))
 	defaultSess, err := sessProvider.Default()
 	if err != nil {
 		return nil, err
@@ -113,8 +116,8 @@ func newLocalRunOpts(vars localRunVars) (*localRunOpts, error) {
 	labeledTermPrinter := func(fw syncbuffer.FileWriter, bufs []*syncbuffer.LabeledSyncBuffer, opts ...syncbuffer.LabeledTermPrinterOption) clideploy.LabeledTermPrinter {
 		return syncbuffer.NewLabeledTermPrinter(fw, bufs, opts...)
 	}
-	opts := &localRunOpts{
-		localRunVars:       vars,
+	opts := &runLocalOpts{
+		runLocalVars:       vars,
 		sel:                selector.NewDeploySelect(prompt.New(), store, deployStore),
 		store:              store,
 		ws:                 ws,
@@ -126,8 +129,9 @@ func newLocalRunOpts(vars localRunVars) (*localRunOpts, error) {
 		dockerEngine:       dockerengine.New(exec.NewCmd()),
 		labeledTermPrinter: labeledTermPrinter,
 		newColor:           termcolor.ColorGenerator(),
+		prog:               termprogress.NewSpinner(log.DiagnosticWriter),
 	}
-	opts.configureClients = func(o *localRunOpts) error {
+	opts.configureClients = func(o *runLocalOpts) error {
 		defaultSessEnvRegion, err := o.sessProvider.DefaultWithRegion(o.targetEnv.Region)
 		if err != nil {
 			return fmt.Errorf("create default session with region %s: %w", o.targetEnv.Region, err)
@@ -186,7 +190,7 @@ func newLocalRunOpts(vars localRunVars) (*localRunOpts, error) {
 }
 
 // Validate returns an error for any invalid optional flags.
-func (o *localRunOpts) Validate() error {
+func (o *runLocalOpts) Validate() error {
 	if o.appName == "" {
 		return errNoAppInWorkspace
 	}
@@ -200,11 +204,11 @@ func (o *localRunOpts) Validate() error {
 }
 
 // Ask prompts the user for any unprovided required fields and validates them.
-func (o *localRunOpts) Ask() error {
+func (o *runLocalOpts) Ask() error {
 	return o.validateAndAskWkldEnvName()
 }
 
-func (o *localRunOpts) validateAndAskWkldEnvName() error {
+func (o *runLocalOpts) validateAndAskWkldEnvName() error {
 	if o.envName != "" {
 		env, err := o.store.GetEnvironment(o.appName, o.envName)
 		if err != nil {
@@ -238,7 +242,7 @@ func (o *localRunOpts) validateAndAskWkldEnvName() error {
 }
 
 // Execute builds and runs the workload images locally.
-func (o *localRunOpts) Execute() error {
+func (o *runLocalOpts) Execute() error {
 	if err := o.configureClients(o); err != nil {
 		return err
 	}
@@ -344,11 +348,11 @@ func (o *localRunOpts) Execute() error {
 	return g.Wait()
 }
 
-func (o *localRunOpts) getContainerSuffix() string {
+func (o *runLocalOpts) getContainerSuffix() string {
 	return fmt.Sprintf("%s-%s-%s", o.appName, o.envName, o.wkldName)
 }
 
-func (o *localRunOpts) runPauseContainer(ctx context.Context, ports map[string]string) error {
+func (o *runLocalOpts) runPauseContainer(ctx context.Context, ports map[string]string) error {
 	// flip ports to be host->ctr
 	flippedPorts := make(map[string]string, len(ports))
 	for k, v := range ports {
@@ -399,7 +403,7 @@ func (o *localRunOpts) runPauseContainer(ctx context.Context, ports map[string]s
 	return nil
 }
 
-func (o *localRunOpts) runContainers(ctx context.Context, containerURIs map[string]string, envVars map[string]containerEnv) error {
+func (o *runLocalOpts) runContainers(ctx context.Context, containerURIs map[string]string, envVars map[string]containerEnv) error {
 	g, ctx := errgroup.WithContext(ctx)
 	for name, uri := range containerURIs {
 		name := name
@@ -437,16 +441,21 @@ func (o *localRunOpts) runContainers(ctx context.Context, containerURIs map[stri
 	return g.Wait()
 }
 
-func (o *localRunOpts) cleanUpContainers(ctx context.Context, containerURIs map[string]string) error {
+func (o *runLocalOpts) cleanUpContainers(ctx context.Context, containerURIs map[string]string) error {
 	cleanUp := func(id string) error {
-		fmt.Printf("Cleaning up %q\n", id)
-
+		o.prog.Start(fmt.Sprintf("Stopping %q", id))
 		if err := o.dockerEngine.Stop(id); err != nil {
+			o.prog.Stop(log.Serrorf("Failed to stop %q\n", id))
 			return fmt.Errorf("stop: %w", err)
 		}
+
+		o.prog.Start(fmt.Sprintf("Removing %q", id))
 		if err := o.dockerEngine.Rm(id); err != nil {
+			o.prog.Stop(log.Serrorf("Failed to remove %q\n", id))
 			return fmt.Errorf("rm: %w", err)
 		}
+
+		o.prog.Stop(log.Ssuccessf("Cleaned up %q\n", id))
 		return nil
 	}
 
@@ -485,7 +494,7 @@ type envVarValue struct {
 // specified in the Task Definition to return a set of environment varibles for each
 // continer defined in the TaskDefinition. The returned map is a map of container names,
 // each of which contains a mapping of key->envVarValue, which defines if the variable is a secret or not.
-func (o *localRunOpts) getEnvVars(ctx context.Context, taskDef *awsecs.TaskDefinition) (map[string]containerEnv, error) {
+func (o *runLocalOpts) getEnvVars(ctx context.Context, taskDef *awsecs.TaskDefinition) (map[string]containerEnv, error) {
 	creds, err := o.sess.Config.Credentials.GetWithContext(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("get IAM credentials: %w", err)
@@ -534,7 +543,7 @@ func (o *localRunOpts) getEnvVars(ctx context.Context, taskDef *awsecs.TaskDefin
 // The expected format of the flag values is KEY=VALUE, with an optional container name
 // in the format of [containerName]:KEY=VALUE. If the container name is omitted,
 // the environment variable override is applied to all containers in the task definition.
-func (o *localRunOpts) fillEnvOverrides(envVars map[string]containerEnv) error {
+func (o *runLocalOpts) fillEnvOverrides(envVars map[string]containerEnv) error {
 	for k, v := range o.envOverrides {
 		if !strings.Contains(k, ":") {
 			// apply override to all containers
@@ -564,7 +573,7 @@ func (o *localRunOpts) fillEnvOverrides(envVars map[string]containerEnv) error {
 
 // fillSecrets collects non-overridden secrets from the task definition and
 // makes requests to SSM and Secrets Manager to get their value.
-func (o *localRunOpts) fillSecrets(ctx context.Context, envVars map[string]containerEnv, taskDef *awsecs.TaskDefinition) error {
+func (o *runLocalOpts) fillSecrets(ctx context.Context, envVars map[string]containerEnv, taskDef *awsecs.TaskDefinition) error {
 	// figure out which secrets we need to get, set value to ValueFrom
 	unique := make(map[string]string)
 	for _, s := range taskDef.Secrets() {
@@ -622,7 +631,7 @@ func (o *localRunOpts) fillSecrets(ctx context.Context, envVars map[string]conta
 	return nil
 }
 
-func (o *localRunOpts) getSecret(ctx context.Context, valueFrom string) (string, error) {
+func (o *runLocalOpts) getSecret(ctx context.Context, valueFrom string) (string, error) {
 	// SSM secrets can be specified as parameter name instead of an ARN.
 	// Default to ssm if valueFrom is not an ARN.
 	getter := o.ssm
@@ -640,16 +649,15 @@ func (o *localRunOpts) getSecret(ctx context.Context, valueFrom string) (string,
 	return getter.GetSecretValue(ctx, valueFrom)
 }
 
-// BuildLocalRunCmd builds the command for running a workload locally
-func BuildLocalRunCmd() *cobra.Command {
-	vars := localRunVars{}
+// BuildRunLocalCmd builds the command for running a workload locally
+func BuildRunLocalCmd() *cobra.Command {
+	vars := runLocalVars{}
 	cmd := &cobra.Command{
-		Use:    "local run",
-		Short:  "Run the workload locally.",
-		Long:   "Run the workload locally.",
-		Hidden: true,
+		Use:   "run local",
+		Short: "Run the workload locally.",
+		Long:  "Run the workload locally.",
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
-			opts, err := newLocalRunOpts(vars)
+			opts, err := newRunLocalOpts(vars)
 			if err != nil {
 				return err
 			}

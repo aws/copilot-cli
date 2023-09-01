@@ -1135,7 +1135,7 @@ func (o *runTaskOpts) askEnvName() error {
 		return nil
 	}
 
-	env, err := o.sel.Environment(taskRunEnvPrompt, taskRunEnvPromptHelp, o.appName, appEnvOptionNone)
+	env, err := o.sel.Environment(taskRunEnvPrompt, taskRunEnvPromptHelp, o.appName, prompt.Option{Value: appEnvOptionNone})
 	if err != nil {
 		return fmt.Errorf("ask for environment: %w", err)
 	}

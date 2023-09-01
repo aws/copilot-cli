@@ -547,7 +547,7 @@ func (o *initOpts) askShouldDeploy() error {
 func (o *initOpts) askEnvNameAndMaybeInit() error {
 	if o.initVars.envName == "" {
 		// Select one of existing envs or create a new one.
-		selectedEnv, err := o.sel.Environment(initExistingEnvSelectPrompt, initExistingEnvSelectHelp, *o.appName, envPromptCreateNew)
+		selectedEnv, err := o.sel.Environment(initExistingEnvSelectPrompt, initExistingEnvSelectHelp, *o.appName, prompt.Option{Value: envPromptCreateNew})
 		if err != nil {
 			return fmt.Errorf("select environment: %w", err)
 		}
@@ -581,7 +581,7 @@ func (o *initOpts) askEnvNameAndMaybeInit() error {
 		return err
 	}
 
-	log.Infof("Environment %s does not yet exist in application %s; initializing it.\n", o.initVars.envName, o.initVars.appName)
+	log.Infof("Environment %s does not yet exist in application %s; initializing it.\n", o.initVars.envName, *o.appName)
 	if err := o.initEnvCmd.Execute(); err != nil {
 		return err
 	}

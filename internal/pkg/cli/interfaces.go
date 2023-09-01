@@ -511,7 +511,7 @@ type appSelector interface {
 
 type appEnvSelector interface {
 	appSelector
-	Environment(prompt, help, app string, additionalOpts ...string) (string, error)
+	Environment(prompt, help, app string, additionalOpts ...prompt.Option) (string, error)
 }
 
 type cfnSelector interface {
