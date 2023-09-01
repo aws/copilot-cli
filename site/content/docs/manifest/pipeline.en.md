@@ -160,7 +160,7 @@ build:
   additional_policy:
     PolicyDocument: 
       {
-        “Statement": [
+        "Statement": [
           {
             "Action": ["ecr:GetAuthorizationToken"],
             "Effect": "Allow",
