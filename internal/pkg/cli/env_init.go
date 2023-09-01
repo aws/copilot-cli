@@ -270,15 +270,6 @@ func (o *initEnvOpts) Ask() error {
 
 // Execute deploys a new environment with CloudFormation and adds it to SSM.
 func (o *initEnvOpts) Execute() error {
-	// Skip execute if the environment already exists in the workspace
-	envs, err := o.envLister.ListEnvironments()
-	if err != nil {
-		return err
-	}
-	if contains(o.name, envs) {
-		return nil
-	}
-
 	if err := o.initRuntimeClients(); err != nil {
 		return err
 	}

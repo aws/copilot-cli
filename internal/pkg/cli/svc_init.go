@@ -364,16 +364,6 @@ func (o *initSvcOpts) Ask() error {
 
 // Execute writes the service's manifest file and stores the service in SSM.
 func (o *initSvcOpts) Execute() error {
-	// Skip execute if the service already exists in the workspace
-	if !o.wsPendingCreation {
-		svcs, err := o.svcLister.ListWorkloads()
-		if err != nil {
-			return err
-		}
-		if contains(o.name, svcs) {
-			return nil
-		}
-	}
 	if !o.allowAppDowngrade {
 		appVersionGetter, err := o.newAppVersionGetter(o.appName)
 		if err != nil {

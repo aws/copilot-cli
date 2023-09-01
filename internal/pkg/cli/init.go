@@ -97,9 +97,8 @@ type initOpts struct {
 	sel    configSelector
 	store  environmentStore
 
-	setupWorkloadInit                    func(*initOpts, string) error
-	useExistingWorkspaceForCMDs          func(*initOpts) error
-	tryUseExistingWorkspaceForValidation func(*initOpts)
+	setupWorkloadInit           func(*initOpts, string) error
+	useExistingWorkspaceForCMDs func(*initOpts) error
 }
 
 func newInitOpts(vars initVars) (*initOpts, error) {
@@ -228,6 +227,11 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		}
 		return nil
 	}
+	ws, err := workspace.Use(fs)
+	var errWorkspaceNotFound workspace.ErrWorkspaceNotFound
+	if err != nil && !errors.As(err, errWorkspaceNotFound) {
+		return nil, err
+	}
 	return &initOpts{
 		initVars: vars,
 
@@ -294,6 +298,11 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 						return envDescriber, nil
 					},
 				}
+				if ws != nil {
+					opts.mftReader = ws
+					opts.wsAppName = initAppCmd.name
+					opts.wsPendingCreation = false
+				}
 				o.initWlCmd = &opts
 				o.schedule = &opts.schedule // Surfaced via pointer for logging
 				o.initWkldVars = &opts.initWkldVars
@@ -336,6 +345,13 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 					}
 					return envDescriber, nil
 				}
+				if ws != nil {
+					opts.svcLister = ws
+					opts.mftReader = ws
+					opts.wsAppName = initAppCmd.name
+					opts.wsRoot = ws.ProjectRoot()
+					opts.wsPendingCreation = false
+				}
 				o.initWlCmd = &opts
 				o.port = &opts.port // Surfaced via pointer for logging.
 				o.initWkldVars = &opts.initWkldVars
@@ -345,25 +361,6 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 			return nil
 		},
 		useExistingWorkspaceForCMDs: useExistingWorkspaceClient,
-		tryUseExistingWorkspaceForValidation: func(o *initOpts) {
-			ws, err := workspace.Use(fs)
-			if err != nil {
-				return
-			}
-
-			if initSvcCmd, ok := o.initWlCmd.(*initSvcOpts); ok {
-				initSvcCmd.svcLister = ws
-				initSvcCmd.mftReader = ws
-				initSvcCmd.wsAppName = initAppCmd.name
-				initSvcCmd.wsRoot = ws.ProjectRoot()
-				initSvcCmd.wsPendingCreation = false
-			}
-			if initJobCmd, ok := o.initWlCmd.(*initJobOpts); ok {
-				initJobCmd.mftReader = ws
-				initJobCmd.wsAppName = initAppCmd.name
-				initJobCmd.wsPendingCreation = false
-			}
-		},
 	}, nil
 }
 
@@ -419,6 +416,7 @@ func (o *initOpts) deploy() error {
 	}
 	return o.deploySvc()
 }
+
 func (o *initOpts) loadApp() error {
 	if err := o.initAppCmd.Ask(); err != nil {
 		return fmt.Errorf("ask app init: %w", err)
@@ -440,7 +438,6 @@ func (o *initOpts) loadWkld() error {
 	if err := o.initWlCmd.Ask(); err != nil {
 		return fmt.Errorf("ask %s: %w", o.wkldType, err)
 	}
-
 	return nil
 }
 
@@ -452,8 +449,6 @@ func (o *initOpts) loadWkldCmd() error {
 	if err := o.setupWorkloadInit(o, wkldType); err != nil {
 		return err
 	}
-	o.tryUseExistingWorkspaceForValidation(o)
-
 	return nil
 }
 
