@@ -80,8 +80,12 @@ func newRenderEnvironmentInput(cfnStack *cloudformation.Stack) *executeAndRender
 func (cf CloudFormation) DeleteEnvironment(appName, envName, cfnExecRoleARN string) error {
 	stackName := stack.NameForEnv(appName, envName)
 	description := fmt.Sprintf("Delete environment stack %s", stackName)
-	return cf.deleteAndRenderStack(stackName, description, func() error {
-		return cf.cfnClient.DeleteAndWaitWithRoleARN(stackName, cfnExecRoleARN)
+	return cf.deleteAndRenderStack(deleteAndRenderInput{
+		stackName:   stackName,
+		description: description,
+		deleteFn: func() error {
+			return cf.cfnClient.DeleteAndWaitWithRoleARN(stackName, cfnExecRoleARN)
+		},
 	})
 }
 
