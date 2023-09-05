@@ -469,26 +469,26 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Properties:
       GroupDescription: HTTP access to the public facing load balancer
       SecurityGroupIngress:
-        - CidrIp: 10.0.0.0/24
-          Description: Allow from anyone on listener port 82
-          FromPort: 82
+        - CidrIp: 0.0.0.0/0
+          Description: Allow from anyone on listener port 443
+          FromPort: 443
           IpProtocol: TCP
-          ToPort: 82
-        - CidrIp: 10.0.0.0/24
+          ToPort: 443
+        - CidrIp: 0.0.0.0/0
           Description: Allow from anyone on listener port 8081
           FromPort: 8081
           IpProtocol: TCP
           ToPort: 8081
-        - CidrIp: 10.0.0.0/24
-          Description: Allow from anyone on listener port 8085
-          FromPort: 8085
+        - CidrIp: 0.0.0.0/0
+          Description: Allow from anyone on listener port 8082
+          FromPort: 8082
           IpProtocol: TCP
-          ToPort: 8085
-        - CidrIp: 10.0.0.0/24
-          Description: Allow from anyone on listener port 85
-          FromPort: 85
+          ToPort: 8082
+        - CidrIp: 0.0.0.0/0
+          Description: Allow from anyone on listener port 8083
+          FromPort: 8083
           IpProtocol: TCP
-          ToPort: 85
+          ToPort: 8083
       VpcId:
         Fn::ImportValue:
           !Sub "${AppName}-${EnvName}-VpcId" 

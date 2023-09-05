@@ -497,10 +497,10 @@ Resources: # If a bucket URL is specified, that means the template exists.
         - !GetAtt NetworkLoadBalancerSecurityGroup.GroupId
   NetworkLoadBalancerSecurityGroup:
     Metadata:
-      'aws:copilot:description': 'A security group for your network load balancer to route traffic to service'
+      'aws:copilot:description': 'A security group for your network load balancer allowing public traffic'
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Allow access from the network load balancer to service
+      GroupDescription: HTTP access to the public facing load balancer
       SecurityGroupIngress:
         - CidrIp: 0.0.0.0/0
           Description: Allow from anyone on listener port 81
@@ -508,10 +508,10 @@ Resources: # If a bucket URL is specified, that means the template exists.
           IpProtocol: TCP
           ToPort: 81
         - CidrIp: 0.0.0.0/0
-          Description: Allow from anyone on listener port 8085
-          FromPort: 8085
+          Description: Allow from anyone on listener port 8082
+          FromPort: 8082
           IpProtocol: TCP
-          ToPort: 8085
+          ToPort: 8082
       VpcId:
         Fn::ImportValue: !Sub "${AppName}-${EnvName}-VpcId"
       Tags:
@@ -527,7 +527,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
           !Sub '${AppName}-${EnvName}-EnvironmentSecurityGroup'
       IpProtocol: -1
       SourceSecurityGroupId: !GetAtt NetworkLoadBalancerSecurityGroup.GroupId
-  NetworLoadBalancerListener:
+  NLBListener:
     Metadata:
       'aws:copilot:description': 'A TCP listener on port `81` that forwards traffic to your tasks'
     Type: AWS::ElasticLoadBalancingV2::Listener
