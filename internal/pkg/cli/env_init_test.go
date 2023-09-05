@@ -411,11 +411,11 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 						Return("test", nil),
 					m.store.EXPECT().GetEnvironment(mockApp, mockEnv).Return(nil, nil),
 					m.envLister.EXPECT().ListEnvironments().Return([]string{mockEnv}, nil),
-	m.sessProvider.EXPECT().FromProfile(mockProfile).Return(&session.Session{
-		Config: &aws.Config{
-			Region: aws.String("us-west-2"),
-		},
-	}, nil).AnyTimes(),
+					m.sessProvider.EXPECT().FromProfile(mockProfile).Return(&session.Session{
+						Config: &aws.Config{
+							Region: aws.String("us-west-2"),
+						},
+					}, nil).AnyTimes(),
 				)
 			},
 		},
