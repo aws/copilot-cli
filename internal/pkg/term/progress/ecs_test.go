@@ -174,13 +174,13 @@ Alarms
 			},
 			wantedNumLines: 8,
 			wantedOut: `Latest 2 stopped tasks
-  TaskId                            CurrentStatus   DesiredStatus
-  21479dca3393490a9d95f27353186bf6  DEPROVISIONING  STOPPED
-  2243bac3ca1d4b3a8c66888348cba2e1  STOPPING        STOPPED
+  TaskId    CurrentStatus   DesiredStatus
+  21479dca  DEPROVISIONING  STOPPED
+  2243bac3  STOPPING        STOPPED
 
 ✘ Latest 2 tasks stopped reason
-  - 21479dca3393490a9d95f27353186bf6: ELB healthcheck failed
-  - 2243bac3ca1d4b3a8c66888348cba2e1: unable to pull secrets
+  - 21479dca: ELB healthcheck failed
+  - 2243bac3: unable to pull secrets
 `,
 		},
 		"should render stopped tasks and split long stopped reasons": {
@@ -198,18 +198,17 @@ Alarms
 					StoppedReason: aws.String("ResourceInitializationError: unable to pull secrets or registry auth: execution resource retrieval failed: unable to retrieve secrets from ssm: service call has been retried 1 time(s)"),
 				},
 			},
-			wantedNumLines: 11,
+			wantedNumLines: 10,
 			wantedOut: `Latest 2 stopped tasks
-  TaskId                            CurrentStatus   DesiredStatus
-  21479dca3393490a9d95f27353186bf6  DEPROVISIONING  STOPPED
-  2243bac3ca1d4b3a8c66888348cba2e1  STOPPING        STOPPED
+  TaskId    CurrentStatus   DesiredStatus
+  21479dca  DEPROVISIONING  STOPPED
+  2243bac3  STOPPING        STOPPED
 
 ✘ Latest 2 tasks stopped reason
-  - 21479dca3393490a9d95f27353186bf6: ELB healthcheck failed
-  - 2243bac3ca1d4b3a8c66888348cba2e1: ResourceInitializationError: unable 
-    to pull secrets or registry auth: execution resource retrieval failed:
-     unable to retrieve secrets from ssm: service call has been retried 1 
-    time(s)
+  - 21479dca: ELB healthcheck failed
+  - 2243bac3: ResourceInitializationError: unable to pull secrets or regis
+    try auth: execution resource retrieval failed: unable to retrieve secr
+    ets from ssm: service call has been retried 1 time(s)
 `,
 		},
 	}

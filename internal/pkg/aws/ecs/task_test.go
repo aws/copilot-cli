@@ -628,6 +628,31 @@ func TestTaskDefinition_EntryPoint(t *testing.T) {
 	}
 }
 
+func TestShortTaskID(t *testing.T) {
+	testCases := map[string]struct {
+		inTaskId     string
+		wantedTaskId string
+	}{
+		"should return short task id": {
+			inTaskId:     "37930fffc2104a1db455aef109b5d122",
+			wantedTaskId: "37930fff",
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			got := ShortTaskID(tc.inTaskId)
+
+			require.Equal(t, tc.wantedTaskId, got)
+		})
+
+	}
+}
+
 func TestFilterRunningTasks(t *testing.T) {
 	testCases := map[string]struct {
 		inTasks     []*Task

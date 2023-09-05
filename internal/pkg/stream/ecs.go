@@ -53,6 +53,7 @@ type ECSDeployment struct {
 	RolloutState    string
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
+	Id              string
 }
 
 func (d ECSDeployment) isPrimary() bool {
@@ -142,6 +143,7 @@ func (s *ECSDeploymentStreamer) Fetch() (next time.Time, done bool, err error) {
 	s.ecsRetries = 0
 
 	var deployments []ECSDeployment
+	var primaryDeploymentId string
 	for _, deployment := range out.Deployments {
 		status := aws.StringValue(deployment.Status)
 		desiredCount, runningCount := aws.Int64Value(deployment.DesiredCount), aws.Int64Value(deployment.RunningCount)
@@ -155,13 +157,16 @@ func (s *ECSDeploymentStreamer) Fetch() (next time.Time, done bool, err error) {
 			RolloutState:    aws.StringValue(deployment.RolloutState),
 			CreatedAt:       aws.TimeValue(deployment.CreatedAt),
 			UpdatedAt:       aws.TimeValue(deployment.UpdatedAt),
+			Id:              aws.StringValue(deployment.Id),
 		}
 		deployments = append(deployments, rollingDeploy)
 		if isDeploymentDone(rollingDeploy, s.deploymentCreationTime) {
 			done = true
 		}
+		if rollingDeploy.isPrimary() {
+			primaryDeploymentId = rollingDeploy.Id
+		}
 	}
-
 	stoppedSvcTasks, err := s.client.StoppedServiceTasks(s.cluster, s.service)
 	if err != nil {
 		if request.IsErrorThrottle(err) {
@@ -174,7 +179,7 @@ func (s *ECSDeploymentStreamer) Fetch() (next time.Time, done bool, err error) {
 
 	var stoppedTasks []ecs.Task
 	for _, st := range stoppedSvcTasks {
-		if stoppingAt := aws.TimeValue(st.StoppingAt); stoppingAt.Before(s.deploymentCreationTime) ||
+		if stoppingAt := aws.TimeValue(st.StoppingAt); aws.StringValue(st.StartedBy) != primaryDeploymentId || stoppingAt.Before(s.deploymentCreationTime) ||
 			(strings.Contains(aws.StringValue(st.StoppedReason), ecsScalingActivity)) {
 			continue
 		}

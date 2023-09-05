@@ -218,11 +218,11 @@ func (c *rollingUpdateComponent) renderStoppedTasks(out io.Writer) (numLines int
 			return 0, err
 		}
 		rows = append(rows, []string{
-			id,
+			ecs.ShortTaskID(id),
 			aws.StringValue(st.LastStatus),
 			aws.StringValue(st.DesiredStatus),
 		})
-		for i, truncatedReason := range splitByLength(fmt.Sprintf("%s: %s", id, aws.StringValue(st.StoppedReason)), maxCellLength) {
+		for i, truncatedReason := range splitByLength(fmt.Sprintf("%s: %s", ecs.ShortTaskID(id), aws.StringValue(st.StoppedReason)), maxCellLength) {
 			pretty := fmt.Sprintf("  %s", truncatedReason)
 			if i == 0 {
 				pretty = fmt.Sprintf("- %s", truncatedReason)

@@ -150,6 +150,7 @@ func TestECSDeploymentStreamer_Fetch(t *testing.T) {
 						Status:         aws.String("PRIMARY"),
 						TaskDefinition: aws.String("arn:aws:ecs:us-west-2:1111:task-definition/myapp-test-mysvc:2"),
 						UpdatedAt:      aws.Time(startDate),
+						Id:             aws.String("ecs-svc/123"),
 					},
 					{
 						DesiredCount:   aws.Int64(10),
@@ -160,6 +161,7 @@ func TestECSDeploymentStreamer_Fetch(t *testing.T) {
 						Status:         aws.String("ACTIVE"),
 						TaskDefinition: aws.String("arn:aws:ecs:us-west-2:1111:task-definition/myapp-test-mysvc:1"),
 						UpdatedAt:      aws.Time(oldStartDate),
+						Id:             aws.String("ecs-svc/456"),
 					},
 				},
 				DeploymentConfiguration: &awsecs.DeploymentConfiguration{
@@ -189,6 +191,7 @@ func TestECSDeploymentStreamer_Fetch(t *testing.T) {
 					LastStatus:    aws.String("Deprovisioning"),
 					StoppedReason: aws.String("unable to pull secrets"),
 					StoppingAt:    aws.Time(startDate.Add(10 * time.Second)),
+					StartedBy:     aws.String("ecs-svc/123"),
 				},
 				{
 					TaskArn:       aws.String("arn:aws:ecs:us-east-2:197732814171:task/bugbash-test-Cluster-qrvEBt"),
@@ -196,6 +199,7 @@ func TestECSDeploymentStreamer_Fetch(t *testing.T) {
 					LastStatus:    aws.String("Stopped"),
 					StoppedReason: aws.String("unable to pull secrets"),
 					StoppingAt:    aws.Time(oldStartDate),
+					StartedBy:     aws.String("ecs-svc/123"),
 				},
 				{
 					TaskArn:       aws.String("arn:aws:ecs:us-east-2:197732814171:task/bugbash-test-Cluster-qrvEBs"),
@@ -203,6 +207,7 @@ func TestECSDeploymentStreamer_Fetch(t *testing.T) {
 					LastStatus:    aws.String("Deprovisioning"),
 					StoppedReason: aws.String("ELB healthcheck failed"),
 					StoppingAt:    aws.Time(startDate.Add(20 * time.Second)),
+					StartedBy:     aws.String("ecs-svc/123"),
 				},
 				{
 					TaskArn:       aws.String("arn:aws:ecs:us-east-2:197732814171:task/bugbash-test-Cluster-qrvEBu"),
@@ -210,6 +215,7 @@ func TestECSDeploymentStreamer_Fetch(t *testing.T) {
 					LastStatus:    aws.String("Deprovisioning"),
 					StoppedReason: aws.String("Scaling activity initiated by deployment ecs-svc/mocktaskid"),
 					StoppingAt:    aws.Time(startDate.Add(30 * time.Second)),
+					StartedBy:     aws.String("ecs-svc/123"),
 				},
 			},
 		}
@@ -244,6 +250,7 @@ func TestECSDeploymentStreamer_Fetch(t *testing.T) {
 						PendingCount:    0,
 						RolloutState:    "COMPLETED",
 						UpdatedAt:       startDate,
+						Id:              "ecs-svc/123",
 					},
 					{
 						Status:          "ACTIVE",
@@ -254,6 +261,7 @@ func TestECSDeploymentStreamer_Fetch(t *testing.T) {
 						PendingCount:    0,
 						RolloutState:    "FAILED",
 						UpdatedAt:       oldStartDate,
+						Id:              "ecs-svc/456",
 					},
 				},
 				Alarms: []cloudwatch.AlarmStatus{

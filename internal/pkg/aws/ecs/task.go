@@ -55,7 +55,7 @@ type Task ecs.Task
 // becomes "4082490e (sample-fargate:2)"
 func (t Task) String() string {
 	taskID, _ := TaskID(aws.StringValue(t.TaskArn))
-	taskID = shortTaskID(taskID)
+	taskID = ShortTaskID(taskID)
 	taskDefName, _ := taskDefinitionName(aws.StringValue(t.TaskDefinitionArn))
 	return fmt.Sprintf("%s (%s)", taskID, taskDefName)
 }
@@ -291,7 +291,7 @@ func TaskDefinitionVersion(taskDefARN string) (int, error) {
 	return version, nil
 }
 
-func shortTaskID(id string) string {
+func ShortTaskID(id string) string {
 	if len(id) >= shortTaskIDLength {
 		return id[:shortTaskIDLength]
 	}
