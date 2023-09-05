@@ -415,7 +415,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 						Config: &aws.Config{
 							Region: aws.String("us-west-2"),
 						},
-					}, nil),
+					}, nil).AnyTimes(),
 				)
 			},
 		},
