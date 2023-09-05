@@ -430,26 +430,25 @@ Resources: # If a bucket URL is specified, that means the template exists.
               - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PublicSubnets'
           SecurityGroups:
             - Fn::ImportValue: !Sub '${AppName}-${EnvName}-EnvironmentSecurityGroup'
-            - !Ref NLBSecurityGroup
       # This may need to be adjusted if the container takes a while to start up
       HealthCheckGracePeriodSeconds: 60
       LoadBalancers:
         - ContainerName: tls
           ContainerPort: 82
-          TargetGroupArn: !Ref NLBTargetGroup
+          TargetGroupArn: !Ref NetworkLoadBalancerTargetGroup
         - ContainerName: fe
           ContainerPort: 8081
-          TargetGroupArn: !Ref NLBTargetGroup1
+          TargetGroupArn: !Ref NetworkLoadBalancerTargetGroup1
         - ContainerName: tls
           ContainerPort: 8085
-          TargetGroupArn: !Ref NLBTargetGroup2
+          TargetGroupArn: !Ref NetworkLoadBalancerTargetGroup2
         - ContainerName: nginx
           ContainerPort: 85
-          TargetGroupArn: !Ref NLBTargetGroup3
+          TargetGroupArn: !Ref NetworkLoadBalancerTargetGroup3
       ServiceRegistries:
         - RegistryArn: !GetAtt DiscoveryService.Arn
           Port: !Ref TargetPort
-  PublicNetworkLoadBalancer:
+  NetworkLoadBalancer:
     Metadata:
       'aws:copilot:description': 'A Network Load Balancer to distribute public traffic to your service'
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
@@ -458,17 +457,63 @@ Resources: # If a bucket URL is specified, that means the template exists.
       Subnets:
         Fn::Split:
           - ","
-          - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PublicSubnets'
+          - Fn::ImportValue:
+              !Sub '${AppName}-${EnvName}-PublicSubnets'
       Type: network
+      SecurityGroups:
+        - !GetAtt NetworkLoadBalancerSecurityGroup.GroupId
+  NetworkLoadBalancerSecurityGroup:
+    Metadata:
+      'aws:copilot:description': 'A security group for your network load balancer allowing public traffic'
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: HTTP access to the public facing load balancer
+      SecurityGroupIngress:
+        - CidrIp: 10.0.0.0/24
+          Description: Allow from anyone on listener port 82
+          FromPort: 82
+          IpProtocol: TCP
+          ToPort: 82
+        - CidrIp: 10.0.0.0/24
+          Description: Allow from anyone on listener port 8081
+          FromPort: 8081
+          IpProtocol: TCP
+          ToPort: 8081
+        - CidrIp: 10.0.0.0/24
+          Description: Allow from anyone on listener port 8085
+          FromPort: 8085
+          IpProtocol: TCP
+          ToPort: 8085
+        - CidrIp: 10.0.0.0/24
+          Description: Allow from anyone on listener port 85
+          FromPort: 85
+          IpProtocol: TCP
+          ToPort: 85
+      VpcId:
+        Fn::ImportValue:
+          !Sub "${AppName}-${EnvName}-VpcId" 
+      Tags:
+        - Key: Name
+          Value: !Sub 'copilot-${AppName}-${EnvName}-${WorkloadName}-nlb'
+  EnvironmentSecurityGroupIngressFromNetworkLoadBalancerSecurityGroup:
+    Type: AWS::EC2::SecurityGroupIngress
+    Metadata:
+      'aws:copilot:description': 'Allow ingress from the network load balancer to services in your environment'
+    Properties:
+      GroupId:
+        Fn::ImportValue:
+          !Sub '${AppName}-${EnvName}-EnvironmentSecurityGroup'
+      IpProtocol: -1
+      SourceSecurityGroupId: !GetAtt NetworkLoadBalancerSecurityGroup.GroupId
   NLBListener:
     Metadata:
       'aws:copilot:description': 'A TLS listener on port `443` that forwards traffic to your tasks'
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
       DefaultActions:
-        - TargetGroupArn: !Ref NLBTargetGroup
+        - TargetGroupArn: !Ref NetworkLoadBalancerTargetGroup
           Type: forward
-      LoadBalancerArn: !Ref PublicNetworkLoadBalancer
+      LoadBalancerArn: !Ref NetworkLoadBalancer
       Port: 443
       Protocol: TLS
       Certificates:
@@ -480,9 +525,9 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
       DefaultActions:
-        - TargetGroupArn: !Ref NLBTargetGroup1
+        - TargetGroupArn: !Ref NetworkLoadBalancerTargetGroup1
           Type: forward
-      LoadBalancerArn: !Ref PublicNetworkLoadBalancer
+      LoadBalancerArn: !Ref NetworkLoadBalancer
       Port: 8081
       Protocol: TLS
       Certificates:
@@ -494,9 +539,9 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
       DefaultActions:
-        - TargetGroupArn: !Ref NLBTargetGroup2
+        - TargetGroupArn: !Ref NetworkLoadBalancerTargetGroup2
           Type: forward
-      LoadBalancerArn: !Ref PublicNetworkLoadBalancer
+      LoadBalancerArn: !Ref NetworkLoadBalancer
       Port: 8082
       Protocol: TCP
   NLBListener3:
@@ -505,12 +550,12 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
       DefaultActions:
-        - TargetGroupArn: !Ref NLBTargetGroup3
+        - TargetGroupArn: !Ref NetworkLoadBalancerTargetGroup3
           Type: forward
-      LoadBalancerArn: !Ref PublicNetworkLoadBalancer
+      LoadBalancerArn: !Ref NetworkLoadBalancer
       Port: 8083
       Protocol: TCP
-  NLBTargetGroup:
+  NetworkLoadBalancerTargetGroup:
     Metadata:
       'aws:copilot:description': 'A target group to connect the network load balancer to your service on port 82'
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
@@ -523,7 +568,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
       TargetType: ip
       VpcId:
         Fn::ImportValue: !Sub "${AppName}-${EnvName}-VpcId"
-  NLBTargetGroup1:
+  NetworkLoadBalancerTargetGroup1:
     Metadata:
       'aws:copilot:description': 'A target group to connect the network load balancer to your service on port 8081'
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
@@ -536,7 +581,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
       TargetType: ip
       VpcId:
         Fn::ImportValue: !Sub "${AppName}-${EnvName}-VpcId"
-  NLBTargetGroup2:
+  NetworkLoadBalancerTargetGroup2:
     Metadata:
       'aws:copilot:description': 'A target group to connect the network load balancer to your service on port 8085'
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
@@ -549,7 +594,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
       TargetType: ip
       VpcId:
         Fn::ImportValue: !Sub "${AppName}-${EnvName}-VpcId"
-  NLBTargetGroup3:
+  NetworkLoadBalancerTargetGroup3:
     Metadata:
       'aws:copilot:description': 'A target group to connect the network load balancer to your service on port 85'
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
@@ -562,58 +607,6 @@ Resources: # If a bucket URL is specified, that means the template exists.
       TargetType: ip
       VpcId:
         Fn::ImportValue: !Sub "${AppName}-${EnvName}-VpcId"
-  NLBSecurityGroup:
-    Metadata:
-      'aws:copilot:description': 'A security group for your network load balancer to route traffic to service'
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: Allow access from the network load balancer to service
-      SecurityGroupIngress:
-        - CidrIp: 10.0.0.0/24
-          Description: Ingress to allow access from Network Load Balancer subnet
-          FromPort: 82
-          IpProtocol: TCP
-          ToPort: 82
-        - CidrIp: 10.0.0.0/24
-          Description: Ingress to allow access from Network Load Balancer subnet
-          FromPort: 8081
-          IpProtocol: TCP
-          ToPort: 8081
-        - CidrIp: 10.0.0.0/24
-          Description: Ingress to allow access from Network Load Balancer subnet
-          FromPort: 8085
-          IpProtocol: TCP
-          ToPort: 8085
-        - CidrIp: 10.0.0.0/24
-          Description: Ingress to allow access from Network Load Balancer subnet
-          FromPort: 85
-          IpProtocol: TCP
-          ToPort: 85
-        - CidrIp: 10.1.0.0/24
-          Description: Ingress to allow access from Network Load Balancer subnet
-          FromPort: 82
-          IpProtocol: TCP
-          ToPort: 82
-        - CidrIp: 10.1.0.0/24
-          Description: Ingress to allow access from Network Load Balancer subnet
-          FromPort: 8081
-          IpProtocol: TCP
-          ToPort: 8081
-        - CidrIp: 10.1.0.0/24
-          Description: Ingress to allow access from Network Load Balancer subnet
-          FromPort: 8085
-          IpProtocol: TCP
-          ToPort: 8085
-        - CidrIp: 10.1.0.0/24
-          Description: Ingress to allow access from Network Load Balancer subnet
-          FromPort: 85
-          IpProtocol: TCP
-          ToPort: 85
-      Tags:
-        - Key: Name
-          Value: !Sub 'copilot-${AppName}-${EnvName}-${WorkloadName}-nlb'
-      VpcId:
-        Fn::ImportValue: !Sub "${AppName}-${EnvName}-VpcId"
   NLBCustomDomainAction:
     Metadata:
       'aws:copilot:description': "Add A-records for your Network Load Balancer aliases"
@@ -621,8 +614,8 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Condition: HasAssociatedDomain
     Properties:
       ServiceToken: !GetAtt NLBCustomDomainFunction.Arn
-      PublicAccessHostedZoneID: !GetAtt PublicNetworkLoadBalancer.CanonicalHostedZoneID
-      PublicAccessDNS: !GetAtt PublicNetworkLoadBalancer.DNSName
+      PublicAccessHostedZoneID: !GetAtt NetworkLoadBalancer.CanonicalHostedZoneID
+      PublicAccessDNS: !GetAtt NetworkLoadBalancer.DNSName
       EnvHostedZoneId:
         Fn::ImportValue: !Sub "${AppName}-${EnvName}-HostedZone"
       EnvName: !Ref EnvName
@@ -687,7 +680,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Condition: HasAssociatedDomain
     Properties:
       ServiceToken: !GetAtt NLBCertValidatorFunction.Arn
-      LoadBalancerDNS: !GetAtt PublicNetworkLoadBalancer.DNSName
+      LoadBalancerDNS: !GetAtt NetworkLoadBalancer.DNSName
       EnvHostedZoneId:
         Fn::ImportValue: !Sub "${AppName}-${EnvName}-HostedZone"
       EnvName: !Ref EnvName

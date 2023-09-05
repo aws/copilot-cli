@@ -18,24 +18,20 @@ NetworkLoadBalancerSecurityGroup:
   Type: AWS::EC2::SecurityGroup
   Properties:
     GroupDescription: HTTP access to the public facing load balancer
+    SecurityGroupIngress:
+{{- range $listener := .NLB.Listener }}
+      - CidrIp: 0.0.0.0/0
+        Description: Allow from anyone on listener port {{ $listener.Port }}
+        FromPort: {{ $listener.Port }}
+        IpProtocol: {{- if eq $listener.Protocol "TLS" }} TCP {{- else }} {{ $listener.Protocol }} {{- end}}
+        ToPort: {{ $listener.Port }}
+{{- end}}
     VpcId:
       Fn::ImportValue:
         !Sub "${AppName}-${EnvName}-VpcId" 
-    SecurityGroupIngress:
-{{- range $i, $cidrblock := .NLB.PublicSubnetCIDRs }}
-      - CidrIp: {{ $cidrblock }}
-        Description: Allow from anyone on port within subnet
-        FromPort: 0
-        IpProtocol: -1
-        ToPort: 65535
-{{- end}}
-{{- range $i, $listener := .NLB.Listener }}
-      - CidrIp: 0.0.0.0/0
-        Description: Allow ingress from NLB listener
-        FromPort: {{ $listener.Port }}
-        IpProtocol: {{ $listener.Protocol }}
-        ToPort: {{ $listener.Port }}
-{{- end}}
+    Tags:
+      - Key: Name
+        Value: !Sub 'copilot-${AppName}-${EnvName}-${WorkloadName}-nlb'
 EnvironmentSecurityGroupIngressFromNetworkLoadBalancerSecurityGroup:
   Type: AWS::EC2::SecurityGroupIngress
   Metadata:
