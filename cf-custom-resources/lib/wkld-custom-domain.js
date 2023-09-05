@@ -249,8 +249,11 @@ async function validateAliases(aliases, publicAccessDNS, oldPublicAccessDNS) {
           return;
         }
         let aliasTarget = recordSet[0].AliasTarget;
-        if (aliasTarget && (aliasTarget.DNSName.toLowerCase() === `${publicAccessDNS.toLowerCase()}.` || aliasTarget.DNSName.toLowerCase() === `${oldPublicAccessDNS.toLowerCase()}.`)) {
+        if (aliasTarget && aliasTarget.DNSName.toLowerCase() === `${publicAccessDNS.toLowerCase()}.`) {
           return; // The record is an alias record and is in use by myself, hence valid.
+        }
+        if (aliasTarget && oldPublicAccessDNS && aliasTarget.DNSName.toLowerCase() === `${oldPublicAccessDNS.toLowerCase()}.`) {
+          return; // The record was used by the old DNS, therefore is now used by the current DNS, hence valid.
         }
         if (aliasTarget) {
           throw new Error(`Alias ${alias} is already in use by ${aliasTarget.DNSName}. This could be another load balancer of a different service.`);
