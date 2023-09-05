@@ -88,6 +88,7 @@ nav:
         - svc override: docs/commands/svc-override.en.md
         - svc package: docs/commands/svc-package.en.md
         - svc delete: docs/commands/svc-delete.en.md
+        - run local: docs/commands/run-local.en.md
       - Release:
         - env deploy: docs/commands/env-deploy.en.md
         - job deploy: docs/commands/job-deploy.en.md
@@ -154,6 +155,7 @@ nav:
         - pipeline override: docs/commands/pipeline-override.en.md
         - pipeline show: docs/commands/pipeline-show.en.md
         - pipeline status: docs/commands/pipeline-status.en.md
+        - run local: docs/commands/run-local.en.md
         - secret init: docs/commands/secret-init.en.md
         - storage init: docs/commands/storage-init.en.md
         - svc delete: docs/commands/svc-delete.en.md
@@ -173,6 +175,7 @@ nav:
         - task run: docs/commands/task-run.en.md
         - version: docs/commands/version.en.md
   - Blogs:
+      - Release v1.30: blogs/release-v130.en.md
       - Release v1.29: blogs/release-v129.en.md
       - Release v1.28: blogs/release-v128.en.md
       - Release v1.27: blogs/release-v127.en.md

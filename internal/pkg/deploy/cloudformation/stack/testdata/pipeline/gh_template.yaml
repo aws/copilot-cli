@@ -240,6 +240,10 @@ Resources:
             Value: !Sub '${AWS::AccountId}'
           - Name: PARTITION
             Value: !Ref AWS::Partition
+          - Name: COPILOT_APPLICATION_NAME
+            Value: phonetool
+          - Name: COPILOT_ENVIRONMENT_NAME
+            Value: test
       Source:
         Type: CODEPIPELINE
         BuildSpec: ./buildspec.yml
@@ -351,6 +355,10 @@ Resources:
             Value: !Sub '${AWS::AccountId}'
           - Name: PARTITION
             Value: !Ref AWS::Partition
+          - Name: COPILOT_APPLICATION_NAME
+            Value: phonetool
+          - Name: COPILOT_ENVIRONMENT_NAME
+            Value: test
       Source:
         Type: CODEPIPELINE
         BuildSpec: copilot/pipelines/buildspec.yml
@@ -465,6 +473,10 @@ Resources:
             Value: !Sub '${AWS::AccountId}'
           - Name: PARTITION
             Value: !Ref AWS::Partition
+          - Name: COPILOT_APPLICATION_NAME
+            Value: phonetool
+          - Name: COPILOT_ENVIRONMENT_NAME
+            Value: test
       Source:
         Type: CODEPIPELINE
         BuildSpec: .anotherPath/buildspec.yml
@@ -579,6 +591,10 @@ Resources:
             Value: !Sub '${AWS::AccountId}'
           - Name: PARTITION
             Value: !Ref AWS::Partition
+          - Name: COPILOT_APPLICATION_NAME
+            Value: phonetool
+          - Name: COPILOT_ENVIRONMENT_NAME
+            Value: test
       Source:
         Type: CODEPIPELINE
         BuildSpec: .somePath/buildspec.yml
@@ -693,6 +709,10 @@ Resources:
             Value: !Sub '${AWS::AccountId}'
           - Name: PARTITION
             Value: !Ref AWS::Partition
+          - Name: COPILOT_APPLICATION_NAME
+            Value: phonetool
+          - Name: COPILOT_ENVIRONMENT_NAME
+            Value: test
       Source:
         Type: CODEPIPELINE
         BuildSpec: .someOtherPath/buildspec.yml
@@ -846,7 +866,6 @@ Resources:
                 Provider: Manual
               RunOrder: 1
             - Name: preAction1
-              Region: us-west-2
               RunOrder: 2
               ActionTypeId:
                 Category: Build
@@ -860,7 +879,6 @@ Resources:
               OutputArtifacts:
                 - Name: PretestDeploymentActionpreAction1Output
             - Name: preAction2
-              Region: us-west-2
               RunOrder: 3
               ActionTypeId:
                 Category: Build
@@ -874,7 +892,6 @@ Resources:
               OutputArtifacts:
                 - Name: PretestDeploymentActionpreAction2Output
             - Name: postAction1
-              Region: us-west-2
               RunOrder: 5
               ActionTypeId:
                 Category: Build
@@ -888,7 +905,6 @@ Resources:
               OutputArtifacts:
                 - Name: PosttestDeploymentActionpostAction1Output
             - Name: postAction2
-              Region: us-west-2
               RunOrder: 6
               ActionTypeId:
                 Category: Build
@@ -902,7 +918,6 @@ Resources:
               OutputArtifacts:
                 - Name: PosttestDeploymentActionpostAction2Output
             - Name: postAction3
-              Region: us-west-2
               RunOrder: 5
               ActionTypeId:
                 Category: Build

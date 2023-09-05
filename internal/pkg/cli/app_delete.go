@@ -173,7 +173,6 @@ func (o *deleteAppOpts) Ask() error {
 	manualConfirm, err := o.prompt.Confirm(
 		fmt.Sprintf(fmtDeleteAppConfirmPrompt, o.name),
 		deleteAppConfirmHelp,
-		prompt.WithTrueDefault(),
 		prompt.WithConfirmFinalMessage())
 	if err != nil {
 		return fmt.Errorf("confirm app deletion: %w", err)
@@ -185,9 +184,13 @@ func (o *deleteAppOpts) Ask() error {
 }
 
 // Execute deletes the application.
-// It removes all the services from each environment, the environments, the pipeline S3 buckets,
-// the pipeline, the application, removes the variables from the config store, and deletes the local workspace.
+// It removes the pipelines, all the services from each environment, the environments, the pipeline S3 buckets,
+// the application, removes the variables from the config store, and deletes the local workspace.
 func (o *deleteAppOpts) Execute() error {
+	if err := o.deletePipelines(); err != nil {
+		return err
+	}
+
 	if err := o.deleteSvcs(); err != nil {
 		return err
 	}
@@ -201,12 +204,6 @@ func (o *deleteAppOpts) Execute() error {
 	}
 
 	if err := o.emptyS3Bucket(); err != nil {
-		return err
-	}
-
-	// deletePipelines must happen before deleteAppResources and deleteWs, since the pipeline delete command relies
-	// on the application stackset as well as the workspace directory to still exist.
-	if err := o.deletePipelines(); err != nil {
 		return err
 	}
 

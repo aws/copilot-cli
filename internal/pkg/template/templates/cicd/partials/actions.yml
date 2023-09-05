@@ -1,6 +1,6 @@
 {{- range $stage := .Stages}}
 {{- range $action := $stage.PreDeployments}}
-Pre{{logicalIDSafe $stage.Name}}DeploymentAction{{logicalIDSafe $action.Name}}BuildProjectRole:
+Pre{{alphanumeric $stage.Name}}DeploymentAction{{alphanumeric $action.Name}}BuildProjectRole:
   Type: AWS::IAM::Role
   Properties:
     Path: /
@@ -21,11 +21,11 @@ Pre{{logicalIDSafe $stage.Name}}DeploymentAction{{logicalIDSafe $action.Name}}Bu
         PolicyDocument:
 {{ include "role-policy-document" $ | indent 10 }}
 
-Pre{{logicalIDSafe $stage.Name}}DeploymentAction{{logicalIDSafe $action.Name}}:
+Pre{{alphanumeric $stage.Name}}DeploymentAction{{alphanumeric $action.Name}}:
   Type: AWS::CodeBuild::Project
   Properties:
     EncryptionKey: !ImportValue {{$.AppName}}-ArtifactKey
-    ServiceRole: !GetAtt Pre{{logicalIDSafe $stage.Name}}DeploymentAction{{logicalIDSafe $action.Name}}BuildProjectRole.Arn
+    ServiceRole: !GetAtt Pre{{alphanumeric $stage.Name}}DeploymentAction{{alphanumeric $action.Name}}BuildProjectRole.Arn
     Artifacts:
       Type: CODEPIPELINE
 {{ include "action-config" $action | indent 4}}
@@ -34,7 +34,7 @@ Pre{{logicalIDSafe $stage.Name}}DeploymentAction{{logicalIDSafe $action.Name}}:
 
 {{- range $stage := .Stages}}
 {{- range $action := $stage.PostDeployments}}
-Post{{logicalIDSafe $stage.Name}}DeploymentAction{{logicalIDSafe $action.Name}}BuildProjectRole:
+Post{{alphanumeric $stage.Name}}DeploymentAction{{alphanumeric $action.Name}}BuildProjectRole:
   Type: AWS::IAM::Role
   Properties:
     Path: /
@@ -55,11 +55,11 @@ Post{{logicalIDSafe $stage.Name}}DeploymentAction{{logicalIDSafe $action.Name}}B
         PolicyDocument:
 {{ include "role-policy-document" $ | indent 10 }}
 
-Post{{logicalIDSafe $stage.Name}}DeploymentAction{{logicalIDSafe $action.Name}}:
+Post{{alphanumeric $stage.Name}}DeploymentAction{{alphanumeric $action.Name}}:
   Type: AWS::CodeBuild::Project
   Properties:
     EncryptionKey: !ImportValue {{$.AppName}}-ArtifactKey
-    ServiceRole: !GetAtt Post{{logicalIDSafe $stage.Name}}DeploymentAction{{logicalIDSafe $action.Name}}BuildProjectRole.Arn
+    ServiceRole: !GetAtt Post{{alphanumeric $stage.Name}}DeploymentAction{{alphanumeric $action.Name}}BuildProjectRole.Arn
     Artifacts:
       Type: CODEPIPELINE
 {{ include "action-config" $action | indent 4}}
