@@ -43,6 +43,15 @@ Configuration for incoming traffic to your site.
 <span class="parent-field">http.</span><a id="http-alias" href="#http-alias" class="field">`alias`</a> <span class="type">String</span>  
 HTTPS domain alias of your service.
 
+<span class="parent-field">http.</span><a id="http-certificate" href="#http-certificate" class="field">`certificate`</a> <span class="type">String</span>  
+The ARN for the certificate used for your HTTPS traffic.
+CloudFront requires imported certificates to be in the `us-east-1` region. For example:
+
+```yaml
+cdn:
+  certificate: "arn:aws:acm:us-east-1:1234567890:certificate/e5a6e114-b022-45b1-9339-38fbfd6db3e2"
+```
+
 <div class="separator"></div>
 
 <a id="files" href="#files" class="field">`files`</a> <span class="type">Array of Maps</span>  

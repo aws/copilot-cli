@@ -14,6 +14,8 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/arn"
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudfront"
 	"github.com/aws/copilot-cli/internal/pkg/graph"
 	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
@@ -587,6 +589,9 @@ func (s StaticSite) validate() error {
 }
 
 func (s StaticSiteConfig) validate() error {
+	if err := s.HTTP.validate(); err != nil {
+		return fmt.Errorf(`validate "http": %w`, err)
+	}
 	for idx, fileupload := range s.FileUploads {
 		if err := fileupload.validate(); err != nil {
 			return fmt.Errorf(`validate "files[%d]": %w`, idx, err)
@@ -597,6 +602,19 @@ func (s StaticSiteConfig) validate() error {
 
 func (f FileUpload) validate() error {
 	return f.validateSource()
+}
+
+func (s StaticSiteHTTP) validate() error {
+	if s.Certificate != "" {
+		certARN, err := arn.Parse(s.Certificate)
+		if err != nil {
+			return fmt.Errorf(`parse cdn certificate: %w`, err)
+		}
+		if certARN.Region != cloudfront.CertRegion {
+			return &errInvalidCloudFrontRegion{}
+		}
+	}
+	return nil
 }
 
 // validateSource returns nil if Source is configured correctly.

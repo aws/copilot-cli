@@ -859,6 +859,7 @@ type WorkloadOpts struct {
 	AssetMappingFileBucket string
 	AssetMappingFilePath   string
 	StaticSiteAlias        string
+	StaticSiteCert         string
 }
 
 // HealthCheckProtocol returns the protocol for the Load Balancer health check,
