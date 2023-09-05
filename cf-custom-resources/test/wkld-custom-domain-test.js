@@ -598,6 +598,52 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
         });
     });
 
+    test("update if the new aliases are exactly the same as the old ones but hosted zone and dns change", () => {
+      AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
+      AWS.mock("Route53", "listResourceRecordSets", mockListResourceRecordSets); // Calls to validate aliases.
+      AWS.mock("Route53", "changeResourceRecordSets", mockChangeResourceRecordSets); // Calls to upsert the A-records.
+      AWS.mock("Route53", "waitFor", mockWaitForRecordsChange); // Calls to wait for the changes.
+
+      mockRequest.ResourceProperties.Aliases = ["a.mockDomain.com"];
+      mockRequest.OldResourceProperties.Aliases = ["a.mockDomain.com"];
+
+      mockRequest.ResourceProperties.PublicAccessHostedZoneID = "mockNewHostedZoneID"
+      mockRequest.OldResourceProperties.PublicAccessHostedZoneID = "mockHostedZoneID"
+
+      mockRequest.ResourceProperties.PublicAccessDNS = "mockNewDNS"
+      mockRequest.OldResourceProperties.PublicAccessDNS = "mockDNS"
+
+      let request = nock(mockResponseURL)
+        .put("/", (body) => {
+          return body.Status === "SUCCESS" && body.PhysicalResourceId === "mockID";
+        })
+        .reply(200);
+
+        return LambdaTester(handler)
+        .event(mockRequest)
+        .expectResolve(() => {
+          expect(request.isDone()).toBe(true);
+          sinon.assert.callCount(mockListHostedZonesByName, 1); 
+          sinon.assert.callCount(mockChangeResourceRecordSets, 2); 
+          sinon.assert.callCount(mockWaitForRecordsChange, 2);
+
+          // The following calls are made to add aliases.
+          sinon.assert.callCount(mockListResourceRecordSets, 1); // 1 call to each alias to validate its ownership; there is 1 alias.
+          sinon.assert.calledWithMatch(mockChangeResourceRecordSets.getCall(0), sinon.match.hasNested("ChangeBatch.Changes[0].Action", "UPSERT"));
+          sinon.assert.calledWithMatch(
+            mockChangeResourceRecordSets,
+            sinon.match.hasNested("ChangeBatch.Changes[0].ResourceRecordSet.Name", "a.mockDomain.com")
+          );
+
+          // The following calls are made to remove aliases.
+          sinon.assert.calledWithMatch(mockChangeResourceRecordSets, sinon.match.hasNested("ChangeBatch.Changes[0].Action", "DELETE"));
+          sinon.assert.calledWithMatch(
+            mockChangeResourceRecordSets,
+            sinon.match.hasNested("ChangeBatch.Changes[0].ResourceRecordSet.Name", "a.mockDomain.com")
+          );
+        });
+    });
+
     test("new aliases that only add additional aliases to the old aliases, without deletion", () => {
       AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
       AWS.mock("Route53", "listResourceRecordSets", mockListResourceRecordSets); // Calls to validate aliases.

@@ -192,6 +192,10 @@ exports.handler = async function (event, context) {
         }
         await validateAliases(aliases, publicAccessDNS);
         await activate(aliases, publicAccessDNS, publicAccessHostedZoneID);
+        if (oldHostedZoneId !== publicAccessHostedZoneID || oldDNS !== publicAccessDNS) {
+          await deactivate(oldAliases, oldDNS, oldHostedZoneId);
+          break;
+        }
         let unusedAliases = new Set([...oldAliases].filter((a) => !aliases.has(a)));
         await deactivate(unusedAliases, oldDNS, oldHostedZoneId);
         break;
