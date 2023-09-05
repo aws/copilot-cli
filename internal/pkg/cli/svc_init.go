@@ -150,6 +150,7 @@ type initSvcOpts struct {
 	sourceSel    staticSourceSelector
 	topicSel     topicSelector
 	mftReader    manifestReader
+	svcLister    wlLister
 
 	// Outputs stored on successful actions.
 	manifestPath string
@@ -218,6 +219,7 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 		topicSel:    snsSel,
 		sourceSel:   sourceSel,
 		mftReader:   ws,
+		svcLister:   ws,
 		newAppVersionGetter: func(appName string) (versionGetter, error) {
 			return describe.NewAppDescriber(appName)
 		},
@@ -486,6 +488,16 @@ func (o *initSvcOpts) validateSvc() error {
 func (o *initSvcOpts) validateDuplicateSvc() error {
 	_, err := o.store.GetService(o.appName, o.name)
 	if err == nil {
+		// Skip error if service already exists in workspace
+		if !o.wsPendingCreation {
+			svcs, err := o.svcLister.ListWorkloads()
+			if err != nil {
+				return err
+			}
+			if contains(o.name, svcs) {
+				return nil
+			}
+		}
 		log.Errorf(`It seems like you are trying to init a service that already exists.
 To recreate the service, please run:
 1. %s. Note: The manifest file will not be deleted and will be used in Step 2.
