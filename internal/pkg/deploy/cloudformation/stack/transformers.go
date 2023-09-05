@@ -690,7 +690,6 @@ func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (networkLoadBalanc
 
 	config := networkLoadBalancerConfig{
 		settings: &template.NetworkLoadBalancer{
-			PublicSubnetCIDRs:   s.publicSubnetCIDRBlocks,
 			Listener:            listeners,
 			Aliases:             aliases,
 			MainContainerPort:   s.manifest.MainContainerPort(),

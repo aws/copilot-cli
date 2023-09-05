@@ -463,7 +463,6 @@ type NLBHealthCheck struct {
 
 // NetworkLoadBalancer holds configuration that's needed for a Network Load Balancer.
 type NetworkLoadBalancer struct {
-	PublicSubnetCIDRs   []string
 	Listener            []NetworkLoadBalancerListener
 	MainContainerPort   string
 	CertificateRequired bool

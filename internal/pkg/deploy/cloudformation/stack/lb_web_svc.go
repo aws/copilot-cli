@@ -29,24 +29,16 @@ const (
 // LoadBalancedWebService represents the configuration needed to create a CloudFormation stack from a load balanced web service manifest.
 type LoadBalancedWebService struct {
 	*ecsWkld
-	manifest               *manifest.LoadBalancedWebService
-	httpsEnabled           bool
-	dnsDelegationEnabled   bool
-	publicSubnetCIDRBlocks []string
-	appInfo                deploy.AppInformation
+	manifest             *manifest.LoadBalancedWebService
+	httpsEnabled         bool
+	dnsDelegationEnabled bool
+	appInfo              deploy.AppInformation
 
 	parser loadBalancedWebSvcReadParser
 }
 
 // LoadBalancedWebServiceOption is used to configuring an optional field for LoadBalancedWebService.
 type LoadBalancedWebServiceOption func(s *LoadBalancedWebService)
-
-// WithNLB enables Network Load Balancer in a LoadBalancedWebService.
-func WithNLB(cidrBlocks []string) func(s *LoadBalancedWebService) {
-	return func(s *LoadBalancedWebService) {
-		s.publicSubnetCIDRBlocks = cidrBlocks
-	}
-}
 
 // LoadBalancedWebServiceConfig contains fields to configure LoadBalancedWebService.
 type LoadBalancedWebServiceConfig struct {
