@@ -225,9 +225,10 @@ exports.handler = async function (event, context) {
  *
  * @param {Set<String>} aliases for the service.
  * @param {String} publicAccessDNS the DNS of the service's load balancer.
+ * @param {String} oldPublicAccessDNS the old DNS of the service's load balancer.
  * @throws error if at least one of the aliases is not valid.
  */
-async function validateAliases(aliases, publicAccessDNS) {
+async function validateAliases(aliases, publicAccessDNS, oldPublicAccessDNS) {
   let promises = [];
 
   for (let alias of aliases) {
@@ -248,7 +249,7 @@ async function validateAliases(aliases, publicAccessDNS) {
           return;
         }
         let aliasTarget = recordSet[0].AliasTarget;
-        if (aliasTarget && aliasTarget.DNSName.toLowerCase() === `${publicAccessDNS.toLowerCase()}.`) {
+        if (aliasTarget && (aliasTarget.DNSName.toLowerCase() === `${publicAccessDNS.toLowerCase()}.` || aliasTarget.DNSName.toLowerCase() === `${oldPublicAccessDNS.toLowerCase()}.`)) {
           return; // The record is an alias record and is in use by myself, hence valid.
         }
         if (aliasTarget) {
