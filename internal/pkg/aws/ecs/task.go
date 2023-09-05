@@ -291,7 +291,7 @@ func TaskDefinitionVersion(taskDefARN string) (int, error) {
 	return version, nil
 }
 
-// // ShortTaskID truncates a string to a maximum length of shortTaskIDLength.
+// ShortTaskID truncates a string to a maximum length of shortTaskIDLength.
 // If the input is shorter, it remains unchanged.
 func ShortTaskID(id string) string {
 	if len(id) >= shortTaskIDLength {
