@@ -200,7 +200,7 @@ exports.handler = async function (event, context) {
         await deactivate(unusedAliases, oldDNS, oldHostedZoneId);
         break;
       case "Create":
-        await validateAliases(aliases, publicAccessDNS, oldDNS);
+        await validateAliases(aliases, publicAccessDNS);
         await activate(aliases, publicAccessDNS, publicAccessHostedZoneID);
         break;
       case "Delete":
