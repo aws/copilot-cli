@@ -179,8 +179,33 @@ Alarms
   2243bac3  STOPPING        STOPPED
 
 ✘ Latest 2 tasks stopped reason
-  - 21479dca: ELB healthcheck failed
-  - 2243bac3: unable to pull secrets
+  - [21479dca]: ELB healthcheck failed
+  - [2243bac3]: unable to pull secrets
+`,
+		},
+		"render collapse if task reasons are same": {
+			inStoppedTasks: []ecs.Task{
+				{
+					TaskArn:       aws.String("arn:aws:ecs:us-east-2:197732814171:task/bugbash-test-Cluster-qrvEBaBlImsZ/21479dca3393490a9d95f27353186bf6"),
+					DesiredStatus: aws.String("STOPPED"),
+					LastStatus:    aws.String("DEPROVISIONING"),
+					StoppedReason: aws.String("Essential container in the task exited"),
+				},
+				{
+					TaskArn:       aws.String("arn:aws:ecs:us-east-2:197732814171:task/bugbash-test-Cluster-qrvEBaBlImsZ/2243bac3ca1d4b3a8c66888348cba2e1"),
+					DesiredStatus: aws.String("STOPPED"),
+					LastStatus:    aws.String("STOPPING"),
+					StoppedReason: aws.String("Essential container in the task exited"),
+				},
+			},
+			wantedNumLines: 7,
+			wantedOut: `Latest 2 stopped tasks
+  TaskId    CurrentStatus   DesiredStatus
+  21479dca  DEPROVISIONING  STOPPED
+  2243bac3  STOPPING        STOPPED
+
+✘ Latest 2 tasks stopped reason
+  - [21479dca,2243bac3]: Essential container in the task exited
 `,
 		},
 		"should render stopped tasks and split long stopped reasons": {
@@ -205,10 +230,10 @@ Alarms
   2243bac3  STOPPING        STOPPED
 
 ✘ Latest 2 tasks stopped reason
-  - 21479dca: ELB healthcheck failed
-  - 2243bac3: ResourceInitializationError: unable to pull secrets or regis
-    try auth: execution resource retrieval failed: unable to retrieve secr
-    ets from ssm: service call has been retried 1 time(s)
+  - [21479dca]: ELB healthcheck failed
+  - [2243bac3]: ResourceInitializationError: unable to pull secrets or reg
+    istry auth: execution resource retrieval failed: unable to retrieve se
+    crets from ssm: service call has been retried 1 time(s)
 `,
 		},
 	}

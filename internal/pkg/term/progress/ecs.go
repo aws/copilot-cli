@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -197,6 +198,11 @@ func (c *rollingUpdateComponent) renderAlarms(out io.Writer) (numLines int, err 
 	return renderComponents(out, components)
 }
 
+type stoppedTasksInfo struct {
+	ids    []string
+	reason string
+}
+
 func (c *rollingUpdateComponent) renderStoppedTasks(out io.Writer) (numLines int, err error) {
 	if len(c.stoppedTasks) == 0 {
 		return 0, nil
@@ -212,17 +218,40 @@ func (c *rollingUpdateComponent) renderStoppedTasks(out io.Writer) (numLines int
 			Padding: c.padding,
 		},
 	}
+
+	taskInfoSlice := make([]stoppedTasksInfo, 0, len(c.stoppedTasks))
 	for _, st := range c.stoppedTasks {
 		id, err := ecs.TaskID(aws.StringValue(st.TaskArn))
 		if err != nil {
 			return 0, err
 		}
+		// Check if there is already an entry with the same task stopped reason.
+		var found bool
+		for i, taskInfo := range taskInfoSlice {
+			if taskInfo.reason == aws.StringValue(st.StoppedReason) {
+				taskInfoSlice[i].ids = append(taskInfoSlice[i].ids, ecs.ShortTaskID(id))
+				found = true
+				break
+			}
+		}
+
+		// If not found, create a new entry
+		if !found {
+			stInfo := stoppedTasksInfo{
+				reason: aws.StringValue(st.StoppedReason),
+				ids:    []string{ecs.ShortTaskID(id)},
+			}
+			taskInfoSlice = append(taskInfoSlice, stInfo)
+		}
+
 		rows = append(rows, []string{
 			ecs.ShortTaskID(id),
 			aws.StringValue(st.LastStatus),
 			aws.StringValue(st.DesiredStatus),
 		})
-		for i, truncatedReason := range splitByLength(fmt.Sprintf("%s: %s", ecs.ShortTaskID(id), aws.StringValue(st.StoppedReason)), maxCellLength) {
+	}
+	for _, info := range taskInfoSlice {
+		for i, truncatedReason := range splitByLength(fmt.Sprintf("[%s]: %s", strings.Join(info.ids, ","), info.reason), maxCellLength) {
 			pretty := fmt.Sprintf("  %s", truncatedReason)
 			if i == 0 {
 				pretty = fmt.Sprintf("- %s", truncatedReason)
