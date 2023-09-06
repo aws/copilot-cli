@@ -4319,9 +4319,18 @@ func TestStaticSiteConfig_validate(t *testing.T) {
 		in          StaticSiteConfig
 		wantedError error
 	}{
+		"should return error if alias is not specified when certificate is set": {
+			in: StaticSiteConfig{
+				HTTP: StaticSiteHTTP{
+					Certificate: "arn:aws:acm:us-east-1:1234567890:certificate/1115a386-a3db-4fb8-9b39-dfed63968129",
+				},
+			},
+			wantedError: fmt.Errorf(`validate "http": "alias" must be specified if "certificate" is specified`),
+		},
 		"should return error if certificate is not in us-east-1": {
 			in: StaticSiteConfig{
 				HTTP: StaticSiteHTTP{
+					Alias:       "foobar.com",
 					Certificate: "arn:aws:acm:us-east-2:1234567890:certificate/1115a386-a3db-4fb8-9b39-dfed63968129",
 				},
 			},

@@ -606,6 +606,12 @@ func (f FileUpload) validate() error {
 
 func (s StaticSiteHTTP) validate() error {
 	if s.Certificate != "" {
+		if s.Alias == "" {
+			return &errFieldMustBeSpecified{
+				missingField:      "alias",
+				conditionalFields: []string{"certificate"},
+			}
+		}
 		certARN, err := arn.Parse(s.Certificate)
 		if err != nil {
 			return fmt.Errorf(`parse cdn certificate: %w`, err)
