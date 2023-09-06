@@ -190,7 +190,7 @@ exports.handler = async function (event, context) {
         if (setEqual(oldAliases, aliases) && oldHostedZoneId === publicAccessHostedZoneID && oldDNS === publicAccessDNS) {
           break;
         }
-        await validateAliases(aliases, publicAccessDNS);
+        await validateAliases(aliases, publicAccessDNS, oldDNS);
         await activate(aliases, publicAccessDNS, publicAccessHostedZoneID);
         if (oldHostedZoneId !== publicAccessHostedZoneID || oldDNS !== publicAccessDNS) {
           await deactivate(oldAliases, oldDNS, oldHostedZoneId);
@@ -200,7 +200,7 @@ exports.handler = async function (event, context) {
         await deactivate(unusedAliases, oldDNS, oldHostedZoneId);
         break;
       case "Create":
-        await validateAliases(aliases, publicAccessDNS);
+        await validateAliases(aliases, publicAccessDNS, oldDNS);
         await activate(aliases, publicAccessDNS, publicAccessHostedZoneID);
         break;
       case "Delete":
