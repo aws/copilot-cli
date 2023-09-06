@@ -4,6 +4,7 @@
 package progress
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -11,6 +12,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatch"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/stream"
+	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/stretchr/testify/require"
 )
 
@@ -172,8 +174,8 @@ Alarms
 					StoppedReason: aws.String("unable to pull secrets"),
 				},
 			},
-			wantedNumLines: 8,
-			wantedOut: `Latest 2 stopped tasks
+			wantedNumLines: 9,
+			wantedOut: fmt.Sprintf(`Latest 2 stopped tasks
   TaskId    CurrentStatus   DesiredStatus
   21479dca  DEPROVISIONING  STOPPED
   2243bac3  STOPPING        STOPPED
@@ -181,7 +183,10 @@ Alarms
 ✘ Latest 2 tasks stopped reason
   - [21479dca]: ELB healthcheck failed
   - [2243bac3]: unable to pull secrets
-`,
+  To troubleshoot the task stopped reason:
+  1. You can run %s to see the logs of the last Stopped Task.
+  2. You can follow this article https://repost.aws/knowledge-center/ecs-task-stopped.
+`, color.HighlightCode("copilot svc logs --previous")),
 		},
 		"render collapse if task reasons are same": {
 			inStoppedTasks: []ecs.Task{
@@ -198,15 +203,18 @@ Alarms
 					StoppedReason: aws.String("Essential container in the task exited"),
 				},
 			},
-			wantedNumLines: 7,
-			wantedOut: `Latest 2 stopped tasks
+			wantedNumLines: 8,
+			wantedOut: fmt.Sprintf(`Latest 2 stopped tasks
   TaskId    CurrentStatus   DesiredStatus
   21479dca  DEPROVISIONING  STOPPED
   2243bac3  STOPPING        STOPPED
 
 ✘ Latest 2 tasks stopped reason
   - [21479dca,2243bac3]: Essential container in the task exited
-`,
+  To troubleshoot the task stopped reason:
+  1. You can run %s to see the logs of the last Stopped Task.
+  2. You can follow this article https://repost.aws/knowledge-center/ecs-task-stopped.
+`, color.HighlightCode("copilot svc logs --previous")),
 		},
 		"should render stopped tasks and split long stopped reasons": {
 			inStoppedTasks: []ecs.Task{
@@ -223,8 +231,8 @@ Alarms
 					StoppedReason: aws.String("ResourceInitializationError: unable to pull secrets or registry auth: execution resource retrieval failed: unable to retrieve secrets from ssm: service call has been retried 1 time(s)"),
 				},
 			},
-			wantedNumLines: 10,
-			wantedOut: `Latest 2 stopped tasks
+			wantedNumLines: 11,
+			wantedOut: fmt.Sprintf(`Latest 2 stopped tasks
   TaskId    CurrentStatus   DesiredStatus
   21479dca  DEPROVISIONING  STOPPED
   2243bac3  STOPPING        STOPPED
@@ -234,7 +242,10 @@ Alarms
   - [2243bac3]: ResourceInitializationError: unable to pull secrets or reg
     istry auth: execution resource retrieval failed: unable to retrieve se
     crets from ssm: service call has been retried 1 time(s)
-`,
+  To troubleshoot the task stopped reason:
+  1. You can run %s to see the logs of the last Stopped Task.
+  2. You can follow this article https://repost.aws/knowledge-center/ecs-task-stopped.
+`, color.HighlightCode("copilot svc logs --previous")),
 		},
 	}
 

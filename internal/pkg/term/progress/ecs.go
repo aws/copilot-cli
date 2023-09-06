@@ -264,6 +264,12 @@ func (c *rollingUpdateComponent) renderStoppedTasks(out io.Writer) (numLines int
 	}
 	table := newTableComponent(color.Faint.Sprintf("Latest %d stopped %s", len(c.stoppedTasks), english.PluralWord(len(c.stoppedTasks), "task", "tasks")), header, rows)
 	table.Padding = c.padding
+	var debug debugStoppedTaskReason
+	childComponents = append(childComponents,
+		&singleLineComponent{
+			Text:    debug.RecommendActions(),
+			Padding: c.padding + nestedComponentPadding,
+		})
 	treeComponent := treeComponent{
 		Root:     table,
 		Children: childComponents,
@@ -291,4 +297,12 @@ func parseServiceARN(arn string) (cluster, service string) {
 	parsed, _ := ecs.ParseServiceArn(arn)
 	// Errors can't happen on valid ARNs.
 	return parsed.ClusterName(), parsed.ServiceName()
+}
+
+type debugStoppedTaskReason struct{}
+
+func (d *debugStoppedTaskReason) RecommendActions() string {
+	return fmt.Sprintf(`To troubleshoot the task stopped reason:
+  1. You can run %s to see the logs of the last Stopped Task.
+  2. You can follow this article https://repost.aws/knowledge-center/ecs-task-stopped.`, color.HighlightCode("copilot svc logs --previous"))
 }
