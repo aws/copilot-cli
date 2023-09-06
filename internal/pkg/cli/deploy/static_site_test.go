@@ -217,7 +217,7 @@ func TestStaticSiteDeployer_stackConfiguration(t *testing.T) {
 			},
 			wantErr: `static sites not supported: app version must be >= v1.2.0`,
 		},
-		"error bc alias specified no domain imported or no imported cert": {
+		"error bc alias specified no domain imported and no imported cert": {
 			deployer: &staticSiteDeployer{
 				svcDeployer: &svcDeployer{
 					workloadDeployer: &workloadDeployer{

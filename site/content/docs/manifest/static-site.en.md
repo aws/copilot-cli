@@ -48,7 +48,8 @@ The ARN for the certificate used for your HTTPS traffic.
 CloudFront requires imported certificates to be in the `us-east-1` region. For example:
 
 ```yaml
-cdn:
+http:
+  alias: example.com
   certificate: "arn:aws:acm:us-east-1:1234567890:certificate/e5a6e114-b022-45b1-9339-38fbfd6db3e2"
 ```
 
