@@ -393,11 +393,11 @@ func (cf CloudFormation) executeAndRenderChangeSet(in *executeAndRenderChangeSet
 	if in.enableInterrupt {
 		g.Go(func() error {
 			return cf.waitForSignalAndHandleInterrupt(signalHandlerInput{
-				ctx:                         ctx,
-				cancelFn:                    cancel,
-				sigCh:                       sigChannel,
-				stackName:                   in.stackName,
-				prevChangeSetRenderComplete: prevChangeSetRenderComplete,
+				ctx:              ctx,
+				cancelFn:         cancel,
+				sigCh:            sigChannel,
+				stackName:        in.stackName,
+				updateRenderDone: prevChangeSetRenderComplete,
 			})
 		})
 	}
@@ -434,11 +434,11 @@ func (cf CloudFormation) renderChangeSet(ctx context.Context, changeSetID string
 }
 
 type signalHandlerInput struct {
-	ctx                         context.Context
-	cancelFn                    context.CancelFunc
-	sigCh                       chan os.Signal
-	stackName                   string
-	prevChangeSetRenderComplete chan bool
+	ctx              context.Context
+	cancelFn         context.CancelFunc
+	sigCh            chan os.Signal
+	stackName        string
+	updateRenderDone chan bool
 }
 
 func (cf CloudFormation) waitForSignalAndHandleInterrupt(in signalHandlerInput) error {
@@ -464,7 +464,7 @@ Pressing Ctrl-C again will exit immediately but the deletion of stack %s will co
 					deleteFn: func() error {
 						return cf.cfnClient.DeleteAndWait(in.stackName)
 					},
-					prevRenderComplete: in.prevChangeSetRenderComplete,
+					updateRenderDone: in.updateRenderDone,
 				}); err != nil {
 					return err
 				}
@@ -481,7 +481,7 @@ Pressing Ctrl-C again will exit immediately but stack %s rollback will continue
 					cancelUpdateFn: func() error {
 						return cf.cfnClient.CancelUpdateStack(in.stackName)
 					},
-					prevRenderComplete: in.prevChangeSetRenderComplete,
+					updateRenderDone: in.updateRenderDone,
 				}); err != nil {
 					return err
 				}
@@ -496,10 +496,10 @@ Pressing Ctrl-C again will exit immediately but stack %s rollback will continue
 }
 
 type cancelUpdateAndRenderInput struct {
-	stackName          string
-	description        string
-	cancelUpdateFn     func() error
-	prevRenderComplete <-chan bool
+	stackName        string
+	description      string
+	cancelUpdateFn   func() error
+	updateRenderDone <-chan bool
 }
 
 func (cf CloudFormation) cancelUpdateAndRender(in *cancelUpdateAndRenderInput) error {
@@ -520,8 +520,8 @@ func (cf CloudFormation) cancelUpdateAndRender(in *cancelUpdateAndRenderInput) e
 	}
 	g.Go(in.cancelUpdateFn)
 	g.Go(func() error {
-		if in.prevRenderComplete != nil {
-			<-in.prevRenderComplete
+		if in.updateRenderDone != nil {
+			<-in.updateRenderDone
 		}
 		_, err := progress.Render(ctx, progress.NewTabbedFileWriter(cf.console), renderer)
 		return err
@@ -748,10 +748,10 @@ func (cf CloudFormation) stackRenderer(ctx context.Context, in renderStackInput)
 }
 
 type deleteAndRenderInput struct {
-	stackName          string
-	description        string
-	deleteFn           func() error
-	prevRenderComplete <-chan bool
+	stackName        string
+	description      string
+	deleteFn         func() error
+	updateRenderDone <-chan bool
 }
 
 func (cf CloudFormation) deleteAndRenderStack(in deleteAndRenderInput) error {
@@ -789,8 +789,8 @@ func (cf CloudFormation) deleteAndRenderStack(in deleteAndRenderInput) error {
 		startTime:      now,
 	})
 	g.Go(func() error {
-		if in.prevRenderComplete != nil {
-			<-in.prevRenderComplete
+		if in.updateRenderDone != nil {
+			<-in.updateRenderDone
 		}
 		w := progress.NewTabbedFileWriter(cf.console)
 		nl, err := progress.Render(ctx, w, renderer)
