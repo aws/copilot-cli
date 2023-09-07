@@ -12,6 +12,8 @@ Resources:
       'aws:copilot:description': 'An Amazon S3 bucket, {{.Name}}, for storing and retrieving objects'
     Type: AWS::S3::Bucket
     Properties:
+      VersioningConfiguration:
+        Status: Enabled
       AccessControl: Private
       BucketEncryption:
         ServerSideEncryptionConfiguration:

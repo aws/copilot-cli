@@ -27,6 +27,8 @@ Resources:
       OwnershipControls:
         Rules:
           - ObjectOwnership: BucketOwnerEnforced
+      VersioningConfiguration:
+        Status: Enabled
 
   bucketBucketPolicy:
     Metadata:

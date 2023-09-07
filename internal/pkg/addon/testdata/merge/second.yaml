@@ -81,6 +81,8 @@ Resources:
           BlockPublicPolicy: true
           IgnorePublicAcls: true
           RestrictPublicBuckets: true
+        VersioningConfiguration:
+          Status: Enabled
 
     MyBucketAccessPolicy:
       Type: AWS::IAM::ManagedPolicy
