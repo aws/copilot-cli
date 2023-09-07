@@ -633,8 +633,12 @@ func TestShortTaskID(t *testing.T) {
 		inTaskId     string
 		wantedTaskId string
 	}{
-		"should return short task id": {
+		"return truncated short task id": {
 			inTaskId:     "37930fffc2104a1db455aef109b5d122",
+			wantedTaskId: "37930fff",
+		},
+		"return given short taskid": {
+			inTaskId:     "37930fff",
 			wantedTaskId: "37930fff",
 		},
 	}
@@ -644,9 +648,9 @@ func TestShortTaskID(t *testing.T) {
 			// GIVEN
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-
+			// WHEN
 			got := ShortTaskID(tc.inTaskId)
-
+			// THEN
 			require.Equal(t, tc.wantedTaskId, got)
 		})
 
