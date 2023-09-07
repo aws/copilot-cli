@@ -7,9 +7,11 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatch"
@@ -199,8 +201,8 @@ func (c *rollingUpdateComponent) renderAlarms(out io.Writer) (numLines int, err 
 }
 
 type stoppedTasksInfo struct {
-	ids    []string
-	reason string
+	ids              []string
+	latestStoppingAt time.Time
 }
 
 func (c *rollingUpdateComponent) renderStoppedTasks(out io.Writer) (numLines int, err error) {
@@ -219,39 +221,38 @@ func (c *rollingUpdateComponent) renderStoppedTasks(out io.Writer) (numLines int
 		},
 	}
 
-	taskInfoSlice := make([]stoppedTasksInfo, 0, len(c.stoppedTasks))
+	taskInfoMap := make(map[string]stoppedTasksInfo, len(c.stoppedTasks))
 	for _, st := range c.stoppedTasks {
 		id, err := ecs.TaskID(aws.StringValue(st.TaskArn))
 		if err != nil {
 			return 0, err
 		}
-		// Check if there is already an entry with the same task stopped reason.
-		var found bool
-		for i, taskInfo := range taskInfoSlice {
-			if taskInfo.reason == aws.StringValue(st.StoppedReason) {
-				taskInfoSlice[i].ids = append(taskInfoSlice[i].ids, ecs.ShortTaskID(id))
-				found = true
-				break
+		existingTaskInfo, ok := taskInfoMap[aws.StringValue(st.StoppedReason)]
+		if ok {
+			existingTaskInfo.ids = append(existingTaskInfo.ids, ecs.ShortTaskID(id))
+			existingTaskInfo.latestStoppingAt = aws.TimeValue(st.StoppingAt)
+			taskInfoMap[aws.StringValue(st.StoppedReason)] = existingTaskInfo
+		} else {
+			taskInfoMap[aws.StringValue(st.StoppedReason)] = stoppedTasksInfo{
+				ids:              []string{ecs.ShortTaskID(id)},
+				latestStoppingAt: aws.TimeValue(st.StoppingAt),
 			}
 		}
-
-		// If not found, create a new entry
-		if !found {
-			stInfo := stoppedTasksInfo{
-				reason: aws.StringValue(st.StoppedReason),
-				ids:    []string{ecs.ShortTaskID(id)},
-			}
-			taskInfoSlice = append(taskInfoSlice, stInfo)
-		}
-
 		rows = append(rows, []string{
 			ecs.ShortTaskID(id),
 			aws.StringValue(st.LastStatus),
 			aws.StringValue(st.DesiredStatus),
 		})
 	}
-	for _, info := range taskInfoSlice {
-		for i, truncatedReason := range splitByLength(fmt.Sprintf("[%s]: %s", strings.Join(info.ids, ","), info.reason), maxCellLength) {
+	var sortReasons []string
+	for reason := range taskInfoMap {
+		sortReasons = append(sortReasons, reason)
+	}
+	sort.SliceStable(sortReasons, func(i, j int) bool {
+		return taskInfoMap[sortReasons[i]].latestStoppingAt.After(taskInfoMap[sortReasons[j]].latestStoppingAt)
+	})
+	for _, reason := range sortReasons {
+		for i, truncatedReason := range splitByLength(fmt.Sprintf("[%s]: %s", strings.Join(taskInfoMap[reason].ids, ","), reason), maxCellLength) {
 			pretty := fmt.Sprintf("  %s", truncatedReason)
 			if i == 0 {
 				pretty = fmt.Sprintf("- %s", truncatedReason)
@@ -271,12 +272,13 @@ func (c *rollingUpdateComponent) renderStoppedTasks(out io.Writer) (numLines int
 			Padding: c.padding,
 		},
 		&singleLineComponent{
-			Text: fmt.Sprintf("1. You can run %s to see the logs of the last Stopped Task.",
+			Text: fmt.Sprintf("1. You can run %s to see the logs of the last stopped task.",
 				color.HighlightCode("copilot svc logs --previous")),
 			Padding: c.padding + nestedComponentPadding,
 		},
 		&singleLineComponent{
-			Text:    fmt.Sprintf("2. You can follow this article %s.", color.Emphasize("https://repost.aws/knowledge-center/ecs-task-stopped")),
+			Text: fmt.Sprintf("2. You can visit this article %s.",
+				color.Emphasize("https://repost.aws/knowledge-center/ecs-task-stopped")),
 			Padding: c.padding + nestedComponentPadding,
 		})
 	treeComponent := treeComponent{

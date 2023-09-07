@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatch"
@@ -81,6 +82,7 @@ func TestRollingUpdateComponent_Listen(t *testing.T) {
 }
 
 func TestRollingUpdateComponent_Render(t *testing.T) {
+	startDate := time.Date(2020, time.November, 23, 18, 0, 0, 0, time.UTC)
 	testCases := map[string]struct {
 		inDeployments  []stream.ECSDeployment
 		inFailureMsgs  []string
@@ -166,12 +168,14 @@ Alarms
 					DesiredStatus: aws.String("STOPPED"),
 					LastStatus:    aws.String("DEPROVISIONING"),
 					StoppedReason: aws.String("ELB healthcheck failed"),
+					StoppingAt:    aws.Time(startDate.Add(20 * time.Second)),
 				},
 				{
 					TaskArn:       aws.String("arn:aws:ecs:us-east-2:197732814171:task/bugbash-test-Cluster-qrvEBaBlImsZ/2243bac3ca1d4b3a8c66888348cba2e1"),
 					DesiredStatus: aws.String("STOPPED"),
 					LastStatus:    aws.String("STOPPING"),
 					StoppedReason: aws.String("unable to pull secrets"),
+					StoppingAt:    aws.Time(startDate.Add(10 * time.Second)),
 				},
 			},
 			wantedNumLines: 12,
@@ -185,23 +189,25 @@ Alarms
   - [2243bac3]: unable to pull secrets
 
 Troubleshoot task stopped reason
-  1. You can run %s to see the logs of the last Stopped Task.
-  2. You can follow this article https://repost.aws/knowledge-center/ecs-task-stopped.
+  1. You can run %s to see the logs of the last stopped task.
+  2. You can visit this article https://repost.aws/knowledge-center/ecs-task-stopped.
 `, color.HighlightCode("copilot svc logs --previous")),
 		},
-		"render collapse if task reasons are same": {
+		"render collapse taskids if task reasons are same": {
 			inStoppedTasks: []ecs.Task{
 				{
 					TaskArn:       aws.String("arn:aws:ecs:us-east-2:197732814171:task/bugbash-test-Cluster-qrvEBaBlImsZ/21479dca3393490a9d95f27353186bf6"),
 					DesiredStatus: aws.String("STOPPED"),
 					LastStatus:    aws.String("DEPROVISIONING"),
 					StoppedReason: aws.String("Essential container in the task exited"),
+					StoppingAt:    aws.Time(startDate.Add(20 * time.Second)),
 				},
 				{
 					TaskArn:       aws.String("arn:aws:ecs:us-east-2:197732814171:task/bugbash-test-Cluster-qrvEBaBlImsZ/2243bac3ca1d4b3a8c66888348cba2e1"),
 					DesiredStatus: aws.String("STOPPED"),
 					LastStatus:    aws.String("STOPPING"),
 					StoppedReason: aws.String("Essential container in the task exited"),
+					StoppingAt:    aws.Time(startDate.Add(10 * time.Second)),
 				},
 			},
 			wantedNumLines: 11,
@@ -214,8 +220,8 @@ Troubleshoot task stopped reason
   - [21479dca,2243bac3]: Essential container in the task exited
 
 Troubleshoot task stopped reason
-  1. You can run %s to see the logs of the last Stopped Task.
-  2. You can follow this article https://repost.aws/knowledge-center/ecs-task-stopped.
+  1. You can run %s to see the logs of the last stopped task.
+  2. You can visit this article https://repost.aws/knowledge-center/ecs-task-stopped.
 `, color.HighlightCode("copilot svc logs --previous")),
 		},
 		"should render stopped tasks and split long stopped reasons": {
@@ -225,12 +231,14 @@ Troubleshoot task stopped reason
 					DesiredStatus: aws.String("STOPPED"),
 					LastStatus:    aws.String("DEPROVISIONING"),
 					StoppedReason: aws.String("ELB healthcheck failed"),
+					StoppingAt:    aws.Time(startDate.Add(20 * time.Second)),
 				},
 				{
 					TaskArn:       aws.String("arn:aws:ecs:us-east-2:197732814171:task/bugbash-test-Cluster-qrvEBaBlImsZ/2243bac3ca1d4b3a8c66888348cba2e1"),
 					DesiredStatus: aws.String("STOPPED"),
 					LastStatus:    aws.String("STOPPING"),
 					StoppedReason: aws.String("ResourceInitializationError: unable to pull secrets or registry auth: execution resource retrieval failed: unable to retrieve secrets from ssm: service call has been retried 1 time(s)"),
+					StoppingAt:    aws.Time(startDate.Add(10 * time.Second)),
 				},
 			},
 			wantedNumLines: 14,
@@ -246,8 +254,8 @@ Troubleshoot task stopped reason
     crets from ssm: service call has been retried 1 time(s)
 
 Troubleshoot task stopped reason
-  1. You can run %s to see the logs of the last Stopped Task.
-  2. You can follow this article https://repost.aws/knowledge-center/ecs-task-stopped.
+  1. You can run %s to see the logs of the last stopped task.
+  2. You can visit this article https://repost.aws/knowledge-center/ecs-task-stopped.
 `, color.HighlightCode("copilot svc logs --previous")),
 		},
 	}
