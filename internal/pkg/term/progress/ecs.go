@@ -200,11 +200,6 @@ func (c *rollingUpdateComponent) renderAlarms(out io.Writer) (numLines int, err 
 	return renderComponents(out, components)
 }
 
-type stoppedTasksInfo struct {
-	ids              []string
-	latestStoppingAt time.Time
-}
-
 func (c *rollingUpdateComponent) renderStoppedTasks(out io.Writer) (numLines int, err error) {
 	if len(c.stoppedTasks) == 0 {
 		return 0, nil
@@ -220,20 +215,23 @@ func (c *rollingUpdateComponent) renderStoppedTasks(out io.Writer) (numLines int
 			Padding: c.padding,
 		},
 	}
-
-	taskInfoMap := make(map[string]stoppedTasksInfo, len(c.stoppedTasks))
+	type stoppedTasksInfo struct {
+		ids              []string
+		latestStoppingAt time.Time
+	}
+	stopReason2Tasks := make(map[string]*stoppedTasksInfo, len(c.stoppedTasks))
 	for _, st := range c.stoppedTasks {
 		id, err := ecs.TaskID(aws.StringValue(st.TaskArn))
 		if err != nil {
 			return 0, err
 		}
-		existingTaskInfo, ok := taskInfoMap[aws.StringValue(st.StoppedReason)]
+		tasks, ok := stopReason2Tasks[aws.StringValue(st.StoppedReason)]
 		if ok {
-			existingTaskInfo.ids = append(existingTaskInfo.ids, ecs.ShortTaskID(id))
-			existingTaskInfo.latestStoppingAt = aws.TimeValue(st.StoppingAt)
-			taskInfoMap[aws.StringValue(st.StoppedReason)] = existingTaskInfo
+			tasks.ids = append(tasks.ids, ecs.ShortTaskID(id))
+			tasks.latestStoppingAt = aws.TimeValue(st.StoppingAt)
+			stopReason2Tasks[aws.StringValue(st.StoppedReason)] = tasks
 		} else {
-			taskInfoMap[aws.StringValue(st.StoppedReason)] = stoppedTasksInfo{
+			stopReason2Tasks[aws.StringValue(st.StoppedReason)] = &stoppedTasksInfo{
 				ids:              []string{ecs.ShortTaskID(id)},
 				latestStoppingAt: aws.TimeValue(st.StoppingAt),
 			}
@@ -244,15 +242,15 @@ func (c *rollingUpdateComponent) renderStoppedTasks(out io.Writer) (numLines int
 			aws.StringValue(st.DesiredStatus),
 		})
 	}
-	var sortReasons []string
-	for reason := range taskInfoMap {
-		sortReasons = append(sortReasons, reason)
+	var sortedReasons []string
+	for reason := range stopReason2Tasks {
+		sortedReasons = append(sortedReasons, reason)
 	}
-	sort.SliceStable(sortReasons, func(i, j int) bool {
-		return taskInfoMap[sortReasons[i]].latestStoppingAt.After(taskInfoMap[sortReasons[j]].latestStoppingAt)
+	sort.SliceStable(sortedReasons, func(i, j int) bool {
+		return stopReason2Tasks[sortedReasons[i]].latestStoppingAt.After(stopReason2Tasks[sortedReasons[j]].latestStoppingAt)
 	})
-	for _, reason := range sortReasons {
-		for i, truncatedReason := range splitByLength(fmt.Sprintf("[%s]: %s", strings.Join(taskInfoMap[reason].ids, ","), reason), maxCellLength) {
+	for _, reason := range sortedReasons {
+		for i, truncatedReason := range splitByLength(fmt.Sprintf("[%s]: %s", strings.Join(stopReason2Tasks[reason].ids, ","), reason), maxCellLength) {
 			pretty := fmt.Sprintf("  %s", truncatedReason)
 			if i == 0 {
 				pretty = fmt.Sprintf("- %s", truncatedReason)
