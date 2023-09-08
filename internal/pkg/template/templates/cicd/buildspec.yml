@@ -2,9 +2,6 @@
 version: 0.2
 phases:
   install:
-    runtime-versions:
-      ruby: 3.1
-      nodejs: 16
     commands:
       - echo "cd into $CODEBUILD_SRC_DIR"
       - cd $CODEBUILD_SRC_DIR
