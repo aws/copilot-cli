@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -494,7 +495,7 @@ func (o *initSvcOpts) validateDuplicateSvc() error {
 			if err != nil {
 				return err
 			}
-			if contains(o.name, svcs) {
+			if slices.Contains(svcs, o.name) {
 				return nil
 			}
 		}
