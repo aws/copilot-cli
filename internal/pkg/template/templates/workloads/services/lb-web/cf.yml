@@ -146,11 +146,19 @@ Resources:
   {{- end}}
   {{- end}}
   {{- if .NLB}}
+    {{- if .NLB.UDPListenerExists }}
     {{- range $i, $listener := .NLB.Listener }}
         - ContainerName: {{$listener.TargetContainer}}
           ContainerPort: {{$listener.TargetPort}}
           TargetGroupArn: !Ref NetworkLoadBalancerTargetGroup{{ if ne $i 0 }}{{ $i }}{{ end }}
     {{- end }}
+    {{- else}}
+    {{- range $i, $listener := .NLB.Listener }}
+        - ContainerName: {{$listener.TargetContainer}}
+          ContainerPort: {{$listener.TargetPort}}
+          TargetGroupArn: !Ref NLBTargetGroup{{ if ne $i 0 }}{{ $i }}{{ end }}
+    {{- end }}
+    {{- end}}
   {{- end }}
       ServiceRegistries:
         - RegistryArn: !GetAtt DiscoveryService.Arn
@@ -177,8 +185,15 @@ Outputs:
     Export:
       Name: !Sub ${AWS::StackName}-DiscoveryServiceARN
   {{- if .NLB}}
-  PublicNetworkLoadBalancerDNSName:
-    Value: !GetAtt NetworkLoadBalancer.DNSName
+  {{- if .NLB.UDPListenerExists }}
+  PublicNetworkLoadBalancerV2DNSName:
+    Value: !GetAtt PublicNetworkLoadBalancerV2.DNSName
     Export:
-      Name: !Sub ${AWS::StackName}-NetworkLoadBalancerDNSName
+      Name: !Sub ${AWS::StackName}-PublicNetworkLoadBalancerV2DNSName
+  {{- else}}
+  PublicNetworkLoadBalancerDNSName:
+    Value: !GetAtt PublicNetworkLoadBalancer.DNSName
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicNetworkLoadBalancerDNSName
+  {{- end}}
   {{- end}}
