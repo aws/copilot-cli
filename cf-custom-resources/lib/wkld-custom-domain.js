@@ -184,6 +184,8 @@ exports.handler = async function (event, context) {
   let handler = async function () {
     switch (event.RequestType) {
       case "Update":
+        // Hosted Zone and DNS are not guaranteed to be the same, 
+        // so we want to be able to update routing in case alias is unchanged but hosted zone or DNS is not.
         let oldAliases = new Set(event.OldResourceProperties.Aliases);
         let oldHostedZoneId = event.OldResourceProperties.PublicAccessHostedZoneID;
         let oldDNS = event.OldResourceProperties.PublicAccessDNS;
@@ -192,10 +194,6 @@ exports.handler = async function (event, context) {
         }
         await validateAliases(aliases, publicAccessDNS, oldDNS);
         await activate(aliases, publicAccessDNS, publicAccessHostedZoneID);
-        if (oldHostedZoneId !== publicAccessHostedZoneID || oldDNS !== publicAccessDNS) {
-          await deactivate(oldAliases, oldDNS, oldHostedZoneId);
-          break;
-        }
         let unusedAliases = new Set([...oldAliases].filter((a) => !aliases.has(a)));
         await deactivate(unusedAliases, oldDNS, oldHostedZoneId);
         break;
