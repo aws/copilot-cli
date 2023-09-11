@@ -41,6 +41,7 @@ type LoadBalancedWebService struct {
 // LoadBalancedWebServiceOption is used to configuring an optional field for LoadBalancedWebService.
 type LoadBalancedWebServiceOption func(s *LoadBalancedWebService)
 
+// TODO(Aiden): remove when NetworkLoadBalancer is forcibly updated
 // WithNLB enables Network Load Balancer in a LoadBalancedWebService.
 func WithNLB(cidrBlocks []string) func(s *LoadBalancedWebService) {
 	return func(s *LoadBalancedWebService) {
