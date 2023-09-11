@@ -65,7 +65,11 @@ func (cf CloudFormation) handleStackError(stackName string, err error) error {
 func (cf CloudFormation) DeleteWorkload(in deploy.DeleteWorkloadInput) error {
 	stackName := fmt.Sprintf("%s-%s-%s", in.AppName, in.EnvName, in.Name)
 	description := fmt.Sprintf("Delete stack %s", stackName)
-	return cf.deleteAndRenderStack(stackName, description, func() error {
-		return cf.cfnClient.DeleteAndWaitWithRoleARN(stackName, in.ExecutionRoleARN)
+	return cf.deleteAndRenderStack(deleteAndRenderInput{
+		stackName:   stackName,
+		description: description,
+		deleteFn: func() error {
+			return cf.cfnClient.DeleteAndWaitWithRoleARN(stackName, in.ExecutionRoleARN)
+		},
 	})
 }

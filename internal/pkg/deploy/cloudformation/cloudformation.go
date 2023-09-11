@@ -31,6 +31,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/stream"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
+	"github.com/aws/copilot-cli/internal/pkg/term/cursor"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"golang.org/x/sync/errgroup"
@@ -374,26 +375,40 @@ func (cf CloudFormation) executeAndRenderChangeSet(in *executeAndRenderChangeSet
 	g, ctx := errgroup.WithContext(context.Background())
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
+	prevChangeSetRenderComplete := make(chan bool)
 	g.Go(func() error {
+		defer close(prevChangeSetRenderComplete)
 		defer cancel()
-		if err := cf.renderChangeSet(ctx, changeSetID, in); err != nil {
+		nl, err := cf.renderChangeSet(ctx, changeSetID, in)
+		if err != nil {
 			if !errors.Is(err, context.Canceled) {
 				return err
 			}
+			// Erase previous stack events only if context is canceled
+			// by waitForSignalAndHandleInterrupt().
+			cursor.EraseLinesAbove(cf.console, nl)
 		}
 		return nil
 	})
 	if in.enableInterrupt {
 		g.Go(func() error {
-			return cf.waitForSignalAndHandleInterrupt(ctx, cancel, sigChannel, in.stackName)
+			return cf.waitForSignalAndHandleInterrupt(signalHandlerInput{
+				ctx:              ctx,
+				cancelFn:         cancel,
+				sigCh:            sigChannel,
+				stackName:        in.stackName,
+				updateRenderDone: prevChangeSetRenderComplete,
+			})
 		})
 	}
 	return g.Wait()
 }
 
-func (cf CloudFormation) renderChangeSet(ctx context.Context, changeSetID string, in *executeAndRenderChangeSetInput) error {
+// renderChangeSet renders and executes a CloudFormation change set, providing progress updates if necessary.
+// It returns the number of rendered lines and any encountered error.
+func (cf CloudFormation) renderChangeSet(ctx context.Context, changeSetID string, in *executeAndRenderChangeSetInput) (int, error) {
 	if _, ok := cf.console.(*discardFile); ok { // If we don't have to render skip the additional network calls.
-		return nil
+		return 0, nil
 	}
 	waitCtx, cancelWait := context.WithTimeout(ctx, waitForStackTimeout)
 	defer cancelWait()
@@ -401,73 +416,90 @@ func (cf CloudFormation) renderChangeSet(ctx context.Context, changeSetID string
 
 	renderer, err := cf.createChangeSetRenderer(g, ctx, changeSetID, in.stackName, in.stackDescription, progress.RenderOptions{})
 	if err != nil {
-		return err
+		return 0, err
 	}
+	var prevNumLines int
 	g.Go(func() error {
-		_, err := progress.Render(ctx, progress.NewTabbedFileWriter(cf.console), renderer)
+		var err error
+		prevNumLines, err = progress.Render(ctx, progress.NewTabbedFileWriter(cf.console), renderer)
 		return err
 	})
 	if err := g.Wait(); err != nil {
-		return err
+		return prevNumLines, err
 	}
 	if err := cf.errOnFailedStack(in.stackName); err != nil {
-		return err
+		return prevNumLines, err
 	}
-	return nil
+	return prevNumLines, nil
 }
 
-func (cf CloudFormation) waitForSignalAndHandleInterrupt(ctx context.Context, cancelFn context.CancelFunc, sigCh chan os.Signal, stackName string) error {
+type signalHandlerInput struct {
+	ctx              context.Context
+	cancelFn         context.CancelFunc
+	sigCh            chan os.Signal
+	stackName        string
+	updateRenderDone chan bool
+}
+
+func (cf CloudFormation) waitForSignalAndHandleInterrupt(in signalHandlerInput) error {
 	for {
 		select {
-		case <-sigCh:
-			cancelFn()
-			stopCatchSignals(sigCh)
-			stackDescr, err := cf.cfnClient.Describe(stackName)
+		case <-in.sigCh:
+			in.cancelFn()
+			stopCatchSignals(in.sigCh)
+			stackDescr, err := cf.cfnClient.Describe(in.stackName)
 			if err != nil {
-				return fmt.Errorf("describe stack %s: %w", stackName, err)
+				return fmt.Errorf("describe stack %s: %w", in.stackName, err)
 			}
 			switch aws.StringValue(stackDescr.StackStatus) {
 			case sdkcloudformation.StackStatusCreateInProgress:
 				log.Infoln()
 				log.Infof(`Received Interrupt for Ctrl-C.
 Pressing Ctrl-C again will exit immediately but the deletion of stack %s will continue
-`, stackName)
-				description := fmt.Sprintf("Delete stack %s", stackName)
-				if err := cf.deleteAndRenderStack(stackName, description, func() error {
-					return cf.cfnClient.DeleteAndWait(stackName)
+`, in.stackName)
+				description := fmt.Sprintf("Delete stack %s", in.stackName)
+				if err := cf.deleteAndRenderStack(deleteAndRenderInput{
+					stackName:   in.stackName,
+					description: description,
+					deleteFn: func() error {
+						return cf.cfnClient.DeleteAndWait(in.stackName)
+					},
+					updateRenderDone: in.updateRenderDone,
 				}); err != nil {
 					return err
 				}
-				return &ErrStackDeletedOnInterrupt{stackName: stackName}
+				return &ErrStackDeletedOnInterrupt{stackName: in.stackName}
 			case sdkcloudformation.StackStatusUpdateInProgress:
 				log.Infoln()
 				log.Infof(`Received Interrupt for Ctrl-C.
 Pressing Ctrl-C again will exit immediately but stack %s rollback will continue
-`, stackName)
-				description := fmt.Sprintf("Canceling stack update %s", stackName)
+`, in.stackName)
+				description := fmt.Sprintf("Canceling stack update %s", in.stackName)
 				if err := cf.cancelUpdateAndRender(&cancelUpdateAndRenderInput{
-					stackName:   stackName,
+					stackName:   in.stackName,
 					description: description,
 					cancelUpdateFn: func() error {
-						return cf.cfnClient.CancelUpdateStack(stackName)
+						return cf.cfnClient.CancelUpdateStack(in.stackName)
 					},
+					updateRenderDone: in.updateRenderDone,
 				}); err != nil {
 					return err
 				}
-				return &ErrStackUpdateCanceledOnInterrupt{stackName: stackName}
+				return &ErrStackUpdateCanceledOnInterrupt{stackName: in.stackName}
 			}
 			return nil
-		case <-ctx.Done():
-			stopCatchSignals(sigCh)
+		case <-in.ctx.Done():
+			stopCatchSignals(in.sigCh)
 			return nil
 		}
 	}
 }
 
 type cancelUpdateAndRenderInput struct {
-	stackName      string
-	description    string
-	cancelUpdateFn func() error
+	stackName        string
+	description      string
+	cancelUpdateFn   func() error
+	updateRenderDone <-chan bool
 }
 
 func (cf CloudFormation) cancelUpdateAndRender(in *cancelUpdateAndRenderInput) error {
@@ -488,6 +520,9 @@ func (cf CloudFormation) cancelUpdateAndRender(in *cancelUpdateAndRenderInput) e
 	}
 	g.Go(in.cancelUpdateFn)
 	g.Go(func() error {
+		if in.updateRenderDone != nil {
+			<-in.updateRenderDone
+		}
 		_, err := progress.Render(ctx, progress.NewTabbedFileWriter(cf.console), renderer)
 		return err
 	})
@@ -712,23 +747,30 @@ func (cf CloudFormation) stackRenderer(ctx context.Context, in renderStackInput)
 	return renderer
 }
 
-func (cf CloudFormation) deleteAndRenderStack(name, description string, deleteFn func() error) error {
-	body, err := cf.cfnClient.TemplateBody(name)
+type deleteAndRenderInput struct {
+	stackName        string
+	description      string
+	deleteFn         func() error
+	updateRenderDone <-chan bool
+}
+
+func (cf CloudFormation) deleteAndRenderStack(in deleteAndRenderInput) error {
+	body, err := cf.cfnClient.TemplateBody(in.stackName)
 	if err != nil {
 		if !errors.As(err, &errNotFound) {
-			return fmt.Errorf("get template body of stack %q: %w", name, err)
+			return fmt.Errorf("get template body of stack %q: %w", in.stackName, err)
 		}
 		return nil // stack already deleted.
 	}
 	descriptionFor, err := cloudformation.ParseTemplateDescriptions(body)
 	if err != nil {
-		return fmt.Errorf("parse resource descriptions in template of stack %q: %w", name, err)
+		return fmt.Errorf("parse resource descriptions in template of stack %q: %w", in.stackName, err)
 	}
 
-	stack, err := cf.cfnClient.Describe(name)
+	stack, err := cf.cfnClient.Describe(in.stackName)
 	if err != nil {
 		if !errors.As(err, &errNotFound) {
-			return fmt.Errorf("retrieve the stack ID for stack %q: %w", name, err)
+			return fmt.Errorf("retrieve the stack ID for stack %q: %w", in.stackName, err)
 		}
 		return nil // stack already deleted.
 	}
@@ -737,24 +779,27 @@ func (cf CloudFormation) deleteAndRenderStack(name, description string, deleteFn
 	defer cancelWait()
 	g, ctx := errgroup.WithContext(waitCtx)
 	now := time.Now()
-	g.Go(deleteFn)
+	g.Go(in.deleteFn)
 	renderer := cf.stackRenderer(ctx, renderStackInput{
 		group:          g,
 		stackID:        aws.StringValue(stack.StackId),
-		stackName:      name,
-		description:    description,
+		stackName:      in.stackName,
+		description:    in.description,
 		descriptionFor: descriptionFor,
 		startTime:      now,
 	})
 	g.Go(func() error {
+		if in.updateRenderDone != nil {
+			<-in.updateRenderDone
+		}
 		w := progress.NewTabbedFileWriter(cf.console)
 		nl, err := progress.Render(ctx, w, renderer)
 		if err != nil {
-			return fmt.Errorf("render stack %q progress: %w", name, err)
+			return fmt.Errorf("render stack %q progress: %w", in.stackName, err)
 		}
-		_, err = progress.EraseAndRender(w, progress.LineRenderer(log.Ssuccess(description), 0), nl)
+		_, err = progress.EraseAndRender(w, progress.LineRenderer(log.Ssuccess(in.description), 0), nl)
 		if err != nil {
-			return fmt.Errorf("erase and render stack %q progress: %w", name, err)
+			return fmt.Errorf("erase and render stack %q progress: %w", in.stackName, err)
 		}
 		return nil
 	})
