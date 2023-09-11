@@ -13,6 +13,7 @@ import (
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
@@ -41,10 +42,15 @@ var (
 		color.HighlightCode("copilot app init --domain example.com"))
 )
 
+type publicCIDRBlocksGetter interface {
+	PublicCIDRBlocks() ([]string, error)
+}
+
 type lbWebSvcDeployer struct {
 	*svcDeployer
-	appVersionGetter versionGetter
-	lbMft            *manifest.LoadBalancedWebService
+	appVersionGetter       versionGetter
+	publicCIDRBlocksGetter publicCIDRBlocksGetter
+	lbMft                  *manifest.LoadBalancedWebService
 
 	// Overriden in tests.
 	newAliasCertValidator func(optionalRegion *string) aliasCertValidator
@@ -62,6 +68,16 @@ func NewLBWSDeployer(in *WorkloadDeployerInput) (*lbWebSvcDeployer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("new app describer for application %s: %w", in.App.Name, err)
 	}
+	deployStore, err := deploy.NewStore(in.SessionProvider, svcDeployer.store)
+	if err != nil {
+		return nil, fmt.Errorf("new deploy store: %w", err)
+	}
+	envDescriber, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
+		App:         in.App.Name,
+		Env:         in.Env.Name,
+		ConfigStore: svcDeployer.store,
+		DeployStore: deployStore,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("create describer for environment %s in application %s: %w", in.Env.Name, in.App.Name, err)
 	}
@@ -70,9 +86,10 @@ func NewLBWSDeployer(in *WorkloadDeployerInput) (*lbWebSvcDeployer, error) {
 		return nil, fmt.Errorf("manifest is not of type %s", manifestinfo.LoadBalancedWebServiceType)
 	}
 	return &lbWebSvcDeployer{
-		svcDeployer:      svcDeployer,
-		appVersionGetter: versionGetter,
-		lbMft:            lbMft,
+		svcDeployer:            svcDeployer,
+		appVersionGetter:       versionGetter,
+		publicCIDRBlocksGetter: envDescriber,
+		lbMft:                  lbMft,
 		newAliasCertValidator: func(optionalRegion *string) aliasCertValidator {
 			sess := svcDeployer.envSess.Copy(&aws.Config{
 				Region: optionalRegion,
@@ -134,6 +151,14 @@ func (d *lbWebSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*s
 		return nil, err
 	}
 	var opts []stack.LoadBalancedWebServiceOption
+	if !d.lbMft.NLBConfig.IsEmpty() {
+		cidrBlocks, err := d.publicCIDRBlocksGetter.PublicCIDRBlocks()
+		if err != nil {
+			return nil, fmt.Errorf("get public CIDR blocks information from the VPC of environment %s: %w", d.env.Name, err)
+		}
+		opts = append(opts, stack.WithNLB(cidrBlocks))
+	}
+
 	var conf cloudformation.StackConfiguration
 	switch {
 	case d.newStack != nil:

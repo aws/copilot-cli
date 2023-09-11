@@ -114,7 +114,7 @@ func TestNetworkLoadBalancedWebService_Template(t *testing.T) {
 				Version:                  "v1.29.0",
 			},
 			RootUserARN: "arn:aws:iam::123456789123:root",
-		})
+		}, stack.WithNLB([]string{"10.0.0.0/24", "10.1.0.0/24"}))
 		tpl, err := serializer.Template()
 		require.NoError(t, err, "template should render")
 		regExpGUID := regexp.MustCompile(`([a-f\d]{8}-)([a-f\d]{4}-){3}([a-f\d]{12})`) // Matches random guids
