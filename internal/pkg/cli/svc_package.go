@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -264,7 +265,7 @@ func (o *packageSvcOpts) validateOrAskSvcName() error {
 		if err != nil {
 			return fmt.Errorf("list services in the workspace: %w", err)
 		}
-		if !contains(o.name, names) {
+		if !slices.Contains(names, o.name) {
 			return fmt.Errorf("service '%s' does not exist in the workspace", o.name)
 		}
 		return nil
@@ -486,15 +487,6 @@ func (e *errDiffNotAvailable) Error() string {
 // ExitCode returns 2 when a diff is unavailable due to a parent error.
 func (e *errDiffNotAvailable) ExitCode() int {
 	return 2
-}
-
-func contains(s string, items []string) bool {
-	for _, item := range items {
-		if s == item {
-			return true
-		}
-	}
-	return false
 }
 
 // buildSvcPackageCmd builds the command for printing a service's CloudFormation template.

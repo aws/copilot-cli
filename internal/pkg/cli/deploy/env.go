@@ -78,11 +78,6 @@ type stackDescriber interface {
 	Resources() ([]*stack.Resource, error)
 }
 
-type addons struct {
-	stack stackBuilder
-	err   error
-}
-
 type envDeployer struct {
 	app *config.Application
 	env *config.Environment
@@ -103,13 +98,11 @@ type envDeployer struct {
 	newServiceStackDescriber func(string) stackDescriber
 
 	// Dependencies for parsing addons.
-	ws              WorkspaceAddonsReaderPathGetter
-	parseAddonsOnce sync.Once
-	parseAddons     func() (stackBuilder, error)
+	ws          WorkspaceAddonsReaderPathGetter
+	parseAddons func() (stackBuilder, error)
 
 	// Cached variables.
 	appRegionalResources *cfnstack.AppRegionalResources
-	addons               addons
 }
 
 // NewEnvDeployerInput contains information needed to construct an environment deployer.
@@ -177,14 +170,10 @@ func NewEnvDeployer(in *NewEnvDeployerInput) (*envDeployer, error) {
 		newServiceStackDescriber: func(svc string) stackDescriber {
 			return stack.NewStackDescriber(cfnstack.NameForWorkload(in.App.Name, in.Env.Name, svc), envManagerSession)
 		},
-
+		parseAddons: sync.OnceValues(func() (stackBuilder, error) {
+			return addon.ParseFromEnv(in.Workspace)
+		}),
 		ws: in.Workspace,
-	}
-	deployer.parseAddons = func() (stackBuilder, error) {
-		deployer.parseAddonsOnce.Do(func() {
-			deployer.addons.stack, deployer.addons.err = addon.ParseFromEnv(deployer.ws)
-		})
-		return deployer.addons.stack, deployer.addons.err
 	}
 	return deployer, nil
 }
