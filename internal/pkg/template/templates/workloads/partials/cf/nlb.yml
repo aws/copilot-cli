@@ -22,11 +22,11 @@ NetworkLoadBalancerSecurityGroup:
     'aws:copilot:description': 'A security group for your network load balancer allowing public traffic'
   Type: AWS::EC2::SecurityGroup
   Properties:
-    GroupDescription: allow traffic to the public facing load balancer on listener ports
+    GroupDescription: Allow traffic to the public facing load balancer on listener ports
     SecurityGroupIngress:
 {{- range $listener := .NLB.Listener }}
       - CidrIp: 0.0.0.0/0
-        Description: Allow from anyone on listener port {{ $listener.Port }}
+        Description: Allow {{- if eq $listener.Protocol "TLS" }} TCP {{- else }} {{ $listener.Protocol }} {{- end}} traffic from anyone on listener port {{ $listener.Port }}
         FromPort: {{ $listener.Port }}
         IpProtocol: {{- if eq $listener.Protocol "TLS" }} TCP {{- else }} {{ $listener.Protocol }} {{- end}}
         ToPort: {{ $listener.Port }}
