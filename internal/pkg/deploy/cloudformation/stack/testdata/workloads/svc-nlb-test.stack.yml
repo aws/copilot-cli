@@ -285,6 +285,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
     DependsOn:
       - NLBListener
       - NLBListener1
+      - NLBListener2
     Properties:
       PlatformVersion: LATEST
       Cluster:
@@ -338,8 +339,11 @@ Resources: # If a bucket URL is specified, that means the template exists.
           ContainerPort: 443
           TargetGroupArn: !Ref NetworkLoadBalancerTargetGroup
         - ContainerName: fe
-          ContainerPort: 8081
+          ContainerPort: 8080
           TargetGroupArn: !Ref NetworkLoadBalancerTargetGroup1
+        - ContainerName: fe
+          ContainerPort: 8081
+          TargetGroupArn: !Ref NetworkLoadBalancerTargetGroup2
       ServiceRegistries:
         - RegistryArn: !GetAtt DiscoveryService.Arn
           Port: !Ref TargetPort
@@ -362,13 +366,18 @@ Resources: # If a bucket URL is specified, that means the template exists.
       'aws:copilot:description': 'A security group for your network load balancer allowing public traffic'
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Allow traffic to the public facing load balancer on listener port
+      GroupDescription: Allow traffic to the public facing load balancer on listener ports
       SecurityGroupIngress:
         - CidrIp: 0.0.0.0/0
           Description: Allow TCP traffic from anyone on listener port 443
           FromPort: 443
           IpProtocol: TCP
           ToPort: 443
+        - CidrIp: 0.0.0.0/0
+          Description: Allow TCP traffic from anyone on listener port 8080
+          FromPort: 8080
+          IpProtocol: TCP
+          ToPort: 8080
         - CidrIp: 0.0.0.0/0
           Description: Allow UDP traffic from anyone on listener port 8081
           FromPort: 8081
@@ -405,11 +414,25 @@ Resources: # If a bucket URL is specified, that means the template exists.
       SslPolicy: ELBSecurityPolicy-TLS13-1-2-2021-06
   NLBListener1:
     Metadata:
-      'aws:copilot:description': 'A UDP listener on port `8081` that forwards traffic to your tasks'
+      'aws:copilot:description': 'A TCP listener on port `8080` that forwards traffic to your tasks'
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
       DefaultActions:
         - TargetGroupArn: !Ref NetworkLoadBalancerTargetGroup1
+          Type: forward
+      LoadBalancerArn: !Ref PublicNetworkLoadBalancerV2
+      Port: 8080
+      Protocol: TCP
+      Certificates:
+        - CertificateArn: !Ref NLBCertValidatorAction
+      SslPolicy: ELBSecurityPolicy-TLS13-1-2-2021-06
+  NLBListener2:
+    Metadata:
+      'aws:copilot:description': 'A UDP listener on port `8081` that forwards traffic to your tasks'
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - TargetGroupArn: !Ref NetworkLoadBalancerTargetGroup2
           Type: forward
       LoadBalancerArn: !Ref PublicNetworkLoadBalancerV2
       Port: 8081
@@ -429,6 +452,19 @@ Resources: # If a bucket URL is specified, that means the template exists.
       VpcId:
         Fn::ImportValue: !Sub "${AppName}-${EnvName}-VpcId"
   NetworkLoadBalancerTargetGroup1:
+    Metadata:
+      'aws:copilot:description': 'A target group to connect the network load balancer to your service on port 8080'
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Port: 8080
+      Protocol: TCP
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: 60 # ECS Default is 300; Copilot default is 60.
+      TargetType: ip
+      VpcId:
+        Fn::ImportValue: !Sub "${AppName}-${EnvName}-VpcId"
+  NetworkLoadBalancerTargetGroup2:
     Metadata:
       'aws:copilot:description': 'A target group to connect the network load balancer to your service on port 8081'
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
