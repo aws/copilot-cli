@@ -186,10 +186,10 @@ Outputs:
       Name: !Sub ${AWS::StackName}-DiscoveryServiceARN
   {{- if .NLB}}
   {{- if .NLB.UDPListenerExists }}
-  PublicNetworkLoadBalancerV2DNSName:
+  PublicNetworkLoadBalancerDNSName:
     Value: !GetAtt PublicNetworkLoadBalancerV2.DNSName
     Export:
-      Name: !Sub ${AWS::StackName}-PublicNetworkLoadBalancerV2DNSName
+      Name: !Sub ${AWS::StackName}-PublicNetworkLoadBalancerDNSName
   {{- else}}
   PublicNetworkLoadBalancerDNSName:
     Value: !GetAtt PublicNetworkLoadBalancer.DNSName
