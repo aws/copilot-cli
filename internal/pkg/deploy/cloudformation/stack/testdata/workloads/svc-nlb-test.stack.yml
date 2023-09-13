@@ -343,7 +343,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
       ServiceRegistries:
         - RegistryArn: !GetAtt DiscoveryService.Arn
           Port: !Ref TargetPort
-  NetworkLoadBalancer:
+  PublicNetworkLoadBalancerV2:
     Metadata:
       'aws:copilot:description': 'A Network Load Balancer to distribute public traffic to your service'
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
@@ -397,7 +397,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
       DefaultActions:
         - TargetGroupArn: !Ref NetworkLoadBalancerTargetGroup
           Type: forward
-      LoadBalancerArn: !Ref NetworkLoadBalancer
+      LoadBalancerArn: !Ref PublicNetworkLoadBalancerV2
       Port: 443
       Protocol: TLS
       Certificates:
@@ -411,7 +411,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
       DefaultActions:
         - TargetGroupArn: !Ref NetworkLoadBalancerTargetGroup1
           Type: forward
-      LoadBalancerArn: !Ref NetworkLoadBalancer
+      LoadBalancerArn: !Ref PublicNetworkLoadBalancerV2
       Port: 8081
       Protocol: UDP
   NetworkLoadBalancerTargetGroup:
@@ -458,8 +458,8 @@ Resources: # If a bucket URL is specified, that means the template exists.
               - ""
           Type: A
           AliasTarget:
-            HostedZoneId: !GetAtt NetworkLoadBalancer.CanonicalHostedZoneID
-            DNSName: !GetAtt NetworkLoadBalancer.DNSName
+            HostedZoneId: !GetAtt PublicNetworkLoadBalancerV2.CanonicalHostedZoneID
+            DNSName: !GetAtt PublicNetworkLoadBalancerV2.DNSName
   NLBCertValidatorAction:
     Metadata:
       'aws:copilot:description': "Request and validate the certificate for your Network Load Balancer"
@@ -467,7 +467,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Condition: HasAssociatedDomain
     Properties:
       ServiceToken: !GetAtt NLBCertValidatorFunction.Arn
-      LoadBalancerDNS: !GetAtt NetworkLoadBalancer.DNSName
+      LoadBalancerDNS: !GetAtt PublicNetworkLoadBalancerV2.DNSName
       EnvHostedZoneId:
         Fn::ImportValue: !Sub "${AppName}-${EnvName}-HostedZone"
       EnvName: !Ref EnvName
@@ -571,6 +571,6 @@ Outputs:
     Export:
       Name: !Sub ${AWS::StackName}-DiscoveryServiceARN
   PublicNetworkLoadBalancerDNSName:
-    Value: !GetAtt NetworkLoadBalancer.DNSName
+    Value: !GetAtt PublicNetworkLoadBalancerV2.DNSName
     Export:
-      Name: !Sub ${AWS::StackName}-NetworkLoadBalancerDNSName
+      Name: !Sub ${AWS::StackName}-PublicNetworkLoadBalancerDNSName
