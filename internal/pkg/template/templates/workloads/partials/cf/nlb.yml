@@ -188,7 +188,7 @@ NLBTargetGroup{{- if ne $i 0 }}{{$i}}{{end}}:
         !Sub "${AppName}-${EnvName}-VpcId"
 {{- end}}
 {{- end}}
-# BELOW HERE IS GOOD (I THINK)
+
 {{- if not .NLB.Aliases}}
 NLBDNSAlias:
   Metadata:
