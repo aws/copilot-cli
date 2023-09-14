@@ -3985,7 +3985,7 @@ func TestValidateExposedPorts(t *testing.T) {
 					},
 				},
 			},
-			wanted: fmt.Errorf(`containers "foo" and "mockMainContainer" are exposing the same port 80`),
+			wanted: fmt.Errorf(`containers "mockMainContainer" and "foo" are exposing the same port 80`),
 		},
 		"should not error out when alb target_port is same as that of sidecar container port but target_container is empty": {
 			in: validateExposedPortsOpts{
@@ -4067,6 +4067,13 @@ func TestValidateExposedPorts(t *testing.T) {
 				alb: &HTTP{
 					Main: RoutingRule{
 						TargetPort:      aws.Uint16(80),
+						TargetContainer: aws.String("foo"),
+					},
+				},
+				nlb: &NetworkLoadBalancerConfiguration{
+					Listener: NetworkLoadBalancerListener{
+						Port:            aws.String("8080/tcp"),
+						TargetPort:      aws.Int(80),
 						TargetContainer: aws.String("foo"),
 					},
 				},

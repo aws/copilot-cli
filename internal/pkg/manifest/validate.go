@@ -50,6 +50,10 @@ const (
 )
 
 const (
+	defaultProtocol = TCP
+)
+
+const (
 	// Listener rules have a quota of five condition values per rule.
 	// Please refer to https://docs.aws.amazon.com/elasticloadbalancing/latest/application/load-balancer-limits.html.
 	maxConditionsPerRule = 5
@@ -2050,29 +2054,40 @@ func validateDepsForEssentialContainers(deps map[string]containerDependency) err
 	return nil
 }
 
+type containerNameAndProtocol struct {
+	containerName     string
+	containerProtocol string
+}
+
 func validateExposedPorts(opts validateExposedPortsOpts) error {
-	containerNameFor := make(map[uint16]string)
-	populateMainContainerPort(containerNameFor, opts)
-	if err := populateSidecarContainerPortsAndValidate(containerNameFor, opts); err != nil {
+	portExposedTo := make(map[uint16]containerNameAndProtocol)
+
+	if err := populateAndValidateSidecarContainerPorts(portExposedTo, opts); err != nil {
 		return err
 	}
-	if err := populateALBPortsAndValidate(containerNameFor, opts); err != nil {
+	if err := populateAndValidateALBPorts(portExposedTo, opts); err != nil {
 		return err
 	}
-	if err := populateNLBPortsAndValidate(containerNameFor, opts); err != nil {
+	if err := populateAndValidateNLBPorts(portExposedTo, opts); err != nil {
+		return err
+	}
+	if err := populateAndValidateMainContainerPort(portExposedTo, opts); err != nil {
 		return err
 	}
 	return nil
 }
 
-func populateMainContainerPort(containerNameFor map[uint16]string, opts validateExposedPortsOpts) {
+func populateAndValidateMainContainerPort(portExposedTo map[uint16]containerNameAndProtocol, opts validateExposedPortsOpts) error {
 	if opts.mainContainerPort == nil {
-		return
+		return nil
 	}
-	containerNameFor[aws.Uint16Value(opts.mainContainerPort)] = opts.mainContainerName
+
+	port := aws.Uint16Value(opts.mainContainerPort)
+	protocol := defaultProtocol
+	return validateAndPopulateExposedPortMapping(portExposedTo, port, protocol, opts.mainContainerName)
 }
 
-func populateSidecarContainerPortsAndValidate(containerNameFor map[uint16]string, opts validateExposedPortsOpts) error {
+func populateAndValidateSidecarContainerPorts(portExposedTo map[uint16]containerNameAndProtocol, opts validateExposedPortsOpts) error {
 	for name, sidecar := range opts.sidecarConfig {
 		if sidecar.Port == nil {
 			continue
@@ -2081,100 +2096,121 @@ func populateSidecarContainerPortsAndValidate(containerNameFor map[uint16]string
 		if err != nil {
 			return err
 		}
-		port, err := strconv.ParseUint(aws.StringValue(sidecarPort), 10, 16)
+		parsedPort, err := strconv.ParseUint(aws.StringValue(sidecarPort), 10, 16)
 		if err != nil {
 			return err
 		}
-		if _, ok := containerNameFor[uint16(port)]; ok {
-			return &errContainersExposingSamePort{
-				firstContainer:  name,
-				secondContainer: containerNameFor[uint16(port)],
-				port:            uint16(port),
-			}
+
+		port := uint16(parsedPort)
+		protocol := defaultProtocol
+		if err = validateAndPopulateExposedPortMapping(portExposedTo, port, protocol, name); err != nil {
+			return err
 		}
-		containerNameFor[uint16(port)] = name
 	}
 	return nil
 }
 
-func populateALBPortsAndValidate(containerNameFor map[uint16]string, opts validateExposedPortsOpts) error {
-	// This condition takes care of the use case where target_container is set to x container and
-	// target_port exposing port 80 which is already exposed by container y.That means container x
-	// is trying to expose the port that is already being exposed by container y, so error out.
+func populateAndValidateALBPorts(portExposedTo map[uint16]containerNameAndProtocol, opts validateExposedPortsOpts) error {
 	if opts.alb == nil || opts.alb.IsEmpty() {
 		return nil
 	}
+
 	alb := opts.alb
 	for _, rule := range alb.RoutingRules() {
+		targetProtocol := defaultProtocol
+		targetPort := aws.Uint16Value(rule.TargetPort)
 		if rule.TargetPort == nil {
 			continue
 		}
-		if err := validateContainersNotExposingSamePort(containerNameFor, aws.Uint16Value(rule.TargetPort), rule.TargetContainer); err != nil {
+
+		// Prefer `http.target_container`, then existing exposed port mapping, then fallback on name of main container
+		targetContainer := opts.mainContainerName
+		if existingContainerNameAndProtocol, ok := portExposedTo[targetPort]; ok {
+			targetContainer = existingContainerNameAndProtocol.containerName
+		}
+		if rule.TargetContainer != nil {
+			targetContainer = aws.StringValue(rule.TargetContainer)
+		}
+
+		if err := validateAndPopulateExposedPortMapping(portExposedTo, targetPort, targetProtocol, targetContainer); err != nil {
 			return err
 		}
-		targetContainerName := opts.mainContainerName
-		if rule.TargetContainer != nil {
-			targetContainerName = aws.StringValue(rule.TargetContainer)
-		}
-		containerNameFor[aws.Uint16Value(rule.TargetPort)] = targetContainerName
-	}
-
-	return nil
-}
-
-func validateContainersNotExposingSamePort(containerNameFor map[uint16]string, targetPort uint16, targetContainer *string) error {
-	container, exists := containerNameFor[targetPort]
-	if !exists {
-		return nil
-	}
-	if targetContainer != nil && container != aws.StringValue(targetContainer) {
-		return &errContainersExposingSamePort{
-			firstContainer:  aws.StringValue(targetContainer),
-			secondContainer: container,
-			port:            targetPort,
-		}
 	}
 	return nil
 }
 
-func populateNLBPortsAndValidate(containerNameFor map[uint16]string, opts validateExposedPortsOpts) error {
+func populateAndValidateNLBPorts(portExposedTo map[uint16]containerNameAndProtocol, opts validateExposedPortsOpts) error {
 	if opts.nlb == nil || opts.nlb.IsEmpty() {
 		return nil
 	}
+
 	nlb := opts.nlb
-	if err := populateAndValidateNLBPorts(nlb.Listener, containerNameFor, opts.mainContainerName); err != nil {
+	if err := populateAndValidateNLBListenerPorts(nlb.Listener, portExposedTo, opts.mainContainerName); err != nil {
 		return fmt.Errorf(`validate "nlb": %w`, err)
 	}
 
 	for idx, listener := range nlb.AdditionalListeners {
-		if err := populateAndValidateNLBPorts(listener, containerNameFor, opts.mainContainerName); err != nil {
+		if err := populateAndValidateNLBListenerPorts(listener, portExposedTo, opts.mainContainerName); err != nil {
 			return fmt.Errorf(`validate "nlb.additional_listeners[%d]": %w`, idx, err)
 		}
 	}
 	return nil
 }
 
-func populateAndValidateNLBPorts(listener NetworkLoadBalancerListener, containerNameFor map[uint16]string, mainContainerName string) error {
-	nlbPort, _, err := ParsePortMapping(listener.Port)
+func populateAndValidateNLBListenerPorts(listener NetworkLoadBalancerListener, portExposedTo map[uint16]containerNameAndProtocol, mainContainerName string) error {
+	nlbRecieverPort, nlbProtocol, err := ParsePortMapping(listener.Port)
 	if err != nil {
 		return err
 	}
-	port, err := strconv.ParseUint(aws.StringValue(nlbPort), 10, 16)
+	port, err := strconv.ParseUint(aws.StringValue(nlbRecieverPort), 10, 16)
 	if err != nil {
 		return err
 	}
+
 	targetPort := uint16(port)
 	if listener.TargetPort != nil {
 		targetPort = uint16(aws.IntValue(listener.TargetPort))
 	}
-	if err = validateContainersNotExposingSamePort(containerNameFor, uint16(aws.IntValue(listener.TargetPort)), listener.TargetContainer); err != nil {
-		return err
+	targetProtocol := defaultProtocol
+	if nlbProtocol != nil {
+		targetProtocol = strings.ToUpper(aws.StringValue(nlbProtocol))
 	}
 	targetContainer := mainContainerName
 	if listener.TargetContainer != nil {
 		targetContainer = aws.StringValue(listener.TargetContainer)
 	}
-	containerNameFor[targetPort] = targetContainer
+	return validateAndPopulateExposedPortMapping(portExposedTo, targetPort, targetProtocol, targetContainer)
+}
+
+func validateAndPopulateExposedPortMapping(portExposedTo map[uint16]containerNameAndProtocol, targetPort uint16, targetProtocol string, targetContainer string) error {
+	exposedContainerAndProtocol, alreadyExposed := portExposedTo[targetPort]
+	exposedContainer := exposedContainerAndProtocol.containerName
+	exposedProtocol := exposedContainerAndProtocol.containerProtocol
+
+	// Port is not associated with container and protocol, populate map
+	if !alreadyExposed {
+		portExposedTo[targetPort] = containerNameAndProtocol{
+			containerName:     targetContainer,
+			containerProtocol: targetProtocol,
+		}
+		return nil
+	}
+
+	if exposedContainer != targetContainer {
+		return &errContainersExposingSamePort{
+			firstContainer:  targetContainer,
+			secondContainer: exposedContainer,
+			port:            targetPort,
+		}
+	}
+	if exposedProtocol != targetProtocol {
+		return &errContainerPortExposedWithMultipleProtocol{
+			container:      exposedContainer,
+			port:           targetPort,
+			firstProtocol:  targetProtocol,
+			secondProtocol: exposedProtocol,
+		}
+	}
 	return nil
 }
 
