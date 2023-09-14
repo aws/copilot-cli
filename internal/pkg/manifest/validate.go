@@ -2116,6 +2116,7 @@ func populateAndValidateALBPorts(portExposedTo map[uint16]containerNameAndProtoc
 		if rule.TargetPort == nil {
 			continue
 		}
+		targetPort := aws.Uint16Value(rule.TargetPort)
 
 		// Prefer `http.target_container`, then existing exposed port mapping, then fallback on name of main container
 		targetContainer := opts.mainContainerName
@@ -2126,7 +2127,7 @@ func populateAndValidateALBPorts(portExposedTo map[uint16]containerNameAndProtoc
 			targetContainer = aws.StringValue(rule.TargetContainer)
 		}
 
-		if err := validateAndPopulateExposedPortMapping(portExposedTo, aws.Uint16Value(rule.TargetPort), defaultProtocol, targetContainer); err != nil {
+		if err := validateAndPopulateExposedPortMapping(portExposedTo, targetPort, defaultProtocol, targetContainer); err != nil {
 			return err
 		}
 	}
