@@ -2062,6 +2062,9 @@ type containerNameAndProtocol struct {
 func validateExposedPorts(opts validateExposedPortsOpts) error {
 	portExposedTo := make(map[uint16]containerNameAndProtocol)
 
+	if err := populateAndValidateMainContainerPort(portExposedTo, opts); err != nil {
+		return err
+	}
 	if err := populateAndValidateSidecarContainerPorts(portExposedTo, opts); err != nil {
 		return err
 	}
@@ -2069,9 +2072,6 @@ func validateExposedPorts(opts validateExposedPortsOpts) error {
 		return err
 	}
 	if err := populateAndValidateNLBPorts(portExposedTo, opts); err != nil {
-		return err
-	}
-	if err := populateAndValidateMainContainerPort(portExposedTo, opts); err != nil {
 		return err
 	}
 	return nil
