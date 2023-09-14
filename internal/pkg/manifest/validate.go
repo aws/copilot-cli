@@ -2175,10 +2175,16 @@ func populateAndValidateNLBListenerPorts(listener NetworkLoadBalancerListener, p
 	if nlbProtocol != nil {
 		targetProtocol = strings.ToUpper(aws.StringValue(nlbProtocol))
 	}
+
+	// Prefer `nlb.target_container`, then existing exposed port mapping, then fallback on name of main container
 	targetContainer := mainContainerName
+	if existingContainerNameAndProtocol, ok := portExposedTo[targetPort]; ok {
+		targetContainer = existingContainerNameAndProtocol.containerName
+	}
 	if listener.TargetContainer != nil {
 		targetContainer = aws.StringValue(listener.TargetContainer)
 	}
+
 	return validateAndPopulateExposedPortMapping(portExposedTo, targetPort, targetProtocol, targetContainer)
 }
 
