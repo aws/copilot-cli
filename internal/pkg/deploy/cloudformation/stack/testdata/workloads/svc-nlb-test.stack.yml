@@ -425,9 +425,6 @@ Resources: # If a bucket URL is specified, that means the template exists.
       LoadBalancerArn: !Ref PublicNetworkLoadBalancerV2
       Port: 8080
       Protocol: TCP
-      Certificates:
-        - CertificateArn: !Ref NLBCertValidatorAction
-      SslPolicy: ELBSecurityPolicy-TLS13-1-2-2021-06
   NLBListener2:
     Metadata:
       'aws:copilot:description': 'A UDP listener on port `8081` that forwards traffic to your tasks'
