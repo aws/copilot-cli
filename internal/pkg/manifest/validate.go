@@ -2082,9 +2082,7 @@ func populateAndValidateMainContainerPort(portExposedTo map[uint16]containerName
 		return nil
 	}
 
-	port := aws.Uint16Value(opts.mainContainerPort)
-	protocol := defaultProtocol
-	return validateAndPopulateExposedPortMapping(portExposedTo, port, protocol, opts.mainContainerName)
+	return validateAndPopulateExposedPortMapping(portExposedTo, aws.Uint16Value(opts.mainContainerPort), defaultProtocol, opts.mainContainerName)
 }
 
 func populateAndValidateSidecarContainerPorts(portExposedTo map[uint16]containerNameAndProtocol, opts validateExposedPortsOpts) error {
@@ -2101,9 +2099,7 @@ func populateAndValidateSidecarContainerPorts(portExposedTo map[uint16]container
 			return err
 		}
 
-		port := uint16(parsedPort)
-		protocol := defaultProtocol
-		if err = validateAndPopulateExposedPortMapping(portExposedTo, port, protocol, name); err != nil {
+		if err = validateAndPopulateExposedPortMapping(portExposedTo, uint16(parsedPort), defaultProtocol, name); err != nil {
 			return err
 		}
 	}
@@ -2117,8 +2113,6 @@ func populateAndValidateALBPorts(portExposedTo map[uint16]containerNameAndProtoc
 
 	alb := opts.alb
 	for _, rule := range alb.RoutingRules() {
-		targetProtocol := defaultProtocol
-		targetPort := aws.Uint16Value(rule.TargetPort)
 		if rule.TargetPort == nil {
 			continue
 		}
@@ -2132,7 +2126,7 @@ func populateAndValidateALBPorts(portExposedTo map[uint16]containerNameAndProtoc
 			targetContainer = aws.StringValue(rule.TargetContainer)
 		}
 
-		if err := validateAndPopulateExposedPortMapping(portExposedTo, targetPort, targetProtocol, targetContainer); err != nil {
+		if err := validateAndPopulateExposedPortMapping(portExposedTo, aws.Uint16Value(rule.TargetPort), defaultProtocol, targetContainer); err != nil {
 			return err
 		}
 	}
@@ -2171,7 +2165,12 @@ func populateAndValidateNLBListenerPorts(listener NetworkLoadBalancerListener, p
 	if listener.TargetPort != nil {
 		targetPort = uint16(aws.IntValue(listener.TargetPort))
 	}
+
+	// Prefer `nlb.port`, then existing exposed port mapping, then fallback on default protocol
 	targetProtocol := defaultProtocol
+	if existingContainerNameAndProtocol, ok := portExposedTo[targetPort]; ok {
+		targetProtocol = existingContainerNameAndProtocol.containerProtocol
+	}
 	if nlbProtocol != nil {
 		targetProtocol = strings.ToUpper(aws.StringValue(nlbProtocol))
 	}
