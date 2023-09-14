@@ -22,6 +22,7 @@ The steps involved in `job deploy` are:
       --allow-downgrade                Optional. Allow using an older version of Copilot to update Copilot components
                                        updated by a newer version of Copilot.
   -a, --app string                     Name of the application.
+      --detach                         Optional. Skip displaying CloudFormation deployment progress.
       --diff                           Compares the generated CloudFormation template to the deployed stack.
   -e, --env string                     Name of the environment.
   -h, --help                           help for deploy

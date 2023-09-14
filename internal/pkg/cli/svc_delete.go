@@ -8,8 +8,10 @@ package cli
 import (
 	"errors"
 	"fmt"
-	clideploy "github.com/aws/copilot-cli/internal/pkg/cli/deploy"
 	"os"
+	"slices"
+
+	clideploy "github.com/aws/copilot-cli/internal/pkg/cli/deploy"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
@@ -295,7 +297,7 @@ func (o *deleteSvcOpts) deleteStacks(wkldType string, envs []*config.Environment
 func (o *deleteSvcOpts) emptyECRRepos(envs []*config.Environment) error {
 	var uniqueRegions []string
 	for _, env := range envs {
-		if !contains(env.Region, uniqueRegions) {
+		if !slices.Contains(uniqueRegions, env.Region) {
 			uniqueRegions = append(uniqueRegions, env.Region)
 		}
 	}

@@ -227,7 +227,7 @@ Resources:
               - Name: BuildOutput
         {{- range $stage := .Stages}}
         {{- $numDeployments := len $stage.Deployments}}{{- if gt $numDeployments 0}}
-        - Name: DeployTo-{{$stage.Name}}
+        - Name: {{$stage.FullName}}
           Actions:
             {{- if $stage.Approval }}
             - Name: {{$stage.Approval.Name}}

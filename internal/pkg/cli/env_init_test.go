@@ -38,6 +38,7 @@ type initEnvMocks struct {
 	ec2Client    *mocks.Mockec2Client
 	selApp       *mocks.MockappSelector
 	store        *mocks.Mockstore
+	envLister    *mocks.MockwsEnvironmentsLister
 	wsAppName    string
 }
 
@@ -111,8 +112,20 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 				m.wsAppName = "phonetool"
 				m.store.EXPECT().GetApplication("phonetool").Return(nil, nil)
 				m.store.EXPECT().GetEnvironment("phonetool", "test-pdx").Return(nil, nil)
+				m.envLister.EXPECT().ListEnvironments().Return([]string{}, nil)
 			},
 			wantedErrMsg: "environment test-pdx already exists",
+		},
+		"should skip error if environment already exists in current workspace": {
+			inEnvName: "test-pdx",
+			inAppName: "phonetool",
+
+			setupMocks: func(m *initEnvMocks) {
+				m.wsAppName = "phonetool"
+				m.store.EXPECT().GetApplication("phonetool").Return(nil, nil)
+				m.store.EXPECT().GetEnvironment("phonetool", "test-pdx").Return(nil, nil)
+				m.envLister.EXPECT().ListEnvironments().Return([]string{"test-pdx"}, nil)
+			},
 		},
 		"cannot specify both vpc resources importing flags and configuring flags": {
 			inEnvName: "test-pdx",
@@ -270,7 +283,8 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			m := &initEnvMocks{
-				store: mocks.NewMockstore(ctrl),
+				store:     mocks.NewMockstore(ctrl),
+				envLister: mocks.NewMockwsEnvironmentsLister(ctrl),
 			}
 			if tc.setupMocks != nil {
 				tc.setupMocks(m)
@@ -302,6 +316,7 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 				},
 				store:     m.store,
 				wsAppName: m.wsAppName,
+				envLister: m.envLister,
 			}
 
 			// WHEN
@@ -380,9 +395,29 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 						Get(envInitNamePrompt, envInitNameHelpPrompt, gomock.Any(), gomock.Any()).
 						Return("test", nil),
 					m.store.EXPECT().GetEnvironment(mockApp, mockEnv).Return(nil, nil),
+					m.envLister.EXPECT().ListEnvironments().Return([]string{}, nil),
 				)
 			},
 			wantedError: errors.New("environment test already exists"),
+		},
+		"should skip error if environment already exists in workspace": {
+			inAppName: mockApp,
+			inProfile: mockProfile,
+			inDefault: true,
+			setupMocks: func(m initEnvMocks) {
+				gomock.InOrder(
+					m.prompt.EXPECT().
+						Get(envInitNamePrompt, envInitNameHelpPrompt, gomock.Any(), gomock.Any()).
+						Return("test", nil),
+					m.store.EXPECT().GetEnvironment(mockApp, mockEnv).Return(nil, nil),
+					m.envLister.EXPECT().ListEnvironments().Return([]string{mockEnv}, nil),
+					m.sessProvider.EXPECT().FromProfile(mockProfile).Return(&session.Session{
+						Config: &aws.Config{
+							Region: aws.String("us-west-2"),
+						},
+					}, nil).AnyTimes(),
+				)
+			},
 		},
 		"should create a session from a named profile if flag is provided": {
 			inAppName: mockApp,
@@ -920,6 +955,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 				ec2Client:    mocks.NewMockec2Client(ctrl),
 				selApp:       mocks.NewMockappSelector(ctrl),
 				store:        mocks.NewMockstore(ctrl),
+				envLister:    mocks.NewMockwsEnvironmentsLister(ctrl),
 			}
 
 			tc.setupMocks(mocks)
@@ -948,6 +984,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 				prompt:    mocks.prompt,
 				selApp:    mocks.selApp,
 				store:     mocks.store,
+				envLister: mocks.envLister,
 			}
 
 			// WHEN
