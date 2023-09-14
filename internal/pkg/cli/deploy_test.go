@@ -37,7 +37,7 @@ name: fe
 type: Load Balanced Web Service`)
 	testCases := map[string]struct {
 		inAppName    string
-		inName       string
+		inNames      []string
 		inEnvName    string
 		inShouldInit *bool
 		inDeployEnv  *bool
@@ -54,7 +54,7 @@ type: Load Balanced Web Service`)
 	}{
 		"prompts for initialization and deployment of environment when workload initialized": {
 			inAppName: "app",
-			inName:    "fe",
+			inNames:   []string{"fe"},
 			inEnvName: "test",
 			wantedErr: "",
 			mockSel:   func(m *mocks.MockwsSelector) {},
@@ -122,7 +122,7 @@ type: Load Balanced Web Service`)
 		},
 		"prompts for initializing workload": {
 			inAppName:    "app",
-			inName:       "fe",
+			inNames:      []string{"fe"},
 			inEnvName:    "test",
 			inInitEnv:    aws.Bool(false),
 			inDeployEnv:  aws.Bool(false),
@@ -155,7 +155,7 @@ type: Load Balanced Web Service`)
 		},
 		"initializes workload with flag specified": {
 			inAppName:    "app",
-			inName:       "fe",
+			inNames:      []string{"fe"},
 			inEnvName:    "test",
 			inInitEnv:    aws.Bool(false),
 			inDeployEnv:  aws.Bool(false),
@@ -186,7 +186,7 @@ type: Load Balanced Web Service`)
 		},
 		"errors if noInit specified": {
 			inAppName:    "app",
-			inName:       "fe",
+			inNames:      []string{"fe"},
 			inEnvName:    "test",
 			inInitEnv:    aws.Bool(false),
 			inDeployEnv:  aws.Bool(false),
@@ -217,7 +217,7 @@ type: Load Balanced Web Service`)
 		},
 		"errors reading manifest": {
 			inAppName:   "app",
-			inName:      "fe",
+			inNames:     []string{"fe"},
 			inEnvName:   "test",
 			inInitEnv:   aws.Bool(false),
 			inDeployEnv: aws.Bool(false),
@@ -245,7 +245,7 @@ type: Load Balanced Web Service`)
 		},
 		"error getting workload type": {
 			inAppName:   "app",
-			inName:      "fe",
+			inNames:     []string{"fe"},
 			inEnvName:   "test",
 			inInitEnv:   aws.Bool(false),
 			inDeployEnv: aws.Bool(false),
@@ -275,7 +275,7 @@ type: Load Balanced Web Service`)
 		},
 		"error listing workloads": {
 			inAppName:   "app",
-			inName:      "fe",
+			inNames:     []string{"fe"},
 			inEnvName:   "test",
 			inInitEnv:   aws.Bool(false),
 			inDeployEnv: aws.Bool(false),
@@ -363,7 +363,7 @@ type: Load Balanced Web Service`)
 		},
 		"doesn't prompt if name is specified": {
 			inAppName:   "app",
-			inName:      "fe",
+			inNames:     []string{"fe"},
 			inEnvName:   "test",
 			inInitEnv:   aws.Bool(false),
 			inDeployEnv: aws.Bool(false),
@@ -413,7 +413,7 @@ type: Load Balanced Web Service`)
 		},
 		"ask error": {
 			inAppName:   "app",
-			inName:      "fe",
+			inNames:     []string{"fe"},
 			inEnvName:   "test",
 			inInitEnv:   aws.Bool(false),
 			inDeployEnv: aws.Bool(false),
@@ -441,7 +441,7 @@ type: Load Balanced Web Service`)
 		},
 		"validate error": {
 			inAppName:   "app",
-			inName:      "fe",
+			inNames:     []string{"fe"},
 			inEnvName:   "test",
 			inInitEnv:   aws.Bool(false),
 			inDeployEnv: aws.Bool(false),
@@ -470,7 +470,7 @@ type: Load Balanced Web Service`)
 		},
 		"execute error": {
 			inAppName:   "app",
-			inName:      "fe",
+			inNames:     []string{"fe"},
 			inEnvName:   "test",
 			inInitEnv:   aws.Bool(false),
 			inDeployEnv: aws.Bool(false),
@@ -500,7 +500,7 @@ type: Load Balanced Web Service`)
 		},
 		"workload init error": {
 			inAppName:         "app",
-			inName:            "fe",
+			inNames:           []string{"fe"},
 			inEnvName:         "test",
 			wantedErr:         "add workload to app: some error",
 			inDeployEnv:       aws.Bool(false),
@@ -526,7 +526,7 @@ type: Load Balanced Web Service`)
 		},
 		"confirm workload init error": {
 			inAppName:   "app",
-			inName:      "fe",
+			inNames:     []string{"fe"},
 			inEnvName:   "test",
 			wantedErr:   "confirm initialize workload: some error",
 			inDeployEnv: aws.Bool(false),
@@ -592,7 +592,7 @@ type: Load Balanced Web Service`)
 		},
 		"error listing ws envs": {
 			inAppName:         "app",
-			inName:            "fe",
+			inNames:           []string{"fe"},
 			wantedErr:         "get initialized environments: some error",
 			mockSel:           func(m *mocks.MockwsSelector) {},
 			mockPrompt:        func(m *mocks.Mockprompter) {},
@@ -608,7 +608,7 @@ type: Load Balanced Web Service`)
 		},
 		"error selecting environment": {
 			inAppName: "app",
-			inName:    "fe",
+			inNames:   []string{"fe"},
 			wantedErr: "get environment name: some error",
 			mockSel: func(m *mocks.MockwsSelector) {
 				m.EXPECT().Environment(gomock.Any(), "", "app", prompt.Option{Value: "prod", Hint: "uninitialized"}).Return("", errors.New("some error"))
@@ -623,6 +623,42 @@ type: Load Balanced Web Service`)
 				m.EXPECT().ListEnvironments().Return([]string{"prod"}, nil)
 			},
 			mockInit: func(m *mocks.MockwkldInitializerWithoutManifest) {},
+		},
+		"deploys multiple workloads": {
+			inAppName:   "app",
+			inEnvName:   "test",
+			inNames:     []string{"fe", "be"},
+			inInitEnv:   aws.Bool(false),
+			inDeployEnv: aws.Bool(false),
+
+			mockSel: func(m *mocks.MockwsSelector) {
+			},
+			mockActionCommand: func(m *mocks.MockactionCommand) {
+				m.EXPECT().Ask().Times(2)
+				m.EXPECT().Validate().Times(2)
+				m.EXPECT().Execute().Times(2)
+				m.EXPECT().RecommendActions().Times(2)
+			},
+			mockCmd: func(m *mocks.Mockcmd) {
+
+			},
+			mockStore: func(m *mocks.Mockstore) {
+				mockBeWl := config.Workload{
+					App:  "app",
+					Name: "be",
+					Type: "Backend Service",
+				}
+				m.EXPECT().GetEnvironment("app", "test").Return(&mockEnv, nil)
+				m.EXPECT().ListWorkloads("app").Return([]*config.Workload{&mockWl, &mockBeWl}, nil).Times(2)
+				m.EXPECT().GetWorkload("app", "fe").Return(&mockWl, nil)
+				m.EXPECT().GetWorkload("app", "be").Return(&mockBeWl, nil)
+			},
+			mockWs: func(m *mocks.MockwsWlDirReader) {
+				m.EXPECT().ReadWorkloadManifest("fe").Times(0)
+				m.EXPECT().ListEnvironments().Return([]string{"test"}, nil)
+			},
+			mockPrompt: func(m *mocks.Mockprompter) {},
+			mockInit:   func(m *mocks.MockwkldInitializerWithoutManifest) {},
 		},
 	}
 	for name, tc := range testCases {
@@ -668,8 +704,8 @@ type: Load Balanced Web Service`)
 
 				setupDeployCmd: func(o *deployOpts, name, wlType string) actionCommand { return mockCmd },
 			}
-			if tc.inName != "" {
-				opts.workloadNames = []string{tc.inName}
+			if tc.inNames != nil {
+				opts.workloadNames = tc.inNames
 			}
 			// WHEN
 			err := opts.Run()
