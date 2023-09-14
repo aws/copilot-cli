@@ -358,7 +358,7 @@ type: Load Balanced Web Service`)
 			},
 			mockWs: func(m *mocks.MockwsWlDirReader) {
 				m.EXPECT().ListEnvironments().Return([]string{"test"}, nil)
-				m.EXPECT().ReadWorkloadManifest("fe").Times(0)
+				m.EXPECT().ReadWorkloadManifest("mailer").Times(0)
 			},
 		},
 		"doesn't prompt if name is specified": {
@@ -651,14 +651,12 @@ type: Load Balanced Web Service`)
 				deployVars: deployVars{
 					deployWkldVars: deployWkldVars{
 						appName: tc.inAppName,
-						name:    tc.inName,
 						envName: tc.inEnvName,
 					},
 					yesInitWkld: tc.inShouldInit,
 					deployEnv:   tc.inDeployEnv,
 					yesInitEnv:  tc.inInitEnv,
 				},
-				deployWkld:      mockCmd,
 				newInitEnvCmd:   func(o *deployOpts) (cmd, error) { return mockNoActionCmd, nil },
 				newDeployEnvCmd: func(o *deployOpts) (cmd, error) { return mockNoActionCmd, nil },
 				sel:             mockSel,
@@ -668,9 +666,11 @@ type: Load Balanced Web Service`)
 
 				newWorkloadAdder: func() wkldInitializerWithoutManifest { return mockInit },
 
-				setupDeployCmd: func(o *deployOpts, wlType string) {},
+				setupDeployCmd: func(o *deployOpts, name, wlType string) actionCommand { return mockCmd },
 			}
-
+			if tc.inName != "" {
+				opts.workloadNames = []string{tc.inName}
+			}
 			// WHEN
 			err := opts.Run()
 
