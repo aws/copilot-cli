@@ -2184,8 +2184,6 @@ func populateAndValidateNLBListenerPorts(listener NetworkLoadBalancerListener, p
 
 func validateAndPopulateExposedPortMapping(portExposedTo map[uint16]containerNameAndProtocol, targetPort uint16, targetProtocol string, targetContainer string) error {
 	exposedContainerAndProtocol, alreadyExposed := portExposedTo[targetPort]
-	exposedContainer := exposedContainerAndProtocol.containerName
-	exposedProtocol := exposedContainerAndProtocol.containerProtocol
 
 	// Port is not associated with container and protocol, populate map
 	if !alreadyExposed {
@@ -2196,6 +2194,8 @@ func validateAndPopulateExposedPortMapping(portExposedTo map[uint16]containerNam
 		return nil
 	}
 
+	exposedContainer := exposedContainerAndProtocol.containerName
+	exposedProtocol := exposedContainerAndProtocol.containerProtocol
 	if exposedContainer != targetContainer {
 		return &errContainersExposingSamePort{
 			firstContainer:  targetContainer,
