@@ -304,24 +304,24 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 			// DeleteEnvOpts, and DeletePipelineOpts. It allows us to instead simply
 			// test if the deletion of those resources succeeded or failed.
 			mockSvcDeleteExecutor := mocks.NewMockexecutor(ctrl)
-			mockSvcExecutorProvider := func(svcName string) (executor, error) {
+			mockSvcExecutorProvider := func(appName, svcName string) (executor, error) {
 				return mockSvcDeleteExecutor, nil
 			}
 			mockJobDeleteExecutor := mocks.NewMockexecutor(ctrl)
-			mockJobExecutorProvider := func(jobName string) (executor, error) {
+			mockJobExecutorProvider := func(appName, jobName string) (executor, error) {
 				return mockJobDeleteExecutor, nil
 			}
 			mockTaskDeleteExecutor := mocks.NewMockexecutor(ctrl)
-			mockTaskDeleteProvider := func(envName, taskName string) (executor, error) {
+			mockTaskDeleteProvider := func(appName, envName, taskName string) (executor, error) {
 				return mockTaskDeleteExecutor, nil
 			}
 			mockEnvDeleteExecutor := mocks.NewMockexecuteAsker(ctrl)
-			mockAskExecutorProvider := func(envName string) (executeAsker, error) {
+			mockAskExecutorProvider := func(appName, envName string) (executeAsker, error) {
 				return mockEnvDeleteExecutor, nil
 			}
 
 			mockPipelineDeleteExecutor := mocks.NewMockexecutor(ctrl)
-			mockPipelineExecutorProvider := func(pipelineName string) (executor, error) {
+			mockPipelineExecutorProvider := func(appName, pipelineName string) (executor, error) {
 				return mockPipelineDeleteExecutor, nil
 			}
 

@@ -65,11 +65,11 @@ type deleteAppOpts struct {
 	pipelineLister         deployedPipelineLister
 	sel                    appSelector
 	s3                     func(session *session.Session) bucketEmptier
-	svcDeleteExecutor      func(svcName string) (executor, error)
-	jobDeleteExecutor      func(jobName string) (executor, error)
-	envDeleteExecutor      func(envName string) (executeAsker, error)
-	taskDeleteExecutor     func(envName, taskName string) (executor, error)
-	pipelineDeleteExecutor func(pipelineName string) (executor, error)
+	svcDeleteExecutor      func(appName, svcName string) (executor, error)
+	jobDeleteExecutor      func(appName, jobName string) (executor, error)
+	envDeleteExecutor      func(appName, envName string) (executeAsker, error)
+	taskDeleteExecutor     func(appName, envName, taskName string) (executor, error)
+	pipelineDeleteExecutor func(appName, pipelineName string) (executor, error)
 	existingWorkSpace      func() (wsAppManagerDeleter, error)
 }
 
@@ -93,32 +93,32 @@ func newDeleteAppOpts(vars deleteAppVars) (*deleteAppOpts, error) {
 		},
 		pipelineLister: deploy.NewPipelineStore(rg.New(defaultSession)),
 		sel:            selector.NewAppEnvSelector(prompter, store),
-		svcDeleteExecutor: func(svcName string) (executor, error) {
+		svcDeleteExecutor: func(appName, svcName string) (executor, error) {
 			opts, err := newDeleteSvcOpts(deleteSvcVars{
 				skipConfirmation: true, // always skip sub-confirmations
 				name:             svcName,
-				appName:          vars.name,
+				appName:          appName,
 			})
 			if err != nil {
 				return nil, err
 			}
 			return opts, nil
 		},
-		jobDeleteExecutor: func(jobName string) (executor, error) {
+		jobDeleteExecutor: func(appName, jobName string) (executor, error) {
 			opts, err := newDeleteJobOpts(deleteJobVars{
 				skipConfirmation: true,
 				name:             jobName,
-				appName:          vars.name,
+				appName:          appName,
 			})
 			if err != nil {
 				return nil, err
 			}
 			return opts, nil
 		},
-		envDeleteExecutor: func(envName string) (executeAsker, error) {
+		envDeleteExecutor: func(appName, envName string) (executeAsker, error) {
 			opts, err := newDeleteEnvOpts(deleteEnvVars{
 				skipConfirmation: true,
-				appName:          vars.name,
+				appName:          appName,
 				name:             envName,
 			})
 			if err != nil {
@@ -126,9 +126,9 @@ func newDeleteAppOpts(vars deleteAppVars) (*deleteAppOpts, error) {
 			}
 			return opts, nil
 		},
-		taskDeleteExecutor: func(envName, taskName string) (executor, error) {
+		taskDeleteExecutor: func(appName, envName, taskName string) (executor, error) {
 			opts, err := newDeleteTaskOpts(deleteTaskVars{
-				app:              vars.name,
+				app:              appName,
 				env:              envName,
 				name:             taskName,
 				skipConfirmation: true,
@@ -138,9 +138,9 @@ func newDeleteAppOpts(vars deleteAppVars) (*deleteAppOpts, error) {
 			}
 			return opts, nil
 		},
-		pipelineDeleteExecutor: func(pipelineName string) (executor, error) {
+		pipelineDeleteExecutor: func(appName, pipelineName string) (executor, error) {
 			opts, err := newDeletePipelineOpts(deletePipelineVars{
-				appName:            vars.name,
+				appName:            appName,
 				name:               pipelineName,
 				skipConfirmation:   true,
 				shouldDeleteSecret: true,
@@ -242,7 +242,7 @@ func (o *deleteAppOpts) deleteSvcs() error {
 	}
 
 	for _, svc := range svcs {
-		cmd, err := o.svcDeleteExecutor(svc.Name)
+		cmd, err := o.svcDeleteExecutor(o.name, svc.Name)
 		if err != nil {
 			return err
 		}
@@ -260,7 +260,7 @@ func (o *deleteAppOpts) deleteJobs() error {
 	}
 
 	for _, job := range jobs {
-		cmd, err := o.jobDeleteExecutor(job.Name)
+		cmd, err := o.jobDeleteExecutor(o.name, job.Name)
 		if err != nil {
 			return err
 		}
@@ -284,7 +284,7 @@ func (o *deleteAppOpts) deleteEnvs() error {
 			return err
 		}
 		for _, task := range tasks {
-			taskCmd, err := o.taskDeleteExecutor(env.Name, task.TaskName())
+			taskCmd, err := o.taskDeleteExecutor(o.name, env.Name, task.TaskName())
 			if err != nil {
 				return err
 			}
@@ -293,7 +293,7 @@ func (o *deleteAppOpts) deleteEnvs() error {
 			}
 		}
 
-		cmd, err := o.envDeleteExecutor(env.Name)
+		cmd, err := o.envDeleteExecutor(o.name, env.Name)
 		if err != nil {
 			return err
 		}
@@ -341,7 +341,7 @@ func (o *deleteAppOpts) deletePipelines() error {
 	}
 
 	for _, pipeline := range pipelines {
-		cmd, err := o.pipelineDeleteExecutor(pipeline.Name)
+		cmd, err := o.pipelineDeleteExecutor(o.name, pipeline.Name)
 		if err != nil {
 			return err
 		}
