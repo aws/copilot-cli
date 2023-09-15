@@ -281,6 +281,7 @@ func (o *deployOpts) askName() error {
 	if o.workloadNames != nil || len(o.workloadNames) != 0 {
 		return nil
 	}
+	names, err := o.sel.
 	name, err := o.sel.Workload("Select a service or job in your workspace", "")
 	if err != nil {
 		return fmt.Errorf("select service or job: %w", err)
@@ -456,9 +457,6 @@ func BuildDeployCmd() *cobra.Command {
 	var initWorkload bool
 	var initEnvironment bool
 	var deployEnvironment bool
-
-	var name string
-
 	cmd := &cobra.Command{
 		Use:   "deploy",
 		Short: "Deploy a Copilot job or service.",
@@ -501,10 +499,6 @@ func BuildDeployCmd() *cobra.Command {
 				}
 			}
 
-			if cmd.Flags().Changed(nameFlag) {
-				opts.workloadNames = []string{name}
-			}
-
 			if err := opts.Run(); err != nil {
 				return err
 			}
@@ -512,7 +506,7 @@ func BuildDeployCmd() *cobra.Command {
 		}),
 	}
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
-	cmd.Flags().StringVarP(&name, nameFlag, nameFlagShort, "", workloadFlagDescription)
+	cmd.Flags().StringSliceVarP(&vars.workloadNames, nameFlag, nameFlagShort, nil, workloadFlagDescription)
 	cmd.Flags().StringVarP(&vars.envName, envFlag, envFlagShort, "", envFlagDescription)
 	cmd.Flags().StringVar(&vars.imageTag, imageTagFlag, "", imageTagFlagDescription)
 	cmd.Flags().StringToStringVar(&vars.resourceTags, resourceTagsFlag, nil, resourceTagsFlagDescription)
