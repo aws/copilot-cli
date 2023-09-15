@@ -2062,9 +2062,6 @@ type containerNameAndProtocol struct {
 func validateExposedPorts(opts validateExposedPortsOpts) error {
 	portExposedTo := make(map[uint16]containerNameAndProtocol)
 
-	if err := populateAndValidateMainContainerPort(portExposedTo, opts); err != nil {
-		return err
-	}
 	if err := populateAndValidateSidecarContainerPorts(portExposedTo, opts); err != nil {
 		return err
 	}
@@ -2072,6 +2069,9 @@ func validateExposedPorts(opts validateExposedPortsOpts) error {
 		return err
 	}
 	if err := populateAndValidateNLBPorts(portExposedTo, opts); err != nil {
+		return err
+	}
+	if err := populateAndValidateMainContainerPort(portExposedTo, opts); err != nil {
 		return err
 	}
 	return nil
@@ -2082,7 +2082,13 @@ func populateAndValidateMainContainerPort(portExposedTo map[uint16]containerName
 		return nil
 	}
 
-	return validateAndPopulateExposedPortMapping(portExposedTo, aws.Uint16Value(opts.mainContainerPort), defaultProtocol, opts.mainContainerName)
+	targetPort := aws.Uint16Value(opts.mainContainerPort)
+	targetProtocol := defaultProtocol
+	if existingContainerNameAndProtocol, ok := portExposedTo[targetPort]; ok {
+		targetProtocol = existingContainerNameAndProtocol.containerProtocol
+	}
+
+	return validateAndPopulateExposedPortMapping(portExposedTo, targetPort, targetProtocol, opts.mainContainerName)
 }
 
 func populateAndValidateSidecarContainerPorts(portExposedTo map[uint16]containerNameAndProtocol, opts validateExposedPortsOpts) error {
