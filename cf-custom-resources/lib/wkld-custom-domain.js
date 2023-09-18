@@ -184,14 +184,18 @@ exports.handler = async function (event, context) {
   let handler = async function () {
     switch (event.RequestType) {
       case "Update":
+        // Hosted Zone and DNS are not guaranteed to be the same, 
+        // so we want to be able to update routing in case alias is unchanged but hosted zone or DNS is not.
         let oldAliases = new Set(event.OldResourceProperties.Aliases);
-        if (setEqual(oldAliases, aliases)) {
+        let oldHostedZoneId = event.OldResourceProperties.PublicAccessHostedZoneID;
+        let oldDNS = event.OldResourceProperties.PublicAccessDNS;
+        if (setEqual(oldAliases, aliases) && oldHostedZoneId === publicAccessHostedZoneID && oldDNS === publicAccessDNS) {
           break;
         }
-        await validateAliases(aliases, publicAccessDNS);
+        await validateAliases(aliases, publicAccessDNS, oldDNS);
         await activate(aliases, publicAccessDNS, publicAccessHostedZoneID);
         let unusedAliases = new Set([...oldAliases].filter((a) => !aliases.has(a)));
-        await deactivate(unusedAliases, publicAccessDNS, publicAccessHostedZoneID);
+        await deactivate(unusedAliases, oldDNS, oldHostedZoneId);
         break;
       case "Create":
         await validateAliases(aliases, publicAccessDNS);
@@ -219,9 +223,10 @@ exports.handler = async function (event, context) {
  *
  * @param {Set<String>} aliases for the service.
  * @param {String} publicAccessDNS the DNS of the service's load balancer.
+ * @param {String} oldPublicAccessDNS the old DNS of the service's load balancer.
  * @throws error if at least one of the aliases is not valid.
  */
-async function validateAliases(aliases, publicAccessDNS) {
+async function validateAliases(aliases, publicAccessDNS, oldPublicAccessDNS) {
   let promises = [];
 
   for (let alias of aliases) {
@@ -244,6 +249,9 @@ async function validateAliases(aliases, publicAccessDNS) {
         let aliasTarget = recordSet[0].AliasTarget;
         if (aliasTarget && aliasTarget.DNSName.toLowerCase() === `${publicAccessDNS.toLowerCase()}.`) {
           return; // The record is an alias record and is in use by myself, hence valid.
+        }
+        if (aliasTarget && oldPublicAccessDNS && aliasTarget.DNSName.toLowerCase() === `${oldPublicAccessDNS.toLowerCase()}.`) {
+          return; // The record was used by the old DNS, therefore is now used by the current DNS, hence valid.
         }
         if (aliasTarget) {
           throw new Error(`Alias ${alias} is already in use by ${aliasTarget.DNSName}. This could be another load balancer of a different service.`);
