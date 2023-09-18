@@ -9,6 +9,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/profile"
@@ -176,6 +177,7 @@ type initEnvOpts struct {
 	selApp              appSelector
 	appCFN              appResourcesGetter
 	manifestWriter      environmentManifestWriter
+	envLister           wsEnvironmentsLister
 
 	sess *session.Session // Session pointing to environment's AWS account and region.
 
@@ -224,6 +226,7 @@ func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
 		selApp:         selector.NewAppEnvSelector(prompt.New(), store),
 		appCFN:         deploycfn.New(defaultSession, deploycfn.WithProgressTracker(os.Stderr)),
 		manifestWriter: ws,
+		envLister:      ws,
 
 		wsAppName:       tryReadingAppName(),
 		templateVersion: version.LatestTemplateVersion(),
@@ -661,6 +664,15 @@ func (o *initEnvOpts) askAZs() ([]string, error) {
 func (o *initEnvOpts) validateDuplicateEnv() error {
 	_, err := o.store.GetEnvironment(o.appName, o.name)
 	if err == nil {
+		// Skip error if environment already exists in workspace
+		envs, err := o.envLister.ListEnvironments()
+		if err != nil {
+			return err
+		}
+		if slices.Contains(envs, o.name) {
+			return nil
+		}
+
 		dir := filepath.Join("copilot", "environments", o.name)
 		log.Infof(`It seems like you are trying to init an environment that already exists.
 To generate a manifest for the environment:

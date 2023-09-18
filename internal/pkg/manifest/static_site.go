@@ -32,7 +32,8 @@ type StaticSiteConfig struct {
 
 // StaticSiteHTTP defines the http configuration for the static site.
 type StaticSiteHTTP struct {
-	Alias string `yaml:"alias"`
+	Alias       string `yaml:"alias"`
+	Certificate string `yaml:"certificate"`
 }
 
 // FileUpload represents the options for file uploading.

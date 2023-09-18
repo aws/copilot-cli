@@ -286,6 +286,9 @@ Resources:
             Status: Enabled
             Prefix: 'manual/env-files'
             ExpirationInDays: 1
+            NoncurrentVersionExpirationInDays: 1 # Permanently delete noncurrent versions of objects
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 1
   S3BucketPolicy:
     Metadata:
       'aws:copilot:description': 'A policy to allow file uploads to the S3 bucket'

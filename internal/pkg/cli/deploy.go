@@ -6,6 +6,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -135,7 +136,7 @@ func newDeployOpts(vars deployVars) (*deployOpts, error) {
 		setupDeployCmd: func(o *deployOpts, workloadName, workloadType string) actionCommand {
 			var output actionCommand
 			switch {
-			case contains(workloadType, manifestinfo.JobTypes()):
+			case slices.Contains(manifestinfo.JobTypes(), workloadType):
 				opts := &deployJobOpts{
 					deployWkldVars: o.deployWkldVars,
 
@@ -153,7 +154,7 @@ func newDeployOpts(vars deployVars) (*deployOpts, error) {
 				}
 				opts.name = workloadName
 				output = opts
-			case contains(workloadType, manifestinfo.ServiceTypes()):
+			case slices.Contains(manifestinfo.JobTypes(), workloadType):
 				opts := &deploySvcOpts{
 					deployWkldVars: o.deployWkldVars,
 
@@ -191,7 +192,7 @@ func (o *deployOpts) maybeInitWkld(name string) error {
 	}
 
 	// Workload is already initialized. Return early.
-	if contains(name, wlNames) {
+	if slices.Contains(wlNames, name) {
 		return nil
 	}
 
@@ -205,8 +206,8 @@ func (o *deployOpts) maybeInitWkld(name string) error {
 		return fmt.Errorf("get workload type from manifest for workload %s: %w", name, err)
 	}
 
-	if !contains(workloadType, manifestinfo.WorkloadTypes()) {
-		return fmt.Errorf("unrecognized workload type %q in manifest for workload %s", workloadType, name)
+	if !slices.Contains(manifestinfo.WorkloadTypes(), workloadType) {
+		return fmt.Errorf("unrecognized workload type %q in manifest for workload %s", workloadType, o.name)
 	}
 
 	if o.yesInitWkld == nil {
@@ -352,7 +353,7 @@ func (o *deployOpts) checkEnvExists() error {
 	if err != nil {
 		return fmt.Errorf("list environments in workspace: %w", err)
 	}
-	o.envExistsInWs = contains(o.envName, envs)
+	o.envExistsInWs = slices.Contains(envs, o.envName)
 
 	// the desired environment doesn't actually exist.
 	if !o.envExistsInApp && !o.envExistsInWs {

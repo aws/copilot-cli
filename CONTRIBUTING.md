@@ -20,7 +20,7 @@ Please read it over and let us know if it's not up-to-date (or, even better, sub
 
 ### Environment
 
-- Make sure you are using Go 1.20 (`go version`).
+- Make sure you are using Go 1.21 (`go version`).
 - Fork the repository.
 - Clone your forked repository locally.
 - We use Go Modules to manage dependencies, so you can develop outside of your $GOPATH.
