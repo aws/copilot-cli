@@ -8,25 +8,18 @@ package deploy
 import (
 	"errors"
 	"fmt"
+	"gopkg.in/yaml.v3"
 	"path"
 	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
 
-	"gopkg.in/yaml.v3"
-
-	"github.com/aws/copilot-cli/internal/pkg/graph"
-
-	"github.com/aws/copilot-cli/internal/pkg/config"
-
-	"github.com/aws/copilot-cli/internal/pkg/manifest"
-
 	"github.com/aws/aws-sdk-go/aws/arn"
+	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/graph"
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
 )
-
-// DefaultPipelineBranch is the default repository branch to use for pipeline.
-const DefaultPipelineBranch = "main"
 
 const (
 	fmtInvalidRepo           = "unable to parse the repository from the URL %+v"
@@ -38,9 +31,13 @@ const (
 
 	// DefaultPipelineArtifactsDir is the default folder to output Copilot-generated templates.
 	DefaultPipelineArtifactsDir = "infrastructure"
+	// DefaultPipelineBranch is the default repository branch to use for pipeline.
+	DefaultPipelineBranch = "main"
+	// StageFullNamePrefix is prefix to a pipeline stage name. For example, "DeployTo-test" for a test environment stage.
+	StageFullNamePrefix = "DeployTo-"
 )
 
-// Name of the environment varialbes injected into the CodeBuild projects that support pre/post-deployment actions.
+// Name of the environment variables injected into the CodeBuild projects that support pre/post-deployment actions.
 const (
 	envVarNameEnvironmentName = "COPILOT_ENVIRONMENT_NAME"
 	envVarNameApplicationName = "COPILOT_APPLICATION_NAME"
@@ -533,6 +530,11 @@ func (stg *PipelineStage) Init(env *config.Environment, mftStage *manifest.Pipel
 // Name returns the stage's name.
 func (stg *PipelineStage) Name() string {
 	return stg.associatedEnvironment.Name
+}
+
+// FullName returns the stage's full name.
+func (stg *PipelineStage) FullName() string {
+	return StageFullNamePrefix + stg.associatedEnvironment.Name
 }
 
 // Approval returns a manual approval action for the stage.

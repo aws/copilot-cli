@@ -6,6 +6,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -132,7 +133,7 @@ func newDeployOpts(vars deployVars) (*deployOpts, error) {
 
 		setupDeployCmd: func(o *deployOpts, workloadType string) {
 			switch {
-			case contains(workloadType, manifestinfo.JobTypes()):
+			case slices.Contains(manifestinfo.JobTypes(), workloadType):
 				opts := &deployJobOpts{
 					deployWkldVars: o.deployWkldVars,
 
@@ -149,7 +150,7 @@ func newDeployOpts(vars deployVars) (*deployOpts, error) {
 					return newJobDeployer(opts)
 				}
 				o.deployWkld = opts
-			case contains(workloadType, manifestinfo.ServiceTypes()):
+			case slices.Contains(manifestinfo.JobTypes(), workloadType):
 				opts := &deploySvcOpts{
 					deployWkldVars: o.deployWkldVars,
 
@@ -185,7 +186,7 @@ func (o *deployOpts) maybeInitWkld() error {
 	}
 
 	// Workload is already initialized. Return early.
-	if contains(o.name, wlNames) {
+	if slices.Contains(wlNames, o.name) {
 		return nil
 	}
 
@@ -199,7 +200,7 @@ func (o *deployOpts) maybeInitWkld() error {
 		return fmt.Errorf("get workload type from manifest for workload %s: %w", o.name, err)
 	}
 
-	if !contains(workloadType, manifestinfo.WorkloadTypes()) {
+	if !slices.Contains(manifestinfo.WorkloadTypes(), workloadType) {
 		return fmt.Errorf("unrecognized workload type %q in manifest for workload %s", workloadType, o.name)
 	}
 
@@ -337,7 +338,7 @@ func (o *deployOpts) checkEnvExists() error {
 	if err != nil {
 		return fmt.Errorf("list environments in workspace: %w", err)
 	}
-	o.envExistsInWs = contains(o.envName, envs)
+	o.envExistsInWs = slices.Contains(envs, o.envName)
 
 	// the desired environment doesn't actually exist.
 	if !o.envExistsInApp && !o.envExistsInWs {
@@ -396,13 +397,6 @@ func (o *deployOpts) maybeInitEnv() error {
 func (o *deployOpts) maybeDeployEnv() error {
 	if !o.envExistsInWs {
 		return nil
-	}
-	if o.deployEnv == nil {
-		v, err := o.prompt.Confirm(fmt.Sprintf("Would you like to deploy the environment %q before deploying your workload?", o.envName), "", prompt.WithFinalMessage("Deploy environment:"))
-		if err != nil {
-			return fmt.Errorf("confirm env deployment: %w", err)
-		}
-		o.deployEnv = aws.Bool(v)
 	}
 
 	if aws.BoolValue(o.deployEnv) {

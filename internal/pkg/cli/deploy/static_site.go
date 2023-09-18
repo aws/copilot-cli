@@ -157,7 +157,7 @@ func (d *staticSiteDeployer) stackConfiguration(in *StackRuntimeConfiguration) (
 	if err != nil {
 		return nil, err
 	}
-	if err := d.validateAlias(); err != nil {
+	if err := d.validateAppDomainAlias(); err != nil {
 		return nil, err
 	}
 	if err := validateMinAppVersion(d.app.Name, d.name, d.appVersionGetter, version.AppTemplateMinStaticSite); err != nil {
@@ -205,18 +205,13 @@ func (d *staticSiteDeployer) convertSources() ([]manifest.FileUpload, error) {
 	return convertedFileUploads, nil
 }
 
-func (d *staticSiteDeployer) validateAlias() error {
-	if d.staticSiteMft.HTTP.Alias == "" {
+func (d *staticSiteDeployer) validateAppDomainAlias() error {
+	if d.staticSiteMft.HTTP.Alias == "" || d.staticSiteMft.HTTP.Certificate != "" {
 		return nil
 	}
 
-	hasImportedCerts := len(d.envConfig.HTTPConfig.Public.Certificates) != 0
-	if hasImportedCerts {
-		return fmt.Errorf("cannot specify alias when env %q imports one or more certificates", d.env.Name)
-	}
-
 	if d.app.Domain == "" {
-		return fmt.Errorf("cannot specify alias when application is not associated with a domain")
+		return fmt.Errorf("cannot specify alias when application is not associated with a domain or %q is not set", "http.certificate")
 	}
 
 	return validateAliases(d.app, d.env.Name, d.staticSiteMft.HTTP.Alias)

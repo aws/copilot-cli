@@ -400,9 +400,9 @@ Cannot be specified with --default-config or any of the --override flags.`
 	enableContainerInsightsFlagDescription = "Optional. Enable CloudWatch Container Insights."
 	defaultConfigFlagDescription           = "Optional. Skip prompting and use default environment configuration."
 
-	profileFlagDescription         = "Name of the profile."
-	accessKeyIDFlagDescription     = "Optional. An AWS access key."
-	secretAccessKeyFlagDescription = "Optional. An AWS secret access key."
+	profileFlagDescription         = "Name of the profile for the environment account."
+	accessKeyIDFlagDescription     = "Optional. An AWS access key for the environment account."
+	secretAccessKeyFlagDescription = "Optional. An AWS secret access key for the environment account."
 	sessionTokenFlagDescription    = "Optional. An AWS session token for temporary credentials."
 	envRegionTokenFlagDescription  = "Optional. An AWS region where the environment will be created."
 

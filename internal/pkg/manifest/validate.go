@@ -9,11 +9,14 @@ import (
 	"net"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/arn"
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudfront"
 	"github.com/aws/copilot-cli/internal/pkg/graph"
 	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
@@ -587,6 +590,9 @@ func (s StaticSite) validate() error {
 }
 
 func (s StaticSiteConfig) validate() error {
+	if err := s.HTTP.validate(); err != nil {
+		return fmt.Errorf(`validate "http": %w`, err)
+	}
 	for idx, fileupload := range s.FileUploads {
 		if err := fileupload.validate(); err != nil {
 			return fmt.Errorf(`validate "files[%d]": %w`, idx, err)
@@ -597,6 +603,25 @@ func (s StaticSiteConfig) validate() error {
 
 func (f FileUpload) validate() error {
 	return f.validateSource()
+}
+
+func (s StaticSiteHTTP) validate() error {
+	if s.Certificate != "" {
+		if s.Alias == "" {
+			return &errFieldMustBeSpecified{
+				missingField:      "alias",
+				conditionalFields: []string{"certificate"},
+			}
+		}
+		certARN, err := arn.Parse(s.Certificate)
+		if err != nil {
+			return fmt.Errorf(`parse cdn certificate: %w`, err)
+		}
+		if certARN.Region != cloudfront.CertRegion {
+			return &errInvalidCloudFrontRegion{}
+		}
+	}
+	return nil
 }
 
 // validateSource returns nil if Source is configured correctly.
@@ -921,7 +946,7 @@ func (r RoutingRule) validate() error {
 		}
 	}
 	if r.ProtocolVersion != nil {
-		if !contains(strings.ToUpper(*r.ProtocolVersion), httpProtocolVersions) {
+		if !slices.Contains(httpProtocolVersions, strings.ToUpper(*r.ProtocolVersion)) {
 			return fmt.Errorf(`"version" field value '%s' must be one of %s`, *r.ProtocolVersion, english.WordSeries(httpProtocolVersions, "or"))
 		}
 	}
@@ -1868,14 +1893,14 @@ func (q FIFOAdvanceConfig) validateHighThroughputFIFO() error {
 }
 
 func (q FIFOAdvanceConfig) validateDeduplicationScope() error {
-	if q.DeduplicationScope != nil && !contains(aws.StringValue(q.DeduplicationScope), validSQSDeduplicationScopeValues) {
+	if q.DeduplicationScope != nil && !slices.Contains(validSQSDeduplicationScopeValues, aws.StringValue(q.DeduplicationScope)) {
 		return fmt.Errorf(`validate "deduplication_scope": deduplication scope value must be one of %s`, english.WordSeries(validSQSDeduplicationScopeValues, "or"))
 	}
 	return nil
 }
 
 func (q FIFOAdvanceConfig) validateFIFOThroughputLimit() error {
-	if q.FIFOThroughputLimit != nil && !contains(aws.StringValue(q.FIFOThroughputLimit), validSQSFIFOThroughputLimitValues) {
+	if q.FIFOThroughputLimit != nil && !slices.Contains(validSQSFIFOThroughputLimitValues, aws.StringValue(q.FIFOThroughputLimit)) {
 		return fmt.Errorf(`validate "throughput_limit": fifo throughput limit value must be one of %s`, english.WordSeries(validSQSFIFOThroughputLimitValues, "or"))
 	}
 	return nil
@@ -2253,15 +2278,6 @@ func validateARM(opts validateARMOpts) error {
 		return errors.New(`'Fargate Spot' is not supported when deploying on ARM architecture`)
 	}
 	return nil
-}
-
-func contains(name string, names []string) bool {
-	for _, n := range names {
-		if name == n {
-			return true
-		}
-	}
-	return false
 }
 
 // validate returns nil if ImageLocationOrBuild is configured correctly.

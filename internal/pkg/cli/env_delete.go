@@ -7,11 +7,14 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+	rg "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -72,16 +75,18 @@ type deleteEnvOpts struct {
 	deleteEnvVars
 
 	// Interfaces for dependencies.
-	store             environmentStore
-	rg                resourceGetter
-	deployer          environmentDeployer
-	envDeleterFromApp envDeleterFromApp
-	iam               roleDeleter
-	s3                bucketEmptier
-	envStackDescriber stackDescriber
-	prog              progress
-	prompt            prompter
-	sel               configSelector
+	store                  environmentStore
+	rg                     resourceGetter
+	deployer               environmentDeployer
+	envDeleterFromApp      envDeleterFromApp
+	iam                    roleDeleter
+	s3                     bucketEmptier
+	envStackDescriber      stackDescriber
+	deployedPipelineLister deployedPipelineLister
+	pipelineGetter         pipelineGetter
+	prog                   progress
+	prompt                 prompter
+	sel                    configSelector
 
 	// cached data to avoid fetching the same information multiple times.
 	envConfig *config.Environment
@@ -123,6 +128,8 @@ func newDeleteEnvOpts(vars deleteEnvVars) (*deleteEnvOpts, error) {
 			o.envStackDescriber = stackdescr.NewStackDescriber(stack.NameForEnv(o.appName, o.name), sess)
 			o.deployer = cloudformation.New(sess, cloudformation.WithProgressTracker(os.Stderr))
 			o.envDeleterFromApp = cloudformation.New(defaultSess, cloudformation.WithProgressTracker(os.Stderr))
+			o.pipelineGetter = codepipeline.New(defaultSess)
+			o.deployedPipelineLister = deploy.NewPipelineStore(rg.New(defaultSess))
 			return nil
 		},
 	}, nil
@@ -171,6 +178,10 @@ func (o *deleteEnvOpts) Execute() error {
 		return err
 	}
 	if err := o.validateNoRunningServices(); err != nil {
+		return err
+	}
+
+	if err := o.validateNoDependencyPipelines(); err != nil {
 		return err
 	}
 
@@ -286,7 +297,29 @@ func (o *deleteEnvOpts) validateNoRunningServices() error {
 				svcNames = append(svcNames, *t.Value)
 			}
 		}
-		return fmt.Errorf("service '%s' still exist within the environment %s", strings.Join(svcNames, ", "), o.name)
+		return fmt.Errorf("service %q still exist within the environment %s", strings.Join(svcNames, ", "), o.name)
+	}
+	return nil
+}
+
+func (o *deleteEnvOpts) validateNoDependencyPipelines() error {
+	pipelines, err := o.deployedPipelineLister.ListDeployedPipelines(o.appName)
+	if err != nil {
+		return fmt.Errorf("list deployed pipelines: %w", err)
+	}
+	for _, pipeline := range pipelines {
+		info, err := o.pipelineGetter.GetPipeline(pipeline.ResourceName)
+		if err != nil {
+			return fmt.Errorf("get pipeline %s: %w", pipeline.ResourceName, err)
+		}
+		for _, stage := range info.Stages {
+			if strings.TrimPrefix(stage.Name, deploy.StageFullNamePrefix) == o.name {
+				return &errPipelineDependsOnEnv{
+					pipeline: pipeline.Name,
+					env:      o.name,
+				}
+			}
+		}
 	}
 	return nil
 }
@@ -399,7 +432,7 @@ func (o *deleteEnvOpts) emptyBuckets() error {
 
 	var stackBucketARNs []string
 	for _, resource := range envResources {
-		if contains(resource.LogicalID, stack.EnvManagedS3BucketLogicalIds) {
+		if slices.Contains(stack.EnvManagedS3BucketLogicalIds, resource.LogicalID) {
 			stackBucketARNs = append(stackBucketARNs, resource.PhysicalID)
 		}
 	}
@@ -421,7 +454,7 @@ func (o *deleteEnvOpts) emptyBuckets() error {
 
 		// Warn about hanging bucket when bucket is found via API call but is not in the env CFN stack
 		// Those found via API call but not CFN stack cannot be deleted by Copilot
-		if !contains(bucketARN.String(), stackBucketARNs) {
+		if !slices.Contains(stackBucketARNs, bucketARN.String()) {
 			log.Warningf(`Bucket %q was emptied, but was not found in the Cloudformation stack. This resource is now dangling, and can be deleted from the S3 console.\n`, bucketARN)
 		}
 	}

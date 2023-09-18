@@ -5,6 +5,7 @@ package cli
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
@@ -124,7 +125,7 @@ func (o *overrideWorkloadOpts) validateServiceName() error {
 	if err != nil {
 		return fmt.Errorf("list services in the workspace: %v", err)
 	}
-	if !contains(o.name, names) {
+	if !slices.Contains(names, o.name) {
 		return fmt.Errorf("service %q does not exist in the workspace", o.name)
 	}
 	return nil
