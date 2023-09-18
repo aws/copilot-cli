@@ -688,9 +688,18 @@ func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (networkLoadBalanc
 		return networkLoadBalancerConfig{}, fmt.Errorf(`convert "nlb.alias" to string slice: %w`, err)
 	}
 
+	// TODO(Aiden): remove when NetworkLoadBalancer is forcibly updated
+	var udpListenerExists bool
+	for _, listener := range listeners {
+		if listener.Protocol == "UDP" {
+			udpListenerExists = true
+		}
+	}
+
 	config := networkLoadBalancerConfig{
 		settings: &template.NetworkLoadBalancer{
 			PublicSubnetCIDRs:   s.publicSubnetCIDRBlocks,
+			UDPListenerExists:   udpListenerExists,
 			Listener:            listeners,
 			Aliases:             aliases,
 			MainContainerPort:   s.manifest.MainContainerPort(),
