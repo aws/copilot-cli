@@ -189,15 +189,14 @@ func newDefaultScheduledJob() *ScheduledJob {
 
 // ExposedPorts returns all the ports that are sidecar container ports available to receive traffic.
 func (j *ScheduledJob) ExposedPorts() (ExposedPortsIndex, error) {
-	var exposedPorts []ExposedPort
+	exposedPorts := make(map[uint16]ExposedPort)
 	for name, sidecar := range j.Sidecars {
-		out, err := sidecar.exposedPorts(name)
+		err := sidecar.exposePorts(exposedPorts, name)
 		if err != nil {
 			return ExposedPortsIndex{}, err
 		}
-		exposedPorts = append(exposedPorts, out...)
 	}
-	portsForContainer, containerForPort := prepareParsedExposedPortsMap(sortExposedPorts(exposedPorts))
+	portsForContainer, containerForPort := prepareParsedExposedPortsMap(exposedPorts)
 	return ExposedPortsIndex{
 		PortsForContainer: portsForContainer,
 		ContainerForPort:  containerForPort,

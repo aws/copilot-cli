@@ -272,32 +272,31 @@ func (c *NetworkLoadBalancerListener) IsEmpty() bool {
 
 // ExposedPorts returns all the ports that are container ports available to receive traffic.
 func (lbws *LoadBalancedWebService) ExposedPorts() (ExposedPortsIndex, error) {
-	var exposedPorts []ExposedPort
+	exposedPorts := make(map[uint16]ExposedPort)
 	workloadName := aws.StringValue(lbws.Name)
-	// port from image.port.
-	exposedPorts = append(exposedPorts, lbws.ImageConfig.exposedPorts(workloadName)...)
 	// port from sidecar[x].image.port.
 	for name, sidecar := range lbws.Sidecars {
-		out, err := sidecar.exposedPorts(name)
+		err := sidecar.exposePorts(exposedPorts, name)
 		if err != nil {
 			return ExposedPortsIndex{}, err
 		}
-		exposedPorts = append(exposedPorts, out...)
 	}
 	// port from http.target_port and http.additional_rules[x].target_port
 	for _, rule := range lbws.HTTPOrBool.RoutingRules() {
-		exposedPorts = append(exposedPorts, rule.exposedPorts(exposedPorts, workloadName)...)
+		rule.exposePorts(exposedPorts, workloadName)
 	}
 
 	// port from nlb.target_port and nlb.additional_listeners[x].target_port
 	for _, listener := range lbws.NLBConfig.NLBListeners() {
-		out, err := listener.exposedPorts(exposedPorts, workloadName)
+		err := listener.exposePorts(exposedPorts, workloadName)
 		if err != nil {
 			return ExposedPortsIndex{}, err
 		}
-		exposedPorts = append(exposedPorts, out...)
 	}
-	portsForContainer, containerForPort := prepareParsedExposedPortsMap(sortExposedPorts(exposedPorts))
+	// port from image.port.
+	lbws.ImageConfig.exposePorts(exposedPorts, workloadName)
+
+	portsForContainer, containerForPort := prepareParsedExposedPortsMap(exposedPorts)
 	return ExposedPortsIndex{
 		WorkloadName:      workloadName,
 		PortsForContainer: portsForContainer,

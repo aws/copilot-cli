@@ -199,21 +199,20 @@ func newDefaultBackendService() *BackendService {
 
 // ExposedPorts returns all the ports that are container ports available to receive traffic.
 func (b *BackendService) ExposedPorts() (ExposedPortsIndex, error) {
-	var exposedPorts []ExposedPort
+	exposedPorts := make(map[uint16]ExposedPort)
 
 	workloadName := aws.StringValue(b.Name)
-	exposedPorts = append(exposedPorts, b.ImageConfig.exposedPorts(workloadName)...)
+	b.ImageConfig.exposePorts(exposedPorts, workloadName)
 	for name, sidecar := range b.Sidecars {
-		out, err := sidecar.exposedPorts(name)
+		err := sidecar.exposePorts(exposedPorts, name)
 		if err != nil {
 			return ExposedPortsIndex{}, err
 		}
-		exposedPorts = append(exposedPorts, out...)
 	}
 	for _, rule := range b.HTTP.RoutingRules() {
-		exposedPorts = append(exposedPorts, rule.exposedPorts(exposedPorts, workloadName)...)
+		rule.exposePorts(exposedPorts, workloadName)
 	}
-	portsForContainer, containerForPort := prepareParsedExposedPortsMap(sortExposedPorts(exposedPorts))
+	portsForContainer, containerForPort := prepareParsedExposedPortsMap(exposedPorts)
 	return ExposedPortsIndex{
 		WorkloadName:      workloadName,
 		PortsForContainer: portsForContainer,
