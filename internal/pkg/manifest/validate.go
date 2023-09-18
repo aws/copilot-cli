@@ -2159,11 +2159,11 @@ func populateAndValidateNLBPorts(portExposedTo map[uint16]containerNameAndProtoc
 }
 
 func populateAndValidateNLBListenerPorts(listener NetworkLoadBalancerListener, portExposedTo map[uint16]containerNameAndProtocol, mainContainerName string) error {
-	nlbRecieverPort, nlbProtocol, err := ParsePortMapping(listener.Port)
+	nlbReceiverPort, nlbProtocol, err := ParsePortMapping(listener.Port)
 	if err != nil {
 		return err
 	}
-	port, err := strconv.ParseUint(aws.StringValue(nlbRecieverPort), 10, 16)
+	port, err := strconv.ParseUint(aws.StringValue(nlbReceiverPort), 10, 16)
 	if err != nil {
 		return err
 	}
