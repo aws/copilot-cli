@@ -5,6 +5,7 @@ package cli
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/spf13/cobra"
 )
@@ -40,7 +41,7 @@ func (o *overrideWorkloadOpts) validateJobName() error {
 	if err != nil {
 		return fmt.Errorf("list jobs in the workspace: %v", err)
 	}
-	if !contains(o.name, names) {
+	if !slices.Contains(names, o.name) {
 		return fmt.Errorf("job %q does not exist in the workspace", o.name)
 	}
 	return nil

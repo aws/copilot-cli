@@ -6,9 +6,10 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"testing"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/config"
-	"testing"
 
 	awscfn "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
@@ -100,7 +101,7 @@ func TestInitOpts_Run(t *testing.T) {
 				opts.initWlCmd.(*climocks.MockactionCommand).EXPECT().Validate().Return(nil)
 				opts.initAppCmd.(*climocks.MockactionCommand).EXPECT().Execute().Return(nil)
 				opts.initWlCmd.(*climocks.MockactionCommand).EXPECT().Execute().Return(nil)
-				opts.sel.(*climocks.MockconfigSelector).EXPECT().Environment(initExistingEnvSelectPrompt, initExistingEnvSelectHelp, mockAppName, envPromptCreateNew).Return(envPromptCreateNew, nil)
+				opts.sel.(*climocks.MockconfigSelector).EXPECT().Environment(initExistingEnvSelectPrompt, initExistingEnvSelectHelp, mockAppName, prompt.Option{Value: envPromptCreateNew}).Return(envPromptCreateNew, nil)
 				opts.prompt.(*climocks.Mockprompter).EXPECT().Confirm(initShouldDeployPrompt, initShouldDeployHelpPrompt, gomock.Any()).
 					Return(true, nil)
 				opts.prompt.(*climocks.Mockprompter).EXPECT().Get(envInitNamePrompt, envInitNameHelpPrompt, gomock.Any(), gomock.Any()).Return("test2", nil)
@@ -124,7 +125,7 @@ func TestInitOpts_Run(t *testing.T) {
 				opts.initWlCmd.(*climocks.MockactionCommand).EXPECT().Execute().Return(nil)
 				opts.prompt.(*climocks.Mockprompter).EXPECT().Confirm(initShouldDeployPrompt, initShouldDeployHelpPrompt, gomock.Any()).
 					Return(true, nil)
-				opts.sel.(*climocks.MockconfigSelector).EXPECT().Environment(initExistingEnvSelectPrompt, initExistingEnvSelectHelp, mockAppName, envPromptCreateNew).Return(envPromptCreateNew, nil)
+				opts.sel.(*climocks.MockconfigSelector).EXPECT().Environment(initExistingEnvSelectPrompt, initExistingEnvSelectHelp, mockAppName, prompt.Option{Value: envPromptCreateNew}).Return(envPromptCreateNew, nil)
 				opts.prompt.(*climocks.Mockprompter).EXPECT().Get(envInitNamePrompt, envInitNameHelpPrompt, gomock.Any(), gomock.Any()).Return("", errors.New("some error"))
 			},
 			wantedError: "get environment name: some error",
@@ -140,7 +141,7 @@ func TestInitOpts_Run(t *testing.T) {
 				opts.initWlCmd.(*climocks.MockactionCommand).EXPECT().Execute().Return(nil)
 				opts.prompt.(*climocks.Mockprompter).EXPECT().Confirm(initShouldDeployPrompt, initShouldDeployHelpPrompt, gomock.Any()).
 					Return(true, nil)
-				opts.sel.(*climocks.MockconfigSelector).EXPECT().Environment(initExistingEnvSelectPrompt, initExistingEnvSelectHelp, mockAppName, envPromptCreateNew).Return(envPromptCreateNew, nil)
+				opts.sel.(*climocks.MockconfigSelector).EXPECT().Environment(initExistingEnvSelectPrompt, initExistingEnvSelectHelp, mockAppName, prompt.Option{Value: envPromptCreateNew}).Return(envPromptCreateNew, nil)
 				opts.prompt.(*climocks.Mockprompter).EXPECT().Get(envInitNamePrompt, envInitNameHelpPrompt, gomock.Any(), gomock.Any()).Return("test2", nil)
 				opts.store.(*climocks.Mockstore).EXPECT().GetEnvironment(mockAppName, "test2").Return(nil, &config.ErrNoSuchEnvironment{
 					ApplicationName: mockAppName,
@@ -184,7 +185,7 @@ func TestInitOpts_Run(t *testing.T) {
 				opts.initWlCmd.(*climocks.MockactionCommand).EXPECT().Execute().Return(nil)
 				opts.prompt.(*climocks.Mockprompter).EXPECT().Confirm(initShouldDeployPrompt, initShouldDeployHelpPrompt, gomock.Any()).
 					Return(true, nil)
-				opts.sel.(*climocks.MockconfigSelector).EXPECT().Environment(initExistingEnvSelectPrompt, initExistingEnvSelectHelp, mockAppName, envPromptCreateNew).Return(envPromptCreateNew, nil)
+				opts.sel.(*climocks.MockconfigSelector).EXPECT().Environment(initExistingEnvSelectPrompt, initExistingEnvSelectHelp, mockAppName, prompt.Option{Value: envPromptCreateNew}).Return(envPromptCreateNew, nil)
 				opts.prompt.(*climocks.Mockprompter).EXPECT().Get(envInitNamePrompt, envInitNameHelpPrompt, gomock.Any(), gomock.Any()).Return("test2", nil)
 				opts.store.(*climocks.Mockstore).EXPECT().GetEnvironment(mockAppName, "test2").Return(&config.Environment{}, nil)
 				opts.initEnvCmd.(*climocks.MockactionCommand).EXPECT().Execute().Times(0)
@@ -231,7 +232,7 @@ func TestInitOpts_Run(t *testing.T) {
 
 				opts.prompt.(*climocks.Mockprompter).EXPECT().Confirm(initShouldDeployPrompt, initShouldDeployHelpPrompt, gomock.Any()).
 					Return(true, nil)
-				opts.sel.(*climocks.MockconfigSelector).EXPECT().Environment(initExistingEnvSelectPrompt, initExistingEnvSelectHelp, mockAppName, envPromptCreateNew).Return("test2", nil)
+				opts.sel.(*climocks.MockconfigSelector).EXPECT().Environment(initExistingEnvSelectPrompt, initExistingEnvSelectHelp, mockAppName, prompt.Option{Value: envPromptCreateNew}).Return("test2", nil)
 				opts.initEnvCmd.(*climocks.MockactionCommand).EXPECT().Execute().Times(0)
 				opts.deployEnvCmd.(*climocks.Mockcmd).EXPECT().Execute().Return(nil)
 				opts.deploySvcCmd.(*climocks.MockactionCommand).EXPECT().Ask().Return(nil)

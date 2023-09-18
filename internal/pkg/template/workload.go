@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"fmt"
+	"slices"
 	"strconv"
 	"text/template"
 
@@ -463,7 +464,8 @@ type NLBHealthCheck struct {
 
 // NetworkLoadBalancer holds configuration that's needed for a Network Load Balancer.
 type NetworkLoadBalancer struct {
-	PublicSubnetCIDRs   []string
+	PublicSubnetCIDRs   []string // TODO(Aiden): remove when NetworkLoadBalancer is forcibly updated
+	UDPListenerExists   bool     // TODO(Aiden): remove when NetworkLoadBalancer is forcibly updated
 	Listener            []NetworkLoadBalancerListener
 	MainContainerPort   string
 	CertificateRequired bool
@@ -859,6 +861,7 @@ type WorkloadOpts struct {
 	AssetMappingFileBucket string
 	AssetMappingFilePath   string
 	StaticSiteAlias        string
+	StaticSiteCert         string
 }
 
 // HealthCheckProtocol returns the protocol for the Load Balancer health check,
@@ -959,7 +962,7 @@ func withSvcParsingFuncs() ParseOption {
 			"logicalIDSafe":           StripNonAlphaNumFunc,
 			"wordSeries":              english.WordSeries,
 			"pluralWord":              english.PluralWord,
-			"contains":                contains,
+			"contains":                slices.Contains[[]string, string],
 			"requiresVPCConnector":    requiresVPCConnector,
 			"strconvUint16":           StrconvUint16,
 			"trancateWithHashPadding": trancateWithHashPadding,
@@ -1028,15 +1031,6 @@ func requiresVPCConnector(o WorkloadOpts) bool {
 		return false
 	}
 	return len(o.Network.SubnetIDs) > 0 || o.Network.SubnetsType != ""
-}
-
-func contains(list []string, s string) bool {
-	for _, item := range list {
-		if item == s {
-			return true
-		}
-	}
-	return false
 }
 
 // ARN determines the arn for a topic using the SNSTopic name and account information

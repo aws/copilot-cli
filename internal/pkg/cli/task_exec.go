@@ -117,7 +117,7 @@ func (o *taskExecOpts) Ask() error {
 		o.appName = appName
 	}
 	if o.envName == "" {
-		envName, err := o.configSel.Environment(taskExecEnvNamePrompt, taskExecEnvNameHelpPrompt, o.appName, useDefaultClusterOption)
+		envName, err := o.configSel.Environment(taskExecEnvNamePrompt, taskExecEnvNameHelpPrompt, o.appName, prompt.Option{Value: useDefaultClusterOption})
 		if err != nil {
 			return fmt.Errorf("select environment: %w", err)
 		}
