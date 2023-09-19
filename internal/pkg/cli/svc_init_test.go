@@ -449,23 +449,23 @@ type: Request-Driven Web Service`), nil)
 				m.mockPrompt.EXPECT().SelectOption(gomock.Eq(fmt.Sprintf(fmtSvcInitSvcTypePrompt, "service type")), gomock.Any(), gomock.Eq([]prompt.Option{
 					{
 						Value: manifestinfo.RequestDrivenWebServiceType,
-						Hint:  "App Runner",
+						Hint:  rdwsTypeHint,
 					},
 					{
 						Value: manifestinfo.LoadBalancedWebServiceType,
-						Hint:  "Internet to ECS on Fargate",
+						Hint:  lbwsTypeHint,
 					},
 					{
 						Value: manifestinfo.BackendServiceType,
-						Hint:  "ECS on Fargate",
+						Hint:  besTypeHint,
 					},
 					{
 						Value: manifestinfo.WorkerServiceType,
-						Hint:  "Events to SQS to ECS on Fargate",
+						Hint:  wsTypeHint,
 					},
 					{
 						Value: manifestinfo.StaticSiteType,
-						Hint:  "Internet to CDN to S3 bucket",
+						Hint:  ssTypeHint,
 					},
 				}), gomock.Any()).
 					Return(wantedSvcType, nil)
