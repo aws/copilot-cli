@@ -740,9 +740,16 @@ func convertAllowedSourceIPs(allowedSourceIPs []manifest.IPNet) []string {
 	return sourceIPs
 }
 
-func convertServiceConnect(s manifest.ServiceConnectBoolOrArgs) *template.ServiceConnect {
+func convertServiceConnect(s manifest.ServiceConnectBoolOrArgs, index manifest.ExposedPortsIndex, serverPort *uint16) *template.ServiceConnect {
+	var scPort *string
+	for _, exposedPort := range index.PortsForContainer[index.WorkloadName] {
+		if exposedPort.Port == aws.Uint16Value(serverPort) && exposedPort.Protocol != strings.ToLower(manifest.UDP) {
+			scPort = aws.String(strconv.FormatInt(int64(exposedPort.Port), 10))
+		}
+	}
 	return &template.ServiceConnect{
-		Alias: s.ServiceConnectArgs.Alias,
+		Alias:       s.ServiceConnectArgs.Alias,
+		ExposedPort: scPort,
 	}
 }
 

@@ -182,7 +182,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	}
 	var scConfig *template.ServiceConnect
 	if s.manifest.Network.Connect.Enabled() {
-		scConfig = convertServiceConnect(s.manifest.Network.Connect)
+		scConfig = convertServiceConnect(s.manifest.Network.Connect, exposedPorts, s.manifest.ImageConfig.Port)
 	}
 
 	targetContainer, targetContainerPort, err := s.manifest.HTTPOrBool.Main.Target(exposedPorts)

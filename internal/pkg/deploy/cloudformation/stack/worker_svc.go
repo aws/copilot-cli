@@ -124,7 +124,8 @@ func (s *WorkerService) Template() (string, error) {
 	}
 	var scConfig *template.ServiceConnect
 	if s.manifest.Network.Connect.Enabled() {
-		scConfig = convertServiceConnect(s.manifest.Network.Connect)
+		// Worker Service is a service connect client, pass in nil server port and exposedPorts, as no ports are exposed.
+		scConfig = convertServiceConnect(s.manifest.Network.Connect, manifest.ExposedPortsIndex{}, nil)
 	}
 	content, err := s.parser.ParseWorkerService(template.WorkloadOpts{
 		AppName:                  s.app,
