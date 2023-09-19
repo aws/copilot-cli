@@ -41,8 +41,7 @@ const (
 type deployVars struct {
 	deployWkldVars
 
-	workloadNames      []string
-	deployAllWorkloads bool
+	workloadNames []string
 
 	yesInitWkld *bool
 	deployEnv   *bool
@@ -207,7 +206,7 @@ func (o *deployOpts) maybeInitWkld(name string) error {
 	}
 
 	if !slices.Contains(manifestinfo.WorkloadTypes(), workloadType) {
-		return fmt.Errorf("unrecognized workload type %q in manifest for workload %s", workloadType, o.name)
+		return fmt.Errorf("unrecognized workload type %q in manifest for workload %s", workloadType, name)
 	}
 
 	if o.yesInitWkld == nil {
