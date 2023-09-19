@@ -359,6 +359,7 @@ Resources:
 			},
 		},
 	}, nil)
+	mockECS.EXPECT().StoppedServiceTasks("cluster", "service").Return(nil, nil)
 	mockCFN.EXPECT().Describe(stackName).Return(&cloudformation.StackDescription{
 		StackStatus: aws.String("CREATE_COMPLETE"),
 	}, nil)
