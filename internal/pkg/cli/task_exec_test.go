@@ -6,6 +6,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -173,7 +174,7 @@ func TestTaskExec_Ask(t *testing.T) {
 		"should bubble error if fail to select environment": {
 			inApp: mockApp,
 			setupMocks: func(m execTaskMocks) {
-				m.configSel.EXPECT().Environment(taskExecEnvNamePrompt, taskExecEnvNameHelpPrompt, mockApp, useDefaultClusterOption).
+				m.configSel.EXPECT().Environment(taskExecEnvNamePrompt, taskExecEnvNameHelpPrompt, mockApp, prompt.Option{Value: useDefaultClusterOption}).
 					Return("", mockErr)
 			},
 
@@ -227,7 +228,7 @@ func TestTaskExec_Ask(t *testing.T) {
 			setupMocks: func(m execTaskMocks) {
 				m.configSel.EXPECT().Application(taskExecAppNamePrompt, taskExecAppNameHelpPrompt, useDefaultClusterOption).
 					Return(mockApp, nil)
-				m.configSel.EXPECT().Environment(taskExecEnvNamePrompt, taskExecEnvNameHelpPrompt, mockApp, useDefaultClusterOption).
+				m.configSel.EXPECT().Environment(taskExecEnvNamePrompt, taskExecEnvNameHelpPrompt, mockApp, prompt.Option{Value: useDefaultClusterOption}).
 					Return(mockEnv, nil)
 				m.storeSvc.EXPECT().GetEnvironment(mockApp, mockEnv).Return(&config.Environment{}, nil)
 				m.provider.EXPECT().FromRole(gomock.Any(), gomock.Any())

@@ -42,6 +42,7 @@ type LoadBalancedWebService struct {
 type LoadBalancedWebServiceOption func(s *LoadBalancedWebService)
 
 // WithNLB enables Network Load Balancer in a LoadBalancedWebService.
+// TODO(Aiden): remove when NetworkLoadBalancer is forcibly updated
 func WithNLB(cidrBlocks []string) func(s *LoadBalancedWebService) {
 	return func(s *LoadBalancedWebService) {
 		s.publicSubnetCIDRBlocks = cidrBlocks

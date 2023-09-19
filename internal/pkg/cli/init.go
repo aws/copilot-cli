@@ -210,6 +210,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		}
 		sel := selector.NewLocalWorkloadSelector(prompt, configStore, ws, selector.OnlyInitializedWorkloads)
 		initEnvCmd.manifestWriter = ws
+		initEnvCmd.envLister = ws
 		deployEnvCmd.ws = ws
 		deployEnvCmd.newEnvDeployer = func() (envDeployer, error) {
 			return newEnvDeployer(deployEnvCmd, ws)
@@ -218,13 +219,18 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		deploySvcCmd.sel = sel
 		deployJobCmd.ws = ws
 		deployJobCmd.sel = sel
-		if initWkCmd, ok := o.initWlCmd.(*initSvcOpts); ok {
-			initWkCmd.init = &initialize.WorkloadInitializer{Store: configStore, Ws: ws, Prog: spin, Deployer: deployer}
+		if initSvcCmd, ok := o.initWlCmd.(*initSvcOpts); ok {
+			initSvcCmd.init = &initialize.WorkloadInitializer{Store: configStore, Ws: ws, Prog: spin, Deployer: deployer}
 		}
-		if initWkCmd, ok := o.initWlCmd.(*initJobOpts); ok {
-			initWkCmd.init = &initialize.WorkloadInitializer{Store: configStore, Ws: ws, Prog: spin, Deployer: deployer}
+		if initJobCmd, ok := o.initWlCmd.(*initJobOpts); ok {
+			initJobCmd.init = &initialize.WorkloadInitializer{Store: configStore, Ws: ws, Prog: spin, Deployer: deployer}
 		}
 		return nil
+	}
+	ws, err := workspace.Use(fs)
+	var errWorkspaceNotFound *workspace.ErrWorkspaceNotFound
+	if err != nil && !errors.As(err, &errWorkspaceNotFound) {
+		return nil, err
 	}
 	return &initOpts{
 		initVars: vars,
@@ -292,6 +298,11 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 						return envDescriber, nil
 					},
 				}
+				if ws != nil {
+					opts.mftReader = ws
+					opts.wsAppName = initAppCmd.name
+					opts.wsPendingCreation = false
+				}
 				o.initWlCmd = &opts
 				o.schedule = &opts.schedule // Surfaced via pointer for logging
 				o.initWkldVars = &opts.initWkldVars
@@ -333,6 +344,13 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 						return nil, err
 					}
 					return envDescriber, nil
+				}
+				if ws != nil {
+					opts.svcLister = ws
+					opts.mftReader = ws
+					opts.wsAppName = initAppCmd.name
+					opts.wsRoot = ws.ProjectRoot()
+					opts.wsPendingCreation = false
 				}
 				o.initWlCmd = &opts
 				o.port = &opts.port // Surfaced via pointer for logging.
@@ -398,6 +416,7 @@ func (o *initOpts) deploy() error {
 	}
 	return o.deploySvc()
 }
+
 func (o *initOpts) loadApp() error {
 	if err := o.initAppCmd.Ask(); err != nil {
 		return fmt.Errorf("ask app init: %w", err)
@@ -419,7 +438,6 @@ func (o *initOpts) loadWkld() error {
 	if err := o.initWlCmd.Ask(); err != nil {
 		return fmt.Errorf("ask %s: %w", o.wkldType, err)
 	}
-
 	return nil
 }
 
@@ -431,7 +449,6 @@ func (o *initOpts) loadWkldCmd() error {
 	if err := o.setupWorkloadInit(o, wkldType); err != nil {
 		return err
 	}
-
 	return nil
 }
 
@@ -547,12 +564,15 @@ func (o *initOpts) askShouldDeploy() error {
 func (o *initOpts) askEnvNameAndMaybeInit() error {
 	if o.initVars.envName == "" {
 		// Select one of existing envs or create a new one.
-		selectedEnv, err := o.sel.Environment(initExistingEnvSelectPrompt, initExistingEnvSelectHelp, *o.appName, envPromptCreateNew)
+		selectedEnv, err := o.sel.Environment(initExistingEnvSelectPrompt, initExistingEnvSelectHelp, *o.appName, prompt.Option{Value: envPromptCreateNew})
 		if err != nil {
 			return fmt.Errorf("select environment: %w", err)
 		}
 		// Customer has selected an existing environment. Return early.
 		if selectedEnv != envPromptCreateNew {
+			if initEnvCmd, ok := o.initEnvCmd.(*initEnvOpts); ok {
+				initEnvCmd.name = selectedEnv
+			}
 			return nil
 		}
 
@@ -578,7 +598,7 @@ func (o *initOpts) askEnvNameAndMaybeInit() error {
 		return err
 	}
 
-	log.Infof("Environment %s does not yet exist in application %s; initializing it.\n", o.initVars.envName, o.initVars.appName)
+	log.Infof("Environment %s does not yet exist in application %s; initializing it.\n", o.initVars.envName, *o.appName)
 	if err := o.initEnvCmd.Execute(); err != nil {
 		return err
 	}

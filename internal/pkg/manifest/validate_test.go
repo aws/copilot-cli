@@ -3985,7 +3985,20 @@ func TestValidateExposedPorts(t *testing.T) {
 					},
 				},
 			},
-			wanted: fmt.Errorf(`containers "foo" and "mockMainContainer" are exposing the same port 80`),
+			wanted: fmt.Errorf(`containers "mockMainContainer" and "foo" are exposing the same port 80`),
+		},
+		"should not error out when main container uses non-default protocol": {
+			in: validateExposedPortsOpts{
+				mainContainerName: "mockMainContainer",
+				mainContainerPort: aws.Uint16(80),
+				nlb: &NetworkLoadBalancerConfiguration{
+					Listener: NetworkLoadBalancerListener{
+						Port:       aws.String("8080/udp"),
+						TargetPort: aws.Int(80),
+					},
+				},
+			},
+			wanted: nil,
 		},
 		"should not error out when alb target_port is same as that of sidecar container port but target_container is empty": {
 			in: validateExposedPortsOpts{
@@ -3999,6 +4012,42 @@ func TestValidateExposedPorts(t *testing.T) {
 				alb: &HTTP{
 					Main: RoutingRule{
 						TargetPort: aws.Uint16(80),
+					},
+				},
+			},
+			wanted: nil,
+		},
+		"should not error out when nlb target_port is same as that of sidecar container port but target_container is empty": {
+			in: validateExposedPortsOpts{
+				mainContainerName: "mockMainContainer",
+				mainContainerPort: aws.Uint16(8080),
+				sidecarConfig: map[string]*SidecarConfig{
+					"foo": {
+						Port: aws.String("80"),
+					},
+				},
+				nlb: &NetworkLoadBalancerConfiguration{
+					Listener: NetworkLoadBalancerListener{
+						Port:       aws.String("8080/tcp"),
+						TargetPort: aws.Int(80),
+					},
+				},
+			},
+			wanted: nil,
+		},
+		"should not error out when nlb target_port is same as that of sidecar container port but target_container and protocol is empty": {
+			in: validateExposedPortsOpts{
+				mainContainerName: "mockMainContainer",
+				mainContainerPort: aws.Uint16(8080),
+				sidecarConfig: map[string]*SidecarConfig{
+					"foo": {
+						Port: aws.String("80"),
+					},
+				},
+				nlb: &NetworkLoadBalancerConfiguration{
+					Listener: NetworkLoadBalancerListener{
+						Port:       aws.String("8080"),
+						TargetPort: aws.Int(80),
 					},
 				},
 			},
@@ -4067,6 +4116,13 @@ func TestValidateExposedPorts(t *testing.T) {
 				alb: &HTTP{
 					Main: RoutingRule{
 						TargetPort:      aws.Uint16(80),
+						TargetContainer: aws.String("foo"),
+					},
+				},
+				nlb: &NetworkLoadBalancerConfiguration{
+					Listener: NetworkLoadBalancerListener{
+						Port:            aws.String("8080/tcp"),
+						TargetPort:      aws.Int(80),
 						TargetContainer: aws.String("foo"),
 					},
 				},
@@ -4195,6 +4251,34 @@ func TestValidateExposedPorts(t *testing.T) {
 			},
 			wanted: fmt.Errorf(`validate "nlb": containers "nginx" and "foo" are exposing the same port 5001`),
 		},
+		"should return an error if alb and nlb target_port trying to expose same container port with different protocol": {
+			in: validateExposedPortsOpts{
+				mainContainerName: "mockMainContainer",
+				mainContainerPort: aws.Uint16(5000),
+				sidecarConfig: map[string]*SidecarConfig{
+					"foo": {
+						Port: aws.String("8080"),
+					},
+					"nginx": {
+						Port: aws.String("80"),
+					},
+				},
+				alb: &HTTP{
+					Main: RoutingRule{
+						TargetPort:      aws.Uint16(5001),
+						TargetContainer: aws.String("foo"),
+					},
+				},
+				nlb: &NetworkLoadBalancerConfiguration{
+					Listener: NetworkLoadBalancerListener{
+						Port:            aws.String("5001/udp"),
+						TargetPort:      aws.Int(5001),
+						TargetContainer: aws.String("foo"),
+					},
+				},
+			},
+			wanted: fmt.Errorf(`validate "nlb": container "foo" is exposing the same port 5001 with protocol UDP and TCP`),
+		},
 		"should not return an error if nlb is trying to expose multiple ports": {
 			in: validateExposedPortsOpts{
 				mainContainerName: "mockMainContainer",
@@ -4299,6 +4383,48 @@ func TestImageLocationOrBuild_validate(t *testing.T) {
 			in: ImageLocationOrBuild{
 				Location: aws.String("mockLocation"),
 			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			err := tc.in.validate()
+
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestStaticSiteConfig_validate(t *testing.T) {
+	testCases := map[string]struct {
+		in          StaticSiteConfig
+		wantedError error
+	}{
+		"should return error if alias is not specified when certificate is set": {
+			in: StaticSiteConfig{
+				HTTP: StaticSiteHTTP{
+					Certificate: "arn:aws:acm:us-east-1:1234567890:certificate/1115a386-a3db-4fb8-9b39-dfed63968129",
+				},
+			},
+			wantedError: fmt.Errorf(`validate "http": "alias" must be specified if "certificate" is specified`),
+		},
+		"should return error if certificate is not in us-east-1": {
+			in: StaticSiteConfig{
+				HTTP: StaticSiteHTTP{
+					Alias:       "foobar.com",
+					Certificate: "arn:aws:acm:us-east-2:1234567890:certificate/1115a386-a3db-4fb8-9b39-dfed63968129",
+				},
+			},
+			wantedError: fmt.Errorf(`validate "http": cdn certificate must be in region us-east-1`),
+		},
+		"should return error if source is missing": {
+			in: StaticSiteConfig{
+				FileUploads: []FileUpload{{}},
+			},
+			wantedError: fmt.Errorf(`validate "files[0]": "source" must be specified`),
 		},
 	}
 	for name, tc := range testCases {

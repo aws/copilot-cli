@@ -23,6 +23,9 @@ List of all available properties for a Copilot pipeline manifest. To learn more 
         stages: 
           - # By default all workloads are deployed concurrently within a stage.
             name: test
+            pre_deployments:
+              db_migration:
+                buildspec: ./buildspec.yml
             test_commands:
               - make integ-test
               - echo "woo! Tests passed"
@@ -134,10 +137,10 @@ Configuration for CodeBuild project.
 <span class="parent-field">build.</span><a id="build-image" href="#build-image" class="field">`image`</a> <span class="type">String</span>  
 The URI that identifies the Docker image to use for this build project. As of now, `aws/codebuild/amazonlinux2-x86_64-standard:3.0` is used by default.
 
-<span class="parent-field">build.</span><a id="build-buildspec" href="#build-buildspec" class="field">`buildspec`</a> <span class="type">String</span>
-Optional. The URI that identifies a buildspec to use for this build project. By default, Copilot will generate one for you, located at `copilot/pipelines/[your pipeline name]/buildspec.yml`.
+<span class="parent-field">build.</span><a id="build-buildspec" href="#build-buildspec" class="field">`buildspec`</a> <span class="type">String</span>  
+Optional. The path to a buildspec file, relative to the project root, to use for this build project. By default, Copilot will generate one for you, located at `copilot/pipelines/[your pipeline name]/buildspec.yml`.
 
-<span class="parent-field">build.</span><a id="build-additional-policy" href="#build-additional-policy" class="field">`additional_policy.`</a><a id="policy-document" href="#policy-document" class="field">`PolicyDocument`</a> <span class="type">Map</span>
+<span class="parent-field">build.</span><a id="build-additional-policy" href="#build-additional-policy" class="field">`additional_policy.`</a><a id="policy-document" href="#policy-document" class="field">`PolicyDocument`</a> <span class="type">Map</span>  
 Optional. Specify an additional policy document to add to the build project role.
 The additional policy document can be specified in a map in YAML, for example:
 ```yaml
@@ -157,7 +160,7 @@ build:
   additional_policy:
     PolicyDocument: 
       {
-        “Statement": [
+        "Statement": [
           {
             "Action": ["ecr:GetAuthorizationToken"],
             "Effect": "Allow",
@@ -177,7 +180,29 @@ Ordered list of environments that your pipeline will deploy to.
 The name of an environment to deploy your services to.
 
 <span class="parent-field">stages.</span><a id="stages-approval" href="#stages-approval" class="field">`requires_approval`</a> <span class="type">Boolean</span>  
-Optional. Indicates whether to add a manual approval step before the deployment. Defaults to `false`.
+Optional. Indicates whether to add a manual approval step before the deployment (or the pre-deployment actions, if you have added any). Defaults to `false`.
+
+<span class="parent-field">stages.</span><a id="stages-predeployments" href="#stages-predeployments" class="field">`pre_deployments`</a> <span class="type">Map</span> <span class="version">Added in [v1.30.0](../../blogs/release-v130.en.md#deployment-actions)</span>  
+Optional. Add actions to be executed before deployments.
+```yaml
+stages:
+  - name: <env name>
+    pre_deployments:
+      <action name>:
+        buildspec: <path to local buildspec>
+        depends_on: [<other action's name>, ...]
+```
+<span class="parent-field">stages.pre_deployments.</span><a id="stages-predeployments-name" href="#stages-predeployments-name" class="field">`<name>`</a> <span class="type">Map</span> <span class="version">Added in [v1.30.0](../../blogs/release-v130.en.md#deployment-actions)</span>  
+Name of the pre-deployment action.
+
+<span class="parent-field">stages.pre_deployments.`<name>`.</span><a id="stages-predeployments-buildspec" href="#stages-predeployments-buildspec" class="field">`buildspec`</a> <span class="type">String</span> <span class="version">Added in [v1.30.0](../../blogs/release-v130.en.md#deployment-actions)</span>  
+The path to a buildspec file, relative to the project root, to use for this build project.
+
+<span class="parent-field">stages.pre_deployments.`<name>`.</span><a id="stages-predeployments-dependson" href="#stages-predeployments-dependson" class="field">`depends_on`</a> <span class="type">Array of Strings</span> <span class="version">Added in [v1.30.0](../../blogs/release-v130.en.md#deployment-actions)</span>  
+Optional. Names of other pre-deployment actions that should be deployed prior to deploying this action. Defaults to no dependencies.
+
+!!! info
+    For more on pre- and post-deployments, see the [v1.30.0 blog post](../../blogs/release-v130.en.md) and the [Pipelines](../concepts/pipelines.en.md) page.
 
 <span class="parent-field">stages.</span><a id="stages-deployments" href="#stages-deployments" class="field">`deployments`</a> <span class="type">Map</span>  
 Optional. Control which CloudFormation stacks to deploy and their order.  
@@ -223,8 +248,8 @@ Finally, if `deployments` isn't specified, by default Copilot will deploy all yo
 <span class="parent-field">stages.deployments.</span><a id="stages-deployments-name" href="#stages-deployments-name" class="field">`<name>`</a> <span class="type">Map</span>  
 Name of the job or service to deploy.  
 
-<span class="parent-field">stages.deployments.`<name>`.</span><a id="stages-deployments-dependson" href="#stages-deployments-dependson" class="field">`depends_on`</a> <span class="type">Array of Strings</span>    
-Optional. Name of other job or services that should be deployed prior to deploying this microservice. Defaults to no dependencies.  
+<span class="parent-field">stages.deployments.`<name>`.</span><a id="stages-deployments-dependson" href="#stages-deployments-dependson" class="field">`depends_on`</a> <span class="type">Array of Strings</span>  
+Optional. Name of other jobs or services that should be deployed prior to deploying this microservice. Defaults to no dependencies.  
 
 <span class="parent-field">stages.deployments.`<name>`.</span><a id="stages-deployments-stackname" href="#stages-deployments-stackname" class="field">`stack_name`</a> <span class="type">String</span>  
 Optional. Name of the stack to create or update. Defaults to `<app name>-<stage name>-<deployment name>`.  
@@ -236,5 +261,24 @@ Optional. Path to the CloudFormation template generated during the `build` phase
 <span class="parent-field">stages.deployments.`<name>`.</span><a id="stages-deployments-templateconfig" href="#stages-deployments-templatepath" class="field">`template_config`</a> <span class="type">String</span>  
 Optional. Path to the CloudFormation template configuration generated during the `build` phase. Defaults to `infrastructure/<deployment name>-<stage name>.params.json`.
 
+<span class="parent-field">stages.</span><a id="stages-postdeployments" href="#stages-postdeployments" class="field">`post_deployments`</a> <span class="type">Map</span><span class="version">Added in [v1.30.0](../../blogs/release-v130.en.md#deployment-actions)</span>  
+Optional. Add actions to be executed after deployments. Mutually exclusive with `stages.test_commands`.
+```yaml
+stages:
+  - name: <env name>
+    post_deployments:
+      <action name>:
+        buildspec: <path to local buildspec>
+        depends_on: [<other action's name>, ...]
+```
+<span class="parent-field">stages.post_deployments.</span><a id="stages-postdeployments-name" href="#stages-postdeployments-name" class="field">`<name>`</a> <span class="type">Map</span> <span class="version">Added in [v1.30.0](../../blogs/release-v130.en.md#deployment-actions)</span>  
+Name of the post-deployment action.
+
+<span class="parent-field">stages.post_deployments.`<name>`.</span><a id="stages-postdeployments-buildspec" href="#stages-postdeployments-buildspec" class="field">`buildspec`</a> <span class="type">String</span> <span class="version">Added in [v1.30.0](../../blogs/release-v130.en.md#deployment-actions)</span>  
+The path to a buildspec file, relative to the project root, to use for this build project.
+
+<span class="parent-field">stages.post_deployments.`<name>`.</span><a id="stages-postdeployments-depends_on" href="#stages-postdeployments-dependson" class="field">`depends_on`</a> <span class="type">Array of Strings</span> <span class="version">Added in [v1.30.0](../../blogs/release-v130.en.md#deployment-actions)</span>   
+Optional. Names of other post-deployment actions that should be deployed prior to deploying this action. Defaults to no dependencies.
+
 <span class="parent-field">stages.</span><a id="stages-test-cmds" href="#stages-test-cmds" class="field">`test_commands`</a> <span class="type">Array of Strings</span>  
-Optional. Commands to run integration or end-to-end tests after deployment. Defaults to no post-deployment validations.
+Optional. Commands to run integration or end-to-end tests after deployment. Defaults to no post-deployment validations. Mutually exclusive with `stages.post_deployment`.

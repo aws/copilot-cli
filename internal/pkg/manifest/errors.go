@@ -236,3 +236,14 @@ type errContainersExposingSamePort struct {
 func (e *errContainersExposingSamePort) Error() string {
 	return fmt.Sprintf(`containers %q and %q are exposing the same port %d`, e.firstContainer, e.secondContainer, e.port)
 }
+
+type errContainerPortExposedWithMultipleProtocol struct {
+	container      string
+	port           uint16
+	firstProtocol  string
+	secondProtocol string
+}
+
+func (e *errContainerPortExposedWithMultipleProtocol) Error() string {
+	return fmt.Sprintf(`container %q is exposing the same port %d with protocol %s and %s`, e.container, e.port, e.firstProtocol, e.secondProtocol)
+}

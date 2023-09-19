@@ -217,46 +217,7 @@ func TestStaticSiteDeployer_stackConfiguration(t *testing.T) {
 			},
 			wantErr: `static sites not supported: app version must be >= v1.2.0`,
 		},
-		"error bc alias specified and env has imported certs": {
-			deployer: &staticSiteDeployer{
-				svcDeployer: &svcDeployer{
-					workloadDeployer: &workloadDeployer{
-						app: &config.Application{},
-						env: &config.Environment{
-							Name: "mockEnv",
-						},
-						envConfig: &manifest.Environment{
-							EnvironmentConfig: manifest.EnvironmentConfig{
-								HTTPConfig: manifest.EnvironmentHTTPConfig{
-									Public: manifest.PublicHTTPConfig{
-										Certificates: []string{"mockCert"},
-									},
-								},
-							},
-						},
-						endpointGetter: &endpointGetterDouble{
-							ServiceDiscoveryEndpointFn: ReturnsValues("", error(nil)),
-						},
-						envVersionGetter: &versionGetterDouble{
-							VersionFn: ReturnsValues("", error(nil)),
-						},
-						resources: &stack.AppRegionalResources{},
-					},
-				},
-				appVersionGetter: &versionGetterDouble{
-					VersionFn: ReturnsValues("v1.2.0", error(nil)),
-				},
-				staticSiteMft: &manifest.StaticSite{
-					StaticSiteConfig: manifest.StaticSiteConfig{
-						HTTP: manifest.StaticSiteHTTP{
-							Alias: "hi.com",
-						},
-					},
-				},
-			},
-			wantErr: `cannot specify alias when env "mockEnv" imports one or more certificates`,
-		},
-		"error bc alias specified no domain imported": {
+		"error bc alias specified no domain imported and no imported cert": {
 			deployer: &staticSiteDeployer{
 				svcDeployer: &svcDeployer{
 					workloadDeployer: &workloadDeployer{
@@ -283,7 +244,7 @@ func TestStaticSiteDeployer_stackConfiguration(t *testing.T) {
 					},
 				},
 			},
-			wantErr: `cannot specify alias when application is not associated with a domain`,
+			wantErr: `cannot specify alias when application is not associated with a domain or "http.certificate" is not set`,
 		},
 		"error bc invalid alias": {
 			deployer: &staticSiteDeployer{
@@ -368,7 +329,7 @@ func TestStaticSiteDeployer_stackConfiguration(t *testing.T) {
 				},
 			},
 		},
-		"success with alias": {
+		"success with app alias": {
 			deployer: &staticSiteDeployer{
 				svcDeployer: &svcDeployer{
 					workloadDeployer: &workloadDeployer{
@@ -396,6 +357,42 @@ func TestStaticSiteDeployer_stackConfiguration(t *testing.T) {
 					StaticSiteConfig: manifest.StaticSiteConfig{
 						HTTP: manifest.StaticSiteHTTP{
 							Alias: "hi.mockApp.example.com",
+						},
+					},
+				},
+				newStack: func(*stack.StaticSiteConfig) (deployCFN.StackConfiguration, error) {
+					return nil, nil
+				},
+			},
+		},
+		"success with cert alias": {
+			deployer: &staticSiteDeployer{
+				svcDeployer: &svcDeployer{
+					workloadDeployer: &workloadDeployer{
+						app: &config.Application{
+							Name: "mockApp",
+						},
+						env: &config.Environment{
+							Name: "mockEnv",
+						},
+						envConfig: &manifest.Environment{},
+						endpointGetter: &endpointGetterDouble{
+							ServiceDiscoveryEndpointFn: ReturnsValues("", error(nil)),
+						},
+						envVersionGetter: &versionGetterDouble{
+							VersionFn: ReturnsValues("", error(nil)),
+						},
+						resources: &stack.AppRegionalResources{},
+					},
+				},
+				appVersionGetter: &versionGetterDouble{
+					VersionFn: ReturnsValues("v1.2.0", error(nil)),
+				},
+				staticSiteMft: &manifest.StaticSite{
+					StaticSiteConfig: manifest.StaticSiteConfig{
+						HTTP: manifest.StaticSiteHTTP{
+							Alias:       "random.example.com",
+							Certificate: "mockCert",
 						},
 					},
 				},

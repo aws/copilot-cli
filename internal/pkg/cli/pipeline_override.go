@@ -5,6 +5,7 @@ package cli
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
@@ -98,7 +99,7 @@ func (o *overridePipelineOpts) validatePipelineName() error {
 	for _, pipeline := range pipelines {
 		names = append(names, pipeline.Name)
 	}
-	if !contains(o.name, names) {
+	if !slices.Contains(names, o.name) {
 		return fmt.Errorf("pipeline %q does not exist in the workspace", o.name)
 	}
 	return nil
