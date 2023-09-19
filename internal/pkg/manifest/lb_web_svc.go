@@ -293,7 +293,7 @@ func (lbws *LoadBalancedWebService) ExposedPorts() (ExposedPortsIndex, error) {
 			return ExposedPortsIndex{}, err
 		}
 	}
-	// port from image.port.
+	// port from image.port
 	lbws.ImageConfig.exposePorts(exposedPorts, workloadName)
 
 	portsForContainer, containerForPort := prepareParsedExposedPortsMap(exposedPorts)

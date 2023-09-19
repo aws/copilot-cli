@@ -524,7 +524,8 @@ func (cfg *ALBListener) RulePaths() []string {
 
 // ServiceConnect holds configuration for ECS Service Connect.
 type ServiceConnect struct {
-	Alias *string
+	Alias       *string
+	ExposedPort *string
 }
 
 // AdvancedCount holds configuration for autoscaling and capacity provider

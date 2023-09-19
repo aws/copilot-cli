@@ -43,7 +43,7 @@ const (
 
 	// TLS is the tls protocol for NLB.
 	TLS = "TLS"
-	udp = "UDP"
+	UDP = "UDP"
 
 	// Tracing vendors.
 	awsXRAY = "awsxray"
@@ -70,8 +70,8 @@ var (
 
 	essentialContainerDependsOnValidStatuses = []string{dependsOnStart, dependsOnHealthy}
 	dependsOnValidStatuses                   = []string{dependsOnStart, dependsOnComplete, dependsOnSuccess, dependsOnHealthy}
-	nlbValidProtocols                        = []string{TCP, udp, TLS}
-	validContainerProtocols                  = []string{TCP, udp}
+	nlbValidProtocols                        = []string{TCP, UDP, TLS}
+	validContainerProtocols                  = []string{TCP, UDP}
 	tracingValidVendors                      = []string{awsXRAY}
 	ecsRollingUpdateStrategies               = []string{ECSDefaultRollingUpdateStrategy, ECSRecreateRollingUpdateStrategy}
 

@@ -202,7 +202,6 @@ func (b *BackendService) ExposedPorts() (ExposedPortsIndex, error) {
 	exposedPorts := make(map[uint16]ExposedPort)
 
 	workloadName := aws.StringValue(b.Name)
-	b.ImageConfig.exposePorts(exposedPorts, workloadName)
 	for name, sidecar := range b.Sidecars {
 		err := sidecar.exposePorts(exposedPorts, name)
 		if err != nil {
@@ -212,6 +211,7 @@ func (b *BackendService) ExposedPorts() (ExposedPortsIndex, error) {
 	for _, rule := range b.HTTP.RoutingRules() {
 		rule.exposePorts(exposedPorts, workloadName)
 	}
+	b.ImageConfig.exposePorts(exposedPorts, workloadName)
 	portsForContainer, containerForPort := prepareParsedExposedPortsMap(exposedPorts)
 	return ExposedPortsIndex{
 		WorkloadName:      workloadName,
