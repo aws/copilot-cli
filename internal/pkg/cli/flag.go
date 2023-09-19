@@ -281,7 +281,7 @@ We do not recommend using this flag for a
 production environment.`
 	forceEnvDeployFlagDescription  = "Optional. Force update the environment stack template."
 	yesInitWorkloadFlagDescription = "Optional. Initialize a workload before deploying it."
-	allFlagDescription             = "Optional. Deploy all workloads with manifests in the current Copilot workspace."
+	allWorkloadsFlagDescription             = "Optional. Deploy all workloads with manifests in the current Copilot workspace."
 	detachFlagDescription          = "Optional. Skip displaying CloudFormation deployment progress."
 
 	// Operational.
