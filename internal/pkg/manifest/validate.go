@@ -2179,9 +2179,6 @@ func validateAndPopulateNLBListenerPorts(listener NetworkLoadBalancerListener, p
 
 	// Prefer `nlb.port`, then fallback on default protocol
 	targetProtocol := defaultProtocol
-	/*if existingContainerNameAndProtocol, ok := portExposedTo[targetPort]; ok {
-		targetProtocol = existingContainerNameAndProtocol.containerProtocol
-	}*/
 	if nlbProtocol != nil {
 		targetProtocol = strings.ToUpper(aws.StringValue(nlbProtocol))
 	}
