@@ -43,6 +43,8 @@ const (
 
 	// TLS is the tls protocol for NLB.
 	TLS = "TLS"
+
+	// UDP is the udp protocol for NLB.
 	UDP = "UDP"
 
 	// Tracing vendors.
