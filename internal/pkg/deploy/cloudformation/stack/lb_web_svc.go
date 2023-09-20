@@ -264,6 +264,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("apply task definition overrides: %w", err)
 	}
+	fmt.Println(string(overriddenTpl))
 	return string(overriddenTpl), nil
 }
 

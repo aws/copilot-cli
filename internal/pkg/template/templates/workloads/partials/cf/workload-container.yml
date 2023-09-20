@@ -26,31 +26,19 @@
       ContainerName: {{$name}}
   {{- end}}
 {{- end}}
-{{- if eq .WorkloadType "Load Balanced Web Service"}}
-  PortMappings:
-  {{- range $portMapping := .PortMappings }}
-    - ContainerPort: {{ $portMapping.ContainerPort }}
-      Protocol: {{ $portMapping.Protocol }}
-  {{- if .ServiceConnect}}
-  {{- if eq $portMapping.ContainerPort $.ServiceConnect.ExposedPort}}
-      Name: target
-  {{- end}}
-  {{- end}}
-  {{- end}}
-{{- end}} {{/* end if eq .WorkloadType "Load Balanced Web Service"*/}}
-{{- if eq .WorkloadType "Backend Service"}}
-  {{- if .PortMappings}}
+{{- if .PortMappings}}
   PortMappings:
   {{- range $portMapping := .PortMappings}}
     - ContainerPort: {{$portMapping.ContainerPort}}
       Protocol: {{ $portMapping.Protocol }}
-  {{- if .ServiceConnect}}
-  {{- if eq $portMapping.ContainerPort $.ServiceConnect.ExposedPort}}
-      Name: target
+  {{- if $.ServiceConnect}}
+  {{- if $.ServiceConnect.ExposedPort}}
+  {{- if eq $.ServiceConnect.ExposedPort $portMapping.ContainerPort}}
+      # Name: target
   {{- end}}
   {{- end}}
   {{- end}}
-{{- end}}
+  {{- end}}
 {{- end}}
 {{- if .HealthCheck}}
   HealthCheck:
