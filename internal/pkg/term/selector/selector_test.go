@@ -1419,6 +1419,78 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 	}
 }
 
+func TestWorkspaceSelect_Workloads(t *testing.T) {
+	testCases := map[string]struct {
+		setupMocks func(mocks workspaceSelectMocks)
+		wantErr    error
+		want       []string
+	}{
+		"success": {
+			setupMocks: func(m workspaceSelectMocks) {
+				m.ws.EXPECT().Summary().Return(&workspace.Summary{
+					Application: "app",
+				}, nil)
+				m.ws.EXPECT().ListWorkloads().Return([]string{"fe", "be", "worker"}, nil)
+				m.configLister.EXPECT().ListWorkloads("app").Return([]*config.Workload{
+					{
+						App:  "app",
+						Name: "fe",
+						Type: "Load Balanced Web Service",
+					},
+					{
+						App:  "app",
+						Name: "worker",
+						Type: "Worker Service",
+					},
+				}, nil)
+				m.prompt.EXPECT().MultiSelectOptions(gomock.Any(), gomock.Any(), []prompt.Option{
+					{Value: "fe"},
+					{Value: "worker"},
+					{
+						Value: "be",
+						Hint:  "uninitialized",
+					},
+				}, gomock.Any()).Return([]string{"fe", "be"}, nil).Times(1)
+			},
+			want: []string{"fe", "be"},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockwsRetriever := mocks.NewMockworkspaceRetriever(ctrl)
+			MockconfigLister := mocks.NewMockconfigLister(ctrl)
+			mockprompt := mocks.NewMockPrompter(ctrl)
+			mocks := workspaceSelectMocks{
+				ws:           mockwsRetriever,
+				configLister: MockconfigLister,
+				prompt:       mockprompt,
+			}
+			tc.setupMocks(mocks)
+
+			sel := LocalWorkloadSelector{
+				ConfigSelector: &ConfigSelector{
+					AppEnvSelector: &AppEnvSelector{
+						prompt:       mockprompt,
+						appEnvLister: MockconfigLister,
+					},
+					workloadLister: MockconfigLister,
+				},
+				ws:                       mockwsRetriever,
+				onlyInitializedWorkloads: false,
+			}
+			got, err := sel.Workloads("Select a workload", "Help text")
+			if tc.wantErr != nil {
+				require.EqualError(t, err, tc.wantErr.Error())
+			} else {
+				require.Equal(t, tc.want, got)
+			}
+		})
+	}
+}
+
 func TestWorkspaceSelect_EnvironmentsInWorkspace(t *testing.T) {
 	testCases := map[string]struct {
 		setupMocks func(mocks workspaceSelectMocks)
@@ -1652,7 +1724,7 @@ func TestWorkspaceSelect_Workload(t *testing.T) {
 				m.prompt.EXPECT().SelectOption(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Times(0)
 			},
-			wantErr: fmt.Errorf("no jobs or services found in workspace"),
+			wantErr: fmt.Errorf("no workloads found in workspace"),
 		},
 		"with one workspace service but no store services": {
 			inOnlyInitializedWorkloads: false,
@@ -1747,7 +1819,7 @@ func TestWorkspaceSelect_Workload(t *testing.T) {
 				m.prompt.EXPECT().SelectOption(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Times(0)
 			},
-			wantErr: errors.New("retrieve jobs and services from workspace: some error"),
+			wantErr: errors.New("retrieve workloads from workspace: some error"),
 		},
 		"fails retrieving store workloads": {
 			setupMocks: func(m workspaceSelectMocks) {
@@ -1759,7 +1831,7 @@ func TestWorkspaceSelect_Workload(t *testing.T) {
 				m.prompt.EXPECT().SelectOption(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Times(0)
 			},
-			wantErr: errors.New("retrieve jobs and services from store: some error"),
+			wantErr: errors.New("retrieve workloads from store: some error"),
 		},
 		"fails selecting workload": {
 			inOnlyInitializedWorkloads: false,
