@@ -691,7 +691,7 @@ func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (networkLoadBalanc
 	// TODO(Aiden): remove when NetworkLoadBalancer is forcibly updated
 	var udpListenerExists bool
 	for _, listener := range listeners {
-		if listener.Protocol == "UDP" {
+		if strings.EqualFold(listener.Protocol, manifest.UDP) {
 			udpListenerExists = true
 		}
 	}
