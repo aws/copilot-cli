@@ -111,9 +111,11 @@ NetworkConfiguration:
       {{- else}}
       - Fn::ImportValue: {{$sg.Value}} {{- end}}
       {{- end}}
-      {{- if .NLB}}
-      - !Ref NLBSecurityGroup
-      {{- end}}
       {{- if .NestedStack}}{{$stackName := .NestedStack.StackName}}{{range $sg := .NestedStack.SecurityGroupOutputs}}
       - Fn::GetAtt: [{{$stackName}}, Outputs.{{$sg}}]
       {{- end}}{{end}}
+      {{- if .NLB}}
+      {{- if not .NLB.UDPListenerExists }}
+      - !Ref NLBSecurityGroup
+      {{- end}}
+      {{- end}}

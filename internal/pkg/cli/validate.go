@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -356,7 +357,7 @@ func validateStorageType(val interface{}, opts validateStorageTypeOpts) error {
 	if !ok {
 		return errValueNotAString
 	}
-	if !contains(storageType, storageTypes) {
+	if !slices.Contains(storageTypes, storageType) {
 		return fmt.Errorf(fmtErrInvalidStorageType, storageType, prettify(storageTypes))
 	}
 

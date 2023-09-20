@@ -22,7 +22,7 @@ When you're setting up a service, Copilot will ask you about what kind of servic
 
 ### Internet-facing services
 
-If you want your service to serve internet traffic then you have three options:
+If you want your service to serve public internet traffic, you have three options:
 
 * "Request-Driven Web Service" will provision an AWS App Runner Service to run your service.
 * "Static Site" will provision a dedicated CloudFront distribution and S3 bucket for your static website.
@@ -31,7 +31,7 @@ If you want your service to serve internet traffic then you have three options:
 
 #### Request-Driven Web Service
 An AWS App Runner service that autoscales your instances based on incoming traffic and scales down to a baseline instance when there's no traffic. 
-This option is more cost effective for HTTP services with sudden bursts in request volumes or low request volumes.
+This option is more cost-effective for HTTP services with sudden bursts in request volumes or low request volumes.
 
 Unlike ECS, App Runner services are not connected by default to a VPC. In order to route egress traffic through a VPC, 
 you can configure the [`network`](../manifest/rd-web-service.en.md#network) field in the manifest.
@@ -53,7 +53,7 @@ Below is a diagram for a Load Balanced Web Service that involves an Application 
 ![lb-web-service-infra](https://user-images.githubusercontent.com/879348/86045951-39762880-ba01-11ea-9a47-fc9278600154.png)
 
 ### Backend Service
-If you want a service that can't be accessed externally, but only from other services within your application, you can create a __Backend Service__. Copilot will provision an ECS Service running on AWS Fargate, but won't set up any internet-facing endpoints. To learn about creating Backend Services with internal load balancers, go [here](../developing/internal-albs.en.md).
+If you want a service that can't be accessed externally, but only from other services within your application, you can create a __Backend Service__. Copilot will provision an ECS Service running on AWS Fargate, but won't set up any internet-facing endpoints. Load balancing is available for Backend Services. To learn about creating internal load balancers, go [here](../developing/internal-albs.en.md).
 
 ![backend-service-infra](https://user-images.githubusercontent.com/879348/86046929-e8673400-ba02-11ea-8676-addd6042e517.png)
 
