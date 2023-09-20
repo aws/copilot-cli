@@ -47,7 +47,7 @@ EnvironmentSecurityGroupIngressFromNetworkLoadBalancerSecurityGroup:
         !Sub '${AppName}-${EnvName}-EnvironmentSecurityGroup'
     IpProtocol: -1
     SourceSecurityGroupId: !GetAtt NetworkLoadBalancerSecurityGroup.GroupId
-{{- else}} # Old NLB security group for non-UDP traffic
+{{- else}} {{ /* Old NLB security group for non-UDP traffic */ }}
 NLBSecurityGroup:
   Metadata:
     'aws:copilot:description': 'A security group for your network load balancer to route traffic to service'
