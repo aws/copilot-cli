@@ -6,13 +6,11 @@ package cli
 import (
 	"errors"
 	"fmt"
-	"slices"
-	"strings"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
+	"slices"
 
 	"github.com/aws/copilot-cli/cmd/copilot/template"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
@@ -436,7 +434,7 @@ func (o *deployOpts) loadWkldCmd(name string) (actionCommand, error) {
 	if err != nil {
 		return nil, err
 	}
-	if strings.Contains(strings.ToLower(wl.Type), jobWkldType) {
+	if slices.Contains(manifestinfo.JobTypes(), wl.Type) {
 		o.wlType = jobWkldType
 		return cmd, nil
 	}
