@@ -56,7 +56,7 @@ type deployOpts struct {
 	deployVars
 
 	newWorkloadAdder func() wkldInitializerWithoutManifest
-	setupDeployCmd   func(*deployOpts, string, string) actionCommand
+	setupDeployCmd   func(*deployOpts, string, string) (actionCommand, error)
 
 	newInitEnvCmd   func(o *deployOpts) (cmd, error)
 	newDeployEnvCmd func(o *deployOpts) (cmd, error)
@@ -132,8 +132,7 @@ func newDeployOpts(vars deployVars) (*deployOpts, error) {
 			})
 		},
 
-		setupDeployCmd: func(o *deployOpts, workloadName, workloadType string) actionCommand {
-			var output actionCommand
+		setupDeployCmd: func(o *deployOpts, workloadName, workloadType string) (actionCommand, error) {
 			switch {
 			case slices.Contains(manifestinfo.JobTypes(), workloadType):
 				opts := &deployJobOpts{
@@ -152,7 +151,7 @@ func newDeployOpts(vars deployVars) (*deployOpts, error) {
 					return newJobDeployer(opts)
 				}
 				opts.name = workloadName
-				output = opts
+				return opts, nil
 			case slices.Contains(manifestinfo.JobTypes(), workloadType):
 				opts := &deploySvcOpts{
 					deployWkldVars: o.deployWkldVars,
@@ -172,9 +171,9 @@ func newDeployOpts(vars deployVars) (*deployOpts, error) {
 					return newSvcDeployer(opts)
 				}
 				opts.name = workloadName
-				output = opts
+				return opts, nil
 			}
-			return output
+			return nil, fmt.Errorf("unrecognized workload type %s", workloadType)
 		},
 	}, nil
 }
@@ -433,7 +432,10 @@ func (o *deployOpts) loadWkldCmd(name string) (actionCommand, error) {
 	if err != nil {
 		return nil, fmt.Errorf("retrieve %s from application %s: %w", o.appName, name, err)
 	}
-	cmd := o.setupDeployCmd(o, name, wl.Type)
+	cmd, err := o.setupDeployCmd(o, name, wl.Type)
+	if err != nil {
+		return nil, err
+	}
 	if strings.Contains(strings.ToLower(wl.Type), jobWkldType) {
 		o.wlType = jobWkldType
 		return cmd, nil

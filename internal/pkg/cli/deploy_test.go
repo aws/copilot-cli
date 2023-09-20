@@ -5,11 +5,12 @@ package cli
 
 import (
 	"errors"
+	"testing"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
-	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -702,7 +703,7 @@ type: Load Balanced Web Service`)
 
 				newWorkloadAdder: func() wkldInitializerWithoutManifest { return mockInit },
 
-				setupDeployCmd: func(o *deployOpts, name, wlType string) actionCommand { return mockCmd },
+				setupDeployCmd: func(o *deployOpts, name, wlType string) (actionCommand, error) { return mockCmd, nil },
 			}
 			if tc.inNames != nil {
 				opts.workloadNames = tc.inNames
