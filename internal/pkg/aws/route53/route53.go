@@ -167,7 +167,7 @@ func matchesDomain(domain string) filterZoneFunc {
 }
 
 func isPrivateHostedZone(cfg *route53.HostedZoneConfig) bool {
-	return aws.BoolValue(cfg.PrivateZone) == true
+	return aws.BoolValue(cfg.PrivateZone)
 }
 
 func cleanNSRecord(record string) string {
