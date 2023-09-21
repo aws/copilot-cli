@@ -515,7 +515,7 @@ func (rr RoutingRule) exposePorts(exposedPorts map[uint16]ExposedPort, workloadN
 		targetContainer = aws.StringValue(rr.TargetContainer)
 	}
 	targetPort := aws.Uint16Value(rr.TargetPort)
-	for port, _ := range exposedPorts {
+	for port := range exposedPorts {
 		if targetPort == port {
 			return
 		}
@@ -600,12 +600,13 @@ func (sidecar SidecarConfig) exposePorts(exposedPorts map[uint16]ExposedPort, si
 	return nil
 }
 
+// ServiceConnectTargetContainer contains the name of a container and port to expose to ECS Service Connect.
 type ServiceConnectTargetContainer struct {
 	Container string
 	Port      string
 }
 
-// Target returns the target container, port, and protocol to be exposed for ServiceConnect.
+// ServiceConnectTarget returns the target container, port, and protocol to be exposed for ServiceConnect.
 func (l *LoadBalancedWebService) ServiceConnectTarget(exposedPorts ExposedPortsIndex) *ServiceConnectTargetContainer {
 	// Expose ServiceConnect from `image.port` by default.
 	targetContainer := exposedPorts.WorkloadName
@@ -630,7 +631,7 @@ func (l *LoadBalancedWebService) ServiceConnectTarget(exposedPorts ExposedPortsI
 	}
 }
 
-// Target returns the target container and port to be exposed for ServiceConnect.
+// ServiceConnectTarget returns the target container and port to be exposed for ServiceConnect.
 func (b *BackendService) ServiceConnectTarget(exposedPorts ExposedPortsIndex) *ServiceConnectTargetContainer {
 	// Expose ServiceConnect from `image.port` by default.
 	targetContainer := exposedPorts.WorkloadName

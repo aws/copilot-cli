@@ -271,7 +271,7 @@ Outputs:
 			WorkloadType: manifestinfo.LoadBalancedWebServiceType,
 			ServiceConnectOpts: template.ServiceConnectOpts{
 				Alias: aws.String("frontend"),
-				Container: &template.ServiceConnectContainer{
+				Server: &template.ServiceConnectServer{
 					Name: "frontend",
 					Port: "80",
 				},
@@ -487,7 +487,7 @@ Outputs:
 		// THEN
 		require.NoError(t, err)
 		require.Equal(t, template.ServiceConnectOpts{
-			Container: &template.ServiceConnectContainer{
+			Server: &template.ServiceConnectServer{
 				Name: "envoy",
 				Port: "443",
 			},

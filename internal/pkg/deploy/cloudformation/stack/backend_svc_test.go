@@ -318,7 +318,7 @@ Outputs:
 			},
 			ServiceConnectOpts: template.ServiceConnectOpts{
 				Alias: aws.String("api"),
-				Container: &template.ServiceConnectContainer{
+				Server: &template.ServiceConnectServer{
 					Name: "api",
 					Port: "8080",
 				},
@@ -523,7 +523,7 @@ Outputs:
 				},
 			},
 			ServiceConnectOpts: template.ServiceConnectOpts{
-				Container: &template.ServiceConnectContainer{
+				Server: &template.ServiceConnectServer{
 					Name: "envoy",
 					Port: "443",
 				},

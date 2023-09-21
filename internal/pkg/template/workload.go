@@ -511,21 +511,22 @@ func (cfg *ALBListener) RulePaths() []string {
 	return rulePaths
 }
 
-type ServiceConnectContainer struct {
+// ServiceConnectServer defines the container name and port which a service routes Service Connect through.
+type ServiceConnectServer struct {
 	Name string
 	Port string
 }
 
 // ServiceConnectOpts holds configuration for ECS Service Connect.
 type ServiceConnectOpts struct {
-	Alias     *string
-	Container *ServiceConnectContainer
-	Enabled   bool
+	Alias   *string
+	Server  *ServiceConnectServer
+	Enabled bool
 }
 
 // Exposed returns true if the target container has an accessible port to receive traffic.
 func (tg ServiceConnectOpts) Exposed() bool {
-	return tg.Container != nil && tg.Container.Port != "" && tg.Container.Port != NoExposedContainerPort
+	return tg.Server != nil && tg.Server.Port != "" && tg.Server.Port != NoExposedContainerPort
 }
 
 // AdvancedCount holds configuration for autoscaling and capacity provider

@@ -750,7 +750,7 @@ func convertServiceConnectOpts(s manifest.ServiceConnectBoolOrArgs, target *mani
 
 	// target != nil means that a Service Connect port is exposed for this service.
 	if target != nil {
-		scOpts.Container = &template.ServiceConnectContainer{
+		scOpts.Server = &template.ServiceConnectServer{
 			Name: target.Container,
 			Port: target.Port,
 		}

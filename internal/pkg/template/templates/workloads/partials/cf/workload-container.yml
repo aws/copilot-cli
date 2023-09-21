@@ -31,8 +31,8 @@
   {{- range $portMapping := .PortMappings }}
     - ContainerPort: {{ $portMapping.ContainerPort }}
       Protocol: {{ $portMapping.Protocol }}
-  {{- if $.ServiceConnectOpts.Container}}
-  {{- if and (eq $.ServiceConnectOpts.Container.Name $.WorkloadName) (eq $.ServiceConnectOpts.Container.Port (strconvUint16 $portMapping.ContainerPort ))}}
+  {{- if $.ServiceConnectOpts.Server}}
+  {{- if and (eq $.ServiceConnectOpts.Server.Name $.WorkloadName) (eq $.ServiceConnectOpts.Server.Port (strconvUint16 $portMapping.ContainerPort ))}}
       Name: target
   {{- end}}
   {{- end}}
@@ -44,8 +44,8 @@
   {{- range $portMapping := .PortMappings}}
     - ContainerPort: {{$portMapping.ContainerPort}}
       Protocol: {{ $portMapping.Protocol }}
-  {{- if $.ServiceConnectOpts.Container}}
-  {{- if and (eq $.ServiceConnectOpts.Container.Name $.WorkloadName) (eq $.ServiceConnectOpts.Container.Port (strconvUint16 $portMapping.ContainerPort ))}}
+  {{- if $.ServiceConnectOpts.Server}}
+  {{- if and (eq $.ServiceConnectOpts.Server.Name $.WorkloadName) (eq $.ServiceConnectOpts.Server.Port (strconvUint16 $portMapping.ContainerPort ))}}
       Name: target
   {{- end}}
   {{- end}}
