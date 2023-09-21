@@ -605,9 +605,9 @@ type ServiceConnectTargetContainer struct {
 	Port      string
 }
 
-// Target returns the target container, port, and protocol to be exposed for ServiceConnect
+// Target returns the target container, port, and protocol to be exposed for ServiceConnect.
 func (l *LoadBalancedWebService) ServiceConnectTarget(exposedPorts ExposedPortsIndex) (*ServiceConnectTargetContainer, error) {
-	// Route load balancer traffic to main container by default.
+	// Expose ServiceConnect from `image.port` by default.
 	targetContainer := exposedPorts.WorkloadName
 	targetPort := exposedPorts.mainContainerPort()
 	targetProtocol := exposedPorts.mainContainerProtocol()
@@ -633,9 +633,9 @@ func (l *LoadBalancedWebService) ServiceConnectTarget(exposedPorts ExposedPortsI
 	}, nil
 }
 
-// Target returns the target container and port to be exposed for ServiceConnect
+// Target returns the target container and port to be exposed for ServiceConnect.
 func (b *BackendService) ServiceConnectTarget(exposedPorts ExposedPortsIndex) (*ServiceConnectTargetContainer, error) {
-	// Route load balancer traffic to main container by default.
+	// Expose ServiceConnect from `image.port` by default.
 	targetContainer := exposedPorts.WorkloadName
 	targetPort := exposedPorts.mainContainerPort()
 	targetProtocol := exposedPorts.mainContainerProtocol()
