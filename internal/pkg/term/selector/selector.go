@@ -751,19 +751,7 @@ func (s *DeploySelector) filterWorkloads(inWorkloads []*DeployedWorkload) ([]*De
 
 // Service fetches all services in the workspace and then prompts the user to select one.
 func (s *LocalWorkloadSelector) Service(msg, help string) (string, error) {
-	summary, err := s.ws.Summary()
-	if err != nil {
-		return "", fmt.Errorf("read workspace summary: %w", err)
-	}
-	wsServiceNames, err := s.retrieveWorkspaceServices()
-	if err != nil {
-		return "", fmt.Errorf("retrieve services from workspace: %w", err)
-	}
-	storeServices, err := s.ConfigSelector.workloadLister.ListServices(summary.Application)
-	if err != nil {
-		return "", fmt.Errorf("retrieve services from store: %w", err)
-	}
-	options, err := s.getWorkloadSelectOptions(storeServices, wsServiceNames, svcWorkloadType)
+	options, err := s.getWorkloadSelectOptions(svcWorkloadType)
 	if err != nil {
 		return "", err
 	}
@@ -781,19 +769,7 @@ func (s *LocalWorkloadSelector) Service(msg, help string) (string, error) {
 
 // Job fetches all jobs in the workspace and then prompts the user to select one.
 func (s *LocalWorkloadSelector) Job(msg, help string) (string, error) {
-	summary, err := s.ws.Summary()
-	if err != nil {
-		return "", fmt.Errorf("read workspace summary: %w", err)
-	}
-	wsJobNames, err := s.retrieveWorkspaceJobs()
-	if err != nil {
-		return "", fmt.Errorf("retrieve jobs from workspace: %w", err)
-	}
-	storeJobs, err := s.ConfigSelector.workloadLister.ListJobs(summary.Application)
-	if err != nil {
-		return "", fmt.Errorf("retrieve jobs from store: %w", err)
-	}
-	options, err := s.getWorkloadSelectOptions(storeJobs, wsJobNames, jobWorkloadType)
+	options, err := s.getWorkloadSelectOptions(jobWorkloadType)
 	if err != nil {
 		return "", err
 	}
@@ -810,17 +786,21 @@ func (s *LocalWorkloadSelector) Job(msg, help string) (string, error) {
 
 }
 
-func (s *LocalWorkloadSelector) getWorkloadSelectOptions(storeWls []*config.Workload, wsWlNames []string, workloadType string) ([]prompt.Option, error) {
-	var pluralNounString string
-	switch workloadType {
-	case anyWorkloadType:
-		pluralNounString = "jobs or services"
-	case svcWorkloadType:
-		fallthrough
-	case jobWorkloadType:
-		pluralNounString = english.PluralWord(2, workloadType, "")
-	default:
-		return nil, fmt.Errorf("unrecognized workload type %q", workloadType)
+func (s *LocalWorkloadSelector) getWorkloadSelectOptions(workloadType string) ([]prompt.Option, error) {
+	pluralNounString := english.PluralWord(2, workloadType, "")
+
+	summary, err := s.ws.Summary()
+	if err != nil {
+		return nil, fmt.Errorf("read workspace summary: %w", err)
+	}
+	wsWlNames, err := s.retrieveWorkspaceWorkloads(workloadType)
+	if err != nil {
+		return nil, fmt.Errorf("retrieve %s from workspace: %w", pluralNounString, err)
+	}
+
+	storeWls, err := s.retrieveStoreWorkloads(summary.Application, workloadType)
+	if err != nil {
+		return nil, fmt.Errorf("retrieve %s from store: %w", pluralNounString, err)
 	}
 
 	var options []prompt.Option
@@ -863,33 +843,41 @@ var OnlyInitializedWorkloads WorkloadSelectOption = func(s *LocalWorkloadSelecto
 	s.onlyInitializedWorkloads = true
 }
 
-// Workload fetches all jobs and services in a workspace and prompts the user to select one.
-// It can optionally select only initialized workloads which exist in the app (default behavior)
-// or list all workloads for which there are manifests in the workspace.
-// The latter behavior can be specified by passing the LocalWorkloads
-func (s *LocalWorkloadSelector) Workload(msg, help string) (wl string, err error) {
-	summary, err := s.ws.Summary()
+// Workloads fetches all jobs and services in a workspace and prompts the user to select one or more.
+// It can optionally select only initialized workloads which exist in the app (by passing the
+// OnlyInitializedWorkloads option to NewLocalWorkloadSelector) or list all workloads for which
+// there are manifests in the workspace (default).
+func (s *LocalWorkloadSelector) Workloads(msg, help string) ([]string, error) {
+	options, err := s.getWorkloadSelectOptions(anyWorkloadType)
 	if err != nil {
-		return "", fmt.Errorf("read workspace summary: %w", err)
+		return nil, err
 	}
-	wsWlNames, err := s.retrieveWorkspaceWorkloads()
-	if err != nil {
-		return "", fmt.Errorf("retrieve jobs and services from workspace: %w", err)
-	}
-	storeWls, err := s.ConfigSelector.workloadLister.ListWorkloads(summary.Application)
-	if err != nil {
-		return "", fmt.Errorf("retrieve jobs and services from store: %w", err)
+	if len(options) == 1 {
+		log.Infof("Found only one workload, defaulting to: %s\n", color.HighlightUserInput(options[0].Value))
+		return []string{options[0].Value}, nil
 	}
 
-	options, err := s.getWorkloadSelectOptions(storeWls, wsWlNames, anyWorkloadType)
+	selectedWlNames, err := s.prompt.MultiSelectOptions(msg, help, options, prompt.WithFinalMessage("Names:"))
+	if err != nil {
+		return nil, fmt.Errorf("select workloads: %w", err)
+	}
+	return selectedWlNames, nil
+}
+
+// Workload fetches all jobs and services in a workspace and prompts the user to select one.
+// It can optionally select only initialized workloads which exist in the app (by passing the
+// OnlyInitializedWorkloads option to NewLocalWorkloadSelector) or list all workloads for which
+// there are manifests in the workspace (default).
+func (s *LocalWorkloadSelector) Workload(msg, help string) (wl string, err error) {
+	options, err := s.getWorkloadSelectOptions(anyWorkloadType)
 	if err != nil {
 		return "", err
 	}
-
 	if len(options) == 1 {
 		log.Infof("Found only one workload, defaulting to: %s\n", color.HighlightUserInput(options[0].Value))
 		return options[0].Value, nil
 	}
+
 	selectedWlName, err := s.prompt.SelectOption(msg, help, options, prompt.WithFinalMessage(workloadFinalMsg))
 	if err != nil {
 		return "", fmt.Errorf("select workload: %w", err)
@@ -1333,12 +1321,28 @@ func (s *LocalWorkloadSelector) retrieveWorkspaceJobs() ([]string, error) {
 	return localJobNames, nil
 }
 
-func (s *LocalWorkloadSelector) retrieveWorkspaceWorkloads() ([]string, error) {
-	localWlNames, err := s.ws.ListWorkloads()
-	if err != nil {
-		return nil, err
+func (s *LocalWorkloadSelector) retrieveStoreWorkloads(appName, wlType string) ([]*config.Workload, error) {
+	switch wlType {
+	case svcWorkloadType:
+		return s.ConfigSelector.workloadLister.ListServices(appName)
+	case jobWorkloadType:
+		return s.ConfigSelector.workloadLister.ListJobs(appName)
+	case anyWorkloadType:
+		return s.ConfigSelector.workloadLister.ListWorkloads(appName)
 	}
-	return localWlNames, nil
+	return nil, fmt.Errorf("unrecognized workload type %s", wlType)
+}
+
+func (s *LocalWorkloadSelector) retrieveWorkspaceWorkloads(wlType string) ([]string, error) {
+	switch wlType {
+	case svcWorkloadType:
+		return s.retrieveWorkspaceServices()
+	case jobWorkloadType:
+		return s.retrieveWorkspaceJobs()
+	case anyWorkloadType:
+		return s.ws.ListWorkloads()
+	}
+	return nil, fmt.Errorf("unrecognized workload type %s", wlType)
 }
 
 func (s *WsPipelineSelector) pipelinePath(pipelines []workspace.PipelineManifest, name string) string {

@@ -43,6 +43,8 @@ const (
 
 	// TLS is the tls protocol for NLB.
 	TLS = "TLS"
+
+	// UDP is the udp protocol for NLB.
 	UDP = "UDP"
 
 	// Tracing vendors.
@@ -2062,22 +2064,22 @@ type containerNameAndProtocol struct {
 func validateExposedPorts(opts validateExposedPortsOpts) error {
 	portExposedTo := make(map[uint16]containerNameAndProtocol)
 
-	if err := populateAndValidateSidecarContainerPorts(portExposedTo, opts); err != nil {
+	if err := validateAndPopulateSidecarContainerPorts(portExposedTo, opts); err != nil {
 		return err
 	}
-	if err := populateAndValidateALBPorts(portExposedTo, opts); err != nil {
+	if err := validateAndPopulateALBPorts(portExposedTo, opts); err != nil {
 		return err
 	}
-	if err := populateAndValidateNLBPorts(portExposedTo, opts); err != nil {
+	if err := validateAndPopulateNLBPorts(portExposedTo, opts); err != nil {
 		return err
 	}
-	if err := populateAndValidateMainContainerPort(portExposedTo, opts); err != nil {
+	if err := validateAndPopulateMainContainerPort(portExposedTo, opts); err != nil {
 		return err
 	}
 	return nil
 }
 
-func populateAndValidateMainContainerPort(portExposedTo map[uint16]containerNameAndProtocol, opts validateExposedPortsOpts) error {
+func validateAndPopulateMainContainerPort(portExposedTo map[uint16]containerNameAndProtocol, opts validateExposedPortsOpts) error {
 	if opts.mainContainerPort == nil {
 		return nil
 	}
@@ -2091,12 +2093,12 @@ func populateAndValidateMainContainerPort(portExposedTo map[uint16]containerName
 	return validateAndPopulateExposedPortMapping(portExposedTo, targetPort, targetProtocol, opts.mainContainerName)
 }
 
-func populateAndValidateSidecarContainerPorts(portExposedTo map[uint16]containerNameAndProtocol, opts validateExposedPortsOpts) error {
+func validateAndPopulateSidecarContainerPorts(portExposedTo map[uint16]containerNameAndProtocol, opts validateExposedPortsOpts) error {
 	for name, sidecar := range opts.sidecarConfig {
 		if sidecar.Port == nil {
 			continue
 		}
-		sidecarPort, _, err := ParsePortMapping(sidecar.Port)
+		sidecarPort, sidecarProtocol, err := ParsePortMapping(sidecar.Port)
 		if err != nil {
 			return err
 		}
@@ -2104,15 +2106,19 @@ func populateAndValidateSidecarContainerPorts(portExposedTo map[uint16]container
 		if err != nil {
 			return err
 		}
+		protocol := defaultProtocol
+		if sidecarProtocol != nil {
+			protocol = aws.StringValue(sidecarProtocol)
+		}
 
-		if err = validateAndPopulateExposedPortMapping(portExposedTo, uint16(parsedPort), defaultProtocol, name); err != nil {
+		if err = validateAndPopulateExposedPortMapping(portExposedTo, uint16(parsedPort), protocol, name); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func populateAndValidateALBPorts(portExposedTo map[uint16]containerNameAndProtocol, opts validateExposedPortsOpts) error {
+func validateAndPopulateALBPorts(portExposedTo map[uint16]containerNameAndProtocol, opts validateExposedPortsOpts) error {
 	if opts.alb == nil || opts.alb.IsEmpty() {
 		return nil
 	}
@@ -2133,32 +2139,32 @@ func populateAndValidateALBPorts(portExposedTo map[uint16]containerNameAndProtoc
 			targetContainer = aws.StringValue(rule.TargetContainer)
 		}
 
-		if err := validateAndPopulateExposedPortMapping(portExposedTo, targetPort, defaultProtocol, targetContainer); err != nil {
+		if err := validateAndPopulateExposedPortMapping(portExposedTo, targetPort, TCP, targetContainer); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func populateAndValidateNLBPorts(portExposedTo map[uint16]containerNameAndProtocol, opts validateExposedPortsOpts) error {
+func validateAndPopulateNLBPorts(portExposedTo map[uint16]containerNameAndProtocol, opts validateExposedPortsOpts) error {
 	if opts.nlb == nil || opts.nlb.IsEmpty() {
 		return nil
 	}
 
 	nlb := opts.nlb
-	if err := populateAndValidateNLBListenerPorts(nlb.Listener, portExposedTo, opts.mainContainerName); err != nil {
+	if err := validateAndPopulateNLBListenerPorts(nlb.Listener, portExposedTo, opts.mainContainerName); err != nil {
 		return fmt.Errorf(`validate "nlb": %w`, err)
 	}
 
 	for idx, listener := range nlb.AdditionalListeners {
-		if err := populateAndValidateNLBListenerPorts(listener, portExposedTo, opts.mainContainerName); err != nil {
+		if err := validateAndPopulateNLBListenerPorts(listener, portExposedTo, opts.mainContainerName); err != nil {
 			return fmt.Errorf(`validate "nlb.additional_listeners[%d]": %w`, idx, err)
 		}
 	}
 	return nil
 }
 
-func populateAndValidateNLBListenerPorts(listener NetworkLoadBalancerListener, portExposedTo map[uint16]containerNameAndProtocol, mainContainerName string) error {
+func validateAndPopulateNLBListenerPorts(listener NetworkLoadBalancerListener, portExposedTo map[uint16]containerNameAndProtocol, mainContainerName string) error {
 	nlbReceiverPort, nlbProtocol, err := ParsePortMapping(listener.Port)
 	if err != nil {
 		return err
@@ -2173,11 +2179,8 @@ func populateAndValidateNLBListenerPorts(listener NetworkLoadBalancerListener, p
 		targetPort = uint16(aws.IntValue(listener.TargetPort))
 	}
 
-	// Prefer `nlb.port`, then existing exposed port mapping, then fallback on default protocol
+	// Prefer `nlb.port`, then fallback on default protocol
 	targetProtocol := defaultProtocol
-	if existingContainerNameAndProtocol, ok := portExposedTo[targetPort]; ok {
-		targetProtocol = existingContainerNameAndProtocol.containerProtocol
-	}
 	if nlbProtocol != nil {
 		targetProtocol = strings.ToUpper(aws.StringValue(nlbProtocol))
 	}

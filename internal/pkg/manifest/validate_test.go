@@ -4053,6 +4053,24 @@ func TestValidateExposedPorts(t *testing.T) {
 			},
 			wanted: nil,
 		},
+		"should not error out when nlb target_port is same as that of sidecar container port but sidecar uses non default protocol": {
+			in: validateExposedPortsOpts{
+				mainContainerName: "mockMainContainer",
+				mainContainerPort: aws.Uint16(8080),
+				sidecarConfig: map[string]*SidecarConfig{
+					"foo": {
+						Port: aws.String("80/udp"),
+					},
+				},
+				nlb: &NetworkLoadBalancerConfiguration{
+					Listener: NetworkLoadBalancerListener{
+						Port:       aws.String("8080"),
+						TargetPort: aws.Int(80),
+					},
+				},
+			},
+			wanted: fmt.Errorf(`validate "nlb": container "foo" is exposing the same port 80 with protocol TCP and udp`),
+		},
 		"should return an error if alb target_port points to one sidecar container port and target_container points to another sidecar container": {
 			in: validateExposedPortsOpts{
 				mainContainerName: "mockMainContainer",

@@ -36,6 +36,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const jobTypeHint = "Scheduled event to State Machine to Fargate"
+
 var (
 	jobInitSchedulePrompt = "How would you like to " + color.Emphasize("schedule") + " this job?"
 	jobInitScheduleHelp   = `How to determine this job's schedule. "Rate" lets you define the time between 
@@ -48,7 +50,7 @@ To learn more see: https://git.io/JEEU4`, manifestinfo.ScheduledJobType)
 )
 
 var jobTypeHints = map[string]string{
-	manifestinfo.ScheduledJobType: "Scheduled event to State Machine to Fargate",
+	manifestinfo.ScheduledJobType: jobTypeHint,
 }
 
 type initJobVars struct {
