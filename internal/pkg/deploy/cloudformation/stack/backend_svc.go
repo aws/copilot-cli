@@ -127,10 +127,7 @@ func (s *BackendService) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	scTarget, err := s.manifest.ServiceConnectTarget(exposedPorts)
-	if err != nil {
-		return "", err
-	}
+	scTarget := s.manifest.ServiceConnectTarget(exposedPorts)
 	scOpts := convertServiceConnectOpts(s.manifest.Network.Connect, scTarget)
 
 	albListenerConfig, err := s.convertALBListener()
