@@ -159,7 +159,7 @@ func TestInitAppOpts_Validate(t *testing.T) {
 				m.mockRoute53Svc.EXPECT().ValidateDomainOwnership("badMockDomain.com").Return(nil)
 				m.mockRoute53Svc.EXPECT().DomainHostedZoneID("badMockDomain.com").Return("", &route53.ErrDomainHostedZoneNotFound{})
 			},
-			wantedError: fmt.Errorf("get hosted zone ID for domain badMockDomain.com: %w", &route53.ErrDomainHostedZoneNotFound{}),
+			wantedError: fmt.Errorf("get public hosted zone ID for domain badMockDomain.com: %w", &route53.ErrDomainHostedZoneNotFound{}),
 		},
 		"errors if failed to validate that domain has a hosted zone": {
 			inDomainName: "mockDomain.com",
@@ -169,7 +169,7 @@ func TestInitAppOpts_Validate(t *testing.T) {
 				m.mockRoute53Svc.EXPECT().ValidateDomainOwnership("mockDomain.com").Return(&route53.ErrUnmatchedNSRecords{})
 				m.mockRoute53Svc.EXPECT().DomainHostedZoneID("mockDomain.com").Return("", errors.New("some error"))
 			},
-			wantedError: errors.New("get hosted zone ID for domain mockDomain.com: some error"),
+			wantedError: errors.New("get public hosted zone ID for domain mockDomain.com: some error"),
 		},
 		"valid": {
 			inPBPolicyName: "arn:aws:iam::1234567890:policy/myPermissionsBoundaryPolicy",

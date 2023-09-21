@@ -152,7 +152,7 @@ type filterZoneFunc func(*route53.HostedZone) bool
 func filterHostedZones(zones []*route53.HostedZone, fn filterZoneFunc) []*route53.HostedZone {
 	var hostedZones []*route53.HostedZone
 	for _, hostedZone := range zones {
-		if fn(hostedZone) {
+		if fn(hostedZone) && !isPrivateHostedZone(hostedZone.Config) {
 			hostedZones = append(hostedZones, hostedZone)
 		}
 	}
@@ -164,6 +164,10 @@ func matchesDomain(domain string) filterZoneFunc {
 		// example.com. should match example.com
 		return domain == aws.StringValue(z.Name) || domain+"." == aws.StringValue(z.Name)
 	}
+}
+
+func isPrivateHostedZone(cfg *route53.HostedZoneConfig) bool {
+	return aws.BoolValue(cfg.PrivateZone) == true
 }
 
 func cleanNSRecord(record string) string {
