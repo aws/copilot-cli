@@ -262,6 +262,7 @@ const (
 	svcFlagDescription          = "Name of the service."
 	jobFlagDescription          = "Name of the job."
 	workloadFlagDescription     = "Name of the service or job."
+	workloadsFlagDescription    = "Names of the service or jobs to deploy."
 	nameFlagDescription         = "Name of the service, job, or task group."
 	yesFlagDescription          = "Skips confirmation prompt."
 	resourceTagsFlagDescription = `Optional. Labels with a key and value separated by commas.
@@ -281,7 +282,7 @@ We do not recommend using this flag for a
 production environment.`
 	forceEnvDeployFlagDescription  = "Optional. Force update the environment stack template."
 	yesInitWorkloadFlagDescription = "Optional. Initialize a workload before deploying it."
-	allWorkloadsFlagDescription             = "Optional. Deploy all workloads with manifests in the current Copilot workspace."
+	allWorkloadsFlagDescription    = "Optional. Deploy all workloads with manifests in the current Copilot workspace."
 	detachFlagDescription          = "Optional. Skip displaying CloudFormation deployment progress."
 
 	// Operational.

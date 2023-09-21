@@ -39,7 +39,8 @@ const (
 type deployVars struct {
 	deployWkldVars
 
-	workloadNames []string
+	workloadNames      []string
+	deployAllWorkloads bool
 
 	yesInitWkld *bool
 	deployEnv   *bool
@@ -246,7 +247,11 @@ func (o *deployOpts) Run() error {
 		return err
 	}
 
-	for _, workload := range o.workloadNames {
+	deploymentOrderWorkloadNames, err := o.getDeploymentOrder()
+	if err != nil {
+		return err
+	}
+	for _, workload := range deploymentOrderWorkloadNames {
 		if err := o.maybeInitWkld(workload); err != nil {
 			return err
 		}
@@ -275,11 +280,11 @@ func (o *deployOpts) askName() error {
 	if o.workloadNames != nil || len(o.workloadNames) != 0 {
 		return nil
 	}
-	name, err := o.sel.Workload("Select a service or job in your workspace", "")
+	names, err := o.sel.Workloads("Select a service or job in your workspace", "")
 	if err != nil {
 		return fmt.Errorf("select service or job: %w", err)
 	}
-	o.workloadNames = []string{name}
+	o.workloadNames = names
 	return nil
 }
 
@@ -448,7 +453,6 @@ func BuildDeployCmd() *cobra.Command {
 	var initWorkload bool
 	var initEnvironment bool
 	var deployEnvironment bool
-	var name string
 	cmd := &cobra.Command{
 		Use:   "deploy",
 		Short: "Deploy a Copilot job or service.",
@@ -491,10 +495,6 @@ func BuildDeployCmd() *cobra.Command {
 				}
 			}
 
-			if cmd.Flags().Changed(nameFlag) {
-				opts.workloadNames = []string{name}
-			}
-
 			if err := opts.Run(); err != nil {
 				return err
 			}
@@ -502,7 +502,7 @@ func BuildDeployCmd() *cobra.Command {
 		}),
 	}
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
-	cmd.Flags().StringVarP(&name, nameFlag, nameFlagShort, "", workloadFlagDescription)
+	cmd.Flags().StringSliceVarP(&vars.workloadNames, nameFlag, nameFlagShort, nil, workloadsFlagDescription)
 	cmd.Flags().StringVarP(&vars.envName, envFlag, envFlagShort, "", envFlagDescription)
 	cmd.Flags().StringVar(&vars.imageTag, imageTagFlag, "", imageTagFlagDescription)
 	cmd.Flags().StringToStringVar(&vars.resourceTags, resourceTagsFlag, nil, resourceTagsFlagDescription)
@@ -514,6 +514,7 @@ func BuildDeployCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&deployEnvironment, deployEnvFlag, false, deployEnvFlagDescription)
 	cmd.Flags().BoolVar(&initEnvironment, yesInitEnvFlag, false, yesInitEnvFlagDescription)
 	cmd.Flags().BoolVar(&initWorkload, yesInitWorkloadFlag, false, yesInitWorkloadFlagDescription)
+	cmd.Flags().BoolVar(&vars.deployAllWorkloads, allFlag, false, allWorkloadsFlagDescription)
 
 	cmd.Flags().StringVar(&vars.profile, profileFlag, "", profileFlagDescription)
 	cmd.Flags().StringVar(&vars.tempCreds.AccessKeyID, accessKeyIDFlag, "", accessKeyIDFlagDescription)
