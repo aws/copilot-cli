@@ -824,7 +824,7 @@ func (s *LocalWorkloadSelector) getWorkloadSelectOptions(workloadType string) ([
 		return nil, fmt.Errorf("no %s found in workspace", pluralNounString)
 	}
 	// Get the list of un-initialized workloads that are present in the workspace and add them to options.
-	unInitializedLocalWorkloads := filterOutStrings(wsWlNames, initializedLocalWorkloads)
+	unInitializedLocalWorkloads := FilterOutItems(wsWlNames, initializedLocalWorkloads, func(a string) string { return a })
 	for _, wl := range unInitializedLocalWorkloads {
 		options = append(options, prompt.Option{
 			Value: wl,
@@ -885,32 +885,24 @@ func (s *LocalWorkloadSelector) Workload(msg, help string) (wl string, err error
 	return selectedWlName, nil
 }
 
-func filterStrings(allStrings []string, wantedStrings []string) []string {
-	isWanted := make(map[string]bool)
-	for _, name := range wantedStrings {
-		isWanted[name] = true
+// FilterOutItems is a generic function to return the subset of allItems which does not include the items specified in
+// unwantedItems. stringFunc is a function which maps the unwantedItem type T to a string value. For example, one can
+// convert a struct of type *config.Workload to a string by passing
+//
+//	func(w *config.Workload) string { return w.Name }
+//
+// as the stringFunc parameter.
+func FilterOutItems[T any](allItems []string, unwantedItems []T, stringFunc func(T) string) []string {
+	isUnwanted := make(map[string]bool)
+	for _, item := range unwantedItems {
+		isUnwanted[stringFunc(item)] = true
 	}
 	var filtered []string
-	for _, wl := range allStrings {
-		if _, ok := isWanted[wl]; !ok {
+	for _, str := range allItems {
+		if isUnwanted[str] {
 			continue
 		}
-		filtered = append(filtered, wl)
-	}
-	return filtered
-}
-
-func filterOutStrings(allStrings []string, unwantedStrings []string) []string {
-	isUnWanted := make(map[string]bool)
-	for _, name := range unwantedStrings {
-		isUnWanted[name] = true
-	}
-	var filtered []string
-	for _, wl := range allStrings {
-		if isUnWanted[wl] {
-			continue
-		}
-		filtered = append(filtered, wl)
+		filtered = append(filtered, str)
 	}
 	return filtered
 }
@@ -945,27 +937,36 @@ func (s *LocalEnvironmentSelector) LocalEnvironment(msg, help string) (string, e
 }
 
 func filterEnvsByName(envs []*config.Environment, wantedNames []string) []string {
-	// TODO: refactor this and `filterWlsByName`  when generic supports using common struct fields: https://github.com/golang/go/issues/48522
-	isWanted := make(map[string]bool)
-	for _, name := range wantedNames {
-		isWanted[name] = true
-	}
-	var filtered []string
-	for _, wl := range envs {
-		if _, ok := isWanted[wl.Name]; !ok {
-			continue
-		}
-		filtered = append(filtered, wl.Name)
-	}
-	return filtered
+	return FilterItemsByStrings(wantedNames, envs, func(e *config.Environment) string { return e.Name })
 }
 
 func filterWlsByName(wls []*config.Workload, wantedNames []string) []string {
-	stringWls := make([]string, len(wls))
-	for i := range wls {
-		stringWls[i] = wls[i].Name
+	return FilterItemsByStrings(wantedNames, wls, func(w *config.Workload) string { return w.Name })
+}
+
+// FilterItemsByStrings is a generic function to return the subset of wantedStrings that exists in possibleItems.
+// stringFunc is a method to convert the generic item type (T) to a string; for example, one can convert a struct of type
+// *config.Workload to a string by passing
+//
+//	func(w *config.Workload) string { return w.Name }.
+//
+// Likewise, FilterItemsByStrings can work on a list of strings by returning the unmodified item:
+//
+//	FilterItemsByStrings(wantedStrings, stringSlice2, func(s string) string { return s })
+//
+// It returns a list of strings (items whose stringFunc() exists in the list of wantedStrings).
+func FilterItemsByStrings[T any](wantedStrings []string, possibleItems []T, stringFunc func(T) string) []string {
+	m := make(map[string]bool)
+	for _, item := range wantedStrings {
+		m[item] = true
 	}
-	return filterStrings(stringWls, wantedNames)
+	res := make([]string, 0, len(wantedStrings))
+	for _, item := range possibleItems {
+		if m[stringFunc(item)] {
+			res = append(res, stringFunc(item))
+		}
+	}
+	return res
 }
 
 // WsPipeline fetches all the pipelines in a workspace and prompts the user to select one.
