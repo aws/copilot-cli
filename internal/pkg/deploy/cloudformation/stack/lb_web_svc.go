@@ -180,15 +180,11 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	var scConfig *template.ServiceConnect
-	if s.manifest.Network.Connect.Enabled() {
-		scConfig = convertServiceConnect(s.manifest.Network.Connect, exposedPorts, s.manifest.ImageConfig.Port)
-	}
-
-	targetContainer, targetContainerPort, err := s.manifest.HTTPOrBool.Main.Target(exposedPorts)
+	scTarget, err := s.manifest.ServiceConnectTarget(exposedPorts)
 	if err != nil {
 		return "", err
 	}
+	scOpts := convertServiceConnectOpts(s.manifest.Network.Connect, scTarget)
 
 	// Set container-level feature flag.
 	logConfig := convertLogging(s.manifest.Logging)
@@ -229,11 +225,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		Storage:                 convertStorageOpts(s.manifest.Name, s.manifest.Storage),
 
 		// ALB configs.
-		ALBEnabled: !s.manifest.HTTPOrBool.Disabled(),
-		HTTPTargetContainer: template.HTTPTargetContainer{
-			Port: targetContainerPort,
-			Name: targetContainer,
-		},
+		ALBEnabled:  !s.manifest.HTTPOrBool.Disabled(),
 		GracePeriod: s.convertGracePeriod(),
 		ALBListener: albListenerConfig,
 
@@ -243,7 +235,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		NLB:                  nlbConfig.settings,
 
 		// service connect and service discovery options.
-		ServiceConnect:           scConfig,
+		ServiceConnectOpts:       scOpts,
 		ServiceDiscoveryEndpoint: s.rc.ServiceDiscoveryEndpoint,
 
 		// Additional options for request driven web service templates.
@@ -264,7 +256,6 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("apply task definition overrides: %w", err)
 	}
-	fmt.Println(string(overriddenTpl))
 	return string(overriddenTpl), nil
 }
 

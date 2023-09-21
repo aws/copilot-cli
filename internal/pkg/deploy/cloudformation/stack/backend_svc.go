@@ -127,14 +127,11 @@ func (s *BackendService) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	var scConfig *template.ServiceConnect
-	if s.manifest.Network.Connect.Enabled() {
-		scConfig = convertServiceConnect(s.manifest.Network.Connect, exposedPorts, s.manifest.ImageConfig.Port)
-	}
-	targetContainer, targetContainerPort, err := s.manifest.HTTP.Main.Target(exposedPorts)
+	scTarget, err := s.manifest.ServiceConnectTarget(exposedPorts)
 	if err != nil {
 		return "", err
 	}
+	scOpts := convertServiceConnectOpts(s.manifest.Network.Connect, scTarget)
 
 	albListenerConfig, err := s.convertALBListener()
 	if err != nil {
@@ -178,11 +175,7 @@ func (s *BackendService) Template() (string, error) {
 		Storage:                 convertStorageOpts(s.manifest.Name, s.manifest.Storage),
 
 		// ALB configs.
-		ALBEnabled: s.albEnabled,
-		HTTPTargetContainer: template.HTTPTargetContainer{
-			Port: targetContainerPort,
-			Name: targetContainer,
-		},
+		ALBEnabled:  s.albEnabled,
 		GracePeriod: s.convertGracePeriod(),
 		ALBListener: albListenerConfig,
 
@@ -193,7 +186,7 @@ func (s *BackendService) Template() (string, error) {
 		Sidecars: sidecars,
 
 		// service connect and service discovery options.
-		ServiceConnect:           scConfig,
+		ServiceConnectOpts:       scOpts,
 		ServiceDiscoveryEndpoint: s.rc.ServiceDiscoveryEndpoint,
 
 		// Additional options for request driven web service templates.

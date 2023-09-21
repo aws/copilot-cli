@@ -269,12 +269,13 @@ Outputs:
 			EnvName:      "test",
 			WorkloadName: "frontend",
 			WorkloadType: manifestinfo.LoadBalancedWebServiceType,
-			HTTPTargetContainer: template.HTTPTargetContainer{
-				Name: "frontend",
-				Port: "80",
-			},
-			ServiceConnect: &template.ServiceConnect{
+			ServiceConnectOpts: template.ServiceConnectOpts{
 				Alias: aws.String("frontend"),
+				Container: &template.ServiceConnectContainer{
+					Name: "frontend",
+					Port: "80",
+				},
+				Enabled: true,
 			},
 			HealthCheck: &template.ContainerHealthCheck{
 				Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
@@ -448,6 +449,7 @@ Outputs:
 			Path: "frontend",
 			Port: 80,
 		})
+		mft.Network.Connect.EnableServiceConnect = aws.Bool(true)
 		mft.HTTPOrBool.Main.TargetContainer = aws.String("envoy")
 		mft.Sidecars = map[string]*manifest.SidecarConfig{
 			"envoy": {
@@ -484,10 +486,13 @@ Outputs:
 
 		// THEN
 		require.NoError(t, err)
-		require.Equal(t, template.HTTPTargetContainer{
-			Port: "443",
-			Name: "envoy",
-		}, actual.HTTPTargetContainer)
+		require.Equal(t, template.ServiceConnectOpts{
+			Container: &template.ServiceConnectContainer{
+				Name: "envoy",
+				Port: "443",
+			},
+			Enabled: true,
+		}, actual.ServiceConnectOpts)
 	})
 }
 

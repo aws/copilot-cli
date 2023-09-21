@@ -122,10 +122,10 @@ func (s *WorkerService) Template() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf(`convert "publish" field for service %s: %w`, s.name, err)
 	}
-	var scConfig *template.ServiceConnect
+	var scOpts template.ServiceConnectOpts
 	if s.manifest.Network.Connect.Enabled() {
-		// Worker Service is a service connect client, pass in nil server port and exposedPorts, as no ports are exposed.
-		scConfig = convertServiceConnect(s.manifest.Network.Connect, manifest.ExposedPortsIndex{}, nil)
+		// Worker Service is a service connect client, pass in nil target container.
+		scOpts = convertServiceConnectOpts(s.manifest.Network.Connect, nil)
 	}
 	content, err := s.parser.ParseWorkerService(template.WorkloadOpts{
 		AppName:                  s.app,
@@ -152,7 +152,7 @@ func (s *WorkerService) Template() (string, error) {
 		Network:                  convertNetworkConfig(s.manifest.Network),
 		DeploymentConfiguration:  convertWorkerDeploymentConfig(s.manifest.WorkerServiceConfig.DeployConfig),
 		EntryPoint:               entrypoint,
-		ServiceConnect:           scConfig,
+		ServiceConnectOpts:       scOpts,
 		Command:                  command,
 		DependsOn:                convertDependsOn(s.manifest.ImageConfig.Image.DependsOn),
 		CredentialsParameter:     aws.StringValue(s.manifest.ImageConfig.Image.Credentials),

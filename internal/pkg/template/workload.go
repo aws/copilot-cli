@@ -225,17 +225,6 @@ type LogConfigOpts struct {
 	Secrets        map[string]Secret
 }
 
-// HTTPTargetContainer represents the target group of a load balancer that points to a container.
-type HTTPTargetContainer struct {
-	Name string
-	Port string
-}
-
-// Exposed returns true if the target container has an accessible port to receive traffic.
-func (tg HTTPTargetContainer) Exposed() bool {
-	return tg.Port != "" && tg.Port != NoExposedContainerPort
-}
-
 // StrconvUint16 returns string converted from uint16.
 func StrconvUint16(val uint16) string {
 	return strconv.FormatUint(uint64(val), 10)
@@ -522,10 +511,21 @@ func (cfg *ALBListener) RulePaths() []string {
 	return rulePaths
 }
 
-// ServiceConnect holds configuration for ECS Service Connect.
-type ServiceConnect struct {
-	Alias       *string
-	ExposedPort *uint16
+type ServiceConnectContainer struct {
+	Name string
+	Port string
+}
+
+// ServiceConnectOpts holds configuration for ECS Service Connect.
+type ServiceConnectOpts struct {
+	Alias     *string
+	Container *ServiceConnectContainer
+	Enabled   bool
+}
+
+// Exposed returns true if the target container has an accessible port to receive traffic.
+func (tg ServiceConnectOpts) Exposed() bool {
+	return tg.Container != nil && tg.Container.Port != "" && tg.Container.Port != NoExposedContainerPort
 }
 
 // AdvancedCount holds configuration for autoscaling and capacity provider
@@ -827,12 +827,11 @@ type WorkloadOpts struct {
 	// Additional options for service templates.
 	WorkloadType            string
 	HealthCheck             *ContainerHealthCheck
-	HTTPTargetContainer     HTTPTargetContainer
 	GracePeriod             *int64
 	NLB                     *NetworkLoadBalancer
 	ALBListener             *ALBListener
 	DeploymentConfiguration DeploymentConfigurationOpts
-	ServiceConnect          *ServiceConnect
+	ServiceConnectOpts      ServiceConnectOpts
 
 	// Custom Resources backed by Lambda functions.
 	CustomResources map[string]S3ObjectLocation

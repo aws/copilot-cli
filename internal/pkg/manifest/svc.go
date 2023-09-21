@@ -36,11 +36,25 @@ func (idx ExposedPortsIndex) mainContainerPort() string {
 	return idx.containerPortDefinedBy(idx.WorkloadName)
 }
 
+func (idx ExposedPortsIndex) mainContainerProtocol() string {
+	return idx.containerProtocolDefinedBy(idx.WorkloadName)
+}
+
 // containerPortDefinedBy returns the explicitly defined container port, if there is no port exposed for the container then returns the empty string "".
 func (idx ExposedPortsIndex) containerPortDefinedBy(container string) string {
 	for _, portConfig := range idx.PortsForContainer[container] {
 		if portConfig.isDefinedByContainer {
 			return strconv.Itoa(int(portConfig.Port))
+		}
+	}
+	return ""
+}
+
+// containerProtocolDefinedBy returns the protocol for the explicitly defined container port, if there is no port exposed for the container then returns the empty string "".
+func (idx ExposedPortsIndex) containerProtocolDefinedBy(container string) string {
+	for _, portConfig := range idx.PortsForContainer[container] {
+		if portConfig.isDefinedByContainer {
+			return portConfig.Protocol
 		}
 	}
 	return ""
@@ -584,6 +598,67 @@ func (sidecar SidecarConfig) exposePorts(exposedPorts map[uint16]ExposedPort, si
 	}
 
 	return nil
+}
+
+type ServiceConnectTargetContainer struct {
+	Container string
+	Port      string
+}
+
+// Target returns the target container, port, and protocol to be exposed for ServiceConnect
+func (l *LoadBalancedWebService) ServiceConnectTarget(exposedPorts ExposedPortsIndex) (*ServiceConnectTargetContainer, error) {
+	// Route load balancer traffic to main container by default.
+	targetContainer := exposedPorts.WorkloadName
+	targetPort := exposedPorts.mainContainerPort()
+	targetProtocol := exposedPorts.mainContainerProtocol()
+
+	albContainer, albPort, err := l.HTTPOrBool.Main.Target(exposedPorts)
+	if err != nil {
+		return nil, err
+	}
+	if albContainer != "" && albPort != "" {
+		targetContainer = albContainer
+		targetPort = albPort
+		targetProtocol = TCP
+	}
+
+	// ServiceConnect can't use UDP
+	if targetProtocol == UDP {
+		return nil, nil
+	}
+
+	return &ServiceConnectTargetContainer{
+		Container: targetContainer,
+		Port:      targetPort,
+	}, nil
+}
+
+// Target returns the target container and port to be exposed for ServiceConnect
+func (b *BackendService) ServiceConnectTarget(exposedPorts ExposedPortsIndex) (*ServiceConnectTargetContainer, error) {
+	// Route load balancer traffic to main container by default.
+	targetContainer := exposedPorts.WorkloadName
+	targetPort := exposedPorts.mainContainerPort()
+	targetProtocol := exposedPorts.mainContainerProtocol()
+
+	albContainer, albPort, err := b.HTTP.Main.Target(exposedPorts)
+	if err != nil {
+		return nil, err
+	}
+	if albContainer != "" && albPort != "" {
+		targetContainer = albContainer
+		targetPort = albPort
+		targetProtocol = TCP
+	}
+
+	// ServiceConnect can't use UDP
+	if targetProtocol == UDP {
+		return nil, nil
+	}
+
+	return &ServiceConnectTargetContainer{
+		Container: targetContainer,
+		Port:      targetPort,
+	}, nil
 }
 
 // Target returns target container and target port for the ALB configuration.

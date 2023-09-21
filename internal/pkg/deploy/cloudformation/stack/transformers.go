@@ -740,17 +740,23 @@ func convertAllowedSourceIPs(allowedSourceIPs []manifest.IPNet) []string {
 	return sourceIPs
 }
 
-func convertServiceConnect(s manifest.ServiceConnectBoolOrArgs, index manifest.ExposedPortsIndex, serverPort *uint16) *template.ServiceConnect {
-	var scPort *uint16
-	for _, exposedPort := range index.PortsForContainer[index.WorkloadName] {
-		if exposedPort.Port == aws.Uint16Value(serverPort) && exposedPort.Protocol != strings.ToLower(manifest.UDP) {
-			scPort = aws.Uint16(exposedPort.Port)
+func convertServiceConnectOpts(s manifest.ServiceConnectBoolOrArgs, target *manifest.ServiceConnectTargetContainer) template.ServiceConnectOpts {
+	var scOpts template.ServiceConnectOpts
+
+	if s.Enabled() {
+		scOpts.Alias = s.ServiceConnectArgs.Alias
+		scOpts.Enabled = true
+	}
+
+	// target != nil means that a Service Connect port is exposed for this service.
+	if target != nil {
+		scOpts.Container = &template.ServiceConnectContainer{
+			Name: target.Container,
+			Port: target.Port,
 		}
 	}
-	return &template.ServiceConnect{
-		Alias:       s.ServiceConnectArgs.Alias,
-		ExposedPort: scPort,
-	}
+
+	return scOpts
 }
 
 func convertLogging(lc manifest.Logging) *template.LogConfigOpts {

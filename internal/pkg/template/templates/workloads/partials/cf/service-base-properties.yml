@@ -60,7 +60,7 @@ CapacityProviderStrategy:
   {{- end}}
 {{- end }}
 ServiceConnectConfiguration:
-  {{- if .ServiceConnect }}
+  {{- if .ServiceConnectOpts.Enabled }}
   Enabled: True
   Namespace: {{.ServiceDiscoveryEndpoint}}
   LogConfiguration:
@@ -69,15 +69,15 @@ ServiceConnectConfiguration:
       awslogs-region: !Ref AWS::Region
       awslogs-group: !Ref LogGroup
       awslogs-stream-prefix: copilot
-  {{- if .HTTPTargetContainer.Exposed}}
+  {{- if .ServiceConnectOpts.Exposed}}
   Services:
     - PortName: target
       # Avoid using the same service with Service Discovery in a namespace.
       DiscoveryName: !Join ["-", [!Ref WorkloadName, "sc"]] 
       ClientAliases:
         - Port: !Ref TargetPort
-          {{- if .ServiceConnect.Alias }}
-          DnsName: {{.ServiceConnect.Alias}}
+          {{- if .ServiceConnectOpts.Alias }}
+          DnsName: {{.ServiceConnectOpts.Alias}}
           {{- else}}
           DnsName: !Ref WorkloadName
           {{- end}}
