@@ -188,8 +188,6 @@ Resources:
     Type: AWS::Route53::RecordSet
     Condition: DelegateDNS
     Properties:
-      # Use HostedZoneId in case of multiple hosted zones. 
-      # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-route53-recordset.html#cfn-route53-recordset-hostedzoneid 
       HostedZoneId: !Sub ${AppDomainHostedZoneID}
       Comment: !Sub "Record for copilot domain delegation for application ${AppDomainName}"
       Name: !Sub ${AppName}.${AppDomainName}.
