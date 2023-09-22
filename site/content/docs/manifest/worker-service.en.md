@@ -205,7 +205,7 @@ filter_policy:
     - example_corp
   event:
     - anything-but: order_cancelled
-  cutomer_interests:
+  customer_interests:
     - rugby
     - football
     - baseball
