@@ -108,7 +108,7 @@ func (o *overrideOpts) Execute() error {
 		if err := override.ScaffoldWithPatch(o.fs, dir); err != nil {
 			return fmt.Errorf("scaffold CFN YAML patches under %q: %v", dir, err)
 		}
-		log.Successf("Created a YAML patch file under %q to override resources\n", displayPath(dir))
+		log.Successf("Created a YAML patch file %q to override resources\n", filepath.Join(displayPath(dir), override.YAMLPatchFile))
 	}
 	return nil
 }
