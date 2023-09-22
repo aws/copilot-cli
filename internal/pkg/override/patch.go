@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	YAMLPatchFile        = "cfn.patches.yml" // Name of the YAML patch override file.
+	YAMLPatchFile        = "cfn.patches.yml" // YAMLPatchFile is the name of the YAML patch override file.
 	jsonPointerSeparator = "/"
 )
 
