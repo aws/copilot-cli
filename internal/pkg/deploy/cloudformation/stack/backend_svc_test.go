@@ -317,10 +317,10 @@ Outputs:
 				Timeout:     aws.Int64(10),
 			},
 			ServiceConnectOpts: template.ServiceConnectOpts{
-				Alias: aws.String("api"),
 				Server: &template.ServiceConnectServer{
-					Name: "api",
-					Port: "8080",
+					Name:  "api",
+					Port:  "8080",
+					Alias: aws.String("api"),
 				},
 				Enabled: true,
 			},

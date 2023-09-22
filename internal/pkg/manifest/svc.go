@@ -504,7 +504,7 @@ func (cfg ImageWithHealthcheckAndOptionalPort) exposePorts(exposedPorts map[uint
 	}
 }
 
-// exportPorts returns any new ports that should be exposed given the application load balancer
+// exposePorts populates a map of ports that should be exposed given the application load balancer
 // configuration that's not part of the existing containerPorts.
 func (rr RoutingRule) exposePorts(exposedPorts map[uint16]ExposedPort, workloadName string) {
 	if rr.TargetPort == nil {
@@ -515,19 +515,17 @@ func (rr RoutingRule) exposePorts(exposedPorts map[uint16]ExposedPort, workloadN
 		targetContainer = aws.StringValue(rr.TargetContainer)
 	}
 	targetPort := aws.Uint16Value(rr.TargetPort)
-	for port := range exposedPorts {
-		if targetPort == port {
-			return
-		}
+	if _, ok := exposedPorts[targetPort]; ok {
+		return
 	}
 	exposedPorts[targetPort] = ExposedPort{
 		Port:          targetPort,
-		Protocol:      strings.ToLower(defaultProtocol),
+		Protocol:      strings.ToLower(TCP),
 		ContainerName: targetContainer,
 	}
 }
 
-// exportPorts returns any new ports that should be exposed given the network load balancer
+// exposePorts populates a map of ports that should be exposed given the network load balancer
 // configuration that's not part of the existing containerPorts.
 func (cfg NetworkLoadBalancerListener) exposePorts(exposedPorts map[uint16]ExposedPort, workloadName string) error {
 	if cfg.IsEmpty() {
@@ -613,14 +611,18 @@ func (l *LoadBalancedWebService) ServiceConnectTarget(exposedPorts ExposedPortsI
 	targetPort := exposedPorts.mainContainerPort()
 	targetProtocol := exposedPorts.mainContainerProtocol()
 
-	albContainer, albPort := l.HTTPOrBool.Main.exposedContainerAndPort(exposedPorts)
+	// Only assign albContainer and albPort if alb is enabled.
+	var albContainer, albPort *string
+	if !l.HTTPOrBool.Disabled() {
+		albContainer, albPort = l.HTTPOrBool.Main.exposedContainerAndPort(exposedPorts)
+	}
 	if albContainer != nil && albPort != nil {
 		targetContainer = aws.StringValue(albContainer)
 		targetPort = aws.StringValue(albPort)
 		targetProtocol = TCP
 	}
 
-	// ServiceConnect can't use UDP
+	// ServiceConnect can't use UDP.
 	if strings.EqualFold(targetProtocol, UDP) {
 		return nil
 	}
@@ -645,7 +647,7 @@ func (b *BackendService) ServiceConnectTarget(exposedPorts ExposedPortsIndex) *S
 		targetProtocol = TCP
 	}
 
-	// ServiceConnect can't use UDP
+	// ServiceConnect can't use UDP.
 	if strings.EqualFold(targetProtocol, UDP) {
 		return nil
 	}
@@ -750,6 +752,7 @@ func prepareParsedExposedPortsMap(exposedPorts map[uint16]ExposedPort) (map[stri
 	for port := range exposedPorts {
 		ports = append(ports, port)
 	}
+	// Sort for consistency in unit tests.
 	sort.Slice(ports, func(i, j int) bool { return ports[i] < ports[j] })
 
 	for _, port := range ports {

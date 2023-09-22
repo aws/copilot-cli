@@ -270,10 +270,10 @@ Outputs:
 			WorkloadName: "frontend",
 			WorkloadType: manifestinfo.LoadBalancedWebServiceType,
 			ServiceConnectOpts: template.ServiceConnectOpts{
-				Alias: aws.String("frontend"),
 				Server: &template.ServiceConnectServer{
-					Name: "frontend",
-					Port: "80",
+					Name:  "frontend",
+					Port:  "80",
+					Alias: aws.String("frontend"),
 				},
 				Enabled: true,
 			},

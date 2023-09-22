@@ -742,17 +742,19 @@ func convertAllowedSourceIPs(allowedSourceIPs []manifest.IPNet) []string {
 
 func convertServiceConnectOpts(s manifest.ServiceConnectBoolOrArgs, target *manifest.ServiceConnectTargetContainer) template.ServiceConnectOpts {
 	var scOpts template.ServiceConnectOpts
+	var alias *string
 
 	if s.Enabled() {
-		scOpts.Alias = s.ServiceConnectArgs.Alias
+		alias = s.ServiceConnectArgs.Alias
 		scOpts.Enabled = true
 	}
 
 	// target != nil means that a Service Connect port is exposed for this service.
 	if target != nil {
 		scOpts.Server = &template.ServiceConnectServer{
-			Name: target.Container,
-			Port: target.Port,
+			Name:  target.Container,
+			Port:  target.Port,
+			Alias: alias,
 		}
 	}
 

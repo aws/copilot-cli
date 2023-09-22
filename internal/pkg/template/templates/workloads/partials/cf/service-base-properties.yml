@@ -69,15 +69,15 @@ ServiceConnectConfiguration:
       awslogs-region: !Ref AWS::Region
       awslogs-group: !Ref LogGroup
       awslogs-stream-prefix: copilot
-  {{- if .ServiceConnectOpts.Exposed}}
+  {{- if .ServiceConnectOpts.IsServerExposed}}
   Services:
     - PortName: target
       # Avoid using the same service with Service Discovery in a namespace.
       DiscoveryName: !Join ["-", [!Ref WorkloadName, "sc"]] 
       ClientAliases:
         - Port: !Ref TargetPort
-          {{- if .ServiceConnectOpts.Alias }}
-          DnsName: {{.ServiceConnectOpts.Alias}}
+          {{- if .ServiceConnectOpts.Server.Alias }}
+          DnsName: {{.ServiceConnectOpts.Server.Alias}}
           {{- else}}
           DnsName: !Ref WorkloadName
           {{- end}}
