@@ -15,7 +15,7 @@ import (
 
 const (
 	jsonPointerSeparator = "/"
-	yamlPatchFile        = "cfn.patches.yml"
+	YAMLPatchFile        = "cfn.patches.yml"
 )
 
 // ScaffoldWithPatch sets up YAML patches in dir/ to apply to the
@@ -98,7 +98,7 @@ func (p *Patch) Override(body []byte) ([]byte, error) {
 }
 
 func unmarshalPatches(path string, fs afero.Fs) ([]yamlPatch, error) {
-	path = filepath.Join(path, yamlPatchFile)
+	path = filepath.Join(path, YAMLPatchFile)
 	content, err := afero.ReadFile(fs, path)
 	if err != nil {
 		return nil, fmt.Errorf("read file at %q: %w", path, err)
