@@ -65,7 +65,7 @@ type SubscribeConfig struct {
 
 // IsEmpty returns empty if the struct has all zero members.
 func (s *SubscribeConfig) IsEmpty() bool {
-	return s.Topics == nil && s.Queue.IsEmpty()
+	return s.Topics == nil
 }
 
 // TopicSubscription represents the configurable options for setting up a SNS Topic Subscription.

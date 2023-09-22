@@ -1795,7 +1795,9 @@ func (a FIFOTopicAdvanceConfig) validate() error {
 // validate returns nil if SubscribeConfig is configured correctly.
 func (s SubscribeConfig) validate() error {
 	if s.IsEmpty() {
-		return nil
+		return &errFieldMustBeSpecified{
+			missingField: "subscribe.topics",
+		}
 	}
 	for ind, topic := range s.Topics {
 		if err := topic.validate(); err != nil {

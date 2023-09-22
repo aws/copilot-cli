@@ -966,6 +966,14 @@ func TestWorkerService_validate(t *testing.T) {
 			},
 		},
 	}
+	testSubscribeConfig := SubscribeConfig{
+		Topics: []TopicSubscription{
+			{
+				Name:    aws.String("mock-topic"),
+				Service: aws.String("mock-service"),
+			},
+		},
+	}
 	testCases := map[string]struct {
 		config WorkerService
 
@@ -1017,7 +1025,30 @@ func TestWorkerService_validate(t *testing.T) {
 			},
 			wantedErrorMsgPrefix: `validate "network": `,
 		},
-		"error if fail to validate subscribe": {
+		"error if 'subscribe' field is empty": {
+			config: WorkerService{
+				WorkerServiceConfig: WorkerServiceConfig{
+					ImageConfig: testImageConfig,
+				},
+			},
+			wantedErrorMsgPrefix: `validate "subscribe": `,
+		},
+		"error if topic name is not set": {
+			config: WorkerService{
+				WorkerServiceConfig: WorkerServiceConfig{
+					ImageConfig: testImageConfig,
+					Subscribe: SubscribeConfig{
+						Topics: []TopicSubscription{
+							{
+								Name: nil,
+							},
+						},
+					},
+				},
+			},
+			wantedError: fmt.Errorf(`validate "subscribe": validate "topics[0]": "name" must be specified`),
+		},
+		"error if topic service field is empty": {
 			config: WorkerService{
 				WorkerServiceConfig: WorkerServiceConfig{
 					ImageConfig: testImageConfig,
@@ -1036,6 +1067,7 @@ func TestWorkerService_validate(t *testing.T) {
 			config: WorkerService{
 				WorkerServiceConfig: WorkerServiceConfig{
 					ImageConfig: testImageConfig,
+					Subscribe:   testSubscribeConfig,
 					PublishConfig: PublishConfig{
 						Topics: []Topic{
 							{},
@@ -1049,6 +1081,7 @@ func TestWorkerService_validate(t *testing.T) {
 			config: WorkerService{
 				WorkerServiceConfig: WorkerServiceConfig{
 					ImageConfig: testImageConfig,
+					Subscribe:   testSubscribeConfig,
 					TaskDefOverrides: []OverrideRule{
 						{
 							Path: "Family",
@@ -1058,19 +1091,12 @@ func TestWorkerService_validate(t *testing.T) {
 			},
 			wantedErrorMsgPrefix: `validate "taskdef_overrides[0]": `,
 		},
-		"error if name is not set": {
-			config: WorkerService{
-				WorkerServiceConfig: WorkerServiceConfig{
-					ImageConfig: testImageConfig,
-				},
-			},
-			wantedError: fmt.Errorf(`"name" must be specified`),
-		},
 		"error if fail to validate dependencies": {
 			config: WorkerService{
 				Workload: Workload{Name: aws.String("mockWorkload")},
 				WorkerServiceConfig: WorkerServiceConfig{
 					ImageConfig: testImageConfig,
+					Subscribe:   testSubscribeConfig,
 					Sidecars: map[string]*SidecarConfig{
 						"foo": {
 							Image:     BasicToUnion[*string, ImageLocationOrBuild](aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon")),
@@ -1090,6 +1116,7 @@ func TestWorkerService_validate(t *testing.T) {
 				Workload: Workload{Name: aws.String("mockName")},
 				WorkerServiceConfig: WorkerServiceConfig{
 					ImageConfig: testImageConfig,
+					Subscribe:   testSubscribeConfig,
 					TaskConfig: TaskConfig{
 						Platform: PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("windows/amd64"))},
 						Storage: Storage{Volumes: map[string]*Volume{
@@ -1115,6 +1142,7 @@ func TestWorkerService_validate(t *testing.T) {
 				},
 				WorkerServiceConfig: WorkerServiceConfig{
 					ImageConfig: testImageConfig,
+					Subscribe:   testSubscribeConfig,
 					TaskConfig: TaskConfig{
 						Platform: PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("linux/arm64"))},
 						Count: Count{
@@ -1135,6 +1163,7 @@ func TestWorkerService_validate(t *testing.T) {
 				},
 				WorkerServiceConfig: WorkerServiceConfig{
 					ImageConfig: testImageConfig,
+					Subscribe:   testSubscribeConfig,
 					TaskConfig: TaskConfig{
 						Platform: PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("linux/arm64"))},
 						Count: Count{
@@ -1156,6 +1185,7 @@ func TestWorkerService_validate(t *testing.T) {
 			config: WorkerService{
 				WorkerServiceConfig: WorkerServiceConfig{
 					ImageConfig: testImageConfig,
+					Subscribe:   testSubscribeConfig,
 					Network: NetworkConfig{
 						Connect: ServiceConnectBoolOrArgs{
 							ServiceConnectArgs: ServiceConnectArgs{

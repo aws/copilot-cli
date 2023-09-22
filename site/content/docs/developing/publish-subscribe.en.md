@@ -49,7 +49,7 @@ const out = await client.send(new PublishCommand({
 
 ## Subscribing to a topic with a Worker Service
 
-To subscribe to an existing SNS topic with a worker service, you'll need to edit the worker service's manifest.
+To subscribe to an existing, Copilot-created SNS topic with a worker service, you'll need to edit the worker service's manifest after running `copilot svc init` and before running `copilot svc deploy`.
 Using the [`subscribe`](../manifest/worker-service/#subscribe) field in the manifest, you can define subscriptions to 
 existing SNS topics exposed by other services in your environment.  In this example, we'll use the `ordersTopic` topic 
 which the `api` service from the last section exposed. We'll also customize the worker service's queue to enable a dead-letter queue. 
