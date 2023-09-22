@@ -14,8 +14,8 @@ import (
 )
 
 const (
+	YAMLPatchFile        = "cfn.patches.yml" // Name of the YAML patch override file.
 	jsonPointerSeparator = "/"
-	YAMLPatchFile        = "cfn.patches.yml"
 )
 
 // ScaffoldWithPatch sets up YAML patches in dir/ to apply to the
