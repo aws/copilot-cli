@@ -506,15 +506,15 @@ func (cfg ImageWithHealthcheckAndOptionalPort) exposePorts(exposedPorts map[uint
 
 // exposePorts populates a map of ports that should be exposed given the application load balancer
 // configuration that's not part of the existing containerPorts.
-func (rr RoutingRule) exposePorts(exposedPorts map[uint16]ExposedPort, workloadName string) {
-	if rr.TargetPort == nil {
+func (rule RoutingRule) exposePorts(exposedPorts map[uint16]ExposedPort, workloadName string) {
+	if rule.TargetPort == nil {
 		return
 	}
 	targetContainer := workloadName
-	if rr.TargetContainer != nil {
-		targetContainer = aws.StringValue(rr.TargetContainer)
+	if rule.TargetContainer != nil {
+		targetContainer = aws.StringValue(rule.TargetContainer)
 	}
-	targetPort := aws.Uint16Value(rr.TargetPort)
+	targetPort := aws.Uint16Value(rule.TargetPort)
 	if _, ok := exposedPorts[targetPort]; ok {
 		return
 	}
@@ -660,35 +660,33 @@ func (b *BackendService) ServiceConnectTarget(exposedPorts ExposedPortsIndex) *S
 
 // Target returns target container and target port for the ALB configuration.
 // This method should be called only when ALB config is not empty.
-func (rr *RoutingRule) Target(exposedPorts ExposedPortsIndex) (targetContainer string, targetPort string, err error) {
+func (rule *RoutingRule) Target(exposedPorts ExposedPortsIndex) (targetContainer string, targetPort string, err error) {
 	// Route load balancer traffic to main container by default.
 	targetContainer = exposedPorts.WorkloadName
 	targetPort = exposedPorts.mainContainerPort()
 
-	rrTargetContainer, rrTargetPort := rr.exposedContainerAndPort(exposedPorts)
-	if rrTargetContainer != nil {
-		targetContainer = aws.StringValue(rrTargetContainer)
+	ruleTargetContainer, ruleTargetPort := rule.exposedContainerAndPort(exposedPorts)
+	if ruleTargetContainer != nil {
+		targetContainer = aws.StringValue(ruleTargetContainer)
 	}
-	if rrTargetPort != nil {
-		targetPort = aws.StringValue(rrTargetPort)
+	if ruleTargetPort != nil {
+		targetPort = aws.StringValue(ruleTargetPort)
 	}
 	return
 }
 
 // exposedContainerAndPort returns the targetContainer and targetPort from a given ExposedPortsIndex for a routing rule.
-func (rr *RoutingRule) exposedContainerAndPort(exposedPorts ExposedPortsIndex) (*string, *string) {
+func (rule *RoutingRule) exposedContainerAndPort(exposedPorts ExposedPortsIndex) (*string, *string) {
 	var targetContainer, targetPort *string
 
-	rrTargetContainer := rr.TargetContainer
-	rrTargetPort := rr.TargetPort
-	if rrTargetContainer == nil && rrTargetPort == nil { // both targetPort and targetContainer are nil.
+	if rule.TargetContainer == nil && rule.TargetPort == nil { // both targetPort and targetContainer are nil.
 		return nil, nil
 	}
 
-	if rrTargetPort == nil { // when target_port is nil
-		if aws.StringValue(rrTargetContainer) != exposedPorts.WorkloadName {
-			targetContainer = rrTargetContainer
-			targetPort = aws.String(exposedPorts.containerPortDefinedBy(aws.StringValue(rrTargetContainer)))
+	if rule.TargetPort == nil { // when target_port is nil
+		if aws.StringValue(rule.TargetContainer) != exposedPorts.WorkloadName {
+			targetContainer = rule.TargetContainer
+			targetPort = aws.String(exposedPorts.containerPortDefinedBy(aws.StringValue(rule.TargetContainer)))
 			/* NOTE: When the `target_port` is empty, the intended target port should be the port that is explicitly exposed by the container. Consider the following example
 			```
 			http:
@@ -703,8 +701,8 @@ func (rr *RoutingRule) exposedContainerAndPort(exposedPorts ExposedPortsIndex) (
 		return targetContainer, targetPort
 	}
 
-	if rrTargetContainer == nil { // when target_container is nil
-		container, port := targetContainerFromTargetPort(exposedPorts, rrTargetPort)
+	if rule.TargetContainer == nil { // when target_container is nil
+		container, port := targetContainerFromTargetPort(exposedPorts, rule.TargetPort)
 		targetPort = port
 		// In general, containers aren't expected to be empty. But this condition is applied for extra safety.
 		if container != nil {
@@ -714,8 +712,8 @@ func (rr *RoutingRule) exposedContainerAndPort(exposedPorts ExposedPortsIndex) (
 	}
 
 	// when both target_port and target_container are not nil
-	targetContainer = rrTargetContainer
-	targetPort = aws.String(template.StrconvUint16(aws.Uint16Value(rrTargetPort)))
+	targetContainer = rule.TargetContainer
+	targetPort = aws.String(template.StrconvUint16(aws.Uint16Value(rule.TargetPort)))
 	return targetContainer, targetPort
 }
 
@@ -748,7 +746,7 @@ func prepareParsedExposedPortsMap(exposedPorts map[uint16]ExposedPort) (map[stri
 	parsedContainerMap := make(map[string][]ExposedPort)
 	parsedExposedPortMap := make(map[uint16]string)
 
-	ports := []uint16{}
+	var ports []uint16
 	for port := range exposedPorts {
 		ports = append(ports, port)
 	}
