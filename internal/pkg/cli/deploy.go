@@ -8,9 +8,13 @@ import (
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/dustin/go-humanize/english"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	"slices"
+	"sort"
+	"strconv"
+	"strings"
 
 	"github.com/aws/copilot-cli/cmd/copilot/template"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
@@ -73,7 +77,10 @@ type deployOpts struct {
 	envExistsInWs  bool
 
 	// Cached variables
-	wsEnvironments []string
+	wsEnvironments         []string
+	wsWorkloads            []string
+	storeWorkloads         []*config.Workload
+	initializedWsWorkloads []string
 }
 
 func newDeployOpts(vars deployVars) (*deployOpts, error) {
@@ -226,8 +233,145 @@ func (o *deployOpts) maybeInitWkld(name string) error {
 	return nil
 }
 
+func parseDeploymentOrderTags(namesWithOptionalOrder []string) (map[string]int, error) {
+	prioritiesMap := make(map[string]int)
+	// First pass through flags to identify priority groups
+	for _, wkldName := range namesWithOptionalOrder {
+		parts := strings.Split(wkldName, "/")
+		// If there's no priority tag, deploy this service after everything else. Signify this with -1 priority.
+		// If there's a valid tag, add it to the map of priorities.
+		if len(parts) == 1 {
+			prioritiesMap[parts[0]] = -1
+		} else if len(parts) == 2 {
+			order, err := strconv.Atoi(parts[1])
+			if err != nil {
+				return nil, fmt.Errorf("parse deployment order for workloads: %w", err)
+			}
+			prioritiesMap[parts[0]] = order
+		} else {
+			return nil, fmt.Errorf("invalid deployment order for workload %s", wkldName)
+		}
+	}
+	return prioritiesMap, nil
+}
+
+// getDeploymentOrder parses names and tags from the --name flag, respecting "all".
+// It returns an ordered list of which workloads should be deployed and when.
+// For example, when a customer specifies "fe/2,be/1,worker,job" and the --all flag
+// in a workspace where there also exists a `db` service, this function will return
+//
+//	[][]string{ {"be"}, {"fe"}, {"worker", "job", "db"} }.
+//
+// TODO: when there's a dependsOn field in the manifest, we should modify this function to respect it.
+func (o *deployOpts) getDeploymentOrder() ([][]string, error) {
+	// Get a map from workload name to deployment priority
+	prioritiesMap, err := parseDeploymentOrderTags(o.workloadNames)
+	if err != nil {
+		return nil, err
+	}
+
+	// Iterate over priority map to invert it and get groups of workloads with the same priority.
+	groupsMap := make(map[int][]string)
+	for k, v := range prioritiesMap {
+		groupsMap[v] = append(groupsMap[v], k)
+	}
+
+	// If --all is specified, we need to add the remainder of workloads with -1 priority according to whether or not --init-wkld is specified.
+	if o.deployAllWorkloads {
+		specifiedWorkloadList := make([]string, 0, len(prioritiesMap))
+		for k := range prioritiesMap {
+			specifiedWorkloadList = append(specifiedWorkloadList, k)
+		}
+
+		if o.yesInitWkld != nil && aws.BoolValue(o.yesInitWkld) {
+			// --all and --init-wkld=false: get only get initialized local workloads.
+			initializedWorkloads, err := o.listInitializedLocalWorkloads()
+			if err != nil {
+				return nil, err
+			}
+			workloadsToAppend := selector.FilterOutItems(initializedWorkloads, specifiedWorkloadList, func(s string) string { return s })
+			groupsMap[-1] = append(groupsMap[-1], workloadsToAppend...)
+		} else {
+			// otherwise, add all unspecified local workloads.
+			localWorkloads, err := o.listLocalWorkloads()
+			if err != nil {
+				return nil, err
+			}
+			workloadsToAppend := selector.FilterOutItems(localWorkloads, specifiedWorkloadList, func(s string) string { return s })
+			groupsMap[-1] = append(groupsMap[-1], workloadsToAppend...)
+		}
+	}
+
+	type workloadPriority struct {
+		priority  int
+		workloads []string
+	}
+	deploymentGroups := make([]workloadPriority, len(groupsMap))
+	i := 0
+	for k, v := range groupsMap {
+		deploymentGroups[i] = workloadPriority{
+			priority:  k,
+			workloads: v,
+		}
+		i++
+	}
+	// sort by priority
+	sort.Slice(deploymentGroups, func(i, j int) bool { return deploymentGroups[i].priority < deploymentGroups[j].priority })
+
+	res := make([][]string, len(deploymentGroups))
+	// rotate the array to the left one element so that the -1 priority appears at the end.
+	for i := 1; i <= len(res); i++ {
+		res[i%len(res)] = deploymentGroups[i%len(res)].workloads
+	}
+	return res, nil
+}
+
+func (o *deployOpts) listStoreWorkloads() ([]*config.Workload, error) {
+	if o.storeWorkloads == nil {
+		wls, err := o.store.ListWorkloads(o.appName)
+		if err != nil {
+			return nil, fmt.Errorf("retrieve store workloads: %w", err)
+		}
+		o.storeWorkloads = wls
+	}
+	return o.storeWorkloads, nil
+}
+
+func (o *deployOpts) listLocalWorkloads() ([]string, error) {
+	if o.wsWorkloads == nil {
+		localWorkloads, err := o.ws.ListWorkloads()
+		if err != nil {
+			return nil, fmt.Errorf("retrieve workspace workloads: %w", err)
+		}
+		o.wsWorkloads = localWorkloads
+	}
+
+	return o.wsWorkloads, nil
+}
+
+func (o *deployOpts) listInitializedLocalWorkloads() ([]string, error) {
+	if o.initializedWsWorkloads == nil {
+		storeWls, err := o.listStoreWorkloads()
+		if err != nil {
+			return nil, err
+		}
+		localWorkloads, err := o.listLocalWorkloads()
+		if err != nil {
+			return nil, err
+		}
+
+		o.initializedWsWorkloads = selector.FilterItemsByStrings(localWorkloads, storeWls, func(workload *config.Workload) string { return workload.Name })
+	}
+	return o.initializedWsWorkloads, nil
+}
+
+type workloadCommand struct {
+	name string
+	cmd  actionCommand
+}
+
 func (o *deployOpts) Run() error {
-	if err := o.askName(); err != nil {
+	if err := o.askNames(); err != nil {
 		return err
 	}
 
@@ -247,44 +391,89 @@ func (o *deployOpts) Run() error {
 		return err
 	}
 
-	deploymentOrderWorkloadNames, err := o.getDeploymentOrder()
+	deploymentOrderGroups, err := o.getDeploymentOrder()
 	if err != nil {
 		return err
 	}
-	for _, workload := range deploymentOrderWorkloadNames {
-		if err := o.maybeInitWkld(workload); err != nil {
-			return err
+
+	cmds := make([][]workloadCommand, len(deploymentOrderGroups))
+	// Do all our asking before executing deploy commands.
+	for i, deploymentGroup := range deploymentOrderGroups {
+		for _, workload := range deploymentGroup {
+			if err := o.maybeInitWkld(workload); err != nil {
+				return err
+			}
+			deployCmd, err := o.loadWkldCmd(workload)
+			if err != nil {
+				return err
+			}
+			cmds[i] = append(cmds[i], workloadCommand{
+				name: workload,
+				cmd:  deployCmd,
+			})
+			if err := deployCmd.Ask(); err != nil {
+				return fmt.Errorf("ask %s deploy: %w", o.wlType, err)
+			}
+			if err := deployCmd.Validate(); err != nil {
+				return fmt.Errorf("validate %s deploy: %w", o.wlType, err)
+			}
 		}
-		deployCmd, err := o.loadWkldCmd(workload)
-		if err != nil {
-			return err
+	}
+
+	// Count number of deployments.
+	count := 0
+	for i := 0; i < len(cmds); i++ {
+		count += len(cmds[i])
+	}
+	log.Infof("Will deploy %d %s in the following order.\n", count, english.PluralWord(count, "workload", ""))
+	for i := 0; i < len(cmds); i++ {
+		names := ""
+		for _, cmd := range cmds[i] {
+			names += cmd.name + " "
 		}
-		if err := deployCmd.Ask(); err != nil {
-			return fmt.Errorf("ask %s deploy: %w", o.wlType, err)
-		}
-		if err := deployCmd.Validate(); err != nil {
-			return fmt.Errorf("validate %s deploy: %w", o.wlType, err)
-		}
-		if err := deployCmd.Execute(); err != nil {
-			return fmt.Errorf("execute %s deploy: %w", o.wlType, err)
-		}
-		if err := deployCmd.RecommendActions(); err != nil {
-			return err
+		log.Infof("%d. %s\n", i+1, names)
+	}
+
+	totalNumDeployed := 1
+	for _, deploymentGroup := range cmds {
+		// TODO parallelize this. Steps involve modifying the cmd to provide an option to
+		// disable the progress tracker, and to create several syncbuffers to hold spinners.
+		for g, cmd := range deploymentGroup {
+			if err := cmd.cmd.Execute(); err != nil {
+				return fmt.Errorf("execute deployment %d of %d in group %d: %w", totalNumDeployed, len(deploymentGroup), g+1, err)
+			}
+			if err := cmd.cmd.RecommendActions(); err != nil {
+				return err
+			}
+			totalNumDeployed++
 		}
 	}
 
 	return nil
 }
 
-func (o *deployOpts) askName() error {
+func (o *deployOpts) askNames() error {
 	if o.workloadNames != nil || len(o.workloadNames) != 0 {
 		return nil
 	}
-	names, err := o.sel.Workloads("Select a service or job in your workspace", "")
-	if err != nil {
-		return fmt.Errorf("select service or job: %w", err)
+
+	if !o.deployAllWorkloads {
+		names, err := o.sel.Workloads("Select a service or job in your workspace", "")
+		if err != nil {
+			return fmt.Errorf("select service or job: %w", err)
+		}
+		o.workloadNames = names
+		return nil
 	}
-	o.workloadNames = names
+
+	// --all and --init-wkld=false means we should only use the initialized local workloads.
+	if o.yesInitWkld != nil && !aws.BoolValue(o.yesInitWkld) {
+		o.workloadNames = o.initializedWsWorkloads
+		return nil
+	}
+
+	// --all and --init-wkld=true, or --init-wkld unspecified, means we should use ALL local workloads as our list of names.
+	o.workloadNames = o.wsWorkloads
 	return nil
 }
 
@@ -466,7 +655,8 @@ func BuildDeployCmd() *cobra.Command {
     then deploys a service named "api"
   /code $ copilot deploy --init-env --deploy-env --env test --name api --profile default --region us-west-2
   Initializes and deploys a service named "backend" to a "prod" environment.
-  /code $ copilot deploy --init-wkld --deploy-env=false --env prod --name backend`,
+  /code $ copilot deploy --init-wkld --deploy-env=false --env prod --name backend
+  Deploys all local workloads`,
 
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newDeployOpts(vars)

@@ -98,7 +98,7 @@ type: Load Balanced Web Service`)
 			inInitEnv:   aws.Bool(false),
 			inDeployEnv: aws.Bool(false),
 			mockSel: func(m *mocks.MockwsSelector) {
-				m.EXPECT().Workload("Select a service or job in your workspace", "").Return("fe", nil)
+				m.EXPECT().Workloads("Select a service or job in your workspace", "").Return([]string{"fe"}, nil)
 			},
 			mockActionCommand: func(m *mocks.MockactionCommand) {
 				m.EXPECT().Ask()
@@ -327,7 +327,7 @@ type: Load Balanced Web Service`)
 
 			},
 			mockSel: func(m *mocks.MockwsSelector) {
-				m.EXPECT().Workload(gomock.Any(), gomock.Any()).Return("fe", nil)
+				m.EXPECT().Workloads(gomock.Any(), gomock.Any()).Return([]string{"fe"}, nil)
 			},
 			mockInit: func(m *mocks.MockwkldInitializerWithoutManifest) {
 				m.EXPECT().AddWorkloadToApp("app", "fe", manifestinfo.LoadBalancedWebServiceType).Return(nil)
@@ -340,7 +340,7 @@ type: Load Balanced Web Service`)
 			inDeployEnv: aws.Bool(false),
 			wantedErr:   "ask job deploy: some error",
 			mockSel: func(m *mocks.MockwsSelector) {
-				m.EXPECT().Workload("Select a service or job in your workspace", "").Return("mailer", nil)
+				m.EXPECT().Workloads("Select a service or job in your workspace", "").Return([]string{"mailer"}, nil)
 			},
 			mockActionCommand: func(m *mocks.MockactionCommand) {
 				m.EXPECT().Ask().Return(errors.New("some error"))
@@ -399,7 +399,7 @@ type: Load Balanced Web Service`)
 			inDeployEnv: aws.Bool(false),
 			wantedErr:   "select service or job: some error",
 			mockSel: func(m *mocks.MockwsSelector) {
-				m.EXPECT().Workload(gomock.Any(), gomock.Any()).Return("", errors.New("some error"))
+				m.EXPECT().Workloads(gomock.Any(), gomock.Any()).Return(nil, errors.New("some error"))
 			},
 			mockActionCommand: func(m *mocks.MockactionCommand) {},
 			mockCmd:           func(m *mocks.Mockcmd) {},
@@ -475,7 +475,7 @@ type: Load Balanced Web Service`)
 			inEnvName:   "test",
 			inInitEnv:   aws.Bool(false),
 			inDeployEnv: aws.Bool(false),
-			wantedErr:   "execute svc deploy: some error",
+			wantedErr:   "execute deployment 1 of 1 in group 1: some error",
 
 			mockSel: func(m *mocks.MockwsSelector) {},
 			mockActionCommand: func(m *mocks.MockactionCommand) {
@@ -554,7 +554,7 @@ type: Load Balanced Web Service`)
 			inAppName: "app",
 			wantedErr: "",
 			mockSel: func(m *mocks.MockwsSelector) {
-				m.EXPECT().Workload("Select a service or job in your workspace", "").Return("fe", nil)
+				m.EXPECT().Workloads("Select a service or job in your workspace", "").Return([]string{"fe"}, nil)
 				m.EXPECT().Environment("Select an environment to deploy to", "", "app", prompt.Option{Value: "prod", Hint: "uninitialized"}).Return("prod", nil)
 			},
 			mockPrompt: func(m *mocks.Mockprompter) {
