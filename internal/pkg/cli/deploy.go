@@ -644,8 +644,8 @@ func BuildDeployCmd() *cobra.Command {
 	var deployEnvironment bool
 	cmd := &cobra.Command{
 		Use:   "deploy",
-		Short: "Deploy a Copilot job or service.",
-		Long:  "Deploy a Copilot job or service.",
+		Short: "Deploy one or more Copilot jobs or services.",
+		Long:  "Deploy one or more Copilot jobs or services.",
 		Example: `
   Deploys a service named "frontend" to a "test" environment.
   /code $ copilot deploy --name frontend --env test --deploy-env=false
@@ -656,7 +656,10 @@ func BuildDeployCmd() *cobra.Command {
   /code $ copilot deploy --init-env --deploy-env --env test --name api --profile default --region us-west-2
   Initializes and deploys a service named "backend" to a "prod" environment.
   /code $ copilot deploy --init-wkld --deploy-env=false --env prod --name backend
-  Deploys all local workloads`,
+  Deploys all local, initialized workloads in no particular order.
+  /code $ copilot deploy --all --env prod --name backend --init-wkld=false
+  Deploys multiple workloads in a prescribed order (fe and worker, then be).
+  /code $ copilot deploy -n fe/1 -n be/2 -n worker/1`,
 
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newDeployOpts(vars)
