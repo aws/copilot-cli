@@ -262,7 +262,7 @@ const (
 	svcFlagDescription          = "Name of the service."
 	jobFlagDescription          = "Name of the job."
 	workloadFlagDescription     = "Name of the service or job."
-	workloadsFlagDescription    = "Names of the service or jobs to deploy."
+	workloadsFlagDescription    = "Names of the service or jobs to deploy, with an optional priority tag."
 	nameFlagDescription         = "Name of the service, job, or task group."
 	yesFlagDescription          = "Skips confirmation prompt."
 	resourceTagsFlagDescription = `Optional. Labels with a key and value separated by commas.
