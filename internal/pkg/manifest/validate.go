@@ -215,6 +215,11 @@ func (l LoadBalancedWebServiceConfig) validate() error {
 	if err = l.ImageOverride.validate(); err != nil {
 		return err
 	}
+	if l.HTTPOrBool.IsEmpty() {
+		return &errFieldMustBeSpecified{
+			missingField: "http",
+		}
+	}
 	if err = l.HTTPOrBool.validate(); err != nil {
 		return fmt.Errorf(`validate "http": %w`, err)
 	}
@@ -842,6 +847,9 @@ func (CommandOverride) validate() error {
 
 // validate returns nil if HTTP is configured correctly.
 func (r HTTP) validate() error {
+	if r.IsEmpty() {
+		return nil
+	}
 	// we consider the fact that primary routing rule is mandatory before you write any additional routing rules.
 	if err := r.Main.validate(); err != nil {
 		return err
