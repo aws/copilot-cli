@@ -158,7 +158,7 @@ func newDeployOpts(vars deployVars) (*deployOpts, error) {
 				}
 				opts.name = workloadName
 				return opts, nil
-			case slices.Contains(manifestinfo.JobTypes(), workloadType):
+			case slices.Contains(manifestinfo.ServiceTypes(), workloadType):
 				opts := &deploySvcOpts{
 					deployWkldVars: o.deployWkldVars,
 
@@ -283,14 +283,16 @@ func (o *deployOpts) getDeploymentOrder() ([][]string, error) {
 			specifiedWorkloadList = append(specifiedWorkloadList, k)
 		}
 
-		if o.yesInitWkld != nil && aws.BoolValue(o.yesInitWkld) {
+		if o.yesInitWkld != nil && !aws.BoolValue(o.yesInitWkld) {
 			// --all and --init-wkld=false: get only get initialized local workloads.
 			initializedWorkloads, err := o.listInitializedLocalWorkloads()
 			if err != nil {
 				return nil, err
 			}
 			workloadsToAppend := selector.FilterOutItems(initializedWorkloads, specifiedWorkloadList, func(s string) string { return s })
-			groupsMap[-1] = append(groupsMap[-1], workloadsToAppend...)
+			if len(workloadsToAppend) != 0 {
+				groupsMap[-1] = append(groupsMap[-1], workloadsToAppend...)
+			}
 		} else {
 			// otherwise, add all unspecified local workloads.
 			localWorkloads, err := o.listLocalWorkloads()
@@ -298,7 +300,9 @@ func (o *deployOpts) getDeploymentOrder() ([][]string, error) {
 				return nil, err
 			}
 			workloadsToAppend := selector.FilterOutItems(localWorkloads, specifiedWorkloadList, func(s string) string { return s })
-			groupsMap[-1] = append(groupsMap[-1], workloadsToAppend...)
+			if len(workloadsToAppend) != 0 {
+				groupsMap[-1] = append(groupsMap[-1], workloadsToAppend...)
+			}
 		}
 	}
 
@@ -319,10 +323,20 @@ func (o *deployOpts) getDeploymentOrder() ([][]string, error) {
 	sort.Slice(deploymentGroups, func(i, j int) bool { return deploymentGroups[i].priority < deploymentGroups[j].priority })
 
 	res := make([][]string, len(deploymentGroups))
-	// rotate the array to the left one element so that the -1 priority appears at the end.
-	for i := 1; i <= len(res); i++ {
-		res[i%len(res)] = deploymentGroups[i%len(res)].workloads
+	for i, g := range deploymentGroups {
+		res[i] = g.workloads
 	}
+	if deploymentGroups[0].priority != -1 {
+		return res, nil
+	}
+
+	// rotate the array to the left one element so that the -1 priority appears at the end.
+	first := res[0]
+	for i := 1; i < len(res); i++ {
+		res[i-1] = res[i]
+	}
+	res[len(res)-1] = first
+
 	return res, nil
 }
 
@@ -398,6 +412,7 @@ func (o *deployOpts) Run() error {
 
 	cmds := make([][]workloadCommand, len(deploymentOrderGroups))
 	// Do all our asking before executing deploy commands.
+	log.Infoln("Checking for all required information. We may ask you some questions.")
 	for i, deploymentGroup := range deploymentOrderGroups {
 		for _, workload := range deploymentGroup {
 			if err := o.maybeInitWkld(workload); err != nil {
