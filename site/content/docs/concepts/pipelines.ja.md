@@ -26,7 +26,7 @@ Copilot はいくつかのコマンドで CodePipeline をセットアップし�
 
 ソースコードがリポジトリホストから pull された後に、 Service のコンテナイメージがビルドされ、 各環境の ECR リポジトリにパブリッシュされます。加えて、Addon テンプレート、Lambda 関数 zip ファイル、環境変数ファイルなどのすべての入力ファイルが S3　にアップロードされます。
 
-3. __Deploy Stages__ - ビルドが終わると、一部あるいはすべての Environment にデプロイできます。オプションとしてデプロイ完了後のテスト実行やデプロイ実行に手動承認を挟むことが可能です。
+3. __Deploy Stages__ - ビルドが終わると、一部あるいはすべての Environment にデプロイできます。オプションとしてデプロイ前後のアクションやテストコマンドの実行に手動承認を挟むことが可能です。
 
 Copilot を使って CodePipeline のセットアップを済ませたら、あとは GitHub、Bitbucket、あるいは CodeCommit リポジトリにプッシュするだけです。あとは CodePipeline がデプロイまでのプロセスを実行してくれます。
 
@@ -63,9 +63,11 @@ Pipeline の設定はワークスペースのレベルで作成されます。�
 
 * __Pipeline name__: パイプラインの名前を `[repository name]-[branch name]` とすることをお勧めします。( 尋ねられた場合、 デフォルト名を受け入れるには 'Enter' ボタンを入力します)。これにより複数のパイプラインを作成した場合に、ブランチごとのパイプラインワークフローに従う場合にうまく機能でします。
 
-* __Release order__: デプロイ先の Environment (複数可)を尋ねられます - どの Environment からデプロイを実施したいか、その順番にあわせて Environment を選択しましょう。(複数の Environment に対して同時にデプロイを実行することはありません)。最初に _test_ Environment へデプロイし、その後 _prod_ Environment へデプロイする、といった設定がよくある順番でしょう。
+* __Pipeline type__: 'Workloads' または '[Environments](../../blogs/release-v120.ja.md#continuous-delivery)' のいずれかを指定します。これにより、Pipeline がトリガーされたときに何をデプロイするかを決定します。
 
-* __Tracking repository__: デプロイ先の Environment を選択すると、次にどの Git リポジトリを CodePipeline からトラックしたいかを尋ねられます。ここで選ぶリポジトリへのプッシュが、CodePipeline の Pipeline をトリガーするリポジトリとなります。(設定したい対象のリポジトリがここでリストに表示されない場合、 `--url` フラグで明示的に Git リポジトリの URL を渡すこともできます。)
+* __Release order__: デプロイする Environment またはワークロードをデプロイする先の Environment を尋ねられます - どの Environment からデプロイを実施したいか、その順番にあわせて Environment を選択しましょう。(複数の Environment に対して同時にデプロイを実行することはありません)。最初に _test_ Environment へデプロイし、その後 _prod_ Environment へデプロイする、といった設定がよくある順番でしょう。
+
+* __Tracking repository__: デプロイする Environment またはワークロードをデプロイする先の Environment を選択すると、次にどの Git リポジトリを CodePipeline からトラックしたいかを尋ねられます。ここで選ぶリポジトリへのプッシュが、CodePipeline の Pipeline をトリガーするリポジトリとなります。(設定したい対象のリポジトリがここでリストに表示されない場合、 `--url` フラグで明示的に Git リポジトリの URL を渡すこともできます。)
 
 * __Tracking branch__: リポジトリを選択すると、 Copilot は現在のローカルブランチをパイプラインを利用するブランチとして指定します。これはステップ 2 で変更できます。
 
@@ -109,9 +111,9 @@ stages:
 ```
 `manifest.yml` で利用可能な全ての設定項目については [Pipeline Manifest](../manifest/pipeline.ja.md) をご覧ください。
 
-このファイルには大きく３つのパーツがあります。最初の `name` フィールドは Pipeline に作成されるパイプラインの名称です。そして `source` セクションは Pipeline がトラックするソースリポジトリとそのブランチといった詳細を定義し、最後の `stages` セクションでは、どの Environment に対してこの Pipeline でデプロイを行いたいか定義します。この設定ファイルはいつでも変更可能ですが、変更後は Git リポジトリへのコミットとプッシュ、その後 `copilot pipeline deploy` コマンドを実行する必要があります。
+このファイルには大きく 3 つのパーツがあります。最初の `name` フィールドは Pipeline に作成されるパイプラインの名称です。そして `source` セクションは Pipeline がトラックするソースリポジトリとそのブランチといった詳細を定義し、最後の `stages` セクションでは、デプロイまたはどの Environment に対してこの Pipeline でデプロイを行いたいか定義します。この設定ファイルはいつでも変更可能ですが、変更後は Git リポジトリへのコミットとプッシュ、その後 `copilot pipeline deploy` コマンドを実行する必要があります。
 
-よくあるケースとしては、新たなデプロイ先の Environment を増やしたいときや、Pipeline がトラックするブランチを変更したい際にこのファイルを更新することになるでしょう。あるいはもしすでに CodeStar Connections に接続済みのリポジトリがあり、Copilot で新たに作成するのではなく既存のものを利用したい場合には、その接続名を記述することになります。また、Pipeline Manifest はデプロイの手動承認を設定したり、デプロイ後に自動テストを実行したりしたい場合の設定を記述する場所でもあります。(本ページ下部の "テストの追加" もご覧ください)
+よくあるケースとしては、ワークロードをデプロイまたはデプロイする Environment を変更したい、デプロイの順序を指定したい、デプロイの前後に実行する Pipeline のアクションを追加したい、トラックするブランチを変更したいといった際にこのファイルを更新することになるでしょう。また、デプロイ前に手動の承認ステップを追加したり、テストを実行するコマンドを追加したりすることもできます ([カスタマイズ](#customization) を参照)。あるいはもしすでに CodeStar Connections に接続済みのリポジトリがあり、Copilot で新たに作成するのではなく既存のものを利用したい場合には、その接続名を記述することになります。
 
 ### ステップ 3: Buildspec ファイルの更新 (オプション)
 
@@ -154,11 +156,51 @@ Pipeline を作成した後、`buildspec.yml` の以下の行を最新バージ�
 ...
 ```
 
-## テストの追加
+<a id="Customization"></a>
+## カスタマイズ
+### 手動での承認
+承認ステップを追加するには、`require_approval` フィールドを 'true' に設定します。なお CodePipeline コンソールから手動で操作しない限り、デプロイ前後のアクションは実行されません。
 
-パイプラインの重要な要素の１つはもちろんですが自動化されたテストの実行です。デプロイステージの後に実行されるインテグレーションテストや E2E テストのようなものを追加するには、それらのテストを実行するコマンドを `test_commands` セクションに記述します。すべてのテストが成功すると、次のステージへと進みます。
+### デプロイ前後のアクション
+[v1.30.0](../../blogs/release-v130.ja.md) では、各 Workload または Environment のデプロイ前後において、Pipeline にアクションを挿入できます。データベース移行、テスト、その他のアクションを Pipeline Manifest に直接追加できます。
+```yaml
+stages:
+  - name: test
+    require_approval: true
+    pre_deployments:
+      db_migration: # このアクションの名称
+        buildspec: copilot/pipelines/demo-api-frontend-main/buildspecs/buildspec.yml # buildspec へのパス
+    deployments: # 任意項目、デプロイの順序 
+      orders:
+      warehouse:
+      frontend:
+        depends_on: [orders, warehouse]
+    post_deployments:
+      db_migration:
+        buildspec: copilot/pipelines/demo-api-frontend-main/buildspecs/post_buildspec.yml
+      integration:
+        buildspec: copilot/pipelines/demo-api-frontend-main/buildspecs/integ-buildspec.yml
+        depends_on: [db_migration] # 任意項目、アクションの順序
+```
+`buildspec` Manifest フィールドに、プロジェクトルートからの相対パスで [buildspec ファイル](https://docs.aws.amazon.com/ja_jp/codebuild/latest/userguide/build-spec-ref.html)のパスを追加します。Copilot の環境変数 `$COPILOT_APPLICATION_NAME` と `$COPILOT_ENVIRONMENT_NAME` は、これらの buildspecs 内で使用できます。
 
-`test_commands` を追加すると、[aws/codebuild/amazonlinux2-x86_64-standard:3.0](https://docs.aws.amazon.com/ja_jp/codebuild/latest/userguide/build-env-ref-available.html) イメージを利用する CodeBuild プロジェクトが生成されます。例えば `make` のようなコマンドをはじめとして、Amazon Linux 2 で利用可能な多くのコマンドを利用できます。
+期待する[デプロイメントの順序](#ordering)を指定するのと同じように、`depends_on` サブフィールドを使用してアクションの実行順序を指定できます。
+
+!!! info
+    デプロイの前後やテストコマンド用に生成された CodeBuild プロジェクトは、Pipeline やアプリと同じリージョンにデプロイされます。デプロイする Environment またはワークロードをデプロイする先の Environment の VPC にアクセスするには、デプロイ前後のアクションの buildspec で Copilot コマンドを使用するか、テストコマンドで直接 Copilot コマンドを使用します。
+
+### 順序指定
+`deployments` フィールドを使用すると、ワークロードまたは Environment のデプロイ順序を (Pipeline のタイプに応じて) 指定できます。これを指定しない場合、デプロイは並行して実行されます。 (詳細については、[このブログ記事]](../../blogs/release-v118.ja.md#controlling-order-of-deployments-in-a-pipeline)を参照してください。)
+
+### テスト
+デプロイ後のテストに必要なコマンドはごく一部で、必ずしも別の buildspec を作成する必要がない場合は、`test_commands` フィールドを利用してください。
+
+導入後のテストに必要なコマンドは少数のみで、必ずしも必要ではない場合別の buildspec を作成するには、`test_commands` フィールドを利用します。
+
+!!! warning
+    ステージ内の `post_deployments` フィールドと `test_commands` フィールドは相互に排他的です。
+
+デプロイ前、デプロイ後、およびテストコマンドは、[aws/codebuild/amazonlinux2-x86_64-standard:4.0](https://docs.aws.amazon.com/ja_jp/codebuild/latest/userguide/build-env-ref-available.html) イメージを使用して CodeBuild プロジェクトを生成するため、Amazon Linux 2 のほとんどのコマンド (`make` を含む) を使用できます。
 
 テストの実行を Docker コンテナの中で実行するように設定していますか？Copilot では CodeBuild プロジェクトの Docker サポートを利用できますので、`docker build` コマンドも同様に利用可能です。
 
@@ -174,16 +216,17 @@ source:
     repository: https://github.com/kohidave/demo-api-frontend
 
 stages:
-    -
-      name: test
+    - name: test
       # make test コマンドと echo コマンドが正常に終了した場合のみ
       # prod ステージに進みます
       test_commands:
         - make test
         - echo "woo! Tests passed"
-    -
-      name: prod
+    - name: prod
 ```
 
 !!! info
     AWS の Nathan Peck が素晴らしい例を提供しています。その例では `test_commands` に特に注目しています：https://aws.amazon.com/blogs/containers/automatically-deploying-your-container-application-with-aws-copilot/
+
+### Pipeline のオーバーライド
+これらのカスタム設定のオプションをすべて使っても、期待する Ppeline を設定できない場合は、Copilot の一時回避的なソリューションである [Pipeline オーバーライド](../../blogs/release-v129.ja.md#pipeline-overrides)を、[CDK](../developing/overrides/cdk.ja.md) または [YAML](../developing/overrides/yamlpatch.ja.md) を使って Pipeline の CloudFormation テンプレートを変更できます。
