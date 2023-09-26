@@ -87,9 +87,9 @@ func Lookup(path string, fs afero.Fs) (Info, error) {
 }
 
 func lookupYAMLPatch(path string, fs afero.Fs) (Info, error) {
-	ok, _ := afero.Exists(fs, filepath.Join(path, yamlPatchFile))
+	ok, _ := afero.Exists(fs, filepath.Join(path, YAMLPatchFile))
 	if !ok {
-		return Info{}, fmt.Errorf(`%s does not exist under %q`, yamlPatchFile, path)
+		return Info{}, fmt.Errorf(`%s does not exist under %q`, YAMLPatchFile, path)
 	}
 	return yamlPatchInfo(path), nil
 }
