@@ -407,6 +407,10 @@ Resources:
       RootDNSRole: {{ .AppDNSDelegationRole }}
       DomainName:  {{ .AppDNSName }}
       Aliases: {{ if .StaticSiteAlias }} [{{ quote .StaticSiteAlias }}] {{ else }} [] {{ end }}
+      {{- if .HostedZones}}
+      RootHostedZoneId: {{.HostedZones.RootDomainHostedZoneId}}
+      AppHostedZoneId: {{.HostedZones.AppDomainHostedZoneId}}
+      {{- end}}
 
   CustomDomainFunction:
     Type: AWS::Lambda::Function
@@ -478,6 +482,10 @@ Resources:
       DomainName:  {{ .AppDNSName }}
       IsCloudFrontCertificate: true
       Aliases: {{ if .StaticSiteAlias }} [{{ quote .StaticSiteAlias }}] {{ else }} [] {{ end }}
+      {{- if .HostedZones}}
+      RootHostedZoneId: {{.HostedZones.RootDomainHostedZoneId}}
+      AppHostedZoneId: {{.HostedZones.AppDomainHostedZoneId}}
+      {{- end}}
 
   CertificateValidationFunction:
     Type: AWS::Lambda::Function

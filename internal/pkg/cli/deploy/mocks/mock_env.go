@@ -453,3 +453,41 @@ func (mr *MockstackDescriberMockRecorder) Resources() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Resources", reflect.TypeOf((*MockstackDescriber)(nil).Resources))
 }
+
+// MockdomainHostedZoneGetter is a mock of domainHostedZoneGetter interface.
+type MockdomainHostedZoneGetter struct {
+	ctrl     *gomock.Controller
+	recorder *MockdomainHostedZoneGetterMockRecorder
+}
+
+// MockdomainHostedZoneGetterMockRecorder is the mock recorder for MockdomainHostedZoneGetter.
+type MockdomainHostedZoneGetterMockRecorder struct {
+	mock *MockdomainHostedZoneGetter
+}
+
+// NewMockdomainHostedZoneGetter creates a new mock instance.
+func NewMockdomainHostedZoneGetter(ctrl *gomock.Controller) *MockdomainHostedZoneGetter {
+	mock := &MockdomainHostedZoneGetter{ctrl: ctrl}
+	mock.recorder = &MockdomainHostedZoneGetterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockdomainHostedZoneGetter) EXPECT() *MockdomainHostedZoneGetterMockRecorder {
+	return m.recorder
+}
+
+// PublicDomainHostedZoneID mocks base method.
+func (m *MockdomainHostedZoneGetter) PublicDomainHostedZoneID(domainName string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PublicDomainHostedZoneID", domainName)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// PublicDomainHostedZoneID indicates an expected call of PublicDomainHostedZoneID.
+func (mr *MockdomainHostedZoneGetterMockRecorder) PublicDomainHostedZoneID(domainName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublicDomainHostedZoneID", reflect.TypeOf((*MockdomainHostedZoneGetter)(nil).PublicDomainHostedZoneID), domainName)
+}

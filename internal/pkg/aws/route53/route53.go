@@ -48,8 +48,8 @@ func New(s *session.Session) *Route53 {
 	}
 }
 
-// DomainHostedZoneID returns the Hosted Zone ID of a domain.
-func (r53 *Route53) DomainHostedZoneID(domainName string) (string, error) {
+// PublicDomainHostedZoneID returns the public Hosted Zone ID of a domain.
+func (r53 *Route53) PublicDomainHostedZoneID(domainName string) (string, error) {
 	if id, ok := r53.hostedZoneIDFor[domainName]; ok {
 		return id, nil
 	}
@@ -84,7 +84,7 @@ func (r53 *Route53) DomainHostedZoneID(domainName string) (string, error) {
 // route53 hosted zone for the domain.
 // If there are missing NS records returns ErrUnmatchedNSRecords.
 func (r53 *Route53) ValidateDomainOwnership(domainName string) error {
-	hzID, err := r53.DomainHostedZoneID(domainName)
+	hzID, err := r53.PublicDomainHostedZoneID(domainName)
 	if err != nil {
 		return err
 	}

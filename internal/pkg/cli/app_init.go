@@ -319,7 +319,7 @@ func (o *initAppOpts) domainHostedZoneID(domainName string) (string, error) {
 	if o.cachedHostedZoneID != "" {
 		return o.cachedHostedZoneID, nil
 	}
-	hostedZoneID, err := o.route53.DomainHostedZoneID(domainName)
+	hostedZoneID, err := o.route53.PublicDomainHostedZoneID(domainName)
 	if err != nil {
 		return "", fmt.Errorf("get public hosted zone ID for domain %s: %w", domainName, err)
 	}

@@ -148,6 +148,7 @@ func (s *RequestDrivenWebService) Template() (string, error) {
 		AppRunnerVPCEndpoint: s.manifest.Private.Advanced.Endpoint,
 		Count:                s.manifest.Count,
 		Secrets:              convertSecrets(s.manifest.RequestDrivenWebServiceConfig.Secrets),
+		HostedZones:          convertHostedZones(s.app),
 	})
 	if err != nil {
 		return "", err

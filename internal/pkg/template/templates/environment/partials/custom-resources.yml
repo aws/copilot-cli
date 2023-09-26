@@ -12,6 +12,11 @@ DelegateDNSAction:
     SubdomainName: !Sub ${EnvironmentName}.${AppName}.${AppDNSName}
     NameServers: !GetAtt EnvironmentHostedZone.NameServers
     RootDNSRole: !Ref AppDNSDelegationRole
+    {{- if .HostedZones}}
+    RootHostedZoneId: {{.HostedZones.RootDomainHostedZoneId}}
+    AppHostedZoneId: {{.HostedZones.AppDomainHostedZoneId}}
+    EnvHostedZoneId: !Ref EnvironmentHostedZone
+    {{- end}}
 
 HTTPSCert:
   Metadata:
@@ -31,6 +36,11 @@ HTTPSCert:
     EnvHostedZoneId: !Ref EnvironmentHostedZone
     Region: !Ref AWS::Region
     RootDNSRole: !Ref AppDNSDelegationRole
+    {{- if .HostedZones}}
+    RootHostedZoneId: {{.HostedZones.RootDomainHostedZoneId}}
+    AppHostedZoneId: {{.HostedZones.AppDomainHostedZoneId}}
+    {{- end}}
+
 
 CustomDomainAction:
   Metadata:
@@ -44,6 +54,7 @@ CustomDomainAction:
     Aliases: !Ref Aliases
     AppDNSRole: !Ref AppDNSDelegationRole
     DomainName: !Ref AppDNSName
+    EnvHostedZoneId: !Ref EnvironmentHostedZone
     {{- if .CDNConfig}}
     PublicAccessDNS: !GetAtt CloudFrontDistribution.DomainName
     PublicAccessHostedZone: Z2FDTNDATAQYW2 # See https://go.aws/3cPhvlX
@@ -51,3 +62,7 @@ CustomDomainAction:
     PublicAccessDNS: !GetAtt PublicLoadBalancer.DNSName
     PublicAccessHostedZone: !GetAtt PublicLoadBalancer.CanonicalHostedZoneID
     {{- end}}
+    {{- if .HostedZones}}
+    RootHostedZoneId: {{.HostedZones.RootDomainHostedZoneId}}
+    AppHostedZoneId: {{.HostedZones.AppDomainHostedZoneId}}
+    {{- end}}    

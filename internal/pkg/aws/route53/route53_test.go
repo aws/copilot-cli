@@ -230,7 +230,7 @@ func TestRoute53_DomainHostedZoneID(t *testing.T) {
 				hostedZoneIDFor: make(map[string]string),
 			}
 
-			gotID, gotErr := service.DomainHostedZoneID(tc.domainName)
+			gotID, gotErr := service.PublicDomainHostedZoneID(tc.domainName)
 
 			if gotErr != nil {
 				require.EqualError(t, tc.wantErr, gotErr.Error())
@@ -267,12 +267,12 @@ func TestRoute53_DomainHostedZoneID(t *testing.T) {
 		}
 
 		// Call once and make the request.
-		actual, err := service.DomainHostedZoneID("example.com")
+		actual, err := service.PublicDomainHostedZoneID("example.com")
 		require.NoError(t, err)
 		require.Equal(t, "Z0698117FUWMJ87C39TF", actual)
 
 		// Call again and Times should be 1.
-		actual, err = service.DomainHostedZoneID("example.com")
+		actual, err = service.PublicDomainHostedZoneID("example.com")
 		require.NoError(t, err)
 		require.Equal(t, "Z0698117FUWMJ87C39TF", actual)
 	})

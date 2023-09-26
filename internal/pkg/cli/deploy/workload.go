@@ -24,6 +24,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
+	"github.com/aws/copilot-cli/internal/pkg/aws/route53"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -180,20 +181,21 @@ type workloadDeployer struct {
 	workspacePath string
 
 	// Dependencies.
-	fs                 afero.Fs
-	s3Client           uploader
-	addons             stackBuilder
-	repository         repositoryService
-	deployer           serviceDeployer
-	tmplGetter         deployedTemplateGetter
-	endpointGetter     endpointGetter
-	spinner            spinner
-	templateFS         template.Reader
-	envVersionGetter   versionGetter
-	overrider          Overrider
-	docker             dockerEngineRunChecker
-	customResources    customResourcesFunc
-	labeledTermPrinter func(fw syncbuffer.FileWriter, bufs []*syncbuffer.LabeledSyncBuffer, opts ...syncbuffer.LabeledTermPrinterOption) LabeledTermPrinter
+	fs                     afero.Fs
+	s3Client               uploader
+	addons                 stackBuilder
+	repository             repositoryService
+	deployer               serviceDeployer
+	tmplGetter             deployedTemplateGetter
+	endpointGetter         endpointGetter
+	spinner                spinner
+	templateFS             template.Reader
+	envVersionGetter       versionGetter
+	overrider              Overrider
+	docker                 dockerEngineRunChecker
+	customResources        customResourcesFunc
+	labeledTermPrinter     func(fw syncbuffer.FileWriter, bufs []*syncbuffer.LabeledSyncBuffer, opts ...syncbuffer.LabeledTermPrinterOption) LabeledTermPrinter
+	domainHostedZoneGetter domainHostedZoneGetter
 
 	// Cached variables.
 	defaultSess              *session.Session
@@ -335,6 +337,7 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 		store:                    store,
 		envConfig:                envConfig,
 		labeledTermPrinter:       labeledTermPrinter,
+		domainHostedZoneGetter:   route53.New(defaultSession),
 
 		mft:    in.Mft,
 		rawMft: in.RawMft,
