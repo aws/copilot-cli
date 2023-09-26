@@ -352,6 +352,95 @@ func (o *runLocalOpts) getContainerSuffix() string {
 	return fmt.Sprintf("%s-%s-%s", o.appName, o.envName, o.wkldName)
 }
 
+type action struct {
+	async bool
+	fn    func(context.Context) error
+}
+
+type containerManager struct {
+	actions []action
+}
+
+// funcs:
+// StartPauseContainer
+//   - blocks until pause container is "ready"
+// StartWorkloadContainers
+//   - returns once all containers are running
+// StopWorkloadContainers
+//   - returns once all workload containers have stopped
+// StopAllContainers
+//   - returns once all containers have stopped
+
+// TODO ctrl-c handler
+func (c *containerManager) Start(ctx context.Context) error {
+	// stop manager if any of the actions returns an error
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	g, ctx := errgroup.WithContext(ctx)
+
+	for i := range c.actions {
+		action := c.actions[i]
+		if action.async {
+			g.Go(func() error {
+				return action.fn(ctx)
+			})
+			continue
+		}
+
+		if err := action.fn(ctx); err != nil {
+			return err
+		}
+	}
+
+	return g.Wait()
+}
+
+func (o *runLocalOpts) pauseContainerActions(ctx context.Context, ports map[string]string) []action {
+	// flip ports to be host->ctr
+	flippedPorts := make(map[string]string, len(ports))
+	for k, v := range ports {
+		flippedPorts[v] = k
+	}
+	containerNameWithSuffix := fmt.Sprintf("%s-%s", pauseContainerName, o.containerSuffix)
+	runOptions := &dockerengine.RunOptions{
+		ImageURI:       pauseContainerURI,
+		ContainerName:  containerNameWithSuffix,
+		ContainerPorts: flippedPorts,
+		Command:        []string{"sleep", "infinity"},
+		LogOptions: dockerengine.RunLogOptions{
+			Color:      o.newColor(),
+			LinePrefix: "[pause] ",
+		},
+	}
+
+	return []action{
+		{
+			async: true,
+			fn: func(ctx context.Context) error {
+				return o.dockerEngine.Run(ctx, runOptions)
+			},
+		},
+		{
+			async: false,
+			fn: func(ctx context.Context) error {
+				for {
+					fmt.Printf("checking if container is running\n")
+					isRunning, err := o.dockerEngine.IsContainerRunning(containerNameWithSuffix)
+					switch {
+					case err != nil:
+						return fmt.Errorf("check if container is running: %w", err)
+					case isRunning:
+						return nil
+					}
+					// If the container isn't running yet, sleep for a short duration before checking again.
+					time.Sleep(1 * time.Second)
+				}
+			},
+		},
+	}
+}
+
 func (o *runLocalOpts) runPauseContainer(ctx context.Context, ports map[string]string) error {
 	// flip ports to be host->ctr
 	flippedPorts := make(map[string]string, len(ports))
@@ -401,6 +490,46 @@ func (o *runLocalOpts) runPauseContainer(ctx context.Context, ports map[string]s
 	}
 
 	return nil
+}
+
+func (o *runLocalOpts) runContainersActions(ctx context.Context, containerURIs map[string]string, envVars map[string]containerEnv) []action {
+	var actions []action
+	for name, uri := range containerURIs {
+		name := name
+		uri := uri
+
+		vars, secrets := make(map[string]string), make(map[string]string)
+		for k, v := range envVars[name] {
+			if v.Secret {
+				secrets[k] = v.Value
+			} else {
+				vars[k] = v.Value
+			}
+		}
+
+		actions = append(actions, action{
+			async: true,
+			fn: func(ctx context.Context) error {
+				runOptions := &dockerengine.RunOptions{
+					ImageURI:         uri,
+					ContainerName:    fmt.Sprintf("%s-%s", name, o.containerSuffix),
+					Secrets:          secrets,
+					EnvVars:          vars,
+					ContainerNetwork: fmt.Sprintf("%s-%s", pauseContainerName, o.containerSuffix),
+					LogOptions: dockerengine.RunLogOptions{
+						Color:      o.newColor(),
+						LinePrefix: fmt.Sprintf("[%s] ", name),
+					},
+				}
+				if err := o.dockerEngine.Run(ctx, runOptions); err != nil {
+					return fmt.Errorf("run container %q: %w", name, err)
+				}
+				return nil
+			},
+		})
+	}
+
+	return actions
 }
 
 func (o *runLocalOpts) runContainers(ctx context.Context, containerURIs map[string]string, envVars map[string]containerEnv) error {
