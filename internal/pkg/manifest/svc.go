@@ -456,20 +456,21 @@ func (s *StringOrFromCFN) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
-func (cfg ImageWithPortAndHealthcheck) exposePorts(exposedPorts map[uint16]ExposedPort, workloadName string) {
+func (cfg ImageWithPortAndHealthcheck) exposePorts(exposedPorts map[uint16]ExposedPort, workloadName string) map[uint16]ExposedPort {
 	if cfg.Port == nil {
-		return
+		return nil
 	}
 
+	newExposedPorts := make(map[uint16]ExposedPort)
 	targetPort := aws.Uint16Value(cfg.Port)
 	if exposedPort, ok := exposedPorts[targetPort]; ok {
-		exposedPorts[targetPort] = ExposedPort{
+		newExposedPorts[targetPort] = ExposedPort{
 			Port:                 exposedPort.Port,
 			Protocol:             exposedPort.Protocol,
 			ContainerName:        exposedPort.ContainerName,
 			isDefinedByContainer: true,
 		}
-		return
+		return newExposedPorts
 	}
 
 	exposedPorts[targetPort] = ExposedPort{
@@ -478,22 +479,24 @@ func (cfg ImageWithPortAndHealthcheck) exposePorts(exposedPorts map[uint16]Expos
 		ContainerName:        workloadName,
 		isDefinedByContainer: true,
 	}
+	return newExposedPorts
 }
 
-func (cfg ImageWithHealthcheckAndOptionalPort) exposePorts(exposedPorts map[uint16]ExposedPort, workloadName string) {
+func (cfg ImageWithHealthcheckAndOptionalPort) exposePorts(exposedPorts map[uint16]ExposedPort, workloadName string) map[uint16]ExposedPort {
 	if cfg.Port == nil {
-		return
+		return nil
 	}
 
+	newExposedPorts := make(map[uint16]ExposedPort)
 	targetPort := aws.Uint16Value(cfg.Port)
 	if exposedPort, ok := exposedPorts[targetPort]; ok {
-		exposedPorts[targetPort] = ExposedPort{
+		newExposedPorts[targetPort] = ExposedPort{
 			Port:                 exposedPort.Port,
 			Protocol:             exposedPort.Protocol,
 			ContainerName:        exposedPort.ContainerName,
 			isDefinedByContainer: true,
 		}
-		return
+		return newExposedPorts
 	}
 
 	exposedPorts[targetPort] = ExposedPort{
@@ -502,13 +505,14 @@ func (cfg ImageWithHealthcheckAndOptionalPort) exposePorts(exposedPorts map[uint
 		ContainerName:        workloadName,
 		isDefinedByContainer: true,
 	}
+	return newExposedPorts
 }
 
 // exposePorts populates a map of ports that should be exposed given the application load balancer
 // configuration that's not part of the existing containerPorts.
-func (rule RoutingRule) exposePorts(exposedPorts map[uint16]ExposedPort, workloadName string) {
+func (rule RoutingRule) exposePorts(exposedPorts map[uint16]ExposedPort, workloadName string) map[uint16]ExposedPort {
 	if rule.TargetPort == nil {
-		return
+		return nil
 	}
 	targetContainer := workloadName
 	if rule.TargetContainer != nil {
@@ -516,29 +520,31 @@ func (rule RoutingRule) exposePorts(exposedPorts map[uint16]ExposedPort, workloa
 	}
 	targetPort := aws.Uint16Value(rule.TargetPort)
 	if _, ok := exposedPorts[targetPort]; ok {
-		return
+		return nil
 	}
-	exposedPorts[targetPort] = ExposedPort{
+	newExposedPorts := make(map[uint16]ExposedPort)
+	newExposedPorts[targetPort] = ExposedPort{
 		Port:          targetPort,
 		Protocol:      strings.ToLower(TCP),
 		ContainerName: targetContainer,
 	}
+	return newExposedPorts
 }
 
 // exposePorts populates a map of ports that should be exposed given the network load balancer
 // configuration that's not part of the existing containerPorts.
-func (cfg NetworkLoadBalancerListener) exposePorts(exposedPorts map[uint16]ExposedPort, workloadName string) error {
+func (cfg NetworkLoadBalancerListener) exposePorts(exposedPorts map[uint16]ExposedPort, workloadName string) (map[uint16]ExposedPort, error) {
 	if cfg.IsEmpty() {
-		return nil
+		return nil, nil
 	}
 	nlbPort, nlbProtocol, err := ParsePortMapping(cfg.Port)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	port, err := strconv.ParseUint(aws.StringValue(nlbPort), 10, 16)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	targetPort := uint16(port)
 	if cfg.TargetPort != nil {
@@ -554,7 +560,7 @@ func (cfg NetworkLoadBalancerListener) exposePorts(exposedPorts map[uint16]Expos
 	targetProtocol = strings.ToLower(targetProtocol)
 	for _, exposedPort := range exposedPorts {
 		if targetPort == exposedPort.Port && targetProtocol == exposedPort.Protocol {
-			return nil
+			return nil, nil
 		}
 	}
 	targetContainer := workloadName
@@ -562,22 +568,23 @@ func (cfg NetworkLoadBalancerListener) exposePorts(exposedPorts map[uint16]Expos
 		targetContainer = aws.StringValue(cfg.TargetContainer)
 	}
 
-	exposedPorts[targetPort] = ExposedPort{
+	newExposedPorts := make(map[uint16]ExposedPort)
+	newExposedPorts[targetPort] = ExposedPort{
 		Port:          targetPort,
 		Protocol:      targetProtocol,
 		ContainerName: targetContainer,
 	}
 
-	return nil
+	return newExposedPorts, nil
 }
 
-func (sidecar SidecarConfig) exposePorts(exposedPorts map[uint16]ExposedPort, sidecarName string) error {
+func (sidecar SidecarConfig) exposePorts(exposedPorts map[uint16]ExposedPort, sidecarName string) (map[uint16]ExposedPort, error) {
 	if sidecar.Port == nil {
-		return nil
+		return nil, nil
 	}
 	sidecarPort, protocolPtr, err := ParsePortMapping(sidecar.Port)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	protocol := aws.StringValue(protocolPtr)
 	if protocolPtr == nil {
@@ -585,17 +592,18 @@ func (sidecar SidecarConfig) exposePorts(exposedPorts map[uint16]ExposedPort, si
 	}
 	port, err := strconv.ParseUint(aws.StringValue(sidecarPort), 10, 16)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	exposedPorts[uint16(port)] = ExposedPort{
+	newExposedPorts := make(map[uint16]ExposedPort)
+	newExposedPorts[uint16(port)] = ExposedPort{
 		Port:                 uint16(port),
 		Protocol:             strings.ToLower(protocol),
 		ContainerName:        sidecarName,
 		isDefinedByContainer: true,
 	}
 
-	return nil
+	return newExposedPorts, nil
 }
 
 // ServiceConnectTargetContainer contains the name of a container and port to expose to ECS Service Connect.

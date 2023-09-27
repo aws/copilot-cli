@@ -4,6 +4,7 @@
 package manifest
 
 import (
+	"maps"
 	"strconv"
 	"time"
 
@@ -276,10 +277,11 @@ func (lbws *LoadBalancedWebService) ExposedPorts() (ExposedPortsIndex, error) {
 	workloadName := aws.StringValue(lbws.Name)
 	// port from sidecar[x].image.port.
 	for name, sidecar := range lbws.Sidecars {
-		err := sidecar.exposePorts(exposedPorts, name)
+		newExposedPorts, err := sidecar.exposePorts(exposedPorts, name)
 		if err != nil {
 			return ExposedPortsIndex{}, err
 		}
+		maps.Copy(exposedPorts, newExposedPorts)
 	}
 	// port from http.target_port and http.additional_rules[x].target_port
 	for _, rule := range lbws.HTTPOrBool.RoutingRules() {
@@ -288,10 +290,11 @@ func (lbws *LoadBalancedWebService) ExposedPorts() (ExposedPortsIndex, error) {
 
 	// port from nlb.target_port and nlb.additional_listeners[x].target_port
 	for _, listener := range lbws.NLBConfig.NLBListeners() {
-		err := listener.exposePorts(exposedPorts, workloadName)
+		newExposedPorts, err := listener.exposePorts(exposedPorts, workloadName)
 		if err != nil {
 			return ExposedPortsIndex{}, err
 		}
+		maps.Copy(exposedPorts, newExposedPorts)
 	}
 	// port from image.port
 	lbws.ImageConfig.exposePorts(exposedPorts, workloadName)

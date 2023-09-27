@@ -4,6 +4,8 @@
 package manifest
 
 import (
+	"maps"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/template"
@@ -203,10 +205,11 @@ func (b *BackendService) ExposedPorts() (ExposedPortsIndex, error) {
 
 	workloadName := aws.StringValue(b.Name)
 	for name, sidecar := range b.Sidecars {
-		err := sidecar.exposePorts(exposedPorts, name)
+		newExposedPorts, err := sidecar.exposePorts(exposedPorts, name)
 		if err != nil {
 			return ExposedPortsIndex{}, err
 		}
+		maps.Copy(exposedPorts, newExposedPorts)
 	}
 	for _, rule := range b.HTTP.RoutingRules() {
 		rule.exposePorts(exposedPorts, workloadName)

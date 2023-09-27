@@ -4,6 +4,8 @@
 package manifest
 
 import (
+	"maps"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/manifest/manifestinfo"
 	"github.com/aws/copilot-cli/internal/pkg/template"
@@ -191,10 +193,11 @@ func newDefaultScheduledJob() *ScheduledJob {
 func (j *ScheduledJob) ExposedPorts() (ExposedPortsIndex, error) {
 	exposedPorts := make(map[uint16]ExposedPort)
 	for name, sidecar := range j.Sidecars {
-		err := sidecar.exposePorts(exposedPorts, name)
+		newExposedPorts, err := sidecar.exposePorts(exposedPorts, name)
 		if err != nil {
 			return ExposedPortsIndex{}, err
 		}
+		maps.Copy(exposedPorts, newExposedPorts)
 	}
 	portsForContainer, containerForPort := prepareParsedExposedPortsMap(exposedPorts)
 	return ExposedPortsIndex{
