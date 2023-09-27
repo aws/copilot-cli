@@ -111,9 +111,9 @@ stages:
 ```
 `manifest.yml` で利用可能な全ての設定項目については [Pipeline Manifest](../manifest/pipeline.ja.md) をご覧ください。
 
-このファイルには大きく 3 つのパーツがあります。最初の `name` フィールドは Pipeline に作成されるパイプラインの名称です。そして `source` セクションは Pipeline がトラックするソースリポジトリとそのブランチといった詳細を定義し、最後の `stages` セクションでは、デプロイまたはどの Environment に対してこの Pipeline でデプロイを行いたいか定義します。この設定ファイルはいつでも変更可能ですが、変更後は Git リポジトリへのコミットとプッシュ、その後 `copilot pipeline deploy` コマンドを実行する必要があります。
+このファイルには大きく 3 つのパーツがあります。最初の `name` フィールドは Pipeline に作成されるパイプラインの名称です。そして `source` セクションは Pipeline がトラックするソースリポジトリとそのブランチといった詳細を定義し、最後の `stages` セクションではこの Pipeline がデプロイする Environment そのものまたは Pipeline がワークロードをデプロイする際のデプロイ先の Environment を定義します。この設定ファイルはいつでも変更可能ですが、変更後は Git リポジトリへのコミットとプッシュ、その後 `copilot pipeline deploy` コマンドを実行する必要があります。
 
-よくあるケースとしては、ワークロードをデプロイまたはデプロイする Environment を変更したい、デプロイの順序を指定したい、デプロイの前後に実行する Pipeline のアクションを追加したい、トラックするブランチを変更したいといった際にこのファイルを更新することになるでしょう。また、デプロイ前に手動の承認ステップを追加したり、テストを実行するコマンドを追加したりすることもできます ([カスタマイズ](#customization) を参照)。あるいはもしすでに CodeStar Connections に接続済みのリポジトリがあり、Copilot で新たに作成するのではなく既存のものを利用したい場合には、その接続名を記述することになります。
+よくあるケースとしては、ワークロードをデプロイする先の Environment またはデプロイする Environment を変更したい、デプロイの順序を指定したい、デプロイの前後に実行する Pipeline のアクションを追加したい、トラックするブランチを変更したいといった際にこのファイルを更新することになるでしょう。また、デプロイ前に手動の承認ステップを追加したり、テストを実行するコマンドを追加したりすることもできます ([カスタマイズ](#customization) を参照)。あるいはもしすでに CodeStar Connections に接続済みのリポジトリがあり、Copilot で新たに作成するのではなく既存のものを利用したい場合には、その接続名を記述することになります。
 
 ### ステップ 3: Buildspec ファイルの更新 (オプション)
 
@@ -162,7 +162,7 @@ Pipeline を作成した後、`buildspec.yml` の以下の行を最新バージ�
 承認ステップを追加するには、`require_approval` フィールドを 'true' に設定します。なお CodePipeline コンソールから手動で操作しない限り、デプロイ前後のアクションは実行されません。
 
 ### デプロイ前後のアクション
-[v1.30.0](../../blogs/release-v130.ja.md) では、各 Workload または Environment のデプロイ前後において、Pipeline にアクションを挿入できます。データベース移行、テスト、その他のアクションを Pipeline Manifest に直接追加できます。
+[v1.30.0](../../blogs/release-v130.ja.md) では、各ワークロードまたは Environment のデプロイ前後において、Pipeline にアクションを挿入できます。データベース移行、テスト、その他のアクションを Pipeline Manifest に直接追加できます。
 ```yaml
 stages:
   - name: test
@@ -187,7 +187,7 @@ stages:
 期待する[デプロイメントの順序](#ordering)を指定するのと同じように、`depends_on` サブフィールドを使用してアクションの実行順序を指定できます。
 
 !!! info
-    デプロイの前後やテストコマンド用に生成された CodeBuild プロジェクトは、Pipeline やアプリと同じリージョンにデプロイされます。デプロイする Environment またはワークロードをデプロイする先の Environment の VPC にアクセスするには、デプロイ前後のアクションの buildspec で Copilot コマンドを使用するか、テストコマンドで直接 Copilot コマンドを使用します。
+    デプロイの前後やテストコマンド用に生成された CodeBuild プロジェクトは、Pipeline や Application と同じリージョンにデプロイされます。デプロイする Environment またはワークロードをデプロイする先の Environment の VPC にアクセスするには、デプロイ前後のアクションの buildspec で Copilot コマンドを使用するか、テストコマンドで直接 Copilot コマンドを使用します。
 
 ### 順序指定
 `deployments` フィールドを使用すると、ワークロードまたは Environment のデプロイ順序を (Pipeline のタイプに応じて) 指定できます。これを指定しない場合、デプロイは並行して実行されます。 (詳細については、[このブログ記事]](../../blogs/release-v118.ja.md#controlling-order-of-deployments-in-a-pipeline)を参照してください。)

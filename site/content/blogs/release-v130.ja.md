@@ -21,7 +21,7 @@ Copilot v1.30 ではより柔軟で効率的な開発を支援する大きな機
 
 - **`copilot run local`**: Copilot に新しい操作コマンドが追加され、ローカルで Service を実行できるようになりました! [詳細はこちらをご覧ください](#copilot-run-local)。
 - **Ctrl-C によるデプロイのロールバック**: もう完了まで待つ必要はありません！いつでもターミナルから CloudFormation デプロイをロールバックできるようになりました。[詳細はこちらをご覧ください](#roll-back-deployments-with-ctrl-c)。
-- **デプロイ前後の Pipline アクション**: Workload/Environment のデプロイ前後に、DB マイグレーション、統合テスト、その他のアクションを挿入できるようになりました。[詳細はこちらをご覧ください](#deployment-actions)。
+- **デプロイ前後の Pipline アクション**: ワークロード/Environment のデプロイ前後に、DB マイグレーション、統合テスト、その他のアクションを挿入できるようになりました。[詳細はこちらをご覧ください](#deployment-actions)。
 - **`copilot deploy` の機能拡張**: このコマンドのスコープや柔軟性について拡充しました。[詳細はこちらをご覧ください](#copilot-deploy-enhancements)。
 - **`--detach flag`**: CloudFormation スタックイベントの進行状況をターミナル上でスキップできるようにしました。[詳細はこちらをご覧ください](#use---detach-to-deploy-without-waiting)。
 
@@ -39,12 +39,13 @@ Copilot v1.30 ではより柔軟で効率的な開発を支援する大きな機
 ## `copilot run local`
 Service に対する変更作業をしているときに `copilot run local` を使用すると、デプロイのオーバーヘッドなしにコードの変更をテストできるため、イテレーションループを高速化できます。開始するには、まず `copilot svc deploy` を実行して Service のバージョンをデプロイする必要があります。
 
-Service のデプロイが完了したら、コードの修正を開始できます。変更をテストする準備をした後、`copilot run local` を実行すると、Copilot がプライマリコンテナとサイドカーの両方に対して以下が実行されます。
+Service のデプロイが完了したら、コードの修正を開始できます。変更をテストする準備をした後、`copilot run local` を実行すると、Copilot はプライマリコンテナとサイドカーコンテナの両方に対して以下を実行します。
 
 1. [`image`](../docs/manifest/lb-web-service#image) で指定されたイメージをビルドまたは pull します。
 2. [`secrets`](../docs/manifest/lb-web-service#secrets) で指定されたシークレットの値を取得します。
 3. 現在の IAM ユーザー/ロールの認証情報を取得します。
-4. [`variables`](../docs/manifest/lb-web-service#variables) を適用したステップ 1 のイメージ、ステップ 2 のシークレット値およびステップ 3 の IAM 認証情報を用いてローカルマシンで実行します。
+4. [`variables`](../docs/manifest/lb-web-service#variables) とステップ 2 のシークレット値及びステップ 3 の IAM 認証情報を適用した状態でステップ 1 で指定したコンテナイメージをローカルマシンで実行します。
+
 
 Service からのログはターミナルにストリーミングされます。テストが終了した後に Ctrl-C を入力すると、Copilot が実行中のコンテナをすべてクリーンアップしてから終了します!
 
@@ -59,11 +60,11 @@ Service、Job、Environment がデプロイされるのを待っている間、`
 
 <a id="deployment-actions"></a>
 ## デプロイ時のアクション
-ワークロードのデプロイメントの前にデータベースの移行を実行する必要があり、ワークロードの健全性チェックはその更新に依存する場合があります。あるいは、ワークロードのデプロイ後に Pipeline でエンドツーエンドまたは統合テストを実行したい場合もあります。これらのアクションは、[Copilot Pipeline](../docs/concepts/pipelines.ja.md) で可能になりました。
+ワークロードのデプロイの前にデータベースの移行を実行する必要があり、ワークロードの健全性チェックはその更新に依存する場合があります。あるいは、ワークロードのデプロイ後に Pipeline で E2E またはインテグレーションテストを実行したい場合もあります。これらのアクションは、[Copilot Pipeline](../docs/concepts/pipelines.ja.md) で可能になりました。
 
-Copilot は以前から ['test_commands'](https://aws.github.io/copilot-cli/docs/manifest/pipeline/#stages-test-cmds) をサポートしていますが、[デプロイ前](https://aws.github.io/copilot-cli/docs/manifest/pipeline/#stages-predeployments)と[デプロイ後](https://aws.github.io/copilot-cli/docs/manifest/pipeline/#stages-postdeployments)のアクションによって Pipeline の機能と柔軟性が拡張されます。`test_commands` の場合、Copilot はコマンド文字列を含む [buildspec](https://docs.aws.amazon.com/codebuild/latest/userguide/build-spec-ref.html) を Pipeline の Cloudformation テンプレートにインライン化します。`pre_deployments` と `post_deployments` の場合、Copilot はローカルのワークスペース内の buildspec を読み込みます。
+Copilot は以前から ['test_commands'](https://aws.github.io/copilot-cli/docs/manifest/pipeline/#stages-test-cmds) をサポートしていますが、[デプロイ前](https://aws.github.io/copilot-cli/docs/manifest/pipeline/#stages-predeployments)と[デプロイ後](https://aws.github.io/copilot-cli/docs/manifest/pipeline/#stages-postdeployments)のアクションによって Pipeline の機能と柔軟性が拡張されます。`test_commands` の場合、Copilot はコマンド文字列を含む [buildspec](https://docs.aws.amazon.com/codebuild/latest/userguide/build-spec-ref.html) を Pipeline の CloudFormation テンプレートにインライン化します。`pre_deployments` と `post_deployments` の場合、Copilot はローカルのワークスペース内の buildspec を読み込みます。
 
-これらのアクションのすべての設定は、[Pipeline Manifest](../docs/manifest/pipeline.ja.md) で制御できます。複数のデプロイ前アクションと複数のデプロイ後アクションを持つことができます。なお、それぞれのアクションについて、`[pre_/post_]deployments.buildspec`フィールドに、プロジェクトルートからの相対パスで [buildspec](https://docs.aws.amazon.com/codebuild/latest/userguide/build-spec-ref.html) へのパスを指定する必要があります。Copilot はアクション用の CodeBuild プロジェクトを生成し、Pipeline およびアプリと同じリージョンにデプロイします。buildspec 内で Copilot コマンド (`copilot svc exec` や `copilot task run` など) を使用して、デプロイ先またはデプロイ先の Environment の VPC にアクセスします。 なお、`$COPILOT_APPLICATION_NAME` および `$COPILOT_ENVIRONMENT_NAME` という Copilot 環境変数を使用して、buildspec ファイルを複数の Environment で再利用できます。
+これらのアクションのすべての設定は、[Pipeline Manifest](../docs/manifest/pipeline.ja.md) で制御できます。複数のデプロイ前アクションと複数のデプロイ後アクションを持つことができます。なお、それぞれのアクションについて、`[pre_/post_]deployments.buildspec`フィールドに、プロジェクトルートからの相対パスで [buildspec](https://docs.aws.amazon.com/codebuild/latest/userguide/build-spec-ref.html) へのパスを指定する必要があります。Copilot はアクション用の CodeBuild プロジェクトを生成し、Pipeline および Application と同じリージョンにデプロイします。buildspec 内で Copilot コマンド (`copilot svc exec` や `copilot task run` など) を使用して、デプロイされた Environment にある VPC またはワークロードのデプロイ先の Environment にある VPC にアクセスします。なお、`$COPILOT_APPLICATION_NAME` および `$COPILOT_ENVIRONMENT_NAME` という Copilot 環境変数を使用して、buildspec ファイルを複数の Environment で再利用できます。
 
 `depends_on` フィールドを使用して、デプロイ前およびデプロイ後のグループ内でのアクションの順序を指定することもできます。デフォルトでは、アクションは並行して実行されます。
 
@@ -90,7 +91,7 @@ stages:
 
 <a id="copilot-deploy-enhancements"></a>
 ## `copilot deploy` の機能拡張
-`copilot deploy` がワークロードの初期化、Environment の初期化とデプロイをサポートするようになりました。アプリと Manifest のみを含むリポジトリから開始し、単一のコマンドで動作させる Environment と Service をデプロイできるようになりました。必要なワークロードをデプロイする前に Environment をデプロイすることもできます。
+`copilot deploy` がワークロードの初期化、Environment の初期化とデプロイをサポートするようになりました。Application と Manifest のみを含むリポジトリから開始し、単一のコマンドで動作させる Environment と Service をデプロイできるようになりました。必要なワークロードをデプロイする前に Environment をデプロイすることもできます。
 
 例えば、"prod" Environment と "frontend" および "backend" Service の Manifest を含むリポジトリをクローンしてデプロイしたいとします。
 `copilot deploy` は、必要に応じてワークロードと Environment を初期化するようプロンプトを表示し、Environment をデプロイするアカウントの認証情報を尋ねてから、Environment とワークロードをデプロイします。
