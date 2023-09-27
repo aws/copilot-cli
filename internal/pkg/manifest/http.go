@@ -18,6 +18,10 @@ type HTTPOrBool struct {
 	Enabled *bool
 }
 
+func (r *HTTPOrBool) isEmpty() bool {
+	return r.Enabled == nil && r.HTTP.IsEmpty()
+}
+
 // Disabled returns true if the routing rule configuration is explicitly disabled.
 func (r *HTTPOrBool) Disabled() bool {
 	return r.Enabled != nil && !aws.BoolValue(r.Enabled)

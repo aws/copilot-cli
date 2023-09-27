@@ -256,6 +256,15 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 			},
 			wantedError: fmt.Errorf(`"name" must be specified`),
 		},
+		"error if http field is empty": {
+			lbConfig: LoadBalancedWebService{
+				Workload: Workload{Name: aws.String("mockName")},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: testImageConfig,
+				},
+			},
+			wantedErrorMsgPrefix: `"http" must be specified`,
+		},
 		"error if fail to validate HTTP load balancer target": {
 			lbConfig: LoadBalancedWebService{
 				Workload: Workload{Name: aws.String("mockName")},

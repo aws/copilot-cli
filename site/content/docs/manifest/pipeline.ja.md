@@ -23,6 +23,9 @@
         stages: 
           - # デフォルトでは、すべてのワークロードはステージ内で同時にデプロイされます。
             name: test
+            pre_deployments:
+              db_migration:
+                buildspec: ./buildspec.yml
             test_commands:
               - make integ-test
               - echo "woo! Tests passed"
@@ -136,9 +139,9 @@ CodeBuild プロジェクトに関する設定。
 CodeBuild のビルドプロジェクトで利用する Docker イメージの URI。`aws/codebuild/amazonlinux2-x86_64-standard:3.0` がデフォルトで利用されます。
 
 <span class="parent-field">build.</span><a id="build-buildspec" href="#build-buildspec" class="field">`buildspec`</a> <span class="type">String</span>
-任意項目。ビルドプロジェクトで利用する buildspec ファイルを指定する URI です。デフォルトでは、Copilot  が buildspec ファイルを作成します。作成したファイルは、 `copilot/pipelines/[your pipeline name]/buildspec.yml` に配置されています。
+任意項目。このビルドプロジェクトで使用する、buildspec ファイルへのプロジェクトルートからの相対パスを指定します。デフォルトでは、作成したファイルは、 `copilot/pipelines/[your pipeline name]/buildspec.yml` に配置されています。
 
-<span class="parent-field">build.</span><a id="build-additional-policy" href="#build-additional-policy" class="field">`additional_policy.`</a><a id="policy-document" href="#policy-document" class="field">`PolicyDocument`</a> <span class="type">Map</span>
+<span class="parent-field">build.</span><a id="build-additional-policy" href="#build-additional-policy" class="field">`additional_policy.`</a><a id="policy-document" href="#policy-document" class="field">`PolicyDocument`</a> <span class="type">Map</span>  
 任意項目。ビルドプロジェクトロールに追加するポリシードキュメントを指定します。追加のポリシードキュメントは、以下の例のように YAML のマップに指定することができます。
 ```yaml
 build:
@@ -177,12 +180,31 @@ Pipeline のデプロイ先である 1 つ以上の Environment をデプロイ�
 Service をデプロイする Environment 名。
 
 <span class="parent-field">stages.</span><a id="stages-approval" href="#stages-approval" class="field">`requires_approval`</a> <span class="type">Boolean</span>   
-Optional. Indicates whether to add a manual approval step before the deployment. Defaults to `false`.
-任意項目。デプロイの前に手動承認ステップを追加するかどうかを示します。デフォルトは `false` です。
+任意項目。デプロイの前に手動承認ステップを追加するかどうか (追加している場合はデプロイ前のアクションを追加するかどうか) を示します。デフォルトは `false` です。
+
+<span class="parent-field">stages.</span><a id="stages-predeployments" href="#stages-predeployments" class="field">`pre_deployments`</a> <span class="type">Map</span> <span class="version">[v1.30.0](../../blogs/release-v130.ja.md#deployment-actions) にて追加</span>  
+任意項目。デプロイ前に実行するアクションを追加します。 
+```yaml
+stages:
+  - name: <env name>
+    pre_deployments:
+      <action name>:
+        buildspec: <path to local buildspec>
+        depends_on: [<other action's name>, ...]
+```
+<span class="parent-field">stages.pre_deployments.</span><a id="stages-predeployments-name" href="#stages-predeployments-name" class="field">`<name>`</a> <span class="type">Map</span> <span class="version">[v1.30.0](../../blogs/release-v130.ja.md#deployment-actions) にて追加</span>  
+デプロイ前のアクションの名前。
+
+<span class="parent-field">stages.pre_deployments.`<name>`.</span><a id="stages-predeployments-buildspec" href="#stages-predeployments-buildspec" class="field">`buildspec`</a> <span class="type">String</span> <span class="version">[v1.30.0](../../blogs/release-v130.ja.md#deployment-actions) にて追加</span>  
+このビルドプロジェクトで使用する buildspec ファイルへのパスを、プロジェクトルートからの相対パスで指定します。
+
+<span class="parent-field">stages.pre_deployments.`<name>`.</span><a id="stages-predeployments-dependson" href="#stages-predeployments-dependson" class="field">`depends_on`</a> <span class="type">Array of Strings</span> <span class="version">[v1.30.0](../../blogs/release-v130.ja.md#deployment-actions) にて追加</span>  
+任意項目。このアクションをデプロイする前にデプロイする必要がある、他のデプロイ前アクションの名前。デフォルトでは依存関係はありません。
+
+!!! info
+    デプロイ前およびデプロイ後の詳細については、[v1.30.0 のブログ記事](../../blogs/release-v130.ja.md) および [Pipeline](../concepts/pipelines.ja.md) ページを参照してください。
 
 <span class="parent-field">stages.</span><a id="stages-deployments" href="#stages-deployments" class="field">`deployments`</a> <span class="type">Map</span>  
-Optional. Control which CloudFormation stacks to deploy and their order.  
-The `deployments` dependencies are specified in a map of the form:
 任意項目。デプロイする CloudFormation スタックとその順序を制御します。
 デプロイの依存関係は、次の形式の Map で指定されます。
 ```yaml
@@ -223,11 +245,10 @@ stages:
 
 最後に、もし `deployments` が指定されていない場合、デフォルトでは Copilot は git リポジトリにあるすべての Service と Job を並行してデプロイします。
 
-<span class="parent-field">stages.deployments.</span><a id="stages-deployments-name" href="#stages-deployments-name" class="field">`<name>`</a> <span class="type">Map</span>   
+<span class="parent-field">stages.deployments.</span><a id="stages-deployments-name" href="#stages-deployments-name" class="field">`<name>`</a> <span class="type">Map</span>  
 デプロイする Job または Service の名前。
 
-<span class="parent-field">stages.deployments.`<name>`.</span><a id="stages-deployments-dependson" href="#stages-deployments-dependson" class="field">`depends_on`</a> <span class="type">Array of Strings</span>    
-Optional. Name of other job or services that should be deployed prior to deploying this microservice. Defaults to no dependencies.  
+<span class="parent-field">stages.deployments.`<name>`.</span><a id="stages-deployments-dependson" href="#stages-deployments-dependson" class="field">`depends_on`</a> <span class="type">Array of Strings</span>   
 任意項目。このマイクロサービスをデプロイする前にデプロイする必要がある他の Job または Service の名前。デフォルトでは依存関係はありません。
 
 <span class="parent-field">stages.deployments.`<name>`.</span><a id="stages-deployments-stackname" href="#stages-deployments-stackname" class="field">`stack_name`</a> <span class="type">String</span>  
@@ -240,6 +261,24 @@ Optional. Name of other job or services that should be deployed prior to deployi
 <span class="parent-field">stages.deployments.`<name>`.</span><a id="stages-deployments-templateconfig" href="#stages-deployments-templatepath" class="field">`template_config`</a> <span class="type">String</span>  
 任意項目。`build` フェーズで生成された CloudFormation テンプレート設定へのパス。デフォルトは `infrastructure/<deployment name>-<stage name>.params.json` です。
 
+<span class="parent-field">stages.</span><a id="stages-postdeployments" href="#stages-postdeployments" class="field">`post_deployments`</a> <span class="type">Map</span><span class="version">[v1.30.0](../../blogs/release-v130.ja.md#deployment-actions) にて追加</span>  
+任意項目。デプロイ後に実行するアクションを追加します。`stages.test_commands` とは相互に排他的です。
+```yaml
+stages:
+  - name: <env name>
+    post_deployments:
+      <action name>:
+        buildspec: <path to local buildspec>
+        depends_on: [<other action's name>, ...]
+```
+<span class="parent-field">stages.post_deployments.</span><a id="stages-postdeployments-name" href="#stages-postdeployments-name" class="field">`<name>`</a> <span class="type">Map</span> <span class="version">[v1.30.0](../../blogs/release-v130.ja.md#deployment-actions) にて追加</span>  
+デプロイ後アクションの名前。
+
+<span class="parent-field">stages.post_deployments.`<name>`.</span><a id="stages-postdeployments-buildspec" href="#stages-postdeployments-buildspec" class="field">`buildspec`</a> <span class="type">String</span> <span class="version">[v1.30.0](../../blogs/release-v130.ja.md#deployment-actions) にて追加</span>  
+このビルドプロジェクトで使用する buildspec ファイルへのパスを、プロジェクトルートからの相対パスで指定します。
+
+<span class="parent-field">stages.post_deployments.`<name>`.</span><a id="stages-postdeployments-depends_on" href="#stages-postdeployments-dependson" class="field">`depends_on`</a> <span class="type">Array of Strings</span> <span class="version">[v1.30.0](../../blogs/release-v130.ja.md#deployment-actions) にて追加</span>   
+任意項目。このアクションをデプロイする前にデプロイする必要がある他のデプロイ後アクションの名前。 デフォルトでは依存関係はありません。
+
 <span class="parent-field">stages.</span><a id="stages-test-cmds" href="#stages-test-cmds" class="field">`test_commands`</a> <span class="type">Array of Strings</span>   
-任意項目。デプロイ後にインテグレーションテストまたは E2E テストを実行するコマンドです。デフォルトでは、デプロイ後の検証は行いません。
-    
+任意項目。デプロイ後にインテグレーションテストまたは E2E テストを実行するコマンドです。デフォルトでは、デプロイ後の検証は行いません。'stages.post_deployment' とは相互に排他的です。
