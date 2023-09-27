@@ -6,12 +6,11 @@ package cli
 import (
 	"errors"
 	"fmt"
-	"strings"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
+	"slices"
 
 	"github.com/aws/copilot-cli/cmd/copilot/template"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
@@ -40,6 +39,8 @@ const (
 type deployVars struct {
 	deployWkldVars
 
+	workloadNames []string
+
 	yesInitWkld *bool
 	deployEnv   *bool
 	yesInitEnv  *bool
@@ -52,9 +53,8 @@ type deployVars struct {
 type deployOpts struct {
 	deployVars
 
-	deployWkld       actionCommand
 	newWorkloadAdder func() wkldInitializerWithoutManifest
-	setupDeployCmd   func(*deployOpts, string)
+	setupDeployCmd   func(*deployOpts, string, string) (actionCommand, error)
 
 	newInitEnvCmd   func(o *deployOpts) (cmd, error)
 	newDeployEnvCmd func(o *deployOpts) (cmd, error)
@@ -130,9 +130,9 @@ func newDeployOpts(vars deployVars) (*deployOpts, error) {
 			})
 		},
 
-		setupDeployCmd: func(o *deployOpts, workloadType string) {
+		setupDeployCmd: func(o *deployOpts, workloadName, workloadType string) (actionCommand, error) {
 			switch {
-			case contains(workloadType, manifestinfo.JobTypes()):
+			case slices.Contains(manifestinfo.JobTypes(), workloadType):
 				opts := &deployJobOpts{
 					deployWkldVars: o.deployWkldVars,
 
@@ -148,8 +148,9 @@ func newDeployOpts(vars deployVars) (*deployOpts, error) {
 				opts.newJobDeployer = func() (workloadDeployer, error) {
 					return newJobDeployer(opts)
 				}
-				o.deployWkld = opts
-			case contains(workloadType, manifestinfo.ServiceTypes()):
+				opts.name = workloadName
+				return opts, nil
+			case slices.Contains(manifestinfo.JobTypes(), workloadType):
 				opts := &deploySvcOpts{
 					deployWkldVars: o.deployWkldVars,
 
@@ -167,13 +168,15 @@ func newDeployOpts(vars deployVars) (*deployOpts, error) {
 				opts.newSvcDeployer = func() (workloadDeployer, error) {
 					return newSvcDeployer(opts)
 				}
-				o.deployWkld = opts
+				opts.name = workloadName
+				return opts, nil
 			}
+			return nil, fmt.Errorf("unrecognized workload type %s", workloadType)
 		},
 	}, nil
 }
 
-func (o *deployOpts) maybeInitWkld() error {
+func (o *deployOpts) maybeInitWkld(name string) error {
 	// Confirm that the workload needs to be initialized after asking for the name.
 	initializedWorkloads, err := o.store.ListWorkloads(o.appName)
 	if err != nil {
@@ -185,26 +188,26 @@ func (o *deployOpts) maybeInitWkld() error {
 	}
 
 	// Workload is already initialized. Return early.
-	if contains(o.name, wlNames) {
+	if slices.Contains(wlNames, name) {
 		return nil
 	}
 
 	// Get workload type and confirm readable manifest.
-	mf, err := o.ws.ReadWorkloadManifest(o.name)
+	mf, err := o.ws.ReadWorkloadManifest(name)
 	if err != nil {
-		return fmt.Errorf("read manifest for workload %s: %w", o.name, err)
+		return fmt.Errorf("read manifest for workload %s: %w", name, err)
 	}
 	workloadType, err := mf.WorkloadType()
 	if err != nil {
-		return fmt.Errorf("get workload type from manifest for workload %s: %w", o.name, err)
+		return fmt.Errorf("get workload type from manifest for workload %s: %w", name, err)
 	}
 
-	if !contains(workloadType, manifestinfo.WorkloadTypes()) {
-		return fmt.Errorf("unrecognized workload type %q in manifest for workload %s", workloadType, o.name)
+	if !slices.Contains(manifestinfo.WorkloadTypes(), workloadType) {
+		return fmt.Errorf("unrecognized workload type %q in manifest for workload %s", workloadType, name)
 	}
 
 	if o.yesInitWkld == nil {
-		confirmInitWkld, err := o.prompt.Confirm(fmt.Sprintf("Found manifest for uninitialized %s %q. Initialize it?", workloadType, o.name), "This workload will be initialized, then deployed.", prompt.WithFinalMessage(fmt.Sprintf("Initialize %s:", workloadType)))
+		confirmInitWkld, err := o.prompt.Confirm(fmt.Sprintf("Found manifest for uninitialized %s %q. Initialize it?", workloadType, name), "This workload will be initialized, then deployed.", prompt.WithFinalMessage(fmt.Sprintf("Initialize %s:", workloadType)))
 		if err != nil {
 			return fmt.Errorf("confirm initialize workload: %w", err)
 		}
@@ -212,11 +215,11 @@ func (o *deployOpts) maybeInitWkld() error {
 	}
 
 	if !aws.BoolValue(o.yesInitWkld) {
-		return fmt.Errorf("workload %s is uninitialized but --%s=false was specified", o.name, yesInitWorkloadFlag)
+		return fmt.Errorf("workload %s is uninitialized but --%s=false was specified", name, yesInitWorkloadFlag)
 	}
 
 	wkldAdder := o.newWorkloadAdder()
-	if err = wkldAdder.AddWorkloadToApp(o.appName, o.name, workloadType); err != nil {
+	if err = wkldAdder.AddWorkloadToApp(o.appName, name, workloadType); err != nil {
 		return fmt.Errorf("add workload to app: %w", err)
 	}
 	return nil
@@ -243,31 +246,40 @@ func (o *deployOpts) Run() error {
 		return err
 	}
 
-	if err := o.maybeInitWkld(); err != nil {
-		return err
+	for _, workload := range o.workloadNames {
+		if err := o.maybeInitWkld(workload); err != nil {
+			return err
+		}
+		deployCmd, err := o.loadWkldCmd(workload)
+		if err != nil {
+			return err
+		}
+		if err := deployCmd.Ask(); err != nil {
+			return fmt.Errorf("ask %s deploy: %w", o.wlType, err)
+		}
+		if err := deployCmd.Validate(); err != nil {
+			return fmt.Errorf("validate %s deploy: %w", o.wlType, err)
+		}
+		if err := deployCmd.Execute(); err != nil {
+			return fmt.Errorf("execute %s deploy: %w", o.wlType, err)
+		}
+		if err := deployCmd.RecommendActions(); err != nil {
+			return err
+		}
 	}
 
-	if err := o.loadWkld(); err != nil {
-		return err
-	}
-	if err := o.deployWkld.Execute(); err != nil {
-		return fmt.Errorf("execute %s deploy: %w", o.wlType, err)
-	}
-	if err := o.deployWkld.RecommendActions(); err != nil {
-		return err
-	}
 	return nil
 }
 
 func (o *deployOpts) askName() error {
-	if o.name != "" {
+	if o.workloadNames != nil || len(o.workloadNames) != 0 {
 		return nil
 	}
 	name, err := o.sel.Workload("Select a service or job in your workspace", "")
 	if err != nil {
 		return fmt.Errorf("select service or job: %w", err)
 	}
-	o.name = name
+	o.workloadNames = []string{name}
 	return nil
 }
 
@@ -337,7 +349,7 @@ func (o *deployOpts) checkEnvExists() error {
 	if err != nil {
 		return fmt.Errorf("list environments in workspace: %w", err)
 	}
-	o.envExistsInWs = contains(o.envName, envs)
+	o.envExistsInWs = slices.Contains(envs, o.envName)
 
 	// the desired environment doesn't actually exist.
 	if !o.envExistsInApp && !o.envExistsInWs {
@@ -353,7 +365,6 @@ func (o *deployOpts) checkEnvExists() error {
 
 func (o *deployOpts) maybeInitEnv() error {
 	if o.envExistsInApp {
-		log.Infof("Environment %q exists in application %q. Skipping initialization.\n", o.envName, o.appName)
 		return nil
 	}
 
@@ -414,31 +425,21 @@ func (o *deployOpts) maybeDeployEnv() error {
 	return nil
 }
 
-func (o *deployOpts) loadWkld() error {
-	if err := o.loadWkldCmd(); err != nil {
-		return err
-	}
-	if err := o.deployWkld.Ask(); err != nil {
-		return fmt.Errorf("ask %s deploy: %w", o.wlType, err)
-	}
-	if err := o.deployWkld.Validate(); err != nil {
-		return fmt.Errorf("validate %s deploy: %w", o.wlType, err)
-	}
-	return nil
-}
-
-func (o *deployOpts) loadWkldCmd() error {
-	wl, err := o.store.GetWorkload(o.appName, o.name)
+func (o *deployOpts) loadWkldCmd(name string) (actionCommand, error) {
+	wl, err := o.store.GetWorkload(o.appName, name)
 	if err != nil {
-		return fmt.Errorf("retrieve %s from application %s: %w", o.appName, o.name, err)
+		return nil, fmt.Errorf("retrieve %s from application %s: %w", o.appName, name, err)
 	}
-	o.setupDeployCmd(o, wl.Type)
-	if strings.Contains(strings.ToLower(wl.Type), jobWkldType) {
+	cmd, err := o.setupDeployCmd(o, name, wl.Type)
+	if err != nil {
+		return nil, err
+	}
+	if slices.Contains(manifestinfo.JobTypes(), wl.Type) {
 		o.wlType = jobWkldType
-		return nil
+		return cmd, nil
 	}
 	o.wlType = svcWkldType
-	return nil
+	return cmd, nil
 }
 
 // BuildDeployCmd is the deploy command.
@@ -447,7 +448,7 @@ func BuildDeployCmd() *cobra.Command {
 	var initWorkload bool
 	var initEnvironment bool
 	var deployEnvironment bool
-
+	var name string
 	cmd := &cobra.Command{
 		Use:   "deploy",
 		Short: "Deploy a Copilot job or service.",
@@ -490,6 +491,10 @@ func BuildDeployCmd() *cobra.Command {
 				}
 			}
 
+			if cmd.Flags().Changed(nameFlag) {
+				opts.workloadNames = []string{name}
+			}
+
 			if err := opts.Run(); err != nil {
 				return err
 			}
@@ -497,7 +502,7 @@ func BuildDeployCmd() *cobra.Command {
 		}),
 	}
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
-	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, "", workloadFlagDescription)
+	cmd.Flags().StringVarP(&name, nameFlag, nameFlagShort, "", workloadFlagDescription)
 	cmd.Flags().StringVarP(&vars.envName, envFlag, envFlagShort, "", envFlagDescription)
 	cmd.Flags().StringVar(&vars.imageTag, imageTagFlag, "", imageTagFlagDescription)
 	cmd.Flags().StringToStringVar(&vars.resourceTags, resourceTagsFlag, nil, resourceTagsFlagDescription)

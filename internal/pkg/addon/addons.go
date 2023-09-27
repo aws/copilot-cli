@@ -7,6 +7,7 @@ package addon
 import (
 	"fmt"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -174,7 +175,7 @@ func (p *parser) stack() (*stack, error) {
 	}, nil
 }
 
-// parseTemplate merges CloudFormation templates under the "addons/" directory  into a single CloudFormation 
+// parseTemplate merges CloudFormation templates under the "addons/" directory  into a single CloudFormation
 // template and returns it.
 //
 // If the addons directory doesn't exist or no yaml files are found in
@@ -296,24 +297,15 @@ func filterFiles(files []string, matchers ...func(string) bool) []string {
 }
 
 func yamlMatcher(fileName string) bool {
-	return contains(yamlExtensions, filepath.Ext(fileName))
+	return slices.Contains(yamlExtensions, filepath.Ext(fileName))
 }
 
 func paramsMatcher(fileName string) bool {
-	return contains(parameterFileNames, fileName)
+	return slices.Contains(parameterFileNames, fileName)
 }
 
 func nonParamsMatcher(fileName string) bool {
 	return !paramsMatcher(fileName)
-}
-
-func contains(arr []string, el string) bool {
-	for _, item := range arr {
-		if item == el {
-			return true
-		}
-	}
-	return false
 }
 
 func quoteSlice(elems []string) []string {

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws/arn"
@@ -431,7 +432,7 @@ func (o *deleteEnvOpts) emptyBuckets() error {
 
 	var stackBucketARNs []string
 	for _, resource := range envResources {
-		if contains(resource.LogicalID, stack.EnvManagedS3BucketLogicalIds) {
+		if slices.Contains(stack.EnvManagedS3BucketLogicalIds, resource.LogicalID) {
 			stackBucketARNs = append(stackBucketARNs, resource.PhysicalID)
 		}
 	}
@@ -453,7 +454,7 @@ func (o *deleteEnvOpts) emptyBuckets() error {
 
 		// Warn about hanging bucket when bucket is found via API call but is not in the env CFN stack
 		// Those found via API call but not CFN stack cannot be deleted by Copilot
-		if !contains(bucketARN.String(), stackBucketARNs) {
+		if !slices.Contains(stackBucketARNs, bucketARN.String()) {
 			log.Warningf(`Bucket %q was emptied, but was not found in the Cloudformation stack. This resource is now dangling, and can be deleted from the S3 console.\n`, bucketARN)
 		}
 	}

@@ -9,9 +9,9 @@ phases:
     runtime-versions:
       nodejs: 16
     commands:
-      - 'cd $HOME/.goenv && git pull --ff-only && cd -'
-      - 'goenv install 1.20.1' # Check if a version is available: https://github.com/syndbg/goenv/tree/master/plugins/go-build/share/go-build
-      - 'goenv global 1.20.1'
+      - "cd $HOME/.goenv && git pull --ff-only && cd -"
+      - "goenv install 1.21.1" # Check if a version is available: https://github.com/syndbg/goenv/tree/master/plugins/go-build/share/go-build
+      - "goenv global 1.21.1"
   pre_build:
     commands:
       - echo "cd into $CODEBUILD_SRC_DIR"
@@ -80,4 +80,4 @@ phases:
       - $ARTIFACT_DIRECTORY/copilot-linux-$VERSION --version
 artifacts:
   files:
-    - '**/*'
+    - "**/*"

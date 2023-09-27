@@ -6,6 +6,7 @@ package deploy
 
 import (
 	"fmt"
+	"slices"
 	"sort"
 
 	"github.com/aws/aws-sdk-go/aws/arn"
@@ -190,7 +191,7 @@ func (s *Store) listDeployedWorkloads(appName string, envName string, workloadTy
 	var wklds []string
 	for _, resource := range resources {
 		name := resource.Tags[ServiceTagKey]
-		if name == "" || contains(name, wklds) {
+		if name == "" || slices.Contains(wklds, name) {
 			// To avoid listing duplicate service entry in a case when service has addons stack.
 			continue
 		}
@@ -243,15 +244,6 @@ func (s *Store) ListSNSTopics(appName string, envName string) ([]Topic, error) {
 	}
 
 	return out, nil
-}
-
-func contains(name string, names []string) bool {
-	for _, n := range names {
-		if name == n {
-			return true
-		}
-	}
-	return false
 }
 
 type result struct {

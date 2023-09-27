@@ -14,6 +14,8 @@ Resources:
       'aws:copilot:description': 'An Amazon S3 bucket to store and retrieve objects for {{.Name}}'
     Type: AWS::S3::Bucket
     Properties:
+      VersioningConfiguration:
+        Status: Enabled
       AccessControl: Private
       BucketEncryption:
         ServerSideEncryptionConfiguration:
@@ -27,6 +29,13 @@ Resources:
       OwnershipControls:
         Rules:
           - ObjectOwnership: BucketOwnerEnforced
+      LifecycleConfiguration:
+        Rules:
+          - Id: ExpireNonCurrentObjects
+            Status: Enabled
+            NoncurrentVersionExpirationInDays: 30
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 1
 
   {{logicalIDSafe .Name}}BucketPolicy:
     Metadata:
