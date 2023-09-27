@@ -8,9 +8,11 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
+	"sync"
 
 	"github.com/julienschmidt/httprouter"
 )
@@ -128,7 +130,30 @@ func PutEFSCheck(w http.ResponseWriter, req *http.Request, ps httprouter.Params)
 	w.WriteHeader(http.StatusOK)
 }
 
-func main() {
+func handleUDPTraffic(wg *sync.WaitGroup) {
+	defer wg.Done()
+
+	udpServer, err := net.ListenUDP("udp", &net.UDPAddr{Port: 8080})
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Println("Listening on port 8080...")
+
+	for {
+		buffer := make([]byte, 1024)
+		_, _, err := udpServer.ReadFrom(buffer)
+		if err != nil {
+			continue
+		}
+		go func() {
+			log.Printf("Received UDP message: %s\n", buffer)
+		}()
+	}
+}
+
+func handleHTTPTraffic(wg *sync.WaitGroup) {
+	defer wg.Done()
+
 	router := httprouter.New()
 	router.GET("/", SimpleGet)
 	router.GET("/service-endpoint-test", ServiceGet)
@@ -139,4 +164,13 @@ func main() {
 
 	log.Println("Listening on port 80...")
 	log.Fatal(http.ListenAndServe(":80", router))
+}
+
+func main() {
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go handleUDPTraffic(&wg)
+	go handleHTTPTraffic(&wg)
+	wg.Wait()
+	log.Println("Finished listening")
 }

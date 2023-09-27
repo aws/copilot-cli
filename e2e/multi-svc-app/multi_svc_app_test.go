@@ -6,7 +6,10 @@ package multi_svc_app_test
 import (
 	"fmt"
 	"io"
+	"net"
 	"net/http"
+	"strings"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -242,17 +245,18 @@ var _ = Describe("Multiple Service App", func() {
 
 				// Call each environment's endpoint and ensure it returns a 200
 				route := svc.Routes[0]
+				routeURL = strings.Split(route.URL, " ")[0]
 				Expect(route.Environment).To(Equal("test"))
 				// Since the front-end was added first, it should have no suffix.
 				if svcName == "front-end" {
-					Expect(route.URL).ToNot(HaveSuffix(svcName))
+					Expect(routeURL).ToNot(HaveSuffix(svcName))
 				}
 
 				// Since the www app was added second, it should have app appended to the name.
 				var resp *http.Response
 				var fetchErr error
 				Eventually(func() (int, error) {
-					resp, fetchErr = http.Get(route.URL)
+					resp, fetchErr = http.Get(routeURL)
 					return resp.StatusCode, fetchErr
 				}, "60s", "1s").Should(Equal(200))
 
@@ -325,9 +329,9 @@ var _ = Describe("Multiple Service App", func() {
 			route := svc.Routes[0]
 
 			Expect(route.Environment).To(Equal("test"))
-			routeURL = route.URL
+			routeURL = strings.Split(route.URL, " ")[0]
 
-			resp, fetchErr := http.Get(fmt.Sprintf("%s/service-endpoint-test/", route.URL))
+			resp, fetchErr := http.Get(fmt.Sprintf("%s/service-endpoint-test/", routeURL))
 			Expect(fetchErr).NotTo(HaveOccurred())
 			Expect(resp.StatusCode).To(Equal(200))
 
@@ -336,6 +340,51 @@ var _ = Describe("Multiple Service App", func() {
 			bodyBytes, err := io.ReadAll(resp.Body)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(bodyBytes)).To(Equal("back-end-service"))
+		})
+
+		It("should be able to send udp message", func() {
+			// The front-end service has an NLB listener on port 8080 over UDP.
+			svcName := "front-end"
+			svc, svcShowErr := cli.SvcShow(&client.SvcShowRequest{
+				AppName: appName,
+				Name:    svcName,
+			})
+			Expect(svcShowErr).NotTo(HaveOccurred())
+			Expect(len(svc.Routes)).To(Equal(1))
+
+			route := svc.Routes[0]
+			addr := strings.Split(route.URL, " ")[2]
+
+			Expect(route.Environment).To(Equal("test"))
+
+			conn, dialErr := net.Dial("udp", addr)
+			Expect(dialErr).NotTo(HaveOccurred())
+
+			// Send message 5 times in case UDP packets are dropped.
+			testStr := "test message"
+			for i := 0; i < 5; i++ {
+				conn.Write([]byte(testStr))
+				time.Sleep(time.Second)
+			}
+
+			// Retrieve logs to check if UDP traffic was received.
+			var svcLogs []client.SvcLogsOutput
+			var svcLogsErr error
+			Eventually(func() ([]client.SvcLogsOutput, error) {
+				svcLogs, svcLogsErr = cli.SvcLogs(&client.SvcLogsRequest{
+					AppName: appName,
+					Name:    svcName,
+					EnvName: "test",
+					Since:   "1h",
+				})
+				return svcLogs, svcLogsErr
+			}, "60s", "10s").ShouldNot(BeEmpty())
+
+			var svcLogMessages []string
+			for _, logLine := range svcLogs {
+				svcLogMessages = append(svcLogMessages, logLine.Message)
+			}
+			Expect(svcLogMessages).To(ContainElement(ContainSubstring("Received UDP message: test message")))
 		})
 
 		It("should be able to write to EFS volume", func() {
@@ -351,9 +400,9 @@ var _ = Describe("Multiple Service App", func() {
 			route := svc.Routes[0]
 
 			Expect(route.Environment).To(Equal("test"))
-			routeURL = route.URL
+			routeURL = strings.Split(route.URL, " ")[0]
 
-			resp, fetchErr := http.Get(fmt.Sprintf("%s/efs-putter", route.URL))
+			resp, fetchErr := http.Get(fmt.Sprintf("%s/efs-putter", routeURL))
 			Expect(fetchErr).NotTo(HaveOccurred())
 			Expect(resp.StatusCode).To(Equal(200))
 		})
@@ -400,8 +449,9 @@ var _ = Describe("Multiple Service App", func() {
 
 			// Calls the front end's magicwords endpoint
 			route := svc.Routes[0]
+			routeURL = strings.Split(route.URL, " ")[0]
 			Expect(route.Environment).To(Equal("test"))
-			resp, fetchErr := http.Get(fmt.Sprintf("%s/magicwords/", route.URL))
+			resp, fetchErr := http.Get(fmt.Sprintf("%s/magicwords/", routeURL))
 			Expect(fetchErr).NotTo(HaveOccurred())
 			Expect(resp.StatusCode).To(Equal(200))
 
