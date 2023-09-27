@@ -87,15 +87,11 @@ Resources:
             Resource: !Sub arn:${AWS::Partition}:s3:::${PipelineBuiltArtifactBucket}/*
             Principal: '*'
             Condition:
-              StringNotEquals:
+              StringNotEqualsIfExists:
                 s3:x-amz-server-side-encryption: 'aws:kms'
-          - Action: s3:PutObject
-            Effect: Deny
-            Resource: !Sub arn:${AWS::Partition}:s3:::${PipelineBuiltArtifactBucket}/*
-            Principal: '*'
-            Condition:
               Null:
-                s3:x-amz-server-side-encryption: true
+                s3:x-amz-server-side-encryption: false
+
   PipelineBuiltArtifactBucket:
     Type: AWS::S3::Bucket
     Properties:
