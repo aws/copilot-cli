@@ -455,6 +455,9 @@ func (c Client) serviceARN(app, env, svc string) (*ecs.ServiceArn, error) {
 	if len(activeSvcs) > 1 {
 		return nil, fmt.Errorf("more than one ECS service with tags %s", tags.String())
 	}
+	if len(activeSvcs) == 0 {
+		return nil, fmt.Errorf("no active ECS service found")
+	}
 	serviceARN, err := ecs.ParseServiceArn(activeSvcs[0])
 	if err != nil {
 		return nil, fmt.Errorf("parse service arn: %w", err)
