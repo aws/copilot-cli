@@ -13,7 +13,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -249,31 +248,9 @@ func (o *runLocalOpts) Execute() error {
 
 	ctx := context.Background()
 
-	taskDef, err := o.ecsLocalClient.TaskDefinition(o.appName, o.envName, o.wkldName)
+	task, err := o.getTask(ctx)
 	if err != nil {
-		return fmt.Errorf("get task definition: %w", err)
-	}
-
-	envVars, err := o.getEnvVars(ctx, taskDef)
-	if err != nil {
-		return fmt.Errorf("get env vars: %w", err)
-	}
-
-	// map of containerPort -> hostPort
-	ports := make(map[string]string)
-	for _, container := range taskDef.ContainerDefinitions {
-		for _, mapping := range container.PortMappings {
-			host := strconv.FormatInt(aws.Int64Value(mapping.HostPort), 10)
-
-			ctr := host
-			if mapping.ContainerPort != nil {
-				ctr = strconv.FormatInt(aws.Int64Value(mapping.ContainerPort), 10)
-			}
-			ports[ctr] = host
-		}
-	}
-	for _, port := range o.portOverrides {
-		ports[port.container] = port.host
+		return fmt.Errorf("get task: %w", err)
 	}
 
 	mft, err := workloadManifest(&workloadManifestInput{
@@ -294,58 +271,92 @@ func (o *runLocalOpts) Execute() error {
 		return fmt.Errorf("build images: %w", err)
 	}
 
-	// fill the location from the task def for containers without a URI
-	for _, container := range taskDef.ContainerDefinitions {
-		name := aws.StringValue(container.Name)
-		if _, ok := containerURIs[name]; !ok {
-			containerURIs[name] = aws.StringValue(container.Image)
+	// replace built images with the local built URI
+	for name, uri := range containerURIs {
+		ctr, ok := task.Containers[name]
+		if !ok {
+			return fmt.Errorf("built an image for %q, which doesn't exist in the task", name)
 		}
+
+		ctr.ImageURI = uri
+		task.Containers[name] = ctr
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	g, ctx := errgroup.WithContext(ctx)
-	gotSigInt := &atomic.Bool{}
+	s := dockerengine.NewScheduler(o.dockerEngine.(dockerengine.DockerCmdClient))
 
-	g.Go(func() error {
-		defer cancel() // needed in case all containers exit successfully
+	errCh := make(chan error)
 
-		if err := o.runPauseContainer(ctx, ports); err != nil {
-			// if we've received a sigint, we want to ignore
-			// any errors coming from this goroutine
-			if gotSigInt.Load() {
-				return nil
+	go func() {
+		errCh <- s.Start(task)
+	}()
+
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+	defer signal.Stop(sigCh)
+
+	select {
+	case err := <-errCh:
+		// do i need to stop?
+		fmt.Printf("err: %s\n", err)
+	case <-sigCh:
+		// reset signal handler in case we get ctrl+c again
+		// while trying to stop containers
+		signal.Stop(sigCh)
+
+		fmt.Printf("\nStopping containers...\n\n")
+	}
+
+	// stop the containers in either case
+	s.Stop()
+}
+
+func (o *runLocalOpts) getTask(ctx context.Context) (dockerengine.Task, error) {
+	td, err := o.ecsLocalClient.TaskDefinition(o.appName, o.envName, o.wkldName)
+	if err != nil {
+		return dockerengine.Task{}, fmt.Errorf("get task definition: %w", err)
+	}
+
+	envVars, err := o.getEnvVars(ctx, td)
+	if err != nil {
+		return dockerengine.Task{}, fmt.Errorf("get env vars: %w", err)
+	}
+
+	task := dockerengine.Task{
+		IDPrefix:   fmt.Sprintf("%s-%s-%s-", o.appName, o.envName, o.wkldName),
+		Containers: make(map[string]dockerengine.ContainerDefinition, len(td.ContainerDefinitions)),
+	}
+
+	for _, ctr := range td.ContainerDefinitions {
+		name := aws.StringValue(ctr.Name)
+		def := dockerengine.ContainerDefinition{
+			ImageURI: aws.StringValue(ctr.Image),
+			EnvVars:  envVars[name].EnvVars(),
+			Secrets:  envVars[name].Secrets(),
+			Ports:    make(map[string]string, len(ctr.PortMappings)),
+		}
+
+		for _, port := range ctr.PortMappings {
+			hostPort := strconv.FormatInt(aws.Int64Value(port.HostPort), 10)
+			ctrPort := hostPort
+			if port.ContainerPort != nil {
+				ctrPort = strconv.FormatInt(aws.Int64Value(port.ContainerPort), 10)
 			}
-			return fmt.Errorf("run pause container: %w", err)
+
+			for _, override := range o.portOverrides {
+				if override.container == ctrPort {
+					hostPort = override.host
+					break
+				}
+			}
+
+			def.Ports[hostPort] = ctrPort
 		}
+	}
 
-		err := o.runContainers(ctx, containerURIs, envVars)
-		if gotSigInt.Load() {
-			return nil
-		}
-		return err
-	})
-
-	g.Go(func() error {
-		sigCh := make(chan os.Signal, 1)
-		signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
-		defer signal.Stop(sigCh)
-
-		select {
-		case <-ctx.Done():
-		case <-sigCh:
-			gotSigInt.Store(true)
-			// reset signal handler in case we get ctrl+c again
-			// while trying to stop containers
-			signal.Stop(sigCh)
-			fmt.Printf("\nStopping containers...\n\n")
-		}
-
-		return o.cleanUpContainers(context.Background(), containerURIs)
-	})
-
-	return g.Wait()
+	return task, nil
 }
 
 func (o *runLocalOpts) getContainerSuffix() string {
@@ -359,86 +370,6 @@ type action struct {
 
 type containerManager struct {
 	actions []action
-}
-
-// funcs:
-// StartPauseContainer
-//   - blocks until pause container is "ready"
-// StartWorkloadContainers
-//   - returns once all containers are running
-// StopWorkloadContainers
-//   - returns once all workload containers have stopped
-// StopAllContainers
-//   - returns once all containers have stopped
-
-// TODO ctrl-c handler
-func (c *containerManager) Start(ctx context.Context) error {
-	// stop manager if any of the actions returns an error
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
-	g, ctx := errgroup.WithContext(ctx)
-
-	for i := range c.actions {
-		action := c.actions[i]
-		if action.async {
-			g.Go(func() error {
-				return action.fn(ctx)
-			})
-			continue
-		}
-
-		if err := action.fn(ctx); err != nil {
-			return err
-		}
-	}
-
-	return g.Wait()
-}
-
-func (o *runLocalOpts) pauseContainerActions(ctx context.Context, ports map[string]string) []action {
-	// flip ports to be host->ctr
-	flippedPorts := make(map[string]string, len(ports))
-	for k, v := range ports {
-		flippedPorts[v] = k
-	}
-	containerNameWithSuffix := fmt.Sprintf("%s-%s", pauseContainerName, o.containerSuffix)
-	runOptions := &dockerengine.RunOptions{
-		ImageURI:       pauseContainerURI,
-		ContainerName:  containerNameWithSuffix,
-		ContainerPorts: flippedPorts,
-		Command:        []string{"sleep", "infinity"},
-		LogOptions: dockerengine.RunLogOptions{
-			Color:      o.newColor(),
-			LinePrefix: "[pause] ",
-		},
-	}
-
-	return []action{
-		{
-			async: true,
-			fn: func(ctx context.Context) error {
-				return o.dockerEngine.Run(ctx, runOptions)
-			},
-		},
-		{
-			async: false,
-			fn: func(ctx context.Context) error {
-				for {
-					fmt.Printf("checking if container is running\n")
-					isRunning, err := o.dockerEngine.IsContainerRunning(containerNameWithSuffix)
-					switch {
-					case err != nil:
-						return fmt.Errorf("check if container is running: %w", err)
-					case isRunning:
-						return nil
-					}
-					// If the container isn't running yet, sleep for a short duration before checking again.
-					time.Sleep(1 * time.Second)
-				}
-			},
-		},
-	}
 }
 
 func (o *runLocalOpts) runPauseContainer(ctx context.Context, ports map[string]string) error {
@@ -490,46 +421,6 @@ func (o *runLocalOpts) runPauseContainer(ctx context.Context, ports map[string]s
 	}
 
 	return nil
-}
-
-func (o *runLocalOpts) runContainersActions(ctx context.Context, containerURIs map[string]string, envVars map[string]containerEnv) []action {
-	var actions []action
-	for name, uri := range containerURIs {
-		name := name
-		uri := uri
-
-		vars, secrets := make(map[string]string), make(map[string]string)
-		for k, v := range envVars[name] {
-			if v.Secret {
-				secrets[k] = v.Value
-			} else {
-				vars[k] = v.Value
-			}
-		}
-
-		actions = append(actions, action{
-			async: true,
-			fn: func(ctx context.Context) error {
-				runOptions := &dockerengine.RunOptions{
-					ImageURI:         uri,
-					ContainerName:    fmt.Sprintf("%s-%s", name, o.containerSuffix),
-					Secrets:          secrets,
-					EnvVars:          vars,
-					ContainerNetwork: fmt.Sprintf("%s-%s", pauseContainerName, o.containerSuffix),
-					LogOptions: dockerengine.RunLogOptions{
-						Color:      o.newColor(),
-						LinePrefix: fmt.Sprintf("[%s] ", name),
-					},
-				}
-				if err := o.dockerEngine.Run(ctx, runOptions); err != nil {
-					return fmt.Errorf("run container %q: %w", name, err)
-				}
-				return nil
-			},
-		})
-	}
-
-	return actions
 }
 
 func (o *runLocalOpts) runContainers(ctx context.Context, containerURIs map[string]string, envVars map[string]containerEnv) error {
@@ -617,6 +508,34 @@ type envVarValue struct {
 	Value    string
 	Secret   bool
 	Override bool
+}
+
+func (c containerEnv) EnvVars() map[string]string {
+	if c == nil {
+		return nil
+	}
+
+	out := make(map[string]string)
+	for k, v := range c {
+		if !v.Secret {
+			out[k] = v.Value
+		}
+	}
+	return out
+}
+
+func (c containerEnv) Secrets() map[string]string {
+	if c == nil {
+		return nil
+	}
+
+	out := make(map[string]string)
+	for k, v := range c {
+		if v.Secret {
+			out[k] = v.Value
+		}
+	}
+	return out
 }
 
 // getEnvVars uses env overrides passed by flags and environment variables/secrets

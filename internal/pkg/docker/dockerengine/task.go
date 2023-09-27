@@ -9,19 +9,19 @@ import (
 	"time"
 )
 
-type TaskManager struct {
+type Scheduler struct {
 	mu        sync.RWMutex
 	curTask   Task
 	curTaskID int
-	done      bool
+	running   bool
 
 	errors chan error
 
 	docker DockerCmdClient
 }
 
-func NewTaskManager(docker DockerCmdClient) *TaskManager {
-	return &TaskManager{
+func NewScheduler(docker DockerCmdClient) *Scheduler {
+	return &Scheduler{
 		errors: make(chan error),
 		docker: docker,
 	}
@@ -43,31 +43,41 @@ func NewTaskManager(docker DockerCmdClient) *TaskManager {
 // Restart() to run an updated task with the same manager. Any errors
 // encountered by operations done by the task manager will be returned
 // by Start().
-func (t *TaskManager) Start(task Task) error {
+func (s *Scheduler) Start(task Task) error {
+	// TODO start should _stop and return nil_ after Stop() is called
+	// so that the goroutine ends after Stop() is called
+	s.mu.Lock()
+	if s.running {
+		s.mu.Unlock()
+		return fmt.Errorf("scheduler already running. use Restart() to run a task.")
+	}
+	s.running = true
+	s.mu.Unlock()
+
 	ctx := context.Background()
 
 	// start the pause container
 	pauseRunOpts := task.pauseRunOptions()
-	go t.run(-1, pauseRunOpts) // pause is used across taskIDs
+	go s.run(-1, pauseRunOpts) // pause is used across taskIDs
 	go func() {
-		if err := t.waitForContainerToStart(ctx, pauseRunOpts.ContainerName); err != nil {
-			t.errors <- fmt.Errorf("wait for pause container to start: %w", err)
+		if err := s.waitForContainerToStart(ctx, pauseRunOpts.ContainerName); err != nil {
+			s.errors <- fmt.Errorf("wait for pause container to start: %w", err)
 		}
 
-		t.Restart(task)
+		s.Restart(task)
 	}()
 
 	for {
 		select {
-		case err := <-t.errors:
+		case err := <-s.errors:
 			// only return error if it came from the current task ID.
 			// we _expect_ errors from previous task IDs as we shut them down.
 			var runErr *runError
 			switch {
 			case errors.As(err, &runErr):
-				t.mu.RLock()
-				isCurTask := runErr.taskID == t.curTaskID
-				t.mu.RUnlock()
+				s.mu.RLock()
+				isCurTask := runErr.taskID == s.curTaskID
+				s.mu.RUnlock()
 				if isCurTask {
 					return runErr.err
 				}
@@ -78,16 +88,16 @@ func (t *TaskManager) Start(task Task) error {
 	}
 }
 
-func (t *TaskManager) Restart(task Task) {
-	t.mu.Lock()
-	defer t.mu.Unlock()
+func (s *Scheduler) Restart(task Task) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
-	if t.done {
+	if !s.running {
 		return
 	}
 
 	// ensure no pause container changes
-	curOpts := t.curTask.pauseRunOptions()
+	curOpts := s.curTask.pauseRunOptions()
 	newOpts := task.pauseRunOptions()
 	switch {
 	case !maps.Equal(curOpts.EnvVars, newOpts.EnvVars):
@@ -95,49 +105,49 @@ func (t *TaskManager) Restart(task Task) {
 	case !maps.Equal(curOpts.Secrets, newOpts.Secrets):
 		fallthrough
 	case !maps.Equal(curOpts.ContainerPorts, newOpts.ContainerPorts):
-		t.errors <- errors.New("new task requires recreating pause container")
+		s.errors <- errors.New("new task requires recreating pause container")
 	}
 
-	if err := t.stopTask(context.Background(), t.curTask); err != nil {
-		t.errors <- err
+	if err := s.stopTask(context.Background(), s.curTask); err != nil {
+		s.errors <- err
 		return
 	}
 
-	t.curTask = task
-	t.curTaskID++
+	s.curTask = task
+	s.curTaskID++
 
 	for name := range task.Containers {
 		name := name
-		go t.run(t.curTaskID, task.containerRunOptions(name))
+		go s.run(s.curTaskID, task.containerRunOptions(name))
 	}
 }
 
-func (t *TaskManager) Stop() {
-	t.mu.Lock()
-	defer t.mu.Unlock()
+func (s *Scheduler) Stop() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
-	if t.done {
+	if !s.running {
 		return
 	}
-	t.done = true
+	s.running = false
 
 	// collect errors since we want to try to clean up everything we can
 	var errs []error
-	if err := t.stopTask(context.Background(), t.curTask); err != nil {
+	if err := s.stopTask(context.Background(), s.curTask); err != nil {
 		errs = append(errs, err)
 	}
 
 	// stop pause container
-	if err := t.docker.Stop(context.Background(), t.curTask.containerID("pause")); err != nil {
+	if err := s.docker.Stop(context.Background(), s.curTask.containerID("pause")); err != nil {
 		errs = append(errs, fmt.Errorf("stop %q: %w", "pause", err))
 	}
 
 	if len(errs) > 0 {
-		t.errors <- fmt.Errorf("stop: %w", errors.Join(errs...))
+		s.errors <- fmt.Errorf("stop: %w", errors.Join(errs...))
 	}
 }
 
-func (t *TaskManager) stopTask(ctx context.Context, task Task) error {
+func (s *Scheduler) stopTask(ctx context.Context, task Task) error {
 	if len(task.Containers) == 0 {
 		return nil
 	}
@@ -146,7 +156,7 @@ func (t *TaskManager) stopTask(ctx context.Context, task Task) error {
 	for name := range task.Containers {
 		name := name
 		go func() {
-			if err := t.docker.Stop(ctx, task.containerID(name)); err != nil {
+			if err := s.docker.Stop(ctx, task.containerID(name)); err != nil {
 				errCh <- fmt.Errorf("stop %q: %w", name, err)
 				return
 			}
@@ -165,9 +175,9 @@ func (t *TaskManager) stopTask(ctx context.Context, task Task) error {
 	return errors.Join(errs...)
 }
 
-func (t *TaskManager) waitForContainerToStart(ctx context.Context, id string) error {
+func (s *Scheduler) waitForContainerToStart(ctx context.Context, id string) error {
 	for {
-		isRunning, err := t.docker.IsContainerRunning(ctx, id)
+		isRunning, err := s.docker.IsContainerRunning(ctx, id)
 		switch {
 		case err != nil:
 			return fmt.Errorf("check if %q is running: %w", id, err)
@@ -239,7 +249,7 @@ func (r *runError) Error() string {
 
 // run calls docker run using opts. Any errors are sent to
 // t.errors, wrapped as a runError with the given taskID.
-func (t *TaskManager) run(taskID int, opts RunOptions) {
+func (t *Scheduler) run(taskID int, opts RunOptions) {
 	if err := t.docker.Run(context.Background(), &opts); err != nil {
 		t.errors <- &runError{
 			taskID: taskID,
