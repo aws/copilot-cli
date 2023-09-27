@@ -315,9 +315,9 @@ func (c DockerCmdClient) IsContainerRunning(ctx context.Context, name string) (b
 }
 
 // Stop calls `docker stop` to stop a running container.
-func (c DockerCmdClient) Stop(containerID string) error {
+func (c DockerCmdClient) Stop(ctx context.Context, containerID string) error {
 	buf := &bytes.Buffer{}
-	if err := c.runner.Run("docker", []string{"stop", containerID}, exec.Stdout(buf), exec.Stderr(buf)); err != nil {
+	if err := c.runner.RunWithContext(ctx, "docker", []string{"stop", containerID}, exec.Stdout(buf), exec.Stderr(buf)); err != nil {
 		return fmt.Errorf("%s: %w", strings.TrimSpace(buf.String()), err)
 	}
 	return nil

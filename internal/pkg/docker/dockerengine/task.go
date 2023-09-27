@@ -128,8 +128,7 @@ func (t *TaskManager) Stop() {
 	}
 
 	// stop pause container
-	// TODO add ctx to docker.Stop() here and in stopTask
-	if err := t.docker.Stop(t.curTask.containerID("pause")); err != nil {
+	if err := t.docker.Stop(context.Background(), t.curTask.containerID("pause")); err != nil {
 		errs = append(errs, fmt.Errorf("stop %q: %w", "pause", err))
 	}
 
@@ -147,7 +146,7 @@ func (t *TaskManager) stopTask(ctx context.Context, task Task) error {
 	for name := range task.Containers {
 		name := name
 		go func() {
-			if err := t.docker.Stop(task.containerID(name)); err != nil {
+			if err := t.docker.Stop(ctx, task.containerID(name)); err != nil {
 				errCh <- fmt.Errorf("stop %q: %w", name, err)
 				return
 			}
