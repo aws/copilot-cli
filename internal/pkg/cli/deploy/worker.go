@@ -5,6 +5,7 @@ package deploy
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -216,18 +217,9 @@ func validateTopicsExist(subscriptions []manifest.TopicSubscription, topicARNs [
 
 	for _, ts := range subscriptions {
 		topicName := fmt.Sprintf(resourceNameFormat, app, env, aws.StringValue(ts.Service), aws.StringValue(ts.Name))
-		if !contains(topicName, validTopicResources) {
+		if !slices.Contains(validTopicResources, topicName) {
 			return fmt.Errorf(fmtErrTopicSubscriptionNotAllowed, topicName, env)
 		}
 	}
 	return nil
-}
-
-func contains(s string, items []string) bool {
-	for _, item := range items {
-		if s == item {
-			return true
-		}
-	}
-	return false
 }

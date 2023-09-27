@@ -81,6 +81,15 @@ Resources:
           BlockPublicPolicy: true
           IgnorePublicAcls: true
           RestrictPublicBuckets: true
+        VersioningConfiguration:
+          Status: Enabled
+        LifecycleConfiguration:
+          Rules:
+            - Id: ExpireNonCurrentObjects
+              Status: Enabled
+              NoncurrentVersionExpirationInDays: 30
+              AbortIncompleteMultipartUpload:
+                DaysAfterInitiation: 1
 
     MyBucketAccessPolicy:
       Type: AWS::IAM::ManagedPolicy

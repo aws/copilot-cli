@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -103,6 +104,12 @@ These messages can be consumed by the Worker Service.`
 const (
 	ingressTypeEnvironment = "Environment"
 	ingressTypeInternet    = "Internet"
+
+	rdwsTypeHint = "App Runner"
+	lbwsTypeHint = "Public. ALB by default. Internet to ECS on Fargate"
+	besTypeHint  = "Private. ALB optional. ECS on Fargate"
+	wsTypeHint   = "Events to SQS to ECS on Fargate"
+	ssTypeHint   = "Internet to CDN to S3 bucket"
 )
 
 var rdwsIngressOptions = []string{
@@ -111,11 +118,11 @@ var rdwsIngressOptions = []string{
 }
 
 var serviceTypeHints = map[string]string{
-	manifestinfo.RequestDrivenWebServiceType: "App Runner",
-	manifestinfo.LoadBalancedWebServiceType:  "Internet to ECS on Fargate",
-	manifestinfo.BackendServiceType:          "ECS on Fargate",
-	manifestinfo.WorkerServiceType:           "Events to SQS to ECS on Fargate",
-	manifestinfo.StaticSiteType:              "Internet to CDN to S3 bucket",
+	manifestinfo.RequestDrivenWebServiceType: rdwsTypeHint,
+	manifestinfo.LoadBalancedWebServiceType:  lbwsTypeHint,
+	manifestinfo.BackendServiceType:          besTypeHint,
+	manifestinfo.WorkerServiceType:           wsTypeHint,
+	manifestinfo.StaticSiteType:              ssTypeHint,
 }
 
 type initWkldVars struct {
@@ -494,7 +501,7 @@ func (o *initSvcOpts) validateDuplicateSvc() error {
 			if err != nil {
 				return err
 			}
-			if contains(o.name, svcs) {
+			if slices.Contains(svcs, o.name) {
 				return nil
 			}
 		}

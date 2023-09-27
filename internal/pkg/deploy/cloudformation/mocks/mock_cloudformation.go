@@ -189,6 +189,21 @@ func (mr *MockecsClientMockRecorder) Service(clusterName, serviceName interface{
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Service", reflect.TypeOf((*MockecsClient)(nil).Service), clusterName, serviceName)
 }
 
+// StoppedServiceTasks mocks base method.
+func (m *MockecsClient) StoppedServiceTasks(cluster, service string) ([]*ecs.Task, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StoppedServiceTasks", cluster, service)
+	ret0, _ := ret[0].([]*ecs.Task)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// StoppedServiceTasks indicates an expected call of StoppedServiceTasks.
+func (mr *MockecsClientMockRecorder) StoppedServiceTasks(cluster, service interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StoppedServiceTasks", reflect.TypeOf((*MockecsClient)(nil).StoppedServiceTasks), cluster, service)
+}
+
 // MockcwClient is a mock of cwClient interface.
 type MockcwClient struct {
 	ctrl     *gomock.Controller

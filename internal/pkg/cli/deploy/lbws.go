@@ -42,6 +42,7 @@ var (
 		color.HighlightCode("copilot app init --domain example.com"))
 )
 
+// TODO(Aiden): remove when NetworkLoadBalancer is forcibly updated
 type publicCIDRBlocksGetter interface {
 	PublicCIDRBlocks() ([]string, error)
 }
@@ -68,6 +69,8 @@ func NewLBWSDeployer(in *WorkloadDeployerInput) (*lbWebSvcDeployer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("new app describer for application %s: %w", in.App.Name, err)
 	}
+
+	// TODO(Aiden): remove when NetworkLoadBalancer is forcibly updated
 	deployStore, err := deploy.NewStore(in.SessionProvider, svcDeployer.store)
 	if err != nil {
 		return nil, fmt.Errorf("new deploy store: %w", err)
@@ -78,6 +81,7 @@ func NewLBWSDeployer(in *WorkloadDeployerInput) (*lbWebSvcDeployer, error) {
 		ConfigStore: svcDeployer.store,
 		DeployStore: deployStore,
 	})
+
 	if err != nil {
 		return nil, fmt.Errorf("create describer for environment %s in application %s: %w", in.Env.Name, in.App.Name, err)
 	}

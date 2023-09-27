@@ -9,6 +9,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/profile"
@@ -668,7 +669,7 @@ func (o *initEnvOpts) validateDuplicateEnv() error {
 		if err != nil {
 			return err
 		}
-		if contains(o.name, envs) {
+		if slices.Contains(envs, o.name) {
 			return nil
 		}
 
