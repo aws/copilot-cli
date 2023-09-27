@@ -245,8 +245,11 @@ var _ = Describe("Multiple Service App", func() {
 
 				// Call each environment's endpoint and ensure it returns a 200
 				route := svc.Routes[0]
-				routeURL = strings.Split(route.URL, " ")[0]
 				Expect(route.Environment).To(Equal("test"))
+
+				// route.URL for "front-end" is of the form `(alb url) or (nlb url), so we split to retrieve just one valid url`
+				routeURL = strings.Split(route.URL, " ")[0]
+
 				// Since the front-end was added first, it should have no suffix.
 				if svcName == "front-end" {
 					Expect(routeURL).ToNot(HaveSuffix(svcName))
@@ -327,8 +330,9 @@ var _ = Describe("Multiple Service App", func() {
 			// Calls the front end's service connect/discovery endpoint - which should connect
 			// to the backend, and pipe the backend response to us.
 			route := svc.Routes[0]
-
 			Expect(route.Environment).To(Equal("test"))
+
+			// route.URL is of the form `(alb url) or (nlb url), so we split to retrieve just one valid url`
 			routeURL = strings.Split(route.URL, " ")[0]
 
 			resp, fetchErr := http.Get(fmt.Sprintf("%s/service-endpoint-test/", routeURL))
@@ -398,8 +402,9 @@ var _ = Describe("Multiple Service App", func() {
 
 			// Calls the front end's EFS test endpoint - which should create a file in the EFS filesystem.
 			route := svc.Routes[0]
-
 			Expect(route.Environment).To(Equal("test"))
+
+			// route.URL is of the form `(alb url) or (nlb url), so we split to retrieve just one valid url`
 			routeURL = strings.Split(route.URL, " ")[0]
 
 			resp, fetchErr := http.Get(fmt.Sprintf("%s/efs-putter", routeURL))
@@ -449,6 +454,8 @@ var _ = Describe("Multiple Service App", func() {
 
 			// Calls the front end's magicwords endpoint
 			route := svc.Routes[0]
+
+			// route.URL is of the form `(alb url) or (nlb url), so we split to retrieve just one valid url`
 			routeURL = strings.Split(route.URL, " ")[0]
 			Expect(route.Environment).To(Equal("test"))
 			resp, fetchErr := http.Get(fmt.Sprintf("%s/magicwords/", routeURL))
