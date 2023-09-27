@@ -518,15 +518,9 @@ type ServiceConnectServer struct {
 	Alias *string
 }
 
-// ServiceConnectOpts holds configuration for ECS Service Connect.
-type ServiceConnectOpts struct {
-	Server  *ServiceConnectServer
-	Enabled bool
-}
-
-// IsServerExposed returns true if the ServiceConnectOpts is for a SC server and has an accessible port to receive traffic.
-func (opts ServiceConnectOpts) IsServerExposed() bool {
-	return opts.Server != nil && opts.Server.Port != "" && opts.Server.Port != NoExposedContainerPort
+// IsExposed returns true if the ServiceConnectServer has an accessible port to receive traffic.
+func (opts ServiceConnectServer) IsExposed() bool {
+	return opts.Port != "" && opts.Port != NoExposedContainerPort
 }
 
 // AdvancedCount holds configuration for autoscaling and capacity provider
@@ -832,7 +826,8 @@ type WorkloadOpts struct {
 	NLB                     *NetworkLoadBalancer
 	ALBListener             *ALBListener
 	DeploymentConfiguration DeploymentConfigurationOpts
-	ServiceConnectOpts      ServiceConnectOpts
+	ServiceConnectServer    *ServiceConnectServer
+	ServiceConnectClient    bool
 
 	// Custom Resources backed by Lambda functions.
 	CustomResources map[string]S3ObjectLocation

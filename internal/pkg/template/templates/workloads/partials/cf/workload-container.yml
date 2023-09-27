@@ -31,10 +31,10 @@
   {{- range $portMapping := .PortMappings }}
     - ContainerPort: {{ $portMapping.ContainerPort }}
       Protocol: {{ $portMapping.Protocol }}
-  {{- if $.ServiceConnectOpts.Server}}
-  {{- if and (eq $.ServiceConnectOpts.Server.Name $.WorkloadName) (eq $.ServiceConnectOpts.Server.Port (strconvUint16 $portMapping.ContainerPort ))}}
+  {{- if $.ServiceConnectServer}}
+  {{- if and (eq $.ServiceConnectServer.Name $.WorkloadName) (eq $.ServiceConnectServer.Port (strconvUint16 $portMapping.ContainerPort ))}}
       Name: target
-  {{- end}}
+  {{- end}} 
   {{- end}}
   {{- end}}
 {{- end}} {{/* end if eq .WorkloadType "Load Balanced Web Service"*/}}
@@ -44,8 +44,8 @@
   {{- range $portMapping := .PortMappings}}
     - ContainerPort: {{$portMapping.ContainerPort}}
       Protocol: {{ $portMapping.Protocol }}
-  {{- if $.ServiceConnectOpts.Server}}
-  {{- if and (eq $.ServiceConnectOpts.Server.Name $.WorkloadName) (eq $.ServiceConnectOpts.Server.Port (strconvUint16 $portMapping.ContainerPort ))}}
+  {{- if $.ServiceConnectServer}}
+  {{- if and (eq $.ServiceConnectServer.Name $.WorkloadName) (eq $.ServiceConnectServer.Port (strconvUint16 $portMapping.ContainerPort ))}}
       Name: target
   {{- end}}
   {{- end}}

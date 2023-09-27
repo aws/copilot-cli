@@ -128,7 +128,7 @@ func (s *BackendService) Template() (string, error) {
 		return "", err
 	}
 	scTarget := s.manifest.ServiceConnectTarget(exposedPorts)
-	scOpts := convertServiceConnectOpts(s.manifest.Network.Connect, scTarget)
+	scServer := convertServiceConnectServer(s.manifest.Network.Connect, scTarget)
 
 	albListenerConfig, err := s.convertALBListener()
 	if err != nil {
@@ -183,7 +183,8 @@ func (s *BackendService) Template() (string, error) {
 		Sidecars: sidecars,
 
 		// service connect and service discovery options.
-		ServiceConnectOpts:       scOpts,
+		ServiceConnectServer:     scServer,
+		ServiceConnectClient:     s.manifest.Network.Connect.Enabled(),
 		ServiceDiscoveryEndpoint: s.rc.ServiceDiscoveryEndpoint,
 
 		// Additional options for request driven web service templates.

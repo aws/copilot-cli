@@ -181,7 +181,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		return "", err
 	}
 	scTarget := s.manifest.ServiceConnectTarget(exposedPorts)
-	scOpts := convertServiceConnectOpts(s.manifest.Network.Connect, scTarget)
+	scServer := convertServiceConnectServer(s.manifest.Network.Connect, scTarget)
 
 	// Set container-level feature flag.
 	logConfig := convertLogging(s.manifest.Logging)
@@ -232,7 +232,8 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		NLB:                  nlbConfig.settings,
 
 		// service connect and service discovery options.
-		ServiceConnectOpts:       scOpts,
+		ServiceConnectServer:     scServer,
+		ServiceConnectClient:     s.manifest.Network.Connect.Enabled(),
 		ServiceDiscoveryEndpoint: s.rc.ServiceDiscoveryEndpoint,
 
 		// Additional options for request driven web service templates.

@@ -740,25 +740,17 @@ func convertAllowedSourceIPs(allowedSourceIPs []manifest.IPNet) []string {
 	return sourceIPs
 }
 
-func convertServiceConnectOpts(s manifest.ServiceConnectBoolOrArgs, target *manifest.ServiceConnectTargetContainer) template.ServiceConnectOpts {
-	var scOpts template.ServiceConnectOpts
-	var alias *string
-
-	if s.Enabled() {
-		alias = s.ServiceConnectArgs.Alias
-		scOpts.Enabled = true
+func convertServiceConnectServer(s manifest.ServiceConnectBoolOrArgs, target *manifest.ServiceConnectTargetContainer) *template.ServiceConnectServer {
+	// target == nil means that a Service Connect port is not exposed for this service.
+	if target == nil {
+		return nil
 	}
 
-	// target != nil means that a Service Connect port is exposed for this service.
-	if target != nil {
-		scOpts.Server = &template.ServiceConnectServer{
-			Name:  target.Container,
-			Port:  target.Port,
-			Alias: alias,
-		}
+	return &template.ServiceConnectServer{
+		Name:  target.Container,
+		Port:  target.Port,
+		Alias: s.Alias,
 	}
-
-	return scOpts
 }
 
 func convertLogging(lc manifest.Logging) *template.LogConfigOpts {
