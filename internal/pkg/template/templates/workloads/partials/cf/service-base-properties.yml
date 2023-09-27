@@ -70,7 +70,6 @@ ServiceConnectConfiguration:
       awslogs-group: !Ref LogGroup
       awslogs-stream-prefix: copilot
   {{- if .ServiceConnectServer }}
-  {{- if .ServiceConnectServer.IsExposed }}
   Services:
     - PortName: target
       # Avoid using the same service with Service Discovery in a namespace.
@@ -82,7 +81,6 @@ ServiceConnectConfiguration:
           {{- else}}
           DnsName: !Ref WorkloadName
           {{- end}}
-  {{- end}}
   {{- end}}
   {{- else}}
   !If

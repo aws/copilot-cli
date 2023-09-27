@@ -741,8 +741,7 @@ func convertAllowedSourceIPs(allowedSourceIPs []manifest.IPNet) []string {
 }
 
 func convertServiceConnectServer(s manifest.ServiceConnectBoolOrArgs, target *manifest.ServiceConnectTargetContainer) *template.ServiceConnectServer {
-	// target == nil means that a Service Connect port is not exposed for this service.
-	if target == nil {
+	if target == nil || target.Port == "" || target.Port == template.NoExposedContainerPort {
 		return nil
 	}
 

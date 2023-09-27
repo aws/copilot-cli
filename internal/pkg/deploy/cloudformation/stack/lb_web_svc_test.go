@@ -488,6 +488,7 @@ Outputs:
 			Name: "envoy",
 			Port: "443",
 		}, actual.ServiceConnectServer)
+		require.Equal(t, true, actual.ServiceConnectClient)
 	})
 }
 

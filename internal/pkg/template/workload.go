@@ -518,11 +518,6 @@ type ServiceConnectServer struct {
 	Alias *string
 }
 
-// IsExposed returns true if the ServiceConnectServer has an accessible port to receive traffic.
-func (opts ServiceConnectServer) IsExposed() bool {
-	return opts.Port != "" && opts.Port != NoExposedContainerPort
-}
-
 // AdvancedCount holds configuration for autoscaling and capacity provider
 // parameters.
 type AdvancedCount struct {
