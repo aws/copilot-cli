@@ -285,7 +285,7 @@ func (lbws *LoadBalancedWebService) ExposedPorts() (ExposedPortsIndex, error) {
 	}
 	// port from http.target_port and http.additional_rules[x].target_port
 	for _, rule := range lbws.HTTPOrBool.RoutingRules() {
-		rule.exposePorts(exposedPorts, workloadName)
+		maps.Copy(exposedPorts, rule.exposePorts(exposedPorts, workloadName))
 	}
 
 	// port from nlb.target_port and nlb.additional_listeners[x].target_port
@@ -297,7 +297,7 @@ func (lbws *LoadBalancedWebService) ExposedPorts() (ExposedPortsIndex, error) {
 		maps.Copy(exposedPorts, newExposedPorts)
 	}
 	// port from image.port
-	lbws.ImageConfig.exposePorts(exposedPorts, workloadName)
+	maps.Copy(exposedPorts, lbws.ImageConfig.exposePorts(exposedPorts, workloadName))
 
 	portsForContainer, containerForPort := prepareParsedExposedPortsMap(exposedPorts)
 	return ExposedPortsIndex{

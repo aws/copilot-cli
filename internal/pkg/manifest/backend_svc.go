@@ -212,9 +212,9 @@ func (b *BackendService) ExposedPorts() (ExposedPortsIndex, error) {
 		maps.Copy(exposedPorts, newExposedPorts)
 	}
 	for _, rule := range b.HTTP.RoutingRules() {
-		rule.exposePorts(exposedPorts, workloadName)
+		maps.Copy(exposedPorts, rule.exposePorts(exposedPorts, workloadName))
 	}
-	b.ImageConfig.exposePorts(exposedPorts, workloadName)
+	maps.Copy(exposedPorts, b.ImageConfig.exposePorts(exposedPorts, workloadName))
 	portsForContainer, containerForPort := prepareParsedExposedPortsMap(exposedPorts)
 	return ExposedPortsIndex{
 		WorkloadName:      workloadName,
