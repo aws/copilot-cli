@@ -5,6 +5,7 @@ package manifest
 
 import (
 	"errors"
+	"maps"
 	"strings"
 	"time"
 
@@ -376,15 +377,15 @@ func newDefaultWorkerService() *WorkerService {
 
 // ExposedPorts returns all the ports that are sidecar container ports available to receive traffic.
 func (ws *WorkerService) ExposedPorts() (ExposedPortsIndex, error) {
-	var exposedPorts []ExposedPort
+	exposedPorts := make(map[uint16]ExposedPort)
 	for name, sidecar := range ws.Sidecars {
-		out, err := sidecar.exposedPorts(name)
+		newExposedPorts, err := sidecar.exposePorts(exposedPorts, name)
 		if err != nil {
 			return ExposedPortsIndex{}, err
 		}
-		exposedPorts = append(exposedPorts, out...)
+		maps.Copy(exposedPorts, newExposedPorts)
 	}
-	portsForContainer, containerForPort := prepareParsedExposedPortsMap(sortExposedPorts(exposedPorts))
+	portsForContainer, containerForPort := prepareParsedExposedPortsMap(exposedPorts)
 	return ExposedPortsIndex{
 		PortsForContainer: portsForContainer,
 		ContainerForPort:  containerForPort,
