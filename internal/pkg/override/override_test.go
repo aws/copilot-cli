@@ -91,7 +91,7 @@ func TestLookup(t *testing.T) {
 		fs := afero.NewMemMapFs()
 		root := filepath.Join("copilot", "frontend", "overrides")
 		_ = fs.MkdirAll(root, 0755)
-		_ = afero.WriteFile(fs, filepath.Join(root, yamlPatchFile), []byte("- {op: 5, path: '/Resources'}"), 0755)
+		_ = afero.WriteFile(fs, filepath.Join(root, YAMLPatchFile), []byte("- {op: 5, path: '/Resources'}"), 0755)
 
 		// WHEN
 		info, err := Lookup(root, fs)
@@ -107,7 +107,7 @@ func TestLookup(t *testing.T) {
 		fs := afero.NewMemMapFs()
 		root := filepath.Join("copilot", "frontend", "overrides")
 		_ = fs.MkdirAll(root, 0755)
-		_ = afero.WriteFile(fs, filepath.Join(root, yamlPatchFile), []byte("- {op: 5, path: '/Resources'}"), 0755)
+		_ = afero.WriteFile(fs, filepath.Join(root, YAMLPatchFile), []byte("- {op: 5, path: '/Resources'}"), 0755)
 
 		// WHEN
 		info, err := Lookup(root, fs)

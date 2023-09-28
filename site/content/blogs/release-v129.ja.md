@@ -13,7 +13,7 @@ image_height: '747'
 
 AWS Copilot コアチームは Copilot v1.29 のリリースを発表します。
 
-本リリースにご協力いただいた [@tjhorner](https://github.com/tjhorner)、[@build-with-aws-copilot](https://github.com/build-with-aws-copilot), に感謝します。 <release class=""></release>
+本リリースにご協力いただいた [@tjhorner](https://github.com/tjhorner)、[@build-with-aws-copilot](https://github.com/build-with-aws-copilot) に感謝します。 
 私たちのパブリックな[コミュニティチャット](https://app.gitter.im/#/room/#aws_copilot-cli:gitter.im) は成長しており、オンラインでは 500 人以上、[GitHub](http://github.com/aws/copilot-cli/) では 2.9k 以上のスターを獲得しています。
 AWS Copilot へご支援、ご支持いただいている皆様お一人お一人に感謝をいたします。
 

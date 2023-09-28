@@ -92,6 +92,9 @@ func (d *LBWebServiceDescriber) URI(envName string) (URI, error) {
 		if strings.HasPrefix(resource.LogicalID, svcStackResourceNLBTargetGroupLogicalID) {
 			nlbEnabled = true
 		}
+		if strings.HasPrefix(resource.LogicalID, svcStackResourceNLBTargetGroupV2LogicalID) {
+			nlbEnabled = true
+		}
 	}
 
 	var uri LBWebServiceURI
