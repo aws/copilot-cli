@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
+	awscfn "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/dustin/go-humanize/english"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
@@ -177,6 +178,11 @@ func newDeployOpts(vars deployVars) (*deployOpts, error) {
 					return newSvcDeployer(opts)
 				}
 				opts.name = workloadName
+				// Multi-deployments can have flags specified which are not compatible with all service types.
+				// Currently only forceNewUpdate is incompatible with Static Site types.
+				if workloadType == manifestinfo.StaticSiteType {
+					opts.forceNewUpdate = false
+				}
 				return opts, nil
 			}
 			return nil, fmt.Errorf("unrecognized workload type %s", workloadType)
@@ -184,19 +190,20 @@ func newDeployOpts(vars deployVars) (*deployOpts, error) {
 	}, nil
 }
 
+// maybeInitWkld decides whether a workload needs to be initialized before deployment.
+// We do not prompt for workload initialization; specifying the workload by name suffices
+// to convey the customer intention. When the customer specifies --all and --init-wkld,
+// we will add all un-initialized local workloads to the list to be deployed.
+// When the customer does not specify --init-wkld with --all, we will only deploy initialized workloads.
 func (o *deployOpts) maybeInitWkld(name string) error {
 	// Confirm that the workload needs to be initialized after asking for the name.
-	initializedWorkloads, err := o.store.ListWorkloads(o.appName)
+	initializedWorkloads, err := o.listInitializedLocalWorkloads()
 	if err != nil {
-		return fmt.Errorf("retrieve workloads: %w", err)
-	}
-	wlNames := make([]string, len(initializedWorkloads))
-	for i := range initializedWorkloads {
-		wlNames[i] = initializedWorkloads[i].Name
+		return err
 	}
 
 	// Workload is already initialized. Return early.
-	if slices.Contains(wlNames, name) {
+	if slices.Contains(initializedWorkloads, name) {
 		return nil
 	}
 
@@ -212,18 +219,6 @@ func (o *deployOpts) maybeInitWkld(name string) error {
 
 	if !slices.Contains(manifestinfo.WorkloadTypes(), workloadType) {
 		return fmt.Errorf("unrecognized workload type %q in manifest for workload %s", workloadType, name)
-	}
-
-	if o.yesInitWkld == nil {
-		confirmInitWkld, err := o.prompt.Confirm(fmt.Sprintf("Found manifest for uninitialized %s %q. Initialize it?", workloadType, name), "This workload will be initialized, then deployed.", prompt.WithFinalMessage(fmt.Sprintf("Initialize %s:", workloadType)))
-		if err != nil {
-			return fmt.Errorf("confirm initialize workload: %w", err)
-		}
-		o.yesInitWkld = aws.Bool(confirmInitWkld)
-	}
-
-	if !aws.BoolValue(o.yesInitWkld) {
-		return fmt.Errorf("workload %s is uninitialized but --%s=false was specified", name, yesInitWorkloadFlag)
 	}
 
 	wkldAdder := o.newWorkloadAdder()
@@ -412,9 +407,12 @@ func (o *deployOpts) Run() error {
 
 	cmds := make([][]workloadCommand, len(deploymentOrderGroups))
 	// Do all our asking before executing deploy commands.
+	// Also initialize workloads that need initialization (if they're specified by name and un-initialized,
+	// it means the customer probably wants to init them).
 	log.Infoln("Checking for all required information. We may ask you some questions.")
 	for i, deploymentGroup := range deploymentOrderGroups {
 		for _, workload := range deploymentGroup {
+			// 1. Decide whether the current workload needs initialization.
 			if err := o.maybeInitWkld(workload); err != nil {
 				return err
 			}
@@ -426,6 +424,7 @@ func (o *deployOpts) Run() error {
 				name: workload,
 				cmd:  deployCmd,
 			})
+
 			if err := deployCmd.Ask(); err != nil {
 				return fmt.Errorf("ask %s deploy: %w", o.wlType, err)
 			}
@@ -451,11 +450,16 @@ func (o *deployOpts) Run() error {
 
 	totalNumDeployed := 1
 	for _, deploymentGroup := range cmds {
-		// TODO parallelize this. Steps involve modifying the cmd to provide an option to
-		// disable the progress tracker, and to create several syncbuffers to hold spinners.
+		// TODO parallelize this. Steps involve:
+		// 1. Modify the cmd to optionally disable progress tracker
+		// 2. Modify labeledSyncBuffer so it can display a spinner.
+		// 3. Wrap Execute() in a goroutine with ErrorGroup and context
 		for g, cmd := range deploymentGroup {
 			if err := cmd.cmd.Execute(); err != nil {
-				return fmt.Errorf("execute deployment %d of %d in group %d: %w", totalNumDeployed, len(deploymentGroup), g+1, err)
+				var errChangeSetEmpty *awscfn.ErrChangeSetEmpty
+				if !errors.As(err, &errChangeSetEmpty) {
+					return fmt.Errorf("execute deployment %d of %d in group %d: %w", totalNumDeployed, len(deploymentGroup), g+1, err)
+				}
 			}
 			if err := cmd.cmd.RecommendActions(); err != nil {
 				return err
