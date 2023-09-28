@@ -740,9 +740,15 @@ func convertAllowedSourceIPs(allowedSourceIPs []manifest.IPNet) []string {
 	return sourceIPs
 }
 
-func convertServiceConnect(s manifest.ServiceConnectBoolOrArgs) *template.ServiceConnect {
-	return &template.ServiceConnect{
-		Alias: s.ServiceConnectArgs.Alias,
+func convertServiceConnectServer(s manifest.ServiceConnectBoolOrArgs, target *manifest.ServiceConnectTargetContainer) *template.ServiceConnectServer {
+	if target == nil || target.Port == "" || target.Port == template.NoExposedContainerPort {
+		return nil
+	}
+
+	return &template.ServiceConnectServer{
+		Name:  target.Container,
+		Port:  target.Port,
+		Alias: aws.StringValue(s.Alias),
 	}
 }
 

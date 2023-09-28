@@ -60,8 +60,10 @@
   PortMappings:
     {{- range $portMapping := $sidecar.PortMappings }}
     - ContainerPort: {{ $portMapping.ContainerPort }}
-  {{- if and (eq $.HTTPTargetContainer.Name $sidecar.Name) (eq $.HTTPTargetContainer.Port (strconvUint16 $portMapping.ContainerPort))}}
+  {{- if $.ServiceConnectOpts.Server}}
+  {{- if and (eq $.ServiceConnectOpts.Server.Name $sidecar.Name) (eq $.ServiceConnectOpts.Server.Port (strconvUint16 $portMapping.ContainerPort ))}}
       Name: target
+  {{- end}}
   {{- end}}
       Protocol: {{ $portMapping.Protocol }}
 {{- end}}
