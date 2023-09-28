@@ -511,7 +511,7 @@ func (cfg *ALBListener) RulePaths() []string {
 	return rulePaths
 }
 
-// ServiceConnect defines the options for service connect.
+// ServiceConnectOpts defines the options for service connect.
 // If Client is false, logically Server must be nil.
 type ServiceConnectOpts struct {
 	Server *ServiceConnectServer
