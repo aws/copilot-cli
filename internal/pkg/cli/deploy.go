@@ -346,41 +346,44 @@ func (o *deployOpts) getDeploymentOrder() ([][]string, error) {
 }
 
 func (o *deployOpts) listStoreWorkloads() ([]*config.Workload, error) {
-	if o.storeWorkloads == nil {
-		wls, err := o.store.ListWorkloads(o.appName)
-		if err != nil {
-			return nil, fmt.Errorf("retrieve store workloads: %w", err)
-		}
-		o.storeWorkloads = wls
+	if o.storeWorkloads != nil {
+		return o.storeWorkloads, nil
 	}
+	wls, err := o.store.ListWorkloads(o.appName)
+	if err != nil {
+		return nil, fmt.Errorf("retrieve store workloads: %w", err)
+	}
+	o.storeWorkloads = wls
 	return o.storeWorkloads, nil
 }
 
 func (o *deployOpts) listLocalWorkloads() ([]string, error) {
-	if o.wsWorkloads == nil {
-		localWorkloads, err := o.ws.ListWorkloads()
-		if err != nil {
-			return nil, fmt.Errorf("retrieve workspace workloads: %w", err)
-		}
-		o.wsWorkloads = localWorkloads
+	if o.wsWorkloads != nil {
+		return o.wsWorkloads, nil
 	}
+	localWorkloads, err := o.ws.ListWorkloads()
+	if err != nil {
+		return nil, fmt.Errorf("retrieve workspace workloads: %w", err)
+	}
+	o.wsWorkloads = localWorkloads
 
 	return o.wsWorkloads, nil
 }
 
 func (o *deployOpts) listInitializedLocalWorkloads() ([]string, error) {
-	if o.initializedWsWorkloads == nil {
-		storeWls, err := o.listStoreWorkloads()
-		if err != nil {
-			return nil, err
-		}
-		localWorkloads, err := o.listLocalWorkloads()
-		if err != nil {
-			return nil, err
-		}
-
-		o.initializedWsWorkloads = selector.FilterItemsByStrings(localWorkloads, storeWls, func(workload *config.Workload) string { return workload.Name })
+	if o.initializedWsWorkloads != nil {
+		return o.initializedWsWorkloads, nil
 	}
+	storeWls, err := o.listStoreWorkloads()
+	if err != nil {
+		return nil, err
+	}
+	localWorkloads, err := o.listLocalWorkloads()
+	if err != nil {
+		return nil, err
+	}
+
+	o.initializedWsWorkloads = selector.FilterItemsByStrings(localWorkloads, storeWls, func(workload *config.Workload) string { return workload.Name })
 	return o.initializedWsWorkloads, nil
 }
 
@@ -420,7 +423,7 @@ func (o *deployOpts) Run() error {
 	// Also initialize workloads that need initialization (if they're specified by name and un-initialized,
 	// it means the customer probably wants to init them).
 	log.Infoln("Checking for all required information. We may ask you some questions.")
-	for i, deploymentGroup := range deploymentOrderGroups {
+	for order, deploymentGroup := range deploymentOrderGroups {
 		for _, workload := range deploymentGroup {
 			// 1. Decide whether the current workload needs initialization.
 			if err := o.maybeInitWkld(workload); err != nil {
@@ -430,7 +433,7 @@ func (o *deployOpts) Run() error {
 			if err != nil {
 				return err
 			}
-			cmds[i] = append(cmds[i], workloadCommand{
+			cmds[order] = append(cmds[order], workloadCommand{
 				name: workload,
 				cmd:  deployCmd,
 			})
@@ -443,7 +446,32 @@ func (o *deployOpts) Run() error {
 			}
 		}
 	}
+	if len(cmds) > 1 || len(cmds[0]) > 1 {
+		logDeploymentOrderInfo(cmds)
+	}
 
+	for g, deploymentGroup := range cmds {
+		// TODO parallelize this. Steps involve:
+		// 1. Modify the cmd to optionally disable progress tracker
+		// 2. Modify labeledSyncBuffer so it can display a spinner.
+		// 3. Wrap Execute() in a goroutine with ErrorGroup and context
+		for i, cmd := range deploymentGroup {
+			if err := cmd.cmd.Execute(); err != nil {
+				var errNoInfraChanges *errNoInfrastructureChanges
+				if !errors.As(err, &errNoInfraChanges) {
+					return fmt.Errorf("execute deployment %d of %d in group %d: %w", i+1, len(deploymentGroup), g+1, err)
+				}
+			}
+			if err := cmd.cmd.RecommendActions(); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func logDeploymentOrderInfo(cmds [][]workloadCommand) {
 	// Count number of deployments.
 	count := 0
 	for i := 0; i < len(cmds); i++ {
@@ -457,28 +485,6 @@ func (o *deployOpts) Run() error {
 		}
 		log.Infof("%d. %s\n", i+1, names)
 	}
-
-	totalNumDeployed := 1
-	for _, deploymentGroup := range cmds {
-		// TODO parallelize this. Steps involve:
-		// 1. Modify the cmd to optionally disable progress tracker
-		// 2. Modify labeledSyncBuffer so it can display a spinner.
-		// 3. Wrap Execute() in a goroutine with ErrorGroup and context
-		for g, cmd := range deploymentGroup {
-			if err := cmd.cmd.Execute(); err != nil {
-				var errNoInfraChanges *errNoInfrastructureChanges
-				if !errors.As(err, &errNoInfraChanges) {
-					return fmt.Errorf("execute deployment %d of %d in group %d: %w", totalNumDeployed, len(deploymentGroup), g+1, err)
-				}
-			}
-			if err := cmd.cmd.RecommendActions(); err != nil {
-				return err
-			}
-			totalNumDeployed++
-		}
-	}
-
-	return nil
 }
 
 func (o *deployOpts) askNames() error {
@@ -486,23 +492,23 @@ func (o *deployOpts) askNames() error {
 		return nil
 	}
 
-	if !o.deployAllWorkloads {
-		names, err := o.sel.Workloads("Select a service or job in your workspace", "")
-		if err != nil {
-			return fmt.Errorf("select service or job: %w", err)
+	if o.deployAllWorkloads {
+		// --all and --init-wkld=false means we should only use the initialized local workloads.
+		if o.yesInitWkld != nil && !aws.BoolValue(o.yesInitWkld) {
+			o.workloadNames = o.initializedWsWorkloads
+			return nil
 		}
-		o.workloadNames = names
+
+		// --all and --init-wkld=true, or --init-wkld unspecified, means we should use ALL local workloads as our list of names.
+		o.workloadNames = o.wsWorkloads
 		return nil
 	}
 
-	// --all and --init-wkld=false means we should only use the initialized local workloads.
-	if o.yesInitWkld != nil && !aws.BoolValue(o.yesInitWkld) {
-		o.workloadNames = o.initializedWsWorkloads
-		return nil
+	names, err := o.sel.Workloads("Select a service or job in your workspace", "")
+	if err != nil {
+		return fmt.Errorf("select service or job: %w", err)
 	}
-
-	// --all and --init-wkld=true, or --init-wkld unspecified, means we should use ALL local workloads as our list of names.
-	o.workloadNames = o.wsWorkloads
+	o.workloadNames = names
 	return nil
 }
 
