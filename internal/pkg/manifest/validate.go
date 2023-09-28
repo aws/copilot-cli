@@ -74,6 +74,7 @@ var (
 	dependsOnValidStatuses                   = []string{dependsOnStart, dependsOnComplete, dependsOnSuccess, dependsOnHealthy}
 	nlbValidProtocols                        = []string{TCP, UDP, TLS}
 	validContainerProtocols                  = []string{TCP, UDP}
+	validHealthCheckProtocols                = []string{TCP}
 	tracingValidVendors                      = []string{awsXRAY}
 	ecsRollingUpdateStrategies               = []string{ECSDefaultRollingUpdateStrategy, ECSRecreateRollingUpdateStrategy}
 
@@ -150,6 +151,18 @@ func (l LoadBalancedWebService) validate() error {
 		nlb:               &l.NLBConfig,
 	}); err != nil {
 		return fmt.Errorf("validate unique exposed ports: %w", err)
+	}
+	exposedPortsIndex, err := l.ExposedPorts()
+	if err != nil {
+		return err
+	}
+	if err = validateHealthCheckPorts(validateHealthCheckPortsOpts{
+		exposedPorts:      exposedPortsIndex,
+		mainContainerPort: l.ImageConfig.Port,
+		alb:               &l.HTTPOrBool.HTTP,
+		nlb:               &l.NLBConfig,
+	}); err != nil {
+		return fmt.Errorf("validate load balancer health check ports: %w", err)
 	}
 	return nil
 }
@@ -317,6 +330,17 @@ func (b BackendService) validate() error {
 		alb:               &b.HTTP,
 	}); err != nil {
 		return fmt.Errorf("validate unique exposed ports: %w", err)
+	}
+	exposedPortsIndex, err := b.ExposedPorts()
+	if err != nil {
+		return err
+	}
+	if err = validateHealthCheckPorts(validateHealthCheckPortsOpts{
+		exposedPorts:      exposedPortsIndex,
+		mainContainerPort: b.ImageConfig.Port,
+		alb:               &b.HTTP,
+	}); err != nil {
+		return fmt.Errorf("validate load balancer health check ports: %w", err)
 	}
 	return nil
 }
@@ -1963,6 +1987,13 @@ func (s Secret) validate() error {
 	return nil
 }
 
+type validateHealthCheckPortsOpts struct {
+	exposedPorts      ExposedPortsIndex
+	mainContainerPort *uint16
+	alb               *HTTP
+	nlb               *NetworkLoadBalancerConfiguration
+}
+
 type validateExposedPortsOpts struct {
 	mainContainerName string
 	mainContainerPort *uint16
@@ -1998,6 +2029,80 @@ type validateWindowsOpts struct {
 type validateARMOpts struct {
 	Spot     *int
 	SpotFrom *int
+}
+
+func validateHealthCheckPorts(opts validateHealthCheckPortsOpts) error {
+	if opts.alb != nil {
+		for _, rule := range opts.alb.RoutingRules() {
+			// healthCheckPort is defined by RoutingRule.HealthCheck.Port, with fallback on RoutingRule.TargetPort, then image.port.
+			var healthCheckPort uint16
+			if opts.mainContainerPort != nil {
+				healthCheckPort = aws.Uint16Value(opts.mainContainerPort)
+			}
+			if rule.TargetPort != nil {
+				healthCheckPort = aws.Uint16Value(rule.TargetPort)
+			}
+			if rule.HealthCheck.Advanced.Port != nil {
+				healthCheckPort = uint16(aws.IntValue(rule.HealthCheck.Advanced.Port))
+			}
+
+			if err := validateHealthCheckPort(healthCheckPort, opts); err != nil {
+				return err
+			}
+		}
+	}
+
+	if opts.nlb != nil {
+		for _, listener := range opts.nlb.NLBListeners() {
+			// healthCheckPort is defined by Listener.HealthCheck.Port, with fallback on Listener.TargetPort, then Listener.Port, then image.port.
+			var healthCheckPort uint16
+			if opts.mainContainerPort != nil {
+				healthCheckPort = aws.Uint16Value(opts.mainContainerPort)
+			}
+			if listener.Port != nil {
+				port, _, err := ParsePortMapping(listener.Port)
+				if err != nil {
+					return err
+				}
+				parsedPort, err := strconv.ParseUint(aws.StringValue(port), 10, 16)
+				if err != nil {
+					return err
+				}
+				healthCheckPort = uint16(parsedPort)
+			}
+			if listener.TargetPort != nil {
+				healthCheckPort = uint16(aws.IntValue(listener.TargetPort))
+			}
+			if listener.HealthCheck.Port != nil {
+				healthCheckPort = uint16(aws.IntValue(listener.HealthCheck.Port))
+			}
+
+			if err := validateHealthCheckPort(healthCheckPort, opts); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func validateHealthCheckPort(port uint16, opts validateHealthCheckPortsOpts) error {
+	container := opts.exposedPorts.ContainerForPort[port]
+	containerPorts := opts.exposedPorts.PortsForContainer[container]
+	for _, exposedPort := range containerPorts {
+		if exposedPort.Port != port {
+			continue
+		}
+
+		if !slices.Contains(validHealthCheckProtocols, strings.ToUpper(exposedPort.Protocol)) {
+			return &errHealthCheckPortExposedWithInvalidProtocol{
+				healthCheckPort: port,
+				container:       container,
+				protocol:        exposedPort.Protocol,
+			}
+		}
+	}
+
+	return nil
 }
 
 func validateTargetContainer(opts validateTargetContainerOpts) error {

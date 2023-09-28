@@ -247,3 +247,13 @@ type errContainerPortExposedWithMultipleProtocol struct {
 func (e *errContainerPortExposedWithMultipleProtocol) Error() string {
 	return fmt.Sprintf(`container %q is exposing the same port %d with protocol %s and %s`, e.container, e.port, e.firstProtocol, e.secondProtocol)
 }
+
+type errHealthCheckPortExposedWithInvalidProtocol struct {
+	healthCheckPort uint16
+	container       string
+	protocol        string
+}
+
+func (e *errHealthCheckPortExposedWithInvalidProtocol) Error() string {
+	return fmt.Sprintf(`container %q exposes port %d with healthchecks using invalid protocol %s`, e.container, e.healthCheckPort, e.protocol)
+}
