@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
-	awscfn "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/dustin/go-humanize/english"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
@@ -228,6 +227,17 @@ func (o *deployOpts) maybeInitWkld(name string) error {
 	return nil
 }
 
+// parseDeploymentOrderTags takes a list of workload names, optionally tagged with a priority. Lower priorities will be
+// deployed first.
+//
+//	[]string{"fe/1", "be/1", "worker/2"}
+//
+// It returns a map from the workload name to its priority, and errors out if the order tag is incorrectly formatted.
+//
+//	map[string]int{"fe": 1, "be": 1, "worker": 2}
+//
+// It is possible to have multiple workloads of the same priority. We don't guarantee that workloads within priority
+// groups will have identical deployment orders each time.
 func parseDeploymentOrderTags(namesWithOptionalOrder []string) (map[string]int, error) {
 	prioritiesMap := make(map[string]int)
 	// First pass through flags to identify priority groups
@@ -456,8 +466,8 @@ func (o *deployOpts) Run() error {
 		// 3. Wrap Execute() in a goroutine with ErrorGroup and context
 		for g, cmd := range deploymentGroup {
 			if err := cmd.cmd.Execute(); err != nil {
-				var errChangeSetEmpty *awscfn.ErrChangeSetEmpty
-				if !errors.As(err, &errChangeSetEmpty) {
+				var errNoInfraChanges *errNoInfrastructureChanges
+				if !errors.As(err, &errNoInfraChanges) {
 					return fmt.Errorf("execute deployment %d of %d in group %d: %w", totalNumDeployed, len(deploymentGroup), g+1, err)
 				}
 			}

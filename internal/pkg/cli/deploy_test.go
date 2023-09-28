@@ -635,6 +635,57 @@ type: Worker Service`)
 				m.EXPECT().AddWorkloadToApp("app", "worker", manifestinfo.WorkerServiceType).Return(nil)
 			},
 		},
+		"skips deploying workload with no changes": {
+			inAppName:    "app",
+			inEnvName:    "test",
+			inDeployAll:  true,
+			inShouldInit: aws.Bool(true),
+			inNames:      []string{"be/1", "worker/2"},
+			inInitEnv:    aws.Bool(false),
+			inDeployEnv:  aws.Bool(false),
+
+			mockSel: func(m *mocks.MockwsSelector) {
+			},
+			mockActionCommand: func(m *mocks.MockactionCommand) {
+				m.EXPECT().Ask().Times(3)
+				m.EXPECT().Validate().Times(3)
+				m.EXPECT().Execute().Times(2)
+				m.EXPECT().Execute().Return(&errNoInfrastructureChanges{
+					parentErr: errors.New("some error"),
+				})
+				m.EXPECT().RecommendActions().Times(3)
+			},
+			mockCmd: func(m *mocks.Mockcmd) {
+
+			},
+			mockStore: func(m *mocks.Mockstore) {
+				mockBeWl := config.Workload{
+					App:  "app",
+					Name: "be",
+					Type: "Backend Service",
+				}
+				mockWorkerWl := config.Workload{
+					App:  "app",
+					Name: "worker",
+					Type: "Worker Service",
+				}
+				m.EXPECT().GetEnvironment("app", "test").Return(&mockEnv, nil)
+				m.EXPECT().ListWorkloads("app").Return([]*config.Workload{&mockWl, &mockBeWl}, nil)
+				m.EXPECT().GetWorkload("app", "fe").Return(&mockWl, nil)
+				m.EXPECT().GetWorkload("app", "be").Return(&mockBeWl, nil)
+				m.EXPECT().GetWorkload("app", "worker").Return(&mockWorkerWl, nil)
+			},
+			mockWs: func(m *mocks.MockwsWlDirReader) {
+				m.EXPECT().ReadWorkloadManifest("fe").Times(0)
+				m.EXPECT().ReadWorkloadManifest("worker").Return(mockWorkerManifest, nil)
+				m.EXPECT().ListWorkloads().Return([]string{"fe", "be", "worker"}, nil)
+				m.EXPECT().ListEnvironments().Return([]string{"test"}, nil)
+			},
+			mockPrompt: func(m *mocks.Mockprompter) {},
+			mockInit: func(m *mocks.MockwkldInitializerWithoutManifest) {
+				m.EXPECT().AddWorkloadToApp("app", "worker", manifestinfo.WorkerServiceType).Return(nil)
+			},
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
