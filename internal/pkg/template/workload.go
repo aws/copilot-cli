@@ -511,6 +511,13 @@ func (cfg *ALBListener) RulePaths() []string {
 	return rulePaths
 }
 
+// ServiceConnect defines the options for service connect.
+// If Client is false, logically Server must be nil.
+type ServiceConnectOpts struct {
+	Server *ServiceConnectServer
+	Client bool
+}
+
 // ServiceConnectServer defines the container name and port which a service routes Service Connect through.
 type ServiceConnectServer struct {
 	Name  string
@@ -821,8 +828,7 @@ type WorkloadOpts struct {
 	NLB                     *NetworkLoadBalancer
 	ALBListener             *ALBListener
 	DeploymentConfiguration DeploymentConfigurationOpts
-	ServiceConnectServer    *ServiceConnectServer
-	ServiceConnectClient    bool
+	ServiceConnectOpts      ServiceConnectOpts
 
 	// Custom Resources backed by Lambda functions.
 	CustomResources map[string]S3ObjectLocation

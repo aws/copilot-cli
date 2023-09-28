@@ -316,13 +316,15 @@ Outputs:
 				StartPeriod: aws.Int64(0),
 				Timeout:     aws.Int64(10),
 			},
-			ServiceConnectServer: &template.ServiceConnectServer{
-				Name:  "api",
-				Port:  "8080",
-				Alias: "api",
+			ServiceConnectOpts: template.ServiceConnectOpts{
+				Server: &template.ServiceConnectServer{
+					Name:  "api",
+					Port:  "8080",
+					Alias: "api",
+				},
+				Client: true,
 			},
-			ServiceConnectClient: true,
-			GracePeriod:          aws.Int64(manifest.DefaultHealthCheckGracePeriod),
+			GracePeriod: aws.Int64(manifest.DefaultHealthCheckGracePeriod),
 			CustomResources: map[string]template.S3ObjectLocation{
 				"EnvControllerFunction": {
 					Bucket: "my-bucket",
@@ -520,11 +522,13 @@ Outputs:
 					PortMappings: []*template.PortMapping{},
 				},
 			},
-			ServiceConnectServer: &template.ServiceConnectServer{
-				Name: "envoy",
-				Port: "443",
+			ServiceConnectOpts: template.ServiceConnectOpts{
+				Server: &template.ServiceConnectServer{
+					Name: "envoy",
+					Port: "443",
+				},
+				Client: true,
 			},
-			ServiceConnectClient: true,
 			CustomResources: map[string]template.S3ObjectLocation{
 				"EnvControllerFunction": {
 					Bucket: "my-bucket",

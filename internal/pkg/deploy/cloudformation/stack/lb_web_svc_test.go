@@ -269,12 +269,14 @@ Outputs:
 			EnvName:      "test",
 			WorkloadName: "frontend",
 			WorkloadType: manifestinfo.LoadBalancedWebServiceType,
-			ServiceConnectServer: &template.ServiceConnectServer{
-				Name:  "frontend",
-				Port:  "80",
-				Alias: "frontend",
+			ServiceConnectOpts: template.ServiceConnectOpts{
+				Server: &template.ServiceConnectServer{
+					Name:  "frontend",
+					Port:  "80",
+					Alias: "frontend",
+				},
+				Client: true,
 			},
-			ServiceConnectClient: true,
 			HealthCheck: &template.ContainerHealthCheck{
 				Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
 				Interval:    aws.Int64(10),
@@ -484,11 +486,13 @@ Outputs:
 
 		// THEN
 		require.NoError(t, err)
-		require.Equal(t, &template.ServiceConnectServer{
-			Name: "envoy",
-			Port: "443",
-		}, actual.ServiceConnectServer)
-		require.Equal(t, true, actual.ServiceConnectClient)
+		require.Equal(t, template.ServiceConnectOpts{
+			Server: &template.ServiceConnectServer{
+				Name: "envoy",
+				Port: "443",
+			},
+			Client: true,
+		}, actual.ServiceConnectOpts)
 	})
 }
 
