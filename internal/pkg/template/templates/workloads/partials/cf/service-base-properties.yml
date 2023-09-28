@@ -76,10 +76,10 @@ ServiceConnectConfiguration:
       DiscoveryName: !Join ["-", [!Ref WorkloadName, "sc"]] 
       ClientAliases:
         - Port: !Ref TargetPort
-          {{- if .ServiceConnectServer.Alias }}
-          DnsName: {{.ServiceConnectServer.Alias}}
-          {{- else}}
+          {{- if eq .ServiceConnectServer.Alias ""}}
           DnsName: !Ref WorkloadName
+          {{- else}}
+          DnsName: {{.ServiceConnectServer.Alias}}
           {{- end}}
   {{- end}}
   {{- else}}

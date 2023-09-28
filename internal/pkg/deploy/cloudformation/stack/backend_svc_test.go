@@ -319,7 +319,7 @@ Outputs:
 			ServiceConnectServer: &template.ServiceConnectServer{
 				Name:  "api",
 				Port:  "8080",
-				Alias: aws.String("api"),
+				Alias: "api",
 			},
 			ServiceConnectClient: true,
 			GracePeriod:          aws.Int64(manifest.DefaultHealthCheckGracePeriod),

@@ -272,7 +272,7 @@ Outputs:
 			ServiceConnectServer: &template.ServiceConnectServer{
 				Name:  "frontend",
 				Port:  "80",
-				Alias: aws.String("frontend"),
+				Alias: "frontend",
 			},
 			ServiceConnectClient: true,
 			HealthCheck: &template.ContainerHealthCheck{

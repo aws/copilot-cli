@@ -515,7 +515,7 @@ func (cfg *ALBListener) RulePaths() []string {
 type ServiceConnectServer struct {
 	Name  string
 	Port  string
-	Alias *string
+	Alias string
 }
 
 // AdvancedCount holds configuration for autoscaling and capacity provider

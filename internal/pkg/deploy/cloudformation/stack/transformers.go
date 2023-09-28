@@ -748,7 +748,7 @@ func convertServiceConnectServer(s manifest.ServiceConnectBoolOrArgs, target *ma
 	return &template.ServiceConnectServer{
 		Name:  target.Container,
 		Port:  target.Port,
-		Alias: s.Alias,
+		Alias: aws.StringValue(s.Alias),
 	}
 }
 
