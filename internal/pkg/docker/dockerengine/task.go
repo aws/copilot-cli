@@ -10,6 +10,8 @@ import (
 )
 
 type Scheduler struct {
+	idPrefix string
+
 	mu        sync.RWMutex
 	curTask   Task
 	curTaskID int
@@ -20,10 +22,11 @@ type Scheduler struct {
 	docker DockerCmdClient
 }
 
-func NewScheduler(docker DockerCmdClient) *Scheduler {
+func NewScheduler(docker DockerCmdClient, idPrefix string) *Scheduler {
 	return &Scheduler{
-		errors: make(chan error),
-		docker: docker,
+		idPrefix: idPrefix,
+		errors:   make(chan error),
+		docker:   docker,
 	}
 }
 
@@ -67,6 +70,9 @@ func (s *Scheduler) Start(task Task) error {
 		s.Restart(task)
 	}()
 
+	// TODO what we created an actions channel? or "events" or something?
+	// and the schedule thread ran everything itself?
+	// i.e., events <- stopEvent{}, events <- restartEvent{}
 	for {
 		select {
 		case err := <-s.errors:
@@ -88,6 +94,10 @@ func (s *Scheduler) Start(task Task) error {
 	}
 }
 
+type schedulerAction interface {
+	Do() error
+}
+
 func (s *Scheduler) Restart(task Task) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -97,8 +107,8 @@ func (s *Scheduler) Restart(task Task) {
 	}
 
 	// ensure no pause container changes
-	curOpts := s.curTask.pauseRunOptions()
-	newOpts := task.pauseRunOptions()
+	curOpts := s.pauseRunOptions(s.curTask)
+	newOpts := s.pauseRunOptions(task)
 	switch {
 	case !maps.Equal(curOpts.EnvVars, newOpts.EnvVars):
 		fallthrough
@@ -116,9 +126,9 @@ func (s *Scheduler) Restart(task Task) {
 	s.curTask = task
 	s.curTaskID++
 
-	for name := range task.Containers {
-		name := name
-		go s.run(s.curTaskID, task.containerRunOptions(name))
+	for name, ctr := range task.Containers {
+		name, ctr := name, ctr
+		go s.run(s.curTaskID, s.containerRunOptions(name, ctr))
 	}
 }
 
@@ -193,8 +203,11 @@ func (s *Scheduler) waitForContainerToStart(ctx context.Context, id string) erro
 	}
 }
 
+func (s *Scheduler) containerID(name string) string {
+	return s.idPrefix + name
+}
+
 type Task struct {
-	IDPrefix   string
 	Containers map[string]ContainerDefinition
 }
 
@@ -205,10 +218,10 @@ type ContainerDefinition struct {
 	Ports    map[string]string // host port -> container port
 }
 
-func (t *Task) pauseRunOptions() RunOptions {
+func (s *Scheduler) pauseRunOptions(t Task) RunOptions {
 	opts := RunOptions{
 		ImageURI:       "public.ecr.aws/amazonlinux/amazonlinux:2023",
-		ContainerName:  t.containerID("pause"),
+		ContainerName:  s.containerID("pause"),
 		Command:        []string{"sleep", "infinity"},
 		ContainerPorts: make(map[string]string),
 	}
@@ -222,20 +235,15 @@ func (t *Task) pauseRunOptions() RunOptions {
 	return opts
 }
 
-func (t *Task) containerRunOptions(name string) RunOptions {
-	ctr := t.Containers[name]
+func (s *Scheduler) containerRunOptions(name string, ctr ContainerDefinition) RunOptions {
 	return RunOptions{
 		ImageURI:         ctr.ImageURI,
-		ContainerName:    t.containerID(name),
+		ContainerName:    name,
 		EnvVars:          ctr.EnvVars,
 		Secrets:          ctr.Secrets,
-		ContainerNetwork: t.containerID("pause"),
+		ContainerNetwork: s.containerID("pause"),
 		// TODO logging
 	}
-}
-
-func (t *Task) containerID(name string) string {
-	return t.IDPrefix + name
 }
 
 type runError struct {
