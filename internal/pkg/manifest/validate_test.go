@@ -4014,6 +4014,14 @@ func TestValidateHealthCheckPorts(t *testing.T) {
 						Port: aws.Int(80),
 					},
 				},
+				AdditionalListeners: []NetworkLoadBalancerListener{
+					{
+						Port: aws.String("8081/udp"),
+					},
+					{
+						Port: aws.String("8082"),
+					},
+				},
 			},
 		},
 	}
