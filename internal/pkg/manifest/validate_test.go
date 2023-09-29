@@ -485,6 +485,9 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					ImageConfig: testImageConfig,
+					HTTPOrBool: HTTPOrBool{
+						Enabled: aws.Bool(false),
+					},
 					NLBConfig: NetworkLoadBalancerConfiguration{
 						Listener: NetworkLoadBalancerListener{
 							Port: aws.String("80/udp"),
