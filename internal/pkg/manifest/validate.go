@@ -159,8 +159,8 @@ func (l LoadBalancedWebService) validate() error {
 	if err = validateHealthCheckPorts(validateHealthCheckPortsOpts{
 		exposedPorts:      exposedPortsIndex,
 		mainContainerPort: l.ImageConfig.Port,
-		alb:               &l.HTTPOrBool.HTTP,
-		nlb:               &l.NLBConfig,
+		alb:               l.HTTPOrBool.HTTP,
+		nlb:               l.NLBConfig,
 	}); err != nil {
 		return fmt.Errorf("validate load balancer health check ports: %w", err)
 	}
@@ -338,7 +338,7 @@ func (b BackendService) validate() error {
 	if err = validateHealthCheckPorts(validateHealthCheckPortsOpts{
 		exposedPorts:      exposedPortsIndex,
 		mainContainerPort: b.ImageConfig.Port,
-		alb:               &b.HTTP,
+		alb:               b.HTTP,
 	}); err != nil {
 		return fmt.Errorf("validate load balancer health check ports: %w", err)
 	}
@@ -1990,8 +1990,8 @@ func (s Secret) validate() error {
 type validateHealthCheckPortsOpts struct {
 	exposedPorts      ExposedPortsIndex
 	mainContainerPort *uint16
-	alb               *HTTP
-	nlb               *NetworkLoadBalancerConfiguration
+	alb               HTTP
+	nlb               NetworkLoadBalancerConfiguration
 }
 
 type validateExposedPortsOpts struct {
@@ -2032,52 +2032,20 @@ type validateARMOpts struct {
 }
 
 func validateHealthCheckPorts(opts validateHealthCheckPortsOpts) error {
-	if opts.alb != nil {
-		// healthCheckPort is defined by RoutingRule.HealthCheck.Port, with fallback on RoutingRule.TargetPort, then image.port.
-		var healthCheckPort uint16
-		if opts.mainContainerPort != nil {
-			healthCheckPort = aws.Uint16Value(opts.mainContainerPort)
-		}
-		if opts.alb.Main.TargetPort != nil {
-			healthCheckPort = aws.Uint16Value(opts.alb.Main.TargetPort)
-		}
-		if opts.alb.Main.HealthCheck.Advanced.Port != nil {
-			healthCheckPort = uint16(aws.IntValue(opts.alb.Main.HealthCheck.Advanced.Port))
-		}
-
+	for _, rule := range opts.alb.RoutingRules() {
+		healthCheckPort := rule.HealthCheckPort(opts.mainContainerPort)
 		if err := validateHealthCheckPort(healthCheckPort, opts); err != nil {
 			return err
 		}
 	}
 
-	if opts.nlb != nil {
-		// healthCheckPort is defined by Listener.HealthCheck.Port, with fallback on Listener.TargetPort, then Listener.Port, then image.port.
-		var healthCheckPort uint16
-		if opts.mainContainerPort != nil {
-			healthCheckPort = aws.Uint16Value(opts.mainContainerPort)
-		}
-		if opts.nlb.Listener.Port != nil {
-			port, _, err := ParsePortMapping(opts.nlb.Listener.Port)
-			if err != nil {
-				return err
-			}
-			parsedPort, err := strconv.ParseUint(aws.StringValue(port), 10, 16)
-			if err != nil {
-				return err
-			}
-			healthCheckPort = uint16(parsedPort)
-		}
-		if opts.nlb.Listener.TargetPort != nil {
-			healthCheckPort = uint16(aws.IntValue(opts.nlb.Listener.TargetPort))
-		}
-		if opts.nlb.Listener.HealthCheck.Port != nil {
-			healthCheckPort = uint16(aws.IntValue(opts.nlb.Listener.HealthCheck.Port))
-		}
-
+	for _, listener := range opts.nlb.NLBListeners() {
+		healthCheckPort := listener.HealthCheckPort(opts.mainContainerPort)
 		if err := validateHealthCheckPort(healthCheckPort, opts); err != nil {
 			return err
 		}
 	}
+
 	return nil
 }
 

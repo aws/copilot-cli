@@ -4017,6 +4017,9 @@ func TestValidateHealthCheckPorts(t *testing.T) {
 				AdditionalListeners: []NetworkLoadBalancerListener{
 					{
 						Port: aws.String("8081/udp"),
+						HealthCheck: NLBHealthCheckArgs{
+							Port: aws.Int(80),
+						},
 					},
 					{
 						Port: aws.String("8082"),
@@ -4058,7 +4061,7 @@ func TestValidateHealthCheckPorts(t *testing.T) {
 			in: validateHealthCheckPortsOpts{
 				exposedPorts:      exposedPortIndex,
 				mainContainerPort: lbws.ImageConfig.Port,
-				nlb:               &lbwsWithInvalidHealthChecks.NLBConfig,
+				nlb:               lbwsWithInvalidHealthChecks.NLBConfig,
 			},
 			wanted: fmt.Errorf(`container "mockWorkload" exposes port 8080 with healthchecks using invalid protocol udp`),
 		},
@@ -4066,7 +4069,7 @@ func TestValidateHealthCheckPorts(t *testing.T) {
 			in: validateHealthCheckPortsOpts{
 				exposedPorts:      exposedPortIndex,
 				mainContainerPort: lbws.ImageConfig.Port,
-				alb:               &lbwsWithInvalidHealthChecks.HTTPOrBool.HTTP,
+				alb:               lbwsWithInvalidHealthChecks.HTTPOrBool.HTTP,
 			},
 			wanted: fmt.Errorf(`container "mockWorkload" exposes port 8080 with healthchecks using invalid protocol udp`),
 		},
@@ -4074,8 +4077,8 @@ func TestValidateHealthCheckPorts(t *testing.T) {
 			in: validateHealthCheckPortsOpts{
 				exposedPorts:      exposedPortIndex,
 				mainContainerPort: aws.Uint16(8080),
-				alb:               &lbws.HTTPOrBool.HTTP,
-				nlb:               &lbws.NLBConfig,
+				alb:               lbws.HTTPOrBool.HTTP,
+				nlb:               lbws.NLBConfig,
 			},
 			wanted: fmt.Errorf(`container "mockWorkload" exposes port 8080 with healthchecks using invalid protocol udp`),
 		},
@@ -4083,8 +4086,8 @@ func TestValidateHealthCheckPorts(t *testing.T) {
 			in: validateHealthCheckPortsOpts{
 				exposedPorts:      exposedPortIndex,
 				mainContainerPort: lbws.ImageConfig.Port,
-				alb:               &lbws.HTTPOrBool.HTTP,
-				nlb:               &lbws.NLBConfig,
+				alb:               lbws.HTTPOrBool.HTTP,
+				nlb:               lbws.NLBConfig,
 			},
 		},
 	}

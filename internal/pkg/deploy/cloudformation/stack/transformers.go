@@ -615,7 +615,7 @@ func (conv routingRuleConfigConverter) convert() (*template.ALBListenerRule, err
 		TargetContainer:     targetContainer,
 		TargetPort:          targetPort,
 		Aliases:             aliases,
-		HTTPHealthCheck:     convertHTTPHealthCheck(&conv.rule.HealthCheck),
+		HTTPHealthCheck:     convertHTTPHealthCheck(&conv.rule.HealthCheck, conv.rule.HealthCheckPort(conv.manifest.MainContainerPort())),
 		AllowedSourceIps:    convertAllowedSourceIPs(conv.rule.AllowedSourceIps),
 		Stickiness:          strconv.FormatBool(aws.BoolValue(conv.rule.Stickiness)),
 		HTTPVersion:         aws.StringValue(convertHTTPVersion(conv.rule.ProtocolVersion)),
