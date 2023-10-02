@@ -393,6 +393,14 @@ type workloadCommand struct {
 	cmd  actionCommand
 }
 
+func getTotalNumberOfWorkloads(deploymentGroups [][]workloadCommand) int {
+	count := 0
+	for i := 0; i < len(deploymentGroups); i++ {
+		count += len(deploymentGroups[i])
+	}
+	return count
+}
+
 func (o *deployOpts) Run() error {
 	if err := o.askNames(); err != nil {
 		return err
@@ -430,15 +438,17 @@ func (o *deployOpts) Run() error {
 			if err := o.maybeInitWkld(workload); err != nil {
 				return err
 			}
+			// 2. Set up workload command.
 			deployCmd, err := o.loadWkldCmd(workload)
 			if err != nil {
 				return err
 			}
+
 			cmds[order] = append(cmds[order], workloadCommand{
 				name: workload,
 				cmd:  deployCmd,
 			})
-
+			// 3. Ask() and Validate() for required info.
 			if err := deployCmd.Ask(); err != nil {
 				return fmt.Errorf("ask %s deploy: %w", o.wlType, err)
 			}
@@ -447,7 +457,8 @@ func (o *deployOpts) Run() error {
 			}
 		}
 	}
-	if len(cmds) > 1 || len(cmds[0]) > 1 {
+
+	if getTotalNumberOfWorkloads(cmds) > 1 {
 		logDeploymentOrderInfo(cmds)
 	}
 
@@ -482,7 +493,7 @@ func logDeploymentOrderInfo(cmds [][]workloadCommand) {
 	for i := 0; i < len(cmds); i++ {
 		names := ""
 		for _, cmd := range cmds[i] {
-			names += cmd.name + " "
+			names += cmd.name + ", "
 		}
 		log.Infof("%d. %s\n", i+1, names)
 	}
