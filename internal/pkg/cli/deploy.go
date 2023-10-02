@@ -522,11 +522,11 @@ func logDeploymentOrderInfo(cmds [][]workloadCommand) {
 	}
 	log.Infof("Will deploy %d %s in the following order.\n", count, english.PluralWord(count, "workload", ""))
 	for i := 0; i < len(cmds); i++ {
-		names := ""
+		names := make([]string, 0, len(cmds))
 		for _, cmd := range cmds[i] {
-			names += cmd.name + ", "
+			names = append(names, cmd.name)
 		}
-		log.Infof("%d. %s\n", i+1, names)
+		log.Infof("%d. %s\n", i+1, strings.Join(names, ", "))
 	}
 }
 
