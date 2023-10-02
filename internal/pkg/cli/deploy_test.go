@@ -1126,6 +1126,35 @@ func Test_deployOpts_getDeploymentOrder(t *testing.T) {
 			mockWs:          func(m *mocks.MockwsWlDirReader) {},
 			mockStore:       func(m *mocks.Mockstore) {},
 		},
+		"order tags, --all true, initWkld false": {
+			inWorkloadNames: []string{"fe/2", "be/1"},
+			inInitWkld:      aws.Bool(false),
+			inDeployAll:     true,
+			want:            [][]string{{"be"}, {"fe"}, {"db"}},
+			mockWs: func(m *mocks.MockwsWlDirReader) {
+				m.EXPECT().ListWorkloads().Return([]string{"be", "db", "fe", "worker"}, nil)
+			},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().ListWorkloads("app").Return([]*config.Workload{
+					{
+						App:  "app",
+						Name: "fe",
+						Type: "Load Balanced Web Service",
+					},
+					{
+						App:  "app",
+						Name: "be",
+						Type: "Backend Service",
+					},
+					{
+						App:  "app",
+						Name: "db",
+						Type: "Backend Service",
+					},
+				}, nil)
+			},
+		},
+
 		//"no order tags, --all, initWkld specified": {
 		//	inWorkloadNames: []string{"fe", "be", "db"},
 		//	inInitWkld: aws.Bool(true),
