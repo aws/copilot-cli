@@ -16,7 +16,7 @@ require (
 	github.com/lnquy/cron v1.1.1
 	github.com/moby/buildkit v0.12.2
 	github.com/onsi/ginkgo/v2 v2.12.1
-	github.com/onsi/gomega v1.27.10
+	github.com/onsi/gomega v1.28.0
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/spf13/afero v1.10.0
 	github.com/spf13/cobra v1.7.0
