@@ -1069,6 +1069,26 @@ func Test_deployOpts_maybeDeployEnv(t *testing.T) {
 }
 
 func Test_deployOpts_getDeploymentOrder(t *testing.T) {
+	mockFe := &config.Workload{
+		App:  "app",
+		Name: "fe",
+		Type: "Load Balanced Web Service",
+	}
+	mockBe := &config.Workload{
+		App:  "app",
+		Name: "be",
+		Type: "Backend Service",
+	}
+	mockDb := &config.Workload{
+		App:  "app",
+		Name: "db",
+		Type: "Backend Service",
+	}
+	mockWorker := &config.Workload{
+		App:  "app",
+		Name: "worker",
+		Type: "Worker Service",
+	}
 	tests := map[string]struct {
 		inWorkloadNames []string
 		inInitWkld      *bool
@@ -1086,7 +1106,13 @@ func Test_deployOpts_getDeploymentOrder(t *testing.T) {
 			mockWs: func(m *mocks.MockwsWlDirReader) {
 				m.EXPECT().ListWorkloads().Return([]string{"be", "db", "fe"}, nil)
 			},
-			mockStore: func(m *mocks.Mockstore) {},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().ListWorkloads("app").Return([]*config.Workload{
+					mockFe,
+					mockBe,
+					mockDb,
+				}, nil)
+			},
 		},
 		"with order tags and groups, --all, initWkld unspecified": {
 			inWorkloadNames: []string{"fe/1", "be/2", "db/2", "worker/5"},
@@ -1096,17 +1122,31 @@ func Test_deployOpts_getDeploymentOrder(t *testing.T) {
 			mockWs: func(m *mocks.MockwsWlDirReader) {
 				m.EXPECT().ListWorkloads().Return([]string{"be", "db", "fe", "worker"}, nil)
 			},
-			mockStore: func(m *mocks.Mockstore) {},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().ListWorkloads("app").Return([]*config.Workload{
+					mockFe,
+					mockBe,
+					mockDb,
+					mockWorker,
+				}, nil)
+			},
 		},
 		"with all order tags, --all, initWkld unspecified": {
-			inWorkloadNames: []string{"fe/1", "be/2", "db/3", "worker/4"},
+			inWorkloadNames: []string{"fe/1", "be/2", "db/3"},
 			inInitWkld:      nil,
 			inDeployAll:     true,
 			want:            [][]string{{"fe"}, {"be"}, {"db"}, {"worker"}},
 			mockWs: func(m *mocks.MockwsWlDirReader) {
 				m.EXPECT().ListWorkloads().Return([]string{"be", "db", "fe", "worker"}, nil)
 			},
-			mockStore: func(m *mocks.Mockstore) {},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().ListWorkloads("app").Return([]*config.Workload{
+					mockFe,
+					mockBe,
+					mockDb,
+					mockWorker,
+				}, nil)
+			},
 		},
 		"with some order tags --all, intWkld unspecified": {
 			inWorkloadNames: []string{"be/2", "db/3"},
@@ -1116,7 +1156,30 @@ func Test_deployOpts_getDeploymentOrder(t *testing.T) {
 			mockWs: func(m *mocks.MockwsWlDirReader) {
 				m.EXPECT().ListWorkloads().Return([]string{"be", "db", "fe", "worker"}, nil)
 			},
-			mockStore: func(m *mocks.Mockstore) {},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().ListWorkloads("app").Return([]*config.Workload{
+					mockFe,
+					mockBe,
+					mockDb,
+					mockWorker,
+				}, nil)
+			},
+		},
+		"with some order tags, some workloads uninitialized, initWkld unspecified": {
+			inWorkloadNames: []string{"be/2", "db/3"},
+			inInitWkld:      nil,
+			inDeployAll:     true,
+			want:            [][]string{{"be"}, {"db"}, {"fe"}},
+			mockWs: func(m *mocks.MockwsWlDirReader) {
+				m.EXPECT().ListWorkloads().Return([]string{"be", "db", "fe", "worker"}, nil)
+			},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().ListWorkloads("app").Return([]*config.Workload{
+					mockFe,
+					mockBe,
+					mockDb,
+				}, nil)
+			},
 		},
 		"with some order tags, --all false, intWkld unspecified": {
 			inWorkloadNames: []string{"be/2", "db/3"},
@@ -1154,13 +1217,6 @@ func Test_deployOpts_getDeploymentOrder(t *testing.T) {
 				}, nil)
 			},
 		},
-
-		//"no order tags, --all, initWkld specified": {
-		//	inWorkloadNames: []string{"fe", "be", "db"},
-		//	inInitWkld: aws.Bool(true),
-		//	inDeployAll: true,
-		//	want: [],
-		//},
 	}
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {

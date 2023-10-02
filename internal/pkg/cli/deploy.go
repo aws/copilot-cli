@@ -324,8 +324,8 @@ func (o *deployOpts) getDeploymentOrder() ([][]string, error) {
 			specifiedWorkloadList = append(specifiedWorkloadList, k)
 		}
 
-		if o.yesInitWkld != nil && !aws.BoolValue(o.yesInitWkld) {
-			// --all and --init-wkld=false: get only get initialized local workloads.
+		if o.yesInitWkld == nil || o.yesInitWkld != nil && !aws.BoolValue(o.yesInitWkld) {
+			// --all and --init-wkld=false, or init-wkld is unspecified: get only get initialized local workloads.
 			initializedWorkloads, err := o.listInitializedLocalWorkloads()
 			if err != nil {
 				return nil, err
