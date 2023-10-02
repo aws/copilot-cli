@@ -4,10 +4,10 @@
 package cli
 
 import (
+	"container/heap"
 	"errors"
 	"fmt"
 	"slices"
-	"sort"
 	"strconv"
 	"strings"
 
@@ -228,6 +228,41 @@ func (o *deployOpts) maybeInitWkld(name string) error {
 	return nil
 }
 
+type workloadPriority struct {
+	priority  int
+	workloads []string
+}
+type pq []workloadPriority
+
+// These methods satisfy heap.Interface.
+
+// Len returns the length of the data structure.
+func (p pq) Len() int { return len(p) }
+
+// Less returns the lesser of two elements in the array, compared by priority.
+func (p pq) Less(i, j int) bool { return p[i].priority < p[j].priority }
+
+// Swap swaps the positions of two elements in the priority queue.
+func (p pq) Swap(i, j int) {
+	p[i], p[j] = p[j], p[i]
+}
+
+// Push appends a new element to the back of the underlying array.
+func (p *pq) Push(x any) {
+	*p = append(*p, x.(workloadPriority))
+}
+
+// Pop removes the last element from the array.
+func (p *pq) Pop() any {
+	old := *p
+	n := len(old)
+	res := old[n-1]
+	*p = old[:n-1]
+	return res
+}
+
+var _ heap.Interface = (*pq)(nil)
+
 // parseDeploymentOrderTags takes a list of workload names, optionally tagged with a priority. Lower priorities will be
 // deployed first.
 //
@@ -312,36 +347,32 @@ func (o *deployOpts) getDeploymentOrder() ([][]string, error) {
 		}
 	}
 
-	type workloadPriority struct {
-		priority  int
-		workloads []string
-	}
-	deploymentGroups := make([]workloadPriority, len(groupsMap))
-	i := 0
+	deploymentGroups := make(pq, 0, len(groupsMap))
+	heap.Init(&deploymentGroups)
 	for k, v := range groupsMap {
-		deploymentGroups[i] = workloadPriority{
+		heap.Push(&deploymentGroups, workloadPriority{
 			priority:  k,
 			workloads: v,
-		}
-		i++
-	}
-	// sort by priority
-	sort.Slice(deploymentGroups, func(i, j int) bool { return deploymentGroups[i].priority < deploymentGroups[j].priority })
+		})
 
-	res := make([][]string, len(deploymentGroups))
-	for i, g := range deploymentGroups {
-		res[i] = g.workloads
 	}
-	if deploymentGroups[0].priority != -1 {
+
+	res := make([][]string, 0, len(deploymentGroups))
+	sortedDeploymentGroups := make([]workloadPriority, 0, len(deploymentGroups))
+
+	for deploymentGroups.Len() > 0 {
+		v := heap.Pop(&deploymentGroups).(workloadPriority)
+		sortedDeploymentGroups = append(sortedDeploymentGroups, v)
+		res = append(res, v.workloads)
+	}
+
+	if len(sortedDeploymentGroups) == 1 || sortedDeploymentGroups[0].priority != -1 {
 		return res, nil
 	}
 
-	// rotate the array to the left one element so that the -1 priority appears at the end.
+	// Rotate the array to the left one element so that the -1 priority appears at the end.
 	first := res[0]
-	for i := 1; i < len(res); i++ {
-		res[i-1] = res[i]
-	}
-	res[len(res)-1] = first
+	res = append(res[1:], first)
 
 	return res, nil
 }

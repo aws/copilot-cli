@@ -1088,6 +1088,44 @@ func Test_deployOpts_getDeploymentOrder(t *testing.T) {
 			},
 			mockStore: func(m *mocks.Mockstore) {},
 		},
+		"with order tags and groups, --all, initWkld unspecified": {
+			inWorkloadNames: []string{"fe/1", "be/2", "db/2", "worker/5"},
+			inInitWkld:      nil,
+			inDeployAll:     true,
+			want:            [][]string{{"fe"}, {"be", "db"}, {"worker"}},
+			mockWs: func(m *mocks.MockwsWlDirReader) {
+				m.EXPECT().ListWorkloads().Return([]string{"be", "db", "fe", "worker"}, nil)
+			},
+			mockStore: func(m *mocks.Mockstore) {},
+		},
+		"with all order tags, --all, initWkld unspecified": {
+			inWorkloadNames: []string{"fe/1", "be/2", "db/3", "worker/4"},
+			inInitWkld:      nil,
+			inDeployAll:     true,
+			want:            [][]string{{"fe"}, {"be"}, {"db"}, {"worker"}},
+			mockWs: func(m *mocks.MockwsWlDirReader) {
+				m.EXPECT().ListWorkloads().Return([]string{"be", "db", "fe", "worker"}, nil)
+			},
+			mockStore: func(m *mocks.Mockstore) {},
+		},
+		"with some order tags --all, intWkld unspecified": {
+			inWorkloadNames: []string{"be/2", "db/3"},
+			inInitWkld:      nil,
+			inDeployAll:     true,
+			want:            [][]string{{"be"}, {"db"}, {"fe", "worker"}},
+			mockWs: func(m *mocks.MockwsWlDirReader) {
+				m.EXPECT().ListWorkloads().Return([]string{"be", "db", "fe", "worker"}, nil)
+			},
+			mockStore: func(m *mocks.Mockstore) {},
+		},
+		"with some order tags, --all false, intWkld unspecified": {
+			inWorkloadNames: []string{"be/2", "db/3"},
+			inInitWkld:      nil,
+			inDeployAll:     false,
+			want:            [][]string{{"be"}, {"db"}},
+			mockWs:          func(m *mocks.MockwsWlDirReader) {},
+			mockStore:       func(m *mocks.Mockstore) {},
+		},
 		//"no order tags, --all, initWkld specified": {
 		//	inWorkloadNames: []string{"fe", "be", "db"},
 		//	inInitWkld: aws.Bool(true),
@@ -1121,7 +1159,7 @@ func Test_deployOpts_getDeploymentOrder(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 				for i := range got {
-					require.ElementsMatch(t, tt.want[i], got[i])
+					require.ElementsMatch(t, tt.want[i], got[i], "list 1: %v, list2: %v", tt.want, got)
 				}
 			}
 		})
