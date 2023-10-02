@@ -247,6 +247,8 @@ func TestBackendService_Template(t *testing.T) {
 				Rolling: aws.String("recreate"),
 			}}
 		privatePlacement := manifest.PrivateSubnetPlacement
+		mft.Network.Connect.Alias = aws.String("api")
+		mft.Network.Connect.EnableServiceConnect = aws.Bool(true)
 		mft.Network.VPC.Placement = manifest.PlacementArgOrString{
 			PlacementString: &privatePlacement,
 		}
@@ -314,9 +316,13 @@ Outputs:
 				StartPeriod: aws.Int64(0),
 				Timeout:     aws.Int64(10),
 			},
-			HTTPTargetContainer: template.HTTPTargetContainer{
-				Port: "8080",
-				Name: "api",
+			ServiceConnectOpts: template.ServiceConnectOpts{
+				Server: &template.ServiceConnectServer{
+					Name:  "api",
+					Port:  "8080",
+					Alias: "api",
+				},
+				Client: true,
 			},
 			GracePeriod: aws.Int64(manifest.DefaultHealthCheckGracePeriod),
 			CustomResources: map[string]template.S3ObjectLocation{
@@ -426,6 +432,7 @@ Outputs:
 			},
 		}
 		privatePlacement := manifest.PrivateSubnetPlacement
+		mft.Network.Connect.EnableServiceConnect = aws.Bool(true)
 		mft.Network.VPC.Placement = manifest.PlacementArgOrString{
 			PlacementString: &privatePlacement,
 		}
@@ -515,9 +522,12 @@ Outputs:
 					PortMappings: []*template.PortMapping{},
 				},
 			},
-			HTTPTargetContainer: template.HTTPTargetContainer{
-				Name: "envoy",
-				Port: "443",
+			ServiceConnectOpts: template.ServiceConnectOpts{
+				Server: &template.ServiceConnectServer{
+					Name: "envoy",
+					Port: "443",
+				},
+				Client: true,
 			},
 			CustomResources: map[string]template.S3ObjectLocation{
 				"EnvControllerFunction": {

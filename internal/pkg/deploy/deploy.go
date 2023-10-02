@@ -191,7 +191,7 @@ func (s *Store) listDeployedWorkloads(appName string, envName string, workloadTy
 	var wklds []string
 	for _, resource := range resources {
 		name := resource.Tags[ServiceTagKey]
-		if name == "" || !slices.Contains(wklds, name) {
+		if name == "" || slices.Contains(wklds, name) {
 			// To avoid listing duplicate service entry in a case when service has addons stack.
 			continue
 		}

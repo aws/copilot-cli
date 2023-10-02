@@ -1032,3 +1032,86 @@ func TestLoadBalancedWebService_NetworkLoadBalancerTarget(t *testing.T) {
 		})
 	}
 }
+
+func TestLoadBalancedWebService_ServiceConnectTarget(t *testing.T) {
+	testCases := map[string]struct {
+		in                         LoadBalancedWebService
+		wantedServiceConnectTarget *ServiceConnectTargetContainer
+	}{
+		"should return primary container name/image port as targetContainer/targetPort in case targetContainer and targetPort is not given": {
+			in: LoadBalancedWebService{
+				Workload: Workload{
+					Name: aws.String("foo"),
+					Type: aws.String("Load Balanced WebService"),
+				},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: ImageWithPortAndHealthcheck{
+						ImageWithPort: ImageWithPort{
+							Port: aws.Uint16(80),
+						},
+					},
+				},
+			},
+			wantedServiceConnectTarget: &ServiceConnectTargetContainer{
+				Container: "foo",
+				Port:      "80",
+			},
+		},
+		"should return alb targetContainer/targetPort if main routing rule is defined": {
+			in: LoadBalancedWebService{
+				Workload: Workload{
+					Name: aws.String("foo"),
+					Type: aws.String("Load Balanced WebService"),
+				},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: ImageWithPortAndHealthcheck{
+						ImageWithPort: ImageWithPort{
+							Port: aws.Uint16(80),
+						},
+					},
+					HTTPOrBool: HTTPOrBool{
+						HTTP: HTTP{
+							Main: RoutingRule{
+								TargetContainer: aws.String("foo"),
+								TargetPort:      aws.Uint16(8080),
+							},
+						},
+					},
+				},
+			},
+			wantedServiceConnectTarget: &ServiceConnectTargetContainer{
+				Container: "foo",
+				Port:      "8080",
+			},
+		},
+		"should return nil if container protocol is udp": {
+			in: LoadBalancedWebService{
+				Workload: Workload{
+					Name: aws.String("foo"),
+					Type: aws.String("Load Balanced WebService"),
+				},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: ImageWithPortAndHealthcheck{
+						ImageWithPort: ImageWithPort{
+							Port: aws.Uint16(80),
+						},
+					},
+					NLBConfig: NetworkLoadBalancerConfiguration{
+						Listener: NetworkLoadBalancerListener{
+							Port: aws.String("80/udp"),
+						},
+					},
+				},
+			},
+			wantedServiceConnectTarget: nil,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			exposedPorts, _ := tc.in.ExposedPorts()
+			targetSCContainer := tc.in.ServiceConnectTarget(exposedPorts)
+			require.Equal(t, tc.wantedServiceConnectTarget, targetSCContainer)
+		})
+	}
+}

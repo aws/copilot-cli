@@ -180,14 +180,10 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	var scConfig *template.ServiceConnect
-	if s.manifest.Network.Connect.Enabled() {
-		scConfig = convertServiceConnect(s.manifest.Network.Connect)
-	}
-
-	targetContainer, targetContainerPort, err := s.manifest.HTTPOrBool.Main.Target(exposedPorts)
-	if err != nil {
-		return "", err
+	scTarget := s.manifest.ServiceConnectTarget(exposedPorts)
+	scOpts := template.ServiceConnectOpts{
+		Server: convertServiceConnectServer(s.manifest.Network.Connect, scTarget),
+		Client: s.manifest.Network.Connect.Enabled(),
 	}
 
 	// Set container-level feature flag.
@@ -229,11 +225,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		Storage:                 convertStorageOpts(s.manifest.Name, s.manifest.Storage),
 
 		// ALB configs.
-		ALBEnabled: !s.manifest.HTTPOrBool.Disabled(),
-		HTTPTargetContainer: template.HTTPTargetContainer{
-			Port: targetContainerPort,
-			Name: targetContainer,
-		},
+		ALBEnabled:  !s.manifest.HTTPOrBool.Disabled(),
 		GracePeriod: s.convertGracePeriod(),
 		ALBListener: albListenerConfig,
 
@@ -243,7 +235,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		NLB:                  nlbConfig.settings,
 
 		// service connect and service discovery options.
-		ServiceConnect:           scConfig,
+		ServiceConnectOpts:       scOpts,
 		ServiceDiscoveryEndpoint: s.rc.ServiceDiscoveryEndpoint,
 
 		// Additional options for request driven web service templates.

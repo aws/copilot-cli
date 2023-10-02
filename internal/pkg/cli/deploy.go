@@ -6,15 +6,16 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"slices"
+	"sort"
+	"strconv"
+	"strings"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/dustin/go-humanize/english"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
-	"slices"
-	"sort"
-	"strconv"
-	"strings"
 
 	"github.com/aws/copilot-cli/cmd/copilot/template"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
