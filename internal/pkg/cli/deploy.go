@@ -389,8 +389,8 @@ func (o *deployOpts) listInitializedLocalWorkloads() ([]string, error) {
 }
 
 type workloadCommand struct {
+	actionCommand
 	name string
-	cmd  actionCommand
 }
 
 func getTotalNumberOfWorkloads(deploymentGroups [][]workloadCommand) int {
@@ -445,8 +445,8 @@ func (o *deployOpts) Run() error {
 			}
 
 			cmds[order] = append(cmds[order], workloadCommand{
-				name: workload,
-				cmd:  deployCmd,
+				name:          workload,
+				actionCommand: deployCmd,
 			})
 			// 3. Ask() and Validate() for required info.
 			if err := deployCmd.Ask(); err != nil {
@@ -468,13 +468,13 @@ func (o *deployOpts) Run() error {
 		// 2. Modify labeledSyncBuffer so it can display a spinner.
 		// 3. Wrap Execute() in a goroutine with ErrorGroup and context
 		for i, cmd := range deploymentGroup {
-			if err := cmd.cmd.Execute(); err != nil {
+			if err := cmd.Execute(); err != nil {
 				var errNoInfraChanges *errNoInfrastructureChanges
 				if !errors.As(err, &errNoInfraChanges) {
 					return fmt.Errorf("execute deployment %d of %d in group %d: %w", i+1, len(deploymentGroup), g+1, err)
 				}
 			}
-			if err := cmd.cmd.RecommendActions(); err != nil {
+			if err := cmd.RecommendActions(); err != nil {
 				return err
 			}
 		}
