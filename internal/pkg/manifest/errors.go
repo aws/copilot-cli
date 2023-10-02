@@ -255,5 +255,7 @@ type errHealthCheckPortExposedWithInvalidProtocol struct {
 }
 
 func (e *errHealthCheckPortExposedWithInvalidProtocol) Error() string {
-	return fmt.Sprintf(`container %q exposes port %d with healthchecks using invalid protocol %s`, e.container, e.healthCheckPort, e.protocol)
+	return fmt.Sprintf(`container %q exposes port %d using protocol %s invalid for health checks. Valid protocol %s %s.`, 
+		e.container, e.healthCheckPort, e.protocol, english.PluralWord(len(validHealthCheckProtocols), "is", "are"), 
+		english.WordSeries(quoteStringSlice(validHealthCheckProtocols), "or"))
 }

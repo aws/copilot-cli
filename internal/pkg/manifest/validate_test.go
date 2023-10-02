@@ -495,7 +495,7 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 					},
 				},
 			},
-			wantedError: fmt.Errorf(`validate load balancer health check ports: container "mockName" exposes port 80 with healthchecks using invalid protocol udp`),
+			wantedError: fmt.Errorf(`validate load balancer health check ports: container "mockName" exposes port 80 using protocol udp invalid for health checks. Valid protocol is "TCP".`),
 		},
 		"error if fail to validate deployment": {
 			lbConfig: LoadBalancedWebService{
@@ -4063,7 +4063,7 @@ func TestValidateHealthCheckPorts(t *testing.T) {
 				mainContainerPort: lbws.ImageConfig.Port,
 				nlb:               lbwsWithInvalidHealthChecks.NLBConfig,
 			},
-			wanted: fmt.Errorf(`container "mockWorkload" exposes port 8080 with healthchecks using invalid protocol udp`),
+			wanted: fmt.Errorf(`container "mockWorkload" exposes port 8080 using protocol udp invalid for health checks. Valid protocol is "TCP".`),
 		},
 		"error with healthcheck on nlb udp from alb routing rule": {
 			in: validateHealthCheckPortsOpts{
@@ -4071,7 +4071,7 @@ func TestValidateHealthCheckPorts(t *testing.T) {
 				mainContainerPort: lbws.ImageConfig.Port,
 				alb:               lbwsWithInvalidHealthChecks.HTTPOrBool.HTTP,
 			},
-			wanted: fmt.Errorf(`container "mockWorkload" exposes port 8080 with healthchecks using invalid protocol udp`),
+			wanted: fmt.Errorf(`container "mockWorkload" exposes port 8080 using protocol udp invalid for health checks. Valid protocol is "TCP".`),
 		},
 		"error with healthcheck from image port": {
 			in: validateHealthCheckPortsOpts{
@@ -4080,7 +4080,7 @@ func TestValidateHealthCheckPorts(t *testing.T) {
 				alb:               lbws.HTTPOrBool.HTTP,
 				nlb:               lbws.NLBConfig,
 			},
-			wanted: fmt.Errorf(`container "mockWorkload" exposes port 8080 with healthchecks using invalid protocol udp`),
+			wanted: fmt.Errorf(`container "mockWorkload" exposes port 8080 using protocol udp invalid for health checks. Valid protocol is "TCP".`),
 		},
 		"no error with valid healthchecks": {
 			in: validateHealthCheckPortsOpts{

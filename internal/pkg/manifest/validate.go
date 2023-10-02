@@ -152,12 +152,12 @@ func (l LoadBalancedWebService) validate() error {
 	}); err != nil {
 		return fmt.Errorf("validate unique exposed ports: %w", err)
 	}
-	exposedPortsIndex, err := l.ExposedPorts()
+	ports, err := l.ExposedPorts()
 	if err != nil {
 		return err
 	}
 	if err = validateHealthCheckPorts(validateHealthCheckPortsOpts{
-		exposedPorts:      exposedPortsIndex,
+		exposedPorts:      ports,
 		mainContainerPort: l.ImageConfig.Port,
 		alb:               l.HTTPOrBool.HTTP,
 		nlb:               l.NLBConfig,
@@ -2040,12 +2040,14 @@ func validateHealthCheckPorts(opts validateHealthCheckPortsOpts) error {
 	}
 
 	for _, listener := range opts.nlb.NLBListeners() {
-		healthCheckPort := listener.HealthCheckPort(opts.mainContainerPort)
+		healthCheckPort, err := listener.HealthCheckPort(aws.Uint16Value(opts.mainContainerPort))
+		if err != nil {
+			return err
+		}
 		if err := validateHealthCheckPort(healthCheckPort, opts); err != nil {
 			return err
 		}
 	}
-
 	return nil
 }
 
@@ -2065,7 +2067,6 @@ func validateHealthCheckPort(port uint16, opts validateHealthCheckPortsOpts) err
 			}
 		}
 	}
-
 	return nil
 }
 
