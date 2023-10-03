@@ -20,6 +20,27 @@ Copilot v1.31 brings big enhancements to help you develop more flexibly and effi
 
 - **NLB enhancements**: You can now add security groups to Copilot-managed NLBs. NLBs also support the UDP protocol.
 - **Better task failure logs**: Copilot will show more descriptive information during deployments when tasks fail, allowing better troubleshooting.
+You can view the ECS task stopped reasons for the two most recent tasks during deployments using copilot [noun] deploy.
+
+```console
+  - An ECS service to run and maintain your tasks in the environment cluster
+    Deployments                                                                                                              
+               Revision  Rollout        Desired  Running  Failed  Pending                                                            
+      PRIMARY  11        [in progress]  1        0        1       0                                                                  
+      ACTIVE   8         [completed]    1        1        0       0                                                                  
+    Latest 2 stopped tasks                                                                                                   
+      TaskId    CurrentStatus   DesiredStatus                                                                                        
+      6b1d6e32  DEPROVISIONING  STOPPED                                                                                              
+      9802d212  STOPPED         STOPPED                                                                                              
+                                                                                                                                     
+    ✘ Latest 2 tasks stopped reason                                                                                 
+      - [6b1d6e32,9802d212]: Essential container in task exited                                                                      
+                                                                                                                                     
+    Troubleshoot task stopped reason                                                                                         
+      1. You can run `copilot svc logs --previous` to see the logs of the last stopped task.                                
+      2. You can visit this article https://repost.aws/knowledge-center/ecs-task-stopped.          
+```
+
 - **`copilot deploy` enhancements: You can now deploy multiple workloads at once, or deploy all local workloads with `--all`.
 - **Importing an ACM certificate for your Static Site**: You can now bring your own ACM certificate for the Static Site service. [See detailed section](#importing-an-acm-certificate-for-your-static-site)
 
