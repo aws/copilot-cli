@@ -381,19 +381,14 @@ func (o *deployOpts) getDeploymentOrder() ([][]string, error) {
 	}
 
 	res := make([][]string, 0, deploymentGroups.Len())
-	sortedDeploymentGroups := make([]workloadPriority, 0, deploymentGroups.Len())
-
 	for deploymentGroups.Len() > 0 {
 		v, ok := deploymentGroups.Pop()
 		if !ok || v == nil {
 			continue
 		}
-		sortedDeploymentGroups = append(sortedDeploymentGroups, *v)
 		res = append(res, v.workloads)
 	}
-
 	return res, nil
-
 }
 
 func (o *deployOpts) listStoreWorkloads() ([]*config.Workload, error) {
