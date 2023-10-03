@@ -41,6 +41,53 @@ const (
 	jobWkldType = "job"
 )
 
+// FilterItemsByStrings is a generic function to return the subset of wantedStrings that exists in possibleItems.
+// stringFunc is a method to convert the generic item type (T) to a string; for example, one can convert a struct of type
+// *config.Workload to a string by passing
+//
+//	func(w *config.Workload) string { return w.Name }.
+//
+// Likewise, FilterItemsByStrings can work on a list of strings by returning the unmodified item:
+//
+//	FilterItemsByStrings(wantedStrings, stringSlice2, func(s string) string { return s })
+//
+// It returns a list of strings (items whose stringFunc() exists in the list of wantedStrings).
+func FilterItemsByStrings[T any](wantedStrings []string, possibleItems []T, stringFunc func(T) string) []string {
+	m := make(map[string]bool)
+	for _, item := range wantedStrings {
+		m[item] = true
+	}
+	res := make([]string, 0, len(wantedStrings))
+	for _, item := range possibleItems {
+		if m[stringFunc(item)] {
+			res = append(res, stringFunc(item))
+		}
+	}
+	return res
+}
+
+// FilterOutItems is a generic function to return the subset of allItems which does not include the items specified in
+// unwantedItems. stringFunc is a function which maps the unwantedItem type T to a string value. For example, one can
+// convert a struct of type *config.Workload to a string by passing
+//
+//	func(w *config.Workload) string { return w.Name }
+//
+// as the stringFunc parameter.
+func FilterOutItems[T any](allItems []string, unwantedItems []T, stringFunc func(T) string) []string {
+	isUnwanted := make(map[string]bool)
+	for _, item := range unwantedItems {
+		isUnwanted[stringFunc(item)] = true
+	}
+	var filtered []string
+	for _, str := range allItems {
+		if isUnwanted[str] {
+			continue
+		}
+		filtered = append(filtered, str)
+	}
+	return filtered
+}
+
 type deployVars struct {
 	deployWkldVars
 
@@ -331,7 +378,7 @@ func (o *deployOpts) getDeploymentOrder() ([][]string, error) {
 			if err != nil {
 				return nil, err
 			}
-			workloadsToAppend := selector.FilterOutItems(initializedWorkloads, specifiedWorkloadList, func(s string) string { return s })
+			workloadsToAppend := FilterOutItems(initializedWorkloads, specifiedWorkloadList, func(s string) string { return s })
 			if len(workloadsToAppend) != 0 {
 				groupsMap[-1] = append(groupsMap[-1], workloadsToAppend...)
 			}
@@ -341,7 +388,7 @@ func (o *deployOpts) getDeploymentOrder() ([][]string, error) {
 			if err != nil {
 				return nil, err
 			}
-			workloadsToAppend := selector.FilterOutItems(localWorkloads, specifiedWorkloadList, func(s string) string { return s })
+			workloadsToAppend := FilterOutItems(localWorkloads, specifiedWorkloadList, func(s string) string { return s })
 			if len(workloadsToAppend) != 0 {
 				groupsMap[-1] = append(groupsMap[-1], workloadsToAppend...)
 			}
@@ -416,7 +463,7 @@ func (o *deployOpts) listInitializedLocalWorkloads() ([]string, error) {
 		return nil, err
 	}
 
-	o.initializedWsWorkloads = selector.FilterItemsByStrings(localWorkloads, storeWls, func(workload *config.Workload) string { return workload.Name })
+	o.initializedWsWorkloads = FilterItemsByStrings(localWorkloads, storeWls, func(workload *config.Workload) string { return workload.Name })
 	return o.initializedWsWorkloads, nil
 }
 
@@ -556,7 +603,48 @@ func (o *deployOpts) askNames() error {
 	if err != nil {
 		return fmt.Errorf("select service or job: %w", err)
 	}
+<<<<<<< Updated upstream
 	o.workloadNames = names
+=======
+	if len(names) == 1 {
+		o.workloadNames = names
+		return nil
+	}
+
+	// Select workload priority by repeatedly prompting with a multiselect until the list of options is depleted.
+	options := names
+	taggedOptions := make([]string, 0, len(options))
+	currentPriority := 1
+	for len(options) > 0 {
+		deploymentGroupIndex := "next"
+		if currentPriority == 1 {
+			deploymentGroupIndex = "first"
+		}
+		selectedNames, err := o.prompt.MultiSelect(
+			fmt.Sprintf("Which workload(s) would you like to deploy in your %s deployment group?", deploymentGroupIndex),
+			"These workloads will be deployed together.",
+			append(options, optionAllRemainingWorkloads),
+			prompt.RequireMinItems(1),
+			prompt.WithFinalMessage(fmt.Sprintf("Group %d", currentPriority)),
+		)
+		if err != nil {
+			return fmt.Errorf("select workloads for deployment group: %w", err)
+		}
+		if slices.Contains(selectedNames, optionAllRemainingWorkloads) {
+			selectedNames = options
+		}
+
+		// Tag all selected workloads with the given priority.
+		for _, name := range selectedNames {
+			taggedOptions = append(taggedOptions, fmt.Sprintf("%s/%d", name, currentPriority))
+		}
+
+		options = FilterOutItems(options, selectedNames, func(a string) string { return a })
+		currentPriority++
+	}
+
+	o.workloadNames = taggedOptions
+>>>>>>> Stashed changes
 	return nil
 }
 
