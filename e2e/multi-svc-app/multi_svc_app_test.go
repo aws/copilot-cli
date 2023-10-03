@@ -247,8 +247,11 @@ var _ = Describe("Multiple Service App", func() {
 				route := svc.Routes[0]
 				Expect(route.Environment).To(Equal("test"))
 
-				// route.URL for "front-end" is of the form `(alb url) or (nlb url), so we split to retrieve just one valid url`
-				routeURL = strings.Split(route.URL, " ")[0]
+				// route.URL is of the form `example-alb.elb.us-west-2.amazonaws.com or example-nlb.elb.us-west-2.amazonaws.com, so we split to retrieve just one valid url`
+				routeURLs := strings.Split(route.URL, " ")
+				Expect(len(svc.Routes)).To(BeNumerically(">", 1))
+
+				routeURL = routeURLs[0]
 
 				// Since the front-end was added first, it should have no suffix.
 				if svcName == "front-end" {
@@ -332,8 +335,11 @@ var _ = Describe("Multiple Service App", func() {
 			route := svc.Routes[0]
 			Expect(route.Environment).To(Equal("test"))
 
-			// route.URL is of the form `(alb url) or (nlb url), so we split to retrieve just one valid url`
-			routeURL = strings.Split(route.URL, " ")[0]
+			// route.URL is of the form `example-alb.elb.us-west-2.amazonaws.com or example-nlb.elb.us-west-2.amazonaws.com, so we split to retrieve just one valid url`
+			routeURLs := strings.Split(route.URL, " ")
+			Expect(len(svc.Routes)).To(BeNumerically(">", 1))
+
+			routeURL = routeURLs[0]
 
 			resp, fetchErr := http.Get(fmt.Sprintf("%s/service-endpoint-test/", routeURL))
 			Expect(fetchErr).NotTo(HaveOccurred())
@@ -357,11 +363,16 @@ var _ = Describe("Multiple Service App", func() {
 			Expect(len(svc.Routes)).To(Equal(1))
 
 			route := svc.Routes[0]
-			addr := strings.Split(route.URL, " ")[2]
+
+			// route.URL is of the form `example-alb.elb.us-west-2.amazonaws.com or example-nlb.elb.us-west-2.amazonaws.com, so we split to retrieve just one valid url`
+			routeURLs := strings.Split(route.URL, " ")
+			Expect(len(svc.Routes)).To(BeNumerically(">", 1))
+
+			routeURL = routeURLs[0]
 
 			Expect(route.Environment).To(Equal("test"))
 
-			conn, dialErr := net.Dial("udp", addr)
+			conn, dialErr := net.Dial("udp", routeURL)
 			Expect(dialErr).NotTo(HaveOccurred())
 
 			// Send message 5 times in case UDP packets are dropped.
@@ -404,8 +415,11 @@ var _ = Describe("Multiple Service App", func() {
 			route := svc.Routes[0]
 			Expect(route.Environment).To(Equal("test"))
 
-			// route.URL is of the form `(alb url) or (nlb url), so we split to retrieve just one valid url`
-			routeURL = strings.Split(route.URL, " ")[0]
+			// route.URL is of the form `example-alb.elb.us-west-2.amazonaws.com or example-nlb.elb.us-west-2.amazonaws.com, so we split to retrieve just one valid url`
+			routeURLs := strings.Split(route.URL, " ")
+			Expect(len(svc.Routes)).To(BeNumerically(">", 1))
+
+			routeURL = routeURLs[0]
 
 			resp, fetchErr := http.Get(fmt.Sprintf("%s/efs-putter", routeURL))
 			Expect(fetchErr).NotTo(HaveOccurred())
@@ -455,8 +469,12 @@ var _ = Describe("Multiple Service App", func() {
 			// Calls the front end's magicwords endpoint
 			route := svc.Routes[0]
 
-			// route.URL is of the form `(alb url) or (nlb url), so we split to retrieve just one valid url`
-			routeURL = strings.Split(route.URL, " ")[0]
+			// route.URL is of the form `example-alb.elb.us-west-2.amazonaws.com or example-nlb.elb.us-west-2.amazonaws.com, so we split to retrieve just one valid url`
+			routeURLs := strings.Split(route.URL, " ")
+			Expect(len(svc.Routes)).To(BeNumerically(">", 1))
+
+			routeURL = routeURLs[0]
+
 			Expect(route.Environment).To(Equal("test"))
 			resp, fetchErr := http.Get(fmt.Sprintf("%s/magicwords/", routeURL))
 			Expect(fetchErr).NotTo(HaveOccurred())

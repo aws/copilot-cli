@@ -137,16 +137,20 @@ func handleUDPTraffic(wg *sync.WaitGroup) {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	defer udpServer.Close()
 	log.Println("Listening on port 8080...")
 
+	readBuffer := make([]byte, 1024)
 	for {
-		buffer := make([]byte, 1024)
-		_, _, err := udpServer.ReadFrom(buffer)
+		_, _, err := udpServer.ReadFrom(readBuffer)
 		if err != nil {
 			continue
 		}
 		go func() {
-			log.Printf("Received UDP message: %s\n", buffer)
+			msg := string(readBuffer[:])
+			readBuffer = make([]byte, 1024)
+			log.Printf("Received UDP message: %s\n", msg)
 		}()
 	}
 }
