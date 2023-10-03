@@ -654,7 +654,7 @@ type: Worker Service`)
 				m.EXPECT().Execute().Return(&errNoInfrastructureChanges{
 					parentErr: errors.New("some error"),
 				})
-				m.EXPECT().RecommendActions().Times(3)
+				m.EXPECT().RecommendActions().Times(2)
 			},
 			mockCmd: func(m *mocks.Mockcmd) {
 
