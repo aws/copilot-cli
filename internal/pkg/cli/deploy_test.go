@@ -1218,6 +1218,12 @@ func Test_deployOpts_getDeploymentOrder(t *testing.T) {
 				}, nil)
 			},
 		},
+		"no workloads, empty groupsMap": {
+			inWorkloadNames: []string{},
+			wantErr:         "generate deployment groups: no workloads were specified",
+			mockWs:          func(m *mocks.MockwsWlDirReader) {},
+			mockStore:       func(m *mocks.Mockstore) {},
+		},
 	}
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {

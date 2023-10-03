@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/aws/copilot-cli/internal/pkg/queue"
+	"math"
 	"slices"
 	"strconv"
 	"strings"
@@ -300,10 +301,10 @@ func parseDeploymentOrderTags(namesWithOptionalOrder []string) (map[string]int, 
 	// First pass through flags to identify priority groups
 	for _, wkldName := range namesWithOptionalOrder {
 		parts := strings.Split(wkldName, "/")
-		// If there's no priority tag, deploy this service after everything else. Signify this with -1 priority.
+		// If there's no priority tag, deploy this service after everything else. Signify this with math.MaxInt priority.
 		// If there's a valid tag, add it to the map of priorities.
 		if len(parts) == 1 {
-			prioritiesMap[parts[0]] = -1
+			prioritiesMap[parts[0]] = math.MaxInt
 		} else if len(parts) == 2 {
 			order, err := strconv.Atoi(parts[1])
 			if err != nil {
@@ -337,8 +338,11 @@ func (o *deployOpts) getDeploymentOrder() ([][]string, error) {
 	for k, v := range prioritiesMap {
 		groupsMap[v] = append(groupsMap[v], k)
 	}
+	if len(groupsMap) == 0 {
+		return nil, errors.New("generate deployment groups: no workloads were specified")
+	}
 
-	// If --all is specified, we need to add the remainder of workloads with -1 priority according to whether or not --init-wkld is specified.
+	// If --all is specified, we need to add the remainder of workloads with math.MaxInt priority according to whether or not --init-wkld is specified.
 	if o.deployAllWorkloads {
 		specifiedWorkloadList := make([]string, 0, len(prioritiesMap))
 		for k := range prioritiesMap {
@@ -353,7 +357,7 @@ func (o *deployOpts) getDeploymentOrder() ([][]string, error) {
 			}
 			workloadsToAppend := FilterOutItems(initializedWorkloads, specifiedWorkloadList, func(s string) string { return s })
 			if len(workloadsToAppend) != 0 {
-				groupsMap[-1] = append(groupsMap[-1], workloadsToAppend...)
+				groupsMap[math.MaxInt] = append(groupsMap[math.MaxInt], workloadsToAppend...)
 			}
 		} else {
 			// otherwise, add all unspecified local workloads.
@@ -363,7 +367,7 @@ func (o *deployOpts) getDeploymentOrder() ([][]string, error) {
 			}
 			workloadsToAppend := FilterOutItems(localWorkloads, specifiedWorkloadList, func(s string) string { return s })
 			if len(workloadsToAppend) != 0 {
-				groupsMap[-1] = append(groupsMap[-1], workloadsToAppend...)
+				groupsMap[math.MaxInt] = append(groupsMap[math.MaxInt], workloadsToAppend...)
 			}
 		}
 	}
@@ -388,15 +392,8 @@ func (o *deployOpts) getDeploymentOrder() ([][]string, error) {
 		res = append(res, v.workloads)
 	}
 
-	if len(sortedDeploymentGroups) == 1 || sortedDeploymentGroups[0].priority != -1 {
-		return res, nil
-	}
-
-	// Rotate the array to the left one element so that the -1 priority appears at the end.
-	first := res[0]
-	res = append(res[1:], first)
-
 	return res, nil
+
 }
 
 func (o *deployOpts) listStoreWorkloads() ([]*config.Workload, error) {
@@ -447,7 +444,7 @@ type workloadCommand struct {
 }
 
 func getTotalNumberOfWorkloads(deploymentGroups [][]workloadCommand) int {
-	count := 0
+	var count int
 	for i := 0; i < len(deploymentGroups); i++ {
 		count += len(deploymentGroups[i])
 	}
