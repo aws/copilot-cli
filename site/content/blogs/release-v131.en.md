@@ -39,6 +39,13 @@ There are also several other mini improvements:
 
     See the section [Overview](../docs/concepts/overview.en.md) for a more detailed introduction to AWS Copilot.
 
+## Importing certificates for static site
+
+## UDP traffic support
+
+## Better debug information from progress tracker
+
+## Ordered deployments by `copilot deploy`
 
 ## What’s next?
 
