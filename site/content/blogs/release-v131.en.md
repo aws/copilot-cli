@@ -18,9 +18,9 @@ Thanks to every one of you who shows love and support for AWS Copilot.
 
 Copilot v1.31 brings big enhancements to help you develop more flexibly and efficiently:
 
-- **NLB enhancements**: You can now add security groups to Copilot-managed NLBs. NLBs also support the UDP protocol.
+- **NLB enhancements**: You can now add security groups to Copilot-managed [network load balancers](../docs/manifest/lb-web-service.en.md#nlb). NLBs also support the UDP protocol.
 - **Better task failure logs**: Copilot will show more descriptive information during deployments when tasks fail, allowing better troubleshooting.
-- **`copilot deploy` enhancements: You can now deploy multiple workloads at once, or deploy all local workloads with `--all`.
+- **`copilot deploy` enhancements**: You can now deploy multiple workloads at once, or deploy all local workloads with `--all`.
 
 ???+ note "What’s AWS Copilot?"
 
@@ -33,6 +33,15 @@ Copilot v1.31 brings big enhancements to help you develop more flexibly and effi
     See the section [Overview](../docs/concepts/overview.en.md) for a more detailed introduction to AWS Copilot.
 
 ## NLB enhancements
+
+Copilot brings UDP traffic support with an update to your Network Load Balancer! The protocol your NLB uses is specified by the [nlb.port](https://aws.github.io/copilot-cli/docs/manifest/lb-web-service/#nlb-port) field.
+```
+nlb:
+  port: 8080/udp
+```
+
+!!!warning
+  To use the new Security Group, your `NetworkLoadBalancer` and `TargetGroup` resources need to be recreated. With v1.31 this will only happen if you specify `udp` protocol. With v1.33 however, Copilot will make this change for all users.
 
 ## Better task failure logs
 
