@@ -94,10 +94,10 @@ type deployVars struct {
 
 	workloadNames      []string
 	deployAllWorkloads bool
+	yesInitWkld        bool
 
-	yesInitWkld *bool
-	deployEnv   *bool
-	yesInitEnv  *bool
+	deployEnv  *bool
+	yesInitEnv *bool
 
 	region    string
 	tempCreds tempCredsVars
@@ -349,23 +349,23 @@ func (o *deployOpts) getDeploymentOrder() ([][]string, error) {
 			specifiedWorkloadList = append(specifiedWorkloadList, k)
 		}
 
-		if o.yesInitWkld == nil || o.yesInitWkld != nil && !aws.BoolValue(o.yesInitWkld) {
-			// --all and --init-wkld=false, or init-wkld is unspecified: get only get initialized local workloads.
-			initializedWorkloads, err := o.listInitializedLocalWorkloads()
-			if err != nil {
-				return nil, err
-			}
-			workloadsToAppend := FilterOutItems(initializedWorkloads, specifiedWorkloadList, func(s string) string { return s })
-			if len(workloadsToAppend) != 0 {
-				groupsMap[math.MaxInt] = append(groupsMap[math.MaxInt], workloadsToAppend...)
-			}
-		} else {
-			// otherwise, add all unspecified local workloads.
+		if o.yesInitWkld {
+			// Add all unspecified local workloads to the list of workloads to be deployed.
 			localWorkloads, err := o.listLocalWorkloads()
 			if err != nil {
 				return nil, err
 			}
 			workloadsToAppend := FilterOutItems(localWorkloads, specifiedWorkloadList, func(s string) string { return s })
+			if len(workloadsToAppend) != 0 {
+				groupsMap[math.MaxInt] = append(groupsMap[math.MaxInt], workloadsToAppend...)
+			}
+		} else {
+			// Otherwise (--init-wkld is false): get only get initialized local workloads.
+			initializedWorkloads, err := o.listInitializedLocalWorkloads()
+			if err != nil {
+				return nil, err
+			}
+			workloadsToAppend := FilterOutItems(initializedWorkloads, specifiedWorkloadList, func(s string) string { return s })
 			if len(workloadsToAppend) != 0 {
 				groupsMap[math.MaxInt] = append(groupsMap[math.MaxInt], workloadsToAppend...)
 			}
@@ -554,13 +554,13 @@ func (o *deployOpts) askNames() error {
 	}
 
 	if o.deployAllWorkloads {
-		// --all and --init-wkld=false means we should only use the initialized local workloads.
-		if o.yesInitWkld != nil && !aws.BoolValue(o.yesInitWkld) {
-			o.workloadNames = o.initializedWsWorkloads
+		// --all and --init-wkld=true, means we should use ALL local workloads as our list of names.
+		if o.yesInitWkld {
+			o.workloadNames = o.wsWorkloads
 			return nil
 		}
-		// --all and --init-wkld=true, or --init-wkld unspecified, means we should use ALL local workloads as our list of names.
-		o.workloadNames = o.wsWorkloads
+		// --all and --init-wkld=false means we should only use the initialized local workloads.
+		o.workloadNames = o.initializedWsWorkloads
 		return nil
 	}
 
@@ -734,7 +734,6 @@ func (o *deployOpts) loadWkldCmd(name string) (actionCommand, error) {
 // BuildDeployCmd is the deploy command.
 func BuildDeployCmd() *cobra.Command {
 	vars := deployVars{}
-	var initWorkload bool
 	var initEnvironment bool
 	var deployEnvironment bool
 	cmd := &cobra.Command{
@@ -760,13 +759,6 @@ func BuildDeployCmd() *cobra.Command {
 			opts, err := newDeployOpts(vars)
 			if err != nil {
 				return err
-			}
-
-			if cmd.Flags().Changed(yesInitWorkloadFlag) {
-				opts.yesInitWkld = aws.Bool(false)
-				if initWorkload {
-					opts.yesInitWkld = aws.Bool(true)
-				}
 			}
 
 			if cmd.Flags().Changed(yesInitEnvFlag) {
@@ -801,7 +793,7 @@ func BuildDeployCmd() *cobra.Command {
 
 	cmd.Flags().BoolVar(&deployEnvironment, deployEnvFlag, false, deployEnvFlagDescription)
 	cmd.Flags().BoolVar(&initEnvironment, yesInitEnvFlag, false, yesInitEnvFlagDescription)
-	cmd.Flags().BoolVar(&initWorkload, yesInitWorkloadFlag, false, yesInitWorkloadFlagDescription)
+	cmd.Flags().BoolVar(&vars.yesInitWkld, yesInitWorkloadFlag, false, yesInitWorkloadFlagDescription)
 	cmd.Flags().BoolVar(&vars.deployAllWorkloads, allFlag, false, allWorkloadsFlagDescription)
 
 	cmd.Flags().StringVar(&vars.profile, profileFlag, "", profileFlagDescription)

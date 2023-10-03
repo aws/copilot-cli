@@ -44,7 +44,7 @@ type: Worker Service`)
 		inNames      []string
 		inDeployAll  bool
 		inEnvName    string
-		inShouldInit *bool
+		inShouldInit bool
 		inDeployEnv  *bool
 		inInitEnv    *bool
 
@@ -133,7 +133,7 @@ type: Worker Service`)
 			inEnvName:    "test",
 			inInitEnv:    aws.Bool(false),
 			inDeployEnv:  aws.Bool(false),
-			inShouldInit: aws.Bool(true),
+			inShouldInit: true,
 			mockWs: func(m *mocks.MockwsWlDirReader) {
 				m.EXPECT().ReadWorkloadManifest("fe").Return(mockManifest, nil)
 				m.EXPECT().ListEnvironments().Return([]string{"test"}, nil)
@@ -453,7 +453,7 @@ type: Worker Service`)
 			inEnvName:         "test",
 			wantedErr:         "add workload to app: some error",
 			inDeployEnv:       aws.Bool(false),
-			inShouldInit:      aws.Bool(true),
+			inShouldInit:      true,
 			mockSel:           func(m *mocks.MockwsSelector) {},
 			mockPrompt:        func(m *mocks.Mockprompter) {},
 			mockActionCommand: func(m *mocks.MockactionCommand) {},
@@ -592,7 +592,7 @@ type: Worker Service`)
 			inAppName:    "app",
 			inEnvName:    "test",
 			inDeployAll:  true,
-			inShouldInit: aws.Bool(true),
+			inShouldInit: true,
 			inNames:      []string{"be/1", "worker/2"},
 			inInitEnv:    aws.Bool(false),
 			inDeployEnv:  aws.Bool(false),
@@ -640,7 +640,7 @@ type: Worker Service`)
 			inAppName:    "app",
 			inEnvName:    "test",
 			inDeployAll:  true,
-			inShouldInit: aws.Bool(true),
+			inShouldInit: true,
 			inNames:      []string{"be/1", "worker/2"},
 			inInitEnv:    aws.Bool(false),
 			inDeployEnv:  aws.Bool(false),
@@ -1092,7 +1092,7 @@ func Test_deployOpts_getDeploymentOrder(t *testing.T) {
 	}
 	tests := map[string]struct {
 		inWorkloadNames []string
-		inInitWkld      *bool
+		inInitWkld      bool
 		inDeployAll     bool
 		want            [][]string
 		mockWs          func(m *mocks.MockwsWlDirReader)
@@ -1101,7 +1101,6 @@ func Test_deployOpts_getDeploymentOrder(t *testing.T) {
 	}{
 		"no order tags, --all, initWkld unspecified": {
 			inWorkloadNames: []string{"fe", "be", "db"},
-			inInitWkld:      nil,
 			inDeployAll:     true,
 			want:            [][]string{{"be", "db", "fe"}},
 			mockWs: func(m *mocks.MockwsWlDirReader) {
@@ -1117,7 +1116,6 @@ func Test_deployOpts_getDeploymentOrder(t *testing.T) {
 		},
 		"with order tags and groups, --all, initWkld unspecified": {
 			inWorkloadNames: []string{"fe/1", "be/2", "db/2", "worker/5"},
-			inInitWkld:      nil,
 			inDeployAll:     true,
 			want:            [][]string{{"fe"}, {"be", "db"}, {"worker"}},
 			mockWs: func(m *mocks.MockwsWlDirReader) {
@@ -1134,7 +1132,6 @@ func Test_deployOpts_getDeploymentOrder(t *testing.T) {
 		},
 		"with all order tags, --all, initWkld unspecified": {
 			inWorkloadNames: []string{"fe/1", "be/2", "db/3"},
-			inInitWkld:      nil,
 			inDeployAll:     true,
 			want:            [][]string{{"fe"}, {"be"}, {"db"}, {"worker"}},
 			mockWs: func(m *mocks.MockwsWlDirReader) {
@@ -1151,7 +1148,6 @@ func Test_deployOpts_getDeploymentOrder(t *testing.T) {
 		},
 		"with some order tags --all, intWkld unspecified": {
 			inWorkloadNames: []string{"be/2", "db/3"},
-			inInitWkld:      nil,
 			inDeployAll:     true,
 			want:            [][]string{{"be"}, {"db"}, {"fe", "worker"}},
 			mockWs: func(m *mocks.MockwsWlDirReader) {
@@ -1168,7 +1164,6 @@ func Test_deployOpts_getDeploymentOrder(t *testing.T) {
 		},
 		"with some order tags, some workloads uninitialized, initWkld unspecified": {
 			inWorkloadNames: []string{"be/2", "db/3"},
-			inInitWkld:      nil,
 			inDeployAll:     true,
 			want:            [][]string{{"be"}, {"db"}, {"fe"}},
 			mockWs: func(m *mocks.MockwsWlDirReader) {
@@ -1184,7 +1179,6 @@ func Test_deployOpts_getDeploymentOrder(t *testing.T) {
 		},
 		"with some order tags, --all false, intWkld unspecified": {
 			inWorkloadNames: []string{"be/2", "db/3"},
-			inInitWkld:      nil,
 			inDeployAll:     false,
 			want:            [][]string{{"be"}, {"db"}},
 			mockWs:          func(m *mocks.MockwsWlDirReader) {},
@@ -1192,7 +1186,7 @@ func Test_deployOpts_getDeploymentOrder(t *testing.T) {
 		},
 		"order tags, --all true, initWkld false": {
 			inWorkloadNames: []string{"fe/2", "be/1"},
-			inInitWkld:      aws.Bool(false),
+			inInitWkld:      false,
 			inDeployAll:     true,
 			want:            [][]string{{"be"}, {"fe"}, {"db"}},
 			mockWs: func(m *mocks.MockwsWlDirReader) {
