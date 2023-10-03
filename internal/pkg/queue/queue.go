@@ -7,6 +7,11 @@ package queue
 import "container/heap"
 
 // Lesser is an interface to enable generic structs to be elements of a priority queue.
+// Any struct can become a priority queue element by defining the LessThan method
+// and initializing a new PriorityQueue.
+//
+//		(s myStruct) LessThan(other myStruct) bool
+//	 q := NewPriorityQueue[myStruct]()
 type Lesser[T any] interface {
 	LessThan(T) bool
 }
