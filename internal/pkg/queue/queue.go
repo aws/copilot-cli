@@ -16,10 +16,12 @@ type PriorityQueue[T Lesser[T]] struct {
 	pq pq[T]
 }
 
+// Push adds a new element to the queue and puts it in the correct place.
 func (p *PriorityQueue[T]) Push(x T) {
 	heap.Push(&p.pq, x)
 }
 
+// Pop removes the top element of the queue and restructures it in log(n) time.
 func (p *PriorityQueue[T]) Pop() (*T, bool) {
 	if p.pq.Len() == 0 {
 		return nil, false
@@ -28,6 +30,7 @@ func (p *PriorityQueue[T]) Pop() (*T, bool) {
 	return &v, true
 }
 
+// Len returns the length of the queue.
 func (p *PriorityQueue[T]) Len() int {
 	return p.pq.Len()
 }
