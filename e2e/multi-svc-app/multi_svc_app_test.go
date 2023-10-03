@@ -249,7 +249,7 @@ var _ = Describe("Multiple Service App", func() {
 
 				// route.URL is of the form `example-alb.elb.us-west-2.amazonaws.com or example-nlb.elb.us-west-2.amazonaws.com, so we split to retrieve just one valid url`
 				routeURLs := strings.Split(route.URL, " ")
-				Expect(len(svc.Routes)).To(BeNumerically(">", 1))
+				Expect(len(routeURLs)).To(BeNumerically(">", 1))
 
 				routeURL = routeURLs[0]
 
@@ -337,7 +337,7 @@ var _ = Describe("Multiple Service App", func() {
 
 			// route.URL is of the form `example-alb.elb.us-west-2.amazonaws.com or example-nlb.elb.us-west-2.amazonaws.com, so we split to retrieve just one valid url`
 			routeURLs := strings.Split(route.URL, " ")
-			Expect(len(svc.Routes)).To(BeNumerically(">", 1))
+			Expect(len(routeURLs)).To(BeNumerically(">", 1))
 
 			routeURL = routeURLs[0]
 
@@ -366,7 +366,7 @@ var _ = Describe("Multiple Service App", func() {
 
 			// route.URL is of the form `example-alb.elb.us-west-2.amazonaws.com or example-nlb.elb.us-west-2.amazonaws.com, so we split to retrieve just one valid url`
 			routeURLs := strings.Split(route.URL, " ")
-			Expect(len(svc.Routes)).To(BeNumerically(">", 1))
+			Expect(len(routeURLs)).To(BeNumerically(">", 1))
 
 			routeURL = routeURLs[0]
 
@@ -417,7 +417,7 @@ var _ = Describe("Multiple Service App", func() {
 
 			// route.URL is of the form `example-alb.elb.us-west-2.amazonaws.com or example-nlb.elb.us-west-2.amazonaws.com, so we split to retrieve just one valid url`
 			routeURLs := strings.Split(route.URL, " ")
-			Expect(len(svc.Routes)).To(BeNumerically(">", 1))
+			Expect(len(routeURLs)).To(BeNumerically(">", 1))
 
 			routeURL = routeURLs[0]
 
@@ -471,7 +471,7 @@ var _ = Describe("Multiple Service App", func() {
 
 			// route.URL is of the form `example-alb.elb.us-west-2.amazonaws.com or example-nlb.elb.us-west-2.amazonaws.com, so we split to retrieve just one valid url`
 			routeURLs := strings.Split(route.URL, " ")
-			Expect(len(svc.Routes)).To(BeNumerically(">", 1))
+			Expect(len(routeURLs)).To(BeNumerically(">", 1))
 
 			routeURL = routeURLs[0]
 
