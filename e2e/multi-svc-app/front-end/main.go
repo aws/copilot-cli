@@ -143,15 +143,12 @@ func handleUDPTraffic(wg *sync.WaitGroup) {
 
 	readBuffer := make([]byte, 1024)
 	for {
-		_, _, err := udpServer.ReadFrom(readBuffer)
+		bytesRead, _, err := udpServer.ReadFrom(readBuffer)
 		if err != nil {
 			continue
 		}
-		go func() {
-			msg := string(readBuffer[:])
-			readBuffer = make([]byte, 1024)
-			log.Printf("Received UDP message: %s\n", msg)
-		}()
+		msg := string(readBuffer[:bytesRead])
+		log.Printf("Received UDP message: %s\n", msg)
 	}
 }
 
