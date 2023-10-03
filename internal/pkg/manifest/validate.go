@@ -2034,7 +2034,7 @@ type validateARMOpts struct {
 func validateHealthCheckPorts(opts validateHealthCheckPortsOpts) error {
 	for _, rule := range opts.alb.RoutingRules() {
 		healthCheckPort := rule.HealthCheckPort(opts.mainContainerPort)
-		if err := validateHealthCheckPort(healthCheckPort, opts); err != nil {
+		if err := validateHealthCheckPort(healthCheckPort, opts.exposedPorts); err != nil {
 			return err
 		}
 	}
@@ -2044,16 +2044,16 @@ func validateHealthCheckPorts(opts validateHealthCheckPortsOpts) error {
 		if err != nil {
 			return err
 		}
-		if err := validateHealthCheckPort(healthCheckPort, opts); err != nil {
+		if err := validateHealthCheckPort(healthCheckPort, opts.exposedPorts); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func validateHealthCheckPort(port uint16, opts validateHealthCheckPortsOpts) error {
-	container := opts.exposedPorts.ContainerForPort[port]
-	containerPorts := opts.exposedPorts.PortsForContainer[container]
+func validateHealthCheckPort(port uint16, ports ExposedPortsIndex) error {
+	container := ports.ContainerForPort[port]
+	containerPorts := ports.PortsForContainer[container]
 	for _, exposedPort := range containerPorts {
 		if exposedPort.Port != port {
 			continue
