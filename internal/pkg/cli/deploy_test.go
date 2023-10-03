@@ -103,7 +103,7 @@ type: Worker Service`)
 			inInitEnv:   aws.Bool(false),
 			inDeployEnv: aws.Bool(false),
 			mockSel: func(m *mocks.MockwsSelector) {
-				m.EXPECT().Workloads("Select a service or job in your workspace", "").Return([]string{"fe"}, nil)
+				m.EXPECT().Workloads("Select one or more services or jobs in your workspace.", "").Return([]string{"fe"}, nil)
 			},
 			mockActionCommand: func(m *mocks.MockactionCommand) {
 				m.EXPECT().Ask()
@@ -284,7 +284,7 @@ type: Worker Service`)
 			inDeployEnv: aws.Bool(false),
 			wantedErr:   "ask job deploy: some error",
 			mockSel: func(m *mocks.MockwsSelector) {
-				m.EXPECT().Workloads("Select a service or job in your workspace", "").Return([]string{"mailer"}, nil)
+				m.EXPECT().Workloads("Select one or more services or jobs in your workspace.", "").Return([]string{"mailer"}, nil)
 			},
 			mockActionCommand: func(m *mocks.MockactionCommand) {
 				m.EXPECT().Ask().Return(errors.New("some error"))
@@ -478,7 +478,8 @@ type: Worker Service`)
 			inAppName: "app",
 			wantedErr: "",
 			mockSel: func(m *mocks.MockwsSelector) {
-				m.EXPECT().Workloads("Select a service or job in your workspace", "").Return([]string{"fe"}, nil)
+
+				m.EXPECT().Workloads("Select one or more services or jobs in your workspace.", "").Return([]string{"fe"}, nil)
 				m.EXPECT().Environment("Select an environment to deploy to", "", "app", prompt.Option{Value: "prod", Hint: "uninitialized"}).Return("prod", nil)
 			},
 			mockPrompt: func(m *mocks.Mockprompter) {

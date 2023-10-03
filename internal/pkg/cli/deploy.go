@@ -232,19 +232,19 @@ type workloadPriority struct {
 	priority  int
 	workloads []string
 }
+
+// pq implements a priority queue.
 type pq []workloadPriority
 
-// These methods satisfy heap.Interface.
-
 // Len returns the length of the data structure.
-func (p pq) Len() int { return len(p) }
+func (p *pq) Len() int { return len(*p) }
 
 // Less returns the lesser of two elements in the array, compared by priority.
-func (p pq) Less(i, j int) bool { return p[i].priority < p[j].priority }
+func (p *pq) Less(i, j int) bool { return (*p)[i].priority < (*p)[j].priority }
 
 // Swap swaps the positions of two elements in the priority queue.
-func (p pq) Swap(i, j int) {
-	p[i], p[j] = p[j], p[i]
+func (p *pq) Swap(i, j int) {
+	(*p)[i], (*p)[j] = (*p)[j], (*p)[i]
 }
 
 // Push appends a new element to the back of the underlying array.
@@ -261,6 +261,7 @@ func (p *pq) Pop() any {
 	return res
 }
 
+// Compile-time check that pq satisfies the heap interface from container/heap.
 var _ heap.Interface = (*pq)(nil)
 
 // parseDeploymentOrderTags takes a list of workload names, optionally tagged with a priority. Lower priorities will be
@@ -504,6 +505,10 @@ func (o *deployOpts) Run() error {
 				if !errors.As(err, &errNoInfraChanges) {
 					return fmt.Errorf("execute deployment %d of %d in group %d: %w", i+1, len(deploymentGroup), g+1, err)
 				}
+				// Don't run recommended actions if there is an infra error. It's possible for RecommendActions to panic
+				// when it returns an error (the actionRecommender return is nil in error cases and the struct member
+				// is never set.
+				continue
 			}
 			if err := cmd.RecommendActions(); err != nil {
 				return err
@@ -547,7 +552,7 @@ func (o *deployOpts) askNames() error {
 		return nil
 	}
 
-	names, err := o.sel.Workloads("Select a service or job in your workspace", "")
+	names, err := o.sel.Workloads("Select one or more services or jobs in your workspace.", "")
 	if err != nil {
 		return fmt.Errorf("select service or job: %w", err)
 	}
