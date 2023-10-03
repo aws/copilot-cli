@@ -21,7 +21,7 @@ Copilot v1.31 brings big enhancements to help you develop more flexibly and effi
 - **NLB enhancements**: You can now add security groups to Copilot-managed NLBs. NLBs also support the UDP protocol.
 - **Better task failure logs**: Copilot will show more descriptive information during deployments when tasks fail, allowing better troubleshooting.
 
-You can view the ECS task stopped reasons for the two most recent tasks during deployments using copilot [noun] deploy.
+You can view the ECS task stopped reasons for the two most recent tasks during deployments using `copilot [noun] deploy`.
 
 ```console
   - An ECS service to run and maintain your tasks in the environment cluster
