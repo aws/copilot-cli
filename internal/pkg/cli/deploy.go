@@ -4,9 +4,9 @@
 package cli
 
 import (
-	"container/heap"
 	"errors"
 	"fmt"
+	"github.com/aws/copilot-cli/internal/pkg/queue"
 	"slices"
 	"strconv"
 	"strings"
@@ -280,36 +280,9 @@ type workloadPriority struct {
 	workloads []string
 }
 
-// pq implements a priority queue.
-type pq []workloadPriority
-
-// Len returns the length of the data structure.
-func (p *pq) Len() int { return len(*p) }
-
-// Less returns the lesser of two elements in the array, compared by priority.
-func (p *pq) Less(i, j int) bool { return (*p)[i].priority < (*p)[j].priority }
-
-// Swap swaps the positions of two elements in the priority queue.
-func (p *pq) Swap(i, j int) {
-	(*p)[i], (*p)[j] = (*p)[j], (*p)[i]
+func (w workloadPriority) LessThan(a workloadPriority) bool {
+	return w.priority < a.priority
 }
-
-// Push appends a new element to the back of the underlying array.
-func (p *pq) Push(x any) {
-	*p = append(*p, x.(workloadPriority))
-}
-
-// Pop removes the last element from the array.
-func (p *pq) Pop() any {
-	old := *p
-	n := len(old)
-	res := old[n-1]
-	*p = old[:n-1]
-	return res
-}
-
-// Compile-time check that pq satisfies the heap interface from container/heap.
-var _ heap.Interface = (*pq)(nil)
 
 // parseDeploymentOrderTags takes a list of workload names, optionally tagged with a priority. Lower priorities will be
 // deployed first.
@@ -395,22 +368,23 @@ func (o *deployOpts) getDeploymentOrder() ([][]string, error) {
 		}
 	}
 
-	deploymentGroups := make(pq, 0, len(groupsMap))
-	heap.Init(&deploymentGroups)
+	deploymentGroups := queue.NewPriorityQueue[workloadPriority]()
 	for k, v := range groupsMap {
-		heap.Push(&deploymentGroups, workloadPriority{
+		deploymentGroups.Push(workloadPriority{
 			priority:  k,
 			workloads: v,
 		})
-
 	}
 
-	res := make([][]string, 0, len(deploymentGroups))
-	sortedDeploymentGroups := make([]workloadPriority, 0, len(deploymentGroups))
+	res := make([][]string, 0, deploymentGroups.Len())
+	sortedDeploymentGroups := make([]workloadPriority, 0, deploymentGroups.Len())
 
 	for deploymentGroups.Len() > 0 {
-		v := heap.Pop(&deploymentGroups).(workloadPriority)
-		sortedDeploymentGroups = append(sortedDeploymentGroups, v)
+		v, ok := deploymentGroups.Pop()
+		if !ok || v == nil {
+			continue
+		}
+		sortedDeploymentGroups = append(sortedDeploymentGroups, *v)
 		res = append(res, v.workloads)
 	}
 
@@ -593,7 +567,6 @@ func (o *deployOpts) askNames() error {
 			o.workloadNames = o.initializedWsWorkloads
 			return nil
 		}
-
 		// --all and --init-wkld=true, or --init-wkld unspecified, means we should use ALL local workloads as our list of names.
 		o.workloadNames = o.wsWorkloads
 		return nil
@@ -603,48 +576,7 @@ func (o *deployOpts) askNames() error {
 	if err != nil {
 		return fmt.Errorf("select service or job: %w", err)
 	}
-<<<<<<< Updated upstream
 	o.workloadNames = names
-=======
-	if len(names) == 1 {
-		o.workloadNames = names
-		return nil
-	}
-
-	// Select workload priority by repeatedly prompting with a multiselect until the list of options is depleted.
-	options := names
-	taggedOptions := make([]string, 0, len(options))
-	currentPriority := 1
-	for len(options) > 0 {
-		deploymentGroupIndex := "next"
-		if currentPriority == 1 {
-			deploymentGroupIndex = "first"
-		}
-		selectedNames, err := o.prompt.MultiSelect(
-			fmt.Sprintf("Which workload(s) would you like to deploy in your %s deployment group?", deploymentGroupIndex),
-			"These workloads will be deployed together.",
-			append(options, optionAllRemainingWorkloads),
-			prompt.RequireMinItems(1),
-			prompt.WithFinalMessage(fmt.Sprintf("Group %d", currentPriority)),
-		)
-		if err != nil {
-			return fmt.Errorf("select workloads for deployment group: %w", err)
-		}
-		if slices.Contains(selectedNames, optionAllRemainingWorkloads) {
-			selectedNames = options
-		}
-
-		// Tag all selected workloads with the given priority.
-		for _, name := range selectedNames {
-			taggedOptions = append(taggedOptions, fmt.Sprintf("%s/%d", name, currentPriority))
-		}
-
-		options = FilterOutItems(options, selectedNames, func(a string) string { return a })
-		currentPriority++
-	}
-
-	o.workloadNames = taggedOptions
->>>>>>> Stashed changes
 	return nil
 }
 
