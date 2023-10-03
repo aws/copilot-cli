@@ -38,8 +38,9 @@ import (
 )
 
 const (
-	svcWkldType = "svc"
-	jobWkldType = "job"
+	svcWkldType                 = "svc"
+	jobWkldType                 = "job"
+	optionAllRemainingWorkloads = "All remaining workloads"
 )
 
 // filterItemsByStrings is a generic function to return the subset of wantedStrings that exists in possibleItems.
@@ -130,6 +131,7 @@ type deployOpts struct {
 	wsWorkloads            []string
 	storeWorkloads         []*config.Workload
 	initializedWsWorkloads []string
+	deploymentOrderMap     map[string]int
 }
 
 func newDeployOpts(vars deployVars) (*deployOpts, error) {
@@ -296,7 +298,10 @@ func (w workloadPriority) LessThan(a workloadPriority) bool {
 //
 // It is possible to have multiple workloads of the same priority. We don't guarantee that workloads within priority
 // groups will have identical deployment orders each time.
-func parseDeploymentOrderTags(namesWithOptionalOrder []string) (map[string]int, error) {
+func (o *deployOpts) parseDeploymentOrderTags(namesWithOptionalOrder []string) error {
+	if o.deploymentOrderMap != nil {
+		return nil
+	}
 	prioritiesMap := make(map[string]int)
 	// First pass through flags to identify priority groups
 	for _, wkldName := range namesWithOptionalOrder {
@@ -308,14 +313,15 @@ func parseDeploymentOrderTags(namesWithOptionalOrder []string) (map[string]int, 
 		} else if len(parts) == 2 {
 			order, err := strconv.Atoi(parts[1])
 			if err != nil {
-				return nil, fmt.Errorf("parse deployment order for workloads: %w", err)
+				return fmt.Errorf("parse deployment order for workloads: %w", err)
 			}
 			prioritiesMap[parts[0]] = order
 		} else {
-			return nil, fmt.Errorf("invalid deployment order for workload %s", wkldName)
+			return fmt.Errorf("invalid deployment order for workload %s", wkldName)
 		}
 	}
-	return prioritiesMap, nil
+	o.deploymentOrderMap = prioritiesMap
+	return nil
 }
 
 // getDeploymentOrder parses names and tags from the --name flag, respecting "all".
@@ -328,14 +334,13 @@ func parseDeploymentOrderTags(namesWithOptionalOrder []string) (map[string]int, 
 // TODO: when there's a dependsOn field in the manifest, we should modify this function to respect it.
 func (o *deployOpts) getDeploymentOrder() ([][]string, error) {
 	// Get a map from workload name to deployment priority
-	prioritiesMap, err := parseDeploymentOrderTags(o.workloadNames)
-	if err != nil {
+	if err := o.parseDeploymentOrderTags(o.workloadNames); err != nil {
 		return nil, err
 	}
 
 	// Iterate over priority map to invert it and get groups of workloads with the same priority.
 	groupsMap := make(map[int][]string)
-	for k, v := range prioritiesMap {
+	for k, v := range o.deploymentOrderMap {
 		groupsMap[v] = append(groupsMap[v], k)
 	}
 	if len(groupsMap) == 0 {
@@ -344,8 +349,8 @@ func (o *deployOpts) getDeploymentOrder() ([][]string, error) {
 
 	// If --all is specified, we need to add the remainder of workloads with math.MaxInt priority according to whether or not --init-wkld is specified.
 	if o.deployAllWorkloads {
-		specifiedWorkloadList := make([]string, 0, len(prioritiesMap))
-		for k := range prioritiesMap {
+		specifiedWorkloadList := make([]string, 0, len(o.deploymentOrderMap))
+		for k := range o.deploymentOrderMap {
 			specifiedWorkloadList = append(specifiedWorkloadList, k)
 		}
 
@@ -563,7 +568,46 @@ func (o *deployOpts) askNames() error {
 	if err != nil {
 		return fmt.Errorf("select service or job: %w", err)
 	}
-	o.workloadNames = names
+	if len(names) == 1 {
+		o.workloadNames = names
+		return nil
+	}
+
+	// Select workload priority by repeatedly prompting with a multiselect until the list of options is depleted.
+	options := names
+	taggedOptions := make([]string, 0, len(options))
+	currentPriority := 1
+	for len(options) > 0 {
+		deploymentGroupOrdinalWord := "next"
+		if currentPriority == 1 {
+			deploymentGroupOrdinalWord = "first"
+		}
+		selectedNames, err := o.prompt.MultiSelect(
+			fmt.Sprintf("Which workload(s) would you like to deploy in your %s deployment group?", deploymentGroupOrdinalWord),
+			"These workloads will be deployed together.",
+			append(options, optionAllRemainingWorkloads),
+			prompt.RequireMinItems(1),
+			prompt.WithFinalMessage(fmt.Sprintf("Group %d", currentPriority)),
+		)
+		if err != nil {
+			return fmt.Errorf("select workloads for deployment group: %w", err)
+		}
+		if slices.Contains(selectedNames, optionAllRemainingWorkloads) {
+			selectedNames = options
+		}
+
+		// Tag all selected workloads with the given priority.
+		for _, name := range selectedNames {
+			taggedOptions = append(taggedOptions, fmt.Sprintf("%s/%d", name, currentPriority))
+		}
+
+		options = selector.FilterOutItems(options, selectedNames, func(a string) string { return a })
+		currentPriority++
+	}
+
+	if err := o.parseDeploymentOrderTags(taggedOptions); err != nil {
+		return err
+	}
 	return nil
 }
 
