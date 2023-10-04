@@ -29,22 +29,23 @@ The steps involved in `copilot deploy` are as follows:
 ## What are the flags?
 
 ```
+      --all                            Optional. Deploy all workloads with manifests in the current Copilot workspace.
       --allow-downgrade                Optional. Allow using an older version of Copilot to update Copilot components
                                        updated by a newer version of Copilot.
   -a, --app string                     Name of the application.
       --aws-access-key-id string       Optional. An AWS access key for the environment account.
       --aws-secret-access-key string   Optional. An AWS secret access key for the environment account.
       --aws-session-token string       Optional. An AWS session token for temporary credentials.
-      --deploy-env bool                Deploy the target environment before deploying the workload.
-      --detach bool                    Optional. Skip displaying CloudFormation deployment progress.
+      --deploy-env                     Deploy the target environment before deploying the workload.
+      --detach                         Optional. Skip displaying CloudFormation deployment progress.
   -e, --env string                     Name of the environment.
       --force                          Optional. Force a new service deployment using the existing image.
                                        Not available with the "Static Site" service type.
   -h, --help                           help for deploy
-      --init-env bool                  Confirm initializing the target environment if it does not exist.
-      --init-wkld bool                 Optional. Initialize a workload before deploying it.
-  -n, --name string                    Name of the service or job.
-      --no-rollback bool               Optional. Disable automatic stack 
+      --init-env                       Confirm initializing the target environment if it does not exist.
+      --init-wkld                      Optional. When specified with --all, initialize all local workloads before deployment.
+  -n, --name strings                   Names of the service or jobs to deploy, with an optional priority tag (e.g. fe/1, be/2, my-job/1).
+      --no-rollback                    Optional. Disable automatic stack 
                                        rollback in case of deployment failure.
                                        We do not recommend using this flag for a
                                        production environment.
@@ -53,7 +54,6 @@ The steps involved in `copilot deploy` are as follows:
       --resource-tags stringToString   Optional. Labels with a key and value separated by commas.
                                        Allows you to categorize resources. (default [])
       --tag string                     Optional. The tag for the container images Copilot builds from Dockerfiles.
-
 ```
 
 !!!info
@@ -82,3 +82,19 @@ Initializes and deploys a service named "backend" to a "prod" environment.
 ```console
 $ copilot deploy --init-wkld --deploy-env=false --env prod --name backend
 ```
+
+Deploys all local, initialized workloads in no particular order.
+```console
+$ copilot deploy --all --env prod --name backend
+```
+
+Deploys multiple workloads in a prescribed order (fe and worker, then be).
+```console
+$ copilot deploy -n fe/1 -n be/2 -n worker/1
+```
+
+Initializes and deploys all local workloads after deploying environment changes.
+```console
+$ copilot deploy --all --init-wkld --deploy-env -e prod
+```
+
