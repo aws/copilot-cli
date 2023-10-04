@@ -357,7 +357,7 @@ This allows more fined-grind intra-vpc access control: your service won't need t
 public subnets where the nlb is deployed; it only needs to allow-list the nlb, specifically.
 
 Onboarding with nlb security group implies resource recreation, because a security group can't be added to an existing
-nlb that does not already have one. Therefore, after v1.33.0, you might see some resource recreation around your nlb.
+nlb that does not already have one. Therefore, after v1.33.0, you might see some resource recreation related to your nlb.
 
 This means:
 1. If you don't use alias, then the nlb's dns will change.
