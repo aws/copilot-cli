@@ -36,7 +36,9 @@ Copilot v1.31 brings big enhancements to help you develop more flexibly and effi
 
 ## Better task failure logs
 
-`copilot [noun] deploy` will now display the ECS task stopped reasons for the two most recent task failures during deployments of your Load Balanced Web Service, Backend Service and Worker Services.
+Before Copilot v1.31, if you wanted to find out why your ECS tasks stopped, you'd have to navigate to AWS Console -> ECS -> Service -> Stopped Tasks -> Stopped Reason.
+
+With this enhancement, `copilot [noun] deploy` will now display the ECS task stopped reasons within your CloudFormation deployment progress tracker. Copilot will show the two most recent task failures during deployments of your Load Balanced Web Service, Backend Service and Worker Services.
 
 ```console
   - An ECS service to run and maintain your tasks in the environment cluster
@@ -54,7 +56,7 @@ Copilot v1.31 brings big enhancements to help you develop more flexibly and effi
                                                                                                                                      
     Troubleshoot task stopped reason                                                                                         
       1. You can run `copilot svc logs --previous` to see the logs of the last stopped task.                                
-      2. You can visit this article https://repost.aws/knowledge-center/ecs-task-stopped.          
+      2. You can visit this article: https://repost.aws/knowledge-center/ecs-task-stopped.          
 ```
 
 - **`copilot deploy` enhancements: You can now deploy multiple workloads at once, or deploy all local workloads with `--all`.
