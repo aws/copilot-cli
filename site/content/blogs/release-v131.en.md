@@ -19,9 +19,24 @@ Thanks to every one of you who shows love and support for AWS Copilot.
 Copilot v1.31 brings big enhancements to help you develop more flexibly and efficiently:
 
 - **NLB enhancements**: You can now add security groups to Copilot-managed NLBs. NLBs also support the UDP protocol.
-- **Better task failure logs**: Copilot will show more descriptive information during deployments when tasks fail, allowing better troubleshooting.
+- **Better task failure logs**: Copilot will show more descriptive information during deployments when tasks fail, allowing better troubleshooting. [See detailed section](#better-task-failure-logs)
+- **`copilot deploy` enhancements: You can now deploy multiple workloads at once, or deploy all local workloads with `--all`.
 
-You can view the ECS task stopped reasons for the two most recent tasks during deployments using `copilot [noun] deploy`.
+???+ note "What’s AWS Copilot?"
+
+    The AWS Copilot CLI is a tool for developers to build, release, and operate production-ready applications on AWS.
+    From getting started, pushing to staging, and releasing to production, Copilot can help manage the entire lifecycle of your application development.
+    At the foundation of Copilot is AWS CloudFormation, which enables you to provision Infrastructure as Code.
+    Copilot provides pre-defined CloudFormation templates and user-friendly workflows for different types of microservice architectures,
+    enabling you to focus on developing your application, instead of writing deployment scripts.
+
+    See the section [Overview](../docs/concepts/overview.en.md) for a more detailed introduction to AWS Copilot.
+
+## NLB enhancements
+
+## Better task failure logs
+
+`copilot [noun] deploy` will now display the ECS task stopped reasons for the two most recent task failures during deployments of your Load Balanced Web Service, Backend Service and Worker Services.
 
 ```console
   - An ECS service to run and maintain your tasks in the environment cluster
@@ -72,3 +87,4 @@ http:
 ```
 
 Note that `example.com` must be the domain name or any subject alternative name of the certificate you are bringing in, and we'll use the imported certificate for your HTTPS traffic instead of creating a Copilot-managed one.
+## `copilot deploy` enhancements
