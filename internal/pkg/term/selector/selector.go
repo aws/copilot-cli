@@ -824,7 +824,7 @@ func (s *LocalWorkloadSelector) getWorkloadSelectOptions(workloadType string) ([
 		return nil, fmt.Errorf("no %s found in workspace", pluralNounString)
 	}
 	// Get the list of un-initialized workloads that are present in the workspace and add them to options.
-	unInitializedLocalWorkloads := FilterOutItems(wsWlNames, initializedLocalWorkloads, func(a string) string { return a })
+	unInitializedLocalWorkloads := filterOutItems(wsWlNames, initializedLocalWorkloads, func(a string) string { return a })
 	for _, wl := range unInitializedLocalWorkloads {
 		options = append(options, prompt.Option{
 			Value: wl,
@@ -885,14 +885,14 @@ func (s *LocalWorkloadSelector) Workload(msg, help string) (wl string, err error
 	return selectedWlName, nil
 }
 
-// FilterOutItems is a generic function to return the subset of allItems which does not include the items specified in
+// filterOutItems is a generic function to return the subset of allItems which does not include the items specified in
 // unwantedItems. stringFunc is a function which maps the unwantedItem type T to a string value. For example, one can
 // convert a struct of type *config.Workload to a string by passing
 //
 //	func(w *config.Workload) string { return w.Name }
 //
 // as the stringFunc parameter.
-func FilterOutItems[T any](allItems []string, unwantedItems []T, stringFunc func(T) string) []string {
+func filterOutItems[T any](allItems []string, unwantedItems []T, stringFunc func(T) string) []string {
 	isUnwanted := make(map[string]bool)
 	for _, item := range unwantedItems {
 		isUnwanted[stringFunc(item)] = true
@@ -937,25 +937,25 @@ func (s *LocalEnvironmentSelector) LocalEnvironment(msg, help string) (string, e
 }
 
 func filterEnvsByName(envs []*config.Environment, wantedNames []string) []string {
-	return FilterItemsByStrings(wantedNames, envs, func(e *config.Environment) string { return e.Name })
+	return filterItemsByStrings(wantedNames, envs, func(e *config.Environment) string { return e.Name })
 }
 
 func filterWlsByName(wls []*config.Workload, wantedNames []string) []string {
-	return FilterItemsByStrings(wantedNames, wls, func(w *config.Workload) string { return w.Name })
+	return filterItemsByStrings(wantedNames, wls, func(w *config.Workload) string { return w.Name })
 }
 
-// FilterItemsByStrings is a generic function to return the subset of wantedStrings that exists in possibleItems.
+// filterItemsByStrings is a generic function to return the subset of wantedStrings that exists in possibleItems.
 // stringFunc is a method to convert the generic item type (T) to a string; for example, one can convert a struct of type
 // *config.Workload to a string by passing
 //
 //	func(w *config.Workload) string { return w.Name }.
 //
-// Likewise, FilterItemsByStrings can work on a list of strings by returning the unmodified item:
+// Likewise, filterItemsByStrings can work on a list of strings by returning the unmodified item:
 //
-//	FilterItemsByStrings(wantedStrings, stringSlice2, func(s string) string { return s })
+//	filterItemsByStrings(wantedStrings, stringSlice2, func(s string) string { return s })
 //
 // It returns a list of strings (items whose stringFunc() exists in the list of wantedStrings).
-func FilterItemsByStrings[T any](wantedStrings []string, possibleItems []T, stringFunc func(T) string) []string {
+func filterItemsByStrings[T any](wantedStrings []string, possibleItems []T, stringFunc func(T) string) []string {
 	m := make(map[string]bool)
 	for _, item := range wantedStrings {
 		m[item] = true

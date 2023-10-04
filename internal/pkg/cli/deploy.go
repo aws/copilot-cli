@@ -42,18 +42,18 @@ const (
 	jobWkldType = "job"
 )
 
-// FilterItemsByStrings is a generic function to return the subset of wantedStrings that exists in possibleItems.
+// filterItemsByStrings is a generic function to return the subset of wantedStrings that exists in possibleItems.
 // stringFunc is a method to convert the generic item type (T) to a string; for example, one can convert a struct of type
 // *config.Workload to a string by passing
 //
 //	func(w *config.Workload) string { return w.Name }.
 //
-// Likewise, FilterItemsByStrings can work on a list of strings by returning the unmodified item:
+// Likewise, filterItemsByStrings can work on a list of strings by returning the unmodified item:
 //
-//	FilterItemsByStrings(wantedStrings, stringSlice2, func(s string) string { return s })
+//	filterItemsByStrings(wantedStrings, stringSlice2, func(s string) string { return s })
 //
 // It returns a list of strings (items whose stringFunc() exists in the list of wantedStrings).
-func FilterItemsByStrings[T any](wantedStrings []string, possibleItems []T, stringFunc func(T) string) []string {
+func filterItemsByStrings[T any](wantedStrings []string, possibleItems []T, stringFunc func(T) string) []string {
 	m := make(map[string]bool)
 	for _, item := range wantedStrings {
 		m[item] = true
@@ -67,14 +67,14 @@ func FilterItemsByStrings[T any](wantedStrings []string, possibleItems []T, stri
 	return res
 }
 
-// FilterOutItems is a generic function to return the subset of allItems which does not include the items specified in
+// filterOutItems is a generic function to return the subset of allItems which does not include the items specified in
 // unwantedItems. stringFunc is a function which maps the unwantedItem type T to a string value. For example, one can
 // convert a struct of type *config.Workload to a string by passing
 //
 //	func(w *config.Workload) string { return w.Name }
 //
 // as the stringFunc parameter.
-func FilterOutItems[T any](allItems []string, unwantedItems []T, stringFunc func(T) string) []string {
+func filterOutItems[T any](allItems []string, unwantedItems []T, stringFunc func(T) string) []string {
 	isUnwanted := make(map[string]bool)
 	for _, item := range unwantedItems {
 		isUnwanted[stringFunc(item)] = true
@@ -355,7 +355,7 @@ func (o *deployOpts) getDeploymentOrder() ([][]string, error) {
 			if err != nil {
 				return nil, err
 			}
-			workloadsToAppend := FilterOutItems(localWorkloads, specifiedWorkloadList, func(s string) string { return s })
+			workloadsToAppend := filterOutItems(localWorkloads, specifiedWorkloadList, func(s string) string { return s })
 			if len(workloadsToAppend) != 0 {
 				groupsMap[math.MaxInt] = append(groupsMap[math.MaxInt], workloadsToAppend...)
 			}
@@ -365,7 +365,7 @@ func (o *deployOpts) getDeploymentOrder() ([][]string, error) {
 			if err != nil {
 				return nil, err
 			}
-			workloadsToAppend := FilterOutItems(initializedWorkloads, specifiedWorkloadList, func(s string) string { return s })
+			workloadsToAppend := filterOutItems(initializedWorkloads, specifiedWorkloadList, func(s string) string { return s })
 			if len(workloadsToAppend) != 0 {
 				groupsMap[math.MaxInt] = append(groupsMap[math.MaxInt], workloadsToAppend...)
 			}
@@ -429,7 +429,7 @@ func (o *deployOpts) listInitializedLocalWorkloads() ([]string, error) {
 		return nil, err
 	}
 
-	o.initializedWsWorkloads = FilterItemsByStrings(localWorkloads, storeWls, func(workload *config.Workload) string { return workload.Name })
+	o.initializedWsWorkloads = filterItemsByStrings(localWorkloads, storeWls, func(workload *config.Workload) string { return workload.Name })
 	return o.initializedWsWorkloads, nil
 }
 
@@ -742,18 +742,20 @@ func BuildDeployCmd() *cobra.Command {
 		Long:  "Deploy one or more Copilot jobs or services.",
 		Example: `
   Deploys a service named "frontend" to a "test" environment.
-  /code $ copilot deploy --name frontend --env test --deploy-env=false
+  /code $ copilot deploy --name frontend --env test
   Deploys a job named "mailer" with additional resource tags to a "prod" environment.
   /code $ copilot deploy -n mailer -e prod --resource-tags source/revision=bb133e7,deployment/initiator=manual --deploy-env=false
   Initializes and deploys an environment named "test" in us-west-2 under the "default" profile with local manifest, 
     then deploys a service named "api"
   /code $ copilot deploy --init-env --deploy-env --env test --name api --profile default --region us-west-2
   Initializes and deploys a service named "backend" to a "prod" environment.
-  /code $ copilot deploy --init-wkld --deploy-env=false --env prod --name backend
+  /code $ copilot deploy --init-wkld --env prod --name backend
   Deploys all local, initialized workloads in no particular order.
-  /code $ copilot deploy --all --env prod --name backend --init-wkld=false
+  /code $ copilot deploy --all --env prod --name backend
   Deploys multiple workloads in a prescribed order (fe and worker, then be).
-  /code $ copilot deploy -n fe/1 -n be/2 -n worker/1`,
+  /code $ copilot deploy -n fe/1 -n be/2 -n worker/1
+  Initializes and deploys all local workloads after deploying environment changes.
+  /code $ copilot deploy --all --init-wkld --deploy-env -e prod`,
 
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newDeployOpts(vars)
