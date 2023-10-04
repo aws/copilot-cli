@@ -21,6 +21,7 @@ Copilot v1.31 brings big enhancements to help you develop more flexibly and effi
 - **NLB enhancements**: You can now add security groups to Copilot-managed NLBs. NLBs also support the UDP protocol.
 - **Better task failure logs**: Copilot will show more descriptive information during deployments when tasks fail, allowing better troubleshooting. [See detailed section](#better-task-failure-logs)
 - **`copilot deploy` enhancements: You can now deploy multiple workloads at once, or deploy all local workloads with `--all`.
+- **Importing an ACM certificate for your Static Site**: You can now bring your own ACM certificate for the Static Site service. [See detailed section](#importing-an-acm-certificate-for-your-static-site)
 
 ???+ note "What’s AWS Copilot?"
 
@@ -58,10 +59,6 @@ With this enhancement, `copilot [noun] deploy` will now display the ECS task sto
       1. You can run `copilot svc logs --previous` to see the logs of the last stopped task.                                
       2. You can visit this article: https://repost.aws/knowledge-center/ecs-task-stopped.          
 ```
-## NLB enhancements
-
-## Better task failure logs
-
 ## `copilot deploy` enhancements
 
 ## Importing an ACM certificate for your Static Site
