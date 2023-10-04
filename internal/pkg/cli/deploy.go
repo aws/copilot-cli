@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/aws/copilot-cli/internal/pkg/queue"
+	"github.com/dustin/go-humanize"
 	"math"
 	"slices"
 	"strconv"
@@ -66,28 +67,6 @@ func filterItemsByStrings[T any](wantedStrings []string, possibleItems []T, stri
 		}
 	}
 	return res
-}
-
-// filterOutItems is a generic function to return the subset of allItems which does not include the items specified in
-// unwantedItems. stringFunc is a function which maps the unwantedItem type T to a string value. For example, one can
-// convert a struct of type *config.Workload to a string by passing
-//
-//	func(w *config.Workload) string { return w.Name }
-//
-// as the stringFunc parameter.
-func filterOutItems[T any](allItems []string, unwantedItems []T, stringFunc func(T) string) []string {
-	isUnwanted := make(map[string]bool)
-	for _, item := range unwantedItems {
-		isUnwanted[stringFunc(item)] = true
-	}
-	var filtered []string
-	for _, str := range allItems {
-		if isUnwanted[str] {
-			continue
-		}
-		filtered = append(filtered, str)
-	}
-	return filtered
 }
 
 type deployVars struct {
@@ -299,7 +278,7 @@ func (w workloadPriority) LessThan(a workloadPriority) bool {
 // It is possible to have multiple workloads of the same priority. We don't guarantee that workloads within priority
 // groups will have identical deployment orders each time.
 func (o *deployOpts) parseDeploymentOrderTags(namesWithOptionalOrder []string) error {
-	if o.deploymentOrderMap != nil {
+	if len(o.deploymentOrderMap) > 0 {
 		return nil
 	}
 	prioritiesMap := make(map[string]int)
@@ -360,7 +339,7 @@ func (o *deployOpts) getDeploymentOrder() ([][]string, error) {
 			if err != nil {
 				return nil, err
 			}
-			workloadsToAppend := filterOutItems(localWorkloads, specifiedWorkloadList, func(s string) string { return s })
+			workloadsToAppend := slices.DeleteFunc(localWorkloads, func(s string) bool { return slices.Contains(specifiedWorkloadList, s) })
 			if len(workloadsToAppend) != 0 {
 				groupsMap[math.MaxInt] = append(groupsMap[math.MaxInt], workloadsToAppend...)
 			}
@@ -370,7 +349,7 @@ func (o *deployOpts) getDeploymentOrder() ([][]string, error) {
 			if err != nil {
 				return nil, err
 			}
-			workloadsToAppend := filterOutItems(initializedWorkloads, specifiedWorkloadList, func(s string) string { return s })
+			workloadsToAppend := slices.DeleteFunc(initializedWorkloads, func(s string) bool { return slices.Contains(specifiedWorkloadList, s) })
 			if len(workloadsToAppend) != 0 {
 				groupsMap[math.MaxInt] = append(groupsMap[math.MaxInt], workloadsToAppend...)
 			}
@@ -578,12 +557,8 @@ func (o *deployOpts) askNames() error {
 	taggedOptions := make([]string, 0, len(options))
 	currentPriority := 1
 	for len(options) > 0 {
-		deploymentGroupOrdinalWord := "next"
-		if currentPriority == 1 {
-			deploymentGroupOrdinalWord = "first"
-		}
 		selectedNames, err := o.prompt.MultiSelect(
-			fmt.Sprintf("Which workload(s) would you like to deploy in your %s deployment group?", deploymentGroupOrdinalWord),
+			fmt.Sprintf("Which workload(s) would you like to deploy in your %s deployment group?", humanize.Ordinal(currentPriority)),
 			"These workloads will be deployed together.",
 			append(options, optionAllRemainingWorkloads),
 			prompt.RequireMinItems(1),
@@ -600,8 +575,7 @@ func (o *deployOpts) askNames() error {
 		for _, name := range selectedNames {
 			taggedOptions = append(taggedOptions, fmt.Sprintf("%s/%d", name, currentPriority))
 		}
-
-		options = filterOutItems(options, selectedNames, func(a string) string { return a })
+		options = slices.DeleteFunc(options, func(s string) bool { return slices.Contains(selectedNames, s) })
 		currentPriority++
 	}
 
