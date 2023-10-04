@@ -636,6 +636,56 @@ type: Worker Service`)
 				m.EXPECT().AddWorkloadToApp("app", "worker", manifestinfo.WorkerServiceType).Return(nil)
 			},
 		},
+		"deploys multiple workloads with specified order by prompting": {
+			inAppName: "app",
+			inEnvName: "test",
+
+			mockSel: func(m *mocks.MockwsSelector) {
+				m.EXPECT().Workloads(gomock.Any(), gomock.Any()).Return([]string{"be", "worker"}, nil)
+			},
+			mockActionCommand: func(m *mocks.MockactionCommand) {
+				m.EXPECT().Ask().Times(2)
+				m.EXPECT().Validate().Times(2)
+				m.EXPECT().Execute().Times(2)
+				m.EXPECT().RecommendActions().Times(2)
+			},
+			mockCmd: func(m *mocks.Mockcmd) {},
+			mockStore: func(m *mocks.Mockstore) {
+				mockBeWl := config.Workload{
+					App:  "app",
+					Name: "be",
+					Type: "Backend Service",
+				}
+				mockWorkerWl := config.Workload{
+					App:  "app",
+					Name: "worker",
+					Type: "Worker Service",
+				}
+				m.EXPECT().GetEnvironment("app", "test").Return(&mockEnv, nil)
+				m.EXPECT().ListWorkloads("app").Return([]*config.Workload{&mockWorkerWl, &mockBeWl}, nil)
+				m.EXPECT().GetWorkload("app", "be").Return(&mockBeWl, nil)
+				m.EXPECT().GetWorkload("app", "worker").Return(&mockWorkerWl, nil)
+			},
+			mockWs: func(m *mocks.MockwsWlDirReader) {
+				m.EXPECT().ListWorkloads().Return([]string{"fe", "be", "worker"}, nil)
+				m.EXPECT().ListEnvironments().Return([]string{"test"}, nil)
+			},
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().MultiSelect(
+					gomock.Any(),
+					gomock.Any(),
+					[]string{"be", "worker", optionAllRemainingWorkloads},
+					gomock.Any(),
+					gomock.Any()).Return([]string{"be"}, nil)
+				m.EXPECT().MultiSelect(
+					gomock.Any(),
+					gomock.Any(),
+					[]string{"worker", optionAllRemainingWorkloads},
+					gomock.Any(),
+					gomock.Any()).Return([]string{optionAllRemainingWorkloads}, nil)
+			},
+			mockInit: func(m *mocks.MockwkldInitializerWithoutManifest) {},
+		},
 		"skips deploying workload with no changes": {
 			inAppName:    "app",
 			inEnvName:    "test",
