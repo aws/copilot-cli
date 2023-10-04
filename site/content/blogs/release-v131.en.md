@@ -58,20 +58,6 @@ With this enhancement, `copilot [noun] deploy` will now display the ECS task sto
       1. You can run `copilot svc logs --previous` to see the logs of the last stopped task.                                
       2. You can visit this article: https://repost.aws/knowledge-center/ecs-task-stopped.          
 ```
-
-- **`copilot deploy` enhancements: You can now deploy multiple workloads at once, or deploy all local workloads with `--all`.
-- **Importing an ACM certificate for your Static Site**: You can now bring your own ACM certificate for the Static Site service. [See detailed section](#importing-an-acm-certificate-for-your-static-site)
-
-???+ note "What’s AWS Copilot?"
-
-    The AWS Copilot CLI is a tool for developers to build, release, and operate production-ready applications on AWS.
-    From getting started, pushing to staging, and releasing to production, Copilot can help manage the entire lifecycle of your application development.
-    At the foundation of Copilot is AWS CloudFormation, which enables you to provision Infrastructure as Code.
-    Copilot provides pre-defined CloudFormation templates and user-friendly workflows for different types of microservice architectures,
-    enabling you to focus on developing your application, instead of writing deployment scripts.
-
-    See the section [Overview](../docs/concepts/overview.en.md) for a more detailed introduction to AWS Copilot.
-
 ## NLB enhancements
 
 ## Better task failure logs
@@ -89,4 +75,3 @@ http:
 ```
 
 Note that `example.com` must be the domain name or any subject alternative name of the certificate you are bringing in, and we'll use the imported certificate for your HTTPS traffic instead of creating a Copilot-managed one.
-## `copilot deploy` enhancements
