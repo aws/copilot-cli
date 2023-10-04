@@ -503,8 +503,8 @@ func (o *deployOpts) Run() error {
 		}
 	}
 
-	if getTotalNumberOfWorkloads(cmds) > 1 {
-		logDeploymentOrderInfo(cmds)
+	if count := getTotalNumberOfWorkloads(cmds); count > 1 {
+		logDeploymentOrderInfo(cmds, count)
 	}
 
 	for g, deploymentGroup := range cmds {
@@ -532,13 +532,8 @@ func (o *deployOpts) Run() error {
 	return nil
 }
 
-func logDeploymentOrderInfo(cmds [][]workloadCommand) {
-	// Count number of deployments.
-	count := 0
-	for i := 0; i < len(cmds); i++ {
-		count += len(cmds[i])
-	}
-	log.Infof("Will deploy %d %s in the following order.\n", count, english.PluralWord(count, "workload", ""))
+func logDeploymentOrderInfo(cmds [][]workloadCommand, totalCount int) {
+	log.Infof("Will deploy %d %s in the following order.\n", totalCount, english.PluralWord(totalCount, "workload", ""))
 	for i := 0; i < len(cmds); i++ {
 		names := make([]string, 0, len(cmds))
 		for _, cmd := range cmds[i] {
