@@ -487,6 +487,25 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 			},
 			wantedError: errors.New(`scaling based on "nlb" requests or response time is not supported`),
 		},
+		"error if healthcheck points to nlb port using udp": {
+			lbConfig: LoadBalancedWebService{
+				Workload: Workload{
+					Name: aws.String("mockName"),
+				},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: testImageConfig,
+					HTTPOrBool: HTTPOrBool{
+						Enabled: aws.Bool(false),
+					},
+					NLBConfig: NetworkLoadBalancerConfiguration{
+						Listener: NetworkLoadBalancerListener{
+							Port: aws.String("80/udp"),
+						},
+					},
+				},
+			},
+			wantedError: fmt.Errorf(`validate load balancer health check ports: container "mockName" exposes port 80 using protocol udp invalid for health checks. Valid protocol is "TCP".`),
+		},
 		"error if fail to validate deployment": {
 			lbConfig: LoadBalancedWebService{
 				Workload: Workload{
@@ -3974,6 +3993,121 @@ func TestFromEnvironment_validate(t *testing.T) {
 				require.EqualError(t, gotErr, tc.wantedError.Error())
 			} else {
 				require.NoError(t, gotErr)
+			}
+		})
+	}
+}
+
+func TestValidateHealthCheckPorts(t *testing.T) {
+	lbws := LoadBalancedWebService{
+		Workload: Workload{
+			Name: aws.String("mockWorkload"),
+		},
+		LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+			ImageConfig: ImageWithPortAndHealthcheck{
+				ImageWithPort: ImageWithPort{
+					Port: aws.Uint16(80),
+				},
+			},
+			HTTPOrBool: HTTPOrBool{
+				HTTP: HTTP{
+					Main: RoutingRule{
+						Path: aws.String("/"),
+					},
+				},
+			},
+			NLBConfig: NetworkLoadBalancerConfiguration{
+				Listener: NetworkLoadBalancerListener{
+					Port: aws.String("8080/udp"),
+					HealthCheck: NLBHealthCheckArgs{
+						Port: aws.Int(80),
+					},
+				},
+				AdditionalListeners: []NetworkLoadBalancerListener{
+					{
+						Port: aws.String("8081/udp"),
+						HealthCheck: NLBHealthCheckArgs{
+							Port: aws.Int(80),
+						},
+					},
+					{
+						Port: aws.String("8082"),
+					},
+				},
+			},
+		},
+	}
+	lbwsWithInvalidHealthChecks := LoadBalancedWebService{
+		LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+			HTTPOrBool: HTTPOrBool{
+				HTTP: HTTP{
+					Main: RoutingRule{
+						Path: aws.String("/"),
+						HealthCheck: HealthCheckArgsOrString{
+							Union[string, HTTPHealthCheckArgs]{
+								Advanced: HTTPHealthCheckArgs{
+									Port: aws.Int(8080),
+								},
+							},
+						},
+						TargetPort: aws.Uint16(80),
+					},
+				},
+			},
+			NLBConfig: NetworkLoadBalancerConfiguration{
+				Listener: NetworkLoadBalancerListener{
+					Port: aws.String("8080/udp"),
+				},
+			},
+		},
+	}
+	exposedPortIndex, _ := lbws.ExposedPorts()
+	testCases := map[string]struct {
+		in     validateHealthCheckPortsOpts
+		wanted error
+	}{
+		"error with healthcheck on nlb udp": {
+			in: validateHealthCheckPortsOpts{
+				exposedPorts:      exposedPortIndex,
+				mainContainerPort: lbws.ImageConfig.Port,
+				nlb:               lbwsWithInvalidHealthChecks.NLBConfig,
+			},
+			wanted: fmt.Errorf(`container "mockWorkload" exposes port 8080 using protocol udp invalid for health checks. Valid protocol is "TCP".`),
+		},
+		"error with healthcheck on nlb udp from alb routing rule": {
+			in: validateHealthCheckPortsOpts{
+				exposedPorts:      exposedPortIndex,
+				mainContainerPort: lbws.ImageConfig.Port,
+				alb:               lbwsWithInvalidHealthChecks.HTTPOrBool.HTTP,
+			},
+			wanted: fmt.Errorf(`container "mockWorkload" exposes port 8080 using protocol udp invalid for health checks. Valid protocol is "TCP".`),
+		},
+		"error with healthcheck from image port": {
+			in: validateHealthCheckPortsOpts{
+				exposedPorts:      exposedPortIndex,
+				mainContainerPort: aws.Uint16(8080),
+				alb:               lbws.HTTPOrBool.HTTP,
+				nlb:               lbws.NLBConfig,
+			},
+			wanted: fmt.Errorf(`container "mockWorkload" exposes port 8080 using protocol udp invalid for health checks. Valid protocol is "TCP".`),
+		},
+		"no error with valid healthchecks": {
+			in: validateHealthCheckPortsOpts{
+				exposedPorts:      exposedPortIndex,
+				mainContainerPort: lbws.ImageConfig.Port,
+				alb:               lbws.HTTPOrBool.HTTP,
+				nlb:               lbws.NLBConfig,
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			err := validateHealthCheckPorts(tc.in)
+
+			if tc.wanted != nil {
+				require.EqualError(t, err, tc.wanted.Error())
+			} else {
+				require.NoError(t, err)
 			}
 		})
 	}
