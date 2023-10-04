@@ -40,8 +40,8 @@ nlb:
   port: 8080/udp
 ```
 
-!!!warning
-  To use the new Security Group, your `NetworkLoadBalancer` and `TargetGroup` resources need to be recreated. With v1.31 this will only happen if you specify `udp` protocol. With v1.33 however, Copilot will make this change for all users.
+!!!info
+  NLB Security Group is a new AWS feature that lets you filter public traffic to your NLB, enhancing the security of your application. For more information, read this [AWS blogpost](https://aws.amazon.com/blogs/containers/network-load-balancers-now-support-security-groups/). For Copilot to use this feature, your `NetworkLoadBalancer` and `TargetGroup` resources need to be recreated. With v1.31 this will only happen if you specify `udp` protocol. With v1.33 however, Copilot will make this change for all users. The effect of this change is that the Physical IDs of these resources will change. This can impact your application if you manually manage any resources, and will change the URL of your NLB.
 
 ## Better task failure logs
 
