@@ -199,7 +199,6 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		WorkloadType:       manifestinfo.LoadBalancedWebServiceType,
 
 		// Configuration for the main container.
-		// ImportedALB: s.manifest.ImportALB,
 		Command:      command,
 		EntryPoint:   entrypoint,
 		HealthCheck:  convertContainerHealthCheck(s.manifest.ImageConfig.HealthCheck),
