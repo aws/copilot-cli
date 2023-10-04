@@ -190,7 +190,7 @@ Alarms
 
 Troubleshoot task stopped reason
   1. You can run %s to see the logs of the last stopped task.
-  2. You can visit this article https://repost.aws/knowledge-center/ecs-task-stopped.
+  2. You can visit this article: https://repost.aws/knowledge-center/ecs-task-stopped.
 `, color.HighlightCode("copilot svc logs --previous")),
 		},
 		"render collapse taskids if task reasons are same": {
@@ -221,7 +221,7 @@ Troubleshoot task stopped reason
 
 Troubleshoot task stopped reason
   1. You can run %s to see the logs of the last stopped task.
-  2. You can visit this article https://repost.aws/knowledge-center/ecs-task-stopped.
+  2. You can visit this article: https://repost.aws/knowledge-center/ecs-task-stopped.
 `, color.HighlightCode("copilot svc logs --previous")),
 		},
 		"should render stopped tasks and split long stopped reasons": {
@@ -255,7 +255,7 @@ Troubleshoot task stopped reason
 
 Troubleshoot task stopped reason
   1. You can run %s to see the logs of the last stopped task.
-  2. You can visit this article https://repost.aws/knowledge-center/ecs-task-stopped.
+  2. You can visit this article: https://repost.aws/knowledge-center/ecs-task-stopped.
 `, color.HighlightCode("copilot svc logs --previous")),
 		},
 	}
