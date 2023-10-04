@@ -41,10 +41,10 @@ Service に対する変更作業をしているときに `copilot run local` を
 
 Service のデプロイが完了したら、コードの修正を開始できます。変更をテストする準備をした後、`copilot run local` を実行すると、Copilot はプライマリコンテナとサイドカーコンテナの両方に対して以下を実行します。
 
-1. [`image`](../docs/manifest/lb-web-service#image) で指定されたイメージをビルドまたは pull します。
-2. [`secrets`](../docs/manifest/lb-web-service#secrets) で指定されたシークレットの値を取得します。
+1. [`image`](../docs/manifest/lb-web-service.ja.md#image) で指定されたイメージをビルドまたは pull します。
+2. [`secrets`](../docs/manifest/lb-web-service.ja.md#secrets) で指定されたシークレットの値を取得します。
 3. 現在の IAM ユーザー/ロールの認証情報を取得します。
-4. [`variables`](../docs/manifest/lb-web-service#variables) とステップ 2 のシークレット値及びステップ 3 の IAM 認証情報を適用した状態でステップ 1 で指定したコンテナイメージをローカルマシンで実行します。
+4. [`variables`](../docs/manifest/lb-web-service.ja.md#variables) とステップ 2 のシークレット値及びステップ 3 の IAM 認証情報を適用した状態でステップ 1 で指定したコンテナイメージをローカルマシンで実行します。
 
 
 Service からのログはターミナルにストリーミングされます。テストが終了した後に Ctrl-C を入力すると、Copilot が実行中のコンテナをすべてクリーンアップしてから終了します!
