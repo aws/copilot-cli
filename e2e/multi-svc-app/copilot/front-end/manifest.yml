@@ -22,6 +22,11 @@ http:
   # To match all requests you can use the "/" path. 
   path: '/'
 
+nlb:
+  port: 8080/udp
+  healthcheck:
+    port: 80
+
 network:
   connect: true
 
