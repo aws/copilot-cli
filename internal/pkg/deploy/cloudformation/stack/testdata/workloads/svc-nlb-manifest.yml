@@ -29,6 +29,8 @@ environments:
       additional_listeners:
         - port: 8080/tcp
         - port: 8081/udp
+          healthcheck:
+            port: 80
     network:
       connect: true
   dev:
