@@ -350,6 +350,23 @@ After fixing the deployment, you can:
 
 // RecommendActions returns follow-up actions the user can take after successfully executing the command.
 func (o *deploySvcOpts) RecommendActions() error {
+	if lbMft, ok := o.appliedDynamicMft.Manifest().(*manifest.LoadBalancedWebService); ok {
+		if !lbMft.NLBConfig.IsEmpty() {
+			log.Infof(`Starting v1.33.0, Copilot will start applying a security group to your network load balancer.
+This allows more fined-grind intra-vpc access control: your service won't need to allow-list the cidr blocks of the
+public subnets where the nlb lives; it only needs to allow-list the nlb, specifically.
+
+Onboarding with nlb security group implies resource recreation, because a security group can't be added to an existing
+nlb that does not already have one. Therefore, after v1.33.0, you might see some resource recreation around your nlb.
+
+This means:
+1. If you don't use alias, then the nlb's dns will change.
+2. If you use alias, then the alias will start pointing to the new nlb that is enhanced with a security group.
+
+For more on security group for your nlb, please see https://docs.aws.amazon.com/elasticloadbalancing/latest/network/load-balancer-security-groups.html.
+`)
+		}
+	}
 	if o.noDeploy || o.detach {
 		return nil
 	}
