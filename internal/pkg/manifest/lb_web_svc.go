@@ -271,27 +271,29 @@ func (c *NetworkLoadBalancerListener) IsEmpty() bool {
 }
 
 // HealthCheckPort returns the port a HealthCheck is set to for a NetworkLoadBalancerListener.
-func (listener NetworkLoadBalancerListener) HealthCheckPort(mainContainerPort uint16) (uint16, error) {
+func (listener NetworkLoadBalancerListener) HealthCheckPort(mainContainerPort *uint16) (uint16, error) {
 	// healthCheckPort is defined by Listener.HealthCheck.Port, with fallback on Listener.TargetPort, then Listener.Port.
-	healthCheckPort := mainContainerPort
+	if listener.HealthCheck.Port != nil {
+		return uint16(aws.IntValue(listener.HealthCheck.Port)), nil
+	}
+	if listener.TargetPort != nil {
+		return uint16(aws.IntValue(listener.TargetPort)), nil
+	}
 	if listener.Port != nil {
 		port, _, err := ParsePortMapping(listener.Port)
 		if err != nil {
-			return healthCheckPort, err
+			return 0, err
 		}
 		parsedPort, err := strconv.ParseUint(aws.StringValue(port), 10, 16)
 		if err != nil {
-			return healthCheckPort, err
+			return 0, err
 		}
-		healthCheckPort = uint16(parsedPort)
+		return uint16(parsedPort), nil
 	}
-	if listener.TargetPort != nil {
-		healthCheckPort = uint16(aws.IntValue(listener.TargetPort))
+	if mainContainerPort != nil {
+		return aws.Uint16Value(mainContainerPort), nil
 	}
-	if listener.HealthCheck.Port != nil {
-		healthCheckPort = uint16(aws.IntValue(listener.HealthCheck.Port))
-	}
-	return healthCheckPort, nil
+	return 0, nil
 }
 
 // ExposedPorts returns all the ports that are container ports available to receive traffic.

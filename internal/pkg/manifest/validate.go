@@ -2040,7 +2040,7 @@ func validateHealthCheckPorts(opts validateHealthCheckPortsOpts) error {
 	}
 
 	for _, listener := range opts.nlb.NLBListeners() {
-		healthCheckPort, err := listener.HealthCheckPort(aws.Uint16Value(opts.mainContainerPort))
+		healthCheckPort, err := listener.HealthCheckPort(opts.mainContainerPort)
 		if err != nil {
 			return err
 		}
