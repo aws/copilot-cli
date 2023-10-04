@@ -739,7 +739,7 @@ func BuildDeployCmd() *cobra.Command {
   Deploys a service named "frontend" to a "test" environment.
   /code $ copilot deploy --name frontend --env test
   Deploys a job named "mailer" with additional resource tags to a "prod" environment.
-  /code $ copilot deploy -n mailer -e prod --resource-tags source/revision=bb133e7,deployment/initiator=manual --deploy-env=false
+  /code $ copilot deploy -n mailer -e prod --resource-tags source/revision=bb133e7,deployment/initiator=manual
   Initializes and deploys an environment named "test" in us-west-2 under the "default" profile with local manifest, 
     then deploys a service named "api"
   /code $ copilot deploy --init-env --deploy-env --env test --name api --profile default --region us-west-2
