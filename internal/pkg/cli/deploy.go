@@ -601,7 +601,7 @@ func (o *deployOpts) askNames() error {
 			taggedOptions = append(taggedOptions, fmt.Sprintf("%s/%d", name, currentPriority))
 		}
 
-		options = selector.FilterOutItems(options, selectedNames, func(a string) string { return a })
+		options = filterOutItems(options, selectedNames, func(a string) string { return a })
 		currentPriority++
 	}
 
