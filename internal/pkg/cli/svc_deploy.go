@@ -363,7 +363,7 @@ This means:
 1. If you don't use alias, then the nlb's dns will change.
 2. If you use alias, then the alias will start pointing to the new nlb that is enhanced with a security group.
 
-For more on security group for your nlb, please see https://docs.aws.amazon.com/elasticloadbalancing/latest/network/load-balancer-security-groups.html.
+For more on nlb security groups, please see https://docs.aws.amazon.com/elasticloadbalancing/latest/network/load-balancer-security-groups.html.
 `)
 		}
 	}
