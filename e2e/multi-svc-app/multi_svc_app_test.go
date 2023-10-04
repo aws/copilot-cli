@@ -385,21 +385,19 @@ var _ = Describe("Multiple Service App", func() {
 			// Retrieve logs to check if UDP traffic was received.
 			var svcLogs []client.SvcLogsOutput
 			var svcLogsErr error
-			Eventually(func() ([]client.SvcLogsOutput, error) {
+			Eventually(func() ([]string, error) {
 				svcLogs, svcLogsErr = cli.SvcLogs(&client.SvcLogsRequest{
 					AppName: appName,
 					Name:    svcName,
 					EnvName: "test",
 					Since:   "1h",
 				})
-				return svcLogs, svcLogsErr
-			}, "60s", "10s").ShouldNot(BeEmpty())
-
-			var svcLogMessages []string
-			for _, logLine := range svcLogs {
-				svcLogMessages = append(svcLogMessages, logLine.Message)
-			}
-			Expect(svcLogMessages).To(ContainElement(ContainSubstring("Received UDP message: test message")))
+				var svcLogMessages []string
+				for _, logLine := range svcLogs {
+					svcLogMessages = append(svcLogMessages, logLine.Message)
+				}
+				return svcLogMessages, svcLogsErr
+			}, "60s", "10s").Should(ContainElement(ContainSubstring("Received UDP message: test message")))
 		})
 
 		It("should be able to write to EFS volume", func() {
