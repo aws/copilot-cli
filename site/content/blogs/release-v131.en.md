@@ -59,6 +59,7 @@ With this enhancement, `copilot [noun] deploy` will now display the ECS task sto
       1. You can run `copilot svc logs --previous` to see the logs of the last stopped task.                                
       2. You can visit this article: https://repost.aws/knowledge-center/ecs-task-stopped.          
 ```
+
 ## `copilot deploy` enhancements
 
 ## Importing an ACM certificate for your Static Site
