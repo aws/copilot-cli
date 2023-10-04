@@ -22,6 +22,8 @@ Copilot v1.31 brings big enhancements to help you develop more flexibly and effi
 - **Better task failure logs**: Copilot will show more descriptive information during deployments when tasks fail, allowing better troubleshooting.
 - **`copilot deploy` enhancements**: You can now deploy multiple workloads at once, or deploy all local workloads with `--all`.
 
+#### Please read if you use `nlb`: [NLB security group enhacement](#nlb-enhancements)
+
 ???+ note "What’s AWS Copilot?"
 
     The AWS Copilot CLI is a tool for developers to build, release, and operate production-ready applications on AWS.
@@ -40,8 +42,8 @@ nlb:
   port: 8080/udp
 ```
 
-!!!info
-  NLB Security Group is a new AWS feature that lets you filter public traffic to your NLB, enhancing the security of your application. For more information, read this [AWS blogpost](https://aws.amazon.com/blogs/containers/network-load-balancers-now-support-security-groups/). For Copilot to use this feature, your `NetworkLoadBalancer` and `TargetGroup` resources need to be recreated. With v1.31 this will only happen if you specify `udp` protocol. With v1.33 however, Copilot will make this change for all users. The effect of this change is that the Physical IDs of these resources will change. This can impact your application if you manually manage any resources, and will change the URL of your NLB.
+!!!info 
+    NLB Security Group is a new AWS feature that lets you filter public traffic to your NLB, enhancing the security of your application. For more information, read this [AWS blogpost](https://aws.amazon.com/blogs/containers/network-load-balancers-now-support-security-groups/). For Copilot to use this feature, your `NetworkLoadBalancer` and `TargetGroup` resources need to be recreated. With v1.31 this will only happen if you specify `udp` protocol. With v1.33 however, Copilot will make this change for all users. This means that if you don't use DNS aliases, then the NLB's domain name will change, and if you do use DNS alias, then the alias will start pointing to the new NLB that is enhanced with a security group.
 
 ## Better task failure logs
 
