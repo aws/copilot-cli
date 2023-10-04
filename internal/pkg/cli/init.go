@@ -228,9 +228,12 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		return nil
 	}
 	ws, err := workspace.Use(fs)
+	var errNoAppSummary *workspace.ErrNoAssociatedApplication
 	var errWorkspaceNotFound *workspace.ErrWorkspaceNotFound
-	if err != nil && !errors.As(err, &errWorkspaceNotFound) {
-		return nil, err
+	if err != nil {
+		if !errors.As(err, &errWorkspaceNotFound) && !errors.As(err, &errNoAppSummary) {
+			return nil, err
+		}
 	}
 	return &initOpts{
 		initVars: vars,

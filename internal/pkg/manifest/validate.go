@@ -235,6 +235,11 @@ func (l LoadBalancedWebServiceConfig) validate() error {
 	if err = l.ImageOverride.validate(); err != nil {
 		return err
 	}
+	if l.HTTPOrBool.isEmpty() {
+		return &errFieldMustBeSpecified{
+			missingField: "http",
+		}
+	}
 	if err = l.HTTPOrBool.validate(); err != nil {
 		return fmt.Errorf(`validate "http": %w`, err)
 	}
