@@ -63,6 +63,9 @@ efs:
 <span class="parent-field">storage.volumes.`<volume>`.efs.</span><a id="id" href="#id" class="field">`id`</a> <span class="type">String</span>  
 必須設定項目です。マウントする EFS ファイルシステムの ID を指定します。
 
+<span class="parent-field">storage.volumes.`<volume>`.efs.id.</span><a id="from_cfn" href="#from_cfn" class="field">`from_cfn`</a> <span class="type">String</span> <span class="version">[v1.30.0](../../blogs/release-v130.ja.md#deployment-actions) にて追加</span>  
+[CloudFormation スタック出力値のエクスポート](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/using-cfn-stack-exports.html)の名前を指定します。
+
 <span class="parent-field">storage.volumes.`<volume>`.efs.</span><a id="root_dir" href="#root-dir" class="field">`root_dir`</a> <span class="type">String</span>
 任意設定項目で、デフォルト値は `/` です。EFS ファイルシステム内のどのパスをマウントするボリュームのルートとするのかを指定します。指定する値は 255 文字未満かつ `a-zA-Z0-9.-_/` の文字種である必要があります。EFS アクセスポイントを利用する場合、本設定値に空もしくは `/` を指定し、かつ `auth.iam` の設定値が `true` となっている必要があります。
 

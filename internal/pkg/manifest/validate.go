@@ -74,6 +74,7 @@ var (
 	dependsOnValidStatuses                   = []string{dependsOnStart, dependsOnComplete, dependsOnSuccess, dependsOnHealthy}
 	nlbValidProtocols                        = []string{TCP, UDP, TLS}
 	validContainerProtocols                  = []string{TCP, UDP}
+	validHealthCheckProtocols                = []string{TCP}
 	tracingValidVendors                      = []string{awsXRAY}
 	ecsRollingUpdateStrategies               = []string{ECSDefaultRollingUpdateStrategy, ECSRecreateRollingUpdateStrategy}
 
@@ -151,6 +152,18 @@ func (l LoadBalancedWebService) validate() error {
 	}); err != nil {
 		return fmt.Errorf("validate unique exposed ports: %w", err)
 	}
+	ports, err := l.ExposedPorts()
+	if err != nil {
+		return err
+	}
+	if err = validateHealthCheckPorts(validateHealthCheckPortsOpts{
+		exposedPorts:      ports,
+		mainContainerPort: l.ImageConfig.Port,
+		alb:               l.HTTPOrBool.HTTP,
+		nlb:               l.NLBConfig,
+	}); err != nil {
+		return fmt.Errorf("validate load balancer health check ports: %w", err)
+	}
 	return nil
 }
 
@@ -221,6 +234,11 @@ func (l LoadBalancedWebServiceConfig) validate() error {
 	}
 	if err = l.ImageOverride.validate(); err != nil {
 		return err
+	}
+	if l.HTTPOrBool.isEmpty() {
+		return &errFieldMustBeSpecified{
+			missingField: "http",
+		}
 	}
 	if err = l.HTTPOrBool.validate(); err != nil {
 		return fmt.Errorf(`validate "http": %w`, err)
@@ -317,6 +335,17 @@ func (b BackendService) validate() error {
 		alb:               &b.HTTP,
 	}); err != nil {
 		return fmt.Errorf("validate unique exposed ports: %w", err)
+	}
+	exposedPortsIndex, err := b.ExposedPorts()
+	if err != nil {
+		return err
+	}
+	if err = validateHealthCheckPorts(validateHealthCheckPortsOpts{
+		exposedPorts:      exposedPortsIndex,
+		mainContainerPort: b.ImageConfig.Port,
+		alb:               b.HTTP,
+	}); err != nil {
+		return fmt.Errorf("validate load balancer health check ports: %w", err)
 	}
 	return nil
 }
@@ -1963,6 +1992,13 @@ func (s Secret) validate() error {
 	return nil
 }
 
+type validateHealthCheckPortsOpts struct {
+	exposedPorts      ExposedPortsIndex
+	mainContainerPort *uint16
+	alb               HTTP
+	nlb               NetworkLoadBalancerConfiguration
+}
+
 type validateExposedPortsOpts struct {
 	mainContainerName string
 	mainContainerPort *uint16
@@ -1998,6 +2034,45 @@ type validateWindowsOpts struct {
 type validateARMOpts struct {
 	Spot     *int
 	SpotFrom *int
+}
+
+func validateHealthCheckPorts(opts validateHealthCheckPortsOpts) error {
+	for _, rule := range opts.alb.RoutingRules() {
+		healthCheckPort := rule.HealthCheckPort(opts.mainContainerPort)
+		if err := validateHealthCheckPort(healthCheckPort, opts.exposedPorts); err != nil {
+			return err
+		}
+	}
+
+	for _, listener := range opts.nlb.NLBListeners() {
+		healthCheckPort, err := listener.HealthCheckPort(opts.mainContainerPort)
+		if err != nil {
+			return err
+		}
+		if err := validateHealthCheckPort(healthCheckPort, opts.exposedPorts); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func validateHealthCheckPort(port uint16, ports ExposedPortsIndex) error {
+	container := ports.ContainerForPort[port]
+	containerPorts := ports.PortsForContainer[container]
+	for _, exposedPort := range containerPorts {
+		if exposedPort.Port != port {
+			continue
+		}
+
+		if !slices.Contains(validHealthCheckProtocols, strings.ToUpper(exposedPort.Protocol)) {
+			return &errHealthCheckPortExposedWithInvalidProtocol{
+				healthCheckPort: port,
+				container:       container,
+				protocol:        exposedPort.Protocol,
+			}
+		}
+	}
+	return nil
 }
 
 func validateTargetContainer(opts validateTargetContainerOpts) error {
