@@ -21,6 +21,7 @@ Copilot v1.31 brings big enhancements to help you develop more flexibly and effi
 - **NLB enhancements**: You can now add security groups to Copilot-managed NLBs. NLBs also support the UDP protocol.
 - **Better task failure logs**: Copilot will show more descriptive information during deployments when tasks fail, allowing better troubleshooting.
 - **`copilot deploy` enhancements: You can now deploy multiple workloads at once, or deploy all local workloads with `--all`.
+- **Importing an ACM certificate for your Static Site**: You can now bring your own ACM certificate for the Static Site service.
 
 ???+ note "What’s AWS Copilot?"
 
@@ -37,3 +38,15 @@ Copilot v1.31 brings big enhancements to help you develop more flexibly and effi
 ## Better task failure logs
 
 ## `copilot deploy` enhancements
+
+## Importing an ACM certificate for your Static Site
+
+Copilot now introduces a new field `http.certificate` in the [Static Site manifest](../docs/manifest/static-site.en.md). You can specify with the ARN of any validated ACM certificate in `us-east-1` as below:
+
+```yaml
+http:
+  alias: example.com
+  certificate: "arn:aws:acm:us-east-1:1234567890:certificate/e5a6e114-b022-45b1-9339-38fbfd6db3e2"
+```
+
+Note that `example.com` must be the domain name or any subject alternative name of the certificate you are bringing in, and we'll use the imported certificate for your HTTPS traffic instead of creating a Copilot-managed one.
