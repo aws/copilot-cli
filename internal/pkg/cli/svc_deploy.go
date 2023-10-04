@@ -354,7 +354,7 @@ func (o *deploySvcOpts) RecommendActions() error {
 		if !lbMft.NLBConfig.IsEmpty() {
 			log.Infof(`Starting v1.33.0, Copilot will start applying a security group to your network load balancer.
 This allows more fined-grind intra-vpc access control: your service won't need to allow-list the cidr blocks of the
-public subnets where the nlb lives; it only needs to allow-list the nlb, specifically.
+public subnets where the nlb is deployed; it only needs to allow-list the nlb, specifically.
 
 Onboarding with nlb security group implies resource recreation, because a security group can't be added to an existing
 nlb that does not already have one. Therefore, after v1.33.0, you might see some resource recreation around your nlb.
