@@ -271,6 +271,32 @@ func (c *NetworkLoadBalancerListener) IsEmpty() bool {
 		c.SSLPolicy == nil && c.Stickiness == nil && c.DeregistrationDelay == nil
 }
 
+// HealthCheckPort returns the port a HealthCheck is set to for a NetworkLoadBalancerListener.
+func (listener NetworkLoadBalancerListener) HealthCheckPort(mainContainerPort *uint16) (uint16, error) {
+	// healthCheckPort is defined by Listener.HealthCheck.Port, with fallback on Listener.TargetPort, then Listener.Port.
+	if listener.HealthCheck.Port != nil {
+		return uint16(aws.IntValue(listener.HealthCheck.Port)), nil
+	}
+	if listener.TargetPort != nil {
+		return uint16(aws.IntValue(listener.TargetPort)), nil
+	}
+	if listener.Port != nil {
+		port, _, err := ParsePortMapping(listener.Port)
+		if err != nil {
+			return 0, err
+		}
+		parsedPort, err := strconv.ParseUint(aws.StringValue(port), 10, 16)
+		if err != nil {
+			return 0, err
+		}
+		return uint16(parsedPort), nil
+	}
+	if mainContainerPort != nil {
+		return aws.Uint16Value(mainContainerPort), nil
+	}
+	return 0, nil
+}
+
 // ExposedPorts returns all the ports that are container ports available to receive traffic.
 func (lbws *LoadBalancedWebService) ExposedPorts() (ExposedPortsIndex, error) {
 	exposedPorts := make(map[uint16]ExposedPort)
