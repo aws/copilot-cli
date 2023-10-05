@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws/arn"
 	"sort"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -167,10 +168,15 @@ type LoadBalancer struct {
 
 // LoadBalancer returns select information about a load balancer.
 func (e *ELBV2) LoadBalancer(id string) (*LoadBalancer, error) {
-	// figure out if id is name or arn and put it in appropriate input field
-	input := &elbv2.DescribeLoadBalancersInput{
-		LoadBalancerArns: nil,
-		Names:            nil,
+	var input *elbv2.DescribeLoadBalancersInput
+	if arn.IsARN(id) {
+		input = &elbv2.DescribeLoadBalancersInput{
+			LoadBalancerArns: []*string{aws.String(id)},
+		}
+	} else {
+		input = &elbv2.DescribeLoadBalancersInput{
+			Names: []*string{aws.String(id)},
+		}
 	}
 	output, err := e.client.DescribeLoadBalancers(input)
 	if err != nil {
