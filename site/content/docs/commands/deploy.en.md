@@ -93,7 +93,7 @@ Deploys multiple workloads in a prescribed order (fe and worker, then be).
 $ copilot deploy -n fe/1 -n be/2 -n worker/1
 ```
 
-Initializes and deploys all local workloads after deploying environment changes.
+Initializes and deploys all local workloads after (re)deploying the `prod` environment.
 ```console
 $ copilot deploy --all --init-wkld --deploy-env -e prod
 ```
