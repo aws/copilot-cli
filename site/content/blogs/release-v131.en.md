@@ -45,6 +45,24 @@ nlb:
 !!!info 
     NLB Security Group is a new AWS feature that lets you filter public traffic to your NLB, enhancing the security of your application. For more information, read this [AWS blogpost](https://aws.amazon.com/blogs/containers/network-load-balancers-now-support-security-groups/). For Copilot to use this feature, your `NetworkLoadBalancer` and `TargetGroup` resources need to be recreated. With v1.31 this will only happen if you specify `udp` protocol. With v1.33 however, Copilot will make this change for all users. This means that if you don't use DNS aliases, then the NLB's domain name will change, and if you do use DNS alias, then the alias will start pointing to the new NLB that is enhanced with a security group.
 
+## `copilot deploy` enhancements
+`copilot deploy` now supports deploying multiple workloads with one command. You can specify multiple workloads with the
+`--name` flag, use the new `--all` flag in conjunction with `--init-wkld` to initialize and deploy all local workloads,
+and you can now provide a "deployment order" tag when specifying service names. 
+
+For example, if you have cloned a new repository which includes multiple workloads, you can initialize the environment and 
+all services with one command.
+```console
+copilot deploy --init-env --deploy-env -e dev --all --init-wkld
+```
+
+If you have a service which must be deployed before another--for example, there is worker service which subscribes to a topic exposed
+by a different service in the workspace--you can specify names and orders with `--all`.
+```console
+copilot deploy --all -n fe/1 -n worker/2
+```
+This will deploy `fe`, then `worker`, then the remaining services or jobs in the workspace.
+
 ## Better task failure logs
 
 Before Copilot v1.31, if you wanted to find out why your ECS tasks stopped, you'd have to navigate to AWS Console -> ECS -> Service -> Stopped Tasks -> Stopped Reason.
@@ -70,7 +88,6 @@ With this enhancement, `copilot [noun] deploy` will now display the ECS task sto
       2. You can visit this article: https://repost.aws/knowledge-center/ecs-task-stopped.          
 ```
 
-## `copilot deploy` enhancements
 
 ## Importing an ACM certificate for your Static Site
 
