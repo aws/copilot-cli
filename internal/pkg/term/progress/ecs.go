@@ -275,7 +275,7 @@ func (c *rollingUpdateComponent) renderStoppedTasks(out io.Writer) (numLines int
 			Padding: c.padding + nestedComponentPadding,
 		},
 		&singleLineComponent{
-			Text: fmt.Sprintf("2. You can visit this article %s.",
+			Text: fmt.Sprintf("2. You can visit this article: %s.",
 				color.Emphasize("https://repost.aws/knowledge-center/ecs-task-stopped")),
 			Padding: c.padding + nestedComponentPadding,
 		})
