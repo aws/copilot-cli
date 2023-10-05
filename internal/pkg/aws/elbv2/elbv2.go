@@ -26,6 +26,8 @@ type api interface {
 	DescribeTargetHealth(*elbv2.DescribeTargetHealthInput) (*elbv2.DescribeTargetHealthOutput, error)
 	DescribeRules(*elbv2.DescribeRulesInput) (*elbv2.DescribeRulesOutput, error)
 	DescribeRulesWithContext(context.Context, *elbv2.DescribeRulesInput, ...request.Option) (*elbv2.DescribeRulesOutput, error)
+	DescribeLoadBalancers(input *elbv2.DescribeLoadBalancersInput) (*elbv2.DescribeLoadBalancersOutput, error)
+	DescribeListeners(input *elbv2.DescribeListenersInput) (*elbv2.DescribeListenersOutput, error)
 }
 
 // ELBV2 wraps an AWS ELBV2 client.
@@ -152,4 +154,54 @@ func (t *TargetHealth) HealthStatus() *HealthStatus {
 
 func (t *TargetHealth) targetID() string {
 	return aws.StringValue(t.Target.Id)
+}
+
+type LoadBalancer struct {
+	ARN            string
+	Name           string
+	DNSName        string
+	Scheme         string // "internet-facing" or "internal"
+	SecurityGroups []string
+}
+
+func (e *ELBV2) LoadBalancer(id string) (*LoadBalancer, error) {
+	// figure out if id is name or arn and put it in appropriate input field
+	input := &elbv2.DescribeLoadBalancersInput{
+		LoadBalancerArns: nil,
+		Names:            nil,
+	}
+	output, err := e.client.DescribeLoadBalancers(input)
+	if err != nil {
+		return nil, fmt.Errorf("describe load balancer %q: %w", id, err)
+	}
+	lb := output.LoadBalancers[0]
+	return &LoadBalancer{
+		ARN:            aws.StringValue(lb.LoadBalancerArn),
+		Name:           aws.StringValue(lb.LoadBalancerName),
+		DNSName:        aws.StringValue(lb.DNSName),
+		Scheme:         aws.StringValue(lb.Scheme),
+		SecurityGroups: aws.StringValueSlice(lb.SecurityGroups),
+	}, nil
+}
+
+type Listener struct {
+	ARN      *string
+	Port     *int64
+	Protocol *string
+}
+
+func (e *ELBV2) Listeners(lbARN string) ([]*Listener, error) {
+	output, err := e.client.DescribeListeners(&elbv2.DescribeListenersInput{LoadBalancerArn: aws.String(lbARN)})
+	if err != nil {
+		return nil, fmt.Errorf("describe listeners on load balancer %q: %w", lbARN, err)
+	}
+	var listeners []*Listener
+	for _, listener := range output.Listeners {
+		listeners = append(listeners, &Listener{
+			ARN:      listener.ListenerArn,
+			Port:     listener.Port,
+			Protocol: listener.Protocol,
+		})
+	}
+	return listeners, nil
 }
