@@ -249,8 +249,8 @@ var _ = Describe("Multiple Service App", func() {
 
 				routeURL = route.URL
 				if svcName == "front-end" {
-					// route.URL is of the form `https://example-alb.elb.us-west-2.amazonaws.com or example-nlb.elb.us-west-2.amazonaws.com, so we split to retrieve just one valid url`
-					routeURLs := strings.Split(route.URL, "or")
+					// route.URL is of the form `https://exampleor-alb.elb.us-west-2.amazonaws.com or exampleor-nlb.elb.us-west-2.amazonaws.com, so we split to retrieve just one valid url`
+					routeURLs := strings.Split(route.URL, " or")
 					Expect(len(routeURLs)).To(BeNumerically(">", 1))
 					routeURL = strings.TrimSpace(routeURLs[0])
 
@@ -335,8 +335,8 @@ var _ = Describe("Multiple Service App", func() {
 			route := svc.Routes[0]
 			Expect(route.Environment).To(Equal("test"))
 
-			// route.URL is of the form `https://example-alb.elb.us-west-2.amazonaws.com or example-nlb.elb.us-west-2.amazonaws.com, so we split to retrieve just one valid url`
-			routeURLs := strings.Split(route.URL, "or")
+			// route.URL is of the form `https://exampleor-alb.elb.us-west-2.amazonaws.com or exampleor-nlb.elb.us-west-2.amazonaws.com, so we split to retrieve just one valid url`
+			routeURLs := strings.Split(route.URL, " or")
 			Expect(len(routeURLs)).To(BeNumerically(">", 1))
 
 			routeURL = strings.TrimSpace(routeURLs[0])
@@ -413,8 +413,8 @@ var _ = Describe("Multiple Service App", func() {
 			route := svc.Routes[0]
 			Expect(route.Environment).To(Equal("test"))
 
-			// route.URL is of the form `https://example-alb.elb.us-west-2.amazonaws.com or example-nlb.elb.us-west-2.amazonaws.com, so we split to retrieve just one valid url`
-			routeURLs := strings.Split(route.URL, "or")
+			// route.URL is of the form `https://exampleor-alb.elb.us-west-2.amazonaws.com or exampleor-nlb.elb.us-west-2.amazonaws.com, so we split to retrieve just one valid url`
+			routeURLs := strings.Split(route.URL, " or")
 			Expect(len(routeURLs)).To(BeNumerically(">", 1))
 
 			routeURL = strings.TrimSpace(routeURLs[0])
@@ -467,8 +467,8 @@ var _ = Describe("Multiple Service App", func() {
 			// Calls the front end's magicwords endpoint
 			route := svc.Routes[0]
 
-			// route.URL is of the form `https://example-alb.elb.us-west-2.amazonaws.com or example-nlb.elb.us-west-2.amazonaws.com, so we split to retrieve just one valid url`
-			routeURLs := strings.Split(route.URL, "or")
+			// route.URL is of the form `https://exampleor-alb.elb.us-west-2.amazonaws.com or exampleor-nlb.elb.us-west-2.amazonaws.com, so we split to retrieve just one valid url`
+			routeURLs := strings.Split(route.URL, " or")
 			Expect(len(routeURLs)).To(BeNumerically(">", 1))
 
 			routeURL = strings.TrimSpace(routeURLs[0])
