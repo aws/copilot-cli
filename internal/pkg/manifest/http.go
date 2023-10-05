@@ -101,6 +101,21 @@ func (r *RoutingRule) IsEmpty() bool {
 		r.HostedZone == nil && r.RedirectToHTTPS == nil
 }
 
+// HealthCheckPort returns the port a HealthCheck is set to for a RoutingRule.
+func (r *RoutingRule) HealthCheckPort(mainContainerPort *uint16) uint16 {
+	// healthCheckPort is defined by RoutingRule.HealthCheck.Port, with fallback on RoutingRule.TargetPort, then image.port.
+	if r.HealthCheck.Advanced.Port != nil {
+		return uint16(aws.IntValue(r.HealthCheck.Advanced.Port))
+	}
+	if r.TargetPort != nil {
+		return aws.Uint16Value(r.TargetPort)
+	}
+	if mainContainerPort != nil {
+		return aws.Uint16Value(mainContainerPort)
+	}
+	return 0
+}
+
 // IPNet represents an IP network string. For example: 10.1.0.0/16
 type IPNet string
 
