@@ -247,14 +247,14 @@ var _ = Describe("Multiple Service App", func() {
 				route := svc.Routes[0]
 				Expect(route.Environment).To(Equal("test"))
 
-				// route.URL is of the form `example-alb.elb.us-west-2.amazonaws.com or example-nlb.elb.us-west-2.amazonaws.com, so we split to retrieve just one valid url`
-				routeURLs := strings.Split(route.URL, " ")
-				Expect(len(routeURLs)).To(BeNumerically(">", 1))
-
-				routeURL = routeURLs[0]
-
-				// Since the front-end was added first, it should have no suffix.
+				routeURL = route.URL
 				if svcName == "front-end" {
+					// route.URL is of the form `https://example-alb.elb.us-west-2.amazonaws.com or example-nlb.elb.us-west-2.amazonaws.com, so we split to retrieve just one valid url`
+					routeURLs := strings.Split(route.URL, "or")
+					Expect(len(routeURLs)).To(BeNumerically(">", 1))
+					routeURL = strings.TrimSpace(routeURLs[0])
+
+					// Since the front-end was added first, it should have no suffix.
 					Expect(routeURL).ToNot(HaveSuffix(svcName))
 				}
 
@@ -335,11 +335,11 @@ var _ = Describe("Multiple Service App", func() {
 			route := svc.Routes[0]
 			Expect(route.Environment).To(Equal("test"))
 
-			// route.URL is of the form `example-alb.elb.us-west-2.amazonaws.com or example-nlb.elb.us-west-2.amazonaws.com, so we split to retrieve just one valid url`
-			routeURLs := strings.Split(route.URL, " ")
+			// route.URL is of the form `https://example-alb.elb.us-west-2.amazonaws.com or example-nlb.elb.us-west-2.amazonaws.com, so we split to retrieve just one valid url`
+			routeURLs := strings.Split(route.URL, "or")
 			Expect(len(routeURLs)).To(BeNumerically(">", 1))
 
-			routeURL = routeURLs[0]
+			routeURL = strings.TrimSpace(routeURLs[0])
 
 			resp, fetchErr := http.Get(fmt.Sprintf("%s/service-endpoint-test/", routeURL))
 			Expect(fetchErr).NotTo(HaveOccurred())
@@ -365,10 +365,10 @@ var _ = Describe("Multiple Service App", func() {
 			route := svc.Routes[0]
 
 			// route.URL is of the form `example-alb.elb.us-west-2.amazonaws.com or example-nlb.elb.us-west-2.amazonaws.com, so we split to retrieve just one valid url`
-			routeURLs := strings.Split(route.URL, " ")
-			Expect(len(routeURLs)).To(BeNumerically(">", 1))
+			routeURLs := strings.Split(route.URL, " or ")
+			Expect(len(routeURLs)).To(Equal(2))
 
-			routeURL = routeURLs[0]
+			routeURL = routeURLs[1]
 
 			Expect(route.Environment).To(Equal("test"))
 
@@ -413,11 +413,11 @@ var _ = Describe("Multiple Service App", func() {
 			route := svc.Routes[0]
 			Expect(route.Environment).To(Equal("test"))
 
-			// route.URL is of the form `example-alb.elb.us-west-2.amazonaws.com or example-nlb.elb.us-west-2.amazonaws.com, so we split to retrieve just one valid url`
-			routeURLs := strings.Split(route.URL, " ")
+			// route.URL is of the form `https://example-alb.elb.us-west-2.amazonaws.com or example-nlb.elb.us-west-2.amazonaws.com, so we split to retrieve just one valid url`
+			routeURLs := strings.Split(route.URL, "or")
 			Expect(len(routeURLs)).To(BeNumerically(">", 1))
 
-			routeURL = routeURLs[0]
+			routeURL = strings.TrimSpace(routeURLs[0])
 
 			resp, fetchErr := http.Get(fmt.Sprintf("%s/efs-putter", routeURL))
 			Expect(fetchErr).NotTo(HaveOccurred())
@@ -467,11 +467,11 @@ var _ = Describe("Multiple Service App", func() {
 			// Calls the front end's magicwords endpoint
 			route := svc.Routes[0]
 
-			// route.URL is of the form `example-alb.elb.us-west-2.amazonaws.com or example-nlb.elb.us-west-2.amazonaws.com, so we split to retrieve just one valid url`
-			routeURLs := strings.Split(route.URL, " ")
+			// route.URL is of the form `https://example-alb.elb.us-west-2.amazonaws.com or example-nlb.elb.us-west-2.amazonaws.com, so we split to retrieve just one valid url`
+			routeURLs := strings.Split(route.URL, "or")
 			Expect(len(routeURLs)).To(BeNumerically(">", 1))
 
-			routeURL = routeURLs[0]
+			routeURL = strings.TrimSpace(routeURLs[0])
 
 			Expect(route.Environment).To(Equal("test"))
 			resp, fetchErr := http.Get(fmt.Sprintf("%s/magicwords/", routeURL))
