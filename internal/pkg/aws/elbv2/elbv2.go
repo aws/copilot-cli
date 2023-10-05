@@ -156,6 +156,7 @@ func (t *TargetHealth) targetID() string {
 	return aws.StringValue(t.Target.Id)
 }
 
+// LoadBalancer contains information about a given load balancer.
 type LoadBalancer struct {
 	ARN            string
 	Name           string
@@ -164,6 +165,7 @@ type LoadBalancer struct {
 	SecurityGroups []string
 }
 
+// LoadBalancer returns select information about a load balancer.
 func (e *ELBV2) LoadBalancer(id string) (*LoadBalancer, error) {
 	// figure out if id is name or arn and put it in appropriate input field
 	input := &elbv2.DescribeLoadBalancersInput{
@@ -184,12 +186,14 @@ func (e *ELBV2) LoadBalancer(id string) (*LoadBalancer, error) {
 	}, nil
 }
 
+// Listener contains information about a listener.
 type Listener struct {
 	ARN      *string
 	Port     *int64
 	Protocol *string
 }
 
+// Listeners returns select information about all listeners on a given load balancer.
 func (e *ELBV2) Listeners(lbARN string) ([]*Listener, error) {
 	output, err := e.client.DescribeListeners(&elbv2.DescribeListenersInput{LoadBalancerArn: aws.String(lbARN)})
 	if err != nil {
