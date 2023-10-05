@@ -22,7 +22,7 @@ Copilot v1.31 brings big enhancements to help you develop more flexibly and effi
 - **Better task failure logs**: Copilot will show more descriptive information during deployments when tasks fail, allowing better troubleshooting.
 - **`copilot deploy` enhancements**: You can now deploy multiple workloads at once, or deploy all local workloads with `--all`.
 - **Importing an ACM certificate for your Static Site**: You can now bring your own ACM certificate for the Static Site service. [See detailed section](#importing-an-acm-certificate-for-your-static-site)
-#### Please read if you use `nlb`: [NLB security group enhacement](#nlb-enhancements)
+#### Please read if you use `nlb`: [NLB security group enhancement](#nlb-enhancements)
 
 ???+ note "What’s AWS Copilot?"
 
