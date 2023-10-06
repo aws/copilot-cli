@@ -15,9 +15,9 @@ type Scheduler struct {
 	mu        sync.RWMutex
 	curTask   Task
 	curTaskID int
-	running   bool
 
-	errors chan error
+	errors  chan error
+	stopped chan struct{}
 
 	docker DockerCmdClient
 }
@@ -30,18 +30,6 @@ func NewScheduler(docker DockerCmdClient, idPrefix string) *Scheduler {
 	}
 }
 
-// logic in run_local is:
-// go task.Start()
-//  if a container stops
-//  either - continue on to next container based on exit code
-//  or - stop workload containers and fail
-// go wait for ctrl-C
-//  if ctrl-c, task.Stop()
-// go watchForWrite()
-//  if file written
-//    rebuild containers
-//    task.RestartWorkloadContainers()
-
 // Start starts the task mananger with the given task. Use
 // Restart() to run an updated task with the same manager. Any errors
 // encountered by operations done by the task manager will be returned
@@ -49,18 +37,10 @@ func NewScheduler(docker DockerCmdClient, idPrefix string) *Scheduler {
 func (s *Scheduler) Start(task Task) error {
 	// TODO start should _stop and return nil_ after Stop() is called
 	// so that the goroutine ends after Stop() is called
-	s.mu.Lock()
-	if s.running {
-		s.mu.Unlock()
-		return fmt.Errorf("scheduler already running. use Restart() to run a task.")
-	}
-	s.running = true
-	s.mu.Unlock()
-
 	ctx := context.Background()
 
 	// start the pause container
-	pauseRunOpts := task.pauseRunOptions()
+	pauseRunOpts := s.pauseRunOptions(task)
 	go s.run(-1, pauseRunOpts) // pause is used across taskIDs
 	go func() {
 		if err := s.waitForContainerToStart(ctx, pauseRunOpts.ContainerName); err != nil {
@@ -70,9 +50,6 @@ func (s *Scheduler) Start(task Task) error {
 		s.Restart(task)
 	}()
 
-	// TODO what we created an actions channel? or "events" or something?
-	// and the schedule thread ran everything itself?
-	// i.e., events <- stopEvent{}, events <- restartEvent{}
 	for {
 		select {
 		case err := <-s.errors:
@@ -87,24 +64,19 @@ func (s *Scheduler) Start(task Task) error {
 				if isCurTask {
 					return runErr.err
 				}
-			case err != nil:
+			default:
 				return err
 			}
 		}
 	}
 }
 
-type schedulerAction interface {
-	Do() error
-}
-
 func (s *Scheduler) Restart(task Task) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if !s.running {
-		return
-	}
+	// we no longer care about errors from the old task
+	s.curTaskID++
 
 	// ensure no pause container changes
 	curOpts := s.pauseRunOptions(s.curTask)
@@ -118,28 +90,36 @@ func (s *Scheduler) Restart(task Task) {
 		s.errors <- errors.New("new task requires recreating pause container")
 	}
 
-	if err := s.stopTask(context.Background(), s.curTask); err != nil {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go s.cancelCtxOnStop(ctx, cancel)
+
+	if err := s.stopTask(ctx, s.curTask); err != nil {
 		s.errors <- err
 		return
 	}
 
 	s.curTask = task
-	s.curTaskID++
-
 	for name, ctr := range task.Containers {
 		name, ctr := name, ctr
 		go s.run(s.curTaskID, s.containerRunOptions(name, ctr))
 	}
 }
 
+// cancelCtxOnStop calls cancel if Stop() is called before ctx finishes.
+func (s *Scheduler) cancelCtxOnStop(ctx context.Context, cancel func()) {
+	select {
+	case <-ctx.Done():
+	case <-s.stopped:
+		cancel()
+	}
+}
+
 func (s *Scheduler) Stop() {
+	close(s.stopped)
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
-
-	if !s.running {
-		return
-	}
-	s.running = false
 
 	// collect errors since we want to try to clean up everything we can
 	var errs []error
@@ -148,7 +128,7 @@ func (s *Scheduler) Stop() {
 	}
 
 	// stop pause container
-	if err := s.docker.Stop(context.Background(), s.curTask.containerID("pause")); err != nil {
+	if err := s.docker.Stop(context.Background(), s.containerID("pause")); err != nil {
 		errs = append(errs, fmt.Errorf("stop %q: %w", "pause", err))
 	}
 
@@ -166,7 +146,7 @@ func (s *Scheduler) stopTask(ctx context.Context, task Task) error {
 	for name := range task.Containers {
 		name := name
 		go func() {
-			if err := s.docker.Stop(ctx, task.containerID(name)); err != nil {
+			if err := s.docker.Stop(ctx, s.containerID(name)); err != nil {
 				errCh <- fmt.Errorf("stop %q: %w", name, err)
 				return
 			}
@@ -257,9 +237,13 @@ func (r *runError) Error() string {
 
 // run calls docker run using opts. Any errors are sent to
 // t.errors, wrapped as a runError with the given taskID.
-func (t *Scheduler) run(taskID int, opts RunOptions) {
-	if err := t.docker.Run(context.Background(), &opts); err != nil {
-		t.errors <- &runError{
+func (s *Scheduler) run(taskID int, opts RunOptions) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go s.cancelCtxOnStop(ctx, cancel)
+
+	if err := s.docker.Run(ctx, &opts); err != nil {
+		s.errors <- &runError{
 			taskID: taskID,
 			err:    err,
 		}
