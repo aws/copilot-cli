@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/aws/copilot-cli/internal/pkg/queue"
+	"github.com/dustin/go-humanize"
 	"math"
 	"slices"
 	"strconv"
@@ -38,8 +39,9 @@ import (
 )
 
 const (
-	svcWkldType = "svc"
-	jobWkldType = "job"
+	svcWkldType                 = "svc"
+	jobWkldType                 = "job"
+	optionAllRemainingWorkloads = "All remaining workloads"
 )
 
 // filterItemsByStrings is a generic function to return the subset of wantedStrings that exists in possibleItems.
@@ -65,28 +67,6 @@ func filterItemsByStrings[T any](wantedStrings []string, possibleItems []T, stri
 		}
 	}
 	return res
-}
-
-// filterOutItems is a generic function to return the subset of allItems which does not include the items specified in
-// unwantedItems. stringFunc is a function which maps the unwantedItem type T to a string value. For example, one can
-// convert a struct of type *config.Workload to a string by passing
-//
-//	func(w *config.Workload) string { return w.Name }
-//
-// as the stringFunc parameter.
-func filterOutItems[T any](allItems []string, unwantedItems []T, stringFunc func(T) string) []string {
-	isUnwanted := make(map[string]bool)
-	for _, item := range unwantedItems {
-		isUnwanted[stringFunc(item)] = true
-	}
-	var filtered []string
-	for _, str := range allItems {
-		if isUnwanted[str] {
-			continue
-		}
-		filtered = append(filtered, str)
-	}
-	return filtered
 }
 
 type deployVars struct {
@@ -130,6 +110,7 @@ type deployOpts struct {
 	wsWorkloads            []string
 	storeWorkloads         []*config.Workload
 	initializedWsWorkloads []string
+	deploymentOrderMap     map[string]int
 }
 
 func newDeployOpts(vars deployVars) (*deployOpts, error) {
@@ -296,7 +277,10 @@ func (w workloadPriority) LessThan(a workloadPriority) bool {
 //
 // It is possible to have multiple workloads of the same priority. We don't guarantee that workloads within priority
 // groups will have identical deployment orders each time.
-func parseDeploymentOrderTags(namesWithOptionalOrder []string) (map[string]int, error) {
+func (o *deployOpts) parseDeploymentOrderTags(namesWithOptionalOrder []string) error {
+	if len(o.deploymentOrderMap) > 0 {
+		return nil
+	}
 	prioritiesMap := make(map[string]int)
 	// First pass through flags to identify priority groups
 	for _, wkldName := range namesWithOptionalOrder {
@@ -308,14 +292,15 @@ func parseDeploymentOrderTags(namesWithOptionalOrder []string) (map[string]int, 
 		} else if len(parts) == 2 {
 			order, err := strconv.Atoi(parts[1])
 			if err != nil {
-				return nil, fmt.Errorf("parse deployment order for workloads: %w", err)
+				return fmt.Errorf("parse deployment order for workloads: %w", err)
 			}
 			prioritiesMap[parts[0]] = order
 		} else {
-			return nil, fmt.Errorf("invalid deployment order for workload %s", wkldName)
+			return fmt.Errorf("invalid deployment order for workload %s", wkldName)
 		}
 	}
-	return prioritiesMap, nil
+	o.deploymentOrderMap = prioritiesMap
+	return nil
 }
 
 // getDeploymentOrder parses names and tags from the --name flag, respecting "all".
@@ -328,14 +313,13 @@ func parseDeploymentOrderTags(namesWithOptionalOrder []string) (map[string]int, 
 // TODO: when there's a dependsOn field in the manifest, we should modify this function to respect it.
 func (o *deployOpts) getDeploymentOrder() ([][]string, error) {
 	// Get a map from workload name to deployment priority
-	prioritiesMap, err := parseDeploymentOrderTags(o.workloadNames)
-	if err != nil {
+	if err := o.parseDeploymentOrderTags(o.workloadNames); err != nil {
 		return nil, err
 	}
 
 	// Iterate over priority map to invert it and get groups of workloads with the same priority.
 	groupsMap := make(map[int][]string)
-	for k, v := range prioritiesMap {
+	for k, v := range o.deploymentOrderMap {
 		groupsMap[v] = append(groupsMap[v], k)
 	}
 	if len(groupsMap) == 0 {
@@ -344,8 +328,8 @@ func (o *deployOpts) getDeploymentOrder() ([][]string, error) {
 
 	// If --all is specified, we need to add the remainder of workloads with math.MaxInt priority according to whether or not --init-wkld is specified.
 	if o.deployAllWorkloads {
-		specifiedWorkloadList := make([]string, 0, len(prioritiesMap))
-		for k := range prioritiesMap {
+		specifiedWorkloadList := make([]string, 0, len(o.deploymentOrderMap))
+		for k := range o.deploymentOrderMap {
 			specifiedWorkloadList = append(specifiedWorkloadList, k)
 		}
 
@@ -355,7 +339,7 @@ func (o *deployOpts) getDeploymentOrder() ([][]string, error) {
 			if err != nil {
 				return nil, err
 			}
-			workloadsToAppend := filterOutItems(localWorkloads, specifiedWorkloadList, func(s string) string { return s })
+			workloadsToAppend := slices.DeleteFunc(localWorkloads, func(s string) bool { return slices.Contains(specifiedWorkloadList, s) })
 			if len(workloadsToAppend) != 0 {
 				groupsMap[math.MaxInt] = append(groupsMap[math.MaxInt], workloadsToAppend...)
 			}
@@ -365,7 +349,7 @@ func (o *deployOpts) getDeploymentOrder() ([][]string, error) {
 			if err != nil {
 				return nil, err
 			}
-			workloadsToAppend := filterOutItems(initializedWorkloads, specifiedWorkloadList, func(s string) string { return s })
+			workloadsToAppend := slices.DeleteFunc(initializedWorkloads, func(s string) bool { return slices.Contains(specifiedWorkloadList, s) })
 			if len(workloadsToAppend) != 0 {
 				groupsMap[math.MaxInt] = append(groupsMap[math.MaxInt], workloadsToAppend...)
 			}
@@ -563,7 +547,41 @@ func (o *deployOpts) askNames() error {
 	if err != nil {
 		return fmt.Errorf("select service or job: %w", err)
 	}
-	o.workloadNames = names
+	if len(names) == 1 {
+		o.workloadNames = names
+		return nil
+	}
+
+	// Select workload priority by repeatedly prompting with a multiselect until the list of options is depleted.
+	options := names
+	taggedOptions := make([]string, 0, len(options))
+	currentPriority := 1
+	for len(options) > 0 {
+		selectedNames, err := o.prompt.MultiSelect(
+			fmt.Sprintf("Which workload(s) would you like to deploy in your %s deployment group?", humanize.Ordinal(currentPriority)),
+			"These workloads will be deployed together.",
+			append(options, optionAllRemainingWorkloads),
+			prompt.RequireMinItems(1),
+			prompt.WithFinalMessage(fmt.Sprintf("Group %d", currentPriority)),
+		)
+		if err != nil {
+			return fmt.Errorf("select workloads for deployment group: %w", err)
+		}
+		if slices.Contains(selectedNames, optionAllRemainingWorkloads) {
+			selectedNames = options
+		}
+
+		// Tag all selected workloads with the given priority.
+		for _, name := range selectedNames {
+			taggedOptions = append(taggedOptions, fmt.Sprintf("%s/%d", name, currentPriority))
+		}
+		options = slices.DeleteFunc(options, func(s string) bool { return slices.Contains(selectedNames, s) })
+		currentPriority++
+	}
+
+	if err := o.parseDeploymentOrderTags(taggedOptions); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -739,7 +757,7 @@ func BuildDeployCmd() *cobra.Command {
   Deploys a service named "frontend" to a "test" environment.
   /code $ copilot deploy --name frontend --env test
   Deploys a job named "mailer" with additional resource tags to a "prod" environment.
-  /code $ copilot deploy -n mailer -e prod --resource-tags source/revision=bb133e7,deployment/initiator=manual --deploy-env=false
+  /code $ copilot deploy -n mailer -e prod --resource-tags source/revision=bb133e7,deployment/initiator=manual
   Initializes and deploys an environment named "test" in us-west-2 under the "default" profile with local manifest, 
     then deploys a service named "api"
   /code $ copilot deploy --init-env --deploy-env --env test --name api --profile default --region us-west-2
