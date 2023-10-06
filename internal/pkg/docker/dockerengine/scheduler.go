@@ -26,6 +26,7 @@ func NewScheduler(docker DockerCmdClient, idPrefix string) *Scheduler {
 	return &Scheduler{
 		idPrefix: idPrefix,
 		errors:   make(chan error),
+		stopped:  make(chan struct{}),
 		docker:   docker,
 	}
 }
@@ -58,6 +59,8 @@ func (s *Scheduler) Start(task Task) error {
 			case errors.As(err, &runErr):
 				isCurTask := runErr.taskID == s.curTaskID.Load()
 				if isCurTask {
+					// TODO should call Stop() in this case - or how can we get Stop() errors
+					// if Start() ends on it's own?
 					return runErr.err
 				}
 			default:
@@ -75,15 +78,17 @@ func (s *Scheduler) Restart(task Task) {
 	defer s.mu.Unlock()
 
 	// ensure no pause container changes
-	curOpts := s.pauseRunOptions(s.curTask)
-	newOpts := s.pauseRunOptions(task)
-	switch {
-	case !maps.Equal(curOpts.EnvVars, newOpts.EnvVars):
-		fallthrough
-	case !maps.Equal(curOpts.Secrets, newOpts.Secrets):
-		fallthrough
-	case !maps.Equal(curOpts.ContainerPorts, newOpts.ContainerPorts):
-		s.errors <- errors.New("new task requires recreating pause container")
+	if taskID != 1 {
+		curOpts := s.pauseRunOptions(s.curTask)
+		newOpts := s.pauseRunOptions(task)
+		switch {
+		case !maps.Equal(curOpts.EnvVars, newOpts.EnvVars):
+			fallthrough
+		case !maps.Equal(curOpts.Secrets, newOpts.Secrets):
+			fallthrough
+		case !maps.Equal(curOpts.ContainerPorts, newOpts.ContainerPorts):
+			s.errors <- errors.New("new task requires recreating pause container")
+		}
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -239,10 +244,11 @@ func (s *Scheduler) run(taskID int32, opts RunOptions) {
 	defer cancel()
 	go s.cancelCtxOnStop(ctx, cancel)
 
+	fmt.Printf("calling docker run for %q\n", opts.ContainerName)
 	if err := s.docker.Run(ctx, &opts); err != nil {
 		s.errors <- &runError{
 			taskID: taskID,
-			err:    err,
+			err:    fmt.Errorf("run %q: %w", opts.ContainerName, err),
 		}
 	}
 }

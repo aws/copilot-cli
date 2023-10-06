@@ -236,8 +236,7 @@ func (in *RunOptions) generateRunArguments() []string {
 		args = append(args, "--publish", fmt.Sprintf("%s:%s", hostPort, containerPort))
 	}
 
-	// Add network option if it's not a "pause" container.
-	if !strings.HasPrefix(in.ContainerName, "pause") {
+	if in.ContainerNetwork != "" {
 		args = append(args, "--network", fmt.Sprintf("container:%s", in.ContainerNetwork))
 	}
 

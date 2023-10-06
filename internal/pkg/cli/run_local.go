@@ -14,7 +14,6 @@ import (
 	"strings"
 	"sync"
 	"syscall"
-	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
@@ -236,7 +235,6 @@ func (o *runLocalOpts) validateAndAskWkldEnvName() error {
 	o.wkldName = deployedWorkload.Name
 	o.envName = deployedWorkload.Env
 	o.wkldType = deployedWorkload.Type
-	o.containerSuffix = o.getContainerSuffix()
 	return nil
 }
 
@@ -285,7 +283,7 @@ func (o *runLocalOpts) Execute() error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	s := dockerengine.NewScheduler(o.dockerEngine.(dockerengine.DockerCmdClient))
+	s := dockerengine.NewScheduler(o.dockerEngine.(dockerengine.DockerCmdClient), fmt.Sprintf("%s-%s-%s-", o.appName, o.envName, o.wkldName))
 
 	errCh := make(chan error)
 
@@ -311,6 +309,7 @@ func (o *runLocalOpts) Execute() error {
 
 	// stop the containers in either case
 	s.Stop()
+	return nil
 }
 
 func (o *runLocalOpts) getTask(ctx context.Context) (dockerengine.Task, error) {
@@ -325,7 +324,6 @@ func (o *runLocalOpts) getTask(ctx context.Context) (dockerengine.Task, error) {
 	}
 
 	task := dockerengine.Task{
-		IDPrefix:   fmt.Sprintf("%s-%s-%s-", o.appName, o.envName, o.wkldName),
 		Containers: make(map[string]dockerengine.ContainerDefinition, len(td.ContainerDefinitions)),
 	}
 
@@ -354,24 +352,14 @@ func (o *runLocalOpts) getTask(ctx context.Context) (dockerengine.Task, error) {
 
 			def.Ports[hostPort] = ctrPort
 		}
+
+		task.Containers[name] = def
 	}
 
 	return task, nil
 }
 
-func (o *runLocalOpts) getContainerSuffix() string {
-	return fmt.Sprintf("%s-%s-%s", o.appName, o.envName, o.wkldName)
-}
-
-type action struct {
-	async bool
-	fn    func(context.Context) error
-}
-
-type containerManager struct {
-	actions []action
-}
-
+/*
 func (o *runLocalOpts) runPauseContainer(ctx context.Context, ports map[string]string) error {
 	// flip ports to be host->ctr
 	flippedPorts := make(map[string]string, len(ports))
@@ -422,6 +410,7 @@ func (o *runLocalOpts) runPauseContainer(ctx context.Context, ports map[string]s
 
 	return nil
 }
+*/
 
 func (o *runLocalOpts) runContainers(ctx context.Context, containerURIs map[string]string, envVars map[string]containerEnv) error {
 	g, ctx := errgroup.WithContext(ctx)
@@ -464,7 +453,7 @@ func (o *runLocalOpts) runContainers(ctx context.Context, containerURIs map[stri
 func (o *runLocalOpts) cleanUpContainers(ctx context.Context, containerURIs map[string]string) error {
 	cleanUp := func(id string) error {
 		o.prog.Start(fmt.Sprintf("Stopping %q", id))
-		if err := o.dockerEngine.Stop(id); err != nil {
+		if err := o.dockerEngine.Stop(context.Background(), id); err != nil {
 			o.prog.Stop(log.Serrorf("Failed to stop %q\n", id))
 			return fmt.Errorf("stop: %w", err)
 		}
