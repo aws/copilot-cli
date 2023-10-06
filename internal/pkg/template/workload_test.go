@@ -371,11 +371,11 @@ func TestEnvControllerParameters(t *testing.T) {
 			opts: WorkloadOpts{
 				WorkloadType: "Load Balanced Web Service",
 				ALBEnabled:   true,
-				ImportedALB: &ImportALB{
+				ImportedALB: &ImportedALB{
 					Name: aws.String("MyExistingALB"),
 				},
 			},
-			expected: []string{},
+			expected: []string{"Aliases,"},
 		},
 		"LBWS with ALB and private placement": {
 			opts: WorkloadOpts{

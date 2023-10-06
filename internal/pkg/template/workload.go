@@ -799,7 +799,7 @@ type WorkloadOpts struct {
 	Secrets      map[string]Secret
 	EntryPoint   []string
 	Command      []string
-	ImportedALB  *ImportALB
+	ImportedALB  *ImportedALB
 
 	// Additional options that are common between **all** workload templates.
 	Tags                     map[string]string        // Used by App Runner workloads to tag App Runner service resources
@@ -880,8 +880,8 @@ func (lr ALBListenerRule) HealthCheckProtocol() string {
 	return ""
 }
 
-// ImportALB holds the fields to import an existing ALB.
-type ImportALB struct {
+// ImportedALB holds the fields to import an existing ALB.
+type ImportedALB struct {
 	Name *string
 	ARN  *string
 }
@@ -1005,8 +1005,8 @@ func randomUUIDFunc() (string, error) {
 // envControllerParameters determines which parameters to include in the EnvController template.
 func envControllerParameters(o WorkloadOpts) []string {
 	parameters := []string{}
-	if o.WorkloadType == "Load Balanced Web Service" && o.ImportedALB == nil {
-		if o.ALBEnabled {
+	if o.WorkloadType == "Load Balanced Web Service" {
+		if o.ALBEnabled && o.ImportedALB == nil {
 			parameters = append(parameters, "ALBWorkloads,")
 		}
 		parameters = append(parameters, "Aliases,") // YAML needs the comma separator; resolved in EnvContr.
