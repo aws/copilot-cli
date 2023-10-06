@@ -71,6 +71,15 @@ func (s *Scheduler) Start(task Task) error {
 	}
 }
 
+// err reports error to the main scheduler routine in its own goroutine.
+// this makes it possible for errors to be reported from a function that has s.mu locked,
+// by not blocking run() errors from being handled.
+func (s *Scheduler) err(err error) {
+	go func() {
+		s.errors <- err
+	}()
+}
+
 func (s *Scheduler) Restart(task Task) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -87,7 +96,7 @@ func (s *Scheduler) Restart(task Task) {
 	case !maps.Equal(curOpts.Secrets, newOpts.Secrets):
 		fallthrough
 	case !maps.Equal(curOpts.ContainerPorts, newOpts.ContainerPorts):
-		s.errors <- errors.New("new task requires recreating pause container")
+		s.err(errors.New("new task requires recreating pause container"))
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -95,7 +104,7 @@ func (s *Scheduler) Restart(task Task) {
 	go s.cancelCtxOnStop(ctx, cancel)
 
 	if err := s.stopTask(ctx, s.curTask); err != nil {
-		s.errors <- err
+		s.err(err)
 		return
 	}
 
@@ -121,6 +130,9 @@ func (s *Scheduler) Stop() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	// ignore old errors
+	s.curTaskID++
+
 	// collect errors since we want to try to clean up everything we can
 	var errs []error
 	if err := s.stopTask(context.Background(), s.curTask); err != nil {
@@ -133,7 +145,7 @@ func (s *Scheduler) Stop() {
 	}
 
 	if len(errs) > 0 {
-		s.errors <- fmt.Errorf("stop: %w", errors.Join(errs...))
+		s.err(fmt.Errorf("stop: %w", errors.Join(errs...)))
 	}
 }
 
