@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"maps"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -14,10 +15,9 @@ type Scheduler struct {
 
 	mu        sync.RWMutex
 	curTask   Task
-	curTaskID int
-
-	errors  chan error
-	stopped chan struct{}
+	curTaskID atomic.Int32
+	errors    chan error
+	stopped   chan struct{}
 
 	docker DockerCmdClient
 }
@@ -35,8 +35,6 @@ func NewScheduler(docker DockerCmdClient, idPrefix string) *Scheduler {
 // encountered by operations done by the task manager will be returned
 // by Start().
 func (s *Scheduler) Start(task Task) error {
-	// TODO start should _stop and return nil_ after Stop() is called
-	// so that the goroutine ends after Stop() is called
 	ctx := context.Background()
 
 	// start the pause container
@@ -58,9 +56,7 @@ func (s *Scheduler) Start(task Task) error {
 			var runErr *runError
 			switch {
 			case errors.As(err, &runErr):
-				s.mu.RLock()
-				isCurTask := runErr.taskID == s.curTaskID
-				s.mu.RUnlock()
+				isCurTask := runErr.taskID == s.curTaskID.Load()
 				if isCurTask {
 					return runErr.err
 				}
@@ -71,21 +67,12 @@ func (s *Scheduler) Start(task Task) error {
 	}
 }
 
-// err reports error to the main scheduler routine in its own goroutine.
-// this makes it possible for errors to be reported from a function that has s.mu locked,
-// by not blocking run() errors from being handled.
-func (s *Scheduler) err(err error) {
-	go func() {
-		s.errors <- err
-	}()
-}
-
 func (s *Scheduler) Restart(task Task) {
+	// we no longer care about errors from the old task
+	taskID := s.curTaskID.Add(1)
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
-
-	// we no longer care about errors from the old task
-	s.curTaskID++
 
 	// ensure no pause container changes
 	curOpts := s.pauseRunOptions(s.curTask)
@@ -96,7 +83,7 @@ func (s *Scheduler) Restart(task Task) {
 	case !maps.Equal(curOpts.Secrets, newOpts.Secrets):
 		fallthrough
 	case !maps.Equal(curOpts.ContainerPorts, newOpts.ContainerPorts):
-		s.err(errors.New("new task requires recreating pause container"))
+		s.errors <- errors.New("new task requires recreating pause container")
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -104,14 +91,14 @@ func (s *Scheduler) Restart(task Task) {
 	go s.cancelCtxOnStop(ctx, cancel)
 
 	if err := s.stopTask(ctx, s.curTask); err != nil {
-		s.err(err)
+		s.errors <- err
 		return
 	}
 
 	s.curTask = task
 	for name, ctr := range task.Containers {
 		name, ctr := name, ctr
-		go s.run(s.curTaskID, s.containerRunOptions(name, ctr))
+		go s.run(taskID, s.containerRunOptions(name, ctr))
 	}
 }
 
@@ -125,13 +112,11 @@ func (s *Scheduler) cancelCtxOnStop(ctx context.Context, cancel func()) {
 }
 
 func (s *Scheduler) Stop() {
+	s.curTaskID.Add(1) // ignore old errors
 	close(s.stopped)
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
-
-	// ignore old errors
-	s.curTaskID++
 
 	// collect errors since we want to try to clean up everything we can
 	var errs []error
@@ -145,7 +130,7 @@ func (s *Scheduler) Stop() {
 	}
 
 	if len(errs) > 0 {
-		s.err(fmt.Errorf("stop: %w", errors.Join(errs...)))
+		s.errors <- fmt.Errorf("stop: %w", errors.Join(errs...))
 	}
 }
 
@@ -239,7 +224,7 @@ func (s *Scheduler) containerRunOptions(name string, ctr ContainerDefinition) Ru
 }
 
 type runError struct {
-	taskID int
+	taskID int32
 	err    error
 }
 
@@ -249,7 +234,7 @@ func (r *runError) Error() string {
 
 // run calls docker run using opts. Any errors are sent to
 // t.errors, wrapped as a runError with the given taskID.
-func (s *Scheduler) run(taskID int, opts RunOptions) {
+func (s *Scheduler) run(taskID int32, opts RunOptions) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	go s.cancelCtxOnStop(ctx, cancel)
