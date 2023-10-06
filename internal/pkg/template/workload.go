@@ -799,6 +799,7 @@ type WorkloadOpts struct {
 	Secrets      map[string]Secret
 	EntryPoint   []string
 	Command      []string
+	ImportedALB  *ImportedALB
 
 	// Additional options that are common between **all** workload templates.
 	Tags                     map[string]string        // Used by App Runner workloads to tag App Runner service resources
@@ -877,6 +878,12 @@ func (lr ALBListenerRule) HealthCheckProtocol() string {
 		return "HTTP"
 	}
 	return ""
+}
+
+// ImportedALB holds the fields to import an existing ALB.
+type ImportedALB struct {
+	Name *string
+	ARN  *string
 }
 
 // ParseLoadBalancedWebService parses a load balanced web service's CloudFormation template
@@ -962,12 +969,12 @@ func withSvcParsingFuncs() ParseOption {
 			"contains":                slices.Contains[[]string, string],
 			"requiresVPCConnector":    requiresVPCConnector,
 			"strconvUint16":           StrconvUint16,
-			"trancateWithHashPadding": trancateWithHashPadding,
+			"truncateWithHashPadding": truncateWithHashPadding,
 		})
 	}
 }
 
-func trancateWithHashPadding(s string, max, paddingLength int) string {
+func truncateWithHashPadding(s string, max, paddingLength int) string {
 	if len(s) <= max {
 		return s
 	}
@@ -999,7 +1006,7 @@ func randomUUIDFunc() (string, error) {
 func envControllerParameters(o WorkloadOpts) []string {
 	parameters := []string{}
 	if o.WorkloadType == "Load Balanced Web Service" {
-		if o.ALBEnabled {
+		if o.ALBEnabled && o.ImportedALB == nil {
 			parameters = append(parameters, "ALBWorkloads,")
 		}
 		parameters = append(parameters, "Aliases,") // YAML needs the comma separator; resolved in EnvContr.
