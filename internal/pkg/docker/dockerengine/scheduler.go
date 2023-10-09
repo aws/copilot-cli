@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package dockerengine
 
 import (
@@ -49,6 +52,7 @@ func (s *Scheduler) Start(task Task) error {
 		s.Restart(task)
 	}()
 
+	defer s.Stop()
 	for {
 		select {
 		case err := <-s.errors:
@@ -116,9 +120,16 @@ func (s *Scheduler) cancelCtxOnStop(ctx context.Context, cancel func()) {
 	}
 }
 
-func (s *Scheduler) Stop() {
-	s.curTaskID.Add(1) // ignore old errors
-	close(s.stopped)
+func (s *Scheduler) Stop() error {
+	select {
+	case <-s.stopped:
+		// only need to stop once
+		return nil
+	default:
+		// ignore run errors
+		s.curTaskID.Add(1)
+		close(s.stopped)
+	}
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -130,13 +141,15 @@ func (s *Scheduler) Stop() {
 	}
 
 	// stop pause container
+	// TODO, again, should be -t 0 (kill)
 	if err := s.docker.Stop(context.Background(), s.containerID("pause")); err != nil {
 		errs = append(errs, fmt.Errorf("stop %q: %w", "pause", err))
 	}
 
 	if len(errs) > 0 {
-		s.errors <- fmt.Errorf("stop: %w", errors.Join(errs...))
+		return fmt.Errorf("stop: %w", errors.Join(errs...))
 	}
+	return nil
 }
 
 func (s *Scheduler) stopTask(ctx context.Context, task Task) error {
@@ -148,6 +161,7 @@ func (s *Scheduler) stopTask(ctx context.Context, task Task) error {
 	for name := range task.Containers {
 		name := name
 		go func() {
+			// should be a kill at wait 10 seconds?
 			if err := s.docker.Stop(ctx, s.containerID(name)); err != nil {
 				errCh <- fmt.Errorf("stop %q: %w", name, err)
 				return
@@ -244,7 +258,6 @@ func (s *Scheduler) run(taskID int32, opts RunOptions) {
 	defer cancel()
 	go s.cancelCtxOnStop(ctx, cancel)
 
-	fmt.Printf("calling docker run for %q\n", opts.ContainerName)
 	if err := s.docker.Run(ctx, &opts); err != nil {
 		s.errors <- &runError{
 			taskID: taskID,
