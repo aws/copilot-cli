@@ -14,7 +14,8 @@ import (
 )
 
 type Scheduler struct {
-	idPrefix string
+	idPrefix   string
+	logOptions logOptionsFunc
 
 	mu        sync.RWMutex
 	curTask   Task
@@ -25,12 +26,15 @@ type Scheduler struct {
 	docker DockerCmdClient
 }
 
-func NewScheduler(docker DockerCmdClient, idPrefix string) *Scheduler {
+type logOptionsFunc func(name string, ctr ContainerDefinition) RunLogOptions
+
+func NewScheduler(docker DockerCmdClient, idPrefix string, logOptions logOptionsFunc) *Scheduler {
 	return &Scheduler{
-		idPrefix: idPrefix,
-		errors:   make(chan error),
-		stopped:  make(chan struct{}),
-		docker:   docker,
+		idPrefix:   idPrefix,
+		logOptions: logOptions,
+		errors:     make(chan error),
+		stopped:    make(chan struct{}),
+		docker:     docker,
 	}
 }
 
@@ -218,7 +222,7 @@ func (s *Scheduler) containerRunOptions(name string, ctr ContainerDefinition) Ru
 		EnvVars:          ctr.EnvVars,
 		Secrets:          ctr.Secrets,
 		ContainerNetwork: s.containerID("pause"),
-		// TODO logging
+		LogOptions:       s.logOptions(name, ctr),
 	}
 }
 

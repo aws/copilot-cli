@@ -283,7 +283,13 @@ func (o *runLocalOpts) Execute() error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	s := dockerengine.NewScheduler(o.dockerEngine.(dockerengine.DockerCmdClient), fmt.Sprintf("%s-%s-%s-", o.appName, o.envName, o.wkldName))
+	s := dockerengine.NewScheduler(o.dockerEngine.(dockerengine.DockerCmdClient), fmt.Sprintf("%s-%s-%s-", o.appName, o.envName, o.wkldName), func(name string, ctr dockerengine.ContainerDefinition) dockerengine.RunLogOptions {
+		return dockerengine.RunLogOptions{
+			Color:      o.newColor(),
+			Output:     os.Stderr,
+			LinePrefix: fmt.Sprintf("[%s] ", name),
+		}
+	})
 
 	errCh := make(chan error)
 
