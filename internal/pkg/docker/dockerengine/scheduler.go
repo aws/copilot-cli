@@ -71,12 +71,9 @@ func (s *Scheduler) Restart(task Task) {
 	if taskID != 1 {
 		curOpts := s.pauseRunOptions(s.curTask)
 		newOpts := s.pauseRunOptions(task)
-		switch {
-		case !maps.Equal(curOpts.EnvVars, newOpts.EnvVars):
-			fallthrough
-		case !maps.Equal(curOpts.Secrets, newOpts.Secrets):
-			fallthrough
-		case !maps.Equal(curOpts.ContainerPorts, newOpts.ContainerPorts):
+		if !maps.Equal(curOpts.EnvVars, newOpts.EnvVars) ||
+			!maps.Equal(curOpts.Secrets, newOpts.Secrets) ||
+			!maps.Equal(curOpts.ContainerPorts, newOpts.ContainerPorts) {
 			s.errors <- errors.New("new task requires recreating pause container")
 		}
 	}
@@ -218,7 +215,7 @@ func (s *Scheduler) pauseRunOptions(t Task) RunOptions {
 func (s *Scheduler) containerRunOptions(name string, ctr ContainerDefinition) RunOptions {
 	return RunOptions{
 		ImageURI:         ctr.ImageURI,
-		ContainerName:    name,
+		ContainerName:    s.containerID(name),
 		EnvVars:          ctr.EnvVars,
 		Secrets:          ctr.Secrets,
 		ContainerNetwork: s.containerID("pause"),
