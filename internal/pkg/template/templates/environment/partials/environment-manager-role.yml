@@ -12,7 +12,10 @@ EnvironmentManagerRole:
       - Effect: Allow
         Principal:
           AWS: !Sub ${ToolsAccountPrincipalARN}
-        Action: sts:AssumeRole
+        Action:
+        - sts:AssumeRole
+        - sts:SetSourceIdentity
+        - stsTagSession
     {{- if .PermissionsBoundary}}
     PermissionsBoundary: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/{{.PermissionsBoundary}}'
     {{- end}}
