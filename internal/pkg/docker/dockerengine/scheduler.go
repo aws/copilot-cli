@@ -52,26 +52,8 @@ func (s *Scheduler) Start(task Task) error {
 		s.Restart(task)
 	}()
 
-	defer s.Stop()
-	for {
-		select {
-		case err := <-s.errors:
-			// only return error if it came from the current task ID.
-			// we _expect_ errors from previous task IDs as we shut them down.
-			var runErr *runError
-			switch {
-			case errors.As(err, &runErr):
-				isCurTask := runErr.taskID == s.curTaskID.Load()
-				if isCurTask {
-					// TODO should call Stop() in this case - or how can we get Stop() errors
-					// if Start() ends on it's own?
-					return runErr.err
-				}
-			default:
-				return err
-			}
-		}
-	}
+	err := <-s.errors
+	return errors.Join(s.Stop(), err)
 }
 
 func (s *Scheduler) Restart(task Task) {
@@ -141,7 +123,6 @@ func (s *Scheduler) Stop() error {
 	}
 
 	// stop pause container
-	// TODO, again, should be -t 0 (kill)
 	if err := s.docker.Stop(context.Background(), s.containerID("pause")); err != nil {
 		errs = append(errs, fmt.Errorf("stop %q: %w", "pause", err))
 	}
@@ -161,7 +142,6 @@ func (s *Scheduler) stopTask(ctx context.Context, task Task) error {
 	for name := range task.Containers {
 		name := name
 		go func() {
-			// should be a kill at wait 10 seconds?
 			if err := s.docker.Stop(ctx, s.containerID(name)); err != nil {
 				errCh <- fmt.Errorf("stop %q: %w", name, err)
 				return
@@ -242,26 +222,12 @@ func (s *Scheduler) containerRunOptions(name string, ctr ContainerDefinition) Ru
 	}
 }
 
-type runError struct {
-	taskID int32
-	err    error
-}
-
-func (r *runError) Error() string {
-	return r.err.Error()
-}
-
 // run calls docker run using opts. Any errors are sent to
 // t.errors, wrapped as a runError with the given taskID.
 func (s *Scheduler) run(taskID int32, opts RunOptions) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	go s.cancelCtxOnStop(ctx, cancel)
-
-	if err := s.docker.Run(ctx, &opts); err != nil {
-		s.errors <- &runError{
-			taskID: taskID,
-			err:    fmt.Errorf("run %q: %w", opts.ContainerName, err),
+	if err := s.docker.Run(context.Background(), &opts); err != nil {
+		if taskID == s.curTaskID.Load() {
+			s.errors <- fmt.Errorf("run %q: %w", opts.ContainerName, err)
 		}
 	}
 }
