@@ -71,7 +71,7 @@ type deleteSvcOpts struct {
 	appCFN        svcRemoverFromApp
 	getSvcCFN     func(sess *awssession.Session) wlDeleter
 	getECR        func(sess *awssession.Session) imageRemover
-	newSvcCleaner func(sess *awssession.Session, manifestType string) cleaner
+	newSvcCleaner func(sess *awssession.Session, env *config.Environment, manifestType string) cleaner
 }
 
 func newDeleteSvcOpts(vars deleteSvcVars) (*deleteSvcOpts, error) {
@@ -99,9 +99,9 @@ func newDeleteSvcOpts(vars deleteSvcVars) (*deleteSvcOpts, error) {
 			return ecr.New(sess)
 		},
 	}
-	opts.newSvcCleaner = func(sess *awssession.Session, manifestType string) cleaner {
+	opts.newSvcCleaner = func(sess *awssession.Session, env *config.Environment, manifestType string) cleaner {
 		if manifestType == manifestinfo.StaticSiteType {
-			return clean.StaticSite(opts.appName, opts.envName, opts.name, s3.New(sess), awss3.New(sess))
+			return clean.StaticSite(opts.appName, env.Name, opts.name, s3.New(sess), awss3.New(sess))
 		}
 		return &clean.NoOp{}
 	}
@@ -276,7 +276,7 @@ func (o *deleteSvcOpts) deleteStacks(wkldType string, envs []*config.Environment
 			return err
 		}
 
-		if err := o.newSvcCleaner(sess, wkldType).Clean(); err != nil {
+		if err := o.newSvcCleaner(sess, env, wkldType).Clean(); err != nil {
 			return fmt.Errorf("clean resources: %w", err)
 		}
 
