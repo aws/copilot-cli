@@ -13,6 +13,10 @@ import (
 	"time"
 )
 
+// Scheduler manages running a Task. Only a single Task
+// can be running at a time for a given Scheduler. A Scheduler
+// can only be Start()-ed once; multiple calls to Start() will
+// break things.
 type Scheduler struct {
 	idPrefix   string
 	logOptions logOptionsFunc
@@ -28,6 +32,8 @@ type Scheduler struct {
 
 type logOptionsFunc func(name string, ctr ContainerDefinition) RunLogOptions
 
+// NewScheduler creates a new Scheduler. idPrefix is a prefix used when
+// naming containers that are run by the Scheduler.
 func NewScheduler(docker DockerCmdClient, idPrefix string, logOptions logOptionsFunc) *Scheduler {
 	return &Scheduler{
 		idPrefix:   idPrefix,
@@ -38,10 +44,11 @@ func NewScheduler(docker DockerCmdClient, idPrefix string, logOptions logOptions
 	}
 }
 
-// Start starts the task mananger with the given task. Use
-// Restart() to run an updated task with the same manager. Any errors
-// encountered by operations done by the task manager will be returned
-// by Start().
+// Start starts the Scheduler with the given task. Use
+// Restart() to run a new task with the Scheduler. The first
+// error the Scheduler has occur from a running container or
+// while performing docker operations will be returned. Start
+// calls Stop() when it exits.
 func (s *Scheduler) Start(task Task) error {
 	ctx := context.Background()
 
@@ -60,6 +67,8 @@ func (s *Scheduler) Start(task Task) error {
 	return errors.Join(s.Stop(), err)
 }
 
+// Restart stops the current running task and starts task.
+// Errors that occur while Restarting will be returned by Start().
 func (s *Scheduler) Restart(task Task) {
 	// we no longer care about errors from the old task
 	taskID := s.curTaskID.Add(1)
@@ -103,6 +112,8 @@ func (s *Scheduler) cancelCtxOnStop(ctx context.Context, cancel func()) {
 	}
 }
 
+// Stop stops the task and scheduler containers. If Stop() has already been
+// called, it does nothing and returns nil.
 func (s *Scheduler) Stop() error {
 	select {
 	case <-s.stopped:
@@ -134,6 +145,7 @@ func (s *Scheduler) Stop() error {
 	return nil
 }
 
+// stopTask calls `docker stop` for all containers defined by task.
 func (s *Scheduler) stopTask(ctx context.Context, task Task) error {
 	if len(task.Containers) == 0 {
 		return nil
@@ -162,6 +174,7 @@ func (s *Scheduler) stopTask(ctx context.Context, task Task) error {
 	return errors.Join(errs...)
 }
 
+// waitForContainerToStart blocks until the container specified by id starts.
 func (s *Scheduler) waitForContainerToStart(ctx context.Context, id string) error {
 	for {
 		isRunning, err := s.docker.IsContainerRunning(ctx, id)
@@ -180,14 +193,19 @@ func (s *Scheduler) waitForContainerToStart(ctx context.Context, id string) erro
 	}
 }
 
+// containerID returns the full ID for a container with name run by s.
 func (s *Scheduler) containerID(name string) string {
 	return s.idPrefix + name
 }
 
+// Task defines a set of Containers to be run together.
+// Containers within a Task can talk to each other on localhost
+// and are stopped and started as a group.
 type Task struct {
 	Containers map[string]ContainerDefinition
 }
 
+// ContainerDefinition defines information necessary to run a container.
 type ContainerDefinition struct {
 	ImageURI string
 	EnvVars  map[string]string
@@ -195,6 +213,7 @@ type ContainerDefinition struct {
 	Ports    map[string]string // host port -> container port
 }
 
+// pauseRunOptions returns RunOptions for the pause container for t.
 func (s *Scheduler) pauseRunOptions(t Task) RunOptions {
 	opts := RunOptions{
 		ImageURI:       "public.ecr.aws/amazonlinux/amazonlinux:2023",
@@ -212,6 +231,7 @@ func (s *Scheduler) pauseRunOptions(t Task) RunOptions {
 	return opts
 }
 
+// containerRunOptions returns RunOptions for the given container.
 func (s *Scheduler) containerRunOptions(name string, ctr ContainerDefinition) RunOptions {
 	return RunOptions{
 		ImageURI:         ctr.ImageURI,
@@ -223,11 +243,12 @@ func (s *Scheduler) containerRunOptions(name string, ctr ContainerDefinition) Ru
 	}
 }
 
-// run calls docker run using opts. Any errors are sent to
-// t.errors, wrapped as a runError with the given taskID.
+// run calls `docker run` using opts. Errors are only returned
+// to the main scheduler routine if the taskID the container was run with
+// matches the current taskID the scheduler is running.
 func (s *Scheduler) run(taskID int32, opts RunOptions) {
 	if err := s.docker.Run(context.Background(), &opts); err != nil {
-		if taskID == s.curTaskID.Load() {
+		if taskID == -1 || taskID == s.curTaskID.Load() {
 			s.errors <- fmt.Errorf("run %q: %w", opts.ContainerName, err)
 		}
 	}
