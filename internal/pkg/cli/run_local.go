@@ -382,7 +382,7 @@ func (o *runLocalOpts) runPauseContainer(ctx context.Context, ports map[string]s
 	// go routine to check if pause container is running
 	go func() {
 		for {
-			isRunning, err := o.dockerEngine.IsContainerRunning(containerNameWithSuffix)
+			isRunning, err := o.dockerEngine.IsContainerRunning(ctx, containerNameWithSuffix)
 			if err != nil {
 				errCh <- fmt.Errorf("check if container is running: %w", err)
 				return
@@ -444,7 +444,7 @@ func (o *runLocalOpts) runContainers(ctx context.Context, containerURIs map[stri
 func (o *runLocalOpts) cleanUpContainers(ctx context.Context, containerURIs map[string]string) error {
 	cleanUp := func(id string) error {
 		o.prog.Start(fmt.Sprintf("Stopping %q", id))
-		if err := o.dockerEngine.Stop(id); err != nil {
+		if err := o.dockerEngine.Stop(ctx, id); err != nil {
 			o.prog.Stop(log.Serrorf("Failed to stop %q\n", id))
 			return fmt.Errorf("stop: %w", err)
 		}
