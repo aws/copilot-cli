@@ -89,7 +89,7 @@ Resources:
             Condition:
               StringNotEqualsIfExists:
                 s3:x-amz-server-side-encryption: 'aws:kms'
-              Null:
+              'Null':
                 s3:x-amz-server-side-encryption: false
 
   PipelineBuiltArtifactBucket:
