@@ -468,6 +468,17 @@ func TestELBV2_LoadBalancer(t *testing.T) {
 			},
 			expectedErr: `describe load balancer "loadBalancerName": some error`,
 		},
+		"error if no load balancers returned": {
+			mockID: "mockLBName",
+			setUpMock: func(m *mocks.Mockapi) {
+				m.EXPECT().DescribeLoadBalancers(&elbv2.DescribeLoadBalancersInput{
+					Names: []*string{aws.String("mockLBName")},
+				}).Return(&elbv2.DescribeLoadBalancersOutput{
+					LoadBalancers: []*elbv2.LoadBalancer{},
+				}, nil)
+			},
+			expectedErr: `no load balancer "mockLBName" found`,
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
@@ -511,7 +522,7 @@ func TestELBV2_Listeners(t *testing.T) {
 		setUpMock func(m *mocks.Mockapi)
 
 		expectedErr       string
-		expectedListeners []*Listener
+		expectedListeners []Listener
 	}{
 		"successfully return listeners from LB ARN": {
 			setUpMock: func(m *mocks.Mockapi) {
@@ -519,16 +530,16 @@ func TestELBV2_Listeners(t *testing.T) {
 					LoadBalancerArn: mockLBARN,
 				}).Return(mockOutput, nil)
 			},
-			expectedListeners: []*Listener{
+			expectedListeners: []Listener{
 				{
-					ARN:      aws.String("listenerARN1"),
-					Port:     aws.Int64(80),
-					Protocol: aws.String("HTTP"),
+					ARN:      "listenerARN1",
+					Port:     80,
+					Protocol: "HTTP",
 				},
 				{
-					ARN:      aws.String("listenerARN2"),
-					Port:     aws.Int64(443),
-					Protocol: aws.String("HTTPS"),
+					ARN:      "listenerARN2",
+					Port:     443,
+					Protocol: "HTTPS",
 				},
 			},
 		},
