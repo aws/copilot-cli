@@ -162,6 +162,7 @@ type SvcDeployInput struct {
 	Force    bool
 }
 
+// DeployRequest contains parameters for calling copilot deploy --all.
 type DeployRequest struct {
 	All     bool
 	EnvName string
