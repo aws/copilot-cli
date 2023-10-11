@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws/arn"
 	"sort"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -26,6 +27,8 @@ type api interface {
 	DescribeTargetHealth(*elbv2.DescribeTargetHealthInput) (*elbv2.DescribeTargetHealthOutput, error)
 	DescribeRules(*elbv2.DescribeRulesInput) (*elbv2.DescribeRulesOutput, error)
 	DescribeRulesWithContext(context.Context, *elbv2.DescribeRulesInput, ...request.Option) (*elbv2.DescribeRulesOutput, error)
+	DescribeLoadBalancers(input *elbv2.DescribeLoadBalancersInput) (*elbv2.DescribeLoadBalancersOutput, error)
+	DescribeListeners(input *elbv2.DescribeListenersInput) (*elbv2.DescribeListenersOutput, error)
 }
 
 // ELBV2 wraps an AWS ELBV2 client.
@@ -152,4 +155,66 @@ func (t *TargetHealth) HealthStatus() *HealthStatus {
 
 func (t *TargetHealth) targetID() string {
 	return aws.StringValue(t.Target.Id)
+}
+
+// LoadBalancer contains information about a given load balancer.
+type LoadBalancer struct {
+	ARN            string
+	Name           string
+	DNSName        string
+	Scheme         string // "internet-facing" or "internal"
+	SecurityGroups []string
+}
+
+// LoadBalancer returns select information about a load balancer.
+func (e *ELBV2) LoadBalancer(nameOrARN string) (*LoadBalancer, error) {
+	var input *elbv2.DescribeLoadBalancersInput
+	if arn.IsARN(nameOrARN) {
+		input = &elbv2.DescribeLoadBalancersInput{
+			LoadBalancerArns: []*string{aws.String(nameOrARN)},
+		}
+	} else {
+		input = &elbv2.DescribeLoadBalancersInput{
+			Names: []*string{aws.String(nameOrARN)},
+		}
+	}
+	output, err := e.client.DescribeLoadBalancers(input)
+	if err != nil {
+		return nil, fmt.Errorf("describe load balancer %q: %w", nameOrARN, err)
+	}
+	if len(output.LoadBalancers) == 0 {
+		return nil, fmt.Errorf("no load balancer %q found", nameOrARN)
+	}
+	lb := output.LoadBalancers[0]
+	return &LoadBalancer{
+		ARN:            aws.StringValue(lb.LoadBalancerArn),
+		Name:           aws.StringValue(lb.LoadBalancerName),
+		DNSName:        aws.StringValue(lb.DNSName),
+		Scheme:         aws.StringValue(lb.Scheme),
+		SecurityGroups: aws.StringValueSlice(lb.SecurityGroups),
+	}, nil
+}
+
+// Listener contains information about a listener.
+type Listener struct {
+	ARN      string
+	Port     int64
+	Protocol string
+}
+
+// Listeners returns select information about all listeners on a given load balancer.
+func (e *ELBV2) Listeners(lbARN string) ([]Listener, error) {
+	output, err := e.client.DescribeListeners(&elbv2.DescribeListenersInput{LoadBalancerArn: aws.String(lbARN)})
+	if err != nil {
+		return nil, fmt.Errorf("describe listeners on load balancer %q: %w", lbARN, err)
+	}
+	var listeners []Listener
+	for _, listener := range output.Listeners {
+		listeners = append(listeners, Listener{
+			ARN:      aws.StringValue(listener.ListenerArn),
+			Port:     aws.Int64Value(listener.Port),
+			Protocol: aws.StringValue(listener.Protocol),
+		})
+	}
+	return listeners, nil
 }
