@@ -6,12 +6,13 @@ package cli
 import (
 	"errors"
 	"fmt"
-	"github.com/aws/copilot-cli/internal/pkg/queue"
-	"github.com/dustin/go-humanize"
 	"math"
 	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/aws/copilot-cli/internal/pkg/queue"
+	"github.com/dustin/go-humanize"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
@@ -312,6 +313,7 @@ func (o *deployOpts) parseDeploymentOrderTags(namesWithOptionalOrder []string) e
 //
 // TODO: when there's a dependsOn field in the manifest, we should modify this function to respect it.
 func (o *deployOpts) getDeploymentOrder() ([][]string, error) {
+
 	// Get a map from workload name to deployment priority
 	if err := o.parseDeploymentOrderTags(o.workloadNames); err != nil {
 		return nil, err
@@ -321,9 +323,6 @@ func (o *deployOpts) getDeploymentOrder() ([][]string, error) {
 	groupsMap := make(map[int][]string)
 	for k, v := range o.deploymentOrderMap {
 		groupsMap[v] = append(groupsMap[v], k)
-	}
-	if len(groupsMap) == 0 {
-		return nil, errors.New("generate deployment groups: no workloads were specified")
 	}
 
 	// If --all is specified, we need to add the remainder of workloads with math.MaxInt priority according to whether or not --init-wkld is specified.
@@ -356,6 +355,10 @@ func (o *deployOpts) getDeploymentOrder() ([][]string, error) {
 		}
 	}
 
+	if len(groupsMap) == 0 {
+		log.Infoln("No workloads to deploy. Did you mean to specify --init-wkld with --all?")
+		return nil, errors.New("generate deployment groups: no workloads were specified")
+	}
 	deploymentGroups := queue.NewPriorityQueue[workloadPriority]()
 	for k, v := range groupsMap {
 		deploymentGroups.Push(workloadPriority{

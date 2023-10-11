@@ -194,44 +194,19 @@ var _ = Describe("Multiple Service App", func() {
 
 	Context("when deploying services and jobs", Ordered, func() {
 		var (
-			frontEndDeployErr error
-			wwwDeployErr      error
-			backEndDeployErr  error
-			jobDeployErr      error
-
-			routeURL string
+			deployErr error
+			routeURL  string
 		)
 		BeforeAll(func() {
-			_, backEndDeployErr = cli.SvcDeploy(&client.SvcDeployInput{
-				Name:     "back-end",
-				EnvName:  "test",
-				ImageTag: "gallopinggurdey",
-			})
-			_, frontEndDeployErr = cli.SvcDeploy(&client.SvcDeployInput{
-				Name:     "front-end",
-				EnvName:  "test",
-				ImageTag: "gallopinggurdey",
-			})
-			_, jobDeployErr = cli.JobDeploy(&client.JobDeployInput{
-				Name:     "query",
-				EnvName:  "test",
-				ImageTag: "thepostalservice",
-			})
-			_, wwwDeployErr = cli.SvcDeploy(&client.SvcDeployInput{
-				Name:     "www",
-				EnvName:  "test",
-				ImageTag: "gallopinggurdey",
+
+			_, deployErr = cli.Deploy(&client.DeployRequest{
+				All:     true,
+				EnvName: "test",
 			})
 		})
 
-		It("svc deploy should succeed", func() {
-			Expect(frontEndDeployErr).NotTo(HaveOccurred())
-			Expect(wwwDeployErr).NotTo(HaveOccurred())
-			Expect(backEndDeployErr).NotTo(HaveOccurred())
-		})
-
-		It("job deploy should succeed", func() {
-			Expect(jobDeployErr).NotTo(HaveOccurred())
+		It("deploy should succeed", func() {
+			Expect(deployErr).NotTo(HaveOccurred())
 		})
 
 		It("svc show should include a valid URL and description for test env", func() {
