@@ -434,7 +434,7 @@ func compareStackTemplateSection(t *testing.T, key, wanted, actual reflect.Value
 		fmt.Sprintf("%q does not exist in the actual template", key.Interface()))
 	require.True(t, wantedExist,
 		fmt.Sprintf("%q does not exist in the expected template", key.Interface()))
-	require.Equal(t, actual.MapIndex(key).Interface(), wanted.MapIndex(key).Interface(),
+	require.Equal(t, wanted.MapIndex(key).Interface(), actual.MapIndex(key).Interface(),
 		fmt.Sprintf("Comparing %q", key.Interface()))
 }
 

@@ -162,6 +162,12 @@ type SvcDeployInput struct {
 	Force    bool
 }
 
+// DeployRequest contains parameters for calling copilot deploy --all.
+type DeployRequest struct {
+	All     bool
+	EnvName string
+}
+
 // TaskRunInput contains the parameters for calling copilot task run.
 type TaskRunInput struct {
 	AppName string
@@ -480,6 +486,29 @@ func (cli *CLI) SvcDeploy(opts *SvcDeployInput) (string, error) {
 	}
 	return cli.exec(
 		exec.Command(cli.path, arguments...))
+}
+
+/*
+Deploy runs:
+copilot deploy
+
+	--env $p
+	--all
+
+It does not initialize any workloads or environments, simply deploys all initialized services
+and jobs in the workspace.
+*/
+func (cli *CLI) Deploy(opts *DeployRequest) (string, error) {
+	arguments := []string{
+		"deploy",
+		"--env", opts.EnvName,
+	}
+	if opts.All {
+		arguments = append(arguments, "--all")
+	}
+	return cli.exec(
+		exec.Command(cli.path, arguments...),
+	)
 }
 
 /*
