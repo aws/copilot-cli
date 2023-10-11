@@ -458,7 +458,7 @@ func TestPackageEnvOpts_Execute(t *testing.T) {
 						EnvironmentConfig: manifest.EnvironmentConfig{},
 					},
 					ForceNewUpdate:      false,
-					RawManifest:         []byte("name: test\ntype: Environment\n"),
+					RawManifest:         "name: test\ntype: Environment\n",
 					PermissionsBoundary: "mockPermissionsBoundaryPolicy",
 				}).Return(&deploy.GenerateCloudFormationTemplateOutput{
 					Template:   "template",
@@ -525,7 +525,7 @@ func TestPackageEnvOpts_Execute(t *testing.T) {
 						EnvironmentConfig: manifest.EnvironmentConfig{},
 					},
 					ForceNewUpdate:      false,
-					RawManifest:         []byte("name: test\ntype: Environment\n"),
+					RawManifest:         "name: test\ntype: Environment\n",
 					PermissionsBoundary: "mockPermissionsBoundaryPolicy",
 				}).Return(&deploy.GenerateCloudFormationTemplateOutput{
 					Template:   "template",

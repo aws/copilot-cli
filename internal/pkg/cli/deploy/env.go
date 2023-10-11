@@ -257,7 +257,7 @@ type DeployEnvironmentInput struct {
 	CustomResourcesURLs map[string]string
 	Manifest            *manifest.Environment
 	ForceNewUpdate      bool
-	RawManifest         []byte
+	RawManifest         string
 	PermissionsBoundary string
 	DisableRollback     bool
 	Version             string

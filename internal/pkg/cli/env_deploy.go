@@ -185,7 +185,11 @@ func (o *deployEnvOpts) Execute() error {
 	if err != nil {
 		return fmt.Errorf("read manifest for environment %q: %w", o.name, err)
 	}
-	mft, err := environmentManifest(o.name, rawMft, o.newInterpolator(o.appName, o.name))
+	interpolated, err := o.newInterpolator(o.appName, o.name).Interpolate(string(rawMft))
+	if err != nil {
+		return fmt.Errorf("interpolate environment variables for %q manifest: %w", o.name, err)
+	}
+	mft, err := environmentManifest(o.name, []byte(interpolated))
 	if err != nil {
 		return err
 	}
@@ -209,7 +213,7 @@ func (o *deployEnvOpts) Execute() error {
 		AddonsURL:           artifacts.AddonsURL,
 		CustomResourcesURLs: artifacts.CustomResourceURLs,
 		Manifest:            mft,
-		RawManifest:         rawMft,
+		RawManifest:         interpolated,
 		PermissionsBoundary: o.targetApp.PermissionsBoundary,
 		ForceNewUpdate:      o.forceNewUpdate,
 		DisableRollback:     o.disableRollback,
@@ -267,12 +271,8 @@ After fixing the deployment, you can:
 	return fmt.Errorf("deploy environment %s: %w", o.name, err)
 }
 
-func environmentManifest(envName string, rawMft []byte, transformer interpolator) (*manifest.Environment, error) {
-	interpolated, err := transformer.Interpolate(string(rawMft))
-	if err != nil {
-		return nil, fmt.Errorf("interpolate environment variables for %q manifest: %w", envName, err)
-	}
-	mft, err := manifest.UnmarshalEnvironment([]byte(interpolated))
+func environmentManifest(envName string, rawMft []byte) (*manifest.Environment, error) {
+	mft, err := manifest.UnmarshalEnvironment(rawMft)
 	if err != nil {
 		return nil, fmt.Errorf("unmarshal environment manifest for %q: %w", envName, err)
 	}

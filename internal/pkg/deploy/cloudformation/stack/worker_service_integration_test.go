@@ -69,7 +69,7 @@ func TestWorkerService_Template(t *testing.T) {
 		Env:                envName,
 		Manifest:           v,
 		ArtifactBucketName: "bucket",
-		RawManifest:        manifestBytes,
+		RawManifest:        string(manifestBytes),
 		RuntimeConfig: stack.RuntimeConfig{
 			ServiceDiscoveryEndpoint: "test.my-app.local",
 			AccountID:                "123456789123",

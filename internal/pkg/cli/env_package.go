@@ -181,7 +181,11 @@ func (o *packageEnvOpts) Execute() error {
 	if err != nil {
 		return fmt.Errorf("read manifest for environment %q: %w", o.name, err)
 	}
-	mft, err := environmentManifest(o.name, rawMft, o.newInterpolator(o.appName, o.name))
+	interpolated, err := o.newInterpolator(o.appName, o.name).Interpolate(string(rawMft))
+	if err != nil {
+		return fmt.Errorf("interpolate environment variables for %q manifest: %w", o.name, err)
+	}
+	mft, err := environmentManifest(o.name, []byte(interpolated))
 	if err != nil {
 		return err
 	}
@@ -209,7 +213,7 @@ func (o *packageEnvOpts) Execute() error {
 		AddonsURL:           uploadArtifactsOut.AddonsURL,
 		CustomResourcesURLs: uploadArtifactsOut.CustomResourceURLs,
 		Manifest:            mft,
-		RawManifest:         rawMft,
+		RawManifest:         interpolated,
 		PermissionsBoundary: o.appCfg.PermissionsBoundary,
 		ForceNewUpdate:      o.forceNewUpdate,
 		Version:             o.templateVersion,
