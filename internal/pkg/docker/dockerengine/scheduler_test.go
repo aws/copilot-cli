@@ -3,6 +3,7 @@ package dockerengine
 import (
 	"context"
 	"errors"
+	"io"
 	"sync"
 	"testing"
 
@@ -37,11 +38,11 @@ func (d *dockerEngineDouble) Run(ctx context.Context, opts *RunOptions) error {
 }
 
 func TestScheduler(t *testing.T) {
-	//noLogs := func(name string, ctr ContainerDefinition) RunLogOptions {
-	//	return RunLogOptions{
-	//		Output: io.Discard,
-	//	}
-	//}
+	noLogs := func(name string, ctr ContainerDefinition) RunLogOptions {
+		return RunLogOptions{
+			Output: io.Discard,
+		}
+	}
 
 	tests := map[string]struct {
 		dockerEngine func(sync chan struct{}) DockerEngine
@@ -51,35 +52,52 @@ func TestScheduler(t *testing.T) {
 
 		runErrs []string
 	}{
-		/*
-			"works with empty task definition": {
-				dockerEngine: func(sync chan struct{}) DockerEngine {
-					return &dockerEngineDouble{
-						IsContainerRunningFn: func(ctx context.Context, name string) (bool, error) {
-							return false, errors.New("some error")
-						},
-					}
-				},
-				test: func(t *testing.T, s *Scheduler, sync chan struct{}) {
-					require.NoError(t, s.Stop())
-				},
+		"works with empty task definition": {
+			dockerEngine: func(sync chan struct{}) DockerEngine {
+				return &dockerEngineDouble{
+					IsContainerRunningFn: func(ctx context.Context, name string) (bool, error) {
+						return true, nil
+					},
+				}
 			},
-		*/
+			test: func(t *testing.T, s *Scheduler, sync chan struct{}) {},
+		},
 		"error returned if unable to check if pause container is running": {
 			dockerEngine: func(sync chan struct{}) DockerEngine {
 				return &dockerEngineDouble{
 					IsContainerRunningFn: func(ctx context.Context, name string) (bool, error) {
-						defer func() { sync <- struct{}{} }()
 						return false, errors.New("some error")
 					},
 				}
 			},
-			test: func(t *testing.T, s *Scheduler, sync chan struct{}) {
-				<-sync
-				require.NoError(t, s.Stop())
-			},
+			test: func(t *testing.T, s *Scheduler, sync chan struct{}) {},
 			runErrs: []string{
 				`wait for pause container to start: check if "prefix-pause" is running: some error`,
+			},
+		},
+		"error running container foo": {
+			dockerEngine: func(sync chan struct{}) DockerEngine {
+				return &dockerEngineDouble{
+					IsContainerRunningFn: func(ctx context.Context, name string) (bool, error) {
+						return true, nil
+					},
+					RunFn: func(ctx context.Context, opts *RunOptions) error {
+						if opts.ContainerName == "prefix-foo" {
+							return errors.New("some error")
+						}
+						return nil
+					},
+				}
+			},
+			logOptions: noLogs,
+			test:       func(t *testing.T, s *Scheduler, sync chan struct{}) {},
+			initTask: Task{
+				Containers: map[string]ContainerDefinition{
+					"foo": {},
+				},
+			},
+			runErrs: []string{
+				`run "prefix-foo": some error`,
 			},
 		},
 	}
@@ -93,27 +111,35 @@ func TestScheduler(t *testing.T) {
 			wg.Add(2)
 
 			runErrs := s.Start(tc.initTask)
-			testDone := make(chan struct{})
+			done := make(chan struct{})
 
 			go func() {
 				defer wg.Done()
+				defer close(done)
+
+				if len(tc.runErrs) == 0 {
+					return
+				}
 
 				var actualErrs []string
-				for {
-					select {
-					case err := <-runErrs:
-						actualErrs = append(actualErrs, err.Error())
-					case <-testDone:
+				for err := range runErrs {
+					actualErrs = append(actualErrs, err.Error())
+
+					if len(tc.runErrs) == len(actualErrs) {
 						require.ElementsMatch(t, tc.runErrs, actualErrs)
 						return
 					}
 				}
+
+				// they'll never match here
+				require.ElementsMatch(t, tc.runErrs, actualErrs)
 			}()
 
 			go func() {
 				defer wg.Done()
-				defer close(testDone)
 				tc.test(t, s, syncCh)
+				<-done
+				require.NoError(t, s.Stop())
 			}()
 
 			wg.Wait()

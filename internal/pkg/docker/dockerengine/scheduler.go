@@ -26,6 +26,7 @@ type Scheduler struct {
 	curTaskID atomic.Int32
 	errors    chan error
 	stopped   chan struct{}
+	wg        *sync.WaitGroup
 
 	docker DockerEngine
 }
@@ -46,6 +47,7 @@ func NewScheduler(docker DockerEngine, idPrefix string, logOptions logOptionsFun
 		logOptions: logOptions,
 		stopped:    make(chan struct{}),
 		docker:     docker,
+		wg:         &sync.WaitGroup{},
 	}
 }
 
@@ -59,8 +61,11 @@ func (s *Scheduler) Start(task Task) <-chan error {
 
 	// start the pause container
 	pauseRunOpts := s.pauseRunOptions(task)
-	go s.run(-1, pauseRunOpts) // pause is used across taskIDs
+	s.run(-1, pauseRunOpts)
+
+	s.wg.Add(1)
 	go func() {
+		defer s.wg.Done()
 		if err := s.waitForContainerToStart(context.Background(), pauseRunOpts.ContainerName); err != nil {
 			s.runtimeErr(fmt.Errorf("wait for pause container to start: %w", err))
 		}
@@ -95,7 +100,17 @@ func (s *Scheduler) Restart(task Task) error {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	go s.cancelCtxOnStop(ctx, cancel)
+
+	// cancelCtxOnStop calls cancel if Stop() is called before ctx finishes.
+	s.wg.Add(1)
+	go func() {
+		defer s.wg.Done()
+		select {
+		case <-ctx.Done():
+		case <-s.stopped:
+			cancel()
+		}
+	}()
 
 	if err := s.stopTask(ctx, s.curTask); err != nil {
 		return fmt.Errorf("stop existing task: %w", err)
@@ -104,19 +119,10 @@ func (s *Scheduler) Restart(task Task) error {
 	s.curTask = task
 	for name, ctr := range task.Containers {
 		name, ctr := name, ctr
-		go s.run(taskID, s.containerRunOptions(name, ctr))
+		s.run(taskID, s.containerRunOptions(name, ctr))
 	}
 
 	return nil
-}
-
-// cancelCtxOnStop calls cancel if Stop() is called before ctx finishes.
-func (s *Scheduler) cancelCtxOnStop(ctx context.Context, cancel func()) {
-	select {
-	case <-ctx.Done():
-	case <-s.stopped:
-		cancel()
-	}
 }
 
 // Stop stops the task and scheduler containers. If Stop() has already been
@@ -125,6 +131,7 @@ func (s *Scheduler) Stop() error {
 	select {
 	case <-s.stopped:
 		// only need to stop once
+		s.wg.Wait()
 		return nil
 	default:
 		// ignore run errors
@@ -133,7 +140,11 @@ func (s *Scheduler) Stop() error {
 	}
 
 	s.mu.Lock()
-	defer s.mu.Unlock()
+	defer func() {
+		s.mu.Unlock()
+		s.wg.Wait()
+		close(s.errors)
+	}()
 
 	// collect errors since we want to try to clean up everything we can
 	var errs []error
@@ -251,22 +262,28 @@ func (s *Scheduler) containerRunOptions(name string, ctr ContainerDefinition) Ru
 }
 
 func (s *Scheduler) runtimeErr(err error) {
-	select {
-	case <-s.stopped:
-		fmt.Printf("already stopped: %s\n", err)
-	default:
-		fmt.Printf("default: %s\n", err)
-		s.errors <- err
-	}
+	s.errors <- err
+	/*
+		select {
+		case <-s.stopped:
+		default:
+			s.errors <- err
+		}
+	*/
 }
 
 // run calls `docker run` using opts. Errors are only returned
 // to the main scheduler routine if the taskID the container was run with
 // matches the current taskID the scheduler is running.
 func (s *Scheduler) run(taskID int32, opts RunOptions) {
-	if err := s.docker.Run(context.Background(), &opts); err != nil {
-		if taskID == -1 || taskID == s.curTaskID.Load() {
-			s.runtimeErr(fmt.Errorf("run %q: %w", opts.ContainerName, err))
+	s.wg.Add(1)
+	go func() {
+		defer s.wg.Done()
+
+		if err := s.docker.Run(context.Background(), &opts); err != nil {
+			if taskID == -1 || taskID == s.curTaskID.Load() {
+				s.runtimeErr(fmt.Errorf("run %q: %w", opts.ContainerName, err))
+			}
 		}
-	}
+	}()
 }
