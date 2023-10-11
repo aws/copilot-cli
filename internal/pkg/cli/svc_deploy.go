@@ -599,10 +599,12 @@ func (o *deploySvcOpts) uriRecommendedActions() ([]string, error) {
 		network = "with service discovery."
 	case describe.URIAccessTypeServiceConnect:
 		network = "with service connect."
+	case describe.URIAccessTypeNone:
+		return []string{}, nil
 	}
 
 	return []string{
-		fmt.Sprintf("You can access your service at %s %s", uri.URI, network),
+		fmt.Sprintf("Your service is accessible at %s %s", uri.URI, network),
 	}, nil
 }
 
