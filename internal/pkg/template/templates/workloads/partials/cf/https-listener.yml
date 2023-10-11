@@ -54,6 +54,8 @@ HTTPSRulePriorityAction:
     RulePath: {{ fmtSlice (quoteSlice .ALBListener.RulePaths) }}
     {{- if eq $.WorkloadType "Backend Service" }}
     ListenerArn: !GetAtt EnvControllerAction.InternalHTTPSListenerArn
+    {{- else if .ImportedALB}}
+    ListenerArn: {{.ImportedALB.ListenerARN}}
     {{- else}}
     ListenerArn: !GetAtt EnvControllerAction.HTTPSListenerArn
     {{- end}}
@@ -67,6 +69,8 @@ HTTPRuleWithDomainPriorityAction:
     RulePath: {{ fmtSlice (quoteSlice .ALBListener.RulePaths) }}
     {{- if eq $.WorkloadType "Backend Service"}}
     ListenerArn: !GetAtt EnvControllerAction.InternalHTTPListenerArn
+    {{- else if .ImportedALB}}
+    ListenerArn: {{.ImportedALB.ListenerARN}}
     {{- else}}
     ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
     {{- end}}
@@ -129,6 +133,8 @@ HTTPListenerRuleWithDomain{{ if ne $i 0 }}{{ $i }}{{ end }}:
             {{- end }}
     {{- if eq $.WorkloadType "Backend Service"}}
     ListenerArn: !GetAtt EnvControllerAction.InternalHTTPListenerArn
+    {{- else if .ImportedALB}}
+    ListenerArn: {{.ImportedALB.ListenerARN}}
     {{- else}}
     ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
     {{- end}}
@@ -176,6 +182,8 @@ HTTPSListenerRule{{ if ne $i 0 }}{{ $i }}{{ end }}:
           {{- end }}
     {{- if eq $.WorkloadType "Backend Service"}}
     ListenerArn: !GetAtt EnvControllerAction.InternalHTTPSListenerArn
+    {{- else if .ImportedALB}}
+    ListenerArn: {{.ImportedALB.ListenerARN}}
     {{- else}}
     ListenerArn: !GetAtt EnvControllerAction.HTTPSListenerArn
     {{- end}}

@@ -358,6 +358,8 @@ AutoScalingPolicyALBSumRequestCountPerTarget:
           - Name: LoadBalancer
             {{- if eq .WorkloadType "Backend Service"}}
             Value: !GetAtt EnvControllerAction.InternalLoadBalancerFullName
+            {{- else if .ImportedALB}}
+            Value: {{.ImportedALB.Name}}
             {{- else}}
             Value: !GetAtt EnvControllerAction.PublicLoadBalancerFullName
             {{- end}}
@@ -392,6 +394,8 @@ AutoScalingPolicyALBAverageResponseTime:
           - Name: LoadBalancer
             {{- if eq .WorkloadType "Backend Service"}}
             Value: !GetAtt EnvControllerAction.InternalLoadBalancerFullName
+            {{- else if .ImportedALB}}
+            Value: {{.ImportedALB.Name}}
             {{- else}}
             Value: !GetAtt EnvControllerAction.PublicLoadBalancerFullName
             {{- end}}

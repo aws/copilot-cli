@@ -168,6 +168,18 @@ Resources:
 {{include "alb" . | indent 2}}
 {{- end}}
 
+{{- if .ImportedALB}}
+{{- range $i, $secgrp := .ImportedALB.SecurityGroups }}
+  EnvironmentSecurityGroupIngressFromImportedALB{{ $i }}
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !GetAtt EnvControllerAction.EnvironmentSecurityGroup
+      Description: Ingress from the imported ALB
+      SourceSecurityGroupId: {{ $secgrp.ID }}
+      IpProtocol: -1{{ if ne $i 0 }}{{ $i }}{{ end }}
+{{- end}}
+{{- end}}
+
 {{- if .NLB}}
 {{include "nlb" . | indent 2}}
 {{- end}}
