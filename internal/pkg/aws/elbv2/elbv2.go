@@ -21,10 +21,6 @@ import (
 const (
 	// TargetHealthStateHealthy wraps the ELBV2 health status HEALTHY.
 	TargetHealthStateHealthy = elbv2.TargetHealthStateEnumHealthy
-	// LoadBalancerSchemeInternetFacing wraps the ELBV2 LB scheme "internet-facing".
-	LoadBalancerSchemeInternetFacing = elbv2.LoadBalancerSchemeEnumInternetFacing
-	// LoadBalancerSchemeInternal wraps the ELBV2 LB scheme "internal".
-	LoadBalancerSchemeInternal = elbv2.LoadBalancerSchemeEnumInternal
 )
 
 type api interface {
