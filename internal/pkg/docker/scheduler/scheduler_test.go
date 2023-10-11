@@ -1,4 +1,4 @@
-package dockerengine
+package scheduler
 
 import (
 	"context"
@@ -7,39 +7,14 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
+	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine/dockerenginetest"
 	"github.com/stretchr/testify/require"
 )
 
-type dockerEngineDouble struct {
-	StopFn               func(context.Context, string) error
-	IsContainerRunningFn func(context.Context, string) (bool, error)
-	RunFn                func(context.Context, *RunOptions) error
-}
-
-func (d *dockerEngineDouble) Stop(ctx context.Context, name string) error {
-	if d.StopFn == nil {
-		return nil
-	}
-	return d.StopFn(ctx, name)
-}
-
-func (d *dockerEngineDouble) IsContainerRunning(ctx context.Context, name string) (bool, error) {
-	if d.IsContainerRunningFn == nil {
-		return false, nil
-	}
-	return d.IsContainerRunningFn(ctx, name)
-}
-
-func (d *dockerEngineDouble) Run(ctx context.Context, opts *RunOptions) error {
-	if d.RunFn == nil {
-		return nil
-	}
-	return d.RunFn(ctx, opts)
-}
-
 func TestScheduler(t *testing.T) {
-	noLogs := func(name string, ctr ContainerDefinition) RunLogOptions {
-		return RunLogOptions{
+	noLogs := func(name string, ctr ContainerDefinition) dockerengine.RunLogOptions {
+		return dockerengine.RunLogOptions{
 			Output: io.Discard,
 		}
 	}
@@ -54,7 +29,7 @@ func TestScheduler(t *testing.T) {
 	}{
 		"works with empty task definition": {
 			dockerEngine: func(sync chan struct{}) DockerEngine {
-				return &dockerEngineDouble{
+				return &dockerenginetest.Double{
 					IsContainerRunningFn: func(ctx context.Context, name string) (bool, error) {
 						return true, nil
 					},
@@ -64,7 +39,7 @@ func TestScheduler(t *testing.T) {
 		},
 		"error returned if unable to check if pause container is running": {
 			dockerEngine: func(sync chan struct{}) DockerEngine {
-				return &dockerEngineDouble{
+				return &dockerenginetest.Double{
 					IsContainerRunningFn: func(ctx context.Context, name string) (bool, error) {
 						return false, errors.New("some error")
 					},
@@ -77,11 +52,11 @@ func TestScheduler(t *testing.T) {
 		},
 		"error running container foo": {
 			dockerEngine: func(sync chan struct{}) DockerEngine {
-				return &dockerEngineDouble{
+				return &dockerenginetest.Double{
 					IsContainerRunningFn: func(ctx context.Context, name string) (bool, error) {
 						return true, nil
 					},
-					RunFn: func(ctx context.Context, opts *RunOptions) error {
+					RunFn: func(ctx context.Context, opts *dockerengine.RunOptions) error {
 						if opts.ContainerName == "prefix-foo" {
 							return errors.New("some error")
 						}

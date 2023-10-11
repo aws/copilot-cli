@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-package dockerengine
+package scheduler
 
 import (
 	"context"
@@ -11,6 +11,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 )
 
 // Scheduler manages running a Task. Only a single Task
@@ -31,12 +33,12 @@ type Scheduler struct {
 	docker DockerEngine
 }
 
-type logOptionsFunc func(name string, ctr ContainerDefinition) RunLogOptions
+type logOptionsFunc func(name string, ctr ContainerDefinition) dockerengine.RunLogOptions
 
 type DockerEngine interface {
 	Stop(context.Context, string) error
 	IsContainerRunning(context.Context, string) (bool, error)
-	Run(context.Context, *RunOptions) error
+	Run(context.Context, *dockerengine.RunOptions) error
 }
 
 // NewScheduler creates a new Scheduler. idPrefix is a prefix used when
@@ -232,8 +234,8 @@ type ContainerDefinition struct {
 }
 
 // pauseRunOptions returns RunOptions for the pause container for t.
-func (s *Scheduler) pauseRunOptions(t Task) RunOptions {
-	opts := RunOptions{
+func (s *Scheduler) pauseRunOptions(t Task) dockerengine.RunOptions {
+	opts := dockerengine.RunOptions{
 		ImageURI:       "public.ecr.aws/amazonlinux/amazonlinux:2023",
 		ContainerName:  s.containerID("pause"),
 		Command:        []string{"sleep", "infinity"},
@@ -250,8 +252,8 @@ func (s *Scheduler) pauseRunOptions(t Task) RunOptions {
 }
 
 // containerRunOptions returns RunOptions for the given container.
-func (s *Scheduler) containerRunOptions(name string, ctr ContainerDefinition) RunOptions {
-	return RunOptions{
+func (s *Scheduler) containerRunOptions(name string, ctr ContainerDefinition) dockerengine.RunOptions {
+	return dockerengine.RunOptions{
 		ImageURI:         ctr.ImageURI,
 		ContainerName:    s.containerID(name),
 		EnvVars:          ctr.EnvVars,
@@ -275,7 +277,7 @@ func (s *Scheduler) runtimeErr(err error) {
 // run calls `docker run` using opts. Errors are only returned
 // to the main scheduler routine if the taskID the container was run with
 // matches the current taskID the scheduler is running.
-func (s *Scheduler) run(taskID int32, opts RunOptions) {
+func (s *Scheduler) run(taskID int32, opts dockerengine.RunOptions) {
 	s.wg.Add(1)
 	go func() {
 		defer s.wg.Done()
