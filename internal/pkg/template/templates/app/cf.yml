@@ -82,6 +82,16 @@ Resources:
               AWS:
                 - !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:root{{range $accounts}}
                 - !Sub arn:${AWS::Partition}:iam::{{.}}:root{{end}}
+          - Action: s3:PutObject
+            Effect: Deny
+            Resource: !Sub arn:${AWS::Partition}:s3:::${PipelineBuiltArtifactBucket}/*
+            Principal: '*'
+            Condition:
+              StringNotEqualsIfExists:
+                s3:x-amz-server-side-encryption: 'aws:kms'
+              'Null':
+                s3:x-amz-server-side-encryption: false
+
   PipelineBuiltArtifactBucket:
     Type: AWS::S3::Bucket
     Properties:
@@ -90,7 +100,9 @@ Resources:
       BucketEncryption:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
-              SSEAlgorithm: AES256
+              SSEAlgorithm: 'aws:kms'
+              KMSMasterKeyID: !GetAtt KMSKey.Arn
+            BucketKeyEnabled: true
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
         BlockPublicPolicy: true
