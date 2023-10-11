@@ -823,7 +823,7 @@ func TestDockerCommand_IsContainerRunning(t *testing.T) {
 			s := DockerCmdClient{
 				runner: mockCmd,
 			}
-			_, err := s.IsContainerRunning(tc.inContainerName)
+			_, err := s.IsContainerRunning(context.Background(), tc.inContainerName)
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			} else {

@@ -27,18 +27,23 @@ type Scheduler struct {
 	errors    chan error
 	stopped   chan struct{}
 
-	docker DockerCmdClient
+	docker DockerEngine
 }
 
 type logOptionsFunc func(name string, ctr ContainerDefinition) RunLogOptions
 
+type DockerEngine interface {
+	Stop(context.Context, string) error
+	IsContainerRunning(context.Context, string) (bool, error)
+	Run(context.Context, *RunOptions) error
+}
+
 // NewScheduler creates a new Scheduler. idPrefix is a prefix used when
 // naming containers that are run by the Scheduler.
-func NewScheduler(docker DockerCmdClient, idPrefix string, logOptions logOptionsFunc) *Scheduler {
+func NewScheduler(docker DockerEngine, idPrefix string, logOptions logOptionsFunc) *Scheduler {
 	return &Scheduler{
 		idPrefix:   idPrefix,
 		logOptions: logOptions,
-		errors:     make(chan error),
 		stopped:    make(chan struct{}),
 		docker:     docker,
 	}
@@ -49,27 +54,28 @@ func NewScheduler(docker DockerCmdClient, idPrefix string, logOptions logOptions
 // error the Scheduler has occur from a running container or
 // while performing docker operations will be returned. Start
 // calls Stop() when it exits.
-func (s *Scheduler) Start(task Task) error {
-	ctx := context.Background()
+func (s *Scheduler) Start(task Task) <-chan error {
+	s.errors = make(chan error)
 
 	// start the pause container
 	pauseRunOpts := s.pauseRunOptions(task)
 	go s.run(-1, pauseRunOpts) // pause is used across taskIDs
 	go func() {
-		if err := s.waitForContainerToStart(ctx, pauseRunOpts.ContainerName); err != nil {
-			s.errors <- fmt.Errorf("wait for pause container to start: %w", err)
+		if err := s.waitForContainerToStart(context.Background(), pauseRunOpts.ContainerName); err != nil {
+			s.runtimeErr(fmt.Errorf("wait for pause container to start: %w", err))
 		}
 
-		s.Restart(task)
+		if err := s.Restart(task); err != nil {
+			s.runtimeErr(fmt.Errorf("start initial task: %w", err))
+		}
 	}()
 
-	err := <-s.errors
-	return errors.Join(s.Stop(), err)
+	return s.errors
 }
 
 // Restart stops the current running task and starts task.
 // Errors that occur while Restarting will be returned by Start().
-func (s *Scheduler) Restart(task Task) {
+func (s *Scheduler) Restart(task Task) error {
 	// we no longer care about errors from the old task
 	taskID := s.curTaskID.Add(1)
 
@@ -83,7 +89,7 @@ func (s *Scheduler) Restart(task Task) {
 		if !maps.Equal(curOpts.EnvVars, newOpts.EnvVars) ||
 			!maps.Equal(curOpts.Secrets, newOpts.Secrets) ||
 			!maps.Equal(curOpts.ContainerPorts, newOpts.ContainerPorts) {
-			s.errors <- errors.New("new task requires recreating pause container")
+			return errors.New("new task requires recreating pause container")
 		}
 	}
 
@@ -92,8 +98,7 @@ func (s *Scheduler) Restart(task Task) {
 	go s.cancelCtxOnStop(ctx, cancel)
 
 	if err := s.stopTask(ctx, s.curTask); err != nil {
-		s.errors <- err
-		return
+		return fmt.Errorf("stop existing task: %w", err)
 	}
 
 	s.curTask = task
@@ -101,6 +106,8 @@ func (s *Scheduler) Restart(task Task) {
 		name, ctr := name, ctr
 		go s.run(taskID, s.containerRunOptions(name, ctr))
 	}
+
+	return nil
 }
 
 // cancelCtxOnStop calls cancel if Stop() is called before ctx finishes.
@@ -243,13 +250,23 @@ func (s *Scheduler) containerRunOptions(name string, ctr ContainerDefinition) Ru
 	}
 }
 
+func (s *Scheduler) runtimeErr(err error) {
+	select {
+	case <-s.stopped:
+		fmt.Printf("already stopped: %s\n", err)
+	default:
+		fmt.Printf("default: %s\n", err)
+		s.errors <- err
+	}
+}
+
 // run calls `docker run` using opts. Errors are only returned
 // to the main scheduler routine if the taskID the container was run with
 // matches the current taskID the scheduler is running.
 func (s *Scheduler) run(taskID int32, opts RunOptions) {
 	if err := s.docker.Run(context.Background(), &opts); err != nil {
 		if taskID == -1 || taskID == s.curTaskID.Load() {
-			s.errors <- fmt.Errorf("run %q: %w", opts.ContainerName, err)
+			s.runtimeErr(fmt.Errorf("run %q: %w", opts.ContainerName, err))
 		}
 	}
 }
