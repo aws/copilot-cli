@@ -23,7 +23,6 @@ type Scheduler struct {
 	idPrefix   string
 	logOptions logOptionsFunc
 
-	mu        sync.RWMutex
 	curTask   Task
 	curTaskID atomic.Int32
 	runErrs   chan error
@@ -179,8 +178,8 @@ func (s *Scheduler) Stop() {
 type stopAction struct{}
 
 func (a *stopAction) Do(s *Scheduler) error {
-	defer s.wg.Done() // for the scheduler
-	s.curTaskID.Add(1)
+	defer s.wg.Done()  // for the scheduler
+	s.curTaskID.Add(1) // ignore runtime errors
 
 	// collect errors since we want to try to clean up everything we can
 	var errs []error
@@ -193,10 +192,7 @@ func (a *stopAction) Do(s *Scheduler) error {
 		errs = append(errs, fmt.Errorf("stop %q: %w", "pause", err))
 	}
 
-	if len(errs) > 0 {
-		return errors.Join(errs...)
-	}
-	return nil
+	return errors.Join(errs...)
 }
 
 // stopTask calls `docker stop` for all containers defined by task.
