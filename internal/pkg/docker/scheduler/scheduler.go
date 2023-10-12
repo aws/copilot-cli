@@ -62,11 +62,11 @@ func NewScheduler(docker DockerEngine, idPrefix string, logOptions logOptionsFun
 	return s
 }
 
-// Start starts the Scheduler with the given task. Use
-// Restart() to run a new task with the Scheduler. The first
-// error the Scheduler has occur from a running container or
-// while performing docker operations will be returned. Start
-// calls Stop() when it exits.
+// Start starts the Scheduler. Start must be called before any other
+// Scheduler functions. Errors from containers run by the scheduler
+// or from Scheduler actions are sent to the returned error channel.
+// The returned error channel is closed after calling Stop() has
+// stopped the Scheduler.
 func (s *Scheduler) Start() chan error {
 	// close done when all goroutines created by scheduler have finished
 	done := make(chan struct{})
@@ -98,13 +98,13 @@ func (s *Scheduler) Start() chan error {
 	return errs
 }
 
-// Restart stops the current running task and starts task.
-// Errors that occur while Restarting will be returned by Start().
+// RunTask stops the current running task and starts task.
 func (s *Scheduler) RunTask(task Task) {
-	// i need to guarentee that when an action is accepted by the scheduler
-	// meaning, pulled off the queue, that it runs and any errors returned by it
-	// are added to the list. however, if Stop() is called _while a different routine
-	// is waiting to get accepted by the scheduler_, those actions are ignored.
+	// this guarantees the following:
+	// - if runTaskAction{} is pulled by the scheduler, any errors
+	//   returned by it are reported by the scheduler.
+	// - if Stop() is called _before_ the scheduler picks up this
+	//   action, then this action is skipped.
 	select {
 	case <-s.stopped:
 	case s.actions <- &runTaskAction{
@@ -166,8 +166,9 @@ func (r *runTaskAction) Do(s *Scheduler) error {
 	return nil
 }
 
-// Stop stops the task and scheduler containers. If Stop() has already been
-// called, it does nothing and returns nil.
+// Stop stops the current running task containers and the Scheduler. Stop is
+// idempotent and safe to call multiple times. Calls to RunTask() after calling Stop
+// do nothing.
 func (s *Scheduler) Stop() {
 	s.stopOnce.Do(func() {
 		close(s.stopped)
