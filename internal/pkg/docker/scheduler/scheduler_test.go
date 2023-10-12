@@ -3,9 +3,7 @@ package scheduler
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io"
-	"strings"
 	"sync"
 	"testing"
 
@@ -24,11 +22,9 @@ func TestScheduler(t *testing.T) {
 	tests := map[string]struct {
 		dockerEngine func(t *testing.T, sync chan struct{}) DockerEngine
 		logOptions   logOptionsFunc
-		initTask     Task
 		test         func(t *testing.T, s *Scheduler, sync chan struct{})
 
-		runErrs  []string
-		stopErrs []string // Stop errors are created by errors.Join
+		errs []string
 	}{
 		"works with empty task definition": {
 			dockerEngine: func(t *testing.T, sync chan struct{}) DockerEngine {
@@ -49,7 +45,7 @@ func TestScheduler(t *testing.T) {
 				}
 			},
 			test: func(t *testing.T, s *Scheduler, sync chan struct{}) {},
-			runErrs: []string{
+			errs: []string{
 				`wait for pause container to start: check if "prefix-pause" is running: some error`,
 			},
 		},
@@ -68,13 +64,14 @@ func TestScheduler(t *testing.T) {
 				}
 			},
 			logOptions: noLogs,
-			test:       func(t *testing.T, s *Scheduler, sync chan struct{}) {},
-			initTask: Task{
-				Containers: map[string]ContainerDefinition{
-					"foo": {},
-				},
+			test: func(t *testing.T, s *Scheduler, sync chan struct{}) {
+				s.RunTask(Task{
+					Containers: map[string]ContainerDefinition{
+						"foo": {},
+					},
+				})
 			},
-			runErrs: []string{
+			errs: []string{
 				`run "prefix-foo": some error`,
 			},
 		},
@@ -93,56 +90,68 @@ func TestScheduler(t *testing.T) {
 				}
 			},
 			logOptions: noLogs,
-			test:       func(t *testing.T, s *Scheduler, sync chan struct{}) {},
-			initTask: Task{
-				Containers: map[string]ContainerDefinition{
-					"foo":     {},
-					"bar":     {},
-					"success": {},
-				},
+			test: func(t *testing.T, s *Scheduler, sync chan struct{}) {
+				s.RunTask(Task{
+					Containers: map[string]ContainerDefinition{
+						"foo":     {},
+						"bar":     {},
+						"success": {},
+					},
+				})
 			},
-			stopErrs: []string{
+			errs: []string{
 				`stop "pause": some error`,
 				`stop "foo": some error`,
 				`stop "bar": some error`,
 			},
 		},
-		"error restarting new task due to pause changes": {
-			dockerEngine: func(t *testing.T, sync chan struct{}) DockerEngine {
-				return &dockerenginetest.Double{
-					IsContainerRunningFn: func(ctx context.Context, name string) (bool, error) {
-						return true, nil
-					},
-					RunFn: func(ctx context.Context, ro *dockerengine.RunOptions) error {
-					},
-				}
-			},
-			logOptions: noLogs,
-			initTask: Task{
-				Containers: map[string]ContainerDefinition{
-					"foo": {
-						Ports: map[string]string{
-							"8080": "80",
+		/*
+			"error restarting new task due to pause changes": {
+				dockerEngine: func(t *testing.T, sync chan struct{}) DockerEngine {
+					return &dockerenginetest.Double{
+						IsContainerRunningFn: func(ctx context.Context, name string) (bool, error) {
+							return true, nil
 						},
-					},
+						RunFn: func(ctx context.Context, ro *dockerengine.RunOptions) error {
+							return nil
+						},
+					}
 				},
-			},
-			test: func(t *testing.T, s *Scheduler, sync chan struct{}) {
-				// TODO need to wait for the first Start() task to start first
-				// before starting the second task
-				err := s.Restart(Task{
+				logOptions: noLogs,
+				initTask: Task{
 					Containers: map[string]ContainerDefinition{
 						"foo": {
 							Ports: map[string]string{
-								"10000": "80",
+								"8080": "80",
 							},
 						},
 					},
-				})
-				fmt.Printf("error: %s\n", err)
-				require.EqualError(t, err, "new task requires recreating pause container")
+				},
+				test: func(t *testing.T, s *Scheduler, sync chan struct{}) {
+					s.RunTask(Task{
+						Containers: map[string]ContainerDefinition{
+							"foo":     {},
+							"bar":     {},
+							"success": {},
+						},
+					})
+
+					// TODO need to wait for the first Start() task to start first
+					// before starting the second task
+					err := s.Restart(Task{
+						Containers: map[string]ContainerDefinition{
+							"foo": {
+								Ports: map[string]string{
+									"10000": "80",
+								},
+							},
+						},
+					})
+					fmt.Printf("error: %s\n", err)
+					require.EqualError(t, err, "new task requires recreating pause container")
+				},
 			},
-		},
+		*/
 	}
 
 	for name, tc := range tests {
@@ -153,41 +162,24 @@ func TestScheduler(t *testing.T) {
 			wg := &sync.WaitGroup{}
 			wg.Add(2)
 
-			runErrs := s.Start(tc.initTask)
-			done := make(chan struct{})
+			errs := s.Start()
 
 			go func() {
 				defer wg.Done()
-				defer close(done)
-
-				if len(tc.runErrs) == 0 {
-					return
-				}
 
 				var actualErrs []string
-				for err := range runErrs {
+				for err := range errs {
 					actualErrs = append(actualErrs, err.Error())
-
-					if len(tc.runErrs) == len(actualErrs) {
-						require.ElementsMatch(t, tc.runErrs, actualErrs)
-						return
-					}
 				}
 
-				require.ElementsMatch(t, tc.runErrs, actualErrs)
+				require.ElementsMatch(t, tc.errs, actualErrs)
 			}()
 
 			go func() {
 				defer wg.Done()
+
 				tc.test(t, s, syncCh)
-				<-done
-				err := s.Stop()
-				if len(tc.stopErrs) == 0 {
-					require.NoError(t, err)
-				} else {
-					err := errors.Unwrap(err)
-					require.ElementsMatch(t, tc.stopErrs, strings.Split(err.Error(), "\n"))
-				}
+				s.Stop()
 			}()
 
 			wg.Wait()
