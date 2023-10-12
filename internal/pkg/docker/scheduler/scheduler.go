@@ -30,7 +30,7 @@ type Scheduler struct {
 	stopped   chan struct{}
 	wg        *sync.WaitGroup
 	actions   chan action
-	stopOnce  sync.Once
+	stopOnce  *sync.Once
 
 	docker DockerEngine
 }
@@ -56,6 +56,8 @@ func NewScheduler(docker DockerEngine, idPrefix string, logOptions logOptionsFun
 		stopped:    make(chan struct{}),
 		docker:     docker,
 		wg:         &sync.WaitGroup{},
+		stopOnce:   &sync.Once{},
+		actions:    make(chan action),
 	}
 	return s
 }
@@ -80,7 +82,6 @@ func (s *Scheduler) Start() chan error {
 
 	// scheduler routine
 	errs := make(chan error)
-
 	go func() {
 		for {
 			select {
@@ -103,8 +104,16 @@ func (s *Scheduler) Start() chan error {
 // Restart stops the current running task and starts task.
 // Errors that occur while Restarting will be returned by Start().
 func (s *Scheduler) RunTask(task Task) {
-	r := &runTaskAction{task: task}
-	s.actions <- r
+	// i need to guarentee that when an action is accepted by the scheduler
+	// meaning, pulled off the queue, that it runs and any errors returned by it
+	// are added to the list. however, if Stop() is called _while a different routine
+	// is waiting to get accepted by the scheduler_, those actions are ignored.
+	select {
+	case <-s.stopped:
+	case s.actions <- &runTaskAction{
+		task: task,
+	}:
+	}
 }
 
 type runTaskAction struct {
@@ -112,12 +121,6 @@ type runTaskAction struct {
 }
 
 func (r *runTaskAction) Do(s *Scheduler) error {
-	select {
-	case <-s.stopped:
-		return nil
-	default:
-	}
-
 	// we no longer care about errors from the old task
 	taskID := s.curTaskID.Add(1)
 
@@ -151,10 +154,10 @@ func (r *runTaskAction) Do(s *Scheduler) error {
 			!maps.Equal(curOpts.ContainerPorts, newOpts.ContainerPorts) {
 			return errors.New("new task requires recreating pause container")
 		}
-	}
 
-	if err := s.stopTask(ctx, s.curTask); err != nil {
-		return fmt.Errorf("stop existing task: %w", err)
+		if err := s.stopTask(ctx, s.curTask); err != nil {
+			return fmt.Errorf("stop existing task: %w", err)
+		}
 	}
 
 	s.curTask = r.task
@@ -193,7 +196,7 @@ func (a *stopAction) Do(s *Scheduler) error {
 	}
 
 	if len(errs) > 0 {
-		return fmt.Errorf("stop: %w", errors.Join(errs...))
+		return errors.Join(errs...)
 	}
 	return nil
 }
