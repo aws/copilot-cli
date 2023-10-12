@@ -1182,7 +1182,7 @@ func BuildTaskRunCmd() *cobra.Command {
   /code $ copilot task run --subnets subnet-123,subnet-456 --security-groups sg-123,sg-456
   Run a task with a command.
   /code $ copilot task run --command "python migrate-script.py"
-  Run a task with Docker build-args.
+  Run a task with Docker build args.
   /code $ copilot task run --build-args GO_VERSION=1.19"`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newTaskRunOpts(vars)
