@@ -6,11 +6,19 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"math"
+	"slices"
+	"strconv"
+	"strings"
+
+	"github.com/aws/copilot-cli/internal/pkg/queue"
+	"github.com/dustin/go-humanize"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/dustin/go-humanize/english"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
-	"slices"
 
 	"github.com/aws/copilot-cli/cmd/copilot/template"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
@@ -32,18 +40,45 @@ import (
 )
 
 const (
-	svcWkldType = "svc"
-	jobWkldType = "job"
+	svcWkldType                 = "svc"
+	jobWkldType                 = "job"
+	optionAllRemainingWorkloads = "All remaining workloads"
 )
+
+// filterItemsByStrings is a generic function to return the subset of wantedStrings that exists in possibleItems.
+// stringFunc is a method to convert the generic item type (T) to a string; for example, one can convert a struct of type
+// *config.Workload to a string by passing
+//
+//	func(w *config.Workload) string { return w.Name }.
+//
+// Likewise, filterItemsByStrings can work on a list of strings by returning the unmodified item:
+//
+//	filterItemsByStrings(wantedStrings, stringSlice2, func(s string) string { return s })
+//
+// It returns a list of strings (items whose stringFunc() exists in the list of wantedStrings).
+func filterItemsByStrings[T any](wantedStrings []string, possibleItems []T, stringFunc func(T) string) []string {
+	m := make(map[string]bool)
+	for _, item := range wantedStrings {
+		m[item] = true
+	}
+	res := make([]string, 0, len(wantedStrings))
+	for _, item := range possibleItems {
+		if m[stringFunc(item)] {
+			res = append(res, stringFunc(item))
+		}
+	}
+	return res
+}
 
 type deployVars struct {
 	deployWkldVars
 
-	workloadNames []string
+	workloadNames      []string
+	deployAllWorkloads bool
+	yesInitWkld        bool
 
-	yesInitWkld *bool
-	deployEnv   *bool
-	yesInitEnv  *bool
+	deployEnv  *bool
+	yesInitEnv *bool
 
 	region    string
 	tempCreds tempCredsVars
@@ -72,7 +107,11 @@ type deployOpts struct {
 	envExistsInWs  bool
 
 	// Cached variables
-	wsEnvironments []string
+	wsEnvironments         []string
+	wsWorkloads            []string
+	storeWorkloads         []*config.Workload
+	initializedWsWorkloads []string
+	deploymentOrderMap     map[string]int
 }
 
 func newDeployOpts(vars deployVars) (*deployOpts, error) {
@@ -150,7 +189,7 @@ func newDeployOpts(vars deployVars) (*deployOpts, error) {
 				}
 				opts.name = workloadName
 				return opts, nil
-			case slices.Contains(manifestinfo.JobTypes(), workloadType):
+			case slices.Contains(manifestinfo.ServiceTypes(), workloadType):
 				opts := &deploySvcOpts{
 					deployWkldVars: o.deployWkldVars,
 
@@ -169,6 +208,11 @@ func newDeployOpts(vars deployVars) (*deployOpts, error) {
 					return newSvcDeployer(opts)
 				}
 				opts.name = workloadName
+				// Multi-deployments can have flags specified which are not compatible with all service types.
+				// Currently only forceNewUpdate is incompatible with Static Site types.
+				if workloadType == manifestinfo.StaticSiteType {
+					opts.forceNewUpdate = false
+				}
 				return opts, nil
 			}
 			return nil, fmt.Errorf("unrecognized workload type %s", workloadType)
@@ -176,19 +220,20 @@ func newDeployOpts(vars deployVars) (*deployOpts, error) {
 	}, nil
 }
 
+// maybeInitWkld decides whether a workload needs to be initialized before deployment.
+// We do not prompt for workload initialization; specifying the workload by name suffices
+// to convey the customer intention. When the customer specifies --all and --init-wkld,
+// we will add all un-initialized local workloads to the list to be deployed.
+// When the customer does not specify --init-wkld with --all, we will only deploy initialized workloads.
 func (o *deployOpts) maybeInitWkld(name string) error {
 	// Confirm that the workload needs to be initialized after asking for the name.
-	initializedWorkloads, err := o.store.ListWorkloads(o.appName)
+	initializedWorkloads, err := o.listInitializedLocalWorkloads()
 	if err != nil {
-		return fmt.Errorf("retrieve workloads: %w", err)
-	}
-	wlNames := make([]string, len(initializedWorkloads))
-	for i := range initializedWorkloads {
-		wlNames[i] = initializedWorkloads[i].Name
+		return err
 	}
 
 	// Workload is already initialized. Return early.
-	if slices.Contains(wlNames, name) {
+	if slices.Contains(initializedWorkloads, name) {
 		return nil
 	}
 
@@ -206,18 +251,6 @@ func (o *deployOpts) maybeInitWkld(name string) error {
 		return fmt.Errorf("unrecognized workload type %q in manifest for workload %s", workloadType, name)
 	}
 
-	if o.yesInitWkld == nil {
-		confirmInitWkld, err := o.prompt.Confirm(fmt.Sprintf("Found manifest for uninitialized %s %q. Initialize it?", workloadType, name), "This workload will be initialized, then deployed.", prompt.WithFinalMessage(fmt.Sprintf("Initialize %s:", workloadType)))
-		if err != nil {
-			return fmt.Errorf("confirm initialize workload: %w", err)
-		}
-		o.yesInitWkld = aws.Bool(confirmInitWkld)
-	}
-
-	if !aws.BoolValue(o.yesInitWkld) {
-		return fmt.Errorf("workload %s is uninitialized but --%s=false was specified", name, yesInitWorkloadFlag)
-	}
-
 	wkldAdder := o.newWorkloadAdder()
 	if err = wkldAdder.AddWorkloadToApp(o.appName, name, workloadType); err != nil {
 		return fmt.Errorf("add workload to app: %w", err)
@@ -225,8 +258,183 @@ func (o *deployOpts) maybeInitWkld(name string) error {
 	return nil
 }
 
+type workloadPriority struct {
+	priority  int
+	workloads []string
+}
+
+func (w workloadPriority) LessThan(a workloadPriority) bool {
+	return w.priority < a.priority
+}
+
+// parseDeploymentOrderTags takes a list of workload names, optionally tagged with a priority. Lower priorities will be
+// deployed first.
+//
+//	[]string{"fe/1", "be/1", "worker/2"}
+//
+// It returns a map from the workload name to its priority, and errors out if the order tag is incorrectly formatted.
+//
+//	map[string]int{"fe": 1, "be": 1, "worker": 2}
+//
+// It is possible to have multiple workloads of the same priority. We don't guarantee that workloads within priority
+// groups will have identical deployment orders each time.
+func (o *deployOpts) parseDeploymentOrderTags(namesWithOptionalOrder []string) error {
+	if len(o.deploymentOrderMap) > 0 {
+		return nil
+	}
+	prioritiesMap := make(map[string]int)
+	// First pass through flags to identify priority groups
+	for _, wkldName := range namesWithOptionalOrder {
+		parts := strings.Split(wkldName, "/")
+		// If there's no priority tag, deploy this service after everything else. Signify this with math.MaxInt priority.
+		// If there's a valid tag, add it to the map of priorities.
+		if len(parts) == 1 {
+			prioritiesMap[parts[0]] = math.MaxInt
+		} else if len(parts) == 2 {
+			order, err := strconv.Atoi(parts[1])
+			if err != nil {
+				return fmt.Errorf("parse deployment order for workloads: %w", err)
+			}
+			prioritiesMap[parts[0]] = order
+		} else {
+			return fmt.Errorf("invalid deployment order for workload %s", wkldName)
+		}
+	}
+	o.deploymentOrderMap = prioritiesMap
+	return nil
+}
+
+// getDeploymentOrder parses names and tags from the --name flag, respecting "all".
+// It returns an ordered list of which workloads should be deployed and when.
+// For example, when a customer specifies "fe/2,be/1,worker,job" and the --all flag
+// in a workspace where there also exists a `db` service, this function will return
+//
+//	[][]string{ {"be"}, {"fe"}, {"worker", "job", "db"} }.
+//
+// TODO: when there's a dependsOn field in the manifest, we should modify this function to respect it.
+func (o *deployOpts) getDeploymentOrder() ([][]string, error) {
+
+	// Get a map from workload name to deployment priority
+	if err := o.parseDeploymentOrderTags(o.workloadNames); err != nil {
+		return nil, err
+	}
+
+	// Iterate over priority map to invert it and get groups of workloads with the same priority.
+	groupsMap := make(map[int][]string)
+	for k, v := range o.deploymentOrderMap {
+		groupsMap[v] = append(groupsMap[v], k)
+	}
+
+	// If --all is specified, we need to add the remainder of workloads with math.MaxInt priority according to whether or not --init-wkld is specified.
+	if o.deployAllWorkloads {
+		specifiedWorkloadList := make([]string, 0, len(o.deploymentOrderMap))
+		for k := range o.deploymentOrderMap {
+			specifiedWorkloadList = append(specifiedWorkloadList, k)
+		}
+
+		if o.yesInitWkld {
+			// Add all unspecified local workloads to the list of workloads to be deployed.
+			localWorkloads, err := o.listLocalWorkloads()
+			if err != nil {
+				return nil, err
+			}
+			workloadsToAppend := slices.DeleteFunc(localWorkloads, func(s string) bool { return slices.Contains(specifiedWorkloadList, s) })
+			if len(workloadsToAppend) != 0 {
+				groupsMap[math.MaxInt] = append(groupsMap[math.MaxInt], workloadsToAppend...)
+			}
+		} else {
+			// Otherwise (--init-wkld is false): get only get initialized local workloads.
+			initializedWorkloads, err := o.listInitializedLocalWorkloads()
+			if err != nil {
+				return nil, err
+			}
+			workloadsToAppend := slices.DeleteFunc(initializedWorkloads, func(s string) bool { return slices.Contains(specifiedWorkloadList, s) })
+			if len(workloadsToAppend) != 0 {
+				groupsMap[math.MaxInt] = append(groupsMap[math.MaxInt], workloadsToAppend...)
+			}
+		}
+	}
+
+	if len(groupsMap) == 0 {
+		log.Infoln("No workloads to deploy. Did you mean to specify --init-wkld with --all?")
+		return nil, errors.New("generate deployment groups: no workloads were specified")
+	}
+	deploymentGroups := queue.NewPriorityQueue[workloadPriority]()
+	for k, v := range groupsMap {
+		deploymentGroups.Push(workloadPriority{
+			priority:  k,
+			workloads: v,
+		})
+	}
+
+	res := make([][]string, 0, deploymentGroups.Len())
+	for deploymentGroups.Len() > 0 {
+		v, ok := deploymentGroups.Pop()
+		if !ok || v == nil {
+			continue
+		}
+		res = append(res, v.workloads)
+	}
+	return res, nil
+}
+
+func (o *deployOpts) listStoreWorkloads() ([]*config.Workload, error) {
+	if o.storeWorkloads != nil {
+		return o.storeWorkloads, nil
+	}
+	wls, err := o.store.ListWorkloads(o.appName)
+	if err != nil {
+		return nil, fmt.Errorf("retrieve store workloads: %w", err)
+	}
+	o.storeWorkloads = wls
+	return o.storeWorkloads, nil
+}
+
+func (o *deployOpts) listLocalWorkloads() ([]string, error) {
+	if o.wsWorkloads != nil {
+		return o.wsWorkloads, nil
+	}
+	localWorkloads, err := o.ws.ListWorkloads()
+	if err != nil {
+		return nil, fmt.Errorf("retrieve workspace workloads: %w", err)
+	}
+	o.wsWorkloads = localWorkloads
+
+	return o.wsWorkloads, nil
+}
+
+func (o *deployOpts) listInitializedLocalWorkloads() ([]string, error) {
+	if o.initializedWsWorkloads != nil {
+		return o.initializedWsWorkloads, nil
+	}
+	storeWls, err := o.listStoreWorkloads()
+	if err != nil {
+		return nil, err
+	}
+	localWorkloads, err := o.listLocalWorkloads()
+	if err != nil {
+		return nil, err
+	}
+
+	o.initializedWsWorkloads = filterItemsByStrings(localWorkloads, storeWls, func(workload *config.Workload) string { return workload.Name })
+	return o.initializedWsWorkloads, nil
+}
+
+type workloadCommand struct {
+	actionCommand
+	name string
+}
+
+func getTotalNumberOfWorkloads(deploymentGroups [][]workloadCommand) int {
+	var count int
+	for i := 0; i < len(deploymentGroups); i++ {
+		count += len(deploymentGroups[i])
+	}
+	return count
+}
+
 func (o *deployOpts) Run() error {
-	if err := o.askName(); err != nil {
+	if err := o.askNames(); err != nil {
 		return err
 	}
 
@@ -246,40 +454,137 @@ func (o *deployOpts) Run() error {
 		return err
 	}
 
-	for _, workload := range o.workloadNames {
-		if err := o.maybeInitWkld(workload); err != nil {
-			return err
+	deploymentOrderGroups, err := o.getDeploymentOrder()
+	if err != nil {
+		return err
+	}
+
+	cmds := make([][]workloadCommand, len(deploymentOrderGroups))
+	// Do all our asking before executing deploy commands.
+	// Also initialize workloads that need initialization (if they're specified by name and un-initialized,
+	// it means the customer probably wants to init them).
+	log.Infoln("Checking for all required information. We may ask you some questions.")
+	for order, deploymentGroup := range deploymentOrderGroups {
+		for _, workload := range deploymentGroup {
+			// 1. Decide whether the current workload needs initialization.
+			if err := o.maybeInitWkld(workload); err != nil {
+				return err
+			}
+			// 2. Set up workload command.
+			deployCmd, err := o.loadWkldCmd(workload)
+			if err != nil {
+				return err
+			}
+
+			cmds[order] = append(cmds[order], workloadCommand{
+				name:          workload,
+				actionCommand: deployCmd,
+			})
+			// 3. Ask() and Validate() for required info.
+			if err := deployCmd.Ask(); err != nil {
+				return fmt.Errorf("ask %s deploy: %w", o.wlType, err)
+			}
+			if err := deployCmd.Validate(); err != nil {
+				return fmt.Errorf("validate %s deploy: %w", o.wlType, err)
+			}
 		}
-		deployCmd, err := o.loadWkldCmd(workload)
-		if err != nil {
-			return err
-		}
-		if err := deployCmd.Ask(); err != nil {
-			return fmt.Errorf("ask %s deploy: %w", o.wlType, err)
-		}
-		if err := deployCmd.Validate(); err != nil {
-			return fmt.Errorf("validate %s deploy: %w", o.wlType, err)
-		}
-		if err := deployCmd.Execute(); err != nil {
-			return fmt.Errorf("execute %s deploy: %w", o.wlType, err)
-		}
-		if err := deployCmd.RecommendActions(); err != nil {
-			return err
+	}
+
+	if count := getTotalNumberOfWorkloads(cmds); count > 1 {
+		logDeploymentOrderInfo(cmds, count)
+	}
+
+	for g, deploymentGroup := range cmds {
+		// TODO parallelize this. Steps involve:
+		// 1. Modify the cmd to optionally disable progress tracker
+		// 2. Modify labeledSyncBuffer so it can display a spinner.
+		// 3. Wrap Execute() in a goroutine with ErrorGroup and context
+		for i, cmd := range deploymentGroup {
+			if err := cmd.Execute(); err != nil {
+				var errNoInfraChanges *errNoInfrastructureChanges
+				if !errors.As(err, &errNoInfraChanges) {
+					return fmt.Errorf("execute deployment %d of %d in group %d: %w", i+1, len(deploymentGroup), g+1, err)
+				}
+				// Don't run recommended actions if there is an infra error. It's possible for RecommendActions to panic
+				// when it returns an error (the actionRecommender return is nil in error cases and the struct member
+				// is never set.
+				continue
+			}
+			if err := cmd.RecommendActions(); err != nil {
+				return err
+			}
 		}
 	}
 
 	return nil
 }
 
-func (o *deployOpts) askName() error {
+func logDeploymentOrderInfo(cmds [][]workloadCommand, totalCount int) {
+	log.Infof("Will deploy %d %s in the following order.\n", totalCount, english.PluralWord(totalCount, "workload", ""))
+	for i := 0; i < len(cmds); i++ {
+		names := make([]string, 0, len(cmds))
+		for _, cmd := range cmds[i] {
+			names = append(names, cmd.name)
+		}
+		log.Infof("%d. %s\n", i+1, strings.Join(names, ", "))
+	}
+}
+
+func (o *deployOpts) askNames() error {
 	if o.workloadNames != nil || len(o.workloadNames) != 0 {
 		return nil
 	}
-	name, err := o.sel.Workload("Select a service or job in your workspace", "")
+
+	if o.deployAllWorkloads {
+		// --all and --init-wkld=true, means we should use ALL local workloads as our list of names.
+		if o.yesInitWkld {
+			o.workloadNames = o.wsWorkloads
+			return nil
+		}
+		// --all and --init-wkld=false means we should only use the initialized local workloads.
+		o.workloadNames = o.initializedWsWorkloads
+		return nil
+	}
+
+	names, err := o.sel.Workloads("Select one or more services or jobs in your workspace.", "")
 	if err != nil {
 		return fmt.Errorf("select service or job: %w", err)
 	}
-	o.workloadNames = []string{name}
+	if len(names) == 1 {
+		o.workloadNames = names
+		return nil
+	}
+
+	// Select workload priority by repeatedly prompting with a multiselect until the list of options is depleted.
+	options := names
+	taggedOptions := make([]string, 0, len(options))
+	currentPriority := 1
+	for len(options) > 0 {
+		selectedNames, err := o.prompt.MultiSelect(
+			fmt.Sprintf("Which workload(s) would you like to deploy in your %s deployment group?", humanize.Ordinal(currentPriority)),
+			"These workloads will be deployed together.",
+			append(options, optionAllRemainingWorkloads),
+			prompt.RequireMinItems(1),
+			prompt.WithFinalMessage(fmt.Sprintf("Group %d", currentPriority)),
+		)
+		if err != nil {
+			return fmt.Errorf("select workloads for deployment group: %w", err)
+		}
+		if slices.Contains(selectedNames, optionAllRemainingWorkloads) {
+			selectedNames = options
+		}
+
+		// Tag all selected workloads with the given priority.
+		for _, name := range selectedNames {
+			taggedOptions = append(taggedOptions, fmt.Sprintf("%s/%d", name, currentPriority))
+		}
+		options = slices.DeleteFunc(options, func(s string) bool { return slices.Contains(selectedNames, s) })
+		currentPriority++
+	}
+
+	if err := o.parseDeploymentOrderTags(taggedOptions); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -445,36 +750,33 @@ func (o *deployOpts) loadWkldCmd(name string) (actionCommand, error) {
 // BuildDeployCmd is the deploy command.
 func BuildDeployCmd() *cobra.Command {
 	vars := deployVars{}
-	var initWorkload bool
 	var initEnvironment bool
 	var deployEnvironment bool
-	var name string
 	cmd := &cobra.Command{
 		Use:   "deploy",
-		Short: "Deploy a Copilot job or service.",
-		Long:  "Deploy a Copilot job or service.",
+		Short: "Deploy one or more Copilot jobs or services.",
+		Long:  "Deploy one or more Copilot jobs or services.",
 		Example: `
   Deploys a service named "frontend" to a "test" environment.
-  /code $ copilot deploy --name frontend --env test --deploy-env=false
+  /code $ copilot deploy --name frontend --env test
   Deploys a job named "mailer" with additional resource tags to a "prod" environment.
-  /code $ copilot deploy -n mailer -e prod --resource-tags source/revision=bb133e7,deployment/initiator=manual --deploy-env=false
+  /code $ copilot deploy -n mailer -e prod --resource-tags source/revision=bb133e7,deployment/initiator=manual
   Initializes and deploys an environment named "test" in us-west-2 under the "default" profile with local manifest, 
     then deploys a service named "api"
   /code $ copilot deploy --init-env --deploy-env --env test --name api --profile default --region us-west-2
   Initializes and deploys a service named "backend" to a "prod" environment.
-  /code $ copilot deploy --init-wkld --deploy-env=false --env prod --name backend`,
+  /code $ copilot deploy --init-wkld --env prod --name backend
+  Deploys all local, initialized workloads in no particular order.
+  /code $ copilot deploy --all --env prod --name backend
+  Deploys multiple workloads in a prescribed order (fe and worker, then be).
+  /code $ copilot deploy -n fe/1 -n be/2 -n worker/1
+  Initializes and deploys all local workloads after deploying environment changes.
+  /code $ copilot deploy --all --init-wkld --deploy-env -e prod`,
 
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newDeployOpts(vars)
 			if err != nil {
 				return err
-			}
-
-			if cmd.Flags().Changed(yesInitWorkloadFlag) {
-				opts.yesInitWkld = aws.Bool(false)
-				if initWorkload {
-					opts.yesInitWkld = aws.Bool(true)
-				}
 			}
 
 			if cmd.Flags().Changed(yesInitEnvFlag) {
@@ -491,10 +793,6 @@ func BuildDeployCmd() *cobra.Command {
 				}
 			}
 
-			if cmd.Flags().Changed(nameFlag) {
-				opts.workloadNames = []string{name}
-			}
-
 			if err := opts.Run(); err != nil {
 				return err
 			}
@@ -502,7 +800,7 @@ func BuildDeployCmd() *cobra.Command {
 		}),
 	}
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
-	cmd.Flags().StringVarP(&name, nameFlag, nameFlagShort, "", workloadFlagDescription)
+	cmd.Flags().StringSliceVarP(&vars.workloadNames, nameFlag, nameFlagShort, nil, workloadsFlagDescription)
 	cmd.Flags().StringVarP(&vars.envName, envFlag, envFlagShort, "", envFlagDescription)
 	cmd.Flags().StringVar(&vars.imageTag, imageTagFlag, "", imageTagFlagDescription)
 	cmd.Flags().StringToStringVar(&vars.resourceTags, resourceTagsFlag, nil, resourceTagsFlagDescription)
@@ -513,7 +811,8 @@ func BuildDeployCmd() *cobra.Command {
 
 	cmd.Flags().BoolVar(&deployEnvironment, deployEnvFlag, false, deployEnvFlagDescription)
 	cmd.Flags().BoolVar(&initEnvironment, yesInitEnvFlag, false, yesInitEnvFlagDescription)
-	cmd.Flags().BoolVar(&initWorkload, yesInitWorkloadFlag, false, yesInitWorkloadFlagDescription)
+	cmd.Flags().BoolVar(&vars.yesInitWkld, yesInitWorkloadFlag, false, yesInitWorkloadFlagDescription)
+	cmd.Flags().BoolVar(&vars.deployAllWorkloads, allFlag, false, allWorkloadsFlagDescription)
 
 	cmd.Flags().StringVar(&vars.profile, profileFlag, "", profileFlagDescription)
 	cmd.Flags().StringVar(&vars.tempCreds.AccessKeyID, accessKeyIDFlag, "", accessKeyIDFlagDescription)

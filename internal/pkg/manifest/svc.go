@@ -36,11 +36,25 @@ func (idx ExposedPortsIndex) mainContainerPort() string {
 	return idx.containerPortDefinedBy(idx.WorkloadName)
 }
 
+func (idx ExposedPortsIndex) mainContainerProtocol() string {
+	return idx.containerProtocolDefinedBy(idx.WorkloadName)
+}
+
 // containerPortDefinedBy returns the explicitly defined container port, if there is no port exposed for the container then returns the empty string "".
 func (idx ExposedPortsIndex) containerPortDefinedBy(container string) string {
 	for _, portConfig := range idx.PortsForContainer[container] {
 		if portConfig.isDefinedByContainer {
 			return strconv.Itoa(int(portConfig.Port))
+		}
+	}
+	return ""
+}
+
+// containerProtocolDefinedBy returns the protocol for the explicitly defined container port, if there is no port exposed for the container then returns the empty string "".
+func (idx ExposedPortsIndex) containerProtocolDefinedBy(container string) string {
+	for _, portConfig := range idx.PortsForContainer[container] {
+		if portConfig.isDefinedByContainer {
+			return portConfig.Protocol
 		}
 	}
 	return ""
@@ -442,62 +456,84 @@ func (s *StringOrFromCFN) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
-func (cfg ImageWithPortAndHealthcheck) exposedPorts(workloadName string) []ExposedPort {
+func (cfg ImageWithPortAndHealthcheck) exposePorts(exposedPorts map[uint16]ExposedPort, workloadName string) map[uint16]ExposedPort {
 	if cfg.Port == nil {
 		return nil
 	}
-	return []ExposedPort{
-		{
-			Port:                 aws.Uint16Value(cfg.Port),
-			Protocol:             "tcp",
-			ContainerName:        workloadName,
+
+	newExposedPorts := make(map[uint16]ExposedPort)
+	targetPort := aws.Uint16Value(cfg.Port)
+	if exposedPort, ok := exposedPorts[targetPort]; ok {
+		newExposedPorts[targetPort] = ExposedPort{
+			Port:                 exposedPort.Port,
+			Protocol:             exposedPort.Protocol,
+			ContainerName:        exposedPort.ContainerName,
 			isDefinedByContainer: true,
-		},
+		}
+		return newExposedPorts
 	}
 
+	exposedPorts[targetPort] = ExposedPort{
+		Port:                 targetPort,
+		Protocol:             strings.ToLower(defaultProtocol),
+		ContainerName:        workloadName,
+		isDefinedByContainer: true,
+	}
+	return newExposedPorts
 }
 
-func (cfg ImageWithHealthcheckAndOptionalPort) exposedPorts(workloadName string) []ExposedPort {
+func (cfg ImageWithHealthcheckAndOptionalPort) exposePorts(exposedPorts map[uint16]ExposedPort, workloadName string) map[uint16]ExposedPort {
 	if cfg.Port == nil {
 		return nil
 	}
-	return []ExposedPort{
-		{
-			Port:                 aws.Uint16Value(cfg.Port),
-			Protocol:             "tcp",
-			ContainerName:        workloadName,
+
+	newExposedPorts := make(map[uint16]ExposedPort)
+	targetPort := aws.Uint16Value(cfg.Port)
+	if exposedPort, ok := exposedPorts[targetPort]; ok {
+		newExposedPorts[targetPort] = ExposedPort{
+			Port:                 exposedPort.Port,
+			Protocol:             exposedPort.Protocol,
+			ContainerName:        exposedPort.ContainerName,
 			isDefinedByContainer: true,
-		},
+		}
+		return newExposedPorts
 	}
+
+	exposedPorts[targetPort] = ExposedPort{
+		Port:                 targetPort,
+		Protocol:             strings.ToLower(defaultProtocol),
+		ContainerName:        workloadName,
+		isDefinedByContainer: true,
+	}
+	return newExposedPorts
 }
 
-// exportPorts returns any new ports that should be exposed given the application load balancer
+// exposePorts populates a map of ports that should be exposed given the application load balancer
 // configuration that's not part of the existing containerPorts.
-func (rr RoutingRule) exposedPorts(exposedPorts []ExposedPort, workloadName string) []ExposedPort {
-	if rr.TargetPort == nil {
+func (rule RoutingRule) exposePorts(exposedPorts map[uint16]ExposedPort, workloadName string) map[uint16]ExposedPort {
+	if rule.TargetPort == nil {
 		return nil
 	}
 	targetContainer := workloadName
-	if rr.TargetContainer != nil {
-		targetContainer = aws.StringValue(rr.TargetContainer)
+	if rule.TargetContainer != nil {
+		targetContainer = aws.StringValue(rule.TargetContainer)
 	}
-	for _, exposedPort := range exposedPorts {
-		if aws.Uint16Value(rr.TargetPort) == exposedPort.Port {
-			return nil
-		}
+	targetPort := aws.Uint16Value(rule.TargetPort)
+	if _, ok := exposedPorts[targetPort]; ok {
+		return nil
 	}
-	return []ExposedPort{
-		{
-			Port:          aws.Uint16Value(rr.TargetPort),
-			Protocol:      "tcp",
-			ContainerName: targetContainer,
-		},
+	newExposedPorts := make(map[uint16]ExposedPort)
+	newExposedPorts[targetPort] = ExposedPort{
+		Port:          targetPort,
+		Protocol:      strings.ToLower(TCP),
+		ContainerName: targetContainer,
 	}
+	return newExposedPorts
 }
 
-// exportPorts returns any new ports that should be exposed given the network load balancer
+// exposePorts populates a map of ports that should be exposed given the network load balancer
 // configuration that's not part of the existing containerPorts.
-func (cfg NetworkLoadBalancerListener) exposedPorts(exposedPorts []ExposedPort, workloadName string) ([]ExposedPort, error) {
+func (cfg NetworkLoadBalancerListener) exposePorts(exposedPorts map[uint16]ExposedPort, workloadName string) (map[uint16]ExposedPort, error) {
 	if cfg.IsEmpty() {
 		return nil, nil
 	}
@@ -532,16 +568,17 @@ func (cfg NetworkLoadBalancerListener) exposedPorts(exposedPorts []ExposedPort, 
 		targetContainer = aws.StringValue(cfg.TargetContainer)
 	}
 
-	return []ExposedPort{
-		{
-			Port:          targetPort,
-			Protocol:      targetProtocol,
-			ContainerName: targetContainer,
-		},
-	}, nil
+	newExposedPorts := make(map[uint16]ExposedPort)
+	newExposedPorts[targetPort] = ExposedPort{
+		Port:          targetPort,
+		Protocol:      targetProtocol,
+		ContainerName: targetContainer,
+	}
+
+	return newExposedPorts, nil
 }
 
-func (sidecar SidecarConfig) exposedPorts(sidecarName string) ([]ExposedPort, error) {
+func (sidecar SidecarConfig) exposePorts(exposedPorts map[uint16]ExposedPort, sidecarName string) (map[uint16]ExposedPort, error) {
 	if sidecar.Port == nil {
 		return nil, nil
 	}
@@ -557,41 +594,107 @@ func (sidecar SidecarConfig) exposedPorts(sidecarName string) ([]ExposedPort, er
 	if err != nil {
 		return nil, err
 	}
-	return []ExposedPort{
-		{
-			Port:                 uint16(port),
-			Protocol:             strings.ToLower(protocol),
-			ContainerName:        sidecarName,
-			isDefinedByContainer: true,
-		},
-	}, nil
+
+	newExposedPorts := make(map[uint16]ExposedPort)
+	newExposedPorts[uint16(port)] = ExposedPort{
+		Port:                 uint16(port),
+		Protocol:             strings.ToLower(protocol),
+		ContainerName:        sidecarName,
+		isDefinedByContainer: true,
+	}
+
+	return newExposedPorts, nil
 }
 
-func sortExposedPorts(exposedPorts []ExposedPort) []ExposedPort {
-	// Sort the exposed ports so that the order is consistent and the integration test won't be flaky.
-	sort.Slice(exposedPorts, func(i, j int) bool {
-		return exposedPorts[i].Port < exposedPorts[j].Port
-	})
-	return exposedPorts
+// ServiceConnectTargetContainer contains the name of a container and port to expose to ECS Service Connect.
+type ServiceConnectTargetContainer struct {
+	Container string
+	Port      string
+}
+
+// ServiceConnectTarget returns the target container, port, and protocol to be exposed for ServiceConnect.
+func (l *LoadBalancedWebService) ServiceConnectTarget(exposedPorts ExposedPortsIndex) *ServiceConnectTargetContainer {
+	// Expose ServiceConnect from `image.port` by default.
+	targetContainer := exposedPorts.WorkloadName
+	targetPort := exposedPorts.mainContainerPort()
+	targetProtocol := exposedPorts.mainContainerProtocol()
+
+	// Only assign albContainer and albPort if alb is enabled.
+	var albContainer, albPort *string
+	if !l.HTTPOrBool.Disabled() {
+		albContainer, albPort = l.HTTPOrBool.Main.exposedContainerAndPort(exposedPorts)
+	}
+	if albContainer != nil && albPort != nil {
+		targetContainer = aws.StringValue(albContainer)
+		targetPort = aws.StringValue(albPort)
+		targetProtocol = TCP
+	}
+
+	// ServiceConnect can't use UDP.
+	if strings.EqualFold(targetProtocol, UDP) {
+		return nil
+	}
+
+	return &ServiceConnectTargetContainer{
+		Container: targetContainer,
+		Port:      targetPort,
+	}
+}
+
+// ServiceConnectTarget returns the target container and port to be exposed for ServiceConnect.
+func (b *BackendService) ServiceConnectTarget(exposedPorts ExposedPortsIndex) *ServiceConnectTargetContainer {
+	// Expose ServiceConnect from `image.port` by default.
+	targetContainer := exposedPorts.WorkloadName
+	targetPort := exposedPorts.mainContainerPort()
+	targetProtocol := exposedPorts.mainContainerProtocol()
+
+	albContainer, albPort := b.HTTP.Main.exposedContainerAndPort(exposedPorts)
+	if albContainer != nil && albPort != nil {
+		targetContainer = aws.StringValue(albContainer)
+		targetPort = aws.StringValue(albPort)
+		targetProtocol = TCP
+	}
+
+	// ServiceConnect can't use UDP.
+	if strings.EqualFold(targetProtocol, UDP) {
+		return nil
+	}
+
+	return &ServiceConnectTargetContainer{
+		Container: targetContainer,
+		Port:      targetPort,
+	}
 }
 
 // Target returns target container and target port for the ALB configuration.
 // This method should be called only when ALB config is not empty.
-func (rr *RoutingRule) Target(exposedPorts ExposedPortsIndex) (targetContainer string, targetPort string, err error) {
+func (rule *RoutingRule) Target(exposedPorts ExposedPortsIndex) (targetContainer string, targetPort string, err error) {
 	// Route load balancer traffic to main container by default.
 	targetContainer = exposedPorts.WorkloadName
 	targetPort = exposedPorts.mainContainerPort()
 
-	rrTargetContainer := rr.TargetContainer
-	rrTargetPort := rr.TargetPort
-	if rrTargetContainer == nil && rrTargetPort == nil { // both targetPort and targetContainer are nil.
-		return
+	ruleTargetContainer, ruleTargetPort := rule.exposedContainerAndPort(exposedPorts)
+	if ruleTargetContainer != nil {
+		targetContainer = aws.StringValue(ruleTargetContainer)
+	}
+	if ruleTargetPort != nil {
+		targetPort = aws.StringValue(ruleTargetPort)
+	}
+	return
+}
+
+// exposedContainerAndPort returns the targetContainer and targetPort from a given ExposedPortsIndex for a routing rule.
+func (rule *RoutingRule) exposedContainerAndPort(exposedPorts ExposedPortsIndex) (*string, *string) {
+	var targetContainer, targetPort *string
+
+	if rule.TargetContainer == nil && rule.TargetPort == nil { // both targetPort and targetContainer are nil.
+		return nil, nil
 	}
 
-	if rrTargetPort == nil { // when target_port is nil
-		if aws.StringValue(rrTargetContainer) != exposedPorts.WorkloadName {
-			targetContainer = aws.StringValue(rrTargetContainer)
-			targetPort = exposedPorts.containerPortDefinedBy(aws.StringValue(rrTargetContainer))
+	if rule.TargetPort == nil { // when target_port is nil
+		if aws.StringValue(rule.TargetContainer) != exposedPorts.WorkloadName {
+			targetContainer = rule.TargetContainer
+			targetPort = aws.String(exposedPorts.containerPortDefinedBy(aws.StringValue(rule.TargetContainer)))
 			/* NOTE: When the `target_port` is empty, the intended target port should be the port that is explicitly exposed by the container. Consider the following example
 			```
 			http:
@@ -603,23 +706,23 @@ func (rr *RoutingRule) Target(exposedPorts ExposedPortsIndex) (targetContainer s
 			In this example, the target port for the ALB listener rule should be 81
 			*/
 		}
-		return
+		return targetContainer, targetPort
 	}
 
-	if rrTargetContainer == nil { // when target_container is nil
-		container, port := targetContainerFromTargetPort(exposedPorts, rrTargetPort)
-		targetPort = aws.StringValue(port)
+	if rule.TargetContainer == nil { // when target_container is nil
+		container, port := targetContainerFromTargetPort(exposedPorts, rule.TargetPort)
+		targetPort = port
 		// In general, containers aren't expected to be empty. But this condition is applied for extra safety.
 		if container != nil {
-			targetContainer = aws.StringValue(container)
+			targetContainer = container
 		}
-		return
+		return targetContainer, targetPort
 	}
 
 	// when both target_port and target_container are not nil
-	targetContainer = aws.StringValue(rrTargetContainer)
-	targetPort = template.StrconvUint16(aws.Uint16Value(rrTargetPort))
-	return
+	targetContainer = rule.TargetContainer
+	targetPort = aws.String(template.StrconvUint16(aws.Uint16Value(rule.TargetPort)))
+	return targetContainer, targetPort
 }
 
 // targetContainerFromTargetPort returns target container and target port from the given target_port input.
@@ -647,10 +750,19 @@ func (s *BackendService) MainContainerPort() string {
 	return port
 }
 
-func prepareParsedExposedPortsMap(exposedPorts []ExposedPort) (map[string][]ExposedPort, map[uint16]string) {
+func prepareParsedExposedPortsMap(exposedPorts map[uint16]ExposedPort) (map[string][]ExposedPort, map[uint16]string) {
 	parsedContainerMap := make(map[string][]ExposedPort)
 	parsedExposedPortMap := make(map[uint16]string)
-	for _, exposedPort := range exposedPorts {
+
+	var ports []uint16
+	for port := range exposedPorts {
+		ports = append(ports, port)
+	}
+	// Sort for consistency in unit tests.
+	sort.Slice(ports, func(i, j int) bool { return ports[i] < ports[j] })
+
+	for _, port := range ports {
+		exposedPort := exposedPorts[port]
 		parsedContainerMap[exposedPort.ContainerName] = append(parsedContainerMap[exposedPort.ContainerName], exposedPort)
 		parsedExposedPortMap[exposedPort.Port] = exposedPort.ContainerName
 	}

@@ -6181,6 +6181,21 @@ func (mr *MockwsSelectorMockRecorder) Workload(msg, help interface{}) *gomock.Ca
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Workload", reflect.TypeOf((*MockwsSelector)(nil).Workload), msg, help)
 }
 
+// Workloads mocks base method.
+func (m *MockwsSelector) Workloads(msg, help string) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Workloads", msg, help)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Workloads indicates an expected call of Workloads.
+func (mr *MockwsSelectorMockRecorder) Workloads(msg, help interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Workloads", reflect.TypeOf((*MockwsSelector)(nil).Workloads), msg, help)
+}
+
 // MockstaticSourceSelector is a mock of staticSourceSelector interface.
 type MockstaticSourceSelector struct {
 	ctrl     *gomock.Controller

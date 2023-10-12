@@ -22,6 +22,7 @@ Service デプロイの手順は以下の通りです。
       --allow-downgrade                Optional. Allow using an older version of Copilot to update Copilot components
                                        updated by a newer version of Copilot.
   -a, --app string                     Name of the application.
+      --detach                         Optional. Skip displaying CloudFormation deployment progress.
       --diff                           Compares the generated CloudFormation template to the deployed stack.
       --diff-yes                       Skip interactive approval of diff before deploying.
   -e, --env string                     Name of the environment.

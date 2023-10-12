@@ -39,15 +39,16 @@ const (
 	yesInitWorkloadFlag = "init-wkld"
 
 	// Build flags.
-	dockerFileFlag        = "dockerfile"
-	dockerFileContextFlag = "build-context"
-	imageTagFlag          = "tag"
-	stackOutputDirFlag    = "output-dir"
-	uploadAssetsFlag      = "upload-assets"
-	deployFlag            = "deploy"
-	diffFlag              = "diff"
-	diffAutoApproveFlag   = "diff-yes"
-	sourcesFlag           = "sources"
+	dockerFileFlag          = "dockerfile"
+	dockerFileContextFlag   = "build-context"
+	dockerFileBuildArgsFlag = "build-args"
+	imageTagFlag            = "tag"
+	stackOutputDirFlag      = "output-dir"
+	uploadAssetsFlag        = "upload-assets"
+	deployFlag              = "deploy"
+	diffFlag                = "diff"
+	diffAutoApproveFlag     = "diff-yes"
+	sourcesFlag             = "sources"
 
 	// Flags for operational commands.
 	limitFlag                   = "limit"
@@ -193,6 +194,8 @@ var (
 Cannot be specified with --%s or --%s.`, dockerFileFlag, dockerFileContextFlag)
 	dockerFileFlagDescription = fmt.Sprintf(`Path to the Dockerfile.
 Cannot be specified with --%s.`, imageFlag)
+	dockerFileBuildArgsFlagDescription = fmt.Sprintf(`Key-value pairs converted to --build-args.
+Cannot be specified with --%s.`, imageFlag)
 	dockerFileContextFlagDescription = fmt.Sprintf(`Path to the Docker build context.
 Cannot be specified with --%s.`, imageFlag)
 	sourcesFlagDescription = fmt.Sprintf(`List of relative paths to source directories or files.
@@ -262,6 +265,7 @@ const (
 	svcFlagDescription          = "Name of the service."
 	jobFlagDescription          = "Name of the job."
 	workloadFlagDescription     = "Name of the service or job."
+	workloadsFlagDescription    = "Names of the service or jobs to deploy, with an optional priority tag (e.g. fe/1, be/2, my-job/1)."
 	nameFlagDescription         = "Name of the service, job, or task group."
 	yesFlagDescription          = "Skips confirmation prompt."
 	resourceTagsFlagDescription = `Optional. Labels with a key and value separated by commas.
@@ -280,8 +284,8 @@ rollback in case of deployment failure.
 We do not recommend using this flag for a
 production environment.`
 	forceEnvDeployFlagDescription  = "Optional. Force update the environment stack template."
-	yesInitWorkloadFlagDescription = "Optional. Initialize a workload before deploying it."
-	allWorkloadsFlagDescription             = "Optional. Deploy all workloads with manifests in the current Copilot workspace."
+	yesInitWorkloadFlagDescription = "Optional. When specified with --all, initialize all local workloads before deployment."
+	allWorkloadsFlagDescription    = "Optional. Deploy all workloads with manifests in the current Copilot workspace."
 	detachFlagDescription          = "Optional. Skip displaying CloudFormation deployment progress."
 
 	// Operational.

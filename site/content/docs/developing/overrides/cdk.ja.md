@@ -170,3 +170,34 @@ Copilot は `.build/` ディレクトリ配下に Manifest より生成された
         }
     }
     ```
+
+次の例ではリソースを削除する方法を示しています。具体的には Copilot が作成し Service のログを保持するデフォルトのロググループです。
+
+??? note "`stack.ts` のサンプルを見る"
+
+    ```typescript
+    import * as cdk from 'aws-cdk-lib';
+    import * as path from 'path';
+
+    interface TransformedStackProps extends cdk.StackProps {
+        readonly appName: string;
+        readonly envName: string;
+    }
+
+    export class TransformedStack extends cdk.Stack {
+        public readonly template: cdk.cloudformation_include.CfnInclude;
+        public readonly appName: string;
+        public readonly envName: string;
+
+        constructor(scope: cdk.App, id: string, props: TransformedStackProps) {
+            super(scope, id, props);
+            this.template = new cdk.cloudformation_include.CfnInclude(this, 'Template', {
+            templateFile: path.join('.build', 'in.yml'),
+            });
+            this.appName = props.appName;
+            this.envName = props.envName;
+            // Deletes the default log group resource.
+            this.template.node.tryRemoveChild("LogGroup")
+        }
+    }
+    ```
