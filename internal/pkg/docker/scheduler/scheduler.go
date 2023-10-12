@@ -58,6 +58,7 @@ func NewScheduler(docker DockerEngine, idPrefix string, logOptions logOptionsFun
 		wg:         &sync.WaitGroup{},
 		stopOnce:   &sync.Once{},
 		actions:    make(chan action),
+		runErrs:    make(chan error),
 	}
 	return s
 }
@@ -68,20 +69,12 @@ func NewScheduler(docker DockerEngine, idPrefix string, logOptions logOptionsFun
 // while performing docker operations will be returned. Start
 // calls Stop() when it exits.
 func (s *Scheduler) Start() chan error {
-	s.runErrs = make(chan error)
-
-	// for the scheduler; decremented by stopAction
-	s.wg.Add(1)
-
 	// close done when all goroutines created by scheduler have finished
 	done := make(chan struct{})
-	go func() {
-		s.wg.Wait()
-		close(done)
-	}()
+	errs := make(chan error)
 
 	// scheduler routine
-	errs := make(chan error)
+	s.wg.Add(1) // decremented by stopAction
 	go func() {
 		for {
 			select {
@@ -96,6 +89,11 @@ func (s *Scheduler) Start() chan error {
 				return
 			}
 		}
+	}()
+
+	go func() {
+		s.wg.Wait()
+		close(done)
 	}()
 
 	return errs
