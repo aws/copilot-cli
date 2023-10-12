@@ -670,6 +670,7 @@ func TestDockerCommand_Run(t *testing.T) {
 			setupMocks: func(controller *gomock.Controller) {
 				mockCmd = NewMockCmd(controller)
 				mockCmd.EXPECT().RunWithContext(gomock.Any(), "docker", []string{"run",
+					"--rm",
 					"--name", mockPauseContainer,
 					"mockImageUri",
 					"sleep", "infinity"}, gomock.Any(), gomock.Any()).Return(mockError)
@@ -684,6 +685,7 @@ func TestDockerCommand_Run(t *testing.T) {
 			setupMocks: func(controller *gomock.Controller) {
 				mockCmd = NewMockCmd(controller)
 				mockCmd.EXPECT().RunWithContext(gomock.Any(), "docker", gomock.InAnyOrder([]string{"run",
+					"--rm",
 					"--name", mockPauseContainer,
 					"--publish", "8080:8080",
 					"--publish", "8081:8081",
@@ -700,6 +702,7 @@ func TestDockerCommand_Run(t *testing.T) {
 			setupMocks: func(controller *gomock.Controller) {
 				mockCmd = NewMockCmd(controller)
 				mockCmd.EXPECT().RunWithContext(gomock.Any(), "docker", gomock.InAnyOrder([]string{"run",
+					"--rm",
 					"--name", mockContainerName,
 					"--network", "container:pauseContainer",
 					"--env", "DB_PASSWORD=mysecretPassword",
@@ -720,6 +723,7 @@ func TestDockerCommand_Run(t *testing.T) {
 			setupMocks: func(controller *gomock.Controller) {
 				mockCmd = NewMockCmd(controller)
 				mockCmd.EXPECT().RunWithContext(gomock.Any(), "docker", gomock.InAnyOrder([]string{"run",
+					"--rm",
 					"--name", mockContainerName,
 					"--network", "container:pauseContainer",
 					"--env", "DB_PASSWORD=mysecretPassword",
@@ -803,7 +807,7 @@ func TestDockerCommand_IsContainerRunning(t *testing.T) {
 			inContainerName: mockUnknownContainerName,
 			setupMocks: func(controller *gomock.Controller) {
 				mockCmd = NewMockCmd(controller)
-				mockCmd.EXPECT().Run("docker", []string{"ps", "-q", "--filter", "name=mockUnknownContainer"}, gomock.Any()).Return(mockError)
+				mockCmd.EXPECT().RunWithContext(gomock.Any(), "docker", []string{"ps", "-q", "--filter", "name=mockUnknownContainer"}, gomock.Any()).Return(mockError)
 			},
 
 			wantedErr: fmt.Errorf("run docker ps: some error"),
@@ -812,7 +816,7 @@ func TestDockerCommand_IsContainerRunning(t *testing.T) {
 			inContainerName: mockContainerName,
 			setupMocks: func(controller *gomock.Controller) {
 				mockCmd = NewMockCmd(controller)
-				mockCmd.EXPECT().Run("docker", []string{"ps", "-q", "--filter", "name=mockContainer"}, gomock.Any()).Return(nil)
+				mockCmd.EXPECT().RunWithContext(gomock.Any(), "docker", []string{"ps", "-q", "--filter", "name=mockContainer"}, gomock.Any()).Return(nil)
 			},
 		},
 	}
