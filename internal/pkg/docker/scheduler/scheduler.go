@@ -40,10 +40,11 @@ type action interface {
 
 type logOptionsFunc func(name string, ctr ContainerDefinition) dockerengine.RunLogOptions
 
+// DockerEngine is used by Scheduler to manage containers.
 type DockerEngine interface {
-	Stop(context.Context, string) error
-	IsContainerRunning(context.Context, string) (bool, error)
 	Run(context.Context, *dockerengine.RunOptions) error
+	IsContainerRunning(context.Context, string) (bool, error)
+	Stop(context.Context, string) error
 }
 
 // NewScheduler creates a new Scheduler. idPrefix is a prefix used when
