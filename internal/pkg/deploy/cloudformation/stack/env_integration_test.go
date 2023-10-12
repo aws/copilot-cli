@@ -264,15 +264,6 @@ network:
 			wantedFileName: "template-with-importedvpc-flowlogs.yml",
 		},
 	}
-	val, exist := os.LookupEnv("REGION")
-	require.NoError(t, os.Setenv("REGION", "us-west-2"))
-	defer func() {
-		if !exist {
-			require.NoError(t, os.Unsetenv("REGION"))
-			return
-		}
-		require.NoError(t, os.Setenv("REGION", val))
-	}()
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN

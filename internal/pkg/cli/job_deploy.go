@@ -173,26 +173,20 @@ func (o *deployJobOpts) Execute() error {
 			return err
 		}
 	}
-	raw, err := o.ws.ReadWorkloadManifest(o.name)
-	if err != nil {
-		return fmt.Errorf("read manifest file for %s: %w", o.name, err)
-	}
-	interpolated, err := o.newInterpolator(o.appName, o.envName).Interpolate(string(raw))
-	if err != nil {
-		return fmt.Errorf("interpolate environment variables for %s manifest: %w", o.name, err)
-	}
-	mft, err := workloadManifest(&workloadManifestInput{
-		name:            o.name,
-		appName:         o.appName,
-		envName:         o.envName,
-		interpolatedMft: interpolated,
-		unmarshal:       o.unmarshal,
-		sess:            o.envSess,
+	mft, interpolated, err := workloadManifest(&workloadManifestInput{
+		name:         o.name,
+		appName:      o.appName,
+		envName:      o.envName,
+		ws:           o.ws,
+		interpolator: o.newInterpolator(o.appName, o.envName),
+		unmarshal:    o.unmarshal,
+		sess:         o.envSess,
 	})
 	if err != nil {
 		return err
 	}
 	o.appliedDynamicMft = mft
+	o.rawMft = interpolated
 	if err := validateWorkloadManifestCompatibilityWithEnv(o.ws, o.envFeaturesDescriber, mft, o.envName); err != nil {
 		return err
 	}

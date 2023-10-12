@@ -275,21 +275,14 @@ func (o *runLocalOpts) Execute() error {
 	for _, port := range o.portOverrides {
 		ports[port.container] = port.host
 	}
-	raw, err := o.ws.ReadWorkloadManifest(o.wkldName)
-	if err != nil {
-		return fmt.Errorf("read manifest file for %s: %w", o.wkldName, err)
-	}
-	interpolated, err := o.newInterpolator(o.appName, o.envName).Interpolate(string(raw))
-	if err != nil {
-		return fmt.Errorf("interpolate environment variables for %s manifest: %w", o.wkldName, err)
-	}
-	mft, err := workloadManifest(&workloadManifestInput{
-		name:            o.wkldName,
-		appName:         o.appName,
-		envName:         o.envName,
-		interpolatedMft: interpolated,
-		unmarshal:       o.unmarshal,
-		sess:            o.envSess,
+	mft, _, err := workloadManifest(&workloadManifestInput{
+		name:         o.wkldName,
+		appName:      o.appName,
+		envName:      o.envName,
+		ws:           o.ws,
+		interpolator: o.newInterpolator(o.appName, o.envName),
+		unmarshal:    o.unmarshal,
+		sess:         o.envSess,
 	})
 	if err != nil {
 		return err
