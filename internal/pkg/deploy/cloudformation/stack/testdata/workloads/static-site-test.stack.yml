@@ -354,6 +354,19 @@ Resources:
               - !Sub arn:aws:s3:::${Bucket}
               - !Sub arn:aws:s3:::${Bucket}/*
 
+  AddonsStack:
+    Metadata:
+      'aws:copilot:description': 'An Addons CloudFormation Stack for your additional AWS resources'
+    Type: AWS::CloudFormation::Stack
+    Condition: HasAddons
+    Properties:
+      Parameters:
+        App: !Ref AppName
+        Env: !Ref EnvName
+        Name: !Ref WorkloadName
+      TemplateURL:
+        !Ref AddonsTemplateURL
+
 Outputs:
   CloudFrontDistributionDomainName:
     Value: !GetAtt CloudFrontDistribution.DomainName
