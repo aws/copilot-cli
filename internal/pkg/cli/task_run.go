@@ -114,6 +114,7 @@ type runTaskVars struct {
 	image                 string
 	dockerfilePath        string
 	dockerfileContextPath string
+	dockerfileBuildArgs   map[string]string
 	imageTag              string
 
 	taskRole      string
@@ -370,6 +371,10 @@ func (o *runTaskOpts) Validate() error {
 
 	if o.image != "" && o.dockerfileContextPath != "" {
 		return errors.New("cannot specify both `--image` and `--build-context`")
+	}
+
+	if o.image != "" && o.dockerfileBuildArgs != nil {
+		return errors.New("cannot specify both `--image` and `--build-args`")
 	}
 
 	if o.isDockerfileSet {
@@ -963,6 +968,7 @@ func (o *runTaskOpts) buildAndPushImage(uri string) error {
 		Dockerfile: o.dockerfilePath,
 		Context:    ctx,
 		Tags:       append([]string{imageTagLatest}, additionalTags...),
+		Args:       o.dockerfileBuildArgs,
 	}
 	buildArgsList, err := buildArgs.GenerateDockerBuildArgs(dockerengine.New(exec.NewCmd()))
 	if err != nil {
@@ -1175,7 +1181,9 @@ func BuildTaskRunCmd() *cobra.Command {
   Run a task using the current workspace with specific subnets and security groups.
   /code $ copilot task run --subnets subnet-123,subnet-456 --security-groups sg-123,sg-456
   Run a task with a command.
-  /code $ copilot task run --command "python migrate-script.py"`,
+  /code $ copilot task run --command "python migrate-script.py"
+  Run a task with Docker build args.
+  /code $ copilot task run --build-args GO_VERSION=1.19"`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newTaskRunOpts(vars)
 			if err != nil {
@@ -1193,6 +1201,7 @@ func BuildTaskRunCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&vars.groupName, taskGroupNameFlag, nameFlagShort, "", taskGroupFlagDescription)
 
 	cmd.Flags().StringVar(&vars.dockerfilePath, dockerFileFlag, defaultDockerfilePath, dockerFileFlagDescription)
+	cmd.Flags().StringToStringVar(&vars.dockerfileBuildArgs, dockerFileBuildArgsFlag, nil, dockerFileBuildArgsFlagDescription)
 	cmd.Flags().StringVar(&vars.dockerfileContextPath, dockerFileContextFlag, "", dockerFileContextFlagDescription)
 	cmd.Flags().StringVarP(&vars.image, imageFlag, imageFlagShort, "", imageFlagDescription)
 	cmd.Flags().StringVar(&vars.imageTag, imageTagFlag, "", taskImageTagFlagDescription)
@@ -1228,6 +1237,7 @@ func BuildTaskRunCmd() *cobra.Command {
 
 	buildFlags := pflag.NewFlagSet("Build", pflag.ContinueOnError)
 	buildFlags.AddFlag(cmd.Flags().Lookup(dockerFileFlag))
+	buildFlags.AddFlag(cmd.Flags().Lookup(dockerFileBuildArgsFlag))
 	buildFlags.AddFlag(cmd.Flags().Lookup(dockerFileContextFlag))
 	buildFlags.AddFlag(cmd.Flags().Lookup(imageFlag))
 	buildFlags.AddFlag(cmd.Flags().Lookup(imageTagFlag))
