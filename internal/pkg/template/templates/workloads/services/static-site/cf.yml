@@ -327,6 +327,15 @@ Resources:
                 Resource:
                   - arn:aws:s3:::{{.AssetMappingFileBucket}}/{{.AssetMappingFilePath}}
                   - arn:aws:s3:::{{.AssetMappingFileBucket}}/local-assets/*
+              - Effect: Allow
+                Action: kms:Decrypt
+                Resource:
+                  Fn::ImportValue:
+                    !Sub "${AppName}-ArtifactKey"
+                Condition:
+                  StringEquals:
+                    kms:EncryptionContext:aws:s3:arn: arn:aws:s3:::{{.AssetMappingFileBucket}}
+                    kms:ViaService: !Sub 's3.${AWS::Region}.amazonaws.com'
         - PolicyName: ServiceBucketAccess
           PolicyDocument:
             Version: 2012-10-17

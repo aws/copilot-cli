@@ -36,6 +36,36 @@ func (m *Mockapi) EXPECT() *MockapiMockRecorder {
 	return m.recorder
 }
 
+// DescribeListeners mocks base method.
+func (m *Mockapi) DescribeListeners(input *elbv2.DescribeListenersInput) (*elbv2.DescribeListenersOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DescribeListeners", input)
+	ret0, _ := ret[0].(*elbv2.DescribeListenersOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DescribeListeners indicates an expected call of DescribeListeners.
+func (mr *MockapiMockRecorder) DescribeListeners(input interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeListeners", reflect.TypeOf((*Mockapi)(nil).DescribeListeners), input)
+}
+
+// DescribeLoadBalancers mocks base method.
+func (m *Mockapi) DescribeLoadBalancers(input *elbv2.DescribeLoadBalancersInput) (*elbv2.DescribeLoadBalancersOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DescribeLoadBalancers", input)
+	ret0, _ := ret[0].(*elbv2.DescribeLoadBalancersOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DescribeLoadBalancers indicates an expected call of DescribeLoadBalancers.
+func (mr *MockapiMockRecorder) DescribeLoadBalancers(input interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeLoadBalancers", reflect.TypeOf((*Mockapi)(nil).DescribeLoadBalancers), input)
+}
+
 // DescribeRules mocks base method.
 func (m *Mockapi) DescribeRules(arg0 *elbv2.DescribeRulesInput) (*elbv2.DescribeRulesOutput, error) {
 	m.ctrl.T.Helper()
