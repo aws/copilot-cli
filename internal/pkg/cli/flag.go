@@ -39,15 +39,16 @@ const (
 	yesInitWorkloadFlag = "init-wkld"
 
 	// Build flags.
-	dockerFileFlag        = "dockerfile"
-	dockerFileContextFlag = "build-context"
-	imageTagFlag          = "tag"
-	stackOutputDirFlag    = "output-dir"
-	uploadAssetsFlag      = "upload-assets"
-	deployFlag            = "deploy"
-	diffFlag              = "diff"
-	diffAutoApproveFlag   = "diff-yes"
-	sourcesFlag           = "sources"
+	dockerFileFlag          = "dockerfile"
+	dockerFileContextFlag   = "build-context"
+	dockerFileBuildArgsFlag = "build-args"
+	imageTagFlag            = "tag"
+	stackOutputDirFlag      = "output-dir"
+	uploadAssetsFlag        = "upload-assets"
+	deployFlag              = "deploy"
+	diffFlag                = "diff"
+	diffAutoApproveFlag     = "diff-yes"
+	sourcesFlag             = "sources"
 
 	// Flags for operational commands.
 	limitFlag                   = "limit"
@@ -192,6 +193,8 @@ var (
 	imageFlagDescription = fmt.Sprintf(`The location of an existing Docker image.
 Cannot be specified with --%s or --%s.`, dockerFileFlag, dockerFileContextFlag)
 	dockerFileFlagDescription = fmt.Sprintf(`Path to the Dockerfile.
+Cannot be specified with --%s.`, imageFlag)
+	dockerFileBuildArgsFlagDescription = fmt.Sprintf(`Key-value pairs converted to --build-args.
 Cannot be specified with --%s.`, imageFlag)
 	dockerFileContextFlagDescription = fmt.Sprintf(`Path to the Docker build context.
 Cannot be specified with --%s.`, imageFlag)
