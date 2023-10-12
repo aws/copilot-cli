@@ -181,15 +181,7 @@ func (o *deployEnvOpts) Execute() error {
 			return err
 		}
 	}
-	rawMft, err := o.ws.ReadEnvironmentManifest(o.name)
-	if err != nil {
-		return fmt.Errorf("read manifest for environment %q: %w", o.name, err)
-	}
-	interpolated, err := o.newInterpolator(o.appName, o.name).Interpolate(string(rawMft))
-	if err != nil {
-		return fmt.Errorf("interpolate environment variables for %q manifest: %w", o.name, err)
-	}
-	mft, err := environmentManifest(o.name, []byte(interpolated))
+	mft, interpolated, err := environmentManifest(o.name, o.ws, o.newInterpolator(o.appName, o.name))
 	if err != nil {
 		return err
 	}
@@ -271,15 +263,23 @@ After fixing the deployment, you can:
 	return fmt.Errorf("deploy environment %s: %w", o.name, err)
 }
 
-func environmentManifest(envName string, rawMft []byte) (*manifest.Environment, error) {
-	mft, err := manifest.UnmarshalEnvironment(rawMft)
+func environmentManifest(envName string, reader wsEnvironmentReader, transformer interpolator) (*manifest.Environment, string, error) {
+	rawMft, err := reader.ReadEnvironmentManifest(envName)
 	if err != nil {
-		return nil, fmt.Errorf("unmarshal environment manifest for %q: %w", envName, err)
+		return nil, "", fmt.Errorf("read manifest for environment %q: %w", envName, err)
+	}
+	interpolated, err := transformer.Interpolate(string(rawMft))
+	if err != nil {
+		return nil, "", fmt.Errorf("interpolate environment variables for %q manifest: %w", envName, err)
+	}
+	mft, err := manifest.UnmarshalEnvironment([]byte(interpolated))
+	if err != nil {
+		return nil, "", fmt.Errorf("unmarshal environment manifest for %q: %w", envName, err)
 	}
 	if err := mft.Validate(); err != nil {
-		return nil, fmt.Errorf("validate environment manifest for %q: %w", envName, err)
+		return nil, "", fmt.Errorf("validate environment manifest for %q: %w", envName, err)
 	}
-	return mft, nil
+	return mft, interpolated, nil
 }
 
 func (o *deployEnvOpts) showDiffAndConfirmDeployment(deployer envDeployer, input *deploy.DeployEnvironmentInput) (bool, error) {

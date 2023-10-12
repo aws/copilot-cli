@@ -217,7 +217,7 @@ type WorkloadDeployerInput struct {
 	Env              *config.Environment
 	Image            ContainerImageIdentifier
 	Mft              interface{} // Interpolated, applied, and unmarshaled manifest.
-	RawMft           string
+	RawMft           string      // With env var interpolation only.
 	EnvVersionGetter versionGetter
 	Overrider        Overrider
 

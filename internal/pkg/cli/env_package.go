@@ -177,15 +177,7 @@ func (o *packageEnvOpts) Execute() error {
 			return err
 		}
 	}
-	rawMft, err := o.ws.ReadEnvironmentManifest(o.name)
-	if err != nil {
-		return fmt.Errorf("read manifest for environment %q: %w", o.name, err)
-	}
-	interpolated, err := o.newInterpolator(o.appName, o.name).Interpolate(string(rawMft))
-	if err != nil {
-		return fmt.Errorf("interpolate environment variables for %q manifest: %w", o.name, err)
-	}
-	mft, err := environmentManifest(o.name, []byte(interpolated))
+	mft, interpolated, err := environmentManifest(o.name, o.ws, o.newInterpolator(o.appName, o.name))
 	if err != nil {
 		return err
 	}
