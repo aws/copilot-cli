@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation/stackset"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	rg "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -315,12 +314,8 @@ func (o *deleteAppOpts) emptyS3Bucket() error {
 	}
 	appResources, err := o.cfn.GetRegionalAppResources(app)
 	if err != nil {
-		innerErr := err
-		for errors.Unwrap(innerErr) != nil {
-			innerErr = errors.Unwrap(innerErr)
-		}
 		// ErrStackSetNotFound means application Parameter Store params are hanging, return nil to continue for deletion
-		if _, ok := innerErr.(*stackset.ErrStackSetNotFound); ok {
+		if isStackSetNotExistsErr(err) {
 			return nil
 		}
 		return fmt.Errorf("get regional application resources for %s: %w", app.Name, err)

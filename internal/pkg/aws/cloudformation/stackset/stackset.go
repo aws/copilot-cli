@@ -241,11 +241,6 @@ func (ss *StackSet) InstanceSummaries(name string, opts ...InstanceSummariesOpti
 	for {
 		resp, err := ss.client.ListStackInstances(in)
 		if err != nil {
-			if isNotFoundStackSet(err) {
-				return nil, &ErrStackSetNotFound{
-					name: name,
-				}
-			}
 			return nil, fmt.Errorf("list stack instances for stack set %s: %w", name, err)
 		}
 		for _, cfnSummary := range resp.Summaries {
