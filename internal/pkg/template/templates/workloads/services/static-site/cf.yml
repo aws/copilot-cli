@@ -572,6 +572,8 @@ Resources:
         - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
 {{- end}}
 
+{{include "addons" . | indent 2}}
+
 Outputs:
   CloudFrontDistributionDomainName:
     Value: !GetAtt CloudFrontDistribution.DomainName

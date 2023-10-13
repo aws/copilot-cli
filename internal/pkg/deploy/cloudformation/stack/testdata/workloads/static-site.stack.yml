@@ -514,6 +514,19 @@ Resources:
       ManagedPolicyArns:
         - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
 
+  AddonsStack:
+    Metadata:
+      'aws:copilot:description': 'An Addons CloudFormation Stack for your additional AWS resources'
+    Type: AWS::CloudFormation::Stack
+    Condition: HasAddons
+    Properties:
+      Parameters:
+        App: !Ref AppName
+        Env: !Ref EnvName
+        Name: !Ref WorkloadName
+      TemplateURL:
+        !Ref AddonsTemplateURL
+
 Outputs:
   CloudFrontDistributionDomainName:
     Value: !GetAtt CloudFrontDistribution.DomainName
