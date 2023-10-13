@@ -92,7 +92,7 @@ type ScheduledJobConfig struct {
 	Env                string
 	Manifest           *manifest.ScheduledJob
 	ArtifactBucketName string
-	RawManifest        []byte
+	RawManifest        string
 	RuntimeConfig      RuntimeConfig
 	Addons             NestedStackConfigurer
 }

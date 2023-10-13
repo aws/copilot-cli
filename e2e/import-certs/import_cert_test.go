@@ -43,10 +43,9 @@ var _ = Describe("Import Certificates", func() {
 		)
 		BeforeAll(func() {
 			_, err = cli.EnvInit(&client.EnvInitRequest{
-				AppName:           appName,
-				EnvName:           "test",
-				Profile:           "test",
-				CertificateImport: importedCert,
+				AppName: appName,
+				EnvName: "test",
+				Profile: "test",
 			})
 		})
 		It("env init should succeed", func() {

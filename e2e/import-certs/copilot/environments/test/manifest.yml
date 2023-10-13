@@ -1,0 +1,10 @@
+name: test
+type: Environment
+
+http:
+  public:
+    certificates:
+      - ${IMPORTED_CERT_ARN}
+
+observability:
+  container_insights: false

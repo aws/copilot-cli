@@ -1274,8 +1274,8 @@ func mockDeployEnvironmentInput() *EnvConfig {
 				Type: aws.String("Environment"),
 			},
 		},
-		RawMft: []byte(`name: env
+		RawMft: `name: env
 type: Environment
-`),
+`,
 	}
 }

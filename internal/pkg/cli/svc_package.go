@@ -75,6 +75,7 @@ type packageSvcOpts struct {
 	targetApp         *config.Application
 	targetEnv         *config.Environment
 	envSess           *session.Session
+	rawMft            string
 	appliedDynamicMft manifest.DynamicWorkload
 	rootUserARN       string
 
@@ -126,10 +127,6 @@ func newWorkloadStackGenerator(o *packageSvcOpts) (workloadStackGenerator, error
 	if err != nil {
 		return nil, err
 	}
-	raw, err := o.ws.ReadWorkloadManifest(o.name)
-	if err != nil {
-		return nil, fmt.Errorf("read manifest file for %s: %w", o.name, err)
-	}
 	ovrdr, err := clideploy.NewOverrider(o.ws.WorkloadOverridesPath(o.name), o.appName, o.envName, o.fs, o.sessProvider)
 	if err != nil {
 		return nil, err
@@ -147,7 +144,7 @@ func newWorkloadStackGenerator(o *packageSvcOpts) (workloadStackGenerator, error
 			GitShortCommitTag: o.gitShortCommit,
 		},
 		Mft:              content,
-		RawMft:           raw,
+		RawMft:           o.rawMft,
 		EnvVersionGetter: o.envFeaturesDescriber,
 		Overrider:        ovrdr,
 	}
@@ -345,12 +342,12 @@ type cfnStackConfig struct {
 }
 
 func (o *packageSvcOpts) getStackGenerator(env *config.Environment) (workloadStackGenerator, error) {
-	mft, err := workloadManifest(&workloadManifestInput{
+	mft, interpolated, err := workloadManifest(&workloadManifestInput{
 		name:         o.name,
 		appName:      o.appName,
 		envName:      o.envName,
-		interpolator: o.newInterpolator(o.appName, o.envName),
 		ws:           o.ws,
+		interpolator: o.newInterpolator(o.appName, o.envName),
 		unmarshal:    o.unmarshal,
 		sess:         o.envSess,
 	})
@@ -358,6 +355,7 @@ func (o *packageSvcOpts) getStackGenerator(env *config.Environment) (workloadSta
 		return nil, err
 	}
 	o.appliedDynamicMft = mft
+	o.rawMft = interpolated
 	if err := validateWorkloadManifestCompatibilityWithEnv(o.ws, o.envFeaturesDescriber, o.appliedDynamicMft, o.envName); err != nil {
 		return nil, err
 	}
