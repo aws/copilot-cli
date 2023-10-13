@@ -293,7 +293,11 @@ func (c DockerCmdClient) Run(ctx context.Context, options *RunOptions) error {
 		stderr := logger()
 		defer stderr.Close()
 
-		if err := c.runner.RunWithContext(ctx, "docker", options.generateRunArguments(), exec.Stdout(stdout), exec.Stderr(stderr)); err != nil {
+		if err := c.runner.RunWithContext(ctx, "docker",
+			options.generateRunArguments(),
+			exec.Stdout(stdout),
+			exec.Stderr(stderr),
+			exec.NewProcessGroup()); err != nil {
 			return fmt.Errorf("running container: %w", err)
 		}
 		return nil
