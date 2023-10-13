@@ -47,6 +47,11 @@ type DockerEngine interface {
 	Stop(context.Context, string) error
 }
 
+const (
+	stoppedTaskID  = -1
+	pauseCtrTaskID = 0
+)
+
 // NewScheduler creates a new Scheduler. idPrefix is a prefix used when
 // naming containers that are run by the Scheduler.
 func NewScheduler(docker DockerEngine, idPrefix string, logOptions logOptionsFunc) *Scheduler {
@@ -139,7 +144,7 @@ func (r *runTaskAction) Do(s *Scheduler) error {
 	if taskID == 1 {
 		// start the pause container
 		opts := s.pauseRunOptions(r.task)
-		s.run(-1, opts)
+		s.run(pauseCtrTaskID, opts)
 		if err := s.waitForContainerToStart(ctx, opts.ContainerName); err != nil {
 			return fmt.Errorf("wait for pause container to start: %w", err)
 		}
@@ -180,8 +185,8 @@ func (s *Scheduler) Stop() {
 type stopAction struct{}
 
 func (a *stopAction) Do(s *Scheduler) error {
-	defer s.wg.Done()  // for the scheduler
-	s.curTaskID.Add(1) // ignore runtime errors
+	defer s.wg.Done()                // for the scheduler
+	s.curTaskID.Store(stoppedTaskID) // ignore runtime errors
 
 	// collect errors since we want to try to clean up everything we can
 	var errs []error
@@ -304,7 +309,14 @@ func (s *Scheduler) run(taskID int32, opts dockerengine.RunOptions) {
 		defer s.wg.Done()
 
 		if err := s.docker.Run(context.Background(), &opts); err != nil {
-			if taskID == -1 || taskID == s.curTaskID.Load() {
+			curTaskID := s.curTaskID.Load()
+			if curTaskID == stoppedTaskID {
+				return
+			}
+
+			// the error is from the pause container
+			// or from the currently running task
+			if taskID == pauseCtrTaskID || taskID == curTaskID {
 				s.runErrs <- fmt.Errorf("run %q: %w", opts.ContainerName, err)
 			}
 		}
