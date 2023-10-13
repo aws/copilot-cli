@@ -5,13 +5,17 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/signal"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"syscall"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
@@ -31,7 +35,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
-	"github.com/aws/copilot-cli/internal/pkg/docker/scheduler"
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -234,6 +237,7 @@ func (o *runLocalOpts) validateAndAskWkldEnvName() error {
 	o.wkldName = deployedWorkload.Name
 	o.envName = deployedWorkload.Env
 	o.wkldType = deployedWorkload.Type
+	o.containerSuffix = o.getContainerSuffix()
 	return nil
 }
 
@@ -245,9 +249,31 @@ func (o *runLocalOpts) Execute() error {
 
 	ctx := context.Background()
 
-	task, err := o.getTask(ctx)
+	taskDef, err := o.ecsLocalClient.TaskDefinition(o.appName, o.envName, o.wkldName)
 	if err != nil {
-		return fmt.Errorf("get task: %w", err)
+		return fmt.Errorf("get task definition: %w", err)
+	}
+
+	envVars, err := o.getEnvVars(ctx, taskDef)
+	if err != nil {
+		return fmt.Errorf("get env vars: %w", err)
+	}
+
+	// map of containerPort -> hostPort
+	ports := make(map[string]string)
+	for _, container := range taskDef.ContainerDefinitions {
+		for _, mapping := range container.PortMappings {
+			host := strconv.FormatInt(aws.Int64Value(mapping.HostPort), 10)
+
+			ctr := host
+			if mapping.ContainerPort != nil {
+				ctr = strconv.FormatInt(aws.Int64Value(mapping.ContainerPort), 10)
+			}
+			ports[ctr] = host
+		}
+	}
+	for _, port := range o.portOverrides {
+		ports[port.container] = port.host
 	}
 
 	mft, err := workloadManifest(&workloadManifestInput{
@@ -268,98 +294,192 @@ func (o *runLocalOpts) Execute() error {
 		return fmt.Errorf("build images: %w", err)
 	}
 
-	// replace built images with the local built URI
-	for name, uri := range containerURIs {
-		ctr, ok := task.Containers[name]
-		if !ok {
-			return fmt.Errorf("built an image for %q, which doesn't exist in the task", name)
+	// fill the location from the task def for containers without a URI
+	for _, container := range taskDef.ContainerDefinitions {
+		name := aws.StringValue(container.Name)
+		if _, ok := containerURIs[name]; !ok {
+			containerURIs[name] = aws.StringValue(container.Image)
 		}
-
-		ctr.ImageURI = uri
-		task.Containers[name] = ctr
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	idPrefix := fmt.Sprintf("%s-%s-%s-", o.appName, o.envName, o.wkldName)
-	s := scheduler.NewScheduler(o.dockerEngine.(dockerengine.DockerCmdClient), idPrefix, func(name string, ctr scheduler.ContainerDefinition) dockerengine.RunLogOptions {
-		return dockerengine.RunLogOptions{
-			Color:      o.newColor(),
-			Output:     os.Stderr,
-			LinePrefix: fmt.Sprintf("[%s] ", name),
-		}
-	})
+	g, ctx := errgroup.WithContext(ctx)
+	gotSigInt := &atomic.Bool{}
 
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+	g.Go(func() error {
+		defer cancel() // needed in case all containers exit successfully
 
-	errCh := s.Start()
-	s.RunTask(task)
-
-	for {
-		select {
-		// we loop until errCh closes, since Start()
-		// closes errCh when the scheduler is completely done.
-		case err, ok := <-errCh:
-			if !ok {
+		if err := o.runPauseContainer(ctx, ports); err != nil {
+			// if we've received a sigint, we want to ignore
+			// any errors coming from this goroutine
+			if gotSigInt.Load() {
 				return nil
 			}
-
-			fmt.Printf("error: %s\n", err)
-			s.Stop()
-		case <-sigCh:
-			signal.Stop(sigCh)
-			s.Stop()
+			return fmt.Errorf("run pause container: %w", err)
 		}
-	}
+
+		err := o.runContainers(ctx, containerURIs, envVars)
+		if gotSigInt.Load() {
+			return nil
+		}
+		return err
+	})
+
+	g.Go(func() error {
+		sigCh := make(chan os.Signal, 1)
+		signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+		defer signal.Stop(sigCh)
+
+		select {
+		case <-ctx.Done():
+		case <-sigCh:
+			gotSigInt.Store(true)
+			// reset signal handler in case we get ctrl+c again
+			// while trying to stop containers
+			signal.Stop(sigCh)
+			fmt.Printf("\nStopping containers...\n\n")
+		}
+
+		return o.cleanUpContainers(context.Background(), containerURIs)
+	})
+
+	return g.Wait()
 }
 
-func (o *runLocalOpts) getTask(ctx context.Context) (scheduler.Task, error) {
-	td, err := o.ecsLocalClient.TaskDefinition(o.appName, o.envName, o.wkldName)
+func (o *runLocalOpts) getContainerSuffix() string {
+	return fmt.Sprintf("%s-%s-%s", o.appName, o.envName, o.wkldName)
+}
+
+func (o *runLocalOpts) runPauseContainer(ctx context.Context, ports map[string]string) error {
+	// flip ports to be host->ctr
+	flippedPorts := make(map[string]string, len(ports))
+	for k, v := range ports {
+		flippedPorts[v] = k
+	}
+	containerNameWithSuffix := fmt.Sprintf("%s-%s", pauseContainerName, o.containerSuffix)
+	runOptions := &dockerengine.RunOptions{
+		ImageURI:       pauseContainerURI,
+		ContainerName:  containerNameWithSuffix,
+		ContainerPorts: flippedPorts,
+		Command:        []string{"sleep", "infinity"},
+		LogOptions: dockerengine.RunLogOptions{
+			Color:      o.newColor(),
+			LinePrefix: "[pause] ",
+		},
+	}
+
+	//channel to receive any error from the goroutine
+	errCh := make(chan error, 1)
+
+	go func() {
+		if err := o.dockerEngine.Run(ctx, runOptions); err != nil {
+			errCh <- err
+		}
+	}()
+
+	// go routine to check if pause container is running
+	go func() {
+		for {
+			isRunning, err := o.dockerEngine.IsContainerRunning(ctx, containerNameWithSuffix)
+			if err != nil {
+				errCh <- fmt.Errorf("check if container is running: %w", err)
+				return
+			}
+			if isRunning {
+				errCh <- nil
+				return
+			}
+			// If the container isn't running yet, sleep for a short duration before checking again.
+			time.Sleep(time.Second)
+		}
+	}()
+	err := <-errCh
 	if err != nil {
-		return scheduler.Task{}, fmt.Errorf("get task definition: %w", err)
+		return err
 	}
 
-	envVars, err := o.getEnvVars(ctx, td)
-	if err != nil {
-		return scheduler.Task{}, fmt.Errorf("get env vars: %w", err)
-	}
+	return nil
+}
 
-	task := scheduler.Task{
-		Containers: make(map[string]scheduler.ContainerDefinition),
-	}
+func (o *runLocalOpts) runContainers(ctx context.Context, containerURIs map[string]string, envVars map[string]containerEnv) error {
+	g, ctx := errgroup.WithContext(ctx)
+	for name, uri := range containerURIs {
+		name := name
+		uri := uri
 
-	for _, ctr := range td.ContainerDefinitions {
-		name := aws.StringValue(ctr.Name)
-		def := scheduler.ContainerDefinition{
-			ImageURI: aws.StringValue(ctr.Image),
-			EnvVars:  envVars[name].EnvVars(),
-			Secrets:  envVars[name].Secrets(),
-			Ports:    make(map[string]string, len(ctr.PortMappings)),
+		vars, secrets := make(map[string]string), make(map[string]string)
+		for k, v := range envVars[name] {
+			if v.Secret {
+				secrets[k] = v.Value
+			} else {
+				vars[k] = v.Value
+			}
 		}
 
-		for _, port := range ctr.PortMappings {
-			hostPort := strconv.FormatInt(aws.Int64Value(port.HostPort), 10)
-			ctrPort := hostPort
-			if port.ContainerPort != nil {
-				ctrPort = strconv.FormatInt(aws.Int64Value(port.ContainerPort), 10)
+		// Execute each container run in a separate goroutine
+		g.Go(func() error {
+			runOptions := &dockerengine.RunOptions{
+				ImageURI:         uri,
+				ContainerName:    fmt.Sprintf("%s-%s", name, o.containerSuffix),
+				Secrets:          secrets,
+				EnvVars:          vars,
+				ContainerNetwork: fmt.Sprintf("%s-%s", pauseContainerName, o.containerSuffix),
+				LogOptions: dockerengine.RunLogOptions{
+					Color:      o.newColor(),
+					LinePrefix: fmt.Sprintf("[%s] ", name),
+				},
 			}
-
-			for _, override := range o.portOverrides {
-				if override.container == ctrPort {
-					hostPort = override.host
-					break
-				}
+			if err := o.dockerEngine.Run(ctx, runOptions); err != nil {
+				return fmt.Errorf("run container %q: %w", name, err)
 			}
-
-			def.Ports[hostPort] = ctrPort
-		}
-
-		task.Containers[name] = def
+			return nil
+		})
 	}
 
-	return task, nil
+	return g.Wait()
+}
+
+func (o *runLocalOpts) cleanUpContainers(ctx context.Context, containerURIs map[string]string) error {
+	cleanUp := func(id string) error {
+		o.prog.Start(fmt.Sprintf("Stopping %q", id))
+		if err := o.dockerEngine.Stop(ctx, id); err != nil {
+			o.prog.Stop(log.Serrorf("Failed to stop %q\n", id))
+			return fmt.Errorf("stop: %w", err)
+		}
+
+		o.prog.Start(fmt.Sprintf("Removing %q", id))
+		if err := o.dockerEngine.Rm(id); err != nil {
+			o.prog.Stop(log.Serrorf("Failed to remove %q\n", id))
+			return fmt.Errorf("rm: %w", err)
+		}
+
+		o.prog.Stop(log.Ssuccessf("Cleaned up %q\n", id))
+		return nil
+	}
+
+	var errs []error
+
+	for name := range containerURIs {
+		ctr := fmt.Sprintf("%s-%s", name, o.containerSuffix)
+		if err := cleanUp(ctr); err != nil {
+			errs = append(errs, fmt.Errorf("clean up %q: %w", ctr, err))
+		}
+	}
+
+	pauseCtr := fmt.Sprintf("%s-%s", pauseContainerName, o.containerSuffix)
+	if err := cleanUp(pauseCtr); err != nil {
+		errs = append(errs, fmt.Errorf("clean up %q: %w", pauseCtr, err))
+	}
+
+	if len(errs) > 0 {
+		sort.Slice(errs, func(i, j int) bool {
+			return errs[i].Error() < errs[j].Error()
+		})
+		return errors.Join(errs...)
+	}
+	return nil
 }
 
 type containerEnv map[string]envVarValue
@@ -368,34 +488,6 @@ type envVarValue struct {
 	Value    string
 	Secret   bool
 	Override bool
-}
-
-func (c containerEnv) EnvVars() map[string]string {
-	if c == nil {
-		return nil
-	}
-
-	out := make(map[string]string)
-	for k, v := range c {
-		if !v.Secret {
-			out[k] = v.Value
-		}
-	}
-	return out
-}
-
-func (c containerEnv) Secrets() map[string]string {
-	if c == nil {
-		return nil
-	}
-
-	out := make(map[string]string)
-	for k, v := range c {
-		if v.Secret {
-			out[k] = v.Value
-		}
-	}
-	return out
 }
 
 // getEnvVars uses env overrides passed by flags and environment variables/secrets
