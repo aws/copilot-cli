@@ -297,21 +297,20 @@ func (o *runLocalOpts) Execute() error {
 	errCh := s.Start()
 	s.RunTask(task)
 
-	defer func() {
-		signal.Stop(sigCh)
-
-		fmt.Sprintf("Stopping containers...\n\n")
-		s.Stop()
-	}()
-
 	for {
 		select {
-		case err := <-errCh:
-			fmt.Printf("%s\n", err)
-			return nil
+		// we loop until errCh closes, since Start()
+		// closes errCh when the scheduler is completely done.
+		case err, ok := <-errCh:
+			if !ok {
+				return nil
+			}
+
+			fmt.Printf("error: %s\n", err)
+			s.Stop()
 		case <-sigCh:
-			fmt.Printf("got signal\n")
-			return nil
+			signal.Stop(sigCh)
+			s.Stop()
 		}
 	}
 }
