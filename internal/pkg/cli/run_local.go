@@ -275,13 +275,12 @@ func (o *runLocalOpts) Execute() error {
 	for _, port := range o.portOverrides {
 		ports[port.container] = port.host
 	}
-
-	mft, err := workloadManifest(&workloadManifestInput{
+	mft, _, err := workloadManifest(&workloadManifestInput{
 		name:         o.wkldName,
 		appName:      o.appName,
 		envName:      o.envName,
-		interpolator: o.newInterpolator(o.appName, o.envName),
 		ws:           o.ws,
+		interpolator: o.newInterpolator(o.appName, o.envName),
 		unmarshal:    o.unmarshal,
 		sess:         o.envSess,
 	})

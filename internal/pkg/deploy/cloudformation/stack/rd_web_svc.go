@@ -53,7 +53,7 @@ type RequestDrivenWebServiceConfig struct {
 	App                deploy.AppInformation
 	Env                string
 	Manifest           *manifest.RequestDrivenWebService
-	RawManifest        []byte
+	RawManifest        string
 	ArtifactBucketName string
 	RuntimeConfig      RuntimeConfig
 	Addons             NestedStackConfigurer

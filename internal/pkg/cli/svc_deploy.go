@@ -84,6 +84,7 @@ type deploySvcOpts struct {
 	envSess           *session.Session
 	svcType           string
 	appliedDynamicMft manifest.DynamicWorkload
+	rawMft            string
 	rootUserARN       string
 	deployRecs        clideploy.ActionRecommender
 	noDeploy          bool
@@ -134,10 +135,6 @@ func newSvcDeployer(o *deploySvcOpts) (workloadDeployer, error) {
 	if err != nil {
 		return nil, err
 	}
-	raw, err := o.ws.ReadWorkloadManifest(o.name)
-	if err != nil {
-		return nil, fmt.Errorf("read manifest file for %s: %w", o.name, err)
-	}
 	ovrdr, err := clideploy.NewOverrider(o.ws.WorkloadOverridesPath(o.name), o.appName, o.envName, afero.NewOsFs(), o.sessProvider)
 	if err != nil {
 		return nil, err
@@ -155,7 +152,7 @@ func newSvcDeployer(o *deploySvcOpts) (workloadDeployer, error) {
 			GitShortCommitTag: o.gitShortCommit,
 		},
 		Mft:              content,
-		RawMft:           raw,
+		RawMft:           o.rawMft,
 		EnvVersionGetter: o.envFeaturesDescriber,
 		Overrider:        ovrdr,
 	}
@@ -221,22 +218,23 @@ func (o *deploySvcOpts) Execute() error {
 			return err
 		}
 	}
-	mft, err := workloadManifest(&workloadManifestInput{
+	mft, interpolated, err := workloadManifest(&workloadManifestInput{
 		name:         o.name,
 		appName:      o.appName,
 		envName:      o.envName,
-		interpolator: o.newInterpolator(o.appName, o.envName),
 		ws:           o.ws,
+		interpolator: o.newInterpolator(o.appName, o.envName),
 		unmarshal:    o.unmarshal,
 		sess:         o.envSess,
 	})
 	if err != nil {
 		return err
 	}
+	o.rawMft = interpolated
+	o.appliedDynamicMft = mft
 	if o.forceNewUpdate && o.svcType == manifestinfo.StaticSiteType {
 		return fmt.Errorf("--%s is not supported for service type %q", forceFlag, manifestinfo.StaticSiteType)
 	}
-	o.appliedDynamicMft = mft
 	if err := validateWorkloadManifestCompatibilityWithEnv(o.ws, o.envFeaturesDescriber, mft, o.envName); err != nil {
 		return err
 	}
@@ -494,30 +492,30 @@ type workloadManifestInput struct {
 	unmarshal    func([]byte) (manifest.DynamicWorkload, error)
 }
 
-func workloadManifest(in *workloadManifestInput) (manifest.DynamicWorkload, error) {
+func workloadManifest(in *workloadManifestInput) (manifest.DynamicWorkload, string, error) {
 	raw, err := in.ws.ReadWorkloadManifest(in.name)
 	if err != nil {
-		return nil, fmt.Errorf("read manifest file for %s: %w", in.name, err)
+		return nil, "", fmt.Errorf("read manifest file for %s: %w", in.name, err)
 	}
 	interpolated, err := in.interpolator.Interpolate(string(raw))
 	if err != nil {
-		return nil, fmt.Errorf("interpolate environment variables for %s manifest: %w", in.name, err)
+		return nil, "", fmt.Errorf("interpolate environment variables for %s manifest: %w", in.name, err)
 	}
 	mft, err := in.unmarshal([]byte(interpolated))
 	if err != nil {
-		return nil, fmt.Errorf("unmarshal service %s manifest: %w", in.name, err)
+		return nil, "", fmt.Errorf("unmarshal service %s manifest: %w", in.name, err)
 	}
 	envMft, err := mft.ApplyEnv(in.envName)
 	if err != nil {
-		return nil, fmt.Errorf("apply environment %s override: %w", in.envName, err)
+		return nil, "", fmt.Errorf("apply environment %s override: %w", in.envName, err)
 	}
 	if err := envMft.Validate(); err != nil {
-		return nil, fmt.Errorf("validate manifest against environment %q: %w", in.envName, err)
+		return nil, "", fmt.Errorf("validate manifest against environment %q: %w", in.envName, err)
 	}
 	if err := envMft.Load(in.sess); err != nil {
-		return nil, fmt.Errorf("load dynamic content: %w", err)
+		return nil, "", fmt.Errorf("load dynamic content: %w", err)
 	}
-	return envMft, nil
+	return envMft, interpolated, nil
 }
 
 func validateWorkloadManifestCompatibilityWithEnv(ws wsEnvironmentsLister, env versionCompatibilityChecker, mft manifest.DynamicWorkload, envName string) error {

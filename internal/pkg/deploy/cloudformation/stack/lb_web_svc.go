@@ -54,7 +54,7 @@ type LoadBalancedWebServiceConfig struct {
 	App                *config.Application
 	EnvManifest        *manifest.Environment
 	Manifest           *manifest.LoadBalancedWebService
-	RawManifest        []byte // Content of the manifest file without any transformations.
+	RawManifest        string
 	RuntimeConfig      RuntimeConfig
 	RootUserARN        string
 	ArtifactBucketName string
