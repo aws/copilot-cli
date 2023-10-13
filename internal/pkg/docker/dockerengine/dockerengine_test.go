@@ -673,7 +673,7 @@ func TestDockerCommand_Run(t *testing.T) {
 					"--rm",
 					"--name", mockPauseContainer,
 					"mockImageUri",
-					"sleep", "infinity"}, gomock.Any(), gomock.Any()).Return(mockError)
+					"sleep", "infinity"}, gomock.Any(), gomock.Any(), gomock.Any()).Return(mockError)
 			},
 			wantedError: fmt.Errorf("running container: %w", mockError),
 		},
@@ -690,7 +690,7 @@ func TestDockerCommand_Run(t *testing.T) {
 					"--publish", "8080:8080",
 					"--publish", "8081:8081",
 					mockImageURI,
-					"sleep", "infinity"}), gomock.Any(), gomock.Any()).Return(nil)
+					"sleep", "infinity"}), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
 		},
 		"success with run options for service containers": {
@@ -710,7 +710,7 @@ func TestDockerCommand_Run(t *testing.T) {
 					"--env", "COPILOT_APPLICATION_NAME=mockAppName",
 					"--env", "COPILOT_SERVICE_NAME=mockSvcName",
 					"--env", "COPILOT_ENVIRONMENT_NAME=mockEnvName",
-					mockImageURI}), gomock.Any(), gomock.Any()).Return(nil)
+					mockImageURI}), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
 		},
 		"logs are successfully copied to expected target": {
@@ -731,7 +731,7 @@ func TestDockerCommand_Run(t *testing.T) {
 					"--env", "COPILOT_APPLICATION_NAME=mockAppName",
 					"--env", "COPILOT_SERVICE_NAME=mockSvcName",
 					"--env", "COPILOT_ENVIRONMENT_NAME=mockEnvName",
-					mockImageURI}), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, name string, args []string, opts ...exec.CmdOption) error {
+					mockImageURI}), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, name string, args []string, opts ...exec.CmdOption) error {
 					// nab stdin and stderr
 					cmd := &osexec.Cmd{}
 					for _, opt := range opts {
