@@ -208,6 +208,7 @@ func (s *Scheduler) stopTask(ctx context.Context, task Task) error {
 		return nil
 	}
 
+	// errCh gets one error per container
 	errCh := make(chan error)
 	for name := range task.Containers {
 		name := name

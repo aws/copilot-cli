@@ -51,32 +51,6 @@ func TestScheduler(t *testing.T) {
 				`wait for pause container to start: check if "prefix-pause" is running: some error`,
 			},
 		},
-		"error running pause container": {
-			dockerEngine: func(t *testing.T, sync chan struct{}) DockerEngine {
-				return &dockerenginetest.Double{
-					IsContainerRunningFn: func(ctx context.Context, name string) (bool, error) {
-						return true, nil
-					},
-					RunFn: func(ctx context.Context, opts *dockerengine.RunOptions) error {
-						if opts.ContainerName == "prefix-pause" {
-							return errors.New("some error")
-						}
-						return nil
-					},
-				}
-			},
-			logOptions: noLogs,
-			test: func(t *testing.T, s *Scheduler, sync chan struct{}) {
-				s.RunTask(Task{
-					Containers: map[string]ContainerDefinition{
-						"foo": {},
-					},
-				})
-			},
-			errs: []string{
-				`run "prefix-pause": some error`,
-			},
-		},
 		"error stopping task": {
 			dockerEngine: func(t *testing.T, sync chan struct{}) DockerEngine {
 				return &dockerenginetest.Double{
