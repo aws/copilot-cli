@@ -39,6 +39,7 @@ type StaticSiteConfig struct {
 	ArtifactBucketName string
 	Addons             NestedStackConfigurer
 	AssetMappingURL    string
+	AppHostedZoneID    string
 }
 
 // NewStaticSite creates a new CFN stack from a manifest file, given the options.
@@ -54,9 +55,11 @@ func NewStaticSite(cfg *StaticSiteConfig) (*StaticSite, error) {
 	if cfg.App.Domain != "" {
 		dnsDelegationEnabled = true
 		appInfo = deploy.AppInformation{
-			Name:                cfg.App.Name,
-			Domain:              cfg.App.Domain,
-			AccountPrincipalARN: cfg.RootUserARN,
+			Name:                   cfg.App.Name,
+			Domain:                 cfg.App.Domain,
+			AccountPrincipalARN:    cfg.RootUserARN,
+			RootDomainHostedZoneId: cfg.App.DomainHostedZoneID,
+			AppDomainHostedZoneId:  cfg.AppHostedZoneID,
 		}
 	}
 	return &StaticSite{
@@ -133,6 +136,7 @@ func (s *StaticSite) Template() (string, error) {
 
 		AppDNSName:             dnsName,
 		AppDNSDelegationRole:   dnsDelegationRole,
+		HostedZones:            convertHostedZones(s.appInfo),
 		AssetMappingFileBucket: bucket,
 		AssetMappingFilePath:   path,
 		StaticSiteAlias:        staticSiteAlias,

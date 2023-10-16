@@ -5052,19 +5052,19 @@ func (m *MockdomainHostedZoneGetter) EXPECT() *MockdomainHostedZoneGetterMockRec
 	return m.recorder
 }
 
-// DomainHostedZoneID mocks base method.
-func (m *MockdomainHostedZoneGetter) DomainHostedZoneID(domainName string) (string, error) {
+// PublicDomainHostedZoneID mocks base method.
+func (m *MockdomainHostedZoneGetter) PublicDomainHostedZoneID(domainName string) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DomainHostedZoneID", domainName)
+	ret := m.ctrl.Call(m, "PublicDomainHostedZoneID", domainName)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// DomainHostedZoneID indicates an expected call of DomainHostedZoneID.
-func (mr *MockdomainHostedZoneGetterMockRecorder) DomainHostedZoneID(domainName interface{}) *gomock.Call {
+// PublicDomainHostedZoneID indicates an expected call of PublicDomainHostedZoneID.
+func (mr *MockdomainHostedZoneGetterMockRecorder) PublicDomainHostedZoneID(domainName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DomainHostedZoneID", reflect.TypeOf((*MockdomainHostedZoneGetter)(nil).DomainHostedZoneID), domainName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublicDomainHostedZoneID", reflect.TypeOf((*MockdomainHostedZoneGetter)(nil).PublicDomainHostedZoneID), domainName)
 }
 
 // ValidateDomainOwnership mocks base method.

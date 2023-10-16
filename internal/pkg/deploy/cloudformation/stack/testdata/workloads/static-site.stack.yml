@@ -377,6 +377,8 @@ Resources:
       RootDNSRole: arn:aws:iam::123456789123:role/my-app-DNSDelegationRole
       DomainName: example.com
       Aliases: ["*.example.com"]
+      RootHostedZoneId: "Z00ABC"
+      AppHostedZoneId: "Z00DEF"
 
   CustomDomainFunction:
     Type: AWS::Lambda::Function
@@ -439,6 +441,8 @@ Resources:
       DomainName: example.com
       IsCloudFrontCertificate: true
       Aliases: ["*.example.com"]
+      RootHostedZoneId: "Z00ABC"
+      AppHostedZoneId: "Z00DEF"
 
   CertificateValidationFunction:
     Type: AWS::Lambda::Function
