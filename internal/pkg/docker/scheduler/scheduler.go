@@ -52,10 +52,14 @@ const (
 	pauseCtrTaskID = 0
 )
 
+const (
+	pauseContainerURI = "public.ecr.aws/amazonlinux/amazonlinux:2023"
+)
+
 // NewScheduler creates a new Scheduler. idPrefix is a prefix used when
 // naming containers that are run by the Scheduler.
 func NewScheduler(docker DockerEngine, idPrefix string, logOptions logOptionsFunc) *Scheduler {
-	s := &Scheduler{
+	return &Scheduler{
 		idPrefix:   idPrefix,
 		logOptions: logOptions,
 		stopped:    make(chan struct{}),
@@ -65,7 +69,6 @@ func NewScheduler(docker DockerEngine, idPrefix string, logOptions logOptionsFun
 		actions:    make(chan action),
 		runErrs:    make(chan error),
 	}
-	return s
 }
 
 // Start starts the Scheduler. Start must be called before any other
@@ -274,7 +277,7 @@ type ContainerDefinition struct {
 // pauseRunOptions returns RunOptions for the pause container for t.
 func (s *Scheduler) pauseRunOptions(t Task) dockerengine.RunOptions {
 	opts := dockerengine.RunOptions{
-		ImageURI:       "public.ecr.aws/amazonlinux/amazonlinux:2023",
+		ImageURI:       pauseContainerURI,
 		ContainerName:  s.containerID("pause"),
 		Command:        []string{"sleep", "infinity"},
 		ContainerPorts: make(map[string]string),
