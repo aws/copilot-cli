@@ -314,7 +314,7 @@ func (o *deleteAppOpts) emptyS3Bucket() error {
 	}
 	appResources, err := o.cfn.GetRegionalAppResources(app)
 	if err != nil {
-		// ErrStackSetNotFound means application Parameter Store params are hanging, return nil to continue for deletion
+		// ErrStackSetNotFound means application Parameter Store params are dangling, return nil to continue for deletion.
 		if isStackSetNotExistsErr(err) {
 			return nil
 		}
