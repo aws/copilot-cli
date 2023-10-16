@@ -1061,7 +1061,8 @@ Resources:
       DomainName: !Sub ${AppName}.${AppDNSName}
       SubdomainName: !Sub ${EnvironmentName}.${AppName}.${AppDNSName}
       NameServers: !GetAtt EnvironmentHostedZone.NameServers
-      RootDNSRole: !Ref AppDNSDelegationRole
+      RootDNSRole: !Ref AppDNSDelegationRole\
+      EnvHostedZoneId: !Ref EnvironmentHostedZone
   
   HTTPSCert:
     Metadata:

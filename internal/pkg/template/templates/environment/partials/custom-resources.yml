@@ -12,10 +12,10 @@ DelegateDNSAction:
     SubdomainName: !Sub ${EnvironmentName}.${AppName}.${AppDNSName}
     NameServers: !GetAtt EnvironmentHostedZone.NameServers
     RootDNSRole: !Ref AppDNSDelegationRole
+    EnvHostedZoneId: !Ref EnvironmentHostedZone
     {{- if .HostedZones}}
     RootHostedZoneId: {{.HostedZones.RootDomainHostedZoneId}}
     AppHostedZoneId: {{.HostedZones.AppDomainHostedZoneId}}
-    EnvHostedZoneId: !Ref EnvironmentHostedZone
     {{- end}}
 
 HTTPSCert:
