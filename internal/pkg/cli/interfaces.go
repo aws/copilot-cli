@@ -554,6 +554,7 @@ type wsSelector interface {
 	Service(prompt, help string) (string, error)
 	Job(prompt, help string) (string, error)
 	Workload(msg, help string) (string, error)
+	Workloads(msg, help string) ([]string, error)
 }
 
 type staticSourceSelector interface {

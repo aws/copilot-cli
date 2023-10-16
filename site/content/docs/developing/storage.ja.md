@@ -59,7 +59,7 @@ $ copilot storage init -n my-cluster -t Aurora --serverless-version v1
 Copilot で EFS ファイルシステムを使う方法は２つあります: Copilot 管理の EFS、あるいは既存の EFS ファイルシステムのインポートです。
 
 !!! Attention
-    EFS は、Windows ベースの service ではサポートされておりません。
+    EFS は、Windows ベースの Service ではサポートされておりません。
 
 ### Copilot 管理の EFS
 ```yaml
@@ -73,11 +73,9 @@ storage:
       read_only: false
 ```
 
-この Manifest では、Environment ごとに EFS ボリュームと EFS アクセスポイントが作成され、Service 専用のディレクトリが EFS ファイルシステム内の `/frontend` パスに作成されます。コンテナはこのボリュームをマウントし、コンテナ内ファイルシステムの `/var/efs` パスへのアクセスによって EFS ファイルシステム内に作成された専用ディレクトリとその配下のすべてのサブディレクトリにアクセスできるようになります。EFS ファイルシステムとその中の `/frontend` ディレクトリは Environment を削除するまで維持されます。
+この Manifest では、Environment ごとに EFS ボリュームと EFS アクセスポイントが作成され、Service 専用のディレクトリが EFS ファイルシステム内の `/frontend` パスに作成されます。コンテナはこのボリュームをマウントし、コンテナ内ファイルシステムの `/var/efs` パスへのアクセスによって EFS ファイルシステム内に作成された専用ディレクトリとその配下のすべてのサブディレクトリにアクセスできるようになります。EFS ファイルシステムとその中の `/frontend` ディレクトリは Environment を削除するまで維持されます。各 Service にアクセスポイントを使用すると、2 つの Service が相互にデータアクセスできなくなります。
 
-各サービスごとに個別の EFS アクセスポイントを用意し利用することで、意図的に高度な設定を実施しない限りは各サービスはお互いのデータにアクセスすることはできません。詳細は[高度なユースケース](#高度なユースケース)もご覧ください。
-
-また、高度な EFS 設定にある `uid` と `gid` の指定によって、EFS アクセスポイントの UID と GID のカスタマイズも可能です。UID あるいは GID が未指定の場合、Copilot は Service 名の [CRC32 チェックサム](https://stackoverflow.com/a/14210379/5890422)を元にした擬似乱数(pseudorandom numbers)をこれらの設定値として利用します。
+また、高度な EFS 設定にある `uid` と `gid` の指定によって、EFS アクセスポイントの UID と GID のカスタマイズも可能です。UID あるいは GID が未指定の場合、Copilot は Service 名の [CRC32 チェックサム](https://stackoverflow.com/a/14210379/5890422)を元にした擬似乱数 (pseudorandom numbers) をこれらの設定値として利用します。
 
 ```yaml
 storage:
@@ -120,8 +118,11 @@ Service がその EFS ボリュームを利用する前にデータを投入し�
 ###### `copilot svc exec` を利用する
 アプリケーションの起動時点でデータが必要となるタイプのワークロードの場合は、そのアプリケーションより先にプレースホルダとなるコンテナを利用してデータのダウンロードを先に済ませておくと良いでしょう。
 
-例えば次のような Manifest を使ってプレースホルダとなるコンテナを持つ Service をデプロイします。
+例えば、次のような Manifest を使って `frontend` Service をデプロイします。
 ```yaml
+name: frontend
+type: Load Balanced Web Service
+
 image:
   location: amazon/amazon-ecs-sample
 exec: true
@@ -146,6 +147,9 @@ $ copilot svc exec
 必要な作業が終わったら、Manifest から `exec` フィールドを削除し、`image` フィールド以下を実際に実行したいコンテナイメージのビルド設定やコンテナイメージに書き換えましょう。
 
 ```yaml
+name: frontend
+type: Load Balanced Web Service
+
 image:
   build: ./Dockerfile
 storage:

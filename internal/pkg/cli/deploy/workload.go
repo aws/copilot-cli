@@ -177,7 +177,7 @@ type workloadDeployer struct {
 	image         ContainerImageIdentifier
 	resources     *stack.AppRegionalResources
 	mft           interface{}
-	rawMft        []byte
+	rawMft        string
 	workspacePath string
 
 	// Dependencies.
@@ -219,7 +219,7 @@ type WorkloadDeployerInput struct {
 	Env              *config.Environment
 	Image            ContainerImageIdentifier
 	Mft              interface{} // Interpolated, applied, and unmarshaled manifest.
-	RawMft           []byte      // Content of the manifest file without any transformations.
+	RawMft           string      // With env var interpolation only.
 	EnvVersionGetter versionGetter
 	Overrider        Overrider
 

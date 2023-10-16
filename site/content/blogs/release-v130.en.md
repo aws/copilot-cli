@@ -42,10 +42,10 @@ without the overhead of a deployment. To get started, you first need to deploy a
 After you have your service deployed, you can start making modifications to your code. When you're ready to test your changes, run `copilot run local` and
 Copilot will do the following for both your primary container and any sidecars:
 
-1. Build or pull the image specified by [`image`](../docs/manifest/lb-web-service#image)
-2. Get the values for secrets specified by [`secrets`](../docs/manifest/lb-web-service#secrets)
+1. Build or pull the image specified by [`image`](../docs/manifest/lb-web-service.en.md#image)
+2. Get the values for secrets specified by [`secrets`](../docs/manifest/lb-web-service.en.md#secrets)
 3. Get credentials for your current IAM user/role
-4. Run images from step 1 with [`variables`](../docs/manifest/lb-web-service#variables), secrets from step 2, and IAM credentials from step 3 on your local machine
+4. Run images from step 1 with [`variables`](../docs/manifest/lb-web-service.en.md#variables), secrets from step 2, and IAM credentials from step 3 on your local machine
 
 Logs from your service are streamed to your terminal. When you're finished testing, type Ctrl-C and Copilot will clean up all of running containers before exiting!
 

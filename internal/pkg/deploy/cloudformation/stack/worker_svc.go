@@ -32,7 +32,7 @@ type WorkerServiceConfig struct {
 	Env                string
 	Manifest           *manifest.WorkerService
 	ArtifactBucketName string
-	RawManifest        []byte
+	RawManifest        string
 	RuntimeConfig      RuntimeConfig
 	Addons             NestedStackConfigurer
 }
@@ -122,9 +122,9 @@ func (s *WorkerService) Template() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf(`convert "publish" field for service %s: %w`, s.name, err)
 	}
-	var scConfig *template.ServiceConnect
-	if s.manifest.Network.Connect.Enabled() {
-		scConfig = convertServiceConnect(s.manifest.Network.Connect)
+	scOpts := template.ServiceConnectOpts{
+		Server: convertServiceConnectServer(s.manifest.Network.Connect, nil),
+		Client: s.manifest.Network.Connect.Enabled(),
 	}
 	content, err := s.parser.ParseWorkerService(template.WorkloadOpts{
 		AppName:                  s.app,
@@ -151,7 +151,7 @@ func (s *WorkerService) Template() (string, error) {
 		Network:                  convertNetworkConfig(s.manifest.Network),
 		DeploymentConfiguration:  convertWorkerDeploymentConfig(s.manifest.WorkerServiceConfig.DeployConfig),
 		EntryPoint:               entrypoint,
-		ServiceConnect:           scConfig,
+		ServiceConnectOpts:       scOpts,
 		Command:                  command,
 		DependsOn:                convertDependsOn(s.manifest.ImageConfig.Image.DependsOn),
 		CredentialsParameter:     aws.StringValue(s.manifest.ImageConfig.Image.Credentials),

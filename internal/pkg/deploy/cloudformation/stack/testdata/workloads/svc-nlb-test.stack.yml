@@ -468,6 +468,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
       'aws:copilot:description': 'A target group to connect the network load balancer to your service on port 8081'
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
+      HealthCheckPort: 80
       Port: 8081
       Protocol: UDP
       TargetGroupAttributes:

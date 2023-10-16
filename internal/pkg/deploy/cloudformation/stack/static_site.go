@@ -33,7 +33,7 @@ type StaticSiteConfig struct {
 	App                *config.Application
 	EnvManifest        *manifest.Environment
 	Manifest           *manifest.StaticSite
-	RawManifest        []byte // Content of the manifest file without any transformations.
+	RawManifest        string
 	RuntimeConfig      RuntimeConfig
 	RootUserARN        string
 	ArtifactBucketName string

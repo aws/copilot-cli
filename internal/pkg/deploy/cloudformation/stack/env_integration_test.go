@@ -72,7 +72,7 @@ observability:
 					ArtifactBucketARN:    "arn:aws:s3:::mockbucket",
 					ArtifactBucketKeyARN: "arn:aws:kms:us-west-2:000000000:key/1234abcd-12ab-34cd-56ef-1234567890ab",
 					Mft:                  &mft,
-					RawMft:               []byte(rawMft),
+					RawMft:               rawMft,
 				}
 			}(),
 			wantedFileName: "template-with-cloudfront-observability.yml",
@@ -97,7 +97,7 @@ http:
 					ArtifactBucketARN:    "arn:aws:s3:::mockbucket",
 					ArtifactBucketKeyARN: "arn:aws:kms:us-west-2:000000000:key/1234abcd-12ab-34cd-56ef-1234567890ab",
 					Mft:                  &mft,
-					RawMft:               []byte(rawMft),
+					RawMft:               rawMft,
 				}
 			}(),
 			wantedFileName: "template-with-default-access-log-config.yml",
@@ -141,7 +141,7 @@ network:
 					ArtifactBucketARN:    "arn:aws:s3:::mockbucket",
 					ArtifactBucketKeyARN: "arn:aws:kms:us-west-2:000000000:key/1234abcd-12ab-34cd-56ef-1234567890ab",
 					Mft:                  &mft,
-					RawMft:               []byte(rawMft),
+					RawMft:               rawMft,
 				}
 			}(),
 
@@ -176,7 +176,7 @@ security_group:
 					ArtifactBucketARN:    "arn:aws:s3:::mockbucket",
 					ArtifactBucketKeyARN: "arn:aws:kms:us-west-2:000000000:key/1234abcd-12ab-34cd-56ef-1234567890ab",
 					Mft:                  &mft,
-					RawMft:               []byte(rawMft),
+					RawMft:               rawMft,
 				}
 			}(),
 
@@ -199,7 +199,7 @@ type: Environment`
 					ArtifactBucketARN:    "arn:aws:s3:::mockbucket",
 					ArtifactBucketKeyARN: "arn:aws:kms:us-west-2:000000000:key/1234abcd-12ab-34cd-56ef-1234567890ab",
 					Mft:                  &mft,
-					RawMft:               []byte(rawMft),
+					RawMft:               rawMft,
 				}
 			}(),
 			wantedFileName: "template-with-basic-manifest.yml",
@@ -225,7 +225,7 @@ network:
 					ArtifactBucketARN:    "arn:aws:s3:::mockbucket",
 					ArtifactBucketKeyARN: "arn:aws:kms:us-west-2:000000000:key/1234abcd-12ab-34cd-56ef-1234567890ab",
 					Mft:                  &mft,
-					RawMft:               []byte(rawMft),
+					RawMft:               rawMft,
 				}
 			}(),
 			wantedFileName: "template-with-defaultvpc-flowlogs.yml",
@@ -258,7 +258,7 @@ network:
 					ArtifactBucketARN:    "arn:aws:s3:::mockbucket",
 					ArtifactBucketKeyARN: "arn:aws:kms:us-west-2:000000000:key/1234abcd-12ab-34cd-56ef-1234567890ab",
 					Mft:                  &mft,
-					RawMft:               []byte(rawMft),
+					RawMft:               rawMft,
 				}
 			}(),
 			wantedFileName: "template-with-importedvpc-flowlogs.yml",
@@ -336,7 +336,7 @@ observability:
 					ArtifactBucketARN:    "arn:aws:s3:::mockbucket",
 					ArtifactBucketKeyARN: "arn:aws:kms:us-west-2:000000000:key/1234abcd-12ab-34cd-56ef-1234567890ab",
 					Mft:                  &mft,
-					RawMft:               []byte(rawMft),
+					RawMft:               rawMft,
 				}
 			}(),
 			newManifest: func() *stack.EnvConfig {
@@ -374,7 +374,7 @@ observability:
 					ArtifactBucketARN:    "arn:aws:s3:::mockbucket",
 					ArtifactBucketKeyARN: "arn:aws:kms:us-west-2:000000000:key/1234abcd-12ab-34cd-56ef-1234567890ab",
 					Mft:                  &mft,
-					RawMft:               []byte(rawMft),
+					RawMft:               rawMft,
 				}
 			}(),
 		},
@@ -434,7 +434,7 @@ func compareStackTemplateSection(t *testing.T, key, wanted, actual reflect.Value
 		fmt.Sprintf("%q does not exist in the actual template", key.Interface()))
 	require.True(t, wantedExist,
 		fmt.Sprintf("%q does not exist in the expected template", key.Interface()))
-	require.Equal(t, actual.MapIndex(key).Interface(), wanted.MapIndex(key).Interface(),
+	require.Equal(t, wanted.MapIndex(key).Interface(), actual.MapIndex(key).Interface(),
 		fmt.Sprintf("Comparing %q", key.Interface()))
 }
 

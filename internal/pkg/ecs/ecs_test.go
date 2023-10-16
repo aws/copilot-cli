@@ -190,6 +190,23 @@ func TestClient_serviceARN(t *testing.T) {
 			},
 			wantedError: fmt.Errorf(`more than one ECS service with tags "copilot-application"="mockApp","copilot-environment"="mockEnv","copilot-service"="mockSvc"`),
 		},
+		"error if there is no active svc": {
+			setupMocks: func(m clientMocks) {
+				gomock.InOrder(
+					m.resourceGetter.EXPECT().GetResourcesByTags(serviceResourceType, getRgInput).
+						Return([]*resourcegroups.Resource{
+							{ARN: mockSvcARN1}, {ARN: mockSvcARN2},
+						}, nil),
+					m.resourceGetter.EXPECT().GetResourcesByTags(clusterResourceType, getRgEnvClusterInput).
+						Return([]*resourcegroups.Resource{
+							{ARN: "mockARN1"}, {ARN: "mockARN2"},
+						}, nil),
+					m.ecsClient.EXPECT().ActiveClusters("mockARN1", "mockARN2").Return([]string{"mockARN1"}, nil),
+					m.ecsClient.EXPECT().ActiveServices("mockARN1", []string{mockSvcARN1, mockSvcARN2}).Return([]string{}, nil),
+				)
+			},
+			wantedError: fmt.Errorf(`no active ECS service found`),
+		},
 		"success with only one active svc": {
 			setupMocks: func(m clientMocks) {
 				gomock.InOrder(

@@ -225,17 +225,6 @@ type LogConfigOpts struct {
 	Secrets        map[string]Secret
 }
 
-// HTTPTargetContainer represents the target group of a load balancer that points to a container.
-type HTTPTargetContainer struct {
-	Name string
-	Port string
-}
-
-// Exposed returns true if the target container has an accessible port to receive traffic.
-func (tg HTTPTargetContainer) Exposed() bool {
-	return tg.Port != "" && tg.Port != NoExposedContainerPort
-}
-
 // StrconvUint16 returns string converted from uint16.
 func StrconvUint16(val uint16) string {
 	return strconv.FormatUint(uint64(val), 10)
@@ -522,9 +511,18 @@ func (cfg *ALBListener) RulePaths() []string {
 	return rulePaths
 }
 
-// ServiceConnect holds configuration for ECS Service Connect.
-type ServiceConnect struct {
-	Alias *string
+// ServiceConnectOpts defines the options for service connect.
+// If Client is false, logically Server must be nil.
+type ServiceConnectOpts struct {
+	Server *ServiceConnectServer
+	Client bool
+}
+
+// ServiceConnectServer defines the container name and port which a service routes Service Connect through.
+type ServiceConnectServer struct {
+	Name  string
+	Port  string
+	Alias string
 }
 
 // AdvancedCount holds configuration for autoscaling and capacity provider
@@ -801,6 +799,7 @@ type WorkloadOpts struct {
 	Secrets      map[string]Secret
 	EntryPoint   []string
 	Command      []string
+	ImportedALB  *ImportedALB
 
 	// Additional options that are common between **all** workload templates.
 	Tags                     map[string]string        // Used by App Runner workloads to tag App Runner service resources
@@ -826,12 +825,11 @@ type WorkloadOpts struct {
 	// Additional options for service templates.
 	WorkloadType            string
 	HealthCheck             *ContainerHealthCheck
-	HTTPTargetContainer     HTTPTargetContainer
 	GracePeriod             *int64
 	NLB                     *NetworkLoadBalancer
 	ALBListener             *ALBListener
 	DeploymentConfiguration DeploymentConfigurationOpts
-	ServiceConnect          *ServiceConnect
+	ServiceConnectOpts      ServiceConnectOpts
 
 	// Custom Resources backed by Lambda functions.
 	CustomResources map[string]S3ObjectLocation
@@ -881,6 +879,12 @@ func (lr ALBListenerRule) HealthCheckProtocol() string {
 		return "HTTP"
 	}
 	return ""
+}
+
+// ImportedALB holds the fields to import an existing ALB.
+type ImportedALB struct {
+	Name *string
+	ARN  *string
 }
 
 // ParseLoadBalancedWebService parses a load balanced web service's CloudFormation template
@@ -966,12 +970,12 @@ func withSvcParsingFuncs() ParseOption {
 			"contains":                slices.Contains[[]string, string],
 			"requiresVPCConnector":    requiresVPCConnector,
 			"strconvUint16":           StrconvUint16,
-			"trancateWithHashPadding": trancateWithHashPadding,
+			"truncateWithHashPadding": truncateWithHashPadding,
 		})
 	}
 }
 
-func trancateWithHashPadding(s string, max, paddingLength int) string {
+func truncateWithHashPadding(s string, max, paddingLength int) string {
 	if len(s) <= max {
 		return s
 	}
@@ -1003,7 +1007,7 @@ func randomUUIDFunc() (string, error) {
 func envControllerParameters(o WorkloadOpts) []string {
 	parameters := []string{}
 	if o.WorkloadType == "Load Balanced Web Service" {
-		if o.ALBEnabled {
+		if o.ALBEnabled && o.ImportedALB == nil {
 			parameters = append(parameters, "ALBWorkloads,")
 		}
 		parameters = append(parameters, "Aliases,") // YAML needs the comma separator; resolved in EnvContr.

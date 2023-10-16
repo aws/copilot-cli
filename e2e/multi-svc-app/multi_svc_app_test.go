@@ -6,7 +6,10 @@ package multi_svc_app_test
 import (
 	"fmt"
 	"io"
+	"net"
 	"net/http"
+	"strings"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -191,44 +194,19 @@ var _ = Describe("Multiple Service App", func() {
 
 	Context("when deploying services and jobs", Ordered, func() {
 		var (
-			frontEndDeployErr error
-			wwwDeployErr      error
-			backEndDeployErr  error
-			jobDeployErr      error
-
-			routeURL string
+			deployErr error
+			routeURL  string
 		)
 		BeforeAll(func() {
-			_, backEndDeployErr = cli.SvcDeploy(&client.SvcDeployInput{
-				Name:     "back-end",
-				EnvName:  "test",
-				ImageTag: "gallopinggurdey",
-			})
-			_, frontEndDeployErr = cli.SvcDeploy(&client.SvcDeployInput{
-				Name:     "front-end",
-				EnvName:  "test",
-				ImageTag: "gallopinggurdey",
-			})
-			_, jobDeployErr = cli.JobDeploy(&client.JobDeployInput{
-				Name:     "query",
-				EnvName:  "test",
-				ImageTag: "thepostalservice",
-			})
-			_, wwwDeployErr = cli.SvcDeploy(&client.SvcDeployInput{
-				Name:     "www",
-				EnvName:  "test",
-				ImageTag: "gallopinggurdey",
+
+			_, deployErr = cli.Deploy(&client.DeployRequest{
+				All:     true,
+				EnvName: "test",
 			})
 		})
 
-		It("svc deploy should succeed", func() {
-			Expect(frontEndDeployErr).NotTo(HaveOccurred())
-			Expect(wwwDeployErr).NotTo(HaveOccurred())
-			Expect(backEndDeployErr).NotTo(HaveOccurred())
-		})
-
-		It("job deploy should succeed", func() {
-			Expect(jobDeployErr).NotTo(HaveOccurred())
+		It("deploy should succeed", func() {
+			Expect(deployErr).NotTo(HaveOccurred())
 		})
 
 		It("svc show should include a valid URL and description for test env", func() {
@@ -243,16 +221,23 @@ var _ = Describe("Multiple Service App", func() {
 				// Call each environment's endpoint and ensure it returns a 200
 				route := svc.Routes[0]
 				Expect(route.Environment).To(Equal("test"))
-				// Since the front-end was added first, it should have no suffix.
+
+				routeURL = route.URL
 				if svcName == "front-end" {
-					Expect(route.URL).ToNot(HaveSuffix(svcName))
+					// route.URL is of the form `https://exampleor-alb.elb.us-west-2.amazonaws.com or exampleor-nlb.elb.us-west-2.amazonaws.com, so we split to retrieve just one valid url`
+					routeURLs := strings.Split(route.URL, " or")
+					Expect(len(routeURLs)).To(BeNumerically(">", 1))
+					routeURL = strings.TrimSpace(routeURLs[0])
+
+					// Since the front-end was added first, it should have no suffix.
+					Expect(routeURL).ToNot(HaveSuffix(svcName))
 				}
 
 				// Since the www app was added second, it should have app appended to the name.
 				var resp *http.Response
 				var fetchErr error
 				Eventually(func() (int, error) {
-					resp, fetchErr = http.Get(route.URL)
+					resp, fetchErr = http.Get(routeURL)
 					return resp.StatusCode, fetchErr
 				}, "60s", "1s").Should(Equal(200))
 
@@ -323,11 +308,15 @@ var _ = Describe("Multiple Service App", func() {
 			// Calls the front end's service connect/discovery endpoint - which should connect
 			// to the backend, and pipe the backend response to us.
 			route := svc.Routes[0]
-
 			Expect(route.Environment).To(Equal("test"))
-			routeURL = route.URL
 
-			resp, fetchErr := http.Get(fmt.Sprintf("%s/service-endpoint-test/", route.URL))
+			// route.URL is of the form `https://exampleor-alb.elb.us-west-2.amazonaws.com or exampleor-nlb.elb.us-west-2.amazonaws.com, so we split to retrieve just one valid url`
+			routeURLs := strings.Split(route.URL, " or")
+			Expect(len(routeURLs)).To(BeNumerically(">", 1))
+
+			routeURL = strings.TrimSpace(routeURLs[0])
+
+			resp, fetchErr := http.Get(fmt.Sprintf("%s/service-endpoint-test/", routeURL))
 			Expect(fetchErr).NotTo(HaveOccurred())
 			Expect(resp.StatusCode).To(Equal(200))
 
@@ -336,6 +325,54 @@ var _ = Describe("Multiple Service App", func() {
 			bodyBytes, err := io.ReadAll(resp.Body)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(bodyBytes)).To(Equal("back-end-service"))
+		})
+
+		It("should be able to send udp message", func() {
+			// The front-end service has an NLB listener on port 8080 over UDP.
+			svcName := "front-end"
+			svc, svcShowErr := cli.SvcShow(&client.SvcShowRequest{
+				AppName: appName,
+				Name:    svcName,
+			})
+			Expect(svcShowErr).NotTo(HaveOccurred())
+			Expect(len(svc.Routes)).To(Equal(1))
+
+			route := svc.Routes[0]
+
+			// route.URL is of the form `example-alb.elb.us-west-2.amazonaws.com or example-nlb.elb.us-west-2.amazonaws.com, so we split to retrieve just one valid url`
+			routeURLs := strings.Split(route.URL, " or ")
+			Expect(len(routeURLs)).To(Equal(2))
+
+			routeURL = routeURLs[1]
+
+			Expect(route.Environment).To(Equal("test"))
+
+			conn, dialErr := net.Dial("udp", routeURL)
+			Expect(dialErr).NotTo(HaveOccurred())
+
+			// Send message 5 times in case UDP packets are dropped.
+			testStr := "test message"
+			for i := 0; i < 5; i++ {
+				conn.Write([]byte(testStr))
+				time.Sleep(time.Second)
+			}
+
+			// Retrieve logs to check if UDP traffic was received.
+			var svcLogs []client.SvcLogsOutput
+			var svcLogsErr error
+			Eventually(func() ([]string, error) {
+				svcLogs, svcLogsErr = cli.SvcLogs(&client.SvcLogsRequest{
+					AppName: appName,
+					Name:    svcName,
+					EnvName: "test",
+					Since:   "1h",
+				})
+				var svcLogMessages []string
+				for _, logLine := range svcLogs {
+					svcLogMessages = append(svcLogMessages, logLine.Message)
+				}
+				return svcLogMessages, svcLogsErr
+			}, "60s", "10s").Should(ContainElement(ContainSubstring("Received UDP message: test message")))
 		})
 
 		It("should be able to write to EFS volume", func() {
@@ -349,11 +386,15 @@ var _ = Describe("Multiple Service App", func() {
 
 			// Calls the front end's EFS test endpoint - which should create a file in the EFS filesystem.
 			route := svc.Routes[0]
-
 			Expect(route.Environment).To(Equal("test"))
-			routeURL = route.URL
 
-			resp, fetchErr := http.Get(fmt.Sprintf("%s/efs-putter", route.URL))
+			// route.URL is of the form `https://exampleor-alb.elb.us-west-2.amazonaws.com or exampleor-nlb.elb.us-west-2.amazonaws.com, so we split to retrieve just one valid url`
+			routeURLs := strings.Split(route.URL, " or")
+			Expect(len(routeURLs)).To(BeNumerically(">", 1))
+
+			routeURL = strings.TrimSpace(routeURLs[0])
+
+			resp, fetchErr := http.Get(fmt.Sprintf("%s/efs-putter", routeURL))
 			Expect(fetchErr).NotTo(HaveOccurred())
 			Expect(resp.StatusCode).To(Equal(200))
 		})
@@ -400,8 +441,15 @@ var _ = Describe("Multiple Service App", func() {
 
 			// Calls the front end's magicwords endpoint
 			route := svc.Routes[0]
+
+			// route.URL is of the form `https://exampleor-alb.elb.us-west-2.amazonaws.com or exampleor-nlb.elb.us-west-2.amazonaws.com, so we split to retrieve just one valid url`
+			routeURLs := strings.Split(route.URL, " or")
+			Expect(len(routeURLs)).To(BeNumerically(">", 1))
+
+			routeURL = strings.TrimSpace(routeURLs[0])
+
 			Expect(route.Environment).To(Equal("test"))
-			resp, fetchErr := http.Get(fmt.Sprintf("%s/magicwords/", route.URL))
+			resp, fetchErr := http.Get(fmt.Sprintf("%s/magicwords/", routeURL))
 			Expect(fetchErr).NotTo(HaveOccurred())
 			Expect(resp.StatusCode).To(Equal(200))
 
