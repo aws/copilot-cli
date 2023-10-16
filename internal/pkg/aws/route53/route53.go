@@ -48,8 +48,8 @@ func New(s *session.Session) *Route53 {
 	}
 }
 
-// DomainHostedZoneID returns the Hosted Zone ID of a domain.
-func (r53 *Route53) DomainHostedZoneID(domainName string) (string, error) {
+// PublicDomainHostedZoneID returns the public Hosted Zone ID of a domain.
+func (r53 *Route53) PublicDomainHostedZoneID(domainName string) (string, error) {
 	if id, ok := r53.hostedZoneIDFor[domainName]; ok {
 		return id, nil
 	}
@@ -60,7 +60,7 @@ func (r53 *Route53) DomainHostedZoneID(domainName string) (string, error) {
 		return "", fmt.Errorf("list hosted zone for %s: %w", domainName, err)
 	}
 	for {
-		hostedZones := filterHostedZones(resp.HostedZones, matchesDomain(domainName))
+		hostedZones := filterHostedZones(resp.HostedZones, matchesDomain(domainName), matchesPublic())
 		if len(hostedZones) > 0 {
 			// return the first match.
 			id := strings.TrimPrefix(aws.StringValue(hostedZones[0].Id), "/hostedzone/")
@@ -84,7 +84,7 @@ func (r53 *Route53) DomainHostedZoneID(domainName string) (string, error) {
 // route53 hosted zone for the domain.
 // If there are missing NS records returns ErrUnmatchedNSRecords.
 func (r53 *Route53) ValidateDomainOwnership(domainName string) error {
-	hzID, err := r53.DomainHostedZoneID(domainName)
+	hzID, err := r53.PublicDomainHostedZoneID(domainName)
 	if err != nil {
 		return err
 	}
@@ -149,10 +149,18 @@ func (r53 *Route53) lookupNSRecords(domainName string) ([]string, error) {
 
 type filterZoneFunc func(*route53.HostedZone) bool
 
-func filterHostedZones(zones []*route53.HostedZone, fn filterZoneFunc) []*route53.HostedZone {
+func filterHostedZones(zones []*route53.HostedZone, filterFuncs ...filterZoneFunc) []*route53.HostedZone {
 	var hostedZones []*route53.HostedZone
+	passesAllFilters := func(zone *route53.HostedZone) bool {
+		for _, fn := range filterFuncs {
+			if !fn(zone) {
+				return false
+			}
+		}
+		return true
+	}
 	for _, hostedZone := range zones {
-		if fn(hostedZone) {
+		if passesAllFilters(hostedZone) {
 			hostedZones = append(hostedZones, hostedZone)
 		}
 	}
@@ -163,6 +171,12 @@ func matchesDomain(domain string) filterZoneFunc {
 	return func(z *route53.HostedZone) bool {
 		// example.com. should match example.com
 		return domain == aws.StringValue(z.Name) || domain+"." == aws.StringValue(z.Name)
+	}
+}
+
+func matchesPublic() filterZoneFunc {
+	return func(config *route53.HostedZone) bool {
+		return !aws.BoolValue(config.Config.PrivateZone)
 	}
 }
 

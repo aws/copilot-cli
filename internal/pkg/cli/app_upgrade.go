@@ -188,7 +188,7 @@ func (o *appUpgradeOpts) upgradeApplication(app *config.Application, fromVersion
 
 func (o *appUpgradeOpts) upgradeAppSSMStore(app *config.Application) error {
 	if app.Domain != "" && app.DomainHostedZoneID == "" {
-		hostedZoneID, err := o.route53.DomainHostedZoneID(app.Domain)
+		hostedZoneID, err := o.route53.PublicDomainHostedZoneID(app.Domain)
 		if err != nil {
 			return fmt.Errorf("get hosted zone ID for domain %s: %w", app.Domain, err)
 		}
