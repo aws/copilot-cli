@@ -16,9 +16,7 @@ import (
 )
 
 // Scheduler manages running a Task. Only a single Task
-// can be running at a time for a given Scheduler. A Scheduler
-// can only be Start()-ed once; multiple calls to Start() will
-// break things.
+// can be running at a time for a given Scheduler.
 type Scheduler struct {
 	idPrefix   string
 	logOptions logOptionsFunc
@@ -75,7 +73,7 @@ func NewScheduler(docker DockerEngine, idPrefix string, logOptions logOptionsFun
 // Scheduler functions. Errors from containers run by the scheduler
 // or from Scheduler actions are sent to the returned error channel.
 // The returned error channel is closed after calling Stop() has
-// stopped the Scheduler.
+// stopped the Scheduler. A Scheduler should only be Started once.
 func (s *Scheduler) Start() chan error {
 	// close done when all goroutines created by scheduler have finished
 	done := make(chan struct{})
@@ -166,12 +164,12 @@ func (r *runTaskAction) Do(s *Scheduler) error {
 		}
 	}
 
-	s.curTask = r.task
 	for name, ctr := range r.task.Containers {
 		name, ctr := name, ctr
 		s.run(taskID, s.containerRunOptions(name, ctr))
 	}
 
+	s.curTask = r.task
 	return nil
 }
 
@@ -275,6 +273,8 @@ type ContainerDefinition struct {
 }
 
 // pauseRunOptions returns RunOptions for the pause container for t.
+// The pause container owns the networking namespace that is shared
+// among all of the containers in the task.
 func (s *Scheduler) pauseRunOptions(t Task) dockerengine.RunOptions {
 	opts := dockerengine.RunOptions{
 		ImageURI:       pauseContainerURI,
