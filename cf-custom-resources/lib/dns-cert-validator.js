@@ -212,6 +212,8 @@ const validateCertificate = async function(
     options,
     envRoute53,
     appRoute53,
+    rootHostedZoneId,
+    appHostedZoneId,
     envHostedZoneId,
     certificateARN,
     acm
@@ -221,6 +223,8 @@ const validateCertificate = async function(
       options,
       envRoute53,
       appRoute53,
+      rootHostedZoneId,
+      appHostedZoneId,
       envHostedZoneId
   );
 
@@ -241,7 +245,9 @@ const updateHostedZoneRecords = async function (
   options,
   envRoute53,
   appRoute53,
-  envHostedZoneId
+  rootHostedZoneId,
+  appHostedZoneId,
+  envHostedZoneId,
 ) {
   const promises = [];
   for (const option of options) {
@@ -265,6 +271,7 @@ const updateHostedZoneRecords = async function (
             record: option.ResourceRecord,
             action: action,
             domainName: domainType.domain,
+            hostedZoneId: appHostedZoneId,
           })
         );
         break;
@@ -275,6 +282,7 @@ const updateHostedZoneRecords = async function (
             record: option.ResourceRecord,
             action: action,
             domainName: domainType.domain,
+            hostedZoneId: rootHostedZoneId,
           })
         );
         break;
@@ -293,6 +301,8 @@ const deleteHostedZoneRecords = async function (
   envRoute53,
   appRoute53,
   acm,
+  rootHostedZoneId,
+  appHostedZoneId,
   envHostedZoneId
 ) {
   let listCertificatesInput = {};
@@ -354,6 +364,8 @@ const deleteHostedZoneRecords = async function (
         filteredRecordOption,
         envRoute53,
         appRoute53,
+        rootHostedZoneId,
+        appHostedZoneId,
         envHostedZoneId
     );
   } catch (e) {
@@ -416,6 +428,8 @@ const deleteCertificate = async function (
   arn,
   certDomain,
   region,
+  rootHostedZoneId,
+  appHostedZoneId,
   envHostedZoneId,
   rootDnsRole
 ) {
@@ -463,6 +477,8 @@ const deleteCertificate = async function (
       envRoute53,
       appRoute53,
       acm,
+      rootHostedZoneId,
+      appHostedZoneId,
       envHostedZoneId
     );
 
@@ -626,7 +642,7 @@ exports.certificateRequestHandler = async function (event, context) {
         );
         responseData.Arn = physicalResourceId = response.CertificateArn;  // Set physicalResourceId as soon as we can.
         options = await waitForValidationOptionsToBeReady(response.CertificateArn, sansToUse, acm);
-        await validateCertificate(options, envRoute53, appRoute53, props.EnvHostedZoneId, response.CertificateArn, acm);
+        await validateCertificate(options, envRoute53, appRoute53, props.RootHostedZoneId, props.AppHostedZoneId, props.EnvHostedZoneId, response.CertificateArn, acm);
         break;
       case "Update":
         // Exit early if cert doesn't change.
@@ -644,7 +660,7 @@ exports.certificateRequestHandler = async function (event, context) {
         );
         responseData.Arn = physicalResourceId = response.CertificateArn;
         options = await waitForValidationOptionsToBeReady(response.CertificateArn, sansToUse, acm);
-        await validateCertificate(options, envRoute53, appRoute53, props.EnvHostedZoneId, response.CertificateArn, acm);
+        await validateCertificate(options, envRoute53, appRoute53, props.RootHostedZoneId, props.AppHostedZoneId, props.EnvHostedZoneId, response.CertificateArn, acm);
         break;
       case "Delete":
         // If the resource didn't create correctly, the physical resource ID won't be the
@@ -654,6 +670,8 @@ exports.certificateRequestHandler = async function (event, context) {
             physicalResourceId,
             certDomain,
             props.Region,
+            props.RootHostedZoneId, 
+            props.AppHostedZoneId,
             props.EnvHostedZoneId,
             props.RootDNSRole
           );

@@ -35,6 +35,9 @@ func TestRoute53_DomainHostedZoneID(t *testing.T) {
 						{
 							Name: aws.String("mockDomain.com"),
 							Id:   aws.String("mockID"),
+							Config: &route53.HostedZoneConfig{
+								PrivateZone: aws.Bool(false),
+							},
 						},
 					},
 				}, nil)
@@ -53,6 +56,9 @@ func TestRoute53_DomainHostedZoneID(t *testing.T) {
 						{
 							Name: aws.String("mockDomain.subdomain.com."),
 							Id:   aws.String("mockID"),
+							Config: &route53.HostedZoneConfig{
+								PrivateZone: aws.Bool(false),
+							},
 						},
 					},
 				}, nil)
@@ -73,6 +79,9 @@ func TestRoute53_DomainHostedZoneID(t *testing.T) {
 						{
 							Name: aws.String("mockDomain1.com"),
 							Id:   aws.String("mockID1"),
+							Config: &route53.HostedZoneConfig{
+								PrivateZone: aws.Bool(false),
+							},
 						},
 					},
 				}, nil)
@@ -85,10 +94,16 @@ func TestRoute53_DomainHostedZoneID(t *testing.T) {
 						{
 							Name: aws.String("mockDomain2.com"),
 							Id:   aws.String("mockID2"),
+							Config: &route53.HostedZoneConfig{
+								PrivateZone: aws.Bool(false),
+							},
 						},
 						{
 							Name: aws.String("mockDomain3.com"),
 							Id:   aws.String("mockID3"),
+							Config: &route53.HostedZoneConfig{
+								PrivateZone: aws.Bool(false),
+							},
 						},
 					},
 				}, nil)
@@ -108,6 +123,9 @@ func TestRoute53_DomainHostedZoneID(t *testing.T) {
 					HostedZones: []*route53.HostedZone{
 						{
 							Name: aws.String("mockDomain1.com"),
+							Config: &route53.HostedZoneConfig{
+								PrivateZone: aws.Bool(false),
+							},
 						},
 					},
 				}, nil)
@@ -119,9 +137,15 @@ func TestRoute53_DomainHostedZoneID(t *testing.T) {
 					HostedZones: []*route53.HostedZone{
 						{
 							Name: aws.String("mockDomain2.com"),
+							Config: &route53.HostedZoneConfig{
+								PrivateZone: aws.Bool(false),
+							},
 						},
 						{
 							Name: aws.String("mockDomain3.com"),
+							Config: &route53.HostedZoneConfig{
+								PrivateZone: aws.Bool(false),
+							},
 						},
 					},
 				}, nil)
@@ -139,6 +163,57 @@ func TestRoute53_DomainHostedZoneID(t *testing.T) {
 			},
 			wantErr: fmt.Errorf("list hosted zone for mockDomain.com: some error"),
 		},
+		"filter and pick the first public hosted zone": {
+			domainName: "mockDomain3.com",
+			mockRoute53Client: func(m *mocks.Mockapi) {
+				m.EXPECT().ListHostedZonesByName(&route53.ListHostedZonesByNameInput{
+					DNSName: aws.String("mockDomain3.com"),
+				}).Return(&route53.ListHostedZonesByNameOutput{
+					IsTruncated:      aws.Bool(true),
+					NextDNSName:      aws.String("mockDomain2.com"),
+					NextHostedZoneId: aws.String("mockID"),
+					HostedZones: []*route53.HostedZone{
+						{
+							Name: aws.String("mockDomain1.com"),
+							Id:   aws.String("mockID1"),
+							Config: &route53.HostedZoneConfig{
+								PrivateZone: aws.Bool(false),
+							},
+						},
+					},
+				}, nil)
+				m.EXPECT().ListHostedZonesByName(&route53.ListHostedZonesByNameInput{
+					DNSName:      aws.String("mockDomain2.com"),
+					HostedZoneId: aws.String("mockID"),
+				}).Return(&route53.ListHostedZonesByNameOutput{
+					IsTruncated: aws.Bool(false),
+					HostedZones: []*route53.HostedZone{
+						{
+							Name: aws.String("mockDomain3.com"),
+							Id:   aws.String("mockID2"),
+							Config: &route53.HostedZoneConfig{
+								PrivateZone: aws.Bool(true),
+							},
+						},
+						{
+							Name: aws.String("mockDomain3.com"),
+							Id:   aws.String("mockID3"),
+							Config: &route53.HostedZoneConfig{
+								PrivateZone: aws.Bool(false),
+							},
+						},
+						{
+							Name: aws.String("mockDomain3.com"),
+							Id:   aws.String("mockID4"),
+							Config: &route53.HostedZoneConfig{
+								PrivateZone: aws.Bool(false),
+							},
+						},
+					},
+				}, nil)
+			},
+			wantHostedZoneID: "mockID3",
+		},
 	}
 
 	for name, tc := range testCases {
@@ -155,7 +230,7 @@ func TestRoute53_DomainHostedZoneID(t *testing.T) {
 				hostedZoneIDFor: make(map[string]string),
 			}
 
-			gotID, gotErr := service.DomainHostedZoneID(tc.domainName)
+			gotID, gotErr := service.PublicDomainHostedZoneID(tc.domainName)
 
 			if gotErr != nil {
 				require.EqualError(t, tc.wantErr, gotErr.Error())
@@ -179,6 +254,9 @@ func TestRoute53_DomainHostedZoneID(t *testing.T) {
 				{
 					Name: aws.String("example.com"),
 					Id:   aws.String("Z0698117FUWMJ87C39TF"),
+					Config: &route53.HostedZoneConfig{
+						PrivateZone: aws.Bool(false),
+					},
 				},
 			},
 		}, nil).Times(1)
@@ -189,12 +267,12 @@ func TestRoute53_DomainHostedZoneID(t *testing.T) {
 		}
 
 		// Call once and make the request.
-		actual, err := service.DomainHostedZoneID("example.com")
+		actual, err := service.PublicDomainHostedZoneID("example.com")
 		require.NoError(t, err)
 		require.Equal(t, "Z0698117FUWMJ87C39TF", actual)
 
 		// Call again and Times should be 1.
-		actual, err = service.DomainHostedZoneID("example.com")
+		actual, err = service.PublicDomainHostedZoneID("example.com")
 		require.NoError(t, err)
 		require.Equal(t, "Z0698117FUWMJ87C39TF", actual)
 	})

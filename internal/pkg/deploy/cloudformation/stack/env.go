@@ -219,6 +219,7 @@ func (e *Env) Template() (string, error) {
 		SerializedManifest: string(e.in.RawMft),
 		ForceUpdateID:      forceUpdateID,
 		DelegateDNS:        e.in.App.Domain != "",
+		HostedZones:        convertHostedZones(e.in.App),
 	})
 	if err != nil {
 		return "", err
