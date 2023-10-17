@@ -167,7 +167,7 @@ func (o *deleteAppOpts) Ask() error {
 		return err
 	}
 	log.Infoln()
-	log.Warningf(`Copilot app delete will delete all your infrastructure created as a part of your application %s.
+	log.Warningf(`Copilot app delete deletes all the infrastructure created as a part of your application %s.
 Infrastructure includes all the pipelines, environments, workloads and application resources. 
 This action can not be undone.
 `, o.name)
