@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-package scheduler
+package orchestrator
 
 import (
 	"context"
@@ -15,9 +15,9 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 )
 
-// Scheduler manages running a Task. Only a single Task
-// can be running at a time for a given Scheduler.
-type Scheduler struct {
+// Orchestrator manages running a Task. Only a single Task
+// can be running at a time for a given Orchestrator.
+type Orchestrator struct {
 	idPrefix   string
 	logOptions logOptionsFunc
 
@@ -33,12 +33,12 @@ type Scheduler struct {
 }
 
 type action interface {
-	Do(s *Scheduler) error
+	Do(s *Orchestrator) error
 }
 
 type logOptionsFunc func(name string, ctr ContainerDefinition) dockerengine.RunLogOptions
 
-// DockerEngine is used by Scheduler to manage containers.
+// DockerEngine is used by Orchestrator to manage containers.
 type DockerEngine interface {
 	Run(context.Context, *dockerengine.RunOptions) error
 	IsContainerRunning(context.Context, string) (bool, error)
@@ -54,10 +54,10 @@ const (
 	pauseContainerURI = "public.ecr.aws/amazonlinux/amazonlinux:2023"
 )
 
-// NewScheduler creates a new Scheduler. idPrefix is a prefix used when
-// naming containers that are run by the Scheduler.
-func NewScheduler(docker DockerEngine, idPrefix string, logOptions logOptionsFunc) *Scheduler {
-	return &Scheduler{
+// New creates a new Orchestrator. idPrefix is a prefix used when
+// naming containers that are run by the Orchestrator.
+func New(docker DockerEngine, idPrefix string, logOptions logOptionsFunc) *Orchestrator {
+	return &Orchestrator{
 		idPrefix:   idPrefix,
 		logOptions: logOptions,
 		stopped:    make(chan struct{}),
@@ -69,26 +69,26 @@ func NewScheduler(docker DockerEngine, idPrefix string, logOptions logOptionsFun
 	}
 }
 
-// Start starts the Scheduler. Start must be called before any other
-// Scheduler functions. Errors from containers run by the scheduler
-// or from Scheduler actions are sent to the returned error channel.
+// Start starts the Orchestrator. Start must be called before any other
+// orchestrator functions. Errors from containers run by the Orchestrator
+// or from Orchestrator actions are sent to the returned error channel.
 // The returned error channel is closed after calling Stop() has
-// stopped the Scheduler. A Scheduler should only be Started once.
-func (s *Scheduler) Start() chan error {
-	// close done when all goroutines created by scheduler have finished
+// stopped the Orchestrator. An Orchestrator should only be Started once.
+func (o *Orchestrator) Start() chan error {
+	// close done when all goroutines created by Orchestrator have finished
 	done := make(chan struct{})
 	errs := make(chan error)
 
-	// scheduler routine
-	s.wg.Add(1) // decremented by stopAction
+	// orchestrator routine
+	o.wg.Add(1) // decremented by stopAction
 	go func() {
 		for {
 			select {
-			case action := <-s.actions:
-				if err := action.Do(s); err != nil {
+			case action := <-o.actions:
+				if err := action.Do(o); err != nil {
 					errs <- err
 				}
-			case err := <-s.runErrs:
+			case err := <-o.runErrs:
 				errs <- err
 			case <-done:
 				close(errs)
@@ -98,7 +98,7 @@ func (s *Scheduler) Start() chan error {
 	}()
 
 	go func() {
-		s.wg.Wait()
+		o.wg.Wait()
 		close(done)
 	}()
 
@@ -106,15 +106,15 @@ func (s *Scheduler) Start() chan error {
 }
 
 // RunTask stops the current running task and starts task.
-func (s *Scheduler) RunTask(task Task) {
+func (o *Orchestrator) RunTask(task Task) {
 	// this guarantees the following:
-	// - if runTaskAction{} is pulled by the scheduler, any errors
-	//   returned by it are reported by the scheduler.
-	// - if Stop() is called _before_ the scheduler picks up this
+	// - if runTaskAction{} is pulled by the Orchestrator, any errors
+	//   returned by it are reported by the Orchestrator.
+	// - if Stop() is called _before_ the Orchestrator picks up this
 	//   action, then this action is skipped.
 	select {
-	case <-s.stopped:
-	case s.actions <- &runTaskAction{
+	case <-o.stopped:
+	case o.actions <- &runTaskAction{
 		task: task,
 	}:
 	}
@@ -124,7 +124,7 @@ type runTaskAction struct {
 	task Task
 }
 
-func (r *runTaskAction) Do(s *Scheduler) error {
+func (a *runTaskAction) Do(s *Orchestrator) error {
 	// we no longer care about errors from the old task
 	taskID := s.curTaskID.Add(1)
 
@@ -144,7 +144,7 @@ func (r *runTaskAction) Do(s *Scheduler) error {
 
 	if taskID == 1 {
 		// start the pause container
-		opts := s.pauseRunOptions(r.task)
+		opts := s.pauseRunOptions(a.task)
 		s.run(pauseCtrTaskID, opts)
 		if err := s.waitForContainerToStart(ctx, opts.ContainerName); err != nil {
 			return fmt.Errorf("wait for pause container to start: %w", err)
@@ -152,7 +152,7 @@ func (r *runTaskAction) Do(s *Scheduler) error {
 	} else {
 		// ensure no pause container changes
 		curOpts := s.pauseRunOptions(s.curTask)
-		newOpts := s.pauseRunOptions(r.task)
+		newOpts := s.pauseRunOptions(a.task)
 		if !maps.Equal(curOpts.EnvVars, newOpts.EnvVars) ||
 			!maps.Equal(curOpts.Secrets, newOpts.Secrets) ||
 			!maps.Equal(curOpts.ContainerPorts, newOpts.ContainerPorts) {
@@ -164,29 +164,29 @@ func (r *runTaskAction) Do(s *Scheduler) error {
 		}
 	}
 
-	for name, ctr := range r.task.Containers {
+	for name, ctr := range a.task.Containers {
 		name, ctr := name, ctr
 		s.run(taskID, s.containerRunOptions(name, ctr))
 	}
 
-	s.curTask = r.task
+	s.curTask = a.task
 	return nil
 }
 
-// Stop stops the current running task containers and the Scheduler. Stop is
+// Stop stops the current running task containers and the Orchestrator. Stop is
 // idempotent and safe to call multiple times. Calls to RunTask() after calling Stop
 // do nothing.
-func (s *Scheduler) Stop() {
-	s.stopOnce.Do(func() {
-		close(s.stopped)
-		s.actions <- &stopAction{}
+func (o *Orchestrator) Stop() {
+	o.stopOnce.Do(func() {
+		close(o.stopped)
+		o.actions <- &stopAction{}
 	})
 }
 
 type stopAction struct{}
 
-func (a *stopAction) Do(s *Scheduler) error {
-	defer s.wg.Done()                // for the scheduler
+func (a *stopAction) Do(s *Orchestrator) error {
+	defer s.wg.Done()                // for the Orchestrator
 	s.curTaskID.Store(stoppedTaskID) // ignore runtime errors
 
 	// collect errors since we want to try to clean up everything we can
@@ -204,7 +204,7 @@ func (a *stopAction) Do(s *Scheduler) error {
 }
 
 // stopTask calls `docker stop` for all containers defined by task.
-func (s *Scheduler) stopTask(ctx context.Context, task Task) error {
+func (o *Orchestrator) stopTask(ctx context.Context, task Task) error {
 	if len(task.Containers) == 0 {
 		return nil
 	}
@@ -214,7 +214,7 @@ func (s *Scheduler) stopTask(ctx context.Context, task Task) error {
 	for name := range task.Containers {
 		name := name
 		go func() {
-			if err := s.docker.Stop(ctx, s.containerID(name)); err != nil {
+			if err := o.docker.Stop(ctx, o.containerID(name)); err != nil {
 				errCh <- fmt.Errorf("stop %q: %w", name, err)
 				return
 			}
@@ -234,9 +234,9 @@ func (s *Scheduler) stopTask(ctx context.Context, task Task) error {
 }
 
 // waitForContainerToStart blocks until the container specified by id starts.
-func (s *Scheduler) waitForContainerToStart(ctx context.Context, id string) error {
+func (o *Orchestrator) waitForContainerToStart(ctx context.Context, id string) error {
 	for {
-		isRunning, err := s.docker.IsContainerRunning(ctx, id)
+		isRunning, err := o.docker.IsContainerRunning(ctx, id)
 		switch {
 		case err != nil:
 			return fmt.Errorf("check if %q is running: %w", id, err)
@@ -253,8 +253,8 @@ func (s *Scheduler) waitForContainerToStart(ctx context.Context, id string) erro
 }
 
 // containerID returns the full ID for a container with name run by s.
-func (s *Scheduler) containerID(name string) string {
-	return s.idPrefix + name
+func (o *Orchestrator) containerID(name string) string {
+	return o.idPrefix + name
 }
 
 // Task defines a set of Containers to be run together.
@@ -275,10 +275,10 @@ type ContainerDefinition struct {
 // pauseRunOptions returns RunOptions for the pause container for t.
 // The pause container owns the networking namespace that is shared
 // among all of the containers in the task.
-func (s *Scheduler) pauseRunOptions(t Task) dockerengine.RunOptions {
+func (o *Orchestrator) pauseRunOptions(t Task) dockerengine.RunOptions {
 	opts := dockerengine.RunOptions{
 		ImageURI:       pauseContainerURI,
-		ContainerName:  s.containerID("pause"),
+		ContainerName:  o.containerID("pause"),
 		Command:        []string{"sleep", "infinity"},
 		ContainerPorts: make(map[string]string),
 	}
@@ -293,27 +293,27 @@ func (s *Scheduler) pauseRunOptions(t Task) dockerengine.RunOptions {
 }
 
 // containerRunOptions returns RunOptions for the given container.
-func (s *Scheduler) containerRunOptions(name string, ctr ContainerDefinition) dockerengine.RunOptions {
+func (o *Orchestrator) containerRunOptions(name string, ctr ContainerDefinition) dockerengine.RunOptions {
 	return dockerengine.RunOptions{
 		ImageURI:         ctr.ImageURI,
-		ContainerName:    s.containerID(name),
+		ContainerName:    o.containerID(name),
 		EnvVars:          ctr.EnvVars,
 		Secrets:          ctr.Secrets,
-		ContainerNetwork: s.containerID("pause"),
-		LogOptions:       s.logOptions(name, ctr),
+		ContainerNetwork: o.containerID("pause"),
+		LogOptions:       o.logOptions(name, ctr),
 	}
 }
 
 // run calls `docker run` using opts. Errors are only returned
-// to the main scheduler routine if the taskID the container was run with
-// matches the current taskID the scheduler is running.
-func (s *Scheduler) run(taskID int32, opts dockerengine.RunOptions) {
-	s.wg.Add(1)
+// to the main Orchestrator routine if the taskID the container was run with
+// matches the current taskID the Orchestrator is running.
+func (o *Orchestrator) run(taskID int32, opts dockerengine.RunOptions) {
+	o.wg.Add(1)
 	go func() {
-		defer s.wg.Done()
+		defer o.wg.Done()
 
-		if err := s.docker.Run(context.Background(), &opts); err != nil {
-			curTaskID := s.curTaskID.Load()
+		if err := o.docker.Run(context.Background(), &opts); err != nil {
+			curTaskID := o.curTaskID.Load()
 			if curTaskID == stoppedTaskID {
 				return
 			}
@@ -321,7 +321,7 @@ func (s *Scheduler) run(taskID int32, opts dockerengine.RunOptions) {
 			// the error is from the pause container
 			// or from the currently running task
 			if taskID == pauseCtrTaskID || taskID == curTaskID {
-				s.runErrs <- fmt.Errorf("run %q: %w", opts.ContainerName, err)
+				o.runErrs <- fmt.Errorf("run %q: %w", opts.ContainerName, err)
 			}
 		}
 	}()

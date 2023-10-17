@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-package scheduler
+package orchestrator
 
 import (
 	"context"
@@ -16,7 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestScheduler(t *testing.T) {
+func TestOrchestrator(t *testing.T) {
 	noLogs := func(name string, ctr ContainerDefinition) dockerengine.RunLogOptions {
 		return dockerengine.RunLogOptions{
 			Output: io.Discard,
@@ -26,7 +26,7 @@ func TestScheduler(t *testing.T) {
 	tests := map[string]struct {
 		dockerEngine func(t *testing.T, sync chan struct{}) DockerEngine
 		logOptions   logOptionsFunc
-		test         func(t *testing.T, s *Scheduler, sync chan struct{})
+		test         func(t *testing.T, o *Orchestrator, sync chan struct{})
 
 		errs []string
 	}{
@@ -34,7 +34,7 @@ func TestScheduler(t *testing.T) {
 			dockerEngine: func(t *testing.T, sync chan struct{}) DockerEngine {
 				return &dockerenginetest.Double{}
 			},
-			test: func(t *testing.T, s *Scheduler, sync chan struct{}) {},
+			test: func(t *testing.T, o *Orchestrator, sync chan struct{}) {},
 		},
 		"error if unable to check if pause container is running": {
 			dockerEngine: func(t *testing.T, sync chan struct{}) DockerEngine {
@@ -44,8 +44,8 @@ func TestScheduler(t *testing.T) {
 					},
 				}
 			},
-			test: func(t *testing.T, s *Scheduler, sync chan struct{}) {
-				s.RunTask(Task{})
+			test: func(t *testing.T, o *Orchestrator, sync chan struct{}) {
+				o.RunTask(Task{})
 			},
 			errs: []string{
 				`wait for pause container to start: check if "prefix-pause" is running: some error`,
@@ -66,8 +66,8 @@ func TestScheduler(t *testing.T) {
 				}
 			},
 			logOptions: noLogs,
-			test: func(t *testing.T, s *Scheduler, sync chan struct{}) {
-				s.RunTask(Task{
+			test: func(t *testing.T, o *Orchestrator, sync chan struct{}) {
+				o.RunTask(Task{
 					Containers: map[string]ContainerDefinition{
 						"foo":     {},
 						"bar":     {},
@@ -87,14 +87,11 @@ func TestScheduler(t *testing.T) {
 					IsContainerRunningFn: func(ctx context.Context, name string) (bool, error) {
 						return true, nil
 					},
-					RunFn: func(ctx context.Context, ro *dockerengine.RunOptions) error {
-						return nil
-					},
 				}
 			},
 			logOptions: noLogs,
-			test: func(t *testing.T, s *Scheduler, sync chan struct{}) {
-				s.RunTask(Task{
+			test: func(t *testing.T, o *Orchestrator, sync chan struct{}) {
+				o.RunTask(Task{
 					Containers: map[string]ContainerDefinition{
 						"foo": {
 							Ports: map[string]string{
@@ -103,7 +100,7 @@ func TestScheduler(t *testing.T) {
 						},
 					},
 				})
-				s.RunTask(Task{
+				o.RunTask(Task{
 					Containers: map[string]ContainerDefinition{
 						"foo": {
 							Ports: map[string]string{
@@ -136,8 +133,8 @@ func TestScheduler(t *testing.T) {
 				}
 			},
 			logOptions: noLogs,
-			test: func(t *testing.T, s *Scheduler, sync chan struct{}) {
-				s.RunTask(Task{
+			test: func(t *testing.T, o *Orchestrator, sync chan struct{}) {
+				o.RunTask(Task{
 					Containers: map[string]ContainerDefinition{
 						"foo": {
 							Ports: map[string]string{
@@ -159,12 +156,12 @@ func TestScheduler(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			syncCh := make(chan struct{})
-			s := NewScheduler(tc.dockerEngine(t, syncCh), "prefix-", tc.logOptions)
+			o := New(tc.dockerEngine(t, syncCh), "prefix-", tc.logOptions)
 
 			wg := &sync.WaitGroup{}
 			wg.Add(2)
 
-			errs := s.Start()
+			errs := o.Start()
 
 			go func() {
 				defer wg.Done()
@@ -180,8 +177,8 @@ func TestScheduler(t *testing.T) {
 			go func() {
 				defer wg.Done()
 
-				tc.test(t, s, syncCh)
-				s.Stop()
+				tc.test(t, o, syncCh)
+				o.Stop()
 			}()
 
 			wg.Wait()
