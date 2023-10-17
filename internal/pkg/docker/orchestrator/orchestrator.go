@@ -33,7 +33,7 @@ type Orchestrator struct {
 }
 
 type action interface {
-	Do(s *Orchestrator) error
+	Do(o *Orchestrator) error
 }
 
 type logOptionsFunc func(name string, ctr ContainerDefinition) dockerengine.RunLogOptions
@@ -124,52 +124,52 @@ type runTaskAction struct {
 	task Task
 }
 
-func (a *runTaskAction) Do(s *Orchestrator) error {
+func (a *runTaskAction) Do(o *Orchestrator) error {
 	// we no longer care about errors from the old task
-	taskID := s.curTaskID.Add(1)
+	taskID := o.curTaskID.Add(1)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	// cancelCtxOnStop calls cancel if Stop() is called before ctx finishes.
-	s.wg.Add(1)
+	o.wg.Add(1)
 	go func() {
-		defer s.wg.Done()
+		defer o.wg.Done()
 		select {
 		case <-ctx.Done():
-		case <-s.stopped:
+		case <-o.stopped:
 			cancel()
 		}
 	}()
 
 	if taskID == 1 {
 		// start the pause container
-		opts := s.pauseRunOptions(a.task)
-		s.run(pauseCtrTaskID, opts)
-		if err := s.waitForContainerToStart(ctx, opts.ContainerName); err != nil {
+		opts := o.pauseRunOptions(a.task)
+		o.run(pauseCtrTaskID, opts)
+		if err := o.waitForContainerToStart(ctx, opts.ContainerName); err != nil {
 			return fmt.Errorf("wait for pause container to start: %w", err)
 		}
 	} else {
 		// ensure no pause container changes
-		curOpts := s.pauseRunOptions(s.curTask)
-		newOpts := s.pauseRunOptions(a.task)
+		curOpts := o.pauseRunOptions(o.curTask)
+		newOpts := o.pauseRunOptions(a.task)
 		if !maps.Equal(curOpts.EnvVars, newOpts.EnvVars) ||
 			!maps.Equal(curOpts.Secrets, newOpts.Secrets) ||
 			!maps.Equal(curOpts.ContainerPorts, newOpts.ContainerPorts) {
 			return errors.New("new task requires recreating pause container")
 		}
 
-		if err := s.stopTask(ctx, s.curTask); err != nil {
+		if err := o.stopTask(ctx, o.curTask); err != nil {
 			return fmt.Errorf("stop existing task: %w", err)
 		}
 	}
 
 	for name, ctr := range a.task.Containers {
 		name, ctr := name, ctr
-		s.run(taskID, s.containerRunOptions(name, ctr))
+		o.run(taskID, o.containerRunOptions(name, ctr))
 	}
 
-	s.curTask = a.task
+	o.curTask = a.task
 	return nil
 }
 
@@ -185,18 +185,18 @@ func (o *Orchestrator) Stop() {
 
 type stopAction struct{}
 
-func (a *stopAction) Do(s *Orchestrator) error {
-	defer s.wg.Done()                // for the Orchestrator
-	s.curTaskID.Store(stoppedTaskID) // ignore runtime errors
+func (a *stopAction) Do(o *Orchestrator) error {
+	defer o.wg.Done()                // for the Orchestrator
+	o.curTaskID.Store(stoppedTaskID) // ignore runtime errors
 
 	// collect errors since we want to try to clean up everything we can
 	var errs []error
-	if err := s.stopTask(context.Background(), s.curTask); err != nil {
+	if err := o.stopTask(context.Background(), o.curTask); err != nil {
 		errs = append(errs, err)
 	}
 
 	// stop pause container
-	if err := s.docker.Stop(context.Background(), s.containerID("pause")); err != nil {
+	if err := o.docker.Stop(context.Background(), o.containerID("pause")); err != nil {
 		errs = append(errs, fmt.Errorf("stop %q: %w", "pause", err))
 	}
 
