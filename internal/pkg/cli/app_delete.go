@@ -166,6 +166,11 @@ func (o *deleteAppOpts) Ask() error {
 	if err := o.validateOrAskAppName(); err != nil {
 		return err
 	}
+	log.Infoln()
+	log.Warningf(`Copilot app delete will delete all your infrastructure created as a part of your application %s.
+Infrastructure includes all the pipelines, environments, workloads and application resources. 
+This action can not be undone.
+`, o.name)
 	if o.skipConfirmation {
 		return nil
 	}
