@@ -19,6 +19,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
@@ -167,10 +168,10 @@ func (o *deleteAppOpts) Ask() error {
 		return err
 	}
 	log.Infoln()
-	log.Warningf(`Copilot app delete deletes all the infrastructure created as a part of your application %s.
+	log.Warningf(`%s deletes all the infrastructure created as a part of your application %s.
 Infrastructure includes all the pipelines, environments, workloads and application resources. 
 This action can not be undone.
-`, o.name)
+`, color.HighlightCode("copilot app delete"), o.name)
 	if o.skipConfirmation {
 		return nil
 	}
