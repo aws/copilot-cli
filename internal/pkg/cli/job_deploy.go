@@ -57,6 +57,7 @@ type deployJobOpts struct {
 	targetApp         *config.Application
 	targetEnv         *config.Environment
 	envSess           *session.Session
+	rawMft            string // Content of the environment manifest with env var interpolation only.
 	appliedDynamicMft manifest.DynamicWorkload
 	rootUserARN       string
 
@@ -98,10 +99,6 @@ func newJobDeployOpts(vars deployWkldVars) (*deployJobOpts, error) {
 }
 
 func newJobDeployer(o *deployJobOpts) (workloadDeployer, error) {
-	raw, err := o.ws.ReadWorkloadManifest(o.name)
-	if err != nil {
-		return nil, fmt.Errorf("read manifest file for %s: %w", o.name, err)
-	}
 	ovrdr, err := deploy.NewOverrider(o.ws.WorkloadOverridesPath(o.name), o.appName, o.envName, afero.NewOsFs(), o.sessProvider)
 	if err != nil {
 		return nil, err
@@ -118,7 +115,7 @@ func newJobDeployer(o *deployJobOpts) (workloadDeployer, error) {
 			GitShortCommitTag: o.gitShortCommit,
 		},
 		Mft:              content,
-		RawMft:           raw,
+		RawMft:           o.rawMft,
 		EnvVersionGetter: o.envFeaturesDescriber,
 		Overrider:        ovrdr,
 	}
@@ -176,12 +173,12 @@ func (o *deployJobOpts) Execute() error {
 			return err
 		}
 	}
-	mft, err := workloadManifest(&workloadManifestInput{
+	mft, interpolated, err := workloadManifest(&workloadManifestInput{
 		name:         o.name,
 		appName:      o.appName,
 		envName:      o.envName,
-		interpolator: o.newInterpolator(o.appName, o.envName),
 		ws:           o.ws,
+		interpolator: o.newInterpolator(o.appName, o.envName),
 		unmarshal:    o.unmarshal,
 		sess:         o.envSess,
 	})
@@ -189,6 +186,7 @@ func (o *deployJobOpts) Execute() error {
 		return err
 	}
 	o.appliedDynamicMft = mft
+	o.rawMft = interpolated
 	if err := validateWorkloadManifestCompatibilityWithEnv(o.ws, o.envFeaturesDescriber, mft, o.envName); err != nil {
 		return err
 	}

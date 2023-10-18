@@ -154,7 +154,7 @@ type wkld struct {
 	artifactBucketName string
 	rc                 RuntimeConfig
 	image              location
-	rawManifest        []byte // Content of the manifest file without any transformations.
+	rawManifest        string
 
 	parser template.Parser
 	addons NestedStackConfigurer

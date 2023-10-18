@@ -53,7 +53,7 @@ type RequestDrivenWebServiceConfig struct {
 	App                deploy.AppInformation
 	Env                string
 	Manifest           *manifest.RequestDrivenWebService
-	RawManifest        []byte
+	RawManifest        string
 	ArtifactBucketName string
 	RuntimeConfig      RuntimeConfig
 	Addons             NestedStackConfigurer
@@ -148,6 +148,7 @@ func (s *RequestDrivenWebService) Template() (string, error) {
 		AppRunnerVPCEndpoint: s.manifest.Private.Advanced.Endpoint,
 		Count:                s.manifest.Count,
 		Secrets:              convertSecrets(s.manifest.RequestDrivenWebServiceConfig.Secrets),
+		HostedZones:          convertHostedZones(s.app),
 	})
 	if err != nil {
 		return "", err
