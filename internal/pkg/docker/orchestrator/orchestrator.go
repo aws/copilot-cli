@@ -46,8 +46,8 @@ type DockerEngine interface {
 }
 
 const (
-	stoppedTaskID  = -1
-	pauseCtrTaskID = 0
+	orchestratorStoppedTaskID = -1
+	pauseCtrTaskID            = 0
 )
 
 const (
@@ -186,8 +186,8 @@ func (o *Orchestrator) Stop() {
 type stopAction struct{}
 
 func (a *stopAction) Do(o *Orchestrator) error {
-	defer o.wg.Done()                // for the Orchestrator
-	o.curTaskID.Store(stoppedTaskID) // ignore runtime errors
+	defer o.wg.Done()                            // for the Orchestrator
+	o.curTaskID.Store(orchestratorStoppedTaskID) // ignore runtime errors
 
 	// collect errors since we want to try to clean up everything we can
 	var errs []error
@@ -314,7 +314,7 @@ func (o *Orchestrator) run(taskID int32, opts dockerengine.RunOptions) {
 
 		if err := o.docker.Run(context.Background(), &opts); err != nil {
 			curTaskID := o.curTaskID.Load()
-			if curTaskID == stoppedTaskID {
+			if curTaskID == orchestratorStoppedTaskID {
 				return
 			}
 
