@@ -10,7 +10,7 @@ import (
 	"syscall"
 )
 
-// NewProcessGroup causes the command to be assigned it's own
+// NewProcessGroup causes the command to be assigned its own
 // process group, and not use the parent's (this command) pid.
 func NewProcessGroup() CmdOption {
 	return func(c *exec.Cmd) {

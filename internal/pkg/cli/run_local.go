@@ -249,13 +249,12 @@ func (o *runLocalOpts) Execute() error {
 	if err != nil {
 		return fmt.Errorf("get task: %w", err)
 	}
-
-	mft, err := workloadManifest(&workloadManifestInput{
+	mft, _, err := workloadManifest(&workloadManifestInput{
 		name:         o.wkldName,
 		appName:      o.appName,
 		envName:      o.envName,
-		interpolator: o.newInterpolator(o.appName, o.envName),
 		ws:           o.ws,
+		interpolator: o.newInterpolator(o.appName, o.envName),
 		unmarshal:    o.unmarshal,
 		sess:         o.envSess,
 	})

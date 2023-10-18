@@ -34,7 +34,7 @@ type BackendServiceConfig struct {
 	EnvManifest        *manifest.Environment
 	Manifest           *manifest.BackendService
 	ArtifactBucketName string
-	RawManifest        []byte // Content of the manifest file without any transformations.
+	RawManifest        string
 	RuntimeConfig      RuntimeConfig
 	Addons             NestedStackConfigurer
 }
