@@ -7,13 +7,13 @@ import "github.com/aws/copilot-cli/internal/pkg/docker/orchestrator"
 
 // Double is a test double for orchestrator.Orchestrator
 type Double struct {
-	StartFn   func() chan error
+	StartFn   func() <-chan error
 	RunTaskFn func(task orchestrator.Task)
 	StopFn    func()
 }
 
 // Start calls the stubbed function.
-func (d *Double) Start() chan error {
+func (d *Double) Start() <-chan error {
 	if d.StartFn == nil {
 		return nil
 	}
