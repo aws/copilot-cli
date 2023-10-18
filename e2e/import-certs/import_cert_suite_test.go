@@ -5,7 +5,6 @@ package import_certs
 
 import (
 	"fmt"
-	"os"
 	"testing"
 	"time"
 
@@ -16,7 +15,6 @@ import (
 
 var cli *client.CLI
 var appName string
-var importedCert string
 
 func TestAppWithDomain(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -24,9 +22,6 @@ func TestAppWithDomain(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
-	arn, ok := os.LookupEnv("IMPORTED_CERT_ARN")
-	Expect(ok).Should(Equal(true))
-	importedCert = arn
 	copilotCLI, err := client.NewCLI()
 	Expect(err).NotTo(HaveOccurred())
 	cli = copilotCLI

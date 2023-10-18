@@ -143,10 +143,11 @@ func (d *rdwsDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*rdwsS
 	default:
 		conf, err = stack.NewRequestDrivenWebService(stack.RequestDrivenWebServiceConfig{
 			App: deploy.AppInformation{
-				Name:                d.app.Name,
-				Domain:              d.app.Domain,
-				PermissionsBoundary: d.app.PermissionsBoundary,
-				AccountPrincipalARN: in.RootUserARN,
+				Name:                   d.app.Name,
+				Domain:                 d.app.Domain,
+				PermissionsBoundary:    d.app.PermissionsBoundary,
+				AccountPrincipalARN:    in.RootUserARN,
+				RootDomainHostedZoneId: d.app.DomainHostedZoneID,
 			},
 			Env:                d.env.Name,
 			Manifest:           d.rdwsMft,

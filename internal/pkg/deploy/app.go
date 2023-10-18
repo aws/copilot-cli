@@ -27,10 +27,12 @@ type CreateAppInput struct {
 
 // AppInformation holds information about the application that need to be propagated to the env stacks and workload stacks.
 type AppInformation struct {
-	AccountPrincipalARN string
-	Domain              string
-	Name                string
-	PermissionsBoundary string
+	AccountPrincipalARN    string
+	Domain                 string
+	Name                   string
+	PermissionsBoundary    string
+	RootDomainHostedZoneId string
+	AppDomainHostedZoneId  string
 }
 
 // DNSDelegationRole returns the ARN of the app's DNS delegation role.

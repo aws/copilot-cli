@@ -455,7 +455,7 @@ type deployer interface {
 }
 
 type domainHostedZoneGetter interface {
-	DomainHostedZoneID(domainName string) (string, error)
+	PublicDomainHostedZoneID(domainName string) (string, error)
 	ValidateDomainOwnership(domainName string) error
 }
 

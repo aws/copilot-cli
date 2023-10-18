@@ -95,7 +95,10 @@ exports.handler = async function (event, context) {
             }),
         });
         appRunnerClient = new AWS.AppRunner();
-        appHostedZoneID = await domainHostedZoneID(appDNSName);
+        appHostedZoneID = props.RootHostedZoneId
+        if (!appHostedZoneID){
+            appHostedZoneID = await domainHostedZoneID(appDNSName);
+        }
         switch (event.RequestType) {
             case "Create":
             case "Update":

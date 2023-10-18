@@ -163,6 +163,14 @@ func (d *staticSiteDeployer) stackConfiguration(in *StackRuntimeConfiguration) (
 	if err := validateMinAppVersion(d.app.Name, d.name, d.appVersionGetter, version.AppTemplateMinStaticSite); err != nil {
 		return nil, fmt.Errorf("static sites not supported: %w", err)
 	}
+	var appHostedZoneID string
+	if d.app.Domain != "" {
+		appHostedZoneID, err = appDomainHostedZoneId(d.app.Name, d.app.Domain, d.domainHostedZoneGetter)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	conf, err := d.newStack(&stack.StaticSiteConfig{
 		App:                d.app,
 		EnvManifest:        d.envConfig,
@@ -173,6 +181,7 @@ func (d *staticSiteDeployer) stackConfiguration(in *StackRuntimeConfiguration) (
 		RootUserARN:        in.RootUserARN,
 		Addons:             d.addons,
 		AssetMappingURL:    in.StaticSiteAssetMappingURL,
+		AppHostedZoneID:    appHostedZoneID,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("create stack configuration: %w", err)

@@ -91,6 +91,16 @@ Resources:
                 s3:x-amz-server-side-encryption: 'aws:kms'
               'Null':
                 s3:x-amz-server-side-encryption: false
+          - Sid: ForceHTTPS
+            Effect: Deny
+            Principal: "*"
+            Action: s3:*
+            Resource:
+              - !Sub ${PipelineBuiltArtifactBucket.Arn}
+              - !Sub ${PipelineBuiltArtifactBucket.Arn}/*
+            Condition:
+              Bool:
+                aws:SecureTransport: false
 
   PipelineBuiltArtifactBucket:
     Type: AWS::S3::Bucket
