@@ -56,6 +56,12 @@ const (
 	pauseContainerName = "pause"
 )
 
+type containerOrchestrator interface {
+	Start() chan error
+	RunTask(task orchestrator.Task)
+	Stop()
+}
+
 type runLocalVars struct {
 	wkldName      string
 	wkldType      string
@@ -85,6 +91,7 @@ type runLocalOpts struct {
 	containerSuffix string
 	newColor        func() *color.Color
 	prog            progress
+	newOrchestrator func() containerOrchestrator
 
 	buildContainerImages func(mft manifest.DynamicWorkload) (map[string]string, error)
 	configureClients     func(o *runLocalOpts) error
@@ -182,6 +189,18 @@ func newRunLocalOpts(vars runLocalVars) (*runLocalOpts, error) {
 			containerURIs[name] = info.RepoTags[0]
 		}
 		return containerURIs, nil
+	}
+	opts.newOrchestrator = func() containerOrchestrator {
+		idPrefix := fmt.Sprintf("%s-%s-%s-", opts.appName, opts.envName, opts.wkldName)
+		colorGen := termcolor.ColorGenerator()
+
+		return orchestrator.New(opts.dockerEngine, idPrefix, func(name string, ctr orchestrator.ContainerDefinition) dockerengine.RunLogOptions {
+			return dockerengine.RunLogOptions{
+				Color:      colorGen(),
+				Output:     os.Stderr,
+				LinePrefix: fmt.Sprintf("[%s] ", name),
+			}
+		})
 	}
 	return opts, nil
 }
@@ -281,14 +300,7 @@ func (o *runLocalOpts) Execute() error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	idPrefix := fmt.Sprintf("%s-%s-%s-", o.appName, o.envName, o.wkldName)
-	orch := orchestrator.New(o.dockerEngine, idPrefix, func(name string, ctr orchestrator.ContainerDefinition) dockerengine.RunLogOptions {
-		return dockerengine.RunLogOptions{
-			Color:      o.newColor(),
-			Output:     os.Stderr,
-			LinePrefix: fmt.Sprintf("[%s] ", name),
-		}
-	})
+	orch := o.newOrchestrator()
 
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
