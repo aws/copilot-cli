@@ -50,9 +50,6 @@ import (
 
 const (
 	workloadAskPrompt = "Which workload would you like to run locally?"
-
-	pauseContainerURI  = "public.ecr.aws/amazonlinux/amazonlinux:2023"
-	pauseContainerName = "pause"
 )
 
 type containerOrchestrator interface {
@@ -293,9 +290,6 @@ func (o *runLocalOpts) Execute() error {
 		ctr.ImageURI = uri
 		task.Containers[name] = ctr
 	}
-
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
 
 	orch := o.newOrchestrator()
 
