@@ -43,7 +43,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/term/syncbuffer"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
-	"github.com/fatih/color"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
@@ -57,7 +56,7 @@ const (
 )
 
 type containerOrchestrator interface {
-	Start() chan error
+	Start() <-chan error
 	RunTask(task orchestrator.Task)
 	Stop()
 }
@@ -88,8 +87,6 @@ type runLocalOpts struct {
 	cmd             execRunner
 	dockerEngine    dockerEngineRunner
 	repository      repositoryService
-	containerSuffix string
-	newColor        func() *color.Color
 	prog            progress
 	newOrchestrator func() containerOrchestrator
 
@@ -132,7 +129,6 @@ func newRunLocalOpts(vars runLocalVars) (*runLocalOpts, error) {
 		cmd:                exec.NewCmd(),
 		dockerEngine:       dockerengine.New(exec.NewCmd()),
 		labeledTermPrinter: labeledTermPrinter,
-		newColor:           termcolor.ColorGenerator(),
 		prog:               termprogress.NewSpinner(log.DiagnosticWriter),
 	}
 	opts.configureClients = func(o *runLocalOpts) error {
@@ -268,6 +264,7 @@ func (o *runLocalOpts) Execute() error {
 	if err != nil {
 		return fmt.Errorf("get task: %w", err)
 	}
+
 	mft, _, err := workloadManifest(&workloadManifestInput{
 		name:         o.wkldName,
 		appName:      o.appName,
