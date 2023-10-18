@@ -31,7 +31,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
-	"github.com/aws/copilot-cli/internal/pkg/docker/scheduler"
+	"github.com/aws/copilot-cli/internal/pkg/docker/orchestrator"
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -282,7 +282,7 @@ func (o *runLocalOpts) Execute() error {
 	defer cancel()
 
 	idPrefix := fmt.Sprintf("%s-%s-%s-", o.appName, o.envName, o.wkldName)
-	s := scheduler.NewScheduler(o.dockerEngine.(dockerengine.DockerCmdClient), idPrefix, func(name string, ctr scheduler.ContainerDefinition) dockerengine.RunLogOptions {
+	orch := orchestrator.New(o.dockerEngine, idPrefix, func(name string, ctr orchestrator.ContainerDefinition) dockerengine.RunLogOptions {
 		return dockerengine.RunLogOptions{
 			Color:      o.newColor(),
 			Output:     os.Stderr,
@@ -293,45 +293,45 @@ func (o *runLocalOpts) Execute() error {
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 
-	errCh := s.Start()
-	s.RunTask(task)
+	errCh := orch.Start()
+	orch.RunTask(task)
 
 	for {
 		select {
-		// we loop until errCh closes, since Start()
-		// closes errCh when the scheduler is completely done.
 		case err, ok := <-errCh:
+			// we loop until errCh closes, since Start()
+			// closes errCh when the orchestrator is completely done.
 			if !ok {
 				return nil
 			}
 
 			fmt.Printf("error: %s\n", err)
-			s.Stop()
+			orch.Stop()
 		case <-sigCh:
 			signal.Stop(sigCh)
-			s.Stop()
+			orch.Stop()
 		}
 	}
 }
 
-func (o *runLocalOpts) getTask(ctx context.Context) (scheduler.Task, error) {
+func (o *runLocalOpts) getTask(ctx context.Context) (orchestrator.Task, error) {
 	td, err := o.ecsLocalClient.TaskDefinition(o.appName, o.envName, o.wkldName)
 	if err != nil {
-		return scheduler.Task{}, fmt.Errorf("get task definition: %w", err)
+		return orchestrator.Task{}, fmt.Errorf("get task definition: %w", err)
 	}
 
 	envVars, err := o.getEnvVars(ctx, td)
 	if err != nil {
-		return scheduler.Task{}, fmt.Errorf("get env vars: %w", err)
+		return orchestrator.Task{}, fmt.Errorf("get env vars: %w", err)
 	}
 
-	task := scheduler.Task{
-		Containers: make(map[string]scheduler.ContainerDefinition),
+	task := orchestrator.Task{
+		Containers: make(map[string]orchestrator.ContainerDefinition),
 	}
 
 	for _, ctr := range td.ContainerDefinitions {
 		name := aws.StringValue(ctr.Name)
-		def := scheduler.ContainerDefinition{
+		def := orchestrator.ContainerDefinition{
 			ImageURI: aws.StringValue(ctr.Image),
 			EnvVars:  envVars[name].EnvVars(),
 			Secrets:  envVars[name].Secrets(),
