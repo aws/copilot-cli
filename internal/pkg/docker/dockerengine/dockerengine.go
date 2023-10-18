@@ -226,6 +226,7 @@ func (c DockerCmdClient) Push(ctx context.Context, uri string, w io.Writer, tags
 
 func (in *RunOptions) generateRunArguments() []string {
 	args := []string{"run"}
+	args = append(args, "--rm")
 
 	if in.ContainerName != "" {
 		args = append(args, "--name", in.ContainerName)
@@ -235,8 +236,7 @@ func (in *RunOptions) generateRunArguments() []string {
 		args = append(args, "--publish", fmt.Sprintf("%s:%s", hostPort, containerPort))
 	}
 
-	// Add network option if it's not a "pause" container.
-	if !strings.HasPrefix(in.ContainerName, "pause") {
+	if in.ContainerNetwork != "" {
 		args = append(args, "--network", fmt.Sprintf("container:%s", in.ContainerNetwork))
 	}
 
@@ -293,7 +293,11 @@ func (c DockerCmdClient) Run(ctx context.Context, options *RunOptions) error {
 		stderr := logger()
 		defer stderr.Close()
 
-		if err := c.runner.RunWithContext(ctx, "docker", options.generateRunArguments(), exec.Stdout(stdout), exec.Stderr(stderr)); err != nil {
+		if err := c.runner.RunWithContext(ctx, "docker",
+			options.generateRunArguments(),
+			exec.Stdout(stdout),
+			exec.Stderr(stderr),
+			exec.NewProcessGroup()); err != nil {
 			return fmt.Errorf("running container: %w", err)
 		}
 		return nil
@@ -303,9 +307,9 @@ func (c DockerCmdClient) Run(ctx context.Context, options *RunOptions) error {
 }
 
 // IsContainerRunning checks if a specific Docker container is running.
-func (c DockerCmdClient) IsContainerRunning(containerName string) (bool, error) {
+func (c DockerCmdClient) IsContainerRunning(ctx context.Context, name string) (bool, error) {
 	buf := &bytes.Buffer{}
-	if err := c.runner.Run("docker", []string{"ps", "-q", "--filter", "name=" + containerName}, exec.Stdout(buf)); err != nil {
+	if err := c.runner.RunWithContext(ctx, "docker", []string{"ps", "-q", "--filter", "name=" + name}, exec.Stdout(buf)); err != nil {
 		return false, fmt.Errorf("run docker ps: %w", err)
 	}
 
@@ -314,9 +318,9 @@ func (c DockerCmdClient) IsContainerRunning(containerName string) (bool, error) 
 }
 
 // Stop calls `docker stop` to stop a running container.
-func (c DockerCmdClient) Stop(containerID string) error {
+func (c DockerCmdClient) Stop(ctx context.Context, containerID string) error {
 	buf := &bytes.Buffer{}
-	if err := c.runner.Run("docker", []string{"stop", containerID}, exec.Stdout(buf), exec.Stderr(buf)); err != nil {
+	if err := c.runner.RunWithContext(ctx, "docker", []string{"stop", containerID}, exec.Stdout(buf), exec.Stderr(buf)); err != nil {
 		return fmt.Errorf("%s: %w", strings.TrimSpace(buf.String()), err)
 	}
 	return nil
