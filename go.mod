@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.2
-	github.com/aws/aws-sdk-go v1.45.24
+	github.com/aws/aws-sdk-go v1.45.25
 	github.com/briandowns/spinner v1.23.0
 	github.com/dustin/go-humanize v1.0.1
 	github.com/fatih/color v1.15.0
@@ -15,7 +15,7 @@ require (
 	github.com/imdario/mergo v0.3.16
 	github.com/lnquy/cron v1.1.1
 	github.com/moby/buildkit v0.12.2
-	github.com/onsi/ginkgo/v2 v2.12.1
+	github.com/onsi/ginkgo/v2 v2.13.0
 	github.com/onsi/gomega v1.28.0
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/spf13/afero v1.10.0
@@ -25,7 +25,7 @@ require (
 	github.com/xlab/treeprint v1.2.0
 	golang.org/x/mod v0.13.0
 	golang.org/x/sync v0.4.0
-	golang.org/x/term v0.12.0
+	golang.org/x/term v0.13.0
 	golang.org/x/text v0.13.0
 	gopkg.in/ini.v1 v1.67.0
 	gopkg.in/yaml.v3 v3.0.1
@@ -53,8 +53,8 @@ require (
 	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	golang.org/x/net v0.15.0 // indirect
-	golang.org/x/sys v0.12.0 // indirect
+	golang.org/x/net v0.17.0 // indirect
+	golang.org/x/sys v0.13.0 // indirect
 	golang.org/x/tools v0.13.0 // indirect
 	google.golang.org/protobuf v1.30.0 // indirect
 	gotest.tools/v3 v3.5.0 // indirect

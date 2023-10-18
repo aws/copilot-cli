@@ -5052,19 +5052,19 @@ func (m *MockdomainHostedZoneGetter) EXPECT() *MockdomainHostedZoneGetterMockRec
 	return m.recorder
 }
 
-// DomainHostedZoneID mocks base method.
-func (m *MockdomainHostedZoneGetter) DomainHostedZoneID(domainName string) (string, error) {
+// PublicDomainHostedZoneID mocks base method.
+func (m *MockdomainHostedZoneGetter) PublicDomainHostedZoneID(domainName string) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DomainHostedZoneID", domainName)
+	ret := m.ctrl.Call(m, "PublicDomainHostedZoneID", domainName)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// DomainHostedZoneID indicates an expected call of DomainHostedZoneID.
-func (mr *MockdomainHostedZoneGetterMockRecorder) DomainHostedZoneID(domainName interface{}) *gomock.Call {
+// PublicDomainHostedZoneID indicates an expected call of PublicDomainHostedZoneID.
+func (mr *MockdomainHostedZoneGetterMockRecorder) PublicDomainHostedZoneID(domainName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DomainHostedZoneID", reflect.TypeOf((*MockdomainHostedZoneGetter)(nil).DomainHostedZoneID), domainName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublicDomainHostedZoneID", reflect.TypeOf((*MockdomainHostedZoneGetter)(nil).PublicDomainHostedZoneID), domainName)
 }
 
 // ValidateDomainOwnership mocks base method.
@@ -7665,18 +7665,18 @@ func (mr *MockdockerEngineRunnerMockRecorder) CheckDockerEngineRunning() *gomock
 }
 
 // IsContainerRunning mocks base method.
-func (m *MockdockerEngineRunner) IsContainerRunning(arg0 string) (bool, error) {
+func (m *MockdockerEngineRunner) IsContainerRunning(arg0 context.Context, arg1 string) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsContainerRunning", arg0)
+	ret := m.ctrl.Call(m, "IsContainerRunning", arg0, arg1)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // IsContainerRunning indicates an expected call of IsContainerRunning.
-func (mr *MockdockerEngineRunnerMockRecorder) IsContainerRunning(arg0 interface{}) *gomock.Call {
+func (mr *MockdockerEngineRunnerMockRecorder) IsContainerRunning(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsContainerRunning", reflect.TypeOf((*MockdockerEngineRunner)(nil).IsContainerRunning), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsContainerRunning", reflect.TypeOf((*MockdockerEngineRunner)(nil).IsContainerRunning), arg0, arg1)
 }
 
 // Rm mocks base method.
@@ -7708,17 +7708,17 @@ func (mr *MockdockerEngineRunnerMockRecorder) Run(arg0, arg1 interface{}) *gomoc
 }
 
 // Stop mocks base method.
-func (m *MockdockerEngineRunner) Stop(arg0 string) error {
+func (m *MockdockerEngineRunner) Stop(arg0 context.Context, arg1 string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Stop", arg0)
+	ret := m.ctrl.Call(m, "Stop", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Stop indicates an expected call of Stop.
-func (mr *MockdockerEngineRunnerMockRecorder) Stop(arg0 interface{}) *gomock.Call {
+func (mr *MockdockerEngineRunnerMockRecorder) Stop(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockdockerEngineRunner)(nil).Stop), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockdockerEngineRunner)(nil).Stop), arg0, arg1)
 }
 
 // MockworkloadStackGenerator is a mock of workloadStackGenerator interface.

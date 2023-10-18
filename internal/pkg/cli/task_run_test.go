@@ -68,6 +68,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 
 		inImage                 string
 		inDockerfilePath        string
+		inDockerfileBuildArgs   map[string]string
 		inDockerfileContextPath string
 
 		inTaskRole string
@@ -234,6 +235,16 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 			inDockerfileContextPath: "../../other",
 
 			wantedError: errors.New("cannot specify both `--image` and `--build-context`"),
+		},
+		"both build args and image name specified": {
+			basicOpts: defaultOpts,
+
+			inImage: "113459295.dkr.ecr.ap-northeast-1.amazonaws.com/my-app",
+			inDockerfileBuildArgs: map[string]string{
+				"KEY": "VALUE",
+			},
+
+			wantedError: errors.New("cannot specify both `--image` and `--build-args`"),
 		},
 		"both dockerfile and image name specified": {
 			basicOpts: defaultOpts,
@@ -417,6 +428,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 					subnets:                     tc.inSubnets,
 					securityGroups:              tc.inSecurityGroups,
 					dockerfilePath:              tc.inDockerfilePath,
+					dockerfileBuildArgs:         tc.inDockerfileBuildArgs,
 					dockerfileContextPath:       tc.inDockerfileContextPath,
 					envVars:                     tc.inEnvVars,
 					envFile:                     tc.inEnvFile,
