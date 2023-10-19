@@ -329,7 +329,7 @@ func (o *runLocalOpts) getTask(ctx context.Context) (orchestrator.Task, error) {
 	}
 
 	task := orchestrator.Task{
-		Containers: make(map[string]orchestrator.ContainerDefinition),
+		Containers: make(map[string]orchestrator.ContainerDefinition, len(td.ContainerDefinitions)),
 	}
 
 	for _, ctr := range td.ContainerDefinitions {
