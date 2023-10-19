@@ -28,11 +28,11 @@ HTTPRulePriorityAction:
     ListenerArn: !GetAtt EnvControllerAction.InternalHTTPListenerArn
     {{- else if $.ImportedALB}}
     {{- $length := len $.ImportedALB.Listeners}}{{if eq $length 1}}
-      {{- range $i, $listener := $.ImportedALB.Listeners}}
+      {{- range $listener := $.ImportedALB.Listeners}}
     ListenerArn: {{$listener.ARN}}
       {{- end}}
     {{- else}}
-    {{- range $i, $listener := $.ImportedALB.Listeners}}
+    {{- range $listener := $.ImportedALB.Listeners}}
       {{- if eq $listener.Port 443}}
     ListenerArn: {{$listener.ARN}}
       {{- end}}
@@ -84,11 +84,11 @@ HTTPListenerRule{{ if ne $i 0 }}{{ $i }}{{ end }}:
     ListenerArn: !GetAtt EnvControllerAction.InternalHTTPListenerArn
 {{- else if $.ImportedALB}}
   {{- $length := len $.ImportedALB.Listeners}}{{if eq $length 1}}
-    {{- range $index, $listener := $.ImportedALB.Listeners }}
+    {{- range $listener := $.ImportedALB.Listeners }}
     ListenerArn: {{$listener.ARN}}
     {{- end}}
   {{- else}}
-  {{- range $index, $listener := $.ImportedALB.Listeners }}
+  {{- range $listener := $.ImportedALB.Listeners }}
   {{- if eq $listener.Port 443}}
     ListenerArn: {{$listener.ARN}}
   {{- end}}
@@ -101,7 +101,7 @@ HTTPListenerRule{{ if ne $i 0 }}{{ $i }}{{ end }}:
 
 {{- if $.ImportedALB}}
   {{- $length := len $.ImportedALB.Listeners}}{{if eq $length 2}}
-  {{- range $index, $listener := $.ImportedALB.Listeners }}
+  {{- range $listener := $.ImportedALB.Listeners }}
   {{- if eq $listener.Port 80}}
 HTTPRedirectRulePriorityAction:
   Metadata:
