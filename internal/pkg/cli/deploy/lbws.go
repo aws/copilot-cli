@@ -5,6 +5,7 @@ package deploy
 
 import (
 	"fmt"
+	"github.com/aws/copilot-cli/internal/pkg/aws/elbv2"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -47,10 +48,15 @@ type publicCIDRBlocksGetter interface {
 	PublicCIDRBlocks() ([]string, error)
 }
 
+type elbGetter interface {
+	LoadBalancer(nameOrARN string) (*elbv2.LoadBalancer, error)
+}
+
 type lbWebSvcDeployer struct {
 	*svcDeployer
 	appVersionGetter       versionGetter
 	publicCIDRBlocksGetter publicCIDRBlocksGetter
+	elbGetter              elbGetter
 	lbMft                  *manifest.LoadBalancedWebService
 
 	// Overriden in tests.
@@ -75,6 +81,11 @@ func NewLBWSDeployer(in *WorkloadDeployerInput) (*lbWebSvcDeployer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("new deploy store: %w", err)
 	}
+	defaultSess, err := in.SessionProvider.Default()
+	if err != nil {
+		return nil, fmt.Errorf("create default session: %w", err)
+	}
+	elbGetter := elbv2.New(defaultSess)
 	envDescriber, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
 		App:         in.App.Name,
 		Env:         in.Env.Name,
@@ -93,6 +104,7 @@ func NewLBWSDeployer(in *WorkloadDeployerInput) (*lbWebSvcDeployer, error) {
 		svcDeployer:            svcDeployer,
 		appVersionGetter:       versionGetter,
 		publicCIDRBlocksGetter: envDescriber,
+		elbGetter:              elbGetter,
 		lbMft:                  lbMft,
 		newAliasCertValidator: func(optionalRegion *string) aliasCertValidator {
 			sess := svcDeployer.envSess.Copy(&aws.Config{
@@ -161,6 +173,13 @@ func (d *lbWebSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*s
 			return nil, fmt.Errorf("get public CIDR blocks information from the VPC of environment %s: %w", d.env.Name, err)
 		}
 		opts = append(opts, stack.WithNLB(cidrBlocks))
+	}
+	if d.lbMft.HTTPOrBool.ImportedALB != nil {
+		lb, err := d.elbGetter.LoadBalancer(aws.StringValue(d.lbMft.HTTPOrBool.ImportedALB))
+		if err != nil {
+			return nil, err
+		}
+		opts = append(opts, stack.WithImportedALB(lb))
 	}
 
 	var conf cloudformation.StackConfiguration

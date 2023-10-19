@@ -162,6 +162,7 @@ type LoadBalancer struct {
 	ARN            string
 	Name           string
 	DNSName        string
+	Listeners      []Listener
 	Scheme         string // "internet-facing" or "internal"
 	SecurityGroups []string
 }
@@ -186,11 +187,16 @@ func (e *ELBV2) LoadBalancer(nameOrARN string) (*LoadBalancer, error) {
 		return nil, fmt.Errorf("no load balancer %q found", nameOrARN)
 	}
 	lb := output.LoadBalancers[0]
+	listeners, err := e.listeners(aws.StringValue(lb.LoadBalancerArn))
+	if err != nil {
+		return nil, err
+	}
 	return &LoadBalancer{
 		ARN:            aws.StringValue(lb.LoadBalancerArn),
 		Name:           aws.StringValue(lb.LoadBalancerName),
 		DNSName:        aws.StringValue(lb.DNSName),
 		Scheme:         aws.StringValue(lb.Scheme),
+		Listeners:      listeners,
 		SecurityGroups: aws.StringValueSlice(lb.SecurityGroups),
 	}, nil
 }
@@ -202,8 +208,8 @@ type Listener struct {
 	Protocol string
 }
 
-// Listeners returns select information about all listeners on a given load balancer.
-func (e *ELBV2) Listeners(lbARN string) ([]Listener, error) {
+// listeners returns select information about all listeners on a given load balancer.
+func (e *ELBV2) listeners(lbARN string) ([]Listener, error) {
 	output, err := e.client.DescribeListeners(&elbv2.DescribeListenersInput{LoadBalancerArn: aws.String(lbARN)})
 	if err != nil {
 		return nil, fmt.Errorf("describe listeners on load balancer %q: %w", lbARN, err)

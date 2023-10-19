@@ -5,6 +5,7 @@ package stack
 
 import (
 	"fmt"
+	"github.com/aws/copilot-cli/internal/pkg/aws/elbv2"
 	"strconv"
 	"strings"
 
@@ -33,6 +34,7 @@ type LoadBalancedWebService struct {
 	httpsEnabled           bool
 	dnsDelegationEnabled   bool
 	publicSubnetCIDRBlocks []string
+	importedALB            *elbv2.LoadBalancer
 	appInfo                deploy.AppInformation
 
 	parser loadBalancedWebSvcReadParser
@@ -46,6 +48,13 @@ type LoadBalancedWebServiceOption func(s *LoadBalancedWebService)
 func WithNLB(cidrBlocks []string) func(s *LoadBalancedWebService) {
 	return func(s *LoadBalancedWebService) {
 		s.publicSubnetCIDRBlocks = cidrBlocks
+	}
+}
+
+// WithImportedALB specifies an imported load balancer.
+func WithImportedALB(alb *elbv2.LoadBalancer) func(s *LoadBalancedWebService) {
+	return func(s *LoadBalancedWebService) {
+		s.importedALB = alb
 	}
 }
 
@@ -180,6 +189,10 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
+	importedALBConfig, err := s.convertImportedALB()
+	if err != nil {
+		return "", err
+	}
 	scTarget := s.manifest.ServiceConnectTarget(exposedPorts)
 	scOpts := template.ServiceConnectOpts{
 		Server: convertServiceConnectServer(s.manifest.Network.Connect, scTarget),
@@ -228,6 +241,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		ALBEnabled:  !s.manifest.HTTPOrBool.Disabled(),
 		GracePeriod: s.convertGracePeriod(),
 		ALBListener: albListenerConfig,
+		ImportedALB: importedALBConfig,
 
 		// NLB configs.
 		AppDNSName:           nlbConfig.appDNSName,
