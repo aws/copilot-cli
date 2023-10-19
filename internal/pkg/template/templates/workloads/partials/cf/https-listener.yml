@@ -55,11 +55,19 @@ HTTPSRulePriorityAction:
     {{- if eq $.WorkloadType "Backend Service" }}
     ListenerArn: !GetAtt EnvControllerAction.InternalHTTPSListenerArn
     {{- else if $.ImportedALB}}
-    {{- range $listener := $.ImportedALB.Listeners}}
+    {{- $length := len $.ImportedALB.Listeners}}{{if eq $length 1}}
+    {{- range $i, $listener := $.ImportedALB.Listeners}}
     ListenerArn: {{$listener.ARN}}
+      {{- end}}
+    {{- else}}
+    {{- range $i, $listener := $.ImportedALB.Listeners}}
+    {{- if eq $listener.Port 443}}
+    ListenerArn: {{$listener.ARN}}
+      {{- end}}
+    {{- end}}
     {{- end}}
     {{- else}}
-    ListenerArn: !GetAtt EnvControllerAction.HTTPSListenerArn
+    ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
     {{- end}}
 
 HTTPRuleWithDomainPriorityAction:
@@ -72,8 +80,16 @@ HTTPRuleWithDomainPriorityAction:
     {{- if eq $.WorkloadType "Backend Service"}}
     ListenerArn: !GetAtt EnvControllerAction.InternalHTTPListenerArn
     {{- else if $.ImportedALB}}
-    {{- range $listener := $.ImportedALB.Listeners}}
+    {{- $length := len $.ImportedALB.Listeners}}{{if eq $length 1}}
+    {{- range $i, $listener := $.ImportedALB.Listeners}}
     ListenerArn: {{$listener.ARN}}
+      {{- end}}
+    {{- else}}
+    {{- range $i, $listener := $.ImportedALB.Listeners}}
+    {{- if eq $listener.Port 443}}
+    ListenerArn: {{$listener.ARN}}
+      {{- end}}
+    {{- end}}
     {{- end}}
     {{- else}}
     ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
@@ -191,13 +207,19 @@ HTTPSListenerRule{{ if ne $i 0 }}{{ $i }}{{ end }}:
     {{- if eq $.WorkloadType "Backend Service"}}
     ListenerArn: !GetAtt EnvControllerAction.InternalHTTPSListenerArn
     {{- else if $.ImportedALB}}
-      {{- range $i, $listener := $.ImportedALB.Listeners}}
-        {{- if eq $listener.Port 443}}
+    {{- $length := len $.ImportedALB.Listeners}}{{if eq $length 1}}
+    {{- range $i, $listener := $.ImportedALB.Listeners}}
     ListenerArn: {{$listener.ARN}}
-        {{- end}}
       {{- end}}
     {{- else}}
-    ListenerArn: !GetAtt EnvControllerAction.HTTPSListenerArn
+    {{- range $i, $listener := $.ImportedALB.Listeners}}
+    {{- if eq $listener.Port 443}}
+    ListenerArn: {{$listener.ARN}}
+      {{- end}}
+    {{- end}}
+    {{- end}}
+    {{- else}}
+    ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
     {{- end}}
     Priority: !GetAtt HTTPSRulePriorityAction.Priority{{ if ne $i 0 }}{{ $i }}{{ end }}
   {{- end }}

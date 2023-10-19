@@ -136,6 +136,12 @@ HTTPListenerRedirectRule{{ if ne $i 0 }}{{ $i }}{{ end }}:
               - - !Ref WorkloadName
                 - !GetAtt EnvControllerAction.InternalWorkloadsHostedZoneName
       {{- end}}
+      {{- if $rule.Aliases}}
+      - Field: 'host-header'
+        HostHeaderConfig:
+          Values: { { fmtSlice (quoteSlice $rule.Aliases) } }
+      {{- end}}
+#      TODO(jwh): need else/other host-header?
       - Field: 'path-pattern'
         PathPatternConfig:
           Values:
