@@ -39,7 +39,7 @@ type api interface {
 	StopTask(input *ecs.StopTaskInput) (*ecs.StopTaskOutput, error)
 	UpdateService(input *ecs.UpdateServiceInput) (*ecs.UpdateServiceOutput, error)
 	WaitUntilTasksRunning(input *ecs.DescribeTasksInput) error
-	ListServicesByNamespace(*ecs.ListServicesByNamespaceInput) (*ecs.ListServicesByNamespaceOutput, error)
+	ListServicesByNamespacePages(input *ecs.ListServicesByNamespaceInput, fn func(*ecs.ListServicesByNamespaceOutput, bool) bool) error
 }
 
 type ssmSessionStarter interface {
@@ -136,14 +136,18 @@ func (e *ECS) Services(cluster string, services ...string) ([]*Service, error) {
 }
 
 func (e *ECS) ListServicesByNamespace(namespace string) ([]string, error) {
-	arns, err := e.client.ListServicesByNamespace(&ecs.ListServicesByNamespaceInput{
+	// TODO ensure ListServicesByNamesspace doesn't return duplicates?
+	var arns []string
+	err := e.client.ListServicesByNamespacePages(&ecs.ListServicesByNamespaceInput{
 		Namespace: aws.String(namespace),
+	}, func(resp *ecs.ListServicesByNamespaceOutput, b bool) bool {
+		arns = append(arns, aws.StringValueSlice(resp.ServiceArns)...)
+		return true
 	})
 	if err != nil {
 		return nil, err
 	}
-	// TODO ensure fn doesn't return duplicates?
-	return aws.StringValueSlice(arns.ServiceArns), nil
+	return arns, nil
 }
 
 // UpdateServiceOpts sets the optional parameter for UpdateService.
