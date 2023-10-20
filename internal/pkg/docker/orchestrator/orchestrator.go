@@ -74,7 +74,7 @@ func New(docker DockerEngine, idPrefix string, logOptions logOptionsFunc) *Orche
 // or from Orchestrator actions are sent to the returned error channel.
 // The returned error channel is closed after calling Stop() has
 // stopped the Orchestrator. An Orchestrator should only be Started once.
-func (o *Orchestrator) Start() chan error {
+func (o *Orchestrator) Start() <-chan error {
 	// close done when all goroutines created by Orchestrator have finished
 	done := make(chan struct{})
 	errs := make(chan error)
