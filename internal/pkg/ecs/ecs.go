@@ -7,6 +7,7 @@ package ecs
 import (
 	"encoding/json"
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -47,6 +48,8 @@ type ecsClient interface {
 	DescribeTasks(cluster string, taskARNs []string) ([]*ecs.Task, error)
 	ActiveClusters(arns ...string) ([]string, error)
 	ActiveServices(clusterName string, serviceARNs ...string) ([]string, error)
+	ListServicesByNamespace(namespace string) ([]string, error)
+	Services(cluster string, services ...string) ([]*ecs.Service, error)
 }
 
 type stepFunctionsClient interface {
@@ -131,6 +134,34 @@ func (c Client) Service(app, env, svc string) (*ecs.Service, error) {
 		return nil, fmt.Errorf("get ECS service %s: %w", serviceName, err)
 	}
 	return service, nil
+}
+
+// ServiceConnectServices returns a list of services that are in the same
+// service connect namespace as the given service.
+func (c Client) ServiceConnectServices(app, env, svc string) ([]*ecs.Service, error) {
+	s, err := c.Service(app, env, svc)
+	if err != nil {
+		return nil, fmt.Errorf("get service: %w", err)
+	}
+	if len(s.Deployments) == 0 {
+		return nil, nil
+	}
+
+	arns, err := c.ecsClient.ListServicesByNamespace(aws.StringValue(s.Deployments[0].ServiceConnectConfiguration.Namespace))
+	if err != nil {
+		return nil, fmt.Errorf("get services in same namespace: %w", err)
+	}
+
+	// remove this service's arn
+	arns = slices.DeleteFunc(arns, func(arn string) bool {
+		return arn == aws.StringValue(s.ServiceArn)
+	})
+
+	svcs, err := c.ecsClient.Services(aws.StringValue(s.ClusterArn), arns...)
+	if err != nil {
+		return nil, fmt.Errorf("get services: %w", err)
+	}
+	return svcs, nil
 }
 
 // LastUpdatedAt returns the last updated time of the ECS service.

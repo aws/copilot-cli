@@ -185,6 +185,7 @@ type repositoryService interface {
 
 type ecsLocalClient interface {
 	TaskDefinition(app, env, svc string) (*awsecs.TaskDefinition, error)
+	ServiceConnectServices(app, env, svc string) ([]*awsecs.Service, error)
 }
 
 type logEventsWriter interface {

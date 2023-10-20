@@ -39,6 +39,7 @@ type api interface {
 	StopTask(input *ecs.StopTaskInput) (*ecs.StopTaskOutput, error)
 	UpdateService(input *ecs.UpdateServiceInput) (*ecs.UpdateServiceOutput, error)
 	WaitUntilTasksRunning(input *ecs.DescribeTasksInput) error
+	ListServicesByNamespace(*ecs.ListServicesByNamespaceInput) (*ecs.ListServicesByNamespaceOutput, error)
 }
 
 type ssmSessionStarter interface {
@@ -100,6 +101,7 @@ func (e *ECS) TaskDefinition(taskDefName string) (*TaskDefinition, error) {
 
 // Service calls ECS API and returns the specified service running in the cluster.
 func (e *ECS) Service(clusterName, serviceName string) (*Service, error) {
+	// TODO use Services() below
 	resp, err := e.client.DescribeServices(&ecs.DescribeServicesInput{
 		Cluster:  aws.String(clusterName),
 		Services: aws.StringSlice([]string{serviceName}),
@@ -114,6 +116,37 @@ func (e *ECS) Service(clusterName, serviceName string) (*Service, error) {
 		}
 	}
 	return nil, fmt.Errorf("cannot find service %s", serviceName)
+}
+
+func (e *ECS) Services(cluster string, services ...string) ([]*Service, error) {
+	// TODO split into groups of 10
+	resp, err := e.client.DescribeServices(&ecs.DescribeServicesInput{
+		Cluster:  aws.String(cluster),
+		Services: aws.StringSlice(services),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("describe services: %w", err)
+	}
+
+	var out []*Service
+
+	for i := range resp.Services {
+		svc := Service(*resp.Services[i])
+		out = append(out, &svc)
+	}
+
+	// TODO make sure len(services) == len(out)
+	return out, nil
+}
+
+func (e *ECS) ListServicesByNamespace(namespace string) ([]string, error) {
+	arns, err := e.client.ListServicesByNamespace(&ecs.ListServicesByNamespaceInput{
+		Namespace: aws.String(namespace),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return aws.StringValueSlice(arns.ServiceArns), nil
 }
 
 // UpdateServiceOpts sets the optional parameter for UpdateService.

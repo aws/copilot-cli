@@ -262,6 +262,18 @@ func (o *runLocalOpts) Execute() error {
 		return fmt.Errorf("get task: %w", err)
 	}
 
+	// TODO add proxy flag
+	hd := &hostDiscoverer{
+		app:  o.appName,
+		env:  o.envName,
+		wkld: o.wkldName,
+		ecs:  ecs.New(o.sess), // TODO update env manager role to support actions
+	}
+	_, err = hd.Hosts(ctx)
+	if err != nil {
+		return fmt.Errorf("find hosts to connect to: %w", err)
+	}
+
 	mft, _, err := workloadManifest(&workloadManifestInput{
 		name:         o.wkldName,
 		appName:      o.appName,
@@ -557,6 +569,49 @@ func (o *runLocalOpts) getSecret(ctx context.Context, valueFrom string) (string,
 	}
 
 	return getter.GetSecretValue(ctx, valueFrom)
+}
+
+type host struct {
+	host string
+	port string
+}
+
+type hostDiscoverer struct {
+	rg   resourceGetter
+	ecs  ecsLocalClient
+	app  string
+	env  string
+	wkld string
+	// rg := resourcegroups.New(o.sess) // TODO move to newRunLocalOpts()
+}
+
+func (h *hostDiscoverer) Hosts(ctx context.Context) ([]host, error) {
+	// rds instances
+	// elasticcache instances
+	// ecs services via
+	// ecs services via SC
+	svcs, err := h.ecs.ServiceConnectServices(h.app, h.env, h.wkld)
+	if err != nil {
+		return nil, fmt.Errorf("get service: %w", err)
+	}
+
+	var hosts []host
+	for _, svc := range svcs {
+		// TODO is there only one deployment?
+		for _, dep := range svc.Deployments {
+			for _, sc := range dep.ServiceConnectConfiguration.Services {
+				for _, alias := range sc.ClientAliases {
+					hosts = append(hosts, host{
+						host: aws.StringValue(alias.DnsName),
+						port: strconv.Itoa(int(aws.Int64Value(alias.Port))),
+					})
+				}
+			}
+		}
+	}
+
+	fmt.Printf("hosts: %+v\n", hosts)
+	return nil, nil
 }
 
 // BuildRunLocalCmd builds the command for running a workload locally
