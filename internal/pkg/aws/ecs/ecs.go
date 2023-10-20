@@ -101,42 +101,38 @@ func (e *ECS) TaskDefinition(taskDefName string) (*TaskDefinition, error) {
 
 // Service calls ECS API and returns the specified service running in the cluster.
 func (e *ECS) Service(clusterName, serviceName string) (*Service, error) {
-	// TODO use Services() below
-	resp, err := e.client.DescribeServices(&ecs.DescribeServicesInput{
-		Cluster:  aws.String(clusterName),
-		Services: aws.StringSlice([]string{serviceName}),
-	})
+	svcs, err := e.Services(clusterName, serviceName)
 	if err != nil {
-		return nil, fmt.Errorf("describe service %s: %w", serviceName, err)
+		return nil, err
 	}
-	for _, service := range resp.Services {
-		if aws.StringValue(service.ServiceName) == serviceName {
-			svc := Service(*service)
-			return &svc, nil
-		}
-	}
-	return nil, fmt.Errorf("cannot find service %s", serviceName)
+
+	return svcs[0], nil
 }
 
 func (e *ECS) Services(cluster string, services ...string) ([]*Service, error) {
-	// TODO split into groups of 10
-	resp, err := e.client.DescribeServices(&ecs.DescribeServicesInput{
-		Cluster:  aws.String(cluster),
-		Services: aws.StringSlice(services),
-	})
-	if err != nil {
-		return nil, fmt.Errorf("describe services: %w", err)
+	var svcs []*Service
+
+	for i := 0; i < len(services); i += 10 {
+		split := services[i:min(10+i, len(services))]
+
+		resp, err := e.client.DescribeServices(&ecs.DescribeServicesInput{
+			Cluster:  aws.String(cluster),
+			Services: aws.StringSlice(split),
+		})
+		switch {
+		case err != nil:
+			return nil, fmt.Errorf("describe services: %w", err)
+		case len(resp.Failures) > 0:
+			return nil, fmt.Errorf("describe services: %s", resp.Failures[0].GoString())
+		}
+
+		for j := range resp.Services {
+			svc := Service(*resp.Services[j])
+			svcs = append(svcs, &svc)
+		}
 	}
 
-	var out []*Service
-
-	for i := range resp.Services {
-		svc := Service(*resp.Services[i])
-		out = append(out, &svc)
-	}
-
-	// TODO make sure len(services) == len(out)
-	return out, nil
+	return svcs, nil
 }
 
 func (e *ECS) ListServicesByNamespace(namespace string) ([]string, error) {
@@ -146,6 +142,7 @@ func (e *ECS) ListServicesByNamespace(namespace string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
+	// TODO ensure fn doesn't return duplicates?
 	return aws.StringValueSlice(arns.ServiceArns), nil
 }
 
