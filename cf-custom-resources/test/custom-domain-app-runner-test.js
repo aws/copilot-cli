@@ -13,8 +13,8 @@ const nock = require("nock");
 let origLog = console.log;
 
 describe("Custom Domain for App Runner Service", () => {
-    const [mockServiceARN, mockCustomDomain, mockHostedZoneID, mockResponseURL, mockPhysicalResourceID, mockLogicalResourceID, mockTarget, mockAppDNSName] =
-        ["mockService", "mockDomain", "mockHostedZoneID", "https://mock.com/", "mockPhysicalResourceID", "mockLogicalResourceID", "mockTarget", "mockAppDNSName", ];
+    const [mockServiceARN, mockCustomDomain, mockHostedZoneID, mockResponseURL, mockPhysicalResourceID, mockLogicalResourceID, mockTarget, mockAppDNSName,mockAppHostedZoneID] =
+        ["mockService", "mockDomain", "mockHostedZoneID", "https://mock.com/", "mockPhysicalResourceID", "mockLogicalResourceID", "mockTarget", "mockAppDNSName","Z00ABC" ];
 
     beforeEach(() => {
         // Prevent logging.
@@ -635,13 +635,6 @@ describe("Custom Domain for App Runner Service", () => {
 
         test("success", () => {
             const mockTarget = "mockTarget";
-            const mockListHostedZonesByName = sinon.fake.resolves({
-                HostedZones: [
-                    {
-                        Id: "/hostedzone/mockHostedZoneID",
-                    },
-                ],
-            }); // Able to retrieve the hosted zone ID.
             const mockAssociateCustomDomain = sinon.fake.resolves({DNSTarget: mockTarget,});
             const mockWaitFor = sinon.fake.resolves();
             const mockDescribeCustomDomains = sinon.stub();
@@ -689,7 +682,6 @@ describe("Custom Domain for App Runner Service", () => {
             AWS.mock("Route53", "changeResourceRecordSets", mockChangeResourceRecordSets);
             AWS.mock("Route53", "waitFor", mockWaitFor);
             AWS.mock("AppRunner", "describeCustomDomains", mockDescribeCustomDomains);
-            AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
 
             const expectedResponse = nock(mockResponseURL)
                 .put("/", (body) => {
@@ -705,6 +697,7 @@ describe("Custom Domain for App Runner Service", () => {
                         ServiceARN: mockServiceARN,
                         AppDNSRole: "",
                         CustomDomain: mockCustomDomain,
+                        RootHostedZoneId: mockAppHostedZoneID,
                     },
                     PhysicalResourceId: mockPhysicalResourceID,
                     LogicalResourceId: mockLogicalResourceID,

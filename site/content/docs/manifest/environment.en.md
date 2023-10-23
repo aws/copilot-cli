@@ -326,10 +326,10 @@ List of [AWS Certificate Manager certificate](https://docs.aws.amazon.com/acm/la
 By attaching public or private certificates to your load balancer, you can associate your Backend Services with a domain name and reach them with HTTPS.
 See the [Developing/Domains](../developing/domain.en.md#use-domain-in-your-existing-validated-certificates) guide to learn more about how to redeploy services using [`http.alias`](./backend-service.en.md#http-alias).
 
-<span class="parent-field">http.private.</span><a id="http-private-subnets" href="#http-private-subnets" class="field">`subnets`</a> <span class="type">Array of Strings</span>   
+<span class="parent-field">http.private.</span><a id="http-private-subnets" href="#http-private-subnets" class="field">`subnets`</a> <span class="type">Array of Strings</span>
 The subnet IDs to place the internal load balancer in.
 
-<span class="parent-field">http.private</span><a id="http-private-ingress" href="#http-private-ingress" class="field">`ingress`</a> <span class="type">Map</span><span class="version">Modified in [v1.23.0](../../blogs/release-v123.en.md#move-misplaced-http-fields-in-environment-manifest-backward-compatible)</span>  
+<span class="parent-field">http.private.</span><a id="http-private-ingress" href="#http-private-ingress" class="field">`ingress`</a> <span class="type">Map</span><span class="version">Modified in [v1.23.0](../../blogs/release-v123.en.md#move-misplaced-http-fields-in-environment-manifest-backward-compatible)</span>  
 Ingress rules to allow for the internal load balancer.  
 ```yaml
 http:

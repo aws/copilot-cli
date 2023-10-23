@@ -32,7 +32,7 @@ type WorkerServiceConfig struct {
 	Env                string
 	Manifest           *manifest.WorkerService
 	ArtifactBucketName string
-	RawManifest        []byte
+	RawManifest        string
 	RuntimeConfig      RuntimeConfig
 	Addons             NestedStackConfigurer
 }

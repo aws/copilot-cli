@@ -960,6 +960,7 @@ Resources:
       SubdomainName: !Sub ${EnvironmentName}.${AppName}.${AppDNSName}
       NameServers: !GetAtt EnvironmentHostedZone.NameServers
       RootDNSRole: !Ref AppDNSDelegationRole
+      EnvHostedZoneId: !Ref EnvironmentHostedZone
   
   HTTPSCert:
     Metadata:
@@ -992,6 +993,7 @@ Resources:
       Aliases: !Ref Aliases
       AppDNSRole: !Ref AppDNSDelegationRole
       DomainName: !Ref AppDNSName
+      EnvHostedZoneId: !Ref EnvironmentHostedZone
       PublicAccessDNS: !GetAtt PublicLoadBalancer.DNSName
       PublicAccessHostedZone: !GetAtt PublicLoadBalancer.CanonicalHostedZoneID
   VpcFlowLogGroup:

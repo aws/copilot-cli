@@ -112,7 +112,7 @@ type EnvConfig struct {
 	InternalLBSourceIPs []string              // Optional configuration to specify private security group ingress based on customer given source IPs.
 	Telemetry           *config.Telemetry     // Optional observability and monitoring configuration.
 	Mft                 *manifest.Environment // Unmarshaled and interpolated manifest object.
-	RawMft              []byte                // Content of the environment manifest without any modifications.
+	RawMft              string                // Content of the environment manifest with env var interpolation only.
 	ForceUpdate         bool
 }
 
@@ -219,6 +219,7 @@ func (e *Env) Template() (string, error) {
 		SerializedManifest: string(e.in.RawMft),
 		ForceUpdateID:      forceUpdateID,
 		DelegateDNS:        e.in.App.Domain != "",
+		HostedZones:        convertHostedZones(e.in.App),
 	})
 	if err != nil {
 		return "", err

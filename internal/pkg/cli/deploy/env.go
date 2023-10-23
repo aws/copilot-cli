@@ -20,6 +20,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/elbv2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
+	"github.com/aws/copilot-cli/internal/pkg/aws/route53"
 	awss3 "github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/cli/deploy/patch"
@@ -78,6 +79,9 @@ type stackDescriber interface {
 	Resources() ([]*stack.Resource, error)
 }
 
+type domainHostedZoneGetter interface {
+	PublicDomainHostedZoneID(domainName string) (string, error)
+}
 type envDeployer struct {
 	app *config.Application
 	env *config.Environment
@@ -96,6 +100,7 @@ type envDeployer struct {
 	envDescriber             envDescriber
 	lbDescriber              lbDescriber
 	newServiceStackDescriber func(string) stackDescriber
+	domainHostedZoneGetter   domainHostedZoneGetter
 
 	// Dependencies for parsing addons.
 	ws          WorkspaceAddonsReaderPathGetter
@@ -173,7 +178,8 @@ func NewEnvDeployer(in *NewEnvDeployerInput) (*envDeployer, error) {
 		parseAddons: sync.OnceValues(func() (stackBuilder, error) {
 			return addon.ParseFromEnv(in.Workspace)
 		}),
-		ws: in.Workspace,
+		ws:                     in.Workspace,
+		domainHostedZoneGetter: route53.New(defaultSession),
 	}
 	return deployer, nil
 }
@@ -257,7 +263,7 @@ type DeployEnvironmentInput struct {
 	CustomResourcesURLs map[string]string
 	Manifest            *manifest.Environment
 	ForceNewUpdate      bool
-	RawManifest         []byte
+	RawManifest         string
 	PermissionsBoundary string
 	DisableRollback     bool
 	Version             string
@@ -398,12 +404,21 @@ func (d *envDeployer) buildStackInput(in *DeployEnvironmentInput) (*cfnstack.Env
 	if err != nil {
 		return nil, err
 	}
+	var appHostedZoneID string
+	if d.app.Domain != "" {
+		appHostedZoneID, err = appDomainHostedZoneId(d.app.Name, d.app.Domain, d.domainHostedZoneGetter)
+		if err != nil {
+			return nil, err
+		}
+	}
 	return &cfnstack.EnvConfig{
 		Name: d.env.Name,
 		App: deploy.AppInformation{
-			Name:                d.app.Name,
-			Domain:              d.app.Domain,
-			AccountPrincipalARN: in.RootUserARN,
+			Name:                   d.app.Name,
+			Domain:                 d.app.Domain,
+			AccountPrincipalARN:    in.RootUserARN,
+			RootDomainHostedZoneId: d.app.DomainHostedZoneID,
+			AppDomainHostedZoneId:  appHostedZoneID,
 		},
 		AdditionalTags:       d.app.Tags,
 		Addons:               addons,
@@ -581,4 +596,15 @@ func (d *envDeployer) cfManagedPrefixListID() (string, error) {
 	}
 
 	return id, nil
+}
+
+func appDomainHostedZoneId(appName, domain string, domainHostedZoneGetter domainHostedZoneGetter) (string, error) {
+	if domain == "" {
+		return "", nil
+	}
+	appHostedZoneID, err := domainHostedZoneGetter.PublicDomainHostedZoneID(fmt.Sprintf("%s.%s", appName, domain))
+	if err != nil {
+		return "", fmt.Errorf("get public public hosted zone ID for domain %s", fmt.Sprintf("%s.%s", appName, domain))
+	}
+	return appHostedZoneID, nil
 }

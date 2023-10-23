@@ -17,10 +17,10 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
-	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
+	"github.com/aws/copilot-cli/internal/pkg/docker/orchestrator"
+	"github.com/aws/copilot-cli/internal/pkg/docker/orchestrator/orchestratortest"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
-	"github.com/fatih/color"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -205,6 +205,7 @@ type runLocalExecuteMocks struct {
 	ssm            *mocks.MocksecretGetter
 	secretsManager *mocks.MocksecretGetter
 	prog           *mocks.Mockprogress
+	orchestrator   *orchestratortest.Double
 }
 
 type mockProvider struct {
@@ -239,9 +240,6 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 		AccountID:      "123456789",
 		ManagerRoleARN: "arn::env-manager",
 	}
-
-	mockContainerSuffix := fmt.Sprintf("%s-%s-%s", testAppName, testEnvName, testWkldName)
-	mockPauseContainerName := pauseContainerName + "-" + mockContainerSuffix
 
 	mockContainerURIs := map[string]string{
 		"foo": "image1",
@@ -300,54 +298,43 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 			},
 		},
 	}
-	expectedRunPauseArgs := &dockerengine.RunOptions{
-		ImageURI:      pauseContainerURI,
-		ContainerName: mockPauseContainerName,
-		ContainerPorts: map[string]string{
-			"80":    "8080",
-			"999":   "9999",
-			"10000": "10000",
-			"777":   "7777",
-		},
-		Command: []string{"sleep", "infinity"},
-		LogOptions: dockerengine.RunLogOptions{
-			LinePrefix: "[pause] ",
-		},
-	}
-	expectedRunFooArgs := &dockerengine.RunOptions{
-		ContainerName: "foo" + "-" + mockContainerSuffix,
-		ImageURI:      "image1",
-		EnvVars: map[string]string{
-			"FOO_VAR":               "foo-value",
-			"AWS_ACCESS_KEY_ID":     "myID",
-			"AWS_SECRET_ACCESS_KEY": "mySecret",
-			"AWS_SESSION_TOKEN":     "myToken",
-		},
-		Secrets: map[string]string{
-			"SHARED_SECRET": "secretvalue",
-		},
-		ContainerNetwork: mockPauseContainerName,
-		LogOptions: dockerengine.RunLogOptions{
-			LinePrefix: "[foo] ",
-		},
-	}
-	expectedRunBarArgs := &dockerengine.RunOptions{
-		ContainerName: "bar" + "-" + mockContainerSuffix,
-		ImageURI:      "image2",
-		EnvVars: map[string]string{
-			"BAR_VAR":               "bar-value",
-			"AWS_ACCESS_KEY_ID":     "myID",
-			"AWS_SECRET_ACCESS_KEY": "mySecret",
-			"AWS_SESSION_TOKEN":     "myToken",
-		},
-		Secrets: map[string]string{
-			"SHARED_SECRET": "secretvalue",
-		},
-		ContainerNetwork: mockPauseContainerName,
-		LogOptions: dockerengine.RunLogOptions{
-			LinePrefix: "[bar] ",
+	expectedTask := orchestrator.Task{
+		Containers: map[string]orchestrator.ContainerDefinition{
+			"foo": {
+				ImageURI: "image1",
+				EnvVars: map[string]string{
+					"FOO_VAR":               "foo-value",
+					"AWS_ACCESS_KEY_ID":     "myID",
+					"AWS_SECRET_ACCESS_KEY": "mySecret",
+					"AWS_SESSION_TOKEN":     "myToken",
+				},
+				Secrets: map[string]string{
+					"SHARED_SECRET": "secretvalue",
+				},
+				Ports: map[string]string{
+					"80":  "8080",
+					"999": "9999",
+				},
+			},
+			"bar": {
+				ImageURI: "image2",
+				EnvVars: map[string]string{
+					"BAR_VAR":               "bar-value",
+					"AWS_ACCESS_KEY_ID":     "myID",
+					"AWS_SECRET_ACCESS_KEY": "mySecret",
+					"AWS_SESSION_TOKEN":     "myToken",
+				},
+				Secrets: map[string]string{
+					"SHARED_SECRET": "secretvalue",
+				},
+				Ports: map[string]string{
+					"777":   "7777",
+					"10000": "10000",
+				},
+			},
 		},
 	}
+
 	testCases := map[string]struct {
 		inputAppName       string
 		inputEnvName       string
@@ -356,7 +343,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 		inputPortOverrides []string
 		buildImagesError   error
 
-		setupMocks     func(m *runLocalExecuteMocks)
+		setupMocks     func(t *testing.T, m *runLocalExecuteMocks)
 		wantedWkldName string
 		wantedEnvName  string
 		wantedWkldType string
@@ -366,10 +353,10 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 			inputAppName:  testAppName,
 			inputWkldName: testWkldName,
 			inputEnvName:  testEnvName,
-			setupMocks: func(m *runLocalExecuteMocks) {
+			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
 				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(nil, testError)
 			},
-			wantedError: fmt.Errorf("get task definition: %w", testError),
+			wantedError: fmt.Errorf("get task: get task definition: %w", testError),
 		},
 		"error getting env vars due to bad override": {
 			inputAppName:  testAppName,
@@ -378,16 +365,16 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 			inputEnvOverrides: map[string]string{
 				"bad:OVERRIDE": "i fail",
 			},
-			setupMocks: func(m *runLocalExecuteMocks) {
+			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
 				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
 			},
-			wantedError: errors.New(`get env vars: parse env overrides: "bad:OVERRIDE" targets invalid container`),
+			wantedError: errors.New(`get task: get env vars: parse env overrides: "bad:OVERRIDE" targets invalid container`),
 		},
 		"error reading workload manifest": {
 			inputAppName:  testAppName,
 			inputWkldName: testWkldName,
 			inputEnvName:  testEnvName,
-			setupMocks: func(m *runLocalExecuteMocks) {
+			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
 				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
 				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
 				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return(nil, errors.New("some error"))
@@ -398,7 +385,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 			inputAppName:  testAppName,
 			inputWkldName: testWkldName,
 			inputEnvName:  testEnvName,
-			setupMocks: func(m *runLocalExecuteMocks) {
+			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
 				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
 				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
 				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
@@ -411,7 +398,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 			inputWkldName:    testWkldName,
 			inputEnvName:     testEnvName,
 			buildImagesError: errors.New("some error"),
-			setupMocks: func(m *runLocalExecuteMocks) {
+			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
 				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
 				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
 				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
@@ -419,190 +406,63 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 			},
 			wantedError: errors.New(`build images: some error`),
 		},
-		"error if fail to run pause container": {
+		"pulls errors from orchestrator": {
 			inputAppName:  testAppName,
 			inputWkldName: testWkldName,
 			inputEnvName:  testEnvName,
-			setupMocks: func(m *runLocalExecuteMocks) {
-				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
-				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
-				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
-				m.interpolator.EXPECT().Interpolate("").Return("", nil)
-				m.dockerEngine.EXPECT().Run(gomock.Any(), expectedRunPauseArgs).Return(errors.New("some error"))
-				m.dockerEngine.EXPECT().IsContainerRunning(mockPauseContainerName).Return(false, nil).AnyTimes()
-
-				m.prog.EXPECT().Start(gomock.Any()).Return().Times(6)
-				m.prog.EXPECT().Stop(gomock.Any()).Return().Times(3)
-				m.dockerEngine.EXPECT().Stop(gomock.Any()).Return(nil).Times(3)
-				m.dockerEngine.EXPECT().Rm(gomock.Any()).Return(nil).Times(3)
-			},
-			wantedError: errors.New(`run pause container: some error`),
-		},
-		"error if fail to check if pause container running": {
-			inputAppName:  testAppName,
-			inputWkldName: testWkldName,
-			inputEnvName:  testEnvName,
-			setupMocks: func(m *runLocalExecuteMocks) {
+			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
 				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
 				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
 				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
 				m.interpolator.EXPECT().Interpolate("").Return("", nil)
 
-				runCalled := make(chan struct{})
-				isRunningCalled := make(chan struct{})
-				m.dockerEngine.EXPECT().Run(gomock.Any(), expectedRunPauseArgs).DoAndReturn(func(ctx context.Context, opts *dockerengine.RunOptions) error {
-					close(runCalled)
-					<-isRunningCalled
-					return nil
-				})
-				m.dockerEngine.EXPECT().IsContainerRunning(mockPauseContainerName).DoAndReturn(func(name string) (bool, error) {
-					<-runCalled
-					defer close(isRunningCalled)
-					return false, errors.New("some error")
-				})
-
-				m.prog.EXPECT().Start(gomock.Any()).Return().Times(6)
-				m.prog.EXPECT().Stop(gomock.Any()).Return().Times(3)
-				m.dockerEngine.EXPECT().Stop(gomock.Any()).Return(nil).Times(3)
-				m.dockerEngine.EXPECT().Rm(gomock.Any()).Return(nil).Times(3)
-			},
-			wantedError: errors.New(`run pause container: check if container is running: some error`),
-		},
-		"error if fail to run service container": {
-			inputAppName:  testAppName,
-			inputWkldName: testWkldName,
-			inputEnvName:  testEnvName,
-			setupMocks: func(m *runLocalExecuteMocks) {
-				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
-				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
-				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
-				m.interpolator.EXPECT().Interpolate("").Return("", nil)
-
-				runCalled := make(chan struct{})
-				m.dockerEngine.EXPECT().Run(gomock.Any(), expectedRunPauseArgs).DoAndReturn(func(ctx context.Context, opts *dockerengine.RunOptions) error {
-					close(runCalled)
-					return nil
-				})
-				m.dockerEngine.EXPECT().IsContainerRunning(mockPauseContainerName).DoAndReturn(func(name string) (bool, error) {
-					<-runCalled
-					return true, nil
-				})
-				m.dockerEngine.EXPECT().Run(gomock.Any(), expectedRunFooArgs).Return(errors.New("some error"))
-				m.dockerEngine.EXPECT().Run(gomock.Any(), expectedRunBarArgs).Return(nil)
-
-				m.prog.EXPECT().Start(gomock.Any()).Return().Times(6)
-				m.prog.EXPECT().Stop(gomock.Any()).Return().Times(3)
-				m.dockerEngine.EXPECT().Stop(gomock.Any()).Return(nil).Times(3)
-				m.dockerEngine.EXPECT().Rm(gomock.Any()).Return(nil).Times(3)
-			},
-			wantedError: errors.New(`run container "foo": some error`),
-		},
-		"success": {
-			inputAppName:  testAppName,
-			inputWkldName: testWkldName,
-			inputEnvName:  testEnvName,
-			setupMocks: func(m *runLocalExecuteMocks) {
-				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
-				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
-				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
-				m.interpolator.EXPECT().Interpolate("").Return("", nil)
-
-				runCalled := make(chan struct{})
-				m.dockerEngine.EXPECT().Run(gomock.Any(), expectedRunPauseArgs).DoAndReturn(func(ctx context.Context, opts *dockerengine.RunOptions) error {
-					close(runCalled)
-					return nil
-				})
-				m.dockerEngine.EXPECT().IsContainerRunning(mockPauseContainerName).DoAndReturn(func(name string) (bool, error) {
-					<-runCalled
-					return true, nil
-				})
-				m.dockerEngine.EXPECT().Run(gomock.Any(), expectedRunFooArgs).Return(nil)
-				m.dockerEngine.EXPECT().Run(gomock.Any(), expectedRunBarArgs).Return(nil)
-
-				m.prog.EXPECT().Start(gomock.Any()).Return().Times(6)
-				m.prog.EXPECT().Stop(gomock.Any()).Return().Times(3)
-				m.dockerEngine.EXPECT().Stop(gomock.Any()).Return(nil).Times(3)
-				m.dockerEngine.EXPECT().Rm(gomock.Any()).Return(nil).Times(3)
+				errCh := make(chan error, 1)
+				m.orchestrator.StartFn = func() <-chan error {
+					errCh <- errors.New("some error")
+					return errCh
+				}
+				m.orchestrator.RunTaskFn = func(task orchestrator.Task) {
+					require.Equal(t, expectedTask, task)
+				}
+				m.orchestrator.StopFn = func() {
+					require.Len(t, errCh, 0)
+					close(errCh)
+				}
 			},
 		},
-		"ctrl-c, errors stopping and removing containers": {
+		"handles ctrl-c, waits to get all errors": {
 			inputAppName:  testAppName,
 			inputWkldName: testWkldName,
 			inputEnvName:  testEnvName,
-			setupMocks: func(m *runLocalExecuteMocks) {
+			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
 				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
 				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
 				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
 				m.interpolator.EXPECT().Interpolate("").Return("", nil)
 
-				runCalled := make(chan struct{})
-				stopCalled := make(chan struct{})
-				m.dockerEngine.EXPECT().Run(gomock.Any(), expectedRunPauseArgs).DoAndReturn(func(ctx context.Context, opts *dockerengine.RunOptions) error {
-					close(runCalled)
-					return nil
-				})
-				m.dockerEngine.EXPECT().IsContainerRunning(mockPauseContainerName).DoAndReturn(func(name string) (bool, error) {
-					<-runCalled
-					return true, nil
-				})
-				m.dockerEngine.EXPECT().Run(gomock.Any(), expectedRunFooArgs).DoAndReturn(func(ctx context.Context, opts *dockerengine.RunOptions) error {
+				errCh := make(chan error, 1)
+				m.orchestrator.StartFn = func() <-chan error {
+					return errCh
+				}
+				m.orchestrator.RunTaskFn = func(task orchestrator.Task) {
+					require.Equal(t, expectedTask, task)
 					syscall.Kill(syscall.Getpid(), syscall.SIGINT)
-					<-stopCalled
-					return errors.New("hi")
-				})
-				m.dockerEngine.EXPECT().Run(gomock.Any(), expectedRunBarArgs).Return(nil)
+				}
 
-				m.prog.EXPECT().Start(gomock.Any()).Return().Times(5)
-				m.prog.EXPECT().Stop(gomock.Any()).Return().Times(3)
-				m.dockerEngine.EXPECT().Stop(expectedRunFooArgs.ContainerName).DoAndReturn(func(id string) error {
-					close(stopCalled)
-					return errors.New("stop foo")
-				})
-				m.dockerEngine.EXPECT().Stop(expectedRunBarArgs.ContainerName).Return(nil)
-				m.dockerEngine.EXPECT().Rm(expectedRunBarArgs.ContainerName).Return(errors.New("rm bar"))
-				m.dockerEngine.EXPECT().Stop(expectedRunPauseArgs.ContainerName).Return(nil)
-				m.dockerEngine.EXPECT().Rm(expectedRunPauseArgs.ContainerName).Return(errors.New("rm stop"))
-			},
-			wantedError: fmt.Errorf("clean up %q: rm: rm bar\nclean up %q: stop: stop foo\nclean up %q: rm: rm stop", expectedRunBarArgs.ContainerName, expectedRunFooArgs.ContainerName, expectedRunPauseArgs.ContainerName),
-		},
-		"handles ctrl-c successfully, errors from running ignored": {
-			inputAppName:  testAppName,
-			inputWkldName: testWkldName,
-			inputEnvName:  testEnvName,
-			setupMocks: func(m *runLocalExecuteMocks) {
-				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
-				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
-				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
-				m.interpolator.EXPECT().Interpolate("").Return("", nil)
-
-				runCalled := make(chan struct{})
-				stopCalled := make(chan struct{})
-				m.dockerEngine.EXPECT().Run(gomock.Any(), expectedRunPauseArgs).DoAndReturn(func(ctx context.Context, opts *dockerengine.RunOptions) error {
-					close(runCalled)
-					return nil
-				})
-				m.dockerEngine.EXPECT().IsContainerRunning(mockPauseContainerName).DoAndReturn(func(name string) (bool, error) {
-					<-runCalled
-					return true, nil
-				})
-				m.dockerEngine.EXPECT().Run(gomock.Any(), expectedRunFooArgs).DoAndReturn(func(ctx context.Context, opts *dockerengine.RunOptions) error {
-					syscall.Kill(syscall.Getpid(), syscall.SIGINT)
-					<-stopCalled
-					return errors.New("hi")
-				})
-				m.dockerEngine.EXPECT().Run(gomock.Any(), expectedRunBarArgs).Return(nil)
-
-				m.prog.EXPECT().Start(gomock.Any()).Return().Times(6)
-				m.prog.EXPECT().Stop(gomock.Any()).Return().Times(3)
-				m.dockerEngine.EXPECT().Stop(expectedRunFooArgs.ContainerName).DoAndReturn(func(id string) error {
-					close(stopCalled)
-					return nil
-				})
-				m.dockerEngine.EXPECT().Rm(expectedRunFooArgs.ContainerName).Return(nil)
-				m.dockerEngine.EXPECT().Stop(expectedRunBarArgs.ContainerName).Return(nil)
-				m.dockerEngine.EXPECT().Rm(expectedRunBarArgs.ContainerName).Return(nil)
-				m.dockerEngine.EXPECT().Stop(expectedRunPauseArgs.ContainerName).Return(nil)
-				m.dockerEngine.EXPECT().Rm(expectedRunPauseArgs.ContainerName).Return(nil)
+				count := 1
+				m.orchestrator.StopFn = func() {
+					switch count {
+					case 1:
+						errCh <- errors.New("error from stopping after sigint")
+					case 2:
+						errCh <- errors.New("an error after calling Stop the first time")
+					case 3:
+						close(errCh)
+					default:
+						t.Fatalf("Stop() called %v times, only expected 3 times", count)
+					}
+					count++
+				}
 			},
 		},
 	}
@@ -622,8 +482,9 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 				dockerEngine:   mocks.NewMockdockerEngineRunner(ctrl),
 				repository:     mocks.NewMockrepositoryService(ctrl),
 				prog:           mocks.NewMockprogress(ctrl),
+				orchestrator:   &orchestratortest.Double{},
 			}
-			tc.setupMocks(m)
+			tc.setupMocks(t, m)
 			opts := runLocalOpts{
 				runLocalVars: runLocalVars{
 					appName:      tc.inputAppName,
@@ -663,16 +524,15 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 						Credentials: credentials.NewStaticCredentials("myID", "mySecret", "myToken"),
 					},
 				},
-				cmd:             m.mockRunner,
-				dockerEngine:    m.dockerEngine,
-				repository:      m.repository,
-				targetEnv:       &mockEnv,
-				targetApp:       &mockApp,
-				containerSuffix: mockContainerSuffix,
-				newColor: func() *color.Color {
-					return nil
+				cmd:          m.mockRunner,
+				dockerEngine: m.dockerEngine,
+				repository:   m.repository,
+				targetEnv:    &mockEnv,
+				targetApp:    &mockApp,
+				prog:         m.prog,
+				newOrchestrator: func() containerOrchestrator {
+					return m.orchestrator
 				},
-				prog: m.prog,
 			}
 			// WHEN
 			err := opts.Execute()
