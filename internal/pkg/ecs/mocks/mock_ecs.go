@@ -142,6 +142,21 @@ func (mr *MockecsClientMockRecorder) DescribeTasks(cluster, taskARNs interface{}
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeTasks", reflect.TypeOf((*MockecsClient)(nil).DescribeTasks), cluster, taskARNs)
 }
 
+// ListServicesByNamespace mocks base method.
+func (m *MockecsClient) ListServicesByNamespace(namespace string) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListServicesByNamespace", namespace)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListServicesByNamespace indicates an expected call of ListServicesByNamespace.
+func (mr *MockecsClientMockRecorder) ListServicesByNamespace(namespace interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListServicesByNamespace", reflect.TypeOf((*MockecsClient)(nil).ListServicesByNamespace), namespace)
+}
+
 // NetworkConfiguration mocks base method.
 func (m *MockecsClient) NetworkConfiguration(cluster, serviceName string) (*ecs.NetworkConfiguration, error) {
 	m.ctrl.T.Helper()
@@ -215,6 +230,26 @@ func (m *MockecsClient) ServiceRunningTasks(clusterName, serviceName string) ([]
 func (mr *MockecsClientMockRecorder) ServiceRunningTasks(clusterName, serviceName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServiceRunningTasks", reflect.TypeOf((*MockecsClient)(nil).ServiceRunningTasks), clusterName, serviceName)
+}
+
+// Services mocks base method.
+func (m *MockecsClient) Services(cluster string, services ...string) ([]*ecs.Service, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{cluster}
+	for _, a := range services {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Services", varargs...)
+	ret0, _ := ret[0].([]*ecs.Service)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Services indicates an expected call of Services.
+func (mr *MockecsClientMockRecorder) Services(cluster interface{}, services ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{cluster}, services...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Services", reflect.TypeOf((*MockecsClient)(nil).Services), varargs...)
 }
 
 // StopTasks mocks base method.

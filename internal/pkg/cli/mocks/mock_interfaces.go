@@ -1738,6 +1738,21 @@ func (m *MockecsLocalClient) EXPECT() *MockecsLocalClientMockRecorder {
 	return m.recorder
 }
 
+// ServiceConnectServices mocks base method.
+func (m *MockecsLocalClient) ServiceConnectServices(app, env, svc string) ([]*ecs.Service, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ServiceConnectServices", app, env, svc)
+	ret0, _ := ret[0].([]*ecs.Service)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ServiceConnectServices indicates an expected call of ServiceConnectServices.
+func (mr *MockecsLocalClientMockRecorder) ServiceConnectServices(app, env, svc interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServiceConnectServices", reflect.TypeOf((*MockecsLocalClient)(nil).ServiceConnectServices), app, env, svc)
+}
+
 // TaskDefinition mocks base method.
 func (m *MockecsLocalClient) TaskDefinition(app, env, svc string) (*ecs.TaskDefinition, error) {
 	m.ctrl.T.Helper()

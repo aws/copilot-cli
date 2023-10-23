@@ -15,6 +15,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	sdkecs "github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
+	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/docker/orchestrator"
@@ -206,6 +207,7 @@ type runLocalExecuteMocks struct {
 	secretsManager *mocks.MocksecretGetter
 	prog           *mocks.Mockprogress
 	orchestrator   *orchestratortest.Double
+	hostFinder     *hostFinderDouble
 }
 
 type mockProvider struct {
@@ -218,6 +220,17 @@ func (m *mockProvider) Retrieve() (credentials.Value, error) {
 
 func (m *mockProvider) IsExpired() bool {
 	return false
+}
+
+type hostFinderDouble struct {
+	HostsFn func(context.Context) ([]host, error)
+}
+
+func (d *hostFinderDouble) Hosts(ctx context.Context) ([]host, error) {
+	if d.HostsFn == nil {
+		return nil, nil
+	}
+	return d.HostsFn(ctx)
 }
 
 func TestRunLocalOpts_Execute(t *testing.T) {
@@ -342,6 +355,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 		inputEnvOverrides  map[string]string
 		inputPortOverrides []string
 		buildImagesError   error
+		inProxy            bool
 
 		setupMocks     func(t *testing.T, m *runLocalExecuteMocks)
 		wantedWkldName string
@@ -369,6 +383,20 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
 			},
 			wantedError: errors.New(`get task: get env vars: parse env overrides: "bad:OVERRIDE" targets invalid container`),
+		},
+		"error getting hosts to proxy to": {
+			inputAppName:  testAppName,
+			inputWkldName: testWkldName,
+			inputEnvName:  testEnvName,
+			inProxy:       true,
+			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
+				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
+				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
+				m.hostFinder.HostsFn = func(ctx context.Context) ([]host, error) {
+					return nil, fmt.Errorf("some error")
+				}
+			},
+			wantedError: errors.New(`find hosts to connect to: some error`),
 		},
 		"error reading workload manifest": {
 			inputAppName:  testAppName,
@@ -483,6 +511,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 				repository:     mocks.NewMockrepositoryService(ctrl),
 				prog:           mocks.NewMockprogress(ctrl),
 				orchestrator:   &orchestratortest.Double{},
+				hostFinder:     &hostFinderDouble{},
 			}
 			tc.setupMocks(t, m)
 			opts := runLocalOpts{
@@ -501,6 +530,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 							container: "9999",
 						},
 					},
+					proxy: tc.inProxy,
 				},
 				newInterpolator: func(app, env string) interpolator {
 					return m.interpolator
@@ -530,9 +560,8 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 				targetEnv:    &mockEnv,
 				targetApp:    &mockApp,
 				prog:         m.prog,
-				newOrchestrator: func() containerOrchestrator {
-					return m.orchestrator
-				},
+				orchestrator: m.orchestrator,
+				hostFinder:   m.hostFinder,
 			}
 			// WHEN
 			err := opts.Execute()
@@ -941,6 +970,116 @@ func TestRunLocalOpts_getEnvVars(t *testing.T) {
 			}
 			require.NoError(t, err)
 			require.Equal(t, tc.want, got)
+		})
+	}
+}
+
+func TestRunLocal_HostDiscovery(t *testing.T) {
+	type testMocks struct {
+		ecs *mocks.MockecsLocalClient
+	}
+
+	tests := map[string]struct {
+		setupMocks func(t *testing.T, m *testMocks)
+
+		wantHosts []host
+		wantError string
+	}{
+		"error getting services": {
+			setupMocks: func(t *testing.T, m *testMocks) {
+				m.ecs.EXPECT().ServiceConnectServices(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("some error"))
+			},
+			wantError: "get service connect services: some error",
+		},
+		"ignores non-primary deployments": {
+			setupMocks: func(t *testing.T, m *testMocks) {
+				m.ecs.EXPECT().ServiceConnectServices(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*awsecs.Service{
+					{
+						Deployments: []*sdkecs.Deployment{
+							{
+								Status: aws.String("ACTIVE"),
+								ServiceConnectConfiguration: &sdkecs.ServiceConnectConfiguration{
+									Enabled: aws.Bool(true),
+									Services: []*sdkecs.ServiceConnectService{
+										{
+											ClientAliases: []*sdkecs.ServiceConnectClientAlias{
+												{
+													DnsName: aws.String("old"),
+													Port:    aws.Int64(80),
+												},
+											},
+										},
+									},
+								},
+							},
+							{
+								Status: aws.String("PRIMARY"),
+								ServiceConnectConfiguration: &sdkecs.ServiceConnectConfiguration{
+									Enabled: aws.Bool(true),
+									Services: []*sdkecs.ServiceConnectService{
+										{
+											ClientAliases: []*sdkecs.ServiceConnectClientAlias{
+												{
+													DnsName: aws.String("primary"),
+													Port:    aws.Int64(80),
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+					{
+						Deployments: []*sdkecs.Deployment{
+							{
+								Status: aws.String("INACTIVE"),
+								ServiceConnectConfiguration: &sdkecs.ServiceConnectConfiguration{
+									Enabled: aws.Bool(true),
+									Services: []*sdkecs.ServiceConnectService{
+										{
+											ClientAliases: []*sdkecs.ServiceConnectClientAlias{
+												{
+													DnsName: aws.String("inactive"),
+													Port:    aws.Int64(80),
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				}, nil)
+			},
+			wantHosts: []host{
+				{
+					host: "primary",
+					port: "80",
+				},
+			},
+		},
+	}
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			m := &testMocks{
+				ecs: mocks.NewMockecsLocalClient(ctrl),
+			}
+			tc.setupMocks(t, m)
+
+			h := &hostDiscoverer{
+				ecs: m.ecs,
+			}
+
+			hosts, err := h.Hosts(context.Background())
+			if tc.wantError != "" {
+				require.EqualError(t, err, tc.wantError)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantHosts, hosts)
+			}
 		})
 	}
 }

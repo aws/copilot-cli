@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -46,7 +47,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
-	"golang.org/x/exp/slices"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -276,10 +276,13 @@ func (o *runLocalOpts) Execute() error {
 	}
 
 	if o.proxy {
-		_, err = o.hostFinder.Hosts(ctx)
+		hosts, err := o.hostFinder.Hosts(ctx)
 		if err != nil {
 			return fmt.Errorf("find hosts to connect to: %w", err)
 		}
+
+		// TODO(dannyrandall): inject into orchestrator and use in pause container
+		fmt.Printf("hosts: %+v\n", hosts)
 	}
 
 	mft, _, err := workloadManifest(&workloadManifestInput{
@@ -592,7 +595,7 @@ type hostDiscoverer struct {
 func (h *hostDiscoverer) Hosts(ctx context.Context) ([]host, error) {
 	svcs, err := h.ecs.ServiceConnectServices(h.app, h.env, h.wkld)
 	if err != nil {
-		return nil, fmt.Errorf("get service: %w", err)
+		return nil, fmt.Errorf("get service connect services: %w", err)
 	}
 
 	var hosts []host
@@ -615,8 +618,7 @@ func (h *hostDiscoverer) Hosts(ctx context.Context) ([]host, error) {
 		}
 	}
 
-	fmt.Printf("hosts: %+v\n", hosts)
-	return nil, nil
+	return hosts, nil
 }
 
 // BuildRunLocalCmd builds the command for running a workload locally
