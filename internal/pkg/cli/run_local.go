@@ -60,6 +60,10 @@ type containerOrchestrator interface {
 	Stop()
 }
 
+type hostFinder interface {
+	Hosts(context.Context) ([]host, error)
+}
+
 type runLocalVars struct {
 	wkldName      string
 	wkldType      string
@@ -67,27 +71,29 @@ type runLocalVars struct {
 	envName       string
 	envOverrides  map[string]string
 	portOverrides portOverrides
+	proxy         bool
 }
 
 type runLocalOpts struct {
 	runLocalVars
 
-	sel             deploySelector
-	ecsLocalClient  ecsLocalClient
-	ssm             secretGetter
-	secretsManager  secretGetter
-	sessProvider    sessionProvider
-	sess            *session.Session
-	envSess         *session.Session
-	targetEnv       *config.Environment
-	targetApp       *config.Application
-	store           store
-	ws              wsWlDirReader
-	cmd             execRunner
-	dockerEngine    dockerEngineRunner
-	repository      repositoryService
-	prog            progress
-	newOrchestrator func() containerOrchestrator
+	sel            deploySelector
+	ecsLocalClient ecsLocalClient
+	ssm            secretGetter
+	secretsManager secretGetter
+	sessProvider   sessionProvider
+	sess           *session.Session
+	envSess        *session.Session
+	targetEnv      *config.Environment
+	targetApp      *config.Application
+	store          store
+	ws             wsWlDirReader
+	cmd            execRunner
+	dockerEngine   dockerEngineRunner
+	repository     repositoryService
+	prog           progress
+	orchestrator   containerOrchestrator
+	hostFinder     hostFinder
 
 	buildContainerImages func(mft manifest.DynamicWorkload) (map[string]string, error)
 	configureClients     func(o *runLocalOpts) error
@@ -153,6 +159,23 @@ func newRunLocalOpts(vars runLocalVars) (*runLocalOpts, error) {
 		}
 		repoName := clideploy.RepoName(o.appName, o.wkldName)
 		o.repository = repository.NewWithURI(ecr.New(defaultSessEnvRegion), repoName, resources.RepositoryURLs[o.wkldName])
+
+		idPrefix := fmt.Sprintf("%s-%s-%s-", opts.appName, opts.envName, opts.wkldName)
+		colorGen := termcolor.ColorGenerator()
+		o.orchestrator = orchestrator.New(opts.dockerEngine, idPrefix, func(name string, ctr orchestrator.ContainerDefinition) dockerengine.RunLogOptions {
+			return dockerengine.RunLogOptions{
+				Color:      colorGen(),
+				Output:     os.Stderr,
+				LinePrefix: fmt.Sprintf("[%s] ", name),
+			}
+		})
+
+		o.hostFinder = &hostDiscoverer{
+			app:  o.appName,
+			env:  o.envName,
+			wkld: o.wkldName,
+			ecs:  ecs.New(o.sess), // TODO update env manager role to support actions
+		}
 		return nil
 	}
 	opts.buildContainerImages = func(mft manifest.DynamicWorkload) (map[string]string, error) {
@@ -184,18 +207,6 @@ func newRunLocalOpts(vars runLocalVars) (*runLocalOpts, error) {
 			containerURIs[name] = info.RepoTags[0]
 		}
 		return containerURIs, nil
-	}
-	opts.newOrchestrator = func() containerOrchestrator {
-		idPrefix := fmt.Sprintf("%s-%s-%s-", opts.appName, opts.envName, opts.wkldName)
-		colorGen := termcolor.ColorGenerator()
-
-		return orchestrator.New(opts.dockerEngine, idPrefix, func(name string, ctr orchestrator.ContainerDefinition) dockerengine.RunLogOptions {
-			return dockerengine.RunLogOptions{
-				Color:      colorGen(),
-				Output:     os.Stderr,
-				LinePrefix: fmt.Sprintf("[%s] ", name),
-			}
-		})
 	}
 	return opts, nil
 }
@@ -264,16 +275,11 @@ func (o *runLocalOpts) Execute() error {
 		return fmt.Errorf("get task: %w", err)
 	}
 
-	// TODO add proxy flag
-	hd := &hostDiscoverer{
-		app:  o.appName,
-		env:  o.envName,
-		wkld: o.wkldName,
-		ecs:  ecs.New(o.sess), // TODO update env manager role to support actions
-	}
-	_, err = hd.Hosts(ctx)
-	if err != nil {
-		return fmt.Errorf("find hosts to connect to: %w", err)
+	if o.proxy {
+		_, err = o.hostFinder.Hosts(ctx)
+		if err != nil {
+			return fmt.Errorf("find hosts to connect to: %w", err)
+		}
 	}
 
 	mft, _, err := workloadManifest(&workloadManifestInput{
@@ -305,13 +311,11 @@ func (o *runLocalOpts) Execute() error {
 		task.Containers[name] = ctr
 	}
 
-	orch := o.newOrchestrator()
-
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 
-	errCh := orch.Start()
-	orch.RunTask(task)
+	errCh := o.orchestrator.Start()
+	o.orchestrator.RunTask(task)
 
 	for {
 		select {
@@ -323,10 +327,10 @@ func (o *runLocalOpts) Execute() error {
 			}
 
 			fmt.Printf("error: %s\n", err)
-			orch.Stop()
+			o.orchestrator.Stop()
 		case <-sigCh:
 			signal.Stop(sigCh)
-			orch.Stop()
+			o.orchestrator.Stop()
 		}
 	}
 }
@@ -640,5 +644,6 @@ func BuildRunLocalCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
 	cmd.Flags().Var(&vars.portOverrides, portOverrideFlag, portOverridesFlagDescription)
 	cmd.Flags().StringToStringVar(&vars.envOverrides, envVarOverrideFlag, nil, envVarOverrideFlagDescription)
+	cmd.Flags().BoolVar(&vars.proxy, proxyFlag, false, proxyFlagDescription)
 	return cmd
 }
