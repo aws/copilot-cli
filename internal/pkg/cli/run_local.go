@@ -16,6 +16,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/session"
+	sdkecs "github.com/aws/aws-sdk-go/service/ecs"
 	sdksecretsmanager "github.com/aws/aws-sdk-go/service/secretsmanager"
 	sdkssm "github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/cmd/copilot/template"
@@ -45,6 +46,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
+	"golang.org/x/exp/slices"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -577,19 +579,13 @@ type host struct {
 }
 
 type hostDiscoverer struct {
-	rg   resourceGetter
 	ecs  ecsLocalClient
 	app  string
 	env  string
 	wkld string
-	// rg := resourcegroups.New(o.sess) // TODO move to newRunLocalOpts()
 }
 
 func (h *hostDiscoverer) Hosts(ctx context.Context) ([]host, error) {
-	// rds instances
-	// elasticcache instances
-	// ecs services via
-	// ecs services via SC
 	svcs, err := h.ecs.ServiceConnectServices(h.app, h.env, h.wkld)
 	if err != nil {
 		return nil, fmt.Errorf("get service: %w", err)
@@ -597,15 +593,20 @@ func (h *hostDiscoverer) Hosts(ctx context.Context) ([]host, error) {
 
 	var hosts []host
 	for _, svc := range svcs {
-		// TODO is there only one deployment?
-		for _, dep := range svc.Deployments {
-			for _, sc := range dep.ServiceConnectConfiguration.Services {
-				for _, alias := range sc.ClientAliases {
-					hosts = append(hosts, host{
-						host: aws.StringValue(alias.DnsName),
-						port: strconv.Itoa(int(aws.Int64Value(alias.Port))),
-					})
-				}
+		// find the primary deployment with service connect enabled
+		idx := slices.IndexFunc(svc.Deployments, func(dep *sdkecs.Deployment) bool {
+			return aws.StringValue(dep.Status) == "PRIMARY" && aws.BoolValue(dep.ServiceConnectConfiguration.Enabled)
+		})
+		if idx == -1 {
+			continue
+		}
+
+		for _, sc := range svc.Deployments[idx].ServiceConnectConfiguration.Services {
+			for _, alias := range sc.ClientAliases {
+				hosts = append(hosts, host{
+					host: aws.StringValue(alias.DnsName),
+					port: strconv.Itoa(int(aws.Int64Value(alias.Port))),
+				})
 			}
 		}
 	}
