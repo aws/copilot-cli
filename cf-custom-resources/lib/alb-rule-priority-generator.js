@@ -104,7 +104,7 @@ const calculateNextRulePriority = async function (listenerArn) {
 };
 
 /**
- * Lists all the existing rules for a ALB Listener, finds the min of their root rule
+ * Lists all the existing rules for an ALB Listener, finds the min of their root rule
  * priorities, and then returns min - 1.
  *
  * @param {string} listenerArn the ARN of the ALB listener.
