@@ -105,6 +105,9 @@ func (e *ECS) Service(clusterName, serviceName string) (*Service, error) {
 	if err != nil {
 		return nil, err
 	}
+	if aws.StringValue(svcs[0].ServiceName) != serviceName {
+		return nil, fmt.Errorf("cannot find service %s", serviceName)
+	}
 
 	return svcs[0], nil
 }
@@ -123,7 +126,7 @@ func (e *ECS) Services(cluster string, services ...string) ([]*Service, error) {
 		case err != nil:
 			return nil, fmt.Errorf("describe services: %w", err)
 		case len(resp.Failures) > 0:
-			return nil, fmt.Errorf("describe services: %s", resp.Failures[0].GoString())
+			return nil, fmt.Errorf("describe services: %s", resp.Failures[0].String())
 		}
 
 		for j := range resp.Services {
@@ -136,7 +139,6 @@ func (e *ECS) Services(cluster string, services ...string) ([]*Service, error) {
 }
 
 func (e *ECS) ListServicesByNamespace(namespace string) ([]string, error) {
-	// TODO ensure ListServicesByNamesspace doesn't return duplicates?
 	var arns []string
 	err := e.client.ListServicesByNamespacePages(&ecs.ListServicesByNamespaceInput{
 		Namespace: aws.String(namespace),
