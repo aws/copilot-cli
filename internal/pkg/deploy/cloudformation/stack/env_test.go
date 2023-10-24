@@ -134,6 +134,9 @@ func TestEnv_Template(t *testing.T) {
 
 		// GIVEN
 		inEnvConfig := mockDeployEnvironmentInput()
+		inEnvConfig.App.Domain = "example.com"
+		inEnvConfig.App.RootDomainHostedZoneId = "Z00ABC"
+		inEnvConfig.App.AppDomainHostedZoneId = "Z00DEF"
 		mockParser := mocks.NewMockembedFS(ctrl)
 		mockParser.EXPECT().Read(gomock.Any()).Return(&template.Content{Buffer: bytes.NewBufferString("data")}, nil).AnyTimes()
 		mockParser.EXPECT().ParseEnv(gomock.Any()).DoAndReturn(func(data *template.EnvOpts) (*template.Content, error) {
@@ -170,6 +173,11 @@ func TestEnv_Template(t *testing.T) {
 				ArtifactBucketARN:  "arn:aws:s3:::mockbucket",
 				SerializedManifest: "name: env\ntype: Environment\n",
 				ForceUpdateID:      "mockPreviousForceUpdateID",
+				DelegateDNS:        true,
+				HostedZones: &template.HostedZones{
+					RootDomainHostedZoneId: "Z00ABC",
+					AppDomainHostedZoneId:  "Z00DEF",
+				},
 			}, data)
 			return &template.Content{Buffer: bytes.NewBufferString("mockTemplate")}, nil
 		})
@@ -1274,8 +1282,8 @@ func mockDeployEnvironmentInput() *EnvConfig {
 				Type: aws.String("Environment"),
 			},
 		},
-		RawMft: []byte(`name: env
+		RawMft: `name: env
 type: Environment
-`),
+`,
 	}
 }

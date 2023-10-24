@@ -139,6 +139,7 @@ func TestStaticSiteDeployer_UploadArtifacts(t *testing.T) {
 
 func TestStaticSiteDeployer_stackConfiguration(t *testing.T) {
 	tests := map[string]struct {
+		setUpMocks   func(m *mocks.MockdomainHostedZoneGetter)
 		deployer     *staticSiteDeployer
 		wantErr      string
 		wantTemplate string
@@ -330,6 +331,9 @@ func TestStaticSiteDeployer_stackConfiguration(t *testing.T) {
 			},
 		},
 		"success with app alias": {
+			setUpMocks: func(m *mocks.MockdomainHostedZoneGetter) {
+				m.EXPECT().PublicDomainHostedZoneID(fmt.Sprintf("%s.%s", "mockApp", "example.com")).Return("Z00AB", nil).Return("Z00AB", nil)
+			},
 			deployer: &staticSiteDeployer{
 				svcDeployer: &svcDeployer{
 					workloadDeployer: &workloadDeployer{
@@ -402,6 +406,9 @@ func TestStaticSiteDeployer_stackConfiguration(t *testing.T) {
 			},
 		},
 		"success with overrider": {
+			setUpMocks: func(m *mocks.MockdomainHostedZoneGetter) {
+				m.EXPECT().PublicDomainHostedZoneID(fmt.Sprintf("%s.%s", "mockApp", "example.com")).Return("Z00AB", nil)
+			},
 			deployer: &staticSiteDeployer{
 				svcDeployer: &svcDeployer{
 					workloadDeployer: &workloadDeployer{
@@ -443,6 +450,13 @@ func TestStaticSiteDeployer_stackConfiguration(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			if tc.setUpMocks != nil {
+				mocks := mocks.NewMockdomainHostedZoneGetter(ctrl)
+				tc.setUpMocks(mocks)
+				tc.deployer.domainHostedZoneGetter = mocks
+			}
 			out, gotErr := tc.deployer.stackConfiguration(&StackRuntimeConfiguration{})
 			if tc.wantErr != "" {
 				require.EqualError(t, gotErr, tc.wantErr)

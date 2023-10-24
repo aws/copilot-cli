@@ -45,30 +45,30 @@ $ copilot env init --import-cert-arns arn:aws:acm:us-east-1:123456789012:certifi
 For example, one of the certificates has `example.com` as its domain and `*.example.com` as a subject alternative name (SAN):
 
 ???+ example "Sample certificate"
-```json
-{
-  "Certificate": {
-    "CertificateArn": "arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789012",
-    "DomainName": "example.com",
-    "SubjectAlternativeNames": [
-      "*.example.com"
-    ],
-    "DomainValidationOptions": [
-      {
+    ```json
+    {
+      "Certificate": {
+        "CertificateArn": "arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789012",
         "DomainName": "example.com",
-        "ValidationDomain": "example.com",
-        "ValidationStatus": "SUCCESS",
-        "ResourceRecord": {
-          "Name": "_45c8aa9ac85568e905a6c3852e62ebc6.example.com.",
-          "Type": "CNAME",
-          "Value": "_f8be688050b7d23184863690b3d4baa8.xrchbtpdjs.acm-validations.aws."
-        },
-        "ValidationMethod": "DNS"
-      }
-    ],
-    ...
-}
-```
+        "SubjectAlternativeNames": [
+          "*.example.com"
+        ],
+        "DomainValidationOptions": [
+          {
+            "DomainName": "example.com",
+            "ValidationDomain": "example.com",
+            "ValidationStatus": "SUCCESS",
+            "ResourceRecord": {
+              "Name": "_45c8aa9ac85568e905a6c3852e62ebc6.example.com.",
+              "Type": "CNAME",
+              "Value": "_f8be688050b7d23184863690b3d4baa8.xrchbtpdjs.acm-validations.aws."
+            },
+            "ValidationMethod": "DNS"
+          }
+        ],
+        ...
+    }
+    ```
 Then, you need to specify aliases that are valid against any of the imported certificates in a [Load Balanced Web Service manifest](../docs/manifest/lb-web-service.en.md):
 ```yaml
 name: frontend
@@ -81,17 +81,17 @@ http:
     Specifying `http.alias` in service manifests is required for deploying services to an environment with imported certificates.
 After the deployment, add the DNS of the Application Load Balancer (ALB) created in the environment as an A record to where your alias domain is hosted. For example, if your alias domain is hosted in Route 53:
 ???+ example "Sample Route 53 A Record"
-```json
-{
-  "Name": "v1.example.com.",
-  "Type": "A",
-  "AliasTarget": {
-    "HostedZoneId": "Z1H1FL3HABSF5",
-    "DNSName": "demo-publi-1d328e3bqag4r-1914228528.us-west-2.elb.amazonaws.com.",
-    "EvaluateTargetHealth": true
-  }
-}
-```
+    ```json
+    {
+      "Name": "v1.example.com.",
+      "Type": "A",
+      "AliasTarget": {
+        "HostedZoneId": "Z1H1FL3HABSF5",
+        "DNSName": "demo-publi-1d328e3bqag4r-1914228528.us-west-2.elb.amazonaws.com.",
+        "EvaluateTargetHealth": true
+      }
+    }
+    ```
 Now, your service has HTTPS enabled using your own certificates and can be accessed via `https://v1.example.com`!
 
 ## Controlling Order of Deployments in a Pipeline
@@ -102,30 +102,30 @@ Prior to v1.18, all services and jobs defined in your git repository got deploye
 For example, given a monorepo with three microservices: `frontend`, `orders`, `warehouse`. All of them got deployed at the same time
 to the `test` and `prod` environments:
 === "Pipeline"
-![Rendered pipeline](../assets/images/pipeline-default.png)  
+    ![Rendered pipeline](../assets/images/pipeline-default.png)  
 === "Pipeline Manifest"
-```yaml
-name: release
-source:
-  provider: GitHub
-  properties:
-    branch: main
-    repository: https://github.com/user/repo
-stages:
-- name: test
-- name: prod
-  requires_approval: true
-```
+    ```yaml
+    name: release
+    source:
+      provider: GitHub
+      properties:
+        branch: main
+        repository: https://github.com/user/repo
+    stages:
+    - name: test
+    - name: prod
+      requires_approval: true
+    ```
 === "Repository Layout"
-```
-copilot
-├── frontend
-│   └── manifest.yml
-├── orders
-│   └── manifest.yml
-└── warehouse
-    └── manifest.yml
-```
+    ```
+    copilot
+    ├── frontend
+    │   └── manifest.yml
+    ├── orders
+    │   └── manifest.yml
+    └── warehouse
+        └── manifest.yml
+    ```
 Starting with v1.18, you can control the order of your deployments in your pipeline with the new [`deployments` field](../docs/manifest/pipeline.en.md#stages-deployments).  
 ```yaml
 stages:

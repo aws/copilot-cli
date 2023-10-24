@@ -327,6 +327,15 @@ Resources:
                 Resource:
                   - arn:aws:s3:::{{.AssetMappingFileBucket}}/{{.AssetMappingFilePath}}
                   - arn:aws:s3:::{{.AssetMappingFileBucket}}/local-assets/*
+              - Effect: Allow
+                Action: kms:Decrypt
+                Resource:
+                  Fn::ImportValue:
+                    !Sub "${AppName}-ArtifactKey"
+                Condition:
+                  StringEquals:
+                    kms:EncryptionContext:aws:s3:arn: arn:aws:s3:::{{.AssetMappingFileBucket}}
+                    kms:ViaService: !Sub 's3.${AWS::Region}.amazonaws.com'
         - PolicyName: ServiceBucketAccess
           PolicyDocument:
             Version: 2012-10-17
@@ -407,6 +416,10 @@ Resources:
       RootDNSRole: {{ .AppDNSDelegationRole }}
       DomainName:  {{ .AppDNSName }}
       Aliases: {{ if .StaticSiteAlias }} [{{ quote .StaticSiteAlias }}] {{ else }} [] {{ end }}
+      {{- if .HostedZones}}
+      RootHostedZoneId: {{.HostedZones.RootDomainHostedZoneId}}
+      AppHostedZoneId: {{.HostedZones.AppDomainHostedZoneId}}
+      {{- end}}
 
   CustomDomainFunction:
     Type: AWS::Lambda::Function
@@ -478,6 +491,10 @@ Resources:
       DomainName:  {{ .AppDNSName }}
       IsCloudFrontCertificate: true
       Aliases: {{ if .StaticSiteAlias }} [{{ quote .StaticSiteAlias }}] {{ else }} [] {{ end }}
+      {{- if .HostedZones}}
+      RootHostedZoneId: {{.HostedZones.RootDomainHostedZoneId}}
+      AppHostedZoneId: {{.HostedZones.AppDomainHostedZoneId}}
+      {{- end}}
 
   CertificateValidationFunction:
     Type: AWS::Lambda::Function
@@ -562,6 +579,8 @@ Resources:
       ManagedPolicyArns:
         - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
 {{- end}}
+
+{{include "addons" . | indent 2}}
 
 Outputs:
   CloudFrontDistributionDomainName:

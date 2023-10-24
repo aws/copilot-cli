@@ -6,7 +6,7 @@ const ATTEMPTS_VALIDATION_OPTIONS_READY = 10;
 const ATTEMPTS_RECORD_SETS_CHANGE = 10;
 const DELAY_RECORD_SETS_CHANGE_IN_S = 30;
 
-let envHostedZoneID, appName, envName, serviceName, domainTypes, rootDNSRole, domainName;
+let rootHostedZoneID,appHostedZoneID,envHostedZoneID, appName, envName, serviceName, domainTypes, rootDNSRole, domainName;
 let defaultSleep = function (ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 };
@@ -157,6 +157,8 @@ exports.handler = async function (event, context) {
   const aliases = new Set(props.Aliases);
 
   // Initialize global variables.
+  rootHostedZoneID = props.RootHostedZoneId;
+  appHostedZoneID = props.AppHostedZoneId;
   envHostedZoneID = props.EnvHostedZoneId;
   envName = props.EnvName;
   appName = props.AppName;
@@ -444,17 +446,23 @@ async function domainResources(alias) {
     };
   }
   if (domainTypes.AppDomainZone.regex.test(alias)) {
+    if (!appHostedZoneID){
+      appHostedZoneID = await hostedZoneID.app()
+    }
     return {
       domain: domainTypes.AppDomainZone.domain,
       route53Client: clients.app.route53(),
-      hostedZoneID: await hostedZoneID.app(),
+      hostedZoneID: appHostedZoneID,
     };
   }
   if (domainTypes.RootDomainZone.regex.test(alias)) {
+    if (!rootHostedZoneID){
+      rootHostedZoneID = await hostedZoneID.root()
+    }
     return {
       domain: domainTypes.RootDomainZone.domain,
       route53Client: clients.root.route53(),
-      hostedZoneID: await hostedZoneID.root(),
+      hostedZoneID: rootHostedZoneID,
     };
   }
   throw new UnrecognizedDomainTypeError(`unrecognized domain type for ${alias}`);

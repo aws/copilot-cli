@@ -90,7 +90,8 @@ const createSubdomainInRoot = async function (
   domainName,
   subDomain,
   nameServers,
-  rootDnsRole
+  rootDnsRole,
+  hostedZoneId
 ) {
   const route53 = new aws.Route53({
     credentials: new aws.ChainableTemporaryCredentials({
@@ -98,7 +99,7 @@ const createSubdomainInRoot = async function (
       masterCredentials: new aws.EnvironmentCredentials("AWS"),
     }),
   });
-
+  if (!hostedZoneId) {
   const hostedZones = await route53
     .listHostedZonesByName({
       DNSName: domainName,
@@ -115,8 +116,8 @@ const createSubdomainInRoot = async function (
 
   // HostedZoneIDs are of the form /hostedzone/1234455, but the actual
   // ID is after the last slash.
-  const hostedZoneId = domainHostedZone.Id.split("/").pop();
-
+  hostedZoneId = domainHostedZone.Id.split("/").pop();
+  }
   const changeBatch = await route53
     .changeResourceRecordSets({
       ChangeBatch: {
@@ -158,7 +159,8 @@ const deleteSubdomainInRoot = async function (
   requestId,
   domainName,
   subDomain,
-  rootDnsRole
+  rootDnsRole,
+  hostedZoneId
 ) {
   const route53 = new aws.Route53({
     credentials: new aws.ChainableTemporaryCredentials({
@@ -166,7 +168,7 @@ const deleteSubdomainInRoot = async function (
       masterCredentials: new aws.EnvironmentCredentials("AWS"),
     }),
   });
-
+  if (!hostedZoneId) {
   const hostedZones = await route53
     .listHostedZonesByName({
       DNSName: domainName,
@@ -183,8 +185,8 @@ const deleteSubdomainInRoot = async function (
 
   // HostedZoneIDs are of the form /hostedzone/1234455, but the actual
   // ID is after the last slash.
-  const hostedZoneId = domainHostedZone.Id.split("/").pop();
-
+  hostedZoneId = domainHostedZone.Id.split("/").pop();
+  }
   // Find the recordsets for this subdomain, and then remove it
   // from the hosted zone.
   const recordSets = await route53
@@ -275,7 +277,8 @@ exports.domainDelegationHandler = async function (event, context) {
           props.DomainName,
           props.SubdomainName,
           props.NameServers,
-          props.RootDNSRole
+          props.RootDNSRole,
+          props.RootHostedZoneId
         );
         break;
       case "Delete":
@@ -283,7 +286,8 @@ exports.domainDelegationHandler = async function (event, context) {
           event.RequestId,
           props.DomainName,
           props.SubdomainName,
-          props.RootDNSRole
+          props.RootDNSRole,
+          props.RootHostedZoneId
         );
         break;
       default:

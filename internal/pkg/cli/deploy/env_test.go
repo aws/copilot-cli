@@ -44,8 +44,9 @@ type envDeployerMocks struct {
 	stackDescribers  map[string]*mocks.MockstackDescriber
 	ws               *mocks.MockWorkspaceAddonsReaderPathGetter
 
-	parseAddons func() (stackBuilder, error)
-	addons      *mocks.MockstackBuilder
+	parseAddons            func() (stackBuilder, error)
+	addons                 *mocks.MockstackBuilder
+	domainHostedZoneGetter *mocks.MockdomainHostedZoneGetter
 }
 
 func TestEnvDeployer_UploadArtifacts(t *testing.T) {
@@ -392,7 +393,9 @@ func TestEnvDeployer_GenerateCloudFormationTemplate(t *testing.T) {
 	)
 	mockError := errors.New("some error")
 	mockApp := &config.Application{
-		Name: mockAppName,
+		Name:               mockAppName,
+		Domain:             "example.com",
+		DomainHostedZoneID: "v1.example.com",
 	}
 	testCases := map[string]struct {
 		inManifest manifest.Environment
@@ -417,6 +420,7 @@ func TestEnvDeployer_GenerateCloudFormationTemplate(t *testing.T) {
 				m.parseAddons = func() (stackBuilder, error) {
 					return nil, &addon.ErrAddonsNotFound{}
 				}
+				m.domainHostedZoneGetter.EXPECT().PublicDomainHostedZoneID(fmt.Sprintf("%s.%s", mockAppName, mockApp.Domain)).Return("Z00ABC", nil)
 				m.envDeployer.EXPECT().DeployedEnvironmentParameters(gomock.Any(), gomock.Any()).Return(nil, mockError)
 			},
 			wantedError: errors.New("describe environment stack parameters: some error"),
@@ -431,6 +435,7 @@ func TestEnvDeployer_GenerateCloudFormationTemplate(t *testing.T) {
 				}
 				m.envDeployer.EXPECT().DeployedEnvironmentParameters(gomock.Any(), gomock.Any()).Return(nil, nil)
 				m.envDeployer.EXPECT().ForceUpdateOutputID(gomock.Any(), gomock.Any()).Return("", mockError)
+				m.domainHostedZoneGetter.EXPECT().PublicDomainHostedZoneID(fmt.Sprintf("%s.%s", mockAppName, mockApp.Domain)).Return("Z00ABC", nil)
 			},
 			wantedError: errors.New("retrieve environment stack force update ID: some error"),
 		},
@@ -445,6 +450,7 @@ func TestEnvDeployer_GenerateCloudFormationTemplate(t *testing.T) {
 				m.envDeployer.EXPECT().DeployedEnvironmentParameters(gomock.Any(), gomock.Any()).Return(nil, nil)
 				m.envDeployer.EXPECT().ForceUpdateOutputID(gomock.Any(), gomock.Any()).Return("", nil)
 				m.stackSerializer.EXPECT().Template().Return("", mockError)
+				m.domainHostedZoneGetter.EXPECT().PublicDomainHostedZoneID(fmt.Sprintf("%s.%s", mockAppName, mockApp.Domain)).Return("Z00ABC", nil)
 			},
 			wantedError: errors.New("generate stack template: some error"),
 		},
@@ -460,6 +466,7 @@ func TestEnvDeployer_GenerateCloudFormationTemplate(t *testing.T) {
 				m.envDeployer.EXPECT().ForceUpdateOutputID(gomock.Any(), gomock.Any()).Return("", nil)
 				m.stackSerializer.EXPECT().Template().Return("", nil)
 				m.stackSerializer.EXPECT().SerializedParameters().Return("", mockError)
+				m.domainHostedZoneGetter.EXPECT().PublicDomainHostedZoneID(fmt.Sprintf("%s.%s", mockAppName, mockApp.Domain)).Return("Z00ABC", nil)
 			},
 			wantedError: errors.New("generate stack template parameters: some error"),
 		},
@@ -499,6 +506,7 @@ func TestEnvDeployer_GenerateCloudFormationTemplate(t *testing.T) {
 				m.envDeployer.EXPECT().ForceUpdateOutputID(gomock.Any(), gomock.Any()).Return("", nil)
 				m.stackSerializer.EXPECT().Template().Return("aloo", nil)
 				m.stackSerializer.EXPECT().SerializedParameters().Return("gobi", nil)
+				m.domainHostedZoneGetter.EXPECT().PublicDomainHostedZoneID(fmt.Sprintf("%s.%s", mockAppName, mockApp.Domain)).Return("Z00ABC", nil).Return("Z00ABC", nil)
 			},
 
 			wantedTemplate: "aloo",
@@ -518,6 +526,7 @@ func TestEnvDeployer_GenerateCloudFormationTemplate(t *testing.T) {
 				m.envDeployer.EXPECT().ForceUpdateOutputID(gomock.Any(), gomock.Any()).Return("", nil)
 				m.stackSerializer.EXPECT().Template().Return("aloo", nil)
 				m.stackSerializer.EXPECT().SerializedParameters().Return("gobi", nil)
+				m.domainHostedZoneGetter.EXPECT().PublicDomainHostedZoneID(fmt.Sprintf("%s.%s", mockAppName, mockApp.Domain)).Return("Z00ABC", nil)
 			},
 
 			wantedTemplate: "aloo",
@@ -530,9 +539,10 @@ func TestEnvDeployer_GenerateCloudFormationTemplate(t *testing.T) {
 			defer ctrl.Finish()
 
 			m := &envDeployerMocks{
-				appCFN:          mocks.NewMockappResourcesGetter(ctrl),
-				envDeployer:     mocks.NewMockenvironmentDeployer(ctrl),
-				stackSerializer: cfnmocks.NewMockStackConfiguration(ctrl),
+				appCFN:                 mocks.NewMockappResourcesGetter(ctrl),
+				envDeployer:            mocks.NewMockenvironmentDeployer(ctrl),
+				stackSerializer:        cfnmocks.NewMockStackConfiguration(ctrl),
+				domainHostedZoneGetter: mocks.NewMockdomainHostedZoneGetter(ctrl),
 			}
 			tc.setUpMocks(m, ctrl)
 			d := envDeployer{
@@ -546,7 +556,8 @@ func TestEnvDeployer_GenerateCloudFormationTemplate(t *testing.T) {
 				newStack: func(_ *cfnstack.EnvConfig, _ string, _ []*awscfn.Parameter) (cloudformation.StackConfiguration, error) {
 					return m.stackSerializer, nil
 				},
-				parseAddons: m.parseAddons,
+				parseAddons:            m.parseAddons,
+				domainHostedZoneGetter: m.domainHostedZoneGetter,
 			}
 			actual, err := d.GenerateCloudFormationTemplate(&DeployEnvironmentInput{
 				Manifest: &tc.inManifest,
