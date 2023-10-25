@@ -112,7 +112,7 @@ func (e *ECS) Service(clusterName, serviceName string) (*Service, error) {
 	return svcs[0], nil
 }
 
-// Services calls the ECS API and returns all of the services running in cluster.
+// Services calls the ECS API and returns all of the specified services running in cluster.
 func (e *ECS) Services(cluster string, services ...string) ([]*Service, error) {
 	var svcs []*Service
 

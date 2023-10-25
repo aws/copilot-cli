@@ -598,7 +598,7 @@ func TestClient_ServiceConnectServices(t *testing.T) {
 				}, nil)
 				m.ecsClient.EXPECT().ListServicesByNamespace("namespace").Return(nil, errors.New("some error"))
 			},
-			wantedError: fmt.Errorf(`get services in same namespace: some error`),
+			wantedError: fmt.Errorf(`get services in the same namespace: some error`),
 		},
 		"error getting namespaced services, svc arn removed": {
 			setupMocks: func(m clientMocks) {

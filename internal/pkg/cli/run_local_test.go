@@ -565,14 +565,14 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 				unmarshal: func(b []byte) (manifest.DynamicWorkload, error) {
 					return m.mockMft, nil
 				},
-				configureClients: func(o *runLocalOpts) error {
+				configureClients: func() error {
 					return nil
 				},
 				buildContainerImages: func(mft manifest.DynamicWorkload) (map[string]string, error) {
 					return mockContainerURIs, tc.buildImagesError
 				},
 				ws:             m.ws,
-				ecsLocalClient: m.ecsLocalClient,
+				ecsClient:      m.ecsLocalClient,
 				ssm:            m.ssm,
 				secretsManager: m.secretsManager,
 				store:          m.store,

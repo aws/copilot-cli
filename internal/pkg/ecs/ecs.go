@@ -137,7 +137,7 @@ func (c Client) Service(app, env, svc string) (*ecs.Service, error) {
 }
 
 // ServiceConnectServices returns a list of services that are in the same
-// service connect namespace as the given service.
+// service connect namespace as the given service, except for itself.
 func (c Client) ServiceConnectServices(app, env, svc string) ([]*ecs.Service, error) {
 	s, err := c.Service(app, env, svc)
 	if err != nil {
@@ -149,7 +149,7 @@ func (c Client) ServiceConnectServices(app, env, svc string) ([]*ecs.Service, er
 
 	arns, err := c.ecsClient.ListServicesByNamespace(aws.StringValue(s.Deployments[0].ServiceConnectConfiguration.Namespace))
 	if err != nil {
-		return nil, fmt.Errorf("get services in same namespace: %w", err)
+		return nil, fmt.Errorf("get services in the same namespace: %w", err)
 	}
 
 	// remove this service's arn

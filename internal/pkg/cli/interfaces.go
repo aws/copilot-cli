@@ -183,7 +183,7 @@ type repositoryService interface {
 	imageBuilderPusher
 }
 
-type ecsLocalClient interface {
+type ecsClient interface {
 	TaskDefinition(app, env, svc string) (*awsecs.TaskDefinition, error)
 	ServiceConnectServices(app, env, svc string) ([]*awsecs.Service, error)
 }
