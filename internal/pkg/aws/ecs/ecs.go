@@ -112,6 +112,7 @@ func (e *ECS) Service(clusterName, serviceName string) (*Service, error) {
 	return svcs[0], nil
 }
 
+// Services calls the ECS API and returns all of the services running in cluster.
 func (e *ECS) Services(cluster string, services ...string) ([]*Service, error) {
 	var svcs []*Service
 
@@ -140,6 +141,8 @@ func (e *ECS) Services(cluster string, services ...string) ([]*Service, error) {
 	return svcs, nil
 }
 
+// ListServicesByNamespace returns a list of service ARNs of services that
+// are in the given namespace.
 func (e *ECS) ListServicesByNamespace(namespace string) ([]string, error) {
 	var arns []string
 	err := e.client.ListServicesByNamespacePages(&ecs.ListServicesByNamespaceInput{
