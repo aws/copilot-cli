@@ -304,6 +304,25 @@ func TestFromEnvConfig(t *testing.T) {
 				},
 			},
 		},
+		"converts additional assume role permissions": {
+			in: &config.Environment{
+				App:  "phonetool",
+				Name: "test",
+				CustomConfig: &config.CustomizeEnv{
+					AdditionalAssumeRolePermissions: []string{"sts:SetSourceIdentity"},
+				},
+			},
+
+			wanted: &Environment{
+				Workload: Workload{
+					Name: stringP("test"),
+					Type: stringP("Environment"),
+				},
+				EnvironmentConfig: EnvironmentConfig{
+					AdditionalAssumeRolePermissions: []string{"sts:SetSourceIdentity"},
+				},
+			},
+		},
 	}
 
 	for name, tc := range testCases {
@@ -637,6 +656,23 @@ http:
 							Ingress:      RestrictiveIngress{SourceIPs: []IPNet{"1.1.1.1", "2.2.2.2"}},
 						},
 					},
+				},
+			},
+		},
+		"unmarshal with additional assume role permissions": {
+			inContent: `name: prod
+type: Environment
+additionalAssumeRolePermissions:
+  - sts:SetSourceIdentity
+  - sts:TagSession
+`,
+			wantedStruct: &Environment{
+				Workload: Workload{
+					Name: aws.String("prod"),
+					Type: aws.String("Environment"),
+				},
+				EnvironmentConfig: EnvironmentConfig{
+					AdditionalAssumeRolePermissions: []string{"sts:SetSourceIdentity", "sts:TagSession"},
 				},
 			},
 		},

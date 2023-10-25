@@ -151,6 +151,7 @@ type initEnvVars struct {
 	importCerts        []string      // Additional existing ACM certificates to use.
 	internalALBSubnets []string      // Subnets to be used for internal ALB placement.
 	allowVPCIngress    bool          // True means the env stack will create ingress to the internal ALB from ports 80/443.
+	federatedSession   bool          // True means, that the following additional permissions are added to the environment manager role trust policy: sts:SetSourceIdentity, sts:TagSession.
 
 	tempCreds tempCredsVars // Temporary credentials to initialize the environment. Mutually exclusive with the profile.
 	region    string        // The region to create the environment in.
@@ -747,10 +748,11 @@ func (o *initEnvOpts) deployEnv(app *config.Application) error {
 			Domain:              app.Domain,
 			AccountPrincipalARN: caller.RootUserARN,
 		},
-		AdditionalTags:       app.Tags,
-		ArtifactBucketARN:    artifactBucketARN,
-		ArtifactBucketKeyARN: resources.KMSKeyARN,
-		PermissionsBoundary:  app.PermissionsBoundary,
+		AdditionalTags:                  app.Tags,
+		ArtifactBucketARN:               artifactBucketARN,
+		ArtifactBucketKeyARN:            resources.KMSKeyARN,
+		PermissionsBoundary:             app.PermissionsBoundary,
+		AdditionalAssumeRolePermissions: o.additionalAssumeRolePermissions(),
 	}
 
 	if err := o.cleanUpDanglingRoles(o.appName, o.name); err != nil {
@@ -768,6 +770,13 @@ func (o *initEnvOpts) deployEnv(app *config.Application) error {
 		return err
 	}
 	return nil
+}
+
+func (o *initEnvOpts) additionalAssumeRolePermissions() (permissions []string) {
+	if o.federatedSession {
+		permissions = append(permissions, "sts:SetSourceIdentity", "sts:TagSession")
+	}
+	return
 }
 
 func (o *initEnvOpts) addToStackset(opts *deploycfn.AddEnvToAppOpts) error {
@@ -867,11 +876,12 @@ func (o *initEnvOpts) tryDeletingEnvRoles(app, env string) {
 
 func (o *initEnvOpts) writeManifest() (string, error) {
 	customizedEnv := &config.CustomizeEnv{
-		ImportVPC:                   o.importVPCConfig(),
-		VPCConfig:                   o.adjustVPCConfig(),
-		ImportCertARNs:              o.importCerts,
-		InternalALBSubnets:          o.internalALBSubnets,
-		EnableInternalALBVPCIngress: o.allowVPCIngress,
+		ImportVPC:                       o.importVPCConfig(),
+		VPCConfig:                       o.adjustVPCConfig(),
+		ImportCertARNs:                  o.importCerts,
+		InternalALBSubnets:              o.internalALBSubnets,
+		EnableInternalALBVPCIngress:     o.allowVPCIngress,
+		AdditionalAssumeRolePermissions: o.additionalAssumeRolePermissions(),
 	}
 	if customizedEnv.IsEmpty() {
 		customizedEnv = nil
@@ -973,6 +983,7 @@ func buildEnvInitCmd() *cobra.Command {
 	cmd.Flags().StringSliceVar(&vars.internalALBSubnets, internalALBSubnetsFlag, nil, internalALBSubnetsFlagDescription)
 	cmd.Flags().BoolVar(&vars.allowVPCIngress, allowVPCIngressFlag, false, allowVPCIngressFlagDescription)
 	cmd.Flags().BoolVar(&vars.defaultConfig, defaultConfigFlag, false, defaultConfigFlagDescription)
+	cmd.Flags().BoolVar(&vars.federatedSession, allowFederatedSessionFlag, false, allowFederatedSessionFlagDescription)
 
 	flags := pflag.NewFlagSet("Common", pflag.ContinueOnError)
 	flags.AddFlag(cmd.Flags().Lookup(appFlag))
@@ -984,6 +995,7 @@ func buildEnvInitCmd() *cobra.Command {
 	flags.AddFlag(cmd.Flags().Lookup(regionFlag))
 	flags.AddFlag(cmd.Flags().Lookup(defaultConfigFlag))
 	flags.AddFlag(cmd.Flags().Lookup(allowDowngradeFlag))
+	flags.AddFlag(cmd.Flags().Lookup(allowFederatedSessionFlag))
 
 	resourcesImportFlags := pflag.NewFlagSet("Import Existing Resources", pflag.ContinueOnError)
 	resourcesImportFlags.AddFlag(cmd.Flags().Lookup(vpcIDFlag))

@@ -79,3 +79,15 @@ http:
 observability:
   container_insights: {{.Observability.ContainerInsights}}
 {{- end}}
+
+# Configure additional permissions for the trust policy of the environment manager role to be able to assume it
+{{- if not .AdditionalAssumeRolePermissions}}
+# additionalAssumeRolePermissions:
+#   - sts:SetSourceIdentity
+#   - sts:TagSession
+{{- else}}
+additionalAssumeRolePermissions:
+  {{- range $perm := .AdditionalAssumeRolePermissions}}
+  - {{$perm}}
+  {{- end}}
+{{- end}}

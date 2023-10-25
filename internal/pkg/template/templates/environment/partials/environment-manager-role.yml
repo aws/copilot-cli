@@ -14,8 +14,9 @@ EnvironmentManagerRole:
           AWS: !Sub ${ToolsAccountPrincipalARN}
         Action:
         - sts:AssumeRole
-        - sts:SetSourceIdentity
-        - stsTagSession
+{{- range $perm := .AdditionalAssumeRolePermissions}}
+        - "{{$perm}}"
+{{- end}}
     {{- if .PermissionsBoundary}}
     PermissionsBoundary: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/{{.PermissionsBoundary}}'
     {{- end}}

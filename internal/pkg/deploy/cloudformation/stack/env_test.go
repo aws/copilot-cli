@@ -170,10 +170,11 @@ func TestEnv_Template(t *testing.T) {
 				Telemetry: &template.Telemetry{
 					EnableContainerInsights: false,
 				},
-				ArtifactBucketARN:  "arn:aws:s3:::mockbucket",
-				SerializedManifest: "name: env\ntype: Environment\n",
-				ForceUpdateID:      "mockPreviousForceUpdateID",
-				DelegateDNS:        true,
+				ArtifactBucketARN:               "arn:aws:s3:::mockbucket",
+				SerializedManifest:              "name: env\ntype: Environment\n",
+				ForceUpdateID:                   "mockPreviousForceUpdateID",
+				DelegateDNS:                     true,
+				AdditionalAssumeRolePermissions: []string{"sts:TagSession", "sts:SetSourceIdentity"},
 				HostedZones: &template.HostedZones{
 					RootDomainHostedZoneId: "Z00ABC",
 					AppDomainHostedZoneId:  "Z00DEF",
@@ -1090,6 +1091,20 @@ func TestBootstrapEnv_Template(t *testing.T) {
 			},
 			expectedOutput: "mockTemplate",
 		},
+		"should contain additional permissions": {
+			in: &EnvConfig{
+				AdditionalAssumeRolePermissions: []string{"sts:TagSession", "sts:SetSourceIdentity"},
+			},
+			setupMock: func(m *mocks.MockenvReadParser) {
+				m.EXPECT().ParseEnvBootstrap(gomock.Any(), gomock.Any()).DoAndReturn(func(data *template.EnvOpts, options ...template.ParseOption) (*template.Content, error) {
+					require.Equal(t, &template.EnvOpts{
+						AdditionalAssumeRolePermissions: []string{"sts:TagSession", "sts:SetSourceIdentity"},
+					}, data)
+					return &template.Content{Buffer: bytes.NewBufferString("mockTemplate")}, nil
+				})
+			},
+			expectedOutput: "mockTemplate",
+		},
 	}
 
 	for name, tc := range testCases {
@@ -1275,7 +1290,8 @@ func mockDeployEnvironmentInput() *EnvConfig {
 			"DNSDelegationFunction":         "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey2",
 			"CustomDomainFunction":          "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey4",
 		},
-		ArtifactBucketARN: "arn:aws:s3:::mockbucket",
+		ArtifactBucketARN:               "arn:aws:s3:::mockbucket",
+		AdditionalAssumeRolePermissions: []string{"sts:TagSession", "sts:SetSourceIdentity"},
 		Mft: &manifest.Environment{
 			Workload: manifest.Workload{
 				Name: aws.String("env"),
