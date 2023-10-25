@@ -228,6 +228,23 @@ func TestECS_Services(t *testing.T) {
   Reason: "some error"
 }`,
 		},
+		"error if api returns incorrect count": {
+			clusterName: "mockCluster",
+			services:    []string{"1", "2"},
+			mockECSClient: func(m *mocks.Mockapi) {
+				m.EXPECT().DescribeServices(&ecs.DescribeServicesInput{
+					Cluster:  aws.String("mockCluster"),
+					Services: aws.StringSlice([]string{"1", "2"}),
+				}).Return(&ecs.DescribeServicesOutput{
+					Services: []*ecs.Service{
+						{
+							ServiceName: aws.String("1"),
+						},
+					},
+				}, nil)
+			},
+			wantErr: "describe services: got 1 services, but expected 2",
+		},
 		"success with > 10": {
 			clusterName: "mockCluster",
 			services: []string{

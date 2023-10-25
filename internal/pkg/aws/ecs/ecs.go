@@ -127,6 +127,8 @@ func (e *ECS) Services(cluster string, services ...string) ([]*Service, error) {
 			return nil, fmt.Errorf("describe services: %w", err)
 		case len(resp.Failures) > 0:
 			return nil, fmt.Errorf("describe services: %s", resp.Failures[0].String())
+		case len(resp.Services) != len(split):
+			return nil, fmt.Errorf("describe services: got %v services, but expected %v", len(resp.Services), len(split))
 		}
 
 		for j := range resp.Services {
