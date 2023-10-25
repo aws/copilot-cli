@@ -26,6 +26,9 @@ const (
 	InternalALBFeatureName             = "InternalALBWorkloads"
 	AliasesFeatureName                 = "Aliases"
 	AppRunnerPrivateServiceFeatureName = "AppRunnerPrivateWorkloads"
+	SecretInitFeatureName              = "SecretInit"
+	JobRunFeatureName                  = "JobRun"
+	RunLocalProxyFeatureName           = "RunLocalProxy"
 )
 
 // LastForceDeployIDOutputName is the logical ID of the deployment controller output.
@@ -47,6 +50,9 @@ var leastVersionForFeature = map[string]string{
 	InternalALBFeatureName:             "v1.10.0",
 	AliasesFeatureName:                 "v1.4.0",
 	AppRunnerPrivateServiceFeatureName: "v1.23.0",
+	SecretInitFeatureName:              "v1.4.0",
+	JobRunFeatureName:                  "v1.12.0",
+	RunLocalProxyFeatureName:           "v1.32.0",
 }
 
 // AvailableEnvFeatures returns a list of the latest available feature, named after their corresponding parameter names.

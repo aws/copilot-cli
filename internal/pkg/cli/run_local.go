@@ -20,7 +20,7 @@ import (
 	sdkecs "github.com/aws/aws-sdk-go/service/ecs"
 	sdksecretsmanager "github.com/aws/aws-sdk-go/service/secretsmanager"
 	sdkssm "github.com/aws/aws-sdk-go/service/ssm"
-	"github.com/aws/copilot-cli/cmd/copilot/template"
+	cmdtemplate "github.com/aws/copilot-cli/cmd/copilot/template"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
@@ -39,6 +39,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/repository"
+	"github.com/aws/copilot-cli/internal/pkg/template"
 	termcolor "github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
@@ -287,7 +288,7 @@ func (o *runLocalOpts) Execute() error {
 	}
 
 	if o.proxy {
-		if err := validateMinEnvVersion(o.ws, o.envChecker, o.appName, o.envName, "v1.32.0", "run local --proxy"); err != nil {
+		if err := validateMinEnvVersion(o.ws, o.envChecker, o.appName, o.envName, template.LeastVersionForFeature(template.RunLocalProxyFeatureName), "run local --proxy"); err != nil {
 			return err
 		}
 
@@ -654,7 +655,7 @@ func BuildRunLocalCmd() *cobra.Command {
 			"group": group.Develop,
 		},
 	}
-	cmd.SetUsageTemplate(template.Usage)
+	cmd.SetUsageTemplate(cmdtemplate.Usage)
 
 	cmd.Flags().StringVarP(&vars.wkldName, nameFlag, nameFlagShort, "", workloadFlagDescription)
 	cmd.Flags().StringVarP(&vars.envName, envFlag, envFlagShort, "", envFlagDescription)

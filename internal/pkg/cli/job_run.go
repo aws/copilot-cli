@@ -6,9 +6,6 @@ package cli
 import (
 	"fmt"
 
-	"github.com/aws/copilot-cli/internal/pkg/workspace"
-	"github.com/spf13/afero"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
@@ -19,9 +16,12 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/runner/jobrunner"
+	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
+	"github.com/aws/copilot-cli/internal/pkg/workspace"
+	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
 
@@ -204,7 +204,7 @@ func (o *jobRunOpts) validateEnvCompatible() error {
 	if err != nil {
 		return err
 	}
-	return validateMinEnvVersion(o.ws, envStack, o.appName, o.envName, "v1.12.0", "job run")
+	return validateMinEnvVersion(o.ws, envStack, o.appName, o.envName, template.LeastVersionForFeature(template.JobRunFeatureName), "job run")
 }
 
 func buildJobRunCmd() *cobra.Command {
