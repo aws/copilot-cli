@@ -288,7 +288,7 @@ func (o *runLocalOpts) Execute() error {
 	}
 
 	if o.proxy {
-		if err := validateMinEnvVersion(o.ws, o.envChecker, o.appName, o.envName, template.LeastVersionForFeature(template.RunLocalProxyFeatureName), "run local --proxy"); err != nil {
+		if err := validateMinEnvVersion(o.ws, o.envChecker, o.appName, o.envName, template.RunLocalProxyMinEnvVersion, "run local --proxy"); err != nil {
 			return err
 		}
 

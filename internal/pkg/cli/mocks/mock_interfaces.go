@@ -1715,31 +1715,31 @@ func (mr *MockrepositoryServiceMockRecorder) Login() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Login", reflect.TypeOf((*MockrepositoryService)(nil).Login))
 }
 
-// MockecsLocalClient is a mock of ecsLocalClient interface.
-type MockecsLocalClient struct {
+// MockecsClient is a mock of ecsClient interface.
+type MockecsClient struct {
 	ctrl     *gomock.Controller
-	recorder *MockecsLocalClientMockRecorder
+	recorder *MockecsClientMockRecorder
 }
 
-// MockecsLocalClientMockRecorder is the mock recorder for MockecsLocalClient.
-type MockecsLocalClientMockRecorder struct {
-	mock *MockecsLocalClient
+// MockecsClientMockRecorder is the mock recorder for MockecsClient.
+type MockecsClientMockRecorder struct {
+	mock *MockecsClient
 }
 
-// NewMockecsLocalClient creates a new mock instance.
-func NewMockecsLocalClient(ctrl *gomock.Controller) *MockecsLocalClient {
-	mock := &MockecsLocalClient{ctrl: ctrl}
-	mock.recorder = &MockecsLocalClientMockRecorder{mock}
+// NewMockecsClient creates a new mock instance.
+func NewMockecsClient(ctrl *gomock.Controller) *MockecsClient {
+	mock := &MockecsClient{ctrl: ctrl}
+	mock.recorder = &MockecsClientMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockecsLocalClient) EXPECT() *MockecsLocalClientMockRecorder {
+func (m *MockecsClient) EXPECT() *MockecsClientMockRecorder {
 	return m.recorder
 }
 
 // ServiceConnectServices mocks base method.
-func (m *MockecsLocalClient) ServiceConnectServices(app, env, svc string) ([]*ecs.Service, error) {
+func (m *MockecsClient) ServiceConnectServices(app, env, svc string) ([]*ecs.Service, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ServiceConnectServices", app, env, svc)
 	ret0, _ := ret[0].([]*ecs.Service)
@@ -1748,13 +1748,13 @@ func (m *MockecsLocalClient) ServiceConnectServices(app, env, svc string) ([]*ec
 }
 
 // ServiceConnectServices indicates an expected call of ServiceConnectServices.
-func (mr *MockecsLocalClientMockRecorder) ServiceConnectServices(app, env, svc interface{}) *gomock.Call {
+func (mr *MockecsClientMockRecorder) ServiceConnectServices(app, env, svc interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServiceConnectServices", reflect.TypeOf((*MockecsLocalClient)(nil).ServiceConnectServices), app, env, svc)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServiceConnectServices", reflect.TypeOf((*MockecsClient)(nil).ServiceConnectServices), app, env, svc)
 }
 
 // TaskDefinition mocks base method.
-func (m *MockecsLocalClient) TaskDefinition(app, env, svc string) (*ecs.TaskDefinition, error) {
+func (m *MockecsClient) TaskDefinition(app, env, svc string) (*ecs.TaskDefinition, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "TaskDefinition", app, env, svc)
 	ret0, _ := ret[0].(*ecs.TaskDefinition)
@@ -1763,9 +1763,9 @@ func (m *MockecsLocalClient) TaskDefinition(app, env, svc string) (*ecs.TaskDefi
 }
 
 // TaskDefinition indicates an expected call of TaskDefinition.
-func (mr *MockecsLocalClientMockRecorder) TaskDefinition(app, env, svc interface{}) *gomock.Call {
+func (mr *MockecsClientMockRecorder) TaskDefinition(app, env, svc interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TaskDefinition", reflect.TypeOf((*MockecsLocalClient)(nil).TaskDefinition), app, env, svc)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TaskDefinition", reflect.TypeOf((*MockecsClient)(nil).TaskDefinition), app, env, svc)
 }
 
 // MocklogEventsWriter is a mock of logEventsWriter interface.

@@ -204,7 +204,7 @@ func (o *jobRunOpts) validateEnvCompatible() error {
 	if err != nil {
 		return err
 	}
-	return validateMinEnvVersion(o.ws, envStack, o.appName, o.envName, template.LeastVersionForFeature(template.JobRunFeatureName), "job run")
+	return validateMinEnvVersion(o.ws, envStack, o.appName, o.envName, template.JobRunMinEnvVersion, "job run")
 }
 
 func buildJobRunCmd() *cobra.Command {

@@ -251,7 +251,7 @@ func (o *secretInitOpts) configureClientsAndUpgradeForEnvironments(secrets map[s
 		if err := o.configureClientsForEnv(envName); err != nil {
 			return err
 		}
-		if err := validateMinEnvVersion(o.ws, o.envCompatibilityChecker[envName], o.appName, envName, template.LeastVersionForFeature(template.SecretInitFeatureName), "secret init"); err != nil {
+		if err := validateMinEnvVersion(o.ws, o.envCompatibilityChecker[envName], o.appName, envName, template.SecretInitMinEnvVersion, "secret init"); err != nil {
 			return err
 		}
 	}

@@ -194,7 +194,7 @@ func TestRunLocalOpts_Ask(t *testing.T) {
 }
 
 type runLocalExecuteMocks struct {
-	ecsLocalClient *mocks.MockecsLocalClient
+	ecsClient      *mocks.MockecsClient
 	store          *mocks.Mockstore
 	sessCreds      credentials.Provider
 	interpolator   *mocks.Mockinterpolator
@@ -369,7 +369,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 			inputWkldName: testWkldName,
 			inputEnvName:  testEnvName,
 			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
-				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(nil, testError)
+				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(nil, testError)
 			},
 			wantedError: fmt.Errorf("get task: get task definition: %w", testError),
 		},
@@ -381,7 +381,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 				"bad:OVERRIDE": "i fail",
 			},
 			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
-				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
+				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
 			},
 			wantedError: errors.New(`get task: get env vars: parse env overrides: "bad:OVERRIDE" targets invalid container`),
 		},
@@ -391,7 +391,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 			inputEnvName:  testEnvName,
 			inProxy:       true,
 			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
-				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
+				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
 				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
 				m.envChecker.EXPECT().Version().Return("", fmt.Errorf("some error"))
 			},
@@ -403,7 +403,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 			inputEnvName:  testEnvName,
 			inProxy:       true,
 			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
-				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
+				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
 				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
 				m.envChecker.EXPECT().Version().Return("v1.31.0", nil)
 			},
@@ -415,7 +415,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 			inputEnvName:  testEnvName,
 			inProxy:       true,
 			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
-				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
+				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
 				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
 				m.envChecker.EXPECT().Version().Return("v1.32.0", nil)
 				m.hostFinder.HostsFn = func(ctx context.Context) ([]host, error) {
@@ -429,7 +429,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 			inputWkldName: testWkldName,
 			inputEnvName:  testEnvName,
 			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
-				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
+				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
 				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
 				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return(nil, errors.New("some error"))
 			},
@@ -440,7 +440,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 			inputWkldName: testWkldName,
 			inputEnvName:  testEnvName,
 			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
-				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
+				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
 				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
 				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
 				m.interpolator.EXPECT().Interpolate("").Return("", errors.New("some error"))
@@ -453,7 +453,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 			inputEnvName:     testEnvName,
 			buildImagesError: errors.New("some error"),
 			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
-				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
+				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
 				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
 				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
 				m.interpolator.EXPECT().Interpolate("").Return("", nil)
@@ -465,7 +465,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 			inputWkldName: testWkldName,
 			inputEnvName:  testEnvName,
 			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
-				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
+				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
 				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
 				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
 				m.interpolator.EXPECT().Interpolate("").Return("", nil)
@@ -489,7 +489,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 			inputWkldName: testWkldName,
 			inputEnvName:  testEnvName,
 			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
-				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
+				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
 				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
 				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
 				m.interpolator.EXPECT().Interpolate("").Return("", nil)
@@ -526,7 +526,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			m := &runLocalExecuteMocks{
-				ecsLocalClient: mocks.NewMockecsLocalClient(ctrl),
+				ecsClient:      mocks.NewMockecsClient(ctrl),
 				ssm:            mocks.NewMocksecretGetter(ctrl),
 				secretsManager: mocks.NewMocksecretGetter(ctrl),
 				store:          mocks.NewMockstore(ctrl),
@@ -572,7 +572,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 					return mockContainerURIs, tc.buildImagesError
 				},
 				ws:             m.ws,
-				ecsClient:      m.ecsLocalClient,
+				ecsClient:      m.ecsClient,
 				ssm:            m.ssm,
 				secretsManager: m.secretsManager,
 				store:          m.store,
@@ -1004,7 +1004,7 @@ func TestRunLocalOpts_getEnvVars(t *testing.T) {
 
 func TestRunLocal_HostDiscovery(t *testing.T) {
 	type testMocks struct {
-		ecs *mocks.MockecsLocalClient
+		ecs *mocks.MockecsClient
 	}
 
 	tests := map[string]struct {
@@ -1093,7 +1093,7 @@ func TestRunLocal_HostDiscovery(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			m := &testMocks{
-				ecs: mocks.NewMockecsLocalClient(ctrl),
+				ecs: mocks.NewMockecsClient(ctrl),
 			}
 			tc.setupMocks(t, m)
 
