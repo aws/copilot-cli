@@ -32,6 +32,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 	"github.com/aws/copilot-cli/internal/pkg/docker/orchestrator"
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
@@ -83,7 +84,7 @@ type runLocalOpts struct {
 	secretsManager secretGetter
 	sessProvider   sessionProvider
 	sess           *session.Session
-	envSess        *session.Session
+	envManagerSess *session.Session
 	targetEnv      *config.Environment
 	targetApp      *config.Application
 	store          store
@@ -94,6 +95,7 @@ type runLocalOpts struct {
 	prog           progress
 	orchestrator   containerOrchestrator
 	hostFinder     hostFinder
+	envChecker     versionCompatibilityChecker
 
 	buildContainerImages func(mft manifest.DynamicWorkload) (map[string]string, error)
 	configureClients     func(o *runLocalOpts) error
@@ -141,16 +143,16 @@ func newRunLocalOpts(vars runLocalVars) (*runLocalOpts, error) {
 		if err != nil {
 			return fmt.Errorf("create default session with region %s: %w", o.targetEnv.Region, err)
 		}
-		o.envSess, err = o.sessProvider.FromRole(o.targetEnv.ManagerRoleARN, o.targetEnv.Region)
+		o.envManagerSess, err = o.sessProvider.FromRole(o.targetEnv.ManagerRoleARN, o.targetEnv.Region)
 		if err != nil {
-			return fmt.Errorf("create env session %s: %w", o.targetEnv.Region, err)
+			return fmt.Errorf("create env manager session %s: %w", o.targetEnv.Region, err)
 		}
 
 		// EnvManagerRole has permissions to get task def and get SSM values.
 		// However, it doesn't have permissions to get secrets from secrets manager,
 		// so use the default sess and *hope* they have permissions.
-		o.ecsLocalClient = ecs.New(o.envSess)
-		o.ssm = ssm.New(o.envSess)
+		o.ecsLocalClient = ecs.New(o.envManagerSess)
+		o.ssm = ssm.New(o.envManagerSess)
 		o.secretsManager = secretsmanager.New(defaultSessEnvRegion)
 
 		resources, err := cloudformation.New(o.sess, cloudformation.WithProgressTracker(os.Stderr)).GetAppResourcesByRegion(o.targetApp, o.targetEnv.Region)
@@ -174,8 +176,17 @@ func newRunLocalOpts(vars runLocalVars) (*runLocalOpts, error) {
 			app:  o.appName,
 			env:  o.envName,
 			wkld: o.wkldName,
-			ecs:  ecs.New(o.sess), // TODO update env manager role to support actions
+			ecs:  ecs.New(o.envManagerSess),
 		}
+		envDesc, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
+			App:         opts.appName,
+			Env:         opts.envName,
+			ConfigStore: store,
+		})
+		if err != nil {
+			return fmt.Errorf("create env describer: %w", err)
+		}
+		o.envChecker = envDesc
 		return nil
 	}
 	opts.buildContainerImages = func(mft manifest.DynamicWorkload) (map[string]string, error) {
@@ -276,6 +287,10 @@ func (o *runLocalOpts) Execute() error {
 	}
 
 	if o.proxy {
+		if err := validateMinEnvVersion(o.ws, o.envChecker, o.appName, o.envName, "v1.32.0", "run local --proxy"); err != nil {
+			return err
+		}
+
 		hosts, err := o.hostFinder.Hosts(ctx)
 		if err != nil {
 			return fmt.Errorf("find hosts to connect to: %w", err)
@@ -292,7 +307,7 @@ func (o *runLocalOpts) Execute() error {
 		ws:           o.ws,
 		interpolator: o.newInterpolator(o.appName, o.envName),
 		unmarshal:    o.unmarshal,
-		sess:         o.envSess,
+		sess:         o.envManagerSess,
 	})
 	if err != nil {
 		return err

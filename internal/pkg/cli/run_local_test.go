@@ -208,6 +208,7 @@ type runLocalExecuteMocks struct {
 	prog           *mocks.Mockprogress
 	orchestrator   *orchestratortest.Double
 	hostFinder     *hostFinderDouble
+	envChecker     *mocks.MockversionCompatibilityChecker
 }
 
 type mockProvider struct {
@@ -384,6 +385,30 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 			},
 			wantedError: errors.New(`get task: get env vars: parse env overrides: "bad:OVERRIDE" targets invalid container`),
 		},
+		"error getting env version": {
+			inputAppName:  testAppName,
+			inputWkldName: testWkldName,
+			inputEnvName:  testEnvName,
+			inProxy:       true,
+			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
+				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
+				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
+				m.envChecker.EXPECT().Version().Return("", fmt.Errorf("some error"))
+			},
+			wantedError: errors.New(`retrieve version of environment stack "testEnv" in application "testApp": some error`),
+		},
+		"error due to old env version": {
+			inputAppName:  testAppName,
+			inputWkldName: testWkldName,
+			inputEnvName:  testEnvName,
+			inProxy:       true,
+			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
+				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
+				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
+				m.envChecker.EXPECT().Version().Return("v1.31.0", nil)
+			},
+			wantedError: errors.New(`environment "testEnv" is on version "v1.31.0" which does not support the "run local --proxy" feature`),
+		},
 		"error getting hosts to proxy to": {
 			inputAppName:  testAppName,
 			inputWkldName: testWkldName,
@@ -392,6 +417,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
 				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
 				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
+				m.envChecker.EXPECT().Version().Return("v1.32.0", nil)
 				m.hostFinder.HostsFn = func(ctx context.Context) ([]host, error) {
 					return nil, fmt.Errorf("some error")
 				}
@@ -512,6 +538,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 				prog:           mocks.NewMockprogress(ctrl),
 				orchestrator:   &orchestratortest.Double{},
 				hostFinder:     &hostFinderDouble{},
+				envChecker:     mocks.NewMockversionCompatibilityChecker(ctrl),
 			}
 			tc.setupMocks(t, m)
 			opts := runLocalOpts{
@@ -562,6 +589,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 				prog:         m.prog,
 				orchestrator: m.orchestrator,
 				hostFinder:   m.hostFinder,
+				envChecker:   m.envChecker,
 			}
 			// WHEN
 			err := opts.Execute()
