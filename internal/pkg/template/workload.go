@@ -884,11 +884,12 @@ func (lr ALBListenerRule) HealthCheckProtocol() string {
 
 // ImportedALB holds the fields to import an existing ALB.
 type ImportedALB struct {
-	Name           string
-	ARN            string
-	DNSName        string
-	Listeners      []LBListener
-	SecurityGroups []LBSecurityGroup
+	Name            string
+	ARN             string
+	DNSName         string
+	HasTwoListeners bool
+	Listeners       []LBListener
+	SecurityGroups  []LBSecurityGroup
 }
 
 // LBListener struct represents the listener of a load balancer. // TODO(jwh): instead, reuse ALBListener

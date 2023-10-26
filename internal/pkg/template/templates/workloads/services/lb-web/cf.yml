@@ -118,7 +118,12 @@ Resources:
     DependsOn:
     {{- if .ALBListener}}
     {{- range $i, $rule := .ALBListener.Rules }}
-      {{- if $.ALBListener.IsHTTPS }}
+      {{- if $.ImportedALB}}
+      - HTTPListenerRule{{ if ne $i 0 }}{{ $i }}{{ end }}
+        {{- if $.ImportedALB.HasTwoListeners}}
+      - HTTPListenerRedirectRule
+        {{- end}}
+      {{- else if $.ALBListener.IsHTTPS }}
       - HTTPListenerRuleWithDomain{{ if ne $i 0 }}{{ $i }}{{ end }}
       - HTTPSListenerRule{{ if ne $i 0 }}{{ $i }}{{ end }}
       {{- else}}

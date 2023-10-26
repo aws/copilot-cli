@@ -1,11 +1,10 @@
 # for one listener or the port 443 listener if two
 {{- $arn := ""}}
-{{- $length := len $.ImportedALB.Listeners}}
-{{- if eq $length 1 }}
+{{- if not $.ImportedALB.HasTwoListeners }}
   {{- range $listener := $.ImportedALB.Listeners}}
   {{- $arn = $listener.ARN}}
   {{- end}}
-{{- else if eq $length 2 }}
+{{- else }}
   {{- range $listener := $.ImportedALB.Listeners}}
   {{- if eq $listener.Port 443}}
   {{- $arn = $listener.ARN}}
