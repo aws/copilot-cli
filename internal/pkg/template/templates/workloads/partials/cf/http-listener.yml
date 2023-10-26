@@ -137,9 +137,7 @@ HTTPListenerRedirectRule{{ if ne $i 0 }}{{ $i }}{{ end }}:
           Query: "#{query}"
           StatusCode: HTTP_301
     ListenerArn: {{$listener.ARN}}
-    Priority: !GetAtt HTTPRulePriorityAction.Priority{{ if ne $i 0 }}{{ $i }}{{ end }}
-
-#    Priority: !GetAtt HTTPRedirectRulePriorityAction.Priority{{ if ne $i 0 }}{{ $i }}{{ end }}
+    Priority: !GetAtt HTTPRedirectRulePriorityAction.Priority{{ if ne $i 0 }}{{ $i }}{{ end }}
   {{- end}}
   {{- end}}
   {{- end}}
