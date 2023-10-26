@@ -90,7 +90,9 @@ RulePriorityFunctionRole:
                 - elasticloadbalancing:DescribeRules
               Resource: "*"
 
-{{- if .ALBListener.IsHTTPS}}
+{{- if $.ImportedALB}}
+{{include "imported-alb-resources" .}}
+{{- else if .ALBListener.IsHTTPS}}
 {{include "https-listener" .}}
 {{- else}}
 {{include "http-listener" .}}

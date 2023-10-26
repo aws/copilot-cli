@@ -1,0 +1,117 @@
+# for one listener or the port 443 listener if two
+{{- $arn := ""}}
+{{- $length := len $.ImportedALB.Listeners}}
+{{- if eq $length 1 }}
+  {{- range $listener := $.ImportedALB.Listeners}}
+  {{- $arn = $listener.ARN}}
+  {{- end}}
+{{- else if eq $length 2 }}
+  {{- range $listener := $.ImportedALB.Listeners}}
+  {{- if eq $listener.Port 443}}
+  {{- $arn = $listener.ARN}}
+  {{- end}}
+  {{- end}}
+{{- end}}
+
+{{- if ne $arn ""}}
+HTTPRulePriorityAction:
+  Metadata:
+    'aws:copilot:description': 'A custom resource assigning priority for HTTP listener rules'
+  Type: Custom::RulePriorityFunction
+  Properties:
+    ServiceToken: !GetAtt RulePriorityFunction.Arn
+    RulePath: {{ fmtSlice (quoteSlice .ALBListener.RulePaths) }}
+    ListenerArn: {{$arn}}
+
+{{- range $i, $rule := .ALBListener.Rules}}
+HTTPListenerRule{{ if ne $i 0 }}{{ $i }}{{ end }}:
+  Metadata:
+    'aws:copilot:description': 'An HTTP listener rule for path `{{$rule.Path}}` that forwards HTTP traffic to your tasks'
+  Type: AWS::ElasticLoadBalancingV2::ListenerRule
+  Properties:
+    Actions:
+      - TargetGroupArn: !Ref TargetGroup{{ if ne $i 0 }}{{ $i }}{{ end }}
+        Type: forward
+    Conditions:
+      {{- if $rule.AllowedSourceIps}}
+      - Field: 'source-ip'
+        SourceIpConfig:
+          Values:
+          {{- range $sourceIP := $rule.AllowedSourceIps}}
+          - {{$sourceIP}}
+          {{- end}}
+      {{- end}}
+      - Field: 'path-pattern'
+        PathPatternConfig:
+          Values:
+            {{- if eq $rule.Path "/" }}
+            - /*
+            {{- else }}
+            - {{ $rule.Path }}
+            - {{ $rule.Path }}/*
+            {{- end }}
+    ListenerArn: {{$arn}}
+    Priority: !GetAtt HTTPRulePriorityAction.Priority{{ if ne $i 0 }}{{ $i }}{{ end }}
+  {{- end}}
+{{- end }}
+
+# redirect port 80 to 443
+{{- $port80arn := ""}}
+{{- range $listener := $.ImportedALB.Listeners}}
+  {{- if eq $listener.Port 80}}
+  {{- $port80arn = $listener.ARN}}
+  {{- end}}
+{{- end}}
+{{- $isHTTPS := .ALBListener.IsHTTPS}}
+  {{- if ne $port80arn ""}}
+  {{- range $i, $rule := .ALBListener.Rules}}
+HTTPListenerRedirectRule:
+  Metadata:
+    'aws:copilot:description': 'An HTTP listener rule that redirects port 80 to port 443'
+  Type: AWS::ElasticLoadBalancingV2::ListenerRule
+  Properties:
+    Actions:
+      - Type: redirect
+        RedirectConfig:
+          Protocol: HTTPS
+          Port: 443
+          Host: "#{host}"
+          Path: "/#{path}"
+          Query: "#{query}"
+          StatusCode: HTTP_301
+    Conditions:
+      {{- if $rule.AllowedSourceIps}}
+      - Field: 'source-ip'
+        SourceIpConfig:
+          Values:
+          {{- range $sourceIP := $rule.AllowedSourceIps}}
+          - {{$sourceIP}}
+          {{- end}}
+      {{- end}}
+      {{- if $rule.Aliases}}
+      - Field: 'host-header'
+        HostHeaderConfig:
+          Values: {{ fmtSlice (quoteSlice $rule.Aliases)}}
+      {{- else if $isHTTPS}}
+      - Field: 'host-header'
+        HostHeaderConfig:
+          Values:
+            - Fn::Join:
+                - '.'
+                - - !Ref WorkloadName
+                  - Fn::ImportValue:
+                      !Sub "${AppName}-${EnvName}-SubDomain"
+      {{- end}}
+      - Field: 'path-pattern'
+        PathPatternConfig:
+          Values:
+            {{- if eq $rule.Path "/" }}
+            - /*
+            {{- else }}
+            - {{ $rule.Path }}
+            - {{ $rule.Path }}/*
+            {{- end }}
+    ListenerArn: {{$port80arn}}
+    Priority: !GetAtt HTTPRulePriorityAction.Priority{{ if ne $i 0 }}{{ $i }}{{ end }}
+  {{- end}}
+{{- end}}

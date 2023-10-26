@@ -111,6 +111,7 @@ var (
 		"vpc-connector",
 		"alb",
 		"rollback-alarms",
+		"imported-alb-resources",
 	}
 
 	// Operating systems to determine Fargate platform versions.
