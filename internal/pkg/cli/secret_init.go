@@ -9,33 +9,26 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/aws/copilot-cli/internal/pkg/workspace"
-
-	"github.com/aws/copilot-cli/internal/pkg/describe"
-
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
-
-	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
-
-	"github.com/dustin/go-humanize/english"
-
-	"gopkg.in/yaml.v3"
-
 	"github.com/aws/aws-sdk-go/aws"
 	awsssm "github.com/aws/aws-sdk-go/service/ssm"
-
-	"github.com/spf13/afero"
-	"github.com/spf13/cobra"
-
+	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/describe"
+	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
+	"github.com/aws/copilot-cli/internal/pkg/workspace"
+	"github.com/dustin/go-humanize/english"
+	"github.com/spf13/afero"
+	"github.com/spf13/cobra"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
+	"gopkg.in/yaml.v3"
 )
 
 const (
@@ -254,12 +247,11 @@ func (o *secretInitOpts) configureClientsAndUpgradeForEnvironments(secrets map[s
 		}
 	}
 
-	const minEnvVersionForSecretInit = "v1.4.0"
 	for envName := range envNames {
 		if err := o.configureClientsForEnv(envName); err != nil {
 			return err
 		}
-		if err := validateMinEnvVersion(o.ws, o.envCompatibilityChecker[envName], o.appName, envName, minEnvVersionForSecretInit, "secret init"); err != nil {
+		if err := validateMinEnvVersion(o.ws, o.envCompatibilityChecker[envName], o.appName, envName, template.SecretInitMinEnvVersion, "secret init"); err != nil {
 			return err
 		}
 	}

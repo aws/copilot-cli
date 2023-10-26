@@ -692,7 +692,8 @@ Resources:
                   "ecs:DescribeTaskDefinition",
                   "ecs:ListTaskDefinitions",
                   "ecs:ListClusters",
-                  "ecs:RunTask"
+                  "ecs:RunTask",
+                  "ecs:ListServicesByNamespace"
                 ]
                 Resource: "*"
               - Sid: ExecuteCommand

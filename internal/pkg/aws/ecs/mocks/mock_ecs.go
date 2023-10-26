@@ -109,6 +109,20 @@ func (mr *MockapiMockRecorder) ExecuteCommand(input interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExecuteCommand", reflect.TypeOf((*Mockapi)(nil).ExecuteCommand), input)
 }
 
+// ListServicesByNamespacePages mocks base method.
+func (m *Mockapi) ListServicesByNamespacePages(input *ecs.ListServicesByNamespaceInput, fn func(*ecs.ListServicesByNamespaceOutput, bool) bool) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListServicesByNamespacePages", input, fn)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ListServicesByNamespacePages indicates an expected call of ListServicesByNamespacePages.
+func (mr *MockapiMockRecorder) ListServicesByNamespacePages(input, fn interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListServicesByNamespacePages", reflect.TypeOf((*Mockapi)(nil).ListServicesByNamespacePages), input, fn)
+}
+
 // ListTasks mocks base method.
 func (m *Mockapi) ListTasks(input *ecs.ListTasksInput) (*ecs.ListTasksOutput, error) {
 	m.ctrl.T.Helper()

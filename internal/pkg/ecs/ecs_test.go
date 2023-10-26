@@ -533,6 +533,186 @@ func TestClient_Service(t *testing.T) {
 	}
 }
 
+func TestClient_ServiceConnectServices(t *testing.T) {
+	const (
+		mockApp     = "mockApp"
+		mockEnv     = "mockEnv"
+		mockSvc     = "mockSvc"
+		mockSvcARN  = "arn:aws:ecs:us-west-2:1234567890:service/mockCluster/mockService"
+		mockCluster = "mockCluster"
+		mockService = "mockService"
+	)
+	mockError := errors.New("some error")
+	getRgEnvClusterInput := map[string]string{
+		deploy.AppTagKey: mockApp,
+		deploy.EnvTagKey: mockEnv,
+	}
+	getRgInput := map[string]string{
+		deploy.AppTagKey:     mockApp,
+		deploy.EnvTagKey:     mockEnv,
+		deploy.ServiceTagKey: mockSvc,
+	}
+
+	tests := map[string]struct {
+		setupMocks func(mocks clientMocks)
+
+		wantedError error
+		wanted      []*ecs.Service
+	}{
+		"error getting the service": {
+			setupMocks: func(m clientMocks) {
+				m.resourceGetter.EXPECT().GetResourcesByTags(serviceResourceType, getRgInput).
+					Return([]*resourcegroups.Resource{
+						{ARN: mockSvcARN},
+					}, nil)
+				m.resourceGetter.EXPECT().GetResourcesByTags(clusterResourceType, getRgEnvClusterInput).
+					Return([]*resourcegroups.Resource{
+						{ARN: "mockARN1"}, {ARN: "mockARN2"},
+					}, nil)
+				m.ecsClient.EXPECT().ActiveClusters("mockARN1", "mockARN2").Return([]string{"mockARN1"}, nil)
+				m.ecsClient.EXPECT().ActiveServices("mockARN1", []string{mockSvcARN}).Return([]string{mockSvcARN}, nil)
+				m.ecsClient.EXPECT().Service(mockCluster, mockService).Return(nil, mockError)
+			},
+			wantedError: fmt.Errorf(`get service: get ECS service mockService: some error`),
+		},
+		"error listing namespace": {
+			setupMocks: func(m clientMocks) {
+				m.resourceGetter.EXPECT().GetResourcesByTags(serviceResourceType, getRgInput).
+					Return([]*resourcegroups.Resource{
+						{ARN: mockSvcARN},
+					}, nil)
+				m.resourceGetter.EXPECT().GetResourcesByTags(clusterResourceType, getRgEnvClusterInput).
+					Return([]*resourcegroups.Resource{
+						{ARN: "mockARN1"}, {ARN: "mockARN2"},
+					}, nil)
+				m.ecsClient.EXPECT().ActiveClusters("mockARN1", "mockARN2").Return([]string{"mockARN1"}, nil)
+				m.ecsClient.EXPECT().ActiveServices("mockARN1", []string{mockSvcARN}).Return([]string{mockSvcARN}, nil)
+				m.ecsClient.EXPECT().Service(mockCluster, mockService).Return(&ecs.Service{
+					Deployments: []*awsecs.Deployment{
+						{
+							ServiceConnectConfiguration: &awsecs.ServiceConnectConfiguration{
+								Namespace: aws.String("namespace"),
+							},
+						},
+					},
+				}, nil)
+				m.ecsClient.EXPECT().ListServicesByNamespace("namespace").Return(nil, errors.New("some error"))
+			},
+			wantedError: fmt.Errorf(`get services in the same namespace: some error`),
+		},
+		"error getting namespaced services, svc arn removed": {
+			setupMocks: func(m clientMocks) {
+				m.resourceGetter.EXPECT().GetResourcesByTags(serviceResourceType, getRgInput).
+					Return([]*resourcegroups.Resource{
+						{ARN: mockSvcARN},
+					}, nil)
+				m.resourceGetter.EXPECT().GetResourcesByTags(clusterResourceType, getRgEnvClusterInput).
+					Return([]*resourcegroups.Resource{
+						{ARN: "cluster1"}, {ARN: "cluster2"},
+					}, nil)
+				m.ecsClient.EXPECT().ActiveClusters("cluster1", "cluster2").Return([]string{"cluster1"}, nil)
+				m.ecsClient.EXPECT().ActiveServices("cluster1", []string{mockSvcARN}).Return([]string{mockSvcARN}, nil)
+				m.ecsClient.EXPECT().Service(mockCluster, mockService).Return(&ecs.Service{
+					ServiceArn: aws.String(mockSvcARN),
+					ClusterArn: aws.String("cluster1"),
+					Deployments: []*awsecs.Deployment{
+						{
+							ServiceConnectConfiguration: &awsecs.ServiceConnectConfiguration{
+								Namespace: aws.String("namespace"),
+							},
+						},
+					},
+				}, nil)
+				m.ecsClient.EXPECT().ListServicesByNamespace("namespace").Return([]string{
+					mockSvcARN,
+					"svc1",
+					"svc2",
+				}, nil)
+				m.ecsClient.EXPECT().Services("cluster1", "svc1", "svc2").Return(nil, errors.New("some error"))
+			},
+			wantedError: fmt.Errorf(`get services: some error`),
+		},
+		"success, svc arn not removed": {
+			setupMocks: func(m clientMocks) {
+				m.resourceGetter.EXPECT().GetResourcesByTags(serviceResourceType, getRgInput).
+					Return([]*resourcegroups.Resource{
+						{ARN: mockSvcARN},
+					}, nil)
+				m.resourceGetter.EXPECT().GetResourcesByTags(clusterResourceType, getRgEnvClusterInput).
+					Return([]*resourcegroups.Resource{
+						{ARN: "cluster1"}, {ARN: "cluster2"},
+					}, nil)
+				m.ecsClient.EXPECT().ActiveClusters("cluster1", "cluster2").Return([]string{"cluster1"}, nil)
+				m.ecsClient.EXPECT().ActiveServices("cluster1", []string{mockSvcARN}).Return([]string{mockSvcARN}, nil)
+				m.ecsClient.EXPECT().Service(mockCluster, mockService).Return(&ecs.Service{
+					ServiceArn: aws.String(mockSvcARN),
+					ClusterArn: aws.String("cluster1"),
+					Deployments: []*awsecs.Deployment{
+						{
+							ServiceConnectConfiguration: &awsecs.ServiceConnectConfiguration{
+								Namespace: aws.String("namespace"),
+							},
+						},
+					},
+				}, nil)
+				m.ecsClient.EXPECT().ListServicesByNamespace("namespace").Return([]string{
+					"svc1",
+					"svc2",
+				}, nil)
+				m.ecsClient.EXPECT().Services("cluster1", "svc1", "svc2").Return([]*ecs.Service{
+					{
+						ServiceArn: aws.String("svc1"),
+					},
+					{
+						ServiceArn: aws.String("svc2"),
+					},
+				}, nil)
+			},
+			wanted: []*ecs.Service{
+				{
+					ServiceArn: aws.String("svc1"),
+				},
+				{
+					ServiceArn: aws.String("svc2"),
+				},
+			},
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			// GIVEN
+			mockRgGetter := mocks.NewMockresourceGetter(ctrl)
+			mockECSClient := mocks.NewMockecsClient(ctrl)
+			mocks := clientMocks{
+				resourceGetter: mockRgGetter,
+				ecsClient:      mockECSClient,
+			}
+
+			test.setupMocks(mocks)
+
+			client := Client{
+				rgGetter:  mockRgGetter,
+				ecsClient: mockECSClient,
+			}
+
+			// WHEN
+			got, err := client.ServiceConnectServices(mockApp, mockEnv, mockSvc)
+
+			// THEN
+			if test.wantedError != nil {
+				require.EqualError(t, err, test.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, got, test.wanted)
+			}
+		})
+	}
+}
+
 func TestClient_LastUpdatedAt(t *testing.T) {
 	const (
 		mockApp     = "mockApp"
