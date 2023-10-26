@@ -263,6 +263,33 @@ network:
 			}(),
 			wantedFileName: "template-with-importedvpc-flowlogs.yml",
 		},
+		"generate template with additional assume role permissions": {
+			input: func() *stack.EnvConfig {
+				rawMft := `name: test
+type: Environment
+
+additionalAssumeRolePermissions:
+  - sts:SetSourceIdentity
+  - sts:TagSession`
+				var mft manifest.Environment
+				err := yaml.Unmarshal([]byte(rawMft), &mft)
+				require.NoError(t, err)
+				return &stack.EnvConfig{
+					Version: "1.x",
+					App: deploy.AppInformation{
+						AccountPrincipalARN: "arn:aws:iam::000000000:root",
+						Name:                "demo",
+					},
+					Name:                            "test",
+					ArtifactBucketARN:               "arn:aws:s3:::mockbucket",
+					ArtifactBucketKeyARN:            "arn:aws:kms:us-west-2:000000000:key/1234abcd-12ab-34cd-56ef-1234567890ab",
+					Mft:                             &mft,
+					AdditionalAssumeRolePermissions: mft.AdditionalAssumeRolePermissions,
+					RawMft:                          rawMft,
+				}
+			}(),
+			wantedFileName: "template-with-additional-assume-role-permissions.yml",
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {

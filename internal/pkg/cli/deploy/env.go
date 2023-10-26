@@ -270,6 +270,13 @@ type DeployEnvironmentInput struct {
 	Detach              bool
 }
 
+func (dei DeployEnvironmentInput) AdditionalAssumeRolePermissions() []string {
+	if dei.Manifest == nil {
+		return []string{}
+	}
+	return dei.Manifest.AdditionalAssumeRolePermissions
+}
+
 // GenerateCloudFormationTemplate returns the environment stack's template and parameter configuration.
 func (d *envDeployer) GenerateCloudFormationTemplate(in *DeployEnvironmentInput) (*GenerateCloudFormationTemplateOutput, error) {
 	stackInput, err := d.buildStackInput(in)
@@ -428,7 +435,7 @@ func (d *envDeployer) buildStackInput(in *DeployEnvironmentInput) (*cfnstack.Env
 		CIDRPrefixListIDs:               cidrPrefixListIDs,
 		PublicALBSourceIPs:              d.publicALBSourceIPs(in),
 		Mft:                             in.Manifest,
-		AdditionalAssumeRolePermissions: in.Manifest.AdditionalAssumeRolePermissions,
+		AdditionalAssumeRolePermissions: in.AdditionalAssumeRolePermissions(),
 		ForceUpdate:                     in.ForceNewUpdate,
 		RawMft:                          in.RawManifest,
 		PermissionsBoundary:             in.PermissionsBoundary,
