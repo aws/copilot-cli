@@ -270,6 +270,8 @@ type DeployEnvironmentInput struct {
 	Detach              bool
 }
 
+// AdditionalAssumeRolePermissions helper method to export the additional assume role permissions of environment roles
+// from the manifest.
 func (dei DeployEnvironmentInput) AdditionalAssumeRolePermissions() []string {
 	if dei.Manifest == nil {
 		return []string{}
